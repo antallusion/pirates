@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GRAVETIDE — a Pirate Gothic MMORPG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IM+Fell+English+SC&family=Inter:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <canvas id="world"></canvas>
+
+  <!-- Title / login -->
+  <section id="screen-login" class="screen">
+    <div class="keyart" data-asset="art.keyart"></div>
+    <div class="login-panel panel">
+      <h1 class="title">GRAVETIDE</h1>
+      <p class="subtitle">The ocean is the world. The ship is the character. The captain is the build.</p>
+      <form id="login-form">
+        <label>Captain's name<input id="login-name" maxlength="20" autocomplete="off" placeholder="e.g. Anne Blackwood" /></label>
+        <button class="btn btn-primary" type="submit">Set sail</button>
+      </form>
+      <p id="login-error" class="error"></p>
+      <p class="hint">Top-down multiplayer prototype · Phase 1 build</p>
+    </div>
+  </section>
+
+  <!-- Captain selection -->
+  <section id="screen-captain" class="screen hidden">
+    <div class="captain-wrap panel">
+      <h2 class="title-sm">Choose your captain</h2>
+      <div id="captain-list" class="captain-list"></div>
+      <div id="captain-detail" class="captain-detail"></div>
+    </div>
+  </section>
+
+  <!-- In-game HUD -->
+  <section id="hud" class="hidden">
+    <div id="hud-captain" class="hud-block top-left"></div>
+    <div id="hud-map" class="hud-block top-right">
+      <canvas id="minimap" width="220" height="220"></canvas>
+      <div id="hud-region"></div>
+    </div>
+    <div id="hud-ship" class="hud-block bottom-left"></div>
+    <div id="hud-combat" class="hud-block bottom-center"></div>
+    <div id="hud-nav" class="hud-block bottom-right"></div>
+    <div id="hud-prompt"></div>
+    <div id="banner"></div>
+    <div id="toasts"></div>
+    <div id="chat">
+      <div id="chat-log"></div>
+      <input id="chat-input" maxlength="200" placeholder="Enter to speak…" />
+    </div>
+  </section>
+
+  <section id="modal" class="hidden">
+    <div id="modal-panel" class="panel"></div>
+  </section>
+
+  <div id="connection" class="hidden">Reconnecting to the Admiralty…</div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

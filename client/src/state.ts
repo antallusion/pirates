@@ -1,0 +1,220 @@
+// Client-side replica of what the server lets this player know: entities in interest range,
+// streamed islands, charted islands, private captain state. Remote ships are interpolated
+// ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
+
+import { isNight } from '../../shared/src/constants.ts';
+import { lerp, lerpAngle } from '../../shared/src/math.ts';
+import type {
+  BoardingResult, CurrentData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
+} from '../../shared/src/protocol.ts';
+import { stepSailing } from '../../shared/src/sim/sailing.ts';
+import type { SailState } from '../../shared/src/sim/sailing.ts';
+import { computeShipStats, crewFactor, loadFactor } from '../../shared/src/sim/shipstats.ts';
+import type { ShipStats } from '../../shared/src/sim/shipstats.ts';
+import { currentAt } from '../../shared/src/world/worldgen.ts';
+import type { RegionId } from '../../shared/src/world/regions.ts';
+
+export interface ShipSample {
+  t: number;
+  x: number;
+  y: number;
+  h: number;
+  spd: number;
+  sail: number;
+  hull: number;
+  sails: number;
+  flags: number;
+  crew: number;
+}
+
+export interface RemoteShip {
+  id: number;
+  info: ShipInfo | null;
+  buf: ShipSample[];
+  cur: ShipSample;
+  wake: { x: number; y: number; t: number; w: number }[];
+  sinkStart: number;
+}
+
+const INTERP_DELAY = 0.12;
+
+export class ClientState {
+  self: PrivateState | null = null;
+  you: SelfRow | null = null;
+  youServerTime = 0;
+  youArrival = 0;
+  entityId = 0;
+  ownDisplay: SailState | null = null;
+  ownWake: { x: number; y: number; t: number; w: number }[] = [];
+  ownStats: ShipStats | null = null;
+
+  ships = new Map<number, RemoteShip>();
+  infos = new Map<number, EntityInfo>();
+  loot = new Map<number, { x: number; y: number; value: number }>();
+  islands = new Map<number, IslandData>();
+  ports: PortPublic[] = [];
+  currents: CurrentData[] = [];
+  discovered = new Set<number>();
+
+  wind: [number, number] = [0, 0.5];
+  weather: WeatherKind = 'breeze';
+  region: RegionId = 'black_coast';
+  fog = 0.1;
+  serverTime = 0;
+  serverTimeArrival = 0;
+
+  portView: PortView | null = null;
+  boarding: BoardingResult | null = null;
+
+  input = { rudder: 0, sail: 2, seq: 0 };
+
+  apply(m: ServerMsg): void {
+    const now = performance.now() / 1000;
+    switch (m.t) {
+      case 'init':
+        this.self = m.self;
+        this.ports = m.ports;
+        this.currents = m.currents;
+        this.discovered = new Set(m.discovered);
+        this.entityId = m.entityId;
+        this.serverTime = m.time;
+        this.serverTimeArrival = now;
+        this.ships.clear();
+        this.infos.clear();
+        this.loot.clear();
+        this.ownDisplay = null;
+        this.refreshStats();
+        break;
+      case 'self':
+        this.self = m.self;
+        this.refreshStats();
+        break;
+      case 'chunk':
+        for (const is of m.islands) this.islands.set(is.id, is);
+        break;
+      case 'info':
+        for (const i of m.list) this.infos.set(i.id, i);
+        for (const i of m.list) {
+          const s = this.ships.get(i.id);
+          if (s && i.kind === 'ship') s.info = i;
+        }
+        break;
+      case 'gone':
+        for (const id of m.ids) {
+          this.ships.delete(id);
+          this.loot.delete(id);
+          this.infos.delete(id);
+        }
+        break;
+      case 'snap': {
+        this.serverTime = m.time;
+        this.serverTimeArrival = now;
+        this.wind = m.wind;
+        this.weather = m.weather;
+        this.region = m.region;
+        this.fog = m.fog;
+        if (m.you) {
+          this.you = m.you;
+          this.youServerTime = m.time;
+          this.youArrival = now;
+        }
+        for (const r of m.ships) {
+          const [id, x, y, h, spd, sail, hull, sails, flags, crew] = r;
+          const sample: ShipSample = { t: m.time, x, y, h, spd, sail, hull, sails, flags, crew };
+          let s = this.ships.get(id);
+          if (!s) {
+            const info = this.infos.get(id);
+            s = { id, info: info && info.kind === 'ship' ? info : null, buf: [], cur: sample, wake: [], sinkStart: 0 };
+            this.ships.set(id, s);
+          }
+          s.buf.push(sample);
+          if (s.buf.length > 12) s.buf.shift();
+        }
+        for (const [id, x, y] of m.loot) {
+          const info = this.infos.get(id);
+          this.loot.set(id, { x, y, value: info && info.kind === 'loot' ? info.value : 0 });
+        }
+        break;
+      }
+      case 'port':
+        this.portView = m.view;
+        break;
+      case 'boarding':
+        this.boarding = m.result;
+        break;
+      case 'ev':
+        for (const e of m.list) if (e.k === 'discover') this.discovered.add(e.islandId);
+        break;
+    }
+  }
+
+  refreshStats(): void {
+    if (!this.self) return;
+    this.ownStats = computeShipStats(this.self.loadout, this.self.captain, this.self.talents, []);
+  }
+
+  estServerTime(): number {
+    return this.serverTime + (performance.now() / 1000 - this.serverTimeArrival);
+  }
+
+  night(): boolean {
+    return isNight(this.estServerTime());
+  }
+
+  /** Interpolate remote ships at render time. */
+  updateRemote(): void {
+    const rt = this.estServerTime() - INTERP_DELAY;
+    for (const s of this.ships.values()) {
+      const b = s.buf;
+      if (!b.length) continue;
+      let a = b[0], c = b[b.length - 1];
+      for (let i = 0; i < b.length - 1; i++) {
+        if (b[i].t <= rt && b[i + 1].t >= rt) {
+          a = b[i];
+          c = b[i + 1];
+          break;
+        }
+      }
+      if (rt >= c.t) {
+        // Extrapolate briefly past the newest sample.
+        const dt = Math.min(0.25, rt - c.t);
+        s.cur = { ...c, x: c.x + Math.sin(c.h) * c.spd * dt, y: c.y - Math.cos(c.h) * c.spd * dt };
+      } else if (rt <= a.t) {
+        s.cur = a;
+      } else {
+        const t = (rt - a.t) / Math.max(1e-4, c.t - a.t);
+        s.cur = { ...c, x: lerp(a.x, c.x, t), y: lerp(a.y, c.y, t), h: lerpAngle(a.h, c.h, t), spd: lerp(a.spd, c.spd, t), sail: lerp(a.sail, c.sail, t) };
+      }
+    }
+  }
+
+  /** Own ship: server state advanced by the elapsed time with the player's current input. */
+  updateOwn(): SailState | null {
+    const you = this.you;
+    if (!you || !this.ownStats || !this.self) return null;
+    const st = this.ownStats;
+    const elapsed = Math.min(0.2, performance.now() / 1000 - this.youArrival);
+    let s: SailState = { x: you.x, y: you.y, heading: you.h, speed: you.spd, sail: you.sail, rudder: you.rud };
+    const sailSteps = [0, 0.25, 0.5, 0.75, 1];
+    const params = {
+      rig: st.rig, maxSpeed: st.maxSpeed, accel: st.accel, turnRate: st.turnRate, noGoDeg: st.noGoDeg, sailChangeRate: st.sailChangeRate,
+      currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
+      loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: this.night() ? 1 + st.nightSpeed : 1,
+      personalWind: false, weatherly: this.self.loadout.classId === 'schooner',
+    };
+    const wind = { dir: this.wind[0], strength: this.wind[1] };
+    const cur = currentAt(this.currents, s.x, s.y);
+    const input = { rudder: this.input.rudder, sailTarget: sailSteps[this.input.sail] };
+    let t = elapsed;
+    while (t > 0) {
+      const dt = Math.min(0.05, t);
+      s = stepSailing(s, input, params, wind, cur, dt);
+      t -= dt;
+    }
+    // Smooth toward the predicted state to hide snapshot corrections.
+    const d = this.ownDisplay;
+    if (!d || Math.hypot(d.x - s.x, d.y - s.y) > 40) this.ownDisplay = s;
+    else this.ownDisplay = { ...s, x: lerp(d.x, s.x, 0.3), y: lerp(d.y, s.y, 0.3), heading: lerpAngle(d.heading, s.heading, 0.3) };
+    return this.ownDisplay;
+  }
+}

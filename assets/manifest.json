@@ -1,0 +1,32 @@
+{
+  "$comment": "GRAVETIDE asset manifest. Each asset has a local path (vendored by `npm run assets:fetch`) and a remote Higgsfield CDN URL. The client prefers the local file and falls back to the remote URL; if both fail, the procedural renderer draws the object. Generated with Higgsfield gpt_image_2_5 (quality high). See docs/06_ART_DIRECTION.md.",
+  "cdn": "https://d8j0ntlcm91z4.cloudfront.net/user_3F3RPvUVQudjpmbCHoHOQv37FWv/",
+  "assets": {
+    "ship.sloop":        { "local": "ships/sloop.png",        "remote": "hf_20260925_220207_2434a108-4c34-4e7f-a9a2-8c046a5b0c15.png", "job": "2434a108-4c34-4e7f-a9a2-8c046a5b0c15" },
+    "ship.schooner":     { "local": "ships/schooner.png",     "remote": "hf_20260925_220208_13629612-1ba0-4541-bf3b-925e80210a3f.png", "job": "13629612-1ba0-4541-bf3b-925e80210a3f" },
+    "ship.brigantine":   { "local": "ships/brigantine.png",   "remote": "hf_20260925_220208_ffeadb42-cdf6-479f-936b-a04a749a685c.png", "job": "ffeadb42-cdf6-479f-936b-a04a749a685c" },
+    "ship.frigate":      { "local": "ships/frigate.png",      "remote": "hf_20260925_220207_0cd9e060-7f26-4cdd-92e6-cb33aa92e199.png", "job": "0cd9e060-7f26-4cdd-92e6-cb33aa92e199" },
+    "ship.galleon":      { "local": "ships/galleon.png",      "remote": "hf_20260925_220208_3b3f1bc7-418a-4527-85af-0b8e12e8d791.png", "job": "3b3f1bc7-418a-4527-85af-0b8e12e8d791" },
+    "ship.man_o_war":    { "local": "ships/man_o_war.png",    "remote": "hf_20260925_220209_95ee080e-bdbd-426e-a1b4-9b64d6c14a38.png", "job": "95ee080e-bdbd-426e-a1b4-9b64d6c14a38" },
+    "ship.ghost_ship":   { "local": "ships/ghost_ship.png",   "remote": "hf_20260925_220207_4a9e7c3d-de3e-48e4-8229-b0af3b4f90bb.png", "job": "4a9e7c3d-de3e-48e4-8229-b0af3b4f90bb" },
+    "ship.fluyt":        { "local": "ships/fluyt.png",        "remote": "hf_20260925_220207_5fbddf68-9f64-4261-9204-e638f2e39bb0.png", "job": "5fbddf68-9f64-4261-9204-e638f2e39bb0" },
+    "ship.cursed_frigate": { "local": "ships/cursed_frigate.png", "remote": "hf_20260925_220334_370a1676-2e9f-484f-83a2-48c7f9d17e9d.png", "job": "370a1676-2e9f-484f-83a2-48c7f9d17e9d" },
+    "tex.ocean":         { "local": "textures/ocean.png",     "remote": "hf_20260925_220208_5c5379f8-6368-46d0-ad0d-94cef99a55bd.png", "job": "5c5379f8-6368-46d0-ad0d-94cef99a55bd" },
+    "tex.land":          { "local": "textures/land.png",      "remote": "hf_20260925_220208_1f6b2c6b-eb05-489e-91a9-c46ce300f18d.png", "job": "1f6b2c6b-eb05-489e-91a9-c46ce300f18d" },
+    "tex.sand":          { "local": "textures/sand.png",      "remote": "hf_20260925_220231_19fc9c70-9a50-4083-b18d-344926151a07.png", "job": "19fc9c70-9a50-4083-b18d-344926151a07" },
+    "tex.chart":         { "local": "textures/chart.png",     "remote": "hf_20260925_220207_d78a6474-c92b-45cb-accf-b9d45ce9ac9e.png", "job": "d78a6474-c92b-45cb-accf-b9d45ce9ac9e" },
+    "tex.ebony":         { "local": "textures/ebony.png",     "remote": "hf_20260925_220231_202ad54d-b93d-4e5c-a3d6-97992d5601c0.png", "job": "202ad54d-b93d-4e5c-a3d6-97992d5601c0" },
+    "prop.port_town":    { "local": "props/port_town.png",    "remote": "hf_20260925_220232_80ce3e16-2575-4fde-8931-8bc88627e582.png", "job": "80ce3e16-2575-4fde-8931-8bc88627e582" },
+    "prop.wreckage":     { "local": "props/wreckage.png",     "remote": "hf_20260925_220231_f7ba8806-dc0c-4a9d-9229-ab6a5e614177.png", "job": "f7ba8806-dc0c-4a9d-9229-ab6a5e614177" },
+    "prop.lighthouse":   { "local": "props/lighthouse.png",   "remote": "hf_20260925_220334_69740460-3adb-4424-9e39-0e2649abd20a.png", "job": "69740460-3adb-4424-9e39-0e2649abd20a" },
+    "creature.leviathan": { "local": "creatures/leviathan.png", "remote": "hf_20260925_220334_fd69f300-c0be-44c7-8aa5-f6ed7edf9303.png", "job": "fd69f300-c0be-44c7-8aa5-f6ed7edf9303" },
+    "art.keyart":        { "local": "art/keyart.png",         "remote": "hf_20260925_220207_3f62a999-76f0-4087-b19a-e8c9f9a5d11b.png", "job": "3f62a999-76f0-4087-b19a-e8c9f9a5d11b" },
+    "art.reference_captain": { "local": "art/reference_captain.png", "remote": "hf_20260925_220334_5e5e0807-6f46-45c5-b15c-dee5e157780e.png", "job": "5e5e0807-6f46-45c5-b15c-dee5e157780e" },
+    "portrait.corsair":  { "local": "portraits/corsair.png",  "remote": "hf_20260925_220231_54e8201a-fea9-40f3-ac45-e22daf0325ea.png", "job": "54e8201a-fea9-40f3-ac45-e22daf0325ea" },
+    "portrait.smuggler": { "local": "portraits/smuggler.png", "remote": "hf_20260925_220231_5041c43e-949a-4f06-98d1-11adcb155571.png", "job": "5041c43e-949a-4f06-98d1-11adcb155571" },
+    "portrait.reaver":   { "local": "portraits/reaver.png",   "remote": "hf_20260925_220231_97feb3b5-1a89-418f-9d10-4bbce6ccbe19.png", "job": "97feb3b5-1a89-418f-9d10-4bbce6ccbe19" },
+    "portrait.navigator": { "local": "portraits/navigator.png", "remote": "hf_20260925_220231_ec861446-8a33-4b9c-9fd9-39816977540d.png", "job": "ec861446-8a33-4b9c-9fd9-39816977540d" },
+    "portrait.drowned":  { "local": "portraits/drowned.png",  "remote": "hf_20260925_220231_0d6f6940-2494-4d33-856c-af3a529196ad.png", "job": "0d6f6940-2494-4d33-856c-af3a529196ad" },
+    "portrait.admiral":  { "local": "portraits/admiral.png",  "remote": "hf_20260925_220231_b988d334-4f40-4d83-95f5-16667fdf892e.png", "job": "b988d334-4f40-4d83-95f5-16667fdf892e" }
+  }
+}

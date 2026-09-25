@@ -1,0 +1,23 @@
+{
+  "name": "gravetide",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GRAVETIDE — a Pirate Gothic × Deep-Sea Horror multiplayer sandbox RPG (top-down).",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/src/main.ts",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server/src/main.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test tests/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm test",
+    "assets:fetch": "node tools/fetch-assets.ts",
+    "bot": "node --disable-warning=ExperimentalWarning tools/bot.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,955 @@
+// Strictly top-down renderer (Canvas 2D). Layer order:
+// ocean → currents & wind streaks → shallows/islands → ports & props → wakes → loot → ships →
+// projectiles & particles → darkness/light pass → fog/rain → screen-space overlays.
+// Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
+
+import { FACTIONS } from '../../../shared/src/data/factions.ts';
+import { GUNS, SHIP_CLASSES, AMMO } from '../../../shared/src/data/ships.ts';
+import type { ShipClassId } from '../../../shared/src/data/ships.ts';
+import { nightFactor } from '../../../shared/src/constants.ts';
+import { clamp, headingVec } from '../../../shared/src/math.ts';
+import type { IslandData, ShipInfo } from '../../../shared/src/protocol.ts';
+import { SF } from '../../../shared/src/protocol.ts';
+import { fbm } from '../../../shared/src/rng.ts';
+import type { SailState } from '../../../shared/src/sim/sailing.ts';
+import { REGIONS } from '../../../shared/src/world/regions.ts';
+import type { IslandBiome } from '../../../shared/src/world/regions.ts';
+import { pattern, sprite } from '../assets.ts';
+import type { ClientState, RemoteShip } from '../state.ts';
+import { Fx } from './fx.ts';
+
+const BIOME_TINT: Record<IslandBiome, string> = {
+  temperate: 'rgba(40,52,40,0.35)',
+  mossy: 'rgba(38,58,48,0.4)',
+  volcanic: 'rgba(40,18,14,0.55)',
+  ice: 'rgba(170,185,200,0.45)',
+  ruins: 'rgba(40,60,62,0.45)',
+  bone: 'rgba(150,145,130,0.4)',
+  barren: 'rgba(70,64,55,0.4)',
+};
+const BIOME_BASE: Record<IslandBiome, string> = {
+  temperate: '#2a3026', mossy: '#26322b', volcanic: '#1d1614', ice: '#8d98a3', ruins: '#2a3131', bone: '#6f6a5f', barren: '#3b372f',
+};
+
+interface DrawShip {
+  id: number;
+  x: number;
+  y: number;
+  h: number;
+  spd: number;
+  sail: number;
+  hull: number;
+  sails: number;
+  flags: number;
+  classId: ShipClassId;
+  info: ShipInfo | null;
+  own: boolean;
+  sinkT: number;
+}
+
+export class Renderer {
+  readonly canvas: HTMLCanvasElement;
+  readonly g: CanvasRenderingContext2D;
+  readonly fx = new Fx();
+  w = 0;
+  h = 0;
+  dpr = 1;
+  camX = 0;
+  camY = 0;
+  zoom = 2.6; // px per meter
+  targetZoom = 2.6;
+  time = 0;
+  mouseX = 0;
+  mouseY = 0;
+  private dark: HTMLCanvasElement;
+  private dg: CanvasRenderingContext2D;
+  private noise: HTMLCanvasElement;
+  private noisePattern: CanvasPattern | null = null;
+  private rain: { x: number; y: number; s: number }[] = [];
+  private streaks: { x: number; y: number; t: number }[] = [];
+  private lightning = 0;
+  private nextLightning = 5;
+  private sinkStarts = new Map<number, number>();
+  private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
+
+  constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas;
+    this.g = canvas.getContext('2d', { alpha: false })!;
+    this.dark = document.createElement('canvas');
+    this.dg = this.dark.getContext('2d')!;
+    this.noise = this.makeNoise(256);
+    this.resize();
+    addEventListener('resize', () => this.resize());
+    for (let i = 0; i < 260; i++) this.rain.push({ x: Math.random(), y: Math.random(), s: 0.6 + Math.random() * 0.8 });
+    for (let i = 0; i < 70; i++) this.streaks.push({ x: Math.random(), y: Math.random(), t: Math.random() * 4 });
+  }
+
+  resize(): void {
+    this.dpr = Math.min(2, devicePixelRatio || 1);
+    this.w = innerWidth;
+    this.h = innerHeight;
+    this.canvas.width = Math.round(this.w * this.dpr);
+    this.canvas.height = Math.round(this.h * this.dpr);
+    this.dark.width = Math.round(this.w / 2);
+    this.dark.height = Math.round(this.h / 2);
+  }
+
+  private makeNoise(size: number): HTMLCanvasElement {
+    // Tileable fog/wave noise generated once (fallback when the ocean texture is unavailable).
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d')!;
+    const img = g.createImageData(size, size);
+    const period = 8;
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const u = (x / size) * period, v = (y / size) * period;
+        // Tile by blending four offset samples.
+        const fx = x / size, fy = y / size;
+        const n =
+          fbm(u, v, 7) * (1 - fx) * (1 - fy) + fbm(u - period, v, 7) * fx * (1 - fy) + fbm(u, v - period, 7) * (1 - fx) * fy + fbm(u - period, v - period, 7) * fx * fy;
+        const i = (y * size + x) * 4;
+        const val = Math.round(n * 255);
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = val;
+        img.data[i + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  }
+
+  sx(x: number): number {
+    return (x - this.camX) * this.zoom + this.w / 2;
+  }
+  sy(y: number): number {
+    return (y - this.camY) * this.zoom + this.h / 2;
+  }
+  toWorld(px: number, py: number): { x: number; y: number } {
+    return { x: (px - this.w / 2) / this.zoom + this.camX, y: (py - this.h / 2) / this.zoom + this.camY };
+  }
+
+  /** Main frame. */
+  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null }): void {
+    this.time += dt;
+    this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
+    const g = this.g;
+    if (own) {
+      // Look slightly ahead of the ship.
+      const v = headingVec(own.heading);
+      const lead = clamp(own.speed * 5, 0, 90);
+      this.camX += (own.x + v.x * lead - this.camX) * Math.min(1, dt * 4);
+      this.camY += (own.y + v.y * lead - this.camY) * Math.min(1, dt * 4);
+    }
+    this.fx.update(dt);
+    const shake = this.fx.shake;
+    const shx = shake ? (Math.random() - 0.5) * shake * 8 : 0, shy = shake ? (Math.random() - 0.5) * shake * 8 : 0;
+    g.setTransform(this.dpr, 0, 0, this.dpr, shx * this.dpr, shy * this.dpr);
+
+    const night = nightFactor(state.estServerTime());
+    const region = REGIONS[state.region];
+    this.drawOcean(state, region.waterTint);
+    this.drawCurrents(state);
+    const islands = this.visibleIslands(state);
+    for (const is of islands) this.drawShallows(is);
+    for (const is of islands) this.drawIsland(is, state);
+    this.drawPorts(state);
+
+    // Ships.
+    const ships: DrawShip[] = [];
+    for (const s of state.ships.values()) ships.push(this.toDraw(s));
+    if (own && state.you && state.self) {
+      ships.push({
+        id: state.entityId, x: own.x, y: own.y, h: own.heading, spd: own.speed, sail: own.sail, hull: state.you.hull / state.you.hullMax,
+        sails: state.you.sails / state.you.sailsMax, flags: state.you.flags, classId: state.self.loadout.classId, info: null, own: true, sinkT: 0,
+      });
+    }
+    for (const s of ships) this.updateWake(s, dt);
+    this.drawWakes();
+    this.drawLoot(state);
+    for (const s of ships) this.drawShip(s, state);
+    this.drawBalls();
+    this.drawParticles(false);
+
+    this.drawLighting(state, ships, night);
+    this.drawParticles(true);
+    this.drawWeather(state, dt);
+
+    // Overlays (not affected by darkness).
+    if (own && state.you && state.self) this.drawAim(state, own, aim);
+    for (const s of ships) if (!s.own) this.drawLabel(s, state, aim.boardTarget === s.id);
+    this.drawTexts();
+    this.drawVignette(state.fog, night);
+    if (this.fx.flash > 0) {
+      g.fillStyle = `rgba(210,225,255,${this.fx.flash * 0.5})`;
+      g.fillRect(0, 0, this.w, this.h);
+    }
+  }
+
+  // ------------------------------------------------------------------ ocean
+
+  private drawOcean(state: ClientState, tint: string): void {
+    const g = this.g;
+    g.fillStyle = tint;
+    g.fillRect(-20, -20, this.w + 40, this.h + 40);
+    const tex = pattern(g, 'tex.ocean');
+    const wind = headingVec(state.wind[0]);
+    const tile = 240; // meters per texture tile
+    if (tex) {
+      const s = sprite('tex.ocean')!;
+      const k = (tile * this.zoom) / s.img.naturalWidth;
+      const drift = this.time * 1.6;
+      for (const [alpha, scale, dx, dy] of [
+        [0.55, 1, wind.x * drift, wind.y * drift],
+        [0.22, 0.63, -wind.y * drift * 0.7 + 90, wind.x * drift * 0.7 + 40],
+      ] as const) {
+        const m = new DOMMatrix().translate(this.sx(dx), this.sy(dy)).scale(k * scale);
+        tex.setTransform(m);
+        g.globalAlpha = alpha;
+        g.fillStyle = tex;
+        g.fillRect(0, 0, this.w, this.h);
+      }
+      g.globalAlpha = 1;
+    } else {
+      this.noisePattern ??= g.createPattern(this.noise, 'repeat');
+      const p = this.noisePattern!;
+      const k = (tile * this.zoom) / 256;
+      const drift = this.time * 2;
+      p.setTransform(new DOMMatrix().translate(this.sx(wind.x * drift), this.sy(wind.y * drift)).scale(k));
+      g.globalAlpha = 0.07;
+      g.fillStyle = p;
+      g.globalCompositeOperation = 'screen';
+      g.fillRect(0, 0, this.w, this.h);
+      g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = 1;
+    }
+    // Moonlit sheen band that slowly moves.
+    const grd = g.createLinearGradient(0, 0, this.w, this.h);
+    const t = (Math.sin(this.time * 0.05) + 1) / 2;
+    grd.addColorStop(clamp(t - 0.25, 0, 1), 'rgba(120,150,180,0)');
+    grd.addColorStop(t, 'rgba(120,150,180,0.05)');
+    grd.addColorStop(clamp(t + 0.25, 0, 1), 'rgba(120,150,180,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, this.w, this.h);
+
+    // Wind streaks: short pale dashes drifting downwind (readability of wind direction).
+    g.strokeStyle = 'rgba(200,215,225,0.10)';
+    g.lineWidth = 1;
+    const len = 10 + state.wind[1] * 16;
+    for (const st of this.streaks) {
+      st.t += 0.016;
+      const life = (st.t % 4) / 4;
+      const px = ((st.x * this.w + wind.x * life * 180) % this.w + this.w) % this.w;
+      const py = ((st.y * this.h + wind.y * life * 180) % this.h + this.h) % this.h;
+      g.globalAlpha = Math.sin(life * Math.PI) * clamp(state.wind[1], 0.2, 1);
+      g.beginPath();
+      g.moveTo(px, py);
+      g.lineTo(px + wind.x * len, py + wind.y * len);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+  }
+
+  private drawCurrents(state: ClientState): void {
+    const g = this.g;
+    const navigator = state.self?.captain === 'navigator';
+    g.save();
+    g.lineCap = 'butt';
+    for (const c of state.currents) {
+      g.beginPath();
+      for (let i = 0; i < c.points.length; i++) {
+        const [x, y] = c.points[i];
+        if (i === 0) g.moveTo(this.sx(x), this.sy(y));
+        else g.lineTo(this.sx(x), this.sy(y));
+      }
+      g.setLineDash([14 * this.zoom, 60 * this.zoom]);
+      g.lineDashOffset = -this.time * c.strength * 4 * this.zoom;
+      g.strokeStyle = navigator ? 'rgba(140,200,220,0.2)' : 'rgba(140,180,200,0.06)';
+      g.lineWidth = clamp(c.width * 0.004 * this.zoom, 1, 6);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  // ------------------------------------------------------------------ islands
+
+  private visibleIslands(state: ClientState): IslandData[] {
+    const out: IslandData[] = [];
+    const margin = 200;
+    const hw = this.w / 2 / this.zoom + margin, hh = this.h / 2 / this.zoom + margin;
+    for (const is of state.islands.values()) {
+      if (Math.abs(is.x - this.camX) - is.r > hw || Math.abs(is.y - this.camY) - is.r > hh) continue;
+      out.push(is);
+    }
+    return out;
+  }
+
+  private path(poly: number[], scale = 1, cx = 0, cy = 0): void {
+    const g = this.g;
+    g.beginPath();
+    for (let i = 0; i < poly.length; i += 2) {
+      const x = cx + (poly[i] - cx) * scale, y = cy + (poly[i + 1] - cy) * scale;
+      if (i === 0) g.moveTo(this.sx(x), this.sy(y));
+      else g.lineTo(this.sx(x), this.sy(y));
+    }
+    g.closePath();
+  }
+
+  private drawShallows(is: IslandData): void {
+    const g = this.g;
+    g.save();
+    g.lineJoin = 'round';
+    this.path(is.poly);
+    const strange = REGIONS[is.region].strangeness;
+    const base = strange > 0.4 ? '20,70,72' : '40,70,80';
+    for (const [w, a] of [[110, 0.05], [60, 0.07], [28, 0.1]] as const) {
+      g.lineWidth = w * this.zoom;
+      g.strokeStyle = `rgba(${base},${a})`;
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  private drawIsland(is: IslandData, state: ClientState): void {
+    const g = this.g;
+    g.save();
+    g.lineJoin = 'round';
+    // Sand/rock rim.
+    this.path(is.poly);
+    const sand = pattern(g, 'tex.sand');
+    if (sand) {
+      sand.setTransform(new DOMMatrix().translate(this.sx(0), this.sy(0)).scale(this.zoom * 0.12));
+      g.strokeStyle = sand;
+    } else g.strokeStyle = is.biome === 'volcanic' ? '#241c19' : is.biome === 'ice' ? '#9aa4ad' : '#4d463b';
+    g.lineWidth = 16 * this.zoom;
+    g.stroke();
+    // Land.
+    const land = pattern(g, 'tex.land');
+    if (land) {
+      land.setTransform(new DOMMatrix().translate(this.sx(is.id * 137), this.sy(is.id * 91)).scale(this.zoom * 0.45));
+      g.fillStyle = land;
+    } else g.fillStyle = BIOME_BASE[is.biome];
+    g.fill();
+    g.fillStyle = BIOME_TINT[is.biome];
+    g.fill();
+    // Elevation shading: concentric darker cores.
+    for (const [sc, a] of [[0.72, 0.18], [0.45, 0.2]] as const) {
+      this.path(is.poly, sc, is.x, is.y);
+      g.fillStyle = is.biome === 'ice' ? `rgba(230,238,245,${a * 0.8})` : `rgba(8,10,8,${a})`;
+      g.fill();
+    }
+    // Surf line.
+    this.path(is.poly);
+    g.setLineDash([3 * this.zoom, 9 * this.zoom]);
+    g.lineDashOffset = this.time * 4 * this.zoom;
+    g.strokeStyle = 'rgba(210,220,225,0.22)';
+    g.lineWidth = Math.max(1, 2.2 * this.zoom);
+    g.stroke();
+    g.setLineDash([]);
+    // Name label when zoomed out enough to matter or discovered.
+    const known = state.discovered.has(is.id);
+    if (known && is.r > 180 && this.zoom < 2.2) {
+      g.font = `italic ${Math.round(clamp(is.r * this.zoom * 0.08, 11, 18))}px "Cormorant Garamond", Georgia, serif`;
+      g.fillStyle = 'rgba(216,210,196,0.55)';
+      g.textAlign = 'center';
+      g.fillText(is.name, this.sx(is.x), this.sy(is.y));
+    }
+    g.restore();
+    this.drawFeatures(is);
+  }
+
+  private featurePoint(is: IslandData, salt: number, inset: number): { x: number; y: number } {
+    const n = is.poly.length / 2;
+    const i = ((is.id * 7 + salt * 13) % n) * 2;
+    const px = is.poly[i], py = is.poly[i + 1];
+    return { x: px + (is.x - px) * inset, y: py + (is.y - py) * inset };
+  }
+
+  private drawFeatures(is: IslandData): void {
+    const g = this.g;
+    for (const f of is.features) {
+      if (f === 'lighthouse') {
+        const p = this.featurePoint(is, 1, 0.04);
+        const spr = sprite('prop.lighthouse');
+        const size = 70 * this.zoom;
+        if (spr) g.drawImage(spr.img, this.sx(p.x) - size / 2, this.sy(p.y) - size / 2, size, size);
+        else {
+          g.fillStyle = '#5c5a55';
+          g.beginPath();
+          g.arc(this.sx(p.x), this.sy(p.y), 6 * this.zoom, 0, Math.PI * 2);
+          g.fill();
+        }
+      } else if (f === 'wreck') {
+        const p = this.featurePoint(is, 2, -0.08);
+        const spr = sprite('prop.wreckage');
+        const size = 60 * this.zoom;
+        if (spr) {
+          g.globalAlpha = 0.85;
+          g.drawImage(spr.img, this.sx(p.x) - size / 2, this.sy(p.y) - size / 2, size, size);
+          g.globalAlpha = 1;
+        }
+      } else if (f === 'ruins' || f === 'shrine') {
+        const p = this.featurePoint(is, f === 'ruins' ? 3 : 4, 0.3);
+        g.save();
+        g.translate(this.sx(p.x), this.sy(p.y));
+        g.strokeStyle = 'rgba(160,160,150,0.45)';
+        g.lineWidth = Math.max(1, 1.5 * this.zoom);
+        for (let k = 0; k < 5; k++) {
+          const a = (k / 5) * Math.PI * 2 + is.id;
+          g.strokeRect(Math.sin(a) * 12 * this.zoom - 3 * this.zoom, -Math.cos(a) * 12 * this.zoom - 3 * this.zoom, 6 * this.zoom, 6 * this.zoom);
+        }
+        g.restore();
+      }
+    }
+  }
+
+  private drawPorts(state: ClientState): void {
+    const g = this.g;
+    const spr = sprite('prop.port_town');
+    for (const p of state.ports) {
+      if (Math.abs(p.x - this.camX) * this.zoom > this.w || Math.abs(p.y - this.camY) * this.zoom > this.h) continue;
+      const island = [...state.islands.values()].find((is) => is.portId === p.id);
+      if (!island) continue;
+      // Town sits on the coast facing the anchor.
+      const dx = island.x - p.x, dy = island.y - p.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const tx = p.x + (dx / d) * 150, ty = p.y + (dy / d) * 150;
+      const ang = Math.atan2(-dx, dy); // docks toward the sea
+      const size = (150 + p.size * 70) * this.zoom;
+      g.save();
+      g.translate(this.sx(tx), this.sy(ty));
+      g.rotate(ang);
+      if (spr) g.drawImage(spr.img, -size / 2, -size / 2, size, size);
+      else {
+        g.fillStyle = '#26272a';
+        g.fillRect(-size * 0.3, -size * 0.3, size * 0.6, size * 0.5);
+      }
+      // Piers.
+      g.fillStyle = '#3a2e22';
+      for (let k = -1; k <= 1; k++) g.fillRect(k * size * 0.18 - 3 * this.zoom, size * 0.15, 6 * this.zoom, size * 0.45);
+      g.restore();
+      // Name & flag.
+      g.font = `${Math.round(clamp(14 * this.zoom, 12, 22))}px "IM Fell English SC", Georgia, serif`;
+      g.textAlign = 'center';
+      g.fillStyle = 'rgba(0,0,0,0.6)';
+      g.fillText(p.name, this.sx(p.x) + 1, this.sy(p.y) - 40 * this.zoom + 1);
+      g.fillStyle = FACTIONS[p.faction].lantern;
+      g.fillText(p.name, this.sx(p.x), this.sy(p.y) - 40 * this.zoom);
+      // Docking ring.
+      g.strokeStyle = 'rgba(176,141,87,0.25)';
+      g.setLineDash([4, 6]);
+      g.beginPath();
+      g.arc(this.sx(p.x), this.sy(p.y), 420 * this.zoom, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
+  }
+
+  // ------------------------------------------------------------------ ships
+
+  private toDraw(s: RemoteShip): DrawShip {
+    const c = s.cur;
+    const classId = s.info?.classId ?? 'sloop';
+    let sinkT = 0;
+    if (c.flags & SF.SINKING) {
+      if (!this.sinkStarts.has(s.id)) this.sinkStarts.set(s.id, this.time);
+      sinkT = this.time - (this.sinkStarts.get(s.id) ?? this.time);
+    }
+    return { id: s.id, x: c.x, y: c.y, h: c.h, spd: c.spd, sail: c.sail, hull: c.hull, sails: c.sails, flags: c.flags, classId, info: s.info, own: false, sinkT };
+  }
+
+  private updateWake(s: DrawShip, dt: number): void {
+    let w = this.wakes.get(s.id);
+    if (!w) this.wakes.set(s.id, (w = []));
+    const last = w[w.length - 1];
+    const cls = SHIP_CLASSES[s.classId];
+    if (s.spd > 0.8 && (!last || Math.hypot(last.x - s.x, last.y - s.y) > 4)) {
+      const back = headingVec(s.h + Math.PI);
+      w.push({ x: s.x + back.x * cls.length * 0.45, y: s.y + back.y * cls.length * 0.45, t: this.time, w: cls.beam * (0.6 + s.spd / 20) });
+    }
+    while (w.length && this.time - w[0].t > 7) w.shift();
+    void dt;
+  }
+
+  private drawWakes(): void {
+    const g = this.g;
+    g.save();
+    g.lineCap = 'round';
+    for (const [id, w] of this.wakes) {
+      if (w.length < 2) {
+        if (!w.length) this.wakes.delete(id);
+        continue;
+      }
+      for (let i = 1; i < w.length; i++) {
+        const a = w[i - 1], b = w[i];
+        const age = this.time - b.t;
+        const alpha = clamp(0.16 * (1 - age / 7), 0, 0.16);
+        const spread = b.w * (1 + age * 0.35);
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len, ny = dx / len;
+        g.strokeStyle = `rgba(200,212,220,${alpha})`;
+        g.lineWidth = Math.max(1, 1.6 * this.zoom * (1 - age / 8));
+        for (const side of [-1, 1]) {
+          g.beginPath();
+          g.moveTo(this.sx(a.x + nx * spread * side * 0.5 * (1 - 0.1)), this.sy(a.y + ny * spread * side * 0.5 * (1 - 0.1)));
+          g.lineTo(this.sx(b.x + nx * spread * side * 0.5), this.sy(b.y + ny * spread * side * 0.5));
+          g.stroke();
+        }
+        g.strokeStyle = `rgba(160,180,190,${alpha * 0.5})`;
+        g.lineWidth = Math.max(1, b.w * 0.5 * this.zoom * (1 - age / 8));
+        g.beginPath();
+        g.moveTo(this.sx(a.x), this.sy(a.y));
+        g.lineTo(this.sx(b.x), this.sy(b.y));
+        g.stroke();
+      }
+    }
+    g.restore();
+  }
+
+  private drawLoot(state: ClientState): void {
+    const g = this.g;
+    const spr = sprite('prop.wreckage');
+    for (const l of state.loot.values()) {
+      const size = 38 * this.zoom;
+      const bob = Math.sin(this.time * 1.5 + l.x) * 0.1;
+      g.save();
+      g.translate(this.sx(l.x), this.sy(l.y));
+      g.rotate(bob);
+      if (spr) g.drawImage(spr.img, -size / 2, -size / 2, size, size);
+      else {
+        g.fillStyle = '#6b5436';
+        for (let k = 0; k < 5; k++) g.fillRect(Math.sin(k * 2.1) * size * 0.3, Math.cos(k * 1.7) * size * 0.3, size * 0.18, size * 0.12);
+      }
+      g.restore();
+      g.fillStyle = 'rgba(224,184,98,0.8)';
+      g.font = '11px Inter, sans-serif';
+      g.textAlign = 'center';
+      g.fillText(`salvage ~${l.value}`, this.sx(l.x), this.sy(l.y) + size * 0.7);
+    }
+  }
+
+  private drawShip(s: DrawShip, state: ClientState): void {
+    const g = this.g;
+    const cls = SHIP_CLASSES[s.classId];
+    const len = cls.length * this.zoom, beam = cls.beam * this.zoom;
+    const x = this.sx(s.x), y = this.sy(s.y);
+    if (x < -len * 2 || y < -len * 2 || x > this.w + len * 2 || y > this.h + len * 2) return;
+    const hidden = (s.flags & SF.HIDDEN) !== 0;
+    const sinking = s.sinkT > 0 || (s.flags & SF.SINKING) !== 0;
+    const sinkF = sinking ? clamp(s.sinkT / 6, 0, 1) : 0;
+    g.save();
+    g.translate(x, y);
+    // Engine shadow: offset toward the moon-lit side (south-east), softened.
+    g.save();
+    g.rotate(s.h);
+    g.fillStyle = `rgba(0,0,0,${0.35 * (1 - sinkF)})`;
+    g.beginPath();
+    g.ellipse(beam * 0.35, beam * 0.45, beam * 0.62, len * 0.5, 0, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+
+    g.rotate(s.h + (sinking ? sinkF * 0.35 : 0));
+    const scale = 1 - sinkF * 0.25;
+    g.scale(scale, scale);
+    g.globalAlpha = (hidden ? 0.45 : 1) * (1 - sinkF * 0.85);
+    const spriteId = cls.sprite;
+    const spr = sprite(spriteId);
+    if (spr) {
+      // Scale so the drawn subject matches hull length.
+      const imgH = len / spr.extentY;
+      const imgW = imgH * (spr.img.naturalWidth / spr.img.naturalHeight);
+      g.drawImage(spr.img, -imgW * spr.cx, -imgH * spr.cy, imgW, imgH);
+    } else {
+      this.proceduralShip(cls.id, len, beam, s.sail, s.sails);
+    }
+    // Sail damage tint (torn canvas reads as darker patches).
+    if (s.sails < 0.6) {
+      g.fillStyle = `rgba(10,10,10,${(0.6 - s.sails) * 0.5})`;
+      g.fillRect(-beam * 0.9, -len * 0.3, beam * 1.8, len * 0.5);
+    }
+    g.restore();
+
+    // Damage smoke and fire.
+    if (s.hull < 0.5 && Math.random() < (0.5 - s.hull) * 0.5) this.fx.smoke(s.x + (Math.random() - 0.5) * cls.beam, s.y + (Math.random() - 0.5) * cls.length * 0.6, 1, 5, true);
+    if ((s.flags & SF.FIRE) && Math.random() < 0.6) {
+      this.fx.add({ kind: 'fire', x: s.x + (Math.random() - 0.5) * cls.beam, y: s.y + (Math.random() - 0.5) * cls.length * 0.5, vy: -2, life: 0.6, size: 3, grow: 4, color: '#ff8a3c' });
+      this.fx.light(s.x, s.y, 60, 'rgba(255,140,60,1)', 0.5, 0.1);
+    }
+    if (s.flags & SF.BOARDING) {
+      // Grapple lines to the ship we're locked with.
+      for (const o of state.ships.values()) {
+        if (o.id === s.id || !(o.cur.flags & SF.BOARDING)) continue;
+        if (Math.hypot(o.cur.x - s.x, o.cur.y - s.y) > 60) continue;
+        g.strokeStyle = 'rgba(180,160,120,0.7)';
+        g.lineWidth = 1;
+        for (let k = -1; k <= 1; k++) {
+          g.beginPath();
+          g.moveTo(x + k * 4, y + k * 4);
+          g.lineTo(this.sx(o.cur.x) - k * 4, this.sy(o.cur.y) - k * 4);
+          g.stroke();
+        }
+      }
+    }
+  }
+
+  private proceduralShip(id: ShipClassId, len: number, beam: number, sail: number, sailHp: number): void {
+    const g = this.g;
+    const ghost = id === 'ghost_ship';
+    // Hull.
+    g.beginPath();
+    g.moveTo(0, -len / 2);
+    g.bezierCurveTo(beam * 0.55, -len * 0.3, beam * 0.55, len * 0.3, beam * 0.4, len / 2);
+    g.lineTo(-beam * 0.4, len / 2);
+    g.bezierCurveTo(-beam * 0.55, len * 0.3, -beam * 0.55, -len * 0.3, 0, -len / 2);
+    g.closePath();
+    g.fillStyle = ghost ? '#141a1a' : '#241b14';
+    g.fill();
+    g.strokeStyle = ghost ? 'rgba(46,230,200,0.5)' : '#0a0806';
+    g.lineWidth = 1.5;
+    g.stroke();
+    // Deck.
+    g.fillStyle = ghost ? '#1d2322' : '#4a3b2b';
+    g.beginPath();
+    g.ellipse(0, 0, beam * 0.34, len * 0.42, 0, 0, Math.PI * 2);
+    g.fill();
+    // Masts & sails.
+    const cls = SHIP_CLASSES[id];
+    const masts = cls.tier >= 3 ? 3 : cls.tier === 2 ? 2 : 1;
+    for (let m = 0; m < masts; m++) {
+      const my = -len * 0.25 + (m * len * 0.5) / Math.max(1, masts - 1 || 1) - (masts === 1 ? -len * 0.05 : 0);
+      const w = beam * (0.9 + sail * 0.6);
+      g.fillStyle = `rgba(${ghost ? '120,130,125' : '190,184,165'},${0.35 + sail * 0.55 * (0.4 + sailHp * 0.6)})`;
+      if (cls.rig === 'fore_aft') {
+        g.beginPath();
+        g.moveTo(0, my - len * 0.08);
+        g.lineTo(w * 0.5, my + len * 0.12);
+        g.lineTo(0, my + len * 0.14);
+        g.fill();
+      } else {
+        g.fillRect(-w / 2, my - 2, w, Math.max(2, len * 0.05 * (0.5 + sail)));
+      }
+      g.fillStyle = '#15100b';
+      g.beginPath();
+      g.arc(0, my, Math.max(1.5, beam * 0.08), 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  private drawBalls(): void {
+    const g = this.g;
+    for (const b of this.fx.balls) {
+      if (b.delay > 0) continue;
+      const r = Math.max(1.4, (b.ammo === 'grape' ? 0.5 : 0.9) * this.zoom);
+      if (b.trail.length > 1) {
+        g.strokeStyle = 'rgba(40,40,40,0.35)';
+        g.lineWidth = r;
+        g.beginPath();
+        g.moveTo(this.sx(b.trail[0][0]), this.sy(b.trail[0][1]));
+        for (const [tx, ty] of b.trail) g.lineTo(this.sx(tx), this.sy(ty));
+        g.stroke();
+      }
+      g.fillStyle = b.ammo === 'chain' ? '#3b3b3b' : '#111';
+      g.beginPath();
+      g.arc(this.sx(b.x), this.sy(b.y), r, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  private drawParticles(emissive: boolean): void {
+    const g = this.g;
+    for (const p of this.fx.particles) {
+      const isEm = p.kind === 'flash' || p.kind === 'fire' || p.kind === 'spark' || p.kind === 'ring';
+      if (isEm !== emissive || p.kind === 'text') continue;
+      const a = 1 - p.t / p.life;
+      const x = this.sx(p.x), y = this.sy(p.y), s = Math.max(0.5, p.size * this.zoom);
+      switch (p.kind) {
+        case 'smoke':
+          g.fillStyle = p.color;
+          g.globalAlpha = a * a * 0.2;
+          g.beginPath();
+          g.arc(x, y, s, 0, Math.PI * 2);
+          g.fill();
+          break;
+        case 'splash':
+          g.strokeStyle = p.color;
+          g.globalAlpha = a * 0.7;
+          g.lineWidth = Math.max(1, this.zoom);
+          g.beginPath();
+          g.arc(x, y, s, 0, Math.PI * 2);
+          g.stroke();
+          break;
+        case 'foam':
+        case 'splinter':
+          g.fillStyle = p.color;
+          g.globalAlpha = a;
+          g.fillRect(x - s / 2, y - s / 2, s, s);
+          break;
+        case 'glow':
+          g.fillStyle = p.color;
+          g.globalAlpha = a * 0.8;
+          g.beginPath();
+          g.arc(x, y, s, 0, Math.PI * 2);
+          g.fill();
+          break;
+        case 'flash':
+        case 'fire':
+        case 'spark': {
+          g.globalCompositeOperation = 'lighter';
+          const grd = g.createRadialGradient(x, y, 0, x, y, s);
+          grd.addColorStop(0, p.color);
+          grd.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = grd;
+          g.globalAlpha = a;
+          g.beginPath();
+          g.arc(x, y, s, 0, Math.PI * 2);
+          g.fill();
+          g.globalCompositeOperation = 'source-over';
+          break;
+        }
+        case 'ring':
+          g.strokeStyle = p.color;
+          g.globalAlpha = a * 0.6;
+          g.lineWidth = 2;
+          g.beginPath();
+          g.arc(x, y, s, 0, Math.PI * 2);
+          g.stroke();
+          break;
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  private drawTexts(): void {
+    const g = this.g;
+    g.textAlign = 'center';
+    for (const p of this.fx.particles) {
+      if (p.kind !== 'text' || !p.text) continue;
+      const a = 1 - p.t / p.life;
+      g.globalAlpha = a;
+      g.font = `600 ${p.size}px Inter, sans-serif`;
+      g.fillStyle = '#000';
+      g.fillText(p.text, this.sx(p.x) + 1, this.sy(p.y) + 1);
+      g.fillStyle = p.color;
+      g.fillText(p.text, this.sx(p.x), this.sy(p.y));
+    }
+    g.globalAlpha = 1;
+  }
+
+  // ------------------------------------------------------------------ light
+
+  private drawLighting(state: ClientState, ships: DrawShip[], night: number): void {
+    const dg = this.dg;
+    const W = this.dark.width, H = this.dark.height;
+    const k = 0.5; // dark canvas is half resolution
+    const darkness = 0.18 + night * 0.5 + (state.weather === 'storm' || state.weather === 'black_storm' ? 0.12 : 0);
+    dg.globalCompositeOperation = 'source-over';
+    dg.clearRect(0, 0, W, H);
+    dg.fillStyle = `rgba(3,6,14,${darkness})`;
+    dg.fillRect(0, 0, W, H);
+    dg.globalCompositeOperation = 'destination-out';
+    const hole = (wx: number, wy: number, r: number, strength: number) => {
+      const x = this.sx(wx) * k, y = this.sy(wy) * k, rr = r * this.zoom * k;
+      if (x < -rr || y < -rr || x > W + rr || y > H + rr) return;
+      const grd = dg.createRadialGradient(x, y, 0, x, y, rr);
+      grd.addColorStop(0, `rgba(0,0,0,${strength})`);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      dg.fillStyle = grd;
+      dg.beginPath();
+      dg.arc(x, y, rr, 0, Math.PI * 2);
+      dg.fill();
+    };
+    const glows: { x: number; y: number; r: number; color: string; a: number }[] = [];
+    for (const s of ships) {
+      if (s.flags & SF.LANTERNS_OUT || s.sinkT > 0) continue;
+      const cls = SHIP_CLASSES[s.classId];
+      const back = headingVec(s.h + Math.PI);
+      const lx = s.x + back.x * cls.length * 0.4, ly = s.y + back.y * cls.length * 0.4;
+      hole(lx, ly, 55 + cls.length, 0.75);
+      if (s.own) hole(s.x, s.y, 140, 0.35);
+      const fac = s.own ? '#f2b35a' : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].lantern : '#f2b35a';
+      glows.push({ x: lx, y: ly, r: 16 + cls.length * 0.4, color: fac, a: 0.55 });
+    }
+    for (const p of state.ports) {
+      hole(p.x, p.y, 520, 0.8);
+      glows.push({ x: p.x, y: p.y, r: 90, color: FACTIONS[p.faction].lantern, a: 0.28 });
+    }
+    for (const is of state.islands.values()) {
+      if (!is.features.includes('lighthouse')) continue;
+      const p = this.featurePoint(is, 1, 0.04);
+      hole(p.x, p.y, 260, 0.85);
+      glows.push({ x: p.x, y: p.y, r: 40, color: '#f5c77a', a: 0.6 });
+      // Rotating beam.
+      const a = this.time * 0.6 + is.id;
+      const v = headingVec(a);
+      hole(p.x + v.x * 500, p.y + v.y * 500, 260, 0.35);
+      if (REGIONS[is.region].strangeness > 0.3 && is.features.includes('shrine')) glows.push({ x: is.x, y: is.y, r: 70, color: '#2ee6c8', a: 0.25 });
+    }
+    for (const l of this.fx.lights) {
+      const f = 1 - l.t / l.life;
+      hole(l.x, l.y, l.r, l.intensity * f);
+      glows.push({ x: l.x, y: l.y, r: l.r * 0.4, color: l.color, a: 0.5 * l.intensity * f });
+    }
+    dg.globalCompositeOperation = 'source-over';
+    const g = this.g;
+    g.drawImage(this.dark, 0, 0, this.w, this.h);
+    // Additive lantern glow (warm against cold water).
+    g.globalCompositeOperation = 'lighter';
+    for (const gl of glows) {
+      const x = this.sx(gl.x), y = this.sy(gl.y), r = gl.r * this.zoom;
+      if (x < -r || y < -r || x > this.w + r || y > this.h + r) continue;
+      const grd = g.createRadialGradient(x, y, 0, x, y, r);
+      grd.addColorStop(0, hexA(gl.color, gl.a * (0.4 + night * 0.6)));
+      grd.addColorStop(1, hexA(gl.color, 0));
+      g.fillStyle = grd;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalCompositeOperation = 'source-over';
+    // Cold moonlight grade.
+    g.fillStyle = `rgba(40,70,110,${0.04 + night * 0.05})`;
+    g.globalCompositeOperation = 'soft-light';
+    g.fillRect(0, 0, this.w, this.h);
+    g.globalCompositeOperation = 'source-over';
+  }
+
+  private drawWeather(state: ClientState, dt: number): void {
+    const g = this.g;
+    // Fog: noise layer drifting with the wind.
+    if (state.fog > 0.08) {
+      this.noisePattern ??= g.createPattern(this.noise, 'repeat');
+      const p = this.noisePattern!;
+      const wind = headingVec(state.wind[0]);
+      const drift = this.time * 6;
+      p.setTransform(new DOMMatrix().translate(this.sx(wind.x * drift), this.sy(wind.y * drift)).scale((900 * this.zoom) / 256));
+      g.fillStyle = p;
+      g.globalAlpha = state.fog * 0.22;
+      g.globalCompositeOperation = 'screen';
+      g.fillRect(0, 0, this.w, this.h);
+      g.globalCompositeOperation = 'source-over';
+      g.fillStyle = `rgba(70,82,92,${state.fog * 0.16})`;
+      g.fillRect(0, 0, this.w, this.h);
+      g.globalAlpha = 1;
+    }
+    const raining = state.weather === 'rain' || state.weather === 'storm' || state.weather === 'black_storm';
+    if (raining) {
+      const heavy = state.weather !== 'rain';
+      const wind = headingVec(state.wind[0]);
+      g.strokeStyle = state.weather === 'black_storm' ? 'rgba(120,200,190,0.25)' : 'rgba(180,195,210,0.28)';
+      g.lineWidth = 1;
+      g.beginPath();
+      const n = heavy ? this.rain.length : this.rain.length / 2;
+      for (let i = 0; i < n; i++) {
+        const r = this.rain[i];
+        r.y += dt * r.s * 1.6;
+        r.x += dt * wind.x * 0.3;
+        if (r.y > 1) r.y -= 1;
+        if (r.x > 1) r.x -= 1;
+        if (r.x < 0) r.x += 1;
+        const x = r.x * this.w, y = r.y * this.h;
+        g.moveTo(x, y);
+        g.lineTo(x + wind.x * 6, y + 14 * r.s);
+      }
+      g.stroke();
+      if (heavy) {
+        this.nextLightning -= dt;
+        if (this.nextLightning <= 0) {
+          this.nextLightning = 6 + Math.random() * 12;
+          this.lightning = 1;
+          this.fx.flash = 0.8;
+        }
+      }
+    }
+    this.lightning = Math.max(0, this.lightning - dt * 3);
+  }
+
+  private drawVignette(fog: number, night: number): void {
+    const g = this.g;
+    const grd = g.createRadialGradient(this.w / 2, this.h / 2, Math.min(this.w, this.h) * 0.3, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.75);
+    grd.addColorStop(0, 'rgba(0,0,0,0)');
+    grd.addColorStop(1, `rgba(0,0,0,${0.55 + night * 0.2 + fog * 0.15})`);
+    g.fillStyle = grd;
+    g.fillRect(0, 0, this.w, this.h);
+  }
+
+  // ------------------------------------------------------------------ overlays
+
+  private drawAim(state: ClientState, own: SailState, aim: { side: 'port' | 'starboard' | null; dist: number }): void {
+    const g = this.g;
+    const you = state.you!;
+    const self = state.self!;
+    for (const side of ['port', 'starboard'] as const) {
+      const gun = GUNS[self.loadout.guns[side]];
+      const range = gun.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel].rangeMul;
+      const ready = you.reload[side] >= 1;
+      const active = aim.side === side;
+      const h = own.heading + (side === 'port' ? -Math.PI / 2 : Math.PI / 2);
+      const spread = (gun.spreadDeg * Math.PI) / 180 * 3 + 0.12;
+      const x = this.sx(own.x), y = this.sy(own.y);
+      const r = range * this.zoom;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.arc(x, y, r, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
+      g.closePath();
+      g.fillStyle = active ? (ready ? 'rgba(224,184,98,0.12)' : 'rgba(150,120,90,0.07)') : ready ? 'rgba(224,184,98,0.04)' : 'rgba(0,0,0,0)';
+      g.fill();
+      if (active) {
+        g.strokeStyle = ready ? 'rgba(224,184,98,0.6)' : 'rgba(150,120,90,0.4)';
+        g.lineWidth = 1;
+        g.stroke();
+        // Aim distance marker.
+        const d = clamp(aim.dist, 40, range) * this.zoom;
+        g.beginPath();
+        g.arc(x, y, d, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
+        g.strokeStyle = ready ? 'rgba(240,200,110,0.9)' : 'rgba(150,120,90,0.6)';
+        g.lineWidth = 2;
+        g.stroke();
+      }
+    }
+  }
+
+  private drawLabel(s: DrawShip, state: ClientState, boardTarget: boolean): void {
+    const g = this.g;
+    if (!s.info || s.flags & SF.HIDDEN) return;
+    const cls = SHIP_CLASSES[s.classId];
+    const x = this.sx(s.x), y = this.sy(s.y) - (cls.length * this.zoom) / 2 - 16;
+    const hostile = (s.flags & SF.HOSTILE) !== 0;
+    const info = s.info;
+    const faction = info.faction !== 'player' ? FACTIONS[info.faction] : null;
+    g.textAlign = 'center';
+    g.font = '600 11px Inter, sans-serif';
+    const label = info.isPlayer ? `${info.captainName} · ${info.name}` : info.name;
+    g.fillStyle = '#000';
+    g.fillText(label, x + 1, y + 1);
+    g.fillStyle = hostile ? '#e0776b' : info.isPlayer ? '#cfe0f2' : faction ? faction.lantern : '#ccc';
+    g.fillText(label, x, y);
+    g.font = '10px Inter, sans-serif';
+    g.fillStyle = 'rgba(180,180,180,0.8)';
+    const tag = info.isPlayer ? `Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
+    g.fillText(tag + (s.flags & SF.SURRENDERED ? ' · STRUCK' : ''), x, y + 11);
+    // Hull and sails bars.
+    const w = 46;
+    g.fillStyle = 'rgba(0,0,0,0.7)';
+    g.fillRect(x - w / 2 - 1, y + 15, w + 2, 7);
+    g.fillStyle = s.hull > 0.5 ? '#9b5a44' : s.hull > 0.25 ? '#b0703a' : '#c23d33';
+    g.fillRect(x - w / 2, y + 16, w * clamp(s.hull, 0, 1), 2.5);
+    g.fillStyle = '#b3ab96';
+    g.fillRect(x - w / 2, y + 19, w * clamp(s.sails, 0, 1), 2);
+    if (boardTarget || s.flags & SF.MARKED) {
+      g.strokeStyle = boardTarget ? 'rgba(224,184,98,0.9)' : 'rgba(208,106,94,0.9)';
+      g.setLineDash([5, 4]);
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(this.sx(s.x), this.sy(s.y), cls.length * this.zoom * 0.7, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
+    void state;
+  }
+}
+
+function hexA(color: string, a: number): string {
+  if (color.startsWith('rgba')) return color.replace(/,\s*[\d.]+\)$/, `,${a})`);
+  const n = parseInt(color.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}

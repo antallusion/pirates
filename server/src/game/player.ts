@@ -1,0 +1,195 @@
+// Player session and persistent captain profile, plus progression, reputation and wanted rules.
+
+import { CAPTAINS } from '../../../shared/src/data/captains.ts';
+import type { CaptainId } from '../../../shared/src/data/captains.ts';
+import { FACTIONS, FACTION_IDS, factionRelation, wantedLevel } from '../../../shared/src/data/factions.ts';
+import type { FactionId } from '../../../shared/src/data/factions.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
+import { AMMO_IDS } from '../../../shared/src/data/ships.ts';
+import type { AmmoId } from '../../../shared/src/data/ships.ts';
+import type { TalentRanks } from '../../../shared/src/data/talents.ts';
+import { totalPointsSpent } from '../../../shared/src/data/talents.ts';
+import { MAX_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src/constants.ts';
+import type { BoardingResult, Contract, PrivateState } from '../../../shared/src/protocol.ts';
+import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
+import type { WsConnection } from '../net/websocket.ts';
+import type { ShipEntity } from './ship.ts';
+
+export interface Profile {
+  version: 1;
+  captain: CaptainId;
+  shipName: string;
+  level: number;
+  xp: number;
+  talents: TalentRanks;
+  gold: number;
+  infamy: number;
+  reputation: Partial<Record<FactionId, number>>;
+  loadout: ShipLoadout;
+  cargo: Cargo;
+  ammo: AmmoStock;
+  ammoSel: AmmoId;
+  crew: number;
+  morale: number;
+  hull: number;
+  sails: number;
+  rudderHp: number;
+  gunsDisabled: { port: number; starboard: number };
+  lastPort: string;
+  docked: string | null;
+  contracts: Contract[];
+  discovered: number[];
+  regionsSeen: string[];
+  stats: { sunk: number; boarded: number; tradeProfit: number; distance: number };
+  cooldowns: Record<string, number>;
+  insured: boolean;
+  priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>> }>;
+  costBasis: Partial<Record<GoodId, number>>;
+  createdAt: number;
+}
+
+export function newProfile(captain: CaptainId, shipName: string, startPort: string, now: number): Profile {
+  const c = CAPTAINS[captain];
+  const loadout: ShipLoadout = { classId: c.start.ship, name: shipName, guns: { port: c.start.gun, starboard: c.start.gun }, modules: {} };
+  const reputation: Partial<Record<FactionId, number>> = {};
+  for (const f of FACTION_IDS) reputation[f] = 0;
+  if (captain === 'drowned') reputation.crown = -15;
+  if (captain === 'admiral') reputation.crown = -25;
+  return {
+    version: 1, captain, shipName, level: 1, xp: 0, talents: {}, gold: c.start.gold, infamy: 0, reputation, loadout,
+    cargo: { ...c.start.cargo }, ammo: { round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
+    hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
+    contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 }, cooldowns: {},
+    insured: false, priceIntel: {}, costBasis: {}, createdAt: now,
+  };
+}
+
+export class PlayerSession {
+  readonly conn: WsConnection;
+  accountId = 0;
+  name = '';
+  token = '';
+  profile: Profile | null = null;
+  ship: ShipEntity | null = null;
+  knownEntities = new Set<number>();
+  knownChunks = new Set<number>();
+  discovered = new Set<number>();
+  msgWindowStart = 0;
+  msgCount = 0;
+  pendingBoarding: { result: BoardingResult; targetId: number } | null = null;
+  lastPortPush = 0;
+  lastSave = 0;
+  disconnectedAt: number | null = null;
+  lingerUntil = 0;
+  lastRegion = '';
+
+  constructor(conn: WsConnection) {
+    this.conn = conn;
+  }
+
+  get authed(): boolean {
+    return this.accountId > 0;
+  }
+}
+
+// ------------------------------------------------------------------ progression
+
+export function talentPointsAvailable(p: Profile): number {
+  return talentPointsForLevel(p.level) - totalPointsSpent(p.talents);
+}
+
+/** Adds XP, handles level-ups. Returns number of levels gained. */
+export function addXp(p: Profile, amount: number): number {
+  if (p.level >= MAX_LEVEL) return 0;
+  p.xp += Math.max(0, Math.round(amount));
+  let gained = 0;
+  while (p.level < MAX_LEVEL && p.xp >= xpForLevel(p.level)) {
+    p.xp -= xpForLevel(p.level);
+    p.level++;
+    gained++;
+  }
+  if (p.level >= MAX_LEVEL) p.xp = 0;
+  return gained;
+}
+
+// ------------------------------------------------------------------ reputation & law
+
+export function changeRep(p: Profile, faction: FactionId, delta: number): void {
+  // Direct change plus a smaller spillover to the faction's friends and enemies.
+  for (const f of FACTION_IDS) {
+    const rel = factionRelation(faction, f) / 100;
+    const d = f === faction ? delta : delta * rel * 0.3;
+    if (Math.abs(d) < 0.05) continue;
+    p.reputation[f] = Math.max(-100, Math.min(100, (p.reputation[f] ?? 0) + d));
+  }
+}
+
+export function canDock(p: Profile, faction: FactionId): { ok: boolean; reason?: string } {
+  const w = wantedLevel(p.infamy);
+  const def = FACTIONS[faction];
+  if (w > def.dockMaxWanted) return { ok: false, reason: `${def.short} harbour masters refuse ships at Wanted ${w}.` };
+  if ((p.reputation[faction] ?? 0) <= -50) return { ok: false, reason: `The ${def.name} considers you an enemy.` };
+  return { ok: true };
+}
+
+export function pardonCost(p: Profile): number {
+  return Math.round(p.infamy * 18 + p.level * 40);
+}
+
+export function toPrivateState(s: PlayerSession, now: number): PrivateState {
+  const p = s.profile!;
+  const ship = s.ship;
+  return {
+    accountId: s.accountId,
+    name: s.name,
+    captain: p.captain,
+    level: p.level,
+    xp: p.xp,
+    xpNext: xpForLevel(p.level),
+    talentPoints: talentPointsAvailable(p),
+    talents: p.talents,
+    gold: Math.floor(p.gold),
+    infamy: Math.round(p.infamy),
+    wanted: wantedLevel(p.infamy),
+    reputation: Object.fromEntries(Object.entries(p.reputation).map(([k, v]) => [k, Math.round(v ?? 0)])),
+    loadout: p.loadout,
+    cargo: ship ? ship.cargo : p.cargo,
+    ammo: ship ? ship.ammo : p.ammo,
+    ammoSel: ship ? ship.ammoSel : p.ammoSel,
+    crew: ship ? ship.crew : p.crew,
+    morale: Math.round(ship ? ship.morale : p.morale),
+    hull: Math.round(ship ? ship.hull : p.hull),
+    sails: Math.round(ship ? ship.sails : p.sails),
+    rudderHp: ship ? ship.rudderHp : p.rudderHp,
+    gunsDisabled: ship ? { ...ship.gunsDisabled } : p.gunsDisabled,
+    dockedAt: ship ? ship.docked : p.docked,
+    lastPort: p.lastPort,
+    contracts: p.contracts,
+    cooldowns: p.cooldowns,
+    repairing: ship?.repairing ?? false,
+    discoveredCount: s.discovered.size,
+    stats: p.stats,
+    protectedUntil: ship?.protectedUntil ?? 0,
+    insured: p.insured,
+  };
+  void now;
+}
+
+export function sanitizeProfile(raw: Profile): Profile {
+  // Defensive load: fill fields added in later versions and clamp obviously broken values.
+  const p = raw;
+  p.talents ??= {};
+  p.reputation ??= {};
+  p.contracts ??= [];
+  p.discovered ??= [];
+  p.regionsSeen ??= [];
+  p.cooldowns ??= {};
+  p.priceIntel ??= {};
+  p.costBasis ??= {};
+  p.stats ??= { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 };
+  p.ammo ??= { round: 0, chain: 0, grape: 0 };
+  for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));
+  p.gold = Math.max(0, p.gold ?? 0);
+  p.gunsDisabled ??= { port: 0, starboard: 0 };
+  return p;
+}
