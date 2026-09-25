@@ -43,6 +43,8 @@ export interface NpcBrain {
   surrenderedAt: number;
   expiresAt: number;
   huntAccount: number | null;
+  chase: { id: number; until: number } | null; // spotted from the crow's nest: pursue beyond detection range
+  spared: Map<number, number>; // ship id -> until: plundered victims are left alone
   stuckCheck: { x: number; y: number; t: number };
 }
 
@@ -71,7 +73,7 @@ export function npcName(game: Game): { ship: string; captain: string } {
 export function newBrain(id: number, role: NpcRole, now: number): NpcBrain {
   return {
     id, role, active: false, farSince: now, path: null, traveled: 0, length: 0, wp: 1, destPort: null, area: null, target: null,
-    fleeFrom: null, nextThink: now, tackSide: 1, tackUntil: 0, surrenderedAt: 0, expiresAt: 0, huntAccount: null,
+    fleeFrom: null, nextThink: now, tackSide: 1, tackUntil: 0, surrenderedAt: 0, expiresAt: 0, huntAccount: null, chase: null, spared: new Map(),
     stuckCheck: { x: 0, y: 0, t: now },
   };
 }
@@ -326,6 +328,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   let preyD = Infinity;
   game.forShipsNear(ship.state.x, ship.state.y, ship.stats.detection, (o) => {
     if (o.id === ship.id || !o.alive || o.docked) return;
+    if ((brain.spared.get(o.id) ?? 0) > now) return;
     const d = dist(ship.state.x, ship.state.y, o.state.x, o.state.y);
     if (d > detectionRange(game, ship, o)) return;
     if (npcHostileTo(game, ship, o) && d < preyD) {
@@ -342,6 +345,14 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     if (hunted && hunted.alive && !hunted.docked) {
       prey = hunted;
       preyD = dist(ship.state.x, ship.state.y, hunted.state.x, hunted.state.y);
+    }
+  }
+  if (!prey && brain.chase) {
+    const c = game.ships.get(brain.chase.id);
+    if (!c || !c.alive || c.docked || now > brain.chase.until || !npcHostileTo(game, ship, c) || c.hasFlag('hidden')) brain.chase = null;
+    else {
+      prey = c;
+      preyD = dist(ship.state.x, ship.state.y, c.state.x, c.state.y);
     }
   }
 
@@ -413,8 +424,9 @@ function followPath(game: Game, ship: ShipEntity, brain: NpcBrain): void {
 
 function chooseAmmo(ship: ShipEntity, target: ShipEntity, d: number, wantsBoard: boolean): AmmoId {
   const has = (a: AmmoId) => ship.ammo[a] > 0;
-  if (wantsBoard && d < 180 && has('grape') && target.crew > target.stats.crewMax * 0.35) return 'grape';
-  if (wantsBoard && target.sails > target.stats.sailHpMax * 0.45 && has('chain')) return 'chain';
+  const inRange = (a: AmmoId) => d < Math.max(effectiveRange(ship, 'port', a), effectiveRange(ship, 'starboard', a)) * 0.95;
+  if (wantsBoard && has('grape') && inRange('grape') && target.crew > target.stats.crewMax * 0.35) return 'grape';
+  if (wantsBoard && has('chain') && inRange('chain') && target.sails > target.stats.sailHpMax * 0.45) return 'chain';
   if (has('round')) return 'round';
   return has('chain') ? 'chain' : 'grape';
 }
@@ -427,7 +439,8 @@ function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntit
     startBoarding(game, ship, target, 'standard');
     return;
   }
-  const range = effectiveRange(ship, 'port', ship.ammoSel);
+  const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
+  const maxRange = Math.max(rangeOf('port'), rangeOf('starboard'));
   const bearing = headingOf(target.state.x - ship.state.x, target.state.y - ship.state.y);
   // Lead the target by the ball's flight time.
   const flight = d / 180;
@@ -436,27 +449,32 @@ function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntit
   const py = target.state.y + tv.y * target.state.speed * flight;
   const leadD = dist(ship.state.x, ship.state.y, px, py);
   const leadBearing = headingOf(px - ship.state.x, py - ship.state.y);
+  const weakened = target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
 
-  if (d > range * 0.9) {
+  if (d > maxRange * 1.5) {
     steer(game, ship, brain, bearing, 1);
+  } else if (wantsBoard && weakened) {
+    steer(game, ship, brain, leadBearing, d < 250 ? 0.75 : 1); // close for the grapple
   } else {
-    // Present the loaded broadside.
-    const portLoaded = ship.reload.port <= 0, starLoaded = ship.reload.starboard <= 0;
-    const hPort = wrapAngle(bearing + Math.PI / 2); // heading that puts target on the port beam
+    // Present a loaded broadside, spiralling in or out to hold the ideal distance.
+    const hPort = wrapAngle(bearing + Math.PI / 2); // target on our port beam
     const hStar = wrapAngle(bearing - Math.PI / 2);
-    const dPort = Math.abs(angleDiff(ship.state.heading, hPort));
-    const dStar = Math.abs(angleDiff(ship.state.heading, hStar));
-    let desired = dPort < dStar ? hPort : hStar;
-    if (portLoaded && !starLoaded) desired = hPort;
-    if (starLoaded && !portLoaded) desired = hStar;
-    if (wantsBoard && target.sails < target.stats.sailHpMax * 0.4) desired = bearing; // close in for the grapple
-    if (d < range * 0.3 && !wantsBoard) desired = wrapAngle(desired + (desired === hPort ? -0.4 : 0.4));
-    steer(game, ship, brain, desired, wantsBoard && d < 400 ? 0.75 : 1);
+    const score = (side: 'port' | 'starboard', h: number) =>
+      Math.abs(angleDiff(ship.state.heading, h)) + (ship.reload[side] > 0 ? 1.2 : 0) + (rangeOf(side) < d * 0.9 ? 0.8 : 0);
+    const side = score('port', hPort) <= score('starboard', hStar) ? 'port' : 'starboard';
+    let desired = side === 'port' ? hPort : hStar;
+    const inward = side === 'port' ? -1 : 1; // rotation that turns the bow toward the target
+    // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.
+    const range = wantsBoard ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
+    if (d > range) desired = wrapAngle(desired + inward * 0.85);
+    else if (d > range * 0.75) desired = wrapAngle(desired + inward * 0.4);
+    else if (d < range * 0.35 && !wantsBoard) desired = wrapAngle(desired - inward * 0.35);
+    steer(game, ship, brain, desired, 1);
   }
   for (const side of ['port', 'starboard'] as const) {
     if (ship.reload[side] > 0) continue;
     const off = Math.abs(angleDiff(sideHeading(ship, side), leadBearing));
-    if (off < 20 * DEG && leadD < range * 0.98) fireBroadside(game, ship, side, leadD);
+    if (off < 20 * DEG && leadD < rangeOf(side) * 0.98) fireBroadside(game, ship, side, leadD);
   }
 }
 
@@ -515,7 +533,7 @@ export interface NpcQuota {
   ghosts: number;
 }
 
-export const QUOTA: NpcQuota = { merchants: 44, pirates: 26, fishers: 10, ghosts: 2 };
+export const QUOTA: NpcQuota = { merchants: 70, pirates: 34, fishers: 16, ghosts: 2 };
 
 export function spawnMerchant(game: Game): void {
   const ports = game.world.ports;
@@ -533,12 +551,14 @@ export function spawnMerchant(game: Game): void {
 
 const PIRATE_REGIONS: RegionId[] = ['gravewater', 'whispering', 'ashen_isles', 'dead_mans_expanse', 'leviathan_reach', 'drowned_crown'];
 
-export function spawnPirate(game: Game, near?: { x: number; y: number }): ShipEntity | null {
+export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
   let x: number, y: number, region: RegionId;
   if (near) {
-    const a = game.rng.float() * Math.PI * 2;
-    x = near.x + Math.sin(a) * 3400;
-    y = near.y - Math.cos(a) * 3400;
+    // Just beyond the horizon of interest and to windward — attackers want the weather gauge.
+    const wind = game.windFor(near);
+    const a = wind.dir + Math.PI + game.rng.range(-1.1, 1.1);
+    x = near.state.x + Math.sin(a) * 2350;
+    y = near.state.y - Math.cos(a) * 2350;
     region = game.regionAt(x, y);
   } else {
     region = game.rng.pick(PIRATE_REGIONS);
@@ -555,6 +575,16 @@ export function spawnPirate(game: Game, near?: { x: number; y: number }): ShipEn
   ship.cargo[game.rng.pick(loot)] = game.rng.int(3, 8 + ship.cls.tier * 4);
   const brain = game.npcs.get(ship.id)!;
   brain.area = { x, y, r: 7000 };
+  if (near) {
+    // Ambush: the lookout has spotted the captain; pursue for a few minutes.
+    const path = findPath(game.world, x, y, near.state.x, near.state.y, 20000);
+    if (path) {
+      setPath(brain, path);
+      brain.area = { x: near.state.x, y: near.state.y, r: 3000 };
+      brain.chase = { id: near.id, until: game.now + 240 };
+      return ship;
+    }
+  }
   if (!planWander(game, ship, brain)) {
     game.removeShip(ship.id);
     return null;

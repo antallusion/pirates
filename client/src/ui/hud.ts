@@ -230,7 +230,14 @@ export class Hud {
     g.strokeRect(0.5, 0.5, W - 1, H - 1);
   }
 
+  private recentToasts = new Map<string, number>();
+
   toast(msg: string, kind: string): void {
+    // Collapse repeats (e.g. mashing fire while reloading).
+    const now = performance.now();
+    if ((this.recentToasts.get(msg) ?? 0) > now - 2500) return;
+    this.recentToasts.set(msg, now);
+    if (this.recentToasts.size > 50) this.recentToasts.clear();
     const el = document.createElement('div');
     el.className = `toast ${kind}`;
     el.textContent = msg;

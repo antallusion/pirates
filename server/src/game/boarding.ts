@@ -104,18 +104,23 @@ export function stepBoarding(game: Game): void {
     const rng = game.rng;
     const killB = Math.min(b.crew, Math.round(pa * 0.075 * agg.tempo * (0.7 + rng.float() * 0.6)));
     const killA = Math.min(a.crew, Math.round(pb * 0.07 * agg.ownLoss * (0.7 + rng.float() * 0.6)));
-    b.crew -= killB;
-    a.crew -= killA;
-    bs.killed += killB;
-    bs.lost += killA;
+    // Some always survive to strike the colours or cut the grapples.
+    const floorA = Math.max(2, Math.round(bs.startCrew * 0.1));
+    const floorB = Math.max(2, Math.round(bs.enemyStartCrew * 0.1));
+    const killB2 = Math.max(0, Math.min(killB, b.crew - floorB));
+    const killA2 = Math.max(0, Math.min(killA, a.crew - floorA));
+    b.crew -= killB2;
+    a.crew -= killA2;
+    bs.killed += killB2;
+    bs.lost += killA2;
     b.morale -= (killB / Math.max(1, bs.enemyStartCrew)) * 90 + 2;
     a.morale -= (killA / Math.max(1, bs.startCrew)) * 70;
     if (a.hasFlag('terror') && b.crew < b.stats.crewMax * 0.3) b.morale -= 6;
     if (a.captain === 'reaver') a.morale += killB * 0.5;
     a.morale = clamp(a.morale, 0, 100);
     b.morale = clamp(b.morale, 0, 100);
-    const bBroken = b.crew <= bs.enemyStartCrew * 0.15 || b.morale <= 5 || b.surrendered;
-    const aBroken = a.crew <= bs.startCrew * 0.15 || a.morale <= 5;
+    const bBroken = b.crew <= Math.max(floorB, bs.enemyStartCrew * 0.15) || b.morale <= 5 || b.surrendered;
+    const aBroken = a.crew <= Math.max(floorA, bs.startCrew * 0.15) || a.morale <= 5;
     if (bBroken || aBroken || bs.rounds >= 25) {
       const attackerWins = bBroken && !aBroken ? true : aBroken && !bBroken ? false : pa >= pb;
       finishBoarding(game, a, b, attackerWins);

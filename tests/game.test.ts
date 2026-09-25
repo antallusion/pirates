@@ -194,3 +194,27 @@ test('the living ocean: NPC population boots and simulates with LOD', () => {
   const snap = c.last('snap');
   assert.ok(snap && snap.you, 'snapshots flow');
 });
+
+test('NPC pirates hunt, fight at range, board once and spare the plundered victim', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Prey Pete');
+  const ship = undockAtSea(game, c);
+  // Contested Gravewater: pirates do not attack in the safe Black Coast.
+  ship.state.x = 56000;
+  ship.state.y = 70000;
+  ship.region = game.regionAt(ship.state.x, ship.state.y);
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  const pirate = game.spawnNpcShip('pirate', 'brigantine', 'confederacy', ship.state.x + 600, ship.state.y, -Math.PI / 2);
+  const brain = game.npcs.get(pirate.id)!;
+  brain.active = true;
+  brain.chase = { id: ship.id, until: 1e9 };
+  brain.area = { x: ship.state.x, y: ship.state.y, r: 2000 };
+  game.grid.upsert(pirate.id, pirate.state.x, pirate.state.y);
+  steps(game, 20 * 200);
+  const evs = c.all('ev').flatMap((m) => m.list);
+  assert.ok(evs.filter((e) => e.k === 'volley' && e.ship === pirate.id).length >= 3, 'pirate fired broadsides');
+  assert.ok(ship.hull < ship.stats.hullMax, 'player hull damaged');
+  const boards = evs.filter((e) => e.k === 'board_start').length;
+  assert.ok(boards <= 1, `boarded ${boards} times`);
+  assert.ok(ship.crew >= 2, 'survivors remain');
+});

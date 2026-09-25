@@ -520,12 +520,12 @@ export class Game {
       const ship = s.ship;
       if (!ship || ship.docked || !s.profile) continue;
       const safety = REGIONS[ship.region].safety;
-      if (safety !== 'safe' && this.rng.chance(0.05)) {
+      if (safety !== 'safe' && this.rng.chance(0.04)) {
         let pirateNear = false;
         this.forShipsNear(ship.state.x, ship.state.y, 5000, (o) => {
           if (o.npcRole === 'pirate') pirateNear = true;
         });
-        if (!pirateNear) spawnPirate(this, ship.state);
+        if (!pirateNear) spawnPirate(this, ship);
       }
       if (ship.wantedCache >= 3 && this.rng.chance(0.03)) {
         let hunted = false;
@@ -900,6 +900,8 @@ export class Game {
     const brain = this.npcs.get(a.id);
     if (brain) {
       brain.target = null;
+      brain.chase = null;
+      brain.spared.set(b.id, this.now + 900);
       a.attackers.delete(b.id);
       b.attackers.delete(a.id);
     }
