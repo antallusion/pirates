@@ -89,6 +89,7 @@ export type ClientMsg =
   | { t: 'dive_surface' }
   | { t: 'abyss'; action: 'ritual' }
   | { t: 'legends' }
+  | { t: 'legendary'; action: 'deliver'; id: string }
   | { t: 'season'; action: 'title' | 'pennant' | 'name'; value?: string; islandId?: number }
   | { t: 'map'; action: 'forge' | 'appraise' | 'seal' | 'give' | 'burn'; id?: string; to?: string }
   | { t: 'licence' }
@@ -389,7 +390,7 @@ export interface PrivateState {
   sites: ResourceSiteView[]; // extraction rights you hold
   warehouses: Record<string, Cargo>;
   /** Island feature within reach of the boats, if any. */
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition'; blocked?: string } | null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise'; blocked?: string } | null;
   /** Landing party ashore. */
   landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;
@@ -602,6 +603,24 @@ export interface SeasonView {
   nameRights: number;
 }
 
+/** A legendary ship of the server (legendary.ts): her commission, her captain, or her wreck. */
+export interface LegendaryView {
+  id: string;
+  name: string;
+  base: string;
+  boss: string;
+  port: string;
+  status: 'locked' | 'commission' | 'owned' | 'sunk';
+  owner?: string;
+  gift: string;
+  price: string;
+  need: { good: string; have: number; need: number }[];
+  leaders: { name: string; value: number }[];
+  mine: number;
+  canDeliver: boolean;
+  wreck?: { x: number; y: number };
+}
+
 /** A captain's legend (legends.ts): trophies, the monsters slain, the chapters of the Abyss, and the book of the sea. */
 export interface LegendsView {
   trophies: string[];
@@ -610,6 +629,7 @@ export interface LegendsView {
   shards: number;
   firsts: { boss: string; names: string[]; at: number }[];
   season: SeasonView;
+  legendary: LegendaryView[];
 }
 
 /** The Abyss as a captain knows it (abyss.ts). */
@@ -669,7 +689,7 @@ export interface DiveView {
 /** A world event (events.ts): the Armada, a blockade, the Storm of the Century, a new island, a fever. */
 export interface WorldEventView {
   id: number;
-  kind: 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic';
+  kind: 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | 'glory';
   title: string;
   region: RegionId;
   port?: string;

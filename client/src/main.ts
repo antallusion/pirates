@@ -582,6 +582,7 @@ function computePrompt(): string {
     parts.push(`Boats ashore at the ${esc(self.landing.feature.replace('_', ' '))} — ${Math.round(frac * 100)}% <span class="muted">(raise sail to recall)</span>`);
   } else if (self.landable?.blocked) parts.push(`<span class="muted">${esc(self.landable.feature)} — ${esc(self.landable.blocked)}</span>`);
   else if (self.landable?.action === 'dig') parts.push(`<kbd>L</kbd> Dig for the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
+  else if (self.landable?.action === 'raise') parts.push(`<kbd>L</kbd> Raise the ${esc(self.landable.feature.replace(/^wreck of the /, ''))} from the sea floor`);
   else if (self.landable?.action === 'expedition') parts.push(`<kbd>L</kbd> Lower the diving bell over ${esc(self.landable.island)} (heave to first)`);
   else if (self.landable?.action === 'dive') parts.push(`<kbd>L</kbd> Send divers down to the ${esc(self.landable.feature)}`);
   else if (self.landable) parts.push(`<kbd>L</kbd> Send a landing party to the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);

@@ -100,7 +100,12 @@ export class CompanyScreen {
       <h4 style="margin-top:8px">Your season</h4>${se.mine.map((m) => `<div class="row"><span>${esc(m.stat)}</span><span>${m.value}</span></div>`).join('') || '<p class="muted">Nothing yet this season.</p>'}</div>
       <div class="card"><h4>Legends of the Ocean — this season</h4>${se.tables.filter((t) => t.rows.length).map((t) => `<div style="margin-bottom:4px"><b>${esc(t.stat)}</b>: ${t.rows.map((r, i) => `${i + 1}. ${esc(r.name)} (${r.value})`).join(' · ')}</div>`).join('') || '<p class="muted">The tables are empty.</p>'}</div>
       <div class="card"><h4>The Pantheon</h4>${se.halls.map((h) => `<div><b>${esc(h.hall)}</b>: ${h.members.map((m) => `${esc(m.name)} <span class="muted">(season ${m.season})</span>`).join(', ') || '<span class="muted">empty halls</span>'}</div>`).join('')}</div>`;
-    body.innerHTML = `${season}<div class="cols"><div>
+    const legendary = `<div class="card"><h4>Legendary ships — one of each on these seas</h4>${v.legendary.map((l) => `<div style="margin-bottom:8px"><b>${esc(l.name)}</b> <span class="muted">(${esc(l.base)} · from the ${esc(l.boss.replace('_', ' '))} · yard at ${esc(l.port)})</span>
+        <div style="font-size:12px"><span style="color:var(--good)">${esc(l.gift)}</span> <span style="color:var(--bad)">${esc(l.price)}</span></div>
+        ${l.status === 'locked' ? '<div class="muted">Her keel waits for the first victory over her monster.</div>'
+        : l.status === 'commission' ? `<div>The commission: ${l.need.map((n) => `${esc(n.good)} ${n.have}/${n.need}`).join(' · ')}${l.leaders.length ? ` — leading: ${l.leaders.map((x) => `${esc(x.name)} (${x.value})`).join(', ')}` : ''}${l.mine ? ` · yours: ${l.mine}` : ''}</div>${l.canDeliver ? `<button class="btn btn-small btn-primary" data-deliver="${l.id}">Deliver what she needs from your hold</button>` : ''}`
+        : l.status === 'owned' ? `<div>Sailed by <b>${esc(l.owner ?? '')}</b>.</div>` : `<div style="color:var(--bad)">Sunk${l.wreck ? ` at ${Math.round(l.wreck.x / 1000)} km E, ${Math.round(l.wreck.y / 1000)} km S` : ''} — ${esc(l.owner ?? 'her captain')} must raise her.</div>`}</div>`).join('')}</div>`;
+    body.innerHTML = `${season}${legendary}<div class="cols"><div>
       <div class="card"><h4>Trophies</h4>${v.trophies.map((t) => `<div>✦ ${esc(t)}</div>`).join('') || '<p class="muted">None yet.</p>'}</div>
       <div class="card"><h4>Monsters slain</h4>${v.bossKills.map((k) => `<div class="row"><span>${esc(k.name)}</span><span>×${k.n}</span></div>`).join('') || '<p class="muted">None yet.</p>'}
         ${v.shards ? `<p class="muted">Ritual shards: ${v.shards}/3</p>` : ''}</div></div>
@@ -108,6 +113,7 @@ export class CompanyScreen {
       <div class="card"><h4>First on these seas</h4>${v.firsts.map((f) => `<div class="row"><span>${esc(f.boss)}</span><span class="muted">${esc(f.names.slice(0, 4).join(', '))}${f.names.length > 4 ? '…' : ''} · ${date(f.at)}</span></div>`).join('') || '<p class="muted">No monster has fallen yet.</p>'}</div></div></div>`;
     body.querySelector<HTMLSelectElement>('[data-sel="title"]')!.onchange = (e) => this.send({ t: 'season', action: 'title', value: (e.target as HTMLSelectElement).value });
     body.querySelector<HTMLSelectElement>('[data-sel="pennant"]')!.onchange = (e) => this.send({ t: 'season', action: 'pennant', value: (e.target as HTMLSelectElement).value });
+    body.querySelectorAll<HTMLElement>('[data-deliver]').forEach((el) => (el.onclick = () => this.send({ t: 'legendary', action: 'deliver', id: el.dataset.deliver! })));
     const nameBtn = body.querySelector<HTMLElement>('[data-name-isle]');
     if (nameBtn) nameBtn.onclick = () => this.send({ t: 'season', action: 'name', islandId: Number(body.querySelector<HTMLSelectElement>('[data-sel="island"]')!.value), value: body.querySelector<HTMLInputElement>('[data-sel="newname"]')!.value });
   }

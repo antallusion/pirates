@@ -414,6 +414,7 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   if (def.tier > port.shipyardTier) return `${port.name} cannot build a ${def.name}`;
   if (def.factions && !def.factions.includes(port.faction)) return `Only ${def.factions.join(', ')} yards build the ${def.name}`;
   if (classId === ship.loadout.classId) return 'You already sail one';
+  if (ship.loadout.legendary) return 'Berth your legendary ship before you buy another hull';
   const tradeIn = Math.round(shipValue(ship) * 0.6);
   const cost = Math.max(0, def.price - tradeIn);
   const p = s.profile!;

@@ -404,7 +404,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // Iron Strapping: extra armour against armour-piercing shot.
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
   const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)));
-  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1); // Leviathan Lore, the Harpooneer
+  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1); // Leviathan Lore, the Harpooneer, Saint Maw's Bell
   let hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore;
   // No single broadside may take more than 30% of a hull (Iron Coffin: 20%).
   if (p.volley !== undefined) {

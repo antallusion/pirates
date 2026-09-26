@@ -29,6 +29,7 @@ import type { ShipEntity } from './ship.ts';
 import { legendFragment } from './treasure.ts';
 import { chapter, giveShard, spawnEcho } from './abyss.ts';
 import { seasonStat, seasonMods } from './seasons.ts';
+import { onFirstKill } from './legendary.ts';
 
 type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add';
 
@@ -1452,6 +1453,7 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
   if (!firsts[def.id] && names.length) {
     firsts[def.id] = { names: names.slice(0, 20), at: wall };
     game.db.setKv('boss_firsts', firsts);
+    onFirstKill(game, def.id); // the keel of a legendary ship
     for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `FIRST ON THE SEAS: ${def.name} falls for the first time — to ${who}.`, kind: 'gold' });
   }
   game.log(`[boss] ${f.kind} slain by ${names.length} captains`);

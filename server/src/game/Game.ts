@@ -78,6 +78,9 @@ import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './explor
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
 import { legendsView } from './legends.ts';
+import { deliver, ensureLegendary, legendaryCalendar, legendarySecond, legendarySunk, legendWreckHere, raiseLegend } from './legendary.ts';
+import { LEGENDARY } from '../../../shared/src/data/legendary.ts';
+import type { LegendaryId } from '../../../shared/src/data/legendary.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
 import type { AbyssMap } from './abyss.ts';
@@ -623,6 +626,7 @@ export class Game {
     expeditionsSecond(this);
     digNoise(this);
     stepSeasons(this);
+    if (Math.floor(now) % 60 === 0) legendaryCalendar(this);
     // Nearest player distance for NPC LOD.
     const players: ShipEntity[] = [];
     for (const s of this.sessions) if (s.ship && !s.ship.docked) players.push(s.ship);
@@ -747,6 +751,7 @@ export class Game {
       if (this.tick % 200 < 20) tendCaravans(this, s, (c, from) => planMerchantVoyage(this, c, this.npcs.get(c.id)!, from));
       checkDeeds(this, s, 1);
       abyssSecond(this, s);
+      legendarySecond(this, s);
       tickLoan(this, s);
       if (this.tick % 1200 < 20) decayClaims(this, s.profile);
       s.siteViews = this.sites.filter((x) => x.holder === s.accountId && x.until > this.now).map((x) => siteView(this, s, x));
@@ -757,7 +762,10 @@ export class Game {
       const wreck = s.ship.docked || s.ship.landing || tmap ? null : wreckHere(this, s.ship);
       const wreckWhy = wreck ? canDive(this, s, wreck) : null;
       const city = s.ship.docked || s.ship.landing ? null : cityPrompt(this, s);
-      s.landable = city
+      const legend = s.ship.docked || s.ship.landing ? null : legendWreckHere(this, s.ship);
+      s.landable = legend
+        ? { island: 'the sea floor', feature: `wreck of the ${LEGENDARY[legend.id].name}`, action: 'raise' as const, blocked: legend.owner === s.name ? undefined : `only ${legend.owner ?? 'her captain'} can raise her` }
+        : city
         ? city
         : cove
         ? { island: cove.name, feature: 'buyers for contraband (90% of Fogmouth)' }
@@ -1539,6 +1547,7 @@ export class Game {
 
   private playerDeath(s: PlayerSession, ship: ShipEntity): void {
     const p = s.profile!;
+    if (ship.loadout.legendary) legendarySunk(this, s, ship); // Sunken Glory
     grantBubble(this, s);
     onSunkCrew(this, s);
     questEvent(this, s, { k: 'die', region: ship.region });
@@ -2348,7 +2357,14 @@ export class Game {
         return err(diveMove(this, s, String(msg.dir)));
       case 'dive_surface':
         return err(diveSurface(this, s));
-      case 'land':
+      case 'legendary':
+        portAction((pt) => deliver(this, s, pt, msg.id as LegendaryId));
+        this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
+        return;
+      case 'land': {
+        const raised = ship.docked ? undefined : raiseLegend(this, s);
+        if (raised !== undefined) return err(raised);
+      }
         if (!ship.docked && cityHere(this, ship) && !this.expeditions.runOf(s.accountId)) return err(startDive(this, s));
         err(coveAt(this, ship) && Object.keys(ship.cargo).some((g) => GOODS[g as GoodId].contraband) ? coveSell(this, s) : startLanding(this, s));
         this.pushSelf(s, true);
@@ -2756,6 +2772,7 @@ export class Game {
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
     sendEvents(this, s);
     applyPantheon(this, s);
+    ensureLegendary(this, s);
     sendSites(this, s);
     pushParty(this, s);
     mailOnLogin(this, s);

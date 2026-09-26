@@ -75,7 +75,9 @@ export type Flag =
   // shipbuilding
   | 'drowned_silk' | 'cursed_wood' | 'fh_crown_lion' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_saint_of_wrecks'
   // world bosses (fittings)
-  | 'choir_bell' | 'lightning_rod' | 'lantern_gland';
+  | 'choir_bell' | 'lightning_rod' | 'lantern_gland'
+  // legendary ships
+  | 'saint_maws_bell' | 'crowns_sorrow' | 'widows_lament' | 'lamplighter';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

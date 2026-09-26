@@ -14,6 +14,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { depthAt, isLand, islandChunkKeys, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
 import type { Port, RaisedIsland } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
+import { glories } from './legendary.ts';
 import { sitesOfIsland } from './resources.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -626,10 +627,13 @@ export function eventShipLost(game: Game, ship: ShipEntity): void {
 // ================================================================== the view
 
 export function eventViews(game: Game): WorldEventView[] {
-  return game.worldEvents.active(game).map((e) => ({
+  const list: WorldEventView[] = game.worldEvents.active(game).map((e) => ({
     id: e.id, kind: e.kind, title: e.title, region: e.region, port: e.port, x: Math.round(e.x), y: Math.round(e.y),
     endsIn: Math.max(0, Math.round((e.ends - game.wallNow()) / 1000)), by: e.by, stage: e.stage, quarantine: e.quarantine,
   }));
+  // Sunken Glory: a legendary wreck is marked for the whole sea for 48 hours.
+  for (const w of glories(game)) list.push({ id: -1 - list.length, kind: 'glory', title: `Sunken Glory: the ${w.name}`, region: regionAt(game.world, w.x, w.y), x: w.x, y: w.y, endsIn: w.endsIn });
+  return list;
 }
 
 function broadcast(game: Game): void {

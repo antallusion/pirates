@@ -13,6 +13,8 @@ import { talentModifiers } from '../data/talents.ts';
 import type { TalentRanks } from '../data/talents.ts';
 import { baseNoGo, rowSpeed } from './sailing.ts';
 import { buildSources } from '../data/shipbuild.ts';
+import { LEGENDARY } from '../data/legendary.ts';
+import type { LegendaryId } from '../data/legendary.ts';
 import type { ShipBuild } from '../data/shipbuild.ts';
 import type { SailTalents } from './sailing.ts';
 import { DEG } from '../math.ts';
@@ -33,6 +35,8 @@ export interface ShipLoadout {
   guild?: { g: number; id: number };
   /** Built to order at a yard (docs/02 §3). */
   build?: ShipBuild;
+  /** One of the server's legendary ships (docs/02 §14.A.5). */
+  legendary?: LegendaryId;
 }
 
 export interface ShipStats {
@@ -97,6 +101,9 @@ function moduleSources(loadout: ShipLoadout): { mods?: StatMods; flags?: Flag[] 
     for (const k in def.mods ?? {}) mods[k as keyof StatMods] = (def.mods![k as keyof StatMods] ?? 0) * lvl;
     out.push({ mods, flags: def.flags });
   }
+  // A legendary ship's gift and price.
+  const leg = loadout.legendary ? LEGENDARY[loadout.legendary] : undefined;
+  if (leg) out.push({ mods: leg.mods, flags: leg.flags });
   return out;
 }
 

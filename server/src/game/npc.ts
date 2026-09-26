@@ -215,6 +215,7 @@ function detectionRange(game: Game, npc: ShipEntity, other: ShipEntity): number 
   let r = npc.stats.detection * signature(other);
   if (other.hasFlag('hidden')) return 230;
   if (other.hasFlag('dark_running')) r *= 0.4;
+  if (other.hasFlag('lamplighter') && npc.npcRole === 'ghost') r *= 2; // the Lamplighter's lights draw the dead
   const w = game.weatherOf(other);
   if (w === 'fog') r *= 0.55;
   else if (w === 'rain' || w === 'storm') r *= 0.75;
