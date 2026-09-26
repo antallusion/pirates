@@ -229,5 +229,6 @@ export function sailTalents(st: ShipStats): SailTalents {
     polarBoost: tx(st, 'polarBoost'),
     rowSpeed: rowSpeed(st.classId, st.flags.has('sweeps_drill'), storm),
     stormRider: storm,
+    silentRunning: tx(st, 'silentRunning'),
   };
 }

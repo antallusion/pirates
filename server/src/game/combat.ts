@@ -17,6 +17,8 @@ import { MAX_LEAKS, leakChance } from './damagecontrol.ts';
 import type { ShipEntity } from './ship.ts';
 import { addHeat, upwindOf } from './talentfx.ts';
 import { callPatrols } from './tradefx.ts';
+import { unmask } from './smugglefx.ts';
+import { isNight } from '../../../shared/src/constants.ts';
 
 export interface Projectile {
   owner: number;
@@ -113,6 +115,19 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const rollMul = rolling ? (ship.hasFlag('rolling_broadside') ? 0.8 : 1.15) : 1;
   const rangedIn = target?.hasEffect('ranged_in') ? 0.85 : 1;
   const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn;
+  // Shadow Strike: the first broadside from hiding, before she has seen you.
+  const hiding = ship.hasFlag('hidden') || isNight(game.now) || game.weatherOf(ship) === 'fog';
+  const shadow = !!target && ship.hasFlag('shadow_strike') && hiding && !target.attackers.has(ship.id) && !ship.attackers.has(target.id) ? 1.3 : 1;
+  if (shadow > 1 && target) {
+    ship.addEffect({ id: 'shadow', until: game.now + 4, flags: ['hidden'] }, game.now);
+    const tb = game.npcs.get(target.id);
+    if (tb) tb.spared.set(ship.id, game.now + 4);
+  }
+  unmask(game, ship, 'you opened fire');
+  if (ship.hasEffect('slip_away')) {
+    ship.effects = ship.effects.filter((e) => e.id !== 'slip_away');
+    ship.recompute(game.now);
+  }
   const volley = game.allocId();
   const rec: VolleyRec = { owner: ship.id, total: 0, left: 0, hits: new Map(), counts: !rolling || ship.hasFlag('rolling_broadside'), demoralised: new Set(), t: game.now };
   const shotSpeed = 1 + tval(ship.stats, 'shotSpeed');
@@ -129,7 +144,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
       const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
         owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed, dist: d, traveled: 0, ammo,
-        damage: gun.damage * ship.stats.gunDamageMul, maxRange: range, delay: delay / 1000, volley,
+        damage: gun.damage * ship.stats.gunDamageMul * shadow, maxRange: range, delay: delay / 1000, volley,
       });
       rec.total++;
       balls.push([Math.round(bx), Math.round(by), Math.round(h * 1000) / 1000, Math.round(d), delay]);

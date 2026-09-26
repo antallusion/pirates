@@ -87,6 +87,12 @@ export interface Profile {
     caravanReadyAt: number;
     rumorsHeard: number[];
   };
+  smuggle: {
+    stamped: Partial<Record<GoodId, number>>; // contraband with the Brokers' stamp (Forged Papers 2)
+    coves: number[]; // hidden coves found
+    brokerPassUsed: boolean;
+    hotRun: Contract | null;
+  };
   createdAt: number;
 }
 
@@ -119,7 +125,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], trade: newTradeState(), curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -176,18 +182,25 @@ export function addXp(p: Profile, amount: number): number {
 // ------------------------------------------------------------------ reputation & law
 
 export function changeRep(p: Profile, faction: FactionId, delta: number): void {
+  const nobody = (p.talents.smg_nobodys_ship ?? 0) > 0; // Nobody's Ship: standing grows at half speed
+  const ledger = (p.talents.smg_black_ledger ?? 0) > 0; // Black Ledger: the League never trusts you
   // Direct change plus a smaller spillover to the faction's friends and enemies.
   for (const f of FACTION_IDS) {
     const rel = factionRelation(faction, f) / 100;
-    const d = f === faction ? delta : delta * rel * 0.3;
+    let d = f === faction ? delta : delta * rel * 0.3;
+    if (d > 0 && nobody) d *= 0.5;
     if (Math.abs(d) < 0.05) continue;
-    p.reputation[f] = Math.max(-100, Math.min(100, (p.reputation[f] ?? 0) + d));
+    const cur = p.reputation[f] ?? 0;
+    let next = cur + d;
+    if (d > 0 && ledger && f === 'league') next = Math.min(next, Math.max(cur, 0)); // never above neutral
+    p.reputation[f] = Math.max(-100, Math.min(100, next));
   }
 }
 
 export function canDock(p: Profile, faction: FactionId): { ok: boolean; reason?: string } {
   const w = wantedLevel(p.infamy);
   const def = FACTIONS[faction];
+  if (faction === 'crown' && (p.talents.smg_nobodys_ship ?? 0) > 0) return { ok: false, reason: 'The Crown does not moor a ship with no name and no flag.' };
   if (w > def.dockMaxWanted) return { ok: false, reason: `${def.short} harbour masters refuse ships at Wanted ${w}.` };
   if ((p.reputation[faction] ?? 0) <= -50) return { ok: false, reason: `The ${def.name} considers you an enemy.` };
   return { ok: true };
@@ -197,7 +210,7 @@ export function pardonCost(p: Profile): number {
   return Math.round(p.infamy * 18 + p.level * 40);
 }
 
-export function toPrivateState(s: PlayerSession, now: number): PrivateState {
+export function toPrivateState(s: PlayerSession, now: number, world: { coves: { id: number; name: string; x: number; y: number }[]; patrols: [number, number][] } = { coves: [], patrols: [] }): PrivateState {
   const p = s.profile!;
   const ship = s.ship;
   return {
@@ -221,6 +234,8 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     heat: ship ? { port: Math.round(ship.heat.port), starboard: Math.round(ship.heat.starboard) } : { port: 0, starboard: 0 },
     rollingFire: ship?.rollingFire ?? false,
     options: p.trade.options,
+    coves: world.coves.filter((c) => p.smuggle.coves.includes(c.id) || ship?.hasFlag('cove_knowledge')).map((c) => ({ name: c.name, x: Math.round(c.x), y: Math.round(c.y) })),
+    patrols: world.patrols,
     appraisal: ship?.hasFlag('appraiser') ? appraise(p) : null,
     captives: p.captives.map((c) => ({ name: c.name, faction: c.faction, ransom: captiveRansom(c, (ship?.rank('trd_prize_broker') ?? 0) > 0) })),
     talents: p.talents,
@@ -311,6 +326,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.talentCooldowns ??= {};
   p.captives ??= [];
   p.trade = { ...newTradeState(), ...(p.trade ?? {}) };
+  p.smuggle = { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null, ...((p.smuggle as Partial<Profile['smuggle']> | undefined) ?? {}) };
   p.ammo = { ...emptyAmmo(), ...(p.ammo ?? {}) };
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));
   p.gold = Math.max(0, p.gold ?? 0);

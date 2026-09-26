@@ -121,6 +121,7 @@ export class ShipEntity {
   prize = false; // a captured NPC sailing under a prize crew for her captor
   caravanOf: number | null = null; // Counting House: the account this merchant trades for
   caravanFrom: string | null = null;
+  pendingDump: { good: GoodId; qty: number; at: number } | null = null; // cargo going over the side
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;
@@ -233,6 +234,10 @@ export class ShipEntity {
   }
 
   info(): ShipInfo {
+    // False Colors: a nameless merchant under a borrowed flag.
+    if (this.hasFlag('false_colors')) {
+      return { id: this.id, kind: 'ship', name: 'Unknown Merchant', classId: this.loadout.classId, faction: 'league', captainName: '', npcRole: 'merchant', isPlayer: false, level: 1, wanted: 0 };
+    }
     return {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,

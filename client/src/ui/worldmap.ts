@@ -224,6 +224,14 @@ export class WorldMap {
       g.fillRect(tx(st.x) - 4, ty(st.y) - 4, 8, 8);
       g.fillText(`${st.good.replace('_', ' ')} ${st.stock}/${st.capacity}`, tx(st.x), ty(st.y) + 16);
     }
+    // Hidden coves you know.
+    for (const c of state.self?.coves ?? []) {
+      g.fillStyle = '#6fbf8f';
+      g.beginPath();
+      g.arc(tx(c.x), ty(c.y), 4, 0, Math.PI * 2);
+      g.fill();
+      g.fillText(c.name, tx(c.x), ty(c.y) - 8);
+    }
     // You.
     const own = state.ownDisplay;
     if (own) {

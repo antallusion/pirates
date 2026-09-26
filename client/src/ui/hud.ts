@@ -253,6 +253,25 @@ export class Hud {
       g.fillStyle = '#b08d57';
       g.fillRect(tx(l.x) - 1.5, ty(l.y) - 1.5, 3, 3);
     }
+    // Insider: Crown patrols as hollow red diamonds; hidden coves as green hooks.
+    g.strokeStyle = 'rgba(224,101,90,0.8)';
+    for (const [px, py] of state.self?.patrols ?? []) {
+      if (Math.abs(px - own.x) > range || Math.abs(py - own.y) > range) continue;
+      g.beginPath();
+      g.moveTo(tx(px), ty(py) - 4);
+      g.lineTo(tx(px) + 4, ty(py));
+      g.lineTo(tx(px), ty(py) + 4);
+      g.lineTo(tx(px) - 4, ty(py));
+      g.closePath();
+      g.stroke();
+    }
+    g.fillStyle = '#6fbf8f';
+    for (const c of state.self?.coves ?? []) {
+      if (Math.abs(c.x - own.x) > range || Math.abs(c.y - own.y) > range) continue;
+      g.beginPath();
+      g.arc(tx(c.x), ty(c.y), 3, 0, Math.PI * 2);
+      g.fill();
+    }
     // Own ship.
     g.save();
     g.translate(W / 2, H / 2);

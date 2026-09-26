@@ -24,6 +24,7 @@ import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { onSaleDeeds } from './progression.ts';
 import { dealOfDay, onSale, talentPriceMods } from './tradefx.ts';
+import { portFence } from './smugglefx.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { bankView, forwardOffers, forwardView, hasExchange, insuranceQuotes, orderView } from './finance.ts';
 import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
@@ -106,7 +107,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       mounts: mountOffers(ship, port),
       guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
     },
-    contracts: game.contractsAt(port.id),
+    contracts: [...hotRun(game, s, port), ...game.contractsAt(port.id)],
     rumors: [poiRumor(game, s, port), ...game.rumorsNear(port.x, port.y, 3)].filter((r): r is string => !!r),
     charts: chartView(game, s, port),
     sites: sitesNearPort(game, port).map((x) => siteView(game, s, x)),
@@ -125,6 +126,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     insurance: insuranceQuotes(game, s, port),
     duty: mods.duty,
     dealOfDay: ship.rank('trd_local_contacts') >= 3 ? dealOfDay(game, port) : null,
+    fence: portFence(game, ship, port),
     licence: port.faction in FACTION_DUTY ? { cost: feeFor(ship, licenceCost(p.level)), until: p.licences[port.faction as keyof typeof p.licences] ?? 0 } : null,
     pardonCost: port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy' ? pardonCost(p) : null,
   };
@@ -183,6 +185,8 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     ship.cargo[good] = prevQty + qty;
     game.setCostBasis(s, good, (prevBasis * prevQty + price) / (prevQty + qty));
     applyTrade(market, good, -qty);
+    // Forged Papers rank 2: the Brokers stamp what they sell you.
+    if (def.contraband && port.faction === 'brokers' && ship.rank('smg_forged_papers') >= 2) p.smuggle.stamped[good] = (p.smuggle.stamped[good] ?? 0) + qty;
     game.db.ledger(s.accountId, 'buy', -price, `${qty} ${good} @ ${port.id}`);
     return null;
   }
@@ -214,6 +218,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   const basis = game.costBasis(s, good);
   ship.cargo[good] = (ship.cargo[good] ?? 0) - n;
   if (!ship.cargo[good]) delete ship.cargo[good];
+  if (p.smuggle.stamped[good]) p.smuggle.stamped[good] = Math.max(0, p.smuggle.stamped[good]! - n);
   p.gold += price;
   applyTrade(market, good, n);
   const profit = price - basis * n;
@@ -368,6 +373,26 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   }
   game.db.ledger(s.accountId, 'ship', -cost, classId);
   return null;
+}
+
+/** Black Ledger: the Brokers keep a hot contraband run for their own. */
+function hotRun(game: Game, s: PlayerSession, port: Port): Contract[] {
+  const ship = s.ship!;
+  const p = s.profile!;
+  if (!ship.hasFlag('black_ledger') || port.faction !== 'brokers') return [];
+  if (p.smuggle.hotRun && p.smuggle.hotRun.expiresAt > game.now) return [p.smuggle.hotRun];
+  const dests = game.world.ports.filter((q) => q.blackMarket && q.id !== port.id && dist(q.x, q.y, port.x, port.y) < 45000);
+  if (!dests.length) return [];
+  const dest = dests[Math.floor(game.rng.float() * dests.length)];
+  const good: GoodId = game.rng.chance(0.5) ? 'dreamleaf' : 'cursed_relics';
+  const qty = game.rng.int(6, 16);
+  const d = dist(dest.x, dest.y, port.x, port.y);
+  p.smuggle.hotRun = {
+    id: `hot${game.allocId()}`, kind: 'delivery', title: `Hot run: ${qty} ${GOODS[good].name} to ${dest.name}`, fromPort: port.id, toPort: dest.id, good, qty,
+    reward: Math.round(qty * GOODS[good].basePrice * (0.6 + d / 25000)), xp: Math.round(qty * 10 + d / 80), expiresAt: game.now + 1800 + d / 5,
+    description: 'The Brokers want this moved quietly. No questions, no receipts, a fat purse.',
+  };
+  return [p.smuggle.hotRun];
 }
 
 /** Ledger Keeper: port fees −15% per rank. */

@@ -56,6 +56,10 @@ import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } f
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, takeCaptive, takePrize } from './prizes.ts';
 import type { JollyBoat } from './prizes.ts';
+import {
+  bribeCost, buildCoves, contrabandValue, coveAt, coveSell, customsSearch, deferCrime, discoverCoves, dockOverride, fenceSale, portFence, settleCrimes, unmask, visibleRange,
+} from './smugglefx.ts';
+import type { Cove, PendingCrime } from './smugglefx.ts';
 import { buyOption, caravanLost, caravansOf, exerciseOption, expireOptions, priceLetters, tendCaravans, onArrival } from './tradefx.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import type { Projectile, VolleyRec } from './combat.ts';
@@ -84,6 +88,8 @@ interface Loot {
   cargo: Cargo;
   gold: number;
   expires: number;
+  ownerOnly?: number; // Quick Dump: casks only their owner can see and pick up
+  decoy?: boolean; // Decoy Barrels: empty
 }
 
 interface Rumor {
@@ -142,6 +148,10 @@ export class Game {
   orders: BuyOrder[] = [];
   volleys = new Map<number, VolleyRec>();
   boats: JollyBoat[] = [];
+  coves: Cove[] = [];
+  crimes: PendingCrime[] = [];
+  /** Ships sunk recently (Nobody's Ship: dead men tell no tales). */
+  sunkRecently = new Map<number, number>();
   pendingEvent: { id: number; port: string; good: GoodId; shock: number; text: string; at: number } | null = null;
   econHistory: IndexPoint[] = [];
   econRewardMul = 1;
@@ -185,6 +195,7 @@ export class Game {
     const savedSites = this.db.getKv<Record<string, { stock: number; holder: number | null; holderName: string; until: number }>>('sites');
     if (savedSites) for (const site of this.sites) if (savedSites[site.id]) Object.assign(site, savedSites[site.id]);
     this.orders = this.db.getKv<BuyOrder[]>('orders') ?? [];
+    this.coves = buildCoves(this);
     const econ = this.db.getKv<{ history: IndexPoint[]; rewardMul: number }>('econ');
     if (econ) {
       this.econHistory = econ.history ?? [];
@@ -494,6 +505,8 @@ export class Game {
       }
     }
     stepBoats(this);
+    settleCrimes(this);
+    for (const [id, t] of this.sunkRecently) if (now - t > 900) this.sunkRecently.delete(id);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
 
     // Loot: expiry and pickup.
@@ -505,6 +518,7 @@ export class Game {
       this.grid.query(l.x, l.y, 60, (id) => {
         const s = this.ships.get(id);
         if (!s || !s.isPlayer || !s.alive || s.docked) return;
+        if (l.ownerOnly !== undefined && s.accountId !== l.ownerOnly) return;
         if (dist(s.state.x, s.state.y, l.x, l.y) > s.stats.length / 2 + 30) return;
         this.pickupLoot(s, l);
       });
@@ -523,6 +537,15 @@ export class Game {
       if (s.ship.landing) stepLanding(this, s.ship);
       expireForwards(this, s);
       expireOptions(this, s);
+      discoverCoves(this, s);
+      this.stepDump(s);
+      if (s.ship.hasEffect('false_colors')) {
+        let close = false;
+        this.forShipsNear(s.ship.state.x, s.ship.state.y, 120, (o) => {
+          if (o.npcRole === 'patrol' && dist(o.state.x, o.state.y, s.ship!.state.x, s.ship!.state.y) < 100) close = true;
+        });
+        if (close) unmask(this, s.ship, 'a patrol came alongside');
+      }
       if (this.tick % 1200 < 20) priceLetters(this, s, (pt) => recordIntel(this, s, pt));
       if (this.tick % 200 < 20) tendCaravans(this, s, (c, from) => planMerchantVoyage(this, c, this.npcs.get(c.id)!, from));
       checkDeeds(this, s, 1);
@@ -531,7 +554,10 @@ export class Game {
       s.siteViews = this.sites.filter((x) => x.holder === s.accountId && x.until > this.now).map((x) => siteView(this, s, x));
       const own = s.ship.docked || s.ship.landing ? null : ownSiteNear(this, s);
       const land = s.ship.docked || s.ship.landing || own ? null : findLandable(this, s);
-      s.landable = own
+      const cove = !s.ship.docked && Object.keys(s.ship.cargo).some((g) => GOODS[g as GoodId].contraband) ? coveAt(this, s.ship) : null;
+      s.landable = cove
+        ? { island: cove.name, feature: 'buyers for contraband (90% of Fogmouth)' }
+        : own
         ? { island: own.island.name, feature: `stockpile of ${GOODS[own.site.good].name.toLowerCase()} (${Math.floor(own.site.stock)})` }
         : land ? { island: land.island.name, feature: FEATURE_NAMES[land.feature] } : null;
       const wNow = this.weatherOf(s.ship);
@@ -613,16 +639,18 @@ export class Game {
         const planksNeeded = hullGain / 40;
         const sailGain = Math.min(st.sailHpMax - ship.sails, st.sailHpMax * 0.02 * st.repairRate * crewF * rate);
         const clothNeeded = sailGain / 20;
-        const planks = ship.cargo.planks ?? 0, cloth = ship.cargo.sailcloth ?? 0;
+        // A hidden cove has timber and canvas to spare for those who know it.
+        const cove = ship.hasFlag('cove_knowledge') && coveAt(this, ship) !== null;
+        const planks = cove ? 1e9 : ship.cargo.planks ?? 0, cloth = cove ? 1e9 : ship.cargo.sailcloth ?? 0;
         let did = false;
         if (hullGain > 0.5 && planks >= planksNeeded) {
           ship.hull += hullGain;
-          ship.cargo.planks = Math.round((planks - planksNeeded) * 100) / 100;
+          if (!cove) ship.cargo.planks = Math.round((planks - planksNeeded) * 100) / 100;
           did = true;
         }
         if (sailGain > 0.2 && cloth >= clothNeeded) {
           ship.sails += sailGain;
-          ship.cargo.sailcloth = Math.round((cloth - clothNeeded) * 100) / 100;
+          if (!cove) ship.cargo.sailcloth = Math.round((cloth - clothNeeded) * 100) / 100;
           did = true;
         }
         if (ship.rudderHp < 1 && planks > 0.2) {
@@ -672,7 +700,7 @@ export class Game {
     if (ship.isPlayer && !ship.inCombat(now)) {
       const p = this.profileOf(ship);
       if (p && p.infamy > 0) {
-        p.infamy = Math.max(0, p.infamy - 0.05);
+        p.infamy = Math.max(0, p.infamy - 0.05 * (1 + tval(st, 'infamyDecay')));
         ship.wantedCache = wantedLevel(p.infamy);
       }
     }
@@ -853,6 +881,69 @@ export class Game {
     return economyReport(this, windowSec);
   }
 
+  /** Insider: Crown patrols in the captain's region, rounded to 100 m. */
+  private insiderPatrols(s: PlayerSession): [number, number][] {
+    const ship = s.ship;
+    if (!ship?.hasFlag('insider')) return [];
+    const out: [number, number][] = [];
+    for (const [id, b] of this.npcs) {
+      if (b.role !== 'patrol') continue;
+      const o = this.ships.get(id);
+      if (!o || o.faction !== 'crown' || o.region !== ship.region) continue;
+      out.push([Math.round(o.state.x / 100) * 100, Math.round(o.state.y / 100) * 100]);
+    }
+    return out;
+  }
+
+  /** Re-send a ship's name card to everyone (False Colors). */
+  refreshInfo(ship: ShipEntity): void {
+    for (const s of this.sessions) s.knownEntities.delete(ship.id);
+  }
+
+  /** Decoy Barrels: empty casks that look like cargo. */
+  dropDecoy(x: number, y: number): void {
+    const id = this.allocId();
+    this.loot.set(id, { id, x, y, cargo: { rum: 8 + this.rng.int(0, 8) }, gold: 0, expires: this.now + 120, decoy: true });
+  }
+
+  /** Cargo over the side: five seconds of work, or at once into marked casks with Quick Dump. */
+  private jettison(s: PlayerSession, good: GoodId, qty: number): string | null {
+    const ship = s.ship!;
+    if (!GOODS[good] || !Number.isInteger(qty) || qty <= 0) return 'Bad order';
+    if (ship.docked) return 'Sell it in port instead';
+    const n = Math.min(qty, Math.floor(ship.cargo[good] ?? 0));
+    if (n <= 0) return 'You do not carry that';
+    const quick = tval(ship.stats, 'quickDump');
+    if (quick > 0) {
+      this.dumpNow(s, good, n, quick);
+      return null;
+    }
+    ship.pendingDump = { good, qty: n, at: this.now + 5 };
+    this.toastShip(ship, `Heaving ${n} ${GOODS[good].name.toLowerCase()} over the side…`, 'info');
+    return null;
+  }
+
+  private dumpNow(s: PlayerSession, good: GoodId, n: number, quick: number): void {
+    const ship = s.ship!;
+    ship.cargo[good] = (ship.cargo[good] ?? 0) - n;
+    if (!ship.cargo[good]) delete ship.cargo[good];
+    if (s.profile!.stolen[good]) s.profile!.stolen[good] = Math.max(0, s.profile!.stolen[good]! - n);
+    if (quick > 0) {
+      const back = headingVec(ship.state.heading + Math.PI);
+      const id = this.allocId();
+      this.loot.set(id, { id, x: ship.state.x + back.x * 40, y: ship.state.y + back.y * 40, cargo: { [good]: n }, gold: 0, expires: this.now + (quick >= 2 ? 1200 : 600), ownerOnly: s.accountId });
+      this.toastShip(ship, `${n} ${GOODS[good].name.toLowerCase()} over the side in marked casks.`, 'info');
+    } else this.toastShip(ship, `${n} ${GOODS[good].name.toLowerCase()} went to the bottom.`, 'info');
+  }
+
+  private stepDump(s: PlayerSession): void {
+    const d = s.ship?.pendingDump;
+    if (!d || d.at > this.now) return;
+    s.ship!.pendingDump = null;
+    const n = Math.min(d.qty, Math.floor(s.ship!.cargo[d.good] ?? 0));
+    if (n > 0) this.dumpNow(s, d.good, n, 0);
+  }
+
   sessionByAccount(accountId: number): PlayerSession | null {
     return this.byAccount.get(accountId) ?? null;
   }
@@ -889,6 +980,7 @@ export class Game {
   addInfamy(ship: ShipEntity, amount: number, reason: string): void {
     const p = this.profileOf(ship);
     if (!p) return;
+    if (deferCrime(this, ship, amount, reason)) return; // Nobody's Ship: only a surviving witness tells
     const before = wantedLevel(p.infamy);
     p.infamy = Math.min(900, p.infamy + amount);
     const after = wantedLevel(p.infamy);
@@ -950,6 +1042,7 @@ export class Game {
   beginSinking(ship: ShipEntity): void {
     if (ship.sinkingUntil) return;
     if (ship.caravanOf !== null) caravanLost(this, ship);
+    this.sunkRecently.set(ship.id, this.now);
     ship.sinkingUntil = this.now + 6;
     ship.boarding = null;
     ship.repairing = false;
@@ -1071,6 +1164,17 @@ export class Game {
     losePrizes(this, ship);
     p.trade.voyageProfit = 0;
     p.trade.voyageShare = 0;
+    p.smuggle.brokerPassUsed = false;
+    // Smuggler's Luck: some contraband turns up in the Brokers' warehouse at Fogmouth.
+    const luck = tval(ship.stats, 'smugglersLuck');
+    if (luck > 0) {
+      for (const id of Object.keys(ship.cargo) as GoodId[]) {
+        if (!GOODS[id].contraband || !this.rng.chance(luck)) continue;
+        const wh = (p.warehouses.fogmouth ??= {});
+        wh[id] = (wh[id] ?? 0) + (ship.cargo[id] ?? 0);
+        this.sendTo(s, { t: 'toast', msg: `Your ${GOODS[id].name.toLowerCase()} waits for you in the Brokers' warehouse at Fogmouth.`, kind: 'good' });
+      }
+    }
     // A sinking ends the voyage.
     p.deedState.voyagePorts = [];
     p.deedState.wantedTime = 0;
@@ -1235,6 +1339,11 @@ export class Game {
   private pickupLoot(ship: ShipEntity, l: Loot): void {
     const s = this.sessionOf(ship);
     if (!s || !s.profile) return;
+    if (l.decoy) {
+      this.loot.delete(l.id);
+      this.toastShip(ship, 'Empty casks, weighted to float. A decoy!', 'bad');
+      return;
+    }
     let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul);
     const got: string[] = [];
     for (const id in l.cargo) {
@@ -1600,7 +1709,15 @@ export class Game {
         ship.repairing = !!msg.on;
         return;
       case 'dock':
-        return err(this.tryDock(s));
+        return err(this.tryDock(s, !!msg.bribe));
+      case 'jettison':
+        return err(this.jettison(s, msg.good, Math.trunc(Number(msg.qty))));
+      case 'fence_sell':
+        return portAction((pt) => {
+          const f = portFence(this, ship, pt);
+          if (f === null) return 'No fence here for you';
+          return fenceSale(this, s, msg.good, Math.trunc(Number(msg.qty)), f, pt.id);
+        });
       case 'undock':
         return err(this.undock(s));
       case 'trade':
@@ -1633,6 +1750,13 @@ export class Game {
             p.contracts = p.contracts.filter((c) => c.id !== msg.id);
             return null;
           }
+          if (ship.hasFlag('black_ledger') && pt.faction === 'league') return 'The Gilded Ledger has no work for the Black Ledger';
+          const hot = p.smuggle.hotRun;
+          if (hot && hot.id === msg.id) {
+            p.contracts.push({ ...hot, progress: 0 });
+            p.smuggle.hotRun = null;
+            return null;
+          }
           const slots = 3 + (tval(ship.stats, 'contractBroker') >= 1 ? 1 : 0);
           if (p.contracts.length >= slots) return `You can hold at most ${slots} contracts`;
           const list = this.contractsAt(pt.id);
@@ -1660,7 +1784,7 @@ export class Game {
         this.sendTo(s, { t: 'toast', msg: STATION_NAMES[msg.station], kind: 'info' });
         return;
       case 'land':
-        err(startLanding(this, s));
+        err(coveAt(this, ship) && Object.keys(ship.cargo).some((g) => GOODS[g as GoodId].contraband) ? coveSell(this, s) : startLanding(this, s));
         this.pushSelf(s, true);
         return;
       case 'chart':
@@ -1818,7 +1942,7 @@ export class Game {
     s.knownEntities.clear();
     s.knownChunks.clear();
     this.sendTo(s, {
-      t: 'init', self: toPrivateState(s, this.now), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
+      t: 'init', self: toPrivateState(s, this.now, { coves: this.coves, patrols: this.insiderPatrols(s) }), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
     });
     // Islands the captain has charted are sent up front so the world map is complete.
     this.sendIslands(s, [...s.discovered]);
@@ -1851,7 +1975,7 @@ export class Game {
 
   // ================================================================= docking
 
-  private tryDock(s: PlayerSession): string | null {
+  private tryDock(s: PlayerSession, bribing = false): string | null {
     const ship = s.ship!;
     const p = s.profile!;
     if (ship.docked) return 'Already in port';
@@ -1861,21 +1985,23 @@ export class Game {
     if (!port || dist(port.x, port.y, ship.state.x, ship.state.y) > PORT_DOCK_RADIUS) return 'No harbour close enough';
     if (ship.state.speed > 7) return 'Take in sail before entering harbour';
     const ok = canDock(p, port.faction);
-    if (!ok.ok) return ok.reason!;
-    // Patrol inspections in lawful ports: contraband is seized unless hidden in a false bottom.
-    if (FACTIONS[port.faction].lawful && !ship.hasFlag('false_bottom')) {
-      const seized: string[] = [];
-      for (const id in ship.cargo) {
-        const g = id as GoodId;
-        if (GOODS[g].contraband && (ship.cargo[g] ?? 0) > 0 && this.rng.chance(0.6)) {
-          seized.push(`${ship.cargo[g]} ${GOODS[g].name}`);
-          delete ship.cargo[g];
-        }
-      }
-      if (seized.length) {
-        this.addInfamy(ship, 8, 'smuggling');
-        this.toastShip(ship, `Customs seized ${seized.join(', ')}.`, 'bad');
-      }
+    const override = ok.ok ? null : dockOverride(ship, p, port, bribing);
+    if (!ok.ok && !override) return ok.reason!;
+    const lawful = FACTIONS[port.faction].lawful;
+    // A bribe instead of a search (and, with Greased Palms, instead of the harbour master's refusal).
+    if (bribing && lawful && (contrabandValue(ship) > 0 || override === 'bribe')) {
+      const cost = bribeCost(ship);
+      if (p.gold < cost) return `The customs officer wants ${cost} silver`;
+      p.gold -= cost;
+      this.db.ledger(s.accountId, 'bribe', -cost, port.id);
+      this.toastShip(ship, `${cost} silver changes hands. The customs officer admires the sky.`, 'info');
+    } else if (lawful) {
+      const seized = customsSearch(this, s, port);
+      if (seized.length) this.toastShip(ship, `Customs seized ${seized.join(', ')}.`, 'bad');
+    }
+    if (override === 'broker') {
+      p.smuggle.brokerPassUsed = true;
+      this.toastShip(ship, "The Brokers' forged licence passes. Once.", 'info');
     }
     this.dockShip(s, port);
     return null;
@@ -1957,7 +2083,7 @@ export class Game {
 
   pushSelf(s: PlayerSession, force = false): void {
     if (!s.profile) return;
-    const state = toPrivateState(s, this.now);
+    const state = toPrivateState(s, this.now, { coves: this.coves, patrols: this.insiderPatrols(s) });
     const json = JSON.stringify(state);
     if (!force && this.lastSelf.get(s) === json) return;
     this.lastSelf.set(s, json);
@@ -1984,6 +2110,7 @@ export class Game {
         if (o.id !== me.id) {
           if (o.docked) return;
           if (o.hasFlag('hidden') && d > 250 && o.ownerId !== me.id) return;
+          if (o.isPlayer && d > 250 && d > visibleRange(this, o, me)) return;
         }
         const brain = this.npcs.get(o.id);
         if (brain && !brain.active) return;
@@ -2003,6 +2130,7 @@ export class Game {
       const loot: LootRow[] = [];
       for (const l of this.loot.values()) {
         if (dist(l.x, l.y, cx, cy) > INTEREST_RADIUS) continue;
+        if (l.ownerOnly !== undefined && l.ownerOnly !== s.accountId) continue;
         seen.add(l.id);
         if (!s.knownEntities.has(l.id)) {
           s.knownEntities.add(l.id);

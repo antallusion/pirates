@@ -12,6 +12,7 @@ import type { PriceMods } from './economy.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { smugglingSellMul } from './smugglefx.ts';
 
 const DAY = 7200; // one game day = two real hours
 
@@ -39,7 +40,7 @@ export function talentPriceMods(game: Game, ship: ShipEntity, port: Port, p: Pro
   const route = p.trade.arrivalRoute && p.trade.arrivalRoute.endsWith(`>${port.id}`) ? p.trade.routes[p.trade.arrivalRoute] : undefined;
   const routeMul = route ? 1 + tx(st, 'routeBonus') * Math.min(3, Math.max(0, route.n - 1)) : 1;
   for (const g of Object.keys(GOODS) as GoodId[]) {
-    let sell = routeMul;
+    let sell = routeMul * smugglingSellMul(ship, port, g);
     if (p.trade.monoBonus.includes(g) && !(p.trade.monopoly[`${port.id}:${g}`] > game.now)) sell *= 1.05;
     if (sell !== 1) mods.goodSell![g] = sell;
     if ((p.trade.monopoly[`${port.id}:${g}`] ?? 0) > game.now) mods.goodSlip![g] = -0.25;
@@ -177,7 +178,7 @@ export function expireOptions(game: Game, s: PlayerSession): void {
 
 /** A protected captain was attacked: Crown and League patrols nearby come about to help. */
 export function callPatrols(game: Game, victim: ShipEntity, attacker: ShipEntity): void {
-  if (!victim.hasFlag('convoy_rights') || REGIONS[victim.region].safety === 'lawless') return;
+  if (!victim.hasFlag('convoy_rights') || victim.hasFlag('black_ledger') || REGIONS[victim.region].safety === 'lawless') return;
   if (attacker.id === victim.id || attacker.ownerId === victim.id) return;
   game.forShipsNear(victim.state.x, victim.state.y, 2500, (o) => {
     if (o.npcRole !== 'patrol' || !o.alive || o.id === attacker.id) return;

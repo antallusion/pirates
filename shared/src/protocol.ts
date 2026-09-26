@@ -35,7 +35,9 @@ export type ClientMsg =
   | { t: 'board_cut' }
   | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' }
   | { t: 'repair'; on: boolean }
-  | { t: 'dock' }
+  | { t: 'dock'; bribe?: boolean }
+  | { t: 'jettison'; good: GoodId; qty: number }
+  | { t: 'fence_sell'; good: GoodId; qty: number }
   | { t: 'undock' }
   | { t: 'trade'; good: GoodId; qty: number }
   | { t: 'buy_ammo'; ammo: AmmoId; qty: number }
@@ -236,6 +238,9 @@ export interface PrivateState {
   options: { port: string; good: GoodId; qty: number; price: number; deposit: number; until: number }[];
   /** Appraiser: best sell price you know for each good, and where. */
   appraisal: Partial<Record<GoodId, { price: number; port: string }>> | null;
+  coves: { name: string; x: number; y: number }[];
+  /** Insider: Crown patrols in your region. */
+  patrols: [number, number][];
   gold: number;
   infamy: number;
   wanted: number;
@@ -310,6 +315,7 @@ export interface PortView {
   materialDiscount: Record<string, { good: GoodId; units: number }>;
   duty: number;
   dealOfDay: GoodId | null;
+  fence: number | null; // a fence buys contraband here at this share of Fogmouth's price
   licence: { cost: number; until: number } | null;
   charts: { sellable: number; sellValue: number; offers: { region: RegionId; name: string; islands: number; price: number }[] };
   pardonCost: number | null;

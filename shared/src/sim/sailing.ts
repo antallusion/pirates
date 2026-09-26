@@ -47,6 +47,7 @@ export interface SailTalents {
   polarBoost: number; // share of point-of-sail loss recovered
   rowSpeed: number; // m/s under oars (0 = cannot row)
   stormRider: boolean;
+  silentRunning: number; // ranks: +5% speed per rank under half sail
 }
 
 /** Oars: the xebec rows by design; Sweeps teach schooners and brigantines to row, and the xebec to row harder. */
@@ -118,7 +119,7 @@ export function targetSpeed(state: SailState, p: SailParams, wind: WindSample): 
   if (p.sweeps && windS < 0.5) windFactor *= 1.25;
   windFactor *= 1 - seaSpeedPenalty(wind.strength, tal?.seaPenalty ?? 0);
   if (tal?.stormRider) windFactor *= wind.strength >= 0.75 ? 1.2 : wind.strength < 0.35 ? 0.7 : 1;
-  const sailFactor = Math.pow(state.sail, 0.85);
+  const sailFactor = Math.pow(state.sail, 0.85) * (tal && tal.silentRunning > 0 && state.sail <= 0.51 ? 1 + 0.05 * tal.silentRunning : 1);
   const sailHealth = 0.25 + 0.75 * p.sailHealth;
   const crew = 0.45 + 0.55 * p.crewFactor;
   return p.maxSpeed * eff * windFactor * sailFactor * sailHealth * crew * p.loadFactor * p.speedMul;

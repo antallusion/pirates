@@ -20,6 +20,7 @@ import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import { caravanSold } from './tradefx.ts';
+import { coveAt, loseTrail, signature } from './smugglefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
 import type { Game } from './Game.ts';
 import { findPath, pathLength, pointAlong } from './nav.ts';
@@ -151,6 +152,10 @@ function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
 export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): boolean {
   if (npc.id === other.id || !other.alive || other.docked) return false;
   const role = npc.npcRole;
+  // A hidden cove is neutral water for those who know it.
+  if (other.isPlayer && other.hasFlag('cove_knowledge') && coveAt(game, other)) return false;
+  // False Colors: law and bounty hunters see a merchant.
+  if (other.hasFlag('false_colors') && (role === 'patrol' || role === 'hunter') && !(npc.attackers.get(other.id) ?? 0)) return false;
   if (npc.ownerId !== null) {
     // Escort: hostile to whoever is hostile to its owner.
     if (other.id === npc.ownerId || other.ownerId === npc.ownerId) return false;
@@ -195,7 +200,7 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
 }
 
 function detectionRange(game: Game, npc: ShipEntity, other: ShipEntity): number {
-  let r = npc.stats.detection;
+  let r = npc.stats.detection * signature(other);
   if (other.hasFlag('hidden')) return 230;
   if (other.hasFlag('dark_running')) r *= 0.4;
   const w = game.weatherOf(other);
@@ -350,7 +355,10 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   });
   if (brain.huntAccount !== null) {
     const hunted = game.shipOfAccount(brain.huntAccount);
-    if (hunted && hunted.alive && !hunted.docked) {
+    if (hunted && loseTrail(game, ship, hunted)) {
+      brain.huntAccount = null; // the wake went cold
+      brain.expiresAt = now + 60;
+    } else if (hunted && hunted.alive && !hunted.docked) {
       prey = hunted;
       preyD = dist(ship.state.x, ship.state.y, hunted.state.x, hunted.state.y);
     }

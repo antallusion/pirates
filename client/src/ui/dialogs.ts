@@ -67,7 +67,7 @@ export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: 
   root.querySelector('button')!.onclick = close;
 }
 
-export function renderShip(root: HTMLElement, state: ClientState): void {
+export function renderShip(root: HTMLElement, state: ClientState, send?: (m: ClientMsg) => void): void {
   const self = state.self;
   const st = state.ownStats;
   if (!self || !st) return;
@@ -90,11 +90,16 @@ export function renderShip(root: HTMLElement, state: ClientState): void {
       ${cargo.map(([g, n]) => {
         const a = self.appraisal?.[g as GoodId];
         const where = a ? state.ports.find((p) => p.id === a.port)?.name ?? a.port : '';
-        return `<tr><td class="${GOODS[g as GoodId].contraband ? 'contra' : ''}">${esc(GOODS[g as GoodId].name)}</td><td>${Math.floor(n ?? 0)}</td><td>${((n ?? 0) * GOODS[g as GoodId].volume).toFixed(1)}</td><td>${((n ?? 0) * GOODS[g as GoodId].weight).toFixed(1)}</td>${self.appraisal ? `<td>${a ? `<span class="gold">${fmt(a.price * Math.floor(n ?? 0))}</span> <span class="muted">${esc(where)}</span>` : '<span class="muted">—</span>'}</td>` : ''}</tr>`;
+        return `<tr><td class="${GOODS[g as GoodId].contraband ? 'contra' : ''}">${esc(GOODS[g as GoodId].name)} ${self.dockedAt ? '' : `<button class="btn btn-small" data-dump="${g}" title="Over the side">⤓</button>`}</td><td>${Math.floor(n ?? 0)}</td><td>${((n ?? 0) * GOODS[g as GoodId].volume).toFixed(1)}</td><td>${((n ?? 0) * GOODS[g as GoodId].weight).toFixed(1)}</td>${self.appraisal ? `<td>${a ? `<span class="gold">${fmt(a.price * Math.floor(n ?? 0))}</span> <span class="muted">${esc(where)}</span>` : '<span class="muted">—</span>'}</td>` : ''}</tr>`;
       }).join('') || '<tr><td colspan="4" class="muted">Empty hold</td></tr>'}
       </table><p class="muted">Ammunition: ${AMMO_IDS.map((a) => `${self.ammo[a]} ${esc(AMMO[a].name.toLowerCase())}`).join(' · ')}</p>
       <h3 class="title-sm" style="font-size:20px">Contracts</h3>${self.contracts.map((c) => `<div class="card"><b>${esc(c.title)}</b> <span class="gold">${fmt(c.reward)}</span></div>`).join('') || '<p class="muted">None.</p>'}
     </div></div></div>`;
+  root.querySelectorAll<HTMLElement>('[data-dump]').forEach((el) => (el.onclick = () => {
+    const g = el.dataset.dump as GoodId;
+    const n = Math.floor(self.cargo[g] ?? 0);
+    if (send && confirm(`Throw ${n} ${GOODS[g].name} over the side?`)) send({ t: 'jettison', good: g, qty: n });
+  }));
 }
 
 export function renderHelp(root: HTMLElement): void {
@@ -115,7 +120,7 @@ export function renderHelp(root: HTMLElement): void {
     ['L', 'Heave to near an island feature (cache, wreck, ruins, grove, mine, pearl bank, shrine) and send a landing party ashore.'],
     ['G', 'Crew orders: balanced → guns (faster reload, slow pumps) → braces (sail handling, speed) → damage control (pumps ×2, fast leak plugging and firefighting, slow reload).'],
     ['R', 'Toggle repairs (uses planks & sailcloth; not in combat without Battle Repair).'],
-    ['F', 'Dock at a nearby port / set sail.'],
+    ['F', 'Dock at a nearby port / set sail. Shift+F: dock and pay customs to look away (no search).'],
     ['M · T · I', 'World chart · talents · ship & hold.'],
     ['Wheel', 'Zoom.'],
     ['N', 'Sound on / off.'],

@@ -162,7 +162,7 @@ function refreshModal(): void {
       worldMap.open(root, state);
       break;
     case 'ship':
-      renderShip(root, state);
+      renderShip(root, state, (m) => net.send(m));
       break;
     case 'help':
       renderHelp(root);
@@ -281,7 +281,7 @@ addEventListener('keydown', (e) => {
       break;
     case 'f':
       if (docked) net.send({ t: 'undock' });
-      else net.send({ t: 'dock' });
+      else net.send({ t: 'dock', bribe: e.shiftKey });
       break;
     case 'm':
       toggle('map');

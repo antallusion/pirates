@@ -19,7 +19,10 @@ export type StatKey =
   | 'ironGrip' | 'holdTheLine'
   // trade
   | 'dutyMul' | 'tradeRep' | 'slippage' | 'contractBroker' | 'spoilage' | 'insurancePremium' | 'insurancePayout' | 'priceMemory'
-  | 'routeBonus' | 'loadPenalty' | 'profitShare';
+  | 'routeBonus' | 'loadPenalty' | 'profitShare'
+  // smuggling
+  | 'hiddenSearch' | 'signature' | 'fence' | 'quickDump' | 'openSearch' | 'silentRunning' | 'bribe' | 'infamyDecay' | 'smugglersLuck'
+  | 'ghostWake' | 'dangerousGoods';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -32,7 +35,10 @@ export type Flag =
   // boarding
   | 'pistol_volley' | 'bow_and_stern' | 'first_over_rail' | 'surrender_terms' | 'hull_to_hull' | 'warlord' | 'ransom' | 'no_quarter'
   // trade
-  | 'appraiser' | 'convoy_rights' | 'speculator' | 'rumor_mill' | 'league_patron' | 'monopolist' | 'prize_broker' | 'counting_house';
+  | 'appraiser' | 'convoy_rights' | 'speculator' | 'rumor_mill' | 'league_patron' | 'monopolist' | 'prize_broker' | 'counting_house'
+  // smuggling
+  | 'dark_lanterns' | 'fog_sense' | 'false_colors' | 'cove_knowledge' | 'night_market' | 'insider' | 'shadow_strike' | 'broker_friend'
+  | 'nobodys_ship' | 'black_ledger';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

@@ -9,6 +9,7 @@ import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
 import { launchJollyBoat } from './prizes.ts';
+import { decoyBarrels, falseColors, slipAway } from './smugglefx.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -155,6 +156,19 @@ export function useTalentActive(game: Game, s: PlayerSession, id: string): strin
       applyDamage(game, ship, { hull: ship.stats.hullMax * 0.02 }, null);
       break;
     }
+    case 'smg_false_colors': {
+      const why = falseColors(game, ship);
+      if (why) return why;
+      break;
+    }
+    case 'smg_slip_away': {
+      const why = slipAway(game, ship);
+      if (why) return why;
+      break;
+    }
+    case 'smg_decoy_barrels':
+      decoyBarrels(game, ship);
+      break;
     case 'brd_jolly_boat': {
       const why = launchJollyBoat(game, ship);
       if (why) return why;

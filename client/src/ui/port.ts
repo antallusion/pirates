@@ -94,6 +94,8 @@ export class PortScreen {
         const qty = Number(root.querySelector<HTMLInputElement>('#opt-qty')!.value);
         return this.send({ t: 'option', good: good as never, qty });
       }
+      case 'fence':
+        return this.send({ t: 'fence_sell', good: d.good as never, qty: Math.floor(state.self?.cargo[d.good as never] ?? 0) });
       case 'option_ex':
         return this.send({ t: 'option_exercise', index: Number(d.i) });
       case 'order_fill':
@@ -171,6 +173,8 @@ export class PortScreen {
       ${view.duty ? `Import duty <b>${Math.round(view.duty * 100)}%</b> on sales (licence waives it).` : ''} ${portDef.blackMarket ? 'Black market: fences buy plunder (−15%).' : ''}</span>
       <label class="lbl">Qty <select data-qty class="btn">${qtys.map((q) => `<option ${q === this.qty ? 'selected' : ''}>${q}</option>`).join('')}</select></label></div>
       <table class="grid"><tr><th>Good</th><th>Stock</th><th>Buy</th><th>Sell</th><th></th><th>Per unit</th><th>Hold</th><th></th></tr>${rows}</table>
+      ${view.fence !== null ? `<div class="card" style="margin-top:10px"><h4>A quiet word in the back room</h4><p class="muted">A fence buys contraband here at ${Math.round(view.fence * 100)}% of Fogmouth's price.</p>
+        ${(Object.keys(self.cargo) as (keyof typeof GOODS)[]).filter((g) => GOODS[g].contraband && (self.cargo[g] ?? 0) >= 1).map((g) => `<button class="btn btn-small" data-act="fence" data-good="${g}">Sell ${Math.floor(self.cargo[g] ?? 0)} ${esc(GOODS[g].name)}</button>`).join(' ') || '<span class="muted">You carry nothing he wants.</span>'}</div>` : ''}
       <h3 class="title-sm" style="font-size:20px;margin-top:16px">Chandlery — shot & powder</h3>${ammo}${intel}`;
   }
 
