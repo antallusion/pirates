@@ -4,3 +4,4 @@ data/*.db-*
 *.log
 .DS_Store
 assets/raw/
+__pycache__/
