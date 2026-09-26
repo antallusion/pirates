@@ -1,6 +1,11 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { t } from '../i18n.ts';
+import type { Key } from '../i18n.ts';
+import { term } from './terms.ts';
+import { drawRelation, relationOf, RELATION_COLOR } from '../render/relation.ts';
+import { cbColor, settings } from '../settings.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { WANTED_TITLES } from '../../../shared/src/data/factions.ts';
 import { AMMO, AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
@@ -234,8 +239,9 @@ export class Hud {
     g.fill();
     g.restore();
     const rel = Math.round(relWindDeg(you.h, { dir: state.wind[0], strength: state.wind[1] }));
-    const point = rel < (state.ownStats?.noGoDeg ?? 50) ? '<span style="color:var(--bad)">in irons</span>' : rel < 80 ? 'close-hauled' : rel < 110 ? 'beam reach' : rel < 160 ? 'broad reach' : 'running';
-    $('nav-text').innerHTML = `Wind ${Math.round(state.wind[1] * 30)} kn · ${point} (${rel}°)`;
+    const pt = rel < (state.ownStats?.noGoDeg ?? 50) ? 'irons' : rel < 80 ? 'close' : rel < 110 ? 'beam' : rel < 160 ? 'broad' : 'running';
+    const point = term(`sail.${pt}` as Key, pt === 'irons' ? 'bad' : '');
+    $('nav-text').innerHTML = `${esc(t('hud.wind', { kn: Math.round(state.wind[1] * 30) }))} · ${point} (${rel}°)`;
   }
 
   private drawMinimap(state: ClientState): void {
@@ -292,13 +298,14 @@ export class Hud {
       g.fillStyle = '#e0b862';
       g.fillRect(tx(p.x) - 3, ty(p.y) - 3, 6, 6);
     }
+    // Ships by shape (§11.2): circle a friend, square a neutral, diamond an enemy, notched diamond a bounty.
+    const cb = settings().colorblind;
     for (const s of state.ships.values()) {
-      const hostile = s.cur.flags & SF.HOSTILE;
-      g.fillStyle = hostile ? '#e0655a' : s.info?.isPlayer ? '#8fb3d9' : '#a9a9a0';
-      g.beginPath();
-      g.arc(tx(s.cur.x), ty(s.cur.y), hostile ? 3 : 2.2, 0, Math.PI * 2);
-      g.fill();
+      if (s.id === state.entityId) continue;
+      const rel = relationOf(state, s);
+      drawRelation(g, rel, tx(s.cur.x), ty(s.cur.y), rel === 'enemy' || rel === 'target' ? 3 : 2.4, cbColor(cb, RELATION_COLOR[rel]));
     }
+    drawRelation(g, 'me', W / 2, H / 2, 2.6, RELATION_COLOR.me);
     for (const l of state.loot.values()) {
       g.fillStyle = '#b08d57';
       g.fillRect(tx(l.x) - 1.5, ty(l.y) - 1.5, 3, 3);
@@ -487,6 +494,16 @@ export class Hud {
     this.toastsEl.prepend(el);
     while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
     setTimeout(() => el.remove(), kind === 'xp' ? 3500 : 7000);
+  }
+
+  /** A sound caption at the edge of the screen it came from (docs/07 §11.5). */
+  caption(text: string, dir: 'ahead' | 'astern' | 'port' | 'starboard' | 'near'): void {
+    const el = document.createElement('div');
+    el.className = `caption cap-${dir}`;
+    el.textContent = text;
+    $('captions').append(el);
+    while ($('captions').children.length > 4) $('captions').firstChild!.remove();
+    setTimeout(() => el.remove(), 3500);
   }
 
   /** Letters waiting: a small seal by the minimap. */

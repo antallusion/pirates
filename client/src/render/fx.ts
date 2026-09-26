@@ -57,6 +57,17 @@ export class Fx {
   shake = 0;
   flash = 0; // lightning / explosion screen flash
 
+  private lastFlash = -1;
+
+  /** A screen flash — never more than three a second (docs/07 §11.3), whatever sets them off. */
+  screenFlash(v: number): boolean {
+    const now = (globalThis.performance?.now() ?? Date.now()) / 1000;
+    if (now - this.lastFlash < 1 / 3) return false;
+    this.lastFlash = now;
+    this.flash = Math.max(this.flash, v);
+    return true;
+  }
+
   /** Particle LOD: 0 full, 1 thinned, 2 sparse. Chosen from the frame time (or pinned low by the options). */
   lod = 0;
   /** Pinned by the effects option; null follows the frame time. */
@@ -308,7 +319,7 @@ export class Fx {
             }
             break;
           case 'lightning':
-            this.flash = Math.max(this.flash, 0.9);
+            this.screenFlash(0.9);
             this.add({ kind: 'flash', x: e.x, y: e.y, life: 0.3, size: 10, grow: 120, color: '#d8e4ff' });
             this.light(e.x, e.y, 400, 'rgba(210,225,255,1)', 1, 0.4);
             this.splinters(e.x, e.y, 12);

@@ -24,8 +24,13 @@ import { TalentScreen } from './ui/talents.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
+import { OptionsScreen } from './ui/options.ts';
+import { actionFor, applyToDocument, onSettings, settings } from './settings.ts';
+import type { Settings } from './settings.ts';
+import { lang, onLang, t, translateDom } from './i18n.ts';
+import type { Key } from './i18n.ts';
 
-type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | null;
+type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -50,8 +55,39 @@ const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
 const divePanel = new DivePanel((m) => net.send(m));
+const optionsScreen = new OptionsScreen();
+optionsScreen.close = () => closeModal();
 const onboarding = new OnboardingUi(state);
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
+// Options: applied now and on every change (docs/07 §11).
+function applySettings(o: Settings): void {
+  applyToDocument(o);
+  audio.configure(o.volume.master, { sea: o.volume.sea, combat: o.volume.combat, ui: o.volume.ui }, o.mono);
+  renderer.fx.forceLod = o.effects === 'low' ? 2 : null;
+  audio.onCaption = o.captions
+    ? (kind, dir, far) => hud.caption(t(`cap.${kind}` as Key, { dir: t(`dir.${dir}` as Key), far: far ? t('cap.far') : '' }), dir)
+    : null;
+}
+applySettings(settings());
+onSettings(applySettings);
+document.documentElement.lang = lang();
+translateDom();
+onLang(() => {
+  translateDom();
+  if (modal) refreshModal();
+});
+
+/** Reads the open screen aloud (or stops reading). */
+function readAloud(): void {
+  const synth = globalThis.speechSynthesis;
+  if (!synth) return hud.toast('This browser cannot read aloud.', 'bad');
+  if (synth.speaking) return synth.cancel();
+  const text = (modal ? $('modal-panel').innerText : [$('hud-watch').innerText, $('hud-ship').innerText, $('nav-text').innerText].join('. ')).replace(/\s+/g, ' ').trim().slice(0, 4000);
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang() === 'ru' ? 'ru-RU' : 'en-GB';
+  synth.speak(u);
+}
+
 onboarding.onEdge = () => {
   // Never over a fight's screen: the boarding or the shipwreck come first.
   if (modal === null || modal === 'map' || modal === 'help') openModal('edge');
@@ -166,6 +202,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'init':
       inGame = true;
+      audio.ownId = m.entityId;
       $('screen-captain').classList.add('hidden');
       hud.show(true);
       if (state.you === null && m.self.dockedAt) openModal('port');
@@ -295,6 +332,9 @@ function refreshModal(): void {
     case 'edge':
       renderEdge(root, () => closeModal());
       break;
+    case 'options':
+      optionsScreen.render(root);
+      break;
     case 'boarding':
       if (state.boarding) renderBoarding(root, state.boarding, state, (m) => net.send(m), () => closeModal());
       break;
@@ -350,13 +390,21 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     return;
   }
+  // Esc leaves the options even with a slider or a list still in focus.
+  if (e.key === 'Escape' && modal === 'options' && !optionsScreen.capturing) {
+    (document.activeElement as HTMLElement | null)?.blur();
+    closeModal();
+    return;
+  }
   if (typing()) return;
   const k = e.key.toLowerCase();
   if (k === 'escape') {
     if (modal === 'barter') net.send({ t: 'barter', action: 'cancel' });
     else if (modal && modal !== 'boarding' && modal !== 'sunk') closeModal();
+    else if (!modal) openModal('options');
     return;
   }
+  if (modal === 'options' && optionsScreen.capturing) return;
   // The diving bell: Shift+arrows steer it through the drowned streets.
   if (state.dive?.leader && e.shiftKey && e.key.startsWith('Arrow')) {
     const d = ({ ArrowUp: 'n', ArrowRight: 'e', ArrowDown: 's', ArrowLeft: 'w' } as const)[e.key as 'ArrowUp'];
@@ -364,54 +412,57 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     return;
   }
-  if (e.repeat && k !== 'a' && k !== 'd') return;
+  const act = actionFor(settings().keys, k);
+  if (!act) return;
+  // Arrows and Space must not scroll the page.
+  if (k === ' ' || k.startsWith('arrow') || /^f\d+$/.test(k)) e.preventDefault();
+  if (e.repeat && act !== 'rudderLeft' && act !== 'rudderRight') return;
   keys.add(k);
   const docked = !!state.self?.dockedAt;
-  switch (k) {
-    case 'w':
+  switch (act) {
+    case 'sailUp':
       state.input.sail = clamp(state.input.sail + 1, 0, 4);
       break;
-    case 's':
+    case 'sailDown':
       state.input.sail = clamp(state.input.sail - 1, 0, 4);
       break;
-    case 'q':
+    case 'firePort':
       fire('port');
       break;
-    case 'e':
+    case 'fireStarboard':
       fire('starboard');
       break;
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-      net.send({ t: 'ammo', ammo: AMMO_IDS[Number(k) - 1] });
+    case 'ammo1':
+    case 'ammo2':
+    case 'ammo3':
+    case 'ammo4':
+    case 'ammo5':
+      net.send({ t: 'ammo', ammo: AMMO_IDS[Number(act.slice(4)) - 1] });
       break;
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-    case '0': {
+    case 'talent1':
+    case 'talent2':
+    case 'talent3':
+    case 'talent4':
+    case 'talent5': {
       const list = state.self ? activeTalents(state.self.talents) : [];
-      const t = list['67890'.indexOf(k)];
-      if (t) sendTalent(t.id);
+      const tal = list[Number(act.slice(6)) - 1];
+      if (tal) sendTalent(tal.id);
       else hud.toast('No active talent in that slot — learn one (T).', 'bad');
       break;
     }
-    case 'k':
+    case 'fireMode':
       net.send({ t: 'fire_mode', rolling: !state.self?.rollingFire });
       break;
-    case ' ':
+    case 'chasers':
       fireChasers();
-      e.preventDefault();
       break;
-    case 'z':
-    case 'x':
-    case 'c':
-    case 'v':
-      useAbilityKey(k.toUpperCase() as 'Z');
+    case 'abilityZ':
+    case 'abilityX':
+    case 'abilityC':
+    case 'abilityV':
+      useAbilityKey(act.slice(7) as 'Z');
       break;
-    case 'b':
+    case 'board':
       if (state.you && state.you.flags & SF.BOARDING) {
         net.send(e.shiftKey ? { t: 'scuttle' } : { t: 'board_cut' });
         break;
@@ -421,54 +472,57 @@ addEventListener('keydown', (e) => {
         net.send({ t: 'board', target: boardTarget, aggression });
       } else hud.toast('No crippled ship within grappling range.', 'bad');
       break;
-    case 'l':
+    case 'land':
       net.send({ t: 'land' });
       break;
-    case 'g': {
+    case 'orders': {
       const cur = state.you?.station ?? 'balanced';
       net.send({ t: 'station', station: STATIONS[(STATIONS.indexOf(cur) + 1) % STATIONS.length] });
       break;
     }
-    case 'r':
+    case 'repair':
       net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
       break;
-    case 'f':
+    case 'dock':
       if (docked) net.send({ t: 'undock' });
       else net.send({ t: 'dock', bribe: e.shiftKey });
       break;
-    case 'm':
+    case 'map':
       toggle('map');
       break;
-    case 't':
+    case 'talents':
       toggle('talents');
       break;
-    case 'i':
+    case 'ship':
       toggle('ship');
       break;
-    case 'o':
+    case 'crew':
       toggle('crew');
       break;
-    case 'y':
+    case 'company':
       if (modal !== 'company') companyScreen.open();
       toggle('company');
       break;
-    case 'u':
+    case 'cursedShot':
       net.send({ t: 'ammo', ammo: 'cursed' });
       break;
-    case 'j': {
+    case 'formation': {
       const order = ['line', 'wedge', 'ring'] as const;
       const cur = state.self?.fleet.formation ?? 'line';
       net.send({ t: 'formation', formation: order[(order.indexOf(cur) + 1) % 3] });
       break;
     }
-    case 'h':
+    case 'help':
       toggle('help');
       break;
-    case 'n':
+    case 'mute':
       hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 'info');
       break;
-    case 'p':
+    case 'harbour':
       if (docked) openModal('port');
+      break;
+    case 'readAloud':
+      readAloud();
       break;
   }
 });
@@ -563,7 +617,9 @@ function sendTalent(id: string): void {
 }
 
 function sendInput(now: number): void {
-  const rudder = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
+  const km = settings().keys;
+  const held = (a: 'rudderLeft' | 'rudderRight') => km[a].some((k) => k && keys.has(k));
+  const rudder = (held('rudderRight') ? 1 : 0) - (held('rudderLeft') ? 1 : 0);
   state.input.rudder = typing() ? 0 : rudder;
   const key = `${state.input.rudder}|${state.input.sail}`;
   if (key !== lastInputKey || now - lastInputSent > 250) {

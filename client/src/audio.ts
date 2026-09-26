@@ -16,6 +16,18 @@ export function spatial(lx: number, ly: number, sx: number, sy: number, range = 
   return { gain, pan };
 }
 
+export type Bus = 'sea' | 'combat' | 'ui';
+export type CaptionKind = 'volley' | 'explosion' | 'deep' | 'thunder' | 'sinking';
+export type CaptionDir = 'ahead' | 'astern' | 'port' | 'starboard' | 'near';
+
+/** Where a sound lies from the listener, on screen terms (north is up). */
+export function direction(lx: number, ly: number, sx: number, sy: number): CaptionDir {
+  const dx = sx - lx, dy = sy - ly;
+  if (Math.hypot(dx, dy) < 120) return 'near';
+  if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? 'port' : 'starboard';
+  return dy < 0 ? 'ahead' : 'astern';
+}
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -24,8 +36,16 @@ export class AudioEngine {
   private sea: GainNode | null = null;
   private seaFilter: BiquadFilterNode | null = null;
   private rain: GainNode | null = null;
+  /** Buses (docs/07 §11.5): the sea and weather, the fighting, the interface. */
+  private buses: Record<Bus, GainNode> | null = null;
   muted = localStorage.getItem('gravetide.muted') === '1';
   volume = Number(localStorage.getItem('gravetide.volume') ?? 0.7);
+  levels: Record<Bus, number> = { sea: 1, combat: 1, ui: 1 };
+  mono = false;
+  /** Sound captions: "[broadside to port, far]" — set by the options. */
+  onCaption: ((kind: CaptionKind, dir: CaptionDir, far: boolean) => void) | null = null;
+  ownId = 0;
+  private captionAt = new Map<string, number>();
   listener = { x: 0, y: 0 };
   private lastThunder = 0;
 
@@ -42,6 +62,13 @@ export class AudioEngine {
     this.master = ctx.createGain();
     this.master.gain.value = this.muted ? 0 : this.volume;
     this.master.connect(ctx.destination);
+    const bus = (k: Bus) => {
+      const g = ctx.createGain();
+      g.gain.value = this.levels[k];
+      g.connect(this.master!);
+      return g;
+    };
+    this.buses = { sea: bus('sea'), combat: bus('combat'), ui: bus('ui') };
     this.noise = this.makeNoise(2, false);
     this.brown = this.makeNoise(4, true);
     // Ocean bed.
@@ -53,7 +80,7 @@ export class AudioEngine {
     this.seaFilter.frequency.value = 500;
     this.sea = ctx.createGain();
     this.sea.gain.value = 0.25;
-    sea.connect(this.seaFilter).connect(this.sea).connect(this.master);
+    sea.connect(this.seaFilter).connect(this.sea).connect(this.buses.sea);
     sea.start();
     // Rain.
     const rain = ctx.createBufferSource();
@@ -64,7 +91,7 @@ export class AudioEngine {
     hp.frequency.value = 2500;
     this.rain = ctx.createGain();
     this.rain.gain.value = 0;
-    rain.connect(hp).connect(this.rain).connect(this.master);
+    rain.connect(hp).connect(this.rain).connect(this.buses.sea);
     rain.start();
   }
 
@@ -103,14 +130,26 @@ export class AudioEngine {
     void dt;
   }
 
-  private voice(gain: number, pan: number, delay = 0): { out: GainNode; at: number } | null {
+  /** Master volume, the three buses and mono, from the options. */
+  configure(master: number, levels: Record<Bus, number>, mono: boolean): void {
+    this.volume = master;
+    this.levels = { ...levels };
+    this.mono = mono;
+    localStorage.setItem('gravetide.volume', String(master));
+    if (!this.ctx || !this.master || !this.buses) return;
+    const t = this.ctx.currentTime;
+    this.master.gain.setTargetAtTime(this.muted ? 0 : master, t, 0.05);
+    for (const k of Object.keys(this.buses) as Bus[]) this.buses[k].gain.setTargetAtTime(levels[k], t, 0.05);
+  }
+
+  private voice(gain: number, pan: number, delay = 0, bus: Bus = 'combat'): { out: GainNode; at: number } | null {
     const ctx = this.ctx;
-    if (!ctx || !this.master || gain <= 0.001) return null;
+    if (!ctx || !this.buses || gain <= 0.001) return null;
     const out = ctx.createGain();
     out.gain.value = gain;
     const p = ctx.createStereoPanner();
-    p.pan.value = pan;
-    out.connect(p).connect(this.master);
+    p.pan.value = this.mono ? 0 : pan;
+    out.connect(p).connect(this.buses[bus]);
     return { out, at: ctx.currentTime + delay };
   }
 
@@ -183,6 +222,10 @@ export class AudioEngine {
     const now = performance.now();
     if (now - this.lastThunder < 3000) return;
     this.lastThunder = now;
+    if (this.onCaption && (this.captionAt.get('thunder') ?? 0) < now - 2000) {
+      this.captionAt.set('thunder', now);
+      this.onCaption('thunder', 'near', true);
+    }
     const v = this.voice(0.5, (Math.random() - 0.5) * 0.8, 0.4 + Math.random() * 1.2);
     if (!v) return;
     this.noiseBurst(v.out, v.at, 3.5, 'lowpass', 180, 0.4, 1);
@@ -191,13 +234,13 @@ export class AudioEngine {
 
   /** Harbour bell: inharmonic partials of a cast bronze bell. */
   bell(): void {
-    const v = this.voice(0.25, 0);
+    const v = this.voice(0.25, 0, 0, 'ui');
     if (!v) return;
     for (const [ratio, amp] of [[1, 1], [2.0, 0.5], [2.4, 0.4], [3.0, 0.25], [4.2, 0.15]] as const) this.tone(v.out, v.at, 220 * ratio, 3.5 / ratio + 0.8, amp * 0.4);
   }
 
   coins(): void {
-    const v = this.voice(0.2, 0);
+    const v = this.voice(0.2, 0, 0, 'ui');
     if (!v) return;
     for (let i = 0; i < 4; i++) this.tone(v.out, v.at + i * 0.045, 2600 + Math.random() * 900, 0.12, 0.3, 'triangle');
   }
@@ -210,7 +253,31 @@ export class AudioEngine {
     this.tone(v.out, v.at + 0.2, 138.6, 2.5, 0.3, 'sine', 90);
   }
 
+  /** A caption for a sound that matters, with where it came from (at most one of a kind every 2 s). */
+  private caption(kind: CaptionKind, x: number, y: number, range: number): void {
+    if (!this.onCaption) return;
+    const now = performance.now();
+    if ((this.captionAt.get(kind) ?? 0) > now - 2000) return;
+    const d = Math.hypot(x - this.listener.x, y - this.listener.y);
+    if (d > range) return;
+    this.captionAt.set(kind, now);
+    this.onCaption(kind, direction(this.listener.x, this.listener.y, x, y), d > range * 0.45);
+  }
+
   onEvent(e: GameEvent): void {
+    // Captions do not need the sound to be on — that is the point of them.
+    switch (e.k) {
+      case 'volley':
+        if (e.ship !== this.ownId && e.balls.length) this.caption('volley', e.balls[0][0], e.balls[0][1], 1600);
+        break;
+      case 'fx':
+        if (e.fx === 'explosion' || e.fx === 'mortar') this.caption('explosion', e.x, e.y, 3000);
+        else if (e.fx === 'deep_call' || e.fx === 'maw' || e.fx === 'boss_roar' || e.fx === 'rise' || e.fx === 'song' || e.fx === 'plankton') this.caption('deep', e.x, e.y, 2500);
+        break;
+      case 'sunk':
+        this.caption('sinking', e.x, e.y, 2200);
+        break;
+    }
     if (!this.ctx) return;
     switch (e.k) {
       case 'volley':

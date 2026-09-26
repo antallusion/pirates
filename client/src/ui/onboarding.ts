@@ -7,6 +7,7 @@ import { has, onLang, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
 import { $, esc } from './dom.ts';
+import { glossaryHtml } from './terms.ts';
 
 /** Which DOM block shows which part of the HUD. */
 const BLOCKS: Record<string, HudBlock[]> = {
@@ -150,5 +151,6 @@ export function logbookHtml(v: OnboardingView | null): string {
     <p><b>${esc(t('log.goals'))}</b>${v?.goalsDone ? ` <span class="muted">(${esc(t('log.goalsDone', { n: v.goalsDone }))})</span>` : ''}</p>
     ${goals.length ? `<ul>${goals.map((g) => `<li>${esc(has(`goal.${g}`) ? t(`goal.${g}` as Key) : g)}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}
     <p><b>${esc(t('log.hints'))}</b></p>
-    ${hints.length ? `<ul>${hints.map((h) => `<li>${esc(t(`hint.${h}` as Key))}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}</div>`;
+    ${hints.length ? `<ul>${hints.map((h) => `<li>${esc(t(`hint.${h}` as Key))}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}
+    <p><b>${esc(t('log.glossary'))}</b></p>${glossaryHtml()}</div>`;
 }

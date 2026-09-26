@@ -21,6 +21,9 @@ import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 import { GlSea, GlSky, glWanted } from './gl.ts';
 import { CELL, SpriteAtlas } from './atlas.ts';
 import type { SailKey } from './atlas.ts';
+import { FACTION_SIGN } from './relation.ts';
+import { cbColor, settings } from '../settings.ts';
+import type { FactionId } from '../../../shared/src/data/factions.ts';
 
 const BIOME_TINT: Record<IslandBiome, string> = {
   temperate: 'rgba(40,52,40,0.35)',
@@ -167,7 +170,8 @@ export class Renderer {
       this.fx.view = { x0: this.camX - mx, y0: this.camY - my, x1: this.camX + mx, y1: this.camY + my };
     }
     this.fx.update(dt);
-    const shake = this.fx.shake;
+    const opt = settings();
+    const shake = opt.screenShake ? this.fx.shake : 0;
     const shx = shake ? (Math.random() - 0.5) * shake * 8 : 0, shy = shake ? (Math.random() - 0.5) * shake * 8 : 0;
     g.setTransform(this.dpr, 0, 0, this.dpr, shx * this.dpr, shy * this.dpr);
 
@@ -196,7 +200,7 @@ export class Renderer {
     this.drawLoot(state);
     this.drawDuelRing(state);
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
-    drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, false);
+    drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, false); // no pulsing zones when motion is reduced
     for (const s of ships) this.drawShip(s, state);
     this.drawTethers(state, ships);
     this.drawBalls();
@@ -205,7 +209,7 @@ export class Renderer {
     // The Islands of Light burn in the Abyss's dark.
     for (const l of state.self?.abyss?.lights ?? []) this.fx.light(l.x, l.y, 700, 'rgba(255,245,210,1)', 0.9, 0.05);
     this.drawLighting(state, ships, night);
-    drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, true);
+    drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, true);
     this.drawParticles(true);
     this.drawWeather(state, dt);
 
@@ -215,7 +219,8 @@ export class Renderer {
     this.drawTexts();
     this.drawVignette(state.fog, night);
     if (this.fx.flash > 0) {
-      g.fillStyle = `rgba(210,225,255,${this.fx.flash * 0.5})`;
+      // Reduced flashes: a gentle 30% lift instead of a white-out.
+      g.fillStyle = `rgba(210,225,255,${this.fx.flash * (opt.reduceFlashes ? 0.12 : 0.5)})`;
       g.fillRect(0, 0, this.w, this.h);
     }
   }
@@ -1049,6 +1054,8 @@ export class Renderer {
       dg.fill();
     };
     const glows: { x: number; y: number; r: number; color: string; a: number }[] = [];
+    const marks: { x: number; y: number; sign: string; color: string }[] = [];
+    const opt = settings();
     for (const s of ships) {
       if (s.flags & SF.LANTERNS_OUT || s.sinkT > 0) continue;
       const cls = SHIP_CLASSES[s.classId];
@@ -1056,12 +1063,16 @@ export class Renderer {
       const lx = s.x + back.x * cls.length * 0.4, ly = s.y + back.y * cls.length * 0.4;
       hole(lx, ly, 55 + cls.length, 0.75);
       if (s.own) hole(s.x, s.y, 140, 0.35);
-      const fac = s.own ? '#f2b35a' : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].lantern : '#f2b35a';
-      glows.push({ x: lx, y: ly, r: 16 + cls.length * 0.4, color: fac, a: 0.55 });
+      const fac = s.own ? '#f2b35a' : s.info && s.info.faction !== 'player' ? cbColor(opt.colorblind, FACTIONS[s.info.faction].lantern) : '#f2b35a';
+      // Lanterns flicker a little (unless the options still them).
+      const flick = opt.lanternFlicker ? 0.88 + 0.12 * Math.sin(this.time * 9 + s.id * 1.7) * Math.sin(this.time * 3.1 + s.id) : 1;
+      glows.push({ x: lx, y: ly, r: 16 + cls.length * 0.4, color: fac, a: 0.55 * flick });
+      // Lantern marks: the faction's sign by her lantern at battle zoom.
+      if (opt.lanternMarks && this.zoom >= 1.4 && s.info && s.info.faction !== 'player') marks.push({ x: lx, y: ly, sign: FACTION_SIGN[s.info.faction], color: fac });
     }
     for (const p of state.ports) {
       hole(p.x, p.y, 520, 0.8);
-      glows.push({ x: p.x, y: p.y, r: 90, color: FACTIONS[p.faction].lantern, a: 0.28 });
+      glows.push({ x: p.x, y: p.y, r: 90, color: cbColor(opt.colorblind, FACTIONS[p.faction].lantern), a: 0.28 });
     }
     for (const is of state.islands.values()) {
       if (!is.features.includes('lighthouse')) continue;
@@ -1096,6 +1107,17 @@ export class Renderer {
       g.fill();
     }
     g.globalCompositeOperation = 'source-over';
+    if (marks.length) {
+      g.font = '600 13px Inter, sans-serif';
+      g.textAlign = 'left';
+      for (const m of marks) {
+        const x = this.sx(m.x) + 7, y = this.sy(m.y) + 4;
+        g.fillStyle = 'rgba(0,0,0,0.75)';
+        g.fillText(m.sign, x + 1, y + 1);
+        g.fillStyle = m.color;
+        g.fillText(m.sign, x, y);
+      }
+    }
     // Cold moonlight grade.
     g.fillStyle = `rgba(40,70,110,${0.04 + night * 0.05})`;
     g.globalCompositeOperation = 'soft-light';
@@ -1144,9 +1166,9 @@ export class Renderer {
       if (heavy) {
         this.nextLightning -= dt;
         if (this.nextLightning <= 0) {
-          this.nextLightning = 6 + Math.random() * 12;
+          this.nextLightning = 6 + Math.random() * 12; // series of strikes at least 4 s apart
           this.lightning = 1;
-          this.fx.flash = 0.8;
+          this.fx.screenFlash(0.8);
           this.onLightning();
           // A bolt from the top of the sky down to somewhere over the sea.
           let x = this.w * (0.15 + Math.random() * 0.7), y = -10;
@@ -1166,7 +1188,7 @@ export class Renderer {
       const wv = headingVec(state.wind[0]);
       this.sky.draw({
         camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, wind: [wv.x * (0.5 + state.wind[1]), wv.y * (0.5 + state.wind[1])],
-        fog: clamp(state.fog, 0, 1), flash: this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: this.lightning,
+        fog: clamp(state.fog, 0, 1), flash: settings().reduceFlashes ? this.fx.flash * 0.25 : this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: settings().reduceFlashes ? 0 : this.lightning,
       });
     }
   }
@@ -1244,10 +1266,12 @@ export class Renderer {
     const faction = info.faction !== 'player' ? FACTIONS[info.faction] : null;
     g.textAlign = 'center';
     g.font = '600 11px Inter, sans-serif';
-    const label = info.isPlayer ? `${info.captainName} · ${info.name}` : info.name;
+    // The faction's sign leads every NPC's name (§11.1): never the lantern's colour alone.
+    const label = info.isPlayer ? `${info.captainName} · ${info.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${info.name}`;
+    const cb = settings().colorblind;
     g.fillStyle = '#000';
     g.fillText(label, x + 1, y + 1);
-    g.fillStyle = hostile ? '#e0776b' : info.isPlayer ? '#cfe0f2' : faction ? faction.lantern : '#ccc';
+    g.fillStyle = cbColor(cb, hostile ? '#e0776b' : info.isPlayer ? '#cfe0f2' : faction ? faction.lantern : '#ccc');
     g.fillText(label, x, y);
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
