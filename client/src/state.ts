@@ -212,7 +212,7 @@ export class ClientState {
       rig: st.rig, maxSpeed: st.maxSpeed, accel: st.accel, turnRate: st.turnRate, noGoDeg: st.noGoDeg, sailChangeRate: st.sailChangeRate,
       currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
       loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: this.night() ? 1 + st.nightSpeed : 1,
-      personalWind: false, weatherly: this.self.loadout.classId === 'schooner',
+      personalWind: false, weatherly: this.self.loadout.classId === 'schooner', sweeps: this.self.loadout.classId === 'xebec',
     };
     const wind = { dir: this.wind[0], strength: this.wind[1] };
     const cur = currentAt(this.currents, s.x, s.y, this.estServerTime(), this.whirlpools);

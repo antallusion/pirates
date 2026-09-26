@@ -22,7 +22,26 @@ export interface Tether {
 }
 
 export function mountReloadTime(ship: ShipEntity): number {
-  return ship.loadout.mount ? MOUNTS[ship.loadout.mount].reload * ship.stats.reloadMul : 1;
+  if (!ship.loadout.mount) return 1;
+  const bomb = ship.cls.passive.id === 'bomb_vessel' && ship.loadout.mount === 'mortar' ? 0.5 : 1;
+  return MOUNTS[ship.loadout.mount].reload * ship.stats.reloadMul * bomb;
+}
+
+/** A fireship's charges go off: everything close burns, the hulk is gone. */
+export function detonateFireship(game: Game, ship: ShipEntity): void {
+  ship.fuseAt = 0;
+  const now = game.now;
+  game.forShipsNear(ship.state.x, ship.state.y, 150, (o) => {
+    if (o.id === ship.id || !o.alive || o.docked) return;
+    const d = dist(o.state.x, o.state.y, ship.state.x, ship.state.y) - o.stats.length / 3;
+    if (d > 90) return;
+    const f = 1 - Math.max(0, d) / 110;
+    applyDamage(game, o, { hull: 700 * f, sails: 60 * f, crew: 4 * f, morale: 25 * f }, ship);
+    o.addEffect({ id: 'fire', until: now + 15, source: ship.id }, now);
+  });
+  game.emit({ k: 'fx', fx: 'explosion', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 90 }, ship.state.x, ship.state.y);
+  ship.hull = 0;
+  game.beginSinking(ship);
 }
 
 export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number): string | null {
@@ -39,10 +58,13 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
   const now = game.now;
   switch (id) {
     case 'mortar': {
-      const scatter = (reach / def.range) * 60 * game.seaSpread(ship);
-      const x = ship.state.x + Math.sin(h) * reach + game.rng.gauss() * scatter;
-      const y = ship.state.y - Math.cos(h) * reach + game.rng.gauss() * scatter;
-      game.strikes.push({ at: now + 3, x, y, radius: 55, hull: 280, rudder: 0.1, owner: ship.id, slow: 0, shells: 1, fx: 'mortar' });
+      const bombs = ship.cls.passive.id === 'bomb_vessel' ? 2 : 1;
+      for (let i = 0; i < bombs; i++) {
+        const scatter = (reach / def.range) * 60 * game.seaSpread(ship) * (i ? 1.4 : 1);
+        const x = ship.state.x + Math.sin(h) * reach + game.rng.gauss() * scatter;
+        const y = ship.state.y - Math.cos(h) * reach + game.rng.gauss() * scatter;
+        game.strikes.push({ at: now + 3 + i * 0.4, x, y, radius: 55, hull: 280, rudder: 0.1, owner: ship.id, slow: 0, shells: 1, fx: 'mortar' });
+      }
       game.emit({ k: 'fx', fx: 'mortar_launch', x: Math.round(ship.state.x), y: Math.round(ship.state.y) }, ship.state.x, ship.state.y);
       break;
     }
@@ -70,6 +92,13 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
       ship.tether = { target: target.id, until: now + 20, length: Math.max(40, dist(ship.state.x, ship.state.y, target.state.x, target.state.y)), strain: 0 };
       game.emit({ k: 'tether', a: ship.id, b: target.id, until: Math.round(now + 20) }, ship.state.x, ship.state.y);
       game.toastShip(target, `Harpooned by ${ship.name}! Cut the line or be boarded.`, 'bad');
+      break;
+    }
+    case 'fire_charge': {
+      if (ship.fuseAt) return 'The fuses are already burning';
+      ship.fuseAt = now + 8;
+      ship.addEffect({ id: 'fire', until: now + 9 }, now);
+      game.toastShip(ship, 'Fuses lit! 8 seconds — steer her into them and take to the boats!', 'bad');
       break;
     }
     case 'abyssal_lance': {
@@ -158,6 +187,7 @@ export function mountOffers(ship: ShipEntity, port: Port): { mount: MountId; cos
 export function shipyardMount(game: Game, s: PlayerSession, port: Port, mount: MountId): string | null {
   const ship = s.ship!;
   if (!MOUNTS[mount]) return 'Unknown mount';
+  if (ship.cls.fixedMount) return `The ${ship.cls.name}'s ${MOUNTS[ship.cls.fixedMount].name} cannot be replaced`;
   if (!mountOffers(ship, port).some((o) => o.mount === mount)) return `${port.name} cannot fit a ${MOUNTS[mount].name} to a ${ship.cls.name}`;
   if (ship.loadout.mount === mount) return 'Already fitted';
   const refund = ship.loadout.mount ? Math.round(MOUNTS[ship.loadout.mount].price * 0.4) : 0;

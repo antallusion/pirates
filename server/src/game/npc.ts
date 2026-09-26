@@ -580,7 +580,7 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
   }
   if (REGIONS[region].safety === 'safe' || isLand(game.world, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500) return null;
   const tierRoll = game.rng.float() + REGIONS[region].strangeness * 0.5;
-  const cls: ShipClassId = tierRoll < 0.45 ? 'sloop' : tierRoll < 0.75 ? 'schooner' : tierRoll < 1.0 ? 'brigantine' : 'brig';
+  const cls: ShipClassId = tierRoll < 0.45 ? 'sloop' : tierRoll < 0.72 ? 'schooner' : tierRoll < 0.8 ? 'xebec' : tierRoll < 1.0 ? 'brigantine' : 'brig';
   const ship = game.spawnNpcShip('pirate', cls, 'confederacy', x, y, game.rng.range(0, Math.PI * 2));
   ship.purse = 100 + game.rng.int(0, 400) * ship.cls.tier;
   const loot: GoodId[] = ['rum', 'gunpowder', 'weapons', 'tobacco', 'spices', 'dreamleaf'];

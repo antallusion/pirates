@@ -9,6 +9,7 @@ import type { AmmoId, GunId, ModuleId, ShipClassId } from '../../../shared/src/d
 import { dist } from '../../../shared/src/math.ts';
 import type { Contract, PortView, Side } from '../../../shared/src/protocol.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import type { ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
@@ -76,7 +77,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     shipyard: {
       tier,
       repairCost: repairCost(ship),
-      ships: SHIP_CLASS_IDS.filter((id) => SHIP_CLASSES[id].purchasable && SHIP_CLASSES[id].tier <= tier).map((id) => ({
+      ships: SHIP_CLASS_IDS.filter((id) => SHIP_CLASSES[id].purchasable && SHIP_CLASSES[id].tier <= tier && (!SHIP_CLASSES[id].factions || SHIP_CLASSES[id].factions!.includes(port.faction))).map((id) => ({
         classId: id, price: SHIP_CLASSES[id].price, tradeIn: Math.round(shipValue(ship) * 0.6),
       })),
       modules: MODULE_IDS.filter((m) => !(m === 'figurehead_kraken' && tier < 2)).map((m) => {
@@ -254,13 +255,14 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   const def = SHIP_CLASSES[classId];
   if (!def || !def.purchasable) return 'Not for sale';
   if (def.tier > port.shipyardTier) return `${port.name} cannot build a ${def.name}`;
+  if (def.factions && !def.factions.includes(port.faction)) return `Only ${def.factions.join(', ')} yards build the ${def.name}`;
   if (classId === ship.loadout.classId) return 'You already sail one';
   const tradeIn = Math.round(shipValue(ship) * 0.6);
   const cost = Math.max(0, def.price - tradeIn);
   const p = s.profile!;
   if (p.gold < cost) return `Needs ${cost} silver after trade-in`;
   const gun = defaultGunFor(def);
-  const newLoadout = { classId, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {} };
+  const newLoadout: ShipLoadout = { classId, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {}, mount: def.fixedMount };
   p.gold -= cost;
   // The old deck mount is sold back to the yard.
   if (ship.loadout.mount) p.gold += Math.round(MOUNTS[ship.loadout.mount].price * 0.4);

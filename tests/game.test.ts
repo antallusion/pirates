@@ -511,3 +511,39 @@ test('deck mounts: harpoon tethers and drags, mortar bombs a point, chain gun st
   }
   assert.ok(hit, 'mortar landed on a sitting target');
 });
+
+test('rare hulls: faction yards, xebec sweeps, bomb ketch twin mortars, fireship detonation', async () => {
+  const { stepSailing } = await import('../shared/src/sim/sailing.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Rare Collector');
+  const s = [...game.sessions][0];
+  s.profile!.gold = 50000;
+  // Saltmarrow (Crown, tier 1) builds neither.
+  c.push({ t: 'shipyard', action: 'buy_ship', classId: 'fireship' });
+  assert.equal(s.ship!.loadout.classId, 'sloop');
+  // Sweeps: a xebec makes way head to wind.
+  const xeb = game.spawnNpcShip('merchant', 'xebec', 'free', 40000, 40000, 0);
+  game.npcs.delete(xeb.id);
+  let st = { ...xeb.state, speed: 0, heading: 0 };
+  for (let i = 0; i < 100; i++) st = stepSailing(st, { rudder: 0, sailTarget: 1 }, xeb.sailParams(false), { dir: Math.PI, strength: 0.6 }, { x: 0, y: 0 }, 0.05);
+  assert.ok(st.speed > 1.2, `xebec rows into the wind (${st.speed.toFixed(2)})`);
+  // Fireship: fitted charges, detonation damages neighbours and sinks the hulk.
+  const ship = undockAtSea(game, c);
+  ship.loadout = { classId: 'fireship', name: 'Hellburner', guns: ship.loadout.guns, modules: {}, mount: 'fire_charge' };
+  ship.recompute(game.now);
+  ship.hull = ship.stats.hullMax;
+  const victim = npcAbeam(game, ship, 'port', 40);
+  const hull0 = victim.hull;
+  c.push({ t: 'mount', x: victim.state.x, y: victim.state.y });
+  assert.ok(ship.fuseAt > 0);
+  steps(game, 20 * 16);
+  assert.ok(victim.hull < hull0 - 300, `blast damage ${(hull0 - victim.hull).toFixed(0)}`);
+  assert.ok(c.last('sunk_self'), 'the hulk is gone; the crew is carried to port');
+  // Bomb ketch: mortar reloads twice as fast.
+  const { mountReloadTime } = await import('../server/src/game/mounts.ts');
+  const bk = game.spawnNpcShip('patrol', 'bomb_ketch', 'crown', 30000, 30000, 0);
+  bk.loadout.mount = 'mortar';
+  const br = game.spawnNpcShip('patrol', 'brig', 'crown', 30500, 30000, 0);
+  br.loadout.mount = 'mortar';
+  assert.ok(mountReloadTime(bk) < mountReloadTime(br) * 0.6);
+});

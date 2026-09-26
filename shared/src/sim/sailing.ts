@@ -34,6 +34,7 @@ export interface SailParams {
   speedMul: number; // misc multiplier (night runner, abilities, status)
   personalWind: boolean; // Storm Chaser: always best angle
   weatherly: boolean; // schooner passive
+  sweeps?: boolean; // xebec: oars and lateen rig for light airs
 }
 
 const BASE_NOGO: Record<Rig, number> = { square: 65, fore_aft: 42, mixed: 52 };
@@ -86,7 +87,8 @@ export function targetSpeed(state: SailState, p: SailParams, wind: WindSample): 
   const rel = p.personalWind ? 135 : relWindDeg(state.heading, wind);
   const windS = p.personalWind ? Math.max(0.8, wind.strength) : wind.strength;
   const eff = polarEfficiency(p.rig, rel, p.noGoDeg, p.weatherly);
-  const windFactor = 0.3 + 0.7 * Math.min(1.15, windS);
+  let windFactor = 0.3 + 0.7 * Math.min(1.15, windS);
+  if (p.sweeps && windS < 0.5) windFactor *= 1.25;
   const sailFactor = Math.pow(state.sail, 0.85);
   const sailHealth = 0.25 + 0.75 * p.sailHealth;
   const crew = 0.45 + 0.55 * p.crewFactor;
@@ -98,7 +100,9 @@ export function stepSailing(s: SailState, input: SailInput, p: SailParams, wind:
   const sail = approach(s.sail, clamp(input.sailTarget, 0, 1), sailRate * dt);
   const rudder = approach(s.rudder, clamp(input.rudder, -1, 1), 2.8 * dt);
 
-  const tgt = targetSpeed({ ...s, sail }, p, wind);
+  let tgt = targetSpeed({ ...s, sail }, p, wind);
+  // Sweeps: the crew rows when the wind fails.
+  if (p.sweeps && input.sailTarget > 0) tgt = Math.max(tgt, 3 * (0.45 + 0.55 * p.crewFactor));
   let speed: number;
   if (s.speed < tgt) speed = Math.min(tgt, s.speed + p.accel * dt);
   else speed = Math.max(tgt, s.speed - (p.accel * 0.7 + 0.25 + s.speed * 0.04) * dt);

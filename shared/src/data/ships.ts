@@ -3,7 +3,8 @@
 // so a fast ship crosses the 96 km ocean in roughly 100 minutes).
 
 export type ShipClassId =
-  | 'sloop' | 'cutter' | 'schooner' | 'brigantine' | 'fluyt' | 'brig' | 'frigate' | 'galleon' | 'man_o_war' | 'ghost_ship';
+  | 'sloop' | 'cutter' | 'schooner' | 'brigantine' | 'fluyt' | 'brig' | 'frigate' | 'galleon' | 'man_o_war' | 'ghost_ship'
+  | 'xebec' | 'bomb_ketch' | 'fireship';
 
 export type Rig = 'square' | 'fore_aft' | 'mixed';
 
@@ -33,6 +34,10 @@ export interface ShipClassDef {
   detection: number; // meters
   price: number;
   purchasable: boolean;
+  /** Rare hulls are built only by yards of these factions. */
+  factions?: string[];
+  /** Mount that comes fitted and cannot be changed. */
+  fixedMount?: MountId;
   sprite: string; // asset id in assets/manifest.json
   passive: { id: string; name: string; description: string };
 }
@@ -102,6 +107,27 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 160, holdWeight: 200, crewMin: 180, crewMax: 600, gunPortsPerSide: 20, bowChasers: 2, sternChasers: 2,
     sailHp: 300, repairRate: 0.7, detection: 1600, price: 90000, purchasable: true, sprite: 'ship.man_o_war',
     passive: { id: 'line', name: 'Ship of the Line', description: 'Immune to raking bonus damage from the bow.' },
+  }),
+  xebec: ship({
+    id: 'xebec', name: 'Xebec', tier: 2, rig: 'fore_aft', role: 'Rare. Lateen-rigged corsair with sweeps: flies in light airs, rows through calms.',
+    length: 30, beam: 7, hull: 1500, armor: 0.05, maxSpeed: 17, accel: 2.4, turnRate: 21, draft: 2.2,
+    holdVolume: 55, holdWeight: 60, crewMin: 20, crewMax: 80, gunPortsPerSide: 5, bowChasers: 2, sternChasers: 1,
+    sailHp: 120, repairRate: 1.1, detection: 1500, price: 9500, purchasable: true, sprite: 'ship.xebec', factions: ['brokers', 'confederacy', 'free'],
+    passive: { id: 'sweeps', name: 'Sweeps', description: '+25% speed in winds under half strength; oars give at least 3 m/s on any heading, even head to wind.' },
+  }),
+  bomb_ketch: ship({
+    id: 'bomb_ketch', name: 'Bomb Ketch', tier: 3, rig: 'mixed', role: 'Rare. A floating mortar battery for sieges and ambushes.',
+    length: 30, beam: 10, hull: 2700, armor: 0.2, maxSpeed: 12, accel: 1.2, turnRate: 13, draft: 3.2,
+    holdVolume: 70, holdWeight: 110, crewMin: 30, crewMax: 100, gunPortsPerSide: 4, bowChasers: 0, sternChasers: 1,
+    sailHp: 150, repairRate: 0.9, detection: 1400, price: 16000, purchasable: true, sprite: 'ship.bomb_ketch', factions: ['crown', 'confederacy'], fixedMount: 'mortar',
+    passive: { id: 'bomb_vessel', name: 'Bomb Vessel', description: 'Twin mortar wells: the fitted mortar reloads 50% faster and throws two bombs.' },
+  }),
+  fireship: ship({
+    id: 'fireship', name: 'Fireship', tier: 1, rig: 'square', role: 'Rare. A hulk of tar and powder you sail into the enemy line and abandon.',
+    length: 24, beam: 8, hull: 800, armor: 0.0, maxSpeed: 13, accel: 1.8, turnRate: 17, draft: 2.6,
+    holdVolume: 10, holdWeight: 20, crewMin: 6, crewMax: 20, gunPortsPerSide: 0, bowChasers: 0, sternChasers: 0,
+    sailHp: 90, repairRate: 0.8, detection: 1300, price: 900, purchasable: true, sprite: 'ship.fireship', factions: ['confederacy', 'free'], fixedMount: 'fire_charge',
+    passive: { id: 'fireship', name: 'Fire Hulk', description: 'No guns. RMB lights the charges: 8 s later she explodes (700 damage in 90 m, fires). The crew rows away; you are carried to port like a wreck.' },
   }),
   ghost_ship: ship({
     id: 'ghost_ship', name: 'Ghost Ship', tier: 5, rig: 'mixed', role: 'Something the sea gave back.',
@@ -215,7 +241,7 @@ export function defaultGunFor(cls: ShipClassDef): GunId {
 
 // ---------------------------------------------------------------- Deck mounts (special weapons, right mouse)
 
-export type MountId = 'mortar' | 'harpoon' | 'chain_gun' | 'abyssal_lance';
+export type MountId = 'mortar' | 'harpoon' | 'chain_gun' | 'abyssal_lance' | 'fire_charge';
 
 export interface MountDef {
   id: MountId;
@@ -234,6 +260,7 @@ export const MOUNTS: Record<MountId, MountDef> = {
   mortar: { id: 'mortar', name: 'Sea Mortar', minTier: 2, minRange: 250, range: 900, reload: 25, price: 3200, factions: [], description: 'Lobs a bomb at a point: 3 s flight, 55 m blast, heavy hull damage, poor accuracy at long range. Useless against ships that keep moving.' },
   harpoon: { id: 'harpoon', name: 'Harpoon Gun', minTier: 1, minRange: 0, range: 190, reload: 20, price: 1800, factions: ['harpoon', 'free', 'confederacy'], description: 'Whaler\'s harpoon on a cable: tethers the target for 20 s so it cannot escape. Sets up boardings. The line snaps if strained too long.' },
   chain_gun: { id: 'chain_gun', name: 'Swivel Chain Gun', minTier: 1, minRange: 0, range: 260, reload: 7, price: 1400, factions: [], description: 'A pivoting swivel that fires three chain balls in any direction. Uses chain shot from the hold.' },
+  fire_charge: { id: 'fire_charge', name: 'Fire Charges', minTier: 99, minRange: 0, range: 0, reload: 999, price: 0, factions: ['__fixed__'], description: 'Tar, brushwood and powder. Light them and row away.' },
   abyssal_lance: { id: 'abyssal_lance', name: 'Abyssal Lance', minTier: 2, minRange: 0, range: 320, reload: 30, price: 6000, factions: ['choir'], description: 'A spine from the deep that answers to a cursed hull. A lance of cold light: hull and crew damage, terror. Needs curse stage 1+, deepens your curse.' },
 };
 

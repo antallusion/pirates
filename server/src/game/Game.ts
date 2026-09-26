@@ -19,7 +19,7 @@ import type {
   BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow,
 } from '../../../shared/src/protocol.ts';
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
-import { fireMount, isTethered, mountReloadTime, shipyardMount, stepTethers } from './mounts.ts';
+import { detonateFireship, fireMount, isTethered, mountReloadTime, shipyardMount, stepTethers } from './mounts.ts';
 import { STATION_NAMES, floodCapacity, setStation, stepFlooding } from './damagecontrol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { encodeSnap } from '../../../shared/src/codec.ts';
@@ -547,6 +547,11 @@ export class Game {
     curseAura(this, ship);
     // Brine Mend heal-over-time.
     if (ship.hasEffect('brine_mend')) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.025);
+    // Fireship charges.
+    if (ship.fuseAt && this.now >= ship.fuseAt) {
+      detonateFireship(this, ship);
+      return;
+    }
     // Leaks, pumps and plugs.
     if (stepFlooding(this, ship)) return;
     // Fire.
@@ -924,6 +929,7 @@ export class Game {
     ship.surrendered = false;
     ship.boarding = null;
     ship.effects = [];
+    ship.fuseAt = 0;
     ship.water = 0;
     ship.leaks = 0;
     ship.station = 'balanced';

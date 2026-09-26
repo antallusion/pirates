@@ -87,6 +87,7 @@ export class ShipEntity {
   lastPlug = 0;
   station: Station = 'balanced';
   mountReload = 0;
+  fuseAt = 0; // fireship charges
   tether: Tether | null = null;
   unsinkableReadyAt = 0;
   lastStandUntil = 0;
@@ -168,6 +169,7 @@ export class ShipEntity {
       speedMul: (night ? 1 + st.nightSpeed : 1) * (this.hull < st.hullMax * 0.3 ? 0.85 : 1),
       personalWind: st.flags.has('personal_wind'),
       weatherly: this.cls.passive.id === 'weatherly',
+      sweeps: this.cls.passive.id === 'sweeps',
     };
   }
 
