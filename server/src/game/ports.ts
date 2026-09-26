@@ -7,7 +7,7 @@ import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { AMMO, AMMO_IDS, GUNS, GUN_IDS, MODULES, MODULE_IDS, MOUNTS, SHIP_CLASSES, SHIP_CLASS_IDS, defaultGunFor, moduleCost } from '../../../shared/src/data/ships.ts';
 import type { AmmoId, GunId, ModuleId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import { dist } from '../../../shared/src/math.ts';
-import type { Contract, PortView, Side } from '../../../shared/src/protocol.ts';
+import type { Contract, PortView, Side, TavernView } from '../../../shared/src/protocol.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
@@ -17,6 +17,9 @@ import { FACTION_DUTY, LICENCE_SEC, licenceCost, marketRows, midPrice, portIsLaw
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { PriceMods } from './economy.ts';
 import type { Game } from './Game.ts';
+import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
+import type { Profession } from '../../../shared/src/data/crew.ts';
+import { hireTrade, recruitCost, tavernOf } from './crew.ts';
 import { poiRumor } from './exploration.ts';
 import { mountOffers } from './mounts.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -95,6 +98,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     ammoPrices,
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: crewCost(port, p),
+    tavern: tavernView(game, port, p),
     shipyard: {
       tier,
       repairCost: repairCost(ship),
@@ -246,27 +250,8 @@ export function buyAmmo(game: Game, s: PlayerSession, port: Port, ammo: AmmoId, 
   return null;
 }
 
-export function hireCrew(game: Game, s: PlayerSession, port: Port, qty: number): string | null {
-  const ship = s.ship!;
-  const p = s.profile!;
-  if (!Number.isInteger(qty) || qty === 0 || Math.abs(qty) > 400) return 'Bad number';
-  if (qty < 0) {
-    // Discharge sailors (they leave in port).
-    ship.crew = Math.max(1, ship.crew + qty);
-    return null;
-  }
-  const avail = Math.floor(game.tavernCrew.get(port.id) ?? 0);
-  const room = ship.stats.crewMax - ship.crew;
-  const n = Math.min(qty, avail, room);
-  if (n <= 0) return room <= 0 ? 'No hammocks left aboard' : 'No sailors looking for a berth here';
-  const cost = n * crewCost(port, p);
-  if (p.gold < cost) return 'Not enough silver';
-  p.gold -= cost;
-  game.db.ledger(s.accountId, 'crew', -cost, port.id);
-  ship.morale = (ship.morale * ship.crew + 62 * n) / (ship.crew + n);
-  ship.crew += n;
-  game.tavernCrew.set(port.id, avail - n);
-  return null;
+export function hireCrew(game: Game, s: PlayerSession, port: Port, qty: number, prof: Profession = 'sailor'): string | null {
+  return hireTrade(game, s, port, prof, qty);
 }
 
 export function shipyardRepair(game: Game, s: PlayerSession): string | null {
@@ -617,4 +602,17 @@ export function buyChart(game: Game, s: PlayerSession, port: Port, region: Regio
   game.db.ledger(s.accountId, 'chart_bought', -price, `${region} @ ${port.id}`);
   game.sendTo(s, { t: 'toast', msg: `${list.length} islands inked onto your chart.`, kind: 'info' });
   return null;
+}
+
+function tavernView(game: Game, port: Port, p: Profile): TavernView {
+  const t = tavernOf(game, port);
+  const costs = {} as Record<Profession, number>;
+  for (const k of PROFESSIONS) costs[k] = recruitCost(game, port, p, k);
+  return {
+    stars: Math.round(t.stars * 10) / 10,
+    stock: Object.fromEntries(Object.entries(t.stock).map(([k, v]) => [k, Math.floor(v ?? 0)])),
+    costs,
+    officers: t.officers.map((o) => ({ ...o, taken: t.hired.includes(o.id) || (!!o.unique && (p.company.uniquesGone.includes(o.unique) || p.company.officers.some((x) => x.unique === o.unique))) })),
+    pressGang: REGIONS[port.region].safety === 'lawless',
+  };
 }

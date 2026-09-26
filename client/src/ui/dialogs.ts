@@ -11,6 +11,7 @@ import { esc, fmt } from './dom.ts';
 
 export function renderBoarding(root: HTMLElement, r: BoardingResult, state: ClientState, send: (m: ClientMsg) => void, close: () => void): void {
   const take: Cargo = {};
+  let recruit = r.recruits;
   const mul = state.ownStats?.contrabandVolumeMul ?? 1;
   const holdMax = state.ownStats?.holdVolume ?? 0;
   const base = cargoVolume(state.self?.cargo ?? {}, mul, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1);
@@ -36,6 +37,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
         ${Object.keys(r.destroyed).length ? `<p class="muted">Destroyed in the fight: ${Object.entries(r.destroyed).map(([g, n]) => `${n} ${esc(GOODS[g as GoodId].name)}`).join(', ')}</p>` : ''}
       </div><div>
         <div class="card"><h4>Coin & shot</h4><p>${fmt(r.gold)} silver from her strongbox; ${AMMO_IDS.map((a) => `${r.ammo[a]} ${esc(AMMO[a].name.toLowerCase())}`).join(', ')}.</p></div>
+        ${r.recruits > 0 ? `<div class="card"><h4>Prisoners</h4><p>Up to ${r.recruits} of her crew would sign the articles (low loyalty at first).</p><div class="loot-row"><span>Sign on</span><b>${recruit}</b><input type="range" min="0" max="${r.recruits}" value="${recruit}" id="recruit" /></div></div>` : ''}
         <div class="card"><h4>Her fate</h4>
           ${r.noQuarter ? '<p class="bad">No Quarter: she will be burning and going down within the minute. Take what you can.</p><button class="btn btn-danger" data-fate="sink">Take and leave her to burn</button>' : `
           <p>Sinking her leaves no witnesses but angers her flag. Releasing her earns a sliver of mercy.${r.npc ? ` Her captain offers a ransom of ${fmt(r.ransom)}.` : ''}${r.captive ? ' If you sink her or take her as a prize, her captain comes with you in irons.' : ''}</p>
@@ -44,12 +46,17 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
           ${r.npc ? `<button class="btn btn-primary" data-fate="ransom">Take and ransom (${fmt(r.ransom)})</button>` : ''}
           ${r.prize ? `<button class="btn btn-primary" data-fate="prize" title="She follows you; any port with a yard buys her">Take her as a prize — ${r.prize.crew} hands, court pays ~${fmt(r.prize.value)}</button>` : ''}`}
         </div></div></div></div>`;
-    root.querySelectorAll<HTMLInputElement>('input[type=range]').forEach((el) => (el.oninput = () => {
+    root.querySelectorAll<HTMLInputElement>('input[type=range][data-g]').forEach((el) => (el.oninput = () => {
       take[el.dataset.g as GoodId] = Number(el.value);
       draw();
     }));
+    const rec = root.querySelector<HTMLInputElement>('#recruit');
+    if (rec) rec.oninput = () => {
+      recruit = Number(rec.value);
+      draw();
+    };
     root.querySelectorAll<HTMLElement>('[data-fate]').forEach((el) => (el.onclick = () => {
-      send({ t: 'loot_take', take, fate: el.dataset.fate as 'sink' | 'prize' });
+      send({ t: 'loot_take', take, fate: el.dataset.fate as 'sink' | 'prize', recruit });
       close();
     }));
   };
@@ -124,7 +131,7 @@ export function renderHelp(root: HTMLElement): void {
     ['G', 'Crew orders: balanced → guns (faster reload, slow pumps) → braces (sail handling, speed) → damage control (pumps ×2, fast leak plugging and firefighting, slow reload).'],
     ['R', 'Toggle repairs (uses planks & sailcloth; not in combat without Battle Repair).'],
     ['F', 'Dock at a nearby port / set sail. Shift+F: dock and pay customs to look away (no search).'],
-    ['M · T · I', 'World chart · talents · ship & hold.'],
+    ['M · T · I · O', 'World chart · talents · ship & hold · crew and officers (orders, the Codex share).'],
     ['Wheel', 'Zoom.'],
     ['N', 'Sound on / off.'],
     ['Enter', 'Chat.'],

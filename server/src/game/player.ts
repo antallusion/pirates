@@ -20,6 +20,9 @@ import { captiveRansom } from './prizes.ts';
 import type { Captive } from './prizes.ts';
 import type { TradeOption } from './tradefx.ts';
 import type { TreasureMap } from './explorefx.ts';
+import { MUTINY_TIMEOUT, expectedShare, loyaltyOf, mutinyPayCost, newCompany, officerFactor, sanitizeCompany, unrestWord, wagesPerHour } from './crew.ts';
+import type { Company } from './crew.ts';
+import { officerSlots } from '../../../shared/src/data/crew.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 
 export interface Profile {
@@ -39,6 +42,8 @@ export interface Profile {
   crew: number;
   morale: number;
   sanity: number;
+  company: Company;
+  crewAmbush: number; // an officer sold your route: hunters wait on the next voyage
   hull: number;
   sails: number;
   rudderHp: number;
@@ -134,7 +139,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
   if (captain === 'admiral') reputation.crown = -25;
   return {
     version: 1, captain, shipName, level: 1, xp: 0, talents: {}, gold: c.start.gold, infamy: 0, reputation, loadout,
-    cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100,
+    cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
     insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], explore: { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false }, keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
@@ -262,6 +267,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     soundings: world.explore?.soundings ?? [],
     forecast: world.explore?.forecast ?? null,
     goldTrails: world.explore?.goldTrails ?? [],
+    company: companyView(p, ship, now),
     appraisal: ship?.hasFlag('appraiser') ? appraise(p) : null,
     captives: p.captives.map((c) => ({ name: c.name, faction: c.faction, ransom: captiveRansom(c, (ship?.rank('trd_prize_broker') ?? 0) > 0) })),
     talents: p.talents,
@@ -328,6 +334,8 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.chartsBought ??= [];
   p.explored ??= {};
   p.curse ??= 0;
+  sanitizeCompany(p);
+  p.crewAmbush ??= 0;
   p.sanity = Math.max(0, Math.min(100, p.sanity ?? 100));
   p.stolen ??= {};
   p.licences ??= {};
@@ -362,4 +370,27 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.gold = Math.max(0, p.gold ?? 0);
   p.gunsDisabled ??= { port: 0, starboard: 0 };
   return p;
+}
+
+function companyView(p: Profile, ship: ShipEntity | null, now: number): PrivateState['company'] {
+  const c = p.company;
+  return {
+    pools: { ...c.pools },
+    skill: Math.round(c.skill * 100) / 100,
+    loyalty: Math.round(loyaltyOf(c, now)),
+    share: c.share,
+    expectedShare: expectedShare(c, now),
+    officers: c.officers.map((o) => ({
+      id: o.id, name: o.name, role: o.role, level: o.level, traits: o.traits, loyalty: Math.round(o.loyalty),
+      wound: o.wound && o.wound.until > now ? (o.wound.heavy ? 'heavy' : 'light') : null, away: officerFactor(o, now) <= 0 && !o.wound,
+      orderReady: o.orderReady, unique: o.unique, warned: o.warnedAt !== undefined,
+    })),
+    slots: ship ? officerSlots(ship.cls.tier, ship.loadout.modules.crew_quarters ?? 0) : 1,
+    traits: c.traits,
+    unrest: unrestWord(c),
+    wagesPerHour: Math.round(wagesPerHour(c) * 10) / 10,
+    owed: Math.round(c.owed),
+    memorial: c.memorial,
+    mutiny: c.mutiny ? { ringleader: c.mutiny.ringleader, mutineers: c.mutiny.mutineers, payCost: mutinyPayCost(c), left: Math.max(0, Math.round(MUTINY_TIMEOUT - (now - c.mutiny.at))) } : null,
+  };
 }

@@ -31,7 +31,7 @@ export type StatKey =
   // exploration
   | 'cartography' | 'forecast' | 'beachcomber' | 'treasureHunter' | 'diveDepth' | 'pathfinder' | 'tracking' | 'frontier'
   | 'anomalySight' | 'chartedWaters' | 'storesVolume' | 'eyeOfStorm'
-  | 'dreadGain' | 'mysticMorale' | 'sanityLoss';
+  | 'dreadGain' | 'mysticMorale' | 'sanityLoss' | 'moraleBase';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -55,7 +55,9 @@ export type Flag =
   | 'legendary_keel' | 'boneyard_secrets' | 'iron_coffin' | 'overgunned'
   // exploration
   | 'star_reader' | 'rumor_hound' | 'sounding_line' | 'ruin_reader' | 'map_of_the_dead' | 'lucky_dig' | 'leviathan_lore'
-  | 'legend_seeker' | 'gold_fever' | 'beyond_the_edge' | 'gold_trail';
+  | 'legend_seeker' | 'gold_fever' | 'beyond_the_edge' | 'gold_trail'
+  // crew and officers (docs/02 §8)
+  | 'boatswain' | 'quartermaster' | 'alchemist' | 'deep_pastor' | 'sailmaker' | 'harpooner' | 'well_fed' | 'fog_born';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

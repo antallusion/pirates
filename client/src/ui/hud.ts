@@ -56,7 +56,7 @@ export class Hud {
     const cls = SHIP_CLASSES[self.loadout.classId];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
-    const skey = `${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}`;
+    const skey = `${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
     if (skey !== this.lastShipKey) {
       this.lastShipKey = skey;
       const steps = [0, 0.25, 0.5, 0.75, 1].slice(1).map((v) => `<span class="${you.sail >= v - 0.01 ? 'on' : ''} ${Math.abs(you.sailT - v) < 0.01 ? 'target' : ''}"></span>`).join('');
@@ -69,6 +69,7 @@ export class Hud {
         <div class="row"><span class="lbl">Orders [G]</span><span class="val">${esc({ balanced: 'Balanced', gunnery: 'Guns', sailing: 'Braces', damage_control: 'Damage control' }[you.station])}</span></div>
         <div class="row"><span class="lbl">Morale</span><span class="val">${you.morale}</span></div>${bar('morale', you.morale / 100)}
         ${you.sanity < 99.5 ? `<div class="row" title="The crew's nerve. The deep, the dark, cursed cargo and dead shipmates wear it down; rum, dreamleaf and a port restore it."><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">Sanity</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
+        ${self.company.unrest ? `<div class="row" title="Low loyalty and low morale breed mutiny. Pay, rum, a fair share or a port will calm them. [O] crew"><span class="lbl" style="color:var(--bad)">Crew</span><span class="val" style="color:var(--bad)">${esc(self.company.unrest)}</span></div>` : ''}
         ${self.captain === 'drowned' ? `<div class="row" title="Dread: paid for miracles. Grows as you bleed, kill and sail in the dark. At 80 the Call: +20% power, but the crew hears it."><span class="lbl" style="color:var(--turq)">Dread</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ' · THE CALL' : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
         <div class="row"><span class="lbl">Hold</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · food ${Math.floor(self.cargo.provisions)}` : ' · <span style="color:var(--bad)">no food</span>'}</span></div>
         ${self.curse >= 25 ? `<div class="row"><span class="lbl" style="color:var(--turq)">Curse</span><span class="val" style="color:var(--turq)">stage ${self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1} · ${self.curse}</span></div>` : ''}

@@ -14,6 +14,7 @@ import { Renderer } from './render/renderer.ts';
 import { ClientState } from './state.ts';
 import { showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
+import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { $, esc } from './ui/dom.ts';
 import { Hud } from './ui/hud.ts';
 import { PortScreen } from './ui/port.ts';
@@ -21,7 +22,7 @@ import { TalentScreen } from './ui/talents.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 
-type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | null;
+type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -100,7 +101,15 @@ function onMessage(m: ServerMsg): void {
       else if (modal === 'port') refreshModal();
       break;
     case 'self':
-      if (modal === 'port' || modal === 'talents' || modal === 'ship') refreshModal();
+      if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
+      else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
+      else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny') refreshModal();
+      break;
+    case 'mutiny':
+      if (m.mutineers > 0) {
+        audio.bell();
+        hud.banner('MUTINY', `${m.ringleader} and ${m.mutineers} men`);
+      }
       break;
     case 'boarding':
       if (m.result) openModal('boarding');
@@ -169,6 +178,12 @@ function refreshModal(): void {
       break;
     case 'boarding':
       if (state.boarding) renderBoarding(root, state.boarding, state, (m) => net.send(m), () => closeModal());
+      break;
+    case 'crew':
+      renderCrew(root, state, (m) => net.send(m));
+      break;
+    case 'mutiny':
+      renderMutiny(root, state, (m) => net.send(m));
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null));
@@ -291,6 +306,9 @@ addEventListener('keydown', (e) => {
       break;
     case 'i':
       toggle('ship');
+      break;
+    case 'o':
+      toggle('crew');
       break;
     case 'h':
       toggle('help');

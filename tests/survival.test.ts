@@ -76,6 +76,12 @@ test('the long voyage: weariness after an hour (Long Voyage delays it), scurvy (
   const { game } = makeGame();
   const { ship } = atSea(game, 'Sailor', {});
   const { ship: salt } = atSea(game, 'Salty', { srv_long_voyage: 2, srv_lime_and_salt: 1 });
+  // No cook aboard (a well-fed crew does not get scurvy either).
+  for (const x of [ship, salt]) {
+    const co = game.profileOf(x)!.company;
+    co.pools.sailor += co.pools.cook;
+    co.pools.cook = 0;
+  }
   ship.voyageStart = game.now - 4000;
   salt.voyageStart = game.now - 4000;
   assert.ok(weariness(game, ship) > 0);

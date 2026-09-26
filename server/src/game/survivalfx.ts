@@ -72,7 +72,7 @@ export function stepSurvival(game: Game, ship: ShipEntity): void {
   // Scurvy after an hour without making port; Lime and Salt keep it off.
   const scurvyDue = now >= (ship.talentReady.scurvy ?? 0);
   if (scurvyDue) ship.talentReady.scurvy = now + 300;
-  if (sea > SCURVY_AFTER && scurvyDue && !ship.hasFlag('lime_and_salt') && game.rng.chance(0.25) && ship.crew > st.crewMin * 0.5) {
+  if (sea > SCURVY_AFTER && scurvyDue && !ship.hasFlag('lime_and_salt') && !ship.hasFlag('well_fed') && game.rng.chance(0.25) && ship.crew > st.crewMin * 0.5) {
     const n = 1 + game.rng.int(0, 1);
     ship.crew -= n;
     ship.morale = Math.max(0, ship.morale - 3);

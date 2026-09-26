@@ -12,6 +12,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { whirlpoolAt } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
+import { madnessCheck } from './crew.ts';
 
 export const RESOLVE_MAX = 100;
 export const CALL_THRESHOLD = 80;
@@ -55,7 +56,10 @@ export function onCrewKilled(game: Game, victim: ShipEntity, killed: number, kil
     }
   }
   // Losing shipmates shakes the rest: −3 sanity for every 5% of the crew.
-  if (victim.isPlayer) loseSanity(victim, (killed / Math.max(1, victim.stats.crewMax)) * 60);
+  if (victim.isPlayer) {
+    loseSanity(victim, (killed / Math.max(1, victim.stats.crewMax)) * 60);
+    victim.crewDeaths += killed;
+  }
 }
 
 /** A subsystem crit (mast, rudder, guns, magazine). */
@@ -199,7 +203,9 @@ function stepSanity(game: Game, ship: ShipEntity): void {
     ship.cargo.rum = (ship.cargo.rum ?? 0) - 1;
     if (ship.cargo.rum <= 0) delete ship.cargo.rum;
     gainSanity(ship, 10);
-    ship.morale = Math.min(100, ship.morale + 5);
+    // A drunkard officer makes a party of it.
+    const drunk = game.sessionOf(ship)?.profile?.company.officers.some((o) => o.traits.includes('drunkard')) ?? false;
+    ship.morale = Math.min(100, ship.morale + 5 + (drunk ? 10 : 0));
     game.toastShip(ship, 'A tot of rum all round steadies the hands. (+10 sanity)', 'info');
   }
   if (ship.sanity < 60 && (ship.cargo.dreamleaf ?? 0) >= 1 && (ship.talentReady.leafPipe ?? 0) <= now) {
@@ -260,6 +266,9 @@ function stepSanity(game: Game, ship: ShipEntity): void {
       ship.morale = Math.max(0, ship.morale - 5);
       game.toastShip(ship, 'The crew has seized the helm and steers for the call!', 'bad');
     }
+    // Madness tests their loyalty every minute.
+    const sess = game.sessionOf(ship);
+    if (sess?.profile) madnessCheck(game, sess);
   }
 }
 

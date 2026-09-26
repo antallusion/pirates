@@ -301,6 +301,7 @@ export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: n
     npc: !b.isPlayer,
     prize: null,
     captive: false,
+    recruits: 0,
     noQuarter: a.hasFlag('no_quarter'),
   };
   game.onBoardingWon(a, b, result);

@@ -135,6 +135,8 @@ export class ShipEntity {
   sanity = 100; // the crew's nerve on a long voyage
   sanityState: SanityState = 'clear';
   seizedHelm: { until: number; x: number; y: number } | null = null; // madness: the crew steers
+  crewDeaths = 0; // men killed since the company last counted them
+  companyKey = ''; // last applied crew modifiers
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

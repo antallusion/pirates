@@ -49,6 +49,12 @@ import type { WsConnection } from '../net/websocket.ts';
 import type { Database } from '../persistence/db.ts';
 import { stepStrikes, useAbility } from './abilities.ts';
 import { stepMind, stepZones } from './mind.ts';
+import {
+  dismissOfficer, hireOfficer, maxRecruits, mutinyCourse, officerOrder, onDockCrew, onFightWon, onMagazineBlast, onSunkCrew, plunderShare, pressGang, recruitPrisoners,
+  resolveMutiny, springAmbush, stepCompany, stepSpirit,
+} from './crew.ts';
+import type { Tavern } from './crew.ts';
+import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
@@ -152,6 +158,7 @@ export class Game {
   loot = new Map<number, Loot>();
   markets = new Map<string, Market>();
   tavernCrew = new Map<string, number>();
+  taverns = new Map<string, Tavern>();
   contracts = new Map<string, { list: ReturnType<typeof generateContracts>; refreshAt: number }>();
   rumors: Rumor[] = [];
   weather: Record<RegionId, RegionWeather>;
@@ -522,6 +529,7 @@ export class Game {
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) continue;
       this.shipUpkeep(ship);
+      stepSpirit(this, ship);
       stepTalentEffects(this, ship);
       stepSurvival(this, ship);
       if (ship.isPlayer) {
@@ -577,6 +585,13 @@ export class Game {
       discoverCoves(this, s);
       stepExplorer(this, s);
       stepMind(this, s.ship);
+      stepCompany(this, s);
+      // After a mutiny they sail her to port themselves.
+      const bound = mutinyCourse(this, s.ship, s.profile.company);
+      if (bound && !s.ship.docked) {
+        s.ship.seizedHelm = { until: now + 2, x: bound.x, y: bound.y };
+        if (dist(bound.x, bound.y, s.ship.state.x, s.ship.state.y) < 700 && !s.ship.inCombat(now)) this.dockShip(s, bound);
+      }
       syncKeel(this, s);
       this.stepDump(s);
       if (s.ship.hasEffect('false_colors')) {
@@ -641,6 +656,7 @@ export class Game {
     if (this.weatherOf(ship) === 'black_storm') baseline -= 15;
     baseline -= CURSE_MORALE[curseStage(ship.curse)];
     baseline -= weariness(this, ship); // a long voyage wears on a crew
+    baseline += tval(st, 'moraleBase'); // cooks, one-legged storytellers, superstition
     ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
@@ -680,7 +696,7 @@ export class Game {
       const inCombat = ship.inCombat(now);
       const rate = inCombat ? (canMend(this, ship) ? st.battleRepairRate : 0) : 1;
       // Spare Rigging: the sails can be mended under fire even when the hull cannot.
-      const sailRate = inCombat ? Math.max(rate, ship.hasFlag('spare_rigging') ? 0.3 : 0) : 1;
+      const sailRate = inCombat ? Math.max(rate, ship.hasFlag('spare_rigging') ? 0.3 : 0, ship.hasFlag('sailmaker') ? 0.3 : 0) * (ship.hasFlag('sailmaker') ? 2 : 1) : 1;
       if (rate <= 0 && sailRate <= 0) {
         ship.repairing = false;
         this.toastShip(ship, 'Carpenters cannot work under fire.', 'bad');
@@ -1174,6 +1190,7 @@ export class Game {
     const xp = (how === 'sunk' ? 45 : 70) * tier * (1 + victim.level / 12);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
+    onFightWon(this, s);
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
     let escorts = 0;
@@ -1228,6 +1245,7 @@ export class Game {
 
   private playerDeath(s: PlayerSession, ship: ShipEntity): void {
     const p = s.profile!;
+    onSunkCrew(this, s);
     const lostValue = cargoValue(ship.cargo);
     // Lifeboats: fewer men lost, part of the lawful cargo saved.
     const boats = tval(ship.stats, 'lifeboats');
@@ -1285,6 +1303,7 @@ export class Game {
     ship.surrendered = false;
     ship.boarding = null;
     ship.effects = [];
+    ship.companyKey = '';
     ship.fuseAt = 0;
     ship.water = 0;
     ship.leaks = 0;
@@ -1310,6 +1329,7 @@ export class Game {
       const crew = prizeCrewNeeded(a, b);
       result.prize = crew !== null ? { crew, value: prizeValue(b, a) } : null;
       result.captive = a.hasFlag('ransom') && !a.hasFlag('no_quarter') && !b.isPlayer;
+      result.recruits = !b.isPlayer && sa.profile ? maxRecruits(a, b, sa.profile.company) : 0;
       // No Quarter in contested waters: the whole sea hears of it.
       if (a.hasFlag('no_quarter') && REGIONS[a.region].safety === 'contested' && sa.profile) {
         const lvl = wantedLevel(sa.profile.infamy);
@@ -1350,7 +1370,7 @@ export class Game {
     }
   }
 
-  private resolveLoot(s: PlayerSession, take: Cargo, fateAsked: 'sink' | 'release' | 'ransom' | 'prize'): string | null {
+  private resolveLoot(s: PlayerSession, take: Cargo, fateAsked: 'sink' | 'release' | 'ransom' | 'prize', recruit = 0): string | null {
     // No Quarter: whatever is chosen, she goes down.
     const fate = s.ship?.hasFlag('no_quarter') ? 'sink' : fateAsked;
     const pend = s.pendingBoarding;
@@ -1390,9 +1410,19 @@ export class Game {
       this.toastShip(ship, `Swaying ${moved} units across (${Math.ceil(ship.transferUntil - this.now)} s alongside).`, 'info');
     }
     if (fate === 'sink' || fate === 'prize') takeCaptive(this, s, target);
+    // Prisoners who sign on.
+    if (recruit > 0 && !target.isPlayer) {
+      const n = recruitPrisoners(this, s, target, recruit);
+      if (n) this.toastShip(ship, `${n} of her crew sign the articles (loyalty 20: former enemies).`, 'info');
+    }
+    // A cruel officer resents letting them go.
+    if (fate === 'release' && s.profile.company.officers.some((o) => o.traits.includes('cruel'))) {
+      for (const o of s.profile.company.officers) if (o.traits.includes('cruel')) o.loyalty = Math.max(0, o.loyalty - 10);
+    }
     if (!target.isPlayer) mapChance(this, s, target.npcRole === 'pirate' ? 0.1 : 0.05, target.npcRole === 'pirate' ? 2 : 1, "In her captain's cabin");
-    s.profile.gold += pend.result.gold;
-    if (pend.result.gold) this.db.ledger(s.accountId, 'plunder', pend.result.gold, target.name);
+    const kept = plunderShare(this, s, pend.result.gold);
+    s.profile.gold += kept;
+    if (pend.result.gold) this.db.ledger(s.accountId, 'plunder', kept, target.name);
     if (!target.isPlayer) target.purse = 0;
     target.lootLockedFor = null;
     const f = target.faction !== 'player' ? target.faction : null;
@@ -1411,8 +1441,9 @@ export class Game {
       this.beginSinking(target);
       this.toastShip(ship, `${target.name} goes down with ${moved} units of her cargo in your hold.`, 'good');
     } else if (fate === 'ransom' && !target.isPlayer) {
-      s.profile.gold += pend.result.ransom;
-      this.db.ledger(s.accountId, 'ransom', pend.result.ransom, target.name);
+      const keptRansom = plunderShare(this, s, pend.result.ransom);
+      s.profile.gold += keptRansom;
+      this.db.ledger(s.accountId, 'ransom', keptRansom, target.name);
       if (f) changeRep(s.profile, f, -3);
       this.releasePrize(target);
       this.toastShip(ship, `Ransom paid: ${pend.result.ransom} silver.`, 'gold');
@@ -1518,6 +1549,7 @@ export class Game {
     const w = this.weatherOf(ship);
     let f = w === 'fog' ? 0.6 : w === 'storm' || w === 'black_storm' ? 0.8 : 1;
     if (ship.hasFlag('dead_reckoning')) f = 1 - (1 - f) / 2;
+    if (ship.hasFlag('fog_born') && w === 'fog') f *= 1.1;
     if (ship.hasFlag('storm_rider') && (w === 'storm' || w === 'black_storm')) f = 1 - (1 - f) / 2;
     if (tval(ship.stats, 'eyeOfStorm') >= 1 && (w === 'storm' || w === 'black_storm')) f = 1; // Eye of the Storm
     return f;
@@ -1770,6 +1802,7 @@ export class Game {
     switch (msg.t) {
       case 'input': {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;
+        if (s.profile?.company.mutiny) return; // the mutineers hold the wheel
         ship.input = { rudder: clamp(msg.rudder, -1, 1), sailTarget: SAIL_STEPS[clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1)] };
         if (ship.hasFlag('unsinkable') && ship.captain !== 'drowned') ship.input.sailTarget = Math.min(ship.input.sailTarget, 0.9);
         if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
@@ -1825,7 +1858,7 @@ export class Game {
       case 'captive':
         return portAction((pt) => captiveAction(this, s, pt, Math.trunc(Number(msg.index)), msg.mode === 'hand_over' ? 'hand_over' : 'ransom'));
       case 'loot_take':
-        err(this.resolveLoot(s, msg.take ?? {}, msg.fate === 'prize' || msg.fate === 'ransom' || msg.fate === 'release' ? msg.fate : 'sink'));
+        err(this.resolveLoot(s, msg.take ?? {}, msg.fate === 'prize' || msg.fate === 'ransom' || msg.fate === 'release' ? msg.fate : 'sink', Math.max(0, Math.trunc(Number(msg.recruit) || 0))));
         this.sendTo(s, { t: 'boarding', result: null });
         this.pushSelf(s, true);
         return;
@@ -1852,7 +1885,26 @@ export class Game {
       case 'buy_ammo':
         return portAction((pt) => buyAmmo(this, s, pt, msg.ammo, Math.trunc(Number(msg.qty))));
       case 'hire_crew':
-        return portAction((pt) => hireCrew(this, s, pt, Math.trunc(Number(msg.qty))));
+        return portAction((pt) => hireCrew(this, s, pt, Math.trunc(Number(msg.qty)), msg.prof && PROFESSIONS.includes(msg.prof) ? msg.prof : 'sailor'));
+      case 'press_gang':
+        return portAction((pt) => pressGang(this, s, pt, Math.trunc(Number(msg.qty))));
+      case 'officer':
+        if (msg.action === 'order') return err(officerOrder(this, s, String(msg.id)));
+        if (msg.action === 'hire') return portAction((pt) => hireOfficer(this, s, pt, String(msg.id)));
+        if (msg.action === 'dismiss') return portAction(() => dismissOfficer(this, s, String(msg.id)));
+        return;
+      case 'codex': {
+        const share = Math.round(Number(msg.share));
+        if (!Number.isFinite(share)) return;
+        s.profile!.company.share = Math.max(0, Math.min(50, share));
+        this.pushSelf(s, true);
+        return;
+      }
+      case 'mutiny':
+        if (!['pay', 'suppress', 'yield', 'duel'].includes(msg.choice)) return;
+        err(resolveMutiny(this, s, msg.choice));
+        this.pushSelf(s, true);
+        return;
       case 'shipyard':
         return portAction((pt) => {
           // Modular Refit: fittings change in any port.
@@ -2132,6 +2184,11 @@ export class Game {
     } else if (lawful) {
       const seized = customsSearch(this, s, port);
       if (seized.length) this.toastShip(ship, `Customs seized ${seized.join(', ')}.`, 'bad');
+      // A deep pastor aboard offends Crown customs.
+      if (port.faction === 'crown' && ship.hasFlag('deep_pastor')) {
+        changeRep(s.profile!, 'crown', -10);
+        this.toastShip(ship, 'The Crown inspector sees your deep pastor and makes a note of it (−10 Crown standing).', 'bad');
+      }
     }
     if (override === 'broker') {
       p.smuggle.brokerPassUsed = true;
@@ -2149,6 +2206,7 @@ export class Game {
     ship.voyageStart = 0;
     p.explore.hoardAboard = false;
     sellPrizes(this, s, port);
+    onDockCrew(this, s, port);
     onArrival(this, p, port);
     this.tavernWhispers(s);
     ship.docked = port.id;
@@ -2202,6 +2260,7 @@ export class Game {
     ship.docked = null;
     ship.voyageStart = this.now;
     delete ship.talentReady.wear;
+    springAmbush(this, s);
     s.profile!.docked = null;
     const v = headingVec(away);
     ship.state = { x: port.x + v.x * 60, y: port.y + v.y * 60, heading: away, speed: 3, sail: 0.5, rudder: 0 };

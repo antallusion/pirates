@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { CaptainId } from './data/captains.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
@@ -31,7 +32,7 @@ export type ClientMsg =
   | { t: 'ammo'; ammo: AmmoId }
   | { t: 'ability'; id: string; x?: number; y?: number }
   | { t: 'board'; target: number; aggression: Aggression }
-  | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize' }
+  | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize'; recruit?: number }
   | { t: 'board_cut' }
   | { t: 'scuttle' }
   | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' }
@@ -43,7 +44,11 @@ export type ClientMsg =
   | { t: 'undock' }
   | { t: 'trade'; good: GoodId; qty: number }
   | { t: 'buy_ammo'; ammo: AmmoId; qty: number }
-  | { t: 'hire_crew'; qty: number }
+  | { t: 'hire_crew'; qty: number; prof?: Profession }
+  | { t: 'officer'; action: 'hire' | 'dismiss' | 'order'; id: string }
+  | { t: 'codex'; share: number }
+  | { t: 'mutiny'; choice: 'pay' | 'suppress' | 'yield' | 'duel' }
+  | { t: 'press_gang'; qty: number }
   | { t: 'shipyard'; action: 'repair' }
   | { t: 'shipyard'; action: 'module'; module: ModuleId }
   | { t: 'shipyard'; action: 'unfit'; module: ModuleId }
@@ -258,6 +263,8 @@ export interface PrivateState {
   soundings: [number, number][];
   forecast: { kind: string; in: number } | null;
   goldTrails: [number, number][];
+  /** The crew as people (docs/02 §8). */
+  company: CompanyView;
   gold: number;
   infamy: number;
   wanted: number;
@@ -311,12 +318,51 @@ export interface MarketRow {
   legal: boolean;
 }
 
+export interface OfficerView {
+  id: string;
+  name: string;
+  role: OfficerRole;
+  level: number;
+  traits: TraitId[];
+  loyalty: number;
+  wound: 'light' | 'heavy' | null;
+  away: boolean;
+  orderReady: number;
+  unique?: string;
+  warned: boolean;
+}
+
+export interface CompanyView {
+  pools: Record<Profession, number>;
+  skill: number;
+  loyalty: number;
+  share: number;
+  expectedShare: number;
+  officers: OfficerView[];
+  slots: number;
+  traits: TraitId[];
+  unrest: string;
+  wagesPerHour: number;
+  owed: number;
+  memorial: { name: string; role: OfficerRole; t: number; cause: string }[];
+  mutiny: { ringleader: string; mutineers: number; payCost: number; left: number } | null;
+}
+
+export interface TavernView {
+  stars: number;
+  stock: Partial<Record<Profession, number>>;
+  costs: Record<Profession, number>;
+  officers: { id: string; name: string; role: OfficerRole; level: number; traits: TraitId[]; price: number; loyalty: number; unique?: string; story?: string; rep?: number; taken: boolean }[];
+  pressGang: boolean;
+}
+
 export interface PortView {
   portId: string;
   market: MarketRow[];
   ammoPrices: Record<AmmoId, number>;
   crewAvailable: number;
   crewHireCost: number;
+  tavern: TavernView;
   shipyard: {
     tier: number;
     repairCost: number;
@@ -449,6 +495,8 @@ export interface BoardingResult {
   /** Men needed to sail her home as a prize and what a prize court would pay, when she can be taken. */
   prize: { crew: number; value: number } | null;
   captive: boolean; // Ransom: her captain can be taken prisoner
+  /** Prisoners who would sign on (up to 30% of her surviving crew). */
+  recruits: number;
   noQuarter: boolean; // No Quarter: she sinks within the minute whatever you choose
 }
 
@@ -464,6 +512,7 @@ export type ServerMsg =
   | { t: 'self'; self: PrivateState }
   | { t: 'port'; view: PortView | null }
   | { t: 'boarding'; result: BoardingResult | null }
+  | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
   | { t: 'chat'; from: string; text: string }

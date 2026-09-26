@@ -56,7 +56,7 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
   const d = dist(ship.state.x, ship.state.y, tx, ty);
   if (d < def.minRange) return `Too close for the ${def.name}`;
   const h = Math.atan2(tx - ship.state.x, -(ty - ship.state.y));
-  const reach = Math.min(d, def.range);
+  const reach = Math.min(d, def.range * (id === 'harpoon' && ship.hasFlag('harpooner') ? 1.25 : 1));
   const now = game.now;
   switch (id) {
     case 'mortar': {

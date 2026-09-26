@@ -10,6 +10,9 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
+import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
+import type { Profession } from '../../../shared/src/data/crew.ts';
+import { traitChips } from './crew.ts';
 
 type Tab = 'market' | 'shipyard' | 'tavern' | 'contracts' | 'harbour' | 'holdings' | 'exchange';
 
@@ -65,7 +68,11 @@ export class PortScreen {
       case 'ammo':
         return this.send({ t: 'buy_ammo', ammo: d.ammo as never, qty: Number(d.n) });
       case 'crew':
-        return this.send({ t: 'hire_crew', qty: Number(d.n) });
+        return this.send({ t: 'hire_crew', qty: Number(d.n), prof: (d.prof as Profession | undefined) ?? 'sailor' });
+      case 'press':
+        return this.send({ t: 'press_gang', qty: 10 });
+      case 'officer_hire':
+        return this.send({ t: 'officer', action: 'hire', id: d.id! });
       case 'repair':
         return this.send({ t: 'shipyard', action: 'repair' });
       case 'module':
@@ -229,11 +236,22 @@ export class PortScreen {
     const self = state.self!;
     const port = state.ports.find((p) => p.id === view.portId)!;
     const room = (state.you?.crewMax ?? 0) - self.crew;
+    const tv = view.tavern;
+    const co = self.company;
+    const trades = PROFESSIONS.filter((k) => k !== 'sailor').map((k) => `<tr title="${esc(PROFESSION_DEFS[k].description)}"><td>${esc(PROFESSION_DEFS[k].name)}</td><td>${co.pools[k]} aboard</td><td>${tv.stock[k] ?? 0} here</td><td>${fmt(tv.costs[k])}</td>
+        <td><button class="btn btn-small" data-act="crew" data-prof="${k}" data-n="1" ${(tv.stock[k] ?? 0) > 0 && room > 0 ? '' : 'disabled'}>Hire</button> <button class="btn btn-small btn-danger" data-act="crew" data-prof="${k}" data-n="-1" ${co.pools[k] > 0 ? '' : 'disabled'}>−</button></td></tr>`).join('');
+    const officers = tv.officers.map((o) => `<div class="card"><h4>${esc(o.name)} <span class="muted">— ${esc(OFFICER_DEFS[o.role].name)}, level ${o.level}</span></h4>
+        ${o.story ? `<p class="muted">${esc(o.story)}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
+        <div class="row"><span>Loyalty ${o.loyalty}${o.rep ? ` · needs standing ${o.rep}` : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? 'Signed elsewhere' : `Sign — ${fmt(o.price)}`}</button></div></div>`).join('') || '<p class="muted">No officers drinking here this hour.</p>';
     return `<div class="cols"><div class="card"><h4>Sailors looking for a berth: ${view.crewAvailable}</h4>
-        <p>Signing bounty ${view.crewHireCost} silver each. Fresh hands lower morale a little until they find their feet. You have room for ${room}.</p>
+        <p>Signing bounty ${view.crewHireCost} silver each. Recruits here are ${'★'.repeat(Math.round(tv.stars))} (${tv.stars}); new hands dilute your crew's veterancy and loyalty. You have room for ${room}.</p>
         ${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}">Hire ${n} (${fmt(n * view.crewHireCost)})</button>`).join(' ')}
-        <button class="btn btn-small btn-danger" data-act="crew" data-n="-5">Discharge 5</button></div>
-      <div class="card"><h4>Rumours over rum</h4>${view.rumors.map((r) => `<p>“${esc(r)}”</p>`).join('')}</div></div>
+        <button class="btn btn-small btn-danger" data-act="crew" data-n="-5">Discharge 5</button>
+        ${tv.pressGang ? `<button class="btn btn-small btn-danger" data-act="press" title="Cheap and fast; loyalty 10, and they know it">Press gang (10)</button>` : ''}
+        <h4 style="margin-top:10px">Tradesmen</h4><table class="grid">${trades}</table></div>
+      <div><h3 class="title-sm" style="font-size:20px">Officers looking for a berth (${co.officers.length}/${co.slots})</h3>${officers}</div></div>
+      <div class="cols">
+      <div class="card"><h4>Rumours over rum</h4>${view.rumors.map((r) => `<p>“${esc(r)}”</p>`).join('')}</div><div></div></div>
       <div class="card"><h4>The cartographer</h4>
         <p>Knowledge is cargo too. The cartographer copies your charts of islands this port does not know yet${port.faction === 'brokers' ? ' — and the Fog Brokers pay a premium for it' : ''}, and sells charts of nearby waters. Bought charts show islands but earn no discovery experience.</p>
         <div class="row"><span>${view.charts.sellable} island${view.charts.sellable === 1 ? '' : 's'} they have not seen from you</span>

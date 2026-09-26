@@ -13,6 +13,7 @@ import { boardingRangeBetween, canBoard, claimPrize, startBoatBoarding } from '.
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { changeRep } from './player.ts';
+import { plunderShare } from './crew.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_PRIZES = 2;
@@ -75,7 +76,7 @@ export function sellPrizes(game: Game, s: PlayerSession, port: Port): void {
   if (port.shipyardTier < 1) return;
   for (const prize of prizesOf(game, ship)) {
     if (dist(prize.state.x, prize.state.y, port.x, port.y) > 3000) continue;
-    const value = Math.round(prizeValue(prize, ship) * (ship.hasFlag('prize_refit') && (port.faction === 'free' || port.faction === 'confederacy') ? 1.2 : 1));
+    const value = plunderShare(game, s, Math.round(prizeValue(prize, ship) * (ship.hasFlag('prize_refit') && (port.faction === 'free' || port.faction === 'confederacy') ? 1.2 : 1)));
     s.profile!.gold += value;
     ship.crew = Math.min(ship.stats.crewMax, ship.crew + prize.crew);
     game.db.ledger(s.accountId, 'prize', value, prize.loadout.classId);
@@ -120,7 +121,7 @@ export function captiveAction(game: Game, s: PlayerSession, port: Port, index: n
   const c = p.captives[index];
   if (!c) return 'No such captive';
   if (mode === 'ransom') {
-    const v = captiveRansom(c, (s.ship?.rank('trd_prize_broker') ?? 0) > 0);
+    const v = plunderShare(game, s, captiveRansom(c, (s.ship?.rank('trd_prize_broker') ?? 0) > 0));
     p.gold += v;
     game.db.ledger(s.accountId, 'ransom', v, c.name);
     game.sendTo(s, { t: 'toast', msg: `${c.name}'s people pay ${v} silver for him.`, kind: 'gold' });

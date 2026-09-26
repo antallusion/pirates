@@ -22,6 +22,7 @@ import { survivalOnHit, woundedOf } from './survivalfx.ts';
 import { isMonster } from './explorefx.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { onCrewKilled, onCrit, onHullDamage } from './mind.ts';
+import { onMagazineBlast } from './crew.ts';
 
 export interface Projectile {
   owner: number;
@@ -87,7 +88,6 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
   // Gun Crew Drill: a short-handed crew loses less.
   const gcf = 1 - (1 - gunCrewFactor(ship.stats, ship.loadout, ship.crew)) * Math.max(0, 1 - tval(ship.stats, 'gunCrewDrill'));
   let t = gun.reload * ship.stats.reloadMul / gcf;
-  if (ship.morale < 30) t *= 1.25;
   const fullVolley = !ship.rollingFire || ship.hasFlag('rolling_broadside');
   if (ship.captain === 'corsair' && ship.gunsDisabled[side] === 0 && fullVolley) t *= 0.85; // Broadside Discipline
   if (ship.rollingFire) t *= 0.85; // guns reload as they fire
@@ -446,11 +446,13 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       igniteShip(game, target, 12, null);
       game.emit({ k: 'fx', fx: 'explosion', x: Math.round(target.state.x), y: Math.round(target.state.y), r: 40 }, target.state.x, target.state.y);
       game.toastShip(target, 'Powder explosion in the hold!', 'bad');
+      const ts = game.sessionOf(target);
+      if (ts?.profile) onMagazineBlast(game, ts);
       crit = 'powder';
     }
   }
   const fireRisk = Math.max(0, 1 + tval(target.stats, 'fireRisk'));
-  const ignite = (p.ammo === 'incendiary' ? 0.25 : p.ammo === 'round' && sst ? tval(sst, 'heatedShot') : 0) * fireRisk;
+  const ignite = (p.ammo === 'incendiary' ? 0.25 * (shooter?.hasFlag('alchemist') ? 1.2 : 1) : p.ammo === 'round' && sst ? tval(sst, 'heatedShot') : 0) * fireRisk;
   if (ignite > 0 && hullDmg > 5 && game.rng.chance(ignite)) {
     igniteShip(game, target, 10 + game.rng.float() * 6, shooter);
     crit = 'fire';

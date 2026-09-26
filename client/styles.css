@@ -173,6 +173,9 @@ table.grid tr:hover td { background: #15171a; }
 .down { color: var(--good); }
 .contra { color: #b99ad6; }
 .card { border: 1px solid var(--slate); padding: 10px 12px; margin-bottom: 8px; background: #0f1114; }
+.chip { display: inline-block; padding: 1px 6px; margin: 1px 2px 1px 0; border: 1px solid var(--slate); font-size: 11px; }
+.chip.good { border-color: rgba(111, 191, 143, 0.5); color: #9fd3b0; }
+.chip.bad { border-color: rgba(208, 106, 94, 0.5); color: #e0958a; }
 .card h4 { margin: 0 0 4px; font-family: var(--serif); font-size: 18px; font-weight: 600; }
 .card p { margin: 0 0 6px; color: #bdb6a8; font-family: var(--serif); font-size: 15px; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
