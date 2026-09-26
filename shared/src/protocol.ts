@@ -48,6 +48,7 @@ export type ClientMsg =
   | { t: 'pardon' }
   | { t: 'insure' }
   | { t: 'land' }
+  | { t: 'licence' }
   | { t: 'station'; station: Station }
   | { t: 'cleanse' }
   | { t: 'chart'; action: 'sell' }
@@ -168,6 +169,8 @@ export interface PrivateState {
   cooldowns: Record<string, number>; // ability id -> world time when ready
   repairing: boolean;
   curse: number; // 0..100; stages at 25 / 50 / 80
+  stolen: Partial<Record<GoodId, number>>; // plundered units customs may recognise
+  licences: Partial<Record<FactionId, number>>; // faction -> world time the trade licence expires
   /** Island feature within reach of the boats, if any. */
   landable: { island: string; feature: string } | null;
   /** Landing party ashore. */
@@ -207,6 +210,8 @@ export interface PortView {
   };
   contracts: Contract[];
   rumors: string[];
+  duty: number;
+  licence: { cost: number; until: number } | null;
   charts: { sellable: number; sellValue: number; offers: { region: RegionId; name: string; islands: number; price: number }[] };
   pardonCost: number | null;
   priceIntel?: { portId: string; name: string; good: GoodId; sell: number; ageSec: number }[];

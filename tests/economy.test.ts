@@ -6,7 +6,7 @@ import { generateWorld } from '../shared/src/world/worldgen.ts';
 import { WORLD_SEED } from '../shared/src/constants.ts';
 
 const world = generateWorld(WORLD_SEED);
-const neutral: PriceMods = { buyMul: 1, sellMul: 1, lawfulPort: false, honest: false };
+const neutral: PriceMods = { buyMul: 1, sellMul: 1, lawfulPort: false, honest: false, duty: 0 };
 
 test('producers sell cheap, consumers pay dear', () => {
   const blackwater = createMarket(world.ports.find((p) => p.id === 'blackwater')!);

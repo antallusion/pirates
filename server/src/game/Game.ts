@@ -43,7 +43,7 @@ import type { DelayedStrike } from './abilities.ts';
 import { canBoard, startBoarding, stepBoarding } from './boarding.ts';
 import { applyDamage, fireBroadside, fireChaser, stepProjectiles } from './combat.ts';
 import type { Projectile } from './combat.ts';
-import { createMarket, restoreMarkets, serializeMarkets, tickMarket } from './economy.ts';
+import { ECON_HOUR, createMarket, restoreMarkets, serializeMarkets, tickMarket } from './economy.ts';
 import type { Market } from './economy.ts';
 import { RouteCache } from './nav.ts';
 import {
@@ -53,7 +53,7 @@ import type { NpcBrain } from './npc.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
 import type { Profile } from './player.ts';
 import {
-  buildPortView, buyAmmo, buyChart, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, trade,
+  buildPortView, buyAmmo, buyChart, buyLicence, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, trade,
 } from './ports.ts';
 import { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
@@ -495,6 +495,23 @@ export class Game {
       }
     }
 
+    // Perishables rot in the hold; salt aboard halves the loss.
+    if (ship.isPlayer) {
+      for (const id in ship.cargo) {
+        const g = id as GoodId;
+        const spoil = GOODS[g].spoilPerHour;
+        const n = ship.cargo[g] ?? 0;
+        if (!spoil || n <= 0 || g === 'provisions') continue; // provisions are eaten, not left to rot
+        const acc = (ship.spoilAcc[g] ?? 0) + ((n * spoil * ((ship.cargo.salt ?? 0) > 0 ? 0.5 : 1)) / ECON_HOUR) * (this.weatherOf(ship) === 'rain' ? 1.3 : 1);
+        if (acc >= 1) {
+          const lost = Math.floor(acc);
+          ship.cargo[g] = Math.max(0, n - lost);
+          if (!ship.cargo[g]) delete ship.cargo[g];
+          ship.spoilAcc[g] = acc - lost;
+          this.toastShip(ship, `${lost} ${GOODS[g].name.toLowerCase()} spoiled in the damp hold.`, 'bad');
+        } else ship.spoilAcc[g] = acc;
+      }
+    }
     // Repairs: carpenters consume planks and sailcloth.
     if (ship.repairing) {
       const inCombat = ship.inCombat(now);
@@ -1005,6 +1022,7 @@ export class Game {
       target.cargo[g] = avail - n;
       if (!target.cargo[g]) delete target.cargo[g];
       ship.cargo[g] = (ship.cargo[g] ?? 0) + n;
+      s.profile.stolen[g] = (s.profile.stolen[g] ?? 0) + n;
       // Plunder has no purchase cost; keep the basis low so selling it rewards less XP than honest profit.
       const prev = (ship.cargo[g] ?? 0) - n;
       this.setCostBasis(s, g, (this.costBasis(s, g) * prev + GOODS[g].basePrice * 0.6 * n) / Math.max(1, prev + n));
@@ -1419,6 +1437,8 @@ export class Game {
         });
       case 'pardon':
         return portAction((pt) => pardon(this, s, pt));
+      case 'licence':
+        return portAction((pt) => buyLicence(this, s, pt));
       case 'cleanse':
         return portAction((pt) => cleanse(this, s, pt));
       case 'station':

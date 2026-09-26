@@ -547,3 +547,33 @@ test('rare hulls: faction yards, xebec sweeps, bomb ketch twin mortars, fireship
   br.loadout.mount = 'mortar';
   assert.ok(mountReloadTime(bk) < mountReloadTime(br) * 0.6);
 });
+
+test('trade 2.0: duties and licences, stolen goods seized by customs or fenced, spoilage', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Fence Finder');
+  const s = [...game.sessions][0];
+  const p = s.profile!;
+  const ship = s.ship!;
+  // Saltmarrow is Crown: 8% duty, waived by a licence.
+  game.pushPort(s);
+  assert.equal(c.last('port')!.view!.duty, 0.08);
+  p.gold = 10000;
+  c.push({ t: 'licence' });
+  assert.ok((p.licences.crown ?? 0) > game.now);
+  assert.equal(c.last('port')!.view!.duty, 0);
+  // Stolen rum in a lawful port: repeated sales will eventually be caught.
+  let seized = false;
+  for (let i = 0; i < 12 && !seized; i++) {
+    ship.cargo.rum = 5;
+    p.stolen.rum = 5;
+    const inf = p.infamy;
+    c.push({ t: 'trade', good: 'rum', qty: -5 });
+    seized = p.infamy > inf;
+  }
+  assert.ok(seized, 'customs seized plunder at least once');
+  // Perishables rot at sea.
+  c.push({ t: 'undock' });
+  ship.cargo.medicine = 100;
+  steps(game, 20 * 700);
+  assert.ok((ship.cargo.medicine ?? 0) < 100, 'medicine spoiled');
+});

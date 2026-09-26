@@ -1,5 +1,5 @@
 // Trade goods. Weight in "tons-ish" units, volume in hold slots. Prices in silver reales.
-// `spoilPerHour` is the fraction of a stack that rots per real hour at sea (0 = never).
+// `spoilPerHour` is the fraction of a stack that rots per economy hour (15 real minutes) at sea (0 = never).
 // `danger` > 0 means the cargo can detonate/ignite when the hold takes hits (gunpowder, relics).
 
 export type GoodId =

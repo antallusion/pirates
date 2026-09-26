@@ -2,6 +2,7 @@
 
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, ChaserEnd } from '../../../shared/src/data/ships.ts';
 import { emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
@@ -88,6 +89,7 @@ export class ShipEntity {
   station: Station = 'balanced';
   mountReload = 0;
   fuseAt = 0; // fireship charges
+  spoilAcc: Partial<Record<GoodId, number>> = {};
   tether: Tether | null = null;
   unsinkableReadyAt = 0;
   lastStandUntil = 0;

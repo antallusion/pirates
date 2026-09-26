@@ -13,7 +13,8 @@ import type { ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { marketRows, midPrice, portIsLawful, quoteBuy, quoteSell, applyTrade } from './economy.ts';
+import { FACTION_DUTY, LICENCE_SEC, licenceCost, marketRows, midPrice, portIsLawful, quoteBuy, quoteSell, applyTrade } from './economy.ts';
+import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { PriceMods } from './economy.ts';
 import type { Game } from './Game.ts';
 import { poiRumor } from './exploration.ts';
@@ -22,12 +23,19 @@ import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 
-export function priceMods(ship: ShipEntity, port: Port): PriceMods {
+export function hasLicence(p: Profile, faction: string, now: number): boolean {
+  // A licence is void for anyone the law is hunting.
+  return (p.licences[faction as keyof typeof p.licences] ?? 0) > now && wantedLevel(p.infamy) < 2;
+}
+
+export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0): PriceMods {
+  const licensed = p ? hasLicence(p, port.faction, now) : false;
   return {
-    buyMul: ship.stats.buyMul * (ship.captain === 'drowned' && port.faction === 'crown' ? 1.2 : 1),
+    buyMul: ship.stats.buyMul * (ship.captain === 'drowned' && port.faction === 'crown' ? 1.2 : 1) * (licensed ? 0.97 : 1),
     sellMul: ship.stats.sellMul,
     lawfulPort: portIsLawful(port),
     honest: ship.hasFlag('honest_merchant'),
+    duty: licensed ? 0 : FACTION_DUTY[port.faction] ?? 0,
   };
 }
 
@@ -64,7 +72,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
   const ship = s.ship!;
   const p = s.profile!;
   const market = game.markets.get(port.id)!;
-  const mods = priceMods(ship, port);
+  const mods = priceMods(ship, port, s.profile!, game.now);
   const ammoPrices = {} as Record<AmmoId, number>;
   for (const a of AMMO_IDS) ammoPrices[a] = ammoPrice(game, port, a);
   const tier = port.shipyardTier;
@@ -90,6 +98,8 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     contracts: game.contractsAt(port.id),
     rumors: [poiRumor(game, s, port), ...game.rumorsNear(port.x, port.y, 3)].filter((r): r is string => !!r),
     charts: chartView(game, s, port),
+    duty: hasLicence(p, port.faction, game.now) ? 0 : FACTION_DUTY[port.faction] ?? 0,
+    licence: port.faction in FACTION_DUTY ? { cost: licenceCost(p.level), until: p.licences[port.faction as keyof typeof p.licences] ?? 0 } : null,
     pardonCost: port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy' ? pardonCost(p) : null,
   };
   if (ship.hasFlag('market_sense')) {
@@ -114,7 +124,7 @@ export function recordIntel(game: Game, s: PlayerSession, port: Port): void {
   const ship = s.ship!;
   const market = game.markets.get(port.id);
   if (!market) return;
-  const rows = marketRows(market, priceMods(ship, port));
+  const rows = marketRows(market, priceMods(ship, port, s.profile!, game.now));
   const sell: Partial<Record<GoodId, number>> = {};
   for (const r of rows) sell[r.good] = r.sell;
   s.profile!.priceIntel[port.id] = { t: game.now, sell };
@@ -132,7 +142,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   if (!gm) return `${port.name} does not trade ${GOODS[good].name}`;
   const def = GOODS[good];
   if (def.contraband && !port.blackMarket) return 'Contraband cannot be traded here';
-  const mods = priceMods(ship, port);
+  const mods = priceMods(ship, port, s.profile!, game.now);
   if (qty > 0) {
     if (gm.stock < qty) return 'Not enough in stock';
     const price = quoteBuy(good, gm, qty, mods);
@@ -149,9 +159,31 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     game.db.ledger(s.accountId, 'buy', -price, `${qty} ${good} @ ${port.id}`);
     return null;
   }
-  const n = -qty;
-  if ((ship.cargo[good] ?? 0) < n) return 'You do not carry that much';
-  const price = quoteSell(good, gm, n, mods);
+  let n = -qty;
+  const have = ship.cargo[good] ?? 0;
+  if (have < n) return 'You do not carry that much';
+  // Stolen goods: customs in lawful ports may seize them; black-market fences take a cut.
+  const stolen = Math.min(p.stolen[good] ?? 0, have);
+  let fenced = 0;
+  if (stolen > 0 && portIsLawful(port)) {
+    const exposed = Math.max(0, n - (have - stolen)); // clean units go on the counter first
+    if (exposed > 0 && game.rng.chance(ship.hasFlag('false_bottom') ? 0.15 : 0.45)) {
+      ship.cargo[good] = have - exposed;
+      if (!ship.cargo[good]) delete ship.cargo[good];
+      p.stolen[good] = stolen - exposed;
+      game.addInfamy(ship, 6, 'selling stolen goods');
+      game.adjustRepProfile(s, port.faction, -5);
+      game.sendTo(s, { t: 'toast', msg: `Customs recognise plundered ${GOODS[good].name.toLowerCase()} — ${exposed} seized!`, kind: 'bad' });
+      n -= exposed;
+      if (n <= 0) return null;
+    } else if (exposed > 0) p.stolen[good] = stolen - exposed;
+  } else if (stolen > 0 && port.blackMarket) {
+    fenced = Math.min(n, stolen);
+    p.stolen[good] = stolen - fenced;
+  } else if (stolen > 0) p.stolen[good] = Math.max(0, stolen - Math.max(0, n - (have - stolen)));
+  if (!p.stolen[good]) delete p.stolen[good];
+  const full = quoteSell(good, gm, n, mods);
+  const price = Math.floor(full - (full / n) * fenced * 0.15);
   const basis = game.costBasis(s, good);
   ship.cargo[good] = (ship.cargo[good] ?? 0) - n;
   if (!ship.cargo[good]) delete ship.cargo[good];
@@ -286,6 +318,19 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
     }
   }
   game.db.ledger(s.accountId, 'ship', -cost, classId);
+  return null;
+}
+
+export function buyLicence(game: Game, s: PlayerSession, port: Port): string | null {
+  const p = s.profile!;
+  if (!(port.faction in FACTION_DUTY)) return 'This harbour levies no duties to be licensed against';
+  if (wantedLevel(p.infamy) >= 2) return 'The clerks will not license a wanted captain';
+  const cost = licenceCost(p.level);
+  if (p.gold < cost) return `A licence costs ${cost} silver`;
+  p.gold -= cost;
+  const f = port.faction as keyof typeof p.licences;
+  p.licences[f] = Math.max(game.now, p.licences[f] ?? 0) + LICENCE_SEC;
+  game.db.ledger(s.accountId, 'licence', -cost, port.faction);
   return null;
 }
 

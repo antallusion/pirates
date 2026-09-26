@@ -61,6 +61,7 @@ export interface PriceMods {
   buyMul: number;
   sellMul: number;
   lawfulPort: boolean;
+  duty: number; // import duty on sales, 0..1
   honest: boolean;
 }
 
@@ -84,7 +85,7 @@ export function quoteSell(good: GoodId, gm: GoodMarket, qty: number, mods: Price
     total += midPrice(good, sim) * (1 - SPREAD) * mul;
     sim.stock += 1;
   }
-  const tax = mods.lawfulPort ? 0.03 : 0;
+  const tax = mods.duty;
   return Math.floor(total * (1 - tax));
 }
 
@@ -99,7 +100,7 @@ export function marketRows(market: Market, mods: PriceMods): MarketRow[] {
     rows.push({
       good,
       buy: Math.ceil(mid * (1 + SPREAD) * mods.buyMul),
-      sell: Math.floor(mid * (1 - SPREAD) * mods.sellMul * (mods.lawfulPort ? 0.97 : 1)),
+      sell: Math.floor(mid * (1 - SPREAD) * mods.sellMul * (1 - mods.duty)),
       stock: Math.floor(gm.stock),
       trend: Math.max(-1, Math.min(1, (mid - old) / Math.max(1, old))),
       legal: !GOODS[good].contraband,
@@ -151,7 +152,7 @@ export function bestRoute(
 ): TradeRoute | null {
   const src = markets.get(from.id);
   if (!src) return null;
-  const neutral: PriceMods = { buyMul: 1, sellMul: 1, lawfulPort: false, honest: false };
+  const neutral: PriceMods = { buyMul: 1, sellMul: 1, lawfulPort: false, honest: false, duty: 0 };
   let best: TradeRoute | null = null;
   let bestScore = 0;
   for (const to of ports) {
@@ -207,4 +208,11 @@ export function restoreMarkets(markets: Map<string, Market>, data: Record<string
       }
     }
   }
+}
+
+/** Import duty charged on sales in each faction's ports; a trade licence waives it. */
+export const FACTION_DUTY: Partial<Record<string, number>> = { crown: 0.08, league: 0.05, harpoon: 0.03 };
+export const LICENCE_SEC = 2 * 3600;
+export function licenceCost(level: number): number {
+  return 500 + level * 25;
 }

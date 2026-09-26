@@ -46,10 +46,12 @@ export interface Profile {
   priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>> }>;
   costBasis: Partial<Record<GoodId, number>>;
   sightings: { name: string; kind: string; x: number; y: number; t: number }[];
-  chartSales: Record<string, number[]>;
-  chartsBought: number[];
-  explored: Record<string, number>;
-  curse: number; // 'islandId:feature' -> world time last worked // port id -> island ids whose charts that port already bought
+  chartSales: Record<string, number[]>; // port id -> island ids whose charts that port already bought
+  chartsBought: number[]; // bought or heard-of islands: not resellable
+  explored: Record<string, number>; // 'islandId:feature' -> world time last worked
+  curse: number;
+  stolen: Partial<Record<GoodId, number>>;
+  licences: Partial<Record<FactionId, number>>;
   createdAt: number;
 }
 
@@ -65,7 +67,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -174,6 +176,8 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     cooldowns: p.cooldowns,
     repairing: ship?.repairing ?? false,
     curse: Math.round(ship ? ship.curse : p.curse),
+    stolen: p.stolen,
+    licences: p.licences,
     landable: s.landable,
     landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature, until: ship.landing.until, started: ship.landing.started } : null,
     discoveredCount: s.discovered.size,
@@ -209,6 +213,8 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.chartsBought ??= [];
   p.explored ??= {};
   p.curse ??= 0;
+  p.stolen ??= {};
+  p.licences ??= {};
   p.stats ??= { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 };
   p.ammo = { ...emptyAmmo(), ...(p.ammo ?? {}) };
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));

@@ -87,6 +87,8 @@ export class PortScreen {
         return this.send({ t: 'chart', action: 'buy', region: d.region as RegionId });
       case 'insure':
         return this.send({ t: 'insure' });
+      case 'licence':
+        return this.send({ t: 'licence' });
       case 'cleanse':
         return this.send({ t: 'cleanse' });
       case 'respec':
@@ -117,10 +119,11 @@ export class PortScreen {
     const rows = view.market.map((r) => {
       const g = GOODS[r.good];
       const have = Math.floor(self.cargo[r.good] ?? 0);
+      const stolen = Math.min(have, self.stolen[r.good] ?? 0);
       const trend = r.trend > 0.03 ? `<span class="up">▲</span>` : r.trend < -0.03 ? `<span class="down">▼</span>` : '<span class="muted">·</span>';
       return `<tr>
         <td><b class="${r.legal ? '' : 'contra'}">${esc(g.name)}</b>${r.legal ? '' : ' <span class="contra">contraband</span>'}${g.spoilPerHour ? ' <span class="muted">perishable</span>' : ''}${g.danger > 0.3 ? ' <span class="up">dangerous</span>' : ''}</td>
-        <td>${r.stock}</td><td class="gold">${r.buy}</td><td>${r.sell}</td><td>${trend}</td><td class="muted">${g.weight}t · ${g.volume}v</td><td>${have || ''}</td>
+        <td>${r.stock}</td><td class="gold">${r.buy}</td><td>${r.sell}</td><td>${trend}</td><td class="muted">${g.weight}t · ${g.volume}v</td><td>${have || ''}${stolen ? ` <span class="up" title="Plundered: customs may seize it; fences pay 15% less">(${stolen} stolen)</span>` : ''}</td>
         <td><button class="btn btn-small" data-act="buy" data-good="${r.good}">Buy</button>
             <button class="btn btn-small" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>Sell</button>
             <button class="btn btn-small" data-act="sellall" data-good="${r.good}" ${have ? '' : 'disabled'}>All</button></td></tr>`;
@@ -130,7 +133,9 @@ export class PortScreen {
       : '';
     const ammo = AMMO_IDS.map((a) => `<div class="card" style="display:flex;justify-content:space-between;align-items:center"><div><b>${esc(AMMO[a].name)}</b> <span class="muted">${esc(AMMO[a].description)}</span><br><span class="muted">In hold: ${self.ammo[a]} · ${view.ammoPrices[a]} each</span></div>
       <div>${[20, 50].map((n) => `<button class="btn btn-small" data-act="ammo" data-ammo="${a}" data-n="${n}">+${n} (${Math.ceil(view.ammoPrices[a] * n)})</button>`).join(' ')}</div></div>`).join('');
-    return `<div class="row" style="margin-bottom:8px"><span class="muted">Prices move with every trade. Goods reach this port only when a ship carries them here.</span>
+    const portDef = state.ports.find((p) => p.id === view.portId)!;
+    return `<div class="row" style="margin-bottom:8px"><span class="muted">Prices move with every trade. Goods reach this port only when a ship carries them here.
+      ${view.duty ? `Import duty <b>${Math.round(view.duty * 100)}%</b> on sales (licence waives it).` : ''} ${portDef.blackMarket ? 'Black market: fences buy plunder (−15%).' : ''}</span>
       <label class="lbl">Qty <select data-qty class="btn">${qtys.map((q) => `<option ${q === this.qty ? 'selected' : ''}>${q}</option>`).join('')}</select></label></div>
       <table class="grid"><tr><th>Good</th><th>Stock</th><th>Buy</th><th>Sell</th><th></th><th>Per unit</th><th>Hold</th><th></th></tr>${rows}</table>
       <h3 class="title-sm" style="font-size:20px;margin-top:16px">Chandlery — shot & powder</h3>${ammo}${intel}`;
@@ -208,6 +213,9 @@ export class PortScreen {
     const reps = Object.entries(self.reputation).map(([f, v]) => `<tr><td>${esc(FACTIONS[f as never as keyof typeof FACTIONS].name)}</td><td class="${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</td></tr>`).join('');
     return `<div class="cols"><div>
         <div class="card"><h4>Letters of pardon</h4>${view.pardonCost !== null ? `<p>Infamy ${self.infamy}. The Fog Brokers can make your name… quieter.</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>Buy pardon — ${fmt(view.pardonCost)}</button>` : '<p class="muted">Lawful harbours do not sell forgeries. Try a free port, Fogmouth or Cinderhold.</p>'}</div>
+        ${view.licence ? `<div class="card"><h4>Trade licence</h4><p>Waives the ${Math.round((view.licence.until > state.estServerTime() ? 0 : view.duty) * 100) || ''}${view.licence.until > state.estServerTime() ? 'duty (active)' : '% import duty'} in every ${esc(FACTIONS[port.faction].short)} port and trims buying prices by 3% for two hours. Void while you are wanted (Wanted 2+).</p>
+          ${view.licence.until > state.estServerTime() ? `<p class="good">Licensed for ${Math.round((view.licence.until - state.estServerTime()) / 60)} more minutes.</p>` : ''}
+          <button class="btn" data-act="licence">Buy / extend — ${fmt(view.licence.cost)}</button></div>` : ''}
         <div class="card"><h4>Voyage insurance</h4><p>${port.faction === 'league' || port.faction === 'free' ? 'The Gilded Ledger will insure hull and half your cargo value until you next make port.' : 'Only League and free ports write policies.'}</p>
           <button class="btn" data-act="insure" ${self.insured ? 'disabled' : ''}>${self.insured ? 'Insured' : 'Buy policy'}</button></div>
         <div class="card"><h4>Scrape & bless the hull</h4><p>Curse ${self.curse}/100${self.curse >= 25 ? ` — stage ${self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1}` : ''}. ${['harpoon', 'crown', 'league'].includes(port.faction) ? 'The chaplain and the yard crew will scrape the growth away.' : 'No one here will touch a cursed hull.'}</p>
