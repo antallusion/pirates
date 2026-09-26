@@ -5,9 +5,10 @@
 export type GoodId =
   | 'provisions' | 'rum' | 'sugar' | 'tobacco' | 'timber' | 'planks' | 'sailcloth'
   | 'iron' | 'coal' | 'gunpowder' | 'cloth' | 'spices' | 'medicine' | 'weapons'
-  | 'whale_oil' | 'salt' | 'pearls' | 'dreamleaf' | 'cursed_relics' | 'abyssal_ore';
+  | 'whale_oil' | 'salt' | 'pearls' | 'dreamleaf' | 'cursed_relics' | 'abyssal_ore'
+  | 'leviathan_bone' | 'sulfur_iron' | 'drowned_silk' | 'kraken_ink';
 
-export type GoodCategory = 'staple' | 'luxury' | 'industrial' | 'military' | 'supply' | 'contraband' | 'mystic';
+export type GoodCategory = 'staple' | 'luxury' | 'industrial' | 'military' | 'supply' | 'contraband' | 'mystic' | 'rare';
 
 export interface GoodDef {
   id: GoodId;
@@ -48,6 +49,11 @@ export const GOODS: Record<GoodId, GoodDef> = {
   dreamleaf: g('dreamleaf', 'Dreamleaf', 'contraband', 120, 0.5, 1, 0.01, 0, true, 'Narcotic leaf. Forbidden in Crown ports, adored in Fogmouth.'),
   cursed_relics: g('cursed_relics', 'Cursed Relics', 'mystic', 300, 0.3, 0.5, 0, 0.4, true, 'Idols from the Drowned Crown. They whisper. The crew hates them.'),
   abyssal_ore: g('abyssal_ore', 'Abyssal Ore', 'mystic', 260, 3, 1, 0, 0.1, false, 'Deep-sea metal that never rusts. Shipwrights pay a fortune.'),
+  // Rare shipbuilding materials (docs/02 §3.A.4): only where they come from.
+  leviathan_bone: g('leviathan_bone', 'Leviathan Bone', 'rare', 420, 2, 1, 0, 0, false, 'Keel-bone of the great beasts. A keel of it will not break.'),
+  sulfur_iron: g('sulfur_iron', 'Sulfur Iron', 'rare', 180, 3, 1, 0, 0, false, 'Volcanic iron from the Ashen Isles. Guns cast from it rarely burst.'),
+  drowned_silk: g('drowned_silk', 'Drowned Silk', 'rare', 520, 0.3, 0.5, 0, 0, false, 'Sailcloth woven in the Drowned Crown. It mends itself. The crew does not like the sound it makes.'),
+  kraken_ink: g('kraken_ink', 'Kraken Ink', 'rare', 380, 0.5, 0.3, 0, 0, false, 'Ink of the deep. A hull painted with it is hard to see.'),
 };
 
 export const GOOD_IDS = Object.keys(GOODS) as GoodId[];

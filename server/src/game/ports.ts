@@ -22,6 +22,9 @@ import type { Profession } from '../../../shared/src/data/crew.ts';
 import { hireTrade, recruitCost, tavernOf } from './crew.ts';
 import { ESCORT_OFFERS } from './fleet.ts';
 import { questOffers } from './quests.ts';
+import { woodAvailable } from './shipbuilding.ts';
+import { FIGUREHEADS, PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS } from '../../../shared/src/data/shipbuild.ts';
+import type { FigureheadId, WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { CAPTAINS_HOUSES } from '../../../shared/src/data/quests.ts';
 import { exoticBonus, noteExoticPurchase } from './bridgefx.ts';
 import { poiRumor } from './exploration.ts';
@@ -107,6 +110,12 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     tavern: tavernView(game, port, p, ship),
     questOffers: questOffers(p, port).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: q.reward.silver, xp: q.reward.xp, path: q.reward.path })),
     captainsHouse: CAPTAINS_HOUSES.includes(port.id),
+    yard: {
+      woods: (Object.keys(WOODS) as WoodId[]).filter((w) => woodAvailable(port, w)),
+      figurehead: (Object.values(FIGUREHEADS).find((f) => f.port === port.id)?.id ?? null) as FigureheadId | null,
+      plans: YARD_FACTIONS_WITH_PLANS.includes(port.faction as never) && (p.reputation[port.faction as never] ?? 0) >= PLAN_REP,
+      master: port.shipyardTier >= 3,
+    },
     oathOffer: p.oath ? null : port.id === 'cinderhold' ? 'code' : port.id === 'gravesend' ? 'marque' : null,
     escorts: ESCORT_OFFERS.map((o) => ({ classId: o.classId, price: o.price, upkeep: o.upkeep, available: port.shipyardTier >= o.yard })),
     shipyard: {
@@ -237,7 +246,8 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   if (!ship.cargo[good]) delete ship.cargo[good];
   if (p.smuggle.stamped[good]) p.smuggle.stamped[good] = Math.max(0, p.smuggle.stamped[good]! - n);
   const exotic = exoticBonus(ship, p, port, good, n, price);
-  p.gold += price + exotic;
+  const gilded = ship.hasFlag('fh_gilded_scale') && port.faction === 'league' ? Math.floor(price * 0.05) : 0; // the Gilded Scale
+  p.gold += price + exotic + gilded;
   applyTrade(market, good, n);
   const profit = price - basis * n;
   p.stats.tradeProfit += Math.max(0, profit);

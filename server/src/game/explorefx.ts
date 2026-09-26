@@ -14,6 +14,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { questEvent } from './quests.ts';
+import { grantPlan } from './shipbuilding.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_MAPS = 6;
@@ -51,13 +52,14 @@ const TIER_REGIONS: RegionId[][] = [
   ['dead_mans_expanse', 'drowned_crown', 'ashen_isles', 'leviathan_reach'],
 ];
 
-/** A spot just off the shore of an island where the boats can land. */
+/** A spot off the shore of an island where the boats can land. */
 function shoreSpot(is: Island, k: number): [number, number] {
   const n = is.poly.length / 2;
   const i = (k % n) * 2;
   const px = is.poly[i], py = is.poly[i + 1];
   const dx = px - is.x, dy = py - is.y, d = Math.hypot(dx, dy) || 1;
-  return [px + (dx / d) * 60, py + (dy / d) * 60];
+  // Just beyond the shoal band (90 m), so a ship can heave to on the spot without grounding.
+  return [px + (dx / d) * 110, py + (dy / d) * 110];
 }
 
 export function makeMap(game: Game, tier: number, opts: { island?: Island; legendary?: boolean } = {}): TreasureMap {
@@ -174,6 +176,9 @@ export function hoard(game: Game, s: PlayerSession, grade: number, share: number
   p.gold += silver;
   game.db.ledger(s.accountId, 'treasure', silver, `grade ${grade}`);
   fragmentChance(game, s, [0, 0.2, 0.35, 0.6, 0.8][Math.min(4, grade)]);
+  // Hoards hold plans: masterwork now and then, a legendary one in the great hoards.
+  if (grade >= 3) grantPlan(game, s, 'legendary');
+  else if (grade === 2 && rng.chance(0.2)) grantPlan(game, s, 'masterwork');
   if (ship.hasFlag('gold_fever')) p.explore.hoardAboard = true;
   game.sendTo(s, { t: 'toast', msg: `TREASURE! ${silver} silver${got.length ? `, ${got.join(', ')}` : ''}.`, kind: 'gold' });
 }
@@ -262,6 +267,12 @@ export function resolveDive(game: Game, s: PlayerSession, wreckId: number, share
   p.gold += silver;
   game.db.ledger(s.accountId, 'dive', silver, w.name);
   mapChance(game, s, 0.1 * w.tier, Math.min(3, w.tier), 'In a sea chest on the wreck');
+  // Old ships keep old plans; the graveyard keeps its serpents.
+  if (game.rng.chance(0.05 * w.tier)) grantPlan(game, s, 'masterwork');
+  if (ship.region === 'dead_mans_expanse' && !p.figureheads.includes('fh_serpent') && game.rng.chance(0.1)) {
+    p.figureheads.push('fh_serpent');
+    game.toastShip(ship, 'The divers bring up a carved sea serpent from her bow. A yard can fit it.', 'gold');
+  }
   fragmentChance(game, s, 0.04 * w.tier);
   game.toastShip(ship, `The divers come up from the ${w.name}: ${fit} ${GOODS[g].name.toLowerCase()} and ${silver} silver.`, 'gold');
   game.grantXp(s, 60 * w.tier, null);

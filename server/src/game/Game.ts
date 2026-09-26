@@ -55,6 +55,7 @@ import {
 } from './crew.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
+import { buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { abandonQuest, acceptQuest, marqueBounty, questEvent, swearOath, switchPath } from './quests.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
@@ -600,6 +601,7 @@ export class Game {
       stepFleet(this, s);
       stepAbyss(this, s);
       stepBridges(this, s);
+      stepBuiltShip(this, s);
       questEvent(this, s, { k: 'tick', dt: 1 });
       // After a mutiny they sail her to port themselves.
       const bound = mutinyCourse(this, s.ship, s.profile.company);
@@ -1089,7 +1091,8 @@ export class Game {
 
   adjustRep(ship: ShipEntity, faction: FactionId, delta: number): void {
     const p = this.profileOf(ship);
-    if (p) changeRep(p, faction, delta);
+    // The Crown Lion on the bow: the Crown warms to you faster.
+    if (p) changeRep(p, faction, faction === 'crown' && delta > 0 && ship.hasFlag('fh_crown_lion') ? delta * 1.1 : delta);
   }
 
   adjustRepProfile(s: PlayerSession, faction: FactionId, delta: number): void {
@@ -1170,7 +1173,7 @@ export class Game {
       this.sunkHulls = this.sunkHulls.filter((h) => this.now - h.t < 600).slice(-40);
     }
     if (ship.hasFlag('scuttle_charges') && ship.isPlayer) blowMagazine(this, ship); // nobody gets her hold
-    ship.sinkingUntil = this.now + 6;
+    ship.sinkingUntil = this.now + 6 + (ship.hasFlag('fh_saint_of_wrecks') ? 5 : 0); // the Saint of Wrecks holds her up
     ship.boarding = null;
     ship.repairing = false;
     ship.input = { rudder: 0, sailTarget: 0 };
@@ -1920,6 +1923,16 @@ export class Game {
         return portAction((pt) => switchPath(this, s, pt, msg.to));
       case 'oath':
         return portAction((pt) => swearOath(this, s, pt, msg.oath === 'code' ? 'code' : 'marque'));
+      case 'build':
+        return portAction((pt) => orderBuild(this, s, pt, msg.req));
+      case 'build_launch':
+        return portAction((pt) => launchBuild(this, s, pt, String(msg.id)));
+      case 'berth':
+        return portAction((pt) => (msg.action === 'sell' ? sellBerth(this, s, pt, Math.trunc(Number(msg.index))) : swapBerth(this, s, pt, Math.trunc(Number(msg.index)))));
+      case 'plan_buy':
+        return portAction((pt) => buyPlan(this, s, pt, msg.classId));
+      case 'figurehead_buy':
+        return portAction((pt) => buyFigurehead(this, s, pt));
       case 'formation':
         err(setFormation(this, s, msg.formation));
         this.pushSelf(s, true);

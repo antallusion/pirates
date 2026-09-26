@@ -37,6 +37,7 @@ export function createMarket(port: Port): Market {
     const cons = port.profile.consumes[id] ?? 0;
     const traded = prod > 0 || cons > 0 || ALWAYS_TRADED.includes(id) || (def.contraband && allowContraband) || port.size >= 3;
     if (!traded) continue;
+    if (def.category === 'rare' && prod === 0 && cons === 0) continue; // rare materials only where they come from
     if (def.contraband && !allowContraband) continue;
     const size = port.size;
     let target: number;

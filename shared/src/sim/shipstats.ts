@@ -12,6 +12,8 @@ import type { Flag, ModifierSource, StatKey } from '../data/stats.ts';
 import { talentModifiers } from '../data/talents.ts';
 import type { TalentRanks } from '../data/talents.ts';
 import { baseNoGo, rowSpeed } from './sailing.ts';
+import { buildSources } from '../data/shipbuild.ts';
+import type { ShipBuild } from '../data/shipbuild.ts';
 import type { SailTalents } from './sailing.ts';
 import { DEG } from '../math.ts';
 
@@ -27,6 +29,8 @@ export interface ShipLoadout {
   excellent?: ModuleId[];
   /** Legendary Keel on this hull. */
   keel?: boolean;
+  /** Built to order at a yard (docs/02 §3). */
+  build?: ShipBuild;
 }
 
 export interface ShipStats {
@@ -91,7 +95,7 @@ export function computeShipStats(
   // Permanent sources (captain passive, talents) are capped per 03 §3.3; temporary effects stack on top.
   const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents)]);
   const m0 = (x: Record<StatKey, number>, k: StatKey) => mod(x, k);
-  const eff = sumMods(effects);
+  const eff = sumMods([...effects, ...buildSources(loadout.build, cls.armor)]);
   for (const f of eff.flags) flags.add(f);
   const has = (id: string) => (talents[id] ?? 0) > 0;
   const e = (k: StatKey) => mod(eff.mods, k);

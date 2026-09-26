@@ -3,10 +3,13 @@
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
-import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { ClientMsg, PortView } from '../../../shared/src/protocol.ts';
-import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import { cargoVolume, computeShipStats } from '../../../shared/src/sim/shipstats.ts';
+import { BUILD_TIME, FIGUREHEADS, RARES, VARIANTS, WOODS, buildMaterials } from '../../../shared/src/data/shipbuild.ts';
+import type { FigureheadId, RareSlot, ShipBuild, WoodId } from '../../../shared/src/data/shipbuild.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
@@ -20,6 +23,8 @@ type Tab = 'market' | 'shipyard' | 'tavern' | 'contracts' | 'harbour' | 'holding
 export class PortScreen {
   tab: Tab = 'market';
   qty = 1;
+  /** The build order being drawn up at the yard. */
+  build: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master: boolean } = { classId: 'sloop', name: '', frame: 'pine', plank: 'pine', rares: {}, master: false };
   private send: (m: ClientMsg) => void;
   private onClose: () => void;
   constructor(send: (m: ClientMsg) => void, onClose: () => void) {
@@ -48,6 +53,16 @@ export class PortScreen {
       this.render(root, state);
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
+    root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-build]').forEach((el) => (el.onchange = () => {
+      const k = el.dataset.build!;
+      const v = el instanceof HTMLInputElement && el.type === 'checkbox' ? el.checked : el.value;
+      if (k.startsWith('rare:')) {
+        const slot = k.slice(5) as RareSlot;
+        if (v) this.build.rares[slot] = v as GoodId;
+        else delete this.build.rares[slot];
+      } else (this.build as Record<string, unknown>)[k] = v === '' ? undefined : v;
+      this.render(root, state);
+    }));
     root.querySelectorAll<HTMLSelectElement>('select[data-qty]').forEach((el) => (el.onchange = () => {
       this.qty = Number(el.value);
       this.render(root, state);
@@ -83,6 +98,19 @@ export class PortScreen {
       case 'oath':
         if (confirm('An oath cannot be taken back. Swear?')) this.send({ t: 'oath', oath: d.oath as 'code' });
         return;
+      case 'build_order':
+        return this.send({ t: 'build', req: { ...this.build, name: this.build.name || SHIP_CLASSES[this.build.classId].name } });
+      case 'launch':
+        return this.send({ t: 'build_launch', id: d.id! });
+      case 'berth_swap':
+        return this.send({ t: 'berth', action: 'swap', index: Number(d.i) });
+      case 'berth_sell':
+        if (confirm('Sell this ship to the yard?')) this.send({ t: 'berth', action: 'sell', index: Number(d.i) });
+        return;
+      case 'plan_buy':
+        return this.send({ t: 'plan_buy', classId: this.build.classId });
+      case 'figurehead_buy':
+        return this.send({ t: 'figurehead_buy' });
       case 'escort_hire':
         return this.send({ t: 'escort', action: 'hire', classId: d.cls as ShipClassId });
       case 'escort_dismiss':
@@ -248,7 +276,71 @@ export class PortScreen {
         ${modules}</div></div>
       <h3 class="title-sm" style="font-size:20px;margin-top:10px">New hulls (trade-in applied)</h3>
       <table class="grid"><tr><th>Class</th><th>Hull</th><th>Speed</th><th>Guns</th><th>Hold</th><th>Crew</th><th></th></tr>${ships}</table>
-      <p class="muted">Tier ${sy.tier} yard. Bigger is not better: a galleon hauls a fortune but a sloop will run circles around her.</p>`;
+      <p class="muted">Tier ${sy.tier} yard. Bigger is not better: a galleon hauls a fortune but a sloop will run circles around her.</p>
+      ${this.buildCard(view, state)}`;
+  }
+
+  /** Build to order (docs/02 §3): plan, timber, rare materials, figurehead, master; then launch and berths. */
+  private buildCard(view: PortView, state: ClientState): string {
+    const self = state.self!;
+    const b = this.build;
+    const yard = view.yard;
+    const classes = view.shipyard.ships.map((x) => x.classId);
+    if (!classes.includes(b.classId)) b.classId = classes[0] ?? 'sloop';
+    if (!yard.woods.includes(b.frame)) b.frame = yard.woods[0] ?? 'pine';
+    if (!yard.woods.includes(b.plank)) b.plank = yard.woods[0] ?? 'pine';
+    const cls = SHIP_CLASSES[b.classId];
+    const frame = WOODS[b.frame], plank = WOODS[b.plank];
+    const plan = self.plans.find((x) => x.id === b.planId);
+    const build: ShipBuild = { frame: b.frame, plank: b.plank, rares: Object.entries(b.rares).map(([slot, good]) => ({ slot: slot as RareSlot, good: good as GoodId })), figurehead: b.figurehead, quality: plan?.quality ?? 'common', variants: plan?.variants ?? [], builder: view.portId };
+    const gun = defaultGunFor(cls);
+    const preview = computeShipStats({ classId: b.classId, name: 'x', guns: { port: gun, starboard: gun }, modules: {}, build }, self.captain, self.talents);
+    const plain = computeShipStats({ classId: b.classId, name: 'x', guns: { port: gun, starboard: gun }, modules: {} }, self.captain, self.talents);
+    const master = b.master && yard.master;
+    const cost = Math.round(cls.price * ((frame.cost + plank.cost) / 2) * (master ? 1.25 : 1) + (b.figurehead ? FIGUREHEADS[b.figurehead].price : 0));
+    const skill = Math.min(0.35, 0.01 * Object.entries(self.talents).filter(([id]) => id.startsWith('shp_')).reduce((a, [, r]) => a + (r ?? 0), 0));
+    const time = Math.round(BUILD_TIME[cls.tier] * Math.max(frame.time, plank.time) * (1 - skill) * (master ? 0.75 : 1));
+    const mats = buildMaterials(cls.tier);
+    for (const [slot, good] of Object.entries(b.rares)) {
+      const def = RARES[slot as RareSlot].find((x) => x.good === good);
+      if (def) mats[def.good] = (mats[def.good] ?? 0) + def.units;
+    }
+    const wh = self.warehouses[view.portId] ?? {};
+    const matText = Object.entries(mats).map(([g, n]) => {
+      const got = Math.floor(self.cargo[g as GoodId] ?? 0) + Math.floor(wh[g as GoodId] ?? 0);
+      return `<span class="${got >= (n ?? 0) ? '' : 'up'}">${n} ${esc(GOODS[g as GoodId].name.toLowerCase())} (${got})</span>`;
+    }).join(' · ');
+    const pct = (a: number, z: number) => `${a >= z ? '+' : ''}${Math.round((a / z - 1) * 100)}%`;
+    const figs = [yard.figurehead, ...self.figureheads].filter((f, i, a) => f && a.indexOf(f) === i) as FigureheadId[];
+    const orders = self.builds.map((o) => {
+      const left = Math.max(0, o.done - state.estServerTime());
+      const here = o.port === view.portId;
+      return `<div class="row" style="padding:3px 0"><span><b>${esc(o.name)}</b> <span class="muted">${esc(SHIP_CLASSES[o.classId].name)} · ${esc(WOODS[o.frame].name)}/${esc(WOODS[o.plank].name)} · ${o.quality} plan · at ${esc(state.ports.find((p) => p.id === o.port)?.name ?? o.port)}</span></span>
+        ${left > 0 ? `<span class="muted">${Math.ceil(left / 60)} min</span>` : here ? `<button class="btn btn-small btn-primary" data-act="launch" data-id="${o.id}">Launch her</button>` : '<span class="gold">Ready</span>'}</div>`;
+    }).join('');
+    const berths = self.berths.map((x, i) => `<div class="row" style="padding:3px 0"><span>${esc(x.name)} <span class="muted">${esc(SHIP_CLASSES[x.classId].name)} · hull ${x.hull}% · at ${esc(state.ports.find((p) => p.id === x.port)?.name ?? x.port)}</span></span>
+      ${x.port === view.portId ? `<span><button class="btn btn-small" data-act="berth_swap" data-i="${i}">Take her out</button> <button class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}">Sell</button></span>` : ''}</div>`).join('');
+    return `<h3 class="title-sm" style="font-size:20px;margin-top:10px">Build to order</h3>
+      <div class="cols"><div class="card">
+        <div class="row"><span>Hull</span><select data-build="classId">${classes.map((c) => `<option value="${c}" ${c === b.classId ? 'selected' : ''}>${esc(SHIP_CLASSES[c].name)} (T${SHIP_CLASSES[c].tier})</option>`).join('')}</select></div>
+        <div class="row"><span>Name</span><input data-build="name" value="${esc(b.name)}" maxlength="28" placeholder="${esc(cls.name)}" style="width:160px"></div>
+        <div class="row"><span>Frame</span><select data-build="frame">${yard.woods.map((w) => `<option value="${w}" ${w === b.frame ? 'selected' : ''}>${esc(WOODS[w].name)}</option>`).join('')}</select></div>
+        <div class="row"><span>Planking</span><select data-build="plank">${yard.woods.map((w) => `<option value="${w}" ${w === b.plank ? 'selected' : ''}>${esc(WOODS[w].name)}</option>`).join('')}</select></div>
+        <p class="muted">${esc(frame.description)} ${b.plank !== b.frame ? esc(plank.description) : ''}</p>
+        ${(Object.keys(RARES) as RareSlot[]).map((slot) => `<div class="row"><span>${slot === 'keel' ? 'Keel' : slot === 'belt' ? 'Waterline belt' : slot === 'sails' ? 'Canvas' : slot === 'guns' ? 'Gun metal' : 'Paint'}</span><select data-build="rare:${slot}"><option value="">standard</option>${RARES[slot].map((r) => `<option value="${r.good}" ${b.rares[slot] === r.good ? 'selected' : ''} title="${esc(r.description)}">${esc(r.name)} (${r.units} ${esc(GOODS[r.good].name.toLowerCase())})</option>`).join('')}</select></div>`).join('')}
+        <div class="row"><span>Figurehead</span><select data-build="figurehead"><option value="">none</option>${figs.map((f) => `<option value="${f}" ${b.figurehead === f ? 'selected' : ''}>${esc(FIGUREHEADS[f].name)} — ${esc(FIGUREHEADS[f].description)}</option>`).join('')}</select></div>
+        <div class="row"><span>Plan</span><select data-build="planId"><option value="">common (no lines)</option>${self.plans.filter((x) => x.classId === null || x.classId === b.classId).map((x) => `<option value="${x.id}" ${b.planId === x.id ? 'selected' : ''}>${x.quality}: ${x.variants.map((v) => esc(VARIANTS[v].name)).join('; ')} (${x.uses > 1000 ? '∞' : x.uses} uses)</option>`).join('')}</select></div>
+        ${yard.master ? `<label class="row"><span>Master shipwright (−25% time, +25% cost)</span><input type="checkbox" data-build="master" ${b.master ? 'checked' : ''}></label>` : ''}
+      </div><div class="card">
+        <h4>${esc(b.name || cls.name)}</h4>
+        <table class="grid"><tr><td>Hull</td><td>${preview.hullMax} (${pct(preview.hullMax, plain.hullMax)})</td></tr><tr><td>Armour</td><td>${Math.round(preview.armor * 100)}% (${pct(preview.armor || 0.01, plain.armor || 0.01)})</td></tr>
+          <tr><td>Speed</td><td>${preview.maxSpeed.toFixed(1)} (${pct(preview.maxSpeed, plain.maxSpeed)})</td></tr><tr><td>Hold</td><td>${preview.holdVolume.toFixed(0)}</td></tr><tr><td>Crew</td><td>${preview.crewMax}</td></tr></table>
+        <p>${fmt(cost)} silver · ${Math.ceil(time / 60)} min at the yard</p><p class="muted">${matText}</p>
+        <button class="btn btn-primary" data-act="build_order" ${self.builds.length ? 'disabled' : ''}>${self.builds.length ? 'The yard is busy with your order' : 'Lay down the keel'}</button>
+        ${yard.plans ? `<p style="margin-top:8px"><button class="btn btn-small" data-act="plan_buy">Buy a good plan for a ${esc(cls.name)} — ${fmt(Math.round(cls.price * 0.3))}</button></p>` : ''}
+        ${yard.figurehead ? `<p><button class="btn btn-small" data-act="figurehead_buy">Fit the ${esc(FIGUREHEADS[yard.figurehead].name)} to your ship — ${fmt(FIGUREHEADS[yard.figurehead].price)}</button></p>` : ''}
+      </div></div>
+      ${orders || berths ? `<div class="card"><h4>Orders and berths</h4>${orders}${berths}</div>` : ''}`;
   }
 
   private tavern(view: PortView, state: ClientState): string {

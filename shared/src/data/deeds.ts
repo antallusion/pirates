@@ -36,7 +36,7 @@ export const DEEDS: DeedDef[] = [
   { id: 'deed_last_plank', name: 'Last Plank', condition: 'Make port with less than 5% hull.', path: 'survival' },
   { id: 'deed_mutiny', name: 'Mutiny', condition: 'Put down a mutiny, or live through one.', path: 'crew' },
   { id: 'deed_fleet_victory', name: 'Fleet Victory', condition: 'Sink a ship while commanding three: yourself and two escorts.', path: 'command' },
-  { id: 'deed_masterwork_ship', name: 'Masterwork Ship', condition: 'Build an Excellent ship at a yard.', path: 'shipwright', awaits: 'shipbuilding (Phase 5)' },
+  { id: 'deed_masterwork_ship', name: 'Masterwork Ship', condition: 'Build an Excellent ship at a yard.', path: 'shipwright' },
   { id: 'deed_wanted_legend', name: 'Wanted Legend', condition: 'Stay at Wanted 4+ for two hours, or claim the bounty on a Wanted 3+ criminal.', path: 'law' },
   { id: 'deed_legend_quest', name: 'Legend Quest', condition: "Finish any captain's Legend quest.", path: 'story' },
 ];

@@ -76,6 +76,7 @@ test('treasure maps: circle shrinks with Treasure Hunter; Legend Seeker pins a l
 test('digging: the boats go ashore in the circle, a miss points onward, the spot yields the hoard', () => {
   const { game } = makeGame();
   const { c, s, ship, p } = captain(game, 'Digger', { exp_treasure_hunter: 2 });
+  for (const id of [...game.npcs.keys()]) game.removeShip(id); // an empty sea: nobody interrupts the digging
   const m = makeMap(game, 1);
   p.explore.maps.push(m);
   // First inside the circle but far from the spot.
@@ -91,6 +92,7 @@ test('digging: the boats go ashore in the circle, a miss points onward, the spot
     assert.ok(c.all('toast').some((t) => /landmarks on the map point further/.test(t.msg)));
   }
   toSea(game, s, m.sx, m.sy);
+  ship.lastCombat = -999;
   const g0 = p.gold;
   c.push({ t: 'land' });
   assert.equal(ship.landing?.feature, 'dig');

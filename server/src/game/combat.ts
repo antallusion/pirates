@@ -386,7 +386,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // Iron Strapping: extra armour against armour-piercing shot.
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
   const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)));
-  const lore = shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1; // Leviathan Lore
+  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1); // Leviathan Lore, the Harpooneer
   let hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore;
   // No single broadside may take more than 30% of a hull (Iron Coffin: 20%).
   if (p.volley !== undefined) {
@@ -536,6 +536,8 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   const now = game.now;
   // Pact of Salt and Bone: the monsters of the deep bite softer.
   if (source && isMonster(source) && d.hull) d = { ...d, hull: d.hull * pactDamageMul(target) };
+  // The Drowned Man on the bow: the Drowned Captain enters every fight with 10 Dread.
+  for (const x of [source, target]) if (x && x.captain === 'drowned' && x.hasFlag('fh_drowned_man') && !x.inCombat(now)) x.dread = Math.max(x.dread, 10);
   if (source) {
     registerAggression(game, source, target);
     source.lastCombat = now;

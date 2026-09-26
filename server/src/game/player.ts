@@ -26,6 +26,9 @@ import type { Company } from './crew.ts';
 import { escortUpkeep, newFleet } from './fleet.ts';
 import type { Fleet } from './fleet.ts';
 import { newQuestLog, sanitizeQuests, stepProgress } from './quests.ts';
+import { sanitizeShipbuilding } from './shipbuilding.ts';
+import type { Berth, BuildOrder } from './shipbuilding.ts';
+import type { FigureheadId, Plan } from '../../../shared/src/data/shipbuild.ts';
 import type { Oath, QuestLog } from './quests.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 
@@ -52,6 +55,10 @@ export interface Profile {
   paths: CaptainId[]; // Paths this captain may take up at a Captain's House
   pathSwitchAt: number;
   oath: Oath | null; // the Code or a letter of marque
+  builds: BuildOrder[];
+  plans: Plan[];
+  berths: Berth[];
+  figureheads: FigureheadId[]; // carved figureheads found, not yet fitted
   exotic: Partial<Record<GoodId, number>>; // units bought in lawless waters (Exotic Goods)
   salvageDay: number; // Salvage King: the game day of the last raising
   crewAmbush: number; // an officer sold your route: hunters wait on the next voyage
@@ -150,7 +157,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
   if (captain === 'admiral') reputation.crown = -25;
   return {
     version: 1, captain, shipName, level: 1, xp: 0, talents: {}, gold: c.start.gold, infamy: 0, reputation, loadout,
-    cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0, fleet: newFleet(), exotic: {}, salvageDay: -1, quests: newQuestLog(), paths: [captain], pathSwitchAt: -1e9, oath: null,
+    cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0, fleet: newFleet(), exotic: {}, salvageDay: -1, builds: [], plans: [], berths: [], figureheads: [], quests: newQuestLog(), paths: [captain], pathSwitchAt: -1e9, oath: null,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
     insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], explore: { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false }, keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
@@ -291,6 +298,10 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     paths: p.paths,
     oath: p.oath,
     pathSwitchAt: p.pathSwitchAt,
+    builds: p.builds.map((b) => ({ id: b.id, port: b.port, classId: b.classId, name: b.name, done: b.done, start: b.start, frame: b.build.frame, plank: b.build.plank, quality: b.build.quality })),
+    plans: p.plans.map((x) => ({ id: x.id, classId: x.classId, quality: x.quality, variants: x.variants, uses: x.uses })),
+    berths: p.berths.map((b) => ({ port: b.port, name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100) })),
+    figureheads: p.figureheads,
     fleet: world.fleet ?? { escorts: [], slots: 0, formation: p.fleet.formation, upkeep: 0 },
     inspect: world.inspect ?? [],
     monsters: world.monsters ?? [],
@@ -364,6 +375,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.fleet ??= newFleet();
   p.exotic ??= {};
   sanitizeQuests(p);
+  sanitizeShipbuilding(p);
   p.salvageDay ??= -1;
   p.fleet.escorts ??= [];
   p.fleet.formation ??= 'line';

@@ -86,17 +86,17 @@ export const KEY_PORTS: KeyPortDef[] = [
   },
   {
     id: 'fogmouth', name: 'Fogmouth', region: 'whispering', faction: 'brokers', pos: [21000, 45000], coastDir: Math.PI * 1.5, islandRadius: 1000, size: 2, shipyardTier: 2, blackMarket: true,
-    profile: { produces: { dreamleaf: 8, pearls: 4, provisions: 12 }, consumes: { rum: 18, weapons: 10, medicine: 8, cloth: 10, tobacco: 10, sugar: 8 } },
+    profile: { produces: { dreamleaf: 8, pearls: 4, provisions: 12, kraken_ink: 1 }, consumes: { rum: 18, weapons: 10, medicine: 8, cloth: 10, tobacco: 10, sugar: 8 } },
     description: 'Stilt-town of the Fog Brokers. Lanterns off, voices low.',
   },
   {
     id: 'cinderhold', name: 'Cinderhold', region: 'ashen_isles', faction: 'confederacy', pos: [82500, 71000], coastDir: Math.PI * 0.5, islandRadius: 1500, size: 3, shipyardTier: 3, blackMarket: true,
-    profile: { produces: { gunpowder: 22, iron: 26, coal: 24, weapons: 10 }, consumes: { provisions: 36, rum: 30, timber: 22, sugar: 10, medicine: 8, cloth: 10, sailcloth: 8 } },
+    profile: { produces: { gunpowder: 22, iron: 26, coal: 24, weapons: 10, sulfur_iron: 4 }, consumes: { provisions: 36, rum: 30, timber: 22, sugar: 10, medicine: 8, cloth: 10, sailcloth: 8 } },
     description: 'Pirate capital in a volcanic caldera. The Code is law, the law is the Code.',
   },
   {
     id: 'harpoon_rest', name: "Harpoon's Rest", region: 'leviathan_reach', faction: 'harpoon', pos: [30500, 13500], coastDir: Math.PI, islandRadius: 1100, size: 2, shipyardTier: 2, blackMarket: false,
-    profile: { produces: { whale_oil: 26, provisions: 10, timber: 12 }, consumes: { salt: 20, rum: 16, weapons: 10, gunpowder: 10, medicine: 6, iron: 8 } },
+    profile: { produces: { whale_oil: 26, provisions: 10, timber: 12, leviathan_bone: 2 }, consumes: { salt: 20, rum: 16, weapons: 10, gunpowder: 10, medicine: 6, iron: 8 } },
     description: 'Whalers and monster hunters. Bone arches over the harbour mouth.',
   },
   {
@@ -106,7 +106,7 @@ export const KEY_PORTS: KeyPortDef[] = [
   },
   {
     id: 'saint_maw', name: 'Saint Maw', region: 'drowned_crown', faction: 'choir', pos: [73500, 27000], coastDir: 0, islandRadius: 1000, size: 2, shipyardTier: 2, blackMarket: true,
-    profile: { produces: { cursed_relics: 5, abyssal_ore: 5, pearls: 4 }, consumes: { provisions: 26, medicine: 10, cloth: 8, whale_oil: 10, rum: 10 } },
+    profile: { produces: { cursed_relics: 5, abyssal_ore: 5, pearls: 4, drowned_silk: 2 }, consumes: { provisions: 26, medicine: 10, cloth: 8, whale_oil: 10, rum: 10 } },
     description: 'City of the Choir. The bells ring underwater.',
   },
 ];

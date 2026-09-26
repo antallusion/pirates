@@ -4,6 +4,7 @@
 // for the planned binary encoding.
 
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
+import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { CaptainId } from './data/captains.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
@@ -54,6 +55,11 @@ export type ClientMsg =
   | { t: 'quest'; action: 'accept' | 'abandon'; id: string }
   | { t: 'path'; to: CaptainId }
   | { t: 'oath'; oath: 'code' | 'marque' }
+  | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }
+  | { t: 'build_launch'; id: string }
+  | { t: 'berth'; action: 'swap' | 'sell'; index: number }
+  | { t: 'plan_buy'; classId: ShipClassId }
+  | { t: 'figurehead_buy' }
   | { t: 'shipyard'; action: 'repair' }
   | { t: 'shipyard'; action: 'module'; module: ModuleId }
   | { t: 'shipyard'; action: 'unfit'; module: ModuleId }
@@ -276,6 +282,11 @@ export interface PrivateState {
   paths: CaptainId[];
   oath: 'code' | 'marque' | null;
   pathSwitchAt: number;
+  /** Shipbuilding (docs/02 §3). */
+  builds: { id: string; port: string; classId: ShipClassId; name: string; done: number; start: number; frame: WoodId; plank: WoodId; quality: PlanQuality }[];
+  plans: { id: string; classId: ShipClassId | null; quality: PlanQuality; variants: VariantId[]; uses: number }[];
+  berths: { port: string; name: string; classId: ShipClassId; hull: number }[];
+  figureheads: FigureheadId[];
   /** Hired escorts (Command) and the formation signal. */
   fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
   /** Admiral's Eye: what you can read of ships near you. */
@@ -385,6 +396,7 @@ export interface PortView {
   questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId }[];
   captainsHouse: boolean;
   oathOffer: 'code' | 'marque' | null;
+  yard: { woods: WoodId[]; figurehead: FigureheadId | null; plans: boolean; master: boolean };
   shipyard: {
     tier: number;
     repairCost: number;

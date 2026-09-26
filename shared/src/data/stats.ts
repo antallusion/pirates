@@ -71,7 +71,9 @@ export type Flag =
   | 'eyes_of_choir' | 'krakens_embrace' | 'voice_of_choir' | 'drowned_king' | 'crew_of_drowned' | 'heart_of_abyss'
   // bridges
   | 'chain_and_grapple' | 'storm_gunner' | 'ghost_trader' | 'blood_and_salt' | 'drowned_boarders' | 'flagship_yard' | 'exotic_goods'
-  | 'night_raider' | 'tide_whisperer' | 'salvage_king' | 'grand_battery' | 'iron_will';
+  | 'night_raider' | 'tide_whisperer' | 'salvage_king' | 'grand_battery' | 'iron_will'
+  // shipbuilding
+  | 'drowned_silk' | 'cursed_wood' | 'fh_crown_lion' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_saint_of_wrecks';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 
