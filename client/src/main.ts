@@ -8,6 +8,7 @@ import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
 import { SF } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
 import { assetUrl, loadAssets } from './assets.ts';
+import { AudioEngine } from './audio.ts';
 import { Net } from './net.ts';
 import { Renderer } from './render/renderer.ts';
 import { ClientState } from './state.ts';
@@ -25,6 +26,9 @@ const net = new Net();
 const state = new ClientState();
 const renderer = new Renderer($('world') as HTMLCanvasElement);
 const hud = new Hud();
+const audio = new AudioEngine();
+renderer.onLightning = () => audio.thunder();
+for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });
 const worldMap = new WorldMap();
 let modal: Modal = null;
 let inGame = false;
@@ -87,6 +91,7 @@ function onMessage(m: ServerMsg): void {
       }
       break;
     case 'port':
+      if (m.view && modal !== 'port') audio.bell();
       if (m.view && modal !== 'boarding' && modal !== 'sunk') openModal('port');
       else if (!m.view && modal === 'port') closeModal();
       else if (modal === 'port') refreshModal();
@@ -104,6 +109,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'toast':
       hud.toast(m.msg, m.kind);
+      if (m.kind === 'gold') audio.coins();
       break;
     case 'chat':
       hud.chat(m.from, m.text);
@@ -111,6 +117,7 @@ function onMessage(m: ServerMsg): void {
     case 'ev':
       for (const e of m.list) {
         renderer.fx.onEvent(e, state.entityId);
+        audio.onEvent(e);
         if (e.k === 'region') {
           const r = REGIONS[e.region];
           hud.banner(r.name, `${r.safety === 'safe' ? 'Safe waters' : r.safety === 'contested' ? 'Contested waters' : 'Lawless waters'} — ${r.mood}`);
@@ -253,6 +260,9 @@ addEventListener('keydown', (e) => {
     case 'h':
       toggle('help');
       break;
+    case 'n':
+      hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 'info');
+      break;
     case 'p':
       if (docked) openModal('port');
       break;
@@ -378,6 +388,8 @@ function frame(t: number): void {
     aimSide = sideUnderCursor();
     const prompt = computePrompt();
     renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget });
+    if (own) audio.listener = { x: own.x, y: own.y };
+    audio.ambience(state.wind[1], state.weather, dt);
     hud.update(state, prompt);
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
   }

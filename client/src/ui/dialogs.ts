@@ -104,6 +104,7 @@ export function renderHelp(root: HTMLElement): void {
     ['F', 'Dock at a nearby port / set sail.'],
     ['M · T · I', 'World chart · talents · ship & hold.'],
     ['Wheel', 'Zoom.'],
+    ['N', 'Sound on / off.'],
     ['Enter', 'Chat.'],
   ];
   root.innerHTML = `<div class="modal-head"><div><h2>Captain's Handbook</h2><div class="sub">The ocean is the world. The ship is the character. The captain is the build.</div></div><div class="muted">[H] close</div></div>

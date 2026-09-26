@@ -61,6 +61,7 @@ export class Renderer {
   time = 0;
   mouseX = 0;
   mouseY = 0;
+  onLightning: () => void = () => {};
   private dark: HTMLCanvasElement;
   private dg: CanvasRenderingContext2D;
   private noise: HTMLCanvasElement;
@@ -893,6 +894,7 @@ export class Renderer {
           this.nextLightning = 6 + Math.random() * 12;
           this.lightning = 1;
           this.fx.flash = 0.8;
+          this.onLightning();
         }
       }
     }

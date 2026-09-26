@@ -36,7 +36,7 @@ Open the page, name your captain, choose a Path, and set sail from Saltmarrow on
 | **R** | repairs (consume planks & sailcloth) |
 | **F** | dock / set sail · **P** reopen harbour |
 | **M · T · I · H** | world chart · talents · ship & hold · handbook |
-| wheel · Enter | zoom · chat |
+| wheel · Enter · N | zoom · chat · sound on/off |
 
 ## What is in the prototype
 
