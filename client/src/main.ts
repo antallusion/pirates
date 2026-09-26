@@ -1,7 +1,7 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
-import { AMMO_IDS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
+import { AMMO_IDS, CHASER_CONE, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS } from '../../shared/src/constants.ts';
 import { clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
@@ -228,7 +228,13 @@ addEventListener('keydown', (e) => {
     case '1':
     case '2':
     case '3':
+    case '4':
+    case '5':
       net.send({ t: 'ammo', ammo: AMMO_IDS[Number(k) - 1] });
+      break;
+    case ' ':
+      fireChasers();
+      e.preventDefault();
       break;
     case 'z':
     case 'x':
@@ -315,6 +321,26 @@ function fire(side: 'port' | 'starboard'): void {
   net.send({ t: 'fire', side, dist: Math.round(aimDistance()) });
 }
 
+/** Bow or stern chasers, whichever end the cursor lies off. */
+export function chaserEndUnderCursor(): 'bow' | 'stern' | null {
+  const own = state.ownDisplay;
+  if (!own) return null;
+  const m = mouseWorld();
+  const want = Math.atan2(m.x - own.x, -(m.y - own.y));
+  const off = Math.abs(((want - own.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+  if (off < CHASER_CONE) return 'bow';
+  if (Math.PI - off < CHASER_CONE) return 'stern';
+  return null;
+}
+
+function fireChasers(): void {
+  if (state.self?.dockedAt) return;
+  const end = chaserEndUnderCursor();
+  if (!end) return hud.toast('Chasers only bear along the keel — aim ahead or astern.', 'bad');
+  const m = mouseWorld();
+  net.send({ t: 'chase', end, x: Math.round(m.x), y: Math.round(m.y) });
+}
+
 function useAbilityKey(key: 'Z' | 'X' | 'C' | 'V'): void {
   const self = state.self;
   if (!self) return;
@@ -396,7 +422,7 @@ function frame(t: number): void {
     const own = state.updateOwn();
     aimSide = sideUnderCursor();
     const prompt = computePrompt();
-    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget });
+    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: chaserEndUnderCursor() });
     if (own) audio.listener = { x: own.x, y: own.y };
     audio.ambience(state.wind[1], state.weather, dt);
     hud.update(state, prompt);

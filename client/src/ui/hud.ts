@@ -76,7 +76,8 @@ export class Hud {
     const reload = (['port', 'starboard'] as const).map((side) => {
       const r = you.reload[side];
       return `<div class="reload-side ${r >= 1 ? 'ready' : ''}">${side === 'port' ? '[Q] Port' : 'Starboard [E]'}${bar('', Math.round(r * 50) / 50)}</div>`;
-    }).join('');
+    }).join('') + (SHIP_CLASSES[self.loadout.classId].bowChasers + SHIP_CLASSES[self.loadout.classId].sternChasers > 0
+      ? `<div class="reload-side ${Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 ? 'ready' : ''}">[Space] Chasers${bar('', Math.round(Math.max(you.reload.bow, you.reload.stern) * 50) / 50)}</div>` : '');
     const abilities = cap.abilities.map((a) => {
       const ready = self.cooldowns[a.id] ?? 0;
       const left = Math.max(0, ready - now);

@@ -6,7 +6,7 @@
 import type { CaptainId } from './data/captains.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
-import type { AmmoId, GunId, ModuleId, ShipClassId } from './data/ships.ts';
+import type { AmmoId, ChaserEnd, GunId, ModuleId, ShipClassId } from './data/ships.ts';
 import type { TalentRanks } from './data/talents.ts';
 import type { Cargo, AmmoStock, ShipLoadout } from './sim/shipstats.ts';
 import type { IslandFeature } from './world/worldgen.ts';
@@ -23,6 +23,7 @@ export type ClientMsg =
   | { t: 'create_captain'; captain: CaptainId; shipName: string }
   | { t: 'input'; seq: number; rudder: number; sail: number }
   | { t: 'fire'; side: Side; dist: number }
+  | { t: 'chase'; end: ChaserEnd; x: number; y: number }
   | { t: 'ammo'; ammo: AmmoId }
   | { t: 'ability'; id: string; x?: number; y?: number }
   | { t: 'board'; target: number; aggression: Aggression }
@@ -266,7 +267,7 @@ export interface SelfRow {
   crew: number;
   crewMax: number;
   morale: number;
-  reload: { port: number; starboard: number }; // 0..1 readiness
+  reload: { port: number; starboard: number; bow: number; stern: number }; // 0..1 readiness
   ammoSel: AmmoId;
   ammo: AmmoStock;
   flags: number;
@@ -274,7 +275,7 @@ export interface SelfRow {
 }
 
 export type GameEvent =
-  | { k: 'volley'; ship: number; side: Side; ammo: AmmoId; balls: [number, number, number, number, number][] } // [x, y, heading, dist, delayMs]
+  | { k: 'volley'; ship: number; side: Side | ChaserEnd; ammo: AmmoId; balls: [number, number, number, number, number][] } // [x, y, heading, dist, delayMs]
   | { k: 'hit'; x: number; y: number; ship: number; dmg: number; ammo: AmmoId; crit?: string }
   | { k: 'splash'; x: number; y: number }
   | { k: 'sunk'; ship: number; x: number; y: number; name: string }

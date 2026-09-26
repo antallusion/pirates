@@ -117,7 +117,7 @@ button { font-family: var(--sans); }
 .sail-steps span.target { border-color: var(--gold); }
 
 .ammo-box { display: flex; gap: 6px; }
-.ammo { width: 64px; padding: 5px; border: 1px solid var(--slate); text-align: center; background: #0e1013; font-size: 11px; }
+.ammo { width: 58px; padding: 5px; border: 1px solid var(--slate); text-align: center; background: #0e1013; font-size: 11px; }
 .ammo.sel { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.3); }
 .ammo b { display: block; font-size: 10px; color: var(--fog); }
 .reload { display: flex; gap: 8px; }

@@ -1,7 +1,8 @@
 // Naval combat: broadsides, ballistics, hit resolution with angle-of-impact and subsystem damage,
 // crimes and kill credit. All numbers come from shared data; nothing here trusts the client.
 
-import { AMMO, GUNS } from '../../../shared/src/data/ships.ts';
+import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
+import type { ChaserEnd } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -96,6 +97,41 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   return null;
 }
 
+/** Bow/stern chasers: long guns aimed at a point within a cone along the keel. Great for chases. */
+export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: number, ty: number): string | null {
+  if (!ship.alive || ship.docked || ship.boarding || ship.surrendered) return 'Cannot fire now';
+  const count = end === 'bow' ? ship.cls.bowChasers : ship.cls.sternChasers;
+  if (count <= 0) return `No ${end} chasers on a ${ship.cls.name}`;
+  if (ship.chaserReload[end] > 0) return 'Chasers are still loading';
+  const ammo = ship.ammoSel === 'grape' ? 'round' : ship.ammoSel; // chasers do not load grape
+  const shots = Math.min(count, ship.ammo[ammo]);
+  if (shots <= 0) return `Out of ${AMMO[ammo].name}`;
+  if (!Number.isFinite(tx) || !Number.isFinite(ty)) return 'No target';
+  const keel = end === 'bow' ? ship.state.heading : wrapAngle(ship.state.heading + Math.PI);
+  const want = Math.atan2(tx - ship.state.x, -(ty - ship.state.y));
+  const off = wrapAngle(want - keel);
+  const h = keel + Math.max(-CHASER_CONE, Math.min(CHASER_CONE, off));
+  const gun = GUNS[CHASER_GUN];
+  const range = gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul;
+  const d = clamp(Math.hypot(tx - ship.state.x, ty - ship.state.y), 40, range);
+  const v = headingVec(keel);
+  const ox = ship.state.x + v.x * ship.stats.length * 0.5, oy = ship.state.y + v.y * ship.stats.length * 0.5;
+  const balls: [number, number, number, number, number][] = [];
+  for (let i = 0; i < shots; i++) {
+    const bh = h + game.rng.gauss() * gun.spreadDeg * DEG * 0.5 * ship.stats.spreadMul * game.seaSpread(ship);
+    const bd = d * (1 + game.rng.gauss() * 0.04);
+    const delay = i * 120;
+    game.projectiles.push({ owner: ship.id, x: ox, y: oy, heading: bh, speed: AMMO[ammo].speed, dist: bd, traveled: 0, ammo, damage: gun.damage * ship.stats.gunDamageMul, maxRange: range, delay: delay / 1000 });
+    balls.push([Math.round(ox), Math.round(oy), Math.round(bh * 1000) / 1000, Math.round(bd), delay]);
+  }
+  ship.ammo[ammo] -= shots;
+  ship.chaserReload[end] = CHASER_RELOAD * ship.stats.reloadMul;
+  ship.lastCombat = game.now;
+  ship.protectedUntil = 0;
+  game.emit({ k: 'volley', ship: ship.id, side: end, ammo, balls }, ship.state.x, ship.state.y);
+  return null;
+}
+
 export function stepProjectiles(game: Game, dt: number): void {
   const list = game.projectiles;
   let w = 0;
@@ -178,7 +214,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // Glancing blows off a steeply angled hull skip away.
   const glance = along > 0.5 && !raking ? 0.8 : 1;
 
-  const hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - target.stats.armor) * target.stats.incomingDamageMul;
+  const armor = target.stats.armor * (1 - (ARMOR_PIERCE[p.ammo] ?? 0));
+  const hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul;
   const sailDmg = p.damage * ammo.sailMul * falloff * (shooter?.stats.sailDamageMul ?? 1);
   const crewKill = ammo.crewKill * (shooter?.stats.crewKillMul ?? 1) * (raking ? 1.8 : 1) * (0.5 + game.rng.float());
 
@@ -203,7 +240,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   if (p.ammo !== 'grape' && hullDmg > 10) {
     const deepHold = target.cls.passive.id === 'deep_hold' ? 0.5 : 1;
     if (game.rng.chance(0.07 * deepHold)) destroyRandomCargo(game, target, 1 + game.rng.int(0, 2));
-    const powder = target.cargo.gunpowder ?? 0;
+    // Fire shot in the magazine burns like powder.
+    const powder = (target.cargo.gunpowder ?? 0) + target.ammo.incendiary / 10;
     if (powder >= 5 && game.rng.chance(0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10))) {
       target.cargo.gunpowder = Math.floor(powder * 0.4);
       applyDamage(game, target, { hull: target.stats.hullMax * 0.14, crew: 3, morale: 12, sails: 10 }, shooter);
@@ -212,6 +250,10 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       game.toastShip(target, 'Powder explosion in the hold!', 'bad');
       crit = 'powder';
     }
+  }
+  if (p.ammo === 'incendiary' && hullDmg > 5 && game.rng.chance(0.25)) {
+    target.addEffect({ id: 'fire', until: game.now + 10 + game.rng.float() * 6, source: shooter?.id }, game.now);
+    crit = 'fire';
   }
   if (p.ammo === 'chain' && shooter?.hasFlag('tangled_rigging')) {
     target.addEffect({ id: 'tangled', until: game.now + 6, mods: { turnRate: -0.35 }, source: shooter.id }, game.now);

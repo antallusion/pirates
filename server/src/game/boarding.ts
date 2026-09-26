@@ -7,6 +7,7 @@ import type { Aggression, BoardingResult } from '../../../shared/src/protocol.ts
 import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { AmmoStock, Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { damageBlocked } from './combat.ts';
+import { AMMO_IDS, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -156,11 +157,8 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
     if (n - lost > 0) cargo[g] = n - lost;
   }
   b.cargo = cargo;
-  const ammo: AmmoStock = {
-    round: Math.floor(b.ammo.round * 0.4),
-    chain: Math.floor(b.ammo.chain * 0.4),
-    grape: Math.floor(b.ammo.grape * 0.4),
-  };
+  const ammo: AmmoStock = emptyAmmo();
+  for (const k of AMMO_IDS) ammo[k] = Math.floor(b.ammo[k] * 0.4);
   // Victory effects.
   a.morale = Math.min(100, a.morale + 10 + a.stats.moraleOnBoard);
   if (a.hasFlag('blood_tide')) a.hull = Math.min(a.stats.hullMax, a.hull + a.stats.hullMax * 0.15);

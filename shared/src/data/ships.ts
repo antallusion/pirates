@@ -142,7 +142,7 @@ export const GUNS: Record<GunId, GunDef> = {
 
 export const GUN_IDS = Object.keys(GUNS) as GunId[];
 
-export type AmmoId = 'round' | 'chain' | 'grape';
+export type AmmoId = 'round' | 'chain' | 'grape' | 'incendiary' | 'heavy';
 
 export interface AmmoDef {
   id: AmmoId;
@@ -161,9 +161,24 @@ export const AMMO: Record<AmmoId, AmmoDef> = {
   round: { id: 'round', name: 'Round Shot', hullMul: 1, sailMul: 0.08, crewKill: 0.5, rangeMul: 1, speed: 190, price: 2, weightPer10: 0.5, description: 'Solid iron. Breaks hulls.' },
   chain: { id: 'chain', name: 'Chain Shot', hullMul: 0.25, sailMul: 0.45, crewKill: 0.25, rangeMul: 0.72, speed: 160, price: 4, weightPer10: 0.5, description: 'Two balls on a chain. Shreds sails and rigging.' },
   grape: { id: 'grape', name: 'Grapeshot', hullMul: 0.12, sailMul: 0.06, crewKill: 2.4, rangeMul: 0.55, speed: 170, price: 3, weightPer10: 0.5, description: 'A bag of musket balls. Clears decks before a boarding.' },
+  incendiary: { id: 'incendiary', name: 'Fire Shot', hullMul: 0.55, sailMul: 0.2, crewKill: 0.4, rangeMul: 0.8, speed: 175, price: 9, weightPer10: 0.6, description: 'Heated shot and pitch pots. A quarter of hull hits start a fire. Dangerous to carry.' },
+  heavy: { id: 'heavy', name: 'Heavy Shot', hullMul: 1.15, sailMul: 0.05, crewKill: 0.5, rangeMul: 0.85, speed: 170, price: 7, weightPer10: 0.9, description: 'Forged armour-piercing shot: ignores most of an armoured hull.' },
 };
 
-export const AMMO_IDS: AmmoId[] = ['round', 'chain', 'grape'];
+export const AMMO_IDS: AmmoId[] = ['round', 'chain', 'grape', 'incendiary', 'heavy'];
+
+/** Fraction of target armour that an ammo type ignores. */
+export const ARMOR_PIERCE: Partial<Record<AmmoId, number>> = { heavy: 0.6 };
+
+export function emptyAmmo(): Record<AmmoId, number> {
+  return { round: 0, chain: 0, grape: 0, incendiary: 0, heavy: 0 };
+}
+
+/** Bow and stern chasers: long guns that fire along the keel, aimed within a cone. */
+export const CHASER_GUN: GunId = 'long_9';
+export const CHASER_CONE = (35 * Math.PI) / 180;
+export const CHASER_RELOAD = 12;
+export type ChaserEnd = 'bow' | 'stern';
 
 // ---------------------------------------------------------------- Shipyard modules
 

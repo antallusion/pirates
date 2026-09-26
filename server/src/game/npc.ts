@@ -9,6 +9,7 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, ShipClassId } from '../../../shared/src/data/ships.ts';
+import { CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import { angleDiff, clamp, DEG, dist, headingOf, headingVec, wrapAngle } from '../../../shared/src/math.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
@@ -17,7 +18,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { canBoard, startBoarding } from './boarding.ts';
-import { effectiveRange, fireBroadside, sideHeading } from './combat.ts';
+import { effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import { applyTrade, bestRoute } from './economy.ts';
 import type { Game } from './Game.ts';
 import { findPath, pathLength, pointAlong } from './nav.ts';
@@ -475,6 +476,13 @@ function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntit
     if (ship.reload[side] > 0) continue;
     const off = Math.abs(angleDiff(sideHeading(ship, side), leadBearing));
     if (off < 20 * DEG && leadD < rangeOf(side) * 0.98) fireBroadside(game, ship, side, leadD);
+  }
+  // Chasers: pursuers fire from the bow, the pursued from the stern.
+  const chaseRange = effectiveRange(ship, 'port', 'round') * 1.2;
+  if (leadD < chaseRange) {
+    const offBow = Math.abs(angleDiff(ship.state.heading, leadBearing));
+    if (offBow < CHASER_CONE && ship.chaserReload.bow <= 0 && ship.cls.bowChasers) fireChaser(game, ship, 'bow', px, py);
+    else if (Math.PI - offBow < CHASER_CONE && ship.chaserReload.stern <= 0 && ship.cls.sternChasers) fireChaser(game, ship, 'stern', px, py);
   }
 }
 

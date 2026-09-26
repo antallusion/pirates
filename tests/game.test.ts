@@ -390,3 +390,50 @@ test('curse: the Abyss claims a lingering ship in stages; a Crown yard scrapes i
   assert.equal(ship.curse, 0);
   assert.equal(ship.stats.armor, armor0);
 });
+
+test('bow chasers hit a ship dead ahead; broadsides cannot', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Chase Master');
+  const ship = undockAtSea(game, c);
+  const npc = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x, ship.state.y - 200, 0);
+  game.npcs.get(npc.id)!.active = true;
+  npc.input = { rudder: 0, sailTarget: 0 };
+  game.grid.upsert(npc.id, npc.state.x, npc.state.y);
+  const hull0 = npc.hull;
+  c.push({ t: 'chase', end: 'stern', x: npc.state.x, y: npc.state.y });
+  assert.ok(c.all('toast').some((t) => /No stern chasers/.test(t.msg)), 'sloops have no stern chasers');
+  c.push({ t: 'chase', end: 'bow', x: npc.state.x, y: npc.state.y });
+  steps(game, 30);
+  assert.ok(npc.hull < hull0, 'chaser ball struck');
+  assert.ok(ship.chaserReload.bow > 0);
+});
+
+test('heavy shot pierces armour; fire shot starts fires', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Ordnance Officer');
+  const ship = undockAtSea(game, c);
+  const hit = (ammo: 'round' | 'heavy' | 'incendiary') => {
+    const npc = npcAbeam(game, ship, 'starboard', 110);
+    npc.loadout.classId = 'galleon';
+    npc.recompute(game.now);
+    npc.hull = npc.stats.hullMax;
+    const hull0 = npc.hull;
+    ship.ammo[ammo] = 50;
+    ship.ammoSel = ammo;
+    ship.reload.starboard = 0;
+    c.push({ t: 'fire', side: 'starboard', dist: 110 });
+    steps(game, 40);
+    const dmg = hull0 - npc.hull;
+    const burning = npc.hasEffect('fire');
+    game.removeShip(npc.id);
+    return { dmg, burning };
+  };
+  let round = 0, heavy = 0, fires = 0;
+  for (let i = 0; i < 4; i++) {
+    round += hit('round').dmg;
+    heavy += hit('heavy').dmg;
+    if (hit('incendiary').burning) fires++;
+  }
+  assert.ok(heavy > round, `heavy ${heavy.toFixed(0)} > round ${round.toFixed(0)} against an armoured galleon`);
+  assert.ok(fires >= 1, 'fire shot set at least one fire');
+});

@@ -2,7 +2,8 @@
 
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
-import type { AmmoId } from '../../../shared/src/data/ships.ts';
+import type { AmmoId, ChaserEnd } from '../../../shared/src/data/ships.ts';
+import { emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { Flag, StatMods } from '../../../shared/src/data/stats.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
@@ -62,7 +63,8 @@ export class ShipEntity {
   crew = 0;
   morale = 80;
   cargo: Cargo = {};
-  ammo: AmmoStock = { round: 0, chain: 0, grape: 0 };
+  ammo: AmmoStock = emptyAmmo();
+  chaserReload: Record<ChaserEnd, number> = { bow: 0, stern: 0 };
   ammoSel: AmmoId = 'round';
   purse = 0; // NPC coin chest, looted on boarding
   reload: Record<Side, number> = { port: 0, starboard: 0 };

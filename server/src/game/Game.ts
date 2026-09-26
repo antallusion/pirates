@@ -11,7 +11,7 @@ import { FACTIONS, WANTED_TITLES, wantedLevel } from '../../../shared/src/data/f
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { AMMO_IDS, SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
+import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
 import { clamp, closestOnPolygon, dist, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
@@ -39,7 +39,7 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, startBoarding, stepBoarding } from './boarding.ts';
-import { applyDamage, fireBroadside, stepProjectiles } from './combat.ts';
+import { applyDamage, fireBroadside, fireChaser, stepProjectiles } from './combat.ts';
 import type { Projectile } from './combat.ts';
 import { createMarket, restoreMarkets, serializeMarkets, tickMarket } from './economy.ts';
 import type { Market } from './economy.ts';
@@ -249,6 +249,8 @@ export class Game {
     for (const ship of this.ships.values()) {
       if (ship.reload.port > 0) ship.reload.port = Math.max(0, ship.reload.port - dt);
       if (ship.reload.starboard > 0) ship.reload.starboard = Math.max(0, ship.reload.starboard - dt);
+      if (ship.chaserReload.bow > 0) ship.chaserReload.bow = Math.max(0, ship.chaserReload.bow - dt);
+      if (ship.chaserReload.stern > 0) ship.chaserReload.stern = Math.max(0, ship.chaserReload.stern - dt);
       if (ship.sinkingUntil && now >= ship.sinkingUntil) this.finalizeSink(ship);
     }
 
@@ -629,7 +631,7 @@ export class Game {
     ship.npcRole = role;
     ship.crew = Math.round(ship.stats.crewMax * (role === 'merchant' || role === 'fisher' ? 0.45 : 0.75));
     ship.morale = role === 'ghost' ? 100 : 70;
-    ship.ammo = { round: 400, chain: role === 'pirate' ? 120 : 40, grape: role === 'pirate' ? 120 : 40 };
+    ship.ammo = { ...emptyAmmo(), round: 400, chain: role === 'pirate' ? 120 : 40, grape: role === 'pirate' ? 120 : 40, incendiary: role === 'pirate' ? 20 : 0, heavy: role === 'patrol' || role === 'hunter' ? 60 : 0 };
     ship.level = role === 'ghost' ? 20 : ship.cls.tier * 3;
     ship.region = regionAt(this.world, x, y);
     ship.state.sail = 0.8;
@@ -907,7 +909,7 @@ export class Game {
     let port = this.portById(p.lastPort);
     if (!port || !canDock(p, port.faction).ok) port = this.nearestPort(ship.state.x, ship.state.y, (q) => canDock(p, q.faction).ok) ?? this.portById(START_PORT)!;
     ship.cargo = {};
-    ship.ammo = { round: Math.floor(ship.ammo.round * 0.5), chain: Math.floor(ship.ammo.chain * 0.5), grape: Math.floor(ship.ammo.grape * 0.5) };
+    for (const a of AMMO_IDS) ship.ammo[a] = Math.floor(ship.ammo[a] * 0.5);
     ship.crew = Math.max(Math.round(ship.stats.crewMin * 0.6), ship.crew - crewLost);
     ship.morale = 50;
     ship.sinkingUntil = 0;
@@ -993,7 +995,7 @@ export class Game {
       moved += n;
     }
     for (const a of AMMO_IDS) ship.ammo[a] += pend.result.ammo[a];
-    target.ammo = { round: 0, chain: 0, grape: 0 };
+    target.ammo = emptyAmmo();
     s.profile.gold += pend.result.gold;
     if (!target.isPlayer) target.purse = 0;
     target.lootLockedFor = null;
@@ -1324,6 +1326,9 @@ export class Game {
       case 'fire':
         if (msg.side !== 'port' && msg.side !== 'starboard') return;
         return err(fireBroadside(this, ship, msg.side, Number(msg.dist)));
+      case 'chase':
+        if (msg.end !== 'bow' && msg.end !== 'stern') return;
+        return err(fireChaser(this, ship, msg.end, Number(msg.x), Number(msg.y)));
       case 'ammo':
         if (AMMO_IDS.includes(msg.ammo)) {
           ship.ammoSel = msg.ammo;
@@ -1736,6 +1741,8 @@ export class Game {
         reload: {
           port: me.reload.port <= 0 ? 1 : 1 - me.reload.port / Math.max(0.1, reloadEstimate(me, 'port')),
           starboard: me.reload.starboard <= 0 ? 1 : 1 - me.reload.starboard / Math.max(0.1, reloadEstimate(me, 'starboard')),
+          bow: me.cls.bowChasers ? 1 - me.chaserReload.bow / CHASER_RELOAD : 0,
+          stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / CHASER_RELOAD : 0,
         },
         ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now), combat: me.inCombat(this.now),
       };

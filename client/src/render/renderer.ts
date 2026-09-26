@@ -4,7 +4,7 @@
 // Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
 
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { GUNS, SHIP_CLASSES, AMMO } from '../../../shared/src/data/ships.ts';
+import { GUNS, SHIP_CLASSES, AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { nightFactor } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
@@ -131,7 +131,7 @@ export class Renderer {
   }
 
   /** Main frame. */
-  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null }): void {
+  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null }): void {
     this.time += dt;
     this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
     const g = this.g;
@@ -1042,10 +1042,28 @@ export class Renderer {
 
   // ------------------------------------------------------------------ overlays
 
-  private drawAim(state: ClientState, own: SailState, aim: { side: 'port' | 'starboard' | null; dist: number }): void {
+  private drawAim(state: ClientState, own: SailState, aim: { side: 'port' | 'starboard' | null; dist: number; chaser: 'bow' | 'stern' | null }): void {
     const g = this.g;
     const you = state.you!;
     const self = state.self!;
+    if (aim.chaser) {
+      const cls = SHIP_CLASSES[self.loadout.classId];
+      const has = aim.chaser === 'bow' ? cls.bowChasers : cls.sternChasers;
+      if (has) {
+        const ready = you.reload[aim.chaser] >= 1;
+        const keel = aim.chaser === 'bow' ? own.heading : own.heading + Math.PI;
+        const r = GUNS.long_9.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel === 'grape' ? 'round' : you.ammoSel].rangeMul * this.zoom;
+        const x = this.sx(own.x), y = this.sy(own.y);
+        g.beginPath();
+        g.moveTo(x, y);
+        g.arc(x, y, r, keel - Math.PI / 2 - CHASER_CONE, keel - Math.PI / 2 + CHASER_CONE);
+        g.closePath();
+        g.fillStyle = ready ? 'rgba(143,179,217,0.10)' : 'rgba(90,100,110,0.06)';
+        g.fill();
+        g.strokeStyle = ready ? 'rgba(143,179,217,0.6)' : 'rgba(90,100,110,0.4)';
+        g.stroke();
+      }
+    }
     for (const side of ['port', 'starboard'] as const) {
       const gun = GUNS[self.loadout.guns[side]];
       const range = gun.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel].rangeMul;
