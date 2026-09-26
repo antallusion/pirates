@@ -34,7 +34,7 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (d > boardingRangeBetween(a, b) * (anywhere ? 1 : 1)) return 'Too far to throw grapples';
   if (!anywhere) {
     const relSpeed = Math.abs(a.state.speed - b.state.speed);
-    if (relSpeed > 5.5 && !b.surrendered) return 'Match her speed before boarding';
+    if (relSpeed > 5.5 && !b.surrendered && a.tether?.target !== b.id) return 'Match her speed before boarding';
     const weakened =
       b.surrendered ||
       b.hull <= b.stats.hullMax * 0.6 ||

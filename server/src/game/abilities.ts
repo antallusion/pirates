@@ -17,7 +17,7 @@ export interface DelayedStrike {
   owner: number;
   slow: number; // seconds of slow applied
   shells: number; // >1 = barrage split into shells
-  fx: 'deep_call' | 'maw' | 'barrage';
+  fx: 'deep_call' | 'maw' | 'barrage' | 'mortar';
 }
 
 export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?: number, ty?: number): string | null {

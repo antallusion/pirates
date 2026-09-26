@@ -6,7 +6,7 @@
 import type { CaptainId } from './data/captains.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
-import type { AmmoId, ChaserEnd, GunId, ModuleId, ShipClassId } from './data/ships.ts';
+import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';
 import type { TalentRanks } from './data/talents.ts';
 import type { Cargo, AmmoStock, ShipLoadout } from './sim/shipstats.ts';
 import type { IslandFeature } from './world/worldgen.ts';
@@ -26,6 +26,7 @@ export type ClientMsg =
   | { t: 'input'; seq: number; rudder: number; sail: number }
   | { t: 'fire'; side: Side; dist: number }
   | { t: 'chase'; end: ChaserEnd; x: number; y: number }
+  | { t: 'mount'; x: number; y: number }
   | { t: 'ammo'; ammo: AmmoId }
   | { t: 'ability'; id: string; x?: number; y?: number }
   | { t: 'board'; target: number; aggression: Aggression }
@@ -40,6 +41,7 @@ export type ClientMsg =
   | { t: 'shipyard'; action: 'module'; module: ModuleId }
   | { t: 'shipyard'; action: 'guns'; side: Side; gun: GunId }
   | { t: 'shipyard'; action: 'buy_ship'; classId: ShipClassId }
+  | { t: 'shipyard'; action: 'mount'; mount: MountId }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
   | { t: 'learn_talent'; id: string }
   | { t: 'respec' }
@@ -201,6 +203,7 @@ export interface PortView {
     ships: { classId: ShipClassId; price: number; tradeIn: number }[];
     modules: { module: ModuleId; level: number; cost: number; max: number }[];
     guns: { gun: GunId; cost: number }[];
+    mounts: { mount: MountId; cost: number }[];
   };
   contracts: Contract[];
   rumors: string[];
@@ -252,6 +255,7 @@ export const SF = {
   FIRE: 4096,
   CURSE_LOW: 8192, // curse stage bit 0
   CURSE_HIGH: 16384, // curse stage bit 1  (stage = LOW + 2·HIGH)
+  TETHERED: 32768,
 } as const;
 
 export interface SelfRow {
@@ -270,7 +274,7 @@ export interface SelfRow {
   crew: number;
   crewMax: number;
   morale: number;
-  reload: { port: number; starboard: number; bow: number; stern: number }; // 0..1 readiness
+  reload: { port: number; starboard: number; bow: number; stern: number; mount: number }; // 0..1 readiness
   ammoSel: AmmoId;
   ammo: AmmoStock;
   flags: number;
@@ -288,7 +292,9 @@ export type GameEvent =
   | { k: 'board_start'; a: number; b: number }
   | { k: 'board_end'; a: number; b: number; winner: number }
   | { k: 'ability'; ship: number; id: string; x?: number; y?: number }
-  | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram'; x: number; y: number; r?: number }
+  | { k: 'tether'; a: number; b: number; until: number }
+  | { k: 'lance'; x: number; y: number; x2: number; y2: number }
+  | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram'; x: number; y: number; r?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 

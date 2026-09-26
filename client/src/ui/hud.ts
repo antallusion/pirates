@@ -3,7 +3,7 @@
 
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { WANTED_TITLES } from '../../../shared/src/data/factions.ts';
-import { AMMO, AMMO_IDS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { timeOfDay } from '../../../shared/src/constants.ts';
 import { headingVec } from '../../../shared/src/math.ts';
 import { SF } from '../../../shared/src/protocol.ts';
@@ -79,7 +79,8 @@ export class Hud {
       const r = you.reload[side];
       return `<div class="reload-side ${r >= 1 ? 'ready' : ''}">${side === 'port' ? '[Q] Port' : 'Starboard [E]'}${bar('', Math.round(r * 50) / 50)}</div>`;
     }).join('') + (SHIP_CLASSES[self.loadout.classId].bowChasers + SHIP_CLASSES[self.loadout.classId].sternChasers > 0
-      ? `<div class="reload-side ${Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 ? 'ready' : ''}">[Space] Chasers${bar('', Math.round(Math.max(you.reload.bow, you.reload.stern) * 50) / 50)}</div>` : '');
+      ? `<div class="reload-side ${Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 ? 'ready' : ''}">[Space] Chasers${bar('', Math.round(Math.max(you.reload.bow, you.reload.stern) * 50) / 50)}</div>` : '')
+      + (self.loadout.mount ? `<div class="reload-side ${you.reload.mount >= 1 ? 'ready' : ''}">[RMB] ${esc(MOUNTS[self.loadout.mount].name)}${bar('', Math.round(you.reload.mount * 50) / 50)}</div>` : '');
     const abilities = cap.abilities.map((a) => {
       const ready = self.cooldowns[a.id] ?? 0;
       const left = Math.max(0, ready - now);

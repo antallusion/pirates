@@ -212,3 +212,29 @@ export function defaultGunFor(cls: ShipClassDef): GunId {
   if (cls.tier >= 3) return 'medium_12';
   return 'light_6';
 }
+
+// ---------------------------------------------------------------- Deck mounts (special weapons, right mouse)
+
+export type MountId = 'mortar' | 'harpoon' | 'chain_gun' | 'abyssal_lance';
+
+export interface MountDef {
+  id: MountId;
+  name: string;
+  minTier: number;
+  minRange: number;
+  range: number;
+  reload: number;
+  price: number;
+  /** Only sold by ports of these factions (empty = any shipyard). */
+  factions: string[];
+  description: string;
+}
+
+export const MOUNTS: Record<MountId, MountDef> = {
+  mortar: { id: 'mortar', name: 'Sea Mortar', minTier: 2, minRange: 250, range: 900, reload: 25, price: 3200, factions: [], description: 'Lobs a bomb at a point: 3 s flight, 55 m blast, heavy hull damage, poor accuracy at long range. Useless against ships that keep moving.' },
+  harpoon: { id: 'harpoon', name: 'Harpoon Gun', minTier: 1, minRange: 0, range: 190, reload: 20, price: 1800, factions: ['harpoon', 'free', 'confederacy'], description: 'Whaler\'s harpoon on a cable: tethers the target for 20 s so it cannot escape. Sets up boardings. The line snaps if strained too long.' },
+  chain_gun: { id: 'chain_gun', name: 'Swivel Chain Gun', minTier: 1, minRange: 0, range: 260, reload: 7, price: 1400, factions: [], description: 'A pivoting swivel that fires three chain balls in any direction. Uses chain shot from the hold.' },
+  abyssal_lance: { id: 'abyssal_lance', name: 'Abyssal Lance', minTier: 2, minRange: 0, range: 320, reload: 30, price: 6000, factions: ['choir'], description: 'A spine from the deep that answers to a cursed hull. A lance of cold light: hull and crew damage, terror. Needs curse stage 1+, deepens your curse.' },
+};
+
+export const MOUNT_IDS = Object.keys(MOUNTS) as MountId[];

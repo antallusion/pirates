@@ -300,6 +300,11 @@ canvas.addEventListener('mousedown', (e) => {
   if (side) fire(side);
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('mousedown', (e) => {
+  if (!inGame || e.button !== 2 || state.self?.dockedAt) return;
+  const m = mouseWorld();
+  net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
+});
 
 function mouseWorld(): { x: number; y: number } {
   return renderer.toWorld(renderer.mouseX, renderer.mouseY);

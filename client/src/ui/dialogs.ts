@@ -97,6 +97,7 @@ export function renderHelp(root: HTMLElement): void {
     ['A / D', 'Rudder. Ships need way on to turn.'],
     ['Q / E, LMB', 'Fire port / starboard broadside. Cursor distance sets elevation. LMB fires the side facing the cursor.'],
     ['1 – 5', 'Round shot (hull) · chain (sails) · grape (crew) · fire shot (sets fires, burns in your own magazine) · heavy shot (pierces armour).'],
+    ['RMB', 'Deck mount at the cursor (fit one at a shipyard): mortar, harpoon (tethers the target), swivel chain gun, abyssal lance.'],
     ['Space', 'Bow or stern chasers toward the cursor (it must lie within 35° of the keel). Chasers never load grape.'],
     ['Z X C / V', 'Captain abilities / Ultimate (level 6).'],
     ['B', 'Board the nearest crippled ship in range (hull ≤60%, crew ≤50%, sails ≤35% or struck).'],

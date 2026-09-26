@@ -4,7 +4,7 @@
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { AMMO, AMMO_IDS, GUNS, GUN_IDS, MODULES, MODULE_IDS, SHIP_CLASSES, SHIP_CLASS_IDS, defaultGunFor, moduleCost } from '../../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, GUNS, GUN_IDS, MODULES, MODULE_IDS, MOUNTS, SHIP_CLASSES, SHIP_CLASS_IDS, defaultGunFor, moduleCost } from '../../../shared/src/data/ships.ts';
 import type { AmmoId, GunId, ModuleId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { Contract, PortView, Side } from '../../../shared/src/protocol.ts';
@@ -16,6 +16,7 @@ import { marketRows, midPrice, portIsLawful, quoteBuy, quoteSell, applyTrade } f
 import type { PriceMods } from './economy.ts';
 import type { Game } from './Game.ts';
 import { poiRumor } from './exploration.ts';
+import { mountOffers } from './mounts.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -82,6 +83,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
         const level = ship.loadout.modules[m] ?? 0;
         return { module: m, level, cost: level >= MODULES[m].maxLevel ? 0 : moduleCost(m, level + 1, ship.cls.tier), max: MODULES[m].maxLevel };
       }),
+      mounts: mountOffers(ship, port),
       guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
     },
     contracts: game.contractsAt(port.id),
@@ -260,6 +262,8 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   const gun = defaultGunFor(def);
   const newLoadout = { classId, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {} };
   p.gold -= cost;
+  // The old deck mount is sold back to the yard.
+  if (ship.loadout.mount) p.gold += Math.round(MOUNTS[ship.loadout.mount].price * 0.4);
   ship.loadout = newLoadout;
   p.loadout = newLoadout;
   ship.gunsDisabled = { port: 0, starboard: 0 };

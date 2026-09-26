@@ -2,8 +2,8 @@
 
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
-import { AMMO, AMMO_IDS, GUNS, MODULES, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
-import type { ShipClassId } from '../../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { ClientMsg, PortView } from '../../../shared/src/protocol.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -72,6 +72,8 @@ export class PortScreen {
         return this.send({ t: 'shipyard', action: 'module', module: d.module as never });
       case 'gun':
         return this.send({ t: 'shipyard', action: 'guns', side: d.side as never, gun: d.gun as never });
+      case 'mount':
+        return this.send({ t: 'shipyard', action: 'mount', mount: d.mount as MountId });
       case 'ship':
         if (confirm(`Trade in your ship for a ${SHIP_CLASSES[d.cls as ShipClassId].name}?`)) this.send({ t: 'shipyard', action: 'buy_ship', classId: d.cls as ShipClassId });
         return;
@@ -159,7 +161,13 @@ export class PortScreen {
     return `<div class="cols"><div>
         <div class="card"><h4>Repairs</h4><p>Hull ${state.you?.hull ?? 0}/${state.you?.hullMax ?? 0}, sails ${state.you?.sails ?? 0}/${state.you?.sailsMax ?? 0}, dismounted guns ${self.gunsDisabled.port + self.gunsDisabled.starboard}.</p>
         <button class="btn btn-primary" data-act="repair" ${sy.repairCost ? '' : 'disabled'}>${sy.repairCost ? `Full repair — ${fmt(sy.repairCost)}` : 'She is sound'}</button></div>
-        ${guns}</div><div>${modules}</div></div>
+        ${guns}</div><div>
+        <div class="card"><h4>Deck mount (right mouse)</h4>${sy.mounts.map((m) => {
+          const def = MOUNTS[m.mount];
+          const fitted = self.loadout.mount === m.mount;
+          return `<div style="padding:4px 0"><div class="row"><b>${esc(def.name)}</b><button class="btn btn-small" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? 'Fitted' : fmt(m.cost)}</button></div><span class="muted">${esc(def.description)}</span></div>`;
+        }).join('') || '<p class="muted">No mounts for this hull here.</p>'}</div>
+        ${modules}</div></div>
       <h3 class="title-sm" style="font-size:20px;margin-top:10px">New hulls (trade-in applied)</h3>
       <table class="grid"><tr><th>Class</th><th>Hull</th><th>Speed</th><th>Guns</th><th>Hold</th><th>Crew</th><th></th></tr>${ships}</table>
       <p class="muted">Tier ${sy.tier} yard. Bigger is not better: a galleon hauls a fortune but a sloop will run circles around her.</p>`;

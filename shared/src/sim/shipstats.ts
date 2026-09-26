@@ -6,7 +6,7 @@ import type { CaptainId } from '../data/captains.ts';
 import { GOODS } from '../data/goods.ts';
 import type { GoodId } from '../data/goods.ts';
 import { AMMO, GUNS, MODULES, SHIP_CLASSES } from '../data/ships.ts';
-import type { AmmoId, GunId, ModuleId, Rig, ShipClassId } from '../data/ships.ts';
+import type { AmmoId, GunId, ModuleId, MountId, Rig, ShipClassId } from '../data/ships.ts';
 import { mod, sumMods } from '../data/stats.ts';
 import type { Flag, ModifierSource } from '../data/stats.ts';
 import { talentModifiers } from '../data/talents.ts';
@@ -19,6 +19,7 @@ export interface ShipLoadout {
   name: string;
   guns: { port: GunId; starboard: GunId };
   modules: Partial<Record<ModuleId, number>>;
+  mount?: MountId;
 }
 
 export interface ShipStats {

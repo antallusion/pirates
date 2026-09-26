@@ -171,6 +171,7 @@ export class Renderer {
     this.drawWakes();
     this.drawLoot(state);
     for (const s of ships) this.drawShip(s, state);
+    this.drawTethers(state, ships);
     this.drawBalls();
     this.drawParticles(false);
 
@@ -800,6 +801,36 @@ export class Renderer {
       g.arc(0, my, Math.max(1.5, beam * 0.08), 0, Math.PI * 2);
       g.fill();
     }
+  }
+
+  private drawTethers(state: ClientState, ships: DrawShip[]): void {
+    const g = this.g;
+    const now = state.estServerTime();
+    const pos = new Map(ships.map((s) => [s.id, s]));
+    this.fx.tethers = this.fx.tethers.filter((t) => t.until > now && pos.has(t.a) && pos.has(t.b) && pos.get(t.b)!.flags & SF.TETHERED);
+    g.save();
+    for (const t of this.fx.tethers) {
+      const a = pos.get(t.a)!, b = pos.get(t.b)!;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 + 6; // the cable sags
+      g.strokeStyle = 'rgba(150,130,95,0.9)';
+      g.lineWidth = Math.max(1, 0.6 * this.zoom);
+      g.beginPath();
+      g.moveTo(this.sx(a.x), this.sy(a.y));
+      g.quadraticCurveTo(this.sx(mx), this.sy(my), this.sx(b.x), this.sy(b.y));
+      g.stroke();
+    }
+    for (const bm of this.fx.beams) {
+      const a = 1 - bm.t / 0.6;
+      g.globalCompositeOperation = 'lighter';
+      g.strokeStyle = `rgba(46,230,200,${a})`;
+      g.lineWidth = Math.max(2, 3 * this.zoom * a);
+      g.beginPath();
+      g.moveTo(this.sx(bm.x), this.sy(bm.y));
+      g.lineTo(this.sx(bm.x2), this.sy(bm.y2));
+      g.stroke();
+      g.globalCompositeOperation = 'source-over';
+    }
+    g.restore();
   }
 
   private drawBalls(): void {

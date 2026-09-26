@@ -19,6 +19,7 @@ import type {
   BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow,
 } from '../../../shared/src/protocol.ts';
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
+import { fireMount, isTethered, mountReloadTime, shipyardMount, stepTethers } from './mounts.ts';
 import { STATION_NAMES, floodCapacity, setStation, stepFlooding } from './damagecontrol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { encodeSnap } from '../../../shared/src/codec.ts';
@@ -243,6 +244,7 @@ export class Game {
       this.physics(ship, dt, night);
     }
     this.collideShips();
+    stepTethers(this, dt);
     stepProjectiles(this, dt);
     stepBoarding(this);
     stepStrikes(this);
@@ -250,6 +252,7 @@ export class Game {
     for (const ship of this.ships.values()) {
       if (ship.reload.port > 0) ship.reload.port = Math.max(0, ship.reload.port - dt);
       if (ship.reload.starboard > 0) ship.reload.starboard = Math.max(0, ship.reload.starboard - dt);
+      if (ship.mountReload > 0) ship.mountReload = Math.max(0, ship.mountReload - dt);
       if (ship.chaserReload.bow > 0) ship.chaserReload.bow = Math.max(0, ship.chaserReload.bow - dt);
       if (ship.chaserReload.stern > 0) ship.chaserReload.stern = Math.max(0, ship.chaserReload.stern - dt);
       if (ship.sinkingUntil && now >= ship.sinkingUntil) this.finalizeSink(ship);
@@ -1334,6 +1337,8 @@ export class Game {
       case 'fire':
         if (msg.side !== 'port' && msg.side !== 'starboard') return;
         return err(fireBroadside(this, ship, msg.side, Number(msg.dist)));
+      case 'mount':
+        return err(fireMount(this, ship, Number(msg.x), Number(msg.y)));
       case 'chase':
         if (msg.end !== 'bow' && msg.end !== 'stern') return;
         return err(fireChaser(this, ship, msg.end, Number(msg.x), Number(msg.y)));
@@ -1384,6 +1389,8 @@ export class Game {
               return shipyardGuns(this, s, pt, msg.side, msg.gun);
             case 'buy_ship':
               return shipyardBuy(this, s, pt, msg.classId);
+            case 'mount':
+              return shipyardMount(this, s, pt, msg.mount);
             default:
               return 'Unknown order';
           }
@@ -1729,7 +1736,7 @@ export class Game {
           o.id, Math.round(o.state.x * 10) / 10, Math.round(o.state.y * 10) / 10, Math.round(o.state.heading * 1000) / 1000,
           Math.round(o.state.speed * 10) / 10, Math.round(o.state.sail * 100) / 100,
           Math.round((o.hull / o.stats.hullMax) * 1000) / 1000, Math.round((o.sails / o.stats.sailHpMax) * 100) / 100,
-          o.flagsFor(me.id, this.isHostile(o, me), this.now), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
+          o.flagsFor(me.id, this.isHostile(o, me), this.now) | (isTethered(this, o) ? SF.TETHERED : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
         ]);
       });
       const loot: LootRow[] = [];
@@ -1759,8 +1766,9 @@ export class Game {
           starboard: me.reload.starboard <= 0 ? 1 : 1 - me.reload.starboard / Math.max(0.1, reloadEstimate(me, 'starboard')),
           bow: me.cls.bowChasers ? 1 - me.chaserReload.bow / CHASER_RELOAD : 0,
           stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / CHASER_RELOAD : 0,
+          mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
-        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now), combat: me.inCombat(this.now),
+        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (isTethered(this, me) ? SF.TETHERED : 0), combat: me.inCombat(this.now),
         water: Math.min(1, me.water / floodCapacity(me)), leaks: me.leaks, station: me.station,
       };
       this.sendSnap(s, {

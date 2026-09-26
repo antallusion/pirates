@@ -223,11 +223,17 @@ export class AudioEngine {
       case 'sunk':
         this.splash(e.x, e.y, true);
         break;
+      case 'lance':
+        this.eerie(e.x2, e.y2);
+        break;
       case 'fx':
         if (e.fx === 'explosion') this.explosion(e.x, e.y);
         else if (e.fx === 'deep_call' || e.fx === 'maw') this.eerie(e.x, e.y);
         else if (e.fx === 'barrage') for (let i = 0; i < 6; i++) this.cannon(e.x, e.y, i * 0.1, 0.6);
         else if (e.fx === 'ram') this.hit(e.x, e.y, true);
+        else if (e.fx === 'mortar_launch') this.cannon(e.x, e.y, 0, 1.4);
+        else if (e.fx === 'mortar') this.explosion(e.x, e.y);
+        else if (e.fx === 'harpoon_miss') this.splash(e.x, e.y, false);
         break;
     }
   }

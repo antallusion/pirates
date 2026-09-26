@@ -466,3 +466,48 @@ test('leaks flood the hold, pumps and damage control fight back, a full hold fou
   steps(game, 20 * 10);
   assert.ok(ship.sinkingUntil > 0 || c.last('sunk_self'), 'foundered');
 });
+
+test('deck mounts: harpoon tethers and drags, mortar bombs a point, chain gun strips sails', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Whaler Wes');
+  const s = [...game.sessions][0];
+  s.profile!.gold = 20000;
+  // Saltmarrow (Crown) does not sell harpoons; any yard sells chain guns.
+  c.push({ t: 'shipyard', action: 'mount', mount: 'harpoon' });
+  assert.equal(s.ship!.loadout.mount, undefined);
+  c.push({ t: 'shipyard', action: 'mount', mount: 'chain_gun' });
+  assert.equal(s.ship!.loadout.mount, 'chain_gun');
+  const ship = undockAtSea(game, c);
+  // Chain gun in any direction.
+  const npc = npcAbeam(game, ship, 'starboard', 150);
+  const sails0 = npc.sails;
+  c.push({ t: 'mount', x: npc.state.x, y: npc.state.y });
+  steps(game, 30);
+  assert.ok(npc.sails < sails0, 'chain gun tore sails');
+  assert.ok(ship.mountReload > 0);
+  // Harpoon (fitted by hand for the test): tether, then drag the target along.
+  ship.loadout.mount = 'harpoon';
+  ship.mountReload = 0;
+  c.push({ t: 'mount', x: npc.state.x, y: npc.state.y });
+  assert.ok(ship.tether?.target === npc.id, 'harpooned');
+  ship.input = { rudder: 0, sailTarget: 1 };
+  ship.state.heading = Math.PI; // sail away from the target
+  const d0 = Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y);
+  steps(game, 20 * 6);
+  const d1 = Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y);
+  assert.ok(d1 < d0 + 60, `cable holds the pair together (${d0.toFixed(0)} → ${d1.toFixed(0)})`);
+  // Mortar: bomb a stationary target.
+  ship.tether = null;
+  ship.loadout.mount = 'mortar';
+  ship.mountReload = 0;
+  const far = npcAbeam(game, ship, 'port', 400);
+  const hull0 = far.hull;
+  let hit = false;
+  for (let i = 0; i < 6 && !hit; i++) {
+    ship.mountReload = 0;
+    c.push({ t: 'mount', x: far.state.x, y: far.state.y });
+    steps(game, 20 * 4);
+    hit = far.hull < hull0;
+  }
+  assert.ok(hit, 'mortar landed on a sitting target');
+});

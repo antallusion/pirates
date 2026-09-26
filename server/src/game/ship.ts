@@ -14,6 +14,7 @@ import type { AmmoStock, Cargo, ShipLoadout, ShipStats } from '../../../shared/s
 import { computeShipStats, crewFactor, loadFactor } from '../../../shared/src/sim/shipstats.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Landing } from './exploration.ts';
+import type { Tether } from './mounts.ts';
 
 export interface StatusEffect {
   id: string;
@@ -85,6 +86,8 @@ export class ShipEntity {
   leaks = 0;
   lastPlug = 0;
   station: Station = 'balanced';
+  mountReload = 0;
+  tether: Tether | null = null;
   unsinkableReadyAt = 0;
   lastStandUntil = 0;
   doubleShotArmed = false;

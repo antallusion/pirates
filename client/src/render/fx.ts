@@ -47,6 +47,8 @@ export class Fx {
   particles: Particle[] = [];
   balls: Ball[] = [];
   lights: Light[] = [];
+  tethers: { a: number; b: number; until: number }[] = [];
+  beams: { x: number; y: number; x2: number; y2: number; t: number }[] = [];
   shake = 0;
   flash = 0; // lightning / explosion screen flash
 
@@ -145,6 +147,15 @@ export class Fx {
         if (e.ship === ownId) this.shake = Math.max(this.shake, 0.35);
         break;
       }
+      case 'tether':
+        this.tethers = this.tethers.filter((t) => t.a !== e.a);
+        this.tethers.push({ a: e.a, b: e.b, until: e.until });
+        break;
+      case 'lance':
+        this.beams.push({ x: e.x, y: e.y, x2: e.x2, y2: e.y2, t: 0 });
+        this.light(e.x2, e.y2, 160, 'rgba(46,230,200,1)', 1, 0.8);
+        this.splash(e.x2, e.y2, false);
+        break;
       case 'sunk':
         this.splash(e.x, e.y, true);
         this.smoke(e.x, e.y, 20, 16, true);
@@ -191,6 +202,18 @@ export class Fx {
           case 'star_fix':
             this.add({ kind: 'ring', x: e.x, y: e.y, life: 2.5, size: 50, grow: 900, color: '#8fb3d9' });
             break;
+          case 'mortar_launch':
+            this.add({ kind: 'flash', x: e.x, y: e.y, life: 0.25, size: 6, grow: 60, color: '#ffc27a' });
+            this.smoke(e.x, e.y, 6, 9, true);
+            this.shake = Math.max(this.shake, 0.3);
+            break;
+          case 'mortar':
+            this.explosion(e.x, e.y, e.r ?? 55);
+            this.splash(e.x, e.y, true);
+            break;
+          case 'harpoon_miss':
+            this.splash(e.x, e.y, false);
+            break;
           case 'ram':
             this.splinters(e.x, e.y, 24);
             this.splash(e.x, e.y, true);
@@ -234,6 +257,8 @@ export class Fx {
     }
     this.particles = this.particles.filter((p) => p.t < p.life);
     for (const l of this.lights) l.t += dt;
+    for (const b of this.beams) b.t += dt;
+    this.beams = this.beams.filter((b) => b.t < 0.6);
     this.lights = this.lights.filter((l) => l.t < l.life);
     this.shake = Math.max(0, this.shake - dt * 1.6);
     this.flash = Math.max(0, this.flash - dt * 2.5);
