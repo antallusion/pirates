@@ -86,7 +86,8 @@ export async function loadAssets(ids: string[] | null, onProgress?: (done: numbe
   } catch {
     return;
   }
-  const list = (ids ?? Object.keys(manifest.assets)).filter((id) => manifest!.assets[id]);
+  // The reference art is for reviews, not for the game.
+  const list = (ids ?? Object.keys(manifest.assets).filter((id) => !id.startsWith('art.reference'))).filter((id) => manifest!.assets[id]);
   let done = 0;
   await Promise.all(
     list.map(async (id) => {

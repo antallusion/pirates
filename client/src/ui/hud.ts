@@ -45,6 +45,10 @@ export class Hud {
   private lastRegion = '';
   private lastMinimap = 0;
   private lastNav = 0;
+  private gaugeEls = new Map<string, { el: HTMLElement; fill: HTMLElement }>();
+  private cdEls = new Map<string, { cd: HTMLElement; cdt: HTMLElement; charge: HTMLElement | null }>();
+  /** Bumped when art finishes loading so slots rebuild with their icons. */
+  artEpoch = 0;
 
   constructor() {
     // The unit frame opens the ship's full condition on screens too small to keep it out.
@@ -104,53 +108,79 @@ export class Hud {
     // Combat block: rebuilt each frame (cheap, few nodes).
     const now = state.estServerTime();
     // Cursed shot shows only when you carry it (key U).
-    const ammo = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed').map((a, i) => slot({
-      data: `data-ammo="${a}"`, cls: you.ammoSel === a ? 'sel' : '', art: `ammo_${a}`, glyph: AMMO[a].name.slice(0, 1), name: AMMO[a].name,
-      key: a === 'cursed' ? 'U' : String(i + 1), qty: String(you.ammo[a]), title: AMMO[a].name,
-    })).join('');
-    const reload = (['port', 'starboard'] as const).map((side) => {
-      const r = you.reload[side];
-      return `<div class="rl ${r >= 1 ? 'ready' : ''}">${esc(keyless(L(side)))}<div class="fbar"><i style="width:${pct(Math.round(r * 50) / 50)}"></i></div></div>`;
-    }).join('') + (SHIP_CLASSES[self.loadout.classId].bowChasers + SHIP_CLASSES[self.loadout.classId].sternChasers > 0
-      ? `<div class="rl ${Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 ? 'ready' : ''}">${esc(keyless(L('chasers')))}<div class="fbar"><i style="width:${pct(Math.round(Math.max(you.reload.bow, you.reload.stern) * 50) / 50)}"></i></div></div>` : '')
-      + (self.loadout.mount ? `<div class="rl ${you.reload.mount >= 1 ? 'ready' : ''}">${esc(MOUNTS[self.loadout.mount].name)}<div class="fbar"><i style="width:${pct(Math.round(you.reload.mount * 50) / 50)}"></i></div></div>` : '');
-    const abilities = cap.abilities.map((a) => {
-      const ready = self.cooldowns[a.id] ?? 0;
-      const left = Math.max(0, ready - now);
+    // The action bar is rebuilt only when its make-up changes (shots and counts, abilities and their locks, talents,
+    // gauges, fire mode); reloads and cooldowns move in place every frame without touching the markup.
+    const shots = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed');
+    const shipCls = cls;
+    const gauges: { id: string; label: string; v: number; ready: boolean }[] = [
+      { id: 'port', label: keyless(L('port')), v: you.reload.port, ready: you.reload.port >= 1 },
+      { id: 'starboard', label: keyless(L('starboard')), v: you.reload.starboard, ready: you.reload.starboard >= 1 },
+    ];
+    if (shipCls.bowChasers + shipCls.sternChasers > 0) gauges.push({ id: 'chasers', label: keyless(L('chasers')), v: Math.max(you.reload.bow, you.reload.stern), ready: Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 });
+    if (self.loadout.mount) gauges.push({ id: 'mount', label: MOUNTS[self.loadout.mount].name, v: you.reload.mount, ready: you.reload.mount >= 1 });
+    const abil = cap.abilities.map((a) => {
       const locked = a.kind === 'ultimate' && self.level < 6;
-      const frac = left > 0 ? left / a.cooldown : 0;
       // Ultimates need full resolve; the Drowned Captain's miracles need Dread.
-      const charge = a.kind === 'ultimate' && !locked && you.resolve < 100 ? `<div class="charge" style="width:${Math.round(you.resolve)}%"></div>` : '';
+      const charging = a.kind === 'ultimate' && !locked && you.resolve < 100;
       const starved = (a.dreadCost ?? 0) > you.dread;
-      return slot({
-        data: `data-ab="${a.id}"`, cls: `${a.kind === 'ultimate' ? 'ult' : ''} ${locked || charge || starved ? 'locked' : ''}`, art: `ab_${a.id}`, glyph: a.key, name: a.name, key: a.key,
-        title: `${a.name} — ${a.description}`,
-        extra: `${charge}${frac > 0 ? `<div class="cd" style="height:${Math.round(frac * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}${locked ? `<div class="cdt">${esc(L('lv6'))}</div>` : ''}`,
-      });
-    }).join('');
-    const talentBar = activeTalents(self.talents).slice(0, 5).map((t, i) => {
-      const left = Math.max(0, (self.talentCooldowns[t.id] ?? 0) - now);
-      const frac = left > 0 && t.active ? left / t.active.cooldown : 0;
-      return slot({
-        data: `data-talent="${t.id}"`, cls: 'talent', art: `tree_${t.tree}`, glyph: '✦', name: t.name, key: '67890'[i], title: `${t.name} — ${t.description}`,
-        extra: frac > 0 ? `<div class="cd" style="height:${Math.round(Math.min(1, frac) * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : '',
-      });
-    }).join('');
+      return { a, locked, charging, dim: locked || charging || starved, left: Math.max(0, (self.cooldowns[a.id] ?? 0) - now) };
+    });
+    const tals = activeTalents(self.talents).slice(0, 5).map((t) => ({ t, left: Math.max(0, (self.talentCooldowns[t.id] ?? 0) - now) }));
     const heat = self.heat.port || self.heat.starboard
       ? `<div class="row" style="font-size:11px"><span class="lbl" style="color:var(--bad)">${esc(L('heat'))}</span><span class="val">${esc(L('heatSides', { p: self.heat.port, s: self.heat.starboard }))}</span></div>` : '';
     // Storm Gunner: the crest of the swell (the same seven-second cycle as the server).
     const crest = (self.talents.brg_storm_gunner ?? 0) > 0 && state.wind[1] >= 0.9 && Math.sin((now * Math.PI * 2) / 7 + (state.entityId ?? 0)) > 0.75;
     const mode = `<div class="ab-mode">${esc(keyless(L('fireMode')))}: ${esc(L(self.rollingFire ? 'rolling' : 'broadside'))}${crest ? ` · <span style="color:var(--gold)">${esc(L('crest'))}</span>` : ''}</div>`;
     const combat = $('hud-combat');
-    const key = ammo + reload + abilities + talentBar + heat + mode;
+    const key = [lang(), document.body.classList.contains('touch'), you.ammoSel, shots.map((a) => `${a}${you.ammo[a]}`).join(','), gauges.map((g) => g.id).join(','),
+      abil.map((x) => `${x.a.id}${x.dim ? 1 : 0}${x.locked ? 1 : 0}`).join(','), tals.map((x) => x.t.id).join(','), heat, mode, this.artEpoch].join('|');
     if (key !== this.lastCombatKey) {
       this.lastCombatKey = key;
+      const ammo = shots.map((a, i) => slot({
+        data: `data-ammo="${a}"`, cls: you.ammoSel === a ? 'sel' : '', art: `ammo_${a}`, glyph: AMMO[a].name.slice(0, 1), name: AMMO[a].name,
+        key: a === 'cursed' ? 'U' : String(i + 1), qty: String(you.ammo[a]), title: AMMO[a].name,
+      })).join('');
+      const reload = gauges.map((g) => `<div class="rl" data-g="${g.id}">${esc(g.label)}<div class="fbar"><i></i></div></div>`).join('');
+      const abilities = abil.map((x) => slot({
+        data: `data-ab="${x.a.id}"`, cls: `${x.a.kind === 'ultimate' ? 'ult' : ''} ${x.dim ? 'locked' : ''}`, art: `ab_${x.a.id}`, glyph: x.a.key, name: x.a.name, key: x.a.key,
+        title: `${x.a.name} — ${x.a.description}`,
+        extra: `${x.charging ? '<div class="charge"></div>' : ''}<div class="cd"></div><div class="cdt">${x.locked ? esc(L('lv6')) : ''}</div>`,
+      })).join('');
+      const talentBar = tals.map((x, i) => slot({
+        data: `data-talent="${x.t.id}"`, cls: 'talent', art: `tree_${x.t.tree}`, glyph: '✦', name: x.t.name, key: '67890'[i], title: `${x.t.name} — ${x.t.description}`,
+        extra: '<div class="cd"></div><div class="cdt"></div>',
+      })).join('');
       combat.innerHTML = `<div class="ab-reload">${reload}</div>${mode}${heat}
         <div class="ab-row"><div class="ab-group ab-ammo">${ammo}</div><i class="ab-sep"></i><div class="ab-group ab-abil">${abilities}</div>${talentBar ? `<i class="ab-sep"></i><div class="ab-group">${talentBar}</div>` : ''}</div>`;
       combat.querySelectorAll<HTMLElement>('[data-ab]').forEach((el) => (el.onclick = () => this.onAbility(el.dataset.ab!)));
       combat.querySelectorAll<HTMLElement>('[data-talent]').forEach((el) => (el.onclick = () => this.onTalent(el.dataset.talent!)));
       combat.querySelectorAll<HTMLElement>('[data-ammo]').forEach((el) => (el.onclick = () => (el.classList.contains('sel') && document.body.classList.contains('touch') ? this.onAmmoCycle() : this.onAmmo(el.dataset.ammo!))));
+      this.gaugeEls = new Map([...combat.querySelectorAll<HTMLElement>('.rl')].map((el) => [el.dataset.g!, { el, fill: el.querySelector<HTMLElement>('i')! }]));
+      this.cdEls = new Map([...combat.querySelectorAll<HTMLElement>('[data-ab], [data-talent]')].map((el) => [el.dataset.ab ?? `t:${el.dataset.talent}`, { cd: el.querySelector<HTMLElement>('.cd')!, cdt: el.querySelector<HTMLElement>('.cdt')!, charge: el.querySelector<HTMLElement>('.charge') }]));
     }
+    // Gauges and cooldowns, in place.
+    for (const g of gauges) {
+      const e = this.gaugeEls.get(g.id);
+      if (!e) continue;
+      e.el.classList.toggle('ready', g.ready);
+      e.fill.style.width = pct(Math.round(g.v * 50) / 50);
+    }
+    const setCd = (id: string, left: number, total: number, locked: boolean) => {
+      const e = this.cdEls.get(id);
+      if (!e) return;
+      const frac = left > 0 ? Math.min(1, left / total) : 0;
+      e.cd.style.height = `${Math.round(frac * 100)}%`;
+      if (!locked) {
+        const txt = frac > 0 ? String(Math.ceil(left)) : '';
+        if (e.cdt.textContent !== txt) e.cdt.textContent = txt;
+      }
+    };
+    for (const x of abil) {
+      setCd(x.a.id, x.left, x.a.cooldown, x.locked);
+      const ch = this.cdEls.get(x.a.id)?.charge;
+      if (ch) ch.style.width = `${Math.round(you.resolve)}%`;
+    }
+    for (const x of tals) setCd(`t:${x.t.id}`, x.left, x.t.active?.cooldown ?? 1, false);
     // The prompt, region line, minimap and compass: rewritten only when they change, drawn at their own pace.
     if (prompt !== this.lastPrompt) {
       this.lastPrompt = prompt;

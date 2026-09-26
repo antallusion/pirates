@@ -1,5 +1,6 @@
-// Downloads every asset in assets/manifest.json from the Higgsfield CDN into assets/<local>.
-// Run where the network allows it: `npm run assets:fetch` (add --force to re-download).
+// Downloads every asset in assets/manifest.json from the Higgsfield CDN into assets/<local>, as the CDN has it.
+// The committed files are baked (trimmed, resized, WebP) by `python tools/art/process.py`; this is the fallback
+// for a checkout without them. Run where the network allows it: `npm run assets:fetch` (--force re-downloads).
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

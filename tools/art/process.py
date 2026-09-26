@@ -7,9 +7,12 @@
 Originals are cached in assets/raw/ (not committed). What each entry becomes is decided by its `fit`
 field in assets/manifest.json, or by its kind when absent:
 
-    sprite:<px>   trim to the alpha box + 4% margin, longest side <= px, PNG (ships, monsters, props, icons)
-    overlay:<px>  keep the frame (curse overlays are stretched over the hull), longest side <= px, PNG
-    opaque:<px>   no alpha, longest side <= px, JPEG q86 (portraits, textures, backgrounds, key art)
+    sprite:<px>   trim to the alpha box + 4% margin, longest side <= px (ships, monsters, props, icons)
+    overlay:<px>  keep the frame (curse overlays are stretched over the hull), longest side <= px
+    opaque:<px>   no alpha, longest side <= px (portraits, textures, backgrounds, key art)
+
+Files are written as WebP (lossy with alpha; a tenth of the PNG) unless the local path says .png or .jpg.
+`--webp` moves every manifest entry to a .webp local path first (and removes the old baked file).
 
 The client prefers the local file and falls back to the CDN original, so the local copy may be smaller.
 Needs Pillow and numpy (dev only; the game itself has no dependencies).
@@ -38,6 +41,8 @@ DEFAULT_FIT = {
     'part': 'sprite:512',
     'ui': 'sprite:1024',
     'tex': 'opaque:1024',
+    'tex.chart': 'opaque:2048',
+    'art.reference_captain': 'opaque:1024',
     'portrait': 'opaque:560',
     'card': 'opaque:960',
     'art': 'opaque:1920',
@@ -51,7 +56,7 @@ def load_manifest():
 
 
 def fit_of(aid, entry):
-    return entry.get('fit') or DEFAULT_FIT.get(aid.split('.')[0], 'sprite:768')
+    return entry.get('fit') or DEFAULT_FIT.get(aid) or DEFAULT_FIT.get(aid.split('.')[0], 'sprite:768')
 
 
 def raw_path(entry):
@@ -106,6 +111,30 @@ def transparency(img):
     return float((a < 16).mean())
 
 
+def save(img, target, quality):
+    low = target.lower()
+    if low.endswith('.webp'):
+        img.save(target, 'WEBP', quality=quality, method=6)
+    elif low.endswith(('.jpg', '.jpeg')):
+        img.convert('RGB').save(target, 'JPEG', quality=quality, optimize=True, progressive=True)
+    else:
+        img.save(target, 'PNG', optimize=True)
+
+
+def to_webp(m):
+    for entry in m['assets'].values():
+        base, ext = os.path.splitext(entry['local'])
+        if ext.lower() == '.webp':
+            continue
+        old = os.path.join(ASSETS, entry['local'])
+        if os.path.exists(old):
+            os.remove(old)
+        entry['local'] = base + '.webp'
+    sys.path.insert(0, os.path.dirname(__file__))
+    from register import write_manifest
+    write_manifest(m)
+
+
 def bake(aid, entry, cdn):
     src = fetch_raw(cdn, entry)
     mode, px = fit_of(aid, entry).split(':')
@@ -117,10 +146,7 @@ def bake(aid, entry, cdn):
     note = ''
     if mode == 'opaque':
         img = shrink(img.convert('RGB'), px)
-        if target.lower().endswith(('.jpg', '.jpeg')):
-            img.save(target, 'JPEG', quality=86, optimize=True, progressive=True)
-        else:
-            img.save(target, 'PNG', optimize=True)
+        save(img, target, 84)
     else:
         img = img.convert('RGBA')
         clear = transparency(img)
@@ -130,7 +156,7 @@ def bake(aid, entry, cdn):
         if mode == 'sprite':
             img = trim(img)
         img = shrink(img, px)
-        img.save(target, 'PNG', optimize=True)
+        save(img, target, 88)
     kb = os.path.getsize(target) // 1024
     print(f'{aid:34s} {img.width}x{img.height} {kb}KB -> assets/{entry["local"]}{note}')
 
@@ -168,6 +194,9 @@ def main(argv):
     force = '--force' in argv
     only = [a for a in argv if not a.startswith('--')]
     m = load_manifest()
+    if '--webp' in argv:
+        to_webp(m)
+        force = True
     failed = 0
     for aid, entry in m['assets'].items():
         if only and not any(aid == o or aid.startswith(o.rstrip('*')) and o.endswith('*') for o in only):

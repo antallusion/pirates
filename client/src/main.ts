@@ -134,6 +134,7 @@ onboarding.onEdge = () => {
 loadAssets(null).then(() => {
   applySkin();
   buildMicroMenu();
+  hud.artEpoch++;
   const url = assetUrl('art.keyart');
   const ka = document.querySelector<HTMLElement>('.keyart');
   if (ka && url) ka.style.backgroundImage = `url('${url}')`;

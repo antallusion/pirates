@@ -95,7 +95,7 @@ button { font-family: var(--sans); }
   --mm: 108px; --uf-p: 56px; --slot: 42px; --stick: 124px; --fire: 64px; --touch-h: 0px; --top-h: 150px;
 }
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
-.hud-block { position: absolute; pointer-events: auto; background: rgba(10, 11, 13, 0.78); border: 1px solid rgba(111, 90, 56, 0.55); border-radius: 3px; padding: 8px 10px; backdrop-filter: blur(2px); }
+.hud-block { position: absolute; pointer-events: auto; background: rgba(10, 11, 13, 0.82); border: 1px solid rgba(111, 90, 56, 0.55); border-radius: 3px; padding: 8px 10px; }
 
 /* Unit frame: the captain's portrait in its ring, name, silver and the ship's three lives. */
 .unit-frame { position: absolute; top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); width: min(calc(100vw - var(--mm) - 36px), 340px); display: flex; gap: 10px; align-items: center; pointer-events: auto; cursor: pointer; }

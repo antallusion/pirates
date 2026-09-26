@@ -3,7 +3,7 @@
     python tools/art/register.py batch.json
 
 batch.json is a list of {"id": "monster.kraken", "job": "<job id>", "url": "<result url>"} with optional
-"local" (defaults to <folder of the kind>/<name>.png, .jpg for opaque fits) and "fit" (see process.py).
+"local" (defaults to <folder of the kind>/<name>.webp) and "fit" (see process.py).
 Existing ids are replaced: the old job stays recoverable from git history.
 """
 
@@ -19,7 +19,6 @@ FOLDER = {
     'icon': 'icons', 'fx': 'fx', 'part': 'fx', 'ui': 'ui', 'tex': 'textures', 'portrait': 'portraits',
     'card': 'cards', 'art': 'art', 'bg': 'art',
 }
-OPAQUE = {'tex', 'portrait', 'card', 'art', 'bg'}
 
 
 def write_manifest(m):
@@ -46,7 +45,7 @@ def main(path):
         url = b['url']
         if not url.startswith(m['cdn']):
             raise SystemExit(f'{aid}: {url} is not on the manifest CDN')
-        local = b.get('local') or f'{FOLDER[kind]}/{name}.{"jpg" if kind in OPAQUE else "png"}'
+        local = b.get('local') or f'{FOLDER[kind]}/{name}.webp'
         entry = {'local': local, 'remote': url[len(m['cdn']):], 'job': b['job']}
         if b.get('fit'):
             entry['fit'] = b['fit']

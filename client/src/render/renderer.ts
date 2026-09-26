@@ -115,7 +115,8 @@ export class Renderer {
   }
 
   resize(): void {
-    this.dpr = Math.min(2, devicePixelRatio || 1);
+    // Phones and tablets draw at 1.5× at most: three full-screen layers at 3× cost more than they show.
+    this.dpr = Math.min(matchMedia('(pointer: coarse)').matches ? 1.5 : 2, devicePixelRatio || 1);
     this.w = innerWidth;
     this.h = innerHeight;
     this.canvas.width = Math.round(this.w * this.dpr);
