@@ -10,6 +10,9 @@ import { Game } from '../server/src/game/Game.ts';
 import { createStaticHandler } from '../server/src/net/static.ts';
 import { acceptUpgrade } from '../server/src/net/websocket.ts';
 import { Database } from '../server/src/persistence/db.ts';
+import { risingPoint, summon } from '../server/src/game/bosses.ts';
+import { BOSSES } from '../shared/src/data/bosses.ts';
+import type { BossId } from '../shared/src/data/bosses.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const db = new Database(':memory:');
@@ -29,9 +32,30 @@ const staged = new Set<number>();
 const portMode = process.env.SHOWCASE === 'port';
 // SHOWCASE=rich: each new captain is a seasoned, well-off level 30 in port (guilds, islands, the market).
 const richMode = process.env.SHOWCASE === 'rich';
+// SHOWCASE=boss:kraken (any boss id): a captain who puts to sea is set down 600 m from that boss, raised for her.
+const bossKind = process.env.SHOWCASE?.startsWith('boss:') ? (process.env.SHOWCASE.slice(5) as BossId) : null;
 setInterval(() => {
   for (const s of game.sessions) {
     const ship = s.ship;
+    if (bossKind) {
+      if (!ship || ship.docked || staged.has(ship.id)) continue;
+      staged.add(ship.id);
+      let f = [...game.bosses.fights.values()].find((x) => x.kind === bossKind);
+      if (!f) {
+        const def = BOSSES[bossKind];
+        const spot = risingPoint(game, def, def.regions)!;
+        if (def.window === 'storm') for (const r of def.regions) game.weather[r].kind = 'storm';
+        f = summon(game, bossKind, spot.x, spot.y);
+      }
+      const body = game.ships.get(f.id)!;
+      ship.state.x = body.state.x + 260;
+      ship.state.y = body.state.y + 120;
+      ship.protectedUntil = 0;
+      s.profile!.level = 30;
+      ship.level = 30;
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      continue;
+    }
     if (richMode) {
       if (!ship || !s.profile || staged.has(ship.id)) continue;
       staged.add(ship.id);

@@ -234,7 +234,10 @@ export class AudioEngine {
         else if (e.fx === 'mortar_launch') this.cannon(e.x, e.y, 0, 1.4);
         else if (e.fx === 'mortar') this.explosion(e.x, e.y);
         else if (e.fx === 'harpoon_miss' || e.fx === 'breach') this.splash(e.x, e.y, false);
-        else if (e.fx === 'broken_mast') this.hit(e.x, e.y, true);
+        else if (e.fx === 'broken_mast' || e.fx === 'axes' || e.fx === 'ice' || e.fx === 'claws') this.hit(e.x, e.y, true);
+        else if (e.fx === 'lightning') this.thunder();
+        else if (e.fx === 'boss_roar' || e.fx === 'song' || e.fx === 'rise' || e.fx === 'swallow') this.eerie(e.x, e.y);
+        else if (e.fx === 'white_water' || e.fx === 'spit' || e.fx === 'bile' || e.fx === 'ink') this.splash(e.x, e.y, true);
         break;
     }
   }

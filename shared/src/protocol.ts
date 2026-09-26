@@ -532,7 +532,35 @@ export const SF = {
   SHAME: 1 << 18, // hunted a minnow: marked for an hour
   DUEL: 1 << 19, // in a duel (with the receiving player, or watched)
   BOUNTY: 1 << 20, // a price on this captain's head
+  SUBMERGED: 1 << 21, // under the surface (a diving monster, Abyss Step): nothing can touch her
+  GRABBED: 1 << 22, // held by a Kraken's arm
+  SWALLOWED: 1 << 23, // inside the Lantern Maw
 } as const;
+
+/** A world boss fight as its neighbours see it (sent once a second within range; bosses.ts). */
+export interface BossZone {
+  k: 'whirl' | 'ring' | 'eye' | 'ink' | 'lure' | 'telegraph' | 'maze' | 'song' | 'bile';
+  x: number;
+  y: number;
+  r: number;
+}
+
+export interface BossView {
+  id: number;
+  kind: string;
+  name: string;
+  phase: number;
+  phaseName: string;
+  hp: number;
+  hpMax: number;
+  x: number;
+  y: number;
+  hint: string;
+  endsIn: number;
+  parts: { id: number; label: string; hp: number; hpMax: number }[];
+  zones: BossZone[];
+  you: { share: number; grabbed: boolean; swallowed: number };
+}
 
 export interface SelfRow {
   x: number;
@@ -576,7 +604,8 @@ export type GameEvent =
   | { k: 'ability'; ship: number; id: string; x?: number; y?: number }
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
-  | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'; x: number; y: number; r?: number; dir?: number }
+  | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
+    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes'; x: number; y: number; r?: number; dir?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 
@@ -607,6 +636,7 @@ export type ServerMsg =
   | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[] }
   | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number }
   | { t: 'info'; list: EntityInfo[] }
+  | { t: 'boss'; list: BossView[] }
   | { t: 'gone'; ids: number[] }
   | { t: 'ev'; list: GameEvent[] }
   | { t: 'self'; self: PrivateState }

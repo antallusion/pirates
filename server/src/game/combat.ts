@@ -30,6 +30,7 @@ import { moraleLossMul, onMagazineBlast } from './crew.ts';
 import { screenFlagship } from './fleet.ts';
 import { grandBattery, nightRaider, stormGunnerRange } from './bridgefx.ts';
 import { cursedDamageMul, onCursedHit, onCursedVolley, onOwnCrewKilled, pactDamageMul } from './abyssfx.ts';
+import { bossIncoming, innerVolley, swallowedShield } from './bosses.ts';
 
 export interface Projectile {
   owner: number;
@@ -117,6 +118,14 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const shots = Math.min(guns, ship.ammo[ammo]);
   if (shots <= 0) return `Out of ${AMMO[ammo].name}`;
   const gun = GUNS[ship.loadout.guns[side]];
+  // Swallowed by the Lantern Maw: the broadside goes into its gut.
+  if (innerVolley(game, ship, shots * gun.damage * ship.stats.gunDamageMul * AMMO[ammo].hullMul)) {
+    ship.ammo[ammo] -= shots;
+    ship.reload[side] = reloadTime(ship, side, game.now);
+    ship.lastReloadTotal[side] = ship.reload[side];
+    ship.lastCombat = game.now;
+    return null;
+  }
   const range = effectiveRange(ship, side, ammo) * stormGunnerRange(game, ship);
   const dist = clamp(Number.isFinite(aimDist) ? aimDist : range, 40, range);
   let baseHeading = sideHeading(ship, side);
@@ -245,7 +254,7 @@ export function stepProjectiles(game: Game, dt: number): void {
     const nx = p.x + v.x * step, ny = p.y + v.y * step;
     let hit: ShipEntity | null = null;
     let bestT = 2;
-    game.grid.query((p.x + nx) / 2, (p.y + ny) / 2, step + 60, (id) => {
+    game.grid.query((p.x + nx) / 2, (p.y + ny) / 2, step + 90, (id) => {
       if (id === p.owner || id === p.ignore) return;
       const s = game.ships.get(id);
       if (!s || s.docked || !s.alive) return;
@@ -451,7 +460,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       if (rec) (rec.battery ??= new Set()).add(target.id);
     }
   }
-  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: 0.35 + grapeMorale + battery }, shooter);
+  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: 0.35 + grapeMorale + battery }, shooter, { x: hx, y: hy });
   if (shooter && p.volley !== undefined && sst?.flags.has('splinter_storm') && target.crew < target.stats.crewMax * 0.3) {
     const rec = game.volleys.get(p.volley);
     if (rec && !rec.demoralised.has(target.id)) {
@@ -538,12 +547,19 @@ export interface DamagePacket {
 }
 
 /** Central damage entry point for cannon fire, abilities, collisions and hazards. */
-export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, source: ShipEntity | null): void {
+export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, source: ShipEntity | null, at?: { x: number; y: number }): void {
   if (!target.alive || target.docked) return;
   // A ship across a zone line: the hit is hers to take in her own zone.
   if (target.ghost) return game.zone?.forwardHit(target, d, source);
   // Under black water (Abyss Step, the Drowned King) nothing can touch her.
   if (target.hasEffect('submerged') || target.hasEffect('ghost_return')) return;
+  // Inside the Lantern Maw nothing reaches her but the Maw; a boss decides how a hit lands on it.
+  if (swallowedShield(target, source)) return;
+  if (target.bossOf) {
+    const landed = bossIncoming(game, target, d, source, at);
+    if (!landed) return;
+    d = landed;
+  }
   const now = game.now;
   // Pact of Salt and Bone: the monsters of the deep bite softer.
   if (source && isMonster(source) && d.hull) d = { ...d, hull: d.hull * pactDamageMul(target) };
@@ -620,6 +636,7 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   const now = game.now;
   const prev = b.attackers.get(a.id);
   b.attackers.set(a.id, now);
+  if (b.npcRole === 'boss' || a.npcRole === 'boss') return; // no law and no flag at sea against the deep
   if (prev !== undefined && now - prev < 60) return; // same engagement
   if (inDuel(game, a) && inDuel(game, a) === inDuel(game, b)) return; // a duel is no crime
   const pa = a.isPlayer ? game.profileOf(a) : null;

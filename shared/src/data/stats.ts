@@ -73,7 +73,9 @@ export type Flag =
   | 'chain_and_grapple' | 'storm_gunner' | 'ghost_trader' | 'blood_and_salt' | 'drowned_boarders' | 'flagship_yard' | 'exotic_goods'
   | 'night_raider' | 'tide_whisperer' | 'salvage_king' | 'grand_battery' | 'iron_will'
   // shipbuilding
-  | 'drowned_silk' | 'cursed_wood' | 'fh_crown_lion' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_saint_of_wrecks';
+  | 'drowned_silk' | 'cursed_wood' | 'fh_crown_lion' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_saint_of_wrecks'
+  // world bosses (fittings)
+  | 'choir_bell' | 'lightning_rod' | 'lantern_gland';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

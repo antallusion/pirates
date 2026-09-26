@@ -260,6 +260,61 @@ export class Fx {
           case 'breach':
             this.splash(e.x, e.y, false);
             break;
+          // World bosses.
+          case 'boss_roar':
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 2, size: 30, grow: (e.r ?? 400) / 2, color: '#9aa9b0' });
+            for (let i = 0; i < 10; i++) this.splash(e.x + (Math.random() - 0.5) * 120, e.y + (Math.random() - 0.5) * 120, true);
+            this.shake = Math.max(this.shake, 0.9);
+            break;
+          case 'white_water':
+            for (let i = 0; i < 30; i++) {
+              const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (e.r ?? 70);
+              setTimeout(() => this.splash(e.x + Math.sin(a) * r, e.y - Math.cos(a) * r, false), i * 90);
+            }
+            break;
+          case 'lightning':
+            this.flash = Math.max(this.flash, 0.9);
+            this.add({ kind: 'flash', x: e.x, y: e.y, life: 0.3, size: 10, grow: 120, color: '#d8e4ff' });
+            this.light(e.x, e.y, 400, 'rgba(210,225,255,1)', 1, 0.4);
+            this.splinters(e.x, e.y, 12);
+            break;
+          case 'ink':
+            for (let i = 0; i < 16; i++) {
+              const a = Math.random() * Math.PI * 2, r = Math.random() * (e.r ?? 180);
+              this.add({ kind: 'smoke', x: e.x + Math.sin(a) * r, y: e.y - Math.cos(a) * r, life: 10, size: 30 + Math.random() * 20, grow: 2, color: '#07070c' });
+            }
+            break;
+          case 'bile':
+            this.add({ kind: 'glow', x: e.x, y: e.y, life: 3, size: e.r ?? 70, grow: 0, color: '#6a8a1a' });
+            this.smoke(e.x, e.y, 8, 10, false);
+            break;
+          case 'swallow':
+          case 'spit':
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 1.2, size: 20, grow: 80, color: '#ffe19a' });
+            for (let i = 0; i < 6; i++) this.splash(e.x + (Math.random() - 0.5) * 50, e.y + (Math.random() - 0.5) * 50, true);
+            this.shake = Math.max(this.shake, 0.5);
+            break;
+          case 'song':
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 4, size: 40, grow: (e.r ?? 1600) / 4, color: '#9b6bd0' });
+            break;
+          case 'ice':
+            this.splinters(e.x, e.y, 18);
+            this.add({ kind: 'flash', x: e.x, y: e.y, life: 0.3, size: 8, grow: 40, color: '#dff4ff' });
+            break;
+          case 'claws':
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 0.8, size: 20, grow: (e.r ?? 130), color: '#6b4a35' });
+            this.splinters(e.x, e.y, 16);
+            break;
+          case 'coil':
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 2, size: e.r ?? 320, grow: 0, color: '#c9e04a' });
+            break;
+          case 'rise':
+            this.add({ kind: 'glow', x: e.x, y: e.y, life: 4, size: e.r ?? 60, grow: 10, color: '#0a2f2b' });
+            this.light(e.x, e.y, 180, 'rgba(46,230,200,1)', 0.8, 3);
+            break;
+          case 'axes':
+            this.splinters(e.x, e.y, 10);
+            break;
         }
         break;
       case 'ability':

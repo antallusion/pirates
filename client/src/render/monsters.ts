@@ -1,0 +1,474 @@
+// Monsters of the deep and their fights (docs/02 §11.A.4), drawn procedurally: the world bosses and their
+// parts, and the zones of their fights (whirlpool, coil, eye, ink, false lights, white water, the maze, the Song).
+
+import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import type { ShipClassId } from '../../../shared/src/data/ships.ts';
+import type { BossView } from '../../../shared/src/protocol.ts';
+import { SF } from '../../../shared/src/protocol.ts';
+import { sprite } from '../assets.ts';
+
+export interface MonsterDraw {
+  id: number;
+  x: number; // screen
+  y: number;
+  h: number;
+  classId: ShipClassId;
+  flags: number;
+  hull: number; // 0..1
+  sinkT: number;
+}
+
+function rnd(seed: number): () => number {
+  let s = (seed * 16807) % 2147483647 || 1;
+  return () => (s = (s * 16807) % 2147483647) / 2147483647;
+}
+
+/** A monster at screen (x, y), zoom px/m, animated by t seconds. */
+export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: number, t: number): void {
+  const cls = SHIP_CLASSES[m.classId];
+  const len = cls.length * zoom, beam = cls.beam * zoom;
+  const submerged = (m.flags & SF.SUBMERGED) !== 0;
+  const sinkF = m.sinkT > 0 ? Math.min(1, m.sinkT / 6) : 0;
+  g.save();
+  g.translate(m.x, m.y);
+  g.rotate(m.h);
+  g.globalAlpha = (submerged ? 0.28 : 1) * (1 - sinkF * 0.85);
+  const spr = sprite(cls.sprite);
+  if (spr && !submerged) {
+    const imgH = len / spr.extentY;
+    const imgW = imgH * (spr.img.naturalWidth / spr.img.naturalHeight);
+    g.drawImage(spr.img, -imgW * spr.cx, -imgH * spr.cy, imgW, imgH);
+  } else {
+    switch (m.classId) {
+      case 'leviathan': leviathan(g, len, beam, t, submerged); break;
+      case 'kraken': kraken(g, len, beam, t); break;
+      case 'kraken_tentacle': tentacle(g, len, beam, t, m.id); break;
+      case 'drowned_whale': whale(g, len, beam, t); break;
+      case 'whale_heart': orb(g, beam, t, '150,20,30', 1.6); break;
+      case 'lantern_maw': maw(g, len, beam, t); break;
+      case 'black_serpent': serpent(g, len, beam, t); break;
+      case 'mother_of_wrecks': mother(g, len, beam, t, m.id); break;
+      case 'wreck_core': orb(g, beam, t, '46,230,200', 2.2); break;
+      case 'storm_widow': widow(g, len, t); break;
+      default: orb(g, beam, t, '120,120,120', 1);
+    }
+  }
+  g.restore();
+}
+
+function leviathan(g: CanvasRenderingContext2D, len: number, beam: number, t: number, submerged: boolean): void {
+  const flex = Math.sin(t * 1.4) * beam * 0.25;
+  // Body: a long tapering shape from snout (−y… +y is the bow in ship space: heading points up = −y).
+  g.beginPath();
+  g.moveTo(0, -len * 0.5);
+  g.bezierCurveTo(beam * 0.7, -len * 0.35, beam * 0.55 + flex, len * 0.2, flex * 1.6, len * 0.42);
+  g.lineTo(flex * 1.6 + beam * 0.6, len * 0.52);
+  g.lineTo(flex * 1.6, len * 0.47);
+  g.lineTo(flex * 1.6 - beam * 0.6, len * 0.52);
+  g.lineTo(flex * 1.6, len * 0.42);
+  g.bezierCurveTo(-beam * 0.55 + flex, len * 0.2, -beam * 0.7, -len * 0.35, 0, -len * 0.5);
+  g.closePath();
+  const grad = g.createLinearGradient(-beam, 0, beam, 0);
+  grad.addColorStop(0, '#1b2a33');
+  grad.addColorStop(0.5, '#3a525c');
+  grad.addColorStop(1, '#16222a');
+  g.fillStyle = submerged ? '#0a1216' : grad;
+  g.fill();
+  if (submerged) return;
+  // Bony ridge down the spine.
+  g.fillStyle = '#b9b2a0';
+  for (let i = 0; i < 9; i++) {
+    const y = -len * 0.34 + i * len * 0.08;
+    const x = flex * (i / 9) * 1.2;
+    g.beginPath();
+    g.moveTo(x - beam * 0.07, y + len * 0.02);
+    g.lineTo(x, y - len * 0.03);
+    g.lineTo(x + beam * 0.07, y + len * 0.02);
+    g.fill();
+  }
+  // Gills and eyes.
+  g.strokeStyle = 'rgba(210,90,80,0.8)';
+  g.lineWidth = Math.max(1, beam * 0.03);
+  for (const side of [-1, 1]) {
+    for (let k = 0; k < 3; k++) {
+      g.beginPath();
+      g.arc(side * beam * 0.36, -len * 0.3 + k * len * 0.03, beam * 0.12, side > 0 ? 2.2 : -0.9, side > 0 ? 4 : 0.9);
+      g.stroke();
+    }
+    g.fillStyle = '#d6e6c8';
+    g.beginPath();
+    g.arc(side * beam * 0.28, -len * 0.42, Math.max(1.5, beam * 0.05), 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+function kraken(g: CanvasRenderingContext2D, len: number, beam: number, t: number): void {
+  const pulse = 1 + Math.sin(t * 1.8) * 0.04;
+  g.scale(pulse, pulse);
+  const grad = g.createRadialGradient(0, 0, beam * 0.1, 0, 0, beam * 0.6);
+  grad.addColorStop(0, '#6a2a3a');
+  grad.addColorStop(1, '#2a0f18');
+  g.fillStyle = grad;
+  g.beginPath();
+  g.ellipse(0, len * 0.05, beam * 0.5, len * 0.5, 0, 0, Math.PI * 2);
+  g.fill();
+  // Mottling.
+  g.fillStyle = 'rgba(200,120,110,0.25)';
+  const r = rnd(7);
+  for (let i = 0; i < 14; i++) {
+    g.beginPath();
+    g.arc((r() - 0.5) * beam * 0.7, (r() - 0.5) * len * 0.8, beam * (0.03 + r() * 0.05), 0, Math.PI * 2);
+    g.fill();
+  }
+  // Eyes.
+  for (const side of [-1, 1]) {
+    g.fillStyle = '#e8d27a';
+    g.beginPath();
+    g.ellipse(side * beam * 0.26, -len * 0.25, beam * 0.08, beam * 0.05, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#000';
+    g.fillRect(side * beam * 0.26 - beam * 0.06, -len * 0.25 - 0.5, beam * 0.12, Math.max(1, beam * 0.015));
+  }
+}
+
+function tentacle(g: CanvasRenderingContext2D, len: number, beam: number, t: number, id: number): void {
+  // Base at the stern end (+y), tip at the bow (−y), whipping.
+  const pts: [number, number][] = [];
+  for (let i = 0; i <= 12; i++) {
+    const u = i / 12;
+    const y = len * (0.5 - u);
+    const x = Math.sin(t * 2.2 + u * 4 + id) * beam * 1.6 * u;
+    pts.push([x, y]);
+  }
+  for (let pass = 0; pass < 2; pass++) {
+    g.beginPath();
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    g.lineCap = 'round';
+    g.strokeStyle = pass === 0 ? '#2a0f18' : '#7a3346';
+    g.lineWidth = pass === 0 ? beam * 1.1 : beam * 0.7;
+    g.stroke();
+  }
+  g.fillStyle = 'rgba(230,190,180,0.7)';
+  for (let i = 1; i < pts.length - 1; i += 2) {
+    g.beginPath();
+    g.arc(pts[i][0] + beam * 0.15, pts[i][1], Math.max(0.8, beam * 0.12 * (1 - i / 14)), 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+function whale(g: CanvasRenderingContext2D, len: number, beam: number, t: number): void {
+  const roll = Math.sin(t * 0.5) * beam * 0.03;
+  g.translate(roll, 0);
+  g.beginPath();
+  g.ellipse(0, 0, beam * 0.5, len * 0.5, 0, 0, Math.PI * 2);
+  g.fillStyle = '#4d5a52';
+  g.fill();
+  g.strokeStyle = '#1c2420';
+  g.lineWidth = 2;
+  g.stroke();
+  // Rot and barnacles.
+  const r = rnd(31);
+  g.fillStyle = 'rgba(160,170,140,0.35)';
+  for (let i = 0; i < 40; i++) {
+    g.beginPath();
+    g.arc((r() - 0.5) * beam * 0.8, (r() - 0.5) * len * 0.9, beam * (0.01 + r() * 0.03), 0, Math.PI * 2);
+    g.fill();
+  }
+  // The drowned town on its back: roofs and a bell tower.
+  for (let i = 0; i < 7; i++) {
+    const x = (r() - 0.5) * beam * 0.45, y = (r() - 0.5) * len * 0.5;
+    g.fillStyle = '#2a2320';
+    g.fillRect(x - beam * 0.06, y - beam * 0.05, beam * 0.12, beam * 0.1);
+    g.fillStyle = '#5a3a2a';
+    g.beginPath();
+    g.moveTo(x - beam * 0.08, y - beam * 0.05);
+    g.lineTo(x, y - beam * 0.12);
+    g.lineTo(x + beam * 0.08, y - beam * 0.05);
+    g.fill();
+  }
+  g.fillStyle = '#3a3029';
+  g.fillRect(-beam * 0.05, -len * 0.08, beam * 0.1, beam * 0.3);
+  g.fillStyle = 'rgba(140,220,200,0.7)';
+  g.beginPath();
+  g.arc(0, -len * 0.08, beam * 0.05, 0, Math.PI * 2);
+  g.fill();
+  // Tail fluke.
+  g.fillStyle = '#3c4741';
+  g.beginPath();
+  g.moveTo(0, len * 0.45);
+  g.lineTo(beam * 0.45, len * 0.55);
+  g.lineTo(0, len * 0.5);
+  g.lineTo(-beam * 0.45, len * 0.55);
+  g.fill();
+}
+
+function orb(g: CanvasRenderingContext2D, beam: number, t: number, rgb: string, glow: number): void {
+  const r = beam * 0.5 * (1 + Math.sin(t * 3) * 0.12);
+  const grad = g.createRadialGradient(0, 0, 0, 0, 0, r * glow);
+  grad.addColorStop(0, `rgba(${rgb},1)`);
+  grad.addColorStop(0.4, `rgba(${rgb},0.6)`);
+  grad.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = grad;
+  g.beginPath();
+  g.arc(0, 0, r * glow, 0, Math.PI * 2);
+  g.fill();
+}
+
+function maw(g: CanvasRenderingContext2D, len: number, beam: number, t: number): void {
+  const jaw = 0.15 + Math.max(0, Math.sin(t * 0.9)) * 0.25;
+  g.fillStyle = '#0b0d10';
+  g.beginPath();
+  g.ellipse(0, len * 0.1, beam * 0.5, len * 0.42, 0, 0, Math.PI * 2);
+  g.fill();
+  // Jaws with needle teeth.
+  for (const side of [-1, 1]) {
+    g.save();
+    g.rotate(side * jaw);
+    g.fillStyle = '#16191e';
+    g.beginPath();
+    g.moveTo(0, -len * 0.25);
+    g.quadraticCurveTo(side * beam * 0.55, -len * 0.35, side * beam * 0.05, -len * 0.52);
+    g.lineTo(0, -len * 0.25);
+    g.fill();
+    g.fillStyle = '#d9d2bd';
+    for (let k = 0; k < 6; k++) {
+      const y = -len * 0.28 - k * len * 0.035;
+      g.beginPath();
+      g.moveTo(side * beam * 0.02, y);
+      g.lineTo(side * beam * (0.08 + k * 0.03), y - len * 0.01);
+      g.lineTo(side * beam * 0.02, y - len * 0.02);
+      g.fill();
+    }
+    g.restore();
+  }
+  // The lure on its stalk.
+  const lx = Math.sin(t * 1.3) * beam * 0.15, ly = -len * 0.62;
+  g.strokeStyle = '#2a2e33';
+  g.lineWidth = Math.max(1, beam * 0.03);
+  g.beginPath();
+  g.moveTo(0, -len * 0.1);
+  g.quadraticCurveTo(beam * 0.1, -len * 0.5, lx, ly);
+  g.stroke();
+  g.translate(lx, ly);
+  orb(g, beam * 0.18, t * 1.7, '255,240,190', 2.5);
+}
+
+function serpent(g: CanvasRenderingContext2D, len: number, beam: number, t: number): void {
+  const segs = 22;
+  const pts: [number, number][] = [];
+  for (let i = 0; i <= segs; i++) {
+    const u = i / segs;
+    pts.push([Math.sin(t * 3 - u * 7) * beam * 2.2 * u, -len * 0.5 + u * len]);
+  }
+  for (let i = segs; i >= 1; i--) {
+    const [x, y] = pts[i];
+    const w = beam * (1 - (i / segs) * 0.6);
+    g.fillStyle = i % 2 ? '#101213' : '#1c2022';
+    g.beginPath();
+    g.ellipse(x, y, w * 0.55, (len / segs) * 0.75, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Head.
+  const [hx, hy] = pts[0];
+  g.fillStyle = '#0d0f10';
+  g.beginPath();
+  g.ellipse(hx, hy, beam * 0.7, beam * 1.1, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#c9e04a';
+  for (const side of [-1, 1]) {
+    g.beginPath();
+    g.arc(hx + side * beam * 0.35, hy - beam * 0.4, Math.max(1, beam * 0.12), 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+function mother(g: CanvasRenderingContext2D, len: number, beam: number, t: number, id: number): void {
+  const r = rnd(id % 997 + 13);
+  // A mound of broken hulls, masts and ribs.
+  g.fillStyle = '#1d1712';
+  g.beginPath();
+  g.ellipse(0, 0, beam * 0.5, len * 0.5, 0, 0, Math.PI * 2);
+  g.fill();
+  for (let i = 0; i < 70; i++) {
+    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 0.48;
+    const x = Math.sin(a) * beam * d, y = Math.cos(a) * len * d;
+    if (Math.hypot(x / beam, y / len) < 0.2) continue; // the heart of the maze is open water
+    g.save();
+    g.translate(x, y);
+    g.rotate(r() * Math.PI);
+    g.fillStyle = ['#3a2d20', '#4b3a28', '#2d241b', '#5a4630'][i % 4];
+    g.fillRect(-beam * 0.06, -beam * 0.012, beam * (0.08 + r() * 0.1), beam * 0.024);
+    g.restore();
+  }
+  // The maze: a dark channel spiralling in.
+  g.strokeStyle = 'rgba(12,20,26,0.9)';
+  g.lineWidth = Math.max(2, beam * 0.04);
+  g.beginPath();
+  for (let k = 0; k <= 60; k++) {
+    const a = k * 0.25, d = 0.48 - k * 0.006;
+    const x = Math.sin(a) * beam * d, y = Math.cos(a) * len * d;
+    if (k === 0) g.moveTo(x, y);
+    else g.lineTo(x, y);
+  }
+  g.stroke();
+  // Claws.
+  for (const side of [-1, 1]) {
+    const open = Math.sin(t * 1.5 + side) * 0.3;
+    g.save();
+    g.translate(side * beam * 0.45, -len * 0.3);
+    g.rotate(side * (0.6 + open));
+    g.fillStyle = '#6b4a35';
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.quadraticCurveTo(side * beam * 0.2, -len * 0.15, 0, -len * 0.25);
+    g.quadraticCurveTo(-side * beam * 0.05, -len * 0.12, 0, 0);
+    g.fill();
+    g.restore();
+  }
+}
+
+function widow(g: CanvasRenderingContext2D, len: number, t: number): void {
+  // A spiral of storm cloud around a pale veiled figure.
+  for (let i = 0; i < 5; i++) {
+    g.save();
+    g.rotate(t * (0.6 + i * 0.1) + i);
+    g.strokeStyle = `rgba(150,160,175,${0.35 - i * 0.05})`;
+    g.lineWidth = len * 0.06;
+    g.beginPath();
+    g.arc(0, 0, len * (0.18 + i * 0.07), 0, Math.PI * 1.3);
+    g.stroke();
+    g.restore();
+  }
+  g.fillStyle = 'rgba(225,230,240,0.85)';
+  g.beginPath();
+  g.moveTo(0, -len * 0.14);
+  g.quadraticCurveTo(len * 0.08, 0, len * 0.06, len * 0.12);
+  g.lineTo(-len * 0.06, len * 0.12);
+  g.quadraticCurveTo(-len * 0.08, 0, 0, -len * 0.14);
+  g.fill();
+  if (Math.sin(t * 7.3) > 0.93) {
+    g.strokeStyle = 'rgba(210,225,255,0.9)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(0, 0);
+    let x = 0, y = 0;
+    for (let k = 0; k < 6; k++) {
+      x += (Math.sin(t * 13 + k) * 0.5) * len * 0.12;
+      y -= len * 0.08;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+}
+
+/** The zones of a fight on the water, under the ships. */
+export function drawBossZones(g: CanvasRenderingContext2D, bosses: BossView[], sx: (x: number) => number, sy: (y: number) => number, zoom: number, t: number, lights: boolean): void {
+  for (const b of bosses) {
+    for (const z of b.zones) {
+      const x = sx(z.x), y = sy(z.y), r = z.r * zoom;
+      const glow = z.k === 'lure' || z.k === 'eye';
+      if (glow !== lights) continue;
+      g.save();
+      switch (z.k) {
+        case 'whirl':
+          g.strokeStyle = 'rgba(170,200,210,0.35)';
+          g.lineWidth = 2;
+          for (let k = 0; k < 5; k++) {
+            g.beginPath();
+            for (let a = 0; a < Math.PI * 4; a += 0.2) {
+              const rr = r * (1 - a / (Math.PI * 4)) ;
+              const px = x + Math.sin(a + t * 1.5 + k * 1.25) * rr, py = y - Math.cos(a + t * 1.5 + k * 1.25) * rr;
+              if (a === 0) g.moveTo(px, py);
+              else g.lineTo(px, py);
+            }
+            g.stroke();
+          }
+          break;
+        case 'ring':
+          g.strokeStyle = 'rgba(20,24,26,0.85)';
+          g.lineWidth = Math.max(4, 12 * zoom);
+          g.beginPath();
+          g.arc(x, y, r, 0, Math.PI * 2);
+          g.stroke();
+          g.strokeStyle = 'rgba(201,224,74,0.25)';
+          g.lineWidth = 1;
+          g.setLineDash([6, 8]);
+          g.stroke();
+          break;
+        case 'eye': {
+          const grad = g.createRadialGradient(x, y, 0, x, y, r);
+          grad.addColorStop(0, 'rgba(200,220,255,0.10)');
+          grad.addColorStop(1, 'rgba(200,220,255,0.02)');
+          g.fillStyle = grad;
+          g.beginPath();
+          g.arc(x, y, r, 0, Math.PI * 2);
+          g.fill();
+          g.strokeStyle = 'rgba(200,220,255,0.6)';
+          g.setLineDash([10, 8]);
+          g.lineDashOffset = -t * 20;
+          g.stroke();
+          break;
+        }
+        case 'ink':
+          g.fillStyle = 'rgba(5,5,10,0.55)';
+          for (let k = 0; k < 6; k++) {
+            g.beginPath();
+            g.arc(x + Math.sin(k * 2.1) * r * 0.4, y + Math.cos(k * 1.7) * r * 0.4, r * 0.6, 0, Math.PI * 2);
+            g.fill();
+          }
+          break;
+        case 'lure': {
+          const pulse = 0.75 + Math.sin(t * 2 + z.x) * 0.25;
+          const grad = g.createRadialGradient(x, y, 0, x, y, r * 1.6);
+          grad.addColorStop(0, `rgba(255,225,150,${0.9 * pulse})`);
+          grad.addColorStop(0.2, `rgba(255,210,120,${0.35 * pulse})`);
+          grad.addColorStop(1, 'rgba(255,210,120,0)');
+          g.fillStyle = grad;
+          g.beginPath();
+          g.arc(x, y, r * 1.6, 0, Math.PI * 2);
+          g.fill();
+          break;
+        }
+        case 'telegraph': {
+          const p = (t * 2) % 1;
+          g.strokeStyle = `rgba(235,240,245,${0.9 - p * 0.6})`;
+          g.lineWidth = 3;
+          g.beginPath();
+          g.arc(x, y, r * (0.4 + p * 0.8), 0, Math.PI * 2);
+          g.stroke();
+          g.fillStyle = 'rgba(235,240,245,0.18)';
+          g.beginPath();
+          g.arc(x, y, r, 0, Math.PI * 2);
+          g.fill();
+          break;
+        }
+        case 'maze':
+          g.strokeStyle = 'rgba(160,120,80,0.6)';
+          g.setLineDash([4, 6]);
+          g.lineWidth = 1.5;
+          g.beginPath();
+          g.arc(x, y, r, 0, Math.PI * 2);
+          g.stroke();
+          break;
+        case 'song':
+          g.strokeStyle = 'rgba(155,107,208,0.18)';
+          g.lineWidth = 2;
+          for (let k = 0; k < 3; k++) {
+            const p = ((t * 0.3 + k / 3) % 1);
+            g.beginPath();
+            g.arc(x, y, r * p, 0, Math.PI * 2);
+            g.stroke();
+          }
+          break;
+        case 'bile':
+          g.fillStyle = 'rgba(150,190,40,0.35)';
+          g.beginPath();
+          g.arc(x, y, r, 0, Math.PI * 2);
+          g.fill();
+          break;
+      }
+      g.restore();
+    }
+  }
+}

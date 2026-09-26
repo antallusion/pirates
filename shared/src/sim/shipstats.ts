@@ -8,7 +8,7 @@ import type { GoodId } from '../data/goods.ts';
 import { AMMO, GUNS, MODULES, SHIP_CLASSES } from '../data/ships.ts';
 import type { AmmoId, GunId, ModuleId, MountId, Rig, ShipClassId } from '../data/ships.ts';
 import { mod, sumMods } from '../data/stats.ts';
-import type { Flag, ModifierSource, StatKey } from '../data/stats.ts';
+import type { Flag, ModifierSource, StatKey, StatMods } from '../data/stats.ts';
 import { talentModifiers } from '../data/talents.ts';
 import type { TalentRanks } from '../data/talents.ts';
 import { baseNoGo, rowSpeed } from './sailing.ts';
@@ -86,6 +86,20 @@ export interface ShipStats {
   flags: Set<Flag>;
 }
 
+/** Fittings that carry their own modifiers and switches (boss plans, the Choir Bell, the Lightning Rod). */
+function moduleSources(loadout: ShipLoadout): { mods?: StatMods; flags?: Flag[] }[] {
+  const out: { mods?: StatMods; flags?: Flag[] }[] = [];
+  for (const id in loadout.modules) {
+    const def = MODULES[id as ModuleId];
+    const lvl = loadout.modules[id as ModuleId] ?? 0;
+    if (!def || lvl <= 0 || (!def.mods && !def.flags)) continue;
+    const mods: StatMods = {};
+    for (const k in def.mods ?? {}) mods[k as keyof StatMods] = (def.mods![k as keyof StatMods] ?? 0) * lvl;
+    out.push({ mods, flags: def.flags });
+  }
+  return out;
+}
+
 export function computeShipStats(
   loadout: ShipLoadout,
   captain: CaptainId,
@@ -97,7 +111,7 @@ export function computeShipStats(
   // Permanent sources (captain passive, talents) are capped per 03 §3.3; temporary effects stack on top.
   const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents)]);
   const m0 = (x: Record<StatKey, number>, k: StatKey) => mod(x, k);
-  const eff = sumMods([...effects, ...buildSources(loadout.build, cls.armor)]);
+  const eff = sumMods([...effects, ...buildSources(loadout.build, cls.armor), ...moduleSources(loadout)]);
   for (const f of eff.flags) flags.add(f);
   const has = (id: string) => (talents[id] ?? 0) > 0;
   const e = (k: StatKey) => mod(eff.mods, k);

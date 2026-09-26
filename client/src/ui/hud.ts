@@ -20,6 +20,7 @@ export class Hud {
   private lastCaptainKey = '';
   private lastShipKey = '';
   private lastCombatKey = '';
+  private lastBossKey = '';
   private toastsEl = $('toasts');
   private bannerTimer = 0;
   private minimap = $('minimap') as HTMLCanvasElement;
@@ -34,6 +35,7 @@ export class Hud {
   update(state: ClientState, prompt: string): void {
     const self = state.self, you = state.you;
     if (!self || !you) return;
+    this.drawBoss(state);
     const cap = CAPTAINS[self.captain];
 
     // Captain block (only re-rendered when something changes).
@@ -129,6 +131,29 @@ export class Hud {
     $('hud-prompt').innerHTML = prompt;
     this.drawMinimap(state);
     this.updateRegion(state, now);
+  }
+
+  /** The world boss panel: name, phase, strength, parts, what to do, and your part in it. */
+  private drawBoss(state: ClientState): void {
+    const el = $('hud-boss');
+    const b = state.bosses[0];
+    if (!b) {
+      if (this.lastBossKey) {
+        el.classList.add('hidden');
+        this.lastBossKey = '';
+      }
+      return;
+    }
+    const key = JSON.stringify([b.id, b.phase, Math.round((b.hp / b.hpMax) * 200), b.parts.map((p) => Math.round((p.hp / p.hpMax) * 20)), b.hint, b.you, Math.floor(b.endsIn / 60)]);
+    if (key === this.lastBossKey) return;
+    this.lastBossKey = key;
+    el.classList.remove('hidden');
+    const pct = Math.max(0, Math.min(100, (b.hp / b.hpMax) * 100));
+    const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => `<span class="${p.hp <= 0 ? 'dead' : ''}">${esc(p.label)} ${p.hp > 0 ? Math.round((p.hp / p.hpMax) * 100) + '%' : ''}</span>`).join('')}</div>` : '';
+    const alert = b.you.swallowed > 0 ? `<div class="balert">SWALLOWED — ${b.you.swallowed} s to tear free. Fire everything!</div>` : b.you.grabbed ? '<div class="balert">HELD BY AN ARM — [G] Axes!</div>' : '';
+    el.innerHTML = `<div class="bname">${esc(b.name)}</div><div class="bphase">${esc(b.phaseName)} · leaves in ${Math.ceil(b.endsIn / 60)} min</div>
+      <div class="bbar"><i style="width:${pct.toFixed(1)}%"></i></div>${parts}
+      <div class="bhint">${esc(b.hint)}</div><div class="byou">Your part: ${Math.round(b.you.share * 100)}%</div>${alert}`;
   }
 
   private updateRegion(state: ClientState, now: number): void {
@@ -355,6 +380,15 @@ export class Hud {
       const mx = clamp(tx(m.x), 3, c.width - 3), my = clamp(ty(m.y), 3, c.height - 3);
       g.fillRect(mx - 2.5, my - 2.5, 5, 5);
     }
+    // World bosses within reach: a large violet ring.
+    g.strokeStyle = '#b07ae0';
+    g.lineWidth = 2;
+    for (const b of state.bosses) {
+      g.beginPath();
+      g.arc(clamp(tx(b.x), 6, c.width - 6), clamp(ty(b.y), 6, c.height - 6), 6, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.lineWidth = 1;
     // Monsters the Choir shows you (Eyes of the Choir).
     g.fillStyle = '#9b6bd0';
     for (const [mx, my] of state.self?.monsters ?? []) {

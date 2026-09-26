@@ -45,7 +45,7 @@ export interface BoardingState {
   healed?: number; // Blood and Salt: hull mended this boarding
 }
 
-export type NpcRole = 'merchant' | 'patrol' | 'pirate' | 'hunter' | 'fisher' | 'ghost' | 'escort';
+export type NpcRole = 'merchant' | 'patrol' | 'pirate' | 'hunter' | 'fisher' | 'ghost' | 'escort' | 'boss';
 
 export class ShipEntity {
   readonly id: number;
@@ -155,6 +155,9 @@ export class ShipEntity {
   risingFrac = 0;
   abyssSpawn = false;
   towed = false; // Salvage King: a raised hull on the tow line
+  // World bosses (bosses.ts): the fight this entity belongs to (its body's id) and what part of it she is.
+  bossOf = 0;
+  bossPart = '';
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;
@@ -260,6 +263,9 @@ export class ShipEntity {
     if (this.hasFlag('dark_running')) f |= SF.LANTERNS_OUT;
     if (this.hasEffect('undertow') || this.hasEffect('maw_slow')) f |= SF.SLOWED;
     if (this.hasEffect('fire')) f |= SF.FIRE;
+    if (this.hasEffect('submerged')) f |= SF.SUBMERGED;
+    if (this.hasEffect('grabbed')) f |= SF.GRABBED;
+    if (this.hasEffect('swallowed')) f |= SF.SWALLOWED;
     const stage = curseStage(this.curse);
     if (stage & 1) f |= SF.CURSE_LOW;
     if (stage & 2) f |= SF.CURSE_HIGH;

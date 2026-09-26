@@ -77,6 +77,7 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
+import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
@@ -176,6 +177,7 @@ export class Game {
   grid = new SpatialGrid(1000, WORLD_SIZE);
   projectiles: Projectile[] = [];
   strikes: DelayedStrike[] = [];
+  bosses = new BossHub();
   zones: DeepZone[] = [];
   sunkHulls: SunkHull[] = [];
   loot = new Map<number, Loot>();
@@ -392,7 +394,7 @@ export class Game {
     // Movement for every physically simulated ship.
     const night = isNight(now);
     for (const ship of this.ships.values()) {
-      if (ship.docked || ship.ghost) continue;
+      if (ship.docked || ship.ghost || ship.npcRole === 'boss') continue;
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) continue;
       this.physics(ship, dt, night);
@@ -402,6 +404,7 @@ export class Game {
     stepProjectiles(this, dt);
     stepBoarding(this);
     stepStrikes(this);
+    stepBosses(this, dt);
     stepZones(this, dt);
 
     for (const ship of this.ships.values()) {
@@ -437,6 +440,10 @@ export class Game {
   // ================================================================= physics
 
   windFor(ship: ShipEntity): WindSample {
+    if (this.bosses.fights.size) {
+      const w = bossWind(this, ship);
+      if (w) return w;
+    }
     return windAt(this.world.seed, this.now, ship.state.x, ship.state.y, WEATHER_WIND[this.weatherAt(ship.state.x, ship.state.y)]);
   }
 
@@ -549,14 +556,14 @@ export class Game {
 
   private collideShips(): void {
     for (const a of this.ships.values()) {
-      if (a.docked || !a.alive || a.ghost) continue;
+      if (a.docked || !a.alive || a.ghost || a.npcRole === 'boss') continue;
       const brainA = this.npcs.get(a.id);
       if (brainA && !brainA.active) continue;
       const ra = a.stats.length * 0.32;
       this.grid.query(a.state.x, a.state.y, 80, (id) => {
         if (id <= a.id) return;
         const b = this.ships.get(id);
-        if (!b || b.docked || !b.alive || b.ghost) return;
+        if (!b || b.docked || !b.alive || b.ghost || b.npcRole === 'boss') return;
         if (a.boarding?.with === b.id) return;
         const rb = b.stats.length * 0.32;
         const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
@@ -592,6 +599,7 @@ export class Game {
 
   private everySecond(): void {
     const now = this.now;
+    this.bosses.second(this);
     // Nearest player distance for NPC LOD.
     const players: ShipEntity[] = [];
     for (const s of this.sessions) if (s.ship && !s.ship.docked) players.push(s.ship);
@@ -646,7 +654,7 @@ export class Game {
     {
       if (ship.effects.length && ship.effects.some((e) => e.until <= now)) ship.recompute(now);
       ship.region = regionAt(this.world, ship.state.x, ship.state.y);
-      if (!ship.alive || ship.docked) return;
+      if (!ship.alive || ship.docked || ship.npcRole === 'boss') return;
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) return;
       this.shipUpkeep(ship);
@@ -890,7 +898,7 @@ export class Game {
 
   private director(): void {
     const now = this.now;
-    const counts: Record<NpcRole, number> = { merchant: 0, patrol: 0, pirate: 0, hunter: 0, fisher: 0, ghost: 0, escort: 0 };
+    const counts: Record<NpcRole, number> = { merchant: 0, patrol: 0, pirate: 0, hunter: 0, fisher: 0, ghost: 0, escort: 0, boss: 0 };
     for (const b of this.npcs.values()) counts[b.role]++;
     for (let i = 0; counts.merchant + i < this.quota(QUOTA.merchants) && i < 2; i++) spawnMerchant(this);
     if (counts.pirate < this.quota(QUOTA.pirates)) spawnPirate(this);
@@ -1325,6 +1333,7 @@ export class Game {
 
   beginSinking(ship: ShipEntity): void {
     if (ship.sinkingUntil) return;
+    if (ship.bossOf && bossSinking(this, ship)) return; // the deep keeps its own dead
     if (duelIntercept(this, ship)) return; // nobody sinks in a duel: she strikes
     if (ship.caravanOf !== null) caravanLost(this, ship);
     this.sunkRecently.set(ship.id, this.now);
@@ -1361,6 +1370,7 @@ export class Game {
       const o = this.ships.get(id);
       if (o && o.alive && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) < r) out.push([Math.round(o.state.x / 100) * 100, Math.round(o.state.y / 100) * 100]);
     }
+    for (const [x, y] of bossPositions(this)) if (dist(x, y, ship.state.x, ship.state.y) < r * 2) out.push([Math.round(x / 100) * 100, Math.round(y / 100) * 100]);
     return out;
   }
 
@@ -1556,6 +1566,7 @@ export class Game {
   }
 
   onBoardingWon(a: ShipEntity, b: ShipEntity, result: BoardingResult): void {
+    if (b.bossOf && bossBoarded(this, a, b)) return;
     if (b.caravanOf !== null) caravanLost(this, b);
     const sa = this.sessionOf(a);
     if (sa) {
@@ -2136,6 +2147,8 @@ export class Game {
       case 'board': {
         const target = this.ships.get(Number(msg.target));
         if (!target) return err('No such ship');
+        const monster = bossBoardOrder(this, ship, target);
+        if (monster !== undefined) return err(monster);
         const agg = msg.aggression === 'careful' || msg.aggression === 'brutal' ? msg.aggression : 'standard';
         const why = canBoard(this, ship, target);
         if (why) return err(why);

@@ -17,6 +17,7 @@ import type { IslandBiome } from '../../../shared/src/world/regions.ts';
 import { pattern, sprite } from '../assets.ts';
 import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
+import { drawBossZones, drawMonster } from './monsters.ts';
 
 const BIOME_TINT: Record<IslandBiome, string> = {
   temperate: 'rgba(40,52,40,0.35)',
@@ -171,12 +172,14 @@ export class Renderer {
     this.drawWakes();
     this.drawLoot(state);
     this.drawDuelRing(state);
+    drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, false);
     for (const s of ships) this.drawShip(s, state);
     this.drawTethers(state, ships);
     this.drawBalls();
     this.drawParticles(false);
 
     this.drawLighting(state, ships, night);
+    drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, true);
     this.drawParticles(true);
     this.drawWeather(state, dt);
 
@@ -616,7 +619,20 @@ export class Renderer {
     const len = cls.length * this.zoom, beam = cls.beam * this.zoom;
     const x = this.sx(s.x), y = this.sy(s.y);
     if (x < -len * 2 || y < -len * 2 || x > this.w + len * 2 || y > this.h + len * 2) return;
-    const hidden = (s.flags & SF.HIDDEN) !== 0;
+    if (cls.monster) {
+      drawMonster(g, { id: s.id, x, y, h: s.h, classId: s.classId, flags: s.flags, hull: s.hull, sinkT: s.sinkT }, this.zoom, this.time);
+      if (s.classId === 'lantern_maw' && !(s.flags & SF.SUBMERGED)) {
+        const v = headingVec(s.h);
+        this.fx.light(s.x + v.x * cls.length * 0.62, s.y + v.y * cls.length * 0.62, 160, 'rgba(255,225,150,1)', 0.9, 0.05);
+      }
+      // Every horror of the deep glows a little: pale eyes, rot-light, the sheen of wet hide.
+      if (!(s.flags & SF.SUBMERGED)) this.fx.light(s.x, s.y, cls.length * 0.7, s.classId === 'black_serpent' ? 'rgba(201,224,74,1)' : 'rgba(150,190,200,1)', 0.35, 0.05);
+      if (s.classId === 'wreck_core' || s.classId === 'whale_heart') this.fx.light(s.x, s.y, 60, s.classId === 'wreck_core' ? 'rgba(46,230,200,1)' : 'rgba(200,40,50,1)', 0.6, 0.05);
+      return;
+    }
+    // Inside the Lantern Maw: only her own captain sees her, a shadow in its gut.
+    if ((s.flags & SF.SWALLOWED) && !s.own) return;
+    const hidden = (s.flags & SF.HIDDEN) !== 0 || (s.flags & SF.SWALLOWED) !== 0;
     const sinking = s.sinkT > 0 || (s.flags & SF.SINKING) !== 0;
     const sinkF = sinking ? clamp(s.sinkT / 6, 0, 1) : 0;
     g.save();
@@ -1160,7 +1176,7 @@ export class Renderer {
     g.fillText(label, x, y);
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
-    const tag = info.isPlayer ? `Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
+    const tag = info.isPlayer ? `Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? 'World boss — a horror of the deep' : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
     const marks = info.isPlayer
       ? `${s.flags & SF.BLACK_FLAG ? ' · black flag' : ''}${s.flags & SF.GREEN_PENNANT ? ' · green pennant' : ''}${s.flags & SF.SHAME ? ' · SHAME' : ''}${s.flags & SF.BOUNTY ? ' · bounty' : ''}${s.flags & SF.DUEL ? ' · duelling' : ''}`
       : '';

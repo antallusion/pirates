@@ -187,6 +187,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
         return !other.surrendered;
       case 'ghost':
         return !pactNeutral(other, npc, game.now);
+      case 'boss':
+        return true;
       default:
         return false;
     }
@@ -200,7 +202,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     case 'hunter':
       return oRole === 'pirate' || oRole === 'ghost';
     case 'ghost':
-      return oRole !== 'ghost';
+      return oRole !== 'ghost' && oRole !== 'boss';
+    case 'boss':
+      return oRole !== 'ghost' && oRole !== 'boss';
     default:
       return false;
   }

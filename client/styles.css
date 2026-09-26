@@ -138,6 +138,17 @@ button { font-family: var(--sans); }
 
 #hud-prompt { position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%); font-family: var(--serif); font-size: 17px; color: var(--bone); text-shadow: 0 1px 3px #000; text-align: center; }
 #hud-prompt kbd { border: 1px solid var(--brass); color: var(--gold); padding: 0 6px; font-family: var(--sans); font-size: 12px; margin-right: 4px; }
+#hud-boss { left: 50%; top: 10px; transform: translateX(-50%); width: 440px; text-align: center; }
+#hud-boss .bname { font-family: var(--display); font-size: 20px; color: var(--bone); letter-spacing: 0.05em; }
+#hud-boss .bphase { font-family: var(--serif); font-style: italic; color: var(--gold); font-size: 13px; }
+#hud-boss .bbar { height: 9px; background: #1b1512; border: 1px solid rgba(111,90,56,0.8); margin: 5px 0 3px; }
+#hud-boss .bbar i { display: block; height: 100%; background: linear-gradient(90deg, #6a1f24, #b23a3a); }
+#hud-boss .bparts { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; font-size: 10px; color: var(--fog); }
+#hud-boss .bparts span { border: 1px solid rgba(111,90,56,0.5); padding: 0 4px; }
+#hud-boss .bparts span.dead { opacity: 0.35; text-decoration: line-through; }
+#hud-boss .bhint { font-size: 12px; color: var(--fog); margin-top: 4px; }
+#hud-boss .byou { font-size: 12px; color: var(--gold); margin-top: 2px; }
+#hud-boss .balert { font-size: 13px; color: var(--bad); font-weight: 600; margin-top: 3px; }
 #banner { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); text-align: center; font-family: var(--display); font-size: 38px; color: var(--bone); text-shadow: 0 0 20px #000; opacity: 0; transition: opacity 1.2s; letter-spacing: 0.06em; }
 #banner small { display: block; font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--fog); letter-spacing: 0.02em; }
 #banner.show { opacity: 1; }

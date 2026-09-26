@@ -2,9 +2,14 @@
 // Speeds are in game meters/second (the world is compressed ~6x relative to real nautical scale
 // so a fast ship crosses the 96 km ocean in roughly 100 minutes).
 
+import type { Flag, StatMods } from './stats.ts';
+
 export type ShipClassId =
   | 'sloop' | 'cutter' | 'schooner' | 'brigantine' | 'fluyt' | 'brig' | 'frigate' | 'galleon' | 'man_o_war' | 'ghost_ship'
-  | 'xebec' | 'bomb_ketch' | 'fireship';
+  | 'xebec' | 'bomb_ketch' | 'fireship'
+  // World bosses and their parts (docs/02 §11.A.4): never sold, never sailed by a captain.
+  | 'leviathan' | 'kraken' | 'kraken_tentacle' | 'drowned_whale' | 'whale_heart' | 'lantern_maw' | 'black_serpent'
+  | 'mother_of_wrecks' | 'wreck_core' | 'storm_widow';
 
 export type Rig = 'square' | 'fore_aft' | 'mixed';
 
@@ -38,11 +43,22 @@ export interface ShipClassDef {
   factions?: string[];
   /** Mount that comes fitted and cannot be changed. */
   fixedMount?: MountId;
+  /** A creature of the deep, not a hull: drawn by the monster renderer, moved by the boss stepper. */
+  monster?: boolean;
   sprite: string; // asset id in assets/manifest.json
   passive: { id: string; name: string; description: string };
 }
 
 const ship = (d: ShipClassDef): ShipClassDef => d;
+
+function monster(id: ShipClassId, name: string, role: string, length: number, beam: number, hull: number, armor: number, maxSpeed: number, passive: string): ShipClassDef {
+  return {
+    id, name, tier: 6, rig: 'mixed', role, length, beam, hull, armor, maxSpeed, accel: 3, turnRate: 20, draft: 0,
+    holdVolume: 0, holdWeight: 0, crewMin: 0, crewMax: 400, gunPortsPerSide: 0, bowChasers: 0, sternChasers: 0,
+    sailHp: 1, repairRate: 0, detection: 2500, price: 0, purchasable: false, monster: true, sprite: `monster.${id}`,
+    passive: { id: 'monster', name: 'Monster', description: passive },
+  };
+}
 
 export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
   sloop: ship({
@@ -136,6 +152,17 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     sailHp: 220, repairRate: 1.3, detection: 1500, price: 0, purchasable: false, sprite: 'ship.ghost_ship',
     passive: { id: 'dead_crew', name: 'Dead Crew', description: 'Crew does not lose morale. Sails ignore storms.' },
   }),
+
+  leviathan: monster('leviathan', 'Leviathan', 'The oldest hunger in the Reach.', 118, 26, 60000, 0.25, 16, 'Gills that open only while the harpoons hold it.'),
+  kraken: monster('kraken', 'Kraken', 'A mantle the size of a harbour; the arms do the killing.', 46, 34, 30000, 0.2, 5, 'The body opens once four arms are cut away.'),
+  kraken_tentacle: monster('kraken_tentacle', 'Kraken Arm', 'An arm of the Kraken. It grips, it drags, it drowns.', 44, 6, 2600, 0.05, 0, 'Cut it away to free the ship it holds.'),
+  drowned_whale: monster('drowned_whale', 'The Drowned Whale', 'A rotting colossus with a drowned town on its back.', 112, 30, 52000, 0.2, 3, 'In its last hour only boarders can reach its heart.'),
+  whale_heart: monster('whale_heart', 'Heart of the Whale', 'The black heart in the drowned town, and the dead who guard it.', 14, 10, 9000, 0.9, 0, 'Board it: cannon cannot reach it.'),
+  lantern_maw: monster('lantern_maw', 'The Lantern Maw', 'A great angler in the dark. Its lights lie.', 70, 44, 26000, 0.15, 11, 'Lanterns draw it; inside it, every gun hits thrice.'),
+  black_serpent: monster('black_serpent', 'The Black Serpent', 'Coils like a sea wall; bile that eats canvas.', 150, 12, 36000, 0.2, 19, 'It flees through shoals where only small ships follow.'),
+  mother_of_wrecks: monster('mother_of_wrecks', 'Mother of Wrecks', 'A living reef of a thousand wrecks — a hermit crab the size of an island.', 150, 120, 70000, 0.35, 0, 'Its cores lie in a maze only shallow keels can enter.'),
+  wreck_core: monster('wreck_core', 'Wreck Core', 'A pulsing heart of the reef, deep in the maze.', 12, 12, 6000, 0.1, 0, 'Reachable only from within the maze.'),
+  storm_widow: monster('storm_widow', 'The Storm Widow', 'A widow of wind and lightning walking on the waves.', 60, 60, 40000, 0.2, 6, 'She can only be hurt from inside the moving eye.'),
 };
 
 export const SHIP_CLASS_IDS = Object.keys(SHIP_CLASSES) as ShipClassId[];
@@ -211,7 +238,10 @@ export type ChaserEnd = 'bow' | 'stern';
 
 // ---------------------------------------------------------------- Shipyard modules
 
-export type ModuleId = 'hull_plating' | 'sail_plan' | 'rudder' | 'hold_expansion' | 'crew_quarters' | 'figurehead_kraken' | 'ghost_timbers';
+export type ModuleId = 'hull_plating' | 'sail_plan' | 'rudder' | 'hold_expansion' | 'crew_quarters' | 'figurehead_kraken' | 'ghost_timbers'
+  | 'choir_bell' | 'lightning_rod'
+  // Plans taken from world bosses (docs/02 §11.A.4).
+  | 'bone_culverin' | 'kraken_beak' | 'lantern_cannon' | 'serpent_scale' | 'crown_old_pattern' | 'galleass_sweeps' | 'storm_glass' | 'lantern_gland';
 
 export interface ModuleDef {
   id: ModuleId;
@@ -222,6 +252,9 @@ export interface ModuleDef {
   perLevel: { hullMul?: number; armorAdd?: number; speedMul?: number; sailHpMul?: number; turnMul?: number; holdMul?: number; crewMul?: number; boardingMul?: number; signature?: number };
   /** Not sold: fitted only from plans found at sea. */
   blueprint?: boolean;
+  /** Stat modifiers and switches per level, beyond the hull-shape lines above. */
+  mods?: StatMods;
+  flags?: Flag[];
 }
 
 export const MODULES: Record<ModuleId, ModuleDef> = {
@@ -231,6 +264,16 @@ export const MODULES: Record<ModuleId, ModuleDef> = {
   hold_expansion: { id: 'hold_expansion', name: 'Hold Expansion', maxLevel: 2, baseCost: 1000, description: 'Rebuilt bulkheads and orlop storage.', perLevel: { holdMul: 0.12, speedMul: -0.01 } },
   crew_quarters: { id: 'crew_quarters', name: 'Crew Quarters', maxLevel: 2, baseCost: 850, description: 'More hammocks, more hands.', perLevel: { crewMul: 0.12 } },
   ghost_timbers: { id: 'ghost_timbers', name: 'Ghost Timbers', maxLevel: 1, baseCost: 2200, blueprint: true, description: 'Pale wood from the boneyards of the Expanse, fitted to the plans of a ship that should not float. Light, quiet, uncanny.', perLevel: { speedMul: 0.04, sailHpMul: 0.1, signature: -0.06 } },
+  choir_bell: { id: 'choir_bell', name: 'Choir Bell', maxLevel: 1, baseCost: 500, flags: ['choir_bell'], description: 'A bronze bell of the Choir on the forecastle. Its toll drowns the Song of the Drowned Whale for every ship within 400 m.', perLevel: {} },
+  lightning_rod: { id: 'lightning_rod', name: 'Lightning Rod', maxLevel: 1, baseCost: 450, flags: ['lightning_rod'], description: 'Copper down the mainmast to the sea: lightning strikes do 60% less damage.', perLevel: {} },
+  bone_culverin: { id: 'bone_culverin', name: 'Bone Culverins', maxLevel: 1, baseCost: 3800, blueprint: true, mods: { gunDamageMul: 0.06, rangeMul: 0.05 }, description: 'Barrels bored from leviathan bone, to plans taken from its hoard: +6% gun damage, +5% range.', perLevel: {} },
+  kraken_beak: { id: 'kraken_beak', name: "Kraken's Beak", maxLevel: 1, baseCost: 3200, blueprint: true, mods: { ramDealt: 0.35, ramTaken: -0.2 }, description: 'The beak of a Kraken sheathed on the stem: rams +35%, ramming damage taken −20%.', perLevel: {} },
+  lantern_cannon: { id: 'lantern_cannon', name: 'Lantern Cannon', maxLevel: 1, baseCost: 3400, blueprint: true, mods: { chaserDamage: 0.3, chaserArc: 0.2 }, description: 'Chasers cast around a glowing gland of the Maw: +30% chaser damage, wider arc.', perLevel: {} },
+  serpent_scale: { id: 'serpent_scale', name: 'Serpent-Scale Belt', maxLevel: 1, baseCost: 3600, blueprint: true, mods: { leakInflow: -0.2 }, description: 'Scales of the Black Serpent nailed along the waterline: +6% armour, leaks −20%.', perLevel: { armorAdd: 0.06 } },
+  crown_old_pattern: { id: 'crown_old_pattern', name: 'Old-Pattern Crown Frames', maxLevel: 1, baseCost: 3000, blueprint: true, description: "Frames drawn to the Admiralty's lost plans of Drey's day: +6% hull, +4% turning.", perLevel: { hullMul: 0.06, turnMul: 0.04 } },
+  galleass_sweeps: { id: 'galleass_sweeps', name: 'Galleass Sweeps', maxLevel: 1, baseCost: 3000, blueprint: true, mods: { accel: 0.12 }, description: 'Old galleass oar-ports cut to plans found in the Mother of Wrecks: +12% acceleration, +3% speed.', perLevel: { speedMul: 0.03 } },
+  storm_glass: { id: 'storm_glass', name: 'Storm Glass Sails', maxLevel: 1, baseCost: 3300, blueprint: true, mods: { stormSailDamage: -0.5 }, description: 'Canvas treated with storm glass of the Widow: storms tear half as much, +10% sail strength.', perLevel: { sailHpMul: 0.1 } },
+  lantern_gland: { id: 'lantern_gland', name: 'Glowing Gland', maxLevel: 1, baseCost: 2600, blueprint: true, flags: ['lantern_gland'], mods: { detection: 0.12 }, description: 'The lure of the Lantern Maw hung at the bow: +12% sight; ghosts and monsters show on the chart at night.', perLevel: {} },
   figurehead_kraken: { id: 'figurehead_kraken', name: 'Kraken Figurehead', maxLevel: 1, baseCost: 2500, description: 'A carved horror on the bow. Enemy crews flinch when you close in.', perLevel: { boardingMul: 0.1 } },
 };
 
