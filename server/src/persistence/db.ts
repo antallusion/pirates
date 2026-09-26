@@ -115,6 +115,23 @@ export class Database {
     this.db.prepare('INSERT INTO ledger (account_id, kind, amount, detail, at) VALUES (?, ?, ?, ?, ?)').run(accountId, kind, Math.round(amount), detail, Date.now());
   }
 
+  /** Inflow and outflow per ledger kind since `sinceMs` (epoch ms). */
+  ledgerFlows(sinceMs: number): { kind: string; inflow: number; outflow: number; n: number }[] {
+    return this.db
+      .prepare(
+        `SELECT kind, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS inflow, SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END) AS outflow, COUNT(*) AS n
+         FROM ledger WHERE at >= ? GROUP BY kind`,
+      )
+      .all(sinceMs) as { kind: string; inflow: number; outflow: number; n: number }[];
+  }
+
+  /** Silver held by every saved captain: purse and League bank balance. */
+  silverHoldings(): { account_id: number; gold: number; bank: number }[] {
+    return this.db
+      .prepare(`SELECT account_id, COALESCE(json_extract(data, '$.gold'), 0) AS gold, COALESCE(json_extract(data, '$.bank'), 0) AS bank FROM captains`)
+      .all() as { account_id: number; gold: number; bank: number }[];
+  }
+
   transaction(fn: () => void): void {
     this.db.exec('BEGIN');
     try {

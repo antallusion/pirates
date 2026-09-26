@@ -14,6 +14,7 @@ import type { BoardingResult, Contract, PrivateState, ResourceSiteView } from '.
 import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { WsConnection } from '../net/websocket.ts';
 import type { ShipEntity } from './ship.ts';
+import type { Forward, Loan, Policy } from './finance.ts';
 
 export interface Profile {
   version: 1;
@@ -53,6 +54,11 @@ export interface Profile {
   stolen: Partial<Record<GoodId, number>>;
   licences: Partial<Record<FactionId, number>>;
   warehouses: Record<string, Cargo>;
+  forwards: Forward[];
+  bank: number;
+  loan: Loan | null;
+  policy: Policy | null;
+  claims: number[]; // world times of insurance claims
   createdAt: number;
 }
 
@@ -68,7 +74,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -197,6 +203,10 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     stats: p.stats,
     protectedUntil: ship?.protectedUntil ?? 0,
     insured: p.insured,
+    policy: p.policy?.tier ?? null,
+    forwards: p.forwards.map((f) => ({ ...f, fromName: f.fromPort, toName: f.toPort })),
+    bank: p.bank,
+    loan: p.loan,
   };
   void now;
 }
@@ -220,6 +230,12 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.stolen ??= {};
   p.licences ??= {};
   p.warehouses ??= {};
+  p.forwards ??= [];
+  p.bank = Math.max(0, p.bank ?? 0);
+  p.loan ??= null;
+  p.claims ??= [];
+  // Pre-2.0 boolean policies become hull cover.
+  p.policy ??= p.insured ? { tier: 'hull', declared: 0, premium: 0, deductible: 0 } : null;
   p.stats ??= { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 };
   p.ammo = { ...emptyAmmo(), ...(p.ammo ?? {}) };
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));

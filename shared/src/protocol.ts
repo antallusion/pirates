@@ -46,7 +46,12 @@ export type ClientMsg =
   | { t: 'learn_talent'; id: string }
   | { t: 'respec' }
   | { t: 'pardon' }
-  | { t: 'insure' }
+  | { t: 'insure'; tier?: InsuranceTier }
+  | { t: 'forward'; id: string }
+  | { t: 'order'; action: 'post'; good: GoodId; qty: number; price: number }
+  | { t: 'order'; action: 'fill'; id: string; qty: number }
+  | { t: 'order'; action: 'cancel'; id: string }
+  | { t: 'bank'; action: 'deposit' | 'withdraw' | 'borrow' | 'repay'; amount: number }
   | { t: 'land' }
   | { t: 'licence' }
   | { t: 'rights'; site: string }
@@ -117,6 +122,52 @@ export interface ResourceSiteView {
   holder: string | null;
   until: number;
   mine: boolean;
+}
+
+export type InsuranceTier = 'hull' | 'cargo' | 'full';
+
+export interface InsuranceQuote {
+  tier: InsuranceTier;
+  premium: number;
+  declared: number; // cargo value covered
+  deductible: number;
+  cover: number; // share of the declared cargo paid out
+  hull: boolean; // waives the salvage fee on sinking
+}
+
+export interface ForwardView {
+  id: string;
+  fromPort: string;
+  fromName: string;
+  toPort: string;
+  toName: string;
+  good: GoodId;
+  qty: number;
+  delivered: number;
+  price: number;
+  collateral: number;
+  expiresAt: number;
+}
+
+export interface BuyOrderView {
+  id: string;
+  name: string;
+  good: GoodId;
+  qty: number;
+  filled: number;
+  price: number;
+  expiresAt: number;
+  mine: boolean;
+}
+
+export interface BankView {
+  available: boolean;
+  balance: number;
+  loan: { owed: number; due: number; defaulted: boolean } | null;
+  limit: number;
+  interest: number;
+  withdrawFee: number;
+  term: number;
 }
 
 export interface PortPublic {
@@ -202,6 +253,10 @@ export interface PrivateState {
   stats: { sunk: number; boarded: number; tradeProfit: number; distance: number };
   protectedUntil: number; // newbie / respawn protection (world time)
   insured: boolean;
+  policy: InsuranceTier | null;
+  forwards: ForwardView[];
+  bank: number;
+  loan: { owed: number; due: number; defaulted: boolean } | null;
 }
 
 export interface MarketRow {
@@ -236,6 +291,9 @@ export interface PortView {
   licence: { cost: number; until: number } | null;
   charts: { sellable: number; sellValue: number; offers: { region: RegionId; name: string; islands: number; price: number }[] };
   pardonCost: number | null;
+  exchange: { forwards: ForwardView[]; orders: BuyOrderView[] } | null;
+  bank: BankView;
+  insurance: InsuranceQuote[];
   priceIntel?: { portId: string; name: string; good: GoodId; sell: number; ageSec: number }[];
 }
 

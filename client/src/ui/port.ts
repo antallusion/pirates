@@ -11,7 +11,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
 
-type Tab = 'market' | 'shipyard' | 'tavern' | 'contracts' | 'harbour' | 'holdings';
+type Tab = 'market' | 'shipyard' | 'tavern' | 'contracts' | 'harbour' | 'holdings' | 'exchange';
 
 export class PortScreen {
   tab: Tab = 'market';
@@ -29,7 +29,7 @@ export class PortScreen {
     if (!view || !self) return;
     const port = state.ports.find((p) => p.id === view.portId)!;
     const faction = FACTIONS[port.faction];
-    const tabs: [Tab, string][] = [['market', 'Market'], ['shipyard', 'Shipyard'], ['tavern', 'Tavern'], ['contracts', 'Contracts'], ['harbour', 'Harbour Master'], ['holdings', 'Sites & Warehouse']];
+    const tabs: [Tab, string][] = [['market', 'Market'], ['shipyard', 'Shipyard'], ['tavern', 'Tavern'], ['contracts', 'Contracts'], ['harbour', 'Harbour Master'], ['holdings', 'Sites & Warehouse'], ['exchange', 'Exchange & Bank']];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1);
     root.innerHTML = `
       <div class="modal-head">
@@ -86,7 +86,23 @@ export class PortScreen {
       case 'chart_buy':
         return this.send({ t: 'chart', action: 'buy', region: d.region as RegionId });
       case 'insure':
-        return this.send({ t: 'insure' });
+        return this.send({ t: 'insure', tier: d.tier as never });
+      case 'forward':
+        return this.send({ t: 'forward', id: d.id! });
+      case 'order_fill':
+        return this.send({ t: 'order', action: 'fill', id: d.id!, qty: Number(d.n) });
+      case 'order_cancel':
+        return this.send({ t: 'order', action: 'cancel', id: d.id! });
+      case 'order_post': {
+        const good = root.querySelector<HTMLSelectElement>('#ord-good')!.value;
+        const qty = Number(root.querySelector<HTMLInputElement>('#ord-qty')!.value);
+        const price = Number(root.querySelector<HTMLInputElement>('#ord-price')!.value);
+        return this.send({ t: 'order', action: 'post', good: good as never, qty, price });
+      }
+      case 'bank': {
+        const amount = Math.floor(Number(root.querySelector<HTMLInputElement>('#bank-amt')!.value));
+        return this.send({ t: 'bank', action: d.mode as never, amount });
+      }
       case 'licence':
         return this.send({ t: 'licence' });
       case 'rights':
@@ -116,6 +132,8 @@ export class PortScreen {
         return this.harbour(view, state);
       case 'holdings':
         return this.holdings(view, state);
+      case 'exchange':
+        return this.exchange(view, state);
     }
   }
 
@@ -224,8 +242,9 @@ export class PortScreen {
         ${view.licence ? `<div class="card"><h4>Trade licence</h4><p>Waives the ${Math.round((view.licence.until > state.estServerTime() ? 0 : view.duty) * 100) || ''}${view.licence.until > state.estServerTime() ? 'duty (active)' : '% import duty'} in every ${esc(FACTIONS[port.faction].short)} port and trims buying prices by 3% for two hours. Void while you are wanted (Wanted 2+).</p>
           ${view.licence.until > state.estServerTime() ? `<p class="good">Licensed for ${Math.round((view.licence.until - state.estServerTime()) / 60)} more minutes.</p>` : ''}
           <button class="btn" data-act="licence">Buy / extend — ${fmt(view.licence.cost)}</button></div>` : ''}
-        <div class="card"><h4>Voyage insurance</h4><p>${port.faction === 'league' || port.faction === 'free' ? 'The Gilded Ledger will insure hull and half your cargo value until you next make port.' : 'Only League and free ports write policies.'}</p>
-          <button class="btn" data-act="insure" ${self.insured ? 'disabled' : ''}>${self.insured ? 'Insured' : 'Buy policy'}</button></div>
+        <div class="card"><h4>Voyage insurance</h4>${view.insurance.length ? `<p>The Gilded Ledger underwrites this voyage until you next make port. Premiums rise with your wanted level, the curse on your hull, dangerous cargo and recent claims. Cargo cover is fixed at today's value, minus a 10% deductible. Void for the hunted (Wanted 3+).</p>
+          ${self.policy ? `<p class="good">Insured: ${esc(self.policy)} cover.</p>` : view.insurance.map((q) => `<div class="row" style="padding:3px 0"><span><b>${q.tier === 'hull' ? 'Hull' : q.tier === 'cargo' ? 'Cargo' : 'Full'}</b> <span class="muted">${q.hull ? 'salvage fee waived' : ''}${q.hull && q.cover ? ' · ' : ''}${q.cover ? `${Math.round(q.cover * 100)}% of ${fmt(q.declared)} cargo, −${fmt(q.deductible)}` : ''}</span></span>
+            <button class="btn btn-small" data-act="insure" data-tier="${q.tier}" ${q.cover && q.declared < 50 ? 'disabled' : ''}>${fmt(q.premium)}</button></div>`).join('')}` : '<p class="muted">Only League and free ports write policies.</p>'}</div>
         <div class="card"><h4>Scrape & bless the hull</h4><p>Curse ${self.curse}/100${self.curse >= 25 ? ` — stage ${self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1}` : ''}. ${['harpoon', 'crown', 'league'].includes(port.faction) ? 'The chaplain and the yard crew will scrape the growth away.' : 'No one here will touch a cursed hull.'}</p>
           <button class="btn" data-act="cleanse" ${self.curse >= 2 && ['harpoon', 'crown', 'league'].includes(port.faction) ? '' : 'disabled'}>Cleanse — ${fmt(Math.round(self.curse * 8 * (0.6 + SHIP_CLASSES[self.loadout.classId].tier * 0.4)))}</button></div>
         <div class="card"><h4>Retrain</h4><p>Forget all talents (${fmt(60 * self.level)} silver).</p><button class="btn btn-danger" data-act="respec">Respec</button></div>
@@ -258,6 +277,41 @@ export class PortScreen {
       <div><div class="card"><h4>Warehouse ${wh.rented ? `<span class="muted">${Math.round(wh.volume)}/${wh.capacity}</span>` : ''}</h4>
         <p class="muted">${wh.rented ? 'Your goods rest here safe from storms and pirates. Goods stored here lose their stolen marks. The yard draws materials from here.' : `Rent a warehouse for ${fmt(wh.rent)} on your first deposit. Stored goods are safe, lose stolen marks, and feed the shipyard.`}</p>
         ${rows ? `<table class="grid"><tr><th>Good</th><th>Hold</th><th>Stored</th><th></th></tr>${rows}</table>` : '<p class="muted">Nothing in the hold or the warehouse.</p>'}</div></div></div>`;
+  }
+
+
+  private exchange(view: PortView, state: ClientState): string {
+    const self = state.self!;
+    const now = state.estServerTime();
+    const portName = (id: string) => state.ports.find((p) => p.id === id)?.name ?? id;
+    const mins = (t: number) => `${Math.max(0, Math.round((t - now) / 60))} min`;
+    const ex = view.exchange;
+    const forwards = ex?.forwards.map((f) => `<tr><td>${f.qty} ${esc(GOODS[f.good].name)}</td><td>${esc(f.toName)}</td><td class="gold">${f.price}/u</td><td>${fmt(f.collateral)}</td><td>${mins(f.expiresAt)}</td>
+      <td><button class="btn btn-small" data-act="forward" data-id="${esc(f.id)}">Sign</button></td></tr>`).join('') ?? '';
+    const mine = self.forwards.map((f) => `<tr><td>${f.delivered}/${f.qty} ${esc(GOODS[f.good].name)}</td><td>${esc(portName(f.toPort))}</td><td class="gold">${f.price}/u</td><td>${fmt(f.collateral)}</td><td>${mins(f.expiresAt)}</td></tr>`).join('');
+    const orders = ex?.orders.map((o) => {
+      const have = Math.floor(self.cargo[o.good] ?? 0);
+      const n = Math.min(have, o.qty - o.filled);
+      return `<tr><td>${esc(o.name)}</td><td>${o.qty - o.filled} ${esc(GOODS[o.good].name)}</td><td class="gold">${o.price}/u</td><td>${mins(o.expiresAt)}</td>
+        <td>${o.mine ? `<button class="btn btn-small" data-act="order_cancel" data-id="${esc(o.id)}">Cancel</button>` : `<button class="btn btn-small" data-act="order_fill" data-id="${esc(o.id)}" data-n="${n}" ${n ? '' : 'disabled'}>Sell ${n || ''}</button>`}</td></tr>`;
+    }).join('') ?? '';
+    const goodsOpts = view.market.map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} (~${r.sell})</option>`).join('');
+    const b = view.bank;
+    const loan = b.loan ? `<p class="${b.loan.defaulted ? 'bad' : ''}">Owed ${fmt(b.loan.owed)} — ${b.loan.defaulted ? 'IN DEFAULT: bailiffs collect in every lawful port' : `due in ${mins(b.loan.due)}`}.</p>` : '';
+    return `<div class="cols"><div>
+        <div class="card"><h4>Forward contracts</h4>${ex ? `<p class="muted">Lock a price today for goods delivered to another port before the deadline. Collateral comes back on full delivery; partial deliveries are paid as they arrive. Lawful exchanges refuse plunder.</p>
+          ${forwards ? `<table class="grid"><tr><th>Goods</th><th>To</th><th>Price</th><th>Collateral</th><th>Deadline</th><th></th></tr>${forwards}</table>` : '<p class="muted">No forwards on the board right now.</p>'}` : '<p class="muted">This harbour is too small for an exchange.</p>'}
+          ${mine ? `<h4 style="margin-top:10px">Your forwards</h4><table class="grid">${mine}</table>` : ''}</div>
+        <div class="card"><h4>Buy orders</h4>${ex ? `<p class="muted">Post silver in escrow and let other captains bring you goods. Filled goods wait in your warehouse here; unfilled escrow returns when the order lapses (3 h). Listing fee 2%.</p>
+          ${orders ? `<table class="grid"><tr><th>Buyer</th><th>Wants</th><th>Pays</th><th>Lapses</th><th></th></tr>${orders}</table>` : '<p class="muted">No open orders.</p>'}
+          <div class="row" style="gap:6px;margin-top:8px"><select id="ord-good">${goodsOpts}</select><input id="ord-qty" type="number" min="1" max="200" value="20" style="width:60px"><input id="ord-price" type="number" min="1" value="20" style="width:70px"><button class="btn btn-small" data-act="order_post">Post order</button></div>` : '<p class="muted">—</p>'}</div>
+      </div><div>
+        <div class="card"><h4>The Gilded Ledger — bank</h4>${b.available ? `<p>Balance <b class="gold">${fmt(b.balance)}</b>. Silver in the bank is safe when you sink; a tenth of what you carry goes down with the ship. Withdrawals cost ${Math.round(b.withdrawFee * 100)}%.</p>
+          <p>Credit line <b>${fmt(b.limit)}</b> at ${Math.round(b.interest * 100)}% for ${Math.round(b.term / 3600)} h. Default adds 20%, costs League standing and your balance.</p>${loan}
+          <div class="row" style="gap:6px"><input id="bank-amt" type="number" min="1" value="500" style="width:90px">
+          ${(['deposit', 'withdraw', 'borrow', 'repay'] as const).map((m) => `<button class="btn btn-small" data-act="bank" data-mode="${m}">${m[0].toUpperCase() + m.slice(1)}</button>`).join('')}</div>`
+          : `<p class="muted">No counting-house here — League ports and large free ports only. Balance ${fmt(self.bank)}.</p>${loan}`}</div>
+      </div></div>`;
   }
 
 }

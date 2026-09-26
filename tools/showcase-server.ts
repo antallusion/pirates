@@ -25,9 +25,22 @@ server.on('upgrade', (req, socket) => {
 game.start();
 
 const staged = new Set<number>();
+// SHOWCASE=port: redock each new captain at a League port with a bank, an exchange and an open buy order.
+const portMode = process.env.SHOWCASE === 'port';
 setInterval(() => {
   for (const s of game.sessions) {
     const ship = s.ship;
+    if (portMode) {
+      if (!ship || !ship.docked || staged.has(ship.id)) continue;
+      staged.add(ship.id);
+      const lp = game.world.ports.find((q) => q.faction === 'league' && q.size >= 2)!;
+      ship.state.x = lp.x;
+      ship.state.y = lp.y;
+      (game as unknown as { dockShip(x: typeof s, p: typeof lp): void }).dockShip(s, lp);
+      game.orders.push({ id: `bo_demo${ship.id}`, accountId: -1, name: 'Mistress Vane', portId: lp.id, good: 'provisions', qty: 30, filled: 0, price: 16, escrow: 480, expiresAt: game.now + 3600, pendingGoods: 0, pendingRefund: 0, closed: false });
+      game.pushPort(s);
+      continue;
+    }
     if (!ship || ship.docked || staged.has(ship.id)) continue;
     staged.add(ship.id);
     ship.state.x = 56000;

@@ -28,6 +28,13 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify({ ok: true, protocol: PROTOCOL_VERSION, ...game.stats() }));
     return;
   }
+  if (req.url?.startsWith('/economy')) {
+    // Faucets, sinks, money supply and price level. ?window=seconds (default one hour).
+    const w = Number(new URL(req.url, 'http://x').searchParams.get('window') ?? 3600);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ...game.economy(Number.isFinite(w) && w > 0 ? Math.min(w, 30 * 86400) : 3600), history: game.econHistory }));
+    return;
+  }
   if (await serveStatic(req, res)) return;
   res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
 });

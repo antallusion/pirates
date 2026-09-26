@@ -22,6 +22,7 @@ import { mountOffers } from './mounts.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { bankView, forwardOffers, forwardView, hasExchange, insuranceQuotes, orderView } from './finance.ts';
 import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
 
 export function hasLicence(p: Profile, faction: string, now: number): boolean {
@@ -108,6 +109,11 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       rent: WAREHOUSE_RENT,
     },
     materialDiscount: MODULE_MATERIALS,
+    exchange: hasExchange(port)
+      ? { forwards: forwardOffers(game, port).map((f) => forwardView(game, f)), orders: game.orders.filter((o) => o.portId === port.id && !o.closed).map((o) => orderView(o, s.accountId)) }
+      : null,
+    bank: bankView(p, port),
+    insurance: insuranceQuotes(game, s, port),
     duty: hasLicence(p, port.faction, game.now) ? 0 : FACTION_DUTY[port.faction] ?? 0,
     licence: port.faction in FACTION_DUTY ? { cost: licenceCost(p.level), until: p.licences[port.faction as keyof typeof p.licences] ?? 0 } : null,
     pardonCost: port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy' ? pardonCost(p) : null,
@@ -216,6 +222,7 @@ export function buyAmmo(game: Game, s: PlayerSession, port: Port, ammo: AmmoId, 
   if (s.profile!.gold < cost) return 'Not enough silver';
   s.profile!.gold -= cost;
   ship.ammo[ammo] += qty;
+  game.db.ledger(s.accountId, 'ammo', -cost, ammo);
   return null;
 }
 
@@ -235,6 +242,7 @@ export function hireCrew(game: Game, s: PlayerSession, port: Port, qty: number):
   const cost = n * crewCost(port, p);
   if (p.gold < cost) return 'Not enough silver';
   p.gold -= cost;
+  game.db.ledger(s.accountId, 'crew', -cost, port.id);
   ship.morale = (ship.morale * ship.crew + 62 * n) / (ship.crew + n);
   ship.crew += n;
   game.tavernCrew.set(port.id, avail - n);
@@ -292,6 +300,7 @@ export function shipyardGuns(game: Game, s: PlayerSession, port: Port, side: Sid
   const cost = Math.max(0, Math.round(def.price * n - old.price * n * 0.5));
   if (s.profile!.gold < cost) return `Needs ${cost} silver`;
   s.profile!.gold -= cost;
+  if (cost) game.db.ledger(s.accountId, 'guns', -cost, gun);
   ship.loadout.guns[side] = gun;
   ship.gunsDisabled[side] = 0;
   ship.recompute(game.now);
@@ -313,7 +322,11 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   const newLoadout: ShipLoadout = { classId, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {}, mount: def.fixedMount };
   p.gold -= cost;
   // The old deck mount is sold back to the yard.
-  if (ship.loadout.mount) p.gold += Math.round(MOUNTS[ship.loadout.mount].price * 0.4);
+  if (ship.loadout.mount) {
+    const back = Math.round(MOUNTS[ship.loadout.mount].price * 0.4);
+    p.gold += back;
+    game.db.ledger(s.accountId, 'mount_sold', back, ship.loadout.mount);
+  }
   ship.loadout = newLoadout;
   p.loadout = newLoadout;
   ship.gunsDisabled = { port: 0, starboard: 0 };
@@ -324,14 +337,18 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   if (cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul) > ship.stats.holdVolume) {
     // Excess cargo is sold to the yard at a poor price rather than silently vanishing.
     let excess = cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul) - ship.stats.holdVolume;
+    let dumped = 0;
     for (const id of Object.keys(ship.cargo) as GoodId[]) {
       while (excess > 0 && (ship.cargo[id] ?? 0) > 0) {
         ship.cargo[id]! -= 1;
         excess -= GOODS[id].volume;
-        p.gold += Math.floor(GOODS[id].basePrice * 0.5);
+        const back = Math.floor(GOODS[id].basePrice * 0.5);
+        p.gold += back;
+        dumped += back;
       }
       if (!ship.cargo[id]) delete ship.cargo[id];
     }
+    if (dumped) game.db.ledger(s.accountId, 'dumped_cargo', dumped, classId);
   }
   game.db.ledger(s.accountId, 'ship', -cost, classId);
   return null;
@@ -378,7 +395,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
       const kills = rng.int(1, 3);
       out.push({
         id: `c${contractSeq++}`, kind, title: `Bounty: ${kills} pirate ship${kills > 1 ? 's' : ''}`, fromPort: port.id, targetFaction: 'confederacy', kills, progress: 0,
-        reward: 320 * kills + rng.int(0, 150), xp: 180 * kills, expiresAt: now + 3600,
+        reward: Math.round((320 * kills + rng.int(0, 150)) * game.econRewardMul), xp: 180 * kills, expiresAt: now + 3600,
         description: `The ${FACTIONS[port.faction].short} pays for every Red Tide hull sunk or taken. Bring proof — or don't come back.`,
       });
       continue;
@@ -389,7 +406,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
     if (kind === 'courier') {
       out.push({
         id: `c${contractSeq++}`, kind, title: `Sealed letters to ${dest.name}`, fromPort: port.id, toPort: dest.id,
-        reward: Math.round(120 + d / 55), xp: Math.round(60 + d / 120), expiresAt: now + 1800 + d / 8,
+        reward: Math.round((120 + d / 55) * game.econRewardMul), xp: Math.round(60 + d / 120), expiresAt: now + 1800 + d / 8,
         description: `Wax-sealed dispatches for ${dest.name}. No questions, no delays.`,
       });
       continue;
@@ -400,7 +417,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
     const qty = rng.int(6, 18);
     out.push({
       id: `c${contractSeq++}`, kind: 'delivery', title: `Deliver ${qty} ${GOODS[good].name} to ${dest.name}`, fromPort: port.id, toPort: dest.id, good, qty,
-      reward: Math.round(qty * GOODS[good].basePrice * (0.35 + d / 30000)), xp: Math.round(qty * 6 + d / 100), expiresAt: now + 2400 + d / 6,
+      reward: Math.round(qty * GOODS[good].basePrice * (0.35 + d / 30000) * game.econRewardMul), xp: Math.round(qty * 6 + d / 100), expiresAt: now + 2400 + d / 6,
       description: `${dest.name} is short of ${GOODS[good].name.toLowerCase()}. Buy it anywhere — the buyer pays on delivery, on top of market price.`,
     });
   }

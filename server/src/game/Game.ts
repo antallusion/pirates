@@ -21,6 +21,13 @@ import type {
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
 import { buildSites, buyRights, ownSiteNear, siteView, tickSites, warehouseAction } from './resources.ts';
 import type { ResourceSite } from './resources.ts';
+import {
+  acceptForward, bankAction, buyPolicy, cancelOrder, claimPolicy, collectDebt, decayClaims, expireForwards, fillOrder, postOrder,
+  settleForwards, settleOrders, tickLoan, tickOrders,
+} from './finance.ts';
+import type { BuyOrder, Forward } from './finance.ts';
+import { econCheckpoint, economyReport } from './econmetrics.ts';
+import type { EconomyReport, IndexPoint } from './econmetrics.ts';
 import { detonateFireship, fireMount, isTethered, mountReloadTime, shipyardMount, stepTethers } from './mounts.ts';
 import { STATION_NAMES, floodCapacity, setStation, stepFlooding } from './damagecontrol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -123,6 +130,11 @@ export class Game {
   weather: Record<RegionId, RegionWeather>;
   fronts: Front[] = [];
   sites: ResourceSite[];
+  forwardBoards = new Map<string, { list: Forward[]; refreshAt: number }>();
+  orders: BuyOrder[] = [];
+  econHistory: IndexPoint[] = [];
+  econRewardMul = 1;
+  private nextEconCheckpoint = 0;
   private lastWeather = new WeakMap<PlayerSession, string>();
   sessions = new Set<PlayerSession>();
   private byAccount = new Map<number, PlayerSession>();
@@ -161,6 +173,12 @@ export class Game {
     this.sites = buildSites(this.world);
     const savedSites = this.db.getKv<Record<string, { stock: number; holder: number | null; holderName: string; until: number }>>('sites');
     if (savedSites) for (const site of this.sites) if (savedSites[site.id]) Object.assign(site, savedSites[site.id]);
+    this.orders = this.db.getKv<BuyOrder[]>('orders') ?? [];
+    const econ = this.db.getKv<{ history: IndexPoint[]; rewardMul: number }>('econ');
+    if (econ) {
+      this.econHistory = econ.history ?? [];
+      this.econRewardMul = econ.rewardMul ?? 1;
+    }
     this.weather = initWeather(this.rng, this.now);
     this.nextWorldEvent = this.now + 600;
   }
@@ -225,6 +243,14 @@ export class Game {
       for (const p of this.world.ports) this.tavernCrew.set(p.id, Math.min(10 + p.size * 14, (this.tavernCrew.get(p.id) ?? 0) + 0.6 * p.size));
       stepWeather(this.weather, this.rng, now);
       tickSites(this, edt);
+      tickOrders(this);
+      if (now >= this.nextEconCheckpoint) {
+        if (this.nextEconCheckpoint !== 0) {
+          const r = econCheckpoint(this);
+          if (r.status !== 'stable') this.log(`[economy] ${r.status}: net ${r.netPerHour}/h on supply ${r.supply.total}, contract rewards ×${r.rewardMul}`);
+        }
+        this.nextEconCheckpoint = now + 3600;
+      }
       this.fronts = stepFronts(this.fronts, this.rng, now, edt, (x, y) => windAt(this.world.seed, now, x, y).dir);
     }
     if (now >= this.nextWorldEvent) {
@@ -452,6 +478,9 @@ export class Game {
       this.discover(s);
       this.recordSightings(s);
       if (s.ship.landing) stepLanding(this, s.ship);
+      expireForwards(this, s);
+      tickLoan(this, s);
+      if (this.tick % 1200 < 20) decayClaims(this, s.profile);
       s.siteViews = this.sites.filter((x) => x.holder === s.accountId && x.until > this.now).map((x) => siteView(this, s, x));
       const own = s.ship.docked || s.ship.landing ? null : ownSiteNear(this, s);
       const land = s.ship.docked || s.ship.landing || own ? null : findLandable(this, s);
@@ -752,6 +781,14 @@ export class Game {
     return this.byAccount.get(ship.accountId)?.profile ?? null;
   }
 
+  economy(windowSec = 3600): EconomyReport {
+    return economyReport(this, windowSec);
+  }
+
+  sessionByAccount(accountId: number): PlayerSession | null {
+    return this.byAccount.get(accountId) ?? null;
+  }
+
   sessionOf(ship: ShipEntity | null): PlayerSession | null {
     if (!ship || ship.accountId === null) return null;
     return this.byAccount.get(ship.accountId) ?? null;
@@ -869,6 +906,7 @@ export class Game {
       if (p) {
         gold = Math.floor(p.gold * 0.05);
         p.gold -= gold;
+        if (gold && ship.accountId !== null) this.db.ledger(ship.accountId, 'loot_drop', -gold, 'wreck');
       }
     }
     if (!Object.keys(cargo).length && gold <= 0) return;
@@ -938,14 +976,19 @@ export class Game {
     const lostValue = cargoValue(ship.cargo);
     const crewLost = Math.max(0, Math.round(ship.crew * 0.35));
     const cls = SHIP_CLASSES[ship.loadout.classId];
-    const fee = p.insured ? 0 : Math.min(Math.floor(p.gold), Math.round(cls.price * 0.1));
+    const claim = claimPolicy(this, s, lostValue);
+    const fee = claim.feeWaived ? 0 : Math.min(Math.floor(p.gold), Math.round(cls.price * 0.1));
     p.gold -= fee;
-    if (p.insured) {
-      const payout = Math.round(lostValue * 0.5);
-      p.gold += payout;
-      this.sendTo(s, { t: 'toast', msg: `The Gilded Ledger honours your policy: ${payout} silver for lost cargo.`, kind: 'gold' });
+    // A tenth of the silver in the captain's chest goes down with her; the League bank keeps the rest safe.
+    const purseLost = Math.floor(p.gold * 0.1);
+    p.gold -= purseLost;
+    if (purseLost) this.db.ledger(s.accountId, 'sunk_purse', -purseLost, ship.loadout.classId);
+    if (claim.reason) this.sendTo(s, { t: 'toast', msg: claim.reason, kind: 'bad' });
+    else if (claim.payout || claim.feeWaived) {
+      p.gold += claim.payout;
+      this.sendTo(s, { t: 'toast', msg: `The Gilded Ledger honours your policy${claim.feeWaived ? ': salvage fee waived' : ''}${claim.payout ? `${claim.feeWaived ? ',' : ':'} ${claim.payout} silver for lost cargo` : ''}.`, kind: 'gold' });
     }
-    p.insured = false;
+    if (purseLost) this.sendTo(s, { t: 'toast', msg: `${purseLost} silver from the captain's chest went down with her.`, kind: 'bad' });
     // Respawn at the last port if it will still have us, otherwise the nearest that will.
     let port = this.portById(p.lastPort);
     if (!port || !canDock(p, port.faction).ok) port = this.nearestPort(ship.state.x, ship.state.y, (q) => canDock(p, q.faction).ok) ?? this.portById(START_PORT)!;
@@ -995,7 +1038,9 @@ export class Game {
     a.purse += result.gold;
     const sb = this.sessionOf(b);
     if (sb && sb.profile) {
-      sb.profile.gold = Math.max(0, sb.profile.gold - result.gold);
+      const robbed = Math.min(sb.profile.gold, result.gold);
+      sb.profile.gold -= robbed;
+      if (robbed) this.db.ledger(sb.accountId, 'robbed', -robbed, a.name);
       this.sendTo(sb, { t: 'toast', msg: `${a.name}'s pirates stripped your hold and your purse (${result.gold} silver).`, kind: 'bad' });
     }
     b.lootLockedFor = null;
@@ -1043,6 +1088,7 @@ export class Game {
     for (const a of AMMO_IDS) ship.ammo[a] += pend.result.ammo[a];
     target.ammo = emptyAmmo();
     s.profile.gold += pend.result.gold;
+    if (pend.result.gold) this.db.ledger(s.accountId, 'plunder', pend.result.gold, target.name);
     if (!target.isPlayer) target.purse = 0;
     target.lootLockedFor = null;
     const f = target.faction !== 'player' ? target.faction : null;
@@ -1054,6 +1100,7 @@ export class Game {
       this.toastShip(ship, `${target.name} goes down with ${moved} units of her cargo in your hold.`, 'good');
     } else if (fate === 'ransom' && !target.isPlayer) {
       s.profile.gold += pend.result.ransom;
+      this.db.ledger(s.accountId, 'ransom', pend.result.ransom, target.name);
       if (f) changeRep(s.profile, f, -3);
       this.releasePrize(target);
       this.toastShip(ship, `Ransom paid: ${pend.result.ransom} silver.`, 'gold');
@@ -1092,6 +1139,7 @@ export class Game {
     }
     if (l.gold > 0) {
       s.profile.gold += l.gold;
+      this.db.ledger(s.accountId, 'loot', l.gold, 'salvage');
       got.push(`${l.gold} silver`);
       l.gold = 0;
     }
@@ -1468,15 +1516,20 @@ export class Game {
       case 'chart':
         return portAction((pt) => (msg.action === 'sell' ? sellCharts(this, s, pt) : buyChart(this, s, pt, msg.region)));
       case 'insure':
+        return portAction((pt) => buyPolicy(this, s, pt, msg.tier === 'cargo' || msg.tier === 'full' ? msg.tier : 'hull'));
+      case 'forward':
+        return portAction((pt) => acceptForward(this, s, pt, String(msg.id)));
+      case 'order':
         return portAction((pt) => {
-          if (pt.faction !== 'league' && pt.faction !== 'free') return 'Only League and free ports write policies';
-          if (p.insured) return 'Already insured for this voyage';
-          const cost = Math.round(SHIP_CLASSES[ship.loadout.classId].price * 0.04 + cargoValue(ship.cargo) * 0.03);
-          if (p.gold < cost) return `A policy costs ${cost} silver`;
-          p.gold -= cost;
-          p.insured = true;
-          this.db.ledger(s.accountId, 'insurance', -cost, pt.id);
-          return null;
+          if (msg.action === 'post') return postOrder(this, s, pt, msg.good, Math.trunc(Number(msg.qty)), Math.trunc(Number(msg.price)));
+          if (msg.action === 'fill') return fillOrder(this, s, pt, String(msg.id), Math.trunc(Number(msg.qty)));
+          if (msg.action === 'cancel') return cancelOrder(this, s, pt, String(msg.id));
+          return 'Bad order';
+        });
+      case 'bank':
+        return portAction((pt) => {
+          if (!['deposit', 'withdraw', 'borrow', 'repay'].includes(msg.action)) return 'Bad request';
+          return bankAction(this, s, pt, msg.action, Math.trunc(Number(msg.amount)));
         });
       case 'learn_talent': {
         const why = canLearn(p.talents, String(msg.id), this.talentPoints(p));
@@ -1494,6 +1547,7 @@ export class Game {
           const cost = 60 * p.level;
           if (p.gold < cost) return `Respec costs ${cost} silver`;
           p.gold -= cost;
+          this.db.ledger(s.accountId, 'respec', -cost, String(p.level));
           p.talents = {};
           ship.talents = p.talents;
           ship.recompute(this.now);
@@ -1686,9 +1740,15 @@ export class Game {
     p.lastPort = port.id;
     p.docked = port.id;
     // Arriving is the end of a voyage: the policy expires.
-    if (p.insured && ship.alive) p.insured = false;
+    if (p.policy && ship.alive) {
+      p.policy = null;
+      p.insured = false;
+    }
     recordIntel(this, s, port);
     this.checkDeliveries(s, port);
+    settleForwards(this, s, port);
+    settleOrders(this, s, port);
+    collectDebt(this, s, port);
     const visitedKey = `visited:${port.id}`;
     if (!p.regionsSeen.includes(visitedKey)) {
       p.regionsSeen.push(visitedKey);
@@ -1853,6 +1913,8 @@ export class Game {
     this.db.transaction(() => {
       for (const s of this.byAccount.values()) this.saveSession(s);
       this.db.setKv('world', { time: this.now, markets: serializeMarkets(this.markets) });
+      this.db.setKv('orders', this.orders);
+      this.db.setKv('econ', { history: this.econHistory, rewardMul: this.econRewardMul });
       this.db.setKv('sites', Object.fromEntries(this.sites.map((x) => [x.id, { stock: x.stock, holder: x.holder, holderName: x.holderName, until: x.until }])));
     });
   }
