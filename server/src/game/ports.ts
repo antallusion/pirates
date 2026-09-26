@@ -15,6 +15,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { marketRows, midPrice, portIsLawful, quoteBuy, quoteSell, applyTrade } from './economy.ts';
 import type { PriceMods } from './economy.ts';
 import type { Game } from './Game.ts';
+import { poiRumor } from './exploration.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -82,7 +83,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
     },
     contracts: game.contractsAt(port.id),
-    rumors: game.rumorsNear(port.x, port.y, 4),
+    rumors: [poiRumor(game, s, port), ...game.rumorsNear(port.x, port.y, 3)].filter((r): r is string => !!r),
     charts: chartView(game, s, port),
     pardonCost: port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy' ? pardonCost(p) : null,
   };

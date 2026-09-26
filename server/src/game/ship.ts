@@ -12,6 +12,7 @@ import type { SailInput, SailParams, SailState } from '../../../shared/src/sim/s
 import type { AmmoStock, Cargo, ShipLoadout, ShipStats } from '../../../shared/src/sim/shipstats.ts';
 import { computeShipStats, crewFactor, loadFactor } from '../../../shared/src/sim/shipstats.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
+import type { Landing } from './exploration.ts';
 
 export interface StatusEffect {
   id: string;
@@ -76,6 +77,7 @@ export class ShipEntity {
   lastCombat = -999;
   attackers = new Map<number, number>(); // entity id -> last hit time
   repairing = false;
+  landing: Landing | null = null;
   unsinkableReadyAt = 0;
   lastStandUntil = 0;
   doubleShotArmed = false;

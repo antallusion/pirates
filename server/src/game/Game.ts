@@ -35,6 +35,7 @@ import { sanitizeName } from '../auth.ts';
 import type { WsConnection } from '../net/websocket.ts';
 import type { Database } from '../persistence/db.ts';
 import { stepStrikes, useAbility } from './abilities.ts';
+import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, startBoarding, stepBoarding } from './boarding.ts';
 import { applyDamage, fireBroadside, stepProjectiles } from './combat.ts';
@@ -282,7 +283,9 @@ export class Game {
       ship.state.speed *= 0.97;
       return;
     }
-    if (ship.boarding) {
+    if (ship.boarding || ship.landing) {
+      // Grappled, or riding at anchor while the boats are ashore.
+      if (ship.landing) ship.state.speed = 0;
       this.grid.upsert(ship.id, ship.state.x, ship.state.y);
       return;
     }
@@ -434,6 +437,9 @@ export class Game {
       this.streamChunks(s);
       this.discover(s);
       this.recordSightings(s);
+      if (s.ship.landing) stepLanding(this, s.ship);
+      const land = s.ship.docked || s.ship.landing ? null : findLandable(this, s);
+      s.landable = land ? { island: land.island.name, feature: FEATURE_NAMES[land.feature] } : null;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
       if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });
@@ -1379,6 +1385,10 @@ export class Game {
         });
       case 'pardon':
         return portAction((pt) => pardon(this, s, pt));
+      case 'land':
+        err(startLanding(this, s));
+        this.pushSelf(s, true);
+        return;
       case 'chart':
         return portAction((pt) => (msg.action === 'sell' ? sellCharts(this, s, pt) : buyChart(this, s, pt, msg.region)));
       case 'insure':

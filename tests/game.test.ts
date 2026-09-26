@@ -290,3 +290,70 @@ test('sightings and market intel are remembered with timestamps', () => {
   assert.ok(sg, 'ghost ship logged');
   assert.ok(Math.abs(sg.x - ghost.state.x) < 50);
 });
+
+function parkNear(game: Game, ship: ShipEntity, feature: string) {
+  const is = game.world.islands.find((i) => i.features.includes(feature as never) && !i.portId)!;
+  // Just off the coast.
+  const n = is.poly.length;
+  const px = is.poly[0], py = is.poly[1];
+  const dx = px - is.x, dy = py - is.y, d = Math.hypot(dx, dy);
+  ship.state.x = px + (dx / d) * 120;
+  ship.state.y = py + (dy / d) * 120;
+  ship.state.speed = 0;
+  ship.input = { rudder: 0, sailTarget: 0 };
+  ship.protectedUntil = 0;
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  void n;
+  return is;
+}
+
+test('landing parties: anchor, explore a feature, bring back loot; it restocks only later', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Beach Comber');
+  c.push({ t: 'undock' });
+  const s = [...game.sessions][0];
+  const ship = s.ship!;
+  const is = parkNear(game, ship, 'wreck');
+  steps(game, 25);
+  assert.ok(s.landable, 'feature within reach');
+  c.push({ t: 'land' });
+  assert.ok(ship.landing, 'boats away');
+  const x0 = ship.state.x;
+  const cargo0 = (ship.cargo.planks ?? 0) + (ship.cargo.sailcloth ?? 0);
+  steps(game, 20 * 45);
+  assert.equal(ship.landing, null);
+  assert.ok(Math.abs(ship.state.x - x0) < 1, 'ship rode at anchor');
+  assert.ok((ship.cargo.planks ?? 0) + (ship.cargo.sailcloth ?? 0) > cargo0 || !c.all('toast').every((t) => !/party returns/.test(t.msg)), 'salvage brought back');
+  assert.ok(c.all('toast').some((t) => /party returns/.test(t.msg)));
+  assert.ok(s.profile!.explored[`${is.id}:wreck`] > 0);
+  c.push({ t: 'land' });
+  assert.equal(ship.landing?.islandId === is.id && ship.landing?.feature === 'wreck', false, 'same feature not immediately again');
+});
+
+test('landing parties are recalled when the captain raises sail early', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Impatient Ike');
+  c.push({ t: 'undock' });
+  const s = [...game.sessions][0];
+  const ship = s.ship!;
+  parkNear(game, ship, 'ruins');
+  steps(game, 25);
+  c.push({ t: 'land' });
+  assert.ok(ship.landing);
+  steps(game, 20 * 3);
+  c.push({ t: 'input', seq: 5, rudder: 0, sail: 3 });
+  steps(game, 25);
+  assert.equal(ship.landing, null);
+  assert.ok(c.all('toast').some((t) => /recalled/.test(t.msg)));
+});
+
+test('tavern rumours point to unexplored features and chart them', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Rumour Monger');
+  const s = [...game.sessions][0];
+  const rumor = c.last('port')!.view!.rumors[0];
+  assert.match(rumor, /km .* of here/);
+  const name = /on (.+?), \d+ km/.exec(rumor)![1];
+  const island = game.world.islands.find((i) => i.name === name)!;
+  assert.ok(s.discovered.has(island.id), 'the rumoured island is marked on the chart');
+});

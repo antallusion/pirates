@@ -242,6 +242,9 @@ addEventListener('keydown', (e) => {
         net.send({ t: 'board', target: boardTarget, aggression });
       } else hud.toast('No crippled ship within grappling range.', 'bad');
       break;
+    case 'l':
+      net.send({ t: 'land' });
+      break;
     case 'r':
       net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
       break;
@@ -369,6 +372,11 @@ function computePrompt(): string {
     const name = state.ships.get(best)?.info?.name ?? 'her';
     parts.push(`<kbd>B</kbd> Board the ${esc(name)} <span class="muted">(Shift careful · Ctrl brutal)</span>`);
   }
+  if (self.landing) {
+    const now = state.estServerTime();
+    const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
+    parts.push(`Boats ashore at the ${esc(self.landing.feature.replace('_', ' '))} — ${Math.round(frac * 100)}% <span class="muted">(raise sail to recall)</span>`);
+  } else if (self.landable) parts.push(`<kbd>L</kbd> Send a landing party to the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
   if (port) parts.push(`<kbd>F</kbd> Enter ${esc(port.name)}`);
   if (you.flags & SF.PROTECTED) parts.push('<span class="muted">Protected — firing ends it</span>');

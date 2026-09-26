@@ -100,6 +100,7 @@ export function renderHelp(root: HTMLElement): void {
     ['Z X C / V', 'Captain abilities / Ultimate (level 6).'],
     ['B', 'Board the nearest crippled ship in range (hull ≤60%, crew ≤50%, sails ≤35% or struck).'],
     ['Shift+B', 'Board carefully (less cargo destroyed, slower). Ctrl+B: brutal.'],
+    ['L', 'Heave to near an island feature (cache, wreck, ruins, grove, mine, pearl bank, shrine) and send a landing party ashore.'],
     ['R', 'Toggle repairs (uses planks & sailcloth; not in combat without Battle Repair).'],
     ['F', 'Dock at a nearby port / set sail.'],
     ['M · T · I', 'World chart · talents · ship & hold.'],

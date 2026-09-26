@@ -42,6 +42,7 @@ export type ClientMsg =
   | { t: 'respec' }
   | { t: 'pardon' }
   | { t: 'insure' }
+  | { t: 'land' }
   | { t: 'chart'; action: 'sell' }
   | { t: 'chart'; action: 'buy'; region: RegionId }
   | { t: 'chat'; text: string }
@@ -159,6 +160,10 @@ export interface PrivateState {
   contracts: Contract[];
   cooldowns: Record<string, number>; // ability id -> world time when ready
   repairing: boolean;
+  /** Island feature within reach of the boats, if any. */
+  landable: { island: string; feature: string } | null;
+  /** Landing party ashore. */
+  landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;
   /** What the captain knows about each visited market, and how old that knowledge is. */
   intel: { portId: string; t: number; top: [GoodId, number][] }[];
