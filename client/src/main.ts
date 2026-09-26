@@ -30,6 +30,8 @@ import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './
 import type { PadEvent } from './gamepad.ts';
 import type { Settings } from './settings.ts';
 import { lang, onLang, t, translateDom } from './i18n.ts';
+import { applyDataLocale } from './lang/data.ts';
+import { serverText } from './lang/server.ts';
 import type { Key } from './i18n.ts';
 
 type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | null;
@@ -73,8 +75,10 @@ function applySettings(o: Settings): void {
 applySettings(settings());
 onSettings(applySettings);
 document.documentElement.lang = lang();
+applyDataLocale(lang());
 translateDom();
 onLang(() => {
+  applyDataLocale(lang());
   translateDom();
   if (modal) refreshModal();
 });
@@ -192,8 +196,8 @@ function onMessage(m: ServerMsg): void {
       if (m.msg === 'auth_required') {
         net.forget();
         $('screen-login').classList.remove('hidden');
-      } else if (!inGame) $('login-error').textContent = m.msg;
-      else hud.toast(m.msg, 'bad');
+      } else if (!inGame) $('login-error').textContent = serverText(m.msg);
+      else hud.toast(serverText(m.msg), 'bad');
       break;
     case 'welcome':
       $('screen-login').classList.add('hidden');
@@ -255,7 +259,7 @@ function onMessage(m: ServerMsg): void {
       openModal('sunk');
       break;
     case 'toast':
-      hud.toast(m.msg, m.kind);
+      hud.toast(serverText(m.msg), m.kind);
       if (m.kind === 'gold') audio.coins();
       break;
     case 'chat':
