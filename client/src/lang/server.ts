@@ -4,7 +4,7 @@
 // themselves translated when they are known names or phrases. Unknown text passes through unchanged.
 
 import { lang } from '../i18n.ts';
-import { NAME_RU } from './data.ts';
+import { NAME_RU, TEXT_RU } from './data.ts';
 import { SERVER_RU_A } from './server.ru.a.ts';
 import { SERVER_RU_B } from './server.ru.b.ts';
 
@@ -43,7 +43,7 @@ function part(s: string, depth: number): string {
 
 function translate(s: string, depth: number): string {
   if (!templates) compile();
-  const hit = exact.get(s);
+  const hit = exact.get(s) ?? TEXT_RU.get(s);
   if (hit) return hit;
   for (const t of templates!) {
     const m = t.re.exec(s);
