@@ -20,7 +20,7 @@
     "fx.curse_veins":            { "local": "fx/curse_veins.webp", "remote": "hf_20260926_004724_bb22474a-addd-4057-b067-c511beb26f73.png", "job": "bb22474a-addd-4057-b067-c511beb26f73" },
     "tex.ocean":                 { "local": "textures/ocean.webp", "remote": "hf_20260925_220208_5c5379f8-6368-46d0-ad0d-94cef99a55bd.png", "job": "5c5379f8-6368-46d0-ad0d-94cef99a55bd" },
     "tex.land":                  { "local": "textures/land.webp", "remote": "hf_20260925_220208_1f6b2c6b-eb05-489e-91a9-c46ce300f18d.png", "job": "1f6b2c6b-eb05-489e-91a9-c46ce300f18d" },
-    "tex.sand":                  { "local": "textures/sand.webp", "remote": "hf_20260925_220231_19fc9c70-9a50-4083-b18d-344926151a07.png", "job": "19fc9c70-9a50-4083-b18d-344926151a07" },
+    "tex.sand":                  { "local": "textures/sand.webp", "remote": "hf_20260925_220231_19fc9c70-9a50-4083-b18d-344926151a07.png", "job": "19fc9c70-9a50-4083-b18d-344926151a07", "fit": "opaque:1024:1.2" },
     "tex.chart":                 { "local": "textures/chart.webp", "remote": "hf_20260925_220207_d78a6474-c92b-45cb-accf-b9d45ce9ac9e.png", "job": "d78a6474-c92b-45cb-accf-b9d45ce9ac9e" },
     "tex.ebony":                 { "local": "textures/ebony.webp", "remote": "hf_20260925_220231_202ad54d-b93d-4e5c-a3d6-97992d5601c0.png", "job": "202ad54d-b93d-4e5c-a3d6-97992d5601c0" },
     "prop.port_town":            { "local": "props/port_town.webp", "remote": "hf_20260925_220232_80ce3e16-2575-4fde-8931-8bc88627e582.png", "job": "80ce3e16-2575-4fde-8931-8bc88627e582" },
@@ -214,6 +214,18 @@
     "icon.fh_serpent":           { "local": "icons/fh_serpent.webp", "remote": "hf_20260926_193226_e086b110-9bf5-41af-adad-6b7cfd65181a.png", "job": "e086b110-9bf5-41af-adad-6b7cfd65181a" },
     "icon.fh_saint_of_wrecks":   { "local": "icons/fh_saint_of_wrecks.webp", "remote": "hf_20260926_193227_f071c87f-1a26-4981-9312-48cbad1e4795.png", "job": "f071c87f-1a26-4981-9312-48cbad1e4795" },
     "icon.tab_market":           { "local": "icons/tab_market.webp", "remote": "hf_20260926_193226_ab2fbaff-2823-49fe-a979-2ddebddc007c.png", "job": "ab2fbaff-2823-49fe-a979-2ddebddc007c" },
-    "icon.tab_tavern":           { "local": "icons/tab_tavern.webp", "remote": "hf_20260926_193227_f807c873-2294-4e49-b6ea-087128de178b.png", "job": "f807c873-2294-4e49-b6ea-087128de178b" }
+    "icon.tab_tavern":           { "local": "icons/tab_tavern.webp", "remote": "hf_20260926_193227_f807c873-2294-4e49-b6ea-087128de178b.png", "job": "f807c873-2294-4e49-b6ea-087128de178b" },
+    "tex.fog":                   { "local": "textures/fog.webp", "remote": "hf_20260926_194313_d5f99067-a209-4784-994c-af9f27125745.png", "job": "d5f99067-a209-4784-994c-af9f27125745" },
+    "tex.land_temperate":        { "local": "textures/land_temperate.webp", "remote": "hf_20260926_194313_1fbe106f-1ac1-4d31-96cd-af82d656e067.png", "job": "1fbe106f-1ac1-4d31-96cd-af82d656e067", "fit": "opaque:1024:1.35" },
+    "tex.land_mossy":            { "local": "textures/land_mossy.webp", "remote": "hf_20260926_194313_ff4c678e-684d-492c-8d16-6875f8fb669e.png", "job": "ff4c678e-684d-492c-8d16-6875f8fb669e", "fit": "opaque:1024:1.35" },
+    "tex.land_volcanic":         { "local": "textures/land_volcanic.webp", "remote": "hf_20260926_194313_cdc0ad8d-10d9-429b-9ff4-3d852b12b920.png", "job": "cdc0ad8d-10d9-429b-9ff4-3d852b12b920", "fit": "opaque:1024:1.35" },
+    "tex.land_ice":              { "local": "textures/land_ice.webp", "remote": "hf_20260926_194313_a9d6f622-dd74-4635-b036-effb9a611824.png", "job": "a9d6f622-dd74-4635-b036-effb9a611824" },
+    "tex.land_ruins":            { "local": "textures/land_ruins.webp", "remote": "hf_20260926_194313_1a4d3a95-c376-4f8e-b07f-0d23217b3abf.png", "job": "1a4d3a95-c376-4f8e-b07f-0d23217b3abf", "fit": "opaque:1024:1.35" },
+    "tex.land_bone":             { "local": "textures/land_bone.webp", "remote": "hf_20260926_194313_523fced6-ffd3-48f9-8bd7-c32f90daaedd.png", "job": "523fced6-ffd3-48f9-8bd7-c32f90daaedd" },
+    "tex.land_barren":           { "local": "textures/land_barren.webp", "remote": "hf_20260926_194313_05c18ddc-7543-438e-ab81-c1be74d68a42.png", "job": "05c18ddc-7543-438e-ab81-c1be74d68a42", "fit": "opaque:1024:1.35" },
+    "tex.shore_black":           { "local": "textures/shore_black.webp", "remote": "hf_20260926_194313_f6804edd-37a9-4a8e-85b7-f8e2e17eeff2.png", "job": "f6804edd-37a9-4a8e-85b7-f8e2e17eeff2", "fit": "opaque:1024:1.2" },
+    "tex.shore_ice":             { "local": "textures/shore_ice.webp", "remote": "hf_20260926_194313_39209ce2-4f05-498a-afcb-0d3f9a9e6c01.png", "job": "39209ce2-4f05-498a-afcb-0d3f9a9e6c01" },
+    "tex.reef":                  { "local": "textures/reef.webp", "remote": "hf_20260926_194313_95b14187-ca1d-4c12-90b5-5ddce54947f3.png", "job": "95b14187-ca1d-4c12-90b5-5ddce54947f3" },
+    "tex.rock":                  { "local": "textures/rock.webp", "remote": "hf_20260926_194313_806e15cd-ac80-4d71-92bb-94c8cf953fe2.png", "job": "806e15cd-ac80-4d71-92bb-94c8cf953fe2", "fit": "opaque:1024:1.2" }
   }
 }

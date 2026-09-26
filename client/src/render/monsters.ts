@@ -432,6 +432,14 @@ export function drawPveSites(g: CanvasRenderingContext2D, sites: PveSiteView[], 
     if (x < -r - 50 || y < -r - 50 || x > w + r + 50 || y > h + r + 50) continue;
     g.save();
     if (s.kind === 'city') {
+      // The drowned city itself, seen through dark water.
+      const city = sprite('prop.drowned_city');
+      if (city) {
+        const size = Math.max(r * 2.6, 900 * zoom);
+        g.globalAlpha = 0.5;
+        g.drawImage(city.img, x - size / 2, y - size / 2, size, size);
+        g.globalAlpha = 1;
+      }
       // The bell buoy: a lantern on a float, and the drowned city's shadow below.
       const grad = g.createRadialGradient(x, y, 0, x, y, r * 1.8);
       grad.addColorStop(0, 'rgba(40,90,90,0.25)');
@@ -469,7 +477,22 @@ export function drawPveSites(g: CanvasRenderingContext2D, sites: PveSiteView[], 
       // The wall of wrecks, broken only where a gate is open.
       const open = (s.gates ?? []).filter((q) => q.open).map((q) => q.a);
       const gap = 0.14;
-      const steps = 180;
+      const wallArt = sprite('prop.wreck_wall');
+      if (wallArt) {
+        // The wall as painted wreck piles laid end to end round the ring, broken where a gate stands open.
+        const segLen = 110 * zoom, segH = segLen * (wallArt.img.naturalHeight / wallArt.img.naturalWidth) * 1.4;
+        const n = Math.max(12, Math.ceil((Math.PI * 2 * wall) / (segLen * 0.85)));
+        for (let i = 0; i < n; i++) {
+          const mid = (i / n) * Math.PI * 2;
+          if (open.some((a) => Math.abs(Math.atan2(Math.sin(mid - a), Math.cos(mid - a))) < gap)) continue;
+          g.save();
+          g.translate(x + Math.sin(mid) * wall, y - Math.cos(mid) * wall);
+          g.rotate(mid + (i % 2 ? Math.PI : 0));
+          g.drawImage(wallArt.img, -segLen / 2, -segH / 2, segLen, segH);
+          g.restore();
+        }
+      }
+      const steps = wallArt ? 0 : 180;
       for (let i = 0; i < steps; i++) {
         const a0 = (i / steps) * Math.PI * 2, a1 = ((i + 1) / steps) * Math.PI * 2;
         const mid = (a0 + a1) / 2;

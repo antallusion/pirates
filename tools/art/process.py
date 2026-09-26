@@ -10,6 +10,7 @@ field in assets/manifest.json, or by its kind when absent:
     sprite:<px>   trim to the alpha box + 4% margin, longest side <= px (ships, monsters, props, icons)
     overlay:<px>  keep the frame (curse overlays are stretched over the hull), longest side <= px
     opaque:<px>   no alpha, longest side <= px (portraits, textures, backgrounds, key art)
+    ...:<gain>    an optional third part lifts brightness (1.3 = +30%), for textures that read too dark in play
 
 Files are written as WebP (lossy with alpha; a tenth of the PNG) unless the local path says .png or .jpg.
 `--webp` moves every manifest entry to a .webp local path first (and removes the old baked file).
@@ -137,8 +138,9 @@ def to_webp(m):
 
 def bake(aid, entry, cdn):
     src = fetch_raw(cdn, entry)
-    mode, px = fit_of(aid, entry).split(':')
-    px = int(px)
+    parts = fit_of(aid, entry).split(':')
+    mode, px = parts[0], int(parts[1])
+    gain = float(parts[2]) if len(parts) > 2 else 1.0
     img = Image.open(src)
     img.load()
     target = os.path.join(ASSETS, entry['local'])
@@ -146,6 +148,9 @@ def bake(aid, entry, cdn):
     note = ''
     if mode == 'opaque':
         img = shrink(img.convert('RGB'), px)
+        if gain != 1.0:
+            from PIL import ImageEnhance
+            img = ImageEnhance.Brightness(img).enhance(gain)
         save(img, target, 84)
     else:
         img = img.convert('RGBA')

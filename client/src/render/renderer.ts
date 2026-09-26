@@ -45,6 +45,57 @@ const BIOME_BASE: Record<IslandBiome, string> = {
   temperate: '#2a3026', mossy: '#26322b', volcanic: '#1d1614', ice: '#8d98a3', ruins: '#2a3131', bone: '#6f6a5f', barren: '#3b372f',
 };
 
+/** Higgsfield art by biome: the land, its shore, and what grows or lies on it. */
+const BIOME_LAND: Record<IslandBiome, string> = {
+  temperate: 'tex.land_temperate', mossy: 'tex.land_mossy', volcanic: 'tex.land_volcanic', ice: 'tex.land_ice', ruins: 'tex.land_ruins', bone: 'tex.land_bone', barren: 'tex.land_barren',
+};
+const BIOME_SHORE: Record<IslandBiome, string> = {
+  temperate: 'tex.sand', mossy: 'tex.rock', volcanic: 'tex.shore_black', ice: 'tex.shore_ice', ruins: 'tex.rock', bone: 'tex.land_bone', barren: 'tex.rock',
+};
+const BIOME_DECOR: Record<IslandBiome, string> = {
+  temperate: 'prop.decor_temperate', mossy: 'prop.decor_mossy', volcanic: 'prop.decor_volcanic', ice: 'prop.decor_ice', ruins: 'prop.decor_barren', bone: 'prop.decor_bone', barren: 'prop.decor_barren',
+};
+/** Island features: the sprite, its size in metres, where it stands (salt, inset toward the centre). */
+const FEATURE_ART: Record<string, { id: string; size: number; salt: number; inset: number }> = {
+  lighthouse: { id: 'prop.lighthouse', size: 70, salt: 1, inset: 0.04 },
+  wreck: { id: 'prop.shipwreck', size: 80, salt: 2, inset: -0.1 },
+  ruins: { id: 'prop.ruins', size: 110, salt: 3, inset: 0.3 },
+  shrine: { id: 'prop.shrine', size: 70, salt: 4, inset: 0.35 },
+  grove: { id: 'prop.grove', size: 120, salt: 5, inset: 0.4 },
+  mine: { id: 'prop.mine', size: 70, salt: 6, inset: 0.3 },
+  pearl_bank: { id: 'prop.pearl_bank', size: 80, salt: 7, inset: -0.06 },
+  cache: { id: 'prop.cache', size: 34, salt: 8, inset: 0.25 },
+};
+
+interface Decor {
+  x: number;
+  y: number;
+  rot: number;
+  size: number;
+  /** A big clump on a green island is a whole grove. */
+  grove: boolean;
+}
+
+/** A small deterministic generator (the same island always wears the same decor). */
+function seeded(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function inPoly(poly: number[], x: number, y: number): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 2; i < poly.length; j = i, i += 2) {
+    const xi = poly[i], yi = poly[i + 1], xj = poly[j], yj = poly[j + 1];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
 interface DrawShip {
   id: number;
   x: number;
@@ -245,8 +296,17 @@ export class Renderer {
     if (this.sea) {
       // The shader sea: the 2D canvas is cleared to let it through; wind streaks stay for reading the wind.
       g.clearRect(-20, -20, this.w + 40, this.h + 40);
+      // The painted sea and mist join the shaders once they have loaded.
+      if (!this.sea.hasTexture) {
+        const t = sprite('tex.ocean');
+        if (t) this.sea.setTexture(t.img);
+      }
+      if (this.sky && !this.sky.hasTexture) {
+        const f = sprite('tex.fog');
+        if (f) this.sky.setTexture(f.img);
+      }
       const wakes: { x: number; y: number; age: number; w: number }[] = [];
-      for (const w of this.wakes.values()) for (let i = Math.max(0, w.length - 6); i < w.length; i++) wakes.push({ x: w[i].x, y: w[i].y, age: this.time - w[i].t, w: w[i].w * (1 + (this.time - w[i].t) * 0.35) });
+      for (const w of this.wakes.values()) for (let i = Math.max(0, w.length - 12); i < w.length; i++) wakes.push({ x: w[i].x, y: w[i].y, age: this.time - w[i].t, w: w[i].w * (1 + (this.time - w[i].t) * 0.35) });
       wakes.sort((a, b) => b.age - a.age);
       const wv = headingVec(state.wind[0]);
       this.sea.draw({
@@ -356,14 +416,20 @@ export class Renderer {
     return out;
   }
 
+  /** A coast or reef outline, rounded: curves through the edges' midpoints with the vertices as control points. */
   private path(poly: number[], scale = 1, cx = 0, cy = 0): void {
     const g = this.g;
+    const n = poly.length / 2;
+    const px = (i: number) => this.sx(cx + (poly[(i % n) * 2] - cx) * scale);
+    const py = (i: number) => this.sy(cy + (poly[(i % n) * 2 + 1] - cy) * scale);
     g.beginPath();
-    for (let i = 0; i < poly.length; i += 2) {
-      const x = cx + (poly[i] - cx) * scale, y = cy + (poly[i + 1] - cy) * scale;
-      if (i === 0) g.moveTo(this.sx(x), this.sy(y));
-      else g.lineTo(this.sx(x), this.sy(y));
+    if (n < 4) {
+      for (let i = 0; i < n; i++) (i ? g.lineTo(px(i), py(i)) : g.moveTo(px(i), py(i)));
+      g.closePath();
+      return;
     }
+    g.moveTo((px(0) + px(1)) / 2, (py(0) + py(1)) / 2);
+    for (let i = 1; i <= n; i++) g.quadraticCurveTo(px(i), py(i), (px(i) + px(i + 1)) / 2, (py(i) + py(i + 1)) / 2);
     g.closePath();
   }
 
@@ -382,11 +448,22 @@ export class Renderer {
       g.beginPath();
       g.arc(cx, cy, reach * this.zoom, 0, Math.PI * 2);
       g.fill();
-      // Spiral foam arms rotating with the flow.
+      // Spiral foam arms rotating with the flow: the painted maelstrom when it has loaded.
       const dirSign = w.clockwise ? 1 : -1;
       const spin = this.time * 0.25 * dirSign;
+      const art = sprite('prop.whirlpool');
+      if (art) {
+        const size = reach * 2 * this.zoom;
+        g.save();
+        g.translate(cx, cy);
+        g.rotate(spin * 1.6);
+        if (!w.clockwise) g.scale(-1, 1);
+        g.globalAlpha = 0.85;
+        g.drawImage(art.img, -size / 2, -size / 2, size, size);
+        g.restore();
+      }
       g.lineWidth = Math.max(1, 2 * this.zoom);
-      for (let arm = 0; arm < 5; arm++) {
+      for (let arm = 0; arm < (art ? 0 : 5); arm++) {
         g.beginPath();
         for (let i = 0; i <= 60; i++) {
           const t = i / 60;
@@ -416,8 +493,15 @@ export class Renderer {
       g.save();
       g.lineJoin = 'round';
       this.path(rf.poly);
-      // Pale water over coral and sand: reads as danger without shouting.
-      g.fillStyle = 'rgba(52,96,92,0.26)';
+      // Pale water over coral and sand: reads as danger without shouting. The painted seabed shows through.
+      const bed = this.tiled('tex.reef', 120, rf.x | 0);
+      if (bed) {
+        g.globalAlpha = 0.55;
+        g.fillStyle = bed;
+        g.fill();
+        g.globalAlpha = 1;
+      }
+      g.fillStyle = 'rgba(52,96,92,0.18)';
       g.fill();
       g.lineWidth = 24 * this.zoom;
       g.strokeStyle = 'rgba(40,84,82,0.10)';
@@ -462,24 +546,27 @@ export class Renderer {
     const g = this.g;
     g.save();
     g.lineJoin = 'round';
-    // Sand/rock rim.
+    // Height: the land throws a soft shadow on the water, away from the moon (south-east).
+    g.save();
+    g.translate(7 * this.zoom, 10 * this.zoom);
     this.path(is.poly);
-    const sand = pattern(g, 'tex.sand');
-    if (sand) {
-      sand.setTransform(new DOMMatrix().translate(this.sx(0), this.sy(0)).scale(this.zoom * 0.12));
-      g.strokeStyle = sand;
-    } else g.strokeStyle = is.biome === 'volcanic' ? '#241c19' : is.biome === 'ice' ? '#9aa4ad' : '#4d463b';
-    g.lineWidth = 16 * this.zoom;
+    g.fillStyle = 'rgba(0,0,0,0.32)';
+    g.fill();
+    g.restore();
+    // The shore: sand, black sand, ice or rock by biome, a band along the coast.
+    this.path(is.poly);
+    const shore = this.tiled(BIOME_SHORE[is.biome], 60, is.id) ?? this.tiled('tex.sand', 60, is.id);
+    g.strokeStyle = shore ?? (is.biome === 'volcanic' ? '#241c19' : is.biome === 'ice' ? '#9aa4ad' : '#4d463b');
+    g.lineWidth = 20 * this.zoom;
     g.stroke();
-    // Land.
-    const land = pattern(g, 'tex.land');
-    if (land) {
-      land.setTransform(new DOMMatrix().translate(this.sx(is.id * 137), this.sy(is.id * 91)).scale(this.zoom * 0.45));
-      g.fillStyle = land;
-    } else g.fillStyle = BIOME_BASE[is.biome];
+    // The land in its biome's painting (the old flat tint only when the art is missing).
+    const land = this.tiled(BIOME_LAND[is.biome], 150, is.id) ?? this.tiled('tex.land', 150, is.id);
+    g.fillStyle = land ?? BIOME_BASE[is.biome];
     g.fill();
-    g.fillStyle = BIOME_TINT[is.biome];
-    g.fill();
+    if (!sprite(BIOME_LAND[is.biome])) {
+      g.fillStyle = BIOME_TINT[is.biome];
+      g.fill();
+    }
     // Relief: hill-shaded height, cliffs and beaches (terrain.ts), clipped to the coast. Until an island's mask
     // is built (at most one a frame), concentric cores stand in.
     const relief = this.reliefOf(is);
@@ -487,6 +574,7 @@ export class Renderer {
       this.path(is.poly);
       g.save();
       g.clip();
+      g.globalAlpha = sprite(BIOME_LAND[is.biome]) ? 0.5 : 1;
       g.drawImage(relief.canvas, this.sx(relief.x0), this.sy(relief.y0), relief.size * this.zoom, relief.size * this.zoom);
       g.restore();
     } else {
@@ -496,12 +584,32 @@ export class Renderer {
         g.fill();
       }
     }
-    // Surf line.
+    // What grows and lies on the island.
+    const decor = sprite(BIOME_DECOR[is.biome]);
+    const grove = sprite('prop.grove');
+    if (decor && this.zoom > 0.3) {
+      for (const d of this.decorOf(is, state)) {
+        const size = d.size * this.zoom;
+        const x = this.sx(d.x), y = this.sy(d.y);
+        if (x < -size || y < -size || x > this.w + size || y > this.h + size) continue;
+        g.save();
+        g.translate(x, y);
+        g.rotate(d.rot);
+        g.drawImage((d.grove && grove ? grove : decor).img, -size / 2, -size / 2, size, size);
+        g.restore();
+      }
+    }
+    // Surf: two soft broken lines of foam working along the coast.
     this.path(is.poly);
     g.setLineDash([3 * this.zoom, 9 * this.zoom]);
     g.lineDashOffset = this.time * 4 * this.zoom;
-    g.strokeStyle = 'rgba(210,220,225,0.22)';
+    g.strokeStyle = 'rgba(210,220,225,0.2)';
     g.lineWidth = Math.max(1, 2.2 * this.zoom);
+    g.stroke();
+    this.path(is.poly, 1.035, is.x, is.y);
+    g.setLineDash([2 * this.zoom, 13 * this.zoom]);
+    g.lineDashOffset = -this.time * 3 * this.zoom;
+    g.strokeStyle = 'rgba(200,212,220,0.1)';
     g.stroke();
     g.setLineDash([]);
     // Name label when zoomed out enough to matter or discovered.
@@ -514,6 +622,41 @@ export class Renderer {
     }
     g.restore();
     this.drawFeatures(is);
+  }
+
+  /** A texture tiled in world space: `metres` per tile, shifted by `seed` so neighbours do not match. */
+  private tiled(id: string, metres: number, seed = 0): CanvasPattern | null {
+    const p = pattern(this.g, id);
+    const s = sprite(id);
+    if (!p || !s) return null;
+    p.setTransform(new DOMMatrix().translate(this.sx(seed * 137), this.sy(seed * 91)).scale((this.zoom * metres) / s.img.naturalWidth));
+    return p;
+  }
+
+  private decorCache = new Map<number, Decor[]>();
+
+  /** Where an island's decor stands: inside the coast, clear of its port town and of each other. */
+  private decorOf(is: IslandData, state: ClientState): Decor[] {
+    const hit = this.decorCache.get(is.id);
+    if (hit) return hit;
+    const rnd = seeded(is.id * 7919 + 17);
+    const inner = is.poly.map((v, i) => (i % 2 === 0 ? is.x + (v - is.x) * 0.78 : is.y + (v - is.y) * 0.78));
+    const port = is.portId ? state.ports.find((p) => p.id === is.portId) : null;
+    // Decor by area: a rock has a clump or two, a great island is wooded and strewn.
+    const want = Math.max(3, Math.min(40, Math.round((is.r * is.r) / 26000)));
+    const out: Decor[] = [];
+    for (let k = 0; k < want * 6 && out.length < want; k++) {
+      const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * is.r;
+      const x = is.x + Math.cos(a) * r, y = is.y + Math.sin(a) * r;
+      if (!inPoly(inner, x, y)) continue;
+      if (port && Math.hypot(x - port.x, y - port.y) < 380) continue;
+      const size = 42 + rnd() * Math.min(120, 30 + is.r / 10);
+      if (out.some((d) => Math.hypot(d.x - x, d.y - y) < (d.size + size) * 0.55)) continue;
+      out.push({ x, y, rot: rnd() * Math.PI * 2, size, grove: size > 95 && (is.biome === 'temperate' || is.biome === 'mossy') });
+    }
+    this.decorCache.set(is.id, out);
+    if (this.decorCache.size > 200) this.decorCache.delete(this.decorCache.keys().next().value!);
+    return out;
   }
 
   private reliefCache = new Map<number, { canvas: HTMLCanvasElement; x0: number; y0: number; size: number }>();
@@ -551,30 +694,29 @@ export class Renderer {
   private drawFeatures(is: IslandData): void {
     const g = this.g;
     for (const f of is.features) {
-      if (f === 'lighthouse') {
-        const p = this.featurePoint(is, 1, 0.04);
-        const spr = sprite('prop.lighthouse');
-        const size = 70 * this.zoom;
-        if (spr) g.drawImage(spr.img, this.sx(p.x) - size / 2, this.sy(p.y) - size / 2, size, size);
-        else {
-          g.fillStyle = '#5c5a55';
-          g.beginPath();
-          g.arc(this.sx(p.x), this.sy(p.y), 6 * this.zoom, 0, Math.PI * 2);
-          g.fill();
-        }
-      } else if (f === 'wreck') {
-        const p = this.featurePoint(is, 2, -0.08);
-        const spr = sprite('prop.wreckage');
-        const size = 60 * this.zoom;
-        if (spr) {
-          g.globalAlpha = 0.85;
-          g.drawImage(spr.img, this.sx(p.x) - size / 2, this.sy(p.y) - size / 2, size, size);
-          g.globalAlpha = 1;
-        }
-      } else if (f === 'ruins' || f === 'shrine') {
-        const p = this.featurePoint(is, f === 'ruins' ? 3 : 4, 0.3);
+      const art = FEATURE_ART[f];
+      if (!art) continue;
+      const p = this.featurePoint(is, art.salt, art.inset);
+      const spr = sprite(art.id);
+      const size = art.size * this.zoom;
+      const x = this.sx(p.x), y = this.sy(p.y);
+      if (x < -size || y < -size || x > this.w + size || y > this.h + size) continue;
+      if (spr) {
         g.save();
-        g.translate(this.sx(p.x), this.sy(p.y));
+        g.translate(x, y);
+        // Everything but the lighthouse turns a little, so no two islands look stamped.
+        if (f !== 'lighthouse') g.rotate(((is.id * 37 + art.salt * 11) % 628) / 100);
+        if (f === 'wreck' || f === 'pearl_bank') g.globalAlpha = 0.9;
+        g.drawImage(spr.img, -size / 2, -size / 2, size, size);
+        g.restore();
+      } else if (f === 'lighthouse') {
+        g.fillStyle = '#5c5a55';
+        g.beginPath();
+        g.arc(x, y, 6 * this.zoom, 0, Math.PI * 2);
+        g.fill();
+      } else if (f === 'ruins' || f === 'shrine') {
+        g.save();
+        g.translate(x, y);
         g.strokeStyle = 'rgba(160,160,150,0.45)';
         g.lineWidth = Math.max(1, 1.5 * this.zoom);
         for (let k = 0; k < 5; k++) {
@@ -588,8 +730,9 @@ export class Renderer {
 
   private drawPorts(state: ClientState): void {
     const g = this.g;
-    const spr = sprite('prop.port_town');
     for (const p of state.ports) {
+      const spr = sprite(`prop.port_${p.faction}`) ?? sprite('prop.port_town');
+      const faction = !!sprite(`prop.port_${p.faction}`);
       if (Math.abs(p.x - this.camX) * this.zoom > this.w || Math.abs(p.y - this.camY) * this.zoom > this.h) continue;
       const island = [...state.islands.values()].find((is) => is.portId === p.id);
       if (!island) continue;
@@ -597,8 +740,10 @@ export class Renderer {
       const dx = island.x - p.x, dy = island.y - p.y;
       const d = Math.hypot(dx, dy) || 1;
       const tx = p.x + (dx / d) * 150, ty = p.y + (dy / d) * 150;
-      const ang = Math.atan2(-dx, dy); // docks toward the sea
-      const size = (150 + p.size * 70) * this.zoom;
+      // Local +y points inland; the faction towns are drawn with their piers at the image's foot, so they turn
+      // half round to put the quays on the water.
+      const ang = Math.atan2(-dx, dy) + (faction ? Math.PI : 0);
+      const size = (faction ? 230 + p.size * 80 : 150 + p.size * 70) * this.zoom;
       g.save();
       g.translate(this.sx(tx), this.sy(ty));
       g.rotate(ang);
@@ -607,9 +752,11 @@ export class Renderer {
         g.fillStyle = '#26272a';
         g.fillRect(-size * 0.3, -size * 0.3, size * 0.6, size * 0.5);
       }
-      // Piers.
-      g.fillStyle = '#3a2e22';
-      for (let k = -1; k <= 1; k++) g.fillRect(k * size * 0.18 - 3 * this.zoom, size * 0.15, 6 * this.zoom, size * 0.45);
+      if (!faction) {
+        // Piers for the old single town (the faction towns have their own).
+        g.fillStyle = '#3a2e22';
+        for (let k = -1; k <= 1; k++) g.fillRect(k * size * 0.18 - 3 * this.zoom, size * 0.15, 6 * this.zoom, size * 0.45);
+      }
       g.restore();
       // Name & flag.
       g.font = `${Math.round(clamp(14 * this.zoom, 12, 22))}px "IM Fell English SC", Georgia, serif`;
@@ -655,6 +802,12 @@ export class Renderer {
   }
 
   private drawWakes(): void {
+    // Over the shader sea the wake is churned water in the shader itself: no lines on top of it.
+    if (this.sea) {
+      for (const [id, w] of this.wakes) if (!w.length) this.wakes.delete(id);
+      return;
+    }
+    const soft = 1;
     const g = this.g;
     g.save();
     g.lineCap = 'round';
@@ -671,7 +824,7 @@ export class Renderer {
         const dx = b.x - a.x, dy = b.y - a.y;
         const len = Math.hypot(dx, dy) || 1;
         const nx = -dy / len, ny = dx / len;
-        g.strokeStyle = `rgba(200,212,220,${alpha})`;
+        g.strokeStyle = `rgba(200,212,220,${alpha * soft})`;
         g.lineWidth = Math.max(1, 1.6 * this.zoom * (1 - age / 8));
         for (const side of [-1, 1]) {
           g.beginPath();
@@ -692,7 +845,7 @@ export class Renderer {
 
   private drawLoot(state: ClientState): void {
     const g = this.g;
-    const spr = sprite('prop.wreckage');
+    const spr = sprite('prop.flotsam') ?? sprite('prop.wreckage');
     for (const l of state.loot.values()) {
       const size = 38 * this.zoom;
       const bob = Math.sin(this.time * 1.5 + l.x) * 0.1;
@@ -1091,7 +1244,8 @@ export class Renderer {
     const dg = this.dg;
     const W = this.dark.width, H = this.dark.height;
     const k = 0.5; // dark canvas is half resolution
-    const darkness = 0.18 + night * 0.5 + (state.weather === 'storm' || state.weather === 'black_storm' ? 0.12 : 0);
+    // Night falls hard but not blind: a phone in a lit room must still read the sea (docs/06 §5.8).
+    const darkness = 0.12 + night * 0.4 + (state.weather === 'storm' || state.weather === 'black_storm' ? 0.1 : 0);
     dg.globalCompositeOperation = 'source-over';
     dg.clearRect(0, 0, W, H);
     dg.fillStyle = `rgba(3,6,14,${darkness})`;
@@ -1252,7 +1406,7 @@ export class Renderer {
     const g = this.g;
     const grd = g.createRadialGradient(this.w / 2, this.h / 2, Math.min(this.w, this.h) * 0.3, this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.75);
     grd.addColorStop(0, 'rgba(0,0,0,0)');
-    grd.addColorStop(1, `rgba(0,0,0,${0.55 + night * 0.2 + fog * 0.15})`);
+    grd.addColorStop(1, `rgba(0,0,0,${0.4 + night * 0.15 + fog * 0.12})`);
     g.fillStyle = grd;
     g.fillRect(0, 0, this.w, this.h);
   }

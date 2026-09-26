@@ -20,31 +20,50 @@ float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { v += a
 const SEA_FRAG = `precision mediump float;
 uniform vec2 res; uniform vec2 cam; uniform float zoom; uniform float time; uniform vec3 tint; uniform vec3 wind; uniform float night;
 uniform vec4 wakes[${MAX_WAKES}]; uniform int nwakes;
+uniform sampler2D tex; uniform float hasTex;
 ${NOISE}
-float height(vec2 w) {
-  vec2 d = normalize(wind.xy + vec2(0.0001));
-  float s = 0.5 + wind.z;
-  float h = 0.0;
-  h += sin(dot(w, d) * 0.045 - time * 1.1) * 0.5;
-  h += sin(dot(w, vec2(-d.y, d.x)) * 0.031 + time * 0.8) * 0.25;
-  h += (fbm(w * 0.012 + d * time * 0.08) - 0.5) * 1.6 * s;
-  h += (fbm(w * 0.05 - d * time * 0.25) - 0.5) * 0.5 * s;
-  return h;
+// The long swell: it only shades the water (a slow roll of moonlight), the painted sea carries the detail.
+float swell(vec2 w, vec2 d) {
+  return sin(dot(w, d) * 0.018 - time * 0.7) * 0.6 + sin(dot(w, vec2(-d.y, d.x)) * 0.011 + time * 0.45) * 0.4
+    + (fbm(w * 0.004 + d * time * 0.02) - 0.5) * 1.2;
 }
 void main() {
   vec2 frag = vec2(gl_FragCoord.x, res.y - gl_FragCoord.y);
   vec2 w = cam + (frag - res * 0.5) / zoom;
-  float e = 1.5;
-  float h = height(w);
-  vec3 n = normalize(vec3(height(w - vec2(e, 0.0)) - height(w + vec2(e, 0.0)), height(w - vec2(0.0, e)) - height(w + vec2(0.0, e)), 1.2));
+  vec2 d = normalize(wind.xy + vec2(0.0001));
+  float s = clamp(wind.z, 0.0, 1.4);
+  float e = 6.0;
+  float hx = swell(w + vec2(e, 0.0), d) - swell(w - vec2(e, 0.0), d);
+  float hy = swell(w + vec2(0.0, e), d) - swell(w - vec2(0.0, e), d);
+  vec3 n = normalize(vec3(-hx, -hy, 3.0));
   vec3 moon = normalize(vec3(0.35, -0.55, 0.75));
   float diff = clamp(dot(n, moon), 0.0, 1.0);
-  float spec = pow(clamp(dot(reflect(-moon, n), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 40.0);
-  vec3 deep = tint * 0.75;
-  vec3 col = mix(deep, tint * 1.7 + vec3(0.02, 0.04, 0.05), diff * 0.55 + h * 0.08);
-  col += vec3(0.55, 0.65, 0.75) * spec * (0.35 + 0.4 * (1.0 - night));
-  float foam = smoothstep(0.75, 1.05, h * (0.6 + wind.z * 0.6)) * (0.25 + wind.z * 0.35);
-  col += vec3(0.6, 0.65, 0.68) * foam;
+  vec3 col;
+  if (hasTex > 0.5) {
+    // Two drifting layers of the painted sea, at different scales and angles, so the tile never shows.
+    vec2 uv1 = w / 300.0 + d * time * 0.006;
+    vec2 uv2 = mat2(0.8, -0.6, 0.6, 0.8) * (w / 190.0) - d * time * 0.009 + vec2(0.37, 0.61);
+    vec3 t1 = texture2D(tex, uv1).rgb;
+    vec3 t2 = texture2D(tex, uv2).rgb;
+    float m = fbm(w * 0.0025 + time * 0.01);
+    vec3 base = mix(t1, t2, 0.35 + 0.3 * m);
+    // Wind raises the whitecaps the painting already has; a calm lays them down.
+    float lum = dot(base, vec3(0.299, 0.587, 0.114));
+    float caps = smoothstep(0.2, 0.5, lum);
+    base = mix(base * 0.75, base, 0.3 + 0.7 * clamp(s, 0.0, 1.0)) + caps * vec3(0.45, 0.5, 0.55) * max(0.0, s - 0.6) * 0.3;
+    col = base * (0.55 + tint * 6.0) * (0.78 + 0.5 * diff);
+  } else {
+    // Without the painting: near-black water, the swell's light, thin whitecap streaks (never broad patches).
+    float h = swell(w, d) + (fbm(w * 0.05 - d * time * 0.25) - 0.5) * 0.6 * (0.5 + s);
+    col = mix(tint * 0.75, tint * 1.6 + vec3(0.02, 0.035, 0.045), diff * 0.5 + h * 0.05);
+    float streak = smoothstep(0.62, 0.78, fbm(vec2(dot(w, d) * 0.12, dot(w, vec2(-d.y, d.x)) * 0.03) + time * 0.1));
+    float crest = smoothstep(0.55, 0.95, h * 0.5 + 0.5);
+    col += vec3(0.5, 0.55, 0.58) * streak * crest * clamp(s - 0.3, 0.0, 1.0) * 0.35;
+  }
+  // Moonlight glints: tiny sparks on ripples that face the moon, only close enough to see them.
+  float rip = noise(w * 0.9 + d * time * 1.4) * noise(w * 1.7 - d * time * 0.9);
+  float spark = smoothstep(0.5, 0.72, rip) * smoothstep(0.35, 0.95, diff) * smoothstep(0.8, 2.2, zoom);
+  col += vec3(0.6, 0.66, 0.74) * spark * (0.1 + 0.12 * (1.0 - night));
   // Wakes: white water by day, the glow of the deep's small lights by night.
   float glow = 0.0;
   for (int i = 0; i < ${MAX_WAKES}; i++) {
@@ -55,31 +74,40 @@ void main() {
     glow += exp(-dot(dv, dv) / (r * r)) * clamp(1.0 - k.z / 7.0, 0.0, 1.0);
   }
   glow = clamp(glow, 0.0, 1.2);
-  vec3 bio = mix(vec3(0.75, 0.8, 0.82), vec3(0.18, 0.9, 0.78), night);
-  col += bio * glow * (0.18 + 0.35 * night);
+  // Churned water: the painting's own foam, broken up, where the wake runs; the deep's small lights by night.
+  float churn = hasTex > 0.5 ? smoothstep(0.08, 0.45, texture2D(tex, w / 36.0 + d * time * 0.04).r) : 0.6;
+  col = mix(col, vec3(0.62, 0.68, 0.72), clamp(glow * (0.22 + 0.7 * churn), 0.0, 0.75) * (1.0 - night * 0.5));
+  col += vec3(0.18, 0.9, 0.78) * glow * churn * 0.22 * night;
   gl_FragColor = vec4(col, 1.0);
 }`;
 
 const SKY_FRAG = `precision mediump float;
 uniform vec2 res; uniform vec2 cam; uniform float zoom; uniform float time; uniform vec2 wind; uniform float fog; uniform float flash; uniform float night;
 uniform vec2 bolt[8]; uniform float boltOn;
+uniform sampler2D fogTex; uniform float hasFog;
 ${NOISE}
 float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
 void main() {
   vec2 frag = vec2(gl_FragCoord.x, res.y - gl_FragCoord.y);
-  vec2 w = cam + (frag - res * 0.5) / zoom;
-  // Three banks of fog, each drifting with the wind at its own height (parallax), thickest where they overlap.
+  // Fog: a thin haze over everything, and banks of mist streaked along the wind in three parallax layers;
+  // it closes in toward the edges of sight, so the ship sails in a pocket of visibility.
+  vec2 wd = normalize(wind + vec2(0.0001));
   float a = 0.0;
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
-    float par = 1.0 + fi * 0.18;
-    vec2 q = (cam + (frag - res * 0.5) / zoom / par) * (0.0016 + fi * 0.0009) + wind * time * (0.01 + fi * 0.006) + fi * 7.3;
-    a += smoothstep(0.35, 0.85, fbm(q)) * (0.55 - fi * 0.12);
+    float par = 1.0 + fi * 0.22;
+    vec2 p = cam + (frag - res * 0.5) / zoom / par;
+    vec2 q = vec2(dot(p, wd), dot(p, vec2(-wd.y, wd.x)) * 1.9);
+    vec2 uv = q / (850.0 + fi * 520.0) - vec2(time * (0.004 + fi * 0.0025), 0.0) + vec2(fi * 0.37, fi * 0.21);
+    float v = hasFog > 0.5 ? texture2D(fogTex, uv).r : fbm(uv * 5.0);
+    a += smoothstep(0.05, 0.8, v) * (0.5 - fi * 0.1);
   }
-  a *= fog;
-  vec3 fogc = mix(vec3(0.42, 0.47, 0.52), vec3(0.12, 0.16, 0.2), night);
+  float edge = smoothstep(0.08, 0.7, length((frag - res * 0.5) / res.y));
+  a = fog * (0.2 + a * 0.95) * mix(0.5, 1.0, edge);
+  // Moonlit mist stays paler than the water it hides, by night as by day.
+  vec3 fogc = mix(vec3(0.5, 0.54, 0.58), vec3(0.24, 0.28, 0.33), night);
   vec3 col = fogc + vec3(0.8, 0.85, 1.0) * flash * 0.6;
-  float alpha = clamp(a * 0.85 + flash * 0.25, 0.0, 0.9);
+  float alpha = clamp(a + flash * 0.25, 0.0, 0.88);
   // A lightning bolt across the sky.
   if (boltOn > 0.0) {
     float d = 1e5;
@@ -146,6 +174,26 @@ class Layer {
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
+  /** A repeating texture from an image, resampled to 1024² so WebGL 1 can tile and mip-map it. */
+  protected texture(img: HTMLImageElement, unit: number, uniform: string, flag: string): void {
+    const gl = this.gl;
+    const c = document.createElement('canvas');
+    c.width = c.height = 1024;
+    c.getContext('2d')!.drawImage(img, 0, 0, 1024, 1024);
+    const t = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, c);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.useProgram(this.prog);
+    gl.uniform1i(this.u(uniform), unit);
+    gl.uniform1f(this.u(flag), 1);
+  }
+
   protected begin(): number {
     const gl = this.gl;
     gl.useProgram(this.prog);
@@ -167,6 +215,13 @@ function makeLayer(id: string, frag: string, alpha: boolean): { canvas: HTMLCanv
 
 export class GlSea extends Layer {
   private wakeData = new Float32Array(MAX_WAKES * 4);
+  hasTexture = false;
+
+  /** The painted sea (`tex.ocean`) under the shader's light. */
+  setTexture(img: HTMLImageElement): void {
+    this.texture(img, 0, 'tex', 'hasTex');
+    this.hasTexture = true;
+  }
 
   static create(): GlSea | null {
     const l = makeLayer('world-sea', SEA_FRAG, false);
@@ -194,6 +249,14 @@ export class GlSea extends Layer {
 }
 
 export class GlSky extends Layer {
+  hasTexture = false;
+
+  /** Painted mist (`tex.fog`) for the fog banks. */
+  setTexture(img: HTMLImageElement): void {
+    this.texture(img, 0, 'fogTex', 'hasFog');
+    this.hasTexture = true;
+  }
+
   static create(): GlSky | null {
     const l = makeLayer('world-sky', SKY_FRAG, true);
     return l ? new GlSky(l.canvas, l.gl, l.prog) : null;
