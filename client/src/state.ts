@@ -189,7 +189,7 @@ export class ClientState {
       }
       if (rt >= c.t) {
         // Extrapolate briefly past the newest sample.
-        const dt = Math.min(0.25, rt - c.t);
+        const dt = Math.min(0.5, rt - c.t); // far ships arrive at 2.5 Hz
         s.cur = { ...c, x: c.x + Math.sin(c.h) * c.spd * dt, y: c.y - Math.cos(c.h) * c.spd * dt };
       } else if (rt <= a.t) {
         s.cur = a;

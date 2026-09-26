@@ -173,6 +173,9 @@ export class PlayerSession {
   chartedCache = { region: '', size: -1, full: false };
   ship: ShipEntity | null = null;
   knownEntities = new Set<number>();
+  /** Delta snapshots: what this client last received for each entity, and when. */
+  sentRows = new Map<number, { key: string; t: number }>();
+  snapCount = 0;
   knownChunks = new Set<number>();
   discovered = new Set<number>();
   msgWindowStart = 0;

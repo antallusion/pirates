@@ -2,7 +2,7 @@
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
 import {
-  CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
+  CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_MID, SNAP_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
   SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight,
 } from '../../../shared/src/constants.ts';
 import { CAPTAINS, CAPTAIN_IDS } from '../../../shared/src/data/captains.ts';
@@ -1011,7 +1011,10 @@ export class Game {
 
   /** Re-send a ship's name card to everyone (False Colors). */
   refreshInfo(ship: ShipEntity): void {
-    for (const s of this.sessions) s.knownEntities.delete(ship.id);
+    for (const s of this.sessions) {
+      s.knownEntities.delete(ship.id);
+      s.sentRows.delete(ship.id);
+    }
   }
 
   /** Loot only one captain can see and pick up. */
@@ -2223,6 +2226,7 @@ export class Game {
       shipyardTier: p.shipyardTier, blackMarket: p.blackMarket, description: p.description,
     }));
     s.knownEntities.clear();
+    s.sentRows.clear();
     s.knownChunks.clear();
     this.sendTo(s, {
       t: 'init', self: toPrivateState(s, this.now, this.worldView(s)), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
@@ -2405,6 +2409,7 @@ export class Game {
       const me = s.ship;
       const cx = me.state.x, cy = me.state.y;
       const ships: ShipRow[] = [];
+      const snapNo = s.snapCount++;
       const infos: EntityInfo[] = [];
       const seen = new Set<number>();
       this.grid.query(cx, cy, INTEREST_RADIUS, (id) => {
@@ -2426,12 +2431,21 @@ export class Game {
           infos.push(o.info());
         }
         if (o.id === me.id) return;
-        ships.push([
+        const row: ShipRow = [
           o.id, Math.round(o.state.x * 10) / 10, Math.round(o.state.y * 10) / 10, Math.round(o.state.heading * 1000) / 1000,
           Math.round(o.state.speed * 10) / 10, Math.round(o.state.sail * 100) / 100,
           Math.round((o.hull / o.stats.hullMax) * 1000) / 1000, Math.round((o.sails / o.stats.sailHpMax) * 100) / 100,
           o.flagsFor(me.id, this.isHostile(o, me), this.now) | (isTethered(this, o) ? SF.TETHERED : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
-        ]);
+        ];
+        // Distance priority: close ships every snapshot, the middle distance every second, the far every fourth.
+        const period = d < SNAP_NEAR ? 1 : d < SNAP_MID ? 2 : 4;
+        const last = s.sentRows.get(o.id);
+        if (last && snapNo % period !== 0) return;
+        // Delta: an unchanged row is not sent again (but refreshed every 2 s to keep interpolation fed).
+        const key = row.slice(1).join(',');
+        if (last && last.key === key && this.now - last.t < 2) return;
+        s.sentRows.set(o.id, { key, t: this.now });
+        ships.push(row);
       });
       const loot: LootRow[] = [];
       for (const l of this.loot.values()) {
@@ -2442,11 +2456,19 @@ export class Game {
           s.knownEntities.add(l.id);
           infos.push({ id: l.id, kind: 'loot', value: cargoValue(l.cargo) + l.gold });
         }
+        // Loot does not move: sent when first seen, refreshed every 5 s.
+        const lk = `${Math.round(l.x)},${Math.round(l.y)}`;
+        const ll = s.sentRows.get(l.id);
+        if (ll && ll.key === lk && this.now - ll.t < 5) continue;
+        s.sentRows.set(l.id, { key: lk, t: this.now });
         loot.push([l.id, Math.round(l.x), Math.round(l.y)]);
       }
       const gone: number[] = [];
       for (const id of s.knownEntities) if (!seen.has(id)) gone.push(id);
-      for (const id of gone) s.knownEntities.delete(id);
+      for (const id of gone) {
+        s.knownEntities.delete(id);
+        s.sentRows.delete(id);
+      }
       if (infos.length) this.sendTo(s, { t: 'info', list: infos });
       if (gone.length) this.sendTo(s, { t: 'gone', ids: gone });
 

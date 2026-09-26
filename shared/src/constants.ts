@@ -2,7 +2,7 @@
 // simulation requires bumping PROTOCOL_VERSION so stale clients are rejected.
 
 export const GAME_NAME = 'GRAVETIDE';
-export const PROTOCOL_VERSION = 22;
+export const PROTOCOL_VERSION = 23;
 
 export const TICK_RATE = 20; // server simulation Hz
 export const TICK_DT = 1 / TICK_RATE;
@@ -15,6 +15,8 @@ export const CHUNKS_PER_SIDE = WORLD_SIZE / CHUNK_SIZE;
 export const NAV_CELL = 400; // meters, coarse navigation grid for NPC routing
 
 export const INTEREST_RADIUS = 2_200; // dynamic entities replicated within this radius
+export const SNAP_NEAR = 700; // closer: every snapshot (10 Hz)
+export const SNAP_MID = 1_600; // closer: every second snapshot; beyond: every fourth
 export const CHUNK_STREAM_RADIUS = 2; // chunks around the player whose static data is streamed
 export const NPC_ACTIVE_RADIUS = 3_200; // NPCs promote from abstract to full physics inside this range
 
