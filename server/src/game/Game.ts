@@ -56,19 +56,20 @@ import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } f
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, takeCaptive, takePrize } from './prizes.ts';
 import type { JollyBoat } from './prizes.ts';
+import { buyOption, caravanLost, caravansOf, exerciseOption, expireOptions, priceLetters, tendCaravans, onArrival } from './tradefx.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import type { Projectile, VolleyRec } from './combat.ts';
 import { ECON_HOUR, createMarket, restoreMarkets, serializeMarkets, tickMarket } from './economy.ts';
 import type { Market } from './economy.ts';
 import { RouteCache } from './nav.ts';
 import {
-  QUOTA, abstractEncounters, newBrain, npcHostileTo, npcName, spawnFisher, spawnGhost, spawnHunter, spawnMerchant, spawnPatrols, spawnPirate, updateNpc,
+  QUOTA, abstractEncounters, newBrain, npcHostileTo, npcName, planMerchantVoyage, spawnFisher, spawnGhost, spawnHunter, spawnMerchant, spawnPatrols, spawnPirate, updateNpc,
 } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
 import type { Profile } from './player.ts';
 import {
-  buildPortView, buyAmmo, buyChart, buyLicence, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, trade,
+  buildPortView, priceMods, buyAmmo, buyChart, buyLicence, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, trade,
 } from './ports.ts';
 import { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
@@ -107,6 +108,7 @@ export interface GameOptions {
 
 const START_PORT = 'saltmarrow';
 
+const EVENT_LEAD = 1200;
 const WEATHER_TOAST: Record<string, string> = {
   calm: 'The wind dies. Sails hang slack.', breeze: 'A light breeze fills the canvas.', wind: 'A fresh wind — good sailing.',
   fog: 'Fog rolls in. Lookouts see half as far.', rain: 'Rain sweeps the deck.', storm: 'Storm! Reef the sails or lose them.',
@@ -140,6 +142,7 @@ export class Game {
   orders: BuyOrder[] = [];
   volleys = new Map<number, VolleyRec>();
   boats: JollyBoat[] = [];
+  pendingEvent: { id: number; port: string; good: GoodId; shock: number; text: string; at: number } | null = null;
   econHistory: IndexPoint[] = [];
   econRewardMul = 1;
   private nextEconCheckpoint = 0;
@@ -519,6 +522,9 @@ export class Game {
       this.recordSightings(s);
       if (s.ship.landing) stepLanding(this, s.ship);
       expireForwards(this, s);
+      expireOptions(this, s);
+      if (this.tick % 1200 < 20) priceLetters(this, s, (pt) => recordIntel(this, s, pt));
+      if (this.tick % 200 < 20) tendCaravans(this, s, (c, from) => planMerchantVoyage(this, c, this.npcs.get(c.id)!, from));
       checkDeeds(this, s, 1);
       tickLoan(this, s);
       if (this.tick % 1200 < 20) decayClaims(this, s.profile);
@@ -583,7 +589,8 @@ export class Game {
         const spoil = GOODS[g].spoilPerHour;
         const n = ship.cargo[g] ?? 0;
         if (!spoil || n <= 0 || g === 'provisions') continue; // provisions are eaten, not left to rot
-        const acc = (ship.spoilAcc[g] ?? 0) + ((n * spoil * ((ship.cargo.salt ?? 0) > 0 ? 0.5 : 1)) / ECON_HOUR) * (this.weatherOf(ship) === 'rain' ? 1.3 : 1);
+        const cold = Math.max(0, 1 + tval(st, 'spoilage')); // Cold Hold
+        const acc = (ship.spoilAcc[g] ?? 0) + ((n * spoil * cold * ((ship.cargo.salt ?? 0) > 0 ? 0.5 : 1)) / ECON_HOUR) * (this.weatherOf(ship) === 'rain' ? 1.3 : 1);
         if (acc >= 1) {
           const lost = Math.floor(acc);
           ship.cargo[g] = Math.max(0, n - lost);
@@ -704,7 +711,19 @@ export class Game {
     }
   }
 
+  /** World market events are brewed 20 minutes before they break; Rumor Mill captains hear of them early. */
   private worldEvent(): void {
+    const due = this.pendingEvent;
+    if (due) {
+      this.pendingEvent = null;
+      const gm = this.markets.get(due.port)?.goods[due.good];
+      if (!gm) return;
+      gm.shock = due.shock;
+      this.addRumor(this.portById(due.port)!.x, this.portById(due.port)!.y, due.text);
+      for (const s of this.sessions) this.sendTo(s, { t: 'toast', msg: `WORLD: ${due.text}`, kind: 'info' });
+      this.log(`[event] ${due.text}`);
+      return;
+    }
     const port = this.rng.pick(this.world.ports.filter((p) => p.key));
     const market = this.markets.get(port.id)!;
     const kinds: [string, GoodId, number, string][] = [
@@ -716,12 +735,19 @@ export class Game {
       ['yard', 'timber', 2.0, `${port.name}'s yards laid down new keels — timber is gold.`],
     ];
     const [, good, shock, text] = this.rng.pick(kinds);
-    const gm = market.goods[good];
-    if (!gm) return;
-    gm.shock = shock;
-    this.addRumor(port.x, port.y, text);
-    for (const s of this.sessions) this.sendTo(s, { t: 'toast', msg: `WORLD: ${text}`, kind: 'info' });
-    this.log(`[event] ${text}`);
+    if (!market.goods[good]) return;
+    this.pendingEvent = { id: this.allocId(), port: port.id, good, shock, text, at: this.now + EVENT_LEAD };
+    this.nextWorldEvent = this.now + EVENT_LEAD;
+    for (const s of this.sessions) if (s.ship?.docked) this.tavernWhispers(s);
+  }
+
+  /** Rumor Mill: in port, the taverns already talk about the market event that is coming. */
+  tavernWhispers(s: PlayerSession): void {
+    const ev = this.pendingEvent;
+    if (!ev || !s.ship?.hasFlag('rumor_mill') || !s.profile || s.profile.trade.rumorsHeard.includes(ev.id)) return;
+    s.profile.trade.rumorsHeard = [...s.profile.trade.rumorsHeard.slice(-9), ev.id];
+    const mins = Math.max(1, Math.round((ev.at - this.now) / 60));
+    this.sendTo(s, { t: 'toast', msg: `Tavern talk (in ~${mins} min): ${ev.text}`, kind: 'info' });
   }
 
   // ================================================================= entities
@@ -923,6 +949,7 @@ export class Game {
 
   beginSinking(ship: ShipEntity): void {
     if (ship.sinkingUntil) return;
+    if (ship.caravanOf !== null) caravanLost(this, ship);
     ship.sinkingUntil = this.now + 6;
     ship.boarding = null;
     ship.repairing = false;
@@ -1042,6 +1069,8 @@ export class Game {
     }
     if (purseLost) this.sendTo(s, { t: 'toast', msg: `${purseLost} silver from the captain's chest went down with her.`, kind: 'bad' });
     losePrizes(this, ship);
+    p.trade.voyageProfit = 0;
+    p.trade.voyageShare = 0;
     // A sinking ends the voyage.
     p.deedState.voyagePorts = [];
     p.deedState.wantedTime = 0;
@@ -1075,6 +1104,7 @@ export class Game {
   }
 
   onBoardingWon(a: ShipEntity, b: ShipEntity, result: BoardingResult): void {
+    if (b.caravanOf !== null) caravanLost(this, b);
     const sa = this.sessionOf(a);
     if (sa) {
       const crew = prizeCrewNeeded(a, b);
@@ -1408,6 +1438,8 @@ export class Game {
     const c = p.contracts.find((x) => x.id === id);
     if (!c) return;
     p.contracts = p.contracts.filter((x) => x.id !== id);
+    // Contract Broker rank 2: +10%.
+    if (s.ship && tval(s.ship.stats, 'contractBroker') >= 2) c.reward = Math.round(c.reward * 1.1);
     p.gold += c.reward;
     if (c.fromPort === 'harpoon_rest') {
       p.stats.harpoonContracts++;
@@ -1601,7 +1633,8 @@ export class Game {
             p.contracts = p.contracts.filter((c) => c.id !== msg.id);
             return null;
           }
-          if (p.contracts.length >= 3) return 'You can hold at most three contracts';
+          const slots = 3 + (tval(ship.stats, 'contractBroker') >= 1 ? 1 : 0);
+          if (p.contracts.length >= slots) return `You can hold at most ${slots} contracts`;
           const list = this.contractsAt(pt.id);
           const c = list.find((x) => x.id === msg.id);
           if (!c) return 'That contract is gone';
@@ -1634,6 +1667,10 @@ export class Game {
         return portAction((pt) => (msg.action === 'sell' ? sellCharts(this, s, pt) : buyChart(this, s, pt, msg.region)));
       case 'insure':
         return portAction((pt) => buyPolicy(this, s, pt, msg.tier === 'cargo' || msg.tier === 'full' ? msg.tier : 'hull'));
+      case 'option':
+        return portAction((pt) => buyOption(this, s, pt, msg.good, Math.trunc(Number(msg.qty)), priceMods(ship, pt, p, this.now, this)));
+      case 'option_exercise':
+        return portAction((pt) => exerciseOption(this, s, pt, Math.trunc(Number(msg.index))));
       case 'forward':
         return portAction((pt) => acceptForward(this, s, pt, String(msg.id)));
       case 'order':
@@ -1804,6 +1841,7 @@ export class Game {
 
   private retireSession(s: PlayerSession): void {
     this.saveSession(s);
+    for (const c of caravansOf(this, s.accountId)) this.removeShip(c.id);
     if (s.ship) {
       losePrizes(this, s.ship);
       this.removeShip(s.ship.id);
@@ -1848,6 +1886,8 @@ export class Game {
     const p = s.profile!;
     onDockDeeds(this, s);
     sellPrizes(this, s, port);
+    onArrival(this, p, port);
+    this.tavernWhispers(s);
     ship.docked = port.id;
     ship.state.speed = 0;
     ship.state.sail = 0;
@@ -1895,6 +1935,7 @@ export class Game {
         away = h;
       }
     }
+    if (ship.docked) s.profile!.trade.lastDeparture = ship.docked;
     ship.docked = null;
     s.profile!.docked = null;
     const v = headingVec(away);

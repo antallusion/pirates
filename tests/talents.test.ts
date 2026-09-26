@@ -201,13 +201,17 @@ test('loadouts: two slots at 20, switch in port with a cooldown, pools keep thei
   // An Honest Merchant build cannot sail with contraband aboard.
   p.loadouts[0] = { ...p.loadouts[0] };
   ship.cargo.dreamleaf = 2;
-  p.loadouts[0] = { trd_haggler: 3, trd_packer: 2, trd_honest_merchant: 1 };
+  p.level = 60;
+  const trade: TalentRanks = { trd_honest_merchant: 1 };
+  for (const t of TALENTS) if (t.tree === 'trade' && !t.keystone) trade[t.id] = t.maxRank;
+  p.loadouts[0] = trade;
   c.push({ t: 'loadout', slot: 0 });
   assert.equal(p.activeLoadout, 1);
   delete ship.cargo.dreamleaf;
   c.push({ t: 'loadout', slot: 0 });
   assert.equal(p.activeLoadout, 0);
   assert.equal(p.talents.trd_honest_merchant, 1);
+  assert.ok(ship.hasFlag('honest_merchant'));
 });
 
 test('deeds from the world: Last Plank on docking, Ice Edge, Grand Circuit', () => {

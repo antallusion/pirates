@@ -16,6 +16,7 @@ import type { Game } from './Game.ts';
 import { MAX_LEAKS, leakChance } from './damagecontrol.ts';
 import type { ShipEntity } from './ship.ts';
 import { addHeat, upwindOf } from './talentfx.ts';
+import { callPatrols } from './tradefx.ts';
 
 export interface Projectile {
   owner: number;
@@ -503,6 +504,10 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     }
   }
   if (target.npcRole) game.npcOnDamaged(target, source);
+  else if (source && target.isPlayer && (target.talentReady.patrols ?? 0) <= now) {
+    target.talentReady.patrols = now + 10;
+    callPatrols(game, target, source);
+  }
 }
 
 /** First blood between two ships decides crimes, reputation and self-defence windows. */

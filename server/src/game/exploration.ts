@@ -5,7 +5,7 @@
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
-import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island, IslandFeature, Port } from '../../../shared/src/world/worldgen.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
@@ -70,9 +70,10 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   const own = ownSiteNear(game, s);
   if (own) {
     const party = Math.max(3, Math.min(16, Math.round(ship.crew * 0.35)));
-    ship.landing = { islandId: own.island.id, feature: 'haul', siteId: own.site.id, until: game.now + 15, started: game.now, party };
+    const haul = 15 * Math.max(0.25, 1 - tx(ship.stats, 'transferSpeed'));
+    ship.landing = { islandId: own.island.id, feature: 'haul', siteId: own.site.id, until: game.now + haul, started: game.now, party };
     ship.input = { rudder: 0, sailTarget: 0 };
-    game.toastShip(ship, `Boats away to haul the ${GOODS[own.site.good].name.toLowerCase()} stockpile on ${own.island.name} (15s).`, 'info');
+    game.toastShip(ship, `Boats away to haul the ${GOODS[own.site.good].name.toLowerCase()} stockpile on ${own.island.name} (${Math.round(haul)}s).`, 'info');
     return null;
   }
   const target = findLandable(game, s);

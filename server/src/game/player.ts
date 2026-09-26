@@ -18,6 +18,7 @@ import type { ShipEntity } from './ship.ts';
 import type { Forward, Loan, Policy } from './finance.ts';
 import { captiveRansom } from './prizes.ts';
 import type { Captive } from './prizes.ts';
+import type { TradeOption } from './tradefx.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 
 export interface Profile {
@@ -73,7 +74,37 @@ export interface Profile {
   loadoutSwitchAt: number;
   talentCooldowns: Record<string, number>;
   captives: Captive[];
+  trade: {
+    lastDeparture: string;
+    arrivalRoute: string;
+    routes: Record<string, { n: number; t: number }>;
+    monoLog: { port: string; good: GoodId; qty: number; t: number }[];
+    monopoly: Record<string, number>;
+    monoBonus: GoodId[];
+    voyageProfit: number;
+    voyageShare: number;
+    options: TradeOption[];
+    caravanReadyAt: number;
+    rumorsHeard: number[];
+  };
   createdAt: number;
+}
+
+/** Best known sell price per good across remembered markets. */
+export function appraise(p: Profile): Partial<Record<GoodId, { price: number; port: string }>> {
+  const out: Partial<Record<GoodId, { price: number; port: string }>> = {};
+  for (const portId in p.priceIntel) {
+    const sell = p.priceIntel[portId].sell;
+    for (const g in sell) {
+      const v = sell[g as GoodId] ?? 0;
+      if (v > (out[g as GoodId]?.price ?? 0)) out[g as GoodId] = { price: v, port: portId };
+    }
+  }
+  return out;
+}
+
+export function newTradeState(): Profile['trade'] {
+  return { lastDeparture: '', arrivalRoute: '', routes: {}, monoLog: [], monopoly: {}, monoBonus: [], voyageProfit: 0, voyageShare: 0, options: [], caravanReadyAt: 0, rumorsHeard: [] };
 }
 
 export function newProfile(captain: CaptainId, shipName: string, startPort: string, now: number): Profile {
@@ -88,7 +119,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], trade: newTradeState(), curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -189,6 +220,8 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     talentCooldowns: p.talentCooldowns,
     heat: ship ? { port: Math.round(ship.heat.port), starboard: Math.round(ship.heat.starboard) } : { port: 0, starboard: 0 },
     rollingFire: ship?.rollingFire ?? false,
+    options: p.trade.options,
+    appraisal: ship?.hasFlag('appraiser') ? appraise(p) : null,
     captives: p.captives.map((c) => ({ name: c.name, faction: c.faction, ransom: captiveRansom(c, (ship?.rank('trd_prize_broker') ?? 0) > 0) })),
     talents: p.talents,
     gold: Math.floor(p.gold),
@@ -277,6 +310,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.loadoutSwitchAt ??= 0;
   p.talentCooldowns ??= {};
   p.captives ??= [];
+  p.trade = { ...newTradeState(), ...(p.trade ?? {}) };
   p.ammo = { ...emptyAmmo(), ...(p.ammo ?? {}) };
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));
   p.gold = Math.max(0, p.gold ?? 0);

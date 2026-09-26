@@ -119,6 +119,8 @@ export class ShipEntity {
   ramTarget = 0;
   sinkAt = 0; // No Quarter: the taken ship goes down
   prize = false; // a captured NPC sailing under a prize crew for her captor
+  caravanOf: number | null = null; // Counting House: the account this merchant trades for
+  caravanFrom: string | null = null;
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

@@ -16,7 +16,10 @@ export type StatKey =
   | 'mastBreak' | 'breachChance' | 'quickSwap' | 'chaserDamage' | 'chaserArc' | 'shotSpeed'
   // boarding
   | 'meleeDamage' | 'boardingNets' | 'matchSpeed' | 'marines' | 'transferSpeed' | 'boardingAxes' | 'prizeCrew' | 'blooded'
-  | 'ironGrip' | 'holdTheLine';
+  | 'ironGrip' | 'holdTheLine'
+  // trade
+  | 'dutyMul' | 'tradeRep' | 'slippage' | 'contractBroker' | 'spoilage' | 'insurancePremium' | 'insurancePayout' | 'priceMemory'
+  | 'routeBonus' | 'loadPenalty' | 'profitShare';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -27,7 +30,9 @@ export type Flag =
   // gunnery
   | 'rolling_broadside' | 'skipping_shot' | 'spotter' | 'splinter_storm' | 'mortar_lore' | 'thunder_broadside' | 'crossfire' | 'red_hot'
   // boarding
-  | 'pistol_volley' | 'bow_and_stern' | 'first_over_rail' | 'surrender_terms' | 'hull_to_hull' | 'warlord' | 'ransom' | 'no_quarter';
+  | 'pistol_volley' | 'bow_and_stern' | 'first_over_rail' | 'surrender_terms' | 'hull_to_hull' | 'warlord' | 'ransom' | 'no_quarter'
+  // trade
+  | 'appraiser' | 'convoy_rights' | 'speculator' | 'rumor_mill' | 'league_patron' | 'monopolist' | 'prize_broker' | 'counting_house';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

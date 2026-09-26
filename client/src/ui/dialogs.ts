@@ -30,7 +30,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
     root.innerHTML = `<div class="modal-head"><div><h2>Prize: ${esc(r.targetName)}</h2><div class="sub">${esc(SHIP_CLASSES[r.targetClass].name)} taken. Your losses: ${r.crewLost} crew. Theirs: ${r.enemyCrewLost}.</div></div></div>
       <div class="modal-body"><div class="cols"><div>
         <h3 class="title-sm" style="font-size:20px">Cargo that survived</h3>
-        ${goods.length ? goods.map((g) => `<div class="loot-row"><span>${esc(GOODS[g].name)} <span class="muted">(${r.cargo[g]})</span></span><b>${take[g] ?? 0}</b>
+        ${goods.length ? goods.map((g) => `<div class="loot-row"><span>${esc(GOODS[g].name)} <span class="muted">(${r.cargo[g]})</span>${state.self?.appraisal?.[g] ? ` <span class="gold" title="Best price you know">${fmt(state.self.appraisal[g]!.price)}/u</span>` : ''}</span><b>${take[g] ?? 0}</b>
           <input type="range" min="0" max="${r.cargo[g]}" value="${take[g] ?? 0}" data-g="${g}" /></div>`).join('') : '<p class="muted">Her hold is empty.</p>'}
         <p class="${used > holdMax ? 'up' : 'muted'}">Your hold: ${used.toFixed(1)} / ${holdMax.toFixed(0)}</p>
         ${Object.keys(r.destroyed).length ? `<p class="muted">Destroyed in the fight: ${Object.entries(r.destroyed).map(([g, n]) => `${n} ${esc(GOODS[g as GoodId].name)}`).join(', ')}</p>` : ''}
@@ -86,8 +86,12 @@ export function renderShip(root: HTMLElement, state: ClientState): void {
       <tr><td>Boarding range / power</td><td>${st.boardingRange.toFixed(0)} m / ×${st.boardingPower.toFixed(2)}</td></tr>
       <tr><td>Detection</td><td>${st.detection.toFixed(0)} m</td></tr>
       <tr><td>Insurance</td><td>${self.insured ? 'Insured for this voyage' : 'None'}</td></tr>
-    </table></div><div><h3 class="title-sm" style="font-size:20px">Hold</h3><table class="grid"><tr><th>Good</th><th>Qty</th><th>Volume</th><th>Weight</th></tr>
-      ${cargo.map(([g, n]) => `<tr><td class="${GOODS[g as GoodId].contraband ? 'contra' : ''}">${esc(GOODS[g as GoodId].name)}</td><td>${Math.floor(n ?? 0)}</td><td>${((n ?? 0) * GOODS[g as GoodId].volume).toFixed(1)}</td><td>${((n ?? 0) * GOODS[g as GoodId].weight).toFixed(1)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Empty hold</td></tr>'}
+    </table></div><div><h3 class="title-sm" style="font-size:20px">Hold</h3><table class="grid"><tr><th>Good</th><th>Qty</th><th>Volume</th><th>Weight</th>${self.appraisal ? '<th>Best known sale</th>' : ''}</tr>
+      ${cargo.map(([g, n]) => {
+        const a = self.appraisal?.[g as GoodId];
+        const where = a ? state.ports.find((p) => p.id === a.port)?.name ?? a.port : '';
+        return `<tr><td class="${GOODS[g as GoodId].contraband ? 'contra' : ''}">${esc(GOODS[g as GoodId].name)}</td><td>${Math.floor(n ?? 0)}</td><td>${((n ?? 0) * GOODS[g as GoodId].volume).toFixed(1)}</td><td>${((n ?? 0) * GOODS[g as GoodId].weight).toFixed(1)}</td>${self.appraisal ? `<td>${a ? `<span class="gold">${fmt(a.price * Math.floor(n ?? 0))}</span> <span class="muted">${esc(where)}</span>` : '<span class="muted">—</span>'}</td>` : ''}</tr>`;
+      }).join('') || '<tr><td colspan="4" class="muted">Empty hold</td></tr>'}
       </table><p class="muted">Ammunition: ${AMMO_IDS.map((a) => `${self.ammo[a]} ${esc(AMMO[a].name.toLowerCase())}`).join(' · ')}</p>
       <h3 class="title-sm" style="font-size:20px">Contracts</h3>${self.contracts.map((c) => `<div class="card"><b>${esc(c.title)}</b> <span class="gold">${fmt(c.reward)}</span></div>`).join('') || '<p class="muted">None.</p>'}
     </div></div></div>`;

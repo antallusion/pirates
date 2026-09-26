@@ -19,6 +19,7 @@ import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
+import { caravanSold } from './tradefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
 import type { Game } from './Game.ts';
 import { findPath, pathLength, pointAlong } from './nav.ts';
@@ -85,7 +86,11 @@ function cruiseSpeed(ship: ShipEntity): number {
 
 /** Load a merchant at `from` with the best-paying cargo for some destination. */
 export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain, from: Port): boolean {
-  const route = bestRoute(from, game.markets, game.world.ports, () => game.rng.float(), 38000);
+  // Counting House caravans trade only between ports their owner has visited.
+  const owner = ship.caravanOf !== null ? game.sessionByAccount(ship.caravanOf) : null;
+  const ports = owner?.profile ? game.world.ports.filter((p) => owner.profile!.regionsSeen.includes(`visited:${p.id}`)) : game.world.ports;
+  const route = bestRoute(from, game.markets, ports, () => game.rng.float(), 38000);
+  ship.caravanFrom = ship.caravanOf !== null ? from.id : null;
   let dest: Port | undefined;
   if (route) {
     dest = game.portById(route.to);
@@ -291,9 +296,11 @@ function arrive(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     const port = game.portById(brain.destPort);
     const market = port ? game.markets.get(port.id) : undefined;
     if (port && market && ship.npcRole === 'merchant') {
+      const from = ship.caravanFrom ? game.portById(ship.caravanFrom) : undefined;
       for (const id in ship.cargo) {
         const g = id as GoodId;
         const n = ship.cargo[g] ?? 0;
+        if (n > 0 && from && market.goods[g]) caravanSold(game, ship, from, port, g, n);
         if (n > 0 && market.goods[g]) applyTrade(market, g, n);
         delete ship.cargo[g];
       }

@@ -9,7 +9,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { BankView, BuyOrderView, ForwardView, InsuranceQuote, InsuranceTier } from '../../../shared/src/protocol.ts';
-import { cargoValue } from '../../../shared/src/sim/shipstats.ts';
+import { cargoValue, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { applyTrade, midPrice, portIsLawful } from './economy.ts';
 import type { Game } from './Game.ts';
@@ -268,26 +268,29 @@ export const LOAN_INTEREST = 0.1;
 export const LOAN_TERM = 3 * 3600;
 const DEFAULT_PENALTY = 0.2;
 
-export function hasBank(port: Port): boolean {
+export function hasBank(port: Port, ship?: ShipEntity): boolean {
+  // League Patron: the Ledger serves you in every lawful port.
+  if (ship?.hasFlag('league_patron') && portIsLawful(port)) return true;
   return port.faction === 'league' || (port.faction === 'free' && port.size >= 2);
 }
 
-export function creditLimit(p: Profile): number {
+export function creditLimit(p: Profile, ship?: ShipEntity): number {
   const rep = p.reputation.league ?? 0;
   if (rep < -10 || wantedLevel(p.infamy) >= 2 || p.loan?.defaulted) return 0;
   const f = Math.max(0.25, Math.min(2, 1 + rep / 50));
-  return Math.floor((300 + p.level * 250) * f);
+  const base = Math.floor((300 + p.level * 250) * f);
+  return ship?.hasFlag('league_patron') ? Math.max(base, 500 * p.level) : base;
 }
 
-export function bankView(p: Profile, port: Port): BankView {
+export function bankView(p: Profile, port: Port, ship?: ShipEntity): BankView {
   return {
-    available: hasBank(port), balance: p.bank, loan: p.loan, limit: creditLimit(p), interest: LOAN_INTEREST, withdrawFee: WITHDRAW_FEE, term: LOAN_TERM,
+    available: hasBank(port, ship), balance: p.bank, loan: p.loan, limit: creditLimit(p, ship), interest: LOAN_INTEREST, withdrawFee: WITHDRAW_FEE, term: LOAN_TERM,
   };
 }
 
 export function bankAction(game: Game, s: PlayerSession, port: Port, action: 'deposit' | 'withdraw' | 'borrow' | 'repay', amount: number): string | null {
   const p = s.profile!;
-  if (!hasBank(port)) return 'The Gilded Ledger keeps no counting-house here';
+  if (!hasBank(port, s.ship ?? undefined)) return 'The Gilded Ledger keeps no counting-house here';
   if (!Number.isInteger(amount) || amount <= 0 || amount > 10_000_000) return 'Bad amount';
   switch (action) {
     case 'deposit':
@@ -305,7 +308,7 @@ export function bankAction(game: Game, s: PlayerSession, port: Port, action: 'de
     }
     case 'borrow': {
       if (p.loan) return 'Repay your current loan first';
-      const limit = creditLimit(p);
+      const limit = creditLimit(p, s.ship ?? undefined);
       if (amount > limit) return limit ? `The Ledger will lend you at most ${limit}` : 'The Ledger will not lend to you';
       p.gold += amount;
       p.loan = { owed: Math.ceil(amount * (1 + LOAN_INTEREST)), due: game.now + LOAN_TERM, defaulted: false };
@@ -392,7 +395,8 @@ export function insuranceQuotes(game: Game, s: PlayerSession, port: Port): Insur
   for (const tier of ['hull', 'cargo', 'full'] as InsuranceTier[]) {
     const c = COVER[tier];
     const base = (c.hull ? hullValue * 0.03 : 0) + declared * c.cargo * 0.06;
-    out.push({ tier, premium: Math.max(20, Math.round(base * risk)), declared: c.cargo ? declared : 0, deductible: c.cargo ? Math.round(declared * 0.1) : 0, cover: c.cargo, hull: c.hull });
+    const gilded = Math.max(0.2, 1 + tx(ship.stats, 'insurancePremium'));
+    out.push({ tier, premium: Math.max(20, Math.round(base * risk * gilded)), declared: c.cargo ? declared : 0, deductible: c.cargo ? Math.round(declared * 0.1) : 0, cover: c.cargo, hull: c.hull });
   }
   void game;
   return out;
@@ -424,7 +428,7 @@ export function claimPolicy(game: Game, s: PlayerSession, lostCargo: number): { 
   if (wantedLevel(p.infamy) >= 3) return { feeWaived: false, payout: 0, reason: 'The Ledger voids the policy of a hunted pirate.' };
   const c = COVER[pol.tier];
   const covered = Math.min(pol.declared, lostCargo);
-  const payout = c.cargo ? Math.max(0, Math.round(covered * c.cargo - pol.deductible)) : 0;
+  const payout = c.cargo ? Math.max(0, Math.round((covered * c.cargo - pol.deductible) * (1 + (s.ship ? tx(s.ship.stats, 'insurancePayout') : 0)))) : 0;
   p.claims.push(game.now);
   if (payout) game.db.ledger(s.accountId, 'insurance_claim', payout, pol.tier);
   return { feeWaived: c.hull, payout };

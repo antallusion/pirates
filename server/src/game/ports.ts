@@ -23,6 +23,8 @@ import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { onSaleDeeds } from './progression.ts';
+import { dealOfDay, onSale, talentPriceMods } from './tradefx.ts';
+import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { bankView, forwardOffers, forwardView, hasExchange, insuranceQuotes, orderView } from './finance.ts';
 import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
 
@@ -31,7 +33,12 @@ export function hasLicence(p: Profile, faction: string, now: number): boolean {
   return (p.licences[faction as keyof typeof p.licences] ?? 0) > now && wantedLevel(p.infamy) < 2;
 }
 
-export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0): PriceMods {
+export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0, game?: Game): PriceMods {
+  const base = basePriceMods(ship, port, p, now);
+  return game && p ? talentPriceMods(game, ship, port, p, base) : base;
+}
+
+function basePriceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0): PriceMods {
   const licensed = p ? hasLicence(p, port.faction, now) : false;
   return {
     buyMul: ship.stats.buyMul * (ship.captain === 'drowned' && port.faction === 'crown' ? 1.2 : 1) * (licensed ? 0.97 : 1),
@@ -76,7 +83,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
   const ship = s.ship!;
   const p = s.profile!;
   const market = game.markets.get(port.id)!;
-  const mods = priceMods(ship, port, s.profile!, game.now);
+  const mods = priceMods(ship, port, s.profile!, game.now, game);
   const ammoPrices = {} as Record<AmmoId, number>;
   for (const a of AMMO_IDS) ammoPrices[a] = ammoPrice(game, port, a);
   const tier = port.shipyardTier;
@@ -108,16 +115,17 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       volume: cargoVolume(p.warehouses[port.id] ?? {}),
       capacity: WAREHOUSE_VOLUME,
       rented: !!p.warehouses[port.id],
-      rent: WAREHOUSE_RENT,
+      rent: feeFor(ship, WAREHOUSE_RENT),
     },
     materialDiscount: MODULE_MATERIALS,
     exchange: hasExchange(port)
       ? { forwards: forwardOffers(game, port).map((f) => forwardView(game, f)), orders: game.orders.filter((o) => o.portId === port.id && !o.closed).map((o) => orderView(o, s.accountId)) }
       : null,
-    bank: bankView(p, port),
+    bank: bankView(p, port, ship),
     insurance: insuranceQuotes(game, s, port),
-    duty: hasLicence(p, port.faction, game.now) ? 0 : FACTION_DUTY[port.faction] ?? 0,
-    licence: port.faction in FACTION_DUTY ? { cost: licenceCost(p.level), until: p.licences[port.faction as keyof typeof p.licences] ?? 0 } : null,
+    duty: mods.duty,
+    dealOfDay: ship.rank('trd_local_contacts') >= 3 ? dealOfDay(game, port) : null,
+    licence: port.faction in FACTION_DUTY ? { cost: feeFor(ship, licenceCost(p.level)), until: p.licences[port.faction as keyof typeof p.licences] ?? 0 } : null,
     pardonCost: port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy' ? pardonCost(p) : null,
   };
   if (ship.hasFlag('market_sense')) {
@@ -142,7 +150,7 @@ export function recordIntel(game: Game, s: PlayerSession, port: Port): void {
   const ship = s.ship!;
   const market = game.markets.get(port.id);
   if (!market) return;
-  const rows = marketRows(market, priceMods(ship, port, s.profile!, game.now));
+  const rows = marketRows(market, priceMods(ship, port, s.profile!, game.now, game));
   const sell: Partial<Record<GoodId, number>> = {};
   for (const r of rows) sell[r.good] = r.sell;
   s.profile!.priceIntel[port.id] = { t: game.now, sell };
@@ -160,8 +168,9 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   if (!gm) return `${port.name} does not trade ${GOODS[good].name}`;
   const def = GOODS[good];
   if (def.contraband && !port.blackMarket) return 'Contraband cannot be traded here';
-  const mods = priceMods(ship, port, s.profile!, game.now);
+  const mods = priceMods(ship, port, s.profile!, game.now, game);
   if (qty > 0) {
+    if (def.contraband && ship.hasFlag('honest_merchant')) return 'An Honest Merchant does not carry contraband';
     if (gm.stock < qty) return 'Not enough in stock';
     const price = quoteBuy(good, gm, qty, mods);
     if (p.gold < price) return 'Not enough silver';
@@ -211,8 +220,9 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   p.stats.tradeProfit += Math.max(0, profit);
   if (profit > 0) game.grantXp(s, profit / 5, null);
   // Trade builds standing with the port's faction.
-  game.adjustRepProfile(s, port.faction, Math.min(3, price / 1500));
+  game.adjustRepProfile(s, port.faction, Math.min(3, price / 1500) * (1 + tx(ship.stats, 'tradeRep')));
   game.db.ledger(s.accountId, 'sell', price, `${n} ${good} @ ${port.id}`);
+  onSale(game, s, port, good, n, profit);
   onSaleDeeds(game, s, port.id, good, n, price);
   game.checkDeliveries(s, port);
   return null;
@@ -360,11 +370,16 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   return null;
 }
 
+/** Ledger Keeper: port fees −15% per rank. */
+export function feeFor(ship: ShipEntity, fee: number): number {
+  return Math.round(fee * Math.max(0, 1 + tx(ship.stats, 'dutyMul')));
+}
+
 export function buyLicence(game: Game, s: PlayerSession, port: Port): string | null {
   const p = s.profile!;
   if (!(port.faction in FACTION_DUTY)) return 'This harbour levies no duties to be licensed against';
   if (wantedLevel(p.infamy) >= 2) return 'The clerks will not license a wanted captain';
-  const cost = licenceCost(p.level);
+  const cost = feeFor(s.ship!, licenceCost(p.level));
   if (p.gold < cost) return `A licence costs ${cost} silver`;
   p.gold -= cost;
   const f = port.faction as keyof typeof p.licences;
@@ -489,7 +504,7 @@ export function chartView(game: Game, s: PlayerSession, port: Port): PortView['c
 export function sellCharts(game: Game, s: PlayerSession, port: Port): string | null {
   const list = sellableCharts(game, s, port);
   if (!list.length) return 'The cartographer already has everything you know';
-  const value = list.reduce((a, is) => a + islandChartValue(is, port), 0);
+  const value = Math.round(list.reduce((a, is) => a + islandChartValue(is, port), 0) * (s.ship!.hasFlag('appraiser') ? 1.15 : 1));
   const p = s.profile!;
   (p.chartSales[port.id] ??= []).push(...list.map((is) => is.id));
   p.gold += value;

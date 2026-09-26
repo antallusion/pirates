@@ -9,6 +9,7 @@ import type { Flag, StatMods } from './stats.ts';
 import { BOARDING } from './trees/boarding.ts';
 import { GUNNERY } from './trees/gunnery.ts';
 import { NAVIGATION } from './trees/navigation.ts';
+import { TRADE } from './trees/trade.ts';
 
 export type TreeId =
   | 'navigation' | 'gunnery' | 'boarding' | 'command' | 'trade'
@@ -30,7 +31,7 @@ export const TREES: Record<TreeId, TreeDef> = {
   gunnery: { id: 'gunnery', name: 'Gunnery', motto: 'Speak in iron.', complete: true, playable: true, native: ['corsair'] },
   boarding: { id: 'boarding', name: 'Boarding', motto: 'Steel, rope and nerve.', complete: true, playable: true, native: ['reaver'] },
   command: { id: 'command', name: 'Command', motto: 'A crew is a blade — keep it sharp.', complete: false, playable: false, native: ['admiral'] },
-  trade: { id: 'trade', name: 'Trade', motto: 'Every port is a ledger.', complete: false, playable: true, native: ['smuggler'] },
+  trade: { id: 'trade', name: 'Trade', motto: 'Every port is a ledger.', complete: true, playable: true, native: ['smuggler'] },
   smuggling: { id: 'smuggling', name: 'Smuggling', motto: 'What the Crown does not see, the Crown does not tax.', complete: false, playable: false, native: ['smuggler'] },
   survival: { id: 'survival', name: 'Survival', motto: 'Stay afloat. Everything else is luxury.', complete: false, playable: true, native: ['reaver', 'drowned'] },
   shipwright: { id: 'shipwright', name: 'Shipwright', motto: 'The hull remembers every hand.', complete: false, playable: false, native: ['admiral'] },
@@ -75,12 +76,6 @@ export const KEYSTONE_REQUIREMENT = 5;
 const t = (d: TalentDef): TalentDef => d;
 
 const LEGACY: TalentDef[] = [
-  // ------------------------------------------------------------- Trade
-  t({ id: 'trd_haggler', tree: 'trade', name: 'Haggler', tier: 1, maxRank: 3, keystone: false, description: 'Buy prices −2% and sell prices +2% per rank.', perRank: { buyMul: -0.02, sellMul: 0.02 } }),
-  t({ id: 'trd_packer', tree: 'trade', name: 'Master Packer', tier: 1, maxRank: 2, keystone: false, description: 'Hold volume +8% per rank.', perRank: { holdVolume: 0.08 } }),
-  t({ id: 'trd_false_bottom', tree: 'trade', name: 'False Bottom', tier: 2, maxRank: 1, keystone: false, description: 'Contraband uses 30% less hold volume.', fixed: { contrabandVolumeMul: -0.3 }, flags: ['false_bottom'] }),
-  t({ id: 'trd_market_sense', tree: 'trade', name: 'Market Sense', tier: 2, maxRank: 1, keystone: false, description: 'See price trends of every port you have visited on the world map.', flags: ['market_sense'] }),
-  t({ id: 'trd_honest_merchant', tree: 'trade', name: 'Honest Merchant', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. You can never attack non-hostile ships; legal goods sell for +12%.', flags: ['honest_merchant'], fixed: { sellMul: 0.12 } }),
   // ------------------------------------------------------------- Survival
   t({ id: 'srv_carpenters', tree: 'survival', name: 'Ship Carpenters', tier: 1, maxRank: 3, keystone: false, description: 'Repair speed +15% per rank.', perRank: { repairRate: 0.15 } }),
   t({ id: 'srv_iron_hull', tree: 'survival', name: 'Iron Hull', tier: 1, maxRank: 3, keystone: false, description: 'Maximum hull +5% per rank.', perRank: { hullMax: 0.05 } }),
@@ -89,7 +84,7 @@ const LEGACY: TalentDef[] = [
   t({ id: 'srv_unsinkable', tree: 'survival', name: 'Unsinkable', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. Once per 5 minutes survive lethal damage with 1 hull for 6 s. Maximum sail level −10%.', flags: ['unsinkable'], fixed: { maxSpeed: -0.1 } }),
 ];
 
-export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...LEGACY];
+export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...TRADE, ...LEGACY];
 
 export const TALENTS_BY_ID: Record<string, TalentDef> = Object.fromEntries(TALENTS.map((x) => [x.id, x]));
 

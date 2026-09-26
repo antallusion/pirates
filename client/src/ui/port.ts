@@ -89,6 +89,13 @@ export class PortScreen {
         return this.send({ t: 'insure', tier: d.tier as never });
       case 'forward':
         return this.send({ t: 'forward', id: d.id! });
+      case 'option_buy': {
+        const good = root.querySelector<HTMLSelectElement>('#opt-good')!.value;
+        const qty = Number(root.querySelector<HTMLInputElement>('#opt-qty')!.value);
+        return this.send({ t: 'option', good: good as never, qty });
+      }
+      case 'option_ex':
+        return this.send({ t: 'option_exercise', index: Number(d.i) });
       case 'order_fill':
         return this.send({ t: 'order', action: 'fill', id: d.id!, qty: Number(d.n) });
       case 'order_cancel':
@@ -148,7 +155,7 @@ export class PortScreen {
       const stolen = Math.min(have, self.stolen[r.good] ?? 0);
       const trend = r.trend > 0.03 ? `<span class="up">▲</span>` : r.trend < -0.03 ? `<span class="down">▼</span>` : '<span class="muted">·</span>';
       return `<tr>
-        <td><b class="${r.legal ? '' : 'contra'}">${esc(g.name)}</b>${r.legal ? '' : ' <span class="contra">contraband</span>'}${g.spoilPerHour ? ' <span class="muted">perishable</span>' : ''}${g.danger > 0.3 ? ' <span class="up">dangerous</span>' : ''}</td>
+        <td><b class="${r.legal ? '' : 'contra'}">${esc(g.name)}</b>${view.dealOfDay === r.good ? ' <span class="gold">deal of the day</span>' : ''}${r.legal ? '' : ' <span class="contra">contraband</span>'}${g.spoilPerHour ? ' <span class="muted">perishable</span>' : ''}${g.danger > 0.3 ? ' <span class="up">dangerous</span>' : ''}</td>
         <td>${r.stock}</td><td class="gold">${r.buy}</td><td>${r.sell}</td><td>${trend}</td><td class="muted">${g.weight}t · ${g.volume}v</td><td>${have || ''}${stolen ? ` <span class="up" title="Plundered: customs may seize it; fences pay 15% less">(${stolen} stolen)</span>` : ''}</td>
         <td><button class="btn btn-small" data-act="buy" data-good="${r.good}">Buy</button>
             <button class="btn btn-small" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>Sell</button>
@@ -311,6 +318,9 @@ export class PortScreen {
           ${orders ? `<table class="grid"><tr><th>Buyer</th><th>Wants</th><th>Pays</th><th>Lapses</th><th></th></tr>${orders}</table>` : '<p class="muted">No open orders.</p>'}
           <div class="row" style="gap:6px;margin-top:8px"><select id="ord-good">${goodsOpts}</select><input id="ord-qty" type="number" min="1" max="200" value="20" style="width:60px"><input id="ord-price" type="number" min="1" value="20" style="width:70px"><button class="btn btn-small" data-act="order_post">Post order</button></div>` : '<p class="muted">—</p>'}</div>
       </div><div>
+        ${self.talents.trd_speculator ? `<div class="card"><h4>Options (Speculator)</h4><p class="muted">Reserve up to 30% of the stock at today's price for 2 h against a 20% deposit.</p>
+          ${self.options.map((o, i) => `<div class="row" style="padding:3px 0"><span>${o.qty} ${esc(GOODS[o.good].name)} @ ${esc(state.ports.find((p) => p.id === o.port)?.name ?? o.port)} · ${fmt(o.price)} · ${mins(o.until)}</span>${o.port === view.portId ? `<button class="btn btn-small" data-act="option_ex" data-i="${i}">Exercise — ${fmt(o.price - o.deposit)}</button>` : ''}</div>`).join('')}
+          <div class="row" style="gap:6px;margin-top:6px"><select id="opt-good">${view.market.filter((r) => r.stock > 3).map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} (${r.buy}, stock ${r.stock})</option>`).join('')}</select><input id="opt-qty" type="number" min="1" value="10" style="width:60px"><button class="btn btn-small" data-act="option_buy">Reserve</button></div></div>` : ''}
         <div class="card"><h4>The Gilded Ledger — bank</h4>${b.available ? `<p>Balance <b class="gold">${fmt(b.balance)}</b>. Silver in the bank is safe when you sink; a tenth of what you carry goes down with the ship. Withdrawals cost ${Math.round(b.withdrawFee * 100)}%.</p>
           <p>Credit line <b>${fmt(b.limit)}</b> at ${Math.round(b.interest * 100)}% for ${Math.round(b.term / 3600)} h. Default adds 20%, costs League standing and your balance.</p>${loan}
           <div class="row" style="gap:6px"><input id="bank-amt" type="number" min="1" value="500" style="width:90px">

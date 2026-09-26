@@ -7,7 +7,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
 import type { ResourceSiteView } from '../../../shared/src/protocol.ts';
-import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island, Port, World } from '../../../shared/src/world/worldgen.ts';
@@ -137,10 +137,11 @@ export function warehouseAction(game: Game, s: PlayerSession, port: Port, good: 
   if (!GOODS[good] || !Number.isInteger(qty) || qty === 0 || Math.abs(qty) > 1000) return 'Bad order';
   let wh = p.warehouses[port.id];
   if (!wh) {
-    if (p.gold < WAREHOUSE_RENT) return `Renting a warehouse here costs ${WAREHOUSE_RENT} silver`;
-    p.gold -= WAREHOUSE_RENT;
+    const rent = Math.round(WAREHOUSE_RENT * Math.max(0, 1 + tx(ship.stats, 'dutyMul')));
+    if (p.gold < rent) return `Renting a warehouse here costs ${rent} silver`;
+    p.gold -= rent;
     wh = p.warehouses[port.id] = {};
-    game.db.ledger(s.accountId, 'warehouse', -WAREHOUSE_RENT, port.id);
+    game.db.ledger(s.accountId, 'warehouse', -rent, port.id);
   }
   if (qty > 0) {
     // Deposit from the hold.

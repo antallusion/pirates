@@ -54,6 +54,8 @@ export type ClientMsg =
   | { t: 'pardon' }
   | { t: 'insure'; tier?: InsuranceTier }
   | { t: 'forward'; id: string }
+  | { t: 'option'; good: GoodId; qty: number }
+  | { t: 'option_exercise'; index: number }
   | { t: 'order'; action: 'post'; good: GoodId; qty: number; price: number }
   | { t: 'order'; action: 'fill'; id: string; qty: number }
   | { t: 'order'; action: 'cancel'; id: string }
@@ -231,6 +233,9 @@ export interface PrivateState {
   heat: { port: number; starboard: number };
   rollingFire: boolean;
   captives: { name: string; faction: FactionId; ransom: number }[];
+  options: { port: string; good: GoodId; qty: number; price: number; deposit: number; until: number }[];
+  /** Appraiser: best sell price you know for each good, and where. */
+  appraisal: Partial<Record<GoodId, { price: number; port: string }>> | null;
   gold: number;
   infamy: number;
   wanted: number;
@@ -304,6 +309,7 @@ export interface PortView {
   warehouse: { goods: Cargo; volume: number; capacity: number; rented: boolean; rent: number };
   materialDiscount: Record<string, { good: GoodId; units: number }>;
   duty: number;
+  dealOfDay: GoodId | null;
   licence: { cost: number; until: number } | null;
   charts: { sellable: number; sellValue: number; offers: { region: RegionId; name: string; islands: number; price: number }[] };
   pardonCost: number | null;

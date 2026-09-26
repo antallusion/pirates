@@ -63,15 +63,26 @@ export interface PriceMods {
   lawfulPort: boolean;
   duty: number; // import duty on sales, 0..1
   honest: boolean;
+  /** Bulk Buyer: how far each unit moves the price (−0.15 per rank). */
+  slippage?: number;
+  /** Per-good price factors: deal of the day, established routes, monopolist bonuses. */
+  goodBuy?: Partial<Record<GoodId, number>>;
+  goodSell?: Partial<Record<GoodId, number>>;
+  goodSlip?: Partial<Record<GoodId, number>>;
+}
+
+function step(good: GoodId, mods: PriceMods): number {
+  return Math.max(0.2, 1 + (mods.slippage ?? 0) + (mods.goodSlip?.[good] ?? 0));
 }
 
 /** Price the player pays per unit when buying `qty` units (walks the curve so bulk buys push the price). */
 export function quoteBuy(good: GoodId, gm: GoodMarket, qty: number, mods: PriceMods): number {
   let total = 0;
   const sim = { ...gm };
+  const k = step(good, mods), g = mods.goodBuy?.[good] ?? 1;
   for (let i = 0; i < qty; i++) {
-    total += midPrice(good, sim) * (1 + SPREAD) * mods.buyMul;
-    sim.stock = Math.max(0, sim.stock - 1);
+    total += midPrice(good, sim) * (1 + SPREAD) * mods.buyMul * g;
+    sim.stock = Math.max(0, sim.stock - k);
   }
   return Math.ceil(total);
 }
@@ -80,10 +91,11 @@ export function quoteSell(good: GoodId, gm: GoodMarket, qty: number, mods: Price
   let total = 0;
   const sim = { ...gm };
   // Honest Merchant's bonus is already inside sellMul but only applies to legal goods.
-  const mul = mods.honest && GOODS[good].contraband ? mods.sellMul - 0.12 : mods.sellMul;
+  const mul = (mods.honest && GOODS[good].contraband ? mods.sellMul - 0.12 : mods.sellMul) * (mods.goodSell?.[good] ?? 1);
+  const k = step(good, mods);
   for (let i = 0; i < qty; i++) {
     total += midPrice(good, sim) * (1 - SPREAD) * mul;
-    sim.stock += 1;
+    sim.stock += k;
   }
   const tax = mods.duty;
   return Math.floor(total * (1 - tax));
@@ -99,8 +111,8 @@ export function marketRows(market: Market, mods: PriceMods): MarketRow[] {
     const old = hist.length ? hist[0] : mid;
     rows.push({
       good,
-      buy: Math.ceil(mid * (1 + SPREAD) * mods.buyMul),
-      sell: Math.floor(mid * (1 - SPREAD) * mods.sellMul * (1 - mods.duty)),
+      buy: Math.ceil(mid * (1 + SPREAD) * mods.buyMul * (mods.goodBuy?.[good] ?? 1)),
+      sell: Math.floor(mid * (1 - SPREAD) * mods.sellMul * (mods.goodSell?.[good] ?? 1) * (1 - mods.duty)),
       stock: Math.floor(gm.stock),
       trend: Math.max(-1, Math.min(1, (mid - old) / Math.max(1, old))),
       legal: !GOODS[good].contraband,

@@ -203,7 +203,7 @@ export function gunWeight(loadout: ShipLoadout): number {
 export function loadFactor(loadout: ShipLoadout, stats: ShipStats, cargo: Cargo, ammo: AmmoStock): number {
   const w = cargoWeight(cargo, ammo) + gunWeight(loadout) * 0.25;
   const ratio = Math.min(1.4, w / Math.max(1, stats.holdWeight));
-  return 1 - ratio * 0.14;
+  return 1 - ratio * 0.14 * Math.max(0, 1 + tx(stats, 'loadPenalty'));
 }
 
 export function crewFactor(stats: ShipStats, crew: number): number {
