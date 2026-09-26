@@ -13,7 +13,7 @@ import { CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import { angleDiff, clamp, DEG, dist, headingOf, headingVec, wrapAngle } from '../../../shared/src/math.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
-import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
@@ -689,8 +689,9 @@ export function spawnPatrols(game: Game): void {
   }
 }
 
-export function spawnGhost(game: Game): void {
-  const regions: RegionId[] = (['drowned_crown', 'dead_mans_expanse', 'the_abyss'] as RegionId[]).filter((r) => !game.zone || game.zone.regions.has(r));
+export function spawnGhost(game: Game, everywhere = false): void {
+  // The Tide of the Dead: in that season the drowned sail every sea.
+  const regions: RegionId[] = (everywhere ? REGION_IDS : (['drowned_crown', 'dead_mans_expanse', 'the_abyss'] as RegionId[])).filter((r) => !game.zone || game.zone.regions.has(r));
   if (!regions.length) return;
   const region = game.rng.pick(regions);
   const [cx, cy] = REGIONS[region].center;

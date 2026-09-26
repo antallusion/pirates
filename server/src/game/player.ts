@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { SeasonStat } from '../../../shared/src/data/seasons.ts';
 import { newPvp } from './pvp.ts';
 import type { PvpState } from './pvp.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
@@ -109,6 +110,14 @@ export interface Profile {
   pressure: number;
   ritualShards: number;
   chapters: string[];
+  /** Seasons (seasons.ts): this season's path and tables; titles and pennants earned; the Pantheon. */
+  season: { id: number; xp: number; level: number; stats: Partial<Record<SeasonStat, number>> };
+  titles: string[];
+  title: string | null;
+  pennants: string[];
+  pennant: string | null;
+  nameRights: number;
+  pantheon: string[];
   bossKills: Record<string, number>;
   bossLocks: Record<string, number>;
   explore: {
@@ -171,7 +180,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0, fleet: newFleet(), exotic: {}, salvageDay: -1, builds: [], plans: [], berths: [], figureheads: [], quests: newQuestLog(), paths: [captain], pathSwitchAt: -1e9, oath: null,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], trophies: [], bossKills: {}, bossLocks: {}, pressure: 0, ritualShards: 0, chapters: [], explore: { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false }, keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], trophies: [], bossKills: {}, bossLocks: {}, pressure: 0, ritualShards: 0, chapters: [], season: { id: -1, xp: 0, level: 0, stats: {} }, titles: [], title: null, pennants: [], pennant: null, nameRights: 0, pantheon: [], explore: { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false }, keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -303,6 +312,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     patrols: world.patrols,
     maps: world.explore?.maps ?? [],
     legendEcho: world.explore?.legendEcho ?? [],
+    pennant: p.pennant,
     abyss: world.abyss ?? null,
     fragments: p.explore.fragments,
     wrecks: world.explore?.wrecks ?? [],
@@ -433,6 +443,13 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.pressure ??= 0;
   p.ritualShards ??= 0;
   p.chapters ??= [];
+  p.season ??= { id: -1, xp: 0, level: 0, stats: {} };
+  p.titles ??= [];
+  p.title ??= null;
+  p.pennants ??= [];
+  p.pennant ??= null;
+  p.nameRights ??= 0;
+  p.pantheon ??= [];
   p.bossKills ??= {};
   p.bossLocks ??= {};
   p.explore = { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false, ...((p.explore as Partial<Profile['explore']> | undefined) ?? {}) };

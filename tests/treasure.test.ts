@@ -187,7 +187,7 @@ test('the legendary chart: pieces narrow the circle, holders hear each other, th
   assert.equal(legend(game).found, true);
   assert.equal(A.p.explore.maps.filter((m) => m.kind === 'fragment').length, 0);
   // Next season, a new chart.
-  wall += 31 * 24 * 3600_000;
+  wall += 91 * 24 * 3600_000;
   assert.notEqual(legend(game).id, lc.id);
 });
 

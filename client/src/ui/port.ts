@@ -370,7 +370,7 @@ export class PortScreen {
     const officers = tv.officers.map((o) => `<div class="card"><h4>${esc(o.name)} <span class="muted">— ${esc(OFFICER_DEFS[o.role].name)}, level ${o.level}</span></h4>
         ${o.story ? `<p class="muted">${esc(o.story)}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>Loyalty ${o.loyalty}${o.rep ? ` · needs standing ${o.rep}` : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? 'Signed elsewhere' : `Sign — ${fmt(o.price)}`}</button></div></div>`).join('') || '<p class="muted">No officers drinking here this hour.</p>';
-    return `<div class="cols"><div class="card"><h4>Sailors looking for a berth: ${view.crewAvailable}</h4>
+    return `${tv.shanty ? `<div class="card"><h4>The bard sings</h4><p><i>${esc(tv.shanty)}</i></p></div>` : ""}<div class="cols"><div class="card"><h4>Sailors looking for a berth: ${view.crewAvailable}</h4>
         <p>Signing bounty ${view.crewHireCost} silver each. Recruits here are ${'★'.repeat(Math.round(tv.stars))} (${tv.stars}); new hands dilute your crew's veterancy and loyalty. You have room for ${room}.</p>
         ${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}">Hire ${n} (${fmt(n * view.crewHireCost)})</button>`).join(' ')}
         <button class="btn btn-small btn-danger" data-act="crew" data-n="-5">Discharge 5</button>

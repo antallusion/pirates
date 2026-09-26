@@ -78,6 +78,7 @@ import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './explor
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
 import { legendsView } from './legends.ts';
+import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
 import type { AbyssMap } from './abyss.ts';
 import { digNoise, legendEcho, mapAction, mapView, onGhostSunk, stealMaps } from './treasure.ts';
@@ -274,6 +275,7 @@ export class Game {
     this.world = generateWorld(seed);
     // Islands the sea has thrown up since (world events).
     for (const r of this.db.getKv<RaisedIsland[]>('raised_islands') ?? []) raiseIsland(this.world, r);
+    applyIslandNames(this); // names the Pantheon gave
     this.rng = new Rng(seed ^ 0x5eed);
     this.routes = new RouteCache(this.world);
     this.expeditions = new ExpeditionHub(this.world);
@@ -388,7 +390,7 @@ export class Game {
         }
         this.nextEconCheckpoint = now + 3600;
       }
-      this.fronts = stepFronts(this.fronts, this.rng, now, edt, (x, y) => windAt(this.world.seed, now, x, y).dir);
+      this.fronts = stepFronts(this.fronts, this.rng, now, edt, (x, y) => windAt(this.world.seed, now, x, y).dir, seasonMods(this).stormMul);
     }
     if (now >= this.nextWorldEvent) {
       this.nextWorldEvent = now + 900 + this.rng.range(0, 600);
@@ -620,6 +622,7 @@ export class Game {
     stepEvents(this);
     expeditionsSecond(this);
     digNoise(this);
+    stepSeasons(this);
     // Nearest player distance for NPC LOD.
     const players: ShipEntity[] = [];
     for (const s of this.sessions) if (s.ship && !s.ship.docked) players.push(s.ship);
@@ -782,6 +785,7 @@ export class Game {
       }
       if (s.ship.distanceLog > 0) {
         s.profile.stats.distance += s.ship.distanceLog;
+        seasonStat(this, s, 'distance', s.ship.distanceLog / 1000);
         s.ship.distanceLog = 0;
       }
       this.pushSelf(s);
@@ -925,9 +929,10 @@ export class Game {
     const counts: Record<NpcRole, number> = { merchant: 0, patrol: 0, pirate: 0, hunter: 0, fisher: 0, ghost: 0, escort: 0, boss: 0 };
     for (const b of this.npcs.values()) counts[b.role]++;
     for (let i = 0; counts.merchant + i < this.quota(QUOTA.merchants) && i < 2; i++) spawnMerchant(this);
-    if (counts.pirate < this.quota(QUOTA.pirates)) spawnPirate(this);
+    const mods = seasonMods(this);
+    if (counts.pirate < this.quota(Math.round(QUOTA.pirates * mods.pirateMul))) spawnPirate(this);
     if (counts.fisher < this.quota(QUOTA.fishers)) spawnFisher(this);
-    if (counts.ghost < this.quota(QUOTA.ghosts) && this.rng.chance(0.02)) spawnGhost(this);
+    if (counts.ghost < this.quota(QUOTA.ghosts * mods.ghostMul) && this.rng.chance(0.02 * mods.ghostMul)) spawnGhost(this, mods.ghostsEverywhere);
     if (counts.patrol < 10 && now - this.patrolsSpawnedAt > 300) {
       spawnPatrols(this);
       this.patrolsSpawnedAt = now;
@@ -1050,7 +1055,10 @@ export class Game {
     else if (key === 'holdings') this.holdings.drop();
     else if (key === 'bounties') this.pvp.drop();
     else if (key.startsWith('board:')) this.post.dropBoard(key.slice(6));
-    else if (key === 'raised_islands') {
+    else if (key === 'island_names') {
+      applyIslandNames(this);
+      for (const s of this.sessions) s.knownChunks.clear();
+    } else if (key === 'raised_islands') {
       // Another zone raised an island (or named one): take it into our world too.
       for (const r of this.db.getKv<RaisedIsland[]>('raised_islands') ?? []) {
         const known = this.world.islands.find((is) => is.x === r.x && is.y === r.y);
@@ -1332,6 +1340,7 @@ export class Game {
     // Frontier Spirit: lawless waters teach more.
     if (s.ship && REGIONS[s.ship.region].safety === 'lawless') amount *= 1 + tval(s.ship.stats, 'frontier');
     const gained = addXp(s.profile, amount);
+    seasonXp(this, s, amount);
     if (s.ship) s.ship.level = s.profile.level;
     if (reason) this.sendTo(s, { t: 'toast', msg: `+${Math.round(amount)} XP — ${reason}`, kind: 'xp' });
     if (gained > 0) {
@@ -1460,6 +1469,12 @@ export class Game {
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
     eventShipLost(this, victim);
+    // The season's tables and the war of Crown and Code.
+    seasonStat(this, s, 'sunk', 1);
+    if ((victim.npcRole === 'pirate' || victim.npcRole === 'ghost' || victim.faction === 'confederacy') && killer.wantedCache === 0) seasonStat(this, s, 'lawful', how === 'boarded' ? 2 : 1);
+    if (how === 'boarded' || (victim.faction !== 'player' && !victim.cls.monster && FACTIONS[victim.faction].lawful)) seasonStat(this, s, 'plunder', how === 'boarded' ? 2 : 1);
+    if (victim.name.startsWith('Echo of')) seasonStat(this, s, 'abyss', 3);
+    warKill(this, victim);
     onGhostSunk(this, s, victim);
     onAbyssKill(this, s, victim);
     let escorts = 0;
@@ -2318,6 +2333,10 @@ export class Game {
         err(mapAction(this, s, port, String(msg.action), msg.id, msg.to));
         this.pushSelf(s, true);
         return;
+      case 'season':
+        err(seasonAction(this, s, String(msg.action), msg.value, msg.islandId !== undefined ? Number(msg.islandId) : undefined));
+        this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
+        return;
       case 'legends':
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
         return;
@@ -2691,6 +2710,8 @@ export class Game {
     ship.morale = p.morale;
     ship.sanity = p.sanity;
     ship.pressure = p.pressure;
+    ship.title = p.title;
+    ship.pennant = p.pennant;
     ship.hull = p.hull < 0 ? ship.stats.hullMax : Math.max(1, Math.min(p.hull, ship.stats.hullMax));
     ship.sails = p.sails < 0 ? ship.stats.sailHpMax : Math.min(p.sails, ship.stats.sailHpMax);
     ship.rudderHp = p.rudderHp;
@@ -2734,6 +2755,7 @@ export class Game {
     if (s.ship?.docked) this.pushPort(s);
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
     sendEvents(this, s);
+    applyPantheon(this, s);
     sendSites(this, s);
     pushParty(this, s);
     mailOnLogin(this, s);

@@ -2,6 +2,7 @@
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
 import { onEventSale } from './events.ts';
+import { seasonStat, shanty } from './seasons.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -261,6 +262,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   game.db.ledger(s.accountId, 'sell', price, `${n} ${good} @ ${port.id}`);
   onSale(game, s, port, good, n, profit);
   onEventSale(game, s, port, good, n);
+  if (profit > 0) seasonStat(game, s, 'trade', profit);
   onSaleDeeds(game, s, port.id, good, n, price);
   game.checkDeliveries(s, port);
   return null;
@@ -643,6 +645,7 @@ function tavernView(game: Game, port: Port, p: Profile, ship: ShipEntity): Taver
   const costs = {} as Record<Profession, number>;
   for (const k of PROFESSIONS) costs[k] = recruitCost(game, port, p, k, ship);
   return {
+    shanty: shanty(game),
     stars: Math.round(t.stars * 10) / 10,
     stock: Object.fromEntries(Object.entries(t.stock).map(([k, v]) => [k, Math.floor(v ?? 0)])),
     costs,

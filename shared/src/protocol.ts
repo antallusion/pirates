@@ -89,6 +89,7 @@ export type ClientMsg =
   | { t: 'dive_surface' }
   | { t: 'abyss'; action: 'ritual' }
   | { t: 'legends' }
+  | { t: 'season'; action: 'title' | 'pennant' | 'name'; value?: string; islandId?: number }
   | { t: 'map'; action: 'forge' | 'appraise' | 'seal' | 'give' | 'burn'; id?: string; to?: string }
   | { t: 'licence' }
   | { t: 'rights'; site: string }
@@ -333,6 +334,8 @@ export interface PrivateState {
   maps: MapView[];
   /** Fragments of the season's legendary chart held by other captains within 10 km: bearings (radians). */
   legendEcho: number[];
+  /** The pennant colour you fly (a season reward), if any. */
+  pennant: string | null;
   /** The Abyss: pressure, the lying stars, visions, the Islands of Light, the chapters (null until it matters). */
   abyss: AbyssView | null;
   fragments: number;
@@ -446,6 +449,8 @@ export interface CompanyView {
 }
 
 export interface TavernView {
+  /** The bard sings of the season's legends. */
+  shanty: string | null;
   stars: number;
   stock: Partial<Record<Profession, number>>;
   costs: Record<Profession, number>;
@@ -504,6 +509,8 @@ export interface ShipInfo {
   level?: number;
   wanted?: number;
   guild?: string; // tag
+  title?: string; // a captain's title (seasons, the Pantheon)
+  pennant?: string; // a season pennant colour
 }
 
 export interface LootInfo {
@@ -573,6 +580,28 @@ export interface MapView {
   piece?: [number, number];
 }
 
+/** The season (seasons.ts): its theme, your path, the tables, the Pantheon. */
+export interface SeasonView {
+  season: number;
+  theme: string;
+  themeText: string;
+  endsIn: number;
+  level: number;
+  xp: number;
+  levelXp: number;
+  maxLevel: number;
+  next: { level: number; reward: string } | null;
+  mine: { stat: string; value: number }[];
+  tables: { stat: string; rows: { name: string; value: number }[] }[];
+  halls: { hall: string; members: { name: string; season: number }[] }[];
+  war?: { crown: number; confederacy: number };
+  titles: string[];
+  title: string | null;
+  pennants: string[];
+  pennant: string | null;
+  nameRights: number;
+}
+
 /** A captain's legend (legends.ts): trophies, the monsters slain, the chapters of the Abyss, and the book of the sea. */
 export interface LegendsView {
   trophies: string[];
@@ -580,6 +609,7 @@ export interface LegendsView {
   chapters: { title: string; text: string }[];
   shards: number;
   firsts: { boss: string; names: string[]; at: number }[];
+  season: SeasonView;
 }
 
 /** The Abyss as a captain knows it (abyss.ts). */

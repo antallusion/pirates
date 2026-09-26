@@ -19,6 +19,7 @@ import type { Game } from './Game.ts';
 import { groupOfAccount } from './party.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { seasonStat } from './seasons.ts';
 
 export const ABYSS_LEVEL = 50;
 const LIGHT_R = 500;
@@ -294,6 +295,7 @@ export function chapter(game: Game, s: PlayerSession, id: string): void {
   const c = CHAPTERS.find((x) => x.id === id);
   if (!c) return;
   p.chapters.push(id);
+  seasonStat(game, s, 'abyss', 5);
   game.sendTo(s, { t: 'toast', msg: `${c.title} — ${c.text}`, kind: 'info' });
 }
 

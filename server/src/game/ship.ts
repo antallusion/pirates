@@ -162,6 +162,9 @@ export class ShipEntity {
   eventOf = 0;
   /** Depth pressure in the Abyss, 0..100 (abyss.ts). */
   pressure = 0;
+  /** A captain's chosen title and pennant colour (seasons.ts). */
+  title: string | null = null;
+  pennant: string | null = null;
   /** The Graveyard Captain of this graveyard (expeditions.ts). */
   yardOf = '';
 
@@ -288,6 +291,7 @@ export class ShipEntity {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
       isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined,
+      title: this.title ?? undefined, pennant: this.pennant ?? undefined,
     };
   }
 }

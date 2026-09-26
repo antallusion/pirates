@@ -86,12 +86,30 @@ export class CompanyScreen {
       return;
     }
     const date = (t: number) => new Date(t).toLocaleDateString();
-    body.innerHTML = `<div class="cols"><div>
+    const se = v.season;
+    const days = Math.ceil(se.endsIn / 86400);
+    const pct = Math.min(100, ((se.xp % se.levelXp) / se.levelXp) * 100);
+    const season = `<div class="card"><h4>Season ${se.season}: ${esc(se.theme)} <span class="muted">· ${days} days left</span></h4><p><i>${esc(se.themeText)}</i></p>
+      ${se.war ? `<div class="row"><span>Crown ${se.war.crown}</span><span>War of Crown and Code</span><span>Confederacy ${se.war.confederacy}</span></div>` : ''}
+      <div class="row"><span>Season path ${se.level}/${se.maxLevel}</span><span class="muted">${se.next ? `next at ${se.next.level}: ${esc(se.next.reward)}` : 'complete'}</span></div>
+      <div class="bbar" style="height:6px;background:#1b1512;border:1px solid rgba(111,90,56,0.8)"><i style="display:block;height:100%;width:${pct.toFixed(0)}%;background:var(--gold)"></i></div>
+      <p class="muted" style="font-size:11px">Only titles and pennant colours: nothing on the season path makes a ship stronger.</p>
+      <div class="row" style="gap:6px"><select data-sel="title"><option value="">— no title —</option>${se.titles.map((t) => `<option ${t === se.title ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+      <select data-sel="pennant"><option value="">plain slate</option>${se.pennants.map((c) => `<option value="${esc(c)}" ${c === se.pennant ? 'selected' : ''} style="color:${esc(c)}">■ ${esc(c)}</option>`).join('')}</select></div>
+      ${se.nameRights > 0 ? `<div class="row" style="gap:6px;margin-top:6px"><span class="gold">The Pantheon lets you name an island you have charted:</span><select data-sel="island">${[...state.discovered].map((id) => state.islands.get(id)).filter((i) => i && !i.portId).map((i) => `<option value="${i!.id}">${esc(i!.name)}</option>`).join('')}</select><input data-sel="newname" placeholder="new name" style="width:120px"><button class="btn btn-small btn-primary" data-name-isle>Name her</button></div>` : ''}
+      <h4 style="margin-top:8px">Your season</h4>${se.mine.map((m) => `<div class="row"><span>${esc(m.stat)}</span><span>${m.value}</span></div>`).join('') || '<p class="muted">Nothing yet this season.</p>'}</div>
+      <div class="card"><h4>Legends of the Ocean — this season</h4>${se.tables.filter((t) => t.rows.length).map((t) => `<div style="margin-bottom:4px"><b>${esc(t.stat)}</b>: ${t.rows.map((r, i) => `${i + 1}. ${esc(r.name)} (${r.value})`).join(' · ')}</div>`).join('') || '<p class="muted">The tables are empty.</p>'}</div>
+      <div class="card"><h4>The Pantheon</h4>${se.halls.map((h) => `<div><b>${esc(h.hall)}</b>: ${h.members.map((m) => `${esc(m.name)} <span class="muted">(season ${m.season})</span>`).join(', ') || '<span class="muted">empty halls</span>'}</div>`).join('')}</div>`;
+    body.innerHTML = `${season}<div class="cols"><div>
       <div class="card"><h4>Trophies</h4>${v.trophies.map((t) => `<div>✦ ${esc(t)}</div>`).join('') || '<p class="muted">None yet.</p>'}</div>
       <div class="card"><h4>Monsters slain</h4>${v.bossKills.map((k) => `<div class="row"><span>${esc(k.name)}</span><span>×${k.n}</span></div>`).join('') || '<p class="muted">None yet.</p>'}
         ${v.shards ? `<p class="muted">Ritual shards: ${v.shards}/3</p>` : ''}</div></div>
       <div><div class="card"><h4>The Log of the Stars</h4>${v.chapters.map((c) => `<p><b>${esc(c.title)}</b><br><i>${esc(c.text)}</i></p>`).join('') || '<p class="muted">The Abyss has told you nothing yet.</p>'}</div>
       <div class="card"><h4>First on these seas</h4>${v.firsts.map((f) => `<div class="row"><span>${esc(f.boss)}</span><span class="muted">${esc(f.names.slice(0, 4).join(', '))}${f.names.length > 4 ? '…' : ''} · ${date(f.at)}</span></div>`).join('') || '<p class="muted">No monster has fallen yet.</p>'}</div></div></div>`;
+    body.querySelector<HTMLSelectElement>('[data-sel="title"]')!.onchange = (e) => this.send({ t: 'season', action: 'title', value: (e.target as HTMLSelectElement).value });
+    body.querySelector<HTMLSelectElement>('[data-sel="pennant"]')!.onchange = (e) => this.send({ t: 'season', action: 'pennant', value: (e.target as HTMLSelectElement).value });
+    const nameBtn = body.querySelector<HTMLElement>('[data-name-isle]');
+    if (nameBtn) nameBtn.onclick = () => this.send({ t: 'season', action: 'name', islandId: Number(body.querySelector<HTMLSelectElement>('[data-sel="island"]')!.value), value: body.querySelector<HTMLInputElement>('[data-sel="newname"]')!.value });
   }
 
   private renderGroup(body: HTMLElement, state: ClientState): void {

@@ -16,6 +16,7 @@ import { grantDeed } from './progression.ts';
 import { questEvent } from './quests.ts';
 import { grantPlan } from './shipbuilding.ts';
 import { digOutcome, legendCircle, legendFragment } from './treasure.ts';
+import { seasonStat } from './seasons.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_MAPS = 6;
@@ -236,6 +237,7 @@ export function hoard(game: Game, s: PlayerSession, grade: number, share: number
       got.push(`${fit} ${GOODS[good].name}`);
     }
   };
+  seasonStat(game, s, 'treasure', 1);
   const silver = Math.round([0, rng.int(300, 700), rng.int(1000, 2500), rng.int(4000, 8000), rng.int(9000, 14000)][Math.min(4, grade)] * share);
   if (grade === 1) give('spices', rng.int(5, 10));
   if (grade === 2) {

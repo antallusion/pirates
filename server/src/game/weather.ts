@@ -73,7 +73,7 @@ const MAX_FRONTS = 12;
 let frontSeq = 1;
 
 /** Spawn fronts in stormy regions; they drift with the prevailing wind and die out. */
-export function stepFronts(fronts: Front[], rng: Rng, now: number, dt: number, windDirAt: (x: number, y: number) => number): Front[] {
+export function stepFronts(fronts: Front[], rng: Rng, now: number, dt: number, windDirAt: (x: number, y: number) => number, stormMul = 1): Front[] {
   const alive: Front[] = [];
   for (const f of fronts) {
     if (f.until <= now) continue;
@@ -91,7 +91,7 @@ export function stepFronts(fronts: Front[], rng: Rng, now: number, dt: number, w
     for (const id of REGION_IDS) {
       const r = REGIONS[id];
       const kind: FrontKind | null =
-        rng.chance(0.002 * r.stormChance * dt) ? (id === 'the_abyss' || (id === 'drowned_crown' && rng.chance(0.3)) ? 'black_storm' : 'storm')
+        rng.chance(0.002 * r.stormChance * stormMul * dt) ? (id === 'the_abyss' || (id === 'drowned_crown' && rng.chance(0.3)) ? 'black_storm' : 'storm')
         : rng.chance(0.002 * r.fogBase * dt) ? 'fog'
         : rng.chance(0.0012 * dt) ? 'rain'
         : null;

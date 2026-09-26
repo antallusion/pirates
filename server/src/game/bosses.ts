@@ -28,6 +28,7 @@ import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { legendFragment } from './treasure.ts';
 import { chapter, giveShard, spawnEcho } from './abyss.ts';
+import { seasonStat, seasonMods } from './seasons.ts';
 
 type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add';
 
@@ -134,7 +135,7 @@ export class BossHub {
     const wall = game.wallNow();
     let dirty = false;
     for (const id of BOSS_IDS) {
-      const def = BOSSES[id];
+      const def = seasonal(game, BOSSES[id]);
       const regions = def.regions.filter((r) => !game.zone || game.zone.regions.has(r));
       if (!regions.length) continue;
       if ([...this.fights.values()].some((f) => f.kind === id)) continue;
@@ -182,6 +183,12 @@ export class BossHub {
 }
 
 // ================================================================== the calendar
+
+/** The Great Migration: the Leviathans rise twice as often, and in Gravewater too. */
+export function seasonal(game: Game, def: BossDef): BossDef {
+  if (def.id !== 'leviathan' || !seasonMods(game).migration) return def;
+  return { ...def, every: def.every / 2, regions: [...def.regions, 'gravewater'] };
+}
 
 function windowOpen(game: Game, def: BossDef, region: RegionId): boolean {
   if (def.window === 'night') return isNight(game.now);
@@ -1425,6 +1432,8 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
       lines.push(`a trophy: ${def.trophy}`);
     }
     p.bossKills[def.id] = (p.bossKills[def.id] ?? 0) + 1;
+    seasonStat(game, s, 'monsters', Math.round(share * 100));
+    if (def.id === 'ancient_leviathan' || def.id === 'abyss_eye') seasonStat(game, s, 'abyss', Math.round(share * 100));
     // The Abyss's own: ritual shards for everyone who truly fought, and a chapter of the story.
     if (def.id === 'ancient_leviathan' || def.id === 'abyss_eye') {
       if (share >= 0.05 || def.id === 'abyss_eye') giveShard(game, s, `From ${def.name}`);

@@ -16,10 +16,10 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { grantDeed } from './progression.ts';
 import type { ShipEntity } from './ship.ts';
+import { seasonId } from './seasons.ts';
 import { grantPlan } from './shipbuilding.ts';
 
 const DAY = 24 * 3600_000;
-const SEASON = 30 * DAY;
 const HEAR_RANGE = 10_000;
 const LEGEND_NAMES = ["The Drowned King's Hoard", "Admiral Drey's Last Pay-Chest", 'The Choir\'s Tithe', 'The Hoard of the Nine Bells'];
 
@@ -39,12 +39,12 @@ export interface LegendChart {
 
 /** This season's legendary chart (one on the server), drawn when first asked for. */
 export function legend(game: Game): LegendChart {
-  const season = Math.floor(game.wallNow() / SEASON);
+  const season = seasonId(game);
   const id = `legend:${season}`;
   let lc = game.db.getKv<LegendChart>('legend_chart');
   if (!lc || lc.id !== id) {
     const rng = new Rng((game.world.seed ^ (season * 2654435761)) >>> 0);
-    const regions: RegionId[] = ['dead_mans_expanse', 'drowned_crown', 'the_abyss'];
+    const regions: RegionId[] = ['dead_mans_expanse', 'drowned_crown']; // a race for the whole sea, not only for those past the Wall
     const pool = game.world.islands.filter((i) => !i.portId && regions.includes(i.region) && i.radius > 200);
     const is = pool[rng.int(0, pool.length - 1)];
     const n = is.poly.length / 2;

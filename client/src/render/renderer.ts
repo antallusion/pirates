@@ -659,7 +659,7 @@ export class Renderer {
     const imgH = len / hullImg.extentY;
     const imgW = imgH * (hullImg.canvas.width / hullImg.canvas.height);
     g.drawImage(hullImg.canvas, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
-    this.drawPennant(s, len, beam);
+    this.drawPennant(s, len, beam, state);
     // Sail damage tint (torn canvas reads as darker patches).
     if (s.sails < 0.6) {
       g.fillStyle = `rgba(10,10,10,${(0.6 - s.sails) * 0.5})`;
@@ -762,11 +762,12 @@ export class Renderer {
   }
 
   /** Faction pennant at the masthead, streaming downwind. Players fly black. */
-  private drawPennant(s: DrawShip, len: number, beam: number): void {
+  private drawPennant(s: DrawShip, len: number, beam: number, state: ClientState): void {
     const g = this.g;
     // A captain's colours: the Black Flag, the Green Pennant, or plain slate.
     const player = s.own || s.info?.isPlayer;
-    const color = player ? (s.flags & SF.BLACK_FLAG ? '#0b0b0b' : s.flags & SF.GREEN_PENNANT ? '#3f7d4a' : '#3b4652') : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
+    const season = s.own ? state.self?.pennant : s.info?.pennant;
+    const color = player ? (s.flags & SF.BLACK_FLAG ? '#0b0b0b' : s.flags & SF.GREEN_PENNANT ? '#3f7d4a' : season ?? '#3b4652') : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
     const trim = s.own || s.info?.isPlayer ? '#d8d2c4' : 'rgba(0,0,0,0.6)';
     const wave = Math.sin(this.time * 6 + s.id) * beam * 0.12;
     const y0 = -len * 0.18;
@@ -1179,7 +1180,7 @@ export class Renderer {
     g.fillText(label, x, y);
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
-    const tag = info.isPlayer ? `Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? 'World boss — a horror of the deep' : cls.monster ? 'A dead ship — mortars break it' : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
+    const tag = info.isPlayer ? `${info.title ? info.title + ' · ' : ''}Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? 'World boss — a horror of the deep' : cls.monster ? 'A dead ship — mortars break it' : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
     const marks = info.isPlayer
       ? `${s.flags & SF.BLACK_FLAG ? ' · black flag' : ''}${s.flags & SF.GREEN_PENNANT ? ' · green pennant' : ''}${s.flags & SF.SHAME ? ' · SHAME' : ''}${s.flags & SF.BOUNTY ? ' · bounty' : ''}${s.flags & SF.DUEL ? ' · duelling' : ''}`
       : '';
