@@ -60,7 +60,7 @@ export class Net {
     };
     ws.onclose = (ev) => {
       this.onStatus(false);
-      if (ev.code === 4000) return; // replaced by another login
+      if (ev.code === 4000 || ev.code === 4002) return; // replaced by another login / client out of date
       const delay = Math.min(8000, 500 * 2 ** this.retry++);
       setTimeout(() => this.connect(), delay);
     };

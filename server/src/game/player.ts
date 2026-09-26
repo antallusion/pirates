@@ -14,7 +14,7 @@ import { MAX_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src
 import { MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
 import type { BoardingResult, Contract, PrivateState, ResourceSiteView } from '../../../shared/src/protocol.ts';
 import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
-import type { WsConnection } from '../net/websocket.ts';
+import type { GameConn } from '../net/conn.ts';
 import type { ShipEntity } from './ship.ts';
 import type { Forward, Loan, Policy } from './finance.ts';
 import { captiveRansom } from './prizes.ts';
@@ -165,7 +165,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
 }
 
 export class PlayerSession {
-  readonly conn: WsConnection;
+  readonly conn: GameConn;
   accountId = 0;
   name = '';
   token = '';
@@ -189,7 +189,7 @@ export class PlayerSession {
   landable: { island: string; feature: string; action?: 'dig' | 'dive'; blocked?: string } | null = null;
   siteViews: ResourceSiteView[] = [];
 
-  constructor(conn: WsConnection) {
+  constructor(conn: GameConn) {
     this.conn = conn;
   }
 

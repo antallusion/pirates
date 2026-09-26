@@ -8,6 +8,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AuthService } from '../auth.ts';
 import type { OAuthFlow } from '../oauth.ts';
+import { clientIp } from '../net/conn.ts';
 
 const LIMIT = 20; // requests per address per minute
 const hits = new Map<string, { n: number; reset: number }>();
@@ -46,7 +47,7 @@ async function readBody(req: IncomingMessage): Promise<Record<string, string>> {
 export async function handleAuth(req: IncomingMessage, res: ServerResponse, auth: AuthService, oauth: OAuthFlow): Promise<boolean> {
   const url = new URL(req.url ?? '/', 'http://x');
   if (!url.pathname.startsWith('/auth/')) return false;
-  const addr = req.socket.remoteAddress ?? '?';
+  const addr = clientIp(req);
   if (limited(addr)) {
     json(res, 429, { error: 'Too many attempts. Wait a minute.' });
     return true;

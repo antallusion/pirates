@@ -38,7 +38,7 @@
 
 | Будущий сервис | Модуль прототипа |
 |---|---|
-| Gateway / Session | `server/src/net/websocket.ts`, `Game.attach/onMessage/handle` |
+| Gateway / Session | `server/src/gateway.ts`, `net/gateway.ts` (WebSocket, версия, rate-limit, маршрутизация, reconnect), `net/link.ts` (внутренний канал к миру, `RemoteConnection`), `net/websocket.ts`, `Game.attach/onMessage/handle` |
 | Auth | `server/src/auth.ts` (гостевые токены, в БД хранится только SHA-256) |
 | Zone Server (физика, бой, абордаж, interest) | `Game.step`, `combat.ts`, `boarding.ts`, `abilities.ts`, `spatial.ts` |
 | NPC Director / NPC simulation | `npc.ts` (LOD abstract/active, роли, маршруты), `nav.ts` (A*) |

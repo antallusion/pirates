@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server/src/main.ts",
+    "gateway": "node --disable-warning=ExperimentalWarning server/src/gateway.ts",
     "dev": "node --disable-warning=ExperimentalWarning --watch server/src/main.ts",
     "test": "node --disable-warning=ExperimentalWarning --test tests/*.test.ts",
     "typecheck": "tsc -p tsconfig.json",

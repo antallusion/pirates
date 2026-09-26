@@ -5,11 +5,12 @@
 import { createHash } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
+import type { GameConn } from './conn.ts';
 
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const MAX_MESSAGE = 64 * 1024;
 
-export class WsConnection {
+export class WsConnection implements GameConn {
   onMessage: (text: string) => void = () => {};
   onClose: () => void = () => {};
   readonly remote: string;

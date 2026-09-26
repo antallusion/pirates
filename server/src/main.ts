@@ -1,6 +1,6 @@
-// GRAVETIDE server entry point: HTTP (static client) + WebSocket (game) on one port.
-// In production the Gateway, World Simulation and Persistence roles split into separate
-// processes (docs/04_TECHNICAL_ARCHITECTURE.md); the prototype runs them in one.
+// GRAVETIDE world entry point: HTTP (static client, accounts) + WebSocket (game) on one port.
+// With LINK_PORT and LINK_SECRET set it also takes sessions relayed by dedicated Gateways
+// (server/src/gateway.ts, net/link.ts); without them it serves players directly.
 
 import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
@@ -9,6 +9,7 @@ import { GAME_NAME, PROTOCOL_VERSION } from '../../shared/src/constants.ts';
 import { AuthService } from './auth.ts';
 import { Game } from './game/Game.ts';
 import { createStaticHandler } from './net/static.ts';
+import { LinkServer } from './net/link.ts';
 import { acceptUpgrade } from './net/websocket.ts';
 import { Database } from './persistence/db.ts';
 import type { Db } from './persistence/db.ts';
@@ -38,7 +39,7 @@ const serveStatic = createStaticHandler(root);
 const server = createServer(async (req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, protocol: PROTOCOL_VERSION, ...game.stats(), online: shared?.onlineCount }));
+    res.end(JSON.stringify({ ok: true, protocol: PROTOCOL_VERSION, ...game.stats(), gateways: link?.peers.size, relayed: link?.sessions, online: shared?.onlineCount }));
     return;
   }
   if (req.url?.startsWith('/leaderboard')) {
@@ -74,6 +75,14 @@ server.on('upgrade', (req, socket) => {
 });
 
 game.start();
+// Dedicated gateways relay their players here over the internal link.
+const link = process.env.LINK_PORT
+  ? new LinkServer({ secret: process.env.LINK_SECRET ?? '', zone: process.env.ZONE_NAME ?? 'main', attach: (c) => game.attach(c) })
+  : null;
+if (link) {
+  const lp = await link.listen(Number(process.env.LINK_PORT), process.env.LINK_HOST ?? '127.0.0.1');
+  console.log(`[${GAME_NAME}] gateway link on ${process.env.LINK_HOST ?? '127.0.0.1'}:${lp}`);
+}
 server.listen(PORT, HOST, () => {
   console.log(`[${GAME_NAME}] listening on http://localhost:${PORT}  (protocol v${PROTOCOL_VERSION}, db ${DATABASE_URL ? 'postgresql' : DB_PATH})`);
 });
@@ -81,6 +90,7 @@ server.listen(PORT, HOST, () => {
 async function shutdown(): Promise<void> {
   console.log('[server] saving world and shutting down…');
   game.stop();
+  await link?.close();
   await db.close();
   await shared?.close();
   process.exit(0);

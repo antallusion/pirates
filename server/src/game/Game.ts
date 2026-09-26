@@ -45,7 +45,7 @@ import { chunkKey, chunkOf, currentAt, depthAt, whirlpoolAt, generateWorld, isla
 import type { Island, Port, World } from '../../../shared/src/world/worldgen.ts';
 import type { AuthService } from '../auth.ts';
 import { sanitizeName } from '../auth.ts';
-import type { WsConnection } from '../net/websocket.ts';
+import type { GameConn } from '../net/conn.ts';
 import type { Db } from '../persistence/db.ts';
 import type { SharedState } from '../persistence/redis.ts';
 import { stepStrikes, useAbility } from './abilities.ts';
@@ -1796,7 +1796,7 @@ export class Game {
 
   // ================================================================= sessions & messages
 
-  attach(conn: WsConnection): PlayerSession {
+  attach(conn: GameConn): PlayerSession {
     const s = new PlayerSession(conn);
     this.sessions.add(s);
     conn.onMessage = (text) => this.onMessage(s, text);
