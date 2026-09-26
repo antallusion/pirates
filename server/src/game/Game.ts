@@ -54,6 +54,8 @@ import {
   dismissOfficer, hireOfficer, maxRecruits, mutinyCourse, officerOrder, onDockCrew, onFightWon, onMagazineBlast, onSunkCrew, plunderShare, pressGang, recruitPrisoners,
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
+import { Social, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
+import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
 import { buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
@@ -114,6 +116,7 @@ interface Loot {
   wreck?: string; // region of a sunk hull (salvage)
   salvaged?: boolean;
   monster?: boolean; // left by a monster of the deep (Leviathan Lore)
+  claim?: { account: number; until: number }; // the victor and their group have the first 30 s
 }
 
 interface Rumor {
@@ -191,6 +194,11 @@ export class Game {
   private nextEconCheckpoint = 0;
   private lastWeather = new WeakMap<PlayerSession, string>();
   sessions = new Set<PlayerSession>();
+  /** Groups, convoys and barter (party.ts); letters and the captains' market (post.ts). */
+  social = new Social();
+  post = new PostOffice();
+  /** Real time in ms, for letters and listings that outlive the process (tests move it). */
+  wallNow: () => number = () => Date.now();
   private byAccount = new Map<number, PlayerSession>();
   private events: QueuedEvent[] = [];
   private nextId = 1;
@@ -570,6 +578,8 @@ export class Game {
     }
     stepBoats(this);
     settleCrimes(this);
+    stepSocial(this);
+    stepPost(this);
     if (Math.floor(now) % 5 === 0) recordTrails(this);
     for (const [id, t] of this.sunkRecently) if (now - t > 900) this.sunkRecently.delete(id);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
@@ -585,6 +595,7 @@ export class Game {
         if (!s || !s.isPlayer || !s.alive || s.docked) return;
         if (s.hasEffect('submerged') || s.hasEffect('ghost_return')) return; // a ghost cannot haul casks aboard
         if (l.ownerOnly !== undefined && s.accountId !== l.ownerOnly) return;
+        if (l.claim && l.claim.until > now && s.accountId !== l.claim.account && !sameGroupAccounts(this, s.accountId, l.claim.account)) return;
         if (dist(s.state.x, s.state.y, l.x, l.y) > s.stats.length / 2 + 30) return;
         this.pickupLoot(s, l);
       });
@@ -1100,7 +1111,15 @@ export class Game {
   }
 
   areAllies(a: ShipEntity, b: ShipEntity): boolean {
-    return (a.ownerId !== null && a.ownerId === b.id) || (b.ownerId !== null && b.ownerId === a.id) || (a.ownerId !== null && a.ownerId === b.ownerId);
+    return (a.ownerId !== null && a.ownerId === b.id) || (b.ownerId !== null && b.ownerId === a.id) || (a.ownerId !== null && a.ownerId === b.ownerId) || sameGroup(this, a, b);
+  }
+
+  /** A captain in this world by name (any case). */
+  sessionByName(name: string): PlayerSession | undefined {
+    const n = name.trim().toLowerCase();
+    if (!n) return undefined;
+    for (const s of this.byAccount.values()) if (s.name.toLowerCase() === n && s.profile) return s;
+    return undefined;
   }
 
   adjustRep(ship: ShipEntity, faction: FactionId, delta: number): void {
@@ -1199,7 +1218,8 @@ export class Game {
     }
     const killer = killerId !== null ? this.ships.get(killerId) ?? null : null;
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
-    this.dropWreckage(ship, 0.4);
+    const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
+    this.dropWreckage(ship, 0.4, victor);
     if (killer) this.creditKill(killer, ship, 'sunk');
   }
 
@@ -1223,7 +1243,7 @@ export class Game {
     this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold: 0, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region });
   }
 
-  private dropWreckage(ship: ShipEntity, frac: number): void {
+  private dropWreckage(ship: ShipEntity, frac: number, victor: number | null = null): void {
     const cargo: Cargo = {};
     for (const id in ship.cargo) {
       const n = Math.floor((ship.cargo[id as GoodId] ?? 0) * frac);
@@ -1242,7 +1262,7 @@ export class Game {
     }
     if (!Object.keys(cargo).length && gold <= 0) return;
     const id = this.allocId();
-    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region, monster: isMonster(ship) });
+    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region, monster: isMonster(ship), claim: victor !== null ? { account: victor, until: this.now + 30 } : undefined });
   }
 
   private creditKill(killer: ShipEntity, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
@@ -1265,12 +1285,23 @@ export class Game {
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
     let escorts = 0;
     for (const o of this.ships.values()) if (o.ownerId === killer.id && o.alive) escorts++;
+    // Captains of your group fighting nearby count as your fleet; they share a part of the glory.
+    const group = groupOfAccount(this, s.accountId);
+    const mates: PlayerSession[] = [];
+    if (group) {
+      for (const m of group.members) {
+        const ms = m === s.accountId ? null : this.byAccount.get(m);
+        if (ms?.ship && ms.profile && ms.ship.alive && !ms.ship.docked && dist(ms.ship.state.x, ms.ship.state.y, victim.state.x, victim.state.y) <= CONVOY_RANGE) mates.push(ms);
+      }
+      escorts += mates.length;
+    }
     if (escorts >= 2) {
       grantDeed(this, s, 'deed_fleet_victory');
       questEvent(this, s, { k: 'fleet_win' });
     }
     checkStatDeeds(this, s);
     this.grantXp(s, xp, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`);
+    for (const ms of mates) this.grantXp(ms, xp * 0.4, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`);
     // Law and reputation.
     if (victim.faction !== 'player') {
       const f = FACTIONS[victim.faction];
@@ -2126,6 +2157,78 @@ export class Game {
         });
       case 'loadout':
         return portAction(() => switchLoadout(this, s, Math.trunc(Number(msg.slot))));
+      case 'group':
+        switch (msg.action) {
+          case 'invite':
+            return err(groupInvite(this, s, msg.name));
+          case 'kick':
+            return err(groupKick(this, s, msg.name));
+          case 'lead':
+            return err(groupLead(this, s, msg.name));
+          case 'accept':
+          case 'decline':
+            return err(groupAnswer(this, s, Math.trunc(Number(msg.id)), msg.action === 'accept'));
+          case 'leave':
+            return err(groupLeave(this, s));
+          case 'convoy':
+            return err(groupConvoy(this, s, !!msg.on));
+          case 'say':
+            return err(groupSay(this, s, msg.text));
+        }
+        return;
+      case 'barter':
+        switch (msg.action) {
+          case 'propose':
+            return err(barterPropose(this, s, msg.name));
+          case 'offer':
+            return err(barterOffer(this, s, msg.gold, msg.cargo));
+          case 'ready':
+            return err(barterReady(this, s));
+          case 'cancel': {
+            const b = this.social.barters.get(s.accountId);
+            if (b) cancelBarter(this, b, `${s.name} walked away`);
+            return;
+          }
+        }
+        return;
+      case 'mail':
+        switch (msg.action) {
+          case 'list':
+            return sendMail(this, s);
+          case 'send':
+            err(mailSend(this, s, msg.to, msg.subject, msg.body, msg.gold));
+            return this.pushSelf(s, true);
+          case 'read':
+            return err(mailRead(this, s, Math.trunc(Number(msg.id))));
+          case 'take':
+            err(mailTake(this, s, Math.trunc(Number(msg.id))));
+            return this.pushSelf(s, true);
+          case 'delete':
+            return err(mailDelete(this, s, Math.trunc(Number(msg.id))));
+        }
+        return;
+      case 'market': {
+        const from = msg.action !== 'list' && 'from' in msg && msg.from === 'warehouse' ? 'warehouse' : 'hold';
+        const int = (v: unknown) => Math.trunc(Number(v));
+        switch (msg.action) {
+          case 'list':
+            if (!port) return err('The market board is in port');
+            return sendMarket(this, s, port);
+          case 'sell':
+            return portAction((pt) => marketSell(this, s, pt, msg.good, int(msg.qty), int(msg.price), from));
+          case 'buy_order':
+            return portAction((pt) => marketBuyOrder(this, s, pt, msg.good, int(msg.qty), int(msg.price)));
+          case 'auction':
+            return portAction((pt) => marketAuction(this, s, pt, msg.good, int(msg.qty), int(msg.price), int(msg.buyout), int(msg.hours), from));
+          case 'fill':
+            return portAction((pt) => marketFill(this, s, pt, int(msg.id), int(msg.qty)));
+          case 'bid':
+            return portAction((pt) => marketBid(this, s, pt, int(msg.id), int(msg.price)));
+          case 'cancel':
+            return portAction((pt) => marketCancel(this, s, pt, int(msg.id)));
+        }
+        return;
+      }
       case 'chat': {
         const text = String(msg.text ?? '').slice(0, 200).trim();
         if (!text) return;
@@ -2252,12 +2355,16 @@ export class Game {
     s.lastRegion = '';
     if (s.ship?.docked) this.pushPort(s);
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
+    pushParty(this, s);
+    mailOnLogin(this, s);
   }
 
   private onDisconnect(s: PlayerSession): void {
     this.sessions.delete(s);
     if (!s.authed || this.byAccount.get(s.accountId) !== s) return;
     s.disconnectedAt = this.now;
+    const barter = this.social.barters.get(s.accountId);
+    if (barter) cancelBarter(this, barter, `${s.name} has gone`);
     // Ships at sea linger (anti combat-logging); docked ships leave at once.
     s.lingerUntil = s.ship && !s.ship.docked ? this.now + LOGOUT_TIMER_SEC : this.now;
     if (s.ship) s.ship.input = { rudder: 0, sailTarget: 0 };
@@ -2266,6 +2373,7 @@ export class Game {
 
   private retireSession(s: PlayerSession): void {
     this.shared?.leave(s.accountId, s.name);
+    socialRetire(this, s);
     if (s.profile) anchorFleet(this, s);
     this.saveSession(s);
     for (const c of caravansOf(this, s.accountId)) this.removeShip(c.id);
@@ -2435,8 +2543,8 @@ export class Game {
         if (o.id !== me.id) {
           if (o.docked) return;
           const lookout = me.hasEffect('crows_nest') && d <= me.stats.detection; // Crow's Nest sees through it all
-          if (!lookout && o.hasFlag('hidden') && d > 250 && o.ownerId !== me.id) return;
-          if (!lookout && o.isPlayer && d > 250 && d > visibleRange(this, o, me)) return;
+          if (!lookout && o.hasFlag('hidden') && d > 250 && o.ownerId !== me.id && !sameGroup(this, o, me)) return;
+          if (!lookout && o.isPlayer && d > 250 && d > visibleRange(this, o, me) && !sameGroup(this, o, me)) return;
         }
         const brain = this.npcs.get(o.id);
         if (brain && !brain.active) return;

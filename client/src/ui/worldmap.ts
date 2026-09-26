@@ -18,7 +18,7 @@ export class WorldMap {
   open(root: HTMLElement, state: ClientState): void {
     root.innerHTML = `<div class="modal-head"><div><h2>Chart of the Known Sea</h2><div class="sub">${state.discovered.size} islands charted · drag to pan, wheel to zoom</div></div><div class="muted">[M] close</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting · <span style="color:#c9a25a">◌</span> treasure map · <span style="color:#78bec8">✕</span> sunken wreck</div></div>`;
+      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#7fd08a">■</span> your group · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting · <span style="color:#c9a25a">◌</span> treasure map · <span style="color:#78bec8">✕</span> sunken wreck</div></div>`;
     const c = root.querySelector('canvas')!;
     this.canvas = c;
     if (!this.centred && state.ownDisplay) {
@@ -253,6 +253,14 @@ export class WorldMap {
       g.arc(tx(c.x), ty(c.y), 4, 0, Math.PI * 2);
       g.fill();
       g.fillText(c.name, tx(c.x), ty(c.y) - 8);
+    }
+    // Your group.
+    g.font = '12px serif';
+    for (const m of state.party?.members ?? []) {
+      if (m.name === state.self?.name || m.docked) continue;
+      g.fillStyle = m.online ? '#7fd08a' : 'rgba(127,208,138,0.45)';
+      g.fillRect(tx(m.x) - 4, ty(m.y) - 4, 8, 8);
+      g.fillText(m.name, tx(m.x), ty(m.y) - 9);
     }
     // You.
     const own = state.ownDisplay;

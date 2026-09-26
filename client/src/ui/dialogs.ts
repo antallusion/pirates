@@ -136,7 +136,8 @@ export function renderHelp(root: HTMLElement): void {
     ['M · T · I · O', 'World chart · talents · ship & hold · crew and officers (orders, the Codex share).'],
     ['Wheel', 'Zoom.'],
     ['N', 'Sound on / off.'],
-    ['Enter', 'Chat.'],
+    ['Y', 'Company & Letters: your group and the convoy signal, trading with another captain, letters by packet boat, the market board in port (Tidewrack: the trophy auction).'],
+    ['Enter', 'Chat. Start with /g to speak to your group only.'],
   ];
   root.innerHTML = `<div class="modal-head"><div><h2>Captain's Handbook</h2><div class="sub">The ocean is the world. The ship is the character. The captain is the build.</div></div><div class="muted">[H] close</div></div>
     <div class="modal-body"><div class="cols"><div class="help-grid">${keys.map(([k, d]) => `<kbd>${esc(k)}</kbd><span>${esc(d)}</span>`).join('')}</div>

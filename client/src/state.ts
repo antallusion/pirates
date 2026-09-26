@@ -5,7 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BoardingResult, CurrentData, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
+  BarterView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
 } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -70,6 +70,12 @@ export class ClientState {
 
   portView: PortView | null = null;
   boarding: BoardingResult | null = null;
+  party: PartyView | null = null;
+  invites: { id: number; from: string }[] = [];
+  barter: BarterView | null = null;
+  letters: LetterView[] = [];
+  unread = 0;
+  market: MarketView | null = null;
 
   input = { rudder: 0, sail: 2, seq: 0 };
 
@@ -147,6 +153,20 @@ export class ClientState {
         this.fronts = m.list;
         this.frontsAt = now;
         this.forecast = m.forecast;
+        break;
+      case 'party':
+        this.party = m.group;
+        this.invites = m.invites;
+        break;
+      case 'barter':
+        this.barter = m.view;
+        break;
+      case 'mail':
+        this.letters = m.letters;
+        this.unread = m.unread;
+        break;
+      case 'market':
+        this.market = m.view;
         break;
       case 'port':
         this.portView = m.view;

@@ -12,6 +12,7 @@ import type { BankView, BuyOrderView, ForwardView, InsuranceQuote, InsuranceTier
 import { cargoValue, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { applyTrade, midPrice, portIsLawful } from './economy.ts';
+import { inConvoy } from './party.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -392,12 +393,13 @@ export function insuranceQuotes(game: Game, s: PlayerSession, port: Port): Insur
   const hullValue = SHIP_CLASSES[ship.loadout.classId].price;
   const declared = cargoValue(ship.cargo);
   const out: InsuranceQuote[] = [];
+  const convoy = inConvoy(game, s) ? 0.7 : 1; // a convoy under signal: −30%
   for (const tier of ['hull', 'cargo', 'full'] as InsuranceTier[]) {
     const c = COVER[tier];
     const base = (c.hull ? hullValue * 0.03 : 0) + declared * c.cargo * 0.06;
     const gilded = Math.max(0.2, 1 + tx(ship.stats, 'insurancePremium'));
     const deep = port.faction === 'league' && ship.captain === 'drowned' ? 1.25 : 1; // the League wrote her off as drowned
-    out.push({ tier, premium: Math.max(20, Math.round(base * risk * gilded * deep)), declared: c.cargo ? declared : 0, deductible: c.cargo ? Math.round(declared * 0.1) : 0, cover: c.cargo, hull: c.hull });
+    out.push({ tier, premium: Math.max(20, Math.round(base * risk * gilded * deep * convoy)), declared: c.cargo ? declared : 0, deductible: c.cargo ? Math.round(declared * 0.1) : 0, cover: c.cargo, hull: c.hull });
   }
   void game;
   return out;

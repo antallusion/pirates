@@ -92,6 +92,23 @@ export type ClientMsg =
   | { t: 'chart'; action: 'sell' }
   | { t: 'chart'; action: 'buy'; region: RegionId }
   | { t: 'chat'; text: string }
+  | { t: 'group'; action: 'invite' | 'kick' | 'lead'; name: string }
+  | { t: 'group'; action: 'accept' | 'decline'; id: number }
+  | { t: 'group'; action: 'leave' }
+  | { t: 'group'; action: 'convoy'; on: boolean }
+  | { t: 'group'; action: 'say'; text: string }
+  | { t: 'barter'; action: 'propose'; name: string }
+  | { t: 'barter'; action: 'offer'; gold: number; cargo: Cargo }
+  | { t: 'barter'; action: 'ready' | 'cancel' }
+  | { t: 'mail'; action: 'list' }
+  | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
+  | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
+  | { t: 'market'; action: 'list' }
+  | { t: 'market'; action: 'sell' | 'buy_order'; good: GoodId; qty: number; price: number; from?: 'hold' | 'warehouse' }
+  | { t: 'market'; action: 'auction'; good: GoodId; qty: number; price: number; buyout: number; hours: number; from?: 'hold' | 'warehouse' }
+  | { t: 'market'; action: 'fill'; id: number; qty: number }
+  | { t: 'market'; action: 'bid'; id: number; price: number }
+  | { t: 'market'; action: 'cancel'; id: number }
   | { t: 'ping'; c: number };
 
 // ------------------------------------------------------------------ server -> client
@@ -549,9 +566,85 @@ export type ServerMsg =
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
-  | { t: 'chat'; from: string; text: string }
+  | { t: 'chat'; from: string; text: string; ch?: 'group' }
+  | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[] }
+  | { t: 'barter'; view: BarterView | null }
+  | { t: 'mail'; letters: LetterView[]; unread: number }
+  | { t: 'market'; view: MarketView }
   | { t: 'err'; msg: string }
   | { t: 'pong'; c: number; s: number };
+
+// ------------------------------------------------------------------ groups, barter, letters, the market
+
+export const GROUP_MAX = 8;
+
+export interface PartyMember {
+  accountId: number;
+  name: string;
+  level: number;
+  captain: CaptainId;
+  online: boolean;
+  docked: string | null;
+  x: number;
+  y: number;
+  hull: number; // 0..1
+  inConvoy: boolean; // within signal distance of the leader while the convoy flies
+}
+
+export interface PartyView {
+  id: number;
+  leader: number;
+  convoy: boolean;
+  members: PartyMember[];
+}
+
+export interface BarterSide {
+  name: string;
+  gold: number;
+  cargo: Cargo;
+  ready: boolean;
+}
+
+export interface BarterView {
+  me: BarterSide;
+  them: BarterSide;
+  atSea: boolean;
+  /** At sea the goods cross on boats: seconds left once both are ready. */
+  transfer: number;
+}
+
+export interface LetterView {
+  id: number;
+  from: string;
+  subject: string;
+  body: string;
+  gold: number;
+  goods: { good: GoodId; qty: number; port: string } | null;
+  sentAt: number; // epoch ms
+  read: boolean;
+  taken: boolean;
+}
+
+export interface ListingView {
+  id: number;
+  kind: 'sell' | 'buy' | 'auction';
+  seller: string;
+  mine: boolean;
+  good: GoodId;
+  qty: number;
+  price: number; // per unit; for an auction the current bid for the whole lot (or the reserve)
+  buyout: number; // auction: whole lot, 0 = none
+  bidder: string | null;
+  endsAt: number; // epoch ms
+}
+
+export interface MarketView {
+  port: string;
+  auction: boolean; // this port holds the trophy auction
+  listFee: number; // fraction of the value, not returned
+  saleTax: number; // fraction of proceeds
+  listings: ListingView[];
+}
 
 export function curseStage(curse: number): 0 | 1 | 2 | 3 {
   return curse >= 80 ? 3 : curse >= 50 ? 2 : curse >= 25 ? 1 : 0;

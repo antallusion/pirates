@@ -15,14 +15,15 @@ import { ClientState } from './state.ts';
 import { showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
 import { renderCrew, renderMutiny } from './ui/crew.ts';
-import { $, esc } from './ui/dom.ts';
+import { CompanyScreen, renderBarter } from './ui/company.ts';
+import { $, esc, keepInputs } from './ui/dom.ts';
 import { Hud } from './ui/hud.ts';
 import { PortScreen } from './ui/port.ts';
 import { TalentScreen } from './ui/talents.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 
-type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | null;
+type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -43,6 +44,7 @@ let aimSide: 'port' | 'starboard' | null = null;
 
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 const talentScreen = new TalentScreen((m) => net.send(m));
+const companyScreen = new CompanyScreen((m) => net.send(m));
 
 // ------------------------------------------------------------------ boot
 
@@ -168,7 +170,7 @@ function onMessage(m: ServerMsg): void {
     case 'self':
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
-      else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny') refreshModal();
+      else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny' || modal === 'company' || modal === 'barter') refreshModal();
       break;
     case 'mutiny':
       if (m.mutineers > 0) {
@@ -189,7 +191,18 @@ function onMessage(m: ServerMsg): void {
       if (m.kind === 'gold') audio.coins();
       break;
     case 'chat':
-      hud.chat(m.from, m.text);
+      hud.chat(m.from, m.text, m.ch);
+      break;
+    case 'party':
+    case 'mail':
+    case 'market':
+      if (modal === 'company') refreshModal();
+      hud.setUnread(state.unread);
+      break;
+    case 'barter':
+      if (m.view && modal !== 'barter') openModal('barter');
+      else if (!m.view && modal === 'barter') closeModal();
+      else if (modal === 'barter') refreshModal();
       break;
     case 'ev':
       for (const e of m.list) {
@@ -250,6 +263,12 @@ function refreshModal(): void {
     case 'mutiny':
       renderMutiny(root, state, (m) => net.send(m));
       break;
+    case 'company':
+      keepInputs(root, () => companyScreen.render(root, state));
+      break;
+    case 'barter':
+      if (state.barter) keepInputs(root, () => renderBarter(root, state, (m) => net.send(m)));
+      break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null));
       break;
@@ -274,7 +293,10 @@ addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     const chat = $('chat');
     if (chat.classList.contains('open')) {
-      if (chatInput.value.trim()) net.send({ t: 'chat', text: chatInput.value });
+      const said = chatInput.value.trim();
+      // "/g …" speaks to your group only.
+      if (/^\/g\s/i.test(said)) net.send({ t: 'group', action: 'say', text: said.slice(3) });
+      else if (said) net.send({ t: 'chat', text: said });
       chatInput.value = '';
       chat.classList.remove('open');
       chatInput.blur();
@@ -288,7 +310,8 @@ addEventListener('keydown', (e) => {
   if (typing()) return;
   const k = e.key.toLowerCase();
   if (k === 'escape') {
-    if (modal && modal !== 'boarding' && modal !== 'sunk') closeModal();
+    if (modal === 'barter') net.send({ t: 'barter', action: 'cancel' });
+    else if (modal && modal !== 'boarding' && modal !== 'sunk') closeModal();
     return;
   }
   if (e.repeat && k !== 'a' && k !== 'd') return;
@@ -374,6 +397,10 @@ addEventListener('keydown', (e) => {
       break;
     case 'o':
       toggle('crew');
+      break;
+    case 'y':
+      if (modal !== 'company') companyScreen.open();
+      toggle('company');
       break;
     case 'u':
       net.send({ t: 'ammo', ammo: 'cursed' });

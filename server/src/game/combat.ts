@@ -12,6 +12,7 @@ import type { Side } from '../../../shared/src/protocol.ts';
 import { gunCrewFactor, tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
+import { sameGroup } from './party.ts';
 import type { Game } from './Game.ts';
 import { MAX_LEAKS, leakChance } from './damagecontrol.ts';
 import type { ShipEntity } from './ship.ts';
@@ -355,6 +356,7 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   }
   if (a.ownerId !== null && a.ownerId === b.id) return 'friendly';
   if (b.ownerId !== null && b.ownerId === a.id) return 'friendly';
+  if (sameGroup(game, a, b)) return 'friendly'; // a group does not fire on its own
   return null;
 }
 

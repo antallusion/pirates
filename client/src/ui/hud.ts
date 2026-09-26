@@ -5,7 +5,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { WANTED_TITLES } from '../../../shared/src/data/factions.ts';
 import { AMMO, AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { isNight, timeOfDay } from '../../../shared/src/constants.ts';
-import { headingVec } from '../../../shared/src/math.ts';
+import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { activeTalents } from '../../../shared/src/data/talents.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
@@ -321,6 +321,13 @@ export class Hud {
       g.arc(tx(c.x), ty(c.y), 3, 0, Math.PI * 2);
       g.fill();
     }
+    // Your group: green squares; they stay on the chart however far they sail.
+    g.fillStyle = '#7fd08a';
+    for (const m of state.party?.members ?? []) {
+      if (m.name === state.self?.name || m.docked || !m.online) continue;
+      const mx = clamp(tx(m.x), 3, c.width - 3), my = clamp(ty(m.y), 3, c.height - 3);
+      g.fillRect(mx - 2.5, my - 2.5, 5, 5);
+    }
     // Monsters the Choir shows you (Eyes of the Choir).
     g.fillStyle = '#9b6bd0';
     for (const [mx, my] of state.self?.monsters ?? []) {
@@ -372,6 +379,13 @@ export class Hud {
     setTimeout(() => el.remove(), kind === 'xp' ? 3500 : 7000);
   }
 
+  /** Letters waiting: a small seal by the minimap. */
+  setUnread(n: number): void {
+    const el = $('unread');
+    el.textContent = n ? `✉ ${n}` : '';
+    el.classList.toggle('hidden', !n);
+  }
+
   banner(title: string, sub: string): void {
     const b = $('banner');
     b.innerHTML = `${esc(title)}<small>${esc(sub)}</small>`;
@@ -380,10 +394,11 @@ export class Hud {
     this.bannerTimer = window.setTimeout(() => b.classList.remove('show'), 3500);
   }
 
-  chat(from: string, text: string): void {
+  chat(from: string, text: string, ch?: 'group'): void {
     const log = $('chat-log');
     const d = document.createElement('div');
-    d.innerHTML = `<b>${esc(from)}:</b> ${esc(text)}`;
+    if (ch === 'group') d.className = 'chat-group';
+    d.innerHTML = `${ch === 'group' ? '<i>[group]</i> ' : ''}<b>${esc(from)}:</b> ${esc(text)}`;
     log.append(d);
     while (log.children.length > 8) log.firstChild!.remove();
   }

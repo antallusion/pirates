@@ -224,3 +224,6 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 .login-account summary { cursor: pointer; color: var(--fog); font-size: 13px; }
 .login-account form label { display: block; margin: 6px 0; }
 #reset-form { margin-top: 10px; }
+#chat-log div.chat-group, #chat-log div.chat-group b { color: #9fe0a8; }
+.unread { position: absolute; top: 6px; left: 8px; font-size: 13px; color: var(--brass); text-shadow: 0 1px 2px #000; pointer-events: none; }
+.card.letter.unread { border-color: var(--brass); }
