@@ -14,6 +14,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
+import { assetUrl } from '../assets.ts';
 import { esc, fmt, icon } from './dom.ts';
 import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
@@ -29,6 +30,11 @@ function licenceLeft(n: number): string {
 }
 
 type Tab = 'market' | 'shipyard' | 'tavern' | 'contracts' | 'harbour' | 'holdings' | 'exchange';
+
+/** The harbour's tabs by their icons. */
+const TAB_ICON: Record<Tab, string> = {
+  market: 'tab_market', shipyard: 'menu_ship', tavern: 'tab_tavern', contracts: 'tab_contracts', harbour: 'anchor', holdings: 'tab_holdings', exchange: 'tab_exchange',
+};
 
 export class PortScreen {
   tab: Tab = 'market';
@@ -50,13 +56,16 @@ export class PortScreen {
     const faction = FACTIONS[port.faction];
     const tabs: [Tab, string][] = [['market', L('tab.market')], ['shipyard', L('tab.shipyard')], ['tavern', L('tab.tavern')], ['contracts', L('tab.contracts')], ['harbour', L('tab.harbour')], ['holdings', L('tab.holdings')], ['exchange', L('tab.exchange')]];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1, state.ownStats?.cursedVolumeMul ?? 1);
+    // The harbour's own painting behind the header, and the faction's crest before its name.
+    const bg = assetUrl(`bg.port_${port.faction}`);
+    root.style.setProperty('--bg-port', bg ? `url('${bg}')` : 'none');
     root.innerHTML = `
       <div class="modal-head">
-        <div><h2>${esc(port.name)}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(serverText(port.description))}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(serverText(e.title))}${e.kind === 'blockade' || e.kind === 'armada' ? esc(L('head.blockade')) : e.kind === 'epidemic' ? esc(L('head.epidemic')) : ''}</div>`).join('')}</div>
+        <div><h2>${icon(`faction_${port.faction}`, '', 'ico-crest')}${esc(port.name)}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(serverText(port.description))}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(serverText(e.title))}${e.kind === 'blockade' || e.kind === 'armada' ? esc(L('head.blockade')) : e.kind === 'epidemic' ? esc(L('head.epidemic')) : ''}</div>`).join('')}</div>
         <div style="text-align:right"><div class="gold" style="font-size:18px">${esc(L('head.silver', { n: fmt(self.gold) }))}</div><div class="muted">${esc(L('head.hold', { vol: vol.toFixed(0), max: (state.ownStats?.holdVolume ?? 0).toFixed(0), crew: self.crew }))}</div>
         <button class="btn btn-primary" data-act="undock" style="margin-top:6px">${esc(L('btn.setSail'))}</button></div>
       </div>
-      <div class="tabs">${tabs.map(([id, n]) => `<div class="tab ${this.tab === id ? 'active' : ''}" data-tab="${id}">${esc(n)}</div>`).join('')}</div>
+      <div class="tabs">${tabs.map(([id, n]) => `<div class="tab ${this.tab === id ? 'active' : ''}" data-tab="${id}">${icon(TAB_ICON[id])}${esc(n)}</div>`).join('')}</div>
       <div class="modal-body">${this.body(view, state)}</div>`;
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
       this.tab = el.dataset.tab as Tab;
@@ -273,7 +282,7 @@ ${ammo}${intel}`;
       const maxed = m.level >= m.max;
       const mat = view.materialDiscount[m.module];
       const matNote = mat && !maxed ? `<p class="muted">${esc(L('yard.matNote', { n: mat.units, good: GOODS[mat.good].name.toLowerCase() }))}</p>` : '';
-      return `<div class="card"><h4>${esc(def.name)} <span class="muted">${m.level}/${m.max}</span>${m.excellent ? ` <span class="gold">${esc(L('yard.excellent'))}</span>` : ''}</h4><p>${esc(def.description)}</p>${matNote}
+      return `<div class="card"><h4>${icon(`mod_${m.module}`, '', 'ico-md')}${esc(def.name)} <span class="muted">${m.level}/${m.max}</span>${m.excellent ? ` <span class="gold">${esc(L('yard.excellent'))}</span>` : ''}</h4><p>${esc(def.description)}</p>${matNote}
         <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${esc(maxed ? L('yard.fullyFitted') : L('yard.fitLevel', { n: m.level + 1, cost: fmt(m.cost) }))}</button>
         ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" title="${esc(self.talents.shp_modular_refit ? L('yard.unfitFree') : L('yard.unfitFee'))}">${esc(L('yard.takeOut'))}</button>` : ''}</div>`;
     }).join('');
@@ -281,7 +290,7 @@ ${ammo}${intel}`;
       ${sy.guns.map((gdef) => {
         const g = GUNS[gdef.gun];
         const mounted = self.loadout.guns[side] === gdef.gun;
-        return `<div class="row" style="padding:3px 0"><span>${esc(g.name)} <span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span></span><button class="btn btn-small" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : fmt(gdef.cost)}</button></div>`;
+        return `<div class="row" style="padding:3px 0"><span>${icon(`gun_${gdef.gun}`)}${esc(g.name)} <span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span></span><button class="btn btn-small" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : fmt(gdef.cost)}</button></div>`;
       }).join('')}</div>`).join('');
     const ships = sy.ships.map((s) => {
       const c = SHIP_CLASSES[s.classId];
@@ -297,7 +306,7 @@ ${ammo}${intel}`;
         <div class="card"><h4>${esc(L('mount.title'))}</h4>${sy.mounts.map((m) => {
           const def = MOUNTS[m.mount];
           const fitted = self.loadout.mount === m.mount;
-          return `<div style="padding:4px 0"><div class="row"><b>${esc(def.name)}</b><button class="btn btn-small" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : fmt(m.cost)}</button></div><span class="muted">${esc(def.description)}</span></div>`;
+          return `<div style="padding:4px 0"><div class="row"><b>${icon(`mount_${m.mount}`)}${esc(def.name)}</b><button class="btn btn-small" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : fmt(m.cost)}</button></div><span class="muted">${esc(def.description)}</span></div>`;
         }).join('') || `<p class="muted">${esc(L('mount.none'))}</p>`}</div>
         ${modules}</div></div>
       <h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('hulls.title'))}</h3>
@@ -429,7 +438,7 @@ ${orders}${berths}</div>` : ''}`;
   private harbour(view: PortView, state: ClientState): string {
     const self = state.self!;
     const port = state.ports.find((p) => p.id === view.portId)!;
-    const reps = Object.entries(self.reputation).map(([f, v]) => `<tr><td>${esc(FACTIONS[f as never as keyof typeof FACTIONS].name)}</td><td class="${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</td></tr>`).join('');
+    const reps = Object.entries(self.reputation).map(([f, v]) => `<tr><td>${icon(`faction_${f}`)}${esc(FACTIONS[f as never as keyof typeof FACTIONS].name)}</td><td class="${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</td></tr>`).join('');
     return `<div class="cols"><div>
         <div class="card"><h4>${esc(L('pardon.title'))}</h4>${view.pardonCost !== null ? `<p>${esc(L('pardon.text', { n: self.infamy }))}</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>${esc(L('pardon.buy', { cost: fmt(view.pardonCost) }))}</button>` : `<p class="muted">${esc(L('pardon.none'))}</p>`}</div>
         ${view.licence ? `<div class="card"><h4>${esc(L('licence.title'))}</h4><p>${esc(view.licence.until > state.estServerTime() ? L('licence.textActive', { faction: FACTIONS[port.faction].short }) : L('licence.textDuty', { pct: Math.round(view.duty * 100) || '', faction: FACTIONS[port.faction].short }))}</p>

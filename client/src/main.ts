@@ -357,6 +357,8 @@ function closeModal(): void {
 
 function refreshModal(): void {
   const root = $('modal-panel');
+  // Screens dress by name in the stylesheet (header art, backgrounds).
+  root.dataset.modal = modal ?? '';
   switch (modal) {
     case 'port':
       if (state.portView) portScreen.render(root, state);
@@ -402,6 +404,7 @@ function refreshModal(): void {
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
       break;
   }
+  if (touch.enabled) stripKeyHints(root);
   // Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons).
   if (modal && modal !== 'boarding' && modal !== 'sunk' && modal !== 'mutiny' && !root.querySelector('.x-btn')) {
     const x = document.createElement('button');
@@ -410,6 +413,15 @@ function refreshModal(): void {
     x.onclick = () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal());
     root.append(x);
   }
+}
+
+/** Touch screens have no keys: "[F]"-style hints come off buttons and tabs. */
+function stripKeyHints(root: HTMLElement): void {
+  root.querySelectorAll<HTMLElement>('button, .tab, .btn').forEach((el) => {
+    for (const n of el.childNodes) {
+      if (n.nodeType === Node.TEXT_NODE && /\[[^\]]{1,8}\]/.test(n.textContent ?? '')) n.textContent = (n.textContent ?? '').replace(/\s*\[[^\]]{1,8}\]\s*/g, ' ').trim();
+    }
+  });
 }
 
 /** A screen from the captain's cabin or the micro menu. */

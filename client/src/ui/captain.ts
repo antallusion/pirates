@@ -5,7 +5,7 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
 import { TREES } from '../../../shared/src/data/talents.ts';
 import { assetUrl } from '../assets.ts';
-import { $, esc } from './dom.ts';
+import { $, esc, icon } from './dom.ts';
 import { dict, onLang, t } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/captain.ts';
 
@@ -41,7 +41,7 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
         <p>${esc(c.bio)}</p>
         <p class="muted" style="font-size:14px">${esc(c.playstyle)} ${esc(L('favoured', { list: c.favoredTrees.map((t) => TREES[t].name).join(', ') }))}</p>
         <div class="ability"><b>${esc(L('passive', { name: c.passive.name }))}</b><small>${esc(c.passive.description)}</small></div>
-        ${c.abilities.map((a) => `<div class="ability ${a.kind === 'ultimate' ? 'ult' : ''}"><span class="key">${a.key}</span><b>${esc(a.name)}</b> <span class="muted">· ${esc(L('cooldown', { n: a.cooldown }))}</span><small>${esc(a.description)}</small></div>`).join('')}
+        ${c.abilities.map((a) => `<div class="ability ${a.kind === 'ultimate' ? 'ult' : ''}">${icon(`ab_${a.id}`, '', 'ab-ico')}<span class="key">${a.key}</span><b>${esc(a.name)}</b> <span class="muted">· ${esc(L('cooldown', { n: a.cooldown }))}</span><small>${esc(a.description)}</small></div>`).join('')}
         <p class="muted" style="font-size:13px;font-family:var(--sans)">${esc(L('starts', { ship: ship.name, gun: GUNS[c.start.gun].name, crew: c.start.crew, gold: c.start.gold }))}</p>
         <label class="lbl">${esc(L('shipName'))}<input id="ship-name" class="field" maxlength="20" value="${esc(defaultShipName(current))}" /></label>
         <label class="check"><input type="checkbox" id="know-sea" /> ${esc(t('captain.knowSea'))}</label>

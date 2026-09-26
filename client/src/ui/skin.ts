@@ -6,6 +6,7 @@ import { assetUrl } from '../assets.ts';
 const SKIN = [
   'ui.frame', 'ui.plate', 'ui.button', 'ui.slot', 'ui.ring', 'ui.portrait_ring', 'ui.minimap_ring', 'ui.bar', 'ui.close',
   'ui.actionbar', 'ui.helm', 'ui.stick_base', 'tex.ebony', 'tex.chart', 'tex.panel', 'tex.parchment',
+  'bg.captain', 'bg.sunk', 'bg.prologue', 'bg.boarding', 'bg.cabin',
 ];
 
 export function applySkin(): void {

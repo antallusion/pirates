@@ -9,7 +9,7 @@ import type { ClientState } from '../state.ts';
 import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/talents.ts';
 import { serverText } from '../lang/server.ts';
-import { esc, fmt } from './dom.ts';
+import { esc, fmt, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 const points = (n: number) => `${n} ${plural(n, L('point.one'), L('point.few'), L('point.many'))}`;
@@ -44,7 +44,7 @@ export class TalentScreen {
             const pts = v === 'bridges' ? TALENTS.filter((x) => x.tree === 'bridge' && (self.talents[x.id] ?? 0) > 0).length : v === 'deeds' ? self.deeds.length : pointsInTree(self.talents, v);
             const off = v !== 'bridges' && v !== 'deeds' && !TREES[v].playable;
             const native = v !== 'bridges' && v !== 'deeds' && TREES[v].native.includes(self.captain);
-            return `<div class="tree-tab ${this.view === v ? 'active' : ''} ${off ? 'muted' : ''}" data-view="${v}">${esc(label)}${native ? ` <span class="gold" title="${esc(L('nativeTip'))}">◆</span>` : ''}<span style="float:right">${pts}</span></div>`;
+            return `<div class="tree-tab ${this.view === v ? 'active' : ''} ${off ? 'muted' : ''}" data-view="${v}">${v !== 'bridges' && v !== 'deeds' ? icon(`tree_${v}`) : ''}${esc(label)}${native ? ` <span class="gold" title="${esc(L('nativeTip'))}">◆</span>` : ''}<span style="float:right">${pts}</span></div>`;
           }).join('')}</div>
           ${this.respecBox(self, docked, now)}
         </div>

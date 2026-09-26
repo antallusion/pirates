@@ -535,3 +535,20 @@ table.grid td .ico { width: 1.9em; height: 1.9em; vertical-align: middle; margin
   table.grid.market td[data-l]::before { content: attr(data-l); display: block; font-size: 10px; color: var(--fog); text-transform: uppercase; letter-spacing: 0.05em; }
   table.grid.market td:first-child::before { display: none; }
 }
+
+/* Painted headers and screen backgrounds (Higgsfield `bg.*`), under a dark wash so text stays readable. */
+.ico-crest { width: 1.35em; height: 1.35em; object-fit: contain; vertical-align: -0.28em; margin-right: 8px; filter: drop-shadow(0 2px 3px #000); }
+#modal-panel[data-modal="port"] .modal-head,
+#modal-panel[data-modal="boarding"] .modal-head,
+#modal-panel[data-modal="menu"] .modal-head { min-height: 118px; align-items: flex-start; background-size: cover; background-position: center; border-bottom: 1px solid rgba(140, 107, 58, 0.45); }
+#modal-panel[data-modal="port"] .modal-head { background-image: linear-gradient(90deg, rgba(8, 8, 9, 0.9) 0%, rgba(8, 8, 9, 0.62) 50%, rgba(8, 8, 9, 0.25) 100%), var(--bg-port, none); }
+#modal-panel[data-modal="boarding"] .modal-head { background-image: linear-gradient(90deg, rgba(8, 8, 9, 0.9), rgba(8, 8, 9, 0.35)), var(--bg-boarding, none); }
+#modal-panel[data-modal="menu"] .modal-head { background-image: linear-gradient(90deg, rgba(8, 8, 9, 0.85), rgba(8, 8, 9, 0.3)), var(--bg-cabin, none); }
+#modal-panel[data-modal="sunk"] { background-image: linear-gradient(rgba(6, 7, 9, 0.55), rgba(6, 7, 9, 0.85)), var(--bg-sunk, none); background-size: cover; background-position: center; }
+#screen-captain { background: linear-gradient(rgba(5, 6, 8, 0.45), rgba(5, 6, 8, 0.8)), var(--bg-captain, none) center / cover no-repeat; }
+#prologue { background: radial-gradient(ellipse at 50% 55%, rgba(10, 16, 22, 0.35), rgba(3, 5, 8, 0.92)), var(--bg-prologue, none) center / cover no-repeat, #05070a; }
+#prologue p { text-shadow: 0 2px 8px #000, 0 0 20px #000; }
+.tab .ico, .tree-tab .ico { width: 22px; height: 22px; vertical-align: -6px; margin-right: 6px; border-radius: 3px; }
+.ability .ab-ico { float: left; width: 46px; height: 46px; margin: 2px 10px 2px 0; border: 1px solid var(--brass-dim); object-fit: cover; }
+.ability { overflow: hidden; }
+.card h4 .ico-md { float: left; margin: -2px 10px 4px 0; }
