@@ -68,7 +68,10 @@ export type Flag =
   | 'signal_flags' | 'escort_captain' | 'line_of_battle' | 'fear_and_respect' | 'screen_flagship' | 'legend_at_helm' | 'admirals_pennant'
   | 'rule_of_the_lash'
   // abyssal
-  | 'eyes_of_choir' | 'krakens_embrace' | 'voice_of_choir' | 'drowned_king' | 'crew_of_drowned' | 'heart_of_abyss';
+  | 'eyes_of_choir' | 'krakens_embrace' | 'voice_of_choir' | 'drowned_king' | 'crew_of_drowned' | 'heart_of_abyss'
+  // bridges
+  | 'chain_and_grapple' | 'storm_gunner' | 'ghost_trader' | 'blood_and_salt' | 'drowned_boarders' | 'flagship_yard' | 'exotic_goods'
+  | 'night_raider' | 'tide_whisperer' | 'salvage_king' | 'grand_battery' | 'iron_will';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

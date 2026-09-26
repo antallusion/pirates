@@ -21,6 +21,7 @@ import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { hireTrade, recruitCost, tavernOf } from './crew.ts';
 import { ESCORT_OFFERS } from './fleet.ts';
+import { exoticBonus, noteExoticPurchase } from './bridgefx.ts';
 import { poiRumor } from './exploration.ts';
 import { mountOffers } from './mounts.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -195,6 +196,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     ship.cargo[good] = prevQty + qty;
     game.setCostBasis(s, good, (prevBasis * prevQty + price) / (prevQty + qty));
     applyTrade(market, good, -qty);
+    noteExoticPurchase(p, port, good, qty);
     // Forged Papers rank 2: the Brokers stamp what they sell you.
     if (def.contraband && port.faction === 'brokers' && ship.rank('smg_forged_papers') >= 2) p.smuggle.stamped[good] = (p.smuggle.stamped[good] ?? 0) + qty;
     game.db.ledger(s.accountId, 'buy', -price, `${qty} ${good} @ ${port.id}`);
@@ -229,7 +231,8 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   ship.cargo[good] = (ship.cargo[good] ?? 0) - n;
   if (!ship.cargo[good]) delete ship.cargo[good];
   if (p.smuggle.stamped[good]) p.smuggle.stamped[good] = Math.max(0, p.smuggle.stamped[good]! - n);
-  p.gold += price;
+  const exotic = exoticBonus(ship, p, port, good, n, price);
+  p.gold += price + exotic;
   applyTrade(market, good, n);
   const profit = price - basis * n;
   p.stats.tradeProfit += Math.max(0, profit);
@@ -583,7 +586,7 @@ export function chartView(game: Game, s: PlayerSession, port: Port): PortView['c
 export function sellCharts(game: Game, s: PlayerSession, port: Port): string | null {
   const list = sellableCharts(game, s, port);
   if (!list.length) return 'The cartographer already has everything you know';
-  const value = Math.round(list.reduce((a, is) => a + islandChartValue(is, port), 0) * (s.ship!.hasFlag('appraiser') ? 1.15 : 1) * (1 + 0.15 * s.ship!.rank('exp_cartographer')));
+  const value = Math.round(list.reduce((a, is) => a + islandChartValue(is, port), 0) * (s.ship!.hasFlag('appraiser') ? 1.15 : 1) * (1 + 0.15 * s.ship!.rank('exp_cartographer')) * (s.ship!.hasFlag('exotic_goods') ? 1.15 : 1));
   const p = s.profile!;
   (p.chartSales[port.id] ??= []).push(...list.map((is) => is.id));
   p.gold += value;

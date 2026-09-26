@@ -2,6 +2,7 @@
 // grove, mine, pearl bank, shrine). It takes time, leaves the ship anchored and exposed, and can cost lives.
 // Features restock after a while, so islands stay worth revisiting. Rumours in taverns point to them.
 
+import { raiseHull, salvageTarget } from './bridgefx.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
@@ -72,6 +73,12 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
   const party0 = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
   // A treasure map whose circle covers us: the boats go digging.
+  // Salvage King: raise a hull that just went down.
+  const hull = salvageTarget(game, s);
+  if (hull) {
+    raiseHull(game, s, hull);
+    return null;
+  }
   const tmap = mapHere(game, s);
   if (tmap) {
     const t = digTime(ship);

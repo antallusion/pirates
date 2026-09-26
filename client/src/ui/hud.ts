@@ -107,7 +107,9 @@ export class Hud {
     }).join('');
     const heat = self.heat.port || self.heat.starboard
       ? `<div class="row" style="font-size:11px"><span class="lbl" style="color:var(--bad)">Heat</span><span class="val">P ${self.heat.port} · S ${self.heat.starboard}</span></div>` : '';
-    const mode = `<div class="row" style="font-size:11px"><span class="lbl">[K] Fire</span><span class="val">${self.rollingFire ? 'rolling' : 'broadside'}</span></div>`;
+    // Storm Gunner: the crest of the swell (the same seven-second cycle as the server).
+    const crest = (self.talents.brg_storm_gunner ?? 0) > 0 && state.wind[1] >= 0.9 && Math.sin((now * Math.PI * 2) / 7 + (state.entityId ?? 0)) > 0.75;
+    const mode = `<div class="row" style="font-size:11px"><span class="lbl">[K] Fire</span><span class="val">${self.rollingFire ? 'rolling' : 'broadside'}${crest ? ' · <span style="color:var(--gold)">CREST +15%</span>' : ''}</span></div>`;
     const combat = $('hud-combat');
     const key = ammo + reload + abilities + talentBar + heat + mode;
     if (key === this.lastCombatKey) {

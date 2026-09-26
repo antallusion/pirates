@@ -2,6 +2,7 @@
 // jettisoned casks, hidden coves, night fences and the Black Ledger, witnesses for Nobody's Ship,
 // hunters losing a ghost wake, and the actives (False Colors, Slip Away, Decoy Barrels).
 
+import { ghostTraderMul } from './bridgefx.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -45,7 +46,7 @@ export function searchChance(ship: ShipEntity, hidden: boolean): number {
   const base = hidden ? 0.1 * Math.max(0, 1 + tx(ship.stats, 'hiddenSearch')) : Math.max(0.05, 0.6 + tx(ship.stats, 'openSearch'));
   // The Mark of the Deep: every ten points in Abyssal, black veins in the canvas and 10% more zealous searches.
   const mark = 1 + 0.1 * Math.floor(pointsInTree(ship.talents, 'abyssal') / 10);
-  return Math.min(1, (ship.hasFlag('nobodys_ship') ? base * 0.5 : base) * mark);
+  return Math.min(1, (ship.hasFlag('nobodys_ship') ? base * 0.5 : base) * mark * ghostTraderMul(ship));
 }
 
 /** Customs at a lawful port. Returns the list of seized lots. */

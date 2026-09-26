@@ -13,6 +13,7 @@ import { fireBroadside, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { flagshipYardMods } from './bridgefx.ts';
 
 export type Formation = 'line' | 'wedge' | 'ring';
 export const FORMATIONS: Formation[] = ['line', 'wedge', 'ring'];
@@ -175,8 +176,9 @@ export function stepFleet(game: Game, s: PlayerSession): void {
   const pennant = ship.hasFlag('admirals_pennant');
   const logistics = tx(ship.stats, 'fleetLogistics');
   for (const e of escorts) {
-    const mods: StatMods = {};
-    if (signals) Object.assign(mods, FORMATION_MODS[p.fleet.formation]);
+    // Flagship Yard: half your fittings' bonuses; then the formation signal.
+    const mods: StatMods = { ...flagshipYardMods(ship) };
+    if (signals) for (const [k, v] of Object.entries(FORMATION_MODS[p.fleet.formation])) mods[k as keyof StatMods] = (mods[k as keyof StatMods] ?? 0) + (v ?? 0);
     if (pennant) {
       mods.hullMax = (mods.hullMax ?? 0) + 0.2;
       mods.gunDamageMul = (mods.gunDamageMul ?? 0) + 0.2;

@@ -8,6 +8,7 @@ import type { CaptainId } from './captains.ts';
 import type { Flag, StatMods } from './stats.ts';
 import { ABYSSAL } from './trees/abyssal.ts';
 import { BOARDING } from './trees/boarding.ts';
+import { BRIDGES } from './trees/bridges.ts';
 import { COMMAND } from './trees/command.ts';
 import { EXPLORATION } from './trees/exploration.ts';
 import { GUNNERY } from './trees/gunnery.ts';
@@ -79,7 +80,7 @@ export const MAX_BRIDGES = 3;
 export const TIER_STEP = 2;
 export const KEYSTONE_REQUIREMENT = 5;
 
-export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...COMMAND, ...TRADE, ...SMUGGLING, ...SURVIVAL, ...SHIPWRIGHT, ...EXPLORATION, ...ABYSSAL];
+export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...COMMAND, ...TRADE, ...SMUGGLING, ...SURVIVAL, ...SHIPWRIGHT, ...EXPLORATION, ...ABYSSAL, ...BRIDGES];
 
 export const TALENTS_BY_ID: Record<string, TalentDef> = Object.fromEntries(TALENTS.map((x) => [x.id, x]));
 

@@ -24,6 +24,7 @@ import { isNight } from '../../../shared/src/constants.ts';
 import { onCrewKilled, onCrit, onHullDamage } from './mind.ts';
 import { moraleLossMul, onMagazineBlast } from './crew.ts';
 import { screenFlagship } from './fleet.ts';
+import { grandBattery, nightRaider, stormGunnerRange } from './bridgefx.ts';
 import { cursedDamageMul, onCursedHit, onCursedVolley, onOwnCrewKilled, pactDamageMul } from './abyssfx.ts';
 
 export interface Projectile {
@@ -53,6 +54,7 @@ export interface VolleyRec {
   demoralised: Set<number>; // Splinter Storm: targets already shaken by this volley
   dealt: Map<number, number>; // hull damage per target (volley cap)
   t: number;
+  battery?: Set<number>; // Grand Battery: targets already shaken by this volley
 }
 
 export const COMBAT_TAG = 20;
@@ -111,7 +113,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const shots = Math.min(guns, ship.ammo[ammo]);
   if (shots <= 0) return `Out of ${AMMO[ammo].name}`;
   const gun = GUNS[ship.loadout.guns[side]];
-  const range = effectiveRange(ship, side, ammo);
+  const range = effectiveRange(ship, side, ammo) * stormGunnerRange(game, ship);
   const dist = clamp(Number.isFinite(aimDist) ? aimDist : range, 40, range);
   let baseHeading = sideHeading(ship, side);
   // Improved Carriages: the guns train toward the aim point.
@@ -130,8 +132,10 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn;
   // Shadow Strike: the first broadside from hiding, before she has seen you.
   const hiding = ship.hasFlag('hidden') || isNight(game.now) || game.weatherOf(ship) === 'fog';
-  const shadow = !!target && ship.hasFlag('shadow_strike') && hiding && !target.attackers.has(ship.id) && !ship.attackers.has(target.id) ? 1.3 : 1;
-  if (shadow > 1 && target) {
+  const shadowStrike = !!target && ship.hasFlag('shadow_strike') && hiding && !target.attackers.has(ship.id) && !ship.attackers.has(target.id) ? 1.3 : 1;
+  // Night Raider: the larger of the two counts.
+  const shadow = Math.max(shadowStrike, nightRaider(game, ship, target, hiding));
+  if (shadowStrike > 1 && target) {
     ship.addEffect({ id: 'shadow', until: game.now + 4, flags: ['hidden'] }, game.now);
     const tb = game.npcs.get(target.id);
     if (tb) tb.spared.set(ship.id, game.now + 4);
@@ -428,7 +432,17 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     crit = 'breach';
   }
   const grapeMorale = p.ammo === 'grape' && sst ? tval(sst, 'grapeMorale') : 0;
-  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: 0.35 + grapeMorale }, shooter);
+  // Grand Battery: three allied ships on one target within two seconds.
+  let battery = 0;
+  if (shooter && grandBattery(game, shooter, target)) {
+    hullDmg *= 1.1;
+    const rec = p.volley !== undefined ? game.volleys.get(p.volley) : undefined;
+    if (!rec || !rec.battery?.has(target.id)) {
+      battery = 10;
+      if (rec) (rec.battery ??= new Set()).add(target.id);
+    }
+  }
+  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: 0.35 + grapeMorale + battery }, shooter);
   if (shooter && p.volley !== undefined && sst?.flags.has('splinter_storm') && target.crew < target.stats.crewMax * 0.3) {
     const rec = game.volleys.get(p.volley);
     if (rec && !rec.demoralised.has(target.id)) {

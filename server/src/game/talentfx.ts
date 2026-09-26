@@ -196,6 +196,7 @@ export function useTalentActive(game: Game, s: PlayerSession, id: string, x?: nu
   let cd = id === 'cmd_sea_shanty' && ship.rank(id) >= 2 ? 360 : def.active.cooldown;
   if (id.startsWith('cmd_') && ship.hasFlag('rule_of_the_lash')) cd *= 0.7;
   // Abyssal gifts: Voice of the Choir and Offering shorten them; the Heart of the Abyss forbids it.
+  if (id === 'abs_abyss_step' && ship.hasFlag('tide_whisperer') && !ship.hasFlag('heart_of_abyss')) cd *= 0.7;
   if (id.startsWith('abs_')) cd *= abyssCooldownMul(ship) * (ship.hasFlag('heart_of_abyss') ? 1 : ship.stats.cooldownMul);
   else cd *= ship.stats.cooldownMul;
   p.talentCooldowns[id] = now + cd;

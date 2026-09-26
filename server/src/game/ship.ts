@@ -42,6 +42,7 @@ export interface BoardingState {
   remote?: boolean;
   party?: number;
   railChecked?: boolean;
+  healed?: number; // Blood and Salt: hull mended this boarding
 }
 
 export type NpcRole = 'merchant' | 'patrol' | 'pirate' | 'hunter' | 'fisher' | 'ghost' | 'escort';
@@ -148,6 +149,7 @@ export class ShipEntity {
   risingQueue: { n: number; at: number }[] = [];
   risingFrac = 0;
   abyssSpawn = false;
+  towed = false; // Salvage King: a raised hull on the tow line
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

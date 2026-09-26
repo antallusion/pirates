@@ -54,6 +54,8 @@ import {
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
 import type { Tavern } from './crew.ts';
+import { stepBridges } from './bridgefx.ts';
+import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
 import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
@@ -157,6 +159,7 @@ export class Game {
   projectiles: Projectile[] = [];
   strikes: DelayedStrike[] = [];
   zones: DeepZone[] = [];
+  sunkHulls: SunkHull[] = [];
   loot = new Map<number, Loot>();
   markets = new Map<string, Market>();
   tavernCrew = new Map<string, number>();
@@ -371,6 +374,7 @@ export class Game {
 
   /** Broadside spread multiplier from the sea state around a ship. */
   seaSpread(ship: ShipEntity): number {
+    if (ship.hasFlag('storm_gunner')) return 1; // Storm Gunner: the swell is part of the aim
     // Sea Legs: gunners who keep their feet lose less to the swell.
     const base = seaStateSpread(this.windFor(ship).strength, ship.cls.tier);
     return 1 + (base - 1) * Math.max(0, 1 + tval(ship.stats, 'seaPenalty'));
@@ -400,6 +404,8 @@ export class Game {
       }
     }
     ship.state = stepSailing(ship.state, input, ship.sailParams(night), wind, cur, dt);
+    // Tide Whisperer: in the dead wind of the Abyss the deep currents carry her.
+    if (ship.region === 'the_abyss' && ship.hasFlag('tide_whisperer') && ship.state.sail > 0.1) ship.state.speed = Math.max(ship.state.speed, ship.stats.maxSpeed * 0.6 * ship.state.sail);
     stepPivot(this, ship, dt);
 
     // Islands: test bow, stern and centre against nearby coastlines.
@@ -592,6 +598,7 @@ export class Game {
       stepCompany(this, s);
       stepFleet(this, s);
       stepAbyss(this, s);
+      stepBridges(this, s);
       // After a mutiny they sail her to port themselves.
       const bound = mutinyCourse(this, s.ship, s.profile.company);
       if (bound && !s.ship.docked) {
@@ -1155,6 +1162,11 @@ export class Game {
     if (ship.sinkingUntil) return;
     if (ship.caravanOf !== null) caravanLost(this, ship);
     this.sunkRecently.set(ship.id, this.now);
+    // Salvage King: a hull that went down whole can be raised for a while.
+    if (!ship.isPlayer && !ship.fleetId && !ship.abyssSpawn && ship.npcRole !== 'ghost') {
+      this.sunkHulls.push({ classId: ship.loadout.classId, name: ship.name.replace(/^Raised /, ''), x: ship.state.x, y: ship.state.y, t: this.now });
+      this.sunkHulls = this.sunkHulls.filter((h) => this.now - h.t < 600).slice(-40);
+    }
     if (ship.hasFlag('scuttle_charges') && ship.isPlayer) blowMagazine(this, ship); // nobody gets her hold
     ship.sinkingUntil = this.now + 6;
     ship.boarding = null;

@@ -13,6 +13,7 @@ import type { ShipEntity } from './ship.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { onCrewKilled, onGrapple } from './mind.ts';
 import { moraleLossMul } from './crew.ts';
+import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx.ts';
 
 const AGG = {
   careful: { tempo: 0.75, cargo: 0.55, ownLoss: 0.9 },
@@ -38,9 +39,11 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (blocked === 'friendly') return 'That ship sails with you';
   const anywhere = a.hasFlag('boarding_anywhere');
   const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
-  if (d > boardingRangeBetween(a, b) * (anywhere ? 1 : 1)) return 'Too far to throw grapples';
+  // Chain and Grapple: tangled rigging is half-way to a grapple already.
+  const tangled = a.hasFlag('chain_and_grapple') && b.hasEffect('tangled');
+  if (d > boardingRangeBetween(a, b) * (tangled ? 1.5 : 1)) return 'Too far to throw grapples';
   // Kraken's Embrace: the deep holds her still for the grapples.
-  const held = b.effects.some((e) => e.id === 'kraken_hold' && e.source === a.id);
+  const held = b.effects.some((e) => e.id === 'kraken_hold' && e.source === a.id) || tangled;
   if (!anywhere && !held) {
     const relSpeed = Math.abs(a.state.speed - b.state.speed);
     const rammed = a.ramTarget === b.id && a.ramUntil > game.now; // Hull to Hull
@@ -70,6 +73,8 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
   b.hull -= b.stats.hullMax * 0.02;
   openingMoves(game, a, b);
   onGrapple(a);
+  drownedBoardersRise(game, a);
+  drownedBoardersRise(game, b);
   game.emit({ k: 'board_start', a: a.id, b: b.id }, a.state.x, a.state.y);
   game.registerBoardingCrime(a, b);
 }
@@ -117,7 +122,7 @@ export function cutGrapples(game: Game, ship: ShipEntity): string | null {
     return null;
   }
   // Iron Grip: the attacker's grapnels cannot be cut at first.
-  const grip = tx(a.stats, 'ironGrip');
+  const grip = Math.max(tx(a.stats, 'ironGrip'), a.hasFlag('chain_and_grapple') && b.hasEffect('tangled') ? 5 : 0);
   if (now - a.boarding!.startedAt < grip) return 'The grapnels are chained — they will not part yet';
   const pa = power(game, a, b, false), pb = power(game, b, a, true);
   const chance = clamp(0.35 + (pb / pa - 1) * 0.3, 0.1, 0.8);
@@ -201,13 +206,19 @@ export function stepBoarding(game: Game): void {
     const floorB = Math.max(2, Math.round(bs.enemyStartCrew * 0.1));
     const killB2 = Math.max(0, Math.min(killB, b.crew - floorB));
     const killA2 = Math.max(0, Math.min(killA, aMen - (bs.remote ? 0 : floorA)));
+    // Drowned Boarders: for the first six seconds the dead take the losses.
+    const livingA = drownedTakeLosses(game, a, killA2);
+    const livingB = drownedTakeLosses(game, b, killB2);
     b.crew -= killB2;
     if (bs.remote) bs.party = (bs.party ?? 0) - killA2;
     else a.crew -= killA2;
     bs.killed += killB2;
     bs.lost += killA2;
-    onCrewKilled(game, b, killB2, a);
-    onCrewKilled(game, a, killA2, b);
+    onCrewKilled(game, b, livingB, a);
+    onCrewKilled(game, a, livingA, b);
+    // Blood and Salt: every foe that falls mends the victor's hull.
+    bloodAndSalt(a, killB2);
+    bloodAndSalt(b, killA2);
     b.morale -= ((killB / Math.max(1, bs.enemyStartCrew)) * 90 + 2) * moraleLossMul(b);
     a.morale -= (killA / Math.max(1, bs.startCrew)) * 70 * moraleLossMul(a);
     if (a.hasFlag('terror') && b.crew < b.stats.crewMax * 0.3) b.morale -= 6;
