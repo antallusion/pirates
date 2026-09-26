@@ -4,12 +4,12 @@
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { WANTED_TITLES } from '../../../shared/src/data/factions.ts';
 import { AMMO, AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
-import { timeOfDay } from '../../../shared/src/constants.ts';
+import { isNight, timeOfDay } from '../../../shared/src/constants.ts';
 import { headingVec } from '../../../shared/src/math.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { activeTalents } from '../../../shared/src/data/talents.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
-import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import { cargoVolume, tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl } from '../assets.ts';
@@ -54,7 +54,7 @@ export class Hud {
 
     // Ship condition.
     const cls = SHIP_CLASSES[self.loadout.classId];
-    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1);
+    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
     const skey = `${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}`;
     if (skey !== this.lastShipKey) {
@@ -126,7 +126,7 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${r.safety}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(state.weather.replace('_', ' '))} · ${esc(seasonName(now))}`;
+    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${r.safety}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(state.weather.replace('_', ' '))} · ${esc(seasonName(now))}${state.self?.forecast ? `<br><span class="muted">Weather Eye: ${esc(state.self.forecast.kind.replace('_', ' '))} in ${Math.max(1, Math.round(state.self.forecast.in / 60))} min</span>` : ''}`;
   }
 
   private drawNav(state: ClientState): void {
@@ -198,7 +198,9 @@ export class Hud {
     const W = c.width, H = c.height;
     const own = state.ownDisplay;
     if (!own) return;
-    const range = 4500;
+    // Star Reader: at night the stars show islands and ports twice as far.
+    const stars = (state.self?.talents.exp_star_reader ?? 0) > 0 && isNight(state.estServerTime());
+    const range = stars ? 9000 : 4500;
     const k = W / (range * 2);
     g.fillStyle = '#060a0e';
     g.fillRect(0, 0, W, H);
@@ -230,8 +232,10 @@ export class Hud {
       g.arc(tx(f.x), ty(f.y), f.r * k, 0, Math.PI * 2);
       g.fill();
     }
+    // Whirlpools are felt, not charted: 2.5 km, further with Anomaly Sense.
+    const sense = 2500 * (1 + (state.ownStats ? tval(state.ownStats, 'anomalySight') : 0));
     for (const w of state.whirlpools) {
-      if (Math.abs(w.x - own.x) > range + w.radius * 2 || Math.abs(w.y - own.y) > range + w.radius * 2) continue;
+      if (Math.hypot(w.x - own.x, w.y - own.y) > sense + w.radius) continue;
       g.strokeStyle = 'rgba(208,106,94,0.6)';
       g.beginPath();
       g.arc(tx(w.x), ty(w.y), w.radius * k, 0, Math.PI * 2);
@@ -252,6 +256,40 @@ export class Hud {
     for (const l of state.loot.values()) {
       g.fillStyle = '#b08d57';
       g.fillRect(tx(l.x) - 1.5, ty(l.y) - 1.5, 3, 3);
+    }
+    // Explorer's marks: soundings (shallows), wakes of passing ships, gold trails, treasure circles, known wrecks.
+    const self = state.self;
+    g.fillStyle = 'rgba(200,170,90,0.55)';
+    for (const [sx, sy] of self?.soundings ?? []) g.fillRect(tx(sx) - 1, ty(sy) - 1, 2, 2);
+    g.strokeStyle = 'rgba(180,200,210,0.45)';
+    g.lineWidth = 1;
+    for (const tr of self?.trails ?? []) {
+      g.beginPath();
+      tr.pts.forEach(([px, py], i) => (i ? g.lineTo(tx(px), ty(py)) : g.moveTo(tx(px), ty(py))));
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(230,190,80,0.8)';
+    for (const [gx, gy] of self?.goldTrails ?? []) {
+      g.beginPath();
+      g.arc(tx(gx), ty(gy), 2, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.strokeStyle = 'rgba(217,180,90,0.8)';
+    g.setLineDash([3, 3]);
+    for (const m of self?.maps ?? []) {
+      g.beginPath();
+      g.arc(tx(m.x), ty(m.y), Math.max(3, m.r * k), 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.setLineDash([]);
+    g.strokeStyle = 'rgba(120,190,200,0.8)';
+    for (const w of self?.wrecks ?? []) {
+      g.beginPath();
+      g.moveTo(tx(w.x) - 3, ty(w.y) - 3);
+      g.lineTo(tx(w.x) + 3, ty(w.y) + 3);
+      g.moveTo(tx(w.x) + 3, ty(w.y) - 3);
+      g.lineTo(tx(w.x) - 3, ty(w.y) + 3);
+      g.stroke();
     }
     // Insider: Crown patrols as hollow red diamonds; hidden coves as green hooks.
     g.strokeStyle = 'rgba(224,101,90,0.8)';

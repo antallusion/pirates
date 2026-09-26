@@ -175,7 +175,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
       case 'hunter':
         return wanted >= 3;
       case 'pirate':
-        if (safety === 'safe') return false;
+        // Gold Fever: a hoard in the hold draws pirates even into safe water.
+        if (safety === 'safe' && !p?.explore.hoardAboard) return false;
         if (p && (p.reputation.confederacy ?? 0) >= 30) return false;
         return !other.surrendered;
       case 'ghost':
@@ -282,6 +283,16 @@ function demote(game: Game, ship: ShipEntity, brain: NpcBrain): void {
 }
 
 function abstractStep(game: Game, ship: ShipEntity, brain: NpcBrain, dt: number): void {
+  // Out of sight but on someone's trail (a gold trail, a hunt): steer the voyage toward them.
+  if (brain.chase) {
+    const c = game.ships.get(brain.chase.id);
+    if (!c || !c.alive || c.docked || game.now > brain.chase.until) brain.chase = null;
+    else if (game.now >= brain.nextThink) {
+      brain.nextThink = game.now + 5;
+      const path = findPath(game.world, ship.state.x, ship.state.y, c.state.x, c.state.y, 20000);
+      if (path) setPath(brain, path);
+    }
+  }
   if (!brain.path) {
     if (!replan(game, ship, brain)) game.removeShip(ship.id);
     return;

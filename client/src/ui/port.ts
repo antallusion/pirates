@@ -30,7 +30,7 @@ export class PortScreen {
     const port = state.ports.find((p) => p.id === view.portId)!;
     const faction = FACTIONS[port.faction];
     const tabs: [Tab, string][] = [['market', 'Market'], ['shipyard', 'Shipyard'], ['tavern', 'Tavern'], ['contracts', 'Contracts'], ['harbour', 'Harbour Master'], ['holdings', 'Sites & Warehouse'], ['exchange', 'Exchange & Bank']];
-    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1);
+    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1);
     root.innerHTML = `
       <div class="modal-head">
         <div><h2>${esc(port.name)}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(port.description)}</div></div>
@@ -89,6 +89,8 @@ export class PortScreen {
         return this.send({ t: 'chart', action: 'sell' });
       case 'chart_buy':
         return this.send({ t: 'chart', action: 'buy', region: d.region as RegionId });
+      case 'treasure':
+        return this.send({ t: 'treasure', action: d.mode as never, tier: Number(d.tier ?? 0) });
       case 'insure':
         return this.send({ t: 'insure', tier: d.tier as never });
       case 'forward':
@@ -238,6 +240,13 @@ export class PortScreen {
           <button class="btn btn-small btn-primary" data-act="chart_sell" ${view.charts.sellable ? '' : 'disabled'}>Sell copies — ${fmt(view.charts.sellValue)}</button></div>
         ${view.charts.offers.map((o) => `<div class="row" style="padding:3px 0"><span>${esc(o.name)} <span class="muted">(${o.islands} uncharted islands)</span></span>
           <button class="btn btn-small" data-act="chart_buy" data-region="${o.region}">Buy — ${fmt(o.price)}</button></div>`).join('') || '<p class="muted">No charts to sell you.</p>'}
+      </div>
+      <div class="card"><h4>Treasure maps (${self.maps.length}/6)</h4>
+        <p>A drunk in the corner swears his stained map is true (350 silver, one a day in each port). Sail into the circle, drop the sails near land and press E to dig.</p>
+        ${self.maps.map((m) => `<div class="row" style="padding:2px 0"><span>${esc(m.name)}</span><span class="muted">search ${Math.round(m.r)} m</span></div>`).join('')}
+        <div class="row" style="gap:6px;margin-top:6px"><button class="btn btn-small" data-act="treasure" data-mode="buy">Buy a map</button>
+          <button class="btn btn-small" data-act="treasure" data-mode="assemble" ${self.fragments >= 3 ? '' : 'disabled'}>Assemble fragments (${self.fragments}/3)</button>
+          ${(self.talents.exp_map_of_the_dead ?? 0) > 0 ? [1, 2].map((t) => `<button class="btn btn-small" data-act="treasure" data-mode="merge" data-tier="${t}" ${self.maps.filter((m) => m.tier === t).length >= 3 ? '' : 'disabled'}>Merge 3 ${t === 1 ? 'stained' : 'captain\'s'}</button>`).join(' ') : ''}</div>
       </div>`;
   }
 

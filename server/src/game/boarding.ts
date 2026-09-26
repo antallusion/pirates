@@ -293,7 +293,7 @@ export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: n
     crewLost: lost,
     enemyCrewLost: killed,
     ransom: b.isPlayer ? 0 : Math.round(150 + cargoValue(cargo) * 0.08 + b.cls.tier * 120),
-    holdFree: Math.max(0, a.stats.holdVolume - cargoVolume(a.cargo, a.stats.contrabandVolumeMul, a.stats.materialVolumeMul)),
+    holdFree: Math.max(0, a.stats.holdVolume - cargoVolume(a.cargo, a.stats.contrabandVolumeMul, a.stats.materialVolumeMul, a.stats.provisionVolumeMul)),
     npc: !b.isPlayer,
     prize: null,
     captive: false,

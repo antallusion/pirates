@@ -8,6 +8,8 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 export interface RegionWeather {
   kind: WeatherKind;
   until: number;
+  /** What comes next (read by Weather Eye). */
+  next?: WeatherKind;
 }
 
 export const WEATHER_WIND: Record<WeatherKind, number> = {
@@ -33,7 +35,7 @@ function roll(rng: Rng, region: RegionId): WeatherKind {
 
 export function initWeather(rng: Rng, now: number): Record<RegionId, RegionWeather> {
   const out = {} as Record<RegionId, RegionWeather>;
-  for (const id of REGION_IDS) out[id] = { kind: roll(rng, id), until: now + rng.range(60, 400) };
+  for (const id of REGION_IDS) out[id] = { kind: roll(rng, id), until: now + rng.range(60, 400), next: roll(rng, id) };
   return out;
 }
 
@@ -43,10 +45,10 @@ export function stepWeather(state: Record<RegionId, RegionWeather>, rng: Rng, no
   for (const id of REGION_IDS) {
     const w = state[id];
     if (now < w.until) continue;
-    const next = roll(rng, id);
+    const next = w.next ?? roll(rng, id);
     const long = next === 'storm' || next === 'black_storm' ? rng.range(120, 260) : rng.range(180, 520);
     if (next !== w.kind) changed.push(id);
-    state[id] = { kind: next, until: now + long };
+    state[id] = { kind: next, until: now + long, next: roll(rng, id) };
   }
   return changed;
 }

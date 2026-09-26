@@ -13,6 +13,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { haulSite, ownSiteNear } from './resources.ts';
+import { canDive, digTime, makeMap, grantMap, mapChance, mapHere, resolveDig, resolveDive, wreckHere } from './explorefx.ts';
 
 export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'>;
 export const LANDABLE: LandableFeature[] = ['cache', 'wreck', 'ruins', 'grove', 'mine', 'pearl_bank', 'shrine'];
@@ -27,8 +28,10 @@ const LAND_RANGE = 260; // meters from the coastline
 
 export interface Landing {
   islandId: number;
-  feature: LandableFeature | 'haul';
+  feature: LandableFeature | 'haul' | 'dig' | 'dive';
   siteId?: string;
+  mapId?: string;
+  wreckId?: number;
   until: number;
   started: number;
   party: number;
@@ -67,6 +70,26 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   if (ship.landing) return 'The boats are already ashore';
   if (ship.inCombat(game.now)) return 'Not while under fire';
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
+  const party0 = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
+  // A treasure map whose circle covers us: the boats go digging.
+  const tmap = mapHere(game, s);
+  if (tmap) {
+    const t = digTime(ship);
+    ship.landing = { islandId: 0, feature: 'dig', mapId: tmap.id, until: game.now + t, started: game.now, party: party0 };
+    ship.input = { rudder: 0, sailTarget: 0 };
+    game.toastShip(ship, `The boats go ashore with spades for the ${tmap.name} (${Math.round(t)}s).`, 'info');
+    return null;
+  }
+  // A sunken wreck below: send the divers down.
+  const wreck = wreckHere(game, ship);
+  if (wreck) {
+    const why = canDive(game, s, wreck);
+    if (why) return why;
+    ship.landing = { islandId: 0, feature: 'dive', wreckId: wreck.id, until: game.now + 25, started: game.now, party: party0 };
+    ship.input = { rudder: 0, sailTarget: 0 };
+    game.toastShip(ship, `Divers go down to the ${wreck.name} (${wreck.depth} m, 25s).`, 'info');
+    return null;
+  }
   const own = ownSiteNear(game, s);
   if (own) {
     const party = Math.max(3, Math.min(16, Math.round(ship.crew * 0.35)));
@@ -108,6 +131,14 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
     game.toastShip(ship, `The landing party is recalled empty-handed${lost ? `; ${lost} did not make it back` : ''}.`, 'bad');
     return;
   }
+  if (l.feature === 'dig') {
+    resolveDig(game, s, l.mapId!, recalled ? 0.5 : 1);
+    return;
+  }
+  if (l.feature === 'dive') {
+    resolveDive(game, s, l.wreckId!, recalled ? 0.5 : 1);
+    return;
+  }
   if (l.feature === 'haul') {
     const site = game.sites.find((x) => x.id === l.siteId);
     if (!site || site.holder !== s.accountId) return;
@@ -120,7 +151,7 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
 }
 
 function addCargo(ship: ShipEntity, good: GoodId, n: number): number {
-  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
+  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
   const per = GOODS[good].volume * (GOODS[good].contraband ? ship.stats.contrabandVolumeMul : 1);
   const fit = Math.max(0, Math.min(n, Math.floor((free + 1e-6) / per)));
   if (fit > 0) ship.cargo[good] = (ship.cargo[good] ?? 0) + fit;
@@ -198,6 +229,14 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   game.grantXp(s, xp * share, null);
   const what = got.length ? got.join(', ') : 'nothing but sand and bones';
   game.toastShip(ship, `The party returns from the ${FEATURE_NAMES[feature]} on ${island.name}: ${what}.${lost ? ` ${lost} lost ashore.` : ''}`, got.length ? 'gold' : 'info');
+  // Treasure maps turn up in caches, wrecks and ruins.
+  if (feature === 'cache') mapChance(game, s, 0.15, 1, 'In the cache');
+  if (feature === 'wreck') mapChance(game, s, 0.1, 1, 'In a captain\'s chest');
+  if (feature === 'ruins') mapChance(game, s, 0.12, REGIONS[island.region].safety === 'lawless' ? 2 : 1, 'Carved on a wall');
+  // Ruin Reader: every third inscription of the Drowned Crown points to a hidden cache.
+  if (feature === 'ruins' && island.region === 'drowned_crown' && ship.hasFlag('ruin_reader') && island.id % 3 === 0) {
+    grantMap(game, s, makeMap(game, 2, { island }), 'The inscription reads true');
+  }
 }
 
 /** A tavern whisper about an unexplored feature near this port; charts the island (quietly) when heard. */

@@ -39,6 +39,7 @@ export type ClientMsg =
   | { t: 'dock'; bribe?: boolean }
   | { t: 'jettison'; good: GoodId; qty: number }
   | { t: 'fence_sell'; good: GoodId; qty: number }
+  | { t: 'treasure'; action: 'buy' | 'assemble' | 'merge'; tier?: number }
   | { t: 'undock' }
   | { t: 'trade'; good: GoodId; qty: number }
   | { t: 'buy_ammo'; ammo: AmmoId; qty: number }
@@ -248,6 +249,15 @@ export interface PrivateState {
   coves: { name: string; x: number; y: number }[];
   /** Insider: Crown patrols in your region. */
   patrols: [number, number][];
+  /** Treasure maps as this captain reads them. */
+  maps: { id: string; name: string; tier: number; x: number; y: number; r: number }[];
+  fragments: number;
+  /** Sunken wrecks you know of. */
+  wrecks: { name: string; x: number; y: number; depth: number }[];
+  trails: { classId: string; pts: [number, number][] }[];
+  soundings: [number, number][];
+  forecast: { kind: string; in: number } | null;
+  goldTrails: [number, number][];
   gold: number;
   infamy: number;
   wanted: number;
@@ -273,7 +283,7 @@ export interface PrivateState {
   sites: ResourceSiteView[]; // extraction rights you hold
   warehouses: Record<string, Cargo>;
   /** Island feature within reach of the boats, if any. */
-  landable: { island: string; feature: string } | null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive'; blocked?: string } | null;
   /** Landing party ashore. */
   landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;

@@ -434,7 +434,10 @@ function computePrompt(): string {
     const now = state.estServerTime();
     const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
     parts.push(`Boats ashore at the ${esc(self.landing.feature.replace('_', ' '))} — ${Math.round(frac * 100)}% <span class="muted">(raise sail to recall)</span>`);
-  } else if (self.landable) parts.push(`<kbd>L</kbd> Send a landing party to the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
+  } else if (self.landable?.blocked) parts.push(`<span class="muted">${esc(self.landable.feature)} — ${esc(self.landable.blocked)}</span>`);
+  else if (self.landable?.action === 'dig') parts.push(`<kbd>L</kbd> Dig for the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
+  else if (self.landable?.action === 'dive') parts.push(`<kbd>L</kbd> Send divers down to the ${esc(self.landable.feature)}`);
+  else if (self.landable) parts.push(`<kbd>L</kbd> Send a landing party to the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
   if (port) parts.push(`<kbd>F</kbd> Enter ${esc(port.name)}`);
   if (you.flags & SF.PROTECTED) parts.push('<span class="muted">Protected — firing ends it</span>');

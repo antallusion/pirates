@@ -154,7 +154,7 @@ export function exerciseOption(game: Game, s: PlayerSession, port: Port, index: 
 }
 
 function cargoVolumeOf(ship: ShipEntity): number {
-  return cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
+  return cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
 }
 
 /** Lapsed options: the stock goes back on the market and the deposit is gone. */

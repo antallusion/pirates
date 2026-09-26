@@ -178,7 +178,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     if (gm.stock < qty) return 'Not enough in stock';
     const price = quoteBuy(good, gm, qty, mods);
     if (p.gold < price) return 'Not enough silver';
-    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
+    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
     const need = qty * def.volume * (def.contraband ? ship.stats.contrabandVolumeMul : 1);
     if (need > free + 1e-6) return 'Not enough room in the hold';
     p.gold -= price;
@@ -419,9 +419,9 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   ship.hull = ship.stats.hullMax;
   ship.sails = ship.stats.sailHpMax;
   ship.rudderHp = 1;
-  if (cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul) > ship.stats.holdVolume) {
+  if (cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul) > ship.stats.holdVolume) {
     // Excess cargo is sold to the yard at a poor price rather than silently vanishing.
-    let excess = cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul) - ship.stats.holdVolume;
+    let excess = cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul) - ship.stats.holdVolume;
     let dumped = 0;
     for (const id of Object.keys(ship.cargo) as GoodId[]) {
       while (excess > 0 && (ship.cargo[id] ?? 0) > 0) {
@@ -593,7 +593,7 @@ export function chartView(game: Game, s: PlayerSession, port: Port): PortView['c
 export function sellCharts(game: Game, s: PlayerSession, port: Port): string | null {
   const list = sellableCharts(game, s, port);
   if (!list.length) return 'The cartographer already has everything you know';
-  const value = Math.round(list.reduce((a, is) => a + islandChartValue(is, port), 0) * (s.ship!.hasFlag('appraiser') ? 1.15 : 1));
+  const value = Math.round(list.reduce((a, is) => a + islandChartValue(is, port), 0) * (s.ship!.hasFlag('appraiser') ? 1.15 : 1) * (1 + 0.15 * s.ship!.rank('exp_cartographer')));
   const p = s.profile!;
   (p.chartSales[port.id] ??= []).push(...list.map((is) => is.id));
   p.gold += value;

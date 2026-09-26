@@ -27,7 +27,10 @@ export type StatKey =
   | 'leakInflow' | 'surgeon' | 'stormHull' | 'materialVolume' | 'materialUse' | 'damageControl' | 'hardenedCrew' | 'longVoyage'
   | 'lifeboats' | 'planking' | 'grimEndurance' | 'fireFight'
   // shipwright
-  | 'ballast' | 'salvage' | 'yardCost' | 'ramDealt' | 'ramTaken' | 'gunTrain' | 'bulkheads' | 'masterwork' | 'strapping' | 'fittings';
+  | 'ballast' | 'salvage' | 'yardCost' | 'ramDealt' | 'ramTaken' | 'gunTrain' | 'bulkheads' | 'masterwork' | 'strapping' | 'fittings'
+  // exploration
+  | 'cartography' | 'forecast' | 'beachcomber' | 'treasureHunter' | 'diveDepth' | 'pathfinder' | 'tracking' | 'frontier'
+  | 'anomalySight' | 'chartedWaters' | 'storesVolume' | 'eyeOfStorm';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -48,7 +51,10 @@ export type Flag =
   | 'lime_and_salt' | 'sealed_magazine' | 'wet_decks' | 'scuttle_charges' | 'old_salt' | 'patchwork_hull'
   // shipwright
   | 'copper_sheathing' | 'master_fitter' | 'field_forge' | 'modular_refit' | 'ironbound_masts' | 'spare_rigging' | 'prize_refit'
-  | 'legendary_keel' | 'boneyard_secrets' | 'iron_coffin' | 'overgunned';
+  | 'legendary_keel' | 'boneyard_secrets' | 'iron_coffin' | 'overgunned'
+  // exploration
+  | 'star_reader' | 'rumor_hound' | 'sounding_line' | 'ruin_reader' | 'map_of_the_dead' | 'lucky_dig' | 'leviathan_lore'
+  | 'legend_seeker' | 'gold_fever' | 'beyond_the_edge' | 'gold_trail';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

@@ -60,6 +60,10 @@ import {
   bribeCost, buildCoves, contrabandValue, coveAt, coveSell, customsSearch, deferCrime, discoverCoves, dockOverride, fenceSale, portFence, settleCrimes, unmask, visibleRange,
 } from './smugglefx.ts';
 import type { Cove, PendingCrime } from './smugglefx.ts';
+import {
+  buildWrecks, canDive, cartographerAction, forecast, goldTrailsFor, isMonster, mapChance, mapCircle, mapHere, recordTrails, soundings, stepExplorer, stormDebris, tavernMap, trailsFor, wreckHere,
+} from './explorefx.ts';
+import type { SunkenWreck, Trail } from './explorefx.ts';
 import { blowMagazine, canMend, lightFuse, seaDamageMul, stepSurvival, weariness } from './survivalfx.ts';
 import { craft, salvageBonus, wreckSalvage } from './wrightfx.ts';
 import { buyOption, caravanLost, caravansOf, exerciseOption, expireOptions, priceLetters, tendCaravans, onArrival } from './tradefx.ts';
@@ -73,7 +77,7 @@ import {
 } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
-import type { Profile } from './player.ts';
+import type { Profile, WorldView } from './player.ts';
 import {
   buildPortView, priceMods, buyAmmo, buyChart, buyLicence, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, shipyardUnfit, layKeel, syncKeel, trade,
 } from './ports.ts';
@@ -94,6 +98,7 @@ interface Loot {
   decoy?: boolean; // Decoy Barrels: empty
   wreck?: string; // region of a sunk hull (salvage)
   salvaged?: boolean;
+  monster?: boolean; // left by a monster of the deep (Leviathan Lore)
 }
 
 interface Rumor {
@@ -119,6 +124,7 @@ export interface GameOptions {
 const START_PORT = 'saltmarrow';
 
 const EVENT_LEAD = 1200;
+const roundCircle = (c: { x: number; y: number; r: number }) => ({ x: Math.round(c.x), y: Math.round(c.y), r: Math.round(c.r) });
 const WEATHER_TOAST: Record<string, string> = {
   calm: 'The wind dies. Sails hang slack.', breeze: 'A light breeze fills the canvas.', wind: 'A fresh wind — good sailing.',
   fog: 'Fog rolls in. Lookouts see half as far.', rain: 'Rain sweeps the deck.', storm: 'Storm! Reef the sails or lose them.',
@@ -152,6 +158,8 @@ export class Game {
   orders: BuyOrder[] = [];
   volleys = new Map<number, VolleyRec>();
   boats: JollyBoat[] = [];
+  wrecks: SunkenWreck[] = [];
+  trails = new Map<number, Trail>();
   coves: Cove[] = [];
   crimes: PendingCrime[] = [];
   /** Ships sunk recently (Nobody's Ship: dead men tell no tales). */
@@ -200,6 +208,7 @@ export class Game {
     if (savedSites) for (const site of this.sites) if (savedSites[site.id]) Object.assign(site, savedSites[site.id]);
     this.orders = this.db.getKv<BuyOrder[]>('orders') ?? [];
     this.coves = buildCoves(this);
+    this.wrecks = buildWrecks(this);
     const econ = this.db.getKv<{ history: IndexPoint[]; rewardMul: number }>('econ');
     if (econ) {
       this.econHistory = econ.history ?? [];
@@ -267,7 +276,8 @@ export class Game {
       if (hist) this.nextHistory = now + 60;
       for (const m of this.markets.values()) tickMarket(m, edt, hist);
       for (const p of this.world.ports) this.tavernCrew.set(p.id, Math.min(10 + p.size * 14, (this.tavernCrew.get(p.id) ?? 0) + 0.6 * p.size));
-      stepWeather(this.weather, this.rng, now);
+      const before = Object.fromEntries(Object.entries(this.weather).map(([k, w]) => [k, w.kind]));
+      for (const r of stepWeather(this.weather, this.rng, now)) if (before[r] === 'storm' || before[r] === 'black_storm') stormDebris(this, r);
       tickSites(this, edt);
       tickOrders(this);
       if (now >= this.nextEconCheckpoint) {
@@ -519,6 +529,7 @@ export class Game {
     }
     stepBoats(this);
     settleCrimes(this);
+    if (Math.floor(now) % 5 === 0) recordTrails(this);
     for (const [id, t] of this.sunkRecently) if (now - t > 900) this.sunkRecently.delete(id);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
 
@@ -551,6 +562,7 @@ export class Game {
       expireForwards(this, s);
       expireOptions(this, s);
       discoverCoves(this, s);
+      stepExplorer(this, s);
       syncKeel(this, s);
       this.stepDump(s);
       if (s.ship.hasEffect('false_colors')) {
@@ -569,8 +581,15 @@ export class Game {
       const own = s.ship.docked || s.ship.landing ? null : ownSiteNear(this, s);
       const land = s.ship.docked || s.ship.landing || own ? null : findLandable(this, s);
       const cove = !s.ship.docked && Object.keys(s.ship.cargo).some((g) => GOODS[g as GoodId].contraband) ? coveAt(this, s.ship) : null;
+      const tmap = s.ship.docked || s.ship.landing ? null : mapHere(this, s);
+      const wreck = s.ship.docked || s.ship.landing || tmap ? null : wreckHere(this, s.ship);
+      const wreckWhy = wreck ? canDive(this, s, wreck) : null;
       s.landable = cove
         ? { island: cove.name, feature: 'buyers for contraband (90% of Fogmouth)' }
+        : tmap
+        ? { island: tmap.name.replace(/^.* — /, ''), feature: `buried treasure (${tmap.name.replace(/ — .*$/, '').toLowerCase()})`, action: 'dig' }
+        : wreck
+        ? { island: 'the sea floor', feature: `wreck of the ${wreck.name} (${wreck.depth} m)`, action: 'dive', blocked: wreckWhy ?? undefined }
         : own
         ? { island: own.island.name, feature: `stockpile of ${GOODS[own.site.good].name.toLowerCase()} (${Math.floor(own.site.stock)})` }
         : land ? { island: land.island.name, feature: FEATURE_NAMES[land.feature] } : null;
@@ -613,7 +632,8 @@ export class Game {
 
     // Provisions: 1 unit feeds 40 sailors for a minute.
     if (ship.isPlayer && this.tick % 200 === 0) {
-      const eat = (ship.crew / 40) * (10 / 60) * 6 * st.provisionUse;
+      const frontier = REGIONS[ship.region].safety === 'lawless' ? Math.max(0.5, 1 - 1.25 * tval(st, 'frontier')) : 1;
+      const eat = (ship.crew / 40) * (10 / 60) * 6 * st.provisionUse * frontier;
       const have = ship.cargo.provisions ?? 0;
       if (have > 0) {
         const left = Math.max(0, have - eat);
@@ -902,6 +922,23 @@ export class Game {
     return economyReport(this, windowSec);
   }
 
+  private worldView(s: PlayerSession): WorldView {
+    const ship = s.ship;
+    const p = s.profile!;
+    return {
+      coves: this.coves,
+      patrols: this.insiderPatrols(s),
+      explore: ship ? {
+        maps: p.explore.maps.map((m) => ({ id: m.id, name: m.name, tier: m.tier, ...roundCircle(mapCircle(m, ship)) })),
+        wrecks: this.wrecks.filter((w) => p.explore.dived[w.id] !== undefined || dist(w.x, w.y, ship.state.x, ship.state.y) < 600).map((w) => ({ name: w.name, x: Math.round(w.x), y: Math.round(w.y), depth: w.depth })),
+        trails: trailsFor(this, ship),
+        soundings: soundings(this, ship),
+        forecast: forecast(this, ship),
+        goldTrails: goldTrailsFor(this, ship),
+      } : undefined,
+    };
+  }
+
   /** Insider: Crown patrols in the captain's region, rounded to 100 m. */
   private insiderPatrols(s: PlayerSession): [number, number][] {
     const ship = s.ship;
@@ -919,6 +956,12 @@ export class Game {
   /** Re-send a ship's name card to everyone (False Colors). */
   refreshInfo(ship: ShipEntity): void {
     for (const s of this.sessions) s.knownEntities.delete(ship.id);
+  }
+
+  /** Loot only one captain can see and pick up. */
+  dropPrivateLoot(accountId: number, x: number, y: number, cargo: Cargo, ttl: number): void {
+    const id = this.allocId();
+    this.loot.set(id, { id, x, y, cargo, gold: 0, expires: this.now + ttl, ownerOnly: accountId });
   }
 
   /** Decoy Barrels: empty casks that look like cargo. */
@@ -1026,6 +1069,8 @@ export class Game {
 
   grantXp(s: PlayerSession, amount: number, reason: string | null): void {
     if (!s.profile || amount <= 0) return;
+    // Frontier Spirit: lawless waters teach more.
+    if (s.ship && REGIONS[s.ship.region].safety === 'lawless') amount *= 1 + tval(s.ship.stats, 'frontier');
     const gained = addXp(s.profile, amount);
     if (s.ship) s.ship.level = s.profile.level;
     if (reason) this.sendTo(s, { t: 'toast', msg: `+${Math.round(amount)} XP — ${reason}`, kind: 'xp' });
@@ -1100,7 +1145,7 @@ export class Game {
     }
     if (!Object.keys(cargo).length && gold <= 0) return;
     const id = this.allocId();
-    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region });
+    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region, monster: isMonster(ship) });
   }
 
   private creditKill(killer: ShipEntity, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
@@ -1302,7 +1347,7 @@ export class Game {
     if (!target || target.lootLockedFor !== ship.id) return 'The prize slipped away';
     if (dist(ship.state.x, ship.state.y, target.state.x, target.state.y) > 400) return 'The prize drifted too far';
     // Move cargo within hold limits.
-    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
+    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
     let moved = 0;
     for (const id in take) {
       const g = id as GoodId;
@@ -1331,6 +1376,7 @@ export class Game {
       this.toastShip(ship, `Swaying ${moved} units across (${Math.ceil(ship.transferUntil - this.now)} s alongside).`, 'info');
     }
     if (fate === 'sink' || fate === 'prize') takeCaptive(this, s, target);
+    if (!target.isPlayer) mapChance(this, s, target.npcRole === 'pirate' ? 0.1 : 0.05, target.npcRole === 'pirate' ? 2 : 1, "In her captain's cabin");
     s.profile.gold += pend.result.gold;
     if (pend.result.gold) this.db.ledger(s.accountId, 'plunder', pend.result.gold, target.name);
     if (!target.isPlayer) target.purse = 0;
@@ -1384,8 +1430,20 @@ export class Game {
     if (l.wreck && !l.salvaged) {
       l.salvaged = true; // the first salvager works the wreck over
       salvageBonus(this, s, l.cargo, l.wreck);
+      // Leviathan Lore: more off a monster of the deep.
+      if (l.monster && ship.hasFlag('leviathan_lore')) for (const g in l.cargo) l.cargo[g as GoodId] = Math.round((l.cargo[g as GoodId] ?? 0) * 1.2);
+      // Beachcombing: something of value in the flotsam.
+      if (this.rng.chance(0.05 + tval(ship.stats, 'beachcomber'))) {
+        if (this.rng.chance(0.3)) mapChance(this, s, 1, 1, 'Wrapped in oilcloth in the flotsam');
+        else {
+          const found = this.rng.int(60, 240);
+          s.profile.gold += found;
+          this.db.ledger(s.accountId, 'loot', found, 'beachcomb');
+          this.toastShip(ship, `A purse in the flotsam: ${found} silver.`, 'gold');
+        }
+      }
     }
-    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
+    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
     const got: string[] = [];
     for (const id in l.cargo) {
       const g = id as GoodId;
@@ -1447,6 +1505,7 @@ export class Game {
     let f = w === 'fog' ? 0.6 : w === 'storm' || w === 'black_storm' ? 0.8 : 1;
     if (ship.hasFlag('dead_reckoning')) f = 1 - (1 - f) / 2;
     if (ship.hasFlag('storm_rider') && (w === 'storm' || w === 'black_storm')) f = 1 - (1 - f) / 2;
+    if (tval(ship.stats, 'eyeOfStorm') >= 1 && (w === 'storm' || w === 'black_storm')) f = 1; // Eye of the Storm
     return f;
   }
 
@@ -1485,7 +1544,14 @@ export class Game {
     const strange = REGIONS[is.region].strangeness;
     const xp = 12 + Math.min(40, is.radius / 40) + strange * 60 + (is.features.includes('ruins') ? 25 : 0);
     this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region }] });
-    this.grantXp(s, xp, null);
+    const ship = s.ship;
+    this.grantXp(s, xp * (1 + (ship ? tval(ship.stats, 'cartography') : 0)), null);
+    // Pathfinder: a new landfall lifts the crew.
+    const pf = ship ? tval(ship.stats, 'pathfinder') : 0;
+    if (ship && pf > 0) {
+      ship.morale = Math.min(100, ship.morale + 10);
+      ship.addEffect({ id: 'pathfinder', until: this.now + 600, mods: { maxSpeed: pf } }, this.now);
+    }
   }
 
   revealAround(ship: ShipEntity, r: number): number {
@@ -1757,6 +1823,8 @@ export class Game {
         return err(this.tryDock(s, !!msg.bribe));
       case 'jettison':
         return err(this.jettison(s, msg.good, Math.trunc(Number(msg.qty))));
+      case 'treasure':
+        return portAction((pt) => (msg.action === 'buy' ? tavernMap(this, s, pt.id) : cartographerAction(this, s, msg.action === 'assemble' ? 'assemble' : 'merge', Math.trunc(Number(msg.tier)))));
       case 'fence_sell':
         return portAction((pt) => {
           const f = portFence(this, ship, pt);
@@ -1993,7 +2061,7 @@ export class Game {
     s.knownEntities.clear();
     s.knownChunks.clear();
     this.sendTo(s, {
-      t: 'init', self: toPrivateState(s, this.now, { coves: this.coves, patrols: this.insiderPatrols(s) }), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
+      t: 'init', self: toPrivateState(s, this.now, this.worldView(s)), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
     });
     // Islands the captain has charted are sent up front so the world map is complete.
     this.sendIslands(s, [...s.discovered]);
@@ -2064,6 +2132,7 @@ export class Game {
     onDockDeeds(this, s);
     syncKeel(this, s);
     ship.voyageStart = 0;
+    p.explore.hoardAboard = false;
     sellPrizes(this, s, port);
     onArrival(this, p, port);
     this.tavernWhispers(s);
@@ -2138,7 +2207,7 @@ export class Game {
 
   pushSelf(s: PlayerSession, force = false): void {
     if (!s.profile) return;
-    const state = toPrivateState(s, this.now, { coves: this.coves, patrols: this.insiderPatrols(s) });
+    const state = toPrivateState(s, this.now, this.worldView(s));
     const json = JSON.stringify(state);
     if (!force && this.lastSelf.get(s) === json) return;
     this.lastSelf.set(s, json);
@@ -2164,8 +2233,9 @@ export class Game {
         if (d > INTEREST_RADIUS) return;
         if (o.id !== me.id) {
           if (o.docked) return;
-          if (o.hasFlag('hidden') && d > 250 && o.ownerId !== me.id) return;
-          if (o.isPlayer && d > 250 && d > visibleRange(this, o, me)) return;
+          const lookout = me.hasEffect('crows_nest') && d <= me.stats.detection; // Crow's Nest sees through it all
+          if (!lookout && o.hasFlag('hidden') && d > 250 && o.ownerId !== me.id) return;
+          if (!lookout && o.isPlayer && d > 250 && d > visibleRange(this, o, me)) return;
         }
         const brain = this.npcs.get(o.id);
         if (brain && !brain.active) return;

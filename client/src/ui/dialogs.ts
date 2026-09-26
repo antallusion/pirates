@@ -13,7 +13,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
   const take: Cargo = {};
   const mul = state.ownStats?.contrabandVolumeMul ?? 1;
   const holdMax = state.ownStats?.holdVolume ?? 0;
-  const base = cargoVolume(state.self?.cargo ?? {}, mul, state.ownStats?.materialVolumeMul ?? 1);
+  const base = cargoVolume(state.self?.cargo ?? {}, mul, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1);
   const goods = Object.keys(r.cargo) as GoodId[];
   // Default: take the most valuable goods per volume that fit.
   let free = holdMax - base;
@@ -79,7 +79,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
       <tr><td>Draft</td><td>${cls.draft.toFixed(1)} m${cls.passive.id === 'shallow_runner' ? ' (Shallow Runner: ignores reefs)' : ' — reefs and coastal shoals shallower than this tear the keel'}</td></tr>
       <tr><td>No-go zone</td><td>${st.noGoDeg.toFixed(0)}° (${esc(cls.rig.replace('_', '-'))} rig)</td></tr><tr><td>Hull / armor</td><td>${st.hullMax} / ${Math.round(st.armor * 100)}%</td></tr>
       <tr><td>Sails</td><td>${st.sailHpMax}</td></tr><tr><td>Crew</td><td>${self.crew} (min ${st.crewMin}, max ${st.crewMax})</td></tr>
-      <tr><td>Hold</td><td>${cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul).toFixed(1)} / ${st.holdVolume.toFixed(0)} volume · ${st.holdWeight.toFixed(0)} t</td></tr>
+      <tr><td>Hold</td><td>${cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul).toFixed(1)} / ${st.holdVolume.toFixed(0)} volume · ${st.holdWeight.toFixed(0)} t</td></tr>
       <tr><td>Port battery</td><td>${cls.gunPortsPerSide - self.gunsDisabled.port}/${cls.gunPortsPerSide} × ${esc(GUNS[self.loadout.guns.port].name)}</td></tr>
       <tr><td>Starboard battery</td><td>${cls.gunPortsPerSide - self.gunsDisabled.starboard}/${cls.gunPortsPerSide} × ${esc(GUNS[self.loadout.guns.starboard].name)}</td></tr>
       <tr><td>Reload / spread / damage</td><td>×${st.reloadMul.toFixed(2)} / ×${st.spreadMul.toFixed(2)} / ×${st.gunDamageMul.toFixed(2)}</td></tr>

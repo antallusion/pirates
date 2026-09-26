@@ -19,6 +19,7 @@ import type { Forward, Loan, Policy } from './finance.ts';
 import { captiveRansom } from './prizes.ts';
 import type { Captive } from './prizes.ts';
 import type { TradeOption } from './tradefx.ts';
+import type { TreasureMap } from './explorefx.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 
 export interface Profile {
@@ -75,6 +76,14 @@ export interface Profile {
   talentCooldowns: Record<string, number>;
   captives: Captive[];
   blueprints: string[]; // plans for fittings no yard sells
+  explore: {
+    maps: TreasureMap[];
+    fragments: number;
+    dived: Record<number, number>; // sunken wreck id -> world time dived
+    rumorDay: number;
+    tavernDeals: string[];
+    hoardAboard: boolean; // Gold Fever: a trail follows you
+  };
   keel: { classId: string; since: number } | null; // Legendary Keel
   trade: {
     lastDeparture: string;
@@ -127,7 +136,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], explore: { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false }, keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -137,6 +146,7 @@ export class PlayerSession {
   name = '';
   token = '';
   profile: Profile | null = null;
+  chartedCache = { region: '', size: -1, full: false };
   ship: ShipEntity | null = null;
   knownEntities = new Set<number>();
   knownChunks = new Set<number>();
@@ -149,7 +159,7 @@ export class PlayerSession {
   disconnectedAt: number | null = null;
   lingerUntil = 0;
   lastRegion = '';
-  landable: { island: string; feature: string } | null = null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive'; blocked?: string } | null = null;
   siteViews: ResourceSiteView[] = [];
 
   constructor(conn: WsConnection) {
@@ -212,7 +222,13 @@ export function pardonCost(p: Profile): number {
   return Math.round(p.infamy * 18 + p.level * 40);
 }
 
-export function toPrivateState(s: PlayerSession, now: number, world: { coves: { id: number; name: string; x: number; y: number }[]; patrols: [number, number][] } = { coves: [], patrols: [] }): PrivateState {
+export interface WorldView {
+  coves: { id: number; name: string; x: number; y: number }[];
+  patrols: [number, number][];
+  explore?: Pick<PrivateState, 'maps' | 'wrecks' | 'trails' | 'soundings' | 'forecast' | 'goldTrails'>;
+}
+
+export function toPrivateState(s: PlayerSession, now: number, world: WorldView = { coves: [], patrols: [] }): PrivateState {
   const p = s.profile!;
   const ship = s.ship;
   return {
@@ -238,6 +254,13 @@ export function toPrivateState(s: PlayerSession, now: number, world: { coves: { 
     options: p.trade.options,
     coves: world.coves.filter((c) => p.smuggle.coves.includes(c.id) || ship?.hasFlag('cove_knowledge')).map((c) => ({ name: c.name, x: Math.round(c.x), y: Math.round(c.y) })),
     patrols: world.patrols,
+    maps: world.explore?.maps ?? [],
+    fragments: p.explore.fragments,
+    wrecks: world.explore?.wrecks ?? [],
+    trails: world.explore?.trails ?? [],
+    soundings: world.explore?.soundings ?? [],
+    forecast: world.explore?.forecast ?? null,
+    goldTrails: world.explore?.goldTrails ?? [],
     appraisal: ship?.hasFlag('appraiser') ? appraise(p) : null,
     captives: p.captives.map((c) => ({ name: c.name, faction: c.faction, ransom: captiveRansom(c, (ship?.rank('trd_prize_broker') ?? 0) > 0) })),
     talents: p.talents,
@@ -328,6 +351,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.talentCooldowns ??= {};
   p.captives ??= [];
   p.blueprints ??= [];
+  p.explore = { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false, ...((p.explore as Partial<Profile['explore']> | undefined) ?? {}) };
   p.keel ??= null;
   p.trade = { ...newTradeState(), ...(p.trade ?? {}) };
   p.smuggle = { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null, ...((p.smuggle as Partial<Profile['smuggle']> | undefined) ?? {}) };

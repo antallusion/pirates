@@ -19,6 +19,7 @@ import { addHeat, upwindOf } from './talentfx.ts';
 import { callPatrols } from './tradefx.ts';
 import { unmask } from './smugglefx.ts';
 import { survivalOnHit, woundedOf } from './survivalfx.ts';
+import { isMonster } from './explorefx.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 
 export interface Projectile {
@@ -376,7 +377,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // Iron Strapping: extra armour against armour-piercing shot.
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
   const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)));
-  let hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul;
+  const lore = shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1; // Leviathan Lore
+  let hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore;
   // No single broadside may take more than 30% of a hull (Iron Coffin: 20%).
   if (p.volley !== undefined) {
     const rec = game.volleys.get(p.volley);

@@ -18,7 +18,7 @@ export class WorldMap {
   open(root: HTMLElement, state: ClientState): void {
     root.innerHTML = `<div class="modal-head"><div><h2>Chart of the Known Sea</h2><div class="sub">${state.discovered.size} islands charted · drag to pan, wheel to zoom</div></div><div class="muted">[M] close</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting</div></div>`;
+      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting · <span style="color:#c9a25a">◌</span> treasure map · <span style="color:#78bec8">✕</span> sunken wreck</div></div>`;
     const c = root.querySelector('canvas')!;
     this.canvas = c;
     if (!this.centred && state.ownDisplay) {
@@ -223,6 +223,28 @@ export class WorldMap {
       g.fillStyle = '#d9b45a';
       g.fillRect(tx(st.x) - 4, ty(st.y) - 4, 8, 8);
       g.fillText(`${st.good.replace('_', ' ')} ${st.stock}/${st.capacity}`, tx(st.x), ty(st.y) + 16);
+    }
+    // Treasure maps: the search circle; sunken wrecks you know of.
+    g.setLineDash([6, 5]);
+    for (const m of state.self?.maps ?? []) {
+      g.strokeStyle = m.tier >= 3 ? '#e8c65a' : '#c9a25a';
+      g.fillStyle = g.strokeStyle;
+      g.beginPath();
+      g.arc(tx(m.x), ty(m.y), Math.max(5, m.r * k), 0, Math.PI * 2);
+      g.stroke();
+      g.fillText(m.name, tx(m.x), ty(m.y) - Math.max(5, m.r * k) - 4);
+    }
+    g.setLineDash([]);
+    for (const w of state.self?.wrecks ?? []) {
+      g.strokeStyle = '#78bec8';
+      g.fillStyle = '#78bec8';
+      g.beginPath();
+      g.moveTo(tx(w.x) - 4, ty(w.y) - 4);
+      g.lineTo(tx(w.x) + 4, ty(w.y) + 4);
+      g.moveTo(tx(w.x) + 4, ty(w.y) - 4);
+      g.lineTo(tx(w.x) - 4, ty(w.y) + 4);
+      g.stroke();
+      g.fillText(`${w.name} · ${w.depth} m`, tx(w.x), ty(w.y) + 14);
     }
     // Hidden coves you know.
     for (const c of state.self?.coves ?? []) {

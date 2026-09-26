@@ -167,6 +167,9 @@ export function useTalentActive(game: Game, s: PlayerSession, id: string): strin
       if (why) return why;
       break;
     }
+    case 'exp_crows_nest':
+      ship.addEffect({ id: 'crows_nest', until: now + 20, mods: { detection: 0.5 } }, now);
+      break;
     case 'srv_brace':
       brace(game, ship);
       break;
