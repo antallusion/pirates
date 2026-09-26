@@ -2,8 +2,9 @@
 // non-trivial effects (area damage, delayed strikes, summons, reveals). Simple buffs are pure data.
 
 import { findAbility } from '../../../shared/src/data/captains.ts';
-import { dist } from '../../../shared/src/math.ts';
+import { dist, headingOf } from '../../../shared/src/math.ts';
 import { applyDamage } from './combat.ts';
+import { RESOLVE_MAX, callPower, spendDread, witnessMiracle } from './mind.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -30,6 +31,9 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
   if (!ship.alive || ship.docked) return 'Not at sea';
   if (def.kind === 'ultimate' && profile.level < 6) return 'Ultimates unlock at level 6';
   if (def.goldCost && profile.gold < def.goldCost) return `Needs ${def.goldCost} silver`;
+  if (def.kind === 'ultimate' && ship.resolve < RESOLVE_MAX) return `${def.name} needs full resolve (${Math.floor(ship.resolve)}/100) — trade blows to build it`;
+  if (def.dreadCost && ship.dread < def.dreadCost) return `${def.name} needs ${def.dreadCost} Dread (${Math.floor(ship.dread)})`;
+  const power = callPower(ship);
 
   let x = tx ?? ship.state.x, y = ty ?? ship.state.y;
   if (def.targeting === 'point' || def.targeting === 'ship') {
@@ -65,20 +69,30 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
     case 'smoke_pots':
       game.emit({ k: 'fx', fx: 'smoke', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 110 }, ship.state.x, ship.state.y);
       break;
-    case 'brine_mend':
-      ship.addEffect({ id: 'brine_mend', until: now + def.duration }, now);
+    case 'brine_mend': {
+      ship.talentReady.brinePower = power;
+      // Two in a hundred go into the water: the sea takes its fee.
+      const lost = Math.max(1, Math.round(ship.crew * 0.02));
+      if (ship.crew > lost + 1) ship.crew -= lost;
+      if (ship.leaks > 0) ship.leaks--;
+      ship.rudderHp = Math.min(1, ship.rudderHp + 0.3 * power);
       break;
-    case 'undertow':
-      game.forShipsNear(ship.state.x, ship.state.y, 320, (o) => {
-        if (o.id !== ship.id && game.isHostile(o, ship)) o.addEffect({ id: 'undertow', until: now + def.duration, mods: { maxSpeed: -0.3, turnRate: -0.2 }, source: ship.id }, now);
-      });
+    }
+    case 'undertow': {
+      const dir = headingOf(x - ship.state.x, y - ship.state.y);
+      // The race starts at your bow and runs 400 m toward the mark.
+      const cx = ship.state.x + Math.sin(dir) * 200, cy = ship.state.y - Math.cos(dir) * 200;
+      game.zones.push({ kind: 'undertow', x: cx, y: cy, r: 200, dir, start: now, until: now + def.duration, owner: ship.id, power, hit: [] });
+      game.emit({ k: 'fx', fx: 'undertow', x: Math.round(cx), y: Math.round(cy), r: 200, dir: Math.round(dir * 1000) / 1000 }, cx, cy);
       break;
+    }
     case 'deep_call':
-      game.strikes.push({ at: now + 1.2, x, y, radius: 45, hull: 220, rudder: 0.3, owner: ship.id, slow: 0, shells: 1, fx: 'deep_call' });
+      game.zones.push({ kind: 'hands', x, y, r: 60, start: now + 1, until: now + 7, owner: ship.id, power, hit: [] });
+      game.strikes.push({ at: now + 1, x, y, radius: 60, hull: 0, rudder: 0, owner: ship.id, slow: 0, shells: 1, fx: 'deep_call' });
       break;
     case 'maw_of_the_deep':
-      game.strikes.push({ at: now + 3, x, y, radius: 75, hull: 900, rudder: 0.2, owner: ship.id, slow: 8, shells: 1, fx: 'maw' });
-      game.adjustRep(ship, 'crown', -3);
+      game.strikes.push({ at: now + 3, x, y, radius: 45, hull: 0.2 * power, rudder: 0, owner: ship.id, slow: 0, shells: 1, fx: 'maw' });
+      game.emit({ k: 'fx', fx: 'maw_warn', x: Math.round(x), y: Math.round(y), r: 45 }, x, y);
       break;
     case 'admiralty_barrage':
       game.strikes.push({ at: now + 3, x, y, radius: 90, hull: 120, rudder: 0, owner: ship.id, slow: 0, shells: 12, fx: 'barrage' });
@@ -116,6 +130,9 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
 
   if (def.goldCost) game.spendGold(ship, def.goldCost, `ability:${def.id}`);
   if (def.moraleCost) ship.morale = Math.max(0, ship.morale - def.moraleCost);
+  if (def.kind === 'ultimate') ship.resolve = 0;
+  if (def.dreadCost) spendDread(ship, def.dreadCost);
+  if (ship.captain === 'drowned') witnessMiracle(game, ship, def.kind === 'ultimate');
   if (def.duration > 0 && (def.mods || def.flags)) {
     ship.addEffect({ id: def.id, until: now + def.duration, mods: def.mods, flags: def.flags }, now);
   } else if (def.duration > 0) {
@@ -144,6 +161,23 @@ export function stepStrikes(game: Game): void {
           if (dist(o.state.x, o.state.y, sx, sy) < o.stats.length / 2 + 12) applyDamage(game, o, { hull: s.hull, crew: 1, morale: 2 }, owner);
         });
       }
+    } else if (s.fx === 'maw') {
+      // The Maw: a fifth of every hull inside (to 4 000, through armour and the volley cap), a mast and two leaks.
+      game.forShipsNear(s.x, s.y, s.radius + 40, (o) => {
+        if (o.id === s.owner || !o.alive) return;
+        if (dist(o.state.x, o.state.y, s.x, s.y) > s.radius + o.stats.length / 3) return;
+        applyDamage(game, o, { hull: Math.min(4000, o.stats.hullMax * s.hull), crew: 2, morale: 8 }, owner);
+        o.leaks = Math.min(8, o.leaks + 2);
+        if (!o.hasFlag('ironbound_masts') && !o.hasEffect('broken_mast')) o.addEffect({ id: 'broken_mast', until: now + 1e9, mods: { maxSpeed: -0.3 }, source: s.owner }, now);
+      });
+      game.zones.push({ kind: 'maw_pull', x: s.x, y: s.y, r: s.radius * 2, inner: s.radius * 0.5, start: now, until: now + 3, owner: s.owner, power: 1, hit: [] });
+      // Everything in the deep within 2 km heard it.
+      for (const [id, b] of game.npcs) {
+        const o = game.ships.get(id);
+        if (b.role === 'ghost' && o && owner && dist(o.state.x, o.state.y, s.x, s.y) < 2000) b.chase = { id: owner.id, until: now + 120 };
+      }
+    } else if (s.fx === 'deep_call') {
+      game.emit({ k: 'fx', fx: 'drowned_hands', x: Math.round(s.x), y: Math.round(s.y), r: s.radius }, s.x, s.y);
     } else {
       game.forShipsNear(s.x, s.y, s.radius + 40, (o) => {
         if (o.id === s.owner || !o.alive) return;

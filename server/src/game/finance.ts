@@ -396,7 +396,8 @@ export function insuranceQuotes(game: Game, s: PlayerSession, port: Port): Insur
     const c = COVER[tier];
     const base = (c.hull ? hullValue * 0.03 : 0) + declared * c.cargo * 0.06;
     const gilded = Math.max(0.2, 1 + tx(ship.stats, 'insurancePremium'));
-    out.push({ tier, premium: Math.max(20, Math.round(base * risk * gilded)), declared: c.cargo ? declared : 0, deductible: c.cargo ? Math.round(declared * 0.1) : 0, cover: c.cargo, hull: c.hull });
+    const deep = port.faction === 'league' && ship.captain === 'drowned' ? 1.25 : 1; // the League wrote her off as drowned
+    out.push({ tier, premium: Math.max(20, Math.round(base * risk * gilded * deep)), declared: c.cargo ? declared : 0, deductible: c.cargo ? Math.round(declared * 0.1) : 0, cover: c.cargo, hull: c.hull });
   }
   void game;
   return out;

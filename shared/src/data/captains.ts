@@ -21,6 +21,8 @@ export interface AbilityDef {
   range?: number;
   goldCost?: number;
   moraleCost?: number;
+  /** The Drowned Captain's miracles are paid in Dread (docs/02 §7.5). */
+  dreadCost?: number;
   mods?: StatMods; // applied to the caster while the effect lasts
   flags?: Flag[];
   description: string;
@@ -103,12 +105,12 @@ export const CAPTAINS: Record<CaptainId, CaptainDef> = {
     bio: 'Went down with the Saint Verity in the Drowned Crown. Walked out of the surf at Wrecktide eleven years later, dripping, calm, and very hungry for something that is not food.',
     playstyle: 'Deep-sea mysticism. Area control, slows and attrition. Every miracle costs the crew\'s nerve.',
     favoredTrees: ['abyssal', 'survival', 'boarding'],
-    passive: { id: 'drowned_once', name: 'Drowned Once', description: 'Once per 5 min, lethal damage leaves you afloat with 1 hull for 10 s. Crown ports charge 20% more.', flags: ['unsinkable'] },
+    passive: { id: 'drowned_once', name: 'Drowned Once', description: 'Once per 5 min, lethal damage leaves you between water and light for 12 s: incoming damage −50%, guns still firing. Mend her to 10% hull or she sinks. Crown ports charge 20% more.', flags: ['unsinkable'] },
     abilities: [
-      { id: 'deep_call', name: 'Deep Call', kind: 'active', key: 'Z', cooldown: 30, duration: 0, targeting: 'point', range: 380, moraleCost: 5, description: 'Something reaches up under the target point: 220 hull damage and 30% rudder damage to ships within 45 m after 1.2 s.' },
-      { id: 'brine_mend', name: 'Brine Mend', kind: 'active', key: 'X', cooldown: 45, duration: 10, targeting: 'self', moraleCost: 10, description: 'The sea knits your planks: heal 25% hull over 10 s. Crew morale −10.' },
-      { id: 'undertow', name: 'Undertow', kind: 'active', key: 'C', cooldown: 40, duration: 8, targeting: 'self', moraleCost: 5, description: 'Enemies within 320 m are dragged by the undertow: −30% speed, −20% turn for 8 s.' },
-      { id: 'maw_of_the_deep', name: 'Maw of the Deep', kind: 'ultimate', key: 'V', cooldown: 200, duration: 0, targeting: 'point', range: 420, moraleCost: 20, description: 'ULTIMATE. After 3 s a maw opens beneath the target point: 900 damage to ships within 75 m and a long slow.' },
+      { id: 'deep_call', name: 'Deep Call', kind: 'active', key: 'Z', cooldown: 40, duration: 0, targeting: 'point', range: 500, dreadCost: 30, description: '30 Dread. After 1 s drowned hands rise at the target point (60 m) for 6 s: −40% speed and −30% turn inside, and every ship caught is holed once.' },
+      { id: 'brine_mend', name: 'Brine Mend', kind: 'active', key: 'X', cooldown: 45, duration: 8, targeting: 'self', dreadCost: 25, moraleCost: 6, description: '25 Dread. The sea knits your planks: +12% hull over 8 s, and a share of it goes where only yards reach — a leak sealed, the rudder mended. Crew morale −6, and 2% of the crew go into the water.' },
+      { id: 'undertow', name: 'Undertow', kind: 'active', key: 'C', cooldown: 50, duration: 10, targeting: 'point', range: 500, dreadCost: 35, description: '35 Dread. A 400 × 60 m race of current from you toward the target for 10 s: ships sailing with it gain speed, against it lose it, and a ship with no way on is dragged along.' },
+      { id: 'maw_of_the_deep', name: 'Maw of the Deep', kind: 'ultimate', key: 'V', cooldown: 300, duration: 0, targeting: 'point', range: 600, dreadCost: 50, moraleCost: 15, description: 'ULTIMATE (100 resolve + 50 Dread). The water boils for 3 s, then a maw 45 m wide opens: 20% of each ship\'s hull (to 4 000, through armour), a mast and two leaks; ships within 90 m are dragged toward it.' },
     ],
     start: { ship: 'sloop', gun: 'light_6', crew: 22, gold: 1100, cargo: { provisions: 8, planks: 3, sailcloth: 2, cursed_relics: 1 } },
   },

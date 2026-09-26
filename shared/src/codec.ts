@@ -10,13 +10,13 @@ import { STATIONS } from './protocol.ts';
 import { REGION_IDS } from './world/regions.ts';
 import type { RegionId } from './world/regions.ts';
 
-export const SNAP_CODEC_VERSION = 4;
+export const SNAP_CODEC_VERSION = 5;
 const WEATHER: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
 type Snap = Extract<ServerMsg, { t: 'snap' }>;
 
 const HEADER = 1 + 4 + 8 + 4 + 2 + 1 + 1 + 1 + 1 + 1;
-const SELF = 4 + 4 + 2 + 2 + 1 + 1 + 1 + 2 * 4 + 1 + 2 * 2 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * AMMO_IDS.length + 2 + 1 + 3 + 1;
+const SELF = 4 + 4 + 2 + 2 + 1 + 1 + 1 + 2 * 4 + 1 + 2 * 2 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * AMMO_IDS.length + 2 + 1 + 3 + 1 + 3;
 const SHIP = 4 + 4 + 4 + 2 + 2 + 1 + 2 + 1 + 2 + 1;
 const LOOT = 4 + 4 + 4;
 
@@ -68,6 +68,9 @@ export function encodeSnap(m: Snap): Uint8Array {
     d.setUint8(o, q8(y.water)); o += 1;
     d.setUint8(o, Math.min(255, y.leaks)); o += 1;
     d.setUint8(o, STATIONS.indexOf(y.station)); o += 1;
+    d.setUint8(o, Math.round(Math.max(0, Math.min(100, y.resolve)))); o += 1;
+    d.setUint8(o, Math.round(Math.max(0, Math.min(100, y.dread)))); o += 1;
+    d.setUint8(o, Math.round(Math.max(0, Math.min(100, y.sanity)))); o += 1;
   }
   d.setUint16(o, m.ships.length, true); o += 2;
   for (const r of m.ships) {
@@ -136,7 +139,10 @@ export function decodeSnap(input: ArrayBuffer | Uint8Array): Snap {
     const water = d.getUint8(o) / 250; o += 1;
     const leaks = d.getUint8(o); o += 1;
     const station = STATIONS[d.getUint8(o)] ?? 'balanced'; o += 1;
-    you = { x, y, h, spd, sail, rud, sailT, hull, hullMax, sails, sailsMax, rudderHp, crew, crewMax, morale, reload: { port, starboard, bow, stern, mount }, ammoSel, ammo, flags, combat, water, leaks, station };
+    const resolve = d.getUint8(o); o += 1;
+    const dread = d.getUint8(o); o += 1;
+    const sanity = d.getUint8(o); o += 1;
+    you = { x, y, h, spd, sail, rud, sailT, hull, hullMax, sails, sailsMax, rudderHp, crew, crewMax, morale, reload: { port, starboard, bow, stern, mount }, ammoSel, ammo, flags, combat, water, leaks, station, resolve, dread, sanity };
   }
   const nShips = d.getUint16(o, true); o += 2;
   const ships: ShipRow[] = [];

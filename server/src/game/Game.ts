@@ -14,7 +14,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
-import { clamp, closestOnPolygon, dist, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
+import { angleDiff, clamp, closestOnPolygon, dist, headingOf, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
 import type {
   BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow, Side,
 } from '../../../shared/src/protocol.ts';
@@ -48,6 +48,8 @@ import { sanitizeName } from '../auth.ts';
 import type { WsConnection } from '../net/websocket.ts';
 import type { Database } from '../persistence/db.ts';
 import { stepStrikes, useAbility } from './abilities.ts';
+import { stepMind, stepZones } from './mind.ts';
+import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
@@ -146,6 +148,7 @@ export class Game {
   grid = new SpatialGrid(1000, WORLD_SIZE);
   projectiles: Projectile[] = [];
   strikes: DelayedStrike[] = [];
+  zones: DeepZone[] = [];
   loot = new Map<number, Loot>();
   markets = new Map<string, Market>();
   tavernCrew = new Map<string, number>();
@@ -317,6 +320,7 @@ export class Game {
     stepProjectiles(this, dt);
     stepBoarding(this);
     stepStrikes(this);
+    stepZones(this, dt);
 
     for (const ship of this.ships.values()) {
       const braced = ship.hasEffect('brace'); // the gun crews lie flat
@@ -377,7 +381,16 @@ export class Game {
     const wind = this.windFor(ship);
     const cur = currentAt(this.world.currents, ship.state.x, ship.state.y, this.now, this.world.whirlpools);
     const prevX = ship.state.x, prevY = ship.state.y;
-    ship.state = stepSailing(ship.state, ship.input, ship.sailParams(night), wind, cur, dt);
+    // Madness: the crew has the wheel and steers for the call.
+    let input = ship.input;
+    if (ship.seizedHelm) {
+      if (ship.seizedHelm.until <= this.now) ship.seizedHelm = null;
+      else {
+        const want = headingOf(ship.seizedHelm.x - ship.state.x, ship.seizedHelm.y - ship.state.y);
+        input = { rudder: clamp(angleDiff(ship.state.heading, want) * 2, -1, 1), sailTarget: Math.max(0.5, ship.input.sailTarget) };
+      }
+    }
+    ship.state = stepSailing(ship.state, input, ship.sailParams(night), wind, cur, dt);
     stepPivot(this, ship, dt);
 
     // Islands: test bow, stern and centre against nearby coastlines.
@@ -563,6 +576,7 @@ export class Game {
       expireOptions(this, s);
       discoverCoves(this, s);
       stepExplorer(this, s);
+      stepMind(this, s.ship);
       syncKeel(this, s);
       this.stepDump(s);
       if (s.ship.hasEffect('false_colors')) {
@@ -720,7 +734,7 @@ export class Game {
     }
     curseAura(this, ship);
     // Brine Mend heal-over-time.
-    if (ship.hasEffect('brine_mend') && canMend(this, ship)) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.025);
+    if (ship.hasEffect('brine_mend') && canMend(this, ship)) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.015 * (ship.talentReady.brinePower || 1));
     // Fireship charges.
     if (ship.fuseAt && this.now >= ship.fuseAt) {
       detonateFireship(this, ship);
@@ -2030,6 +2044,7 @@ export class Game {
     ship.ammoSel = p.ammoSel;
     ship.crew = Math.min(p.crew, ship.stats.crewMax);
     ship.morale = p.morale;
+    ship.sanity = p.sanity;
     ship.hull = p.hull < 0 ? ship.stats.hullMax : Math.max(1, Math.min(p.hull, ship.stats.hullMax));
     ship.sails = p.sails < 0 ? ship.stats.sailHpMax : Math.min(p.sails, ship.stats.sailHpMax);
     ship.rudderHp = p.rudderHp;
@@ -2284,6 +2299,7 @@ export class Game {
         },
         ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (isTethered(this, me) ? SF.TETHERED : 0), combat: me.inCombat(this.now),
         water: Math.min(1, me.water / floodCapacity(me)), leaks: me.leaks, station: me.station,
+        resolve: me.resolve, dread: me.dread, sanity: me.sanity,
       };
       this.sendSnap(s, {
         t: 'snap', tick: this.tick, time: Math.round(this.now * 100) / 100, ack: me.lastInputSeq, you, ships, loot,
@@ -2309,6 +2325,7 @@ export class Game {
       p.ammoSel = ship.ammoSel;
       p.crew = ship.crew;
       p.morale = ship.morale;
+      p.sanity = Math.round(ship.sanity * 10) / 10;
       p.hull = ship.hull;
       p.sails = ship.sails;
       p.rudderHp = ship.rudderHp;

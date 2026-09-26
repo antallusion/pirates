@@ -179,6 +179,31 @@ export class Fx {
             this.light(e.x, e.y, 320, 'rgba(46,230,200,1)', 1, 2.5);
             this.shake = 1;
             break;
+          case 'maw_warn':
+            // Boiling water where the Maw will open: everyone sees it coming.
+            for (let i = 0; i < 24; i++) {
+              const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (e.r ?? 45);
+              setTimeout(() => this.splash(e.x + Math.sin(a) * r, e.y - Math.cos(a) * r, false), i * 120);
+            }
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 3, size: e.r ?? 45, grow: 0, color: '#2ee6c8' });
+            break;
+          case 'drowned_hands':
+            this.add({ kind: 'glow', x: e.x, y: e.y, life: 6, size: e.r ?? 60, grow: 0, color: '#062a26' });
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 6, size: e.r ?? 60, grow: 0, color: '#2ee6c8' });
+            this.splash(e.x, e.y, true);
+            break;
+          case 'undertow': {
+            const d = e.dir ?? 0, len = e.r ?? 200;
+            for (let i = -4; i <= 4; i++) {
+              const x = e.x + Math.sin(d) * (len * i) / 4, y = e.y - Math.cos(d) * (len * i) / 4;
+              this.add({ kind: 'glow', x, y, life: 10, size: 34, grow: 0, color: '#0a2f2b' });
+            }
+            break;
+          }
+          case 'between_worlds':
+            this.add({ kind: 'glow', x: e.x, y: e.y, life: 12, size: (e.r ?? 40) * 1.6, grow: 0, color: '#010807' });
+            this.light(e.x, e.y, 200, 'rgba(46,230,200,1)', 0.6, 3);
+            break;
           case 'barrage':
             for (let i = 0; i < 12; i++) {
               const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (e.r ?? 90);

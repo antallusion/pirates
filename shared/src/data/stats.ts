@@ -30,7 +30,8 @@ export type StatKey =
   | 'ballast' | 'salvage' | 'yardCost' | 'ramDealt' | 'ramTaken' | 'gunTrain' | 'bulkheads' | 'masterwork' | 'strapping' | 'fittings'
   // exploration
   | 'cartography' | 'forecast' | 'beachcomber' | 'treasureHunter' | 'diveDepth' | 'pathfinder' | 'tracking' | 'frontier'
-  | 'anomalySight' | 'chartedWaters' | 'storesVolume' | 'eyeOfStorm';
+  | 'anomalySight' | 'chartedWaters' | 'storesVolume' | 'eyeOfStorm'
+  | 'dreadGain' | 'mysticMorale' | 'sanityLoss';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'

@@ -56,7 +56,7 @@ export class Hud {
     const cls = SHIP_CLASSES[self.loadout.classId];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
-    const skey = `${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}`;
+    const skey = `${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}`;
     if (skey !== this.lastShipKey) {
       this.lastShipKey = skey;
       const steps = [0, 0.25, 0.5, 0.75, 1].slice(1).map((v) => `<span class="${you.sail >= v - 0.01 ? 'on' : ''} ${Math.abs(you.sailT - v) < 0.01 ? 'target' : ''}"></span>`).join('');
@@ -68,6 +68,8 @@ export class Hud {
         ${you.water > 0.01 || you.leaks ? `<div class="row"><span class="lbl" style="color:var(--xp)">Water</span><span class="val">${Math.round(you.water * 100)}%${you.leaks ? ` · ${you.leaks} leak${you.leaks > 1 ? 's' : ''}` : ''}${you.water > 0.4 ? ' · listing' : ''}</span></div>${bar('crew', you.water)}` : ''}
         <div class="row"><span class="lbl">Orders [G]</span><span class="val">${esc({ balanced: 'Balanced', gunnery: 'Guns', sailing: 'Braces', damage_control: 'Damage control' }[you.station])}</span></div>
         <div class="row"><span class="lbl">Morale</span><span class="val">${you.morale}</span></div>${bar('morale', you.morale / 100)}
+        ${you.sanity < 99.5 ? `<div class="row" title="The crew's nerve. The deep, the dark, cursed cargo and dead shipmates wear it down; rum, dreamleaf and a port restore it."><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">Sanity</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
+        ${self.captain === 'drowned' ? `<div class="row" title="Dread: paid for miracles. Grows as you bleed, kill and sail in the dark. At 80 the Call: +20% power, but the crew hears it."><span class="lbl" style="color:var(--turq)">Dread</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ' · THE CALL' : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
         <div class="row"><span class="lbl">Hold</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · food ${Math.floor(self.cargo.provisions)}` : ' · <span style="color:var(--bad)">no food</span>'}</span></div>
         ${self.curse >= 25 ? `<div class="row"><span class="lbl" style="color:var(--turq)">Curse</span><span class="val" style="color:var(--turq)">stage ${self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1} · ${self.curse}</span></div>` : ''}
         <div class="row" style="margin-top:4px"><span class="lbl">Sail [W/S]</span><span class="val">${knots(you.spd)} kn${you.flags & SF.REPAIRING ? ' · repairing' : ''}</span></div>
@@ -88,8 +90,11 @@ export class Hud {
       const left = Math.max(0, ready - now);
       const locked = a.kind === 'ultimate' && self.level < 6;
       const frac = left > 0 ? left / a.cooldown : 0;
-      return `<div class="ab ${a.kind === 'ultimate' ? 'ult' : ''} ${locked ? 'locked' : ''}" data-ab="${a.id}" title="${esc(a.name)} — ${esc(a.description)}">
-        <span class="k">${a.key}</span><span class="n">${esc(a.name)}</span>
+      // Ultimates need full resolve; the Drowned Captain's miracles need Dread.
+      const charge = a.kind === 'ultimate' && !locked && you.resolve < 100 ? `<div class="charge" style="width:${Math.round(you.resolve)}%"></div>` : '';
+      const starved = (a.dreadCost ?? 0) > you.dread;
+      return `<div class="ab ${a.kind === 'ultimate' ? 'ult' : ''} ${locked || charge || starved ? 'locked' : ''}" data-ab="${a.id}" title="${esc(a.name)} — ${esc(a.description)}">
+        <span class="k">${a.key}</span><span class="n">${esc(a.name)}</span>${charge}
         ${frac > 0 ? `<div class="cd" style="height:${Math.round(frac * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}${locked ? '<div class="cdt">Lv6</div>' : ''}</div>`;
     }).join('');
     const talentBar = activeTalents(self.talents).slice(0, 5).map((t, i) => {
@@ -141,6 +146,8 @@ export class Hud {
     g.clearRect(0, 0, W, W);
     g.save();
     g.translate(W / 2, W / 2);
+    // A frightened crew reads a wandering compass (±15°).
+    if ((state.you?.sanity ?? 100) <= 50) g.rotate(Math.sin(performance.now() / 2300) * 0.26);
     // Ring.
     g.strokeStyle = 'rgba(176,141,87,0.6)';
     g.lineWidth = 2;
@@ -310,6 +317,18 @@ export class Hud {
       g.arc(tx(c.x), ty(c.y), 3, 0, Math.PI * 2);
       g.fill();
     }
+    // Afraid lookouts call sails that are not there.
+    if ((state.you?.sanity ?? 100) <= 50) {
+      const epoch = Math.floor(performance.now() / 8000);
+      g.fillStyle = '#e0655a';
+      for (let i = 0; i < 3; i++) {
+        const a = Math.sin(epoch * 12.9898 + i * 78.233) * 43758.5453, b = Math.sin(epoch * 39.3468 + i * 11.135) * 24634.6345;
+        const fx = (a - Math.floor(a)) * W, fy = (b - Math.floor(b)) * H;
+        g.beginPath();
+        g.arc(fx, fy, 3, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
     // Own ship.
     g.save();
     g.translate(W / 2, H / 2);
@@ -357,4 +376,8 @@ export class Hud {
     log.append(d);
     while (log.children.length > 8) log.firstChild!.remove();
   }
+}
+
+function sanityWord(v: number): string {
+  return v > 75 ? 'clear' : v > 50 ? 'uneasy' : v > 25 ? 'afraid' : v > 10 ? 'terror' : 'madness';
 }

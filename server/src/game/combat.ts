@@ -21,6 +21,7 @@ import { unmask } from './smugglefx.ts';
 import { survivalOnHit, woundedOf } from './survivalfx.ts';
 import { isMonster } from './explorefx.ts';
 import { isNight } from '../../../shared/src/constants.ts';
+import { onCrewKilled, onCrit, onHullDamage } from './mind.ts';
 
 export interface Projectile {
   owner: number;
@@ -457,6 +458,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   if (p.ammo === 'chain' && shooter?.hasFlag('tangled_rigging')) {
     target.addEffect({ id: 'tangled', until: game.now + 6, mods: { turnRate: -0.35 }, source: shooter.id }, game.now);
   }
+  if (crit === 'rudder' || crit === 'gun' || crit === 'powder' || crit === 'fire') onCrit(shooter);
   game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: Math.round(hullDmg), ammo: p.ammo, crit }, hx, hy);
 }
 
@@ -474,6 +476,7 @@ function talentHitEffects(game: Game, shooter: ShipEntity, target: ShipEntity, p
     target.addEffect({ id: 'broken_mast', until: now + 1e9, mods: { maxSpeed: -0.3 }, source: shooter.id }, now);
     game.emit({ k: 'fx', fx: 'broken_mast', x: Math.round(target.state.x), y: Math.round(target.state.y) }, target.state.x, target.state.y);
     game.toastShip(target, 'A mast goes by the board!', 'bad');
+    onCrit(shooter);
   }
   target.recentHits = target.recentHits.filter((h) => now - h.t < 3);
   if (shooter.hasFlag('crossfire') && (target.talentReady.crossfire ?? 0) <= now) {
@@ -515,7 +518,10 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   target.lastCombat = now;
   target.protectedUntil = 0;
   survivalOnHit(game, target, d);
-  if (d.hull) target.hull -= d.hull;
+  if (d.hull) {
+    target.hull -= d.hull;
+    onHullDamage(game, target, d.hull, source);
+  }
   if (d.sails) target.sails = Math.max(0, target.sails - d.sails);
   if (d.rudder && !target.hasFlag('iron_tiller')) target.rudderHp = Math.max(0, target.rudderHp - d.rudder);
   if (d.crew) {
@@ -524,6 +530,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     killed = Math.min(killed, target.crew);
     target.crew -= killed;
     target.wounded += woundedOf(game, target, killed);
+    onCrewKilled(game, target, killed, source);
     target.morale -= killed * 0.8;
   }
   if (d.morale) target.morale -= d.morale;
@@ -538,8 +545,16 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     } else if (target.hasFlag('unsinkable') && target.unsinkableReadyAt <= now) {
       target.hull = 1;
       target.unsinkableReadyAt = now + 300;
-      target.lastStandUntil = now + (target.captain === 'drowned' ? 10 : 6);
-      game.toastShip(target, target.captain === 'drowned' ? 'The sea refuses you. Again.' : 'Unsinkable! Hold her together!', 'good');
+      if (target.captain === 'drowned') {
+        // Drowned Once: 12 s between water and light. Mend her to 10% or the sea keeps her.
+        target.lastStandUntil = now + 12;
+        target.addEffect({ id: 'between_worlds', until: now + 1e9, mods: { incomingDamageMul: -0.5, boardingPower: -0.3 } }, now);
+        game.emit({ k: 'fx', fx: 'between_worlds', x: Math.round(target.state.x), y: Math.round(target.state.y), r: 40 }, target.state.x, target.state.y);
+        game.toastShip(target, 'Between water and light: 12 s. Mend her to a tenth of her hull or the sea keeps her.', 'bad');
+      } else {
+        target.lastStandUntil = now + 6;
+        game.toastShip(target, 'Unsinkable! Hold her together!', 'good');
+      }
     } else {
       target.hull = 0;
       game.beginSinking(target);

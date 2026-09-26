@@ -412,6 +412,12 @@ export interface SelfRow {
   water: number; // 0..1 of flood capacity
   leaks: number;
   station: Station;
+  /** Ultimate charge 0..100 (docs/02 §0.3). */
+  resolve: number;
+  /** The Drowned Captain's Dread 0..100 (docs/02 §7.5); 0 for everyone else. */
+  dread: number;
+  /** Crew sanity 0..100 (docs/01 §13.3). */
+  sanity: number;
 }
 
 export type GameEvent =
@@ -424,7 +430,7 @@ export type GameEvent =
   | { k: 'ability'; ship: number; id: string; x?: number; y?: number }
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
-  | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach'; x: number; y: number; r?: number }
+  | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'; x: number; y: number; r?: number; dir?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 

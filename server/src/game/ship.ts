@@ -16,6 +16,7 @@ import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../../
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Landing } from './exploration.ts';
 import type { Tether } from './mounts.ts';
+import type { SanityState } from './mind.ts';
 
 export interface StatusEffect {
   id: string;
@@ -126,6 +127,14 @@ export class ShipEntity {
   wounded = 0; // Ship's Surgeon: back on deck after the fight
   planking = 0; // Double Planking buffer
   scuttleAt = 0; // Scuttle Charges fuse
+  // Minds (server/src/game/mind.ts).
+  resolve = 0; // Ultimate charge
+  dread = 0; // The Drowned Captain's Dread
+  dreadSpent = 0; // toward the next point of morale
+  killTally = 0; // enemy crew killed toward the next +5
+  sanity = 100; // the crew's nerve on a long voyage
+  sanityState: SanityState = 'clear';
+  seizedHelm: { until: number; x: number; y: number } | null = null; // madness: the crew steers
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

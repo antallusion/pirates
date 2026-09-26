@@ -11,6 +11,7 @@ import { AMMO_IDS, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
+import { onCrewKilled, onGrapple } from './mind.ts';
 
 const AGG = {
   careful: { tempo: 0.75, cargo: 0.55, ownLoss: 0.9 },
@@ -65,6 +66,7 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
   a.hull -= a.stats.hullMax * 0.03;
   b.hull -= b.stats.hullMax * 0.02;
   openingMoves(game, a, b);
+  onGrapple(a);
   game.emit({ k: 'board_start', a: a.id, b: b.id }, a.state.x, a.state.y);
   game.registerBoardingCrime(a, b);
 }
@@ -201,6 +203,8 @@ export function stepBoarding(game: Game): void {
     else a.crew -= killA2;
     bs.killed += killB2;
     bs.lost += killA2;
+    onCrewKilled(game, b, killB2, a);
+    onCrewKilled(game, a, killA2, b);
     b.morale -= (killB / Math.max(1, bs.enemyStartCrew)) * 90 + 2;
     a.morale -= (killA / Math.max(1, bs.startCrew)) * 70;
     if (a.hasFlag('terror') && b.crew < b.stats.crewMax * 0.3) b.morale -= 6;

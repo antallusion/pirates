@@ -105,6 +105,8 @@ button { font-family: var(--sans); }
 .bar.sails > i { background: linear-gradient(90deg, #6e6a5c, #b9b19b); }
 .bar.crew > i { background: linear-gradient(90deg, #3e5566, #6f8ea3); }
 .bar.morale > i { background: linear-gradient(90deg, #4d4630, #b08d57); }
+.bar.sanity > i { background: linear-gradient(90deg, #3a2c3e, #8e7aa0); }
+.bar.dread > i { background: linear-gradient(90deg, #06302b, #2ee6c8); }
 .bar.xp > i { background: linear-gradient(90deg, #2b4660, #8fb3d9); }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .lbl { color: var(--fog); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
@@ -132,6 +134,7 @@ button { font-family: var(--sans); }
 .ab .cd { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.72); z-index: 1; }
 .ab .cdt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--fog); z-index: 3; }
 .ab.locked { opacity: 0.35; }
+.ab .charge { position: absolute; left: 0; bottom: 0; height: 3px; background: #2ee6c8; z-index: 2; }
 
 #hud-prompt { position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%); font-family: var(--serif); font-size: 17px; color: var(--bone); text-shadow: 0 1px 3px #000; text-align: center; }
 #hud-prompt kbd { border: 1px solid var(--brass); color: var(--gold); padding: 0 6px; font-family: var(--sans); font-size: 12px; margin-right: 4px; }
