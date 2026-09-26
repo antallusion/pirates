@@ -47,6 +47,7 @@ import type { AuthService } from '../auth.ts';
 import { sanitizeName } from '../auth.ts';
 import type { WsConnection } from '../net/websocket.ts';
 import type { Db } from '../persistence/db.ts';
+import type { SharedState } from '../persistence/redis.ts';
 import { stepStrikes, useAbility } from './abilities.ts';
 import { stepMind, stepZones } from './mind.ts';
 import {
@@ -133,6 +134,8 @@ export interface GameOptions {
   auth: AuthService;
   seed?: number;
   log?: (msg: string) => void;
+  /** Redis-backed presence, chat bus and leaderboards shared with other processes (optional). */
+  shared?: SharedState;
 }
 
 const START_PORT = 'saltmarrow';
@@ -148,6 +151,7 @@ const WEATHER_TOAST: Record<string, string> = {
 export class Game {
   readonly db: Db;
   readonly auth: AuthService;
+  readonly shared: SharedState | null;
   readonly world: World;
   readonly rng: Rng;
   readonly routes: RouteCache;
@@ -206,6 +210,11 @@ export class Game {
     this.db = opts.db;
     this.auth = opts.auth;
     this.log = opts.log ?? ((m) => console.log(m));
+    this.shared = opts.shared ?? null;
+    // Chat from captains in other processes.
+    this.shared?.listenChat((from, text) => {
+      for (const o of this.sessions) this.sendTo(o, { t: 'chat', from, text });
+    });
     const seed = opts.seed ?? WORLD_SEED;
     this.world = generateWorld(seed);
     this.rng = new Rng(seed ^ 0x5eed);
@@ -581,6 +590,8 @@ export class Game {
       });
     }
 
+    // Presence in Redis every ten seconds (other processes see who sails here).
+    if (this.shared && this.tick % 200 === 0) this.shared.heartbeat([...this.sessions].filter((x) => x.authed && x.disconnectedAt === null).map((x) => ({ id: x.accountId, name: x.name })));
     // Sessions: chunk streaming, discovery, regions, lingering ships, private state.
     for (const s of [...this.byAccount.values()]) {
       if (s.disconnectedAt !== null) {
@@ -1246,6 +1257,7 @@ export class Game {
     const xp = (how === 'sunk' ? 45 : 70) * tier * (1 + victim.level / 12);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
+    this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);
     onFightWon(this, s);
     questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
     if (how === 'sunk') marqueBounty(this, s, victim);
@@ -1654,6 +1666,7 @@ export class Game {
     s.discovered.add(is.id);
     s.profile!.discovered.push(is.id);
     questEvent(this, s, { k: 'chart' });
+    this.shared?.bump('charted', s.accountId, s.name, 1);
     const strange = REGIONS[is.region].strangeness;
     const xp = 12 + Math.min(40, is.radius / 40) + strange * 60 + (is.features.includes('ruins') ? 25 : 0);
     this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region }] });
@@ -2117,6 +2130,7 @@ export class Game {
         const text = String(msg.text ?? '').slice(0, 200).trim();
         if (!text) return;
         for (const o of this.sessions) this.sendTo(o, { t: 'chat', from: s.name, text });
+        this.shared?.publishChat(s.name, text);
         return;
       }
       default:
@@ -2251,6 +2265,7 @@ export class Game {
   }
 
   private retireSession(s: PlayerSession): void {
+    this.shared?.leave(s.accountId, s.name);
     if (s.profile) anchorFleet(this, s);
     this.saveSession(s);
     for (const c of caravansOf(this, s.accountId)) this.removeShip(c.id);

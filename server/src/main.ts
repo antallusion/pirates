@@ -13,6 +13,7 @@ import { acceptUpgrade } from './net/websocket.ts';
 import { Database } from './persistence/db.ts';
 import type { Db } from './persistence/db.ts';
 import { PgDatabase } from './persistence/pgdb.ts';
+import { SharedState } from './persistence/redis.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PORT = Number(process.env.PORT ?? 8080);
@@ -23,13 +24,26 @@ const DB_PATH = process.env.DB_PATH ?? resolve(root, 'data/gravetide.db');
 const DATABASE_URL = process.env.DATABASE_URL;
 const db: Db = DATABASE_URL ? await PgDatabase.open(DATABASE_URL) : new Database(DB_PATH);
 const auth = new AuthService(db);
-const game = new Game({ db, auth });
+// Redis when REDIS_URL is set: presence, the chat bus between processes, leaderboards.
+const shared = process.env.REDIS_URL ? await SharedState.open(process.env.REDIS_URL, `world-${process.pid}`) : undefined;
+const game = new Game({ db, auth, shared });
 const serveStatic = createStaticHandler(root);
 
 const server = createServer(async (req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, protocol: PROTOCOL_VERSION, ...game.stats() }));
+    res.end(JSON.stringify({ ok: true, protocol: PROTOCOL_VERSION, ...game.stats(), online: shared?.onlineCount }));
+    return;
+  }
+  if (req.url?.startsWith('/leaderboard')) {
+    // Top captains by ships sunk, taken and islands charted (needs Redis).
+    const board = new URL(req.url, 'http://x').searchParams.get('board') ?? 'sunk';
+    if (!shared || !['sunk', 'boarded', 'charted'].includes(board)) {
+      res.writeHead(404, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: shared ? 'unknown board' : 'leaderboards need REDIS_URL' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ board, top: await shared.top(board, 20) }));
     return;
   }
   if (req.url?.startsWith('/economy')) {
@@ -61,6 +75,7 @@ async function shutdown(): Promise<void> {
   console.log('[server] saving world and shutting down…');
   game.stop();
   await db.close();
+  await shared?.close();
   process.exit(0);
 }
 process.on('SIGINT', () => void shutdown());
