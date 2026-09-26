@@ -21,6 +21,8 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { AMMO_IDS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { WeatherKind } from '../../../shared/src/protocol.ts';
+import { closestOnPolygon, pointInPolygon } from '../../../shared/src/math.ts';
+import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { summon } from './bosses.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
@@ -84,8 +86,11 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         where = `${Math.round(x)}, ${Math.round(y)}`;
       } else {
         const q = args.join(' ').toLowerCase();
-        const port = game.world.ports.find((pt) => pt.id === q || pt.name.toLowerCase() === q) ?? game.world.ports.find((pt) => pt.id.startsWith(q) || pt.name.toLowerCase().startsWith(q));
-        const region = REGION_IDS.find((r) => r === q || REGIONS[r].name.toLowerCase().includes(q));
+        // An exact port, then an exact region, then the first port or region the words begin.
+        const exactPort = game.world.ports.find((pt) => pt.id === q || pt.name.toLowerCase() === q);
+        const exactRegion = REGION_IDS.find((r) => r === q);
+        const port = exactPort ?? (exactRegion ? undefined : game.world.ports.find((pt) => pt.id.startsWith(q) || pt.name.toLowerCase().startsWith(q)));
+        const region = exactRegion ?? REGION_IDS.find((r) => REGIONS[r].name.toLowerCase().includes(q));
         if (port) {
           const is = game.world.islands[port.islandId];
           const d = Math.hypot(port.x - is.x, port.y - is.y) || 1;
@@ -93,7 +98,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
           y = port.y + ((port.y - is.y) / d) * 150;
           where = port.name;
         } else if (region) {
-          [x, y] = REGIONS[region].center;
+          [x, y] = openWater(game, REGIONS[region].center[0], REGIONS[region].center[1]);
           where = REGIONS[region].name;
         } else return `No port or region "${q}".`;
       }
@@ -107,8 +112,24 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'boss': {
       const kind = args[0] as BossId;
       if (!BOSSES[kind]) return `Bosses: ${Object.keys(BOSSES).join(', ')}`;
-      const h = ship.state.heading;
-      const f = summon(game, kind, ship.state.x + Math.sin(h) * 600, ship.state.y - Math.cos(h) * 600);
+      // Open water 600-900 m off: the first bearing with no shore within 400 m of the spot.
+      let x = ship.state.x, y = ship.state.y;
+      search: for (const r of [600, 900, 1300]) {
+        for (let k = 0; k < 12; k++) {
+          const a = ship.state.heading + (k * Math.PI) / 6;
+          const px = ship.state.x + Math.sin(a) * r, py = ship.state.y - Math.cos(a) * r;
+          const clear = islandsNear(game.world, px, py).every((id) => {
+            const poly = game.world.islands[id].poly;
+            return !pointInPolygon(px, py, poly) && closestOnPolygon(px, py, poly).d2 > 400 * 400;
+          });
+          if (clear) {
+            x = px;
+            y = py;
+            break search;
+          }
+        }
+      }
+      const f = summon(game, kind, x, y);
       return `${BOSSES[kind].name} rises (fight ${f.id}).`;
     }
     case 'weather': {
@@ -169,6 +190,22 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     default:
       return `Unknown command. ${HELP}`;
   }
+}
+
+/** The nearest open water to a point: out along a widening spiral until no shore is within 300 m. */
+function openWater(game: Game, x: number, y: number): [number, number] {
+  for (let r = 0; r <= 6000; r += 300) {
+    for (let k = 0; k < Math.max(1, Math.round(r / 150)); k++) {
+      const a = (k / Math.max(1, Math.round(r / 150))) * Math.PI * 2;
+      const px = x + Math.sin(a) * r, py = y - Math.cos(a) * r;
+      const clear = islandsNear(game.world, px, py).every((id) => {
+        const poly = game.world.islands[id].poly;
+        return !pointInPolygon(px, py, poly) && closestOnPolygon(px, py, poly).d2 > 300 * 300;
+      });
+      if (clear) return [px, py];
+    }
+  }
+  return [x, y];
 }
 
 /** Keep a god-mode ship whole (called every step). */

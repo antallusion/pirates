@@ -1,7 +1,8 @@
 // Russian names for the places the world generator composes (shared/src/world/worldgen.ts): an island is a
 // first part and a second ("Iron" + "reach"), sometimes with a kind after it ("Ironreach Isle"). They are
 // transliterated the way the key ports are ("Saltmarrow" — «Солтмарроу»), so a village and its island read
-// the same everywhere; the kind becomes a Russian word in front ("остров Айронрич").
+// the same everywhere; the kind after the name is transliterated as well ("Айронрич-Айл") — a Russian word in front
+// ("остров") would break the case of every sentence the name sits in ("в остров").
 
 const FIRST: Record<string, string> = {
   Grey: 'Грей', Raven: 'Рейвен', Salt: 'Солт', Widow: 'Видоу', Bell: 'Белл', Cold: 'Колд', Lantern: 'Лантерн', Gallows: 'Гэллоуз', Mourn: 'Морн', Iron: 'Айрон',
@@ -23,7 +24,7 @@ const SECOND: Record<string, string> = {
   bar: 'бар', stack: 'стэк', mark: 'марк', ledge: 'ледж',
 };
 
-const KIND: Record<string, string> = { Isle: 'остров', Rock: 'скала', Key: 'островок', Holm: 'островок' };
+const KIND: Record<string, string> = { Isle: 'Айл', Rock: 'Рок', Key: 'Ки', Holm: 'Холм' };
 
 /** Named places that are not composed: the great whirlpools. */
 const FIXED: Record<string, string> = {
@@ -46,6 +47,6 @@ export function composedNameRu(en: string): string | null {
   const second = SECOND[word.slice(first.length)];
   if (!second) return null;
   const base = FIRST[first] + second;
-  const named = m[2] ? `${KIND[m[2]]} ${base}` : base;
+  const named = m[2] ? `${base}-${KIND[m[2]]}` : base;
   return m[3] ? `${named} ${m[3]}` : named;
 }

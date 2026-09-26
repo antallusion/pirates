@@ -218,7 +218,7 @@ export class Hud {
     el.style.setProperty('--card', card ? `url('${card}')` : 'none');
     const pct = Math.max(0, Math.min(100, (b.hp / b.hpMax) * 100));
     const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => `<span class="${p.hp <= 0 ? 'dead' : ''}">${esc(sv(p.label))} ${p.hp > 0 ? Math.round((p.hp / p.hpMax) * 100) + '%' : ''}</span>`).join('')}</div>` : '';
-    const alert = b.you.swallowed > 0 ? `<div class="balert">${esc(L('swallowed', { n: b.you.swallowed }))}</div>` : b.you.grabbed ? `<div class="balert">${esc(L('grabbed'))}</div>` : '';
+    const alert = b.you.swallowed > 0 ? `<div class="balert">${esc(L('swallowed', { n: b.you.swallowed }))}</div>` : b.you.grabbed ? `<div class="balert">${esc(keyless(L('grabbed')))}</div>` : '';
     el.innerHTML = `<div class="bname">${esc(sv(b.name))}</div><div class="bphase">${esc(sv(b.phaseName))} · ${esc(L('bossLeaves', { n: Math.ceil(b.endsIn / 60) }))}</div>
       <div class="bbar"><i style="width:${pct.toFixed(1)}%"></i></div>${parts}
       <div class="bhint">${esc(sv(b.hint))}</div><div class="byou">${esc(L('bossShare', { n: Math.round(b.you.share * 100) }))}</div>${alert}`;
@@ -596,7 +596,7 @@ export class Hud {
     const el = document.createElement('div');
     el.className = `toast ${kind}`;
     const art = kind === 'gold' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'bad' ? 'danger' : kind === 'good' ? 'anchor' : '';
-    el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(msg)}</span>`;
+    el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(keyless(msg))}</span>`;
     decorateSums(el);
     this.toastsEl.prepend(el);
     while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
@@ -670,5 +670,6 @@ function slot(o: { data: string; cls: string; art: string; glyph: string; name: 
 
 /** A label without its keyboard hint ("[Q] Port" → "Port") on touch screens. */
 function keyless(s: string): string {
-  return document.body.classList.contains('touch') ? s.replace(/\[[^\]]*\]\s*/g, '').trim() : s;
+  // "[T]", "(T)", "(Y → Company)": a touch screen has no keys to name.
+  return document.body.classList.contains('touch') ? s.replace(/\[[^\]]*\]\s*/g, '').replace(/\s*\((?:[A-Z0-9]{1,3}|[^()]*→[^()]*)\)/g, '').trim() : s;
 }

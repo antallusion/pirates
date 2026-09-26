@@ -625,7 +625,8 @@ export class Renderer {
     g.setLineDash([]);
     // Name label when zoomed out enough to matter or discovered.
     const known = state.discovered.has(is.id);
-    if (known && is.r > 180 && this.zoom < 2.2) {
+    // A village's island goes by the village's name, and the port writes it already.
+    if (known && is.r > 180 && this.zoom < 2.2 && !is.portId) {
       g.font = `italic ${Math.round(clamp(is.r * this.zoom * 0.08, 11, 18))}px "Cormorant Garamond", Georgia, serif`;
       g.fillStyle = 'rgba(216,210,196,0.55)';
       g.textAlign = 'center';
@@ -1159,7 +1160,6 @@ export class Renderer {
     g.save();
     g.strokeStyle = d.startsIn > 0 ? 'rgba(224,184,98,0.7)' : 'rgba(208,90,80,0.75)';
     g.lineWidth = 2;
-    g.setLineDash([14, 10]);
     g.beginPath();
     g.arc(this.sx(d.cx), this.sy(d.cy), d.r * this.zoom, 0, Math.PI * 2);
     g.stroke();
@@ -1524,11 +1524,16 @@ export class Renderer {
     g.font = '600 11px Inter, system-ui, sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    for (const { s, d } of marks.slice(0, 5)) {
+    const drawn: [number, number][] = [];
+    for (const { s, d } of marks) {
+      if (drawn.length >= 5) break;
       const a = Math.atan2(this.sy(s.y) - cy, this.sx(s.x) - cx);
       // The rim is an ellipse inside the HUD's top and bottom bands.
       const k = 1 / Math.sqrt((Math.cos(a) / rx) ** 2 + (Math.sin(a) / ry) ** 2);
       const x = cx + Math.cos(a) * k, y = cy + Math.sin(a) * k;
+      // One mark for a crowd (a kraken's eight arms): the nearest speaks for them.
+      if (drawn.some(([px, py]) => Math.hypot(px - x, py - y) < 44)) continue;
+      drawn.push([x, y]);
       const boss = s.info?.npcRole === 'boss';
       const col = boss ? '#2ee6c8' : '#e0503c';
       g.translate(x, y);
@@ -1628,6 +1633,8 @@ export class Renderer {
     // Monsters and their parts: the boss panel names them; over the water only a thin bar of their strength.
     if (cls.monster) {
       if (s.flags & SF.SUBMERGED) return;
+      // Whole limbs carry no bar: eight full bars over the arms of a kraken are only clutter.
+      if (s.hull >= 0.995 && s.info.npcRole === 'boss') return;
       const bx = this.sx(s.x), by = this.sy(s.y) - (Math.min(cls.length, 60) * this.zoom) / 2 - 8;
       const w = Math.min(70, 26 + cls.length * 0.3);
       g.fillStyle = 'rgba(0,0,0,0.7)';
@@ -1677,13 +1684,15 @@ export class Renderer {
       g.fillText(line, x, y + 33);
     }
     if (boardTarget || s.flags & SF.MARKED) {
+      // A target ring: four brackets round her, not a dotted circle.
       g.strokeStyle = boardTarget ? 'rgba(224,184,98,0.9)' : 'rgba(208,106,94,0.9)';
-      g.setLineDash([5, 4]);
-      g.lineWidth = 1.5;
-      g.beginPath();
-      g.arc(this.sx(s.x), this.sy(s.y), cls.length * this.zoom * 0.7, 0, Math.PI * 2);
-      g.stroke();
-      g.setLineDash([]);
+      g.lineWidth = 2;
+      const rr = cls.length * this.zoom * 0.7, cx0 = this.sx(s.x), cy0 = this.sy(s.y);
+      for (let q = 0; q < 4; q++) {
+        g.beginPath();
+        g.arc(cx0, cy0, rr, q * (Math.PI / 2) - 0.35, q * (Math.PI / 2) + 0.35);
+        g.stroke();
+      }
     }
   }
 }

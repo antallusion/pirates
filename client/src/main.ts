@@ -566,6 +566,11 @@ addEventListener('keydown', (e) => {
       useAbilityKey(act.slice(7) as 'Z');
       break;
     case 'board':
+      // Held by a kraken's arm: the board key is the axes (the server takes any ship as the order's target).
+      if (grabbed()) {
+        net.send({ t: 'board', target: state.entityId ?? 0, aggression: 'standard' });
+        break;
+      }
       if (state.you && state.you.flags & SF.BOARDING) {
         net.send(e.shiftKey ? { t: 'scuttle' } : { t: 'board_cut' });
         break;
@@ -841,6 +846,7 @@ function actionsRadial(): { label: string; run: () => void }[] {
 
 /** The pad's context action: board, dock, land, set sail — whatever the prompt offers first. */
 function padContext(): void {
+  if (grabbed()) return void net.send({ t: 'board', target: state.entityId ?? 0, aggression: 'standard' });
   if (state.self?.dockedAt) return void (touch.enabled && modal !== 'port' ? openModal('port') : net.send({ t: 'undock' }));
   if (boardTarget !== null) return void net.send({ t: 'board', target: boardTarget, aggression: 'standard' });
   const own = state.ownDisplay;
@@ -883,7 +889,12 @@ function cycleAmmo(dir: number): void {
 }
 
 /** What the touch context button would do now (the same order as the pad's A). */
+function grabbed(): boolean {
+  return !!(state.you && state.you.flags & SF.GRABBED) || !!state.bosses.some((b) => b.you.grabbed);
+}
+
 function contextLabel(): string | null {
+  if (grabbed()) return L('tc.axes');
   // In port with the harbour screen closed: the button brings it back (market, yard, tavern, set sail).
   if (state.self?.dockedAt) return modal === 'port' ? null : L('tc.harbour');
   if (boardTarget !== null) return L('tc.board');

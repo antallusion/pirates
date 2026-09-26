@@ -25,6 +25,8 @@ export function looksLikeProse(s: string): boolean {
   if (/^\[/.test(bare) || /^[a-z_]+(\.[a-z_]+)*$/.test(bare) || /^[a-z]+[A-Z]\w*$/.test(bare)) return false; // log tags, ids, camelCase
   if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE)\b/.test(bare)) return false;
   if (/^[\w-]+$/.test(bare) && !/^[A-Z]/.test(bare)) return false; // a single lower-case token
+  // A word between the holes of a sentence ("{0} rises! {1}", "+{0} XP — {1}") is prose too.
+  if (/\{\d+\}.*\{\d+\}/.test(s) && /[A-Za-z]{2,}[.!?]?/.test(bare) && /\s/.test(s.replace(/\{\d+\}/g, 'x'))) return true;
   return /\s/.test(bare) || /^[A-Z][a-z]+[.!?]?$/.test(bare);
 }
 

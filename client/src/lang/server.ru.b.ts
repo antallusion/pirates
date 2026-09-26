@@ -834,4 +834,13 @@ export const SERVER_RU_B: Record<string, string> = {
   "The Black Storm": "Чёрный шторм",
   "The Dead Wind": "Мёртвый ветер",
   "The Fall": "Падение",
+  // Experience toasts: the extractor skips a line with no lower-case word, so this one is by hand.
+  "+{0} XP — {1}": "+{0} опыта — {1}",
+  // Short sentences between holes (the extractor now finds them).
+  "Bought: {0} {1}": "Куплено: {0} {1}",
+  "Outbid: {0} {1}": "Ставку перебили: {0} {1}",
+  "Sold: {0} {1}": "Продано: {0} {1}",
+  "Unsold: {0} {1}": "Не продано: {0} {1}",
+  "Won: {0} {1}": "Выиграно: {0} {1}",
+  "{0} rises! {1}": "{0} поднимается! {1}",
 };

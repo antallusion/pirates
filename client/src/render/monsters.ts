@@ -494,12 +494,15 @@ export function drawPveSites(g: CanvasRenderingContext2D, sites: PveSiteView[], 
       g.beginPath();
       g.arc(x, y, r * 1.8, 0, Math.PI * 2);
       g.fill();
-      g.strokeStyle = 'rgba(46,230,200,0.35)';
-      g.setLineDash([6, 8]);
+      // The bell's reach: a soft band of light on the water, no dashes.
       g.beginPath();
       g.arc(x, y, 250 * zoom, 0, Math.PI * 2);
+      g.strokeStyle = 'rgba(46,230,200,0.08)';
+      g.lineWidth = Math.max(6, 14 * zoom);
       g.stroke();
-      g.setLineDash([]);
+      g.strokeStyle = 'rgba(46,230,200,0.3)';
+      g.lineWidth = 1.2;
+      g.stroke();
       const bob = Math.sin(t * 2) * 2;
       g.fillStyle = '#b08d57';
       g.beginPath();
@@ -516,10 +519,12 @@ export function drawPveSites(g: CanvasRenderingContext2D, sites: PveSiteView[], 
       g.beginPath();
       g.arc(x, y, r, 0, Math.PI * 2);
       g.fill();
-      g.strokeStyle = 'rgba(160,120,80,0.35)';
-      g.setLineDash([4, 10]);
+      g.strokeStyle = 'rgba(160,120,80,0.1)';
+      g.lineWidth = Math.max(6, 16 * zoom);
       g.stroke();
-      g.setLineDash([]);
+      g.strokeStyle = 'rgba(160,120,80,0.3)';
+      g.lineWidth = 1.2;
+      g.stroke();
       // The wall of wrecks, broken only where a gate is open.
       const open = (s.gates ?? []).filter((q) => q.open).map((q) => q.a);
       const gap = 0.14;
@@ -595,7 +600,6 @@ export function drawBossZones(g: CanvasRenderingContext2D, bosses: BossView[], s
           g.stroke();
           g.strokeStyle = 'rgba(201,224,74,0.25)';
           g.lineWidth = 1;
-          g.setLineDash([6, 8]);
           g.stroke();
           break;
         case 'eye': {
@@ -606,17 +610,26 @@ export function drawBossZones(g: CanvasRenderingContext2D, bosses: BossView[], s
           g.beginPath();
           g.arc(x, y, r, 0, Math.PI * 2);
           g.fill();
-          g.strokeStyle = 'rgba(200,220,255,0.6)';
-          g.setLineDash([10, 8]);
-          g.lineDashOffset = -t * 20;
+          g.strokeStyle = 'rgba(200,220,255,0.12)';
+          g.lineWidth = Math.max(6, 18 * zoom);
+          g.stroke();
+          g.strokeStyle = 'rgba(200,220,255,0.5)';
+          g.lineWidth = 1.5;
           g.stroke();
           break;
         }
         case 'ink':
-          g.fillStyle = 'rgba(5,5,10,0.55)';
-          for (let k = 0; k < 6; k++) {
+          // Ink in the water: soft, drifting blooms that thin out at their edges — never a flat black disc.
+          for (let k = 0; k < 7; k++) {
+            const bx = x + Math.sin(k * 2.1 + t * 0.15) * r * 0.45, by = y + Math.cos(k * 1.7 - t * 0.12) * r * 0.45;
+            const br = r * (0.45 + 0.2 * Math.sin(k * 3.3 + t * 0.4));
+            const ink = g.createRadialGradient(bx, by, 0, bx, by, br);
+            ink.addColorStop(0, 'rgba(6,6,14,0.5)');
+            ink.addColorStop(0.55, 'rgba(8,10,20,0.28)');
+            ink.addColorStop(1, 'rgba(10,14,24,0)');
+            g.fillStyle = ink;
             g.beginPath();
-            g.arc(x + Math.sin(k * 2.1) * r * 0.4, y + Math.cos(k * 1.7) * r * 0.4, r * 0.6, 0, Math.PI * 2);
+            g.arc(bx, by, br, 0, Math.PI * 2);
             g.fill();
           }
           break;
@@ -646,8 +659,7 @@ export function drawBossZones(g: CanvasRenderingContext2D, bosses: BossView[], s
           break;
         }
         case 'maze':
-          g.strokeStyle = 'rgba(160,120,80,0.6)';
-          g.setLineDash([4, 6]);
+          g.strokeStyle = 'rgba(160,120,80,0.5)';
           g.lineWidth = 1.5;
           g.beginPath();
           g.arc(x, y, r, 0, Math.PI * 2);

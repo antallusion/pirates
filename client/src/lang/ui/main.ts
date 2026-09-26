@@ -52,6 +52,7 @@ export const EN = {
   'tc.board': 'Board her',
   'tc.dock': 'Enter port',
   'tc.harbour': 'Harbour',
+  'tc.axes': 'Axes!',
   'tc.land': 'Land a party',
 } as const;
 
@@ -107,5 +108,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'tc.board': 'На абордаж',
   'tc.dock': 'Войти в порт',
   'tc.harbour': 'В гавань',
+  'tc.axes': 'Топоры!',
   'tc.land': 'Высадка',
 };

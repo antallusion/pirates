@@ -165,5 +165,5 @@ export function logbookHtml(v: OnboardingView | null): string {
 
 /** Touch screens have no keys: "(Y → Company)" hints come off the goal lines. */
 function touchless(text: string): string {
-  return document.body.classList.contains('touch') ? text.replace(/\s*\([^()]*→[^()]*\)/g, '').trim() : text;
+  return document.body.classList.contains('touch') ? text.replace(/\s*\((?:[A-Z0-9]{1,3}|[^()]*→[^()]*)\)/g, '').trim() : text;
 }
