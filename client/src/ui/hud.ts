@@ -160,7 +160,16 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${r.safety}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(state.weather.replace('_', ' '))} · ${esc(seasonName(now))}${state.self?.quests[0] ? `<br><span style="color:var(--gold)">${esc(state.self.quests[0].name)}:</span> <span class="muted">${esc(state.self.quests[0].text)}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span>` : ''}${state.self?.forecast ? `<br><span class="muted">Weather Eye: ${esc(state.self.forecast.kind.replace('_', ' '))} in ${Math.max(1, Math.round(state.self.forecast.in / 60))} min</span>` : ''}`;
+    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${r.safety}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(state.weather.replace('_', ' '))} · ${esc(seasonName(now))}${state.self?.quests[0] ? `<br><span style="color:var(--gold)">${esc(state.self.quests[0].name)}:</span> <span class="muted">${esc(state.self.quests[0].text)}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span>` : ''}${state.self?.forecast ? `<br><span class="muted">Weather Eye: ${esc(state.self.forecast.kind.replace('_', ' '))} in ${Math.max(1, Math.round(state.self.forecast.in / 60))} min</span>` : ''}${this.eventLines(state)}`;
+  }
+
+  /** World events in these waters, with the time they have left. */
+  private eventLines(state: ClientState): string {
+    const left = (secs: number) => {
+      const s = Math.max(0, secs - (performance.now() - state.eventsAt) / 1000);
+      return s >= 86400 ? `${Math.round(s / 86400)} d` : s >= 3600 ? `${Math.round(s / 3600)} h` : `${Math.max(1, Math.round(s / 60))} min`;
+    };
+    return state.events.filter((e) => e.region === state.region).map((e) => `<br><span style="color:var(--bad)">⚑ ${esc(e.title)}</span> <span class="muted">· ${left(e.endsIn)}</span>`).join('');
   }
 
   private drawNav(state: ClientState): void {

@@ -158,6 +158,8 @@ export class ShipEntity {
   // World bosses (bosses.ts): the fight this entity belongs to (its body's id) and what part of it she is.
   bossOf = 0;
   bossPart = '';
+  /** A squadron of a world event (events.ts): the Armada, a blockade. */
+  eventOf = 0;
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

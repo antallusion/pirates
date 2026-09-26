@@ -18,7 +18,7 @@ export class WorldMap {
   open(root: HTMLElement, state: ClientState): void {
     root.innerHTML = `<div class="modal-head"><div><h2>Chart of the Known Sea</h2><div class="sub">${state.discovered.size} islands charted · drag to pan, wheel to zoom</div></div><div class="muted">[M] close</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#7fd08a">■</span> your group · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting · <span style="color:#c9a25a">◌</span> treasure map · <span style="color:#78bec8">✕</span> sunken wreck</div></div>`;
+      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#7fd08a">■</span> your group · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting · <span style="color:#c9a25a">◌</span> treasure map · <span style="color:#78bec8">✕</span> sunken wreck · <span style="color:#d06a5e">⚑</span> world event</div></div>`;
     const c = root.querySelector('canvas')!;
     this.canvas = c;
     if (!this.centred && state.ownDisplay) {
@@ -133,6 +133,18 @@ export class WorldMap {
       g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
       g.fillStyle = 'rgba(240,230,200,0.85)';
       g.fillText(p.name, tx(p.x), ty(p.y) - 8);
+    }
+    // World events: a flag on the place, and its title.
+    for (const e of state.events) {
+      const x = tx(e.x), y = ty(e.y);
+      g.strokeStyle = e.kind === 'epidemic' ? '#d8c94a' : e.kind === 'storm_century' ? '#8fb3d9' : e.kind === 'new_island' ? '#e0874a' : '#d06a5e';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(x, y, e.kind === 'storm_century' ? Math.max(14, 9000 * k) : 10, 0, Math.PI * 2);
+      g.stroke();
+      g.font = `italic 12px "Cormorant Garamond", serif`;
+      g.fillStyle = 'rgba(240,200,180,0.9)';
+      g.fillText(`⚑ ${e.title}`, x, y + 22);
     }
     // Maelstroms and weather fronts; the Navigator's forecast shows where storms will be in 10 minutes.
     for (const w of state.whirlpools) {

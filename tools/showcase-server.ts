@@ -28,6 +28,13 @@ server.on('upgrade', (req, socket) => {
 game.start();
 
 const staged = new Set<number>();
+// SHOWCASE=events: the Armada, a pirate blockade, a fever in Saltmarrow and the Storm of the Century, at once.
+if (process.env.SHOWCASE === 'events') {
+  const st = game.worldEvents.data(game);
+  const now = game.wallNow();
+  for (const k of ['armada', 'pirate_blockade', 'epidemic', 'storm:black_coast']) st.next[k] = now;
+  for (const [id, m] of game.markets) if (m.goods.medicine) m.goods.medicine.stock = id === 'saltmarrow' ? 1 : m.goods.medicine.target;
+}
 // SHOWCASE=port: redock each new captain at a League port with a bank, an exchange and an open buy order.
 const portMode = process.env.SHOWCASE === 'port';
 // SHOWCASE=rich: each new captain is a seasoned, well-off level 30 in port (guilds, islands, the market).

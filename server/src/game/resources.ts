@@ -36,18 +36,23 @@ export const WAREHOUSE_RENT = 300;
 
 export function buildSites(world: World): ResourceSite[] {
   const out: ResourceSite[] = [];
-  for (const is of world.islands) {
-    if (is.portId) continue;
-    for (const f of is.features) {
-      let good: GoodId | null = null;
-      if (f === 'mine') good = is.biome === 'volcanic' ? 'iron' : REGIONS[is.region].strangeness > 0.3 ? 'abyssal_ore' : 'coal';
-      else if (f === 'grove') good = 'timber';
-      else if (f === 'pearl_bank') good = 'pearls';
-      if (!good) continue;
-      const scale = Math.min(2, is.radius / 400);
-      const rate = Math.round((good === 'pearls' ? 3 : good === 'abyssal_ore' ? 2 : 10) * (0.7 + scale * 0.5));
-      out.push({ id: `${is.id}:${good}`, islandId: is.id, name: is.name, good, rate, capacity: rate * 8, stock: rate * 2, holder: null, holderName: '', until: 0 });
-    }
+  for (const is of world.islands) out.push(...sitesOfIsland(is));
+  return out;
+}
+
+/** The extraction sites an island offers (mines, groves, pearl banks). */
+export function sitesOfIsland(is: Island): ResourceSite[] {
+  const out: ResourceSite[] = [];
+  if (is.portId) return out;
+  for (const f of is.features) {
+    let good: GoodId | null = null;
+    if (f === 'mine') good = is.biome === 'volcanic' ? 'iron' : REGIONS[is.region].strangeness > 0.3 ? 'abyssal_ore' : 'coal';
+    else if (f === 'grove') good = 'timber';
+    else if (f === 'pearl_bank') good = 'pearls';
+    if (!good) continue;
+    const scale = Math.min(2, is.radius / 400);
+    const rate = Math.round((good === 'pearls' ? 3 : good === 'abyssal_ore' ? 2 : 10) * (0.7 + scale * 0.5));
+    out.push({ id: `${is.id}:${good}`, islandId: is.id, name: is.name, good, rate, capacity: rate * 8, stock: rate * 2, holder: null, holderName: '', until: 0 });
   }
   return out;
 }

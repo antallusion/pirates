@@ -18,6 +18,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { canBoard, startBoarding } from './boarding.ts';
+import { avoidPort } from './events.ts';
 import { effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
@@ -93,7 +94,7 @@ function cruiseSpeed(ship: ShipEntity): number {
 export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain, from: Port): boolean {
   // Counting House caravans trade only between ports their owner has visited.
   const owner = ship.caravanOf !== null ? game.sessionByAccount(ship.caravanOf) : null;
-  const ports = (owner?.profile ? game.world.ports.filter((p) => owner.profile!.regionsSeen.includes(`visited:${p.id}`)) : game.world.ports).filter((p) => game.inZone(p.x, p.y));
+  const ports = (owner?.profile ? game.world.ports.filter((p) => owner.profile!.regionsSeen.includes(`visited:${p.id}`)) : game.world.ports).filter((p) => game.inZone(p.x, p.y) && !avoidPort(game, p.id));
   const route = bestRoute(from, game.markets, ports, () => game.rng.float(), 38000);
   ship.caravanFrom = ship.caravanOf !== null ? from.id : null;
   let dest: Port | undefined;
@@ -112,7 +113,7 @@ export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain
   }
   if (!dest) {
     // No profitable route: sail in ballast to a random port nearby.
-    const near = game.world.ports.filter((p) => p.id !== from.id && Math.hypot(p.x - from.x, p.y - from.y) < 30000 && game.inZone(p.x, p.y));
+    const near = game.world.ports.filter((p) => p.id !== from.id && Math.hypot(p.x - from.x, p.y - from.y) < 30000 && game.inZone(p.x, p.y) && !avoidPort(game, p.id));
     if (!near.length) return false;
     dest = pick(game, near);
   }

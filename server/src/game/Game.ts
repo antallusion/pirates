@@ -42,8 +42,8 @@ import { windAt } from '../../../shared/src/sim/wind.ts';
 import type { WindSample } from '../../../shared/src/sim/wind.ts';
 import { REGIONS, WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { chunkKey, chunkOf, currentAt, depthAt, whirlpoolAt, generateWorld, islandsNear, regionAt } from '../../../shared/src/world/worldgen.ts';
-import type { Island, Port, World } from '../../../shared/src/world/worldgen.ts';
+import { chunkKey, chunkOf, currentAt, depthAt, whirlpoolAt, generateWorld, islandsNear, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
+import type { Island, Port, RaisedIsland, World } from '../../../shared/src/world/worldgen.ts';
 import type { AuthService } from '../auth.ts';
 import { sanitizeName } from '../auth.ts';
 import type { GameConn } from '../net/conn.ts';
@@ -77,6 +77,7 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
+import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
@@ -178,6 +179,7 @@ export class Game {
   projectiles: Projectile[] = [];
   strikes: DelayedStrike[] = [];
   bosses = new BossHub();
+  worldEvents = new EventHub();
   zones: DeepZone[] = [];
   sunkHulls: SunkHull[] = [];
   loot = new Map<number, Loot>();
@@ -262,6 +264,8 @@ export class Game {
     };
     const seed = opts.seed ?? WORLD_SEED;
     this.world = generateWorld(seed);
+    // Islands the sea has thrown up since (world events).
+    for (const r of this.db.getKv<RaisedIsland[]>('raised_islands') ?? []) raiseIsland(this.world, r);
     this.rng = new Rng(seed ^ 0x5eed);
     this.routes = new RouteCache(this.world);
     for (const p of this.world.ports) {
@@ -600,6 +604,7 @@ export class Game {
   private everySecond(): void {
     const now = this.now;
     this.bosses.second(this);
+    stepEvents(this);
     // Nearest player distance for NPC LOD.
     const players: ShipEntity[] = [];
     for (const s of this.sessions) if (s.ship && !s.ship.docked) players.push(s.ship);
@@ -1026,6 +1031,14 @@ export class Game {
     else if (key === 'holdings') this.holdings.drop();
     else if (key === 'bounties') this.pvp.drop();
     else if (key.startsWith('board:')) this.post.dropBoard(key.slice(6));
+    else if (key === 'raised_islands') {
+      // Another zone raised an island (or named one): take it into our world too.
+      for (const r of this.db.getKv<RaisedIsland[]>('raised_islands') ?? []) {
+        const known = this.world.islands.find((is) => is.x === r.x && is.y === r.y);
+        if (known) known.name = r.name;
+        else onIslandRaised(this, raiseIsland(this.world, r).id);
+      }
+    }
   }
 
   spawnNpcShip(role: NpcRole, classId: ShipClassId, faction: FactionId, x: number, y: number, heading: number, names?: { ship: string; captain: string }, id?: number): ShipEntity {
@@ -1423,6 +1436,7 @@ export class Game {
     if (how === 'sunk') marqueBounty(this, s, victim);
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
+    eventShipLost(this, victim);
     let escorts = 0;
     for (const o of this.ships.values()) if (o.ownerId === killer.id && o.alive) escorts++;
     // Captains of your group fighting nearby count as your fleet; they share a part of the glory.
@@ -2189,6 +2203,7 @@ export class Game {
       case 'buy_ammo':
         return portAction((pt) => buyAmmo(this, s, pt, msg.ammo, Math.trunc(Number(msg.qty))));
       case 'hire_crew':
+        if (Number(msg.qty) > 0 && port && hireBlocked(this, port)) return err(hireBlocked(this, port));
         return portAction((pt) => hireCrew(this, s, pt, Math.trunc(Number(msg.qty)), msg.prof && PROFESSIONS.includes(msg.prof) ? msg.prof : 'sailor', !!msg.dregs));
       case 'press_gang':
         return portAction((pt) => pressGang(this, s, pt, Math.trunc(Number(msg.qty))));
@@ -2674,6 +2689,7 @@ export class Game {
     s.lastRegion = '';
     if (s.ship?.docked) this.pushPort(s);
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
+    sendEvents(this, s);
     pushParty(this, s);
     mailOnLogin(this, s);
     this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
@@ -2759,6 +2775,7 @@ export class Game {
     lashInPort(this, s);
     onArrival(this, p, port);
     this.tavernWhispers(s);
+    onDockEvents(this, s, port);
     ship.docked = port.id;
     ship.state.speed = 0;
     ship.state.sail = 0;
@@ -2820,6 +2837,7 @@ export class Game {
     ship.input = { rudder: 0, sailTarget: 0.5 };
     ship.protectedUntil = this.now + 20;
     bubbleOnUndock(this, s);
+    onUndockEvents(this, s, port);
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
     launchFleet(this, s);
     this.sendTo(s, { t: 'port', view: null });

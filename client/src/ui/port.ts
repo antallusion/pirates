@@ -42,7 +42,7 @@ export class PortScreen {
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1, state.ownStats?.cursedVolumeMul ?? 1);
     root.innerHTML = `
       <div class="modal-head">
-        <div><h2>${esc(port.name)}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(port.description)}</div></div>
+        <div><h2>${esc(port.name)}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(port.description)}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(e.title)}${e.kind === 'blockade' || e.kind === 'armada' ? ' — imports ×2.8, local goods ×0.6' : e.kind === 'epidemic' ? ' — medicine ×2' : ''}</div>`).join('')}</div>
         <div style="text-align:right"><div class="gold" style="font-size:18px">${fmt(self.gold)} silver</div><div class="muted">Hold ${vol.toFixed(0)} / ${(state.ownStats?.holdVolume ?? 0).toFixed(0)} · crew ${self.crew}</div>
         <button class="btn btn-primary" data-act="undock" style="margin-top:6px">Set sail [F]</button></div>
       </div>

@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { onEventSale } from './events.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -259,6 +260,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   game.adjustRepProfile(s, port.faction, Math.min(3, price / 1500) * (1 + tx(ship.stats, 'tradeRep')));
   game.db.ledger(s.accountId, 'sell', price, `${n} ${good} @ ${port.id}`);
   onSale(game, s, port, good, n, profit);
+  onEventSale(game, s, port, good, n);
   onSaleDeeds(game, s, port.id, good, n, price);
   game.checkDeliveries(s, port);
   return null;

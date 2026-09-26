@@ -5,7 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BossView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
+  BarterView, BossView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
 } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -82,6 +82,9 @@ export class ClientState {
   marks: { name: string; x: number; y: number }[] = [];
   /** World boss fights within reach (bosses.ts). */
   bosses: BossView[] = [];
+  /** World events under way (events.ts), and when the list came (their clocks run on from there). */
+  events: WorldEventView[] = [];
+  eventsAt = 0;
   holdings: { mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[]; sieges: SiegeView[] } = { mine: [], here: null, region: [], sieges: [] };
   guild: GuildView | null = null;
   guildInvites: { id: number; name: string; tag: string; by: string }[] = [];
@@ -197,6 +200,10 @@ export class ClientState {
         break;
       case 'boss':
         this.bosses = m.list;
+        break;
+      case 'events':
+        this.events = m.list;
+        this.eventsAt = performance.now();
         break;
       case 'guild':
         this.guild = m.guild;

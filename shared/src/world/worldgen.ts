@@ -543,3 +543,53 @@ export function depthAt(world: World, x: number, y: number): number {
   }
   return depth;
 }
+
+/** An island the sea threw up after the world was made (a world event: an eruption). */
+export interface RaisedIsland {
+  x: number;
+  y: number;
+  radius: number;
+  seed: number;
+  name: string;
+  region: RegionId;
+  biome: IslandBiome;
+  features: IslandFeature[];
+}
+
+/** Add a raised island to a world: its shape (from its seed), the chunk index and the navigation grid. */
+export function raiseIsland(world: World, r: RaisedIsland): Island {
+  const existing = world.islands.find((is) => is.x === r.x && is.y === r.y);
+  if (existing) return existing;
+  const rng = new Rng(r.seed);
+  const poly = islandPoly(rng, r.x, r.y, r.radius / 1.25, r.seed);
+  const is: Island = { id: world.islands.length, name: r.name, region: r.region, biome: r.biome, x: r.x, y: r.y, radius: r.radius, poly, features: [...r.features] };
+  world.islands.push(is);
+  const [x0, y0] = chunkOf(is.x - is.radius, is.y - is.radius);
+  const [x1, y1] = chunkOf(is.x + is.radius, is.y + is.radius);
+  for (let cy = y0; cy <= y1; cy++) {
+    for (let cx = x0; cx <= x1; cx++) {
+      const k = chunkKey(cx, cy);
+      let list = world.chunks.get(k);
+      if (!list) world.chunks.set(k, (list = []));
+      list.push(is.id);
+    }
+  }
+  const pad = is.radius + 200;
+  for (let gy = Math.floor((is.y - pad) / NAV_CELL); gy <= Math.floor((is.y + pad) / NAV_CELL); gy++) {
+    for (let gx = Math.floor((is.x - pad) / NAV_CELL); gx <= Math.floor((is.x + pad) / NAV_CELL); gx++) {
+      if (gx < 0 || gy < 0 || gx >= world.navSize || gy >= world.navSize) continue;
+      const x = gx * NAV_CELL + NAV_CELL / 2, y = gy * NAV_CELL + NAV_CELL / 2;
+      if (pointInPolygon(x, y, poly) || closestOnPolygon(x, y, poly).d2 < 160 * 160) world.navGrid[gy * world.navSize + gx] = 1;
+    }
+  }
+  return is;
+}
+
+/** The chunk keys an island touches (to re-send them to captains who already had them). */
+export function islandChunkKeys(is: Island): number[] {
+  const out: number[] = [];
+  const [x0, y0] = chunkOf(is.x - is.radius, is.y - is.radius);
+  const [x1, y1] = chunkOf(is.x + is.radius, is.y + is.radius);
+  for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) out.push(chunkKey(cx, cy));
+  return out;
+}

@@ -537,6 +537,21 @@ export const SF = {
   SWALLOWED: 1 << 23, // inside the Lantern Maw
 } as const;
 
+/** A world event (events.ts): the Armada, a blockade, the Storm of the Century, a new island, a fever. */
+export interface WorldEventView {
+  id: number;
+  kind: 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic';
+  title: string;
+  region: RegionId;
+  port?: string;
+  x: number;
+  y: number;
+  endsIn: number; // seconds
+  by?: string;
+  stage?: string;
+  quarantine?: boolean;
+}
+
 /** A world boss fight as its neighbours see it (sent once a second within range; bosses.ts). */
 export interface BossZone {
   k: 'whirl' | 'ring' | 'eye' | 'ink' | 'lure' | 'telegraph' | 'maze' | 'song' | 'bile';
@@ -637,6 +652,7 @@ export type ServerMsg =
   | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number }
   | { t: 'info'; list: EntityInfo[] }
   | { t: 'boss'; list: BossView[] }
+  | { t: 'events'; list: WorldEventView[] }
   | { t: 'gone'; ids: number[] }
   | { t: 'ev'; list: GameEvent[] }
   | { t: 'self'; self: PrivateState }

@@ -170,4 +170,8 @@ export class RouteCache {
     const p = this.cache.get(key);
     return p ? p.map((q) => [q[0], q[1]] as [number, number]) : null;
   }
+  /** The sea changed shape (a new island): plan every route afresh. */
+  clear(): void {
+    this.cache.clear();
+  }
 }
