@@ -128,6 +128,27 @@ export type ClientMsg =
   | { t: 'isle'; action: 'yard_order'; island: number; req: Extract<ClientMsg, { t: 'build' }>['req'] }
   | { t: 'isle'; action: 'yard_launch'; island: number; id: string }
   | { t: 'isle'; action: 'yard_berth'; island: number; index: number }
+  | { t: 'guild'; action: 'view' }
+  | { t: 'guild'; action: 'found'; name: string; tag: string }
+  | { t: 'guild'; action: 'invite'; name: string }
+  | { t: 'guild'; action: 'answer'; id: number; accept: boolean }
+  | { t: 'guild'; action: 'leave' | 'disband' | 'office' | 'return_ship' }
+  | { t: 'guild'; action: 'kick'; account: number }
+  | { t: 'guild'; action: 'rank'; account: number; rank: GuildRank }
+  | { t: 'guild'; action: 'treasury'; amount: number }
+  | { t: 'guild'; action: 'tax'; pct: number }
+  | { t: 'guild'; action: 'store'; good: GoodId; qty: number }
+  | { t: 'guild'; action: 'contract'; good: GoodId; qty: number; reward: number }
+  | { t: 'guild'; action: 'drop_contract'; id: number }
+  | { t: 'guild'; action: 'give_ship'; berth: number }
+  | { t: 'guild'; action: 'borrow_ship'; id: number }
+  | { t: 'guild'; action: 'flagship'; account: number | null }
+  | { t: 'guild'; action: 'war' | 'alliance' | 'pact' | 'break_alliance' | 'break_pact'; tag: string }
+  | { t: 'guild'; action: 'peace'; tag: string; tribute: number }
+  | { t: 'guild'; action: 'toll'; island: number; pct: number }
+  | { t: 'guild'; action: 'base'; island: number }
+  | { t: 'guild'; action: 'lease'; island: number; days: number }
+  | { t: 'guild'; action: 'say'; text: string }
   | { t: 'ping'; c: number };
 
 // ------------------------------------------------------------------ server -> client
@@ -471,6 +492,7 @@ export interface ShipInfo {
   isPlayer: boolean;
   level?: number;
   wanted?: number;
+  guild?: string; // tag
 }
 
 export interface LootInfo {
@@ -592,13 +614,14 @@ export type ServerMsg =
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
-  | { t: 'chat'; from: string; text: string; ch?: 'group' }
+  | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' }
   | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[] }
   | { t: 'barter'; view: BarterView | null }
   | { t: 'mail'; letters: LetterView[]; unread: number }
   | { t: 'market'; view: MarketView }
   | { t: 'duel'; view: DuelView | null }
   | { t: 'holdings'; mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[] }
+  | { t: 'guild'; guild: GuildView | null; invites: { id: number; name: string; tag: string; by: string }[] }
   | { t: 'bounties'; list: BountyView[] }
   | { t: 'marks'; list: { name: string; x: number; y: number }[] }
   | { t: 'err'; msg: string }
@@ -676,6 +699,45 @@ export interface MarketView {
   listings: ListingView[];
 }
 
+// ------------------------------------------------------------------ guilds
+
+export type GuildRank = 'admiral' | 'vice' | 'commodore' | 'captain' | 'bosun' | 'sailor' | 'cabin_boy';
+
+export interface RouteNodeView {
+  island: number;
+  name: string;
+  region: RegionId;
+  x: number;
+  y: number;
+  holder: string | null;
+  ours: boolean;
+  toll: number;
+  progress: number; // % of the hold we have toward taking it
+}
+
+export interface GuildView {
+  id: number;
+  name: string;
+  tag: string;
+  rank: GuildRank;
+  treasury: number;
+  tax: number;
+  members: { account: number; name: string; rank: GuildRank; online: boolean }[];
+  offices: { port: string; until: number; store: Cargo }[];
+  here: string | null; // the office in this port
+  contracts: { id: number; good: GoodId; qty: number; port: string; reward: number; by: string }[];
+  fleet: { id: number; name: string; classId: ShipClassId; hull: number; port: string; lentTo: string | null; giver: string }[];
+  flagship: string | null;
+  torn: boolean;
+  alliance: string[];
+  pacts: string[];
+  offers: { kind: 'alliance' | 'pact'; from: string }[];
+  wars: { with: string; tag: string; active: boolean; opensAt: number; minEnd: number; ours: number; theirs: number; terms: { fromUs: boolean; tribute: number } | null }[];
+  nodes: RouteNodeView[];
+  islands: { island: number; name: string; base: number }[];
+  log: { t: number; text: string }[];
+}
+
 // ------------------------------------------------------------------ islands and holdings
 
 export interface HoldingView {
@@ -699,6 +761,8 @@ export interface HoldingView {
   window: number; // UTC hour the siege window opens
   windowNext: number | null;
   shieldUntil: number;
+  base: number; // guild base level 0..5
+  guild: boolean;
 }
 
 export interface IslandOffer {

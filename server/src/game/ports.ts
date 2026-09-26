@@ -17,6 +17,7 @@ import { FACTION_DUTY, LICENCE_SEC, licenceCost, marketRows, midPrice, portIsLaw
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { PriceMods } from './economy.ts';
 import { mayUse } from './holdings.ts';
+import { taxSale } from './guilds.ts';
 import type { Game } from './Game.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
@@ -249,6 +250,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   const exotic = exoticBonus(ship, p, port, good, n, price);
   const gilded = ship.hasFlag('fh_gilded_scale') && port.faction === 'league' ? Math.floor(price * 0.05) : 0; // the Gilded Scale
   p.gold += price + exotic + gilded;
+  taxSale(game, s, price); // the guild's share
   applyTrade(market, good, n);
   const profit = price - basis * n;
   p.stats.tradeProfit += Math.max(0, profit);

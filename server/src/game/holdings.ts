@@ -23,6 +23,7 @@ import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
 import { hireTrade } from './crew.ts';
+import { baseUpkeepPerDay, guildCanLease, guildPay } from './guilds.ts';
 import type { Game } from './Game.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession } from './player.ts';
@@ -66,6 +67,7 @@ export interface Holding {
   windowNext: { hour: number; from: number } | null;
   shieldUntil: number; // wall ms: no siege before
   lastSiege: number;
+  base?: number; // guild base level (docs/02 §12.A.3): +2 slots a level
 }
 
 export class HoldingsHub {
@@ -121,6 +123,10 @@ export function has(h: Holding, id: BuildingId): Building | undefined {
 export function strength(h: Holding, id: BuildingId): number {
   const list = h.buildings.filter((b) => b.id === id);
   return list.reduce((a, b) => a + b.condition * (b.unpaid ? 0.5 : 1), 0);
+}
+
+export function slotsOf(isl: Island, h: Holding | undefined): number {
+  return islandSlots(isl.radius, isl.region) + 2 * (h?.base ?? 0);
 }
 
 export function storeCapacity(h: Holding): number {
@@ -190,7 +196,7 @@ function ownedBy(game: Game, accountId: number): Holding[] {
 
 // ------------------------------------------------------------------------------------------ renting
 
-export function rentIsland(game: Game, s: PlayerSession, islandId: number, days: number): string | null {
+export function rentIsland(game: Game, s: PlayerSession, islandId: number, days: number, forGuild = false): string | null {
   const isl = island(game, islandId);
   if (!isl) return 'No such island';
   const why = rentable(isl);
@@ -201,19 +207,29 @@ export function rentIsland(game: Game, s: PlayerSession, islandId: number, days:
   const now = game.wallNow();
   const cur = game.holdings.get(game, islandId);
   if (cur && !mayUse(game, cur, s.accountId) && cur.until + GRACE_MS > now) return `${isl.name} is leased to ${cur.owner.name}`;
-  if (!cur || !mayUse(game, cur, s.accountId)) {
+  // A guild lease is paid from the guild's treasury; a captain's from their purse.
+  const guild = forGuild ? guildCanLease(game, s) : null;
+  if (typeof guild === 'string') return guild;
+  if (!guild && (!cur || !mayUse(game, cur, s.accountId))) {
     if (ownedBy(game, s.accountId).length >= LIMIT_PERSONAL) return 'A captain may hold one island of their own';
   }
   const price = rentPrice(isl, days as RentDays);
-  if (p.gold < price) return `The lease is ${price} silver`;
-  p.gold -= price;
-  game.db.ledger(s.accountId, 'island_rent', -price, `${isl.id}:${days}`);
+  if (guild) {
+    if (cur && mayUse(game, cur, s.accountId) && !(cur.owner.kind === 'guild' && cur.owner.id === guild.gid)) return 'That island is your own, not the guild’s';
+    if (!guildPay(game, guild.gid, price)) return `The lease is ${price} from the guild treasury`;
+    game.db.ledger(s.accountId, 'island_rent_guild', 0, `${isl.id}:${days}:${price}`);
+  } else {
+    if (cur && cur.owner.kind === 'guild' && mayUse(game, cur, s.accountId)) return 'That island is the guild’s: lease it for the guild';
+    if (p.gold < price) return `The lease is ${price} silver`;
+    p.gold -= price;
+    game.db.ledger(s.accountId, 'island_rent', -price, `${isl.id}:${days}`);
+  }
   const faction = game.holdings.factionOf(game, isl.region);
   changeRep(p, faction, 3);
   let h = cur && mayUse(game, cur, s.accountId) ? cur : undefined;
   if (!h) {
     h = {
-      island: isl.id, owner: { kind: 'player', id: s.accountId, name: s.name }, since: now, until: now, lastDays: days as RentDays, autoRenew: true,
+      island: isl.id, owner: guild ? { kind: 'guild', id: guild.gid, name: guild.name } : { kind: 'player', id: s.accountId, name: s.name }, since: now, until: now, lastDays: days as RentDays, autoRenew: true,
       treasury: 0, store: {}, buildings: [], lastUpkeep: now, lastWork: now, toll: { day: 0, paid: 0 }, warned: false,
       window: 19, windowNext: null, shieldUntil: now + 72 * HOUR, lastSiege: 0,
     };
@@ -266,7 +282,7 @@ export function build(game: Game, s: PlayerSession, islandId: number, id: Buildi
   if (!def) return 'Unknown building';
   if (islandNear(game, s.ship!)?.id !== isl.id) return `The builders must be landed at ${isl.name}`;
   if (id !== 'battery' && has(h, id)) return `${isl.name} already has a ${def.name.toLowerCase()}`;
-  if (slotsUsed(h) + def.slots > islandSlots(isl.radius, isl.region)) return `No room: ${isl.name} has ${islandSlots(isl.radius, isl.region)} slots`;
+  if (slotsUsed(h) + def.slots > slotsOf(isl, h)) return `No room: ${isl.name} has ${slotsOf(isl, h)} slots`;
   if (def.needs && !has(h, def.needs)) return `Needs a ${BUILDINGS[def.needs].name.toLowerCase()} first`;
   if (def.notSafe && REGIONS[isl.region].safety === 'safe') return 'Not on the Crown’s own coast';
   if (def.feature === 'mine' && !isl.features.includes('mine')) return 'There is no ore in this rock';
@@ -610,6 +626,15 @@ function produce(game: Game, h: Holding, isl: Island, hours: number): void {
 function upkeep(game: Game, h: Holding, isl: Island): void {
   // Income first: the tavern and the village.
   h.treasury += Math.round((200 + game.rng.float() * 400) * strength(h, 'tavern') + 300 * strength(h, 'fishing_village'));
+  // A guild base costs its weekly keep; unpaid, it slips a level.
+  if (h.owner.kind === 'guild' && (h.base ?? 0) > 0) {
+    const keep = baseUpkeepPerDay(game, h.owner.id, h.base!, h.island);
+    if (h.treasury >= keep) h.treasury -= keep;
+    else {
+      h.base = h.base! - 1;
+      notify(game, h, `${isl.name}: the base slips`, `Its keep of ${keep} a day went unpaid; it is a level lower now.`);
+    }
+  }
   for (const b of h.buildings) {
     const def = BUILDINGS[b.id];
     const goodsOk = Object.entries(def.upkeepGoods).every(([g, n]) => (h.store[g as GoodId] ?? 0) >= (n ?? 0));
@@ -665,11 +690,11 @@ export function shoreWitness(game: Game, x: number, y: number): boolean {
 export function holdingView(game: Game, h: Holding, accountId: number): HoldingView {
   const isl = island(game, h.island)!;
   return {
-    island: h.island, name: isl.name, region: isl.region, x: Math.round(isl.x), y: Math.round(isl.y), size: islandSize(isl.radius), slots: islandSlots(isl.radius, isl.region),
+    island: h.island, name: isl.name, region: isl.region, x: Math.round(isl.x), y: Math.round(isl.y), size: islandSize(isl.radius), slots: slotsOf(isl, h),
     owner: h.owner.name, mine: mayUse(game, h, accountId), until: h.until, autoRenew: h.autoRenew, treasury: h.treasury, store: h.store, storeCap: storeCapacity(h),
     buildings: h.buildings.map((b) => ({ id: b.id, condition: Math.round(b.condition * 100) / 100, unpaid: b.unpaid })),
     upkeep: h.buildings.reduce((a, b) => a + BUILDINGS[b.id].upkeep, 0),
-    renew: rentPrice(isl, 7), window: h.window, windowNext: h.windowNext?.hour ?? null, shieldUntil: h.shieldUntil,
+    renew: rentPrice(isl, 7), window: h.window, windowNext: h.windowNext?.hour ?? null, shieldUntil: h.shieldUntil, base: h.base ?? 0, guild: h.owner.kind === 'guild',
   };
 }
 

@@ -26,6 +26,7 @@ import { dist } from '../../../shared/src/math.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Game } from './Game.ts';
 import { groupOfAccount, sameGroupAccounts } from './party.ts';
+import { atWar } from './guilds.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { deliver } from './post.ts';
@@ -186,6 +187,7 @@ export function legalTarget(game: Game, a: ShipEntity, b: ShipEntity): boolean {
   const pa = prof(game, a), pb = prof(game, b);
   if (!pb) return false;
   if (flying(pb) && REGIONS[b.region].safety === 'contested') return true;
+  if (atWar(game, a, b)) return true; // guild war
   if (wantedLevel(pb.infamy) >= 2) return true;
   if (pa && hunterLicence(pa) && bountyOn(game, b.accountId) > 0) return true;
   return false;

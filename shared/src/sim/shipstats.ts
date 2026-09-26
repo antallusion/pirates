@@ -29,6 +29,8 @@ export interface ShipLoadout {
   excellent?: ModuleId[];
   /** Legendary Keel on this hull. */
   keel?: boolean;
+  /** A guild's hull on loan (docs/02 §12). */
+  guild?: { g: number; id: number };
   /** Built to order at a yard (docs/02 §3). */
   build?: ShipBuild;
 }

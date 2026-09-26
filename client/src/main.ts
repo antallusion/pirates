@@ -203,6 +203,7 @@ function onMessage(m: ServerMsg): void {
     case 'market':
     case 'bounties':
     case 'holdings':
+    case 'guild':
       if (modal === 'company') refreshModal();
       hud.setUnread(state.unread);
       break;
@@ -302,7 +303,8 @@ addEventListener('keydown', (e) => {
     if (chat.classList.contains('open')) {
       const said = chatInput.value.trim();
       // "/g …" speaks to your group only.
-      if (/^\/g\s/i.test(said)) net.send({ t: 'group', action: 'say', text: said.slice(3) });
+      if (/^\/gc\s/i.test(said)) net.send({ t: 'guild', action: 'say', text: said.slice(4) });
+      else if (/^\/g\s/i.test(said)) net.send({ t: 'group', action: 'say', text: said.slice(3) });
       else if (said) net.send({ t: 'chat', text: said });
       chatInput.value = '';
       chat.classList.remove('open');

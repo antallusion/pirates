@@ -27,9 +27,21 @@ game.start();
 const staged = new Set<number>();
 // SHOWCASE=port: redock each new captain at a League port with a bank, an exchange and an open buy order.
 const portMode = process.env.SHOWCASE === 'port';
+// SHOWCASE=rich: each new captain is a seasoned, well-off level 30 in port (guilds, islands, the market).
+const richMode = process.env.SHOWCASE === 'rich';
 setInterval(() => {
   for (const s of game.sessions) {
     const ship = s.ship;
+    if (richMode) {
+      if (!ship || !s.profile || staged.has(ship.id)) continue;
+      staged.add(ship.id);
+      s.profile.gold = 400_000;
+      s.profile.level = 30;
+      ship.level = 30;
+      s.profile.pvp.played = 100 * 3600;
+      game.pushSelf(s, true);
+      continue;
+    }
     if (portMode) {
       if (!ship || !ship.docked || staged.has(ship.id)) continue;
       staged.add(ship.id);

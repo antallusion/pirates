@@ -60,6 +60,7 @@ import { Metrics } from './metrics.ts';
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
 import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
 import type { Holding } from './holdings.ts';
+import { GuildHub, allied, answerInvite, borrowShip, breakTreaty, declareWar, disbandGuild, dropContract, foundGuild, giveShip, guildNotify, guildOfShip, invite as guildInvite, kick as guildKick, leaveGuild, offerTreaty, onShipSunk, onWarKill, openOffice, postContract, proposePeace, pushGuild, raiseBase, returnShip, setFlagship, setRank, setTax, setToll, stepGuilds, storeMove as guildStore, treasury as guildTreasury } from './guilds.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
@@ -206,6 +207,8 @@ export class Game {
   pvp = new PvpHub();
   /** Leased islands and what stands on them (holdings.ts). */
   holdings = new HoldingsHub();
+  /** Guilds, their wars and the routes they hold (guilds.ts). */
+  guilds = new GuildHub();
   /** Hooks for guilds and sieges: whether a captain belongs to a guild, a letter to a guild, an island's enemies. */
   guildMember?: (guildId: number, accountId: number) => boolean;
   guildNotify?: (guildId: number, subject: string, body: string) => void;
@@ -241,6 +244,14 @@ export class Game {
     this.shared?.listenChat((from, text) => {
       for (const o of this.sessions) this.sendTo(o, { t: 'chat', from, text });
     });
+    this.guildMember = (gid, acct) => this.guilds.of(this, acct)?.id === gid;
+    this.guildNotify = (gid, subject, body) => guildNotify(this, gid, subject, body);
+    // An island's guns and a guild at war: the owner guild's enemies are its enemies.
+    this.islandHostile = (h, ship) => {
+      if (h.owner.kind !== 'guild') return false;
+      const g = guildOfShip(this, ship);
+      return !!g && !!this.guilds.store(this).wars.find((w) => ((w.a === g.id && w.b === h.owner.id) || (w.b === g.id && w.a === h.owner.id)) && this.wallNow() >= w.prepUntil);
+    };
     const seed = opts.seed ?? WORLD_SEED;
     this.world = generateWorld(seed);
     this.rng = new Rng(seed ^ 0x5eed);
@@ -589,6 +600,7 @@ export class Game {
     stepPost(this);
     stepPvp(this);
     stepHoldings(this);
+    stepGuilds(this);
     if (Math.floor(now) % 5 === 0) recordTrails(this);
     for (const [id, t] of this.sunkRecently) if (now - t > 900) this.sunkRecently.delete(id);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
@@ -1158,7 +1170,7 @@ export class Game {
   }
 
   areAllies(a: ShipEntity, b: ShipEntity): boolean {
-    return (a.ownerId !== null && a.ownerId === b.id) || (b.ownerId !== null && b.ownerId === a.id) || (a.ownerId !== null && a.ownerId === b.ownerId) || sameGroup(this, a, b);
+    return (a.ownerId !== null && a.ownerId === b.id) || (b.ownerId !== null && b.ownerId === a.id) || (a.ownerId !== null && a.ownerId === b.ownerId) || sameGroup(this, a, b) || allied(this, a, b);
   }
 
   /** A captain in this world by name (any case). */
@@ -1268,6 +1280,7 @@ export class Game {
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
     this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship), victor);
+    onShipSunk(this, ship, killer);
     if (killer) this.creditKill(killer, ship, 'sunk');
   }
 
@@ -1367,8 +1380,9 @@ export class Game {
     }
     if (victim.isPlayer) {
       if (victim.wantedCache >= 3) grantDeed(this, s, 'deed_wanted_legend');
-      // Crown and captains' bounties, repeat kills, the Shame, the right of revenge.
+      // Crown and captains' bounties, repeat kills, the Shame, the right of revenge; war score.
       onPlayerKill(this, killer, victim, how);
+      onWarKill(this, killer, victim, how);
     }
     // Contracts.
     for (const c of p.contracts) {
@@ -2315,6 +2329,8 @@ export class Game {
         const done = (e: string | null) => {
           err(e);
           this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
+    pushGuild(this, s);
+    if (s.ship) s.ship.guildTag = this.guilds.of(this, s.accountId)?.tag ?? null;
           this.pushSelf(s, true);
         };
         switch (msg.action) {
@@ -2347,6 +2363,82 @@ export class Game {
           case 'yard_berth': {
             const yard = islandYard(this, s, id);
             return done(typeof yard === 'string' ? yard : swapBerth(this, s, yard, Math.trunc(Number(msg.index))));
+          }
+        }
+        return;
+      }
+      case 'guild': {
+        const done = (e: string | null) => {
+          err(e);
+          pushGuild(this, s);
+          this.pushSelf(s, true);
+        };
+        const tag = 'tag' in msg ? String(msg.tag ?? '') : '';
+        switch (msg.action) {
+          case 'view':
+            return done(null);
+          case 'found':
+            return done(foundGuild(this, s, msg.name, msg.tag));
+          case 'invite':
+            return done(guildInvite(this, s, msg.name));
+          case 'answer':
+            return done(answerInvite(this, s, Math.trunc(Number(msg.id)), !!msg.accept));
+          case 'leave':
+            return done(leaveGuild(this, s));
+          case 'disband':
+            return done(disbandGuild(this, s));
+          case 'office':
+            return done(openOffice(this, s));
+          case 'return_ship':
+            return done(returnShip(this, s));
+          case 'kick':
+            return done(guildKick(this, s, Math.trunc(Number(msg.account))));
+          case 'rank':
+            return done(setRank(this, s, Math.trunc(Number(msg.account)), msg.rank));
+          case 'treasury':
+            return done(guildTreasury(this, s, Number(msg.amount)));
+          case 'tax':
+            return done(setTax(this, s, Number(msg.pct)));
+          case 'store':
+            return done(guildStore(this, s, msg.good, Math.trunc(Number(msg.qty))));
+          case 'contract':
+            return done(postContract(this, s, msg.good, Math.trunc(Number(msg.qty)), Math.trunc(Number(msg.reward))));
+          case 'drop_contract':
+            return done(dropContract(this, s, Math.trunc(Number(msg.id))));
+          case 'give_ship':
+            return done(giveShip(this, s, Math.trunc(Number(msg.berth))));
+          case 'borrow_ship':
+            return done(borrowShip(this, s, Math.trunc(Number(msg.id))));
+          case 'flagship':
+            return done(setFlagship(this, s, msg.account === null ? null : Math.trunc(Number(msg.account))));
+          case 'war':
+            return done(declareWar(this, s, tag));
+          case 'peace':
+            return done(proposePeace(this, s, tag, Number(msg.tribute)));
+          case 'alliance':
+          case 'pact':
+            return done(offerTreaty(this, s, msg.action, tag));
+          case 'break_alliance':
+            return done(breakTreaty(this, s, 'alliance', tag));
+          case 'break_pact':
+            return done(breakTreaty(this, s, 'pact', tag));
+          case 'toll':
+            return done(setToll(this, s, Math.trunc(Number(msg.island)), Number(msg.pct)));
+          case 'base':
+            return done(raiseBase(this, s, Math.trunc(Number(msg.island))));
+          case 'lease':
+            err(rentIsland(this, s, Math.trunc(Number(msg.island)), Math.trunc(Number(msg.days)), true));
+            this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
+            return done(null);
+          case 'say': {
+            const g = this.guilds.of(this, s.accountId);
+            const text = String(msg.text ?? '').slice(0, 200).trim();
+            if (!g || !text) return;
+            for (const m of g.members) {
+              const ms = this.byAccount.get(m.account);
+              if (ms) this.sendTo(ms, { t: 'chat', from: `[${g.tag}] ${s.name}`, text, ch: 'guild' });
+            }
+            return;
           }
         }
         return;

@@ -414,11 +414,11 @@ export class Hud {
     this.bannerTimer = window.setTimeout(() => b.classList.remove('show'), 3500);
   }
 
-  chat(from: string, text: string, ch?: 'group'): void {
+  chat(from: string, text: string, ch?: 'group' | 'guild'): void {
     const log = $('chat-log');
     const d = document.createElement('div');
-    if (ch === 'group') d.className = 'chat-group';
-    d.innerHTML = `${ch === 'group' ? '<i>[group]</i> ' : ''}<b>${esc(from)}:</b> ${esc(text)}`;
+    if (ch) d.className = `chat-${ch}`;
+    d.innerHTML = `${ch === 'group' ? '<i>[group]</i> ' : ch === 'guild' ? '<i>[guild]</i> ' : ''}<b>${esc(from)}:</b> ${esc(text)}`;
     log.append(d);
     while (log.children.length > 8) log.firstChild!.remove();
   }

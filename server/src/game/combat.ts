@@ -14,6 +14,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { crueltyMul, inDuel, legalTarget, onPlayerAttack, pvpBlocked } from './pvp.ts';
 import { sameGroup } from './party.ts';
+import { guildFriends } from './guilds.ts';
 import type { Game } from './Game.ts';
 import { MAX_LEAKS, leakChance } from './damagecontrol.ts';
 import type { ShipEntity } from './ship.ts';
@@ -360,6 +361,7 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   if (a.ownerId !== null && a.ownerId === b.id) return 'friendly';
   if (b.ownerId !== null && b.ownerId === a.id) return 'friendly';
   if (sameGroup(game, a, b)) return 'friendly'; // a group does not fire on its own
+  if (guildFriends(game, a, b)) return 'friendly'; // nor a guild, its allies or its pact partners
   return null;
 }
 

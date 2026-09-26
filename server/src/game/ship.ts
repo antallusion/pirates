@@ -106,6 +106,7 @@ export class ShipEntity {
   removeAt = 0; // for escorts/despawn timers
   ownerId: number | null = null; // escort owner entity id
   wantedCache = 0;
+  guildTag: string | null = null;
   distanceLog = 0;
   // Talent state (server/src/game/talentfx.ts).
   heat: Record<Side, number> = { port: 0, starboard: 0 }; // Red-Hot Barrels
@@ -269,7 +270,7 @@ export class ShipEntity {
     return {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
-      isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache,
+      isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined,
     };
   }
 }

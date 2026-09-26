@@ -32,6 +32,7 @@ import type { NpcRole, ShipEntity } from './ship.ts';
 export interface NpcBrain {
   id: number;
   tolled?: number; // the last island whose lighthouse took its toll
+  tolledNode?: number; // the last route node whose holder took its toll
   role: NpcRole;
   active: boolean;
   farSince: number;

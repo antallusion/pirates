@@ -12,13 +12,13 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { WOODS } from '../../../shared/src/data/shipbuild.ts';
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { GROUP_MAX } from '../../../shared/src/protocol.ts';
-import type { HoldingView, IslandOffer } from '../../../shared/src/protocol.ts';
+import type { GuildRank, HoldingView, IslandOffer } from '../../../shared/src/protocol.ts';
 import type { ClientMsg, ListingView } from '../../../shared/src/protocol.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
 
-export type CompanyTab = 'group' | 'letters' | 'market' | 'law' | 'isles';
+export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles';
 
 const ago = (ms: number) => {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
@@ -30,6 +30,10 @@ const left = (ms: number) => {
 };
 const goodOptions = (have?: Cargo) =>
   GOOD_IDS.filter((g) => !have || (have[g] ?? 0) > 0).map((g) => `<option value="${g}">${esc(GOODS[g].name)}${have ? ` (${have[g]})` : ''}</option>`).join('');
+
+const RANK_ORDER: GuildRank[] = ['admiral', 'vice', 'commodore', 'captain', 'bosun', 'sailor', 'cabin_boy'];
+const RANK_NAMES: Record<GuildRank, string> = { admiral: 'Admiral', vice: 'Vice-Admiral', commodore: 'Commodore', captain: 'Captain', bosun: 'Bosun', sailor: 'Sailor', cabin_boy: 'Cabin Boy' };
+const BASE_NAMES = ['', 'Anchorage', 'Outpost', 'Fortress', 'Citadel', 'Stronghold'];
 
 export class CompanyScreen {
   tab: CompanyTab = 'group';
@@ -47,9 +51,9 @@ export class CompanyScreen {
   render(root: HTMLElement, state: ClientState): void {
     const docked = state.self?.dockedAt ?? null;
     if (this.tab === 'market' && !docked) this.tab = 'group';
-    const tabs = (['group', 'law', 'letters', 'isles', 'market'] as CompanyTab[])
+    const tabs = (['group', 'guild', 'law', 'letters', 'isles', 'market'] as CompanyTab[])
       .filter((t) => t !== 'market' || docked)
-      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'isles' ? 'Islands' : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
+      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'isles' ? 'Islands' : t === 'guild' ? `${state.guild ? `Guild [${esc(state.guild.tag)}]` : 'Guild'}${state.guildInvites.length ? ' (!)' : ''}` : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
       .join(' ');
     root.innerHTML = `<div class="modal-head"><div><h2>Company &amp; Letters</h2><div class="sub">${tabs}</div></div><div class="muted">[Y] close</div></div>
       <div class="modal-body" id="company-body"></div>`;
@@ -58,6 +62,7 @@ export class CompanyScreen {
     else if (this.tab === 'letters') this.renderLetters(body, state);
     else if (this.tab === 'law') this.renderLaw(body, state);
     else if (this.tab === 'isles') this.renderIsles(body, state);
+    else if (this.tab === 'guild') this.renderGuild(body, state);
     else this.renderMarket(body, state);
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
       this.tab = el.dataset.tab as CompanyTab;
@@ -65,6 +70,7 @@ export class CompanyScreen {
       if (this.tab === 'letters') this.send({ t: 'mail', action: 'list' });
       if (this.tab === 'law') this.send({ t: 'pvp', action: 'bounties' });
       if (this.tab === 'isles') this.send({ t: 'isle', action: 'list' });
+      if (this.tab === 'guild') this.send({ t: 'guild', action: 'view' });
       this.render(root, state);
     }));
   }
@@ -101,8 +107,10 @@ export class CompanyScreen {
   private renderIsles(body: HTMLElement, state: ClientState): void {
     const hs = state.holdings;
     const self = state.self;
+    const guildLease = !!state.guild && ['admiral', 'vice'].includes(state.guild.rank);
     const offer = (o: IslandOffer) => `<div class="card"><h4>${esc(o.name)} <span class="muted">— ${o.size}, ${o.slots} slots, ${esc(o.biome)}${o.mine ? ', ore' : ''}</span></h4>
-      ${o.held ? `<p class="muted">Leased to ${esc(o.held)}.</p>` : o.why ? `<p class="muted">${esc(o.why)}</p>` : `<div class="row" style="gap:6px">${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-rent="${o.island}" data-days="${d}">${d} days — ${fmt(o.price[d])}</button>`).join('')}</div>`}</div>`;
+      ${o.held ? `<p class="muted">Leased to ${esc(o.held)}.</p>` : o.why ? `<p class="muted">${esc(o.why)}</p>` : `<div class="row" style="gap:6px">${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-rent="${o.island}" data-days="${d}">${d} days — ${fmt(o.price[d])}</button>`).join('')}</div>
+        ${guildLease ? `<div class="row" style="gap:6px"><span class="muted">For the guild:</span>${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-glease="${o.island}" data-days="${d}">${d} days</button>`).join('')}</div>` : ''}`}</div>`;
     const here = hs.here && !hs.mine.some((h) => h.island === hs.here!.island) ? offer(hs.here) : '';
     const nearId = hs.here?.island ?? -1;
     const holding = (h: HoldingView) => {
@@ -113,7 +121,7 @@ export class CompanyScreen {
       const yardTier = has('dry_dock') ? 4 : has('shipyard') ? 3 : 0;
       const builds = (self?.builds ?? []).filter((b) => b.port === `isle:${h.island}`);
       const berths = (self?.berths ?? []).map((b, i) => ({ b, i })).filter((x) => x.b.port === `isle:${h.island}`);
-      return `<div class="card"><h4>${esc(h.name)} <span class="muted">— ${esc(h.region.replace(/_/g, ' '))}, ${h.size}, ${used}/${h.slots} slots</span></h4>
+      return `<div class="card"><h4>${esc(h.name)} <span class="muted">— ${esc(h.region.replace(/_/g, ' '))}, ${h.size}, ${used}/${h.slots} slots${h.guild ? ` · guild ${h.base ? BASE_NAMES[h.base] : 'island'}` : ''}</span></h4>
         <p>Lease: <b>${days >= 1 ? `${Math.floor(days)} days` : days > 0 ? `${Math.ceil(days * 24)} hours` : '<span class="bad">run out — renew within 72 h</span>'}</b> · a week ${fmt(h.renew)} · <label><input type="checkbox" data-auto="${h.island}" ${h.autoRenew ? 'checked' : ''}> renew from the treasury</label></p>
         <p>Treasury <b>${fmt(h.treasury)}</b> · upkeep ${fmt(h.upkeep)} a day · <input type="number" value="1000" step="500" style="width:90px" data-tamt="${h.island}"> <button class="btn btn-small" data-tin="${h.island}">Deposit</button> <button class="btn btn-small" data-tout="${h.island}">Withdraw</button></p>
         <table class="grid">${h.buildings.map((b, i) => `<tr><td>${esc(BUILDINGS[b.id].name)}</td><td class="${b.unpaid ? 'bad' : 'muted'}">${Math.round(b.condition * 100)}%${b.unpaid ? ' · unpaid' : ''}</td><td>${near ? `<button class="btn btn-small btn-danger" data-demolish="${h.island}" data-index="${i}">Pull down</button>` : ''}</td></tr>`).join('') || '<tr><td class="muted">Bare rock.</td></tr>'}</table>
@@ -144,6 +152,7 @@ export class CompanyScreen {
     const q = <T extends HTMLElement>(sel: string) => body.querySelector<T>(sel);
     const num = (sel: string) => Number(q<HTMLInputElement>(sel)?.value ?? 0);
     body.querySelectorAll<HTMLElement>('[data-rent]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'rent', island: Number(el.dataset.rent), days: Number(el.dataset.days) })));
+    body.querySelectorAll<HTMLElement>('[data-glease]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'lease', island: Number(el.dataset.glease), days: Number(el.dataset.days) })));
     body.querySelectorAll<HTMLInputElement>('[data-auto]').forEach((el) => (el.onchange = () => this.send({ t: 'isle', action: 'auto', island: Number(el.dataset.auto), on: el.checked })));
     body.querySelectorAll<HTMLElement>('[data-tin]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'treasury', island: Number(el.dataset.tin), amount: num(`[data-tamt="${el.dataset.tin}"]`) })));
     body.querySelectorAll<HTMLElement>('[data-tout]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'treasury', island: Number(el.dataset.tout), amount: -num(`[data-tamt="${el.dataset.tout}"]`) })));
@@ -161,6 +170,89 @@ export class CompanyScreen {
     }));
     body.querySelectorAll<HTMLElement>('[data-ylaunch]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'yard_launch', island: Number(el.dataset.ylaunch), id: el.dataset.id! })));
     body.querySelectorAll<HTMLElement>('[data-yberth]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'yard_berth', island: Number(el.dataset.yberth), index: Number(el.dataset.index) })));
+  }
+
+  private renderGuild(body: HTMLElement, state: ClientState): void {
+    const g = state.guild;
+    const docked = state.self?.dockedAt ?? null;
+    const portName = (id: string) => state.ports.find((p) => p.id === id)?.name ?? id;
+    if (!g) {
+      body.innerHTML = `<div class="cols"><div>
+        ${state.guildInvites.map((i) => `<div class="card"><h4>${esc(i.by)} invites you into ${esc(i.name)} [${esc(i.tag)}]</h4><button class="btn btn-primary" data-gjoin="${i.id}">Join</button> <button class="btn" data-gno="${i.id}">Decline</button></div>`).join('') || '<p class="muted">No guild has asked for you.</p>'}
+      </div><div>
+        <div class="card"><h4>Found a guild</h4><p class="muted">Registered at any harbour office for ${fmt(10000)} silver. Up to 150 captains; alliances, wars, routes, islands and a flagship.</p>
+          <input id="g-name" placeholder="Name (3–24 letters)" maxlength="24" style="width:100%;margin-bottom:6px">
+          <div class="row"><input id="g-tag" placeholder="TAG" maxlength="4" style="width:80px;text-transform:uppercase"><button class="btn btn-primary" id="g-found" ${docked ? '' : 'disabled title="In port"'}>Found</button></div></div>
+      </div></div>`;
+      body.querySelector<HTMLElement>('#g-found')!.onclick = () => this.send({ t: 'guild', action: 'found', name: body.querySelector<HTMLInputElement>('#g-name')!.value, tag: body.querySelector<HTMLInputElement>('#g-tag')!.value });
+      body.querySelectorAll<HTMLElement>('[data-gjoin]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'answer', id: Number(el.dataset.gjoin), accept: true })));
+      body.querySelectorAll<HTMLElement>('[data-gno]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'answer', id: Number(el.dataset.gno), accept: false })));
+      return;
+    }
+    const at = (r: GuildRank) => RANK_ORDER.indexOf(g.rank) <= RANK_ORDER.indexOf(r);
+    const store = g.here ? g.offices.find((o) => o.port === g.here)?.store ?? {} : null;
+    const myBerths = (state.self?.berths ?? []).map((b, i) => ({ b, i })).filter((x) => x.b.port === docked);
+    const tagOf = (s: string) => /\[([A-Z0-9]+)\]$/.exec(s)?.[1] ?? '';
+    body.innerHTML = `<div class="cols"><div>
+      <h3 class="title-sm" style="font-size:20px">${esc(g.name)} [${esc(g.tag)}] <span class="muted" style="font-size:14px">— you are ${esc(RANK_NAMES[g.rank])}</span></h3>
+      <div class="card"><h4>Treasury ${fmt(g.treasury)} · tax ${g.tax}% of members' sales${g.torn ? ' · <span class="bad">the standard is torn</span>' : g.flagship ? ` · standard on ${esc(g.flagship)}'s ship` : ''}</h4>
+        <div class="row"><input type="number" id="g-amt" value="1000" step="500" style="width:100px"><button class="btn btn-small" id="g-dep" ${docked ? '' : 'disabled'}>Deposit</button>${at('vice') ? `<button class="btn btn-small" id="g-wd" ${docked ? '' : 'disabled'}>Withdraw</button>` : ''}
+        ${g.rank === 'admiral' ? `<label>Tax <select id="g-tax">${Array.from({ length: 16 }, (_, i) => `<option ${i === g.tax ? 'selected' : ''}>${i}</option>`).join('')}</select>%</label>` : ''}</div></div>
+      <div class="card"><h4>Members (${g.members.length}/150)</h4><table class="grid">${g.members.map((m) => `<tr><td>${m.online ? '●' : '○'} ${esc(m.name)}</td><td>${g.rank === 'admiral' || (g.rank === 'vice' && RANK_ORDER.indexOf(m.rank) > 1) ? `<select data-grank="${m.account}">${RANK_ORDER.map((r) => `<option value="${r}" ${r === m.rank ? 'selected' : ''}>${RANK_NAMES[r]}</option>`).join('')}</select>` : esc(RANK_NAMES[m.rank])}</td>
+        <td>${at('vice') && RANK_ORDER.indexOf(m.rank) > RANK_ORDER.indexOf(g.rank) ? `<button class="btn btn-small btn-danger" data-gkick="${m.account}">Ashore</button>` : ''}${g.rank === 'admiral' ? ` <button class="btn btn-small" data-gflag="${m.account}" title="Fly the standard from their ship (tier IV+)">Standard</button>` : ''}</td></tr>`).join('')}</table>
+        ${at('commodore') ? '<div class="row"><input id="g-inv" placeholder="Captain to invite" style="flex:1"><button class="btn btn-small" id="g-invite">Invite</button></div>' : ''}</div>
+      <div class="card"><h4>Office ${g.here ? `at ${esc(portName(g.here))}` : ''}</h4>
+        ${store ? `<p class="muted">Store: ${Object.entries(store).filter(([, n]) => (n ?? 0) > 0).map(([k, n]) => `${n} ${esc(GOODS[k as GoodId].name)}`).join(', ') || 'empty'}</p>
+          <div class="row"><select id="g-good">${goodOptions()}</select><input type="number" id="g-qty" value="10" style="width:70px"><button class="btn btn-small" id="g-put">Put in</button><button class="btn btn-small" id="g-take">Take out</button></div>`
+          : `<p class="muted">${docked ? 'The guild keeps no office here.' : 'In port, the guild office.'}</p>${docked && at('vice') ? `<button class="btn btn-small" id="g-office">Rent an office here (${fmt(2000)} a week)</button>` : ''}`}
+        ${g.offices.length ? `<p class="muted">Offices: ${g.offices.map((o) => esc(portName(o.port))).join(', ')}</p>` : ''}
+        ${g.contracts.map((c) => `<p>Deliver ${c.qty} ${esc(GOODS[c.good].name)} to ${esc(portName(c.port))}: ${c.reward} each <span class="muted">(${esc(c.by)})</span>${at('vice') ? ` <button class="btn btn-small" data-gdrop="${c.id}">Withdraw</button>` : ''}</p>`).join('')}
+        ${store && at('vice') ? `<div class="row"><span class="muted">Contract:</span><select id="g-cgood">${goodOptions()}</select><input type="number" id="g-cqty" value="100" style="width:70px"><input type="number" id="g-crew" value="30" style="width:60px"><button class="btn btn-small" id="g-contract">Post</button></div>` : ''}</div>
+      <div class="card"><h4>The guild fleet</h4>${g.fleet.map((f) => `<p>${esc(f.name)} <span class="muted">${esc(SHIP_CLASSES[f.classId].name)} · hull ${f.hull}% · ${f.lentTo ? `out with ${esc(f.lentTo)}` : `at ${esc(portName(f.port))}`} · from ${esc(f.giver)}</span>${!f.lentTo && f.port === docked && at('captain') ? ` <button class="btn btn-small" data-gborrow="${f.id}">Borrow (20% deposit)</button>` : ''}</p>`).join('') || '<p class="muted">No guild hulls.</p>'}
+        ${docked && at('captain') ? myBerths.map(({ b, i }) => `<button class="btn btn-small" data-ggive="${i}">Give the ${esc(b.name)}</button>`).join(' ') + ' <button class="btn btn-small" id="g-return">Return a guild hull berthed here</button>' : ''}</div>
+    </div><div>
+      <div class="card"><h4>Diplomacy</h4>
+        ${g.wars.map((w) => `<p><b class="bad">War</b> with ${esc(w.with)} — ${w.active ? `score ${w.ours} : ${w.theirs}` : `opens ${new Date(w.opensAt).toUTCString().slice(5, 22)}`}${w.terms ? ` · peace offered ${w.terms.fromUs ? 'by us' : 'by them'}${w.terms.tribute ? ` (tribute ${fmt(w.terms.tribute)})` : ''}` : ''}
+          ${g.rank === 'admiral' && Date.now() >= w.minEnd ? ` <input type="number" value="0" style="width:80px" data-gtrib="${esc(w.tag)}"><button class="btn btn-small" data-gpeace="${esc(w.tag)}">${w.terms && !w.terms.fromUs ? 'Accept peace' : 'Offer peace'}</button>` : ''}</p>`).join('')}
+        ${g.alliance.length ? `<p>Allied with ${g.alliance.map(esc).join(', ')}${at('vice') ? ` <button class="btn btn-small" data-gbreak="alliance" data-tag="${esc(tagOf(g.alliance[0]))}">Leave the alliance</button>` : ''}</p>` : ''}
+        ${g.pacts.map((p) => `<p>Pact with ${esc(p)}${at('vice') ? ` <button class="btn btn-small" data-gbreak="pact" data-tag="${esc(tagOf(p))}">End it</button>` : ''}</p>`).join('')}
+        ${g.offers.map((o) => `<p>${esc(o.from)} offers ${o.kind === 'alliance' ? 'an alliance' : 'a pact'}${at('vice') ? ` <button class="btn btn-small btn-primary" data-gtreaty="${o.kind}" data-tag="${esc(tagOf(o.from))}">Agree</button>` : ''}</p>`).join('')}
+        ${at('vice') ? `<div class="row"><input id="g-dtag" placeholder="TAG" maxlength="4" style="width:70px;text-transform:uppercase"><button class="btn btn-small" data-gtreaty="alliance" data-from-input="1">Offer alliance</button><button class="btn btn-small" data-gtreaty="pact" data-from-input="1">Offer pact</button>${g.rank === 'admiral' ? '<button class="btn btn-small btn-danger" id="g-war">Declare war (50 000)</button>' : ''}</div>` : ''}</div>
+      <div class="card"><h4>Routes</h4><p class="muted">Lighthouse islands in contested and lawless water. Thirty minutes with only your guild's ships within 1.5 km takes one: a toll on passing merchants, and word of who sails by.</p>
+        <table class="grid">${g.nodes.map((n) => `<tr><td>${esc(n.name)}</td><td class="muted">${esc(n.region.replace(/_/g, ' '))}</td><td>${n.ours ? `<b>ours</b> · toll ${at('vice') ? `<select data-gtoll="${n.island}">${[1, 2, 3, 4, 5].map((t) => `<option ${t === n.toll ? 'selected' : ''}>${t}</option>`).join('')}</select>` : n.toll}%` : n.holder ? esc(n.holder) : '<span class="muted">nobody</span>'}${n.progress && !n.ours ? ` · taking ${n.progress}%` : ''}</td></tr>`).join('')}</table></div>
+      ${g.islands.length ? `<div class="card"><h4>Guild islands</h4>${g.islands.map((i) => `<p>${esc(i.name)} — ${i.base ? BASE_NAMES[i.base] : 'no base'}${at('vice') && i.base < 5 ? ` <button class="btn btn-small" data-gbase="${i.island}">Raise to ${BASE_NAMES[i.base + 1]}</button>` : ''}</p>`).join('')}</div>` : ''}
+      <div class="card"><h4>Log</h4>${g.log.map((l) => `<p class="muted">${ago(l.t)} — ${esc(l.text)}</p>`).join('')}</div>
+      <p>${g.rank === 'admiral' ? '<button class="btn btn-danger" id="g-disband">Dissolve the guild</button>' : '<button class="btn btn-danger" id="g-leave">Leave the guild</button>'} <span class="muted">Guild chat: /gc in chat.</span></p>
+    </div></div>`;
+    const q = <T extends HTMLElement>(sel: string) => body.querySelector<T>(sel);
+    const v = (sel: string) => q<HTMLInputElement>(sel)?.value ?? '';
+    const on = (sel: string, fn: () => void) => q(sel)?.addEventListener('click', fn);
+    on('#g-dep', () => this.send({ t: 'guild', action: 'treasury', amount: Number(v('#g-amt')) }));
+    on('#g-wd', () => this.send({ t: 'guild', action: 'treasury', amount: -Number(v('#g-amt')) }));
+    q<HTMLSelectElement>('#g-tax')?.addEventListener('change', () => this.send({ t: 'guild', action: 'tax', pct: Number(v('#g-tax')) }));
+    on('#g-invite', () => v('#g-inv') && this.send({ t: 'guild', action: 'invite', name: v('#g-inv') }));
+    on('#g-office', () => this.send({ t: 'guild', action: 'office' }));
+    on('#g-put', () => this.send({ t: 'guild', action: 'store', good: v('#g-good') as GoodId, qty: Number(v('#g-qty')) }));
+    on('#g-take', () => this.send({ t: 'guild', action: 'store', good: v('#g-good') as GoodId, qty: -Number(v('#g-qty')) }));
+    on('#g-contract', () => this.send({ t: 'guild', action: 'contract', good: v('#g-cgood') as GoodId, qty: Number(v('#g-cqty')), reward: Number(v('#g-crew')) }));
+    on('#g-return', () => this.send({ t: 'guild', action: 'return_ship' }));
+    on('#g-war', () => v('#g-dtag') && confirm(`Declare war on [${v('#g-dtag').toUpperCase()}]?`) && this.send({ t: 'guild', action: 'war', tag: v('#g-dtag') }));
+    on('#g-leave', () => confirm('Leave the guild?') && this.send({ t: 'guild', action: 'leave' }));
+    on('#g-disband', () => confirm('Dissolve the guild for good?') && this.send({ t: 'guild', action: 'disband' }));
+    body.querySelectorAll<HTMLSelectElement>('[data-grank]').forEach((el) => (el.onchange = () => this.send({ t: 'guild', action: 'rank', account: Number(el.dataset.grank), rank: el.value as GuildRank })));
+    body.querySelectorAll<HTMLElement>('[data-gkick]').forEach((el) => (el.onclick = () => confirm('Put them ashore?') && this.send({ t: 'guild', action: 'kick', account: Number(el.dataset.gkick) })));
+    body.querySelectorAll<HTMLElement>('[data-gflag]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'flagship', account: Number(el.dataset.gflag) })));
+    body.querySelectorAll<HTMLElement>('[data-gdrop]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'drop_contract', id: Number(el.dataset.gdrop) })));
+    body.querySelectorAll<HTMLElement>('[data-gborrow]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'borrow_ship', id: Number(el.dataset.gborrow) })));
+    body.querySelectorAll<HTMLElement>('[data-ggive]').forEach((el) => (el.onclick = () => confirm('Give this hull to the guild?') && this.send({ t: 'guild', action: 'give_ship', berth: Number(el.dataset.ggive) })));
+    body.querySelectorAll<HTMLElement>('[data-gpeace]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'peace', tag: el.dataset.gpeace!, tribute: Number(q<HTMLInputElement>(`[data-gtrib="${el.dataset.gpeace}"]`)?.value ?? 0) })));
+    body.querySelectorAll<HTMLElement>('[data-gbreak]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: el.dataset.gbreak === 'alliance' ? 'break_alliance' : 'break_pact', tag: el.dataset.tag! })));
+    body.querySelectorAll<HTMLElement>('[data-gtreaty]').forEach((el) => (el.onclick = () => {
+      const tag = el.dataset.fromInput ? v('#g-dtag') : el.dataset.tag!;
+      if (tag) this.send({ t: 'guild', action: el.dataset.gtreaty as 'alliance', tag });
+    }));
+    body.querySelectorAll<HTMLSelectElement>('[data-gtoll]').forEach((el) => (el.onchange = () => this.send({ t: 'guild', action: 'toll', island: Number(el.dataset.gtoll), pct: Number(el.value) })));
+    body.querySelectorAll<HTMLElement>('[data-gbase]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'base', island: Number(el.dataset.gbase) })));
   }
 
   private renderLaw(body: HTMLElement, state: ClientState): void {
