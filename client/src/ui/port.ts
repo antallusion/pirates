@@ -285,34 +285,37 @@ ${ammo}${intel}`;
       const mat = view.materialDiscount[m.module];
       const matNote = mat && !maxed ? `<p class="muted">${esc(L('yard.matNote', { n: mat.units, good: GOODS[mat.good].name.toLowerCase() }))}</p>` : '';
       return `<div class="card"><h4>${icon(`mod_${m.module}`, '', 'ico-md')}${esc(def.name)} <span class="muted">${m.level}/${m.max}</span>${m.excellent ? ` <span class="gold">${esc(L('yard.excellent'))}</span>` : ''}</h4><p>${esc(def.description)}</p>${matNote}
-        <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${maxed ? '' : icon('coin', '', 'ico-sm')}${esc(maxed ? L('yard.fullyFitted') : L('yard.fitLevel', { n: m.level + 1, cost: fmt(m.cost) }))}</button>
+        <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${esc(maxed ? L('yard.fullyFitted') : L('yard.fitLevel', { n: m.level + 1, cost: fmt(m.cost) }))}</button>
         ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" title="${esc(self.talents.shp_modular_refit ? L('yard.unfitFree') : L('yard.unfitFee'))}">${esc(L('yard.takeOut'))}</button>` : ''}</div>`;
     }).join('');
     const guns = (['port', 'starboard'] as const).map((side) => `<div class="card"><h4>${esc(L(side === 'port' ? 'yard.portBattery' : 'yard.starboardBattery', { n: cur.gunPortsPerSide, gun: GUNS[self.loadout.guns[side]].name }))}</h4>
       ${sy.guns.map((gdef) => {
         const g = GUNS[gdef.gun];
         const mounted = self.loadout.guns[side] === gdef.gun;
-        return `<div class="row" style="padding:3px 0"><span>${icon(`gun_${gdef.gun}`)}${esc(g.name)} <span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span></span><button class="btn btn-small" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : fmt(gdef.cost)}</button></div>`;
+        return `<div class="item-row">${icon(`gun_${gdef.gun}`, '', 'item-ico')}<div class="item-text"><b>${esc(g.name)}</b><span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span></div><button class="btn btn-small item-btn" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : money(gdef.cost)}</button></div>`;
       }).join('')}</div>`).join('');
     const ships = sy.ships.map((s) => {
       const c = SHIP_CLASSES[s.classId];
       const net = Math.max(0, s.price - s.tradeIn);
-      return `<tr><td><b>${esc(c.name)}</b> <span class="muted">${esc(L('unit.tier', { n: c.tier }))} · ${esc(c.role)}</span></td><td>${c.hull}</td><td>${c.maxSpeed}</td><td>${c.gunPortsPerSide}×2</td><td>${c.holdVolume}</td><td>${c.crewMin}–${c.crewMax}</td>
-        <td><button class="btn btn-small" data-act="ship" data-cls="${s.classId}" ${s.classId === self.loadout.classId ? 'disabled' : ''}>${s.classId === self.loadout.classId ? esc(L('yard.yours')) : fmt(net)}</button></td></tr>`;
+      const art = assetUrl(c.sprite);
+      return `<div class="card hull-card"><div class="hull-art">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div>
+        <div class="hull-text"><b>${esc(c.name)}</b> <span class="muted">${esc(L('unit.tier', { n: c.tier }))} · ${esc(c.role)}</span>
+          <div class="hull-stats"><span>${icon('stat_hull', '', 'ico-sm')}${c.hull}</span><span>${icon('stat_sails', '', 'ico-sm')}${c.maxSpeed}</span><span>${icon('fire', '', 'ico-sm')}${c.gunPortsPerSide}×2</span><span>${icon('tab_market', '', 'ico-sm')}${c.holdVolume}</span><span>${icon('stat_crew', '', 'ico-sm')}${c.crewMin}–${c.crewMax}</span></div></div>
+        <button class="btn btn-small item-btn" data-act="ship" data-cls="${s.classId}" ${s.classId === self.loadout.classId ? 'disabled' : ''}>${s.classId === self.loadout.classId ? esc(L('yard.yours')) : money(net)}</button></div>`;
     }).join('');
     return `<div class="cols"><div>
         ${self.talents.shp_legendary_keel ? `<div class="card"><h4>${esc(L('keel.title'))}</h4><p class="muted">${esc(L('keel.text'))}</p><button class="btn btn-small" data-act="keel" ${self.loadout.keel ? 'disabled' : ''}>${esc(self.loadout.keel ? L('keel.has') : L('keel.lay'))}</button></div>` : ''}
         <div class="card"><h4>${esc(L('repair.title'))}</h4><p>${esc(L('repair.state', { hull: state.you?.hull ?? 0, hullMax: state.you?.hullMax ?? 0, sails: state.you?.sails ?? 0, sailsMax: state.you?.sailsMax ?? 0, guns: self.gunsDisabled.port + self.gunsDisabled.starboard }))}</p>
-        <button class="btn btn-primary" data-act="repair" ${sy.repairCost ? '' : 'disabled'}>${sy.repairCost ? icon('coin', '', 'ico-sm') : ''}${esc(sy.repairCost ? L('repair.full', { cost: fmt(sy.repairCost) }) : L('repair.sound'))}</button></div>
+        <button class="btn btn-primary" data-act="repair" ${sy.repairCost ? '' : 'disabled'}>${esc(sy.repairCost ? L('repair.full', { cost: fmt(sy.repairCost) }) : L('repair.sound'))}</button></div>
         ${guns}</div><div>
         <div class="card"><h4>${esc(L('mount.title'))}</h4>${sy.mounts.map((m) => {
           const def = MOUNTS[m.mount];
           const fitted = self.loadout.mount === m.mount;
-          return `<div style="padding:4px 0"><div class="row"><b>${icon(`mount_${m.mount}`)}${esc(def.name)}</b><button class="btn btn-small" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : fmt(m.cost)}</button></div><span class="muted">${esc(def.description)}</span></div>`;
+          return `<div class="item-row">${icon(`mount_${m.mount}`, '', 'item-ico')}<div class="item-text"><b>${esc(def.name)}</b><span class="muted">${esc(def.description)}</span></div><button class="btn btn-small item-btn" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : money(m.cost)}</button></div>`;
         }).join('') || `<p class="muted">${esc(L('mount.none'))}</p>`}</div>
         ${modules}</div></div>
       <h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('hulls.title'))}</h3>
-      <table class="grid"><tr><th>${esc(L('th.class'))}</th><th>${esc(L('th.hull'))}</th><th>${esc(L('th.speed'))}</th><th>${esc(L('th.guns'))}</th><th>${esc(L('th.holdCap'))}</th><th>${esc(L('th.crew'))}</th><th></th></tr>${ships}</table>
+      <div class="hull-list">${ships}</div>
       <p class="muted">${esc(L('yard.note', { tier: sy.tier }))}</p>
 
       ${this.buildCard(view, state)}`;
@@ -388,18 +391,20 @@ ${orders}${berths}</div>` : ''}`;
     const room = (state.you?.crewMax ?? 0) - self.crew;
     const tv = view.tavern;
     const co = self.company;
-    const trades = PROFESSIONS.filter((k) => k !== 'sailor').map((k) => `<tr title="${esc(PROFESSION_DEFS[k].description)}"><td>${icon(`prof_${k}`)}${esc(PROFESSION_DEFS[k].name)}</td><td>${esc(L('tavern.aboard', { n: co.pools[k] }))}</td><td>${esc(L('tavern.here', { n: tv.stock[k] ?? 0 }))}</td><td>${fmt(tv.costs[k])}</td>
-        <td><button class="btn btn-small" data-act="crew" data-prof="${k}" data-n="1" ${(tv.stock[k] ?? 0) > 0 && room > 0 ? '' : 'disabled'}>${esc(L('btn.hire'))}</button> <button class="btn btn-small btn-danger" data-act="crew" data-prof="${k}" data-n="-1" ${co.pools[k] > 0 ? '' : 'disabled'}>−</button></td></tr>`).join('');
+    const trades = PROFESSIONS.filter((k) => k !== 'sailor').map((k) => `<div class="trade-row" title="${esc(PROFESSION_DEFS[k].description)}">${icon(`prof_${k}`, '', 'item-ico')}
+        <div class="item-text"><b>${esc(PROFESSION_DEFS[k].name)}</b><span class="muted">${esc(L('tavern.aboard', { n: co.pools[k] }))} · ${esc(L('tavern.here', { n: tv.stock[k] ?? 0 }))}</span></div>
+        ${money(tv.costs[k])}
+        <div class="trade-btns"><button class="btn btn-small" data-act="crew" data-prof="${k}" data-n="1" ${(tv.stock[k] ?? 0) > 0 && room > 0 ? '' : 'disabled'}>${esc(L('btn.hire'))}</button><button class="btn btn-small btn-danger" data-act="crew" data-prof="${k}" data-n="-1" ${co.pools[k] > 0 ? '' : 'disabled'}>−</button></div></div>`).join('');
     const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(o.name)} <span class="muted">— ${esc(L('officer.level', { role: OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${esc(o.taken ? L('officer.taken') : L('officer.sign', { cost: fmt(o.price) }))}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
     return `${tv.shanty ? `<div class="card"><h4>${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4>${esc(L('tavern.sailors', { n: view.crewAvailable }))}</h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
-        ${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}">${esc(L('tavern.hireN', { n, cost: fmt(n * view.crewHireCost) }))}</button>`).join(' ')}
+        <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}</div>
         <button class="btn btn-small btn-danger" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>
         ${tv.dregs ? `<button class="btn btn-small" data-act="dregs" title="${esc(L('tavern.dregsTitle'))}">${esc(L('tavern.dregs'))}</button>` : ''}
         ${tv.pressGang ? `<button class="btn btn-small btn-danger" data-act="press" title="${esc(L('tavern.pressTitle'))}">${esc(L('tavern.press'))}</button>` : ''}
-        <h4 style="margin-top:10px">${esc(L('tavern.tradesmen'))}</h4><table class="grid">${trades}</table></div>
+        <h4 style="margin-top:10px">${esc(L('tavern.tradesmen'))}</h4><div class="trade-list">${trades}</div></div>
       <div><h3 class="title-sm" style="font-size:20px">${esc(L('tavern.officers', { n: co.officers.length, max: co.slots }))}</h3>${officers}</div></div>
       <div class="cols">
       <div class="card"><h4>${esc(L('tavern.rumours'))}</h4>${view.rumors.map((r) => `<p>“${esc(serverText(r))}”</p>`).join('')}</div>

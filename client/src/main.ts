@@ -17,7 +17,7 @@ import { showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
 import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
-import { $, esc, icon, keepInputs } from './ui/dom.ts';
+import { $, decorateSums, esc, icon, keepInputs } from './ui/dom.ts';
 import { Hud } from './ui/hud.ts';
 import { MENU_ITEMS, menuLabel, renderMenu } from './ui/menu.ts';
 import type { MenuItem } from './ui/menu.ts';
@@ -446,6 +446,7 @@ $('hud-map').onclick = () => toggle('map');
 // Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
 new MutationObserver(() => {
   if (touch.enabled) stripKeyHints($('modal-panel'));
+  decorateSums($('modal-panel'));
 }).observe($('modal-panel'), { childList: true, subtree: true });
 
 function toggle(m: Modal): void {

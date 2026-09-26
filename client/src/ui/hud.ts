@@ -18,7 +18,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl } from '../assets.ts';
 import type { ClientState } from '../state.ts';
-import { $, bar, esc, fmt, icon, knots, pct } from './dom.ts';
+import { $, bar, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
@@ -597,6 +597,7 @@ export class Hud {
     el.className = `toast ${kind}`;
     const art = kind === 'gold' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'bad' ? 'danger' : kind === 'good' ? 'anchor' : '';
     el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(msg)}</span>`;
+    decorateSums(el);
     this.toastsEl.prepend(el);
     while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
     setTimeout(() => el.remove(), kind === 'xp' ? 3500 : 7000);

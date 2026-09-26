@@ -75,3 +75,30 @@ export function money(n: number): string {
 export function xpBadge(n: number): string {
   return `<span class="xpv">${icon('xp', '✦', 'ico-sm')}${fmt(n)}</span>`;
 }
+
+const SUM = /(\d[\d,.  ]*\d|\d)\s*(серебра|серебро|серебром|silver)/gi;
+const XP = /(\d[\d,.  ]*\d|\d)\s*(опыта|XP)/g;
+
+/**
+ * Every "N silver" and "N XP" written anywhere in a screen becomes the coin or the star with the sum — server
+ * sentences, prices on buttons, letters — without each screen having to say so. Idempotent: a sum it has dressed
+ * no longer matches.
+ */
+export function decorateSums(root: HTMLElement): void {
+  const coin = assetUrl('icon.coin'), star = assetUrl('icon.xp');
+  if (!coin || !star) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const hits: Text[] = [];
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/серебр|silver|опыта|XP/i.test(n.nodeValue ?? '')) hits.push(n as Text);
+  for (const t of hits) {
+    if (t.parentElement?.closest('input, textarea, select, option, script, style, title')) continue;
+    const plain = esc(t.nodeValue);
+    const html = plain
+      .replace(SUM, `<span class="money"><img class="ico-sm" src="${coin}" alt="" draggable="false">$1</span>`)
+      .replace(XP, `<span class="xpv"><img class="ico-sm" src="${star}" alt="" draggable="false">$1</span>`);
+    if (html === plain) continue;
+    const box = document.createElement('span');
+    box.innerHTML = html;
+    t.replaceWith(...box.childNodes);
+  }
+}
