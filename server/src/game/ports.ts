@@ -22,6 +22,7 @@ import { mountOffers } from './mounts.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { onSaleDeeds } from './progression.ts';
 import { bankView, forwardOffers, forwardView, hasExchange, insuranceQuotes, orderView } from './finance.ts';
 import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
 
@@ -67,7 +68,8 @@ export function repairCost(ship: ShipEntity): number {
   // Crown yards charge extra to work on a cursed hull.
   const curseMul = ship.curse >= 80 ? 1.5 : ship.curse >= 50 ? 1.2 : 1;
   const guns = (ship.gunsDisabled.port * GUNS[ship.loadout.guns.port].price + ship.gunsDisabled.starboard * GUNS[ship.loadout.guns.starboard].price) * 0.3;
-  return Math.ceil(Math.max(0, (hull + sails + rudder) * curseMul + guns));
+  const mast = ship.hasEffect('broken_mast') ? ship.cls.price * 0.03 : 0;
+  return Math.ceil(Math.max(0, (hull + sails + rudder) * curseMul + guns + mast));
 }
 
 export function buildPortView(game: Game, s: PlayerSession, port: Port): PortView {
@@ -211,6 +213,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   // Trade builds standing with the port's faction.
   game.adjustRepProfile(s, port.faction, Math.min(3, price / 1500));
   game.db.ledger(s.accountId, 'sell', price, `${n} ${good} @ ${port.id}`);
+  onSaleDeeds(game, s, port.id, good, n, price);
   game.checkDeliveries(s, port);
   return null;
 }
@@ -260,6 +263,9 @@ export function shipyardRepair(game: Game, s: PlayerSession): string | null {
   ship.sails = ship.stats.sailHpMax;
   ship.rudderHp = 1;
   ship.gunsDisabled = { port: 0, starboard: 0 };
+  // A new mast is stepped.
+  if (ship.hasEffect('broken_mast')) ship.effects = ship.effects.filter((e) => e.id !== 'broken_mast');
+  ship.recompute(game.now);
   game.db.ledger(s.accountId, 'repair', -cost, ship.loadout.classId);
   return null;
 }

@@ -16,7 +16,7 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
 import { clamp, closestOnPolygon, dist, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
 import type {
-  BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow,
+  BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow, Side,
 } from '../../../shared/src/protocol.ts';
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
 import { buildSites, buyRights, ownSiteNear, siteView, tickSites, warehouseAction } from './resources.ts';
@@ -27,6 +27,8 @@ import {
 } from './finance.ts';
 import type { BuyOrder, Forward } from './finance.ts';
 import { econCheckpoint, economyReport } from './econmetrics.ts';
+import { checkChartDeed, checkDeeds, checkStatDeeds, grantDeed, learnContext, onDockDeeds, onLevelUp, respec, switchLoadout, unspentPoints } from './progression.ts';
+import type { RespecMode } from './progression.ts';
 import type { EconomyReport, IndexPoint } from './econmetrics.ts';
 import { detonateFireship, fireMount, isTethered, mountReloadTime, shipyardMount, stepTethers } from './mounts.ts';
 import { STATION_NAMES, floodCapacity, setStation, stepFlooding } from './damagecontrol.ts';
@@ -50,8 +52,10 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, startBoarding, stepBoarding } from './boarding.ts';
-import { applyDamage, fireBroadside, fireChaser, stepProjectiles } from './combat.ts';
-import type { Projectile } from './combat.ts';
+import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } from './combat.ts';
+import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
+import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
+import type { Projectile, VolleyRec } from './combat.ts';
 import { ECON_HOUR, createMarket, restoreMarkets, serializeMarkets, tickMarket } from './economy.ts';
 import type { Market } from './economy.ts';
 import { RouteCache } from './nav.ts';
@@ -132,6 +136,7 @@ export class Game {
   sites: ResourceSite[];
   forwardBoards = new Map<string, { list: Forward[]; refreshAt: number }>();
   orders: BuyOrder[] = [];
+  volleys = new Map<number, VolleyRec>();
   econHistory: IndexPoint[] = [];
   econRewardMul = 1;
   private nextEconCheckpoint = 0;
@@ -283,8 +288,14 @@ export class Game {
     stepStrikes(this);
 
     for (const ship of this.ships.values()) {
-      if (ship.reload.port > 0) ship.reload.port = Math.max(0, ship.reload.port - dt);
-      if (ship.reload.starboard > 0) ship.reload.starboard = Math.max(0, ship.reload.starboard - dt);
+      if (ship.reload.port > 0) {
+        ship.reload.port = Math.max(0, ship.reload.port - dt);
+        if (ship.reload.port === 0) ship.loadedSince.port = this.now;
+      }
+      if (ship.reload.starboard > 0) {
+        ship.reload.starboard = Math.max(0, ship.reload.starboard - dt);
+        if (ship.reload.starboard === 0) ship.loadedSince.starboard = this.now;
+      }
       if (ship.mountReload > 0) ship.mountReload = Math.max(0, ship.mountReload - dt);
       if (ship.chaserReload.bow > 0) ship.chaserReload.bow = Math.max(0, ship.chaserReload.bow - dt);
       if (ship.chaserReload.stern > 0) ship.chaserReload.stern = Math.max(0, ship.chaserReload.stern - dt);
@@ -315,7 +326,9 @@ export class Game {
 
   /** Broadside spread multiplier from the sea state around a ship. */
   seaSpread(ship: ShipEntity): number {
-    return seaStateSpread(this.windFor(ship).strength, ship.cls.tier);
+    // Sea Legs: gunners who keep their feet lose less to the swell.
+    const base = seaStateSpread(this.windFor(ship).strength, ship.cls.tier);
+    return 1 + (base - 1) * Math.max(0, 1 + tval(ship.stats, 'seaPenalty'));
   }
 
   private physics(ship: ShipEntity, dt: number, night: boolean): void {
@@ -333,6 +346,7 @@ export class Game {
     const cur = currentAt(this.world.currents, ship.state.x, ship.state.y, this.now, this.world.whirlpools);
     const prevX = ship.state.x, prevY = ship.state.y;
     ship.state = stepSailing(ship.state, ship.input, ship.sailParams(night), wind, cur, dt);
+    stepPivot(this, ship, dt);
 
     // Islands: test bow, stern and centre against nearby coastlines.
     const fwd = headingVec(ship.state.heading);
@@ -361,13 +375,13 @@ export class Game {
       }
     }
     // Shoals and reefs: a keel deeper than the water drags and splinters (Shallow Runners skate over).
-    const draft = ship.cls.draft;
+    const draft = ship.cls.draft * Math.max(0.5, 1 + tval(ship.stats, 'draftMul'));
     if (ship.cls.passive.id !== 'shallow_runner' && ship.state.speed > 0.4) {
       const depth = depthAt(this.world, probes[0][0], probes[0][1]);
       if (depth < draft) {
         const over = draft - depth;
         if (ship.state.speed > 1) {
-          applyDamage(this, ship, { hull: over * ship.state.speed * 0.3 * ship.cls.tier }, null);
+          applyDamage(this, ship, { hull: over * ship.state.speed * 0.3 * ship.cls.tier * Math.max(0, 1 + tval(ship.stats, 'reefDamage')) }, null);
           if (this.tick % 20 === 0) this.toastShip(ship, depth < 2.5 ? 'Your keel grinds over the reef!' : 'Shoal water — she is dragging her keel.', 'bad');
         }
         ship.state.speed *= Math.max(0.9, 1 - over * 0.02);
@@ -451,7 +465,10 @@ export class Game {
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) continue;
       this.shipUpkeep(ship);
+      stepTalentEffects(this, ship);
+      if (ship.isPlayer) stepTalents(this, ship);
     }
+    for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
 
     // Loot: expiry and pickup.
     for (const l of this.loot.values()) {
@@ -479,6 +496,7 @@ export class Game {
       this.recordSightings(s);
       if (s.ship.landing) stepLanding(this, s.ship);
       expireForwards(this, s);
+      checkDeeds(this, s, 1);
       tickLoan(this, s);
       if (this.tick % 1200 < 20) decayClaims(this, s.profile);
       s.siteViews = this.sites.filter((x) => x.holder === s.accountId && x.until > this.now).map((x) => siteView(this, s, x));
@@ -615,8 +633,9 @@ export class Game {
     if (ship.hasEffect('fire')) applyDamage(this, ship, { hull: st.hullMax * 0.006, sails: 1.5 }, null);
     // Storms punish full canvas.
     const w = this.weatherOf(ship);
-    if ((w === 'storm' || w === 'black_storm') && ship.state.sail > 0.8 && ship.cls.passive.id !== 'dead_crew') {
-      ship.sails = Math.max(0, ship.sails - st.sailHpMax * 0.012);
+    const canvas = ship.hasFlag('storm_rider') ? 0 : Math.max(0, 1 + tval(st, 'stormSailDamage'));
+    if ((w === 'storm' || w === 'black_storm') && ship.state.sail > 0.8 && ship.cls.passive.id !== 'dead_crew' && canvas > 0) {
+      ship.sails = Math.max(0, ship.sails - st.sailHpMax * 0.012 * canvas);
       if (this.tick % 200 === 0) this.toastShip(ship, 'The storm is shredding your canvas — reef the sails!', 'bad');
     }
     // Infamy slowly fades while you behave.
@@ -848,7 +867,10 @@ export class Game {
     const gained = addXp(s.profile, amount);
     if (s.ship) s.ship.level = s.profile.level;
     if (reason) this.sendTo(s, { t: 'toast', msg: `+${Math.round(amount)} XP — ${reason}`, kind: 'xp' });
-    if (gained > 0) this.sendTo(s, { t: 'toast', msg: `Level ${s.profile.level}! A new talent point awaits.`, kind: 'good' });
+    if (gained > 0) {
+      this.sendTo(s, { t: 'toast', msg: `Level ${s.profile.level}! A new talent point awaits.`, kind: 'good' });
+      onLevelUp(this, s);
+    }
   }
 
   costBasis(s: PlayerSession, good: GoodId): number {
@@ -926,6 +948,12 @@ export class Game {
     const xp = (how === 'sunk' ? 45 : 70) * tier * (1 + victim.level / 12);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
+    if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
+    if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
+    let escorts = 0;
+    for (const o of this.ships.values()) if (o.ownerId === killer.id && o.alive) escorts++;
+    if (escorts >= 2) grantDeed(this, s, 'deed_fleet_victory');
+    checkStatDeeds(this, s);
     this.grantXp(s, xp, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`);
     // Law and reputation.
     if (victim.faction !== 'player') {
@@ -945,6 +973,7 @@ export class Game {
     if (victim.isPlayer && victim.wantedCache >= 2) {
       const vp = this.profileOf(victim);
       if (vp) {
+        if (victim.wantedCache >= 3) grantDeed(this, s, 'deed_wanted_legend');
         const bounty = Math.round(vp.infamy * 6);
         p.gold += bounty;
         vp.infamy *= 0.6;
@@ -989,6 +1018,9 @@ export class Game {
       this.sendTo(s, { t: 'toast', msg: `The Gilded Ledger honours your policy${claim.feeWaived ? ': salvage fee waived' : ''}${claim.payout ? `${claim.feeWaived ? ',' : ':'} ${claim.payout} silver for lost cargo` : ''}.`, kind: 'gold' });
     }
     if (purseLost) this.sendTo(s, { t: 'toast', msg: `${purseLost} silver from the captain's chest went down with her.`, kind: 'bad' });
+    // A sinking ends the voyage.
+    p.deedState.voyagePorts = [];
+    p.deedState.wantedTime = 0;
     // Respawn at the last port if it will still have us, otherwise the nearest that will.
     let port = this.portById(p.lastPort);
     if (!port || !canDock(p, port.faction).ok) port = this.nearestPort(ship.state.x, ship.state.y, (q) => canDock(p, q.faction).ok) ?? this.portById(START_PORT)!;
@@ -1180,9 +1212,19 @@ export class Game {
     });
   }
 
+  /** Share of the normal sighting range left by fog and storm murk (Dead Reckoning and Storm Rider see through). */
+  sightFactor(ship: ShipEntity): number {
+    const w = this.weatherOf(ship);
+    let f = w === 'fog' ? 0.6 : w === 'storm' || w === 'black_storm' ? 0.8 : 1;
+    if (ship.hasFlag('dead_reckoning')) f = 1 - (1 - f) / 2;
+    if (ship.hasFlag('storm_rider') && (w === 'storm' || w === 'black_storm')) f = 1 - (1 - f) / 2;
+    return f;
+  }
+
   private discover(s: PlayerSession): void {
     const ship = s.ship!;
-    const r = Math.min(1700, ship.stats.detection * 0.9) * (this.weatherOf(ship) === 'fog' ? 0.6 : 1);
+    const r = Math.min(1700, ship.stats.detection * 0.9) * this.sightFactor(ship);
+    const before = s.discovered.size;
     const [cx, cy] = chunkOf(ship.state.x, ship.state.y);
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
@@ -1196,6 +1238,7 @@ export class Game {
         }
       }
     }
+    if (s.discovered.size !== before) checkChartDeed(this, s);
   }
 
   /** Add an island to the captain's chart without discovery experience (bought or copied charts). */
@@ -1317,6 +1360,10 @@ export class Game {
     if (!c) return;
     p.contracts = p.contracts.filter((x) => x.id !== id);
     p.gold += c.reward;
+    if (c.fromPort === 'harpoon_rest') {
+      p.stats.harpoonContracts++;
+      checkStatDeeds(this, s);
+    }
     const issuer = this.portById(c.fromPort);
     if (issuer) changeRep(p, issuer.faction, 5);
     this.sendTo(s, { t: 'toast', msg: `Contract complete: ${c.title}. +${c.reward} silver.`, kind: 'gold' });
@@ -1426,10 +1473,27 @@ export class Game {
         if (msg.end !== 'bow' && msg.end !== 'stern') return;
         return err(fireChaser(this, ship, msg.end, Number(msg.x), Number(msg.y)));
       case 'ammo':
-        if (AMMO_IDS.includes(msg.ammo)) {
+        if (AMMO_IDS.includes(msg.ammo) && msg.ammo !== ship.ammoSel) {
+          // Drawing the loaded charge costs part of a reload; Quick Swap trims it.
+          const swap = Math.max(0, 1 - tval(ship.stats, 'quickSwap'));
+          for (const side of ['port', 'starboard'] as Side[]) {
+            if (ship.reload[side] > 0 || ship.gunsDisabled[side] >= ship.stats.gunsPerSide) continue;
+            const t = reloadTime(ship, side, this.now) * 0.3 * swap;
+            if (t <= 0.05) continue;
+            ship.reload[side] = t;
+            ship.lastReloadTotal[side] = t;
+          }
+          ship.swapBonus = ship.rank('gun_quick_swap') > 0;
           ship.ammoSel = msg.ammo;
         }
         return;
+      case 'fire_mode':
+        ship.rollingFire = !!msg.rolling;
+        this.toastShip(ship, ship.rollingFire ? 'Rolling fire: guns fire down the side as they bear.' : 'Broadside fire: every gun at once.', 'info');
+        this.pushSelf(s, true);
+        return;
+      case 'talent_active':
+        return err(useTalentActive(this, s, String(msg.id)));
       case 'ability':
         return err(useAbility(this, ship, String(msg.id), msg.x, msg.y));
       case 'board': {
@@ -1532,7 +1596,7 @@ export class Game {
           return bankAction(this, s, pt, msg.action, Math.trunc(Number(msg.amount)));
         });
       case 'learn_talent': {
-        const why = canLearn(p.talents, String(msg.id), this.talentPoints(p));
+        const why = canLearn(p.talents, String(msg.id), this.talentPoints(p), learnContext(p));
         if (why) return err(why);
         if (ship.inCombat(this.now)) return err('Not in the heat of battle');
         p.talents[msg.id] = (p.talents[msg.id] ?? 0) + 1;
@@ -1544,15 +1608,12 @@ export class Game {
       }
       case 'respec':
         return portAction(() => {
-          const cost = 60 * p.level;
-          if (p.gold < cost) return `Respec costs ${cost} silver`;
-          p.gold -= cost;
-          this.db.ledger(s.accountId, 'respec', -cost, String(p.level));
-          p.talents = {};
-          ship.talents = p.talents;
-          ship.recompute(this.now);
-          return null;
+          if (ship.inCombat(this.now)) return 'Not in the heat of battle';
+          const mode: RespecMode = msg.mode === 'forget' || msg.mode === 'token' ? msg.mode : 'full';
+          return respec(this, s, mode, msg.id);
         });
+      case 'loadout':
+        return portAction(() => switchLoadout(this, s, Math.trunc(Number(msg.slot))));
       case 'chat': {
         const text = String(msg.text ?? '').slice(0, 200).trim();
         if (!text) return;
@@ -1565,7 +1626,7 @@ export class Game {
   }
 
   talentPoints(p: Profile): number {
-    return Math.max(0, p.level - 1) - Object.values(p.talents).reduce((a, b) => a + b, 0);
+    return unspentPoints(p);
   }
 
   private onHello(s: PlayerSession, msg: { v: number; token?: string; name?: string }): void {
@@ -1729,6 +1790,7 @@ export class Game {
   private dockShip(s: PlayerSession, port: Port): void {
     const ship = s.ship!;
     const p = s.profile!;
+    onDockDeeds(this, s);
     ship.docked = port.id;
     ship.state.speed = 0;
     ship.state.sail = 0;
@@ -1874,7 +1936,7 @@ export class Game {
       };
       this.sendSnap(s, {
         t: 'snap', tick: this.tick, time: Math.round(this.now * 100) / 100, ack: me.lastInputSeq, you, ships, loot,
-        wind: [Math.round(wind.dir * 1000) / 1000, Math.round(wind.strength * 100) / 100], weather, region: me.region, fog: WEATHER_FOG[weather],
+        wind: [Math.round(wind.dir * 1000) / 1000, Math.round(wind.strength * 100) / 100], weather, region: me.region, fog: Math.round(WEATHER_FOG[weather] * (0.5 + 0.5 * this.sightFactor(me)) * 100) / 100,
       });
       const mine: GameEvent[] = [];
       for (const e of events) {

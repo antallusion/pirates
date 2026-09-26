@@ -9,7 +9,7 @@ import type {
 } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
-import { computeShipStats, crewFactor, loadFactor } from '../../shared/src/sim/shipstats.ts';
+import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
 import type { ShipStats } from '../../shared/src/sim/shipstats.ts';
 import { currentAt } from '../../shared/src/world/worldgen.ts';
 import type { RegionId } from '../../shared/src/world/regions.ts';
@@ -162,7 +162,7 @@ export class ClientState {
 
   refreshStats(): void {
     if (!this.self) return;
-    this.ownStats = computeShipStats(this.self.loadout, this.self.captain, this.self.talents, []);
+    this.ownStats = computeShipStats(this.self.loadout, this.self.captain, this.self.talents, this.self.effects);
   }
 
   estServerTime(): number {
@@ -213,6 +213,7 @@ export class ClientState {
       currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
       loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: this.night() ? 1 + st.nightSpeed : 1,
       personalWind: false, weatherly: this.self.loadout.classId === 'schooner', sweeps: this.self.loadout.classId === 'xebec',
+      talent: sailTalents(st),
     };
     const wind = { dir: this.wind[0], strength: this.wind[1] };
     const cur = currentAt(this.currents, s.x, s.y, this.estServerTime(), this.whirlpools);

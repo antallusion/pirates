@@ -233,7 +233,8 @@ export class AudioEngine {
         else if (e.fx === 'ram') this.hit(e.x, e.y, true);
         else if (e.fx === 'mortar_launch') this.cannon(e.x, e.y, 0, 1.4);
         else if (e.fx === 'mortar') this.explosion(e.x, e.y);
-        else if (e.fx === 'harpoon_miss') this.splash(e.x, e.y, false);
+        else if (e.fx === 'harpoon_miss' || e.fx === 'breach') this.splash(e.x, e.y, false);
+        else if (e.fx === 'broken_mast') this.hit(e.x, e.y, true);
         break;
     }
   }

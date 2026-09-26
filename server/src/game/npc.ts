@@ -495,8 +495,10 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   if (rel < noGo) {
     const from = wrapAngle(wind.dir + Math.PI);
     if (now > brain.tackUntil) {
+      // Beating to windward: start on the nearer tack, then come about every leg so the zig-zag makes ground.
       const a = wrapAngle(from + noGo * DEG), b = wrapAngle(from - noGo * DEG);
-      brain.tackSide = Math.abs(angleDiff(a, desired)) < Math.abs(angleDiff(b, desired)) ? 1 : -1;
+      const stillBeating = now - brain.tackUntil < 3;
+      brain.tackSide = stillBeating ? -brain.tackSide : Math.abs(angleDiff(a, desired)) < Math.abs(angleDiff(b, desired)) ? 1 : -1;
       brain.tackUntil = now + 22 + game.rng.float() * 10;
     }
     desired = wrapAngle(from + brain.tackSide * noGo * DEG);

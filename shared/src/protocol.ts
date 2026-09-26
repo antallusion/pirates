@@ -8,6 +8,7 @@ import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
 import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';
 import type { TalentRanks } from './data/talents.ts';
+import type { Flag, StatMods } from './data/stats.ts';
 import type { Cargo, AmmoStock, ShipLoadout } from './sim/shipstats.ts';
 import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
@@ -44,7 +45,10 @@ export type ClientMsg =
   | { t: 'shipyard'; action: 'mount'; mount: MountId }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
   | { t: 'learn_talent'; id: string }
-  | { t: 'respec' }
+  | { t: 'respec'; mode?: 'full' | 'forget' | 'token'; id?: string }
+  | { t: 'loadout'; slot: number }
+  | { t: 'talent_active'; id: string; x?: number; y?: number }
+  | { t: 'fire_mode'; rolling: boolean }
   | { t: 'pardon' }
   | { t: 'insure'; tier?: InsuranceTier }
   | { t: 'forward'; id: string }
@@ -217,6 +221,13 @@ export interface PrivateState {
   xpNext: number;
   talentPoints: number;
   talents: TalentRanks;
+  deeds: string[];
+  tokens: number;
+  loadouts: { slots: number; active: number; filled: boolean[]; switchAt: number };
+  respec: { free: boolean; cleanSlateCost: number; cleanSlateAt: number; forgetCost: number };
+  talentCooldowns: Record<string, number>;
+  heat: { port: number; starboard: number };
+  rollingFire: boolean;
   gold: number;
   infamy: number;
   wanted: number;
@@ -254,6 +265,8 @@ export interface PrivateState {
   protectedUntil: number; // newbie / respawn protection (world time)
   insured: boolean;
   policy: InsuranceTier | null;
+  /** Active status effects on your ship, so prediction and the HUD use the same stats as the server. */
+  effects: { id: string; until: number; mods?: StatMods; flags?: Flag[] }[];
   forwards: ForwardView[];
   bank: number;
   loan: { owed: number; due: number; defaulted: boolean } | null;
@@ -370,7 +383,7 @@ export interface SelfRow {
 }
 
 export type GameEvent =
-  | { k: 'volley'; ship: number; side: Side | ChaserEnd; ammo: AmmoId; balls: [number, number, number, number, number][] } // [x, y, heading, dist, delayMs]
+  | { k: 'volley'; ship: number; side: Side | ChaserEnd; ammo: AmmoId; balls: [number, number, number, number, number][]; spd?: number } // [x, y, heading, dist, delayMs]; spd = muzzle velocity multiplier
   | { k: 'hit'; x: number; y: number; ship: number; dmg: number; ammo: AmmoId; crit?: string }
   | { k: 'splash'; x: number; y: number }
   | { k: 'sunk'; ship: number; x: number; y: number; name: string }
@@ -379,7 +392,7 @@ export type GameEvent =
   | { k: 'ability'; ship: number; id: string; x?: number; y?: number }
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
-  | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram'; x: number; y: number; r?: number }
+  | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach'; x: number; y: number; r?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 

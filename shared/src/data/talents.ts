@@ -1,8 +1,13 @@
-// Talent trees — MVP subset of the full 10-tree design in docs/03_TALENT_TREES.md.
-// Five trees are playable in the prototype. Each talent is data: stat modifiers per rank plus
-// optional flags that systems check. Keystones radically change play and carry a real downside.
+// Talent trees — docs/03_TALENT_TREES.md. Ten trees of 24–26 talents with 1–3 ranks, gated by points invested
+// in the tree (T1 0, T2 5, T3 10, T4 15, T5 20, keystone 25 + captain level 25), two mutually exclusive
+// keystones per tree and at most two per build, plus bridge talents between trees (§5, at most three).
+// Trees still marked `complete: false` run on the prototype's compressed gates until their full content lands.
+// Each talent is data: stat modifiers per rank plus optional flags; situational rules live in the systems.
 
+import type { CaptainId } from './captains.ts';
 import type { Flag, StatMods } from './stats.ts';
+import { GUNNERY } from './trees/gunnery.ts';
+import { NAVIGATION } from './trees/navigation.ts';
 
 export type TreeId =
   | 'navigation' | 'gunnery' | 'boarding' | 'command' | 'trade'
@@ -12,70 +17,75 @@ export interface TreeDef {
   id: TreeId;
   name: string;
   motto: string;
-  playableInMvp: boolean;
+  /** Full 03 content and gates. Incomplete trees use the prototype gates (TIER_STEP / KEYSTONE_REQUIREMENT). */
+  complete: boolean;
+  /** Playable at all (has talents). */
+  playable: boolean;
+  native: CaptainId[];
 }
 
 export const TREES: Record<TreeId, TreeDef> = {
-  navigation: { id: 'navigation', name: 'Navigation', motto: 'The wind is a weapon.', playableInMvp: true },
-  gunnery: { id: 'gunnery', name: 'Gunnery', motto: 'Speak in iron.', playableInMvp: true },
-  boarding: { id: 'boarding', name: 'Boarding', motto: 'Steel, rope and nerve.', playableInMvp: true },
-  command: { id: 'command', name: 'Command', motto: 'A crew is a blade — keep it sharp.', playableInMvp: false },
-  trade: { id: 'trade', name: 'Trade', motto: 'Every port is a ledger.', playableInMvp: true },
-  smuggling: { id: 'smuggling', name: 'Smuggling', motto: 'What the Crown does not see, the Crown does not tax.', playableInMvp: false },
-  survival: { id: 'survival', name: 'Survival', motto: 'Stay afloat. Everything else is luxury.', playableInMvp: true },
-  shipwright: { id: 'shipwright', name: 'Shipwright', motto: 'The hull remembers every hand.', playableInMvp: false },
-  exploration: { id: 'exploration', name: 'Exploration', motto: 'Beyond the last lighthouse.', playableInMvp: false },
-  abyssal: { id: 'abyssal', name: 'Abyssal', motto: 'The deep answers those who call.', playableInMvp: false },
+  navigation: { id: 'navigation', name: 'Navigation', motto: 'The wind is a weapon.', complete: true, playable: true, native: ['corsair', 'navigator'] },
+  gunnery: { id: 'gunnery', name: 'Gunnery', motto: 'Speak in iron.', complete: true, playable: true, native: ['corsair'] },
+  boarding: { id: 'boarding', name: 'Boarding', motto: 'Steel, rope and nerve.', complete: false, playable: true, native: ['reaver'] },
+  command: { id: 'command', name: 'Command', motto: 'A crew is a blade — keep it sharp.', complete: false, playable: false, native: ['admiral'] },
+  trade: { id: 'trade', name: 'Trade', motto: 'Every port is a ledger.', complete: false, playable: true, native: ['smuggler'] },
+  smuggling: { id: 'smuggling', name: 'Smuggling', motto: 'What the Crown does not see, the Crown does not tax.', complete: false, playable: false, native: ['smuggler'] },
+  survival: { id: 'survival', name: 'Survival', motto: 'Stay afloat. Everything else is luxury.', complete: false, playable: true, native: ['reaver', 'drowned'] },
+  shipwright: { id: 'shipwright', name: 'Shipwright', motto: 'The hull remembers every hand.', complete: false, playable: false, native: ['admiral'] },
+  exploration: { id: 'exploration', name: 'Exploration', motto: 'Beyond the last lighthouse.', complete: false, playable: false, native: ['navigator'] },
+  abyssal: { id: 'abyssal', name: 'Abyssal', motto: 'The deep answers those who call.', complete: false, playable: false, native: ['drowned'] },
 };
+
+/** Clockwise order of the rays on the Wind Rose (§2.10). */
+export const ROSE_ORDER: TreeId[] = ['navigation', 'exploration', 'abyssal', 'survival', 'shipwright', 'command', 'gunnery', 'boarding', 'smuggling', 'trade'];
 
 export interface TalentDef {
   id: string;
-  tree: TreeId;
+  tree: TreeId | 'bridge';
   name: string;
-  tier: number; // 1..3 in the MVP; tier N requires (N-1)*TIER_STEP points in the tree
+  /** 1..5; 6 = keystone ring. Incomplete trees use 1..3 with the prototype gates. */
+  tier: number;
   maxRank: number;
   keystone: boolean;
   requires?: string;
+  requiresRank?: number;
+  /** The other keystone of the same tree. */
+  excludes?: string;
+  /** Bridges: the two trees and the points required in each. */
+  bridge?: { trees: [TreeId, TreeId]; min: number };
   description: string;
   perRank?: StatMods; // multiplied by rank
   fixed?: StatMods; // applied once when rank >= 1
   flags?: Flag[];
+  /** Active talents are used from the talent bar (keys 6–0). */
+  active?: { cooldown: number };
 }
 
+export const TIER_GATE = 5;
+export const KEYSTONE_GATE = 25;
+export const KEYSTONE_LEVEL = 25;
+export const MAX_KEYSTONES = 2;
+export const MAX_BRIDGES = 3;
+// Prototype gates for trees whose full content has not landed yet.
 export const TIER_STEP = 2;
 export const KEYSTONE_REQUIREMENT = 5;
 
 const t = (d: TalentDef): TalentDef => d;
 
-export const TALENTS: TalentDef[] = [
-  // ------------------------------------------------------------- Navigation
-  t({ id: 'nav_close_hauled', tree: 'navigation', name: 'Close-Hauled', tier: 1, maxRank: 3, keystone: false, description: 'Point higher into the wind: the no-go zone shrinks by 4° per rank.', perRank: { noGoDeg: -4 } }),
-  t({ id: 'nav_quick_trim', tree: 'navigation', name: 'Quick Trim', tier: 1, maxRank: 2, keystone: false, description: 'Sail changes are 25% faster per rank.', perRank: { sailChangeRate: 0.25 } }),
-  t({ id: 'nav_night_runner', tree: 'navigation', name: 'Night Runner', tier: 2, maxRank: 2, keystone: false, description: '+6% speed per rank while sailing at night.', perRank: { nightSpeed: 0.06 } }),
-  t({ id: 'nav_current_reader', tree: 'navigation', name: 'Current Reader', tier: 2, maxRank: 1, keystone: false, description: 'Ocean currents push you 50% harder.', fixed: { currentMul: 0.5 } }),
-  t({ id: 'nav_windborn', tree: 'navigation', name: 'Windborn', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. +15% maximum speed, but −25% maximum hull. You live by never being caught.', fixed: { maxSpeed: 0.15, hullMax: -0.25 } }),
-
-  // ------------------------------------------------------------- Gunnery
-  t({ id: 'gun_fast_hands', tree: 'gunnery', name: 'Fast Hands', tier: 1, maxRank: 3, keystone: false, description: 'Reload time −5% per rank.', perRank: { reloadMul: -0.05 } }),
-  t({ id: 'gun_steady_aim', tree: 'gunnery', name: 'Steady Aim', tier: 1, maxRank: 3, keystone: false, description: 'Broadside spread −8% per rank.', perRank: { spreadMul: -0.08 } }),
-  t({ id: 'gun_tangled_rigging', tree: 'gunnery', name: 'Tangled Rigging', tier: 2, maxRank: 1, keystone: false, description: 'Chain-shot hits apply Tangled Rigging: target turn rate −35% for 6 s.', flags: ['tangled_rigging'] }),
-  t({ id: 'gun_double_charge', tree: 'gunnery', name: 'Double Charge', tier: 2, maxRank: 1, keystone: false, description: 'Each cannon has a 20% chance to fire two balls.', fixed: { doubleShotChance: 0.2 } }),
-  t({ id: 'gun_iron_rain', tree: 'gunnery', name: 'Iron Rain', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. +25% cannon damage, but reloading is 20% slower. Every broadside must count.', fixed: { gunDamageMul: 0.25, reloadMul: 0.2 } }),
-
+const LEGACY: TalentDef[] = [
   // ------------------------------------------------------------- Boarding
   t({ id: 'brd_grapples', tree: 'boarding', name: 'Long Grapples', tier: 1, maxRank: 2, keystone: false, description: 'Boarding range +15% per rank.', perRank: { boardingRange: 0.15 } }),
   t({ id: 'brd_careful_hands', tree: 'boarding', name: 'Careful Hands', tier: 1, maxRank: 3, keystone: false, description: 'Cargo destroyed during boarding −5 percentage points per rank.', perRank: { boardingCargoLoss: -0.05 } }),
   t({ id: 'brd_victory_cheer', tree: 'boarding', name: 'Victory Cheer', tier: 2, maxRank: 1, keystone: false, description: 'A successful boarding restores 25 morale.', fixed: { moraleOnBoard: 25 } }),
   t({ id: 'brd_terror', tree: 'boarding', name: 'Terror', tier: 2, maxRank: 1, keystone: false, description: 'Enemy crews below 30% lose morale twice as fast.', flags: ['terror'], fixed: { enemyMoraleCollapse: 1 } }),
   t({ id: 'brd_blood_tide', tree: 'boarding', name: 'Blood Tide', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. Each successful boarding heals 15% hull, but maximum crew −20%.', flags: ['blood_tide'], fixed: { crewMax: -0.2 } }),
-
   // ------------------------------------------------------------- Trade
   t({ id: 'trd_haggler', tree: 'trade', name: 'Haggler', tier: 1, maxRank: 3, keystone: false, description: 'Buy prices −2% and sell prices +2% per rank.', perRank: { buyMul: -0.02, sellMul: 0.02 } }),
   t({ id: 'trd_packer', tree: 'trade', name: 'Master Packer', tier: 1, maxRank: 2, keystone: false, description: 'Hold volume +8% per rank.', perRank: { holdVolume: 0.08 } }),
   t({ id: 'trd_false_bottom', tree: 'trade', name: 'False Bottom', tier: 2, maxRank: 1, keystone: false, description: 'Contraband uses 30% less hold volume.', fixed: { contrabandVolumeMul: -0.3 }, flags: ['false_bottom'] }),
   t({ id: 'trd_market_sense', tree: 'trade', name: 'Market Sense', tier: 2, maxRank: 1, keystone: false, description: 'See price trends of every port you have visited on the world map.', flags: ['market_sense'] }),
   t({ id: 'trd_honest_merchant', tree: 'trade', name: 'Honest Merchant', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. You can never attack non-hostile ships; legal goods sell for +12%.', flags: ['honest_merchant'], fixed: { sellMul: 0.12 } }),
-
   // ------------------------------------------------------------- Survival
   t({ id: 'srv_carpenters', tree: 'survival', name: 'Ship Carpenters', tier: 1, maxRank: 3, keystone: false, description: 'Repair speed +15% per rank.', perRank: { repairRate: 0.15 } }),
   t({ id: 'srv_iron_hull', tree: 'survival', name: 'Iron Hull', tier: 1, maxRank: 3, keystone: false, description: 'Maximum hull +5% per rank.', perRank: { hullMax: 0.05 } }),
@@ -83,6 +93,8 @@ export const TALENTS: TalentDef[] = [
   t({ id: 'srv_ration_master', tree: 'survival', name: 'Ration Master', tier: 2, maxRank: 2, keystone: false, description: 'Provisions consumption −15% per rank.', perRank: { provisionUse: -0.15 } }),
   t({ id: 'srv_unsinkable', tree: 'survival', name: 'Unsinkable', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. Once per 5 minutes survive lethal damage with 1 hull for 6 s. Maximum sail level −10%.', flags: ['unsinkable'], fixed: { maxSpeed: -0.1 } }),
 ];
+
+export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...LEGACY];
 
 export const TALENTS_BY_ID: Record<string, TalentDef> = Object.fromEntries(TALENTS.map((x) => [x.id, x]));
 
@@ -97,6 +109,16 @@ export function pointsInTree(ranks: TalentRanks, tree: TreeId): number {
   return n;
 }
 
+/** Points in `tree` spent on talents of a lower tier than `tier` — what opens the gate of `tier`. */
+export function pointsBelowTier(ranks: TalentRanks, tree: TreeId, tier: number): number {
+  let n = 0;
+  for (const id in ranks) {
+    const def = TALENTS_BY_ID[id];
+    if (def && def.tree === tree && def.tier < tier) n += ranks[id];
+  }
+  return n;
+}
+
 export function totalPointsSpent(ranks: TalentRanks): number {
   let n = 0;
   for (const id in ranks) n += ranks[id] ?? 0;
@@ -104,27 +126,101 @@ export function totalPointsSpent(ranks: TalentRanks): number {
 }
 
 export function tierRequirement(def: TalentDef): number {
-  if (def.keystone) return KEYSTONE_REQUIREMENT;
-  return (def.tier - 1) * TIER_STEP;
+  if (def.tree === 'bridge') return 0;
+  if (TREES[def.tree].complete) return def.keystone ? KEYSTONE_GATE : (def.tier - 1) * TIER_GATE;
+  return def.keystone ? KEYSTONE_REQUIREMENT : (def.tier - 1) * TIER_STEP;
 }
 
-/** Validates spending one more point; returns an error string or null. Server-authoritative. */
-export function canLearn(ranks: TalentRanks, talentId: string, available: number): string | null {
+export interface LearnContext {
+  level: number;
+  /** The Abyssal tree is open to drowned captains, and to others who have gone down into the deep. */
+  abyssOpen: boolean;
+}
+
+const ANY: LearnContext = { level: 999, abyssOpen: true };
+
+/** Whether `def` at its current rank is still supported by the rest of the build (gates, parents, bridges). */
+function supported(ranks: TalentRanks, def: TalentDef, ctx: LearnContext): string | null {
+  if (def.tree === 'bridge') {
+    const b = def.bridge!;
+    for (const tr of b.trees) if (pointsInTree(ranks, tr) < b.min) return `Requires ${b.min} points in ${TREES[tr].name} and ${TREES[b.trees[0] === tr ? b.trees[1] : b.trees[0]].name}`;
+  } else {
+    const need = tierRequirement(def);
+    const tierForGate = def.keystone ? 6 : def.tier;
+    if (pointsBelowTier(ranks, def.tree, tierForGate) < need) return `Requires ${need} points in ${TREES[def.tree].name}`;
+  }
+  if (def.requires && (ranks[def.requires] ?? 0) < (def.requiresRank ?? 1)) {
+    return `Requires ${TALENTS_BY_ID[def.requires]?.name ?? def.requires}${(def.requiresRank ?? 1) > 1 ? ` rank ${def.requiresRank}` : ''}`;
+  }
+  if (def.keystone && TREES[def.tree as TreeId]?.complete && ctx.level < KEYSTONE_LEVEL) return `Keystones need captain level ${KEYSTONE_LEVEL}`;
+  return null;
+}
+
+/** Validates spending one more point; returns an error string or null. Server-authoritative, client previews. */
+export function canLearn(ranks: TalentRanks, talentId: string, available: number, ctx: LearnContext = ANY): string | null {
   const def = TALENTS_BY_ID[talentId];
   if (!def) return 'Unknown talent';
-  if (!TREES[def.tree].playableInMvp) return 'Tree not available yet';
+  if (def.tree !== 'bridge' && !TREES[def.tree].playable) return 'Tree not available yet';
+  if (def.tree === 'abyssal' && !ctx.abyssOpen) return 'The Abyss has not answered you yet';
   const cur = ranks[talentId] ?? 0;
   if (cur >= def.maxRank) return 'Already at max rank';
   if (available <= 0) return 'No talent points available';
-  // Points invested in the tree excluding this talent's own ranks.
-  const inTree = pointsInTree(ranks, def.tree) - cur;
-  if (inTree < tierRequirement(def)) return `Requires ${tierRequirement(def)} points in ${TREES[def.tree].name}`;
-  if (def.requires && !(ranks[def.requires] > 0)) return `Requires ${TALENTS_BY_ID[def.requires]?.name ?? def.requires}`;
-  if (def.keystone) {
+  const why = supported(ranks, def, ctx);
+  if (why) return why;
+  if (def.keystone && cur === 0) {
+    if (def.excludes && (ranks[def.excludes] ?? 0) > 0) return `Cannot be combined with ${TALENTS_BY_ID[def.excludes]?.name ?? def.excludes}`;
     const keystones = Object.keys(ranks).filter((id) => ranks[id] > 0 && TALENTS_BY_ID[id]?.keystone).length;
-    if (keystones >= 2) return 'At most two keystones may be active';
+    if (keystones >= MAX_KEYSTONES) return 'At most two keystones may be active';
+  }
+  if (def.tree === 'bridge' && cur === 0) {
+    const bridges = Object.keys(ranks).filter((id) => ranks[id] > 0 && TALENTS_BY_ID[id]?.tree === 'bridge').length;
+    if (bridges >= MAX_BRIDGES) return 'At most three bridges';
   }
   return null;
+}
+
+/** Retention rule (§2.3): removing every rank of `talentId` must leave every other talent supported. */
+export function canUnlearn(ranks: TalentRanks, talentId: string, ctx: LearnContext = ANY): string | null {
+  if (!(ranks[talentId] > 0)) return 'Not learned';
+  const next = { ...ranks };
+  delete next[talentId];
+  for (const id in next) {
+    const def = TALENTS_BY_ID[id];
+    if (!def || next[id] <= 0) continue;
+    const why = supported(next, def, ctx);
+    if (why) return `${def.name} depends on it — remove the higher talents first`;
+  }
+  return null;
+}
+
+/** Full validation of a stored build (loadouts, migrations). Returns null when every talent holds. */
+export function validateBuild(ranks: TalentRanks, points: number, ctx: LearnContext = ANY): string | null {
+  if (totalPointsSpent(ranks) > points) return 'More points spent than available';
+  let keystones = 0, bridges = 0;
+  for (const id in ranks) {
+    const def = TALENTS_BY_ID[id];
+    if (!def) return `Unknown talent ${id}`;
+    if (ranks[id] <= 0) continue;
+    if (ranks[id] > def.maxRank) return `${def.name} above max rank`;
+    const why = supported(ranks, def, ctx);
+    if (why) return `${def.name}: ${why}`;
+    if (def.keystone) {
+      keystones++;
+      if (def.excludes && (ranks[def.excludes] ?? 0) > 0) return `${def.name} excludes ${def.excludes}`;
+    }
+    if (def.tree === 'bridge') bridges++;
+  }
+  if (keystones > MAX_KEYSTONES) return 'Too many keystones';
+  if (bridges > MAX_BRIDGES) return 'Too many bridges';
+  return null;
+}
+
+export function rankOf(ranks: TalentRanks, id: string): number {
+  return ranks[id] ?? 0;
+}
+
+export function activeTalents(ranks: TalentRanks): TalentDef[] {
+  return TALENTS.filter((d) => d.active && (ranks[d.id] ?? 0) > 0);
 }
 
 export function talentModifiers(ranks: TalentRanks): { mods?: StatMods; flags?: Flag[] }[] {

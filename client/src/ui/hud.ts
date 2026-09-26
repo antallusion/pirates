@@ -7,6 +7,7 @@ import { AMMO, AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/s
 import { timeOfDay } from '../../../shared/src/constants.ts';
 import { headingVec } from '../../../shared/src/math.ts';
 import { SF } from '../../../shared/src/protocol.ts';
+import { activeTalents } from '../../../shared/src/data/talents.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -24,6 +25,7 @@ export class Hud {
   private minimap = $('minimap') as HTMLCanvasElement;
   onAbility: (id: string) => void = () => {};
   onAmmo: (id: string) => void = () => {};
+  onTalent: (id: string) => void = () => {};
 
   show(on: boolean): void {
     $('hud').classList.toggle('hidden', !on);
@@ -90,8 +92,17 @@ export class Hud {
         <span class="k">${a.key}</span><span class="n">${esc(a.name)}</span>
         ${frac > 0 ? `<div class="cd" style="height:${Math.round(frac * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}${locked ? '<div class="cdt">Lv6</div>' : ''}</div>`;
     }).join('');
+    const talentBar = activeTalents(self.talents).slice(0, 5).map((t, i) => {
+      const left = Math.max(0, (self.talentCooldowns[t.id] ?? 0) - now);
+      const frac = left > 0 && t.active ? left / t.active.cooldown : 0;
+      return `<div class="ab talent" data-talent="${t.id}" title="${esc(t.name)} — ${esc(t.description)}"><span class="k">${'67890'[i]}</span><span class="n">${esc(t.name)}</span>
+        ${frac > 0 ? `<div class="cd" style="height:${Math.round(Math.min(1, frac) * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}</div>`;
+    }).join('');
+    const heat = self.heat.port || self.heat.starboard
+      ? `<div class="row" style="font-size:11px"><span class="lbl" style="color:var(--bad)">Heat</span><span class="val">P ${self.heat.port} · S ${self.heat.starboard}</span></div>` : '';
+    const mode = `<div class="row" style="font-size:11px"><span class="lbl">[K] Fire</span><span class="val">${self.rollingFire ? 'rolling' : 'broadside'}</span></div>`;
     const combat = $('hud-combat');
-    const key = ammo + reload + abilities;
+    const key = ammo + reload + abilities + talentBar + heat + mode;
     if (key === this.lastCombatKey) {
       this.drawNav(state);
       $('hud-prompt').innerHTML = prompt;
@@ -99,8 +110,9 @@ export class Hud {
       return this.updateRegion(state, now);
     }
     this.lastCombatKey = key;
-    combat.innerHTML = `<div><div class="ammo-box">${ammo}</div><div class="reload" style="margin-top:6px">${reload}</div></div><div class="abilities">${abilities}</div>`;
+    combat.innerHTML = `<div><div class="ammo-box">${ammo}</div><div class="reload" style="margin-top:6px">${reload}</div>${mode}${heat}</div><div class="abilities">${abilities}${talentBar}</div>`;
     combat.querySelectorAll<HTMLElement>('[data-ab]').forEach((el) => (el.onclick = () => this.onAbility(el.dataset.ab!)));
+    combat.querySelectorAll<HTMLElement>('[data-talent]').forEach((el) => (el.onclick = () => this.onTalent(el.dataset.talent!)));
     combat.querySelectorAll<HTMLElement>('[data-ammo]').forEach((el) => (el.onclick = () => this.onAmmo(el.dataset.ammo!)));
 
     // Navigation block: compass with wind.

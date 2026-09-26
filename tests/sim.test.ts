@@ -56,11 +56,14 @@ test('ship stats: modules, talents and keystones stack as designed', () => {
 
 test('talents: tier gating, rank caps and the two-keystone limit are enforced', () => {
   assert.equal(canLearn({}, 'gun_fast_hands', 1), null);
-  assert.match(canLearn({}, 'gun_tangled_rigging', 5) ?? '', /Requires 2/);
-  assert.equal(canLearn({ gun_fast_hands: 3 }, 'gun_tangled_rigging', 5), null);
+  // Complete trees: T2 opens at 5 points below it, keystones at 25 and captain level 25.
+  assert.match(canLearn({ gun_fast_hands: 3 }, 'gun_tangled_rigging', 5) ?? '', /Requires 5/);
+  assert.equal(canLearn({ gun_fast_hands: 3, gun_steady_aim: 2 }, 'gun_tangled_rigging', 5), null);
   assert.match(canLearn({ gun_fast_hands: 3 }, 'gun_fast_hands', 5) ?? '', /max rank/);
   assert.match(canLearn({}, 'gun_fast_hands', 0) ?? '', /No talent points/);
-  const full = { gun_fast_hands: 3, gun_steady_aim: 3, gun_iron_rain: 1, nav_close_hauled: 3, nav_quick_trim: 2, nav_night_runner: 1, nav_windborn: 1, srv_carpenters: 3, srv_iron_hull: 3 };
+  // Prototype trees keep their compressed gates until their full content lands.
+  assert.equal(canLearn({ srv_carpenters: 2 }, 'srv_battle_repair', 5), null);
+  const full = { gun_iron_rain: 1, nav_windborn: 1, srv_carpenters: 3, srv_iron_hull: 3 };
   assert.match(canLearn(full, 'srv_unsinkable', 5) ?? '', /two keystones/);
   assert.ok(TALENTS.every((t) => t.maxRank >= 1));
 });

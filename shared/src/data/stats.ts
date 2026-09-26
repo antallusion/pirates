@@ -8,11 +8,21 @@ export type StatKey =
   | 'hullMax' | 'armor' | 'sailHpMax' | 'repairRate' | 'battleRepairRate'
   | 'boardingRange' | 'boardingPower' | 'boardingCargoLoss' | 'moraleOnBoard' | 'enemyMoraleCollapse'
   | 'holdVolume' | 'crewMax' | 'detection' | 'provisionUse' | 'buyMul' | 'sellMul' | 'contrabandVolumeMul'
-  | 'moraleRegen' | 'incomingDamageMul';
+  | 'moraleRegen' | 'incomingDamageMul' | 'cooldownMul' | 'armorPct'
+  // navigation
+  | 'turnDrag' | 'runningFreeAccel' | 'seaPenalty' | 'tackDrill' | 'draftMul' | 'reefDamage' | 'stormSailDamage' | 'evasion' | 'polarBoost'
+  // gunnery
+  | 'chainSail' | 'chainRange' | 'fireRisk' | 'grapeCrew' | 'grapeMorale' | 'heatedShot' | 'gunCrewDrill' | 'swivels' | 'rakingFire'
+  | 'mastBreak' | 'breachChance' | 'quickSwap' | 'chaserDamage' | 'chaserArc' | 'shotSpeed';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
-  | 'terror' | 'false_bottom' | 'dark_running' | 'hidden' | 'boarding_anywhere' | 'personal_wind';
+  | 'terror' | 'false_bottom' | 'dark_running' | 'hidden' | 'boarding_anywhere' | 'personal_wind'
+  // navigation
+  | 'weather_gauge' | 'sweeps_drill' | 'wake_rider' | 'dead_reckoning' | 'lee_shore' | 'stolen_wind' | 'trade_winds' | 'second_wind'
+  | 'iron_tiller' | 'storm_rider'
+  // gunnery
+  | 'rolling_broadside' | 'skipping_shot' | 'spotter' | 'splinter_storm' | 'mortar_lore' | 'thunder_broadside' | 'crossfire' | 'red_hot';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

@@ -9,12 +9,13 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { clamp, DEG, headingVec, segmentHitsHull, toShipLocal, wrapAngle } from '../../../shared/src/math.ts';
 import type { Side } from '../../../shared/src/protocol.ts';
-import { gunCrewFactor } from '../../../shared/src/sim/shipstats.ts';
+import { gunCrewFactor, tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import { MAX_LEAKS, leakChance } from './damagecontrol.ts';
 import type { ShipEntity } from './ship.ts';
+import { addHeat, upwindOf } from './talentfx.ts';
 
 export interface Projectile {
   owner: number;
@@ -28,6 +29,20 @@ export interface Projectile {
   damage: number;
   maxRange: number;
   delay: number;
+  volley?: number; // broadside this ball belongs to (Thunderous Broadside, Spotter, Splinter Storm)
+  ignore?: number; // ship this ball has already missed (Serpentine)
+  skipped?: boolean; // Skipping Shot: already bounced once
+}
+
+/** Bookkeeping for one broadside until its last ball lands. */
+export interface VolleyRec {
+  owner: number;
+  total: number;
+  left: number;
+  hits: Map<number, number>;
+  counts: boolean; // counts as a full volley (not a plain rolling fire)
+  demoralised: Set<number>; // Splinter Storm: targets already shaken by this volley
+  t: number;
 }
 
 export const COMBAT_TAG = 20;
@@ -38,14 +53,38 @@ export function sideHeading(ship: ShipEntity, side: Side): number {
 
 export function effectiveRange(ship: ShipEntity, side: Side, ammo: AmmoId): number {
   const gun = GUNS[ship.loadout.guns[side]];
-  return gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul;
+  const chain = ammo === 'chain' ? 1 + tval(ship.stats, 'chainRange') : 1;
+  return gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul * chain;
+}
+
+/** Nearest hostile inside a broadside's arc and range — the ship the gunners are laying on. */
+export function aimTarget(game: Game, ship: ShipEntity, side: Side, range: number): ShipEntity | null {
+  const h = sideHeading(ship, side);
+  let best: ShipEntity | null = null;
+  let bd = range + 40;
+  game.forShipsNear(ship.state.x, ship.state.y, range + 40, (o) => {
+    if (o.id === ship.id || !o.alive || o.docked || !game.isHostile(o, ship)) return;
+    const bearing = Math.atan2(o.state.x - ship.state.x, -(o.state.y - ship.state.y));
+    if (Math.abs(wrapAngle(bearing - h)) > Math.PI / 3) return;
+    const d = Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
+    if (d < bd) {
+      bd = d;
+      best = o;
+    }
+  });
+  return best;
 }
 
 export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
   const gun = GUNS[ship.loadout.guns[side]];
-  let t = gun.reload * ship.stats.reloadMul / gunCrewFactor(ship.stats, ship.loadout, ship.crew);
+  // Gun Crew Drill: a short-handed crew loses less.
+  const gcf = 1 - (1 - gunCrewFactor(ship.stats, ship.loadout, ship.crew)) * Math.max(0, 1 - tval(ship.stats, 'gunCrewDrill'));
+  let t = gun.reload * ship.stats.reloadMul / gcf;
   if (ship.morale < 30) t *= 1.25;
-  if (ship.captain === 'corsair' && ship.gunsDisabled[side] === 0) t *= 0.85; // Broadside Discipline
+  const fullVolley = !ship.rollingFire || ship.hasFlag('rolling_broadside');
+  if (ship.captain === 'corsair' && ship.gunsDisabled[side] === 0 && fullVolley) t *= 0.85; // Broadside Discipline
+  if (ship.rollingFire) t *= 0.85; // guns reload as they fire
+  if (ship.swapBonus) t *= 1 - 0.05 * ship.rank('gun_quick_swap'); // Quick Swap: 10% at rank 2
   if (ship.cls.passive.id === 'gun_brig' && ship.reload.port === 0 && ship.reload.starboard === 0) t *= 0.92;
   if (ship.ammoSel === 'grape' && ship.hasEffect('grapeshot_frenzy')) t *= 0.5;
   void now;
@@ -68,7 +107,14 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const fwd = headingVec(ship.state.heading);
   const outward = headingVec(baseHeading);
   const doubleShot = ship.doubleShotArmed;
-  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship);
+  const target = aimTarget(game, ship, side, range);
+  const rolling = ship.rollingFire;
+  const rollMul = rolling ? (ship.hasFlag('rolling_broadside') ? 0.8 : 1.15) : 1;
+  const rangedIn = target?.hasEffect('ranged_in') ? 0.85 : 1;
+  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn;
+  const volley = game.allocId();
+  const rec: VolleyRec = { owner: ship.id, total: 0, left: 0, hits: new Map(), counts: !rolling || ship.hasFlag('rolling_broadside'), demoralised: new Set(), t: game.now };
+  const shotSpeed = 1 + tval(ship.stats, 'shotSpeed');
   const balls: [number, number, number, number, number][] = [];
   const rng = game.rng;
   for (let i = 0; i < shots; i++) {
@@ -79,22 +125,31 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     for (let k = 0; k < n; k++) {
       const h = baseHeading + rng.gauss() * spreadRad * 0.5;
       const d = dist * (1 + rng.gauss() * 0.045);
-      const delay = Math.round(i * 45 + rng.float() * 60 + k * 90);
+      const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
-        owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed, dist: d, traveled: 0, ammo,
-        damage: gun.damage * ship.stats.gunDamageMul, maxRange: range, delay: delay / 1000,
+        owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed, dist: d, traveled: 0, ammo,
+        damage: gun.damage * ship.stats.gunDamageMul, maxRange: range, delay: delay / 1000, volley,
       });
+      rec.total++;
       balls.push([Math.round(bx), Math.round(by), Math.round(h * 1000) / 1000, Math.round(d), delay]);
     }
   }
+  rec.left = rec.total;
+  game.volleys.set(volley, rec);
   ship.ammo[ammo] -= shots;
   ship.reload[side] = reloadTime(ship, side, game.now);
   ship.lastReloadTotal[side] = ship.reload[side];
+  ship.swapBonus = false;
   ship.doubleShotArmed = false;
+  addHeat(game, ship, side);
+  // Weather Gauge: the powder smoke blows down onto the enemy.
+  if (target && ship.hasFlag('weather_gauge') && upwindOf(game, ship, target) && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < 450) {
+    target.addEffect({ id: 'gun_smoke', until: game.now + 3, mods: { spreadMul: 0.1 }, source: ship.id }, game.now);
+  }
   ship.lastCombat = game.now;
   ship.protectedUntil = 0;
   ship.repairing = ship.repairing && ship.hasFlag('battle_repair');
-  game.emit({ k: 'volley', ship: ship.id, side, ammo, balls }, ship.state.x, ship.state.y);
+  game.emit({ k: 'volley', ship: ship.id, side, ammo, balls, spd: shotSpeed !== 1 ? shotSpeed : undefined }, ship.state.x, ship.state.y);
   return null;
 }
 
@@ -111,7 +166,8 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
   const keel = end === 'bow' ? ship.state.heading : wrapAngle(ship.state.heading + Math.PI);
   const want = Math.atan2(tx - ship.state.x, -(ty - ship.state.y));
   const off = wrapAngle(want - keel);
-  const h = keel + Math.max(-CHASER_CONE, Math.min(CHASER_CONE, off));
+  const cone = CHASER_CONE + tval(ship.stats, 'chaserArc') * DEG;
+  const h = keel + Math.max(-cone, Math.min(cone, off));
   const gun = GUNS[CHASER_GUN];
   const range = gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul;
   const d = clamp(Math.hypot(tx - ship.state.x, ty - ship.state.y), 40, range);
@@ -122,14 +178,15 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
     const bh = h + game.rng.gauss() * gun.spreadDeg * DEG * 0.5 * ship.stats.spreadMul * game.seaSpread(ship);
     const bd = d * (1 + game.rng.gauss() * 0.04);
     const delay = i * 120;
-    game.projectiles.push({ owner: ship.id, x: ox, y: oy, heading: bh, speed: AMMO[ammo].speed, dist: bd, traveled: 0, ammo, damage: gun.damage * ship.stats.gunDamageMul, maxRange: range, delay: delay / 1000 });
+    game.projectiles.push({ owner: ship.id, x: ox, y: oy, heading: bh, speed: AMMO[ammo].speed * (1 + tval(ship.stats, 'shotSpeed')), dist: bd, traveled: 0, ammo, damage: gun.damage * ship.stats.gunDamageMul * (1 + tval(ship.stats, 'chaserDamage')), maxRange: range, delay: delay / 1000 });
     balls.push([Math.round(ox), Math.round(oy), Math.round(bh * 1000) / 1000, Math.round(bd), delay]);
   }
   ship.ammo[ammo] -= shots;
   ship.chaserReload[end] = CHASER_RELOAD * ship.stats.reloadMul;
   ship.lastCombat = game.now;
   ship.protectedUntil = 0;
-  game.emit({ k: 'volley', ship: ship.id, side: end, ammo, balls }, ship.state.x, ship.state.y);
+  const spd = 1 + tval(ship.stats, 'shotSpeed');
+  game.emit({ k: 'volley', ship: ship.id, side: end, ammo, balls, spd: spd !== 1 ? spd : undefined }, ship.state.x, ship.state.y);
   return null;
 }
 
@@ -149,7 +206,7 @@ export function stepProjectiles(game: Game, dt: number): void {
     let hit: ShipEntity | null = null;
     let bestT = 2;
     game.grid.query((p.x + nx) / 2, (p.y + ny) / 2, step + 60, (id) => {
-      if (id === p.owner) return;
+      if (id === p.owner || id === p.ignore) return;
       const s = game.ships.get(id);
       if (!s || s.docked || !s.alive) return;
       const t = segmentHitsHull(p.x, p.y, nx, ny, s.state.x, s.state.y, s.state.heading, s.stats.length / 2, s.stats.beam / 2);
@@ -159,19 +216,91 @@ export function stepProjectiles(game: Game, dt: number): void {
       }
     });
     if (hit) {
-      const hx = p.x + (nx - p.x) * bestT, hy = p.y + (ny - p.y) * bestT;
-      p.traveled += step * bestT;
-      resolveHit(game, p, hit, hx, hy);
-      continue;
+      const h = hit as ShipEntity;
+      // Serpentine: a ship slewing hard under full rudder throws the gunners off.
+      const evade = tval(h.stats, 'evasion');
+      if (evade > 0 && Math.abs(h.state.rudder) > 0.5 && game.rng.chance(evade)) {
+        p.ignore = h.id;
+      } else {
+        const hx = p.x + (nx - p.x) * bestT, hy = p.y + (ny - p.y) * bestT;
+        p.traveled += step * bestT;
+        resolveHit(game, p, h, hx, hy);
+        volleyBall(game, p, h);
+        continue;
+      }
     }
     p.x = nx;
     p.y = ny;
     p.traveled += step;
-    if (p.traveled >= p.dist - 0.01) continue; // splash (clients simulate splashes themselves)
-    if (isLand(game.world, p.x, p.y)) continue;
+    if (p.traveled >= p.dist - 0.01) {
+      // Skipping Shot: a ball that falls just short bounces on into the hull.
+      if (!p.skipped && game.ships.get(p.owner)?.hasFlag('skipping_shot') && skip(game, p)) continue;
+      volleyBall(game, p, null);
+      continue; // splash (clients simulate splashes themselves)
+    }
+    if (isLand(game.world, p.x, p.y)) {
+      volleyBall(game, p, null);
+      continue;
+    }
     list[w++] = p;
   }
   list.length = w;
+}
+
+function skip(game: Game, p: Projectile): boolean {
+  const v = headingVec(p.heading);
+  const ex = p.x + v.x * 30, ey = p.y + v.y * 30;
+  let hit: ShipEntity | null = null;
+  let bestT = 2;
+  game.grid.query((p.x + ex) / 2, (p.y + ey) / 2, 80, (id) => {
+    if (id === p.owner) return;
+    const s = game.ships.get(id);
+    if (!s || s.docked || !s.alive) return;
+    const t = segmentHitsHull(p.x, p.y, ex, ey, s.state.x, s.state.y, s.state.heading, s.stats.length / 2, s.stats.beam / 2);
+    if (t >= 0 && t < bestT) {
+      bestT = t;
+      hit = s;
+    }
+  });
+  if (!hit) return false;
+  p.skipped = true;
+  const h = hit as ShipEntity;
+  resolveHit(game, { ...p, damage: p.damage * 0.6 }, h, p.x + (ex - p.x) * bestT, p.y + (ey - p.y) * bestT);
+  volleyBall(game, p, h);
+  return true;
+}
+
+/** A ball of a broadside has landed (on a ship or in the sea); settle volley-wide talents at the last one. */
+function volleyBall(game: Game, p: Projectile, target: ShipEntity | null): void {
+  if (p.volley === undefined) return;
+  const rec = game.volleys.get(p.volley);
+  if (!rec) return;
+  if (target) rec.hits.set(target.id, (rec.hits.get(target.id) ?? 0) + 1);
+  if (--rec.left > 0) return;
+  game.volleys.delete(p.volley);
+  const owner = game.ships.get(rec.owner);
+  if (!owner) return;
+  let top = 0, topId = 0;
+  for (const [id, n] of rec.hits) if (n > top) {
+    top = n;
+    topId = id;
+  }
+  const victim = topId ? game.ships.get(topId) : undefined;
+  // Thunderous Broadside: every ball of a full volley (6+) into one ship.
+  if (victim && rec.counts && owner.hasFlag('thunder_broadside') && rec.total >= 6 && top === rec.total && rec.hits.size === 1) {
+    victim.addEffect({ id: 'stunned_crew', until: game.now + 5, mods: { reloadMul: 0.25 }, source: owner.id }, game.now);
+    game.toastShip(owner, `Thunderous broadside! ${victim.name}'s gun crews reel.`, 'good');
+  }
+  // Spotter: three broadsides in a row on the same ship.
+  if (owner.hasFlag('spotter')) {
+    if (victim) {
+      owner.spotter = owner.spotter.target === victim.id ? { target: victim.id, count: owner.spotter.count + 1 } : { target: victim.id, count: 1 };
+      if (owner.spotter.count >= 3) {
+        victim.addEffect({ id: 'ranged_in', until: game.now + 10, source: owner.id }, game.now);
+        owner.spotter.count = 0;
+      }
+    } else owner.spotter = { target: 0, count: 0 };
+  }
 }
 
 /** Whether `a` may damage `b` at all (protection rules). Returns a reason when blocked. */
@@ -211,18 +340,26 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const fromBow = local.y > 0;
   let raking = along > 0.87;
   if (raking && fromBow && target.cls.passive.id === 'line') raking = false;
-  const rakeMul = raking ? 1.25 : 1;
+  // Raking Fire: shot along the keel from astern.
+  const sst = shooter?.stats;
+  const sternRake = raking && !fromBow && sst ? 1 + tval(sst, 'rakingFire') : 1;
+  const rakeMul = (raking ? 1.25 : 1) * sternRake;
   // Glancing blows off a steeply angled hull skip away.
   const glance = along > 0.5 && !raking ? 0.8 : 1;
 
   const armor = target.stats.armor * (1 - (ARMOR_PIERCE[p.ammo] ?? 0));
   const hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul;
-  const sailDmg = p.damage * ammo.sailMul * falloff * (shooter?.stats.sailDamageMul ?? 1);
-  const crewKill = ammo.crewKill * (shooter?.stats.crewKillMul ?? 1) * (raking ? 1.8 : 1) * (0.5 + game.rng.float());
+  const chain = p.ammo === 'chain' ? 1 + (sst ? tval(sst, 'chainSail') : 0) : 1;
+  const sailDmg = p.damage * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain;
+  const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
+  // Splinter Storm: every ball into the hull sends splinters through the gun deck.
+  const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && hullDmg > 5 ? 1 : 0;
+  const crewKill = ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters;
 
   let crit: string | undefined;
   let rudderDmg = 0;
-  if (p.ammo !== 'grape' && local.y < -target.stats.length * 0.33 && game.rng.chance(0.14)) {
+  const rudderChance = 0.14 + (raking && !fromBow && sst ? tval(sst, 'rakingFire') : 0);
+  if (p.ammo !== 'grape' && local.y < -target.stats.length * 0.33 && !target.hasFlag('iron_tiller') && game.rng.chance(rudderChance)) {
     rudderDmg = 0.2 + game.rng.float() * 0.15;
     crit = 'rudder';
   }
@@ -239,7 +376,21 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     crit = 'leak';
   }
 
-  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: 0.35 }, shooter);
+  // Waterline Gunner: a breach below the waterline leaks through any armour.
+  if (sst && p.ammo !== 'grape' && hullDmg > 5 && game.rng.chance(tval(sst, 'breachChance'))) {
+    target.addEffect({ id: 'breach', until: game.now + 10, source: shooter!.id }, game.now);
+    crit = 'breach';
+  }
+  const grapeMorale = p.ammo === 'grape' && sst ? tval(sst, 'grapeMorale') : 0;
+  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: 0.35 + grapeMorale }, shooter);
+  if (shooter && p.volley !== undefined && sst?.flags.has('splinter_storm') && target.crew < target.stats.crewMax * 0.3) {
+    const rec = game.volleys.get(p.volley);
+    if (rec && !rec.demoralised.has(target.id)) {
+      rec.demoralised.add(target.id);
+      target.morale = Math.max(0, target.morale - 5);
+    }
+  }
+  if (shooter) talentHitEffects(game, shooter, target, p);
 
   // Cargo destroyed by hull hits; powder may go up.
   if (p.ammo !== 'grape' && hullDmg > 10) {
@@ -250,20 +401,50 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     if (powder >= 5 && game.rng.chance(0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10))) {
       target.cargo.gunpowder = Math.floor(powder * 0.4);
       applyDamage(game, target, { hull: target.stats.hullMax * 0.14, crew: 3, morale: 12, sails: 10 }, shooter);
-      target.addEffect({ id: 'fire', until: game.now + 12 }, game.now);
+      igniteShip(game, target, 12, null);
       game.emit({ k: 'fx', fx: 'explosion', x: Math.round(target.state.x), y: Math.round(target.state.y), r: 40 }, target.state.x, target.state.y);
       game.toastShip(target, 'Powder explosion in the hold!', 'bad');
       crit = 'powder';
     }
   }
-  if (p.ammo === 'incendiary' && hullDmg > 5 && game.rng.chance(0.25)) {
-    target.addEffect({ id: 'fire', until: game.now + 10 + game.rng.float() * 6, source: shooter?.id }, game.now);
+  const fireRisk = Math.max(0, 1 + tval(target.stats, 'fireRisk'));
+  const ignite = (p.ammo === 'incendiary' ? 0.25 : p.ammo === 'round' && sst ? tval(sst, 'heatedShot') : 0) * fireRisk;
+  if (ignite > 0 && hullDmg > 5 && game.rng.chance(ignite)) {
+    igniteShip(game, target, 10 + game.rng.float() * 6, shooter);
     crit = 'fire';
   }
   if (p.ammo === 'chain' && shooter?.hasFlag('tangled_rigging')) {
     target.addEffect({ id: 'tangled', until: game.now + 6, mods: { turnRate: -0.35 }, source: shooter.id }, game.now);
   }
   game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: Math.round(hullDmg), ammo: p.ammo, crit }, hx, hy);
+}
+
+/** Sets a ship on fire; Powder Discipline shortens the blaze. */
+export function igniteShip(game: Game, target: ShipEntity, seconds: number, source: ShipEntity | null): void {
+  const dur = seconds * Math.max(0.3, 1 + tval(target.stats, 'fireRisk'));
+  target.addEffect({ id: 'fire', until: game.now + dur, source: source?.id }, game.now);
+}
+
+/** Per-hit talent rules of the shooter: Mast Breaker and Crossfire. */
+function talentHitEffects(game: Game, shooter: ShipEntity, target: ShipEntity, p: Projectile): void {
+  const now = game.now;
+  if (p.ammo === 'chain' && target.sails < target.stats.sailHpMax * 0.5 && !target.hasEffect('broken_mast') && game.rng.chance(tval(shooter.stats, 'mastBreak'))) {
+    // Stays until a shipyard steps a new mast (cleared by port repairs).
+    target.addEffect({ id: 'broken_mast', until: now + 1e9, mods: { maxSpeed: -0.3 }, source: shooter.id }, now);
+    game.emit({ k: 'fx', fx: 'broken_mast', x: Math.round(target.state.x), y: Math.round(target.state.y) }, target.state.x, target.state.y);
+    game.toastShip(target, 'A mast goes by the board!', 'bad');
+  }
+  target.recentHits = target.recentHits.filter((h) => now - h.t < 3);
+  if (shooter.hasFlag('crossfire') && (target.talentReady.crossfire ?? 0) <= now) {
+    const cross = target.recentHits.some((h) => Math.abs(wrapAngle(h.dir - p.heading)) >= Math.PI / 2 && (h.shooter === shooter.id || !game.isHostile(game.ships.get(h.shooter) ?? shooter, shooter)));
+    if (cross) {
+      target.talentReady.crossfire = now + 20;
+      target.addEffect({ id: 'crossfire', until: now + 6, mods: { incomingDamageMul: 0.12 }, source: shooter.id }, now);
+      target.morale = Math.max(0, target.morale - 10);
+      game.emit({ k: 'fx', fx: 'crossfire', x: Math.round(target.state.x), y: Math.round(target.state.y) }, target.state.x, target.state.y);
+    }
+  }
+  target.recentHits.push({ t: now, dir: p.heading, shooter: shooter.id });
 }
 
 export function destroyRandomCargo(game: Game, ship: ShipEntity, units: number): void {
@@ -294,7 +475,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   target.protectedUntil = 0;
   if (d.hull) target.hull -= d.hull;
   if (d.sails) target.sails = Math.max(0, target.sails - d.sails);
-  if (d.rudder) target.rudderHp = Math.max(0, target.rudderHp - d.rudder);
+  if (d.rudder && !target.hasFlag('iron_tiller')) target.rudderHp = Math.max(0, target.rudderHp - d.rudder);
   if (d.crew) {
     let killed = Math.floor(d.crew);
     if (game.rng.float() < d.crew - killed) killed++;

@@ -105,9 +105,10 @@ export class Fx {
     switch (e.k) {
       case 'volley': {
         const ammo = AMMO[e.ammo];
+        const spd = ammo.speed * (e.spd ?? 1);
         for (const [x, y, h, d, delay] of e.balls) {
           const v = headingVec(h);
-          this.balls.push({ x, y, vx: v.x * ammo.speed, vy: v.y * ammo.speed, left: d, delay: delay / 1000, ammo: e.ammo, owner: e.ship, alive: true, trail: [] });
+          this.balls.push({ x, y, vx: v.x * spd, vy: v.y * spd, left: d, delay: delay / 1000, ammo: e.ammo, owner: e.ship, alive: true, trail: [] });
           const flashDelay = delay / 1000;
           setTimeout(() => {
             this.add({ kind: 'flash', x: x + v.x * 3, y: y + v.y * 3, life: 0.14, size: 5, grow: 40, color: '#ffd28a' });
@@ -218,6 +219,21 @@ export class Fx {
             this.splinters(e.x, e.y, 24);
             this.splash(e.x, e.y, true);
             this.shake = 0.6;
+            break;
+          case 'hot_barrels':
+            // Red-hot guns: a dull orange glow along the gun deck, readable to the enemy.
+            this.add({ kind: 'glow', x: e.x, y: e.y, life: 1.2, size: 26, grow: 4, color: '#ff7a2a' });
+            this.light(e.x, e.y, 90, 'rgba(255,120,40,1)', 0.55, 1.2);
+            break;
+          case 'broken_mast':
+            this.splinters(e.x, e.y, 30);
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 0.8, size: 10, grow: 60, color: '#b08d57' });
+            break;
+          case 'crossfire':
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 0.9, size: 12, grow: 80, color: '#d06a5e' });
+            break;
+          case 'breach':
+            this.splash(e.x, e.y, false);
             break;
         }
         break;

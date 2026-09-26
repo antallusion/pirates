@@ -10,11 +10,13 @@ import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import { totalPointsSpent } from '../../../shared/src/data/talents.ts';
 import { MAX_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src/constants.ts';
+import { MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
 import type { BoardingResult, Contract, PrivateState, ResourceSiteView } from '../../../shared/src/protocol.ts';
 import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { WsConnection } from '../net/websocket.ts';
 import type { ShipEntity } from './ship.ts';
 import type { Forward, Loan, Policy } from './finance.ts';
+import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 
 export interface Profile {
   version: 1;
@@ -41,7 +43,7 @@ export interface Profile {
   contracts: Contract[];
   discovered: number[];
   regionsSeen: string[];
-  stats: { sunk: number; boarded: number; tradeProfit: number; distance: number };
+  stats: { sunk: number; boarded: number; tradeProfit: number; distance: number; sold: number; fogContraband: number; harpoonContracts: number };
   cooldowns: Record<string, number>;
   insured: boolean;
   priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>> }>;
@@ -59,6 +61,15 @@ export interface Profile {
   loan: Loan | null;
   policy: Policy | null;
   claims: number[]; // world times of insurance claims
+  deeds: string[];
+  deedState: { region: string; crossing: string; blackStorm: number; wantedTime: number; voyagePorts: string[] };
+  tokens: number; // Clean Logbook tokens
+  tokenLevels: number[];
+  cleanSlates: number[]; // world times of paid full respecs
+  loadouts: TalentRanks[];
+  activeLoadout: number;
+  loadoutSwitchAt: number;
+  talentCooldowns: Record<string, number>;
   createdAt: number;
 }
 
@@ -73,8 +84,8 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     version: 1, captain, shipName, level: 1, xp: 0, talents: {}, gold: c.start.gold, infamy: 0, reputation, loadout,
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
-    contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -111,7 +122,7 @@ export class PlayerSession {
 // ------------------------------------------------------------------ progression
 
 export function talentPointsAvailable(p: Profile): number {
-  return talentPointsForLevel(p.level) - totalPointsSpent(p.talents);
+  return talentPointsForLevel(p.level) + Math.min(p.deeds.length, MAX_COUNTED_DEEDS) - totalPointsSpent(p.talents);
 }
 
 /** Adds XP, handles level-ups. Returns number of levels gained. */
@@ -163,6 +174,18 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     xp: p.xp,
     xpNext: xpForLevel(p.level),
     talentPoints: talentPointsAvailable(p),
+    deeds: p.deeds,
+    tokens: p.tokens,
+    loadouts: { slots: loadoutSlots(p.level), active: p.activeLoadout, filled: Array.from({ length: loadoutSlots(p.level) }, (_, i) => i === p.activeLoadout || Object.keys(p.loadouts[i] ?? {}).length > 0), switchAt: p.loadoutSwitchAt },
+    respec: {
+      free: p.level < FREE_RESPEC_LEVEL,
+      cleanSlateCost: cleanSlateCost(p, now),
+      cleanSlateAt: p.cleanSlates.length ? p.cleanSlates[p.cleanSlates.length - 1] + CLEAN_SLATE_CD : 0,
+      forgetCost: 50 * p.level,
+    },
+    talentCooldowns: p.talentCooldowns,
+    heat: ship ? { port: Math.round(ship.heat.port), starboard: Math.round(ship.heat.starboard) } : { port: 0, starboard: 0 },
+    rollingFire: ship?.rollingFire ?? false,
     talents: p.talents,
     gold: Math.floor(p.gold),
     infamy: Math.round(p.infamy),
@@ -204,11 +227,11 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     protectedUntil: ship?.protectedUntil ?? 0,
     insured: p.insured,
     policy: p.policy?.tier ?? null,
+    effects: ship ? ship.effects.filter((e) => e.mods || e.flags).map((e) => ({ id: e.id, until: e.until, mods: e.mods, flags: e.flags })) : [],
     forwards: p.forwards.map((f) => ({ ...f, fromName: f.fromPort, toName: f.toPort })),
     bank: p.bank,
     loan: p.loan,
   };
-  void now;
 }
 
 export function sanitizeProfile(raw: Profile): Profile {
@@ -236,7 +259,19 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.claims ??= [];
   // Pre-2.0 boolean policies become hull cover.
   p.policy ??= p.insured ? { tier: 'hull', declared: 0, premium: 0, deductible: 0 } : null;
-  p.stats ??= { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 };
+  p.stats ??= { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 };
+  p.stats.sold ??= 0;
+  p.stats.fogContraband ??= 0;
+  p.stats.harpoonContracts ??= 0;
+  p.deeds ??= [];
+  p.deedState ??= { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] };
+  p.tokens ??= 0;
+  p.tokenLevels ??= [];
+  p.cleanSlates ??= [];
+  p.loadouts ??= [{}];
+  p.activeLoadout ??= 0;
+  p.loadoutSwitchAt ??= 0;
+  p.talentCooldowns ??= {};
   p.ammo = { ...emptyAmmo(), ...(p.ammo ?? {}) };
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));
   p.gold = Math.max(0, p.gold ?? 0);

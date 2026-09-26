@@ -17,7 +17,8 @@ import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs
 import { $, esc } from './ui/dom.ts';
 import { Hud } from './ui/hud.ts';
 import { PortScreen } from './ui/port.ts';
-import { renderTalents } from './ui/talents.ts';
+import { TalentScreen } from './ui/talents.ts';
+import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 
 type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | null;
@@ -40,6 +41,7 @@ let boardTarget: number | null = null;
 let aimSide: 'port' | 'starboard' | null = null;
 
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
+const talentScreen = new TalentScreen((m) => net.send(m));
 
 // ------------------------------------------------------------------ boot
 
@@ -154,7 +156,7 @@ function refreshModal(): void {
       else closeModal();
       break;
     case 'talents':
-      renderTalents(root, state, (id) => net.send({ t: 'learn_talent', id }));
+      talentScreen.render(root, state);
       break;
     case 'map':
       worldMap.open(root, state);
@@ -231,6 +233,20 @@ addEventListener('keydown', (e) => {
     case '4':
     case '5':
       net.send({ t: 'ammo', ammo: AMMO_IDS[Number(k) - 1] });
+      break;
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case '0': {
+      const list = state.self ? activeTalents(state.self.talents) : [];
+      const t = list['67890'.indexOf(k)];
+      if (t) net.send({ t: 'talent_active', id: t.id });
+      else hud.toast('No active talent in that slot — learn one (T).', 'bad');
+      break;
+    }
+    case 'k':
+      net.send({ t: 'fire_mode', rolling: !state.self?.rollingFire });
       break;
     case ' ':
       fireChasers();
@@ -365,6 +381,7 @@ function sendAbility(id: string): void {
 
 hud.onAbility = (id) => sendAbility(id);
 hud.onAmmo = (id) => net.send({ t: 'ammo', ammo: id as 'round' });
+hud.onTalent = (id) => net.send({ t: 'talent_active', id });
 
 function sendInput(now: number): void {
   const rudder = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);

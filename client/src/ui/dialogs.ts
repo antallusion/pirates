@@ -100,6 +100,9 @@ export function renderHelp(root: HTMLElement): void {
     ['RMB', 'Deck mount at the cursor (fit one at a shipyard): mortar, harpoon (tethers the target), swivel chain gun, abyssal lance.'],
     ['Space', 'Bow or stern chasers toward the cursor (it must lie within 35° of the keel). Chasers never load grape.'],
     ['Z X C / V', 'Captain abilities / Ultimate (level 6).'],
+    ['6 – 0', 'Active talents in the order you learned them (Spill the Wind, Anchor Pivot…).'],
+    ['K', 'Fire mode: full broadside, or rolling fire down the side (guns reload faster, looser spread unless you have Rolling Broadside).'],
+    ['1 – 5 (loaded)', 'Changing shot with a side loaded means drawing the charge: part of a reload (Quick Swap trims it).'],
     ['B', 'Board the nearest crippled ship in range (hull ≤60%, crew ≤50%, sails ≤35% or struck).'],
     ['Shift+B', 'Board carefully (less cargo destroyed, slower). Ctrl+B: brutal.'],
     ['L', 'Heave to near an island feature (cache, wreck, ruins, grove, mine, pearl bank, shrine) and send a landing party ashore.'],
@@ -115,5 +118,5 @@ export function renderHelp(root: HTMLElement): void {
     <div class="modal-body"><div class="cols"><div class="help-grid">${keys.map(([k, d]) => `<kbd>${esc(k)}</kbd><span>${esc(d)}</span>`).join('')}</div>
     <div><div class="card"><h4>First voyage</h4><p>Saltmarrow sells cheap provisions and salt. Porto Blackwater, east along the Black Coast, pays for salt and sells sugar and rum. Gravesend buys sugar. Every sale earns experience.</p></div>
     <div class="card"><h4>The law</h4><p>Attacking lawful ships raises your Wanted level. Crown ports close at Wanted 2, League at 3. Pirate havens (Cinderhold, Fogmouth) never close. Pardons are sold in free and broker ports.</p></div>
-    <div class="card"><h4>Risk</h4><p>Safe waters (Black Coast) forbid PvP. Contested and lawless waters do not. When sunk you keep your ship, level and talents — but cargo, some crew and a repair fee are lost.</p></div></div></div></div>`;
+    <div class="card"><h4>Risk</h4><p>Safe waters (Black Coast) forbid PvP. Contested and lawless waters do not. When sunk you keep your ship, level and talents — but cargo, some crew, a repair fee and a tenth of the silver aboard are lost. The League bank keeps the rest safe.</p></div></div></div></div>`;
 }

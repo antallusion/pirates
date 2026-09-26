@@ -2,7 +2,7 @@
 // simulation requires bumping PROTOCOL_VERSION so stale clients are rejected.
 
 export const GAME_NAME = 'GRAVETIDE';
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 9;
 
 export const TICK_RATE = 20; // server simulation Hz
 export const TICK_DT = 1 / TICK_RATE;
@@ -24,7 +24,7 @@ export const LOOT_LIFETIME_SEC = 180;
 export const LOGOUT_TIMER_SEC = 30; // ship lingers at sea after disconnect (anti combat-log)
 export const COMBAT_TAG_SEC = 20;
 
-export const MAX_LEVEL = 30; // MVP cap; full game: 60
+export const MAX_LEVEL = 60;
 export const SAIL_STEPS = [0, 0.25, 0.5, 0.75, 1] as const;
 
 export function xpForLevel(level: number): number {

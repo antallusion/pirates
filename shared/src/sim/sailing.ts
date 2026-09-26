@@ -35,6 +35,31 @@ export interface SailParams {
   personalWind: boolean; // Storm Chaser: always best angle
   weatherly: boolean; // schooner passive
   sweeps?: boolean; // xebec: oars and lateen rig for light airs
+  /** Talent-driven handling (03 §4.1); all optional so NPCs and tools can omit them. */
+  talent?: SailTalents;
+}
+
+export interface SailTalents {
+  turnDrag: number; // −0.1/rank: less speed bled in hard turns
+  runningFree: number; // +accel with the wind on the quarter
+  seaPenalty: number; // −0.2/rank: heavy-sea speed penalty reduction
+  tackDrill: number; // ranks of Tacking Drill
+  polarBoost: number; // share of point-of-sail loss recovered
+  rowSpeed: number; // m/s under oars (0 = cannot row)
+  stormRider: boolean;
+}
+
+/** Oars: the xebec rows by design; Sweeps teach schooners and brigantines to row, and the xebec to row harder. */
+export function rowSpeed(classId: string, sweepsDrill: boolean, stormRider: boolean): number {
+  if (stormRider) return 0;
+  if (classId === 'xebec') return sweepsDrill ? 3.6 : 3;
+  if (sweepsDrill && (classId === 'schooner' || classId === 'brigantine')) return 2.2;
+  return 0;
+}
+
+/** Heavy seas slow every ship: nothing below a fresh breeze, up to −12% in a full storm. */
+export function seaSpeedPenalty(windStrength: number, seaPenalty = 0): number {
+  return Math.max(0, windStrength - 0.75) * 0.3 * Math.max(0, 1 + seaPenalty);
 }
 
 const BASE_NOGO: Record<Rig, number> = { square: 65, fore_aft: 42, mixed: 52 };
@@ -86,9 +111,13 @@ export function relWindDeg(heading: number, wind: WindSample): number {
 export function targetSpeed(state: SailState, p: SailParams, wind: WindSample): number {
   const rel = p.personalWind ? 135 : relWindDeg(state.heading, wind);
   const windS = p.personalWind ? Math.max(0.8, wind.strength) : wind.strength;
-  const eff = polarEfficiency(p.rig, rel, p.noGoDeg, p.weatherly);
+  let eff = polarEfficiency(p.rig, rel, p.noGoDeg, p.weatherly);
+  const tal = p.talent;
+  if (tal && tal.polarBoost > 0 && rel >= p.noGoDeg) eff += (1 - eff) * Math.min(0.6, tal.polarBoost);
   let windFactor = 0.3 + 0.7 * Math.min(1.15, windS);
   if (p.sweeps && windS < 0.5) windFactor *= 1.25;
+  windFactor *= 1 - seaSpeedPenalty(wind.strength, tal?.seaPenalty ?? 0);
+  if (tal?.stormRider) windFactor *= wind.strength >= 0.75 ? 1.2 : wind.strength < 0.35 ? 0.7 : 1;
   const sailFactor = Math.pow(state.sail, 0.85);
   const sailHealth = 0.25 + 0.75 * p.sailHealth;
   const crew = 0.45 + 0.55 * p.crewFactor;
@@ -100,17 +129,31 @@ export function stepSailing(s: SailState, input: SailInput, p: SailParams, wind:
   const sail = approach(s.sail, clamp(input.sailTarget, 0, 1), sailRate * dt);
   const rudder = approach(s.rudder, clamp(input.rudder, -1, 1), 2.8 * dt);
 
+  const tal = p.talent;
   let tgt = targetSpeed({ ...s, sail }, p, wind);
   // Sweeps: the crew rows when the wind fails.
-  if (p.sweeps && input.sailTarget > 0) tgt = Math.max(tgt, 3 * (0.45 + 0.55 * p.crewFactor));
+  const row = tal ? tal.rowSpeed : p.sweeps ? 3 : 0;
+  if (row > 0 && input.sailTarget > 0) tgt = Math.max(tgt, row * (0.45 + 0.55 * p.crewFactor));
+  const rel = relWindDeg(s.heading, wind);
+  const inIrons = !p.personalWind && rel < p.noGoDeg;
+  let accel = p.accel;
+  if (tal && tal.runningFree > 0 && rel > 150) accel *= 1 + tal.runningFree;
+  let decel = p.accel * 0.7 + 0.25 + s.speed * 0.04;
+  // Tacking Drill: the ship carries her way through the eye of the wind.
+  if (tal && tal.tackDrill > 0 && inIrons && Math.abs(rudder) > 0.3) decel *= 1 - 0.35 * tal.tackDrill;
   let speed: number;
-  if (s.speed < tgt) speed = Math.min(tgt, s.speed + p.accel * dt);
-  else speed = Math.max(tgt, s.speed - (p.accel * 0.7 + 0.25 + s.speed * 0.04) * dt);
+  if (s.speed < tgt) speed = Math.min(tgt, s.speed + accel * dt);
+  else speed = Math.max(tgt, s.speed - decel * dt);
+  // A hard-over rudder bleeds way.
+  speed = Math.max(0, speed - Math.abs(rudder) * speed * 0.05 * Math.max(0, 1 + (tal?.turnDrag ?? 0)) * dt);
 
   // Even a stopped ship can come about slowly (boats, sweeps, backed sails), so nobody is stuck in irons.
   const steerage = clamp(0.5 + speed / Math.max(1, p.maxSpeed * 0.6), 0.5, 1);
   const rudderEff = 0.3 + 0.7 * p.rudderHealth;
-  const heading = wrapAngle(s.heading + rudder * p.turnRate * steerage * rudderEff * dt);
+  let turn = p.turnRate;
+  if (tal?.stormRider) turn *= wind.strength >= 0.75 ? 1.25 : wind.strength < 0.35 ? 0.85 : 1;
+  if (tal && tal.tackDrill > 0 && inIrons) turn *= 1 + 0.2 * tal.tackDrill;
+  const heading = wrapAngle(s.heading + rudder * turn * steerage * rudderEff * dt);
 
   const fwd = headingVec(heading);
   const cm = 1 + p.currentMul;

@@ -12,7 +12,7 @@ import type { Aggression, ShipInfo, Side, Station } from '../../../shared/src/pr
 import { SF, curseStage } from '../../../shared/src/protocol.ts';
 import type { SailInput, SailParams, SailState } from '../../../shared/src/sim/sailing.ts';
 import type { AmmoStock, Cargo, ShipLoadout, ShipStats } from '../../../shared/src/sim/shipstats.ts';
-import { computeShipStats, crewFactor, loadFactor } from '../../../shared/src/sim/shipstats.ts';
+import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../../shared/src/sim/shipstats.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Landing } from './exploration.ts';
 import type { Tether } from './mounts.ts';
@@ -100,6 +100,15 @@ export class ShipEntity {
   ownerId: number | null = null; // escort owner entity id
   wantedCache = 0;
   distanceLog = 0;
+  // Talent state (server/src/game/talentfx.ts).
+  heat: Record<Side, number> = { port: 0, starboard: 0 }; // Red-Hot Barrels
+  loadedSince: Record<Side, number> = { port: 0, starboard: 0 };
+  rollingFire = false;
+  pivot: { until: number; rate: number } | null = null; // Anchor Pivot
+  talentReady: Record<string, number> = {}; // internal cooldowns (Second Wind, Crossfire, swivels)
+  spotter: { target: number; count: number } = { target: 0, count: 0 };
+  recentHits: { t: number; dir: number; shooter: number }[] = []; // for Crossfire
+  swapBonus = false; // Quick Swap: next volley reloads faster
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;
@@ -150,6 +159,10 @@ export class ShipEntity {
     return this.effects.some((e) => e.id === id);
   }
 
+  rank(id: string): number {
+    return this.talents[id] ?? 0;
+  }
+
   hasFlag(f: Flag): boolean {
     return this.stats.flags.has(f);
   }
@@ -172,6 +185,7 @@ export class ShipEntity {
       personalWind: st.flags.has('personal_wind'),
       weatherly: this.cls.passive.id === 'weatherly',
       sweeps: this.cls.passive.id === 'sweeps',
+      talent: sailTalents(st),
     };
   }
 

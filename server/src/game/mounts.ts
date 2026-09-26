@@ -24,7 +24,8 @@ export interface Tether {
 export function mountReloadTime(ship: ShipEntity): number {
   if (!ship.loadout.mount) return 1;
   const bomb = ship.cls.passive.id === 'bomb_vessel' && ship.loadout.mount === 'mortar' ? 0.5 : 1;
-  return MOUNTS[ship.loadout.mount].reload * ship.stats.reloadMul * bomb;
+  const lore = ship.loadout.mount === 'mortar' && ship.hasFlag('mortar_lore') ? 0.8 : 1;
+  return MOUNTS[ship.loadout.mount].reload * ship.stats.reloadMul * bomb * lore;
 }
 
 /** A fireship's charges go off: everything close burns, the hulk is gone. */
@@ -63,7 +64,7 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
         const scatter = (reach / def.range) * 60 * game.seaSpread(ship) * (i ? 1.4 : 1);
         const x = ship.state.x + Math.sin(h) * reach + game.rng.gauss() * scatter;
         const y = ship.state.y - Math.cos(h) * reach + game.rng.gauss() * scatter;
-        game.strikes.push({ at: now + 3 + i * 0.4, x, y, radius: 55, hull: 280, rudder: 0.1, owner: ship.id, slow: 0, shells: 1, fx: 'mortar' });
+        game.strikes.push({ at: now + 3 + i * 0.4, x, y, radius: ship.hasFlag('mortar_lore') ? 69 : 55, hull: 280, rudder: 0.1, owner: ship.id, slow: 0, shells: 1, fx: 'mortar' });
       }
       game.emit({ k: 'fx', fx: 'mortar_launch', x: Math.round(ship.state.x), y: Math.round(ship.state.y) }, ship.state.x, ship.state.y);
       break;
@@ -180,7 +181,8 @@ export function isTethered(game: Game, ship: ShipEntity): boolean {
 
 export function mountOffers(ship: ShipEntity, port: Port): { mount: MountId; cost: number }[] {
   return (Object.keys(MOUNTS) as MountId[])
-    .filter((m) => MOUNTS[m].minTier <= Math.max(ship.cls.tier, port.shipyardTier) && MOUNTS[m].minTier <= ship.cls.tier && (MOUNTS[m].factions.length === 0 || MOUNTS[m].factions.includes(port.faction)))
+    // Mortar Lore: any hull can carry a mortar pit.
+    .filter((m) => MOUNTS[m].minTier <= Math.max(ship.cls.tier, port.shipyardTier) && (MOUNTS[m].minTier <= ship.cls.tier || (m === 'mortar' && ship.hasFlag('mortar_lore'))) && (MOUNTS[m].factions.length === 0 || MOUNTS[m].factions.includes(port.faction)))
     .map((m) => ({ mount: m, cost: MOUNTS[m].price }));
 }
 

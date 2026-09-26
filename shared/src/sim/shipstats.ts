@@ -8,10 +8,11 @@ import type { GoodId } from '../data/goods.ts';
 import { AMMO, GUNS, MODULES, SHIP_CLASSES } from '../data/ships.ts';
 import type { AmmoId, GunId, ModuleId, MountId, Rig, ShipClassId } from '../data/ships.ts';
 import { mod, sumMods } from '../data/stats.ts';
-import type { Flag, ModifierSource } from '../data/stats.ts';
+import type { Flag, ModifierSource, StatKey } from '../data/stats.ts';
 import { talentModifiers } from '../data/talents.ts';
 import type { TalentRanks } from '../data/talents.ts';
-import { baseNoGo } from './sailing.ts';
+import { baseNoGo, rowSpeed } from './sailing.ts';
+import type { SailTalents } from './sailing.ts';
 import { DEG } from '../math.ts';
 
 export interface ShipLoadout {
@@ -63,6 +64,9 @@ export interface ShipStats {
   contrabandVolumeMul: number;
   incomingDamageMul: number;
   moraleRegen: number;
+  cooldownMul: number;
+  /** Raw summed talent/effect values for situational keys (see tx()). */
+  x: Record<StatKey, number>;
   flags: Set<Flag>;
 }
 
@@ -74,12 +78,14 @@ export function computeShipStats(
 ): ShipStats {
   const cls = SHIP_CLASSES[loadout.classId];
   const cap = CAPTAINS[captain];
-  const sources: ModifierSource[] = [
-    { mods: cap.passive.mods, flags: cap.passive.flags },
-    ...talentModifiers(talents),
-    ...effects,
-  ];
-  const { mods, flags } = sumMods(sources);
+  // Permanent sources (captain passive, talents) are capped per 03 §3.3; temporary effects stack on top.
+  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents)]);
+  const eff = sumMods(effects);
+  for (const f of eff.flags) flags.add(f);
+  const has = (id: string) => (talents[id] ?? 0) > 0;
+  const e = (k: StatKey) => mod(eff.mods, k);
+  // Iron Tiller: turn-slowing effects are 40% weaker.
+  const effTurn = e('turnRate') < 0 && flags.has('iron_tiller') ? e('turnRate') * 0.6 : e('turnRate');
 
   // Modules.
   let hullMul = 0, armorAdd = 0, speedMul = 0, sailHpMul = 0, turnMul = 0, holdMul = 0, crewMul = 0, boardingMul = 0;
@@ -99,50 +105,67 @@ export function computeShipStats(
 
   const passive = cls.passive.id;
   const baseRange = 34 + cls.length * 0.5;
+  // Caps (§3.3): a keystone lifts the cap of its own characteristic.
+  const speedCap = has('nav_windborn') ? 0.35 : 0.2;
+  const dmgCap = has('gun_iron_rain') ? 0.5 : 0.25;
+  const reloadFloor = has('gun_red_hot_barrels') ? -0.45 : -0.25;
+  const armorCap = has('shp_iron_coffin') ? 0.9 : 0.5;
+  const detectCap = has('exp_beyond_the_edge') ? 0.35 : 0.2;
+  const m = (k: StatKey) => mod(mods, k);
+  const extra = {} as Record<StatKey, number>;
+  for (const k in mods) extra[k as StatKey] = mods[k as StatKey] + e(k as StatKey);
+  for (const k in eff.mods) if (!(k in extra)) extra[k as StatKey] = e(k as StatKey);
 
   return {
     classId: cls.id,
     rig: cls.rig,
     length: cls.length,
     beam: cls.beam,
-    maxSpeed: cls.maxSpeed * (1 + speedMul + mod(mods, 'maxSpeed')),
-    accel: cls.accel * (1 + mod(mods, 'accel') + (passive === 'dispatch' ? 0.1 : 0)),
-    turnRate: cls.turnRate * DEG * (1 + turnMul + mod(mods, 'turnRate')),
-    noGoDeg: baseNoGo(cls.rig) + mod(mods, 'noGoDeg'),
-    sailChangeRate: 0.45 * (1 + mod(mods, 'sailChangeRate') + (passive === 'raider_rig' ? 0.2 : 0)),
-    currentMul: mod(mods, 'currentMul'),
-    nightSpeed: mod(mods, 'nightSpeed'),
-    hullMax: Math.round(cls.hull * (1 + hullMul + mod(mods, 'hullMax'))),
-    armor: Math.min(0.6, cls.armor + armorAdd + mod(mods, 'armor')),
-    sailHpMax: Math.round(cls.sailHp * (1 + sailHpMul + mod(mods, 'sailHpMax'))),
-    repairRate: cls.repairRate * (1 + mod(mods, 'repairRate')),
-    battleRepairRate: mod(mods, 'battleRepairRate'),
+    maxSpeed: cls.maxSpeed * Math.max(0.2, 1 + Math.min(speedCap, speedMul + m('maxSpeed')) + e('maxSpeed')),
+    accel: cls.accel * (1 + m('accel') + e('accel') + (passive === 'dispatch' ? 0.1 : 0)),
+    turnRate: cls.turnRate * DEG * Math.max(0.2, 1 + Math.min(0.4, turnMul + m('turnRate')) + effTurn),
+    noGoDeg: baseNoGo(cls.rig) + m('noGoDeg') + e('noGoDeg'),
+    sailChangeRate: 0.45 * (1 + m('sailChangeRate') + e('sailChangeRate') + (passive === 'raider_rig' ? 0.2 : 0)),
+    currentMul: m('currentMul') + e('currentMul'),
+    nightSpeed: m('nightSpeed') + e('nightSpeed'),
+    hullMax: Math.round(cls.hull * Math.max(0.3, 1 + hullMul + m('hullMax') + e('hullMax'))),
+    armor: Math.min(0.75, (cls.armor + armorAdd) * (1 + Math.min(armorCap, m('armorPct'))) + m('armor') + e('armor')),
+    sailHpMax: Math.round(cls.sailHp * (1 + sailHpMul + m('sailHpMax') + e('sailHpMax'))),
+    repairRate: cls.repairRate * (1 + m('repairRate') + e('repairRate')),
+    battleRepairRate: m('battleRepairRate') + e('battleRepairRate'),
     crewMin: cls.crewMin,
-    crewMax: Math.round(cls.crewMax * (1 + crewMul + mod(mods, 'crewMax'))),
-    holdVolume: cls.holdVolume * (1 + holdMul + mod(mods, 'holdVolume')),
+    crewMax: Math.round(cls.crewMax * (1 + crewMul + m('crewMax') + e('crewMax'))),
+    holdVolume: cls.holdVolume * (1 + holdMul + m('holdVolume') + e('holdVolume')),
     holdWeight: cls.holdWeight * (1 + holdMul),
-    detection: cls.detection * (1 + mod(mods, 'detection') + (passive === 'hunter' ? 0.15 : 0)),
+    detection: cls.detection * (1 + Math.min(detectCap, m('detection') + (passive === 'hunter' ? 0.15 : 0)) + e('detection')),
     gunsPerSide: cls.gunPortsPerSide,
-    reloadMul: Math.max(0.2, 1 + mod(mods, 'reloadMul')),
-    spreadMul: Math.max(0.2, 1 + mod(mods, 'spreadMul')),
-    gunDamageMul: 1 + mod(mods, 'gunDamageMul'),
-    rangeMul: 1 + mod(mods, 'rangeMul'),
-    doubleShotChance: mod(mods, 'doubleShotChance'),
-    crewKillMul: 1 + mod(mods, 'crewKillMul'),
-    sailDamageMul: 1 + mod(mods, 'sailDamageMul'),
-    boardingRange: baseRange * (1 + mod(mods, 'boardingRange') + (passive === 'raider_rig' ? 0.1 : 0)),
-    boardingPower: 1 + boardingMul + mod(mods, 'boardingPower'),
-    boardingCargoLoss: Math.max(0.02, 0.18 + mod(mods, 'boardingCargoLoss')),
-    moraleOnBoard: mod(mods, 'moraleOnBoard'),
-    enemyMoraleCollapse: mod(mods, 'enemyMoraleCollapse'),
-    provisionUse: Math.max(0.1, 1 + mod(mods, 'provisionUse')),
-    buyMul: 1 + mod(mods, 'buyMul'),
-    sellMul: 1 + mod(mods, 'sellMul'),
-    contrabandVolumeMul: Math.max(0.3, 1 + mod(mods, 'contrabandVolumeMul')),
-    incomingDamageMul: Math.max(0.2, 1 + mod(mods, 'incomingDamageMul')),
-    moraleRegen: 0.4 + mod(mods, 'moraleRegen'),
+    reloadMul: Math.max(0.2, 1 + Math.max(reloadFloor, m('reloadMul')) + e('reloadMul')),
+    spreadMul: Math.max(0.2, 1 + m('spreadMul') + e('spreadMul')),
+    gunDamageMul: Math.max(0.1, 1 + Math.min(dmgCap, m('gunDamageMul')) + e('gunDamageMul')),
+    rangeMul: 1 + m('rangeMul') + e('rangeMul'),
+    doubleShotChance: m('doubleShotChance') + e('doubleShotChance'),
+    crewKillMul: 1 + m('crewKillMul') + e('crewKillMul'),
+    sailDamageMul: 1 + m('sailDamageMul') + e('sailDamageMul'),
+    boardingRange: baseRange * (1 + m('boardingRange') + e('boardingRange') + (passive === 'raider_rig' ? 0.1 : 0)),
+    boardingPower: 1 + boardingMul + m('boardingPower') + e('boardingPower'),
+    boardingCargoLoss: Math.max(0.02, 0.18 + m('boardingCargoLoss') + e('boardingCargoLoss')),
+    moraleOnBoard: m('moraleOnBoard') + e('moraleOnBoard'),
+    enemyMoraleCollapse: m('enemyMoraleCollapse') + e('enemyMoraleCollapse'),
+    provisionUse: Math.max(0.1, 1 + m('provisionUse') + e('provisionUse')),
+    buyMul: 1 + Math.max(-0.15, m('buyMul') + e('buyMul')),
+    sellMul: 1 + Math.min(0.25, m('sellMul') + e('sellMul')),
+    contrabandVolumeMul: Math.max(0.4, 1 + m('contrabandVolumeMul') + e('contrabandVolumeMul')),
+    incomingDamageMul: Math.max(0.2, 1 + m('incomingDamageMul') + e('incomingDamageMul')),
+    moraleRegen: 0.4 + m('moraleRegen') + e('moraleRegen'),
+    cooldownMul: Math.max(0.6, 1 + m('cooldownMul') + e('cooldownMul')),
+    x: extra,
     flags,
   };
+}
+
+/** A situational talent number (sum of ranks × value from talents and effects), 0 when absent. */
+export function tx(st: ShipStats, k: StatKey): number {
+  return st.x[k] ?? 0;
 }
 
 export type Cargo = Partial<Record<GoodId, number>>;
@@ -194,4 +217,17 @@ export function gunCrewFactor(stats: ShipStats, loadout: ShipLoadout, crew: numb
   const perGun = Math.max(GUNS[loadout.guns.port].crewPerGun, GUNS[loadout.guns.starboard].crewPerGun);
   const needed = stats.crewMin + stats.gunsPerSide * perGun;
   return Math.max(0.3, Math.min(1, crew / needed));
+}
+
+export function sailTalents(st: ShipStats): SailTalents {
+  const storm = st.flags.has('storm_rider');
+  return {
+    turnDrag: tx(st, 'turnDrag'),
+    runningFree: tx(st, 'runningFreeAccel'),
+    seaPenalty: tx(st, 'seaPenalty'),
+    tackDrill: tx(st, 'tackDrill'),
+    polarBoost: tx(st, 'polarBoost'),
+    rowSpeed: rowSpeed(st.classId, st.flags.has('sweeps_drill'), storm),
+    stormRider: storm,
+  };
 }
