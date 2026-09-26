@@ -35,6 +35,7 @@ export const EN = {
   'sunk.note': 'Your ship, your level and your talents are never lost. Insure at League ports to soften the next blow.',
   'sunk.back': 'Back to port',
   // Ship & hold.
+  'board.aboard': '{n} aboard her',
   'ship.passive': 'Passive: {name} — {text}',
   'ship.close': '[{key}] close',
   'ship.speed': 'Max speed',
@@ -165,6 +166,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'sunk.fee': 'Плата за подъём и починку',
   'sunk.note': 'Корабль, уровень и таланты не теряются никогда. Страхуйтесь в портах Лиги, чтобы смягчить следующий удар.',
   'sunk.back': 'Вернуться в порт',
+  'board.aboard': 'у неё на борту: {n}',
   'ship.passive': 'Особенность: {name} — {text}',
   'ship.close': '[{key}] закрыть',
   'ship.speed': 'Наибольшая скорость',

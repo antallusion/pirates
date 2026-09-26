@@ -512,7 +512,7 @@ export const RU: Record<keyof typeof EN, string> = {
   emp_lic_text: 'Недельная монополия на товар в портах Короны и Лиги одной области: держатель лицензии продаёт на 10% дороже, прочие платят пошлину 20%. Ставки хранятся в залоге; перебитым их возвращают.',
   emp_lic_this: 'На этой неделе: <b>{good}</b> в {region} — {holder}',
   emp_yours_paren: ' (ваша)',
-  emp_lot: 'На следующей неделе: {good} в {region}',
+  emp_lot: 'На следующей неделе: {good} · {region}',
   emp_top: 'высшая {n}',
   emp_top_yours: ' · ваша {n}',
   emp_bid_in_person: 'Ставки делаются лично, в Грейвсенде.',

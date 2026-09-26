@@ -22,7 +22,8 @@ import { serverText } from '../lang/server.ts';
 import { EN, RU } from '../lang/ui/company.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { esc, fmt, icon } from './dom.ts';
+import { esc, fmt, icon, money } from './dom.ts';
+import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
 /** A name or sentence the server built, in the player's language. */
@@ -65,11 +66,13 @@ export class CompanyScreen {
   render(root: HTMLElement, state: ClientState): void {
     const docked = state.self?.dockedAt ?? null;
     if (this.tab === 'market' && !docked) this.tab = 'group';
-    const tabs = (['group', 'guild', 'law', 'letters', 'isles', 'empires', 'legends', 'market'] as CompanyTab[])
-      .filter((t) => t !== 'market' || docked)
-      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? L('tab_group') : t === 'law' ? `${L('tab_law')}${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'isles' ? L('tab_isles') : t === 'legends' ? L('tab_legends') : t === 'empires' ? L('tab_empires') : t === 'guild' ? `${state.guild ? L('tab_guild_tag', { tag: esc(state.guild.tag) }) : L('tab_guild')}${state.guildInvites.length ? ' (!)' : ''}` : t === 'letters' ? `${L('tab_letters')}${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? L('tab_market_auction') : L('tab_market')}</button>`)
-      .join(' ');
-    root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${tabs}</div></div><div class="muted">${L('close_hint')}</div></div>
+    const TAB_ICON: Record<CompanyTab, string> = { group: 'tab_group', guild: 'tab_guild', law: 'tab_law', letters: 'tab_letters', isles: 'tab_isles', empires: 'tab_empire', legends: 'tab_legends', market: 'tab_board' };
+    const tabName = (t: CompanyTab) => t === 'group' ? L('tab_group') : t === 'law' ? L('tab_law') : t === 'isles' ? L('tab_isles') : t === 'legends' ? L('tab_legends') : t === 'empires' ? L('tab_empires') : t === 'guild' ? (state.guild ? L('tab_guild_tag', { tag: esc(state.guild.tag) }) : L('tab_guild')) : t === 'letters' ? L('tab_letters') : state.market?.auction ? L('tab_market_auction') : L('tab_market');
+    const badge = (t: CompanyTab) => t === 'law' ? state.self?.pvp.challenges.length ?? 0 : t === 'guild' ? state.guildInvites.length : t === 'letters' ? state.unread : 0;
+    const shown = (['group', 'guild', 'law', 'letters', 'isles', 'empires', 'legends', 'market'] as CompanyTab[]).filter((t) => t !== 'market' || docked);
+    const tabs = shown.map((t) => `<button class="tab ${this.tab === t ? 'active' : ''}" data-tab="${t}" title="${tabName(t)}">${icon(TAB_ICON[t])}<span>${tabName(t)}</span>${badge(t) ? `<i class="tab-badge">${badge(t)}</i>` : ''}</button>`).join('');
+    root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2></div><div class="muted">${L('close_hint')}</div></div>
+      <div class="tabs icon-tabs company-tabs" style="--n:${shown.length}">${tabs}</div><div class="tab-caption">${tabName(this.tab)}</div>
       <div class="modal-body" id="company-body"></div>`;
     const body = root.querySelector<HTMLElement>('#company-body')!;
     if (this.tab === 'group') this.renderGroup(body, state);
@@ -105,22 +108,22 @@ export class CompanyScreen {
     const goods = Object.values(GOODS).filter((g) => !g.contraband);
     const date = (t: number) => new Date(t).toLocaleDateString();
     body.innerHTML = `<div class="cols"><div>
-      <div class="card"><h4>${L('emp_gov_title')}</h4><p class="muted" style="font-size:12px">${L('emp_gov_text')}</p>
+      <div class="card"><h4 class="card-h">${icon('faction_crown', '', 'ico-md')}${L('emp_gov_title')}</h4><p class="muted" style="font-size:12px">${L('emp_gov_text')}</p>
         ${v.governors.map((g) => `<div class="row"><span>${esc(sv(g.region))}</span><span>${g.tag ? L('emp_gov_until', { tag: esc(g.tag), date: date(g.until), streak: g.streak }) : `<span class="muted">${L('nobody')}</span>`}</span><span class="muted">${L('emp_nodes', { mine: g.mine, nodes: g.nodes })}</span></div>`).join('')}
         ${v.riots.map((r) => `<div style="color:var(--bad)">${L('emp_riot', { port: esc(sv(r.port)) })}${r.quelled ? L('emp_riot_quelled') : r.failed ? L('emp_riot_failed') : ''}</div>`).join('')}</div>
-      <div class="card"><h4>${L('emp_empires')}</h4>${v.empires.map((e, i) => `<div class="row"><span>${i + 1}. ${esc(e.name)}</span><span>${L('emp_profit', { n: e.profit.toLocaleString() })}</span></div>`).join('') || `<p class="muted">${L('emp_no_empires')}</p>`}</div></div>
-      <div><div class="card"><h4>${L('emp_house')}</h4>${v.house ? `<p>${L('emp_house_text', { offices: v.offices.length ? esc(v.offices.map(sv).join(', ')) : L('none') })}</p>
+      <div class="card"><h4 class="card-h">${icon('tab_empire', '', 'ico-md')}${L('emp_empires')}</h4>${v.empires.map((e, i) => `<div class="row"><span>${i + 1}. ${esc(e.name)}</span><span>${L('emp_profit', { n: e.profit.toLocaleString() })}</span></div>`).join('') || `<p class="muted">${L('emp_no_empires')}</p>`}</div></div>
+      <div><div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${L('emp_house')}</h4>${v.house ? `<p>${L('emp_house_text', { offices: v.offices.length ? esc(v.offices.map(sv).join(', ')) : L('none') })}</p>
         <div class="row" style="gap:4px;flex-wrap:wrap"><select data-cv="from">${v.offices.map((p) => `<option value="${esc(p)}">${esc(sv(p))}</option>`).join('')}</select>→<select data-cv="to">${v.offices.map((p) => `<option value="${esc(p)}">${esc(sv(p))}</option>`).join('')}</select>
         <select data-cv="good">${goods.map((g) => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select><input data-cv="qty" value="30" style="width:50px">
         ${L('emp_every')} <input data-cv="every" value="0" style="width:36px"> ${L('emp_h_escorts')} <input data-cv="escorts" value="1" style="width:30px"><button class="btn btn-small btn-primary" data-convoy>${L('send')}</button></div>
         ${v.orders.map((o) => `<div class="row"><span>${esc(sv(o.from))} → ${esc(sv(o.to))}: ${o.qty} ${esc(sv(o.good))}${o.everyHours ? L('emp_order_every', { n: o.everyHours }) : ''} · ${o.escorts} ${plural(o.escorts, L('escort_one'), L('escort_few'), L('escort_many'))}</span><button class="btn btn-small btn-danger" data-cancel="${o.id}">${L('cancel')}</button></div>`).join('')}`
         : `<p>${L('emp_charter_text')}</p><button class="btn btn-small" data-charter>${L('emp_charter_btn')}</button>`}</div>
-      <div class="card"><h4>${L('emp_lic_title')}</h4><p class="muted" style="font-size:12px">${L('emp_lic_text')}</p>
+      <div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${L('emp_lic_title')}</h4><p class="muted" style="font-size:12px">${L('emp_lic_text')}</p>
         ${v.licences.map((l) => `<div>${L('emp_lic_this', { good: esc(sv(l.good)), region: esc(sv(l.region)), holder: esc(l.holder) })}${l.mine ? L('emp_yours_paren') : ''}</div>`).join('')}
-        ${v.lots.map((l) => `<div class="row"><span>${L('emp_lot', { good: esc(sv(l.good)), region: esc(sv(l.region)) })}</span><span class="muted">${L('emp_top', { n: l.top })}${l.mine ? L('emp_top_yours', { n: l.mine }) : ''}</span>${docked === 'gravesend' ? `<input data-bid="${l.index}" value="${Math.max(500, l.top + 100)}" style="width:70px"><button class="btn btn-small" data-bidbtn="${l.index}">${L('bid')}</button>` : ''}</div>`).join('')}
+        ${v.lots.map((l) => `<div class="lot-row">${icon('map_contract', '', 'item-ico')}<div class="item-text"><b>${L('emp_lot', { good: esc(sv(l.good)), region: esc(sv(l.region)) })}</b><span class="muted">${L('emp_top', { n: l.top })}${l.mine ? L('emp_top_yours', { n: l.mine }) : ''}</span></div>${docked === 'gravesend' ? `<div class="lot-bid"><input data-bid="${l.index}" type="number" value="${Math.max(500, l.top + 100)}"><button class="btn btn-small" data-bidbtn="${l.index}">${L('bid')}</button></div>` : ''}</div>`).join('')}
         ${docked === 'gravesend' ? '' : `<p class="muted">${L('emp_bid_in_person')}</p>`}</div></div></div>`;
     const val = (k: string) => body.querySelector<HTMLInputElement>(`[data-cv="${k}"]`)?.value ?? '';
-    const portId = (name: string) => state.ports.find((p) => p.name === name || p.id === name)?.id ?? name;
+    const portId = (name: string) => state.ports.find((p) => state.enName(p) === name || p.name === name || p.id === name)?.id ?? name;
     body.querySelector<HTMLElement>('[data-charter]')?.addEventListener('click', () => this.send({ t: 'empire', action: 'charter' }));
     body.querySelector<HTMLElement>('[data-convoy]')?.addEventListener('click', () => this.send({ t: 'empire', action: 'convoy', from: portId(val('from')), to: portId(val('to')), good: val('good'), qty: Number(val('qty')), every: Number(val('every')), escorts: Number(val('escorts')) }));
     body.querySelectorAll<HTMLElement>('[data-cancel]').forEach((el) => (el.onclick = () => this.send({ t: 'empire', action: 'cancel', id: Number(el.dataset.cancel) })));
@@ -139,7 +142,7 @@ export class CompanyScreen {
     const se = v.season;
     const days = Math.ceil(se.endsIn / 86400);
     const pct = Math.min(100, ((se.xp % se.levelXp) / se.levelXp) * 100);
-    const season = `<div class="card"><h4>${L('leg_season', { n: se.season, theme: esc(sv(se.theme)) })} <span class="muted">${L('leg_days_left', { n: days, days: dayW(days) })}</span></h4><p><i>${esc(sv(se.themeText))}</i></p>
+    const season = `<div class="card"><h4 class="card-h">${icon('xp', '', 'ico-md')}${L('leg_season', { n: se.season, theme: esc(sv(se.theme)) })} <span class="muted">${L('leg_days_left', { n: days, days: dayW(days) })}</span></h4><p><i>${esc(sv(se.themeText))}</i></p>
       ${se.war ? `<div class="row"><span>${L('leg_crown', { n: se.war.crown })}</span><span>${L('leg_war')}</span><span>${L('leg_confed', { n: se.war.confederacy })}</span></div>` : ''}
       <div class="row"><span>${L('leg_path', { level: se.level, max: se.maxLevel })}</span><span class="muted">${se.next ? L('leg_next', { level: se.next.level, reward: esc(sv(se.next.reward)) }) : L('leg_complete')}</span></div>
       <div class="bbar" style="height:6px;background:#1b1512;border:1px solid rgba(111,90,56,0.8)"><i style="display:block;height:100%;width:${pct.toFixed(0)}%;background:var(--gold)"></i></div>
@@ -148,19 +151,19 @@ export class CompanyScreen {
       <select data-sel="pennant"><option value="">${L('leg_plain')}</option>${se.pennants.map((c) => `<option value="${esc(c)}" ${c === se.pennant ? 'selected' : ''} style="color:${esc(c)}">■ ${esc(c)}</option>`).join('')}</select></div>
       ${se.nameRights > 0 ? `<div class="row" style="gap:6px;margin-top:6px"><span class="gold">${L('leg_name_isle')}</span><select data-sel="island">${[...state.discovered].map((id) => state.islands.get(id)).filter((i) => i && !i.portId).map((i) => `<option value="${i!.id}">${esc(i!.name)}</option>`).join('')}</select><input data-sel="newname" placeholder="${L('leg_new_name')}" style="width:120px"><button class="btn btn-small btn-primary" data-name-isle>${L('leg_name_btn')}</button></div>` : ''}
       <h4 style="margin-top:8px">${L('leg_your_season')}</h4>${se.mine.map((m) => `<div class="row"><span>${esc(sv(m.stat))}</span><span>${m.value}</span></div>`).join('') || `<p class="muted">${L('leg_nothing_season')}</p>`}</div>
-      <div class="card"><h4>${L('leg_tables')}</h4>${se.tables.filter((t) => t.rows.length).map((t) => `<div style="margin-bottom:4px"><b>${esc(sv(t.stat))}</b>: ${t.rows.map((r, i) => `${i + 1}. ${esc(r.name)} (${r.value})`).join(' · ')}</div>`).join('') || `<p class="muted">${L('leg_tables_empty')}</p>`}</div>
-      <div class="card"><h4>${L('leg_pantheon')}</h4>${se.halls.map((h) => `<div><b>${esc(sv(h.hall))}</b>: ${h.members.map((m) => `${esc(m.name)} <span class="muted">${L('leg_member_season', { n: m.season })}</span>`).join(', ') || `<span class="muted">${L('leg_empty_halls')}</span>`}</div>`).join('')}</div>`;
-    const legendary = `<div class="card"><h4>${L('leg_legendary')}</h4>${v.legendary.map((l) => `<div class="leg-ship" style="margin-bottom:8px">${cardArt(`card.leg_${l.id}`)}<b>${esc(sv(l.name))}</b> <span class="muted">${L('leg_ship_meta', { base: esc(sv(l.base)), boss: esc(sv(l.boss.replace('_', ' '))), port: esc(sv(l.port)) })}</span>
+      <div class="card"><h4 class="card-h">${icon('goal', '', 'ico-md')}${L('leg_tables')}</h4>${se.tables.filter((t) => t.rows.length).map((t) => `<div style="margin-bottom:4px"><b>${esc(sv(t.stat))}</b>: ${t.rows.map((r, i) => `${i + 1}. ${esc(r.name)} (${r.value})`).join(' · ')}</div>`).join('') || `<p class="muted">${L('leg_tables_empty')}</p>`}</div>
+      <div class="card"><h4 class="card-h">${icon('tab_legends', '', 'ico-md')}${L('leg_pantheon')}</h4>${se.halls.map((h) => `<div><b>${esc(sv(h.hall))}</b>: ${h.members.map((m) => `${esc(m.name)} <span class="muted">${L('leg_member_season', { n: m.season })}</span>`).join(', ') || `<span class="muted">${L('leg_empty_halls')}</span>`}</div>`).join('')}</div>`;
+    const legendary = `<div class="card"><h4 class="card-h">${icon('tab_legends', '', 'ico-md')}${L('leg_legendary')}</h4>${v.legendary.map((l) => `<div class="leg-ship" style="margin-bottom:8px">${cardArt(`card.leg_${l.id}`)}<b>${esc(sv(l.name))}</b> <span class="muted">${L('leg_ship_meta', { base: esc(sv(l.base)), boss: esc(sv(l.boss.replace('_', ' '))), port: esc(sv(l.port)) })}</span>
         <div style="font-size:12px"><span style="color:var(--good)">${esc(sv(l.gift))}</span> <span style="color:var(--bad)">${esc(sv(l.price))}</span></div>
         ${l.status === 'locked' ? `<div class="muted">${L('leg_locked')}</div>`
         : l.status === 'commission' ? `<div>${L('leg_commission', { need: l.need.map((n) => `${esc(sv(n.good))} ${n.have}/${n.need}`).join(' · ') })}${l.leaders.length ? L('leg_leading', { list: l.leaders.map((x) => `${esc(x.name)} (${x.value})`).join(', ') }) : ''}${l.mine ? L('leg_yours', { n: l.mine }) : ''}</div>${l.canDeliver ? `<button class="btn btn-small btn-primary" data-deliver="${l.id}">${L('leg_deliver')}</button>` : ''}`
         : l.status === 'owned' ? `<div>${L('leg_sailed_by', { owner: esc(l.owner ?? '') })}</div>` : `<div style="color:var(--bad)">${L('leg_sunk', { where: l.wreck ? L('leg_sunk_at', { x: Math.round(l.wreck.x / 1000), y: Math.round(l.wreck.y / 1000) }) : '', owner: l.owner ? esc(l.owner) : L('leg_her_captain') })}</div>`}</div>`).join('')}</div>`;
     body.innerHTML = `${season}${legendary}<div class="cols"><div>
-      <div class="card"><h4>${L('leg_trophies')}</h4>${v.trophies.map((t) => `<div>✦ ${esc(sv(t))}</div>`).join('') || `<p class="muted">${L('none_yet')}</p>`}</div>
-      <div class="card"><h4>${L('leg_monsters')}</h4>${v.bossKills.map((k) => `<div class="row"><span>${esc(sv(k.name))}</span><span>×${k.n}</span></div>`).join('') || `<p class="muted">${L('none_yet')}</p>`}
+      <div class="card"><h4 class="card-h">${icon('tab_legends', '', 'ico-md')}${L('leg_trophies')}</h4>${v.trophies.map((t) => `<div>✦ ${esc(sv(t))}</div>`).join('') || `<p class="muted">${L('none_yet')}</p>`}</div>
+      <div class="card"><h4 class="card-h">${icon('map_monster', '', 'ico-md')}${L('leg_monsters')}</h4>${v.bossKills.map((k) => `<div class="row"><span>${esc(sv(k.name))}</span><span>×${k.n}</span></div>`).join('') || `<p class="muted">${L('none_yet')}</p>`}
         ${v.shards ? `<p class="muted">${L('leg_shards', { n: v.shards })}</p>` : ''}</div></div>
-      <div><div class="card"><h4>${L('leg_log')}</h4>${v.chapters.map((c) => `<p><b>${esc(sv(c.title))}</b><br><i>${esc(sv(c.text))}</i></p>`).join('') || `<p class="muted">${L('leg_no_chapters')}</p>`}</div>
-      <div class="card"><h4>${L('leg_firsts')}</h4>${v.firsts.map((f) => `<div class="row"><span>${esc(sv(f.boss))}</span><span class="muted">${esc(f.names.slice(0, 4).join(', '))}${f.names.length > 4 ? '…' : ''} · ${date(f.at)}</span></div>`).join('') || `<p class="muted">${L('leg_no_firsts')}</p>`}</div></div></div>`;
+      <div><div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${L('leg_log')}</h4>${v.chapters.map((c) => `<p><b>${esc(sv(c.title))}</b><br><i>${esc(sv(c.text))}</i></p>`).join('') || `<p class="muted">${L('leg_no_chapters')}</p>`}</div>
+      <div class="card"><h4 class="card-h">${icon('goal', '', 'ico-md')}${L('leg_firsts')}</h4>${v.firsts.map((f) => `<div class="row"><span>${esc(sv(f.boss))}</span><span class="muted">${esc(f.names.slice(0, 4).join(', '))}${f.names.length > 4 ? '…' : ''} · ${date(f.at)}</span></div>`).join('') || `<p class="muted">${L('leg_no_firsts')}</p>`}</div></div></div>`;
     body.querySelector<HTMLSelectElement>('[data-sel="title"]')!.onchange = (e) => this.send({ t: 'season', action: 'title', value: (e.target as HTMLSelectElement).value });
     body.querySelector<HTMLSelectElement>('[data-sel="pennant"]')!.onchange = (e) => this.send({ t: 'season', action: 'pennant', value: (e.target as HTMLSelectElement).value });
     body.querySelectorAll<HTMLElement>('[data-deliver]').forEach((el) => (el.onclick = () => this.send({ t: 'legendary', action: 'deliver', id: el.dataset.deliver! })));
@@ -177,14 +180,14 @@ export class CompanyScreen {
       ${g ? g.members.map((m) => `<div class="card"><h4>${m.accountId === g.leader ? '⚑ ' : ''}${esc(m.name)} <span class="muted">${L('grp_level', { captain: esc(CAPTAINS[m.captain]?.name ?? m.captain), level: m.level })}</span></h4>
         <div class="row"><span class="muted">${!m.online ? L('grp_ashore') : m.docked ? L('grp_in', { port: esc(state.ports.find((p) => p.id === m.docked)?.name ?? m.docked) }) : L('grp_at_sea', { n: Math.round(m.hull * 100) })}${m.inConvoy ? L('grp_station') : ''}</span>
         ${lead && m.accountId !== me ? `<span><button class="btn btn-small" data-lead="${esc(m.name)}">${L('grp_give_lead')}</button> <button class="btn btn-small btn-danger" data-kick="${esc(m.name)}">${L('grp_kick')}</button></span>` : ''}</div></div>`).join('') : `<p class="muted">${L('grp_about')}</p>`}
-      ${g && lead ? `<div class="card"><h4>${L('grp_convoy')}</h4><p class="muted">${L('grp_convoy_text')}</p>
+      ${g && lead ? `<div class="card"><h4 class="card-h">${icon('ab_form_line', '', 'ico-md')}${L('grp_convoy')}</h4><p class="muted">${L('grp_convoy_text')}</p>
         <button class="btn ${g.convoy ? 'btn-primary' : ''}" id="convoy">${g.convoy ? L('grp_convoy_down') : L('grp_convoy_up')}</button></div>` : g?.convoy ? `<p class="muted">${L('grp_convoy_flying')}</p>` : ''}
       ${g ? `<button class="btn btn-danger" id="leave">${L('grp_leave')}</button>` : ''}
     </div><div>
-      ${lead ? `<div class="card"><h4>${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="invite">${L('invite')}</button></div></div>` : ''}
-      <div class="card"><h4>${L('grp_trade_title')}</h4><p class="muted">${L('grp_trade_text')}</p>
+      ${lead ? `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="invite">${L('invite')}</button></div></div>` : ''}
+      <div class="card"><h4 class="card-h">${icon('tab_market', '', 'ico-md')}${L('grp_trade_title')}</h4><p class="muted">${L('grp_trade_text')}</p>
         <div class="row"><input id="bar-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="hail">${L('grp_hail')}</button></div></div>
-      ${state.invites.map((i) => `<div class="card"><h4>${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
+      ${state.invites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
     </div></div>`;
     const val = (id: string) => body.querySelector<HTMLInputElement>(id)?.value.trim() ?? '';
     body.querySelector<HTMLElement>('#invite')?.addEventListener('click', () => val('#inv-name') && this.send({ t: 'group', action: 'invite', name: val('#inv-name') }));
@@ -201,8 +204,8 @@ export class CompanyScreen {
     const hs = state.holdings;
     const self = state.self;
     const guildLease = !!state.guild && ['admiral', 'vice'].includes(state.guild.rank);
-    const offer = (o: IslandOffer) => `<div class="card"><h4>${esc(o.name)} <span class="muted">${L('isl_offer_meta', { size: L(`size_${o.size}`), slots: o.slots, slotw: slotW(o.slots), biome: esc(L(`biome_${o.biome}`)) })}${o.mine ? L('isl_ore') : ''}</span></h4>
-      ${o.held ? `<p class="muted">${L('isl_leased', { who: esc(o.held) })}${!hs.mine.some((h) => h.island === o.island) && !hs.sieges.some((x) => x.island === o.island) ? ` <button class="btn btn-small btn-danger" data-siege="${o.island}" title="${esc(L('isl_siege_hint'))}">${L('isl_siege_btn')}</button>` : ''}</p>` : o.why ? `<p class="muted">${esc(sv(o.why))}</p>` : `<div class="row" style="gap:6px">${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-rent="${o.island}" data-days="${d}">${L('isl_rent_btn', { d, days: dayW(d), price: fmt(o.price[d]) })}</button>`).join('')}</div>
+    const offer = (o: IslandOffer) => `<div class="card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}<span>${esc(placeName(o.name))} <span class="muted">${L('isl_offer_meta', { size: L(`size_${o.size}`), slots: o.slots, slotw: slotW(o.slots), biome: esc(L(`biome_${o.biome}`)) })}${o.mine ? L('isl_ore') : ''}</span></span></h4>
+      ${o.held ? `<p class="muted">${L('isl_leased', { who: esc(o.held) })}${!hs.mine.some((h) => h.island === o.island) && !hs.sieges.some((x) => x.island === o.island) ? ` <button class="btn btn-small btn-danger" data-siege="${o.island}" title="${esc(L('isl_siege_hint'))}">${L('isl_siege_btn')}</button>` : ''}</p>` : o.why ? `<p class="muted">${esc(sv(o.why))}</p>` : `<div class="rent-grid">${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-rent="${o.island}" data-days="${d}"><b>${L('isl_days', { d, days: dayW(d) })}</b>${money(o.price[d])}</button>`).join('')}</div>
         ${guildLease ? `<div class="row" style="gap:6px"><span class="muted">${L('isl_for_guild')}</span>${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-glease="${o.island}" data-days="${d}">${L('isl_days', { d, days: dayW(d) })}</button>`).join('')}</div>` : ''}`}</div>`;
     const here = hs.here && !hs.mine.some((h) => h.island === hs.here!.island) ? offer(hs.here) : '';
     const nearId = hs.here?.island ?? -1;
@@ -214,7 +217,7 @@ export class CompanyScreen {
       const yardTier = has('dry_dock') ? 4 : has('shipyard') ? 3 : 0;
       const builds = (self?.builds ?? []).filter((b) => b.port === `isle:${h.island}`);
       const berths = (self?.berths ?? []).map((b, i) => ({ b, i })).filter((x) => x.b.port === `isle:${h.island}`);
-      return `<div class="card"><h4>${esc(h.name)} <span class="muted">${L('isl_hold_meta', { region: esc(REGIONS[h.region]?.name ?? h.region.replace(/_/g, ' ')), size: L(`size_${h.size}`), used, slots: h.slots })}${h.guild ? L('isl_guild', { base: h.base ? BASE_NAMES(h.base) : L('isl_island') }) : ''}</span></h4>
+      return `<div class="card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(placeName(h.name))} <span class="muted">${L('isl_hold_meta', { region: esc(REGIONS[h.region]?.name ?? h.region.replace(/_/g, ' ')), size: L(`size_${h.size}`), used, slots: h.slots })}${h.guild ? L('isl_guild', { base: h.base ? BASE_NAMES(h.base) : L('isl_island') }) : ''}</span></span></h4>
         <p>${L('isl_lease')} <b>${days >= 1 ? `${Math.floor(days)} ${dayW(Math.floor(days))}` : days > 0 ? `${Math.ceil(days * 24)} ${hourW(Math.ceil(days * 24))}` : `<span class="bad">${L('isl_runout')}</span>`}</b> · ${L('isl_week', { price: fmt(h.renew) })} · <label><input type="checkbox" data-auto="${h.island}" ${h.autoRenew ? 'checked' : ''}> ${L('isl_auto')}</label></p>
         <p>${L('isl_treasury')} <b>${fmt(h.treasury)}</b> · ${L('isl_upkeep', { n: fmt(h.upkeep) })} · <input type="number" value="1000" step="500" style="width:90px" data-tamt="${h.island}"> <button class="btn btn-small" data-tin="${h.island}">${L('deposit')}</button> <button class="btn btn-small" data-tout="${h.island}">${L('withdraw')}</button></p>
         <table class="grid">${h.buildings.map((b, i) => `<tr><td>${icon(`build_${b.id}`)}${esc(BUILDINGS[b.id].name)}</td><td class="${b.unpaid ? 'bad' : 'muted'}">${Math.round(b.condition * 100)}%${b.unpaid ? L('isl_unpaid') : ''}</td><td>${near ? `<button class="btn btn-small btn-danger" data-demolish="${h.island}" data-index="${i}">${L('isl_demolish')}</button>` : ''}</td></tr>`).join('') || `<tr><td class="muted">${L('isl_bare')}</td></tr>`}</table>
@@ -279,12 +282,12 @@ export class CompanyScreen {
   private renderGuild(body: HTMLElement, state: ClientState): void {
     const g = state.guild;
     const docked = state.self?.dockedAt ?? null;
-    const portName = (id: string) => state.ports.find((p) => p.id === id)?.name ?? id;
+    const portName = (id: string) => placeName(state.ports.find((p) => p.id === id)?.name ?? id);
     if (!g) {
       body.innerHTML = `<div class="cols"><div>
-        ${state.guildInvites.map((i) => `<div class="card"><h4>${L('g_invites', { by: esc(i.by), name: esc(i.name), tag: esc(i.tag) })}</h4><button class="btn btn-primary" data-gjoin="${i.id}">${L('join')}</button> <button class="btn" data-gno="${i.id}">${L('decline')}</button></div>`).join('') || `<p class="muted">${L('g_no_invites')}</p>`}
+        ${state.guildInvites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('g_invites', { by: esc(i.by), name: esc(i.name), tag: esc(i.tag) })}</h4><button class="btn btn-primary" data-gjoin="${i.id}">${L('join')}</button> <button class="btn" data-gno="${i.id}">${L('decline')}</button></div>`).join('') || `<p class="muted">${L('g_no_invites')}</p>`}
       </div><div>
-        <div class="card"><h4>${L('g_found_title')}</h4><p class="muted">${L('g_found_text', { cost: fmt(10000) })}</p>
+        <div class="card"><h4 class="card-h">${icon('tab_guild', '', 'ico-md')}${L('g_found_title')}</h4><p class="muted">${L('g_found_text', { cost: fmt(10000) })}</p>
           <input id="g-name" placeholder="${L('g_ph_name')}" maxlength="24" style="width:100%;margin-bottom:6px">
           <div class="row"><input id="g-tag" placeholder="${L('ph_tag')}" maxlength="4" style="width:80px;text-transform:uppercase"><button class="btn btn-primary" id="g-found" ${docked ? '' : `disabled title="${L('g_in_port')}"`}>${L('g_found_btn')}</button></div></div>
       </div></div>`;
@@ -299,33 +302,33 @@ export class CompanyScreen {
     const tagOf = (s: string) => /\[([A-Z0-9]+)\]$/.exec(s)?.[1] ?? '';
     body.innerHTML = `<div class="cols"><div>
       <h3 class="title-sm" style="font-size:20px">${esc(g.name)} [${esc(g.tag)}] <span class="muted" style="font-size:14px">${L('g_you_are', { rank: esc(RANK_NAMES(g.rank)) })}</span></h3>
-      <div class="card"><h4>${L('g_treasury', { n: fmt(g.treasury), tax: g.tax })}${g.torn ? L('g_torn') : g.flagship ? L('g_standard_on', { name: esc(g.flagship) }) : ''}</h4>
+      <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${L('g_treasury', { n: fmt(g.treasury), tax: g.tax })}${g.torn ? L('g_torn') : g.flagship ? L('g_standard_on', { name: esc(g.flagship) }) : ''}</h4>
         <div class="row"><input type="number" id="g-amt" value="1000" step="500" style="width:100px"><button class="btn btn-small" id="g-dep" ${docked ? '' : 'disabled'}>${L('deposit')}</button>${at('vice') ? `<button class="btn btn-small" id="g-wd" ${docked ? '' : 'disabled'}>${L('withdraw')}</button>` : ''}
         ${g.rank === 'admiral' ? `<label>${L('g_tax')} <select id="g-tax">${Array.from({ length: 16 }, (_, i) => `<option ${i === g.tax ? 'selected' : ''}>${i}</option>`).join('')}</select>%</label>` : ''}</div></div>
-      <div class="card"><h4>${L('g_members', { n: g.members.length })}</h4><table class="grid">${g.members.map((m) => `<tr><td>${m.online ? '●' : '○'} ${esc(m.name)}</td><td>${g.rank === 'admiral' || (g.rank === 'vice' && RANK_ORDER.indexOf(m.rank) > 1) ? `<select data-grank="${m.account}">${RANK_ORDER.map((r) => `<option value="${r}" ${r === m.rank ? 'selected' : ''}>${RANK_NAMES(r)}</option>`).join('')}</select>` : esc(RANK_NAMES(m.rank))}</td>
+      <div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${L('g_members', { n: g.members.length })}</h4><table class="grid">${g.members.map((m) => `<tr><td>${m.online ? '●' : '○'} ${esc(m.name)}</td><td>${g.rank === 'admiral' || (g.rank === 'vice' && RANK_ORDER.indexOf(m.rank) > 1) ? `<select data-grank="${m.account}">${RANK_ORDER.map((r) => `<option value="${r}" ${r === m.rank ? 'selected' : ''}>${RANK_NAMES(r)}</option>`).join('')}</select>` : esc(RANK_NAMES(m.rank))}</td>
         <td>${at('vice') && RANK_ORDER.indexOf(m.rank) > RANK_ORDER.indexOf(g.rank) ? `<button class="btn btn-small btn-danger" data-gkick="${m.account}">${L('g_ashore')}</button>` : ''}${g.rank === 'admiral' ? ` <button class="btn btn-small" data-gflag="${m.account}" title="${L('g_flag_title')}">${L('g_flag')}</button>` : ''}</td></tr>`).join('')}</table>
         ${at('commodore') ? `<div class="row"><input id="g-inv" placeholder="${L('g_ph_inv')}" style="flex:1"><button class="btn btn-small" id="g-invite">${L('invite')}</button></div>` : ''}</div>
-      <div class="card"><h4>${g.here ? L('g_office_at', { port: esc(portName(g.here)) }) : L('g_office')}</h4>
+      <div class="card"><h4 class="card-h">${icon('anchor', '', 'ico-md')}${g.here ? L('g_office_at', { port: esc(portName(g.here)) }) : L('g_office')}</h4>
         ${store ? `<p class="muted">${L('g_store', { list: Object.entries(store).filter(([, n]) => (n ?? 0) > 0).map(([k, n]) => `${n} ${esc(GOODS[k as GoodId].name)}`).join(', ') || L('empty') })}</p>
           <div class="row"><select id="g-good">${goodOptions()}</select><input type="number" id="g-qty" value="10" style="width:70px"><button class="btn btn-small" id="g-put">${L('g_put')}</button><button class="btn btn-small" id="g-take">${L('g_take')}</button></div>`
           : `<p class="muted">${docked ? L('g_no_office') : L('g_office_in_port')}</p>${docked && at('vice') ? `<button class="btn btn-small" id="g-office">${L('g_rent_office', { cost: fmt(2000) })}</button>` : ''}`}
         ${g.offices.length ? `<p class="muted">${L('g_offices', { list: g.offices.map((o) => esc(portName(o.port))).join(', ') })}</p>` : ''}
         ${g.contracts.map((c) => `<p>${L('g_contract_line', { qty: c.qty, good: esc(GOODS[c.good].name), port: esc(portName(c.port)), reward: c.reward })} <span class="muted">(${esc(c.by)})</span>${at('vice') ? ` <button class="btn btn-small" data-gdrop="${c.id}">${L('withdraw')}</button>` : ''}</p>`).join('')}
         ${store && at('vice') ? `<div class="row"><span class="muted">${L('g_contract')}</span><select id="g-cgood">${goodOptions()}</select><input type="number" id="g-cqty" value="100" style="width:70px"><input type="number" id="g-crew" value="30" style="width:60px"><button class="btn btn-small" id="g-contract">${L('post')}</button></div>` : ''}</div>
-      <div class="card"><h4>${L('g_fleet')}</h4>${g.fleet.map((f) => `<p>${esc(f.name)} <span class="muted">${L('g_fleet_meta', { cls: esc(SHIP_CLASSES[f.classId].name), hull: f.hull, where: f.lentTo ? L('g_out_with', { name: esc(f.lentTo) }) : L('g_at', { port: esc(portName(f.port)) }), giver: esc(f.giver) })}</span>${!f.lentTo && f.port === docked && at('captain') ? ` <button class="btn btn-small" data-gborrow="${f.id}">${L('g_borrow')}</button>` : ''}</p>`).join('') || `<p class="muted">${L('g_no_hulls')}</p>`}
+      <div class="card"><h4 class="card-h">${icon('menu_ship', '', 'ico-md')}${L('g_fleet')}</h4>${g.fleet.map((f) => `<p>${esc(f.name)} <span class="muted">${L('g_fleet_meta', { cls: esc(SHIP_CLASSES[f.classId].name), hull: f.hull, where: f.lentTo ? L('g_out_with', { name: esc(f.lentTo) }) : L('g_at', { port: esc(portName(f.port)) }), giver: esc(f.giver) })}</span>${!f.lentTo && f.port === docked && at('captain') ? ` <button class="btn btn-small" data-gborrow="${f.id}">${L('g_borrow')}</button>` : ''}</p>`).join('') || `<p class="muted">${L('g_no_hulls')}</p>`}
         ${docked && at('captain') ? myBerths.map(({ b, i }) => `<button class="btn btn-small" data-ggive="${i}">${L('g_give', { name: esc(b.name) })}</button>`).join(' ') + ` <button class="btn btn-small" id="g-return">${L('g_return')}</button>` : ''}</div>
     </div><div>
-      <div class="card"><h4>${L('g_diplomacy')}</h4>
+      <div class="card"><h4 class="card-h">${icon('tab_law', '', 'ico-md')}${L('g_diplomacy')}</h4>
         ${g.wars.map((w) => `<p>${L('g_war', { name: esc(w.with) })} — ${w.active ? L('g_score', { a: w.ours, b: w.theirs }) : L('g_opens', { when: new Date(w.opensAt).toUTCString().slice(5, 22) })}${w.terms ? `${L('g_peace_offered', { by: w.terms.fromUs ? L('g_by_us') : L('g_by_them') })}${w.terms.tribute ? L('g_tribute', { n: fmt(w.terms.tribute) }) : ''}` : ''}
           ${g.rank === 'admiral' && Date.now() >= w.minEnd ? ` <input type="number" value="0" style="width:80px" data-gtrib="${esc(w.tag)}"><button class="btn btn-small" data-gpeace="${esc(w.tag)}">${w.terms && !w.terms.fromUs ? L('g_accept_peace') : L('g_offer_peace')}</button>` : ''}</p>`).join('')}
         ${g.alliance.length ? `<p>${L('g_allied', { list: g.alliance.map(esc).join(', ') })}${at('vice') ? ` <button class="btn btn-small" data-gbreak="alliance" data-tag="${esc(tagOf(g.alliance[0]))}">${L('g_leave_alliance')}</button>` : ''}</p>` : ''}
         ${g.pacts.map((p) => `<p>${L('g_pact', { name: esc(p) })}${at('vice') ? ` <button class="btn btn-small" data-gbreak="pact" data-tag="${esc(tagOf(p))}">${L('g_end_it')}</button>` : ''}</p>`).join('')}
         ${g.offers.map((o) => `<p>${o.kind === 'alliance' ? L('g_offers_alliance', { from: esc(o.from) }) : L('g_offers_pact', { from: esc(o.from) })}${at('vice') ? ` <button class="btn btn-small btn-primary" data-gtreaty="${o.kind}" data-tag="${esc(tagOf(o.from))}">${L('g_agree')}</button>` : ''}</p>`).join('')}
         ${at('vice') ? `<div class="row"><input id="g-dtag" placeholder="${L('ph_tag')}" maxlength="4" style="width:70px;text-transform:uppercase"><button class="btn btn-small" data-gtreaty="alliance" data-from-input="1">${L('g_offer_alliance')}</button><button class="btn btn-small" data-gtreaty="pact" data-from-input="1">${L('g_offer_pact')}</button>${g.rank === 'admiral' ? `<button class="btn btn-small btn-danger" id="g-war">${L('g_declare_war')}</button>` : ''}</div>` : ''}</div>
-      <div class="card"><h4>${L('g_routes')}</h4><p class="muted">${L('g_routes_text')}</p>
+      <div class="card"><h4 class="card-h">${icon('map_port', '', 'ico-md')}${L('g_routes')}</h4><p class="muted">${L('g_routes_text')}</p>
         <table class="grid">${g.nodes.map((n) => `<tr><td>${esc(n.name)}</td><td class="muted">${esc(REGIONS[n.region]?.name ?? n.region.replace(/_/g, ' '))}</td><td>${n.ours ? L('g_ours_toll', { toll: at('vice') ? `<select data-gtoll="${n.island}">${[1, 2, 3, 4, 5].map((t) => `<option ${t === n.toll ? 'selected' : ''}>${t}</option>`).join('')}</select>` : n.toll }) : n.holder ? esc(n.holder) : `<span class="muted">${L('nobody')}</span>`}${n.progress && !n.ours ? L('g_taking', { n: n.progress }) : ''}</td></tr>`).join('')}</table></div>
-      ${g.islands.length ? `<div class="card"><h4>${L('g_islands')}</h4>${g.islands.map((i) => `<p>${esc(i.name)} — ${i.base ? BASE_NAMES(i.base) : L('g_no_base')}${at('vice') && i.base < 5 ? ` <button class="btn btn-small" data-gbase="${i.island}">${L('g_raise', { base: BASE_NAMES(i.base + 1) })}</button>` : ''}</p>`).join('')}</div>` : ''}
-      <div class="card"><h4>${L('g_log')}</h4>${g.log.map((l) => `<p class="muted">${ago(l.t)} — ${esc(sv(l.text))}</p>`).join('')}</div>
+      ${g.islands.length ? `<div class="card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${L('g_islands')}</h4> ${g.islands.map((i) => `<p>${esc(placeName(i.name))} — ${i.base ? BASE_NAMES(i.base) : L('g_no_base')}${at('vice') && i.base < 5 ? ` <button class="btn btn-small" data-gbase="${i.island}">${L('g_raise', { base: BASE_NAMES(i.base + 1) })}</button>` : ''}</p>`).join('')}</div>` : ''}
+      <div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${L('g_log')}</h4>${g.log.map((l) => `<p class="muted">${ago(l.t)} — ${esc(sv(l.text))}</p>`).join('')}</div>
       <p>${g.rank === 'admiral' ? `<button class="btn btn-danger" id="g-disband">${L('g_disband')}</button>` : `<button class="btn btn-danger" id="g-leave">${L('g_leave')}</button>`} <span class="muted">${L('g_chat')}</span></p>
     </div></div>`;
     const q = <T extends HTMLElement>(sel: string) => body.querySelector<T>(sel);
@@ -366,7 +369,7 @@ export class CompanyScreen {
     const d = state.duel;
     const mins = (ms: number) => Math.max(1, Math.ceil((ms - now) / 60_000));
     body.innerHTML = `<div class="cols"><div>
-      <div class="card"><h4>${L('law_colours')}</h4>
+      <div class="card"><h4 class="card-h">${icon('tab_law', '', 'ico-md')}${L('law_colours')}</h4>
         <p>${v.blackFlag ? L('law_black_on') : L('law_plain')}</p>
         <button class="btn ${v.blackFlag ? '' : 'btn-danger'}" id="bf">${v.blackFlag ? L('law_strike') : L('law_hoist')}</button>
         ${v.pennant ? `<p class="good">${L('law_pennant', { n: v.pennantHoursLeft })}</p>` : ''}
@@ -374,16 +377,16 @@ export class CompanyScreen {
         ${v.shameUntil > now ? `<p class="bad">${L('law_shame', { n: mins(v.shameUntil) })}</p>` : ''}
         ${v.bounty ? `<p class="bad">${L('law_bounty', { n: fmt(v.bounty) })}</p>` : ''}
         <p class="muted">${L('law_stats', { duels: v.duels, wins: v.duelWins, rating: v.rating })}${v.hunter ? L('law_hunter') : ''}</p></div>
-      <div class="card"><h4>${L('law_duels')}</h4>
+      <div class="card"><h4 class="card-h">${icon('tree_boarding', '', 'ico-md')}${L('law_duels')}</h4>
         ${d ? `<p><b>${d.startsIn ? L('duel_guns', { n: d.startsIn }) : L('duel_left', { t: `${Math.floor(d.endsIn / 60)}:${String(d.endsIn % 60).padStart(2, '0')}` })}</b> — ${d.sides.map((side) => side.map((x) => `${esc(x.name)}${x.struck ? L('duel_struck') : ''}`).join(', ')).join(` <i>${L('duel_against')}</i> `)}</p><button class="btn btn-danger" id="yield">${L('duel_yield')}</button>`
           : `<p class="muted">${L('duel_text')}</p>
         <div class="row"><input id="duel-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><label><input type="checkbox" id="duel-fleet"> ${L('duel_groups')}</label><button class="btn" id="duel">${L('duel_challenge')}</button></div>`}
         ${v.challenges.map((c) => `<div class="row"><span>${L('duel_challenges', { from: esc(c.from) })}${c.fleet ? L('duel_fleet') : ''}</span><span><button class="btn btn-small btn-primary" data-duel-yes="${c.id}">${L('accept')}</button> <button class="btn btn-small" data-duel-no="${c.id}">${L('decline')}</button></span></div>`).join('')}</div>
     </div><div>
-      <div class="card"><h4>${L('bnt_board')}</h4>
+      <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${L('bnt_board')}</h4>
         <table class="grid">${state.bounties.map((b) => `<tr><td>${esc(b.name)}</td><td>${L('bnt_total', { n: fmt(b.total) })}</td><td class="muted">${L('bnt_backers', { n: b.backers, word: plural(b.backers, L('backer_one'), L('backer_few'), L('backer_many')) })}${b.wanted ? L('bnt_wanted', { n: b.wanted }) : ''}${b.atSea ? L('bnt_at_sea') : ''}</td></tr>`).join('') || `<tr><td class="muted">${L('bnt_none')}</td></tr>`}</table>
         <p class="muted">${L('bnt_text')}</p></div>
-      ${v.sunkBy.length ? `<div class="card"><h4>${L('bnt_sunk_by')}</h4>${v.sunkBy.map((k) => `<div class="row"><span>${esc(k.name)} <span class="muted">${ago(k.t)}${k.free ? L('bnt_free') : L('bnt_fee')}</span></span>
+      ${v.sunkBy.length ? `<div class="card"><h4 class="card-h">${icon('danger', '', 'ico-md')}${L('bnt_sunk_by')}</h4>${v.sunkBy.map((k) => `<div class="row"><span>${esc(k.name)} <span class="muted">${ago(k.t)}${k.free ? L('bnt_free') : L('bnt_fee')}</span></span>
           <span><input type="number" min="1000" step="500" value="1000" style="width:90px" data-bamt="${esc(k.name)}"><button class="btn btn-small" data-bounty="${esc(k.name)}" ${state.self?.dockedAt ? '' : `disabled title="${L('bnt_at_office')}"`}>${L('bnt_price')}</button></span></div>`).join('')}
         <p class="muted">${L('bnt_see')}</p></div>` : ''}
     </div></div>`;
@@ -411,7 +414,7 @@ export class CompanyScreen {
         <div class="row" style="gap:6px">${!l.read ? `<button class="btn btn-small" data-read="${l.id}">${L('let_mark')}</button>` : ''}
           ${!l.taken ? `<button class="btn btn-small btn-primary" data-take="${l.id}" ${docked && (!l.goods || l.goods.port === docked) ? '' : `disabled title="${L('let_collect_port')}"`}>${L('let_collect')}</button>` : `<button class="btn btn-small" data-del="${l.id}">${L('let_burn')}</button>`}</div></div>`).join('') || `<p class="muted">${L('let_none')}</p>`}
     </div><div>
-      <div class="card"><h4>${L('let_write')}</h4>
+      <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('let_write')}</h4>
         ${docked ? `<p class="muted">${L('let_packet')}</p>
         <input id="m-to" placeholder="${L('let_ph_to')}" maxlength="20" style="width:100%;margin-bottom:6px">
         <input id="m-subj" placeholder="${L('let_ph_subject')}" maxlength="60" style="width:100%;margin-bottom:6px">
@@ -452,7 +455,7 @@ export class CompanyScreen {
       <table class="grid">${mk.listings.filter((l) => l.kind !== 'auction').map(row).join('') || `<tr><td class="muted">${L('mk_nothing')}</td></tr>`}</table>
       ${mk.auction ? `<h3 class="title-sm" style="font-size:20px;margin-top:12px">${L('mk_auction')}</h3><table class="grid">${lots.map(row).join('') || `<tr><td class="muted">${L('mk_no_lots')}</td></tr>`}</table><p class="muted">${L('mk_auction_text')}</p>` : ''}
     </div><div>
-      <div class="card"><h4>${L('mk_post_title')}</h4>
+      <div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${L('mk_post_title')}</h4>
         <div class="row"><select id="k-kind"><option value="sell">${L('mk_opt_sell')}</option><option value="sellw">${L('mk_opt_sellw')}</option><option value="buy">${L('mk_opt_buy')}</option>${mk.auction ? `<option value="auction">${L('mk_opt_auction')}</option>` : ''}</select>
           <select id="k-good">${goodOptions()}</select></div>
         <div class="row"><label>${L('mk_qty')} <input id="k-qty" type="number" min="1" value="10" style="width:80px"></label><label id="k-price-l">${L('mk_price')} <input id="k-price" type="number" min="1" value="${GOODS.sugar.basePrice}" style="width:90px"></label></div>
@@ -493,16 +496,16 @@ export function renderBarter(root: HTMLElement, state: ClientState, send: (m: Cl
   const b = state.barter;
   if (!b) return;
   const hold = state.self?.cargo ?? {};
-  const list = (c: Cargo) => Object.entries(c).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<p>${n} ${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)}</p>`).join('') || `<p class="muted">${L('bt_no_goods')}</p>`;
+  const list = (c: Cargo) => Object.entries(c).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(GOODS[g as GoodId].name)}</span><b>×${n}</b></div>`).join('') || `<p class="muted">${L('bt_no_goods')}</p>`;
   root.innerHTML = `<div class="modal-head"><div><h2>${L('bt_trading', { name: esc(b.them.name) })}</h2><div class="sub">${b.atSea ? L('bt_sea') : L('bt_quay')}${b.transfer ? L('bt_boats', { n: b.transfer }) : ''}</div></div><div class="muted">${L('bt_walk_hint')}</div></div>
     <div class="modal-body"><div class="cols"><div>
       <h3 class="title-sm" style="font-size:20px">${L('bt_you_give')} ${b.me.ready ? `<span class="good">${L('bt_ready')}</span>` : ''}</h3>
-      <div class="card"><div class="row"><label>${L('bt_silver')} <input id="b-gold" type="number" min="0" value="${b.me.gold}" style="width:110px"></label></div>
-        ${Object.entries(hold).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="row"><span>${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)} <span class="muted">(${n})</span></span><input type="number" min="0" max="${n}" value="${b.me.cargo[g as GoodId] ?? 0}" data-give="${g}" style="width:80px"></div>`).join('')}
+      <div class="card"><div class="barter-row">${icon('coin', '', 'item-ico')}<span>${L('bt_silver')}</span><input id="b-gold" class="field" type="number" min="0" value="${b.me.gold}"></div>
+        ${Object.entries(hold).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(GOODS[g as GoodId].name)} <span class="muted">(${n})</span></span><input class="field" type="number" min="0" max="${n}" value="${b.me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
         <button class="btn" id="b-offer">${L('bt_set')}</button></div>
     </div><div>
       <h3 class="title-sm" style="font-size:20px">${L('bt_they_give', { name: esc(b.them.name) })} ${b.them.ready ? `<span class="good">${L('bt_ready')}</span>` : ''}</h3>
-      <div class="card"><p><b>${L('bt_silver_n', { n: fmt(b.them.gold) })}</b></p>${list(b.them.cargo)}</div>
+      <div class="card"><div class="barter-row">${icon('coin', '', 'item-ico')}<span>${L('bt_silver')}</span><b>${money(b.them.gold)}</b></div>${list(b.them.cargo)}</div>
       <div class="row" style="gap:8px"><button class="btn btn-primary" id="b-ready" ${b.me.ready ? 'disabled' : ''}>${L('bt_agree')}</button><button class="btn btn-danger" id="b-cancel">${L('bt_walk')}</button></div>
       <p class="muted">${L('bt_note')}</p>
     </div></div></div>`;

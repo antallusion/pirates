@@ -800,4 +800,16 @@ export const SERVER_RU_B: Record<string, string> = {
   "At most three bridges": "Не больше трёх мостов",
   "Not learned": "Не изучено",
   "{0} depends on it — remove the higher talents first": "От него зависит «{0}» — сначала уберите старшие таланты",
+  // The season's tables and its free path.
+  "Ships sunk": "Потоплено кораблей",
+  "Monster hunters": "Охотники на чудовищ",
+  "Trade empires": "Торговые империи",
+  "Treasure hunters": "Искатели сокровищ",
+  "Longest logs (km)": "Дальние плавания (км)",
+  "Lawful exploits": "Законные подвиги",
+  "Pirate glory": "Пиратская слава",
+  "Deeds of the Abyss": "Деяния Бездны",
+  "Sea-Dog of {0}": "Морской волк ({0})",
+  "Veteran of {0}": "Ветеран ({0})",
+  "Legend of {0}": "Легенда ({0})",
 };

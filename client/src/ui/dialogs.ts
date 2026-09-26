@@ -53,20 +53,22 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
     root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: r.targetName }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div></div></div>
       <div class="modal-body"><div class="cols"><div>
         <h3 class="title-sm" style="font-size:20px">${esc(L('board.cargo'))}</h3>
-        ${goods.length ? goods.map((g) => `<div class="loot-row"><span>${icon(`good_${g}`)}${esc(GOODS[g].name)} <span class="muted">(${r.cargo[g]})</span>${state.self?.appraisal?.[g] ? ` <span class="gold" title="${esc(L('board.bestPrice'))}">${esc(L('board.perUnit', { price: fmt(state.self.appraisal[g]!.price) }))}</span>` : ''}</span><b>${take[g] ?? 0}</b>
+        ${goods.length ? goods.map((g) => `<div class="loot-grid">${icon(`good_${g}`, '', 'item-ico')}<div class="item-text"><b>${esc(GOODS[g].name)}</b><span class="muted">${esc(L('board.aboard', { n: r.cargo[g] ?? 0 }))}${state.self?.appraisal?.[g] ? ` · ${money(state.self.appraisal[g]!.price)}` : ''}</span></div><b class="loot-take">${take[g] ?? 0}</b>
           <input type="range" min="0" max="${r.cargo[g]}" value="${take[g] ?? 0}" data-g="${g}" /></div>`).join('') : `<p class="muted">${esc(L('board.empty'))}</p>`}
         <p class="${used > holdMax ? 'up' : 'muted'}">${esc(L('board.hold', { used: used.toFixed(1), max: holdMax.toFixed(0) }))}</p>
         ${Object.keys(r.destroyed).length ? `<p class="muted">${esc(L('board.destroyed', { list: Object.entries(r.destroyed).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`).join(', ') }))}</p>` : ''}
       </div><div>
-        <div class="card"><h4>${esc(L('board.coin'))}</h4><p>${esc(L('board.coinText', { gold: fmt(r.gold), ammo: AMMO_IDS.map((a) => `${r.ammo[a]} ${AMMO[a].name.toLowerCase()}`).join(', ') }))}</p></div>
-        ${r.recruits > 0 ? `<div class="card"><h4>${esc(L('board.prisoners'))}</h4><p>${esc(L('board.prisonersText', { n: r.recruits }))}</p><div class="loot-row"><span>${esc(L('board.signOn'))}</span><b>${recruit}</b><input type="range" min="0" max="${r.recruits}" value="${recruit}" id="recruit" /></div></div>` : ''}
-        <div class="card"><h4>${esc(L('board.fate'))}</h4>
-          ${r.noQuarter ? `<p class="bad">${esc(L('board.noQuarter', { talent: talentName('brd_no_quarter') }))}</p><button class="btn btn-danger" data-fate="sink">${esc(L('board.burn'))}</button>` : `
+        <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('board.coin'))}</h4><div class="spoils">${money(r.gold)}${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="ammo-chip" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-md')}<b>${r.ammo[a]}</b></span>`).join('')}</div></div>
+        ${r.recruits > 0 ? `<div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('board.prisoners'))}</h4><p>${esc(L('board.prisonersText', { n: r.recruits }))}</p><div class="loot-row"><span>${esc(L('board.signOn'))}</span><b>${recruit}</b><input type="range" min="0" max="${r.recruits}" value="${recruit}" id="recruit" /></div></div>` : ''}
+        <div class="card"><h4 class="card-h">${icon('tree_boarding', '', 'ico-md')}${esc(L('board.fate'))}</h4>
+          ${r.noQuarter ? `<p class="bad">${esc(L('board.noQuarter', { talent: talentName('brd_no_quarter') }))}</p><div class="choice-grid one"><button class="btn btn-danger choice" data-fate="sink">${icon('fire', '', 'choice-ico')}<span>${esc(L('board.burn'))}</span></button></div>` : `
           <p>${esc(L('board.fateText'))}${r.npc ? esc(L('board.ransomOffer', { sum: fmt(r.ransom) })) : ''}${r.captive ? esc(L('board.captive')) : ''}</p>
-          <button class="btn btn-danger" data-fate="sink">${esc(L('board.scuttle'))}</button>
-          <button class="btn" data-fate="release">${esc(L('board.release'))}</button>
-          ${r.npc ? `<button class="btn btn-primary" data-fate="ransom">${esc(L('board.ransom', { sum: fmt(r.ransom) }))}</button>` : ''}
-          ${r.prize ? `<button class="btn btn-primary" data-fate="prize" title="${esc(L('board.prizeTip'))}">${esc(L('board.prize', { crew: r.prize.crew, value: fmt(r.prize.value) }))}</button>` : ''}`}
+          <div class="choice-grid one">
+          <button class="btn btn-danger choice" data-fate="sink">${icon('fire', '', 'choice-ico')}<span>${esc(L('board.scuttle'))}</span></button>
+          <button class="btn choice" data-fate="release">${icon('anchor', '', 'choice-ico')}<span>${esc(L('board.release'))}</span></button>
+          ${r.npc ? `<button class="btn btn-primary choice" data-fate="ransom">${icon('coin', '', 'choice-ico')}<span>${esc(L('board.ransom', { sum: fmt(r.ransom) }))}</span></button>` : ''}
+          ${r.prize ? `<button class="btn btn-primary choice" data-fate="prize" title="${esc(L('board.prizeTip'))}">${icon('menu_ship', '', 'choice-ico')}<span>${esc(L('board.prize', { crew: r.prize.crew, value: fmt(r.prize.value) }))}</span></button>` : ''}
+          </div>`}
         </div></div></div></div>`;
     root.querySelectorAll<HTMLInputElement>('input[type=range][data-g]').forEach((el) => (el.oninput = () => {
       take[el.dataset.g as GoodId] = Number(el.value);
@@ -98,8 +100,11 @@ export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: 
   root.innerHTML = `<div class="modal-body"><div class="center-card">
     <h2 class="title-sm" style="font-size:40px">${esc(L('sunk.title'))}</h2>
     <p style="font-family:var(--serif);font-size:18px;color:var(--fog)">${esc(L('sunk.body', { port: portName }))}</p>
-    <table class="grid" style="max-width:360px;margin:16px auto"><tr><td>${esc(L('sunk.cargo'))}</td><td class="up">${fmt(lost.cargoValue)}</td></tr>
-    <tr><td>${esc(L('sunk.crew'))}</td><td class="up">${lost.crew}</td></tr><tr><td>${esc(L('sunk.fee'))}</td><td class="up">${fmt(lost.repairFee)}</td></tr></table>
+    <div class="loss-list">
+      <div class="loss-row">${icon('tab_market', '', 'item-ico')}<span>${esc(L('sunk.cargo'))}</span><b class="up">${money(lost.cargoValue)}</b></div>
+      <div class="loss-row">${icon('stat_crew', '', 'item-ico')}<span>${esc(L('sunk.crew'))}</span><b class="up">${lost.crew}</b></div>
+      <div class="loss-row">${icon('good_planks', '', 'item-ico')}<span>${esc(L('sunk.fee'))}</span><b class="up">${money(lost.repairFee)}</b></div>
+    </div>
     <p class="muted">${esc(L('sunk.note'))}</p>
     <button class="btn btn-primary">${esc(L('sunk.back'))}</button></div></div>`;
   root.querySelector('button')!.onclick = close;

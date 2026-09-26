@@ -106,6 +106,7 @@ translateDom();
 markLang();
 onLang(() => {
   applyDataLocale(lang());
+  state.relocalize();
   translateDom();
   markLang();
   if (modal) refreshModal();

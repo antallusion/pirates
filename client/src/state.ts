@@ -11,6 +11,7 @@ import type { SailState } from '../../shared/src/sim/sailing.ts';
 import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
 import type { ShipStats } from '../../shared/src/sim/shipstats.ts';
 import { currentAt } from '../../shared/src/world/worldgen.ts';
+import { placeName } from './ui/maps.ts';
 import type { RegionId } from '../../shared/src/world/regions.ts';
 
 export interface ShipSample {
@@ -99,12 +100,32 @@ export class ClientState {
   /** World seconds per real second (1 unless an admin server runs the clock faster). */
   timeScale = 1;
 
+  /** The English names of ports and islands as the server sent them (the shown name follows the language). */
+  private enNames = new WeakMap<object, string>();
+
+  /** A port's or island's name as the server knows it (for matching server text). */
+  enName(o: { name: string }): string {
+    return this.enNames.get(o) ?? o.name;
+  }
+
+  private localize(o: { name: string }): void {
+    if (!this.enNames.has(o)) this.enNames.set(o, o.name);
+    o.name = placeName(this.enNames.get(o)!);
+  }
+
+  /** Ports and islands take the player's language (on arrival and when the language changes). */
+  relocalize(): void {
+    for (const p of this.ports) this.localize(p);
+    for (const is of this.islands.values()) this.localize(is);
+  }
+
   apply(m: ServerMsg): void {
     const now = performance.now() / 1000;
     switch (m.t) {
       case 'init':
         this.self = m.self;
         this.ports = m.ports;
+        for (const p of this.ports) this.localize(p);
         this.currents = m.currents;
         this.whirlpools = m.whirlpools;
         this.discovered = new Set(m.discovered);
@@ -126,7 +147,10 @@ export class ClientState {
         this.refreshStats();
         break;
       case 'chunk':
-        for (const is of m.islands) this.islands.set(is.id, is);
+        for (const is of m.islands) {
+          this.localize(is);
+          this.islands.set(is.id, is);
+        }
         for (const rf of m.reefs ?? []) this.reefs.set(rf.id, rf);
         break;
       case 'info':

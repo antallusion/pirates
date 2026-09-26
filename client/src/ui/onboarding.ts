@@ -141,7 +141,11 @@ export function playPrologue(done: () => void): void {
 export function renderEdge(root: HTMLElement, close: () => void): void {
   root.innerHTML = `<div class="modal-body"><div class="center-card">
     <h2 class="title-sm" style="font-size:34px">${esc(t('edge.title'))}</h2>
-    <ul class="edge-list"><li>${esc(t('edge.pvp'))}</li><li>${esc(t('edge.wanted'))}</li><li>${esc(t('edge.insure'))}</li></ul>
+    <div class="edge-list">
+      <div class="help-row">${icon('danger', '', 'item-ico')}<span>${esc(t('edge.pvp'))}</span></div>
+      <div class="help-row">${icon('wanted', '', 'item-ico')}<span>${esc(t('edge.wanted'))}</span></div>
+      <div class="help-row">${icon('insurance', '', 'item-ico')}<span>${esc(t('edge.insure'))}</span></div>
+    </div>
     <p class="muted">${esc(t('edge.once'))}</p>
     <button class="btn btn-primary">${esc(t('edge.ok'))}</button></div></div>`;
   root.querySelector('button')!.onclick = close;
