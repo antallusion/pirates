@@ -2,6 +2,7 @@
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
 import { onEventSale } from './events.ts';
+import { levyFor, noteSale, payLevy, saleMul } from './empires.ts';
 import { seasonStat, shanty } from './seasons.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -203,8 +204,11 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   if (qty > 0) {
     if (def.contraband && ship.hasFlag('honest_merchant')) return 'An Honest Merchant does not carry contraband';
     if (gm.stock < qty) return 'Not enough in stock';
-    const price = quoteBuy(good, gm, qty, mods);
+    const quoted = quoteBuy(good, gm, qty, mods);
+    const levy = levyFor(game, port, quoted); // the governor's hundredth
+    const price = quoted + levy;
     if (p.gold < price) return 'Not enough silver';
+    payLevy(game, port, levy);
     const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
     const need = qty * def.volume * (def.contraband ? ship.stats.contrabandVolumeMul : 1);
     if (need > free + 1e-6) return 'Not enough room in the hold';
@@ -243,8 +247,11 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     p.stolen[good] = stolen - fenced;
   } else if (stolen > 0) p.stolen[good] = Math.max(0, stolen - Math.max(0, n - (have - stolen)));
   if (!p.stolen[good]) delete p.stolen[good];
-  const full = quoteSell(good, gm, n, mods);
-  const price = Math.floor(full - (full / n) * fenced * 0.15);
+  const full = quoteSell(good, gm, n, mods) * saleMul(game, s, port, good, n); // licences and the flooded market
+  const gross = Math.floor(full - (full / n) * fenced * 0.15);
+  const levy = levyFor(game, port, gross); // the governor's hundredth
+  const price = gross - levy;
+  payLevy(game, port, levy);
   const basis = game.costBasis(s, good);
   ship.cargo[good] = (ship.cargo[good] ?? 0) - n;
   if (!ship.cargo[good]) delete ship.cargo[good];
@@ -262,6 +269,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   game.db.ledger(s.accountId, 'sell', price, `${n} ${good} @ ${port.id}`);
   onSale(game, s, port, good, n, profit);
   onEventSale(game, s, port, good, n);
+  noteSale(game, s, port, good, n);
   if (profit > 0) seasonStat(game, s, 'trade', profit);
   onSaleDeeds(game, s, port.id, good, n, price);
   game.checkDeliveries(s, port);

@@ -18,7 +18,7 @@ import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
 
-export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles' | 'legends';
+export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles' | 'legends' | 'empires';
 
 const ago = (ms: number) => {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
@@ -51,9 +51,9 @@ export class CompanyScreen {
   render(root: HTMLElement, state: ClientState): void {
     const docked = state.self?.dockedAt ?? null;
     if (this.tab === 'market' && !docked) this.tab = 'group';
-    const tabs = (['group', 'guild', 'law', 'letters', 'isles', 'legends', 'market'] as CompanyTab[])
+    const tabs = (['group', 'guild', 'law', 'letters', 'isles', 'empires', 'legends', 'market'] as CompanyTab[])
       .filter((t) => t !== 'market' || docked)
-      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'isles' ? 'Islands' : t === 'legends' ? 'Legends' : t === 'guild' ? `${state.guild ? `Guild [${esc(state.guild.tag)}]` : 'Guild'}${state.guildInvites.length ? ' (!)' : ''}` : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
+      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'isles' ? 'Islands' : t === 'legends' ? 'Legends' : t === 'empires' ? 'Empires' : t === 'guild' ? `${state.guild ? `Guild [${esc(state.guild.tag)}]` : 'Guild'}${state.guildInvites.length ? ' (!)' : ''}` : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
       .join(' ');
     root.innerHTML = `<div class="modal-head"><div><h2>Company &amp; Letters</h2><div class="sub">${tabs}</div></div><div class="muted">[Y] close</div></div>
       <div class="modal-body" id="company-body"></div>`;
@@ -64,9 +64,11 @@ export class CompanyScreen {
     else if (this.tab === 'isles') this.renderIsles(body, state);
     else if (this.tab === 'guild') this.renderGuild(body, state);
     else if (this.tab === 'legends') this.renderLegends(body, state);
+    else if (this.tab === 'empires') this.renderEmpires(body, state);
     else this.renderMarket(body, state);
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
       if (el.dataset.tab === 'legends') this.send({ t: 'legends' });
+      if (el.dataset.tab === 'empires') this.send({ t: 'empire', action: 'view' });
       this.tab = el.dataset.tab as CompanyTab;
       if (this.tab === 'market') this.send({ t: 'market', action: 'list' });
       if (this.tab === 'letters') this.send({ t: 'mail', action: 'list' });
@@ -75,6 +77,40 @@ export class CompanyScreen {
       if (this.tab === 'guild') this.send({ t: 'guild', action: 'view' });
       this.render(root, state);
     }));
+  }
+
+  /** Empires: who governs the lawless seas, the colonies' riots, your trading house and its convoys, the licence exchange. */
+  private renderEmpires(body: HTMLElement, state: ClientState): void {
+    const v = state.empire;
+    if (!v) {
+      this.send({ t: 'empire', action: 'view' });
+      body.innerHTML = '<p class="muted">The Exchange\'s clerks unroll the ledgers…</p>';
+      return;
+    }
+    const docked = state.self?.dockedAt ?? null;
+    const goods = Object.values(GOODS).filter((g) => !g.contraband);
+    const date = (t: number) => new Date(t).toLocaleDateString();
+    body.innerHTML = `<div class="cols"><div>
+      <div class="card"><h4>Governors of the lawless seas</h4><p class="muted" style="font-size:12px">When the week turns, a guild holding 60% of a lawless region's route nodes governs it for the week: 1% of trade in its free ports, first word of its monsters, the purple pennant — at double upkeep, with riots, and never more than four weeks running.</p>
+        ${v.governors.map((g) => `<div class="row"><span>${esc(g.region)}</span><span>${g.tag ? `<b>[${esc(g.tag)}]</b> until ${date(g.until)} (week ${g.streak})` : '<span class="muted">nobody</span>'}</span><span class="muted">nodes ${g.mine}/${g.nodes}</span></div>`).join('')}
+        ${v.riots.map((r) => `<div style="color:var(--bad)">Riot in ${esc(r.port)}${r.quelled ? ' — put down' : r.failed ? ' — the colony won' : ''}</div>`).join('')}</div>
+      <div class="card"><h4>Trade empires</h4>${v.empires.map((e, i) => `<div class="row"><span>${i + 1}. ${esc(e.name)}</span><span>${e.profit.toLocaleString()} profit</span></div>`).join('') || '<p class="muted">No merchant princes yet.</p>'}</div></div>
+      <div><div class="card"><h4>Your trading house</h4>${v.house ? `<p>Chartered. Convoys sail between your offices (${v.offices.length ? esc(v.offices.join(', ')) : 'none'}), carrying up to 60 m³ with hired escorts.</p>
+        <div class="row" style="gap:4px;flex-wrap:wrap"><select data-cv="from">${v.offices.map((p) => `<option>${esc(p)}</option>`).join('')}</select>→<select data-cv="to">${v.offices.map((p) => `<option>${esc(p)}</option>`).join('')}</select>
+        <select data-cv="good">${goods.map((g) => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select><input data-cv="qty" value="30" style="width:50px">
+        every <input data-cv="every" value="0" style="width:36px"> h · escorts <input data-cv="escorts" value="1" style="width:30px"><button class="btn btn-small btn-primary" data-convoy>Send</button></div>
+        ${v.orders.map((o) => `<div class="row"><span>${esc(o.from)} → ${esc(o.to)}: ${o.qty} ${esc(o.good)}${o.everyHours ? ` every ${o.everyHours} h` : ''} · ${o.escorts} escort${o.escorts === 1 ? '' : 's'}</span><button class="btn btn-small btn-danger" data-cancel="${o.id}">Cancel</button></div>`).join('')}`
+        : '<p>A guild admiral may charter the guild as a trading house (20 000 from the treasury) to run convoys between its offices.</p><button class="btn btn-small" data-charter>Charter the house</button>'}</div>
+      <div class="card"><h4>The Gravesend licence exchange</h4><p class="muted" style="font-size:12px">A week's monopoly on a good in a region's Crown and League ports: the licensee sells at +10%, everyone else pays a 20% duty. Bids are held in escrow; the outbid are repaid.</p>
+        ${v.licences.map((l) => `<div>This week: <b>${esc(l.good)}</b> in ${esc(l.region)} — ${esc(l.holder)}${l.mine ? ' (yours)' : ''}</div>`).join('')}
+        ${v.lots.map((l) => `<div class="row"><span>Next week: ${esc(l.good)} in ${esc(l.region)}</span><span class="muted">top ${l.top}${l.mine ? ` · yours ${l.mine}` : ''}</span>${docked === 'gravesend' ? `<input data-bid="${l.index}" value="${Math.max(500, l.top + 100)}" style="width:70px"><button class="btn btn-small" data-bidbtn="${l.index}">Bid</button>` : ''}</div>`).join('')}
+        ${docked === 'gravesend' ? '' : '<p class="muted">Bid in person at Gravesend.</p>'}</div></div></div>`;
+    const val = (k: string) => body.querySelector<HTMLInputElement>(`[data-cv="${k}"]`)?.value ?? '';
+    const portId = (name: string) => state.ports.find((p) => p.name === name || p.id === name)?.id ?? name;
+    body.querySelector<HTMLElement>('[data-charter]')?.addEventListener('click', () => this.send({ t: 'empire', action: 'charter' }));
+    body.querySelector<HTMLElement>('[data-convoy]')?.addEventListener('click', () => this.send({ t: 'empire', action: 'convoy', from: portId(val('from')), to: portId(val('to')), good: val('good'), qty: Number(val('qty')), every: Number(val('every')), escorts: Number(val('escorts')) }));
+    body.querySelectorAll<HTMLElement>('[data-cancel]').forEach((el) => (el.onclick = () => this.send({ t: 'empire', action: 'cancel', id: Number(el.dataset.cancel) })));
+    body.querySelectorAll<HTMLElement>('[data-bidbtn]').forEach((el) => (el.onclick = () => this.send({ t: 'empire', action: 'bid', lot: Number(el.dataset.bidbtn), amount: Number(body.querySelector<HTMLInputElement>(`[data-bid="${el.dataset.bidbtn}"]`)!.value) })));
   }
 
   /** Legends: your trophies and monsters, the chapters of the Abyss, the first victories on these seas. */

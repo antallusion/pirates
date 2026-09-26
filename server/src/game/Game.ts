@@ -78,6 +78,7 @@ import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './explor
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
 import { legendsView } from './legends.ts';
+import { EmpireHub, GOVERNOR_PENNANT, empireAction, empireView, governsAny, stepEmpires } from './empires.ts';
 import { deliver, ensureLegendary, legendaryCalendar, legendarySecond, legendarySunk, legendWreckHere, raiseLegend } from './legendary.ts';
 import { LEGENDARY } from '../../../shared/src/data/legendary.ts';
 import type { LegendaryId } from '../../../shared/src/data/legendary.ts';
@@ -189,6 +190,7 @@ export class Game {
   strikes: DelayedStrike[] = [];
   bosses = new BossHub();
   worldEvents = new EventHub();
+  empires = new EmpireHub();
   expeditions: ExpeditionHub;
   expeditionSecs = 0;
   abyss: AbyssMap;
@@ -626,6 +628,7 @@ export class Game {
     expeditionsSecond(this);
     digNoise(this);
     stepSeasons(this);
+    stepEmpires(this);
     if (Math.floor(now) % 60 === 0) legendaryCalendar(this);
     // Nearest player distance for NPC LOD.
     const players: ShipEntity[] = [];
@@ -752,6 +755,12 @@ export class Game {
       checkDeeds(this, s, 1);
       abyssSecond(this, s);
       legendarySecond(this, s);
+      // The governor's purple, unless a season pennant is flown.
+      const gov = !s.profile.pennant && s.ship.guildTag && governsAny(this, s.accountId) ? GOVERNOR_PENNANT : s.profile.pennant;
+      if (gov !== s.ship.pennant) {
+        s.ship.pennant = gov;
+        this.refreshInfo(s.ship);
+      }
       tickLoan(this, s);
       if (this.tick % 1200 < 20) decayClaims(this, s.profile);
       s.siteViews = this.sites.filter((x) => x.holder === s.accountId && x.until > this.now).map((x) => siteView(this, s, x));
@@ -1063,6 +1072,7 @@ export class Game {
     else if (key === 'holdings') this.holdings.drop();
     else if (key === 'bounties') this.pvp.drop();
     else if (key.startsWith('board:')) this.post.dropBoard(key.slice(6));
+    else if (key === 'empires') this.empires.drop();
     else if (key === 'island_names') {
       applyIslandNames(this);
       for (const s of this.sessions) s.knownChunks.clear();
@@ -2345,6 +2355,10 @@ export class Game {
       case 'season':
         err(seasonAction(this, s, String(msg.action), msg.value, msg.islandId !== undefined ? Number(msg.islandId) : undefined));
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
+        return;
+      case 'empire':
+        if (msg.action !== 'view') err(empireAction(this, s, port, msg));
+        this.sendTo(s, { t: 'empire', view: empireView(this, s) });
         return;
       case 'legends':
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });

@@ -30,6 +30,7 @@ import { legendFragment } from './treasure.ts';
 import { chapter, giveShard, spawnEcho } from './abyss.ts';
 import { seasonStat, seasonMods } from './seasons.ts';
 import { onFirstKill } from './legendary.ts';
+import { governorsOfRegion } from './empires.ts';
 
 type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add';
 
@@ -226,10 +227,13 @@ function announce(game: Game, def: BossDef, x: number, y: number, mins: number):
   const region = REGIONS[regionAt(game.world, x, y)].name;
   const text = `${def.name} stirs in ${region}. Whalers mark the water ${Math.round(x / 1000)} km east, ${Math.round(y / 1000)} km south — within the half hour.`;
   for (const p of game.world.ports) if (def.regions.includes(p.region) || dist(p.x, p.y, x, y) < 30000) game.addRumor(p.x, p.y, text);
+  const gov = governorsOfRegion(game, regionAt(game.world, x, y));
   for (const s of game.sessions) {
     const sh = s.ship;
     if (!sh) continue;
-    if (def.regions.includes(sh.region) || dist(sh.state.x, sh.state.y, x, y) < 20000) game.sendTo(s, { t: 'toast', msg: `Tavern talk: ${text}`, kind: 'info' });
+    const governor = gov !== null && game.guilds.of(game, s.accountId)?.id === gov;
+    if (governor) game.sendTo(s, { t: 'toast', msg: `Governor's dispatch: ${text}`, kind: 'gold' });
+    else if (def.regions.includes(sh.region) || dist(sh.state.x, sh.state.y, x, y) < 20000) game.sendTo(s, { t: 'toast', msg: `Tavern talk: ${text}`, kind: 'info' });
   }
   game.log(`[boss] ${def.id} announced at ${Math.round(x)},${Math.round(y)} (in ~${mins} min)`);
 }

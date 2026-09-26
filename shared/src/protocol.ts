@@ -89,6 +89,7 @@ export type ClientMsg =
   | { t: 'dive_surface' }
   | { t: 'abyss'; action: 'ritual' }
   | { t: 'legends' }
+  | { t: 'empire'; action: 'view' | 'charter' | 'convoy' | 'cancel' | 'bid'; from?: string; to?: string; good?: string; qty?: number; every?: number; escorts?: number; id?: number; amount?: number; lot?: number }
   | { t: 'legendary'; action: 'deliver'; id: string }
   | { t: 'season'; action: 'title' | 'pennant' | 'name'; value?: string; islandId?: number }
   | { t: 'map'; action: 'forge' | 'appraise' | 'seal' | 'give' | 'burn'; id?: string; to?: string }
@@ -621,6 +622,18 @@ export interface LegendaryView {
   wreck?: { x: number; y: number };
 }
 
+/** Trade empires and the guild wars for regions (empires.ts). */
+export interface EmpireView {
+  governors: { region: string; tag: string | null; until: number; streak: number; nodes: number; mine: number }[];
+  riots: { port: string; quelled: boolean; failed: boolean }[];
+  house: boolean;
+  orders: { id: number; from: string; to: string; good: string; qty: number; everyHours: number; escorts: number }[];
+  offices: string[];
+  lots: { index: number; good: string; region: string; top: number; mine: number }[];
+  licences: { good: string; region: string; holder: string; mine: boolean }[];
+  empires: { name: string; profit: number }[];
+}
+
 /** A captain's legend (legends.ts): trophies, the monsters slain, the chapters of the Abyss, and the book of the sea. */
 export interface LegendsView {
   trophies: string[];
@@ -803,6 +816,7 @@ export type ServerMsg =
   | { t: 'boss'; list: BossView[] }
   | { t: 'events'; list: WorldEventView[] }
   | { t: 'legends'; view: LegendsView }
+  | { t: 'empire'; view: EmpireView }
   | { t: 'pve_sites'; list: PveSiteView[] }
   | { t: 'dive'; view: DiveView | null }
   | { t: 'gone'; ids: number[] }

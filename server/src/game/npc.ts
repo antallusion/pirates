@@ -19,6 +19,7 @@ import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { avoidPort } from './events.ts';
+import { convoyArrived } from './empires.ts';
 import { effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
@@ -320,6 +321,7 @@ function abstractStep(game: Game, ship: ShipEntity, brain: NpcBrain, dt: number)
 
 /** Arrival at the end of a path: merchants trade and re-plan, others pick a new leg. */
 function arrive(game: Game, ship: ShipEntity, brain: NpcBrain): void {
+  if (ship.convoyOf && brain.destPort === ship.convoyOf.to) return convoyArrived(game, ship);
   if (brain.destPort) {
     const port = game.portById(brain.destPort);
     const market = port ? game.markets.get(port.id) : undefined;

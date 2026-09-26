@@ -16,6 +16,7 @@
 //  - Islands: up to six guild islands (leased from the treasury by vice-admirals); a base on one raises it through
 //    five levels (+2 slots a level, weekly upkeep from the island's treasury).
 
+import { upkeepMul } from './empires.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -126,6 +127,14 @@ export class GuildHub {
         if (isl.portId || !isl.features.includes('lighthouse') || REGIONS[isl.region].safety === 'safe') continue;
         this.data.nodes[isl.id] ??= { island: isl.id, holder: null, toll: 2, progress: {}, tollToday: { day: 0, paid: 0 }, seen: {} };
       }
+      // Every lawless region has at least five nodes to govern by: where there are too few lighthouses, the
+      // great ruined islands serve (docs/02 §14.A.3).
+      for (const region of Object.keys(REGIONS) as (keyof typeof REGIONS)[]) {
+        if (REGIONS[region].safety !== 'lawless') continue;
+        const have = Object.values(this.data.nodes).filter((n) => game.world.islands[n.island]?.region === region).length;
+        const extra = game.world.islands.filter((i) => i.region === region && !i.portId && !this.data!.nodes[i.id] && i.radius > 250).sort((a, b) => b.radius - a.radius || a.id - b.id).slice(0, Math.max(0, 5 - have));
+        for (const isl of extra) this.data.nodes[isl.id] = { island: isl.id, holder: null, toll: 2, progress: {}, tollToday: { day: 0, paid: 0 }, seen: {} };
+      }
     }
     return this.data;
   }
@@ -167,15 +176,15 @@ export class GuildHub {
 
 // ------------------------------------------------------------------------------------------ basics
 
-function member(g: Guild, account: number): Member | undefined {
+export function member(g: Guild, account: number): Member | undefined {
   return g.members.find((m) => m.account === account);
 }
 
-function rankAtLeast(m: Member | undefined, r: GuildRank): boolean {
+export function rankAtLeast(m: Member | undefined, r: GuildRank): boolean {
   return !!m && RANKS.indexOf(m.rank) <= RANKS.indexOf(r);
 }
 
-function log(game: Game, g: Guild, text: string): void {
+export function log(game: Game, g: Guild, text: string): void {
   g.log.push({ t: game.wallNow(), text });
   if (g.log.length > 120) g.log.splice(0, g.log.length - 120);
   game.guilds.touch();
@@ -778,7 +787,7 @@ export function raiseBase(game: Game, s: PlayerSession, islandId: number): strin
 export function baseUpkeepPerDay(game: Game, gid: number, level: number, islandId: number): number {
   const bases = Object.values(game.holdings.map(game)).filter((h) => h.owner.kind === 'guild' && h.owner.id === gid && (h.base ?? 0) > 0).sort((a, b) => a.since - b.since);
   const order = Math.max(0, bases.findIndex((h) => h.island === islandId));
-  return Math.round((BASE_WEEK[level] / 7) * 1.5 ** order);
+  return Math.round((BASE_WEEK[level] / 7) * 1.5 ** order * upkeepMul(game, gid)); // a governor pays double
 }
 
 // ------------------------------------------------------------------------------------------ routes

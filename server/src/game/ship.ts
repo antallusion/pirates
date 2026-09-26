@@ -167,6 +167,8 @@ export class ShipEntity {
   pennant: string | null = null;
   /** The Graveyard Captain of this graveyard (expeditions.ts). */
   yardOf = '';
+  /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
+  convoyOf: { guild: number; to: string } | null = null;
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

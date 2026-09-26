@@ -5,7 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BossView, DiveView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
+  BarterView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
 } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -87,6 +87,7 @@ export class ClientState {
   /** Sunken cities and ship graveyards; the diving bell when one of ours is down (expeditions.ts). */
   pveSites: PveSiteView[] = [];
   legends: LegendsView | null = null;
+  empire: EmpireView | null = null;
   dive: DiveView | null = null;
   eventsAt = 0;
   holdings: { mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[]; sieges: SiegeView[] } = { mine: [], here: null, region: [], sieges: [] };
@@ -207,6 +208,9 @@ export class ClientState {
         break;
       case 'legends':
         this.legends = m.view;
+        break;
+      case 'empire':
+        this.empire = m.view;
         break;
       case 'pve_sites':
         this.pveSites = m.list;
