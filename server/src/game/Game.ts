@@ -46,7 +46,7 @@ import type { Island, Port, World } from '../../../shared/src/world/worldgen.ts'
 import type { AuthService } from '../auth.ts';
 import { sanitizeName } from '../auth.ts';
 import type { WsConnection } from '../net/websocket.ts';
-import type { Database } from '../persistence/db.ts';
+import type { Db } from '../persistence/db.ts';
 import { stepStrikes, useAbility } from './abilities.ts';
 import { stepMind, stepZones } from './mind.ts';
 import {
@@ -129,7 +129,7 @@ interface QueuedEvent {
 }
 
 export interface GameOptions {
-  db: Database;
+  db: Db;
   auth: AuthService;
   seed?: number;
   log?: (msg: string) => void;
@@ -146,7 +146,7 @@ const WEATHER_TOAST: Record<string, string> = {
 }
 
 export class Game {
-  readonly db: Database;
+  readonly db: Db;
   readonly auth: AuthService;
   readonly world: World;
   readonly rng: Rng;

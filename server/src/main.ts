@@ -11,13 +11,17 @@ import { Game } from './game/Game.ts';
 import { createStaticHandler } from './net/static.ts';
 import { acceptUpgrade } from './net/websocket.ts';
 import { Database } from './persistence/db.ts';
+import type { Db } from './persistence/db.ts';
+import { PgDatabase } from './persistence/pgdb.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PORT = Number(process.env.PORT ?? 8080);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const DB_PATH = process.env.DB_PATH ?? resolve(root, 'data/gravetide.db');
 
-const db = new Database(DB_PATH);
+// PostgreSQL when DATABASE_URL is set (postgres://user:pass@host:port/db), SQLite otherwise.
+const DATABASE_URL = process.env.DATABASE_URL;
+const db: Db = DATABASE_URL ? await PgDatabase.open(DATABASE_URL) : new Database(DB_PATH);
 const auth = new AuthService(db);
 const game = new Game({ db, auth });
 const serveStatic = createStaticHandler(root);
@@ -50,14 +54,14 @@ server.on('upgrade', (req, socket) => {
 
 game.start();
 server.listen(PORT, HOST, () => {
-  console.log(`[${GAME_NAME}] listening on http://localhost:${PORT}  (protocol v${PROTOCOL_VERSION}, db ${DB_PATH})`);
+  console.log(`[${GAME_NAME}] listening on http://localhost:${PORT}  (protocol v${PROTOCOL_VERSION}, db ${DATABASE_URL ? 'postgresql' : DB_PATH})`);
 });
 
-function shutdown(): void {
+async function shutdown(): Promise<void> {
   console.log('[server] saving world and shutting down…');
   game.stop();
-  db.close();
+  await db.close();
   process.exit(0);
 }
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+process.on('SIGINT', () => void shutdown());
+process.on('SIGTERM', () => void shutdown());

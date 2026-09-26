@@ -2,7 +2,7 @@
 // (stored only as a SHA-256 hash). Production swaps this module for OAuth/e-mail login behind the same API.
 
 import { createHash, randomBytes } from 'node:crypto';
-import type { Database } from './persistence/db.ts';
+import type { Db } from './persistence/db.ts';
 
 export interface AuthResult {
   accountId: number;
@@ -22,8 +22,8 @@ export function sanitizeName(raw: string): string | null {
 }
 
 export class AuthService {
-  private db: Database;
-  constructor(db: Database) {
+  private db: Db;
+  constructor(db: Db) {
     this.db = db;
   }
 

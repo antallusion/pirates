@@ -51,7 +51,24 @@ export interface CaptainRow {
   heading: number;
 }
 
-export class Database {
+/** What the game needs from persistence. SQLite (`Database`) and PostgreSQL (`PgDatabase`) both provide it synchronously. */
+export interface Db {
+  close(): void | Promise<void>;
+  createAccount(name: string, tokenHash: string): number;
+  accountByToken(tokenHash: string): AccountRow | undefined;
+  accountByName(name: string): AccountRow | undefined;
+  touchAccount(id: number): void;
+  loadCaptain(accountId: number): CaptainRow | undefined;
+  saveCaptain(accountId: number, data: unknown, x: number, y: number, heading: number): void;
+  getKv<T>(key: string): T | undefined;
+  setKv(key: string, value: unknown): void;
+  ledger(accountId: number, kind: string, amount: number, detail: string): void;
+  ledgerFlows(sinceMs: number): { kind: string; inflow: number; outflow: number; n: number }[];
+  silverHoldings(): { account_id: number; gold: number; bank: number }[];
+  transaction(fn: () => void): void;
+}
+
+export class Database implements Db {
   private db: DatabaseSync;
 
   constructor(path: string) {
