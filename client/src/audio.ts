@@ -3,6 +3,8 @@
 // harbour bells, coins. Positional: gain and stereo pan from the listener (own ship).
 
 import type { GameEvent, WeatherKind } from '../../shared/src/protocol.ts';
+import { MusicDirector } from './music.ts';
+import type { MusicInput } from './music.ts';
 
 const HEARING = 1600; // meters beyond which a cannon is not heard
 
@@ -16,7 +18,7 @@ export function spatial(lx: number, ly: number, sx: number, sy: number, range = 
   return { gain, pan };
 }
 
-export type Bus = 'sea' | 'combat' | 'ui';
+export type Bus = 'sea' | 'combat' | 'ui' | 'music';
 export type CaptionKind = 'volley' | 'explosion' | 'deep' | 'thunder' | 'sinking';
 export type CaptionDir = 'ahead' | 'astern' | 'port' | 'starboard' | 'near';
 
@@ -40,7 +42,9 @@ export class AudioEngine {
   private buses: Record<Bus, GainNode> | null = null;
   muted = localStorage.getItem('gravetide.muted') === '1';
   volume = Number(localStorage.getItem('gravetide.volume') ?? 0.7);
-  levels: Record<Bus, number> = { sea: 1, combat: 1, ui: 1 };
+  levels: Record<Bus, number> = { sea: 1, combat: 1, ui: 1, music: 0.8 };
+  /** The score and the ship's own voice (music.ts). */
+  readonly music = new MusicDirector();
   mono = false;
   /** Sound captions: "[broadside to port, far]" — set by the options. */
   onCaption: ((kind: CaptionKind, dir: CaptionDir, far: boolean) => void) | null = null;
@@ -68,7 +72,7 @@ export class AudioEngine {
       g.connect(this.master!);
       return g;
     };
-    this.buses = { sea: bus('sea'), combat: bus('combat'), ui: bus('ui') };
+    this.buses = { sea: bus('sea'), combat: bus('combat'), ui: bus('ui'), music: bus('music') };
     this.noise = this.makeNoise(2, false);
     this.brown = this.makeNoise(4, true);
     // Ocean bed.
@@ -93,6 +97,7 @@ export class AudioEngine {
     this.rain.gain.value = 0;
     rain.connect(hp).connect(this.rain).connect(this.buses.sea);
     rain.start();
+    this.music.attach(ctx, this.buses.music, this.noise);
   }
 
   toggleMute(): boolean {
@@ -131,15 +136,23 @@ export class AudioEngine {
   }
 
   /** Master volume, the three buses and mono, from the options. */
-  configure(master: number, levels: Record<Bus, number>, mono: boolean): void {
+  configure(master: number, levels: Partial<Record<Bus, number>>, mono: boolean): void {
     this.volume = master;
-    this.levels = { ...levels };
+    this.levels = { ...this.levels, ...levels };
     this.mono = mono;
     localStorage.setItem('gravetide.volume', String(master));
     if (!this.ctx || !this.master || !this.buses) return;
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.muted ? 0 : master, t, 0.05);
-    for (const k of Object.keys(this.buses) as Bus[]) this.buses[k].gain.setTargetAtTime(levels[k], t, 0.05);
+    for (const k of Object.keys(this.buses) as Bus[]) this.buses[k].gain.setTargetAtTime(this.levels[k], t, 0.05);
+  }
+
+  /** Once a frame: the score, the creak of the rigging, the bells of the watch. */
+  frame(dt: number, scene: MusicInput, wind: number, sail: number, heel: number, timeOfDay01: number, atSea: boolean): void {
+    if (!this.ctx || !this.buses) return;
+    this.music.update(dt, scene);
+    if (atSea) this.music.creak(dt, wind, sail, heel, this.buses.sea);
+    this.music.shipsBell(timeOfDay01, this.buses.ui);
   }
 
   private voice(gain: number, pan: number, delay = 0, bus: Bus = 'combat'): { out: GainNode; at: number } | null {

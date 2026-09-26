@@ -3,7 +3,7 @@
 import { DivePanel } from './ui/dive.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
-import { PORT_DOCK_RADIUS } from '../../shared/src/constants.ts';
+import { PORT_DOCK_RADIUS, timeOfDay } from '../../shared/src/constants.ts';
 import { clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
@@ -11,7 +11,7 @@ import { REGIONS } from '../../shared/src/world/regions.ts';
 import { assetUrl, loadAssets } from './assets.ts';
 import { AudioEngine } from './audio.ts';
 import { Net } from './net.ts';
-import { Renderer } from './render/renderer.ts';
+import { Renderer, shipHeel } from './render/renderer.ts';
 import { ClientState } from './state.ts';
 import { showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
@@ -29,10 +29,15 @@ import { actionFor, applyToDocument, onSettings, settings, update } from './sett
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
 import type { PadEvent } from './gamepad.ts';
 import type { Settings } from './settings.ts';
-import { lang, onLang, t, translateDom } from './i18n.ts';
-import { applyDataLocale } from './lang/data.ts';
+import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
+import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { serverText } from './lang/server.ts';
 import type { Key } from './i18n.ts';
+import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
+
+const L = dict(MAIN_EN, MAIN_RU);
+/** A name or sentence that came from the server, in the player's language. */
+const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
 type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | null;
 
@@ -66,7 +71,7 @@ onboarding.send = (action) => net.send({ t: 'onboarding', action });
 // Options: applied now and on every change (docs/07 §11).
 function applySettings(o: Settings): void {
   applyToDocument(o);
-  audio.configure(o.volume.master, { sea: o.volume.sea, combat: o.volume.combat, ui: o.volume.ui }, o.mono);
+  audio.configure(o.volume.master, { sea: o.volume.sea, combat: o.volume.combat, ui: o.volume.ui, music: o.volume.music }, o.mono);
   renderer.fx.forceLod = o.effects === 'low' ? 2 : null;
   audio.onCaption = o.captions
     ? (kind, dir, far) => hud.caption(t(`cap.${kind}` as Key, { dir: t(`dir.${dir}` as Key), far: far ? t('cap.far') : '' }), dir)
@@ -77,16 +82,24 @@ onSettings(applySettings);
 document.documentElement.lang = lang();
 applyDataLocale(lang());
 translateDom();
+markLang();
 onLang(() => {
   applyDataLocale(lang());
   translateDom();
+  markLang();
   if (modal) refreshModal();
 });
+
+/** The EN / RU switch on the title screen. */
+function markLang(): void {
+  document.querySelectorAll<HTMLElement>('[data-lang]').forEach((b) => b.classList.toggle('btn-primary', b.dataset.lang === lang()));
+}
+document.querySelectorAll<HTMLElement>('[data-lang]').forEach((b) => (b.onclick = () => setLang(b.dataset.lang === 'ru' ? 'ru' : 'en')));
 
 /** Reads the open screen aloud (or stops reading). */
 function readAloud(): void {
   const synth = globalThis.speechSynthesis;
-  if (!synth) return hud.toast('This browser cannot read aloud.', 'bad');
+  if (!synth) return hud.toast(L('noReadAloud'), 'bad');
   if (synth.speaking) return synth.cancel();
   const text = (modal ? $('modal-panel').innerText : [$('hud-watch').innerText, $('hud-ship').innerText, $('nav-text').innerText].join('. ')).replace(/\s+/g, ' ').trim().slice(0, 4000);
   const u = new SpeechSynthesisUtterance(text);
@@ -112,9 +125,9 @@ loadAssets(null).then(() => {
   const hash = new URLSearchParams(location.hash.slice(1));
   const tok = hash.get('token');
   if (tok) net.adopt(tok);
-  if (hash.has('verified')) $('login-error').textContent = 'E-mail confirmed. Welcome aboard.';
-  if (hash.has('verify-failed')) $('login-error').textContent = 'That confirmation link has expired.';
-  if (hash.get('auth-error')) $('login-error').textContent = hash.get('auth-error')!;
+  if (hash.has('verified')) $('login-error').textContent = L('verified');
+  if (hash.has('verify-failed')) $('login-error').textContent = L('verifyFailed');
+  if (hash.get('auth-error')) $('login-error').textContent = serverText(hash.get('auth-error')!);
   const reset = hash.get('reset');
   if (reset) {
     $('reset-form').classList.remove('hidden');
@@ -124,7 +137,7 @@ loadAssets(null).then(() => {
       if (r.token) {
         net.adopt(r.token);
         net.connect();
-      } else $('login-error').textContent = r.error ?? 'Could not reset.';
+      } else $('login-error').textContent = (r.error ? serverText(r.error) : L('resetFailed'));
     };
   }
   if (location.hash) history.replaceState(null, '', location.pathname);
@@ -138,7 +151,7 @@ async function authPost(path: string, body: Record<string, string>): Promise<{ t
     const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     return (await res.json()) as { token?: string; error?: string };
   } catch {
-    return { error: 'The harbour master is not answering.' };
+    return { error: L('noAnswer') };
   }
 }
 
@@ -146,16 +159,18 @@ let registering = false;
 $('register-toggle').onclick = () => {
   registering = !registering;
   $('register-name-wrap').classList.toggle('hidden', !registering);
-  ($('email-form').querySelector('[data-mode]') as HTMLElement).textContent = registering ? 'Create the account' : 'Sign in';
+  const btn = $('email-form').querySelector('[data-mode]') as HTMLElement;
+  btn.dataset.i18n = registering ? 'login.create' : 'login.signIn';
+  btn.textContent = t(registering ? 'login.create' : 'login.signIn');
 };
 $('forgot-btn').onclick = async () => {
   const email = ($('login-email') as HTMLInputElement).value.trim();
   if (!email) {
-    $('login-error').textContent = 'Write your e-mail first.';
+    $('login-error').textContent = L('emailFirst');
     return;
   }
   await authPost('/auth/forgot', { email });
-  $('login-error').textContent = 'If that address has an account, a letter is on its way.';
+  $('login-error').textContent = L('letterSent');
 };
 ($('email-form') as HTMLFormElement).onsubmit = async (e) => {
   e.preventDefault();
@@ -165,21 +180,21 @@ $('forgot-btn').onclick = async () => {
     ? await authPost('/auth/register', { email, password, name: ($('register-name') as HTMLInputElement).value.trim() })
     : await authPost('/auth/login', { email, password });
   if (!r.token) {
-    $('login-error').textContent = r.error ?? 'Could not sign in.';
+    $('login-error').textContent = (r.error ? serverText(r.error) : L('signInFailed'));
     return;
   }
   net.adopt(r.token);
   net.connect();
 };
 fetch('/auth/providers').then((r) => r.json()).then((d: { providers: { id: string; name: string }[] }) => {
-  $('oauth-buttons').innerHTML = d.providers.map((p) => `<a class="btn btn-small" href="/auth/oauth/${p.id}">Sign in with ${p.name}</a>`).join('');
+  $('oauth-buttons').innerHTML = d.providers.map((p) => `<a class="btn btn-small" href="/auth/oauth/${p.id}">${esc(L('signInWith', { name: p.name }))}</a>`).join('');
 }).catch(() => undefined);
 
 ($('login-form') as HTMLFormElement).onsubmit = (e) => {
   e.preventDefault();
   const name = ($('login-name') as HTMLInputElement).value.trim();
   if (name.length < 3) {
-    $('login-error').textContent = 'A captain needs a name of at least three letters.';
+    $('login-error').textContent = L('nameShort');
     return;
   }
   net.forget();
@@ -247,7 +262,7 @@ function onMessage(m: ServerMsg): void {
     case 'mutiny':
       if (m.mutineers > 0) {
         audio.bell();
-        hud.banner('MUTINY', `${m.ringleader} and ${m.mutineers} men`);
+        hud.banner(L('mutiny'), L('mutinySub', { name: m.ringleader, n: m.mutineers, men: plural(m.mutineers, L('men.one'), L('men.few'), L('men.many')) }));
       }
       break;
     case 'boarding':
@@ -255,7 +270,7 @@ function onMessage(m: ServerMsg): void {
       else if (modal === 'boarding') closeModal();
       break;
     case 'sunk_self':
-      lastSunk = { lost: m.lost, port: state.ports.find((p) => p.id === m.respawnPort)?.name ?? 'port', towed: !!m.towed };
+      lastSunk = { lost: m.lost, port: state.ports.find((p) => p.id === m.respawnPort)?.name ?? L('port'), towed: !!m.towed };
       openModal('sunk');
       break;
     case 'toast':
@@ -266,7 +281,7 @@ function onMessage(m: ServerMsg): void {
       hud.chat(m.from, m.text, m.ch);
       break;
     case 'duel':
-      if (m.view && m.view.startsIn === 5) hud.banner('A DUEL', m.view.sides.map((side) => side.map((x) => x.name).join(', ')).join('  against  '));
+      if (m.view && m.view.startsIn === 5) hud.banner(L('duel'), m.view.sides.map((side) => side.map((x) => x.name).join(', ')).join(`  ${L('against')}  `));
       if (modal === 'company') refreshModal();
       break;
     case 'party':
@@ -294,9 +309,9 @@ function onMessage(m: ServerMsg): void {
         audio.onEvent(e);
         if (e.k === 'region') {
           const r = REGIONS[e.region];
-          hud.banner(r.name, `${r.safety === 'safe' ? 'Safe waters' : r.safety === 'contested' ? 'Contested waters' : 'Lawless waters'} — ${r.mood}`);
-        } else if (e.k === 'discover' && !e.quiet) hud.toast(`Charted: ${e.name}`, 'xp');
-        else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) hud.toast('Grapples away! Boarding action!', 'info');
+          hud.banner(r.name, `${L(r.safety === 'safe' ? 'safeWaters' : r.safety === 'contested' ? 'contestedWaters' : 'lawlessWaters')} — ${r.mood}`);
+        } else if (e.k === 'discover' && !e.quiet) hud.toast(L('charted', { name: sv(e.name) }), 'xp');
+        else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) hud.toast(L('grapples'), 'info');
       }
       if (modal === 'map') worldMap.draw(state);
       break;
@@ -456,7 +471,7 @@ addEventListener('keydown', (e) => {
       const list = state.self ? activeTalents(state.self.talents) : [];
       const tal = list[Number(act.slice(6)) - 1];
       if (tal) sendTalent(tal.id);
-      else hud.toast('No active talent in that slot — learn one (T).', 'bad');
+      else hud.toast(L('noTalent'), 'bad');
       break;
     }
     case 'fireMode':
@@ -479,7 +494,7 @@ addEventListener('keydown', (e) => {
       if (boardTarget !== null) {
         const aggression: Aggression = e.shiftKey ? 'careful' : e.ctrlKey ? 'brutal' : 'standard';
         net.send({ t: 'board', target: boardTarget, aggression });
-      } else hud.toast('No crippled ship within grappling range.', 'bad');
+      } else hud.toast(L('noCrippled'), 'bad');
       break;
     case 'land':
       net.send({ t: 'land' });
@@ -525,7 +540,7 @@ addEventListener('keydown', (e) => {
       toggle('help');
       break;
     case 'mute':
-      hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 'info');
+      hud.toast(L(audio.toggleMute() ? 'soundOff' : 'soundOn'), 'info');
       break;
     case 'harbour':
       if (docked) openModal('port');
@@ -599,7 +614,7 @@ export function chaserEndUnderCursor(): 'bow' | 'stern' | null {
 function fireChasers(): void {
   if (state.self?.dockedAt) return;
   const end = chaserEndUnderCursor();
-  if (!end) return hud.toast('Chasers only bear along the keel — aim ahead or astern.', 'bad');
+  if (!end) return hud.toast(L('chasersKeel'), 'bad');
   const m = mouseWorld();
   net.send({ t: 'chase', end, x: Math.round(m.x), y: Math.round(m.y) });
 }
@@ -666,25 +681,25 @@ function computePrompt(): string {
   boardTarget = best;
   const parts: string[] = [];
   if (best !== null) {
-    const name = state.ships.get(best)?.info?.name ?? 'her';
-    parts.push(`<kbd>B</kbd> Board the ${esc(name)} <span class="muted">(Shift careful · Ctrl brutal)</span>`);
+    const name = state.ships.get(best)?.info?.name ?? L('her');
+    parts.push(`<kbd>B</kbd> ${esc(L('board', { name }))} <span class="muted">${esc(L('boardMods'))}</span>`);
   }
   const ab = self.abyss;
-  if (ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500) parts.push('At the rim of the Eye: type <kbd>/ritual</kbd> to speak the Raising Ritual (30 cursed relics in the hold).');
+  if (ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500) parts.push(esc(L('ritual', { cmd: '\u0000' })).replace('\u0000', '<kbd>/ritual</kbd>'));
   if (self.landing) {
     const now = state.estServerTime();
     const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
-    parts.push(`Boats ashore at the ${esc(self.landing.feature.replace('_', ' '))} — ${Math.round(frac * 100)}% <span class="muted">(raise sail to recall)</span>`);
-  } else if (self.landable?.blocked) parts.push(`<span class="muted">${esc(self.landable.feature)} — ${esc(self.landable.blocked)}</span>`);
-  else if (self.landable?.action === 'dig') parts.push(`<kbd>L</kbd> Dig for the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
-  else if (self.landable?.action === 'raise') parts.push(`<kbd>L</kbd> Raise the ${esc(self.landable.feature.replace(/^wreck of the /, ''))} from the sea floor`);
-  else if (self.landable?.action === 'expedition') parts.push(`<kbd>L</kbd> Lower the diving bell over ${esc(self.landable.island)} (heave to first)`);
-  else if (self.landable?.action === 'dive') parts.push(`<kbd>L</kbd> Send divers down to the ${esc(self.landable.feature)}`);
-  else if (self.landable) parts.push(`<kbd>L</kbd> Send a landing party to the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
+    parts.push(`${esc(L('ashore', { feature: sv(self.landing.feature.replace('_', ' ')), pct: Math.round(frac * 100) }))} <span class="muted">${esc(L('recall'))}</span>`);
+  } else if (self.landable?.blocked) parts.push(`<span class="muted">${esc(sv(self.landable.feature))} — ${esc(sv(self.landable.blocked))}</span>`);
+  else if (self.landable?.action === 'dig') parts.push(`<kbd>L</kbd> ${esc(L('dig', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
+  else if (self.landable?.action === 'raise') parts.push(`<kbd>L</kbd> ${esc(L('raise', { feature: sv(self.landable.feature.replace(/^wreck of the /, '')) }))}`);
+  else if (self.landable?.action === 'expedition') parts.push(`<kbd>L</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);
+  else if (self.landable?.action === 'dive') parts.push(`<kbd>L</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
+  else if (self.landable) parts.push(`<kbd>L</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
-  if (port) parts.push(`<kbd>F</kbd> Enter ${esc(port.name)}`);
-  if (you.flags & SF.PROTECTED) parts.push('<span class="muted">Protected — firing ends it</span>');
-  if (you.combat && !(you.flags & SF.REPAIRING) && you.hull < you.hullMax * 0.5) parts.push('<span class="muted"><kbd>R</kbd> repairs need a lull in the fighting</span>');
+  if (port) parts.push(`<kbd>F</kbd> ${esc(L('enter', { port: sv(port.name) }))}`);
+  if (you.flags & SF.PROTECTED) parts.push(`<span class="muted">${esc(L('protected'))}</span>`);
+  if (you.combat && !(you.flags & SF.REPAIRING) && you.hull < you.hullMax * 0.5) parts.push(`<span class="muted">${esc(L('repairLull', { key: '\u0000' })).replace('\u0000', '<kbd>R</kbd>')}</span>`);
   return parts.join('<br>');
 }
 
@@ -729,7 +744,7 @@ function ammoRadial(): { label: string; run: () => void }[] {
 function actionsRadial(): { label: string; run: () => void }[] {
   return [
     { label: t('act.repair'), run: () => net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) }) },
-    { label: t('act.board'), run: () => (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast('No crippled ship within grappling range.', 'bad')) },
+    { label: t('act.board'), run: () => (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(L('noCrippled'), 'bad')) },
     { label: t('act.orders'), run: () => net.send({ t: 'station', station: STATIONS[(STATIONS.indexOf(state.you?.station ?? 'balanced') + 1) % STATIONS.length] }) },
     { label: t('act.land'), run: () => net.send({ t: 'land' }) },
     { label: t('act.fireMode'), run: () => net.send({ t: 'fire_mode', rolling: !state.self?.rollingFire }) },
@@ -769,7 +784,7 @@ function pollPad(dt: number): void {
   }
   if (!padSeen) {
     padSeen = true;
-    hud.toast('Gamepad ready — Menu for options, View for the chart.', 'info');
+    hud.toast(L('padReady'), 'info');
     // Steam Deck and other small screens: 125% interface, once.
     if (innerWidth <= 1280 && innerHeight <= 800 && settings().uiScale === 1) update({ uiScale: 1.25 });
   }
@@ -869,7 +884,7 @@ function pollPad(dt: number): void {
         break;
       case BTN.L3:
         padHoldHeading = padHoldHeading === null && own ? own.heading : null;
-        hud.toast(padHoldHeading !== null ? 'Holding the course.' : 'The helm is yours.', 'info');
+        hud.toast(L(padHoldHeading !== null ? 'holdCourse' : 'helmYours'), 'info');
         break;
       case BTN.R3:
         padTarget = lockTarget(rx, ry);
@@ -907,7 +922,7 @@ function lockTarget(rx: number, ry: number): number | null {
       best = s.id;
     }
   }
-  if (best !== null) hud.toast(`Target: ${state.ships.get(best)?.info?.name ?? 'a ship'}`, 'info');
+  if (best !== null) hud.toast(L('target', { name: state.ships.get(best)?.info?.name ?? L('aShip') }), 'info');
   return best;
 }
 
@@ -962,6 +977,18 @@ function frame(t: number): void {
     renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: chaserEndUnderCursor() });
     if (own) audio.listener = { x: own.x, y: own.y };
     audio.ambience(state.wind[1], state.weather, dt);
+    if (own) {
+      // The score follows the scene (docs/07 §10.4); the rigging creaks with the load; the bells keep the watch.
+      const hostileNear = [...state.ships.values()].some((x) => x.cur.flags & SF.HOSTILE && dist(x.cur.x, x.cur.y, own.x, own.y) < 1200);
+      audio.frame(dt, {
+        docked: !!state.self?.dockedAt,
+        combat: !!state.you?.combat,
+        chased: hostileNear,
+        weather: state.weather,
+        region: state.region,
+        anomaly: state.bosses.some((b) => dist(b.x, b.y, own.x, own.y) < 3000),
+      }, state.wind[1], own.sail, Math.abs(shipHeel(own.heading, state.wind[0], state.wind[1], own.sail, SHIP_CLASSES[state.self!.loadout.classId].tier, state.you?.water ?? 0, 0)), timeOfDay(state.estServerTime()), !state.self?.dockedAt);
+    }
     hud.update(state, prompt);
     divePanel.render(state.dive);
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);

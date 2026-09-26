@@ -22,6 +22,13 @@ import { GlSea, GlSky, glWanted } from './gl.ts';
 import { CELL, SpriteAtlas } from './atlas.ts';
 import type { SailKey } from './atlas.ts';
 import { FACTION_SIGN } from './relation.ts';
+import { buildRelief } from './terrain.ts';
+import type { Palette } from './terrain.ts';
+import { dict } from '../i18n.ts';
+import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
+
+const L = dict(REN, RRU);
+const hasRole = (r: string): r is 'merchant' => `role.${r}` in REN;
 import { cbColor, settings } from '../settings.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 
@@ -154,8 +161,11 @@ export class Renderer {
   }
 
   /** Main frame. */
+  private frameNo = 0;
+
   render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null }): void {
     this.time += dt;
+    this.frameNo++;
     this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
     const g = this.g;
     if (own) {
@@ -426,7 +436,7 @@ export class Renderer {
         g.font = 'italic 11px "Cormorant Garamond", Georgia, serif';
         g.fillStyle = 'rgba(200,215,210,0.55)';
         g.textAlign = 'center';
-        g.fillText(`reef · ${rf.depth.toFixed(1)} m`, this.sx(rf.x), this.sy(rf.y));
+        g.fillText(L('reef', { m: rf.depth.toFixed(1) }), this.sx(rf.x), this.sy(rf.y));
       }
       g.restore();
     }
@@ -469,11 +479,21 @@ export class Renderer {
     g.fill();
     g.fillStyle = BIOME_TINT[is.biome];
     g.fill();
-    // Elevation shading: concentric darker cores.
-    for (const [sc, a] of [[0.72, 0.18], [0.45, 0.2]] as const) {
-      this.path(is.poly, sc, is.x, is.y);
-      g.fillStyle = is.biome === 'ice' ? `rgba(230,238,245,${a * 0.8})` : `rgba(8,10,8,${a})`;
-      g.fill();
+    // Relief: hill-shaded height, cliffs and beaches (terrain.ts), clipped to the coast. Until an island's mask
+    // is built (at most one a frame), concentric cores stand in.
+    const relief = this.reliefOf(is);
+    if (relief) {
+      this.path(is.poly);
+      g.save();
+      g.clip();
+      g.drawImage(relief.canvas, this.sx(relief.x0), this.sy(relief.y0), relief.size * this.zoom, relief.size * this.zoom);
+      g.restore();
+    } else {
+      for (const [sc, a] of [[0.72, 0.18], [0.45, 0.2]] as const) {
+        this.path(is.poly, sc, is.x, is.y);
+        g.fillStyle = is.biome === 'ice' ? `rgba(230,238,245,${a * 0.8})` : `rgba(8,10,8,${a})`;
+        g.fill();
+      }
     }
     // Surf line.
     this.path(is.poly);
@@ -493,6 +513,31 @@ export class Renderer {
     }
     g.restore();
     this.drawFeatures(is);
+  }
+
+  private reliefCache = new Map<number, { canvas: HTMLCanvasElement; x0: number; y0: number; size: number }>();
+  private reliefBuiltAt = -1;
+
+  /** The island's relief mask, built lazily (one per frame) and kept for the 60 most recently seen islands. */
+  private reliefOf(is: IslandData): { canvas: HTMLCanvasElement; x0: number; y0: number; size: number } | null {
+    const hit = this.reliefCache.get(is.id);
+    if (hit) {
+      this.reliefCache.delete(is.id);
+      this.reliefCache.set(is.id, hit);
+      return hit;
+    }
+    if (this.reliefBuiltAt === this.frameNo) return null;
+    this.reliefBuiltAt = this.frameNo;
+    const palette: Palette = is.biome === 'ice' ? 'ice' : is.biome === 'volcanic' ? 'dark' : is.biome === 'bone' || is.biome === 'barren' ? 'pale' : 'green';
+    const r = buildRelief(is.poly, is.x, is.y, 0x51ed + is.id * 977, palette, is.biome === 'volcanic' || is.biome === 'ruins' ? 1 : is.biome === 'mossy' ? 0 : 0.5);
+    const c = document.createElement('canvas');
+    c.width = r.w;
+    c.height = r.h;
+    c.getContext('2d')!.putImageData(new ImageData(r.rgba as unknown as Uint8ClampedArray<ArrayBuffer>, r.w, r.h), 0, 0);
+    const entry = { canvas: c, x0: r.x0, y0: r.y0, size: r.w * r.res };
+    this.reliefCache.set(is.id, entry);
+    while (this.reliefCache.size > 60) this.reliefCache.delete(this.reliefCache.keys().next().value!);
+    return entry;
   }
 
   private featurePoint(is: IslandData, salt: number, inset: number): { x: number; y: number } {
@@ -662,7 +707,7 @@ export class Renderer {
       g.fillStyle = 'rgba(224,184,98,0.8)';
       g.font = '11px Inter, sans-serif';
       g.textAlign = 'center';
-      g.fillText(`salvage ~${l.value}`, this.sx(l.x), this.sy(l.y) + size * 0.7);
+      g.fillText(L('salvage', { n: l.value }), this.sx(l.x), this.sy(l.y) + size * 0.7);
     }
   }
 
@@ -688,20 +733,27 @@ export class Renderer {
     const hidden = (s.flags & SF.HIDDEN) !== 0 || (s.flags & SF.SWALLOWED) !== 0;
     const sinking = s.sinkT > 0 || (s.flags & SF.SINKING) !== 0;
     const sinkF = sinking ? clamp(s.sinkT / 6, 0, 1) : 0;
+    // Heel: she leans to leeward with the wind on her beam and her canvas set; water in the hold adds a list.
+    const heel = shipHeel(s.h, state.wind[0], state.wind[1], s.sail, cls.tier, s.own ? state.you?.water ?? 0 : 0, settings().reduceMotion ? 0 : Math.sin(this.time * 0.9 + s.id));
     g.save();
     g.translate(x, y);
-    // Engine shadow: offset toward the moon-lit side (south-east), softened.
+    // Engine shadow: offset toward the moon-lit side (south-east), softened; a heeled hull throws it wider to leeward.
     g.save();
     g.rotate(s.h);
     g.fillStyle = `rgba(0,0,0,${0.35 * (1 - sinkF)})`;
     g.beginPath();
-    g.ellipse(beam * 0.35, beam * 0.45, beam * 0.62, len * 0.5, 0, 0, Math.PI * 2);
+    g.ellipse(beam * (0.35 + heel * 0.5), beam * 0.45, beam * (0.62 + Math.abs(heel) * 0.35), len * 0.5, 0, 0, Math.PI * 2);
     g.fill();
     g.restore();
 
     g.rotate(s.h + (sinking ? sinkF * 0.35 : 0));
     const scale = 1 - sinkF * 0.25;
     g.scale(scale, scale);
+    // Seen from above, a heeled ship shows less deck and her masts lean out to leeward.
+    if (heel) {
+      g.translate(heel * beam * 0.18, 0);
+      g.transform(1 - Math.abs(heel) * 0.14, 0, heel * 0.06, 1, 0, 0);
+    }
     g.globalAlpha = (hidden ? 0.45 : 1) * (1 - sinkF * 0.85);
     const stage = curseStageFromFlags(s.flags);
     const hullImg = this.shipImage(cls.id, stage);
@@ -1277,12 +1329,13 @@ export class Renderer {
     g.fillText(label, x, y);
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
-    const tag = info.isPlayer ? `${info.title ? info.title + ' · ' : ''}Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? 'World boss — a horror of the deep' : cls.monster ? 'A dead ship — mortars break it' : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
+    const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
+    const tag = info.isPlayer ? `${info.title ? info.title + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : `${cls.name} · ${faction?.short ?? ''}${role ? ' ' + role : ''}`;
     const marks = info.isPlayer
-      ? `${s.flags & SF.BLACK_FLAG ? ' · black flag' : ''}${s.flags & SF.GREEN_PENNANT ? ' · green pennant' : ''}${s.flags & SF.SHAME ? ' · SHAME' : ''}${s.flags & SF.BOUNTY ? ' · bounty' : ''}${s.flags & SF.DUEL ? ' · duelling' : ''}`
+      ? `${s.flags & SF.BLACK_FLAG ? L('blackFlag') : ''}${s.flags & SF.GREEN_PENNANT ? L('greenPennant') : ''}${s.flags & SF.SHAME ? L('shame') : ''}${s.flags & SF.BOUNTY ? L('bounty') : ''}${s.flags & SF.DUEL ? L('duel') : ''}`
       : '';
     if (s.flags & SF.SHAME) g.fillStyle = 'rgba(224,119,107,0.9)';
-    g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? ' · STRUCK' : ''), x, y + 11);
+    g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? L('struck') : ''), x, y + 11);
     // Hull and sails bars.
     const w = 46;
     g.fillStyle = 'rgba(0,0,0,0.7)';
@@ -1296,7 +1349,7 @@ export class Renderer {
     if (eye) {
       g.font = '10px Inter, sans-serif';
       g.fillStyle = 'rgba(0,0,0,0.8)';
-      const line = `hull ${eye.hull}% · crew ${eye.crew} · morale ${eye.morale} · P${eye.port ? '●' : '○'} S${eye.starboard ? '●' : '○'}`;
+      const line = L('eye', { hull: eye.hull, crew: eye.crew, morale: eye.morale, port: eye.port ? '●' : '○', stbd: eye.starboard ? '●' : '○' });
       g.fillText(line, x + 1, y + 34);
       g.fillStyle = '#d9c9a0';
       g.fillText(line, x, y + 33);
@@ -1323,4 +1376,15 @@ function hexA(color: string, a: number): string {
 function hexRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.replace('#', ''), 16);
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+/**
+ * How far a ship heels, −1 (to port) … 1 (to starboard): the wind's push across her (strongest on the beam) times
+ * the canvas set, less for heavier hulls; a flooded hold adds a steady list; the swell rocks her a little.
+ */
+export function shipHeel(heading: number, windDir: number, windStrength: number, sail: number, tier: number, water: number, swell: number): number {
+  const across = Math.sin(windDir - heading); // > 0: the wind blows toward her starboard side
+  const push = across * clamp(windStrength, 0, 1.5) * sail * (1.2 / (0.6 + tier * 0.4));
+  const list = water * 0.35;
+  return clamp(push * 0.8 + Math.sign(push || 1) * list + swell * 0.04 * (0.5 + windStrength), -1, 1);
 }

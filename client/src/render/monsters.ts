@@ -1,6 +1,7 @@
 // Monsters of the deep and their fights (docs/02 §11.A.4), drawn procedurally: the world bosses and their
 // parts, and the zones of their fights (whirlpool, coil, eye, ink, false lights, white water, the maze, the Song).
 
+import { serverText } from '../lang/server.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { BossView, PveSiteView } from '../../../shared/src/protocol.ts';
@@ -489,7 +490,7 @@ export function drawPveSites(g: CanvasRenderingContext2D, sites: PveSiteView[], 
     g.font = '12px "IM Fell English SC", serif';
     g.textAlign = 'center';
     g.fillStyle = 'rgba(216,210,196,0.7)';
-    g.fillText(s.name, x, y - (s.kind === 'city' ? 20 : (s.wall ?? 360) * zoom + 14));
+    g.fillText(serverText(s.name), x, y - (s.kind === 'city' ? 20 : (s.wall ?? 360) * zoom + 14));
     g.restore();
   }
 }

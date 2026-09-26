@@ -118,7 +118,7 @@ export interface Settings {
   plainTerms: boolean; // "close to the wind" for "close-hauled"
   captions: boolean; // sound captions with direction
   mono: boolean;
-  volume: { master: number; sea: number; combat: number; ui: number };
+  volume: { master: number; sea: number; combat: number; ui: number; music: number };
   keys: Keymap;
 }
 
@@ -126,7 +126,7 @@ export function defaults(): Settings {
   return {
     uiScale: 1, textScale: 1, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1 },
+    plainTerms: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
 }
@@ -141,7 +141,7 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   s.uiScale = Math.min(2, Math.max(0.7, Number(s.uiScale) || 1));
   s.textScale = Math.min(1.5, Math.max(0.9, Number(s.textScale) || 1));
   if (!['off', 'protan', 'deutan', 'tritan'].includes(s.colorblind)) s.colorblind = 'off';
-  for (const k of ['master', 'sea', 'combat', 'ui'] as const) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
+  for (const k of ['master', 'sea', 'combat', 'ui', 'music'] as const) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
   return s;
 }
 

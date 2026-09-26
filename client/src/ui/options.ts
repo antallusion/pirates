@@ -108,7 +108,7 @@ export class OptionsScreen {
           <label class="opt-range">${esc(t('opt.effects'))}<select data-sel="effects" class="field"><option value="auto" ${s.effects === 'auto' ? 'selected' : ''}>${esc(t('opt.effects.auto'))}</option><option value="low" ${s.effects === 'low' ? 'selected' : ''}>${esc(t('opt.effects.low'))}</option></select></label>
           ${check('webgl', 'opt.webgl')}`;
       case 'sound':
-        return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}`;
+        return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}`;
       case 'controls': {
         const clash = conflicts(s.keys);
         const bad = new Set([...clash.keys()]);

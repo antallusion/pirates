@@ -1,15 +1,14 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
-import { t } from '../i18n.ts';
+import { dict, lang, plural, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
 import { term } from './terms.ts';
 import { drawRelation, relationOf, RELATION_COLOR } from '../render/relation.ts';
 import { cbColor, settings } from '../settings.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
-import { WANTED_TITLES } from '../../../shared/src/data/factions.ts';
 import { AMMO, AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
-import { isNight, timeOfDay } from '../../../shared/src/constants.ts';
+import { isNight, nightFactor, timeOfDay } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { activeTalents } from '../../../shared/src/data/talents.ts';
@@ -20,6 +19,14 @@ import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, esc, fmt, knots } from './dom.ts';
+import { EN, RU } from '../lang/ui/hud.ts';
+import { NAME_RU } from '../lang/data.ts';
+import { serverText } from '../lang/server.ts';
+
+const L = dict(EN, RU);
+/** A name or sentence that came from the server, in the player's language. */
+const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
+const wantedTitle = (n: number): string => L(`wanted.${Math.max(0, Math.min(5, n))}` as keyof typeof EN & string);
 
 export class Hud {
   private lastCaptainKey = '';
@@ -44,7 +51,7 @@ export class Hud {
     const cap = CAPTAINS[self.captain];
 
     // Captain block (only re-rendered when something changes).
-    const ckey = `${self.level}|${self.xp}|${self.gold}|${self.wanted}|${self.talentPoints}`;
+    const ckey = `${lang()}|${self.level}|${self.xp}|${self.gold}|${self.wanted}|${self.talentPoints}`;
     if (ckey !== this.lastCaptainKey) {
       this.lastCaptainKey = ckey;
       const url = assetUrl(cap.portrait);
@@ -52,10 +59,10 @@ export class Hud {
         <div class="hud-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"></div>
         <div style="flex:1">
           <div class="hud-name">${esc(self.name)}</div>
-          <div class="row"><span class="lbl">${esc(cap.archetype)} · Lv ${self.level}</span><span class="gold val">${fmt(self.gold)} ⛁</span></div>
+          <div class="row"><span class="lbl">${esc(cap.archetype)} · ${esc(L('lv', { n: self.level }))}</span><span class="gold val">${fmt(self.gold)} ⛁</span></div>
           ${bar('xp', self.xp / Math.max(1, self.xpNext))}
-          <div class="row"><span class="wanted" title="${esc(WANTED_TITLES[self.wanted])}">${self.wanted ? '☠'.repeat(self.wanted) + ' ' + esc(WANTED_TITLES[self.wanted]) : '<span class="muted">Unknown to the law</span>'}</span>
-          ${self.talentPoints > 0 ? `<span class="gold">[T] ${self.talentPoints} talent pt</span>` : ''}</div>
+          <div class="row"><span class="wanted" title="${esc(wantedTitle(self.wanted))}">${self.wanted ? '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>
+          ${self.talentPoints > 0 ? `<span class="gold">${esc(L('talentPts', { n: self.talentPoints }))}</span>` : ''}</div>
         </div>`;
     }
 
@@ -63,24 +70,24 @@ export class Hud {
     const cls = SHIP_CLASSES[self.loadout.classId];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1, state.ownStats?.cursedVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
-    const skey = `${self.abyss?.pressure ?? -1}|${self.abyss?.shards ?? 0}|${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
+    const skey = `${lang()}|${self.abyss?.pressure ?? -1}|${self.abyss?.shards ?? 0}|${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
     if (skey !== this.lastShipKey) {
       this.lastShipKey = skey;
       const steps = [0, 0.25, 0.5, 0.75, 1].slice(1).map((v) => `<span class="${you.sail >= v - 0.01 ? 'on' : ''} ${Math.abs(you.sailT - v) < 0.01 ? 'target' : ''}"></span>`).join('');
       $('hud-ship').innerHTML = `
         <div class="row"><b style="font-family:var(--serif);font-size:16px">${esc(self.loadout.name)}</b><span class="lbl">${esc(cls.name)}</span></div>
-        <div class="row"><span class="lbl">Hull</span><span class="val">${fmt(you.hull)} / ${fmt(you.hullMax)}</span></div>${bar('hull', you.hull / you.hullMax)}
-        <div class="row"><span class="lbl">Sails</span><span class="val">${fmt(you.sails)} / ${fmt(you.sailsMax)}${you.rudderHp < 0.99 ? ` · rudder ${Math.round(you.rudderHp * 100)}%` : ''}</span></div>${bar('sails', you.sails / you.sailsMax)}
-        <div class="row"><span class="lbl">Crew</span><span class="val">${you.crew} / ${you.crewMax}</span></div>${bar('crew', you.crew / you.crewMax)}
-        ${you.water > 0.01 || you.leaks ? `<div class="row"><span class="lbl" style="color:var(--xp)">Water</span><span class="val">${Math.round(you.water * 100)}%${you.leaks ? ` · ${you.leaks} leak${you.leaks > 1 ? 's' : ''}` : ''}${you.water > 0.4 ? ' · listing' : ''}</span></div>${bar('crew', you.water)}` : ''}
-        <div class="row"><span class="lbl">Orders [G]</span><span class="val">${esc({ balanced: 'Balanced', gunnery: 'Guns', sailing: 'Braces', damage_control: 'Damage control' }[you.station])}</span></div>
-        <div class="row"><span class="lbl">Morale</span><span class="val">${you.morale}</span></div>${bar('morale', you.morale / 100)}
-        ${self.abyss && (self.abyss.inside || self.abyss.pressure > 0) ? `<div class="row" title="Depth pressure in the Abyss: whispers at 30, visions at 60, rot at 90. The Islands of Light wash it out."><span class="lbl" style="color:${self.abyss.pressure < 60 ? 'var(--fog)' : 'var(--bad)'}">Pressure</span><span class="val">${self.abyss.pressure}${self.abyss.shards ? ` · shards ${self.abyss.shards}/3` : ''}</span></div>${bar('sanity', self.abyss.pressure / 100)}` : ''}${you.sanity < 99.5 ? `<div class="row" title="The crew's nerve. The deep, the dark, cursed cargo and dead shipmates wear it down; rum, dreamleaf and a port restore it."><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">Sanity</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
-        ${self.company.unrest ? `<div class="row" title="Low loyalty and low morale breed mutiny. Pay, rum, a fair share or a port will calm them. [O] crew"><span class="lbl" style="color:var(--bad)">Crew</span><span class="val" style="color:var(--bad)">${esc(self.company.unrest)}</span></div>` : ''}
-        ${self.captain === 'drowned' ? `<div class="row" title="Dread: paid for miracles. Grows as you bleed, kill and sail in the dark. At 80 the Call: +20% power, but the crew hears it."><span class="lbl" style="color:var(--turq)">Dread</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ' · THE CALL' : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
-        <div class="row"><span class="lbl">Hold</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · food ${Math.floor(self.cargo.provisions)}` : ' · <span style="color:var(--bad)">no food</span>'}</span></div>
-        ${self.curse >= 25 ? `<div class="row"><span class="lbl" style="color:var(--turq)">Curse</span><span class="val" style="color:var(--turq)">stage ${self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1} · ${self.curse}</span></div>` : ''}
-        <div class="row" style="margin-top:4px"><span class="lbl">Sail [W/S]</span><span class="val">${knots(you.spd)} kn${you.flags & SF.REPAIRING ? ' · repairing' : ''}</span></div>
+        <div class="row"><span class="lbl">${esc(L('hull'))}</span><span class="val">${fmt(you.hull)} / ${fmt(you.hullMax)}</span></div>${bar('hull', you.hull / you.hullMax)}
+        <div class="row"><span class="lbl">${esc(L('sails'))}</span><span class="val">${fmt(you.sails)} / ${fmt(you.sailsMax)}${you.rudderHp < 0.99 ? ` · ${esc(L('rudder', { n: Math.round(you.rudderHp * 100) }))}` : ''}</span></div>${bar('sails', you.sails / you.sailsMax)}
+        <div class="row"><span class="lbl">${esc(L('crew'))}</span><span class="val">${you.crew} / ${you.crewMax}</span></div>${bar('crew', you.crew / you.crewMax)}
+        ${you.water > 0.01 || you.leaks ? `<div class="row"><span class="lbl" style="color:var(--xp)">${esc(L('water'))}</span><span class="val">${Math.round(you.water * 100)}%${you.leaks ? ` · ${you.leaks} ${esc(plural(you.leaks, L('leak.one'), L('leak.few'), L('leak.many')))}` : ''}${you.water > 0.4 ? ` · ${esc(L('listing'))}` : ''}</span></div>${bar('crew', you.water)}` : ''}
+        <div class="row"><span class="lbl">${esc(L('orders'))}</span><span class="val">${esc(L(`station.${you.station}`))}</span></div>
+        <div class="row"><span class="lbl">${esc(L('morale'))}</span><span class="val">${you.morale}</span></div>${bar('morale', you.morale / 100)}
+        ${self.abyss && (self.abyss.inside || self.abyss.pressure > 0) ? `<div class="row" title="${esc(L('pressureTip'))}"><span class="lbl" style="color:${self.abyss.pressure < 60 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('pressure'))}</span><span class="val">${self.abyss.pressure}${self.abyss.shards ? ` · ${esc(L('shards', { n: self.abyss.shards }))}` : ''}</span></div>${bar('sanity', self.abyss.pressure / 100)}` : ''}${you.sanity < 99.5 ? `<div class="row" title="${esc(L('sanityTip'))}"><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('sanity'))}</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
+        ${self.company.unrest ? `<div class="row" title="${esc(L('unrestTip'))}"><span class="lbl" style="color:var(--bad)">${esc(L('crew'))}</span><span class="val" style="color:var(--bad)">${esc(sv(self.company.unrest))}</span></div>` : ''}
+        ${self.captain === 'drowned' ? `<div class="row" title="${esc(L('dreadTip'))}"><span class="lbl" style="color:var(--turq)">${esc(L('dread'))}</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ` · ${esc(L('theCall'))}` : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
+        <div class="row"><span class="lbl">${esc(L('hold'))}</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · ${esc(L('food', { n: Math.floor(self.cargo.provisions) }))}` : ` · <span style="color:var(--bad)">${esc(L('noFood'))}</span>`}</span></div>
+        ${self.curse >= 25 ? `<div class="row"><span class="lbl" style="color:var(--turq)">${esc(L('curse'))}</span><span class="val" style="color:var(--turq)">${esc(L('curseStage', { n: self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1 }))} · ${self.curse}</span></div>` : ''}
+        <div class="row" style="margin-top:4px"><span class="lbl">${esc(L('sail'))}</span><span class="val">${knots(you.spd)} ${esc(L('kn'))}${you.flags & SF.REPAIRING ? ` · ${esc(L('repairing'))}` : ''}</span></div>
         <div class="sail-steps">${steps}</div>`;
     }
 
@@ -90,9 +97,9 @@ export class Hud {
     const ammo = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed').map((a, i) => `<div class="ammo ${you.ammoSel === a ? 'sel' : ''}" data-ammo="${a}"><b>[${a === 'cursed' ? 'U' : i + 1}]</b>${esc(AMMO[a].name)}<br>${you.ammo[a]}</div>`).join('');
     const reload = (['port', 'starboard'] as const).map((side) => {
       const r = you.reload[side];
-      return `<div class="reload-side ${r >= 1 ? 'ready' : ''}">${side === 'port' ? '[Q] Port' : 'Starboard [E]'}${bar('', Math.round(r * 50) / 50)}</div>`;
+      return `<div class="reload-side ${r >= 1 ? 'ready' : ''}">${esc(L(side))}${bar('', Math.round(r * 50) / 50)}</div>`;
     }).join('') + (SHIP_CLASSES[self.loadout.classId].bowChasers + SHIP_CLASSES[self.loadout.classId].sternChasers > 0
-      ? `<div class="reload-side ${Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 ? 'ready' : ''}">[Space] Chasers${bar('', Math.round(Math.max(you.reload.bow, you.reload.stern) * 50) / 50)}</div>` : '')
+      ? `<div class="reload-side ${Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 ? 'ready' : ''}">${esc(L('chasers'))}${bar('', Math.round(Math.max(you.reload.bow, you.reload.stern) * 50) / 50)}</div>` : '')
       + (self.loadout.mount ? `<div class="reload-side ${you.reload.mount >= 1 ? 'ready' : ''}">[RMB] ${esc(MOUNTS[self.loadout.mount].name)}${bar('', Math.round(you.reload.mount * 50) / 50)}</div>` : '');
     const abilities = cap.abilities.map((a) => {
       const ready = self.cooldowns[a.id] ?? 0;
@@ -104,7 +111,7 @@ export class Hud {
       const starved = (a.dreadCost ?? 0) > you.dread;
       return `<div class="ab ${a.kind === 'ultimate' ? 'ult' : ''} ${locked || charge || starved ? 'locked' : ''}" data-ab="${a.id}" title="${esc(a.name)} — ${esc(a.description)}">
         <span class="k">${a.key}</span><span class="n">${esc(a.name)}</span>${charge}
-        ${frac > 0 ? `<div class="cd" style="height:${Math.round(frac * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}${locked ? '<div class="cdt">Lv6</div>' : ''}</div>`;
+        ${frac > 0 ? `<div class="cd" style="height:${Math.round(frac * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}${locked ? `<div class="cdt">${esc(L('lv6'))}</div>` : ''}</div>`;
     }).join('');
     const talentBar = activeTalents(self.talents).slice(0, 5).map((t, i) => {
       const left = Math.max(0, (self.talentCooldowns[t.id] ?? 0) - now);
@@ -113,10 +120,10 @@ export class Hud {
         ${frac > 0 ? `<div class="cd" style="height:${Math.round(Math.min(1, frac) * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}</div>`;
     }).join('');
     const heat = self.heat.port || self.heat.starboard
-      ? `<div class="row" style="font-size:11px"><span class="lbl" style="color:var(--bad)">Heat</span><span class="val">P ${self.heat.port} · S ${self.heat.starboard}</span></div>` : '';
+      ? `<div class="row" style="font-size:11px"><span class="lbl" style="color:var(--bad)">${esc(L('heat'))}</span><span class="val">${esc(L('heatSides', { p: self.heat.port, s: self.heat.starboard }))}</span></div>` : '';
     // Storm Gunner: the crest of the swell (the same seven-second cycle as the server).
     const crest = (self.talents.brg_storm_gunner ?? 0) > 0 && state.wind[1] >= 0.9 && Math.sin((now * Math.PI * 2) / 7 + (state.entityId ?? 0)) > 0.75;
-    const mode = `<div class="row" style="font-size:11px"><span class="lbl">[K] Fire</span><span class="val">${self.rollingFire ? 'rolling' : 'broadside'}${crest ? ' · <span style="color:var(--gold)">CREST +15%</span>' : ''}</span></div>`;
+    const mode = `<div class="row" style="font-size:11px"><span class="lbl">${esc(L('fireMode'))}</span><span class="val">${esc(L(self.rollingFire ? 'rolling' : 'broadside'))}${crest ? ` · <span style="color:var(--gold)">${esc(L('crest'))}</span>` : ''}</span></div>`;
     const combat = $('hud-combat');
     const key = ammo + reload + abilities + talentBar + heat + mode;
     if (key === this.lastCombatKey) {
@@ -149,32 +156,32 @@ export class Hud {
       }
       return;
     }
-    const key = JSON.stringify([b.id, b.phase, Math.round((b.hp / b.hpMax) * 200), b.parts.map((p) => Math.round((p.hp / p.hpMax) * 20)), b.hint, b.you, Math.floor(b.endsIn / 60)]);
+    const key = JSON.stringify([lang(), b.id, b.phase, Math.round((b.hp / b.hpMax) * 200), b.parts.map((p) => Math.round((p.hp / p.hpMax) * 20)), b.hint, b.you, Math.floor(b.endsIn / 60)]);
     if (key === this.lastBossKey) return;
     this.lastBossKey = key;
     el.classList.remove('hidden');
     const pct = Math.max(0, Math.min(100, (b.hp / b.hpMax) * 100));
-    const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => `<span class="${p.hp <= 0 ? 'dead' : ''}">${esc(p.label)} ${p.hp > 0 ? Math.round((p.hp / p.hpMax) * 100) + '%' : ''}</span>`).join('')}</div>` : '';
-    const alert = b.you.swallowed > 0 ? `<div class="balert">SWALLOWED — ${b.you.swallowed} s to tear free. Fire everything!</div>` : b.you.grabbed ? '<div class="balert">HELD BY AN ARM — [G] Axes!</div>' : '';
-    el.innerHTML = `<div class="bname">${esc(b.name)}</div><div class="bphase">${esc(b.phaseName)} · leaves in ${Math.ceil(b.endsIn / 60)} min</div>
+    const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => `<span class="${p.hp <= 0 ? 'dead' : ''}">${esc(sv(p.label))} ${p.hp > 0 ? Math.round((p.hp / p.hpMax) * 100) + '%' : ''}</span>`).join('')}</div>` : '';
+    const alert = b.you.swallowed > 0 ? `<div class="balert">${esc(L('swallowed', { n: b.you.swallowed }))}</div>` : b.you.grabbed ? `<div class="balert">${esc(L('grabbed'))}</div>` : '';
+    el.innerHTML = `<div class="bname">${esc(sv(b.name))}</div><div class="bphase">${esc(sv(b.phaseName))} · ${esc(L('bossLeaves', { n: Math.ceil(b.endsIn / 60) }))}</div>
       <div class="bbar"><i style="width:${pct.toFixed(1)}%"></i></div>${parts}
-      <div class="bhint">${esc(b.hint)}</div><div class="byou">Your part: ${Math.round(b.you.share * 100)}%</div>${alert}`;
+      <div class="bhint">${esc(sv(b.hint))}</div><div class="byou">${esc(L('bossShare', { n: Math.round(b.you.share * 100) }))}</div>${alert}`;
   }
 
   private updateRegion(state: ClientState, now: number): void {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${r.safety}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(state.weather.replace('_', ' '))} · ${esc(seasonName(now))}${state.self?.quests[0] ? `<br><span style="color:var(--gold)">${esc(state.self.quests[0].name)}:</span> <span class="muted">${esc(state.self.quests[0].text)}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span>` : ''}${state.self?.forecast ? `<br><span class="muted">Weather Eye: ${esc(state.self.forecast.kind.replace('_', ' '))} in ${Math.max(1, Math.round(state.self.forecast.in / 60))} min</span>` : ''}${this.eventLines(state)}`;
+    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))} · ${esc(seasonWord(seasonName(now)))}${state.self?.quests[0] ? `<br><span style="color:var(--gold)">${esc(sv(state.self.quests[0].name))}:</span> <span class="muted">${esc(sv(state.self.quests[0].text))}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span>` : ''}${state.self?.forecast ? `<br><span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}`;
   }
 
   /** World events in these waters, with the time they have left. */
   private eventLines(state: ClientState): string {
     const left = (secs: number) => {
       const s = Math.max(0, secs - (performance.now() - state.eventsAt) / 1000);
-      return s >= 86400 ? `${Math.round(s / 86400)} d` : s >= 3600 ? `${Math.round(s / 3600)} h` : `${Math.max(1, Math.round(s / 60))} min`;
+      return s >= 86400 ? L('days', { n: Math.round(s / 86400) }) : s >= 3600 ? L('hours', { n: Math.round(s / 3600) }) : L('mins', { n: Math.max(1, Math.round(s / 60)) });
     };
-    return state.events.filter((e) => e.region === state.region).map((e) => `<br><span style="color:var(--bad)">⚑ ${esc(e.title)}</span> <span class="muted">· ${left(e.endsIn)}</span>`).join('');
+    return state.events.filter((e) => e.region === state.region).map((e) => `<br><span style="color:var(--bad)">⚑ ${esc(sv(e.title))}</span> <span class="muted">· ${left(e.endsIn)}</span>`).join('');
   }
 
   private drawNav(state: ClientState): void {
@@ -202,7 +209,7 @@ export class Hud {
     g.font = '16px "IM Fell English SC", serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    for (const [t, a] of [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]] as const) g.fillText(t, Math.sin(a) * (R - 14), -Math.cos(a) * (R - 14));
+    for (const [t, a] of [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]] as const) g.fillText(L(`compass.${t}`), Math.sin(a) * (R - 14), -Math.cos(a) * (R - 14));
     const you = state.you!;
     // No-go wedge (relative to wind source).
     const from = state.wind[0] + Math.PI;
@@ -271,8 +278,17 @@ export class Hud {
       g.fill();
     }
     g.strokeStyle = 'rgba(90,160,150,0.7)';
+    // Night navigation by lights: in the dark a shoal shows only within reach of a light — a lighthouse (3 km),
+    // a port (2.5 km) or your own lanterns (600 m).
+    const dark = nightFactor(state.estServerTime()) > 0.6;
+    const lights: [number, number, number][] = dark ? [[own.x, own.y, 600]] : [];
+    if (dark) {
+      for (const p of state.ports) if (Math.abs(p.x - own.x) < range + 2500 && Math.abs(p.y - own.y) < range + 2500) lights.push([p.x, p.y, 2500]);
+      for (const is of state.islands.values()) if (is.features.includes('lighthouse') && Math.abs(is.x - own.x) < range + 3000 && Math.abs(is.y - own.y) < range + 3000) lights.push([is.x, is.y, 3000]);
+    }
     for (const rf of state.reefs.values()) {
       if (Math.abs(rf.x - own.x) > range + rf.r || Math.abs(rf.y - own.y) > range + rf.r) continue;
+      if (dark && !lights.some(([lx, ly, lr]) => Math.hypot(rf.x - lx, rf.y - ly) < lr + rf.r)) continue;
       g.beginPath();
       g.arc(tx(rf.x), ty(rf.y), Math.max(1.5, rf.r * k * 0.8), 0, Math.PI * 2);
       g.stroke();
@@ -292,6 +308,14 @@ export class Hud {
       g.beginPath();
       g.arc(tx(w.x), ty(w.y), w.radius * k, 0, Math.PI * 2);
       g.stroke();
+    }
+    // Lighthouses are landmarks: a warm star on the chart.
+    for (const is of state.islands.values()) {
+      if (!is.features.includes('lighthouse') || Math.abs(is.x - own.x) > range || Math.abs(is.y - own.y) > range) continue;
+      g.fillStyle = dark ? '#f5c77a' : 'rgba(245,199,122,0.6)';
+      g.beginPath();
+      g.arc(tx(is.x), ty(is.y), dark ? 3.2 : 2.2, 0, Math.PI * 2);
+      g.fill();
     }
     for (const p of state.ports) {
       if (Math.abs(p.x - own.x) > range || Math.abs(p.y - own.y) > range) continue;
@@ -525,12 +549,22 @@ export class Hud {
     const log = $('chat-log');
     const d = document.createElement('div');
     if (ch) d.className = `chat-${ch}`;
-    d.innerHTML = `${ch === 'group' ? '<i>[group]</i> ' : ch === 'guild' ? '<i>[guild]</i> ' : ''}<b>${esc(from)}:</b> ${esc(text)}`;
+    d.innerHTML = `${ch === 'group' ? `<i>${esc(L('chatGroup'))}</i> ` : ch === 'guild' ? `<i>${esc(L('chatGuild'))}</i> ` : ''}<b>${esc(from)}:</b> ${esc(text)}`;
     log.append(d);
     while (log.children.length > 8) log.firstChild!.remove();
   }
 }
 
 function sanityWord(v: number): string {
-  return v > 75 ? 'clear' : v > 50 ? 'uneasy' : v > 25 ? 'afraid' : v > 10 ? 'terror' : 'madness';
+  return L(v > 75 ? 'sanity.clear' : v > 50 ? 'sanity.uneasy' : v > 25 ? 'sanity.afraid' : v > 10 ? 'sanity.terror' : 'sanity.madness');
+}
+
+function weatherWord(w: string): string {
+  const k = `weather.${w}`;
+  return k in EN ? L(k as keyof typeof EN & string) : w.replace('_', ' ');
+}
+
+function seasonWord(s: string): string {
+  const k = `season.${s}`;
+  return k in EN ? L(k as keyof typeof EN & string) : s;
 }

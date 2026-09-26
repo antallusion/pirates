@@ -57,6 +57,7 @@ import {
 } from './crew.ts';
 import { Social, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
+import { havenSecond } from './havens.ts';
 import { onboardingAction, onboardingProtected, onboardingRescue, onboardingSecond, onboardingSeen, onboardingStart, onboardingView } from './onboarding.ts';
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
 import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
@@ -747,6 +748,7 @@ export class Game {
       expireForwards(this, s);
       expireOptions(this, s);
       discoverCoves(this, s);
+      havenSecond(this, s);
       stepExplorer(this, s);
       stepMind(this, s.ship);
       stepCompany(this, s);
@@ -1950,7 +1952,7 @@ export class Game {
     this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region, quiet: true }] });
   }
 
-  private markDiscovered(s: PlayerSession, is: Island): void {
+  markDiscovered(s: PlayerSession, is: Island): void {
     s.discovered.add(is.id);
     s.profile!.discovered.push(is.id);
     questEvent(this, s, { k: 'chart' });

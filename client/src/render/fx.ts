@@ -1,10 +1,14 @@
 // Visual effects: cannonballs (simulated from volley events), smoke, splashes, splinters, fire,
 // explosions, ability effects and floating combat text. Pure presentation — never game state.
 
+import { dict } from '../i18n.ts';
+import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { AMMO } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import { headingVec } from '../../../shared/src/math.ts';
 import type { GameEvent } from '../../../shared/src/protocol.ts';
+
+const L = dict(REN, RRU);
 
 export interface Particle {
   kind: 'smoke' | 'flash' | 'splash' | 'splinter' | 'fire' | 'ring' | 'text' | 'spark' | 'foam' | 'glow';
@@ -190,7 +194,7 @@ export class Fx {
         this.smoke(e.x, e.y, 2, 5, true);
         this.light(e.x, e.y, 50, 'rgba(255,170,90,1)', 0.5, 0.2);
         const color = e.ship === ownId ? '#e07a6a' : e.crit ? '#f0c060' : '#e8e0cc';
-        this.text(e.x, e.y - 6, e.crit ? `${e.dmg} ${e.crit.toUpperCase()}` : String(e.dmg), color);
+        this.text(e.x, e.y - 6, e.crit ? `${e.dmg} ${`crit.${e.crit}` in REN ? L(`crit.${e.crit}` as 'crit.fire') : e.crit.toUpperCase()}` : String(e.dmg), color);
         if (e.ship === ownId) this.shake = Math.max(this.shake, 0.35);
         break;
       }

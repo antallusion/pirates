@@ -140,6 +140,7 @@ export class ShipEntity {
   dreadSpent = 0; // toward the next point of morale
   killTally = 0; // enemy crew killed toward the next +5
   sanity = 100; // the crew's nerve on a long voyage
+  havenOf: number | null = null; // the secret harbour she lies in (havens.ts)
   sanityState: SanityState = 'clear';
   seizedHelm: { until: number; x: number; y: number } | null = null; // madness: the crew steers
   crewDeaths = 0; // men killed since the company last counted them

@@ -24,19 +24,20 @@ function compile(): void {
       const m = /^\{(\d+)\}$/.exec(part);
       if (m) {
         order.push(Number(m[1]));
-        return '(.+?)';
+        return '(.*?)'; // may be empty: the English plural 's' of a singular
       }
       return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }).join('');
     templates.push({ re: new RegExp(`^${src}$`, 's'), ru, order });
   }
   // The most literal text first: "Sold {0} sugar" before "{0} {1}".
-  const lit = (t: { re: RegExp }) => t.re.source.replace(/\(\.\+\?\)/g, '').length;
+  const lit = (t: { re: RegExp }) => t.re.source.replace(/\(\.\*\?\)/g, '').length;
   templates.sort((a, b) => lit(b) - lit(a));
 }
 
 /** A captured fragment: a known name, a known phrase, or itself. */
 function part(s: string, depth: number): string {
+  if (!s) return s;
   return NAME_RU.get(s) ?? exact.get(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
 }
 
