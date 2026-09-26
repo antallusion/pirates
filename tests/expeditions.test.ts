@@ -65,6 +65,9 @@ function route(rooms: Room[], from: number, to: number): ('n' | 'e' | 's' | 'w')
 function walk(game: Game, c: FakeConn, run: DiveRun, to: number): void {
   for (const d of route(run.rooms, run.pos, to)) {
     run.air = run.airMax; // the test is about the maze, not the air
+    // The test sends far faster than a hand could: keep under the server's flood guard (90 messages a real
+    // second), or a fast machine drops the moves and the walk stalls.
+    for (const x of game.sessions) x.msgCount = 0;
     c.push({ t: 'dive_move', dir: d });
     steps(game, 30);
   }
