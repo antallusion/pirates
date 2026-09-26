@@ -2,7 +2,7 @@
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
 import {
-  CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_MID, SNAP_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
+  CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_CROWD, SNAP_CROWD_EVERY, SNAP_MID, SNAP_NEAR, SNAP_RANK_MID, SNAP_RANK_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
   SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight,
 } from '../../../shared/src/constants.ts';
 import { CAPTAINS, CAPTAIN_IDS } from '../../../shared/src/data/captains.ts';
@@ -17,6 +17,7 @@ import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
 import { angleDiff, clamp, closestOnPolygon, dist, headingOf, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
 import type {
   BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow, Side,
+  PrivateState,
 } from '../../../shared/src/protocol.ts';
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
 import { buildSites, buyRights, ownSiteNear, siteView, tickSites, warehouseAction } from './resources.ts';
@@ -55,6 +56,7 @@ import {
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
 import { Social, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
+import { Metrics } from './metrics.ts';
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
@@ -75,7 +77,7 @@ import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './ta
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, takeCaptive, takePrize } from './prizes.ts';
 import type { JollyBoat } from './prizes.ts';
 import {
-  bribeCost, buildCoves, contrabandValue, coveAt, coveSell, customsSearch, deferCrime, discoverCoves, dockOverride, fenceSale, portFence, settleCrimes, unmask, visibleRange,
+  bribeCost, buildCoves, contrabandValue, coveAt, coveSell, customsSearch, deferCrime, discoverCoves, dockOverride, fenceSale, portFence, settleCrimes, unmask, visibleRange, visibleRangeBase,
 } from './smugglefx.ts';
 import type { Cove, PendingCrime } from './smugglefx.ts';
 import {
@@ -202,11 +204,16 @@ export class Game {
   pvp = new PvpHub();
   /** Real time in ms, for letters and listings that outlive the process (tests move it). */
   wallNow: () => number = () => Date.now();
+  metrics = new Metrics();
+  private snapMs = 0;
+  private secondMs = 0;
   private byAccount = new Map<number, PlayerSession>();
   private events: QueuedEvent[] = [];
   private nextId = 1;
   private portIndex = new Map<string, Port>();
-  private lastSelf = new WeakMap<PlayerSession, string>();
+  /** The private state each client holds, field by field (JSON), so only what changed is sent. */
+  private recentEvents: { tick: number; list: { x: number; y: number; json: string; far: string }[] }[] = [];
+  private lastSelf = new WeakMap<PlayerSession, Map<string, string>>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private nextEconTick = 0;
   private nextHistory = 0;
@@ -267,11 +274,17 @@ export class Game {
       last = t;
       let steps = 0;
       while (acc >= TICK_DT && steps < 5) {
+        const t0 = performance.now();
+        this.snapMs = this.secondMs = 0;
         this.step();
+        this.metrics.tick(performance.now() - t0, this.snapMs, this.secondMs);
         acc -= TICK_DT;
         steps++;
       }
-      if (steps === 5) acc = 0; // drop time rather than spiral
+      if (steps === 5 && acc >= TICK_DT) {
+        acc = 0; // drop time rather than spiral
+        this.metrics.overruns++;
+      }
     }, 1000 * TICK_DT * 0.5);
   }
 
@@ -300,8 +313,13 @@ export class Game {
 
     if (now >= this.nextSecond) {
       this.nextSecond = now + 1;
+      const t0 = performance.now();
       this.everySecond();
+      this.secondMs = performance.now() - t0;
     }
+    const bucket = this.tick % 20;
+    for (const ship of [...this.ships.values()]) if (ship.id % 20 === bucket) this.shipSecond(ship);
+    for (const ses of [...this.byAccount.values()]) if (ses.accountId % 20 === bucket) this.sessionSecond(ses);
     if (now >= this.nextDirector) {
       this.nextDirector = now + 2;
       this.director();
@@ -372,7 +390,12 @@ export class Game {
       if (ship.sinkingUntil && now >= ship.sinkingUntil) this.finalizeSink(ship);
     }
 
-    if (this.tick % SNAPSHOT_EVERY_TICKS === 0) this.sendSnapshots();
+    {
+      // Every tick serves a share of the captains (each still at 10 Hz): the cost is spread, not spiked.
+      const t0 = performance.now();
+      this.sendSnapshots();
+      this.snapMs = performance.now() - t0;
+    }
     if (now >= this.nextSave) {
       this.nextSave = now + 30;
       this.saveAll();
@@ -552,33 +575,6 @@ export class Game {
       this.nearestPlayer.set(id, best * 0.75);
     }
 
-    for (const ship of this.ships.values()) {
-      if (ship.effects.length && ship.effects.some((e) => e.until <= now)) ship.recompute(now);
-      ship.region = regionAt(this.world, ship.state.x, ship.state.y);
-      if (!ship.alive || ship.docked) continue;
-      const brain = this.npcs.get(ship.id);
-      if (brain && !brain.active) continue;
-      this.shipUpkeep(ship);
-      stepSpirit(this, ship);
-      stepTalentEffects(this, ship);
-      stepAbyssShip(this, ship);
-      stepSurvival(this, ship);
-      if (ship.isPlayer) {
-        stepTalents(this, ship);
-        surrenderTerms(this, ship);
-      }
-      // Scuttle Charges: the fuse has burned down.
-      if (ship.scuttleAt && now >= ship.scuttleAt) {
-        ship.hull = 0;
-        this.beginSinking(ship);
-      }
-      // No Quarter: the taken ship goes down.
-      if (ship.sinkAt && now >= ship.sinkAt) {
-        ship.sinkAt = 0;
-        ship.hull = 0;
-        this.beginSinking(ship);
-      }
-    }
     stepBoats(this);
     settleCrimes(this);
     stepSocial(this);
@@ -607,13 +603,50 @@ export class Game {
 
     // Presence in Redis every ten seconds (other processes see who sails here).
     if (this.shared && this.tick % 200 === 0) this.shared.heartbeat([...this.sessions].filter((x) => x.authed && x.disconnectedAt === null).map((x) => ({ id: x.accountId, name: x.name })));
-    // Sessions: chunk streaming, discovery, regions, lingering ships, private state.
-    for (const s of [...this.byAccount.values()]) {
+  }
+
+  /** A ship's once-a-second upkeep, run for a twentieth of the ships each tick (by id). */
+  private shipSecond(ship: ShipEntity): void {
+    const now = this.now;
+    {
+      if (ship.effects.length && ship.effects.some((e) => e.until <= now)) ship.recompute(now);
+      ship.region = regionAt(this.world, ship.state.x, ship.state.y);
+      if (!ship.alive || ship.docked) return;
+      const brain = this.npcs.get(ship.id);
+      if (brain && !brain.active) return;
+      this.shipUpkeep(ship);
+      stepSpirit(this, ship);
+      stepTalentEffects(this, ship);
+      stepAbyssShip(this, ship);
+      stepSurvival(this, ship);
+      if (ship.isPlayer) {
+        stepTalents(this, ship);
+        surrenderTerms(this, ship);
+      }
+      // Scuttle Charges: the fuse has burned down.
+      if (ship.scuttleAt && now >= ship.scuttleAt) {
+        ship.hull = 0;
+        this.beginSinking(ship);
+      }
+      // No Quarter: the taken ship goes down.
+      if (ship.sinkAt && now >= ship.sinkAt) {
+        ship.sinkAt = 0;
+        ship.hull = 0;
+        this.beginSinking(ship);
+      }
+    }
+  }
+
+  /** Each captain's once-a-second chores: chunk streaming, discovery, regions, lingering ships, private state.
+   *  Run for a twentieth of the captains each tick (by account id), so a crowd costs no spike. */
+  private sessionSecond(s: PlayerSession): void {
+    const now = this.now;
+    {
       if (s.disconnectedAt !== null) {
         if (now >= s.lingerUntil && !(s.ship && s.ship.inCombat(now) && now < s.lingerUntil + 60)) this.retireSession(s);
-        continue;
+        return;
       }
-      if (!s.ship || !s.profile) continue;
+      if (!s.ship || !s.profile) return;
       this.streamChunks(s);
       this.discover(s);
       this.recordSightings(s);
@@ -1634,13 +1667,24 @@ export class Game {
   }
 
   /** Notable ships the captain has laid eyes on are logged with time and place for the chart. */
+  /** Ships worth a lookout's shout (ghosts, hunters, notorious captains): listed once a second, not per captain. */
+  private notables: { o: ShipEntity; kind: 'ghost' | 'hunter' | 'notorious' }[] = [];
+  private notablesAt = -1;
+
   private recordSightings(s: PlayerSession): void {
     const ship = s.ship!;
     const p = s.profile!;
-    this.forShipsNear(ship.state.x, ship.state.y, Math.min(INTEREST_RADIUS, ship.stats.detection), (o) => {
-      if (o.id === ship.id || o.docked || o.hasFlag('hidden')) return;
-      const kind = o.npcRole === 'ghost' ? 'ghost' : o.npcRole === 'hunter' ? 'hunter' : o.isPlayer && o.wantedCache >= 3 ? 'notorious' : null;
-      if (!kind) return;
+    if (this.notablesAt !== Math.floor(this.now)) {
+      this.notablesAt = Math.floor(this.now);
+      this.notables = [];
+      for (const o of this.ships.values()) {
+        const kind = o.npcRole === 'ghost' ? 'ghost' : o.npcRole === 'hunter' ? 'hunter' : o.isPlayer && o.wantedCache >= 3 ? 'notorious' : null;
+        if (kind && o.alive) this.notables.push({ o, kind });
+      }
+    }
+    const range = Math.min(INTEREST_RADIUS, ship.stats.detection);
+    for (const { o, kind } of this.notables) {
+      if (o.id === ship.id || o.docked || o.hasFlag('hidden') || dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > range) continue;
       const name = o.isPlayer ? `${o.captainName} (${o.name})` : o.name;
       const rec = { name, kind, x: Math.round(o.state.x), y: Math.round(o.state.y), t: Math.round(this.now) };
       const i = p.sightings.findIndex((q) => q.name === name);
@@ -1650,7 +1694,7 @@ export class Game {
         this.sendTo(s, { t: 'toast', msg: kind === 'ghost' ? `Lookout: a ship with no lights… ${o.name}.` : `Lookout: ${name} sighted.`, kind: 'info' });
         if (p.sightings.length > 25) p.sightings.shift();
       }
-    });
+    }
   }
 
   /** Share of the normal sighting range left by fog and storm murk (Dead Reckoning and Storm Rider see through). */
@@ -1838,13 +1882,22 @@ export class Game {
 
   sendTo(s: PlayerSession, msg: ServerMsg): void {
     if (s.conn.closed || s.disconnectedAt !== null) return;
-    s.conn.send(JSON.stringify(msg));
+    this.sendText(s, JSON.stringify(msg));
+  }
+
+  /** An already-serialised message. */
+  sendText(s: PlayerSession, text: string): void {
+    if (s.conn.closed || s.disconnectedAt !== null) return;
+    this.metrics.bytesText += text.length;
+    s.conn.send(text);
   }
 
   /** Snapshots are the hot path: binary frames (shared/src/codec.ts). */
   private sendSnap(s: PlayerSession, msg: Extract<ServerMsg, { t: 'snap' }>): void {
     if (s.conn.closed || s.disconnectedAt !== null) return;
-    s.conn.sendBinary(encodeSnap(msg));
+    const bytes = encodeSnap(msg);
+    this.metrics.bytesBinary += bytes.byteLength;
+    s.conn.sendBinary(bytes);
   }
 
   toastShip(ship: ShipEntity | null, msg: string, kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' = 'info'): void {
@@ -2364,6 +2417,7 @@ export class Game {
     s.knownEntities.clear();
     s.sentRows.clear();
     s.knownChunks.clear();
+    this.lastSelf.delete(s); // the init carries the whole private state
     this.sendTo(s, {
       t: 'init', self: toPrivateState(s, this.now, this.worldView(s)), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
     });
@@ -2536,25 +2590,78 @@ export class Game {
   pushSelf(s: PlayerSession, force = false): void {
     if (!s.profile) return;
     const state = toPrivateState(s, this.now, this.worldView(s));
-    const json = JSON.stringify(state);
-    if (!force && this.lastSelf.get(s) === json) return;
-    this.lastSelf.set(s, json);
-    this.sendTo(s, { t: 'self', self: state });
+    const prev = this.lastSelf.get(s);
+    const fields = new Map<string, string>();
+    for (const [k, v] of Object.entries(state)) fields.set(k, JSON.stringify(v) ?? 'null');
+    this.lastSelf.set(s, fields);
+    if (!prev) return this.sendTo(s, { t: 'self', self: state });
+    // Only the fields that changed (a forced push always goes out, to let the screens refresh).
+    const patch: Partial<PrivateState> = {};
+    let n = 0;
+    for (const [k, j] of fields) if (prev.get(k) !== j) {
+      (patch as Record<string, unknown>)[k] = (state as unknown as Record<string, unknown>)[k];
+      n++;
+    }
+    if (n || force) this.sendTo(s, { t: 'self_patch', patch });
   }
 
   // ================================================================= snapshots (interest management)
 
+  /** A ship's snapshot row and its delta key, as every viewer sees it (the hostile bit is added per viewer). */
+  private snapRow(o: ShipEntity, frame: { rows: Map<number, { row: ShipRow; key: string }>; tethered: Set<number> }): { row: ShipRow; key: string } {
+    let r = frame.rows.get(o.id);
+    if (r) return r;
+    const row: ShipRow = [
+      o.id, Math.round(o.state.x * 10) / 10, Math.round(o.state.y * 10) / 10, Math.round(o.state.heading * 1000) / 1000,
+      Math.round(o.state.speed * 10) / 10, Math.round(o.state.sail * 100) / 100,
+      Math.round((o.hull / o.stats.hullMax) * 1000) / 1000, Math.round((o.sails / o.stats.sailHpMax) * 100) / 100,
+      o.flagsFor(null, false, this.now) | (frame.tethered.has(o.id) ? SF.TETHERED : 0) | (o.isPlayer ? pvpFlags(this, o) : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
+    ];
+    r = { row, key: `${row[1]},${row[2]},${row[3]},${row[4]},${row[5]},${row[6]},${row[7]},${row[8]},${row[9]}` };
+    frame.rows.set(o.id, r);
+    return r;
+  }
+
   private sendSnapshots(): void {
-    const events = this.events;
+    // Events are serialised once as they are flushed and kept for one snapshot period, so each captain gets
+    // every event exactly once whichever tick serves them. Far off, a volley keeps only three (cosmetic) balls.
+    const fresh = this.events;
     this.events = [];
+    this.recentEvents.push({
+      tick: this.tick,
+      list: fresh.map((e) => {
+        const json = JSON.stringify(e.ev);
+        const far = e.ev.k === 'volley' && e.ev.balls.length > 3 ? JSON.stringify({ ...e.ev, balls: [0, Math.floor(e.ev.balls.length / 2), e.ev.balls.length - 1].map((j) => (e.ev as { balls: unknown[] }).balls[j]) }) : json;
+        return { x: e.x, y: e.y, json, far };
+      }),
+    });
+    while (this.recentEvents.length && this.recentEvents[0].tick <= this.tick - SNAP_CROWD_EVERY) this.recentEvents.shift();
+    // Rows are built once per ship per snapshot, not once per viewer.
+    const tethered = new Set<number>();
+    for (const o of this.ships.values()) if (o.tether) {
+      tethered.add(o.id);
+      tethered.add(o.tether.target);
+    }
+    const frame = { rows: new Map<number, { row: ShipRow; key: string }>(), tethered };
+    const vis = new Map<number, { r: number; fog: boolean }>();
+    const visible = (o: ShipEntity, fogSense: boolean) => {
+      let v = vis.get(o.id);
+      if (v === undefined) vis.set(o.id, (v = visibleRangeBase(this, o)));
+      return Math.max(250, fogSense && v.fog ? v.r * 1.5 : v.r);
+    };
     for (const s of this.sessions) {
       if (!s.authed || !s.ship || s.disconnectedAt !== null) continue;
+      if ((s.accountId + this.tick) % s.snapEvery !== 0) continue;
       const me = s.ship;
+      s.conn.cork?.();
       const cx = me.state.x, cy = me.state.y;
+      const crowsNest = me.hasEffect('crows_nest'), fogSense = me.hasFlag('fog_sense');
       const ships: ShipRow[] = [];
       const snapNo = s.snapCount++;
       const infos: EntityInfo[] = [];
       const seen = new Set<number>();
+      // Candidates in range, nearest first: rank as well as distance sets how often each is sent.
+      const cand: { o: ShipEntity; d: number }[] = [];
       this.grid.query(cx, cy, INTEREST_RADIUS, (id) => {
         const o = this.ships.get(id);
         if (!o) return;
@@ -2562,9 +2669,10 @@ export class Game {
         if (d > INTEREST_RADIUS) return;
         if (o.id !== me.id) {
           if (o.docked) return;
-          const lookout = me.hasEffect('crows_nest') && d <= me.stats.detection; // Crow's Nest sees through it all
-          if (!lookout && o.hasFlag('hidden') && d > 250 && o.ownerId !== me.id && !sameGroup(this, o, me)) return;
-          if (!lookout && o.isPlayer && d > 250 && d > visibleRange(this, o, me) && !sameGroup(this, o, me)) return;
+          const lookout = crowsNest && d <= me.stats.detection; // Crow's Nest sees through it all
+          if (!lookout && d > 250 && o.hasFlag('hidden') && o.ownerId !== me.id && !sameGroup(this, o, me)) return;
+          // Seen from afar only by her signature (the fog-sense of the observer stretches it in fog).
+          if (!lookout && o.isPlayer && d > 250 && d > visible(o, fogSense) && !sameGroup(this, o, me)) return;
         }
         const brain = this.npcs.get(o.id);
         if (brain && !brain.active) return;
@@ -2573,23 +2681,31 @@ export class Game {
           s.knownEntities.add(o.id);
           infos.push(o.info());
         }
-        if (o.id === me.id) return;
-        const row: ShipRow = [
-          o.id, Math.round(o.state.x * 10) / 10, Math.round(o.state.y * 10) / 10, Math.round(o.state.heading * 1000) / 1000,
-          Math.round(o.state.speed * 10) / 10, Math.round(o.state.sail * 100) / 100,
-          Math.round((o.hull / o.stats.hullMax) * 1000) / 1000, Math.round((o.sails / o.stats.sailHpMax) * 100) / 100,
-          o.flagsFor(me.id, this.isHostile(o, me), this.now) | (isTethered(this, o) ? SF.TETHERED : 0) | (o.isPlayer ? pvpFlags(this, o) : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
-        ];
-        // Distance priority: close ships every snapshot, the middle distance every second, the far every fourth.
-        const period = d < SNAP_NEAR ? 1 : d < SNAP_MID ? 2 : 4;
-        const last = s.sentRows.get(o.id);
-        if (last && snapNo % period !== 0) return;
-        // Delta: an unchanged row is not sent again (but refreshed every 2 s to keep interpolation fed).
-        const key = row.slice(1).join(',');
-        if (last && last.key === key && this.now - last.t < 2) return;
-        s.sentRows.set(o.id, { key, t: this.now });
-        ships.push(row);
+        if (o.id !== me.id) cand.push({ o, d });
       });
+      // In a crowd: the distance of the 40th and 100th nearest (selection, not a full sort).
+      // A captain in a crowd gets 5 Hz instead of 10: the client draws further in the past to keep it smooth.
+      s.snapEvery = cand.length > SNAP_CROWD ? SNAP_CROWD_EVERY : SNAPSHOT_EVERY_TICKS;
+      const nearCut = cand.length > SNAP_RANK_NEAR ? kthSmallest(cand.map((c) => c.d), SNAP_RANK_NEAR) : Infinity;
+      const midCut = cand.length > SNAP_RANK_MID ? kthSmallest(cand.map((c) => c.d), SNAP_RANK_MID) : Infinity;
+      for (const { o, d } of cand) {
+        const base = this.snapRow(o, frame);
+        const hostile = this.isHostile(o, me);
+        // Distance priority: close ships every snapshot, the middle distance every second, the far every fourth —
+        // and in a crowd only the nearest few dozen at full rate.
+        const byDist = d < SNAP_NEAR ? 1 : d < SNAP_MID ? 2 : 4;
+        const byRank = d < nearCut ? 1 : d < midCut ? 2 : 4;
+        const period = Math.max(byDist, byRank);
+        const last = s.sentRows.get(o.id);
+        if (last && snapNo % period !== 0) continue;
+        // Delta: an unchanged row is not sent again (but refreshed every 2 s to keep interpolation fed).
+        const key = hostile ? base.key + 'h' : base.key;
+        if (last && last.key === key && this.now - last.t < 2) continue;
+        s.sentRows.set(o.id, { key, t: this.now });
+        const row = base.row.slice() as ShipRow;
+        if (hostile) row[8] = row[8] | SF.HOSTILE;
+        ships.push(row);
+      }
       const loot: LootRow[] = [];
       for (const l of this.loot.values()) {
         if (dist(l.x, l.y, cx, cy) > INTEREST_RADIUS) continue;
@@ -2628,7 +2744,7 @@ export class Game {
           stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / CHASER_RELOAD : 0,
           mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
-        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (isTethered(this, me) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now),
+        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now),
         water: Math.min(1, me.water / floodCapacity(me)), leaks: me.leaks, station: me.station,
         resolve: me.resolve, dread: me.dread, sanity: me.sanity,
       };
@@ -2636,11 +2752,17 @@ export class Game {
         t: 'snap', tick: this.tick, time: Math.round(this.now * 100) / 100, ack: me.lastInputSeq, you, ships, loot,
         wind: [Math.round(wind.dir * 1000) / 1000, Math.round(wind.strength * 100) / 100], weather, region: me.region, fog: Math.round(WEATHER_FOG[weather] * (0.5 + 0.5 * this.sightFactor(me)) * 100) / 100,
       });
-      const mine: GameEvent[] = [];
-      for (const e of events) {
-        if (dist(e.x, e.y, cx, cy) < INTEREST_RADIUS + 400) mine.push(e.ev);
+      const mine: string[] = [];
+      for (const r of this.recentEvents) {
+        if (r.tick <= s.lastEvTick) continue;
+        for (const e of r.list) {
+          const d = dist(e.x, e.y, cx, cy);
+          if (d < INTEREST_RADIUS + 400) mine.push(d < SNAP_MID ? e.json : e.far);
+        }
       }
-      if (mine.length) this.sendTo(s, { t: 'ev', list: mine });
+      s.lastEvTick = this.tick;
+      if (mine.length) this.sendText(s, `{"t":"ev","list":[${mine.join(',')}]}`);
+      s.conn.uncork?.();
     }
   }
 
@@ -2685,10 +2807,34 @@ export class Game {
   stats(): Record<string, number> {
     let active = 0;
     for (const b of this.npcs.values()) if (b.active) active++;
-    return { players: this.sessions.size, ships: this.ships.size, npcs: this.npcs.size, activeNpcs: active, projectiles: this.projectiles.length, loot: this.loot.size, time: Math.round(this.now) };
+    return { players: this.sessions.size, ships: this.ships.size, npcs: this.npcs.size, activeNpcs: active, projectiles: this.projectiles.length, loot: this.loot.size, time: Math.round(this.now), ...this.metrics.summary() };
   }
 }
 
 function reloadEstimate(ship: ShipEntity, side: 'port' | 'starboard'): number {
   return Math.max(ship.reload[side], ship.lastReloadTotal[side]);
+}
+
+/** The k-th smallest value (0-based: k = 40 gives the 41st), by quickselect. */
+export function kthSmallest(a: number[], k: number): number {
+  let lo = 0, hi = a.length - 1;
+  while (lo < hi) {
+    const pivot = a[(lo + hi) >> 1];
+    let i = lo, j = hi;
+    while (i <= j) {
+      while (a[i] < pivot) i++;
+      while (a[j] > pivot) j--;
+      if (i <= j) {
+        const t = a[i];
+        a[i] = a[j];
+        a[j] = t;
+        i++;
+        j--;
+      }
+    }
+    if (k <= j) hi = j;
+    else if (k >= i) lo = i;
+    else return a[k];
+  }
+  return a[k];
 }

@@ -2,7 +2,7 @@
 // simulation requires bumping PROTOCOL_VERSION so stale clients are rejected.
 
 export const GAME_NAME = 'GRAVETIDE';
-export const PROTOCOL_VERSION = 24;
+export const PROTOCOL_VERSION = 25;
 
 export const TICK_RATE = 20; // server simulation Hz
 export const TICK_DT = 1 / TICK_RATE;
@@ -17,6 +17,12 @@ export const NAV_CELL = 400; // meters, coarse navigation grid for NPC routing
 export const INTEREST_RADIUS = 2_200; // dynamic entities replicated within this radius
 export const SNAP_NEAR = 700; // closer: every snapshot (10 Hz)
 export const SNAP_MID = 1_600; // closer: every second snapshot; beyond: every fourth
+// In a crowd, rank matters too: the nearest SNAP_RANK_NEAR ships at full rate, up to SNAP_RANK_MID at half, the rest a quarter.
+export const SNAP_RANK_NEAR = 40;
+export const SNAP_RANK_MID = 100;
+// More ships than this in view: snapshots every SNAP_CROWD_EVERY ticks (5 Hz) for that captain.
+export const SNAP_CROWD = 150;
+export const SNAP_CROWD_EVERY = 4;
 export const CHUNK_STREAM_RADIUS = 2; // chunks around the player whose static data is streamed
 export const NPC_ACTIVE_RADIUS = 3_200; // NPCs promote from abstract to full physics inside this range
 

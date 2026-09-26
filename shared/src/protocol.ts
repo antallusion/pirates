@@ -573,6 +573,7 @@ export type ServerMsg =
   | { t: 'gone'; ids: number[] }
   | { t: 'ev'; list: GameEvent[] }
   | { t: 'self'; self: PrivateState }
+  | { t: 'self_patch'; patch: Partial<PrivateState> } // only the fields that changed
   | { t: 'port'; view: PortView | null }
   | { t: 'boarding'; result: BoardingResult | null }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }

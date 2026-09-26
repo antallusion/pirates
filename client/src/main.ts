@@ -168,6 +168,7 @@ function onMessage(m: ServerMsg): void {
       else if (modal === 'port') refreshModal();
       break;
     case 'self':
+    case 'self_patch':
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
       else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny' || modal === 'company' || modal === 'barter') refreshModal();

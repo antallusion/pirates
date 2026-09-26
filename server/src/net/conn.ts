@@ -12,6 +12,9 @@ export interface GameConn {
   send(text: string): void;
   sendBinary(bytes: Uint8Array): void;
   close(code?: number, reason?: string): void;
+  /** Batch the next writes into one (a snapshot, its events and new entities go out together). */
+  cork?(): void;
+  uncork?(): void;
 }
 
 /** The player's address; behind a TLS terminator set TRUST_PROXY=1 to read X-Forwarded-For. */

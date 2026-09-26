@@ -179,6 +179,9 @@ export class PlayerSession {
   /** Delta snapshots: what this client last received for each entity, and when. */
   sentRows = new Map<number, { key: string; t: number }>();
   snapCount = 0;
+  /** Ticks between this captain's snapshots: 2 (10 Hz), or 4 in a crowd; and the last tick of events sent. */
+  snapEvery = 2;
+  lastEvTick = 0;
   knownChunks = new Set<number>();
   discovered = new Set<number>();
   msgWindowStart = 0;

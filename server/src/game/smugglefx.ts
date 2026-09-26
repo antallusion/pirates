@@ -29,13 +29,18 @@ export function signature(ship: ShipEntity): number {
 
 /** Range at which `target` shows up for another captain, or Infinity for an ordinary ship. */
 export function visibleRange(game: Game, target: ShipEntity, observer: ShipEntity): number {
-  if (target.hasFlag('dark_lanterns') && isNight(game.now)) return 250;
+  const base = visibleRangeBase(game, target);
+  // Fog Sense: the observer reads the fog better.
+  return observer.hasFlag('fog_sense') && base.fog ? Math.max(250, base.r * 1.5) : Math.max(250, base.r);
+}
+
+/** How far this ship can be seen, before the observer's own talents (the same for every observer). */
+export function visibleRangeBase(game: Game, target: ShipEntity): { r: number; fog: boolean } {
+  if (target.hasFlag('dark_lanterns') && isNight(game.now)) return { r: 250, fog: false };
   const sig = signature(target);
-  if (sig >= 1) return Infinity;
+  if (sig >= 1) return { r: Infinity, fog: false };
   const w = game.weatherOf(target);
-  let r = 2200 * sig * (w === 'fog' ? 0.55 : w === 'rain' || w === 'storm' || w === 'black_storm' ? 0.8 : 1) * (isNight(game.now) ? 0.8 : 1);
-  if (w === 'fog' && observer.hasFlag('fog_sense')) r *= 1.5;
-  return Math.max(250, r);
+  return { r: 2200 * sig * (w === 'fog' ? 0.55 : w === 'rain' || w === 'storm' || w === 'black_storm' ? 0.8 : 1) * (isNight(game.now) ? 0.8 : 1), fog: w === 'fog' };
 }
 
 // ------------------------------------------------------------------ customs

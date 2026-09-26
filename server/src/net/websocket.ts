@@ -51,6 +51,14 @@ export class WsConnection implements GameConn {
     this.finish();
   }
 
+  cork(): void {
+    (this.socket as unknown as { cork?: () => void }).cork?.();
+  }
+
+  uncork(): void {
+    (this.socket as unknown as { uncork?: () => void }).uncork?.();
+  }
+
   get buffered(): number {
     return (this.socket as unknown as { writableLength?: number }).writableLength ?? 0;
   }

@@ -17,7 +17,14 @@ export class FakeConn {
   buffered = 0;
   inbox: ServerMsg[] = [];
   send(text: string): void {
-    this.inbox.push(JSON.parse(text) as ServerMsg);
+    const m = JSON.parse(text) as ServerMsg;
+    // Like the client: a patch is merged into the private state it holds.
+    if (m.t === 'self_patch') {
+      const base = this.last('self')?.self ?? this.last('init')?.self;
+      if (base) this.inbox.push({ t: 'self', self: { ...base, ...m.patch } });
+      return;
+    }
+    this.inbox.push(m);
   }
   sendBinary(bytes: Uint8Array): void {
     this.bytesOut += bytes.byteLength;

@@ -36,7 +36,8 @@ export interface RemoteShip {
   sinkStart: number;
 }
 
-const INTERP_DELAY = 0.12;
+// Remote ships are drawn this far in the past; it grows when snapshots come slower (a crowded harbour).
+const INTERP_MIN = 0.12, INTERP_MAX = 0.4;
 
 export class ClientState {
   self: PrivateState | null = null;
@@ -81,6 +82,7 @@ export class ClientState {
   marks: { name: string; x: number; y: number }[] = [];
 
   input = { rudder: 0, sail: 2, seq: 0 };
+  snapGap = 0.1; // seconds between snapshots (smoothed)
 
   apply(m: ServerMsg): void {
     const now = performance.now() / 1000;
@@ -104,6 +106,10 @@ export class ClientState {
         this.self = m.self;
         this.refreshStats();
         break;
+      case 'self_patch':
+        if (this.self) Object.assign(this.self, m.patch);
+        this.refreshStats();
+        break;
       case 'chunk':
         for (const is of m.islands) this.islands.set(is.id, is);
         for (const rf of m.reefs ?? []) this.reefs.set(rf.id, rf);
@@ -123,6 +129,7 @@ export class ClientState {
         }
         break;
       case 'snap': {
+        if (this.serverTime > 0 && m.time > this.serverTime) this.snapGap += (Math.min(1, m.time - this.serverTime) - this.snapGap) * 0.1;
         this.serverTime = m.time;
         this.serverTimeArrival = now;
         this.wind = m.wind;
@@ -207,7 +214,7 @@ export class ClientState {
 
   /** Interpolate remote ships at render time. */
   updateRemote(): void {
-    const rt = this.estServerTime() - INTERP_DELAY;
+    const rt = this.estServerTime() - Math.min(INTERP_MAX, Math.max(INTERP_MIN, this.snapGap * 1.3));
     for (const s of this.ships.values()) {
       const b = s.buf;
       if (!b.length) continue;
