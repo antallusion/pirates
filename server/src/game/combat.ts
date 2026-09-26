@@ -13,6 +13,7 @@ import { gunCrewFactor } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
+import { MAX_LEAKS, leakChance } from './damagecontrol.ts';
 import type { ShipEntity } from './ship.ts';
 
 export interface Projectile {
@@ -233,6 +234,10 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     }
   }
   if (raking) crit = crit ?? 'raked';
+  if ((p.ammo === 'round' || p.ammo === 'heavy') && hullDmg > 15 && target.leaks < MAX_LEAKS && game.rng.chance(leakChance(target, p.ammo === 'heavy'))) {
+    target.leaks++;
+    crit = 'leak';
+  }
 
   applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: 0.35 }, shooter);
 

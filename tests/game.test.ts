@@ -437,3 +437,32 @@ test('heavy shot pierces armour; fire shot starts fires', () => {
   assert.ok(heavy > round, `heavy ${heavy.toFixed(0)} > round ${round.toFixed(0)} against an armoured galleon`);
   assert.ok(fires >= 1, 'fire shot set at least one fire');
 });
+
+test('leaks flood the hold, pumps and damage control fight back, a full hold founders her', async () => {
+  const { floodCapacity } = await import('../server/src/game/damagecontrol.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Pump Boy');
+  const ship = undockAtSea(game, c);
+  ship.leaks = 6;
+  delete ship.cargo.planks;
+  steps(game, 20 * 20);
+  const w1 = ship.water;
+  assert.ok(w1 > 0, 'taking water');
+  const speedFactor = ship.sailParams(false).loadFactor;
+  assert.ok(speedFactor < 1, 'water makes her sluggish');
+  // Damage control with planks: leaks get plugged fast.
+  ship.cargo.planks = 10;
+  c.push({ t: 'station', station: 'damage_control' });
+  assert.equal(ship.station, 'damage_control');
+  assert.ok(ship.stats.reloadMul > 1, 'guns suffer while the crew pumps');
+  steps(game, 20 * 45);
+  assert.equal(ship.leaks, 0, 'all leaks plugged');
+  assert.ok(ship.water < w1, 'pumped out');
+  // Unchecked flooding founders the ship even with a sound hull.
+  ship.leaks = 8;
+  delete ship.cargo.planks;
+  ship.crew = 2;
+  ship.water = floodCapacity(ship) * 0.98;
+  steps(game, 20 * 10);
+  assert.ok(ship.sinkingUntil > 0 || c.last('sunk_self'), 'foundered');
+});

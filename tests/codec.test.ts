@@ -11,7 +11,7 @@ function sample(n: number): Snap {
   return {
     t: 'snap', tick: 123456, time: 98765.43, ack: 77, weather: 'storm', region: 'gravewater', fog: 0.45, wind: [7.9, 1.21],
     you: { x: 56001.2, y: 70002.7, h: 1.2345, spd: 12.34, sail: 0.75, rud: -0.6, sailT: 1, hull: 812, hullMax: 900, sails: 77, sailsMax: 100, rudderHp: 0.8,
-      crew: 21, crewMax: 28, morale: 64, reload: { port: 0.5, starboard: 1, bow: 0.2, stern: 1 }, ammoSel: 'chain', ammo: { round: 57, chain: 12, grape: 20, incendiary: 5, heavy: 9 }, flags: 128 | 512, combat: true },
+      crew: 21, crewMax: 28, morale: 64, reload: { port: 0.5, starboard: 1, bow: 0.2, stern: 1 }, ammoSel: 'chain', ammo: { round: 57, chain: 12, grape: 20, incendiary: 5, heavy: 9 }, flags: 128 | 512, combat: true, water: 0.4, leaks: 3, station: 'damage_control' },
     ships, loot: [[5, 56100, 70100]],
   };
 }

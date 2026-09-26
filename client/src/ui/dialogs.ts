@@ -102,6 +102,7 @@ export function renderHelp(root: HTMLElement): void {
     ['B', 'Board the nearest crippled ship in range (hull ≤60%, crew ≤50%, sails ≤35% or struck).'],
     ['Shift+B', 'Board carefully (less cargo destroyed, slower). Ctrl+B: brutal.'],
     ['L', 'Heave to near an island feature (cache, wreck, ruins, grove, mine, pearl bank, shrine) and send a landing party ashore.'],
+    ['G', 'Crew orders: balanced → guns (faster reload, slow pumps) → braces (sail handling, speed) → damage control (pumps ×2, fast leak plugging and firefighting, slow reload).'],
     ['R', 'Toggle repairs (uses planks & sailcloth; not in combat without Battle Repair).'],
     ['F', 'Dock at a nearby port / set sail.'],
     ['M · T · I', 'World chart · talents · ship & hold.'],

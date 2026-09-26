@@ -5,7 +5,7 @@ import { AMMO_IDS, CHASER_CONE, SHIP_CLASSES } from '../../shared/src/data/ships
 import { PORT_DOCK_RADIUS } from '../../shared/src/constants.ts';
 import { clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
-import { SF } from '../../shared/src/protocol.ts';
+import { SF, STATIONS } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
 import { assetUrl, loadAssets } from './assets.ts';
 import { AudioEngine } from './audio.ts';
@@ -251,6 +251,11 @@ addEventListener('keydown', (e) => {
     case 'l':
       net.send({ t: 'land' });
       break;
+    case 'g': {
+      const cur = state.you?.station ?? 'balanced';
+      net.send({ t: 'station', station: STATIONS[(STATIONS.indexOf(cur) + 1) % STATIONS.length] });
+      break;
+    }
     case 'r':
       net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
       break;

@@ -13,6 +13,8 @@ import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 
 export type Side = 'port' | 'starboard';
+export type Station = 'balanced' | 'gunnery' | 'sailing' | 'damage_control';
+export const STATIONS: Station[] = ['balanced', 'gunnery', 'sailing', 'damage_control'];
 export type Aggression = 'careful' | 'standard' | 'brutal';
 export type WeatherKind = 'calm' | 'breeze' | 'wind' | 'fog' | 'rain' | 'storm' | 'black_storm';
 
@@ -44,6 +46,7 @@ export type ClientMsg =
   | { t: 'pardon' }
   | { t: 'insure' }
   | { t: 'land' }
+  | { t: 'station'; station: Station }
   | { t: 'cleanse' }
   | { t: 'chart'; action: 'sell' }
   | { t: 'chart'; action: 'buy'; region: RegionId }
@@ -272,6 +275,9 @@ export interface SelfRow {
   ammo: AmmoStock;
   flags: number;
   combat: boolean;
+  water: number; // 0..1 of flood capacity
+  leaks: number;
+  station: Station;
 }
 
 export type GameEvent =

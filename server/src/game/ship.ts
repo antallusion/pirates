@@ -7,7 +7,7 @@ import { emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { Flag, StatMods } from '../../../shared/src/data/stats.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
-import type { Aggression, ShipInfo, Side } from '../../../shared/src/protocol.ts';
+import type { Aggression, ShipInfo, Side, Station } from '../../../shared/src/protocol.ts';
 import { SF, curseStage } from '../../../shared/src/protocol.ts';
 import type { SailInput, SailParams, SailState } from '../../../shared/src/sim/sailing.ts';
 import type { AmmoStock, Cargo, ShipLoadout, ShipStats } from '../../../shared/src/sim/shipstats.ts';
@@ -81,6 +81,10 @@ export class ShipEntity {
   repairing = false;
   landing: Landing | null = null;
   curse = 0; // the sea's claim on the ship, 0..100
+  water = 0; // tonnes of seawater in the hold
+  leaks = 0;
+  lastPlug = 0;
+  station: Station = 'balanced';
   unsinkableReadyAt = 0;
   lastStandUntil = 0;
   doubleShotArmed = false;
@@ -157,7 +161,7 @@ export class ShipEntity {
       sailHealth: this.sails / Math.max(1, st.sailHpMax),
       rudderHealth: this.rudderHp,
       crewFactor: crewFactor(st, this.crew),
-      loadFactor: loadFactor(this.loadout, st, this.cargo, this.ammo),
+      loadFactor: loadFactor(this.loadout, st, this.cargo, this.ammo) * (1 - 0.4 * Math.min(1, this.water / (st.holdWeight * 0.5 + st.length * 2))),
       speedMul: (night ? 1 + st.nightSpeed : 1) * (this.hull < st.hullMax * 0.3 ? 0.85 : 1),
       personalWind: st.flags.has('personal_wind'),
       weatherly: this.cls.passive.id === 'weatherly',

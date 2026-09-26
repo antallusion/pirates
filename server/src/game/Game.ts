@@ -18,7 +18,8 @@ import { clamp, closestOnPolygon, dist, headingVec, pointInPolygon } from '../..
 import type {
   BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow,
 } from '../../../shared/src/protocol.ts';
-import { SF, curseStage } from '../../../shared/src/protocol.ts';
+import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
+import { STATION_NAMES, floodCapacity, setStation, stepFlooding } from './damagecontrol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { encodeSnap } from '../../../shared/src/codec.ts';
 import { polarEfficiency, relWindDeg, stepSailing } from '../../../shared/src/sim/sailing.ts';
@@ -543,6 +544,8 @@ export class Game {
     curseAura(this, ship);
     // Brine Mend heal-over-time.
     if (ship.hasEffect('brine_mend')) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.025);
+    // Leaks, pumps and plugs.
+    if (stepFlooding(this, ship)) return;
     // Fire.
     if (ship.hasEffect('fire')) applyDamage(this, ship, { hull: st.hullMax * 0.006, sails: 1.5 }, null);
     // Storms punish full canvas.
@@ -789,6 +792,8 @@ export class Game {
     const brain = this.npcs.get(target.id);
     if (!brain || !source) return;
     if (brain.role === 'merchant' || brain.role === 'fisher') brain.fleeFrom = source.id;
+    // Holed below the waterline: every hand to the pumps (merchants) or keep the guns manned (warships).
+    if (target.leaks >= 2 && target.station !== 'damage_control' && (brain.role === 'merchant' || target.leaks >= 4)) setStation(this, target, 'damage_control');
     else if (brain.target === null) brain.target = source.id;
     // Lawful ships call for help: nearby patrols join in.
     if (target.faction !== 'player' && FACTIONS[target.faction].lawful && source.isPlayer) {
@@ -916,6 +921,9 @@ export class Game {
     ship.surrendered = false;
     ship.boarding = null;
     ship.effects = [];
+    ship.water = 0;
+    ship.leaks = 0;
+    ship.station = 'balanced';
     ship.attackers.clear();
     ship.recompute(this.now);
     ship.hull = ship.stats.hullMax;
@@ -1400,6 +1408,11 @@ export class Game {
         return portAction((pt) => pardon(this, s, pt));
       case 'cleanse':
         return portAction((pt) => cleanse(this, s, pt));
+      case 'station':
+        if (!STATIONS.includes(msg.station)) return;
+        setStation(this, ship, msg.station);
+        this.sendTo(s, { t: 'toast', msg: STATION_NAMES[msg.station], kind: 'info' });
+        return;
       case 'land':
         err(startLanding(this, s));
         this.pushSelf(s, true);
@@ -1618,6 +1631,9 @@ export class Game {
     ship.state.speed = 0;
     ship.state.sail = 0;
     ship.repairing = false;
+    // Harbour pumps and caulkers see to the water and the leaks.
+    ship.water = 0;
+    ship.leaks = 0;
     ship.input = { rudder: 0, sailTarget: 0 };
     p.lastPort = port.id;
     p.docked = port.id;
@@ -1745,6 +1761,7 @@ export class Game {
           stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / CHASER_RELOAD : 0,
         },
         ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now), combat: me.inCombat(this.now),
+        water: Math.min(1, me.water / floodCapacity(me)), leaks: me.leaks, station: me.station,
       };
       this.sendSnap(s, {
         t: 'snap', tick: this.tick, time: Math.round(this.now * 100) / 100, ack: me.lastInputSeq, you, ships, loot,
