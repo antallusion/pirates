@@ -18,6 +18,7 @@ import { pattern, sprite } from '../assets.ts';
 import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
+import { GlSea, GlSky, glWanted } from './gl.ts';
 
 const BIOME_TINT: Record<IslandBiome, string> = {
   temperate: 'rgba(40,52,40,0.35)',
@@ -75,9 +76,20 @@ export class Renderer {
   private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
   private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
 
+  /** WebGL layers: the shader sea below, the fog and lightning above (null: the 2D fallback draws them). */
+  readonly sea: GlSea | null;
+  readonly sky: GlSky | null;
+  private bolt: [number, number][] | null = null;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this.g = canvas.getContext('2d', { alpha: false })!;
+    const want = glWanted();
+    this.sea = want ? GlSea.create() : null;
+    this.sky = this.sea ? GlSky.create() : null;
+    if (this.sea) canvas.before(this.sea.canvas);
+    if (this.sky) canvas.after(this.sky.canvas);
+    // Over a shader sea the world canvas is transparent where there is only water.
+    this.g = canvas.getContext('2d', { alpha: !!this.sea })!;
     this.dark = document.createElement('canvas');
     this.dg = this.dark.getContext('2d')!;
     this.noise = this.makeNoise(256);
@@ -93,6 +105,8 @@ export class Renderer {
     this.h = innerHeight;
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
+    this.sea?.resize(this.w, this.h, this.dpr);
+    this.sky?.resize(this.w, this.h, this.dpr);
     this.dark.width = Math.round(this.w / 2);
     this.dark.height = Math.round(this.h / 2);
   }
@@ -201,6 +215,20 @@ export class Renderer {
 
   private drawOcean(state: ClientState, tint: string): void {
     const g = this.g;
+    if (this.sea) {
+      // The shader sea: the 2D canvas is cleared to let it through; wind streaks stay for reading the wind.
+      g.clearRect(-20, -20, this.w + 40, this.h + 40);
+      const wakes: { x: number; y: number; age: number; w: number }[] = [];
+      for (const w of this.wakes.values()) for (let i = Math.max(0, w.length - 6); i < w.length; i++) wakes.push({ x: w[i].x, y: w[i].y, age: this.time - w[i].t, w: w[i].w * (1 + (this.time - w[i].t) * 0.35) });
+      wakes.sort((a, b) => b.age - a.age);
+      const wv = headingVec(state.wind[0]);
+      this.sea.draw({
+        camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, tint: hexRgb(tint), wind: [wv.x, wv.y, clamp(state.wind[1], 0, 1.4)],
+        night: nightFactor(state.estServerTime()), wakes,
+      });
+      this.drawStreaks(state);
+      return;
+    }
     g.fillStyle = tint;
     g.fillRect(-20, -20, this.w + 40, this.h + 40);
     const tex = pattern(g, 'tex.ocean');
@@ -243,7 +271,13 @@ export class Renderer {
     g.fillStyle = grd;
     g.fillRect(0, 0, this.w, this.h);
 
-    // Wind streaks: short pale dashes drifting downwind (readability of wind direction).
+    this.drawStreaks(state);
+  }
+
+  /** Wind streaks: short pale dashes drifting downwind (readability of wind direction). */
+  private drawStreaks(state: ClientState): void {
+    const g = this.g;
+    const wind = headingVec(state.wind[0]);
     g.strokeStyle = 'rgba(200,215,225,0.10)';
     g.lineWidth = 1;
     const len = 10 + state.wind[1] * 16;
@@ -1051,8 +1085,8 @@ export class Renderer {
 
   private drawWeather(state: ClientState, dt: number): void {
     const g = this.g;
-    // Fog: noise layer drifting with the wind.
-    if (state.fog > 0.08) {
+    // Fog: noise layer drifting with the wind (the shader sky draws it when WebGL is on).
+    if (state.fog > 0.08 && !this.sky) {
       this.noisePattern ??= g.createPattern(this.noise, 'repeat');
       const p = this.noisePattern!;
       const wind = headingVec(state.wind[0]);
@@ -1094,10 +1128,27 @@ export class Renderer {
           this.lightning = 1;
           this.fx.flash = 0.8;
           this.onLightning();
+          // A bolt from the top of the sky down to somewhere over the sea.
+          let x = this.w * (0.15 + Math.random() * 0.7), y = -10;
+          const pts: [number, number][] = [[x, y]];
+          for (let i = 0; i < 7; i++) {
+            x += (Math.random() - 0.5) * this.w * 0.08;
+            y += this.h * (0.06 + Math.random() * 0.06);
+            pts.push([x, y]);
+          }
+          this.bolt = pts;
         }
       }
     }
     this.lightning = Math.max(0, this.lightning - dt * 3);
+    if (this.lightning <= 0) this.bolt = null;
+    if (this.sky) {
+      const wv = headingVec(state.wind[0]);
+      this.sky.draw({
+        camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, wind: [wv.x * (0.5 + state.wind[1]), wv.y * (0.5 + state.wind[1])],
+        fog: clamp(state.fog, 0, 1), flash: this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: this.lightning,
+      });
+    }
   }
 
   private drawVignette(fog: number, night: number): void {
@@ -1220,4 +1271,10 @@ function hexA(color: string, a: number): string {
   if (color.startsWith('rgba')) return color.replace(/,\s*[\d.]+\)$/, `,${a})`);
   const n = parseInt(color.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/** '#0c141c' → [r, g, b] in 0..1. */
+function hexRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }

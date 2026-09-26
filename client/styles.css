@@ -25,6 +25,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--ink); color: var(--bone); font-family: var(--sans); font-size: 13px; overflow: hidden; }
 canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: crosshair; }
+canvas#world-sea, canvas#world-sky { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; pointer-events: none; }
 .hidden { display: none !important; }
 button { font-family: var(--sans); }
 
