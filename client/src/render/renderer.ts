@@ -170,6 +170,7 @@ export class Renderer {
     for (const s of ships) this.updateWake(s, dt);
     this.drawWakes();
     this.drawLoot(state);
+    this.drawDuelRing(state);
     for (const s of ships) this.drawShip(s, state);
     this.drawTethers(state, ships);
     this.drawBalls();
@@ -744,7 +745,9 @@ export class Renderer {
   /** Faction pennant at the masthead, streaming downwind. Players fly black. */
   private drawPennant(s: DrawShip, len: number, beam: number): void {
     const g = this.g;
-    const color = s.own || s.info?.isPlayer ? '#141414' : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
+    // A captain's colours: the Black Flag, the Green Pennant, or plain slate.
+    const player = s.own || s.info?.isPlayer;
+    const color = player ? (s.flags & SF.BLACK_FLAG ? '#0b0b0b' : s.flags & SF.GREEN_PENNANT ? '#3f7d4a' : '#3b4652') : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
     const trim = s.own || s.info?.isPlayer ? '#d8d2c4' : 'rgba(0,0,0,0.6)';
     const wave = Math.sin(this.time * 6 + s.id) * beam * 0.12;
     const y0 = -len * 0.18;
@@ -801,6 +804,21 @@ export class Renderer {
       g.arc(0, my, Math.max(1.5, beam * 0.08), 0, Math.PI * 2);
       g.fill();
     }
+  }
+
+  /** The duel ring: a dashed red circle on the water. */
+  private drawDuelRing(state: ClientState): void {
+    const d = state.duel;
+    if (!d) return;
+    const g = this.g;
+    g.save();
+    g.strokeStyle = d.startsIn > 0 ? 'rgba(224,184,98,0.7)' : 'rgba(208,90,80,0.75)';
+    g.lineWidth = 2;
+    g.setLineDash([14, 10]);
+    g.beginPath();
+    g.arc(this.sx(d.cx), this.sy(d.cy), d.r * this.zoom, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
   }
 
   private drawTethers(state: ClientState, ships: DrawShip[]): void {
@@ -1143,7 +1161,11 @@ export class Renderer {
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
     const tag = info.isPlayer ? `Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
-    g.fillText(tag + (s.flags & SF.SURRENDERED ? ' · STRUCK' : ''), x, y + 11);
+    const marks = info.isPlayer
+      ? `${s.flags & SF.BLACK_FLAG ? ' · black flag' : ''}${s.flags & SF.GREEN_PENNANT ? ' · green pennant' : ''}${s.flags & SF.SHAME ? ' · SHAME' : ''}${s.flags & SF.BOUNTY ? ' · bounty' : ''}${s.flags & SF.DUEL ? ' · duelling' : ''}`
+      : '';
+    if (s.flags & SF.SHAME) g.fillStyle = 'rgba(224,119,107,0.9)';
+    g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? ' · STRUCK' : ''), x, y + 11);
     // Hull and sails bars.
     const w = 46;
     g.fillStyle = 'rgba(0,0,0,0.7)';

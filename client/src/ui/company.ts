@@ -11,7 +11,7 @@ import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
 
-export type CompanyTab = 'group' | 'letters' | 'market';
+export type CompanyTab = 'group' | 'letters' | 'market' | 'law';
 
 const ago = (ms: number) => {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
@@ -40,20 +40,22 @@ export class CompanyScreen {
   render(root: HTMLElement, state: ClientState): void {
     const docked = state.self?.dockedAt ?? null;
     if (this.tab === 'market' && !docked) this.tab = 'group';
-    const tabs = (['group', 'letters', 'market'] as CompanyTab[])
+    const tabs = (['group', 'law', 'letters', 'market'] as CompanyTab[])
       .filter((t) => t !== 'market' || docked)
-      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
+      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
       .join(' ');
     root.innerHTML = `<div class="modal-head"><div><h2>Company &amp; Letters</h2><div class="sub">${tabs}</div></div><div class="muted">[Y] close</div></div>
       <div class="modal-body" id="company-body"></div>`;
     const body = root.querySelector<HTMLElement>('#company-body')!;
     if (this.tab === 'group') this.renderGroup(body, state);
     else if (this.tab === 'letters') this.renderLetters(body, state);
+    else if (this.tab === 'law') this.renderLaw(body, state);
     else this.renderMarket(body, state);
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
       this.tab = el.dataset.tab as CompanyTab;
       if (this.tab === 'market') this.send({ t: 'market', action: 'list' });
       if (this.tab === 'letters') this.send({ t: 'mail', action: 'list' });
+      if (this.tab === 'law') this.send({ t: 'pvp', action: 'bounties' });
       this.render(root, state);
     }));
   }
@@ -85,6 +87,48 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-decline]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'decline', id: Number(el.dataset.decline) })));
     body.querySelectorAll<HTMLElement>('[data-lead]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'lead', name: el.dataset.lead! })));
     body.querySelectorAll<HTMLElement>('[data-kick]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'kick', name: el.dataset.kick! })));
+  }
+
+  private renderLaw(body: HTMLElement, state: ClientState): void {
+    const v = state.self?.pvp;
+    if (!v) return;
+    const now = Date.now();
+    const d = state.duel;
+    const mins = (ms: number) => Math.max(1, Math.ceil((ms - now) / 60_000));
+    body.innerHTML = `<div class="cols"><div>
+      <div class="card"><h4>Your colours</h4>
+        <p>${v.blackFlag ? '<b>The Black Flag flies.</b> In contested water any captain may attack you without a crime; plunder from NPCs +15%, from captains ×1.2. Struck in port, or after 15 minutes out of a fight.' : 'Plain colours. Attacking a captain who is not fair game is a crime outside lawless water.'}</p>
+        <button class="btn ${v.blackFlag ? '' : 'btn-danger'}" id="bf">${v.blackFlag ? 'Strike the Black Flag' : 'Hoist the Black Flag'}</button>
+        ${v.pennant ? `<p class="good">Green Pennant: nobody may attack you in contested water (${v.pennantHoursLeft} h at sea left, or until level 15). Attacking a captain lowers it for half an hour; you take no goods from other captains.</p>` : ''}
+        ${v.bubbleUntil > now ? `<p class="good">Protected after your sinking for ${mins(v.bubbleUntil)} more minutes — until you fire, sail into lawless water or take someone's casks.</p>` : ''}
+        ${v.shameUntil > now ? `<p class="bad">SHAME for ${mins(v.shameUntil)} more minutes: you hunted a minnow. Your crimes count double in contested water.</p>` : ''}
+        ${v.bounty ? `<p class="bad">A purse of ${fmt(v.bounty)} silver hangs on your head.</p>` : ''}
+        <p class="muted">Duels ${v.duels} · won ${v.duelWins} · rating ${v.rating}${v.hunter ? ' · hunter’s licence (Crown standing): captains with a price on their head are fair game' : ''}</p></div>
+      <div class="card"><h4>Duels</h4>
+        ${d ? `<p><b>${d.startsIn ? `Guns in ${d.startsIn} s` : `${Math.floor(d.endsIn / 60)}:${String(d.endsIn % 60).padStart(2, '0')} left`}</b> — ${d.sides.map((side) => side.map((x) => `${esc(x.name)}${x.struck ? ' (struck)' : ''}`).join(', ')).join(' <i>against</i> ')}</p><button class="btn btn-danger" id="yield">Yield</button>`
+          : `<p class="muted">By consent, anywhere — even in the Crown’s waters. Nobody sinks and nothing is lost: when it ends, both ships are as they were. Stay inside the ring. Group leaders may duel group against group.</p>
+        <div class="row"><input id="duel-name" placeholder="Captain's name" maxlength="20" style="flex:1"><label><input type="checkbox" id="duel-fleet"> groups</label><button class="btn" id="duel">Challenge</button></div>`}
+        ${v.challenges.map((c) => `<div class="row"><span><b>${esc(c.from)}</b> challenges you${c.fleet ? ' (group against group)' : ''}</span><span><button class="btn btn-small btn-primary" data-duel-yes="${c.id}">Accept</button> <button class="btn btn-small" data-duel-no="${c.id}">Decline</button></span></div>`).join('')}</div>
+    </div><div>
+      <div class="card"><h4>The bounty board</h4>
+        <table class="grid">${state.bounties.map((b) => `<tr><td>${esc(b.name)}</td><td><b>${fmt(b.total)}</b> silver</td><td class="muted">${b.backers} backer${b.backers > 1 ? 's' : ''}${b.wanted ? ` · Wanted ${b.wanted}` : ''}${b.atSea ? ' · at sea' : ''}</td></tr>`).join('') || '<tr><td class="muted">No purses posted.</td></tr>'}</table>
+        <p class="muted">Paid to whoever sinks the captain (taken alive: half again), never to their group or anyone who traded or sailed with them in the last day. A fleet three times their strength shares half.</p></div>
+      ${v.sunkBy.length ? `<div class="card"><h4>Who sank you</h4>${v.sunkBy.map((k) => `<div class="row"><span>${esc(k.name)} <span class="muted">${ago(k.t)}${k.free ? ' · right of revenge: no fee' : ' · 10% to the League'}</span></span>
+          <span><input type="number" min="1000" step="500" value="1000" style="width:90px" data-bamt="${esc(k.name)}"><button class="btn btn-small" data-bounty="${esc(k.name)}" ${state.self?.dockedAt ? '' : 'disabled title="At a harbour office"'}>Put a price</button></span></div>`).join('')}
+        <p class="muted">For a day after they sink you, you see them on your chart within 3 km.</p></div>` : ''}
+    </div></div>`;
+    body.querySelector<HTMLElement>('#bf')!.onclick = () => this.send({ t: 'pvp', action: 'black_flag', on: !v.blackFlag });
+    body.querySelector<HTMLElement>('#yield')?.addEventListener('click', () => this.send({ t: 'pvp', action: 'forfeit' }));
+    body.querySelector<HTMLElement>('#duel')?.addEventListener('click', () => {
+      const name = body.querySelector<HTMLInputElement>('#duel-name')!.value.trim();
+      if (name) this.send({ t: 'pvp', action: 'duel', name, fleet: body.querySelector<HTMLInputElement>('#duel-fleet')!.checked });
+    });
+    body.querySelectorAll<HTMLElement>('[data-duel-yes]').forEach((el) => (el.onclick = () => this.send({ t: 'pvp', action: 'duel_answer', id: Number(el.dataset.duelYes), accept: true })));
+    body.querySelectorAll<HTMLElement>('[data-duel-no]').forEach((el) => (el.onclick = () => this.send({ t: 'pvp', action: 'duel_answer', id: Number(el.dataset.duelNo), accept: false })));
+    body.querySelectorAll<HTMLElement>('[data-bounty]').forEach((el) => (el.onclick = () => {
+      const amt = Number(body.querySelector<HTMLInputElement>(`[data-bamt="${el.dataset.bounty}"]`)!.value);
+      this.send({ t: 'pvp', action: 'bounty', name: el.dataset.bounty!, amount: amt });
+    }));
   }
 
   private renderLetters(body: HTMLElement, state: ClientState): void {

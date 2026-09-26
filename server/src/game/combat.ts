@@ -12,6 +12,7 @@ import type { Side } from '../../../shared/src/protocol.ts';
 import { gunCrewFactor, tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
+import { crueltyMul, inDuel, legalTarget, onPlayerAttack, pvpBlocked } from './pvp.ts';
 import { sameGroup } from './party.ts';
 import type { Game } from './Game.ts';
 import { MAX_LEAKS, leakChance } from './damagecontrol.ts';
@@ -344,12 +345,14 @@ function volleyBall(game: Game, p: Projectile, target: ShipEntity | null): void 
 export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): string | null {
   if (b.docked) return 'docked';
   if (!a) return null;
+  // Duels, the Green Pennant (pvp.ts).
+  const pv = pvpBlocked(game, a, b);
+  if (pv === 'duel_ok') return null;
+  if (pv) return pv;
   if (b.protectedUntil > game.now) return 'protected';
   if (a.isPlayer && b.isPlayer) {
     const safety = REGIONS[b.region].safety;
     if (safety === 'safe') return 'Safe waters: no PvP here.';
-    const pa = game.profileOf(a), pb = game.profileOf(b);
-    if (safety !== 'lawless' && pa && pb && (pa.level < 5 || pb.level < 5)) return 'Young captains are protected outside lawless waters.';
   }
   if (a.isPlayer && a.hasFlag('honest_merchant') && !game.isHostile(b, a) && !b.attackers.has(a.id)) {
     return 'Honest Merchant: you do not fire on peaceful ships.';
@@ -540,6 +543,11 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   if (source && isMonster(source) && d.hull) d = { ...d, hull: d.hull * pactDamageMul(target) };
   // The Drowned Man on the bow: the Drowned Captain enters every fight with 10 Dread.
   for (const x of [source, target]) if (x && x.captain === 'drowned' && x.hasFlag('fh_drowned_man') && !x.inCombat(now)) x.dread = Math.max(x.dread, 10);
+  // Nobody reaches into a duel, and duellists reach nobody else.
+  if (source && source !== target) {
+    const pv = pvpBlocked(game, source, target);
+    if (pv && pv !== 'duel_ok') return;
+  }
   if (source) {
     registerAggression(game, source, target);
     source.lastCombat = now;
@@ -607,6 +615,7 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   const prev = b.attackers.get(a.id);
   b.attackers.set(a.id, now);
   if (prev !== undefined && now - prev < 60) return; // same engagement
+  if (inDuel(game, a) && inDuel(game, a) === inDuel(game, b)) return; // a duel is no crime
   const pa = a.isPlayer ? game.profileOf(a) : null;
   if (!pa) return;
   // Self defence: b attacked a recently.
@@ -616,8 +625,9 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   const zoneMul = safety === 'safe' ? 2 : safety === 'contested' ? 1 : 0.3;
   let infamy = 0;
   if (b.isPlayer) {
-    const pb = game.profileOf(b);
-    if (pb && wantedLevel(pb.infamy) < 2) infamy = 18 * zoneMul;
+    onPlayerAttack(game, a, b);
+    // Fair game (the Black Flag, Wanted 2+, a price on the head for a licensed hunter) costs nothing.
+    if (!legalTarget(game, a, b)) infamy = 18 * zoneMul * crueltyMul(game, a, b);
   } else if (b.faction !== 'player' && FACTIONS[b.faction].lawful) {
     infamy = (b.npcRole === 'patrol' ? 26 : 14) * zoneMul;
     game.adjustRep(a, b.faction, -8);

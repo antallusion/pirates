@@ -1,5 +1,7 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import { newPvp } from './pvp.ts';
+import type { PvpState } from './pvp.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
@@ -35,6 +37,7 @@ import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from 
 export interface Profile {
   version: 1;
   captain: CaptainId;
+  pvp: PvpState;
   shipName: string;
   level: number;
   xp: number;
@@ -156,7 +159,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
   if (captain === 'drowned') reputation.crown = -15;
   if (captain === 'admiral') reputation.crown = -25;
   return {
-    version: 1, captain, shipName, level: 1, xp: 0, talents: {}, gold: c.start.gold, infamy: 0, reputation, loadout,
+    version: 1, captain, pvp: newPvp(), shipName, level: 1, xp: 0, talents: {}, gold: c.start.gold, infamy: 0, reputation, loadout,
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0, fleet: newFleet(), exotic: {}, salvageDay: -1, builds: [], plans: [], berths: [], figureheads: [], quests: newQuestLog(), paths: [captain], pathSwitchAt: -1e9, oath: null,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
@@ -256,6 +259,7 @@ export interface WorldView {
   inspect?: PrivateState['inspect'];
   monsters?: PrivateState['monsters'];
   explore?: Pick<PrivateState, 'maps' | 'wrecks' | 'trails' | 'soundings' | 'forecast' | 'goldTrails'>;
+  pvp?: PrivateState['pvp'];
 }
 
 export function toPrivateState(s: PlayerSession, now: number, world: WorldView = { coves: [], patrols: [] }): PrivateState {
@@ -264,6 +268,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
   return {
     accountId: s.accountId,
     name: s.name,
+    pvp: world.pvp ?? { blackFlag: p.pvp.blackFlag, pennant: false, pennantHoursLeft: 0, shameUntil: p.pvp.shameUntil, bubbleUntil: p.pvp.bubbleUntil, rating: p.pvp.rating, duels: p.pvp.duels, duelWins: p.pvp.duelWins, bounty: 0, hunter: false, sunkBy: [], challenges: [] },
     captain: p.captain,
     level: p.level,
     xp: p.xp,
@@ -362,6 +367,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   // Defensive load: fill fields added in later versions and clamp obviously broken values.
   const p = raw;
   p.talents ??= {};
+  p.pvp = { ...newPvp(), ...(p.pvp ?? {}) };
   p.reputation ??= {};
   p.contracts ??= [];
   p.discovered ??= [];

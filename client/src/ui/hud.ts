@@ -321,6 +321,26 @@ export class Hud {
       g.arc(tx(c.x), ty(c.y), 3, 0, Math.PI * 2);
       g.fill();
     }
+    // Right of revenge: who sank you, in red. The duel ring.
+    g.strokeStyle = '#e0655a';
+    g.lineWidth = 2;
+    for (const m of state.marks) {
+      const mx = clamp(tx(m.x), 4, c.width - 4), my = clamp(ty(m.y), 4, c.height - 4);
+      g.beginPath();
+      g.moveTo(mx - 4, my - 4);
+      g.lineTo(mx + 4, my + 4);
+      g.moveTo(mx + 4, my - 4);
+      g.lineTo(mx - 4, my + 4);
+      g.stroke();
+    }
+    g.lineWidth = 1;
+    if (state.duel) {
+      g.setLineDash([4, 3]);
+      g.beginPath();
+      g.arc(tx(state.duel.cx), ty(state.duel.cy), state.duel.r * k, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
     // Your group: green squares; they stay on the chart however far they sail.
     g.fillStyle = '#7fd08a';
     for (const m of state.party?.members ?? []) {

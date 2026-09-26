@@ -10,14 +10,14 @@ import { STATIONS } from './protocol.ts';
 import { REGION_IDS } from './world/regions.ts';
 import type { RegionId } from './world/regions.ts';
 
-export const SNAP_CODEC_VERSION = 5;
+export const SNAP_CODEC_VERSION = 6;
 const WEATHER: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
 type Snap = Extract<ServerMsg, { t: 'snap' }>;
 
 const HEADER = 1 + 4 + 8 + 4 + 2 + 1 + 1 + 1 + 1 + 1;
-const SELF = 4 + 4 + 2 + 2 + 1 + 1 + 1 + 2 * 4 + 1 + 2 * 2 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * AMMO_IDS.length + 2 + 1 + 3 + 1 + 3;
-const SHIP = 4 + 4 + 4 + 2 + 2 + 1 + 2 + 1 + 2 + 1;
+const SELF = 4 + 4 + 2 + 2 + 1 + 1 + 1 + 2 * 4 + 1 + 2 * 2 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * AMMO_IDS.length + 4 + 1 + 3 + 1 + 3;
+const SHIP = 4 + 4 + 4 + 2 + 2 + 1 + 2 + 1 + 4 + 1;
 const LOOT = 4 + 4 + 4;
 
 const q8 = (v: number) => Math.max(0, Math.min(250, Math.round(v * 250)));
@@ -63,7 +63,7 @@ export function encodeSnap(m: Snap): Uint8Array {
     d.setUint8(o, q8(y.reload.mount)); o += 1;
     d.setUint8(o, AMMO_IDS.indexOf(y.ammoSel)); o += 1;
     for (const a of AMMO_IDS) { d.setUint16(o, u16(y.ammo[a]), true); o += 2; }
-    d.setUint16(o, y.flags & 0xffff, true); o += 2;
+    d.setUint32(o, y.flags >>> 0, true); o += 4;
     d.setUint8(o, y.combat ? 1 : 0); o += 1;
     d.setUint8(o, q8(y.water)); o += 1;
     d.setUint8(o, Math.min(255, y.leaks)); o += 1;
@@ -82,7 +82,7 @@ export function encodeSnap(m: Snap): Uint8Array {
     d.setUint8(o, q8(r[5])); o += 1;
     d.setUint16(o, u16(Math.max(0, Math.min(1, r[6])) * 10000), true); o += 2;
     d.setUint8(o, q8(r[7])); o += 1;
-    d.setUint16(o, r[8] & 0xffff, true); o += 2;
+    d.setUint32(o, r[8] >>> 0, true); o += 4;
     d.setUint8(o, q8(r[9])); o += 1;
   }
   d.setUint16(o, m.loot.length, true); o += 2;
@@ -134,7 +134,7 @@ export function decodeSnap(input: ArrayBuffer | Uint8Array): Snap {
     const ammoSel = AMMO_IDS[d.getUint8(o)] as AmmoId; o += 1;
     const ammo = emptyAmmo();
     for (const a of AMMO_IDS) { ammo[a] = d.getUint16(o, true); o += 2; }
-    const flags = d.getUint16(o, true); o += 2;
+    const flags = d.getUint32(o, true); o += 4;
     const combat = d.getUint8(o) === 1; o += 1;
     const water = d.getUint8(o) / 250; o += 1;
     const leaks = d.getUint8(o); o += 1;
@@ -155,7 +155,7 @@ export function decodeSnap(input: ArrayBuffer | Uint8Array): Snap {
     const sail = d.getUint8(o) / 250; o += 1;
     const hull = d.getUint16(o, true) / 10000; o += 2;
     const sails = d.getUint8(o) / 250; o += 1;
-    const flags = d.getUint16(o, true); o += 2;
+    const flags = d.getUint32(o, true); o += 4;
     const crew = d.getUint8(o) / 250; o += 1;
     ships.push([id, x, y, h, spd, sail, hull, sails, flags, crew]);
   }

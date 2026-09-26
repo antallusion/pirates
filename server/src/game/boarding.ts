@@ -1,6 +1,7 @@
 // Boarding: grapple → melee rounds → surrender. Costly by design: cargo is destroyed in the fight,
 // crews die, morale swings and the attacker's hull takes grappling damage. See docs/02 §6.
 
+import { inDuel } from './pvp.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { clamp, dist } from '../../../shared/src/math.ts';
 import type { Aggression, BoardingResult } from '../../../shared/src/protocol.ts';
@@ -32,6 +33,7 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (a.boarding || b.boarding) return 'Already locked in a boarding action';
   if (a.docked || b.docked) return 'Not at sea';
   if (a.surrendered) return 'You struck your colours';
+  if (inDuel(game, a) || inDuel(game, b)) return 'No boarding in a duel';
   if (b.lootLockedFor !== null) return b.lootLockedFor === a.id ? 'She is already yours' : 'She has struck to another captain';
   if (b.prize) return 'She sails under a prize crew';
   const blocked = damageBlocked(game, a, b);

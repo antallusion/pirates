@@ -14,6 +14,7 @@ import { cargoVolume, computeShipStats, tx } from '../../../shared/src/sim/ships
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { Game } from './Game.ts';
+import { hasPennant, tie } from './pvp.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -128,6 +129,10 @@ export function groupAnswer(game: Game, s: PlayerSession, id: number, accept: bo
   }
   g.members.push(s.accountId);
   game.social.groupOf.set(s.accountId, g.id);
+  for (const m of g.members) {
+    const ms = game.sessionByAccount(m);
+    if (ms && ms !== s) tie(game, s, ms); // sailing together: no bounties between them for a day
+  }
   // Other invitations to this captain lapse.
   for (const [k, v] of game.social.invites) if (v.to === s.accountId) game.social.invites.delete(k);
   groupNotice(game, g, `${s.name} joins the group.`);
@@ -414,6 +419,7 @@ function settleBarter(game: Game, b: Barter): string | null {
     for (const [g, n] of Object.entries(o.cargo)) if ((s.ship!.cargo[g as GoodId] ?? 0) < (n ?? 0)) return cancelBarter(game, b, `${s.name} no longer carries the goods`);
   }
   for (const [s, give, take] of [[A, oa, ob], [B, ob, oa]] as const) {
+    if (Object.keys(take.cargo).length && hasPennant(game, s.profile!)) return cancelBarter(game, b, `${s.name} sails under the Green Pennant and may take no goods from other captains`);
     const st = s.ship!.stats;
     const after: Cargo = { ...s.ship!.cargo };
     for (const [g, n] of Object.entries(give.cargo)) after[g as GoodId] = (after[g as GoodId] ?? 0) - (n ?? 0);
@@ -427,6 +433,7 @@ function settleBarter(game: Game, b: Barter): string | null {
   }
   move(A, B, oa);
   move(B, A, ob);
+  tie(game, A, B);
   A.ship.recompute(game.now);
   B.ship.recompute(game.now);
   const line = (o: Offer) => [o.gold ? `${o.gold} silver` : '', ...Object.entries(o.cargo).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`)].filter(Boolean).join(', ') || 'nothing';

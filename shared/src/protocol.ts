@@ -109,6 +109,12 @@ export type ClientMsg =
   | { t: 'market'; action: 'fill'; id: number; qty: number }
   | { t: 'market'; action: 'bid'; id: number; price: number }
   | { t: 'market'; action: 'cancel'; id: number }
+  | { t: 'pvp'; action: 'black_flag'; on: boolean }
+  | { t: 'pvp'; action: 'duel'; name: string; fleet: boolean }
+  | { t: 'pvp'; action: 'duel_answer'; id: number; accept: boolean }
+  | { t: 'pvp'; action: 'forfeit' }
+  | { t: 'pvp'; action: 'bounty'; name: string; amount: number }
+  | { t: 'pvp'; action: 'bounties' }
   | { t: 'ping'; c: number };
 
 // ------------------------------------------------------------------ server -> client
@@ -352,6 +358,7 @@ export interface PrivateState {
   forwards: ForwardView[];
   bank: number;
   loan: { owed: number; due: number; defaulted: boolean } | null;
+  pvp: PvpView;
 }
 
 export interface MarketRow {
@@ -483,6 +490,11 @@ export const SF = {
   CURSE_LOW: 8192, // curse stage bit 0
   CURSE_HIGH: 16384, // curse stage bit 1  (stage = LOW + 2·HIGH)
   TETHERED: 32768,
+  BLACK_FLAG: 1 << 16, // flying the Black Flag: fair game in contested water
+  GREEN_PENNANT: 1 << 17, // a young captain under the Green Pennant
+  SHAME: 1 << 18, // hunted a minnow: marked for an hour
+  DUEL: 1 << 19, // in a duel (with the receiving player, or watched)
+  BOUNTY: 1 << 20, // a price on this captain's head
 } as const;
 
 export interface SelfRow {
@@ -571,6 +583,9 @@ export type ServerMsg =
   | { t: 'barter'; view: BarterView | null }
   | { t: 'mail'; letters: LetterView[]; unread: number }
   | { t: 'market'; view: MarketView }
+  | { t: 'duel'; view: DuelView | null }
+  | { t: 'bounties'; list: BountyView[] }
+  | { t: 'marks'; list: { name: string; x: number; y: number }[] }
   | { t: 'err'; msg: string }
   | { t: 'pong'; c: number; s: number };
 
@@ -644,6 +659,41 @@ export interface MarketView {
   listFee: number; // fraction of the value, not returned
   saleTax: number; // fraction of proceeds
   listings: ListingView[];
+}
+
+// ------------------------------------------------------------------ PvP 2.0
+
+export interface PvpView {
+  blackFlag: boolean;
+  pennant: boolean; // under the Green Pennant
+  pennantHoursLeft: number;
+  shameUntil: number; // epoch ms
+  bubbleUntil: number; // epoch ms
+  rating: number;
+  duels: number;
+  duelWins: number;
+  bounty: number; // the captains' purse on your own head
+  hunter: boolean; // a hunter's licence (Crown standing)
+  sunkBy: { name: string; t: number; free: boolean }[];
+  challenges: { id: number; from: string; fleet: boolean }[];
+}
+
+export interface DuelView {
+  id: number;
+  cx: number;
+  cy: number;
+  r: number;
+  startsIn: number;
+  endsIn: number;
+  sides: { name: string; struck: boolean }[][];
+}
+
+export interface BountyView {
+  name: string;
+  total: number;
+  backers: number;
+  wanted: number;
+  atSea: boolean;
 }
 
 export function curseStage(curse: number): 0 | 1 | 2 | 3 {

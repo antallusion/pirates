@@ -5,7 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
+  BarterView, BountyView, DuelView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
 } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -76,6 +76,9 @@ export class ClientState {
   letters: LetterView[] = [];
   unread = 0;
   market: MarketView | null = null;
+  duel: DuelView | null = null;
+  bounties: BountyView[] = [];
+  marks: { name: string; x: number; y: number }[] = [];
 
   input = { rudder: 0, sail: 2, seq: 0 };
 
@@ -167,6 +170,15 @@ export class ClientState {
         break;
       case 'market':
         this.market = m.view;
+        break;
+      case 'duel':
+        this.duel = m.view;
+        break;
+      case 'bounties':
+        this.bounties = m.list;
+        break;
+      case 'marks':
+        this.marks = m.list;
         break;
       case 'port':
         this.portView = m.view;

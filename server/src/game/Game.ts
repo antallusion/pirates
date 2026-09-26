@@ -55,6 +55,7 @@ import {
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
 import { Social, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
+import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
@@ -197,6 +198,8 @@ export class Game {
   /** Groups, convoys and barter (party.ts); letters and the captains' market (post.ts). */
   social = new Social();
   post = new PostOffice();
+  /** Colours, duels, bounties (pvp.ts). */
+  pvp = new PvpHub();
   /** Real time in ms, for letters and listings that outlive the process (tests move it). */
   wallNow: () => number = () => Date.now();
   private byAccount = new Map<number, PlayerSession>();
@@ -580,6 +583,7 @@ export class Game {
     settleCrimes(this);
     stepSocial(this);
     stepPost(this);
+    stepPvp(this);
     if (Math.floor(now) % 5 === 0) recordTrails(this);
     for (const [id, t] of this.sunkRecently) if (now - t > 900) this.sunkRecently.delete(id);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
@@ -1014,6 +1018,7 @@ export class Game {
         forecast: forecast(this, ship),
         goldTrails: goldTrailsFor(this, ship),
       } : undefined,
+      pvp: pvpView(this, s),
     };
   }
 
@@ -1198,6 +1203,7 @@ export class Game {
 
   beginSinking(ship: ShipEntity): void {
     if (ship.sinkingUntil) return;
+    if (duelIntercept(this, ship)) return; // nobody sinks in a duel: she strikes
     if (ship.caravanOf !== null) caravanLost(this, ship);
     this.sunkRecently.set(ship.id, this.now);
     // Salvage King: a hull that went down whole can be raised for a while.
@@ -1219,7 +1225,7 @@ export class Game {
     const killer = killerId !== null ? this.ships.get(killerId) ?? null : null;
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
-    this.dropWreckage(ship, 0.4, victor);
+    this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship), victor);
     if (killer) this.creditKill(killer, ship, 'sunk');
   }
 
@@ -1317,17 +1323,10 @@ export class Game {
         }
       }
     }
-    if (victim.isPlayer && victim.wantedCache >= 2) {
-      const vp = this.profileOf(victim);
-      if (vp) {
-        if (victim.wantedCache >= 3) grantDeed(this, s, 'deed_wanted_legend');
-        const bounty = Math.round(vp.infamy * 6);
-        p.gold += bounty;
-        vp.infamy *= 0.6;
-        victim.wantedCache = wantedLevel(vp.infamy);
-        this.sendTo(s, { t: 'toast', msg: `Bounty collected on ${victim.captainName}: ${bounty} silver.`, kind: 'gold' });
-        this.db.ledger(s.accountId, 'bounty', bounty, victim.captainName);
-      }
+    if (victim.isPlayer) {
+      if (victim.wantedCache >= 3) grantDeed(this, s, 'deed_wanted_legend');
+      // Crown and captains' bounties, repeat kills, the Shame, the right of revenge.
+      onPlayerKill(this, killer, victim, how);
     }
     // Contracts.
     for (const c of p.contracts) {
@@ -1351,6 +1350,7 @@ export class Game {
 
   private playerDeath(s: PlayerSession, ship: ShipEntity): void {
     const p = s.profile!;
+    grantBubble(this, s);
     onSunkCrew(this, s);
     questEvent(this, s, { k: 'die', region: ship.region });
     anchorFleet(this, s, 0.5); // without the flagship the squadron scatters home
@@ -1573,6 +1573,7 @@ export class Game {
   }
 
   private pickupLoot(ship: ShipEntity, l: Loot): void {
+    bubbleOnLoot(this, ship, l.ownerOnly === ship.accountId);
     const s = this.sessionOf(ship);
     if (!s || !s.profile) return;
     if (l.decoy) {
@@ -2229,6 +2230,24 @@ export class Game {
         }
         return;
       }
+      case 'pvp':
+        switch (msg.action) {
+          case 'black_flag':
+            return err(setBlackFlag(this, s, !!msg.on));
+          case 'duel':
+            return err(challengeDuel(this, s, msg.name, !!msg.fleet));
+          case 'duel_answer':
+            err(answerDuel(this, s, Math.trunc(Number(msg.id)), !!msg.accept));
+            return this.pushSelf(s, true);
+          case 'forfeit':
+            return err(forfeitDuel(this, s));
+          case 'bounty':
+            err(postBounty(this, s, msg.name, Number(msg.amount)));
+            return this.pushSelf(s, true);
+          case 'bounties':
+            return sendBounties(this, s);
+        }
+        return;
       case 'chat': {
         const text = String(msg.text ?? '').slice(0, 200).trim();
         if (!text) return;
@@ -2499,6 +2518,7 @@ export class Game {
     ship.state = { x: port.x + v.x * 60, y: port.y + v.y * 60, heading: away, speed: 3, sail: 0.5, rudder: 0 };
     ship.input = { rudder: 0, sailTarget: 0.5 };
     ship.protectedUntil = this.now + 20;
+    bubbleOnUndock(this, s);
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
     launchFleet(this, s);
     this.sendTo(s, { t: 'port', view: null });
@@ -2558,7 +2578,7 @@ export class Game {
           o.id, Math.round(o.state.x * 10) / 10, Math.round(o.state.y * 10) / 10, Math.round(o.state.heading * 1000) / 1000,
           Math.round(o.state.speed * 10) / 10, Math.round(o.state.sail * 100) / 100,
           Math.round((o.hull / o.stats.hullMax) * 1000) / 1000, Math.round((o.sails / o.stats.sailHpMax) * 100) / 100,
-          o.flagsFor(me.id, this.isHostile(o, me), this.now) | (isTethered(this, o) ? SF.TETHERED : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
+          o.flagsFor(me.id, this.isHostile(o, me), this.now) | (isTethered(this, o) ? SF.TETHERED : 0) | (o.isPlayer ? pvpFlags(this, o) : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
         ];
         // Distance priority: close ships every snapshot, the middle distance every second, the far every fourth.
         const period = d < SNAP_NEAR ? 1 : d < SNAP_MID ? 2 : 4;
@@ -2608,7 +2628,7 @@ export class Game {
           stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / CHASER_RELOAD : 0,
           mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
-        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (isTethered(this, me) ? SF.TETHERED : 0), combat: me.inCombat(this.now),
+        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (isTethered(this, me) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now),
         water: Math.min(1, me.water / floodCapacity(me)), leaks: me.leaks, station: me.station,
         resolve: me.resolve, dread: me.dread, sanity: me.sanity,
       };

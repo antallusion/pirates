@@ -133,6 +133,7 @@ test('barter across the quay: offers, both ready, silver and goods change hands 
   const a = join(game, 'Anne Quay');
   const b = join(game, 'Bram Quay');
   const A = sess(game, 'Anne Quay'), B = sess(game, 'Bram Quay');
+  A.profile!.level = B.profile!.level = 20; // past the Green Pennant
   A.ship!.cargo = { rum: 10 };
   A.profile!.stolen = { rum: 4 };
   B.ship!.cargo = {};
@@ -168,6 +169,7 @@ test('barter at sea: hove-to alongside, the boats take time, and parting calls i
   const a = join(game, 'Anne Swell');
   const b = join(game, 'Bram Swell');
   const A = sess(game, 'Anne Swell'), B = sess(game, 'Bram Swell');
+  A.profile!.level = B.profile!.level = 20;
   atSea(game, a, A, 50_000, 50_000);
   atSea(game, b, B, 50_300, 50_000);
   A.ship!.cargo = { sugar: 8 };

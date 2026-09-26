@@ -136,12 +136,12 @@ export function renderHelp(root: HTMLElement): void {
     ['M · T · I · O', 'World chart · talents · ship & hold · crew and officers (orders, the Codex share).'],
     ['Wheel', 'Zoom.'],
     ['N', 'Sound on / off.'],
-    ['Y', 'Company & Letters: your group and the convoy signal, trading with another captain, letters by packet boat, the market board in port (Tidewrack: the trophy auction).'],
+    ['Y', 'Company & Letters: your group and the convoy signal, trading with another captain, your colours (the Black Flag), duels and the bounty board, letters by packet boat, the market board in port (Tidewrack: the trophy auction).'],
     ['Enter', 'Chat. Start with /g to speak to your group only.'],
   ];
   root.innerHTML = `<div class="modal-head"><div><h2>Captain's Handbook</h2><div class="sub">The ocean is the world. The ship is the character. The captain is the build.</div></div><div class="muted">[H] close</div></div>
     <div class="modal-body"><div class="cols"><div class="help-grid">${keys.map(([k, d]) => `<kbd>${esc(k)}</kbd><span>${esc(d)}</span>`).join('')}</div>
     <div><div class="card"><h4>First voyage</h4><p>Saltmarrow sells cheap provisions and salt. Porto Blackwater, east along the Black Coast, pays for salt and sells sugar and rum. Gravesend buys sugar. Every sale earns experience.</p></div>
     <div class="card"><h4>The law</h4><p>Attacking lawful ships raises your Wanted level. Crown ports close at Wanted 2, League at 3. Pirate havens (Cinderhold, Fogmouth) never close. Pardons are sold in free and broker ports.</p></div>
-    <div class="card"><h4>Risk</h4><p>Safe waters (Black Coast) forbid PvP. Contested and lawless waters do not. When sunk you keep your ship, level and talents — but cargo, some crew, a repair fee and a tenth of the silver aboard are lost. The League bank keeps the rest safe.</p></div></div></div></div>`;
+    <div class="card"><h4>Risk</h4><p>Safe waters (Black Coast) forbid PvP but for duels by consent. Contested and lawless waters do not — though young captains sail under the Green Pennant in contested water, and a sunk captain is protected for ten minutes. When sunk you keep your ship, level and talents — but cargo, some crew, a repair fee and a tenth of the silver aboard are lost. The League bank keeps the rest safe.</p></div></div></div></div>`;
 }

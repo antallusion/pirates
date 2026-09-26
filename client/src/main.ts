@@ -193,9 +193,14 @@ function onMessage(m: ServerMsg): void {
     case 'chat':
       hud.chat(m.from, m.text, m.ch);
       break;
+    case 'duel':
+      if (m.view && m.view.startsIn === 5) hud.banner('A DUEL', m.view.sides.map((side) => side.map((x) => x.name).join(', ')).join('  against  '));
+      if (modal === 'company') refreshModal();
+      break;
     case 'party':
     case 'mail':
     case 'market':
+    case 'bounties':
       if (modal === 'company') refreshModal();
       hud.setUnread(state.unread);
       break;
