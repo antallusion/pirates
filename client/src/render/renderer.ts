@@ -729,35 +729,81 @@ export class Renderer {
     }
   }
 
+  /** Where each port town stands: on the land behind its anchorage, its quays at the shore (computed once). */
+  private portLayout = new Map<string, { x: number; y: number; ang: number; size: number } | null>();
+
+  private layoutPort(p: ClientState['ports'][number], island: { x: number; y: number; r: number; poly: number[] }): { x: number; y: number; ang: number; size: number } {
+    const dx = island.x - p.x, dy = island.y - p.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const ux = dx / d, uy = dy / d;
+    // The ray from the anchorage to the island's heart: where it makes landfall and where it leaves the land again.
+    const hits: number[] = [];
+    const poly = island.poly;
+    for (let i = 0; i < poly.length; i += 2) {
+      const ax = poly[i], ay = poly[i + 1], bx = poly[(i + 2) % poly.length], by = poly[(i + 3) % poly.length];
+      const ex = bx - ax, ey = by - ay;
+      const den = ux * ey - uy * ex;
+      if (Math.abs(den) < 1e-9) continue;
+      const t = ((ax - p.x) * ey - (ay - p.y) * ex) / den;
+      const u = ((ax - p.x) * uy - (ay - p.y) * ux) / den;
+      if (t > 0 && u >= 0 && u <= 1) hits.push(t);
+    }
+    hits.sort((m, n) => m - n);
+    // An anchorage already on the land (a river mouth, a lagoon) starts the town where it lies.
+    const ashore = inPoly(poly, p.x, p.y);
+    const tIn = ashore ? 0 : hits[0] ?? d * 0.6;
+    const tOut = (ashore ? hits[0] : hits[1]) ?? d + island.r * 0.5;
+    // The town's body fills the upper three quarters of the painting, the quays the foot: the body must fit the land.
+    const depth = Math.max(80, tOut - tIn);
+    const size = Math.max(140, Math.min(230 + p.size * 80, (depth * 0.8) / 0.64));
+    const shoreX = p.x + ux * tIn, shoreY = p.y + uy * tIn;
+    // Local +y turns to the sea, so the quays at the painting's foot reach into the water.
+    return { x: shoreX + ux * size * 0.24, y: shoreY + uy * size * 0.24, ang: Math.atan2(-dx, dy) + Math.PI, size };
+  }
+
   private drawPorts(state: ClientState): void {
     const g = this.g;
     for (const p of state.ports) {
+      if (Math.abs(p.x - this.camX) * this.zoom > this.w + 600 * this.zoom || Math.abs(p.y - this.camY) * this.zoom > this.h + 600 * this.zoom) continue;
       const spr = sprite(`prop.port_${p.faction}`) ?? sprite('prop.port_town');
-      const faction = !!sprite(`prop.port_${p.faction}`);
-      if (Math.abs(p.x - this.camX) * this.zoom > this.w || Math.abs(p.y - this.camY) * this.zoom > this.h) continue;
       const island = [...state.islands.values()].find((is) => is.portId === p.id);
       if (!island) continue;
-      // Town sits on the coast facing the anchor.
-      const dx = island.x - p.x, dy = island.y - p.y;
-      const d = Math.hypot(dx, dy) || 1;
-      const tx = p.x + (dx / d) * 150, ty = p.y + (dy / d) * 150;
-      // Local +y points inland; the faction towns are drawn with their piers at the image's foot, so they turn
-      // half round to put the quays on the water.
-      const ang = Math.atan2(-dx, dy) + (faction ? Math.PI : 0);
-      const size = (faction ? 230 + p.size * 80 : 150 + p.size * 70) * this.zoom;
+      let lay = this.portLayout.get(p.id);
+      if (!lay) this.portLayout.set(p.id, (lay = this.layoutPort(p, island)));
+      const size = lay.size * this.zoom;
+      const path = () => {
+        g.beginPath();
+        for (let i = 0; i < island.poly.length; i += 2) {
+          if (i === 0) g.moveTo(this.sx(island.poly[i]), this.sy(island.poly[i + 1]));
+          else g.lineTo(this.sx(island.poly[i]), this.sy(island.poly[i + 1]));
+        }
+        g.closePath();
+      };
+      const town = () => {
+        g.translate(this.sx(lay.x), this.sy(lay.y));
+        g.rotate(lay.ang);
+        if (spr) g.drawImage(spr.img, -size / 2, -size / 2, size, size);
+        else {
+          g.fillStyle = '#26272a';
+          g.fillRect(-size * 0.4, -size * 0.4, size * 0.8, size * 0.64);
+        }
+      };
+      // The town's streets and walls stand only on the land — no ship sails through a house.
       g.save();
-      g.translate(this.sx(tx), this.sy(ty));
-      g.rotate(ang);
-      if (spr) g.drawImage(spr.img, -size / 2, -size / 2, size, size);
-      else {
-        g.fillStyle = '#26272a';
-        g.fillRect(-size * 0.3, -size * 0.3, size * 0.6, size * 0.5);
-      }
-      if (!faction) {
-        // Piers for the old single town (the faction towns have their own).
-        g.fillStyle = '#3a2e22';
-        for (let k = -1; k <= 1; k++) g.fillRect(k * size * 0.18 - 3 * this.zoom, size * 0.15, 6 * this.zoom, size * 0.45);
-      }
+      path();
+      g.clip();
+      town();
+      g.restore();
+      // The quays: only the painting's foot, out over the water from the shore.
+      g.save();
+      g.translate(this.sx(lay.x), this.sy(lay.y));
+      g.rotate(lay.ang);
+      g.beginPath();
+      g.rect(-size / 2, size * 0.23, size, size * 0.27);
+      g.clip();
+      g.rotate(-lay.ang);
+      g.translate(-this.sx(lay.x), -this.sy(lay.y));
+      town();
       g.restore();
       // Name & flag.
       g.font = `${Math.round(clamp(14 * this.zoom, 12, 22))}px "IM Fell English SC", Georgia, serif`;
@@ -766,13 +812,12 @@ export class Renderer {
       g.fillText(p.name, this.sx(p.x) + 1, this.sy(p.y) - 40 * this.zoom + 1);
       g.fillStyle = FACTIONS[p.faction].lantern;
       g.fillText(p.name, this.sx(p.x), this.sy(p.y) - 40 * this.zoom);
-      // Docking ring.
-      g.strokeStyle = 'rgba(176,141,87,0.25)';
-      g.setLineDash([4, 6]);
+      // The harbour's reach: a faint ring of calmer water, no dashes.
+      g.strokeStyle = 'rgba(176,141,87,0.14)';
+      g.lineWidth = Math.max(1, 2 * this.zoom);
       g.beginPath();
       g.arc(this.sx(p.x), this.sy(p.y), 420 * this.zoom, 0, Math.PI * 2);
       g.stroke();
-      g.setLineDash([]);
     }
   }
 
@@ -1457,13 +1502,21 @@ export class Renderer {
         const keel = aim.chaser === 'bow' ? own.heading : own.heading + Math.PI;
         const r = GUNS.long_9.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel === 'grape' ? 'round' : you.ammoSel].rangeMul * this.zoom;
         const x = this.sx(own.x), y = this.sy(own.y);
+        // A soft fan of light that fades toward the range, and the range itself as a short bright arc — no rays
+        // running off the screen.
+        const grd = g.createRadialGradient(x, y, 0, x, y, r);
+        grd.addColorStop(0, ready ? 'rgba(143,179,217,0.16)' : 'rgba(90,100,110,0.08)');
+        grd.addColorStop(1, 'rgba(143,179,217,0)');
         g.beginPath();
         g.moveTo(x, y);
         g.arc(x, y, r, keel - Math.PI / 2 - CHASER_CONE, keel - Math.PI / 2 + CHASER_CONE);
         g.closePath();
-        g.fillStyle = ready ? 'rgba(143,179,217,0.10)' : 'rgba(90,100,110,0.06)';
+        g.fillStyle = grd;
         g.fill();
-        g.strokeStyle = ready ? 'rgba(143,179,217,0.6)' : 'rgba(90,100,110,0.4)';
+        g.beginPath();
+        g.arc(x, y, r, keel - Math.PI / 2 - CHASER_CONE, keel - Math.PI / 2 + CHASER_CONE);
+        g.strokeStyle = ready ? 'rgba(143,179,217,0.55)' : 'rgba(90,100,110,0.35)';
+        g.lineWidth = 1.5;
         g.stroke();
       }
     }
@@ -1476,15 +1529,20 @@ export class Renderer {
       const spread = (gun.spreadDeg * Math.PI) / 180 * 3 + 0.12;
       const x = this.sx(own.x), y = this.sy(own.y);
       const r = range * this.zoom;
+      const grd = g.createRadialGradient(x, y, 0, x, y, r);
+      grd.addColorStop(0, active ? (ready ? 'rgba(224,184,98,0.2)' : 'rgba(150,120,90,0.1)') : ready ? 'rgba(224,184,98,0.06)' : 'rgba(0,0,0,0)');
+      grd.addColorStop(1, 'rgba(224,184,98,0)');
       g.beginPath();
       g.moveTo(x, y);
       g.arc(x, y, r, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
       g.closePath();
-      g.fillStyle = active ? (ready ? 'rgba(224,184,98,0.12)' : 'rgba(150,120,90,0.07)') : ready ? 'rgba(224,184,98,0.04)' : 'rgba(0,0,0,0)';
+      g.fillStyle = grd;
       g.fill();
       if (active) {
-        g.strokeStyle = ready ? 'rgba(224,184,98,0.6)' : 'rgba(150,120,90,0.4)';
-        g.lineWidth = 1;
+        g.beginPath();
+        g.arc(x, y, r, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
+        g.strokeStyle = ready ? 'rgba(224,184,98,0.5)' : 'rgba(150,120,90,0.35)';
+        g.lineWidth = 1.5;
         g.stroke();
         // Aim distance marker.
         const d = clamp(aim.dist, 40, range) * this.zoom;

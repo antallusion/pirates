@@ -3,6 +3,10 @@
 export const EN = {
   'title': 'Talents',
   'sub': 'Level {level} · {points} to spend · deeds {counted}/{max} · at most two keystones and three bridges',
+  'chip.level': 'Level {level}',
+  'chip.points': '{points} to spend',
+  'chip.deeds': 'Deeds {counted}/{max}',
+  'rules': 'At most two keystones and three bridges.',
   'point.one': 'point',
   'point.few': 'points',
   'point.many': 'points',
@@ -46,6 +50,10 @@ export const EN = {
 export const RU: Record<keyof typeof EN, string> = {
   'title': 'Таланты',
   'sub': 'Уровень {level} · свободно: {points} · деяния {counted}/{max} · не более двух краеугольных талантов и трёх мостов',
+  'chip.level': 'Уровень {level}',
+  'chip.points': 'Свободно: {points}',
+  'chip.deeds': 'Деяния {counted}/{max}',
+  'rules': 'Не более двух краеугольных талантов и трёх мостов.',
   'point.one': 'очко',
   'point.few': 'очка',
   'point.many': 'очков',

@@ -4,7 +4,9 @@ import { lang, setLang, t } from '../i18n.ts';
 import type { Key, Lang } from '../i18n.ts';
 import { ACTIONS, conflicts, keyLabel, keyOf, PRESETS, settings, update } from '../settings.ts';
 import type { Action, Colorblind, Settings } from '../settings.ts';
-import { esc } from './dom.ts';
+import { esc, icon } from './dom.ts';
+
+const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls' };
 
 type Tab = 'ui' | 'vision' | 'sound' | 'controls';
 
@@ -43,10 +45,10 @@ export class OptionsScreen {
     this.root = root;
     const s = settings();
     const tabs: Tab[] = ['ui', 'vision', 'sound', 'controls'];
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(t('opt.title'))}</h2><div class="sub">${esc(t('opt.sub'))}</div></div><button class="btn btn-small" data-close>${esc(t('opt.close'))}</button></div>
-      <div class="tabs">${tabs.map((x) => `<button class="tab ${x === this.tab ? 'active' : ''}" data-tab="${x}">${esc(t(`opt.tab.${x}` as Key))}</button>`).join('')}</div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(t('opt.title'))}</h2><div class="sub">${esc(t('opt.sub'))}</div></div></div>
+      <div class="tabs icon-tabs four">${tabs.map((x) => `<button class="tab ${x === this.tab ? 'active' : ''}" data-tab="${x}" title="${esc(t(`opt.tab.${x}` as Key))}">${icon(TAB_ICON[x])}<span>${esc(t(`opt.tab.${x}` as Key))}</span></button>`).join('')}</div>
+      <div class="tab-caption">${esc(t(`opt.tab.${this.tab}` as Key))}</div>
       <div class="modal-body options">${this.body(s)}</div>`;
-    root.querySelector<HTMLButtonElement>('[data-close]')!.onclick = () => this.close();
     root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => (b.onclick = () => {
       this.tab = b.dataset.tab as Tab;
       this.listening = null;
@@ -93,19 +95,19 @@ export class OptionsScreen {
   private body(s: Settings): string {
     const check = (k: keyof Settings, label: Key) => `<label class="check"><input type="checkbox" data-bool="${k}" ${s[k] ? 'checked' : ''}/> ${esc(t(label))}</label>`;
     const range = (k: 'uiScale' | 'textScale', label: Key, min: number, max: number) =>
-      `<label class="opt-range">${esc(t(label))}<input type="range" data-num="${k}" min="${min}" max="${max}" step="0.05" value="${s[k]}"/><output>${Math.round(s[k] * 100)}%</output></label>`;
+      `<label class="opt-range"><span class="opt-l">${esc(t(label))}</span><input type="range" data-num="${k}" min="${min}" max="${max}" step="0.05" value="${s[k]}"/><output>${Math.round(s[k] * 100)}%</output></label>`;
     const vol = (k: keyof Settings['volume'], label: Key) =>
-      `<label class="opt-range">${esc(t(label))}<input type="range" data-vol="${k}" min="0" max="1" step="0.05" value="${s.volume[k]}"/><output>${Math.round(s.volume[k] * 100)}%</output></label>`;
+      `<label class="opt-range"><span class="opt-l">${esc(t(label))}</span><input type="range" data-vol="${k}" min="0" max="1" step="0.05" value="${s.volume[k]}"/><output>${Math.round(s.volume[k] * 100)}%</output></label>`;
     switch (this.tab) {
       case 'ui':
-        return `<label class="opt-range">${esc(t('opt.lang'))}<select data-sel="lang" class="field">${(['en', 'ru'] as Lang[]).map((l) => `<option value="${l}" ${lang() === l ? 'selected' : ''}>${l === 'en' ? 'English' : 'Русский'}</option>`).join('')}</select></label>
+        return `<label class="opt-range sel"><span class="opt-l">${icon('opt_lang', '', 'ico-sm')}${esc(t('opt.lang'))}</span><select data-sel="lang" class="field">${(['en', 'ru'] as Lang[]).map((l) => `<option value="${l}" ${lang() === l ? 'selected' : ''}>${l === 'en' ? 'English' : 'Русский'}</option>`).join('')}</select></label>
           ${range('uiScale', 'opt.uiScale', 0.7, 2)}${range('textScale', 'opt.textScale', 0.9, 1.5)}
           ${check('highContrast', 'opt.highContrast')}${check('plainFont', 'opt.plainFont')}${check('plainTerms', 'opt.plainTerms')}
           <p class="muted">${esc(t('opt.readAloud', { key: keyLabel(s.keys.readAloud[0] || s.keys.readAloud[1]) }))}</p>`;
       case 'vision':
-        return `<label class="opt-range">${esc(t('opt.colorblind'))}<select data-sel="colorblind" class="field">${(['off', 'protan', 'deutan', 'tritan'] as Colorblind[]).map((c) => `<option value="${c}" ${s.colorblind === c ? 'selected' : ''}>${esc(t(`opt.cb.${c}` as Key))}</option>`).join('')}</select></label>
+        return `<label class="opt-range sel"><span class="opt-l">${esc(t('opt.colorblind'))}</span><select data-sel="colorblind" class="field">${(['off', 'protan', 'deutan', 'tritan'] as Colorblind[]).map((c) => `<option value="${c}" ${s.colorblind === c ? 'selected' : ''}>${esc(t(`opt.cb.${c}` as Key))}</option>`).join('')}</select></label>
           ${check('lanternMarks', 'opt.lanternMarks')}${check('reduceFlashes', 'opt.reduceFlashes')}${check('screenShake', 'opt.screenShake')}${check('lanternFlicker', 'opt.lanternFlicker')}${check('reduceMotion', 'opt.reduceMotion')}
-          <label class="opt-range">${esc(t('opt.effects'))}<select data-sel="effects" class="field"><option value="auto" ${s.effects === 'auto' ? 'selected' : ''}>${esc(t('opt.effects.auto'))}</option><option value="low" ${s.effects === 'low' ? 'selected' : ''}>${esc(t('opt.effects.low'))}</option></select></label>
+          <label class="opt-range sel"><span class="opt-l">${esc(t('opt.effects'))}</span><select data-sel="effects" class="field"><option value="auto" ${s.effects === 'auto' ? 'selected' : ''}>${esc(t('opt.effects.auto'))}</option><option value="low" ${s.effects === 'low' ? 'selected' : ''}>${esc(t('opt.effects.low'))}</option></select></label>
           ${check('webgl', 'opt.webgl')}`;
       case 'sound':
         return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}`;

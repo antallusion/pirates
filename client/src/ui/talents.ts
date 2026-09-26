@@ -33,23 +33,39 @@ export class TalentScreen {
     const lo = self.loadouts;
     const now = state.estServerTime();
     const nav = [...ROSE_ORDER, 'bridges', 'deeds'] as View[];
+    const sel = this.view;
+    const selTree = sel !== 'bridges' && sel !== 'deeds' ? sel : null;
+    const selPts = selTree ? pointsInTree(self.talents, selTree) : sel === 'bridges' ? TALENTS.filter((x) => x.tree === 'bridge' && (self.talents[x.id] ?? 0) > 0).length : self.deeds.length;
+    const nodes = ROSE_ORDER.map((t, i) => {
+      const pts = pointsInTree(self.talents, t);
+      const f = Math.min(1, pts / 26);
+      const off = !TREES[t].playable;
+      const native = TREES[t].native.includes(self.captain);
+      return `<button class="rose-node ${sel === t ? 'active' : ''} ${off ? 'off' : ''}" data-view="${t}" style="--a:${i * 36}deg;--f:${(f * 360).toFixed(0)}deg" title="${esc(TREES[t].name)}" aria-label="${esc(TREES[t].name)}">${icon(`tree_${t}`, '✦', 'rose-ico')}${pts ? `<span class="rose-pts">${pts}</span>` : ''}${native ? `<i class="rose-native" title="${esc(L('nativeTip'))}">◆</i>` : ''}</button>`;
+    }).join('');
+    const coreArt = selTree ? `tree_${selTree}` : sel === 'bridges' ? 'ab_form_line' : 'goal';
+    const coreName = selTree ? TREES[selTree].name : sel === 'bridges' ? L('bridges') : L('deeds');
+    const loadouts = lo.slots > 1
+      ? `<div class="tal-loadout"><span class="with-ico">${icon('menu_talents', '', 'ico-sm')}${esc(L('loadout'))}</span>${Array.from({ length: lo.slots }, (_, i) => `<button class="btn btn-small ${i === lo.active ? 'btn-primary' : ''}" data-loadout="${i}" ${!docked || i === lo.active || lo.switchAt > now ? 'disabled' : ''}>${i + 1}${lo.filled[i] ? '' : esc(L('empty'))}</button>`).join('')}<span class="muted">${esc(docked ? (lo.switchAt > now ? L('switchAgain', { n: Math.ceil((lo.switchAt - now) / 60) }) : L('switchInPort')) : L('switchOnlyInPort'))}</span></div>`
+      : `<div class="tal-loadout muted">${esc(L('loadoutsAt20'))}</div>`;
     root.innerHTML = `
-      <div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { level: self.level, points: points(self.talentPoints), counted, max: MAX_COUNTED_DEEDS }))}</div></div>
-      <div style="text-align:right">${lo.slots > 1 ? `<div>${esc(L('loadout'))} ${Array.from({ length: lo.slots }, (_, i) => `<button class="btn btn-small ${i === lo.active ? 'btn-primary' : ''}" data-loadout="${i}" ${!docked || i === lo.active || lo.switchAt > now ? 'disabled' : ''}>${i + 1}${lo.filled[i] ? '' : esc(L('empty'))}</button>`).join(' ')}</div>
-        <div class="muted" style="font-size:11px">${esc(docked ? (lo.switchAt > now ? L('switchAgain', { n: Math.ceil((lo.switchAt - now) / 60) }) : L('switchInPort')) : L('switchOnlyInPort'))}</div>` : `<div class="muted">${esc(L('loadoutsAt20'))}</div>`}</div></div>
-      <div class="modal-body"><div style="display:grid;grid-template-columns:220px 1fr;gap:16px">
-        <div>${rose(self.talents)}
-          <div class="tree-nav">${nav.map((v) => {
-            const label = v === 'bridges' ? L('bridges') : v === 'deeds' ? L('deeds') : TREES[v].name;
-            const pts = v === 'bridges' ? TALENTS.filter((x) => x.tree === 'bridge' && (self.talents[x.id] ?? 0) > 0).length : v === 'deeds' ? self.deeds.length : pointsInTree(self.talents, v);
-            const off = v !== 'bridges' && v !== 'deeds' && !TREES[v].playable;
-            const native = v !== 'bridges' && v !== 'deeds' && TREES[v].native.includes(self.captain);
-            return `<div class="tree-tab ${this.view === v ? 'active' : ''} ${off ? 'muted' : ''}" data-view="${v}">${v !== 'bridges' && v !== 'deeds' ? icon(`tree_${v}`) : ''}${esc(label)}${native ? ` <span class="gold" title="${esc(L('nativeTip'))}">◆</span>` : ''}<span style="float:right">${pts}</span></div>`;
-          }).join('')}</div>
-          ${this.respecBox(self, docked, now)}
+      <div class="modal-head"><div><h2>${esc(L('title'))}</h2></div></div>
+      <div class="modal-body">
+        <div class="tal-chips"><span class="chip-stat">${icon('xp', '', 'ico-sm')}${esc(L('chip.level', { level: self.level }))}</span><span class="chip-stat ${self.talentPoints ? 'hot' : ''}">${icon('menu_talents', '', 'ico-sm')}${esc(L('chip.points', { points: points(self.talentPoints) }))}</span><span class="chip-stat">${icon('goal', '', 'ico-sm')}${esc(L('chip.deeds', { counted, max: MAX_COUNTED_DEEDS }))}</span></div>
+        ${loadouts}
+        <div class="tal-layout">
+          <div class="tal-side">
+            <div class="rose">${nodes}<div class="rose-core">${icon(coreArt, '', 'rose-core-ico')}<b>${esc(coreName)}</b><span>${esc(sel === 'deeds' ? String(selPts) : points(selPts))}</span></div></div>
+            <div class="rose-extra">
+              <button class="btn btn-small ${sel === 'bridges' ? 'btn-primary' : ''}" data-view="bridges">${icon('ab_form_line', '', 'ico-sm')}${esc(L('bridges'))} <b>${TALENTS.filter((x) => x.tree === 'bridge' && (self.talents[x.id] ?? 0) > 0).length}</b></button>
+              <button class="btn btn-small ${sel === 'deeds' ? 'btn-primary' : ''}" data-view="deeds">${icon('goal', '', 'ico-sm')}${esc(L('deeds'))} <b>${self.deeds.length}</b></button>
+            </div>
+            <p class="muted tal-rules">${esc(L('rules'))}</p>
+          </div>
+          <div class="tal-main">${this.view === 'deeds' ? deeds(self.deeds) : this.tree(self, ctx, docked)}</div>
+          <div class="tal-respec">${this.respecBox(self, docked, now)}</div>
         </div>
-        <div>${this.view === 'deeds' ? deeds(self.deeds) : this.tree(self, ctx, docked)}</div>
-      </div></div>`;
+      </div>`;
     root.querySelectorAll<HTMLElement>('[data-view]').forEach((el) => (el.onclick = () => {
       this.view = el.dataset.view as View;
       this.render(root, state);
@@ -71,22 +87,22 @@ export class TalentScreen {
   private respecBox(self: NonNullable<ClientState['self']>, docked: boolean, now: number): string {
     const r = self.respec;
     const cd = r.cleanSlateAt > now ? L('nextIn', { h: Math.ceil((r.cleanSlateAt - now) / 3600) }) : '';
-    return `<div class="card" style="margin-top:10px"><h4>${esc(L('respec'))}</h4>
+    return `<div class="card"><h4 class="card-h">${icon('ab_brine_mend', '', 'ico-md')}${esc(L('respec'))}</h4>
       <p class="muted" style="font-size:12px">${esc(docked ? L('clickForget') : L('respecPort'))} ${esc(r.free ? L('allFree') : L('forgetCost', { cost: fmt(r.forgetCost) }))}</p>
-      <button class="btn btn-small" data-respec="full" ${!docked || (!r.free && r.cleanSlateAt > now) ? 'disabled' : ''}>${esc(L('cleanSlate'))}${esc(r.free ? L('free') : L('cost', { cost: fmt(r.cleanSlateCost) }))}${esc(cd)}</button>
-      <button class="btn btn-small" data-respec="token" ${!docked || self.tokens <= 0 ? 'disabled' : ''}>${esc(L('token', { n: self.tokens }))}</button></div>`;
+      <div class="respec-btns"><button class="btn btn-small" data-respec="full" ${!docked || (!r.free && r.cleanSlateAt > now) ? 'disabled' : ''}>${esc(L('cleanSlate'))}${esc(r.free ? L('free') : L('cost', { cost: fmt(r.cleanSlateCost) }))}${esc(cd)}</button>
+      <button class="btn btn-small" data-respec="token" ${!docked || self.tokens <= 0 ? 'disabled' : ''}>${esc(L('token', { n: self.tokens }))}</button></div></div>`;
   }
 
   private tree(self: NonNullable<ClientState['self']>, ctx: { level: number; abyssOpen: boolean }, docked: boolean): string {
     const view = this.view as TreeId | 'bridges';
     const talents = TALENTS.filter((x) => (view === 'bridges' ? x.tree === 'bridge' : x.tree === view));
     if (view !== 'bridges' && !TREES[view].playable) {
-      return `<h3>${esc(TREES[view].name)}</h3><p class="motto">${esc(TREES[view].motto)}</p><p class="muted">${esc(L('later'))}</p>`;
+      return `<h3 class="tree-h">${icon(`tree_${view}`, '', 'ico-md')}${esc(TREES[view].name)}</h3><p class="motto">${esc(TREES[view].motto)}</p><p class="muted">${esc(L('later'))}</p>`;
     }
     if (!talents.length) return `<p class="muted">${esc(L('noBridges'))}</p>`;
     const head = view === 'bridges'
-      ? `<h3>${esc(L('bridges'))}</h3><p class="motto">${esc(L('bridgesMotto'))}</p>`
-      : `<h3>${esc(TREES[view].name)} <span class="muted" style="font-size:14px">${esc(points(pointsInTree(self.talents, view)))}</span></h3><p class="motto">${esc(TREES[view].motto)}${TREES[view].complete ? esc(L('tiersOpen', { gate: KEYSTONE_GATE })) : ''}</p>`;
+      ? `<h3 class="tree-h">${icon('ab_form_line', '', 'ico-md')}${esc(L('bridges'))}</h3><p class="motto">${esc(L('bridgesMotto'))}</p>`
+      : `<h3 class="tree-h">${icon(`tree_${view}`, '', 'ico-md')}${esc(TREES[view].name)} <span class="muted" style="font-size:14px">${esc(points(pointsInTree(self.talents, view)))}</span></h3><p class="motto">${esc(TREES[view].motto)}${TREES[view].complete ? esc(L('tiersOpen', { gate: KEYSTONE_GATE })) : ''}</p>`;
     const tiers = [...new Set(talents.map((x) => (x.keystone ? 99 : x.tier)))].sort((a, b) => a - b);
     return head + tiers.map((tier) => `<div class="tier-label">${esc(tier === 99 ? L('keystones') : view === 'bridges' ? L('bridges') : L('tier', { tier, points: points(tierRequirement(talents.find((x) => x.tier === tier && !x.keystone)!)) }))}</div>
       <div class="tier-row">${talents.filter((x) => (x.keystone ? 99 : x.tier) === tier).map((x) => card(x, self, ctx, docked)).join('')}</div>`).join('');
@@ -98,28 +114,14 @@ function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level
   const why = canLearn(self.talents, x.id, self.talentPoints, ctx);
   const locked = rank === 0 && why !== null && why !== 'No talent points available';
   const forgettable = docked && rank > 0 && !x.keystone && canUnlearn(self.talents, x.id, ctx) === null;
+  const art = x.tree === 'bridge' ? `tree_${x.bridge?.trees[0] ?? 'command'}` : `tree_${x.tree}`;
+  const pips = `<span class="pips">${Array.from({ length: x.maxRank }, (_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}" title="${esc(why ? serverText(why) : L('learn'))}">
-    <span class="rank">${rank}/${x.maxRank}</span>${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}<b>${esc(x.name)}</b>${x.active ? ` <span class="gold">${esc(L('active'))}</span>` : ''}
-    <small>${esc(x.description)}</small>${locked && why ? `<small class="muted">${esc(serverText(why))}</small>` : ''}</div>`;
-}
-
-/** The Wind Rose: ten rays in the canonical clockwise order, length by points invested (26 = full). */
-function rose(ranks: Record<string, number>): string {
-  const c = 100, r0 = 14, r1 = 88;
-  const rays = ROSE_ORDER.map((t, i) => {
-    const a = (i / ROSE_ORDER.length) * Math.PI * 2 - Math.PI / 2;
-    const f = Math.min(1, pointsInTree(ranks, t) / 26);
-    const x1 = c + Math.cos(a) * r1, y1 = c + Math.sin(a) * r1;
-    const xf = c + Math.cos(a) * (r0 + (r1 - r0) * f), yf = c + Math.sin(a) * (r0 + (r1 - r0) * f);
-    const lx = c + Math.cos(a) * (r1 + 2), ly = c + Math.sin(a) * (r1 + 2);
-    return `<line x1="${c}" y1="${c}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="rgba(240,230,200,0.18)"/>
-      ${f > 0 ? `<line x1="${c}" y1="${c}" x2="${xf.toFixed(1)}" y2="${yf.toFixed(1)}" stroke="#d9b45a" stroke-width="3" stroke-linecap="round"/>` : ''}
-      <text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="8" fill="rgba(240,230,200,0.6)" text-anchor="middle">${esc(TREES[t].name.slice(0, 4))}</text>`;
-  }).join('');
-  return `<svg viewBox="-10 -10 220 220" width="200" height="200" style="display:block;margin:0 auto 8px"><circle cx="${c}" cy="${c}" r="${r1}" fill="none" stroke="rgba(240,230,200,0.12)"/>${rays}<circle cx="${c}" cy="${c}" r="${r0}" fill="#0c141c" stroke="#d9b45a"/></svg>`;
+    ${icon(art, '✦', 'talent-ico')}<div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
+    <small>${esc(x.description)}</small>${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
 }
 
 function deeds(have: string[]): string {
-  return `<h3>${esc(L('deeds'))}</h3><p class="motto">${esc(L('deedsMotto'))}</p>
-    <table class="grid">${DEEDS.map((d) => `<tr><td>${have.includes(d.id) ? '<span class="good">✔</span>' : ''}</td><td><b>${esc(d.name)}</b></td><td>${esc(d.condition)}${d.awaits ? ` <span class="muted">${esc(L('opensWith', { what: d.awaits }))}</span>` : ''}</td></tr>`).join('')}</table>`;
+  return `<h3 class="tree-h">${icon('goal', '', 'ico-md')}${esc(L('deeds'))}</h3><p class="motto">${esc(L('deedsMotto'))}</p>
+    <div class="deed-list">${DEEDS.map((d) => `<div class="deed-row ${have.includes(d.id) ? 'done' : ''}">${icon('goal', '✦', 'item-ico')}<div class="item-text"><b>${esc(d.name)}</b><span class="muted">${esc(d.condition)}${d.awaits ? ` ${esc(L('opensWith', { what: d.awaits }))}` : ''}</span></div>${have.includes(d.id) ? '<span class="good deed-tick">✔</span>' : '<span></span>'}</div>`).join('')}</div>`;
 }

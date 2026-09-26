@@ -127,7 +127,10 @@ export class WorldMap {
     g.fillRect(0, 0, W, H);
     if (chart) {
       g.globalAlpha = 0.9;
-      g.drawImage(chart.img, tx(0), ty(0), WORLD_SIZE * k, WORLD_SIZE * k);
+      // The painting is wider than the square world: take its middle square, so the compass rose stays round.
+      const iw = chart.img.naturalWidth || chart.img.width, ih = chart.img.naturalHeight || chart.img.height;
+      const side = Math.min(iw, ih);
+      g.drawImage(chart.img, (iw - side) / 2, (ih - side) / 2, side, side, tx(0), ty(0), WORLD_SIZE * k, WORLD_SIZE * k);
       g.globalAlpha = 1;
     }
     // Grid.

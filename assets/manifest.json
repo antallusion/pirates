@@ -317,6 +317,18 @@
     "icon.map_port":                  { "local": "icons/map_port.webp", "remote": "hf_20260926_201013_9b600c34-b8fb-46dd-b0f4-cef6bf66a91c.png", "job": "9b600c34-b8fb-46dd-b0f4-cef6bf66a91c", "fit": "sprite:128" },
     "icon.map_contract":              { "local": "icons/map_contract.webp", "remote": "hf_20260926_201014_b9942d10-3530-4cd1-a182-a39a6747a30f.png", "job": "b9942d10-3530-4cd1-a182-a39a6747a30f", "fit": "sprite:128" },
     "icon.map_monster":               { "local": "icons/map_monster.webp", "remote": "hf_20260926_201013_82790374-563e-489e-809c-5a910b67218c.png", "job": "82790374-563e-489e-809c-5a910b67218c", "fit": "sprite:128" },
-    "icon.map_cove":                  { "local": "icons/map_cove.webp", "remote": "hf_20260926_201013_ce654744-1f5a-41f9-aaa3-0be93ea88c7b.png", "job": "ce654744-1f5a-41f9-aaa3-0be93ea88c7b", "fit": "sprite:128" }
+    "icon.map_cove":                  { "local": "icons/map_cove.webp", "remote": "hf_20260926_201013_ce654744-1f5a-41f9-aaa3-0be93ea88c7b.png", "job": "ce654744-1f5a-41f9-aaa3-0be93ea88c7b", "fit": "sprite:128" },
+    "icon.tab_group":                 { "local": "icons/tab_group.webp", "remote": "hf_20260926_222151_fb8d201b-bb39-4b1e-957f-31badce9fbf0.png", "job": "fb8d201b-bb39-4b1e-957f-31badce9fbf0" },
+    "icon.tab_guild":                 { "local": "icons/tab_guild.webp", "remote": "hf_20260926_222150_288d1172-da0a-487d-8b76-bf3e917fb4a6.png", "job": "288d1172-da0a-487d-8b76-bf3e917fb4a6" },
+    "icon.tab_law":                   { "local": "icons/tab_law.webp", "remote": "hf_20260926_222150_b1d7287b-0b3f-435d-b7b7-a4784b4f5be4.png", "job": "b1d7287b-0b3f-435d-b7b7-a4784b4f5be4" },
+    "icon.tab_letters":               { "local": "icons/tab_letters.webp", "remote": "hf_20260926_222151_a53e4d7e-088e-48e9-b937-2e8c62ab9eff.png", "job": "a53e4d7e-088e-48e9-b937-2e8c62ab9eff" },
+    "icon.tab_isles":                 { "local": "icons/tab_isles.webp", "remote": "hf_20260926_222151_90b93d44-b31a-4407-bbaa-8165ed787e61.png", "job": "90b93d44-b31a-4407-bbaa-8165ed787e61" },
+    "icon.tab_empire":                { "local": "icons/tab_empire.webp", "remote": "hf_20260926_222151_2a660da2-a3df-4d40-bf7c-722e441ab485.png", "job": "2a660da2-a3df-4d40-bf7c-722e441ab485" },
+    "icon.tab_legends":               { "local": "icons/tab_legends.webp", "remote": "hf_20260926_222150_e0a4c3ac-0b50-41b3-8b93-435a9421519d.png", "job": "e0a4c3ac-0b50-41b3-8b93-435a9421519d" },
+    "icon.tab_board":                 { "local": "icons/tab_board.webp", "remote": "hf_20260926_222150_c09c59c3-e211-448b-b8f4-20a94ed680d7.png", "job": "c09c59c3-e211-448b-b8f4-20a94ed680d7" },
+    "icon.opt_sound":                 { "local": "icons/opt_sound.webp", "remote": "hf_20260926_222150_5aee6c4b-e021-4053-ba87-44e25f7ca2d1.png", "job": "5aee6c4b-e021-4053-ba87-44e25f7ca2d1" },
+    "icon.opt_controls":              { "local": "icons/opt_controls.webp", "remote": "hf_20260926_222150_b4f2d576-b5e1-4093-ac6b-fe96d46c7880.png", "job": "b4f2d576-b5e1-4093-ac6b-fe96d46c7880" },
+    "icon.opt_lang":                  { "local": "icons/opt_lang.webp", "remote": "hf_20260926_222150_a4ff9cc9-e2ff-48ca-945a-aa45acc3b8c6.png", "job": "a4ff9cc9-e2ff-48ca-945a-aa45acc3b8c6" },
+    "icon.insurance":                 { "local": "icons/insurance.webp", "remote": "hf_20260926_222150_eef9fa87-97df-4b36-95a0-619223af2f38.png", "job": "eef9fa87-97df-4b36-95a0-619223af2f38" }
   }
 }

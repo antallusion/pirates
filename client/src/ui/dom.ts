@@ -62,13 +62,14 @@ export function icon(id: string, glyph = '', cls = 'ico'): string {
 }
 
 /** An officer's face: the unique officers have portraits, the rest the mark of their post. */
-export function officerIcon(o: { role: string; unique?: string }): string {
-  return (o.unique ? icon(`portrait.officer_${o.unique}`, '', 'ico-md ico-round') : '') || icon(`role_${o.role}`, '', 'ico-md');
+export function officerIcon(o: { role: string; unique?: string }, cls = 'ico-md'): string {
+  return (o.unique ? icon(`portrait.officer_${o.unique}`, '', `${cls} ico-round`) : '') || icon(`role_${o.role}`, '', cls);
 }
 
 /** Silver as the game shows it everywhere: the coin and the sum. */
 export function money(n: number): string {
-  return `<span class="money">${icon('coin', '⛁', 'ico-sm')}${fmt(n)}</span>`;
+  const sum = Number.isInteger(n) || Math.abs(n) >= 100 ? fmt(n) : n.toFixed(1).replace(/\.0$/, '');
+  return `<span class="money">${icon('coin', '⛁', 'ico-sm')}${sum}</span>`;
 }
 
 /** Experience: the navigator's star and the sum. */

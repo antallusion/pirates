@@ -3,6 +3,11 @@
 export const EN = {
   'title': 'The Company',
   'sub': '{souls} aboard · veterancy {stars} ({skill}) · morale {morale} ({spirit}) · loyalty {loyalty}',
+  'st.souls': 'Aboard',
+  'st.skill': 'Veterancy',
+  'st.morale': 'Morale',
+  'st.loyalty': 'Loyalty',
+  'perHour': '/h',
   'soul.one': 'soul',
   'soul.few': 'souls',
   'soul.many': 'souls',
@@ -56,6 +61,11 @@ export const EN = {
 export const RU: Record<keyof typeof EN, string> = {
   'title': 'Команда',
   'sub': 'На борту {souls} · выучка {stars} ({skill}) · дух {morale} ({spirit}) · верность {loyalty}',
+  'st.souls': 'На борту',
+  'st.skill': 'Выучка',
+  'st.morale': 'Дух',
+  'st.loyalty': 'Верность',
+  'perHour': '/ч',
   'soul.one': 'душа',
   'soul.few': 'души',
   'soul.many': 'душ',
