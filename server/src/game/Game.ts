@@ -77,6 +77,7 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
+import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditionsSecond, onYardCaptainSunk, sendSites, startDive, stepExpeditions } from './expeditions.ts';
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } from './combat.ts';
@@ -180,6 +181,8 @@ export class Game {
   strikes: DelayedStrike[] = [];
   bosses = new BossHub();
   worldEvents = new EventHub();
+  expeditions: ExpeditionHub;
+  expeditionSecs = 0;
   zones: DeepZone[] = [];
   sunkHulls: SunkHull[] = [];
   loot = new Map<number, Loot>();
@@ -268,6 +271,7 @@ export class Game {
     for (const r of this.db.getKv<RaisedIsland[]>('raised_islands') ?? []) raiseIsland(this.world, r);
     this.rng = new Rng(seed ^ 0x5eed);
     this.routes = new RouteCache(this.world);
+    this.expeditions = new ExpeditionHub(this.world);
     for (const p of this.world.ports) {
       this.portIndex.set(p.id, p);
       this.markets.set(p.id, createMarket(p));
@@ -398,7 +402,7 @@ export class Game {
     // Movement for every physically simulated ship.
     const night = isNight(now);
     for (const ship of this.ships.values()) {
-      if (ship.docked || ship.ghost || ship.npcRole === 'boss') continue;
+      if (ship.docked || ship.ghost || ship.cls.monster) continue;
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) continue;
       this.physics(ship, dt, night);
@@ -409,6 +413,7 @@ export class Game {
     stepBoarding(this);
     stepStrikes(this);
     stepBosses(this, dt);
+    stepExpeditions(this, dt);
     stepZones(this, dt);
 
     for (const ship of this.ships.values()) {
@@ -605,6 +610,7 @@ export class Game {
     const now = this.now;
     this.bosses.second(this);
     stepEvents(this);
+    expeditionsSecond(this);
     // Nearest player distance for NPC LOD.
     const players: ShipEntity[] = [];
     for (const s of this.sessions) if (s.ship && !s.ship.docked) players.push(s.ship);
@@ -659,7 +665,7 @@ export class Game {
     {
       if (ship.effects.length && ship.effects.some((e) => e.until <= now)) ship.recompute(now);
       ship.region = regionAt(this.world, ship.state.x, ship.state.y);
-      if (!ship.alive || ship.docked || ship.npcRole === 'boss') return;
+      if (!ship.alive || ship.docked || ship.cls.monster) return;
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) return;
       this.shipUpkeep(ship);
@@ -737,7 +743,10 @@ export class Game {
       const tmap = s.ship.docked || s.ship.landing ? null : mapHere(this, s);
       const wreck = s.ship.docked || s.ship.landing || tmap ? null : wreckHere(this, s.ship);
       const wreckWhy = wreck ? canDive(this, s, wreck) : null;
-      s.landable = cove
+      const city = s.ship.docked || s.ship.landing ? null : cityPrompt(this, s);
+      s.landable = city
+        ? city
+        : cove
         ? { island: cove.name, feature: 'buyers for contraband (90% of Fogmouth)' }
         : tmap
         ? { island: tmap.name.replace(/^.* — /, ''), feature: `buried treasure (${tmap.name.replace(/ — .*$/, '').toLowerCase()})`, action: 'dig' }
@@ -1368,6 +1377,7 @@ export class Game {
     }
     const killer = killerId !== null ? this.ships.get(killerId) ?? null : null;
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
+    if (ship.yardOf) onYardCaptainSunk(this, ship);
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
     this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship), victor);
     onShipSunk(this, ship, killer);
@@ -1426,7 +1436,7 @@ export class Game {
     }
     if (!s || !s.profile) return;
     const p = s.profile;
-    const tier = victim.cls.tier;
+    const tier = victim.cls.monster ? 1 : victim.cls.tier; // a rotten hulk is no ship of the line
     const xp = (how === 'sunk' ? 45 : 70) * tier * (1 + victim.level / 12);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
@@ -1456,8 +1466,8 @@ export class Game {
     checkStatDeeds(this, s);
     this.grantXp(s, xp, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`);
     for (const ms of mates) this.grantXp(ms, xp * 0.4, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`);
-    // Law and reputation.
-    if (victim.faction !== 'player') {
+    // Law and reputation (monsters and hulks answer to nobody).
+    if (victim.faction !== 'player' && !victim.cls.monster) {
       const f = FACTIONS[victim.faction];
       if (f.lawful) {
         const zone = REGIONS[victim.region].safety;
@@ -2287,7 +2297,12 @@ export class Game {
         setStation(this, ship, msg.station);
         this.sendTo(s, { t: 'toast', msg: STATION_NAMES[msg.station], kind: 'info' });
         return;
+      case 'dive_move':
+        return err(diveMove(this, s, String(msg.dir)));
+      case 'dive_surface':
+        return err(diveSurface(this, s));
       case 'land':
+        if (!ship.docked && cityHere(this, ship) && !this.expeditions.runOf(s.accountId)) return err(startDive(this, s));
         err(coveAt(this, ship) && Object.keys(ship.cargo).some((g) => GOODS[g as GoodId].contraband) ? coveSell(this, s) : startLanding(this, s));
         this.pushSelf(s, true);
         return;
@@ -2690,6 +2705,7 @@ export class Game {
     if (s.ship?.docked) this.pushPort(s);
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
     sendEvents(this, s);
+    sendSites(this, s);
     pushParty(this, s);
     mailOnLogin(this, s);
     this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });

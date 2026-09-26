@@ -85,6 +85,8 @@ export type ClientMsg =
   | { t: 'order'; action: 'cancel'; id: string }
   | { t: 'bank'; action: 'deposit' | 'withdraw' | 'borrow' | 'repay'; amount: number }
   | { t: 'land' }
+  | { t: 'dive_move'; dir: 'n' | 'e' | 's' | 'w' }
+  | { t: 'dive_surface' }
   | { t: 'licence' }
   | { t: 'rights'; site: string }
   | { t: 'warehouse'; good: GoodId; qty: number }
@@ -377,7 +379,7 @@ export interface PrivateState {
   sites: ResourceSiteView[]; // extraction rights you hold
   warehouses: Record<string, Cargo>;
   /** Island feature within reach of the boats, if any. */
-  landable: { island: string; feature: string; action?: 'dig' | 'dive'; blocked?: string } | null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition'; blocked?: string } | null;
   /** Landing party ashore. */
   landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;
@@ -537,6 +539,46 @@ export const SF = {
   SWALLOWED: 1 << 23, // inside the Lantern Maw
 } as const;
 
+/** PvE locations (expeditions.ts): sunken cities (bell buoys) and ship graveyards (a wall of wrecks with gates). */
+export interface PveSiteView {
+  id: string;
+  kind: 'city' | 'graveyard';
+  name: string;
+  x: number;
+  y: number;
+  r: number;
+  wall?: number;
+  gates?: { a: number; open: boolean }[];
+  captain?: boolean;
+  tide: string;
+}
+
+export interface DiveRoomView {
+  k: string; // room kind, or '?' where the bell has not been
+  d: number; // door bits: 1 N, 2 E, 4 S, 8 W
+  done: boolean;
+}
+
+/** The diving bell in a sunken city. */
+export interface DiveView {
+  site: string;
+  w: number;
+  h: number;
+  rooms: DiveRoomView[];
+  pos: number;
+  air: number;
+  airMax: number;
+  divers: number;
+  keys: number;
+  haul: string;
+  silver: number;
+  waveIn: number;
+  endsIn: number;
+  tide: string;
+  log: string[];
+  leader: boolean;
+}
+
 /** A world event (events.ts): the Armada, a blockade, the Storm of the Century, a new island, a fever. */
 export interface WorldEventView {
   id: number;
@@ -653,6 +695,8 @@ export type ServerMsg =
   | { t: 'info'; list: EntityInfo[] }
   | { t: 'boss'; list: BossView[] }
   | { t: 'events'; list: WorldEventView[] }
+  | { t: 'pve_sites'; list: PveSiteView[] }
+  | { t: 'dive'; view: DiveView | null }
   | { t: 'gone'; ids: number[] }
   | { t: 'ev'; list: GameEvent[] }
   | { t: 'self'; self: PrivateState }

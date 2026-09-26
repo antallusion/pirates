@@ -636,7 +636,7 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   const now = game.now;
   const prev = b.attackers.get(a.id);
   b.attackers.set(a.id, now);
-  if (b.npcRole === 'boss' || a.npcRole === 'boss') return; // no law and no flag at sea against the deep
+  if (b.npcRole === 'boss' || a.npcRole === 'boss' || b.cls.monster) return; // no law and no flag at sea against the deep
   if (prev !== undefined && now - prev < 60) return; // same engagement
   if (inDuel(game, a) && inDuel(game, a) === inDuel(game, b)) return; // a duel is no crime
   const pa = a.isPlayer ? game.profileOf(a) : null;

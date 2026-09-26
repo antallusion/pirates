@@ -41,9 +41,29 @@ const portMode = process.env.SHOWCASE === 'port';
 const richMode = process.env.SHOWCASE === 'rich';
 // SHOWCASE=boss:kraken (any boss id): a captain who puts to sea is set down 600 m from that boss, raised for her.
 const bossKind = process.env.SHOWCASE?.startsWith('boss:') ? (process.env.SHOWCASE.slice(5) as BossId) : null;
+// SHOWCASE=city | graveyard: a captain who puts to sea is set down at a sunken city's bell buoy or a graveyard.
+const siteKind = process.env.SHOWCASE === 'city' || process.env.SHOWCASE === 'graveyard' ? process.env.SHOWCASE : null;
 setInterval(() => {
   for (const s of game.sessions) {
     const ship = s.ship;
+    if (siteKind) {
+      if (!ship || ship.docked || staged.has(ship.id)) continue;
+      staged.add(ship.id);
+      const site = game.expeditions.sites.find((x) => x.kind === siteKind)!;
+      ship.loadout.classId = 'brig';
+      ship.recompute(game.now);
+      ship.hull = ship.stats.hullMax;
+      ship.crew = ship.stats.crewMax;
+      ship.state.x = site.x + (siteKind === 'city' ? 30 : 0);
+      ship.state.y = site.y + (siteKind === 'city' ? 0 : 520);
+      ship.state.speed = 0;
+      ship.state.sail = 0;
+      ship.input = { rudder: 0, sailTarget: 0 };
+      ship.protectedUntil = 0;
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      game.pushSelf(s, true);
+      continue;
+    }
     if (bossKind) {
       if (!ship || ship.docked || staged.has(ship.id)) continue;
       staged.add(ship.id);

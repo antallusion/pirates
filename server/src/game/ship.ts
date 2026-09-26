@@ -160,6 +160,8 @@ export class ShipEntity {
   bossPart = '';
   /** A squadron of a world event (events.ts): the Armada, a blockade. */
   eventOf = 0;
+  /** The Graveyard Captain of this graveyard (expeditions.ts). */
+  yardOf = '';
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

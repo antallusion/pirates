@@ -149,6 +149,14 @@ button { font-family: var(--sans); }
 #hud-boss .bhint { font-size: 12px; color: var(--fog); margin-top: 4px; }
 #hud-boss .byou { font-size: 12px; color: var(--gold); margin-top: 2px; }
 #hud-boss .balert { font-size: 13px; color: var(--bad); font-weight: 600; margin-top: 3px; }
+#hud-dive { left: 12px; top: 110px; width: 214px; font-size: 12px; }
+#hud-dive .dname { font-family: var(--serif); color: var(--bone); font-size: 15px; }
+#hud-dive .dmaze { position: relative; margin: 6px auto; background: #040506; }
+#hud-dive .dcell { position: absolute; box-sizing: border-box; color: var(--gold); font-size: 13px; text-align: center; line-height: 22px; }
+#hud-dive .dcell b { color: #9fe8f2; }
+#hud-dive .dlog { max-height: 70px; overflow: hidden; color: var(--fog); font-size: 11px; margin: 4px 0; }
+#hud-dive .dctl { text-align: center; }
+#hud-dive .dctl button { min-width: 30px; margin: 1px; }
 #banner { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); text-align: center; font-family: var(--display); font-size: 38px; color: var(--bone); text-shadow: 0 0 20px #000; opacity: 0; transition: opacity 1.2s; letter-spacing: 0.06em; }
 #banner small { display: block; font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--fog); letter-spacing: 0.02em; }
 #banner.show { opacity: 1; }

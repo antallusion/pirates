@@ -9,7 +9,9 @@ export type ShipClassId =
   | 'xebec' | 'bomb_ketch' | 'fireship'
   // World bosses and their parts (docs/02 §11.A.4): never sold, never sailed by a captain.
   | 'leviathan' | 'kraken' | 'kraken_tentacle' | 'drowned_whale' | 'whale_heart' | 'lantern_maw' | 'black_serpent'
-  | 'mother_of_wrecks' | 'wreck_core' | 'storm_widow';
+  | 'mother_of_wrecks' | 'wreck_core' | 'storm_widow'
+  // PvE locations (expeditions.ts): the rotten hulks of a ship graveyard.
+  | 'hulk';
 
 export type Rig = 'square' | 'fore_aft' | 'mixed';
 
@@ -162,6 +164,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
   black_serpent: monster('black_serpent', 'The Black Serpent', 'Coils like a sea wall; bile that eats canvas.', 150, 12, 36000, 0.2, 19, 'It flees through shoals where only small ships follow.'),
   mother_of_wrecks: monster('mother_of_wrecks', 'Mother of Wrecks', 'A living reef of a thousand wrecks — a hermit crab the size of an island.', 150, 120, 70000, 0.35, 0, 'Its cores lie in a maze only shallow keels can enter.'),
   wreck_core: monster('wreck_core', 'Wreck Core', 'A pulsing heart of the reef, deep in the maze.', 12, 12, 6000, 0.1, 0, 'Reachable only from within the maze.'),
+  hulk: monster('hulk', 'Rotten Hulk', 'A dead ship wedged in the graveyard. Mortars bring it down.', 44, 12, 1800, 0.55, 0, 'Cannon glance off its sodden timbers; bombs break it.'),
   storm_widow: monster('storm_widow', 'The Storm Widow', 'A widow of wind and lightning walking on the waves.', 60, 60, 40000, 0.2, 6, 'She can only be hurt from inside the moving eye.'),
 };
 

@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { DivePanel } from './ui/dive.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO_IDS, CHASER_CONE, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS } from '../../shared/src/constants.ts';
@@ -45,6 +46,7 @@ let aimSide: 'port' | 'starboard' | null = null;
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
+const divePanel = new DivePanel((m) => net.send(m));
 
 // ------------------------------------------------------------------ boot
 
@@ -323,6 +325,13 @@ addEventListener('keydown', (e) => {
     else if (modal && modal !== 'boarding' && modal !== 'sunk') closeModal();
     return;
   }
+  // The diving bell: Shift+arrows steer it through the drowned streets.
+  if (state.dive?.leader && e.shiftKey && e.key.startsWith('Arrow')) {
+    const d = ({ ArrowUp: 'n', ArrowRight: 'e', ArrowDown: 's', ArrowLeft: 'w' } as const)[e.key as 'ArrowUp'];
+    if (d) net.send({ t: 'dive_move', dir: d });
+    e.preventDefault();
+    return;
+  }
   if (e.repeat && k !== 'a' && k !== 'd') return;
   keys.add(k);
   const docked = !!state.self?.dockedAt;
@@ -569,6 +578,7 @@ function computePrompt(): string {
     parts.push(`Boats ashore at the ${esc(self.landing.feature.replace('_', ' '))} — ${Math.round(frac * 100)}% <span class="muted">(raise sail to recall)</span>`);
   } else if (self.landable?.blocked) parts.push(`<span class="muted">${esc(self.landable.feature)} — ${esc(self.landable.blocked)}</span>`);
   else if (self.landable?.action === 'dig') parts.push(`<kbd>L</kbd> Dig for the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
+  else if (self.landable?.action === 'expedition') parts.push(`<kbd>L</kbd> Lower the diving bell over ${esc(self.landable.island)} (heave to first)`);
   else if (self.landable?.action === 'dive') parts.push(`<kbd>L</kbd> Send divers down to the ${esc(self.landable.feature)}`);
   else if (self.landable) parts.push(`<kbd>L</kbd> Send a landing party to the ${esc(self.landable.feature)} on ${esc(self.landable.island)}`);
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
@@ -594,6 +604,7 @@ function frame(t: number): void {
     if (own) audio.listener = { x: own.x, y: own.y };
     audio.ambience(state.wind[1], state.weather, dt);
     hud.update(state, prompt);
+    divePanel.render(state.dive);
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
   }
   requestAnimationFrame(frame);

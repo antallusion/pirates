@@ -3,7 +3,7 @@
 
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
-import type { BossView } from '../../../shared/src/protocol.ts';
+import type { BossView, PveSiteView } from '../../../shared/src/protocol.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { sprite } from '../assets.ts';
 
@@ -50,6 +50,7 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
       case 'mother_of_wrecks': mother(g, len, beam, t, m.id); break;
       case 'wreck_core': orb(g, beam, t, '46,230,200', 2.2); break;
       case 'storm_widow': widow(g, len, t); break;
+      case 'hulk': hulk(g, len, beam, m.id); break;
       default: orb(g, beam, t, '120,120,120', 1);
     }
   }
@@ -359,6 +360,107 @@ function widow(g: CanvasRenderingContext2D, len: number, t: number): void {
       g.lineTo(x, y);
     }
     g.stroke();
+  }
+}
+
+function hulk(g: CanvasRenderingContext2D, len: number, beam: number, id: number): void {
+  const r = rnd(id % 991 + 5);
+  g.rotate((r() - 0.5) * 0.3);
+  g.beginPath();
+  g.moveTo(0, -len / 2);
+  g.bezierCurveTo(beam * 0.55, -len * 0.3, beam * 0.55, len * 0.3, beam * 0.4, len / 2);
+  g.lineTo(-beam * 0.4, len / 2);
+  g.bezierCurveTo(-beam * 0.55, len * 0.3, -beam * 0.55, -len * 0.3, 0, -len / 2);
+  g.closePath();
+  g.fillStyle = '#2a2118';
+  g.fill();
+  g.strokeStyle = '#120d09';
+  g.lineWidth = 1.5;
+  g.stroke();
+  // Stove-in planking and a broken mast.
+  g.fillStyle = '#0c0907';
+  for (let i = 0; i < 4; i++) g.fillRect((r() - 0.5) * beam * 0.6, (r() - 0.5) * len * 0.7, beam * 0.18, len * 0.06);
+  g.strokeStyle = '#4b3a28';
+  g.lineWidth = Math.max(1, beam * 0.12);
+  g.beginPath();
+  g.moveTo(0, -len * 0.1);
+  g.lineTo(beam * (r() - 0.5) * 1.6, -len * 0.1 - len * 0.35);
+  g.stroke();
+  g.fillStyle = 'rgba(120,140,110,0.35)';
+  for (let i = 0; i < 20; i++) {
+    g.beginPath();
+    g.arc((r() - 0.5) * beam * 0.8, (r() - 0.5) * len * 0.9, Math.max(0.6, beam * 0.04), 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+/** Sunken cities (the bell buoy) and ship graveyards (the wall of wrecks, its gates, the silted field). */
+export function drawPveSites(g: CanvasRenderingContext2D, sites: PveSiteView[], sx: (x: number) => number, sy: (y: number) => number, zoom: number, t: number, w: number, h: number): void {
+  for (const s of sites) {
+    const x = sx(s.x), y = sy(s.y), r = s.r * zoom;
+    if (x < -r - 50 || y < -r - 50 || x > w + r + 50 || y > h + r + 50) continue;
+    g.save();
+    if (s.kind === 'city') {
+      // The bell buoy: a lantern on a float, and the drowned city's shadow below.
+      const grad = g.createRadialGradient(x, y, 0, x, y, r * 1.8);
+      grad.addColorStop(0, 'rgba(40,90,90,0.25)');
+      grad.addColorStop(1, 'rgba(40,90,90,0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(x, y, r * 1.8, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = 'rgba(46,230,200,0.35)';
+      g.setLineDash([6, 8]);
+      g.beginPath();
+      g.arc(x, y, 250 * zoom, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+      const bob = Math.sin(t * 2) * 2;
+      g.fillStyle = '#b08d57';
+      g.beginPath();
+      g.arc(x, y + bob, Math.max(3, 3 * zoom), 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = `rgba(255,230,150,${0.6 + Math.sin(t * 3) * 0.3})`;
+      g.beginPath();
+      g.arc(x, y + bob - Math.max(4, 4 * zoom), Math.max(2, 1.6 * zoom), 0, Math.PI * 2);
+      g.fill();
+    } else {
+      const wall = (s.wall ?? 360) * zoom;
+      // The silted field.
+      g.fillStyle = 'rgba(60,48,32,0.10)';
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = 'rgba(160,120,80,0.35)';
+      g.setLineDash([4, 10]);
+      g.stroke();
+      g.setLineDash([]);
+      // The wall of wrecks, broken only where a gate is open.
+      const open = (s.gates ?? []).filter((q) => q.open).map((q) => q.a);
+      const gap = 0.14;
+      const steps = 180;
+      for (let i = 0; i < steps; i++) {
+        const a0 = (i / steps) * Math.PI * 2, a1 = ((i + 1) / steps) * Math.PI * 2;
+        const mid = (a0 + a1) / 2;
+        if (open.some((a) => Math.abs(Math.atan2(Math.sin(mid - a), Math.cos(mid - a))) < gap)) continue;
+        g.strokeStyle = i % 3 === 0 ? '#3a2d20' : i % 3 === 1 ? '#2a2118' : '#4b3a28';
+        g.lineWidth = Math.max(3, 16 * zoom);
+        g.beginPath();
+        g.arc(x, y, wall, a0 - Math.PI / 2, a1 - Math.PI / 2);
+        g.stroke();
+      }
+      if (s.captain) {
+        g.fillStyle = `rgba(46,230,200,${0.12 + Math.sin(t * 2) * 0.05})`;
+        g.beginPath();
+        g.arc(x, y, 90 * zoom, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    g.font = '12px "IM Fell English SC", serif';
+    g.textAlign = 'center';
+    g.fillStyle = 'rgba(216,210,196,0.7)';
+    g.fillText(s.name, x, y - (s.kind === 'city' ? 20 : (s.wall ?? 360) * zoom + 14));
+    g.restore();
   }
 }
 

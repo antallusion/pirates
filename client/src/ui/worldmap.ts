@@ -134,6 +134,17 @@ export class WorldMap {
       g.fillStyle = 'rgba(240,230,200,0.85)';
       g.fillText(p.name, tx(p.x), ty(p.y) - 8);
     }
+    // Sunken cities and graveyards.
+    for (const s of state.pveSites) {
+      g.strokeStyle = s.kind === 'city' ? '#2ee6c8' : '#a0784f';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(tx(s.x), ty(s.y), Math.max(5, (s.kind === 'city' ? 250 : s.r) * k), 0, Math.PI * 2);
+      g.stroke();
+      g.font = `italic 11px "Cormorant Garamond", serif`;
+      g.fillStyle = 'rgba(200,220,210,0.8)';
+      g.fillText(s.name, tx(s.x), ty(s.y) - 9);
+    }
     // World events: a flag on the place, and its title.
     for (const e of state.events) {
       const x = tx(e.x), y = ty(e.y);

@@ -17,7 +17,7 @@ import type { IslandBiome } from '../../../shared/src/world/regions.ts';
 import { pattern, sprite } from '../assets.ts';
 import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
-import { drawBossZones, drawMonster } from './monsters.ts';
+import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 
 const BIOME_TINT: Record<IslandBiome, string> = {
   temperate: 'rgba(40,52,40,0.35)',
@@ -172,6 +172,7 @@ export class Renderer {
     this.drawWakes();
     this.drawLoot(state);
     this.drawDuelRing(state);
+    drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, false);
     for (const s of ships) this.drawShip(s, state);
     this.drawTethers(state, ships);
@@ -1176,7 +1177,7 @@ export class Renderer {
     g.fillText(label, x, y);
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
-    const tag = info.isPlayer ? `Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? 'World boss — a horror of the deep' : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
+    const tag = info.isPlayer ? `Lv ${info.level ?? 1}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? 'World boss — a horror of the deep' : cls.monster ? 'A dead ship — mortars break it' : `${cls.name} · ${faction?.short ?? ''}${info.npcRole ? ' ' + info.npcRole : ''}`;
     const marks = info.isPlayer
       ? `${s.flags & SF.BLACK_FLAG ? ' · black flag' : ''}${s.flags & SF.GREEN_PENNANT ? ' · green pennant' : ''}${s.flags & SF.SHAME ? ' · SHAME' : ''}${s.flags & SF.BOUNTY ? ' · bounty' : ''}${s.flags & SF.DUEL ? ' · duelling' : ''}`
       : '';
