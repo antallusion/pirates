@@ -66,7 +66,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const fwd = headingVec(ship.state.heading);
   const outward = headingVec(baseHeading);
   const doubleShot = ship.doubleShotArmed;
-  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1);
+  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship);
   const balls: [number, number, number, number, number][] = [];
   const rng = game.rng;
   for (let i = 0; i < shots; i++) {

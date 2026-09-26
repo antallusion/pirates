@@ -62,6 +62,28 @@ export interface IslandData {
   portId?: string;
 }
 
+export interface WhirlpoolData {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  radius: number;
+  strength: number;
+  clockwise: boolean;
+}
+
+/** A weather front. vx/vy/ttl are only filled in for captains who can forecast (Navigator). */
+export interface FrontData {
+  id: number;
+  kind: 'storm' | 'black_storm' | 'fog' | 'rain';
+  x: number;
+  y: number;
+  r: number;
+  vx: number;
+  vy: number;
+  ttl: number;
+}
+
 export interface ReefData {
   id: number;
   x: number;
@@ -270,7 +292,8 @@ export interface BoardingResult {
 
 export type ServerMsg =
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
-  | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; discovered: number[]; time: number; entityId: number }
+  | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number }
+  | { t: 'fronts'; list: FrontData[]; forecast: boolean }
   | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[] }
   | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number }
   | { t: 'info'; list: EntityInfo[] }

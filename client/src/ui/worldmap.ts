@@ -134,6 +134,39 @@ export class WorldMap {
       g.fillStyle = 'rgba(240,230,200,0.85)';
       g.fillText(p.name, tx(p.x), ty(p.y) - 8);
     }
+    // Maelstroms and weather fronts; the Navigator's forecast shows where storms will be in 10 minutes.
+    for (const w of state.whirlpools) {
+      g.strokeStyle = 'rgba(208,106,94,0.7)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(tx(w.x), ty(w.y), Math.max(4, w.radius * k), 0, Math.PI * 2);
+      g.stroke();
+      g.font = 'italic 11px "Cormorant Garamond", serif';
+      g.fillStyle = 'rgba(208,106,94,0.8)';
+      g.fillText(w.name, tx(w.x), ty(w.y) - Math.max(6, w.radius * k) - 3);
+    }
+    for (const f of state.fronts) {
+      g.fillStyle = f.kind === 'black_storm' ? 'rgba(46,230,200,0.12)' : f.kind === 'storm' ? 'rgba(170,175,195,0.18)' : 'rgba(170,180,185,0.10)';
+      g.beginPath();
+      g.arc(tx(f.x), ty(f.y), f.r * k, 0, Math.PI * 2);
+      g.fill();
+      g.font = '10px Inter, sans-serif';
+      g.fillStyle = 'rgba(216,210,196,0.7)';
+      g.fillText(f.kind.replace('_', ' '), tx(f.x), ty(f.y));
+      if (state.forecast && (f.vx || f.vy)) {
+        const t = Math.min(600, f.ttl);
+        g.strokeStyle = 'rgba(143,179,217,0.8)';
+        g.setLineDash([4, 4]);
+        g.beginPath();
+        g.moveTo(tx(f.x), ty(f.y));
+        g.lineTo(tx(f.x + f.vx * t), ty(f.y + f.vy * t));
+        g.stroke();
+        g.setLineDash([]);
+        g.beginPath();
+        g.arc(tx(f.x + f.vx * t), ty(f.y + f.vy * t), f.r * k, 0, Math.PI * 2);
+        g.stroke();
+      }
+    }
     // Market knowledge: every visited port carries the age of what you know about it.
     const now = state.estServerTime();
     const age = (t: number) => {

@@ -10,6 +10,7 @@ import { SF } from '../../../shared/src/protocol.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, esc, fmt, knots } from './dom.ts';
@@ -108,7 +109,7 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${r.safety}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(state.weather.replace('_', ' '))}`;
+    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${r.safety}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(state.weather.replace('_', ' '))} · ${esc(seasonName(now))}`;
   }
 
   private drawNav(state: ClientState): void {
@@ -203,6 +204,20 @@ export class Hud {
       if (Math.abs(rf.x - own.x) > range + rf.r || Math.abs(rf.y - own.y) > range + rf.r) continue;
       g.beginPath();
       g.arc(tx(rf.x), ty(rf.y), Math.max(1.5, rf.r * k * 0.8), 0, Math.PI * 2);
+      g.stroke();
+    }
+    // Weather fronts on the horizon.
+    for (const f of state.fronts) {
+      g.fillStyle = f.kind === 'black_storm' ? 'rgba(46,230,200,0.10)' : f.kind === 'storm' ? 'rgba(160,170,190,0.16)' : f.kind === 'fog' ? 'rgba(170,180,185,0.10)' : 'rgba(120,150,190,0.10)';
+      g.beginPath();
+      g.arc(tx(f.x), ty(f.y), f.r * k, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (const w of state.whirlpools) {
+      if (Math.abs(w.x - own.x) > range + w.radius * 2 || Math.abs(w.y - own.y) > range + w.radius * 2) continue;
+      g.strokeStyle = 'rgba(208,106,94,0.6)';
+      g.beginPath();
+      g.arc(tx(w.x), ty(w.y), w.radius * k, 0, Math.PI * 2);
       g.stroke();
     }
     for (const p of state.ports) {

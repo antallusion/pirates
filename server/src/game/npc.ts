@@ -192,7 +192,7 @@ function detectionRange(game: Game, npc: ShipEntity, other: ShipEntity): number 
   let r = npc.stats.detection;
   if (other.hasFlag('hidden')) return 230;
   if (other.hasFlag('dark_running')) r *= 0.4;
-  const w = game.weatherIn(other.region);
+  const w = game.weatherOf(other);
   if (w === 'fog') r *= 0.55;
   else if (w === 'rain' || w === 'storm') r *= 0.75;
   if (isNight(game.now)) r *= 0.8;

@@ -60,8 +60,27 @@ export interface Reef {
   depth: number;
 }
 
+/** A maelstrom: a spinning, sucking current. Deadly at the core, a slingshot at the rim. */
+export interface Whirlpool {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  radius: number;
+  strength: number; // tangential m/s at the rim
+  clockwise: boolean;
+}
+
+export const WHIRLPOOLS: Whirlpool[] = [
+  { id: 'widows_eye', name: "The Widow's Eye", x: 50000, y: 36000, radius: 1400, strength: 5, clockwise: true },
+  { id: 'gullet', name: 'The Gullet', x: 60500, y: 49500, radius: 1100, strength: 4.5, clockwise: false },
+  { id: 'saltmouth', name: 'Saltmouth Drain', x: 45000, y: 47500, radius: 900, strength: 4, clockwise: true },
+  { id: 'the_throat', name: 'The Throat', x: 86000, y: 13000, radius: 1800, strength: 6.5, clockwise: false },
+];
+
 export interface World {
   seed: number;
+  whirlpools: Whirlpool[];
   islands: Island[];
   reefs: Reef[];
   reefChunks: Map<number, number[]>;
@@ -250,8 +269,9 @@ export function generateWorld(seed: number): World {
       const roll = rng.float();
       let r = roll < 0.55 ? rng.range(90, 260) : roll < 0.88 ? rng.range(260, 650) : rng.range(650, 1300);
       r *= reg.islandScale;
-      // Keep currents navigable.
+      // Keep currents navigable and maelstrom eyes in open water.
       if (distanceToCurrents(x, y) < r + 700) continue;
+      if (WHIRLPOOLS.some((w) => Math.hypot(w.x - x, w.y - y) < w.radius * 1.4 + r)) continue;
       if (overlaps(x, y, r, 380)) continue;
       const poly = islandPoly(rng, x, y, r, seed + islands.length * 7);
       const features: IslandFeature[] = [];
@@ -328,6 +348,7 @@ export function generateWorld(seed: number): World {
       if (regionOf(x, y) !== rid) continue;
       const r = reefRng.range(60, 230);
       if (distanceToCurrents(x, y) < r + 400) continue;
+      if (WHIRLPOOLS.some((w) => Math.hypot(w.x - x, w.y - y) < w.radius * 1.4 + r)) continue;
       if (islands.some((is) => Math.hypot(is.x - x, is.y - y) < is.radius + r + 150)) continue;
       if (ports.some((p) => Math.hypot(p.x - x, p.y - y) < r + 1500)) continue;
       if (reefs.some((q) => Math.hypot(q.x - x, q.y - y) < q.radius + r + 120)) continue;
@@ -371,6 +392,15 @@ export function generateWorld(seed: number): World {
       }
     }
   }
+  // Maelstrom eyes are not a route.
+  for (const w of WHIRLPOOLS) {
+    const r = w.radius * 0.6;
+    for (let gy = Math.floor((w.y - r) / NAV_CELL); gy <= Math.floor((w.y + r) / NAV_CELL); gy++) {
+      for (let gx = Math.floor((w.x - r) / NAV_CELL); gx <= Math.floor((w.x + r) / NAV_CELL); gx++) {
+        if (Math.hypot(gx * NAV_CELL + NAV_CELL / 2 - w.x, gy * NAV_CELL + NAV_CELL / 2 - w.y) < r) navGrid[gy * navSize + gx] = 1;
+      }
+    }
+  }
   // Reefs: rasterise each one; any cell the reef touches (half a cell diagonal) is blocked.
   for (const rf of reefs) {
     const pad = rf.radius + 300;
@@ -388,7 +418,7 @@ export function generateWorld(seed: number): World {
     navGrid[gy * navSize + gx] = 0;
   }
 
-  return { seed, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize };
+  return { seed, whirlpools: WHIRLPOOLS, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize };
 }
 
 /** Anchor point `offset` meters beyond the outermost coastline crossing along `heading` from the island centre. */
@@ -417,8 +447,39 @@ function distanceToCurrents(x: number, y: number): number {
   return best;
 }
 
-/** Ocean current vector at a point (m/s). */
-export function currentAt(currents: Current[], x: number, y: number): { x: number; y: number } {
+export const SEASON_SEC = 4 * 48 * 60; // a season lasts four in-game days
+
+/** Seasonal strength of the great currents: they swell and slacken over a year of four seasons. */
+export function seasonFactor(t: number): number {
+  return 0.85 + 0.3 * Math.sin((t / (SEASON_SEC * 4)) * Math.PI * 2);
+}
+
+export function seasonName(t: number): string {
+  return ['Thaw', 'High Tide', 'Ashfall', 'Deep Winter'][Math.floor(((t / SEASON_SEC) % 4 + 4) % 4)];
+}
+
+/** Maelstrom flow at a point: swirl plus a pull toward the core. */
+export function whirlpoolAt(pools: Whirlpool[], x: number, y: number): { x: number; y: number; core: Whirlpool | null } {
+  let vx = 0, vy = 0;
+  let core: Whirlpool | null = null;
+  for (const w of pools) {
+    const dx = x - w.x, dy = y - w.y;
+    const d = Math.hypot(dx, dy);
+    const reach = w.radius * 2.2;
+    if (d > reach || d < 1) continue;
+    // Swirl peaks near the rim and fades outward; the pull grows toward the eye.
+    const swirl = w.strength * Math.min(1, d / (w.radius * 0.35)) * (1 - Math.max(0, d - w.radius) / (reach - w.radius));
+    const pull = w.strength * 0.35 * (1 - d / reach);
+    const tx = w.clockwise ? -dy / d : dy / d, ty = w.clockwise ? dx / d : -dx / d;
+    vx += tx * swirl - (dx / d) * pull;
+    vy += ty * swirl - (dy / d) * pull;
+    if (d < w.radius * 0.25) core = w;
+  }
+  return { x: vx, y: vy, core };
+}
+
+/** Ocean current vector at a point (m/s), including seasons and maelstroms. */
+export function currentAt(currents: Current[], x: number, y: number, t = 0, pools: Whirlpool[] = []): { x: number; y: number } {
   let vx = 0, vy = 0;
   for (const c of currents) {
     for (let i = 1; i < c.points.length; i++) {
@@ -437,7 +498,9 @@ export function currentAt(currents: Current[], x: number, y: number): { x: numbe
       vy += (aby / len) * f;
     }
   }
-  return { x: vx, y: vy };
+  const season = seasonFactor(t);
+  const wp = pools.length ? whirlpoolAt(pools, x, y) : { x: 0, y: 0 };
+  return { x: vx * season + wp.x, y: vy * season + wp.y };
 }
 
 /** Islands whose bounds may contain (x, y). */

@@ -5,7 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BoardingResult, CurrentData, ReefData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
+  BoardingResult, CurrentData, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
 } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -55,6 +55,10 @@ export class ClientState {
   reefs = new Map<number, ReefData>();
   ports: PortPublic[] = [];
   currents: CurrentData[] = [];
+  whirlpools: WhirlpoolData[] = [];
+  fronts: FrontData[] = [];
+  frontsAt = 0;
+  forecast = false;
   discovered = new Set<number>();
 
   wind: [number, number] = [0, 0.5];
@@ -76,6 +80,7 @@ export class ClientState {
         this.self = m.self;
         this.ports = m.ports;
         this.currents = m.currents;
+        this.whirlpools = m.whirlpools;
         this.discovered = new Set(m.discovered);
         this.entityId = m.entityId;
         this.serverTime = m.time;
@@ -138,6 +143,11 @@ export class ClientState {
         }
         break;
       }
+      case 'fronts':
+        this.fronts = m.list;
+        this.frontsAt = now;
+        this.forecast = m.forecast;
+        break;
       case 'port':
         this.portView = m.view;
         break;
@@ -205,7 +215,7 @@ export class ClientState {
       personalWind: false, weatherly: this.self.loadout.classId === 'schooner',
     };
     const wind = { dir: this.wind[0], strength: this.wind[1] };
-    const cur = currentAt(this.currents, s.x, s.y);
+    const cur = currentAt(this.currents, s.x, s.y, this.estServerTime(), this.whirlpools);
     const input = { rudder: this.input.rudder, sailTarget: sailSteps[this.input.sail] };
     let t = elapsed;
     while (t > 0) {

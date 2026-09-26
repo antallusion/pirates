@@ -151,6 +151,7 @@ export class Renderer {
     this.drawOcean(state, region.waterTint);
     this.drawCurrents(state);
     const islands = this.visibleIslands(state);
+    this.drawWhirlpools(state);
     this.drawReefs(state);
     for (const is of islands) this.drawShallows(is);
     for (const is of islands) this.drawIsland(is, state);
@@ -294,6 +295,47 @@ export class Renderer {
       else g.lineTo(this.sx(x), this.sy(y));
     }
     g.closePath();
+  }
+
+  private drawWhirlpools(state: ClientState): void {
+    const g = this.g;
+    for (const w of state.whirlpools) {
+      const reach = w.radius * 2.2;
+      if (Math.abs(w.x - this.camX) - reach > this.w / 2 / this.zoom || Math.abs(w.y - this.camY) - reach > this.h / 2 / this.zoom) continue;
+      const cx = this.sx(w.x), cy = this.sy(w.y);
+      // Darkening funnel.
+      const grd = g.createRadialGradient(cx, cy, 0, cx, cy, reach * this.zoom);
+      grd.addColorStop(0, 'rgba(0,0,0,0.75)');
+      grd.addColorStop(0.3, 'rgba(2,6,8,0.45)');
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grd;
+      g.beginPath();
+      g.arc(cx, cy, reach * this.zoom, 0, Math.PI * 2);
+      g.fill();
+      // Spiral foam arms rotating with the flow.
+      const dirSign = w.clockwise ? 1 : -1;
+      const spin = this.time * 0.25 * dirSign;
+      g.lineWidth = Math.max(1, 2 * this.zoom);
+      for (let arm = 0; arm < 5; arm++) {
+        g.beginPath();
+        for (let i = 0; i <= 60; i++) {
+          const t = i / 60;
+          const r = reach * (1 - t * 0.95);
+          const a = spin + (arm / 5) * Math.PI * 2 + dirSign * t * Math.PI * 3.2;
+          const x = cx + Math.sin(a) * r * this.zoom, y = cy - Math.cos(a) * r * this.zoom;
+          if (i === 0) g.moveTo(x, y);
+          else g.lineTo(x, y);
+        }
+        g.strokeStyle = `rgba(200,212,220,${0.08 + (arm % 2) * 0.05})`;
+        g.stroke();
+      }
+      if (this.zoom < 2.5) {
+        g.font = 'italic 14px "Cormorant Garamond", Georgia, serif';
+        g.fillStyle = 'rgba(208,106,94,0.6)';
+        g.textAlign = 'center';
+        g.fillText(w.name, cx, cy - w.radius * 0.4 * this.zoom);
+      }
+    }
   }
 
   private drawReefs(state: ClientState): void {

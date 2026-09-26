@@ -28,7 +28,7 @@ import { windAt } from '../../../shared/src/sim/wind.ts';
 import type { WindSample } from '../../../shared/src/sim/wind.ts';
 import { REGIONS, WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { chunkKey, chunkOf, currentAt, depthAt, generateWorld, islandsNear, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { chunkKey, chunkOf, currentAt, depthAt, whirlpoolAt, generateWorld, islandsNear, regionAt } from '../../../shared/src/world/worldgen.ts';
 import type { Island, Port, World } from '../../../shared/src/world/worldgen.ts';
 import type { AuthService } from '../auth.ts';
 import { sanitizeName } from '../auth.ts';
@@ -54,8 +54,8 @@ import {
 import { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
 import { SpatialGrid } from './spatial.ts';
-import { WEATHER_FOG, WEATHER_WIND, initWeather, stepWeather } from './weather.ts';
-import type { RegionWeather } from './weather.ts';
+import { WEATHER_FOG, WEATHER_WIND, initWeather, seaStateSpread, stepFronts, stepWeather, weatherAtPoint } from './weather.ts';
+import type { Front, RegionWeather } from './weather.ts';
 
 interface Loot {
   id: number;
@@ -88,6 +88,12 @@ export interface GameOptions {
 
 const START_PORT = 'saltmarrow';
 
+const WEATHER_TOAST: Record<string, string> = {
+  calm: 'The wind dies. Sails hang slack.', breeze: 'A light breeze fills the canvas.', wind: 'A fresh wind — good sailing.',
+  fog: 'Fog rolls in. Lookouts see half as far.', rain: 'Rain sweeps the deck.', storm: 'Storm! Reef the sails or lose them.',
+  black_storm: 'A black storm. The crew will not look at the water.',
+}
+
 export class Game {
   readonly db: Database;
   readonly auth: AuthService;
@@ -109,6 +115,8 @@ export class Game {
   contracts = new Map<string, { list: ReturnType<typeof generateContracts>; refreshAt: number }>();
   rumors: Rumor[] = [];
   weather: Record<RegionId, RegionWeather>;
+  fronts: Front[] = [];
+  private lastWeather = new WeakMap<PlayerSession, string>();
   sessions = new Set<PlayerSession>();
   private byAccount = new Map<number, PlayerSession>();
   private events: QueuedEvent[] = [];
@@ -205,9 +213,8 @@ export class Game {
       if (hist) this.nextHistory = now + 60;
       for (const m of this.markets.values()) tickMarket(m, edt, hist);
       for (const p of this.world.ports) this.tavernCrew.set(p.id, Math.min(10 + p.size * 14, (this.tavernCrew.get(p.id) ?? 0) + 0.6 * p.size));
-      for (const c of stepWeather(this.weather, this.rng, now)) {
-        this.emitRegion(c, `Weather in ${REGIONS[c].name}: ${this.weather[c].kind.replace('_', ' ')}.`);
-      }
+      stepWeather(this.weather, this.rng, now);
+      this.fronts = stepFronts(this.fronts, this.rng, now, edt, (x, y) => windAt(this.world.seed, now, x, y).dir);
     }
     if (now >= this.nextWorldEvent) {
       this.nextWorldEvent = now + 900 + this.rng.range(0, 600);
@@ -253,11 +260,21 @@ export class Game {
   // ================================================================= physics
 
   windFor(ship: ShipEntity): WindSample {
-    return windAt(this.world.seed, this.now, ship.state.x, ship.state.y, WEATHER_WIND[this.weather[ship.region].kind]);
+    return windAt(this.world.seed, this.now, ship.state.x, ship.state.y, WEATHER_WIND[this.weatherAt(ship.state.x, ship.state.y)]);
   }
 
-  weatherIn(region: RegionId) {
-    return this.weather[region].kind;
+  /** Local weather: travelling fronts over the regional baseline. */
+  weatherAt(x: number, y: number) {
+    return weatherAtPoint(this.fronts, this.weather[regionAt(this.world, x, y)].kind, x, y);
+  }
+
+  weatherOf(ship: ShipEntity) {
+    return this.weatherAt(ship.state.x, ship.state.y);
+  }
+
+  /** Broadside spread multiplier from the sea state around a ship. */
+  seaSpread(ship: ShipEntity): number {
+    return seaStateSpread(this.windFor(ship).strength, ship.cls.tier);
   }
 
   private physics(ship: ShipEntity, dt: number, night: boolean): void {
@@ -270,7 +287,7 @@ export class Game {
       return;
     }
     const wind = this.windFor(ship);
-    const cur = currentAt(this.world.currents, ship.state.x, ship.state.y);
+    const cur = currentAt(this.world.currents, ship.state.x, ship.state.y, this.now, this.world.whirlpools);
     const prevX = ship.state.x, prevY = ship.state.y;
     ship.state = stepSailing(ship.state, ship.input, ship.sailParams(night), wind, cur, dt);
 
@@ -417,6 +434,11 @@ export class Game {
       this.streamChunks(s);
       this.discover(s);
       this.recordSightings(s);
+      const wNow = this.weatherOf(s.ship);
+      const wPrev = this.lastWeather.get(s);
+      if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });
+      this.lastWeather.set(s, wNow);
+      if (this.tick % 60 < 20) this.sendFronts(s);
       const region = s.ship.region;
       if (region !== s.lastRegion) {
         s.lastRegion = region;
@@ -443,7 +465,7 @@ export class Game {
     if (ship.isPlayer && (ship.cargo.provisions ?? 0) <= 0) baseline = 25;
     if ((ship.cargo.rum ?? 0) > 0) baseline += 8;
     if ((ship.cargo.cursed_relics ?? 0) > 0 && ship.cls.passive.id !== 'dead_crew') baseline -= 6 + Math.min(20, (ship.cargo.cursed_relics ?? 0) * 2);
-    if (this.weatherIn(ship.region) === 'black_storm') baseline -= 15;
+    if (this.weatherOf(ship) === 'black_storm') baseline -= 15;
     ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
@@ -497,12 +519,18 @@ export class Game {
         }
       }
     }
+    // The eye of a maelstrom grinds ships apart.
+    const wp = whirlpoolAt(this.world.whirlpools, ship.state.x, ship.state.y);
+    if (wp.core) {
+      applyDamage(this, ship, { hull: st.hullMax * 0.02, sails: 2, crew: 0.3, morale: 2 }, null);
+      if (this.tick % 60 === 0) this.toastShip(ship, `${wp.core.name} is tearing her apart — claw out of the eye!`, 'bad');
+    }
     // Brine Mend heal-over-time.
     if (ship.hasEffect('brine_mend')) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.025);
     // Fire.
     if (ship.hasEffect('fire')) applyDamage(this, ship, { hull: st.hullMax * 0.006, sails: 1.5 }, null);
     // Storms punish full canvas.
-    const w = this.weatherIn(ship.region);
+    const w = this.weatherOf(ship);
     if ((w === 'storm' || w === 'black_storm') && ship.state.sail > 0.8 && ship.cls.passive.id !== 'dead_crew') {
       ship.sails = Math.max(0, ship.sails - st.sailHpMax * 0.012);
       if (this.tick % 200 === 0) this.toastShip(ship, 'The storm is shredding your canvas — reef the sails!', 'bad');
@@ -1011,6 +1039,17 @@ export class Game {
 
   // ================================================================= discovery
 
+  /** Clouds on the horizon: everyone sees fronts within 15 km; the Navigator reads them 45 km out, with drift. */
+  private sendFronts(s: PlayerSession): void {
+    const ship = s.ship!;
+    const navigator = ship.captain === 'navigator';
+    const range = navigator ? 45000 : 15000;
+    const list = this.fronts
+      .filter((f) => Math.hypot(f.x - ship.state.x, f.y - ship.state.y) < range + f.radius)
+      .map((f) => ({ id: f.id, kind: f.kind, x: Math.round(f.x), y: Math.round(f.y), r: Math.round(f.radius), vx: navigator ? Math.round(f.vx * 10) / 10 : 0, vy: navigator ? Math.round(f.vy * 10) / 10 : 0, ttl: navigator ? Math.round(f.until - this.now) : 0 }));
+    this.sendTo(s, { t: 'fronts', list, forecast: navigator });
+  }
+
   /** Notable ships the captain has laid eyes on are logged with time and place for the chart. */
   private recordSightings(s: PlayerSession): void {
     const ship = s.ship!;
@@ -1033,7 +1072,7 @@ export class Game {
 
   private discover(s: PlayerSession): void {
     const ship = s.ship!;
-    const r = Math.min(1700, ship.stats.detection * 0.9) * (this.weatherIn(ship.region) === 'fog' ? 0.6 : 1);
+    const r = Math.min(1700, ship.stats.detection * 0.9) * (this.weatherOf(ship) === 'fog' ? 0.6 : 1);
     const [cx, cy] = chunkOf(ship.state.x, ship.state.y);
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
@@ -1487,11 +1526,12 @@ export class Game {
     s.knownEntities.clear();
     s.knownChunks.clear();
     this.sendTo(s, {
-      t: 'init', self: toPrivateState(s, this.now), ports, currents: this.world.currents, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
+      t: 'init', self: toPrivateState(s, this.now), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
     });
     // Islands the captain has charted are sent up front so the world map is complete.
     this.sendIslands(s, [...s.discovered]);
     this.streamChunks(s);
+    if (s.ship && !s.ship.docked) this.sendFronts(s);
     s.lastRegion = '';
     if (s.ship?.docked) this.pushPort(s);
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
@@ -1576,7 +1616,7 @@ export class Game {
     const is = this.world.islands[port.islandId];
     // Leave harbour on the best point of sail within 90° of straight out to sea.
     const out = Math.atan2(port.x - is.x, -(port.y - is.y));
-    const wind = windAt(this.world.seed, this.now, port.x, port.y, WEATHER_WIND[this.weather[ship.region].kind]);
+    const wind = windAt(this.world.seed, this.now, port.x, port.y, WEATHER_WIND[this.weatherAt(port.x, port.y)]);
     let away = out, bestEff = -1;
     for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]) {
       const h = out + off;
@@ -1667,7 +1707,7 @@ export class Game {
       if (gone.length) this.sendTo(s, { t: 'gone', ids: gone });
 
       const wind = this.windFor(me);
-      const weather = this.weather[me.region].kind;
+      const weather = this.weatherOf(me);
       const you: SelfRow = {
         x: me.state.x, y: me.state.y, h: me.state.heading, spd: me.state.speed, sail: me.state.sail, rud: me.state.rudder, sailT: me.input.sailTarget,
         hull: Math.round(me.hull), hullMax: me.stats.hullMax, sails: Math.round(me.sails), sailsMax: me.stats.sailHpMax, rudderHp: Math.round(me.rudderHp * 100) / 100,
