@@ -81,3 +81,15 @@ export function translateDom(root: ParentNode = document): void {
     if (has(k)) el.title = t(k);
   });
 }
+
+/**
+ * A screen's own dictionary: `const L = dict(EN, RU)` then `L('key', vars)`. Keeps each UI module's words next to it
+ * (client/src/lang/ui/*.ts) with the same fallback and placeholders as `t`.
+ */
+export function dict<T extends Record<string, string>>(en: T, ru: Record<keyof T, string>): (key: keyof T & string, vars?: Record<string, string | number>) => string {
+  return (key, vars) => {
+    let s = (current === 'ru' ? ru[key] : undefined) ?? en[key] ?? key;
+    if (vars) s = s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+    return s;
+  };
+}
