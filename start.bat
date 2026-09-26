@@ -17,7 +17,7 @@ if %NODEMAJOR% LSS 22 (
   pause
   exit /b 1
 )
-if "%PORT%"=="" set PORT=8080
+if "%PORT%"=="" set PORT=58521
 echo GRAVETIDE запускается на http://localhost:%PORT% — не закрывайте это окно.
 start "" "http://localhost:%PORT%"
 node --disable-warning=ExperimentalWarning server/src/main.ts
