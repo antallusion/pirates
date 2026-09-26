@@ -10,6 +10,7 @@ import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
 import { launchJollyBoat } from './prizes.ts';
 import { decoyBarrels, falseColors, slipAway } from './smugglefx.ts';
+import { brace, plugTheBreach } from './survivalfx.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -98,7 +99,7 @@ export function addHeat(game: Game, ship: ShipEntity, side: Side): void {
   if (ship.heat[side] >= 100) {
     ship.heat[side] = 50;
     if (ship.gunsDisabled[side] < ship.stats.gunsPerSide) ship.gunsDisabled[side]++;
-    applyDamage(game, ship, { hull: ship.stats.hullMax * 0.04, crew: 3, morale: 4 }, null);
+    applyDamage(game, ship, { hull: ship.stats.hullMax * 0.04 * (ship.hasFlag('wet_decks') ? 0.5 : 1), crew: 3, morale: 4 }, null);
     game.emit({ k: 'fx', fx: 'explosion', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 18 }, ship.state.x, ship.state.y);
     game.toastShip(ship, `A ${side} gun bursts from the heat!`, 'bad');
   }
@@ -166,6 +167,12 @@ export function useTalentActive(game: Game, s: PlayerSession, id: string): strin
       if (why) return why;
       break;
     }
+    case 'srv_brace':
+      brace(game, ship);
+      break;
+    case 'srv_plug_the_breach':
+      plugTheBreach(game, ship);
+      break;
     case 'smg_decoy_barrels':
       decoyBarrels(game, ship);
       break;

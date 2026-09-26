@@ -22,7 +22,10 @@ export type StatKey =
   | 'routeBonus' | 'loadPenalty' | 'profitShare'
   // smuggling
   | 'hiddenSearch' | 'signature' | 'fence' | 'quickDump' | 'openSearch' | 'silentRunning' | 'bribe' | 'infamyDecay' | 'smugglersLuck'
-  | 'ghostWake' | 'dangerousGoods';
+  | 'ghostWake' | 'dangerousGoods'
+  // survival
+  | 'leakInflow' | 'surgeon' | 'stormHull' | 'materialVolume' | 'materialUse' | 'damageControl' | 'hardenedCrew' | 'longVoyage'
+  | 'lifeboats' | 'planking' | 'grimEndurance' | 'fireFight';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -38,7 +41,9 @@ export type Flag =
   | 'appraiser' | 'convoy_rights' | 'speculator' | 'rumor_mill' | 'league_patron' | 'monopolist' | 'prize_broker' | 'counting_house'
   // smuggling
   | 'dark_lanterns' | 'fog_sense' | 'false_colors' | 'cove_knowledge' | 'night_market' | 'insider' | 'shadow_strike' | 'broker_friend'
-  | 'nobodys_ship' | 'black_ledger';
+  | 'nobodys_ship' | 'black_ledger'
+  // survival
+  | 'lime_and_salt' | 'sealed_magazine' | 'wet_decks' | 'scuttle_charges' | 'old_salt' | 'patchwork_hull';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

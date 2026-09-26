@@ -54,7 +54,7 @@ export class Hud {
 
     // Ship condition.
     const cls = SHIP_CLASSES[self.loadout.classId];
-    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1);
+    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
     const skey = `${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}`;
     if (skey !== this.lastShipKey) {

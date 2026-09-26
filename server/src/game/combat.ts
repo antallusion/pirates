@@ -18,6 +18,7 @@ import type { ShipEntity } from './ship.ts';
 import { addHeat, upwindOf } from './talentfx.ts';
 import { callPatrols } from './tradefx.ts';
 import { unmask } from './smugglefx.ts';
+import { survivalOnHit, woundedOf } from './survivalfx.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 
 export interface Projectile {
@@ -387,6 +388,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     }
   }
   if (raking) crit = crit ?? 'raked';
+  if (crit && crit !== 'raked') target.talentReady.patchPause = game.now + 3; // Patchwork Hull pauses
   if ((p.ammo === 'round' || p.ammo === 'heavy') && hullDmg > 15 && target.leaks < MAX_LEAKS && game.rng.chance(leakChance(target, p.ammo === 'heavy'))) {
     target.leaks++;
     crit = 'leak';
@@ -394,7 +396,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
 
   // Waterline Gunner: a breach below the waterline leaks through any armour.
   if (sst && p.ammo !== 'grape' && hullDmg > 5 && game.rng.chance(tval(sst, 'breachChance'))) {
-    target.addEffect({ id: 'breach', until: game.now + 10, source: shooter!.id }, game.now);
+    target.addEffect({ id: 'breach', until: game.now + 10 * Math.max(0.2, 1 - tval(target.stats, 'damageControl')), source: shooter!.id }, game.now);
     crit = 'breach';
   }
   const grapeMorale = p.ammo === 'grape' && sst ? tval(sst, 'grapeMorale') : 0;
@@ -414,7 +416,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     if (game.rng.chance(0.07 * deepHold)) destroyRandomCargo(game, target, 1 + game.rng.int(0, 2));
     // Fire shot in the magazine burns like powder.
     const powder = (target.cargo.gunpowder ?? 0) + target.ammo.incendiary / 10;
-    if (powder >= 5 && game.rng.chance(0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10))) {
+    if (powder >= 5 && game.rng.chance(0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10) * (target.hasFlag('sealed_magazine') ? 0.25 : 1))) {
       target.cargo.gunpowder = Math.floor(powder * 0.4);
       applyDamage(game, target, { hull: target.stats.hullMax * 0.14, crew: 3, morale: 12, sails: 10 }, shooter);
       igniteShip(game, target, 12, null);
@@ -437,7 +439,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
 
 /** Sets a ship on fire; Powder Discipline shortens the blaze. */
 export function igniteShip(game: Game, target: ShipEntity, seconds: number, source: ShipEntity | null): void {
-  const dur = seconds * Math.max(0.3, 1 + tval(target.stats, 'fireRisk'));
+  const dur = seconds * Math.max(0.2, 1 + tval(target.stats, 'fireRisk') + tval(target.stats, 'fireFight') - tval(target.stats, 'damageControl'));
   target.addEffect({ id: 'fire', until: game.now + dur, source: source?.id }, game.now);
 }
 
@@ -489,6 +491,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   }
   target.lastCombat = now;
   target.protectedUntil = 0;
+  survivalOnHit(game, target, d);
   if (d.hull) target.hull -= d.hull;
   if (d.sails) target.sails = Math.max(0, target.sails - d.sails);
   if (d.rudder && !target.hasFlag('iron_tiller')) target.rudderHp = Math.max(0, target.rudderHp - d.rudder);
@@ -497,6 +500,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     if (game.rng.float() < d.crew - killed) killed++;
     killed = Math.min(killed, target.crew);
     target.crew -= killed;
+    target.wounded += woundedOf(game, target, killed);
     target.morale -= killed * 0.8;
   }
   if (d.morale) target.morale -= d.morale;

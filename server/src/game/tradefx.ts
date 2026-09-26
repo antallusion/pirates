@@ -4,7 +4,7 @@
 
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { tx } from '../../../shared/src/sim/shipstats.ts';
+import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { applyTrade, midPrice, quoteBuy } from './economy.ts';
@@ -154,12 +154,7 @@ export function exerciseOption(game: Game, s: PlayerSession, port: Port, index: 
 }
 
 function cargoVolumeOf(ship: ShipEntity): number {
-  let v = 0;
-  for (const id in ship.cargo) {
-    const g = id as GoodId;
-    v += (ship.cargo[g] ?? 0) * GOODS[g].volume * (GOODS[g].contraband ? ship.stats.contrabandVolumeMul : 1);
-  }
-  return v;
+  return cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
 }
 
 /** Lapsed options: the stock goes back on the market and the deposit is gone. */

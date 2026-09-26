@@ -60,6 +60,7 @@ import {
   bribeCost, buildCoves, contrabandValue, coveAt, coveSell, customsSearch, deferCrime, discoverCoves, dockOverride, fenceSale, portFence, settleCrimes, unmask, visibleRange,
 } from './smugglefx.ts';
 import type { Cove, PendingCrime } from './smugglefx.ts';
+import { blowMagazine, lightFuse, seaDamageMul, stepSurvival, weariness } from './survivalfx.ts';
 import { buyOption, caravanLost, caravansOf, exerciseOption, expireOptions, priceLetters, tendCaravans, onArrival } from './tradefx.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import type { Projectile, VolleyRec } from './combat.ts';
@@ -305,11 +306,12 @@ export class Game {
     stepStrikes(this);
 
     for (const ship of this.ships.values()) {
-      if (ship.reload.port > 0) {
+      const braced = ship.hasEffect('brace'); // the gun crews lie flat
+      if (ship.reload.port > 0 && !braced) {
         ship.reload.port = Math.max(0, ship.reload.port - dt);
         if (ship.reload.port === 0) ship.loadedSince.port = this.now;
       }
-      if (ship.reload.starboard > 0) {
+      if (ship.reload.starboard > 0 && !braced) {
         ship.reload.starboard = Math.max(0, ship.reload.starboard - dt);
         if (ship.reload.starboard === 0) ship.loadedSince.starboard = this.now;
       }
@@ -411,7 +413,7 @@ export class Game {
       ship.state.y = clamp(ship.state.y, m, WORLD_SIZE - m);
       ship.state.speed *= 0.5;
       if (this.tick % 20 === 0) {
-        applyDamage(this, ship, { hull: ship.stats.hullMax * 0.02, sails: 5 }, null);
+        applyDamage(this, ship, { hull: ship.stats.hullMax * 0.02 * seaDamageMul(ship), sails: 5 }, null);
         this.toastShip(ship, 'The Maelstrom Wall tears at your rigging. Turn back.', 'bad');
       }
     }
@@ -493,9 +495,15 @@ export class Game {
       if (brain && !brain.active) continue;
       this.shipUpkeep(ship);
       stepTalentEffects(this, ship);
+      stepSurvival(this, ship);
       if (ship.isPlayer) {
         stepTalents(this, ship);
         surrenderTerms(this, ship);
+      }
+      // Scuttle Charges: the fuse has burned down.
+      if (ship.scuttleAt && now >= ship.scuttleAt) {
+        ship.hull = 0;
+        this.beginSinking(ship);
       }
       // No Quarter: the taken ship goes down.
       if (ship.sinkAt && now >= ship.sinkAt) {
@@ -593,6 +601,7 @@ export class Game {
     if ((ship.cargo.cursed_relics ?? 0) > 0 && ship.cls.passive.id !== 'dead_crew') baseline -= 6 + Math.min(20, (ship.cargo.cursed_relics ?? 0) * 2);
     if (this.weatherOf(ship) === 'black_storm') baseline -= 15;
     baseline -= CURSE_MORALE[curseStage(ship.curse)];
+    baseline -= weariness(this, ship); // a long voyage wears on a crew
     ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
@@ -636,25 +645,29 @@ export class Game {
       } else {
         const crewF = Math.min(1, ship.crew / Math.max(1, st.crewMin * 2));
         const hullGain = Math.min(st.hullMax - ship.hull, st.hullMax * 0.012 * st.repairRate * crewF * rate);
-        const planksNeeded = hullGain / 40;
+        const use = Math.max(0.3, 1 + tval(st, 'materialUse')); // Spare Timber
+        const planksNeeded = (hullGain / 40) * use;
         const sailGain = Math.min(st.sailHpMax - ship.sails, st.sailHpMax * 0.02 * st.repairRate * crewF * rate);
-        const clothNeeded = sailGain / 20;
+        const clothNeeded = (sailGain / 20) * use;
         // A hidden cove has timber and canvas to spare for those who know it.
         const cove = ship.hasFlag('cove_knowledge') && coveAt(this, ship) !== null;
+        const oldSalt = ship.hasFlag('old_salt'); // makes do with what the sea gives, at half speed
         const planks = cove ? 1e9 : ship.cargo.planks ?? 0, cloth = cove ? 1e9 : ship.cargo.sailcloth ?? 0;
         let did = false;
-        if (hullGain > 0.5 && planks >= planksNeeded) {
-          ship.hull += hullGain;
-          if (!cove) ship.cargo.planks = Math.round((planks - planksNeeded) * 100) / 100;
+        if (hullGain > 0.5 && (planks >= planksNeeded || oldSalt)) {
+          const stocked = planks >= planksNeeded;
+          ship.hull += stocked ? hullGain : hullGain * 0.5;
+          if (!cove && stocked) ship.cargo.planks = Math.round((planks - planksNeeded) * 100) / 100;
           did = true;
         }
-        if (sailGain > 0.2 && cloth >= clothNeeded) {
-          ship.sails += sailGain;
-          if (!cove) ship.cargo.sailcloth = Math.round((cloth - clothNeeded) * 100) / 100;
+        if (sailGain > 0.2 && (cloth >= clothNeeded || oldSalt)) {
+          const stocked = cloth >= clothNeeded;
+          ship.sails += stocked ? sailGain : sailGain * 0.5;
+          if (!cove && stocked) ship.cargo.sailcloth = Math.round((cloth - clothNeeded) * 100) / 100;
           did = true;
         }
-        if (ship.rudderHp < 1 && planks > 0.2) {
-          ship.rudderHp = Math.min(1, ship.rudderHp + 0.01 * st.repairRate);
+        if (ship.rudderHp < 1 && (planks > 0.2 || oldSalt)) {
+          ship.rudderHp = Math.min(1, ship.rudderHp + 0.01 * st.repairRate * (1 + tval(st, 'damageControl')));
           did = true;
         }
         if ((ship.cargo.planks ?? 0) <= 0.01) delete ship.cargo.planks;
@@ -669,7 +682,7 @@ export class Game {
     // The eye of a maelstrom grinds ships apart.
     const wp = whirlpoolAt(this.world.whirlpools, ship.state.x, ship.state.y);
     if (wp.core) {
-      applyDamage(this, ship, { hull: st.hullMax * 0.02, sails: 2, crew: 0.3, morale: 2 }, null);
+      applyDamage(this, ship, { hull: st.hullMax * 0.02 * seaDamageMul(ship), sails: 2, crew: 0.3, morale: 2 }, null);
       if (this.tick % 60 === 0) this.toastShip(ship, `${wp.core.name} is tearing her apart — claw out of the eye!`, 'bad');
     }
     // The sea's claim.
@@ -688,7 +701,7 @@ export class Game {
     // Leaks, pumps and plugs.
     if (stepFlooding(this, ship)) return;
     // Fire.
-    if (ship.hasEffect('fire')) applyDamage(this, ship, { hull: st.hullMax * 0.006, sails: 1.5 }, null);
+    if (ship.hasEffect('fire')) applyDamage(this, ship, { hull: st.hullMax * 0.006 * (ship.hasFlag('wet_decks') ? 0.6 : 1), sails: 1.5 }, null);
     // Storms punish full canvas.
     const w = this.weatherOf(ship);
     const canvas = ship.hasFlag('storm_rider') ? 0 : Math.max(0, 1 + tval(st, 'stormSailDamage'));
@@ -1043,6 +1056,7 @@ export class Game {
     if (ship.sinkingUntil) return;
     if (ship.caravanOf !== null) caravanLost(this, ship);
     this.sunkRecently.set(ship.id, this.now);
+    if (ship.hasFlag('scuttle_charges') && ship.isPlayer) blowMagazine(this, ship); // nobody gets her hold
     ship.sinkingUntil = this.now + 6;
     ship.boarding = null;
     ship.repairing = false;
@@ -1146,7 +1160,17 @@ export class Game {
   private playerDeath(s: PlayerSession, ship: ShipEntity): void {
     const p = s.profile!;
     const lostValue = cargoValue(ship.cargo);
-    const crewLost = Math.max(0, Math.round(ship.crew * 0.35));
+    // Lifeboats: fewer men lost, part of the lawful cargo saved.
+    const boats = tval(ship.stats, 'lifeboats');
+    const crewLost = Math.max(0, Math.round(ship.crew * 0.35 * Math.max(0, 1 - 0.3 * boats)));
+    const saved: Cargo = {};
+    if (boats > 0 && !ship.hasFlag('scuttle_charges')) {
+      for (const id of Object.keys(ship.cargo) as GoodId[]) {
+        if (GOODS[id].contraband) continue;
+        const n = Math.floor((ship.cargo[id] ?? 0) * Math.min(1, 0.2 * boats));
+        if (n > 0) saved[id] = n;
+      }
+    }
     const cls = SHIP_CLASSES[ship.loadout.classId];
     const claim = claimPolicy(this, s, lostValue);
     const fee = claim.feeWaived ? 0 : Math.min(Math.floor(p.gold), Math.round(cls.price * 0.1));
@@ -1181,7 +1205,10 @@ export class Game {
     // Respawn at the last port if it will still have us, otherwise the nearest that will.
     let port = this.portById(p.lastPort);
     if (!port || !canDock(p, port.faction).ok) port = this.nearestPort(ship.state.x, ship.state.y, (q) => canDock(p, q.faction).ok) ?? this.portById(START_PORT)!;
-    ship.cargo = {};
+    ship.cargo = saved;
+    if (Object.keys(saved).length) this.sendTo(s, { t: 'toast', msg: `The boats saved ${Object.entries(saved).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`).join(', ')}.`, kind: 'good' });
+    ship.voyageStart = 0;
+    ship.wounded = 0;
     for (const a of AMMO_IDS) ship.ammo[a] = Math.floor(ship.ammo[a] * 0.5);
     ship.crew = Math.max(Math.round(ship.stats.crewMin * 0.6), ship.crew - crewLost);
     ship.morale = 50;
@@ -1265,7 +1292,7 @@ export class Game {
     if (!target || target.lootLockedFor !== ship.id) return 'The prize slipped away';
     if (dist(ship.state.x, ship.state.y, target.state.x, target.state.y) > 400) return 'The prize drifted too far';
     // Move cargo within hold limits.
-    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul);
+    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
     let moved = 0;
     for (const id in take) {
       const g = id as GoodId;
@@ -1344,7 +1371,7 @@ export class Game {
       this.toastShip(ship, 'Empty casks, weighted to float. A decoy!', 'bad');
       return;
     }
-    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul);
+    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
     const got: string[] = [];
     for (const id in l.cargo) {
       const g = id as GoodId;
@@ -1697,6 +1724,8 @@ export class Game {
       }
       case 'board_cut':
         return err(cutGrapples(this, ship));
+      case 'scuttle':
+        return err(lightFuse(this, ship));
       case 'captive':
         return portAction((pt) => captiveAction(this, s, pt, Math.trunc(Number(msg.index)), msg.mode === 'hand_over' ? 'hand_over' : 'ransom'));
       case 'loot_take':
@@ -2011,6 +2040,7 @@ export class Game {
     const ship = s.ship!;
     const p = s.profile!;
     onDockDeeds(this, s);
+    ship.voyageStart = 0;
     sellPrizes(this, s, port);
     onArrival(this, p, port);
     this.tavernWhispers(s);
@@ -2063,6 +2093,8 @@ export class Game {
     }
     if (ship.docked) s.profile!.trade.lastDeparture = ship.docked;
     ship.docked = null;
+    ship.voyageStart = this.now;
+    delete ship.talentReady.wear;
     s.profile!.docked = null;
     const v = headingVec(away);
     ship.state = { x: port.x + v.x * 60, y: port.y + v.y * 60, heading: away, speed: 3, sail: 0.5, rudder: 0 };

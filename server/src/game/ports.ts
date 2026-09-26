@@ -77,7 +77,8 @@ export function repairCost(ship: ShipEntity): number {
   const curseMul = ship.curse >= 80 ? 1.5 : ship.curse >= 50 ? 1.2 : 1;
   const guns = (ship.gunsDisabled.port * GUNS[ship.loadout.guns.port].price + ship.gunsDisabled.starboard * GUNS[ship.loadout.guns.starboard].price) * 0.3;
   const mast = ship.hasEffect('broken_mast') ? ship.cls.price * 0.03 : 0;
-  return Math.ceil(Math.max(0, (hull + sails + rudder) * curseMul + guns + mast));
+  const patchwork = ship.hasFlag('patchwork_hull') ? 1.5 : 1;
+  return Math.ceil(Math.max(0, ((hull + sails + rudder) * curseMul + guns + mast) * patchwork));
 }
 
 export function buildPortView(game: Game, s: PlayerSession, port: Port): PortView {
@@ -176,7 +177,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     if (gm.stock < qty) return 'Not enough in stock';
     const price = quoteBuy(good, gm, qty, mods);
     if (p.gold < price) return 'Not enough silver';
-    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul);
+    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
     const need = qty * def.volume * (def.contraband ? ship.stats.contrabandVolumeMul : 1);
     if (need > free + 1e-6) return 'Not enough room in the hold';
     p.gold -= price;
@@ -355,9 +356,9 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   ship.hull = ship.stats.hullMax;
   ship.sails = ship.stats.sailHpMax;
   ship.rudderHp = 1;
-  if (cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul) > ship.stats.holdVolume) {
+  if (cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul) > ship.stats.holdVolume) {
     // Excess cargo is sold to the yard at a poor price rather than silently vanishing.
-    let excess = cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul) - ship.stats.holdVolume;
+    let excess = cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul) - ship.stats.holdVolume;
     let dumped = 0;
     for (const id of Object.keys(ship.cargo) as GoodId[]) {
       while (excess > 0 && (ship.cargo[id] ?? 0) > 0) {

@@ -186,14 +186,14 @@ test('loadouts: two slots at 20, switch in port with a cooldown, pools keep thei
   const p = s.profile!;
   game.grantXp(s, 3e6, null);
   assert.ok(p.level >= 20);
-  c.push({ t: 'learn_talent', id: 'srv_iron_hull' });
-  c.push({ t: 'learn_talent', id: 'srv_iron_hull' });
+  c.push({ t: 'learn_talent', id: 'srv_carpenters' });
+  c.push({ t: 'learn_talent', id: 'srv_carpenters' });
   const ship = s.ship!;
   ship.hull = Math.round(ship.stats.hullMax / 2);
   c.push({ t: 'loadout', slot: 1 });
   assert.equal(p.activeLoadout, 1);
   assert.deepEqual(p.talents, {});
-  assert.equal(p.loadouts[0].srv_iron_hull, 2, 'first build stored');
+  assert.equal(p.loadouts[0].srv_carpenters, 2, 'first build stored');
   assert.ok(Math.abs(ship.hull / ship.stats.hullMax - 0.5) < 0.01, 'hull keeps its share');
   c.push({ t: 'loadout', slot: 0 });
   assert.equal(p.activeLoadout, 1, 'cooldown');

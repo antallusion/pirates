@@ -122,6 +122,10 @@ export class ShipEntity {
   caravanOf: number | null = null; // Counting House: the account this merchant trades for
   caravanFrom: string | null = null;
   pendingDump: { good: GoodId; qty: number; at: number } | null = null; // cargo going over the side
+  voyageStart = 0; // world time she left port (0 = in port / NPC)
+  wounded = 0; // Ship's Surgeon: back on deck after the fight
+  planking = 0; // Double Planking buffer
+  scuttleAt = 0; // Scuttle Charges fuse
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

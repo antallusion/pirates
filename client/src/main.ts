@@ -260,7 +260,7 @@ addEventListener('keydown', (e) => {
       break;
     case 'b':
       if (state.you && state.you.flags & SF.BOARDING) {
-        net.send({ t: 'board_cut' });
+        net.send(e.shiftKey ? { t: 'scuttle' } : { t: 'board_cut' });
         break;
       }
       if (boardTarget !== null) {

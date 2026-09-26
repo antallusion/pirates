@@ -10,6 +10,7 @@ import { BOARDING } from './trees/boarding.ts';
 import { GUNNERY } from './trees/gunnery.ts';
 import { NAVIGATION } from './trees/navigation.ts';
 import { SMUGGLING } from './trees/smuggling.ts';
+import { SURVIVAL } from './trees/survival.ts';
 import { TRADE } from './trees/trade.ts';
 
 export type TreeId =
@@ -34,7 +35,7 @@ export const TREES: Record<TreeId, TreeDef> = {
   command: { id: 'command', name: 'Command', motto: 'A crew is a blade — keep it sharp.', complete: false, playable: false, native: ['admiral'] },
   trade: { id: 'trade', name: 'Trade', motto: 'Every port is a ledger.', complete: true, playable: true, native: ['smuggler'] },
   smuggling: { id: 'smuggling', name: 'Smuggling', motto: 'What the Crown does not see, the Crown does not tax.', complete: true, playable: true, native: ['smuggler'] },
-  survival: { id: 'survival', name: 'Survival', motto: 'Stay afloat. Everything else is luxury.', complete: false, playable: true, native: ['reaver', 'drowned'] },
+  survival: { id: 'survival', name: 'Survival', motto: 'Stay afloat. Everything else is luxury.', complete: true, playable: true, native: ['reaver', 'drowned'] },
   shipwright: { id: 'shipwright', name: 'Shipwright', motto: 'The hull remembers every hand.', complete: false, playable: false, native: ['admiral'] },
   exploration: { id: 'exploration', name: 'Exploration', motto: 'Beyond the last lighthouse.', complete: false, playable: false, native: ['navigator'] },
   abyssal: { id: 'abyssal', name: 'Abyssal', motto: 'The deep answers those who call.', complete: false, playable: false, native: ['drowned'] },
@@ -74,18 +75,7 @@ export const MAX_BRIDGES = 3;
 export const TIER_STEP = 2;
 export const KEYSTONE_REQUIREMENT = 5;
 
-const t = (d: TalentDef): TalentDef => d;
-
-const LEGACY: TalentDef[] = [
-  // ------------------------------------------------------------- Survival
-  t({ id: 'srv_carpenters', tree: 'survival', name: 'Ship Carpenters', tier: 1, maxRank: 3, keystone: false, description: 'Repair speed +15% per rank.', perRank: { repairRate: 0.15 } }),
-  t({ id: 'srv_iron_hull', tree: 'survival', name: 'Iron Hull', tier: 1, maxRank: 3, keystone: false, description: 'Maximum hull +5% per rank.', perRank: { hullMax: 0.05 } }),
-  t({ id: 'srv_battle_repair', tree: 'survival', name: 'Battle Repair', tier: 2, maxRank: 1, keystone: false, description: 'Carpenters can repair the hull during combat at 40% speed.', flags: ['battle_repair'], fixed: { battleRepairRate: 0.4 } }),
-  t({ id: 'srv_ration_master', tree: 'survival', name: 'Ration Master', tier: 2, maxRank: 2, keystone: false, description: 'Provisions consumption −15% per rank.', perRank: { provisionUse: -0.15 } }),
-  t({ id: 'srv_unsinkable', tree: 'survival', name: 'Unsinkable', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. Once per 5 minutes survive lethal damage with 1 hull for 6 s. Maximum sail level −10%.', flags: ['unsinkable'], fixed: { maxSpeed: -0.1 } }),
-];
-
-export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...TRADE, ...SMUGGLING, ...LEGACY];
+export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...TRADE, ...SMUGGLING, ...SURVIVAL];
 
 export const TALENTS_BY_ID: Record<string, TalentDef> = Object.fromEntries(TALENTS.map((x) => [x.id, x]));
 

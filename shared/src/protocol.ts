@@ -33,6 +33,7 @@ export type ClientMsg =
   | { t: 'board'; target: number; aggression: Aggression }
   | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize' }
   | { t: 'board_cut' }
+  | { t: 'scuttle' }
   | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' }
   | { t: 'repair'; on: boolean }
   | { t: 'dock'; bribe?: boolean }

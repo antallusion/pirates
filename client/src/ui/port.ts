@@ -30,7 +30,7 @@ export class PortScreen {
     const port = state.ports.find((p) => p.id === view.portId)!;
     const faction = FACTIONS[port.faction];
     const tabs: [Tab, string][] = [['market', 'Market'], ['shipyard', 'Shipyard'], ['tavern', 'Tavern'], ['contracts', 'Contracts'], ['harbour', 'Harbour Master'], ['holdings', 'Sites & Warehouse'], ['exchange', 'Exchange & Bank']];
-    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1);
+    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1);
     root.innerHTML = `
       <div class="modal-head">
         <div><h2>${esc(port.name)}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(port.description)}</div></div>

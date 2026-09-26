@@ -4,6 +4,7 @@
 import type { StatMods } from '../../../shared/src/data/stats.ts';
 import type { Station } from '../../../shared/src/protocol.ts';
 import type { Game } from './Game.ts';
+import { tx } from '../../../shared/src/sim/shipstats.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const STATION_MODS: Record<Station, StatMods> = {
@@ -44,7 +45,7 @@ export function stepFlooding(game: Game, ship: ShipEntity): boolean {
   const cap = floodCapacity(ship);
   const tierF = 0.6 + ship.cls.tier * 0.2;
   const dc = ship.station === 'damage_control';
-  ship.water += ship.leaks * 0.3 * tierF;
+  ship.water += ship.leaks * 0.3 * tierF * Math.max(0, 1 + tx(ship.stats, 'leakInflow'));
   if (ship.water > 0) {
     const pumpers = Math.min(1, ship.crew / Math.max(1, ship.stats.crewMax));
     const pump = pumpers * 1.1 * tierF * (dc ? 2 : ship.station === 'gunnery' ? 0.5 : 1);
