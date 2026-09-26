@@ -54,8 +54,8 @@ export function takePrize(game: Game, s: PlayerSession, target: ShipEntity): str
   target.lootLockedFor = null;
   target.morale = 60;
   target.name = `Prize ${target.name}`;
-  // Prize Crew: patched up on the spot.
-  target.hull = Math.min(target.stats.hullMax, target.hull + target.stats.hullMax * (tx(ship.stats, 'prizeCrew') / 2));
+  // Prize Crew: patched up on the spot (Prize Refit: fully).
+  target.hull = ship.hasFlag('prize_refit') ? target.stats.hullMax : Math.min(target.stats.hullMax, target.hull + target.stats.hullMax * (tx(ship.stats, 'prizeCrew') / 2));
   const brain = game.npcs.get(target.id);
   if (brain) {
     brain.active = true;
@@ -75,7 +75,7 @@ export function sellPrizes(game: Game, s: PlayerSession, port: Port): void {
   if (port.shipyardTier < 1) return;
   for (const prize of prizesOf(game, ship)) {
     if (dist(prize.state.x, prize.state.y, port.x, port.y) > 3000) continue;
-    const value = prizeValue(prize, ship);
+    const value = Math.round(prizeValue(prize, ship) * (ship.hasFlag('prize_refit') && (port.faction === 'free' || port.faction === 'confederacy') ? 1.2 : 1));
     s.profile!.gold += value;
     ship.crew = Math.min(ship.stats.crewMax, ship.crew + prize.crew);
     game.db.ledger(s.accountId, 'prize', value, prize.loadout.classId);

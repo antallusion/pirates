@@ -348,7 +348,8 @@ function aimDistance(): number {
 
 function fire(side: 'port' | 'starboard'): void {
   if (state.self?.dockedAt) return;
-  net.send({ t: 'fire', side, dist: Math.round(aimDistance()) });
+  const m = mouseWorld();
+  net.send({ t: 'fire', side, dist: Math.round(aimDistance()), x: Math.round(m.x), y: Math.round(m.y) });
 }
 
 /** Bow or stern chasers, whichever end the cursor lies off. */

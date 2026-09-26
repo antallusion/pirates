@@ -46,6 +46,7 @@ export interface VolleyRec {
   hits: Map<number, number>;
   counts: boolean; // counts as a full volley (not a plain rolling fire)
   demoralised: Set<number>; // Splinter Storm: targets already shaken by this volley
+  dealt: Map<number, number>; // hull damage per target (volley cap)
   t: number;
 }
 
@@ -96,7 +97,7 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
 }
 
 /** Fires a broadside. Returns null on success, or a reason string. */
-export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number): string | null {
+export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number, aimAt?: { x: number; y: number }): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
   if (ship.reload[side] > 0) return 'Guns are still loading';
   const guns = ship.stats.gunsPerSide - ship.gunsDisabled[side];
@@ -107,7 +108,13 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const gun = GUNS[ship.loadout.guns[side]];
   const range = effectiveRange(ship, side, ammo);
   const dist = clamp(Number.isFinite(aimDist) ? aimDist : range, 40, range);
-  const baseHeading = sideHeading(ship, side);
+  let baseHeading = sideHeading(ship, side);
+  // Improved Carriages: the guns train toward the aim point.
+  const train = tval(ship.stats, 'gunTrain') * DEG;
+  if (aimAt && train > 0) {
+    const want = Math.atan2(aimAt.x - ship.state.x, -(aimAt.y - ship.state.y));
+    baseHeading = wrapAngle(baseHeading + clamp(wrapAngle(want - baseHeading), -train, train));
+  }
   const fwd = headingVec(ship.state.heading);
   const outward = headingVec(baseHeading);
   const doubleShot = ship.doubleShotArmed;
@@ -130,7 +137,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     ship.recompute(game.now);
   }
   const volley = game.allocId();
-  const rec: VolleyRec = { owner: ship.id, total: 0, left: 0, hits: new Map(), counts: !rolling || ship.hasFlag('rolling_broadside'), demoralised: new Set(), t: game.now };
+  const rec: VolleyRec = { owner: ship.id, total: 0, left: 0, hits: new Map(), counts: !rolling || ship.hasFlag('rolling_broadside'), demoralised: new Set(), dealt: new Map(), t: game.now };
   const shotSpeed = 1 + tval(ship.stats, 'shotSpeed');
   const balls: [number, number, number, number, number][] = [];
   const rng = game.rng;
@@ -159,6 +166,8 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   ship.swapBonus = false;
   ship.doubleShotArmed = false;
   addHeat(game, ship, side);
+  // Overgunned: a full broadside makes the hull groan.
+  if (ship.hasFlag('overgunned') && ship.gunsDisabled[side] === 0) ship.hull -= ship.stats.hullMax * 0.005;
   // Weather Gauge: the powder smoke blows down onto the enemy.
   if (target && ship.hasFlag('weather_gauge') && upwindOf(game, ship, target) && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < 450) {
     target.addEffect({ id: 'gun_smoke', until: game.now + 3, mods: { spreadMul: 0.1 }, source: ship.id }, game.now);
@@ -173,7 +182,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
 /** Bow/stern chasers: long guns aimed at a point within a cone along the keel. Great for chases. */
 export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: number, ty: number): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
-  const count = end === 'bow' ? ship.cls.bowChasers : ship.cls.sternChasers;
+  const count = end === 'bow' ? ship.stats.bowChasers : ship.cls.sternChasers;
   if (count <= 0) return `No ${end} chasers on a ${ship.cls.name}`;
   if (ship.chaserReload[end] > 0) return 'Chasers are still loading';
   const ammo = ship.ammoSel === 'grape' ? 'round' : ship.ammoSel; // chasers do not load grape
@@ -364,8 +373,20 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // Glancing blows off a steeply angled hull skip away.
   const glance = along > 0.5 && !raking ? 0.8 : 1;
 
-  const armor = target.stats.armor * (1 - (ARMOR_PIERCE[p.ammo] ?? 0));
-  const hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul;
+  // Iron Strapping: extra armour against armour-piercing shot.
+  const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
+  const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)));
+  let hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul;
+  // No single broadside may take more than 30% of a hull (Iron Coffin: 20%).
+  if (p.volley !== undefined) {
+    const rec = game.volleys.get(p.volley);
+    if (rec) {
+      const cap = target.stats.hullMax * (target.hasFlag('iron_coffin') ? 0.2 : 0.3);
+      const done = rec.dealt.get(target.id) ?? 0;
+      hullDmg = Math.max(0, Math.min(hullDmg, cap - done));
+      rec.dealt.set(target.id, done + hullDmg);
+    }
+  }
   const chain = p.ammo === 'chain' ? 1 + (sst ? tval(sst, 'chainSail') : 0) : 1;
   const sailDmg = p.damage * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain;
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
@@ -446,7 +467,7 @@ export function igniteShip(game: Game, target: ShipEntity, seconds: number, sour
 /** Per-hit talent rules of the shooter: Mast Breaker and Crossfire. */
 function talentHitEffects(game: Game, shooter: ShipEntity, target: ShipEntity, p: Projectile): void {
   const now = game.now;
-  if (p.ammo === 'chain' && target.sails < target.stats.sailHpMax * 0.5 && !target.hasEffect('broken_mast') && game.rng.chance(tval(shooter.stats, 'mastBreak'))) {
+  if (p.ammo === 'chain' && !target.hasFlag('ironbound_masts') && target.sails < target.stats.sailHpMax * 0.5 && !target.hasEffect('broken_mast') && game.rng.chance(tval(shooter.stats, 'mastBreak'))) {
     // Stays until a shipyard steps a new mast (cleared by port repairs).
     target.addEffect({ id: 'broken_mast', until: now + 1e9, mods: { maxSpeed: -0.3 }, source: shooter.id }, now);
     game.emit({ k: 'fx', fx: 'broken_mast', x: Math.round(target.state.x), y: Math.round(target.state.y) }, target.state.x, target.state.y);

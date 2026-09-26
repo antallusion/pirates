@@ -21,6 +21,12 @@ export interface ShipLoadout {
   guns: { port: GunId; starboard: GunId };
   modules: Partial<Record<ModuleId, number>>;
   mount?: MountId;
+  /** Master Fitter: this fitting may go one level beyond its limit. */
+  overfit?: ModuleId;
+  /** Masterwork: fittings that came out Excellent (bonus +50%). */
+  excellent?: ModuleId[];
+  /** Legendary Keel on this hull. */
+  keel?: boolean;
 }
 
 export interface ShipStats {
@@ -63,6 +69,7 @@ export interface ShipStats {
   sellMul: number;
   contrabandVolumeMul: number;
   materialVolumeMul: number; // Spare Timber
+  bowChasers: number;
   incomingDamageMul: number;
   moraleRegen: number;
   cooldownMul: number;
@@ -81,6 +88,7 @@ export function computeShipStats(
   const cap = CAPTAINS[captain];
   // Permanent sources (captain passive, talents) are capped per 03 §3.3; temporary effects stack on top.
   const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents)]);
+  const m0 = (x: Record<StatKey, number>, k: StatKey) => mod(x, k);
   const eff = sumMods(effects);
   for (const f of eff.flags) flags.add(f);
   const has = (id: string) => (talents[id] ?? 0) > 0;
@@ -88,20 +96,31 @@ export function computeShipStats(
   // Iron Tiller: turn-slowing effects are 40% weaker.
   const effTurn = e('turnRate') < 0 && flags.has('iron_tiller') ? e('turnRate') * 0.6 : e('turnRate');
 
-  // Modules.
-  let hullMul = 0, armorAdd = 0, speedMul = 0, sailHpMul = 0, turnMul = 0, holdMul = 0, crewMul = 0, boardingMul = 0;
+  // Modules (Perfect Balance scales their bonuses; Excellent work +50%; Trim the Ballast eases their weight).
+  let hullMul = 0, armorAdd = 0, speedMul = 0, sailHpMul = 0, turnMul = 0, holdMul = 0, crewMul = 0, boardingMul = 0, sigMod = 0;
+  const fit = 1 + m0(mods, 'fittings');
+  const ballast = Math.max(0, 1 + m0(mods, 'ballast'));
   for (const id in loadout.modules) {
     const lvl = loadout.modules[id as ModuleId] ?? 0;
     const pl = MODULES[id as ModuleId]?.perLevel;
     if (!pl || lvl <= 0) continue;
-    hullMul += (pl.hullMul ?? 0) * lvl;
-    armorAdd += (pl.armorAdd ?? 0) * lvl;
-    speedMul += (pl.speedMul ?? 0) * lvl;
-    sailHpMul += (pl.sailHpMul ?? 0) * lvl;
-    turnMul += (pl.turnMul ?? 0) * lvl;
-    holdMul += (pl.holdMul ?? 0) * lvl;
-    crewMul += (pl.crewMul ?? 0) * lvl;
-    boardingMul += (pl.boardingMul ?? 0) * lvl;
+    const q = fit * (loadout.excellent?.includes(id as ModuleId) ? 1.5 : 1);
+    const pos = (v: number | undefined) => (v ?? 0) * lvl * ((v ?? 0) > 0 ? q : ballast);
+    hullMul += pos(pl.hullMul);
+    armorAdd += pos(pl.armorAdd);
+    speedMul += pos(pl.speedMul);
+    sailHpMul += pos(pl.sailHpMul);
+    turnMul += pos(pl.turnMul);
+    holdMul += pos(pl.holdMul);
+    crewMul += pos(pl.crewMul);
+    boardingMul += pos(pl.boardingMul);
+    sigMod += (pl.signature ?? 0) * lvl;
+  }
+  // Legendary Keel.
+  if (loadout.keel) {
+    hullMul += 0.05;
+    holdMul += 0.05;
+    speedMul += 0.03;
   }
 
   const passive = cls.passive.id;
@@ -115,6 +134,7 @@ export function computeShipStats(
   const m = (k: StatKey) => mod(mods, k);
   const extra = {} as Record<StatKey, number>;
   for (const k in mods) extra[k as StatKey] = mods[k as StatKey] + e(k as StatKey);
+  if (sigMod) extra.signature = (extra.signature ?? 0) + sigMod;
   for (const k in eff.mods) if (!(k in extra)) extra[k as StatKey] = e(k as StatKey);
 
   return {
@@ -139,7 +159,8 @@ export function computeShipStats(
     holdVolume: cls.holdVolume * (1 + holdMul + m('holdVolume') + e('holdVolume')),
     holdWeight: cls.holdWeight * (1 + holdMul),
     detection: cls.detection * (1 + Math.min(detectCap, m('detection') + (passive === 'hunter' ? 0.15 : 0)) + e('detection')),
-    gunsPerSide: cls.gunPortsPerSide,
+    gunsPerSide: cls.gunPortsPerSide + (flags.has('overgunned') ? 2 : 0),
+    bowChasers: cls.bowChasers + (flags.has('overgunned') ? 1 : 0),
     reloadMul: Math.max(0.2, 1 + Math.max(reloadFloor, m('reloadMul')) + e('reloadMul')),
     spreadMul: Math.max(0.2, 1 + m('spreadMul') + e('spreadMul')),
     gunDamageMul: Math.max(0.1, 1 + Math.min(dmgCap, m('gunDamageMul')) + e('gunDamageMul')),
@@ -203,7 +224,7 @@ export function gunWeight(loadout: ShipLoadout): number {
 
 /** Speed multiplier from how heavily the ship is loaded (guns count half, they're designed in). */
 export function loadFactor(loadout: ShipLoadout, stats: ShipStats, cargo: Cargo, ammo: AmmoStock): number {
-  const w = cargoWeight(cargo, ammo) + gunWeight(loadout) * 0.25;
+  const w = cargoWeight(cargo, ammo) + gunWeight(loadout) * 0.25 * Math.max(0, 1 + tx(stats, 'ballast'));
   const ratio = Math.min(1.4, w / Math.max(1, stats.holdWeight));
   return 1 - ratio * 0.14 * Math.max(0, 1 + tx(stats, 'loadPenalty'));
 }

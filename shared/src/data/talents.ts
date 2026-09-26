@@ -10,6 +10,7 @@ import { BOARDING } from './trees/boarding.ts';
 import { GUNNERY } from './trees/gunnery.ts';
 import { NAVIGATION } from './trees/navigation.ts';
 import { SMUGGLING } from './trees/smuggling.ts';
+import { SHIPWRIGHT } from './trees/shipwright.ts';
 import { SURVIVAL } from './trees/survival.ts';
 import { TRADE } from './trees/trade.ts';
 
@@ -36,7 +37,7 @@ export const TREES: Record<TreeId, TreeDef> = {
   trade: { id: 'trade', name: 'Trade', motto: 'Every port is a ledger.', complete: true, playable: true, native: ['smuggler'] },
   smuggling: { id: 'smuggling', name: 'Smuggling', motto: 'What the Crown does not see, the Crown does not tax.', complete: true, playable: true, native: ['smuggler'] },
   survival: { id: 'survival', name: 'Survival', motto: 'Stay afloat. Everything else is luxury.', complete: true, playable: true, native: ['reaver', 'drowned'] },
-  shipwright: { id: 'shipwright', name: 'Shipwright', motto: 'The hull remembers every hand.', complete: false, playable: false, native: ['admiral'] },
+  shipwright: { id: 'shipwright', name: 'Shipwright', motto: 'The hull remembers every hand.', complete: true, playable: true, native: ['admiral'] },
   exploration: { id: 'exploration', name: 'Exploration', motto: 'Beyond the last lighthouse.', complete: false, playable: false, native: ['navigator'] },
   abyssal: { id: 'abyssal', name: 'Abyssal', motto: 'The deep answers those who call.', complete: false, playable: false, native: ['drowned'] },
 };
@@ -75,7 +76,7 @@ export const MAX_BRIDGES = 3;
 export const TIER_STEP = 2;
 export const KEYSTONE_REQUIREMENT = 5;
 
-export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...TRADE, ...SMUGGLING, ...SURVIVAL];
+export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...TRADE, ...SMUGGLING, ...SURVIVAL, ...SHIPWRIGHT];
 
 export const TALENTS_BY_ID: Record<string, TalentDef> = Object.fromEntries(TALENTS.map((x) => [x.id, x]));
 

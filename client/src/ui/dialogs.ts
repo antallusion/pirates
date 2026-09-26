@@ -93,8 +93,11 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
         return `<tr><td class="${GOODS[g as GoodId].contraband ? 'contra' : ''}">${esc(GOODS[g as GoodId].name)} ${self.dockedAt ? '' : `<button class="btn btn-small" data-dump="${g}" title="Over the side">⤓</button>`}</td><td>${Math.floor(n ?? 0)}</td><td>${((n ?? 0) * GOODS[g as GoodId].volume).toFixed(1)}</td><td>${((n ?? 0) * GOODS[g as GoodId].weight).toFixed(1)}</td>${self.appraisal ? `<td>${a ? `<span class="gold">${fmt(a.price * Math.floor(n ?? 0))}</span> <span class="muted">${esc(where)}</span>` : '<span class="muted">—</span>'}</td>` : ''}</tr>`;
       }).join('') || '<tr><td colspan="4" class="muted">Empty hold</td></tr>'}
       </table><p class="muted">Ammunition: ${AMMO_IDS.map((a) => `${self.ammo[a]} ${esc(AMMO[a].name.toLowerCase())}`).join(' · ')}</p>
+      ${self.talents.shp_field_forge && !self.dockedAt ? `<div class="card"><h4>Field Forge</h4><p class="muted">Ten batches at a time. Shot: 1 iron + 1 powder per batch; planks: 1 timber.</p>
+        <button class="btn btn-small" data-craft="round">12 round</button> <button class="btn btn-small" data-craft="chain">8 chain</button> <button class="btn btn-small" data-craft="grape">14 grape</button> <button class="btn btn-small" data-craft="planks">planks</button></div>` : ''}
       <h3 class="title-sm" style="font-size:20px">Contracts</h3>${self.contracts.map((c) => `<div class="card"><b>${esc(c.title)}</b> <span class="gold">${fmt(c.reward)}</span></div>`).join('') || '<p class="muted">None.</p>'}
     </div></div></div>`;
+  root.querySelectorAll<HTMLElement>('[data-craft]').forEach((el) => (el.onclick = () => send?.({ t: 'craft', recipe: el.dataset.craft as 'round', n: 10 })));
   root.querySelectorAll<HTMLElement>('[data-dump]').forEach((el) => (el.onclick = () => {
     const g = el.dataset.dump as GoodId;
     const n = Math.floor(self.cargo[g] ?? 0);

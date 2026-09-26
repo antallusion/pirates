@@ -39,7 +39,7 @@ export function stepSurvival(game: Game, ship: ShipEntity): void {
     if (!ship.hasFlag('storm_rider')) ship.hull -= st.hullMax * (w === 'black_storm' ? 0.0005 : 0.0002) * seaDamageMul(ship);
   }
   // Patchwork Hull: constant patching, paused briefly by critical hits.
-  if (ship.hasFlag('patchwork_hull') && (ship.talentReady.patchPause ?? 0) <= now) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.0025);
+  if (ship.hasFlag('patchwork_hull') && (ship.talentReady.patchPause ?? 0) <= now && canMend(game, ship)) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.0025);
   // Double Planking refills a minute after the fight.
   const planking = tx(st, 'planking');
   if (planking > 0 && now - ship.lastCombat > 60) ship.planking = st.hullMax * planking;
@@ -67,7 +67,7 @@ export function stepSurvival(game: Game, ship: ShipEntity): void {
   if ((ship.talentReady.wear ?? 0) === 0) ship.talentReady.wear = now + 600;
   if (now >= ship.talentReady.wear) {
     ship.talentReady.wear = now + 600;
-    if (ship.hull > st.hullMax * 0.4) ship.hull -= st.hullMax * 0.005 * Math.max(0, 1 - 0.15 * tx(st, 'longVoyage'));
+    if (ship.hull > st.hullMax * 0.4) ship.hull -= st.hullMax * 0.005 * Math.max(0, 1 - 0.15 * tx(st, 'longVoyage')) * (ship.hasFlag('copper_sheathing') ? 0.5 : 1);
   }
   // Scurvy after an hour without making port; Lime and Salt keep it off.
   const scurvyDue = now >= (ship.talentReady.scurvy ?? 0);
@@ -106,9 +106,14 @@ export function woundedOf(game: Game, target: ShipEntity, killed: number): numbe
   return Math.floor(x) + (game.rng.float() < x % 1 ? 1 : 0);
 }
 
+/** Iron Coffin: nothing restores the hull while the fight is on. */
+export function canMend(game: Game, ship: ShipEntity): boolean {
+  return !(ship.hasFlag('iron_coffin') && ship.inCombat(game.now));
+}
+
 /** Plug the Breach: +8% hull, every leak and breach stopped. */
 export function plugTheBreach(game: Game, ship: ShipEntity): void {
-  ship.hull = Math.min(ship.stats.hullMax, ship.hull + ship.stats.hullMax * 0.08);
+  if (canMend(game, ship)) ship.hull = Math.min(ship.stats.hullMax, ship.hull + ship.stats.hullMax * 0.08);
   ship.leaks = 0;
   ship.effects = ship.effects.filter((e) => e.id !== 'breach');
   ship.recompute(game.now);

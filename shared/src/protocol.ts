@@ -25,7 +25,7 @@ export type ClientMsg =
   | { t: 'hello'; v: number; token?: string; name?: string }
   | { t: 'create_captain'; captain: CaptainId; shipName: string }
   | { t: 'input'; seq: number; rudder: number; sail: number }
-  | { t: 'fire'; side: Side; dist: number }
+  | { t: 'fire'; side: Side; dist: number; x?: number; y?: number } // x, y: aim point (Improved Carriages)
   | { t: 'chase'; end: ChaserEnd; x: number; y: number }
   | { t: 'mount'; x: number; y: number }
   | { t: 'ammo'; ammo: AmmoId }
@@ -45,6 +45,9 @@ export type ClientMsg =
   | { t: 'hire_crew'; qty: number }
   | { t: 'shipyard'; action: 'repair' }
   | { t: 'shipyard'; action: 'module'; module: ModuleId }
+  | { t: 'shipyard'; action: 'unfit'; module: ModuleId }
+  | { t: 'shipyard'; action: 'keel' }
+  | { t: 'craft'; recipe: CraftRecipe; n: number }
   | { t: 'shipyard'; action: 'guns'; side: Side; gun: GunId }
   | { t: 'shipyard'; action: 'buy_ship'; classId: ShipClassId }
   | { t: 'shipyard'; action: 'mount'; mount: MountId }
@@ -134,6 +137,9 @@ export interface ResourceSiteView {
   until: number;
   mine: boolean;
 }
+
+/** Field Forge recipes. */
+export type CraftRecipe = 'round' | 'chain' | 'grape' | 'planks';
 
 export type InsuranceTier = 'hull' | 'cargo' | 'full';
 
@@ -305,7 +311,7 @@ export interface PortView {
     tier: number;
     repairCost: number;
     ships: { classId: ShipClassId; price: number; tradeIn: number }[];
-    modules: { module: ModuleId; level: number; cost: number; max: number }[];
+    modules: { module: ModuleId; level: number; cost: number; max: number; excellent: boolean }[];
     guns: { gun: GunId; cost: number }[];
     mounts: { mount: MountId; cost: number }[];
   };

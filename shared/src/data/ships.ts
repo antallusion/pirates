@@ -208,7 +208,7 @@ export type ChaserEnd = 'bow' | 'stern';
 
 // ---------------------------------------------------------------- Shipyard modules
 
-export type ModuleId = 'hull_plating' | 'sail_plan' | 'rudder' | 'hold_expansion' | 'crew_quarters' | 'figurehead_kraken';
+export type ModuleId = 'hull_plating' | 'sail_plan' | 'rudder' | 'hold_expansion' | 'crew_quarters' | 'figurehead_kraken' | 'ghost_timbers';
 
 export interface ModuleDef {
   id: ModuleId;
@@ -216,7 +216,9 @@ export interface ModuleDef {
   maxLevel: number;
   baseCost: number; // multiplied by level and ship tier
   description: string;
-  perLevel: { hullMul?: number; armorAdd?: number; speedMul?: number; sailHpMul?: number; turnMul?: number; holdMul?: number; crewMul?: number; boardingMul?: number };
+  perLevel: { hullMul?: number; armorAdd?: number; speedMul?: number; sailHpMul?: number; turnMul?: number; holdMul?: number; crewMul?: number; boardingMul?: number; signature?: number };
+  /** Not sold: fitted only from plans found at sea. */
+  blueprint?: boolean;
 }
 
 export const MODULES: Record<ModuleId, ModuleDef> = {
@@ -225,6 +227,7 @@ export const MODULES: Record<ModuleId, ModuleDef> = {
   rudder: { id: 'rudder', name: 'Balanced Rudder', maxLevel: 2, baseCost: 700, description: 'Deeper, balanced rudder blade.', perLevel: { turnMul: 0.08 } },
   hold_expansion: { id: 'hold_expansion', name: 'Hold Expansion', maxLevel: 2, baseCost: 1000, description: 'Rebuilt bulkheads and orlop storage.', perLevel: { holdMul: 0.12, speedMul: -0.01 } },
   crew_quarters: { id: 'crew_quarters', name: 'Crew Quarters', maxLevel: 2, baseCost: 850, description: 'More hammocks, more hands.', perLevel: { crewMul: 0.12 } },
+  ghost_timbers: { id: 'ghost_timbers', name: 'Ghost Timbers', maxLevel: 1, baseCost: 2200, blueprint: true, description: 'Pale wood from the boneyards of the Expanse, fitted to the plans of a ship that should not float. Light, quiet, uncanny.', perLevel: { speedMul: 0.04, sailHpMul: 0.1, signature: -0.06 } },
   figurehead_kraken: { id: 'figurehead_kraken', name: 'Kraken Figurehead', maxLevel: 1, baseCost: 2500, description: 'A carved horror on the bow. Enemy crews flinch when you close in.', perLevel: { boardingMul: 0.1 } },
 };
 

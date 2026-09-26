@@ -70,6 +70,10 @@ export class PortScreen {
         return this.send({ t: 'shipyard', action: 'repair' });
       case 'module':
         return this.send({ t: 'shipyard', action: 'module', module: d.module as never });
+      case 'unfit':
+        return this.send({ t: 'shipyard', action: 'unfit', module: d.module as never });
+      case 'keel':
+        return this.send({ t: 'shipyard', action: 'keel' });
       case 'gun':
         return this.send({ t: 'shipyard', action: 'guns', side: d.side as never, gun: d.gun as never });
       case 'mount':
@@ -187,8 +191,9 @@ export class PortScreen {
       const maxed = m.level >= m.max;
       const mat = view.materialDiscount[m.module];
       const matNote = mat && !maxed ? `<p class="muted">Bring ${mat.units} ${esc(GOODS[mat.good].name.toLowerCase())} (hold or warehouse here) for up to 30% off.</p>` : '';
-      return `<div class="card"><h4>${esc(def.name)} <span class="muted">${m.level}/${m.max}</span></h4><p>${esc(def.description)}</p>${matNote}
-        <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${maxed ? 'Fully fitted' : `Fit level ${m.level + 1} — ${fmt(m.cost)}`}</button></div>`;
+      return `<div class="card"><h4>${esc(def.name)} <span class="muted">${m.level}/${m.max}</span>${m.excellent ? ' <span class="gold">Excellent</span>' : ''}</h4><p>${esc(def.description)}</p>${matNote}
+        <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${maxed ? 'Fully fitted' : `Fit level ${m.level + 1} — ${fmt(m.cost)}`}</button>
+        ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" title="${self.talents.shp_modular_refit ? 'Free with Modular Refit' : 'The yard charges 10% to take it out'}">Take out</button>` : ''}</div>`;
     }).join('');
     const guns = (['port', 'starboard'] as const).map((side) => `<div class="card"><h4>${side === 'port' ? 'Port' : 'Starboard'} battery — ${cur.gunPortsPerSide} × ${esc(GUNS[self.loadout.guns[side]].name)}</h4>
       ${sy.guns.map((gdef) => {
@@ -203,6 +208,7 @@ export class PortScreen {
         <td><button class="btn btn-small" data-act="ship" data-cls="${s.classId}" ${s.classId === self.loadout.classId ? 'disabled' : ''}>${s.classId === self.loadout.classId ? 'Yours' : fmt(net)}</button></td></tr>`;
     }).join('');
     return `<div class="cols"><div>
+        ${self.talents.shp_legendary_keel ? `<div class="card"><h4>Legendary Keel</h4><p class="muted">+5% hull, +5% hold, +3% speed for one hull class; movable once a week.</p><button class="btn btn-small" data-act="keel" ${self.loadout.keel ? 'disabled' : ''}>${self.loadout.keel ? 'She has it' : 'Lay the keel in this hull'}</button></div>` : ''}
         <div class="card"><h4>Repairs</h4><p>Hull ${state.you?.hull ?? 0}/${state.you?.hullMax ?? 0}, sails ${state.you?.sails ?? 0}/${state.you?.sailsMax ?? 0}, dismounted guns ${self.gunsDisabled.port + self.gunsDisabled.starboard}.</p>
         <button class="btn btn-primary" data-act="repair" ${sy.repairCost ? '' : 'disabled'}>${sy.repairCost ? `Full repair — ${fmt(sy.repairCost)}` : 'She is sound'}</button></div>
         ${guns}</div><div>

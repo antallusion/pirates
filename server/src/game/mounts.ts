@@ -13,6 +13,7 @@ import { applyDamage, damageBlocked } from './combat.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { tx } from '../../../shared/src/sim/shipstats.ts';
 
 export interface Tether {
   target: number;
@@ -193,7 +194,7 @@ export function shipyardMount(game: Game, s: PlayerSession, port: Port, mount: M
   if (!mountOffers(ship, port).some((o) => o.mount === mount)) return `${port.name} cannot fit a ${MOUNTS[mount].name} to a ${ship.cls.name}`;
   if (ship.loadout.mount === mount) return 'Already fitted';
   const refund = ship.loadout.mount ? Math.round(MOUNTS[ship.loadout.mount].price * 0.4) : 0;
-  const cost = Math.max(0, MOUNTS[mount].price - refund);
+  const cost = Math.max(0, Math.round((MOUNTS[mount].price - refund) * Math.max(0.5, 1 + tx(ship.stats, 'yardCost'))));
   if (s.profile!.gold < cost) return `Needs ${cost} silver`;
   s.profile!.gold -= cost;
   ship.loadout.mount = mount;

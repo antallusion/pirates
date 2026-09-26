@@ -52,7 +52,10 @@ export function stepFlooding(game: Game, ship: ShipEntity): boolean {
     ship.water = Math.max(0, ship.water - pump);
   }
   // Carpenters plug leaks with planks — damage control does it fast, even under fire.
-  if (ship.leaks > 0 && (ship.cargo.planks ?? 0) >= 0.5 && game.now - ship.lastPlug >= (dc ? 6 : 20)) {
+  // Watertight Bulkheads: faster plugging, and only so many compartments can flood at once.
+  const bulk = tx(ship.stats, 'bulkheads');
+  if (bulk > 0) ship.leaks = Math.min(ship.leaks, bulk >= 2 ? 1 : 2);
+  if (ship.leaks > 0 && (ship.cargo.planks ?? 0) >= 0.5 && game.now - ship.lastPlug >= (dc ? 6 : 20) * Math.max(0.3, 1 - 0.25 * bulk)) {
     ship.leaks--;
     ship.lastPlug = game.now;
     ship.cargo.planks = Math.round(((ship.cargo.planks ?? 0) - 0.5) * 100) / 100;

@@ -28,6 +28,8 @@ export function curseRate(game: Game, ship: ShipEntity): number {
   if (game.weatherOf(ship) === 'black_storm') rate += 0.1;
   if (ship.captain === 'drowned') rate += 0.02;
   if (rate === 0) rate = ship.docked ? -0.05 : strange < 0.15 ? -0.02 : 0;
+  // Copper Sheathing: growth takes hold half as fast.
+  if (rate > 0 && ship.hasFlag('copper_sheathing')) rate *= 0.5;
   return rate;
 }
 

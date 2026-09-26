@@ -78,7 +78,7 @@ export function repairCost(ship: ShipEntity): number {
   const guns = (ship.gunsDisabled.port * GUNS[ship.loadout.guns.port].price + ship.gunsDisabled.starboard * GUNS[ship.loadout.guns.starboard].price) * 0.3;
   const mast = ship.hasEffect('broken_mast') ? ship.cls.price * 0.03 : 0;
   const patchwork = ship.hasFlag('patchwork_hull') ? 1.5 : 1;
-  return Math.ceil(Math.max(0, ((hull + sails + rudder) * curseMul + guns + mast) * patchwork));
+  return Math.ceil(Math.max(0, ((hull + sails + rudder) * curseMul + guns + mast) * patchwork * yardMul(ship)));
 }
 
 export function buildPortView(game: Game, s: PlayerSession, port: Port): PortView {
@@ -101,9 +101,10 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       ships: SHIP_CLASS_IDS.filter((id) => SHIP_CLASSES[id].purchasable && SHIP_CLASSES[id].tier <= tier && (!SHIP_CLASSES[id].factions || SHIP_CLASSES[id].factions!.includes(port.faction))).map((id) => ({
         classId: id, price: SHIP_CLASSES[id].price, tradeIn: Math.round(shipValue(ship) * 0.6),
       })),
-      modules: MODULE_IDS.filter((m) => !(m === 'figurehead_kraken' && tier < 2)).map((m) => {
+      modules: MODULE_IDS.filter((m) => !(m === 'figurehead_kraken' && tier < 2 && !ship.hasFlag('modular_refit')) && (!MODULES[m].blueprint || p.blueprints.includes(m))).map((m) => {
         const level = ship.loadout.modules[m] ?? 0;
-        return { module: m, level, cost: level >= MODULES[m].maxLevel ? 0 : moduleCost(m, level + 1, ship.cls.tier), max: MODULES[m].maxLevel };
+        const max = moduleLimit(ship, m);
+        return { module: m, level, cost: level >= max ? 0 : Math.round(moduleCost(m, level + 1, ship.cls.tier) * yardMul(ship)), max, excellent: (ship.loadout.excellent ?? []).includes(m) };
       }),
       mounts: mountOffers(ship, port),
       guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
@@ -286,14 +287,27 @@ export function shipyardRepair(game: Game, s: PlayerSession): string | null {
   return null;
 }
 
+/** Yard Credit: −10% per rank on every shipyard bill. */
+export function yardMul(ship: ShipEntity): number {
+  return Math.max(0.5, 1 + tx(ship.stats, 'yardCost'));
+}
+
+/** Highest level this ship may fit (Master Fitter: one fitting one level past its limit). */
+export function moduleLimit(ship: ShipEntity, module: ModuleId): number {
+  const def = MODULES[module];
+  const over = ship.hasFlag('master_fitter') && (!ship.loadout.overfit || ship.loadout.overfit === module) ? 1 : 0;
+  return def.maxLevel + over;
+}
+
 export function shipyardModule(game: Game, s: PlayerSession, port: Port, module: ModuleId): string | null {
   const ship = s.ship!;
   const def = MODULES[module];
   if (!def) return 'Unknown module';
-  if (module === 'figurehead_kraken' && port.shipyardTier < 2) return 'This yard has no carver for that';
+  if (def.blueprint && !s.profile!.blueprints.includes(module)) return 'No yard can build that without the plans';
+  if (module === 'figurehead_kraken' && port.shipyardTier < 2 && !ship.hasFlag('modular_refit')) return 'This yard has no carver for that';
   const level = ship.loadout.modules[module] ?? 0;
-  if (level >= def.maxLevel) return 'Already fully fitted';
-  const full = moduleCost(module, level + 1, ship.cls.tier);
+  if (level >= moduleLimit(ship, module)) return 'Already fully fitted';
+  const full = Math.round(moduleCost(module, level + 1, ship.cls.tier) * yardMul(ship));
   // Materials you bring (hold first, then your warehouse here) knock up to 30% off the yard's price.
   const need = MODULE_MATERIALS[module];
   const wh = s.profile!.warehouses[port.id] ?? {};
@@ -303,11 +317,60 @@ export function shipyardModule(game: Game, s: PlayerSession, port: Port, module:
   if (avail > 0) supplyMaterials(s, port, module);
   s.profile!.gold -= cost;
   ship.loadout.modules[module] = level + 1;
+  if (level + 1 > def.maxLevel) ship.loadout.overfit = module;
+  // Masterwork: a fitting may come out Excellent (bonus +50%).
+  const excellent = 0.05 + tx(ship.stats, 'masterwork');
+  if (!(ship.loadout.excellent ?? []).includes(module) && game.rng.chance(excellent)) {
+    ship.loadout.excellent = [...(ship.loadout.excellent ?? []), module];
+    game.sendTo(s, { t: 'toast', msg: `The yard outdid itself: ${def.name} is Excellent work.`, kind: 'good' });
+  }
   const hullFrac = ship.hull / ship.stats.hullMax;
   ship.recompute(game.now);
   ship.hull = Math.round(ship.stats.hullMax * hullFrac);
   game.db.ledger(s.accountId, 'module', -cost, module);
   return null;
+}
+
+/** Take out one level of a fitting: the yard charges 10% of its price; Modular Refit does it for nothing. */
+export function shipyardUnfit(game: Game, s: PlayerSession, module: ModuleId): string | null {
+  const ship = s.ship!;
+  const level = ship.loadout.modules[module] ?? 0;
+  if (!MODULES[module] || level <= 0) return 'Nothing fitted there';
+  const cost = ship.hasFlag('modular_refit') ? 0 : Math.round(moduleCost(module, level, ship.cls.tier) * 0.1 * yardMul(ship));
+  if (s.profile!.gold < cost) return `Taking it out costs ${cost} silver`;
+  s.profile!.gold -= cost;
+  if (cost) game.db.ledger(s.accountId, 'module', -cost, `unfit:${module}`);
+  if (level - 1 > 0) ship.loadout.modules[module] = level - 1;
+  else delete ship.loadout.modules[module];
+  if (ship.loadout.overfit === module && level - 1 <= MODULES[module].maxLevel) delete ship.loadout.overfit;
+  if (level - 1 <= 0 && ship.loadout.excellent) ship.loadout.excellent = ship.loadout.excellent.filter((m) => m !== module);
+  const hullFrac = ship.hull / ship.stats.hullMax;
+  ship.recompute(game.now);
+  ship.hull = Math.round(ship.stats.hullMax * hullFrac);
+  return null;
+}
+
+/** Legendary Keel: lay it in this hull class (once per 7 days). */
+export function layKeel(game: Game, s: PlayerSession): string | null {
+  const ship = s.ship!;
+  const p = s.profile!;
+  if (!ship.hasFlag('legendary_keel')) return 'You need the Legendary Keel talent';
+  if (p.keel?.classId === ship.loadout.classId) return 'She already has it';
+  if (p.keel && game.now - p.keel.since < 7 * 86400) return `The keel can be moved in ${Math.ceil((7 * 86400 - (game.now - p.keel.since)) / 86400)} days`;
+  p.keel = { classId: ship.loadout.classId, since: game.now };
+  syncKeel(game, s);
+  return null;
+}
+
+export function syncKeel(game: Game, s: PlayerSession): void {
+  const ship = s.ship;
+  if (!ship) return;
+  const want = ship.hasFlag('legendary_keel') && s.profile!.keel?.classId === ship.loadout.classId;
+  if (!!ship.loadout.keel === want) return;
+  ship.loadout.keel = want || undefined;
+  const hullFrac = ship.hull / ship.stats.hullMax;
+  ship.recompute(game.now);
+  ship.hull = Math.round(ship.stats.hullMax * hullFrac);
 }
 
 export function shipyardGuns(game: Game, s: PlayerSession, port: Port, side: Side, gun: GunId): string | null {
@@ -319,7 +382,7 @@ export function shipyardGuns(game: Game, s: PlayerSession, port: Port, side: Sid
   const old = GUNS[ship.loadout.guns[side]];
   if (old.id === gun) return 'Already mounted';
   const n = ship.stats.gunsPerSide;
-  const cost = Math.max(0, Math.round(def.price * n - old.price * n * 0.5));
+  const cost = Math.max(0, Math.round((def.price * n - old.price * n * 0.5) * yardMul(ship)));
   if (s.profile!.gold < cost) return `Needs ${cost} silver`;
   s.profile!.gold -= cost;
   if (cost) game.db.ledger(s.accountId, 'guns', -cost, gun);

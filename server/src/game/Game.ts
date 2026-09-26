@@ -60,7 +60,8 @@ import {
   bribeCost, buildCoves, contrabandValue, coveAt, coveSell, customsSearch, deferCrime, discoverCoves, dockOverride, fenceSale, portFence, settleCrimes, unmask, visibleRange,
 } from './smugglefx.ts';
 import type { Cove, PendingCrime } from './smugglefx.ts';
-import { blowMagazine, lightFuse, seaDamageMul, stepSurvival, weariness } from './survivalfx.ts';
+import { blowMagazine, canMend, lightFuse, seaDamageMul, stepSurvival, weariness } from './survivalfx.ts';
+import { craft, salvageBonus, wreckSalvage } from './wrightfx.ts';
 import { buyOption, caravanLost, caravansOf, exerciseOption, expireOptions, priceLetters, tendCaravans, onArrival } from './tradefx.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import type { Projectile, VolleyRec } from './combat.ts';
@@ -74,7 +75,7 @@ import type { NpcBrain } from './npc.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
 import type { Profile } from './player.ts';
 import {
-  buildPortView, priceMods, buyAmmo, buyChart, buyLicence, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, trade,
+  buildPortView, priceMods, buyAmmo, buyChart, buyLicence, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, shipyardUnfit, layKeel, syncKeel, trade,
 } from './ports.ts';
 import { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
@@ -91,6 +92,8 @@ interface Loot {
   expires: number;
   ownerOnly?: number; // Quick Dump: casks only their owner can see and pick up
   decoy?: boolean; // Decoy Barrels: empty
+  wreck?: string; // region of a sunk hull (salvage)
+  salvaged?: boolean;
 }
 
 interface Rumor {
@@ -458,8 +461,10 @@ export class Game {
           this.hullToHull(b, a);
           const ramA = a.hasEffect('ramming_speed') ? 3 : 1, ramB = b.hasEffect('ramming_speed') ? 3 : 1;
           const base = closing * closing * 2.2;
-          applyDamage(this, b, { hull: base * ramA * (ma / (ma + mb)) * 2, crew: 1, morale: 4 }, a);
-          applyDamage(this, a, { hull: (base * (mb / (ma + mb)) * 2) / ramA, morale: 2 }, b);
+          // Reinforced Bow deals more and takes less; Iron Strapping shrugs off rams.
+          const ramMul = (x: ShipEntity, y: ShipEntity) => Math.max(0, 1 + tval(x.stats, 'ramDealt')) * Math.max(0.2, 1 + tval(y.stats, 'ramTaken')) * Math.max(0.2, 1 - tval(y.stats, 'strapping'));
+          applyDamage(this, b, { hull: base * ramA * (ma / (ma + mb)) * 2 * ramMul(a, b), crew: 1, morale: 4 }, a);
+          applyDamage(this, a, { hull: ((base * (mb / (ma + mb)) * 2) / ramA) * ramMul(b, a), morale: 2 }, b);
           this.emit({ k: 'fx', fx: 'ram', x: Math.round((a.state.x + b.state.x) / 2), y: Math.round((a.state.y + b.state.y) / 2) }, a.state.x, a.state.y);
           a.state.speed *= 0.4;
           b.state.speed *= 0.6;
@@ -546,6 +551,7 @@ export class Game {
       expireForwards(this, s);
       expireOptions(this, s);
       discoverCoves(this, s);
+      syncKeel(this, s);
       this.stepDump(s);
       if (s.ship.hasEffect('false_colors')) {
         let close = false;
@@ -638,8 +644,10 @@ export class Game {
     // Repairs: carpenters consume planks and sailcloth.
     if (ship.repairing) {
       const inCombat = ship.inCombat(now);
-      const rate = inCombat ? st.battleRepairRate : 1;
-      if (rate <= 0) {
+      const rate = inCombat ? (canMend(this, ship) ? st.battleRepairRate : 0) : 1;
+      // Spare Rigging: the sails can be mended under fire even when the hull cannot.
+      const sailRate = inCombat ? Math.max(rate, ship.hasFlag('spare_rigging') ? 0.3 : 0) : 1;
+      if (rate <= 0 && sailRate <= 0) {
         ship.repairing = false;
         this.toastShip(ship, 'Carpenters cannot work under fire.', 'bad');
       } else {
@@ -647,7 +655,7 @@ export class Game {
         const hullGain = Math.min(st.hullMax - ship.hull, st.hullMax * 0.012 * st.repairRate * crewF * rate);
         const use = Math.max(0.3, 1 + tval(st, 'materialUse')); // Spare Timber
         const planksNeeded = (hullGain / 40) * use;
-        const sailGain = Math.min(st.sailHpMax - ship.sails, st.sailHpMax * 0.02 * st.repairRate * crewF * rate);
+        const sailGain = Math.min(st.sailHpMax - ship.sails, st.sailHpMax * 0.02 * st.repairRate * crewF * sailRate);
         const clothNeeded = (sailGain / 20) * use;
         // A hidden cove has timber and canvas to spare for those who know it.
         const cove = ship.hasFlag('cove_knowledge') && coveAt(this, ship) !== null;
@@ -692,7 +700,7 @@ export class Game {
     }
     curseAura(this, ship);
     // Brine Mend heal-over-time.
-    if (ship.hasEffect('brine_mend')) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.025);
+    if (ship.hasEffect('brine_mend') && canMend(this, ship)) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.025);
     // Fireship charges.
     if (ship.fuseAt && this.now >= ship.fuseAt) {
       detonateFireship(this, ship);
@@ -1079,6 +1087,8 @@ export class Game {
       const n = Math.floor((ship.cargo[id as GoodId] ?? 0) * frac);
       if (n > 0) cargo[id as GoodId] = n;
     }
+    // The hull itself breaks up into salvage.
+    for (const [g, n] of Object.entries(wreckSalvage(ship))) cargo[g as GoodId] = (cargo[g as GoodId] ?? 0) + (n ?? 0);
     let gold = ship.isPlayer ? 0 : Math.floor(ship.purse * 0.5);
     if (ship.isPlayer) {
       const p = this.profileOf(ship);
@@ -1090,7 +1100,7 @@ export class Game {
     }
     if (!Object.keys(cargo).length && gold <= 0) return;
     const id = this.allocId();
-    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC });
+    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region });
   }
 
   private creditKill(killer: ShipEntity, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
@@ -1370,6 +1380,10 @@ export class Game {
       this.loot.delete(l.id);
       this.toastShip(ship, 'Empty casks, weighted to float. A decoy!', 'bad');
       return;
+    }
+    if (l.wreck && !l.salvaged) {
+      l.salvaged = true; // the first salvager works the wreck over
+      salvageBonus(this, s, l.cargo, l.wreck);
     }
     let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul);
     const got: string[] = [];
@@ -1683,7 +1697,9 @@ export class Game {
       }
       case 'fire':
         if (msg.side !== 'port' && msg.side !== 'starboard') return;
-        return err(fireBroadside(this, ship, msg.side, Number(msg.dist)));
+        return err(fireBroadside(this, ship, msg.side, Number(msg.dist), Number.isFinite(msg.x) && Number.isFinite(msg.y) ? { x: Number(msg.x), y: Number(msg.y) } : undefined));
+      case 'craft':
+        return err(craft(this, s, msg.recipe, Math.trunc(Number(msg.n))));
       case 'mount':
         return err(fireMount(this, ship, Number(msg.x), Number(msg.y)));
       case 'chase':
@@ -1757,8 +1773,14 @@ export class Game {
         return portAction((pt) => hireCrew(this, s, pt, Math.trunc(Number(msg.qty))));
       case 'shipyard':
         return portAction((pt) => {
-          if (pt.shipyardTier <= 0) return 'No shipyard here';
+          // Modular Refit: fittings change in any port.
+          const fitting = msg.action === 'module' || msg.action === 'unfit';
+          if (pt.shipyardTier <= 0 && !(fitting && ship.hasFlag('modular_refit'))) return 'No shipyard here';
           switch (msg.action) {
+            case 'unfit':
+              return shipyardUnfit(this, s, msg.module);
+            case 'keel':
+              return layKeel(this, s);
             case 'repair':
               return shipyardRepair(this, s);
             case 'module':
@@ -2040,6 +2062,7 @@ export class Game {
     const ship = s.ship!;
     const p = s.profile!;
     onDockDeeds(this, s);
+    syncKeel(this, s);
     ship.voyageStart = 0;
     sellPrizes(this, s, port);
     onArrival(this, p, port);

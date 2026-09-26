@@ -25,7 +25,9 @@ export type StatKey =
   | 'ghostWake' | 'dangerousGoods'
   // survival
   | 'leakInflow' | 'surgeon' | 'stormHull' | 'materialVolume' | 'materialUse' | 'damageControl' | 'hardenedCrew' | 'longVoyage'
-  | 'lifeboats' | 'planking' | 'grimEndurance' | 'fireFight';
+  | 'lifeboats' | 'planking' | 'grimEndurance' | 'fireFight'
+  // shipwright
+  | 'ballast' | 'salvage' | 'yardCost' | 'ramDealt' | 'ramTaken' | 'gunTrain' | 'bulkheads' | 'masterwork' | 'strapping' | 'fittings';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -43,7 +45,10 @@ export type Flag =
   | 'dark_lanterns' | 'fog_sense' | 'false_colors' | 'cove_knowledge' | 'night_market' | 'insider' | 'shadow_strike' | 'broker_friend'
   | 'nobodys_ship' | 'black_ledger'
   // survival
-  | 'lime_and_salt' | 'sealed_magazine' | 'wet_decks' | 'scuttle_charges' | 'old_salt' | 'patchwork_hull';
+  | 'lime_and_salt' | 'sealed_magazine' | 'wet_decks' | 'scuttle_charges' | 'old_salt' | 'patchwork_hull'
+  // shipwright
+  | 'copper_sheathing' | 'master_fitter' | 'field_forge' | 'modular_refit' | 'ironbound_masts' | 'spare_rigging' | 'prize_refit'
+  | 'legendary_keel' | 'boneyard_secrets' | 'iron_coffin' | 'overgunned';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

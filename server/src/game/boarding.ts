@@ -268,7 +268,7 @@ export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: n
   for (const k of AMMO_IDS) ammo[k] = Math.floor(b.ammo[k] * 0.4);
   // Victory effects.
   a.morale = Math.min(100, a.morale + 10 + a.stats.moraleOnBoard);
-  if (a.hasFlag('blood_tide')) a.hull = Math.min(a.stats.hullMax, a.hull + a.stats.hullMax * 0.15);
+  if (a.hasFlag('blood_tide') && !(a.hasFlag('iron_coffin') && a.inCombat(game.now))) a.hull = Math.min(a.stats.hullMax, a.hull + a.stats.hullMax * 0.15);
   if (lost + killed > 0) a.hull -= a.stats.hullMax * 0.02 * agg.cargo; // the fight wrecks some of your own ship
   // Warlord: Glory for every ship taken.
   if (a.hasFlag('warlord')) {

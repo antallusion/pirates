@@ -74,6 +74,8 @@ export interface Profile {
   loadoutSwitchAt: number;
   talentCooldowns: Record<string, number>;
   captives: Captive[];
+  blueprints: string[]; // plans for fittings no yard sells
+  keel: { classId: string; since: number } | null; // Legendary Keel
   trade: {
     lastDeparture: string;
     arrivalRoute: string;
@@ -125,7 +127,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -325,6 +327,8 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.loadoutSwitchAt ??= 0;
   p.talentCooldowns ??= {};
   p.captives ??= [];
+  p.blueprints ??= [];
+  p.keel ??= null;
   p.trade = { ...newTradeState(), ...(p.trade ?? {}) };
   p.smuggle = { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null, ...((p.smuggle as Partial<Profile['smuggle']> | undefined) ?? {}) };
   p.ammo = { ...emptyAmmo(), ...(p.ammo ?? {}) };
