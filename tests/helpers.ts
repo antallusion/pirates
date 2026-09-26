@@ -1,6 +1,7 @@
 // Test helpers: an in-memory game with fake connections that speak the real protocol.
 
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
+import { decodeSnap } from '../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
 import { AuthService } from '../server/src/auth.ts';
 import { Game } from '../server/src/game/Game.ts';
@@ -17,6 +18,10 @@ export class FakeConn {
   inbox: ServerMsg[] = [];
   send(text: string): void {
     this.inbox.push(JSON.parse(text) as ServerMsg);
+  }
+  sendBinary(bytes: Uint8Array): void {
+    this.bytesOut += bytes.byteLength;
+    this.inbox.push(decodeSnap(bytes));
   }
   close(): void {
     if (this.closed) return;

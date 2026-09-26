@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
+import { decodeSnap } from '../shared/src/codec.ts';
 import type { ServerMsg } from '../shared/src/protocol.ts';
 import { acceptUpgrade } from '../server/src/net/websocket.ts';
 import { createStaticHandler } from '../server/src/net/static.ts';
@@ -30,8 +31,9 @@ test('real WebSocket handshake + protocol round trip, and TypeScript served as J
   const got: ServerMsg[] = [];
   await new Promise<void>((resolveOpen) => (ws.onopen = () => resolveOpen()));
   const done = new Promise<void>((r) => {
+    ws.binaryType = 'arraybuffer';
     ws.onmessage = (ev) => {
-      const m = JSON.parse(String(ev.data)) as ServerMsg;
+      const m = (ev.data instanceof ArrayBuffer ? decodeSnap(ev.data) : JSON.parse(String(ev.data))) as ServerMsg;
       got.push(m);
       if (m.t === 'welcome') ws.send(JSON.stringify({ t: 'create_captain', captain: 'navigator', shipName: 'Wire Test' }));
       if (m.t === 'init') r();

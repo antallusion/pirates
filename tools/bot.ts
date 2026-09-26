@@ -3,6 +3,7 @@
 // Useful for load tests (run many) and for verifying the server loop without a browser.
 
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
+import { decodeSnap } from '../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
 
 const url = process.argv[2] ?? 'ws://localhost:8080/ws';
@@ -19,8 +20,11 @@ let lastSnap: Extract<ServerMsg, { t: 'snap' }> | null = null;
 const toasts: string[] = [];
 
 ws.onopen = () => send({ t: 'hello', v: PROTOCOL_VERSION, name });
+ws.binaryType = 'arraybuffer';
+let bytesIn = 0;
 ws.onmessage = (ev) => {
-  const m = JSON.parse(String(ev.data)) as ServerMsg;
+  bytesIn += ev.data instanceof ArrayBuffer ? ev.data.byteLength : String(ev.data).length;
+  const m = (ev.data instanceof ArrayBuffer ? decodeSnap(ev.data) : JSON.parse(String(ev.data))) as ServerMsg;
   counts[m.t] = (counts[m.t] ?? 0) + 1;
   switch (m.t) {
     case 'welcome':
@@ -55,7 +59,7 @@ setTimeout(() => {
   clearInterval(iv);
   const y = lastSnap?.you;
   console.log(JSON.stringify({
-    name, entityId, messages: counts,
+    name, entityId, messages: counts, kbPerSec: Math.round(bytesIn / seconds / 10.24) / 100,
     position: y ? { x: Math.round(y.x), y: Math.round(y.y), speed: Math.round(y.spd * 10) / 10, hull: y.hull, crew: y.crew } : null,
     nearbyShips: lastSnap?.ships.length ?? 0, region: lastSnap?.region, weather: lastSnap?.weather, toasts: toasts.slice(-6),
   }, null, 2));

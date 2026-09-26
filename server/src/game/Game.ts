@@ -20,6 +20,7 @@ import type {
 } from '../../../shared/src/protocol.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
+import { encodeSnap } from '../../../shared/src/codec.ts';
 import { polarEfficiency, relWindDeg, stepSailing } from '../../../shared/src/sim/sailing.ts';
 import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { AmmoStock, Cargo } from '../../../shared/src/sim/shipstats.ts';
@@ -1159,6 +1160,12 @@ export class Game {
     s.conn.send(JSON.stringify(msg));
   }
 
+  /** Snapshots are the hot path: binary frames (shared/src/codec.ts). */
+  private sendSnap(s: PlayerSession, msg: Extract<ServerMsg, { t: 'snap' }>): void {
+    if (s.conn.closed || s.disconnectedAt !== null) return;
+    s.conn.sendBinary(encodeSnap(msg));
+  }
+
   toastShip(ship: ShipEntity | null, msg: string, kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' = 'info'): void {
     const s = this.sessionOf(ship);
     if (s) this.sendTo(s, { t: 'toast', msg, kind });
@@ -1638,7 +1645,7 @@ export class Game {
         },
         ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now), combat: me.inCombat(this.now),
       };
-      this.sendTo(s, {
+      this.sendSnap(s, {
         t: 'snap', tick: this.tick, time: Math.round(this.now * 100) / 100, ack: me.lastInputSeq, you, ships, loot,
         wind: [Math.round(wind.dir * 1000) / 1000, Math.round(wind.strength * 100) / 100], weather, region: me.region, fog: WEATHER_FOG[weather],
       });

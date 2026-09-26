@@ -34,6 +34,11 @@ export class WsConnection {
     this.writeFrame(0x1, payload);
   }
 
+  sendBinary(bytes: Uint8Array): void {
+    if (this.closed) return;
+    this.writeFrame(0x2, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
+  }
+
   close(code = 1000, reason = ''): void {
     if (this.closed) return;
     const r = Buffer.from(reason, 'utf8');

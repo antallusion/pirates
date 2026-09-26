@@ -1,6 +1,7 @@
 // WebSocket connection with token persistence and automatic reconnect.
 
 import { PROTOCOL_VERSION } from '../../shared/src/constants.ts';
+import { decodeSnap } from '../../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../../shared/src/protocol.ts';
 
 const TOKEN_KEY = 'gravetide.token';
@@ -33,10 +34,17 @@ export class Net {
       const token = this.token;
       this.send({ t: 'hello', v: PROTOCOL_VERSION, token: token ?? undefined, name: this.pendingName ?? undefined });
     };
+    ws.binaryType = 'arraybuffer';
     ws.onmessage = (ev) => {
-      const text = String(ev.data);
-      this.bytesIn += text.length;
-      const m = JSON.parse(text) as ServerMsg;
+      let m: ServerMsg;
+      if (ev.data instanceof ArrayBuffer) {
+        this.bytesIn += ev.data.byteLength;
+        m = decodeSnap(ev.data);
+      } else {
+        const text = String(ev.data);
+        this.bytesIn += text.length;
+        m = JSON.parse(text) as ServerMsg;
+      }
       if (m.t === 'welcome') {
         localStorage.setItem(TOKEN_KEY, m.token);
         this.pendingName = null;
