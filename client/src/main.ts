@@ -2,7 +2,7 @@
 
 import { DivePanel } from './ui/dive.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
-import { AMMO, AMMO_IDS, CHASER_CONE, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, timeOfDay } from '../../shared/src/constants.ts';
 import { clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
@@ -17,15 +17,19 @@ import { showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
 import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
-import { $, esc, keepInputs } from './ui/dom.ts';
+import { $, esc, icon, keepInputs } from './ui/dom.ts';
 import { Hud } from './ui/hud.ts';
+import { MENU_ITEMS, menuLabel, renderMenu } from './ui/menu.ts';
+import type { MenuItem } from './ui/menu.ts';
+import { applySkin } from './ui/skin.ts';
+import { rudderToward, TouchControls } from './touch.ts';
 import { PortScreen } from './ui/port.ts';
 import { TalentScreen } from './ui/talents.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { OptionsScreen } from './ui/options.ts';
-import { actionFor, applyToDocument, onSettings, settings, update } from './settings.ts';
+import { actionFor, applyToDocument, keyOf, onSettings, settings, update } from './settings.ts';
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
 import type { PadEvent } from './gamepad.ts';
 import type { Settings } from './settings.ts';
@@ -39,7 +43,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | null;
+type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -66,6 +70,19 @@ const companyScreen = new CompanyScreen((m) => net.send(m));
 const divePanel = new DivePanel((m) => net.send(m));
 const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
+const touch = new TouchControls({
+  sail: (d) => (state.input.sail = clamp(state.input.sail + d, 0, 4)),
+  fire: (side) => touchFire(side),
+  chasers: () => touchChasers(),
+  mount: () => touchMount(),
+  context: () => padContext(),
+  aim: (px, py) => {
+    renderer.mouseX = px;
+    renderer.mouseY = py;
+  },
+  zoom: (f) => (renderer.targetZoom = clamp(renderer.targetZoom * f, 0.35, 4)),
+  menu: () => toggle('menu'),
+});
 const onboarding = new OnboardingUi(state);
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
 // Options: applied now and on every change (docs/07 §11).
@@ -115,6 +132,8 @@ onboarding.onEdge = () => {
 // ------------------------------------------------------------------ boot
 
 loadAssets(null).then(() => {
+  applySkin();
+  buildMicroMenu();
   const url = assetUrl('art.keyart');
   const ka = document.querySelector<HTMLElement>('.keyart');
   if (ka && url) ka.style.backgroundImage = `url('${url}')`;
@@ -374,11 +393,34 @@ function refreshModal(): void {
     case 'barter':
       if (state.barter) keepInputs(root, () => renderBarter(root, state, (m) => net.send(m)));
       break;
+    case 'menu':
+      renderMenu(root, openMenuItem, () => closeModal());
+      break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
       break;
   }
 }
+
+/** A screen from the captain's cabin or the micro menu. */
+function openMenuItem(m: MenuItem): void {
+  if (m === 'chat') {
+    if (modal) closeModal();
+    $('chat').classList.add('open');
+    ($('chat-input') as HTMLInputElement).focus();
+  } else if (m === 'company') {
+    companyScreen.open();
+    openModal('company');
+  } else openModal(m);
+}
+
+/** The desktop micro menu: every screen one click away, in icons (glyphs until the art loads). */
+function buildMicroMenu(): void {
+  $('hud-menu').innerHTML = MENU_ITEMS.map((m) => `<button data-menu="${m.id}" title="${esc(menuLabel(m.id))}">${icon(`menu_${m.id}`, m.glyph)}</button>`).join('');
+  $('hud-menu').querySelectorAll<HTMLElement>('[data-menu]').forEach((b) => (b.onclick = () => openMenuItem(b.dataset.menu as MenuItem)));
+}
+buildMicroMenu();
+$('hud-map').onclick = () => toggle('map');
 
 function toggle(m: Modal): void {
   if (modal === m) closeModal();
@@ -421,7 +463,7 @@ addEventListener('keydown', (e) => {
     return;
   }
   if (typing()) return;
-  const k = e.key.toLowerCase();
+  const k = keyOf(e);
   if (k === 'escape') {
     if (modal === 'barter') net.send({ t: 'barter', action: 'cancel' });
     else if (modal && modal !== 'boarding' && modal !== 'sunk') closeModal();
@@ -550,7 +592,7 @@ addEventListener('keydown', (e) => {
       break;
   }
 });
-addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+addEventListener('keyup', (e) => keys.delete(keyOf(e)));
 addEventListener('blur', () => keys.clear());
 
 const canvas = $('world');
@@ -634,6 +676,7 @@ function sendAbility(id: string): void {
 hud.onAbility = (id) => sendAbility(id);
 hud.onAmmo = (id) => net.send({ t: 'ammo', ammo: id as 'round' });
 hud.onTalent = (id) => sendTalent(id);
+hud.onAmmoCycle = () => cycleAmmo(1);
 
 function sendTalent(id: string): void {
   const m = mouseWorld();
@@ -644,7 +687,11 @@ function sendInput(now: number): void {
   const km = settings().keys;
   const held = (a: 'rudderLeft' | 'rudderRight') => km[a].some((k) => k && keys.has(k));
   const rudder = (held('rudderRight') ? 1 : 0) - (held('rudderLeft') ? 1 : 0);
-  state.input.rudder = typing() ? 0 : rudder || Math.round(padRudder * 100) / 100;
+  // The helm stick sets a course and she holds it; keys or the pad take the helm back.
+  if (rudder || padRudder) touch.course = null;
+  const own = state.ownDisplay;
+  const touchRudder = touch.course !== null && own ? rudderToward(touch.course, own.heading) : 0;
+  state.input.rudder = typing() ? 0 : rudder || Math.round(padRudder * 100) / 100 || Math.round(touchRudder * 100) / 100;
   const key = `${state.input.rudder}|${state.input.sail}`;
   if (key !== lastInputKey || now - lastInputSent > 250) {
     lastInputKey = key;
@@ -768,6 +815,63 @@ function cycleAmmo(dir: number): void {
   if (!have.length) return;
   const i = have.indexOf(state.self?.ammoSel ?? 'round');
   net.send({ t: 'ammo', ammo: have[(i + dir + have.length) % have.length] });
+}
+
+/** What the touch context button would do now (the same order as the pad's A). */
+function contextLabel(): string | null {
+  if (state.self?.dockedAt) return null;
+  if (boardTarget !== null) return L('tc.board');
+  const own = state.ownDisplay;
+  if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
+  if (state.self?.landable && !state.self.landable.blocked) return L('tc.land');
+  return null;
+}
+
+/** The nearest ship within reach that a touch aims at: hostile ones count double, `accept` narrows the arc. */
+function touchTarget(reach: number, accept: (local: { x: number; y: number }) => boolean): { x: number; y: number } | null {
+  const own = state.ownDisplay;
+  if (!own) return null;
+  let best: { x: number; y: number } | null = null, score = Infinity;
+  for (const s of state.ships.values()) {
+    if (s.id === state.entityId || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.HIDDEN)) continue;
+    const d = dist(s.cur.x, s.cur.y, own.x, own.y);
+    if (d > reach || !accept(toShipLocal(s.cur.x, s.cur.y, own.x, own.y, own.heading))) continue;
+    const sc = d * (s.cur.flags & SF.HOSTILE ? 0.5 : 1);
+    if (sc < score) {
+      score = sc;
+      best = { x: s.cur.x, y: s.cur.y };
+    }
+  }
+  return best;
+}
+
+/** A touch broadside: laid on the best ship abeam on that side, or at two-thirds range when the sea is empty. */
+function touchFire(side: 'port' | 'starboard'): void {
+  const own = state.ownDisplay;
+  if (!own || !state.self) return;
+  const range = GUNS[state.self.loadout.guns[side]].range * (state.ownStats?.rangeMul ?? 1);
+  const tgt = touchTarget(range * 1.05, (l) => (l.x < 0) === (side === 'port') && Math.abs(l.x) > Math.abs(l.y) * 0.5);
+  const p = tgt ?? padAimPoint(own.x, own.y, own.heading, side, range * 0.66, 0);
+  aimAt(p.x, p.y);
+  fire(side);
+}
+
+/** Chasers by touch: at a ship in the bow or stern arc, else dead ahead. */
+function touchChasers(): void {
+  const own = state.ownDisplay;
+  if (!own) return;
+  const tgt = touchTarget(GUNS.long_9.range, (l) => Math.abs(l.x) < Math.abs(l.y) * Math.tan(CHASER_CONE));
+  if (tgt) aimAt(tgt.x, tgt.y);
+  else aimAt(own.x + Math.sin(own.heading) * 400, own.y - Math.cos(own.heading) * 400);
+  fireChasers();
+}
+
+/** The deck mount by touch: at the nearest ship in reach, else where the sea was last touched. */
+function touchMount(): void {
+  if (state.self?.dockedAt) return;
+  const tgt = touchTarget(700, () => true);
+  const m = tgt ?? mouseWorld();
+  net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
 }
 
 /** Aim the "cursor" at a world point: everything that aims by the mouse aims by the pad too. */
@@ -972,9 +1076,10 @@ function frame(t: number): void {
     sendInput(t);
     state.updateRemote();
     const own = state.updateOwn();
-    aimSide = sideUnderCursor();
+    // Touch has no hovering cursor: no aim arcs follow it (the broadside buttons aim themselves).
+    aimSide = touch.enabled ? null : sideUnderCursor();
     const prompt = computePrompt();
-    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: chaserEndUnderCursor() });
+    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled ? null : chaserEndUnderCursor() });
     if (own) audio.listener = { x: own.x, y: own.y };
     audio.ambience(state.wind[1], state.weather, dt);
     if (own) {
@@ -990,6 +1095,11 @@ function frame(t: number): void {
       }, state.wind[1], own.sail, Math.abs(shipHeel(own.heading, state.wind[0], state.wind[1], own.sail, SHIP_CLASSES[state.self!.loadout.classId].tier, state.you?.water ?? 0, 0)), timeOfDay(state.estServerTime()), !state.self?.dockedAt);
     }
     hud.update(state, prompt);
+    if (touch.enabled && state.self) {
+      const cls = SHIP_CLASSES[state.self.loadout.classId];
+      touch.setContext(contextLabel());
+      touch.frame(own?.heading ?? null, state.input.sail, cls.bowChasers + cls.sternChasers > 0, !!state.self.loadout.mount);
+    }
     divePanel.render(state.dive);
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
   }

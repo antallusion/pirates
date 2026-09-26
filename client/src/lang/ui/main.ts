@@ -48,6 +48,9 @@ export const EN = {
   enter: 'Enter {port}',
   protected: 'Protected — firing ends it',
   repairLull: '{key} repairs need a lull in the fighting',
+  'tc.board': 'Board her',
+  'tc.dock': 'Enter port',
+  'tc.land': 'Land a party',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -98,4 +101,7 @@ export const RU: Record<keyof typeof EN, string> = {
   enter: 'Войти в порт {port}',
   protected: 'Под защитой — выстрел её снимет',
   repairLull: '{key} для починки нужно затишье в бою',
+  'tc.board': 'На абордаж',
+  'tc.dock': 'Войти в порт',
+  'tc.land': 'Высадка',
 };

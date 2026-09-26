@@ -2,7 +2,7 @@
 
 import { lang, setLang, t } from '../i18n.ts';
 import type { Key, Lang } from '../i18n.ts';
-import { ACTIONS, conflicts, keyLabel, PRESETS, settings, update } from '../settings.ts';
+import { ACTIONS, conflicts, keyLabel, keyOf, PRESETS, settings, update } from '../settings.ts';
 import type { Action, Colorblind, Settings } from '../settings.ts';
 import { esc } from './dom.ts';
 
@@ -22,7 +22,7 @@ export class OptionsScreen {
         if (!this.listening || !this.root?.isConnected) return;
         e.preventDefault();
         e.stopImmediatePropagation();
-        const k = e.key === 'Escape' ? '' : e.key.toLowerCase();
+        const k = e.key === 'Escape' ? '' : keyOf(e);
         const { action, slot } = this.listening;
         const keys = { ...settings().keys, [action]: [...settings().keys[action]] as [string, string] };
         keys[action][slot] = k;

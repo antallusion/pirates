@@ -54,6 +54,19 @@ export const PRESETS: Record<'classic' | 'arrows' | 'lefthand' | 'onehand', Keym
   } as Keymap,
 };
 
+/**
+ * The key a press stands for in a keymap, whatever the keyboard layout: letters and digits by their physical
+ * place (a Russian layout's «ц» is still W), everything else by name. Keymaps store these names.
+ */
+export function keyOf(e: { key: string; code?: string }): string {
+  const code = e.code ?? '';
+  let m = /^Key([A-Z])$/.exec(code);
+  if (m) return m[1].toLowerCase();
+  m = /^(?:Digit|Numpad)(\d)$/.exec(code);
+  if (m) return m[1];
+  return e.key.toLowerCase();
+}
+
 /** The action a key triggers, if any. */
 export function actionFor(map: Keymap, key: string): Action | null {
   const k = key.toLowerCase();

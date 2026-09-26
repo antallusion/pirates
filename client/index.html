@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d10" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title data-i18n="doc.title">GRAVETIDE — a Pirate Gothic MMORPG</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IM+Fell+English+SC&family=Inter:wght@400;500;600&display=swap" />
@@ -57,29 +59,50 @@
     </div>
   </section>
 
-  <!-- In-game HUD -->
+  <!-- In-game HUD: mobile-first. Top row (unit frame, minimap), a top stack and a bottom stack that never overlap,
+       touch controls in the bottom corners on phones and tablets. -->
   <section id="hud" class="hidden">
-    <div id="hud-captain" class="hud-block top-left"></div>
-    <div id="hud-map" class="hud-block top-right">
+    <div id="hud-captain" class="unit-frame"></div>
+    <div id="hud-map" class="minimap-frame">
       <canvas id="minimap" width="220" height="220"></canvas>
-      <div id="hud-region"></div>
+      <i class="mm-ring"></i>
       <div id="unread" class="unread hidden" title="Letters waiting — [Y]" data-i18n-title="hud.unread"></div>
     </div>
-    <div id="hud-ship" class="hud-block bottom-left"></div>
-    <div id="hud-combat" class="hud-block bottom-center"></div>
-    <div id="hud-nav" class="hud-block bottom-right"></div>
-    <div id="hud-prompt"></div>
-    <div id="hud-watch" class="hud-block hidden"></div>
-    <div id="hud-goals" class="hidden"></div>
-    <div id="hud-hint"></div>
+    <div id="hud-region"></div>
+    <div id="hud-stack">
+      <div id="hud-boss" class="hud-block hidden"></div>
+      <div id="hud-watch" class="hud-block hidden"></div>
+      <div id="hud-goals" class="hidden"></div>
+      <div id="hud-dive" class="hud-block hidden"></div>
+    </div>
+    <div id="hud-ship" class="hud-block ship-panel"></div>
+    <div id="hud-nav" class="hud-block"></div>
+    <nav id="hud-menu" class="micro-menu"></nav>
+    <div id="hud-bottom">
+      <div id="hud-hint"></div>
+      <div id="hud-prompt"></div>
+      <button id="tc-context" class="tc-context hidden"><span></span></button>
+      <div id="hud-combat" class="action-bar"></div>
+    </div>
     <div id="captions"></div>
-    <div id="hud-boss" class="hud-block hidden"></div>
-    <div id="hud-dive" class="hud-block hidden"></div>
     <div id="banner"></div>
     <div id="toasts"></div>
     <div id="chat">
       <div id="chat-log"></div>
       <input id="chat-input" maxlength="200" placeholder="Enter to speak…" data-i18n-ph="hud.chatPh" />
+    </div>
+    <div id="touch">
+      <div id="tc-stick"><i id="tc-course" class="hidden"></i><i id="tc-knob"></i></div>
+      <div id="tc-sail" data-sail="0">
+        <button id="tc-sail-up" class="tc-btn" aria-label="Sail up">▲</button>
+        <div class="tc-steps"><i></i><i></i><i></i><i></i></div>
+        <button id="tc-sail-down" class="tc-btn" aria-label="Sail down">▼</button>
+      </div>
+      <button id="tc-chasers" class="tc-btn tc-small hidden" aria-label="Chasers"><b>⇡</b></button>
+      <button id="tc-mount" class="tc-btn tc-small hidden" aria-label="Deck mount"><b>✺</b></button>
+      <button id="tc-port" class="tc-fire" aria-label="Port broadside"><b>◀</b></button>
+      <button id="tc-starboard" class="tc-fire" aria-label="Starboard broadside"><b>▶</b></button>
+      <button id="tc-menu" class="tc-btn tc-menu" aria-label="Menu"><b>☰</b></button>
     </div>
   </section>
 

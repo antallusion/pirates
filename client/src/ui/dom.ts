@@ -1,5 +1,7 @@
 // Tiny DOM helpers. All server-provided strings are escaped before being placed in markup.
 
+import { assetUrl } from '../assets.ts';
+
 export function $(id: string): HTMLElement {
   const e = document.getElementById(id);
   if (!e) throw new Error(`#${id} missing`);
@@ -48,4 +50,13 @@ export function keepInputs(root: HTMLElement, render: () => void): void {
     el.addEventListener('change', () => (el.dataset.dirty = '1'));
     if (active && k === active) el.focus();
   });
+}
+
+/**
+ * An icon from the art registry (`icon.<id>` by default), or the text glyph when the art has not loaded.
+ * `cls` sizes it (`ico` inline with text, `ico-lg` in slots and tiles).
+ */
+export function icon(id: string, glyph = '', cls = 'ico'): string {
+  const url = assetUrl(id.includes('.') ? id : `icon.${id}`);
+  return url ? `<img class="${cls}" src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
 }

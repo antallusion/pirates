@@ -18,7 +18,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl } from '../assets.ts';
 import type { ClientState } from '../state.ts';
-import { $, bar, esc, fmt, knots } from './dom.ts';
+import { $, bar, esc, fmt, icon, knots, pct } from './dom.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
@@ -39,6 +39,17 @@ export class Hud {
   onAbility: (id: string) => void = () => {};
   onAmmo: (id: string) => void = () => {};
   onTalent: (id: string) => void = () => {};
+  /** Phones show only the loaded shot: tapping it loads the next kind. */
+  onAmmoCycle: () => void = () => {};
+  private lastPrompt = '\u0000';
+  private lastRegion = '';
+  private lastMinimap = 0;
+  private lastNav = 0;
+
+  constructor() {
+    // The unit frame opens the ship's full condition on screens too small to keep it out.
+    $('hud-captain').onclick = () => document.body.classList.toggle('ship-open');
+  }
 
   show(on: boolean): void {
     $('hud').classList.toggle('hidden', !on);
@@ -50,19 +61,18 @@ export class Hud {
     this.drawBoss(state);
     const cap = CAPTAINS[self.captain];
 
-    // Captain block (only re-rendered when something changes).
-    const ckey = `${lang()}|${self.level}|${self.xp}|${self.gold}|${self.wanted}|${self.talentPoints}`;
+    // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
+    const url = assetUrl(cap.portrait);
+    const ckey = `${lang()}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}`;
     if (ckey !== this.lastCaptainKey) {
       this.lastCaptainKey = ckey;
-      const url = assetUrl(cap.portrait);
       $('hud-captain').innerHTML = `
-        <div class="hud-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"></div>
-        <div style="flex:1">
-          <div class="hud-name">${esc(self.name)}</div>
-          <div class="row"><span class="lbl">${esc(cap.archetype)} · ${esc(L('lv', { n: self.level }))}</span><span class="gold val">${fmt(self.gold)} ⛁</span></div>
-          ${bar('xp', self.xp / Math.max(1, self.xpNext))}
-          <div class="row"><span class="wanted" title="${esc(wantedTitle(self.wanted))}">${self.wanted ? '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>
-          ${self.talentPoints > 0 ? `<span class="gold">${esc(L('talentPts', { n: self.talentPoints }))}</span>` : ''}</div>
+        <div class="uf-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"><b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b></div>
+        <div class="uf-body">
+          <div class="uf-top"><span class="uf-name">${esc(self.name)}</span><span class="gold val">${fmt(self.gold)} ⛁</span></div>
+          ${fbar('hull', you.hull, you.hullMax, L('hull'))}${fbar('sails', you.sails, you.sailsMax, L('sails'))}${fbar('crew', you.crew, you.crewMax, L('crew'))}
+          <div class="fbar xp"><i style="width:${pct(self.xp / Math.max(1, self.xpNext))}"></i></div>
+          <div class="uf-sub"><span class="wanted" title="${esc(wantedTitle(self.wanted))}">${self.wanted ? '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold">${esc(keyless(L('talentPts', { n: self.talentPoints })))}</span>` : ''}</div>
         </div>`;
     }
 
@@ -94,13 +104,16 @@ export class Hud {
     // Combat block: rebuilt each frame (cheap, few nodes).
     const now = state.estServerTime();
     // Cursed shot shows only when you carry it (key U).
-    const ammo = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed').map((a, i) => `<div class="ammo ${you.ammoSel === a ? 'sel' : ''}" data-ammo="${a}"><b>[${a === 'cursed' ? 'U' : i + 1}]</b>${esc(AMMO[a].name)}<br>${you.ammo[a]}</div>`).join('');
+    const ammo = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed').map((a, i) => slot({
+      data: `data-ammo="${a}"`, cls: you.ammoSel === a ? 'sel' : '', art: `ammo_${a}`, glyph: AMMO[a].name.slice(0, 1), name: AMMO[a].name,
+      key: a === 'cursed' ? 'U' : String(i + 1), qty: String(you.ammo[a]), title: AMMO[a].name,
+    })).join('');
     const reload = (['port', 'starboard'] as const).map((side) => {
       const r = you.reload[side];
-      return `<div class="reload-side ${r >= 1 ? 'ready' : ''}">${esc(L(side))}${bar('', Math.round(r * 50) / 50)}</div>`;
+      return `<div class="rl ${r >= 1 ? 'ready' : ''}">${esc(keyless(L(side)))}<div class="fbar"><i style="width:${pct(Math.round(r * 50) / 50)}"></i></div></div>`;
     }).join('') + (SHIP_CLASSES[self.loadout.classId].bowChasers + SHIP_CLASSES[self.loadout.classId].sternChasers > 0
-      ? `<div class="reload-side ${Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 ? 'ready' : ''}">${esc(L('chasers'))}${bar('', Math.round(Math.max(you.reload.bow, you.reload.stern) * 50) / 50)}</div>` : '')
-      + (self.loadout.mount ? `<div class="reload-side ${you.reload.mount >= 1 ? 'ready' : ''}">[RMB] ${esc(MOUNTS[self.loadout.mount].name)}${bar('', Math.round(you.reload.mount * 50) / 50)}</div>` : '');
+      ? `<div class="rl ${Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 ? 'ready' : ''}">${esc(keyless(L('chasers')))}<div class="fbar"><i style="width:${pct(Math.round(Math.max(you.reload.bow, you.reload.stern) * 50) / 50)}"></i></div></div>` : '')
+      + (self.loadout.mount ? `<div class="rl ${you.reload.mount >= 1 ? 'ready' : ''}">${esc(MOUNTS[self.loadout.mount].name)}<div class="fbar"><i style="width:${pct(Math.round(you.reload.mount * 50) / 50)}"></i></div></div>` : '');
     const abilities = cap.abilities.map((a) => {
       const ready = self.cooldowns[a.id] ?? 0;
       const left = Math.max(0, ready - now);
@@ -109,40 +122,50 @@ export class Hud {
       // Ultimates need full resolve; the Drowned Captain's miracles need Dread.
       const charge = a.kind === 'ultimate' && !locked && you.resolve < 100 ? `<div class="charge" style="width:${Math.round(you.resolve)}%"></div>` : '';
       const starved = (a.dreadCost ?? 0) > you.dread;
-      return `<div class="ab ${a.kind === 'ultimate' ? 'ult' : ''} ${locked || charge || starved ? 'locked' : ''}" data-ab="${a.id}" title="${esc(a.name)} — ${esc(a.description)}">
-        <span class="k">${a.key}</span><span class="n">${esc(a.name)}</span>${charge}
-        ${frac > 0 ? `<div class="cd" style="height:${Math.round(frac * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}${locked ? `<div class="cdt">${esc(L('lv6'))}</div>` : ''}</div>`;
+      return slot({
+        data: `data-ab="${a.id}"`, cls: `${a.kind === 'ultimate' ? 'ult' : ''} ${locked || charge || starved ? 'locked' : ''}`, art: `ab_${a.id}`, glyph: a.key, name: a.name, key: a.key,
+        title: `${a.name} — ${a.description}`,
+        extra: `${charge}${frac > 0 ? `<div class="cd" style="height:${Math.round(frac * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}${locked ? `<div class="cdt">${esc(L('lv6'))}</div>` : ''}`,
+      });
     }).join('');
     const talentBar = activeTalents(self.talents).slice(0, 5).map((t, i) => {
       const left = Math.max(0, (self.talentCooldowns[t.id] ?? 0) - now);
       const frac = left > 0 && t.active ? left / t.active.cooldown : 0;
-      return `<div class="ab talent" data-talent="${t.id}" title="${esc(t.name)} — ${esc(t.description)}"><span class="k">${'67890'[i]}</span><span class="n">${esc(t.name)}</span>
-        ${frac > 0 ? `<div class="cd" style="height:${Math.round(Math.min(1, frac) * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : ''}</div>`;
+      return slot({
+        data: `data-talent="${t.id}"`, cls: 'talent', art: `tree_${t.tree}`, glyph: '✦', name: t.name, key: '67890'[i], title: `${t.name} — ${t.description}`,
+        extra: frac > 0 ? `<div class="cd" style="height:${Math.round(Math.min(1, frac) * 100)}%"></div><div class="cdt">${Math.ceil(left)}</div>` : '',
+      });
     }).join('');
     const heat = self.heat.port || self.heat.starboard
       ? `<div class="row" style="font-size:11px"><span class="lbl" style="color:var(--bad)">${esc(L('heat'))}</span><span class="val">${esc(L('heatSides', { p: self.heat.port, s: self.heat.starboard }))}</span></div>` : '';
     // Storm Gunner: the crest of the swell (the same seven-second cycle as the server).
     const crest = (self.talents.brg_storm_gunner ?? 0) > 0 && state.wind[1] >= 0.9 && Math.sin((now * Math.PI * 2) / 7 + (state.entityId ?? 0)) > 0.75;
-    const mode = `<div class="row" style="font-size:11px"><span class="lbl">${esc(L('fireMode'))}</span><span class="val">${esc(L(self.rollingFire ? 'rolling' : 'broadside'))}${crest ? ` · <span style="color:var(--gold)">${esc(L('crest'))}</span>` : ''}</span></div>`;
+    const mode = `<div class="ab-mode">${esc(keyless(L('fireMode')))}: ${esc(L(self.rollingFire ? 'rolling' : 'broadside'))}${crest ? ` · <span style="color:var(--gold)">${esc(L('crest'))}</span>` : ''}</div>`;
     const combat = $('hud-combat');
     const key = ammo + reload + abilities + talentBar + heat + mode;
-    if (key === this.lastCombatKey) {
-      this.drawNav(state);
-      $('hud-prompt').innerHTML = prompt;
-      this.drawMinimap(state);
-      return this.updateRegion(state, now);
+    if (key !== this.lastCombatKey) {
+      this.lastCombatKey = key;
+      combat.innerHTML = `<div class="ab-reload">${reload}</div>${mode}${heat}
+        <div class="ab-row"><div class="ab-group ab-ammo">${ammo}</div><i class="ab-sep"></i><div class="ab-group ab-abil">${abilities}</div>${talentBar ? `<i class="ab-sep"></i><div class="ab-group">${talentBar}</div>` : ''}</div>`;
+      combat.querySelectorAll<HTMLElement>('[data-ab]').forEach((el) => (el.onclick = () => this.onAbility(el.dataset.ab!)));
+      combat.querySelectorAll<HTMLElement>('[data-talent]').forEach((el) => (el.onclick = () => this.onTalent(el.dataset.talent!)));
+      combat.querySelectorAll<HTMLElement>('[data-ammo]').forEach((el) => (el.onclick = () => (el.classList.contains('sel') && document.body.classList.contains('touch') ? this.onAmmoCycle() : this.onAmmo(el.dataset.ammo!))));
     }
-    this.lastCombatKey = key;
-    combat.innerHTML = `<div><div class="ammo-box">${ammo}</div><div class="reload" style="margin-top:6px">${reload}</div>${mode}${heat}</div><div class="abilities">${abilities}${talentBar}</div>`;
-    combat.querySelectorAll<HTMLElement>('[data-ab]').forEach((el) => (el.onclick = () => this.onAbility(el.dataset.ab!)));
-    combat.querySelectorAll<HTMLElement>('[data-talent]').forEach((el) => (el.onclick = () => this.onTalent(el.dataset.talent!)));
-    combat.querySelectorAll<HTMLElement>('[data-ammo]').forEach((el) => (el.onclick = () => this.onAmmo(el.dataset.ammo!)));
-
-    // Navigation block: compass with wind.
-    this.drawNav(state);
-    $('hud-prompt').innerHTML = prompt;
-    this.drawMinimap(state);
-    this.updateRegion(state, now);
+    // The prompt, region line, minimap and compass: rewritten only when they change, drawn at their own pace.
+    if (prompt !== this.lastPrompt) {
+      this.lastPrompt = prompt;
+      $('hud-prompt').innerHTML = prompt;
+    }
+    const tnow = performance.now();
+    if (tnow - this.lastNav > 66) {
+      this.lastNav = tnow;
+      if ($('hud-nav').offsetParent) this.drawNav(state);
+    }
+    if (tnow - this.lastMinimap > 120) {
+      this.lastMinimap = tnow;
+      this.drawMinimap(state);
+      this.updateRegion(state, now);
+    }
   }
 
   /** The world boss panel: name, phase, strength, parts, what to do, and your part in it. */
@@ -172,7 +195,11 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    $('hud-region').innerHTML = `${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span><br>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))} · ${esc(seasonWord(seasonName(now)))}${state.self?.quests[0] ? `<br><span style="color:var(--gold)">${esc(sv(state.self.quests[0].name))}:</span> <span class="muted">${esc(sv(state.self.quests[0].text))}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span>` : ''}${state.self?.forecast ? `<br><span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}`;
+    const html = `<div>${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))} · ${esc(seasonWord(seasonName(now)))}</div><div class="rg-extra">${state.self?.quests[0] ? `<span style="color:var(--gold)">${esc(sv(state.self.quests[0].name))}:</span> <span class="muted">${esc(sv(state.self.quests[0].text))}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
+    if (html !== this.lastRegion) {
+      this.lastRegion = html;
+      $('hud-region').innerHTML = html;
+    }
   }
 
   /** World events in these waters, with the time they have left. */
@@ -261,6 +288,12 @@ export class Hud {
     const stars = (state.self?.talents.exp_star_reader ?? 0) > 0 && isNight(state.estServerTime());
     const range = stars ? 9000 : 4500;
     const k = W / (range * 2);
+    // A round chart: everything is clipped to the dial the compass ring sits on.
+    g.clearRect(0, 0, W, H);
+    g.save();
+    g.beginPath();
+    g.arc(W / 2, H / 2, W / 2, 0, Math.PI * 2);
+    g.clip();
     g.fillStyle = '#060a0e';
     g.fillRect(0, 0, W, H);
     const tx = (x: number) => (x - own.x) * k + W / 2;
@@ -500,8 +533,23 @@ export class Hud {
     g.closePath();
     g.fill();
     g.restore();
-    g.strokeStyle = 'rgba(176,141,87,0.35)';
-    g.strokeRect(0.5, 0.5, W - 1, H - 1);
+    // The wind on the rim: where it blows from, an arrow pointing where it goes (phones have no compass).
+    const wv = headingVec(state.wind[0]);
+    const r0 = W / 2 - 22;
+    g.strokeStyle = 'rgba(143,179,217,0.9)';
+    g.fillStyle = 'rgba(143,179,217,0.9)';
+    g.lineWidth = 2 + state.wind[1] * 2;
+    g.beginPath();
+    g.moveTo(W / 2 - wv.x * r0, H / 2 - wv.y * r0);
+    g.lineTo(W / 2 - wv.x * (r0 - 26), H / 2 - wv.y * (r0 - 26));
+    g.stroke();
+    g.beginPath();
+    g.moveTo(W / 2 - wv.x * (r0 - 34), H / 2 - wv.y * (r0 - 34));
+    g.lineTo(W / 2 - wv.x * (r0 - 22) - wv.y * 6, H / 2 - wv.y * (r0 - 22) + wv.x * 6);
+    g.lineTo(W / 2 - wv.x * (r0 - 22) + wv.y * 6, H / 2 - wv.y * (r0 - 22) - wv.x * 6);
+    g.fill();
+    g.lineWidth = 1;
+    g.restore();
   }
 
   private recentToasts = new Map<string, number>();
@@ -567,4 +615,20 @@ function weatherWord(w: string): string {
 function seasonWord(s: string): string {
   const k = `season.${s}`;
   return k in EN ? L(k as keyof typeof EN & string) : s;
+}
+
+/** A frame bar: label left, value right, the fill under both. */
+function fbar(cls: string, v: number, max: number, label: string): string {
+  return `<div class="fbar ${cls}"><i style="width:${pct(v / Math.max(1, max))}"></i><span><b>${esc(label)}</b><b>${fmt(v)} / ${fmt(max)}</b></span></div>`;
+}
+
+/** An action-bar slot: the icon (or a glyph and the name while the art loads), key, count and overlays. */
+function slot(o: { data: string; cls: string; art: string; glyph: string; name: string; key: string; title: string; qty?: string; extra?: string }): string {
+  const img = icon(o.art);
+  return `<div class="slot ${o.cls} ${img ? 'has-art' : ''}" ${o.data} title="${esc(o.title)}">${img || `<span class="glyph">${esc(o.glyph)}</span>`}<span class="nm">${esc(o.name)}</span><span class="k">${esc(o.key)}</span>${o.qty !== undefined ? `<span class="q">${esc(o.qty)}</span>` : ''}${o.extra ?? ''}</div>`;
+}
+
+/** A label without its keyboard hint ("[Q] Port" → "Port") on touch screens. */
+function keyless(s: string): string {
+  return document.body.classList.contains('touch') ? s.replace(/\[[^\]]*\]\s*/g, '').trim() : s;
 }

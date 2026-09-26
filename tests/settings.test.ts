@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ACTIONS, actionFor, cbColor, conflicts, defaults, keyLabel, PRESETS, sanitize } from '../client/src/settings.ts';
+import { ACTIONS, actionFor, cbColor, conflicts, defaults, keyLabel, keyOf, PRESETS, sanitize } from '../client/src/settings.ts';
 import { direction } from '../client/src/audio.ts';
 import { Fx } from '../client/src/render/fx.ts';
 
@@ -53,4 +53,16 @@ test('sound captions know the side; screen flashes are held to three a second', 
   let n = 0;
   for (let i = 0; i < 10; i++) if (fx.screenFlash(0.8)) n++;
   assert.equal(n, 1, 'a burst of flashes in one instant is one flash');
+});
+
+test('keys work in any keyboard layout: letters and digits by their physical place', () => {
+  const map = defaults().keys;
+  // A Russian layout types «ц» on W and «ф» on A; the helm must still answer.
+  assert.equal(keyOf({ key: 'ц', code: 'KeyW' }), 'w');
+  assert.equal(actionFor(map, keyOf({ key: 'ц', code: 'KeyW' })), 'sailUp');
+  assert.equal(actionFor(map, keyOf({ key: 'ф', code: 'KeyA' })), 'rudderLeft');
+  assert.equal(keyOf({ key: '!', code: 'Digit1' }), '1');
+  assert.equal(keyOf({ key: 'ArrowLeft', code: 'ArrowLeft' }), 'arrowleft');
+  assert.equal(keyOf({ key: ' ', code: 'Space' }), ' ');
+  assert.equal(keyOf({ key: 'Escape' }), 'escape');
 });
