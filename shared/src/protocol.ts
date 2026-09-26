@@ -51,6 +51,9 @@ export type ClientMsg =
   | { t: 'press_gang'; qty: number }
   | { t: 'escort'; action: 'hire' | 'dismiss'; classId?: ShipClassId; id?: string }
   | { t: 'formation'; formation: 'line' | 'wedge' | 'ring' }
+  | { t: 'quest'; action: 'accept' | 'abandon'; id: string }
+  | { t: 'path'; to: CaptainId }
+  | { t: 'oath'; oath: 'code' | 'marque' }
   | { t: 'shipyard'; action: 'repair' }
   | { t: 'shipyard'; action: 'module'; module: ModuleId }
   | { t: 'shipyard'; action: 'unfit'; module: ModuleId }
@@ -267,6 +270,12 @@ export interface PrivateState {
   goldTrails: [number, number][];
   /** The crew as people (docs/02 §8). */
   company: CompanyView;
+  /** Quests under way (Paths, Legends, the Descent). */
+  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story'; mentor: string; step: number; steps: number; text: string; progress: number; need: number }[];
+  questsDone: string[];
+  paths: CaptainId[];
+  oath: 'code' | 'marque' | null;
+  pathSwitchAt: number;
   /** Hired escorts (Command) and the formation signal. */
   fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
   /** Admiral's Eye: what you can read of ships near you. */
@@ -373,6 +382,9 @@ export interface PortView {
   crewHireCost: number;
   tavern: TavernView;
   escorts: { classId: ShipClassId; price: number; upkeep: number; available: boolean }[];
+  questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId }[];
+  captainsHouse: boolean;
+  oathOffer: 'code' | 'marque' | null;
   shipyard: {
     tier: number;
     repairCost: number;

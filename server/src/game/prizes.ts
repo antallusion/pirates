@@ -14,6 +14,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { changeRep } from './player.ts';
 import { plunderShare } from './crew.ts';
+import { questEvent } from './quests.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_PRIZES = 2;
@@ -82,6 +83,7 @@ export function sellPrizes(game: Game, s: PlayerSession, port: Port): void {
     game.db.ledger(s.accountId, 'prize', value, prize.loadout.classId);
     game.sendTo(s, { t: 'toast', msg: `The prize court of ${port.name} condemns ${prize.name}: ${value} silver.`, kind: 'gold' });
     game.removeShip(prize.id);
+    questEvent(game, s, { k: 'prize' });
   }
 }
 

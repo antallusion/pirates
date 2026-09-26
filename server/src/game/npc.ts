@@ -177,6 +177,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
       case 'hunter':
         return wanted >= 3;
       case 'pirate':
+        // Sworn to the Code: the Brethren do not fire first.
+        if (p?.oath === 'code') return false;
         // Gold Fever: a hoard in the hold draws pirates even into safe water.
         if (safety === 'safe' && !p?.explore.hoardAboard) return false;
         if (p && (p.reputation.confederacy ?? 0) >= 30) return false;

@@ -13,6 +13,7 @@ import type { Island } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { grantDeed } from './progression.ts';
+import { questEvent } from './quests.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_MAPS = 6;
@@ -248,6 +249,7 @@ export function resolveDive(game: Game, s: PlayerSession, wreckId: number, share
   const p = s.profile!;
   if (!w) return;
   p.explore.dived[w.id] = game.now;
+  questEvent(game, s, { k: 'dive' });
   const rng = game.rng;
   const ship = s.ship!;
   const goods: GoodId[] = w.tier >= 3 ? ['cursed_relics', 'abyssal_ore', 'pearls'] : w.tier === 2 ? ['weapons', 'spices', 'pearls'] : ['rum', 'iron', 'cloth'];

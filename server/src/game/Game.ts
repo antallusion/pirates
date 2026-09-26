@@ -55,6 +55,7 @@ import {
 } from './crew.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
+import { abandonQuest, acceptQuest, marqueBounty, questEvent, swearOath, switchPath } from './quests.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
 import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
@@ -599,6 +600,7 @@ export class Game {
       stepFleet(this, s);
       stepAbyss(this, s);
       stepBridges(this, s);
+      questEvent(this, s, { k: 'tick', dt: 1 });
       // After a mutiny they sail her to port themselves.
       const bound = mutinyCourse(this, s.ship, s.profile.company);
       if (bound && !s.ship.docked) {
@@ -1239,11 +1241,16 @@ export class Game {
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
     onFightWon(this, s);
+    questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
+    if (how === 'sunk') marqueBounty(this, s, victim);
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
     let escorts = 0;
     for (const o of this.ships.values()) if (o.ownerId === killer.id && o.alive) escorts++;
-    if (escorts >= 2) grantDeed(this, s, 'deed_fleet_victory');
+    if (escorts >= 2) {
+      grantDeed(this, s, 'deed_fleet_victory');
+      questEvent(this, s, { k: 'fleet_win' });
+    }
     checkStatDeeds(this, s);
     this.grantXp(s, xp, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`);
     // Law and reputation.
@@ -1296,6 +1303,7 @@ export class Game {
   private playerDeath(s: PlayerSession, ship: ShipEntity): void {
     const p = s.profile!;
     onSunkCrew(this, s);
+    questEvent(this, s, { k: 'die', region: ship.region });
     anchorFleet(this, s, 0.5); // without the flagship the squadron scatters home
     const lostValue = cargoValue(ship.cargo);
     // Lifeboats: fewer men lost, part of the lawful cargo saved.
@@ -1639,6 +1647,7 @@ export class Game {
   private markDiscovered(s: PlayerSession, is: Island): void {
     s.discovered.add(is.id);
     s.profile!.discovered.push(is.id);
+    questEvent(this, s, { k: 'chart' });
     const strange = REGIONS[is.region].strangeness;
     const xp = 12 + Math.min(40, is.radius / 40) + strange * 60 + (is.features.includes('ruins') ? 25 : 0);
     this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region }] });
@@ -1900,6 +1909,17 @@ export class Game {
         if (msg.action === 'hire') return portAction((pt) => hireEscort(this, s, pt, msg.classId as ShipClassId));
         if (msg.action === 'dismiss') return portAction(() => dismissEscort(this, s, String(msg.id)));
         return;
+      case 'quest':
+        if (msg.action === 'accept') return portAction((pt) => acceptQuest(this, s, pt, String(msg.id)));
+        if (msg.action === 'abandon') {
+          err(abandonQuest(this, s, String(msg.id)));
+          this.pushSelf(s, true);
+        }
+        return;
+      case 'path':
+        return portAction((pt) => switchPath(this, s, pt, msg.to));
+      case 'oath':
+        return portAction((pt) => swearOath(this, s, pt, msg.oath === 'code' ? 'code' : 'marque'));
       case 'formation':
         err(setFormation(this, s, msg.formation));
         this.pushSelf(s, true);
@@ -2247,7 +2267,9 @@ export class Game {
       this.db.ledger(s.accountId, 'bribe', -cost, port.id);
       this.toastShip(ship, `${cost} silver changes hands. The customs officer admires the sky.`, 'info');
     } else if (lawful) {
+      const carried = Object.keys(ship.cargo).some((g) => GOODS[g as GoodId].contraband && (ship.cargo[g as GoodId] ?? 0) > 0);
       const seized = customsSearch(this, s, port);
+      if (carried && !seized.length) questEvent(this, s, { k: 'customs' });
       if (seized.length) this.toastShip(ship, `Customs seized ${seized.join(', ')}.`, 'bad');
       // A deep pastor aboard offends Crown customs.
       if (port.faction === 'crown' && ship.hasFlag('deep_pastor')) {
@@ -2302,6 +2324,7 @@ export class Game {
       p.regionsSeen.push(visitedKey);
       this.grantXp(s, 60 + port.size * 40, `First visit to ${port.name}`);
     }
+    questEvent(this, s, { k: 'dock', port });
     this.pushPort(s);
     this.pushSelf(s, true);
     this.saveSession(s);

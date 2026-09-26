@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
@@ -71,6 +72,17 @@ export class PortScreen {
         return this.send({ t: 'hire_crew', qty: Number(d.n), prof: (d.prof as Profession | undefined) ?? 'sailor' });
       case 'press':
         return this.send({ t: 'press_gang', qty: 10 });
+      case 'quest_accept':
+        return this.send({ t: 'quest', action: 'accept', id: d.id! });
+      case 'quest_abandon':
+        if (confirm('Set this quest aside? Progress is lost.')) this.send({ t: 'quest', action: 'abandon', id: d.id! });
+        return;
+      case 'path':
+        if (confirm('Take up this Path?')) this.send({ t: 'path', to: d.to as never });
+        return;
+      case 'oath':
+        if (confirm('An oath cannot be taken back. Swear?')) this.send({ t: 'oath', oath: d.oath as 'code' });
+        return;
       case 'escort_hire':
         return this.send({ t: 'escort', action: 'hire', classId: d.cls as ShipClassId });
       case 'escort_dismiss':
@@ -259,7 +271,12 @@ export class PortScreen {
         <h4 style="margin-top:10px">Tradesmen</h4><table class="grid">${trades}</table></div>
       <div><h3 class="title-sm" style="font-size:20px">Officers looking for a berth (${co.officers.length}/${co.slots})</h3>${officers}</div></div>
       <div class="cols">
-      <div class="card"><h4>Rumours over rum</h4>${view.rumors.map((r) => `<p>“${esc(r)}”</p>`).join('')}</div><div></div></div>
+      <div class="card"><h4>Rumours over rum</h4>${view.rumors.map((r) => `<p>“${esc(r)}”</p>`).join('')}</div>
+      <div>${view.questOffers.map((q) => `<div class="card"><h4>${esc(q.name)} <span class="muted">— ${esc(q.mentor)}${q.kind === 'legend' ? ' · Legend' : q.kind === 'path' ? ' · Path' : ''}</span></h4>
+        <p>${esc(q.summary)}</p><ol class="muted" style="margin:4px 0 6px 18px">${q.steps.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>
+        <div class="row"><span class="gold">${fmt(q.silver)} silver · ${fmt(q.xp)} XP${q.path ? ` · the ${esc(CAPTAINS[q.path].archetype)}'s Path` : ''}</span>
+        ${q.blocked ? `<span class="muted">Needs: ${esc(q.blocked)}</span>` : `<button class="btn btn-small btn-primary" data-act="quest_accept" data-id="${q.id}">Take it on</button>`}</div></div>`).join('')}
+      ${self.quests.length ? `<div class="card"><h4>Under way</h4>${self.quests.map((q) => `<div class="row" style="padding:2px 0"><span><b>${esc(q.name)}</b> ${q.step}/${q.steps}: ${esc(q.text)}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</span><button class="btn btn-small btn-danger" data-act="quest_abandon" data-id="${q.id}">Set aside</button></div>`).join('')}</div>` : ''}</div></div>
       <div class="card"><h4>The cartographer</h4>
         <p>Knowledge is cargo too. The cartographer copies your charts of islands this port does not know yet${port.faction === 'brokers' ? ' — and the Fog Brokers pay a premium for it' : ''}, and sells charts of nearby waters. Bought charts show islands but earn no discovery experience.</p>
         <div class="row"><span>${view.charts.sellable} island${view.charts.sellable === 1 ? '' : 's'} they have not seen from you</span>
@@ -304,6 +321,11 @@ export class PortScreen {
             <button class="btn btn-small" data-act="insure" data-tier="${q.tier}" ${q.cover && q.declared < 50 ? 'disabled' : ''}>${fmt(q.premium)}</button></div>`).join('')}` : '<p class="muted">Only League and free ports write policies.</p>'}</div>
         <div class="card"><h4>Scrape & bless the hull</h4><p>Curse ${self.curse}/100${self.curse >= 25 ? ` — stage ${self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1}` : ''}. ${['harpoon', 'crown', 'league'].includes(port.faction) ? 'The chaplain and the yard crew will scrape the growth away.' : 'No one here will touch a cursed hull.'}</p>
           <button class="btn" data-act="cleanse" ${self.curse >= 2 && ['harpoon', 'crown', 'league'].includes(port.faction) ? '' : 'disabled'}>Cleanse — ${fmt(Math.round(self.curse * 8 * (0.6 + SHIP_CLASSES[self.loadout.classId].tier * 0.4)))}</button></div>
+        ${view.captainsHouse ? `<div class="card"><h4>Captain's House</h4><p>Change the Path you walk: level, talents, officers and standing stay yours. Out of combat, Wanted 2 or less, once an hour.</p>
+          <div class="row" style="gap:6px;flex-wrap:wrap">${self.paths.map((c) => `<button class="btn btn-small ${c === self.captain ? 'btn-primary' : ''}" data-act="path" data-to="${c}" ${c === self.captain ? 'disabled' : ''}>${esc(CAPTAINS[c].archetype)}</button>`).join('')}</div>
+          <p class="muted">Other Paths are taught by their mentors (Path quests) and the Legends (Legend quests).</p></div>` : ''}
+        ${view.oathOffer ? `<div class="card"><h4>${view.oathOffer === 'code' ? 'The Code of the Brethren' : 'A letter of marque'}</h4><p>${view.oathOffer === 'code' ? 'Swear to the Code: pirates will not fire on you first, the Confederacy welcomes you — and the Crown will hang you.' : 'Sail as a Crown privateer: Confederacy ships and pirates are fair game, and the Admiralty pays for each one sunk.'} One oath per captain.</p>
+          <button class="btn" data-act="oath" data-oath="${view.oathOffer}">Swear</button></div>` : ''}
         <div class="card"><h4>Escorts (${self.fleet.escorts.length}/${self.fleet.slots})</h4>${self.fleet.slots ? `<p>Hired ships sail with you in formation and fight at your side. Upkeep ${fmt(self.fleet.upkeep)} silver an hour at sea; the yard patches them when you make port.</p>
           ${self.fleet.escorts.map((e) => `<div class="row" style="padding:2px 0"><span>${esc(e.name)} <span class="muted">${esc(SHIP_CLASSES[e.classId].name)} · hull ${e.hull}%</span></span><button class="btn btn-small btn-danger" data-act="escort_dismiss" data-id="${esc(e.id)}">Pay off</button></div>`).join('')}
           ${view.escorts.map((o) => `<button class="btn btn-small" data-act="escort_hire" data-cls="${o.classId}" ${o.available && self.fleet.escorts.length < self.fleet.slots ? '' : 'disabled'} title="${o.upkeep} silver an hour">${esc(SHIP_CLASSES[o.classId].name)} — ${fmt(o.price)}</button>`).join(' ')}` : '<p class="muted">Escort captains answer only to a commander (ten points in the Command tree).</p>'}</div>

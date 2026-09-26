@@ -1,6 +1,7 @@
 // Captain progression (docs/03_TALENT_TREES.md §2): talent points from levels and Legend Deeds, respec
 // (free under level 20, Forget a Lesson, Clean Slate, Clean Logbook tokens) and talent loadouts.
 
+import { questEvent } from './quests.ts';
 import { DEEDS_BY_ID, MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -206,6 +207,7 @@ export function onSaleDeeds(game: Game, s: PlayerSession, portId: string, good: 
   if (!p.deedState.voyagePorts.includes(portId)) p.deedState.voyagePorts.push(portId);
   if (p.deedState.voyagePorts.length >= 6) grantDeed(game, s, 'deed_grand_circuit');
   if (portId === 'fogmouth' && GOODS[good].contraband) p.stats.fogContraband += qty;
+  if (GOODS[good].contraband) questEvent(game, s, { k: 'sell_contraband', qty, port: portId });
   checkStatDeeds(game, s);
 }
 

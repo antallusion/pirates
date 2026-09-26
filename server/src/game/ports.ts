@@ -21,6 +21,8 @@ import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { hireTrade, recruitCost, tavernOf } from './crew.ts';
 import { ESCORT_OFFERS } from './fleet.ts';
+import { questOffers } from './quests.ts';
+import { CAPTAINS_HOUSES } from '../../../shared/src/data/quests.ts';
 import { exoticBonus, noteExoticPurchase } from './bridgefx.ts';
 import { poiRumor } from './exploration.ts';
 import { mountOffers } from './mounts.ts';
@@ -103,6 +105,9 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: crewCost(port, p),
     tavern: tavernView(game, port, p, ship),
+    questOffers: questOffers(p, port).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: q.reward.silver, xp: q.reward.xp, path: q.reward.path })),
+    captainsHouse: CAPTAINS_HOUSES.includes(port.id),
+    oathOffer: p.oath ? null : port.id === 'cinderhold' ? 'code' : port.id === 'gravesend' ? 'marque' : null,
     escorts: ESCORT_OFFERS.map((o) => ({ classId: o.classId, price: o.price, upkeep: o.upkeep, available: port.shipyardTier >= o.yard })),
     shipyard: {
       tier,

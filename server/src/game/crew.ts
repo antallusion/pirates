@@ -19,6 +19,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { changeRep } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { escortUpkeep } from './fleet.ts';
+import { grantDeed } from './progression.ts';
 
 export type Pools = Record<Profession, number>;
 
@@ -447,6 +448,7 @@ export function resolveMutiny(game: Game, s: PlayerSession, choice: 'pay' | 'sup
   if (!m) return 'There is no mutiny';
   const end = (msg: string, kind: 'good' | 'bad' | 'info') => {
     c.mutiny = null;
+    grantDeed(game, s, 'deed_mutiny'); // put down, paid off or lived through
     c.unrest = { phase: 0, t: 0 };
     game.toastShip(ship, msg, kind);
     game.sendTo(s, { t: 'mutiny', ringleader: '', mutineers: 0, payCost: 0, timeout: 0 });
