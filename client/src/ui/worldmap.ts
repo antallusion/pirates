@@ -6,7 +6,12 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
-import { mapCard } from './maps.ts';
+import { dict, plural } from '../i18n.ts';
+import { EN, RU } from '../lang/ui/worldmap.ts';
+import { keyLabel, settings } from '../settings.ts';
+import { mapCard, placeName } from './maps.ts';
+
+const L = dict(EN, RU);
 
 export class WorldMap {
   private zoom = 1;
@@ -17,10 +22,10 @@ export class WorldMap {
   private centred = false;
 
   open(root: HTMLElement, state: ClientState): void {
-    root.innerHTML = `<div class="modal-head"><div><h2>Chart of the Known Sea</h2><div class="sub">${state.discovered.size} islands charted · drag to pan, wheel to zoom</div></div><div class="muted">[M] close</div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L('sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#7fd08a">■</span> your group · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting · <span style="color:#c9a25a">◌</span> treasure map · <span style="color:#78bec8">✕</span> sunken wreck · <span style="color:#d06a5e">⚑</span> world event</div>
-      ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">You hear ${state.self.legendEcho.length} other holder${state.self.legendEcho.length > 1 ? 's' : ''} of the legendary chart within 10 km.</div>` : ''}</div>` : ''}</div>`;
+      <div class="map-legend"><span style="color:#e0b862">■</span> ${L('lg.port')} · <span style="color:#f0e6c8">▲</span> ${L('lg.you')} · <span style="color:#7fd08a">■</span> ${L('lg.group')} · <span style="color:#8fb3d9">- -</span> ${L('lg.currents')} · <span style="color:#d06a5e">◆</span> ${L('lg.contract')} · <span style="color:#8fb3d9">${L('lg.prices')}</span> ${L('lg.pricesAge')} · ✕ ${L('lg.sighting')} · <span style="color:#c9a25a">◌</span> ${L('lg.treasure')} · <span style="color:#78bec8">✕</span> ${L('lg.wreck')} · <span style="color:#d06a5e">⚑</span> ${L('lg.event')}</div>
+      ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}</div>`;
     const c = root.querySelector('canvas')!;
     this.canvas = c;
     if (!this.centred && state.ownDisplay) {
@@ -123,7 +128,7 @@ export class WorldMap {
       if (this.zoom > 4 && is.r > 150) {
         g.font = `italic 11px "Cormorant Garamond", serif`;
         g.fillStyle = 'rgba(216,210,196,0.6)';
-        g.fillText(is.name, tx(is.x), ty(is.y) + 3);
+        g.fillText(placeName(is.name), tx(is.x), ty(is.y) + 3);
       }
     }
     // Ports: key ports are on every chart; villages only once found.
@@ -134,7 +139,7 @@ export class WorldMap {
       g.fillRect(tx(p.x) - 4, ty(p.y) - 4, 8, 8);
       g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
       g.fillStyle = 'rgba(240,230,200,0.85)';
-      g.fillText(p.name, tx(p.x), ty(p.y) - 8);
+      g.fillText(placeName(p.name), tx(p.x), ty(p.y) - 8);
     }
     // Sunken cities and graveyards.
     for (const s of state.pveSites) {
@@ -145,7 +150,7 @@ export class WorldMap {
       g.stroke();
       g.font = `italic 11px "Cormorant Garamond", serif`;
       g.fillStyle = 'rgba(200,220,210,0.8)';
-      g.fillText(s.name, tx(s.x), ty(s.y) - 9);
+      g.fillText(placeName(s.name), tx(s.x), ty(s.y) - 9);
     }
     // World events: a flag on the place, and its title.
     for (const e of state.events) {
@@ -157,7 +162,7 @@ export class WorldMap {
       g.stroke();
       g.font = `italic 12px "Cormorant Garamond", serif`;
       g.fillStyle = 'rgba(240,200,180,0.9)';
-      g.fillText(`⚑ ${e.title}`, x, y + 22);
+      g.fillText(`⚑ ${placeName(e.title)}`, x, y + 22);
     }
     // Maelstroms and weather fronts; the Navigator's forecast shows where storms will be in 10 minutes.
     for (const w of state.whirlpools) {
@@ -168,7 +173,7 @@ export class WorldMap {
       g.stroke();
       g.font = 'italic 11px "Cormorant Garamond", serif';
       g.fillStyle = 'rgba(208,106,94,0.8)';
-      g.fillText(w.name, tx(w.x), ty(w.y) - Math.max(6, w.radius * k) - 3);
+      g.fillText(placeName(w.name), tx(w.x), ty(w.y) - Math.max(6, w.radius * k) - 3);
     }
     for (const f of state.fronts) {
       g.fillStyle = f.kind === 'black_storm' ? 'rgba(46,230,200,0.12)' : f.kind === 'storm' ? 'rgba(170,175,195,0.18)' : 'rgba(170,180,185,0.10)';
@@ -177,7 +182,7 @@ export class WorldMap {
       g.fill();
       g.font = '10px Inter, sans-serif';
       g.fillStyle = 'rgba(216,210,196,0.7)';
-      g.fillText(f.kind.replace('_', ' '), tx(f.x), ty(f.y));
+      g.fillText(L(`front.${f.kind}`), tx(f.x), ty(f.y));
       if (state.forecast && (f.vx || f.vy)) {
         const t = Math.min(600, f.ttl);
         g.strokeStyle = 'rgba(143,179,217,0.8)';
@@ -196,7 +201,7 @@ export class WorldMap {
     const now = state.estServerTime();
     const age = (t: number) => {
       const m = Math.max(0, Math.round((now - t) / 60));
-      return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+      return m < 1 ? L('age.now') : m < 60 ? L('age.min', { n: m }) : L('age.h', { n: Math.round(m / 60) });
     };
     g.textAlign = 'left';
     for (const it of state.self?.intel ?? []) {
@@ -205,7 +210,7 @@ export class WorldMap {
       const fresh = Math.max(0.25, 1 - (now - it.t) / 5400); // knowledge fades over ~1.5 h
       g.font = '10px Inter, sans-serif';
       g.fillStyle = `rgba(143,179,217,${0.85 * fresh})`;
-      g.fillText(`prices ${age(it.t)}`, tx(p.x) + 7, ty(p.y) + 4);
+      g.fillText(L('prices', { age: age(it.t) }), tx(p.x) + 7, ty(p.y) + 4);
       if (this.zoom > 1.8) {
         it.top.forEach(([good, price], i) => {
           g.fillStyle = `rgba(224,184,98,${0.9 * fresh})`;
@@ -227,7 +232,7 @@ export class WorldMap {
       g.stroke();
       g.font = 'italic 11px "Cormorant Garamond", serif';
       g.fillStyle = g.strokeStyle;
-      g.fillText(`${sg.name} — seen ${age(sg.t)}`, x + 8, y - 6);
+      g.fillText(L('seen', { name: placeName(sg.name), age: age(sg.t) }), x + 8, y - 6);
     }
     g.textAlign = 'center';
     // Contract destinations.
@@ -247,7 +252,7 @@ export class WorldMap {
     for (const st of state.self?.sites ?? []) {
       g.fillStyle = '#d9b45a';
       g.fillRect(tx(st.x) - 4, ty(st.y) - 4, 8, 8);
-      g.fillText(`${st.good.replace('_', ' ')} ${st.stock}/${st.capacity}`, tx(st.x), ty(st.y) + 16);
+      g.fillText(`${GOODS[st.good]?.name ?? st.good.replace('_', ' ')} ${st.stock}/${st.capacity}`, tx(st.x), ty(st.y) + 16);
     }
     // Treasure maps: the search circle; sunken wrecks you know of.
     g.setLineDash([6, 5]);
@@ -258,7 +263,7 @@ export class WorldMap {
       g.beginPath();
       g.arc(tx(m.x), ty(m.y), Math.max(5, m.r * k), 0, Math.PI * 2);
       g.stroke();
-      g.fillText(m.name, tx(m.x), ty(m.y) - Math.max(5, m.r * k) - 4);
+      g.fillText(placeName(m.name), tx(m.x), ty(m.y) - Math.max(5, m.r * k) - 4);
     }
     g.setLineDash([]);
     for (const w of state.self?.wrecks ?? []) {
@@ -270,7 +275,7 @@ export class WorldMap {
       g.moveTo(tx(w.x) + 4, ty(w.y) - 4);
       g.lineTo(tx(w.x) - 4, ty(w.y) + 4);
       g.stroke();
-      g.fillText(`${w.name} · ${w.depth} m`, tx(w.x), ty(w.y) + 14);
+      g.fillText(L('wreck', { name: placeName(w.name), depth: w.depth }), tx(w.x), ty(w.y) + 14);
     }
     // Hidden coves you know.
     for (const c of state.self?.coves ?? []) {
@@ -278,7 +283,7 @@ export class WorldMap {
       g.beginPath();
       g.arc(tx(c.x), ty(c.y), 4, 0, Math.PI * 2);
       g.fill();
-      g.fillText(c.name, tx(c.x), ty(c.y) - 8);
+      g.fillText(placeName(c.name), tx(c.x), ty(c.y) - 8);
     }
     // Your islands: a gold flag.
     for (const h of state.holdings.mine) {

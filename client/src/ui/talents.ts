@@ -6,7 +6,13 @@ import { ROSE_ORDER, TALENTS, TREES, KEYSTONE_GATE, canLearn, canUnlearn, points
 import type { TalentDef, TreeId } from '../../../shared/src/data/talents.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import type { ClientState } from '../state.ts';
+import { dict, plural } from '../i18n.ts';
+import { EN, RU } from '../lang/ui/talents.ts';
+import { serverText } from '../lang/server.ts';
 import { esc, fmt } from './dom.ts';
+
+const L = dict(EN, RU);
+const points = (n: number) => `${n} ${plural(n, L('point.one'), L('point.few'), L('point.many'))}`;
 
 type View = TreeId | 'bridges' | 'deeds';
 
@@ -28,17 +34,17 @@ export class TalentScreen {
     const now = state.estServerTime();
     const nav = [...ROSE_ORDER, 'bridges', 'deeds'] as View[];
     root.innerHTML = `
-      <div class="modal-head"><div><h2>Talents</h2><div class="sub">Level ${self.level} · ${self.talentPoints} point${self.talentPoints === 1 ? '' : 's'} to spend · deeds ${counted}/${MAX_COUNTED_DEEDS} · at most two keystones and three bridges</div></div>
-      <div style="text-align:right">${lo.slots > 1 ? `<div>Loadout ${Array.from({ length: lo.slots }, (_, i) => `<button class="btn btn-small ${i === lo.active ? 'btn-primary' : ''}" data-loadout="${i}" ${!docked || i === lo.active || lo.switchAt > now ? 'disabled' : ''}>${i + 1}${lo.filled[i] ? '' : ' (empty)'}</button>`).join(' ')}</div>
-        <div class="muted" style="font-size:11px">${docked ? (lo.switchAt > now ? `switch again in ${Math.ceil((lo.switchAt - now) / 60)} min` : 'switch in port, 10 min cooldown') : 'switch loadouts in port'}</div>` : '<div class="muted">Loadouts open at level 20</div>'}</div></div>
+      <div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { level: self.level, points: points(self.talentPoints), counted, max: MAX_COUNTED_DEEDS }))}</div></div>
+      <div style="text-align:right">${lo.slots > 1 ? `<div>${esc(L('loadout'))} ${Array.from({ length: lo.slots }, (_, i) => `<button class="btn btn-small ${i === lo.active ? 'btn-primary' : ''}" data-loadout="${i}" ${!docked || i === lo.active || lo.switchAt > now ? 'disabled' : ''}>${i + 1}${lo.filled[i] ? '' : esc(L('empty'))}</button>`).join(' ')}</div>
+        <div class="muted" style="font-size:11px">${esc(docked ? (lo.switchAt > now ? L('switchAgain', { n: Math.ceil((lo.switchAt - now) / 60) }) : L('switchInPort')) : L('switchOnlyInPort'))}</div>` : `<div class="muted">${esc(L('loadoutsAt20'))}</div>`}</div></div>
       <div class="modal-body"><div style="display:grid;grid-template-columns:220px 1fr;gap:16px">
         <div>${rose(self.talents)}
           <div class="tree-nav">${nav.map((v) => {
-            const label = v === 'bridges' ? 'Bridges' : v === 'deeds' ? 'Legend Deeds' : TREES[v].name;
+            const label = v === 'bridges' ? L('bridges') : v === 'deeds' ? L('deeds') : TREES[v].name;
             const pts = v === 'bridges' ? TALENTS.filter((x) => x.tree === 'bridge' && (self.talents[x.id] ?? 0) > 0).length : v === 'deeds' ? self.deeds.length : pointsInTree(self.talents, v);
             const off = v !== 'bridges' && v !== 'deeds' && !TREES[v].playable;
             const native = v !== 'bridges' && v !== 'deeds' && TREES[v].native.includes(self.captain);
-            return `<div class="tree-tab ${this.view === v ? 'active' : ''} ${off ? 'muted' : ''}" data-view="${v}">${esc(label)}${native ? ' <span class="gold" title="Native tree of your Path: Forget a Lesson is free">◆</span>' : ''}<span style="float:right">${pts}</span></div>`;
+            return `<div class="tree-tab ${this.view === v ? 'active' : ''} ${off ? 'muted' : ''}" data-view="${v}">${esc(label)}${native ? ` <span class="gold" title="${esc(L('nativeTip'))}">◆</span>` : ''}<span style="float:right">${pts}</span></div>`;
           }).join('')}</div>
           ${this.respecBox(self, docked, now)}
         </div>
@@ -53,36 +59,36 @@ export class TalentScreen {
       this.send({ t: 'learn_talent', id: el.dataset.id! });
     }));
     root.querySelectorAll<HTMLElement>('[data-forget]').forEach((el) => (el.onclick = () => {
-      if (confirm(`Forget every rank of this talent${self.respec.free ? '' : ` (${fmt(self.respec.forgetCost)} silver, free in your native trees)`}?`)) this.send({ t: 'respec', mode: 'forget', id: el.dataset.forget! });
+      if (confirm(self.respec.free ? L('confirmForget') : L('confirmForgetCost', { cost: fmt(self.respec.forgetCost) }))) this.send({ t: 'respec', mode: 'forget', id: el.dataset.forget! });
     }));
     root.querySelectorAll<HTMLElement>('[data-loadout]').forEach((el) => (el.onclick = () => this.send({ t: 'loadout', slot: Number(el.dataset.loadout) })));
     root.querySelectorAll<HTMLElement>('[data-respec]').forEach((el) => (el.onclick = () => {
       const mode = el.dataset.respec as 'full' | 'token';
-      if (confirm(mode === 'token' ? 'Spend a Clean Logbook token to reset every talent?' : `Reset every talent${self.respec.free ? ' (free below level 20)' : ` for ${fmt(self.respec.cleanSlateCost)} silver`}?`)) this.send({ t: 'respec', mode });
+      if (confirm(mode === 'token' ? L('confirmToken') : self.respec.free ? L('confirmResetFree') : L('confirmResetCost', { cost: fmt(self.respec.cleanSlateCost) }))) this.send({ t: 'respec', mode });
     }));
   }
 
   private respecBox(self: NonNullable<ClientState['self']>, docked: boolean, now: number): string {
     const r = self.respec;
-    const cd = r.cleanSlateAt > now ? ` · next in ${Math.ceil((r.cleanSlateAt - now) / 3600)} h` : '';
-    return `<div class="card" style="margin-top:10px"><h4>Respec</h4>
-      <p class="muted" style="font-size:12px">${docked ? 'Click × on a learned talent to forget it.' : 'Respec only in port.'} ${r.free ? 'Everything is free below level 20.' : `Forget a lesson: ${fmt(r.forgetCost)} (free in native ◆ trees).`}</p>
-      <button class="btn btn-small" data-respec="full" ${!docked || (!r.free && r.cleanSlateAt > now) ? 'disabled' : ''}>Clean Slate${r.free ? ' — free' : ` — ${fmt(r.cleanSlateCost)}`}${cd}</button>
-      <button class="btn btn-small" data-respec="token" ${!docked || self.tokens <= 0 ? 'disabled' : ''}>Token (${self.tokens})</button></div>`;
+    const cd = r.cleanSlateAt > now ? L('nextIn', { h: Math.ceil((r.cleanSlateAt - now) / 3600) }) : '';
+    return `<div class="card" style="margin-top:10px"><h4>${esc(L('respec'))}</h4>
+      <p class="muted" style="font-size:12px">${esc(docked ? L('clickForget') : L('respecPort'))} ${esc(r.free ? L('allFree') : L('forgetCost', { cost: fmt(r.forgetCost) }))}</p>
+      <button class="btn btn-small" data-respec="full" ${!docked || (!r.free && r.cleanSlateAt > now) ? 'disabled' : ''}>${esc(L('cleanSlate'))}${esc(r.free ? L('free') : L('cost', { cost: fmt(r.cleanSlateCost) }))}${esc(cd)}</button>
+      <button class="btn btn-small" data-respec="token" ${!docked || self.tokens <= 0 ? 'disabled' : ''}>${esc(L('token', { n: self.tokens }))}</button></div>`;
   }
 
   private tree(self: NonNullable<ClientState['self']>, ctx: { level: number; abyssOpen: boolean }, docked: boolean): string {
     const view = this.view as TreeId | 'bridges';
     const talents = TALENTS.filter((x) => (view === 'bridges' ? x.tree === 'bridge' : x.tree === view));
     if (view !== 'bridges' && !TREES[view].playable) {
-      return `<h3>${esc(TREES[view].name)}</h3><p class="motto">${esc(TREES[view].motto)}</p><p class="muted">This tree opens in a later build of the roadmap.</p>`;
+      return `<h3>${esc(TREES[view].name)}</h3><p class="motto">${esc(TREES[view].motto)}</p><p class="muted">${esc(L('later'))}</p>`;
     }
-    if (!talents.length) return '<p class="muted">Bridges between trees arrive with the remaining trees.</p>';
+    if (!talents.length) return `<p class="muted">${esc(L('noBridges'))}</p>`;
     const head = view === 'bridges'
-      ? '<h3>Bridges</h3><p class="motto">Hybrids are rewarded for combining roles, not for depth. Each needs points in two trees; they do not count toward any tree.</p>'
-      : `<h3>${esc(TREES[view].name)} <span class="muted" style="font-size:14px">${pointsInTree(self.talents, view)} points</span></h3><p class="motto">${esc(TREES[view].motto)}${TREES[view].complete ? ` Tiers open at 0 / 5 / 10 / 15 / 20 points; keystones at ${KEYSTONE_GATE} and captain level 25.` : ''}</p>`;
+      ? `<h3>${esc(L('bridges'))}</h3><p class="motto">${esc(L('bridgesMotto'))}</p>`
+      : `<h3>${esc(TREES[view].name)} <span class="muted" style="font-size:14px">${esc(points(pointsInTree(self.talents, view)))}</span></h3><p class="motto">${esc(TREES[view].motto)}${TREES[view].complete ? esc(L('tiersOpen', { gate: KEYSTONE_GATE })) : ''}</p>`;
     const tiers = [...new Set(talents.map((x) => (x.keystone ? 99 : x.tier)))].sort((a, b) => a - b);
-    return head + tiers.map((tier) => `<div class="tier-label">${tier === 99 ? 'Keystones — pick one' : view === 'bridges' ? 'Bridges' : `Tier ${tier} · ${tierRequirement(talents.find((x) => x.tier === tier && !x.keystone)!)} points`}</div>
+    return head + tiers.map((tier) => `<div class="tier-label">${esc(tier === 99 ? L('keystones') : view === 'bridges' ? L('bridges') : L('tier', { tier, points: points(tierRequirement(talents.find((x) => x.tier === tier && !x.keystone)!)) }))}</div>
       <div class="tier-row">${talents.filter((x) => (x.keystone ? 99 : x.tier) === tier).map((x) => card(x, self, ctx, docked)).join('')}</div>`).join('');
   }
 }
@@ -92,9 +98,9 @@ function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level
   const why = canLearn(self.talents, x.id, self.talentPoints, ctx);
   const locked = rank === 0 && why !== null && why !== 'No talent points available';
   const forgettable = docked && rank > 0 && !x.keystone && canUnlearn(self.talents, x.id, ctx) === null;
-  return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}" title="${esc(why ?? 'Learn')}">
-    <span class="rank">${rank}/${x.maxRank}</span>${forgettable ? `<span class="forget" data-forget="${x.id}" title="Forget">×</span>` : ''}<b>${esc(x.name)}</b>${x.active ? ' <span class="gold">active</span>' : ''}
-    <small>${esc(x.description)}</small>${locked && why ? `<small class="muted">${esc(why)}</small>` : ''}</div>`;
+  return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}" title="${esc(why ? serverText(why) : L('learn'))}">
+    <span class="rank">${rank}/${x.maxRank}</span>${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}<b>${esc(x.name)}</b>${x.active ? ` <span class="gold">${esc(L('active'))}</span>` : ''}
+    <small>${esc(x.description)}</small>${locked && why ? `<small class="muted">${esc(serverText(why))}</small>` : ''}</div>`;
 }
 
 /** The Wind Rose: ten rays in the canonical clockwise order, length by points invested (26 = full). */
@@ -114,6 +120,6 @@ function rose(ranks: Record<string, number>): string {
 }
 
 function deeds(have: string[]): string {
-  return `<h3>Legend Deeds</h3><p class="motto">Each deed is a point of talent; sixteen of the twenty-four count. Most never require PvP or the Abyss.</p>
-    <table class="grid">${DEEDS.map((d) => `<tr><td>${have.includes(d.id) ? '<span class="good">✔</span>' : ''}</td><td><b>${esc(d.name)}</b></td><td>${esc(d.condition)}${d.awaits ? ` <span class="muted">(opens with ${esc(d.awaits)})</span>` : ''}</td></tr>`).join('')}</table>`;
+  return `<h3>${esc(L('deeds'))}</h3><p class="motto">${esc(L('deedsMotto'))}</p>
+    <table class="grid">${DEEDS.map((d) => `<tr><td>${have.includes(d.id) ? '<span class="good">✔</span>' : ''}</td><td><b>${esc(d.name)}</b></td><td>${esc(d.condition)}${d.awaits ? ` <span class="muted">${esc(L('opensWith', { what: d.awaits }))}</span>` : ''}</td></tr>`).join('')}</table>`;
 }
