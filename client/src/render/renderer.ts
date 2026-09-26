@@ -9,7 +9,7 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { nightFactor } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import type { IslandData, ShipInfo } from '../../../shared/src/protocol.ts';
-import { SF } from '../../../shared/src/protocol.ts';
+import { SF, curseStageFromFlags } from '../../../shared/src/protocol.ts';
 import { fbm } from '../../../shared/src/rng.ts';
 import type { SailState } from '../../../shared/src/sim/sailing.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -71,6 +71,7 @@ export class Renderer {
   private lightning = 0;
   private nextLightning = 5;
   private sinkStarts = new Map<number, number>();
+  private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
   private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
 
   constructor(canvas: HTMLCanvasElement) {
@@ -631,16 +632,13 @@ export class Renderer {
     const scale = 1 - sinkF * 0.25;
     g.scale(scale, scale);
     g.globalAlpha = (hidden ? 0.45 : 1) * (1 - sinkF * 0.85);
-    const spriteId = cls.sprite;
-    const spr = sprite(spriteId);
-    if (spr) {
-      // Scale so the drawn subject matches hull length.
-      const imgH = len / spr.extentY;
-      const imgW = imgH * (spr.img.naturalWidth / spr.img.naturalHeight);
-      g.drawImage(spr.img, -imgW * spr.cx, -imgH * spr.cy, imgW, imgH);
-    } else {
-      this.proceduralShip(cls.id, len, beam, s.sail, s.sails);
-    }
+    const stage = curseStageFromFlags(s.flags);
+    const hullImg = this.shipImage(cls.id, stage);
+    // Scale so the drawn subject matches hull length.
+    const imgH = len / hullImg.extentY;
+    const imgW = imgH * (hullImg.canvas.width / hullImg.canvas.height);
+    g.drawImage(hullImg.canvas, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
+    this.drawPennant(s, len, beam);
     // Sail damage tint (torn canvas reads as darker patches).
     if (s.sails < 0.6) {
       g.fillStyle = `rgba(10,10,10,${(0.6 - s.sails) * 0.5})`;
@@ -669,6 +667,96 @@ export class Renderer {
         }
       }
     }
+  }
+
+  /**
+   * Ship image with curse growth baked in, clipped to the hull silhouette ('source-atop').
+   * Cached per class and stage; procedural hull and growth when sprites are unavailable.
+   */
+  private shipImage(id: ShipClassId, stage: number): { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number } {
+    const spr = sprite(SHIP_CLASSES[id].sprite);
+    const key = `${id}|${stage}|${spr ? 1 : 0}|${sprite('fx.curse_growth') ? 1 : 0}`;
+    const hit = this.shipCache.get(key);
+    if (hit) return hit;
+    const c = document.createElement('canvas');
+    const cls = SHIP_CLASSES[id];
+    let entry: { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number };
+    if (spr) {
+      c.width = spr.img.naturalWidth;
+      c.height = spr.img.naturalHeight;
+      c.getContext('2d')!.drawImage(spr.img, 0, 0);
+      entry = { canvas: c, extentY: spr.extentY, cx: spr.cx, cy: spr.cy };
+    } else {
+      // Procedural hull at 6 px per meter.
+      const k = 6;
+      c.width = Math.ceil(cls.beam * k * 2.4);
+      c.height = Math.ceil(cls.length * k * 1.1);
+      const pg = c.getContext('2d')!;
+      pg.translate(c.width / 2, c.height / 2);
+      const prev = this.g;
+      (this as unknown as { g: CanvasRenderingContext2D }).g = pg;
+      this.proceduralShip(id, cls.length * k, cls.beam * k, 0.8, 1);
+      (this as unknown as { g: CanvasRenderingContext2D }).g = prev;
+      entry = { canvas: c, extentY: 1 / 1.1, cx: 0.5, cy: 0.5 };
+    }
+    if (stage > 0) {
+      const cg = c.getContext('2d')!;
+      cg.globalCompositeOperation = 'source-atop';
+      const growth = sprite('fx.curse_growth');
+      const veins = sprite('fx.curse_veins');
+      if (growth) {
+        cg.globalAlpha = [0, 0.35, 0.65, 0.85][stage];
+        cg.drawImage(growth.img, 0, 0, c.width, c.height);
+      } else {
+        // Barnacle crust: pale speckles, denser with each stage.
+        let seed = id.length * 97 + stage;
+        const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+        cg.fillStyle = 'rgba(190,185,168,0.55)';
+        for (let i = 0; i < 120 * stage; i++) {
+          cg.beginPath();
+          cg.arc(rnd() * c.width, rnd() * c.height, 1 + rnd() * 3, 0, Math.PI * 2);
+          cg.fill();
+        }
+      }
+      if (stage >= 3) {
+        if (veins) {
+          cg.globalAlpha = 0.8;
+          cg.drawImage(veins.img, 0, 0, c.width, c.height);
+        } else {
+          cg.strokeStyle = 'rgba(46,230,200,0.55)';
+          cg.lineWidth = 1.5;
+          for (let i = 0; i < 8; i++) {
+            cg.beginPath();
+            cg.moveTo(c.width * (0.3 + 0.05 * i), c.height * 0.1);
+            cg.bezierCurveTo(c.width * 0.2, c.height * 0.4, c.width * 0.8, c.height * 0.6, c.width * (0.35 + 0.04 * i), c.height * 0.9);
+            cg.stroke();
+          }
+        }
+      }
+      cg.globalAlpha = 1;
+      cg.globalCompositeOperation = 'source-over';
+    }
+    this.shipCache.set(key, entry);
+    return entry;
+  }
+
+  /** Faction pennant at the masthead, streaming downwind. Players fly black. */
+  private drawPennant(s: DrawShip, len: number, beam: number): void {
+    const g = this.g;
+    const color = s.own || s.info?.isPlayer ? '#141414' : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
+    const trim = s.own || s.info?.isPlayer ? '#d8d2c4' : 'rgba(0,0,0,0.6)';
+    const wave = Math.sin(this.time * 6 + s.id) * beam * 0.12;
+    const y0 = -len * 0.18;
+    g.beginPath();
+    g.moveTo(0, y0);
+    g.quadraticCurveTo(beam * 0.5, y0 + len * 0.04 + wave, beam * 1.05, y0 + len * 0.09 + wave * 1.5);
+    g.lineTo(0, y0 + len * 0.07);
+    g.closePath();
+    g.fillStyle = color;
+    g.fill();
+    g.strokeStyle = trim;
+    g.lineWidth = Math.max(0.5, this.zoom * 0.3);
+    g.stroke();
   }
 
   private proceduralShip(id: ShipClassId, len: number, beam: number, sail: number, sailHp: number): void {

@@ -327,7 +327,7 @@ test('landing parties: anchor, explore a feature, bring back loot; it restocks o
   assert.ok(c.all('toast').some((t) => /party returns/.test(t.msg)));
   assert.ok(s.profile!.explored[`${is.id}:wreck`] > 0);
   c.push({ t: 'land' });
-  assert.equal(ship.landing?.islandId === is.id && ship.landing?.feature === 'wreck', false, 'same feature not immediately again');
+  assert.equal((ship.landing as { islandId: number; feature: string } | null)?.islandId === is.id, false, 'same feature not immediately again');
 });
 
 test('landing parties are recalled when the captain raises sail early', () => {
@@ -356,4 +356,37 @@ test('tavern rumours point to unexplored features and chart them', () => {
   const name = /on (.+?), \d+ km/.exec(rumor)![1];
   const island = game.world.islands.find((i) => i.name === name)!;
   assert.ok(s.discovered.has(island.id), 'the rumoured island is marked on the chart');
+});
+
+test('curse: the Abyss claims a lingering ship in stages; a Crown yard scrapes it clean', async () => {
+  const { curseStage, curseStageFromFlags } = await import('../shared/src/protocol.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Deep Diver');
+  c.push({ t: 'undock' });
+  const s = [...game.sessions][0];
+  const ship = s.ship!;
+  const armor0 = ship.stats.armor;
+  ship.state.x = 89000;
+  ship.state.y = 9000; // The Abyss
+  ship.protectedUntil = 1e9;
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  steps(game, 20 * 60 * 8);
+  assert.ok(ship.curse >= 50, `curse ${ship.curse.toFixed(1)}`);
+  assert.ok(curseStage(ship.curse) >= 2);
+  assert.ok(ship.stats.armor > armor0, 'barnacle armour');
+  assert.equal(curseStageFromFlags(ship.flagsFor(null, false, game.now)), curseStage(ship.curse));
+  // Back to Gravesend (Crown) for a cleansing.
+  const gravesend = game.portById('gravesend')!;
+  ship.state.x = gravesend.x;
+  ship.state.y = gravesend.y;
+  ship.state.speed = 0;
+  ship.lastCombat = -999;
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  s.profile!.gold = 50000;
+  s.profile!.infamy = 0;
+  c.push({ t: 'dock' });
+  assert.equal(ship.docked, 'gravesend');
+  c.push({ t: 'cleanse' });
+  assert.equal(ship.curse, 0);
+  assert.equal(ship.stats.armor, armor0);
 });

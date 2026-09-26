@@ -18,7 +18,7 @@ import { clamp, closestOnPolygon, dist, headingVec, pointInPolygon } from '../..
 import type {
   BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow,
 } from '../../../shared/src/protocol.ts';
-import { SF } from '../../../shared/src/protocol.ts';
+import { SF, curseStage } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { encodeSnap } from '../../../shared/src/codec.ts';
 import { polarEfficiency, relWindDeg, stepSailing } from '../../../shared/src/sim/sailing.ts';
@@ -35,6 +35,7 @@ import { sanitizeName } from '../auth.ts';
 import type { WsConnection } from '../net/websocket.ts';
 import type { Database } from '../persistence/db.ts';
 import { stepStrikes, useAbility } from './abilities.ts';
+import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, startBoarding, stepBoarding } from './boarding.ts';
@@ -472,6 +473,7 @@ export class Game {
     if ((ship.cargo.rum ?? 0) > 0) baseline += 8;
     if ((ship.cargo.cursed_relics ?? 0) > 0 && ship.cls.passive.id !== 'dead_crew') baseline -= 6 + Math.min(20, (ship.cargo.cursed_relics ?? 0) * 2);
     if (this.weatherOf(ship) === 'black_storm') baseline -= 15;
+    baseline -= CURSE_MORALE[curseStage(ship.curse)];
     ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
@@ -531,6 +533,12 @@ export class Game {
       applyDamage(this, ship, { hull: st.hullMax * 0.02, sails: 2, crew: 0.3, morale: 2 }, null);
       if (this.tick % 60 === 0) this.toastShip(ship, `${wp.core.name} is tearing her apart — claw out of the eye!`, 'bad');
     }
+    // The sea's claim.
+    if (stepCurse(this, ship)) {
+      const stage = curseStage(ship.curse);
+      this.toastShip(ship, ['The hull is clean again.', 'Barnacles and bone crust the hull.', 'The planks weep brine; the crew mutters at night.', 'Something glows in the timbers. The deep has claimed her.'][stage], stage >= 2 ? 'bad' : 'info');
+    }
+    curseAura(this, ship);
     // Brine Mend heal-over-time.
     if (ship.hasEffect('brine_mend')) ship.hull = Math.min(st.hullMax, ship.hull + st.hullMax * 0.025);
     // Fire.
@@ -1385,6 +1393,8 @@ export class Game {
         });
       case 'pardon':
         return portAction((pt) => pardon(this, s, pt));
+      case 'cleanse':
+        return portAction((pt) => cleanse(this, s, pt));
       case 'land':
         err(startLanding(this, s));
         this.pushSelf(s, true);
@@ -1510,6 +1520,7 @@ export class Game {
     ship.sails = p.sails < 0 ? ship.stats.sailHpMax : Math.min(p.sails, ship.stats.sailHpMax);
     ship.rudderHp = p.rudderHp;
     ship.gunsDisabled = { ...p.gunsDisabled };
+    ship.curse = p.curse;
     ship.wantedCache = wantedLevel(p.infamy);
     ship.region = regionAt(this.world, x, y);
     this.ships.set(ship.id, ship);
@@ -1756,6 +1767,7 @@ export class Game {
       p.sails = ship.sails;
       p.rudderHp = ship.rudderHp;
       p.gunsDisabled = { ...ship.gunsDisabled };
+      p.curse = ship.curse;
       p.loadout = ship.loadout;
       p.docked = ship.docked;
     }

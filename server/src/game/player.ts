@@ -48,7 +48,8 @@ export interface Profile {
   sightings: { name: string; kind: string; x: number; y: number; t: number }[];
   chartSales: Record<string, number[]>;
   chartsBought: number[];
-  explored: Record<string, number>; // 'islandId:feature' -> world time last worked // port id -> island ids whose charts that port already bought
+  explored: Record<string, number>;
+  curse: number; // 'islandId:feature' -> world time last worked // port id -> island ids whose charts that port already bought
   createdAt: number;
 }
 
@@ -64,7 +65,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -172,6 +173,7 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     contracts: p.contracts,
     cooldowns: p.cooldowns,
     repairing: ship?.repairing ?? false,
+    curse: Math.round(ship ? ship.curse : p.curse),
     landable: s.landable,
     landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature, until: ship.landing.until, started: ship.landing.started } : null,
     discoveredCount: s.discovered.size,
@@ -206,6 +208,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.chartSales ??= {};
   p.chartsBought ??= [];
   p.explored ??= {};
+  p.curse ??= 0;
   p.stats ??= { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 };
   p.ammo ??= { round: 0, chain: 0, grape: 0 };
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));

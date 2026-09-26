@@ -7,7 +7,7 @@ import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { Flag, StatMods } from '../../../shared/src/data/stats.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import type { Aggression, ShipInfo, Side } from '../../../shared/src/protocol.ts';
-import { SF } from '../../../shared/src/protocol.ts';
+import { SF, curseStage } from '../../../shared/src/protocol.ts';
 import type { SailInput, SailParams, SailState } from '../../../shared/src/sim/sailing.ts';
 import type { AmmoStock, Cargo, ShipLoadout, ShipStats } from '../../../shared/src/sim/shipstats.ts';
 import { computeShipStats, crewFactor, loadFactor } from '../../../shared/src/sim/shipstats.ts';
@@ -78,6 +78,7 @@ export class ShipEntity {
   attackers = new Map<number, number>(); // entity id -> last hit time
   repairing = false;
   landing: Landing | null = null;
+  curse = 0; // the sea's claim on the ship, 0..100
   unsinkableReadyAt = 0;
   lastStandUntil = 0;
   doubleShotArmed = false;
@@ -180,6 +181,9 @@ export class ShipEntity {
     if (this.hasFlag('dark_running')) f |= SF.LANTERNS_OUT;
     if (this.hasEffect('undertow') || this.hasEffect('maw_slow')) f |= SF.SLOWED;
     if (this.hasEffect('fire')) f |= SF.FIRE;
+    const stage = curseStage(this.curse);
+    if (stage & 1) f |= SF.CURSE_LOW;
+    if (stage & 2) f |= SF.CURSE_HIGH;
     void viewerId;
     return f;
   }

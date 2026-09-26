@@ -43,6 +43,7 @@ export type ClientMsg =
   | { t: 'pardon' }
   | { t: 'insure' }
   | { t: 'land' }
+  | { t: 'cleanse' }
   | { t: 'chart'; action: 'sell' }
   | { t: 'chart'; action: 'buy'; region: RegionId }
   | { t: 'chat'; text: string }
@@ -160,6 +161,7 @@ export interface PrivateState {
   contracts: Contract[];
   cooldowns: Record<string, number>; // ability id -> world time when ready
   repairing: boolean;
+  curse: number; // 0..100; stages at 25 / 50 / 80
   /** Island feature within reach of the boats, if any. */
   landable: { island: string; feature: string } | null;
   /** Landing party ashore. */
@@ -244,6 +246,8 @@ export const SF = {
   LANTERNS_OUT: 1024,
   SLOWED: 2048,
   FIRE: 4096,
+  CURSE_LOW: 8192, // curse stage bit 0
+  CURSE_HIGH: 16384, // curse stage bit 1  (stage = LOW + 2·HIGH)
 } as const;
 
 export interface SelfRow {
@@ -312,3 +316,11 @@ export type ServerMsg =
   | { t: 'chat'; from: string; text: string }
   | { t: 'err'; msg: string }
   | { t: 'pong'; c: number; s: number };
+
+export function curseStage(curse: number): 0 | 1 | 2 | 3 {
+  return curse >= 80 ? 3 : curse >= 50 ? 2 : curse >= 25 ? 1 : 0;
+}
+
+export function curseStageFromFlags(flags: number): number {
+  return (flags & SF.CURSE_LOW ? 1 : 0) + (flags & SF.CURSE_HIGH ? 2 : 0);
+}

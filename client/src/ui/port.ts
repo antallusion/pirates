@@ -85,6 +85,8 @@ export class PortScreen {
         return this.send({ t: 'chart', action: 'buy', region: d.region as RegionId });
       case 'insure':
         return this.send({ t: 'insure' });
+      case 'cleanse':
+        return this.send({ t: 'cleanse' });
       case 'respec':
         if (confirm('Forget every talent for a fee?')) this.send({ t: 'respec' });
         return;
@@ -200,6 +202,8 @@ export class PortScreen {
         <div class="card"><h4>Letters of pardon</h4>${view.pardonCost !== null ? `<p>Infamy ${self.infamy}. The Fog Brokers can make your name… quieter.</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>Buy pardon — ${fmt(view.pardonCost)}</button>` : '<p class="muted">Lawful harbours do not sell forgeries. Try a free port, Fogmouth or Cinderhold.</p>'}</div>
         <div class="card"><h4>Voyage insurance</h4><p>${port.faction === 'league' || port.faction === 'free' ? 'The Gilded Ledger will insure hull and half your cargo value until you next make port.' : 'Only League and free ports write policies.'}</p>
           <button class="btn" data-act="insure" ${self.insured ? 'disabled' : ''}>${self.insured ? 'Insured' : 'Buy policy'}</button></div>
+        <div class="card"><h4>Scrape & bless the hull</h4><p>Curse ${self.curse}/100${self.curse >= 25 ? ` — stage ${self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1}` : ''}. ${['harpoon', 'crown', 'league'].includes(port.faction) ? 'The chaplain and the yard crew will scrape the growth away.' : 'No one here will touch a cursed hull.'}</p>
+          <button class="btn" data-act="cleanse" ${self.curse >= 2 && ['harpoon', 'crown', 'league'].includes(port.faction) ? '' : 'disabled'}>Cleanse — ${fmt(Math.round(self.curse * 8 * (0.6 + SHIP_CLASSES[self.loadout.classId].tier * 0.4)))}</button></div>
         <div class="card"><h4>Retrain</h4><p>Forget all talents (${fmt(60 * self.level)} silver).</p><button class="btn btn-danger" data-act="respec">Respec</button></div>
       </div><div class="card"><h4>Standing</h4><table class="grid">${reps}</table>
       <p class="muted" style="margin-top:8px">Sunk ${self.stats.sunk} · taken ${self.stats.boarded} · trade profit ${fmt(self.stats.tradeProfit)} · ${fmt(self.stats.distance / 1000)} km sailed · ${self.discoveredCount} islands charted</p></div></div>`;

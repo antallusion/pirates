@@ -52,8 +52,10 @@ export function repairCost(ship: ShipEntity): number {
   const hull = (ship.stats.hullMax - ship.hull) * (0.45 + tier * 0.1);
   const sails = (ship.stats.sailHpMax - ship.sails) * 1.4;
   const rudder = (1 - ship.rudderHp) * 180 * tier;
+  // Crown yards charge extra to work on a cursed hull.
+  const curseMul = ship.curse >= 80 ? 1.5 : ship.curse >= 50 ? 1.2 : 1;
   const guns = (ship.gunsDisabled.port * GUNS[ship.loadout.guns.port].price + ship.gunsDisabled.starboard * GUNS[ship.loadout.guns.starboard].price) * 0.3;
-  return Math.ceil(Math.max(0, hull + sails + rudder + guns));
+  return Math.ceil(Math.max(0, (hull + sails + rudder) * curseMul + guns));
 }
 
 export function buildPortView(game: Game, s: PlayerSession, port: Port): PortView {

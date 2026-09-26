@@ -13,6 +13,8 @@
     "ship.cutter":       { "local": "ships/cutter.png",       "remote": "hf_20260925_230251_22466014-89d7-49b0-a467-a0b5f8eb87f6.png", "job": "22466014-89d7-49b0-a467-a0b5f8eb87f6" },
     "ship.brig":         { "local": "ships/brig.png",         "remote": "hf_20260925_230252_6515ca21-4a96-454d-839f-0979edc41e21.png", "job": "6515ca21-4a96-454d-839f-0979edc41e21" },
     "ship.cursed_frigate": { "local": "ships/cursed_frigate.png", "remote": "hf_20260925_220334_370a1676-2e9f-484f-83a2-48c7f9d17e9d.png", "job": "370a1676-2e9f-484f-83a2-48c7f9d17e9d" },
+    "fx.curse_growth":  { "local": "fx/curse_growth.png",  "remote": "hf_20260926_004724_0551465d-d44d-4ca3-a175-b83086cc949b.png", "job": "0551465d-d44d-4ca3-a175-b83086cc949b" },
+    "fx.curse_veins":   { "local": "fx/curse_veins.png",   "remote": "hf_20260926_004724_bb22474a-addd-4057-b067-c511beb26f73.png", "job": "bb22474a-addd-4057-b067-c511beb26f73" },
     "tex.ocean":         { "local": "textures/ocean.png",     "remote": "hf_20260925_220208_5c5379f8-6368-46d0-ad0d-94cef99a55bd.png", "job": "5c5379f8-6368-46d0-ad0d-94cef99a55bd" },
     "tex.land":          { "local": "textures/land.png",      "remote": "hf_20260925_220208_1f6b2c6b-eb05-489e-91a9-c46ce300f18d.png", "job": "1f6b2c6b-eb05-489e-91a9-c46ce300f18d" },
     "tex.sand":          { "local": "textures/sand.png",      "remote": "hf_20260925_220231_19fc9c70-9a50-4083-b18d-344926151a07.png", "job": "19fc9c70-9a50-4083-b18d-344926151a07" },
