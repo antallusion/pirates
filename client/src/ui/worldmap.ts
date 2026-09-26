@@ -217,6 +217,13 @@ export class WorldMap {
       g.lineTo(tx(p.x) - 6, ty(p.y) - 6);
       g.fill();
     }
+    // Extraction sites you hold: a gold square with the stockpile.
+    g.font = '11px "Cormorant Garamond", serif';
+    for (const st of state.self?.sites ?? []) {
+      g.fillStyle = '#d9b45a';
+      g.fillRect(tx(st.x) - 4, ty(st.y) - 4, 8, 8);
+      g.fillText(`${st.good.replace('_', ' ')} ${st.stock}/${st.capacity}`, tx(st.x), ty(st.y) + 16);
+    }
     // You.
     const own = state.ownDisplay;
     if (own) {

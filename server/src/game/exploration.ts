@@ -12,6 +12,7 @@ import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { haulSite, ownSiteNear } from './resources.ts';
 
 export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'>;
 export const LANDABLE: LandableFeature[] = ['cache', 'wreck', 'ruins', 'grove', 'mine', 'pearl_bank', 'shrine'];
@@ -26,7 +27,8 @@ const LAND_RANGE = 260; // meters from the coastline
 
 export interface Landing {
   islandId: number;
-  feature: LandableFeature;
+  feature: LandableFeature | 'haul';
+  siteId?: string;
   until: number;
   started: number;
   party: number;
@@ -65,6 +67,14 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   if (ship.landing) return 'The boats are already ashore';
   if (ship.inCombat(game.now)) return 'Not while under fire';
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
+  const own = ownSiteNear(game, s);
+  if (own) {
+    const party = Math.max(3, Math.min(16, Math.round(ship.crew * 0.35)));
+    ship.landing = { islandId: own.island.id, feature: 'haul', siteId: own.site.id, until: game.now + 15, started: game.now, party };
+    ship.input = { rudder: 0, sailTarget: 0 };
+    game.toastShip(ship, `Boats away to haul the ${GOODS[own.site.good].name.toLowerCase()} stockpile on ${own.island.name} (15s).`, 'info');
+    return null;
+  }
   const target = findLandable(game, s);
   if (!target) return 'Nothing worth landing for within reach of the boats';
   const party = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
@@ -95,6 +105,14 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
     const lost = Math.min(l.party, Math.round(l.party * 0.3 * game.rng.float()));
     ship.crew = Math.max(1, ship.crew - lost);
     game.toastShip(ship, `The landing party is recalled empty-handed${lost ? `; ${lost} did not make it back` : ''}.`, 'bad');
+    return;
+  }
+  if (l.feature === 'haul') {
+    const site = game.sites.find((x) => x.id === l.siteId);
+    if (!site || site.holder !== s.accountId) return;
+    const n = haulSite(game, ship, recalled ? { ...site, stock: site.stock / 2 } : site);
+    if (recalled) site.stock -= n;
+    game.toastShip(ship, n > 0 ? `Hauled ${n} ${GOODS[site.good].name.toLowerCase()} aboard from ${island.name}.` : 'No room in the hold for the stockpile.', n > 0 ? 'good' : 'bad');
     return;
   }
   resolveLanding(game, s, ship, island, l.feature, recalled ? 0.5 : 1);

@@ -11,7 +11,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
 
-type Tab = 'market' | 'shipyard' | 'tavern' | 'contracts' | 'harbour';
+type Tab = 'market' | 'shipyard' | 'tavern' | 'contracts' | 'harbour' | 'holdings';
 
 export class PortScreen {
   tab: Tab = 'market';
@@ -29,7 +29,7 @@ export class PortScreen {
     if (!view || !self) return;
     const port = state.ports.find((p) => p.id === view.portId)!;
     const faction = FACTIONS[port.faction];
-    const tabs: [Tab, string][] = [['market', 'Market'], ['shipyard', 'Shipyard'], ['tavern', 'Tavern'], ['contracts', 'Contracts'], ['harbour', 'Harbour Master']];
+    const tabs: [Tab, string][] = [['market', 'Market'], ['shipyard', 'Shipyard'], ['tavern', 'Tavern'], ['contracts', 'Contracts'], ['harbour', 'Harbour Master'], ['holdings', 'Sites & Warehouse']];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1);
     root.innerHTML = `
       <div class="modal-head">
@@ -89,6 +89,10 @@ export class PortScreen {
         return this.send({ t: 'insure' });
       case 'licence':
         return this.send({ t: 'licence' });
+      case 'rights':
+        return this.send({ t: 'rights', site: d.site! });
+      case 'store':
+        return this.send({ t: 'warehouse', good: d.good as never, qty: Number(d.n) });
       case 'cleanse':
         return this.send({ t: 'cleanse' });
       case 'respec':
@@ -110,6 +114,8 @@ export class PortScreen {
         return this.contracts(view, state);
       case 'harbour':
         return this.harbour(view, state);
+      case 'holdings':
+        return this.holdings(view, state);
     }
   }
 
@@ -148,7 +154,9 @@ export class PortScreen {
     const modules = sy.modules.map((m) => {
       const def = MODULES[m.module];
       const maxed = m.level >= m.max;
-      return `<div class="card"><h4>${esc(def.name)} <span class="muted">${m.level}/${m.max}</span></h4><p>${esc(def.description)}</p>
+      const mat = view.materialDiscount[m.module];
+      const matNote = mat && !maxed ? `<p class="muted">Bring ${mat.units} ${esc(GOODS[mat.good].name.toLowerCase())} (hold or warehouse here) for up to 30% off.</p>` : '';
+      return `<div class="card"><h4>${esc(def.name)} <span class="muted">${m.level}/${m.max}</span></h4><p>${esc(def.description)}</p>${matNote}
         <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${maxed ? 'Fully fitted' : `Fit level ${m.level + 1} — ${fmt(m.cost)}`}</button></div>`;
     }).join('');
     const guns = (['port', 'starboard'] as const).map((side) => `<div class="card"><h4>${side === 'port' ? 'Port' : 'Starboard'} battery — ${cur.gunPortsPerSide} × ${esc(GUNS[self.loadout.guns[side]].name)}</h4>
@@ -224,4 +232,32 @@ export class PortScreen {
       </div><div class="card"><h4>Standing</h4><table class="grid">${reps}</table>
       <p class="muted" style="margin-top:8px">Sunk ${self.stats.sunk} · taken ${self.stats.boarded} · trade profit ${fmt(self.stats.tradeProfit)} · ${fmt(self.stats.distance / 1000)} km sailed · ${self.discoveredCount} islands charted</p></div></div>`;
   }
+
+  private holdings(view: PortView, state: ClientState): string {
+    const self = state.self!;
+    const now = state.estServerTime();
+    const sites = view.sites.map((x) => {
+      const left = x.until > now ? Math.round((x.until - now) / 60) : 0;
+      const status = x.mine ? `<span class="good">Yours · ${left} min left · stockpile ${x.stock}/${x.capacity}</span>` : x.holder ? `<span class="bad">Held by ${esc(x.holder)} · ${left} min</span>` : '<span class="muted">Unclaimed</span>';
+      const can = !x.holder || x.mine;
+      return `<tr><td><b>${esc(x.island)}</b></td><td>${esc(GOODS[x.good].name)}</td><td>${x.rate}/h</td><td>${status}</td>
+        <td><button class="btn btn-small" data-act="rights" data-site="${esc(x.id)}" ${can ? '' : 'disabled'}>${x.mine ? 'Extend' : 'Buy rights'} — ${fmt(x.cost)}</button></td></tr>`;
+    }).join('');
+    const wh = view.warehouse;
+    const goods = new Set([...Object.keys(wh.goods), ...Object.keys(self.cargo)]);
+    const rows = [...goods].filter((g) => (wh.goods[g as never] ?? 0) > 0 || (self.cargo[g as never] ?? 0) >= 1).map((g) => {
+      const stored = Math.floor(wh.goods[g as never] ?? 0);
+      const held = Math.floor(self.cargo[g as never] ?? 0);
+      return `<tr><td>${esc(GOODS[g as never as keyof typeof GOODS].name)}</td><td>${held}</td><td>${stored}</td>
+        <td><button class="btn btn-small" data-act="store" data-good="${g}" data-n="${held}" ${held ? '' : 'disabled'}>Store all</button>
+        <button class="btn btn-small" data-act="store" data-good="${g}" data-n="${-stored}" ${stored ? '' : 'disabled'}>Take all</button></td></tr>`;
+    }).join('');
+    return `<div class="cols"><div><div class="card"><h4>Extraction rights</h4>
+        <p class="muted">Mines, groves and pearl banks within a day's sail. Rights last two hours; the stockpile grows whether you come or not. Sail there, heave to within reach of the shore and haul with L. Whatever you carry home can be taken from you at sea.</p>
+        ${sites ? `<table class="grid"><tr><th>Island</th><th>Yield</th><th>Rate</th><th>Status</th><th></th></tr>${sites}</table>` : '<p class="muted">No worked sites near this harbour.</p>'}</div></div>
+      <div><div class="card"><h4>Warehouse ${wh.rented ? `<span class="muted">${Math.round(wh.volume)}/${wh.capacity}</span>` : ''}</h4>
+        <p class="muted">${wh.rented ? 'Your goods rest here safe from storms and pirates. Goods stored here lose their stolen marks. The yard draws materials from here.' : `Rent a warehouse for ${fmt(wh.rent)} on your first deposit. Stored goods are safe, lose stolen marks, and feed the shipyard.`}</p>
+        ${rows ? `<table class="grid"><tr><th>Good</th><th>Hold</th><th>Stored</th><th></th></tr>${rows}</table>` : '<p class="muted">Nothing in the hold or the warehouse.</p>'}</div></div></div>`;
+  }
+
 }

@@ -49,6 +49,8 @@ export type ClientMsg =
   | { t: 'insure' }
   | { t: 'land' }
   | { t: 'licence' }
+  | { t: 'rights'; site: string }
+  | { t: 'warehouse'; good: GoodId; qty: number }
   | { t: 'station'; station: Station }
   | { t: 'cleanse' }
   | { t: 'chart'; action: 'sell' }
@@ -100,6 +102,21 @@ export interface ReefData {
   r: number;
   poly: number[];
   depth: number;
+}
+
+export interface ResourceSiteView {
+  id: string;
+  island: string;
+  x: number;
+  y: number;
+  good: GoodId;
+  rate: number; // units per economy hour (15 min)
+  stock: number; // -1 unless you hold the rights
+  capacity: number;
+  cost: number;
+  holder: string | null;
+  until: number;
+  mine: boolean;
 }
 
 export interface PortPublic {
@@ -171,6 +188,8 @@ export interface PrivateState {
   curse: number; // 0..100; stages at 25 / 50 / 80
   stolen: Partial<Record<GoodId, number>>; // plundered units customs may recognise
   licences: Partial<Record<FactionId, number>>; // faction -> world time the trade licence expires
+  sites: ResourceSiteView[]; // extraction rights you hold
+  warehouses: Record<string, Cargo>;
   /** Island feature within reach of the boats, if any. */
   landable: { island: string; feature: string } | null;
   /** Landing party ashore. */
@@ -210,6 +229,9 @@ export interface PortView {
   };
   contracts: Contract[];
   rumors: string[];
+  sites: ResourceSiteView[];
+  warehouse: { goods: Cargo; volume: number; capacity: number; rented: boolean; rent: number };
+  materialDiscount: Record<string, { good: GoodId; units: number }>;
   duty: number;
   licence: { cost: number; until: number } | null;
   charts: { sellable: number; sellValue: number; offers: { region: RegionId; name: string; islands: number; price: number }[] };

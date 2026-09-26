@@ -19,6 +19,8 @@ import type {
   BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow,
 } from '../../../shared/src/protocol.ts';
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
+import { buildSites, buyRights, ownSiteNear, siteView, tickSites, warehouseAction } from './resources.ts';
+import type { ResourceSite } from './resources.ts';
 import { detonateFireship, fireMount, isTethered, mountReloadTime, shipyardMount, stepTethers } from './mounts.ts';
 import { STATION_NAMES, floodCapacity, setStation, stepFlooding } from './damagecontrol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -120,6 +122,7 @@ export class Game {
   rumors: Rumor[] = [];
   weather: Record<RegionId, RegionWeather>;
   fronts: Front[] = [];
+  sites: ResourceSite[];
   private lastWeather = new WeakMap<PlayerSession, string>();
   sessions = new Set<PlayerSession>();
   private byAccount = new Map<number, PlayerSession>();
@@ -155,6 +158,9 @@ export class Game {
       this.now = saved.time;
       restoreMarkets(this.markets, saved.markets);
     }
+    this.sites = buildSites(this.world);
+    const savedSites = this.db.getKv<Record<string, { stock: number; holder: number | null; holderName: string; until: number }>>('sites');
+    if (savedSites) for (const site of this.sites) if (savedSites[site.id]) Object.assign(site, savedSites[site.id]);
     this.weather = initWeather(this.rng, this.now);
     this.nextWorldEvent = this.now + 600;
   }
@@ -218,6 +224,7 @@ export class Game {
       for (const m of this.markets.values()) tickMarket(m, edt, hist);
       for (const p of this.world.ports) this.tavernCrew.set(p.id, Math.min(10 + p.size * 14, (this.tavernCrew.get(p.id) ?? 0) + 0.6 * p.size));
       stepWeather(this.weather, this.rng, now);
+      tickSites(this, edt);
       this.fronts = stepFronts(this.fronts, this.rng, now, edt, (x, y) => windAt(this.world.seed, now, x, y).dir);
     }
     if (now >= this.nextWorldEvent) {
@@ -445,8 +452,12 @@ export class Game {
       this.discover(s);
       this.recordSightings(s);
       if (s.ship.landing) stepLanding(this, s.ship);
-      const land = s.ship.docked || s.ship.landing ? null : findLandable(this, s);
-      s.landable = land ? { island: land.island.name, feature: FEATURE_NAMES[land.feature] } : null;
+      s.siteViews = this.sites.filter((x) => x.holder === s.accountId && x.until > this.now).map((x) => siteView(this, s, x));
+      const own = s.ship.docked || s.ship.landing ? null : ownSiteNear(this, s);
+      const land = s.ship.docked || s.ship.landing || own ? null : findLandable(this, s);
+      s.landable = own
+        ? { island: own.island.name, feature: `stockpile of ${GOODS[own.site.good].name.toLowerCase()} (${Math.floor(own.site.stock)})` }
+        : land ? { island: land.island.name, feature: FEATURE_NAMES[land.feature] } : null;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
       if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });
@@ -1437,6 +1448,10 @@ export class Game {
         });
       case 'pardon':
         return portAction((pt) => pardon(this, s, pt));
+      case 'rights':
+        return portAction((pt) => buyRights(this, s, pt, String(msg.site)));
+      case 'warehouse':
+        return portAction((pt) => warehouseAction(this, s, pt, msg.good, Math.trunc(Number(msg.qty))));
       case 'licence':
         return portAction((pt) => buyLicence(this, s, pt));
       case 'cleanse':
@@ -1838,6 +1853,7 @@ export class Game {
     this.db.transaction(() => {
       for (const s of this.byAccount.values()) this.saveSession(s);
       this.db.setKv('world', { time: this.now, markets: serializeMarkets(this.markets) });
+      this.db.setKv('sites', Object.fromEntries(this.sites.map((x) => [x.id, { stock: x.stock, holder: x.holder, holderName: x.holderName, until: x.until }])));
     });
   }
 

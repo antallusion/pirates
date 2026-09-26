@@ -22,6 +22,7 @@ import { mountOffers } from './mounts.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { pardonCost } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
 
 export function hasLicence(p: Profile, faction: string, now: number): boolean {
   // A licence is void for anyone the law is hunting.
@@ -98,6 +99,15 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     contracts: game.contractsAt(port.id),
     rumors: [poiRumor(game, s, port), ...game.rumorsNear(port.x, port.y, 3)].filter((r): r is string => !!r),
     charts: chartView(game, s, port),
+    sites: sitesNearPort(game, port).map((x) => siteView(game, s, x)),
+    warehouse: {
+      goods: { ...(p.warehouses[port.id] ?? {}) },
+      volume: cargoVolume(p.warehouses[port.id] ?? {}),
+      capacity: WAREHOUSE_VOLUME,
+      rented: !!p.warehouses[port.id],
+      rent: WAREHOUSE_RENT,
+    },
+    materialDiscount: MODULE_MATERIALS,
     duty: hasLicence(p, port.faction, game.now) ? 0 : FACTION_DUTY[port.faction] ?? 0,
     licence: port.faction in FACTION_DUTY ? { cost: licenceCost(p.level), until: p.licences[port.faction as keyof typeof p.licences] ?? 0 } : null,
     pardonCost: port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy' ? pardonCost(p) : null,
@@ -253,8 +263,14 @@ export function shipyardModule(game: Game, s: PlayerSession, port: Port, module:
   if (module === 'figurehead_kraken' && port.shipyardTier < 2) return 'This yard has no carver for that';
   const level = ship.loadout.modules[module] ?? 0;
   if (level >= def.maxLevel) return 'Already fully fitted';
-  const cost = moduleCost(module, level + 1, ship.cls.tier);
+  const full = moduleCost(module, level + 1, ship.cls.tier);
+  // Materials you bring (hold first, then your warehouse here) knock up to 30% off the yard's price.
+  const need = MODULE_MATERIALS[module];
+  const wh = s.profile!.warehouses[port.id] ?? {};
+  const avail = need ? Math.min(need.units, Math.floor(ship.cargo[need.good] ?? 0) + Math.floor(wh[need.good] ?? 0)) / need.units : 0;
+  const cost = Math.round(full * (1 - 0.3 * avail));
   if (s.profile!.gold < cost) return `Needs ${cost} silver`;
+  if (avail > 0) supplyMaterials(s, port, module);
   s.profile!.gold -= cost;
   ship.loadout.modules[module] = level + 1;
   const hullFrac = ship.hull / ship.stats.hullMax;

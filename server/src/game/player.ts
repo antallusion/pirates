@@ -10,7 +10,7 @@ import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import { totalPointsSpent } from '../../../shared/src/data/talents.ts';
 import { MAX_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src/constants.ts';
-import type { BoardingResult, Contract, PrivateState } from '../../../shared/src/protocol.ts';
+import type { BoardingResult, Contract, PrivateState, ResourceSiteView } from '../../../shared/src/protocol.ts';
 import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { WsConnection } from '../net/websocket.ts';
 import type { ShipEntity } from './ship.ts';
@@ -52,6 +52,7 @@ export interface Profile {
   curse: number;
   stolen: Partial<Record<GoodId, number>>;
   licences: Partial<Record<FactionId, number>>;
+  warehouses: Record<string, Cargo>;
   createdAt: number;
 }
 
@@ -67,7 +68,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
   };
 }
 
@@ -90,6 +91,7 @@ export class PlayerSession {
   lingerUntil = 0;
   lastRegion = '';
   landable: { island: string; feature: string } | null = null;
+  siteViews: ResourceSiteView[] = [];
 
   constructor(conn: WsConnection) {
     this.conn = conn;
@@ -178,6 +180,8 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     curse: Math.round(ship ? ship.curse : p.curse),
     stolen: p.stolen,
     licences: p.licences,
+    sites: s.siteViews,
+    warehouses: p.warehouses,
     landable: s.landable,
     landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature, until: ship.landing.until, started: ship.landing.started } : null,
     discoveredCount: s.discovered.size,
@@ -215,6 +219,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.curse ??= 0;
   p.stolen ??= {};
   p.licences ??= {};
+  p.warehouses ??= {};
   p.stats ??= { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 };
   p.ammo = { ...emptyAmmo(), ...(p.ammo ?? {}) };
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));
