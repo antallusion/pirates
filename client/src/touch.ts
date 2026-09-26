@@ -2,6 +2,7 @@
 // sail steps, broadside buttons that aim themselves, chasers and the deck mount, the context action (board, dock,
 // land, cast off), tap-to-aim on the sea and pinch zoom. Shown on coarse pointers or after the first touch.
 
+import { assetUrl } from './assets.ts';
 import { $ } from './ui/dom.ts';
 
 export interface TouchHooks {
@@ -67,6 +68,30 @@ export class TouchControls {
     this.hooks.zoom(Math.min(innerWidth, innerHeight) < 520 ? 1.3 : 1.1);
   }
 
+  /** Put the art on the buttons once it has loaded (their glyphs stay until then). */
+  dress(): void {
+    this.art('tc-port', 'icon.fire', true);
+    this.art('tc-starboard', 'icon.fire');
+    this.art('tc-chasers', 'icon.chasers');
+    this.mountArt = '';
+  }
+
+  private mountArt = '';
+
+  private art(id: string, art: string, flip = false): void {
+    const url = assetUrl(art);
+    const b = $(id);
+    b.querySelector('img')?.remove();
+    b.classList.toggle('has-art', !!url);
+    if (!url) return;
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    img.draggable = false;
+    if (flip) img.style.transform = 'scaleX(-1)';
+    b.prepend(img);
+  }
+
   /** Show or hide the context button, with what it will do. */
   setContext(label: string | null): void {
     const b = $('tc-context');
@@ -78,7 +103,7 @@ export class TouchControls {
   }
 
   /** Keep the wheel turned to the ship's heading and the course mark where the helm points. */
-  frame(heading: number | null, sail: number, hasChasers: boolean, hasMount: boolean): void {
+  frame(heading: number | null, sail: number, hasChasers: boolean, mount: string | null): void {
     if (!this.enabled) return;
     if (this.stickId === null && heading !== null) this.knob.style.transform = `translate(-50%, -50%) rotate(${heading}rad)`;
     const mark = $('tc-course');
@@ -86,7 +111,11 @@ export class TouchControls {
     if (this.course !== null) mark.style.transform = `rotate(${this.course}rad)`;
     $('tc-sail').dataset.sail = String(sail);
     $('tc-chasers').classList.toggle('hidden', !hasChasers);
-    $('tc-mount').classList.toggle('hidden', !hasMount);
+    $('tc-mount').classList.toggle('hidden', !mount);
+    if (mount && mount !== this.mountArt) {
+      this.mountArt = mount;
+      this.art('tc-mount', `icon.mount_${mount}`);
+    }
   }
 
   private bindStick(): void {

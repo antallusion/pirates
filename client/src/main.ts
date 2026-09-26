@@ -135,6 +135,7 @@ loadAssets(null).then(() => {
   applySkin();
   buildMicroMenu();
   hud.artEpoch++;
+  touch.dress();
   const url = assetUrl('art.keyart');
   const ka = document.querySelector<HTMLElement>('.keyart');
   if (ka && url) ka.style.backgroundImage = `url('${url}')`;
@@ -400,6 +401,14 @@ function refreshModal(): void {
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
       break;
+  }
+  // Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons).
+  if (modal && modal !== 'boarding' && modal !== 'sunk' && modal !== 'mutiny' && !root.querySelector('.x-btn')) {
+    const x = document.createElement('button');
+    x.className = 'x-btn';
+    x.setAttribute('aria-label', 'Close');
+    x.onclick = () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal());
+    root.append(x);
   }
 }
 
@@ -1099,7 +1108,7 @@ function frame(t: number): void {
     if (touch.enabled && state.self) {
       const cls = SHIP_CLASSES[state.self.loadout.classId];
       touch.setContext(contextLabel());
-      touch.frame(own?.heading ?? null, state.input.sail, cls.bowChasers + cls.sternChasers > 0, !!state.self.loadout.mount);
+      touch.frame(own?.heading ?? null, state.input.sail, cls.bowChasers + cls.sternChasers > 0, state.self.loadout.mount ?? null);
     }
     divePanel.render(state.dive);
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);

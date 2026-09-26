@@ -21,7 +21,7 @@ import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
 import { EN, RU } from '../lang/ui/company.ts';
 import type { ClientState } from '../state.ts';
-import { esc, fmt } from './dom.ts';
+import { esc, fmt, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 /** A name or sentence the server built, in the player's language. */
@@ -492,12 +492,12 @@ export function renderBarter(root: HTMLElement, state: ClientState, send: (m: Cl
   const b = state.barter;
   if (!b) return;
   const hold = state.self?.cargo ?? {};
-  const list = (c: Cargo) => Object.entries(c).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<p>${n} ${esc(GOODS[g as GoodId].name)}</p>`).join('') || `<p class="muted">${L('bt_no_goods')}</p>`;
+  const list = (c: Cargo) => Object.entries(c).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<p>${n} ${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)}</p>`).join('') || `<p class="muted">${L('bt_no_goods')}</p>`;
   root.innerHTML = `<div class="modal-head"><div><h2>${L('bt_trading', { name: esc(b.them.name) })}</h2><div class="sub">${b.atSea ? L('bt_sea') : L('bt_quay')}${b.transfer ? L('bt_boats', { n: b.transfer }) : ''}</div></div><div class="muted">${L('bt_walk_hint')}</div></div>
     <div class="modal-body"><div class="cols"><div>
       <h3 class="title-sm" style="font-size:20px">${L('bt_you_give')} ${b.me.ready ? `<span class="good">${L('bt_ready')}</span>` : ''}</h3>
       <div class="card"><div class="row"><label>${L('bt_silver')} <input id="b-gold" type="number" min="0" value="${b.me.gold}" style="width:110px"></label></div>
-        ${Object.entries(hold).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="row"><span>${esc(GOODS[g as GoodId].name)} <span class="muted">(${n})</span></span><input type="number" min="0" max="${n}" value="${b.me.cargo[g as GoodId] ?? 0}" data-give="${g}" style="width:80px"></div>`).join('')}
+        ${Object.entries(hold).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="row"><span>${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)} <span class="muted">(${n})</span></span><input type="number" min="0" max="${n}" value="${b.me.cargo[g as GoodId] ?? 0}" data-give="${g}" style="width:80px"></div>`).join('')}
         <button class="btn" id="b-offer">${L('bt_set')}</button></div>
     </div><div>
       <h3 class="title-sm" style="font-size:20px">${L('bt_they_give', { name: esc(b.them.name) })} ${b.them.ready ? `<span class="good">${L('bt_ready')}</span>` : ''}</h3>

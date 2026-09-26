@@ -15,7 +15,7 @@ import { logbookHtml } from './onboarding.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
-import { esc, fmt } from './dom.ts';
+import { esc, fmt, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
@@ -51,7 +51,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
     root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: r.targetName }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div></div></div>
       <div class="modal-body"><div class="cols"><div>
         <h3 class="title-sm" style="font-size:20px">${esc(L('board.cargo'))}</h3>
-        ${goods.length ? goods.map((g) => `<div class="loot-row"><span>${esc(GOODS[g].name)} <span class="muted">(${r.cargo[g]})</span>${state.self?.appraisal?.[g] ? ` <span class="gold" title="${esc(L('board.bestPrice'))}">${esc(L('board.perUnit', { price: fmt(state.self.appraisal[g]!.price) }))}</span>` : ''}</span><b>${take[g] ?? 0}</b>
+        ${goods.length ? goods.map((g) => `<div class="loot-row"><span>${icon(`good_${g}`)}${esc(GOODS[g].name)} <span class="muted">(${r.cargo[g]})</span>${state.self?.appraisal?.[g] ? ` <span class="gold" title="${esc(L('board.bestPrice'))}">${esc(L('board.perUnit', { price: fmt(state.self.appraisal[g]!.price) }))}</span>` : ''}</span><b>${take[g] ?? 0}</b>
           <input type="range" min="0" max="${r.cargo[g]}" value="${take[g] ?? 0}" data-g="${g}" /></div>`).join('') : `<p class="muted">${esc(L('board.empty'))}</p>`}
         <p class="${used > holdMax ? 'up' : 'muted'}">${esc(L('board.hold', { used: used.toFixed(1), max: holdMax.toFixed(0) }))}</p>
         ${Object.keys(r.destroyed).length ? `<p class="muted">${esc(L('board.destroyed', { list: Object.entries(r.destroyed).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`).join(', ') }))}</p>` : ''}
@@ -126,7 +126,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
       ${cargo.map(([g, n]) => {
         const a = self.appraisal?.[g as GoodId];
         const where = a ? state.ports.find((p) => p.id === a.port)?.name ?? a.port : '';
-        return `<tr><td class="${GOODS[g as GoodId].contraband ? 'contra' : ''}">${esc(GOODS[g as GoodId].name)} ${self.dockedAt ? '' : `<button class="btn btn-small" data-dump="${g}" title="${esc(L('ship.overboard'))}">⤓</button>`}</td><td>${Math.floor(n ?? 0)}</td><td>${((n ?? 0) * GOODS[g as GoodId].volume).toFixed(1)}</td><td>${((n ?? 0) * GOODS[g as GoodId].weight).toFixed(1)}</td>${self.appraisal ? `<td>${a ? `<span class="gold">${fmt(a.price * Math.floor(n ?? 0))}</span> <span class="muted">${esc(where)}</span>` : '<span class="muted">—</span>'}</td>` : ''}</tr>`;
+        return `<tr><td class="${GOODS[g as GoodId].contraband ? 'contra' : ''}">${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)} ${self.dockedAt ? '' : `<button class="btn btn-small" data-dump="${g}" title="${esc(L('ship.overboard'))}">⤓</button>`}</td><td>${Math.floor(n ?? 0)}</td><td>${((n ?? 0) * GOODS[g as GoodId].volume).toFixed(1)}</td><td>${((n ?? 0) * GOODS[g as GoodId].weight).toFixed(1)}</td>${self.appraisal ? `<td>${a ? `<span class="gold">${fmt(a.price * Math.floor(n ?? 0))}</span> <span class="muted">${esc(where)}</span>` : '<span class="muted">—</span>'}</td>` : ''}</tr>`;
       }).join('') || `<tr><td colspan="4" class="muted">${esc(L('ship.emptyHold'))}</td></tr>`}
       </table><p class="muted">${esc(L('ship.ammo', { list: AMMO_IDS.map((a) => `${self.ammo[a]} ${AMMO[a].name.toLowerCase()}`).join(' · ') }))}</p>
       ${self.talents.shp_field_forge && !self.dockedAt ? `<div class="card"><h4>${esc(talentName('shp_field_forge'))}</h4><p class="muted">${esc(L('ship.forgeText'))}</p>
