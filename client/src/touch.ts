@@ -109,7 +109,8 @@ export class TouchControls {
     const mark = $('tc-course');
     mark.classList.toggle('hidden', this.course === null);
     if (this.course !== null) mark.style.transform = `rotate(${this.course}rad)`;
-    $('tc-sail').dataset.sail = String(sail);
+    const sails = $('tc-sail');
+    if (sails.dataset.sail !== String(sail)) sails.dataset.sail = String(sail);
     $('tc-chasers').classList.toggle('hidden', !hasChasers);
     $('tc-mount').classList.toggle('hidden', !mount);
     if (mount && mount !== this.mountArt) {

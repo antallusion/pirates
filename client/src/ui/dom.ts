@@ -65,3 +65,13 @@ export function icon(id: string, glyph = '', cls = 'ico'): string {
 export function officerIcon(o: { role: string; unique?: string }): string {
   return (o.unique ? icon(`portrait.officer_${o.unique}`, '', 'ico-md ico-round') : '') || icon(`role_${o.role}`, '', 'ico-md');
 }
+
+/** Silver as the game shows it everywhere: the coin and the sum. */
+export function money(n: number): string {
+  return `<span class="money">${icon('coin', '⛁', 'ico-sm')}${fmt(n)}</span>`;
+}
+
+/** Experience: the navigator's star and the sum. */
+export function xpBadge(n: number): string {
+  return `<span class="xpv">${icon('xp', '✦', 'ico-sm')}${fmt(n)}</span>`;
+}

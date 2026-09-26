@@ -443,6 +443,10 @@ function buildMicroMenu(): void {
 }
 buildMicroMenu();
 $('hud-map').onclick = () => toggle('map');
+// Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
+new MutationObserver(() => {
+  if (touch.enabled) stripKeyHints($('modal-panel'));
+}).observe($('modal-panel'), { childList: true, subtree: true });
 
 function toggle(m: Modal): void {
   if (modal === m) closeModal();
@@ -1089,7 +1093,18 @@ addEventListener('gamepadconnected', () => {
 // ------------------------------------------------------------------ main loop
 
 let last = performance.now();
+let frameErrors = 0;
 function frame(t: number): void {
+  // The next frame is booked first: one bad frame must never stop the game (it did — the sea froze after casting off).
+  requestAnimationFrame(frame);
+  try {
+    step(t);
+  } catch (e) {
+    if (frameErrors++ < 5) console.error('[frame]', e);
+  }
+}
+
+function step(t: number): void {
   const raw = Math.min(1, (t - last) / 1000); // the pad's holds run on the wall clock, not the capped frame step
   const dt = Math.min(0.1, raw);
   last = t;
@@ -1125,7 +1140,6 @@ function frame(t: number): void {
     divePanel.render(state.dive);
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
   }
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
