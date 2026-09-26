@@ -2,7 +2,7 @@
 
 import { DivePanel } from './ui/dive.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
-import { AMMO_IDS, CHASER_CONE, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, CHASER_CONE, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS } from '../../shared/src/constants.ts';
 import { clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
@@ -25,7 +25,9 @@ import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { OptionsScreen } from './ui/options.ts';
-import { actionFor, applyToDocument, onSettings, settings } from './settings.ts';
+import { actionFor, applyToDocument, onSettings, settings, update } from './settings.ts';
+import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
+import type { PadEvent } from './gamepad.ts';
 import type { Settings } from './settings.ts';
 import { lang, onLang, t, translateDom } from './i18n.ts';
 import type { Key } from './i18n.ts';
@@ -282,6 +284,9 @@ function onMessage(m: ServerMsg): void {
     case 'ev':
       for (const e of m.list) {
         renderer.fx.onEvent(e, state.entityId);
+        // Rumble: a hit on our hull a short knock in both motors; something under the keel a long low hum.
+        if (e.k === 'hit' && e.ship === state.entityId && e.dmg > 0) rumble(activePad(), 0.5, 0.5, 120);
+        else if (e.k === 'fx' && (e.fx === 'deep_call' || e.fx === 'rise' || e.fx === 'maw') && state.ownDisplay && dist(e.x, e.y, state.ownDisplay.x, state.ownDisplay.y) < 600) rumble(activePad(), 0.7, 0, 1200);
         audio.onEvent(e);
         if (e.k === 'region') {
           const r = REGIONS[e.region];
@@ -620,7 +625,7 @@ function sendInput(now: number): void {
   const km = settings().keys;
   const held = (a: 'rudderLeft' | 'rudderRight') => km[a].some((k) => k && keys.has(k));
   const rudder = (held('rudderRight') ? 1 : 0) - (held('rudderLeft') ? 1 : 0);
-  state.input.rudder = typing() ? 0 : rudder;
+  state.input.rudder = typing() ? 0 : rudder || Math.round(padRudder * 100) / 100;
   const key = `${state.input.rudder}|${state.input.sail}`;
   if (key !== lastInputKey || now - lastInputSent > 250) {
     lastInputKey = key;
@@ -679,13 +684,272 @@ function computePrompt(): string {
   return parts.join('<br>');
 }
 
+// ------------------------------------------------------------------ gamepad (docs/07 §12)
+
+const pad = new PadInput();
+let padRudder = 0;
+let padHoldHeading: number | null = null;
+let padAim: { side: 'port' | 'starboard'; range: number; lead: number } | null = null;
+let padTarget: number | null = null;
+let padCursor: { x: number; y: number } | null = null;
+let padSeen = false;
+let radial: { items: { label: string; run: () => void }[]; sel: number; opener: number } | null = null;
+
+function activePad(): Gamepad | null {
+  for (const g of navigator.getGamepads?.() ?? []) if (g && g.connected) return g;
+  return null;
+}
+
+function openRadial(items: { label: string; run: () => void }[], opener: number): void {
+  radial = { items: items.slice(0, 8), sel: -1, opener };
+  const el = $('radial');
+  el.innerHTML = radial.items.map((it, i) => {
+    const a = (i / radial!.items.length) * Math.PI * 2;
+    return `<div class="r-item" data-i="${i}" style="left:${50 + Math.sin(a) * 38}%;top:${50 - Math.cos(a) * 38}%">${esc(it.label)}</div>`;
+  }).join('');
+  el.classList.remove('hidden');
+}
+
+function closeRadial(choose: boolean): void {
+  if (!radial) return;
+  const it = radial.sel >= 0 ? radial.items[radial.sel] : null;
+  radial = null;
+  $('radial').classList.add('hidden');
+  if (choose && it) it.run();
+}
+
+function ammoRadial(): { label: string; run: () => void }[] {
+  return AMMO_IDS.filter((a) => (state.self?.ammo[a] ?? 0) > 0 || a === 'round').map((a) => ({ label: AMMO[a].name, run: () => net.send({ t: 'ammo', ammo: a }) }));
+}
+
+function actionsRadial(): { label: string; run: () => void }[] {
+  return [
+    { label: t('act.repair'), run: () => net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) }) },
+    { label: t('act.board'), run: () => (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast('No crippled ship within grappling range.', 'bad')) },
+    { label: t('act.orders'), run: () => net.send({ t: 'station', station: STATIONS[(STATIONS.indexOf(state.you?.station ?? 'balanced') + 1) % STATIONS.length] }) },
+    { label: t('act.land'), run: () => net.send({ t: 'land' }) },
+    { label: t('act.fireMode'), run: () => net.send({ t: 'fire_mode', rolling: !state.self?.rollingFire }) },
+    { label: t('act.formation'), run: () => net.send({ t: 'formation', formation: (['line', 'wedge', 'ring'] as const)[((['line', 'wedge', 'ring'] as const).indexOf(state.self?.fleet.formation ?? 'line') + 1) % 3] }) },
+    { label: t('act.crew'), run: () => toggle('crew') },
+    { label: t('act.company'), run: () => (companyScreen.open(), toggle('company')) },
+  ];
+}
+
+/** The pad's context action: board, dock, land, set sail — whatever the prompt offers first. */
+function padContext(): void {
+  if (state.self?.dockedAt) return void net.send({ t: 'undock' });
+  if (boardTarget !== null) return void net.send({ t: 'board', target: boardTarget, aggression: 'standard' });
+  const own = state.ownDisplay;
+  if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void net.send({ t: 'dock', bribe: false });
+  if (state.self?.landable) net.send({ t: 'land' });
+}
+
+function cycleAmmo(dir: number): void {
+  const have = AMMO_IDS.filter((a) => (state.self?.ammo[a] ?? 0) > 0);
+  if (!have.length) return;
+  const i = have.indexOf(state.self?.ammoSel ?? 'round');
+  net.send({ t: 'ammo', ammo: have[(i + dir + have.length) % have.length] });
+}
+
+/** Aim the "cursor" at a world point: everything that aims by the mouse aims by the pad too. */
+function aimAt(x: number, y: number): void {
+  renderer.mouseX = renderer.sx(x);
+  renderer.mouseY = renderer.sy(y);
+}
+
+function pollPad(dt: number): void {
+  const gp = activePad();
+  if (!gp) {
+    padRudder = 0;
+    return;
+  }
+  if (!padSeen) {
+    padSeen = true;
+    hud.toast('Gamepad ready — Menu for options, View for the chart.', 'info');
+    // Steam Deck and other small screens: 125% interface, once.
+    if (innerWidth <= 1280 && innerHeight <= 800 && settings().uiScale === 1) update({ uiScale: 1.25 });
+  }
+  const snap = { buttons: gp.buttons.map((b) => ({ pressed: b.pressed, value: b.value })), axes: [...gp.axes] };
+  const evs = pad.poll(snap, dt);
+  const lx = dead(snap.axes[0] ?? 0), ly = dead(snap.axes[1] ?? 0), rx = dead(snap.axes[2] ?? 0), ry = dead(snap.axes[3] ?? 0);
+  if (modal) {
+    padRudder = 0;
+    padMenus(evs, lx, ly, ry, dt);
+    return;
+  }
+  $('pad-cursor').classList.add('hidden');
+  padCursor = null;
+  const own = state.ownDisplay;
+  // The helm: the stick, or the course held by L3.
+  if (lx) padHoldHeading = null;
+  if (padHoldHeading !== null && own) {
+    const diff = Math.atan2(Math.sin(padHoldHeading - own.heading), Math.cos(padHoldHeading - own.heading));
+    padRudder = clamp(diff * 3, -1, 1);
+  } else padRudder = lx;
+  if (radial) {
+    const sx = rx || lx, sy = ry || ly;
+    const sel = radialSector(sx, sy, radial.items.length);
+    if (sel !== radial.sel) {
+      radial.sel = sel;
+      document.querySelectorAll<HTMLElement>('#radial .r-item').forEach((el) => el.classList.toggle('sel', Number(el.dataset.i) === sel));
+    }
+  }
+  for (const e of evs) {
+    if (e.k === 'chord') {
+      // LB + RB: the ultimate (sail steps land on release, and a chord never makes one).
+      useAbilityKey('V');
+      continue;
+    }
+    if (e.k === 'hold') {
+      if (e.b === BTN.LEFT || e.b === BTN.RIGHT) openRadial(ammoRadial(), e.b);
+      else if (e.b === BTN.DOWN) openRadial(actionsRadial(), e.b);
+      continue;
+    }
+    if (e.k === 'release') {
+      if (radial && radial.opener === e.b) {
+        closeRadial(true);
+        continue;
+      }
+      if ((e.b === BTN.LT || e.b === BTN.RT) && padAim) {
+        const side = e.b === BTN.LT ? 'port' : 'starboard';
+        if (padAim.side === side) {
+          fire(side);
+          rumble(gp, side === 'port' ? 0.8 : 0.1, side === 'port' ? 0.1 : 0.8, 180);
+          padAim = null;
+        }
+      } else if (e.b === BTN.LEFT && e.held < HOLD) cycleAmmo(-1);
+      else if (e.b === BTN.RIGHT && e.held < HOLD) cycleAmmo(1);
+      else if (e.b === BTN.DOWN && e.held < HOLD) openRadial(actionsRadial(), -1);
+      else if (e.b === BTN.LB || e.b === BTN.RB) {
+        // A sail step lands on release, so a chord never moves the sails.
+        if (!pad.chord) state.input.sail = clamp(state.input.sail + (e.b === BTN.RB ? 1 : -1), 0, 4);
+      }
+      continue;
+    }
+    // Presses.
+    if (radial && radial.opener === -1) {
+      if (e.b === BTN.A) closeRadial(true);
+      else if (e.b === BTN.B) closeRadial(false);
+      continue;
+    }
+    switch (e.b) {
+      case BTN.A:
+        padContext();
+        break;
+      case BTN.X:
+        useAbilityKey('Z');
+        break;
+      case BTN.Y:
+        useAbilityKey('X');
+        break;
+      case BTN.B:
+        useAbilityKey('C');
+        break;
+      case BTN.LT:
+      case BTN.RT:
+        padAim = { side: e.b === BTN.LT ? 'port' : 'starboard', range: padAim?.range ?? 320, lead: 0 };
+        break;
+      case BTN.UP:
+        if (own) {
+          // Chasers: along the keel, astern if the right stick points back.
+          const back = ry > 0.5 ? -1 : 1;
+          aimAt(own.x + Math.sin(own.heading) * 400 * back, own.y - Math.cos(own.heading) * 400 * back);
+          fireChasers();
+        }
+        break;
+      case BTN.VIEW:
+        toggle('map');
+        break;
+      case BTN.MENU:
+        openModal('options');
+        break;
+      case BTN.L3:
+        padHoldHeading = padHoldHeading === null && own ? own.heading : null;
+        hud.toast(padHoldHeading !== null ? 'Holding the course.' : 'The helm is yours.', 'info');
+        break;
+      case BTN.R3:
+        padTarget = lockTarget(rx, ry);
+        break;
+    }
+  }
+  // Aim: the right stick sets range (up = further) and lead; a locked ship draws the aim onto her.
+  if (padAim && own) {
+    padAim.range = clamp(padAim.range - ry * 450 * dt, 60, 900);
+    padAim.lead = clamp(padAim.lead + rx * 250 * dt, -250, 250);
+    const tgt = padTarget !== null ? state.ships.get(padTarget) : undefined;
+    if (tgt) aimAt(tgt.cur.x, tgt.cur.y);
+    else {
+      const p = padAimPoint(own.x, own.y, own.heading, padAim.side, padAim.range, padAim.lead);
+      aimAt(p.x, p.y);
+    }
+    renderer.look = { x: 0, y: 0 };
+  } else renderer.look = { x: rx * 350, y: ry * 350 };
+}
+
+/** The nearest ship toward the right stick (or simply the nearest) within 1.5 km. */
+function lockTarget(rx: number, ry: number): number | null {
+  const own = state.ownDisplay;
+  if (!own) return null;
+  let best: number | null = null, score = Infinity;
+  const aim = Math.hypot(rx, ry) > 0.3 ? Math.atan2(rx, -ry) : null;
+  for (const s of state.ships.values()) {
+    if (s.id === state.entityId) continue;
+    const d = dist(s.cur.x, s.cur.y, own.x, own.y);
+    if (d > 1500) continue;
+    const off = aim === null ? 0 : Math.abs(Math.atan2(Math.sin(Math.atan2(s.cur.x - own.x, -(s.cur.y - own.y)) - aim), Math.cos(Math.atan2(s.cur.x - own.x, -(s.cur.y - own.y)) - aim)));
+    const sc = d * (1 + off * 2);
+    if (sc < score) {
+      score = sc;
+      best = s.id;
+    }
+  }
+  if (best !== null) hud.toast(`Target: ${state.ships.get(best)?.info?.name ?? 'a ship'}`, 'info');
+  return best;
+}
+
+/** Menus by pad: a virtual cursor that slows over buttons, A clicks, B backs out, LB/RB tabs, the right stick scrolls. */
+function padMenus(evs: PadEvent[], lx: number, ly: number, ry: number, dt: number): void {
+  const cur = (padCursor ??= { x: innerWidth / 2, y: innerHeight / 2 });
+  const under = document.elementFromPoint(cur.x, cur.y) as HTMLElement | null;
+  const sticky = under?.closest('button, a, input, select, .captain-card, [data-tab], [data-id]') ? 0.45 : 1;
+  cur.x = clamp(cur.x + lx * 900 * dt * sticky, 0, innerWidth - 1);
+  cur.y = clamp(cur.y + ly * 900 * dt * sticky, 0, innerHeight - 1);
+  const el = $('pad-cursor');
+  el.classList.remove('hidden');
+  el.style.left = `${cur.x}px`;
+  el.style.top = `${cur.y}px`;
+  if (ry) $('modal-panel').querySelector('.modal-body')?.scrollBy(0, ry * 900 * dt);
+  for (const e of evs) {
+    if (e.k !== 'press') continue;
+    if (e.b === BTN.A) {
+      const target = (document.elementFromPoint(cur.x, cur.y) as HTMLElement | null)?.closest<HTMLElement>('button, a, input, select, .captain-card, [data-tab], [data-id], td, .card') ?? null;
+      if (target instanceof HTMLInputElement && target.type === 'checkbox') target.click();
+      else if (target) target.click();
+    } else if (e.b === BTN.B || e.b === BTN.MENU) {
+      if (modal !== 'boarding' && modal !== 'sunk') closeModal();
+    } else if (e.b === BTN.VIEW && modal === 'map') closeModal();
+    else if (e.b === BTN.LB || e.b === BTN.RB) {
+      const tabs = [...$('modal-panel').querySelectorAll<HTMLElement>('.tab, [data-tab]')];
+      const i = tabs.findIndex((x) => x.classList.contains('active'));
+      const next = tabs[(i + (e.b === BTN.RB ? 1 : -1) + tabs.length) % tabs.length];
+      next?.click();
+    }
+  }
+}
+
+addEventListener('gamepadconnected', () => {
+  padSeen = false;
+});
+
 // ------------------------------------------------------------------ main loop
 
 let last = performance.now();
 function frame(t: number): void {
-  const dt = Math.min(0.1, (t - last) / 1000);
+  const raw = Math.min(1, (t - last) / 1000); // the pad's holds run on the wall clock, not the capped frame step
+  const dt = Math.min(0.1, raw);
   last = t;
   if (inGame) {
+    pollPad(raw);
     sendInput(t);
     state.updateRemote();
     const own = state.updateOwn();

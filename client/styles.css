@@ -310,3 +310,9 @@ body.cb-tritan { --turq: #e84ac8; --turq-dim: rgba(232, 74, 200, 0.2); --xp: #e8
 #captions .cap-near { top: 38%; left: 50%; transform: translateX(-50%); }
 dl.glossary dt { font-weight: 600; margin-top: 6px; }
 dl.glossary dd { margin: 0 0 4px 0; color: var(--fog); font-size: 13px; }
+
+/* Gamepad (docs/07 §12) */
+#radial { position: fixed; left: 50%; top: 50%; width: 360px; height: 360px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(10, 11, 13, 0.85) 30%, rgba(10, 11, 13, 0.55) 70%, transparent 71%); z-index: 40; pointer-events: none; }
+#radial .r-item { position: absolute; transform: translate(-50%, -50%); font-family: var(--sans); font-size: 13px; color: var(--bone); padding: 4px 8px; border: 1px solid var(--brass-dim); background: rgba(10, 11, 13, 0.9); white-space: nowrap; }
+#radial .r-item.sel { border-color: var(--gold); color: var(--gold); transform: translate(-50%, -50%) scale(1.12); }
+#pad-cursor { position: fixed; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid var(--gold); border-radius: 50%; box-shadow: 0 0 6px #000; z-index: 60; pointer-events: none; }

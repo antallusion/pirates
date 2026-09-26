@@ -79,6 +79,8 @@ export class Renderer {
   private nextLightning = 5;
   private sinkStarts = new Map<number, number>();
   readonly atlas = new SpriteAtlas();
+  /** A look-ahead offset in metres (the gamepad's right stick). */
+  look = { x: 0, y: 0 };
   private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
   private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
 
@@ -160,8 +162,8 @@ export class Renderer {
       // Look slightly ahead of the ship.
       const v = headingVec(own.heading);
       const lead = clamp(own.speed * 5, 0, 90);
-      this.camX += (own.x + v.x * lead - this.camX) * Math.min(1, dt * 4);
-      this.camY += (own.y + v.y * lead - this.camY) * Math.min(1, dt * 4);
+      this.camX += (own.x + v.x * lead + this.look.x - this.camX) * Math.min(1, dt * 4);
+      this.camY += (own.y + v.y * lead + this.look.y - this.camY) * Math.min(1, dt * 4);
     }
     // Particle LOD: the frame time picks it; nothing decorative is born off screen.
     this.fx.frame(dt * 1000);
