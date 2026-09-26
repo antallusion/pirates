@@ -131,6 +131,7 @@ export function renderHelp(root: HTMLElement): void {
     ['G', 'Crew orders: balanced → guns (faster reload, slow pumps) → braces (sail handling, speed) → damage control (pumps ×2, fast leak plugging and firefighting, slow reload).'],
     ['R', 'Toggle repairs (uses planks & sailcloth; not in combat without Battle Repair).'],
     ['F', 'Dock at a nearby port / set sail. Shift+F: dock and pay customs to look away (no search).'],
+    ['J', 'Signal the next formation to your escorts (Line · Wedge · Ring; needs Signal Flags).'],
     ['M · T · I · O', 'World chart · talents · ship & hold · crew and officers (orders, the Codex share).'],
     ['Wheel', 'Zoom.'],
     ['N', 'Sound on / off.'],

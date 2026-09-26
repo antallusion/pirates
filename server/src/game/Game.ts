@@ -54,6 +54,7 @@ import {
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
 import type { Tavern } from './crew.ts';
+import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
@@ -586,6 +587,7 @@ export class Game {
       stepExplorer(this, s);
       stepMind(this, s.ship);
       stepCompany(this, s);
+      stepFleet(this, s);
       // After a mutiny they sail her to port themselves.
       const bound = mutinyCourse(this, s.ship, s.profile.company);
       if (bound && !s.ship.docked) {
@@ -877,7 +879,7 @@ export class Game {
   }
 
   spawnEscort(owner: ShipEntity, duration: number): string | null {
-    for (const s of this.ships.values()) if (s.ownerId === owner.id && !s.prize) return 'Your escort is already at sea';
+    for (const s of this.ships.values()) if (s.ownerId === owner.id && !s.prize && !s.fleetId) return 'Your escort is already at sea';
     const back = headingVec(owner.state.heading + Math.PI);
     const x = owner.state.x + back.x * 300, y = owner.state.y + back.y * 300;
     const ship = this.spawnNpcShip('escort', 'brig', 'free', x, y, owner.state.heading, { ship: 'Hired Brig ' + this.rng.pick(['Tenacity', 'Warrant', 'Loyal Oath', 'Salt Debt']), captain: 'Sailing Master' });
@@ -958,6 +960,14 @@ export class Game {
     return {
       coves: this.coves,
       patrols: this.insiderPatrols(s),
+      fleet: ship ? {
+        escorts: p.fleet.escorts.map((e) => {
+          const at = [...this.ships.values()].find((x) => x.fleetId === e.id && x.alive);
+          return { id: e.id, name: e.name, classId: e.classId, hull: Math.round((at ? at.hull / at.stats.hullMax : e.hull) * 100), atSea: !!at };
+        }),
+        slots: escortSlots(p, ship), formation: p.fleet.formation, upkeep: Math.round(escortUpkeep(p, ship)),
+      } : undefined,
+      inspect: ship ? admiralsEye(this, ship) : [],
       explore: ship ? {
         maps: p.explore.maps.map((m) => ({ id: m.id, name: m.name, tier: m.tier, ...roundCircle(mapCircle(m, ship)) })),
         wrecks: this.wrecks.filter((w) => p.explore.dived[w.id] !== undefined || dist(w.x, w.y, ship.state.x, ship.state.y) < 600).map((w) => ({ name: w.name, x: Math.round(w.x), y: Math.round(w.y), depth: w.depth })),
@@ -1240,12 +1250,14 @@ export class Game {
       this.playerDeath(s, ship);
       return;
     }
+    if (ship.fleetId) escortLost(this, ship);
     this.removeShip(ship.id);
   }
 
   private playerDeath(s: PlayerSession, ship: ShipEntity): void {
     const p = s.profile!;
     onSunkCrew(this, s);
+    anchorFleet(this, s, 0.5); // without the flagship the squadron scatters home
     const lostValue = cargoValue(ship.cargo);
     // Lifeboats: fewer men lost, part of the lawful cargo saved.
     const boats = tval(ship.stats, 'lifeboats');
@@ -1810,7 +1822,11 @@ export class Game {
       }
       case 'fire':
         if (msg.side !== 'port' && msg.side !== 'starboard') return;
-        return err(fireBroadside(this, ship, msg.side, Number(msg.dist), Number.isFinite(msg.x) && Number.isFinite(msg.y) ? { x: Number(msg.x), y: Number(msg.y) } : undefined));
+        {
+          const why = fireBroadside(this, ship, msg.side, Number(msg.dist), Number.isFinite(msg.x) && Number.isFinite(msg.y) ? { x: Number(msg.x), y: Number(msg.y) } : undefined);
+          if (!why) lineOfBattle(this, ship, msg.side, Number.isFinite(Number(msg.dist)) ? Number(msg.dist) : 300);
+          return err(why);
+        }
       case 'craft':
         return err(craft(this, s, msg.recipe, Math.trunc(Number(msg.n))));
       case 'mount':
@@ -1839,7 +1855,15 @@ export class Game {
         this.pushSelf(s, true);
         return;
       case 'talent_active':
-        return err(useTalentActive(this, s, String(msg.id)));
+        return err(useTalentActive(this, s, String(msg.id), Number.isFinite(msg.x) ? Number(msg.x) : undefined, Number.isFinite(msg.y) ? Number(msg.y) : undefined));
+      case 'escort':
+        if (msg.action === 'hire') return portAction((pt) => hireEscort(this, s, pt, msg.classId as ShipClassId));
+        if (msg.action === 'dismiss') return portAction(() => dismissEscort(this, s, String(msg.id)));
+        return;
+      case 'formation':
+        err(setFormation(this, s, msg.formation));
+        this.pushSelf(s, true);
+        return;
       case 'ability':
         return err(useAbility(this, ship, String(msg.id), msg.x, msg.y));
       case 'board': {
@@ -1885,7 +1909,7 @@ export class Game {
       case 'buy_ammo':
         return portAction((pt) => buyAmmo(this, s, pt, msg.ammo, Math.trunc(Number(msg.qty))));
       case 'hire_crew':
-        return portAction((pt) => hireCrew(this, s, pt, Math.trunc(Number(msg.qty)), msg.prof && PROFESSIONS.includes(msg.prof) ? msg.prof : 'sailor'));
+        return portAction((pt) => hireCrew(this, s, pt, Math.trunc(Number(msg.qty)), msg.prof && PROFESSIONS.includes(msg.prof) ? msg.prof : 'sailor', !!msg.dregs));
       case 'press_gang':
         return portAction((pt) => pressGang(this, s, pt, Math.trunc(Number(msg.qty))));
       case 'officer':
@@ -2150,6 +2174,7 @@ export class Game {
   }
 
   private retireSession(s: PlayerSession): void {
+    if (s.profile) anchorFleet(this, s);
     this.saveSession(s);
     for (const c of caravansOf(this, s.accountId)) this.removeShip(c.id);
     if (s.ship) {
@@ -2207,6 +2232,9 @@ export class Game {
     p.explore.hoardAboard = false;
     sellPrizes(this, s, port);
     onDockCrew(this, s, port);
+    anchorFleet(this, s);
+    repairFleet(this, s);
+    lashInPort(this, s);
     onArrival(this, p, port);
     this.tavernWhispers(s);
     ship.docked = port.id;
@@ -2261,12 +2289,15 @@ export class Game {
     ship.voyageStart = this.now;
     delete ship.talentReady.wear;
     springAmbush(this, s);
+    // Fair Share: a paid crew sails cheerful.
+    ship.morale = Math.min(100, ship.morale + 5 * ship.rank('cmd_fair_share'));
     s.profile!.docked = null;
     const v = headingVec(away);
     ship.state = { x: port.x + v.x * 60, y: port.y + v.y * 60, heading: away, speed: 3, sail: 0.5, rudder: 0 };
     ship.input = { rudder: 0, sailTarget: 0.5 };
     ship.protectedUntil = this.now + 20;
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
+    launchFleet(this, s);
     this.sendTo(s, { t: 'port', view: null });
     this.pushSelf(s, true);
     return null;

@@ -31,7 +31,10 @@ export type StatKey =
   // exploration
   | 'cartography' | 'forecast' | 'beachcomber' | 'treasureHunter' | 'diveDepth' | 'pathfinder' | 'tracking' | 'frontier'
   | 'anomalySight' | 'chartedWaters' | 'storesVolume' | 'eyeOfStorm'
-  | 'dreadGain' | 'mysticMorale' | 'sanityLoss' | 'moraleBase';
+  | 'dreadGain' | 'mysticMorale' | 'sanityLoss' | 'moraleBase'
+  // command
+  | 'moraleLoss' | 'wages' | 'officerXp' | 'hireCost' | 'drill' | 'inspire' | 'discipline' | 'veteranOfficers' | 'fieldPromotion'
+  | 'fleetLogistics' | 'admiralsEye';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -57,7 +60,10 @@ export type Flag =
   | 'star_reader' | 'rumor_hound' | 'sounding_line' | 'ruin_reader' | 'map_of_the_dead' | 'lucky_dig' | 'leviathan_lore'
   | 'legend_seeker' | 'gold_fever' | 'beyond_the_edge' | 'gold_trail'
   // crew and officers (docs/02 §8)
-  | 'boatswain' | 'quartermaster' | 'alchemist' | 'deep_pastor' | 'sailmaker' | 'harpooner' | 'well_fed' | 'fog_born';
+  | 'boatswain' | 'quartermaster' | 'alchemist' | 'deep_pastor' | 'sailmaker' | 'harpooner' | 'well_fed' | 'fog_born'
+  // command
+  | 'signal_flags' | 'escort_captain' | 'line_of_battle' | 'fear_and_respect' | 'screen_flagship' | 'legend_at_helm' | 'admirals_pennant'
+  | 'rule_of_the_lash';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

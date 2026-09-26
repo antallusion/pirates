@@ -256,7 +256,7 @@ addEventListener('keydown', (e) => {
     case '0': {
       const list = state.self ? activeTalents(state.self.talents) : [];
       const t = list['67890'.indexOf(k)];
-      if (t) net.send({ t: 'talent_active', id: t.id });
+      if (t) sendTalent(t.id);
       else hud.toast('No active talent in that slot — learn one (T).', 'bad');
       break;
     }
@@ -310,6 +310,12 @@ addEventListener('keydown', (e) => {
     case 'o':
       toggle('crew');
       break;
+    case 'j': {
+      const order = ['line', 'wedge', 'ring'] as const;
+      const cur = state.self?.fleet.formation ?? 'line';
+      net.send({ t: 'formation', formation: order[(order.indexOf(cur) + 1) % 3] });
+      break;
+    }
     case 'h':
       toggle('help');
       break;
@@ -404,7 +410,12 @@ function sendAbility(id: string): void {
 
 hud.onAbility = (id) => sendAbility(id);
 hud.onAmmo = (id) => net.send({ t: 'ammo', ammo: id as 'round' });
-hud.onTalent = (id) => net.send({ t: 'talent_active', id });
+hud.onTalent = (id) => sendTalent(id);
+
+function sendTalent(id: string): void {
+  const m = mouseWorld();
+  net.send({ t: 'talent_active', id, x: Math.round(m.x), y: Math.round(m.y) });
+}
 
 function sendInput(now: number): void {
   const rudder = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);

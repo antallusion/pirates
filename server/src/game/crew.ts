@@ -18,6 +18,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { changeRep } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { escortUpkeep } from './fleet.ts';
 
 export type Pools = Record<Profession, number>;
 
@@ -141,6 +142,16 @@ export function officerFactor(o: Officer, now: number): number {
   return w * (1 + (o.level - 1) * 0.02);
 }
 
+/** Officer berths: by hull, the wardroom, and Veteran Officers. */
+export function officerBerths(ship: ShipEntity): number {
+  return officerSlots(ship.cls.tier, ship.loadout.modules.crew_quarters ?? 0) + (tx(ship.stats, 'veteranOfficers') >= 1 ? 1 : 0);
+}
+
+/** Morale lost to hits and deaths (Steady Voice, Inspiring Presence). */
+export function moraleLossMul(ship: ShipEntity): number {
+  return Math.max(0.1, 1 + tx(ship.stats, 'moraleLoss'));
+}
+
 export function hasOfficer(c: Company | undefined, role: OfficerRole, now: number): boolean {
   return !!c?.officers.some((o) => o.role === role && officerFactor(o, now) > 0);
 }
@@ -151,6 +162,12 @@ export function companyMods(ship: ShipEntity, c: Company, now: number): { mods: 
   const flags: Flag[] = [];
   const add = (k: StatKey, v: number) => (mods[k] = (mods[k] ?? 0) + v);
   const q = skillMul(c.skill);
+  // Drill Master: a veteran crew (three stars or better) works faster.
+  const drill = tx(ship.stats, 'drill');
+  if (drill > 0 && c.skill >= 3) {
+    add('reloadMul', -0.02 * drill);
+    add('repairRate', 0.02 * drill);
+  }
   const crew = Math.max(1, ship.crew);
   const P = c.pools;
   // Gunners: one per gun on a side is a full battery; veterancy sharpens it.
@@ -173,7 +190,9 @@ export function companyMods(ship: ShipEntity, c: Company, now: number): { mods: 
     flags.push('well_fed');
   }
   for (const o of c.officers) {
-    const f = officerFactor(o, now);
+    // Field Promotion: in a fight a sailor stands in for a fallen officer at 50/75%. Veteran Officers rank 2: +10%.
+    const promo = ship.inCombat(now) ? [0, 0.5, 0.75][Math.min(2, tx(ship.stats, 'fieldPromotion'))] : 0;
+    const f = Math.max(officerFactor(o, now), promo) * (tx(ship.stats, 'veteranOfficers') >= 2 ? 1.1 : 1);
     if (f <= 0) continue;
     const def = OFFICER_DEFS[o.role];
     for (const k in def.mods ?? {}) add(k as StatKey, (def.mods![k as StatKey] ?? 0) * f);
@@ -223,6 +242,11 @@ export function applyCompany(game: Game, ship: ShipEntity, c: Company): void {
 }
 
 // ------------------------------------------------------------------ wages, loyalty, unrest
+
+/** Fair Share trims the wage bill. */
+export function wageMul(ship: ShipEntity | null): number {
+  return ship ? Math.max(0.2, 1 + tx(ship.stats, 'wages')) : 1;
+}
 
 export function wagesPerHour(c: Company): number {
   let w = 0;
@@ -291,6 +315,11 @@ export function stepCompany(game: Game, s: PlayerSession): void {
     if (o.wound && o.wound.until <= now) o.wound = null;
   }
   // The dead weigh on the living: −1 loyalty for every 5% of the crew lost.
+  // Acting officers step down when the fight is over.
+  if (!ship.inCombat(now) && c.officers.some((o) => o.acting)) {
+    c.officers = c.officers.filter((o) => !o.acting);
+    ship.companyKey = '';
+  }
   if (ship.crewDeaths > 0) {
     c.voyageLost += ship.crewDeaths;
     changeLoyalty(c, -(ship.crewDeaths / Math.max(1, ship.stats.crewMax)) * 20, now);
@@ -301,7 +330,7 @@ export function stepCompany(game: Game, s: PlayerSession): void {
     return;
   }
   // Wages accrue at sea and are paid every ten minutes.
-  c.owed += wagesPerHour(c) / 3600;
+  c.owed += (wagesPerHour(c) * wageMul(ship) + escortUpkeep(p, ship)) / 3600;
   c.seaHours += 1 / 3600;
   if ((ship.talentReady.payday ?? 0) === 0) ship.talentReady.payday = now + 600;
   if (now >= ship.talentReady.payday) {
@@ -327,7 +356,7 @@ export function stepCompany(game: Game, s: PlayerSession): void {
   }
   // Veterancy grows with hours at sea (a star in ~20 h) and storms.
   const w = game.weatherOf(ship);
-  c.skill = Math.min(5, c.skill + (w === 'storm' || w === 'black_storm' ? 0.0003 : 0.00005));
+  c.skill = Math.min(5, c.skill + (w === 'storm' || w === 'black_storm' ? 0.0003 : 0.00005) * (1 + 0.25 * tx(ship.stats, 'drill')));
   if (!c.ghostsSeen) {
     game.forShipsNear(ship.state.x, ship.state.y, 900, (o) => {
       if (o.npcRole === 'ghost' && !c.ghostsSeen) {
@@ -350,7 +379,7 @@ function stepUnrest(game: Game, s: PlayerSession): void {
     return;
   }
   const loyal = loyaltyOf(c, now);
-  const bad = loyal < 25 && ship.morale < 30;
+  const bad = loyal < 25 && ship.morale < (ship.hasFlag('fear_and_respect') ? 15 : 30);
   const slow = hasOfficer(c, 'quartermaster', now) ? 1.5 : 1;
   if (!bad) {
     if (c.unrest.phase > 0 || c.unrest.t > 0) {
@@ -439,7 +468,7 @@ export function resolveMutiny(game: Game, s: PlayerSession, choice: 'pay' | 'sup
     const loyalMen = Math.max(0, ship.crew - m.mutineers);
     const marines = Math.min(c.pools.marine, loyalMen);
     const ours = (loyalMen - marines) * 1 + marines * 2 + c.officers.filter((o) => officerFactor(o, now) > 0).length * 3;
-    const theirs = m.mutineers * 1.1;
+    const theirs = m.mutineers * 1.1 / (ship.hasFlag('fear_and_respect') ? 1.25 : 1);
     const win = game.rng.chance(ours / Math.max(1, ours + theirs));
     if (win) {
       const lost = Math.max(1, Math.round(m.mutineers * 0.2));
@@ -575,6 +604,12 @@ export function woundOfficer(game: Game, s: PlayerSession, heavy: boolean, why: 
 export function killOfficer(game: Game, s: PlayerSession, o: Officer, cause: string): void {
   const c = s.profile!.company;
   c.officers = c.officers.filter((x) => x !== o);
+  if (o.acting) return;
+  // Field Promotion: someone steps into his shoes until the fight is over.
+  const ship = s.ship!;
+  if (tx(ship.stats, 'fieldPromotion') > 0 && ship.inCombat(game.now)) {
+    c.officers.push({ ...o, id: `acting-${o.id}`, name: `Acting ${OFFICER_DEFS[o.role].name.toLowerCase()}`, traits: [], wound: { until: 0, heavy: true }, acting: true, unique: undefined, orderReady: game.now + 30 });
+  }
   if (o.unique) c.uniquesGone.push(o.unique);
   c.memorial.push({ name: o.name, role: o.role, t: Date.now(), cause });
   if (c.memorial.length > 30) c.memorial.shift();
@@ -613,7 +648,7 @@ export function onSunkCrew(game: Game, s: PlayerSession): void {
 /** A fight won: veterancy, officer experience and — over fifty fights together — a seasoned crew. */
 export function onFightWon(game: Game, s: PlayerSession): void {
   const c = s.profile!.company;
-  c.skill = Math.min(5, c.skill + 0.03);
+  c.skill = Math.min(5, c.skill + 0.03 * (1 + 0.25 * tx(s.ship!.stats, 'drill')));
   c.fights++;
   changeLoyalty(c, 1, game.now);
   if (c.fights >= 50 && !c.traits.includes('seasoned')) {
@@ -621,7 +656,7 @@ export function onFightWon(game: Game, s: PlayerSession): void {
     game.toastShip(s.ship!, 'Fifty fights without breaking up: your crew is Seasoned.', 'good');
   }
   for (const o of c.officers) {
-    o.xp += 20;
+    o.xp += 20 * (1 + tx(s.ship!.stats, 'officerXp'));
     const need = 60 + o.level * 40;
     if (o.xp >= need && o.level < 20) {
       o.xp -= need;
@@ -774,13 +809,17 @@ export function tavernOf(game: Game, port: Port): Tavern {
   return t;
 }
 
-export function recruitCost(game: Game, port: Port, p: Profile, prof: Profession): number {
+export function recruitCost(game: Game, port: Port, p: Profile, prof: Profession, ship: ShipEntity | null = null): number {
   const base = 22 + p.level * 1.5 + (port.size >= 3 ? 6 : 0) + (FACTIONS[port.faction].lawful ? 4 : 0);
-  return Math.round(base * PROFESSION_DEFS[prof].hireMul);
+  let mul = PROFESSION_DEFS[prof].hireMul;
+  // Press Gang: sailors cheaper; Legend at the Helm: the Confederacy signs for less.
+  if (ship && prof === 'sailor') mul *= Math.max(0.3, 1 + tx(ship.stats, 'hireCost'));
+  if (ship?.hasFlag('legend_at_helm') && port.faction === 'confederacy') mul *= 0.8;
+  return Math.max(1, Math.round(base * mul));
 }
 
 /** Hire men of a trade. Sailors come from the waterfront; specialists from the tavern's stock. */
-export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profession, qty: number): string | null {
+export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profession, qty: number, dregs = false): string | null {
   const ship = s.ship!;
   const p = s.profile!;
   const c = p.company;
@@ -798,11 +837,15 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   const room = ship.stats.crewMax - ship.crew;
   const n = Math.min(qty, avail, room);
   if (n <= 0) return room <= 0 ? 'No hammocks left aboard' : `No ${PROFESSION_DEFS[prof].name.toLowerCase()} looking for a berth here`;
-  const cost = n * recruitCost(game, port, p, prof);
+  // Press Gang rank 2: the dregs of a lawless port, at half price and morale 30.
+  const scum = dregs && prof === 'sailor' && ship.rank('cmd_press_gang') >= 2 && REGIONS[port.region].safety === 'lawless';
+  if (dregs && !scum) return 'Only a practised press-gang captain finds the dregs, and only in lawless ports';
+  const cost = Math.round(n * recruitCost(game, port, p, prof, ship) * (scum ? 0.5 : 1));
   if (p.gold < cost) return 'Not enough silver';
   p.gold -= cost;
   game.db.ledger(s.accountId, 'crew', -cost, `${port.id}:${prof}`);
-  ship.morale = (ship.morale * ship.crew + 62 * n) / (ship.crew + n);
+  const newMorale = scum ? 30 : ship.hasFlag('legend_at_helm') ? 80 : 62;
+  ship.morale = (ship.morale * ship.crew + newMorale * n) / (ship.crew + n);
   // New hands dilute veterancy and loyalty by their share.
   const total = ship.crew + n;
   c.skill = (c.skill * ship.crew + tav.stars * n) / total;
@@ -823,7 +866,7 @@ export function hireOfficer(game: Game, s: PlayerSession, port: Port, offerId: s
   const offer = tav.officers.find((o) => o.id === offerId);
   if (!offer || tav.hired.includes(offerId)) return 'Nobody by that name is drinking here';
   if (offer.unique && (c.uniquesGone.includes(offer.unique) || c.officers.some((o) => o.unique === offer.unique))) return `${offer.name} will not sail with you`;
-  const slots = officerSlots(ship.cls.tier, ship.loadout.modules.crew_quarters ?? 0);
+  const slots = officerBerths(ship);
   if (c.officers.length >= slots) return `Your ship has berths for ${slots} officer${slots === 1 ? '' : 's'}`;
   if (offer.rep && (p.reputation[port.faction as FactionId] ?? 0) < offer.rep) return `${offer.name} wants a captain ${FACTIONS[port.faction].short} trusts (${offer.rep}+)`;
   if (p.gold < offer.price) return `${offer.name} wants ${offer.price} silver to sign`;

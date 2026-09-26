@@ -132,6 +132,7 @@ export interface Officer {
   warnedAt?: number; // betrayal warned (a game day ahead)
   awayUntil?: number; // taken captive when the ship went down
   orderReady: number;
+  acting?: boolean; // Field Promotion: a sailor standing in until the fight ends
 }
 
 export interface UniqueOfficer {

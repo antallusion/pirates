@@ -44,11 +44,13 @@ export type ClientMsg =
   | { t: 'undock' }
   | { t: 'trade'; good: GoodId; qty: number }
   | { t: 'buy_ammo'; ammo: AmmoId; qty: number }
-  | { t: 'hire_crew'; qty: number; prof?: Profession }
+  | { t: 'hire_crew'; qty: number; prof?: Profession; dregs?: boolean }
   | { t: 'officer'; action: 'hire' | 'dismiss' | 'order'; id: string }
   | { t: 'codex'; share: number }
   | { t: 'mutiny'; choice: 'pay' | 'suppress' | 'yield' | 'duel' }
   | { t: 'press_gang'; qty: number }
+  | { t: 'escort'; action: 'hire' | 'dismiss'; classId?: ShipClassId; id?: string }
+  | { t: 'formation'; formation: 'line' | 'wedge' | 'ring' }
   | { t: 'shipyard'; action: 'repair' }
   | { t: 'shipyard'; action: 'module'; module: ModuleId }
   | { t: 'shipyard'; action: 'unfit'; module: ModuleId }
@@ -265,6 +267,10 @@ export interface PrivateState {
   goldTrails: [number, number][];
   /** The crew as people (docs/02 §8). */
   company: CompanyView;
+  /** Hired escorts (Command) and the formation signal. */
+  fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
+  /** Admiral's Eye: what you can read of ships near you. */
+  inspect: { id: number; hull: number; crew: number; morale: number; port: boolean; starboard: boolean }[];
   gold: number;
   infamy: number;
   wanted: number;
@@ -354,6 +360,7 @@ export interface TavernView {
   costs: Record<Profession, number>;
   officers: { id: string; name: string; role: OfficerRole; level: number; traits: TraitId[]; price: number; loyalty: number; unique?: string; story?: string; rep?: number; taken: boolean }[];
   pressGang: boolean;
+  dregs: boolean;
 }
 
 export interface PortView {
@@ -363,6 +370,7 @@ export interface PortView {
   crewAvailable: number;
   crewHireCost: number;
   tavern: TavernView;
+  escorts: { classId: ShipClassId; price: number; upkeep: number; available: boolean }[];
   shipyard: {
     tier: number;
     repairCost: number;

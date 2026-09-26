@@ -71,6 +71,13 @@ export class PortScreen {
         return this.send({ t: 'hire_crew', qty: Number(d.n), prof: (d.prof as Profession | undefined) ?? 'sailor' });
       case 'press':
         return this.send({ t: 'press_gang', qty: 10 });
+      case 'escort_hire':
+        return this.send({ t: 'escort', action: 'hire', classId: d.cls as ShipClassId });
+      case 'escort_dismiss':
+        if (confirm('Pay this escort off?')) this.send({ t: 'escort', action: 'dismiss', id: d.id! });
+        return;
+      case 'dregs':
+        return this.send({ t: 'hire_crew', qty: 10, prof: 'sailor', dregs: true });
       case 'officer_hire':
         return this.send({ t: 'officer', action: 'hire', id: d.id! });
       case 'repair':
@@ -247,6 +254,7 @@ export class PortScreen {
         <p>Signing bounty ${view.crewHireCost} silver each. Recruits here are ${'★'.repeat(Math.round(tv.stars))} (${tv.stars}); new hands dilute your crew's veterancy and loyalty. You have room for ${room}.</p>
         ${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}">Hire ${n} (${fmt(n * view.crewHireCost)})</button>`).join(' ')}
         <button class="btn btn-small btn-danger" data-act="crew" data-n="-5">Discharge 5</button>
+        ${tv.dregs ? `<button class="btn btn-small" data-act="dregs" title="Half price, morale 30">Dregs (10)</button>` : ''}
         ${tv.pressGang ? `<button class="btn btn-small btn-danger" data-act="press" title="Cheap and fast; loyalty 10, and they know it">Press gang (10)</button>` : ''}
         <h4 style="margin-top:10px">Tradesmen</h4><table class="grid">${trades}</table></div>
       <div><h3 class="title-sm" style="font-size:20px">Officers looking for a berth (${co.officers.length}/${co.slots})</h3>${officers}</div></div>
@@ -296,6 +304,9 @@ export class PortScreen {
             <button class="btn btn-small" data-act="insure" data-tier="${q.tier}" ${q.cover && q.declared < 50 ? 'disabled' : ''}>${fmt(q.premium)}</button></div>`).join('')}` : '<p class="muted">Only League and free ports write policies.</p>'}</div>
         <div class="card"><h4>Scrape & bless the hull</h4><p>Curse ${self.curse}/100${self.curse >= 25 ? ` — stage ${self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1}` : ''}. ${['harpoon', 'crown', 'league'].includes(port.faction) ? 'The chaplain and the yard crew will scrape the growth away.' : 'No one here will touch a cursed hull.'}</p>
           <button class="btn" data-act="cleanse" ${self.curse >= 2 && ['harpoon', 'crown', 'league'].includes(port.faction) ? '' : 'disabled'}>Cleanse — ${fmt(Math.round(self.curse * 8 * (0.6 + SHIP_CLASSES[self.loadout.classId].tier * 0.4)))}</button></div>
+        <div class="card"><h4>Escorts (${self.fleet.escorts.length}/${self.fleet.slots})</h4>${self.fleet.slots ? `<p>Hired ships sail with you in formation and fight at your side. Upkeep ${fmt(self.fleet.upkeep)} silver an hour at sea; the yard patches them when you make port.</p>
+          ${self.fleet.escorts.map((e) => `<div class="row" style="padding:2px 0"><span>${esc(e.name)} <span class="muted">${esc(SHIP_CLASSES[e.classId].name)} · hull ${e.hull}%</span></span><button class="btn btn-small btn-danger" data-act="escort_dismiss" data-id="${esc(e.id)}">Pay off</button></div>`).join('')}
+          ${view.escorts.map((o) => `<button class="btn btn-small" data-act="escort_hire" data-cls="${o.classId}" ${o.available && self.fleet.escorts.length < self.fleet.slots ? '' : 'disabled'} title="${o.upkeep} silver an hour">${esc(SHIP_CLASSES[o.classId].name)} — ${fmt(o.price)}</button>`).join(' ')}` : '<p class="muted">Escort captains answer only to a commander (ten points in the Command tree).</p>'}</div>
         <div class="card"><h4>Retrain</h4><p>Forget all talents (${fmt(60 * self.level)} silver).</p><button class="btn btn-danger" data-act="respec">Respec</button></div>
       </div><div class="card"><h4>Standing</h4><table class="grid">${reps}</table>
       <p class="muted" style="margin-top:8px">Sunk ${self.stats.sunk} · taken ${self.stats.boarded} · trade profit ${fmt(self.stats.tradeProfit)} · ${fmt(self.stats.distance / 1000)} km sailed · ${self.discoveredCount} islands charted</p></div></div>`;

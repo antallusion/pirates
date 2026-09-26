@@ -17,6 +17,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Landing } from './exploration.ts';
 import type { Tether } from './mounts.ts';
 import type { SanityState } from './mind.ts';
+import type { Formation } from './fleet.ts';
 
 export interface StatusEffect {
   id: string;
@@ -137,6 +138,9 @@ export class ShipEntity {
   seizedHelm: { until: number; x: number; y: number } | null = null; // madness: the crew steers
   crewDeaths = 0; // men killed since the company last counted them
   companyKey = ''; // last applied crew modifiers
+  fleetId: string | null = null; // a hired escort's record in her commander's fleet
+  escortIndex = 0; // her station in the formation
+  formation: Formation = 'line'; // a flagship's current signal
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

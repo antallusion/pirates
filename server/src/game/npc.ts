@@ -24,6 +24,7 @@ import { coveAt, loseTrail, signature } from './smugglefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
 import type { Game } from './Game.ts';
 import { findPath, pathLength, pointAlong } from './nav.ts';
+import { formationOffset } from './fleet.ts';
 import type { Path } from './nav.ts';
 import type { NpcRole, ShipEntity } from './ship.ts';
 
@@ -430,10 +431,14 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   if (ship.ownerId !== null) {
     const owner = game.ships.get(ship.ownerId);
     if (owner) {
-      const d = dist(ship.state.x, ship.state.y, owner.state.x, owner.state.y);
-      const behind = headingVec(owner.state.heading + Math.PI);
-      const tx = owner.state.x + behind.x * 140, ty = owner.state.y + behind.y * 140;
-      steer(game, ship, brain, headingOf(tx - ship.state.x, ty - ship.state.y), d > 300 ? 1 : d > 160 ? 0.75 : 0.5);
+      // Keep station in the flagship's formation (hired escorts), or astern of her.
+      const off = ship.fleetId ? formationOffset(owner.formation, ship.escortIndex) : { x: 0, y: -140 };
+      const f = headingVec(owner.state.heading), r = headingVec(owner.state.heading + Math.PI / 2);
+      const tx = owner.state.x + f.x * off.y + r.x * off.x, ty = owner.state.y + f.y * off.y + r.y * off.x;
+      const d = dist(ship.state.x, ship.state.y, tx, ty);
+      // Close up fast when out of station; match the flagship's heading once there.
+      const want = d > 60 ? headingOf(tx - ship.state.x, ty - ship.state.y) : owner.state.heading;
+      steer(game, ship, brain, want, d > 300 ? 1 : d > 120 ? 0.8 : Math.max(0.3, owner.state.sail));
       return;
     }
   }

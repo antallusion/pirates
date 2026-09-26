@@ -4,7 +4,7 @@
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
 import type { ChaserEnd } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
-import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
+import { FACTIONS, WANTED_THRESHOLDS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { clamp, DEG, headingVec, segmentHitsHull, toShipLocal, wrapAngle } from '../../../shared/src/math.ts';
@@ -22,7 +22,8 @@ import { survivalOnHit, woundedOf } from './survivalfx.ts';
 import { isMonster } from './explorefx.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { onCrewKilled, onCrit, onHullDamage } from './mind.ts';
-import { onMagazineBlast } from './crew.ts';
+import { moraleLossMul, onMagazineBlast } from './crew.ts';
+import { screenFlagship } from './fleet.ts';
 
 export interface Projectile {
   owner: number;
@@ -521,8 +522,9 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   target.protectedUntil = 0;
   survivalOnHit(game, target, d);
   if (d.hull) {
-    target.hull -= d.hull;
-    onHullDamage(game, target, d.hull, source);
+    const hull = screenFlagship(game, target, d.hull);
+    target.hull -= hull;
+    onHullDamage(game, target, hull, source);
   }
   if (d.sails) target.sails = Math.max(0, target.sails - d.sails);
   if (d.rudder && !target.hasFlag('iron_tiller')) target.rudderHp = Math.max(0, target.rudderHp - d.rudder);
@@ -533,12 +535,13 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     target.crew -= killed;
     target.wounded += woundedOf(game, target, killed);
     onCrewKilled(game, target, killed, source);
-    target.morale -= killed * 0.8;
+    target.morale -= killed * 0.8 * moraleLossMul(target);
   }
-  if (d.morale) target.morale -= d.morale;
+  if (d.morale) target.morale -= d.morale * moraleLossMul(target);
   // Terror: crews under 30% break twice as fast.
   if (source && source.hasFlag('terror') && target.crew < target.stats.crewMax * 0.3) target.morale -= (d.morale ?? 0) + 0.8;
   target.morale = clamp(target.morale, 0, 100);
+  if (target.hasFlag('rule_of_the_lash')) target.morale = Math.max(50, target.morale); // the lash holds them in a fight
   if (target.cls.passive.id === 'dead_crew') target.morale = Math.max(target.morale, 60);
 
   if (target.hull <= 0) {
@@ -591,6 +594,12 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
     game.adjustRep(a, b.faction, -8);
   } else if (b.faction !== 'player') {
     game.adjustRep(a, b.faction, -4);
+  }
+  // Black Flag in contested water: the first attack under it costs a whole wanted level.
+  if (a.hasEffect('aggressor') && REGIONS[b.region].safety === 'contested') {
+    const lvl = wantedLevel(pa.infamy);
+    if (lvl < 5) infamy = Math.max(infamy, WANTED_THRESHOLDS[lvl + 1] - pa.infamy + 1);
+    a.effects = a.effects.filter((e) => e.id !== 'aggressor');
   }
   if (infamy > 0) game.addInfamy(a, infamy, `attacked ${b.name}`);
 }

@@ -1152,6 +1152,16 @@ export class Renderer {
     g.fillRect(x - w / 2, y + 16, w * clamp(s.hull, 0, 1), 2.5);
     g.fillStyle = '#b3ab96';
     g.fillRect(x - w / 2, y + 19, w * clamp(s.sails, 0, 1), 2);
+    // Admiral's Eye: what your glass reads of her.
+    const eye = state.self?.inspect.find((i) => i.id === s.id);
+    if (eye) {
+      g.font = '10px Inter, sans-serif';
+      g.fillStyle = 'rgba(0,0,0,0.8)';
+      const line = `hull ${eye.hull}% · crew ${eye.crew} · morale ${eye.morale} · P${eye.port ? '●' : '○'} S${eye.starboard ? '●' : '○'}`;
+      g.fillText(line, x + 1, y + 34);
+      g.fillStyle = '#d9c9a0';
+      g.fillText(line, x, y + 33);
+    }
     if (boardTarget || s.flags & SF.MARKED) {
       g.strokeStyle = boardTarget ? 'rgba(224,184,98,0.9)' : 'rgba(208,106,94,0.9)';
       g.setLineDash([5, 4]);
@@ -1161,7 +1171,6 @@ export class Renderer {
       g.stroke();
       g.setLineDash([]);
     }
-    void state;
   }
 }
 

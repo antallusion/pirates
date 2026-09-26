@@ -32,6 +32,9 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
         <div class="row"><input id="codex" type="range" min="0" max="50" step="5" value="${c.share}" style="flex:1"><b id="codex-v">${c.share}%</b></div>
         <p class="muted">They think ${c.expectedShare}% fair. More than that buys loyalty with every prize; much less costs it.</p></div>
       ${c.traits.length ? `<div class="card"><h4>Character of the crew</h4>${traitChips(c.traits)}</div>` : ''}
+      ${self.fleet.slots || self.fleet.escorts.length ? `<div class="card"><h4>Squadron (${self.fleet.escorts.length}/${self.fleet.slots}) · [J] formation</h4>
+        ${self.fleet.escorts.map((e) => `<p>${esc(e.name)} <span class="muted">${e.atSea ? `hull ${e.hull}%` : 'at anchor'}</span></p>`).join('') || '<p class="muted">Hire escorts at a harbour master.</p>'}
+        ${self.talents.cmd_signal_flags ? `<div class="row" style="gap:6px">${(['line', 'wedge', 'ring'] as const).map((f) => `<button class="btn btn-small ${self.fleet.formation === f ? 'btn-primary' : ''}" data-form="${f}" title="${f === 'line' ? '+10% escort damage (Line of Battle fires with you)' : f === 'wedge' ? '+10% escort speed' : '+10% escort armour'}">${f === 'line' ? 'Line' : f === 'wedge' ? 'Wedge' : 'Ring'}</button>`).join('')}</div>` : ''}</div>` : ''}
       ${c.memorial.length ? `<div class="card"><h4>Memorial</h4>${c.memorial.map((m) => `<p>† ${esc(m.name)}, ${esc(OFFICER_DEFS[m.role].name.toLowerCase())} — ${esc(m.cause)}</p>`).join('')}</div>` : ''}
     </div><div>
       <h3 class="title-sm" style="font-size:20px">Officers (${c.officers.length}/${c.slots})</h3>
@@ -49,6 +52,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
   const slider = root.querySelector<HTMLInputElement>('#codex')!;
   slider.oninput = () => (root.querySelector('#codex-v')!.textContent = `${slider.value}%`);
   slider.onchange = () => send({ t: 'codex', share: Number(slider.value) });
+  root.querySelectorAll<HTMLElement>('[data-form]').forEach((el) => (el.onclick = () => send({ t: 'formation', formation: el.dataset.form as 'line' })));
   root.querySelectorAll<HTMLElement>('[data-order]').forEach((el) => (el.onclick = () => send({ t: 'officer', action: 'order', id: el.dataset.order! })));
   root.querySelectorAll<HTMLElement>('[data-dismiss]').forEach((el) => (el.onclick = () => {
     if (confirm('Pay this officer off?')) send({ t: 'officer', action: 'dismiss', id: el.dataset.dismiss! });

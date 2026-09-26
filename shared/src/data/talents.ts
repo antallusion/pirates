@@ -7,6 +7,7 @@
 import type { CaptainId } from './captains.ts';
 import type { Flag, StatMods } from './stats.ts';
 import { BOARDING } from './trees/boarding.ts';
+import { COMMAND } from './trees/command.ts';
 import { EXPLORATION } from './trees/exploration.ts';
 import { GUNNERY } from './trees/gunnery.ts';
 import { NAVIGATION } from './trees/navigation.ts';
@@ -34,7 +35,7 @@ export const TREES: Record<TreeId, TreeDef> = {
   navigation: { id: 'navigation', name: 'Navigation', motto: 'The wind is a weapon.', complete: true, playable: true, native: ['corsair', 'navigator'] },
   gunnery: { id: 'gunnery', name: 'Gunnery', motto: 'Speak in iron.', complete: true, playable: true, native: ['corsair'] },
   boarding: { id: 'boarding', name: 'Boarding', motto: 'Steel, rope and nerve.', complete: true, playable: true, native: ['reaver'] },
-  command: { id: 'command', name: 'Command', motto: 'A crew is a blade — keep it sharp.', complete: false, playable: false, native: ['admiral'] },
+  command: { id: 'command', name: 'Command', motto: 'A crew is a blade — keep it sharp.', complete: true, playable: true, native: ['admiral'] },
   trade: { id: 'trade', name: 'Trade', motto: 'Every port is a ledger.', complete: true, playable: true, native: ['smuggler'] },
   smuggling: { id: 'smuggling', name: 'Smuggling', motto: 'What the Crown does not see, the Crown does not tax.', complete: true, playable: true, native: ['smuggler'] },
   survival: { id: 'survival', name: 'Survival', motto: 'Stay afloat. Everything else is luxury.', complete: true, playable: true, native: ['reaver', 'drowned'] },
@@ -77,7 +78,7 @@ export const MAX_BRIDGES = 3;
 export const TIER_STEP = 2;
 export const KEYSTONE_REQUIREMENT = 5;
 
-export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...TRADE, ...SMUGGLING, ...SURVIVAL, ...SHIPWRIGHT, ...EXPLORATION];
+export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...COMMAND, ...TRADE, ...SMUGGLING, ...SURVIVAL, ...SHIPWRIGHT, ...EXPLORATION];
 
 export const TALENTS_BY_ID: Record<string, TalentDef> = Object.fromEntries(TALENTS.map((x) => [x.id, x]));
 

@@ -12,6 +12,7 @@ import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { onCrewKilled, onGrapple } from './mind.ts';
+import { moraleLossMul } from './crew.ts';
 
 const AGG = {
   careful: { tempo: 0.75, cargo: 0.55, ownLoss: 0.9 },
@@ -205,8 +206,8 @@ export function stepBoarding(game: Game): void {
     bs.lost += killA2;
     onCrewKilled(game, b, killB2, a);
     onCrewKilled(game, a, killA2, b);
-    b.morale -= (killB / Math.max(1, bs.enemyStartCrew)) * 90 + 2;
-    a.morale -= (killA / Math.max(1, bs.startCrew)) * 70;
+    b.morale -= ((killB / Math.max(1, bs.enemyStartCrew)) * 90 + 2) * moraleLossMul(b);
+    a.morale -= (killA / Math.max(1, bs.startCrew)) * 70 * moraleLossMul(a);
     if (a.hasFlag('terror') && b.crew < b.stats.crewMax * 0.3) b.morale -= 6;
     if (a.hasFlag('no_quarter')) b.morale -= killB2; // every man that falls unnerves the rest
     // First Over the Rail: a quarter of her crew down in the first rush breaks her nerve.

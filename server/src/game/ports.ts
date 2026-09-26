@@ -20,6 +20,7 @@ import type { Game } from './Game.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { hireTrade, recruitCost, tavernOf } from './crew.ts';
+import { ESCORT_OFFERS } from './fleet.ts';
 import { poiRumor } from './exploration.ts';
 import { mountOffers } from './mounts.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -98,7 +99,8 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     ammoPrices,
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: crewCost(port, p),
-    tavern: tavernView(game, port, p),
+    tavern: tavernView(game, port, p, ship),
+    escorts: ESCORT_OFFERS.map((o) => ({ classId: o.classId, price: o.price, upkeep: o.upkeep, available: port.shipyardTier >= o.yard })),
     shipyard: {
       tier,
       repairCost: repairCost(ship),
@@ -250,8 +252,8 @@ export function buyAmmo(game: Game, s: PlayerSession, port: Port, ammo: AmmoId, 
   return null;
 }
 
-export function hireCrew(game: Game, s: PlayerSession, port: Port, qty: number, prof: Profession = 'sailor'): string | null {
-  return hireTrade(game, s, port, prof, qty);
+export function hireCrew(game: Game, s: PlayerSession, port: Port, qty: number, prof: Profession = 'sailor', dregs = false): string | null {
+  return hireTrade(game, s, port, prof, qty, dregs);
 }
 
 export function shipyardRepair(game: Game, s: PlayerSession): string | null {
@@ -604,15 +606,16 @@ export function buyChart(game: Game, s: PlayerSession, port: Port, region: Regio
   return null;
 }
 
-function tavernView(game: Game, port: Port, p: Profile): TavernView {
+function tavernView(game: Game, port: Port, p: Profile, ship: ShipEntity): TavernView {
   const t = tavernOf(game, port);
   const costs = {} as Record<Profession, number>;
-  for (const k of PROFESSIONS) costs[k] = recruitCost(game, port, p, k);
+  for (const k of PROFESSIONS) costs[k] = recruitCost(game, port, p, k, ship);
   return {
     stars: Math.round(t.stars * 10) / 10,
     stock: Object.fromEntries(Object.entries(t.stock).map(([k, v]) => [k, Math.floor(v ?? 0)])),
     costs,
     officers: t.officers.map((o) => ({ ...o, taken: t.hired.includes(o.id) || (!!o.unique && (p.company.uniquesGone.includes(o.unique) || p.company.officers.some((x) => x.unique === o.unique))) })),
     pressGang: REGIONS[port.region].safety === 'lawless',
+    dregs: REGIONS[port.region].safety === 'lawless' && ship.rank('cmd_press_gang') >= 2,
   };
 }
