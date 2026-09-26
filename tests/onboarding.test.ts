@@ -8,6 +8,7 @@ import type { PlayerSession } from '../server/src/game/player.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import type { Port } from '../shared/src/world/worldgen.ts';
 import { FakeConn, join, makeGame, steps } from './helpers.ts';
+import { startMutiny } from '../server/src/game/crew.ts';
 
 function recruit(game: Game, name: string, captain: 'corsair' | 'reaver' = 'corsair'): { c: FakeConn; s: PlayerSession } {
   const c = new FakeConn();
@@ -54,6 +55,24 @@ test('the First Watch: seven steps, each by doing; the HUD comes in a block at a
   steps(game, 21);
   assert.equal(stage(c), 'first_fight');
   assert.ok([...game.ships.values()].some((x) => x.name === 'Red Novice'), 'a raider comes for the novice');
+  // The raider is lost (a restart, another captain's broadside): within a minute another comes.
+  for (const x of [...game.ships.values()]) if (x.name === 'Red Novice') game.removeShip(x.id);
+  steps(game, 20 * 50);
+  assert.ok([...game.ships.values()].some((x) => x.name === 'Red Novice'), 'a new raider replaces the lost one');
+  // Safe water or not, she comes for the novice.
+  {
+    const raider = [...game.ships.values()].find((x) => x.name === 'Red Novice')!;
+    ship.state.speed = 0;
+    ship.input = { rudder: 0, sailTarget: 0 };
+    const d0 = Math.hypot(raider.state.x - ship.state.x, raider.state.y - ship.state.y);
+    steps(game, 20 * 30);
+    const d1 = Math.hypot(raider.state.x - ship.state.x, raider.state.y - ship.state.y);
+    assert.equal(game.npcs.get(raider.id)?.target, ship.id, 'she has the novice for her target');
+    assert.ok(Object.entries(raider.ammo).every(([k, n]) => k === 'round' || n === 0), 'round shot only: a lesson, not a massacre');
+    startMutiny(game, s, 'a test');
+    assert.equal(s.profile!.company.mutiny, null, 'no mutiny during the First Watch');
+    assert.ok(d1 < d0 - 100, `the practice raider closes (${Math.round(d0)} → ${Math.round(d1)} m)`);
+  }
   // 4. Three broadsides into the sea — the hint about the lead; then one that lands.
   for (let i = 0; i < 3; i++) onboardingVolley(game, ship, 0);
   assert.ok(c.all('onb').some((m) => m.kind === 'hint' && m.id === 'lead'));

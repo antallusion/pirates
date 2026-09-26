@@ -36,6 +36,7 @@ import type { Settings } from './settings.ts';
 import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { serverText } from './lang/server.ts';
+import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
 
@@ -80,7 +81,10 @@ const touch = new TouchControls({
     renderer.mouseX = px;
     renderer.mouseY = py;
   },
-  zoom: (f) => (renderer.targetZoom = clamp(renderer.targetZoom * f, 0.35, 4)),
+  zoom: (f) => {
+    renderer.userZoomed = true;
+    renderer.targetZoom = clamp(renderer.targetZoom * f, 0.35, 4);
+  },
   menu: () => toggle('menu'),
 });
 const onboarding = new OnboardingUi(state);
@@ -291,10 +295,15 @@ function onMessage(m: ServerMsg): void {
       else if (modal === 'boarding') closeModal();
       break;
     case 'sunk_self':
-      lastSunk = { lost: m.lost, port: state.ports.find((p) => p.id === m.respawnPort)?.name ?? L('port'), towed: !!m.towed };
+      lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed };
       openModal('sunk');
       break;
     case 'toast':
+      // The harbour turned her away for her speed: take in sail and try again when she slows.
+      if (m.msg === 'Take in sail before entering harbour') {
+        requestDock(pendingDock?.bribe ?? false, true);
+        break;
+      }
       hud.toast(serverText(m.msg), m.kind);
       if (m.kind === 'gold') audio.coins();
       break;
@@ -578,7 +587,7 @@ addEventListener('keydown', (e) => {
       break;
     case 'dock':
       if (docked) net.send({ t: 'undock' });
-      else net.send({ t: 'dock', bribe: e.shiftKey });
+      else requestDock(e.shiftKey);
       break;
     case 'map':
       toggle('map');
@@ -628,6 +637,7 @@ canvas.addEventListener('mousemove', (e) => {
   renderer.mouseY = e.clientY;
 });
 canvas.addEventListener('wheel', (e) => {
+  renderer.userZoomed = true;
   renderer.targetZoom = clamp(renderer.targetZoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), 0.35, 4);
 });
 canvas.addEventListener('mousedown', (e) => {
@@ -830,11 +840,38 @@ function actionsRadial(): { label: string; run: () => void }[] {
 
 /** The pad's context action: board, dock, land, set sail — whatever the prompt offers first. */
 function padContext(): void {
-  if (state.self?.dockedAt) return void net.send({ t: 'undock' });
+  if (state.self?.dockedAt) return void (touch.enabled && modal !== 'port' ? openModal('port') : net.send({ t: 'undock' }));
   if (boardTarget !== null) return void net.send({ t: 'board', target: boardTarget, aggression: 'standard' });
   const own = state.ownDisplay;
-  if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void net.send({ t: 'dock', bribe: false });
+  if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void requestDock(false);
   if (state.self?.landable) net.send({ t: 'land' });
+}
+
+/** Docking at speed: the crew takes in sail and she enters harbour as soon as she has slowed (the server wants
+ * her under 7 m/s), instead of a refusal the captain must puzzle out. */
+let pendingDock: { bribe: boolean; until: number; next: number } | null = null;
+function requestDock(bribe: boolean, refused = false): void {
+  const own = state.ownDisplay;
+  if (refused || (own && own.speed > 6)) {
+    state.input.sail = 0;
+    if (!pendingDock) hud.toast(L('reefToDock'), 'info');
+    pendingDock = { bribe, until: performance.now() + 25000, next: performance.now() + 1500 };
+    return;
+  }
+  net.send({ t: 'dock', bribe });
+}
+function stepPendingDock(): void {
+  if (!pendingDock) return;
+  const own = state.ownDisplay;
+  if (state.self?.dockedAt || performance.now() > pendingDock.until || state.input.sail > 0) {
+    pendingDock = null;
+    return;
+  }
+  if (own && own.speed <= 6 && performance.now() >= pendingDock.next) {
+    // Keep the request until the harbour answers: a refusal (still too fast) renews it.
+    pendingDock.next = performance.now() + 1500;
+    net.send({ t: 'dock', bribe: pendingDock.bribe });
+  }
 }
 
 function cycleAmmo(dir: number): void {
@@ -846,7 +883,8 @@ function cycleAmmo(dir: number): void {
 
 /** What the touch context button would do now (the same order as the pad's A). */
 function contextLabel(): string | null {
-  if (state.self?.dockedAt) return null;
+  // In port with the harbour screen closed: the button brings it back (market, yard, tavern, set sail).
+  if (state.self?.dockedAt) return modal === 'port' ? null : L('tc.harbour');
   if (boardTarget !== null) return L('tc.board');
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
@@ -1112,6 +1150,7 @@ function step(t: number): void {
   if (inGame) {
     pollPad(raw);
     sendInput(t);
+    stepPendingDock();
     state.updateRemote();
     const own = state.updateOwn();
     // Touch has no hovering cursor: no aim arcs follow it (the broadside buttons aim themselves).

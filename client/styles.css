@@ -600,7 +600,7 @@ body:not(.touch) #hud-stack { right: calc(var(--sa-r) + 60px); }
   #hud-boss .bname { font-size: 17px; }
   #toasts { top: auto; bottom: calc(var(--sa-b) + var(--touch-h) + 150px); flex-direction: column-reverse; }
 }
-@media (max-width: 699px) { #banner { top: 38%; font-size: 24px; } }
+@media (max-width: 699px) { #banner { top: calc(50% + 34px); font-size: 22px; max-width: 86vw; } #banner small { font-size: 13px; } }
 @media (max-width: 699px) { .captain-wrap .title-sm { font-size: 22px; } }
 
 /* ---- Round 2 (owner's notes) ---- */

@@ -20,6 +20,7 @@ import { changeRep } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { escortUpkeep } from './fleet.ts';
 import { grantDeed } from './progression.ts';
+import { onboardingProtected } from './onboarding.ts';
 
 export type Pools = Record<Profession, number>;
 
@@ -425,6 +426,8 @@ export function startMutiny(game: Game, s: PlayerSession, why: string): void {
   const c = s.profile!.company;
   const ship = s.ship!;
   if (c.mutiny || ship.docked) return;
+  // The First Watch is a lesson: no crew rises against a captain still learning the ropes.
+  if (onboardingProtected(s)) return;
   const mutineers = Math.max(1, Math.round(ship.crew * Math.min(0.8, 0.3 + (100 - loyaltyOf(c, game.now)) / 200)));
   const ringleader = `${game.rng.pick(FIRST_NAMES)} ${game.rng.pick(LAST_NAMES)}`;
   c.mutiny = { at: game.now, mutineers, ringleader };

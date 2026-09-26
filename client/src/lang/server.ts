@@ -5,6 +5,7 @@
 
 import { lang } from '../i18n.ts';
 import { NAME_RU, TEXT_RU } from './data.ts';
+import { composedNameRu } from './names.ts';
 import { SERVER_RU_A } from './server.ru.a.ts';
 import { SERVER_RU_B } from './server.ru.b.ts';
 
@@ -38,12 +39,12 @@ function compile(): void {
 /** A captured fragment: a known name, a known phrase, or itself. */
 function part(s: string, depth: number): string {
   if (!s) return s;
-  return NAME_RU.get(s) ?? exact.get(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
+  return NAME_RU.get(s) ?? exact.get(s) ?? composedNameRu(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
 }
 
 function translate(s: string, depth: number): string {
   if (!templates) compile();
-  const hit = exact.get(s) ?? TEXT_RU.get(s);
+  const hit = exact.get(s) ?? TEXT_RU.get(s) ?? composedNameRu(s);
   if (hit) return hit;
   for (const t of templates!) {
     const m = t.re.exec(s);

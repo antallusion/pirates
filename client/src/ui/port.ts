@@ -1,6 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
-import { mapCard } from './maps.ts';
+import { mapCard, placeName } from './maps.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -61,7 +61,7 @@ export class PortScreen {
     root.style.setProperty('--bg-port', bg ? `url('${bg}')` : 'none');
     root.innerHTML = `
       <div class="modal-head">
-        <div><h2>${icon(`faction_${port.faction}`, '', 'ico-crest')}${esc(port.name)}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(serverText(port.description))}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(serverText(e.title))}${e.kind === 'blockade' || e.kind === 'armada' ? esc(L('head.blockade')) : e.kind === 'epidemic' ? esc(L('head.epidemic')) : ''}</div>`).join('')}</div>
+        <div><h2>${icon(`faction_${port.faction}`, '', 'ico-crest')}${esc(placeName(port.name))}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(serverText(port.description))}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(serverText(e.title))}${e.kind === 'blockade' || e.kind === 'armada' ? esc(L('head.blockade')) : e.kind === 'epidemic' ? esc(L('head.epidemic')) : ''}</div>`).join('')}</div>
         <div style="text-align:right"><div class="gold head-silver">${money(self.gold)}</div><div class="muted">${esc(L('head.hold', { vol: vol.toFixed(0), max: (state.ownStats?.holdVolume ?? 0).toFixed(0), crew: self.crew }))}</div>
         <button class="btn btn-primary" data-act="undock" style="margin-top:6px">${esc(L('btn.setSail'))}</button></div>
       </div>

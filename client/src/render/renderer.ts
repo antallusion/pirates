@@ -8,6 +8,7 @@ import { GUNS, SHIP_CLASSES, AMMO, CHASER_CONE } from '../../../shared/src/data/
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { nightFactor } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
+import { placeName } from '../ui/maps.ts';
 import type { IslandData, ShipInfo } from '../../../shared/src/protocol.ts';
 import { SF, curseStageFromFlags } from '../../../shared/src/protocol.ts';
 import { fbm } from '../../../shared/src/rng.ts';
@@ -123,6 +124,8 @@ export class Renderer {
   camY = 0;
   zoom = 2.6; // px per meter
   targetZoom = 2.6;
+  /** Once the captain zooms, the screen size no longer picks the zoom. */
+  userZoomed = false;
   time = 0;
   mouseX = 0;
   mouseY = 0;
@@ -176,6 +179,9 @@ export class Renderer {
     this.sky?.resize(this.w, this.h, this.dpr);
     this.dark.width = Math.round(this.w / 2);
     this.dark.height = Math.round(this.h / 2);
+    // The default view spans about 260 m across the short side of the screen: a phone still sees a broadside's
+    // reach around her, a desktop keeps the close view.
+    if (!this.userZoomed) this.targetZoom = clamp(Math.min(this.w, this.h) / 260, 1.3, 2.6);
   }
 
   private makeNoise(size: number): HTMLCanvasElement {
@@ -224,8 +230,11 @@ export class Renderer {
       // Look slightly ahead of the ship.
       const v = headingVec(own.heading);
       const lead = clamp(own.speed * 5, 0, 90);
-      this.camX += (own.x + v.x * lead + this.look.x - this.camX) * Math.min(1, dt * 4);
-      this.camY += (own.y + v.y * lead + this.look.y - this.camY) * Math.min(1, dt * 4);
+      // A long way off (the first frame, a respawn, a teleport): cut straight to her instead of flying the chart.
+      const far = Math.hypot(own.x - this.camX, own.y - this.camY) > 1500;
+      const k = far ? 1 : Math.min(1, dt * 4);
+      this.camX += (own.x + v.x * lead + this.look.x - this.camX) * k;
+      this.camY += (own.y + v.y * lead + this.look.y - this.camY) * k;
     }
     // Particle LOD: the frame time picks it; nothing decorative is born off screen.
     this.fx.frame(dt * 1000);
@@ -280,6 +289,7 @@ export class Renderer {
     // Overlays (not affected by darkness).
     if (own && state.you && state.self) this.drawAim(state, own, aim);
     for (const s of ships) if (!s.own) this.drawLabel(s, state, aim.boardTarget === s.id);
+    if (own) this.drawThreatMarks(ships, own);
     this.drawTexts();
     this.drawVignette(state.fog, night);
     if (this.fx.flash > 0) {
@@ -730,9 +740,9 @@ export class Renderer {
   }
 
   /** Where each port town stands: on the land behind its anchorage, its quays at the shore (computed once). */
-  private portLayout = new Map<string, { x: number; y: number; ang: number; size: number } | null>();
+  private portLayout = new Map<string, { x: number; y: number; ang: number; size: number; reach: number } | null>();
 
-  private layoutPort(p: ClientState['ports'][number], island: { x: number; y: number; r: number; poly: number[] }): { x: number; y: number; ang: number; size: number } {
+  private layoutPort(p: ClientState['ports'][number], island: { x: number; y: number; r: number; poly: number[] }): { x: number; y: number; ang: number; size: number; reach: number } {
     const dx = island.x - p.x, dy = island.y - p.y;
     const d = Math.hypot(dx, dy) || 1;
     const ux = dx / d, uy = dy / d;
@@ -754,11 +764,12 @@ export class Renderer {
     const tIn = ashore ? 0 : hits[0] ?? d * 0.6;
     const tOut = (ashore ? hits[0] : hits[1]) ?? d + island.r * 0.5;
     // The town's body fills the upper three quarters of the painting, the quays the foot: the body must fit the land.
-    const depth = Math.max(80, tOut - tIn);
+    // A bay or a spit can end the first stretch of land early; the heart of the island is land all the same.
+    const depth = Math.max(80, tOut - tIn, d - tIn + island.r * 0.25);
     const size = Math.max(140, Math.min(230 + p.size * 80, (depth * 0.8) / 0.64));
     const shoreX = p.x + ux * tIn, shoreY = p.y + uy * tIn;
     // Local +y turns to the sea, so the quays at the painting's foot reach into the water.
-    return { x: shoreX + ux * size * 0.24, y: shoreY + uy * size * 0.24, ang: Math.atan2(-dx, dy) + Math.PI, size };
+    return { x: shoreX + ux * size * 0.24, y: shoreY + uy * size * 0.24, ang: Math.atan2(-dx, dy) + Math.PI, size, reach: tIn };
   }
 
   private drawPorts(state: ClientState): void {
@@ -794,24 +805,25 @@ export class Renderer {
       g.clip();
       town();
       g.restore();
-      // The quays: only the painting's foot, out over the water from the shore.
+      // The quays: the painting's foot, drawn out from the shore to the anchorage, so a ship in port lies at
+      // the end of a jetty and never over a street.
       g.save();
       g.translate(this.sx(lay.x), this.sy(lay.y));
       g.rotate(lay.ang);
-      g.beginPath();
-      g.rect(-size / 2, size * 0.23, size, size * 0.27);
-      g.clip();
-      g.rotate(-lay.ang);
-      g.translate(-this.sx(lay.x), -this.sy(lay.y));
-      town();
+      if (spr) {
+        const iw = spr.img.naturalWidth || spr.img.width, ih = spr.img.naturalHeight || spr.img.height;
+        const len = clamp((lay.reach + 12) * this.zoom, size * 0.24, size * 0.9);
+        g.drawImage(spr.img, 0, ih * 0.735, iw, ih * 0.245, -size / 2, size * 0.235, size, len);
+      }
       g.restore();
       // Name & flag.
       g.font = `${Math.round(clamp(14 * this.zoom, 12, 22))}px "IM Fell English SC", Georgia, serif`;
       g.textAlign = 'center';
       g.fillStyle = 'rgba(0,0,0,0.6)';
-      g.fillText(p.name, this.sx(p.x) + 1, this.sy(p.y) - 40 * this.zoom + 1);
+      const name = placeName(p.name);
+      g.fillText(name, this.sx(p.x) + 1, this.sy(p.y) - 40 * this.zoom + 1);
       g.fillStyle = FACTIONS[p.faction].lantern;
-      g.fillText(p.name, this.sx(p.x), this.sy(p.y) - 40 * this.zoom);
+      g.fillText(name, this.sx(p.x), this.sy(p.y) - 40 * this.zoom);
       // The harbour's reach: a faint ring of calmer water, no dashes.
       g.strokeStyle = 'rgba(176,141,87,0.14)';
       g.lineWidth = Math.max(1, 2 * this.zoom);
@@ -1489,6 +1501,60 @@ export class Renderer {
   }
 
   // ------------------------------------------------------------------ overlays
+
+  /** Hostile ships and bosses beyond the edge of the screen: a mark on the rim pointing at each, with the range,
+   * so a phone's close view never hides who is coming. */
+  private drawThreatMarks(ships: DrawShip[], own: SailState): void {
+    const g = this.g;
+    const cx = this.w / 2, cy = this.h / 2;
+    const rx = this.w / 2 - 26, ry = this.h / 2 - Math.min(150, this.h * 0.2);
+    const marks: { s: DrawShip; d: number }[] = [];
+    for (const s of ships) {
+      if (s.own || s.sinkT > 0) continue;
+      const boss = s.info?.npcRole === 'boss';
+      if (!boss && !(s.flags & SF.HOSTILE)) continue;
+      const d = Math.hypot(s.x - own.x, s.y - own.y);
+      if (d > (boss ? 4000 : 2000)) continue;
+      const px = this.sx(s.x), py = this.sy(s.y);
+      if (px > 0 && px < this.w && py > 0 && py < this.h) continue;
+      marks.push({ s, d });
+    }
+    marks.sort((a, b) => a.d - b.d);
+    g.save();
+    g.font = '600 11px Inter, system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    for (const { s, d } of marks.slice(0, 5)) {
+      const a = Math.atan2(this.sy(s.y) - cy, this.sx(s.x) - cx);
+      // The rim is an ellipse inside the HUD's top and bottom bands.
+      const k = 1 / Math.sqrt((Math.cos(a) / rx) ** 2 + (Math.sin(a) / ry) ** 2);
+      const x = cx + Math.cos(a) * k, y = cy + Math.sin(a) * k;
+      const boss = s.info?.npcRole === 'boss';
+      const col = boss ? '#2ee6c8' : '#e0503c';
+      g.translate(x, y);
+      g.rotate(a);
+      g.fillStyle = 'rgba(8,10,14,0.75)';
+      g.beginPath();
+      g.arc(0, 0, 15, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = col;
+      g.lineWidth = 2;
+      g.stroke();
+      g.fillStyle = col;
+      g.beginPath();
+      g.moveTo(11, 0);
+      g.lineTo(2, -7);
+      g.lineTo(4, 0);
+      g.lineTo(2, 7);
+      g.closePath();
+      g.fill();
+      g.rotate(-a);
+      g.fillStyle = 'rgba(240,230,200,0.95)';
+      g.fillText(d >= 1000 ? `${(d / 1000).toFixed(1)}k` : `${Math.round(d / 10) * 10}`, 0 - Math.cos(a) * 26, 0 - Math.sin(a) * 26);
+      g.translate(-x, -y);
+    }
+    g.restore();
+  }
 
   private drawAim(state: ClientState, own: SailState, aim: { side: 'port' | 'starboard' | null; dist: number; chaser: 'bow' | 'stern' | null }): void {
     const g = this.g;

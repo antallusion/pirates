@@ -26,6 +26,7 @@ export const EN = {
   grapples: 'Grapples away! Boarding action!',
   noTalent: 'No active talent in that slot — learn one (T).',
   noCrippled: 'No crippled ship within grappling range.',
+  reefToDock: 'Taking in sail — she will enter harbour once she slows.',
   soundOff: 'Sound off',
   soundOn: 'Sound on',
   chasersKeel: 'Chasers only bear along the keel — aim ahead or astern.',
@@ -50,6 +51,7 @@ export const EN = {
   repairLull: '{key} repairs need a lull in the fighting',
   'tc.board': 'Board her',
   'tc.dock': 'Enter port',
+  'tc.harbour': 'Harbour',
   'tc.land': 'Land a party',
 } as const;
 
@@ -79,6 +81,7 @@ export const RU: Record<keyof typeof EN, string> = {
   grapples: 'Абордажные крючья за борт! На абордаж!',
   noTalent: 'В этой ячейке нет активного таланта — изучите его (T).',
   noCrippled: 'Нет подбитого судна на расстоянии абордажного крюка.',
+  reefToDock: 'Убираем паруса — войдём в гавань, как только сбавим ход.',
   soundOff: 'Звук выключен',
   soundOn: 'Звук включён',
   chasersKeel: 'Погонные орудия бьют лишь вдоль киля — цельтесь по носу или за корму.',
@@ -103,5 +106,6 @@ export const RU: Record<keyof typeof EN, string> = {
   repairLull: '{key} для починки нужно затишье в бою',
   'tc.board': 'На абордаж',
   'tc.dock': 'Войти в порт',
+  'tc.harbour': 'В гавань',
   'tc.land': 'Высадка',
 };

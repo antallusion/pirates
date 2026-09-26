@@ -58,6 +58,9 @@ interface Stage {
   /** The step's starting mark. */
   mark?(p: Profile): number;
   begin?(game: Game, s: PlayerSession, ship: ShipEntity): void;
+  /** Every second while the step is open: keep what it needs in the world (a restart or a stray broadside must not
+   * leave a captain with nothing to do). */
+  keep?(game: Game, s: PlayerSession, ship: ShipEntity): void;
 }
 
 const START_BLOCKS: HudBlock[] = ['ship', 'nav'];
@@ -98,7 +101,33 @@ export const STAGES: Stage[] = [
     reveal: ['guns', 'abilities'],
     mark: (p) => p.tutorial.hits,
     done: (_g, _s, _ship, p) => p.tutorial.hits > p.tutorial.base,
-    begin: (game, _s, ship) => practiceRaider(game, ship),
+    begin: (game, s, ship) => practiceRaider(game, s, ship),
+    keep: (game, s, ship) => {
+      // The practice raider is gone (sunk by another hand, lost in a restart, left far behind): another comes.
+      if (ship.docked) return;
+      const id = raiders.get(s);
+      const r = id !== undefined ? game.ships.get(id) : undefined;
+      if (r && r.alive && Math.hypot(r.state.x - ship.state.x, r.state.y - ship.state.y) < 3500) {
+        // She keeps coming for as long as the lesson lasts.
+        const b = game.npcs.get(r.id);
+        if (b) {
+          b.practice = ship.id;
+          b.chase = { id: ship.id, until: game.now + 300 };
+        }
+        return;
+      }
+      // One already about (a raider that outlived a restart): she is the one.
+      for (const x of game.ships.values()) {
+        if (x.alive && x.name === 'Red Novice' && Math.hypot(x.state.x - ship.state.x, x.state.y - ship.state.y) < 3500) {
+          raiders.set(s, x.id);
+          return;
+        }
+      }
+      const w = watchOf(s);
+      if (game.now < w.raiderAt) return;
+      w.raiderAt = game.now + 45;
+      practiceRaider(game, s, ship);
+    },
   },
   {
     // The capital: the yard, the licence exchange, the first talents, the contract board.
@@ -158,7 +187,10 @@ export function tradeTip(game: Game, s: PlayerSession): Tutorial['tip'] {
 }
 
 /** A lone Confederacy sloop that comes for the novice in safe water — where the Crown's patrols are near. */
-function practiceRaider(game: Game, ship: ShipEntity): void {
+/** Each novice's practice raider (entity id). */
+const raiders = new WeakMap<PlayerSession, number>();
+
+function practiceRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
   const wind = game.windFor(ship);
   for (const off of [0, 0.8, -0.8, 1.6, -1.6]) {
     const a = wind.dir + Math.PI + off;
@@ -167,10 +199,14 @@ function practiceRaider(game: Game, ship: ShipEntity): void {
     const r = game.spawnNpcShip('pirate', 'sloop', 'confederacy', x, y, a + Math.PI, { ship: 'Red Novice', captain: 'Jory Slack' });
     r.purse = 120;
     r.cargo = { rum: 4 };
+    // A lesson, not a massacre: round shot only (no grape to cut down a novice's crew), and she never boards.
+    for (const a of Object.keys(r.ammo) as (keyof typeof r.ammo)[]) r.ammo[a] = a === 'round' ? 400 : 0;
     const brain = game.npcs.get(r.id)!;
     brain.area = { x: ship.state.x, y: ship.state.y, r: 3000 };
     brain.chase = { id: ship.id, until: game.now + 300 };
     brain.target = ship.id;
+    brain.practice = ship.id;
+    raiders.set(s, r.id);
     return;
   }
 }
@@ -256,7 +292,7 @@ function stepGoals(game: Game, s: PlayerSession, p: Profile): boolean {
 // ------------------------------------------------------------------ the step, once a second
 
 /** Seconds in irons, missed volleys in a row, seconds of neglected damage — per session, never saved. */
-const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string }>();
+const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number }>();
 
 export function onboardingSecond(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
@@ -268,7 +304,7 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
     if (st.done(game, s, ship, p)) {
       advance(game, s, 'done');
       changed = true;
-    }
+    } else st.keep?.(game, s, ship);
   } else if (!t.on || t.stage >= STAGES.length) changed = stepGoals(game, s, p) || changed;
   // The edge of safe waters: once, for every captain.
   if (!t.edgeSeen && REGIONS[ship.region].safety !== 'safe' && !ship.docked) {
@@ -286,7 +322,7 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
 
 function watchOf(s: PlayerSession) {
   let w = watch.get(s);
-  if (!w) watch.set(s, (w = { irons: 0, misses: 0, hurt: 0, view: '' }));
+  if (!w) watch.set(s, (w = { irons: 0, misses: 0, hurt: 0, view: '', raiderAt: 0 }));
   return w;
 }
 

@@ -116,7 +116,16 @@ export class WorldMap {
       g.restore();
       return true;
     };
+    // Labels never pile on each other: the first placed (ports, then sites, then events) keeps its place, a later one
+    // that would cover it waits for a closer zoom.
+    const placed: [number, number, number, number][] = [];
     const label = (text: string, x: number, y: number, color = 'rgba(240,230,200,0.85)') => {
+      const w = g.measureText(text).width;
+      const a = g.textAlign;
+      const x0 = a === 'center' ? x - w / 2 : a === 'right' ? x - w : x;
+      const box: [number, number, number, number] = [x0 - 2, y - 12, x0 + w + 2, y + 4];
+      if (placed.some((b) => box[0] < b[2] && b[0] < box[2] && box[1] < b[3] && b[1] < box[3])) return;
+      placed.push(box);
       g.fillStyle = 'rgba(0,0,0,0.55)';
       g.fillText(text, x + 1, y + 1);
       g.fillStyle = color;
@@ -282,9 +291,10 @@ export class WorldMap {
       const p = state.ports.find((q) => q.id === it.portId);
       if (!p) continue;
       const fresh = Math.max(0.25, 1 - (now - it.t) / 5400); // knowledge fades over ~1.5 h
+      // Price notes only at a closer zoom, and only where they fit.
+      if (this.zoom < 1.6) continue;
       g.font = '10px Inter, sans-serif';
-      g.fillStyle = `rgba(143,179,217,${0.85 * fresh})`;
-      g.fillText(L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.6, ty(p.y) + ms * 0.15);
+      label(L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.6, ty(p.y) + ms * 0.15, `rgba(143,179,217,${0.85 * fresh})`);
       if (this.zoom > 1.8) {
         it.top.forEach(([good, price], i) => {
           g.fillStyle = `rgba(224,184,98,${0.9 * fresh})`;

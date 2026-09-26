@@ -38,7 +38,8 @@ export function encodeSnap(m: Snap): Uint8Array {
   d.setUint8(o, WEATHER.indexOf(m.weather)); o += 1;
   d.setUint8(o, REGION_IDS.indexOf(m.region)); o += 1;
   d.setUint8(o, q8(m.fog)); o += 1;
-  d.setUint8(o, m.you ? 1 : 0); o += 1;
+  // Bit 0: a self row follows; bits 1-7: the admin time scale ×4 (0 = normal time).
+  d.setUint8(o, (m.you ? 1 : 0) | (m.k && m.k !== 1 ? Math.max(1, Math.min(127, Math.round(m.k * 4))) << 1 : 0)); o += 1;
   if (m.you) {
     const y = m.you;
     d.setInt32(o, Math.round(y.x * 10), true); o += 4;
@@ -108,7 +109,9 @@ export function decodeSnap(input: ArrayBuffer | Uint8Array): Snap {
   const weather = WEATHER[d.getUint8(o)]; o += 1;
   const region = REGION_IDS[d.getUint8(o)] as RegionId; o += 1;
   const fog = d.getUint8(o) / 250; o += 1;
-  const hasYou = d.getUint8(o) === 1; o += 1;
+  const flags = d.getUint8(o); o += 1;
+  const hasYou = (flags & 1) === 1;
+  const k = flags >> 1 ? (flags >> 1) / 4 : undefined;
   let you: SelfRow | null = null;
   if (hasYou) {
     const x = d.getInt32(o, true) / 10; o += 4;
@@ -167,5 +170,5 @@ export function decodeSnap(input: ArrayBuffer | Uint8Array): Snap {
     const y = d.getInt32(o, true); o += 4;
     loot.push([id, x, y]);
   }
-  return { t: 'snap', tick, time, ack, you, ships, loot, wind: [windDir, windS], weather, region, fog };
+  return { t: 'snap', tick, time, ack, you, ships, loot, wind: [windDir, windS], weather, region, fog, ...(k ? { k } : {}) };
 }

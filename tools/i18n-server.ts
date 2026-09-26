@@ -34,7 +34,8 @@ export function extract(root = 'server/src'): string[] {
   const walk = (d: string) => {
     for (const f of readdirSync(d, { withFileTypes: true })) {
       if (f.isDirectory()) walk(join(d, f.name));
-      else if (f.name.endsWith('.ts')) files.push(join(d, f.name));
+      // The admin console (GRAVETIDE_ADMIN=1, play-testing only) speaks English to the tester.
+      else if (f.name.endsWith('.ts') && f.name !== 'admin.ts') files.push(join(d, f.name));
     }
   };
   walk(root);

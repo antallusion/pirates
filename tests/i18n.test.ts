@@ -26,3 +26,13 @@ test('t() fills placeholders in the chosen language; Russian plurals', () => {
   setLang('en');
   assert.equal(plural(1, 'ship', 'ships', 'ships'), 'ship');
 });
+
+test('generated island names read in Russian, the kind in front; unknown names stay as they are', async () => {
+  const { composedNameRu } = await import('../client/src/lang/names.ts');
+  assert.equal(composedNameRu('Ironreach'), 'Айронрич');
+  assert.equal(composedNameRu('Widowstead Isle'), 'остров Видоустед');
+  assert.equal(composedNameRu('Cinderforge 12'), 'Синдерфордж 12');
+  assert.equal(composedNameRu("The Widow's Eye"), 'Вдовий Глаз');
+  assert.equal(composedNameRu('Gravesend'), null);
+  assert.equal(composedNameRu('Sold 5 rum.'), null);
+});

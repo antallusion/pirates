@@ -812,7 +812,7 @@ export type ServerMsg =
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number }
   | { t: 'fronts'; list: FrontData[]; forecast: boolean }
   | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[] }
-  | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number }
+  | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number; /** world time per real second, when an admin has changed it */ k?: number }
   | { t: 'info'; list: EntityInfo[] }
   | { t: 'boss'; list: BossView[] }
   | { t: 'events'; list: WorldEventView[] }

@@ -65,7 +65,6 @@ export class TouchControls {
     if (this.enabled) return;
     this.enabled = true;
     document.body.classList.add('touch');
-    this.hooks.zoom(Math.min(innerWidth, innerHeight) < 520 ? 1.3 : 1.1);
   }
 
   /** Put the art on the buttons once it has loaded (their glyphs stay until then). */

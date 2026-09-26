@@ -550,7 +550,7 @@ export interface DamagePacket {
 
 /** Central damage entry point for cannon fire, abilities, collisions and hazards. */
 export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, source: ShipEntity | null, at?: { x: number; y: number }): void {
-  if (!target.alive || target.docked) return;
+  if (!target.alive || target.docked || target.god) return;
   // A ship across a zone line: the hit is hers to take in her own zone.
   if (target.ghost) return game.zone?.forwardHit(target, d, source);
   // Under black water (Abyss Step, the Drowned King) nothing can touch her.

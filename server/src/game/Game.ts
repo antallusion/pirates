@@ -90,6 +90,7 @@ import type { AbyssMap } from './abyss.ts';
 import { digNoise, legendEcho, mapAction, mapView, onGhostSunk, stealMaps } from './treasure.ts';
 import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditionsSecond, onYardCaptainSunk, sendSites, startDive, stepExpeditions } from './expeditions.ts';
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
+import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
@@ -184,6 +185,8 @@ export class Game {
   readonly log: (msg: string) => void;
 
   now = 0; // world time, seconds
+  /** World time per real second (admin /speed; 1 on a normal server). */
+  timeScale = 1;
   tick = 0;
   ships = new Map<number, ShipEntity>();
   npcs = new Map<number, NpcBrain>();
@@ -321,10 +324,11 @@ export class Game {
     let acc = 0;
     this.timer = setInterval(() => {
       const t = performance.now();
-      acc += (t - last) / 1000;
+      acc += ((t - last) / 1000) * this.timeScale;
       last = t;
       let steps = 0;
-      while (acc >= TICK_DT && steps < 5) {
+      const maxSteps = Math.ceil(5 * this.timeScale);
+      while (acc >= TICK_DT && steps < maxSteps) {
         const t0 = performance.now();
         this.snapMs = this.secondMs = 0;
         this.step();
@@ -332,7 +336,7 @@ export class Game {
         acc -= TICK_DT;
         steps++;
       }
-      if (steps === 5 && acc >= TICK_DT) {
+      if (steps === maxSteps && acc >= TICK_DT) {
         acc = 0; // drop time rather than spiral
         this.metrics.overruns++;
       }
@@ -368,6 +372,8 @@ export class Game {
     const now = this.now;
     const prof = this.prof;
     prof.begin();
+    // Admin god mode: whatever the last step did, she starts this one whole.
+    for (const s of this.sessions) if (s.ship?.god && s.ship.alive) mend(s.ship);
 
     if (now >= this.nextSecond) {
       this.nextSecond = now + 1;
@@ -2681,6 +2687,11 @@ export class Game {
       case 'chat': {
         const text = String(msg.text ?? '').slice(0, 200).trim();
         if (!text) return;
+        if (text.startsWith('/') && adminEnabled()) {
+          const reply = runAdmin(this, s, text);
+          if (reply) this.sendTo(s, { t: 'toast', msg: reply, kind: 'info' });
+          return;
+        }
         for (const o of this.sessions) this.sendTo(o, { t: 'chat', from: s.name, text });
         this.shared?.publishChat(s.name, text);
         return;
@@ -2947,7 +2958,7 @@ export class Game {
     this.saveSession(s);
   }
 
-  private undock(s: PlayerSession): string | null {
+  undock(s: PlayerSession): string | null {
     const ship = s.ship!;
     if (!ship.docked) return 'Not in port';
     const port = this.portById(ship.docked)!;
@@ -3154,7 +3165,7 @@ export class Game {
         resolve: me.resolve, dread: me.dread, sanity: me.sanity,
       };
       this.sendSnap(s, {
-        t: 'snap', tick: this.tick, time: Math.round(this.now * 100) / 100, ack: me.lastInputSeq, you, ships, loot,
+        t: 'snap', tick: this.tick, time: Math.round(this.now * 100) / 100, ack: me.lastInputSeq, you, ships, loot, ...(this.timeScale !== 1 ? { k: this.timeScale } : {}),
         wind: [Math.round(wind.dir * 1000) / 1000, Math.round(wind.strength * 100) / 100], weather, region: me.region, fog: Math.round(WEATHER_FOG[weather] * (0.5 + 0.5 * this.sightFactor(me)) * 100) / 100,
       });
       const mine: string[] = [];

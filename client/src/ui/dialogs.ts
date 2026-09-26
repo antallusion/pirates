@@ -1,6 +1,7 @@
 // Boarding plunder, shipwreck, ship/cargo and help dialogs.
 
 import { GOODS } from '../../../shared/src/data/goods.ts';
+import { placeName } from './maps.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, AMMO, SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
 import type { BoardingResult, ClientMsg, OnboardingView } from '../../../shared/src/protocol.ts';
@@ -28,7 +29,7 @@ function kb(a: Action): string {
 }
 
 const talentName = (id: string) => TALENTS_BY_ID[id]?.name ?? id;
-const portName = (id: string) => KEY_PORTS.find((p) => p.id === id)?.name ?? id;
+const portName = (id: string) => placeName(KEY_PORTS.find((p) => p.id === id)?.name ?? id);
 
 export function renderBoarding(root: HTMLElement, r: BoardingResult, state: ClientState, send: (m: ClientMsg) => void, close: () => void): void {
   const take: Cargo = {};

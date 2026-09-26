@@ -55,6 +55,8 @@ export interface NpcBrain {
   chase: { id: number; until: number } | null; // spotted from the crow's nest: pursue beyond detection range
   spared: Map<number, number>; // ship id -> until: plundered victims are left alone
   stuckCheck: { x: number; y: number; t: number };
+  /** The First Watch's practice raider: she comes for this one novice even in safe water. */
+  practice?: number;
 }
 
 const SHIP_NAMES = [
@@ -168,6 +170,7 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     const owner = game.ships.get(npc.ownerId);
     return !!owner && (game.isHostile(other, owner) || owner.attackers.has(other.id) || other.attackers.has(owner.id));
   }
+  if (game.npcs.get(npc.id)?.practice === other.id) return true;
   if (other.attackers.has(npc.id) && game.now - (npc.attackers.get(other.id) ?? -999) < 120) return true;
   if ((npc.attackers.get(other.id) ?? -999) > game.now - 120) return true;
   const safety = REGIONS[other.region].safety;

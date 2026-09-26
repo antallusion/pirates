@@ -8,6 +8,9 @@ import type { Key } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
 import { $, esc, icon } from './dom.ts';
 import { glossaryHtml } from './terms.ts';
+import { placeName } from './maps.ts';
+import { GOODS } from '../../../shared/src/data/goods.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
 
 /** Which DOM block shows which part of the HUD. */
 const BLOCKS: Record<string, HudBlock[]> = {
@@ -63,8 +66,9 @@ export class OnboardingUi {
       return;
     }
     const k = `stage.${v.stage}` as Key;
-    const body = `stage.${v.stage}.body` as Key;
-    const tip = v.tip ? t('stage.first_trade.tip', { good: v.tip.good, port: this.portName(v.tip.port), hours: v.tip.hours }) : '';
+    const touchBody = `stage.${v.stage}.touch` as Key;
+    const body = (document.body.classList.contains('touch') && has(touchBody) ? touchBody : `stage.${v.stage}.body`) as Key;
+    const tip = v.tip ? t('stage.first_trade.tip', { good: GOODS[v.tip.good as GoodId]?.name ?? placeName(v.tip.good), port: this.portName(v.tip.port), hours: v.tip.hours }) : '';
     el.classList.remove('hidden');
     el.innerHTML = `<div class="w-head"><span>${esc(t('watch.title'))} · ${v.index + 1}/${v.of}</span><b>${esc(has(k) ? t(k) : v.stage)}</b></div>
       <div class="w-body">${esc(has(body) ? t(body) : '')}${tip ? `<div class="w-tip">${esc(tip)}</div>` : ''}</div>
@@ -109,7 +113,7 @@ export class OnboardingUi {
   }
 
   private portName(id: string): string {
-    return this.state.ports.find((p) => p.id === id)?.name ?? id;
+    return placeName(this.state.ports.find((p) => p.id === id)?.name ?? id);
   }
 }
 

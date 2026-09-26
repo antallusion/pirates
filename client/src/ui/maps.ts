@@ -4,6 +4,7 @@
 import type { MapView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { NAME_RU } from '../lang/data.ts';
+import { composedNameRu } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/maps.ts';
 import { serverText } from '../lang/server.ts';
 import { esc } from './dom.ts';
@@ -16,7 +17,7 @@ export function placeName(s: string): string {
   if (lang() !== 'ru' || !s) return s;
   let r = named.get(s);
   if (r === undefined) {
-    r = NAME_RU.get(s) ?? serverText(s);
+    r = NAME_RU.get(s) ?? composedNameRu(s) ?? serverText(s);
     named.set(s, r);
   }
   return r;

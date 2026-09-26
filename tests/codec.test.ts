@@ -46,3 +46,12 @@ test('binary snapshots are several times smaller than JSON', () => {
   const json = JSON.stringify(m).length;
   assert.ok(bin * 2.5 < json, `binary ${bin} B vs JSON ${json} B`);
 });
+
+test('the snapshot carries an admin time scale without growing, and none in normal time', async () => {
+  const { encodeSnap, decodeSnap } = await import('../shared/src/codec.ts');
+  const base = { t: 'snap' as const, tick: 1, time: 10, ack: 0, you: null, ships: [], loot: [], wind: [0, 0.5] as [number, number], weather: 'calm' as const, region: 'black_coast' as const, fog: 0.1 };
+  assert.equal(decodeSnap(encodeSnap(base)).k, undefined);
+  assert.equal(decodeSnap(encodeSnap({ ...base, k: 5 })).k, 5);
+  assert.equal(decodeSnap(encodeSnap({ ...base, k: 0.25 })).k, 0.25);
+  assert.equal(encodeSnap({ ...base, k: 5 }).byteLength, encodeSnap(base).byteLength);
+});

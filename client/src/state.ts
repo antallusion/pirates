@@ -96,6 +96,8 @@ export class ClientState {
 
   input = { rudder: 0, sail: 2, seq: 0 };
   snapGap = 0.1; // seconds between snapshots (smoothed)
+  /** World seconds per real second (1 unless an admin server runs the clock faster). */
+  timeScale = 1;
 
   apply(m: ServerMsg): void {
     const now = performance.now() / 1000;
@@ -145,6 +147,7 @@ export class ClientState {
         if (this.serverTime > 0 && m.time > this.serverTime) this.snapGap += (Math.min(1, m.time - this.serverTime) - this.snapGap) * 0.1;
         this.serverTime = m.time;
         this.serverTimeArrival = now;
+        this.timeScale = m.k ?? 1;
         this.wind = m.wind;
         this.weather = m.weather;
         this.region = m.region;
@@ -247,7 +250,7 @@ export class ClientState {
   }
 
   estServerTime(): number {
-    return this.serverTime + (performance.now() / 1000 - this.serverTimeArrival);
+    return this.serverTime + (performance.now() / 1000 - this.serverTimeArrival) * this.timeScale;
   }
 
   night(): boolean {
@@ -256,7 +259,7 @@ export class ClientState {
 
   /** Interpolate remote ships at render time. */
   updateRemote(): void {
-    const rt = this.estServerTime() - Math.min(INTERP_MAX, Math.max(INTERP_MIN, this.snapGap * 1.3));
+    const rt = this.estServerTime() - Math.min(INTERP_MAX * this.timeScale, Math.max(INTERP_MIN * this.timeScale, this.snapGap * 1.3));
     for (const s of this.ships.values()) {
       const b = s.buf;
       if (!b.length) continue;
@@ -286,7 +289,7 @@ export class ClientState {
     const you = this.you;
     if (!you || !this.ownStats || !this.self) return null;
     const st = this.ownStats;
-    const elapsed = Math.min(0.2, performance.now() / 1000 - this.youArrival);
+    const elapsed = Math.min(0.2, performance.now() / 1000 - this.youArrival) * this.timeScale;
     let s: SailState = { x: you.x, y: you.y, heading: you.h, speed: you.spd, sail: you.sail, rudder: you.rud };
     const sailSteps = [0, 0.25, 0.5, 0.75, 1];
     const params = {
