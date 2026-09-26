@@ -198,6 +198,13 @@ export class Hud {
       g.closePath();
       g.fill();
     }
+    g.strokeStyle = 'rgba(90,160,150,0.7)';
+    for (const rf of state.reefs.values()) {
+      if (Math.abs(rf.x - own.x) > range + rf.r || Math.abs(rf.y - own.y) > range + rf.r) continue;
+      g.beginPath();
+      g.arc(tx(rf.x), ty(rf.y), Math.max(1.5, rf.r * k * 0.8), 0, Math.PI * 2);
+      g.stroke();
+    }
     for (const p of state.ports) {
       if (Math.abs(p.x - own.x) > range || Math.abs(p.y - own.y) > range) continue;
       g.fillStyle = '#e0b862';

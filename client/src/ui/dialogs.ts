@@ -74,6 +74,7 @@ export function renderShip(root: HTMLElement, state: ClientState): void {
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)} Passive: ${esc(cls.passive.name)} — ${esc(cls.passive.description)}</div></div><div class="muted">[I] close</div></div>
     <div class="modal-body"><div class="cols"><div><table class="grid">
       <tr><td>Max speed</td><td>${st.maxSpeed.toFixed(1)} m/s</td></tr><tr><td>Turn rate</td><td>${((st.turnRate * 180) / Math.PI).toFixed(1)}°/s</td></tr>
+      <tr><td>Draft</td><td>${cls.draft.toFixed(1)} m${cls.passive.id === 'shallow_runner' ? ' (Shallow Runner: ignores reefs)' : ' — reefs and coastal shoals shallower than this tear the keel'}</td></tr>
       <tr><td>No-go zone</td><td>${st.noGoDeg.toFixed(0)}° (${esc(cls.rig.replace('_', '-'))} rig)</td></tr><tr><td>Hull / armor</td><td>${st.hullMax} / ${Math.round(st.armor * 100)}%</td></tr>
       <tr><td>Sails</td><td>${st.sailHpMax}</td></tr><tr><td>Crew</td><td>${self.crew} (min ${st.crewMin}, max ${st.crewMax})</td></tr>
       <tr><td>Hold</td><td>${cargoVolume(self.cargo, st.contrabandVolumeMul).toFixed(1)} / ${st.holdVolume.toFixed(0)} volume · ${st.holdWeight.toFixed(0)} t</td></tr>

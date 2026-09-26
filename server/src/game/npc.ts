@@ -15,7 +15,7 @@ import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
-import { isLand } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { effectiveRange, fireBroadside, sideHeading } from './combat.ts';
 import { applyTrade, bestRoute } from './economy.ts';
@@ -497,7 +497,11 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   const look = 180 + ship.state.speed * 7;
   const probe = (h: number) => {
     const v = headingVec(h);
-    return isLand(game.world, ship.state.x + v.x * look, ship.state.y + v.y * look) || isLand(game.world, ship.state.x + v.x * look * 0.5, ship.state.y + v.y * look * 0.5);
+    const x1 = ship.state.x + v.x * look, y1 = ship.state.y + v.y * look;
+    const x2 = ship.state.x + v.x * look * 0.5, y2 = ship.state.y + v.y * look * 0.5;
+    if (ship.cls.passive.id === 'shallow_runner') return !!isLand(game.world, x1, y1) || !!isLand(game.world, x2, y2);
+    const draft = ship.cls.draft;
+    return depthAt(game.world, x1, y1) < draft || depthAt(game.world, x2, y2) < draft;
   };
   if (probe(desired)) {
     for (const off of [0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.4, -2.4]) {

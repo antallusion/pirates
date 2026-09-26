@@ -82,3 +82,15 @@ test('math: segment vs hull ellipse', () => {
   assert.ok(segmentHitsHull(-50, 0, 50, 0, 0, 0, 0, 20, 5) >= 0, 'broadside crossing hits');
   assert.equal(segmentHitsHull(-50, 30, 50, 30, 0, 0, 0, 20, 5), -1, 'passes ahead of the bow');
 });
+
+test('depth: reefs and coastal shoals are shallow, open sea is deep, and NPC nav avoids reefs', async () => {
+  const { depthAt, DEEP_WATER } = await import('../shared/src/world/worldgen.ts');
+  const w = generateWorld(WORLD_SEED);
+  assert.ok(w.reefs.length > 100, `${w.reefs.length} reefs`);
+  const rf = w.reefs[0];
+  assert.equal(depthAt(w, rf.x, rf.y), rf.depth);
+  assert.equal(depthAt(w, 48000, 48000) <= DEEP_WATER, true);
+  let blocked = 0;
+  for (const r of w.reefs.slice(0, 40)) if (navBlocked(w, Math.floor(r.x / NAV_CELL), Math.floor(r.y / NAV_CELL))) blocked++;
+  assert.ok(blocked === 40, `nav blocks reef centres (${blocked}/40)`);
+});

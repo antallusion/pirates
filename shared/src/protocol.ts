@@ -60,6 +60,15 @@ export interface IslandData {
   portId?: string;
 }
 
+export interface ReefData {
+  id: number;
+  x: number;
+  y: number;
+  r: number;
+  poly: number[];
+  depth: number;
+}
+
 export interface PortPublic {
   id: string;
   name: string;
@@ -255,7 +264,7 @@ export interface BoardingResult {
 export type ServerMsg =
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; discovered: number[]; time: number; entityId: number }
-  | { t: 'chunk'; key: number; islands: IslandData[] }
+  | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[] }
   | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number }
   | { t: 'info'; list: EntityInfo[] }
   | { t: 'gone'; ids: number[] }

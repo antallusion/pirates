@@ -5,7 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BoardingResult, CurrentData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
+  BoardingResult, CurrentData, ReefData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
 } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -52,6 +52,7 @@ export class ClientState {
   infos = new Map<number, EntityInfo>();
   loot = new Map<number, { x: number; y: number; value: number }>();
   islands = new Map<number, IslandData>();
+  reefs = new Map<number, ReefData>();
   ports: PortPublic[] = [];
   currents: CurrentData[] = [];
   discovered = new Set<number>();
@@ -91,6 +92,7 @@ export class ClientState {
         break;
       case 'chunk':
         for (const is of m.islands) this.islands.set(is.id, is);
+        for (const rf of m.reefs ?? []) this.reefs.set(rf.id, rf);
         break;
       case 'info':
         for (const i of m.list) this.infos.set(i.id, i);

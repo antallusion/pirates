@@ -49,9 +49,22 @@ export interface Current {
   strength: number; // m/s at the core
 }
 
+/** A submerged reef or sandbar: water, but only `depth` meters of it. Deep-draft hulls ground on it. */
+export interface Reef {
+  id: number;
+  region: RegionId;
+  x: number;
+  y: number;
+  radius: number;
+  poly: number[];
+  depth: number;
+}
+
 export interface World {
   seed: number;
   islands: Island[];
+  reefs: Reef[];
+  reefChunks: Map<number, number[]>;
   ports: Port[];
   currents: Current[];
   chunks: Map<number, number[]>; // chunk key -> island ids
@@ -300,6 +313,43 @@ export function generateWorld(seed: number): World {
     }
   }
 
+  // Reefs and sandbars: separate RNG stream so island layout stays stable.
+  const reefRng = new Rng(seed ^ 0x2eef);
+  const reefs: Reef[] = [];
+  const REEF_COUNT: Record<RegionId, number> = {
+    black_coast: 16, gravewater: 16, whispering: 60, ashen_isles: 12, leviathan_reach: 12, dead_mans_expanse: 24, drowned_crown: 24, the_abyss: 10,
+  };
+  for (const rid of REGION_IDS) {
+    let placed = 0, attempts = 0;
+    while (placed < REEF_COUNT[rid] && attempts < REEF_COUNT[rid] * 80) {
+      attempts++;
+      const x = reefRng.range(WORLD_EDGE_MARGIN + 1500, WORLD_SIZE - WORLD_EDGE_MARGIN - 1500);
+      const y = reefRng.range(WORLD_EDGE_MARGIN + 1500, WORLD_SIZE - WORLD_EDGE_MARGIN - 1500);
+      if (regionOf(x, y) !== rid) continue;
+      const r = reefRng.range(60, 230);
+      if (distanceToCurrents(x, y) < r + 400) continue;
+      if (islands.some((is) => Math.hypot(is.x - x, is.y - y) < is.radius + r + 150)) continue;
+      if (ports.some((p) => Math.hypot(p.x - x, p.y - y) < r + 1500)) continue;
+      if (reefs.some((q) => Math.hypot(q.x - x, q.y - y) < q.radius + r + 120)) continue;
+      const poly = islandPoly(reefRng, x, y, r, seed + 9000 + reefs.length);
+      reefs.push({ id: reefs.length, region: rid, x, y, radius: r * 1.25, poly, depth: Math.round(reefRng.range(1.2, 2.8) * 10) / 10 });
+      placed++;
+    }
+  }
+  const reefChunks = new Map<number, number[]>();
+  for (const rf of reefs) {
+    const [x0, y0] = chunkOf(rf.x - rf.radius, rf.y - rf.radius);
+    const [x1, y1] = chunkOf(rf.x + rf.radius, rf.y + rf.radius);
+    for (let cy = y0; cy <= y1; cy++) {
+      for (let cx = x0; cx <= x1; cx++) {
+        const k = chunkKey(cx, cy);
+        let list = reefChunks.get(k);
+        if (!list) reefChunks.set(k, (list = []));
+        list.push(rf.id);
+      }
+    }
+  }
+
   // Navigation grid: blocked if the cell center is on land or within 160 m of a coast, or outside the Maelstrom Wall.
   const navSize = WORLD_SIZE / NAV_CELL;
   const navGrid = new Uint8Array(navSize * navSize);
@@ -311,9 +361,7 @@ export function generateWorld(seed: number): World {
         navGrid[gy * navSize + gx] = 1;
         continue;
       }
-      const list = chunks.get(chunkKey(...chunkOf(x, y)));
-      if (!list) continue;
-      for (const id of list) {
+      for (const id of chunks.get(chunkKey(...chunkOf(x, y))) ?? []) {
         const is = islands[id];
         if (Math.hypot(is.x - x, is.y - y) > is.radius + 260) continue;
         if (pointInPolygon(x, y, is.poly) || closestOnPolygon(x, y, is.poly).d2 < 160 * 160) {
@@ -323,13 +371,24 @@ export function generateWorld(seed: number): World {
       }
     }
   }
+  // Reefs: rasterise each one; any cell the reef touches (half a cell diagonal) is blocked.
+  for (const rf of reefs) {
+    const pad = rf.radius + 300;
+    for (let gy = Math.floor((rf.y - pad) / NAV_CELL); gy <= Math.floor((rf.y + pad) / NAV_CELL); gy++) {
+      for (let gx = Math.floor((rf.x - pad) / NAV_CELL); gx <= Math.floor((rf.x + pad) / NAV_CELL); gx++) {
+        if (gx < 0 || gy < 0 || gx >= navSize || gy >= navSize) continue;
+        const x = gx * NAV_CELL + NAV_CELL / 2, y = gy * NAV_CELL + NAV_CELL / 2;
+        if (pointInPolygon(x, y, rf.poly) || closestOnPolygon(x, y, rf.poly).d2 < 290 * 290) navGrid[gy * navSize + gx] = 1;
+      }
+    }
+  }
   // Make sure port anchors are reachable.
   for (const p of ports) {
     const gx = Math.floor(p.x / NAV_CELL), gy = Math.floor(p.y / NAV_CELL);
     navGrid[gy * navSize + gx] = 0;
   }
 
-  return { seed, islands, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize };
+  return { seed, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize };
 }
 
 /** Anchor point `offset` meters beyond the outermost coastline crossing along `heading` from the island centre. */
@@ -398,4 +457,26 @@ export function isLand(world: World, x: number, y: number): Island | null {
 export function navBlocked(world: World, gx: number, gy: number): boolean {
   if (gx < 0 || gy < 0 || gx >= world.navSize || gy >= world.navSize) return true;
   return world.navGrid[gy * world.navSize + gx] === 1;
+}
+
+export const DEEP_WATER = 40;
+const SHALLOW_BAND = 90; // meters from a coastline over which the sea floor drops away
+
+/** Water depth in meters at a point: reefs, coastal shallows, else deep water. Land returns 0. */
+export function depthAt(world: World, x: number, y: number): number {
+  const key = chunkKey(...chunkOf(x, y));
+  let depth = DEEP_WATER;
+  for (const id of world.reefChunks.get(key) ?? []) {
+    const rf = world.reefs[id];
+    if (Math.abs(rf.x - x) > rf.radius || Math.abs(rf.y - y) > rf.radius) continue;
+    if (pointInPolygon(x, y, rf.poly)) depth = Math.min(depth, rf.depth);
+  }
+  for (const id of world.chunks.get(key) ?? []) {
+    const is = world.islands[id];
+    if (Math.abs(is.x - x) > is.radius + SHALLOW_BAND || Math.abs(is.y - y) > is.radius + SHALLOW_BAND) continue;
+    if (pointInPolygon(x, y, is.poly)) return 0;
+    const d = Math.sqrt(closestOnPolygon(x, y, is.poly).d2);
+    if (d < SHALLOW_BAND) depth = Math.min(depth, 1.5 + (d / SHALLOW_BAND) * 4);
+  }
+  return depth;
 }

@@ -218,3 +218,30 @@ test('NPC pirates hunt, fight at range, board once and spare the plundered victi
   assert.ok(boards <= 1, `boarded ${boards} times`);
   assert.ok(ship.crew >= 2, 'survivors remain');
 });
+
+test('reefs: a deep galleon grounds and splinters, a shallow-running sloop skates over', () => {
+  const { game } = makeGame();
+  const reef = game.world.reefs.find((r) => r.depth < 2.0)!;
+  assert.ok(reef, 'world has shallow reefs');
+  const run = (classId: 'galleon' | 'sloop') => {
+    const npc = game.spawnNpcShip('merchant', classId, 'league', reef.x, reef.y - reef.radius - 20, Math.PI);
+    game.npcs.delete(npc.id); // drive it by hand, straight across the reef
+    npc.state.speed = 9;
+    npc.state.sail = 1;
+    npc.input = { rudder: 0, sailTarget: 1 };
+    game.grid.upsert(npc.id, npc.state.x, npc.state.y);
+    const hull0 = npc.hull;
+    let minSpeed = 99;
+    for (let i = 0; i < 20 * 40; i++) {
+      game.step();
+      minSpeed = Math.min(minSpeed, npc.state.speed);
+    }
+    game.removeShip(npc.id);
+    return { dmg: hull0 - npc.hull, minSpeed };
+  };
+  const galleon = run('galleon');
+  const sloop = run('sloop');
+  assert.ok(galleon.dmg > 0, `galleon damage ${galleon.dmg}`);
+  assert.ok(sloop.dmg === 0, `sloop damage ${sloop.dmg}`);
+  assert.ok(galleon.minSpeed < sloop.minSpeed, 'reef drags the galleon');
+});

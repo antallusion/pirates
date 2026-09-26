@@ -150,6 +150,7 @@ export class Renderer {
     this.drawOcean(state, region.waterTint);
     this.drawCurrents(state);
     const islands = this.visibleIslands(state);
+    this.drawReefs(state);
     for (const is of islands) this.drawShallows(is);
     for (const is of islands) this.drawIsland(is, state);
     this.drawPorts(state);
@@ -292,6 +293,41 @@ export class Renderer {
       else g.lineTo(this.sx(x), this.sy(y));
     }
     g.closePath();
+  }
+
+  private drawReefs(state: ClientState): void {
+    const g = this.g;
+    const hw = this.w / 2 / this.zoom + 300, hh = this.h / 2 / this.zoom + 300;
+    for (const rf of state.reefs.values()) {
+      if (Math.abs(rf.x - this.camX) - rf.r > hw || Math.abs(rf.y - this.camY) - rf.r > hh) continue;
+      g.save();
+      g.lineJoin = 'round';
+      this.path(rf.poly);
+      // Pale water over coral and sand: reads as danger without shouting.
+      g.fillStyle = 'rgba(52,96,92,0.26)';
+      g.fill();
+      g.lineWidth = 24 * this.zoom;
+      g.strokeStyle = 'rgba(40,84,82,0.10)';
+      g.stroke();
+      this.path(rf.poly, 0.55, rf.x, rf.y);
+      g.fillStyle = 'rgba(120,150,130,0.16)';
+      g.fill();
+      // Breakers.
+      this.path(rf.poly);
+      g.setLineDash([2 * this.zoom, 7 * this.zoom]);
+      g.lineDashOffset = -this.time * 3 * this.zoom;
+      g.strokeStyle = 'rgba(215,225,228,0.30)';
+      g.lineWidth = Math.max(1, 1.6 * this.zoom);
+      g.stroke();
+      g.setLineDash([]);
+      if (this.zoom > 1.2) {
+        g.font = 'italic 11px "Cormorant Garamond", Georgia, serif';
+        g.fillStyle = 'rgba(200,215,210,0.55)';
+        g.textAlign = 'center';
+        g.fillText(`reef · ${rf.depth.toFixed(1)} m`, this.sx(rf.x), this.sy(rf.y));
+      }
+      g.restore();
+    }
   }
 
   private drawShallows(is: IslandData): void {

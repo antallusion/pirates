@@ -27,7 +27,7 @@ import { windAt } from '../../../shared/src/sim/wind.ts';
 import type { WindSample } from '../../../shared/src/sim/wind.ts';
 import { REGIONS, WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { chunkKey, chunkOf, currentAt, generateWorld, islandsNear, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { chunkKey, chunkOf, currentAt, depthAt, generateWorld, islandsNear, regionAt } from '../../../shared/src/world/worldgen.ts';
 import type { Island, Port, World } from '../../../shared/src/world/worldgen.ts';
 import type { AuthService } from '../auth.ts';
 import { sanitizeName } from '../auth.ts';
@@ -297,6 +297,19 @@ export class Game {
           this.toastShip(ship, 'Ran aground! The keel groans.', 'bad');
         }
         ship.state.speed *= 0.25;
+      }
+    }
+    // Shoals and reefs: a keel deeper than the water drags and splinters (Shallow Runners skate over).
+    const draft = ship.cls.draft;
+    if (ship.cls.passive.id !== 'shallow_runner' && ship.state.speed > 0.4) {
+      const depth = depthAt(this.world, probes[0][0], probes[0][1]);
+      if (depth < draft) {
+        const over = draft - depth;
+        if (ship.state.speed > 1) {
+          applyDamage(this, ship, { hull: over * ship.state.speed * 0.3 * ship.cls.tier }, null);
+          if (this.tick % 20 === 0) this.toastShip(ship, depth < 2.5 ? 'Your keel grinds over the reef!' : 'Shoal water — she is dragging her keel.', 'bad');
+        }
+        ship.state.speed *= Math.max(0.9, 1 - over * 0.02);
       }
     }
     // The Maelstrom Wall.
@@ -1047,7 +1060,11 @@ export class Game {
         if (cx + dx < 0 || cy + dy < 0 || s.knownChunks.has(k)) continue;
         s.knownChunks.add(k);
         const list = this.world.chunks.get(k) ?? [];
-        this.sendTo(s, { t: 'chunk', key: k, islands: list.map((id) => this.islandData(this.world.islands[id])) });
+        const reefs = (this.world.reefChunks.get(k) ?? []).map((id) => {
+          const rf = this.world.reefs[id];
+          return { id: rf.id, x: Math.round(rf.x), y: Math.round(rf.y), r: Math.round(rf.radius), poly: rf.poly.map((v) => Math.round(v)), depth: rf.depth };
+        });
+        this.sendTo(s, { t: 'chunk', key: k, islands: list.map((id) => this.islandData(this.world.islands[id])), reefs });
       }
     }
   }
