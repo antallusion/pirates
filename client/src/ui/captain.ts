@@ -6,8 +6,9 @@ import { SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
 import { TREES } from '../../../shared/src/data/talents.ts';
 import { assetUrl } from '../assets.ts';
 import { $, esc } from './dom.ts';
+import { t } from '../i18n.ts';
 
-export function showCaptainSelect(onPick: (id: CaptainId, shipName: string) => void): void {
+export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tutorial: boolean) => void): void {
   $('screen-captain').classList.remove('hidden');
   const list = $('captain-list');
   let current: CaptainId = 'corsair';
@@ -38,12 +39,13 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string) => v
         ${c.abilities.map((a) => `<div class="ability ${a.kind === 'ultimate' ? 'ult' : ''}"><span class="key">${a.key}</span><b>${esc(a.name)}</b> <span class="muted">· ${a.cooldown}s</span><small>${esc(a.description)}</small></div>`).join('')}
         <p class="muted" style="font-size:13px;font-family:var(--sans)">Starts with a ${esc(ship.name)} (${esc(GUNS[c.start.gun].name)}s), ${c.start.crew} crew, ${c.start.gold} silver, in Saltmarrow on the Black Coast.</p>
         <label class="lbl">Name your ship<input id="ship-name" class="field" maxlength="20" value="${esc(defaultShipName(current))}" /></label>
+        <label class="check"><input type="checkbox" id="know-sea" /> ${esc(t('captain.knowSea'))}</label>
         <div style="margin-top:12px"><button id="pick-captain" class="btn btn-primary">Take command</button></div>
       </div>`;
     $('pick-captain').onclick = () => {
       const name = ($('ship-name') as HTMLInputElement).value.trim();
       $('screen-captain').classList.add('hidden');
-      onPick(current, name);
+      onPick(current, name, !($('know-sea') as HTMLInputElement).checked);
     };
   };
   render();

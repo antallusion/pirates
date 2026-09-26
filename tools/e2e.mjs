@@ -30,6 +30,7 @@ await page.click('#login-form button');
 await page.waitForSelector('#screen-captain:not(.hidden)', { timeout: 10000 });
 await page.click('.captain-card[data-id="reaver"]');
 await page.screenshot({ path: `${out}/02-captain.png` });
+await page.check('#know-sea');
 await page.click('#pick-captain');
 await page.waitForSelector('#hud:not(.hidden)', { timeout: 10000 });
 await page.waitForTimeout(800);

@@ -57,6 +57,7 @@ import {
 } from './crew.ts';
 import { Social, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
+import { onboardingAction, onboardingProtected, onboardingRescue, onboardingSecond, onboardingSeen, onboardingStart, onboardingView } from './onboarding.ts';
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
 import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
 import type { Holding } from './holdings.ts';
@@ -772,6 +773,7 @@ export class Game {
       if (this.tick % 1200 < 20) priceLetters(this, s, (pt) => recordIntel(this, s, pt));
       if (this.tick % 200 < 20) tendCaravans(this, s, (c, from) => planMerchantVoyage(this, c, this.npcs.get(c.id)!, from));
       checkDeeds(this, s, 1);
+      onboardingSecond(this, s);
       abyssSecond(this, s);
       legendarySecond(this, s);
       // The governor's purple, unless a season pennant is flown.
@@ -1438,7 +1440,7 @@ export class Game {
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
     if (ship.yardOf) onYardCaptainSunk(this, ship);
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
-    this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship), victor);
+    if (!onboardingProtected(this.sessionOf(ship))) this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship), victor); // the First Watch loses nothing
     onShipSunk(this, ship, killer);
     if (killer) this.creditKill(killer, ship, 'sunk');
   }
@@ -1576,6 +1578,14 @@ export class Game {
 
   private playerDeath(s: PlayerSession, ship: ShipEntity): void {
     const p = s.profile!;
+    // The First Watch: a Crown patrol tows her home; nothing is lost.
+    if (onboardingRescue(this, s)) {
+      const home = this.portById(p.lastPort) ?? this.portById(START_PORT)!;
+      this.refitAndDock(s, ship, home);
+      this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: 0, crew: 0, repairFee: 0 }, respawnPort: home.id, towed: true });
+      this.saveSession(s);
+      return;
+    }
     if (ship.loadout.legendary) legendarySunk(this, s, ship); // Sunken Glory
     grantBubble(this, s);
     onSunkCrew(this, s);
@@ -1634,6 +1644,14 @@ export class Game {
     for (const a of AMMO_IDS) ship.ammo[a] = Math.floor(ship.ammo[a] * 0.5);
     ship.crew = Math.max(Math.round(ship.stats.crewMin * 0.6), ship.crew - crewLost);
     ship.morale = 50;
+    this.refitAndDock(s, ship, port);
+    this.db.ledger(s.accountId, 'death', -fee, `sunk; cargo ${lostValue}`);
+    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: lostValue, crew: crewLost, repairFee: fee }, respawnPort: port.id });
+    this.saveSession(s);
+  }
+
+  /** A ship back from the bottom (or towed in): patched, emptied of water and fire, at the quay. */
+  private refitAndDock(s: PlayerSession, ship: ShipEntity, port: Port): void {
     ship.sinkingUntil = 0;
     ship.surrendered = false;
     ship.boarding = null;
@@ -1652,9 +1670,6 @@ export class Game {
     ship.state = { x: port.x, y: port.y, heading: 0, speed: 0, sail: 0, rudder: 0 };
     ship.input = { rudder: 0, sailTarget: 0 };
     this.dockShip(s, port);
-    this.db.ledger(s.accountId, 'death', -fee, `sunk; cargo ${lostValue}`);
-    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: lostValue, crew: crewLost, repairFee: fee }, respawnPort: port.id });
-    this.saveSession(s);
   }
 
   onBoardingWon(a: ShipEntity, b: ShipEntity, result: BoardingResult): void {
@@ -2146,7 +2161,7 @@ export class Game {
     if (msg.t === 'ping') return this.sendTo(s, { t: 'pong', c: msg.c, s: this.now });
     if (msg.t === 'hello') return this.onHello(s, msg);
     if (!s.authed) return this.sendTo(s, { t: 'err', msg: 'Not authenticated' });
-    if (msg.t === 'create_captain') return this.onCreateCaptain(s, msg.captain, msg.shipName);
+    if (msg.t === 'create_captain') return this.onCreateCaptain(s, msg.captain, msg.shipName, msg.tutorial === true);
     const ship = s.ship;
     const p = s.profile;
     if (!ship || !p) return this.sendTo(s, { t: 'err', msg: 'No captain' });
@@ -2163,6 +2178,9 @@ export class Game {
     };
 
     switch (msg.t) {
+      case 'onboarding':
+        if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);
+        return;
       case 'input': {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;
         if (s.profile?.company.mutiny) return; // the mutineers hold the wheel
@@ -2732,12 +2750,13 @@ export class Game {
     if (s.profile) this.sendInit(s);
   }
 
-  private onCreateCaptain(s: PlayerSession, captain: CaptainId, rawShipName: string): void {
+  private onCreateCaptain(s: PlayerSession, captain: CaptainId, rawShipName: string, tutorial = false): void {
     if (s.profile) return this.sendTo(s, { t: 'err', msg: 'You already have a captain' });
     if (!CAPTAIN_IDS.includes(captain)) return this.sendTo(s, { t: 'err', msg: 'Unknown captain' });
     const shipName = sanitizeName(rawShipName ?? '') ?? CAPTAINS[captain].epithet;
     const port = this.portById(START_PORT)!;
     s.profile = newProfile(captain, shipName, port.id, this.now);
+    onboardingStart(this, s, tutorial);
     this.spawnPlayerShip(s, port.x, port.y, 0);
     this.saveSession(s);
     this.sendInit(s);
@@ -2804,6 +2823,8 @@ export class Game {
     if (s.ship?.docked) this.pushPort(s);
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
     sendEvents(this, s);
+    onboardingSeen(this, s);
+    this.sendTo(s, { t: 'onboarding', view: onboardingView(s.profile!) });
     applyPantheon(this, s);
     ensureLegendary(this, s);
     sendSites(this, s);

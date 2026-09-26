@@ -2,6 +2,7 @@
 // With LINK_PORT and LINK_SECRET set it also takes sessions relayed by dedicated Gateways
 // (server/src/gateway.ts, net/link.ts); without them it serves players directly.
 
+import { onboardingReport } from './game/onboarding.ts';
 import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +40,12 @@ const game = new Game({ db, auth, shared });
 const serveStatic = createStaticHandler(root);
 
 const server = createServer(async (req, res) => {
+  if (req.url === '/onboarding') {
+    // The First Watch funnel (docs/07 §13.3): steps passed and skipped, time per step, hints, retention.
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(onboardingReport(game)));
+    return;
+  }
   if (req.url === '/health/profile') {
     // Per-subsystem step timings over the last 30 s (mean, worst, share of the step).
     res.writeHead(200, { 'Content-Type': 'application/json' });

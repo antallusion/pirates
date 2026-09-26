@@ -332,6 +332,16 @@ export class Fx {
           case 'song':
             this.add({ kind: 'ring', x: e.x, y: e.y, life: 4, size: 40, grow: (e.r ?? 1600) / 4, color: '#9b6bd0' });
             break;
+          case 'plankton': {
+            // Bioluminescence wakes around the hull: slow teal motes and a soft light (the First Watch's strangeness).
+            const r = e.r ?? 220;
+            for (let i = 0; i < 90; i++) {
+              const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * r;
+              this.particles.push({ kind: 'glow', x: e.x + Math.sin(a) * d, y: e.y - Math.cos(a) * d, vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1.5, t: 0, life: 6 + Math.random() * 6, size: 2 + Math.random() * 3, grow: 0.3, color: Math.random() < 0.7 ? '#2ee6c8' : '#8ff7e6' });
+            }
+            this.light(e.x, e.y, r * 1.4, 'rgba(46,230,200,1)', 0.7, 10);
+            break;
+          }
           case 'ice':
             this.splinters(e.x, e.y, 18);
             this.add({ kind: 'flash', x: e.x, y: e.y, life: 0.3, size: 8, grow: 40, color: '#dff4ff' });

@@ -18,7 +18,7 @@ const SECRET = process.env.LINK_SECRET ?? '';
 if (SECRET.length < 16) throw new Error('Set LINK_SECRET (at least 16 characters), the same as on the worlds.');
 const gw = new Gateway({ zones: parseZones(process.env.LINK_ZONES ?? 'main=127.0.0.1:9100@http://127.0.0.1:8081'), secret: SECRET });
 const serveStatic = createStaticHandler(root);
-const PASS = /^\/(auth\/|health|economy|leaderboard)/;
+const PASS = /^\/(auth\/|health|economy|leaderboard|onboarding)/;
 
 const server = createServer(async (req, res) => {
   if (req.url === '/gateway/health') {

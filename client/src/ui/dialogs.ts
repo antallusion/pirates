@@ -3,7 +3,9 @@
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, AMMO, SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
-import type { BoardingResult, ClientMsg } from '../../../shared/src/protocol.ts';
+import type { BoardingResult, ClientMsg, OnboardingView } from '../../../shared/src/protocol.ts';
+import { t } from '../i18n.ts';
+import { logbookHtml } from './onboarding.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
@@ -63,7 +65,16 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
   draw();
 }
 
-export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: number; repairFee: number }, portName: string, close: () => void): void {
+export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: number; repairFee: number }, portName: string, close: () => void, towed = false): void {
+  if (towed) {
+    // The First Watch: the soft version, so the real one is recognised later.
+    root.innerHTML = `<div class="modal-body"><div class="center-card">
+      <h2 class="title-sm" style="font-size:40px">${esc(t('towed.title'))}</h2>
+      <p style="font-family:var(--serif);font-size:18px;color:var(--fog)">${esc(t('towed.body', { port: portName }))}</p>
+      <button class="btn btn-primary">${esc(t('towed.ok'))}</button></div></div>`;
+    root.querySelector('button')!.onclick = close;
+    return;
+  }
   root.innerHTML = `<div class="modal-body"><div class="center-card">
     <h2 class="title-sm" style="font-size:40px">The sea took her</h2>
     <p style="font-family:var(--serif);font-size:18px;color:var(--fog)">Survivors were fished from the water and carried to ${esc(portName)}. The shipwrights raised what was left of her hull.</p>
@@ -112,7 +123,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
   }));
 }
 
-export function renderHelp(root: HTMLElement): void {
+export function renderHelp(root: HTMLElement, onboarding: OnboardingView | null = null): void {
   const keys: [string, string][] = [
     ['W / S', 'Raise / lower sail (5 steps). Wind angle matters: watch the compass no-go wedge.'],
     ['A / D', 'Rudder. Ships need way on to turn.'],
@@ -143,5 +154,5 @@ export function renderHelp(root: HTMLElement): void {
     <div class="modal-body"><div class="cols"><div class="help-grid">${keys.map(([k, d]) => `<kbd>${esc(k)}</kbd><span>${esc(d)}</span>`).join('')}</div>
     <div><div class="card"><h4>First voyage</h4><p>Saltmarrow sells cheap provisions and salt. Porto Blackwater, east along the Black Coast, pays for salt and sells sugar and rum. Gravesend buys sugar. Every sale earns experience.</p></div>
     <div class="card"><h4>The law</h4><p>Attacking lawful ships raises your Wanted level. Crown ports close at Wanted 2, League at 3. Pirate havens (Cinderhold, Fogmouth) never close. Pardons are sold in free and broker ports.</p></div>
-    <div class="card"><h4>Risk</h4><p>Safe waters (Black Coast) forbid PvP but for duels by consent. Contested and lawless waters do not — though young captains sail under the Green Pennant in contested water, and a sunk captain is protected for ten minutes. When sunk you keep your ship, level and talents — but cargo, some crew, a repair fee and a tenth of the silver aboard are lost. The League bank keeps the rest safe.</p></div></div></div></div>`;
+    <div class="card"><h4>Risk</h4><p>Safe waters (Black Coast) forbid PvP but for duels by consent. Contested and lawless waters do not — though young captains sail under the Green Pennant in contested water, and a sunk captain is protected for ten minutes. When sunk you keep your ship, level and talents — but cargo, some crew, a repair fee and a tenth of the silver aboard are lost. The League bank keeps the rest safe.</p></div>${logbookHtml(onboarding)}</div></div></div>`;
 }

@@ -21,6 +21,7 @@ await page.fill('#login-name', 'Showcase ' + Math.random().toString(36).slice(2,
 await page.click('#login-form button');
 await page.waitForSelector('#screen-captain:not(.hidden)');
 await page.click('.captain-card[data-id="corsair"]');
+await page.check('#know-sea');
 await page.click('#pick-captain');
 await page.waitForSelector('#hud:not(.hidden)');
 await page.waitForTimeout(600);

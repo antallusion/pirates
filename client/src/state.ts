@@ -5,8 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
-} from '../../shared/src/protocol.ts';
+  BarterView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
 import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
@@ -87,6 +86,7 @@ export class ClientState {
   /** Sunken cities and ship graveyards; the diving bell when one of ours is down (expeditions.ts). */
   pveSites: PveSiteView[] = [];
   legends: LegendsView | null = null;
+  onboarding: OnboardingView | null = null;
   empire: EmpireView | null = null;
   dive: DiveView | null = null;
   eventsAt = 0;
@@ -208,6 +208,9 @@ export class ClientState {
         break;
       case 'legends':
         this.legends = m.view;
+        break;
+      case 'onboarding':
+        this.onboarding = m.view;
         break;
       case 'empire':
         this.empire = m.view;

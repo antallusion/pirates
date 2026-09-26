@@ -26,7 +26,8 @@ export type WeatherKind = 'calm' | 'breeze' | 'wind' | 'fog' | 'rain' | 'storm' 
 
 export type ClientMsg =
   | { t: 'hello'; v: number; token?: string; name?: string }
-  | { t: 'create_captain'; captain: CaptainId; shipName: string }
+  | { t: 'create_captain'; captain: CaptainId; shipName: string; tutorial?: boolean } // tutorial: the First Watch (docs/07 §13)
+  | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' }
   | { t: 'input'; seq: number; rudder: number; sail: number }
   | { t: 'fire'; side: Side; dist: number; x?: number; y?: number } // x, y: aim point (Improved Carriages)
   | { t: 'chase'; end: ChaserEnd; x: number; y: number }
@@ -782,7 +783,7 @@ export type GameEvent =
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
-    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig'; x: number; y: number; r?: number; dir?: number }
+    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton'; x: number; y: number; r?: number; dir?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 
@@ -816,6 +817,9 @@ export type ServerMsg =
   | { t: 'boss'; list: BossView[] }
   | { t: 'events'; list: WorldEventView[] }
   | { t: 'legends'; view: LegendsView }
+  | { t: 'onboarding'; view: OnboardingView }
+  /** A moment of the First Watch: a step done or skipped, a contextual hint, a goal met, the edge of safe waters. */
+  | { t: 'onb'; kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge'; id: string }
   | { t: 'empire'; view: EmpireView }
   | { t: 'pve_sites'; list: PveSiteView[] }
   | { t: 'dive'; view: DiveView | null }
@@ -826,7 +830,7 @@ export type ServerMsg =
   | { t: 'port'; view: PortView | null }
   | { t: 'boarding'; result: BoardingResult | null }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
-  | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string }
+  | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
   | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' }
   | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[] }
@@ -1052,4 +1056,19 @@ export function curseStage(curse: number): 0 | 1 | 2 | 3 {
 
 export function curseStageFromFlags(flags: number): number {
   return (flags & SF.CURSE_LOW ? 1 : 0) + (flags & SF.CURSE_HIGH ? 2 : 0);
+}
+
+/** HUD blocks the First Watch brings in one at a time (docs/07 §13.1). */
+export type HudBlock = 'ship' | 'nav' | 'cargo' | 'feed' | 'target' | 'guns' | 'abilities' | 'map' | 'talents' | 'wanted' | 'captain' | 'minimap';
+
+/** Where a captain stands in the First Watch and the Captain's Goals (onboarding.ts). */
+export interface OnboardingView {
+  stage: string | null; // the current step, or null when the watch is over
+  index: number;
+  of: number;
+  hud: HudBlock[] | null; // visible blocks; null = all of them
+  tip: { good: string; port: string; hours: number } | null; // the tavern's note (first trade)
+  goals: string[] | null; // the three goals under way, or null (hidden, or still in the watch)
+  goalsDone: number;
+  hints: string[]; // hints seen, for the logbook
 }

@@ -23,8 +23,9 @@ import { PortScreen } from './ui/port.ts';
 import { TalentScreen } from './ui/talents.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
+import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 
-type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | null;
+type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -36,7 +37,9 @@ for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListen
 const worldMap = new WorldMap();
 let modal: Modal = null;
 let inGame = false;
-let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; port: string } | null = null;
+let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; port: string; towed: boolean } | null = null;
+/** The prologue plays once, for a captain who has just taken the First Watch. */
+let prologuePending = false;
 const keys = new Set<string>();
 let lastInputSent = 0;
 let lastInputKey = '';
@@ -47,6 +50,12 @@ const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
 const divePanel = new DivePanel((m) => net.send(m));
+const onboarding = new OnboardingUi(state);
+onboarding.send = (action) => net.send({ t: 'onboarding', action });
+onboarding.onEdge = () => {
+  // Never over a fight's screen: the boarding or the shipwreck come first.
+  if (modal === null || modal === 'map' || modal === 'help') openModal('edge');
+};
 
 // ------------------------------------------------------------------ boot
 
@@ -150,17 +159,34 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'welcome':
       $('screen-login').classList.add('hidden');
-      if (!m.hasCaptain) showCaptainSelect((captain, shipName) => net.send({ t: 'create_captain', captain, shipName }));
+      if (!m.hasCaptain) showCaptainSelect((captain, shipName, tutorial) => {
+        prologuePending = tutorial;
+        net.send({ t: 'create_captain', captain, shipName, tutorial });
+      });
       break;
     case 'init':
       inGame = true;
       $('screen-captain').classList.add('hidden');
       hud.show(true);
       if (state.you === null && m.self.dockedAt) openModal('port');
-      if (!localStorage.getItem('gravetide.helpSeen')) {
+      if (prologuePending) {
+        // The First Watch teaches by doing: no handbook up front, the prologue, then the quay.
+        prologuePending = false;
+        localStorage.setItem('gravetide.helpSeen', '1');
+        closeModal();
+        playPrologue(() => undefined);
+      } else if (!localStorage.getItem('gravetide.helpSeen')) {
         localStorage.setItem('gravetide.helpSeen', '1');
         openModal('help');
       }
+      break;
+    case 'onboarding':
+      onboarding.apply(m.view);
+      if (modal === 'help') refreshModal();
+      break;
+    case 'onb':
+      onboarding.moment(m.kind, m.id, (msg, kind) => hud.toast(msg, kind));
+      if (m.kind === 'goal' || m.kind === 'stage') audio.coins();
       break;
     case 'port':
       if (m.view && modal !== 'port') audio.bell();
@@ -186,7 +212,7 @@ function onMessage(m: ServerMsg): void {
       else if (modal === 'boarding') closeModal();
       break;
     case 'sunk_self':
-      lastSunk = { lost: m.lost, port: state.ports.find((p) => p.id === m.respawnPort)?.name ?? 'port' };
+      lastSunk = { lost: m.lost, port: state.ports.find((p) => p.id === m.respawnPort)?.name ?? 'port', towed: !!m.towed };
       openModal('sunk');
       break;
     case 'toast':
@@ -264,7 +290,10 @@ function refreshModal(): void {
       renderShip(root, state, (m) => net.send(m));
       break;
     case 'help':
-      renderHelp(root);
+      renderHelp(root, state.onboarding);
+      break;
+    case 'edge':
+      renderEdge(root, () => closeModal());
       break;
     case 'boarding':
       if (state.boarding) renderBoarding(root, state.boarding, state, (m) => net.send(m), () => closeModal());
@@ -282,7 +311,7 @@ function refreshModal(): void {
       if (state.barter) keepInputs(root, () => renderBarter(root, state, (m) => net.send(m)));
       break;
     case 'sunk':
-      if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null));
+      if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
       break;
   }
 }

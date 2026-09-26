@@ -1,6 +1,7 @@
 // Naval combat: broadsides, ballistics, hit resolution with angle-of-impact and subsystem damage,
 // crimes and kill credit. All numbers come from shared data; nothing here trusts the client.
 
+import { onboardingVolley } from './onboarding.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
 import type { ChaserEnd } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
@@ -330,6 +331,7 @@ function volleyBall(game: Game, p: Projectile, target: ShipEntity | null): void 
   game.volleys.delete(p.volley);
   const owner = game.ships.get(rec.owner);
   if (!owner) return;
+  if (owner.isPlayer) onboardingVolley(game, owner, [...rec.hits.values()].reduce((x, y) => x + y, 0));
   let top = 0, topId = 0;
   for (const [id, n] of rec.hits) if (n > top) {
     top = n;

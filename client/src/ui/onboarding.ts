@@ -1,0 +1,154 @@
+// The First Watch on the client (docs/07 §13): the step panel, the HUD revealed block by block, contextual
+// hints, the Captain's Goals line under the minimap, the prologue, and the edge-of-safe-waters screen.
+// The server says which step and which hint; the words are here, in both languages.
+
+import type { HudBlock, OnboardingView } from '../../../shared/src/protocol.ts';
+import { has, onLang, t } from '../i18n.ts';
+import type { Key } from '../i18n.ts';
+import type { ClientState } from '../state.ts';
+import { $, esc } from './dom.ts';
+
+/** Which DOM block shows which part of the HUD. */
+const BLOCKS: Record<string, HudBlock[]> = {
+  'hud-ship': ['ship'],
+  'hud-nav': ['nav'],
+  'hud-captain': ['captain', 'wanted'],
+  'hud-map': ['minimap', 'map'],
+  'hud-combat': ['guns', 'abilities'],
+};
+
+export class OnboardingUi {
+  private shown = new Set<string>(Object.keys(BLOCKS));
+  private view: OnboardingView | null = null;
+  private hintTimer = 0;
+  private state: ClientState;
+  send: (action: 'skip_stage' | 'skip_all' | 'hide_goals') => void = () => {};
+  /** A screen to open (the edge of safe waters). */
+  onEdge: () => void = () => {};
+
+  constructor(state: ClientState) {
+    this.state = state;
+    onLang(() => this.apply(this.view));
+  }
+
+  apply(view: OnboardingView | null): void {
+    this.view = view;
+    this.applyHud(view?.hud ?? null);
+    this.renderWatch(view);
+    this.renderGoals(view);
+  }
+
+  private applyHud(hud: HudBlock[] | null): void {
+    for (const [id, parts] of Object.entries(BLOCKS)) {
+      const on = !hud || parts.some((p) => hud.includes(p));
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.classList.toggle('tut-hidden', !on);
+      // A block that comes in draws itself.
+      if (on && !this.shown.has(id)) {
+        el.classList.remove('tut-reveal');
+        void el.offsetWidth;
+        el.classList.add('tut-reveal');
+      }
+      if (on) this.shown.add(id);
+      else this.shown.delete(id);
+    }
+  }
+
+  private renderWatch(v: OnboardingView | null): void {
+    const el = $('hud-watch');
+    if (!v?.stage) {
+      el.classList.add('hidden');
+      return;
+    }
+    const k = `stage.${v.stage}` as Key;
+    const body = `stage.${v.stage}.body` as Key;
+    const tip = v.tip ? t('stage.first_trade.tip', { good: v.tip.good, port: this.portName(v.tip.port), hours: v.tip.hours }) : '';
+    el.classList.remove('hidden');
+    el.innerHTML = `<div class="w-head"><span>${esc(t('watch.title'))} · ${v.index + 1}/${v.of}</span><b>${esc(has(k) ? t(k) : v.stage)}</b></div>
+      <div class="w-body">${esc(has(body) ? t(body) : '')}${tip ? `<div class="w-tip">${esc(tip)}</div>` : ''}</div>
+      <div class="w-act"><button class="btn btn-small" data-a="skip_stage">${esc(t('watch.skip'))}</button><button class="btn btn-small btn-ghost" data-a="skip_all">${esc(t('watch.skipAll'))}</button></div>`;
+    el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => this.send(b.dataset.a as 'skip_stage')));
+  }
+
+  private renderGoals(v: OnboardingView | null): void {
+    const el = $('hud-goals');
+    const goals = v?.goals ?? null;
+    if (!goals || !goals.length) {
+      el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    const first = `goal.${goals[0]}` as Key;
+    el.innerHTML = `<span class="g-lbl">${esc(t('goals.title'))}</span> ${esc(has(first) ? t(first) : goals[0])}${goals.length > 1 ? ` <span class="muted">+${goals.length - 1}</span>` : ''}<button class="g-x" title="${esc(t('goals.hide'))}">×</button>`;
+    el.querySelector<HTMLButtonElement>('.g-x')!.onclick = () => this.send('hide_goals');
+  }
+
+  /** A moment from the server: a step done, a hint, a goal met, the edge of safe waters. */
+  moment(kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge', id: string, toast: (msg: string, kind: string) => void): void {
+    if (kind === 'stage') {
+      const k = `stage.${id}` as Key;
+      toast(t('watch.done', { name: has(k) ? t(k) : id }), 'good');
+      if (id === 'edge') toast(t('watch.over'), 'xp');
+    } else if (kind === 'hint') this.hint(id);
+    else if (kind === 'goal') {
+      const k = `goal.${id}` as Key;
+      toast(t('goals.met', { name: has(k) ? t(k) : id }), 'xp');
+    } else if (kind === 'edge') this.onEdge();
+  }
+
+  hint(id: string): void {
+    const k = `hint.${id}` as Key;
+    if (!has(k)) return;
+    const el = $('hud-hint');
+    el.innerHTML = `<b>${esc(t('hint.title'))}</b> ${esc(t(k))}`;
+    el.classList.add('show');
+    clearTimeout(this.hintTimer);
+    this.hintTimer = window.setTimeout(() => el.classList.remove('show'), 9000);
+  }
+
+  private portName(id: string): string {
+    return this.state.ports.find((p) => p.id === id)?.name ?? id;
+  }
+}
+
+/** The prologue: three lines over the harbour at night, then the watch begins. Any click ends it. */
+export function playPrologue(done: () => void): void {
+  const el = $('prologue');
+  el.innerHTML = `<p>${esc(t('prologue.1'))}</p><p>${esc(t('prologue.2'))}</p><p>${esc(t('prologue.3'))}</p><small>${esc(t('prologue.skip'))}</small>`;
+  el.classList.remove('hidden');
+  let over = false;
+  const end = () => {
+    if (over) return;
+    over = true;
+    el.classList.add('fade');
+    setTimeout(() => {
+      el.classList.add('hidden');
+      el.classList.remove('fade');
+      done();
+    }, 600);
+  };
+  el.onclick = end;
+  addEventListener('keydown', end, { once: true });
+  setTimeout(end, 11000);
+}
+
+export function renderEdge(root: HTMLElement, close: () => void): void {
+  root.innerHTML = `<div class="modal-body"><div class="center-card">
+    <h2 class="title-sm" style="font-size:34px">${esc(t('edge.title'))}</h2>
+    <ul class="edge-list"><li>${esc(t('edge.pvp'))}</li><li>${esc(t('edge.wanted'))}</li><li>${esc(t('edge.insure'))}</li></ul>
+    <p class="muted">${esc(t('edge.once'))}</p>
+    <button class="btn btn-primary">${esc(t('edge.ok'))}</button></div></div>`;
+  root.querySelector('button')!.onclick = close;
+}
+
+/** The logbook section of the Handbook: every hint given, the goals under way. */
+export function logbookHtml(v: OnboardingView | null): string {
+  const hints = (v?.hints ?? []).filter((h) => has(`hint.${h}`));
+  const goals = v?.goals ?? [];
+  return `<div class="card"><h4>${esc(t('log.title'))}</h4>
+    <p><b>${esc(t('log.goals'))}</b>${v?.goalsDone ? ` <span class="muted">(${esc(t('log.goalsDone', { n: v.goalsDone }))})</span>` : ''}</p>
+    ${goals.length ? `<ul>${goals.map((g) => `<li>${esc(has(`goal.${g}`) ? t(`goal.${g}` as Key) : g)}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}
+    <p><b>${esc(t('log.hints'))}</b></p>
+    ${hints.length ? `<ul>${hints.map((h) => `<li>${esc(t(`hint.${h}` as Key))}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}</div>`;
+}
