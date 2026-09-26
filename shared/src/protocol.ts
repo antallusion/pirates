@@ -128,6 +128,8 @@ export type ClientMsg =
   | { t: 'isle'; action: 'yard_order'; island: number; req: Extract<ClientMsg, { t: 'build' }>['req'] }
   | { t: 'isle'; action: 'yard_launch'; island: number; id: string }
   | { t: 'isle'; action: 'yard_berth'; island: number; index: number }
+  | { t: 'isle'; action: 'siege' | 'fortify'; island: number }
+  | { t: 'isle'; action: 'siege_choice'; island: number; choice: 'capture' | 'plunder' | 'raze' }
   | { t: 'guild'; action: 'view' }
   | { t: 'guild'; action: 'found'; name: string; tag: string }
   | { t: 'guild'; action: 'invite'; name: string }
@@ -620,7 +622,7 @@ export type ServerMsg =
   | { t: 'mail'; letters: LetterView[]; unread: number }
   | { t: 'market'; view: MarketView }
   | { t: 'duel'; view: DuelView | null }
-  | { t: 'holdings'; mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[] }
+  | { t: 'holdings'; mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[]; sieges: SiegeView[] }
   | { t: 'guild'; guild: GuildView | null; invites: { id: number; name: string; tag: string; by: string }[] }
   | { t: 'bounties'; list: BountyView[] }
   | { t: 'marks'; list: { name: string; x: number; y: number }[] }
@@ -763,6 +765,23 @@ export interface HoldingView {
   shieldUntil: number;
   base: number; // guild base level 0..5
   guild: boolean;
+}
+
+export interface SiegeView {
+  island: number;
+  name: string;
+  attacker: string;
+  defender: string;
+  attacking: boolean;
+  phase: 'notice' | 'bombard' | 'fortify' | 'landing' | 'choose';
+  windowStart: number;
+  windowEnd: number;
+  batteries: number[]; // % left
+  fort: number | null;
+  capture: number; // % of the landing held
+  landing: { x: number; y: number };
+  choiceUntil: number;
+  notes: string[];
 }
 
 export interface IslandOffer {

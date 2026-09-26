@@ -12,7 +12,7 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { WOODS } from '../../../shared/src/data/shipbuild.ts';
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { GROUP_MAX } from '../../../shared/src/protocol.ts';
-import type { GuildRank, HoldingView, IslandOffer } from '../../../shared/src/protocol.ts';
+import type { GuildRank, HoldingView, IslandOffer, SiegeView } from '../../../shared/src/protocol.ts';
 import type { ClientMsg, ListingView } from '../../../shared/src/protocol.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
@@ -109,7 +109,7 @@ export class CompanyScreen {
     const self = state.self;
     const guildLease = !!state.guild && ['admiral', 'vice'].includes(state.guild.rank);
     const offer = (o: IslandOffer) => `<div class="card"><h4>${esc(o.name)} <span class="muted">— ${o.size}, ${o.slots} slots, ${esc(o.biome)}${o.mine ? ', ore' : ''}</span></h4>
-      ${o.held ? `<p class="muted">Leased to ${esc(o.held)}.</p>` : o.why ? `<p class="muted">${esc(o.why)}</p>` : `<div class="row" style="gap:6px">${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-rent="${o.island}" data-days="${d}">${d} days — ${fmt(o.price[d])}</button>`).join('')}</div>
+      ${o.held ? `<p class="muted">Leased to ${esc(o.held)}.${!hs.mine.some((h) => h.island === o.island) && !hs.sieges.some((x) => x.island === o.island) ? ` <button class="btn btn-small btn-danger" data-siege="${o.island}" title="Contested: at a harbour office in its waters, 15% of a week's rent (min 10 000). Lawless: the Black Mark at a Confederacy port, 25 000.">Declare a siege</button>` : ''}</p>` : o.why ? `<p class="muted">${esc(o.why)}</p>` : `<div class="row" style="gap:6px">${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-rent="${o.island}" data-days="${d}">${d} days — ${fmt(o.price[d])}</button>`).join('')}</div>
         ${guildLease ? `<div class="row" style="gap:6px"><span class="muted">For the guild:</span>${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-glease="${o.island}" data-days="${d}">${d} days</button>`).join('')}</div>` : ''}`}</div>`;
     const here = hs.here && !hs.mine.some((h) => h.island === hs.here!.island) ? offer(hs.here) : '';
     const nearId = hs.here?.island ?? -1;
@@ -142,7 +142,15 @@ export class CompanyScreen {
           <p class="muted">Siege window (UTC): <select data-window="${h.island}">${[16, 17, 18, 19, 20, 21, 22].map((hr) => `<option value="${hr}" ${hr === (h.windowNext ?? h.window) ? 'selected' : ''}>${hr}:00–${hr + 2}:00</option>`).join('')}</select>${h.windowNext !== null ? ' (changes in 48 h)' : ''}</p>`
         : '<p class="muted">Lie off the island to build, use the store and its services.</p>'}</div>`;
     };
+    const when = (t: number) => `${new Date(t).toUTCString().slice(5, 22)} UTC`;
+    const siege = (x: SiegeView) => `<div class="card"><h4 class="${x.attacking ? '' : 'bad'}">Siege of ${esc(x.name)} <span class="muted">— ${esc(x.attacker)} against ${esc(x.defender)}</span></h4>
+      <p>${x.phase === 'notice' ? `Bombardment opens ${when(x.windowStart)} (two hours).` : x.phase === 'bombard' ? `<b>Bombardment</b> until ${when(x.windowEnd)}: silence the guns.` : x.phase === 'fortify' ? `The lull: the landing comes ${when(x.windowStart)}.` : x.phase === 'landing' ? `<b>The landing</b> until ${when(x.windowEnd)}: held ${x.capture}% of ten minutes.` : '<b>The island has fallen.</b>'}</p>
+      <p class="muted">Batteries ${x.batteries.map((b) => `${b}%`).join(', ') || 'none'}${x.fort !== null ? ` · fort ${x.fort}%` : ''} · landing point ${x.landing.x}, ${x.landing.y}</p>
+      ${x.phase === 'choose' && x.attacking ? `<div class="row" style="gap:6px"><button class="btn btn-small btn-primary" data-sgc="capture" data-isl="${x.island}">Capture it</button><button class="btn btn-small" data-sgc="plunder" data-isl="${x.island}">Plunder it</button><button class="btn btn-small btn-danger" data-sgc="raze" data-isl="${x.island}">Raze it</button></div>` : ''}
+      ${x.phase === 'fortify' && !x.attacking ? `<button class="btn btn-small" data-fortify="${x.island}">Rebuild the guns (50 planks a battery, 200 the fort, from the store)</button>` : ''}
+      ${x.notes.map((n) => `<p class="muted">${esc(n)}</p>`).join('')}</div>`;
     body.innerHTML = `<div class="cols"><div>
+      ${hs.sieges.map(siege).join('')}
       <h3 class="title-sm" style="font-size:20px">Your islands</h3>
       ${hs.mine.map(holding).join('') || '<p class="muted">You hold no island. Lie off one to lease it, or ask at a harbour office for the islands of its waters. One island of your own; the lease is paid to the faction that holds the region.</p>'}
     </div><div>
@@ -152,6 +160,9 @@ export class CompanyScreen {
     const q = <T extends HTMLElement>(sel: string) => body.querySelector<T>(sel);
     const num = (sel: string) => Number(q<HTMLInputElement>(sel)?.value ?? 0);
     body.querySelectorAll<HTMLElement>('[data-rent]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'rent', island: Number(el.dataset.rent), days: Number(el.dataset.days) })));
+    body.querySelectorAll<HTMLElement>('[data-siege]').forEach((el) => (el.onclick = () => confirm('Declare a siege on this island?') && this.send({ t: 'isle', action: 'siege', island: Number(el.dataset.siege) })));
+    body.querySelectorAll<HTMLElement>('[data-sgc]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'siege_choice', island: Number(el.dataset.isl), choice: el.dataset.sgc as 'capture' })));
+    body.querySelectorAll<HTMLElement>('[data-fortify]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'fortify', island: Number(el.dataset.fortify) })));
     body.querySelectorAll<HTMLElement>('[data-glease]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'lease', island: Number(el.dataset.glease), days: Number(el.dataset.days) })));
     body.querySelectorAll<HTMLInputElement>('[data-auto]').forEach((el) => (el.onchange = () => this.send({ t: 'isle', action: 'auto', island: Number(el.dataset.auto), on: el.checked })));
     body.querySelectorAll<HTMLElement>('[data-tin]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'treasury', island: Number(el.dataset.tin), amount: num(`[data-tamt="${el.dataset.tin}"]`) })));

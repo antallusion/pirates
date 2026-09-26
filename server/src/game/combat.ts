@@ -14,6 +14,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { crueltyMul, inDuel, legalTarget, onPlayerAttack, pvpBlocked } from './pvp.ts';
 import { sameGroup } from './party.ts';
+import { siegeImpact } from './siege.ts';
 import { guildFriends } from './guilds.ts';
 import type { Game } from './Game.ts';
 import { MAX_LEAKS, leakChance } from './damagecontrol.ts';
@@ -275,6 +276,7 @@ export function stepProjectiles(game: Game, dt: number): void {
       // Skipping Shot: a ball that falls just short bounces on into the hull.
       if (!p.skipped && game.ships.get(p.owner)?.hasFlag('skipping_shot') && skip(game, p)) continue;
       volleyBall(game, p, null);
+      siegeImpact(game, p.x, p.y, p.damage, p.owner, false); // shot falling on a besieged island
       continue; // splash (clients simulate splashes themselves)
     }
     if (isLand(game.world, p.x, p.y)) {

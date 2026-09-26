@@ -11,17 +11,19 @@
 //    a fort that fire on pirates and on whoever fires on you, a lighthouse (sight, witness, toll), farms, mines,
 //    plantations, a sawmill, a distillery, a powder mill, a chapel, a chart house, barracks.
 
-import { BUILDINGS, BUILDING_IDS, ISLAND_CACHE_VOLUME, LIMIT_PERSONAL, RENT, RENT_DAYS, WAREHOUSE_ISLAND_VOLUME, islandSize, islandSlots, rentZoneMul } from '../../../shared/src/data/holdings.ts';
+import { BUILDINGS, ISLAND_CACHE_VOLUME, LIMIT_PERSONAL, RENT, RENT_DAYS, WAREHOUSE_ISLAND_VOLUME, islandSize, islandSlots, rentZoneMul } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId, RentDays } from '../../../shared/src/data/holdings.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { dist } from '../../../shared/src/math.ts';
-import type { HoldingView, IslandOffer } from '../../../shared/src/protocol.ts';
+import type { HoldingView, IslandOffer, SiegeView } from '../../../shared/src/protocol.ts';
 import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
+import { siegesFor } from './siege.ts';
+import type { Siege } from './siege.ts';
 import { hireTrade } from './crew.ts';
 import { baseUpkeepPerDay, guildCanLease, guildPay } from './guilds.ts';
 import type { Game } from './Game.ts';
@@ -68,6 +70,7 @@ export interface Holding {
   shieldUntil: number; // wall ms: no siege before
   lastSiege: number;
   base?: number; // guild base level (docs/02 §12.A.3): +2 slots a level
+  siege?: Siege;
 }
 
 export class HoldingsHub {
@@ -707,7 +710,7 @@ export function islandOffer(game: Game, isl: Island): IslandOffer {
 }
 
 /** For the Company screen: your holdings, the island off your bow, and in port the region's islands for lease. */
-export function holdingsFor(game: Game, s: PlayerSession): { mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[]; buildable: BuildingId[] } {
+export function holdingsFor(game: Game, s: PlayerSession): { mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[]; sieges: SiegeView[] } {
   const ship = s.ship;
   const mine = Object.values(game.holdings.map(game)).filter((h) => mayUse(game, h, s.accountId)).map((h) => holdingView(game, h, s.accountId));
   const near = ship ? islandNear(game, ship) : null;
@@ -717,5 +720,5 @@ export function holdingsFor(game: Game, s: PlayerSession): { mine: HoldingView[]
     const port = game.portById(ship.docked);
     if (port) region = game.world.islands.filter((i) => i.region === port.region && !i.portId).map((i) => islandOffer(game, i)).filter((o) => !o.why).sort((a, b) => dist(a.x, a.y, port.x, port.y) - dist(b.x, b.y, port.x, port.y)).slice(0, 20);
   }
-  return { mine, here, region, buildable: BUILDING_IDS };
+  return { mine, here, region, sieges: siegesFor(game, s) };
 }

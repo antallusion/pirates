@@ -61,6 +61,7 @@ import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIn
 import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
 import type { Holding } from './holdings.ts';
 import { GuildHub, allied, answerInvite, borrowShip, breakTreaty, declareWar, disbandGuild, dropContract, foundGuild, giveShip, guildNotify, guildOfShip, invite as guildInvite, kick as guildKick, leaveGuild, offerTreaty, onShipSunk, onWarKill, openOffice, postContract, proposePeace, pushGuild, raiseBase, returnShip, setFlagship, setRank, setTax, setToll, stepGuilds, storeMove as guildStore, treasury as guildTreasury } from './guilds.ts';
+import { besieging, chooseOutcome, declareSiege, fortify, stepSieges } from './siege.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
@@ -248,6 +249,7 @@ export class Game {
     this.guildNotify = (gid, subject, body) => guildNotify(this, gid, subject, body);
     // An island's guns and a guild at war: the owner guild's enemies are its enemies.
     this.islandHostile = (h, ship) => {
+      if (besieging(this, h, ship)) return true;
       if (h.owner.kind !== 'guild') return false;
       const g = guildOfShip(this, ship);
       return !!g && !!this.guilds.store(this).wars.find((w) => ((w.a === g.id && w.b === h.owner.id) || (w.b === g.id && w.a === h.owner.id)) && this.wallNow() >= w.prepUntil);
@@ -601,6 +603,7 @@ export class Game {
     stepPvp(this);
     stepHoldings(this);
     stepGuilds(this);
+    stepSieges(this);
     if (Math.floor(now) % 5 === 0) recordTrails(this);
     for (const [id, t] of this.sunkRecently) if (now - t > 900) this.sunkRecently.delete(id);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
@@ -2352,6 +2355,12 @@ export class Game {
             return done(islandService(this, s, id, msg.what, msg.arg ?? ''));
           case 'window':
             return done(setWindow(this, s, id, Number(msg.hour)));
+          case 'siege':
+            return done(declareSiege(this, s, id));
+          case 'fortify':
+            return done(fortify(this, s, id));
+          case 'siege_choice':
+            return done(chooseOutcome(this, s, id, msg.choice));
           case 'yard_order': {
             const yard = islandYard(this, s, id);
             return done(typeof yard === 'string' ? yard : orderBuild(this, s, yard, msg.req));

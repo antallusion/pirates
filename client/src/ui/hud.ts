@@ -341,6 +341,13 @@ export class Hud {
       g.stroke();
       g.setLineDash([]);
     }
+    // Sieges you are part of: the landing point as a red ring.
+    g.strokeStyle = '#e0655a';
+    for (const x of state.holdings.sieges) {
+      g.beginPath();
+      g.arc(tx(x.landing.x), ty(x.landing.y), 5, 0, Math.PI * 2);
+      g.stroke();
+    }
     // Your group: green squares; they stay on the chart however far they sail.
     g.fillStyle = '#7fd08a';
     for (const m of state.party?.members ?? []) {
