@@ -5,7 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BountyView, DuelView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
+  BarterView, BountyView, DuelView, HoldingView, IslandOffer, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind,
 } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -80,6 +80,7 @@ export class ClientState {
   duel: DuelView | null = null;
   bounties: BountyView[] = [];
   marks: { name: string; x: number; y: number }[] = [];
+  holdings: { mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[] } = { mine: [], here: null, region: [] };
 
   input = { rudder: 0, sail: 2, seq: 0 };
   snapGap = 0.1; // seconds between snapshots (smoothed)
@@ -186,6 +187,9 @@ export class ClientState {
         break;
       case 'marks':
         this.marks = m.list;
+        break;
+      case 'holdings':
+        this.holdings = { mine: m.mine, here: m.here, region: m.region };
         break;
       case 'port':
         this.portView = m.view;

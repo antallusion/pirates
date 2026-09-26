@@ -5,6 +5,7 @@
 
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
+import type { BuildingId, IslandSize } from './data/holdings.ts';
 import type { CaptainId } from './data/captains.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
@@ -115,6 +116,18 @@ export type ClientMsg =
   | { t: 'pvp'; action: 'forfeit' }
   | { t: 'pvp'; action: 'bounty'; name: string; amount: number }
   | { t: 'pvp'; action: 'bounties' }
+  | { t: 'isle'; action: 'list' }
+  | { t: 'isle'; action: 'rent'; island: number; days: number }
+  | { t: 'isle'; action: 'auto'; island: number; on: boolean }
+  | { t: 'isle'; action: 'treasury'; island: number; amount: number }
+  | { t: 'isle'; action: 'build'; island: number; building: BuildingId }
+  | { t: 'isle'; action: 'demolish'; island: number; index: number }
+  | { t: 'isle'; action: 'store'; island: number; good: GoodId; qty: number }
+  | { t: 'isle'; action: 'service'; island: number; what: 'repair' | 'hire' | 'craft' | 'copy_map'; arg?: string | number }
+  | { t: 'isle'; action: 'window'; island: number; hour: number }
+  | { t: 'isle'; action: 'yard_order'; island: number; req: Extract<ClientMsg, { t: 'build' }>['req'] }
+  | { t: 'isle'; action: 'yard_launch'; island: number; id: string }
+  | { t: 'isle'; action: 'yard_berth'; island: number; index: number }
   | { t: 'ping'; c: number };
 
 // ------------------------------------------------------------------ server -> client
@@ -585,6 +598,7 @@ export type ServerMsg =
   | { t: 'mail'; letters: LetterView[]; unread: number }
   | { t: 'market'; view: MarketView }
   | { t: 'duel'; view: DuelView | null }
+  | { t: 'holdings'; mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[] }
   | { t: 'bounties'; list: BountyView[] }
   | { t: 'marks'; list: { name: string; x: number; y: number }[] }
   | { t: 'err'; msg: string }
@@ -660,6 +674,46 @@ export interface MarketView {
   listFee: number; // fraction of the value, not returned
   saleTax: number; // fraction of proceeds
   listings: ListingView[];
+}
+
+// ------------------------------------------------------------------ islands and holdings
+
+export interface HoldingView {
+  island: number;
+  name: string;
+  region: RegionId;
+  x: number;
+  y: number;
+  size: IslandSize;
+  slots: number;
+  owner: string;
+  mine: boolean;
+  until: number; // epoch ms
+  autoRenew: boolean;
+  treasury: number;
+  store: Cargo;
+  storeCap: number; // m³
+  buildings: { id: BuildingId; condition: number; unpaid: boolean }[];
+  upkeep: number; // silver a day
+  renew: number; // a week's rent
+  window: number; // UTC hour the siege window opens
+  windowNext: number | null;
+  shieldUntil: number;
+}
+
+export interface IslandOffer {
+  island: number;
+  name: string;
+  region: RegionId;
+  x: number;
+  y: number;
+  size: IslandSize;
+  slots: number;
+  biome: IslandBiome;
+  mine: boolean;
+  price: Record<7 | 14 | 30, number>;
+  held: string | null;
+  why: string | null; // why it cannot be leased
 }
 
 // ------------------------------------------------------------------ PvP 2.0

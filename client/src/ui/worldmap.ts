@@ -254,6 +254,18 @@ export class WorldMap {
       g.fill();
       g.fillText(c.name, tx(c.x), ty(c.y) - 8);
     }
+    // Your islands: a gold flag.
+    for (const h of state.holdings.mine) {
+      g.fillStyle = '#e0b862';
+      g.beginPath();
+      g.moveTo(tx(h.x), ty(h.y) - 12);
+      g.lineTo(tx(h.x) + 9, ty(h.y) - 8);
+      g.lineTo(tx(h.x), ty(h.y) - 4);
+      g.closePath();
+      g.fill();
+      g.fillRect(tx(h.x) - 1, ty(h.y) - 12, 2, 12);
+      g.fillText(h.name, tx(h.x), ty(h.y) + 12);
+    }
     // Your group.
     g.font = '12px serif';
     for (const m of state.party?.members ?? []) {

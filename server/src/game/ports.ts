@@ -16,6 +16,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { FACTION_DUTY, LICENCE_SEC, licenceCost, marketRows, midPrice, portIsLawful, quoteBuy, quoteSell, applyTrade } from './economy.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { PriceMods } from './economy.ts';
+import { mayUse } from './holdings.ts';
 import type { Game } from './Game.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
@@ -568,9 +569,15 @@ function sellableCharts(game: Game, s: PlayerSession, port: Port): Island[] {
 }
 
 /** Undiscovered islands a cartographer here can sell for a region, closest to the port first. */
+/** A hidden cove keeps its island off every chart sold in port (but its own people know the way). */
+function coveHidden(game: Game, islandId: number, accountId: number): boolean {
+  const h = game.holdings.get(game, islandId);
+  return !!h && h.buildings.some((b) => b.id === 'hidden_cove') && !mayUse(game, h, accountId);
+}
+
 function chartForRegion(game: Game, s: PlayerSession, port: Port, region: RegionId): Island[] {
   return game.world.islands
-    .filter((is) => is.region === region && !s.discovered.has(is.id))
+    .filter((is) => is.region === region && !s.discovered.has(is.id) && !coveHidden(game, is.id, s.accountId))
     .sort((a, b) => dist(a.x, a.y, port.x, port.y) - dist(b.x, b.y, port.x, port.y))
     .slice(0, 15);
 }

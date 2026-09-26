@@ -58,6 +58,8 @@ import {
 import { Social, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics } from './metrics.ts';
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
+import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
+import type { Holding } from './holdings.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
@@ -107,7 +109,7 @@ import { SpatialGrid } from './spatial.ts';
 import { WEATHER_FOG, WEATHER_WIND, initWeather, seaStateSpread, stepFronts, stepWeather, weatherAtPoint } from './weather.ts';
 import type { Front, RegionWeather } from './weather.ts';
 
-interface Loot {
+export interface Loot {
   id: number;
   x: number;
   y: number;
@@ -202,6 +204,12 @@ export class Game {
   post = new PostOffice();
   /** Colours, duels, bounties (pvp.ts). */
   pvp = new PvpHub();
+  /** Leased islands and what stands on them (holdings.ts). */
+  holdings = new HoldingsHub();
+  /** Hooks for guilds and sieges: whether a captain belongs to a guild, a letter to a guild, an island's enemies. */
+  guildMember?: (guildId: number, accountId: number) => boolean;
+  guildNotify?: (guildId: number, subject: string, body: string) => void;
+  islandHostile?: (h: Holding, ship: ShipEntity) => boolean;
   /** Real time in ms, for letters and listings that outlive the process (tests move it). */
   wallNow: () => number = () => Date.now();
   metrics = new Metrics();
@@ -580,6 +588,7 @@ export class Game {
     stepSocial(this);
     stepPost(this);
     stepPvp(this);
+    stepHoldings(this);
     if (Math.floor(now) % 5 === 0) recordTrails(this);
     for (const [id, t] of this.sunkRecently) if (now - t > 900) this.sunkRecently.delete(id);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
@@ -2301,6 +2310,47 @@ export class Game {
             return sendBounties(this, s);
         }
         return;
+      case 'isle': {
+        const id = Math.trunc(Number('island' in msg ? msg.island : -1));
+        const done = (e: string | null) => {
+          err(e);
+          this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
+          this.pushSelf(s, true);
+        };
+        switch (msg.action) {
+          case 'list':
+            return done(null);
+          case 'rent':
+            return done(rentIsland(this, s, id, Math.trunc(Number(msg.days))));
+          case 'auto':
+            return done(setAutoRenew(this, s, id, !!msg.on));
+          case 'treasury':
+            return done(treasuryMove(this, s, id, Number(msg.amount)));
+          case 'build':
+            return done(build(this, s, id, msg.building));
+          case 'demolish':
+            return done(demolish(this, s, id, Math.trunc(Number(msg.index))));
+          case 'store':
+            return done(storeMove(this, s, id, msg.good, Math.trunc(Number(msg.qty))));
+          case 'service':
+            return done(islandService(this, s, id, msg.what, msg.arg ?? ''));
+          case 'window':
+            return done(setWindow(this, s, id, Number(msg.hour)));
+          case 'yard_order': {
+            const yard = islandYard(this, s, id);
+            return done(typeof yard === 'string' ? yard : orderBuild(this, s, yard, msg.req));
+          }
+          case 'yard_launch': {
+            const yard = islandYard(this, s, id);
+            return done(typeof yard === 'string' ? yard : launchBuild(this, s, yard, String(msg.id)));
+          }
+          case 'yard_berth': {
+            const yard = islandYard(this, s, id);
+            return done(typeof yard === 'string' ? yard : swapBerth(this, s, yard, Math.trunc(Number(msg.index))));
+          }
+        }
+        return;
+      }
       case 'chat': {
         const text = String(msg.text ?? '').slice(0, 200).trim();
         if (!text) return;
@@ -2430,6 +2480,7 @@ export class Game {
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
     pushParty(this, s);
     mailOnLogin(this, s);
+    this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
   }
 
   private onDisconnect(s: PlayerSession): void {

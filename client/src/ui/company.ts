@@ -5,13 +5,20 @@
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
+import { BUILDINGS, BUILDING_IDS } from '../../../shared/src/data/holdings.ts';
+import type { BuildingId } from '../../../shared/src/data/holdings.ts';
+import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import type { ShipClassId } from '../../../shared/src/data/ships.ts';
+import { WOODS } from '../../../shared/src/data/shipbuild.ts';
+import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { GROUP_MAX } from '../../../shared/src/protocol.ts';
+import type { HoldingView, IslandOffer } from '../../../shared/src/protocol.ts';
 import type { ClientMsg, ListingView } from '../../../shared/src/protocol.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
 
-export type CompanyTab = 'group' | 'letters' | 'market' | 'law';
+export type CompanyTab = 'group' | 'letters' | 'market' | 'law' | 'isles';
 
 const ago = (ms: number) => {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
@@ -40,9 +47,9 @@ export class CompanyScreen {
   render(root: HTMLElement, state: ClientState): void {
     const docked = state.self?.dockedAt ?? null;
     if (this.tab === 'market' && !docked) this.tab = 'group';
-    const tabs = (['group', 'law', 'letters', 'market'] as CompanyTab[])
+    const tabs = (['group', 'law', 'letters', 'isles', 'market'] as CompanyTab[])
       .filter((t) => t !== 'market' || docked)
-      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
+      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'isles' ? 'Islands' : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
       .join(' ');
     root.innerHTML = `<div class="modal-head"><div><h2>Company &amp; Letters</h2><div class="sub">${tabs}</div></div><div class="muted">[Y] close</div></div>
       <div class="modal-body" id="company-body"></div>`;
@@ -50,12 +57,14 @@ export class CompanyScreen {
     if (this.tab === 'group') this.renderGroup(body, state);
     else if (this.tab === 'letters') this.renderLetters(body, state);
     else if (this.tab === 'law') this.renderLaw(body, state);
+    else if (this.tab === 'isles') this.renderIsles(body, state);
     else this.renderMarket(body, state);
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
       this.tab = el.dataset.tab as CompanyTab;
       if (this.tab === 'market') this.send({ t: 'market', action: 'list' });
       if (this.tab === 'letters') this.send({ t: 'mail', action: 'list' });
       if (this.tab === 'law') this.send({ t: 'pvp', action: 'bounties' });
+      if (this.tab === 'isles') this.send({ t: 'isle', action: 'list' });
       this.render(root, state);
     }));
   }
@@ -87,6 +96,71 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-decline]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'decline', id: Number(el.dataset.decline) })));
     body.querySelectorAll<HTMLElement>('[data-lead]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'lead', name: el.dataset.lead! })));
     body.querySelectorAll<HTMLElement>('[data-kick]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'kick', name: el.dataset.kick! })));
+  }
+
+  private renderIsles(body: HTMLElement, state: ClientState): void {
+    const hs = state.holdings;
+    const self = state.self;
+    const offer = (o: IslandOffer) => `<div class="card"><h4>${esc(o.name)} <span class="muted">— ${o.size}, ${o.slots} slots, ${esc(o.biome)}${o.mine ? ', ore' : ''}</span></h4>
+      ${o.held ? `<p class="muted">Leased to ${esc(o.held)}.</p>` : o.why ? `<p class="muted">${esc(o.why)}</p>` : `<div class="row" style="gap:6px">${([7, 14, 30] as const).map((d) => `<button class="btn btn-small" data-rent="${o.island}" data-days="${d}">${d} days — ${fmt(o.price[d])}</button>`).join('')}</div>`}</div>`;
+    const here = hs.here && !hs.mine.some((h) => h.island === hs.here!.island) ? offer(hs.here) : '';
+    const nearId = hs.here?.island ?? -1;
+    const holding = (h: HoldingView) => {
+      const near = h.island === nearId;
+      const used = h.buildings.reduce((n, b) => n + BUILDINGS[b.id].slots, 0);
+      const days = Math.max(0, (h.until - Date.now()) / 86_400_000);
+      const has = (id: BuildingId) => h.buildings.some((b) => b.id === id);
+      const yardTier = has('dry_dock') ? 4 : has('shipyard') ? 3 : 0;
+      const builds = (self?.builds ?? []).filter((b) => b.port === `isle:${h.island}`);
+      const berths = (self?.berths ?? []).map((b, i) => ({ b, i })).filter((x) => x.b.port === `isle:${h.island}`);
+      return `<div class="card"><h4>${esc(h.name)} <span class="muted">— ${esc(h.region.replace(/_/g, ' '))}, ${h.size}, ${used}/${h.slots} slots</span></h4>
+        <p>Lease: <b>${days >= 1 ? `${Math.floor(days)} days` : days > 0 ? `${Math.ceil(days * 24)} hours` : '<span class="bad">run out — renew within 72 h</span>'}</b> · a week ${fmt(h.renew)} · <label><input type="checkbox" data-auto="${h.island}" ${h.autoRenew ? 'checked' : ''}> renew from the treasury</label></p>
+        <p>Treasury <b>${fmt(h.treasury)}</b> · upkeep ${fmt(h.upkeep)} a day · <input type="number" value="1000" step="500" style="width:90px" data-tamt="${h.island}"> <button class="btn btn-small" data-tin="${h.island}">Deposit</button> <button class="btn btn-small" data-tout="${h.island}">Withdraw</button></p>
+        <table class="grid">${h.buildings.map((b, i) => `<tr><td>${esc(BUILDINGS[b.id].name)}</td><td class="${b.unpaid ? 'bad' : 'muted'}">${Math.round(b.condition * 100)}%${b.unpaid ? ' · unpaid' : ''}</td><td>${near ? `<button class="btn btn-small btn-danger" data-demolish="${h.island}" data-index="${i}">Pull down</button>` : ''}</td></tr>`).join('') || '<tr><td class="muted">Bare rock.</td></tr>'}</table>
+        <p class="muted">Store (${h.storeCap} m³): ${Object.entries(h.store).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `${n} ${esc(GOODS[g as GoodId].name)}`).join(', ') || 'empty'}</p>
+        ${near ? `<div class="row"><select data-sgood="${h.island}">${GOOD_IDS.map((g) => `<option value="${g}">${esc(GOODS[g].name)}</option>`).join('')}</select><input type="number" value="10" style="width:70px" data-sqty="${h.island}"><button class="btn btn-small" data-sin="${h.island}">Land it</button><button class="btn btn-small" data-sout="${h.island}">Load it</button></div>
+          <div class="row" style="gap:6px;flex-wrap:wrap">${has('shipyard') ? `<button class="btn btn-small" data-svc="repair" data-isl="${h.island}">Repair</button>` : ''}${has('tavern') ? `<button class="btn btn-small" data-svc="hire" data-isl="${h.island}" data-arg="5">Sign on 5 hands</button>` : ''}${has('workshop') ? `<button class="btn btn-small" data-svc="craft" data-isl="${h.island}" data-arg="planks">Timber → planks</button><button class="btn btn-small" data-svc="craft" data-isl="${h.island}" data-arg="sailcloth">Cloth → sailcloth</button>` : ''}${has('chart_house') ? (self?.maps ?? []).map((m) => `<button class="btn btn-small" data-svc="copy_map" data-isl="${h.island}" data-arg="${esc(m.id)}">Copy ${esc(m.name)}</button>`).join('') : ''}</div>
+          <details><summary>Build</summary>${BUILDING_IDS.map((id) => {
+            const d = BUILDINGS[id];
+            const mats = Object.entries(d.materials).map(([g, n]) => `${n} ${GOODS[g as GoodId].name.toLowerCase()}`).join(', ');
+            return `<div class="row" style="padding:2px 0"><span title="${esc(d.description)}"><b>${esc(d.name)}</b> <span class="muted">${d.slots} slot${d.slots > 1 ? 's' : ''} · ${fmt(d.cost)}${mats ? ` + ${esc(mats)}` : ''} · ${fmt(d.upkeep)}/day</span></span><button class="btn btn-small" data-build="${h.island}" data-bid="${id}">Build</button></div>`;
+          }).join('')}</details>
+          ${yardTier ? `<details><summary>The yard (to tier ${yardTier === 4 ? 'IV' : 'III'})</summary>
+            <div class="row"><select data-ycls="${h.island}">${(Object.keys(SHIP_CLASSES) as ShipClassId[]).filter((c) => SHIP_CLASSES[c].purchasable && SHIP_CLASSES[c].tier <= yardTier && !SHIP_CLASSES[c].factions).map((c) => `<option value="${c}">${esc(SHIP_CLASSES[c].name)}</option>`).join('')}</select>
+            <select data-ywood="${h.island}">${(Object.keys(WOODS) as WoodId[]).filter((w) => WOODS[w].ports === 'all').map((w) => `<option value="${w}">${esc(WOODS[w].name)}</option>`).join('')}</select>
+            <input data-yname="${h.island}" placeholder="Her name" maxlength="28" style="width:130px"><button class="btn btn-small" data-yorder="${h.island}">Lay down the keel</button></div>
+            ${builds.map((b) => `<p>${esc(b.name)} — ${b.done * 1 <= (state.estServerTime() ?? 0) ? `<button class="btn btn-small btn-primary" data-ylaunch="${h.island}" data-id="${esc(b.id)}">Launch</button>` : `ready in ${Math.ceil((b.done - state.estServerTime()) / 60)} min`}</p>`).join('')}
+            ${berths.map(({ b, i }) => `<p>${esc(b.name)} <span class="muted">berthed here</span> <button class="btn btn-small" data-yberth="${h.island}" data-index="${i}">Take her out</button></p>`).join('')}</details>` : ''}
+          <p class="muted">Siege window (UTC): <select data-window="${h.island}">${[16, 17, 18, 19, 20, 21, 22].map((hr) => `<option value="${hr}" ${hr === (h.windowNext ?? h.window) ? 'selected' : ''}>${hr}:00–${hr + 2}:00</option>`).join('')}</select>${h.windowNext !== null ? ' (changes in 48 h)' : ''}</p>`
+        : '<p class="muted">Lie off the island to build, use the store and its services.</p>'}</div>`;
+    };
+    body.innerHTML = `<div class="cols"><div>
+      <h3 class="title-sm" style="font-size:20px">Your islands</h3>
+      ${hs.mine.map(holding).join('') || '<p class="muted">You hold no island. Lie off one to lease it, or ask at a harbour office for the islands of its waters. One island of your own; the lease is paid to the faction that holds the region.</p>'}
+    </div><div>
+      ${here ? `<h3 class="title-sm" style="font-size:20px">Off your bow</h3>${here}` : ''}
+      ${hs.region.length ? `<h3 class="title-sm" style="font-size:20px">Islands of these waters</h3>${hs.region.map(offer).join('')}` : ''}
+    </div></div>`;
+    const q = <T extends HTMLElement>(sel: string) => body.querySelector<T>(sel);
+    const num = (sel: string) => Number(q<HTMLInputElement>(sel)?.value ?? 0);
+    body.querySelectorAll<HTMLElement>('[data-rent]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'rent', island: Number(el.dataset.rent), days: Number(el.dataset.days) })));
+    body.querySelectorAll<HTMLInputElement>('[data-auto]').forEach((el) => (el.onchange = () => this.send({ t: 'isle', action: 'auto', island: Number(el.dataset.auto), on: el.checked })));
+    body.querySelectorAll<HTMLElement>('[data-tin]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'treasury', island: Number(el.dataset.tin), amount: num(`[data-tamt="${el.dataset.tin}"]`) })));
+    body.querySelectorAll<HTMLElement>('[data-tout]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'treasury', island: Number(el.dataset.tout), amount: -num(`[data-tamt="${el.dataset.tout}"]`) })));
+    body.querySelectorAll<HTMLElement>('[data-demolish]').forEach((el) => (el.onclick = () => confirm('Pull it down?') && this.send({ t: 'isle', action: 'demolish', island: Number(el.dataset.demolish), index: Number(el.dataset.index) })));
+    body.querySelectorAll<HTMLElement>('[data-build]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'build', island: Number(el.dataset.build), building: el.dataset.bid as BuildingId })));
+    const store = (id: string, sign: number) => this.send({ t: 'isle', action: 'store', island: Number(id), good: q<HTMLSelectElement>(`[data-sgood="${id}"]`)!.value as GoodId, qty: sign * num(`[data-sqty="${id}"]`) });
+    body.querySelectorAll<HTMLElement>('[data-sin]').forEach((el) => (el.onclick = () => store(el.dataset.sin!, 1)));
+    body.querySelectorAll<HTMLElement>('[data-sout]').forEach((el) => (el.onclick = () => store(el.dataset.sout!, -1)));
+    body.querySelectorAll<HTMLElement>('[data-svc]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'service', island: Number(el.dataset.isl), what: el.dataset.svc as 'repair', arg: el.dataset.arg })));
+    body.querySelectorAll<HTMLSelectElement>('[data-window]').forEach((el) => (el.onchange = () => this.send({ t: 'isle', action: 'window', island: Number(el.dataset.window), hour: Number(el.value) })));
+    body.querySelectorAll<HTMLElement>('[data-yorder]').forEach((el) => (el.onclick = () => {
+      const id = el.dataset.yorder!;
+      const wood = q<HTMLSelectElement>(`[data-ywood="${id}"]`)!.value as WoodId;
+      this.send({ t: 'isle', action: 'yard_order', island: Number(id), req: { classId: q<HTMLSelectElement>(`[data-ycls="${id}"]`)!.value as ShipClassId, name: q<HTMLInputElement>(`[data-yname="${id}"]`)!.value, frame: wood, plank: wood, rares: {} } });
+    }));
+    body.querySelectorAll<HTMLElement>('[data-ylaunch]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'yard_launch', island: Number(el.dataset.ylaunch), id: el.dataset.id! })));
+    body.querySelectorAll<HTMLElement>('[data-yberth]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'yard_berth', island: Number(el.dataset.yberth), index: Number(el.dataset.index) })));
   }
 
   private renderLaw(body: HTMLElement, state: ClientState): void {

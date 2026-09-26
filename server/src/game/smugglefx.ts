@@ -13,6 +13,7 @@ import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
 import { quoteSell } from './economy.ts';
+import { shoreWitness } from './holdings.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -213,6 +214,7 @@ export interface PendingCrime {
 /** Instead of Wanted now, a crime in contested waters waits to see if anyone lives to tell. */
 export function deferCrime(game: Game, ship: ShipEntity, amount: number, reason: string): boolean {
   if (!ship.hasFlag('nobodys_ship') || REGIONS[ship.region].safety !== 'contested' || ship.accountId === null) return false;
+  if (shoreWitness(game, ship.state.x, ship.state.y)) return false; // the lighthouse keeper saw it
   const witnesses: number[] = [];
   game.forShipsNear(ship.state.x, ship.state.y, 800, (o) => {
     if (o.id !== ship.id && o.alive && o.ownerId !== ship.id) witnesses.push(o.id);

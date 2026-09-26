@@ -202,6 +202,7 @@ function onMessage(m: ServerMsg): void {
     case 'mail':
     case 'market':
     case 'bounties':
+    case 'holdings':
       if (modal === 'company') refreshModal();
       hud.setUnread(state.unread);
       break;

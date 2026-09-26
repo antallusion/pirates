@@ -328,7 +328,7 @@ export class PortScreen {
       return `<div class="row" style="padding:3px 0"><span><b>${esc(o.name)}</b> <span class="muted">${esc(SHIP_CLASSES[o.classId].name)} · ${esc(WOODS[o.frame].name)}/${esc(WOODS[o.plank].name)} · ${o.quality} plan · at ${esc(state.ports.find((p) => p.id === o.port)?.name ?? o.port)}</span></span>
         ${left > 0 ? `<span class="muted">${Math.ceil(left / 60)} min</span>` : here ? `<button class="btn btn-small btn-primary" data-act="launch" data-id="${o.id}">Launch her</button>` : '<span class="gold">Ready</span>'}</div>`;
     }).join('');
-    const berths = self.berths.map((x, i) => `<div class="row" style="padding:3px 0"><span>${esc(x.name)} <span class="muted">${esc(SHIP_CLASSES[x.classId].name)} · hull ${x.hull}% · at ${esc(state.ports.find((p) => p.id === x.port)?.name ?? x.port)}</span></span>
+    const berths = self.berths.map((x, i) => `<div class="row" style="padding:3px 0"><span>${esc(x.name)} <span class="muted">${esc(SHIP_CLASSES[x.classId].name)} · hull ${x.hull}% · at ${esc(state.ports.find((p) => p.id === x.port)?.name ?? (x.port.startsWith('isle:') ? state.islands.get(Number(x.port.slice(5)))?.name ?? 'your island' : x.port))}</span></span>
       ${x.port === view.portId ? `<span><button class="btn btn-small" data-act="berth_swap" data-i="${i}">Take her out</button> <button class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}">Sell</button></span>` : ''}</div>`).join('');
     return `<h3 class="title-sm" style="font-size:20px;margin-top:10px">Build to order</h3>
       <div class="cols"><div class="card">
