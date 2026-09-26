@@ -219,3 +219,8 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 .tier-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px; }
 .talent .forget { float: right; margin-right: 8px; color: var(--bad); cursor: pointer; font-weight: bold; }
 .ab.talent { border-color: var(--gold); }
+
+.login-account { margin-top: 10px; text-align: left; }
+.login-account summary { cursor: pointer; color: var(--fog); font-size: 13px; }
+.login-account form label { display: block; margin: 6px 0; }
+#reset-form { margin-top: 10px; }

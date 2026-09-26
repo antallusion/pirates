@@ -15,6 +15,12 @@ export class Net {
   rtt = 0;
   bytesIn = 0;
 
+  /** Take a token issued over HTTP (e-mail or OAuth sign-in). */
+  adopt(token: string): void {
+    localStorage.setItem(TOKEN_KEY, token);
+    this.pendingName = null;
+  }
+
   get token(): string | null {
     return localStorage.getItem(TOKEN_KEY);
   }

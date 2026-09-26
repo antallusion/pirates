@@ -52,8 +52,73 @@ loadAssets(null).then(() => {
   if (ka && url) ka.style.backgroundImage = `url('${url}')`;
 });
 
+// Links back from letters and OAuth: #token=… (signed in), #reset=… (new password), #verified, #auth-error=….
+{
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const tok = hash.get('token');
+  if (tok) net.adopt(tok);
+  if (hash.has('verified')) $('login-error').textContent = 'E-mail confirmed. Welcome aboard.';
+  if (hash.has('verify-failed')) $('login-error').textContent = 'That confirmation link has expired.';
+  if (hash.get('auth-error')) $('login-error').textContent = hash.get('auth-error')!;
+  const reset = hash.get('reset');
+  if (reset) {
+    $('reset-form').classList.remove('hidden');
+    ($('reset-form') as HTMLFormElement).onsubmit = async (e) => {
+      e.preventDefault();
+      const r = await authPost('/auth/reset', { token: reset, password: ($('reset-password') as HTMLInputElement).value });
+      if (r.token) {
+        net.adopt(r.token);
+        net.connect();
+      } else $('login-error').textContent = r.error ?? 'Could not reset.';
+    };
+  }
+  if (location.hash) history.replaceState(null, '', location.pathname);
+}
+
 if (net.token) net.connect();
 else $('login-name').focus();
+
+async function authPost(path: string, body: Record<string, string>): Promise<{ token?: string; error?: string }> {
+  try {
+    const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return (await res.json()) as { token?: string; error?: string };
+  } catch {
+    return { error: 'The harbour master is not answering.' };
+  }
+}
+
+let registering = false;
+$('register-toggle').onclick = () => {
+  registering = !registering;
+  $('register-name-wrap').classList.toggle('hidden', !registering);
+  ($('email-form').querySelector('[data-mode]') as HTMLElement).textContent = registering ? 'Create the account' : 'Sign in';
+};
+$('forgot-btn').onclick = async () => {
+  const email = ($('login-email') as HTMLInputElement).value.trim();
+  if (!email) {
+    $('login-error').textContent = 'Write your e-mail first.';
+    return;
+  }
+  await authPost('/auth/forgot', { email });
+  $('login-error').textContent = 'If that address has an account, a letter is on its way.';
+};
+($('email-form') as HTMLFormElement).onsubmit = async (e) => {
+  e.preventDefault();
+  const email = ($('login-email') as HTMLInputElement).value.trim();
+  const password = ($('login-password') as HTMLInputElement).value;
+  const r = registering
+    ? await authPost('/auth/register', { email, password, name: ($('register-name') as HTMLInputElement).value.trim() })
+    : await authPost('/auth/login', { email, password });
+  if (!r.token) {
+    $('login-error').textContent = r.error ?? 'Could not sign in.';
+    return;
+  }
+  net.adopt(r.token);
+  net.connect();
+};
+fetch('/auth/providers').then((r) => r.json()).then((d: { providers: { id: string; name: string }[] }) => {
+  $('oauth-buttons').innerHTML = d.providers.map((p) => `<a class="btn btn-small" href="/auth/oauth/${p.id}">Sign in with ${p.name}</a>`).join('');
+}).catch(() => undefined);
 
 ($('login-form') as HTMLFormElement).onsubmit = (e) => {
   e.preventDefault();

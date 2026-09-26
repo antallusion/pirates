@@ -14,7 +14,7 @@ const skip = URL_ ? false : 'set PG_TEST_URL to run against PostgreSQL';
 
 async function fresh(): Promise<void> {
   const c = await PgClient.connect(URL_!);
-  await c.query('DROP TABLE IF EXISTS ledger, captains, kv, accounts CASCADE');
+  await c.query('DROP TABLE IF EXISTS ledger, captains, kv, oauth_links, auth_tokens, accounts CASCADE');
   await c.end();
 }
 
@@ -37,6 +37,10 @@ test('write-behind store: accounts, captains, world state and ledger survive a r
   db.ledger(id, 'trade', 300, 'sugar');
   db.ledger(id, 'wages', -40, '');
   db.transaction(() => db.setKv('orders', [1, 2, 3]));
+  db.setEmail(id, 'rat@harbour.org', 'scrypt$x$y');
+  db.setEmailVerified(id);
+  db.linkOAuth('github', '77', id);
+  db.putAuthToken('t-hash', id, 'reset', Date.now() + 60_000);
   await db.close();
   const again = await PgDatabase.open(URL_!);
   assert.equal(again.accountByToken('hash-1')?.name, 'Harbour Rat');
@@ -47,6 +51,10 @@ test('write-behind store: accounts, captains, world state and ledger survive a r
   assert.equal(flows.find((f) => f.kind === 'trade')?.inflow, 300);
   assert.equal(flows.find((f) => f.kind === 'wages')?.outflow, 40);
   assert.deepEqual(again.silverHoldings(), [{ account_id: id, gold: 1234, bank: 50 }]);
+  assert.equal(again.accountByEmail('RAT@harbour.org')?.email_verified, true);
+  assert.equal(again.accountByOAuth('github', '77')?.id, id);
+  assert.equal(again.takeAuthToken('t-hash', 'reset'), id);
+  assert.equal(again.takeAuthToken('t-hash', 'reset'), undefined, 'one use');
   assert.equal(again.createAccount('Second', 'hash-2'), id + 1, 'ids continue');
   await again.close();
 });

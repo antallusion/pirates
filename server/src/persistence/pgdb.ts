@@ -38,6 +38,22 @@ const MIGRATIONS = [
    )`,
   `CREATE INDEX IF NOT EXISTS ledger_account ON ledger (account_id, at)`,
   `CREATE INDEX IF NOT EXISTS ledger_at ON ledger (at)`,
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS email TEXT`,
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS pass_hash TEXT`,
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS accounts_email ON accounts (lower(email)) WHERE email IS NOT NULL`,
+  `CREATE TABLE IF NOT EXISTS oauth_links (
+     provider TEXT NOT NULL,
+     subject TEXT NOT NULL,
+     account_id BIGINT NOT NULL REFERENCES accounts(id),
+     PRIMARY KEY (provider, subject)
+   )`,
+  `CREATE TABLE IF NOT EXISTS auth_tokens (
+     token_hash TEXT PRIMARY KEY,
+     account_id BIGINT NOT NULL,
+     kind TEXT NOT NULL,
+     expires BIGINT NOT NULL
+   )`,
 ];
 
 const BUCKET_MS = 60_000;
@@ -53,6 +69,9 @@ export class PgDatabase implements Db {
   private accounts = new Map<number, AccountRow>();
   private byToken = new Map<string, AccountRow>();
   private byName = new Map<string, AccountRow>();
+  private byEmail = new Map<string, AccountRow>();
+  private oauth = new Map<string, number>();
+  private authTokens = new Map<string, { account: number; kind: string; expires: number }>();
   private captains = new Map<number, CaptainRow & { gold: number; bank: number }>();
   private kv = new Map<string, string>();
   private buckets = new Map<number, Map<string, { inflow: number; outflow: number; n: number }>>();
@@ -80,8 +99,12 @@ export class PgDatabase implements Db {
   }
 
   private async preload(): Promise<void> {
-    const acc = await this.client.query('SELECT id, name, token_hash FROM accounts');
-    for (const r of acc.rows) this.indexAccount({ id: Number(r.id), name: String(r.name), token_hash: String(r.token_hash) });
+    const acc = await this.client.query('SELECT id, name, token_hash, email, pass_hash, email_verified FROM accounts');
+    for (const r of acc.rows) this.indexAccount({ id: Number(r.id), name: String(r.name), token_hash: String(r.token_hash), email: (r.email as string | null) ?? null, pass_hash: (r.pass_hash as string | null) ?? null, email_verified: !!r.email_verified });
+    for (const r of (await this.client.query('SELECT provider, subject, account_id FROM oauth_links')).rows) this.oauth.set(`${r.provider}:${r.subject}`, Number(r.account_id));
+    for (const r of (await this.client.query('SELECT token_hash, account_id, kind, expires FROM auth_tokens WHERE expires > $1', [Date.now()])).rows) {
+      this.authTokens.set(String(r.token_hash), { account: Number(r.account_id), kind: String(r.kind), expires: Number(r.expires) });
+    }
     const caps = await this.client.query('SELECT account_id, data::text AS data, x, y, heading FROM captains');
     for (const r of caps.rows) {
       const data = String(r.data);
@@ -107,6 +130,71 @@ export class PgDatabase implements Db {
     this.accounts.set(a.id, a);
     this.byToken.set(a.token_hash, a);
     this.byName.set(a.name.toLowerCase(), a);
+    if (a.email) this.byEmail.set(a.email.toLowerCase(), a);
+  }
+
+  // ---------------------------------------------------------------- e-mail and OAuth sign-in
+  accountById(id: number): AccountRow | undefined {
+    return this.accounts.get(id);
+  }
+
+  accountByEmail(email: string): AccountRow | undefined {
+    return this.byEmail.get(email.toLowerCase());
+  }
+
+  setEmail(id: number, email: string, passHash: string): void {
+    const a = this.accounts.get(id);
+    if (!a) return;
+    if (a.email) this.byEmail.delete(a.email.toLowerCase());
+    a.email = email;
+    a.pass_hash = passHash;
+    a.email_verified = false;
+    this.byEmail.set(email.toLowerCase(), a);
+    this.write('UPDATE accounts SET email = $1, pass_hash = $2, email_verified = FALSE WHERE id = $3', [email, passHash, id]);
+  }
+
+  setPassword(id: number, passHash: string): void {
+    const a = this.accounts.get(id);
+    if (a) a.pass_hash = passHash;
+    this.write('UPDATE accounts SET pass_hash = $1 WHERE id = $2', [passHash, id]);
+  }
+
+  setEmailVerified(id: number): void {
+    const a = this.accounts.get(id);
+    if (a) a.email_verified = true;
+    this.write('UPDATE accounts SET email_verified = TRUE WHERE id = $1', [id]);
+  }
+
+  setTokenHash(id: number, tokenHash: string): void {
+    const a = this.accounts.get(id);
+    if (!a) return;
+    this.byToken.delete(a.token_hash);
+    a.token_hash = tokenHash;
+    this.byToken.set(tokenHash, a);
+    this.write('UPDATE accounts SET token_hash = $1 WHERE id = $2', [tokenHash, id]);
+  }
+
+  linkOAuth(provider: string, subject: string, accountId: number): void {
+    this.oauth.set(`${provider}:${subject}`, accountId);
+    this.write('INSERT INTO oauth_links (provider, subject, account_id) VALUES ($1, $2, $3) ON CONFLICT (provider, subject) DO UPDATE SET account_id = EXCLUDED.account_id', [provider, subject, accountId]);
+  }
+
+  accountByOAuth(provider: string, subject: string): AccountRow | undefined {
+    const id = this.oauth.get(`${provider}:${subject}`);
+    return id === undefined ? undefined : this.accounts.get(id);
+  }
+
+  putAuthToken(tokenHash: string, accountId: number, kind: string, expires: number): void {
+    this.authTokens.set(tokenHash, { account: accountId, kind, expires });
+    this.write('INSERT INTO auth_tokens (token_hash, account_id, kind, expires) VALUES ($1, $2, $3, $4) ON CONFLICT (token_hash) DO UPDATE SET account_id = EXCLUDED.account_id, kind = EXCLUDED.kind, expires = EXCLUDED.expires', [tokenHash, accountId, kind, expires]);
+  }
+
+  takeAuthToken(tokenHash: string, kind: string): number | undefined {
+    const t = this.authTokens.get(tokenHash);
+    if (!t) return undefined;
+    this.authTokens.delete(tokenHash);
+    this.write('DELETE FROM auth_tokens WHERE token_hash = $1', [tokenHash]);
+    return t.kind === kind && t.expires > Date.now() ? t.account : undefined;
   }
 
   private bucket(minute: number, kind: string, inflow: number, outflow: number, n: number): void {

@@ -14,6 +14,9 @@ import { Database } from './persistence/db.ts';
 import type { Db } from './persistence/db.ts';
 import { PgDatabase } from './persistence/pgdb.ts';
 import { SharedState } from './persistence/redis.ts';
+import { handleAuth } from './http/auth-routes.ts';
+import { mailerFromEnv } from './mail.ts';
+import { OAuthFlow, providersFromEnv } from './oauth.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PORT = Number(process.env.PORT ?? 8080);
@@ -23,7 +26,10 @@ const DB_PATH = process.env.DB_PATH ?? resolve(root, 'data/gravetide.db');
 // PostgreSQL when DATABASE_URL is set (postgres://user:pass@host:port/db), SQLite otherwise.
 const DATABASE_URL = process.env.DATABASE_URL;
 const db: Db = DATABASE_URL ? await PgDatabase.open(DATABASE_URL) : new Database(DB_PATH);
-const auth = new AuthService(db);
+// Public address for links in letters and OAuth callbacks.
+const PUBLIC_URL = process.env.PUBLIC_URL ?? `http://localhost:${PORT}`;
+const auth = new AuthService(db, mailerFromEnv(), PUBLIC_URL);
+const oauth = new OAuthFlow(providersFromEnv(), PUBLIC_URL);
 // Redis when REDIS_URL is set: presence, the chat bus between processes, leaderboards.
 const shared = process.env.REDIS_URL ? await SharedState.open(process.env.REDIS_URL, `world-${process.pid}`) : undefined;
 const game = new Game({ db, auth, shared });
@@ -53,6 +59,7 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify({ ...game.economy(Number.isFinite(w) && w > 0 ? Math.min(w, 30 * 86400) : 3600), history: game.econHistory }));
     return;
   }
+  if (await handleAuth(req, res, auth, oauth)) return;
   if (await serveStatic(req, res)) return;
   res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
 });

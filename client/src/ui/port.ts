@@ -111,6 +111,16 @@ export class PortScreen {
         return this.send({ t: 'plan_buy', classId: this.build.classId });
       case 'figurehead_buy':
         return this.send({ t: 'figurehead_buy' });
+      case 'claim': {
+        const email = (root.querySelector('#claim-email') as HTMLInputElement).value.trim();
+        const password = (root.querySelector('#claim-password') as HTMLInputElement).value;
+        const token = localStorage.getItem('gravetide.token') ?? '';
+        fetch('/auth/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email, password }) })
+          .then((r) => r.json())
+          .then((r: { error?: string }) => alert(r.error ?? 'Saved. A confirmation letter is on its way.'))
+          .catch(() => alert('The harbour master is not answering.'));
+        return;
+      }
       case 'escort_hire':
         return this.send({ t: 'escort', action: 'hire', classId: d.cls as ShipClassId });
       case 'escort_dismiss':
@@ -421,6 +431,8 @@ export class PortScreen {
         <div class="card"><h4>Escorts (${self.fleet.escorts.length}/${self.fleet.slots})</h4>${self.fleet.slots ? `<p>Hired ships sail with you in formation and fight at your side. Upkeep ${fmt(self.fleet.upkeep)} silver an hour at sea; the yard patches them when you make port.</p>
           ${self.fleet.escorts.map((e) => `<div class="row" style="padding:2px 0"><span>${esc(e.name)} <span class="muted">${esc(SHIP_CLASSES[e.classId].name)} · hull ${e.hull}%</span></span><button class="btn btn-small btn-danger" data-act="escort_dismiss" data-id="${esc(e.id)}">Pay off</button></div>`).join('')}
           ${view.escorts.map((o) => `<button class="btn btn-small" data-act="escort_hire" data-cls="${o.classId}" ${o.available && self.fleet.escorts.length < self.fleet.slots ? '' : 'disabled'} title="${o.upkeep} silver an hour">${esc(SHIP_CLASSES[o.classId].name)} — ${fmt(o.price)}</button>`).join(' ')}` : '<p class="muted">Escort captains answer only to a commander (ten points in the Command tree).</p>'}</div>
+        <div class="card"><h4>Keep your captain</h4><p class="muted">Add an e-mail and a password so this captain can sail from any computer (and be recovered if this browser forgets).</p>
+          <div class="row" style="gap:6px"><input id="claim-email" type="email" placeholder="e-mail" style="flex:1"><input id="claim-password" type="password" placeholder="password (8+)" style="flex:1"><button class="btn btn-small" data-act="claim">Save</button></div></div>
         <div class="card"><h4>Retrain</h4><p>Forget all talents (${fmt(60 * self.level)} silver).</p><button class="btn btn-danger" data-act="respec">Respec</button></div>
       </div><div class="card"><h4>Standing</h4><table class="grid">${reps}</table>
       <p class="muted" style="margin-top:8px">Sunk ${self.stats.sunk} · taken ${self.stats.boarded} · trade profit ${fmt(self.stats.tradeProfit)} · ${fmt(self.stats.distance / 1000)} km sailed · ${self.discoveredCount} islands charted</p></div></div>`;

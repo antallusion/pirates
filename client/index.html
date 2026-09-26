@@ -19,7 +19,25 @@
       <p class="subtitle">The ocean is the world. The ship is the character. The captain is the build.</p>
       <form id="login-form">
         <label>Captain's name<input id="login-name" maxlength="20" autocomplete="off" placeholder="e.g. Anne Blackwood" /></label>
-        <button class="btn btn-primary" type="submit">Set sail</button>
+        <button class="btn btn-primary" type="submit">Set sail as a guest</button>
+      </form>
+      <details id="login-account" class="login-account">
+        <summary>Sign in with an account</summary>
+        <form id="email-form">
+          <label>E-mail<input id="login-email" type="email" autocomplete="email" /></label>
+          <label>Password<input id="login-password" type="password" autocomplete="current-password" minlength="8" /></label>
+          <label id="register-name-wrap" class="hidden">Captain's name<input id="register-name" maxlength="20" autocomplete="off" /></label>
+          <div class="row" style="gap:6px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit" data-mode="login">Sign in</button>
+            <button class="btn" type="button" id="register-toggle">New account</button>
+            <button class="btn btn-small" type="button" id="forgot-btn">Forgot password</button>
+          </div>
+        </form>
+        <div id="oauth-buttons" class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"></div>
+      </details>
+      <form id="reset-form" class="hidden">
+        <label>New password<input id="reset-password" type="password" autocomplete="new-password" minlength="8" /></label>
+        <button class="btn btn-primary" type="submit">Set the new password</button>
       </form>
       <p id="login-error" class="error"></p>
       <p class="hint">Top-down multiplayer prototype · Phase 1 build</p>
