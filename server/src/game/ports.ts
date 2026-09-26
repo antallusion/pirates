@@ -55,6 +55,8 @@ function basePriceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0): Pric
 }
 
 export function ammoPrice(game: Game, port: Port, ammo: AmmoId): number {
+  // Cursed shot is cast only where the Crown does not look: black markets and the Choir.
+  if (ammo === 'cursed' && !port.blackMarket && port.faction !== 'choir') return 0;
   const m = game.markets.get(port.id);
   const powder = m?.goods.gunpowder;
   const iron = m?.goods.iron;
@@ -184,7 +186,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     if (gm.stock < qty) return 'Not enough in stock';
     const price = quoteBuy(good, gm, qty, mods);
     if (p.gold < price) return 'Not enough silver';
-    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
+    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
     const need = qty * def.volume * (def.contraband ? ship.stats.contrabandVolumeMul : 1);
     if (need > free + 1e-6) return 'Not enough room in the hold';
     p.gold -= price;
@@ -244,6 +246,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
 export function buyAmmo(game: Game, s: PlayerSession, port: Port, ammo: AmmoId, qty: number): string | null {
   const ship = s.ship!;
   if (!AMMO_IDS.includes(ammo) || !Number.isInteger(qty) || qty <= 0 || qty > 500) return 'Bad order';
+  if (ammoPrice(game, port, ammo) <= 0) return 'Nobody here will sell you that';
   const cost = Math.ceil(ammoPrice(game, port, ammo) * qty);
   if (s.profile!.gold < cost) return 'Not enough silver';
   s.profile!.gold -= cost;
@@ -406,9 +409,9 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   ship.hull = ship.stats.hullMax;
   ship.sails = ship.stats.sailHpMax;
   ship.rudderHp = 1;
-  if (cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul) > ship.stats.holdVolume) {
+  if (cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul) > ship.stats.holdVolume) {
     // Excess cargo is sold to the yard at a poor price rather than silently vanishing.
-    let excess = cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul) - ship.stats.holdVolume;
+    let excess = cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul) - ship.stats.holdVolume;
     let dumped = 0;
     for (const id of Object.keys(ship.cargo) as GoodId[]) {
       while (excess > 0 && (ship.cargo[id] ?? 0) > 0) {

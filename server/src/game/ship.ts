@@ -141,6 +141,13 @@ export class ShipEntity {
   fleetId: string | null = null; // a hired escort's record in her commander's fleet
   escortIndex = 0; // her station in the formation
   formation: Formation = 'line'; // a flagship's current signal
+  // Abyssal (server/src/game/abyssfx.ts).
+  seaRot: { stacks: number; until: number; by: number } | null = null;
+  abyssStepAt = 0;
+  drownedCrew: { n: number; until: number }[] = [];
+  risingQueue: { n: number; at: number }[] = [];
+  risingFrac = 0;
+  abyssSpawn = false;
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;

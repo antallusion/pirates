@@ -12,6 +12,7 @@ import { launchJollyBoat } from './prizes.ts';
 import { decoyBarrels, falseColors, slipAway } from './smugglefx.ts';
 import { brace, plugTheBreach } from './survivalfx.ts';
 import { commandActive } from './fleet.ts';
+import { abyssCooldownMul, abyssalActive } from './abyssfx.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -186,15 +187,18 @@ export function useTalentActive(game: Game, s: PlayerSession, id: string, x?: nu
       break;
     }
     default: {
-      if (!id.startsWith('cmd_')) return 'Unknown active talent';
-      const why = commandActive(game, s, id, x, y);
+      if (!id.startsWith('cmd_') && !id.startsWith('abs_')) return 'Unknown active talent';
+      const why = id.startsWith('abs_') ? abyssalActive(game, s, id, x, y) : commandActive(game, s, id, x, y);
       if (why) return why;
     }
   }
   // Sea Shanty rank 2 recharges in 6 min; Rule of the Lash speeds every Command order by 30%.
   let cd = id === 'cmd_sea_shanty' && ship.rank(id) >= 2 ? 360 : def.active.cooldown;
   if (id.startsWith('cmd_') && ship.hasFlag('rule_of_the_lash')) cd *= 0.7;
-  p.talentCooldowns[id] = now + cd * ship.stats.cooldownMul;
+  // Abyssal gifts: Voice of the Choir and Offering shorten them; the Heart of the Abyss forbids it.
+  if (id.startsWith('abs_')) cd *= abyssCooldownMul(ship) * (ship.hasFlag('heart_of_abyss') ? 1 : ship.stats.cooldownMul);
+  else cd *= ship.stats.cooldownMul;
+  p.talentCooldowns[id] = now + cd;
   game.emit({ k: 'ability', ship: ship.id, id, x: Math.round(ship.state.x), y: Math.round(ship.state.y) }, ship.state.x, ship.state.y);
   return null;
 }

@@ -39,7 +39,9 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   const anywhere = a.hasFlag('boarding_anywhere');
   const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
   if (d > boardingRangeBetween(a, b) * (anywhere ? 1 : 1)) return 'Too far to throw grapples';
-  if (!anywhere) {
+  // Kraken's Embrace: the deep holds her still for the grapples.
+  const held = b.effects.some((e) => e.id === 'kraken_hold' && e.source === a.id);
+  if (!anywhere && !held) {
     const relSpeed = Math.abs(a.state.speed - b.state.speed);
     const rammed = a.ramTarget === b.id && a.ramUntil > game.now; // Hull to Hull
     if (relSpeed > 5.5 * (1 + tx(a.stats, 'matchSpeed')) && !b.surrendered && a.tether?.target !== b.id && !rammed) return 'Match her speed before boarding';
@@ -298,7 +300,7 @@ export function claimPrize(game: Game, a: ShipEntity, b: ShipEntity, lossFrac: n
     crewLost: lost,
     enemyCrewLost: killed,
     ransom: b.isPlayer ? 0 : Math.round(150 + cargoValue(cargo) * 0.08 + b.cls.tier * 120),
-    holdFree: Math.max(0, a.stats.holdVolume - cargoVolume(a.cargo, a.stats.contrabandVolumeMul, a.stats.materialVolumeMul, a.stats.provisionVolumeMul)),
+    holdFree: Math.max(0, a.stats.holdVolume - cargoVolume(a.cargo, a.stats.contrabandVolumeMul, a.stats.materialVolumeMul, a.stats.provisionVolumeMul, a.stats.cursedVolumeMul)),
     npc: !b.isPlayer,
     prize: null,
     captive: false,

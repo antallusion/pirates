@@ -6,6 +6,7 @@
 
 import type { CaptainId } from './captains.ts';
 import type { Flag, StatMods } from './stats.ts';
+import { ABYSSAL } from './trees/abyssal.ts';
 import { BOARDING } from './trees/boarding.ts';
 import { COMMAND } from './trees/command.ts';
 import { EXPLORATION } from './trees/exploration.ts';
@@ -41,7 +42,7 @@ export const TREES: Record<TreeId, TreeDef> = {
   survival: { id: 'survival', name: 'Survival', motto: 'Stay afloat. Everything else is luxury.', complete: true, playable: true, native: ['reaver', 'drowned'] },
   shipwright: { id: 'shipwright', name: 'Shipwright', motto: 'The hull remembers every hand.', complete: true, playable: true, native: ['admiral'] },
   exploration: { id: 'exploration', name: 'Exploration', motto: 'Beyond the last lighthouse.', complete: true, playable: true, native: ['navigator'] },
-  abyssal: { id: 'abyssal', name: 'Abyssal', motto: 'The deep answers those who call.', complete: false, playable: false, native: ['drowned'] },
+  abyssal: { id: 'abyssal', name: 'Abyssal', motto: 'The deep answers those who call.', complete: true, playable: true, native: ['drowned'] },
 };
 
 /** Clockwise order of the rays on the Wind Rose (§2.10). */
@@ -78,7 +79,7 @@ export const MAX_BRIDGES = 3;
 export const TIER_STEP = 2;
 export const KEYSTONE_REQUIREMENT = 5;
 
-export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...COMMAND, ...TRADE, ...SMUGGLING, ...SURVIVAL, ...SHIPWRIGHT, ...EXPLORATION];
+export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...COMMAND, ...TRADE, ...SMUGGLING, ...SURVIVAL, ...SHIPWRIGHT, ...EXPLORATION, ...ABYSSAL];
 
 export const TALENTS_BY_ID: Record<string, TalentDef> = Object.fromEntries(TALENTS.map((x) => [x.id, x]));
 

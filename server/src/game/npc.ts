@@ -25,6 +25,7 @@ import { applyTrade, bestRoute } from './economy.ts';
 import type { Game } from './Game.ts';
 import { findPath, pathLength, pointAlong } from './nav.ts';
 import { formationOffset } from './fleet.ts';
+import { pactNeutral } from './abyssfx.ts';
 import type { Path } from './nav.ts';
 import type { NpcRole, ShipEntity } from './ship.ts';
 
@@ -181,7 +182,7 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
         if (p && (p.reputation.confederacy ?? 0) >= 30) return false;
         return !other.surrendered;
       case 'ghost':
-        return true;
+        return !pactNeutral(other, npc, game.now);
       default:
         return false;
     }

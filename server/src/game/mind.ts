@@ -131,7 +131,9 @@ export function loseSanity(ship: ShipEntity, n: number): void {
 }
 
 export function gainSanity(ship: ShipEntity, n: number): void {
-  ship.sanity = Math.min(100, ship.sanity + n);
+  // Still Waters eases it faster; the Heart of the Abyss holds on to it.
+  const mul = (1 + 0.2 * tx(ship.stats, 'stillWaters')) * (ship.hasFlag('heart_of_abyss') ? 0.5 : 1);
+  ship.sanity = Math.min(100, ship.sanity + n * mul);
 }
 
 /** Sanity lost per second at sea, before talents and wards. */
@@ -144,7 +146,7 @@ export function sanityDrain(game: Game, ship: ShipEntity): number {
   if (night && !dark) per10 *= 0.7;
   if (night && dark) per10 += 1;
   // Cursed cargo whispers (a dead crew does not listen).
-  if (ship.cls.passive.id !== 'dead_crew') per10 += Math.min(5, (ship.cargo.cursed_relics ?? 0) * 0.5);
+  if (ship.cls.passive.id !== 'dead_crew') per10 += Math.min(5, (ship.cargo.cursed_relics ?? 0) * 0.5) * Math.max(0, 1 - 0.5 * tx(ship.stats, 'cursedCargo'));
   const w = game.weatherOf(ship);
   if (w === 'calm' && REGIONS[ship.region].strangeness >= 0.2) per10 += 1;
   if (w === 'black_storm') per10 += 30; // −3 a minute
@@ -171,7 +173,7 @@ function stepDread(game: Game, ship: ShipEntity): void {
     ship.talentReady.dreadTide = now + 10;
     gainDread(game, ship, 2);
   }
-  if (!ship.inCombat(now) && (ship.talentReady.dreadEbb ?? 0) <= now) {
+  if (!ship.inCombat(now) && !ship.hasFlag('heart_of_abyss') && (ship.talentReady.dreadEbb ?? 0) <= now) {
     ship.talentReady.dreadEbb = now + 3;
     ship.dread = Math.max(0, ship.dread - 1);
   }
@@ -215,7 +217,12 @@ function stepSanity(game: Game, ship: ShipEntity): void {
     gainSanity(ship, 10);
     game.toastShip(ship, 'Dreamleaf smoke drifts below decks. The whispering fades a little. (+10 sanity)', 'info');
   }
-  const state = sanityState(ship.sanity);
+  // Still Waters: the thresholds come 5 points later per rank.
+  const state = sanityState(ship.sanity + 5 * tx(ship.stats, 'stillWaters'));
+  // Salt Ward softens every penalty; Voice of the Choir halves terror and madness past 75 Dread.
+  const dreadNow = ship.captain === 'drowned' ? ship.dread : 100 - ship.sanity;
+  const soft = Math.max(0, 1 - 0.2 * tx(ship.stats, 'saltWard')) * (ship.hasFlag('voice_of_choir') && dreadNow >= 75 && (state === 'terror' || state === 'madness') ? 0.5 : 1);
+  const dead = ship.hasFlag('crew_of_drowned'); // the dead do not fear
   if (state !== ship.sanityState) {
     const worse = ['clear', 'uneasy', 'afraid', 'terror', 'madness'].indexOf(state) > ['clear', 'uneasy', 'afraid', 'terror', 'madness'].indexOf(ship.sanityState);
     ship.sanityState = state;
@@ -232,26 +239,26 @@ function stepSanity(game: Game, ship: ShipEntity): void {
   }
   // Morale bleeds by the state of their nerves (per 10 minutes: 1 / 2 / 4 / 4).
   const bleed = { clear: 0, uneasy: 1, afraid: 2, terror: 4, madness: 4 }[state];
-  if (bleed) ship.morale = Math.max(0, ship.morale - bleed / 600);
+  if (bleed && !dead) ship.morale = Math.max(0, ship.morale - (bleed * soft) / 600);
   // Fear: shaky hands on the guns, slow work below.
   if (state === 'afraid' || state === 'terror' || state === 'madness') {
-    ship.addEffect({ id: 'fear', until: now + 1.6, mods: { spreadMul: 0.1, repairRate: -0.3 } }, now);
+    if (soft > 0) ship.addEffect({ id: 'fear', until: now + 1.6, mods: { spreadMul: 0.1 * soft, repairRate: -0.3 * soft } }, now);
   }
-  if (state === 'terror' || state === 'madness') {
+  if ((state === 'terror' || state === 'madness') && !dead) {
     if ((ship.talentReady.overboard ?? 0) === 0) ship.talentReady.overboard = now + 120;
     if (now >= ship.talentReady.overboard) {
       ship.talentReady.overboard = now + 120;
-      if (ship.crew > 1) {
+      if (ship.crew > 1 && game.rng.chance(soft)) {
         ship.crew--;
         game.toastShip(ship, game.rng.chance(0.5) ? 'A sailor throws himself over the side, screaming about bells.' : 'A sailor hides in the bilge and will not come out.', 'bad');
       }
     }
     // The wheel jerks in a frightened hand.
-    if (game.rng.chance(0.05)) ship.state.rudder = game.rng.chance(0.5) ? 1 : -1;
+    if (game.rng.chance(0.05 * soft)) ship.state.rudder = game.rng.chance(0.5) ? 1 : -1;
   } else ship.talentReady.overboard = 0;
-  if (state === 'madness' && (ship.talentReady.madness ?? 0) <= now) {
+  if (state === 'madness' && !dead && (ship.talentReady.madness ?? 0) <= now) {
     ship.talentReady.madness = now + 60;
-    if (game.rng.chance(0.3)) {
+    if (game.rng.chance(0.3 * soft)) {
       // They steer for the source of the call: the nearest maelstrom, or the Abyss itself.
       let tx0 = REGIONS.the_abyss.center[0], ty0 = REGIONS.the_abyss.center[1], bd = 6000;
       for (const wp of game.world.whirlpools) {
@@ -286,7 +293,8 @@ function endBetweenWorlds(game: Game, ship: ShipEntity): void {
 // ------------------------------------------------------------------ the Drowned Captain's zones
 
 export interface DeepZone {
-  kind: 'hands' | 'undertow' | 'maw_pull';
+  kind: 'hands' | 'undertow' | 'maw_pull' | 'black_water' | 'siren';
+  target?: number; // the siren's listener
   x: number;
   y: number;
   r: number; // radius (hands, maw ring outer) or half-length (undertow)
@@ -318,10 +326,26 @@ export function stepZones(game: Game, dt: number): void {
   for (const z of game.zones) {
     if (z.start > now) continue;
     const owner = game.ships.get(z.owner);
+    if (z.kind === 'siren') {
+      // The song draws her toward the singer at a fifth of her speed.
+      const t = z.target !== undefined ? game.ships.get(z.target) : undefined;
+      if (t && t.alive && owner) {
+        const d = dist(t.state.x, t.state.y, owner.state.x, owner.state.y) || 1;
+        const step = Math.min(d - 20, Math.max(1, Math.abs(t.state.speed)) * 0.2 * z.power * dt);
+        if (step > 0) {
+          t.state.x += ((owner.state.x - t.state.x) / d) * step;
+          t.state.y += ((owner.state.y - t.state.y) / d) * step;
+        }
+      }
+      continue;
+    }
     game.forShipsNear(z.x, z.y, z.r + 60, (o) => {
       if (!o.alive || o.docked || !inZone(z, o.state.x, o.state.y)) return;
       if (z.kind !== 'undertow' && (o.id === z.owner || (owner && game.areAllies(o, owner)))) return;
-      if (z.kind === 'hands') {
+      if (z.kind === 'black_water') {
+        o.addEffect({ id: 'black_water', until: now + 0.3, mods: { maxSpeed: -0.3 * z.power }, source: z.owner }, now);
+        o.lastCombat = now;
+      } else if (z.kind === 'hands') {
         o.addEffect({ id: 'drowned_hands', until: now + 0.3, mods: { maxSpeed: -0.4 * z.power, turnRate: -0.3 * z.power }, source: z.owner }, now);
         if (!z.hit.includes(o.id)) {
           z.hit.push(o.id);

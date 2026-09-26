@@ -54,6 +54,7 @@ import {
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
 import type { Tavern } from './crew.ts';
+import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
 import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
@@ -532,6 +533,7 @@ export class Game {
       this.shipUpkeep(ship);
       stepSpirit(this, ship);
       stepTalentEffects(this, ship);
+      stepAbyssShip(this, ship);
       stepSurvival(this, ship);
       if (ship.isPlayer) {
         stepTalents(this, ship);
@@ -564,6 +566,7 @@ export class Game {
       this.grid.query(l.x, l.y, 60, (id) => {
         const s = this.ships.get(id);
         if (!s || !s.isPlayer || !s.alive || s.docked) return;
+        if (s.hasEffect('submerged') || s.hasEffect('ghost_return')) return; // a ghost cannot haul casks aboard
         if (l.ownerOnly !== undefined && s.accountId !== l.ownerOnly) return;
         if (dist(s.state.x, s.state.y, l.x, l.y) > s.stats.length / 2 + 30) return;
         this.pickupLoot(s, l);
@@ -588,6 +591,7 @@ export class Game {
       stepMind(this, s.ship);
       stepCompany(this, s);
       stepFleet(this, s);
+      stepAbyss(this, s);
       // After a mutiny they sail her to port themselves.
       const bound = mutinyCourse(this, s.ship, s.profile.company);
       if (bound && !s.ship.docked) {
@@ -968,6 +972,7 @@ export class Game {
         slots: escortSlots(p, ship), formation: p.fleet.formation, upkeep: Math.round(escortUpkeep(p, ship)),
       } : undefined,
       inspect: ship ? admiralsEye(this, ship) : [],
+      monsters: ship?.hasFlag('eyes_of_choir') ? this.monstersNear(ship) : [],
       explore: ship ? {
         maps: p.explore.maps.map((m) => ({ id: m.id, name: m.name, tier: m.tier, ...roundCircle(mapCircle(m, ship)) })),
         wrecks: this.wrecks.filter((w) => p.explore.dived[w.id] !== undefined || dist(w.x, w.y, ship.state.x, ship.state.y) < 600).map((w) => ({ name: w.name, x: Math.round(w.x), y: Math.round(w.y), depth: w.depth })),
@@ -1038,6 +1043,7 @@ export class Game {
       this.loot.set(id, { id, x: ship.state.x + back.x * 40, y: ship.state.y + back.y * 40, cargo: { [good]: n }, gold: 0, expires: this.now + (quick >= 2 ? 1200 : 600), ownerOnly: s.accountId });
       this.toastShip(ship, `${n} ${GOODS[good].name.toLowerCase()} over the side in marked casks.`, 'info');
     } else this.toastShip(ship, `${n} ${GOODS[good].name.toLowerCase()} went to the bottom.`, 'info');
+    makeOffering(this, ship, good, n);
   }
 
   private stepDump(s: PlayerSession): void {
@@ -1166,6 +1172,26 @@ export class Game {
     if (killer) this.creditKill(killer, ship, 'sunk');
   }
 
+  /** Eyes of the Choir: ghost ships and worse within twice your sight, to the nearest 100 m. */
+  monstersNear(ship: ShipEntity): [number, number][] {
+    const out: [number, number][] = [];
+    const r = ship.stats.detection * 2;
+    for (const [id, b] of this.npcs) {
+      if (b.role !== 'ghost') continue;
+      const o = this.ships.get(id);
+      if (o && o.alive && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) < r) out.push([Math.round(o.state.x / 100) * 100, Math.round(o.state.y / 100) * 100]);
+    }
+    return out;
+  }
+
+  /** Everything still in her hold goes on the water (the Drowned King keeps nothing). */
+  dropHold(ship: ShipEntity): void {
+    const cargo: Cargo = { ...ship.cargo };
+    if (!Object.keys(cargo).length) return;
+    const id = this.allocId();
+    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold: 0, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region });
+  }
+
   private dropWreckage(ship: ShipEntity, frac: number): void {
     const cargo: Cargo = {};
     for (const id in ship.cargo) {
@@ -1247,6 +1273,7 @@ export class Game {
   private finalizeSink(ship: ShipEntity): void {
     const s = this.sessionOf(ship);
     if (ship.isPlayer && s && s.profile) {
+      if (drownedKingRises(this, s)) return;
       this.playerDeath(s, ship);
       return;
     }
@@ -1393,7 +1420,7 @@ export class Game {
     if (!target || target.lootLockedFor !== ship.id) return 'The prize slipped away';
     if (dist(ship.state.x, ship.state.y, target.state.x, target.state.y) > 400) return 'The prize drifted too far';
     // Move cargo within hold limits.
-    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
+    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
     let moved = 0;
     for (const id in take) {
       const g = id as GoodId;
@@ -1500,7 +1527,7 @@ export class Game {
         }
       }
     }
-    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
+    let free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
     const got: string[] = [];
     for (const id in l.cargo) {
       const g = id as GoodId;
@@ -1562,6 +1589,7 @@ export class Game {
     let f = w === 'fog' ? 0.6 : w === 'storm' || w === 'black_storm' ? 0.8 : 1;
     if (ship.hasFlag('dead_reckoning')) f = 1 - (1 - f) / 2;
     if (ship.hasFlag('fog_born') && w === 'fog') f *= 1.1;
+    if (w === 'fog') f *= 1 + tval(ship.stats, 'fogSight'); // Drowned Eyes
     if (ship.hasFlag('storm_rider') && (w === 'storm' || w === 'black_storm')) f = 1 - (1 - f) / 2;
     if (tval(ship.stats, 'eyeOfStorm') >= 1 && (w === 'storm' || w === 'black_storm')) f = 1; // Eye of the Storm
     return f;

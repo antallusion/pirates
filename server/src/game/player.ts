@@ -235,6 +235,7 @@ export interface WorldView {
   patrols: [number, number][];
   fleet?: PrivateState['fleet'];
   inspect?: PrivateState['inspect'];
+  monsters?: PrivateState['monsters'];
   explore?: Pick<PrivateState, 'maps' | 'wrecks' | 'trails' | 'soundings' | 'forecast' | 'goldTrails'>;
 }
 
@@ -274,6 +275,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     company: companyView(p, ship, now),
     fleet: world.fleet ?? { escorts: [], slots: 0, formation: p.fleet.formation, upkeep: 0 },
     inspect: world.inspect ?? [],
+    monsters: world.monsters ?? [],
     appraisal: ship?.hasFlag('appraiser') ? appraise(p) : null,
     captives: p.captives.map((c) => ({ name: c.name, faction: c.faction, ransom: captiveRansom(c, (ship?.rank('trd_prize_broker') ?? 0) > 0) })),
     talents: p.talents,

@@ -53,7 +53,7 @@ test('Expedition Stores: provisions take less hold', () => {
   const st = computeShipStats(lo, 'navigator', { exp_expedition_stores: 2 });
   assert.ok(st.provisionVolumeMul < 1);
   const cargo = { provisions: 40, rum: 10 };
-  assert.ok(cargoVolume(cargo, 1, 1, st.provisionVolumeMul) < cargoVolume(cargo, 1, 1, 1));
+  assert.ok(cargoVolume(cargo, 1, 1, st.provisionVolumeMul, st.cursedVolumeMul) < cargoVolume(cargo, 1, 1, 1));
 });
 
 test('treasure maps: circle shrinks with Treasure Hunter; Legend Seeker pins a legendary map', () => {

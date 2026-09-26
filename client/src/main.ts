@@ -310,6 +310,9 @@ addEventListener('keydown', (e) => {
     case 'o':
       toggle('crew');
       break;
+    case 'u':
+      net.send({ t: 'ammo', ammo: 'cursed' });
+      break;
     case 'j': {
       const order = ['line', 'wedge', 'ring'] as const;
       const cur = state.self?.fleet.formation ?? 'line';

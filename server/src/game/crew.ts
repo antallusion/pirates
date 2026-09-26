@@ -180,7 +180,7 @@ export function companyMods(ship: ShipEntity, c: Company, now: number): { mods: 
   const carp = Math.min(1.5, P.carpenter / Math.max(1, crew * 0.05));
   add('repairRate', (carp - 1) * 0.3 + (q - 1) * 0.2);
   // Surgeons: each per fifty men turns 15% of the dead into wounded (to 60%).
-  add('surgeon', Math.min(0.6, (P.surgeon / Math.max(1, crew / 50)) * 0.15));
+  if (!ship.hasFlag('crew_of_drowned')) add('surgeon', Math.min(0.6, (P.surgeon / Math.max(1, crew / 50)) * 0.15));
   // Marines: double weight in a boarding.
   add('boardingPower', (P.marine / crew) * q);
   // Cooks: one per forty men.
@@ -379,7 +379,7 @@ function stepUnrest(game: Game, s: PlayerSession): void {
     return;
   }
   const loyal = loyaltyOf(c, now);
-  const bad = loyal < 25 && ship.morale < (ship.hasFlag('fear_and_respect') ? 15 : 30);
+  const bad = !ship.hasFlag('crew_of_drowned') && loyal < 25 && ship.morale < (ship.hasFlag('fear_and_respect') ? 15 : 30);
   const slow = hasOfficer(c, 'quartermaster', now) ? 1.5 : 1;
   if (!bad) {
     if (c.unrest.phase > 0 || c.unrest.t > 0) {
@@ -401,7 +401,7 @@ function stepUnrest(game: Game, s: PlayerSession): void {
     }
   }
   // Losing four in ten on one voyage is a mutiny all by itself.
-  if (!c.mutiny && c.voyageStartCrew > 5 && c.voyageLost > c.voyageStartCrew * 0.4 && loyal < 60) {
+  if (!c.mutiny && !ship.hasFlag('crew_of_drowned') && c.voyageStartCrew > 5 && c.voyageLost > c.voyageStartCrew * 0.4 && loyal < 60) {
     c.voyageLost = 0;
     startMutiny(game, s, 'too many dead this voyage');
   }
@@ -415,7 +415,7 @@ export function unrestWord(c: Company): string {
 /** Madness of the deep (sanity 0–10) tests loyalty every minute. */
 export function madnessCheck(game: Game, s: PlayerSession): void {
   const c = s.profile!.company;
-  if (c.mutiny) return;
+  if (c.mutiny || s.ship?.hasFlag('crew_of_drowned')) return;
   const chance = (loyaltyOf(c, game.now) < 50 ? 0.25 : 0.08) * (hasOfficer(c, 'quartermaster', game.now) ? 0.5 : 1);
   if (game.rng.chance(chance)) startMutiny(game, s, 'the deep called and they answered');
 }
@@ -832,6 +832,8 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
     ship.crew -= n;
     return null;
   }
+  // Crew of the Drowned: lawful ports will not sign the living onto a dead ship.
+  if (ship.hasFlag('crew_of_drowned') && (port.faction === 'crown' || port.faction === 'league')) return 'No living sailor here will sign onto a ship of the dead';
   const tav = tavernOf(game, port);
   const avail = prof === 'sailor' ? Math.floor(game.tavernCrew.get(port.id) ?? 0) : Math.floor(tav.stock[prof] ?? 0);
   const room = ship.stats.crewMax - ship.crew;

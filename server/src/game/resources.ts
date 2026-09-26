@@ -116,7 +116,7 @@ export function ownSiteNear(game: Game, s: PlayerSession): { site: ResourceSite;
 /** Load as much of the stockpile as fits. */
 export function haulSite(game: Game, ship: ShipEntity, site: ResourceSite): number {
   const def = GOODS[site.good];
-  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
+  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
   const n = Math.max(0, Math.min(Math.floor(site.stock), Math.floor((free + 1e-6) / def.volume)));
   if (n > 0) {
     ship.cargo[site.good] = (ship.cargo[site.good] ?? 0) + n;
@@ -159,7 +159,7 @@ export function warehouseAction(game: Game, s: PlayerSession, port: Port, good: 
   }
   const n = Math.min(-qty, wh[good] ?? 0);
   if (n <= 0) return 'Nothing of that kind stored here';
-  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
+  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
   const fit = Math.min(n, Math.floor((free + 1e-6) / GOODS[good].volume));
   if (fit <= 0) return 'No room in the hold';
   wh[good] = (wh[good] ?? 0) - fit;

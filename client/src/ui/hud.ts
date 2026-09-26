@@ -54,7 +54,7 @@ export class Hud {
 
     // Ship condition.
     const cls = SHIP_CLASSES[self.loadout.classId];
-    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1);
+    const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1, state.ownStats?.cursedVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
     const skey = `${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
     if (skey !== this.lastShipKey) {
@@ -79,7 +79,8 @@ export class Hud {
 
     // Combat block: rebuilt each frame (cheap, few nodes).
     const now = state.estServerTime();
-    const ammo = AMMO_IDS.map((a, i) => `<div class="ammo ${you.ammoSel === a ? 'sel' : ''}" data-ammo="${a}"><b>[${i + 1}]</b>${esc(AMMO[a].name)}<br>${you.ammo[a]}</div>`).join('');
+    // Cursed shot shows only when you carry it (key U).
+    const ammo = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed').map((a, i) => `<div class="ammo ${you.ammoSel === a ? 'sel' : ''}" data-ammo="${a}"><b>[${a === 'cursed' ? 'U' : i + 1}]</b>${esc(AMMO[a].name)}<br>${you.ammo[a]}</div>`).join('');
     const reload = (['port', 'starboard'] as const).map((side) => {
       const r = you.reload[side];
       return `<div class="reload-side ${r >= 1 ? 'ready' : ''}">${side === 'port' ? '[Q] Port' : 'Starboard [E]'}${bar('', Math.round(r * 50) / 50)}</div>`;
@@ -241,7 +242,7 @@ export class Hud {
       g.fill();
     }
     // Whirlpools are felt, not charted: 2.5 km, further with Anomaly Sense.
-    const sense = 2500 * (1 + (state.ownStats ? tval(state.ownStats, 'anomalySight') : 0));
+    const sense = 2500 * (1 + (state.ownStats ? tval(state.ownStats, 'anomalySight') : 0) + ((state.self?.talents.abs_drowned_eyes ?? 0) >= 2 ? 0.3 : 0));
     for (const w of state.whirlpools) {
       if (Math.hypot(w.x - own.x, w.y - own.y) > sense + w.radius) continue;
       g.strokeStyle = 'rgba(208,106,94,0.6)';
@@ -318,8 +319,15 @@ export class Hud {
       g.arc(tx(c.x), ty(c.y), 3, 0, Math.PI * 2);
       g.fill();
     }
-    // Afraid lookouts call sails that are not there.
-    if ((state.you?.sanity ?? 100) <= 50) {
+    // Monsters the Choir shows you (Eyes of the Choir).
+    g.fillStyle = '#9b6bd0';
+    for (const [mx, my] of state.self?.monsters ?? []) {
+      g.beginPath();
+      g.arc(tx(mx), ty(my), 3.5, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Afraid lookouts call sails that are not there (Drowned Eyes 2 sees through them).
+    if ((state.you?.sanity ?? 100) <= 50 && (state.self?.talents.abs_drowned_eyes ?? 0) < 2) {
       const epoch = Math.floor(performance.now() / 8000);
       g.fillStyle = '#e0655a';
       for (let i = 0; i < 3; i++) {

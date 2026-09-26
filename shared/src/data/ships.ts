@@ -168,7 +168,7 @@ export const GUNS: Record<GunId, GunDef> = {
 
 export const GUN_IDS = Object.keys(GUNS) as GunId[];
 
-export type AmmoId = 'round' | 'chain' | 'grape' | 'incendiary' | 'heavy';
+export type AmmoId = 'round' | 'chain' | 'grape' | 'incendiary' | 'heavy' | 'cursed';
 
 export interface AmmoDef {
   id: AmmoId;
@@ -180,6 +180,8 @@ export interface AmmoDef {
   speed: number; // m/s
   price: number; // per shot
   weightPer10: number;
+  /** Reload time multiplier (docs/02 §4.A.2). */
+  reloadMul?: number;
   description: string;
 }
 
@@ -189,15 +191,16 @@ export const AMMO: Record<AmmoId, AmmoDef> = {
   grape: { id: 'grape', name: 'Grapeshot', hullMul: 0.12, sailMul: 0.06, crewKill: 2.4, rangeMul: 0.55, speed: 170, price: 3, weightPer10: 0.5, description: 'A bag of musket balls. Clears decks before a boarding.' },
   incendiary: { id: 'incendiary', name: 'Fire Shot', hullMul: 0.55, sailMul: 0.2, crewKill: 0.4, rangeMul: 0.8, speed: 175, price: 9, weightPer10: 0.6, description: 'Heated shot and pitch pots. A quarter of hull hits start a fire. Dangerous to carry.' },
   heavy: { id: 'heavy', name: 'Heavy Shot', hullMul: 1.15, sailMul: 0.05, crewKill: 0.5, rangeMul: 0.85, speed: 170, price: 7, weightPer10: 0.9, description: 'Forged armour-piercing shot: ignores most of an armoured hull.' },
+  cursed: { id: 'cursed', name: 'Cursed Shot', hullMul: 0.8, sailMul: 0.1, crewKill: 0.8, rangeMul: 1, speed: 180, price: 14, weightPer10: 0.6, reloadMul: 1.15, description: 'Iron cast in drowned moulds. Rot: the struck hull cannot be mended for 20 s; −3 morale a hit. The crew hates loading it (−1 morale a volley) and the Crown hates seeing it.' },
 };
 
-export const AMMO_IDS: AmmoId[] = ['round', 'chain', 'grape', 'incendiary', 'heavy'];
+export const AMMO_IDS: AmmoId[] = ['round', 'chain', 'grape', 'incendiary', 'heavy', 'cursed'];
 
 /** Fraction of target armour that an ammo type ignores. */
 export const ARMOR_PIERCE: Partial<Record<AmmoId, number>> = { heavy: 0.6 };
 
 export function emptyAmmo(): Record<AmmoId, number> {
-  return { round: 0, chain: 0, grape: 0, incendiary: 0, heavy: 0 };
+  return { round: 0, chain: 0, grape: 0, incendiary: 0, heavy: 0, cursed: 0 };
 }
 
 /** Bow and stern chasers: long guns that fire along the keel, aimed within a cone. */

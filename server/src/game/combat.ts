@@ -24,6 +24,7 @@ import { isNight } from '../../../shared/src/constants.ts';
 import { onCrewKilled, onCrit, onHullDamage } from './mind.ts';
 import { moraleLossMul, onMagazineBlast } from './crew.ts';
 import { screenFlagship } from './fleet.ts';
+import { cursedDamageMul, onCursedHit, onCursedVolley, onOwnCrewKilled, pactDamageMul } from './abyssfx.ts';
 
 export interface Projectile {
   owner: number;
@@ -88,7 +89,7 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
   const gun = GUNS[ship.loadout.guns[side]];
   // Gun Crew Drill: a short-handed crew loses less.
   const gcf = 1 - (1 - gunCrewFactor(ship.stats, ship.loadout, ship.crew)) * Math.max(0, 1 - tval(ship.stats, 'gunCrewDrill'));
-  let t = gun.reload * ship.stats.reloadMul / gcf;
+  let t = gun.reload * ship.stats.reloadMul / gcf * (AMMO[ship.ammoSel].reloadMul ?? 1);
   const fullVolley = !ship.rollingFire || ship.hasFlag('rolling_broadside');
   if (ship.captain === 'corsair' && ship.gunsDisabled[side] === 0 && fullVolley) t *= 0.85; // Broadside Discipline
   if (ship.rollingFire) t *= 0.85; // guns reload as they fire
@@ -102,6 +103,7 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
 /** Fires a broadside. Returns null on success, or a reason string. */
 export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number, aimAt?: { x: number; y: number }): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
+  if (ship.hasEffect('submerged') || ship.hasEffect('ghost_return')) return 'The guns are under black water';
   if (ship.reload[side] > 0) return 'Guns are still loading';
   const guns = ship.stats.gunsPerSide - ship.gunsDisabled[side];
   if (guns <= 0) return 'Every gun on that side is dismounted';
@@ -155,7 +157,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
       const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
         owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed, dist: d, traveled: 0, ammo,
-        damage: gun.damage * ship.stats.gunDamageMul * shadow, maxRange: range, delay: delay / 1000, volley,
+        damage: gun.damage * ship.stats.gunDamageMul * shadow * (ammo === 'cursed' ? cursedDamageMul(ship) : 1), maxRange: range, delay: delay / 1000, volley,
       });
       rec.total++;
       balls.push([Math.round(bx), Math.round(by), Math.round(h * 1000) / 1000, Math.round(d), delay]);
@@ -164,6 +166,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   rec.left = rec.total;
   game.volleys.set(volley, rec);
   ship.ammo[ammo] -= shots;
+  if (ammo === 'cursed') onCursedVolley(game, ship);
   ship.reload[side] = reloadTime(ship, side, game.now);
   ship.lastReloadTotal[side] = ship.reload[side];
   ship.swapBonus = false;
@@ -434,6 +437,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     }
   }
   if (shooter) talentHitEffects(game, shooter, target, p);
+  if (p.ammo === 'cursed') onCursedHit(game, shooter, target);
 
   // Cargo destroyed by hull hits; powder may go up.
   if (p.ammo !== 'grape' && hullDmg > 10) {
@@ -513,7 +517,11 @@ export interface DamagePacket {
 /** Central damage entry point for cannon fire, abilities, collisions and hazards. */
 export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, source: ShipEntity | null): void {
   if (!target.alive || target.docked) return;
+  // Under black water (Abyss Step, the Drowned King) nothing can touch her.
+  if (target.hasEffect('submerged') || target.hasEffect('ghost_return')) return;
   const now = game.now;
+  // Pact of Salt and Bone: the monsters of the deep bite softer.
+  if (source && isMonster(source) && d.hull) d = { ...d, hull: d.hull * pactDamageMul(target) };
   if (source) {
     registerAggression(game, source, target);
     source.lastCombat = now;
@@ -535,6 +543,9 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     target.crew -= killed;
     target.wounded += woundedOf(game, target, killed);
     onCrewKilled(game, target, killed, source);
+    onOwnCrewKilled(target, killed, now);
+    // Crew of the Drowned: the fallen rise; the crew never drops under 40%.
+    if (target.hasFlag('crew_of_drowned')) target.crew = Math.max(target.crew, Math.ceil(target.stats.crewMax * 0.4));
     target.morale -= killed * 0.8 * moraleLossMul(target);
   }
   if (d.morale) target.morale -= d.morale * moraleLossMul(target);

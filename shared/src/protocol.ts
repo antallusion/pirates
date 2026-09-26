@@ -271,6 +271,8 @@ export interface PrivateState {
   fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
   /** Admiral's Eye: what you can read of ships near you. */
   inspect: { id: number; hull: number; crew: number; morale: number; port: boolean; starboard: boolean }[];
+  /** Eyes of the Choir: monsters and ghost ships far beyond sight. */
+  monsters: [number, number][];
   gold: number;
   infamy: number;
   wanted: number;

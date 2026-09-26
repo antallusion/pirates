@@ -70,6 +70,7 @@ export interface ShipStats {
   contrabandVolumeMul: number;
   materialVolumeMul: number; // Spare Timber
   provisionVolumeMul: number; // Expedition Stores
+  cursedVolumeMul: number; // Cursed Cargo
   bowChasers: number;
   incomingDamageMul: number;
   moraleRegen: number;
@@ -180,6 +181,7 @@ export function computeShipStats(
     contrabandVolumeMul: Math.max(0.4, 1 + m('contrabandVolumeMul') + e('contrabandVolumeMul')),
     materialVolumeMul: Math.max(0.4, 1 + m('materialVolume')),
     provisionVolumeMul: Math.max(0.4, 1 + m('storesVolume')),
+    cursedVolumeMul: Math.max(0.4, 1 - 0.25 * m('cursedCargo')),
     incomingDamageMul: Math.max(0.2, 1 + m('incomingDamageMul') + e('incomingDamageMul')),
     moraleRegen: 0.4 + m('moraleRegen') + e('moraleRegen'),
     cooldownMul: Math.max(0.6, 1 + m('cooldownMul') + e('cooldownMul')),
@@ -196,12 +198,12 @@ export function tx(st: ShipStats, k: StatKey): number {
 export type Cargo = Partial<Record<GoodId, number>>;
 export type AmmoStock = Record<AmmoId, number>;
 
-export function cargoVolume(cargo: Cargo, contrabandVolumeMul = 1, materialVolumeMul = 1, provisionVolumeMul = 1): number {
+export function cargoVolume(cargo: Cargo, contrabandVolumeMul = 1, materialVolumeMul = 1, provisionVolumeMul = 1, cursedVolumeMul = 1): number {
   let v = 0;
   for (const id in cargo) {
     const g = GOODS[id as GoodId];
     const n = cargo[id as GoodId] ?? 0;
-    v += n * g.volume * (g.contraband ? contrabandVolumeMul : id === 'planks' || id === 'sailcloth' ? materialVolumeMul : id === 'provisions' ? provisionVolumeMul : 1);
+    v += n * g.volume * (g.contraband ? contrabandVolumeMul : id === 'planks' || id === 'sailcloth' ? materialVolumeMul : id === 'provisions' ? provisionVolumeMul : 1) * (id === 'cursed_relics' ? cursedVolumeMul : 1);
   }
   return v;
 }

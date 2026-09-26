@@ -151,7 +151,7 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
 }
 
 function addCargo(ship: ShipEntity, good: GoodId, n: number): number {
-  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
+  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
   const per = GOODS[good].volume * (GOODS[good].contraband ? ship.stats.contrabandVolumeMul : 1);
   const fit = Math.max(0, Math.min(n, Math.floor((free + 1e-6) / per)));
   if (fit > 0) ship.cargo[good] = (ship.cargo[good] ?? 0) + fit;

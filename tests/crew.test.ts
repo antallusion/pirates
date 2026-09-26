@@ -259,7 +259,7 @@ test('prisoners sign on after a boarding; press gangs work only in lawless ports
   npc.crew = 30;
   npc.surrendered = true;
   npc.lootLockedFor = ship.id;
-  s.pendingBoarding = { result: { targetName: npc.name, targetClass: 'brig', cargo: {}, destroyed: {}, gold: 0, ammo: { round: 0, chain: 0, grape: 0, incendiary: 0, heavy: 0 }, crewLost: 0, enemyCrewLost: 0, ransom: 0, holdFree: 0, npc: true, prize: null, captive: false, recruits: 9, noQuarter: false }, targetId: npc.id };
+  s.pendingBoarding = { result: { targetName: npc.name, targetClass: 'brig', cargo: {}, destroyed: {}, gold: 0, ammo: { round: 0, chain: 0, grape: 0, incendiary: 0, heavy: 0, cursed: 0 }, crewLost: 0, enemyCrewLost: 0, ransom: 0, holdFree: 0, npc: true, prize: null, captive: false, recruits: 9, noQuarter: false }, targetId: npc.id };
   c.push({ t: 'loot_take', take: {}, fate: 'release', recruit: 9 });
   assert.equal(ship.crew, 19);
   assert.equal(poolTotal(co.pools), 19);

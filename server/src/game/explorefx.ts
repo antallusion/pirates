@@ -150,7 +150,7 @@ export function hoard(game: Game, s: PlayerSession, grade: number, share: number
   const rng = game.rng;
   const got: string[] = [];
   const give = (good: GoodId, n: number) => {
-    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
+    const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
     const fit = Math.max(0, Math.min(Math.round(n * share), Math.floor((free + 1e-6) / GOODS[good].volume)));
     if (fit > 0) {
       ship.cargo[good] = (ship.cargo[good] ?? 0) + fit;
@@ -253,7 +253,7 @@ export function resolveDive(game: Game, s: PlayerSession, wreckId: number, share
   const goods: GoodId[] = w.tier >= 3 ? ['cursed_relics', 'abyssal_ore', 'pearls'] : w.tier === 2 ? ['weapons', 'spices', 'pearls'] : ['rum', 'iron', 'cloth'];
   const g = rng.pick(goods);
   const n = Math.max(1, Math.round(rng.int(3, 8) * (4 - Math.min(3, GOODS[g].volume * 2)) * share / 2));
-  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul);
+  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
   const fit = Math.max(0, Math.min(n, Math.floor((free + 1e-6) / GOODS[g].volume)));
   if (fit > 0) ship.cargo[g] = (ship.cargo[g] ?? 0) + fit;
   const silver = Math.round(rng.int(50, 200) * w.tier * share);

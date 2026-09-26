@@ -100,6 +100,7 @@ export function survivalOnHit(game: Game, target: ShipEntity, d: DamagePacket): 
 
 /** Ship's Surgeon: part of the dead were only wounded. */
 export function woundedOf(game: Game, target: ShipEntity, killed: number): number {
+  if (target.hasFlag('crew_of_drowned')) return 0; // the dead rise instead
   const share = tx(target.stats, 'surgeon');
   if (share <= 0 || killed <= 0) return 0;
   const x = killed * share;
@@ -108,6 +109,8 @@ export function woundedOf(game: Game, target: ShipEntity, killed: number): numbe
 
 /** Iron Coffin: nothing restores the hull while the fight is on. */
 export function canMend(game: Game, ship: ShipEntity): boolean {
+  // Black water and cursed rot: nothing knits a hull there.
+  if (ship.hasEffect('black_water') || ship.hasEffect('rot')) return false;
   return !(ship.hasFlag('iron_coffin') && ship.inCombat(game.now));
 }
 

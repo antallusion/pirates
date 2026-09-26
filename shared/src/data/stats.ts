@@ -34,7 +34,10 @@ export type StatKey =
   | 'dreadGain' | 'mysticMorale' | 'sanityLoss' | 'moraleBase'
   // command
   | 'moraleLoss' | 'wages' | 'officerXp' | 'hireCost' | 'drill' | 'inspire' | 'discipline' | 'veteranOfficers' | 'fieldPromotion'
-  | 'fleetLogistics' | 'admiralsEye';
+  | 'fleetLogistics' | 'admiralsEye'
+  // abyssal
+  | 'abyssPower' | 'saltWard' | 'fogSight' | 'offering' | 'drownedShot' | 'stillWaters' | 'risingDead' | 'cursedCargo' | 'creepingHorror'
+  | 'hollowMen' | 'seaRot' | 'pact';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -63,7 +66,9 @@ export type Flag =
   | 'boatswain' | 'quartermaster' | 'alchemist' | 'deep_pastor' | 'sailmaker' | 'harpooner' | 'well_fed' | 'fog_born'
   // command
   | 'signal_flags' | 'escort_captain' | 'line_of_battle' | 'fear_and_respect' | 'screen_flagship' | 'legend_at_helm' | 'admirals_pennant'
-  | 'rule_of_the_lash';
+  | 'rule_of_the_lash'
+  // abyssal
+  | 'eyes_of_choir' | 'krakens_embrace' | 'voice_of_choir' | 'drowned_king' | 'crew_of_drowned' | 'heart_of_abyss';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 
