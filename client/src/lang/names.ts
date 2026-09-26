@@ -4,6 +4,8 @@
 // the same everywhere; the kind after the name is transliterated as well ("Айронрич-Айл") — a Russian word in front
 // ("остров") would break the case of every sentence the name sits in ("в остров").
 
+import { NAME_RU } from './data.ts';
+
 const FIRST: Record<string, string> = {
   Grey: 'Грей', Raven: 'Рейвен', Salt: 'Солт', Widow: 'Видоу', Bell: 'Белл', Cold: 'Колд', Lantern: 'Лантерн', Gallows: 'Гэллоуз', Mourn: 'Морн', Iron: 'Айрон',
   Hush: 'Хаш', Moss: 'Мосс', Whisper: 'Уиспер', Murk: 'Мерк', Veil: 'Вейл', Sallow: 'Сэллоу', Drift: 'Дрифт', Fen: 'Фен', Low: 'Лоу', Silt: 'Силт',
@@ -43,10 +45,11 @@ export function composedNameRu(en: string): string | null {
   if (!m) return null;
   const word = m[1];
   const first = firstKeys.find((f) => word.startsWith(f));
-  if (!first) return null;
-  const second = SECOND[word.slice(first.length)];
-  if (!second) return null;
-  const base = FIRST[first] + second;
+  const second = first ? SECOND[word.slice(first.length)] : undefined;
+  // A key port's own island ("Cinderhold Isle"): the port's Russian name with the kind.
+  const known = !second && m[2] ? NAME_RU.get(word) : undefined;
+  if (!second && !known) return null;
+  const base = known ?? FIRST[first!] + second;
   const named = m[2] ? `${base}-${KIND[m[2]]}` : base;
   return m[3] ? `${named} ${m[3]}` : named;
 }

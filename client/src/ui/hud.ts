@@ -621,6 +621,16 @@ export class Hud {
   }
 
   banner(title: string, sub: string): void {
+    // A phone has no free middle of the screen: the herald joins the toast column, where nothing covers it.
+    if (matchMedia('(max-width: 699px), (max-height: 520px)').matches) {
+      const el = document.createElement('div');
+      el.className = 'toast herald';
+      el.innerHTML = `<b>${esc(title)}</b><small>${esc(sub)}</small>`;
+      this.toastsEl.prepend(el);
+      while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
+      setTimeout(() => el.remove(), 5000);
+      return;
+    }
     const b = $('banner');
     b.innerHTML = `${esc(title)}<small>${esc(sub)}</small>`;
     b.classList.add('show');
