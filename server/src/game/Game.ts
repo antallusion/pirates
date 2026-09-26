@@ -62,6 +62,7 @@ import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, r
 import type { Holding } from './holdings.ts';
 import { GuildHub, allied, answerInvite, borrowShip, breakTreaty, declareWar, disbandGuild, dropContract, foundGuild, giveShip, guildNotify, guildOfShip, invite as guildInvite, kick as guildKick, leaveGuild, offerTreaty, onShipSunk, onWarKill, openOffice, postContract, proposePeace, pushGuild, raiseBase, returnShip, setFlagship, setRank, setTax, setToll, stepGuilds, storeMove as guildStore, treasury as guildTreasury } from './guilds.ts';
 import { besieging, chooseOutcome, declareSiege, fortify, stepSieges } from './siege.ts';
+import type { ZoneRuntime } from '../zones/zone.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
@@ -77,6 +78,7 @@ import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './explor
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
 import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } from './combat.ts';
+import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, takeCaptive, takePrize } from './prizes.ts';
 import type { JollyBoat } from './prizes.ts';
@@ -217,6 +219,8 @@ export class Game {
   /** Real time in ms, for letters and listings that outlive the process (tests move it). */
   wallNow: () => number = () => Date.now();
   metrics = new Metrics();
+  /** In a multi-zone world: this process's zone (zones/zone.ts); null when one process runs the whole ocean. */
+  zone: ZoneRuntime | null = null;
   private snapMs = 0;
   private secondMs = 0;
   private byAccount = new Map<number, PlayerSession>();
@@ -315,11 +319,16 @@ export class Game {
     this.saveAll();
   }
 
+  /** In a zone, a share of the world's NPCs by its share of the ports. */
+  private quota(n: number): number {
+    return this.zone ? Math.max(1, Math.round((n * this.zonePorts().length) / this.world.ports.length)) : n;
+  }
+
   bootPopulation(): void {
-    for (let i = 0; i < QUOTA.merchants; i++) spawnMerchant(this);
-    for (let i = 0; i < QUOTA.pirates; i++) spawnPirate(this);
-    for (let i = 0; i < QUOTA.fishers; i++) spawnFisher(this);
-    for (let i = 0; i < QUOTA.ghosts; i++) spawnGhost(this);
+    for (let i = 0; i < this.quota(QUOTA.merchants); i++) spawnMerchant(this);
+    for (let i = 0; i < this.quota(QUOTA.pirates); i++) spawnPirate(this);
+    for (let i = 0; i < this.quota(QUOTA.fishers); i++) spawnFisher(this);
+    for (let i = 0; i < this.quota(QUOTA.ghosts); i++) spawnGhost(this);
     spawnPatrols(this);
     this.patrolsSpawnedAt = this.now;
     this.log(`[world] ${this.world.islands.length} islands, ${this.world.ports.length} ports, ${this.ships.size} NPC ships`);
@@ -339,7 +348,7 @@ export class Game {
       this.secondMs = performance.now() - t0;
     }
     const bucket = this.tick % 20;
-    for (const ship of [...this.ships.values()]) if (ship.id % 20 === bucket) this.shipSecond(ship);
+    for (const ship of [...this.ships.values()]) if (ship.id % 20 === bucket && !ship.ghost) this.shipSecond(ship);
     for (const ses of [...this.byAccount.values()]) if (ses.accountId % 20 === bucket) this.sessionSecond(ses);
     if (now >= this.nextDirector) {
       this.nextDirector = now + 2;
@@ -350,7 +359,7 @@ export class Game {
       this.nextEconTick = now + 10;
       const hist = now >= this.nextHistory;
       if (hist) this.nextHistory = now + 60;
-      for (const m of this.markets.values()) tickMarket(m, edt, hist);
+      for (const m of this.markets.values()) if (!this.zone || this.zone.regions.has(this.portById(m.portId)?.region ?? 'black_coast')) tickMarket(m, edt, hist);
       for (const p of this.world.ports) this.tavernCrew.set(p.id, Math.min(10 + p.size * 14, (this.tavernCrew.get(p.id) ?? 0) + 0.6 * p.size));
       const before = Object.fromEntries(Object.entries(this.weather).map(([k, w]) => [k, w.kind]));
       for (const r of stepWeather(this.weather, this.rng, now)) if (before[r] === 'storm' || before[r] === 'black_storm') stormDebris(this, r);
@@ -383,7 +392,7 @@ export class Game {
     // Movement for every physically simulated ship.
     const night = isNight(now);
     for (const ship of this.ships.values()) {
-      if (ship.docked) continue;
+      if (ship.docked || ship.ghost) continue;
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) continue;
       this.physics(ship, dt, night);
@@ -396,6 +405,7 @@ export class Game {
     stepZones(this, dt);
 
     for (const ship of this.ships.values()) {
+      if (ship.ghost) continue;
       const braced = ship.hasEffect('brace'); // the gun crews lie flat
       if (ship.reload.port > 0 && !braced) {
         ship.reload.port = Math.max(0, ship.reload.port - dt);
@@ -411,6 +421,7 @@ export class Game {
       if (ship.sinkingUntil && now >= ship.sinkingUntil) this.finalizeSink(ship);
     }
 
+    this.zone?.afterStep();
     {
       // Every tick serves a share of the captains (each still at 10 Hz): the cost is spread, not spiked.
       const t0 = performance.now();
@@ -538,14 +549,14 @@ export class Game {
 
   private collideShips(): void {
     for (const a of this.ships.values()) {
-      if (a.docked || !a.alive) continue;
+      if (a.docked || !a.alive || a.ghost) continue;
       const brainA = this.npcs.get(a.id);
       if (brainA && !brainA.active) continue;
       const ra = a.stats.length * 0.32;
       this.grid.query(a.state.x, a.state.y, 80, (id) => {
         if (id <= a.id) return;
         const b = this.ships.get(id);
-        if (!b || b.docked || !b.alive) return;
+        if (!b || b.docked || !b.alive || b.ghost) return;
         if (a.boarding?.with === b.id) return;
         const rb = b.stats.length * 0.32;
         const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
@@ -616,7 +627,7 @@ export class Game {
       }
       this.grid.query(l.x, l.y, 60, (id) => {
         const s = this.ships.get(id);
-        if (!s || !s.isPlayer || !s.alive || s.docked) return;
+        if (!s || !s.isPlayer || !s.alive || s.docked || s.ghost) return;
         if (s.hasEffect('submerged') || s.hasEffect('ghost_return')) return; // a ghost cannot haul casks aboard
         if (l.ownerOnly !== undefined && s.accountId !== l.ownerOnly) return;
         if (l.claim && l.claim.until > now && s.accountId !== l.claim.account && !sameGroupAccounts(this, s.accountId, l.claim.account)) return;
@@ -881,10 +892,10 @@ export class Game {
     const now = this.now;
     const counts: Record<NpcRole, number> = { merchant: 0, patrol: 0, pirate: 0, hunter: 0, fisher: 0, ghost: 0, escort: 0 };
     for (const b of this.npcs.values()) counts[b.role]++;
-    for (let i = 0; counts.merchant + i < QUOTA.merchants && i < 2; i++) spawnMerchant(this);
-    if (counts.pirate < QUOTA.pirates) spawnPirate(this);
-    if (counts.fisher < QUOTA.fishers) spawnFisher(this);
-    if (counts.ghost < QUOTA.ghosts && this.rng.chance(0.02)) spawnGhost(this);
+    for (let i = 0; counts.merchant + i < this.quota(QUOTA.merchants) && i < 2; i++) spawnMerchant(this);
+    if (counts.pirate < this.quota(QUOTA.pirates)) spawnPirate(this);
+    if (counts.fisher < this.quota(QUOTA.fishers)) spawnFisher(this);
+    if (counts.ghost < this.quota(QUOTA.ghosts) && this.rng.chance(0.02)) spawnGhost(this);
     if (counts.patrol < 10 && now - this.patrolsSpawnedAt > 300) {
       spawnPatrols(this);
       this.patrolsSpawnedAt = now;
@@ -952,14 +963,68 @@ export class Game {
   // ================================================================= entities
 
   allocId(): number {
-    return this.nextId++;
+    return (this.zone?.idBase() ?? 0) + this.nextId++;
   }
 
-  spawnNpcShip(role: NpcRole, classId: ShipClassId, faction: FactionId, x: number, y: number, heading: number, names?: { ship: string; captain: string }): ShipEntity {
+  /** Whether a point lies in this process's waters (always, in a single-process world). */
+  inZone(x: number, y: number): boolean {
+    return !this.zone || this.zone.inZone(x, y);
+  }
+
+  /** Ports this process looks after. */
+  zonePorts(): Port[] {
+    return this.zone ? this.world.ports.filter((p) => this.zone!.regions.has(p.region)) : this.world.ports;
+  }
+
+  /** Whether this process runs the world-wide calendars (bounty purses, guild probation). */
+  get zoneLead(): boolean {
+    return !this.zone || this.zone.lead;
+  }
+
+  /** Before a captain crosses into another zone: what cannot follow is settled here. */
+  prepareHandoff(s: PlayerSession): void {
+    const barter = this.social.barters.get(s.accountId);
+    if (barter) cancelBarter(this, barter, `${s.name} has sailed on`);
+    if (groupOfAccount(this, s.accountId)) groupLeave(this, s, 'sails into other waters');
+    const duel = this.pvp.duelOf.get(s.accountId);
+    if (duel) forfeitDuel(this, s);
+  }
+
+  /** The session has moved to another zone: forget it here without a lingering ship. */
+  dropSession(s: PlayerSession): void {
+    if (s.ship) this.removeShip(s.ship.id);
+    this.sessions.delete(s);
+    if (this.byAccount.get(s.accountId) === s) this.byAccount.delete(s.accountId);
+  }
+
+  /** A hit landed in another zone on one of our ships. */
+  applyForeignDamage(target: ShipEntity, d: DamagePacket, source: ShipEntity | null): void {
+    applyDamage(this, target, d, source);
+  }
+
+  /** A ship of ours sank one over the line: the credit is ours to give. */
+  creditForeignKill(killer: ShipEntity, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
+    this.creditKill(killer, victim, how);
+  }
+
+  /** An event from over the line, for our captains who can see it. */
+  pushForeignEvent(ev: GameEvent, x: number, y: number): void {
+    this.events.push({ ev, x, y });
+  }
+
+  /** Another zone rewrote a shared record: drop our copy. */
+  invalidateKv(key: string): void {
+    if (key === 'guilds') this.guilds.drop();
+    else if (key === 'holdings') this.holdings.drop();
+    else if (key === 'bounties') this.pvp.drop();
+    else if (key.startsWith('board:')) this.post.dropBoard(key.slice(6));
+  }
+
+  spawnNpcShip(role: NpcRole, classId: ShipClassId, faction: FactionId, x: number, y: number, heading: number, names?: { ship: string; captain: string }, id?: number): ShipEntity {
     const n = names ?? npcName(this);
     const gun = defaultGunFor(SHIP_CLASSES[classId]);
     const ship = new ShipEntity({
-      id: this.allocId(), name: n.ship, captainName: n.captain, captain: 'corsair', faction, accountId: null,
+      id: id ?? this.allocId(), name: n.ship, captainName: n.captain, captain: 'corsair', faction, accountId: null,
       loadout: { classId, name: n.ship, guns: { port: role === 'pirate' && classId !== 'sloop' ? 'carronade_24' : gun, starboard: gun }, modules: {} },
       talents: {}, x, y, heading,
     });
@@ -1330,6 +1395,7 @@ export class Game {
   }
 
   private creditKill(killer: ShipEntity, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
+    if (killer.ghost) return this.zone?.forwardKill(killer, victim, how); // the killer sails in another zone
     const s = this.sessionOf(killer);
     if (killer.ownerId !== null) {
       const owner = this.ships.get(killer.ownerId);
@@ -1943,6 +2009,7 @@ export class Game {
 
   emit(ev: GameEvent, x: number, y: number): void {
     this.events.push({ ev, x, y });
+    this.zone?.onEvent(ev, x, y);
   }
 
   private onMessage(s: PlayerSession, text: string): void {
@@ -2499,6 +2566,21 @@ export class Game {
     s.name = auth.name;
     s.token = auth.token;
     this.byAccount.set(s.accountId, s);
+    // Crossing from another zone: the captain as they left it, not as last saved.
+    const handoff = this.zone?.takePending(s.accountId) ?? null;
+    if (handoff && !s.profile) {
+      s.profile = sanitizeProfile(handoff.profile);
+      s.discovered = new Set(s.profile.discovered);
+      this.spawnPlayerShip(s, handoff.ship.x, handoff.ship.y, handoff.ship.heading, handoff.ship.id);
+      const sh = s.ship!;
+      if (!sh.docked) {
+        sh.state.speed = handoff.ship.speed;
+        sh.state.sail = handoff.ship.sail;
+        sh.input = { rudder: handoff.ship.rudder, sailTarget: handoff.ship.sailTarget };
+        sh.protectedUntil = 0;
+      }
+      this.zone!.landOwned(handoff, sh.id);
+    }
     if (!s.profile) {
       const row = this.db.loadCaptain(s.accountId);
       if (row) {
@@ -2523,11 +2605,11 @@ export class Game {
     this.log(`[account] ${s.name} became ${CAPTAINS[captain].archetype}`);
   }
 
-  private spawnPlayerShip(s: PlayerSession, x: number, y: number, heading: number): void {
+  private spawnPlayerShip(s: PlayerSession, x: number, y: number, heading: number, id?: number): void {
     const p = s.profile!;
     if (s.ship && this.ships.has(s.ship.id)) return;
     const ship = new ShipEntity({
-      id: this.allocId(), name: p.shipName, captainName: s.name, captain: p.captain, faction: 'player', accountId: s.accountId,
+      id: id ?? this.allocId(), name: p.shipName, captainName: s.name, captain: p.captain, faction: 'player', accountId: s.accountId,
       loadout: p.loadout, talents: p.talents, x, y, heading,
     });
     ship.level = p.level;
@@ -2947,10 +3029,27 @@ export class Game {
   saveAll(): void {
     this.db.transaction(() => {
       for (const s of this.byAccount.values()) this.saveSession(s);
-      this.db.setKv('world', { time: this.now, markets: serializeMarkets(this.markets) });
-      this.db.setKv('orders', this.orders);
-      this.db.setKv('econ', { history: this.econHistory, rewardMul: this.econRewardMul });
-      this.db.setKv('sites', Object.fromEntries(this.sites.map((x) => [x.id, { stock: x.stock, holder: x.holder, holderName: x.holderName, until: x.until }])));
+      const markets = serializeMarkets(this.markets);
+      const sites = Object.fromEntries(this.sites.map((x) => [x.id, { stock: x.stock, holder: x.holder, holderName: x.holderName, until: x.until }]));
+      if (!this.zone) {
+        this.db.setKv('world', { time: this.now, markets });
+        this.db.setKv('orders', this.orders);
+        this.db.setKv('econ', { history: this.econHistory, rewardMul: this.econRewardMul });
+        this.db.setKv('sites', sites);
+        return;
+      }
+      // A zone writes only its own ports and sites into the shared records, keeping the other zones' entries.
+      const mine = new Set(this.zonePorts().map((p) => p.id));
+      const ownSite = (id: string) => this.zone!.regions.has(this.world.islands[Number(id.split(':')[0])]?.region);
+      const world = this.db.getKv<{ time: number; markets: Record<string, unknown> }>('world') ?? { time: 0, markets: {} };
+      for (const [id, m] of Object.entries(markets)) if (mine.has(id)) world.markets[id] = m;
+      this.db.setKv('world', { time: Math.max(world.time, this.now), markets: world.markets });
+      const orders = (this.db.getKv<BuyOrder[]>('orders') ?? []).filter((o) => !mine.has(o.portId));
+      this.db.setKv('orders', [...orders, ...this.orders.filter((o) => mine.has(o.portId))]);
+      const storedSites = this.db.getKv<Record<string, unknown>>('sites') ?? {};
+      for (const [id, v] of Object.entries(sites)) if (ownSite(id)) storedSites[id] = v;
+      this.db.setKv('sites', storedSites);
+      if (this.zoneLead) this.db.setKv('econ', { history: this.econHistory, rewardMul: this.econRewardMul });
     });
   }
 

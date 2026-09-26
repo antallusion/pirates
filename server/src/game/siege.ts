@@ -242,6 +242,7 @@ export function stepSieges(game: Game): void {
     const sg = h.siege;
     if (!sg) continue;
     const isl = island(game, h.island)!;
+    if (game.zone && !game.zone.regions.has(isl.region)) continue; // the island's own zone runs its siege
     switch (sg.phase) {
       case 'notice':
         if (wall < sg.windowStart) break;

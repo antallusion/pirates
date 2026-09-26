@@ -3,6 +3,7 @@
 //   HELLO  gateway → world  {secret, v}         READY  world → gateway  {zone, v}
 //   OPEN   gateway → world  player address      CLOSE  either way       u16 code + reason
 //   TEXT / BIN              a game message      PING / PONG             keep-alive (id 0)
+//   MOVE   world → gateway  zone name: the captain sailed into another zone's waters; move the session there
 // A link must present the shared secret first; a silent link is dropped after 15 s.
 
 import { timingSafeEqual } from 'node:crypto';
@@ -10,7 +11,7 @@ import { createServer } from 'node:net';
 import type { AddressInfo, Server, Socket } from 'node:net';
 import type { GameConn } from './conn.ts';
 
-export const F = { HELLO: 1, READY: 2, OPEN: 3, CLOSE: 4, TEXT: 5, BIN: 6, PING: 7, PONG: 8 } as const;
+export const F = { HELLO: 1, READY: 2, OPEN: 3, CLOSE: 4, TEXT: 5, BIN: 6, PING: 7, PONG: 8, MOVE: 9 } as const;
 
 export const LINK_VERSION = 1;
 const MAX_FRAME = 8 * 1024 * 1024;
@@ -92,6 +93,14 @@ export class RemoteConnection implements GameConn {
     if (this.closed) return;
     this.peer.write(frame(F.CLOSE, this.id, closePayload(code, reason)));
     this.finish();
+  }
+
+  /** The captain sailed into another zone: the Gateway takes the session there. Nothing is closed. */
+  moveTo(zone: string): void {
+    if (this.closed) return;
+    this.peer.write(frame(F.MOVE, this.id, zone));
+    this.closed = true;
+    this.peer.conns.delete(this.id);
   }
 
   /** The player is gone (their socket closed, or the link fell). */

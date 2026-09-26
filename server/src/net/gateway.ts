@@ -40,6 +40,7 @@ class ClientSession {
   lastRefill = Date.now();
   dropped = 0;
   timer: ReturnType<typeof setTimeout> | null = null;
+  token: string | null = null; // from the world's welcome, to carry the session to another zone
 
   constructor(id: number, ws: WsConnection, ip: string, burst: number) {
     this.id = id;
@@ -126,7 +127,7 @@ export class ZoneLink {
         const s = this.sessions.get(id);
         if (!s) return;
         const text = p.toString('utf8');
-        if (text.startsWith('{"t":"welcome"')) this.gw.remember(text, this.spec.name);
+        if (text.startsWith('{"t":"welcome"')) s.token = this.gw.remember(text, this.spec.name);
         s.ws.send(text);
         return;
       }
@@ -144,6 +145,14 @@ export class ZoneLink {
         this.sessions.delete(id);
         s.zone = null;
         s.ws.close(c.code, c.reason);
+        return;
+      }
+      case F.MOVE: {
+        const s = this.sessions.get(id);
+        if (!s) return;
+        this.sessions.delete(id);
+        s.zone = null;
+        this.gw.move(s, p.toString('utf8'));
         return;
       }
       case F.PING:
@@ -191,6 +200,7 @@ export class Gateway {
   private rate: number;
   private burst: number;
   kicked = { flood: 0, outdated: 0, slow: 0, perIp: 0 };
+  moves = 0;
 
   constructor(o: GatewayOpts) {
     if (!o.zones.length) throw new Error('the gateway needs at least one world');
@@ -290,17 +300,33 @@ export class Gateway {
     return best;
   }
 
-  /** Learns the route from a world's welcome (it carries the session token). */
-  remember(welcomeJson: string, zone: string): void {
+  /** Learns the route from a world's welcome (it carries the session token). Returns the token. */
+  remember(welcomeJson: string, zone: string): string | null {
     try {
       const m = JSON.parse(welcomeJson) as { token?: string };
-      if (typeof m.token !== 'string') return;
+      if (typeof m.token !== 'string') return null;
       const now = Date.now();
       this.route.set(hashToken(m.token), { zone, at: now });
       if (this.route.size > 200_000) for (const [k, v] of this.route) if (now - v.at > 30 * 86_400_000) this.route.delete(k);
+      return m.token;
     } catch {
-      /* ignore */
+      return null;
     }
+  }
+
+  /** A zone hands the captain over: open the session in the other zone and sign in again there. */
+  move(s: ClientSession, zoneName: string): void {
+    const zone = this.zones.find((z) => z.spec.name === zoneName && z.up);
+    if (!zone || !s.token) {
+      s.ws.send(JSON.stringify({ t: 'err', msg: 'The waters ahead are closed for now — reconnecting…' }));
+      return this.kick(s, CLOSE_RESTART, 'no zone');
+    }
+    s.zone = zone;
+    zone.sessions.set(s.id, s);
+    this.route.set(hashToken(s.token), { zone: zone.spec.name, at: Date.now() });
+    zone.write(frame(F.OPEN, s.id, s.ip));
+    zone.write(frame(F.TEXT, s.id, JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION, token: s.token })));
+    this.moves++;
   }
 
   kick(s: ClientSession, code: number, reason: string, slow = false): void {
@@ -335,6 +361,7 @@ export class Gateway {
     return {
       sessions: this.sessions.size,
       routes: this.route.size,
+      moves: this.moves,
       kicked: { ...this.kicked },
       zones: this.zones.map((z) => ({ name: z.spec.name, up: z.up, sessions: z.sessions.size })),
     };

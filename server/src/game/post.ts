@@ -83,14 +83,19 @@ export class PostOffice {
     return b;
   }
 
+  /** Another zone rewrote this port's board: reload on next use. */
+  dropBoard(port: string): void {
+    this.boards.delete(port);
+  }
+
   saveBoard(game: Game, port: string): void {
     const b = this.boards.get(port);
     if (b) game.db.setKv(`board:${port}`, b);
   }
 
+  /** The boards of the ports this process looks after. */
   allBoards(game: Game): [string, Board][] {
-    for (const p of game.world.ports) this.board(game, p.id);
-    return [...this.boards.entries()];
+    return game.zonePorts().map((p) => [p.id, this.board(game, p.id)] as [string, Board]);
   }
 }
 

@@ -10,6 +10,8 @@ import { AuthService } from './auth.ts';
 import { Game } from './game/Game.ts';
 import { createStaticHandler } from './net/static.ts';
 import { LinkServer } from './net/link.ts';
+import { ZoneRuntime } from './zones/zone.ts';
+import { parseLayout } from '../../shared/src/world/zones.ts';
 import { acceptUpgrade } from './net/websocket.ts';
 import { Database } from './persistence/db.ts';
 import type { Db } from './persistence/db.ts';
@@ -74,6 +76,20 @@ server.on('upgrade', (req, socket) => {
   if (conn) game.attach(conn);
 });
 
+// A zone of a multi-process world (docs/04 §4.4): ZONE=west ZONE_LAYOUT="west=black_coast;east=…" ZONE_PORT=9300
+// ZONE_PEERS="east=127.0.0.1:9301" LINK_SECRET=… — all zones share DB_PATH and are reached through the Gateway.
+let zone: ZoneRuntime | null = null;
+if (process.env.ZONE) {
+  if (DATABASE_URL) throw new Error('Zones share one SQLite database file (DB_PATH); run PostgreSQL with a single world process.');
+  const peers = (process.env.ZONE_PEERS ?? '').split(',').filter(Boolean).map((x) => {
+    const m = /^([\w-]+)=([^:]+):(\d+)$/.exec(x.trim());
+    if (!m) throw new Error(`bad ZONE_PEERS entry "${x}"`);
+    return { id: m[1], host: m[2], port: Number(m[3]) };
+  });
+  zone = new ZoneRuntime(game, { id: process.env.ZONE, layout: parseLayout(process.env.ZONE_LAYOUT ?? ''), secret: process.env.LINK_SECRET ?? '', peers });
+  const zp = await zone.listen(Number(process.env.ZONE_PORT ?? 9300), process.env.ZONE_HOST ?? '127.0.0.1');
+  console.log(`[${GAME_NAME}] zone ${process.env.ZONE} (${[...zone.regions].join(', ')}), mesh on ${zp}`);
+}
 game.start();
 // Dedicated gateways relay their players here over the internal link.
 const link = process.env.LINK_PORT
@@ -91,6 +107,7 @@ async function shutdown(): Promise<void> {
   console.log('[server] saving world and shutting down…');
   game.stop();
   await link?.close();
+  zone?.stop();
   await db.close();
   await shared?.close();
   process.exit(0);

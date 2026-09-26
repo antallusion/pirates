@@ -129,6 +129,11 @@ export class PvpHub {
   saveBoard(game: Game): void {
     if (this.bounties) game.db.setKv('bounties', this.bounties);
   }
+
+  /** Another zone rewrote the purses: reload on next use. */
+  drop(): void {
+    this.bounties = null;
+  }
 }
 
 // ------------------------------------------------------------------------------------------ status
@@ -678,8 +683,8 @@ export function stepPvp(game: Game): void {
       hub.lastMarks.set(s.accountId, marks.length);
     }
   }
-  // Purses older than 14 days: half goes back to those who paid, the rest to the League.
-  if (Math.floor(game.now) % 60 === 0) {
+  // Purses older than 14 days: half goes back to those who paid, the rest to the League (one zone keeps it).
+  if (Math.floor(game.now) % 60 === 0 && game.zoneLead) {
     const board = hub.board(game);
     let changed = false;
     for (const [k, b] of Object.entries(board)) {

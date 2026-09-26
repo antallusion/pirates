@@ -134,6 +134,13 @@ export class GuildHub {
     this.dirty = true;
   }
 
+  /** Another zone rewrote the record: reload it on next use. */
+  drop(): void {
+    if (this.dirty) return; // ours is newer; it will be written and win
+    this.data = null;
+    this.byAccount = null;
+  }
+
   save(game: Game): void {
     if (this.dirty && this.data) {
       game.db.setKv('guilds', this.data);
@@ -797,6 +804,7 @@ export function stepGuilds(game: Game): void {
   // Nodes.
   for (const n of Object.values(st.nodes)) {
     const isl = game.world.islands[n.island];
+    if (game.zone && !game.zone.regions.has(isl.region)) continue; // held and tolled in its own zone
     const present = new Set<number>();
     game.forShipsNear(isl.x, isl.y, isl.radius + 1500, (o) => {
       if (!o.alive || o.docked || !o.isPlayer) return;
@@ -872,8 +880,8 @@ export function stepGuilds(game: Game): void {
       }
     }
   }
-  // The calendar: probation ends, offices lapse, stale offers go.
-  if (Math.floor(now) % 30 === 0) {
+  // The calendar: probation ends, offices lapse, stale offers go (one zone keeps it for the world).
+  if (Math.floor(now) % 30 === 0 && game.zoneLead) {
     for (const g of Object.values(st.guilds)) {
       for (const m of g.members) if (m.rank === 'cabin_boy' && wall - m.joined > 7 * DAY) {
         m.rank = 'sailor';

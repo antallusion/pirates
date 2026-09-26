@@ -93,7 +93,7 @@ function cruiseSpeed(ship: ShipEntity): number {
 export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain, from: Port): boolean {
   // Counting House caravans trade only between ports their owner has visited.
   const owner = ship.caravanOf !== null ? game.sessionByAccount(ship.caravanOf) : null;
-  const ports = owner?.profile ? game.world.ports.filter((p) => owner.profile!.regionsSeen.includes(`visited:${p.id}`)) : game.world.ports;
+  const ports = (owner?.profile ? game.world.ports.filter((p) => owner.profile!.regionsSeen.includes(`visited:${p.id}`)) : game.world.ports).filter((p) => game.inZone(p.x, p.y));
   const route = bestRoute(from, game.markets, ports, () => game.rng.float(), 38000);
   ship.caravanFrom = ship.caravanOf !== null ? from.id : null;
   let dest: Port | undefined;
@@ -112,7 +112,7 @@ export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain
   }
   if (!dest) {
     // No profitable route: sail in ballast to a random port nearby.
-    const near = game.world.ports.filter((p) => p.id !== from.id && Math.hypot(p.x - from.x, p.y - from.y) < 30000);
+    const near = game.world.ports.filter((p) => p.id !== from.id && Math.hypot(p.x - from.x, p.y - from.y) < 30000 && game.inZone(p.x, p.y));
     if (!near.length) return false;
     dest = pick(game, near);
   }
@@ -597,7 +597,7 @@ export interface NpcQuota {
 export const QUOTA: NpcQuota = { merchants: 70, pirates: 34, fishers: 16, ghosts: 2 };
 
 export function spawnMerchant(game: Game): void {
-  const ports = game.world.ports;
+  const ports = game.zonePorts();
   const weights = ports.map((p) => [p, p.size * p.size] as const);
   const port = game.rng.weighted(weights);
   const roll = game.rng.float();
@@ -622,12 +622,14 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
     y = near.state.y - Math.cos(a) * 2350;
     region = game.regionAt(x, y);
   } else {
-    region = game.rng.pick(PIRATE_REGIONS);
+    const regions = game.zone ? PIRATE_REGIONS.filter((r) => game.zone!.regions.has(r)) : PIRATE_REGIONS;
+    if (!regions.length) return null;
+    region = game.rng.pick(regions);
     [x, y] = REGIONS[region].center;
     x += game.rng.range(-9000, 9000);
     y += game.rng.range(-9000, 9000);
   }
-  if (REGIONS[region].safety === 'safe' || isLand(game.world, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500) return null;
+  if (REGIONS[region].safety === 'safe' || isLand(game.world, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
   const tierRoll = game.rng.float() + REGIONS[region].strangeness * 0.5;
   const cls: ShipClassId = tierRoll < 0.45 ? 'sloop' : tierRoll < 0.72 ? 'schooner' : tierRoll < 0.8 ? 'xebec' : tierRoll < 1.0 ? 'brigantine' : 'brig';
   const ship = game.spawnNpcShip('pirate', cls, 'confederacy', x, y, game.rng.range(0, Math.PI * 2));
@@ -654,7 +656,8 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
 }
 
 export function spawnFisher(game: Game): void {
-  const ports = game.world.ports.filter((p) => REGIONS[p.region].safety !== 'lawless');
+  const ports = game.zonePorts().filter((p) => REGIONS[p.region].safety !== 'lawless');
+  if (!ports.length) return;
   const port = game.rng.pick(ports);
   const ship = game.spawnNpcShip('fisher', 'cutter', port.faction === 'crown' ? 'crown' : 'free', port.x, port.y, game.rng.range(0, 6.28));
   ship.cargo = { provisions: game.rng.int(4, 12), salt: game.rng.int(0, 5) };
@@ -665,7 +668,7 @@ export function spawnFisher(game: Game): void {
 }
 
 export function spawnPatrols(game: Game): void {
-  for (const port of game.world.ports) {
+  for (const port of game.zonePorts()) {
     if (!port.key) continue;
     if (port.faction !== 'crown' && port.faction !== 'league' && port.faction !== 'harpoon') continue;
     const n = port.size >= 3 ? 3 : 2;
@@ -682,7 +685,8 @@ export function spawnPatrols(game: Game): void {
 }
 
 export function spawnGhost(game: Game): void {
-  const regions: RegionId[] = ['drowned_crown', 'dead_mans_expanse', 'the_abyss'];
+  const regions: RegionId[] = (['drowned_crown', 'dead_mans_expanse', 'the_abyss'] as RegionId[]).filter((r) => !game.zone || game.zone.regions.has(r));
+  if (!regions.length) return;
   const region = game.rng.pick(regions);
   const [cx, cy] = REGIONS[region].center;
   const x = cx + game.rng.range(-6000, 6000), y = cy + game.rng.range(-6000, 6000);

@@ -34,6 +34,7 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (a.docked || b.docked) return 'Not at sea';
   if (a.surrendered) return 'You struck your colours';
   if (inDuel(game, a) || inDuel(game, b)) return 'No boarding in a duel';
+  if (a.ghost || b.ghost) return 'She is across the line of these waters — close in first';
   if (b.lootLockedFor !== null) return b.lootLockedFor === a.id ? 'She is already yours' : 'She has struck to another captain';
   if (b.prize) return 'She sails under a prize crew';
   const blocked = damageBlocked(game, a, b);

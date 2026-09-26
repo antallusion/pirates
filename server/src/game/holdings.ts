@@ -93,6 +93,11 @@ export class HoldingsHub {
     this.dirty = true;
   }
 
+  /** Another zone rewrote the record: reload it on next use. */
+  drop(): void {
+    if (!this.dirty) this.all = null;
+  }
+
   save(game: Game): void {
     if (!this.dirty || !this.all) return;
     game.db.setKv('holdings', this.all);
@@ -449,7 +454,8 @@ export function setWindow(game: Game, s: PlayerSession, islandId: number, hour: 
 /** Every second: moorings, lighthouses, guns; every ten, the calendar (production, upkeep, leases). */
 export function stepHoldings(game: Game): void {
   const hub = game.holdings;
-  const holdings = Object.values(hub.map(game));
+  // In a multi-zone world each zone keeps the islands in its own waters.
+  const holdings = Object.values(hub.map(game)).filter((h) => !game.zone || game.zone.regions.has(game.world.islands[h.island]?.region));
   if (!holdings.length) return;
   const now = game.now;
   for (const h of holdings) {

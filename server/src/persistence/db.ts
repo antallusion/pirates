@@ -108,7 +108,8 @@ export class Database implements Db {
   constructor(path: string) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
-    this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;');
+    // busy_timeout: zone processes share one database file and take turns writing.
+    this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;');
     for (const m of MIGRATIONS) this.db.exec(m);
     const cols = new Set((this.db.prepare('PRAGMA table_info(accounts)').all() as { name: string }[]).map((c) => c.name));
     for (const [c, def] of ACCOUNT_COLUMNS) if (!cols.has(c)) this.db.exec(`ALTER TABLE accounts ADD COLUMN ${c} ${def}`);

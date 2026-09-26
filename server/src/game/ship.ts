@@ -107,6 +107,10 @@ export class ShipEntity {
   ownerId: number | null = null; // escort owner entity id
   wantedCache = 0;
   guildTag: string | null = null;
+  /** A read-only mirror of a ship another zone simulates (zones/zone.ts). */
+  ghost = false;
+  ghostZone = '';
+  ghostFlags = 0;
   distanceLog = 0;
   // Talent state (server/src/game/talentfx.ts).
   heat: Record<Side, number> = { port: 0, starboard: 0 }; // Red-Hot Barrels
@@ -241,6 +245,7 @@ export class ShipEntity {
   }
 
   flagsFor(viewerId: number | null, hostile: boolean, now: number): number {
+    if (this.ghost) return (this.ghostFlags & ~SF.HOSTILE) | (hostile ? SF.HOSTILE : 0);
     let f = 0;
     if (this.sinkingUntil) f |= SF.SINKING;
     if (this.boarding) f |= SF.BOARDING;
