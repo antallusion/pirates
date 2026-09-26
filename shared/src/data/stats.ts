@@ -13,7 +13,10 @@ export type StatKey =
   | 'turnDrag' | 'runningFreeAccel' | 'seaPenalty' | 'tackDrill' | 'draftMul' | 'reefDamage' | 'stormSailDamage' | 'evasion' | 'polarBoost'
   // gunnery
   | 'chainSail' | 'chainRange' | 'fireRisk' | 'grapeCrew' | 'grapeMorale' | 'heatedShot' | 'gunCrewDrill' | 'swivels' | 'rakingFire'
-  | 'mastBreak' | 'breachChance' | 'quickSwap' | 'chaserDamage' | 'chaserArc' | 'shotSpeed';
+  | 'mastBreak' | 'breachChance' | 'quickSwap' | 'chaserDamage' | 'chaserArc' | 'shotSpeed'
+  // boarding
+  | 'meleeDamage' | 'boardingNets' | 'matchSpeed' | 'marines' | 'transferSpeed' | 'boardingAxes' | 'prizeCrew' | 'blooded'
+  | 'ironGrip' | 'holdTheLine';
 
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
@@ -22,7 +25,9 @@ export type Flag =
   | 'weather_gauge' | 'sweeps_drill' | 'wake_rider' | 'dead_reckoning' | 'lee_shore' | 'stolen_wind' | 'trade_winds' | 'second_wind'
   | 'iron_tiller' | 'storm_rider'
   // gunnery
-  | 'rolling_broadside' | 'skipping_shot' | 'spotter' | 'splinter_storm' | 'mortar_lore' | 'thunder_broadside' | 'crossfire' | 'red_hot';
+  | 'rolling_broadside' | 'skipping_shot' | 'spotter' | 'splinter_storm' | 'mortar_lore' | 'thunder_broadside' | 'crossfire' | 'red_hot'
+  // boarding
+  | 'pistol_volley' | 'bow_and_stern' | 'first_over_rail' | 'surrender_terms' | 'hull_to_hull' | 'warlord' | 'ransom' | 'no_quarter';
 
 export type StatMods = Partial<Record<StatKey, number>>;
 

@@ -36,6 +36,10 @@ export interface BoardingState {
   enemyStartCrew: number;
   killed: number;
   lost: number;
+  /** Jolly Boat Raid: the attacker's ship is not alongside; only `party` fights. */
+  remote?: boolean;
+  party?: number;
+  railChecked?: boolean;
 }
 
 export type NpcRole = 'merchant' | 'patrol' | 'pirate' | 'hunter' | 'fisher' | 'ghost' | 'escort';
@@ -109,6 +113,12 @@ export class ShipEntity {
   spotter: { target: number; count: number } = { target: 0, count: 0 };
   recentHits: { t: number; dir: number; shooter: number }[] = []; // for Crossfire
   swapBonus = false; // Quick Swap: next volley reloads faster
+  gloryStacks = 0; // Warlord
+  transferUntil = 0; // moving plunder across: the ship lies alongside
+  ramUntil = 0; // Hull to Hull: grapples bite after a ram
+  ramTarget = 0;
+  sinkAt = 0; // No Quarter: the taken ship goes down
+  prize = false; // a captured NPC sailing under a prize crew for her captor
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;
@@ -134,6 +144,11 @@ export class ShipEntity {
 
   get cls() {
     return SHIP_CLASSES[this.loadout.classId];
+  }
+
+  /** Locked alongside another ship (a jolly-boat raid leaves the mother ship free). */
+  get grappled(): boolean {
+    return !!this.boarding && !this.boarding.remote;
   }
 
   get alive(): boolean {

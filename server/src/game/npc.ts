@@ -357,6 +357,17 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     }
   }
 
+  // A prize under a prize crew keeps station astern of her captor and never fights.
+  if (ship.prize) {
+    const owner = ship.ownerId !== null ? game.ships.get(ship.ownerId) : undefined;
+    if (owner) {
+      const d = dist(ship.state.x, ship.state.y, owner.state.x, owner.state.y);
+      const behind = headingVec(owner.state.heading + Math.PI);
+      const px = owner.state.x + behind.x * 220, py = owner.state.y + behind.y * 220;
+      steer(game, ship, brain, headingOf(px - ship.state.x, py - ship.state.y), d > 400 ? 1 : d > 250 ? 0.75 : 0.25);
+    }
+    return;
+  }
   const peaceful = role === 'merchant' || role === 'fisher';
   if (peaceful) {
     const danger = (threat ?? (brain.fleeFrom !== null ? game.ships.get(brain.fleeFrom) ?? null : null)) as ShipEntity | null;

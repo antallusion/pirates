@@ -7,7 +7,7 @@ import {
 } from '../../../shared/src/constants.ts';
 import { CAPTAINS, CAPTAIN_IDS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
-import { FACTIONS, WANTED_TITLES, wantedLevel } from '../../../shared/src/data/factions.ts';
+import { FACTIONS, WANTED_THRESHOLDS, WANTED_TITLES, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -51,9 +51,11 @@ import { stepStrikes, useAbility } from './abilities.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
-import { canBoard, startBoarding, stepBoarding } from './boarding.ts';
+import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
 import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
+import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, takeCaptive, takePrize } from './prizes.ts';
+import type { JollyBoat } from './prizes.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import type { Projectile, VolleyRec } from './combat.ts';
 import { ECON_HOUR, createMarket, restoreMarkets, serializeMarkets, tickMarket } from './economy.ts';
@@ -137,6 +139,7 @@ export class Game {
   forwardBoards = new Map<string, { list: Forward[]; refreshAt: number }>();
   orders: BuyOrder[] = [];
   volleys = new Map<number, VolleyRec>();
+  boats: JollyBoat[] = [];
   econHistory: IndexPoint[] = [];
   econRewardMul = 1;
   private nextEconCheckpoint = 0;
@@ -336,7 +339,7 @@ export class Game {
       ship.state.speed *= 0.97;
       return;
     }
-    if (ship.boarding || ship.landing) {
+    if (ship.grappled || ship.landing || ship.transferUntil > this.now) {
       // Grappled, or riding at anchor while the boats are ashore.
       if (ship.landing) ship.state.speed = 0;
       this.grid.upsert(ship.id, ship.state.x, ship.state.y);
@@ -402,6 +405,14 @@ export class Game {
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
   }
 
+  /** Hull to Hull: a ram is a grapple for the next 3 s. */
+  private hullToHull(a: ShipEntity, b: ShipEntity): void {
+    if (!a.hasFlag('hull_to_hull') || a.boarding || b.boarding) return;
+    a.ramTarget = b.id;
+    a.ramUntil = this.now + 3;
+    if (!canBoard(this, a, b)) startBoarding(this, a, b, 'standard');
+  }
+
   private collideShips(): void {
     for (const a of this.ships.values()) {
       if (a.docked || !a.alive) continue;
@@ -427,6 +438,8 @@ export class Game {
         const va = headingVec(a.state.heading), vb = headingVec(b.state.heading);
         const closing = (va.x * a.state.speed - vb.x * b.state.speed) * nx + (va.y * a.state.speed - vb.y * b.state.speed) * ny;
         if (closing > 3) {
+          this.hullToHull(a, b);
+          this.hullToHull(b, a);
           const ramA = a.hasEffect('ramming_speed') ? 3 : 1, ramB = b.hasEffect('ramming_speed') ? 3 : 1;
           const base = closing * closing * 2.2;
           applyDamage(this, b, { hull: base * ramA * (ma / (ma + mb)) * 2, crew: 1, morale: 4 }, a);
@@ -466,8 +479,18 @@ export class Game {
       if (brain && !brain.active) continue;
       this.shipUpkeep(ship);
       stepTalentEffects(this, ship);
-      if (ship.isPlayer) stepTalents(this, ship);
+      if (ship.isPlayer) {
+        stepTalents(this, ship);
+        surrenderTerms(this, ship);
+      }
+      // No Quarter: the taken ship goes down.
+      if (ship.sinkAt && now >= ship.sinkAt) {
+        ship.sinkAt = 0;
+        ship.hull = 0;
+        this.beginSinking(ship);
+      }
     }
+    stepBoats(this);
     for (const [id, v] of this.volleys) if (now - v.t > 30) this.volleys.delete(id);
 
     // Loot: expiry and pickup.
@@ -729,7 +752,7 @@ export class Game {
   }
 
   spawnEscort(owner: ShipEntity, duration: number): string | null {
-    for (const s of this.ships.values()) if (s.ownerId === owner.id) return 'Your escort is already at sea';
+    for (const s of this.ships.values()) if (s.ownerId === owner.id && !s.prize) return 'Your escort is already at sea';
     const back = headingVec(owner.state.heading + Math.PI);
     const x = owner.state.x + back.x * 300, y = owner.state.y + back.y * 300;
     const ship = this.spawnNpcShip('escort', 'brig', 'free', x, y, owner.state.heading, { ship: 'Hired Brig ' + this.rng.pick(['Tenacity', 'Warrant', 'Loyal Oath', 'Salt Debt']), captain: 'Sailing Master' });
@@ -1018,6 +1041,7 @@ export class Game {
       this.sendTo(s, { t: 'toast', msg: `The Gilded Ledger honours your policy${claim.feeWaived ? ': salvage fee waived' : ''}${claim.payout ? `${claim.feeWaived ? ',' : ':'} ${claim.payout} silver for lost cargo` : ''}.`, kind: 'gold' });
     }
     if (purseLost) this.sendTo(s, { t: 'toast', msg: `${purseLost} silver from the captain's chest went down with her.`, kind: 'bad' });
+    losePrizes(this, ship);
     // A sinking ends the voyage.
     p.deedState.voyagePorts = [];
     p.deedState.wantedTime = 0;
@@ -1053,6 +1077,14 @@ export class Game {
   onBoardingWon(a: ShipEntity, b: ShipEntity, result: BoardingResult): void {
     const sa = this.sessionOf(a);
     if (sa) {
+      const crew = prizeCrewNeeded(a, b);
+      result.prize = crew !== null ? { crew, value: prizeValue(b, a) } : null;
+      result.captive = a.hasFlag('ransom') && !a.hasFlag('no_quarter') && !b.isPlayer;
+      // No Quarter in contested waters: the whole sea hears of it.
+      if (a.hasFlag('no_quarter') && REGIONS[a.region].safety === 'contested' && sa.profile) {
+        const lvl = wantedLevel(sa.profile.infamy);
+        if (lvl < 5) this.addInfamy(a, WANTED_THRESHOLDS[lvl + 1] - sa.profile.infamy + 1, 'gave no quarter');
+      }
       sa.pendingBoarding = { result, targetId: b.id };
       this.sendTo(sa, { t: 'boarding', result });
       this.creditKill(a, b, 'boarded');
@@ -1088,7 +1120,9 @@ export class Game {
     }
   }
 
-  private resolveLoot(s: PlayerSession, take: Cargo, fate: 'sink' | 'release' | 'ransom'): string | null {
+  private resolveLoot(s: PlayerSession, take: Cargo, fateAsked: 'sink' | 'release' | 'ransom' | 'prize'): string | null {
+    // No Quarter: whatever is chosen, she goes down.
+    const fate = s.ship?.hasFlag('no_quarter') ? 'sink' : fateAsked;
     const pend = s.pendingBoarding;
     const ship = s.ship;
     if (!pend || !ship || !s.profile) return 'Nothing to loot';
@@ -1119,12 +1153,27 @@ export class Game {
     }
     for (const a of AMMO_IDS) ship.ammo[a] += pend.result.ammo[a];
     target.ammo = emptyAmmo();
+    // Moving plunder across takes time alongside her (Swift Plunder and Dockhands shorten it).
+    if (moved > 0) {
+      const speed = Math.max(0.25, 1 - tval(ship.stats, 'transferSpeed'));
+      ship.transferUntil = this.now + (3 + moved * 0.06) * speed;
+      this.toastShip(ship, `Swaying ${moved} units across (${Math.ceil(ship.transferUntil - this.now)} s alongside).`, 'info');
+    }
+    if (fate === 'sink' || fate === 'prize') takeCaptive(this, s, target);
     s.profile.gold += pend.result.gold;
     if (pend.result.gold) this.db.ledger(s.accountId, 'plunder', pend.result.gold, target.name);
     if (!target.isPlayer) target.purse = 0;
     target.lootLockedFor = null;
     const f = target.faction !== 'player' ? target.faction : null;
-    if (fate === 'sink') {
+    if (fate === 'prize') {
+      const err2 = takePrize(this, s, target);
+      if (!err2) {
+        if (f) changeRep(s.profile, f, -6);
+        return null;
+      }
+      this.toastShip(ship, `${err2} — she is scuttled instead.`, 'bad');
+    }
+    if (fate === 'sink' || fate === 'prize') {
       this.dropWreckage(target, 0.3);
       target.cargo = {};
       target.attackers.set(ship.id, this.now);
@@ -1505,8 +1554,12 @@ export class Game {
         startBoarding(this, ship, target, agg);
         return;
       }
+      case 'board_cut':
+        return err(cutGrapples(this, ship));
+      case 'captive':
+        return portAction((pt) => captiveAction(this, s, pt, Math.trunc(Number(msg.index)), msg.mode === 'hand_over' ? 'hand_over' : 'ransom'));
       case 'loot_take':
-        err(this.resolveLoot(s, msg.take ?? {}, msg.fate));
+        err(this.resolveLoot(s, msg.take ?? {}, msg.fate === 'prize' || msg.fate === 'ransom' || msg.fate === 'release' ? msg.fate : 'sink'));
         this.sendTo(s, { t: 'boarding', result: null });
         this.pushSelf(s, true);
         return;
@@ -1751,7 +1804,10 @@ export class Game {
 
   private retireSession(s: PlayerSession): void {
     this.saveSession(s);
-    if (s.ship) this.removeShip(s.ship.id);
+    if (s.ship) {
+      losePrizes(this, s.ship);
+      this.removeShip(s.ship.id);
+    }
     if (this.byAccount.get(s.accountId) === s) this.byAccount.delete(s.accountId);
   }
 
@@ -1791,6 +1847,7 @@ export class Game {
     const ship = s.ship!;
     const p = s.profile!;
     onDockDeeds(this, s);
+    sellPrizes(this, s, port);
     ship.docked = port.id;
     ship.state.speed = 0;
     ship.state.sail = 0;

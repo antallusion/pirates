@@ -6,6 +6,7 @@
 
 import type { CaptainId } from './captains.ts';
 import type { Flag, StatMods } from './stats.ts';
+import { BOARDING } from './trees/boarding.ts';
 import { GUNNERY } from './trees/gunnery.ts';
 import { NAVIGATION } from './trees/navigation.ts';
 
@@ -27,7 +28,7 @@ export interface TreeDef {
 export const TREES: Record<TreeId, TreeDef> = {
   navigation: { id: 'navigation', name: 'Navigation', motto: 'The wind is a weapon.', complete: true, playable: true, native: ['corsair', 'navigator'] },
   gunnery: { id: 'gunnery', name: 'Gunnery', motto: 'Speak in iron.', complete: true, playable: true, native: ['corsair'] },
-  boarding: { id: 'boarding', name: 'Boarding', motto: 'Steel, rope and nerve.', complete: false, playable: true, native: ['reaver'] },
+  boarding: { id: 'boarding', name: 'Boarding', motto: 'Steel, rope and nerve.', complete: true, playable: true, native: ['reaver'] },
   command: { id: 'command', name: 'Command', motto: 'A crew is a blade — keep it sharp.', complete: false, playable: false, native: ['admiral'] },
   trade: { id: 'trade', name: 'Trade', motto: 'Every port is a ledger.', complete: false, playable: true, native: ['smuggler'] },
   smuggling: { id: 'smuggling', name: 'Smuggling', motto: 'What the Crown does not see, the Crown does not tax.', complete: false, playable: false, native: ['smuggler'] },
@@ -74,12 +75,6 @@ export const KEYSTONE_REQUIREMENT = 5;
 const t = (d: TalentDef): TalentDef => d;
 
 const LEGACY: TalentDef[] = [
-  // ------------------------------------------------------------- Boarding
-  t({ id: 'brd_grapples', tree: 'boarding', name: 'Long Grapples', tier: 1, maxRank: 2, keystone: false, description: 'Boarding range +15% per rank.', perRank: { boardingRange: 0.15 } }),
-  t({ id: 'brd_careful_hands', tree: 'boarding', name: 'Careful Hands', tier: 1, maxRank: 3, keystone: false, description: 'Cargo destroyed during boarding −5 percentage points per rank.', perRank: { boardingCargoLoss: -0.05 } }),
-  t({ id: 'brd_victory_cheer', tree: 'boarding', name: 'Victory Cheer', tier: 2, maxRank: 1, keystone: false, description: 'A successful boarding restores 25 morale.', fixed: { moraleOnBoard: 25 } }),
-  t({ id: 'brd_terror', tree: 'boarding', name: 'Terror', tier: 2, maxRank: 1, keystone: false, description: 'Enemy crews below 30% lose morale twice as fast.', flags: ['terror'], fixed: { enemyMoraleCollapse: 1 } }),
-  t({ id: 'brd_blood_tide', tree: 'boarding', name: 'Blood Tide', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. Each successful boarding heals 15% hull, but maximum crew −20%.', flags: ['blood_tide'], fixed: { crewMax: -0.2 } }),
   // ------------------------------------------------------------- Trade
   t({ id: 'trd_haggler', tree: 'trade', name: 'Haggler', tier: 1, maxRank: 3, keystone: false, description: 'Buy prices −2% and sell prices +2% per rank.', perRank: { buyMul: -0.02, sellMul: 0.02 } }),
   t({ id: 'trd_packer', tree: 'trade', name: 'Master Packer', tier: 1, maxRank: 2, keystone: false, description: 'Hold volume +8% per rank.', perRank: { holdVolume: 0.08 } }),
@@ -94,7 +89,7 @@ const LEGACY: TalentDef[] = [
   t({ id: 'srv_unsinkable', tree: 'survival', name: 'Unsinkable', tier: 3, maxRank: 1, keystone: true, description: 'KEYSTONE. Once per 5 minutes survive lethal damage with 1 hull for 6 s. Maximum sail level −10%.', flags: ['unsinkable'], fixed: { maxSpeed: -0.1 } }),
 ];
 
-export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...LEGACY];
+export const TALENTS: TalentDef[] = [...NAVIGATION, ...GUNNERY, ...BOARDING, ...LEGACY];
 
 export const TALENTS_BY_ID: Record<string, TalentDef> = Object.fromEntries(TALENTS.map((x) => [x.id, x]));
 

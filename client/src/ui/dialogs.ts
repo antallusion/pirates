@@ -37,17 +37,19 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
       </div><div>
         <div class="card"><h4>Coin & shot</h4><p>${fmt(r.gold)} silver from her strongbox; ${AMMO_IDS.map((a) => `${r.ammo[a]} ${esc(AMMO[a].name.toLowerCase())}`).join(', ')}.</p></div>
         <div class="card"><h4>Her fate</h4>
-          <p>Sinking her leaves no witnesses but angers her flag. Releasing her earns a sliver of mercy.${r.npc ? ` Her captain offers a ransom of ${fmt(r.ransom)}.` : ''}</p>
+          ${r.noQuarter ? '<p class="bad">No Quarter: she will be burning and going down within the minute. Take what you can.</p><button class="btn btn-danger" data-fate="sink">Take and leave her to burn</button>' : `
+          <p>Sinking her leaves no witnesses but angers her flag. Releasing her earns a sliver of mercy.${r.npc ? ` Her captain offers a ransom of ${fmt(r.ransom)}.` : ''}${r.captive ? ' If you sink her or take her as a prize, her captain comes with you in irons.' : ''}</p>
           <button class="btn btn-danger" data-fate="sink">Take and scuttle</button>
           <button class="btn" data-fate="release">Take and release</button>
           ${r.npc ? `<button class="btn btn-primary" data-fate="ransom">Take and ransom (${fmt(r.ransom)})</button>` : ''}
+          ${r.prize ? `<button class="btn btn-primary" data-fate="prize" title="She follows you; any port with a yard buys her">Take her as a prize — ${r.prize.crew} hands, court pays ~${fmt(r.prize.value)}</button>` : ''}`}
         </div></div></div></div>`;
     root.querySelectorAll<HTMLInputElement>('input[type=range]').forEach((el) => (el.oninput = () => {
       take[el.dataset.g as GoodId] = Number(el.value);
       draw();
     }));
     root.querySelectorAll<HTMLElement>('[data-fate]').forEach((el) => (el.onclick = () => {
-      send({ t: 'loot_take', take, fate: el.dataset.fate as 'sink' });
+      send({ t: 'loot_take', take, fate: el.dataset.fate as 'sink' | 'prize' });
       close();
     }));
   };
@@ -105,6 +107,7 @@ export function renderHelp(root: HTMLElement): void {
     ['1 – 5 (loaded)', 'Changing shot with a side loaded means drawing the charge: part of a reload (Quick Swap trims it).'],
     ['B', 'Board the nearest crippled ship in range (hull ≤60%, crew ≤50%, sails ≤35% or struck).'],
     ['Shift+B', 'Board carefully (less cargo destroyed, slower). Ctrl+B: brutal.'],
+    ['B (boarding)', 'While grappled: cut the grapples (attacker: fall back; defender: axes on the lines — may fail).'],
     ['L', 'Heave to near an island feature (cache, wreck, ruins, grove, mine, pearl bank, shrine) and send a landing party ashore.'],
     ['G', 'Crew orders: balanced → guns (faster reload, slow pumps) → braces (sail handling, speed) → damage control (pumps ×2, fast leak plugging and firefighting, slow reload).'],
     ['R', 'Toggle repairs (uses planks & sailcloth; not in combat without Battle Repair).'],

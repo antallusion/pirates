@@ -259,6 +259,10 @@ addEventListener('keydown', (e) => {
       useAbilityKey(k.toUpperCase() as 'Z');
       break;
     case 'b':
+      if (state.you && state.you.flags & SF.BOARDING) {
+        net.send({ t: 'board_cut' });
+        break;
+      }
       if (boardTarget !== null) {
         const aggression: Aggression = e.shiftKey ? 'careful' : e.ctrlKey ? 'brutal' : 'standard';
         net.send({ t: 'board', target: boardTarget, aggression });

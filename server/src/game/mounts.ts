@@ -48,7 +48,7 @@ export function detonateFireship(game: Game, ship: ShipEntity): void {
 export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number): string | null {
   const id = ship.loadout.mount;
   if (!id) return 'No deck mount fitted — see a shipyard';
-  if (!ship.alive || ship.docked || ship.boarding || ship.surrendered) return 'Cannot fire now';
+  if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
   if (ship.mountReload > 0) return `${MOUNTS[id].name} is not ready`;
   if (!Number.isFinite(tx) || !Number.isFinite(ty)) return 'No target';
   const def = MOUNTS[id];

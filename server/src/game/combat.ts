@@ -93,7 +93,7 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
 
 /** Fires a broadside. Returns null on success, or a reason string. */
 export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number): string | null {
-  if (!ship.alive || ship.docked || ship.boarding || ship.surrendered) return 'Cannot fire now';
+  if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
   if (ship.reload[side] > 0) return 'Guns are still loading';
   const guns = ship.stats.gunsPerSide - ship.gunsDisabled[side];
   if (guns <= 0) return 'Every gun on that side is dismounted';
@@ -155,7 +155,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
 
 /** Bow/stern chasers: long guns aimed at a point within a cone along the keel. Great for chases. */
 export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: number, ty: number): string | null {
-  if (!ship.alive || ship.docked || ship.boarding || ship.surrendered) return 'Cannot fire now';
+  if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
   const count = end === 'bow' ? ship.cls.bowChasers : ship.cls.sternChasers;
   if (count <= 0) return `No ${end} chasers on a ${ship.cls.name}`;
   if (ship.chaserReload[end] > 0) return 'Chasers are still loading';

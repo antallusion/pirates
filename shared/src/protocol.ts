@@ -31,7 +31,9 @@ export type ClientMsg =
   | { t: 'ammo'; ammo: AmmoId }
   | { t: 'ability'; id: string; x?: number; y?: number }
   | { t: 'board'; target: number; aggression: Aggression }
-  | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' }
+  | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize' }
+  | { t: 'board_cut' }
+  | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' }
   | { t: 'repair'; on: boolean }
   | { t: 'dock' }
   | { t: 'undock' }
@@ -228,6 +230,7 @@ export interface PrivateState {
   talentCooldowns: Record<string, number>;
   heat: { port: number; starboard: number };
   rollingFire: boolean;
+  captives: { name: string; faction: FactionId; ransom: number }[];
   gold: number;
   infamy: number;
   wanted: number;
@@ -408,6 +411,10 @@ export interface BoardingResult {
   ransom: number;
   holdFree: number;
   npc: boolean;
+  /** Men needed to sail her home as a prize and what a prize court would pay, when she can be taken. */
+  prize: { crew: number; value: number } | null;
+  captive: boolean; // Ransom: her captain can be taken prisoner
+  noQuarter: boolean; // No Quarter: she sinks within the minute whatever you choose
 }
 
 export type ServerMsg =

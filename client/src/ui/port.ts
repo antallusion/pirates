@@ -105,6 +105,8 @@ export class PortScreen {
       }
       case 'licence':
         return this.send({ t: 'licence' });
+      case 'captive':
+        return this.send({ t: 'captive', index: Number(d.i), mode: d.mode as 'ransom' });
       case 'rights':
         return this.send({ t: 'rights', site: d.site! });
       case 'store':
@@ -242,6 +244,9 @@ export class PortScreen {
         ${view.licence ? `<div class="card"><h4>Trade licence</h4><p>Waives the ${Math.round((view.licence.until > state.estServerTime() ? 0 : view.duty) * 100) || ''}${view.licence.until > state.estServerTime() ? 'duty (active)' : '% import duty'} in every ${esc(FACTIONS[port.faction].short)} port and trims buying prices by 3% for two hours. Void while you are wanted (Wanted 2+).</p>
           ${view.licence.until > state.estServerTime() ? `<p class="good">Licensed for ${Math.round((view.licence.until - state.estServerTime()) / 60)} more minutes.</p>` : ''}
           <button class="btn" data-act="licence">Buy / extend — ${fmt(view.licence.cost)}</button></div>` : ''}
+        ${self.captives.length ? `<div class="card"><h4>Captives in irons</h4>${self.captives.map((c, i) => `<div class="row" style="padding:3px 0"><span>${esc(c.name)} <span class="muted">${esc(FACTIONS[c.faction].short)}</span></span><span>
+          <button class="btn btn-small" data-act="captive" data-i="${i}" data-mode="ransom">Ransom ${fmt(c.ransom)}</button>
+          <button class="btn btn-small" data-act="captive" data-i="${i}" data-mode="hand_over" title="Only to his enemies: reputation instead of silver">Hand over</button></span></div>`).join('')}</div>` : ''}
         <div class="card"><h4>Voyage insurance</h4>${view.insurance.length ? `<p>The Gilded Ledger underwrites this voyage until you next make port. Premiums rise with your wanted level, the curse on your hull, dangerous cargo and recent claims. Cargo cover is fixed at today's value, minus a 10% deductible. Void for the hunted (Wanted 3+).</p>
           ${self.policy ? `<p class="good">Insured: ${esc(self.policy)} cover.</p>` : view.insurance.map((q) => `<div class="row" style="padding:3px 0"><span><b>${q.tier === 'hull' ? 'Hull' : q.tier === 'cargo' ? 'Cargo' : 'Full'}</b> <span class="muted">${q.hull ? 'salvage fee waived' : ''}${q.hull && q.cover ? ' · ' : ''}${q.cover ? `${Math.round(q.cover * 100)}% of ${fmt(q.declared)} cargo, −${fmt(q.deductible)}` : ''}</span></span>
             <button class="btn btn-small" data-act="insure" data-tier="${q.tier}" ${q.cover && q.declared < 50 ? 'disabled' : ''}>${fmt(q.premium)}</button></div>`).join('')}` : '<p class="muted">Only League and free ports write policies.</p>'}</div>

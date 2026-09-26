@@ -8,6 +8,7 @@ import type { Side } from '../../../shared/src/protocol.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
+import { launchJollyBoat } from './prizes.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -152,6 +153,11 @@ export function useTalentActive(game: Game, s: PlayerSession, id: string): strin
       const angle = (Math.PI / 2) * (1 + Math.min(1, Math.abs(ship.input.rudder)));
       ship.pivot = { until: now + 2.5, rate: (dir * angle) / 2.5 };
       applyDamage(game, ship, { hull: ship.stats.hullMax * 0.02 }, null);
+      break;
+    }
+    case 'brd_jolly_boat': {
+      const why = launchJollyBoat(game, ship);
+      if (why) return why;
       break;
     }
     default:
