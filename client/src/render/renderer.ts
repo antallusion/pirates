@@ -179,6 +179,8 @@ export class Renderer {
     this.drawBalls();
     this.drawParticles(false);
 
+    // The Islands of Light burn in the Abyss's dark.
+    for (const l of state.self?.abyss?.lights ?? []) this.fx.light(l.x, l.y, 700, 'rgba(255,245,210,1)', 0.9, 0.05);
     this.drawLighting(state, ships, night);
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, true);
     this.drawParticles(true);

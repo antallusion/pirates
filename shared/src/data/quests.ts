@@ -36,6 +36,20 @@ export interface QuestDef {
 }
 
 export const QUESTS: QuestDef[] = [
+  // ---------------------------------------------------------------- the way into the Abyss (docs/02 §14.A.1)
+  {
+    id: 'q_last_leaf', kind: 'story', name: 'The Last Leaf', mentor: 'Tobias Wren', port: 'wrecktide',
+    summary: 'Wren\'s great chart has one leaf he never drew: the sea past the Maelstrom Wall, where the stars are wrong. He will give it only to a captain who has seen the edges of everything else.',
+    requires: { level: 45 },
+    steps: [
+      { type: 'chart', count: 40, text: 'Chart forty islands you have never seen.' },
+      { type: 'time_in', region: 'dead_mans_expanse', seconds: 600, text: 'Spend ten minutes at sea in Dead Man\'s Expanse.' },
+      { type: 'reach', region: 'drowned_crown', text: 'Sail into the Drowned Crown.' },
+      { type: 'dive', count: 2, text: 'Send divers down to two sunken wrecks.' },
+      { type: 'visit', port: 'wrecktide', text: 'Bring your log to Tobias Wren at Wrecktide.' },
+    ],
+    reward: { xp: 6000, silver: 3000 },
+  },
   // ---------------------------------------------------------------- base Paths
   {
     id: 'q_path_corsair', kind: 'path', name: 'The Last Volley', mentor: 'Edric Vane', port: 'gravesend',

@@ -58,7 +58,7 @@ export class Hud {
     const cls = SHIP_CLASSES[self.loadout.classId];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1, state.ownStats?.cursedVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
-    const skey = `${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
+    const skey = `${self.abyss?.pressure ?? -1}|${self.abyss?.shards ?? 0}|${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
     if (skey !== this.lastShipKey) {
       this.lastShipKey = skey;
       const steps = [0, 0.25, 0.5, 0.75, 1].slice(1).map((v) => `<span class="${you.sail >= v - 0.01 ? 'on' : ''} ${Math.abs(you.sailT - v) < 0.01 ? 'target' : ''}"></span>`).join('');
@@ -70,7 +70,7 @@ export class Hud {
         ${you.water > 0.01 || you.leaks ? `<div class="row"><span class="lbl" style="color:var(--xp)">Water</span><span class="val">${Math.round(you.water * 100)}%${you.leaks ? ` · ${you.leaks} leak${you.leaks > 1 ? 's' : ''}` : ''}${you.water > 0.4 ? ' · listing' : ''}</span></div>${bar('crew', you.water)}` : ''}
         <div class="row"><span class="lbl">Orders [G]</span><span class="val">${esc({ balanced: 'Balanced', gunnery: 'Guns', sailing: 'Braces', damage_control: 'Damage control' }[you.station])}</span></div>
         <div class="row"><span class="lbl">Morale</span><span class="val">${you.morale}</span></div>${bar('morale', you.morale / 100)}
-        ${you.sanity < 99.5 ? `<div class="row" title="The crew's nerve. The deep, the dark, cursed cargo and dead shipmates wear it down; rum, dreamleaf and a port restore it."><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">Sanity</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
+        ${self.abyss && (self.abyss.inside || self.abyss.pressure > 0) ? `<div class="row" title="Depth pressure in the Abyss: whispers at 30, visions at 60, rot at 90. The Islands of Light wash it out."><span class="lbl" style="color:${self.abyss.pressure < 60 ? 'var(--fog)' : 'var(--bad)'}">Pressure</span><span class="val">${self.abyss.pressure}${self.abyss.shards ? ` · shards ${self.abyss.shards}/3` : ''}</span></div>${bar('sanity', self.abyss.pressure / 100)}` : ''}${you.sanity < 99.5 ? `<div class="row" title="The crew's nerve. The deep, the dark, cursed cargo and dead shipmates wear it down; rum, dreamleaf and a port restore it."><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">Sanity</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
         ${self.company.unrest ? `<div class="row" title="Low loyalty and low morale breed mutiny. Pay, rum, a fair share or a port will calm them. [O] crew"><span class="lbl" style="color:var(--bad)">Crew</span><span class="val" style="color:var(--bad)">${esc(self.company.unrest)}</span></div>` : ''}
         ${self.captain === 'drowned' ? `<div class="row" title="Dread: paid for miracles. Grows as you bleed, kill and sail in the dark. At 80 the Call: +20% power, but the crew hears it."><span class="lbl" style="color:var(--turq)">Dread</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ' · THE CALL' : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
         <div class="row"><span class="lbl">Hold</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · food ${Math.floor(self.cargo.provisions)}` : ' · <span style="color:var(--bad)">no food</span>'}</span></div>
@@ -184,8 +184,9 @@ export class Hud {
     g.clearRect(0, 0, W, W);
     g.save();
     g.translate(W / 2, W / 2);
-    // A frightened crew reads a wandering compass (±15°).
+    // A frightened crew reads a wandering compass (±15°); in the Abyss the stars themselves lie (±30°).
     if ((state.you?.sanity ?? 100) <= 50) g.rotate(Math.sin(performance.now() / 2300) * 0.26);
+    if (state.self?.abyss?.skew) g.rotate(state.self.abyss.skew);
     // Ring.
     g.strokeStyle = 'rgba(176,141,87,0.6)';
     g.lineWidth = 2;
@@ -411,6 +412,32 @@ export class Hud {
       g.stroke();
     }
     g.lineWidth = 1;
+    // The Abyss: Islands of Light, dead-wind zones, the Eye, and the sails your lookouts only think they see.
+    const ab = self?.abyss;
+    if (ab) {
+      g.fillStyle = 'rgba(255,245,210,0.9)';
+      for (const l of ab.lights) {
+        g.beginPath();
+        g.arc(tx(l.x), ty(l.y), 3, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.strokeStyle = 'rgba(160,160,170,0.5)';
+      for (const z of ab.deadWinds) {
+        g.beginPath();
+        g.arc(tx(z.x), ty(z.y), Math.max(3, z.r * k), 0, Math.PI * 2);
+        g.stroke();
+      }
+      g.strokeStyle = '#7a4bd0';
+      g.beginPath();
+      g.arc(tx(ab.eye.x), ty(ab.eye.y), 5, 0, Math.PI * 2);
+      g.stroke();
+      g.fillStyle = '#e0655a';
+      for (const [px, py] of ab.phantoms) {
+        g.beginPath();
+        g.arc(tx(px), ty(py), 3, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
     // Monsters the Choir shows you (Eyes of the Choir).
     g.fillStyle = '#9b6bd0';
     for (const [mx, my] of state.self?.monsters ?? []) {

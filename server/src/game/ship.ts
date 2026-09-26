@@ -160,6 +160,8 @@ export class ShipEntity {
   bossPart = '';
   /** A squadron of a world event (events.ts): the Armada, a blockade. */
   eventOf = 0;
+  /** Depth pressure in the Abyss, 0..100 (abyss.ts). */
+  pressure = 0;
   /** The Graveyard Captain of this graveyard (expeditions.ts). */
   yardOf = '';
 

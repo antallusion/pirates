@@ -87,6 +87,8 @@ export type ClientMsg =
   | { t: 'land' }
   | { t: 'dive_move'; dir: 'n' | 'e' | 's' | 'w' }
   | { t: 'dive_surface' }
+  | { t: 'abyss'; action: 'ritual' }
+  | { t: 'legends' }
   | { t: 'map'; action: 'forge' | 'appraise' | 'seal' | 'give' | 'burn'; id?: string; to?: string }
   | { t: 'licence' }
   | { t: 'rights'; site: string }
@@ -331,6 +333,8 @@ export interface PrivateState {
   maps: MapView[];
   /** Fragments of the season's legendary chart held by other captains within 10 km: bearings (radians). */
   legendEcho: number[];
+  /** The Abyss: pressure, the lying stars, visions, the Islands of Light, the chapters (null until it matters). */
+  abyss: AbyssView | null;
   fragments: number;
   /** Sunken wrecks you know of. */
   wrecks: { name: string; x: number; y: number; depth: number }[];
@@ -569,6 +573,29 @@ export interface MapView {
   piece?: [number, number];
 }
 
+/** A captain's legend (legends.ts): trophies, the monsters slain, the chapters of the Abyss, and the book of the sea. */
+export interface LegendsView {
+  trophies: string[];
+  bossKills: { name: string; n: number }[];
+  chapters: { title: string; text: string }[];
+  shards: number;
+  firsts: { boss: string; names: string[]; at: number }[];
+}
+
+/** The Abyss as a captain knows it (abyss.ts). */
+export interface AbyssView {
+  inside: boolean;
+  pressure: number;
+  skew: number; // radians the stars lie by
+  phantoms: [number, number][];
+  lights: { x: number; y: number; name: string }[];
+  deadWinds: { x: number; y: number; r: number }[];
+  eye: { x: number; y: number };
+  shards: number;
+  chapters: { title: string; text: string }[];
+  cleared: boolean;
+}
+
 /** PvE locations (expeditions.ts): sunken cities (bell buoys) and ship graveyards (a wall of wrecks with gates). */
 export interface PveSiteView {
   id: string;
@@ -725,6 +752,7 @@ export type ServerMsg =
   | { t: 'info'; list: EntityInfo[] }
   | { t: 'boss'; list: BossView[] }
   | { t: 'events'; list: WorldEventView[] }
+  | { t: 'legends'; view: LegendsView }
   | { t: 'pve_sites'; list: PveSiteView[] }
   | { t: 'dive'; view: DiveView | null }
   | { t: 'gone'; ids: number[] }

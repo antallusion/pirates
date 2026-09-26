@@ -305,7 +305,8 @@ addEventListener('keydown', (e) => {
     if (chat.classList.contains('open')) {
       const said = chatInput.value.trim();
       // "/g …" speaks to your group only.
-      if (/^\/gc\s/i.test(said)) net.send({ t: 'guild', action: 'say', text: said.slice(4) });
+      if (/^\/ritual\b/i.test(said)) net.send({ t: 'abyss', action: 'ritual' });
+      else if (/^\/gc\s/i.test(said)) net.send({ t: 'guild', action: 'say', text: said.slice(4) });
       else if (/^\/g\s/i.test(said)) net.send({ t: 'group', action: 'say', text: said.slice(3) });
       else if (said) net.send({ t: 'chat', text: said });
       chatInput.value = '';
@@ -572,6 +573,8 @@ function computePrompt(): string {
     const name = state.ships.get(best)?.info?.name ?? 'her';
     parts.push(`<kbd>B</kbd> Board the ${esc(name)} <span class="muted">(Shift careful · Ctrl brutal)</span>`);
   }
+  const ab = self.abyss;
+  if (ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500) parts.push('At the rim of the Eye: type <kbd>/ritual</kbd> to speak the Raising Ritual (30 cursed relics in the hold).');
   if (self.landing) {
     const now = state.estServerTime();
     const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));

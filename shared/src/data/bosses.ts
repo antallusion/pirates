@@ -6,7 +6,9 @@ import type { FigureheadId } from './shipbuild.ts';
 import type { ModuleId, ShipClassId } from './ships.ts';
 import type { RegionId } from '../world/regions.ts';
 
-export type BossId = 'leviathan' | 'kraken' | 'drowned_whale' | 'lantern_maw' | 'black_serpent' | 'hollow_admiral' | 'mother_of_wrecks' | 'storm_widow';
+export type BossId = 'leviathan' | 'kraken' | 'drowned_whale' | 'lantern_maw' | 'black_serpent' | 'hollow_admiral' | 'mother_of_wrecks' | 'storm_widow'
+  // The Abyss (docs/02 §14.A.1): its ancient leviathans and the season's raid on the Eye.
+  | 'ancient_leviathan' | 'abyss_eye';
 
 export type BossWindow = 'any' | 'night' | 'storm';
 
@@ -110,6 +112,22 @@ export const BOSSES: Record<BossId, BossDef> = {
     rare: [{ kind: 'module', id: 'storm_glass', chance: 0.25 }],
     trophy: 'Veil of the Widow', xp: 4600,
     lore: 'A fight against the weather: the wind turns every 15 s, lightning finds the tallest mast. She can only be hurt from inside the moving eye.',
+  },
+  ancient_leviathan: {
+    id: 'ancient_leviathan', name: 'The Ancient Leviathan', classId: 'leviathan', regions: ['the_abyss'], ships: [15, 25], every: 3 * 24 * 3600, window: 'any', chance: 1, lifetime: 3600,
+    phases: ['The Hunt', 'Roar of the Deep', 'Death Frenzy'],
+    goods: { leviathan_bone: [25, 60], abyssal_ore: [8, 20], cursed_relics: [3, 8] },
+    rare: [{ kind: 'module', id: 'bone_culverin', chance: 0.4 }],
+    trophy: 'Skull of an Ancient', xp: 12000,
+    lore: 'Older than the Leviathans of the Reach, grown in the dark past the Wall. It hunts as they do, but it is three times the beast. Alliances are made for it — and broken over the carcass.',
+  },
+  abyss_eye: {
+    id: 'abyss_eye', name: 'The Eye of the Abyss', classId: 'abyss_eye', regions: ['the_abyss'], ships: [25, 40], every: 30 * 24 * 3600, window: 'any', chance: 1, lifetime: 5400,
+    phases: ['The Black Storm', 'The Dead Wind', 'The Fall'],
+    goods: { abyssal_ore: [20, 50], cursed_relics: [8, 20], pearls: [10, 30] },
+    rare: [{ kind: 'module', id: 'storm_glass', chance: 0.5 }, { kind: 'module', id: 'ghost_timbers', chance: 0.5 }],
+    trophy: 'A Shard of the Eye', xp: 25000,
+    lore: 'Once a season the Eye at the heart of the Abyss opens. First the black storm, then a wind that is not there, then the fall. Only the whole sea together can close it again.',
   },
 };
 

@@ -18,7 +18,7 @@ import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
 
-export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles';
+export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles' | 'legends';
 
 const ago = (ms: number) => {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
@@ -51,9 +51,9 @@ export class CompanyScreen {
   render(root: HTMLElement, state: ClientState): void {
     const docked = state.self?.dockedAt ?? null;
     if (this.tab === 'market' && !docked) this.tab = 'group';
-    const tabs = (['group', 'guild', 'law', 'letters', 'isles', 'market'] as CompanyTab[])
+    const tabs = (['group', 'guild', 'law', 'letters', 'isles', 'legends', 'market'] as CompanyTab[])
       .filter((t) => t !== 'market' || docked)
-      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'isles' ? 'Islands' : t === 'guild' ? `${state.guild ? `Guild [${esc(state.guild.tag)}]` : 'Guild'}${state.guildInvites.length ? ' (!)' : ''}` : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
+      .map((t) => `<button class="btn btn-small ${this.tab === t ? 'btn-primary' : ''}" data-tab="${t}">${t === 'group' ? 'Group' : t === 'law' ? `Colours &amp; Law${state.self?.pvp.challenges.length ? ' (!)' : ''}` : t === 'isles' ? 'Islands' : t === 'legends' ? 'Legends' : t === 'guild' ? `${state.guild ? `Guild [${esc(state.guild.tag)}]` : 'Guild'}${state.guildInvites.length ? ' (!)' : ''}` : t === 'letters' ? `Letters${state.unread ? ` (${state.unread})` : ''}` : state.market?.auction ? 'Market & Auction' : 'Market board'}</button>`)
       .join(' ');
     root.innerHTML = `<div class="modal-head"><div><h2>Company &amp; Letters</h2><div class="sub">${tabs}</div></div><div class="muted">[Y] close</div></div>
       <div class="modal-body" id="company-body"></div>`;
@@ -63,8 +63,10 @@ export class CompanyScreen {
     else if (this.tab === 'law') this.renderLaw(body, state);
     else if (this.tab === 'isles') this.renderIsles(body, state);
     else if (this.tab === 'guild') this.renderGuild(body, state);
+    else if (this.tab === 'legends') this.renderLegends(body, state);
     else this.renderMarket(body, state);
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
+      if (el.dataset.tab === 'legends') this.send({ t: 'legends' });
       this.tab = el.dataset.tab as CompanyTab;
       if (this.tab === 'market') this.send({ t: 'market', action: 'list' });
       if (this.tab === 'letters') this.send({ t: 'mail', action: 'list' });
@@ -73,6 +75,23 @@ export class CompanyScreen {
       if (this.tab === 'guild') this.send({ t: 'guild', action: 'view' });
       this.render(root, state);
     }));
+  }
+
+  /** Legends: your trophies and monsters, the chapters of the Abyss, the first victories on these seas. */
+  private renderLegends(body: HTMLElement, state: ClientState): void {
+    const v = state.legends;
+    if (!v) {
+      this.send({ t: 'legends' });
+      body.innerHTML = '<p class="muted">The logbooks are brought up from below…</p>';
+      return;
+    }
+    const date = (t: number) => new Date(t).toLocaleDateString();
+    body.innerHTML = `<div class="cols"><div>
+      <div class="card"><h4>Trophies</h4>${v.trophies.map((t) => `<div>✦ ${esc(t)}</div>`).join('') || '<p class="muted">None yet.</p>'}</div>
+      <div class="card"><h4>Monsters slain</h4>${v.bossKills.map((k) => `<div class="row"><span>${esc(k.name)}</span><span>×${k.n}</span></div>`).join('') || '<p class="muted">None yet.</p>'}
+        ${v.shards ? `<p class="muted">Ritual shards: ${v.shards}/3</p>` : ''}</div></div>
+      <div><div class="card"><h4>The Log of the Stars</h4>${v.chapters.map((c) => `<p><b>${esc(c.title)}</b><br><i>${esc(c.text)}</i></p>`).join('') || '<p class="muted">The Abyss has told you nothing yet.</p>'}</div>
+      <div class="card"><h4>First on these seas</h4>${v.firsts.map((f) => `<div class="row"><span>${esc(f.boss)}</span><span class="muted">${esc(f.names.slice(0, 4).join(', '))}${f.names.length > 4 ? '…' : ''} · ${date(f.at)}</span></div>`).join('') || '<p class="muted">No monster has fallen yet.</p>'}</div></div></div>`;
   }
 
   private renderGroup(body: HTMLElement, state: ClientState): void {

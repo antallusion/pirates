@@ -51,6 +51,7 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
       case 'wreck_core': orb(g, beam, t, '46,230,200', 2.2); break;
       case 'storm_widow': widow(g, len, t); break;
       case 'hulk': hulk(g, len, beam, m.id); break;
+      case 'abyss_eye': eye(g, len, t); break;
       default: orb(g, beam, t, '120,120,120', 1);
     }
   }
@@ -360,6 +361,35 @@ function widow(g: CanvasRenderingContext2D, len: number, t: number): void {
       g.lineTo(x, y);
     }
     g.stroke();
+  }
+}
+
+function eye(g: CanvasRenderingContext2D, len: number, t: number): void {
+  // A hole in the sea that looks back: black at the centre, a ring of wrong starlight, water pouring in.
+  for (let i = 0; i < 6; i++) {
+    g.save();
+    g.rotate(-t * (0.3 + i * 0.12) + i * 1.3);
+    g.strokeStyle = `rgba(90,70,140,${0.5 - i * 0.07})`;
+    g.lineWidth = len * 0.05;
+    g.beginPath();
+    g.arc(0, 0, len * (0.2 + i * 0.06), 0, Math.PI * 1.4);
+    g.stroke();
+    g.restore();
+  }
+  const grad = g.createRadialGradient(0, 0, 0, 0, 0, len * 0.22);
+  grad.addColorStop(0, '#000');
+  grad.addColorStop(0.8, '#05030a');
+  grad.addColorStop(1, 'rgba(5,3,10,0)');
+  g.fillStyle = grad;
+  g.beginPath();
+  g.arc(0, 0, len * 0.22, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = 'rgba(220,210,255,0.9)';
+  for (let i = 0; i < 12; i++) {
+    const a = i * 0.52 + t * 0.05, r = len * (0.12 + ((i * 37) % 10) / 100);
+    g.beginPath();
+    g.arc(Math.sin(a) * r, -Math.cos(a) * r, Math.max(0.8, len * 0.006), 0, Math.PI * 2);
+    g.fill();
   }
 }
 

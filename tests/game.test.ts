@@ -366,6 +366,9 @@ test('curse: the Abyss claims a lingering ship in stages; a Crown yard scrapes i
   const s = [...game.sessions][0];
   const ship = s.ship!;
   const armor0 = ship.stats.armor;
+  // A captain with leave to pass the Maelstrom Wall.
+  s.profile!.level = 50;
+  s.profile!.quests.done.push('q_last_leaf');
   ship.state.x = 89000;
   ship.state.y = 9000; // The Abyss
   ship.protectedUntil = 1e9;

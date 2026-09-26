@@ -27,6 +27,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { legendFragment } from './treasure.ts';
+import { chapter, giveShard, spawnEcho } from './abyss.ts';
 
 type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add';
 
@@ -140,7 +141,7 @@ export class BossHub {
       const next = sc.next[id] ?? wall;
       const pend = sc.pending[id];
       if (!pend && wall >= next - BOSS_ANNOUNCE * 1000) {
-        const spot = risingPoint(game, def, regions);
+        const spot = id === 'abyss_eye' ? game.abyss.eye : risingPoint(game, def, regions);
         if (!spot) continue;
         sc.pending[id] = { at: Math.max(next, wall), x: spot.x, y: spot.y };
         announce(game, def, spot.x, spot.y, Math.max(0, Math.round((next - wall) / 60000)));
@@ -259,6 +260,12 @@ export function summon(game: Game, kind: BossId, x: number, y: number): Fight {
     body = spawnPart(game, null, def.classId, x, y, game.rng.range(0, Math.PI * 2), def.name, 'body');
   }
   body.bossOf = body.id;
+  if (kind === 'ancient_leviathan') {
+    // Three times the beast of the Reach.
+    body.addEffect({ id: 'ancient', until: now + 1e9, mods: { hullMax: 2 } }, now);
+    body.hull = body.stats.hullMax;
+    body.name = def.name;
+  }
   const f: Fight = {
     id: body.id, kind, def, region: regionAt(game.world, x, y), phase: 0, started: now, endsAt: now + def.lifetime, anchor: { x, y },
     pool: body.stats.hullMax, parts: new Map([[body.id, kind === 'hollow_admiral' ? 'ghost' : 'body']]), contrib: new Map(), ready: {},
@@ -462,7 +469,9 @@ export function stepBosses(game: Game, dt: number): void {
     const body = game.ships.get(f.id);
     if (!body || !body.alive) continue;
     switch (f.kind) {
-      case 'leviathan': leviathanTick(game, f, body, dt); break;
+      case 'leviathan':
+      case 'ancient_leviathan': leviathanTick(game, f, body, dt); break;
+      case 'abyss_eye': eyeTick(game, f, body, dt); break;
       case 'kraken': krakenTick(game, f, body, dt); break;
       case 'drowned_whale': whaleTick(game, f, body, dt); break;
       case 'lantern_maw': mawTick(game, f, body, dt); break;
@@ -776,7 +785,9 @@ function fightSecond(game: Game, f: Fight): void {
   }
   const hp = body.hull / body.stats.hullMax;
   switch (f.kind) {
-    case 'leviathan': leviathanSecond(game, f, body, ships, hp); break;
+    case 'leviathan':
+    case 'ancient_leviathan': leviathanSecond(game, f, body, ships, hp); break;
+    case 'abyss_eye': eyeSecond(game, f, body, ships, hp); break;
     case 'kraken': krakenSecond(game, f, body, ships); break;
     case 'drowned_whale': whaleSecond(game, f, body, ships, hp); break;
     case 'lantern_maw': mawSecond(game, f, body, ships, hp); break;
@@ -1127,6 +1138,40 @@ function widowSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity[]
   if (every(f, 'waves', now, 10)) for (const s of outside) hurt(game, f, s, 0.01);
 }
 
+// -- The Eye of the Abyss: the black storm, the dead wind, the fall.
+function eyeTick(game: Game, f: Fight, body: ShipEntity, dt: number): void {
+  place(game, body, f.anchor.x, f.anchor.y, body.state.heading + 0.1 * dt);
+  body.state.speed = 0;
+  if (f.phase === 2) whirlpool(game, f, f.anchor.x, f.anchor.y, 1500, dt);
+}
+
+function eyeSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity[], hp: number): void {
+  const now = game.now;
+  if (hp <= 0.33) setPhase(game, f, 2);
+  else if (hp <= 0.66) setPhase(game, f, 1);
+  if (f.phase === 0) {
+    if (now - f.wind.at >= 8) {
+      f.wind = { dir: f.wind.dir + (game.rng.chance(0.5) ? 1 : -1) * game.rng.range(45, 120) * (Math.PI / 180), strength: 1.3, at: now };
+    }
+    if (ships.length && every(f, 'lightning', now, 5)) {
+      const top = Math.max(...ships.map((s) => s.cls.tier));
+      const t = game.rng.pick(ships.filter((s) => s.cls.tier === top));
+      const rod = t.hasFlag('lightning_rod') ? 0.4 : 1;
+      hurt(game, f, t, 0.05 * rod, { sails: t.stats.sailHpMax * 0.1 * rod, crew: 2 });
+      game.emit({ k: 'fx', fx: 'lightning', x: Math.round(t.state.x), y: Math.round(t.state.y), r: 30 }, t.state.x, t.state.y);
+    }
+  }
+  if (f.phase === 1 && ships.length && every(f, 'echoes', now, 20)) {
+    const e = spawnEcho(game, game.rng.pick(ships));
+    if (e) {
+      e.bossOf = f.id;
+      e.bossPart = 'add';
+      f.parts.set(e.id, 'add');
+    }
+  }
+  if (f.phase === 2) f.whirl = { x: f.anchor.x, y: f.anchor.y, until: now + 2 };
+}
+
 // ================================================================== hooks from combat and the game
 
 /**
@@ -1140,7 +1185,12 @@ export function bossIncoming(game: Game, target: ShipEntity, d: DamagePacket, so
   let mul = 1;
   const part = f.parts.get(target.id) ?? 'body';
   switch (f.kind) {
-    case 'leviathan': {
+    case 'abyss_eye':
+      if (f.phase < 2) mul = 0.25; // it only truly opens as it falls
+      else if (!source || dist(source.state.x, source.state.y, target.state.x, target.state.y) > 900) return null;
+      break;
+    case 'leviathan':
+    case 'ancient_leviathan': {
       if (target.hasEffect('gills_open') && at) {
         const h = head(target);
         if (dist(at.x, at.y, h.x, h.y) < 35) mul = 2;
@@ -1266,11 +1316,16 @@ export function bossBoardOrder(game: Game, ship: ShipEntity, target: ShipEntity)
 /** Their own wind (the Hollow Admiral's gauge, the Storm Widow's gale) for ships within reach. */
 export function bossWind(game: Game, ship: ShipEntity): WindSample | null {
   for (const f of game.bosses.fights.values()) {
-    if (f.kind !== 'hollow_admiral' && f.kind !== 'storm_widow') continue;
+    if (f.kind !== 'hollow_admiral' && f.kind !== 'storm_widow' && f.kind !== 'abyss_eye') continue;
     const body = game.ships.get(f.id);
     if (!body) continue;
     const d = dist(body.state.x, body.state.y, ship.state.x, ship.state.y);
     if (d > 3200) continue;
+    if (f.kind === 'abyss_eye') {
+      if (f.phase === 1) return { dir: f.wind.dir, strength: 0.02 }; // the dead wind
+      if (f.phase === 0) return { dir: f.wind.dir, strength: 1.3 }; // the black storm's leaping wind
+      return null;
+    }
     if (f.kind === 'storm_widow') {
       const calm = dist(ship.state.x, ship.state.y, f.eye.x, f.eye.y) < f.eye.r;
       return { dir: f.wind.dir, strength: calm ? 0.35 : f.wind.strength };
@@ -1370,6 +1425,11 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
       lines.push(`a trophy: ${def.trophy}`);
     }
     p.bossKills[def.id] = (p.bossKills[def.id] ?? 0) + 1;
+    // The Abyss's own: ritual shards for everyone who truly fought, and a chapter of the story.
+    if (def.id === 'ancient_leviathan' || def.id === 'abyss_eye') {
+      if (share >= 0.05 || def.id === 'abyss_eye') giveShard(game, s, `From ${def.name}`);
+      chapter(game, s, def.id === 'abyss_eye' ? 'eye' : 'ancient');
+    }
     game.grantXp(s, def.xp * (0.3 + 0.7 * k), `${def.name} slain`);
     const pct = Math.round(share * 100);
     game.sendTo(s, { t: 'toast', msg: `${def.name} is slain! Your part: ${pct}%. Your share of the spoils floats where it died${lines.length ? `; and ${lines.join(', ')}` : ''}.`, kind: 'gold' });
@@ -1425,6 +1485,9 @@ function view(game: Game, f: Fight, body: ShipEntity, s: PlayerSession): BossVie
 
 function hintFor(game: Game, f: Fight, body: ShipEntity): string {
   switch (f.kind) {
+    case 'abyss_eye':
+      return f.phase === 0 ? 'The black storm: the wind leaps every few seconds, lightning finds the tallest mast. The Eye shrugs off shot (×0.25).' : f.phase === 1 ? 'The dead wind: no wind at all within 3 km, and the Echoes rise. Row, tow, fight.' : 'The fall: the sea pours into the Eye. Only guns within 900 m of it reach it — and too close, it swallows you.';
+    case 'ancient_leviathan':
     case 'leviathan':
       if (f.whirl) return 'Sail WITH the whirlpool current — against it you are drawn into the mouth.';
       return `Harpoon lines: ${tethersOn(game, body)}/${linesNeeded(game, f)} to hold it. Held, its gills open (×2 at the head).`;

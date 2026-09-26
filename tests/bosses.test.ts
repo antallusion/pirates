@@ -20,7 +20,8 @@ const SEC = 20;
 function arena(kind: BossId, n = 2): { game: Game; f: Fight; body: ShipEntity; caps: { c: FakeConn; s: PlayerSession; ship: ShipEntity }[] } {
   const { game } = makeGame();
   const def = BOSSES[kind];
-  const spot = risingPoint(game, def, def.regions)!;
+  // Outside the Abyss (its Wall has its own rules, tested in abyss.test.ts).
+  const spot = risingPoint(game, def, def.regions.filter((r) => r !== 'the_abyss'))!;
   assert.ok(spot, 'there is open water for it');
   const f = summon(game, kind, spot.x, spot.y);
   const body = game.ships.get(f.id)!;

@@ -77,6 +77,9 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
+import { legendsView } from './legends.ts';
+import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
+import type { AbyssMap } from './abyss.ts';
 import { digNoise, legendEcho, mapAction, mapView, onGhostSunk, stealMaps } from './treasure.ts';
 import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditionsSecond, onYardCaptainSunk, sendSites, startDive, stepExpeditions } from './expeditions.ts';
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
@@ -184,6 +187,7 @@ export class Game {
   worldEvents = new EventHub();
   expeditions: ExpeditionHub;
   expeditionSecs = 0;
+  abyss: AbyssMap;
   zones: DeepZone[] = [];
   sunkHulls: SunkHull[] = [];
   loot = new Map<number, Loot>();
@@ -273,6 +277,7 @@ export class Game {
     this.rng = new Rng(seed ^ 0x5eed);
     this.routes = new RouteCache(this.world);
     this.expeditions = new ExpeditionHub(this.world);
+    this.abyss = abyssMap(this.world);
     for (const p of this.world.ports) {
       this.portIndex.set(p.id, p);
       this.markets.set(p.id, createMarket(p));
@@ -415,6 +420,7 @@ export class Game {
     stepStrikes(this);
     stepBosses(this, dt);
     stepExpeditions(this, dt);
+    stepAbyssSea(this, dt);
     stepZones(this, dt);
 
     for (const ship of this.ships.values()) {
@@ -454,7 +460,8 @@ export class Game {
       const w = bossWind(this, ship);
       if (w) return w;
     }
-    return windAt(this.world.seed, this.now, ship.state.x, ship.state.y, WEATHER_WIND[this.weatherAt(ship.state.x, ship.state.y)]);
+    const base = windAt(this.world.seed, this.now, ship.state.x, ship.state.y, WEATHER_WIND[this.weatherAt(ship.state.x, ship.state.y)]);
+    return (ship.region === 'the_abyss' && abyssWind(this, ship, base)) || base;
   }
 
   /** Local weather: travelling fronts over the regional baseline. */
@@ -736,6 +743,7 @@ export class Game {
       if (this.tick % 1200 < 20) priceLetters(this, s, (pt) => recordIntel(this, s, pt));
       if (this.tick % 200 < 20) tendCaravans(this, s, (c, from) => planMerchantVoyage(this, c, this.npcs.get(c.id)!, from));
       checkDeeds(this, s, 1);
+      abyssSecond(this, s);
       tickLoan(this, s);
       if (this.tick % 1200 < 20) decayClaims(this, s.profile);
       s.siteViews = this.sites.filter((x) => x.holder === s.accountId && x.until > this.now).map((x) => siteView(this, s, x));
@@ -1174,6 +1182,7 @@ export class Game {
         goldTrails: goldTrailsFor(this, ship),
       } : undefined,
       pvp: pvpView(this, s),
+      abyss: abyssView(this, s),
     };
   }
 
@@ -1359,6 +1368,7 @@ export class Game {
   beginSinking(ship: ShipEntity): void {
     if (ship.sinkingUntil) return;
     if (ship.bossOf && bossSinking(this, ship)) return; // the deep keeps its own dead
+    recordEcho(this, ship); // what the Abyss takes, it sends back
     if (duelIntercept(this, ship)) return; // nobody sinks in a duel: she strikes
     if (ship.caravanOf !== null) caravanLost(this, ship);
     this.sunkRecently.set(ship.id, this.now);
@@ -1451,6 +1461,7 @@ export class Game {
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
     eventShipLost(this, victim);
     onGhostSunk(this, s, victim);
+    onAbyssKill(this, s, victim);
     let escorts = 0;
     for (const o of this.ships.values()) if (o.ownerId === killer.id && o.alive) escorts++;
     // Captains of your group fighting nearby count as your fleet; they share a part of the glory.
@@ -2307,6 +2318,13 @@ export class Game {
         err(mapAction(this, s, port, String(msg.action), msg.id, msg.to));
         this.pushSelf(s, true);
         return;
+      case 'legends':
+        this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
+        return;
+      case 'abyss':
+        err(raisingRitual(this, s));
+        this.pushSelf(s, true);
+        return;
       case 'dive_move':
         return err(diveMove(this, s, String(msg.dir)));
       case 'dive_surface':
@@ -2672,6 +2690,7 @@ export class Game {
     ship.crew = Math.min(p.crew, ship.stats.crewMax);
     ship.morale = p.morale;
     ship.sanity = p.sanity;
+    ship.pressure = p.pressure;
     ship.hull = p.hull < 0 ? ship.stats.hullMax : Math.max(1, Math.min(p.hull, ship.stats.hullMax));
     ship.sails = p.sails < 0 ? ship.stats.sailHpMax : Math.min(p.sails, ship.stats.sailHpMax);
     ship.rudderHp = p.rudderHp;
@@ -3070,6 +3089,7 @@ export class Game {
       p.crew = ship.crew;
       p.morale = ship.morale;
       p.sanity = Math.round(ship.sanity * 10) / 10;
+      p.pressure = Math.round(ship.pressure * 10) / 10;
       p.hull = ship.hull;
       p.sails = ship.sails;
       p.rudderHp = ship.rudderHp;

@@ -85,6 +85,22 @@ setInterval(() => {
       game.grid.upsert(ship.id, ship.state.x, ship.state.y);
       continue;
     }
+    if (process.env.SHOWCASE === 'abyss') {
+      // A cleared captain deep in the Abyss, the pressure already at the visions.
+      if (!ship || ship.docked || !s.profile || staged.has(ship.id)) continue;
+      staged.add(ship.id);
+      s.profile.level = 50;
+      s.profile.quests.done.push('q_last_leaf');
+      const l = game.abyss.lights[0];
+      ship.state.x = l.x + 1200;
+      ship.state.y = l.y;
+      ship.pressure = 65;
+      s.profile.ritualShards = 2;
+      ship.protectedUntil = game.now + 600;
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      game.pushSelf(s, true);
+      continue;
+    }
     if (process.env.SHOWCASE === 'maps') {
       // A chest of every kind of map, and a piece of the legendary chart.
       if (!ship || !s.profile || staged.has(ship.id)) continue;
