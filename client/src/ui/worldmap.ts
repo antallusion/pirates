@@ -1,5 +1,6 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
+import { icon } from './dom.ts';
 import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -13,6 +14,12 @@ import { mapCard, placeName } from './maps.ts';
 
 const L = dict(EN, RU);
 
+/** The chart's key, in its own symbols. */
+const LEGEND: [string, Parameters<typeof L>[0]][] = [
+  ['map_ship', 'lg.you'], ['map_port', 'lg.port'], ['map_contract', 'lg.contract'], ['map_treasure', 'lg.treasure'],
+  ['map_wreck', 'lg.wreck'], ['map_event', 'lg.event'], ['map_monster', 'lg.sighting'],
+];
+
 export class WorldMap {
   private zoom = 1;
   private cx = WORLD_SIZE / 2;
@@ -24,7 +31,7 @@ export class WorldMap {
   open(root: HTMLElement, state: ClientState): void {
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L('sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <div class="map-legend"><span style="color:#e0b862">■</span> ${L('lg.port')} · <span style="color:#f0e6c8">▲</span> ${L('lg.you')} · <span style="color:#7fd08a">■</span> ${L('lg.group')} · <span style="color:#8fb3d9">- -</span> ${L('lg.currents')} · <span style="color:#d06a5e">◆</span> ${L('lg.contract')} · <span style="color:#8fb3d9">${L('lg.prices')}</span> ${L('lg.pricesAge')} · ✕ ${L('lg.sighting')} · <span style="color:#c9a25a">◌</span> ${L('lg.treasure')} · <span style="color:#78bec8">✕</span> ${L('lg.wreck')} · <span style="color:#d06a5e">⚑</span> ${L('lg.event')}</div>
+      <div class="map-legend">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div>
       ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}</div>`;
     const c = root.querySelector('canvas')!;
     this.canvas = c;
@@ -39,15 +46,44 @@ export class WorldMap {
       this.zoom = Math.max(1, Math.min(14, this.zoom * (e.deltaY < 0 ? 1.2 : 1 / 1.2)));
       this.draw(state);
     };
-    c.onmousedown = (e) => (this.drag = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy });
-    c.onmousemove = (e) => {
-      if (!this.drag) return;
-      const k = this.scale();
-      this.cx = this.drag.cx - (e.clientX - this.drag.x) / k;
-      this.cy = this.drag.cy - (e.clientY - this.drag.y) / k;
-      this.draw(state);
+    // Mouse, pen or finger: drag to pan; two fingers pinch to zoom.
+    const pts = new Map<number, { x: number; y: number }>();
+    let pinch = 0;
+    const spread = () => {
+      const [p, q] = [...pts.values()];
+      return p && q ? Math.hypot(p.x - q.x, p.y - q.y) : 0;
     };
-    c.onmouseup = c.onmouseleave = () => (this.drag = null);
+    c.style.touchAction = 'none';
+    c.onpointerdown = (e) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 1) this.drag = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy };
+      else {
+        this.drag = null;
+        pinch = spread();
+      }
+    };
+    c.onpointermove = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size >= 2) {
+        const d = spread();
+        if (pinch > 0 && d > 0) {
+          this.zoom = Math.max(1, Math.min(14, this.zoom * (d / pinch)));
+          this.draw(state);
+        }
+        pinch = d;
+      } else if (this.drag) {
+        const k = this.scale();
+        this.cx = this.drag.cx - (e.clientX - this.drag.x) / k;
+        this.cy = this.drag.cy - (e.clientY - this.drag.y) / k;
+        this.draw(state);
+      }
+    };
+    c.onpointerup = c.onpointercancel = c.onpointerleave = (e) => {
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = 0;
+      if (!pts.size) this.drag = null;
+    };
     this.draw(state);
   }
 
@@ -68,6 +104,24 @@ export class WorldMap {
     const k = this.scale();
     const tx = (x: number) => (x - this.cx) * k + W / 2;
     const ty = (y: number) => (y - this.cy) * k + H / 2;
+    // Painted chart symbols (Higgsfield `icon.map_*`, faction crests); the old ink shapes only while they load.
+    const ms = Math.max(20, Math.min(34, 18 + this.zoom * 2));
+    const mark = (id: string, x: number, y: number, size = ms, rot = 0): boolean => {
+      const art = sprite(id);
+      if (!art) return false;
+      g.save();
+      g.translate(x, y);
+      if (rot) g.rotate(rot);
+      g.drawImage(art.img, -size / 2, -size / 2, size, size);
+      g.restore();
+      return true;
+    };
+    const label = (text: string, x: number, y: number, color = 'rgba(240,230,200,0.85)') => {
+      g.fillStyle = 'rgba(0,0,0,0.55)';
+      g.fillText(text, x + 1, y + 1);
+      g.fillStyle = color;
+      g.fillText(text, x, y);
+    };
     const chart = sprite('tex.chart');
     g.fillStyle = '#070a0e';
     g.fillRect(0, 0, W, H);
@@ -88,20 +142,29 @@ export class WorldMap {
       g.stroke();
     }
     // Maelstrom wall.
-    g.strokeStyle = 'rgba(142,42,42,0.5)';
-    g.setLineDash([6, 6]);
+    g.strokeStyle = 'rgba(142,42,42,0.28)';
+    g.lineWidth = 1.2;
     g.strokeRect(tx(2500), ty(2500), (WORLD_SIZE - 5000) * k, (WORLD_SIZE - 5000) * k);
-    g.setLineDash([]);
     // Currents (common sailor knowledge).
-    g.strokeStyle = 'rgba(143,179,217,0.35)';
-    g.setLineDash([8, 8]);
+    g.strokeStyle = 'rgba(143,179,217,0.22)';
+    g.fillStyle = 'rgba(143,179,217,0.4)';
+    g.lineWidth = 1.2;
+    g.lineJoin = 'round';
     for (const cur of state.currents) {
       g.beginPath();
       cur.points.forEach(([x, y], i) => (i ? g.lineTo(tx(x), ty(y)) : g.moveTo(tx(x), ty(y))));
-      g.lineWidth = Math.max(1, cur.width * k * 0.15);
       g.stroke();
+      // Small chevrons show which way the water runs.
+      for (let i = 1; i < cur.points.length; i += 2) {
+        const [ax, ay] = cur.points[i - 1], [bx, by] = cur.points[i];
+        const mx = tx((ax + bx) / 2), my = ty((ay + by) / 2), a = Math.atan2(ty(by) - ty(ay), tx(bx) - tx(ax));
+        g.beginPath();
+        g.moveTo(mx + Math.cos(a) * 5, my + Math.sin(a) * 5);
+        g.lineTo(mx + Math.cos(a + 2.5) * 5, my + Math.sin(a + 2.5) * 5);
+        g.lineTo(mx + Math.cos(a - 2.5) * 5, my + Math.sin(a - 2.5) * 5);
+        g.fill();
+      }
     }
-    g.setLineDash([]);
     // Region names: only regions the captain has entered are named.
     g.textAlign = 'center';
     for (const id of REGION_IDS) {
@@ -135,66 +198,74 @@ export class WorldMap {
     for (const p of state.ports) {
       const known = !p.id.includes('_v') || [...state.discovered].some((id) => state.islands.get(id)?.portId === p.id);
       if (!known) continue;
-      g.fillStyle = FACTIONS[p.faction].lantern;
-      g.fillRect(tx(p.x) - 4, ty(p.y) - 4, 8, 8);
+      if (!mark(`icon.faction_${p.faction}`, tx(p.x), ty(p.y), ms * 0.95)) {
+        g.fillStyle = FACTIONS[p.faction].lantern;
+        g.fillRect(tx(p.x) - 4, ty(p.y) - 4, 8, 8);
+      }
       g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
-      g.fillStyle = 'rgba(240,230,200,0.85)';
-      g.fillText(placeName(p.name), tx(p.x), ty(p.y) - 8);
+      label(placeName(p.name), tx(p.x), ty(p.y) - ms * 0.55);
     }
     // Sunken cities and graveyards.
     for (const s of state.pveSites) {
-      g.strokeStyle = s.kind === 'city' ? '#2ee6c8' : '#a0784f';
-      g.lineWidth = 1.5;
-      g.beginPath();
-      g.arc(tx(s.x), ty(s.y), Math.max(5, (s.kind === 'city' ? 250 : s.r) * k), 0, Math.PI * 2);
-      g.stroke();
+      if (!mark(s.kind === 'city' ? 'icon.map_city' : 'icon.map_graveyard', tx(s.x), ty(s.y))) {
+        g.strokeStyle = s.kind === 'city' ? '#2ee6c8' : '#a0784f';
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.arc(tx(s.x), ty(s.y), Math.max(5, (s.kind === 'city' ? 250 : s.r) * k), 0, Math.PI * 2);
+        g.stroke();
+      }
       g.font = `italic 11px "Cormorant Garamond", serif`;
-      g.fillStyle = 'rgba(200,220,210,0.8)';
-      g.fillText(placeName(s.name), tx(s.x), ty(s.y) - 9);
+      label(placeName(s.name), tx(s.x), ty(s.y) - ms * 0.6, 'rgba(200,220,210,0.9)');
     }
     // World events: a flag on the place, and its title.
     for (const e of state.events) {
       const x = tx(e.x), y = ty(e.y);
-      g.strokeStyle = e.kind === 'epidemic' ? '#d8c94a' : e.kind === 'storm_century' ? '#8fb3d9' : e.kind === 'new_island' ? '#e0874a' : '#d06a5e';
-      g.lineWidth = 2;
-      g.beginPath();
-      g.arc(x, y, e.kind === 'storm_century' ? Math.max(14, 9000 * k) : 10, 0, Math.PI * 2);
-      g.stroke();
+      if (!mark(e.kind === 'storm_century' ? 'icon.map_storm' : 'icon.map_event', x, y, ms * 1.1)) {
+        g.strokeStyle = e.kind === 'epidemic' ? '#d8c94a' : e.kind === 'storm_century' ? '#8fb3d9' : e.kind === 'new_island' ? '#e0874a' : '#d06a5e';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.arc(x, y, 10, 0, Math.PI * 2);
+        g.stroke();
+      }
       g.font = `italic 12px "Cormorant Garamond", serif`;
-      g.fillStyle = 'rgba(240,200,180,0.9)';
-      g.fillText(`⚑ ${placeName(e.title)}`, x, y + 22);
+      label(placeName(e.title), x, y + ms * 0.8, 'rgba(240,200,180,0.95)');
     }
     // Maelstroms and weather fronts; the Navigator's forecast shows where storms will be in 10 minutes.
     for (const w of state.whirlpools) {
-      g.strokeStyle = 'rgba(208,106,94,0.7)';
-      g.lineWidth = 1.5;
-      g.beginPath();
-      g.arc(tx(w.x), ty(w.y), Math.max(4, w.radius * k), 0, Math.PI * 2);
-      g.stroke();
+      if (!mark('icon.map_whirlpool', tx(w.x), ty(w.y), Math.max(ms * 0.9, w.radius * k * 2))) {
+        g.strokeStyle = 'rgba(208,106,94,0.7)';
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.arc(tx(w.x), ty(w.y), Math.max(4, w.radius * k), 0, Math.PI * 2);
+        g.stroke();
+      }
       g.font = 'italic 11px "Cormorant Garamond", serif';
-      g.fillStyle = 'rgba(208,106,94,0.8)';
-      g.fillText(placeName(w.name), tx(w.x), ty(w.y) - Math.max(6, w.radius * k) - 3);
+      label(placeName(w.name), tx(w.x), ty(w.y) - Math.max(ms * 0.5, w.radius * k) - 3, 'rgba(220,140,120,0.9)');
     }
     for (const f of state.fronts) {
-      g.fillStyle = f.kind === 'black_storm' ? 'rgba(46,230,200,0.12)' : f.kind === 'storm' ? 'rgba(170,175,195,0.18)' : 'rgba(170,180,185,0.10)';
+      const rr = f.r * k;
+      const tint = f.kind === 'black_storm' ? '46,230,200' : f.kind === 'storm' ? '150,158,178' : '170,180,185';
+      const stain = g.createRadialGradient(tx(f.x), ty(f.y), 0, tx(f.x), ty(f.y), rr);
+      stain.addColorStop(0, `rgba(${tint},0.2)`);
+      stain.addColorStop(1, `rgba(${tint},0)`);
+      g.fillStyle = stain;
       g.beginPath();
-      g.arc(tx(f.x), ty(f.y), f.r * k, 0, Math.PI * 2);
+      g.arc(tx(f.x), ty(f.y), rr, 0, Math.PI * 2);
       g.fill();
-      g.font = '10px Inter, sans-serif';
-      g.fillStyle = 'rgba(216,210,196,0.7)';
-      g.fillText(L(`front.${f.kind}`), tx(f.x), ty(f.y));
+      if (!mark(f.kind === 'fog' ? 'icon.weather_fog' : f.kind === 'rain' ? 'icon.weather_storm' : 'icon.map_storm', tx(f.x), ty(f.y), ms)) {
+        g.font = '10px Inter, sans-serif';
+        g.fillStyle = 'rgba(216,210,196,0.7)';
+        g.fillText(L(`front.${f.kind}`), tx(f.x), ty(f.y));
+      }
       if (state.forecast && (f.vx || f.vy)) {
         const t = Math.min(600, f.ttl);
-        g.strokeStyle = 'rgba(143,179,217,0.8)';
-        g.setLineDash([4, 4]);
+        g.strokeStyle = 'rgba(143,179,217,0.55)';
+        g.lineWidth = 1.2;
         g.beginPath();
         g.moveTo(tx(f.x), ty(f.y));
         g.lineTo(tx(f.x + f.vx * t), ty(f.y + f.vy * t));
         g.stroke();
-        g.setLineDash([]);
-        g.beginPath();
-        g.arc(tx(f.x + f.vx * t), ty(f.y + f.vy * t), f.r * k, 0, Math.PI * 2);
-        g.stroke();
+        mark('icon.map_storm', tx(f.x + f.vx * t), ty(f.y + f.vy * t), ms * 0.7);
       }
     }
     // Market knowledge: every visited port carries the age of what you know about it.
@@ -210,11 +281,11 @@ export class WorldMap {
       const fresh = Math.max(0.25, 1 - (now - it.t) / 5400); // knowledge fades over ~1.5 h
       g.font = '10px Inter, sans-serif';
       g.fillStyle = `rgba(143,179,217,${0.85 * fresh})`;
-      g.fillText(L('prices', { age: age(it.t) }), tx(p.x) + 7, ty(p.y) + 4);
+      g.fillText(L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.6, ty(p.y) + ms * 0.15);
       if (this.zoom > 1.8) {
         it.top.forEach(([good, price], i) => {
           g.fillStyle = `rgba(224,184,98,${0.9 * fresh})`;
-          g.fillText(`${GOODS[good].name} ${price}`, tx(p.x) + 7, ty(p.y) + 16 + i * 11);
+          g.fillText(`${GOODS[good].name} ${price}`, tx(p.x) + ms * 0.6, ty(p.y) + ms * 0.15 + 12 + i * 11);
         });
       }
     }
@@ -223,13 +294,18 @@ export class WorldMap {
       const x = tx(sg.x), y = ty(sg.y);
       const fresh = Math.max(0.3, 1 - (now - sg.t) / 3600);
       g.strokeStyle = sg.kind === 'ghost' ? `rgba(46,230,200,${fresh})` : `rgba(208,106,94,${fresh})`;
-      g.lineWidth = 1.5;
-      g.beginPath();
-      g.moveTo(x - 5, y - 5);
-      g.lineTo(x + 5, y + 5);
-      g.moveTo(x + 5, y - 5);
-      g.lineTo(x - 5, y + 5);
-      g.stroke();
+      g.globalAlpha = fresh;
+      const drawn = mark(sg.kind === 'ghost' ? 'icon.map_monster' : 'icon.danger', x, y, ms * 0.85);
+      g.globalAlpha = 1;
+      if (!drawn) {
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.moveTo(x - 5, y - 5);
+        g.lineTo(x + 5, y + 5);
+        g.moveTo(x + 5, y - 5);
+        g.lineTo(x - 5, y + 5);
+        g.stroke();
+      }
       g.font = 'italic 11px "Cormorant Garamond", serif';
       g.fillStyle = g.strokeStyle;
       g.fillText(L('seen', { name: placeName(sg.name), age: age(sg.t) }), x + 8, y - 6);
@@ -239,6 +315,7 @@ export class WorldMap {
     for (const ct of state.self?.contracts ?? []) {
       const p = state.ports.find((q) => q.id === ct.toPort);
       if (!p) continue;
+      if (mark('icon.map_contract', tx(p.x) + ms * 0.6, ty(p.y) - ms * 0.6, ms * 0.8)) continue;
       g.fillStyle = '#d06a5e';
       g.beginPath();
       g.moveTo(tx(p.x), ty(p.y) - 12);
@@ -255,35 +332,41 @@ export class WorldMap {
       g.fillText(`${GOODS[st.good]?.name ?? st.good.replace('_', ' ')} ${st.stock}/${st.capacity}`, tx(st.x), ty(st.y) + 16);
     }
     // Treasure maps: the search circle; sunken wrecks you know of.
-    g.setLineDash([6, 5]);
     for (const m of state.self?.maps ?? []) {
-      if (m.r < 0) continue; // riddles, drawings and needles draw no circle
-      g.strokeStyle = m.tier >= 3 ? '#e8c65a' : '#c9a25a';
-      g.fillStyle = g.strokeStyle;
+      if (m.r < 0) continue; // riddles, drawings and needles draw no area
+      const rr = Math.max(8, m.r * k);
+      const area = g.createRadialGradient(tx(m.x), ty(m.y), 0, tx(m.x), ty(m.y), rr);
+      area.addColorStop(0, 'rgba(217,180,90,0.18)');
+      area.addColorStop(1, 'rgba(217,180,90,0)');
+      g.fillStyle = area;
       g.beginPath();
-      g.arc(tx(m.x), ty(m.y), Math.max(5, m.r * k), 0, Math.PI * 2);
-      g.stroke();
-      g.fillText(placeName(m.name), tx(m.x), ty(m.y) - Math.max(5, m.r * k) - 4);
+      g.arc(tx(m.x), ty(m.y), rr, 0, Math.PI * 2);
+      g.fill();
+      mark('icon.map_treasure', tx(m.x), ty(m.y), ms);
+      label(placeName(m.name), tx(m.x), ty(m.y) - ms * 0.65, m.tier >= 3 ? '#e8c65a' : '#c9a25a');
     }
-    g.setLineDash([]);
     for (const w of state.self?.wrecks ?? []) {
       g.strokeStyle = '#78bec8';
       g.fillStyle = '#78bec8';
-      g.beginPath();
-      g.moveTo(tx(w.x) - 4, ty(w.y) - 4);
-      g.lineTo(tx(w.x) + 4, ty(w.y) + 4);
-      g.moveTo(tx(w.x) + 4, ty(w.y) - 4);
-      g.lineTo(tx(w.x) - 4, ty(w.y) + 4);
-      g.stroke();
-      g.fillText(L('wreck', { name: placeName(w.name), depth: w.depth }), tx(w.x), ty(w.y) + 14);
+      if (!mark('icon.map_wreck', tx(w.x), ty(w.y), ms * 0.85)) {
+        g.beginPath();
+        g.moveTo(tx(w.x) - 4, ty(w.y) - 4);
+        g.lineTo(tx(w.x) + 4, ty(w.y) + 4);
+        g.moveTo(tx(w.x) + 4, ty(w.y) - 4);
+        g.lineTo(tx(w.x) - 4, ty(w.y) + 4);
+        g.stroke();
+      }
+      label(L('wreck', { name: placeName(w.name), depth: w.depth }), tx(w.x), ty(w.y) + ms * 0.75, '#9fd0d8');
     }
     // Hidden coves you know.
     for (const c of state.self?.coves ?? []) {
-      g.fillStyle = '#6fbf8f';
-      g.beginPath();
-      g.arc(tx(c.x), ty(c.y), 4, 0, Math.PI * 2);
-      g.fill();
-      g.fillText(placeName(c.name), tx(c.x), ty(c.y) - 8);
+      if (!mark('icon.map_cove', tx(c.x), ty(c.y), ms * 0.85)) {
+        g.fillStyle = '#6fbf8f';
+        g.beginPath();
+        g.arc(tx(c.x), ty(c.y), 4, 0, Math.PI * 2);
+        g.fill();
+      }
+      label(placeName(c.name), tx(c.x), ty(c.y) - ms * 0.55, '#8fd0a8');
     }
     // Your islands: a gold flag.
     for (const h of state.holdings.mine) {
@@ -308,21 +391,27 @@ export class WorldMap {
     // You.
     const own = state.ownDisplay;
     if (own) {
-      g.save();
-      g.translate(tx(own.x), ty(own.y));
-      g.rotate(own.heading);
-      g.fillStyle = '#f0e6c8';
+      // What your lookouts can see: a soft pool of light around you.
+      const sight = g.createRadialGradient(tx(own.x), ty(own.y), 0, tx(own.x), ty(own.y), Math.max(12, 2200 * k));
+      sight.addColorStop(0, 'rgba(240,230,200,0.12)');
+      sight.addColorStop(1, 'rgba(240,230,200,0)');
+      g.fillStyle = sight;
       g.beginPath();
-      g.moveTo(0, -9);
-      g.lineTo(6, 7);
-      g.lineTo(-6, 7);
-      g.closePath();
+      g.arc(tx(own.x), ty(own.y), Math.max(12, 2200 * k), 0, Math.PI * 2);
       g.fill();
-      g.restore();
-      g.strokeStyle = 'rgba(240,230,200,0.4)';
-      g.beginPath();
-      g.arc(tx(own.x), ty(own.y), 2200 * k, 0, Math.PI * 2);
-      g.stroke();
+      if (!mark('icon.map_ship', tx(own.x), ty(own.y), ms * 1.2, own.heading)) {
+        g.save();
+        g.translate(tx(own.x), ty(own.y));
+        g.rotate(own.heading);
+        g.fillStyle = '#f0e6c8';
+        g.beginPath();
+        g.moveTo(0, -9);
+        g.lineTo(6, 7);
+        g.lineTo(-6, 7);
+        g.closePath();
+        g.fill();
+        g.restore();
+      }
     }
   }
 }

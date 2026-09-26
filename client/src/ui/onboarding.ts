@@ -6,7 +6,7 @@ import type { HudBlock, OnboardingView } from '../../../shared/src/protocol.ts';
 import { has, onLang, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
-import { $, esc } from './dom.ts';
+import { $, esc, icon } from './dom.ts';
 import { glossaryHtml } from './terms.ts';
 
 /** Which DOM block shows which part of the HUD. */
@@ -81,7 +81,7 @@ export class OnboardingUi {
     }
     el.classList.remove('hidden');
     const first = `goal.${goals[0]}` as Key;
-    el.innerHTML = `<span class="g-lbl">${esc(t('goals.title'))}</span> ${esc(has(first) ? t(first) : goals[0])}${goals.length > 1 ? ` <span class="muted">+${goals.length - 1}</span>` : ''}<button class="g-x" title="${esc(t('goals.hide'))}">×</button>`;
+    el.innerHTML = `${icon('goal', '', 'ico-goal')}<span class="g-lbl">${esc(t('goals.title'))}</span> ${esc(touchless(has(first) ? t(first) : goals[0]))}${goals.length > 1 ? ` <span class="muted">+${goals.length - 1}</span>` : ''}<button class="g-x" title="${esc(t('goals.hide'))}">×</button>`;
     el.querySelector<HTMLButtonElement>('.g-x')!.onclick = () => this.send('hide_goals');
   }
 
@@ -153,4 +153,9 @@ export function logbookHtml(v: OnboardingView | null): string {
     <p><b>${esc(t('log.hints'))}</b></p>
     ${hints.length ? `<ul>${hints.map((h) => `<li>${esc(t(`hint.${h}` as Key))}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}
     <p><b>${esc(t('log.glossary'))}</b></p>${glossaryHtml()}</div>`;
+}
+
+/** Touch screens have no keys: "(Y → Company)" hints come off the goal lines. */
+function touchless(text: string): string {
+  return document.body.classList.contains('touch') ? text.replace(/\s*\([^()]*→[^()]*\)/g, '').trim() : text;
 }

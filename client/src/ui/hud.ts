@@ -73,10 +73,10 @@ export class Hud {
       $('hud-captain').innerHTML = `
         <div class="uf-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"><b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b></div>
         <div class="uf-body">
-          <div class="uf-top"><span class="uf-name">${esc(self.name)}</span><span class="gold val">${fmt(self.gold)} ⛁</span></div>
-          ${fbar('hull', you.hull, you.hullMax, L('hull'))}${fbar('sails', you.sails, you.sailsMax, L('sails'))}${fbar('crew', you.crew, you.crewMax, L('crew'))}
+          <div class="uf-top"><span class="uf-name">${esc(self.name)}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span></div>
+          ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
           <div class="fbar xp"><i style="width:${pct(self.xp / Math.max(1, self.xpNext))}"></i></div>
-          <div class="uf-sub"><span class="wanted" title="${esc(wantedTitle(self.wanted))}">${self.wanted ? '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold">${esc(keyless(L('talentPts', { n: self.talentPoints })))}</span>` : ''}</div>
+          <div class="uf-sub"><span class="wanted" title="${esc(wantedTitle(self.wanted))}">${self.wanted ? icon('wanted', '☠', 'ico-sm') + '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold">${icon('xp', '', 'ico-sm')}${esc(keyless(L('talentPts', { n: self.talentPoints })))}</span>` : ''}</div>
         </div>`;
     }
 
@@ -112,12 +112,12 @@ export class Hud {
     // gauges, fire mode); reloads and cooldowns move in place every frame without touching the markup.
     const shots = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed');
     const shipCls = cls;
-    const gauges: { id: string; label: string; v: number; ready: boolean }[] = [
-      { id: 'port', label: keyless(L('port')), v: you.reload.port, ready: you.reload.port >= 1 },
-      { id: 'starboard', label: keyless(L('starboard')), v: you.reload.starboard, ready: you.reload.starboard >= 1 },
+    const gauges: { id: string; label: string; art: string; v: number; ready: boolean }[] = [
+      { id: 'port', label: keyless(L('port')), art: 'fire', v: you.reload.port, ready: you.reload.port >= 1 },
+      { id: 'starboard', label: keyless(L('starboard')), art: 'fire', v: you.reload.starboard, ready: you.reload.starboard >= 1 },
     ];
-    if (shipCls.bowChasers + shipCls.sternChasers > 0) gauges.push({ id: 'chasers', label: keyless(L('chasers')), v: Math.max(you.reload.bow, you.reload.stern), ready: Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 });
-    if (self.loadout.mount) gauges.push({ id: 'mount', label: MOUNTS[self.loadout.mount].name, v: you.reload.mount, ready: you.reload.mount >= 1 });
+    if (shipCls.bowChasers + shipCls.sternChasers > 0) gauges.push({ id: 'chasers', label: keyless(L('chasers')), art: 'chasers', v: Math.max(you.reload.bow, you.reload.stern), ready: Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 });
+    if (self.loadout.mount) gauges.push({ id: 'mount', label: MOUNTS[self.loadout.mount].name, art: `mount_${self.loadout.mount}`, v: you.reload.mount, ready: you.reload.mount >= 1 });
     const abil = cap.abilities.map((a) => {
       const locked = a.kind === 'ultimate' && self.level < 6;
       // Ultimates need full resolve; the Drowned Captain's miracles need Dread.
@@ -140,7 +140,7 @@ export class Hud {
         data: `data-ammo="${a}"`, cls: you.ammoSel === a ? 'sel' : '', art: `ammo_${a}`, glyph: AMMO[a].name.slice(0, 1), name: AMMO[a].name,
         key: a === 'cursed' ? 'U' : String(i + 1), qty: String(you.ammo[a]), title: AMMO[a].name,
       })).join('');
-      const reload = gauges.map((g) => `<div class="rl" data-g="${g.id}">${esc(g.label)}<div class="fbar"><i></i></div></div>`).join('');
+      const reload = gauges.map((g) => `<div class="rl ${g.id === 'port' ? 'flip' : ''}" data-g="${g.id}">${icon(g.art, '', 'ico-rl')}<span>${esc(g.label)}</span><div class="fbar"><i></i></div></div>`).join('');
       const abilities = abil.map((x) => slot({
         data: `data-ab="${x.a.id}"`, cls: `${x.a.kind === 'ultimate' ? 'ult' : ''} ${x.dim ? 'locked' : ''}`, art: `ab_${x.a.id}`, glyph: x.a.key, name: x.a.name, key: x.a.key,
         title: `${x.a.name} — ${x.a.description}`,
@@ -228,7 +228,7 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    const html = `<div>${esc(r.name)} · <span style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))} · ${esc(seasonWord(seasonName(now)))}</div><div class="rg-extra">${state.self?.quests[0] ? `<span style="color:var(--gold)">${esc(sv(state.self.quests[0].name))}:</span> <span class="muted">${esc(sv(state.self.quests[0].text))}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
+    const html = `<div><span class="rg-name">${esc(r.name)}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"> · ${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${state.self?.quests[0] ? `<span style="color:var(--gold)">${esc(sv(state.self.quests[0].name))}:</span> <span class="muted">${esc(sv(state.self.quests[0].text))}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
     if (html !== this.lastRegion) {
       this.lastRegion = html;
       $('hud-region').innerHTML = html;
@@ -595,7 +595,8 @@ export class Hud {
     if (this.recentToasts.size > 50) this.recentToasts.clear();
     const el = document.createElement('div');
     el.className = `toast ${kind}`;
-    el.textContent = msg;
+    const art = kind === 'gold' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'bad' ? 'danger' : kind === 'good' ? 'anchor' : '';
+    el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(msg)}</span>`;
     this.toastsEl.prepend(el);
     while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
     setTimeout(() => el.remove(), kind === 'xp' ? 3500 : 7000);
@@ -651,8 +652,13 @@ function seasonWord(s: string): string {
 }
 
 /** A frame bar: label left, value right, the fill under both. */
-function fbar(cls: string, v: number, max: number, label: string): string {
-  return `<div class="fbar ${cls}"><i style="width:${pct(v / Math.max(1, max))}"></i><span><b>${esc(label)}</b><b>${fmt(v)} / ${fmt(max)}</b></span></div>`;
+function fbar(cls: string, v: number, max: number, label: string, art = ''): string {
+  return `<div class="fbar ${cls}"><i style="width:${pct(v / Math.max(1, max))}"></i><span><b>${art ? icon(art, '', 'ico-bar') : ''}<em>${esc(label)}</em></b><b>${fmt(v)} / ${fmt(max)}</b></span></div>`;
+}
+
+/** The weather's picture for the region line. */
+function weatherArt(w: string): string {
+  return w === 'fog' ? 'weather_fog' : w === 'storm' || w === 'black_storm' || w === 'rain' ? 'weather_storm' : w === 'wind' ? 'wind' : 'weather_clear';
 }
 
 /** An action-bar slot: the icon (or a glyph and the name while the art loads), key, count and overlays. */

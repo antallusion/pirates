@@ -284,7 +284,8 @@ export class Renderer {
     this.drawVignette(state.fog, night);
     if (this.fx.flash > 0) {
       // Reduced flashes: a gentle 30% lift instead of a white-out.
-      g.fillStyle = `rgba(210,225,255,${this.fx.flash * (opt.reduceFlashes ? 0.12 : 0.5)})`;
+      // Lightning lights the sea for an instant; it must not wash the whole screen white.
+      g.fillStyle = `rgba(210,225,255,${this.fx.flash * (opt.reduceFlashes ? 0.08 : 0.22)})`;
       g.fillRect(0, 0, this.w, this.h);
     }
   }

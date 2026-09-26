@@ -92,22 +92,28 @@ void main() {
   // Fog: a thin haze over everything, and banks of mist streaked along the wind in three parallax layers;
   // it closes in toward the edges of sight, so the ship sails in a pocket of visibility.
   vec2 wd = normalize(wind + vec2(0.0001));
+  // The banks drift with the wind (11-25 m/s) in world space; the painted mist tiles, so the drift loops forever.
+  float spd = 6.0 + length(wind) * 10.0;
   float a = 0.0;
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
-    float par = 1.0 + fi * 0.22;
+    float par = 1.0 + fi * 0.25;
     vec2 p = cam + (frag - res * 0.5) / zoom / par;
-    vec2 q = vec2(dot(p, wd), dot(p, vec2(-wd.y, wd.x)) * 1.9);
-    vec2 uv = q / (850.0 + fi * 520.0) - vec2(time * (0.004 + fi * 0.0025), 0.0) + vec2(fi * 0.37, fi * 0.21);
+    p -= wd * time * spd * (1.0 + fi * 0.35);
+    vec2 q = vec2(dot(p, wd), dot(p, vec2(-wd.y, wd.x)) * 1.7);
+    vec2 uv = q / (520.0 + fi * 380.0) + vec2(fi * 0.37, fi * 0.21);
+    // A slow curl: each bank changes shape as it goes.
+    vec2 warp = vec2(noise(uv * 3.0 + time * 0.03), noise(uv * 3.0 + 7.1 - time * 0.025)) - 0.5;
+    uv += warp * 0.12;
     float v = hasFog > 0.5 ? texture2D(fogTex, uv).r : fbm(uv * 5.0);
-    a += smoothstep(0.05, 0.8, v) * (0.5 - fi * 0.1);
+    a += smoothstep(0.22, 0.78, v) * (0.6 - fi * 0.14);
   }
-  float edge = smoothstep(0.08, 0.7, length((frag - res * 0.5) / res.y));
-  a = fog * (0.2 + a * 0.95) * mix(0.5, 1.0, edge);
+  float edge = smoothstep(0.05, 0.75, length((frag - res * 0.5) / res.y));
+  a = fog * (0.05 + a * 1.45) * mix(0.6, 1.0, edge);
   // Moonlit mist stays paler than the water it hides, by night as by day.
-  vec3 fogc = mix(vec3(0.5, 0.54, 0.58), vec3(0.24, 0.28, 0.33), night);
-  vec3 col = fogc + vec3(0.8, 0.85, 1.0) * flash * 0.6;
-  float alpha = clamp(a + flash * 0.25, 0.0, 0.88);
+  vec3 fogc = mix(vec3(0.56, 0.6, 0.64), vec3(0.3, 0.34, 0.39), night);
+  vec3 col = fogc + vec3(0.8, 0.85, 1.0) * flash * 0.35;
+  float alpha = clamp(a + flash * 0.1, 0.0, 0.88);
   // A lightning bolt across the sky.
   if (boltOn > 0.0) {
     float d = 1e5;

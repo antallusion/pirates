@@ -2,7 +2,7 @@
 
 export const EN = {
   'title': 'Chart of the Known Sea',
-  'sub': '{islands} charted · drag to pan, wheel to zoom',
+  'sub': '{islands} charted · drag to pan, wheel or two fingers to zoom',
   'island.one': 'island',
   'island.few': 'islands',
   'island.many': 'islands',
@@ -36,7 +36,7 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   'title': 'Карта известного моря',
-  'sub': 'Нанесено на карту: {islands} · тащите, чтобы сдвинуть, колесо — масштаб',
+  'sub': 'Нанесено на карту: {islands} · тащите, чтобы сдвинуть; колесо или два пальца — масштаб',
   'island.one': 'остров',
   'island.few': 'острова',
   'island.many': 'островов',
