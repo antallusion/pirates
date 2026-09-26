@@ -77,6 +77,7 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
+import { digNoise, legendEcho, mapAction, mapView, onGhostSunk, stealMaps } from './treasure.ts';
 import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditionsSecond, onYardCaptainSunk, sendSites, startDive, stepExpeditions } from './expeditions.ts';
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
@@ -611,6 +612,7 @@ export class Game {
     this.bosses.second(this);
     stepEvents(this);
     expeditionsSecond(this);
+    digNoise(this);
     // Nearest player distance for NPC LOD.
     const players: ShipEntity[] = [];
     for (const s of this.sessions) if (s.ship && !s.ship.docked) players.push(s.ship);
@@ -1163,7 +1165,8 @@ export class Game {
       inspect: ship ? admiralsEye(this, ship) : [],
       monsters: ship?.hasFlag('eyes_of_choir') ? this.monstersNear(ship) : [],
       explore: ship ? {
-        maps: p.explore.maps.map((m) => ({ id: m.id, name: m.name, tier: m.tier, ...roundCircle(mapCircle(m, ship)) })),
+        maps: p.explore.maps.map((m) => mapView(this, s, m)),
+        legendEcho: legendEcho(this, s),
         wrecks: this.wrecks.filter((w) => p.explore.dived[w.id] !== undefined || dist(w.x, w.y, ship.state.x, ship.state.y) < 600).map((w) => ({ name: w.name, x: Math.round(w.x), y: Math.round(w.y), depth: w.depth })),
         trails: trailsFor(this, ship),
         soundings: soundings(this, ship),
@@ -1447,6 +1450,7 @@ export class Game {
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
     eventShipLost(this, victim);
+    onGhostSunk(this, s, victim);
     let escorts = 0;
     for (const o of this.ships.values()) if (o.ownerId === killer.id && o.alive) escorts++;
     // Captains of your group fighting nearby count as your fleet; they share a part of the glory.
@@ -1604,6 +1608,8 @@ export class Game {
         if (lvl < 5) this.addInfamy(a, WANTED_THRESHOLDS[lvl + 1] - sa.profile.infamy + 1, 'gave no quarter');
       }
       sa.pendingBoarding = { result, targetId: b.id };
+      const loser = this.sessionOf(b);
+      if (loser?.profile) stealMaps(this, sa, loser); // the captain's chest goes with the ship
       this.sendTo(sa, { t: 'boarding', result });
       this.creditKill(a, b, 'boarded');
       const sb = this.sessionOf(b);
@@ -2296,6 +2302,10 @@ export class Game {
         if (!STATIONS.includes(msg.station)) return;
         setStation(this, ship, msg.station);
         this.sendTo(s, { t: 'toast', msg: STATION_NAMES[msg.station], kind: 'info' });
+        return;
+      case 'map':
+        err(mapAction(this, s, port, String(msg.action), msg.id, msg.to));
+        this.pushSelf(s, true);
         return;
       case 'dive_move':
         return err(diveMove(this, s, String(msg.dir)));

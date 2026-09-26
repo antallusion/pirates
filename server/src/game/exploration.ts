@@ -81,7 +81,7 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   }
   const tmap = mapHere(game, s);
   if (tmap) {
-    const t = digTime(ship);
+    const t = digTime(ship, tmap.tier);
     ship.landing = { islandId: 0, feature: 'dig', mapId: tmap.id, until: game.now + t, started: game.now, party: party0 };
     ship.input = { rudder: 0, sailTarget: 0 };
     game.toastShip(ship, `The boats go ashore with spades for the ${tmap.name} (${Math.round(t)}s).`, 'info');

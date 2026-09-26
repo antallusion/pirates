@@ -265,7 +265,7 @@ export interface WorldView {
   fleet?: PrivateState['fleet'];
   inspect?: PrivateState['inspect'];
   monsters?: PrivateState['monsters'];
-  explore?: Pick<PrivateState, 'maps' | 'wrecks' | 'trails' | 'soundings' | 'forecast' | 'goldTrails'>;
+  explore?: Pick<PrivateState, 'maps' | 'legendEcho' | 'wrecks' | 'trails' | 'soundings' | 'forecast' | 'goldTrails'>;
   pvp?: PrivateState['pvp'];
 }
 
@@ -297,6 +297,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     coves: world.coves.filter((c) => p.smuggle.coves.includes(c.id) || ship?.hasFlag('cove_knowledge')).map((c) => ({ name: c.name, x: Math.round(c.x), y: Math.round(c.y) })),
     patrols: world.patrols,
     maps: world.explore?.maps ?? [],
+    legendEcho: world.explore?.legendEcho ?? [],
     fragments: p.explore.fragments,
     wrecks: world.explore?.wrecks ?? [],
     trails: world.explore?.trails ?? [],

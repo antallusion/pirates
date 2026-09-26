@@ -11,6 +11,8 @@ import { createStaticHandler } from '../server/src/net/static.ts';
 import { acceptUpgrade } from '../server/src/net/websocket.ts';
 import { Database } from '../server/src/persistence/db.ts';
 import { risingPoint, summon } from '../server/src/game/bosses.ts';
+import { makeMap } from '../server/src/game/explorefx.ts';
+import { legendFragment } from '../server/src/game/treasure.ts';
 import { BOSSES } from '../shared/src/data/bosses.ts';
 import type { BossId } from '../shared/src/data/bosses.ts';
 
@@ -81,6 +83,16 @@ setInterval(() => {
       s.profile!.level = 30;
       ship.level = 30;
       game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      continue;
+    }
+    if (process.env.SHOWCASE === 'maps') {
+      // A chest of every kind of map, and a piece of the legendary chart.
+      if (!ship || !s.profile || staged.has(ship.id)) continue;
+      staged.add(ship.id);
+      s.profile.explore.maps = [makeMap(game, 1), makeMap(game, 2, { kind: 'riddle' }), makeMap(game, 2, { kind: 'drawing' }), makeMap(game, 2, { kind: 'landmark' }), makeMap(game, 3, { kind: 'cursed' })];
+      legendFragment(game, s, 1, 'Showcase');
+      s.profile.gold = 5000;
+      game.pushSelf(s, true);
       continue;
     }
     if (richMode) {

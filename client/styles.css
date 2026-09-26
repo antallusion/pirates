@@ -157,6 +157,7 @@ button { font-family: var(--sans); }
 #hud-dive .dlog { max-height: 70px; overflow: hidden; color: var(--fog); font-size: 11px; margin: 4px 0; }
 #hud-dive .dctl { text-align: center; }
 #hud-dive .dctl button { min-width: 30px; margin: 1px; }
+.map-maps { max-height: 150px; overflow-y: auto; font-size: 12px; padding: 6px 10px; border-top: 1px solid rgba(111,90,56,0.4); }
 #banner { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); text-align: center; font-family: var(--display); font-size: 38px; color: var(--bone); text-shadow: 0 0 20px #000; opacity: 0; transition: opacity 1.2s; letter-spacing: 0.06em; }
 #banner small { display: block; font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--fog); letter-spacing: 0.02em; }
 #banner.show { opacity: 1; }

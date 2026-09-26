@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { mapCard } from './maps.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -155,6 +156,11 @@ export class PortScreen {
         return this.send({ t: 'chart', action: 'buy', region: d.region as RegionId });
       case 'treasure':
         return this.send({ t: 'treasure', action: d.mode as never, tier: Number(d.tier ?? 0) });
+      case 'map': {
+        const to = (root.querySelector<HTMLInputElement>(`input[data-for="${d.id}"]`)?.value ?? '').trim();
+        if (d.mode === 'burn' && !confirm('Burn this map?')) return;
+        return this.send({ t: 'map', action: d.mode as never, id: d.id, to: to || undefined });
+      }
       case 'insure':
         return this.send({ t: 'insure', tier: d.tier as never });
       case 'forward':
@@ -386,9 +392,10 @@ export class PortScreen {
         ${view.charts.offers.map((o) => `<div class="row" style="padding:3px 0"><span>${esc(o.name)} <span class="muted">(${o.islands} uncharted islands)</span></span>
           <button class="btn btn-small" data-act="chart_buy" data-region="${o.region}">Buy — ${fmt(o.price)}</button></div>`).join('') || '<p class="muted">No charts to sell you.</p>'}
       </div>
-      <div class="card"><h4>Treasure maps (${self.maps.length}/6)</h4>
-        <p>A drunk in the corner swears his stained map is true (350 silver, one a day in each port). Sail into the circle, drop the sails near land and press E to dig.</p>
-        ${self.maps.map((m) => `<div class="row" style="padding:2px 0"><span>${esc(m.name)}</span><span class="muted">search ${Math.round(m.r)} m</span></div>`).join('')}
+      <div class="card"><h4>Treasure maps (${self.maps.filter((m) => m.kind !== 'fragment').length}/6)</h4>
+        <p>A drunk in the corner swears his map is true (350 silver, one a day in each port) — a stained circle, or a riddle in verse. Sail into the circle (or to the island a clue names), heave to near land and press L to dig. The chest is shared by every copy: the first spade takes it.</p>
+        ${self.maps.map((m) => `${mapCard(m)}<div class="row" style="gap:4px;padding-bottom:4px"><button class="btn btn-small" data-act="map" data-mode="appraise" data-id="${esc(m.id)}">Appraise — 200</button>${port.faction === 'brokers' ? `<button class="btn btn-small" data-act="map" data-mode="seal" data-id="${esc(m.id)}">Brokers' seal — 400</button>` : ''}<input class="map-to" data-for="${esc(m.id)}" placeholder="captain" style="width:90px"><button class="btn btn-small" data-act="map" data-mode="give" data-id="${esc(m.id)}">Hand over</button><button class="btn btn-small btn-danger" data-act="map" data-mode="burn" data-id="${esc(m.id)}">Burn</button></div>`).join('')}
+        ${port.blackMarket ? '<div class="row"><span class="muted">A forger works in the back room (Forged Papers or a cartographer’s eye).</span><button class="btn btn-small" data-act="map" data-mode="forge">Forge a map — 150</button></div>' : ''}
         <div class="row" style="gap:6px;margin-top:6px"><button class="btn btn-small" data-act="treasure" data-mode="buy">Buy a map</button>
           <button class="btn btn-small" data-act="treasure" data-mode="assemble" ${self.fragments >= 3 ? '' : 'disabled'}>Assemble fragments (${self.fragments}/3)</button>
           ${(self.talents.exp_map_of_the_dead ?? 0) > 0 ? [1, 2].map((t) => `<button class="btn btn-small" data-act="treasure" data-mode="merge" data-tier="${t}" ${self.maps.filter((m) => m.tier === t).length >= 3 ? '' : 'disabled'}>Merge 3 ${t === 1 ? 'stained' : 'captain\'s'}</button>`).join(' ') : ''}</div>

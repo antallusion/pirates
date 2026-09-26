@@ -87,6 +87,7 @@ export type ClientMsg =
   | { t: 'land' }
   | { t: 'dive_move'; dir: 'n' | 'e' | 's' | 'w' }
   | { t: 'dive_surface' }
+  | { t: 'map'; action: 'forge' | 'appraise' | 'seal' | 'give' | 'burn'; id?: string; to?: string }
   | { t: 'licence' }
   | { t: 'rights'; site: string }
   | { t: 'warehouse'; good: GoodId; qty: number }
@@ -327,7 +328,9 @@ export interface PrivateState {
   /** Insider: Crown patrols in your region. */
   patrols: [number, number][];
   /** Treasure maps as this captain reads them. */
-  maps: { id: string; name: string; tier: number; x: number; y: number; r: number }[];
+  maps: MapView[];
+  /** Fragments of the season's legendary chart held by other captains within 10 km: bearings (radians). */
+  legendEcho: number[];
   fragments: number;
   /** Sunken wrecks you know of. */
   wrecks: { name: string; x: number; y: number; depth: number }[];
@@ -539,6 +542,33 @@ export const SF = {
   SWALLOWED: 1 << 23, // inside the Lantern Maw
 } as const;
 
+/**
+ * A treasure map (docs/01 §15): coordinates (a circle), a riddle, a drawing of an island seen from the sea,
+ * landmarks and paces, a cursed map that pulls the compass, or fragments of the season's legendary chart.
+ */
+export interface MapView {
+  id: string;
+  name: string;
+  tier: number;
+  kind: 'circle' | 'riddle' | 'drawing' | 'landmark' | 'cursed' | 'fragment';
+  /** The search circle, where the map draws one (r = −1: it does not). */
+  x: number;
+  y: number;
+  r: number;
+  clue?: string;
+  /** A drawing: the island's outline (unit-scaled, north up) and the cross on it. */
+  shape?: number[];
+  cross?: [number, number];
+  /** A cursed map: where the needle pulls (radians). */
+  bearing?: number;
+  /** The appraiser's word, the Brokers' seal. */
+  verdict?: 'genuine' | 'forgery';
+  sealed?: boolean;
+  copy?: boolean;
+  /** A legendary fragment: which one, and how many the chart has. */
+  piece?: [number, number];
+}
+
 /** PvE locations (expeditions.ts): sunken cities (bell buoys) and ship graveyards (a wall of wrecks with gates). */
 export interface PveSiteView {
   id: string;
@@ -662,7 +692,7 @@ export type GameEvent =
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
-    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes'; x: number; y: number; r?: number; dir?: number }
+    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig'; x: number; y: number; r?: number; dir?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 

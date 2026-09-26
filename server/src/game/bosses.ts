@@ -26,6 +26,7 @@ import { hasOfficer } from './crew.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { legendFragment } from './treasure.ts';
 
 type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add';
 
@@ -1363,6 +1364,7 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
       }
     }
     game.dropPrivateLoot(account, x + game.rng.range(-60, 60), y + game.rng.range(-60, 60), cargo, 900);
+    if (account === ranked[0][0]) legendFragment(game, s, 0.35, `In the belly of ${def.name}`);
     if (!p.trophies.includes(def.trophy)) {
       p.trophies.push(def.trophy);
       lines.push(`a trophy: ${def.trophy}`);

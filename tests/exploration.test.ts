@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { TALENTS } from '../shared/src/data/talents.ts';
 import type { TalentRanks } from '../shared/src/data/talents.ts';
 import { cargoVolume, computeShipStats } from '../shared/src/sim/shipstats.ts';
-import { DIG_RANGE, stepExplorer, canDive, diveDepth, forecast, makeMap, mapCircle, recordTrails, regionCharted, soundings, trailsFor } from '../server/src/game/explorefx.ts';
+import { DIG_RANGE, digTime, stepExplorer, canDive, diveDepth, forecast, makeMap, mapCircle, recordTrails, regionCharted, soundings, trailsFor } from '../server/src/game/explorefx.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { npcHostileTo } from '../server/src/game/npc.ts';
@@ -86,7 +86,7 @@ test('digging: the boats go ashore in the circle, a miss points onward, the spot
     toSea(game, s, miss.x, miss.y);
     c.push({ t: 'land' });
     assert.equal(ship.landing?.feature, 'dig');
-    steps(game, 20 * 30);
+    steps(game, 20 * Math.ceil(digTime(ship, m.tier) + 1));
     assert.equal(ship.landing, null);
     assert.equal(p.explore.maps.length, 1, 'still holding the map after a miss');
     assert.ok(c.all('toast').some((t) => /landmarks on the map point further/.test(t.msg)));
@@ -96,8 +96,8 @@ test('digging: the boats go ashore in the circle, a miss points onward, the spot
   const g0 = p.gold;
   c.push({ t: 'land' });
   assert.equal(ship.landing?.feature, 'dig');
-  assert.ok(ship.landing!.until - game.now < 30, 'Treasure Hunter digs faster');
-  steps(game, 20 * 30);
+  assert.ok(ship.landing!.until - game.now < 60, 'Treasure Hunter digs faster than the minute a plain crew needs');
+  steps(game, 20 * Math.ceil(digTime(ship, m.tier) + 1));
   assert.equal(p.explore.maps.length, 0, 'the map is spent');
   assert.ok(p.gold > g0 + 100, `silver from the hoard: ${p.gold - g0}`);
 });

@@ -322,11 +322,24 @@ export class Hud {
     g.strokeStyle = 'rgba(217,180,90,0.8)';
     g.setLineDash([3, 3]);
     for (const m of self?.maps ?? []) {
+      if (m.r < 0) continue;
       g.beginPath();
       g.arc(tx(m.x), ty(m.y), Math.max(3, m.r * k), 0, Math.PI * 2);
       g.stroke();
     }
     g.setLineDash([]);
+    // Holders of the legendary chart you can hear, and where a cursed map pulls: ticks at the rim.
+    const rim = (a: number, color: string) => {
+      g.strokeStyle = color;
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(W / 2 + Math.sin(a) * (W / 2 - 12), H / 2 - Math.cos(a) * (H / 2 - 12));
+      g.lineTo(W / 2 + Math.sin(a) * (W / 2 - 3), H / 2 - Math.cos(a) * (H / 2 - 3));
+      g.stroke();
+      g.lineWidth = 1;
+    };
+    for (const a of self?.legendEcho ?? []) rim(a, '#e8c65a');
+    for (const m of self?.maps ?? []) if (m.bearing !== undefined) rim(m.bearing, '#2ee6c8');
     g.strokeStyle = 'rgba(120,190,200,0.8)';
     for (const w of self?.wrecks ?? []) {
       g.beginPath();

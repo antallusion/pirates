@@ -22,6 +22,7 @@ import { groupOfAccount } from './party.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { grantPlan } from './shipbuilding.ts';
+import { legendFragment } from './treasure.ts';
 
 export type Tide = 'none' | 'fog' | 'blood_moon' | 'calm';
 
@@ -415,6 +416,7 @@ function finishDive(game: Game, run: DiveRun, ok: boolean, why = ''): void {
     game.db.ledger(m.accountId, 'expedition', silver, site.name);
     if (Object.keys(cargo).length) game.dropPrivateLoot(m.accountId, m.ship!.state.x + 30, m.ship!.state.y + 30, cargo, 900);
     if (run.plan && (m.accountId === run.leader || game.rng.chance(0.5))) grantPlan(game, m, 'masterwork');
+    if (run.plan && m.accountId === run.leader) legendFragment(game, m, 0.3, `Sealed in the vault of ${site.name}`);
     game.grantXp(m, 400 + run.seen.size * 25, `Dived ${site.name}`);
     game.sendTo(m, { t: 'toast', msg: `The bell comes up from ${site.name}: ${silver} silver${Object.keys(cargo).length ? ', and a haul floating by your side' : ''}.`, kind: 'gold' });
     game.sendTo(m, { t: 'dive', view: null });
@@ -695,6 +697,7 @@ export function onYardCaptainSunk(game: Game, ship: ShipEntity): void {
       }
     }
     game.grantXp(s, 900 * blood, `The Graveyard Captain of ${site.name}`);
+    legendFragment(game, s, 0.25, 'In the Graveyard Captain\'s coat');
     game.sendTo(s, { t: 'toast', msg: `The Graveyard Captain goes down. His chest floats up for you${lines.length ? `, with ${lines.join(', ')}` : ''}.`, kind: 'gold' });
   }
   game.addRumor(site.x, site.y, `The Graveyard Captain of ${site.name} was sunk. The wrecks are quiet — for a while.`);

@@ -15,6 +15,7 @@ import type { PlayerSession } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { questEvent } from './quests.ts';
 import { grantPlan } from './shipbuilding.ts';
+import { digOutcome, legendCircle, legendFragment } from './treasure.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_MAPS = 6;
@@ -22,9 +23,11 @@ export const DIG_RANGE = 250;
 const BASE_RADIUS = [0, 900, 1400, 2000];
 const TIER_NAMES = ['', 'Stained', 'Captain\'s', 'Legendary'];
 
+export type MapKind = 'circle' | 'riddle' | 'drawing' | 'landmark' | 'cursed' | 'fragment';
+
 export interface TreasureMap {
   id: string;
-  tier: number; // 1..3
+  tier: number; // 1..3 (a cursed map digs as 4)
   name: string;
   region: RegionId;
   sx: number; // the true spot
@@ -32,6 +35,18 @@ export interface TreasureMap {
   ox: number; // offset of the drawn circle's centre from the spot, as a share of the radius
   oy: number;
   legendary: boolean;
+  /** Phase 8 (treasure.ts): what kind of map it is; the chest every copy of it leads to. */
+  kind?: MapKind;
+  hoard?: string;
+  clue?: string;
+  island?: number; // the island the clue is about
+  forged?: number; // a forgery: the forger's account (0: unknown hand)
+  verdict?: 'genuine' | 'forgery';
+  sealed?: boolean; // the Brokers' seal of authenticity
+  copy?: boolean;
+  set?: string; // a legendary fragment: its chart, its number, how many there are
+  piece?: number;
+  of?: number;
 }
 
 export interface SunkenWreck {
@@ -62,20 +77,64 @@ function shoreSpot(is: Island, k: number): [number, number] {
   return [px + (dx / d) * 110, py + (dy / d) * 110];
 }
 
-export function makeMap(game: Game, tier: number, opts: { island?: Island; legendary?: boolean } = {}): TreasureMap {
+export function makeMap(game: Game, tier: number, opts: { island?: Island; legendary?: boolean; kind?: MapKind } = {}): TreasureMap {
   const rng = game.rng;
+  const kind = opts.kind ?? 'circle';
   let is = opts.island;
   if (!is) {
-    const regions = TIER_REGIONS[Math.max(1, Math.min(3, tier))];
-    const pool = game.world.islands.filter((i) => !i.portId && regions.includes(i.region) && i.radius > 150);
-    is = pool[Math.floor(rng.float() * pool.length)];
+    const regions = kind === 'cursed' ? (['drowned_crown', 'the_abyss'] as RegionId[]) : TIER_REGIONS[Math.max(1, Math.min(3, tier))];
+    const pool = game.world.islands.filter((i) => !i.portId && regions.includes(i.region) && i.radius > 150 && (kind !== 'landmark' || i.features.some((f) => LANDMARKS[f])));
+    is = pool[Math.floor(rng.float() * pool.length)] ?? game.world.islands.find((i) => !i.portId && i.radius > 150)!;
   }
-  const [sx, sy] = shoreSpot(is, rng.int(0, 999));
+  const k = rng.int(0, 999);
+  const [sx, sy] = shoreSpot(is, k);
   const a = rng.float() * Math.PI * 2, r = 0.2 + rng.float() * 0.5;
-  return {
-    id: `m${game.allocId()}`, tier, name: `${opts.legendary ? 'Legendary' : TIER_NAMES[tier]} map — ${is.name}`, region: is.region,
-    sx, sy, ox: Math.sin(a) * r, oy: -Math.cos(a) * r, legendary: !!opts.legendary,
+  const id = `m${game.allocId()}`;
+  const m: TreasureMap = {
+    id, tier, name: `${opts.legendary ? 'Legendary' : TIER_NAMES[Math.min(3, tier)]} map — ${is.name}`, region: is.region,
+    sx, sy, ox: Math.sin(a) * r, oy: -Math.cos(a) * r, legendary: !!opts.legendary, kind, hoard: id, island: is.id,
   };
+  if (kind !== 'circle') {
+    m.clue = clueFor(game, kind, is, sx, sy);
+    m.name = { riddle: 'A riddle in verse', drawing: 'A shore drawn from the sea', landmark: 'Landmarks and paces', cursed: 'A map that whispers', circle: m.name, fragment: m.name }[kind];
+    if (kind === 'cursed') m.tier = 4;
+  }
+  return m;
+}
+
+const LANDMARKS: Partial<Record<string, string>> = { lighthouse: 'the lighthouse', ruins: 'the ruined chapel', shrine: 'the drowned shrine', wreck: 'the beached wreck', grove: 'the tall grove', mine: 'the old mine' };
+const SIDES = ['northern', 'north-eastern', 'eastern', 'south-eastern', 'southern', 'south-western', 'western', 'north-western'];
+const SUN = ['toward the pole star', 'toward the morning gale', 'toward the sunrise', 'toward the warm wind', 'toward the noon sun', 'toward the rain', 'toward the sunset', 'toward the cold wind'];
+const BIOME_WORDS: Record<string, string> = { temperate: 'green', mossy: 'mossy', volcanic: 'ashen', ice: 'frozen', ruins: 'broken-spired', bone: 'bone-white', barren: 'bare' };
+
+function octant(fromX: number, fromY: number, toX: number, toY: number): number {
+  const b = Math.atan2(toX - fromX, -(toY - fromY)) / DEG;
+  return Math.round(((b + 360) % 360) / 45) % 8;
+}
+
+/** The words on a clue map: verse about landmarks, paces from a named mark, a region's ink, or whispers. */
+function clueFor(game: Game, kind: MapKind, is: Island, sx: number, sy: number): string {
+  const rng = game.rng;
+  const side = octant(is.x, is.y, sx, sy);
+  const region = REGIONS[is.region].name;
+  const size = is.radius > 700 ? 'a great' : is.radius > 350 ? 'a middling' : 'a little';
+  const mark = is.features.map((f) => LANDMARKS[f]).find(Boolean);
+  switch (kind) {
+    case 'riddle':
+      return rng.pick([
+        `In ${region} lies ${size} ${BIOME_WORDS[is.biome] ?? ''} isle${mark ? ` that keeps ${mark}` : ' with no name on the charts'}; on her ${SIDES[side]} shore, where the tide forgets the sand, the chest was laid.`,
+        `Seek ${size} island of ${region}${mark ? `, ${mark} upon her,` : ','} and walk her ${SIDES[side]} strand. Dead men count their paces there.`,
+      ]);
+    case 'landmark': {
+      const paces = Math.round(dist(is.x, is.y, sx, sy) / 0.8 / 10) * 10;
+      return `From ${mark ?? 'the heart'} of ${is.name}, ${paces} paces ${SUN[side]}, to the water's edge.`;
+    }
+    case 'drawing':
+      return `A shore sketched from the sea; the ink smells of ${region}. The cross is on the ${SIDES[side]} side.`;
+    case 'cursed':
+      return 'The parchment is cold and wet whatever the weather. At night it whispers a bearing.';
+  }
+  return '';
 }
 
 /** The circle as this captain reads it (Treasure Hunter shrinks it; Legend Seeker pins a legendary map). */
@@ -86,10 +145,15 @@ export function mapCircle(m: TreasureMap, ship: ShipEntity | null): { x: number;
   return { x: m.sx + m.ox * r, y: m.sy + m.oy * r, r };
 }
 
+/** Maps in the chest (the pieces of the legendary chart are kept apart, in oilcloth). */
+export function chestCount(maps: TreasureMap[]): number {
+  return maps.filter((m) => m.kind !== 'fragment').length;
+}
+
 /** A map changes hands. Returns false when the chest of maps is full. */
 export function grantMap(game: Game, s: PlayerSession, m: TreasureMap, source: string): boolean {
   const p = s.profile!;
-  if (p.explore.maps.length >= MAX_MAPS) {
+  if (m.kind !== 'fragment' && chestCount(p.explore.maps) >= MAX_MAPS) {
     game.sendTo(s, { t: 'toast', msg: 'Your map chest is full — dig one up or sell one.', kind: 'bad' });
     return false;
   }
@@ -99,10 +163,10 @@ export function grantMap(game: Game, s: PlayerSession, m: TreasureMap, source: s
 }
 
 /** Roll for a map from ordinary finds; Gold Fever doubles the chance. */
-export function mapChance(game: Game, s: PlayerSession, chance: number, tier: number, source: string): void {
+export function mapChance(game: Game, s: PlayerSession, chance: number, tier: number, source: string, kind?: MapKind): void {
   const ship = s.ship!;
   const c = chance * (ship.hasFlag('gold_fever') ? 2 : 1);
-  if (game.rng.chance(c)) grantMap(game, s, makeMap(game, tier), source);
+  if (game.rng.chance(c)) grantMap(game, s, makeMap(game, tier, { kind }), source);
 }
 
 /** Fragments of a legendary map (Legend Seeker: three times as often). */
@@ -113,18 +177,29 @@ export function fragmentChance(game: Game, s: PlayerSession, chance: number): vo
   game.sendTo(s, { t: 'toast', msg: `A torn fragment of a legendary map (${s.profile!.explore.fragments}/3). A cartographer can piece three together.`, kind: 'gold' });
 }
 
-/** What the digging party is going after, if anything: a map whose circle covers the ship. */
+/** What the digging party is going after, if anything: a map whose search area covers the ship. */
 export function mapHere(game: Game, s: PlayerSession): TreasureMap | null {
   const ship = s.ship!;
   for (const m of s.profile!.explore.maps) {
-    const c = mapCircle(m, ship);
-    if (dist(c.x, c.y, ship.state.x, ship.state.y) <= c.r + DIG_RANGE) return m;
+    const c = mapReach(game, s, m);
+    if (c && dist(c.x, c.y, ship.state.x, ship.state.y) <= c.r + DIG_RANGE) return m;
   }
   return null;
 }
 
-export function digTime(ship: ShipEntity): number {
-  return 30 * Math.max(0.4, 1 - 0.15 * tx(ship.stats, 'treasureHunter'));
+/** Where a map lets the boats go digging: its circle, or the island its clue is about, or (cursed) the spot. */
+export function mapReach(game: Game, s: PlayerSession, m: TreasureMap): { x: number; y: number; r: number } | null {
+  const kind = m.kind ?? 'circle';
+  if (kind === 'circle') return mapCircle(m, s.ship);
+  if (kind === 'fragment') return legendCircle(game, s, m);
+  if (kind === 'cursed') return { x: m.sx, y: m.sy, r: 350 };
+  const is = m.island !== undefined ? game.world.islands[m.island] : undefined;
+  return is ? { x: is.x, y: is.y, r: is.radius + 1500 } : { x: m.sx, y: m.sy, r: 1500 };
+}
+
+/** 60–180 s of digging by the size of the hoard (Treasure Hunter hurries it). */
+export function digTime(ship: ShipEntity, tier = 1): number {
+  return (25 + 35 * Math.min(4, tier)) * Math.max(0.4, 1 - 0.15 * tx(ship.stats, 'treasureHunter'));
 }
 
 /** Digging done: the hoard, or a hint toward the true spot. */
@@ -134,6 +209,7 @@ export function resolveDig(game: Game, s: PlayerSession, mapId: string, share: n
   const m = p.explore.maps.find((x) => x.id === mapId);
   if (!m) return;
   const d = dist(m.sx, m.sy, ship.state.x, ship.state.y);
+  if (d <= DIG_RANGE && digOutcome(game, s, m, share)) return; // shared chests, forgeries, curses, the legend
   if (d > DIG_RANGE) {
     const bearing = Math.atan2(m.sx - ship.state.x, -(m.sy - ship.state.y)) / DEG;
     const dir = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'][Math.round(((bearing + 360) % 360) / 45) % 8];
@@ -176,6 +252,8 @@ export function hoard(game: Game, s: PlayerSession, grade: number, share: number
   p.gold += silver;
   game.db.ledger(s.accountId, 'treasure', silver, `grade ${grade}`);
   fragmentChance(game, s, [0, 0.2, 0.35, 0.6, 0.8][Math.min(4, grade)]);
+  // The great hoards may hold a piece of the season's legendary chart.
+  if (grade >= 3) legendFragment(game, s, 0.5, 'Wrapped in oilcloth at the bottom of the chest');
   // Hoards hold plans: masterwork now and then, a legendary one in the great hoards.
   if (grade >= 3) grantPlan(game, s, 'legendary');
   else if (grade === 2 && rng.chance(0.2)) grantPlan(game, s, 'masterwork');
@@ -211,12 +289,14 @@ export function tavernMap(game: Game, s: PlayerSession, portId: string): string 
   const free = s.ship!.hasFlag('rumor_hound') && p.explore.rumorDay !== day;
   const price = free ? 0 : 350;
   if (p.gold < price) return `The map costs ${price} silver`;
-  if (p.explore.maps.length >= MAX_MAPS) return 'Your map chest is full';
+  if (chestCount(p.explore.maps) >= MAX_MAPS) return 'Your map chest is full';
   p.gold -= price;
   if (price) game.db.ledger(s.accountId, 'map', -price, portId);
   if (free) p.explore.rumorDay = day;
   p.explore.tavernDeals = [...p.explore.tavernDeals.slice(-20), key];
-  grantMap(game, s, makeMap(game, 1), free ? 'Tavern rumour' : 'A drunk sailor sells');
+  // Half the maps in taverns are verse: a riddle leads to a finer hoard than a stained circle.
+  const riddle = game.rng.chance(0.4);
+  grantMap(game, s, riddle ? makeMap(game, 2, { kind: 'riddle' }) : makeMap(game, 1), free ? 'Tavern rumour' : 'A drunk sailor sells');
   return null;
 }
 
@@ -266,7 +346,7 @@ export function resolveDive(game: Game, s: PlayerSession, wreckId: number, share
   const silver = Math.round(rng.int(50, 200) * w.tier * share);
   p.gold += silver;
   game.db.ledger(s.accountId, 'dive', silver, w.name);
-  mapChance(game, s, 0.1 * w.tier, Math.min(3, w.tier), 'In a sea chest on the wreck');
+  mapChance(game, s, 0.1 * w.tier, Math.min(3, w.tier), 'In a sea chest on the wreck', w.tier >= 2 ? 'drawing' : 'circle');
   // Old ships keep old plans; the graveyard keeps its serpents.
   if (game.rng.chance(0.05 * w.tier)) grantPlan(game, s, 'masterwork');
   if (ship.region === 'dead_mans_expanse' && !p.figureheads.includes('fh_serpent') && game.rng.chance(0.1)) {

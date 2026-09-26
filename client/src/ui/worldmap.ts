@@ -6,6 +6,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
+import { mapCard } from './maps.ts';
 
 export class WorldMap {
   private zoom = 1;
@@ -18,7 +19,8 @@ export class WorldMap {
   open(root: HTMLElement, state: ClientState): void {
     root.innerHTML = `<div class="modal-head"><div><h2>Chart of the Known Sea</h2><div class="sub">${state.discovered.size} islands charted · drag to pan, wheel to zoom</div></div><div class="muted">[M] close</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#7fd08a">■</span> your group · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting · <span style="color:#c9a25a">◌</span> treasure map · <span style="color:#78bec8">✕</span> sunken wreck · <span style="color:#d06a5e">⚑</span> world event</div></div>`;
+      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#7fd08a">■</span> your group · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting · <span style="color:#c9a25a">◌</span> treasure map · <span style="color:#78bec8">✕</span> sunken wreck · <span style="color:#d06a5e">⚑</span> world event</div>
+      ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">You hear ${state.self.legendEcho.length} other holder${state.self.legendEcho.length > 1 ? 's' : ''} of the legendary chart within 10 km.</div>` : ''}</div>` : ''}</div>`;
     const c = root.querySelector('canvas')!;
     this.canvas = c;
     if (!this.centred && state.ownDisplay) {
@@ -250,6 +252,7 @@ export class WorldMap {
     // Treasure maps: the search circle; sunken wrecks you know of.
     g.setLineDash([6, 5]);
     for (const m of state.self?.maps ?? []) {
+      if (m.r < 0) continue; // riddles, drawings and needles draw no circle
       g.strokeStyle = m.tier >= 3 ? '#e8c65a' : '#c9a25a';
       g.fillStyle = g.strokeStyle;
       g.beginPath();

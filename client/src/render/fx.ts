@@ -315,6 +315,11 @@ export class Fx {
           case 'axes':
             this.splinters(e.x, e.y, 10);
             break;
+          case 'dig':
+            // Gulls over the pit by day, a lantern by night: either way, it can be seen.
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 2, size: 8, grow: 30, color: '#e0d6b8' });
+            this.light(e.x, e.y, 90, 'rgba(255,200,120,1)', 0.6, 10);
+            break;
         }
         break;
       case 'ability':

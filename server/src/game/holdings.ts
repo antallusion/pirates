@@ -417,7 +417,7 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
       if (p.gold < 500) return 'A copy costs 500 silver';
       if (p.explore.maps.length >= 12) return 'Your chart chest is full';
       p.gold -= 500;
-      p.explore.maps.push({ ...m, id: `m${game.allocId()}` });
+      p.explore.maps.push({ ...m, id: `m${game.allocId()}`, hoard: m.hoard ?? m.id, copy: true, verdict: undefined, sealed: undefined }); // a copy leads to the same chest
       game.db.ledger(s.accountId, 'chart_copy', -500, m.name);
       break;
     }
