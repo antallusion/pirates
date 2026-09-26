@@ -7,6 +7,7 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { ClientMsg, PortView } from '../../../shared/src/protocol.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
+import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt } from './dom.ts';
 
@@ -78,6 +79,10 @@ export class PortScreen {
         return this.send({ t: 'contract', action: d.mode as never, id: d.id! });
       case 'pardon':
         return this.send({ t: 'pardon' });
+      case 'chart_sell':
+        return this.send({ t: 'chart', action: 'sell' });
+      case 'chart_buy':
+        return this.send({ t: 'chart', action: 'buy', region: d.region as RegionId });
       case 'insure':
         return this.send({ t: 'insure' });
       case 'respec':
@@ -160,12 +165,20 @@ export class PortScreen {
 
   private tavern(view: PortView, state: ClientState): string {
     const self = state.self!;
+    const port = state.ports.find((p) => p.id === view.portId)!;
     const room = (state.you?.crewMax ?? 0) - self.crew;
     return `<div class="cols"><div class="card"><h4>Sailors looking for a berth: ${view.crewAvailable}</h4>
         <p>Signing bounty ${view.crewHireCost} silver each. Fresh hands lower morale a little until they find their feet. You have room for ${room}.</p>
         ${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}">Hire ${n} (${fmt(n * view.crewHireCost)})</button>`).join(' ')}
         <button class="btn btn-small btn-danger" data-act="crew" data-n="-5">Discharge 5</button></div>
-      <div class="card"><h4>Rumours over rum</h4>${view.rumors.map((r) => `<p>“${esc(r)}”</p>`).join('')}</div></div>`;
+      <div class="card"><h4>Rumours over rum</h4>${view.rumors.map((r) => `<p>“${esc(r)}”</p>`).join('')}</div></div>
+      <div class="card"><h4>The cartographer</h4>
+        <p>Knowledge is cargo too. The cartographer copies your charts of islands this port does not know yet${port.faction === 'brokers' ? ' — and the Fog Brokers pay a premium for it' : ''}, and sells charts of nearby waters. Bought charts show islands but earn no discovery experience.</p>
+        <div class="row"><span>${view.charts.sellable} island${view.charts.sellable === 1 ? '' : 's'} they have not seen from you</span>
+          <button class="btn btn-small btn-primary" data-act="chart_sell" ${view.charts.sellable ? '' : 'disabled'}>Sell copies — ${fmt(view.charts.sellValue)}</button></div>
+        ${view.charts.offers.map((o) => `<div class="row" style="padding:3px 0"><span>${esc(o.name)} <span class="muted">(${o.islands} uncharted islands)</span></span>
+          <button class="btn btn-small" data-act="chart_buy" data-region="${o.region}">Buy — ${fmt(o.price)}</button></div>`).join('') || '<p class="muted">No charts to sell you.</p>'}
+      </div>`;
   }
 
   private contracts(view: PortView, state: ClientState): string {

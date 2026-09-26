@@ -49,7 +49,7 @@ import type { NpcBrain } from './npc.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
 import type { Profile } from './player.ts';
 import {
-  buildPortView, buyAmmo, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, trade,
+  buildPortView, buyAmmo, buyChart, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, trade,
 } from './ports.ts';
 import { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
@@ -416,6 +416,7 @@ export class Game {
       if (!s.ship || !s.profile) continue;
       this.streamChunks(s);
       this.discover(s);
+      this.recordSightings(s);
       const region = s.ship.region;
       if (region !== s.lastRegion) {
         s.lastRegion = region;
@@ -1010,6 +1011,26 @@ export class Game {
 
   // ================================================================= discovery
 
+  /** Notable ships the captain has laid eyes on are logged with time and place for the chart. */
+  private recordSightings(s: PlayerSession): void {
+    const ship = s.ship!;
+    const p = s.profile!;
+    this.forShipsNear(ship.state.x, ship.state.y, Math.min(INTEREST_RADIUS, ship.stats.detection), (o) => {
+      if (o.id === ship.id || o.docked || o.hasFlag('hidden')) return;
+      const kind = o.npcRole === 'ghost' ? 'ghost' : o.npcRole === 'hunter' ? 'hunter' : o.isPlayer && o.wantedCache >= 3 ? 'notorious' : null;
+      if (!kind) return;
+      const name = o.isPlayer ? `${o.captainName} (${o.name})` : o.name;
+      const rec = { name, kind, x: Math.round(o.state.x), y: Math.round(o.state.y), t: Math.round(this.now) };
+      const i = p.sightings.findIndex((q) => q.name === name);
+      if (i >= 0) p.sightings[i] = rec;
+      else {
+        p.sightings.push(rec);
+        this.sendTo(s, { t: 'toast', msg: kind === 'ghost' ? `Lookout: a ship with no lights… ${o.name}.` : `Lookout: ${name} sighted.`, kind: 'info' });
+        if (p.sightings.length > 25) p.sightings.shift();
+      }
+    });
+  }
+
   private discover(s: PlayerSession): void {
     const ship = s.ship!;
     const r = Math.min(1700, ship.stats.detection * 0.9) * (this.weatherIn(ship.region) === 'fog' ? 0.6 : 1);
@@ -1026,6 +1047,15 @@ export class Game {
         }
       }
     }
+  }
+
+  /** Add an island to the captain's chart without discovery experience (bought or copied charts). */
+  chartIsland(s: PlayerSession, is: Island): void {
+    if (s.discovered.has(is.id)) return;
+    s.discovered.add(is.id);
+    s.profile!.discovered.push(is.id);
+    this.sendIslands(s, [is.id]);
+    this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region, quiet: true }] });
   }
 
   private markDiscovered(s: PlayerSession, is: Island): void {
@@ -1310,6 +1340,8 @@ export class Game {
         });
       case 'pardon':
         return portAction((pt) => pardon(this, s, pt));
+      case 'chart':
+        return portAction((pt) => (msg.action === 'sell' ? sellCharts(this, s, pt) : buyChart(this, s, pt, msg.region)));
       case 'insure':
         return portAction((pt) => {
           if (pt.faction !== 'league' && pt.faction !== 'free') return 'Only League and free ports write policies';
@@ -1440,6 +1472,7 @@ export class Game {
         ship.docked = port.id;
         ship.state.x = port.x;
         ship.state.y = port.y;
+        recordIntel(this, s, port);
       } else p.docked = null;
     } else {
       ship.protectedUntil = this.now + 15;

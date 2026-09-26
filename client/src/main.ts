@@ -92,7 +92,8 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'port':
       if (m.view && modal !== 'port') audio.bell();
-      if (m.view && modal !== 'boarding' && modal !== 'sunk') openModal('port');
+      // Never steal focus from another open screen (handbook, boarding, shipwreck); they return to port on close.
+      if (m.view && modal === null) openModal('port');
       else if (!m.view && modal === 'port') closeModal();
       else if (modal === 'port') refreshModal();
       break;
@@ -121,7 +122,7 @@ function onMessage(m: ServerMsg): void {
         if (e.k === 'region') {
           const r = REGIONS[e.region];
           hud.banner(r.name, `${r.safety === 'safe' ? 'Safe waters' : r.safety === 'contested' ? 'Contested waters' : 'Lawless waters'} — ${r.mood}`);
-        } else if (e.k === 'discover') hud.toast(`Charted: ${e.name}`, 'xp');
+        } else if (e.k === 'discover' && !e.quiet) hud.toast(`Charted: ${e.name}`, 'xp');
         else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) hud.toast('Grapples away! Boarding action!', 'info');
       }
       if (modal === 'map') worldMap.draw(state);

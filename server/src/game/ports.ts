@@ -9,7 +9,9 @@ import type { AmmoId, GunId, ModuleId, ShipClassId } from '../../../shared/src/d
 import { dist } from '../../../shared/src/math.ts';
 import type { Contract, PortView, Side } from '../../../shared/src/protocol.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
-import type { Port } from '../../../shared/src/world/worldgen.ts';
+import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
+import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
+import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { marketRows, midPrice, portIsLawful, quoteBuy, quoteSell, applyTrade } from './economy.ts';
 import type { PriceMods } from './economy.ts';
 import type { Game } from './Game.ts';
@@ -81,6 +83,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     },
     contracts: game.contractsAt(port.id),
     rumors: game.rumorsNear(port.x, port.y, 4),
+    charts: chartView(game, s, port),
     pardonCost: port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy' ? pardonCost(p) : null,
   };
   if (ship.hasFlag('market_sense')) {
@@ -332,4 +335,89 @@ export function generateContracts(game: Game, port: Port): Contract[] {
     });
   }
   return out;
+}
+
+// ------------------------------------------------------------------ cartography: information is a resource
+
+/** Silver a cartographer pays for a fresh chart of one island. */
+export function islandChartValue(is: Island, port: Port): number {
+  const strange = REGIONS[is.region].strangeness;
+  let v = 8 + Math.min(40, is.radius / 25) + strange * 60;
+  for (const f of is.features) v += f === 'ruins' || f === 'shrine' ? 20 : f === 'wreck' || f === 'cache' ? 12 : f === 'pearl_bank' || f === 'mine' ? 10 : 4;
+  v *= is.region === port.region ? 1.4 : 0.7;
+  if (port.faction === 'brokers') v *= 1.5; // the Fog Brokers trade in information
+  return Math.round(v);
+}
+
+function sellableCharts(game: Game, s: PlayerSession, port: Port): Island[] {
+  const sold = new Set(s.profile!.chartSales[port.id] ?? []);
+  // Copies of bought charts are worthless to a cartographer: only first-hand surveys sell.
+  for (const id of s.profile!.chartsBought) sold.add(id);
+  const out: Island[] = [];
+  for (const id of s.discovered) {
+    const is = game.world.islands[id];
+    if (!is || is.portId || sold.has(id)) continue;
+    out.push(is);
+  }
+  return out;
+}
+
+/** Undiscovered islands a cartographer here can sell for a region, closest to the port first. */
+function chartForRegion(game: Game, s: PlayerSession, port: Port, region: RegionId): Island[] {
+  return game.world.islands
+    .filter((is) => is.region === region && !s.discovered.has(is.id))
+    .sort((a, b) => dist(a.x, a.y, port.x, port.y) - dist(b.x, b.y, port.x, port.y))
+    .slice(0, 15);
+}
+
+function chartRegions(port: Port): RegionId[] {
+  return REGION_IDS.filter((r) => r === port.region || dist(REGIONS[r].center[0], REGIONS[r].center[1], port.x, port.y) < 42000);
+}
+
+function chartPrice(list: Island[], port: Port): number {
+  return Math.round(list.reduce((a, is) => a + islandChartValue(is, port), 0) * 0.8 + 40);
+}
+
+export function chartView(game: Game, s: PlayerSession, port: Port): PortView['charts'] {
+  const sellable = sellableCharts(game, s, port);
+  return {
+    sellable: sellable.length,
+    sellValue: sellable.reduce((a, is) => a + islandChartValue(is, port), 0),
+    offers: chartRegions(port)
+      .map((region) => {
+        const list = chartForRegion(game, s, port, region);
+        const price = chartPrice(list, port);
+        return { region, name: `Chart of ${REGIONS[region].name}`, islands: list.length, price };
+      })
+      .filter((o) => o.islands > 0),
+  };
+}
+
+export function sellCharts(game: Game, s: PlayerSession, port: Port): string | null {
+  const list = sellableCharts(game, s, port);
+  if (!list.length) return 'The cartographer already has everything you know';
+  const value = list.reduce((a, is) => a + islandChartValue(is, port), 0);
+  const p = s.profile!;
+  (p.chartSales[port.id] ??= []).push(...list.map((is) => is.id));
+  p.gold += value;
+  game.grantXp(s, value / 6, null);
+  game.db.ledger(s.accountId, 'charts_sold', value, `${list.length} islands @ ${port.id}`);
+  game.sendTo(s, { t: 'toast', msg: `The cartographer copies ${list.length} of your charts: +${value} silver.`, kind: 'gold' });
+  return null;
+}
+
+export function buyChart(game: Game, s: PlayerSession, port: Port, region: RegionId): string | null {
+  if (!chartRegions(port).includes(region)) return 'No chart of those waters here';
+  const list = chartForRegion(game, s, port, region);
+  if (!list.length) return 'You already know everything this chart shows';
+  const price = chartPrice(list, port);
+  const p = s.profile!;
+  if (p.gold < price) return `The chart costs ${price} silver`;
+  p.gold -= price;
+  // Bought knowledge charts the islands but earns no discovery experience — you did not sail there.
+  for (const is of list) game.chartIsland(s, is);
+  p.chartsBought.push(...list.map((is) => is.id));
+  game.db.ledger(s.accountId, 'chart_bought', -price, `${region} @ ${port.id}`);
+  game.sendTo(s, { t: 'toast', msg: `${list.length} islands inked onto your chart.`, kind: 'info' });
+  return null;
 }

@@ -42,6 +42,8 @@ export type ClientMsg =
   | { t: 'respec' }
   | { t: 'pardon' }
   | { t: 'insure' }
+  | { t: 'chart'; action: 'sell' }
+  | { t: 'chart'; action: 'buy'; region: RegionId }
   | { t: 'chat'; text: string }
   | { t: 'ping'; c: number };
 
@@ -136,6 +138,10 @@ export interface PrivateState {
   cooldowns: Record<string, number>; // ability id -> world time when ready
   repairing: boolean;
   discoveredCount: number;
+  /** What the captain knows about each visited market, and how old that knowledge is. */
+  intel: { portId: string; t: number; top: [GoodId, number][] }[];
+  /** Last known positions of notable ships (ghosts, hunters, notorious captains). */
+  sightings: { name: string; kind: string; x: number; y: number; t: number }[];
   stats: { sunk: number; boarded: number; tradeProfit: number; distance: number };
   protectedUntil: number; // newbie / respawn protection (world time)
   insured: boolean;
@@ -165,6 +171,7 @@ export interface PortView {
   };
   contracts: Contract[];
   rumors: string[];
+  charts: { sellable: number; sellValue: number; offers: { region: RegionId; name: string; islands: number; price: number }[] };
   pardonCost: number | null;
   priceIntel?: { portId: string; name: string; good: GoodId; sell: number; ageSec: number }[];
 }
@@ -244,7 +251,7 @@ export type GameEvent =
   | { k: 'board_end'; a: number; b: number; winner: number }
   | { k: 'ability'; ship: number; id: string; x?: number; y?: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram'; x: number; y: number; r?: number }
-  | { k: 'discover'; islandId: number; name: string; region: RegionId }
+  | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 
 export interface BoardingResult {

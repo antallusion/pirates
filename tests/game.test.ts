@@ -245,3 +245,48 @@ test('reefs: a deep galleon grounds and splinters, a shallow-running sloop skate
   assert.ok(sloop.dmg === 0, `sloop damage ${sloop.dmg}`);
   assert.ok(galleon.minSpeed < sloop.minSpeed, 'reef drags the galleon');
 });
+
+test('cartography: charts sell once per port, bought charts reveal islands without discovery XP', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Map Maker');
+  const s = [...game.sessions][0];
+  const p = s.profile!;
+  // Chart five nearby islands by sailing past (simulated discovery).
+  const known = game.world.islands.filter((is) => !is.portId && is.region === 'black_coast').slice(0, 5);
+  for (const is of known) s.discovered.add(is.id);
+  game.pushPort(s);
+  const view = c.last('port')!.view!;
+  assert.equal(view.charts.sellable, 5);
+  const gold0 = p.gold;
+  c.push({ t: 'chart', action: 'sell' });
+  assert.equal(p.gold, gold0 + view.charts.sellValue);
+  c.push({ t: 'chart', action: 'sell' });
+  assert.equal(p.gold, gold0 + view.charts.sellValue, 'the same knowledge cannot be sold twice to one port');
+  // Buy a regional chart.
+  const offer = c.last('port')!.view!.charts.offers[0];
+  p.gold = 10000;
+  const xp0 = p.xp, lvl0 = p.level, n0 = s.discovered.size;
+  c.push({ t: 'chart', action: 'buy', region: offer.region });
+  assert.equal(s.discovered.size, n0 + offer.islands);
+  assert.equal(p.gold, 10000 - offer.price);
+  assert.ok(p.xp === xp0 && p.level === lvl0, 'no discovery XP from bought charts');
+  game.pushPort(s);
+  assert.equal(c.last('port')!.view!.charts.sellable, 0, 'bought charts cannot be resold');
+  assert.ok(offer.price < 1200, `a starting captain can afford a chart (${offer.price})`);
+});
+
+test('sightings and market intel are remembered with timestamps', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Look Out');
+  const s = [...game.sessions][0];
+  assert.equal(c.last('init')!.self.intel.length, 1, 'starting port market is known');
+  c.push({ t: 'undock' });
+  const ship = s.ship!;
+  const ghost = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', ship.state.x + 300, ship.state.y, 0);
+  game.npcs.get(ghost.id)!.active = true;
+  game.grid.upsert(ghost.id, ghost.state.x, ghost.state.y);
+  steps(game, 25);
+  const sg = s.profile!.sightings.find((q) => q.kind === 'ghost');
+  assert.ok(sg, 'ghost ship logged');
+  assert.ok(Math.abs(sg.x - ghost.state.x) < 50);
+});

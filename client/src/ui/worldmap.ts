@@ -2,6 +2,7 @@
 
 import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
+import { GOODS } from '../../../shared/src/data/goods.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
@@ -17,7 +18,7 @@ export class WorldMap {
   open(root: HTMLElement, state: ClientState): void {
     root.innerHTML = `<div class="modal-head"><div><h2>Chart of the Known Sea</h2><div class="sub">${state.discovered.size} islands charted · drag to pan, wheel to zoom</div></div><div class="muted">[M] close</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination</div></div>`;
+      <div class="map-legend"><span style="color:#e0b862">■</span> port · <span style="color:#f0e6c8">▲</span> you · <span style="color:#8fb3d9">- -</span> currents · <span style="color:#d06a5e">◆</span> contract destination · <span style="color:#8fb3d9">prices N min ago</span> age of your market knowledge · ✕ last known sighting</div></div>`;
     const c = root.querySelector('canvas')!;
     this.canvas = c;
     if (!this.centred && state.ownDisplay) {
@@ -133,6 +134,44 @@ export class WorldMap {
       g.fillStyle = 'rgba(240,230,200,0.85)';
       g.fillText(p.name, tx(p.x), ty(p.y) - 8);
     }
+    // Market knowledge: every visited port carries the age of what you know about it.
+    const now = state.estServerTime();
+    const age = (t: number) => {
+      const m = Math.max(0, Math.round((now - t) / 60));
+      return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+    };
+    g.textAlign = 'left';
+    for (const it of state.self?.intel ?? []) {
+      const p = state.ports.find((q) => q.id === it.portId);
+      if (!p) continue;
+      const fresh = Math.max(0.25, 1 - (now - it.t) / 5400); // knowledge fades over ~1.5 h
+      g.font = '10px Inter, sans-serif';
+      g.fillStyle = `rgba(143,179,217,${0.85 * fresh})`;
+      g.fillText(`prices ${age(it.t)}`, tx(p.x) + 7, ty(p.y) + 4);
+      if (this.zoom > 1.8) {
+        it.top.forEach(([good, price], i) => {
+          g.fillStyle = `rgba(224,184,98,${0.9 * fresh})`;
+          g.fillText(`${GOODS[good].name} ${price}`, tx(p.x) + 7, ty(p.y) + 16 + i * 11);
+        });
+      }
+    }
+    // Last known positions of notable ships.
+    for (const sg of state.self?.sightings ?? []) {
+      const x = tx(sg.x), y = ty(sg.y);
+      const fresh = Math.max(0.3, 1 - (now - sg.t) / 3600);
+      g.strokeStyle = sg.kind === 'ghost' ? `rgba(46,230,200,${fresh})` : `rgba(208,106,94,${fresh})`;
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(x - 5, y - 5);
+      g.lineTo(x + 5, y + 5);
+      g.moveTo(x + 5, y - 5);
+      g.lineTo(x - 5, y + 5);
+      g.stroke();
+      g.font = 'italic 11px "Cormorant Garamond", serif';
+      g.fillStyle = g.strokeStyle;
+      g.fillText(`${sg.name} — seen ${age(sg.t)}`, x + 8, y - 6);
+    }
+    g.textAlign = 'center';
     // Contract destinations.
     for (const ct of state.self?.contracts ?? []) {
       const p = state.ports.find((q) => q.id === ct.toPort);

@@ -45,6 +45,9 @@ export interface Profile {
   insured: boolean;
   priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>> }>;
   costBasis: Partial<Record<GoodId, number>>;
+  sightings: { name: string; kind: string; x: number; y: number; t: number }[];
+  chartSales: Record<string, number[]>;
+  chartsBought: number[]; // port id -> island ids whose charts that port already bought
   createdAt: number;
 }
 
@@ -60,7 +63,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
     cargo: { ...c.start.cargo }, ammo: { round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 }, cooldowns: {},
-    insured: false, priceIntel: {}, costBasis: {}, createdAt: now,
+    insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], createdAt: now,
   };
 }
 
@@ -168,6 +171,15 @@ export function toPrivateState(s: PlayerSession, now: number): PrivateState {
     cooldowns: p.cooldowns,
     repairing: ship?.repairing ?? false,
     discoveredCount: s.discovered.size,
+    intel: Object.entries(p.priceIntel).map(([portId, rec]) => ({
+      portId,
+      t: rec.t,
+      // Only Market Sense turns a remembered visit into usable price knowledge on the chart.
+      top: ship?.hasFlag('market_sense')
+        ? (Object.entries(rec.sell) as [GoodId, number][]).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        : [],
+    })),
+    sightings: p.sightings,
     stats: p.stats,
     protectedUntil: ship?.protectedUntil ?? 0,
     insured: p.insured,
@@ -186,6 +198,9 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.cooldowns ??= {};
   p.priceIntel ??= {};
   p.costBasis ??= {};
+  p.sightings ??= [];
+  p.chartSales ??= {};
+  p.chartsBought ??= [];
   p.stats ??= { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0 };
   p.ammo ??= { round: 0, chain: 0, grape: 0 };
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));
