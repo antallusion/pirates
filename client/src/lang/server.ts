@@ -36,10 +36,20 @@ function compile(): void {
   templates.sort((a, b) => lit(b) - lit(a));
 }
 
+/** Names the server lowers inside a sentence ("short of provisions"): the Russian name, lowered too. */
+let lowerNames: Map<string, string> | null = null;
+function lowerName(s: string): string | undefined {
+  if (!lowerNames || lowerNames.size < NAME_RU.size) {
+    lowerNames = new Map();
+    for (const [en, ru] of NAME_RU) lowerNames.set(en.toLowerCase(), ru.charAt(0).toLowerCase() + ru.slice(1));
+  }
+  return s === s.toLowerCase() ? lowerNames.get(s) : undefined;
+}
+
 /** A captured fragment: a known name, a known phrase, or itself. */
 function part(s: string, depth: number): string {
   if (!s) return s;
-  return NAME_RU.get(s) ?? exact.get(s) ?? composedNameRu(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
+  return NAME_RU.get(s) ?? lowerName(s) ?? exact.get(s) ?? composedNameRu(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
 }
 
 function translate(s: string, depth: number): string {

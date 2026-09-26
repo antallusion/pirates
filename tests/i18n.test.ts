@@ -36,3 +36,15 @@ test('generated island names read in Russian, the kind in front; unknown names s
   assert.equal(composedNameRu('Gravesend'), null);
   assert.equal(composedNameRu('Sold 5 rum.'), null);
 });
+
+test('names the server lowers inside a sentence come out in Russian; boss phases too', async () => {
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  setLang('ru');
+  applyDataLocale('ru');
+  const out = serverText('Port Gravesend is short of provisions. Buy it anywhere — the buyer pays on delivery, on top of market price.');
+  assert.ok(!/provisions/.test(out), out);
+  assert.equal(serverText('Eight Arms'), 'Восемь щупалец');
+  applyDataLocale('en');
+  setLang('en');
+});
