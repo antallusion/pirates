@@ -10,7 +10,7 @@ import { EN, RU } from '../lang/ui/crew.ts';
 import { serverText } from '../lang/server.ts';
 import { keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
-import { esc, fmt } from './dom.ts';
+import { esc, fmt, icon, officerIcon } from './dom.ts';
 
 const L = dict(EN, RU);
 const kb = (a: Action) => keyLabel(settings().keys[a][0] || settings().keys[a][1]);
@@ -36,7 +36,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { souls, stars: stars(c.skill), skill: c.skill.toFixed(1), morale, spirit, loyalty: c.loyalty }))}${c.unrest ? ` · <span class="bad">${esc(serverText(c.unrest))}</span>` : ''}</div></div><div class="muted">${esc(L('close', { key: kb('crew') }))}</div></div>
     <div class="modal-body"><div class="cols"><div>
       <h3 class="title-sm" style="font-size:20px">${esc(L('trades'))}</h3>
-      <table class="grid">${PROFESSIONS.map((k) => `<tr title="${esc(PROFESSION_DEFS[k].description)}"><td>${esc(PROFESSION_DEFS[k].name)}</td><td>${c.pools[k]}</td><td class="muted">${esc(L('wagePerHour', { wage: PROFESSION_DEFS[k].wage }))}</td></tr>`).join('')}</table>
+      <table class="grid">${PROFESSIONS.map((k) => `<tr title="${esc(PROFESSION_DEFS[k].description)}"><td>${icon(`prof_${k}`)}${esc(PROFESSION_DEFS[k].name)}</td><td>${c.pools[k]}</td><td class="muted">${esc(L('wagePerHour', { wage: PROFESSION_DEFS[k].wage }))}</td></tr>`).join('')}</table>
       <p class="muted">${esc(L('wages', { sum: fmt(c.wagesPerHour) }))}${c.owed ? esc(L('owed', { sum: fmt(c.owed) })) : ''}${esc(L('hireHint'))}</p>
       <div class="card"><h4>${esc(L('codex'))}</h4>
         <div class="row"><input id="codex" type="range" min="0" max="50" step="5" value="${c.share}" style="flex:1"><b id="codex-v">${c.share}%</b></div>
@@ -51,7 +51,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
       ${c.officers.map((o) => {
         const def = OFFICER_DEFS[o.role];
         const left = Math.max(0, o.orderReady - now);
-        return `<div class="card"><h4>${esc(o.name)} <span class="muted">${esc(L('officerLevel', { role: def.name, level: o.level }))}</span></h4>
+        return `<div class="card"><h4>${officerIcon(o)}${esc(o.name)} <span class="muted">${esc(L('officerLevel', { role: def.name, level: o.level }))}</span></h4>
           <p>${traitChips(o.traits)}</p>
           <p class="muted">${esc(def.description)}</p>
           <div class="row"><span>${esc(L('loyalty', { n: o.loyalty }))}${o.warned ? ` <span class="bad">${esc(L('restless'))}</span>` : ''}${o.wound ? ` · <span class="bad">${esc(L(`wound.${o.wound}`))}</span>` : ''}${o.away ? ` · <span class="bad">${esc(L('captive'))}</span>` : ''}</span>

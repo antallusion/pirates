@@ -15,7 +15,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { esc, fmt, icon } from './dom.ts';
+import { esc, fmt, icon, officerIcon } from './dom.ts';
 import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { traitChips } from './crew.ts';
@@ -386,9 +386,9 @@ ${orders}${berths}</div>` : ''}`;
     const room = (state.you?.crewMax ?? 0) - self.crew;
     const tv = view.tavern;
     const co = self.company;
-    const trades = PROFESSIONS.filter((k) => k !== 'sailor').map((k) => `<tr title="${esc(PROFESSION_DEFS[k].description)}"><td>${esc(PROFESSION_DEFS[k].name)}</td><td>${esc(L('tavern.aboard', { n: co.pools[k] }))}</td><td>${esc(L('tavern.here', { n: tv.stock[k] ?? 0 }))}</td><td>${fmt(tv.costs[k])}</td>
+    const trades = PROFESSIONS.filter((k) => k !== 'sailor').map((k) => `<tr title="${esc(PROFESSION_DEFS[k].description)}"><td>${icon(`prof_${k}`)}${esc(PROFESSION_DEFS[k].name)}</td><td>${esc(L('tavern.aboard', { n: co.pools[k] }))}</td><td>${esc(L('tavern.here', { n: tv.stock[k] ?? 0 }))}</td><td>${fmt(tv.costs[k])}</td>
         <td><button class="btn btn-small" data-act="crew" data-prof="${k}" data-n="1" ${(tv.stock[k] ?? 0) > 0 && room > 0 ? '' : 'disabled'}>${esc(L('btn.hire'))}</button> <button class="btn btn-small btn-danger" data-act="crew" data-prof="${k}" data-n="-1" ${co.pools[k] > 0 ? '' : 'disabled'}>−</button></td></tr>`).join('');
-    const officers = tv.officers.map((o) => `<div class="card"><h4>${esc(o.name)} <span class="muted">— ${esc(L('officer.level', { role: OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
+    const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(o.name)} <span class="muted">— ${esc(L('officer.level', { role: OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${esc(o.taken ? L('officer.taken') : L('officer.sign', { cost: fmt(o.price) }))}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
     return `${tv.shanty ? `<div class="card"><h4>${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4>${esc(L('tavern.sailors', { n: view.crewAvailable }))}</h4>

@@ -35,10 +35,14 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
   g.rotate(m.h);
   g.globalAlpha = (submerged ? 0.28 : 1) * (1 - sinkF * 0.85);
   const spr = sprite(cls.sprite);
-  if (spr && !submerged) {
+  if (spr) {
     const imgH = len / spr.extentY;
     const imgW = imgH * (spr.img.naturalWidth / spr.img.naturalHeight);
+    animate(g, m.classId, t, m.id, imgW, imgH, spr.cy);
+    // Under the surface: its own dark, blurred shadow instead of the painted hide.
+    if (submerged) g.filter = 'brightness(0.22) blur(3px)';
     g.drawImage(spr.img, -imgW * spr.cx, -imgH * spr.cy, imgW, imgH);
+    g.filter = 'none';
   } else {
     switch (m.classId) {
       case 'leviathan': leviathan(g, len, beam, t, submerged); break;
@@ -57,6 +61,48 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
     }
   }
   g.restore();
+}
+
+/**
+ * Life for a painted monster (applied to the canvas before the sprite is drawn): every beast breathes, arms sway
+ * from their root, the serpent ripples, the Widow turns, hearts beat twice. The painting stays one piece.
+ */
+function animate(g: CanvasRenderingContext2D, id: ShipClassId, t: number, seed: number, w: number, h: number, cy: number): void {
+  const ph = t + seed * 0.37;
+  const breathe = 1 + Math.sin(ph * 1.1) * 0.012;
+  switch (id) {
+    case 'kraken_tentacle': {
+      // Sway about the root at the foot of the sprite.
+      const root = h * (1 - cy);
+      g.translate(0, root);
+      g.rotate(Math.sin(ph * 1.7) * 0.14 + Math.sin(ph * 0.6) * 0.06);
+      g.translate(0, -root);
+      break;
+    }
+    case 'black_serpent':
+      g.transform(1, 0, Math.sin(ph * 1.3) * 0.09, 1, 0, 0);
+      g.scale(breathe, 1);
+      break;
+    case 'storm_widow':
+      g.rotate(ph * 0.12);
+      g.scale(breathe * 1.01, breathe * 1.01);
+      break;
+    case 'abyss_eye':
+      g.scale(1 + Math.sin(ph * 0.7) * 0.025, 1 + Math.sin(ph * 0.7) * 0.025);
+      break;
+    case 'whale_heart':
+    case 'wreck_core': {
+      // Lub-dub: two quick swells, then rest.
+      const beat = ph % 1.4;
+      const k = 1 + 0.05 * Math.exp(-(((beat - 0.1) / 0.07) ** 2)) + 0.035 * Math.exp(-(((beat - 0.35) / 0.08) ** 2));
+      g.scale(k, k);
+      break;
+    }
+    default:
+      // The great bodies roll a little in the swell and breathe.
+      g.scale(breathe + Math.sin(ph * 0.8) * 0.02, breathe);
+  }
+  void w;
 }
 
 function leviathan(g: CanvasRenderingContext2D, len: number, beam: number, t: number, submerged: boolean): void {

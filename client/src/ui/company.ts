@@ -21,6 +21,7 @@ import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
 import { EN, RU } from '../lang/ui/company.ts';
 import type { ClientState } from '../state.ts';
+import { assetUrl } from '../assets.ts';
 import { esc, fmt, icon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -149,7 +150,7 @@ export class CompanyScreen {
       <h4 style="margin-top:8px">${L('leg_your_season')}</h4>${se.mine.map((m) => `<div class="row"><span>${esc(sv(m.stat))}</span><span>${m.value}</span></div>`).join('') || `<p class="muted">${L('leg_nothing_season')}</p>`}</div>
       <div class="card"><h4>${L('leg_tables')}</h4>${se.tables.filter((t) => t.rows.length).map((t) => `<div style="margin-bottom:4px"><b>${esc(sv(t.stat))}</b>: ${t.rows.map((r, i) => `${i + 1}. ${esc(r.name)} (${r.value})`).join(' · ')}</div>`).join('') || `<p class="muted">${L('leg_tables_empty')}</p>`}</div>
       <div class="card"><h4>${L('leg_pantheon')}</h4>${se.halls.map((h) => `<div><b>${esc(sv(h.hall))}</b>: ${h.members.map((m) => `${esc(m.name)} <span class="muted">${L('leg_member_season', { n: m.season })}</span>`).join(', ') || `<span class="muted">${L('leg_empty_halls')}</span>`}</div>`).join('')}</div>`;
-    const legendary = `<div class="card"><h4>${L('leg_legendary')}</h4>${v.legendary.map((l) => `<div style="margin-bottom:8px"><b>${esc(sv(l.name))}</b> <span class="muted">${L('leg_ship_meta', { base: esc(sv(l.base)), boss: esc(sv(l.boss.replace('_', ' '))), port: esc(sv(l.port)) })}</span>
+    const legendary = `<div class="card"><h4>${L('leg_legendary')}</h4>${v.legendary.map((l) => `<div class="leg-ship" style="margin-bottom:8px">${cardArt(`card.leg_${l.id}`)}<b>${esc(sv(l.name))}</b> <span class="muted">${L('leg_ship_meta', { base: esc(sv(l.base)), boss: esc(sv(l.boss.replace('_', ' '))), port: esc(sv(l.port)) })}</span>
         <div style="font-size:12px"><span style="color:var(--good)">${esc(sv(l.gift))}</span> <span style="color:var(--bad)">${esc(sv(l.price))}</span></div>
         ${l.status === 'locked' ? `<div class="muted">${L('leg_locked')}</div>`
         : l.status === 'commission' ? `<div>${L('leg_commission', { need: l.need.map((n) => `${esc(sv(n.good))} ${n.have}/${n.need}`).join(' · ') })}${l.leaders.length ? L('leg_leading', { list: l.leaders.map((x) => `${esc(x.name)} (${x.value})`).join(', ') }) : ''}${l.mine ? L('leg_yours', { n: l.mine }) : ''}</div>${l.canDeliver ? `<button class="btn btn-small btn-primary" data-deliver="${l.id}">${L('leg_deliver')}</button>` : ''}`
@@ -216,14 +217,14 @@ export class CompanyScreen {
       return `<div class="card"><h4>${esc(h.name)} <span class="muted">${L('isl_hold_meta', { region: esc(REGIONS[h.region]?.name ?? h.region.replace(/_/g, ' ')), size: L(`size_${h.size}`), used, slots: h.slots })}${h.guild ? L('isl_guild', { base: h.base ? BASE_NAMES(h.base) : L('isl_island') }) : ''}</span></h4>
         <p>${L('isl_lease')} <b>${days >= 1 ? `${Math.floor(days)} ${dayW(Math.floor(days))}` : days > 0 ? `${Math.ceil(days * 24)} ${hourW(Math.ceil(days * 24))}` : `<span class="bad">${L('isl_runout')}</span>`}</b> · ${L('isl_week', { price: fmt(h.renew) })} · <label><input type="checkbox" data-auto="${h.island}" ${h.autoRenew ? 'checked' : ''}> ${L('isl_auto')}</label></p>
         <p>${L('isl_treasury')} <b>${fmt(h.treasury)}</b> · ${L('isl_upkeep', { n: fmt(h.upkeep) })} · <input type="number" value="1000" step="500" style="width:90px" data-tamt="${h.island}"> <button class="btn btn-small" data-tin="${h.island}">${L('deposit')}</button> <button class="btn btn-small" data-tout="${h.island}">${L('withdraw')}</button></p>
-        <table class="grid">${h.buildings.map((b, i) => `<tr><td>${esc(BUILDINGS[b.id].name)}</td><td class="${b.unpaid ? 'bad' : 'muted'}">${Math.round(b.condition * 100)}%${b.unpaid ? L('isl_unpaid') : ''}</td><td>${near ? `<button class="btn btn-small btn-danger" data-demolish="${h.island}" data-index="${i}">${L('isl_demolish')}</button>` : ''}</td></tr>`).join('') || `<tr><td class="muted">${L('isl_bare')}</td></tr>`}</table>
+        <table class="grid">${h.buildings.map((b, i) => `<tr><td>${icon(`build_${b.id}`)}${esc(BUILDINGS[b.id].name)}</td><td class="${b.unpaid ? 'bad' : 'muted'}">${Math.round(b.condition * 100)}%${b.unpaid ? L('isl_unpaid') : ''}</td><td>${near ? `<button class="btn btn-small btn-danger" data-demolish="${h.island}" data-index="${i}">${L('isl_demolish')}</button>` : ''}</td></tr>`).join('') || `<tr><td class="muted">${L('isl_bare')}</td></tr>`}</table>
         <p class="muted">${L('isl_store', { cap: h.storeCap, list: Object.entries(h.store).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `${n} ${esc(GOODS[g as GoodId].name)}`).join(', ') || L('empty') })}</p>
         ${near ? `<div class="row"><select data-sgood="${h.island}">${GOOD_IDS.map((g) => `<option value="${g}">${esc(GOODS[g].name)}</option>`).join('')}</select><input type="number" value="10" style="width:70px" data-sqty="${h.island}"><button class="btn btn-small" data-sin="${h.island}">${L('isl_land')}</button><button class="btn btn-small" data-sout="${h.island}">${L('isl_load')}</button></div>
           <div class="row" style="gap:6px;flex-wrap:wrap">${has('shipyard') ? `<button class="btn btn-small" data-svc="repair" data-isl="${h.island}">${L('isl_repair')}</button>` : ''}${has('tavern') ? `<button class="btn btn-small" data-svc="hire" data-isl="${h.island}" data-arg="5">${L('isl_hire')}</button>` : ''}${has('workshop') ? `<button class="btn btn-small" data-svc="craft" data-isl="${h.island}" data-arg="planks">${L('isl_planks')}</button><button class="btn btn-small" data-svc="craft" data-isl="${h.island}" data-arg="sailcloth">${L('isl_sailcloth')}</button>` : ''}${has('chart_house') ? (self?.maps ?? []).map((m) => `<button class="btn btn-small" data-svc="copy_map" data-isl="${h.island}" data-arg="${esc(m.id)}">${L('isl_copy', { name: esc(m.name) })}</button>`).join('') : ''}</div>
           <details><summary>${L('build')}</summary>${BUILDING_IDS.map((id) => {
             const d = BUILDINGS[id];
             const mats = Object.entries(d.materials).map(([g, n]) => `${n} ${GOODS[g as GoodId].name.toLowerCase()}`).join(', ');
-            return `<div class="row" style="padding:2px 0"><span title="${esc(d.description)}"><b>${esc(d.name)}</b> <span class="muted">${L('isl_bmeta', { n: d.slots, slotw: slotW(d.slots), cost: fmt(d.cost), mats: mats ? ` + ${esc(mats)}` : '', upkeep: fmt(d.upkeep) })}</span></span><button class="btn btn-small" data-build="${h.island}" data-bid="${id}">${L('build')}</button></div>`;
+            return `<div class="row" style="padding:2px 0"><span title="${esc(d.description)}">${icon(`build_${id}`)}<b>${esc(d.name)}</b> <span class="muted">${L('isl_bmeta', { n: d.slots, slotw: slotW(d.slots), cost: fmt(d.cost), mats: mats ? ` + ${esc(mats)}` : '', upkeep: fmt(d.upkeep) })}</span></span><button class="btn btn-small" data-build="${h.island}" data-bid="${id}">${L('build')}</button></div>`;
           }).join('')}</details>
           ${yardTier ? `<details><summary>${L('isl_yard', { tier: yardTier === 4 ? 'IV' : 'III' })}</summary>
             <div class="row"><select data-ycls="${h.island}">${(Object.keys(SHIP_CLASSES) as ShipClassId[]).filter((c) => SHIP_CLASSES[c].purchasable && SHIP_CLASSES[c].tier <= yardTier && !SHIP_CLASSES[c].factions).map((c) => `<option value="${c}">${esc(SHIP_CLASSES[c].name)}</option>`).join('')}</select>
@@ -515,4 +516,10 @@ export function renderBarter(root: HTMLElement, state: ClientState, send: (m: Cl
   };
   root.querySelector<HTMLElement>('#b-ready')!.onclick = () => send({ t: 'barter', action: 'ready' });
   root.querySelector<HTMLElement>('#b-cancel')!.onclick = () => send({ t: 'barter', action: 'cancel' });
+}
+
+/** A painted card above an entry (legendary ships), or nothing until the art loads. */
+function cardArt(id: string): string {
+  const url = assetUrl(id);
+  return url ? `<div class="card-art" style="background-image:url('${url}')"></div>` : '';
 }

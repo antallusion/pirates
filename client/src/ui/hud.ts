@@ -213,6 +213,9 @@ export class Hud {
     if (key === this.lastBossKey) return;
     this.lastBossKey = key;
     el.classList.remove('hidden');
+    // The beast's painting behind its name.
+    const card = assetUrl(`card.${b.kind}`);
+    el.style.setProperty('--card', card ? `url('${card}')` : 'none');
     const pct = Math.max(0, Math.min(100, (b.hp / b.hpMax) * 100));
     const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => `<span class="${p.hp <= 0 ? 'dead' : ''}">${esc(sv(p.label))} ${p.hp > 0 ? Math.round((p.hp / p.hpMax) * 100) + '%' : ''}</span>`).join('')}</div>` : '';
     const alert = b.you.swallowed > 0 ? `<div class="balert">${esc(L('swallowed', { n: b.you.swallowed }))}</div>` : b.you.grabbed ? `<div class="balert">${esc(L('grabbed'))}</div>` : '';

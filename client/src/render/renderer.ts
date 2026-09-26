@@ -878,7 +878,7 @@ export class Renderer {
         this.fx.light(s.x + v.x * cls.length * 0.62, s.y + v.y * cls.length * 0.62, 160, 'rgba(255,225,150,1)', 0.9, 0.05);
       }
       // Every horror of the deep glows a little: pale eyes, rot-light, the sheen of wet hide.
-      if (!(s.flags & SF.SUBMERGED)) this.fx.light(s.x, s.y, cls.length * 0.7, s.classId === 'black_serpent' ? 'rgba(201,224,74,1)' : 'rgba(150,190,200,1)', 0.35, 0.05);
+      if (!(s.flags & SF.SUBMERGED) && s.classId !== 'kraken_tentacle' && s.classId !== 'hulk') this.fx.light(s.x, s.y, cls.length * 0.6, s.classId === 'black_serpent' ? 'rgba(201,224,74,1)' : 'rgba(150,190,200,1)', 0.2, 0.05);
       if (s.classId === 'wreck_core' || s.classId === 'whale_heart') this.fx.light(s.x, s.y, 60, s.classId === 'wreck_core' ? 'rgba(46,230,200,1)' : 'rgba(200,40,50,1)', 0.6, 0.05);
       return;
     }
@@ -1160,11 +1160,27 @@ export class Renderer {
 
   private drawParticles(emissive: boolean): void {
     const g = this.g;
+    // Painted particles (Higgsfield `part.*`) where they exist; the drawn shapes otherwise.
+    const smokeArt = sprite('part.smoke'), splashArt = sprite('part.splash'), fireArt = sprite('part.fire'), blastArt = sprite('part.explosion');
     for (const p of this.fx.particles) {
       const isEm = p.kind === 'flash' || p.kind === 'fire' || p.kind === 'spark' || p.kind === 'ring';
       if (isEm !== emissive || p.kind === 'text') continue;
       const a = 1 - p.t / p.life;
       const x = this.sx(p.x), y = this.sy(p.y), s = Math.max(0.5, p.size * this.zoom);
+      const spin = ((p.x * 13 + p.y * 7) % 6.28) + p.t * 0.4;
+      const art = p.kind === 'smoke' && smokeArt && !/^#0/.test(p.color) ? smokeArt : p.kind === 'splash' ? splashArt : p.kind === 'fire' ? fireArt : p.kind === 'flash' && p.size * this.zoom > 3 ? blastArt : null;
+      if (art) {
+        const d = s * (p.kind === 'smoke' ? 2.0 : p.kind === 'splash' ? 2.4 : 2.2);
+        g.save();
+        if (p.kind === 'fire' || p.kind === 'flash') g.globalCompositeOperation = 'lighter';
+        g.globalAlpha = p.kind === 'smoke' ? a * a * 0.3 : p.kind === 'splash' ? a * 0.85 : a;
+        g.translate(x, y);
+        g.rotate(spin);
+        // Powder smoke is grey and thin, never a white cloud: a darkened copy made once.
+        g.drawImage(art === smokeArt ? this.greySmoke(art.img) : art.img, -d / 2, -d / 2, d, d);
+        g.restore();
+        continue;
+      }
       switch (p.kind) {
         case 'smoke':
           g.fillStyle = p.color;
@@ -1220,6 +1236,21 @@ export class Renderer {
       }
     }
     g.globalAlpha = 1;
+  }
+
+  private smokeGrey: HTMLCanvasElement | null = null;
+
+  private greySmoke(img: HTMLImageElement): HTMLCanvasElement {
+    if (this.smokeGrey) return this.smokeGrey;
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const cg = c.getContext('2d')!;
+    cg.drawImage(img, 0, 0);
+    cg.globalCompositeOperation = 'source-atop';
+    cg.fillStyle = 'rgba(40,44,48,0.45)';
+    cg.fillRect(0, 0, c.width, c.height);
+    return (this.smokeGrey = c);
   }
 
   private drawTexts(): void {
@@ -1469,6 +1500,17 @@ export class Renderer {
     const g = this.g;
     if (!s.info || s.flags & SF.HIDDEN) return;
     const cls = SHIP_CLASSES[s.classId];
+    // Monsters and their parts: the boss panel names them; over the water only a thin bar of their strength.
+    if (cls.monster) {
+      if (s.flags & SF.SUBMERGED) return;
+      const bx = this.sx(s.x), by = this.sy(s.y) - (Math.min(cls.length, 60) * this.zoom) / 2 - 8;
+      const w = Math.min(70, 26 + cls.length * 0.3);
+      g.fillStyle = 'rgba(0,0,0,0.7)';
+      g.fillRect(bx - w / 2 - 1, by - 1, w + 2, 5);
+      g.fillStyle = '#b23a3a';
+      g.fillRect(bx - w / 2, by, w * clamp(s.hull, 0, 1), 3);
+      return;
+    }
     const x = this.sx(s.x), y = this.sy(s.y) - (cls.length * this.zoom) / 2 - 16;
     const hostile = (s.flags & SF.HOSTILE) !== 0;
     const info = s.info;

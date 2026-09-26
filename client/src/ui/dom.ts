@@ -60,3 +60,8 @@ export function icon(id: string, glyph = '', cls = 'ico'): string {
   const url = assetUrl(id.includes('.') ? id : `icon.${id}`);
   return url ? `<img class="${cls}" src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
 }
+
+/** An officer's face: the unique officers have portraits, the rest the mark of their post. */
+export function officerIcon(o: { role: string; unique?: string }): string {
+  return (o.unique ? icon(`portrait.officer_${o.unique}`, '', 'ico-md ico-round') : '') || icon(`role_${o.role}`, '', 'ico-md');
+}
