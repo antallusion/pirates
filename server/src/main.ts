@@ -39,6 +39,12 @@ const game = new Game({ db, auth, shared });
 const serveStatic = createStaticHandler(root);
 
 const server = createServer(async (req, res) => {
+  if (req.url === '/health/profile') {
+    // Per-subsystem step timings over the last 30 s (mean, worst, share of the step).
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, ...game.stats(), profile: game.prof.report() }));
+    return;
+  }
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, protocol: PROTOCOL_VERSION, ...game.stats(), gateways: link?.peers.size, relayed: link?.sessions, online: shared?.onlineCount }));

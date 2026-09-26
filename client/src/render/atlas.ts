@@ -1,0 +1,153 @@
+// Sprite atlas (Phase 10): every ship image the sea needs — class × curse stage × sail colours — is packed
+// into a few 2048² pages, so a busy sea draws from one or two textures instead of a canvas per ship. Cells are
+// capped at CELL px on the long side; a ship drawn larger than its cell (close zoom) uses the full image.
+// The packer and the sail tint are pure so they can be tested without a DOM.
+
+import type { FactionId } from '../../../shared/src/data/factions.ts';
+
+export const PAGE = 2048;
+export const CELL = 256;
+const PAD = 2;
+
+export interface Slot {
+  page: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Shelf packing: rows of the height of their first item, a new page when one fills up. */
+export class ShelfPacker {
+  pages = 0;
+  private x = 0;
+  private y = 0;
+  private row = 0;
+  readonly size: number;
+
+  constructor(size = PAGE) {
+    this.size = size;
+  }
+
+  place(w: number, h: number): Slot {
+    if (w + PAD > this.size || h + PAD > this.size) throw new Error(`sprite ${w}×${h} exceeds the page`);
+    if (this.pages === 0) this.pages = 1;
+    if (this.x + w + PAD > this.size) {
+      this.x = 0;
+      this.y += this.row;
+      this.row = 0;
+    }
+    if (this.y + h + PAD > this.size) {
+      this.pages++;
+      this.x = this.y = this.row = 0;
+    }
+    const slot = { page: this.pages - 1, x: this.x, y: this.y, w, h };
+    this.x += w + PAD;
+    this.row = Math.max(this.row, h + PAD);
+    return slot;
+  }
+}
+
+/** Sail canvas by colours flown: lawful navies bleach theirs, the Confederacy dyes blood-red, pirates tar them black. */
+export const SAIL_TINT: Record<FactionId | 'black' | 'none', [number, number, number] | null> = {
+  none: null,
+  free: null,
+  crown: [236, 238, 244],
+  league: [214, 170, 96],
+  confederacy: [168, 52, 44],
+  harpoon: [196, 180, 132],
+  brokers: [120, 132, 124],
+  choir: [52, 110, 104],
+  black: [46, 44, 42],
+};
+export type SailKey = keyof typeof SAIL_TINT;
+
+/**
+ * Re-dyes the canvas: pale, unsaturated pixels (sailcloth) take the tint in proportion to how much they look
+ * like cloth; dark wood and coloured paint stay as they are. In place, RGBA.
+ */
+export function tintSails(d: Uint8ClampedArray, tint: [number, number, number], strength = 0.75): void {
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < 16) continue;
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    const lum = (mx + mn) / 510;
+    const sat = mx ? (mx - mn) / mx : 0;
+    // Cloth: bright and grey-ish. Smooth edges so seams do not band.
+    const w = clamp01((lum - 0.45) / 0.2) * clamp01((0.35 - sat) / 0.15) * strength;
+    if (w <= 0) continue;
+    const shade = lum * 1.15; // keep the folds: the tint is multiplied by the cloth's own light
+    d[i] = r + (Math.min(255, tint[0] * shade) - r) * w;
+    d[i + 1] = g + (Math.min(255, tint[1] * shade) - g) * w;
+    d[i + 2] = b + (Math.min(255, tint[2] * shade) - b) * w;
+  }
+}
+
+function clamp01(v: number): number {
+  return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+
+export interface AtlasEntry {
+  page: HTMLCanvasElement;
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+  /** The full-resolution source for close zoom. */
+  full: HTMLCanvasElement;
+}
+
+export class SpriteAtlas {
+  private packer = new ShelfPacker(PAGE);
+  private canvases: HTMLCanvasElement[] = [];
+  private entries = new Map<string, AtlasEntry>();
+
+  get pageCount(): number {
+    return this.canvases.length;
+  }
+
+  get size(): number {
+    return this.entries.size;
+  }
+
+  /** The entry for `key`, packing `build()` (and its sail-dyed copy) on first use. */
+  get(key: string, build: () => HTMLCanvasElement, sails: SailKey): AtlasEntry {
+    const k = `${key}|${sails}`;
+    const hit = this.entries.get(k);
+    if (hit) return hit;
+    let full = build();
+    const tint = SAIL_TINT[sails];
+    if (tint) full = dyed(full, tint);
+    const s = Math.min(1, CELL / Math.max(full.width, full.height));
+    const w = Math.max(1, Math.round(full.width * s)), h = Math.max(1, Math.round(full.height * s));
+    const slot = this.packer.place(w, h);
+    while (this.canvases.length < this.packer.pages) {
+      const c = document.createElement('canvas');
+      c.width = c.height = PAGE;
+      this.canvases.push(c);
+    }
+    const page = this.canvases[slot.page];
+    const g = page.getContext('2d')!;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(full, slot.x, slot.y, w, h);
+    const e = { page, sx: slot.x, sy: slot.y, sw: w, sh: h, full };
+    this.entries.set(k, e);
+    return e;
+  }
+}
+
+function dyed(src: HTMLCanvasElement, tint: [number, number, number]): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  const g = c.getContext('2d', { willReadFrequently: true })!;
+  g.drawImage(src, 0, 0);
+  try {
+    const img = g.getImageData(0, 0, c.width, c.height);
+    tintSails(img.data, tint);
+    g.putImageData(img, 0, 0);
+  } catch {
+    /* a tainted image cannot be re-dyed: fly it as it came */
+  }
+  return c;
+}

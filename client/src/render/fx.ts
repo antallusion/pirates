@@ -43,6 +43,11 @@ export interface Light {
   t: number;
 }
 
+/** Decoration the LOD may thin; flashes, fire, rings and combat text always show — they carry information. */
+const DECOR = new Set<Particle['kind']>(['smoke', 'foam', 'spark', 'splinter', 'glow', 'splash']);
+export const PARTICLE_CAP = [2400, 1000, 400];
+const THIN = [0, 0.4, 0.7];
+
 export class Fx {
   particles: Particle[] = [];
   balls: Ball[] = [];
@@ -52,8 +57,38 @@ export class Fx {
   shake = 0;
   flash = 0; // lightning / explosion screen flash
 
+  /** Particle LOD: 0 full, 1 thinned, 2 sparse. Chosen from the frame time (or pinned low by the options). */
+  lod = 0;
+  /** Pinned by the effects option; null follows the frame time. */
+  forceLod: number | null = null;
+  /** The visible world rectangle (with a margin): decorative particles outside it are never born. */
+  view: { x0: number; y0: number; x1: number; y1: number } | null = null;
+  private frameEma = 16;
+
+  /** Feeds a frame time; raises the LOD when frames run long, lowers it again (with hysteresis) when they recover. */
+  frame(ms: number): void {
+    this.frameEma += (Math.min(ms, 100) - this.frameEma) * 0.05;
+    if (this.forceLod !== null) {
+      this.lod = this.forceLod;
+      return;
+    }
+    if (this.frameEma > 28) this.lod = 2;
+    else if (this.frameEma > 21 && this.lod < 1) this.lod = 1;
+    else if (this.frameEma < 18 && this.lod === 2) this.lod = 1;
+    else if (this.frameEma < 15) this.lod = 0;
+  }
+
   add(p: Partial<Particle> & Pick<Particle, 'kind' | 'x' | 'y'>): void {
+    if (DECOR.has(p.kind) && !this.admit(p.x, p.y)) return;
     this.particles.push({ vx: 0, vy: 0, t: 0, life: 1, size: 4, grow: 0, color: '#fff', ...p });
+  }
+
+  /** Whether a decorative particle is born: on screen, under the cap, and past the LOD's thinning. */
+  admit(x: number, y: number): boolean {
+    const v = this.view;
+    if (v && (x < v.x0 || x > v.x1 || y < v.y0 || y > v.y1)) return false;
+    if (this.particles.length >= PARTICLE_CAP[this.lod]) return false;
+    return this.lod === 0 || Math.random() >= THIN[this.lod];
   }
 
   light(x: number, y: number, r: number, color: string, intensity: number, life: number): void {

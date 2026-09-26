@@ -54,3 +54,63 @@ export class Metrics {
     };
   }
 }
+
+/**
+ * Per-subsystem timings (Phase 10 profiling): the step calls `lap(name)` after each stage; each stage keeps a
+ * running mean and max over the same 30 s window. The report tells which system would be worth moving to
+ * native code — and so far none is: see docs/04 §Profiling.
+ */
+export class Profiler {
+  private at = 0;
+  private sums = new Map<string, number>();
+  private maxes = new Map<string, number>();
+  private windowSteps = 0;
+  private last: Record<string, { avgMs: number; maxMs: number; share: number }> = {};
+
+  begin(): void {
+    this.at = performance.now();
+  }
+
+  lap(name: string): void {
+    const now = performance.now();
+    const ms = now - this.at;
+    this.at = now;
+    this.sums.set(name, (this.sums.get(name) ?? 0) + ms);
+    if (ms > (this.maxes.get(name) ?? 0)) this.maxes.set(name, ms);
+  }
+
+  /** Closes a step; every WINDOW steps the averages roll over into the report. */
+  end(): void {
+    if (++this.windowSteps < WINDOW) return;
+    this.roll();
+  }
+
+  private roll(): void {
+    let total = 0;
+    for (const v of this.sums.values()) total += v;
+    const r = (v: number) => Math.round(v * 1000) / 1000;
+    const out: typeof this.last = {};
+    for (const [k, v] of [...this.sums].sort((a, b) => b[1] - a[1])) {
+      out[k] = { avgMs: r(v / this.windowSteps), maxMs: r(this.maxes.get(k) ?? 0), share: total ? Math.round((v / total) * 1000) / 1000 : 0 };
+    }
+    this.last = out;
+    this.sums.clear();
+    this.maxes.clear();
+    this.windowSteps = 0;
+  }
+
+  /** The last full window, or the partial one when none has closed yet. */
+  report(): Record<string, { avgMs: number; maxMs: number; share: number }> {
+    if (!Object.keys(this.last).length && this.windowSteps) {
+      const saved = { sums: new Map(this.sums), maxes: new Map(this.maxes), n: this.windowSteps };
+      this.roll();
+      const out = this.last;
+      this.last = {};
+      this.sums = saved.sums;
+      this.maxes = saved.maxes;
+      this.windowSteps = saved.n;
+      return out;
+    }
+    return this.last;
+  }
+}

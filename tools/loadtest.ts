@@ -187,6 +187,13 @@ const checks = TOKENS
       'nobody thrown out': report.closedEarly === 0,
       '≥ 99% of bots in the game': report.inGame >= BOTS * 0.99,
     };
-console.log(JSON.stringify({ ...report, checks }, null, 2));
+// Where the step goes (docs/04 §Profiling): the heaviest subsystems over the last 30 s.
+let profile: unknown = null;
+try {
+  profile = ((await (await fetch(`${URL_HTTP}/health/profile`)).json()) as { profile: unknown }).profile;
+} catch {
+  /* an older server */
+}
+console.log(JSON.stringify({ ...report, profile, checks }, null, 2));
 for (const b of bots) b.ws.close();
 process.exit(Object.values(checks).every(Boolean) ? 0 : 1);

@@ -56,7 +56,7 @@ import {
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
 import { Social, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
-import { Metrics } from './metrics.ts';
+import { Metrics, Profiler } from './metrics.ts';
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
 import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
 import type { Holding } from './holdings.ts';
@@ -237,6 +237,7 @@ export class Game {
   /** Real time in ms, for letters and listings that outlive the process (tests move it). */
   wallNow: () => number = () => Date.now();
   metrics = new Metrics();
+  prof = new Profiler();
   /** In a multi-zone world: this process's zone (zones/zone.ts); null when one process runs the whole ocean. */
   zone: ZoneRuntime | null = null;
   private snapMs = 0;
@@ -363,6 +364,8 @@ export class Game {
     this.now += dt;
     this.tick++;
     const now = this.now;
+    const prof = this.prof;
+    prof.begin();
 
     if (now >= this.nextSecond) {
       this.nextSecond = now + 1;
@@ -370,13 +373,16 @@ export class Game {
       this.everySecond();
       this.secondMs = performance.now() - t0;
     }
+    prof.lap('second');
     const bucket = this.tick % 20;
     for (const ship of [...this.ships.values()]) if (ship.id % 20 === bucket && !ship.ghost) this.shipSecond(ship);
     for (const ses of [...this.byAccount.values()]) if (ses.accountId % 20 === bucket) this.sessionSecond(ses);
+    prof.lap('buckets');
     if (now >= this.nextDirector) {
       this.nextDirector = now + 2;
       this.director();
     }
+    prof.lap('director');
     if (now >= this.nextEconTick) {
       const edt = this.nextEconTick === 0 ? 0 : 10;
       this.nextEconTick = now + 10;
@@ -401,6 +407,7 @@ export class Game {
       this.nextWorldEvent = now + 900 + this.rng.range(0, 600);
       this.worldEvent();
     }
+    prof.lap('economy');
 
     // NPC AI (LOD-aware).
     for (const [id, brain] of this.npcs) {
@@ -411,6 +418,7 @@ export class Game {
       }
       updateNpc(this, ship, brain, dt, this.nearestPlayer.get(id) ?? Infinity);
     }
+    prof.lap('npcAi');
 
     // Movement for every physically simulated ship.
     const night = isNight(now);
@@ -420,15 +428,21 @@ export class Game {
       if (brain && !brain.active) continue;
       this.physics(ship, dt, night);
     }
+    prof.lap('physics');
     this.collideShips();
+    prof.lap('collisions');
     stepTethers(this, dt);
     stepProjectiles(this, dt);
+    prof.lap('projectiles');
     stepBoarding(this);
     stepStrikes(this);
+    prof.lap('boarding');
     stepBosses(this, dt);
     stepExpeditions(this, dt);
     stepAbyssSea(this, dt);
+    prof.lap('pve');
     stepZones(this, dt);
+    prof.lap('zones');
 
     for (const ship of this.ships.values()) {
       if (ship.ghost) continue;
@@ -446,18 +460,23 @@ export class Game {
       if (ship.chaserReload.stern > 0) ship.chaserReload.stern = Math.max(0, ship.chaserReload.stern - dt);
       if (ship.sinkingUntil && now >= ship.sinkingUntil) this.finalizeSink(ship);
     }
+    prof.lap('reloads');
 
     this.zone?.afterStep();
+    prof.lap('handoff');
     {
       // Every tick serves a share of the captains (each still at 10 Hz): the cost is spread, not spiked.
       const t0 = performance.now();
       this.sendSnapshots();
       this.snapMs = performance.now() - t0;
     }
+    prof.lap('snapshots');
     if (now >= this.nextSave) {
       this.nextSave = now + 30;
       this.saveAll();
     }
+    prof.lap('save');
+    prof.end();
   }
 
   // ================================================================= physics

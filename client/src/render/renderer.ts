@@ -19,6 +19,8 @@ import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 import { GlSea, GlSky, glWanted } from './gl.ts';
+import { CELL, SpriteAtlas } from './atlas.ts';
+import type { SailKey } from './atlas.ts';
 
 const BIOME_TINT: Record<IslandBiome, string> = {
   temperate: 'rgba(40,52,40,0.35)',
@@ -73,6 +75,7 @@ export class Renderer {
   private lightning = 0;
   private nextLightning = 5;
   private sinkStarts = new Map<number, number>();
+  readonly atlas = new SpriteAtlas();
   private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
   private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
 
@@ -156,6 +159,12 @@ export class Renderer {
       const lead = clamp(own.speed * 5, 0, 90);
       this.camX += (own.x + v.x * lead - this.camX) * Math.min(1, dt * 4);
       this.camY += (own.y + v.y * lead - this.camY) * Math.min(1, dt * 4);
+    }
+    // Particle LOD: the frame time picks it; nothing decorative is born off screen.
+    this.fx.frame(dt * 1000);
+    {
+      const mx = this.w / 2 / this.zoom + 120, my = this.h / 2 / this.zoom + 120;
+      this.fx.view = { x0: this.camX - mx, y0: this.camY - my, x1: this.camX + mx, y1: this.camY + my };
     }
     this.fx.update(dt);
     const shake = this.fx.shake;
@@ -692,7 +701,10 @@ export class Renderer {
     // Scale so the drawn subject matches hull length.
     const imgH = len / hullImg.extentY;
     const imgW = imgH * (hullImg.canvas.width / hullImg.canvas.height);
-    g.drawImage(hullImg.canvas, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
+    // From the atlas, in the colours she flies; the full image when she is drawn larger than her cell.
+    const a = this.atlas.get(`${cls.id}|${stage}|${hullImg.canvas.width}x${hullImg.canvas.height}`, () => hullImg.canvas, this.sailKey(s));
+    if (Math.max(imgW, imgH) * this.dpr > CELL) g.drawImage(a.full, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
+    else g.drawImage(a.page, a.sx, a.sy, a.sw, a.sh, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
     this.drawPennant(s, len, beam, state);
     // Sail damage tint (torn canvas reads as darker patches).
     if (s.sails < 0.6) {
@@ -793,6 +805,14 @@ export class Renderer {
     }
     this.shipCache.set(key, entry);
     return entry;
+  }
+
+  /** Sail colours: navies and factions dye theirs; a captain under the Black Flag tars them. */
+  private sailKey(s: DrawShip): SailKey {
+    if (s.classId === 'ghost_ship') return 'none';
+    if (s.own || s.info?.isPlayer) return s.flags & SF.BLACK_FLAG ? 'black' : 'none';
+    const f = s.info?.faction;
+    return f && f !== 'player' ? f : 'none';
   }
 
   /** Faction pennant at the masthead, streaming downwind. Players fly black. */
