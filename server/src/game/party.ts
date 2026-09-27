@@ -16,6 +16,7 @@ import { cargoVolume, computeShipStats, tx } from '../../../shared/src/sim/ships
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { Game } from './Game.ts';
+import { ignores } from './friends.ts';
 import { hasPennant, tie } from './pvp.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -102,6 +103,7 @@ export function groupInvite(game: Game, s: PlayerSession, name: string): string 
   const t = game.sessionByName(String(name ?? ''));
   if (!t || !t.profile) return 'No captain of that name is at sea';
   if (t === s) return 'You are already in your own company';
+  if (ignores(t, s.accountId)) return `${t.name} is not listening to you`;
   const g = groupOfAccount(game, s.accountId);
   if (g && g.leader !== s.accountId) return 'Only the leader invites';
   if (g && g.members.length >= GROUP_MAX) return `A group sails at most ${GROUP_MAX} ships`;
@@ -220,7 +222,7 @@ export function groupSay(game: Game, s: PlayerSession, text: string): string | n
   if (!t) return null;
   for (const m of g.members) {
     const ms = game.sessionByAccount(m);
-    if (ms) game.sendTo(ms, { t: 'chat', from: s.name, text: t, ch: 'group' });
+    if (ms && !ignores(ms, s.accountId)) game.sendTo(ms, { t: 'chat', from: s.name, text: t, ch: 'group' });
   }
   return null;
 }
@@ -362,6 +364,7 @@ function alongside(game: Game, a: PlayerSession, b: PlayerSession): { ok: boolea
 export function barterPropose(game: Game, s: PlayerSession, name: string): string | null {
   const t = game.sessionByName(String(name ?? ''));
   if (!t || !t.profile || t === s) return 'No captain of that name is at sea';
+  if (ignores(t, s.accountId)) return `${t.name} is not listening to you`;
   const mine = game.social.barters.get(s.accountId);
   if (mine && mine.open) return 'Finish the trade you have open first';
   const theirs = game.social.barters.get(t.accountId);

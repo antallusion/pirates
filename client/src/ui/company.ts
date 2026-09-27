@@ -210,6 +210,8 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-lfg-invite]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'invite', name: el.dataset.lfgInvite! })));
     const addFriend = () => val('#fr-name') && this.send({ t: 'friend', action: 'add', name: val('#fr-name') });
     body.querySelector<HTMLElement>('#fr-add')?.addEventListener('click', addFriend);
+    body.querySelector<HTMLElement>('#fr-ignore')?.addEventListener('click', () => val('#fr-name') && this.send({ t: 'friend', action: 'ignore', name: val('#fr-name') }));
+    body.querySelectorAll<HTMLElement>('[data-unignore]').forEach((el) => (el.onclick = () => this.send({ t: 'friend', action: 'unignore', name: el.dataset.unignore! })));
     body.querySelector<HTMLInputElement>('#fr-name')?.addEventListener('keydown', (e) => e.key === 'Enter' && (e.stopPropagation(), e.preventDefault(), addFriend()));
     body.querySelectorAll<HTMLElement>('[data-whisper]').forEach((el) => (el.onclick = () => this.onWhisper(el.dataset.whisper!)));
     body.querySelectorAll<HTMLElement>('[data-fr-invite]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'invite', name: el.dataset.frInvite! })));
@@ -228,8 +230,9 @@ export class CompanyScreen {
       <span class="fr-btns">${f.online ? `<button class="btn btn-small" data-whisper="${esc(f.name)}">${L('fr_whisper')}</button>${canInvite && !grouped.includes(f.name) ? `<button class="btn btn-small" data-fr-invite="${esc(f.name)}">${L('fr_invite')}</button>` : ''}` : ''}<button class="btn btn-small" data-unfriend="${esc(f.name)}" title="${esc(L('fr_remove'))}" aria-label="${esc(L('fr_remove'))}">✕</button></span></div>`).join('');
     return `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('fr_title')} <span class="muted fr-count">${L('fr_count', { n: state.friends.length, max: FRIENDS_MAX })}</span></h4>
       <p class="muted">${L('fr_text')}</p>
-      <div class="row lfg-form"><input id="fr-name" placeholder="${L('fr_ph')}" maxlength="40"><button class="btn" id="fr-add">${L('fr_add')}</button></div>
-      <div class="fr-list">${rows || `<p class="muted">${L('fr_none')}</p>`}</div></div>`;
+      <div class="row lfg-form fr-form"><input id="fr-name" placeholder="${L('fr_ph')}" maxlength="40"><button class="btn" id="fr-add">${L('fr_add')}</button><button class="btn" id="fr-ignore">${L('fr_ignore')}</button></div>
+      <div class="fr-list">${rows || `<p class="muted">${L('fr_none')}</p>`}</div>
+      ${state.ignored.length ? `<div class="fr-ign"><span class="muted">${L('fr_ignored')}</span>${state.ignored.map((n) => `<button class="btn btn-small" data-unignore="${esc(n)}" title="${esc(L('fr_unignore', { name: n }))}">${esc(n)} ✕</button>`).join('')}</div>` : ''}</div>`;
   }
 
   /** Looking for a group (docs/11 P6): one's own posting, and the captains at sea looking, to be called aboard. */

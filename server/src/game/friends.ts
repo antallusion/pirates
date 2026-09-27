@@ -1,6 +1,8 @@
 // Friends and whispers (docs/11 P6): a list of up to fifty captains kept with the profile — who is at sea, at what
 // level, in which waters or port; a word when one of them comes aboard or goes ashore; whispers to any captain at
 // sea by name ("/w Name words", names may have spaces), and a reply to the last who whispered ("/r words").
+// And its other side, the unheard: a captain one will not hear — their chat lines, whispers, invitations to a
+// group, a barter or a duel do not reach one (letters still do: the packet boat reads no lists).
 
 import { FRIENDS_MAX } from '../../../shared/src/protocol.ts';
 import type { FriendView } from '../../../shared/src/protocol.ts';
@@ -26,27 +28,71 @@ export function friendsView(game: Game, s: PlayerSession): FriendView[] {
 }
 
 export function pushFriends(game: Game, s: PlayerSession): void {
-  if (s.profile) game.sendTo(s, { t: 'friends', list: friendsView(game, s) });
+  if (s.profile) game.sendTo(s, { t: 'friends', list: friendsView(game, s), ignored: (s.profile.ignored ?? []).map((f) => f.name) });
 }
 
-/** Put a captain on the list: one at sea by name (any case), else one ashore by their exact name. */
+/** A captain by name: one at sea (any case), else one ashore by the exact name — or as names are mostly written,
+ *  each word capitalised ("анна тестова"). */
+function findCaptain(game: Game, name: string): { id: number; name: string } | null {
+  const want = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!want) return null;
+  const o = game.sessionByName(want);
+  if (o) return { id: o.accountId, name: o.name };
+  const titled = want.replace(/(^|\s)(\S)/g, (_, sp: string, c: string) => sp + c.toUpperCase());
+  const row = game.db.accountByName(want) ?? game.db.accountByName(titled);
+  return row ? { id: row.id, name: row.name } : null;
+}
+
+/** Put a captain on the list (and off the unheard, if they were there). */
 export function friendAdd(game: Game, s: PlayerSession, name: string): string | null {
   const p = s.profile;
   if (!p) return null;
-  const want = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
-  if (!want) return 'Name a captain';
-  const o = game.sessionByName(want);
-  // Ashore, by the exact name — or as names are mostly written, each word capitalised ("анна тестова").
-  const titled = want.replace(/(^|\s)(\S)/g, (_, sp: string, c: string) => sp + c.toUpperCase());
-  const row = o ? null : game.db.accountByName(want) ?? game.db.accountByName(titled);
-  const acc = o ? { id: o.accountId, name: o.name } : row ? { id: row.id, name: row.name } : null;
+  if (!String(name ?? '').trim()) return 'Name a captain';
+  const acc = findCaptain(game, name);
   if (!acc) return 'No captain goes by that name';
   if (acc.id === s.accountId) return 'You cannot befriend yourself';
   const list = (p.friends ??= []);
   if (list.some((f) => f.id === acc.id)) return `${acc.name} is already on your list of friends`;
   if (list.length >= FRIENDS_MAX) return `Your list of friends is full (${FRIENDS_MAX})`;
+  p.ignored = (p.ignored ?? []).filter((f) => f.id !== acc.id);
   list.push(acc);
   game.sendTo(s, { t: 'toast', msg: `${acc.name} is now on your list of friends.`, kind: 'good' });
+  pushFriends(game, s);
+  return null;
+}
+
+/** Does this captain turn a deaf ear to that one (by account, or by name for words from another process)? */
+export function ignores(s: PlayerSession | null | undefined, from: number | string): boolean {
+  const list = s?.profile?.ignored;
+  if (!list?.length) return false;
+  return typeof from === 'number' ? list.some((f) => f.id === from) : list.some((f) => f.name.toLowerCase() === from.toLowerCase());
+}
+
+/** Stop hearing a captain (off the friends too). */
+export function ignoreAdd(game: Game, s: PlayerSession, name: string): string | null {
+  const p = s.profile;
+  if (!p) return null;
+  if (!String(name ?? '').trim()) return 'Name a captain';
+  const acc = findCaptain(game, name);
+  if (!acc) return 'No captain goes by that name';
+  if (acc.id === s.accountId) return 'You cannot stop hearing yourself';
+  const list = (p.ignored ??= []);
+  if (list.some((f) => f.id === acc.id)) return `You already do not hear ${acc.name}`;
+  if (list.length >= FRIENDS_MAX) return `The list of the unheard is full (${FRIENDS_MAX})`;
+  p.friends = (p.friends ?? []).filter((f) => f.id !== acc.id);
+  list.push(acc);
+  game.sendTo(s, { t: 'toast', msg: `You no longer hear ${acc.name}: not their words, whispers or invitations.`, kind: 'info' });
+  pushFriends(game, s);
+  return null;
+}
+
+export function ignoreRemove(game: Game, s: PlayerSession, name: string): string | null {
+  const list = s.profile?.ignored ?? [];
+  const n = String(name ?? '').trim().toLowerCase();
+  const i = list.findIndex((f) => f.name.toLowerCase() === n);
+  if (i < 0) return 'Not on your list of the unheard';
+  const [f] = list.splice(i, 1);
+  game.sendTo(s, { t: 'toast', msg: `You hear ${f.name} again.`, kind: 'info' });
   pushFriends(game, s);
   return null;
 }
@@ -73,6 +119,12 @@ export function friendsPresence(game: Game, s: PlayerSession, isAboard: boolean)
     game.sendTo(o, { t: 'toast', msg: isAboard ? `Friend at sea: ${s.name}.` : `Friend ashore: ${s.name}.`, kind: 'info' });
     pushFriends(game, o);
   }
+}
+
+/** "/ignore Name" in chat (or "/игнор"): the name, else null. */
+export function ignoreCommand(text: string): string | null {
+  const m = /^\/(ignore|игнор)\s+(.+)$/is.exec(text);
+  return m ? m[2] : null;
 }
 
 /** A chat line that is a whisper ("/w", "/r" and their Russian twins): the words after it, and whether a reply. */
@@ -104,6 +156,7 @@ export function whisper(game: Game, s: PlayerSession, text: string, reply = fals
   }
   if (!words) return 'Whisper to whom? /w Name words';
   if (to === s) return 'You mutter to yourself';
+  if (ignores(to, s.accountId)) return `${to.name} is not listening to you`;
   game.sendTo(to, { t: 'chat', from: s.name, text: words, ch: 'whisper' });
   game.sendTo(s, { t: 'chat', from: s.name, to: to.name, text: words, ch: 'whisper' });
   game.social.lastWhisper.set(to.accountId, s.name);

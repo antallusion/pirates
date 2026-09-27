@@ -27,6 +27,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Game } from './Game.ts';
 import { groupOfAccount, sameGroupAccounts } from './party.ts';
 import { atWar } from './guilds.ts';
+import { ignores } from './friends.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { deliver } from './post.ts';
@@ -344,6 +345,7 @@ function duelReady(game: Game, list: PlayerSession[]): string | null {
 export function challengeDuel(game: Game, s: PlayerSession, name: string, fleet: boolean): string | null {
   const t = game.sessionByName(String(name ?? ''));
   if (!t || !t.profile || t === s) return 'No captain of that name is at sea';
+  if (ignores(t, s.accountId)) return `${t.name} is not listening to you`;
   if (fleet) {
     const ga = groupOfAccount(game, s.accountId), gb = groupOfAccount(game, t.accountId);
     if (!ga || ga.leader !== s.accountId || !gb || gb.leader !== t.accountId) return 'A fleet duel is between two group leaders';

@@ -58,7 +58,7 @@ import {
   dismissOfficer, hireOfficer, maxRecruits, mutinyCourse, officerOrder, onDockCrew, onFightWon, onMagazineBlast, onSunkCrew, plunderShare, pressGang, recruitPrisoners,
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
-import { friendAdd, friendRemove, friendsPresence, pushFriends, whisper, whisperCommand } from './friends.ts';
+import { friendAdd, friendRemove, friendsPresence, ignoreAdd, ignoreCommand, ignoreRemove, ignores, pushFriends, whisper, whisperCommand } from './friends.ts';
 import { Social, lfgClear, lfgPost, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
 import { havenSecond } from './havens.ts';
@@ -278,7 +278,7 @@ export class Game {
     this.shared = opts.shared ?? null;
     // Chat from captains in other processes.
     this.shared?.listenChat((from, text) => {
-      for (const o of this.sessions) this.sendTo(o, { t: 'chat', from, text });
+      for (const o of this.sessions) if (!ignores(o, from)) this.sendTo(o, { t: 'chat', from, text });
     });
     this.guildMember = (gid, acct) => this.guilds.of(this, acct)?.id === gid;
     this.guildNotify = (gid, subject, body) => guildNotify(this, gid, subject, body);
@@ -2579,6 +2579,8 @@ export class Game {
       case 'friend':
         if (msg.action === 'add') return err(friendAdd(this, s, msg.name));
         if (msg.action === 'remove') return err(friendRemove(this, s, msg.name));
+        if (msg.action === 'ignore') return err(ignoreAdd(this, s, msg.name));
+        if (msg.action === 'unignore') return err(ignoreRemove(this, s, msg.name));
         return pushFriends(this, s);
       case 'barter':
         switch (msg.action) {
@@ -2769,7 +2771,7 @@ export class Game {
             if (!g || !text) return;
             for (const m of g.members) {
               const ms = this.byAccount.get(m.account);
-              if (ms) this.sendTo(ms, { t: 'chat', from: `[${g.tag}] ${s.name}`, text, ch: 'guild' });
+              if (ms && !ignores(ms, s.accountId)) this.sendTo(ms, { t: 'chat', from: `[${g.tag}] ${s.name}`, text, ch: 'guild' });
             }
             return;
           }
@@ -2781,12 +2783,14 @@ export class Game {
         if (!text) return;
         const w = whisperCommand(text);
         if (w) return err(whisper(this, s, w.rest, w.reply));
+        const deaf = ignoreCommand(text);
+        if (deaf) return err(ignoreAdd(this, s, deaf));
         if (text.startsWith('/') && adminEnabled()) {
           const reply = runAdmin(this, s, text);
           if (reply) this.sendTo(s, { t: 'toast', msg: reply, kind: 'info' });
           return;
         }
-        for (const o of this.sessions) this.sendTo(o, { t: 'chat', from: s.name, text });
+        for (const o of this.sessions) if (!ignores(o, s.accountId)) this.sendTo(o, { t: 'chat', from: s.name, text });
         this.shared?.publishChat(s.name, text);
         return;
       }

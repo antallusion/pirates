@@ -941,4 +941,11 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} is not at sea": "{0} сейчас не в море",
   "Whisper to whom? /w Name words": "Кому шепнуть? /ш Имя слова",
   "You mutter to yourself": "Вы бормочете себе под нос",
+  "You cannot stop hearing yourself": "Себя самого не заглушить",
+  "You already do not hear {0}": "Вы и так не слышите: {0}",
+  "The list of the unheard is full ({0})": "Список неслышимых полон ({0})",
+  "You no longer hear {0}: not their words, whispers or invitations.": "Вы больше не слышите: {0} — ни слов, ни шёпота, ни приглашений.",
+  "Not on your list of the unheard": "Этого капитана нет среди неслышимых",
+  "You hear {0} again.": "Снова слышно: {0}.",
+  "{0} is not listening to you": "{0} вас не слушает",
 };

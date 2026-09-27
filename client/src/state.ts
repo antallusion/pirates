@@ -78,6 +78,8 @@ export class ClientState {
   invites: { id: number; from: string }[] = [];
   /** The list of friends (docs/11 P6). */
   friends: FriendView[] = [];
+  /** Captains one does not hear. */
+  ignored: string[] = [];
   barter: BarterView | null = null;
   letters: LetterView[] = [];
   unread = 0;
@@ -228,6 +230,7 @@ export class ClientState {
         break;
       case 'friends':
         this.friends = m.list;
+        this.ignored = m.ignored ?? [];
         break;
       case 'barter':
         this.barter = m.view;

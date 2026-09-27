@@ -88,6 +88,39 @@ test('whispers go to one captain by name (spaces and all), echo back, and "/r" a
   assert.deepEqual(whisperCommand('/W Ann hi'), { rest: 'Ann hi', reply: false });
 });
 
+test('the unheard: their chat, whispers and invitations do not reach one; hearing them again', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Deaf Ear');
+  const b = join(game, 'Loud Mouth');
+  const c = join(game, 'Third Party');
+  a.push({ t: 'friend', action: 'add', name: 'Loud Mouth' });
+  a.push({ t: 'chat', text: '/игнор loud mouth' });
+  assert.deepEqual(a.last('friends')!.ignored, ['Loud Mouth']);
+  assert.deepEqual(a.last('friends')!.list, [], 'off the friends too');
+  const heard = () => a.all('chat').filter((m) => m.from === 'Loud Mouth').length;
+  b.push({ t: 'chat', text: 'buy my rum' });
+  b.push({ t: 'chat', text: '/w Deaf Ear buy my rum' });
+  assert.equal(heard(), 0, 'neither the open chat nor a whisper');
+  assert.ok(c.all('chat').some((m) => m.from === 'Loud Mouth'), 'the others still hear him');
+  b.push({ t: 'group', action: 'invite', name: 'Deaf Ear' });
+  assert.equal(a.all('party').at(-1)?.invites.length ?? 0, 0, 'no invitation arrives');
+  assert.deepEqual(bad(b), ['Deaf Ear is not listening to you', 'Deaf Ear is not listening to you']);
+  // In a group together (she invites him), his group lines stay unheard too.
+  a.push({ t: 'group', action: 'invite', name: 'Loud Mouth' });
+  const inv = b.last('party')!.invites[0];
+  b.push({ t: 'group', action: 'accept', id: inv.id });
+  b.push({ t: 'group', action: 'say', text: 'ahoy group' });
+  assert.equal(heard(), 0);
+  assert.ok(c.all('chat').every((m) => m.text !== 'ahoy group'));
+  // Heard again.
+  a.push({ t: 'friend', action: 'unignore', name: 'LOUD MOUTH' });
+  assert.deepEqual(a.last('friends')!.ignored, []);
+  b.push({ t: 'chat', text: 'buy my rum' });
+  assert.equal(heard(), 1);
+  a.push({ t: 'chat', text: '/ignore Deaf Ear' });
+  assert.equal(bad(a).at(-1), 'You cannot stop hearing yourself');
+});
+
 test('friends and whispers read in Russian', () => {
   setLang('ru');
   const lines = [
@@ -95,6 +128,9 @@ test('friends and whispers read in Russian', () => {
     'You cannot befriend yourself', `Your list of friends is full (${FRIENDS_MAX})`, 'Not on your list of friends', 'Friend at sea: Bo Friend.',
     'Friend ashore: Bo Friend.', 'No one has whispered to you yet', 'Bo Friend is not at sea', 'Whisper to whom? /w Name words', 'You mutter to yourself',
     'No captain goes by that name', 'No captain of that name is at sea', 'Name a captain',
+    'You cannot stop hearing yourself', 'You already do not hear Bo Friend', `The list of the unheard is full (${FRIENDS_MAX})`,
+    'You no longer hear Bo Friend: not their words, whispers or invitations.', 'Not on your list of the unheard', 'You hear Bo Friend again.',
+    'Bo Friend is not listening to you',
   ];
   const out = lines.map((l) => serverText(l));
   setLang('en');
