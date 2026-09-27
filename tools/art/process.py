@@ -154,9 +154,12 @@ def chroma_key(img, hint):
     own, rest = ([hi[0]], [hi[1], hi[2]]) if one else ([hi[0], hi[1]], [hi[2]])
     diff = lambda px: px[..., own].min(-1) - px[..., rest].max(-1)
     k = max(1.0, float(diff(key)))
-    alpha = 1 - np.clip((diff(a) / k - 0.14) / 0.72, 0, 1)
-    al = alpha[..., None]
-    rgb = np.clip((a - (1 - al) * key) / np.maximum(al, 0.05), 0, 255)
+    share = np.clip(diff(a) / k, 0, 1)  # how much of the key shows through
+    # Colours are unmixed with the true (linear) cover, or smoke and nets keep a tint; the alpha itself is firmed up
+    # so the sprite's body is solid and the flat key is clear.
+    cover = (1 - share)[..., None]
+    rgb = np.clip((a - (1 - cover) * key) / np.maximum(cover, 0.05), 0, 255)
+    alpha = 1 - np.clip((share - 0.14) / 0.72, 0, 1)
     edge = alpha < 0.999
     # Despill the edges: the key's channels no higher than the others there.
     ex = np.clip(rgb[..., own].min(-1) - rgb[..., rest].max(-1), 0, None) * edge

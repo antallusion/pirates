@@ -14,6 +14,37 @@ function blob(r: number, n = 48): number[] {
   return p;
 }
 
+test('island relief: no wedges on a crescent — the height rises with the distance from the coast, whatever its shape', () => {
+  // A hooked island whose centre lies out in its bay: a ray from the centre crosses the coast twice.
+  const hook: number[] = [];
+  for (let i = 0; i <= 24; i++) {
+    const a = -Math.PI * 0.8 + (i / 24) * Math.PI * 1.6;
+    hook.push(Math.cos(a) * 600, Math.sin(a) * 600);
+  }
+  for (let i = 24; i >= 0; i--) {
+    const a = -Math.PI * 0.8 + (i / 24) * Math.PI * 1.6;
+    hook.push(Math.cos(a) * 380 + 60, Math.sin(a) * 380);
+  }
+  const r = buildRelief(hook, 0, 0, 77, 'green', 0);
+  // Every step between neighbours inland is a gentle one: no cut-off wedge of land.
+  let worst = 0;
+  for (let j = 1; j < r.h - 1; j++) {
+    for (let i = 1; i < r.w - 1; i++) {
+      const k = j * r.w + i;
+      // Inland only: the cliffs along the coast are meant to be steep.
+      let inland = true;
+      for (let d = -8; d <= 8 && inland; d++) inland = !!r.height[k + d] && !!r.height[k + d * r.w] && !!r.height[k + 1 + d] && !!r.height[k + (d + 1) * r.w];
+      if (!inland) continue;
+      worst = Math.max(worst, Math.abs(r.height[k + 1] - r.height[k]), Math.abs(r.height[k + r.w] - r.height[k]));
+    }
+  }
+  assert.ok(worst < 0.08, `the steepest step between neighbours: ${worst.toFixed(3)}`);
+  // Both horns of the hook have their hills, and the bay between them is sea.
+  const at = (x: number, y: number) => r.height[Math.floor((y - r.y0) / r.res) * r.w + Math.floor((x - r.x0) / r.res)];
+  assert.ok(at(0, -490) > 0.05 && at(0, 490) > 0.05, 'land in both horns');
+  assert.equal(at(0, 0), 0, 'the bay is water');
+});
+
 test('island relief: height inside the coast only, shaded both ways, stretches of cliff and beach', () => {
   const poly = blob(600);
   const rAt = radiusAt(poly, 0, 0);
