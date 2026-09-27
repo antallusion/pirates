@@ -909,4 +909,6 @@ export const SERVER_RU_B: Record<string, string> = {
   "The garrison opens fire on your boats!": "Гарнизон открывает огонь по вашим шлюпкам!",
   "A smuggler sells it for a drink": "Контрабандист продаёт её за выпивку",
   "In the camp's plunder": "В добыче лагеря",
+  // A landing site named in a job.
+  "ruins": "руины",
 };

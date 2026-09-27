@@ -26,6 +26,11 @@ import { dict, lang, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/port.ts';
 import { serverText } from '../lang/server.ts';
 
+/** A generated job's picture by its kind (docs/11 P4). */
+const JOB_ICON: Record<string, string> = {
+  delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'menu_map', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
+  diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye',
+};
 const L = dict(EN, RU);
 
 function licenceLeft(n: number): string {
@@ -423,7 +428,7 @@ ${orders}${berths}</div>` : ''}`;
       <div><h3 class="title-sm" style="font-size:20px">${esc(L('tavern.officers', { n: co.officers.length, max: co.slots }))}</h3>${officers}</div></div>
       <div class="cols">
       <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${[...new Set(view.rumors)].map((r) => `<p>${quote(serverText(r))}</p>`).join('')}</div>
-      <div>${view.questOffers.map((q) => `<div class="card"><h4 class="card-h">${icon(q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : 'goal', '', 'ico-md')}${esc(serverText(q.name))} <span class="muted">— ${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : ''}</span></h4>
+      <div>${view.questOffers.length ? `<h3 class="title-sm" style="font-size:20px">${esc(L('quest.board'))}</h3>` : ''}${view.questOffers.map((q) => `<div class="card"><h4 class="card-h">${icon(q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : q.kind === 'job' ? JOB_ICON[q.category ?? ''] ?? 'goal' : 'goal', '', 'ico-md')}<span class="q-title"><b>${esc(serverText(q.name))}</b><span class="muted">${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : q.kind === 'job' && q.category ? esc(L(`quest.cat.${q.category}` as 'quest.cat.delivery')) : ''}</span></span></h4>
         <p>${esc(serverText(q.summary))}</p><ol class="muted" style="margin:4px 0 6px 18px">${q.steps.map((t) => `<li>${esc(serverText(t))}</li>`).join('')}</ol>
         <div class="row"><span class="reward">${money(q.silver)}${xpBadge(q.xp)}${q.path ? esc(L('quest.pathOf', { arch: CAPTAINS[q.path].archetype })) : ''}</span>
         ${q.blocked ? `<span class="muted">${esc(L('quest.needs', { x: serverText(q.blocked) }))}</span>` : `<button class="btn btn-small btn-primary" data-act="quest_accept" data-id="${q.id}">${esc(L('quest.take'))}</button>`}</div></div>`).join('')}

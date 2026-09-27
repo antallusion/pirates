@@ -11,7 +11,10 @@ import type { TreeId } from './talents.ts';
 export type QuestStep =
   | { type: 'visit'; port: string; text: string }
   | { type: 'deliver'; port: string; good: GoodId; qty: number; text: string }
-  | { type: 'sink'; count: number; role?: 'pirate' | 'patrol' | 'merchant' | 'ghost' | 'hunter'; minTier?: number; text: string }
+  | { type: 'sink'; count: number; role?: 'pirate' | 'patrol' | 'merchant' | 'ghost' | 'hunter'; minTier?: number; region?: RegionId; text: string }
+  /** Generated quests (docs/11 P4): take a cargo aboard at a port; land a party on an island (at one of its sites). */
+  | { type: 'pickup'; port: string; good: GoodId; qty: number; text: string }
+  | { type: 'land'; island: number; site?: string; text: string }
   | { type: 'board'; count: number; text: string }
   | { type: 'prize'; count: number; text: string }
   | { type: 'sell_contraband'; qty: number; port?: string; text: string }
@@ -25,7 +28,7 @@ export type QuestStep =
 
 export interface QuestDef {
   id: string;
-  kind: 'path' | 'legend' | 'story';
+  kind: 'path' | 'legend' | 'story' | 'job';
   name: string;
   mentor: string;
   port: string; // where it is offered and where it ends
@@ -33,6 +36,9 @@ export interface QuestDef {
   requires: { level?: number; rep?: Partial<Record<FactionId, number>>; treePoints?: Partial<Record<TreeId, number>>; anyOf?: boolean };
   steps: QuestStep[];
   reward: { xp: number; silver: number; path?: CaptainId; deed?: string };
+  /** A generated job's category and its template (plot.flavour). */
+  category?: string;
+  template?: string;
 }
 
 export const QUESTS: QuestDef[] = [
@@ -141,6 +147,14 @@ export const QUESTS: QuestDef[] = [
 ];
 
 export const QUESTS_BY_ID: Record<string, QuestDef> = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
+
+/** The generated jobs of this world (the server registers them at start). */
+export const JOBS: QuestDef[] = [];
+export function registerJobs(list: QuestDef[]): void {
+  JOBS.length = 0;
+  JOBS.push(...list);
+  for (const q of list) QUESTS_BY_ID[q.id] = q;
+}
 
 /** The Captain's Houses where a captain may change Path (docs/02 §7). */
 export const CAPTAINS_HOUSES = ['gravesend', 'cinderhold', 'fogmouth', 'tidewrack', 'saint_maw'];

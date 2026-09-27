@@ -1,6 +1,8 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { generateQuests } from '../../../shared/src/data/questgen.ts';
+import { QUESTS_BY_ID, registerJobs } from '../../../shared/src/data/quests.ts';
 import {
   CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_CROWD, SNAP_CROWD_EVERY, SNAP_MID, SNAP_NEAR, SNAP_RANK_MID, SNAP_RANK_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
   SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight,
@@ -287,6 +289,8 @@ export class Game {
     // Islands the sea has thrown up since (world events).
     for (const r of this.db.getKv<RaisedIsland[]>('raised_islands') ?? []) raiseIsland(this.world, r);
     applyIslandNames(this); // names the Pantheon gave
+    // Some three thousand jobs for the ports' people (docs/11 P4), the same on every server of this seed.
+    registerJobs(generateQuests(this.world, seed));
     this.rng = new Rng(seed ^ 0x5eed);
     this.routes = new RouteCache(this.world);
     this.expeditions = new ExpeditionHub(this.world);
@@ -1212,10 +1216,30 @@ export class Game {
     return economyReport(this, windowSec);
   }
 
+  /** Where each active quest's current step points, for the chart. */
+  private questTargets(p: Profile): Record<string, { x: number; y: number }> {
+    const out: Record<string, { x: number; y: number }> = {};
+    for (const qs of p.quests.active) {
+      const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
+      if (!st) continue;
+      let at: { x: number; y: number } | null = null;
+      if (st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup') at = this.portById(st.port) ?? null;
+      else if (st.type === 'sell_contraband' && st.port) at = this.portById(st.port) ?? null;
+      else if (st.type === 'land') at = this.world.islands[st.island] ?? null;
+      else if (st.type === 'reach' || st.type === 'time_in' || st.type === 'die_in' || (st.type === 'sink' && st.region)) {
+        const [x, y] = REGIONS[st.region!].center;
+        at = { x, y };
+      }
+      if (at) out[qs.id] = { x: Math.round(at.x), y: Math.round(at.y) };
+    }
+    return out;
+  }
+
   private worldView(s: PlayerSession): WorldView {
     const ship = s.ship;
     const p = s.profile!;
     return {
+      questTargets: this.questTargets(p),
       coves: this.coves,
       patrols: this.insiderPatrols(s),
       fleet: ship ? {

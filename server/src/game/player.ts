@@ -285,6 +285,8 @@ export interface WorldView {
   explore?: Pick<PrivateState, 'maps' | 'legendEcho' | 'wrecks' | 'trails' | 'soundings' | 'forecast' | 'goldTrails'>;
   abyss?: PrivateState['abyss'];
   pvp?: PrivateState['pvp'];
+  /** Where each active quest's current step points (a port, an island, a region's middle). */
+  questTargets?: Record<string, { x: number; y: number }>;
 }
 
 export function toPrivateState(s: PlayerSession, now: number, world: WorldView = { coves: [], patrols: [] }): PrivateState {
@@ -329,7 +331,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     quests: p.quests.active.map((q) => {
       const def = QUESTS_BY_ID[q.id];
       const st = stepProgress(q);
-      return { id: q.id, name: def.name, kind: def.kind, mentor: def.mentor, step: q.step + 1, steps: def.steps.length, text: st?.text ?? '', progress: st?.progress ?? 0, need: st?.need ?? 1 };
+      const target = world.questTargets?.[q.id];
+      return { id: q.id, name: def.name, kind: def.kind, mentor: def.mentor, step: q.step + 1, steps: def.steps.length, text: st?.text ?? '', progress: st?.progress ?? 0, need: st?.need ?? 1, ...(target ? { target } : {}) };
     }),
     questsDone: p.quests.done,
     paths: p.paths,

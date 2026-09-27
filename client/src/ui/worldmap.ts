@@ -11,6 +11,8 @@ import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/worldmap.ts';
 import { keyLabel, settings } from '../settings.ts';
 import { mapCard, placeName } from './maps.ts';
+import { esc } from './dom.ts';
+import { serverText } from '../lang/server.ts';
 
 const L = dict(EN, RU);
 
@@ -32,7 +34,17 @@ export class WorldMap {
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
       <details class="map-legend"${innerHeight > 520 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
-      ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}`;
+      ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
+      ${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => `<button class="mq-row${q.target ? '' : ' off'}" data-q="${esc(q.id)}"><b>${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>`).join('')}</div>` : ''}`;
+    // A quest in the log: the chart turns to where its step points.
+    root.querySelectorAll<HTMLElement>('[data-q]').forEach((b) => (b.onclick = () => {
+      const q = state.self?.quests.find((x) => x.id === b.dataset.q);
+      if (!q?.target) return;
+      this.cx = q.target.x;
+      this.cy = q.target.y;
+      this.zoom = Math.max(this.zoom, 4);
+      this.draw(state);
+    }));
     const c = root.querySelector('canvas')!;
     this.canvas = c;
     if (!this.centred && state.ownDisplay) {
@@ -391,6 +403,23 @@ export class WorldMap {
         g.fill();
       }
       label(placeName(c.name), tx(c.x), ty(c.y) - ms * 0.55, '#8fd0a8');
+    }
+    // Where the quests point: a gold mark and the quest's name.
+    for (const q of state.self?.quests ?? []) {
+      if (!q.target) continue;
+      const x = tx(q.target.x), y = ty(q.target.y);
+      if (!mark('icon.goal', x, y, ms)) {
+        g.fillStyle = '#e0b862';
+        g.beginPath();
+        g.moveTo(x, y - 8);
+        g.lineTo(x + 6, y);
+        g.lineTo(x, y + 8);
+        g.lineTo(x - 6, y);
+        g.closePath();
+        g.fill();
+      }
+      g.font = '600 11px Inter, system-ui, sans-serif';
+      label(serverText(q.name), x, y + ms * 0.8, '#f0d48e');
     }
     // Your islands: a gold flag.
     for (const h of state.holdings.mine) {

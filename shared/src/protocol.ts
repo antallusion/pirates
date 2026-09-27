@@ -363,7 +363,7 @@ export interface PrivateState {
   /** The crew as people (docs/02 §8). */
   company: CompanyView;
   /** Quests under way (Paths, Legends, the Descent). */
-  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story'; mentor: string; step: number; steps: number; text: string; progress: number; need: number }[];
+  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; target?: { x: number; y: number } }[];
   questsDone: string[];
   paths: CaptainId[];
   oath: 'code' | 'marque' | null;
@@ -482,7 +482,7 @@ export interface PortView {
   crewHireCost: number;
   tavern: TavernView;
   escorts: { classId: ShipClassId; price: number; upkeep: number; available: boolean }[];
-  questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId }[];
+  questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string }[];
   captainsHouse: boolean;
   oathOffer: 'code' | 'marque' | null;
   yard: { woods: WoodId[]; figurehead: FigureheadId | null; plans: boolean; master: boolean };

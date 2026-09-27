@@ -5,7 +5,10 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
-import { CAPTAINS_HOUSES, QUESTS, QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import { CAPTAINS_HOUSES, JOBS, QUESTS, QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import { GOODS } from '../../../shared/src/data/goods.ts';
+import { hashString } from '../../../shared/src/rng.ts';
+import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { QuestDef, QuestStep } from '../../../shared/src/data/quests.ts';
 import { TREES, pointsInTree } from '../../../shared/src/data/talents.ts';
 import type { TreeId } from '../../../shared/src/data/talents.ts';
@@ -17,7 +20,10 @@ import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import type { ShipEntity } from './ship.ts';
 
-export const MAX_ACTIVE_QUESTS = 3;
+export const MAX_ACTIVE_QUESTS = 5;
+/** A port's board shows this many of its generated jobs at a time, a new set every few hours. */
+export const JOBS_ON_BOARD = 5;
+export const JOB_ROTATION_SEC = 4 * 3600;
 export const PATH_SWITCH_CD = 3600;
 
 export interface QuestState {
@@ -43,7 +49,8 @@ export type QuestEvent =
   | { k: 'fleet_win' }
   | { k: 'die'; region: RegionId }
   | { k: 'dive' }
-  | { k: 'dock'; port: Port };
+  | { k: 'dock'; port: Port }
+  | { k: 'land'; island: number; feature: string };
 
 export function newQuestLog(): QuestLog {
   return { active: [], done: [] };
@@ -66,16 +73,29 @@ export function questBlocked(p: Profile, q: QuestDef): string | null {
   return miss ? miss[1] : null;
 }
 
-export function questOffers(p: Profile, port: Port): { q: QuestDef; blocked: string | null }[] {
-  return QUESTS.filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id))
+export function questOffers(p: Profile, port: Port, now = 0): { q: QuestDef; blocked: string | null }[] {
+  const story = QUESTS.filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id));
+  return [...story, ...boardJobs(p, port, now)]
     .map((q) => ({ q, blocked: questBlocked(p, q) }))
     .filter((o) => o.blocked !== 'You already walk this Path' && o.blocked !== 'The deep already knows you');
+}
+
+/** The generated jobs a port's board shows now: a few of its seventy, new every four hours, suited to the
+ *  captain's level first (the ones she is not yet fit for may show, greyed). */
+export function boardJobs(p: Profile, port: Port, now: number): QuestDef[] {
+  const mine = JOBS.filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id));
+  if (!mine.length) return [];
+  const window = Math.floor(now / JOB_ROTATION_SEC);
+  const scored = mine.map((q) => ({ q, k: ((hashString(q.id) ^ (window * 2654435761)) >>> 0) + ((q.requires.level ?? 1) > p.level + 5 ? 2 ** 32 : 0) }));
+  scored.sort((a, b) => a.k - b.k);
+  return scored.slice(0, JOBS_ON_BOARD).map((x) => x.q);
 }
 
 export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string): string | null {
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
   if (!q || q.port !== port.id) return 'Nobody here offers that';
+  if (q.kind === 'job' && !boardJobs(p, port, game.now).includes(q)) return 'That job is no longer on the board';
   const why = questBlocked(p, q);
   if (why) return why;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
@@ -169,8 +189,21 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       if (!ship.cargo[st.good]) delete ship.cargo[st.good];
       return 1;
     }
+    case 'pickup': {
+      if (ev.k !== 'dock' || ev.port.id !== st.port) return 0;
+      const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
+      if (free + 1e-6 < GOODS[st.good].volume * st.qty) {
+        game.toastShip(ship, `Make room in the hold: ${st.qty} ${GOODS[st.good].name.toLowerCase()} wait on the quay.`, 'info');
+        return 0;
+      }
+      ship.cargo[st.good] = (ship.cargo[st.good] ?? 0) + st.qty;
+      return 1;
+    }
+    case 'land':
+      return ev.k === 'land' && ev.island === st.island && (!st.site || st.site === ev.feature) ? 1 : 0;
     case 'sink':
       if (ev.k !== 'sink') return 0;
+      if (st.region && ev.victim.region !== st.region) return 0;
       if (st.role && ev.victim.npcRole !== st.role && !(st.role === 'patrol' && ev.victim.npcRole === 'hunter')) return 0;
       if (st.minTier && ev.victim.cls.tier < st.minTier) return 0;
       return 1;

@@ -8,8 +8,10 @@ import { COMMON_RU, NAME_RU, TEXT_RU } from './data.ts';
 import { composedNameRu, personNameRu } from './names.ts';
 import { SERVER_RU_A } from './server.ru.a.ts';
 import { SERVER_RU_B } from './server.ru.b.ts';
+import { questPatterns } from '../../../shared/src/data/questgen.ts';
 
-const TABLE: Record<string, string> = { ...SERVER_RU_A, ...SERVER_RU_B };
+// The generated jobs' templates carry their Russian twins (shared/src/data/questgen.ts).
+const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
 const exact = new Map<string, string>();
 let templates: { re: RegExp; ru: string; order: number[]; adjacent: number[] }[] | null = null;
 
