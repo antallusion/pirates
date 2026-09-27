@@ -7,6 +7,7 @@ import { ISLAND_JOBS, JOBS, QUESTS_BY_ID } from '../shared/src/data/quests.ts';
 import { islandJobOffer, questEvent } from '../server/src/game/quests.ts';
 import type { QuestDef } from '../shared/src/data/quests.ts';
 import { questPointer } from '../client/src/ui/track.ts';
+import { newsHint } from '../server/src/game/onboarding.ts';
 import { join, makeGame, steps } from './helpers.ts';
 
 test('a group sails as one: the ship one captain sinks counts on a groupmate’s hunt nearby', () => {
@@ -128,4 +129,20 @@ test('a quest done in company pays a tenth more for every groupmate near (up to 
   assert.ok(A.profile!.gold - gold0 >= 1100);
   assert.equal(A.profile!.season.stats.quests, 1, 'counted in the season table of quests done');
   delete QUESTS_BY_ID[quest.id];
+});
+
+test('news told once to every captain: the day’s orders on putting in, the journal on the first quest', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Newsy Nell');
+  const s = game.sessionByName('Newsy Nell')!;
+  const port = game.portById(s.ship!.docked!)!;
+  questEvent(game, s, { k: 'dock', port });
+  questEvent(game, s, { k: 'dock', port });
+  assert.equal(c.all('onb').filter((m) => m.kind === 'hint' && m.id === 'daily').length, 1, 'the orders are told of once');
+  const job = JOBS.find((q) => q.port === port.id && (q.requires.level ?? 1) <= 1);
+  if (!job) return;
+  s.profile!.quests.active.push({ id: job.id, step: 0, progress: 0, startedAt: game.now });
+  newsHint(game, s, 'journal');
+  newsHint(game, s, 'journal');
+  assert.equal(c.all('onb').filter((m) => m.kind === 'hint' && m.id === 'journal').length, 1, 'the journal once');
 });

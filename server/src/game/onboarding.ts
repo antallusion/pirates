@@ -393,7 +393,17 @@ export function onboardingView(p: Profile): OnboardingView {
 // ------------------------------------------------------------------ contextual hints (§13.1)
 
 /** The hints and how often at most (seconds). */
-export const HINTS: Record<string, number> = { irons: 240, lead: 180, repair: 300, docking: 600 };
+export const HINTS: Record<string, number> = { irons: 240, lead: 180, repair: 300, docking: 600, daily: 1e9, journal: 1e9 };
+
+/** News for every captain, old hand or new (docs/11 P6), told once: the day's orders and the common cause on the
+ *  first put-in, the journal and the gold pointer on the first quest taken. */
+export function newsHint(game: Game, s: PlayerSession, id: 'daily' | 'journal'): void {
+  if (!s.profile || (s.profile.tutorial.hints[id] ?? 0) > 0) return;
+  // Not a First Watch hint: kept out of the watch's hint tally.
+  s.profile.tutorial.hints[id] = 1;
+  s.profile.tutorial.hintAt[id] = game.wallNow();
+  game.sendTo(s, { t: 'onb', kind: 'hint', id });
+}
 
 function hint(game: Game, s: PlayerSession, id: string): void {
   const t = s.profile!.tutorial;

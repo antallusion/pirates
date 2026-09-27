@@ -31,6 +31,10 @@ export const EN = {
   'hint.lead': 'Three broadsides into the sea. Aim where she will be, not where she is — and the cursor’s distance sets the range.',
   'hint.repair': 'The hull is below half. R sets the carpenters to work (planks and sailcloth) while no enemy is near.',
   'hint.docking': 'To come in: slow to a crawl close to the port and press F.',
+  'hint.daily': 'New in every tavern: three daily orders with a chest for all three, and the common cause the whole sea works at. The quest journal is on F3.',
+  'hint.journal': 'The quest is in your journal (F3). A gold mark on the edge of the screen and on the minimap leads to its goal; in a group you can share it.',
+  'hint.daily.touch': 'New in every tavern: three daily orders with a chest for all three, and the common cause the whole sea works at. The quest journal is in the cabin menu.',
+  'hint.journal.touch': 'The quest is in your journal (cabin menu). A gold mark on the edge of the screen and on the minimap leads to its goal; in a group you can share it.',
   // The same hints for a touch screen: no keys, no cursor.
   'hint.irons.touch': 'In irons: bow into the wind, sails flapping. Turn the wheel until the wind comes onto her side.',
   'hint.lead.touch': 'Three broadsides into the water. The broadside buttons lay the guns on a ship abeam: bring her onto your beam, inside the range of your guns.',

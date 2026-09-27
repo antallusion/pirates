@@ -18,6 +18,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
+import { newsHint } from './onboarding.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
 import { guildGoalEvent } from './guildgoal.ts';
@@ -109,6 +110,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
   p.quests.active.push({ id, step: 0, progress: 0, startedAt: game.now });
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
+  newsHint(game, s, 'journal');
   // A first step that is already satisfied (being in the right port) completes at once.
   questEvent(game, s, { k: 'dock', port });
   return null;
@@ -226,6 +228,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   const ship = s.ship;
   if (!p || !ship) return;
   // The day's orders and the sea's common cause move on with the same deeds.
+  if (ev.k === 'dock') newsHint(game, s, 'daily');
   dailyEvent(game, s, ev);
   commonEvent(game, s, ev);
   guildGoalEvent(game, s, ev);
