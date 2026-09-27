@@ -11,7 +11,7 @@ import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { WOODS } from '../../../shared/src/data/shipbuild.ts';
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
-import { FRIENDS_MAX, GROUP_MAX } from '../../../shared/src/protocol.ts';
+import { FRESH_LEVEL, FRIENDS_MAX, GROUP_MAX } from '../../../shared/src/protocol.ts';
 import type { GuildRank, HoldingView, IslandOffer, SiegeView } from '../../../shared/src/protocol.ts';
 import type { ClientMsg, ListingView } from '../../../shared/src/protocol.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
@@ -217,7 +217,7 @@ export class CompanyScreen {
       body.closest('#modal-panel')?.querySelector<HTMLElement>('[data-tab="letters"]')?.click();
     }));
     body.querySelectorAll<HTMLElement>('[data-inspect]').forEach((el) => (el.onclick = () => this.send({ t: 'inspect', name: el.dataset.inspect! })));
-    const who = () => this.send({ t: 'who', q: val('#who-q'), here: !!body.querySelector<HTMLInputElement>('#who-here')?.checked });
+    const who = () => this.send({ t: 'who', q: val('#who-q'), here: !!body.querySelector<HTMLInputElement>('#who-here')?.checked, fresh: !!body.querySelector<HTMLInputElement>('#who-fresh')?.checked });
     body.querySelector<HTMLElement>('#who-find')?.addEventListener('click', who);
     body.querySelector<HTMLInputElement>('#who-q')?.addEventListener('keydown', (e) => e.key === 'Enter' && (e.stopPropagation(), e.preventDefault(), who()));
     const addFriend = () => val('#fr-name') && this.send({ t: 'friend', action: 'add', name: val('#fr-name') });
@@ -257,12 +257,12 @@ export class CompanyScreen {
       return L('who_row', { level: e.level, where: port ? L('fr_in_port', { port: placeName(port) }) : placeName(REGIONS[e.region]?.name ?? e.region) });
     };
     const friends = new Set(state.friends.map((f) => f.name));
-    const rows = (w?.list ?? []).map((e) => `<div class="fr-row on"><i class="fr-dot"></i><div class="fr-who"><b class="insp-name" data-inspect="${esc(e.name)}" role="button" tabindex="0">${esc(e.name)}</b>${e.guild ? ` <span class="who-tag">[${esc(e.guild)}]</span>` : ''} <span class="muted">${esc(where(e))}</span></div>
+    const rows = (w?.list ?? []).map((e) => `<div class="fr-row on"><i class="fr-dot"></i><div class="fr-who"><b class="insp-name" data-inspect="${esc(e.name)}" role="button" tabindex="0">${esc(e.name)}</b>${e.guild ? ` <span class="who-tag">[${esc(e.guild)}]</span>` : ''}${e.level <= FRESH_LEVEL ? ` <span class="fresh-tag" title="${esc(L('who_fresh_hint'))}">${L('who_fresh_tag')}</span>` : ''} <span class="muted">${esc(where(e))}</span></div>
       <span class="fr-btns"><button class="btn btn-small" data-whisper="${esc(e.name)}">${L('fr_whisper')}</button>${canInvite && !e.grouped ? `<button class="btn btn-small" data-fr-invite="${esc(e.name)}">${L('fr_invite')}</button>` : ''}${friends.has(e.name) ? '' : `<button class="btn btn-small" data-befriend="${esc(e.name)}">${L('fr_befriend')}</button>`}</span></div>`).join('');
     return `<div class="card"><h4 class="card-h">${icon('menu_map', '', 'ico-md')}${L('who_title')}</h4>
       <p class="muted">${L('who_text')}</p>
       <div class="row lfg-form fr-form"><input id="who-q" placeholder="${L('who_ph')}" maxlength="24"><button class="btn" id="who-find">${L('who_find')}</button></div>
-      <label class="who-here"><input type="checkbox" id="who-here"> ${L('who_here')}</label>
+      <label class="who-here"><input type="checkbox" id="who-here"> ${L('who_here')}</label> <label class="who-here"><input type="checkbox" id="who-fresh"> ${L('who_fresh')}</label>
       ${w ? `<div class="fr-list">${rows || `<p class="muted">${L('who_none')}</p>`}</div>${w.total > w.list.length ? `<p class="muted">${esc(L('who_more', { n: w.total }))}</p>` : ''}` : ''}</div>`;
   }
 

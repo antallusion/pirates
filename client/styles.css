@@ -1734,6 +1734,8 @@ body.touch #hud-region .rg-extra { display: none; }
 .fr-ign { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
 .fr-ign .muted { font-size: 12px; }
 .who-tag { color: var(--brass); font-size: 12px; }
+.fresh-tag { padding: 0 5px; border: 1px solid rgba(127, 212, 138, 0.6); color: #9fe0a8; font: 600 10px/15px var(--sans); text-transform: uppercase; letter-spacing: 0.05em; }
+.who-here + .who-here { margin-left: 10px; }
 /* Inspecting a captain (docs/11 P6): a tapped name, and the card with its figures. */
 .insp-name { cursor: pointer; text-decoration: underline dotted rgba(201, 162, 90, 0.6); text-underline-offset: 3px; }
 .insp-name:hover { color: var(--gold); }

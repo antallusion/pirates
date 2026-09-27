@@ -4,7 +4,7 @@
 // And its other side, the unheard: a captain one will not hear — their chat lines, whispers, invitations to a
 // group, a barter or a duel do not reach one (letters still do: the packet boat reads no lists).
 
-import { FRIENDS_MAX, WHO_MAX } from '../../../shared/src/protocol.ts';
+import { FRESH_LEVEL, FRIENDS_MAX, WHO_MAX } from '../../../shared/src/protocol.ts';
 import type { FriendView, InspectView, WhoView } from '../../../shared/src/protocol.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import { groupOfAccount } from './party.ts';
@@ -131,7 +131,7 @@ export function ignoreCommand(text: string): string | null {
 
 /** Who is at sea (docs/11 P6), as WoW's /who: every captain aboard but oneself, by a part of the name or the
  *  guild's tag, in all waters or only one's own; one's own waters first, then the most seasoned, thirty at most. */
-export function whoList(game: Game, s: PlayerSession, q: string, here: boolean): { list: WhoView[]; total: number } {
+export function whoList(game: Game, s: PlayerSession, q: string, here: boolean, fresh = false): { list: WhoView[]; total: number } {
   const want = String(q ?? '').trim().toLowerCase().slice(0, 24);
   const mine = s.ship?.region;
   const out: WhoView[] = [];
@@ -139,6 +139,7 @@ export function whoList(game: Game, s: PlayerSession, q: string, here: boolean):
     const o = acc === s.accountId ? null : game.sessionByAccount(acc);
     if (!o?.profile || !o.ship) continue;
     if (here && o.ship.region !== mine) continue;
+    if (fresh && o.profile.level > FRESH_LEVEL) continue;
     const tag = game.guilds.of(game, acc)?.tag;
     if (want && !o.name.toLowerCase().includes(want) && !(tag && tag.toLowerCase() === want.replace(/^\[|\]$/g, ''))) continue;
     out.push({ name: o.name, level: o.profile.level, captain: o.profile.captain, region: o.ship.region, docked: o.ship.docked ?? null, ...(tag ? { guild: tag } : {}), grouped: !!groupOfAccount(game, acc) });

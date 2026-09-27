@@ -182,3 +182,14 @@ test('inspecting a captain at sea: level, path, ship and deeds — never the pur
   a.push({ t: 'inspect', name: 'Nobody Here' });
   assert.equal(bad(a).at(-1), 'No captain of that name is at sea');
 });
+
+test('who is at sea, new captains only: those a veteran may take under their wing', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Old Salt Oskar');
+  join(game, 'Green Gil');
+  join(game, 'Middling Mo');
+  game.sessionByName('Old Salt Oskar')!.profile!.level = 30;
+  game.sessionByName('Middling Mo')!.profile!.level = 15;
+  a.push({ t: 'who', q: '', here: false, fresh: true });
+  assert.deepEqual(a.last('who')!.list.map((e) => e.name), ['Green Gil']);
+});

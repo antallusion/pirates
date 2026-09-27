@@ -122,7 +122,7 @@ export type ClientMsg =
   | { t: 'friend'; action: 'add' | 'remove' | 'ignore' | 'unignore'; name: string }
   | { t: 'friend'; action: 'list' }
   /** Who is at sea (docs/11 P6): by a part of a name or a guild's tag, in all waters or only one's own. */
-  | { t: 'who'; q: string; here: boolean }
+  | { t: 'who'; q: string; here: boolean; /** only the new captains (docs/11 P6) */ fresh?: boolean }
   /** Inspect a captain at sea (docs/11 P6). */
   | { t: 'inspect'; name: string }
   | { t: 'group'; action: 'invite' | 'kick' | 'lead'; name: string }
@@ -1017,6 +1017,9 @@ export interface WhoView {
 }
 
 export const WHO_MAX = 30;
+
+/** A new captain, whom a veteran may take under their wing (the mentor's bonus, docs/11 P6). */
+export const FRESH_LEVEL = 9;
 
 /** A captain as another sees them on inspecting (docs/11 P6): no purse, no hold, nothing private. */
 export interface InspectView {

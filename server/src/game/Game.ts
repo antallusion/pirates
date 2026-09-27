@@ -2617,7 +2617,7 @@ export class Game {
         }
         return;
       case 'who':
-        return this.sendTo(s, { t: 'who', ...whoList(this, s, msg.q, !!msg.here) });
+        return this.sendTo(s, { t: 'who', ...whoList(this, s, msg.q, !!msg.here, !!msg.fresh) });
       case 'inspect': {
         const v = inspectView(this, s, msg.name);
         return typeof v === 'string' ? err(v) : this.sendTo(s, { t: 'inspect', view: v });
