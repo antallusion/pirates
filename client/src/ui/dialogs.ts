@@ -7,7 +7,7 @@ import { AMMO_IDS, AMMO, SHIP_CLASSES, GUNS } from '../../../shared/src/data/shi
 import type { BoardingResult, ClientMsg, OnboardingView } from '../../../shared/src/protocol.ts';
 import { TALENTS_BY_ID } from '../../../shared/src/data/talents.ts';
 import { KEY_PORTS, REGIONS } from '../../../shared/src/world/regions.ts';
-import { dict, t } from '../i18n.ts';
+import { dict, lang, t } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/dialogs.ts';
 import { serverText } from '../lang/server.ts';
 import { keyLabel, settings } from '../settings.ts';
@@ -56,10 +56,10 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
         ${goods.length ? goods.map((g) => `<div class="loot-grid">${icon(`good_${g}`, '', 'item-ico')}<div class="item-text"><b>${esc(GOODS[g].name)}</b><span class="muted">${esc(L('board.aboard', { n: r.cargo[g] ?? 0 }))}${state.self?.appraisal?.[g] ? ` · ${money(state.self.appraisal[g]!.price)}` : ''}</span></div><b class="loot-take">${take[g] ?? 0}</b>
           <input type="range" min="0" max="${r.cargo[g]}" value="${take[g] ?? 0}" data-g="${g}" /></div>`).join('') : `<p class="muted">${esc(L('board.empty'))}</p>`}
         <p class="${used > holdMax ? 'up' : 'muted'}">${esc(L('board.hold', { used: dec1(used), max: holdMax.toFixed(0) }))}</p>
-        ${Object.keys(r.destroyed).length ? `<p class="muted">${esc(L('board.destroyed', { list: Object.entries(r.destroyed).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`).join(', ') }))}</p>` : ''}
+        ${Object.keys(r.destroyed).length ? `<p class="muted">${esc(L('board.destroyed', { list: Object.entries(r.destroyed).map(([g, n]) => `${lang() === 'ru' ? GOODS[g as GoodId].name.toLowerCase() : GOODS[g as GoodId].name} × ${n}`).join(' · ') }))}</p>` : ''}
       </div><div>
         <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('board.coin'))}</h4><div class="spoils">${money(r.gold)}${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="ammo-chip" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-md')}<b>${r.ammo[a]}</b></span>`).join('')}</div></div>
-        ${r.recruits > 0 ? `<div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('board.prisoners'))}</h4><p>${esc(L('board.prisonersText', { n: r.recruits }))}</p><div class="loot-row"><span>${esc(L('board.signOn'))}</span><b>${recruit}</b><input type="range" min="0" max="${r.recruits}" value="${recruit}" id="recruit" /></div></div>` : ''}
+        ${r.recruits > 0 ? `<div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('board.prisoners'))}</h4><p>${esc(L(r.recruits === 1 ? 'board.prisonersOne' : 'board.prisonersText', { n: r.recruits }))}</p><div class="loot-row"><span>${esc(L('board.signOn'))}</span><b>${recruit}</b><input type="range" min="0" max="${r.recruits}" value="${recruit}" id="recruit" /></div></div>` : ''}
         <div class="card"><h4 class="card-h">${icon('tree_boarding', '', 'ico-md')}${esc(L('board.fate'))}</h4>
           ${r.noQuarter ? `<p class="bad">${esc(L('board.noQuarter', { talent: talentName('brd_no_quarter') }))}</p><div class="choice-grid one"><button class="btn btn-danger choice" data-fate="sink">${icon('fire', '', 'choice-ico')}<span>${esc(L('board.burn'))}</span></button></div>` : `
           <p>${esc(L('board.fateText'))}${r.npc ? esc(L('board.ransomOffer', { sum: fmt(r.ransom) })) : ''}${r.captive ? esc(L('board.captive')) : ''}</p>
