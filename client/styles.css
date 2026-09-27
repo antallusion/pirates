@@ -1561,3 +1561,6 @@ body.touch #hud-region .rg-extra { display: none; }
 /* A quest card's head: its name, and under it who gives it (they were side by side and crowded a phone). */
 .card-h .q-title { display: grid; gap: 2px; min-width: 0; }
 .card-h .q-title .muted { font-size: 0.72em; font-style: italic; }
+/* The quest the captain follows: a gold edge in the chart's log. */
+.mq-row.tracked { border-color: var(--gold); background: rgba(217, 178, 90, 0.08); }
+.mq-row.tracked b { display: flex; align-items: center; gap: 4px; }

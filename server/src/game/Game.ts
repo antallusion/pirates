@@ -1219,21 +1219,28 @@ export class Game {
     return economyReport(this, windowSec);
   }
 
-  /** Where each active quest's current step points, for the chart. */
-  private questTargets(p: Profile): Record<string, { x: number; y: number }> {
-    const out: Record<string, { x: number; y: number }> = {};
+  /** Where each active quest's current step points, for the chart and the pointer: a place (and how near is
+   *  there), or a region's heart (there once inside the region). */
+  private questTargets(p: Profile): Record<string, { x: number; y: number; r?: number; region?: RegionId }> {
+    const out: Record<string, { x: number; y: number; r?: number; region?: RegionId }> = {};
     for (const qs of p.quests.active) {
       const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
       if (!st) continue;
       let at: { x: number; y: number } | null = null;
+      let r = 400;
+      let region: RegionId | undefined;
       if (st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup') at = this.portById(st.port) ?? null;
       else if (st.type === 'sell_contraband' && st.port) at = this.portById(st.port) ?? null;
-      else if (st.type === 'land') at = this.world.islands[st.island] ?? null;
-      else if (st.type === 'reach' || st.type === 'time_in' || st.type === 'die_in' || (st.type === 'sink' && st.region)) {
+      else if (st.type === 'land') {
+        const is = this.world.islands[st.island];
+        at = is ?? null;
+        if (is) r = is.radius + 300;
+      } else if (st.type === 'reach' || st.type === 'time_in' || st.type === 'die_in' || (st.type === 'sink' && st.region)) {
         const [x, y] = REGIONS[st.region!].center;
         at = { x, y };
+        region = st.region;
       }
-      if (at) out[qs.id] = { x: Math.round(at.x), y: Math.round(at.y) };
+      if (at) out[qs.id] = { x: Math.round(at.x), y: Math.round(at.y), ...(region ? { region } : { r: Math.round(r) }) };
     }
     return out;
   }
@@ -1574,9 +1581,12 @@ export class Game {
       }
       escorts += mates.length;
     }
+    // A group sails as one: the ship its captains fought down counts on each of their quests.
+    for (const ms of mates) questEvent(this, ms, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
     if (escorts >= 2) {
       grantDeed(this, s, 'deed_fleet_victory');
       questEvent(this, s, { k: 'fleet_win' });
+      for (const ms of mates) questEvent(this, ms, { k: 'fleet_win' });
     }
     checkStatDeeds(this, s);
     this.grantXp(s, xp, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`);

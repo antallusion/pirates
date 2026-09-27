@@ -21,6 +21,7 @@ import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
+import { trackedQuest } from './track.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
@@ -256,7 +257,8 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"> · ${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${state.self?.quests[0] ? `<span style="color:var(--gold)">${esc(sv(state.self.quests[0].name))}:</span> <span class="muted">${esc(sv(state.self.quests[0].text))}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
+    const tq = trackedQuest(state.self?.quests);
+    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"> · ${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${tq ? `<span style="color:var(--gold)">${esc(sv(tq.name))}:</span> <span class="muted">${esc(sv(tq.text))}${tq.need > 1 ? ` ${tq.progress}/${tq.need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
     if (html !== this.lastRegion) {
       this.lastRegion = html;
       $('hud-region').innerHTML = html;

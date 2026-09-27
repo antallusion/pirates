@@ -7,6 +7,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
+import { setTracked, trackedQuest } from './track.ts';
 import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/worldmap.ts';
 import { keyLabel, settings } from '../settings.ts';
@@ -31,15 +32,21 @@ export class WorldMap {
   private centred = false;
 
   open(root: HTMLElement, state: ClientState): void {
+    const tracked = trackedQuest(state.self?.quests)?.id;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
       <details class="map-legend"${innerHeight > 520 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
       ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
-      ${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => `<button class="mq-row${q.target ? '' : ' off'}" data-q="${esc(q.id)}"><b>${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>`).join('')}</div>` : ''}`;
-    // A quest in the log: the chart turns to where its step points.
+      ${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => `<button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>`).join('')}</div>` : ''}`;
+    // A quest in the log: it becomes the one followed (the gold mark on the screen's rim), and the chart turns to
+    // where its step points.
     root.querySelectorAll<HTMLElement>('[data-q]').forEach((b) => (b.onclick = () => {
       const q = state.self?.quests.find((x) => x.id === b.dataset.q);
-      if (!q?.target) return;
+      if (!q) return;
+      setTracked(q.id);
+      root.querySelectorAll('.mq-row.tracked').forEach((r) => r.classList.remove('tracked'));
+      b.classList.add('tracked');
+      if (!q.target) return;
       this.cx = q.target.x;
       this.cy = q.target.y;
       this.zoom = Math.max(this.zoom, 4);

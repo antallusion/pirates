@@ -363,7 +363,7 @@ export interface PrivateState {
   /** The crew as people (docs/02 §8). */
   company: CompanyView;
   /** Quests under way (Paths, Legends, the Descent). */
-  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; target?: { x: number; y: number } }[];
+  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; target?: { x: number; y: number; r?: number; region?: RegionId } }[];
   questsDone: string[];
   paths: CaptainId[];
   oath: 'code' | 'marque' | null;

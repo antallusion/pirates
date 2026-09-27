@@ -27,6 +27,7 @@ import { buildRelief } from './terrain.ts';
 import type { Palette } from './terrain.ts';
 import { dict } from '../i18n.ts';
 import { dec1 } from '../ui/dom.ts';
+import { questPointer, trackedQuest } from '../ui/track.ts';
 import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus } from '../../../shared/src/data/gunnery.ts';
 import { islandLife } from '../../../shared/src/world/islandlife.ts';
 import type { LifeSite } from '../../../shared/src/world/islandlife.ts';
@@ -386,6 +387,7 @@ export class Renderer {
     if (own && state.you && state.self) this.drawAim(state, own, aim, ships);
     for (const s of ships) if (!s.own) this.drawLabel(s, state, aim.boardTarget === s.id);
     if (own) this.drawThreatMarks(ships, own);
+    if (own) this.drawQuestMark(state, own);
     this.drawTexts();
     this.drawVignette(state.fog, night);
     if (this.fx.flash > 0) {
@@ -2090,6 +2092,83 @@ export class Renderer {
       g.fillText(d >= 1000 ? L('dist.km', { n: dec1(d / 1000) }) : L('dist.m', { n: Math.round(d / 10) * 10 }), 0 - Math.cos(a) * 26, 0 - Math.sin(a) * 26);
       g.translate(-x, -y);
     }
+    g.restore();
+  }
+
+  /** The tracked quest's goal (docs/11 P6): a gold ring on it when in sight, else a gold mark on the rim pointing
+   *  the way with the range — gone once there (inside the region, or near the port or island). */
+  private drawQuestMark(state: ClientState, own: SailState): void {
+    const p = questPointer(trackedQuest(state.self?.quests), own.x, own.y, state.region);
+    if (!p) return;
+    const g = this.g;
+    const gold = '#d9b25a';
+    const px = this.sx(p.x), py = this.sy(p.y);
+    const label = p.d >= 1000 ? L('dist.km', { n: dec1(p.d / 1000) }) : L('dist.m', { n: Math.round(p.d / 10) * 10 });
+    g.save();
+    g.font = '600 11px Inter, system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    if (px > 40 && px < this.w - 40 && py > 40 && py < this.h - 40) {
+      // In sight: a slow gold ring round the place.
+      const pulse = 0.5 + 0.5 * Math.sin(this.time * 2.4);
+      g.strokeStyle = `rgba(217,178,90,${0.55 + 0.35 * pulse})`;
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(px, py, 16 + 4 * pulse, 0, Math.PI * 2);
+      g.stroke();
+      g.fillStyle = gold;
+      g.beginPath();
+      g.moveTo(px, py - 6);
+      g.lineTo(px + 5, py);
+      g.lineTo(px, py + 6);
+      g.lineTo(px - 5, py);
+      g.closePath();
+      g.fill();
+      g.restore();
+      return;
+    }
+    // Out of sight: on the same rim as the threat marks, walked clear of the HUD.
+    const band = this.hudBand();
+    const menuCol = !document.body.classList.contains('touch') && this.w < 1100 ? 56 : 0;
+    const cx = this.w / 2 - menuCol / 2, cy = (band.top + band.bottom) / 2;
+    const rx = this.w / 2 - 26 - menuCol / 2, ry = Math.max(60, (band.bottom - band.top) / 2 - 20);
+    const a = Math.atan2(py - cy, px - cx);
+    const at = (b: number): [number, number] => {
+      const kb = 1 / Math.sqrt((Math.cos(b) / rx) ** 2 + (Math.sin(b) / ry) ** 2);
+      return [cx + Math.cos(b) * kb, cy + Math.sin(b) * kb];
+    };
+    let [x, y] = at(a);
+    for (let i = 1; i <= 60 && !this.clearOfHud(x, y); i++) {
+      const b = [a + i * 0.05, a - i * 0.05].map(at).find(([qx, qy]) => this.clearOfHud(qx, qy));
+      if (b) [x, y] = b;
+    }
+    g.translate(x, y);
+    g.fillStyle = 'rgba(8,10,14,0.8)';
+    g.beginPath();
+    g.arc(0, 0, 15, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = gold;
+    g.lineWidth = 2;
+    g.stroke();
+    // A gold diamond inside, the arrow's tip toward the goal.
+    g.fillStyle = gold;
+    g.beginPath();
+    g.moveTo(0, -5);
+    g.lineTo(4, 0);
+    g.lineTo(0, 5);
+    g.lineTo(-4, 0);
+    g.closePath();
+    g.fill();
+    g.rotate(a);
+    g.beginPath();
+    g.moveTo(21, 0);
+    g.lineTo(15, -5);
+    g.lineTo(15, 5);
+    g.closePath();
+    g.fill();
+    g.rotate(-a);
+    g.fillStyle = 'rgba(240,226,190,0.95)';
+    g.fillText(label, -Math.cos(a) * 27, -Math.sin(a) * 27);
     g.restore();
   }
 

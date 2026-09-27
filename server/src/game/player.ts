@@ -10,6 +10,7 @@ import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, FACTION_IDS, factionRelation, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
+import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
@@ -286,7 +287,7 @@ export interface WorldView {
   abyss?: PrivateState['abyss'];
   pvp?: PrivateState['pvp'];
   /** Where each active quest's current step points (a port, an island, a region's middle). */
-  questTargets?: Record<string, { x: number; y: number }>;
+  questTargets?: Record<string, { x: number; y: number; r?: number; region?: RegionId }>;
 }
 
 export function toPrivateState(s: PlayerSession, now: number, world: WorldView = { coves: [], patrols: [] }): PrivateState {
