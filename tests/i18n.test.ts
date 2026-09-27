@@ -48,3 +48,10 @@ test('names the server lowers inside a sentence come out in Russian; boss phases
   applyDataLocale('en');
   setLang('en');
 });
+
+test('dates the server writes in English read in Russian', async () => {
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  assert.match(serverText('Coldholm Isle is yours until 04 Oct 2026 00:36 UTC.'), /04 окт 2026/);
+  setLang('en');
+});
