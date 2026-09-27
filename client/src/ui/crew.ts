@@ -84,7 +84,7 @@ export function renderMutiny(root: HTMLElement, state: ClientState, send: (m: Cl
   if (!m) return;
   root.innerHTML = `<div class="modal-body"><div class="center-card">
     <h2 class="title-sm" style="font-size:40px;color:var(--bad)">${esc(L('mutiny'))}</h2>
-    <p style="font-family:var(--serif);font-size:18px;color:var(--fog)">${esc(L('mutinyText', { leader: m.ringleader, men: `${m.mutineers} ${plural(m.mutineers, L('man.one'), L('man.few'), L('man.many'))}`, s: m.left }))}</p>
+    <p style="font-family:var(--serif);font-size:18px;color:var(--fog)">${esc(L('mutinyText', { leader: personName(m.ringleader), men: `${m.mutineers} ${plural(m.mutineers, L('man.one'), L('man.few'), L('man.many'))}`, s: m.left }))}</p>
     <div class="choice-grid">
       <button class="btn choice" data-mut="pay">${icon('coin', '', 'choice-ico')}<span>${esc(L('mut.pay', { sum: fmt(m.payCost) }))}</span></button>
       <button class="btn btn-danger choice" data-mut="suppress">${icon('prof_marine', '', 'choice-ico')}<span>${esc(L('mut.suppress'))}</span></button>

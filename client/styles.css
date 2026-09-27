@@ -1323,3 +1323,8 @@ html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { v
   body.touch #chat.open { z-index: 7; padding: 8px 10px 10px; background: linear-gradient(180deg, rgba(14, 12, 10, 0.96), rgba(8, 8, 9, 0.96)); border: 1px solid rgba(140, 107, 58, 0.55); border-radius: 4px; }
 }
 body.touch #hud-region .rg-extra { display: none; }
+
+/* The centre cards (a mutiny, the edge of safe water, a shipwreck) stand in the middle of the sheet, not at
+   its top with the lower half empty; they still scroll from the top when taller than the screen. */
+.modal-body:has(> .center-card) { display: flex; flex-direction: column; }
+.modal-body > .center-card { margin-block: auto; }
