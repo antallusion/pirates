@@ -122,8 +122,24 @@ export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): 
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} has work for you once you have room for it (${MAX_ACTIVE_QUESTS} quests at most).`, kind: 'info' });
     return;
   }
+  // The giver speaks, and the captain decides (the offer stands while the boats are on the beach).
+  s.islandOffer = { id: q.id, island: islandId, until: game.now + 180 };
+  game.sendTo(s, { t: 'quest_offer', island: islandId, offer: { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait } });
+}
+
+/** The captain answers the beach's offer: take the job, or leave it (they ask again on the next landing). */
+export function answerIslandOffer(game: Game, s: PlayerSession, id: string, take: boolean): string | null {
+  const o = s.islandOffer;
+  if (!o || o.id !== id || game.now > o.until) return take ? 'The people on the beach have gone back to their work' : null;
+  s.islandOffer = null;
+  if (!take) return null;
+  const p = s.profile!;
+  const q = QUESTS_BY_ID[id];
+  if (!q || p.quests.active.some((a) => a.id === id) || p.quests.done.includes(id)) return null;
+  if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
   p.quests.active.push({ id: q.id, step: 0, progress: 0, startedAt: game.now });
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
+  return null;
 }
 
 /** Whether an active quest's step sends the boats to this island (and site): such a landing is never "worked

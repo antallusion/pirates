@@ -917,4 +917,5 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} has work for you once you have room for it ({1} quests at most).": "{0}: для вас есть работа, как только освободится место (не больше {1} заданий).",
   "Make room in the hold: {0} {1} wait on the quay.": "Освободите трюм: на причале ждут {1} × {0}.",
   "That job is no longer on the board": "Этого объявления уже нет на доске",
+  "The people on the beach have gone back to their work": "Люди на берегу уже вернулись к своим делам",
 };

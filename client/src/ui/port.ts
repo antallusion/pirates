@@ -24,6 +24,7 @@ import type { Profession } from '../../../shared/src/data/crew.ts';
 import { traitChips } from './crew.ts';
 import { dict, lang, plural } from '../i18n.ts';
 import { dailyCard } from './daily.ts';
+import { giverDialog } from './giver.ts';
 import { EN, RU } from '../lang/ui/port.ts';
 import { serverText } from '../lang/server.ts';
 
@@ -127,8 +128,13 @@ export class PortScreen {
         return this.send({ t: 'hire_crew', qty: Number(d.n), prof: (d.prof as Profession | undefined) ?? 'sailor' });
       case 'press':
         return this.send({ t: 'press_gang', qty: 10 });
-      case 'quest_accept':
-        return this.send({ t: 'quest', action: 'accept', id: d.id! });
+      case 'quest_accept': {
+        // The giver speaks first: their words, the steps and the pay; the captain takes it or leaves it.
+        const q = state.portView?.questOffers.find((x) => x.id === d.id);
+        if (!q) return this.send({ t: 'quest', action: 'accept', id: d.id! });
+        void giverDialog(q).then((ok) => ok && this.send({ t: 'quest', action: 'accept', id: d.id! }));
+        return;
+      }
       case 'quest_abandon':
         void ask(L('confirm.questAbandon')).then((ok) => ok && this.send({ t: 'quest', action: 'abandon', id: d.id! }));
         return;

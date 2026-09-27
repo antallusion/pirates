@@ -12,12 +12,17 @@ let open: ((ok: boolean) => void) | null = null;
 
 /** Ask the captain; resolves true for «go ahead». A new question closes an unanswered one as «no». */
 export function ask(text: string, yes: string = L('yes'), no: string | null = L('no')): Promise<boolean> {
+  return askHtml(`<p id="confirm-text">${esc(text)}</p>`, yes, no);
+}
+
+/** The same frame round ready-made markup (the caller escapes it): a quest giver's words, a portrait. */
+export function askHtml(body: string, yes: string = L('yes'), no: string | null = L('no'), cls = ''): Promise<boolean> {
   open?.(false);
   return new Promise((done) => {
     const el = document.createElement('div');
     el.id = 'confirm';
-    el.innerHTML = `<div class="panel confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="confirm-text">
-      <p id="confirm-text">${esc(text)}</p>
+    el.innerHTML = `<div class="panel confirm-panel${cls ? ` ${cls}` : ''}" role="alertdialog" aria-modal="true" aria-labelledby="confirm-text">
+      <div class="confirm-body">${body}</div>
       <div class="confirm-row${no === null ? ' one' : ''}">${no === null ? '' : `<button class="btn" data-no>${esc(no)}</button>`}<button class="btn btn-primary" data-yes>${esc(yes)}</button></div></div>`;
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Tab') return;

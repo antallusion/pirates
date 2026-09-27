@@ -65,7 +65,7 @@ export type ClientMsg =
   | { t: 'press_gang'; qty: number }
   | { t: 'escort'; action: 'hire' | 'dismiss'; classId?: ShipClassId; id?: string }
   | { t: 'formation'; formation: 'line' | 'wedge' | 'ring' }
-  | { t: 'quest'; action: 'accept' | 'abandon'; id: string }
+  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline'; id: string }
   | { t: 'path'; to: CaptainId }
   | { t: 'oath'; oath: 'code' | 'marque' }
   | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }
@@ -873,6 +873,8 @@ export interface BoardFightView {
 }
 
 export type ServerMsg =
+  /** An island's people offer their job on the beach (docs/11 P6): the captain may take it or leave it. */
+  | { t: 'quest_offer'; offer: PortView['questOffers'][number]; island: number }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number }
   | { t: 'fronts'; list: FrontData[]; forecast: boolean }

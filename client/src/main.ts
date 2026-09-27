@@ -1,6 +1,7 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
 import { DivePanel } from './ui/dive.ts';
+import { giverDialog } from './ui/giver.ts';
 import { BoardFightPanel } from './ui/boardfight.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
@@ -302,6 +303,10 @@ function onMessage(m: ServerMsg): void {
     case 'sunk_self':
       lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed };
       openModal('sunk');
+      break;
+    case 'quest_offer':
+      // An island's people offer their job on the beach: the giver's window, then the captain's answer.
+      void giverDialog(m.offer).then((ok) => net.send({ t: 'quest', action: ok ? 'accept' : 'decline', id: m.offer.id }));
       break;
     case 'toast':
       // The harbour turned her away for her speed: take in sail and try again when she slows.

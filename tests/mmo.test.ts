@@ -3,7 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { QUESTS_BY_ID } from '../shared/src/data/quests.ts';
+import { ISLAND_JOBS, QUESTS_BY_ID } from '../shared/src/data/quests.ts';
+import { islandJobOffer } from '../server/src/game/quests.ts';
 import type { QuestDef } from '../shared/src/data/quests.ts';
 import { questPointer } from '../client/src/ui/track.ts';
 import { join, makeGame, steps } from './helpers.ts';
@@ -49,4 +50,21 @@ test('the quest pointer: toward the port or island until near it, toward a regio
   assert.ok(questPointer(region, 0, 0, 'black_coast'), 'outside the region: pointed at its heart');
   assert.equal(questPointer(region, 0, 0, 'ashen_isles'), null, 'inside the region: the step is done there');
   assert.equal(questPointer({ ...base }, 0, 0, 'black_coast'), null, 'a step with no place has no pointer');
+});
+
+test('the beach: the giver offers, the captain may leave it (and is asked again next time) or take it', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Lena Shore');
+  const s = game.sessionByName('Lena Shore')!;
+  s.profile!.level = 60;
+  const [islandId, job] = [...ISLAND_JOBS.entries()][0];
+  islandJobOffer(game, s, islandId);
+  assert.equal(c.last('quest_offer')?.offer.id, job.id);
+  c.push({ t: 'quest', action: 'decline', id: job.id });
+  assert.ok(!s.profile!.quests.active.some((a) => a.id === job.id), 'left on the beach');
+  c.push({ t: 'quest', action: 'accept', id: job.id });
+  assert.ok(!s.profile!.quests.active.some((a) => a.id === job.id), 'a declined offer cannot be taken later from afar');
+  islandJobOffer(game, s, islandId);
+  c.push({ t: 'quest', action: 'accept', id: job.id });
+  assert.ok(s.profile!.quests.active.some((a) => a.id === job.id), 'the next landing asks again, and now it is taken');
 });

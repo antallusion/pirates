@@ -1571,3 +1571,27 @@ body.touch #hud-region .rg-extra { display: none; }
 .dl-count { color: var(--gold); font-variant-numeric: tabular-nums; }
 .dl-foot { margin-top: 4px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .map-daily { padding: 6px 10px; border-top: 1px solid rgba(111, 90, 56, 0.4); }
+/* The quest giver's window (docs/11 P6): face and words side by side, the steps, the pay; on a phone, stacked. */
+.confirm-panel.giver-panel { width: min(560px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; text-align: left; }
+/* The words scroll in a low window; the two buttons stay in sight. */
+.giver-panel .confirm-body { min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.giver-panel .giver-pay { margin-bottom: 10px; }
+@media (max-height: 480px) { .giver { grid-template-columns: 92px minmax(0, 1fr); } .giver-face { width: 92px; height: 115px; } .giver-steps { margin: 8px 0 6px; } }
+.giver { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px; align-items: start; }
+.giver-face { width: 120px; height: 150px; background: #111 center 18% / cover no-repeat; border: 2px solid var(--brass-dim); box-shadow: 0 0 0 1px #000, 0 4px 14px rgba(0, 0, 0, 0.7); }
+.giver-words { min-width: 0; }
+.giver-name { margin: 0; font-family: var(--display); font-weight: 400; font-size: 24px; color: var(--bone); line-height: 1.1; }
+.giver-who { margin: 2px 0 8px; font-family: var(--serif); font-style: italic; font-size: 15px; }
+.confirm-panel .giver-say { margin: 0; text-align: left; font-size: 17px; }
+.giver-steps { margin: 12px 0 8px; font-size: 14px; }
+.giver-steps ol { margin: 4px 0 0 20px; padding: 0; color: var(--fog); }
+.giver-steps li { margin: 2px 0; }
+.giver-h { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brass); }
+.giver-pay { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.giver:not(:has(.giver-face)) { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 520px) {
+  .giver { grid-template-columns: 84px minmax(0, 1fr); gap: 10px; }
+  .giver-face { width: 84px; height: 105px; }
+  .giver-name { font-size: 20px; }
+  .confirm-panel .giver-say { font-size: 15px; }
+}

@@ -72,7 +72,7 @@ import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, mark
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
 import { buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { abandonQuest, acceptQuest, marqueBounty, questEvent, swearOath, switchPath } from './quests.ts';
+import { abandonQuest, acceptQuest, answerIslandOffer, marqueBounty, questEvent, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
@@ -2300,6 +2300,13 @@ export class Game {
         if (msg.action === 'dismiss') return portAction(() => dismissEscort(this, s, String(msg.id)));
         return;
       case 'quest':
+        // A job offered on an island's beach is answered there, not in port.
+        if (s.islandOffer?.id === String(msg.id) && (msg.action === 'accept' || msg.action === 'decline')) {
+          err(answerIslandOffer(this, s, String(msg.id), msg.action === 'accept'));
+          this.pushSelf(s, true);
+          return;
+        }
+        if (msg.action === 'decline') return;
         if (msg.action === 'accept') return portAction((pt) => acceptQuest(this, s, pt, String(msg.id)));
         if (msg.action === 'abandon') {
           err(abandonQuest(this, s, String(msg.id)));

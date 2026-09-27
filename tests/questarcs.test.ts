@@ -69,6 +69,11 @@ test('an island\'s people give their job on the beach, and it ends back there', 
   const s = [...game.sessions].find((x) => x.name === 'Beachcomber')!;
   s.profile!.level = 60;
   islandJobOffer(game, s, islandId);
+  // The giver speaks and the captain decides: an offer, not a job pressed on them.
+  const offer = c.last('quest_offer');
+  assert.equal(offer?.offer.id, job.id, 'the giver offers the job');
+  assert.ok(!s.profile!.quests.active.some((a) => a.id === job.id), 'not taken until the captain says so');
+  c.push({ t: 'quest', action: 'accept', id: job.id });
   assert.ok(s.profile!.quests.active.some((a) => a.id === job.id), 'taken on the beach');
   assert.ok(c.all('toast').some((t) => t.msg.startsWith(job.mentor)), 'the giver speaks');
   // Walk it to its last step: the beach can be landed on again at once, and that ends it.
