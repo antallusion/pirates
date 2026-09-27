@@ -428,6 +428,8 @@ export function startMutiny(game: Game, s: PlayerSession, why: string): void {
   if (c.mutiny || ship.docked) return;
   // The First Watch is a lesson: no crew rises against a captain still learning the ropes.
   if (onboardingProtected(s)) return;
+  // The mutineers already hold the helm (a mutiny given in to, bound for port): there is nobody left to rise.
+  if (c.course) return;
   const mutineers = Math.max(1, Math.round(ship.crew * Math.min(0.8, 0.3 + (100 - loyaltyOf(c, game.now)) / 200)));
   const ringleader = `${game.rng.pick(FIRST_NAMES)} ${game.rng.pick(LAST_NAMES)}`;
   c.mutiny = { at: game.now, mutineers, ringleader };
@@ -547,6 +549,13 @@ export function onDockCrew(game: Game, s: PlayerSession, port: Port): void {
   const c = p.company;
   const ship = s.ship!;
   const now = game.now;
+  // A mutiny still on when she makes port ends there: the harbour watch comes aboard and the ringleaders go ashore.
+  if (c.mutiny) {
+    c.mutiny = null;
+    c.unrest = { phase: 0, t: 0 };
+    c.course = c.course ?? port.id;
+    game.sendTo(s, { t: 'mutiny', ringleader: '', mutineers: 0, payCost: 0, timeout: 0 });
+  }
   if (c.course) {
     const gone = Math.floor(ship.crew * 0.5);
     ship.crew = Math.max(1, ship.crew - gone);

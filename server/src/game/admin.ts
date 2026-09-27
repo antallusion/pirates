@@ -149,7 +149,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       return `The clock runs on ${Math.round(ahead / 60)} min to ${hour}:00.`;
     }
     case 'god':
-      ship.god = !ship.god;
+      ship.god = args[0] === 'on' ? true : args[0] === 'off' ? false : !ship.god;
       return ship.god ? 'God mode on: nothing harms her.' : 'God mode off.';
     case 'ship': {
       const cls = args[0] as ShipClassId;
@@ -160,7 +160,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.sails = ship.stats.sailHpMax;
       ship.crew = Math.max(ship.crew, ship.stats.crewMin);
       game.pushSelf(s, true);
-      return `She is a ${SHIP_CLASSES[cls].name} now.`;
+      return `She is a ${SHIP_CLASSES[cls].name} now (crew ${ship.crew}).`;
     }
     case 'sink':
       // The death screen, the tow or the respawn, the losses — without waiting for a fight to go wrong.
@@ -171,6 +171,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       return 'She goes down.';
     case 'heal':
       mend(ship);
+      ship.crew = Math.max(ship.crew, ship.stats.crewMax);
       game.pushSelf(s, true);
       return 'Hull, sails and crew made whole.';
     case 'ammo':
@@ -216,10 +217,11 @@ function openWater(game: Game, x: number, y: number): [number, number] {
 }
 
 /** Keep a god-mode ship whole (called every step). */
-export function mend(ship: { hull: number; sails: number; crew: number; water: number; leaks: number; stats: { hullMax: number; sailHpMax: number; crewMax: number } }): void {
+export function mend(ship: { hull: number; sails: number; crew: number; water: number; leaks: number; stats: { hullMax: number; sailHpMax: number; crewMin: number } }): void {
   ship.hull = ship.stats.hullMax;
   ship.sails = ship.stats.sailHpMax;
-  ship.crew = Math.max(ship.crew, ship.stats.crewMax);
+  // Keeps her sailing, but hands out no free hands: the crew is topped up only to the minimum.
+  ship.crew = Math.max(ship.crew, ship.stats.crewMin);
   ship.water = 0;
   ship.leaks = 0;
 }

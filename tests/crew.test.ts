@@ -207,6 +207,29 @@ test('the road to mutiny: murmurs, disobedience, mutiny — and the four ways ou
   assert.ok(co.course);
 });
 
+test('no mutiny loop: none rises while the mutineers steer for port, and making port ends one still on', () => {
+  const { game } = makeGame();
+  const { s, ship, co } = captain(game, 'Loop');
+  toSea(game, s);
+  startMutiny(game, s, 'test');
+  resolveMutiny(game, s, 'yield');
+  assert.ok(co.course, 'bound for port');
+  // Heavy losses would raise another — but they already hold the helm.
+  co.loyalty = 30;
+  co.voyageStartCrew = 30;
+  co.voyageLost = 25;
+  stepCompany(game, s);
+  startMutiny(game, s, 'again');
+  assert.equal(co.mutiny, null, 'no second mutiny on the way');
+  // A mutiny somehow still on at the quay ends there, and the crew walks off once.
+  co.mutiny = { at: game.now, mutineers: 5, ringleader: 'Test' };
+  const crew = ship.crew;
+  onDockCrew(game, s, game.portById(co.course!)!);
+  assert.equal(co.mutiny, null);
+  assert.equal(co.course, null);
+  assert.ok(ship.crew < crew);
+});
+
 test('madness of the deep can raise a mutiny', () => {
   const { game } = makeGame();
   const { s, co } = captain(game, 'Deep');
