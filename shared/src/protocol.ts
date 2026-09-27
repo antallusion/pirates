@@ -18,6 +18,7 @@ import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
 import type { CommonKind } from './data/commongoal.ts';
+import type { GuildGoalKind } from './data/guildgoal.ts';
 
 export type Side = 'port' | 'starboard';
 export type Station = 'balanced' | 'gunnery' | 'sailing' | 'damage_control';
@@ -1028,6 +1029,8 @@ export interface GuildView {
   offers: { kind: 'alliance' | 'pact'; from: string }[];
   wars: { with: string; tag: string; active: boolean; opensAt: number; minEnd: number; ours: number; theirs: number; terms: { fromUs: boolean; tribute: number } | null }[];
   nodes: RouteNodeView[];
+  /** The guild's order of the week (docs/11 P6). */
+  weekly: { kind: GuildGoalKind; target: number; progress: number; mine: number; done: boolean; endsIn: number };
   islands: { island: number; name: string; base: number }[];
   log: { t: number; text: string }[];
 }

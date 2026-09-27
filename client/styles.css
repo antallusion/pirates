@@ -1631,3 +1631,10 @@ body.touch #hud-region .rg-extra { display: none; }
   .journal { grid-template-columns: minmax(0, 1fr); }
   .jr-detail { order: -1; }
 }
+/* The guild's members on a phone: the name and rank on a line, the orders for them below (no sideways scroll). */
+@media (max-width: 520px) {
+  table.g-members tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-bottom: 1px solid #1a1d21; }
+  table.g-members td { border-bottom: 0; }
+  table.g-members td:nth-child(3) { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 0; }
+  table.g-members td:nth-child(3):empty { display: none; }
+}

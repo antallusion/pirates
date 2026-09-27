@@ -75,6 +75,7 @@ import { buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltSh
 import { abandonQuest, acceptQuest, answerOffer, marqueBounty, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
+import { guildGoalCollect } from './guildgoal.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
 import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
@@ -2895,6 +2896,7 @@ export class Game {
 
   private sendInit(s: PlayerSession): void {
     commonCollect(this, s);
+    guildGoalCollect(this, s);
     const ports: PortPublic[] = this.world.ports.map((p) => ({
       id: p.id, name: p.name, region: p.region, faction: p.faction, x: Math.round(p.x), y: Math.round(p.y), size: p.size,
       shipyardTier: p.shipyardTier, blackMarket: p.blackMarket, description: p.description,

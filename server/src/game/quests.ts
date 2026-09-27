@@ -20,6 +20,7 @@ import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
+import { guildGoalEvent } from './guildgoal.ts';
 import { CONVOY_RANGE, groupOfAccount } from './party.ts';
 import { seasonStat } from './seasons.ts';
 import { grantMap, makeMap } from './explorefx.ts';
@@ -227,6 +228,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   // The day's orders and the sea's common cause move on with the same deeds.
   dailyEvent(game, s, ev);
   commonEvent(game, s, ev);
+  guildGoalEvent(game, s, ev);
   for (const qs of [...p.quests.active]) {
     const q = QUESTS_BY_ID[qs.id];
     if (!q) continue;
@@ -342,6 +344,7 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);
   seasonStat(game, s, 'quests', 1); // the season's table of quests done
+  guildGoalEvent(game, s, 'quest_done');
   // The port whose people gave the work remembers who did it (docs/11 P6): standing with its faction.
   let rep: { faction: FactionId; n: number } | undefined;
   const home = game.portById(q.port);

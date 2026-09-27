@@ -17,6 +17,8 @@
 //    five levels (+2 slots a level, weekly upkeep from the island's treasury).
 
 import { upkeepMul } from './empires.ts';
+import { guildGoalView } from './guildgoal.ts';
+import type { GuildWeekly } from './guildgoal.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -94,6 +96,8 @@ export interface Guild {
   offers: { kind: 'alliance' | 'pact'; from: number; until: number }[];
   bans: Record<string, number>; // guild id -> no war before (wall ms)
   nextId: number;
+  /** The order of the week (docs/11 P6). */
+  weekly?: GuildWeekly;
 }
 
 export interface RouteNode {
@@ -938,6 +942,7 @@ export function guildView(game: Game, s: PlayerSession): { guild: GuildView | nu
         return { with: name(other), tag: st.guilds[other]?.tag ?? '', active: wall >= w.prepUntil, opensAt: w.prepUntil, minEnd: w.minEnd, ours: w.score[g.id] ?? 0, theirs: w.score[other] ?? 0, terms: w.terms ? { fromUs: w.terms.from === g.id, tribute: w.terms.tribute } : null };
       }),
       nodes,
+      weekly: guildGoalView(game, g, s.accountId),
       islands: Object.values(game.holdings.map(game)).filter((h) => h.owner.kind === 'guild' && h.owner.id === g.id).map((h) => ({ island: h.island, name: game.world.islands[h.island].name, base: h.base ?? 0 })),
       log: g.log.slice(-40).reverse(),
     },

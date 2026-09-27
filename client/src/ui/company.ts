@@ -16,6 +16,7 @@ import type { GuildRank, HoldingView, IslandOffer, SiegeView } from '../../../sh
 import type { ClientMsg, ListingView } from '../../../shared/src/protocol.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { guildGoalText } from '../../../shared/src/data/guildgoal.ts';
 import { dict, lang, plural } from '../i18n.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
@@ -280,6 +281,18 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-yberth]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'yard_berth', island: Number(el.dataset.yberth), index: Number(el.dataset.index) })));
   }
 
+  /** The guild's order of the week (docs/11 P6): the goal, the bar the members fill, one's own part, the time left. */
+  private guildWeek(g: NonNullable<ClientState['guild']>): string {
+    const w = g.weekly;
+    if (!w) return '';
+    const pct = Math.min(100, (w.progress / Math.max(1, w.target)) * 100);
+    const tail = w.done ? esc(L('g_week_done')) : `${esc(L('g_week_mine', { n: w.mine }))} · ${esc(L('g_week_left', { d: Math.floor(w.endsIn / 86400), h: Math.floor((w.endsIn % 86400) / 3600) }))}`;
+    return `<div class="card" title="${esc(L('g_week_hint'))}"><h4 class="card-h">${icon('tab_guild', '', 'ico-md')}${esc(L('g_week'))}</h4>
+      <div class="cm-text">${esc(guildGoalText(w.kind, w.target, lang() === 'ru' ? 1 : 0))}</div>
+      <div class="cm-bar${w.done ? ' done' : ''}"><i style="width:${pct.toFixed(1)}%"></i><span>${w.progress}/${w.target}</span></div>
+      <div class="dl-foot muted">${tail}</div></div>`;
+  }
+
   private renderGuild(body: HTMLElement, state: ClientState): void {
     const g = state.guild;
     const docked = state.self?.dockedAt ?? null;
@@ -303,10 +316,11 @@ export class CompanyScreen {
     const tagOf = (s: string) => /\[([A-Z0-9]+)\]$/.exec(s)?.[1] ?? '';
     body.innerHTML = `<div class="cols"><div>
       <div class="sec-head"><h3 class="title-sm" style="font-size:20px">${esc(g.name)} [${esc(g.tag)}]</h3><span class="h-count" title="${L('g_you_are', { rank: esc(RANK_NAMES(g.rank)) })}">${esc(RANK_NAMES(g.rank))}</span></div>
+      ${this.guildWeek(g)}
       <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${L('g_treasury', { n: fmt(g.treasury), tax: g.tax })}${g.torn ? L('g_torn') : g.flagship ? L('g_standard_on', { name: esc(g.flagship) }) : ''}</h4>
         <div class="row"><input type="number" id="g-amt" value="1000" step="500" style="width:100px"><button class="btn btn-small" id="g-dep" ${docked ? '' : 'disabled'}>${L('deposit')}</button>${at('vice') ? `<button class="btn btn-small" id="g-wd" ${docked ? '' : 'disabled'}>${L('withdraw')}</button>` : ''}
         ${g.rank === 'admiral' ? `<label>${L('g_tax')} <select id="g-tax">${Array.from({ length: 16 }, (_, i) => `<option ${i === g.tax ? 'selected' : ''}>${i}</option>`).join('')}</select>%</label>` : ''}</div></div>
-      <div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${L('g_members', { n: g.members.length })}</h4><table class="grid">${g.members.map((m) => `<tr><td>${m.online ? '●' : '○'} ${esc(m.name)}</td><td>${g.rank === 'admiral' || (g.rank === 'vice' && RANK_ORDER.indexOf(m.rank) > 1) ? `<select data-grank="${m.account}">${RANK_ORDER.map((r) => `<option value="${r}" ${r === m.rank ? 'selected' : ''}>${RANK_NAMES(r)}</option>`).join('')}</select>` : esc(RANK_NAMES(m.rank))}</td>
+      <div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${L('g_members', { n: g.members.length })}</h4><table class="grid g-members">${g.members.map((m) => `<tr><td>${m.online ? '●' : '○'} ${esc(m.name)}</td><td>${g.rank === 'admiral' || (g.rank === 'vice' && RANK_ORDER.indexOf(m.rank) > 1) ? `<select data-grank="${m.account}">${RANK_ORDER.map((r) => `<option value="${r}" ${r === m.rank ? 'selected' : ''}>${RANK_NAMES(r)}</option>`).join('')}</select>` : esc(RANK_NAMES(m.rank))}</td>
         <td>${at('vice') && RANK_ORDER.indexOf(m.rank) > RANK_ORDER.indexOf(g.rank) ? `<button class="btn btn-small btn-danger" data-gkick="${m.account}">${L('g_ashore')}</button>` : ''}${g.rank === 'admiral' ? ` <button class="btn btn-small" data-gflag="${m.account}" title="${L('g_flag_title')}">${L('g_flag')}</button>` : ''}</td></tr>`).join('')}</table>
         ${at('commodore') ? `<div class="row"><input id="g-inv" placeholder="${L('g_ph_inv')}" style="flex:1"><button class="btn btn-small" id="g-invite">${L('invite')}</button></div>` : ''}</div>
       <div class="card"><h4 class="card-h">${icon('anchor', '', 'ico-md')}${g.here ? L('g_office_at', { port: esc(portName(g.here)) }) : L('g_office')}</h4>
