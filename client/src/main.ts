@@ -19,7 +19,7 @@ import { showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
 import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
-import { $, decorateSums, esc, icon, keepInputs } from './ui/dom.ts';
+import { $, decorateSums, esc, fmt, icon, keepInputs } from './ui/dom.ts';
 import { Hud } from './ui/hud.ts';
 import { MENU_ITEMS, menuLabel, renderMenu } from './ui/menu.ts';
 import type { MenuItem } from './ui/menu.ts';
@@ -38,6 +38,7 @@ import type { Action, Settings } from './settings.ts';
 import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { serverText } from './lang/server.ts';
+import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
@@ -56,6 +57,7 @@ const audio = new AudioEngine();
 renderer.onLightning = () => audio.thunder();
 for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });
 const worldMap = new WorldMap();
+worldMap.send = (m) => net.send(m);
 let modal: Modal = null;
 let inGame = false;
 let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; port: string; towed: boolean } | null = null;
@@ -305,9 +307,20 @@ function onMessage(m: ServerMsg): void {
       openModal('sunk');
       break;
     case 'quest_offer':
-      // An island's people offer their job on the beach: the giver's window, then the captain's answer.
-      void giverDialog(m.offer).then((ok) => net.send({ t: 'quest', action: ok ? 'accept' : 'decline', id: m.offer.id }));
+      // An island's people offer their job on the beach, or a groupmate shares theirs: the giver's window, then the
+      // captain's answer.
+      void giverDialog(m.offer, m.from).then((ok) => net.send({ t: 'quest', action: ok ? 'accept' : 'decline', id: m.offer.id }));
       break;
+    case 'quest_done': {
+      // The herald: the quest's name and all it paid.
+      const parts = [L('questPaid', { silver: fmt(m.silver), xp: fmt(m.xp) })];
+      if (m.rep) parts.push(L('questRep', { faction: serverText(FACTIONS[m.rep.faction].name), n: m.rep.n }));
+      if (m.extra) parts.push(L(m.extra === 'map' ? 'questMap' : 'questSupplies'));
+      hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
+      audio.bell();
+      audio.coins();
+      break;
+    }
     case 'toast':
       // The harbour turned her away for her speed: take in sail and try again when she slows.
       if (m.msg === 'Take in sail before entering harbour') {

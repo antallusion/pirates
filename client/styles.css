@@ -1563,6 +1563,11 @@ body.touch #hud-region .rg-extra { display: none; }
 .card-h .q-title .muted { font-size: 0.72em; font-style: italic; }
 /* The quest the captain follows: a gold edge in the chart's log. */
 .mq-row.tracked { border-color: var(--gold); background: rgba(217, 178, 90, 0.08); }
+/* A quest shared with the group: the button sits on the row's right, the row's words keep clear of it. */
+.mq-item { position: relative; display: grid; }
+.mq-row.shareable { padding-right: 104px; }
+.mq-share { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); }
+.giver-shared { margin: 0 0 10px; font: 600 12px var(--sans); letter-spacing: 0.04em; color: var(--gold); text-transform: uppercase; }
 .mq-row.tracked b { display: flex; align-items: center; gap: 4px; }
 /* Daily orders (docs/11 P6): three lines, a tick when done, the chest below. */
 .dl-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 3px 0; font-size: 13px; }

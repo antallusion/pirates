@@ -918,4 +918,10 @@ export const SERVER_RU_B: Record<string, string> = {
   "Make room in the hold: {0} {1} wait on the quay.": "Освободите трюм: на причале ждут {1} × {0}.",
   "That job is no longer on the board": "Этого объявления уже нет на доске",
   "The people on the beach have gone back to their work": "Люди на берегу уже вернулись к своим делам",
+  "{0} cannot take it on yet.": "{0} пока не может взяться за это.",
+  "You are not on that quest": "У вас нет такого задания",
+  "A Path or a Legend is walked alone": "Путь и Легенду проходят в одиночку",
+  "You sail in no group": "Вы не в группе",
+  "Nobody in your group can take it on": "В вашей группе никто не может за это взяться",
+  "That offer has lapsed": "Предложение уже не в силе",
 };

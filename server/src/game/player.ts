@@ -213,8 +213,9 @@ export class PlayerSession {
   msgWindowStart = 0;
   msgCount = 0;
   pendingBoarding: { result: BoardingResult; targetId: number } | null = null;
-  /** A job an island's people have just offered on the beach, open for a while (docs/11 P6). */
-  islandOffer: { id: string; island: number; until: number } | null = null;
+  /** A job offered and not yet answered, open for a while (docs/11 P6): by an island's people on the beach, or
+   *  shared by a groupmate. */
+  questOffer: { id: string; until: number; island?: number; from?: string } | null = null;
   lastPortPush = 0;
   lastSave = 0;
   disconnectedAt: number | null = null;

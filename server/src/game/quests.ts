@@ -19,6 +19,8 @@ import type { PlayerSession, Profile } from './player.ts';
 import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { dailyEvent } from './dailies.ts';
+import { groupOfAccount } from './party.ts';
+import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_ACTIVE_QUESTS = 5;
@@ -123,15 +125,45 @@ export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): 
     return;
   }
   // The giver speaks, and the captain decides (the offer stands while the boats are on the beach).
-  s.islandOffer = { id: q.id, island: islandId, until: game.now + 180 };
-  game.sendTo(s, { t: 'quest_offer', island: islandId, offer: { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait } });
+  s.questOffer = { id: q.id, island: islandId, until: game.now + 180 };
+  game.sendTo(s, { t: 'quest_offer', island: islandId, offer: offerView(q) });
 }
 
-/** The captain answers the beach's offer: take the job, or leave it (they ask again on the next landing). */
-export function answerIslandOffer(game: Game, s: PlayerSession, id: string, take: boolean): string | null {
-  const o = s.islandOffer;
-  if (!o || o.id !== id || game.now > o.until) return take ? 'The people on the beach have gone back to their work' : null;
-  s.islandOffer = null;
+function offerView(q: QuestDef) {
+  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait };
+}
+
+/** Share a quest with the group (docs/11 P6): each groupmate online who may take it is offered it, wherever they
+ *  are; the ones who cannot are named to the sharer. */
+export function shareQuest(game: Game, s: PlayerSession, id: string): string | null {
+  const q = QUESTS_BY_ID[id];
+  if (!q || !s.profile!.quests.active.some((a) => a.id === id)) return 'You are not on that quest';
+  if (q.kind === 'path' || q.kind === 'legend') return 'A Path or a Legend is walked alone';
+  const g = groupOfAccount(game, s.accountId);
+  if (!g) return 'You sail in no group';
+  let offered = 0;
+  for (const acc of g.members) {
+    if (acc === s.accountId) continue;
+    const m = game.sessionByAccount(acc);
+    const mp = m?.profile;
+    if (!m || !mp) continue;
+    if (mp.quests.active.some((a) => a.id === id) || mp.quests.done.includes(id)) continue;
+    if (questBlocked(mp, q) || mp.quests.active.length >= MAX_ACTIVE_QUESTS) {
+      game.sendTo(s, { t: 'toast', msg: `${m.name} cannot take it on yet.`, kind: 'info' });
+      continue;
+    }
+    m.questOffer = { id, until: game.now + 180, from: s.name };
+    game.sendTo(m, { t: 'quest_offer', from: s.name, offer: offerView(q) });
+    offered++;
+  }
+  return offered ? null : 'Nobody in your group can take it on';
+}
+
+/** The captain answers an offer: take the job, or leave it (the beach asks again on the next landing). */
+export function answerOffer(game: Game, s: PlayerSession, id: string, take: boolean): string | null {
+  const o = s.questOffer;
+  if (!o || o.id !== id || game.now > o.until) return take ? (o?.from ? 'That offer has lapsed' : 'The people on the beach have gone back to their work') : null;
+  s.questOffer = null;
   if (!take) return null;
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
@@ -285,7 +317,24 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   p.quests.done.push(q.id);
   p.gold += q.reward.silver;
   game.db.ledger(s.accountId, 'quest', q.reward.silver, q.id);
-  game.grantXp(s, q.reward.xp, `${q.name} complete`);
+  game.grantXp(s, q.reward.xp, null);
+  // The port whose people gave the work remembers who did it (docs/11 P6): standing with its faction.
+  let rep: { faction: FactionId; n: number } | undefined;
+  const home = game.portById(q.port);
+  if (home && (q.kind === 'job' || q.kind === 'story')) {
+    rep = { faction: home.faction, n: 2 + Math.min(6, Math.round((q.requires.level ?? 1) / 10)) };
+    changeRep(p, rep.faction, rep.n);
+  }
+  // Now and then something more for the hold: supplies from a grateful quay, rarely a treasure map.
+  let extra: 'map' | 'supplies' | undefined;
+  const roll = hashString(`${q.id}:${s.accountId}`) % 100;
+  if (q.kind === 'job' && roll < 6 && grantMap(game, s, makeMap(game, p.level < 20 ? 1 : p.level < 40 ? 2 : 3), q.mentor.split(',')[0])) extra = 'map';
+  else if (roll < 30 && s.ship) {
+    s.ship.ammo.round = (s.ship.ammo.round ?? 0) + 20;
+    s.ship.ammo.chain = (s.ship.ammo.chain ?? 0) + 10;
+    extra = 'supplies';
+  }
+  game.sendTo(s, { t: 'quest_done', name: q.name, silver: q.reward.silver, xp: q.reward.xp, ...(rep ? { rep } : {}), ...(extra ? { extra } : {}) });
   if (q.reward.path && !p.paths.includes(q.reward.path)) {
     p.paths.push(q.reward.path);
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} teaches you the ${CAPTAINS[q.reward.path].archetype}'s Path. Change Path at any Captain's House.`, kind: 'gold' });

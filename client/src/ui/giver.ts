@@ -9,12 +9,14 @@ import { askHtml } from './confirm.ts';
 import { esc, money, xpBadge } from './dom.ts';
 
 const EN = {
+  shared: '{name} shares this quest with you',
   take: 'Take it on',
   leave: 'Not now',
   steps: 'What is to be done',
   pay: 'Pay',
 };
 const RU: typeof EN = {
+  shared: '{name} делится с вами этим заданием',
   take: 'Взяться',
   leave: 'Не сейчас',
   steps: 'Что нужно сделать',
@@ -24,10 +26,10 @@ const L = dict(EN, RU);
 
 type Offer = PortView['questOffers'][number];
 
-/** The giver's window; resolves true when the captain takes the job. */
-export function giverDialog(q: Offer): Promise<boolean> {
+/** The giver's window; resolves true when the captain takes the job. `from`: the groupmate who shared it. */
+export function giverDialog(q: Offer, from?: string): Promise<boolean> {
   const face = q.portrait ? assetUrl(`portrait.${q.portrait}`) : null;
-  const body = `<div class="giver">
+  const body = `${from ? `<div class="giver-shared">${esc(L('shared', { name: from }))}</div>` : ''}<div class="giver">
     ${face ? `<div class="giver-face" style="background-image:url('${face}')"></div>` : ''}
     <div class="giver-words">
       <h3 id="confirm-text" class="giver-name">${esc(serverText(q.name))}</h3>

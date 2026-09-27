@@ -3,8 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ISLAND_JOBS, QUESTS_BY_ID } from '../shared/src/data/quests.ts';
-import { islandJobOffer } from '../server/src/game/quests.ts';
+import { ISLAND_JOBS, JOBS, QUESTS_BY_ID } from '../shared/src/data/quests.ts';
+import { islandJobOffer, questEvent } from '../server/src/game/quests.ts';
 import type { QuestDef } from '../shared/src/data/quests.ts';
 import { questPointer } from '../client/src/ui/track.ts';
 import { join, makeGame, steps } from './helpers.ts';
@@ -67,4 +67,39 @@ test('the beach: the giver offers, the captain may leave it (and is asked again 
   islandJobOffer(game, s, islandId);
   c.push({ t: 'quest', action: 'accept', id: job.id });
   assert.ok(s.profile!.quests.active.some((a) => a.id === job.id), 'the next landing asks again, and now it is taken');
+});
+
+test('sharing a quest with the group: a groupmate is asked, takes it, and the job pays with the port’s standing', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Ada Share');
+  const b = join(game, 'Ben Share');
+  a.push({ t: 'group', action: 'invite', name: 'ben share' });
+  b.push({ t: 'group', action: 'accept', id: b.last('party')!.invites[0].id });
+  const A = game.sessionByName('Ada Share')!, B = game.sessionByName('Ben Share')!;
+  const job = JOBS.find((q) => (q.requires.level ?? 1) <= 5 && q.steps[0].type !== 'pickup')!;
+  A.profile!.quests.active.push({ id: job.id, step: 0, progress: 0, startedAt: game.now });
+  a.push({ t: 'quest', action: 'share', id: job.id });
+  const offer = b.last('quest_offer');
+  assert.equal(offer?.offer.id, job.id, 'the groupmate is asked');
+  assert.equal(offer?.from, 'Ada Share');
+  b.push({ t: 'quest', action: 'accept', id: job.id });
+  assert.ok(B.profile!.quests.active.some((q) => q.id === job.id), 'and takes it on, wherever they are');
+  // A Path is walked alone.
+  A.profile!.quests.active.push({ id: 'q_path_smuggler', step: 0, progress: 0, startedAt: game.now });
+  a.push({ t: 'quest', action: 'share', id: 'q_path_smuggler' });
+  assert.ok(a.all('toast').some((t) => /walked alone/.test(t.msg)), 'a Path is walked alone');
+  // Done: the herald says what it paid, and the port's faction remembers.
+  const port = game.portById(job.port)!;
+  const rep0 = (B.profile!.reputation[port.faction] ?? 0);
+  const qs = B.profile!.quests.active.find((q) => q.id === job.id)!;
+  qs.step = job.steps.length - 1;
+  const last = job.steps[job.steps.length - 1];
+  if (last.type === 'visit') {
+    questEvent(game, B, { k: 'dock', port: game.portById(last.port)! });
+    const done = b.last('quest_done');
+    assert.equal(done?.name, job.name);
+    assert.equal(done?.silver, job.reward.silver);
+    assert.ok(done?.rep && done.rep.faction === port.faction && done.rep.n >= 2, 'standing with the port’s faction');
+    assert.ok((B.profile!.reputation[port.faction] ?? 0) > rep0);
+  }
 });
