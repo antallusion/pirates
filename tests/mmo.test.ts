@@ -13,6 +13,7 @@ import { REGIONS } from '../shared/src/world/regions.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { trackReward } from '../shared/src/data/seasons.ts';
+import { activeTasks, resetTasks, stepTasks } from '../server/src/game/worldtasks.ts';
 
 test('a group sails as one: the ship one captain sinks counts on a groupmate’s hunt nearby', () => {
   const { game } = makeGame();
@@ -365,4 +366,28 @@ test('the journal knows the quests done: how many, and the last ten by name, the
   const self = c.last('self')?.self ?? c.last('init')!.self;
   assert.equal(self.questsDone.length, 12);
   assert.deepEqual(self.questsRecent, ids.slice(-10).reverse().map((id) => QUESTS_BY_ID[id].name));
+});
+
+test('word of the sea’s company to a captain of some years putting in alone, and of a task of the sea when near one', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Lonely Lars');
+  const s = game.sessionByName('Lonely Lars')!;
+  const port = game.portById(s.ship!.docked!)!;
+  const told = (id: string) => c.all('onb').filter((m) => m.kind === 'hint' && m.id === id).length;
+  questEvent(game, s, { k: 'dock', port });
+  assert.equal(told('social'), 0, 'not before the third level');
+  s.profile!.level = 5;
+  questEvent(game, s, { k: 'dock', port });
+  questEvent(game, s, { k: 'dock', port });
+  assert.equal(told('social'), 1, 'once');
+  // Near a task of the sea, at sea.
+  stepTasks(game);
+  const t = activeTasks(game)[0];
+  s.ship!.docked = null;
+  s.ship!.state.x = t.x;
+  s.ship!.state.y = t.y;
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  questEvent(game, s, { k: 'tick', dt: 1 });
+  assert.equal(told('tasks'), 1);
+  resetTasks(game);
 });

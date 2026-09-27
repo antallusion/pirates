@@ -26,7 +26,7 @@ import { spawnCargoAmbush, spawnPackLeader } from './npc.ts';
 import { ensureElite, eliteSunk, eliteWord, todaysElite } from './elite.ts';
 import { eliteById } from '../../../shared/src/data/elite.ts';
 import { titlesDue } from '../../../shared/src/data/questtitles.ts';
-import { taskEvent } from './worldtasks.ts';
+import { nearTask, taskEvent } from './worldtasks.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
@@ -374,7 +374,13 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   const ship = s.ship;
   if (!p || !ship) return;
   // The day's orders and the sea's common cause move on with the same deeds.
-  if (ev.k === 'dock') newsHint(game, s, 'daily');
+  if (ev.k === 'dock') {
+    newsHint(game, s, 'daily');
+    // A captain of some years, putting in alone: the sea's company (docs/11 P6).
+    if (p.level >= 3 && !groupOfAccount(game, s.accountId)) newsHint(game, s, 'social');
+  }
+  // At sea near a task of the sea for the first time: what it is.
+  if (ev.k === 'tick' && !ship.docked && (p.tutorial.hints.tasks ?? 0) === 0 && nearTask(game, ship.state.x, ship.state.y)) newsHint(game, s, 'tasks');
   if (ev.k === 'tick') {
     cargoAmbush(game, s);
     eliteAtSea(game, s);

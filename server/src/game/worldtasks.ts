@@ -187,6 +187,11 @@ export function taskSalvage(game: Game, s: PlayerSession, taskId: number): void 
   tallyUp(game, s, t);
 }
 
+/** Whether a point is within some task's reach (for the first word of them). */
+export function nearTask(game: Game, x: number, y: number): boolean {
+  return st(game).list.some((t) => Math.hypot(t.x - x, t.y - y) <= TASK_RADIUS * 1.5);
+}
+
 /** For tests: forget the tasks of a game. */
 export function resetTasks(game: Game): void {
   states.delete(game);

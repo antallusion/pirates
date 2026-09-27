@@ -34,6 +34,10 @@ export const EN = {
   'hint.daily': 'New in every tavern: three daily orders with a chest for all three, and the common cause the whole sea works at. The quest journal is on F3.',
   'hint.journal': 'The quest is in your journal (F3). A gold mark on the edge of the screen and on the minimap leads to its goal; in a group you can share it.',
   'hint.daily.touch': 'New in every tavern: three daily orders with a chest for all three, and the common cause the whole sea works at. The quest journal is in the cabin menu.',
+  'hint.social': 'The sea is kinder in company. In Company → Group: look for a group, see who is at sea, keep a list of friends. Sail with a captain ten levels above you and they are your mentor: a tenth more experience for you, silver for them.',
+  'hint.social.touch': 'The sea is kinder in company. In the cabin menu, Company → Group: look for a group, see who is at sea, keep a list of friends. Sail with a captain ten levels above you and they are your mentor: a tenth more experience for you, silver for them.',
+  'hint.tasks': 'A task of the sea is near (a ring on the chart): sink pirates or the drowned, or fish up crates inside it — no quest to take, and it pays once.',
+  'hint.tasks.touch': 'A task of the sea is near (a ring on the chart): sink pirates or the drowned, or fish up crates inside it — no quest to take, and it pays once.',
   'hint.journal.touch': 'The quest is in your journal (cabin menu). A gold mark on the edge of the screen and on the minimap leads to its goal; in a group you can share it.',
   // The same hints for a touch screen: no keys, no cursor.
   'hint.irons.touch': 'In irons: bow into the wind, sails flapping. Turn the wheel until the wind comes onto her side.',
