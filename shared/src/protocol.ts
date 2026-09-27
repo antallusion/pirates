@@ -170,6 +170,8 @@ export type ClientMsg =
   | { t: 'guild'; action: 'answer'; id: number; accept: boolean }
   /** The guild finder (docs/11 P6): a recruiting note (null closes it), a captain's request, an officer's answer. */
   | { t: 'guild'; action: 'recruit'; note: string | null }
+  /** The guild's word of the day (docs/11 P6): heard by every member coming aboard. */
+  | { t: 'guild'; action: 'motd'; text: string }
   | { t: 'guild'; action: 'apply'; id: number; note: string }
   | { t: 'guild'; action: 'request'; account: number; accept: boolean }
   | { t: 'guild'; action: 'leave' | 'disband' | 'office' | 'return_ship' }
@@ -1123,6 +1125,8 @@ export interface GuildView {
   log: { t: number; text: string }[];
   /** The guild finder (docs/11 P6): the recruiting note, and (for commodores and up) the requests to join. */
   recruit?: string | null;
+  /** The guild's word of the day (docs/11 P6). */
+  motd?: string;
   requests?: { account: number; name: string; level: number; note: string; online: boolean }[];
 }
 

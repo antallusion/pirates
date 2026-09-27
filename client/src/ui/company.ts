@@ -57,6 +57,8 @@ export class CompanyScreen {
   private send: (m: ClientMsg) => void;
   /** "Whisper" on a friend: the chat opens addressed to them (main.ts). */
   onWhisper: (name: string) => void = () => {};
+  /** "Letter" on a friend: the letters tab opens with them as the addressee. */
+  private mailTo = '';
 
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
@@ -70,6 +72,7 @@ export class CompanyScreen {
 
   render(root: HTMLElement, state: ClientState): void {
     const docked = state.self?.dockedAt ?? null;
+    if (this.tab !== 'letters') this.mailTo = '';
     if (this.tab === 'market' && !docked) this.tab = 'group';
     const TAB_ICON: Record<CompanyTab, string> = { group: 'tab_group', guild: 'tab_guild', law: 'tab_law', letters: 'tab_letters', isles: 'tab_isles', empires: 'tab_empire', legends: 'tab_legends', market: 'tab_board' };
     const tabName = (t: CompanyTab) => t === 'group' ? L('tab_group') : t === 'law' ? L('tab_law') : t === 'isles' ? L('tab_isles') : t === 'legends' ? L('tab_legends') : t === 'empires' ? L('tab_empires') : t === 'guild' ? (state.guild ? L('tab_guild_tag', { tag: esc(state.guild.tag) }) : L('tab_guild')) : t === 'letters' ? L('tab_letters') : state.market?.auction ? L('tab_market_auction') : L('tab_market');
@@ -209,6 +212,10 @@ export class CompanyScreen {
     body.querySelector<HTMLElement>('#lfg-post')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg', note: val('#lfg-note') }));
     body.querySelector<HTMLElement>('#lfg-stop')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg_clear' }));
     body.querySelectorAll<HTMLElement>('[data-lfg-invite]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'invite', name: el.dataset.lfgInvite! })));
+    body.querySelectorAll<HTMLElement>('[data-letter]').forEach((el) => (el.onclick = () => {
+      this.mailTo = el.dataset.letter!;
+      body.closest('#modal-panel')?.querySelector<HTMLElement>('[data-tab="letters"]')?.click();
+    }));
     body.querySelectorAll<HTMLElement>('[data-inspect]').forEach((el) => (el.onclick = () => this.send({ t: 'inspect', name: el.dataset.inspect! })));
     const who = () => this.send({ t: 'who', q: val('#who-q'), here: !!body.querySelector<HTMLInputElement>('#who-here')?.checked });
     body.querySelector<HTMLElement>('#who-find')?.addEventListener('click', who);
@@ -267,7 +274,7 @@ export class CompanyScreen {
       return L('fr_row', { level: f.level ?? 1, where: port ? L('fr_in_port', { port: placeName(port) }) : placeName(REGIONS[f.region!]?.name ?? f.region ?? '') });
     };
     const rows = state.friends.map((f) => `<div class="fr-row${f.online ? ' on' : ''}"><i class="fr-dot"></i><div class="fr-who">${f.online ? `<b class="insp-name" data-inspect="${esc(f.name)}" role="button" tabindex="0">${esc(f.name)}</b>` : `<b>${esc(f.name)}</b>`} <span class="muted">${esc(where(f))}</span></div>
-      <span class="fr-btns">${f.online ? `<button class="btn btn-small" data-whisper="${esc(f.name)}">${L('fr_whisper')}</button>${canInvite && !grouped.includes(f.name) ? `<button class="btn btn-small" data-fr-invite="${esc(f.name)}">${L('fr_invite')}</button>` : ''}` : ''}<button class="btn btn-small" data-unfriend="${esc(f.name)}" title="${esc(L('fr_remove'))}" aria-label="${esc(L('fr_remove'))}">✕</button></span></div>`).join('');
+      <span class="fr-btns">${f.online ? `<button class="btn btn-small" data-whisper="${esc(f.name)}">${L('fr_whisper')}</button>${canInvite && !grouped.includes(f.name) ? `<button class="btn btn-small" data-fr-invite="${esc(f.name)}">${L('fr_invite')}</button>` : ''}` : ''}<button class="btn btn-small" data-letter="${esc(f.name)}">${L('fr_letter')}</button><button class="btn btn-small" data-unfriend="${esc(f.name)}" title="${esc(L('fr_remove'))}" aria-label="${esc(L('fr_remove'))}">✕</button></span></div>`).join('');
     return `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('fr_title')} <span class="muted fr-count">${L('fr_count', { n: state.friends.length, max: FRIENDS_MAX })}</span></h4>
       <p class="muted">${L('fr_text')}</p>
       <div class="row lfg-form fr-form"><input id="fr-name" placeholder="${L('fr_ph')}" maxlength="40"><button class="btn" id="fr-add">${L('fr_add')}</button><button class="btn" id="fr-ignore">${L('fr_ignore')}</button></div>
@@ -401,6 +408,7 @@ export class CompanyScreen {
     const tagOf = (s: string) => /\[([A-Z0-9]+)\]$/.exec(s)?.[1] ?? '';
     body.innerHTML = `<div class="cols"><div>
       <div class="sec-head"><h3 class="title-sm" style="font-size:20px">${esc(g.name)} [${esc(g.tag)}]</h3><span class="h-count" title="${L('g_you_are', { rank: esc(RANK_NAMES(g.rank)) })}">${esc(RANK_NAMES(g.rank))}</span></div>
+      ${g.motd || at('vice') ? `<div class="card g-motd"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('gm_title')}</h4>${g.motd ? `<p class="lfg-note">«${esc(g.motd)}»</p>` : `<p class="muted">${L('gm_none')}</p>`}${at('vice') ? `<div class="row lfg-form"><input id="gm-text" placeholder="${L('gm_ph')}" maxlength="160" value="${esc(g.motd ?? '')}"><button class="btn btn-small" id="gm-set">${L('gm_set')}</button></div>` : ''}</div>` : ''}
       ${this.guildWeek(g)}
       ${at('commodore') ? this.recruitCard(g) : ''}
       <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${L('g_treasury', { n: fmt(g.treasury), tax: g.tax })}${g.torn ? L('g_torn') : g.flagship ? L('g_standard_on', { name: esc(g.flagship) }) : ''}</h4>
@@ -448,6 +456,7 @@ export class CompanyScreen {
     on('#g-war', () => v('#g-dtag') && void ask(L('g_confirm_war', { tag: v('#g-dtag').toUpperCase() })).then((ok) => ok && this.send({ t: 'guild', action: 'war', tag: v('#g-dtag') })));
     on('#g-leave', () => void ask(L('g_confirm_leave')).then((ok) => ok && this.send({ t: 'guild', action: 'leave' })));
     on('#g-disband', () => void ask(L('g_confirm_disband')).then((ok) => ok && this.send({ t: 'guild', action: 'disband' })));
+    body.querySelector<HTMLElement>('#gm-set')?.addEventListener('click', () => this.send({ t: 'guild', action: 'motd', text: body.querySelector<HTMLInputElement>('#gm-text')?.value ?? '' }));
     body.querySelector<HTMLElement>('#gr-set')?.addEventListener('click', () => this.send({ t: 'guild', action: 'recruit', note: body.querySelector<HTMLInputElement>('#gr-own')?.value ?? '' }));
     body.querySelector<HTMLElement>('#gr-close')?.addEventListener('click', () => this.send({ t: 'guild', action: 'recruit', note: null }));
     body.querySelectorAll<HTMLElement>('[data-greq]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'request', account: Number(el.dataset.greq), accept: !!el.dataset.yes })));
@@ -521,14 +530,17 @@ export class CompanyScreen {
     </div><div>
       <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('let_write')}</h4>
         ${docked ? `<p class="muted">${L('let_packet')}</p>
-        <input id="m-to" placeholder="${L('let_ph_to')}" maxlength="20" style="width:100%;margin-bottom:6px">
+        <input id="m-to" placeholder="${L('let_ph_to')}" maxlength="20" style="width:100%;margin-bottom:6px" value="${esc(this.mailTo)}">
         <input id="m-subj" placeholder="${L('let_ph_subject')}" maxlength="60" style="width:100%;margin-bottom:6px">
         <textarea id="m-body" rows="5" maxlength="1000" placeholder="${L('let_ph_body')}" style="width:100%;margin-bottom:6px"></textarea>
         <div class="row"><label>${L('let_draft')} <input id="m-gold" type="number" min="0" max="100000" value="0" style="width:110px"> ${L('let_silver_word')}</label><button class="btn btn-primary" id="m-send">${L('send')}</button></div>` : `<p class="muted">${L('let_office')}</p>`}</div>
     </div></div>`;
     const v = (id: string) => body.querySelector<HTMLInputElement | HTMLTextAreaElement>(id)?.value ?? '';
+    // The addressee stays in the field (the list may redraw it) until the letter goes or the tab changes.
+    body.querySelector<HTMLInputElement>('#m-to')?.addEventListener('input', (e) => (this.mailTo = (e.target as HTMLInputElement).value));
     body.querySelector<HTMLElement>('#m-send')?.addEventListener('click', () => {
       if (!v('#m-to').trim()) return;
+      this.mailTo = '';
       this.send({ t: 'mail', action: 'send', to: v('#m-to'), subject: v('#m-subj'), body: v('#m-body'), gold: Number(v('#m-gold')) || 0 });
     });
     body.querySelectorAll<HTMLElement>('[data-read]').forEach((el) => (el.onclick = () => this.send({ t: 'mail', action: 'read', id: Number(el.dataset.read) })));

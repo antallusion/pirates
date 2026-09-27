@@ -101,6 +101,8 @@ export interface Guild {
   /** The guild finder (docs/11 P6): the recruiting note (none: not recruiting), and the captains asking in. */
   recruit?: string | null;
   requests?: { account: number; name: string; level: number; note: string; t: number }[];
+  /** The word of the day (docs/11 P6). */
+  motd?: string;
 }
 
 export interface RouteNode {
@@ -309,6 +311,26 @@ export function answerInvite(game: Game, s: PlayerSession, gid: number, accept: 
   tell(game, g, `${s.name} joins ${g.name}.`);
   retag(game, s.accountId);
   return null;
+}
+
+/** The guild's word of the day (vice-admirals and up): every member at sea hears it now, the rest on coming aboard. */
+export function setMotd(game: Game, s: PlayerSession, text: string): string | null {
+  const g = game.guilds.of(game, s.accountId);
+  if (!g || !rankAtLeast(member(g, s.accountId), 'vice')) return 'Vice-admirals and up give the guild its word';
+  const clean = String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, 160);
+  g.motd = clean || undefined;
+  game.guilds.touch();
+  if (clean) for (const m of g.members) {
+    const o = game.sessionByAccount(m.account);
+    if (o) game.sendTo(o, { t: 'toast', msg: `${s.name} gives the guild its word: “${clean}”`, kind: 'info' });
+  }
+  return null;
+}
+
+/** A member comes aboard: the guild's word of the day. */
+export function motdOnLogin(game: Game, s: PlayerSession): void {
+  const g = game.guilds.of(game, s.accountId);
+  if (g?.motd) game.sendTo(s, { t: 'toast', msg: `Guild: “${g.motd}”`, kind: 'info' });
 }
 
 /** A request stands three days. */
@@ -1021,6 +1043,7 @@ export function guildView(game: Game, s: PlayerSession): { guild: GuildView | nu
       islands: Object.values(game.holdings.map(game)).filter((h) => h.owner.kind === 'guild' && h.owner.id === g.id).map((h) => ({ island: h.island, name: game.world.islands[h.island].name, base: h.base ?? 0 })),
       log: g.log.slice(-40).reverse(),
       recruit: g.recruit ?? null,
+      ...(g.motd ? { motd: g.motd } : {}),
       ...(rankAtLeast(me, 'commodore') ? { requests: (g.requests ?? []).filter((r) => r.t + REQUEST_MS > wall).map((r) => ({ account: r.account, name: r.name, level: r.level, note: r.note, online: !!game.sessionByAccount(r.account) })) } : {}),
     },
   };

@@ -69,7 +69,7 @@ import { onboardingAction, onboardingProtected, onboardingRescue, onboardingSeco
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
 import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
 import type { Holding } from './holdings.ts';
-import { GuildHub, allied, answerInvite, answerRequest, applyTo, setRecruit, borrowShip, breakTreaty, declareWar, disbandGuild, dropContract, foundGuild, giveShip, guildNotify, guildOfShip, invite as guildInvite, kick as guildKick, leaveGuild, offerTreaty, onShipSunk, onWarKill, openOffice, postContract, proposePeace, pushGuild, raiseBase, returnShip, setFlagship, setRank, setTax, setToll, stepGuilds, storeMove as guildStore, treasury as guildTreasury } from './guilds.ts';
+import { GuildHub, allied, answerInvite, answerRequest, applyTo, motdOnLogin, setMotd, setRecruit, borrowShip, breakTreaty, declareWar, disbandGuild, dropContract, foundGuild, giveShip, guildNotify, guildOfShip, invite as guildInvite, kick as guildKick, leaveGuild, offerTreaty, onShipSunk, onWarKill, openOffice, postContract, proposePeace, pushGuild, raiseBase, returnShip, setFlagship, setRank, setTax, setToll, stepGuilds, storeMove as guildStore, treasury as guildTreasury } from './guilds.ts';
 import { besieging, chooseOutcome, declareSiege, fortify, stepSieges } from './siege.ts';
 import type { ZoneRuntime } from '../zones/zone.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
@@ -2766,6 +2766,8 @@ export class Game {
             return done(answerInvite(this, s, Math.trunc(Number(msg.id)), !!msg.accept));
           case 'recruit':
             return done(setRecruit(this, s, msg.note === null ? null : String(msg.note ?? '')));
+          case 'motd':
+            return done(setMotd(this, s, String(msg.text ?? '')));
           case 'apply':
             return done(applyTo(this, s, Math.trunc(Number(msg.id)), String(msg.note ?? '')));
           case 'request':
@@ -2970,6 +2972,7 @@ export class Game {
     restReturn(this, s);
     commonCollect(this, s);
     guildGoalCollect(this, s);
+    motdOnLogin(this, s);
     const ports: PortPublic[] = this.world.ports.map((p) => ({
       id: p.id, name: p.name, region: p.region, faction: p.faction, x: Math.round(p.x), y: Math.round(p.y), size: p.size,
       shipyardTier: p.shipyardTier, blackMarket: p.blackMarket, description: p.description,

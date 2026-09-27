@@ -967,5 +967,8 @@ export const SERVER_RU_B: Record<string, string> = {
   "That request has lapsed": "Эта просьба уже не в силе",
   "{0} [{1}] has turned down your request.": "{0} [{1}] отклоняет вашу просьбу.",
   "Welcome aboard {0} [{1}]: your request is granted.": "Добро пожаловать в {0} [{1}]: ваша просьба принята.",
+  "Vice-admirals and up give the guild its word": "Слово гильдии дают вице-адмиралы и старше",
+  "{0} gives the guild its word: “{1}”": "{0} даёт гильдии слово: «{1}»",
+  "Guild: “{0}”": "Гильдия: «{0}»",
   "You saw {0} through “{1}”: {2} silver for the guidance.": "Вы провели капитана {0} через «{1}»: {2} серебра за наставничество.",
 };
