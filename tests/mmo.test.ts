@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ISLAND_JOBS, JOBS, QUESTS_BY_ID } from '../shared/src/data/quests.ts';
-import { islandJobOffer, questEvent } from '../server/src/game/quests.ts';
+import { eventFavor, islandJobOffer, questEvent, questOffers } from '../server/src/game/quests.ts';
 import type { QuestDef } from '../shared/src/data/quests.ts';
 import { questPointer } from '../client/src/ui/track.ts';
 import { newsHint } from '../server/src/game/onboarding.ts';
@@ -145,4 +145,22 @@ test('news told once to every captain: the day’s orders on putting in, the jou
   newsHint(game, s, 'journal');
   newsHint(game, s, 'journal');
   assert.equal(c.all('onb').filter((m) => m.kind === 'hint' && m.id === 'journal').length, 1, 'the journal once');
+});
+
+test('the port’s news on the board: an epidemic puts medicine runs first, marked as wanted now', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Doc Holly');
+  const s = game.sessionByName('Doc Holly')!;
+  s.profile!.level = 30;
+  // A port whose seventy jobs hold a medicine run.
+  const port = game.world.ports.find((pt) => JOBS.some((q) => q.port === pt.id && q.steps.some((st) => (st.type === 'deliver' || st.type === 'pickup') && st.good === 'medicine') && (q.requires.level ?? 1) <= 30))!;
+  const medicine = (id: string) => QUESTS_BY_ID[id].steps.some((st) => (st.type === 'deliver' || st.type === 'pickup') && st.good === 'medicine');
+  const before = questOffers(s.profile!, port, game.now, null).filter((o) => o.q.kind === 'job');
+  // An epidemic breaks out there.
+  game.worldEvents.data(game).list.push({ id: 999, kind: 'epidemic', region: port.region, port: port.id, x: port.x, y: port.y, started: game.wallNow(), ends: game.wallNow() + 3_600_000, title: 'Fever' });
+  const favor = eventFavor(game, port);
+  const after = questOffers(s.profile!, port, game.now, favor).filter((o) => o.q.kind === 'job');
+  assert.ok(after.slice(0, 2).some((o) => medicine(o.q.id)), 'a medicine run is among the first on the board');
+  assert.ok(after.filter((o) => medicine(o.q.id)).length >= before.filter((o) => medicine(o.q.id)).length);
+  void c;
 });

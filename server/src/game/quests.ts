@@ -81,21 +81,49 @@ export function questBlocked(p: Profile, q: QuestDef): string | null {
   return miss ? miss[1] : null;
 }
 
-export function questOffers(p: Profile, port: Port, now = 0): { q: QuestDef; blocked: string | null }[] {
+/** What the sea's news asks of a port's board (docs/11 P6): during an epidemic the medicine runs come first,
+ *  under a blockade the hunts and the runs past it, with an armada about the hunts, after the Storm of the Century
+ *  the rescues. Null when nothing is happening there. */
+export type BoardFavor = ((q: QuestDef) => boolean) | null;
+
+export function eventFavor(game: Game, port: Port): BoardFavor {
+  const wall = game.wallNow();
+  const here = game.worldEvents.data(game).list.filter((e) => e.ends > wall && (e.port === port.id || (!e.port && e.region === port.region)));
+  if (!here.length) return null;
+  const kinds = new Set(here.map((e) => e.kind));
+  const medicine = (q: QuestDef) => q.steps.some((s) => (s.type === 'deliver' || s.type === 'pickup') && s.good === 'medicine');
+  return (q) => (kinds.has('epidemic') && medicine(q))
+    || (kinds.has('blockade') && (q.category === 'hunt' || q.category === 'smuggling'))
+    || (kinds.has('armada') && q.category === 'hunt')
+    || (kinds.has('storm_century') && q.category === 'rescue');
+}
+
+export function questOffers(p: Profile, port: Port, now = 0, favor: BoardFavor = null): { q: QuestDef; blocked: string | null }[] {
   // An arc's chapter is offered once the chapter before it is done.
   const story = [...QUESTS, ...ARC_QUESTS].filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id) && (q.requires.done ?? []).every((d) => p.quests.done.includes(d)));
-  return [...story, ...boardJobs(p, port, now)]
+  return [...story, ...boardJobs(p, port, now, favor)]
     .map((q) => ({ q, blocked: questBlocked(p, q) }))
     .filter((o) => o.blocked !== 'You already walk this Path' && o.blocked !== 'The deep already knows you');
 }
 
 /** The generated jobs a port's board shows now: a few of its seventy, new every four hours, suited to the
  *  captain's level first (the ones she is not yet fit for may show, greyed). */
-export function boardJobs(p: Profile, port: Port, now: number): QuestDef[] {
+export function boardJobs(p: Profile, port: Port, now: number, favor: BoardFavor = null): QuestDef[] {
   const mine = JOBS.filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id));
   if (!mine.length) return [];
   const window = Math.floor(now / JOB_ROTATION_SEC);
+  // The news of the port puts its jobs first (two at most), the rest turn as ever.
   const scored = mine.map((q) => ({ q, k: ((hashString(q.id) ^ (window * 2654435761)) >>> 0) + ((q.requires.level ?? 1) > p.level + 5 ? 2 ** 32 : 0) }));
+  if (favor) {
+    let lifted = 0;
+    for (const x of [...scored].sort((a, b) => a.k - b.k)) {
+      if (lifted >= 2) break;
+      if (favor(x.q) && (x.q.requires.level ?? 1) <= p.level + 5) {
+        x.k -= 2 ** 33;
+        lifted++;
+      }
+    }
+  }
   scored.sort((a, b) => a.k - b.k);
   return scored.slice(0, JOBS_ON_BOARD).map((x) => x.q);
 }
@@ -104,7 +132,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
   if (!q || q.port !== port.id) return 'Nobody here offers that';
-  if (q.kind === 'job' && !boardJobs(p, port, game.now).includes(q)) return 'That job is no longer on the board';
+  if (q.kind === 'job' && !boardJobs(p, port, game.now, eventFavor(game, port)).includes(q)) return 'That job is no longer on the board';
   const why = questBlocked(p, q);
   if (why) return why;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
