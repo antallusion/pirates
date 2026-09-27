@@ -10,7 +10,8 @@ import { GOOD_IDS } from '../data/goods.ts';
 import { KEY_PORTS, REGIONS, REGION_IDS, WORLD_EDGE_MARGIN } from './regions.ts';
 import type { IslandBiome, PortProfile, RegionId } from './regions.ts';
 
-export type IslandFeature = 'port' | 'ruins' | 'wreck' | 'lighthouse' | 'grove' | 'mine' | 'pearl_bank' | 'shrine' | 'cache';
+export type IslandFeature = 'port' | 'ruins' | 'wreck' | 'lighthouse' | 'grove' | 'mine' | 'pearl_bank' | 'shrine' | 'cache'
+  | 'fort' | 'volcano' | 'bones' | 'bell' | 'hermit' | 'spring';
 
 export interface Island {
   id: number;
@@ -289,6 +290,24 @@ export function generateWorld(seed: number): World {
     }
   }
 
+  // 2b) The later features (an old fort, a live volcano, leviathan bones, a drowned bell tower, a hermit, a
+  // spring). They roll from their own generator per island, so the islands and ports rolled above stay exactly
+  // where every saved chart has them.
+  for (const is of islands) {
+    if (is.portId) continue;
+    const r2 = new Rng((seed * 31 + is.id * 7919 + 13) >>> 0);
+    const reg = REGIONS[is.region];
+    const r = is.radius / 1.25;
+    const b = is.biome;
+    if (reg.safety !== 'lawless' && r > 300 && r2.chance(0.07)) is.features.push('fort');
+    if (b === 'volcanic' && r > 250 && r2.chance(0.3)) is.features.push('volcano');
+    if ((b === 'ice' || b === 'bone') && r2.chance(0.16)) is.features.push('bones');
+    else if (b === 'barren' && r2.chance(0.06)) is.features.push('bones');
+    if ((b === 'ruins' || b === 'mossy' || is.region === 'drowned_crown') && r2.chance(0.12)) is.features.push('bell');
+    if (r > 200 && r2.chance(0.05)) is.features.push('hermit');
+    if ((b === 'temperate' || b === 'mossy') && r > 250 && r2.chance(0.1)) is.features.push('spring');
+  }
+
   // 3) Minor ports: villages on medium islands, 2 per region (never in The Abyss).
   const minorFaction: Record<RegionId, FactionId[]> = {
     black_coast: ['crown', 'league'], gravewater: ['league', 'free'], whispering: ['brokers', 'free'], ashen_isles: ['confederacy'],
@@ -313,6 +332,34 @@ export function generateWorld(seed: number): World {
         id: is.portId, name: is.name, region: rid, faction, x: ax, y: ay, islandId: is.id, size, shipyardTier: 1,
         blackMarket: faction === 'brokers' || faction === 'confederacy' || faction === 'free',
         profile: randomProfile(rng, is.biome, size), description: `A small ${REGIONS[rid].biome} settlement under ${faction} colours.`, key: false,
+      });
+      made++;
+    }
+  }
+
+  // 3b) More villages: up to three more a region, closer together, from their own generator (the first two keep
+  // their ids and places for every saved game).
+  const vrng = new Rng((seed * 131 + 977) >>> 0);
+  for (const rid of REGION_IDS) {
+    if (minorFaction[rid].length === 0) continue;
+    // A lighthouse island stays a landmark (and a guild's route node), not a village.
+    const candidates = islands.filter((i) => i.region === rid && !i.portId && !i.features.includes('lighthouse') && i.radius > 320 && i.radius < 1500);
+    let made = ports.filter((p) => p.region === rid && !p.key).length;
+    const cap = made + 3;
+    for (const is of candidates) {
+      if (made >= cap) break;
+      if (ports.some((p) => Math.hypot(p.x - is.x, p.y - is.y) < 5500)) continue;
+      const [rcx, rcy] = REGIONS[rid].center;
+      const ang = Math.atan2(rcx - is.x, -(rcy - is.y));
+      const [ax, ay] = coastAnchor(is.poly, is.x, is.y, ang, 140);
+      const faction = vrng.pick(minorFaction[rid]);
+      const size = 1 as const;
+      is.features.push('port');
+      is.portId = `${rid}_v${made}`;
+      ports.push({
+        id: is.portId, name: is.name, region: rid, faction, x: ax, y: ay, islandId: is.id, size, shipyardTier: 1,
+        blackMarket: faction === 'brokers' || faction === 'confederacy' || faction === 'free',
+        profile: randomProfile(vrng, is.biome, size), description: `A small ${REGIONS[rid].biome} settlement under ${faction} colours.`, key: false,
       });
       made++;
     }

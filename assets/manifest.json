@@ -21,7 +21,7 @@
     "tex.ocean":                      { "local": "textures/ocean.webp", "remote": "hf_20260925_220208_5c5379f8-6368-46d0-ad0d-94cef99a55bd.png", "job": "5c5379f8-6368-46d0-ad0d-94cef99a55bd" },
     "tex.land":                       { "local": "textures/land.webp", "remote": "hf_20260925_220208_1f6b2c6b-eb05-489e-91a9-c46ce300f18d.png", "job": "1f6b2c6b-eb05-489e-91a9-c46ce300f18d" },
     "tex.sand":                       { "local": "textures/sand.webp", "remote": "hf_20260925_220231_19fc9c70-9a50-4083-b18d-344926151a07.png", "job": "19fc9c70-9a50-4083-b18d-344926151a07", "fit": "opaque:1024:1.2" },
-    "tex.chart":                      { "local": "textures/chart.webp", "remote": "hf_20260925_220207_d78a6474-c92b-45cb-accf-b9d45ce9ac9e.png", "job": "d78a6474-c92b-45cb-accf-b9d45ce9ac9e" },
+    "tex.chart":                      { "local": "textures/chart.webp", "remote": "hf_20260926_235449_eda2505b-5b7c-489d-8822-b233d4db022d.png", "job": "eda2505b-5b7c-489d-8822-b233d4db022d", "fit": "opaque:2048" },
     "tex.ebony":                      { "local": "textures/ebony.webp", "remote": "hf_20260925_220231_202ad54d-b93d-4e5c-a3d6-97992d5601c0.png", "job": "202ad54d-b93d-4e5c-a3d6-97992d5601c0" },
     "prop.port_town":                 { "local": "props/port_town.webp", "remote": "hf_20260925_220232_80ce3e16-2575-4fde-8931-8bc88627e582.png", "job": "80ce3e16-2575-4fde-8931-8bc88627e582" },
     "prop.wreckage":                  { "local": "props/wreckage.webp", "remote": "hf_20260925_220231_f7ba8806-dc0c-4a9d-9229-ab6a5e614177.png", "job": "f7ba8806-dc0c-4a9d-9229-ab6a5e614177" },
@@ -329,6 +329,12 @@
     "icon.opt_sound":                 { "local": "icons/opt_sound.webp", "remote": "hf_20260926_222150_5aee6c4b-e021-4053-ba87-44e25f7ca2d1.png", "job": "5aee6c4b-e021-4053-ba87-44e25f7ca2d1" },
     "icon.opt_controls":              { "local": "icons/opt_controls.webp", "remote": "hf_20260926_222150_b4f2d576-b5e1-4093-ac6b-fe96d46c7880.png", "job": "b4f2d576-b5e1-4093-ac6b-fe96d46c7880" },
     "icon.opt_lang":                  { "local": "icons/opt_lang.webp", "remote": "hf_20260926_222150_a4ff9cc9-e2ff-48ca-945a-aa45acc3b8c6.png", "job": "a4ff9cc9-e2ff-48ca-945a-aa45acc3b8c6" },
-    "icon.insurance":                 { "local": "icons/insurance.webp", "remote": "hf_20260926_222150_eef9fa87-97df-4b36-95a0-619223af2f38.png", "job": "eef9fa87-97df-4b36-95a0-619223af2f38" }
+    "icon.insurance":                 { "local": "icons/insurance.webp", "remote": "hf_20260926_222150_eef9fa87-97df-4b36-95a0-619223af2f38.png", "job": "eef9fa87-97df-4b36-95a0-619223af2f38" },
+    "prop.fort":                      { "local": "props/fort.webp", "remote": "hf_20260926_235449_b1138017-2a56-48bc-ba52-c3b14a63b9ff.png", "job": "b1138017-2a56-48bc-ba52-c3b14a63b9ff" },
+    "prop.volcano":                   { "local": "props/volcano.webp", "remote": "hf_20260926_235449_22a945b2-6037-4974-9ec9-fb5da4a6d710.png", "job": "22a945b2-6037-4974-9ec9-fb5da4a6d710" },
+    "prop.bones":                     { "local": "props/bones.webp", "remote": "hf_20260926_235449_1c14871a-2edf-4f2e-8df8-c03feb3ff44c.png", "job": "1c14871a-2edf-4f2e-8df8-c03feb3ff44c" },
+    "prop.bell_tower":                { "local": "props/bell_tower.webp", "remote": "hf_20260926_235449_f899fc56-ff5d-4e66-b88d-cebcd2b5407b.png", "job": "f899fc56-ff5d-4e66-b88d-cebcd2b5407b" },
+    "prop.hermit":                    { "local": "props/hermit.webp", "remote": "hf_20260926_235449_ffd84643-e3b1-40eb-8149-c952beec9643.png", "job": "ffd84643-e3b1-40eb-8149-c952beec9643" },
+    "prop.spring":                    { "local": "props/spring.webp", "remote": "hf_20260926_235449_8b5aa00f-92cb-4271-a067-2d58f61f6882.png", "job": "8b5aa00f-92cb-4271-a067-2d58f61f6882" }
   }
 }

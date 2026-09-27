@@ -228,9 +228,12 @@ test('a lighthouse takes its toll from merchants passing', () => {
   const m = game.spawnNpcShip('merchant', 'fluyt', 'league', isl.x + isl.radius + 1500, isl.y, 0, { ship: 'Fat Purse', captain: 'Factor' });
   m.cargo = { spices: 40 };
   m.input = { rudder: 0, sailTarget: 0 };
+  // Only this merchant passes: the villages' own traders are kept out of the count.
+  for (const o of [...game.ships.values()]) if (o !== m && !o.isPlayer && Math.hypot(o.state.x - isl.x, o.state.y - isl.y) < 12000) game.removeShip(o.id);
   steps(game, 20 * 61);
   assert.ok(h.treasury > 0, `toll ${h.treasury}`);
   const t = h.treasury;
+  for (const o of [...game.ships.values()]) if (o !== m && !o.isPlayer && Math.hypot(o.state.x - isl.x, o.state.y - isl.y) < 12000) game.removeShip(o.id);
   steps(game, 20 * 61);
   assert.equal(h.treasury, t, 'once per passing');
 });

@@ -17,13 +17,14 @@ import { haulSite, ownSiteNear } from './resources.ts';
 import { canDive, digTime, makeMap, grantMap, mapChance, mapHere, resolveDig, resolveDive, wreckHere } from './explorefx.ts';
 
 export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'>;
-export const LANDABLE: LandableFeature[] = ['cache', 'wreck', 'ruins', 'grove', 'mine', 'pearl_bank', 'shrine'];
+export const LANDABLE: LandableFeature[] = ['cache', 'wreck', 'ruins', 'grove', 'mine', 'pearl_bank', 'shrine', 'fort', 'volcano', 'bones', 'bell', 'hermit', 'spring'];
 
 export const FEATURE_NAMES: Record<LandableFeature, string> = {
   cache: "smugglers' cache", wreck: 'beached wreck', ruins: 'ruins', grove: 'timber grove', mine: 'surface mine', pearl_bank: 'pearl bank', shrine: 'drowned shrine',
+  fort: 'abandoned fort', volcano: 'smoking volcano', bones: 'leviathan bones', bell: 'drowned bell tower', hermit: "hermit's hut", spring: 'freshwater spring',
 };
 
-const DURATION: Record<LandableFeature, number> = { cache: 20, wreck: 25, ruins: 40, grove: 30, mine: 35, pearl_bank: 30, shrine: 25 };
+const DURATION: Record<LandableFeature, number> = { cache: 20, wreck: 25, ruins: 40, grove: 30, mine: 35, pearl_bank: 30, shrine: 25, fort: 40, volcano: 35, bones: 30, bell: 30, hermit: 20, spring: 20 };
 const RESTOCK_SEC = 2 * 3600; // a feature can be worked again two real hours later
 const LAND_RANGE = 260; // meters from the coastline
 
@@ -214,6 +215,44 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
       if (rng.chance(0.2)) lost = 1; // a diver does not come up
       xp = 45;
       break;
+    case 'fort':
+      // Powder and shot the garrison never fired; its dead still keep the magazine.
+      give('gunpowder', 3, 8);
+      give('iron', 2, 6);
+      for (const a of ['round', 'chain'] as const) ship.ammo[a] = (ship.ammo[a] ?? 0) + Math.round(rng.int(10, 30) * share);
+      got.push('shot for the guns');
+      if (rng.chance(0.3)) silver = rng.int(60, 180);
+      if (rng.chance(0.18)) lost = rng.int(1, 3);
+      xp = 60;
+      break;
+    case 'volcano':
+      give('sulfur_iron', 3, 8);
+      give('coal', 2, 6);
+      if (rng.chance(0.25)) lost = rng.int(1, 3); // the ground gives way
+      xp = 55;
+      break;
+    case 'bones':
+      give('leviathan_bone', 1, 3);
+      if (rng.chance(0.3)) give('whale_oil', 2, 5);
+      morale = -6;
+      xp = 70 + strange * 150;
+      break;
+    case 'bell':
+      silver = rng.int(60, 200) + Math.round(strange * 250);
+      if (rng.chance(0.35)) give('pearls', 1, 3);
+      if (rng.chance(0.2)) lost = 1;
+      xp = 65 + strange * 150;
+      break;
+    case 'hermit':
+      give('medicine', 1, 4);
+      morale = 5;
+      xp = 40;
+      break;
+    case 'spring':
+      give('provisions', 6, 14);
+      morale = 10;
+      xp = 25;
+      break;
     case 'shrine':
       if (rng.chance(0.5)) {
         give('cursed_relics', 1, 3);
@@ -240,6 +279,9 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   if (feature === 'cache') mapChance(game, s, 0.15, 1, 'In the cache');
   if (feature === 'wreck') mapChance(game, s, 0.1, 1, 'In a captain\'s chest');
   if (feature === 'ruins') mapChance(game, s, 0.12, REGIONS[island.region].safety === 'lawless' ? 2 : 1, 'Carved on a wall');
+  if (feature === 'bell') mapChance(game, s, 0.25, 2, 'Scratched inside the bell');
+  if (feature === 'hermit') mapChance(game, s, 0.35, 1, 'The hermit draws it in the sand');
+  if (feature === 'fort') mapChance(game, s, 0.1, 1, "In the commandant's desk");
   // Ruin Reader: every third inscription of the Drowned Crown points to a hidden cache.
   if (feature === 'ruins' && island.region === 'drowned_crown' && ship.hasFlag('ruin_reader') && island.id % 3 === 0) {
     grantMap(game, s, makeMap(game, 2, { island }), 'The inscription reads true');

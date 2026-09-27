@@ -66,6 +66,12 @@ const FEATURE_ART: Record<string, { id: string; size: number; salt: number; inse
   mine: { id: 'prop.mine', size: 70, salt: 6, inset: 0.3 },
   pearl_bank: { id: 'prop.pearl_bank', size: 80, salt: 7, inset: -0.06 },
   cache: { id: 'prop.cache', size: 34, salt: 8, inset: 0.25 },
+  fort: { id: 'prop.fort', size: 120, salt: 9, inset: 0.2 },
+  volcano: { id: 'prop.volcano', size: 150, salt: 10, inset: 0.55 },
+  bones: { id: 'prop.bones', size: 110, salt: 11, inset: 0.05 },
+  bell: { id: 'prop.bell_tower', size: 70, salt: 12, inset: -0.12 },
+  hermit: { id: 'prop.hermit', size: 60, salt: 13, inset: 0.25 },
+  spring: { id: 'prop.spring', size: 60, salt: 14, inset: 0.4 },
 };
 
 interface Decor {
@@ -713,6 +719,8 @@ export class Renderer {
       const size = art.size * this.zoom;
       const x = this.sx(p.x), y = this.sy(p.y);
       if (x < -size || y < -size || x > this.w + size || y > this.h + size) continue;
+      // A live volcano breathes: a slow column of dark smoke drifts off its crater.
+      if (f === 'volcano' && Math.random() < 0.08) this.fx.smoke(p.x + (Math.random() - 0.5) * 8, p.y + (Math.random() - 0.5) * 8, 1, 14, true);
       if (spr) {
         g.save();
         g.translate(x, y);

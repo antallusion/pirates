@@ -224,11 +224,21 @@ test('route nodes: held by presence alone, then a toll on passing merchants and 
   atSea(B.s, isl.x + isl.radius + 600, isl.y, isl.region);
   steps(game, 21);
   assert.ok(g.log.some((l) => l.text.includes('Bram Route')));
+  // Only this merchant passes (the day's toll has a cap the villages' own traders could fill first).
+  for (const o of [...game.ships.values()]) if (!o.isPlayer && Math.hypot(o.state.x - isl.x, o.state.y - isl.y) < 12000) game.removeShip(o.id);
+  node.tollToday = { day: 0, paid: 0 };
   const m = game.spawnNpcShip('merchant', 'fluyt', 'league', isl.x + isl.radius + 1000, isl.y + 200, 0, { ship: 'Tolled', captain: 'F' });
   m.cargo = { spices: 30 };
   m.input = { rudder: 0, sailTarget: 0 };
   const t = g.treasury;
-  steps(game, 20 * 61);
+  // She lies off the light (her own course would carry her out of reach before the minute's toll is taken).
+  const [mx, my] = [m.state.x, m.state.y];
+  for (let i = 0; i < 61; i++) {
+    m.state.x = mx;
+    m.state.y = my;
+    m.state.speed = 0;
+    steps(game, 20);
+  }
   assert.ok(g.treasury > t, 'the toll');
 });
 
