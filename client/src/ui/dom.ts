@@ -13,8 +13,15 @@ export function esc(s: unknown): string {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
+/** A whole number the reader's way: 410,485 in English, 410 485 (a space that does not break) in Russian. */
 export function fmt(n: number): string {
-  return Math.round(n).toLocaleString('en-US');
+  return lang() === 'ru' ? Math.round(n).toLocaleString('en-US').replace(/,/g, '\u00a0') : Math.round(n).toLocaleString('en-US');
+}
+
+/** A number with one decimal: 2.5 in English, 2,5 in Russian. */
+export function dec1(n: number): string {
+  const s = n.toFixed(1);
+  return lang() === 'ru' ? s.replace('.', ',') : s;
 }
 
 export function pct(v: number): string {
@@ -27,7 +34,7 @@ export function bar(cls: string, frac: number): string {
 
 export function knots(ms: number): string {
   // Game meters/second → displayed knots on the compressed world scale.
-  return (ms * 0.8).toFixed(1);
+  return dec1(ms * 0.8);
 }
 
 /** Re-renders a panel without losing what the player is typing: values and focus survive by id or data key. */
@@ -69,7 +76,7 @@ export function officerIcon(o: { role: string; unique?: string }, cls = 'ico-md'
 
 /** Silver as the game shows it everywhere: the coin and the sum. */
 export function money(n: number): string {
-  const sum = Number.isInteger(n) || Math.abs(n) >= 100 ? fmt(n) : n.toFixed(1).replace(/\.0$/, '');
+  const sum = Number.isInteger(n) || Math.abs(n) >= 100 ? fmt(n) : dec1(n).replace(/[.,]0$/, '');
   return `<span class="money">${icon('coin', '⛁', 'ico-sm')}${sum}</span>`;
 }
 

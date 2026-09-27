@@ -313,6 +313,8 @@ export const EN = {
   'orders.text': 'Post silver in escrow and let other captains bring you goods. Filled goods wait in your warehouse here; unfilled escrow returns when the order lapses (3 h). Listing fee 2%.',
   'orders.none': 'No open orders.',
   'orders.post': 'Post order',
+  'orders.qty': 'How many',
+  'orders.price': 'Price each',
   'opt.title': 'Options (Speculator)',
   'opt.text': "Reserve up to 30% of the stock at today's price for 2 h against a 20% deposit.",
   'opt.exercise': 'Exercise — {cost} silver',
@@ -325,6 +327,7 @@ export const EN = {
   'bank.withdraw': 'Withdraw',
   'bank.borrow': 'Borrow',
   'bank.repay': 'Repay',
+  'bank.amount': 'Sum',
   'bank.none': 'No counting-house here — League ports and large free ports only. Balance {balance}.',
 } as const;
 
@@ -629,6 +632,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'orders.text': 'Внесите серебро в залог — и пусть другие капитаны везут вам товар. Доставленное ждёт на вашем складе здесь; неизрасходованный залог вернётся, когда заявка истечёт (3 ч). Сбор за размещение 2%.',
   'orders.none': 'Открытых заявок нет.',
   'orders.post': 'Разместить заявку',
+  'orders.qty': 'Сколько',
+  'orders.price': 'Цена за единицу',
   'opt.title': 'Опционы (Спекулянт)',
   'opt.text': 'Зарезервируйте до 30% запаса по сегодняшней цене на 2 ч под задаток в 20%.',
   'opt.exercise': 'Исполнить — {cost} серебра',
@@ -641,5 +646,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'bank.withdraw': 'Снять',
   'bank.borrow': 'Занять',
   'bank.repay': 'Погасить',
+  'bank.amount': 'Сумма',
   'bank.none': 'Здесь нет конторы — только в портах Лиги и больших вольных портах. На счёте {balance}.',
 };

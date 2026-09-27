@@ -708,7 +708,7 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .item-text b { font-size: 13px; }
 .item-text .muted { font-size: 11px; line-height: 1.3; }
 .item-btn { width: 100%; display: flex; justify-content: center; align-items: center; white-space: nowrap; }
-.hull-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+.hull-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: 8px; }
 .hull-card { display: grid; grid-template-columns: 76px minmax(0, 1fr) 104px; gap: 10px; align-items: center; margin: 0; }
 .hull-art { width: 76px; height: 50px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .hull-art img { height: 76px; width: auto; transform: rotate(90deg); filter: drop-shadow(0 3px 4px #000); }
@@ -1202,3 +1202,32 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
    the crew bar and let the goals show through), as wide as the screen on a phone. */
 body.ship-open .ship-panel { top: calc(var(--uf-bottom, 104px) + 6px); background: linear-gradient(180deg, #0e0c0a, #080809); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7); z-index: 6; }
 @media (max-width: 699px) { body.ship-open .ship-panel { width: auto; right: calc(var(--sa-r, 0px) + 8px); max-height: calc(100dvh - var(--uf-bottom, 104px) - var(--hb-top, 0px) - 24px); } }
+/* Small forms in cards (a buy order, the bank): labelled fields and equal buttons on one two-column grid. */
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; align-items: end; }
+.form-grid label { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 11px; color: var(--fog); text-transform: uppercase; letter-spacing: 0.05em; }
+.form-grid input, .form-grid select { width: 100%; min-width: 0; }
+.form-grid .fg-wide { grid-column: 1 / -1; }
+.form-grid .btn { width: 100%; min-height: 36px; }
+.good-qty { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+.good-qty > span { min-width: 0; }
+@media (max-width: 699px), (max-height: 520px) { #modal-panel table.grid[data-ledger] td:has(> .good-qty):not(:first-child), #modal-panel table.grid[data-ledger] td.lg-wide { grid-column: span 2; } }
+.good-qty .ico { margin: 0; }
+/* A card's picture bleeds into the card's padding only when it stands straight in a card; inside a legend's
+   ship block (no padding) it keeps to its column. */
+.card-art { margin: 0 0 8px; }
+.card > .card-art { margin: -2px -4px 8px; }
+
+/* A good's marks (contraband, perishable, dangerous, deal of the day): small caps pills that wrap as whole
+   words beside the name, not loose coloured words. */
+.tag { display: inline-block; vertical-align: 2px; margin: 0 0 0 4px; padding: 1px 6px; border: 1px solid rgba(154, 166, 178, 0.35); border-radius: 9px; font: 600 9px/1.4 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fog); white-space: nowrap; }
+.tag-contra { color: #c9a6ff; border-color: rgba(180, 140, 255, 0.45); }
+.tag-bad { color: #ff8a7a; border-color: rgba(255, 120, 100, 0.45); }
+.tag-gold { color: var(--gold); border-color: rgba(224, 184, 98, 0.5); }
+/* A tablet's windows read in one column: two half-width columns squeezed the ledgers (a forwards table ran 187px
+   past its card), the tradesmen's names and the yard's notes. */
+@media (max-width: 979px) { .cols { grid-template-columns: minmax(0, 1fr); gap: 8px; } }
+
+/* A policy line: the serif words sit 2px low in their line box beside a sans button (the face's long descent),
+   so they are lifted to the button's optical middle. */
+.ins-row { padding: 3px 0; align-items: center; gap: 10px; }
+.ins-row > span:first-child { position: relative; top: -2px; }

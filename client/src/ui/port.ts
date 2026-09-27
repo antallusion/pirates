@@ -15,12 +15,12 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { esc, fmt, icon, money, officerIcon, quote, xpBadge } from './dom.ts';
+import { dec1, esc, fmt, icon, money, officerIcon, quote, xpBadge } from './dom.ts';
 import { keyLabel, settings } from '../settings.ts';
 import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { traitChips } from './crew.ts';
-import { dict, plural } from '../i18n.ts';
+import { dict, lang, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/port.ts';
 import { serverText } from '../lang/server.ts';
 
@@ -264,8 +264,8 @@ export class PortScreen {
       const stolen = Math.min(have, self.stolen[r.good] ?? 0);
       const trend = r.trend > 0.03 ? `<span class="up">▲</span>` : r.trend < -0.03 ? `<span class="down">▼</span>` : '';
       return `<tr>
-        <td data-l="${esc(L('th.good'))}"><b class="${r.legal ? '' : 'contra'}">${icon(`good_${r.good}`)}${esc(g.name)}</b>${view.dealOfDay === r.good ? ` <span class="gold">${esc(L('market.dealOfDay'))}</span>` : ''}${r.legal ? '' : ` <span class="contra">${esc(L('market.contraband'))}</span>`}${g.spoilPerHour ? ` <span class="muted">${esc(L('market.perishable'))}</span>` : ''}${g.danger > 0.3 ? ` <span class="up">${esc(L('market.dangerous'))}</span>` : ''}</td>
-        <td data-l="${esc(L('th.stock'))}">${r.stock}</td><td data-l="${esc(L('th.buy'))}">${money(r.buy)}</td><td data-l="${esc(L('th.sell'))}"><span class="price-sell">${money(r.sell)}${trend}</span></td><td class="muted" data-l="${esc(L('th.perUnit'))}">${esc(L('market.weightVolume', { w: g.weight, v: g.volume }))}</td><td data-l="${esc(L('th.hold'))}">${have || '—'}${stolen ? ` <span class="up" title="${esc(L('market.stolenTitle'))}">${esc(L('market.stolen', { n: stolen }))}</span>` : ''}</td>
+        <td data-l="${esc(L('th.good'))}"><b class="${r.legal ? '' : 'contra'}">${icon(`good_${r.good}`)}${esc(g.name)}</b>${view.dealOfDay === r.good ? ` <span class="tag tag-gold">${esc(L('market.dealOfDay'))}</span>` : ''}${r.legal ? '' : ` <span class="tag tag-contra">${esc(L('market.contraband'))}</span>`}${g.spoilPerHour ? ` <span class="tag">${esc(L('market.perishable'))}</span>` : ''}${g.danger > 0.3 ? ` <span class="tag tag-bad">${esc(L('market.dangerous'))}</span>` : ''}</td>
+        <td data-l="${esc(L('th.stock'))}">${r.stock}</td><td data-l="${esc(L('th.buy'))}">${money(r.buy)}</td><td data-l="${esc(L('th.sell'))}"><span class="price-sell">${money(r.sell)}${trend}</span></td><td class="muted" data-l="${esc(L('th.perUnit'))}">${esc(L('market.weightVolume', { w: num(g.weight), v: num(g.volume) }))}</td><td data-l="${esc(L('th.hold'))}">${have || '—'}${stolen ? ` <span class="up" title="${esc(L('market.stolenTitle'))}">${esc(L('market.stolen', { n: stolen }))}</span>` : ''}</td>
         <td><div class="mk-btns"><button class="btn btn-small" data-act="buy" data-good="${r.good}">${esc(L('btn.buy'))}</button>
             <button class="btn btn-small" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button>
             <button class="btn btn-small" data-act="sellall" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.all'))}</button></div></td></tr>`;
@@ -387,7 +387,7 @@ ${ammo}${intel}`;
       </div><div class="card">
         <h4>${esc(b.name || cls.name)}</h4>
         <table class="grid"><tr><td>${esc(L('th.hull'))}</td><td>${preview.hullMax} (${pct(preview.hullMax, plain.hullMax)})</td></tr><tr><td>${esc(L('th.armour'))}</td><td>${Math.round(preview.armor * 100)}% (${pct(preview.armor || 0.01, plain.armor || 0.01)})</td></tr>
-          <tr><td>${esc(L('th.speed'))}</td><td>${preview.maxSpeed.toFixed(1)} (${pct(preview.maxSpeed, plain.maxSpeed)})</td></tr><tr><td>${esc(L('th.holdCap'))}</td><td>${preview.holdVolume.toFixed(0)}</td></tr><tr><td>${esc(L('th.crew'))}</td><td>${preview.crewMax}</td></tr></table>
+          <tr><td>${esc(L('th.speed'))}</td><td>${dec1(preview.maxSpeed)} (${pct(preview.maxSpeed, plain.maxSpeed)})</td></tr><tr><td>${esc(L('th.holdCap'))}</td><td>${preview.holdVolume.toFixed(0)}</td></tr><tr><td>${esc(L('th.crew'))}</td><td>${preview.crewMax}</td></tr></table>
         <p>${esc(L('build.costTime', { cost: fmt(cost), min: Math.ceil(time / 60) }))}</p><p class="muted">${matText}</p>
         <button class="btn btn-primary" data-act="build_order" ${self.builds.length ? 'disabled' : ''}>${esc(self.builds.length ? L('build.busy') : L('build.lay'))}</button>
         ${yard.plans ? `<p style="margin-top:8px"><button class="btn btn-small" data-act="plan_buy">${esc(L('build.planBuy', { ship: cls.name, cost: fmt(Math.round(cls.price * 0.3)) }))}</button></p>` : ''}
@@ -467,7 +467,7 @@ ${orders}${berths}</div>` : ''}`;
           <button class="btn btn-small" data-act="captive" data-i="${i}" data-mode="ransom">${esc(L('captive.ransom', { cost: fmt(c.ransom) }))}</button>
           <button class="btn btn-small" data-act="captive" data-i="${i}" data-mode="hand_over" title="${esc(L('captive.handTitle'))}">${esc(L('btn.handOver'))}</button></span></div>`).join('')}</div>` : ''}
         <div class="card"><h4 class="card-h">${icon('insurance', '', 'ico-md')}${esc(L('ins.title'))}</h4>${view.insurance.length ? `<p>${esc(L('ins.text'))}</p>
-          ${self.policy ? `<p class="good">${esc(L('ins.insured', { tier: L(`ins.${self.policy}`) }))}</p>` : view.insurance.map((q) => `<div class="row" style="padding:3px 0"><span><b>${esc(q.tier === 'hull' ? L('ins.hull') : q.tier === 'cargo' ? L('ins.cargo') : L('ins.full'))}</b> <span class="muted">${q.hull ? esc(L('ins.salvage')) : ''}${q.hull && q.cover ? ' · ' : ''}${q.cover ? esc(L('ins.cover', { pct: Math.round(q.cover * 100), declared: fmt(q.declared), deductible: fmt(q.deductible) })) : ''}</span></span>
+          ${self.policy ? `<p class="good">${esc(L('ins.insured', { tier: L(`ins.${self.policy}`) }))}</p>` : view.insurance.map((q) => `<div class="row ins-row"><span><b>${esc(q.tier === 'hull' ? L('ins.hull') : q.tier === 'cargo' ? L('ins.cargo') : L('ins.full'))}</b> <span class="muted">${q.hull ? esc(L('ins.salvage')) : ''}${q.hull && q.cover ? ' · ' : ''}${q.cover ? esc(L('ins.cover', { pct: Math.round(q.cover * 100), declared: fmt(q.declared), deductible: fmt(q.deductible) })) : ''}</span></span>
             <button class="btn btn-small" data-act="insure" data-tier="${q.tier}" ${q.cover && q.declared < 50 ? 'disabled' : ''}>${money(q.premium)}</button></div>`).join('')}` : `<p class="muted">${esc(L('ins.none'))}</p>`}</div>
         <div class="card"><h4 class="card-h">${icon('ammo_cursed', '', 'ico-md')}${esc(L('curse.title'))}</h4><p>${esc(L('curse.state', { n: self.curse }))}${self.curse >= 25 ? esc(L('curse.stage', { n: self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1 })) : ''}. ${esc(['harpoon', 'crown', 'league'].includes(port.faction) ? L('curse.yes') : L('curse.no'))}</p>
           <button class="btn" data-act="cleanse" ${self.curse >= 2 && ['harpoon', 'crown', 'league'].includes(port.faction) ? '' : 'disabled'}>${esc(L('curse.cleanse', { cost: fmt(Math.round(self.curse * 8 * (0.6 + SHIP_CLASSES[self.loadout.classId].tier * 0.4))) }))}</button></div>
@@ -521,13 +521,13 @@ ${orders}${berths}</div>` : ''}`;
     const portName = (id: string) => state.ports.find((p) => p.id === id)?.name ?? id;
     const mins = (t: number) => L('unit.min', { n: Math.max(0, Math.round((t - now) / 60)) });
     const ex = view.exchange;
-    const forwards = ex?.forwards.map((f) => `<tr><td>${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(placeName(f.toName))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${money(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td>
+    const forwards = ex?.forwards.map((f) => `<tr><td>${goodQty(f.good, f.qty)}</td><td class="lg-wide">${esc(placeName(f.toName))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${money(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td>
       <td><button class="btn btn-small" data-act="forward" data-id="${esc(f.id)}">${esc(L('btn.sign'))}</button></td></tr>`).join('') ?? '';
-    const mine = self.forwards.map((f) => `<tr><td>${f.delivered}/${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(portName(f.toPort))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${money(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td></tr>`).join('');
+    const mine = self.forwards.map((f) => `<tr><td>${goodQty(f.good, f.qty)} <span class="muted">${f.delivered}/${f.qty}</span></td><td class="lg-wide">${esc(portName(f.toPort))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${money(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td></tr>`).join('');
     const orders = ex?.orders.map((o) => {
       const have = Math.floor(self.cargo[o.good] ?? 0);
       const n = Math.min(have, o.qty - o.filled);
-      return `<tr><td>${esc(o.name)}</td><td>${o.qty - o.filled} ${icon(`good_${o.good}`)}${esc(GOODS[o.good].name)}</td><td class="gold">${esc(L('unit.perU', { n: o.price }))}</td><td>${esc(mins(o.expiresAt))}</td>
+      return `<tr><td>${esc(o.name)}</td><td>${goodQty(o.good, o.qty - o.filled)}</td><td class="gold">${esc(L('unit.perU', { n: o.price }))}</td><td>${esc(mins(o.expiresAt))}</td>
         <td>${o.mine ? `<button class="btn btn-small" data-act="order_cancel" data-id="${esc(o.id)}">${esc(L('btn.cancel'))}</button>` : `<button class="btn btn-small" data-act="order_fill" data-id="${esc(o.id)}" data-n="${n}" ${n ? '' : 'disabled'}>${esc(L('order.sell', { n: n || '' }).trim())}</button>`}</td></tr>`;
     }).join('') ?? '';
     const goodsOpts = view.market.map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} (~${r.sell})</option>`).join('');
@@ -539,20 +539,30 @@ ${orders}${berths}</div>` : ''}`;
           ${mine ? `<h4 style="margin-top:10px">${esc(L('fwd.mine'))}</h4><table class="grid">${mine}</table>` : ''}</div>
         ${ex ? `<div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(L('orders.title'))}</h4><p class="muted">${esc(L('orders.text'))}</p>
           ${orders ? `<table class="grid"><tr><th>${esc(L('th.buyer'))}</th><th>${esc(L('th.wants'))}</th><th>${esc(L('th.pays'))}</th><th>${esc(L('th.lapses'))}</th><th></th></tr>${orders}</table>` : `<p class="muted">${esc(L('orders.none'))}</p>`}
-          <div class="row" style="gap:6px;margin-top:8px"><select id="ord-good">${goodsOpts}</select><input id="ord-qty" type="number" min="1" max="200" value="20" style="width:60px"><input id="ord-price" type="number" min="1" value="20" style="width:70px"><button class="btn btn-small" data-act="order_post">${esc(L('orders.post'))}</button></div></div>` : ''}
+          <div class="form-grid"><label class="fg-wide">${esc(L('th.goods'))}<select id="ord-good">${goodsOpts}</select></label><label>${esc(L('orders.qty'))}<input id="ord-qty" type="number" min="1" max="200" value="20"></label><label>${esc(L('orders.price'))}<input id="ord-price" type="number" min="1" value="20"></label><button class="btn btn-primary fg-wide" data-act="order_post">${esc(L('orders.post'))}</button></div></div>` : ''}
       </div><div>
         ${self.talents.trd_speculator ? `<div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('opt.title'))}</h4><p class="muted">${esc(L('opt.text'))}</p>
           ${self.options.map((o, i) => `<div class="row" style="padding:3px 0"><span>${o.qty} ${icon(`good_${o.good}`)}${esc(GOODS[o.good].name)} @ ${esc(state.ports.find((p) => p.id === o.port)?.name ?? o.port)} · ${fmt(o.price)} · ${esc(mins(o.until))}</span>${o.port === view.portId ? `<button class="btn btn-small" data-act="option_ex" data-i="${i}">${esc(L('opt.exercise', { cost: fmt(o.price - o.deposit) }))}</button>` : ''}</div>`).join('')}
           <div class="row" style="gap:6px;margin-top:6px"><select id="opt-good">${view.market.filter((r) => r.stock > 3).map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} ${esc(L('opt.stock', { buy: r.buy, stock: r.stock }))}</option>`).join('')}</select><input id="opt-qty" type="number" min="1" value="10" style="width:60px"><button class="btn btn-small" data-act="option_buy">${esc(L('opt.reserve'))}</button></div></div>` : ''}
         <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('bank.title'))}</h4>${b.available ? `<p>${L('bank.text', { balance: fmt(b.balance), pct: Math.round(b.withdrawFee * 100) })}</p>
           <p>${L('bank.credit', { limit: fmt(b.limit), pct: Math.round(b.interest * 100), h: Math.round(b.term / 3600) })}</p>${loan}
-          <div class="row" style="gap:6px"><input id="bank-amt" type="number" min="1" value="500" style="width:90px">
-          ${(['deposit', 'withdraw', 'borrow', 'repay'] as const).map((m) => `<button class="btn btn-small" data-act="bank" data-mode="${m}">${esc(L(`bank.${m}`))}</button>`).join('')}</div>`
+          <div class="form-grid"><label class="fg-wide">${esc(L('bank.amount'))}<input id="bank-amt" type="number" min="1" value="500"></label>
+          ${(['deposit', 'withdraw', 'borrow', 'repay'] as const).map((m) => `<button class="btn" data-act="bank" data-mode="${m}">${esc(L(`bank.${m}`))}</button>`).join('')}</div>`
           : `<p class="muted">${esc(L('bank.none', { balance: fmt(self.bank) }))}</p>${loan}`}</div>
 
       </div></div>`;
   }
 
+}
+
+/** A small number as the reader writes it: 0.5 in English, 0,5 in Russian. */
+function num(n: number): string {
+  return lang() === 'ru' ? String(n).replace('.', ',') : String(n);
+}
+
+/** A good and how much of it, the way a ledger reads: the picture, the name, × 30. */
+function goodQty(good: GoodId, n: number): string {
+  return `<span class="good-qty">${icon(`good_${good}`)}<span>${esc(GOODS[good].name)}&nbsp;×&nbsp;${n}</span></span>`;
 }
 
 /** How a landing is ordered here: the key it is bound to, or the button a touch screen shows. */

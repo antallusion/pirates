@@ -17,7 +17,7 @@ import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { esc, fmt, icon, money, xpBadge } from './dom.ts';
+import { dec1, esc, fmt, icon, money, xpBadge } from './dom.ts';
 
 const L = dict(EN, RU);
 
@@ -55,7 +55,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
         <h3 class="title-sm" style="font-size:20px">${esc(L('board.cargo'))}</h3>
         ${goods.length ? goods.map((g) => `<div class="loot-grid">${icon(`good_${g}`, '', 'item-ico')}<div class="item-text"><b>${esc(GOODS[g].name)}</b><span class="muted">${esc(L('board.aboard', { n: r.cargo[g] ?? 0 }))}${state.self?.appraisal?.[g] ? ` · ${money(state.self.appraisal[g]!.price)}` : ''}</span></div><b class="loot-take">${take[g] ?? 0}</b>
           <input type="range" min="0" max="${r.cargo[g]}" value="${take[g] ?? 0}" data-g="${g}" /></div>`).join('') : `<p class="muted">${esc(L('board.empty'))}</p>`}
-        <p class="${used > holdMax ? 'up' : 'muted'}">${esc(L('board.hold', { used: used.toFixed(1), max: holdMax.toFixed(0) }))}</p>
+        <p class="${used > holdMax ? 'up' : 'muted'}">${esc(L('board.hold', { used: dec1(used), max: holdMax.toFixed(0) }))}</p>
         ${Object.keys(r.destroyed).length ? `<p class="muted">${esc(L('board.destroyed', { list: Object.entries(r.destroyed).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`).join(', ') }))}</p>` : ''}
       </div><div>
         <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('board.coin'))}</h4><div class="spoils">${money(r.gold)}${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="ammo-chip" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-md')}<b>${r.ammo[a]}</b></span>`).join('')}</div></div>
@@ -124,14 +124,14 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
   const used = cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
   root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div></div><div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div>
     <div class="modal-body"><div class="stat-grid">
-      ${tile('stat_sails', L('ship.speed'), esc(L('ship.speedVal', { v: st.maxSpeed.toFixed(1) })))}
-      ${tile('menu_ship', L('ship.turn'), esc(L('ship.turnVal', { v: ((st.turnRate * 180) / Math.PI).toFixed(1) })))}
-      ${tile('anchor', L('ship.draft'), `${esc(L('ship.draftVal', { v: cls.draft.toFixed(1) }))}<small>${esc(cls.passive.id === 'shallow_runner' ? L('ship.draftShallow', { name: cls.passive.name }) : L('ship.draftDeep'))}</small>`)}
+      ${tile('stat_sails', L('ship.speed'), esc(L('ship.speedVal', { v: dec1(st.maxSpeed) })))}
+      ${tile('menu_ship', L('ship.turn'), esc(L('ship.turnVal', { v: dec1((st.turnRate * 180) / Math.PI) })))}
+      ${tile('anchor', L('ship.draft'), `${esc(L('ship.draftVal', { v: dec1(cls.draft) }))}<small>${esc(cls.passive.id === 'shallow_runner' ? L('ship.draftShallow', { name: cls.passive.name }) : L('ship.draftDeep'))}</small>`)}
       ${tile('wind', L('ship.noGo'), esc(L('ship.noGoVal', { deg: st.noGoDeg.toFixed(0), rig: L(`rig.${cls.rig}`) })))}
       ${tile('stat_hull', L('ship.hull'), `${st.hullMax} / ${Math.round(st.armor * 100)}%`)}
       ${tile('stat_sails', L('ship.sails'), String(st.sailHpMax))}
       ${tile('stat_crew', L('ship.crew'), esc(L('ship.crewVal', { n: self.crew, min: st.crewMin, max: st.crewMax })))}
-      ${tile('tab_market', L('ship.hold'), esc(L('ship.holdVal', { used: used.toFixed(1), max: st.holdVolume.toFixed(0), weight: st.holdWeight.toFixed(0) })))}
+      ${tile('tab_market', L('ship.hold'), esc(L('ship.holdVal', { used: dec1(used), max: st.holdVolume.toFixed(0), weight: st.holdWeight.toFixed(0) })))}
       ${tile(`gun_${self.loadout.guns.port}`, L('ship.port'), `${cls.gunPortsPerSide - self.gunsDisabled.port}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.port].name)}</small>`, true)}
       ${tile(`gun_${self.loadout.guns.starboard}`, L('ship.starboard'), `${cls.gunPortsPerSide - self.gunsDisabled.starboard}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.starboard].name)}</small>`)}
       ${tile('fire', L('ship.gunMuls'), `×${st.reloadMul.toFixed(2)} / ×${st.spreadMul.toFixed(2)} / ×${st.gunDamageMul.toFixed(2)}`)}

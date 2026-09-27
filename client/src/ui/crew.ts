@@ -10,7 +10,7 @@ import { EN, RU } from '../lang/ui/crew.ts';
 import { serverText } from '../lang/server.ts';
 import { keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
-import { esc, fmt, icon, money, officerIcon } from './dom.ts';
+import { dec1, esc, fmt, icon, money, officerIcon } from './dom.ts';
 
 const L = dict(EN, RU);
 const kb = (a: Action) => keyLabel(settings().keys[a][0] || settings().keys[a][1]);
@@ -38,7 +38,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2></div><div class="muted">${esc(L('close', { key: kb('crew') }))}</div></div>
     <div class="modal-body"><div class="stat-grid four">
       ${tile('stat_crew', L('st.souls'), esc(souls))}
-      ${tile('xp', L('st.skill'), `<span class="stars">${stars(c.skill)}</span> ${c.skill.toFixed(1)}`)}
+      ${tile('xp', L('st.skill'), `<span class="stars">${stars(c.skill)}</span> ${dec1(c.skill)}`)}
       ${tile('tree_command', L('st.morale'), `${morale} <small>${esc(spirit)}</small>`)}
       ${tile('menu_crew', L('st.loyalty'), String(c.loyalty))}
     </div>
