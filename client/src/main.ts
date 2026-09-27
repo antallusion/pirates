@@ -453,6 +453,22 @@ function renderModal(root: HTMLElement): void {
   ensureCloseButton(root);
 }
 
+/** Ledgers with a header row: each cell learns its column's name, so a phone can lay the rows out as cards. */
+function labelLedgers(root: HTMLElement): void {
+  root.querySelectorAll<HTMLTableElement>('table.grid:not(.market):not([data-ledger])').forEach((t) => {
+    const head = t.querySelector('tr');
+    if (!head || !head.querySelector('th')) return;
+    t.dataset.ledger = '1';
+    const names = [...head.children].map((c) => (c.textContent ?? '').trim());
+    t.querySelectorAll('tr').forEach((tr, i) => {
+      if (i === 0) return;
+      [...tr.children].forEach((td, k) => {
+        if (names[k] && !(td as HTMLElement).dataset.l) (td as HTMLElement).dataset.l = names[k];
+      });
+    });
+  });
+}
+
 /** Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons). */
 function ensureCloseButton(root: HTMLElement): void {
   if (!modal || modal === 'boarding' || modal === 'sunk' || modal === 'mutiny' || root.querySelector(':scope > .x-btn')) return;
@@ -497,6 +513,7 @@ new MutationObserver(() => {
   decorateSums($('modal-panel'));
   // A screen that redraws itself (a tab clicked) must not lose its close button.
   ensureCloseButton($('modal-panel'));
+  labelLedgers($('modal-panel'));
 }).observe($('modal-panel'), { childList: true, subtree: true });
 
 function toggle(m: Modal): void {

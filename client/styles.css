@@ -1057,3 +1057,17 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
   table.grid.market td:last-child .mk-btns { width: 100%; min-width: 0; }
   table.grid.market td:last-child .mk-btns .btn { min-height: 38px; }
 }
+/* Ledgers on a phone: every row a small card, each figure under its column's name; no sideways scrolling. */
+@media (max-width: 699px) {
+  #modal-panel table.grid[data-ledger] { display: block; overflow: visible; font-size: 13px; }
+  #modal-panel table.grid[data-ledger] tbody { display: block; }
+  #modal-panel table.grid[data-ledger] tr:first-child { display: none; }
+  #modal-panel table.grid[data-ledger] tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 8px; padding: 8px; margin-bottom: 6px; border: 1px solid rgba(140, 107, 58, 0.3); border-radius: 4px; background: rgba(6, 6, 7, 0.5); }
+  #modal-panel table.grid[data-ledger] td { display: block; border: 0; padding: 0; white-space: normal; }
+  #modal-panel table.grid[data-ledger] td:first-child { grid-column: 1 / -1; font-weight: 600; }
+  #modal-panel table.grid[data-ledger] td[data-l]:not(:first-child)::before { content: attr(data-l); display: block; font-size: 10px; color: var(--fog); text-transform: uppercase; letter-spacing: 0.05em; }
+  #modal-panel table.grid[data-ledger] td:empty { display: none; }
+  #modal-panel table.grid[data-ledger] td:has(> .btn):last-child { grid-column: 1 / -1; display: flex; gap: 6px; }
+  #modal-panel table.grid[data-ledger] td:has(> .btn):last-child::before { display: none; }
+  #modal-panel table.grid[data-ledger] td:has(> .btn):last-child .btn { flex: 1; }
+}

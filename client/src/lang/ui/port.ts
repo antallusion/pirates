@@ -92,7 +92,7 @@ export const EN = {
   'fence.text': "A fence buys contraband here at {pct}% of Fogmouth's price.",
   'fence.sell': 'Sell {n} {good}',
   'fence.nothing': 'You carry nothing he wants.',
-  'chandlery.title': 'Chandlery — shot & powder',
+  'chandlery.title': 'Shot & powder',
 
   // Shipyard
   'yard.matNote': 'Bring {n} {good} (hold or warehouse here) for up to 30% off.',
@@ -118,7 +118,8 @@ export const EN = {
   'mount.title': 'Deck mount (right mouse)',
   'mount.fitted': 'Fitted',
   'mount.none': 'No mounts for this hull here.',
-  'hulls.title': 'New hulls (trade-in applied)',
+  'hulls.title': 'New hulls',
+  'hulls.note': 'Prices already count your present ship in trade.',
   'yard.note': 'Tier {tier} yard. Bigger is not better: a galleon hauls a fortune but a sloop will run circles around her.',
 
   // Build to order
@@ -410,7 +411,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'fence.text': 'Скупщик берёт здесь контрабанду по {pct}% от цены Фогмута.',
   'fence.sell': 'Продать {n}: {good}',
   'fence.nothing': 'У вас нет ничего, что ему нужно.',
-  'chandlery.title': 'Лавка шипчандлера — ядра и порох',
+  'chandlery.title': 'Ядра и порох',
 
   'yard.matNote': 'Привезите {good} — {n} ед. (в трюме или на здешнем складе), и скидка составит до 30%.',
   'yard.excellent': 'Отменная работа',
@@ -435,7 +436,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'mount.title': 'Палубная установка (правая кнопка мыши)',
   'mount.fitted': 'Установлена',
   'mount.none': 'Для этого корпуса здесь установок нет.',
-  'hulls.title': 'Новые корпуса (с зачётом прежнего)',
+  'hulls.title': 'Новые корпуса',
+  'hulls.note': 'Цены — уже с зачётом вашего нынешнего корабля.',
   'yard.note': 'Верфь {tier}-го ранга. Больше — не значит лучше: галеон увозит целое состояние, но шлюп обойдёт его кругами.',
 
   'quality.common': 'обычный',

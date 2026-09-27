@@ -325,7 +325,7 @@ ${ammo}${intel}`;
           return `<div class="item-row">${icon(`mount_${m.mount}`, '', 'item-ico')}<div class="item-text"><b>${esc(def.name)}</b><span class="muted">${esc(def.description)}</span></div><button class="btn btn-small item-btn" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : money(m.cost)}</button></div>`;
         }).join('') || `<p class="muted">${esc(L('mount.none'))}</p>`}</div>
         ${modules}</div></div>
-      <h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('hulls.title'))}</h3>
+      <h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('hulls.title'))}</h3><p class="muted" style="margin:0 0 8px">${esc(L('hulls.note'))}</p>
       <div class="hull-list">${ships}</div>
       <p class="muted">${esc(L('yard.note', { tier: sy.tier }))}</p>
 
