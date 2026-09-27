@@ -6,6 +6,20 @@
   <meta name="theme-color" content="#0b0d10" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title data-i18n="doc.title">GRAVETIDE — a Pirate Gothic MMORPG</title>
+  <!-- A Russian reader never sees the English words the page is written in: the title turns before the first
+       paint and the translated texts stay hidden until the game's own script has put them in Russian. -->
+  <script>
+    (function () {
+      var l = null;
+      try { l = localStorage.getItem('gravetide.lang'); } catch (e) {}
+      if (l !== 'en' && l !== 'ru') l = /^(ru|uk|be)/i.test(navigator.language || '') ? 'ru' : 'en';
+      if (l === 'ru') {
+        document.documentElement.lang = 'ru';
+        document.documentElement.classList.add('i18n-pending');
+        document.title = 'GRAVETIDE — пиратская готическая MMORPG';
+      }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IM+Fell+English+SC&family=Inter:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="/styles.css" />

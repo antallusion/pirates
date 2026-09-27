@@ -1247,3 +1247,14 @@ body.ship-open .ship-panel { top: calc(var(--uf-bottom, 104px) + 6px); backgroun
 .btn-block { display: block; width: 100%; margin-top: 8px; }
 .nowrap { white-space: nowrap; }
 .order-row { padding: 4px 0; gap: 10px; align-items: center; }
+
+/* Talent sets: the label and the sets on one grid of equal cells, the hint under them; the set in use is lit,
+   not greyed as if it could not be had. */
+.tal-loadout:has(> button) { display: grid; grid-template-columns: auto repeat(var(--n, 3), minmax(0, 1fr)); gap: 6px; }
+.tal-loadout > .muted { grid-column: 1 / -1; }
+.tal-loadout .btn { width: 100%; }
+.tal-loadout .btn.is-current { cursor: default; box-shadow: 0 0 10px rgba(224, 184, 98, 0.35); }
+
+/* Until the game has put the page's words in Russian, the English ones are not shown (index.html). */
+html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { visibility: hidden; animation: i18n-show 0s 3s forwards; }
+@keyframes i18n-show { to { visibility: visible; } } /* should the script never come, the English shows after 3 s */

@@ -52,9 +52,9 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
   return current === 'ru' ? typeset(s) : s;
 }
 
-/** Russian typesetting: a dash never opens a line, a one-letter word (в, с, к, и…) never ends one. */
+/** Russian typesetting: a dash or a slash never opens a line, a one-letter word (в, с, к, и…) never ends one. */
 export function typeset(s: string): string {
-  return s.replace(/ ([—–])/g, '\u00a0$1').replace(/(?<=^|[\s(«„"])([вВкКсСуУоОиИаАяЯ]) /g, '$1\u00a0');
+  return s.replace(/ ([—–/])/g, '\u00a0$1').replace(/(?<=^|[\s(«„"])([вВкКсСуУоОиИаАяЯ]) /g, '$1\u00a0');
 }
 
 /** Whether a key exists (for ids that come from the server). */
@@ -73,6 +73,8 @@ export function plural(n: number, one: string, few: string, many: string): strin
 
 /** Applies translations to static markup: `data-i18n="key"` sets the text, `data-i18n-ph` the placeholder. */
 export function translateDom(root: ParentNode = document): void {
+  // The page's English stays hidden until this first pass (index.html) — now it can be shown.
+  if (globalThis.document) queueMicrotask(() => document.documentElement.classList.remove('i18n-pending'));
   root.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => {
     const k = el.dataset.i18n!;
     if (has(k)) el.textContent = t(k);

@@ -46,7 +46,7 @@ export class TalentScreen {
     const coreArt = selTree ? `tree_${selTree}` : sel === 'bridges' ? 'ab_form_line' : 'goal';
     const coreName = selTree ? TREES[selTree].name : sel === 'bridges' ? L('bridges') : L('deeds');
     const loadouts = lo.slots > 1
-      ? `<div class="tal-loadout"><span class="with-ico">${icon('menu_talents', '', 'ico-sm')}${esc(L('loadout'))}</span>${Array.from({ length: lo.slots }, (_, i) => `<button class="btn btn-small ${i === lo.active ? 'btn-primary' : ''}" data-loadout="${i}" ${!docked || i === lo.active || lo.switchAt > now ? 'disabled' : ''}>${i + 1}${lo.filled[i] ? '' : esc(L('empty'))}</button>`).join('')}<span class="muted">${esc(docked ? (lo.switchAt > now ? L('switchAgain', { n: Math.ceil((lo.switchAt - now) / 60) }) : L('switchInPort')) : L('switchOnlyInPort'))}</span></div>`
+      ? `<div class="tal-loadout" style="--n:${lo.slots}"><span class="with-ico">${icon('menu_talents', '', 'ico-sm')}${esc(L('loadout'))}</span>${Array.from({ length: lo.slots }, (_, i) => `<button class="btn btn-small ${i === lo.active ? 'btn-primary is-current' : ''}" data-loadout="${i}" ${i === lo.active ? 'aria-current="true"' : !docked || lo.switchAt > now ? 'disabled' : ''}>${i + 1}${lo.filled[i] ? '' : esc(L('empty'))}</button>`).join('')}<span class="muted">${esc(docked ? (lo.switchAt > now ? L('switchAgain', { n: Math.ceil((lo.switchAt - now) / 60) }) : L('switchInPort')) : L('switchOnlyInPort'))}</span></div>`
       : `<div class="tal-loadout muted">${esc(L('loadoutsAt20'))}</div>`;
     root.innerHTML = `
       <div class="modal-head"><div><h2>${esc(L('title'))}</h2></div></div>
@@ -77,7 +77,7 @@ export class TalentScreen {
     root.querySelectorAll<HTMLElement>('[data-forget]').forEach((el) => (el.onclick = () => {
       if (confirm(self.respec.free ? L('confirmForget') : L('confirmForgetCost', { cost: fmt(self.respec.forgetCost) }))) this.send({ t: 'respec', mode: 'forget', id: el.dataset.forget! });
     }));
-    root.querySelectorAll<HTMLElement>('[data-loadout]').forEach((el) => (el.onclick = () => this.send({ t: 'loadout', slot: Number(el.dataset.loadout) })));
+    root.querySelectorAll<HTMLElement>('[data-loadout]:not([aria-current])').forEach((el) => (el.onclick = () => this.send({ t: 'loadout', slot: Number(el.dataset.loadout) })));
     root.querySelectorAll<HTMLElement>('[data-respec]').forEach((el) => (el.onclick = () => {
       const mode = el.dataset.respec as 'full' | 'token';
       if (confirm(mode === 'token' ? L('confirmToken') : self.respec.free ? L('confirmResetFree') : L('confirmResetCost', { cost: fmt(self.respec.cleanSlateCost) }))) this.send({ t: 'respec', mode });
