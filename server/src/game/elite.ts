@@ -35,6 +35,17 @@ export function ensureElite(game: Game, q: QuestDef): ShipEntity | null {
   return flag;
 }
 
+/** A contract's flagship sunk (docs/11 P6): the waters hear who did it, once. */
+export function eliteSunk(game: Game, victim: ShipEntity, by: PlayerSession): void {
+  const map = quarry.get(game);
+  if (!map) return;
+  const id = [...map.entries()].find(([, ship]) => ship === victim.id)?.[0];
+  if (!id) return;
+  map.delete(id);
+  const region = REGIONS[victim.region].name;
+  for (const s of game.sessions) if (s.ship?.region === victim.region) game.sendTo(s, { t: 'toast', msg: `WORLD: ${by.name} and company sank the raiders' flagship ${victim.name} in ${region}.`, kind: 'gold' });
+}
+
 /** Word of the quarry to the captain who takes the contract. */
 export function eliteWord(game: Game, s: PlayerSession, flag: ShipEntity, q: QuestDef): void {
   const st = q.steps[0];

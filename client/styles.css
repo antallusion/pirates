@@ -1710,6 +1710,15 @@ body.touch #hud-region .rg-extra { display: none; }
 .fr-ign { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
 .fr-ign .muted { font-size: 12px; }
 .who-tag { color: var(--brass); font-size: 12px; }
+/* Inspecting a captain (docs/11 P6): a tapped name, and the card with its figures. */
+.insp-name { cursor: pointer; text-decoration: underline dotted rgba(201, 162, 90, 0.6); text-underline-offset: 3px; }
+.insp-name:hover { color: var(--gold); }
+.insp-guild { color: var(--brass); font-size: 14px; margin: -4px 0 6px; }
+.confirm-panel .insp-line { margin: 2px 0; text-align: left; font-size: 15px; }
+.insp-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; margin: 12px 0 8px; }
+.insp-stat { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid rgba(111, 90, 56, 0.35); background: rgba(255, 255, 255, 0.03); font-size: 13px; }
+.insp-stat b { color: var(--bone); font-variant-numeric: tabular-nums; }
+.insp-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .who-here { display: inline-flex; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; color: var(--fog); cursor: pointer; }
 @media (max-width: 480px) { #modal-panel .fr-form > input { flex: 1 1 100%; } #modal-panel .fr-form > .btn { flex: 1 1 0; } }
 @media (max-width: 480px) { .fr-row { grid-template-columns: auto minmax(0, 1fr); } .fr-btns { grid-column: 1 / -1; justify-content: flex-start; } }

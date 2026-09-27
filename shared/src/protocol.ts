@@ -123,6 +123,8 @@ export type ClientMsg =
   | { t: 'friend'; action: 'list' }
   /** Who is at sea (docs/11 P6): by a part of a name or a guild's tag, in all waters or only one's own. */
   | { t: 'who'; q: string; here: boolean }
+  /** Inspect a captain at sea (docs/11 P6). */
+  | { t: 'inspect'; name: string }
   | { t: 'group'; action: 'invite' | 'kick' | 'lead'; name: string }
   | { t: 'group'; action: 'accept' | 'decline'; id: number }
   | { t: 'group'; action: 'leave' }
@@ -937,6 +939,7 @@ export type ServerMsg =
   /** The list of friends, and the names of the captains one does not hear. */
   | { t: 'friends'; list: FriendView[]; ignored?: string[] }
   | { t: 'who'; list: WhoView[]; total: number }
+  | { t: 'inspect'; view: InspectView }
   | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[];
       /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number }[]; lfgMine?: string | null }
   | { t: 'barter'; view: BarterView | null }
@@ -1007,6 +1010,24 @@ export interface WhoView {
 }
 
 export const WHO_MAX = 30;
+
+/** A captain as another sees them on inspecting (docs/11 P6): no purse, no hold, nothing private. */
+export interface InspectView {
+  name: string;
+  level: number;
+  captain: CaptainId;
+  title: string | null;
+  guild: { name: string; tag: string } | null;
+  ship: { name: string; classId: ShipClassId };
+  region: RegionId;
+  deeds: number;
+  seasonLevel: number;
+  questsDone: number;
+  contracts: number;
+  mentored: number;
+  rating: number;
+  wanted: number;
+}
 
 export interface BarterSide {
   name: string;

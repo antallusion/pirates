@@ -61,7 +61,7 @@ import {
   dismissOfficer, hireOfficer, maxRecruits, mutinyCourse, officerOrder, onDockCrew, onFightWon, onMagazineBlast, onSunkCrew, plunderShare, pressGang, recruitPrisoners,
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
-import { friendAdd, friendRemove, friendsPresence, ignoreAdd, ignoreCommand, ignoreRemove, ignores, pushFriends, whisper, whisperCommand, whoList } from './friends.ts';
+import { friendAdd, friendRemove, friendsPresence, ignoreAdd, ignoreCommand, ignoreRemove, ignores, inspectView, pushFriends, whisper, whisperCommand, whoList } from './friends.ts';
 import { Social, lfgClear, lfgPost, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
 import { havenSecond } from './havens.ts';
@@ -2605,6 +2605,10 @@ export class Game {
         return;
       case 'who':
         return this.sendTo(s, { t: 'who', ...whoList(this, s, msg.q, !!msg.here) });
+      case 'inspect': {
+        const v = inspectView(this, s, msg.name);
+        return typeof v === 'string' ? err(v) : this.sendTo(s, { t: 'inspect', view: v });
+      }
       case 'friend':
         if (msg.action === 'add') return err(friendAdd(this, s, msg.name));
         if (msg.action === 'remove') return err(friendRemove(this, s, msg.name));

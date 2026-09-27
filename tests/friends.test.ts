@@ -162,3 +162,23 @@ test('who is at sea: everyone aboard but oneself, by a part of the name or a gui
   a.push({ t: 'who', q: '[owl]', here: false });
   assert.deepEqual(a.last('who')!.list.map((e) => [e.name, e.guild]), [['Near Nell', 'OWL']]);
 });
+
+test('inspecting a captain at sea: level, path, ship and deeds — never the purse or the hold', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Curious Cai');
+  join(game, 'Seen Sal');
+  const S = game.sessionByName('Seen Sal')!;
+  S.profile!.title = 'Hand for Hire';
+  S.profile!.quests.done = ['x', 'elite_saltmarrow_1', 'elite_saltmarrow_2'];
+  a.push({ t: 'inspect', name: 'seen sal' });
+  const v = a.last('inspect')!.view;
+  assert.equal(v.name, 'Seen Sal');
+  assert.equal(v.level, S.profile!.level);
+  assert.equal(v.title, 'Hand for Hire');
+  assert.equal(v.ship.classId, S.ship!.cls.id);
+  assert.equal(v.questsDone, 3);
+  assert.equal(v.contracts, 2);
+  assert.ok(!('gold' in v) && !('cargo' in v), 'nothing private');
+  a.push({ t: 'inspect', name: 'Nobody Here' });
+  assert.equal(bad(a).at(-1), 'No captain of that name is at sea');
+});

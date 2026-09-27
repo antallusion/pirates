@@ -182,7 +182,7 @@ export class CompanyScreen {
     const lead = g ? g.leader === me : true;
     body.innerHTML = `<div class="cols"><div>
       <h3 class="title-sm" style="font-size:20px">${g ? L('grp_yours', { n: g.members.length, max: GROUP_MAX }) : L('grp_alone')}</h3>
-      ${g ? g.members.map((m) => `<div class="card"><h4>${m.accountId === g.leader ? '⚑ ' : ''}${esc(m.name)} <span class="muted">${L('grp_level', { captain: esc(CAPTAINS[m.captain]?.name ?? m.captain), level: m.level })}</span></h4>
+      ${g ? g.members.map((m) => `<div class="card"><h4>${m.accountId === g.leader ? '⚑ ' : ''}${m.accountId !== me && m.online ? `<span class="insp-name" data-inspect="${esc(m.name)}" role="button" tabindex="0">${esc(m.name)}</span>` : esc(m.name)} <span class="muted">${L('grp_level', { captain: esc(CAPTAINS[m.captain]?.name ?? m.captain), level: m.level })}</span></h4>
         <div class="row"><span class="muted">${!m.online ? L('grp_ashore') : m.docked ? L('grp_in', { port: esc(state.ports.find((p) => p.id === m.docked)?.name ?? m.docked) }) : L('grp_at_sea', { n: Math.round(m.hull * 100) })}${m.inConvoy ? L('grp_station') : ''}</span>
         ${m.accountId !== me ? `<span>${state.friends.some((f) => f.name === m.name) ? '' : `<button class="btn btn-small" data-befriend="${esc(m.name)}">${L('fr_befriend')}</button> `}${lead ? `<button class="btn btn-small" data-lead="${esc(m.name)}">${L('grp_give_lead')}</button> <button class="btn btn-small btn-danger" data-kick="${esc(m.name)}">${L('grp_kick')}</button>` : ''}</span>` : ''}</div></div>`).join('') : `<p class="muted">${L('grp_about')}</p>`}
       ${g && lead ? `<div class="card"><h4 class="card-h">${icon('ab_form_line', '', 'ico-md')}${L('grp_convoy')}</h4><p class="muted">${L('grp_convoy_text')}</p>
@@ -209,6 +209,7 @@ export class CompanyScreen {
     body.querySelector<HTMLElement>('#lfg-post')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg', note: val('#lfg-note') }));
     body.querySelector<HTMLElement>('#lfg-stop')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg_clear' }));
     body.querySelectorAll<HTMLElement>('[data-lfg-invite]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'invite', name: el.dataset.lfgInvite! })));
+    body.querySelectorAll<HTMLElement>('[data-inspect]').forEach((el) => (el.onclick = () => this.send({ t: 'inspect', name: el.dataset.inspect! })));
     const who = () => this.send({ t: 'who', q: val('#who-q'), here: !!body.querySelector<HTMLInputElement>('#who-here')?.checked });
     body.querySelector<HTMLElement>('#who-find')?.addEventListener('click', who);
     body.querySelector<HTMLInputElement>('#who-q')?.addEventListener('keydown', (e) => e.key === 'Enter' && (e.stopPropagation(), e.preventDefault(), who()));
@@ -232,7 +233,7 @@ export class CompanyScreen {
       return L('who_row', { level: e.level, where: port ? L('fr_in_port', { port: placeName(port) }) : placeName(REGIONS[e.region]?.name ?? e.region) });
     };
     const friends = new Set(state.friends.map((f) => f.name));
-    const rows = (w?.list ?? []).map((e) => `<div class="fr-row on"><i class="fr-dot"></i><div class="fr-who"><b>${esc(e.name)}</b>${e.guild ? ` <span class="who-tag">[${esc(e.guild)}]</span>` : ''} <span class="muted">${esc(where(e))}</span></div>
+    const rows = (w?.list ?? []).map((e) => `<div class="fr-row on"><i class="fr-dot"></i><div class="fr-who"><b class="insp-name" data-inspect="${esc(e.name)}" role="button" tabindex="0">${esc(e.name)}</b>${e.guild ? ` <span class="who-tag">[${esc(e.guild)}]</span>` : ''} <span class="muted">${esc(where(e))}</span></div>
       <span class="fr-btns"><button class="btn btn-small" data-whisper="${esc(e.name)}">${L('fr_whisper')}</button>${canInvite && !e.grouped ? `<button class="btn btn-small" data-fr-invite="${esc(e.name)}">${L('fr_invite')}</button>` : ''}${friends.has(e.name) ? '' : `<button class="btn btn-small" data-befriend="${esc(e.name)}">${L('fr_befriend')}</button>`}</span></div>`).join('');
     return `<div class="card"><h4 class="card-h">${icon('menu_map', '', 'ico-md')}${L('who_title')}</h4>
       <p class="muted">${L('who_text')}</p>
@@ -248,7 +249,7 @@ export class CompanyScreen {
       const port = f.docked ? state.ports.find((p) => p.id === f.docked)?.name ?? f.docked : null;
       return L('fr_row', { level: f.level ?? 1, where: port ? L('fr_in_port', { port: placeName(port) }) : placeName(REGIONS[f.region!]?.name ?? f.region ?? '') });
     };
-    const rows = state.friends.map((f) => `<div class="fr-row${f.online ? ' on' : ''}"><i class="fr-dot"></i><div class="fr-who"><b>${esc(f.name)}</b> <span class="muted">${esc(where(f))}</span></div>
+    const rows = state.friends.map((f) => `<div class="fr-row${f.online ? ' on' : ''}"><i class="fr-dot"></i><div class="fr-who">${f.online ? `<b class="insp-name" data-inspect="${esc(f.name)}" role="button" tabindex="0">${esc(f.name)}</b>` : `<b>${esc(f.name)}</b>`} <span class="muted">${esc(where(f))}</span></div>
       <span class="fr-btns">${f.online ? `<button class="btn btn-small" data-whisper="${esc(f.name)}">${L('fr_whisper')}</button>${canInvite && !grouped.includes(f.name) ? `<button class="btn btn-small" data-fr-invite="${esc(f.name)}">${L('fr_invite')}</button>` : ''}` : ''}<button class="btn btn-small" data-unfriend="${esc(f.name)}" title="${esc(L('fr_remove'))}" aria-label="${esc(L('fr_remove'))}">✕</button></span></div>`).join('');
     return `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('fr_title')} <span class="muted fr-count">${L('fr_count', { n: state.friends.length, max: FRIENDS_MAX })}</span></h4>
       <p class="muted">${L('fr_text')}</p>

@@ -5,7 +5,8 @@
 // group, a barter or a duel do not reach one (letters still do: the packet boat reads no lists).
 
 import { FRIENDS_MAX, WHO_MAX } from '../../../shared/src/protocol.ts';
-import type { FriendView, WhoView } from '../../../shared/src/protocol.ts';
+import type { FriendView, InspectView, WhoView } from '../../../shared/src/protocol.ts';
+import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import { groupOfAccount } from './party.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
@@ -144,6 +145,21 @@ export function whoList(game: Game, s: PlayerSession, q: string, here: boolean):
   }
   out.sort((a, b) => Number(b.region === mine) - Number(a.region === mine) || b.level - a.level || a.name.localeCompare(b.name));
   return { list: out.slice(0, WHO_MAX), total: out.length };
+}
+
+/** Inspect a captain aboard (docs/11 P6): what anyone on the quay could learn of them — never the purse or hold. */
+export function inspectView(game: Game, s: PlayerSession, name: string): InspectView | string {
+  const o = game.sessionByName(String(name ?? ''));
+  if (!o?.profile || !o.ship || !game.social.aboard.has(o.accountId)) return 'No captain of that name is at sea';
+  const p = o.profile;
+  const g = game.guilds.of(game, o.accountId);
+  void s;
+  return {
+    name: o.name, level: p.level, captain: p.captain, title: p.title, guild: g ? { name: g.name, tag: g.tag } : null,
+    ship: { name: o.ship.name, classId: o.ship.cls.id }, region: o.ship.region, deeds: p.deeds.length, seasonLevel: p.season.level,
+    questsDone: p.quests.done.length, contracts: p.quests.done.filter((id) => id.startsWith('elite_')).length, mentored: p.stats.mentored ?? 0,
+    rating: Math.round(p.pvp.rating ?? 0), wanted: wantedLevel(p.infamy),
+  };
 }
 
 /** A chat line that is a whisper ("/w", "/r" and their Russian twins): the words after it, and whether a reply. */

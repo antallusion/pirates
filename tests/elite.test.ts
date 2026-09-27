@@ -66,6 +66,7 @@ test('on the board, taken by two captains of a group: one flagship with her esco
   (game as unknown as Credit).creditKill(B.ship!, flag, 'sunk');
   assert.equal(B.profile!.quests.active.find((q) => q.id === id)?.step, 1, 'her sinker is on to the bounty');
   assert.equal(A.profile!.quests.active.find((q) => q.id === id)?.step, 1, 'and so is his groupmate');
+  assert.ok(a.all('toast').some((t) => t.msg.startsWith("WORLD: Bo Contract and company sank the raiders' flagship")), 'the waters hear of it');
   // Back in port: paid.
   questEvent(game, A, { k: 'dock', port });
   assert.ok(A.profile!.quests.done.includes(id));
@@ -99,9 +100,9 @@ test('the contracts read in Russian', () => {
   applyDataLocale('ru');
   const bad: string[] = [];
   const q = eliteContractFor('saltmarrow', 20002)!;
-  for (const t of [q.name, q.summary, q.mentor, ...q.steps.map((x) => x.text), 'Isolde Crane sails the Black Tithe with two escorts in The Black Coast. Take a company.']) {
+  for (const t of [q.name, q.summary, q.mentor, ...q.steps.map((x) => x.text), 'Isolde Crane sails the Black Tithe with two escorts in The Black Coast. Take a company.', "WORLD: Bo Lee and company sank the raiders' flagship Black Tithe in The Black Coast."]) {
     const ru = serverText(t);
-    if (/[A-Za-z]{3,}/.test(ru.replace(/Isolde Crane|Black Tithe/g, ''))) bad.push(ru);
+    if (/[A-Za-z]{3,}/.test(ru.replace(/Isolde Crane|Black Tithe|Bo Lee/g, ''))) bad.push(ru);
   }
   setLang('en');
   applyDataLocale('en');

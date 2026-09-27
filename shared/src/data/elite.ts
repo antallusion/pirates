@@ -88,5 +88,6 @@ export function elitePatterns(): [string, string][] {
   for (const f of FLAVOURS) out.push(f.name, f.summary);
   out.push(STEP_SINK, STEP_HOME, MENTOR);
   out.push(['{0} sails the {1} with two escorts in {2}. Take a company.', '{0} ведёт «{1}» с двумя конвоирами в водах «{2}». Возьмите отряд.']);
+  out.push(["{0} and company sank the raiders' flagship {1} in {2}.", '{0} с отрядом потопили флагман налётчиков «{1}» в водах «{2}».']);
   return out;
 }

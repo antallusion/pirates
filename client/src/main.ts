@@ -2,6 +2,7 @@
 
 import { DivePanel } from './ui/dive.ts';
 import { giverDialog } from './ui/giver.ts';
+import { inspectDialog } from './ui/inspect.ts';
 import { BoardFightPanel } from './ui/boardfight.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
@@ -354,6 +355,18 @@ function onMessage(m: ServerMsg): void {
     case 'tasks':
       if (modal === 'map') refreshModal();
       break;
+    case 'inspect': {
+      // A captain's card (docs/11 P6): a whisper opens the chat to them; a call aboard or a friend's name at once.
+      const g = state.party;
+      const me = g?.members.find((x) => x.name === state.self?.name)?.accountId;
+      const canInvite = (!g || g.leader === me) && !g?.members.some((x) => x.name === m.view.name);
+      inspectDialog(m.view, {
+        whisper: (n) => companyScreen.onWhisper(n),
+        invite: (n) => net.send({ t: 'group', action: 'invite', name: n }),
+        befriend: (n) => net.send({ t: 'friend', action: 'add', name: n }),
+      }, { friend: state.friends.some((f) => f.name === m.view.name), canInvite });
+      break;
+    }
     case 'party':
     case 'friends':
     case 'who':
