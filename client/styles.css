@@ -1284,3 +1284,6 @@ html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { v
 @media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
   #toasts { top: auto; bottom: calc(max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h) + 150px) + 8px); flex-direction: column-reverse; }
 }
+/* Toasts in a column share its width, so their left edges (and icons) stand on one line instead of each centred
+   at its own width. */
+@media (max-width: 1099px), (max-height: 599px) { #toasts { align-items: stretch; } }

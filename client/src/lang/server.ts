@@ -66,6 +66,12 @@ function part(s: string, depth: number): string {
 
 function translate(s: string, depth: number): string {
   if (!templates) compile();
+  // World news ("WORLD: …") is a heading over any sentence: the sentence is translated on its own.
+  if (depth === 0 && s.startsWith('WORLD: ') && !exact.has(s)) {
+    const rest = s.slice(7);
+    const inner = translate(rest, 0);
+    if (inner !== rest || !templates!.some((t) => t.re.test(s))) return `${exact.get('WORLD:') ?? 'Вести:'} ${inner}`;
+  }
   const hit = exact.get(s) ?? TEXT_RU.get(s) ?? composedNameRu(s);
   if (hit) return hit;
   for (const t of templates!) {

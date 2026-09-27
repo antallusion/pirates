@@ -91,3 +91,14 @@ test("people's names read in Russian: officers and the sea's captains, in senten
   applyDataLocale('en');
   setLang('en');
 });
+
+test('world news: the heading is taken off and the sentence under it translated on its own', async () => {
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  setLang('ru');
+  applyDataLocale('ru');
+  const out = serverText("WORLD: Cinderhold's yards laid down new keels — timber is gold.").replace(/\u00a0/g, ' ');
+  assert.equal(out, 'Вести: На верфях порта Синдерхолд заложили новые кили — лес на вес золота.');
+  applyDataLocale('en');
+  setLang('en');
+});
