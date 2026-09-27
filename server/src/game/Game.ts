@@ -6,7 +6,7 @@ import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '..
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
-import { pushTasks, stepTasks } from './worldtasks.ts';
+import { pushTasks, stepTasks, taskSalvage } from './worldtasks.ts';
 import {
   CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_CROWD, SNAP_CROWD_EVERY, SNAP_MID, SNAP_NEAR, SNAP_RANK_MID, SNAP_RANK_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
   SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight, xpForLevel,
@@ -151,6 +151,7 @@ export interface Loot {
   salvaged?: boolean;
   monster?: boolean; // left by a monster of the deep (Leviathan Lore)
   claim?: { account: number; until: number }; // the victor and their group have the first 30 s
+  task?: number; // a crate of a wreck field, a task of the sea (docs/11 P6)
 }
 
 interface Rumor {
@@ -1342,6 +1343,13 @@ export class Game {
     this.loot.set(id, { id, x, y, cargo, gold: 0, expires: this.now + 300 });
   }
 
+  /** A crate of a wreck field (docs/11 P6): fished up, it counts on the captain's tally there. */
+  dropTaskCrate(x: number, y: number, cargo: Cargo, task: number, ttl: number): number {
+    const id = this.allocId();
+    this.loot.set(id, { id, x, y, cargo, gold: 0, expires: this.now + Math.max(30, ttl), task });
+    return id;
+  }
+
   /** Decoy Barrels: empty casks that look like cargo. */
   dropDecoy(x: number, y: number): void {
     const id = this.allocId();
@@ -1920,6 +1928,11 @@ export class Game {
       this.loot.delete(l.id);
       this.toastShip(ship, 'Empty casks, weighted to float. A decoy!', 'bad');
       return;
+    }
+    // A wreck field's crate: on the tally, and gone from the water whatever the hold takes of it.
+    if (l.task !== undefined) {
+      this.loot.delete(l.id);
+      taskSalvage(this, s, l.task);
     }
     if (l.wreck && !l.salvaged) {
       l.salvaged = true; // the first salvager works the wreck over

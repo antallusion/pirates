@@ -3,7 +3,8 @@
 // tally (a groupmate's kill too, through the quest events); a full tally is paid once.
 
 import { TASKS_AT_ONCE, TASK_NEED, TASK_RADIUS, TASK_SEC, taskLevel, taskReward } from '../../../shared/src/data/worldtasks.ts';
-import type { TaskView } from '../../../shared/src/data/worldtasks.ts';
+import type { TaskKind, TaskView } from '../../../shared/src/data/worldtasks.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
@@ -14,6 +15,7 @@ import type { ShipEntity } from './ship.ts';
 
 export interface WorldTask {
   id: number;
+  kind: TaskKind;
   island: string;
   region: RegionId;
   x: number;
@@ -23,6 +25,7 @@ export interface WorldTask {
   tally: Map<number, number>; // account → pirates sunk here
   done: Set<number>;
   pirates: number[]; // ship ids of the nest
+  crates: number[]; // loot ids of the wreck field
 }
 
 interface TaskState {
@@ -43,7 +46,7 @@ export function activeTasks(game: Game): WorldTask[] {
 }
 
 /** A nest by an island in open water, clear of ports: none in the Abyss. */
-function placeTask(game: Game): WorldTask | null {
+function placeTask(game: Game, kind: TaskKind): WorldTask | null {
   const islands = game.world.islands.filter((is) => is.region !== 'the_abyss');
   for (let k = 0; k < 40; k++) {
     const is = islands[Math.floor(game.rng.float() * islands.length)];
@@ -55,9 +58,22 @@ function placeTask(game: Game): WorldTask | null {
     if (game.world.ports.some((p) => Math.hypot(p.x - x, p.y - y) < 3500)) continue;
     if (st(game).list.some((t) => Math.hypot(t.x - x, t.y - y) < 8000)) continue;
     const level = taskLevel(REGIONS[is.region].safety);
-    return { id: st(game).nextId++, island: is.name, region: is.region, x, y, until: game.now + TASK_SEC, level, tally: new Map(), done: new Set(), pirates: [] };
+    return { id: st(game).nextId++, kind, island: is.name, region: is.region, x, y, until: game.now + TASK_SEC, level, tally: new Map(), done: new Set(), pirates: [], crates: [] };
   }
   return null;
+}
+
+/** Keep a wreck field strewn: five crates afloat at the least. */
+const SALVAGE: GoodId[] = ['timber', 'rum', 'provisions', 'cloth', 'iron'];
+function strew(game: Game, t: WorldTask): void {
+  t.crates = t.crates.filter((id) => game.loot.has(id));
+  for (let k = 0; t.crates.length < 5 && k < 12; k++) {
+    const a = game.rng.float() * Math.PI * 2, r = 150 + game.rng.float() * 900;
+    const x = t.x + Math.cos(a) * r, y = t.y + Math.sin(a) * r;
+    if (isLand(game.world, x, y) || !game.inZone(x, y)) continue;
+    const good = SALVAGE[Math.floor(game.rng.float() * SALVAGE.length)];
+    t.crates.push(game.dropTaskCrate(x, y, { [good]: 2 + Math.floor(game.rng.float() * 4) }, t.id, t.until - game.now));
+  }
 }
 
 /** Keep a nest stocked: three of its pirates at sea at the least. */
@@ -87,15 +103,19 @@ export function stepTasks(game: Game): void {
   s.list = s.list.filter((t) => t.until > game.now);
   let changed = s.list.length !== before;
   while (s.list.length < TASKS_AT_ONCE) {
-    const t = placeTask(game);
+    // Nests and wreck fields by turns: the kind there are fewer of.
+    const nests = s.list.filter((x) => x.kind === 'nest').length;
+    const t = placeTask(game, nests * 2 <= s.list.length ? 'nest' : 'wreck');
     if (!t) break;
     s.list.push(t);
     changed = true;
     for (const o of game.sessions) {
-      if (o.ship?.region === t.region) game.sendTo(o, { t: 'toast', msg: `News of the sea: pirates nest off ${t.island} in ${REGIONS[t.region].name}. Sink ${TASK_NEED} of them there within 45 min — anyone may.`, kind: 'info' });
+      if (o.ship?.region !== t.region) continue;
+      const region = REGIONS[t.region].name;
+      game.sendTo(o, { t: 'toast', msg: t.kind === 'wreck' ? `News of the sea: a wreck field off ${t.island} in ${region}. Fish ${TASK_NEED} crates out of it within 45 min — anyone may.` : `News of the sea: pirates nest off ${t.island} in ${region}. Sink ${TASK_NEED} of them there within 45 min — anyone may.`, kind: 'info' });
     }
   }
-  if (Math.floor(game.now) % 10 === 0) for (const t of s.list) stock(game, t);
+  if (Math.floor(game.now) % 10 === 0) for (const t of s.list) (t.kind === 'wreck' ? strew : stock)(game, t);
   if (changed || game.now - s.lastBroadcast >= 60) {
     s.lastBroadcast = game.now;
     for (const o of game.sessions) if (o.profile) pushTasks(game, o);
@@ -103,30 +123,43 @@ export function stepTasks(game: Game): void {
 }
 
 export function taskViews(game: Game, accountId: number): TaskView[] {
-  return st(game).list.map((t) => ({ id: t.id, island: t.island, region: t.region, x: Math.round(t.x), y: Math.round(t.y), r: TASK_RADIUS, need: TASK_NEED, mine: Math.min(TASK_NEED, t.tally.get(accountId) ?? 0), done: t.done.has(accountId), endsIn: Math.max(0, Math.round(t.until - game.now)) }));
+  return st(game).list.map((t) => ({ id: t.id, kind: t.kind, island: t.island, region: t.region, x: Math.round(t.x), y: Math.round(t.y), r: TASK_RADIUS, need: TASK_NEED, mine: Math.min(TASK_NEED, t.tally.get(accountId) ?? 0), done: t.done.has(accountId), endsIn: Math.max(0, Math.round(t.until - game.now)) }));
 }
 
 export function pushTasks(game: Game, s: PlayerSession): void {
   game.sendTo(s, { t: 'tasks', list: taskViews(game, s.accountId) });
 }
 
+/** One more on a captain's tally at a task: paid when it is full. */
+function tallyUp(game: Game, s: PlayerSession, t: WorldTask): void {
+  const name = t.kind === 'wreck' ? `Wreck field off ${t.island}` : `Pirate nest off ${t.island}`;
+  const n = (t.tally.get(s.accountId) ?? 0) + 1;
+  t.tally.set(s.accountId, n);
+  if (n >= TASK_NEED) {
+    t.done.add(s.accountId);
+    const r = taskReward(t.level);
+    s.profile!.gold += r.silver;
+    game.db.ledger(s.accountId, 'task', r.silver, `${t.kind} ${t.island}`);
+    game.grantXp(s, r.xp, null);
+    game.sendTo(s, { t: 'toast', msg: `Task of the sea done — ${name}: +${r.silver} silver, +${r.xp} XP.`, kind: 'gold' });
+  } else game.sendTo(s, { t: 'toast', msg: `${name}: ${n}/${TASK_NEED}.`, kind: 'info' });
+  pushTasks(game, s);
+}
+
 /** A pirate sunk (by the captain or a groupmate): on the tally of every nest within reach of her. */
 export function taskEvent(game: Game, s: PlayerSession, victim: ShipEntity): void {
   if (victim.npcRole !== 'pirate' || !s.profile) return;
   for (const t of st(game).list) {
-    if (t.done.has(s.accountId) || Math.hypot(victim.state.x - t.x, victim.state.y - t.y) > TASK_RADIUS) continue;
-    const n = (t.tally.get(s.accountId) ?? 0) + 1;
-    t.tally.set(s.accountId, n);
-    if (n >= TASK_NEED) {
-      t.done.add(s.accountId);
-      const r = taskReward(t.level);
-      s.profile.gold += r.silver;
-      game.db.ledger(s.accountId, 'task', r.silver, `nest ${t.island}`);
-      game.grantXp(s, r.xp, null);
-      game.sendTo(s, { t: 'toast', msg: `Task of the sea done — Pirate nest off ${t.island}: +${r.silver} silver, +${r.xp} XP.`, kind: 'gold' });
-    } else game.sendTo(s, { t: 'toast', msg: `Pirate nest off ${t.island}: ${n}/${TASK_NEED}.`, kind: 'info' });
-    pushTasks(game, s);
+    if (t.kind !== 'nest' || t.done.has(s.accountId) || Math.hypot(victim.state.x - t.x, victim.state.y - t.y) > TASK_RADIUS) continue;
+    tallyUp(game, s, t);
   }
+}
+
+/** A crate of a wreck field fished up: on the captain's tally there. */
+export function taskSalvage(game: Game, s: PlayerSession, taskId: number): void {
+  const t = st(game).list.find((x) => x.id === taskId);
+  if (!t || !s.profile || t.done.has(s.accountId)) return;
+  tallyUp(game, s, t);
 }
 
 /** For tests: forget the tasks of a game. */

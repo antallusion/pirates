@@ -16,6 +16,7 @@ import { keyLabel, settings } from '../settings.ts';
 import { mapCard, placeName } from './maps.ts';
 import { esc } from './dom.ts';
 import { serverText } from '../lang/server.ts';
+import { taskName } from '../../../shared/src/data/worldtasks.ts';
 
 const L = dict(EN, RU);
 
@@ -39,7 +40,7 @@ export class WorldMap {
     const gone = (performance.now() - state.tasksAt) / 1000;
     const rows = state.tasks.map((t) => {
       const m = Math.max(0, Math.ceil((t.endsIn - gone) / 60));
-      return `<button class="mq-row task${t.done ? ' done' : ''}" data-task="${t.id}"><b>${esc(serverText(`Pirate nest off ${t.island}`))}</b><span class="muted">${esc(placeName(REGIONS[t.region].name))} · ${t.done ? esc(L('taskDone')) : esc(L('taskRow', { m, k: t.mine, n: t.need }))}</span></button>`;
+      return `<button class="mq-row task${t.done ? ' done' : ''}" data-task="${t.id}"><b>${esc(serverText(taskName(t.kind, t.island)))}</b><span class="muted">${esc(placeName(REGIONS[t.region].name))} · ${t.done ? esc(L('taskDone')) : esc(L('taskRow', { m, k: t.mine, n: t.need }))}</span></button>`;
     }).join('');
     return `<div class="map-quests map-tasks" title="${esc(L('tasksHint'))}"><div class="mq-head">${icon('danger', '', 'ico-sm')}${esc(L('tasks'))}</div>${rows}</div>`;
   }
@@ -443,22 +444,24 @@ export class WorldMap {
     const gone = (performance.now() - state.tasksAt) / 1000;
     for (const t of state.tasks) {
       const x = tx(t.x), y = ty(t.y);
-      g.strokeStyle = t.done ? 'rgba(150,150,150,0.6)' : 'rgba(232,140,64,0.9)';
-      g.fillStyle = t.done ? 'rgba(120,120,120,0.08)' : 'rgba(232,140,64,0.12)';
+      // Nests in orange, wreck fields in the teal of the sea's salvage.
+      const [cr, cg, cb] = t.kind === 'wreck' ? [80, 200, 190] : [232, 140, 64];
+      g.strokeStyle = t.done ? 'rgba(150,150,150,0.6)' : `rgba(${cr},${cg},${cb},0.9)`;
+      g.fillStyle = t.done ? 'rgba(120,120,120,0.08)' : `rgba(${cr},${cg},${cb},0.12)`;
       g.lineWidth = 2;
       g.beginPath();
       g.arc(x, y, Math.max(7, t.r * k), 0, Math.PI * 2);
       g.fill();
       g.stroke();
-      if (!mark('icon.danger', x, y, ms * 0.9)) {
-        g.fillStyle = '#e88c40';
+      if (!mark(t.kind === 'wreck' ? 'icon.map_wreck' : 'icon.danger', x, y, ms * 0.9)) {
+        g.fillStyle = t.kind === 'wreck' ? '#50c8be' : '#e88c40';
         g.font = '700 14px Inter, system-ui, sans-serif';
         g.textAlign = 'center';
         g.fillText('!', x, y + 5);
       }
       g.font = '600 11px Inter, system-ui, sans-serif';
       const m = Math.max(0, Math.ceil((t.endsIn - gone) / 60));
-      label(`${serverText(`Pirate nest off ${t.island}`)} · ${t.done ? L('taskDone') : L('taskRow', { m, k: t.mine, n: t.need })}`, x, y + ms * 0.9, t.done ? '#b8b8b8' : '#f2b27a');
+      label(`${serverText(taskName(t.kind, t.island))} · ${t.done ? L('taskDone') : L('taskRow', { m, k: t.mine, n: t.need })}`, x, y + ms * 0.9, t.done ? '#b8b8b8' : t.kind === 'wreck' ? '#8fe0d8' : '#f2b27a');
     }
     // Where the quests point: a gold mark and the quest's name.
     for (const q of state.self?.quests ?? []) {

@@ -474,7 +474,7 @@ export class Hud {
     for (const t of state.tasks) {
       const d = Math.hypot(t.x - own.x, t.y - own.y);
       if (Math.max(Math.abs(tx(t.x) - W / 2), Math.abs(ty(t.y) - H / 2)) < W / 2 - 4) {
-        g.strokeStyle = t.done ? 'rgba(160,160,160,0.6)' : 'rgba(232,140,64,0.95)';
+        g.strokeStyle = t.done ? 'rgba(160,160,160,0.6)' : t.kind === 'wreck' ? 'rgba(80,200,190,0.95)' : 'rgba(232,140,64,0.95)';
         g.lineWidth = 1.5;
         g.beginPath();
         g.arc(tx(t.x), ty(t.y), Math.max(4, t.r * k), 0, Math.PI * 2);

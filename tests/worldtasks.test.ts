@@ -26,7 +26,11 @@ test('nests are found about the map, kept stocked, told to the map, and lapse in
   // Stocked on the tenth second.
   while (Math.floor(game.now) % 10 !== 0) game.now += 1;
   stepTasks(game);
-  for (const t of list) assert.ok(t.pirates.filter((id) => game.ships.get(id)?.alive).length >= 3, 'three pirates at the nest');
+  assert.ok(list.some((t) => t.kind === 'nest') && list.some((t) => t.kind === 'wreck'), 'nests and wreck fields both');
+  for (const t of list) {
+    if (t.kind === 'nest') assert.ok(t.pirates.filter((id) => game.ships.get(id)?.alive).length >= 3, 'three pirates at the nest');
+    else assert.ok(t.crates.filter((id) => game.loot.has(id)).length >= 5, 'five crates afloat in the field');
+  }
   const view = c.last('tasks')!;
   assert.equal(view.list.length, TASKS_AT_ONCE);
   assert.equal(view.list[0].need, TASK_NEED);
@@ -79,6 +83,31 @@ test('pirates sunk at a nest fill one’s tally, a groupmate’s too; a full tal
   resetTasks(game);
 });
 
+test('a wreck field: each crate fished up counts, the fourth pays, and a crate is gone once taken', () => {
+  const { game } = makeGame();
+  resetTasks(game);
+  const c = join(game, 'Fisher Fay');
+  const S = game.sessionByName('Fisher Fay')!;
+  stepTasks(game);
+  const t = activeTasks(game).find((x) => x.kind === 'wreck')!;
+  while (Math.floor(game.now) % 10 !== 0) game.now += 1;
+  stepTasks(game);
+  S.ship!.docked = null;
+  const gold = S.profile!.gold;
+  for (let i = 0; i < TASK_NEED; i++) {
+    const id = t.crates.find((x) => game.loot.has(x))!;
+    const l = game.loot.get(id)!;
+    S.ship!.state.x = l.x;
+    S.ship!.state.y = l.y;
+    for (let k = 0; k < 25 && game.loot.has(id); k++) game.step(); // the water is swept once a second
+    assert.ok(!game.loot.has(id), 'the crate is fished up');
+  }
+  assert.ok(t.done.has(S.accountId), 'the tally is full');
+  assert.ok(S.profile!.gold - gold >= taskReward(t.level).silver, 'paid');
+  assert.ok(c.all('toast').some((m) => m.msg.startsWith('Task of the sea done — Wreck field off')));
+  resetTasks(game);
+});
+
 test('the tasks read in Russian', () => {
   // The world is made in English (as on the server), before the Russian tables are laid over the data.
   const { game } = makeGame();
@@ -90,6 +119,10 @@ test('the tasks read in Russian', () => {
     `News of the sea: pirates nest off ${island} in The Black Coast. Sink ${TASK_NEED} of them there within 45 min — anyone may.`,
     `Task of the sea done — Pirate nest off ${island}: +520 silver, +720 XP.`,
     `Pirate nest off ${island}: 2/${TASK_NEED}.`,
+    `Wreck field off ${island}`,
+    `News of the sea: a wreck field off ${island} in The Black Coast. Fish ${TASK_NEED} crates out of it within 45 min — anyone may.`,
+    `Task of the sea done — Wreck field off ${island}: +520 silver, +720 XP.`,
+    `Wreck field off ${island}: 3/${TASK_NEED}.`,
   ].map((l) => serverText(l));
   setLang('en');
   applyDataLocale('en');
