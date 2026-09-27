@@ -809,12 +809,19 @@ export class Renderer {
     const rnd = seeded(is.id * 97 + s.v * 13 + s.kind.length);
     const along = Math.atan2(ty, tx);
     const facingSea = Math.atan2(ox, -oy); // turns a sprite drawn head-up to face the sea
-    /** The painted sprite (docs/11 P5) at px size on its longest side; false when it has not loaded. */
-    const art = (id: string, px: number, py: number, size: number, rot = 0, kx = 1, ky = 1): boolean => {
+    /** The painted sprite (docs/11 P5) at px size on its longest side; false when it has not loaded. Sprites come
+     *  without shadows (docs/06 §5.2): a soft one is laid under what stands on the ground, away from the moon. */
+    const art = (id: string, px: number, py: number, size: number, rot = 0, kx = 1, ky = 1, shadow = 0.38): boolean => {
       const sp = sprite(id);
       if (!sp) return false;
       const k = size / Math.max(sp.img.naturalWidth, sp.img.naturalHeight);
       const w = sp.img.naturalWidth * k, h = sp.img.naturalHeight * k;
+      if (shadow > 0) {
+        g.fillStyle = `rgba(0,0,0,${shadow})`;
+        g.beginPath();
+        g.ellipse(px + size * 0.07, py + size * 0.09, (w * sp.extentX * Math.abs(kx)) / 2, (h * sp.extentY * Math.abs(ky)) / 2, rot, 0, Math.PI * 2);
+        g.fill();
+      }
       g.save();
       g.translate(px, py);
       g.rotate(rot);
@@ -1004,7 +1011,7 @@ export class Renderer {
           const flap = (2 + Math.sin(t * 8 + i * 1.7) * 1.6) * z;
           const span = 4 * z + 2;
           // Heading along its circle; the wings beat by narrowing the span.
-          if (art('creature.gull', gx, gy, span * 2.4, Math.atan2(-Math.sin(a), -Math.cos(a)), 0.55 + 0.45 * Math.abs(Math.sin(t * 8 + i * 1.7)))) continue;
+          if (art('creature.gull', gx, gy, span * 2.4, Math.atan2(-Math.sin(a), -Math.cos(a)), 0.55 + 0.45 * Math.abs(Math.sin(t * 8 + i * 1.7)), 1, 0)) continue;
           g.beginPath();
           g.moveTo(gx - span, gy - flap);
           g.quadraticCurveTo(gx - span / 2, gy - flap * 0.2, gx, gy);
@@ -1090,13 +1097,15 @@ export class Renderer {
     const g = this.g;
     if (is.biome === 'atoll') {
       this.path(is.poly, 0.6, is.x, is.y);
+      // The lagoon is a shallow of the dark sea (docs/06 §6.1: grey-green, never azure — turquoise is the deep's own
+      // light), a shade lighter toward its rim, with a thin moonlit edge of foam.
       const grd = g.createRadialGradient(this.sx(is.x), this.sy(is.y), 0, this.sx(is.x), this.sy(is.y), is.r * 0.6 * this.zoom);
-      grd.addColorStop(0, 'rgba(46,150,160,0.92)');
-      grd.addColorStop(0.8, 'rgba(70,180,176,0.9)');
-      grd.addColorStop(1, 'rgba(150,215,200,0.85)');
+      grd.addColorStop(0, 'rgba(18,28,30,0.95)');
+      grd.addColorStop(0.8, 'rgba(30,43,44,0.93)');
+      grd.addColorStop(1, 'rgba(52,64,60,0.88)');
       g.fillStyle = grd;
       g.fill();
-      g.strokeStyle = 'rgba(230,240,230,0.35)';
+      g.strokeStyle = 'rgba(127,144,156,0.3)';
       g.lineWidth = Math.max(1, 3 * this.zoom);
       g.stroke();
     } else if (is.biome === 'saltflat' && this.zoom > 0.25) {
