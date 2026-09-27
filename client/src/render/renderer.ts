@@ -26,6 +26,7 @@ import { FACTION_SIGN } from './relation.ts';
 import { buildRelief } from './terrain.ts';
 import type { Palette } from './terrain.ts';
 import { dict } from '../i18n.ts';
+import { dec1 } from '../ui/dom.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 
 const L = dict(REN, RRU);
@@ -1620,7 +1621,7 @@ export class Renderer {
       g.fill();
       g.rotate(-a);
       g.fillStyle = 'rgba(240,230,200,0.95)';
-      g.fillText(d >= 1000 ? `${(d / 1000).toFixed(1)}k` : `${Math.round(d / 10) * 10}`, 0 - Math.cos(a) * 26, 0 - Math.sin(a) * 26);
+      g.fillText(d >= 1000 ? L('dist.km', { n: dec1(d / 1000) }) : L('dist.m', { n: Math.round(d / 10) * 10 }), 0 - Math.cos(a) * 26, 0 - Math.sin(a) * 26);
       g.translate(-x, -y);
     }
     g.restore();
@@ -1708,7 +1709,12 @@ export class Renderer {
       g.fillRect(bx - w / 2, by, w * clamp(s.hull, 0, 1), 3);
       return;
     }
-    const x = this.sx(s.x), y = this.sy(s.y) - (cls.length * this.zoom) / 2 - 16;
+    // A ship past the screen's edge has its threat mark; its name is not drawn as a stub at the border, and a
+    // ship on screen near an edge keeps its name inside it.
+    const sxs = this.sx(s.x);
+    if (sxs < 0 || sxs > this.w) return;
+    let x = sxs;
+    const y = this.sy(s.y) - (cls.length * this.zoom) / 2 - 16;
     const hostile = (s.flags & SF.HOSTILE) !== 0;
     const info = s.info;
     const faction = info.faction !== 'player' ? FACTIONS[info.faction] : null;
@@ -1718,14 +1724,20 @@ export class Renderer {
     // NPC ships' names read in the player's language, as in every toast about them; captains name their own.
     const label = info.isPlayer ? `${info.captainName} · ${info.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${placeName(info.name)}`;
     const cb = settings().colorblind;
+    const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
+    const tag = info.isPlayer ? `${info.title ? info.title + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' ');
+    // Both lines keep inside the screen: the name and, under it, the (often longer) class line.
+    const nameW = g.measureText(label).width;
+    g.font = '10px Inter, sans-serif';
+    const half = Math.max(nameW, g.measureText(tag).width) / 2 + 6;
+    g.font = '600 11px Inter, sans-serif';
+    x = clamp(x, half, Math.max(half, this.w - half));
     g.fillStyle = '#000';
     g.fillText(label, x + 1, y + 1);
     g.fillStyle = cbColor(cb, hostile ? '#e0776b' : info.isPlayer ? '#cfe0f2' : faction ? faction.lantern : '#ccc');
     g.fillText(label, x, y);
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
-    const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
-    const tag = info.isPlayer ? `${info.title ? info.title + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : `${cls.name} · ${faction?.short ?? ''}${role ? ' ' + role : ''}`;
     const marks = info.isPlayer
       ? `${s.flags & SF.BLACK_FLAG ? L('blackFlag') : ''}${s.flags & SF.GREEN_PENNANT ? L('greenPennant') : ''}${s.flags & SF.SHAME ? L('shame') : ''}${s.flags & SF.BOUNTY ? L('bounty') : ''}${s.flags & SF.DUEL ? L('duel') : ''}`
       : '';

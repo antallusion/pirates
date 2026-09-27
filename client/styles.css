@@ -1258,3 +1258,10 @@ body.ship-open .ship-panel { top: calc(var(--uf-bottom, 104px) + 6px); backgroun
 /* Until the game has put the page's words in Russian, the English ones are not shown (index.html). */
 html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { visibility: hidden; animation: i18n-show 0s 3s forwards; }
 @keyframes i18n-show { to { visibility: visible; } } /* should the script never come, the English shows after 3 s */
+/* The current quest under the minimap (desktops) wraps to its full words instead of being cut with an ellipsis. */
+#hud-region > .rg-extra { white-space: normal; overflow: visible; }
+
+/* Key chips on the gauges and the fire mode: the bound key (rebinding shows), then the word. */
+.kchip { display: inline-block; margin-right: 4px; padding: 0 3px; border: 1px solid rgba(154, 166, 178, 0.45); border-radius: 3px; font: 700 8px/1.5 var(--sans); color: var(--bone); letter-spacing: 0; text-transform: none; vertical-align: 1px; }
+.rl > span { white-space: nowrap; }
+@media (min-width: 700px) { .rl { width: auto; min-width: 84px; } }

@@ -26,6 +26,7 @@ import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { summon } from './bosses.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
+import type { ShipEntity } from './ship.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -112,23 +113,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'boss': {
       const kind = args[0] as BossId;
       if (!BOSSES[kind]) return `Bosses: ${Object.keys(BOSSES).join(', ')}`;
-      // Open water 600-900 m off: the first bearing with no shore within 400 m of the spot.
-      let x = ship.state.x, y = ship.state.y;
-      search: for (const r of [600, 900, 1300]) {
-        for (let k = 0; k < 12; k++) {
-          const a = ship.state.heading + (k * Math.PI) / 6;
-          const px = ship.state.x + Math.sin(a) * r, py = ship.state.y - Math.cos(a) * r;
-          const clear = islandsNear(game.world, px, py).every((id) => {
-            const poly = game.world.islands[id].poly;
-            return !pointInPolygon(px, py, poly) && closestOnPolygon(px, py, poly).d2 > 400 * 400;
-          });
-          if (clear) {
-            x = px;
-            y = py;
-            break search;
-          }
-        }
-      }
+      const [x, y] = openSpot(game, ship, [600, 900, 1300], 400);
       const f = summon(game, kind, x, y);
       return `${BOSSES[kind].name} rises (fight ${f.id}).`;
     }
@@ -168,9 +153,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const cls = (args[1] ?? 'fluyt') as ShipClassId;
       const faction = (args[2] ?? 'league') as 'league';
       if (!SHIP_CLASSES[cls]) return `Classes: ${Object.keys(SHIP_CLASSES).join(', ')}`;
-      const a = ship.state.heading + Math.PI / 2;
-      const o = game.spawnNpcShip(role, cls, faction, ship.state.x + Math.sin(a) * 300, ship.state.y - Math.cos(a) * 300, ship.state.heading);
+      // Off the beam if the water is open there, else the first open bearing (never on a reef or a shore).
+      const [x, y] = openSpot(game, ship, [300, 500, 800], 200, Math.PI / 2);
+      const o = game.spawnNpcShip(role, cls, faction, x, y, ship.state.heading);
       if (role === 'merchant') o.cargo = { spices: 20, rum: 15, sugar: 20 };
+      // Awake at once (a dormant ship is neither simulated nor sent until the sea wakes it).
+      const brain = game.npcs.get(o.id);
+      if (brain) brain.active = true;
       game.grid.upsert(o.id, o.state.x, o.state.y);
       return `${o.name} (${SHIP_CLASSES[cls].name}, ${faction}) lies off your beam.`;
     }
@@ -236,4 +225,21 @@ export function mend(ship: { hull: number; sails: number; crew: number; water: n
   ship.crew = Math.max(ship.crew, ship.stats.crewMin);
   ship.water = 0;
   ship.leaks = 0;
+}
+
+/** Open water off the ship: the first bearing (from `start` off the bow, every 30°) at each range in turn with no
+ * shore within `margin` metres; the ship's own spot when the sea has none. */
+function openSpot(game: Game, ship: ShipEntity, ranges: number[], margin: number, start = 0): [number, number] {
+  for (const r of ranges) {
+    for (let k = 0; k < 12; k++) {
+      const a = ship.state.heading + start + (k * Math.PI) / 6;
+      const px = ship.state.x + Math.sin(a) * r, py = ship.state.y - Math.cos(a) * r;
+      const clear = islandsNear(game.world, px, py).every((id) => {
+        const poly = game.world.islands[id].poly;
+        return !pointInPolygon(px, py, poly) && closestOnPolygon(px, py, poly).d2 > margin * margin;
+      });
+      if (clear) return [px, py];
+    }
+  }
+  return [ship.state.x, ship.state.y];
 }

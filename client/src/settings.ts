@@ -1,6 +1,8 @@
 // Player options (docs/07 §11): accessibility, controls, sound and graphics. Kept in localStorage, applied at
 // once. Pure parts (the keymap, presets, conflicts, colour-blind remapping) are unit-tested.
 
+import { lang } from './i18n.ts';
+
 export type Action =
   | 'sailUp' | 'sailDown' | 'rudderLeft' | 'rudderRight' | 'firePort' | 'fireStarboard' | 'chasers'
   | 'ammo1' | 'ammo2' | 'ammo3' | 'ammo4' | 'ammo5' | 'cursedShot'
@@ -86,7 +88,7 @@ export function conflicts(map: Keymap): Map<string, Action[]> {
 /** How a key reads on screen. */
 export function keyLabel(k: string): string {
   if (!k) return '—';
-  if (k === ' ') return 'Space';
+  if (k === ' ') return lang() === 'ru' ? 'Пробел' : 'Space';
   if (k.startsWith('arrow')) return { arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→' }[k] ?? k;
   return k.length === 1 ? k.toUpperCase() : k[0].toUpperCase() + k.slice(1);
 }

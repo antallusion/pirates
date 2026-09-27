@@ -29,6 +29,9 @@ export const EN = {
   'crit.rudder': 'RUDDER',
   'crit.gut': 'GUT',
   'crit.raked': 'RAKED',
+  'dist.km': '{n} km',
+  'tag.npc': '{cls} · {faction} {role}',
+  'dist.m': '{n} m',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -60,4 +63,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'crit.rudder': 'РУЛЬ',
   'crit.gut': 'НУТРО',
   'crit.raked': 'ПРОДОЛЬНЫЙ',
+  'dist.km': '{n} км',
+  'tag.npc': '{cls} · {role} · {faction}',
+  'dist.m': '{n} м',
 };

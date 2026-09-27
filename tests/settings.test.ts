@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { ACTIONS, actionFor, cbColor, conflicts, defaults, keyLabel, keyOf, PRESETS, sanitize } from '../client/src/settings.ts';
 import { direction } from '../client/src/audio.ts';
 import { Fx } from '../client/src/render/fx.ts';
+import { setLang } from '../client/src/i18n.ts';
 
 test('key rebinding: two bindings per action, every preset free of conflicts, clashes reported', () => {
   for (const [name, map] of Object.entries(PRESETS)) {
@@ -17,7 +18,11 @@ test('key rebinding: two bindings per action, every preset free of conflicts, cl
   assert.equal(actionFor(PRESETS.onehand, 'z'), null, 'one hand: six keys and the mouse');
   const clash = { ...d.keys, repair: ['q', ''] as [string, string] };
   assert.deepEqual(conflicts(clash).get('q')!.sort(), ['firePort', 'repair']);
+  setLang('en');
   assert.equal(keyLabel(' '), 'Space');
+  setLang('ru');
+  assert.equal(keyLabel(' '), 'Пробел', 'the space bar is named in the reader language');
+  setLang('en');
   assert.equal(keyLabel('arrowleft'), '←');
 });
 

@@ -5,7 +5,8 @@ import { dict, lang, plural, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
 import { term } from './terms.ts';
 import { drawRelation, relationOf, RELATION_COLOR } from '../render/relation.ts';
-import { cbColor, settings } from '../settings.ts';
+import { cbColor, keyLabel, settings } from '../settings.ts';
+import type { Action } from '../settings.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { isNight, nightFactor, timeOfDay } from '../../../shared/src/constants.ts';
@@ -126,11 +127,11 @@ export class Hud {
     // gauges, fire mode); reloads and cooldowns move in place every frame without touching the markup.
     const shots = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed');
     const shipCls = cls;
-    const gauges: { id: string; label: string; art: string; v: number; ready: boolean }[] = [
-      { id: 'port', label: keyless(L('port')), art: 'fire', v: you.reload.port, ready: you.reload.port >= 1 },
-      { id: 'starboard', label: keyless(L('starboard')), art: 'fire', v: you.reload.starboard, ready: you.reload.starboard >= 1 },
+    const gauges: { id: string; label: string; key?: Action; art: string; v: number; ready: boolean }[] = [
+      { id: 'port', label: L('port'), key: 'firePort', art: 'fire', v: you.reload.port, ready: you.reload.port >= 1 },
+      { id: 'starboard', label: L('starboard'), key: 'fireStarboard', art: 'fire', v: you.reload.starboard, ready: you.reload.starboard >= 1 },
     ];
-    if (shipCls.bowChasers + shipCls.sternChasers > 0) gauges.push({ id: 'chasers', label: keyless(L('chasers')), art: 'chasers', v: Math.max(you.reload.bow, you.reload.stern), ready: Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 });
+    if (shipCls.bowChasers + shipCls.sternChasers > 0) gauges.push({ id: 'chasers', label: L('chasers'), key: 'chasers', art: 'chasers', v: Math.max(you.reload.bow, you.reload.stern), ready: Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 });
     if (self.loadout.mount) gauges.push({ id: 'mount', label: MOUNTS[self.loadout.mount].name, art: `mount_${self.loadout.mount}`, v: you.reload.mount, ready: you.reload.mount >= 1 });
     const abil = cap.abilities.map((a) => {
       const locked = a.kind === 'ultimate' && self.level < 6;
@@ -144,7 +145,7 @@ export class Hud {
       ? `<div class="row" style="font-size:11px"><span class="lbl" style="color:var(--bad)">${esc(L('heat'))}</span><span class="val">${esc(L('heatSides', { p: self.heat.port, s: self.heat.starboard }))}</span></div>` : '';
     // Storm Gunner: the crest of the swell (the same seven-second cycle as the server).
     const crest = (self.talents.brg_storm_gunner ?? 0) > 0 && state.wind[1] >= 0.9 && Math.sin((now * Math.PI * 2) / 7 + (state.entityId ?? 0)) > 0.75;
-    const mode = `<div class="ab-mode">${esc(keyless(L('fireMode')))}: ${esc(L(self.rollingFire ? 'rolling' : 'broadside'))}${crest ? ` · <span style="color:var(--gold)">${esc(L('crest'))}</span>` : ''}</div>`;
+    const mode = `<div class="ab-mode">${keyChip('fireMode')}${esc(L('fireMode'))}: ${esc(L(self.rollingFire ? 'rolling' : 'broadside'))}${crest ? ` · <span style="color:var(--gold)">${esc(L('crest'))}</span>` : ''}</div>`;
     const combat = $('hud-combat');
     const key = [lang(), document.body.classList.contains('touch'), you.ammoSel, shots.map((a) => `${a}${you.ammo[a]}`).join(','), gauges.map((g) => g.id).join(','),
       abil.map((x) => `${x.a.id}${x.dim ? 1 : 0}${x.locked ? 1 : 0}`).join(','), tals.map((x) => x.t.id).join(','), heat, mode, this.artEpoch].join('|');
@@ -154,7 +155,7 @@ export class Hud {
         data: `data-ammo="${a}"`, cls: you.ammoSel === a ? 'sel' : '', art: `ammo_${a}`, glyph: AMMO[a].name.slice(0, 1), name: AMMO[a].name,
         key: a === 'cursed' ? 'U' : String(i + 1), qty: String(you.ammo[a]), title: AMMO[a].name,
       })).join('');
-      const reload = gauges.map((g) => `<div class="rl ${g.id === 'port' ? 'flip' : ''}" data-g="${g.id}">${icon(g.art, '', 'ico-rl')}<span>${esc(g.label)}</span><div class="fbar"><i></i></div></div>`).join('');
+      const reload = gauges.map((g) => `<div class="rl ${g.id === 'port' ? 'flip' : ''}" data-g="${g.id}">${icon(g.art, '', 'ico-rl')}<span>${g.key ? keyChip(g.key) : ''}${esc(g.label)}</span><div class="fbar"><i></i></div></div>`).join('');
       const abilities = abil.map((x) => slot({
         data: `data-ab="${x.a.id}"`, cls: `${x.a.kind === 'ultimate' ? 'ult' : ''} ${x.dim ? 'locked' : ''}`, art: `ab_${x.a.id}`, glyph: x.a.key, name: x.a.name, key: x.a.key,
         title: `${x.a.name} — ${x.a.description}`,
@@ -699,6 +700,13 @@ function slot(o: { data: string; cls: string; art: string; glyph: string; name: 
 function placeShipPanel(): void {
   const low = Math.max(0, ...[...$('hud-captain').querySelectorAll('*')].map((e) => e.getBoundingClientRect()).filter((r) => r.height > 0).map((r) => r.bottom));
   if (low > 40) document.body.style.setProperty('--uf-bottom', `${Math.round(low)}px`);
+}
+
+/** The key an action is bound to (the player may have rebound it), as a small chip; none on a touch screen. */
+function keyChip(a: Action): string {
+  if (document.body.classList.contains('touch')) return '';
+  const [k1, k2] = settings().keys[a];
+  return `<kbd class="kchip">${esc(keyLabel(k1 || k2))}</kbd>`;
 }
 
 function keyless(s: string): string {

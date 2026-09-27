@@ -22,6 +22,8 @@ export interface Particle {
   grow: number;
   color: string;
   text?: string;
+  /** Damage a hit number carries: the hits of one broadside on one ship add up into it. */
+  sum?: number;
 }
 
 export interface Ball {
@@ -194,7 +196,15 @@ export class Fx {
         this.smoke(e.x, e.y, 2, 5, true);
         this.light(e.x, e.y, 50, 'rgba(255,170,90,1)', 0.5, 0.2);
         const color = e.ship === ownId ? '#e07a6a' : e.crit ? '#f0c060' : '#e8e0cc';
-        this.text(e.x, e.y - 6, e.crit ? `${e.dmg} ${`crit.${e.crit}` in REN ? L(`crit.${e.crit}` as 'crit.fire') : e.crit.toUpperCase()}` : String(e.dmg), color);
+        if (e.crit) this.text(e.x, e.y - 6, `${e.dmg} ${`crit.${e.crit}` in REN ? L(`crit.${e.crit}` as 'crit.fire') : e.crit.toUpperCase()}`, color);
+        else {
+          // The balls of one broadside land together: their damage reads as one rising number, not a pile.
+          const near = this.particles.find((p) => p.kind === 'text' && p.sum !== undefined && p.t < 0.35 && p.color === color && Math.hypot(p.x - e.x, p.y - (e.y - 6)) < 40);
+          if (near) {
+            near.sum! += e.dmg;
+            near.text = String(near.sum);
+          } else this.add({ kind: 'text', x: e.x, y: e.y - 6, vy: -9, life: 1.3, size: 13, color, text: String(e.dmg), sum: e.dmg });
+        }
         if (e.ship === ownId) this.shake = Math.max(this.shake, 0.35);
         break;
       }
