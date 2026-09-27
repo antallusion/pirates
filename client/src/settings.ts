@@ -9,13 +9,13 @@ export type Action =
   | 'talent1' | 'talent2' | 'talent3' | 'talent4' | 'talent5'
   | 'abilityZ' | 'abilityX' | 'abilityC' | 'abilityV' | 'fireMode'
   | 'board' | 'land' | 'orders' | 'repair' | 'dock' | 'formation' | 'harbour'
-  | 'map' | 'talents' | 'ship' | 'crew' | 'company' | 'help' | 'mute' | 'readAloud';
+  | 'map' | 'talents' | 'ship' | 'crew' | 'company' | 'journal' | 'help' | 'mute' | 'readAloud';
 
 export const ACTIONS: Action[] = [
   'sailUp', 'sailDown', 'rudderLeft', 'rudderRight', 'firePort', 'fireStarboard', 'chasers', 'dash',
   'ammo1', 'ammo2', 'ammo3', 'ammo4', 'ammo5', 'cursedShot', 'talent1', 'talent2', 'talent3', 'talent4', 'talent5',
   'abilityZ', 'abilityX', 'abilityC', 'abilityV', 'fireMode', 'board', 'land', 'orders', 'repair', 'dock', 'formation', 'harbour',
-  'map', 'talents', 'ship', 'crew', 'company', 'help', 'mute', 'readAloud',
+  'map', 'talents', 'ship', 'crew', 'company', 'journal', 'help', 'mute', 'readAloud',
 ];
 
 /** Two bindings per action (the second may be empty). Keys are `KeyboardEvent.key`, lower-cased. */
@@ -28,7 +28,7 @@ const CLASSIC: Keymap = {
   talent1: ['6', ''], talent2: ['7', ''], talent3: ['8', ''], talent4: ['9', ''], talent5: ['0', ''],
   abilityZ: ['z', ''], abilityX: ['x', ''], abilityC: ['c', ''], abilityV: ['v', ''], fireMode: ['k', ''],
   board: ['b', ''], land: ['l', ''], orders: ['g', ''], repair: ['r', ''], dock: ['f', ''], formation: ['j', ''], harbour: ['p', ''],
-  map: ['m', ''], talents: ['t', ''], ship: ['i', ''], crew: ['o', ''], company: ['y', ''], help: ['h', 'f1'], mute: ['n', ''], readAloud: ['f2', ''],
+  map: ['m', ''], talents: ['t', ''], ship: ['i', ''], crew: ['o', ''], company: ['y', ''], journal: ['f3', ''], help: ['h', 'f1'], mute: ['n', ''], readAloud: ['f2', ''],
 };
 
 /** The four presets of §11.4. */
@@ -52,7 +52,7 @@ export const PRESETS: Record<'classic' | 'arrows' | 'lefthand' | 'onehand', Keym
   onehand: {
     ...Object.fromEntries(ACTIONS.map((a) => [a, ['', ''] as [string, string]])),
     sailUp: ['w', 'arrowup'], sailDown: ['s', 'arrowdown'], rudderLeft: ['a', 'arrowleft'], rudderRight: ['d', 'arrowright'],
-    board: ['e', ''], dock: ['q', ''], help: ['f1', ''], map: ['m', ''], readAloud: ['f2', ''],
+    board: ['e', ''], dock: ['q', ''], help: ['f1', ''], map: ['m', ''], journal: ['f3', ''], readAloud: ['f2', ''],
   } as Keymap,
 };
 

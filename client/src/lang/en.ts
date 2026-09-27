@@ -206,6 +206,7 @@ export const EN = {
   'act.help': "Handbook",
   'act.mute': "Sound on/off",
   'act.readAloud': "Read aloud",
+  'act.journal': "Quest journal",
   // Title screen, captain screen static markup, HUD chrome (client/index.html)
   'doc.title': 'GRAVETIDE — a Pirate Gothic MMORPG',
   'login.subtitle': 'The ocean is the world. The ship is the character. The captain is the build.',

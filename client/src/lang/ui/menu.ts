@@ -1,6 +1,7 @@
 // The ship's menu (phones and the micro-menu): the screens a captain opens from the helm.
 
 export const EN = {
+  journal: 'Journal',
   title: "Captain's cabin",
   map: 'Chart',
   ship: 'Ship',
@@ -14,6 +15,7 @@ export const EN = {
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
+  journal: 'Журнал',
   title: 'Каюта капитана',
   map: 'Карта',
   ship: 'Корабль',

@@ -29,6 +29,7 @@ import { PortScreen } from './ui/port.ts';
 import { TalentScreen } from './ui/talents.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
+import { Journal } from './ui/journal.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
@@ -47,7 +48,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -57,6 +58,7 @@ const audio = new AudioEngine();
 renderer.onLightning = () => audio.thunder();
 for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });
 const worldMap = new WorldMap();
+const journal = new Journal((m) => net.send(m));
 worldMap.send = (m) => net.send(m);
 let modal: Modal = null;
 let inGame = false;
@@ -437,6 +439,9 @@ function renderModal(root: HTMLElement): void {
     case 'map':
       worldMap.open(root, state);
       break;
+    case 'journal':
+      journal.render(root, state);
+      break;
     case 'ship':
       renderShip(root, state, (m) => net.send(m));
       break;
@@ -527,7 +532,7 @@ function openMenuItem(m: MenuItem): void {
 
 /** The desktop micro menu: every screen one click away, in icons (glyphs until the art loads). */
 function buildMicroMenu(): void {
-  $('hud-menu').innerHTML = MENU_ITEMS.map((m) => `<button data-menu="${m.id}" title="${esc(menuLabel(m.id))}">${icon(`menu_${m.id}`, m.glyph)}</button>`).join('');
+  $('hud-menu').innerHTML = MENU_ITEMS.map((m) => `<button data-menu="${m.id}" title="${esc(menuLabel(m.id))}">${icon(m.art ?? `menu_${m.id}`, m.glyph)}</button>`).join('');
   $('hud-menu').querySelectorAll<HTMLElement>('[data-menu]').forEach((b) => (b.onclick = () => openMenuItem(b.dataset.menu as MenuItem)));
 }
 buildMicroMenu();
@@ -703,6 +708,9 @@ addEventListener('keydown', (e) => {
       break;
     case 'map':
       toggle('map');
+      break;
+    case 'journal':
+      toggle('journal');
       break;
     case 'talents':
       toggle('talents');

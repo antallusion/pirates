@@ -1606,3 +1606,28 @@ body.touch #hud-region .rg-extra { display: none; }
   .giver-name { font-size: 20px; }
   .confirm-panel .giver-say { font-size: 15px; }
 }
+/* The quest journal (docs/11 P6): the list and the day on the left, the chosen quest in full on the right;
+   one column on a phone. */
+.journal { display: grid; grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
+.jr-side { display: grid; gap: 10px; min-width: 0; }
+.jr-list { display: grid; gap: 4px; }
+.jr-row { display: grid; gap: 1px; text-align: left; padding: 6px 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(111, 90, 56, 0.35); color: var(--bone); cursor: pointer; font: 14px var(--sans); }
+.jr-row b { font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.jr-row .muted { font-size: 12px; }
+.jr-row:hover { border-color: var(--brass); }
+.jr-row.on { border-color: var(--gold); background: rgba(217, 178, 90, 0.08); }
+.jr-day .map-daily { border: 1px solid rgba(111, 90, 56, 0.35); margin-bottom: 8px; }
+.jr-detail { min-width: 0; }
+.jr-steps { list-style: none; margin: 4px 0 0; padding: 0; }
+.jr-steps li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; margin: 3px 0; }
+.jr-steps li.done { color: var(--steel); text-decoration: line-through rgba(201, 162, 90, 0.4); }
+.jr-steps li.now { color: var(--bone); }
+.jr-steps li.ahead { color: var(--fog); }
+.jr-mark { text-align: center; color: var(--good); }
+.jr-mark.now { color: var(--gold); }
+.jr-count { color: var(--gold); font-variant-numeric: tabular-nums; }
+.jr-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 699px) {
+  .journal { grid-template-columns: minmax(0, 1fr); }
+  .jr-detail { order: -1; }
+}
