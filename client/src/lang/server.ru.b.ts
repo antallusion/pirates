@@ -808,6 +808,7 @@ export const SERVER_RU_B: Record<string, string> = {
   // The season's tables and its free path.
   "Ships sunk": "Потоплено кораблей",
   "Monster hunters": "Охотники на чудовищ",
+  "Quests done": "Выполненные задания",
   "Trade empires": "Торговые империи",
   "Treasure hunters": "Искатели сокровищ",
   "Longest logs (km)": "Дальние плавания (км)",

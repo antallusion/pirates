@@ -21,6 +21,7 @@ import { grantDeed } from './progression.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
 import { CONVOY_RANGE, groupOfAccount } from './party.ts';
+import { seasonStat } from './seasons.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -340,6 +341,7 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   p.gold += silver;
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);
+  seasonStat(game, s, 'quests', 1); // the season's table of quests done
   // The port whose people gave the work remembers who did it (docs/11 P6): standing with its faction.
   let rep: { faction: FactionId; n: number } | undefined;
   const home = game.portById(q.port);

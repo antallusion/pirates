@@ -126,5 +126,6 @@ test('a quest done in company pays a tenth more for every groupmate near (up to 
   assert.equal(done?.company, 1);
   assert.equal(done?.silver, 1100, 'a tenth more with one groupmate near');
   assert.ok(A.profile!.gold - gold0 >= 1100);
+  assert.equal(A.profile!.season.stats.quests, 1, 'counted in the season's table of quests done');
   delete QUESTS_BY_ID[quest.id];
 });
