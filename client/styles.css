@@ -270,7 +270,7 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
 /* Desktops (a mouse): the ship column, compass and micro menu come out. */
 @media (min-width: 1100px) and (min-height: 600px) {
   :root { --mm: 184px; --uf-p: 82px; --slot: 52px; }
-  body:not(.touch) .ship-panel { display: block; top: 118px; left: 12px; width: 270px; max-height: calc(100vh - 118px - 260px); overflow-y: auto; }
+  body:not(.touch) .ship-panel { display: block; top: calc(var(--sa-t) + 134px); left: 12px; width: 270px; max-height: calc(100vh - 134px - 260px); overflow-y: auto; }
   body:not(.touch) #hud-nav { display: block; bottom: 62px; right: 12px; width: 176px; padding: 6px; }
   body:not(.touch) .micro-menu { display: flex; gap: 6px; position: absolute; bottom: 12px; right: 12px; pointer-events: auto; }
   #hud-region .rg-extra { display: block; }
@@ -281,9 +281,12 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
 #hud-boss .bphase { font-family: var(--serif); font-style: italic; color: var(--gold); font-size: 13px; }
 #hud-boss .bbar { height: 9px; background: #1b1512; border: 1px solid rgba(111,90,56,0.8); margin: 5px 0 3px; }
 #hud-boss .bbar i { display: block; height: 100%; background: linear-gradient(90deg, #6a1f24, #b23a3a); }
-#hud-boss .bparts { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; font-size: 10px; color: var(--fog); }
-#hud-boss .bparts span { border: 1px solid rgba(111,90,56,0.5); padding: 0 4px; }
-#hud-boss .bparts span.dead { opacity: 0.35; text-decoration: line-through; }
+#hud-boss .bparts { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 6px; font-size: 10px; color: var(--fog); text-align: left; }
+#hud-boss .bpart { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 6px; align-items: center; padding: 3px 6px; border: 1px solid rgba(111,90,56,0.5); background: linear-gradient(90deg, #6a1f24, #b23a3a) 0 100% / var(--hp, 100%) 2px no-repeat, rgba(8, 7, 6, 0.55); }
+#hud-boss .bpart b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hud-boss .bpart em { font-style: normal; font-weight: 700; color: var(--bone); font-variant-numeric: tabular-nums; }
+#hud-boss .bpart.dead { opacity: 0.4; }
+#hud-boss .bpart.dead b { text-decoration: line-through; }
 #hud-boss .bhint { font-size: 12px; color: var(--fog); margin-top: 4px; }
 #hud-boss .byou { font-size: 12px; color: var(--gold); margin-top: 2px; }
 #hud-boss .balert { font-size: 13px; color: var(--bad); font-weight: 600; margin-top: 3px; }
@@ -972,7 +975,7 @@ body.touch #hud-dive .dhint { display: none; }
 /* A tall stack (the diving bell under the goals) scrolls within itself and leaves room above the bottom block
    for two toasts. */
 @media (max-width: 699px), (max-height: 520px) {
-  #hud-stack { max-height: calc(100vh - var(--hb-top, 200px) - 250px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+  #hud-stack { max-height: max(104px, calc(100vh - var(--hb-top, 200px) - 250px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
   #hud-stack::-webkit-scrollbar { display: none; }
 }
 /* While the bell is down on a phone, the goals step aside: the maze and its helm need the room. */
@@ -1265,3 +1268,19 @@ html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { v
 .kchip { display: inline-block; margin-right: 4px; padding: 0 3px; border: 1px solid rgba(154, 166, 178, 0.45); border-radius: 3px; font: 700 8px/1.5 var(--sans); color: var(--bone); letter-spacing: 0; text-transform: none; vertical-align: 1px; }
 .rl > span { white-space: nowrap; }
 @media (min-width: 700px) { .rl { width: auto; min-width: 84px; } }
+
+/* A repeated toast's count. */
+.toast .t-count { margin-left: auto; padding: 0 6px; border-radius: 8px; background: rgba(224, 184, 98, 0.18); color: var(--gold); font: 700 11px/1.5 var(--sans); flex: none; }
+
+/* A low window with a mouse (a short browser window, a tablet on its side with a mouse): the top stack keeps
+   at least room for a boss's card (it was squeezed to nothing), and the micro menu stands in two columns under
+   the minimap instead of one running off the bottom of the screen. */
+@media (max-height: 520px) {
+  body:not(.touch) .micro-menu { display: grid; grid-template-columns: repeat(2, 40px); gap: 6px; }
+  body:not(.touch) #hud-stack { right: calc(var(--sa-r) + var(--mm) + 64px); } /* clear of the minimap */
+}
+/* Tablets: toasts rise from above the bottom block as on phones (at 40% of the height they met the goals under a
+   boss's full card). */
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
+  #toasts { top: auto; bottom: calc(max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h) + 150px) + 8px); flex-direction: column-reverse; }
+}

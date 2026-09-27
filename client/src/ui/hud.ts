@@ -232,7 +232,11 @@ export class Hud {
     const card = assetUrl(`card.${b.kind}`);
     el.style.setProperty('--card', card ? `url('${card}')` : 'none');
     const pct = Math.max(0, Math.min(100, (b.hp / b.hpMax) * 100));
-    const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => `<span class="${p.hp <= 0 ? 'dead' : ''}">${esc(sv(p.label))} ${p.hp > 0 ? Math.round((p.hp / p.hpMax) * 100) + '%' : ''}</span>`).join('')}</div>` : '';
+    // Each part a cell of one grid: its name, what is left of it, and a thread of its strength under both.
+    const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => {
+      const left = Math.max(0, Math.round((p.hp / p.hpMax) * 100));
+      return `<span class="bpart ${p.hp <= 0 ? 'dead' : ''}" style="--hp:${left}%"><b>${esc(sv(p.label))}</b><em>${p.hp > 0 ? left + '%' : '✕'}</em></span>`;
+    }).join('')}</div>` : '';
     const alert = b.you.swallowed > 0 ? `<div class="balert">${esc(L('swallowed', { n: b.you.swallowed }))}</div>` : b.you.grabbed ? `<div class="balert">${esc(keyless(L('grabbed')))}</div>` : '';
     el.innerHTML = `<div class="bname">${esc(sv(b.name))}</div><div class="bphase">${esc(sv(b.phaseName))} · ${esc(L('bossLeaves', { n: Math.ceil(b.endsIn / 60) }))}</div>
       <div class="bbar"><i style="width:${pct.toFixed(1)}%"></i></div>${parts}
@@ -608,14 +612,32 @@ export class Hud {
     if ((this.recentToasts.get(msg) ?? 0) > now - 2500) return;
     this.recentToasts.set(msg, now);
     if (this.recentToasts.size > 50) this.recentToasts.clear();
+    // The same words still on screen: that toast comes back to the top with a count, it is not stacked twice.
+    const same = [...this.toastsEl.children].find((c) => (c as HTMLElement).dataset.msg === msg) as HTMLElement | undefined;
+    if (same) {
+      const n = Number(same.dataset.n ?? 1) + 1;
+      same.dataset.n = String(n);
+      let badge = same.querySelector<HTMLElement>('.t-count');
+      if (!badge) {
+        badge = document.createElement('b');
+        badge.className = 't-count';
+        same.append(badge);
+      }
+      badge.textContent = `×${n}`;
+      this.toastsEl.prepend(same);
+      clearTimeout(Number(same.dataset.timer));
+      same.dataset.timer = String(setTimeout(() => same.remove(), kind === 'xp' ? 3500 : 7000));
+      return;
+    }
     const el = document.createElement('div');
+    el.dataset.msg = msg;
     el.className = `toast ${kind}`;
     const art = kind === 'gold' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'bad' ? 'danger' : kind === 'good' ? 'anchor' : '';
     el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(keyless(msg))}</span>`;
     decorateSums(el);
     this.toastsEl.prepend(el);
     while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
-    setTimeout(() => el.remove(), kind === 'xp' ? 3500 : 7000);
+    el.dataset.timer = String(setTimeout(() => el.remove(), kind === 'xp' ? 3500 : 7000));
   }
 
   /** A sound caption at the edge of the screen it came from (docs/07 §11.5). */
