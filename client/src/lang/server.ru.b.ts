@@ -856,4 +856,11 @@ export const SERVER_RU_B: Record<string, string> = {
   "The hermit draws it in the sand": "Отшельник чертит её на песке",
   // World news: the headline word, then the news itself (translated in its own right).
   "WORLD: {0}": "МИР: {0}",
+  // Compass words the server puts inside sentences: directions (after "на"), shores (after "на его … берегу"),
+  // and the look of an island in a riddle.
+  "north": "север", "north-east": "северо-восток", "east": "восток", "south-east": "юго-восток",
+  "south": "юг", "south-west": "юго-запад", "west": "запад", "north-west": "северо-запад",
+  "northern": "северном", "north-eastern": "северо-восточном", "eastern": "восточном", "south-eastern": "юго-восточном",
+  "southern": "южном", "south-western": "юго-западном", "western": "западном", "north-western": "северо-западном",
+  "green": "зелёный", "mossy": "мшистый", "ashen": "пепельный", "frozen": "ледяной", "broken-spired": "руинный", "bone-white": "костяной", "bare": "голый",
 };

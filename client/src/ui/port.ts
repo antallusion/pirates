@@ -48,6 +48,8 @@ export class PortScreen {
     this.onClose = onClose;
   }
 
+  private lastHtml = '';
+
   render(root: HTMLElement, state: ClientState): void {
     const view = state.portView;
     const self = state.self;
@@ -59,15 +61,24 @@ export class PortScreen {
     // The harbour's own painting behind the header, and the faction's crest before its name.
     const bg = assetUrl(`bg.port_${port.faction}`);
     root.style.setProperty('--bg-port', bg ? `url('${bg}')` : 'none');
-    root.innerHTML = `
-      <div class="modal-head">
-        <div><h2>${icon(`faction_${port.faction}`, '', 'ico-crest')}${esc(placeName(port.name))}</h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(serverText(port.description))}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(serverText(e.title))}${e.kind === 'blockade' || e.kind === 'armada' ? esc(L('head.blockade')) : e.kind === 'epidemic' ? esc(L('head.epidemic')) : ''}</div>`).join('')}</div>
-        <div style="text-align:right"><div class="gold head-silver">${money(self.gold)}</div><div class="muted">${esc(L('head.hold', { vol: vol.toFixed(0), max: (state.ownStats?.holdVolume ?? 0).toFixed(0), crew: self.crew }))}</div>
-        <button class="btn btn-primary" data-act="undock" style="margin-top:6px">${esc(L('btn.setSail'))}</button></div>
+    const html = `
+      <div class="modal-head port-head">
+        <div class="ph-title"><h2>${icon(`faction_${port.faction}`, '', 'ico-crest')}<span>${esc(placeName(port.name))}</span></h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(serverText(port.description))}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(serverText(e.title))}${e.kind === 'blockade' || e.kind === 'armada' ? esc(L('head.blockade')) : e.kind === 'epidemic' ? esc(L('head.epidemic')) : ''}</div>`).join('')}</div>
+        <div class="ph-stats" title="${esc(L('head.hold', { vol: vol.toFixed(0), max: (state.ownStats?.holdVolume ?? 0).toFixed(0), crew: self.crew }))}">
+          <span class="ph-chip gold">${money(self.gold)}</span>
+          <span class="ph-chip">${icon('tab_market', '', 'ico-sm')}${vol.toFixed(0)}/${(state.ownStats?.holdVolume ?? 0).toFixed(0)}</span>
+          <span class="ph-chip">${icon('stat_crew', '', 'ico-sm')}${self.crew}</span>
+          <button class="btn btn-primary ph-sail" data-act="undock">${icon('stat_sails', '', 'ico-sm')}${esc(L('btn.setSail'))}</button>
+        </div>
       </div>
-      <div class="tabs icon-tabs">${tabs.map(([id, n]) => `<div class="tab ${this.tab === id ? 'active' : ''}" data-tab="${id}" title="${esc(n)}">${icon(TAB_ICON[id])}<span>${esc(n)}</span></div>`).join('')}</div>
+      <div class="tabs icon-tabs" style="--n:${tabs.length}">${tabs.map(([id, n]) => `<div class="tab ${this.tab === id ? 'active' : ''}" data-tab="${id}" title="${esc(n)}">${icon(TAB_ICON[id])}<span>${esc(n)}</span></div>`).join('')}</div>
       <div class="tab-caption">${esc(tabs.find(([id]) => id === this.tab)?.[1] ?? '')}</div>
       <div class="modal-body">${this.body(view, state)}</div>`;
+    // The harbour pushes its view every second: an unchanged page is not redrawn (no flicker, no button pulled
+    // from under a finger, no lost hover or selection).
+    if (html === this.lastHtml && root.querySelector('.port-head')) return;
+    this.lastHtml = html;
+    root.innerHTML = html;
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
       this.tab = el.dataset.tab as Tab;
       this.render(root, state);
@@ -250,16 +261,16 @@ export class PortScreen {
       const g = GOODS[r.good];
       const have = Math.floor(self.cargo[r.good] ?? 0);
       const stolen = Math.min(have, self.stolen[r.good] ?? 0);
-      const trend = r.trend > 0.03 ? `<span class="up">▲</span>` : r.trend < -0.03 ? `<span class="down">▼</span>` : '<span class="muted">·</span>';
+      const trend = r.trend > 0.03 ? `<span class="up">▲</span>` : r.trend < -0.03 ? `<span class="down">▼</span>` : '';
       return `<tr>
         <td data-l="${esc(L('th.good'))}"><b class="${r.legal ? '' : 'contra'}">${icon(`good_${r.good}`)}${esc(g.name)}</b>${view.dealOfDay === r.good ? ` <span class="gold">${esc(L('market.dealOfDay'))}</span>` : ''}${r.legal ? '' : ` <span class="contra">${esc(L('market.contraband'))}</span>`}${g.spoilPerHour ? ` <span class="muted">${esc(L('market.perishable'))}</span>` : ''}${g.danger > 0.3 ? ` <span class="up">${esc(L('market.dangerous'))}</span>` : ''}</td>
-        <td data-l="${esc(L('th.stock'))}">${r.stock}</td><td class="gold" data-l="${esc(L('th.buy'))}">${r.buy}</td><td data-l="${esc(L('th.sell'))}">${r.sell} ${trend}</td><td class="muted" data-l="${esc(L('th.perUnit'))}">${esc(L('market.weightVolume', { w: g.weight, v: g.volume }))}</td><td data-l="${esc(L('th.hold'))}">${have || '—'}${stolen ? ` <span class="up" title="${esc(L('market.stolenTitle'))}">${esc(L('market.stolen', { n: stolen }))}</span>` : ''}</td>
-        <td><button class="btn btn-small" data-act="buy" data-good="${r.good}">${esc(L('btn.buy'))}</button>
+        <td data-l="${esc(L('th.stock'))}">${r.stock}</td><td data-l="${esc(L('th.buy'))}">${money(r.buy)}</td><td data-l="${esc(L('th.sell'))}"><span class="price-sell">${money(r.sell)}${trend}</span></td><td class="muted" data-l="${esc(L('th.perUnit'))}">${esc(L('market.weightVolume', { w: g.weight, v: g.volume }))}</td><td data-l="${esc(L('th.hold'))}">${have || '—'}${stolen ? ` <span class="up" title="${esc(L('market.stolenTitle'))}">${esc(L('market.stolen', { n: stolen }))}</span>` : ''}</td>
+        <td><div class="mk-btns"><button class="btn btn-small" data-act="buy" data-good="${r.good}">${esc(L('btn.buy'))}</button>
             <button class="btn btn-small" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button>
-            <button class="btn btn-small" data-act="sellall" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.all'))}</button></td></tr>`;
+            <button class="btn btn-small" data-act="sellall" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.all'))}</button></div></td></tr>`;
     }).join('');
     const intel = view.priceIntel?.length
-      ? `<h3 class="title-sm" style="font-size:20px;margin-top:16px">${esc(L('market.intelTitle'))}</h3><table class="grid"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.port'))}</th><th>${esc(L('th.sellsFor'))}</th><th>${esc(L('th.age'))}</th></tr>${view.priceIntel.slice(0, 12).map((i) => `<tr><td>${icon(`good_${i.good}`)}${esc(GOODS[i.good].name)}</td><td>${esc(i.name)}</td><td class="gold">${i.sell}</td><td class="muted">${esc(L('unit.min', { n: Math.round(i.ageSec / 60) }))}</td></tr>`).join('')}</table>`
+      ? `<h3 class="title-sm" style="font-size:20px;margin-top:16px">${esc(L('market.intelTitle'))}</h3><table class="grid"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.port'))}</th><th>${esc(L('th.sellsFor'))}</th><th>${esc(L('th.age'))}</th></tr>${view.priceIntel.slice(0, 12).map((i) => `<tr><td>${icon(`good_${i.good}`)}${esc(GOODS[i.good].name)}</td><td>${esc(placeName(i.name))}</td><td>${money(i.sell)}</td><td class="muted">${esc(L('unit.min', { n: Math.round(i.ageSec / 60) }))}</td></tr>`).join('')}</table>`
       : '';
     const ammo = AMMO_IDS.map((a) => `<div class="card shop-row">${icon(`ammo_${a}`, '', 'shop-ico')}
       <div class="shop-text"><b>${esc(AMMO[a].name)}</b><span class="muted">${esc(AMMO[a].description)}</span><span class="shop-have">${esc(L('market.inHold', { n: self.ammo[a], price: view.ammoPrices[a] }))}</span></div>
@@ -288,7 +299,7 @@ ${ammo}${intel}`;
         <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${esc(maxed ? L('yard.fullyFitted') : L('yard.fitLevel', { n: m.level + 1, cost: fmt(m.cost) }))}</button>
         ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" title="${esc(self.talents.shp_modular_refit ? L('yard.unfitFree') : L('yard.unfitFee'))}">${esc(L('yard.takeOut'))}</button>` : ''}</div>`;
     }).join('');
-    const guns = (['port', 'starboard'] as const).map((side) => `<div class="card"><h4>${esc(L(side === 'port' ? 'yard.portBattery' : 'yard.starboardBattery', { n: cur.gunPortsPerSide, gun: GUNS[self.loadout.guns[side]].name }))}</h4>
+    const guns = (['port', 'starboard'] as const).map((side) => `<div class="card"><h4 class="card-h">${icon(`gun_${self.loadout.guns[side]}`, '', side === 'port' ? 'ico-md flip' : 'ico-md')}${esc(L(side === 'port' ? 'yard.portBattery' : 'yard.starboardBattery', { n: cur.gunPortsPerSide, gun: GUNS[self.loadout.guns[side]].name }))}</h4>
       ${sy.guns.map((gdef) => {
         const g = GUNS[gdef.gun];
         const mounted = self.loadout.guns[side] === gdef.gun;
@@ -392,12 +403,12 @@ ${orders}${berths}</div>` : ''}`;
     const tv = view.tavern;
     const co = self.company;
     const trades = PROFESSIONS.filter((k) => k !== 'sailor').map((k) => `<div class="trade-row" title="${esc(PROFESSION_DEFS[k].description)}">${icon(`prof_${k}`, '', 'item-ico')}
-        <div class="item-text"><b>${esc(PROFESSION_DEFS[k].name)}</b><span class="muted">${esc(L('tavern.aboard', { n: co.pools[k] }))} · ${esc(L('tavern.here', { n: tv.stock[k] ?? 0 }))}</span></div>
+        <div class="item-text"><b>${esc(PROFESSION_DEFS[k].name)}</b><span class="muted trade-counts"><span title="${esc(L('tavern.aboard', { n: co.pools[k] }))}">${icon('menu_ship', '', 'ico-xs')}${co.pools[k]}</span><span title="${esc(L('tavern.here', { n: tv.stock[k] ?? 0 }))}">${icon('anchor', '', 'ico-xs')}${tv.stock[k] ?? 0}</span></span></div>
         ${money(tv.costs[k])}
         <div class="trade-btns"><button class="btn btn-small" data-act="crew" data-prof="${k}" data-n="1" ${(tv.stock[k] ?? 0) > 0 && room > 0 ? '' : 'disabled'}>${esc(L('btn.hire'))}</button><button class="btn btn-small btn-danger" data-act="crew" data-prof="${k}" data-n="-1" ${co.pools[k] > 0 ? '' : 'disabled'}>−</button></div></div>`).join('');
     const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(o.name)} <span class="muted">— ${esc(L('officer.level', { role: OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
-        <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${esc(o.taken ? L('officer.taken') : L('officer.sign', { cost: fmt(o.price) }))}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
+        <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? esc(L('officer.taken')) : `${esc(L('btn.hire'))} ${money(o.price)}`}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
     return `${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors', { n: view.crewAvailable }))}</h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
         <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}</div>
@@ -407,7 +418,7 @@ ${orders}${berths}</div>` : ''}`;
         <h4 style="margin-top:10px">${esc(L('tavern.tradesmen'))}</h4><div class="trade-list">${trades}</div></div>
       <div><h3 class="title-sm" style="font-size:20px">${esc(L('tavern.officers', { n: co.officers.length, max: co.slots }))}</h3>${officers}</div></div>
       <div class="cols">
-      <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${view.rumors.map((r) => `<p>“${esc(serverText(r))}”</p>`).join('')}</div>
+      <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${[...new Set(view.rumors)].map((r) => `<p>“${esc(serverText(r))}”</p>`).join('')}</div>
       <div>${view.questOffers.map((q) => `<div class="card"><h4 class="card-h">${icon(q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : 'goal', '', 'ico-md')}${esc(serverText(q.name))} <span class="muted">— ${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : ''}</span></h4>
         <p>${esc(serverText(q.summary))}</p><ol class="muted" style="margin:4px 0 6px 18px">${q.steps.map((t) => `<li>${esc(serverText(t))}</li>`).join('')}</ol>
         <div class="row"><span class="reward">${money(q.silver)}${xpBadge(q.xp)}${q.path ? esc(L('quest.pathOf', { arch: CAPTAINS[q.path].archetype })) : ''}</span>
@@ -482,8 +493,8 @@ ${orders}${berths}</div>` : ''}`;
       const left = x.until > now ? Math.round((x.until - now) / 60) : 0;
       const status = x.mine ? `<span class="good">${esc(L('site.yours', { n: left, stock: x.stock, cap: x.capacity }))}</span>` : x.holder ? `<span class="bad">${esc(L('site.held', { who: x.holder, n: left }))}</span>` : `<span class="muted">${esc(L('site.unclaimed'))}</span>`;
       const can = !x.holder || x.mine;
-      return `<tr><td><b>${esc(x.island)}</b></td><td>${icon(`good_${x.good}`)}${esc(GOODS[x.good].name)}</td><td>${esc(L('site.rate', { n: x.rate }))}</td><td>${status}</td>
-        <td><button class="btn btn-small" data-act="rights" data-site="${esc(x.id)}" ${can ? '' : 'disabled'}>${esc(x.mine ? L('site.extend') : L('site.buy'))} — ${fmt(x.cost)}</button></td></tr>`;
+      return `<tr><td><b>${esc(placeName(x.island))}</b></td><td>${icon(`good_${x.good}`)}${esc(GOODS[x.good].name)}</td><td>${esc(L('site.rate', { n: x.rate }))}</td><td>${status}</td>
+        <td><button class="btn btn-small" data-act="rights" data-site="${esc(x.id)}" ${can ? '' : 'disabled'}>${esc(x.mine ? L('site.extend') : L('site.buy'))} ${money(x.cost)}</button></td></tr>`;
     }).join('');
     const wh = view.warehouse;
     const goods = new Set([...Object.keys(wh.goods), ...Object.keys(self.cargo)]);
@@ -509,9 +520,9 @@ ${orders}${berths}</div>` : ''}`;
     const portName = (id: string) => state.ports.find((p) => p.id === id)?.name ?? id;
     const mins = (t: number) => L('unit.min', { n: Math.max(0, Math.round((t - now) / 60)) });
     const ex = view.exchange;
-    const forwards = ex?.forwards.map((f) => `<tr><td>${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(placeName(f.toName))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${fmt(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td>
+    const forwards = ex?.forwards.map((f) => `<tr><td>${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(placeName(f.toName))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${money(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td>
       <td><button class="btn btn-small" data-act="forward" data-id="${esc(f.id)}">${esc(L('btn.sign'))}</button></td></tr>`).join('') ?? '';
-    const mine = self.forwards.map((f) => `<tr><td>${f.delivered}/${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(portName(f.toPort))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${fmt(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td></tr>`).join('');
+    const mine = self.forwards.map((f) => `<tr><td>${f.delivered}/${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(portName(f.toPort))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${money(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td></tr>`).join('');
     const orders = ex?.orders.map((o) => {
       const have = Math.floor(self.cargo[o.good] ?? 0);
       const n = Math.min(have, o.qty - o.filled);

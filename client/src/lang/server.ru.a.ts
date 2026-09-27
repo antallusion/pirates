@@ -139,7 +139,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "An air pocket under a shrine dome: the bell breathes again (+40).": "Воздушный карман под куполом святилища: колокол снова дышит (+40).",
   "An alliance is at most three guilds": "В союзе не больше трёх гильдий",
   "An auction runs 2, 8 or 24 hours": "Аукцион длится 2, 8 или 24 часа",
-  "An old hand swears there is a {0} on {1}, {2} km {3} of here. (Now marked on your chart.)": "Старый моряк клянётся, что на {1} есть {0}, в {2} км к {3} отсюда. (Теперь отмечено на вашей карте.)",
+  "An old hand swears there is a {0} on {1}, {2} km {3} of here. (Now marked on your chart.)": "Старый моряк клянётся: {1} — там {0}, в {2} км на {3} отсюда. (Теперь отмечено на вашей карте.)",
   "An undertow in a flooded hall drags {0} diver{1} into the dark.": "Подводное течение в затопленном зале утягивает во тьму водолазов: {0}{1}.",
   "Anchorage": "Якорная стоянка",
   "Another crew has a bell down here — wait your turn, or make them leave": "Здесь уже спущен колокол другой команды — дождитесь своей очереди или прогоните их",

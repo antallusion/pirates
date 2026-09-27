@@ -365,10 +365,45 @@ function closeModal(): void {
   if (was !== 'port' && state.portView) openModal('port');
 }
 
+/** Where every scrolled box of a window stands, so a refresh from the server does not throw the reader back
+ * to the top (the same window and tab only: a new tab starts at its top). */
+function scrollMarks(root: HTMLElement): { view: string; at: Map<string, [number, number]> } {
+  const view = `${modal}|${root.querySelector<HTMLElement>('.tab.active')?.dataset.tab ?? ''}|${root.querySelector<HTMLElement>('.tree-tab.active, .rose-node.active')?.dataset.view ?? ''}`;
+  const at = new Map<string, [number, number]>();
+  root.querySelectorAll<HTMLElement>('*').forEach((el) => {
+    if (el.scrollTop || el.scrollLeft) at.set(pathOf(root, el), [el.scrollTop, el.scrollLeft]);
+  });
+  return { view, at };
+}
+function pathOf(root: HTMLElement, el: HTMLElement): string {
+  const parts: string[] = [];
+  for (let e: HTMLElement | null = el; e && e !== root; e = e.parentElement) {
+    const i = e.parentElement ? [...e.parentElement.children].indexOf(e) : 0;
+    parts.push(`${e.tagName}.${e.classList[0] ?? ''}#${i}`);
+  }
+  return parts.reverse().join('/');
+}
+function restoreScroll(root: HTMLElement, marks: { view: string; at: Map<string, [number, number]> }): void {
+  if (!marks.at.size || scrollMarks(root).view !== marks.view) return;
+  for (const [path, [top, left]] of marks.at) {
+    const el = [...root.querySelectorAll<HTMLElement>('*')].find((e) => pathOf(root, e) === path);
+    if (el) {
+      el.scrollTop = top;
+      el.scrollLeft = left;
+    }
+  }
+}
+
 function refreshModal(): void {
   const root = $('modal-panel');
+  const marks = root.dataset.modal === (modal ?? '') ? scrollMarks(root) : null;
   // Screens dress by name in the stylesheet (header art, backgrounds).
   root.dataset.modal = modal ?? '';
+  renderModal(root);
+  if (marks) restoreScroll(root, marks);
+}
+
+function renderModal(root: HTMLElement): void {
   switch (modal) {
     case 'port':
       if (state.portView) portScreen.render(root, state);
@@ -415,14 +450,17 @@ function refreshModal(): void {
       break;
   }
   if (touch.enabled) stripKeyHints(root);
-  // Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons).
-  if (modal && modal !== 'boarding' && modal !== 'sunk' && modal !== 'mutiny' && !root.querySelector('.x-btn')) {
-    const x = document.createElement('button');
-    x.className = 'x-btn';
-    x.setAttribute('aria-label', 'Close');
-    x.onclick = () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal());
-    root.append(x);
-  }
+  ensureCloseButton(root);
+}
+
+/** Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons). */
+function ensureCloseButton(root: HTMLElement): void {
+  if (!modal || modal === 'boarding' || modal === 'sunk' || modal === 'mutiny' || root.querySelector(':scope > .x-btn')) return;
+  const x = document.createElement('button');
+  x.className = 'x-btn';
+  x.setAttribute('aria-label', 'Close');
+  x.onclick = () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal());
+  root.append(x);
 }
 
 /** Touch screens have no keys: "[F]"-style hints come off buttons and tabs. */
@@ -457,6 +495,8 @@ $('hud-map').onclick = () => toggle('map');
 new MutationObserver(() => {
   if (touch.enabled) stripKeyHints($('modal-panel'));
   decorateSums($('modal-panel'));
+  // A screen that redraws itself (a tab clicked) must not lose its close button.
+  ensureCloseButton($('modal-panel'));
 }).observe($('modal-panel'), { childList: true, subtree: true });
 
 function toggle(m: Modal): void {

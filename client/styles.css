@@ -688,7 +688,7 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .icon-tabs .tab .ico { margin: 0; }
 @media (max-width: 699px), (max-height: 520px) {
   .tabs { flex-wrap: wrap; overflow: visible; row-gap: 2px; }
-  .tabs.icon-tabs { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; padding: 4px 4px 0; }
+  .tabs.icon-tabs { display: grid; grid-template-columns: repeat(var(--n, 7), minmax(0, 1fr)); gap: 2px; padding: 4px 4px 0; }
   .icon-tabs .tab { flex-direction: column; justify-content: center; gap: 2px; padding: 6px 1px 5px; min-width: 0; text-align: center; }
   .skinned .icon-tabs .tab.active { border-width: 5px 4px 0; border-image-width: 5px 4px 0; padding: 1px 0 5px; }
   .icon-tabs .tab .ico { width: 28px; height: 28px; }
@@ -980,4 +980,80 @@ body.touch #hud-dive .dhint { display: none; }
   #hud-stack:has(#hud-dive:not(.hidden)) #hud-goals { display: none; }
   #hud-dive .dpad { grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(3, 30px); }
   #hud-dive .dpad .btn { width: 30px; height: 30px; }
+}
+/* ==== Grid pass (lead QA): window heads, plates, game scrollbars ==== */
+/* The title plate: the crest and the name centred on one line inside the plate, a fixed small gap. */
+.modal-head h2, .skinned .modal-head h2 { display: inline-flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
+.modal-head h2 .ico-crest, .skinned .modal-head h2 .ico-crest { margin: 0; vertical-align: 0; width: 1.25em; height: 1.25em; flex: none; }
+.modal-head h2 > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.15; }
+/* The harbour head: title and description on the left, the ship's figures and the sail order on the right. */
+.port-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 18px; }
+.port-head .ph-title { min-width: 0; }
+.port-head .sub { margin-top: 4px; }
+.ph-stats { display: grid; grid-template-columns: repeat(3, auto); gap: 6px; align-items: center; justify-items: stretch; }
+.ph-chip { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 30px; padding: 0 10px; border: 1px solid rgba(140, 107, 58, 0.45); border-radius: 15px; background: rgba(8, 9, 11, 0.7); font: 600 13px var(--sans); color: var(--bone); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ph-chip.gold { color: var(--gold); font-size: 15px; }
+.ph-chip .money { gap: 5px; }
+.ph-chip .ico-sm { width: 18px; height: 18px; margin: 0; }
+.ph-sail { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.ph-sail .ico-sm { margin: 0; }
+@media (max-width: 699px), (max-height: 520px) {
+  .port-head { grid-template-columns: minmax(0, 1fr); padding: 8px 50px 8px 10px; }
+  .port-head .ph-title { text-align: left; }
+  .ph-stats { grid-template-columns: auto auto auto; justify-content: start; gap: 6px; }
+  .ph-sail { grid-column: 1 / -1; min-height: 34px; }
+}
+/* Scrollbars in the game's own hand: a thin brass rail on a dark groove, everywhere. */
+/* Firefox takes the standard properties; Chromium keeps its own (setting both would disable the brass thumb). */
+@supports not selector(::-webkit-scrollbar) { * { scrollbar-width: thin; scrollbar-color: #8c6b3a rgba(8, 8, 10, 0.55); } }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(8, 8, 10, 0.55); border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(140, 107, 58, 0.18); }
+::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #5d4527, #b08d57 50%, #5d4527); border-radius: 4px; border: 1px solid rgba(0, 0, 0, 0.6); }
+::-webkit-scrollbar-thumb:horizontal { background: linear-gradient(180deg, #5d4527, #b08d57 50%, #5d4527); }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #6f5530, #d4ae6a 50%, #6f5530); }
+::-webkit-scrollbar-button, ::-webkit-scrollbar-corner { display: none; background: transparent; }
+.card h4.card-h .ico-md.flip { transform: scaleX(-1); }
+.price-sell { display: inline-flex; align-items: center; gap: 4px; }
+.price-sell .money { color: var(--bone); }
+.trade-counts { display: inline-flex; gap: 10px; align-items: center; }
+.trade-counts > span { display: inline-flex; align-items: center; gap: 3px; }
+.trade-row { grid-template-columns: 36px minmax(0, 1fr) 64px 108px; }
+.trade-btns { grid-template-columns: minmax(0, 1fr) 34px; }
+.trade-btns .btn-danger { font-weight: 700; font-size: 16px; line-height: 1; }
+@media (max-width: 380px) { .trade-row { grid-template-columns: 32px minmax(0, 1fr) 60px 104px; } }
+/* Section plates never break onto a second line (a two-line plate tears its frame): smaller type on a phone,
+   an ellipsis if even that does not fit. */
+.skinned .title-sm { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+@media (max-width: 699px) { .skinned .title-sm { font-size: 18px !important; } }
+.btn .money { gap: 4px; }
+/* The close button is on every window: a phone needs no "[O] close" hint beside it. */
+@media (max-width: 699px), (max-height: 520px) { .modal-head > .muted:last-child { display: none; } }
+/* Checkboxes in the game's hand: a dark well with a brass rim, a gold tick when set. */
+input[type=checkbox] { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; flex: none; margin: 0; border: 1px solid var(--brass); border-radius: 4px; background: #0b0d10; box-shadow: inset 0 1px 3px #000; cursor: pointer; position: relative; vertical-align: middle; }
+input[type=checkbox]:checked { background: linear-gradient(180deg, #d8b25e, #a07b3a); border-color: #e8cf8a; box-shadow: 0 0 6px rgba(224, 184, 98, 0.45); }
+input[type=checkbox]:checked::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid #1a1206; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+input[type=checkbox]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* Range sliders: a brass groove with a gold knob. */
+input[type=range] { -webkit-appearance: none; appearance: none; height: 22px; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(180deg, #151210, #2a221a); box-shadow: inset 0 0 0 1px rgba(140, 107, 58, 0.55); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f3dc9c, #b8893f 60%, #6b4c22); border: 1px solid #2a1c0a; box-shadow: 0 1px 3px #000; }
+input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: #1d1813; box-shadow: inset 0 0 0 1px rgba(140, 107, 58, 0.55); }
+input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f3dc9c, #b8893f 60%, #6b4c22); border: 1px solid #2a1c0a; }
+/* Tablets and small desktops: the harbour's and the company's tabs share the row in equal cells, the picture
+   over a small caption, so seven or eight of them never run past the window. */
+@media (min-width: 700px) and (max-width: 1279px) and (min-height: 521px) {
+  .tabs.icon-tabs { display: grid; grid-template-columns: repeat(var(--n, 7), minmax(0, 1fr)); gap: 2px; padding: 4px 12px 0; }
+  .icon-tabs .tab { flex-direction: column; justify-content: center; gap: 3px; padding: 6px 2px 5px; min-width: 0; text-align: center; }
+  .icon-tabs .tab .ico { width: 30px; height: 30px; }
+  .icon-tabs .tab span { font-size: 10px; letter-spacing: 0.04em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .skinned .icon-tabs .tab.active { border-width: 5px 4px 0; border-image-width: 5px 4px 0; padding: 1px 0 5px; }
+}
+/* A plate in a half-width column takes a smaller type so it stays on one line. */
+.cols .title-sm { font-size: 18px !important; }
+/* The market's three orders stand in one row of equal buttons. */
+.mk-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; min-width: 210px; }
+.mk-btns .btn { width: 100%; text-align: center; white-space: nowrap; }
+@media (max-width: 699px), (max-height: 520px) {
+  table.grid.market td:last-child .mk-btns { width: 100%; min-width: 0; }
+  table.grid.market td:last-child .mk-btns .btn { min-height: 38px; }
 }

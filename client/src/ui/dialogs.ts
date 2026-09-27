@@ -132,8 +132,8 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
       ${tile('stat_sails', L('ship.sails'), String(st.sailHpMax))}
       ${tile('stat_crew', L('ship.crew'), esc(L('ship.crewVal', { n: self.crew, min: st.crewMin, max: st.crewMax })))}
       ${tile('tab_market', L('ship.hold'), esc(L('ship.holdVal', { used: used.toFixed(1), max: st.holdVolume.toFixed(0), weight: st.holdWeight.toFixed(0) })))}
-      ${tile(`gun_${self.loadout.guns.port}`, L('ship.port'), `${cls.gunPortsPerSide - self.gunsDisabled.port}/${cls.gunPortsPerSide} × ${esc(GUNS[self.loadout.guns.port].name)}`, true)}
-      ${tile(`gun_${self.loadout.guns.starboard}`, L('ship.starboard'), `${cls.gunPortsPerSide - self.gunsDisabled.starboard}/${cls.gunPortsPerSide} × ${esc(GUNS[self.loadout.guns.starboard].name)}`)}
+      ${tile(`gun_${self.loadout.guns.port}`, L('ship.port'), `${cls.gunPortsPerSide - self.gunsDisabled.port}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.port].name)}</small>`, true)}
+      ${tile(`gun_${self.loadout.guns.starboard}`, L('ship.starboard'), `${cls.gunPortsPerSide - self.gunsDisabled.starboard}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.starboard].name)}</small>`)}
       ${tile('fire', L('ship.gunMuls'), `×${st.reloadMul.toFixed(2)} / ×${st.spreadMul.toFixed(2)} / ×${st.gunDamageMul.toFixed(2)}`)}
       ${tile('tree_boarding', L('ship.boarding'), esc(L('ship.boardingVal', { range: st.boardingRange.toFixed(0), power: st.boardingPower.toFixed(2) })))}
       ${tile('ab_spotters_eye', L('ship.detection'), esc(L('ship.detectionVal', { v: st.detection.toFixed(0) })))}
