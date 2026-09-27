@@ -409,7 +409,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "You do not have that much silver aboard": "У вас на борту нет столько серебра",
   "You enter the Pantheon: {0}. A statue, a title, and the right to name an island of the sea.": "Вы входите в Пантеон: {0}. Статуя, титул и право дать имя острову в море.",
   "You give in. The crew sets course for {0}; half of them will walk off there.": "Вы уступаете. Команда берёт курс на {0}; половина сойдёт там на берег.",
-  "You hail {0} to trade.": "Вы окликаете {0} для торговли.",
+  "You hail {0} to trade.": "Вы зовёте к торгу: {0}.",
   "You have a pact with them": "У вас с ними пакт",
   "You have berths for {0} escort{1}": "У вас есть места для конвоя: {0}{1}",
   "You have no Clean Logbook token": "У вас нет жетона Чистого журнала",

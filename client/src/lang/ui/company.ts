@@ -796,7 +796,7 @@ export const RU: Record<keyof typeof EN, string> = {
   mk_hours: 'Часов',
   mk_in_hold: 'В вашем трюме: {list}',
 
-  bt_trading: 'Торг с {name}',
+  bt_trading: 'Торг: {name}',
   bt_sea: 'Борт о борт в дрейфе: товар переправляют шлюпкой',
   bt_quay: 'Через причал',
   bt_boats: ' · шлюпки в пути, {n} с',

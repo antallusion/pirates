@@ -503,11 +503,11 @@ export function renderBarter(root: HTMLElement, state: ClientState, send: (m: Cl
       <h3 class="title-sm" style="font-size:20px">${L('bt_you_give')} ${b.me.ready ? `<span class="good">${L('bt_ready')}</span>` : ''}</h3>
       <div class="card"><div class="barter-row">${icon('coin', '', 'item-ico')}<span>${L('bt_silver')}</span><input id="b-gold" class="field" type="number" min="0" value="${b.me.gold}"></div>
         ${Object.entries(hold).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(GOODS[g as GoodId].name)} <span class="muted">(${n})</span></span><input class="field" type="number" min="0" max="${n}" value="${b.me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
-        <button class="btn" id="b-offer">${L('bt_set')}</button></div>
+        <button class="btn btn-block" id="b-offer">${L('bt_set')}</button></div>
     </div><div>
       <h3 class="title-sm" style="font-size:20px">${L('bt_they_give', { name: esc(b.them.name) })} ${b.them.ready ? `<span class="good">${L('bt_ready')}</span>` : ''}</h3>
       <div class="card"><div class="barter-row">${icon('coin', '', 'item-ico')}<span>${L('bt_silver')}</span><b>${money(b.them.gold)}</b></div>${list(b.them.cargo)}</div>
-      <div class="row" style="gap:8px"><button class="btn btn-primary" id="b-ready" ${b.me.ready ? 'disabled' : ''}>${L('bt_agree')}</button><button class="btn btn-danger" id="b-cancel">${L('bt_walk')}</button></div>
+      <div class="form-grid"><button class="btn btn-primary" id="b-ready" ${b.me.ready ? 'disabled' : ''}>${L('bt_agree')}</button><button class="btn btn-danger" id="b-cancel">${L('bt_walk')}</button></div>
       <p class="muted">${L('bt_note')}</p>
     </div></div></div>`;
   root.querySelector<HTMLElement>('#b-offer')!.onclick = () => {
