@@ -1287,3 +1287,8 @@ html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { v
 /* Toasts in a column share its width, so their left edges (and icons) stand on one line instead of each centred
    at its own width. */
 @media (max-width: 1099px), (max-height: 599px) { #toasts { align-items: stretch; } }
+
+/* Talent points under the portrait: the key, the mark and the number (the sentence was cut off beside the law's
+   word on a desktop). */
+.uf-sub .uf-pts { display: inline-flex; align-items: center; gap: 3px; flex: none; font-weight: 700; }
+.uf-sub .wanted { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
