@@ -55,3 +55,17 @@ test('dates the server writes in English read in Russian', async () => {
   assert.match(serverText('Coldholm Isle is yours until 04 Oct 2026 00:36 UTC.'), /04 окт 2026/);
   setLang('en');
 });
+
+test('two parts side by side are told apart: a port and what follows its name', async () => {
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  setLang('ru');
+  applyDataLocale('ru');
+  assert.equal(serverText('Fever in Saltmarrow (quarantine)'), 'Лихорадка в Солтмарроу (карантин)');
+  assert.equal(serverText('Fever in Saltmarrow'), 'Лихорадка в Солтмарроу');
+  assert.match(serverText('Deliver 12 Salt to Saltmarrow'), /^Доставить соль × 12 в Солтмарроу$/);
+  const policy = serverText('The Gilded Ledger honours your policy: salvage fee waived, 120 silver for lost cargo.');
+  assert.ok(!/policy|silver/.test(policy), policy);
+  applyDataLocale('en');
+  setLang('en');
+});

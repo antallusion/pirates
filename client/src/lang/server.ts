@@ -4,14 +4,14 @@
 // themselves translated when they are known names or phrases. Unknown text passes through unchanged.
 
 import { lang } from '../i18n.ts';
-import { NAME_RU, TEXT_RU } from './data.ts';
+import { COMMON_RU, NAME_RU, TEXT_RU } from './data.ts';
 import { composedNameRu } from './names.ts';
 import { SERVER_RU_A } from './server.ru.a.ts';
 import { SERVER_RU_B } from './server.ru.b.ts';
 
 const TABLE: Record<string, string> = { ...SERVER_RU_A, ...SERVER_RU_B };
 const exact = new Map<string, string>();
-let templates: { re: RegExp; ru: string; order: number[] }[] | null = null;
+let templates: { re: RegExp; ru: string; order: number[]; adjacent: number[] }[] | null = null;
 
 function compile(): void {
   templates = [];
@@ -29,7 +29,14 @@ function compile(): void {
       }
       return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }).join('');
-    templates.push({ re: new RegExp(`^${src}$`, 's'), ru, order });
+    // Parts side by side ("in {0}{1}"): the lazy match leaves the first empty, so they are split again below.
+    const adjacent: number[] = [];
+    let seen = 0;
+    for (const m of en.matchAll(/\{\d+\}(?=(\{\d+\})?)/g)) {
+      if (m[1]) adjacent.push(seen);
+      seen++;
+    }
+    templates.push({ re: new RegExp(`^${src}$`, 's'), ru, order, adjacent });
   }
   // The most literal text first: "Sold {0} sugar" before "{0} {1}".
   const lit = (t: { re: RegExp }) => t.re.source.replace(/\(\.\*\?\)/g, '').length;
@@ -46,6 +53,11 @@ function lowerName(s: string): string | undefined {
   return s === s.toLowerCase() ? lowerNames.get(s) : undefined;
 }
 
+/** A fragment the tables know as it stands (a name, a phrase, a number). */
+function known(s: string): boolean {
+  return /^[\d\s.,:;×x+\-%]*$/.test(s) || NAME_RU.has(s) || exact.has(s) || TEXT_RU.has(s) || !!composedNameRu(s) || lowerName(s) !== undefined;
+}
+
 /** A captured fragment: a known name, a known phrase, or itself. */
 function part(s: string, depth: number): string {
   if (!s) return s;
@@ -59,9 +71,28 @@ function translate(s: string, depth: number): string {
   for (const t of templates!) {
     const m = t.re.exec(s);
     if (!m) continue;
+    const caps = m.slice(1);
+    for (const i of t.adjacent) {
+      const c = caps[i + 1];
+      if (caps[i] !== '' || !c || known(c)) continue;
+      // One side must be known as it stands; the other may be a sentence of its own.
+      const says = (x: string) => known(x) || (depth < 2 && translate(x, depth + 1) !== x);
+      for (let k = 1; k < c.length; k++) {
+        const l = c.slice(0, k), r = c.slice(k);
+        if ((known(l) && says(r)) || (says(l) && known(r))) {
+          caps[i] = l;
+          caps[i + 1] = r;
+          break;
+        }
+      }
+    }
     const vals: Record<number, string> = {};
-    t.order.forEach((n, i) => (vals[n] = part(m[i + 1], depth)));
-    return t.ru.replace(/\{(\d+)\}/g, (_, n: string) => vals[Number(n)] ?? '');
+    t.order.forEach((n, i) => (vals[n] = part(caps[i], depth)));
+    // A good inside the sentence is a common noun: «Доставить соль», not «Доставить Соль».
+    return t.ru.replace(/\{(\d+)\}/g, (_, n: string, at: number) => {
+      const v = vals[Number(n)] ?? '';
+      return at > 0 && COMMON_RU.has(v) ? v.charAt(0).toLowerCase() + v.slice(1) : v;
+    });
   }
   return s;
 }

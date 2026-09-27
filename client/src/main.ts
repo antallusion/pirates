@@ -443,7 +443,7 @@ function renderModal(root: HTMLElement): void {
       if (state.barter) keepInputs(root, () => renderBarter(root, state, (m) => net.send(m)));
       break;
     case 'menu':
-      renderMenu(root, openMenuItem, () => closeModal());
+      renderMenu(root, openMenuItem);
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
@@ -471,7 +471,7 @@ function labelLedgers(root: HTMLElement): void {
 
 /** Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons). */
 function ensureCloseButton(root: HTMLElement): void {
-  if (!modal || modal === 'boarding' || modal === 'sunk' || modal === 'mutiny' || root.querySelector(':scope > .x-btn')) return;
+  if (!modal || modal === 'boarding' || modal === 'sunk' || modal === 'mutiny' || root.querySelector('.x-btn')) return;
   const x = document.createElement('button');
   x.className = 'x-btn';
   x.setAttribute('aria-label', 'Close');
@@ -916,7 +916,9 @@ function padContext(): void {
   if (boardTarget !== null) return void net.send({ t: 'board', target: boardTarget, aggression: 'standard' });
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void requestDock(false);
-  if (state.self?.landable) net.send({ t: 'land' });
+  if (state.self?.landable && !state.self.landable.blocked) return void net.send({ t: 'land' });
+  const you = state.you;
+  if (you && (you.flags & SF.REPAIRING || !you.combat)) net.send({ t: 'repair', on: !(you.flags & SF.REPAIRING) });
 }
 
 /** Docking at speed: the crew takes in sail and she enters harbour as soon as she has slowed (the server wants
@@ -966,6 +968,10 @@ function contextLabel(): string | null {
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
   if (state.self?.landable && !state.self.landable.blocked) return L('tc.land');
+  // Nothing else at hand: a damaged ship out of the fight can set the carpenters to work (R on a keyboard).
+  const you = state.you;
+  if (you && you.flags & SF.REPAIRING) return L('tc.repairStop');
+  if (you && !you.combat && (you.hull < you.hullMax * 0.98 || you.sails < you.sailsMax * 0.98)) return L('tc.repair');
   return null;
 }
 
@@ -1262,4 +1268,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : openModal(m)) };

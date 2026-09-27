@@ -27,6 +27,8 @@ export const DATA_RU: Record<string, string> = { ...DATA_RU_CORE, ...DATA_RU_TAL
 const originals = new Map<string, string>();
 /** English display name → Russian, for names that arrive inside server sentences. */
 export const NAME_RU = new Map<string, string>();
+/** Russian names of common things (goods), which are written small inside a sentence: «доставить соль». */
+export const COMMON_RU = new Set<string>();
 /** Every English data text → Russian (descriptions that reach the client through the server, e.g. a port's). */
 export const TEXT_RU = new Map<string, string>();
 
@@ -57,6 +59,7 @@ export function applyDataLocale(lang: Lang): void {
       /* a frozen table keeps its English */
     }
     if (path.endsWith('.name')) NAME_RU.set(en, ru);
+    if (path.startsWith('goods.') && path.endsWith('.name')) COMMON_RU.add(ru);
     TEXT_RU.set(en, ru);
   }
 }

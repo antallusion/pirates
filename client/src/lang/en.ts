@@ -31,6 +31,11 @@ export const EN = {
   'hint.lead': 'Three broadsides into the sea. Aim where she will be, not where she is — and the cursor’s distance sets the range.',
   'hint.repair': 'The hull is below half. R sets the carpenters to work (planks and sailcloth) while no enemy is near.',
   'hint.docking': 'To come in: slow to a crawl close to the port and press F.',
+  // The same hints for a touch screen: no keys, no cursor.
+  'hint.irons.touch': 'In irons: bow into the wind, sails flapping. Turn the wheel until the wind comes onto her side.',
+  'hint.lead.touch': 'Three broadsides into the water. The broadside buttons lay the guns on a ship abeam: bring her onto your beam, inside the range of your guns.',
+  'hint.repair.touch': 'The hull is below half. Out of the fight, press “Repair”: the carpenters go to work (planks and sailcloth).',
+  'hint.docking.touch': 'To come in: sail up close to the harbour and press “Enter port”; the crew takes in sail by itself.',
   'hint.title': 'Hint',
   // The Captain's Goals (§13.4)
   'goals.title': 'Captain’s goals',

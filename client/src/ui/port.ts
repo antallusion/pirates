@@ -16,6 +16,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
 import { esc, fmt, icon, money, officerIcon, xpBadge } from './dom.ts';
+import { keyLabel, settings } from '../settings.ts';
 import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { traitChips } from './crew.ts';
@@ -409,12 +410,12 @@ ${orders}${berths}</div>` : ''}`;
     const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(o.name)} <span class="muted">— ${esc(L('officer.level', { role: OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? esc(L('officer.taken')) : `${esc(L('btn.hire'))} ${money(o.price)}`}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
-    return `${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors', { n: view.crewAvailable }))}</h4>
+    return `${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
-        <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}</div>
-        <button class="btn btn-small btn-danger" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>
-        ${tv.dregs ? `<button class="btn btn-small" data-act="dregs" title="${esc(L('tavern.dregsTitle'))}">${esc(L('tavern.dregs'))}</button>` : ''}
-        ${tv.pressGang ? `<button class="btn btn-small btn-danger" data-act="press" title="${esc(L('tavern.pressTitle'))}">${esc(L('tavern.press'))}</button>` : ''}
+        <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}
+        <button class="btn btn-small btn-danger hire-wide" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>
+        ${tv.dregs ? `<button class="btn btn-small hire-wide" data-act="dregs" title="${esc(L('tavern.dregsTitle'))}">${esc(L('tavern.dregs'))}</button>` : ''}
+        ${tv.pressGang ? `<button class="btn btn-small btn-danger hire-wide" data-act="press" title="${esc(L('tavern.pressTitle'))}">${esc(L('tavern.press'))}</button>` : ''}</div>
         <h4 style="margin-top:10px">${esc(L('tavern.tradesmen'))}</h4><div class="trade-list">${trades}</div></div>
       <div><h3 class="title-sm" style="font-size:20px">${esc(L('tavern.officers', { n: co.officers.length, max: co.slots }))}</h3>${officers}</div></div>
       <div class="cols">
@@ -432,7 +433,7 @@ ${orders}${berths}</div>` : ''}`;
           <button class="btn btn-small" data-act="chart_buy" data-region="${o.region}">${esc(L('carto.buy', { cost: fmt(o.price) }))}</button></div>`).join('') || `<p class="muted">${esc(L('carto.none'))}</p>`}
       </div>
       <div class="card"><h4 class="card-h">${icon('map_treasure', '', 'ico-md')}${esc(L('maps.title', { n: self.maps.filter((m) => m.kind !== 'fragment').length }))}</h4>
-        <p>${esc(L('maps.text'))}</p>
+        <p>${esc(L('maps.text', { how: landHow() }))}</p>
         ${self.maps.map((m) => `${mapCard(m)}<div class="row" style="gap:4px;padding-bottom:4px"><button class="btn btn-small" data-act="map" data-mode="appraise" data-id="${esc(m.id)}">${esc(L('maps.appraise'))}</button>${port.faction === 'brokers' ? `<button class="btn btn-small" data-act="map" data-mode="seal" data-id="${esc(m.id)}">${esc(L('maps.seal'))}</button>` : ''}<input class="map-to" data-for="${esc(m.id)}" placeholder="${esc(L('maps.captainPh'))}" style="width:90px"><button class="btn btn-small" data-act="map" data-mode="give" data-id="${esc(m.id)}">${esc(L('btn.handOver'))}</button><button class="btn btn-small btn-danger" data-act="map" data-mode="burn" data-id="${esc(m.id)}">${esc(L('maps.burn'))}</button></div>`).join('')}
         ${port.blackMarket ? `<div class="row"><span class="muted">${esc(L('maps.forger'))}</span><button class="btn btn-small" data-act="map" data-mode="forge">${esc(L('maps.forge'))}</button></div>` : ''}
         <div class="row" style="gap:6px;margin-top:6px"><button class="btn btn-small" data-act="treasure" data-mode="buy">${esc(L('maps.buy'))}</button>
@@ -506,7 +507,7 @@ ${orders}${berths}</div>` : ''}`;
         <button class="btn btn-small" data-act="store" data-good="${g}" data-n="${-stored}" ${stored ? '' : 'disabled'}>${esc(L('wh.takeAll'))}</button></td></tr>`;
     }).join('');
     return `<div class="cols"><div><div class="card"><h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('rights.title'))}</h4>
-        <p class="muted">${esc(L('rights.text'))}</p>
+        <p class="muted">${esc(L('rights.text', { how: landHow() }))}</p>
         ${sites ? `<table class="grid"><tr><th>${esc(L('th.island'))}</th><th>${esc(L('th.yield'))}</th><th>${esc(L('th.rate'))}</th><th>${esc(L('th.status'))}</th><th></th></tr>${sites}</table>` : `<p class="muted">${esc(L('rights.none'))}</p>`}</div></div>
       <div><div class="card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}${esc(L('wh.title'))} ${wh.rented ? `<span class="muted">${Math.round(wh.volume)}/${wh.capacity}</span>` : ''}</h4>
         <p class="muted">${esc(wh.rented ? L('wh.rented') : L('wh.rent', { cost: fmt(wh.rent) }))}</p>
@@ -536,9 +537,9 @@ ${orders}${berths}</div>` : ''}`;
         <div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('fwd.title'))}</h4>${ex ? `<p class="muted">${esc(L('fwd.text'))}</p>
           ${forwards ? `<table class="grid"><tr><th>${esc(L('th.goods'))}</th><th>${esc(L('th.to'))}</th><th>${esc(L('th.price'))}</th><th>${esc(L('th.collateral'))}</th><th>${esc(L('th.deadline'))}</th><th></th></tr>${forwards}</table>` : `<p class="muted">${esc(L('fwd.none'))}</p>`}` : `<p class="muted">${esc(L('fwd.noExchange'))}</p>`}
           ${mine ? `<h4 style="margin-top:10px">${esc(L('fwd.mine'))}</h4><table class="grid">${mine}</table>` : ''}</div>
-        <div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(L('orders.title'))}</h4>${ex ? `<p class="muted">${esc(L('orders.text'))}</p>
+        ${ex ? `<div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(L('orders.title'))}</h4><p class="muted">${esc(L('orders.text'))}</p>
           ${orders ? `<table class="grid"><tr><th>${esc(L('th.buyer'))}</th><th>${esc(L('th.wants'))}</th><th>${esc(L('th.pays'))}</th><th>${esc(L('th.lapses'))}</th><th></th></tr>${orders}</table>` : `<p class="muted">${esc(L('orders.none'))}</p>`}
-          <div class="row" style="gap:6px;margin-top:8px"><select id="ord-good">${goodsOpts}</select><input id="ord-qty" type="number" min="1" max="200" value="20" style="width:60px"><input id="ord-price" type="number" min="1" value="20" style="width:70px"><button class="btn btn-small" data-act="order_post">${esc(L('orders.post'))}</button></div>` : '<p class="muted">—</p>'}</div>
+          <div class="row" style="gap:6px;margin-top:8px"><select id="ord-good">${goodsOpts}</select><input id="ord-qty" type="number" min="1" max="200" value="20" style="width:60px"><input id="ord-price" type="number" min="1" value="20" style="width:70px"><button class="btn btn-small" data-act="order_post">${esc(L('orders.post'))}</button></div></div>` : ''}
       </div><div>
         ${self.talents.trd_speculator ? `<div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('opt.title'))}</h4><p class="muted">${esc(L('opt.text'))}</p>
           ${self.options.map((o, i) => `<div class="row" style="padding:3px 0"><span>${o.qty} ${icon(`good_${o.good}`)}${esc(GOODS[o.good].name)} @ ${esc(state.ports.find((p) => p.id === o.port)?.name ?? o.port)} · ${fmt(o.price)} · ${esc(mins(o.until))}</span>${o.port === view.portId ? `<button class="btn btn-small" data-act="option_ex" data-i="${i}">${esc(L('opt.exercise', { cost: fmt(o.price - o.deposit) }))}</button>` : ''}</div>`).join('')}
@@ -552,6 +553,13 @@ ${orders}${berths}</div>` : ''}`;
       </div></div>`;
   }
 
+}
+
+/** How a landing is ordered here: the key it is bound to, or the button a touch screen shows. */
+function landHow(): string {
+  if (document.body.classList.contains('touch')) return L('rights.tap');
+  const [k1, k2] = settings().keys.land;
+  return L('rights.key', { key: keyLabel(k1 || k2) });
 }
 
 /** A contract's picture: sealed letters, a bounty poster, or the good to deliver. */

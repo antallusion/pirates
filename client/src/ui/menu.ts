@@ -23,9 +23,8 @@ export function menuLabel(id: MenuItem): string {
   return L(id);
 }
 
-export function renderMenu(root: HTMLElement, open: (m: MenuItem) => void, close: () => void): void {
-  root.innerHTML = `<div class="modal-head"><h2>${esc(L('title'))}</h2><button class="x-btn" data-close aria-label="${esc(L('close'))}"></button></div>
+export function renderMenu(root: HTMLElement, open: (m: MenuItem) => void): void {
+  root.innerHTML = `<div class="modal-head"><h2>${esc(L('title'))}</h2></div>
     <div class="modal-body"><div class="menu-grid">${MENU_ITEMS.map((m) => `<button class="menu-tile" data-menu="${m.id}">${icon(`menu_${m.id}`, m.glyph, 'ico-lg')}<span>${esc(L(m.id))}</span></button>`).join('')}</div></div>`;
   root.querySelectorAll<HTMLElement>('[data-menu]').forEach((b) => (b.onclick = () => open(b.dataset.menu as MenuItem)));
-  root.querySelector<HTMLElement>('[data-close]')!.onclick = close;
 }

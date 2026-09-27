@@ -103,7 +103,7 @@ export class OnboardingUi {
   }
 
   hint(id: string): void {
-    const k = `hint.${id}` as Key;
+    const k = hintKey(id);
     if (!has(k)) return;
     const el = $('hud-hint');
     el.innerHTML = `<b>${esc(t('hint.title'))}</b> ${esc(t(k))}`;
@@ -151,6 +151,12 @@ export function renderEdge(root: HTMLElement, close: () => void): void {
   root.querySelector('button')!.onclick = close;
 }
 
+/** A hint's text: on a touch screen its own words when the keyboard's would name keys it does not have. */
+function hintKey(id: string): Key {
+  const touch = `hint.${id}.touch`;
+  return (document.body.classList.contains('touch') && has(touch) ? touch : `hint.${id}`) as Key;
+}
+
 /** The logbook section of the Handbook: every hint given, the goals under way. */
 export function logbookHtml(v: OnboardingView | null): string {
   const hints = (v?.hints ?? []).filter((h) => has(`hint.${h}`));
@@ -159,7 +165,7 @@ export function logbookHtml(v: OnboardingView | null): string {
     <p><b>${esc(t('log.goals'))}</b>${v?.goalsDone ? ` <span class="muted">(${esc(t('log.goalsDone', { n: v.goalsDone }))})</span>` : ''}</p>
     ${goals.length ? `<ul>${goals.map((g) => `<li>${esc(has(`goal.${g}`) ? t(`goal.${g}` as Key) : g)}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}
     <p><b>${esc(t('log.hints'))}</b></p>
-    ${hints.length ? `<ul>${hints.map((h) => `<li>${esc(t(`hint.${h}` as Key))}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}
+    ${hints.length ? `<ul>${hints.map((h) => `<li>${esc(t(hintKey(h)))}</li>`).join('')}</ul>` : `<p class="muted">${esc(t('log.none'))}</p>`}
     <p><b>${esc(t('log.glossary'))}</b></p>${glossaryHtml()}</div>`;
 }
 

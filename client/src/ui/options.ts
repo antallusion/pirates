@@ -45,7 +45,7 @@ export class OptionsScreen {
     this.root = root;
     const s = settings();
     const tabs: Tab[] = ['ui', 'vision', 'sound', 'controls'];
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(t('opt.title'))}</h2><div class="sub">${esc(t('opt.sub'))}</div></div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(t('opt.title'))}</h2>${document.body.classList.contains('touch') ? '' : `<div class="sub">${esc(t('opt.sub'))}</div>`}</div></div>
       <div class="tabs icon-tabs four">${tabs.map((x) => `<button class="tab ${x === this.tab ? 'active' : ''}" data-tab="${x}" title="${esc(t(`opt.tab.${x}` as Key))}">${icon(TAB_ICON[x])}<span>${esc(t(`opt.tab.${x}` as Key))}</span></button>`).join('')}</div>
       <div class="tab-caption">${esc(t(`opt.tab.${this.tab}` as Key))}</div>
       <div class="modal-body options">${this.body(s)}</div>`;

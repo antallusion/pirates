@@ -54,6 +54,8 @@ export const EN = {
   'tc.harbour': 'Harbour',
   'tc.axes': 'Axes!',
   'tc.land': 'Land a party',
+  'tc.repair': 'Repair',
+  'tc.repairStop': 'Stop repairs',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -110,4 +112,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'tc.harbour': 'В гавань',
   'tc.axes': 'Топоры!',
   'tc.land': 'Высадка',
+  'tc.repair': 'Ремонт',
+  'tc.repairStop': 'Хватит чинить',
 };

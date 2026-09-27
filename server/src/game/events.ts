@@ -350,7 +350,7 @@ function triggers(game: Game, st: EventStore, wall: number): boolean {
       st.next.epidemic = wall + (5 + game.worldEvents.rng.float() * 5) * DAY;
       const p = game.worldEvents.rng.pick(pool);
       const quarantine = game.worldEvents.rng.chance(0.3);
-      start(game, { kind: 'epidemic', region: p.region, port: p.id, x: p.x, y: p.y, ends: wall + (1 + game.worldEvents.rng.float() * 2) * DAY, title: `Fever in ${p.name}${quarantine ? ' (quarantine)' : ''}`, quarantine },
+      start(game, { kind: 'epidemic', region: p.region, port: p.id, x: p.x, y: p.y, ends: wall + (1 + game.worldEvents.rng.float() * 2) * DAY, title: quarantine ? `Fever in ${p.name} (quarantine)` : `Fever in ${p.name}`, quarantine },
         `Fever in ${p.name}! Medicine sells for twice its weight${quarantine ? '; the yellow flag flies — no hands to hire and ships that leave may carry it' : ''}.`);
       changed = true;
     }

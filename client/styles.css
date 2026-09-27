@@ -124,7 +124,7 @@ button { font-family: var(--sans); }
 .skinned .uf-portrait::after { content: ''; position: absolute; inset: -17% -21% -21% -17%; background: var(--ui-portrait-ring) center / 100% 100% no-repeat; pointer-events: none; }
 .uf-level { position: absolute; right: -10%; bottom: -10%; width: 38%; height: 38%; display: flex; align-items: center; justify-content: center; z-index: 2; font: 700 11px var(--sans); color: var(--gold); background: radial-gradient(circle, #16110b 55%, transparent 60%); border-radius: 50%; }
 .uf-body { flex: 1; min-width: 0; padding: 4px 8px 5px; background: linear-gradient(90deg, rgba(10, 11, 13, 0.9), rgba(10, 11, 13, 0.6)); border: 1px solid rgba(111, 90, 56, 0.5); border-radius: 3px; }
-.uf-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.uf-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 .uf-name { font-family: var(--display); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .uf-sub { font-size: 10px; color: var(--fog); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between; gap: 6px; }
 .fbar { position: relative; height: 13px; margin: 3px 0 0; background: #0a0c0e; border: 1px solid #000; }
@@ -475,7 +475,7 @@ dl.glossary dd { margin: 0 0 4px 0; color: var(--fog); font-size: 13px; }
 @media (max-width: 699px) { #hud-region { width: 170px; } }
 
 /* ---------- Phase 11 skin: panels, plates, buttons and tabs in the Higgsfield UI kit; windows as sheets on phones */
-.x-btn { position: absolute; top: 8px; right: 8px; width: 38px; height: 38px; padding: 0; border: 1px solid var(--brass-dim); border-radius: 50%; background: #16110d; color: var(--bone); font: 700 18px var(--sans); cursor: pointer; z-index: 5; }
+.x-btn { position: absolute; top: 21px; right: 10px; width: 38px; height: 38px; padding: 0; border: 1px solid var(--brass-dim); border-radius: 50%; background: #16110d; color: var(--bone); font: 700 18px var(--sans); cursor: pointer; z-index: 5; }
 .x-btn::before { content: '×'; }
 .skinned .x-btn { border: 0; background: var(--ui-close) center / contain no-repeat; filter: drop-shadow(0 2px 4px #000); }
 .skinned .x-btn::before { content: ''; }
@@ -499,7 +499,7 @@ body.touch .modal-head > .muted { display: none; }
 .skinned .btn-primary { color: var(--gold); text-shadow: 0 0 8px rgba(224, 184, 98, 0.35), 0 1px 2px #000; }
 .skinned .btn-small { border-width: 5px 8px; border-image-width: 5px 8px; padding: 1px 6px; }
 .skinned .tab { border: 0; }
-.skinned .tab.active { border-style: solid; border-color: transparent; border-width: 6px 10px 0; border-image: var(--ui-button) 40 fill / 6px 10px 0 stretch; padding: 4px 6px 8px; background: none; }
+.skinned .tab.active { border-style: solid; border-color: transparent; border-width: 6px 10px 0; border-image: var(--ui-button) 40 fill / 6px 10px 0 stretch; padding: 6px 6px 6px; background: none; }
 .skinned .card { border-color: rgba(140, 107, 58, 0.35); background: rgba(6, 6, 7, 0.55); box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.6); }
 .skinned table.grid th { background: rgba(14, 12, 10, 0.95); color: var(--brass); }
 
@@ -528,7 +528,7 @@ span.ico.glyph { display: inline-block; text-align: center; width: auto; }
   .trees { grid-template-columns: 1fr 1fr; }
   .btn { min-height: 34px; }
   .menu-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .x-btn { width: 42px; height: 42px; top: 4px; right: 4px; }
+  .x-btn { width: 42px; height: 42px; top: 10px; right: 4px; }
   .login-panel { width: min(520px, 94vw); padding: 26px 18px; }
   .title { font-size: clamp(30px, 9.5vw, 64px); letter-spacing: 0.05em; }
   .captain-wrap { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; height: 100dvh; width: 100vw; padding: 12px; overflow-y: auto; }
@@ -546,7 +546,7 @@ table.grid td .ico { width: 1.9em; height: 1.9em; vertical-align: middle; margin
 @media (max-width: 699px) {
   table.grid.market, table.grid.market tbody { display: block; }
   table.grid.market tr:first-child { display: none; }
-  table.grid.market tr { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 8px; padding: 8px; margin-bottom: 8px; border: 1px solid rgba(140, 107, 58, 0.35); background: rgba(6, 6, 7, 0.55); }
+  table.grid.market tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 8px; padding: 8px; margin-bottom: 8px; border: 1px solid rgba(140, 107, 58, 0.35); background: rgba(6, 6, 7, 0.55); }
   table.grid.market tr:hover td { background: none; }
   table.grid.market td { border: 0; padding: 2px 0; }
   table.grid.market td:first-child { grid-column: 1 / -1; font-size: 15px; }
@@ -690,7 +690,7 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
   .tabs { flex-wrap: wrap; overflow: visible; row-gap: 2px; }
   .tabs.icon-tabs { display: grid; grid-template-columns: repeat(var(--n, 7), minmax(0, 1fr)); gap: 2px; padding: 4px 4px 0; }
   .icon-tabs .tab { flex-direction: column; justify-content: center; gap: 2px; padding: 6px 1px 5px; min-width: 0; text-align: center; }
-  .skinned .icon-tabs .tab.active { border-width: 5px 4px 0; border-image-width: 5px 4px 0; padding: 1px 0 5px; }
+  .skinned .icon-tabs .tab.active { border-width: 5px 4px 0; border-image-width: 5px 4px 0; padding: 3px 0; }
   .icon-tabs .tab .ico { width: 28px; height: 28px; }
   .icon-tabs .tab span { font-size: 8px; letter-spacing: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
@@ -826,7 +826,7 @@ input[type=range] { accent-color: var(--gold); }
 .tree-h { display: flex; align-items: center; gap: 8px; margin: 0; }
 .tree-h .ico-md { width: 36px; height: 36px; }
 .tier-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
-.talent { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: start; border-radius: 6px; margin: 0; padding: 7px 8px; }
+.talent { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; border-radius: 6px; margin: 0; padding: 7px 8px; }
 .talent-ico { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px rgba(140, 107, 58, 0.6); }
 .talent.has .talent-ico { box-shadow: 0 0 0 2px var(--gold); }
 .talent.keystone .talent-ico { box-shadow: 0 0 0 2px var(--turq), 0 0 8px rgba(80, 200, 190, 0.5); }
@@ -1047,7 +1047,7 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
   .icon-tabs .tab { flex-direction: column; justify-content: center; gap: 3px; padding: 6px 2px 5px; min-width: 0; text-align: center; }
   .icon-tabs .tab .ico { width: 30px; height: 30px; }
   .icon-tabs .tab span { font-size: 10px; letter-spacing: 0.04em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .skinned .icon-tabs .tab.active { border-width: 5px 4px 0; border-image-width: 5px 4px 0; padding: 1px 0 5px; }
+  .skinned .icon-tabs .tab.active { border-width: 5px 4px 0; border-image-width: 5px 4px 0; padding: 3px 0; }
 }
 /* A plate in a half-width column takes a smaller type so it stays on one line. */
 .cols .title-sm { font-size: 18px !important; }
@@ -1055,7 +1055,7 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 .mk-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; min-width: 210px; }
 .mk-btns .btn { width: 100%; text-align: center; white-space: nowrap; }
 @media (max-width: 699px), (max-height: 520px) {
-  table.grid.market td:last-child .mk-btns { width: 100%; min-width: 0; }
+  table.grid.market td:last-child .mk-btns { width: 100%; min-width: 0; gap: 8px; margin-top: 4px; }
   table.grid.market td:last-child .mk-btns .btn { min-height: 38px; }
 }
 /* Ledgers on a phone: every row a small card, each figure under its column's name; no sideways scrolling. */
@@ -1074,10 +1074,10 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 }
 /* The harbour's name: the faction's crest stands beside the plate (not squeezed inside it), the name alone in
    the plate's middle. */
-.ph-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.ph-crest { width: 40px; height: 40px; flex: none; object-fit: contain; filter: drop-shadow(0 2px 3px #000); }
+.ph-name { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.ph-crest { width: auto; max-width: 48px; height: 40px; flex: none; object-fit: contain; filter: drop-shadow(0 2px 3px #000); }
 .ph-name h2 { min-width: 0; }
-@media (max-width: 699px), (max-height: 520px) { .ph-crest { width: 34px; height: 34px; } }
+@media (max-width: 699px), (max-height: 520px) { .ph-crest { height: 34px; max-width: 40px; } }
 /* Every title plate: the words sit on the plate's centre line (the display face rides a little high). */
 .skinned .modal-head h2, .skinned .title-sm { line-height: 1.2; padding-top: 2px; padding-bottom: 1px; }
 /* Touch buttons with painted art: the picture fills the ring, nothing else inside. */
@@ -1096,3 +1096,14 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 /* The touch block is as tall as its tallest column (the sail arrows and their steps), so the action bar
    never sits on the upper arrow. */
 @media (max-width: 699px) and (min-height: 521px) { body.touch { --touch-h: calc(var(--stick) + 40px); } }
+
+/* Cards stand 8px apart everywhere: the last one in a column keeps no margin, and a phone's stacked columns
+   are as far apart as two cards. */
+.cols > * > :last-child { margin-bottom: 0; }
+@media (max-width: 699px) { .cols { gap: 8px; } }
+
+/* A count at the end of a card's heading (sailors ashore): a brass chip, not a word that wraps alone. */
+.card-h .h-count { margin-left: auto; flex: none; min-width: 32px; height: 26px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(201, 162, 90, 0.55); border-radius: 13px; background: rgba(12, 9, 6, 0.8); font: 700 14px/1 var(--sans); color: var(--gold); }
+/* The tavern's other orders sit in the hiring grid, two cells wide each. */
+.hire-grid .hire-wide { grid-column: span 2; flex-direction: row; justify-content: center; min-height: 32px; }
