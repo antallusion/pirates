@@ -58,6 +58,7 @@ import {
   dismissOfficer, hireOfficer, maxRecruits, mutinyCourse, officerOrder, onDockCrew, onFightWon, onMagazineBlast, onSunkCrew, plunderShare, pressGang, recruitPrisoners,
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
+import { friendAdd, friendRemove, friendsPresence, pushFriends, whisper, whisperCommand } from './friends.ts';
 import { Social, lfgClear, lfgPost, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
 import { havenSecond } from './havens.ts';
@@ -2575,6 +2576,10 @@ export class Game {
             return lfgClear(this, s);
         }
         return;
+      case 'friend':
+        if (msg.action === 'add') return err(friendAdd(this, s, msg.name));
+        if (msg.action === 'remove') return err(friendRemove(this, s, msg.name));
+        return pushFriends(this, s);
       case 'barter':
         switch (msg.action) {
           case 'propose':
@@ -2774,6 +2779,8 @@ export class Game {
       case 'chat': {
         const text = String(msg.text ?? '').slice(0, 200).trim();
         if (!text) return;
+        const w = whisperCommand(text);
+        if (w) return err(whisper(this, s, w.rest, w.reply));
         if (text.startsWith('/') && adminEnabled()) {
           const reply = runAdmin(this, s, text);
           if (reply) this.sendTo(s, { t: 'toast', msg: reply, kind: 'info' });
@@ -2931,6 +2938,8 @@ export class Game {
     ensureLegendary(this, s);
     sendSites(this, s);
     pushParty(this, s);
+    friendsPresence(this, s, true);
+    pushFriends(this, s);
     mailOnLogin(this, s);
     this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
   }
@@ -2950,6 +2959,7 @@ export class Game {
   private retireSession(s: PlayerSession): void {
     this.shared?.leave(s.accountId, s.name);
     socialRetire(this, s);
+    friendsPresence(this, s, false);
     if (s.profile) anchorFleet(this, s);
     this.saveSession(s);
     for (const c of caravansOf(this, s.accountId)) this.removeShip(c.id);

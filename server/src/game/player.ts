@@ -63,6 +63,8 @@ export interface Profile {
   quests: QuestLog;
   /** Today's three orders and the days in a row (docs/11 P6). */
   daily: DailyState;
+  /** The list of friends (docs/11 P6): account and name as last seen. */
+  friends?: { id: number; name: string }[];
   paths: CaptainId[]; // Paths this captain may take up at a Captain's House
   pathSwitchAt: number;
   oath: Oath | null; // the Code or a letter of marque
@@ -433,6 +435,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.exotic ??= {};
   sanitizeQuests(p);
   sanitizeDaily(p);
+  p.friends = (p.friends ?? []).filter((f) => f && typeof f.id === 'number' && typeof f.name === 'string').slice(0, 50);
   sanitizeShipbuilding(p);
   p.salvageDay ??= -1;
   p.fleet.escorts ??= [];

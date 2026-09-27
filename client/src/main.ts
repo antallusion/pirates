@@ -74,6 +74,14 @@ let aimSide: 'port' | 'starboard' | null = null;
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
+// "Whisper" on a friend: the chat opens over the window, addressed to them.
+let whisperPrefill = '';
+companyScreen.onWhisper = (name) => {
+  const input = $('chat-input') as HTMLInputElement;
+  $('chat').classList.add('open');
+  input.value = whisperPrefill = `${lang() === 'ru' ? '/ш' : '/w'} ${name} `;
+  input.focus();
+};
 const divePanel = new DivePanel((m) => net.send(m));
 const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServerTime());
 const optionsScreen = new OptionsScreen();
@@ -335,13 +343,14 @@ function onMessage(m: ServerMsg): void {
       if (m.kind === 'gold') audio.coins();
       break;
     case 'chat':
-      hud.chat(m.from, m.text, m.ch);
+      hud.chat(m.from, m.text, m.ch, m.to);
       break;
     case 'duel':
       if (m.view && m.view.startsIn === 5) hud.banner(L('duel'), m.view.sides.map((side) => side.map((x) => x.name).join(', ')).join(`  ${L('against')}  `));
       if (modal === 'company') refreshModal();
       break;
     case 'party':
+    case 'friends':
     case 'mail':
     case 'market':
     case 'bounties':
@@ -564,7 +573,10 @@ function typing(): boolean {
 ($('chat-input') as HTMLInputElement).addEventListener('blur', () => {
   const input = $('chat-input') as HTMLInputElement;
   setTimeout(() => {
-    if (!input.value.trim() && document.activeElement !== input) $('chat').classList.remove('open');
+    if (document.activeElement === input) return;
+    // Nothing said (a whisper's address alone counts as nothing): the chat folds away.
+    if (input.value === whisperPrefill) input.value = '';
+    if (!input.value.trim()) $('chat').classList.remove('open');
   }, 150);
 });
 

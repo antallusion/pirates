@@ -101,11 +101,6 @@
     <div id="board-fight" class="hidden"></div>
     <div id="captions"></div>
     <div id="banner"></div>
-    <div id="toasts"></div>
-    <div id="chat">
-      <div id="chat-log"></div>
-      <input id="chat-input" maxlength="200" placeholder="Enter to speak…" data-i18n-ph="hud.chatPh" />
-    </div>
     <div id="touch">
       <div id="tc-stick"><i id="tc-course" class="hidden"></i><i id="tc-knob"></i></div>
       <div id="tc-sail" data-sail="0">
@@ -121,6 +116,15 @@
       <button id="tc-menu" class="tc-btn tc-menu" aria-label="Menu"><b>☰</b></button>
     </div>
   </section>
+
+  <!-- In the HUD's frame but over the windows: the server's word is seen in port too; the chat rises while open. -->
+  <div id="hud-toasts" class="hud-layer hidden"><div id="toasts"></div></div>
+  <div id="hud-chat" class="hud-layer hidden">
+    <div id="chat">
+      <div id="chat-log"></div>
+      <input id="chat-input" maxlength="200" placeholder="Enter to speak…" data-i18n-ph="hud.chatPh" />
+    </div>
+  </div>
 
   <section id="modal" class="hidden">
     <div id="modal-panel" class="panel"></div>

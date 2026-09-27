@@ -72,7 +72,7 @@ export class Hud {
   }
 
   show(on: boolean): void {
-    $('hud').classList.toggle('hidden', !on);
+    for (const id of ['hud', 'hud-toasts', 'hud-chat']) $(id).classList.toggle('hidden', !on);
   }
 
   update(state: ClientState, prompt: string): void {
@@ -706,11 +706,13 @@ export class Hud {
     this.bannerTimer = window.setTimeout(() => b.classList.remove('show'), 3500);
   }
 
-  chat(from: string, text: string, ch?: 'group' | 'guild'): void {
+  chat(from: string, text: string, ch?: 'group' | 'guild' | 'whisper', to?: string): void {
     const log = $('chat-log');
     const d = document.createElement('div');
     if (ch) d.className = `chat-${ch}`;
-    d.innerHTML = `${ch === 'group' ? `<i>${esc(L('chatGroup'))}</i> ` : ch === 'guild' ? `<i>${esc(L('chatGuild'))}</i> ` : ''}<b>${esc(from)}:</b> ${esc(text)}`;
+    // A whisper: from someone, or one's own words to someone (echoed back).
+    const tag = ch === 'group' ? L('chatGroup') : ch === 'guild' ? L('chatGuild') : ch === 'whisper' ? (to ? L('chatWhisperTo', { name: to }) : L('chatWhisper')) : '';
+    d.innerHTML = `${tag ? `<i>${esc(tag)}</i> ` : ''}${to ? '' : `<b>${esc(from)}:</b> `}${esc(text)}`;
     log.append(d);
     while (log.children.length > 8) log.firstChild!.remove();
   }

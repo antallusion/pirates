@@ -115,6 +115,12 @@ button { font-family: var(--sans); }
   --mm: 108px; --uf-p: 56px; --slot: 42px; --stick: 124px; --fire: 64px; --touch-h: 0px; --top-h: 150px;
 }
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+/* Layers in the HUD's frame: the toasts over the windows (a sale, a refusal, a quest taken are seen in port too),
+   the chat under the windows unless it is open (a whisper from the list of friends opens it over them). */
+.hud-layer { position: fixed; inset: 0; pointer-events: none; }
+#hud-toasts { z-index: 40; }
+#hud-chat { z-index: 10; }
+#hud-chat:has(#chat.open) { z-index: 40; }
 .hud-block { position: absolute; pointer-events: auto; background: rgba(10, 11, 13, 0.82); border: 1px solid rgba(111, 90, 56, 0.55); border-radius: 3px; padding: 8px 10px; }
 
 /* Unit frame: the captain's portrait in its ring, name, silver and the ship's three lives. */
@@ -393,6 +399,7 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 #reset-form { margin-top: 10px; }
 #chat-log div.chat-group, #chat-log div.chat-group b { color: #9fe0a8; }
 #chat-log div.chat-guild, #chat-log div.chat-guild b { color: #9fc3e8; }
+#chat-log div.chat-whisper, #chat-log div.chat-whisper b { color: #e0a8e8; }
 #unread { position: absolute; top: 6px; left: 8px; font-size: 13px; color: var(--brass); text-shadow: 0 1px 2px #000; pointer-events: none; }
 .card.letter.unread { border-color: var(--brass); }
 
@@ -425,7 +432,7 @@ label.check { display: flex; gap: 8px; align-items: center; margin-top: 10px; fo
 
 /* Options & accessibility (docs/07 §11) */
 :root { --ui-scale: 1; --text-scale: 1; }
-#hud { zoom: var(--ui-scale); }
+#hud, .hud-layer { zoom: var(--ui-scale); }
 #modal-panel { zoom: calc(var(--ui-scale) * var(--text-scale)); }
 #toasts, #chat, #hud-hint, #hud-watch { font-size: calc(1em * var(--text-scale)); }
 body.hi-contrast .hud-block, body.hi-contrast #hud-goals, body.hi-contrast .toast, body.hi-contrast #hud-hint { background: rgba(4, 5, 7, 0.92) !important; border-width: 2px; border-color: var(--bone); backdrop-filter: none; }
@@ -939,7 +946,7 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
 .toast.herald small { display: block; font: italic 13px var(--serif); color: var(--fog); line-height: 1.25; }
 /* A game screen, not a page: no text selection on the HUD and the controls (a long press on a phone would
    otherwise paint everything blue); fields and the chat still take text. */
-#hud, #touch, #world, .tc-context { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#hud, .hud-layer, #touch, #world, .tc-context { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 #hud input, #hud textarea, #chat, #chat * { -webkit-user-select: text; user-select: text; }
 .toast.herald { display: block; }
 /* A narrow window with a mouse (no touch controls): the whole action bar fits, and the toasts keep clear of the
@@ -1650,3 +1657,14 @@ body.touch #hud-region .rg-extra { display: none; }
 .lfg-note { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--bone); }
 .lfg-form { flex-wrap: wrap; }
 .lfg-form input { flex: 1 1 180px; min-width: 0; }
+/* Friends (docs/11 P6): a dot for at sea, the name and where, the buttons wrapping under on a narrow screen. */
+.fr-list { display: grid; gap: 6px; margin-top: 8px; }
+.fr-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid rgba(111, 90, 56, 0.35); background: rgba(255, 255, 255, 0.03); }
+.fr-row:not(.on) { opacity: 0.62; }
+.fr-dot { width: 9px; height: 9px; border-radius: 50%; background: #5a5347; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5); }
+.fr-row.on .fr-dot { background: #7fd48a; box-shadow: 0 0 6px rgba(127, 212, 138, 0.7); }
+.fr-who { min-width: 0; overflow-wrap: anywhere; }
+.fr-who .muted { font-size: 12px; }
+.fr-btns { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.fr-count { font-size: 12px; font-weight: normal; margin-left: auto; }
+@media (max-width: 480px) { .fr-row { grid-template-columns: auto minmax(0, 1fr); } .fr-btns { grid-column: 1 / -1; justify-content: flex-start; } }

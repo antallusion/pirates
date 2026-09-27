@@ -86,6 +86,8 @@ export const EN = {
   'compass.W': 'W',
   chatGroup: '[group]',
   chatGuild: '[guild]',
+  chatWhisper: '[whisper]',
+  chatWhisperTo: '[whisper → {name}]',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -174,4 +176,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'compass.W': 'З',
   chatGroup: '[отряд]',
   chatGuild: '[гильдия]',
+  chatWhisper: '[шёпот]',
+  chatWhisperTo: '[шёпот → {name}]',
 };

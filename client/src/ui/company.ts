@@ -11,7 +11,7 @@ import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { WOODS } from '../../../shared/src/data/shipbuild.ts';
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
-import { GROUP_MAX } from '../../../shared/src/protocol.ts';
+import { FRIENDS_MAX, GROUP_MAX } from '../../../shared/src/protocol.ts';
 import type { GuildRank, HoldingView, IslandOffer, SiegeView } from '../../../shared/src/protocol.ts';
 import type { ClientMsg, ListingView } from '../../../shared/src/protocol.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
@@ -55,6 +55,8 @@ const BASE_NAMES = (n: number) => (BASE_KEYS[n] ? L(BASE_KEYS[n] as Exclude<(typ
 export class CompanyScreen {
   tab: CompanyTab = 'group';
   private send: (m: ClientMsg) => void;
+  /** "Whisper" on a friend: the chat opens addressed to them (main.ts). */
+  onWhisper: (name: string) => void = () => {};
 
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
@@ -63,6 +65,7 @@ export class CompanyScreen {
   open(tab?: CompanyTab): void {
     if (tab) this.tab = tab;
     this.send({ t: 'mail', action: 'list' });
+    this.send({ t: 'friend', action: 'list' });
   }
 
   render(root: HTMLElement, state: ClientState): void {
@@ -181,13 +184,14 @@ export class CompanyScreen {
       <h3 class="title-sm" style="font-size:20px">${g ? L('grp_yours', { n: g.members.length, max: GROUP_MAX }) : L('grp_alone')}</h3>
       ${g ? g.members.map((m) => `<div class="card"><h4>${m.accountId === g.leader ? '⚑ ' : ''}${esc(m.name)} <span class="muted">${L('grp_level', { captain: esc(CAPTAINS[m.captain]?.name ?? m.captain), level: m.level })}</span></h4>
         <div class="row"><span class="muted">${!m.online ? L('grp_ashore') : m.docked ? L('grp_in', { port: esc(state.ports.find((p) => p.id === m.docked)?.name ?? m.docked) }) : L('grp_at_sea', { n: Math.round(m.hull * 100) })}${m.inConvoy ? L('grp_station') : ''}</span>
-        ${lead && m.accountId !== me ? `<span><button class="btn btn-small" data-lead="${esc(m.name)}">${L('grp_give_lead')}</button> <button class="btn btn-small btn-danger" data-kick="${esc(m.name)}">${L('grp_kick')}</button></span>` : ''}</div></div>`).join('') : `<p class="muted">${L('grp_about')}</p>`}
+        ${m.accountId !== me ? `<span>${state.friends.some((f) => f.name === m.name) ? '' : `<button class="btn btn-small" data-befriend="${esc(m.name)}">${L('fr_befriend')}</button> `}${lead ? `<button class="btn btn-small" data-lead="${esc(m.name)}">${L('grp_give_lead')}</button> <button class="btn btn-small btn-danger" data-kick="${esc(m.name)}">${L('grp_kick')}</button>` : ''}</span>` : ''}</div></div>`).join('') : `<p class="muted">${L('grp_about')}</p>`}
       ${g && lead ? `<div class="card"><h4 class="card-h">${icon('ab_form_line', '', 'ico-md')}${L('grp_convoy')}</h4><p class="muted">${L('grp_convoy_text')}</p>
         <button class="btn ${g.convoy ? 'btn-primary' : ''}" id="convoy">${g.convoy ? L('grp_convoy_down') : L('grp_convoy_up')}</button></div>` : g?.convoy ? `<p class="muted">${L('grp_convoy_flying')}</p>` : ''}
       ${g ? `<button class="btn btn-danger" id="leave">${L('grp_leave')}</button>` : ''}
     </div><div>
       ${lead ? `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="invite">${L('invite')}</button></div></div>` : ''}
       ${this.lfgCard(state, !!g, lead && (g?.members.length ?? 1) < GROUP_MAX)}
+      ${this.friendsCard(state, lead && (g?.members.length ?? 1) < GROUP_MAX, g?.members.map((m) => m.name) ?? [])}
       <div class="card"><h4 class="card-h">${icon('tab_market', '', 'ico-md')}${L('grp_trade_title')}</h4><p class="muted">${L('grp_trade_text')}</p>
         <div class="row"><input id="bar-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="hail">${L('grp_hail')}</button></div></div>
       ${state.invites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
@@ -204,6 +208,28 @@ export class CompanyScreen {
     body.querySelector<HTMLElement>('#lfg-post')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg', note: val('#lfg-note') }));
     body.querySelector<HTMLElement>('#lfg-stop')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg_clear' }));
     body.querySelectorAll<HTMLElement>('[data-lfg-invite]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'invite', name: el.dataset.lfgInvite! })));
+    const addFriend = () => val('#fr-name') && this.send({ t: 'friend', action: 'add', name: val('#fr-name') });
+    body.querySelector<HTMLElement>('#fr-add')?.addEventListener('click', addFriend);
+    body.querySelector<HTMLInputElement>('#fr-name')?.addEventListener('keydown', (e) => e.key === 'Enter' && (e.stopPropagation(), e.preventDefault(), addFriend()));
+    body.querySelectorAll<HTMLElement>('[data-whisper]').forEach((el) => (el.onclick = () => this.onWhisper(el.dataset.whisper!)));
+    body.querySelectorAll<HTMLElement>('[data-fr-invite]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'invite', name: el.dataset.frInvite! })));
+    body.querySelectorAll<HTMLElement>('[data-befriend]').forEach((el) => (el.onclick = () => this.send({ t: 'friend', action: 'add', name: el.dataset.befriend! })));
+    body.querySelectorAll<HTMLElement>('[data-unfriend]').forEach((el) => (el.onclick = () => void ask(L('fr_confirm_remove', { name: el.dataset.unfriend! })).then((ok) => ok && this.send({ t: 'friend', action: 'remove', name: el.dataset.unfriend! }))));
+  }
+
+  /** Friends (docs/11 P6): who is at sea, at what level and where; a whisper, a call aboard, off the list. */
+  private friendsCard(state: ClientState, canInvite: boolean, grouped: string[]): string {
+    const where = (f: ClientState['friends'][number]) => {
+      if (!f.online) return L('fr_ashore');
+      const port = f.docked ? state.ports.find((p) => p.id === f.docked)?.name ?? f.docked : null;
+      return L('fr_row', { level: f.level ?? 1, where: port ? L('fr_in_port', { port: placeName(port) }) : placeName(REGIONS[f.region!]?.name ?? f.region ?? '') });
+    };
+    const rows = state.friends.map((f) => `<div class="fr-row${f.online ? ' on' : ''}"><i class="fr-dot"></i><div class="fr-who"><b>${esc(f.name)}</b> <span class="muted">${esc(where(f))}</span></div>
+      <span class="fr-btns">${f.online ? `<button class="btn btn-small" data-whisper="${esc(f.name)}">${L('fr_whisper')}</button>${canInvite && !grouped.includes(f.name) ? `<button class="btn btn-small" data-fr-invite="${esc(f.name)}">${L('fr_invite')}</button>` : ''}` : ''}<button class="btn btn-small" data-unfriend="${esc(f.name)}" title="${esc(L('fr_remove'))}" aria-label="${esc(L('fr_remove'))}">✕</button></span></div>`).join('');
+    return `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('fr_title')} <span class="muted fr-count">${L('fr_count', { n: state.friends.length, max: FRIENDS_MAX })}</span></h4>
+      <p class="muted">${L('fr_text')}</p>
+      <div class="row lfg-form"><input id="fr-name" placeholder="${L('fr_ph')}" maxlength="40"><button class="btn" id="fr-add">${L('fr_add')}</button></div>
+      <div class="fr-list">${rows || `<p class="muted">${L('fr_none')}</p>`}</div></div>`;
   }
 
   /** Looking for a group (docs/11 P6): one's own posting, and the captains at sea looking, to be called aboard. */

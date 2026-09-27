@@ -5,7 +5,7 @@
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BoardFightView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
+  BarterView, BoardFightView, FriendView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
 import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
@@ -76,6 +76,8 @@ export class ClientState {
   lfg: NonNullable<Extract<ServerMsg, { t: 'party' }>['lfg']> = [];
   lfgMine: string | null = null;
   invites: { id: number; from: string }[] = [];
+  /** The list of friends (docs/11 P6). */
+  friends: FriendView[] = [];
   barter: BarterView | null = null;
   letters: LetterView[] = [];
   unread = 0;
@@ -223,6 +225,9 @@ export class ClientState {
         this.invites = m.invites;
         this.lfg = m.lfg ?? [];
         this.lfgMine = m.lfgMine ?? null;
+        break;
+      case 'friends':
+        this.friends = m.list;
         break;
       case 'barter':
         this.barter = m.view;

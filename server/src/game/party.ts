@@ -62,6 +62,10 @@ export class Social {
   barters = new Map<number, Barter>(); // either side's account id → the barter
   /** Captains looking for a group (docs/11 P6): account → their note and when they posted it (wall ms). */
   lfg = new Map<number, { note: string; since: number }>();
+  /** Captains come aboard (friends.ts): whose friends have heard of it. */
+  aboard = new Set<number>();
+  /** Account → the name of the last captain who whispered to them (for "/r"). */
+  lastWhisper = new Map<number, string>();
   private nextId = 1;
 
   id(): number {

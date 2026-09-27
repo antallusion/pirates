@@ -223,7 +223,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'captain.choose': 'Выберите капитана',
   'hud.unread': 'Ждут письма — [Y]',
   'hud.chatPh': 'Enter — сказать слово…',
-  'hud.chatPhTouch': 'Сказать слово… (/g — отряду)',
+  'hud.chatPhTouch': 'Сказать слово… (/g — отряду, /ш Имя — шёпотом)',
   'conn.reconnecting': 'Восстанавливаем связь с Адмиралтейством…',
   'opt.music': 'Музыка',
 };

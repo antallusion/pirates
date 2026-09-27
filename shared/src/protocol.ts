@@ -115,6 +115,9 @@ export type ClientMsg =
   | { t: 'chart'; action: 'sell' }
   | { t: 'chart'; action: 'buy'; region: RegionId }
   | { t: 'chat'; text: string }
+  /** The list of friends (docs/11 P6); whispers go as chat: "/w Name words", "/r words". */
+  | { t: 'friend'; action: 'add' | 'remove'; name: string }
+  | { t: 'friend'; action: 'list' }
   | { t: 'group'; action: 'invite' | 'kick' | 'lead'; name: string }
   | { t: 'group'; action: 'accept' | 'decline'; id: number }
   | { t: 'group'; action: 'leave' }
@@ -912,7 +915,9 @@ export type ServerMsg =
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
-  | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' }
+  /** `whisper`: to this captain, or (with `to`) their own words to another, echoed back. */
+  | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' | 'whisper'; to?: string }
+  | { t: 'friends'; list: FriendView[] }
   | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[];
       /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number }[]; lfgMine?: string | null }
   | { t: 'barter'; view: BarterView | null }
@@ -949,6 +954,18 @@ export interface PartyView {
   convoy: boolean;
   members: PartyMember[];
 }
+
+/** A captain on one's list of friends (docs/11 P6): who is at sea, at what level, in which waters or port. */
+export interface FriendView {
+  name: string;
+  online: boolean;
+  level?: number;
+  captain?: CaptainId;
+  region?: RegionId;
+  docked?: string | null;
+}
+
+export const FRIENDS_MAX = 50;
 
 export interface BarterSide {
   name: string;
