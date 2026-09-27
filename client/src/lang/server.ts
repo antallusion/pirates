@@ -10,9 +10,10 @@ import { SERVER_RU_A } from './server.ru.a.ts';
 import { SERVER_RU_B } from './server.ru.b.ts';
 import { feminineRu, questPatterns } from '../../../shared/src/data/questgen.ts';
 import { arcPatterns } from '../../../shared/src/data/questarcs.ts';
+import { dailyPatterns } from '../../../shared/src/data/dailies.ts';
 
 // The generated jobs' templates carry their Russian twins (shared/src/data/questgen.ts).
-const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
+const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
 const exact = new Map<string, string>();
 let templates: { re: RegExp; ru: string; order: number[]; adjacent: number[] }[] | null = null;
 

@@ -73,6 +73,7 @@ import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
 import { buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { abandonQuest, acceptQuest, marqueBounty, questEvent, swearOath, switchPath } from './quests.ts';
+import { dailyRollover } from './dailies.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
 import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
@@ -770,6 +771,7 @@ export class Game {
       stepBridges(this, s);
       stepBuiltShip(this, s);
       questEvent(this, s, { k: 'tick', dt: 1 });
+      dailyRollover(this, s);
       // After a mutiny they sail her to port themselves.
       const bound = mutinyCourse(this, s.ship, s.profile.company);
       if (bound && !s.ship.docked) {

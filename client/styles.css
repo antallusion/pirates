@@ -1564,3 +1564,10 @@ body.touch #hud-region .rg-extra { display: none; }
 /* The quest the captain follows: a gold edge in the chart's log. */
 .mq-row.tracked { border-color: var(--gold); background: rgba(217, 178, 90, 0.08); }
 .mq-row.tracked b { display: flex; align-items: center; gap: 4px; }
+/* Daily orders (docs/11 P6): three lines, a tick when done, the chest below. */
+.dl-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 3px 0; font-size: 13px; }
+.dl-row.done .dl-text { color: var(--fog); text-decoration: line-through rgba(201, 162, 90, 0.5); }
+.dl-mark { color: var(--good); font-weight: 700; width: 16px; text-align: center; }
+.dl-count { color: var(--gold); font-variant-numeric: tabular-nums; }
+.dl-foot { margin-top: 4px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.map-daily { padding: 6px 10px; border-top: 1px solid rgba(111, 90, 56, 0.4); }

@@ -364,6 +364,7 @@
     "prop.life_pirate_tent":          { "local": "props/life_pirate_tent.webp", "remote": "hf_20260927_195448_ea8d2353-4fd9-4e03-8a4f-8208b6e68c21.png", "job": "ea8d2353-4fd9-4e03-8a4f-8208b6e68c21", "fit": "keyed:768:#ff00ff" },
     "prop.life_fort":                 { "local": "props/life_fort.webp", "remote": "hf_20260927_195518_c40ae99f-7fa3-4131-bf9d-c944d6e92382.png", "job": "c40ae99f-7fa3-4131-bf9d-c944d6e92382", "fit": "keyed:768:#ff00ff" },
     "creature.seal":                  { "local": "creatures/seal.webp", "remote": "hf_20260927_200438_f1675f9c-215e-49d3-87a7-46ac4a54730f.png", "job": "f1675f9c-215e-49d3-87a7-46ac4a54730f", "fit": "keyed:384:#ff00ff" },
-    "creature.turtle":                { "local": "creatures/turtle.webp", "remote": "hf_20260927_201331_94b266f1-7b85-471f-8990-2b1b084425c6.png", "job": "94b266f1-7b85-471f-8990-2b1b084425c6", "fit": "keyed:384:#ff00ff" }
+    "creature.turtle":                { "local": "creatures/turtle.webp", "remote": "hf_20260927_201331_94b266f1-7b85-471f-8990-2b1b084425c6.png", "job": "94b266f1-7b85-471f-8990-2b1b084425c6", "fit": "keyed:384:#ff00ff" },
+    "creature.crab":                  { "local": "creatures/crab.webp", "remote": "hf_20260927_202650_4f2a5dae-98bc-4394-93cb-5efdfcd101bf.png", "job": "4f2a5dae-98bc-4394-93cb-5efdfcd101bf", "fit": "keyed:384:#ff00ff" }
   }
 }

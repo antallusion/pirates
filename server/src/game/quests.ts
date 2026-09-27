@@ -18,6 +18,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
+import { dailyEvent } from './dailies.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_ACTIVE_QUESTS = 5;
@@ -173,6 +174,8 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   const p = s.profile;
   const ship = s.ship;
   if (!p || !ship) return;
+  // The day's orders move on with the same deeds.
+  dailyEvent(game, s, ev);
   for (const qs of [...p.quests.active]) {
     const q = QUESTS_BY_ID[qs.id];
     if (!q) continue;

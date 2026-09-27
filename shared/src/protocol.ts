@@ -16,6 +16,7 @@ import type { Flag, StatMods } from './data/stats.ts';
 import type { Cargo, AmmoStock, ShipLoadout } from './sim/shipstats.ts';
 import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
+import type { DailyKind } from './data/dailies.ts';
 
 export type Side = 'port' | 'starboard';
 export type Station = 'balanced' | 'gunnery' | 'sailing' | 'damage_control';
@@ -365,6 +366,8 @@ export interface PrivateState {
   /** Quests under way (Paths, Legends, the Descent). */
   quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; target?: { x: number; y: number; r?: number; region?: RegionId } }[];
   questsDone: string[];
+  /** Today's orders (docs/11 P6): each with its pay, the days in a row and the chest. */
+  daily: { day: number; orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
   paths: CaptainId[];
   oath: 'code' | 'marque' | null;
   pathSwitchAt: number;
