@@ -451,7 +451,7 @@ ${orders}${berths}</div>` : ''}`;
       <button class="btn btn-small btn-danger" data-act="contract" data-mode="abandon" data-id="${c.id}">${esc(L('btn.abandon'))}</button></div></div></div>`).join('') || `<p class="muted">${esc(L('contract.none'))}</p>`;
     const offered = view.contracts.map((c) => `<div class="card quest-card">${icon(contractArt(c), '', 'quest-ico')}<div class="quest-body"><h4>${esc(serverText(c.title))}</h4><p>${esc(serverText(c.description))}</p>
       <div class="row"><span class="reward">${money(c.reward)}${xpBadge(c.xp)}</span><button class="btn btn-small btn-primary" data-act="contract" data-mode="accept" data-id="${c.id}">${esc(L('btn.accept'))}</button></div></div></div>`).join('') || `<p class="muted">${esc(L('contract.empty'))}</p>`;
-    return `<div class="cols"><div><h3 class="title-sm" style="font-size:20px">${esc(L('contract.posted'))}</h3>${offered}</div><div><h3 class="title-sm" style="font-size:20px">${esc(L('contract.mine'))}</h3>${mine}</div></div>`;
+    return `<div class="cols"><div><h3 class="title-sm" style="font-size:20px">${esc(L('contract.posted'))}</h3>${offered}</div><div><div class="sec-head"><h3 class="title-sm" style="font-size:20px">${esc(L('contract.mine'))}</h3><span class="h-count" title="${esc(L('contract.slots'))}">${self.contracts.length}/${3 + ((self.talents.trd_contract_broker ?? 0) > 0 ? 1 : 0)}</span></div>${mine}</div></div>`;
   }
 
   private harbour(view: PortView, state: ClientState): string {

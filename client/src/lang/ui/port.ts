@@ -221,7 +221,8 @@ export const EN = {
   'contract.none': 'No contracts in hand.',
   'contract.empty': 'The board is empty. Come back later.',
   'contract.posted': 'Posted here',
-  'contract.mine': 'Your contracts (max 3)',
+  'contract.mine': 'Your contracts',
+  'contract.slots': 'Contracts held / most you may hold',
 
   // Harbour master
   'pardon.title': 'Letters of pardon',
@@ -539,7 +540,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'contract.none': 'На руках нет ни одного контракта.',
   'contract.empty': 'Доска пуста. Загляните позже.',
   'contract.posted': 'Вывешено здесь',
-  'contract.mine': 'Ваши контракты (не более 3)',
+  'contract.mine': 'Ваши контракты',
+  'contract.slots': 'Взято контрактов / сколько можно держать',
 
   'pardon.title': 'Грамоты о помиловании',
   'pardon.text': 'Дурная слава: {n}. Туманные маклеры могут сделать ваше имя… потише.',

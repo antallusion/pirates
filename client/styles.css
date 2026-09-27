@@ -543,7 +543,7 @@ span.ico.glyph { display: inline-block; text-align: center; width: auto; }
 .ico-md { width: 40px; height: 40px; object-fit: contain; flex: none; }
 .with-ico { display: flex; gap: 10px; align-items: center; }
 table.grid td .ico { width: 1.9em; height: 1.9em; vertical-align: middle; margin-right: 6px; }
-@media (max-width: 699px) {
+@media (max-width: 979px) {
   table.grid.market, table.grid.market tbody { display: block; }
   table.grid.market tr:first-child { display: none; }
   table.grid.market tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 8px; padding: 8px; margin-bottom: 8px; border: 1px solid rgba(140, 107, 58, 0.35); background: rgba(6, 6, 7, 0.55); }
@@ -859,7 +859,7 @@ input[type=range] { accent-color: var(--gold); }
 /* ---- P6: handbook and options ---- */
 button.tab { background: none; font-family: var(--sans); }
 .help-list { display: flex; flex-direction: column; }
-.help-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; align-items: start; padding: 6px 0; border-top: 1px solid rgba(140, 107, 58, 0.18); font-size: 13px; line-height: 1.4; }
+.help-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(140, 107, 58, 0.18); font-size: 13px; line-height: 1.4; }
 .help-row:first-child { border-top: 0; }
 .help-row .item-ico { width: 36px; height: 36px; }
 .help-row kbd { margin-right: 4px; white-space: nowrap; }
@@ -1052,8 +1052,8 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 /* A plate in a half-width column takes a smaller type so it stays on one line. */
 .cols .title-sm { font-size: 18px !important; }
 /* The market's three orders stand in one row of equal buttons. */
-.mk-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; min-width: 210px; }
-.mk-btns .btn { width: 100%; text-align: center; white-space: nowrap; }
+.mk-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; min-width: 228px; }
+.mk-btns .btn { width: 100%; text-align: center; white-space: nowrap; padding-left: 2px; padding-right: 2px; }
 @media (max-width: 699px), (max-height: 520px) {
   table.grid.market td:last-child .mk-btns { width: 100%; min-width: 0; gap: 8px; margin-top: 4px; }
   table.grid.market td:last-child .mk-btns .btn { min-height: 38px; }
@@ -1103,7 +1103,28 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 @media (max-width: 699px) { .cols { gap: 8px; } }
 
 /* A count at the end of a card's heading (sailors ashore): a brass chip, not a word that wraps alone. */
-.card-h .h-count { margin-left: auto; flex: none; min-width: 32px; height: 26px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center;
+.card-h .h-count { margin-left: auto; }
+.sec-head { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; min-width: 0; }
+.sec-head .title-sm { margin: 0; min-width: 0; }
+.h-count { flex: none; min-width: 32px; height: 26px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid rgba(201, 162, 90, 0.55); border-radius: 13px; background: rgba(12, 9, 6, 0.8); font: 700 14px/1 var(--sans); color: var(--gold); }
 /* The tavern's other orders sit in the hiring grid, two cells wide each. */
 .hire-grid .hire-wide { grid-column: span 2; flex-direction: row; justify-content: center; min-height: 32px; }
+
+/* A tablet's market: the phone's cards, two to a row (a seven-column ledger does not fit 768px). */
+@media (min-width: 700px) and (max-width: 979px) {
+  table.grid.market tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  table.grid.market tr { margin-bottom: 0; }
+  table.grid.market td:last-child .mk-btns { width: 100%; min-width: 0; gap: 8px; margin-top: 4px; }
+  table.grid.market td:last-child .mk-btns .btn { min-height: 34px; }
+}
+
+/* Every tab keeps its chosen twin's edges (a clear border where the frame will be), so a label does not drop
+   when its tab is chosen and the row reads as one line. */
+.skinned .tab:not(.active) { border-style: solid; border-color: transparent; border-width: 6px 10px 0; padding: 6px; }
+@media (max-width: 699px), (max-height: 520px) {
+  .skinned .icon-tabs .tab:not(.active) { border-width: 5px 4px 0; padding: 3px 0; }
+}
+@media (min-width: 700px) and (max-width: 1279px) and (min-height: 521px) {
+  .skinned .icon-tabs .tab:not(.active) { border-width: 5px 4px 0; padding: 3px 0; }
+}
