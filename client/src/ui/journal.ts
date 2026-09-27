@@ -27,6 +27,7 @@ const EN = {
   kind_legend: 'Legend',
   kind_story: 'Story',
   kind_job: 'Job',
+  fast: 'A quarter more if done within {m} min',
 };
 const RU: typeof EN = {
   title: 'Журнал заданий',
@@ -43,6 +44,7 @@ const RU: typeof EN = {
   kind_legend: 'Легенда',
   kind_story: 'Сюжет',
   kind_job: 'Поручение',
+  fast: 'На четверть больше, если управитесь за {m} мин',
 };
 const L = dict(EN, RU);
 
@@ -110,7 +112,7 @@ export class Journal {
           ${q.summary ? `<p class="giver-say">«${esc(serverText(q.summary))}»</p>` : ''}
         </div></div>
       <div class="giver-steps"><div class="giver-h">${esc(L('steps'))}</div><ol class="jr-steps">${steps}</ol></div>
-      ${q.silver !== undefined ? `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${money(q.silver)}${xpBadge(q.xp ?? 0)}</div>` : ''}
+      ${q.silver !== undefined ? `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${money(q.silver)}${xpBadge(q.xp ?? 0)}${q.fastIn ? `<span class="jr-fast">${esc(L('fast', { m: Math.max(1, Math.ceil(q.fastIn / 60)) }))}</span>` : ''}</div>` : ''}
       <div class="jr-acts">
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}

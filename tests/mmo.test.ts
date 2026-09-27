@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ISLAND_JOBS, JOBS, QUESTS_BY_ID } from '../shared/src/data/quests.ts';
-import { eventFavor, islandJobOffer, questEvent, questOffers } from '../server/src/game/quests.ts';
+import { eventFavor, fastWindow, islandJobOffer, questEvent, questOffers } from '../server/src/game/quests.ts';
 import type { QuestDef } from '../shared/src/data/quests.ts';
 import { questPointer } from '../client/src/ui/track.ts';
 import { newsHint } from '../server/src/game/onboarding.ts';
@@ -99,7 +99,7 @@ test('sharing a quest with the group: a groupmate is asked, takes it, and the jo
     questEvent(game, B, { k: 'dock', port: game.portById(last.port)! });
     const done = b.last('quest_done');
     assert.equal(done?.name, job.name);
-    assert.equal(done?.silver, Math.round(job.reward.silver * (1 + 0.1 * (done?.company ?? 0))), 'the pay, a tenth more for a groupmate in company');
+    assert.equal(done?.silver, Math.round(job.reward.silver * (1 + 0.1 * (done?.company ?? 0)) * (done?.fast ? 1.25 : 1)), 'the pay: a tenth more for a groupmate in company, a quarter for speed');
     assert.ok(done?.rep && done.rep.faction === port.faction && done.rep.n >= 2, 'standing with the port’s faction');
     assert.ok((B.profile!.reputation[port.faction] ?? 0) > rep0);
   }
@@ -163,4 +163,25 @@ test('the port’s news on the board: an epidemic puts medicine runs first, mark
   assert.ok(after.slice(0, 2).some((o) => medicine(o.q.id)), 'a medicine run is among the first on the board');
   assert.ok(after.filter((o) => medicine(o.q.id)).length >= before.filter((o) => medicine(o.q.id)).length);
   void c;
+});
+
+test('the speed bonus: a courier job done inside its window pays a quarter more; a hunt has no window', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Swift Sal');
+  const s = game.sessionByName('Swift Sal')!;
+  const port = game.portById(s.ship!.docked!)!;
+  const job = JOBS.find((q) => q.port === port.id && q.steps.every((st) => st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup'))!;
+  const w = fastWindow(game, job);
+  assert.ok(w && w > 240, `a window sized by the route: ${w}`);
+  const hunt = JOBS.find((q) => q.steps.some((st) => st.type === 'sink'))!;
+  assert.equal(fastWindow(game, hunt), null, 'no race against the clock for a hunt');
+  // Done at once: the bonus.
+  s.profile!.quests.active.push({ id: job.id, step: job.steps.length - 1, progress: 0, startedAt: game.now, fastUntil: game.now + w! });
+  const last = job.steps[job.steps.length - 1];
+  if (last.type !== 'visit') return;
+  s.ship!.cargo = {};
+  questEvent(game, s, { k: 'dock', port: game.portById(last.port)! });
+  const done = c.last('quest_done');
+  assert.equal(done?.fast, true);
+  assert.ok(done && done.silver >= Math.round(job.reward.silver * 1.25) - 1, 'a quarter more');
 });

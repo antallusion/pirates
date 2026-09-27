@@ -368,7 +368,8 @@ export interface PrivateState {
   /** Quests under way (Paths, Legends, the Descent). */
   quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; target?: { x: number; y: number; r?: number; region?: RegionId };
     /** For the journal: the giver's words, every step's text, the pay, the giver's face, the job's kind. */
-    summary?: string; stepTexts?: string[]; silver?: number; xp?: number; portrait?: string; category?: string }[];
+    summary?: string; stepTexts?: string[]; silver?: number; xp?: number; portrait?: string; category?: string;
+    /** seconds left to earn the speed bonus */ fastIn?: number }[];
   questsDone: string[];
   /** Today's orders (docs/11 P6): each with its pay, the days in a row and the chest. */
   daily: { day: number; orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
@@ -883,7 +884,7 @@ export type ServerMsg =
    *  may take it or leave it. */
   | { t: 'quest_offer'; offer: PortView['questOffers'][number]; island?: number; from?: string }
   /** A quest done: its name and all it paid (docs/11 P6). */
-  | { t: 'quest_done'; name: string; silver: number; xp: number; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies' }
+  | { t: 'quest_done'; name: string; silver: number; xp: number; /** done within the speed window */ fast?: boolean; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies' }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number }
   | { t: 'fronts'; list: FrontData[]; forecast: boolean }

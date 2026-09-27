@@ -38,6 +38,37 @@ export interface QuestState {
   step: number;
   progress: number;
   startedAt: number;
+  /** Done before this (game seconds), a job pays a quarter more (docs/11 P6). */
+  fastUntil?: number;
+}
+
+/** The speed bonus: a quarter more silver for a job done within its window. */
+export const FAST_BONUS = 0.25;
+
+/** How long a job's route takes at a good pace, with a third to spare (seconds): from the giver's port through
+ *  every place its steps name. None for a job with no places (a hunt, a count of deeds). */
+export function fastWindow(game: Game, q: QuestDef): number | null {
+  const home = game.portById(q.port);
+  if (!home) return null;
+  let x = home.x, y = home.y, d = 0, places = 0;
+  for (const st of q.steps) {
+    let at: { x: number; y: number } | null = null;
+    if (st.type === 'visit' || st.type === 'deliver' || st.type === 'pickup') at = game.portById(st.port) ?? null;
+    else if (st.type === 'land') at = game.world.islands[st.island] ?? null;
+    else return null; // a step with no place: no race against the clock
+    if (!at) continue;
+    d += Math.hypot(at.x - x, at.y - y);
+    x = at.x;
+    y = at.y;
+    places++;
+  }
+  if (!places || d < 500) return null;
+  return Math.round(240 + (d / 7) * 1.35); // some 7 m/s under way, a third to spare, four minutes in port
+}
+
+function startQuest(game: Game, p: Profile, q: QuestDef): void {
+  const w = q.kind === 'job' ? fastWindow(game, q) : null;
+  p.quests.active.push({ id: q.id, step: 0, progress: 0, startedAt: game.now, ...(w ? { fastUntil: game.now + w } : {}) });
 }
 
 export interface QuestLog {
@@ -136,7 +167,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   const why = questBlocked(p, q);
   if (why) return why;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
-  p.quests.active.push({ id, step: 0, progress: 0, startedAt: game.now });
+  startQuest(game, p, q);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   newsHint(game, s, 'journal');
   // A first step that is already satisfied (being in the right port) completes at once.
@@ -202,7 +233,7 @@ export function answerOffer(game: Game, s: PlayerSession, id: string, take: bool
   const q = QUESTS_BY_ID[id];
   if (!q || p.quests.active.some((a) => a.id === id) || p.quests.done.includes(id)) return null;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
-  p.quests.active.push({ id: q.id, step: 0, progress: 0, startedAt: game.now });
+  startQuest(game, p, q);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   return null;
 }
@@ -366,11 +397,13 @@ export const GROUP_QUEST_BONUS = 0.1;
 
 function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   const p = s.profile!;
+  const st = p.quests.active.find((a) => a.id === q.id);
+  const fast = !!st?.fastUntil && game.now <= st.fastUntil;
   p.quests.active = p.quests.active.filter((a) => a.id !== q.id);
   p.quests.done.push(q.id);
   const company = Math.min(3, matesNear(game, s));
   const k = 1 + GROUP_QUEST_BONUS * company;
-  const silver = Math.round(q.reward.silver * k), xp = Math.round(q.reward.xp * k);
+  const silver = Math.round(q.reward.silver * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(q.reward.xp * k);
   p.gold += silver;
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);
@@ -392,7 +425,7 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
     s.ship.ammo.chain = (s.ship.ammo.chain ?? 0) + 10;
     extra = 'supplies';
   }
-  game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}) });
+  game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(fast ? { fast: true } : {}), ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}) });
   if (q.reward.path && !p.paths.includes(q.reward.path)) {
     p.paths.push(q.reward.path);
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} teaches you the ${CAPTAINS[q.reward.path].archetype}'s Path. Change Path at any Captain's House.`, kind: 'gold' });
