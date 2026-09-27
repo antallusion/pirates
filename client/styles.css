@@ -1119,12 +1119,74 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
   table.grid.market td:last-child .mk-btns .btn { min-height: 34px; }
 }
 
+/* The button art carries a clear margin (19 of its 40px corners): its painted rim is drawn out to the box's
+   edge, so a button's visible frame lines up with the fields, cards and chips around it and a row of buttons
+   stands exactly its gap apart. */
+.skinned .btn, .skinned .tab.active, body.skinned.touch .tc-context:not(.hidden) { border-image-outset: 0.475; }
+
 /* Every tab keeps its chosen twin's edges (a clear border where the frame will be), so a label does not drop
-   when its tab is chosen and the row reads as one line. */
-.skinned .tab:not(.active) { border-style: solid; border-color: transparent; border-width: 6px 10px 0; padding: 6px; }
+   when its tab is chosen and the row reads as one line; the label sits in the middle under the frame's rim. */
+.skinned .tab:not(.active) { border-style: solid; border-color: transparent; border-width: 6px 10px 0; }
+.skinned .tab.active, .skinned .tab:not(.active) { padding: 3px 6px 6px; }
 @media (max-width: 699px), (max-height: 520px) {
-  .skinned .icon-tabs .tab:not(.active) { border-width: 5px 4px 0; padding: 3px 0; }
+  .skinned .icon-tabs .tab:not(.active) { border-width: 5px 4px 0; }
+  .skinned .icon-tabs .tab.active, .skinned .icon-tabs .tab:not(.active) { padding: 1px 0 3px; }
 }
 @media (min-width: 700px) and (max-width: 1279px) and (min-height: 521px) {
-  .skinned .icon-tabs .tab:not(.active) { border-width: 5px 4px 0; padding: 3px 0; }
+  .skinned .icon-tabs .tab:not(.active) { border-width: 5px 4px 0; }
+  .skinned .icon-tabs .tab.active, .skinned .icon-tabs .tab:not(.active) { padding: 1px 0 3px; }
+}
+
+/* The title screen on one axis: the guest order as wide as the name field; the account drawer opens on a brass
+   chevron, not the browser's triangle, and its buttons share the field's width. */
+.login-panel #login-form .btn-primary { display: block; width: 100%; min-height: 44px; font-size: 15px; }
+.login-account { margin-top: 14px; }
+.login-account summary { list-style: none; display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; }
+.login-account summary::-webkit-details-marker { display: none; }
+.login-account summary::before { content: ''; flex: none; width: 8px; height: 8px; margin: 0 4px 0 2px; border: solid var(--brass); border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform 0.15s; }
+.login-account[open] summary::before { transform: rotate(45deg); margin-top: -4px; }
+.login-account form .row { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px !important; }
+.login-account form .row .btn { width: 100%; min-height: 40px; }
+.login-account form .row #forgot-btn { grid-column: 1 / -1; min-height: 32px; }
+.login-panel .hint { margin-top: 18px; }
+/* A screen taller than the window scrolls instead of losing its top (a phone on its side): the panel centres
+   by its margins, which give way when there is no room. A low window gets the compact title screen. */
+#screen-login, #screen-captain { overflow-y: auto; align-items: flex-start; -webkit-overflow-scrolling: touch; }
+#screen-login > .login-panel, #screen-captain > .captain-wrap { margin: auto; }
+@media (max-height: 520px) {
+  .login-panel { padding: 16px 22px; width: min(560px, 94vw); }
+  .login-panel .title { font-size: 40px; }
+  .login-panel .subtitle { font-size: 14px; margin: 0 0 12px; }
+  .login-panel label { margin-bottom: 8px; }
+  .login-panel input { padding: 8px 10px; }
+  .login-panel .hint { margin-top: 10px; }
+}
+/* The game's name fits the title panel's field at every width (it ran 52px past it on a desktop); the trailing
+   letter-space is given back so the word sits in the middle. */
+.login-panel .title { font-size: clamp(30px, 11vw, 54px); letter-spacing: 0.06em; margin-right: -0.06em; white-space: nowrap; }
+
+/* The captain's order stays in reach: pinned to the foot of the scrolling description, full width on a phone. */
+.captain-detail .pick-bar { position: sticky; bottom: 0; z-index: 2; margin-top: 12px; padding: 10px 0 2px; background: linear-gradient(180deg, rgba(10, 9, 8, 0), rgba(10, 9, 8, 0.92) 30%); }
+@media (max-width: 699px), (max-height: 520px) {
+  .captain-detail .pick-bar .btn { width: 100%; min-height: 44px; font-size: 15px; }
+}
+/* A phone on its side: the captains in a column on the left, the chosen one's story on the right with a small
+   portrait beside it — the stacked phone layout left the story 70px of height. */
+@media (max-height: 520px) and (min-width: 600px) {
+  .captain-wrap { grid-template-columns: 200px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100dvh; overflow: hidden; gap: 8px 12px; padding: 10px 14px; }
+  .captain-wrap h2 { grid-column: 1 / -1; margin: 0; }
+  .captain-list { flex-direction: column; overflow-x: hidden; overflow-y: auto; min-height: 0; }
+  .captain-card { flex: none; grid-template-columns: 44px 1fr; padding: 6px; gap: 8px; }
+  .captain-card .portrait { width: 44px; height: 56px; }
+  .captain-card .arch { font-size: 15px; }
+  .captain-detail { grid-template-columns: 150px minmax(0, 1fr); gap: 12px; min-height: 0; }
+  .captain-detail .big-portrait { width: 150px; height: 200px; max-height: none; position: sticky; top: 0; }
+  .captain-detail h3 { font-size: 22px; }
+}
+/* A tablet: the chosen captain's portrait over the story (side by side left the story 133px and ran past the
+   screen). */
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
+  .captain-wrap { grid-template-columns: 260px minmax(0, 1fr); }
+  .captain-detail { grid-template-columns: minmax(0, 1fr); }
+  .captain-detail .big-portrait { width: 100%; height: 300px; background-position: center 20%; }
 }

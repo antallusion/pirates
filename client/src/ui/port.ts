@@ -15,7 +15,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { esc, fmt, icon, money, officerIcon, xpBadge } from './dom.ts';
+import { esc, fmt, icon, money, officerIcon, quote, xpBadge } from './dom.ts';
 import { keyLabel, settings } from '../settings.ts';
 import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
@@ -419,7 +419,7 @@ ${orders}${berths}</div>` : ''}`;
         <h4 style="margin-top:10px">${esc(L('tavern.tradesmen'))}</h4><div class="trade-list">${trades}</div></div>
       <div><h3 class="title-sm" style="font-size:20px">${esc(L('tavern.officers', { n: co.officers.length, max: co.slots }))}</h3>${officers}</div></div>
       <div class="cols">
-      <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${[...new Set(view.rumors)].map((r) => `<p>“${esc(serverText(r))}”</p>`).join('')}</div>
+      <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${[...new Set(view.rumors)].map((r) => `<p>${quote(serverText(r))}</p>`).join('')}</div>
       <div>${view.questOffers.map((q) => `<div class="card"><h4 class="card-h">${icon(q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : 'goal', '', 'ico-md')}${esc(serverText(q.name))} <span class="muted">— ${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : ''}</span></h4>
         <p>${esc(serverText(q.summary))}</p><ol class="muted" style="margin:4px 0 6px 18px">${q.steps.map((t) => `<li>${esc(serverText(t))}</li>`).join('')}</ol>
         <div class="row"><span class="reward">${money(q.silver)}${xpBadge(q.xp)}${q.path ? esc(L('quest.pathOf', { arch: CAPTAINS[q.path].archetype })) : ''}</span>

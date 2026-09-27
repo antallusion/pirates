@@ -219,7 +219,7 @@ export const EN = {
   'login.forgot': 'Forgot password',
   'login.newPassword': 'New password',
   'login.setPassword': 'Set the new password',
-  'login.hint': 'Top-down multiplayer prototype · Phase 1 build',
+  'login.hint': 'A pirate-gothic sea for many captains · early build',
   'captain.choose': 'Choose your captain',
   'hud.unread': 'Letters waiting — [Y]',
   'hud.chatPh': 'Enter to speak…',

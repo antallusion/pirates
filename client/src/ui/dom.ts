@@ -1,6 +1,7 @@
 // Tiny DOM helpers. All server-provided strings are escaped before being placed in markup.
 
 import { assetUrl } from '../assets.ts';
+import { lang } from '../i18n.ts';
 
 export function $(id: string): HTMLElement {
   const e = document.getElementById(id);
@@ -102,4 +103,9 @@ export function decorateSums(root: HTMLElement): void {
     box.innerHTML = html;
     t.replaceWith(...box.childNodes);
   }
+}
+
+/** Words in the language's own quotation marks: «Последний залп», “Last Broadside” (escaped). */
+export function quote(s: string): string {
+  return lang() === 'ru' ? `«${esc(s)}»` : `“${esc(s)}”`;
 }

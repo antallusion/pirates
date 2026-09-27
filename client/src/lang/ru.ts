@@ -212,7 +212,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'login.forgot': 'Забыли пароль',
   'login.newPassword': 'Новый пароль',
   'login.setPassword': 'Задать новый пароль',
-  'login.hint': 'Многопользовательский прототип с видом сверху · сборка фазы 1',
+  'login.hint': 'Пиратское готическое море на многих капитанов · ранняя сборка',
   'captain.choose': 'Выберите капитана',
   'hud.unread': 'Ждут письма — [Y]',
   'hud.chatPh': 'Enter — сказать слово…',
