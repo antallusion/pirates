@@ -353,6 +353,7 @@
     "tex.land_mangrove":              { "local": "textures/land_mangrove.webp", "remote": "hf_20260927_181617_7a70ae97-722c-47cd-bd58-50881d53bb1b.png", "job": "7a70ae97-722c-47cd-bd58-50881d53bb1b", "fit": "opaque:1024:1.1:seam" },
     "tex.land_atoll":                 { "local": "textures/land_atoll.webp", "remote": "hf_20260927_182517_3e2ff006-5c6c-404f-8118-47f0720c3ce3.png", "job": "3e2ff006-5c6c-404f-8118-47f0720c3ce3", "fit": "opaque:1024:1.31:seam" },
     "tex.land_saltflat":              { "local": "textures/land_saltflat.webp", "remote": "hf_20260927_183347_c657a627-afa9-4e61-81c6-5dbfd32b27a8.png", "job": "c657a627-afa9-4e61-81c6-5dbfd32b27a8", "fit": "opaque:1024:1.0:seam" },
-    "tex.land_blacksand":             { "local": "textures/land_blacksand.webp", "remote": "hf_20260927_184318_6e7435d6-338a-4439-931c-de47c79cc803.png", "job": "6e7435d6-338a-4439-931c-de47c79cc803", "fit": "opaque:1024:1.15:seam" }
+    "tex.land_blacksand":             { "local": "textures/land_blacksand.webp", "remote": "hf_20260927_184318_6e7435d6-338a-4439-931c-de47c79cc803.png", "job": "6e7435d6-338a-4439-931c-de47c79cc803", "fit": "opaque:1024:1.15:seam" },
+    "tex.land_fungal":                { "local": "textures/land_fungal.webp", "remote": "hf_20260927_185205_f4cf813f-66ba-4eb4-b8c0-4152d3464586.png", "job": "f4cf813f-66ba-4eb4-b8c0-4152d3464586", "fit": "opaque:1024:1.6:seam" }
   }
 }
