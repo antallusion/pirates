@@ -1,6 +1,7 @@
 // Server-side ship entity: the authoritative state of every vessel (player or NPC) at sea.
 
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
+import type { BoardTactic } from '../../../shared/src/data/boarding.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, ChaserEnd } from '../../../shared/src/data/ships.ts';
@@ -43,6 +44,46 @@ export interface BoardingState {
   party?: number;
   railChecked?: boolean;
   healed?: number; // Blood and Salt: hull mended this boarding
+  /** Boarding 2.0: the fight both sides share, this side's pick for the round (null: not yet), its momentum. */
+  fight: BoardFight;
+  pick: BoardTactic | null;
+  lastPick: BoardTactic | null;
+  momentum: number;
+  won: number;
+  lostRounds: number;
+  moves: number;
+}
+
+/** A deck fight, shared by both sides' boarding states. */
+export interface BoardFight {
+  round: number;
+  /** When this round's choice opened, and when it resolves at the latest. */
+  opened: number;
+  deadline: number;
+  log: { code: string; by: number; n?: number }[];
+  last: { ta: BoardTactic; tb: BoardTactic; ka: number; kb: number; edge: 1 | 0 | -1 } | null;
+  /** Grenade rounds set fires on deck: more of her cargo burns. */
+  fires: number;
+  duel: BoardDuel | null;
+  duelDone: boolean;
+  /** Set when the fight is decided but held a moment so both captains see how (the duel's last blow). */
+  endsAt: number | null;
+  winner: number | null;
+}
+
+export interface BoardDuel {
+  by: number;
+  state: 'offered' | 'running' | 'done';
+  answerBy: number;
+  exchange: number;
+  opens: number;
+  closes: number;
+  sweet: number;
+  a: number[];
+  b: number[];
+  struckA: number | null;
+  struckB: number | null;
+  winner: number | null;
 }
 
 export type NpcRole = 'merchant' | 'patrol' | 'pirate' | 'hunter' | 'fisher' | 'ghost' | 'escort' | 'boss';

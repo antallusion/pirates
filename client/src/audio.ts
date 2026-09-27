@@ -231,6 +231,40 @@ export class AudioEngine {
     this.noiseBurst(v.out, v.at, 2.2, 'lowpass', 600, 0.5, 1);
   }
 
+  /** Muskets along a rail: a crackle of small reports. */
+  muskets(x: number, y: number, n = 8): void {
+    const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1400);
+    for (let i = 0; i < n; i++) {
+      const v = this.voice(gain * 0.28, pan + (Math.random() - 0.5) * 0.3, i * 0.045 + Math.random() * 0.05);
+      if (!v) return;
+      this.noiseBurst(v.out, v.at, 0.14, 'bandpass', 2200 + Math.random() * 900, 1.1, 0.9);
+      this.tone(v.out, v.at, 150, 0.09, 0.25, 'square', 70);
+    }
+  }
+
+  /** Steel on steel: a few bright rings over a scuffle. */
+  clash(x: number, y: number, n = 5): void {
+    const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1100);
+    for (let i = 0; i < n; i++) {
+      const v = this.voice(gain * 0.2, pan + (Math.random() - 0.5) * 0.4, i * 0.12 + Math.random() * 0.08);
+      if (!v) return;
+      const f = 2300 + Math.random() * 1600;
+      this.tone(v.out, v.at, f, 0.22, 0.35, 'triangle');
+      this.tone(v.out, v.at, f * 1.51, 0.16, 0.18, 'sine');
+      this.noiseBurst(v.out, v.at, 0.05, 'highpass', 3500, 0.8, 0.5);
+    }
+  }
+
+  /** A crew's roar: a band of voices rising and falling. */
+  shout(x: number, y: number, big: boolean): void {
+    const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1400);
+    const v = this.voice(gain * (big ? 0.35 : 0.2), pan);
+    if (!v) return;
+    this.noiseBurst(v.out, v.at, big ? 1.3 : 0.8, 'bandpass', 520, 2.2, 0.9);
+    this.noiseBurst(v.out, v.at + 0.05, big ? 1.1 : 0.7, 'bandpass', 1050, 2.8, 0.55);
+    this.tone(v.out, v.at, 190, big ? 1.1 : 0.6, 0.12, 'sawtooth', 150);
+  }
+
   thunder(): void {
     const now = performance.now();
     if (now - this.lastThunder < 3000) return;
@@ -305,6 +339,15 @@ export class AudioEngine {
         break;
       case 'lance':
         this.eerie(e.x2, e.y2);
+        break;
+      case 'board_round':
+        for (const t of [e.ta, e.tb]) {
+          if (t === 'volley' || t === 'officers') this.muskets(e.x, e.y);
+          else if (t === 'grenades') for (let i = 0; i < 3; i++) this.cannon(e.x, e.y, 0.12 + i * 0.16, 0.35);
+          else if (t === 'charge' || t === 'captain' || t === 'colours') this.clash(e.x, e.y);
+        }
+        this.shout(e.x, e.y, e.ta === 'captain' || e.tb === 'captain' || e.ka + e.kb > 8);
+        if (e.ka + e.kb > 0) this.splash(e.x, e.y, false);
         break;
       case 'fx':
         if (e.fx === 'explosion') this.explosion(e.x, e.y);

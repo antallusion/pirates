@@ -305,6 +305,8 @@ export const SERVER_RU_B: Record<string, string> = {
   "Too many attempts. Wait a minute.": "Слишком много попыток. Подождите минуту.",
   "Too slow to keep up": "Слишком медленно, чтобы не отстать",
   "Took": "Взят",
+  "Took {0}": "Взят приз: {0}",
+  "Sank {0}": "Потоплен: {0}",
   "Tow Line": "Буксирный Конец",
   "Trade across the quay in the same port, or heave to alongside at sea": "Торгуйте через пристань в одном порту или лягте в дрейф борт о борт в море",
   "Trade called off: {0}.": "Сделка отменена: {0}.",
@@ -866,4 +868,12 @@ export const SERVER_RU_B: Record<string, string> = {
   "northern": "северном", "north-eastern": "северо-восточном", "eastern": "восточном", "south-eastern": "юго-восточном",
   "southern": "южном", "south-western": "юго-западном", "western": "западном", "north-western": "северо-западном",
   "green": "зелёный", "mossy": "мшистый", "ashen": "пепельный", "frozen": "ледяной", "broken-spired": "руинный", "bone-white": "костяной", "bare": "голый",
+  // Boarding 2.0: the orders and the duel.
+  "Let the steel speak first — a duel after the second round": "Пусть сперва скажет сталь — дуэль после второго раунда",
+  "No blade to swing": "Сейчас нечем замахнуться",
+  "No challenge to answer": "Вызова, на который нужно ответить, нет",
+  "Not enough momentum for that order": "Для этого приказа не хватает натиска",
+  "Nothing to fight": "Сражаться не с кем",
+  "One duel to a fight": "За бой — только одна дуэль",
+  "The captains are fighting — wait for the duel": "Капитаны сошлись в дуэли — дождитесь её исхода",
 };

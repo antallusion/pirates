@@ -21,9 +21,10 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { AMMO_IDS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { WeatherKind } from '../../../shared/src/protocol.ts';
-import { closestOnPolygon, pointInPolygon } from '../../../shared/src/math.ts';
+import { closestOnPolygon, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { summon } from './bosses.ts';
+import { startBoarding } from './boarding.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -34,7 +35,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -163,6 +164,25 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       game.grid.upsert(o.id, o.state.x, o.state.y);
       return `${o.name} (${SHIP_CLASSES[cls].name}, ${faction}) lies off your beam.`;
     }
+    case 'board': {
+      // A deck fight at once: a crippled ship lashed alongside (/board [role] [class] [crew]).
+      if (ship.docked) return 'Put to sea first.';
+      const role = (args[0] ?? 'pirate') as 'pirate';
+      const cls = (args[1] ?? 'brig') as ShipClassId;
+      if (!SHIP_CLASSES[cls]) return `Classes: ${Object.keys(SHIP_CLASSES).join(', ')}`;
+      const v = headingVec(ship.state.heading + Math.PI / 2);
+      const o = game.spawnNpcShip(role, cls, role === 'pirate' ? 'free' : 'league', ship.state.x + v.x * 18, ship.state.y + v.y * 18, ship.state.heading);
+      const brain = game.npcs.get(o.id);
+      if (brain) brain.active = true;
+      o.input = { rudder: 0, sailTarget: 0 };
+      o.state.speed = ship.state.speed = 0;
+      o.hull = o.stats.hullMax * 0.4;
+      o.crew = Math.max(4, Math.round(num(2, ship.crew * 0.8)));
+      o.morale = 80;
+      game.grid.upsert(o.id, o.state.x, o.state.y);
+      startBoarding(game, ship, o, 'standard');
+      return `Grappled: ${o.name}.`;
+    }
     case 'sink':
       // The death screen, the tow or the respawn, the losses — without waiting for a fight to go wrong.
       if (ship.docked) return 'Put to sea first.';
@@ -173,6 +193,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'heal':
       mend(ship);
       ship.crew = Math.max(ship.crew, ship.stats.crewMax);
+      ship.morale = Math.max(ship.morale, 80);
       game.pushSelf(s, true);
       return 'Hull, sails and crew made whole.';
     case 'ammo':

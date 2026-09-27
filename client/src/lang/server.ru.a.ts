@@ -525,6 +525,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "Not at sea": "Вы не в море",
   "Not authenticated": "Вход не выполнен",
   "Not enough hands for a boarding party": "Не хватает людей для абордажной партии",
+  "Your crew has no stomach for boarding — raise their morale first": "Команде не до абордажа — сперва поднимите её дух",
   "Not enough hands to swing an axe": "Не хватает рук, чтобы махать топором",
   "Not enough in stock": "Недостаточно на складе",
   "Not enough room in the hold": "Недостаточно места в трюме",

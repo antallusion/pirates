@@ -7,6 +7,7 @@ import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
 import type { CaptainId } from './data/captains.ts';
+import type { BoardTactic } from './data/boarding.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
 import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';
@@ -37,6 +38,9 @@ export type ClientMsg =
   | { t: 'board'; target: number; aggression: Aggression }
   | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize'; recruit?: number }
   | { t: 'board_cut' }
+  /** Boarding 2.0: this round's tactic; the captains' duel (challenge, answer, a strike at server time `at`). */
+  | { t: 'board_tactic'; tactic: BoardTactic }
+  | { t: 'board_duel'; action: 'challenge' | 'accept' | 'decline' | 'strike'; at?: number }
   | { t: 'scuttle' }
   | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' }
   | { t: 'repair'; on: boolean }
@@ -780,6 +784,8 @@ export type GameEvent =
   | { k: 'sunk'; ship: number; x: number; y: number; name: string }
   | { k: 'board_start'; a: number; b: number }
   | { k: 'board_end'; a: number; b: number; winner: number }
+  /** A round of a deck fight: the tactics of the attacker (a) and the defender (b), and the dead on each side. */
+  | { k: 'board_round'; a: number; b: number; x: number; y: number; ta: BoardTactic; tb: BoardTactic; ka: number; kb: number }
   | { k: 'ability'; ship: number; id: string; x?: number; y?: number }
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
@@ -806,6 +812,52 @@ export interface BoardingResult {
   /** Prisoners who would sign on (up to 30% of her surviving crew). */
   recruits: number;
   noQuarter: boolean; // No Quarter: she sinks within the minute whatever you choose
+  /** How the deck fight went: rounds fought, won and lost, the captains' duel. */
+  report?: { rounds: number; won: number; lost: number; duel: 'won' | 'lost' | null; moves: number };
+}
+
+/** One side of a deck fight as its captain sees it. */
+export interface BoardSideView {
+  name: string;
+  captain: CaptainId | null;
+  crew: number;
+  crewStart: number;
+  morale: number;
+  momentum: number;
+}
+
+/** The captains' duel: an exchange's blade sweeps from `opens` to `closes` (server time); a strike nearest the
+ *  sweet spot (0..1 along the sweep) lands best. Scores 0..1 per exchange. */
+export interface BoardDuelView {
+  by: 'you' | 'foe';
+  state: 'offered' | 'running' | 'done';
+  answerBy: number;
+  exchange: number;
+  opens: number;
+  closes: number;
+  sweet: number;
+  struck: boolean;
+  you: number[];
+  foe: number[];
+  winner: 'you' | 'foe' | null;
+}
+
+/** A deck fight in progress (Boarding 2.0), for one of its captains. */
+export interface BoardFightView {
+  attacker: boolean;
+  round: number;
+  maxRounds: number;
+  /** Server time the round resolves (the choice closes). */
+  ends: number;
+  choice: BoardTactic | null;
+  you: BoardSideView;
+  foe: BoardSideView;
+  last: { you: BoardTactic; foe: BoardTactic; edge: 1 | 0 | -1; killed: number; lost: number } | null;
+  /** What happened beyond the tactics, newest last: a code the client words, whose side did it, a number. */
+  log: { code: string; you: boolean; n?: number }[];
+  duel: BoardDuelView | null;
+  canDuel: boolean;
+  canCut: boolean;
 }
 
 export type ServerMsg =
@@ -830,6 +882,7 @@ export type ServerMsg =
   | { t: 'self_patch'; patch: Partial<PrivateState> } // only the fields that changed
   | { t: 'port'; view: PortView | null }
   | { t: 'boarding'; result: BoardingResult | null }
+  | { t: 'board_fight'; view: BoardFightView | null }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }

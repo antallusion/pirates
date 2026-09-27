@@ -1,6 +1,7 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
 import { DivePanel } from './ui/dive.ts';
+import { BoardFightPanel } from './ui/boardfight.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, timeOfDay } from '../../shared/src/constants.ts';
@@ -69,6 +70,7 @@ const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
 const divePanel = new DivePanel((m) => net.send(m));
+const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServerTime());
 const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
 const touch = new TouchControls({
@@ -575,6 +577,11 @@ addEventListener('keydown', (e) => {
     return;
   }
   if (typing()) return;
+  // A deck fight takes the digits for its orders and Space for the duel's blade.
+  if (!modal && boardFight.onKey(e)) {
+    e.preventDefault();
+    return;
+  }
   const k = keyOf(e);
   if (k === 'escape') {
     if (modal === 'barter') net.send({ t: 'barter', action: 'cancel' });
@@ -1284,6 +1291,7 @@ function step(t: number): void {
       touch.frame(own?.heading ?? null, state.input.sail, cls.bowChasers + cls.sternChasers > 0, state.self.loadout.mount ?? null);
     }
     divePanel.render(state.dive);
+    boardFight.render(state.boardFight);
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
   }
 }
@@ -1291,4 +1299,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : openModal(m)), prologue: () => playPrologue(() => {}), hud, onboarding };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : openModal(m)), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight };

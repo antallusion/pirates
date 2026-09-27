@@ -11,9 +11,9 @@ test('the profiler splits the step by subsystem: mean, worst and share, over a r
   };
   for (let i = 0; i < 20; i++) {
     p.begin();
-    spin(0.2);
+    spin(0.1);
     p.lap('light');
-    spin(1);
+    spin(3); // a wide gap, so a pause of the collector in the light lap cannot turn the order
     p.lap('heavy');
     p.end();
   }

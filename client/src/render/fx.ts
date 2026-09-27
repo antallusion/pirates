@@ -149,6 +149,37 @@ export class Fx {
     this.shake = Math.max(this.shake, 0.6);
   }
 
+  /** A round of a deck fight between two hulls lashed together: powder smoke for volleys, sparks where steel
+   *  meets steel, grenades bursting, and men over the side for the dead. */
+  deckFight(x: number, y: number, ta: string, tb: string, dead: number): void {
+    for (const t of [ta, tb]) {
+      if (t === 'volley' || t === 'officers') {
+        for (let i = 0; i < 8; i++) {
+          const px = x + (Math.random() - 0.5) * 26, py = y + (Math.random() - 0.5) * 26;
+          setTimeout(() => {
+            this.add({ kind: 'flash', x: px, y: py, life: 0.12, size: 1.5, grow: 16, color: '#ffe0a0' });
+            this.smoke(px, py, 2, 5);
+          }, i * 45);
+        }
+      } else if (t === 'charge' || t === 'captain' || t === 'colours') {
+        for (let i = 0; i < 10; i++) {
+          const a = Math.random() * Math.PI * 2, s = 6 + Math.random() * 10;
+          this.add({ kind: 'fire', x: x + (Math.random() - 0.5) * 16, y: y + (Math.random() - 0.5) * 16, vx: Math.sin(a) * s, vy: -Math.cos(a) * s, life: 0.25 + Math.random() * 0.2, size: 1, color: '#fff2c0' });
+        }
+      } else if (t === 'grenades') {
+        for (let i = 0; i < 3; i++) {
+          const px = x + (Math.random() - 0.5) * 30, py = y + (Math.random() - 0.5) * 30;
+          setTimeout(() => this.explosion(px, py, 12), 120 + i * 160);
+        }
+      }
+    }
+    // Men who fall go over the side.
+    for (let i = 0; i < Math.min(6, Math.ceil(dead / 3)); i++) {
+      const a = Math.random() * Math.PI * 2;
+      setTimeout(() => this.splash(x + Math.sin(a) * 22, y - Math.cos(a) * 22, false), 200 + i * 110);
+    }
+  }
+
   text(x: number, y: number, text: string, color: string): void {
     this.add({ kind: 'text', x, y, vy: -9, life: 1.3, size: 13, color, text });
   }
@@ -221,6 +252,9 @@ export class Fx {
         this.splash(e.x, e.y, true);
         this.smoke(e.x, e.y, 20, 16, true);
         this.splinters(e.x, e.y, 30);
+        break;
+      case 'board_round':
+        this.deckFight(e.x, e.y, e.ta, e.tb, e.ka + e.kb);
         break;
       case 'fx':
         switch (e.fx) {

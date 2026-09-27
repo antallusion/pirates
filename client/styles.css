@@ -1419,3 +1419,122 @@ body.touch #hud-region .rg-extra { display: none; }
 .confirm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .confirm-row.one { grid-template-columns: minmax(0, 220px); justify-content: center; }
 .confirm-row .btn { min-height: 40px; }
+
+/* ==== Boarding 2.0: the deck fight (client/src/ui/boardfight.ts) ==== */
+#board-fight { position: absolute; z-index: 12; left: 50%; transform: translateX(-50%); bottom: calc(var(--hb-top, 170px) + 10px); width: min(760px, calc(100vw - 32px)); pointer-events: auto; }
+.bf-panel { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; max-height: calc(100vh - var(--hb-top, 170px) - 30px); overflow-y: auto; scrollbar-width: none; zoom: calc(var(--ui-scale) * var(--text-scale)); }
+.skinned .bf-panel { border-width: 14px; border-image-width: 14px; }
+.bf-info, .bf-act { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.bf-head { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.bf-side { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.bf-side.foe { flex-direction: row-reverse; }
+.bf-face { width: 52px; height: 52px; flex: none; border-radius: 50%; background: #111 center / cover no-repeat; border: 2px solid var(--brass-dim); box-shadow: 0 0 0 1px #000, 0 2px 8px rgba(0, 0, 0, 0.6); }
+.bf-side.foe .bf-face { border-color: rgba(178, 58, 58, 0.75); }
+.bf-meters { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.bf-name { font-family: var(--serif); font-size: 15px; font-weight: 400; color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bf-side.foe .bf-name { text-align: right; }
+.bf-meter { display: grid; grid-template-columns: 60px minmax(0, 1fr) 26px; align-items: center; gap: 6px; font: 600 10px var(--sans); color: var(--fog); letter-spacing: 0.04em; text-transform: uppercase; }
+.bf-side.foe .bf-meter { grid-template-columns: 26px minmax(0, 1fr) 60px; }
+.bf-side.foe .bf-meter span { order: 3; text-align: right; }
+.bf-side.foe .bf-meter em { order: 1; text-align: left; }
+.bf-meter i { position: relative; height: 7px; background: #0b0d10; border: 1px solid rgba(111, 90, 56, 0.6); }
+.bf-side.foe .bf-meter i { transform: scaleX(-1); }
+.bf-meter u { position: absolute; left: 0; top: 0; bottom: 0; transition: width 0.4s; }
+.bf-meter.crew u { background: linear-gradient(90deg, #5f7384, #a9bccb); }
+.bf-meter.nerve u { background: linear-gradient(90deg, #8a6a2c, #e0b862); }
+.bf-meter.mom u { background: linear-gradient(90deg, #7a2323, #d06a5e); }
+.bf-meter s { position: absolute; top: -2px; bottom: -2px; width: 1px; background: rgba(240, 230, 200, 0.5); }
+.bf-meter em { font-style: normal; color: var(--bone); text-align: right; font-variant-numeric: tabular-nums; }
+.bf-mid { text-align: center; min-width: 120px; }
+.bf-title { font-family: var(--display); font-size: 21px; color: var(--gold); line-height: 1.1; }
+.bf-round { font: 600 11px var(--sans); color: var(--fog); text-transform: uppercase; letter-spacing: 0.06em; margin: 3px 0 5px; }
+.bf-timer { height: 4px; background: #0b0d10; border: 1px solid rgba(111, 90, 56, 0.45); }
+.bf-timer i { display: block; height: 100%; background: linear-gradient(90deg, #b23a3a, #e0b862); }
+.bf-news { min-height: 38px; font-family: var(--serif); font-size: 15px; line-height: 1.3; text-align: center; text-wrap: balance; }
+.bf-last.win { color: #a8dca2; }
+.bf-last.lose { color: #e3998a; }
+.bf-last.even { color: var(--bone); }
+.bf-toll { color: var(--fog); font-size: 13px; white-space: nowrap; }
+.bf-log { font-size: 13px; color: var(--fog); font-style: italic; margin-top: 2px; }
+.bf-log .you { color: #cdbf97; }
+.bf-status { font: 600 12px var(--sans); color: var(--fog); text-align: center; }
+.bf-status.given { color: var(--gold); }
+.bf-orders { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+@media (min-width: 1200px) and (min-height: 521px) { .bf-orders { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.bf-orders.specials { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bf-order { position: relative; display: flex; align-items: center; gap: 8px; text-align: left; min-height: 54px; }
+.skinned .bf-order { border-image-outset: 0; padding: 2px 6px; }
+.bf-order .ico { width: 30px; height: 30px; flex: none; }
+.bf-on { display: grid; gap: 1px; min-width: 0; }
+.bf-on b { font-size: 13px; line-height: 1.15; font-weight: 600; }
+.bf-on small { font-size: 11px; color: var(--fog); line-height: 1.15; }
+.bf-order.on { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224, 184, 98, 0.45); }
+.bf-order.on .bf-on b { color: var(--gold); }
+.bf-order[disabled] { opacity: 0.45; filter: grayscale(0.6); }
+.bf-order kbd { position: absolute; top: 2px; right: 4px; font: 600 9px var(--sans); color: var(--gold); opacity: 0.8; border: 0; padding: 0; background: none; }
+.bf-foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+.bf-foot .btn { min-height: 38px; }
+.bf-duel { display: grid; gap: 8px; text-align: center; }
+.bf-duel p { margin: 0; font-family: var(--serif); font-size: 16px; color: var(--bone); }
+.bf-duel-title { font-family: var(--display); font-size: 21px; color: var(--gold); }
+.bf-answer { color: var(--gold); font-family: var(--sans); }
+.bf-sweep { position: relative; height: 28px; margin: 2px 12px; background: linear-gradient(180deg, #0b0d10, #171a1f); border: 1px solid rgba(111, 90, 56, 0.75); }
+.bf-sweet { position: absolute; top: 0; bottom: 0; width: 22%; transform: translateX(-50%); background: radial-gradient(ellipse at center, rgba(245, 236, 210, 0.85), rgba(224, 184, 98, 0.3) 45%, rgba(224, 184, 98, 0) 72%); }
+.bf-blade { position: absolute; left: 0; top: -5px; bottom: -5px; width: 3px; transform: translateX(-50%); background: #eef6f8; box-shadow: 0 0 10px #bfe3ee; }
+.bf-pips { display: flex; justify-content: center; align-items: center; gap: 6px; font: 600 11px var(--sans); color: var(--fog); min-width: 0; }
+.bf-pips span:last-child { max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bf-pips i { width: 12px; height: 12px; flex: none; border-radius: 50%; border: 1px solid rgba(240, 230, 200, 0.45); }
+.bf-pips i.hit { background: var(--gold); }
+.bf-pips i.graze { background: #8a7650; }
+.bf-pips i.miss { background: #4a2222; }
+.bf-pips .sep { width: 16px; }
+.bf-strike { min-height: 50px; font-size: 18px; }
+.bf-hint { font-size: 12px; color: var(--fog); }
+.bf-duel p.bf-duel-end { font-size: 17px; }
+.bf-duel p.bf-duel-end.win { color: #a8dca2; }
+.bf-duel p.bf-duel-end.lose { color: #e3998a; }
+.modal-head .sub.board-report { color: var(--gold); }
+/* A phone: the fight is a sheet from the bottom up to under the unit frame; the helm and the guns wait. */
+@media (max-width: 699px) {
+  #board-fight { left: 0; right: 0; bottom: 0; transform: none; width: auto; }
+  .bf-panel { max-height: calc(100dvh - var(--uf-bottom, 110px) - 6px); padding: 8px 10px calc(8px + var(--sa-b, 0px)); gap: 6px; }
+  .skinned .bf-panel { border-width: 10px; border-image-width: 10px; }
+  .bf-head { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); row-gap: 6px; }
+  .bf-mid { grid-column: 1 / -1; grid-row: 1; }
+  .bf-face { width: 40px; height: 40px; }
+  .bf-meter { grid-template-columns: 44px minmax(0, 1fr) 22px; font-size: 9px; gap: 4px; }
+  .bf-side.foe .bf-meter { grid-template-columns: 22px minmax(0, 1fr) 44px; }
+  .bf-orders { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bf-orders.specials { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bf-orders.specials .bf-order { flex-direction: column; justify-content: center; gap: 2px; text-align: center; min-height: 64px; }
+  .bf-orders.specials .bf-on b { font-size: 11.5px; line-height: 1.1; }
+  .bf-orders.specials .bf-order .ico { display: none; }
+  .bf-orders.specials .bf-on small { font-size: 10px; }
+  .bf-news { font-size: 14px; min-height: 0; }
+  body.boarding #hud-bottom, body.boarding #touch, body.boarding #toasts { display: none; }
+}
+/* A low window (a phone on its side): the fight over the whole screen, what happened on the left, the orders on
+   the right. */
+@media (max-height: 520px) {
+  #board-fight { left: calc(var(--sa-l, 0px) + 6px); right: calc(var(--sa-r, 0px) + 6px); top: 6px; bottom: 6px; transform: none; width: auto; }
+  .bf-panel { height: 100%; max-height: none; flex-direction: row; gap: 12px; padding: 8px 10px; }
+  .skinned .bf-panel { border-width: 10px; border-image-width: 10px; }
+  .bf-info { flex: 1 1 0; justify-content: center; }
+  .bf-act { flex: 1.25 1 0; justify-content: center; }
+  .bf-face { width: 40px; height: 40px; }
+  .bf-head { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); row-gap: 6px; }
+  .bf-mid { grid-column: 1 / -1; grid-row: 1; }
+  .bf-meter { grid-template-columns: 44px minmax(0, 1fr) 22px; font-size: 9px; gap: 4px; }
+  .bf-side.foe .bf-meter { grid-template-columns: 22px minmax(0, 1fr) 44px; }
+  .bf-orders { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bf-order { min-height: 44px; }
+  .bf-orders.specials .bf-order { justify-content: center; text-align: center; }
+  .bf-orders.specials .bf-order .ico { display: none; }
+  .bf-news { font-size: 14px; }
+  body.boarding #hud-bottom, body.boarding #touch, body.boarding #hud-stack { display: none; }
+}
+
+/* A narrow window with a mouse keeps the micro menu down the right edge: the fight stays clear of it. */
+@media (max-width: 1099px) and (min-width: 700px) and (min-height: 521px) { body:not(.touch) #board-fight { width: min(760px, calc(100vw - 150px)); left: calc(50% - 30px); } }
+/* While the captains fight, the round's clock stands still. */
+.bf-panel.dueling .bf-timer { visibility: hidden; }

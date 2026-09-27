@@ -51,7 +51,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
   }
   const draw = () => {
     const used = base + cargoVolume(take, mul);
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: placeName(r.targetName) }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div></div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: placeName(r.targetName) }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div>${r.report ? `<div class="sub board-report">${esc([L('board.report', { rounds: r.report.rounds, won: r.report.won, lost: r.report.lost }), r.report.duel === 'won' ? L('board.duelWon') : '', r.report.moves ? L('board.moves', { n: r.report.moves }) : ''].filter(Boolean).join(' · '))}</div>` : ''}</div></div>
       <div class="modal-body"><div class="cols"><div>
         <h3 class="title-sm" style="font-size:20px">${esc(L('board.cargo'))}</h3>
         ${goods.length ? goods.map((g) => `<div class="loot-grid">${icon(`good_${g}`, '', 'item-ico')}<div class="item-text"><b>${esc(GOODS[g].name)}</b><span class="muted">${esc(L('board.aboard', { n: r.cargo[g] ?? 0 }))}${state.self?.appraisal?.[g] ? ` · ${money(state.self.appraisal[g]!.price)}` : ''}</span></div><b class="loot-take">${take[g] ?? 0}</b>
@@ -183,6 +183,7 @@ export function renderHelp(root: HTMLElement, onboarding: OnboardingView | null 
     ['tree_boarding', kb('board'), L('help.board')],
     ['prof_marine', `Shift+${kb('board')}`, L('help.boardCareful', { ctrl: `Ctrl+${kb('board')}` })],
     ['ab_red_hook_boarding', L('key.boarding', { key: kb('board') }), L('help.cut')],
+    ['tab_board', L('key.fight'), L('help.fight')],
     ['map_cove', kb('land'), L('help.land')],
     ['menu_crew', kb('orders'), L('help.orders')],
     ['good_planks', kb('repair'), L('help.repair', { talent: talentName('srv_battle_repair') })],

@@ -78,7 +78,7 @@ import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
 import type { DelayedStrike } from './abilities.ts';
-import { canBoard, cutGrapples, startBoarding, stepBoarding } from './boarding.ts';
+import { canBoard, cutGrapples, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { legendsView } from './legends.ts';
 import { EmpireHub, GOVERNOR_PENNANT, empireAction, empireView, governsAny, stepEmpires } from './empires.ts';
 import { deliver, ensureLegendary, legendaryCalendar, legendarySecond, legendarySunk, legendWreckHere, raiseLegend } from './legendary.ts';
@@ -2282,6 +2282,10 @@ export class Game {
       }
       case 'board_cut':
         return err(cutGrapples(this, ship));
+      case 'board_tactic':
+        return err(setTactic(this, ship, msg.tactic));
+      case 'board_duel':
+        return err(duelAction(this, ship, msg.action, typeof msg.at === 'number' ? msg.at : undefined));
       case 'scuttle':
         return err(lightFuse(this, ship));
       case 'captive':
