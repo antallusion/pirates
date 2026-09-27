@@ -493,7 +493,10 @@ function openMenuItem(m: MenuItem): void {
   if (m === 'chat') {
     if (modal) closeModal();
     $('chat').classList.add('open');
-    ($('chat-input') as HTMLInputElement).focus();
+    const input = $('chat-input') as HTMLInputElement;
+    // A touch keyboard has no Enter to name: the hint says what to do, and a tap away closes an empty chat.
+    if (touch.enabled) input.placeholder = t('hud.chatPhTouch');
+    input.focus();
   } else if (m === 'company') {
     companyScreen.open();
     openModal('company');
@@ -528,9 +531,24 @@ function typing(): boolean {
   return !!a && (a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.tagName === 'TEXTAREA');
 }
 
+// The chat folds away when its field is left empty (a tap elsewhere on a phone); Esc closes it on a keyboard.
+($('chat-input') as HTMLInputElement).addEventListener('blur', () => {
+  const input = $('chat-input') as HTMLInputElement;
+  setTimeout(() => {
+    if (!input.value.trim() && document.activeElement !== input) $('chat').classList.remove('open');
+  }, 150);
+});
+
 addEventListener('keydown', (e) => {
   if (!inGame) return;
   const chatInput = $('chat-input') as HTMLInputElement;
+  if (e.key === 'Escape' && $('chat').classList.contains('open')) {
+    chatInput.value = '';
+    $('chat').classList.remove('open');
+    chatInput.blur();
+    e.preventDefault();
+    return;
+  }
   if (e.key === 'Enter') {
     const chat = $('chat');
     if (chat.classList.contains('open')) {

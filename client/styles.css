@@ -1292,3 +1292,34 @@ html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { v
    word on a desktop). */
 .uf-sub .uf-pts { display: inline-flex; align-items: center; gap: 3px; flex: none; font-weight: 700; }
 .uf-sub .wanted { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* The open chat on phones and tablets: a panel of its own over the top stack (its lines lay over the goals and
+   the sea), words that do not fit break. */
+#chat-log div { overflow-wrap: anywhere; }
+@media (max-width: 1099px), (max-height: 599px) {
+  #chat.open { z-index: 7; padding: 8px 10px 10px; background: linear-gradient(180deg, rgba(14, 12, 10, 0.96), rgba(8, 8, 9, 0.96)); border: 1px solid rgba(140, 107, 58, 0.55); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7); }
+  #chat.open #chat-log { max-height: 30vh; overflow-y: auto; margin-bottom: 8px; }
+  #chat.open #chat-input { width: 100%; margin: 0; }
+}
+/* …and it takes the goals' place while open: the goals step aside, the chat starts where they stood and keeps
+   clear of the touch menu's button on the right. */
+@media (max-width: 1099px), (max-height: 599px) {
+  body:has(#chat.open) #hud-goals { visibility: hidden; }
+  #chat { top: calc(var(--sa-t) + var(--top-h)); }
+  body.touch #chat { right: calc(var(--sa-r) + 60px); }
+}
+@media (max-height: 520px) {
+  #chat { top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 350px); right: calc(var(--sa-r) + var(--mm) + 64px); }
+  body.touch #chat { right: calc(var(--sa-r) + var(--mm) + 64px); }
+}
+/* Tablets: the chat opens where the top stack stands (under the unit frame, left of the minimap column). */
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
+  #chat, body.touch #chat { top: calc(var(--sa-t) + var(--uf-p) + 54px); right: calc(var(--sa-r) + var(--mm) + 28px); }
+}
+/* A large touch screen: the helm and the sail steps own the bottom-left corner, so the chat opens under the
+   unit frame instead; the quest line under the minimap (a mouse's extra) gives the touch menu its room. */
+@media (min-width: 1100px) and (min-height: 600px) {
+  body.touch #chat { top: calc(var(--sa-t) + 134px); bottom: auto; left: calc(var(--sa-l) + 12px); right: auto; width: 340px; }
+  body.touch #chat.open { z-index: 7; padding: 8px 10px 10px; background: linear-gradient(180deg, rgba(14, 12, 10, 0.96), rgba(8, 8, 9, 0.96)); border: 1px solid rgba(140, 107, 58, 0.55); border-radius: 4px; }
+}
+body.touch #hud-region .rg-extra { display: none; }

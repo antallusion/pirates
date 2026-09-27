@@ -224,6 +224,7 @@ export const EN = {
   'captain.choose': 'Choose your captain',
   'hud.unread': 'Letters waiting — [Y]',
   'hud.chatPh': 'Enter to speak…',
+  'hud.chatPhTouch': 'Say a word… (/g — your group)',
   'conn.reconnecting': 'Reconnecting to the Admiralty…',
   'opt.music': 'Music',
 } as const;
