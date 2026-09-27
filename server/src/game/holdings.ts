@@ -622,9 +622,9 @@ function produce(game: Game, h: Holding, isl: Island, hours: number): void {
   const perDay = hours / 24;
   add('provisions', 20 * perDay * strength(h, 'farm') + 10 * perDay * strength(h, 'fishing_village'));
   // A mine gives six tons an hour of what the rock holds.
-  const ore: GoodId = isl.biome === 'volcanic' ? 'iron' : 'coal';
+  const ore: GoodId = isl.biome === 'volcanic' || isl.biome === 'blacksand' || isl.biome === 'crystal' ? 'iron' : 'coal';
   add(ore, (6 / GOODS[ore].weight) * hours * strength(h, 'mine'));
-  const crop: GoodId = isl.biome === 'mossy' ? 'tobacco' : 'sugar';
+  const crop: GoodId = isl.biome === 'mossy' ? 'tobacco' : isl.biome === 'jungle' ? 'spices' : 'sugar';
   add(crop, (1.5 / GOODS[crop].weight) * hours * strength(h, 'plantation'));
   // Mills turn what is in the store.
   convert({ timber: 10 }, 'planks', 13, Math.floor(6 * hours * strength(h, 'sawmill')));

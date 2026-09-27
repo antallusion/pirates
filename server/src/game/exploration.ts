@@ -10,21 +10,33 @@ import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island, IslandFeature, Port } from '../../../shared/src/world/worldgen.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
+import { LAND_SITES, islandLife } from '../../../shared/src/world/islandlife.ts';
+import type { LandSite, LifeSite } from '../../../shared/src/world/islandlife.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { haulSite, ownSiteNear } from './resources.ts';
 import { canDive, digTime, makeMap, grantMap, mapChance, mapHere, resolveDig, resolveDive, wreckHere } from './explorefx.ts';
 
-export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'>;
-export const LANDABLE: LandableFeature[] = ['cache', 'wreck', 'ruins', 'grove', 'mine', 'pearl_bank', 'shrine', 'fort', 'volcano', 'bones', 'bell', 'hermit', 'spring'];
+/** An island feature, or one of the island's people or beasts (living islands, docs/11 P3). */
+export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'> | LandSite;
+export const LANDABLE: LandableFeature[] = ['cache', 'wreck', 'ruins', 'grove', 'mine', 'pearl_bank', 'shrine', 'fort', 'volcano', 'bones', 'bell', 'hermit', 'spring', ...LAND_SITES];
+
+/** Who and what lives on an island (the same list the client draws). */
+export function lifeOf(is: Island): LifeSite[] {
+  return islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: Math.round(is.radius), poly: is.poly, features: is.features, portId: is.portId });
+}
 
 export const FEATURE_NAMES: Record<LandableFeature, string> = {
   cache: "smugglers' cache", wreck: 'beached wreck', ruins: 'ruins', grove: 'timber grove', mine: 'surface mine', pearl_bank: 'pearl bank', shrine: 'drowned shrine',
   fort: 'abandoned fort', volcano: 'smoking volcano', bones: 'leviathan bones', bell: 'drowned bell tower', hermit: "hermit's hut", spring: 'freshwater spring',
+  fishers: 'fishing hamlet', smugglers: "smugglers' camp", pirate_camp: 'pirate camp', garrison: 'garrisoned fort', seals: 'seal colony', crabs: 'crab beach', turtles: 'turtle beach',
 };
 
-const DURATION: Record<LandableFeature, number> = { cache: 20, wreck: 25, ruins: 40, grove: 30, mine: 35, pearl_bank: 30, shrine: 25, fort: 40, volcano: 35, bones: 30, bell: 30, hermit: 20, spring: 20 };
+const DURATION: Record<LandableFeature, number> = {
+  cache: 20, wreck: 25, ruins: 40, grove: 30, mine: 35, pearl_bank: 30, shrine: 25, fort: 40, volcano: 35, bones: 30, bell: 30, hermit: 20, spring: 20,
+  fishers: 20, smugglers: 25, pirate_camp: 40, garrison: 25, seals: 20, crabs: 15, turtles: 20,
+};
 const RESTOCK_SEC = 2 * 3600; // a feature can be worked again two real hours later
 const LAND_RANGE = 260; // meters from the coastline
 
@@ -54,7 +66,9 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
     if (dist(is.x, is.y, ship.state.x, ship.state.y) > is.radius + LAND_RANGE) continue;
     const d = Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2);
     if (d > LAND_RANGE || d >= bd) continue;
-    for (const f of is.features) {
+    // The island's features first, then her people and beasts.
+    const here: string[] = [...is.features, ...lifeOf(is).map((x) => x.kind)];
+    for (const f of here) {
       if (!LANDABLE.includes(f as LandableFeature)) continue;
       const t = p.explored[exploredKey(is.id, f as LandableFeature)] ?? -Infinity;
       if (game.now - t < RESTOCK_SEC) continue;
@@ -253,6 +267,74 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
       morale = 10;
       xp = 25;
       break;
+    // Living islands: the people and beasts ashore.
+    case 'fishers': {
+      // The hamlet sells its catch cheap and tells what it has seen at sea.
+      const price = rng.int(30, 70);
+      if (p.gold >= price) {
+        p.gold -= price;
+        give('provisions', 8, 16);
+        got.push(`paid ${price} silver`);
+      } else give('provisions', 3, 6);
+      morale = 3;
+      xp = 20;
+      break;
+    }
+    case 'smugglers':
+      if (rng.chance(0.5)) {
+        const price = rng.int(90, 220);
+        if (p.gold >= price) {
+          p.gold -= price;
+          give(rng.pick(['dreamleaf', 'tobacco', 'rum'] as GoodId[]), 3, 8);
+          got.push(`paid ${price} silver`);
+        }
+      } else give('rum', 2, 6);
+      xp = 40;
+      break;
+    case 'pirate_camp': {
+      // A fight on the sand: a small party is thrown back.
+      const beaten = rng.chance(ship.crew < 40 ? 0.35 : 0.15);
+      lost = rng.int(1, beaten ? 7 : 4);
+      if (!beaten) {
+        silver = rng.int(150, 450);
+        give(rng.pick(['weapons', 'rum', 'gunpowder'] as GoodId[]), 3, 8);
+      } else morale = -8;
+      xp = 70;
+      break;
+    }
+    case 'garrison':
+      if (ship.wantedCache >= 2) {
+        // The garrison knows your face: its guns speak before the boats touch the sand.
+        lost = rng.int(2, 5);
+        ship.hull = Math.max(1, ship.hull - ship.stats.hullMax * 0.06);
+        morale = -8;
+        game.toastShip(ship, 'The garrison opens fire on your boats!', 'bad');
+      } else {
+        const price = 120;
+        if (p.gold >= price) {
+          p.gold -= price;
+          ship.ammo.round = (ship.ammo.round ?? 0) + Math.round(20 * share);
+          ship.ammo.chain = (ship.ammo.chain ?? 0) + Math.round(10 * share);
+          got.push('shot for the guns', `paid ${price} silver`);
+        }
+      }
+      xp = 20;
+      break;
+    case 'seals':
+      give('provisions', 6, 12);
+      if (rng.chance(0.5)) give('whale_oil', 1, 3);
+      xp = 20;
+      break;
+    case 'crabs':
+      give('provisions', 4, 9);
+      morale = 2;
+      xp = 15;
+      break;
+    case 'turtles':
+      give('provisions', 5, 10);
+      morale = 5; // turtle soup
+      xp = 20;
+      break;
     case 'shrine':
       if (rng.chance(0.5)) {
         give('cursed_relics', 1, 3);
@@ -282,6 +364,8 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   if (feature === 'bell') mapChance(game, s, 0.25, 2, 'Scratched inside the bell');
   if (feature === 'hermit') mapChance(game, s, 0.35, 1, 'The hermit draws it in the sand');
   if (feature === 'fort') mapChance(game, s, 0.1, 1, "In the commandant's desk");
+  if (feature === 'smugglers') mapChance(game, s, 0.2, 1, 'A smuggler sells it for a drink');
+  if (feature === 'pirate_camp') mapChance(game, s, 0.15, 2, "In the camp's plunder");
   // Ruin Reader: every third inscription of the Drowned Crown points to a hidden cache.
   if (feature === 'ruins' && island.region === 'drowned_crown' && ship.hasFlag('ruin_reader') && island.id % 3 === 0) {
     grantMap(game, s, makeMap(game, 2, { island }), 'The inscription reads true');

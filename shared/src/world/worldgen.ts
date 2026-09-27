@@ -7,7 +7,7 @@ import { fbm, hashString, Rng } from '../rng.ts';
 import type { FactionId } from '../data/factions.ts';
 import type { GoodId } from '../data/goods.ts';
 import { GOOD_IDS } from '../data/goods.ts';
-import { KEY_PORTS, REGIONS, REGION_IDS, WORLD_EDGE_MARGIN } from './regions.ts';
+import { KEY_PORTS, REGIONS, REGION_IDS, WORLD_EDGE_MARGIN, biomeFromMix } from './regions.ts';
 import type { IslandBiome, PortProfile, RegionId } from './regions.ts';
 
 export type IslandFeature = 'port' | 'ruins' | 'wreck' | 'lighthouse' | 'grove' | 'mine' | 'pearl_bank' | 'shrine' | 'cache'
@@ -140,6 +140,13 @@ const SYLLABLES: Record<IslandBiome, [string[], string[]]> = {
   ruins: [['Drowned', 'Sunk', 'Saint', 'Hollow', 'Crown', 'Choir', 'Pale', 'Idol', 'Altar', 'Vesper'], ['spire', 'chapel', 'gate', 'throne', 'arch', 'steps', 'nave', 'crypt', 'court', 'tomb']],
   bone: [['Marrow', 'Rib', 'Skull', 'Hollow', 'Black', 'Silent', 'Lightless', 'Deep', 'Grave', 'Eyeless'], ['reef', 'spine', 'jaw', 'coil', 'teeth', 'ossuary', 'vault', 'rift', 'pit', 'shell']],
   barren: [['Dead', 'Bleached', 'Lost', 'Salt', 'Wreck', 'Last', 'Empty', 'Gull', 'Tern', 'Drear'], ['rock', 'bar', 'reef', 'isle', 'stack', 'key', 'mark', 'shoal', 'ledge', 'point']],
+  jungle: [['Green', 'Parrot', 'Vine', 'Fever', 'Palm', 'Howler', 'Orchid', 'Monkey', 'Tangle', 'Steam'], ['key', 'cay', 'isle', 'hold', 'bight', 'cove', 'point', 'reach', 'wood', 'haven']],
+  mangrove: [['Root', 'Mud', 'Heron', 'Tide', 'Crab', 'Brack', 'Stilt', 'Eel', 'Knot', 'Silt'], ['cay', 'key', 'bank', 'slough', 'mire', 'creek', 'reach', 'hollow', 'fen', 'bar']],
+  atoll: [['Coral', 'Ring', 'Lagoon', 'Pearl', 'Blue', 'Turtle', 'Conch', 'Sun', 'Tern', 'Reef'], ['atoll', 'ring', 'cay', 'key', 'reef', 'bank', 'lagoon', 'shoal', 'isle', 'bar']],
+  saltflat: [['Salt', 'White', 'Brine', 'Pale', 'Crust', 'Glare', 'Dry', 'Bitter', 'Chalk', 'Blind'], ['pan', 'flat', 'marsh', 'bar', 'spit', 'key', 'reach', 'shelf', 'mark', 'isle']],
+  blacksand: [['Black', 'Jet', 'Soot', 'Coal', 'Night', 'Raven', 'Tar', 'Ink', 'Crow', 'Sable'], ['strand', 'beach', 'point', 'cove', 'shore', 'rock', 'bight', 'head', 'isle', 'holm']],
+  fungal: [['Spore', 'Pale', 'Glow', 'Rot', 'Cap', 'Mould', 'Blight', 'Gill', 'Lantern', 'Mire'], ['wood', 'hollow', 'cay', 'mere', 'grove', 'isle', 'key', 'rise', 'fen', 'deep']],
+  crystal: [['Glass', 'Prism', 'Shard', 'Quartz', 'Gleam', 'Facet', 'Spar', 'Hollow', 'Singing', 'Star'], ['spire', 'stack', 'crag', 'cliff', 'teeth', 'rock', 'point', 'fang', 'crown', 'isle']],
 };
 
 function islandName(rng: Rng, biome: IslandBiome, used: Set<string>): string {
@@ -184,6 +191,13 @@ function randomProfile(rng: Rng, biome: IslandBiome, size: number): PortProfile 
     ruins: ['cursed_relics', 'pearls', 'abyssal_ore'],
     bone: ['abyssal_ore', 'cursed_relics'],
     barren: ['salt', 'planks', 'provisions'],
+    jungle: ['sugar', 'tobacco', 'spices', 'timber'],
+    mangrove: ['timber', 'provisions', 'dreamleaf'],
+    atoll: ['pearls', 'salt', 'provisions'],
+    saltflat: ['salt', 'provisions'],
+    blacksand: ['iron', 'coal', 'salt'],
+    fungal: ['dreamleaf', 'medicine'],
+    crystal: ['abyssal_ore', 'pearls', 'iron'],
   };
   const produces: Partial<Record<GoodId, number>> = {};
   const consumes: Partial<Record<GoodId, number>> = {};
@@ -290,6 +304,13 @@ export function generateWorld(seed: number): World {
     }
   }
 
+  // 2a) Living islands (docs/11 P3): each island's biome comes from her region's mix, rolled from her own
+  // generator so every island keeps her place, shape and name. A key port's island keeps the region's own.
+  for (const is of islands) {
+    if (is.portId) continue;
+    is.biome = biomeFromMix(is.region, new Rng((seed * 53 + is.id * 104729 + 7) >>> 0).float());
+  }
+
   // 2b) The later features (an old fort, a live volcano, leviathan bones, a drowned bell tower, a hermit, a
   // spring). They roll from their own generator per island, so the islands and ports rolled above stay exactly
   // where every saved chart has them.
@@ -306,6 +327,10 @@ export function generateWorld(seed: number): World {
     if ((b === 'ruins' || b === 'mossy' || is.region === 'drowned_crown') && r2.chance(0.12)) is.features.push('bell');
     if (r > 200 && r2.chance(0.05)) is.features.push('hermit');
     if ((b === 'temperate' || b === 'mossy') && r > 250 && r2.chance(0.1)) is.features.push('spring');
+    // The new biomes' own: groves and springs in the green, pearls on the coral, a mine in black sand or crystal.
+    if ((b === 'jungle' || b === 'mangrove') && r > 250 && r2.chance(0.14)) is.features.push(r2.chance(0.5) ? 'spring' : 'grove');
+    if (b === 'atoll' && r2.chance(0.25)) is.features.push('pearl_bank');
+    if ((b === 'blacksand' || b === 'crystal') && r > 220 && r2.chance(0.15)) is.features.push('mine');
   }
 
   // 3) Minor ports: villages on medium islands, 2 per region (never in The Abyss).

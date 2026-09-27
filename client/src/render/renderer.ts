@@ -28,6 +28,8 @@ import type { Palette } from './terrain.ts';
 import { dict } from '../i18n.ts';
 import { dec1 } from '../ui/dom.ts';
 import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus } from '../../../shared/src/data/gunnery.ts';
+import { islandLife } from '../../../shared/src/world/islandlife.ts';
+import type { LifeSite } from '../../../shared/src/world/islandlife.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 
 const L = dict(REN, RRU);
@@ -43,20 +45,37 @@ const BIOME_TINT: Record<IslandBiome, string> = {
   ruins: 'rgba(40,60,62,0.45)',
   bone: 'rgba(150,145,130,0.4)',
   barren: 'rgba(70,64,55,0.4)',
+  jungle: 'rgba(20,60,26,0.45)',
+  mangrove: 'rgba(30,48,34,0.5)',
+  atoll: 'rgba(200,190,150,0.25)',
+  saltflat: 'rgba(220,215,200,0.45)',
+  blacksand: 'rgba(18,18,20,0.5)',
+  fungal: 'rgba(70,40,80,0.45)',
+  crystal: 'rgba(90,110,160,0.4)',
 };
 const BIOME_BASE: Record<IslandBiome, string> = {
   temperate: '#2a3026', mossy: '#26322b', volcanic: '#1d1614', ice: '#8d98a3', ruins: '#2a3131', bone: '#6f6a5f', barren: '#3b372f',
+  jungle: '#1f3a22', mangrove: '#24332a', atoll: '#b9a77c', saltflat: '#cfc9b8', blacksand: '#1e1c1c', fungal: '#34263a', crystal: '#4a5670',
+};
+/** The seven living-island biomes wear the old paintings under their own colour until theirs are painted
+ *  (docs/11 P5): a glaze over the land. */
+const BIOME_GLAZE: Partial<Record<IslandBiome, string>> = {
+  jungle: 'rgba(10,70,20,0.38)', mangrove: 'rgba(18,52,40,0.4)', atoll: 'rgba(238,214,160,0.38)', saltflat: 'rgba(238,234,222,0.5)',
+  blacksand: 'rgba(8,8,10,0.42)', fungal: 'rgba(96,40,118,0.36)', crystal: 'rgba(80,112,196,0.34)',
 };
 
 /** Higgsfield art by biome: the land, its shore, and what grows or lies on it. */
 const BIOME_LAND: Record<IslandBiome, string> = {
   temperate: 'tex.land_temperate', mossy: 'tex.land_mossy', volcanic: 'tex.land_volcanic', ice: 'tex.land_ice', ruins: 'tex.land_ruins', bone: 'tex.land_bone', barren: 'tex.land_barren',
+  jungle: 'tex.land_temperate', mangrove: 'tex.land_mossy', atoll: 'tex.sand', saltflat: 'tex.land_barren', blacksand: 'tex.land_volcanic', fungal: 'tex.land_mossy', crystal: 'tex.land_ice',
 };
 const BIOME_SHORE: Record<IslandBiome, string> = {
   temperate: 'tex.sand', mossy: 'tex.rock', volcanic: 'tex.shore_black', ice: 'tex.shore_ice', ruins: 'tex.rock', bone: 'tex.land_bone', barren: 'tex.rock',
+  jungle: 'tex.sand', mangrove: 'tex.rock', atoll: 'tex.sand', saltflat: 'tex.sand', blacksand: 'tex.shore_black', fungal: 'tex.rock', crystal: 'tex.rock',
 };
 const BIOME_DECOR: Record<IslandBiome, string> = {
   temperate: 'prop.decor_temperate', mossy: 'prop.decor_mossy', volcanic: 'prop.decor_volcanic', ice: 'prop.decor_ice', ruins: 'prop.decor_barren', bone: 'prop.decor_bone', barren: 'prop.decor_barren',
+  jungle: 'prop.decor_temperate', mangrove: 'prop.decor_mossy', atoll: 'prop.decor_temperate', saltflat: 'prop.decor_barren', blacksand: 'prop.decor_volcanic', fungal: 'prop.decor_mossy', crystal: 'prop.decor_ice',
 };
 /** Island features: the sprite, its size in metres, where it stands (salt, inset toward the centre). */
 const FEATURE_ART: Record<string, { id: string; size: number; salt: number; inset: number }> = {
@@ -83,6 +102,55 @@ interface Decor {
   size: number;
   /** A big clump on a green island is a whole grove. */
   grove: boolean;
+  /** On fungal and crystal isles, one of their own shapes instead of the old clump. */
+  odd: boolean;
+}
+
+/** Fungal caps: a cluster of pale domes with dark gills. */
+function drawCaps(g: CanvasRenderingContext2D, size: number): void {
+  const caps: [number, number, number][] = [[0, 0, 0.32], [-0.22, 0.14, 0.2], [0.24, 0.1, 0.18], [0.05, -0.24, 0.15]];
+  for (const [dx, dy, r] of caps) {
+    const x = dx * size, y = dy * size, rr = r * size;
+    const grd = g.createRadialGradient(x - rr * 0.3, y - rr * 0.3, rr * 0.1, x, y, rr);
+    grd.addColorStop(0, 'rgba(226,206,240,0.95)');
+    grd.addColorStop(0.6, 'rgba(150,104,176,0.9)');
+    grd.addColorStop(1, 'rgba(52,30,64,0.85)');
+    g.fillStyle = grd;
+    g.beginPath();
+    g.arc(x, y, rr, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = 'rgba(40,20,50,0.5)';
+    g.lineWidth = Math.max(0.5, rr * 0.08);
+    g.beginPath();
+    g.arc(x, y, rr * 0.55, 0, Math.PI * 2);
+    g.stroke();
+  }
+}
+
+/** Crystal shards: thin facets rising together, lit on one side. */
+function drawShards(g: CanvasRenderingContext2D, size: number): void {
+  const shards: [number, number, number, number][] = [[0, 0, 0.5, 0.13], [-0.18, 0.08, 0.36, 0.1], [0.2, 0.06, 0.4, 0.1], [0.06, 0.2, 0.28, 0.08]];
+  for (const [dx, dy, h, w] of shards) {
+    const x = dx * size, y = dy * size, hh = h * size, ww = w * size;
+    const grd = g.createLinearGradient(x - ww, y, x + ww, y - hh);
+    grd.addColorStop(0, 'rgba(70,90,150,0.95)');
+    grd.addColorStop(0.5, 'rgba(170,200,245,0.95)');
+    grd.addColorStop(1, 'rgba(236,244,255,0.95)');
+    g.fillStyle = grd;
+    g.beginPath();
+    g.moveTo(x - ww, y);
+    g.lineTo(x, y - hh);
+    g.lineTo(x + ww, y);
+    g.lineTo(x, y + ww * 0.6);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.55)';
+    g.lineWidth = Math.max(0.5, ww * 0.12);
+    g.beginPath();
+    g.moveTo(x, y - hh);
+    g.lineTo(x, y + ww * 0.6);
+    g.stroke();
+  }
 }
 
 /** A small deterministic generator (the same island always wears the same decor). */
@@ -257,6 +325,7 @@ export class Renderer {
     g.setTransform(this.dpr, 0, 0, this.dpr, shx * this.dpr, shy * this.dpr);
 
     const night = nightFactor(state.estServerTime());
+    this.nightNow = night;
     const region = REGIONS[state.region];
     this.drawOcean(state, region.waterTint);
     this.drawCurrents(state);
@@ -586,6 +655,11 @@ export class Renderer {
       g.fillStyle = BIOME_TINT[is.biome];
       g.fill();
     }
+    const glaze = BIOME_GLAZE[is.biome];
+    if (glaze) {
+      g.fillStyle = glaze;
+      g.fill();
+    }
     // Relief: hill-shaded height, cliffs and beaches (terrain.ts), clipped to the coast. Until an island's mask
     // is built (at most one a frame), concentric cores stand in.
     const relief = this.reliefOf(is);
@@ -603,6 +677,7 @@ export class Renderer {
         g.fill();
       }
     }
+    this.drawBiomeLand(is);
     // What grows and lies on the island.
     const decor = sprite(BIOME_DECOR[is.biome]);
     const grove = sprite('prop.grove');
@@ -614,10 +689,22 @@ export class Renderer {
         g.save();
         g.translate(x, y);
         g.rotate(d.rot);
-        g.drawImage((d.grove && grove ? grove : decor).img, -size / 2, -size / 2, size, size);
+        // Fungal and crystal isles grow their own shapes among the old clumps.
+        if (d.odd && is.biome === 'fungal') drawCaps(g, size);
+        else if (d.odd && is.biome === 'crystal') drawShards(g, size);
+        else g.drawImage((d.grove && grove ? grove : decor).img, -size / 2, -size / 2, size, size);
         g.restore();
       }
     }
+    // Glowing caps and singing crystal give off a little light by night.
+    if ((is.biome === 'fungal' || is.biome === 'crystal') && this.nightNow > 0.3 && this.zoom > 0.3) {
+      const decors = this.decorOf(is, state);
+      for (let k = 0; k < decors.length && k < 4; k++) {
+        const d = decors[(k * 5) % decors.length];
+        this.fx.light(d.x, d.y, 60 + d.size, is.biome === 'fungal' ? 'rgba(170,120,255,1)' : 'rgba(140,200,255,1)', 0.35 * this.nightNow, 0.05);
+      }
+    }
+    this.drawShoreRocks(is);
     // Surf: two soft broken lines of foam working along the coast.
     this.path(is.poly);
     g.setLineDash([3 * this.zoom, 9 * this.zoom]);
@@ -642,6 +729,240 @@ export class Renderer {
     }
     g.restore();
     this.drawFeatures(is);
+    this.drawLife(is);
+  }
+
+  /** Rocky coasts: stones just off the shore, and white water breaking on a few of them. */
+  private drawShoreRocks(is: IslandData): void {
+    const b = is.biome;
+    if (this.zoom < 0.3 || !(b === 'volcanic' || b === 'crystal' || b === 'ice' || b === 'blacksand' || b === 'ruins' || b === 'barren' || b === 'temperate')) return;
+    const g = this.g;
+    const rnd = seeded(is.id * 613 + 29);
+    const n = is.poly.length / 2;
+    const stone = b === 'ice' ? '#9aa6b0' : b === 'crystal' ? '#6c7ca0' : b === 'volcanic' || b === 'blacksand' ? '#1c1817' : '#4a4640';
+    const count = Math.min(14, Math.round(n / 3));
+    for (let k = 0; k < count; k++) {
+      const v = Math.floor(rnd() * n);
+      const px = is.poly[v * 2], py = is.poly[v * 2 + 1];
+      const dx = px - is.x, dy = py - is.y, l = Math.hypot(dx, dy) || 1;
+      const off = 8 + rnd() * 22;
+      const x = this.sx(px + (dx / l) * off), y = this.sy(py + (dy / l) * off);
+      const r = (3 + rnd() * 6) * this.zoom;
+      if (x < -20 || y < -20 || x > this.w + 20 || y > this.h + 20) continue;
+      g.fillStyle = stone;
+      g.beginPath();
+      g.ellipse(x, y, r * 1.3, r, rnd() * Math.PI, 0, Math.PI * 2);
+      g.fill();
+      // Every third stone has the sea breaking on it.
+      if (k % 3 === 0) {
+        const a = 0.25 + 0.2 * Math.sin(this.time * 1.7 + k * 1.3);
+        g.strokeStyle = `rgba(226,234,238,${Math.max(0, a)})`;
+        g.lineWidth = Math.max(1, 1.6 * this.zoom);
+        g.beginPath();
+        g.arc(x, y, r * (1.6 + 0.4 * Math.sin(this.time * 1.7 + k)), 0, Math.PI * 2);
+        g.stroke();
+      }
+    }
+  }
+
+  /** The island's people and beasts (shared/src/world/islandlife.ts): hamlets with boats drawn up, camps with
+   *  their fires, a garrisoned fort under its flag, seals, crabs and turtles on the beach, gulls wheeling over. */
+  private drawLife(is: IslandData): void {
+    if (this.zoom < 0.28) return;
+    const sites = islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: is.r, poly: is.poly, features: is.features, portId: is.portId });
+    for (const s of sites) this.drawSite(is, s);
+  }
+
+  private drawSite(is: IslandData, s: LifeSite): void {
+    const g = this.g;
+    const z = this.zoom;
+    const x = this.sx(s.x), y = this.sy(s.y);
+    const reach = (s.kind === 'gulls' ? is.r : 90) * z;
+    if (x < -reach || y < -reach || x > this.w + reach || y > this.h + reach) return;
+    const vx = is.poly[s.v * 2] - is.x, vy = is.poly[s.v * 2 + 1] - is.y, vl = Math.hypot(vx, vy) || 1;
+    const ox = vx / vl, oy = vy / vl; // seaward
+    const tx = -oy, ty = ox; // along the shore
+    const t = this.time;
+    const night = this.nightNow;
+    const rnd = seeded(is.id * 97 + s.v * 13 + s.kind.length);
+    const hut = (hx: number, hy: number, w: number, roof: string) => {
+      g.fillStyle = 'rgba(0,0,0,0.35)';
+      g.fillRect(hx - w / 2 + 2 * z, hy - w / 2 + 3 * z, w, w * 0.8);
+      g.fillStyle = '#4b3a28';
+      g.fillRect(hx - w / 2, hy - w / 2, w, w * 0.8);
+      g.fillStyle = roof;
+      g.beginPath();
+      g.moveTo(hx - w * 0.62, hy - w * 0.1);
+      g.lineTo(hx, hy - w * 0.72);
+      g.lineTo(hx + w * 0.62, hy - w * 0.1);
+      g.closePath();
+      g.fill();
+    };
+    const fire = (fx: number, fy: number, wx: number, wy: number) => {
+      const f = 0.75 + 0.25 * Math.sin(t * 9 + rnd() * 6);
+      g.fillStyle = `rgba(255,${Math.round(150 + 60 * f)},80,0.95)`;
+      g.beginPath();
+      g.arc(fx, fy, 2.4 * z * f + 1, 0, Math.PI * 2);
+      g.fill();
+      if (night > 0.25) this.fx.light(wx, wy, 90, 'rgba(255,160,80,1)', 0.55 * night, 0.05);
+      else if (Math.random() < 0.02) this.fx.smoke(wx, wy, 1, 6);
+    };
+    switch (s.kind) {
+      case 'fishers':
+      case 'smugglers':
+      case 'pirate_camp': {
+        const people = s.kind === 'fishers';
+        for (let i = 0; i < s.n; i++) {
+          const k = i - (s.n - 1) / 2;
+          const hx = x + tx * k * 16 * z - ox * 4 * z * (i % 2), hy = y + ty * k * 16 * z - oy * 4 * z * (i % 2);
+          if (people) hut(hx, hy, 11 * z, '#6d5237');
+          else {
+            // Tents: canvas triangles, the pirates' black.
+            g.fillStyle = s.kind === 'pirate_camp' ? '#2a2422' : '#8c8068';
+            g.beginPath();
+            g.moveTo(hx - 7 * z, hy + 5 * z);
+            g.lineTo(hx, hy - 7 * z);
+            g.lineTo(hx + 7 * z, hy + 5 * z);
+            g.closePath();
+            g.fill();
+          }
+        }
+        if (people) {
+          // Boats drawn up on the beach, one out on the water.
+          for (let i = 0; i < 2; i++) {
+            const bob = i === 1 ? Math.sin(t * 1.3 + s.v) * 1.5 * z : 0;
+            const bx = x + ox * (14 + i * 22) * z + tx * (i * 10 - 5) * z, by = y + oy * (14 + i * 22) * z + ty * (i * 10 - 5) * z + bob;
+            g.save();
+            g.translate(bx, by);
+            g.rotate(Math.atan2(ty, tx));
+            g.fillStyle = '#5a4128';
+            g.beginPath();
+            g.ellipse(0, 0, 6 * z, 2.2 * z, 0, 0, Math.PI * 2);
+            g.fill();
+            g.restore();
+          }
+          if (night > 0.25) this.fx.light(s.x, s.y, 90, 'rgba(255,190,110,1)', 0.55 * night, 0.05);
+        } else {
+          // Crates by the smugglers' fire; the pirates fly the black.
+          if (s.kind === 'smugglers') {
+            g.fillStyle = '#6b5032';
+            for (let i = 0; i < 3; i++) g.fillRect(x + (i * 5 - 7) * z + ox * 10 * z, y + oy * 10 * z + (i % 2) * 4 * z, 4 * z, 4 * z);
+          } else {
+            const fx = x - ox * 12 * z, fy = y - oy * 12 * z;
+            g.strokeStyle = '#2a1e14';
+            g.lineWidth = Math.max(1, 1.2 * z);
+            g.beginPath();
+            g.moveTo(fx, fy);
+            g.lineTo(fx, fy - 18 * z);
+            g.stroke();
+            const flap = Math.sin(t * 4 + s.v) * 2 * z;
+            g.fillStyle = '#0c0c0c';
+            g.beginPath();
+            g.moveTo(fx, fy - 18 * z);
+            g.lineTo(fx + 10 * z, fy - 15 * z + flap);
+            g.lineTo(fx, fy - 12 * z);
+            g.closePath();
+            g.fill();
+          }
+          fire(x + ox * 4 * z, y + oy * 4 * z, s.x, s.y);
+        }
+        break;
+      }
+      case 'garrison': {
+        // A small star fort of grey stone under the region's colours.
+        g.fillStyle = 'rgba(0,0,0,0.35)';
+        g.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2, rr = (i % 2 ? 11 : 19) * z;
+          const px = x + 3 * z + Math.cos(a) * rr, py = y + 4 * z + Math.sin(a) * rr;
+          if (i) g.lineTo(px, py);
+          else g.moveTo(px, py);
+        }
+        g.fill();
+        g.fillStyle = '#6a6760';
+        g.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2, rr = (i % 2 ? 11 : 19) * z;
+          const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+          if (i) g.lineTo(px, py);
+          else g.moveTo(px, py);
+        }
+        g.closePath();
+        g.fill();
+        g.fillStyle = '#4c4a45';
+        g.fillRect(x - 5 * z, y - 5 * z, 10 * z, 10 * z);
+        const flap = Math.sin(t * 4 + s.v) * 1.5 * z;
+        g.strokeStyle = '#2a2622';
+        g.lineWidth = Math.max(1, z);
+        g.beginPath();
+        g.moveTo(x, y - 5 * z);
+        g.lineTo(x, y - 22 * z);
+        g.stroke();
+        g.fillStyle = REGIONS[is.region].safety === 'safe' ? '#a33a2e' : '#2e5a8a';
+        g.beginPath();
+        g.moveTo(x, y - 22 * z);
+        g.lineTo(x + 11 * z, y - 19 * z + flap);
+        g.lineTo(x, y - 16 * z);
+        g.closePath();
+        g.fill();
+        if (night > 0.25) this.fx.light(s.x, s.y, 130, 'rgba(255,200,130,1)', 0.6 * night, 0.05);
+        break;
+      }
+      case 'seals':
+      case 'turtles':
+      case 'crabs': {
+        for (let i = 0; i < s.n; i++) {
+          const k = i - (s.n - 1) / 2 + (rnd() - 0.5) * 0.6;
+          let bx = x + tx * k * (s.kind === 'crabs' ? 7 : 11) * z + ox * (rnd() * 6) * z;
+          let by = y + ty * k * (s.kind === 'crabs' ? 7 : 11) * z + oy * (rnd() * 6) * z;
+          if (s.kind === 'crabs') {
+            // Sideways, as crabs go.
+            const w = Math.sin(t * (1.4 + i * 0.3) + i) * 5 * z;
+            bx += tx * w;
+            by += ty * w;
+            g.fillStyle = '#b8452f';
+            g.beginPath();
+            g.arc(bx, by, Math.max(1.2, 1.8 * z), 0, Math.PI * 2);
+            g.fill();
+          } else if (s.kind === 'seals') {
+            const breathe = 1 + 0.06 * Math.sin(t * 1.1 + i * 2);
+            g.fillStyle = '#5d6168';
+            g.beginPath();
+            g.ellipse(bx, by, 5.5 * z * breathe, 2.4 * z, Math.atan2(ty, tx) + (rnd() - 0.5), 0, Math.PI * 2);
+            g.fill();
+          } else {
+            const crawl = Math.sin(t * 0.3 + i * 2) * 3 * z;
+            bx += ox * crawl;
+            by += oy * crawl;
+            g.fillStyle = '#4f5a34';
+            g.beginPath();
+            g.ellipse(bx, by, 3.6 * z, 3 * z, 0, 0, Math.PI * 2);
+            g.fill();
+            g.strokeStyle = '#2f3620';
+            g.lineWidth = Math.max(0.6, 0.6 * z);
+            g.stroke();
+          }
+        }
+        break;
+      }
+      case 'gulls': {
+        const rr = is.r * 0.45 * z;
+        g.strokeStyle = 'rgba(236,238,240,0.85)';
+        g.lineWidth = Math.max(1, 1.1 * z);
+        for (let i = 0; i < s.n; i++) {
+          const a = t * (0.25 + (i % 3) * 0.05) + (i / s.n) * Math.PI * 2 + rnd() * 0.5;
+          const gx = x + Math.cos(a) * rr * (0.7 + 0.3 * Math.sin(i)), gy = y + Math.sin(a) * rr * (0.7 + 0.3 * Math.cos(i));
+          const flap = (2 + Math.sin(t * 8 + i * 1.7) * 1.6) * z;
+          const span = 4 * z + 2;
+          g.beginPath();
+          g.moveTo(gx - span, gy - flap);
+          g.quadraticCurveTo(gx - span / 2, gy - flap * 0.2, gx, gy);
+          g.quadraticCurveTo(gx + span / 2, gy - flap * 0.2, gx + span, gy - flap);
+          g.stroke();
+        }
+        break;
+      }
+    }
   }
 
   /** A texture tiled in world space: `metres` per tile, shifted by `seed` so neighbours do not match. */
@@ -653,6 +974,9 @@ export class Renderer {
     return p;
   }
 
+  /** How dark the sea is this frame (0 day … 1 night), for what glows on the islands. */
+  private nightNow = 0;
+
   private decorCache = new Map<number, Decor[]>();
 
   /** Where an island's decor stands: inside the coast, clear of its port town and of each other. */
@@ -663,16 +987,19 @@ export class Renderer {
     const inner = is.poly.map((v, i) => (i % 2 === 0 ? is.x + (v - is.x) * 0.78 : is.y + (v - is.y) * 0.78));
     const port = is.portId ? state.ports.find((p) => p.id === is.portId) : null;
     // Decor by area: a rock has a clump or two, a great island is wooded and strewn.
-    const want = Math.max(3, Math.min(40, Math.round((is.r * is.r) / 26000)));
+    const dense = is.biome === 'jungle' || is.biome === 'mangrove' ? 1.6 : is.biome === 'saltflat' ? 0.4 : 1;
+    const want = Math.max(3, Math.min(56, Math.round(((is.r * is.r) / 26000) * dense)));
+    const lagoon = is.biome === 'atoll' ? is.poly.map((v, i) => (i % 2 === 0 ? is.x + (v - is.x) * 0.6 : is.y + (v - is.y) * 0.6)) : null;
     const out: Decor[] = [];
     for (let k = 0; k < want * 6 && out.length < want; k++) {
       const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * is.r;
       const x = is.x + Math.cos(a) * r, y = is.y + Math.sin(a) * r;
       if (!inPoly(inner, x, y)) continue;
+      if (lagoon && inPoly(lagoon, x, y)) continue;
       if (port && Math.hypot(x - port.x, y - port.y) < 380) continue;
       const size = 42 + rnd() * Math.min(120, 30 + is.r / 10);
       if (out.some((d) => Math.hypot(d.x - x, d.y - y) < (d.size + size) * 0.55)) continue;
-      out.push({ x, y, rot: rnd() * Math.PI * 2, size, grove: size > 95 && (is.biome === 'temperate' || is.biome === 'mossy') });
+      out.push({ x, y, rot: rnd() * Math.PI * 2, size, grove: size > 95 && (is.biome === 'temperate' || is.biome === 'mossy' || is.biome === 'jungle'), odd: rnd() < 0.55 });
     }
     this.decorCache.set(is.id, out);
     if (this.decorCache.size > 200) this.decorCache.delete(this.decorCache.keys().next().value!);
@@ -692,8 +1019,10 @@ export class Renderer {
     }
     if (this.reliefBuiltAt === this.frameNo) return null;
     this.reliefBuiltAt = this.frameNo;
-    const palette: Palette = is.biome === 'ice' ? 'ice' : is.biome === 'volcanic' ? 'dark' : is.biome === 'bone' || is.biome === 'barren' ? 'pale' : 'green';
-    const r = buildRelief(is.poly, is.x, is.y, 0x51ed + is.id * 977, palette, is.biome === 'volcanic' || is.biome === 'ruins' ? 1 : is.biome === 'mossy' ? 0 : 0.5);
+    const b = is.biome;
+    const palette: Palette = b === 'ice' || b === 'crystal' ? 'ice' : b === 'volcanic' || b === 'blacksand' ? 'dark' : b === 'bone' || b === 'barren' || b === 'atoll' || b === 'saltflat' ? 'pale' : 'green';
+    const rocky = b === 'volcanic' || b === 'ruins' || b === 'crystal' ? 1 : b === 'mossy' || b === 'mangrove' || b === 'atoll' || b === 'saltflat' ? 0 : b === 'fungal' || b === 'jungle' ? 0.25 : 0.5;
+    const r = buildRelief(is.poly, is.x, is.y, 0x51ed + is.id * 977, palette, rocky);
     const c = document.createElement('canvas');
     c.width = r.w;
     c.height = r.h;
@@ -702,6 +1031,58 @@ export class Renderer {
     this.reliefCache.set(is.id, entry);
     while (this.reliefCache.size > 60) this.reliefCache.delete(this.reliefCache.keys().next().value!);
     return entry;
+  }
+
+  /** What a living-island biome lays on its land: the atoll's lagoon, the salt pan's cracks, the mangrove's roots
+   *  walking out into the water. */
+  private drawBiomeLand(is: IslandData): void {
+    const g = this.g;
+    if (is.biome === 'atoll') {
+      this.path(is.poly, 0.6, is.x, is.y);
+      const grd = g.createRadialGradient(this.sx(is.x), this.sy(is.y), 0, this.sx(is.x), this.sy(is.y), is.r * 0.6 * this.zoom);
+      grd.addColorStop(0, 'rgba(46,150,160,0.92)');
+      grd.addColorStop(0.8, 'rgba(70,180,176,0.9)');
+      grd.addColorStop(1, 'rgba(150,215,200,0.85)');
+      g.fillStyle = grd;
+      g.fill();
+      g.strokeStyle = 'rgba(230,240,230,0.35)';
+      g.lineWidth = Math.max(1, 3 * this.zoom);
+      g.stroke();
+    } else if (is.biome === 'saltflat' && this.zoom > 0.25) {
+      const rnd = seeded(is.id * 131 + 5);
+      g.save();
+      this.path(is.poly, 0.85, is.x, is.y);
+      g.clip();
+      g.strokeStyle = 'rgba(120,112,96,0.35)';
+      g.lineWidth = Math.max(0.6, 1.2 * this.zoom);
+      for (let k = 0; k < 14; k++) {
+        let x = is.x + (rnd() - 0.5) * is.r * 1.4, y = is.y + (rnd() - 0.5) * is.r * 1.4;
+        g.beginPath();
+        g.moveTo(this.sx(x), this.sy(y));
+        for (let s = 0; s < 4; s++) {
+          x += (rnd() - 0.5) * is.r * 0.3;
+          y += (rnd() - 0.5) * is.r * 0.3;
+          g.lineTo(this.sx(x), this.sy(y));
+        }
+        g.stroke();
+      }
+      g.restore();
+    } else if (is.biome === 'mangrove' && this.zoom > 0.35) {
+      g.strokeStyle = 'rgba(36,30,22,0.7)';
+      g.lineWidth = Math.max(0.8, 1.6 * this.zoom);
+      const n = is.poly.length / 2;
+      for (let i = 0; i < n; i += 1) {
+        const px = is.poly[i * 2], py = is.poly[i * 2 + 1];
+        const dx = px - is.x, dy = py - is.y, l = Math.hypot(dx, dy) || 1;
+        for (let k = -1; k <= 1; k++) {
+          const ox = (-dy / l) * k * 10, oy = (dx / l) * k * 10;
+          g.beginPath();
+          g.moveTo(this.sx(px + ox - (dx / l) * 6), this.sy(py + oy - (dy / l) * 6));
+          g.quadraticCurveTo(this.sx(px + ox + (dx / l) * 10 + oy * 0.3), this.sy(py + oy + (dy / l) * 10 - ox * 0.3), this.sx(px + ox + (dx / l) * 18), this.sy(py + oy + (dy / l) * 18));
+          g.stroke();
+        }
+      }
+    }
   }
 
   private featurePoint(is: IslandData, salt: number, inset: number): { x: number; y: number } {

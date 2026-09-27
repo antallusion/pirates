@@ -8,7 +8,35 @@ export type RegionId =
   | 'leviathan_reach' | 'dead_mans_expanse' | 'drowned_crown' | 'the_abyss';
 
 export type Safety = 'safe' | 'contested' | 'lawless';
-export type IslandBiome = 'temperate' | 'mossy' | 'volcanic' | 'ice' | 'ruins' | 'bone' | 'barren';
+export type IslandBiome = 'temperate' | 'mossy' | 'volcanic' | 'ice' | 'ruins' | 'bone' | 'barren'
+  // Living islands (docs/11 P3): every region is a mix of biomes, and these seven join the old.
+  | 'jungle' | 'mangrove' | 'atoll' | 'saltflat' | 'blacksand' | 'fungal' | 'crystal';
+
+export const ISLAND_BIOMES: IslandBiome[] = ['temperate', 'mossy', 'volcanic', 'ice', 'ruins', 'bone', 'barren', 'jungle', 'mangrove', 'atoll', 'saltflat', 'blacksand', 'fungal', 'crystal'];
+
+/** Each region's islands as a weighted mix of biomes (the first is the region's own). */
+export const BIOME_MIX: Record<RegionId, [IslandBiome, number][]> = {
+  black_coast: [['temperate', 6], ['blacksand', 2], ['saltflat', 1]],
+  gravewater: [['temperate', 5], ['jungle', 2], ['atoll', 2], ['mangrove', 1]],
+  whispering: [['mossy', 5], ['mangrove', 3], ['fungal', 2]],
+  ashen_isles: [['volcanic', 6], ['blacksand', 3], ['crystal', 1]],
+  leviathan_reach: [['ice', 7], ['crystal', 2], ['barren', 1]],
+  dead_mans_expanse: [['barren', 4], ['atoll', 3], ['saltflat', 3]],
+  drowned_crown: [['ruins', 5], ['fungal', 2], ['mangrove', 1], ['crystal', 1]],
+  the_abyss: [['bone', 6], ['fungal', 2], ['crystal', 2]],
+};
+
+/** A biome from a region's mix for a roll in 0..1. */
+export function biomeFromMix(region: RegionId, roll: number): IslandBiome {
+  const mix = BIOME_MIX[region];
+  const total = mix.reduce((a, [, w]) => a + w, 0);
+  let t = roll * total;
+  for (const [b, w] of mix) {
+    if (t < w) return b;
+    t -= w;
+  }
+  return mix[mix.length - 1][0];
+}
 
 export interface RegionDef {
   id: RegionId;

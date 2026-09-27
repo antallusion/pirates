@@ -47,6 +47,13 @@ export const EN = {
   biome_ruins: 'ruins',
   biome_bone: 'bone',
   biome_barren: 'barren',
+  biome_jungle: 'jungle',
+  biome_mangrove: 'mangrove',
+  biome_atoll: 'coral atoll',
+  biome_saltflat: 'salt flats',
+  biome_blacksand: 'black sand',
+  biome_fungal: 'fungal wood',
+  biome_crystal: 'crystal cliffs',
 
   // common
   none: 'none',
@@ -458,6 +465,13 @@ export const RU: Record<keyof typeof EN, string> = {
   biome_ruins: 'руины',
   biome_bone: 'костяной',
   biome_barren: 'голый',
+  biome_jungle: 'тропический лес',
+  biome_mangrove: 'мангры',
+  biome_atoll: 'коралловый атолл',
+  biome_saltflat: 'солончаки',
+  biome_blacksand: 'чёрный песок',
+  biome_fungal: 'грибной лес',
+  biome_crystal: 'хрустальные скалы',
 
   none: 'нет',
   nobody: 'никто',

@@ -106,7 +106,7 @@ export function makeMap(game: Game, tier: number, opts: { island?: Island; legen
 const LANDMARKS: Partial<Record<string, string>> = { lighthouse: 'the lighthouse', ruins: 'the ruined chapel', shrine: 'the drowned shrine', wreck: 'the beached wreck', grove: 'the tall grove', mine: 'the old mine' };
 const SIDES = ['northern', 'north-eastern', 'eastern', 'south-eastern', 'southern', 'south-western', 'western', 'north-western'];
 const SUN = ['toward the pole star', 'toward the morning gale', 'toward the sunrise', 'toward the warm wind', 'toward the noon sun', 'toward the rain', 'toward the sunset', 'toward the cold wind'];
-const BIOME_WORDS: Record<string, string> = { temperate: 'green', mossy: 'mossy', volcanic: 'ashen', ice: 'frozen', ruins: 'broken-spired', bone: 'bone-white', barren: 'bare' };
+const BIOME_WORDS: Record<string, string> = { temperate: 'green', mossy: 'mossy', volcanic: 'ashen', ice: 'frozen', ruins: 'broken-spired', bone: 'bone-white', barren: 'bare', jungle: 'jungled', mangrove: 'mangrove-rooted', atoll: 'coral-ringed', saltflat: 'salt-white', blacksand: 'black-sanded', fungal: 'fungus-grown', crystal: 'crystal-crowned' };
 
 function octant(fromX: number, fromY: number, toX: number, toY: number): number {
   const b = Math.atan2(toX - fromX, -(toY - fromY)) / DEG;
