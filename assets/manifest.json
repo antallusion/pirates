@@ -375,6 +375,7 @@
     "prop.decor_crystal":             { "local": "props/decor_crystal.webp", "remote": "hf_20260927_214246_32bb1715-b6bd-4b86-ab7b-6372df53c485.png", "job": "32bb1715-b6bd-4b86-ab7b-6372df53c485", "fit": "keyed:768:#ff00ff" },
     "prop.decor_fungal":              { "local": "props/decor_fungal.webp", "remote": "hf_20260927_220333_5d75d54f-d615-40ca-938d-19f5082cff2a.png", "job": "5d75d54f-d615-40ca-938d-19f5082cff2a", "fit": "keyed:768:#ff00ff" },
     "portrait.giver_harbour_master_m":{ "local": "portraits/giver_harbour_master_m.webp", "remote": "hf_20260927_221429_90c47172-e728-4519-849c-60827f30a701.png", "job": "90c47172-e728-4519-849c-60827f30a701" },
-    "portrait.giver_harbour_master_f":{ "local": "portraits/giver_harbour_master_f.webp", "remote": "hf_20260927_222401_7abf6c9f-268d-46fa-a3f5-195f1da853c5.png", "job": "7abf6c9f-268d-46fa-a3f5-195f1da853c5" }
+    "portrait.giver_harbour_master_f":{ "local": "portraits/giver_harbour_master_f.webp", "remote": "hf_20260927_222401_7abf6c9f-268d-46fa-a3f5-195f1da853c5.png", "job": "7abf6c9f-268d-46fa-a3f5-195f1da853c5" },
+    "portrait.giver_fishwife_f":      { "local": "portraits/giver_fishwife_f.webp", "remote": "hf_20260927_223305_e04f9a18-6252-4255-ab8b-0dabd6967653.png", "job": "e04f9a18-6252-4255-ab8b-0dabd6967653" }
   }
 }
