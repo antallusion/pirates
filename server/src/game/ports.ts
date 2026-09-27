@@ -113,7 +113,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: crewCost(port, p),
     tavern: tavernView(game, port, p, ship),
-    questOffers: questOffers(p, port, game.now).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: q.reward.silver, xp: q.reward.xp, path: q.reward.path, category: q.category, portrait: q.portrait })),
+    questOffers: questOffers(p, port, game.now).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: q.reward.silver, xp: q.reward.xp, path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}) })),
     captainsHouse: CAPTAINS_HOUSES.includes(port.id),
     yard: {
       woods: (Object.keys(WOODS) as WoodId[]).filter((w) => woodAvailable(port, w)),

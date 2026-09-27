@@ -21,7 +21,7 @@ import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
-import { trackedQuest } from './track.ts';
+import { questPointer, trackedQuest } from './track.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
@@ -468,6 +468,24 @@ export class Hud {
     };
     for (const a of self?.legendEcho ?? []) rim(a, '#e8c65a');
     for (const m of self?.maps ?? []) if (m.bearing !== undefined) rim(m.bearing, '#2ee6c8');
+    // The followed quest's goal (docs/11 P6): a gold diamond on the chart, or at the rim toward it.
+    const qp = questPointer(trackedQuest(self?.quests), own.x, own.y, state.region);
+    if (qp) {
+      const dx = qp.x - own.x, dy = qp.y - own.y;
+      const inside = Math.hypot(dx, dy) * k < W / 2 - 8;
+      const a = Math.atan2(dx, -dy);
+      const qx = inside ? tx(qp.x) : W / 2 + Math.sin(a) * (W / 2 - 8), qy = inside ? ty(qp.y) : H / 2 - Math.cos(a) * (H / 2 - 8);
+      g.fillStyle = '#d9b25a';
+      g.strokeStyle = 'rgba(0,0,0,0.7)';
+      g.beginPath();
+      g.moveTo(qx, qy - 5);
+      g.lineTo(qx + 4, qy);
+      g.lineTo(qx, qy + 5);
+      g.lineTo(qx - 4, qy);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    }
     g.strokeStyle = 'rgba(120,190,200,0.8)';
     for (const w of self?.wrecks ?? []) {
       g.beginPath();
