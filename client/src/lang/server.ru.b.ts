@@ -706,7 +706,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} no longer carries the goods": "У {0} больше нет этого товара",
   "{0} no longer has the silver": "У {0} больше нет этого серебра",
   "{0} now leads the group.": "{0} теперь ведёт отряд.",
-  "{0} of her crew sign the articles (loyalty 20: former enemies).": "{0} из её команды переходят к вам на службу (верность 20: бывшие враги).",
+  "{0} of her crew sign the articles (loyalty 20: former enemies).": "Из её команды к вам переходят: {0} (верность 20 — бывшие враги).",
   "{0} of the crew are not aboard any more. Nobody saw them go.": "{0} из команды больше нет на борту. Никто не видел, как они ушли.",
   "{0} of the dead climb back over the rail, streaming water.": "{0} мертвецов перелезают обратно через борт, истекая водой.",
   "{0} on {1} is silenced.": "{0} на {1} подавлен.",

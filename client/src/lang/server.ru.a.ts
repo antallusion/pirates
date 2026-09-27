@@ -727,7 +727,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "Sunk ghosts rise while their soul-lanterns burn. Board them to put the lanterns out.": "Затонувшие призраки восстают, пока горят их фонари душ. Берите их на абордаж, чтобы погасить фонари.",
   "Sunken Glory: the {0}": "Затонувшая слава: «{0}»",
   "Sunken Ys": "Затонувший Ис",
-  "Swaying {0} units across ({1} s alongside).": "Перегружаем {0} ед. ({1} с борт о борт).",
+  "Swaying {0} units across ({1} s alongside).": "Перегружаем груз ({0} ед.): стоять борт к борту ещё {1} с.",
   "THE CALL. The drowned sing under the keel — your miracles are stronger, and the crew hears it too.": "ЗОВ. Утопленники поют под килем — ваши чудеса сильнее, и команда тоже это слышит.",
   "TREASURE! {0} silver{1}.": "СОКРОВИЩЕ! {0} серебра{1}.",
   "Take in sail before entering harbour": "Уберите паруса, прежде чем входить в гавань",
