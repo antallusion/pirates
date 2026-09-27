@@ -5,7 +5,7 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
-import { CAPTAINS_HOUSES, JOBS, QUESTS, QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import { ARC_QUESTS, CAPTAINS_HOUSES, ISLAND_JOBS, JOBS, QUESTS, QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { hashString } from '../../../shared/src/rng.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
@@ -63,6 +63,7 @@ export function questBlocked(p: Profile, q: QuestDef): string | null {
   if (q.reward.path && p.paths.includes(q.reward.path)) return 'You already walk this Path';
   if (q.id === 'q_first_descent' && (p.captain === 'drowned' || p.deeds.includes('deed_first_descent'))) return 'The deep already knows you';
   const r = q.requires;
+  if (r.done && !r.done.every((d) => p.quests.done.includes(d))) return `First: ${r.done.map((d) => QUESTS_BY_ID[d]?.name ?? d).join(', ')}`;
   if (r.level && p.level < r.level) return `Level ${r.level}`;
   const checks: [boolean, string][] = [];
   for (const [f, v] of Object.entries(r.rep ?? {})) checks.push([(p.reputation[f as FactionId] ?? 0) >= (v ?? 0), `${FACTIONS[f as FactionId].short} standing ${v}`]);
@@ -74,7 +75,8 @@ export function questBlocked(p: Profile, q: QuestDef): string | null {
 }
 
 export function questOffers(p: Profile, port: Port, now = 0): { q: QuestDef; blocked: string | null }[] {
-  const story = QUESTS.filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id));
+  // An arc's chapter is offered once the chapter before it is done.
+  const story = [...QUESTS, ...ARC_QUESTS].filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id) && (q.requires.done ?? []).every((d) => p.quests.done.includes(d)));
   return [...story, ...boardJobs(p, port, now)]
     .map((q) => ({ q, blocked: questBlocked(p, q) }))
     .filter((o) => o.blocked !== 'You already walk this Path' && o.blocked !== 'The deep already knows you');
@@ -104,6 +106,32 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   // A first step that is already satisfied (being in the right port) completes at once.
   questEvent(game, s, { k: 'dock', port });
   return null;
+}
+
+/** A party lands among an island's people: their job, if the captain has none of theirs yet and room for it. */
+export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): void {
+  const p = s.profile!;
+  const q = ISLAND_JOBS.get(islandId);
+  if (!q || p.quests.done.includes(q.id) || p.quests.active.some((a) => a.id === q.id)) return;
+  if ((q.requires.level ?? 1) > p.level + 3) {
+    game.sendTo(s, { t: 'toast', msg: `${q.mentor} has work, but for a captain with more years at sea (level ${q.requires.level}).`, kind: 'info' });
+    return;
+  }
+  if (p.quests.active.length >= MAX_ACTIVE_QUESTS) {
+    game.sendTo(s, { t: 'toast', msg: `${q.mentor} has work for you once you have room for it (${MAX_ACTIVE_QUESTS} quests at most).`, kind: 'info' });
+    return;
+  }
+  p.quests.active.push({ id: q.id, step: 0, progress: 0, startedAt: game.now });
+  game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
+}
+
+/** Whether an active quest's step sends the boats to this island (and site): such a landing is never "worked
+ *  out" by the two hours a feature needs to restock. */
+export function questLandsHere(p: Profile, islandId: number, feature: string): boolean {
+  return p.quests.active.some((a) => {
+    const st = QUESTS_BY_ID[a.id]?.steps[a.step];
+    return !!st && st.type === 'land' && st.island === islandId && (!st.site || st.site === feature);
+  });
 }
 
 export function abandonQuest(game: Game, s: PlayerSession, id: string): string | null {

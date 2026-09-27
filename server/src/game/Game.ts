@@ -1,8 +1,9 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
-import { generateQuests } from '../../../shared/src/data/questgen.ts';
-import { QUESTS_BY_ID, registerJobs } from '../../../shared/src/data/quests.ts';
+import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
+import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
+import { generateArcs } from '../../../shared/src/data/questarcs.ts';
 import {
   CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_CROWD, SNAP_CROWD_EVERY, SNAP_MID, SNAP_NEAR, SNAP_RANK_MID, SNAP_RANK_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
   SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight,
@@ -291,6 +292,8 @@ export class Game {
     applyIslandNames(this); // names the Pantheon gave
     // Some three thousand jobs for the ports' people (docs/11 P4), the same on every server of this seed.
     registerJobs(generateQuests(this.world, seed));
+    registerArcs(generateArcs(this.world, seed)); // five written arcs a region, three chapters each
+    registerIslandJobs(generateIslandJobs(this.world, seed)); // the islands' people
     this.rng = new Rng(seed ^ 0x5eed);
     this.routes = new RouteCache(this.world);
     this.expeditions = new ExpeditionHub(this.world);

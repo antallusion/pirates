@@ -33,12 +33,14 @@ export interface QuestDef {
   mentor: string;
   port: string; // where it is offered and where it ends
   summary: string;
-  requires: { level?: number; rep?: Partial<Record<FactionId, number>>; treePoints?: Partial<Record<TreeId, number>>; anyOf?: boolean };
+  requires: { level?: number; rep?: Partial<Record<FactionId, number>>; treePoints?: Partial<Record<TreeId, number>>; anyOf?: boolean; /** Quests that must be done first (an arc's earlier chapters). */ done?: string[] };
   steps: QuestStep[];
   reward: { xp: number; silver: number; path?: CaptainId; deed?: string };
   /** A generated job's category and its template (plot.flavour). */
   category?: string;
   template?: string;
+  /** A job given by an island's people (on landing there), not on a port's board. */
+  island?: number;
 }
 
 export const QUESTS: QuestDef[] = [
@@ -147,6 +149,24 @@ export const QUESTS: QuestDef[] = [
 ];
 
 export const QUESTS_BY_ID: Record<string, QuestDef> = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
+
+/** The story arcs of this world (the server registers them at start). */
+export const ARC_QUESTS: QuestDef[] = [];
+export function registerArcs(list: QuestDef[]): void {
+  ARC_QUESTS.length = 0;
+  ARC_QUESTS.push(...list);
+  for (const q of list) QUESTS_BY_ID[q.id] = q;
+}
+
+/** Jobs the islands' people give (the server registers them at start). */
+export const ISLAND_JOBS = new Map<number, QuestDef>();
+export function registerIslandJobs(list: QuestDef[]): void {
+  ISLAND_JOBS.clear();
+  for (const q of list) {
+    if (q.island !== undefined) ISLAND_JOBS.set(q.island, q);
+    QUESTS_BY_ID[q.id] = q;
+  }
+}
 
 /** The generated jobs of this world (the server registers them at start). */
 export const JOBS: QuestDef[] = [];

@@ -41,7 +41,7 @@ export const PROFESSIONS: Record<Profession, [string, string]> = {
 // ------------------------------------------------------------------ what each kind of step says
 
 /** Step kinds a plot is made of; each becomes a quest step with its text. */
-export type StepKind = 'pickup' | 'deliver2' | 'deliver3' | 'visit2' | 'visit3' | 'home' | 'sink_pirates' | 'sink_ghosts' | 'sink_hunters' | 'sink_any'
+export type StepKind = 'pickup' | 'deliver2' | 'deliver3' | 'visit2' | 'visit3' | 'home' | 'back' | 'sink_pirates' | 'sink_ghosts' | 'sink_hunters' | 'sink_any'
   | 'board' | 'prize' | 'land_site' | 'land_any' | 'land_any2' | 'dive' | 'chart' | 'reach' | 'time_in' | 'contraband' | 'customs';
 
 export const STEP_TEXT: Record<StepKind, [string, string]> = {
@@ -51,6 +51,7 @@ export const STEP_TEXT: Record<StepKind, [string, string]> = {
   visit2: ['Sail to {port2}.', 'Идите в порт {port2}.'],
   visit3: ['Sail on to {port3}.', 'Затем — в порт {port3}.'],
   home: ['Return to {port}: {giver} is waiting.', 'Вернитесь в порт {port}: вас ждёт {giver}.'],
+  back: ['Return to the {site} on {island}: {giver} is waiting.', 'Вернитесь к месту «{site}» на острове {island}: вас ждёт {giver}.'],
   sink_pirates: ['Sink pirate ships in {region}: {n}.', 'Потопите пиратские корабли в водах «{region}»: {n}.'],
   sink_ghosts: ['Send ghost ships back to the deep: {n}.', 'Верните на дно корабли-призраки: {n}.'],
   sink_hunters: ['Sink the hunters and patrols that come for you: {n}.', 'Потопите охотников и патрули, что придут за вами: {n}.'],
@@ -555,6 +556,8 @@ function stepOf(k: StepKind, p: GenParams, text: string): QuestStep {
       return { type: 'visit', port: p.port3!.id, text };
     case 'home':
       return { type: 'visit', port: p.port.id, text };
+    case 'back':
+      return { type: 'land', island: p.island!.id, site: p.site, text };
     case 'sink_pirates':
       return { type: 'sink', count: p.n, role: 'pirate', region: p.region, text };
     case 'sink_ghosts':
@@ -588,28 +591,60 @@ function stepOf(k: StepKind, p: GenParams, text: string): QuestStep {
   }
 }
 
+/** The plots an island's people can give (no other island in them: the giver's own is where it ends). */
+const ISLAND_PLOTS = ['supply', 'letters', 'pirate_hunt', 'chart_waters', 'lost_divers', 'storm_watch', 'run_contraband'];
+
+/** Jobs from the people of the islands (docs/11 P4): one a peopled island, given when a party lands at their
+ *  hamlet or camp, ending back on their beach. */
+export function generateIslandJobs(world: World, seed: number): QuestDef[] {
+  const out: QuestDef[] = [];
+  for (const is of world.islands) {
+    if (is.portId) continue;
+    const people = islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: Math.round(is.radius), poly: is.poly, features: is.features, portId: is.portId })
+      .find((s) => s.kind === 'fishers' || s.kind === 'smugglers');
+    if (!people) continue;
+    const rng = new Rng((is.id * 7919 + seed * 31 + 3) >>> 0);
+    const near = world.ports.slice().sort((a, b) => Math.hypot(a.x - is.x, a.y - is.y) - Math.hypot(b.x - is.x, b.y - is.y));
+    const port = near[0];
+    const plots = PLOTS.filter((pl) => ISLAND_PLOTS.includes(pl.id) && (people.kind === 'smugglers' || pl.id !== 'run_contraband'));
+    const plot = rng.pick(plots);
+    const flavors = plot.flavors.filter((f) => (people.kind === 'fishers' ? ['fishwife', 'old_salt', 'widow', 'priest', 'harbour_master'] : ['smuggler', 'fence', 'old_salt', 'tavern_keeper']).includes(f.giver));
+    const flavor = flavors.length ? rng.pick(flavors) : plot.flavors[0];
+    const params = rollParams(rng, plot, flavor, port, near.slice(1, 9), [], () => []);
+    if (!params) continue;
+    params.island = is;
+    params.site = people.kind;
+    const q = build(`i_${is.id}`, { ...plot, steps: plot.steps.map((k) => (k === 'home' ? 'back' : k)) }, flavor, params, REGION_LEVEL[REGIONS[is.region].safety] ?? 0);
+    out.push({ ...q, island: is.id });
+  }
+  return out;
+}
+
 /** Sites by the English names the server writes (the client translates them as names). */
 export const SITE_NAMES: Record<string, string> = {
   fishers: 'fishing hamlet', smugglers: "smugglers' camp", pirate_camp: 'pirate camp', garrison: 'garrisoned fort', seals: 'seal colony', crabs: 'crab beach', turtles: 'turtle beach',
   ruins: 'ruins', shrine: 'drowned shrine', bell: 'drowned bell tower',
 };
 
+/** A template pair with its named places numbered by their first use in the English. */
+export function numberedPattern(en: string, ru: string): [string, string] {
+  const names: string[] = [];
+  const num = (s: string, collect: boolean) => s.replace(/\{(\w+)\}/g, (_, k: string) => {
+    let i = names.indexOf(k);
+    if (i < 0 && collect) {
+      names.push(k);
+      i = names.length - 1;
+    }
+    return `{${i}}`;
+  });
+  const e = num(en, true);
+  return [e, num(ru, false)];
+}
+
 /** Every template's English and Russian texts, for the translation patterns (placeholders numbered by first use). */
 export function questPatterns(): [string, string][] {
   const out: [string, string][] = [];
-  const add = (en: string, ru: string) => {
-    const names: string[] = [];
-    const num = (s: string, collect: boolean) => s.replace(/\{(\w+)\}/g, (_, k: string) => {
-      let i = names.indexOf(k);
-      if (i < 0 && collect) {
-        names.push(k);
-        i = names.length - 1;
-      }
-      return `{${i}}`;
-    });
-    const e = num(en, true);
-    out.push([e, num(ru, false)]);
-  };
+  const add = (en: string, ru: string) => out.push(numberedPattern(en, ru));
   for (const pl of PLOTS) for (const f of pl.flavors) {
     add(f.name[0], f.name[1]);
     add(f.summary[0], f.summary[1]);

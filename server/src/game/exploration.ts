@@ -17,7 +17,7 @@ import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { haulSite, ownSiteNear } from './resources.ts';
 import { canDive, digTime, makeMap, grantMap, mapChance, mapHere, resolveDig, resolveDive, wreckHere } from './explorefx.ts';
-import { questEvent } from './quests.ts';
+import { islandJobOffer, questEvent, questLandsHere } from './quests.ts';
 
 /** An island feature, or one of the island's people or beasts (living islands, docs/11 P3). */
 export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'> | LandSite;
@@ -72,7 +72,7 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
     for (const f of here) {
       if (!LANDABLE.includes(f as LandableFeature)) continue;
       const t = p.explored[exploredKey(is.id, f as LandableFeature)] ?? -Infinity;
-      if (game.now - t < RESTOCK_SEC) continue;
+      if (game.now - t < RESTOCK_SEC && !questLandsHere(p, is.id, f)) continue;
       best = { island: is, feature: f as LandableFeature };
       bd = d;
       break;
@@ -359,6 +359,8 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   const what = got.length ? got.join(', ') : 'nothing but sand and bones';
   game.toastShip(ship, `The party returns from the ${FEATURE_NAMES[feature]} on ${island.name}: ${what}.${lost ? ` ${lost} lost ashore.` : ''}`, got.length ? 'gold' : 'info');
   questEvent(game, s, { k: 'land', island: island.id, feature });
+  // The hamlet's or the camp's people have a job of their own.
+  if (feature === 'fishers' || feature === 'smugglers') islandJobOffer(game, s, island.id);
   // Treasure maps turn up in caches, wrecks and ruins.
   if (feature === 'cache') mapChance(game, s, 0.15, 1, 'In the cache');
   if (feature === 'wreck') mapChance(game, s, 0.1, 1, 'In a captain\'s chest');

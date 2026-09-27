@@ -911,4 +911,10 @@ export const SERVER_RU_B: Record<string, string> = {
   "In the camp's plunder": "В добыче лагеря",
   // A landing site named in a job.
   "ruins": "руины",
+  // Arcs and the islands' people.
+  "First: {0}": "Сначала: {0}",
+  "{0} has work, but for a captain with more years at sea (level {1}).": "{0}: работа есть, но для капитана поопытнее (уровень {1}).",
+  "{0} has work for you once you have room for it ({1} quests at most).": "{0}: для вас есть работа, как только освободится место (не больше {1} заданий).",
+  "Make room in the hold: {0} {1} wait on the quay.": "Освободите трюм: на причале ждут {1} × {0}.",
+  "That job is no longer on the board": "Этого объявления уже нет на доске",
 };
