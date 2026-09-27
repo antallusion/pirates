@@ -351,6 +351,7 @@
     "icon.dash":                      { "local": "icons/dash.webp", "remote": "hf_20260927_175753_6873357e-8034-4d27-919b-227fba685e52.png", "job": "6873357e-8034-4d27-919b-227fba685e52", "fit": "opaque:192" },
     "tex.land_jungle":                { "local": "textures/land_jungle.webp", "remote": "hf_20260927_180720_64a69fbe-0f96-4853-b019-b5ed014e4654.png", "job": "64a69fbe-0f96-4853-b019-b5ed014e4654", "fit": "opaque:1024:1.6:seam" },
     "tex.land_mangrove":              { "local": "textures/land_mangrove.webp", "remote": "hf_20260927_181617_7a70ae97-722c-47cd-bd58-50881d53bb1b.png", "job": "7a70ae97-722c-47cd-bd58-50881d53bb1b", "fit": "opaque:1024:1.1:seam" },
-    "tex.land_atoll":                 { "local": "textures/land_atoll.webp", "remote": "hf_20260927_182517_3e2ff006-5c6c-404f-8118-47f0720c3ce3.png", "job": "3e2ff006-5c6c-404f-8118-47f0720c3ce3", "fit": "opaque:1024:1.31:seam" }
+    "tex.land_atoll":                 { "local": "textures/land_atoll.webp", "remote": "hf_20260927_182517_3e2ff006-5c6c-404f-8118-47f0720c3ce3.png", "job": "3e2ff006-5c6c-404f-8118-47f0720c3ce3", "fit": "opaque:1024:1.31:seam" },
+    "tex.land_saltflat":              { "local": "textures/land_saltflat.webp", "remote": "hf_20260927_183347_c657a627-afa9-4e61-81c6-5dbfd32b27a8.png", "job": "c657a627-afa9-4e61-81c6-5dbfd32b27a8", "fit": "opaque:1024:1.0:seam" }
   }
 }
