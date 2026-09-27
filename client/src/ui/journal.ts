@@ -11,6 +11,7 @@ import { ask } from './confirm.ts';
 import { commonLog, dailyLog } from './daily.ts';
 import { esc, icon, money, xpBadge } from './dom.ts';
 import { paidHtml } from './giver.ts';
+import { tasksLog } from './worldmap.ts';
 import { setTracked, trackedQuest } from './track.ts';
 
 const EN = {
@@ -79,7 +80,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>

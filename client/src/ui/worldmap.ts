@@ -21,6 +21,19 @@ import { taskName } from '../../../shared/src/data/worldtasks.ts';
 const L = dict(EN, RU);
 
 /** The chart's key, in its own symbols. */
+/** Tasks of the sea (docs/11 P6): each nest, field or haunted waters, the minutes left and one's tally — under the
+ *  chart (a row turns the chart to it) and in the journal. */
+export function tasksLog(state: ClientState, clickable: boolean): string {
+  if (!state.tasks.length) return '';
+  const gone = (performance.now() - state.tasksAt) / 1000;
+  const rows = state.tasks.map((t) => {
+    const m = Math.max(0, Math.ceil((t.endsIn - gone) / 60));
+    const inner = `<b>${esc(serverText(taskName(t.kind, t.island)))}</b><span class="muted">${esc(placeName(REGIONS[t.region].name))} · ${t.done ? esc(L('taskDone')) : esc(L('taskRow', { m, k: t.mine, n: t.need }))}</span>`;
+    return clickable ? `<button class="mq-row task${t.done ? ' done' : ''}" data-task="${t.id}">${inner}</button>` : `<div class="mq-row task off${t.done ? ' done' : ''}">${inner}</div>`;
+  }).join('');
+  return `<div class="map-quests map-tasks" title="${esc(L('tasksHint'))}"><div class="mq-head">${icon('danger', '', 'ico-sm')}${esc(L('tasks'))}</div>${rows}</div>`;
+}
+
 const LEGEND: [string, Parameters<typeof L>[0]][] = [
   ['map_ship', 'lg.you'], ['map_port', 'lg.port'], ['map_contract', 'lg.contract'], ['map_treasure', 'lg.treasure'],
   ['map_wreck', 'lg.wreck'], ['map_event', 'lg.event'], ['danger', 'lg.task'], ['map_monster', 'lg.sighting'],
@@ -36,13 +49,7 @@ export class WorldMap {
 
   /** Tasks of the sea (docs/11 P6): each nest, its waters, the minutes left and one's tally. */
   private tasksLog(state: ClientState): string {
-    if (!state.tasks.length) return '';
-    const gone = (performance.now() - state.tasksAt) / 1000;
-    const rows = state.tasks.map((t) => {
-      const m = Math.max(0, Math.ceil((t.endsIn - gone) / 60));
-      return `<button class="mq-row task${t.done ? ' done' : ''}" data-task="${t.id}"><b>${esc(serverText(taskName(t.kind, t.island)))}</b><span class="muted">${esc(placeName(REGIONS[t.region].name))} · ${t.done ? esc(L('taskDone')) : esc(L('taskRow', { m, k: t.mine, n: t.need }))}</span></button>`;
-    }).join('');
-    return `<div class="map-quests map-tasks" title="${esc(L('tasksHint'))}"><div class="mq-head">${icon('danger', '', 'ico-sm')}${esc(L('tasks'))}</div>${rows}</div>`;
+    return tasksLog(state, true);
   }
 
   /** Set by the shell: a message to the server (sharing a quest with the group). */
