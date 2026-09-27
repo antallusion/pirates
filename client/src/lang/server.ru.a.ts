@@ -336,7 +336,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "Hard Bargain": "Жёсткий торг",
   "Harpoon lines: {0}/{1} to hold it. Held, its gills open (×2 at the head).": "Гарпунные лини: {0}/{1}, чтобы удержать. Удержан — жабры раскрываются (×2 по голове).",
   "Harpooned by {0}! Cut the line or be boarded.": "Вас загарпунил {0}! Рубите линь, или вас возьмут на абордаж.",
-  "Harrow Maid": "Борона",
+  "Harrow Maid": "Скорбная дева",
   "Hauled {0} {1} aboard from {2}.": "Принято на борт: {1} × {0} из {2}.",
   "Heart of the Whale": "Сердце Кита",
   "Heave to first": "Сначала лягте в дрейф",

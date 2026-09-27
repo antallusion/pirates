@@ -50,7 +50,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
   }
   const draw = () => {
     const used = base + cargoVolume(take, mul);
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: r.targetName }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div></div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: placeName(r.targetName) }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div></div></div>
       <div class="modal-body"><div class="cols"><div>
         <h3 class="title-sm" style="font-size:20px">${esc(L('board.cargo'))}</h3>
         ${goods.length ? goods.map((g) => `<div class="loot-grid">${icon(`good_${g}`, '', 'item-ico')}<div class="item-text"><b>${esc(GOODS[g].name)}</b><span class="muted">${esc(L('board.aboard', { n: r.cargo[g] ?? 0 }))}${state.self?.appraisal?.[g] ? ` · ${money(state.self.appraisal[g]!.price)}` : ''}</span></div><b class="loot-take">${take[g] ?? 0}</b>

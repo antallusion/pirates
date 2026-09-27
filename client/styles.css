@@ -943,3 +943,9 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
   body:not(.touch) { --slot: min(42px, calc((100vw - 64px) / 10)); }
   body:not(.touch) #toasts { width: min(calc(100vw - 120px), 340px); left: calc(50% - 26px); }
 }
+/* A long action bar on a narrow screen (a level-60 captain: six shot, four abilities, five talents) breaks into
+   rows between its groups instead of scrolling its last slots out of sight. */
+@media (max-width: 699px) {
+  #hud-combat .ab-row { flex-wrap: wrap; justify-content: center; overflow: visible; row-gap: 4px; }
+  #hud-combat .ab-sep { display: none; }
+}

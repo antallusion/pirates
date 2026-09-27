@@ -9,7 +9,7 @@
 //   /time <hour>               wind the world clock forward to that hour
 //   /god                       no damage, hull and crew kept whole
 //   /ship <class>              change hull (in port or at sea)
-//   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink
+//   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
 import { DAY_LENGTH_SEC, MAX_LEVEL, timeOfDay } from '../../../shared/src/constants.ts';
 import { BOSSES } from '../../../shared/src/data/bosses.ts';
@@ -33,7 +33,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -161,6 +161,18 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.crew = Math.max(ship.crew, ship.stats.crewMin);
       game.pushSelf(s, true);
       return `She is a ${SHIP_CLASSES[cls].name} now (crew ${ship.crew}).`;
+    }
+    case 'spawn': {
+      // A ship to fight, board or trade with, 300 m off the beam: /spawn [role] [class] [faction].
+      const role = (args[0] ?? 'merchant') as 'merchant';
+      const cls = (args[1] ?? 'fluyt') as ShipClassId;
+      const faction = (args[2] ?? 'league') as 'league';
+      if (!SHIP_CLASSES[cls]) return `Classes: ${Object.keys(SHIP_CLASSES).join(', ')}`;
+      const a = ship.state.heading + Math.PI / 2;
+      const o = game.spawnNpcShip(role, cls, faction, ship.state.x + Math.sin(a) * 300, ship.state.y - Math.cos(a) * 300, ship.state.heading);
+      if (role === 'merchant') o.cargo = { spices: 20, rum: 15, sugar: 20 };
+      game.grid.upsert(o.id, o.state.x, o.state.y);
+      return `${o.name} (${SHIP_CLASSES[cls].name}, ${faction}) lies off your beam.`;
     }
     case 'sink':
       // The death screen, the tow or the respawn, the losses — without waiting for a fight to go wrong.

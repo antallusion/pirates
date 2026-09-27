@@ -29,10 +29,10 @@ import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { OptionsScreen } from './ui/options.ts';
-import { actionFor, applyToDocument, keyOf, onSettings, settings, update } from './settings.ts';
+import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
 import type { PadEvent } from './gamepad.ts';
-import type { Settings } from './settings.ts';
+import type { Action, Settings } from './settings.ts';
 import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { serverText } from './lang/server.ts';
@@ -745,6 +745,12 @@ function sendInput(now: number): void {
 
 // ------------------------------------------------------------------ context prompt & board target
 
+/** The key an action is bound to, as the prompt shows it (the player may have rebound it). */
+function keyOfAction(a: Action): string {
+  const [k1, k2] = settings().keys[a];
+  return keyLabel(k1 || k2);
+}
+
 function computePrompt(): string {
   const own = state.ownDisplay;
   const self = state.self;
@@ -772,7 +778,7 @@ function computePrompt(): string {
   const parts: string[] = [];
   if (best !== null) {
     const name = state.ships.get(best)?.info?.name ?? L('her');
-    parts.push(`<kbd>B</kbd> ${esc(L('board', { name }))} <span class="muted">${esc(L('boardMods'))}</span>`);
+    parts.push(`<kbd>${esc(keyOfAction('board'))}</kbd> ${esc(L('board', { name: placeName(name) }))} <span class="muted">${esc(L('boardMods'))}</span>`);
   }
   const ab = self.abyss;
   if (ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500) parts.push(esc(L('ritual', { cmd: '\u0000' })).replace('\u0000', '<kbd>/ritual</kbd>'));
@@ -781,15 +787,15 @@ function computePrompt(): string {
     const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
     parts.push(`${esc(L('ashore', { feature: sv(self.landing.feature.replace('_', ' ')), pct: Math.round(frac * 100) }))} <span class="muted">${esc(L('recall'))}</span>`);
   } else if (self.landable?.blocked) parts.push(`<span class="muted">${esc(sv(self.landable.feature))} — ${esc(sv(self.landable.blocked))}</span>`);
-  else if (self.landable?.action === 'dig') parts.push(`<kbd>L</kbd> ${esc(L('dig', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
-  else if (self.landable?.action === 'raise') parts.push(`<kbd>L</kbd> ${esc(L('raise', { feature: sv(self.landable.feature.replace(/^wreck of the /, '')) }))}`);
-  else if (self.landable?.action === 'expedition') parts.push(`<kbd>L</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);
-  else if (self.landable?.action === 'dive') parts.push(`<kbd>L</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
-  else if (self.landable) parts.push(`<kbd>L</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
+  else if (self.landable?.action === 'dig') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dig', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
+  else if (self.landable?.action === 'raise') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('raise', { feature: sv(self.landable.feature.replace(/^wreck of the /, '')) }))}`);
+  else if (self.landable?.action === 'expedition') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);
+  else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
+  else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
-  if (port) parts.push(`<kbd>F</kbd> ${esc(L('enter', { port: sv(port.name) }))}`);
+  if (port) parts.push(`<kbd>${esc(keyOfAction('dock'))}</kbd> ${esc(L('enter', { port: sv(port.name) }))}`);
   if (you.flags & SF.PROTECTED) parts.push(`<span class="muted">${esc(L('protected'))}</span>`);
-  if (you.combat && !(you.flags & SF.REPAIRING) && you.hull < you.hullMax * 0.5) parts.push(`<span class="muted">${esc(L('repairLull', { key: '\u0000' })).replace('\u0000', '<kbd>R</kbd>')}</span>`);
+  if (you.combat && !(you.flags & SF.REPAIRING) && you.hull < you.hullMax * 0.5) parts.push(`<span class="muted">${esc(L('repairLull', { key: '\u0000' })).replace('\u0000', `<kbd>${esc(keyOfAction('repair'))}</kbd>`)}</span>`);
   return parts.join('<br>');
 }
 

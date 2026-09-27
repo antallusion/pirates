@@ -1660,7 +1660,8 @@ export class Renderer {
     g.textAlign = 'center';
     g.font = '600 11px Inter, sans-serif';
     // The faction's sign leads every NPC's name (§11.1): never the lantern's colour alone.
-    const label = info.isPlayer ? `${info.captainName} · ${info.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${info.name}`;
+    // NPC ships' names read in the player's language, as in every toast about them; captains name their own.
+    const label = info.isPlayer ? `${info.captainName} · ${info.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${placeName(info.name)}`;
     const cb = settings().colorblind;
     g.fillStyle = '#000';
     g.fillText(label, x + 1, y + 1);
