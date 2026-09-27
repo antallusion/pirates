@@ -25,6 +25,8 @@ import { closestOnPolygon, headingVec, pointInPolygon } from '../../../shared/sr
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { summon } from './bosses.ts';
 import { startBoarding } from './boarding.ts';
+import { mastWreck } from './combat.ts';
+import { spawnFireship } from './npc.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -35,7 +37,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -183,6 +185,17 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       startBoarding(game, ship, o, 'standard');
       return `Grappled: ${o.name}.`;
     }
+    case 'fireship':
+      // A burning hull steered at you from 1.5 km.
+      if (ship.docked) return 'Put to sea first.';
+      return spawnFireship(game, ship) ? 'A fireship is coming.' : 'No open water for her.';
+    case 'mast':
+      // Your mast by the board: the wreckage alongside, to keep or cut away.
+      if (ship.docked) return 'Put to sea first.';
+      ship.addEffect({ id: 'broken_mast', until: game.now + 1e9, mods: { maxSpeed: -0.3 } }, game.now);
+      mastWreck(game, ship);
+      game.pushSelf(s, true);
+      return 'Dismasted.';
     case 'sink':
       // The death screen, the tow or the respawn, the losses — without waiting for a fight to go wrong.
       if (ship.docked) return 'Put to sea first.';

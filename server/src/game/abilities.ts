@@ -3,7 +3,7 @@
 
 import { findAbility } from '../../../shared/src/data/captains.ts';
 import { dist, headingOf } from '../../../shared/src/math.ts';
-import { applyDamage } from './combat.ts';
+import { applyDamage, mastWreck } from './combat.ts';
 import { RESOLVE_MAX, callPower, spendDread, witnessMiracle } from './mind.ts';
 import { siegeImpact } from './siege.ts';
 import type { Game } from './Game.ts';
@@ -170,7 +170,10 @@ export function stepStrikes(game: Game): void {
         if (dist(o.state.x, o.state.y, s.x, s.y) > s.radius + o.stats.length / 3) return;
         applyDamage(game, o, { hull: Math.min(4000, o.stats.hullMax * s.hull), crew: 2, morale: 8 }, owner);
         o.leaks = Math.min(8, o.leaks + 2);
-        if (!o.hasFlag('ironbound_masts') && !o.hasEffect('broken_mast')) o.addEffect({ id: 'broken_mast', until: now + 1e9, mods: { maxSpeed: -0.3 }, source: s.owner }, now);
+        if (!o.hasFlag('ironbound_masts') && !o.hasEffect('broken_mast')) {
+          o.addEffect({ id: 'broken_mast', until: now + 1e9, mods: { maxSpeed: -0.3 }, source: s.owner }, now);
+          mastWreck(game, o);
+        }
       });
       game.zones.push({ kind: 'maw_pull', x: s.x, y: s.y, r: s.radius * 2, inner: s.radius * 0.5, start: now, until: now + 3, owner: s.owner, power: 1, hit: [] });
       // Everything in the deep within 2 km heard it.

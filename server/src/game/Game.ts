@@ -92,7 +92,7 @@ import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditions
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
-import { applyDamage, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
+import { applyDamage, cutMastWreck, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, takeCaptive, takePrize } from './prizes.ts';
@@ -951,8 +951,8 @@ export class Game {
     }
     // Leaks, pumps and plugs.
     if (stepFlooding(this, ship)) return;
-    // Fire.
-    if (ship.hasEffect('fire')) applyDamage(this, ship, { hull: st.hullMax * 0.006 * (ship.hasFlag('wet_decks') ? 0.6 : 1), sails: 1.5 }, null);
+    // Fire (a fireship's own blaze is her weapon, not her end: she burns without burning down).
+    if (ship.hasEffect('fire') && this.npcs.get(ship.id)?.fireship === undefined) applyDamage(this, ship, { hull: st.hullMax * 0.006 * (ship.hasFlag('wet_decks') ? 0.6 : 1), sails: 1.5 }, null);
     // Storms punish full canvas.
     const w = this.weatherOf(ship);
     const canvas = ship.hasFlag('storm_rider') ? 0 : Math.max(0, 1 + tval(st, 'stormSailDamage'));
@@ -1267,6 +1267,12 @@ export class Game {
   dropPrivateLoot(accountId: number, x: number, y: number, cargo: Cargo, ttl: number): void {
     const id = this.allocId();
     this.loot.set(id, { id, x, y, cargo, gold: 0, expires: this.now + ttl, ownerOnly: accountId });
+  }
+
+  /** Cargo on the water for anyone to fish up (a merchant running lighter). */
+  dropCrate(x: number, y: number, cargo: Cargo): void {
+    const id = this.allocId();
+    this.loot.set(id, { id, x, y, cargo, gold: 0, expires: this.now + 300 });
   }
 
   /** Decoy Barrels: empty casks that look like cargo. */
@@ -2215,6 +2221,10 @@ export class Game {
         return err(fireMount(this, ship, Number(msg.x), Number(msg.y)));
       case 'aim':
         if (msg.side === 'port' || msg.side === 'starboard') holdAim(this, ship, msg.side);
+        return;
+      case 'cut_mast':
+        err(cutMastWreck(this, ship));
+        this.pushSelf(s);
         return;
       case 'dash': {
         const why = dash(this, ship);

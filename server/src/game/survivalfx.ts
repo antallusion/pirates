@@ -55,7 +55,7 @@ export function stepSurvival(game: Game, ship: ShipEntity): void {
   if (dc > 0 && ship.hasEffect('broken_mast')) {
     ship.talentReady.juryRig ??= now + 180 * Math.max(0.2, 1 - dc);
     if (now >= ship.talentReady.juryRig) {
-      ship.effects = ship.effects.filter((e) => e.id !== 'broken_mast');
+      ship.effects = ship.effects.filter((e) => e.id !== 'broken_mast' && e.id !== 'mast_wreck');
       ship.recompute(now);
       delete ship.talentReady.juryRig;
       game.toastShip(ship, 'A jury-rigged mast is stepped. She can run again.', 'good');

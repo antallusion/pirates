@@ -20,7 +20,7 @@ import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
-import { effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
+import { applyDamage, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
@@ -57,6 +57,19 @@ export interface NpcBrain {
   stuckCheck: { x: number; y: number; t: number };
   /** The First Watch's practice raider: she comes for this one novice even in safe water. */
   practice?: number;
+  /** Dynamic combat (docs/11 P2): a pack member's side of approach (radians off the prey's heading), until when. */
+  flank?: number;
+  flankUntil?: number;
+  /** A merchant's cargo thrown over the side to run lighter: how often, and when next. */
+  dumped?: number;
+  dumpAt?: number;
+  /** A pirate lying in wait in fog or darkness. */
+  ambushing?: boolean;
+  /** A patrol's flagship and this ship's place in her line. */
+  leader?: number;
+  slot?: number;
+  /** A fireship: the ship she steers for, burning, to lay herself alongside and blow up. */
+  fireship?: number;
 }
 
 const SHIP_NAMES = [
@@ -400,6 +413,10 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     }
   }
 
+  if (brain.fireship !== undefined) {
+    fireshipThink(game, ship, brain);
+    return;
+  }
   // A prize under a prize crew keeps station astern of her captor and never fights.
   if (ship.prize) {
     const owner = ship.ownerId !== null ? game.ships.get(ship.ownerId) : undefined;
@@ -423,6 +440,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
         return;
       }
       const away = headingOf(ship.state.x - danger.state.x, ship.state.y - danger.state.y);
+      if (role === 'merchant') runLighter(game, ship, brain, danger);
       steer(game, ship, brain, away, 1);
       return;
     }
@@ -439,11 +457,50 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     return;
   }
   if (prey) {
-    brain.target = (prey as ShipEntity).id;
-    engage(game, ship, brain, prey as ShipEntity, preyD);
+    const p = prey as ShipEntity;
+    // Out of the fog: the first broadside from hiding is the ambush's (Shadow Strike); then she shows herself.
+    if (brain.ambushing) {
+      brain.ambushing = false;
+      ship.effects = ship.effects.filter((e) => e.id !== 'ambush');
+      ship.addEffect({ id: 'ambush', until: now + 8, flags: ['shadow_strike'] }, now);
+    }
+    if (role === 'pirate' && brain.target !== p.id && p.isPlayer) rallyPack(game, ship, p);
+    brain.target = p.id;
+    engage(game, ship, brain, p, preyD);
     return;
   }
   brain.target = null;
+  brain.flank = undefined;
+  // In fog or darkness a pirate lies low and waits for a sail to come to her.
+  if (role === 'pirate' && !ship.prize && (game.weatherOf(ship) === 'fog' || isNight(now))) {
+    if (!brain.ambushing) {
+      brain.ambushing = true;
+      ship.addEffect({ id: 'ambush', until: now + 900, flags: ['dark_running', 'shadow_strike'] }, now);
+    }
+    const path = brain.path;
+    const [wx, wy] = path && brain.wp < path.length ? path[brain.wp] : [ship.state.x, ship.state.y];
+    steer(game, ship, brain, headingOf(wx - ship.state.x, wy - ship.state.y), 0.15);
+    return;
+  }
+  if (brain.ambushing) {
+    brain.ambushing = false;
+    ship.effects = ship.effects.filter((e) => e.id !== 'ambush');
+    ship.recompute(now);
+  }
+  // A patrol keeps her place in the flagship's line.
+  if (brain.leader !== undefined) {
+    const lead = game.ships.get(brain.leader);
+    if (lead && lead.alive && !lead.docked) {
+      const side = (brain.slot ?? 1) % 2 ? -1 : 1;
+      const f = headingVec(lead.state.heading), r = headingVec(lead.state.heading + Math.PI / 2);
+      const back = 170 * Math.ceil((brain.slot ?? 1) / 2), across = 110 * side;
+      const tx = lead.state.x - f.x * back + r.x * across, ty = lead.state.y - f.y * back + r.y * across;
+      const d = dist(ship.state.x, ship.state.y, tx, ty);
+      steer(game, ship, brain, d > 60 ? headingOf(tx - ship.state.x, ty - ship.state.y) : lead.state.heading, d > 300 ? 1 : d > 120 ? 0.8 : Math.max(0.3, lead.state.sail));
+      return;
+    }
+    brain.leader = undefined;
+  }
   if (ship.ownerId !== null) {
     const owner = game.ships.get(ship.ownerId);
     if (owner) {
@@ -510,6 +567,15 @@ function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntit
   const leadBearing = headingOf(px - ship.state.x, py - ship.state.y);
   const weakened = target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
 
+  // A pack member comes round to her own side of the prey before she opens fire.
+  if (brain.flank !== undefined && (brain.flankUntil ?? 0) > game.now && d > maxRange * 0.7) {
+    const side = headingVec(target.state.heading + brain.flank);
+    const fx = target.state.x + side.x * maxRange * 0.75, fy = target.state.y + side.y * maxRange * 0.75;
+    if (dist(ship.state.x, ship.state.y, fx, fy) > 180) {
+      steer(game, ship, brain, headingOf(fx - ship.state.x, fy - ship.state.y), 1);
+      return;
+    }
+  }
   if (d > maxRange * 1.5) {
     steer(game, ship, brain, bearing, 1);
   } else if (wantsBoard && weakened) {
@@ -594,6 +660,113 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   }
   const diff = angleDiff(ship.state.heading, desired);
   ship.input = { rudder: clamp(diff * 2.2, -1, 1), sailTarget: sail };
+}
+
+/** A wolf pack: a pirate that goes for a captain calls up to two idle pirates within 3 km; they come round to
+ *  her quarters from either side while the first closes from where she is. */
+export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): number {
+  const now = game.now;
+  const sides = [1.9, -1.9];
+  let n = 0;
+  game.forShipsNear(ship.state.x, ship.state.y, 3000, (o) => {
+    if (n >= sides.length || o.id === ship.id || !o.alive || o.docked || o.prize || o.surrendered) return;
+    const b = game.npcs.get(o.id);
+    if (!b || b.role !== 'pirate' || b.target !== null || o.hull < o.stats.hullMax * 0.4) return;
+    b.active = true;
+    b.target = prey.id;
+    b.chase = { id: prey.id, until: now + 120 };
+    b.flank = sides[n];
+    b.flankUntil = now + 90;
+    b.ambushing = false;
+    n++;
+  });
+  if (n > 0) game.toastShip(prey, 'A pirate pack closes in — sails on both quarters!', 'bad');
+  // Outside safe water a pack may send a fireship ahead of it.
+  if (REGIONS[prey.region].safety !== 'safe' && game.rng.chance(0.3)) spawnFireship(game, prey);
+  return n;
+}
+
+/** A fireship: a small hull packed with powder and set alight, steered at a captain to lay herself alongside and
+ *  blow up. Sink her before she arrives. */
+export function spawnFireship(game: Game, prey: ShipEntity): ShipEntity | null {
+  // From windward, as fireships always came: she runs down on her mark before the wind.
+  const from = wrapAngle(game.windFor(prey).dir + Math.PI);
+  for (let i = 0; i < 8; i++) {
+    const a = from + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.35;
+    const x = prey.state.x + Math.sin(a) * 1100, y = prey.state.y - Math.cos(a) * 1100;
+    if (depthAt(game.world, x, y) < 6) continue;
+    const ship = game.spawnNpcShip('pirate', 'sloop', 'free', x, y, headingOf(prey.state.x - x, prey.state.y - y), { ship: 'Fireship', captain: 'No One' });
+    const brain = game.npcs.get(ship.id)!;
+    brain.active = true;
+    brain.fireship = prey.id;
+    brain.chase = { id: prey.id, until: game.now + 150 };
+    ship.cargo = { gunpowder: 20 };
+    ship.crew = Math.max(ship.stats.crewMin, Math.round(ship.crew * 0.6)); // a skeleton crew to steer her in and take to the boats
+    igniteShip(game, ship, 150, null);
+    // Her boats tow her on and the blaze makes its own draught: she keeps her way whatever the wind.
+    ship.addEffect({ id: 'fireship', until: game.now + 1e9, flags: ['personal_wind'] }, game.now);
+    game.grid.upsert(ship.id, x, y);
+    game.toastShip(prey, 'A fireship bears down on you — sink her before she strikes!', 'bad');
+    return ship;
+  }
+  return null;
+}
+
+/** The fireship steers for her mark; alongside, she blows up. With her mark gone she burns out and sinks. */
+function fireshipThink(game: Game, ship: ShipEntity, brain: NpcBrain): void {
+  const mark = game.ships.get(brain.fireship!);
+  if (!mark || !mark.alive || mark.docked) {
+    ship.hull = 0;
+    game.beginSinking(ship);
+    return;
+  }
+  const d = dist(ship.state.x, ship.state.y, mark.state.x, mark.state.y);
+  if (d < (ship.stats.beam + mark.stats.beam) / 2 + 16) {
+    fireshipBlows(game, ship);
+    return;
+  }
+  // Lead her mark a little, and never strike sail.
+  const tv = headingVec(mark.state.heading);
+  const t = Math.min(6, d / Math.max(3, ship.state.speed + 1));
+  steer(game, ship, brain, headingOf(mark.state.x + tv.x * mark.state.speed * t - ship.state.x, mark.state.y + tv.y * mark.state.speed * t - ship.state.y), 1);
+}
+
+/** The powder goes up: every hull within 80 m is holed, set alight and loses men; the fireship is gone. */
+export function fireshipBlows(game: Game, ship: ShipEntity): void {
+  game.emit({ k: 'fx', fx: 'explosion', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 70 }, ship.state.x, ship.state.y);
+  game.forShipsNear(ship.state.x, ship.state.y, 80, (o) => {
+    if (o.id === ship.id || !o.alive || o.docked) return;
+    if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > 80) return;
+    applyDamage(game, o, { hull: o.stats.hullMax * 0.14, sails: o.stats.sailHpMax * 0.2, crew: Math.round(o.crew * 0.06), morale: 10 }, ship, { x: ship.state.x, y: ship.state.y });
+    igniteShip(game, o, 10, ship);
+  });
+  ship.hull = 0;
+  game.beginSinking(ship);
+}
+
+/** A merchant run down throws a third of her hold over the side (up to three times) to run lighter: a trail of
+ *  crates for the chaser to choose between. */
+export function runLighter(game: Game, ship: ShipEntity, brain: NpcBrain, danger: ShipEntity): boolean {
+  const now = game.now;
+  if ((brain.dumped ?? 0) >= 3 || now < (brain.dumpAt ?? 0) || ship.surrendered) return false;
+  if (dist(ship.state.x, ship.state.y, danger.state.x, danger.state.y) > 900) return false;
+  const cargo: Partial<Record<GoodId, number>> = {};
+  let any = false;
+  for (const [g, n] of Object.entries(ship.cargo) as [GoodId, number][]) {
+    const k = Math.floor(n / 3);
+    if (k <= 0) continue;
+    cargo[g] = k;
+    ship.cargo[g] = n - k;
+    any = true;
+  }
+  if (!any) return false;
+  brain.dumped = (brain.dumped ?? 0) + 1;
+  brain.dumpAt = now + 20;
+  const back = headingVec(ship.state.heading + Math.PI);
+  game.dropCrate(ship.state.x + back.x * 40, ship.state.y + back.y * 40, cargo);
+  ship.recompute(now);
+  game.toastNear(ship, `${ship.name} throws cargo over the side to run lighter!`);
+  return true;
 }
 
 // ------------------------------------------------------------------ director: keeps the ocean alive
@@ -683,6 +856,7 @@ export function spawnPatrols(game: Game): void {
     if (!port.key) continue;
     if (port.faction !== 'crown' && port.faction !== 'league' && port.faction !== 'harpoon') continue;
     const n = port.size >= 3 ? 3 : 2;
+    let leader: number | null = null;
     for (let i = 0; i < n; i++) {
       const cls: ShipClassId = port.size >= 3 && i === 0 ? 'frigate' : i === 1 ? 'brig' : 'brigantine';
       const ship = game.spawnNpcShip('patrol', cls, port.faction, port.x, port.y, game.rng.range(0, 6.28));
@@ -690,7 +864,13 @@ export function spawnPatrols(game: Game): void {
       const brain = game.npcs.get(ship.id)!;
       brain.area = { x: port.x, y: port.y, r: port.size >= 3 ? 11000 : 8000 };
       brain.destPort = null;
+      // The first sails the beat; the rest keep station in her line.
+      if (leader !== null) {
+        brain.leader = leader;
+        brain.slot = i;
+      }
       if (!planWander(game, ship, brain)) game.removeShip(ship.id);
+      else if (leader === null) leader = ship.id;
     }
   }
 }

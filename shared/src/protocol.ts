@@ -35,6 +35,8 @@ export type ClientMsg =
   | { t: 'aim'; side: Side }
   /** A hard turn with every hand on the braces: speed, a sharp helm and a moment of evasion. */
   | { t: 'dash' }
+  /** Cut away a fallen mast's wreckage (the helm back, the shield gone). */
+  | { t: 'cut_mast' }
   | { t: 'chase'; end: ChaserEnd; x: number; y: number }
   | { t: 'mount'; x: number; y: number }
   | { t: 'ammo'; ammo: AmmoId }

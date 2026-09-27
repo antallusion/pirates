@@ -879,4 +879,14 @@ export const SERVER_RU_B: Record<string, string> = {
   // Dynamic combat: the dash.
   "Cannot manoeuvre now": "Сейчас не до манёвров",
   "The crew is still hauling the braces ({0} s)": "Команда ещё выбирает брасы ({0} с)",
+  // Dynamic combat: packs and merchants running lighter.
+  "A pirate pack closes in — sails on both quarters!": "Пиратская стая сходится — паруса по обеим раковинам!",
+  "{0} throws cargo over the side to run lighter!": "{0} сбрасывает груз за борт, чтобы уйти налегке!",
+  // Dynamic combat: masts by the board and fireships.
+  "The mast goes by the board! Her wreckage drags alongside — cut it away to free the helm.": "Мачта рухнула за борт! Обломки волочатся у борта — срубите их, чтобы освободить руль.",
+  "No wreckage to cut away": "Рубить нечего — обломков за бортом нет",
+  "The wreckage is cut away: the helm answers again, but that side lies open.": "Обломки срублены: руль снова слушается, но борт теперь открыт.",
+  "A fireship bears down on you — sink her before she strikes!": "На вас идёт брандер — потопите его, пока не дошёл!",
+  "Fireship": "Брандер",
+  "No One": "Никто",
 };

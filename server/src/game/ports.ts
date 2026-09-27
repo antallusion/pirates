@@ -304,7 +304,7 @@ export function shipyardRepair(game: Game, s: PlayerSession): string | null {
   ship.rudderHp = 1;
   ship.gunsDisabled = { port: 0, starboard: 0 };
   // A new mast is stepped.
-  if (ship.hasEffect('broken_mast')) ship.effects = ship.effects.filter((e) => e.id !== 'broken_mast');
+  if (ship.hasEffect('broken_mast')) ship.effects = ship.effects.filter((e) => e.id !== 'broken_mast' && e.id !== 'mast_wreck');
   ship.recompute(game.now);
   game.db.ledger(s.accountId, 'repair', -cost, ship.loadout.classId);
   return null;

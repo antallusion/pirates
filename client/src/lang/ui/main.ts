@@ -44,6 +44,8 @@ export const EN = {
   dig: 'Dig for the {feature} on {island}',
   raise: 'Raise the {feature} from the sea floor',
   expedition: 'Lower the diving bell over {island} (heave to first)',
+  cutMast: 'Cut away the mast wreckage',
+  cutMastWhy: '(the helm answers again; the side loses its shield)',
   dive: 'Send divers down to the {feature}',
   landParty: 'Send a landing party to the {feature} on {island}',
   enter: 'Enter {port}',
@@ -54,6 +56,7 @@ export const EN = {
   'tc.harbour': 'Harbour',
   'tc.axes': 'Axes!',
   'tc.land': 'Land a party',
+  'tc.cutMast': 'Cut the wreckage',
   'tc.repair': 'Repair',
   'tc.repairStop': 'Stop repairs',
 } as const;
@@ -102,6 +105,8 @@ export const RU: Record<keyof typeof EN, string> = {
   dig: 'Копать: «{feature}», остров {island}',
   raise: 'Поднять «{feature}» с морского дна',
   expedition: 'Спустить водолазный колокол — {island} (сначала лягте в дрейф)',
+  cutMast: 'Срубить обломки мачты',
+  cutMastWhy: '(руль снова слушается, борт теряет прикрытие)',
   dive: 'Отправить ныряльщиков к цели «{feature}»',
   landParty: 'Высадить десант: «{feature}», остров {island}',
   enter: 'Войти в порт {port}',
@@ -112,6 +117,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'tc.harbour': 'В гавань',
   'tc.axes': 'Топоры!',
   'tc.land': 'Высадка',
+  'tc.cutMast': 'Срубить обломки',
   'tc.repair': 'Ремонт',
   'tc.repairStop': 'Хватит чинить',
 };

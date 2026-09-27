@@ -669,7 +669,7 @@ addEventListener('keydown', (e) => {
       } else hud.toast(L('noCrippled'), 'bad');
       break;
     case 'land':
-      net.send({ t: 'land' });
+      net.send(mastWreck() && !state.self?.landable ? { t: 'cut_mast' } : { t: 'land' });
       break;
     case 'orders': {
       const cur = state.you?.station ?? 'balanced';
@@ -922,6 +922,7 @@ function computePrompt(): string {
   else if (self.landable?.action === 'expedition') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
   else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
+  if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
   if (port) parts.push(`<kbd>${esc(keyOfAction('dock'))}</kbd> ${esc(L('enter', { port: sv(port.name) }))}`);
   if (you.flags & SF.PROTECTED) parts.push(`<span class="muted">${esc(L('protected'))}</span>`);
@@ -988,8 +989,14 @@ function padContext(): void {
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void requestDock(false);
   if (state.self?.landable && !state.self.landable.blocked) return void net.send({ t: 'land' });
+  if (mastWreck()) return void net.send({ t: 'cut_mast' });
   const you = state.you;
   if (you && (you.flags & SF.REPAIRING || !you.combat)) net.send({ t: 'repair', on: !(you.flags & SF.REPAIRING) });
+}
+
+/** A fallen mast's wreckage drags alongside (it can be cut away). */
+function mastWreck(): boolean {
+  return !!state.self?.effects.some((e) => e.id === 'mast_wreck');
 }
 
 /** Docking at speed: the crew takes in sail and she enters harbour as soon as she has slowed (the server wants
@@ -1039,6 +1046,7 @@ function contextLabel(): string | null {
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
   if (state.self?.landable && !state.self.landable.blocked) return L('tc.land');
+  if (mastWreck()) return L('tc.cutMast');
   // Nothing else at hand: a damaged ship out of the fight can set the carpenters to work (R on a keyboard).
   const you = state.you;
   if (you && you.flags & SF.REPAIRING) return L('tc.repairStop');

@@ -547,6 +547,7 @@ function talentHitEffects(game: Game, shooter: ShipEntity, target: ShipEntity, p
   if (p.ammo === 'chain' && !target.hasFlag('ironbound_masts') && target.sails < target.stats.sailHpMax * 0.5 && !target.hasEffect('broken_mast') && game.rng.chance(tval(shooter.stats, 'mastBreak'))) {
     // Stays until a shipyard steps a new mast (cleared by port repairs).
     target.addEffect({ id: 'broken_mast', until: now + 1e9, mods: { maxSpeed: -0.3 }, source: shooter.id }, now);
+    mastWreck(game, target);
     game.emit({ k: 'fx', fx: 'broken_mast', x: Math.round(target.state.x), y: Math.round(target.state.y) }, target.state.x, target.state.y);
     game.toastShip(target, 'A mast goes by the board!', 'bad');
     onCrit(shooter);
@@ -578,6 +579,25 @@ export interface DamagePacket {
   crew?: number;
   rudder?: number;
   morale?: number;
+}
+
+/** A mast gone by the board: its wreckage drags alongside — the helm answers slowly, but the tangle of spars and
+ *  canvas shields that side — until the captain cuts it away (a choice: the shield or the helm). */
+export function mastWreck(game: Game, ship: ShipEntity): void {
+  ship.addEffect({ id: 'mast_wreck', until: game.now + 1e9, mods: { turnRate: -0.3, incomingDamageMul: -0.15 } }, game.now);
+  game.toastShip(ship, 'The mast goes by the board! Her wreckage drags alongside — cut it away to free the helm.', 'bad');
+}
+
+/** Axes on the lanyards: the wreckage goes, and with it the drag on the helm and the shield on the side. */
+export function cutMastWreck(game: Game, ship: ShipEntity): string | null {
+  if (!ship.hasEffect('mast_wreck')) return 'No wreckage to cut away';
+  ship.effects = ship.effects.filter((e) => e.id !== 'mast_wreck');
+  const mast = ship.effects.find((e) => e.id === 'broken_mast');
+  if (mast) mast.mods = { maxSpeed: -0.2 }; // a jury rig on the stump
+  ship.recompute(game.now);
+  game.emit({ k: 'fx', fx: 'broken_mast', x: Math.round(ship.state.x), y: Math.round(ship.state.y) }, ship.state.x, ship.state.y);
+  game.toastShip(ship, 'The wreckage is cut away: the helm answers again, but that side lies open.', 'info');
+  return null;
 }
 
 /** Central damage entry point for cannon fire, abilities, collisions and hazards. */
