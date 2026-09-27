@@ -77,3 +77,17 @@ test('Russian typesetting: no dash opens a line, no one-letter word ends one', a
   assert.equal(typeset('вместе с приливом и в море'), 'вместе с приливом и в море');
   assert.equal(typeset('В порту (и в море)'), 'В порту (и в море)');
 });
+
+test("people's names read in Russian: officers and the sea's captains, in sentences too", async () => {
+  const { personNameRu } = await import('../client/src/lang/names.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  assert.equal(personNameRu('Morrow Ickes'), 'Морроу Икс');
+  assert.equal(personNameRu('Silas Morrow'), 'Сайлас Морроу');
+  assert.equal(personNameRu('Iron Verdict'), null);
+  setLang('ru');
+  applyDataLocale('ru');
+  assert.match(serverText('Morrow Ickes signs the articles as your Lieutenant.').replace(/ /g, ' '), /^Морроу Икс /);
+  applyDataLocale('en');
+  setLang('en');
+});

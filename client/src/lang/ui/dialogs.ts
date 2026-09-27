@@ -146,7 +146,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'board.coin': 'Монета и заряды',
   'board.coinText': '{gold} серебра из её денежного сундука; {ammo}.',
   'board.prisoners': 'Пленные',
-  'board.prisonersText': 'До {n} человек из её команды готовы подписать статьи (поначалу верность их невелика).',
+  'board.prisonersText': 'До {n} человек из её команды готовы перейти к вам на службу (поначалу верность их невелика).',
   'board.signOn': 'Принять в команду',
   'board.fate': 'Её участь',
   'board.noQuarter': '{talent}: через минуту она вспыхнет и пойдёт ко дну. Берите, что успеете.',

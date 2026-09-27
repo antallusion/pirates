@@ -5,7 +5,7 @@
 
 import { lang, typeset } from '../i18n.ts';
 import { COMMON_RU, NAME_RU, TEXT_RU } from './data.ts';
-import { composedNameRu } from './names.ts';
+import { composedNameRu, personNameRu } from './names.ts';
 import { SERVER_RU_A } from './server.ru.a.ts';
 import { SERVER_RU_B } from './server.ru.b.ts';
 
@@ -55,13 +55,13 @@ function lowerName(s: string): string | undefined {
 
 /** A fragment the tables know as it stands (a name, a phrase, a number). */
 function known(s: string): boolean {
-  return /^[\d\s.,:;×x+\-%]*$/.test(s) || NAME_RU.has(s) || exact.has(s) || TEXT_RU.has(s) || !!composedNameRu(s) || lowerName(s) !== undefined;
+  return /^[\d\s.,:;×x+\-%]*$/.test(s) || NAME_RU.has(s) || exact.has(s) || TEXT_RU.has(s) || !!composedNameRu(s) || !!personNameRu(s) || lowerName(s) !== undefined;
 }
 
 /** A captured fragment: a known name, a known phrase, or itself. */
 function part(s: string, depth: number): string {
   if (!s) return s;
-  return NAME_RU.get(s) ?? lowerName(s) ?? exact.get(s) ?? composedNameRu(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
+  return NAME_RU.get(s) ?? lowerName(s) ?? exact.get(s) ?? composedNameRu(s) ?? personNameRu(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
 }
 
 function translate(s: string, depth: number): string {

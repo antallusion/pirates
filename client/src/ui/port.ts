@@ -1,6 +1,7 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
 import { mapCard, placeName } from './maps.ts';
+import { personName } from '../lang/names.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -407,7 +408,7 @@ ${orders}${berths}</div>` : ''}`;
         <div class="item-text"><b>${esc(PROFESSION_DEFS[k].name)}</b><span class="muted trade-counts"><span title="${esc(L('tavern.aboard', { n: co.pools[k] }))}">${icon('menu_ship', '', 'ico-xs')}${co.pools[k]}</span><span title="${esc(L('tavern.here', { n: tv.stock[k] ?? 0 }))}">${icon('anchor', '', 'ico-xs')}${tv.stock[k] ?? 0}</span></span></div>
         ${money(tv.costs[k])}
         <div class="trade-btns"><button class="btn btn-small" data-act="crew" data-prof="${k}" data-n="1" ${(tv.stock[k] ?? 0) > 0 && room > 0 ? '' : 'disabled'}>${esc(L('btn.hire'))}</button><button class="btn btn-small btn-danger" data-act="crew" data-prof="${k}" data-n="-1" ${co.pools[k] > 0 ? '' : 'disabled'}>−</button></div></div>`).join('');
-    const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(o.name)} <span class="muted">— ${esc(L('officer.level', { role: OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
+    const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(personName(o.name))} <span class="muted">— ${esc(L('officer.level', { role: lang() === 'ru' ? OFFICER_DEFS[o.role].name.toLowerCase() : OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? esc(L('officer.taken')) : `${esc(L('btn.hire'))} ${money(o.price)}`}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
     return `${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>

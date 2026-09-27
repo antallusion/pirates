@@ -4,6 +4,7 @@
 // the same everywhere; the kind after the name is transliterated as well ("Айронрич-Айл") — a Russian word in front
 // ("остров") would break the case of every sentence the name sits in ("в остров").
 
+import { lang } from '../i18n.ts';
 import { NAME_RU } from './data.ts';
 
 const FIRST: Record<string, string> = {
@@ -52,4 +53,33 @@ export function composedNameRu(en: string): string | null {
   const base = known ?? FIRST[first!] + second;
   const named = m[2] ? `${base}-${KIND[m[2]]}` : base;
   return m[3] ? `${named} ${m[3]}` : named;
+}
+
+/** People's names, part by part: the officers' first and last names (shared/src/data/crew.ts) and the
+ * captains the sea throws up (server/src/game/npc.ts), transliterated the way the playable captains are. */
+const PERSON: Record<string, string> = {
+  Ansel: 'Ансел', Bram: 'Брам', Cobb: 'Кобб', Dorran: 'Доррен', Edda: 'Эдда', Fenn: 'Фенн', Gideon: 'Гидеон', Hale: 'Хейл', Isolde: 'Изольда',
+  Jonas: 'Джонас', Kestrel: 'Кестрел', Lark: 'Ларк', Morrow: 'Морроу', Nell: 'Нелл', Oswin: 'Освин', Pell: 'Пелл', Quint: 'Квинт', Rook: 'Рук',
+  Silas: 'Сайлас', Tamsin: 'Тамсин', Ulric: 'Ульрик', Vesper: 'Веспер', Wren: 'Рен', Yarrow: 'Ярроу',
+  Blackwater: 'Блэкуотер', Coldharbour: 'Колдхарбор', Drummond: 'Драммонд', Farrow: 'Фарроу', Gault: 'Голт', Holloway: 'Холлоуэй', Ickes: 'Икс',
+  Jessop: 'Джессоп', Kell: 'Келл', Lowe: 'Лоу', Marrow: 'Марроу', Nettle: 'Неттл', Orme: 'Орм', Pike: 'Пайк', Quill: 'Квилл', Reeve: 'Рив',
+  Salt: 'Солт', Thorne: 'Торн', Umber: 'Амбер', Vane: 'Вейн', Wick: 'Уик', Yeats: 'Йейтс',
+  Aldous: 'Олдос', Crane: 'Крейн', Bess: 'Бесс', Marlow: 'Марлоу', Cato: 'Катон', Wrenfield: 'Ренфилд', Dagny: 'Дагни', Holt: 'Холт',
+  Esme: 'Эсме', Varga: 'Варга', Fenwick: 'Фенвик', Pryce: 'Прайс', Hester: 'Эстер', Lamb: 'Лэмб', Ivo: 'Иво', Maddox: 'Мэддокс',
+  Juno: 'Юнона', Blackwood: 'Блэквуд', Moor: 'Мур', Leda: 'Леда', Frost: 'Фрост', Magnus: 'Магнус', Tarrow: 'Тарроу', Grimsby: 'Гримсби',
+  Osric: 'Осрик', Vale: 'Вейл', Petra: 'Петра', Hawthorne: 'Хоторн', Rurik: 'Рюрик', Ash: 'Эш', Reed: 'Рид', Doyle: 'Дойл', Wynn: 'Уинн',
+  Carrow: 'Кэрроу', Yara: 'Яра', Stroud: 'Страуд',
+};
+
+/** A person's Russian name when every part of it is known ("Morrow Ickes" → «Морроу Икс»), else null. */
+export function personNameRu(en: string): string | null {
+  const parts = en.trim().split(/\s+/);
+  if (parts.length < 2 || parts.length > 3) return null;
+  const ru = parts.map((p) => PERSON[p]);
+  return ru.every(Boolean) ? ru.join(' ') : null;
+}
+
+/** A person's name as the reader should see it. */
+export function personName(en: string): string {
+  return lang() === 'ru' ? personNameRu(en) ?? en : en;
 }

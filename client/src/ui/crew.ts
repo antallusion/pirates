@@ -5,7 +5,8 @@ import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS, TRAITS } from '../../../sha
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import type { ClientState } from '../state.ts';
 import { TALENTS_BY_ID } from '../../../shared/src/data/talents.ts';
-import { dict, plural } from '../i18n.ts';
+import { dict, lang, plural } from '../i18n.ts';
+import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/crew.ts';
 import { serverText } from '../lang/server.ts';
 import { keyLabel, settings } from '../settings.ts';
@@ -60,7 +61,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
       ${c.officers.map((o) => {
         const def = OFFICER_DEFS[o.role];
         const left = Math.max(0, o.orderReady - now);
-        return `<div class="card officer-card">${officerIcon(o, 'officer-ico')}<div class="quest-body"><h4>${esc(o.name)} <span class="muted">${esc(L('officerLevel', { role: def.name, level: o.level }))}</span></h4>
+        return `<div class="card officer-card">${officerIcon(o, 'officer-ico')}<div class="quest-body"><h4>${esc(personName(o.name))} <span class="muted">${esc(L('officerLevel', { role: lang() === 'ru' ? def.name.toLowerCase() : def.name, level: o.level }))}</span></h4>
           <p>${traitChips(o.traits)}</p>
           <p class="muted">${esc(def.description)}</p>
           <div class="row"><span class="with-ico">${icon('menu_crew', '', 'ico-sm')}${esc(L('loyalty', { n: o.loyalty }))}${o.warned ? ` <span class="bad">${esc(L('restless'))}</span>` : ''}${o.wound ? ` · <span class="bad">${esc(L(`wound.${o.wound}`))}</span>` : ''}${o.away ? ` · <span class="bad">${esc(L('captive'))}</span>` : ''}</span>
