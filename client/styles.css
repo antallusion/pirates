@@ -1231,3 +1231,19 @@ body.ship-open .ship-panel { top: calc(var(--uf-bottom, 104px) + 6px); backgroun
    so they are lifted to the button's optical middle. */
 .ins-row { padding: 3px 0; align-items: center; gap: 10px; }
 .ins-row > span:first-child { position: relative; top: -2px; }
+
+/* The yard's build order on the form grid; its checkbox reads as a sentence, not a caps label. */
+.form-grid label.check { flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--bone); }
+.form-grid > p { margin: 0; }
+
+/* What a build needs: one chip per material, what you have over what it takes; short ones in red. */
+.mats { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.mat { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border: 1px solid rgba(140, 107, 58, 0.4); border-radius: 12px; font: 500 12px/1.3 var(--sans); color: var(--bone); }
+.mat .ico { width: 20px; height: 20px; margin: 0; }
+.mat b { font-weight: 700; color: var(--gold); }
+.mat.short { border-color: rgba(255, 120, 100, 0.45); }
+.mat.short b { color: #ff8a7a; }
+
+.btn-block { display: block; width: 100%; margin-top: 8px; }
+.nowrap { white-space: nowrap; }
+.order-row { padding: 4px 0; gap: 10px; align-items: center; }

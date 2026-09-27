@@ -361,37 +361,37 @@ ${ammo}${intel}`;
     const wh = self.warehouses[view.portId] ?? {};
     const matText = Object.entries(mats).map(([g, n]) => {
       const got = Math.floor(self.cargo[g as GoodId] ?? 0) + Math.floor(wh[g as GoodId] ?? 0);
-      return `<span class="${got >= (n ?? 0) ? '' : 'up'}">${n} ${esc(GOODS[g as GoodId].name.toLowerCase())} (${got})</span>`;
-    }).join(' · ');
-    const pct = (a: number, z: number) => `${a >= z ? '+' : ''}${Math.round((a / z - 1) * 100)}%`;
+      return `<span class="mat ${got >= (n ?? 0) ? '' : 'short'}" title="${esc(L('build.matTitle'))}">${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)} <b>${got}/${n}</b></span>`;
+    }).join('');
+    const pct = (a: number, z: number) => { const d = Math.round((a / z - 1) * 100); return `${d >= 0 ? '+' : '−'}${Math.abs(d)}%`; };
     const figs = [yard.figurehead, ...self.figureheads].filter((f, i, a) => f && a.indexOf(f) === i) as FigureheadId[];
     const orders = self.builds.map((o) => {
       const left = Math.max(0, o.done - state.estServerTime());
       const here = o.port === view.portId;
-      return `<div class="row" style="padding:3px 0"><span><b>${esc(o.name)}</b> <span class="muted">${esc(SHIP_CLASSES[o.classId].name)} · ${esc(WOODS[o.frame].name)}/${esc(WOODS[o.plank].name)} · ${esc(L('build.orderInfo', { quality: L(`quality.${o.quality}`), port: state.ports.find((p) => p.id === o.port)?.name ?? o.port }))}</span></span>
-        ${left > 0 ? `<span class="muted">${esc(L('unit.min', { n: Math.ceil(left / 60) }))}</span>` : here ? `<button class="btn btn-small btn-primary" data-act="launch" data-id="${o.id}">${esc(L('build.launch'))}</button>` : `<span class="gold">${esc(L('build.ready'))}</span>`}</div>`;
+      return `<div class="row order-row"><span><b>${esc(o.name)}</b> <span class="muted">${o.name === SHIP_CLASSES[o.classId].name ? '' : `${esc(SHIP_CLASSES[o.classId].name)} · `}${esc(WOODS[o.frame].name)}/${esc(WOODS[o.plank].name)} · ${esc(L('build.orderInfo', { quality: L(`quality.${o.quality}`), port: state.ports.find((p) => p.id === o.port)?.name ?? o.port }))}</span></span>
+        ${left > 0 ? `<span class="muted nowrap">${esc(L('unit.min', { n: Math.ceil(left / 60) }))}</span>` : here ? `<button class="btn btn-small btn-primary" data-act="launch" data-id="${o.id}">${esc(L('build.launch'))}</button>` : `<span class="gold">${esc(L('build.ready'))}</span>`}</div>`;
     }).join('');
     const berths = self.berths.map((x, i) => `<div class="row" style="padding:3px 0"><span>${esc(x.name)} <span class="muted">${esc(SHIP_CLASSES[x.classId].name)} · ${esc(L('berth.info', { hull: x.hull, port: state.ports.find((p) => p.id === x.port)?.name ?? (x.port.startsWith('isle:') ? state.islands.get(Number(x.port.slice(5)))?.name ?? L('berth.yourIsland') : x.port) }))}</span></span>
       ${x.port === view.portId ? `<span><button class="btn btn-small" data-act="berth_swap" data-i="${i}">${esc(L('berth.takeOut'))}</button> <button class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}">${esc(L('btn.sell'))}</button></span>` : ''}</div>`).join('');
     return `<h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('build.title'))}</h3>
-      <div class="cols"><div class="card">
-        <div class="row"><span>${esc(L('build.hull'))}</span><select data-build="classId">${classes.map((c) => `<option value="${c}" ${c === b.classId ? 'selected' : ''}>${esc(SHIP_CLASSES[c].name)} (${esc(L('unit.tier', { n: SHIP_CLASSES[c].tier }))})</option>`).join('')}</select></div>
-        <div class="row"><span>${esc(L('build.name'))}</span><input data-build="name" value="${esc(b.name)}" maxlength="28" placeholder="${esc(cls.name)}" style="width:160px"></div>
-        <div class="row"><span>${esc(L('build.frame'))}</span><select data-build="frame">${yard.woods.map((w) => `<option value="${w}" ${w === b.frame ? 'selected' : ''}>${esc(WOODS[w].name)}</option>`).join('')}</select></div>
-        <div class="row"><span>${esc(L('build.plank'))}</span><select data-build="plank">${yard.woods.map((w) => `<option value="${w}" ${w === b.plank ? 'selected' : ''}>${esc(WOODS[w].name)}</option>`).join('')}</select></div>
-        <p class="muted">${esc(frame.description)} ${b.plank !== b.frame ? esc(plank.description) : ''}</p>
-        ${(Object.keys(RARES) as RareSlot[]).map((slot) => `<div class="row"><span>${esc(slot === 'keel' ? L('rare.keel') : slot === 'belt' ? L('rare.belt') : slot === 'sails' ? L('rare.sails') : slot === 'guns' ? L('rare.guns') : L('rare.paint'))}</span><select data-build="rare:${slot}"><option value="">${esc(L('build.standard'))}</option>${RARES[slot].map((r) => `<option value="${r.good}" ${b.rares[slot] === r.good ? 'selected' : ''} title="${esc(r.description)}">${esc(r.name)} (${r.units} ${esc(GOODS[r.good].name.toLowerCase())})</option>`).join('')}</select></div>`).join('')}
-        <div class="row"><span>${esc(L('build.figurehead'))}</span><select data-build="figurehead"><option value="">${esc(L('build.none'))}</option>${figs.map((f) => `<option value="${f}" ${b.figurehead === f ? 'selected' : ''}>${esc(FIGUREHEADS[f].name)} — ${esc(FIGUREHEADS[f].description)}</option>`).join('')}</select></div>
-        <div class="row"><span>${esc(L('build.plan'))}</span><select data-build="planId"><option value="">${esc(L('build.planCommon'))}</option>${self.plans.filter((x) => x.classId === null || x.classId === b.classId).map((x) => `<option value="${x.id}" ${b.planId === x.id ? 'selected' : ''}>${esc(L(`quality.${x.quality}`))}: ${x.variants.map((v) => esc(VARIANTS[v].name)).join('; ')} ${esc(L('build.uses', { n: x.uses > 1000 ? '∞' : x.uses, word: x.uses > 1000 ? L('build.use5') : plural(x.uses, L('build.use1'), L('build.use2'), L('build.use5')) }))}</option>`).join('')}</select></div>
-        ${yard.master ? `<label class="row"><span>${esc(L('build.master'))}</span><input type="checkbox" data-build="master" ${b.master ? 'checked' : ''}></label>` : ''}
-      </div><div class="card">
+      <div class="cols"><div class="card"><div class="form-grid build-form">
+        <label class="fg-wide">${esc(L('build.hull'))}<select data-build="classId">${classes.map((c) => `<option value="${c}" ${c === b.classId ? 'selected' : ''}>${esc(SHIP_CLASSES[c].name)} (${esc(L('unit.tier', { n: SHIP_CLASSES[c].tier }))})</option>`).join('')}</select></label>
+        <label class="fg-wide">${esc(L('build.name'))}<input data-build="name" value="${esc(b.name)}" maxlength="28" placeholder="${esc(cls.name)}"></label>
+        <label>${esc(L('build.frame'))}<select data-build="frame">${yard.woods.map((w) => `<option value="${w}" ${w === b.frame ? 'selected' : ''}>${esc(WOODS[w].name)}</option>`).join('')}</select></label>
+        <label>${esc(L('build.plank'))}<select data-build="plank">${yard.woods.map((w) => `<option value="${w}" ${w === b.plank ? 'selected' : ''}>${esc(WOODS[w].name)}</option>`).join('')}</select></label>
+        <p class="muted fg-wide">${esc(frame.description)} ${b.plank !== b.frame ? esc(plank.description) : ''}</p>
+        ${(Object.keys(RARES) as RareSlot[]).map((slot, i, all) => `<label class="${all.length % 2 && i === all.length - 1 ? 'fg-wide' : ''}">${esc(slot === 'keel' ? L('rare.keel') : slot === 'belt' ? L('rare.belt') : slot === 'sails' ? L('rare.sails') : slot === 'guns' ? L('rare.guns') : L('rare.paint'))}<select data-build="rare:${slot}"><option value="">${esc(L('build.standard'))}</option>${RARES[slot].map((r) => `<option value="${r.good}" ${b.rares[slot] === r.good ? 'selected' : ''} title="${esc(r.description)}">${esc(r.name)} (${r.units} ${esc(GOODS[r.good].name.toLowerCase())})</option>`).join('')}</select></label>`).join('')}
+        <label class="fg-wide">${esc(L('build.figurehead'))}<select data-build="figurehead"><option value="">${esc(L('build.none'))}</option>${figs.map((f) => `<option value="${f}" ${b.figurehead === f ? 'selected' : ''}>${esc(FIGUREHEADS[f].name)} — ${esc(FIGUREHEADS[f].description)}</option>`).join('')}</select></label>
+        <label class="fg-wide">${esc(L('build.plan'))}<select data-build="planId"><option value="">${esc(L('build.planCommon'))}</option>${self.plans.filter((x) => x.classId === null || x.classId === b.classId).map((x) => `<option value="${x.id}" ${b.planId === x.id ? 'selected' : ''}>${esc(L(`quality.${x.quality}`))}: ${x.variants.map((v) => esc(VARIANTS[v].name)).join('; ')} ${esc(L('build.uses', { n: x.uses > 1000 ? '∞' : x.uses, word: x.uses > 1000 ? L('build.use5') : plural(x.uses, L('build.use1'), L('build.use2'), L('build.use5')) }))}</option>`).join('')}</select></label>
+        ${yard.master ? `<label class="check fg-wide"><input type="checkbox" data-build="master" ${b.master ? 'checked' : ''}> ${esc(L('build.master'))}</label>` : ''}
+      </div></div><div class="card">
         <h4>${esc(b.name || cls.name)}</h4>
         <table class="grid"><tr><td>${esc(L('th.hull'))}</td><td>${preview.hullMax} (${pct(preview.hullMax, plain.hullMax)})</td></tr><tr><td>${esc(L('th.armour'))}</td><td>${Math.round(preview.armor * 100)}% (${pct(preview.armor || 0.01, plain.armor || 0.01)})</td></tr>
           <tr><td>${esc(L('th.speed'))}</td><td>${dec1(preview.maxSpeed)} (${pct(preview.maxSpeed, plain.maxSpeed)})</td></tr><tr><td>${esc(L('th.holdCap'))}</td><td>${preview.holdVolume.toFixed(0)}</td></tr><tr><td>${esc(L('th.crew'))}</td><td>${preview.crewMax}</td></tr></table>
-        <p>${esc(L('build.costTime', { cost: fmt(cost), min: Math.ceil(time / 60) }))}</p><p class="muted">${matText}</p>
-        <button class="btn btn-primary" data-act="build_order" ${self.builds.length ? 'disabled' : ''}>${esc(self.builds.length ? L('build.busy') : L('build.lay'))}</button>
-        ${yard.plans ? `<p style="margin-top:8px"><button class="btn btn-small" data-act="plan_buy">${esc(L('build.planBuy', { ship: cls.name, cost: fmt(Math.round(cls.price * 0.3)) }))}</button></p>` : ''}
-        ${yard.figurehead ? `<p><button class="btn btn-small" data-act="figurehead_buy">${esc(L('build.figureheadBuy', { fig: FIGUREHEADS[yard.figurehead].name, cost: fmt(FIGUREHEADS[yard.figurehead].price) }))}</button></p>` : ''}
+        <p>${esc(L('build.costTime', { cost: fmt(cost), min: Math.ceil(time / 60) }))}</p><div class="mats">${matText}</div>
+        <button class="btn btn-primary btn-block" data-act="build_order" ${self.builds.length ? 'disabled' : ''}>${esc(self.builds.length ? L('build.busy') : L('build.lay'))}</button>
+        ${yard.plans ? `<p style="margin-top:8px"><button class="btn btn-small btn-block" data-act="plan_buy">${esc(L('build.planBuy', { ship: cls.name, cost: fmt(Math.round(cls.price * 0.3)) }))}</button></p>` : ''}
+        ${yard.figurehead ? `<p><button class="btn btn-small btn-block" data-act="figurehead_buy">${esc(L('build.figureheadBuy', { fig: FIGUREHEADS[yard.figurehead].name, cost: fmt(FIGUREHEADS[yard.figurehead].price) }))}</button></p>` : ''}
       </div></div>
       ${orders || berths ? `<div class="card"><h4 class="card-h">${icon('build_shipyard', '', 'ico-md')}${esc(L('build.orders'))}</h4>
 ${orders}${berths}</div>` : ''}`;
