@@ -357,6 +357,7 @@
     "tex.land_fungal":                { "local": "textures/land_fungal.webp", "remote": "hf_20260927_185205_f4cf813f-66ba-4eb4-b8c0-4152d3464586.png", "job": "f4cf813f-66ba-4eb4-b8c0-4152d3464586", "fit": "opaque:1024:1.6:seam" },
     "tex.land_crystal":               { "local": "textures/land_crystal.webp", "remote": "hf_20260927_190118_4816407f-b3a6-499d-a7dd-857af511ec78.png", "job": "4816407f-b3a6-499d-a7dd-857af511ec78", "fit": "opaque:1024:1.02:seam" },
     "tex.shore_coral":                { "local": "textures/shore_coral.webp", "remote": "hf_20260927_191004_c13e8338-d879-45ff-b00b-863a0937d42c.png", "job": "c13e8338-d879-45ff-b00b-863a0937d42c", "fit": "opaque:1024:1.0:seam" },
-    "prop.life_hut":                  { "local": "props/life_hut.webp", "remote": "hf_20260927_191907_763a0fac-ffc2-472e-9f8d-31509e9ad128.png", "job": "763a0fac-ffc2-472e-9f8d-31509e9ad128", "fit": "keyed:768:#ff00ff" }
+    "prop.life_hut":                  { "local": "props/life_hut.webp", "remote": "hf_20260927_191907_763a0fac-ffc2-472e-9f8d-31509e9ad128.png", "job": "763a0fac-ffc2-472e-9f8d-31509e9ad128", "fit": "keyed:768:#ff00ff" },
+    "prop.life_boat":                 { "local": "props/life_boat.webp", "remote": "hf_20260927_192804_4797c867-fe82-4073-be50-80f8f7334974.png", "job": "4797c867-fe82-4073-be50-80f8f7334974", "fit": "keyed:768:#ff00ff" }
   }
 }
