@@ -137,3 +137,28 @@ test('friends and whispers read in Russian', () => {
   const english = out.filter((r) => /[A-Za-z]{3,}/.test(r.replace(/Bo Friend|Name/g, '')));
   assert.deepEqual(english, []);
 });
+
+test('who is at sea: everyone aboard but oneself, by a part of the name or a guild tag, one’s own waters first', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Who Asks');
+  const nell = join(game, 'Near Nell');
+  join(game, 'Far Fergus');
+  const F = game.sessionByName('Far Fergus')!;
+  F.ship!.region = F.ship!.region === 'gravewater' ? 'black_coast' : 'gravewater';
+  a.push({ t: 'who', q: '', here: false });
+  let w = a.last('who')!;
+  assert.equal(w.total, 2);
+  assert.deepEqual(w.list.map((e) => e.name), ['Near Nell', 'Far Fergus'], 'one’s own waters first');
+  a.push({ t: 'who', q: 'fer', here: false });
+  assert.deepEqual(a.last('who')!.list.map((e) => e.name), ['Far Fergus']);
+  a.push({ t: 'who', q: '', here: true });
+  w = a.last('who')!;
+  assert.deepEqual(w.list.map((e) => e.name), ['Near Nell'], 'these waters only');
+  // By a guild's tag.
+  const N = game.sessionByName('Near Nell')!;
+  N.profile!.gold = 50_000;
+  nell.push({ t: 'guild', action: 'found', name: 'Salt Owls', tag: 'OWL' });
+  assert.ok(game.guilds.of(game, N.accountId), 'the guild is founded');
+  a.push({ t: 'who', q: '[owl]', here: false });
+  assert.deepEqual(a.last('who')!.list.map((e) => [e.name, e.guild]), [['Near Nell', 'OWL']]);
+});

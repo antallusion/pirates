@@ -353,6 +353,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'party':
     case 'friends':
+    case 'who':
     case 'mail':
     case 'market':
     case 'bounties':

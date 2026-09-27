@@ -1687,5 +1687,7 @@ body.touch #hud-region .rg-extra { display: none; }
 .fr-count { font-size: 12px; font-weight: normal; margin-left: auto; }
 .fr-ign { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
 .fr-ign .muted { font-size: 12px; }
+.who-tag { color: var(--brass); font-size: 12px; }
+.who-here { display: inline-flex; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; color: var(--fog); cursor: pointer; }
 @media (max-width: 480px) { #modal-panel .fr-form > input { flex: 1 1 100%; } #modal-panel .fr-form > .btn { flex: 1 1 0; } }
 @media (max-width: 480px) { .fr-row { grid-template-columns: auto minmax(0, 1fr); } .fr-btns { grid-column: 1 / -1; justify-content: flex-start; } }

@@ -120,6 +120,8 @@ export type ClientMsg =
   /** The list of friends (docs/11 P6); whispers go as chat: "/w Name words", "/r words". */
   | { t: 'friend'; action: 'add' | 'remove' | 'ignore' | 'unignore'; name: string }
   | { t: 'friend'; action: 'list' }
+  /** Who is at sea (docs/11 P6): by a part of a name or a guild's tag, in all waters or only one's own. */
+  | { t: 'who'; q: string; here: boolean }
   | { t: 'group'; action: 'invite' | 'kick' | 'lead'; name: string }
   | { t: 'group'; action: 'accept' | 'decline'; id: number }
   | { t: 'group'; action: 'leave' }
@@ -929,6 +931,7 @@ export type ServerMsg =
   | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' | 'whisper'; to?: string }
   /** The list of friends, and the names of the captains one does not hear. */
   | { t: 'friends'; list: FriendView[]; ignored?: string[] }
+  | { t: 'who'; list: WhoView[]; total: number }
   | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[];
       /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number }[]; lfgMine?: string | null }
   | { t: 'barter'; view: BarterView | null }
@@ -986,6 +989,19 @@ export interface FriendView {
 }
 
 export const FRIENDS_MAX = 50;
+
+/** A captain at sea as the "who is at sea" search shows them (docs/11 P6). */
+export interface WhoView {
+  name: string;
+  level: number;
+  captain: CaptainId;
+  region: RegionId;
+  docked: string | null;
+  guild?: string;
+  grouped: boolean;
+}
+
+export const WHO_MAX = 30;
 
 export interface BarterSide {
   name: string;

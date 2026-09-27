@@ -4,8 +4,9 @@
 // And its other side, the unheard: a captain one will not hear — their chat lines, whispers, invitations to a
 // group, a barter or a duel do not reach one (letters still do: the packet boat reads no lists).
 
-import { FRIENDS_MAX } from '../../../shared/src/protocol.ts';
-import type { FriendView } from '../../../shared/src/protocol.ts';
+import { FRIENDS_MAX, WHO_MAX } from '../../../shared/src/protocol.ts';
+import type { FriendView, WhoView } from '../../../shared/src/protocol.ts';
+import { groupOfAccount } from './party.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 
@@ -125,6 +126,24 @@ export function friendsPresence(game: Game, s: PlayerSession, isAboard: boolean)
 export function ignoreCommand(text: string): string | null {
   const m = /^\/(ignore|игнор)\s+(.+)$/is.exec(text);
   return m ? m[2] : null;
+}
+
+/** Who is at sea (docs/11 P6), as WoW's /who: every captain aboard but oneself, by a part of the name or the
+ *  guild's tag, in all waters or only one's own; one's own waters first, then the most seasoned, thirty at most. */
+export function whoList(game: Game, s: PlayerSession, q: string, here: boolean): { list: WhoView[]; total: number } {
+  const want = String(q ?? '').trim().toLowerCase().slice(0, 24);
+  const mine = s.ship?.region;
+  const out: WhoView[] = [];
+  for (const acc of game.social.aboard) {
+    const o = acc === s.accountId ? null : game.sessionByAccount(acc);
+    if (!o?.profile || !o.ship) continue;
+    if (here && o.ship.region !== mine) continue;
+    const tag = game.guilds.of(game, acc)?.tag;
+    if (want && !o.name.toLowerCase().includes(want) && !(tag && tag.toLowerCase() === want.replace(/^\[|\]$/g, ''))) continue;
+    out.push({ name: o.name, level: o.profile.level, captain: o.profile.captain, region: o.ship.region, docked: o.ship.docked ?? null, ...(tag ? { guild: tag } : {}), grouped: !!groupOfAccount(game, acc) });
+  }
+  out.sort((a, b) => Number(b.region === mine) - Number(a.region === mine) || b.level - a.level || a.name.localeCompare(b.name));
+  return { list: out.slice(0, WHO_MAX), total: out.length };
 }
 
 /** A chat line that is a whisper ("/w", "/r" and their Russian twins): the words after it, and whether a reply. */
