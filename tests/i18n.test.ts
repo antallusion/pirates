@@ -76,6 +76,8 @@ test('Russian typesetting: no dash opens a line, no one-letter word ends one', a
   assert.equal(typeset('Фрегат Короны — холодные огни'), 'Фрегат Короны — холодные огни');
   assert.equal(typeset('вместе с приливом и в море'), 'вместе с приливом и в море');
   assert.equal(typeset('В порту (и в море)'), 'В порту (и в море)');
+  assert.equal(typeset('через 44 с · осталось 9 мин, 1,9 км и 12 %'), 'через 44\u00a0с\u00a0· осталось 9\u00a0мин, 1,9\u00a0км и\u00a012\u00a0%');
+  assert.equal(typeset('45 миль и 3 стражи'), '45 миль и\u00a03 стражи');
 });
 
 test("people's names read in Russian: officers and the sea's captains, in sentences too", async () => {

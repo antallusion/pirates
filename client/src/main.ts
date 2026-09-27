@@ -863,7 +863,12 @@ function computePrompt(): string {
     const now = state.estServerTime();
     const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
     parts.push(`${esc(L('ashore', { feature: sv(self.landing.feature.replace('_', ' ')), pct: Math.round(frac * 100) }))} <span class="muted">${esc(L('recall'))}</span>`);
-  } else if (self.landable?.blocked) parts.push(`<span class="muted">${esc(sv(self.landable.feature))} — ${esc(sv(self.landable.blocked))}</span>`);
+  } else if (self.landable?.blocked) {
+    // What stops you, after the place it is about (with a capital: it opens the line) unless it names the place itself.
+    const why = sv(self.landable.blocked), where = sv(self.landable.feature);
+    const line = why.includes(sv(self.landable.island)) ? why : `${where.charAt(0).toUpperCase()}${where.slice(1)} — ${why}`;
+    parts.push(`<span class="muted">${esc(line)}</span>`);
+  }
   else if (self.landable?.action === 'dig') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dig', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'raise') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('raise', { feature: sv(self.landable.feature.replace(/^wreck of the /, '')) }))}`);
   else if (self.landable?.action === 'expedition') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);

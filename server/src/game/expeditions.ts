@@ -490,7 +490,7 @@ export function diveView(game: Game, run: DiveRun): DiveView {
   // Doors of rooms next to where you have been are guessed from the ones you saw.
   return {
     site: site.name, w: MAZE_W, h: MAZE_H, rooms, pos: run.pos, air: Math.max(0, run.air), airMax: run.airMax, divers: run.divers, keys: run.keys,
-    haul: Object.entries(run.haul).map(([g, n]) => `${n} ${GOODS[g as GoodId].name.toLowerCase()}`).join(', '), silver: run.silver,
+    haul: { ...run.haul }, silver: run.silver,
     waveIn: Math.max(0, Math.round(run.nextWave - game.now)), endsIn: Math.max(0, Math.round(run.ends - game.now)), tide: TIDE_NAMES[tideOf(game)], log: run.log, leader: false,
   };
 }

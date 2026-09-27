@@ -1331,3 +1331,59 @@ body.touch #hud-region .rg-extra { display: none; }
 /* A centre card's title fits its plate on every width (the edge of safe water's was cut at 34px in 560px). */
 .center-card .title-sm { font-size: clamp(20px, 2.6vw, 28px) !important; max-width: 100%; }
 @media (max-width: 699px) { .center-card .title-sm { white-space: normal; text-wrap: balance; margin-left: 0; margin-right: 0; overflow: visible; } }
+
+/* The bell's maze and its helm side by side (stacked, the helm fell below a phone's fold); a dive gives the top
+   stack more of the screen. */
+#hud-dive .dplay { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0; }
+#hud-dive .dplay .dmaze { margin: 0; flex: none; }
+#hud-dive .dplay .dctl { margin: 0; grid-template-columns: auto; justify-items: center; }
+@media (max-width: 699px), (max-height: 520px) {
+  #hud-stack:has(#hud-dive:not(.hidden)) { max-height: max(104px, calc(100vh - var(--hb-top, 200px) - 70px)); }
+}
+/* The bell's helm buttons are small squares: a thin painted rim, no side padding, so the arrow has room. */
+.skinned #hud-dive .dpad .btn { padding: 0; border-width: 5px; border-image-width: 5px; }
+/* The bell's air: a thin sea-blue bar (it had no style outside the boss panel and stood 0px high). */
+#hud-dive .bbar { height: 6px; background: #0b1618; border: 1px solid rgba(88, 184, 200, 0.4); margin: 4px 0; }
+#hud-dive .bbar i { display: block; height: 100%; }
+/* The bell's log keeps its newest lines in sight (it showed the oldest and cut the rest). */
+#hud-dive .dlog { display: flex; flex-direction: column; justify-content: flex-end; }
+/* A phone on its side: title and «Surface» on one line, the maze beside its helm and the counts, one line of log;
+   the panel may reach down to the bottom block, and toasts step aside under the unit frame. */
+@media (max-height: 520px) {
+  #hud-stack:has(#hud-dive:not(.hidden)) { max-height: calc(100vh - var(--hb-top, 120px) - var(--sa-t) - 16px); }
+  #hud-dive { display: grid; grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: "name name surf" "stat stat stat" "maze pad info" "bar bar bar" "haul haul haul" "log log log"; gap: 4px 10px; align-items: center; }
+  #hud-dive .dplay, #hud-dive .dctl { display: contents; }
+  #hud-dive .dname { grid-area: name; }
+  #hud-dive .dsurface { grid-area: surf; justify-self: end; margin: 0; }
+  #hud-dive .dstatus { grid-area: stat; }
+  #hud-dive .dplay .dmaze { grid-area: maze; margin: 0; }
+  #hud-dive .dpad { grid-area: pad; grid-template-columns: repeat(3, 28px); grid-template-rows: repeat(3, 28px); }
+  #hud-dive .dpad .btn { width: 28px; height: 28px; }
+  #hud-dive .dally { grid-column: 2 / 4; grid-row: 3; }
+  #hud-dive .dstats { grid-area: info; flex-direction: column; align-items: flex-start; gap: 3px; margin: 0; }
+  #hud-dive .bbar { grid-area: bar; margin: 0; }
+  #hud-dive .dhaul { grid-area: haul; }
+  #hud-dive .dlog { grid-area: log; max-height: 14px; margin: 0; }
+  #hud-dive .dhint { display: none; }
+  body:has(#hud-dive:not(.hidden)) #toasts { left: calc(var(--sa-l) + 8px); transform: none; width: 330px; }
+  body:has(#hud-dive:not(.hidden)) #toasts .toast:nth-child(n+3) { display: none; }
+}
+/* A room's mark sits in the middle of its cell at every cell size (a fixed 22px line dropped it 4.5px in 17px). */
+#hud-dive .dcell { display: flex; align-items: center; justify-content: center; line-height: 1; }
+@media (max-height: 520px) { #hud-dive .dsurface { height: 28px; padding-block: 0; } }
+/* The prompt over the action bar keeps to the middle column and wraps in balanced lines (a bell buoy's line ran
+   704px across a phone on its side and under the micro menu). */
+#hud-prompt { max-width: min(92vw, 560px); text-wrap: balance; }
+/* The drowned maze shows its bounds while most of it is still dark, and the helm's hint sits under the maze and
+   the helm instead of as a third column. */
+#hud-dive .dmaze { outline: 1px solid rgba(111, 90, 56, 0.55); outline-offset: 1px; }
+#hud-dive .dplay { flex-wrap: wrap; }
+#hud-dive .dplay > .dhint { flex-basis: 100%; text-align: center; }
+/* The log shows whole entries only (a clipped box cut the older one mid-line): the last three; on a phone, upright
+   or on its side, the last one in two lines at most. */
+#hud-dive .dlog { max-height: none; }
+#hud-dive .dlog > div:nth-last-child(n+4) { display: none; }
+@media (max-width: 699px), (max-height: 520px) {
+  #hud-dive .dlog > div:not(:last-child) { display: none; }
+  #hud-dive .dlog > div { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+}

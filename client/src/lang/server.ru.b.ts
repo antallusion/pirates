@@ -458,7 +458,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "Your crew brought the fever aboard. Five chests of medicine would have kept it out.": "Ваша команда занесла на борт лихорадку. Пять ящиков лекарств уберегли бы от неё.",
   "Your debt to the Gilded Ledger is settled.": "Ваш долг Золочёной книге погашен.",
   "Your divers have already stripped that wreck for now": "Ваши водолазы пока обобрали этот остов дочиста",
-  "Your divers need rest before {0} again ({1} min)": "Вашим водолазам нужен отдых, прежде чем снова: {0} ({1} мин)",
+  "Your divers need rest before {0} again ({1} min)": "{0}: водолазам нужен отдых, снова можно через {1} мин",
   "Your escort is already at sea": "Ваш конвой уже в море",
   "Your escort {0} is lost with all hands.": "Ваш конвойный «{0}» погиб со всей командой.",
   "Your false colours are struck: {0}.": "Ваш ложный флаг сорван: {0}.",

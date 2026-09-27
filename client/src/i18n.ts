@@ -52,9 +52,13 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
   return current === 'ru' ? typeset(s) : s;
 }
 
-/** Russian typesetting: a dash or a slash never opens a line, a one-letter word (в, с, к, и…) never ends one. */
+/** Russian typesetting: a dash or a slash never opens a line, a one-letter word (в, с, к, и…) never ends one, a
+ *  number keeps its unit (44 с, 9 мин, 1,9 км) on its line. */
 export function typeset(s: string): string {
-  return s.replace(/ ([—–/])/g, '\u00a0$1').replace(/(?<=^|[\s(«„"])([вВкКсСуУоОиИаАяЯ]) /g, '$1\u00a0');
+  return s
+    .replace(/ ([—–/])/g, '\u00a0$1')
+    .replace(/(?<=^|[\s(«„"])([вВкКсСуУоОиИаАяЯ]) /g, '$1\u00a0')
+    .replace(/(\d) (?=(?:с|сек|мин|ч|м|км|т|уз\.|дн\.?|сут\.?|шт\.?|%)(?![А-Яа-яЁё]))/g, '$1\u00a0');
 }
 
 /** Whether a key exists (for ids that come from the server). */

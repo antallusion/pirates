@@ -1545,10 +1545,18 @@ export class Renderer {
   // ------------------------------------------------------------------ overlays
 
   private band = { top: 0, bottom: 0, at: -1 };
+  private hudRects: DOMRect[] = [];
   /** The free band of the screen between the top panels and the bottom block (measured twice a second). */
   private hudBand(): { top: number; bottom: number } {
     if (this.time - this.band.at > 0.5 || this.band.at < 0) {
       let top = 0, bottom = this.h;
+      this.hudRects = [];
+      for (const sel of ['#hud-captain', '#hud-map', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-sail', '#tc-port', '#tc-starboard', '#tc-chasers', '#tc-menu']) {
+        document.querySelectorAll<HTMLElement>(sel).forEach((e) => {
+          const r = e.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) this.hudRects.push(r);
+        });
+      }
       for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-stack > :not(.hidden)']) {
         document.querySelectorAll<HTMLElement>(sel).forEach((e) => {
           const r = e.getBoundingClientRect();
@@ -1563,6 +1571,13 @@ export class Renderer {
       this.band = { top: Math.min(top, this.h * 0.45), bottom: Math.max(bottom, this.h * 0.55), at: this.time };
     }
     return this.band;
+  }
+
+  /** Whether a threat mark (its circle and range) at x, y is clear of every HUD block and on the screen. */
+  private clearOfHud(x: number, y: number): boolean {
+    const m = 18;
+    if (x < m || x > this.w - m || y < m || y > this.h - m) return false;
+    return !this.hudRects.some((q) => x > q.left - m && x < q.right + m && y > q.top - m && y < q.bottom + m);
   }
 
   /** Hostile ships and bosses beyond the edge of the screen: a mark on the rim pointing at each, with the range,
@@ -1595,8 +1610,17 @@ export class Renderer {
       if (drawn.length >= 5) break;
       const a = Math.atan2(this.sy(s.y) - cy, this.sx(s.x) - cx);
       // The rim is an ellipse inside the HUD's top and bottom bands.
-      const k = 1 / Math.sqrt((Math.cos(a) / rx) ** 2 + (Math.sin(a) / ry) ** 2);
-      const x = cx + Math.cos(a) * k, y = cy + Math.sin(a) * k;
+      // A mark that falls on a HUD block (a tall top stack in a low window: the bell's panel, a boss card) walks
+      // along the rim to the nearest free place.
+      const at = (b: number): [number, number] => {
+        const kb = 1 / Math.sqrt((Math.cos(b) / rx) ** 2 + (Math.sin(b) / ry) ** 2);
+        return [cx + Math.cos(b) * kb, cy + Math.sin(b) * kb];
+      };
+      let [x, y] = at(a);
+      for (let i = 1; i <= 60 && !this.clearOfHud(x, y); i++) {
+        const b = [a + i * 0.05, a - i * 0.05].map(at).find(([px, py]) => this.clearOfHud(px, py));
+        if (b) [x, y] = b;
+      }
       // One mark for a crowd (a kraken's eight arms): the nearest speaks for them.
       if (drawn.some(([px, py]) => Math.hypot(px - x, py - y) < 44)) continue;
       drawn.push([x, y]);

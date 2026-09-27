@@ -101,7 +101,7 @@ export const RU: Record<keyof typeof EN, string> = {
   recall: '(поднимите паруса, чтобы отозвать)',
   dig: 'Копать: «{feature}», остров {island}',
   raise: 'Поднять «{feature}» с морского дна',
-  expedition: 'Спустить водолазный колокол у острова {island} (сперва лечь в дрейф)',
+  expedition: 'Спустить водолазный колокол — {island} (сначала лягте в дрейф)',
   dive: 'Отправить ныряльщиков к цели «{feature}»',
   landParty: 'Высадить десант: «{feature}», остров {island}',
   enter: 'Войти в порт {port}',

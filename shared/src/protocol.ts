@@ -691,7 +691,8 @@ export interface DiveView {
   airMax: number;
   divers: number;
   keys: number;
-  haul: string;
+  /** What the divers have brought up so far (goods by the unit). */
+  haul: Cargo;
   silver: number;
   waveIn: number;
   endsIn: number;
