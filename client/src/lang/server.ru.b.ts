@@ -927,4 +927,5 @@ export const SERVER_RU_B: Record<string, string> = {
   "That offer has lapsed": "Предложение уже не в силе",
   "You already sail in a group": "Вы уже в группе",
   "Sails on the horizon, closing fast — someone has word of your cargo.": "Паруса на горизонте идут наперерез — кто-то прознал о вашем грузе.",
+  "{0} leads them in the {1}: sink that ship and the rest will scatter.": "Их ведёт {0} на «{1}»: потопите этот корабль — остальные разбегутся.",
 };

@@ -1240,6 +1240,11 @@ export class Game {
         const is = this.world.islands[st.island];
         at = is ?? null;
         if (is) r = is.radius + 300;
+      } else if (st.type === 'sink' && qs.leader !== undefined && this.ships.get(qs.leader)?.alive) {
+        // A hunt's leader: the pointer follows his ship.
+        const l = this.ships.get(qs.leader)!;
+        at = { x: l.state.x, y: l.state.y };
+        r = 250;
       } else if (st.type === 'reach' || st.type === 'time_in' || st.type === 'die_in' || (st.type === 'sink' && st.region)) {
         const [x, y] = REGIONS[st.region!].center;
         at = { x, y };

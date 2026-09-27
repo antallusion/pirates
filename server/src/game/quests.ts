@@ -19,7 +19,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { newsHint } from './onboarding.ts';
-import { spawnCargoAmbush } from './npc.ts';
+import { spawnCargoAmbush, spawnPackLeader } from './npc.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
@@ -45,6 +45,8 @@ export interface QuestState {
   /** A courier's cargo draws raiders once (docs/11 P6): when, and whether they have come. */
   ambushAt?: number;
   ambushed?: boolean;
+  /** A hunt's quarry: the band leader's ship (docs/11 P6); sinking him ends the hunt at once. */
+  leader?: number;
 }
 
 /** A courier with a quest's cargo aboard, at sea in waters that are not the Crown's peace, meets raiders once:
@@ -92,9 +94,19 @@ export function fastWindow(game: Game, q: QuestDef): number | null {
   return Math.round(240 + (d / 7) * 1.35); // some 7 m/s under way, a third to spare, four minutes in port
 }
 
-function startQuest(game: Game, p: Profile, q: QuestDef): void {
+function startQuest(game: Game, p: Profile, q: QuestDef, s?: PlayerSession): void {
   const w = q.kind === 'job' ? fastWindow(game, q) : null;
-  p.quests.active.push({ id: q.id, step: 0, progress: 0, startedAt: game.now, ...(w ? { fastUntil: game.now + w } : {}) });
+  const qs: QuestState = { id: q.id, step: 0, progress: 0, startedAt: game.now, ...(w ? { fastUntil: game.now + w } : {}) };
+  // A hunt of pirates in a region: the band has a leader, and word of him comes with the job.
+  const hunt = q.kind === 'job' ? q.steps.find((st) => st.type === 'sink' && st.region && st.role === 'pirate') : undefined;
+  if (hunt && hunt.type === 'sink' && hunt.region && p.level >= 8) {
+    const leader = spawnPackLeader(game, hunt.region, p.level);
+    if (leader) {
+      qs.leader = leader.id;
+      if (s) game.sendTo(s, { t: 'toast', msg: `${leader.captainName} leads them in the ${leader.name}: sink that ship and the rest will scatter.`, kind: 'info' });
+    }
+  }
+  p.quests.active.push(qs);
 }
 
 export interface QuestLog {
@@ -193,7 +205,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   const why = questBlocked(p, q);
   if (why) return why;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
-  startQuest(game, p, q);
+  startQuest(game, p, q, s);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   newsHint(game, s, 'journal');
   // A first step that is already satisfied (being in the right port) completes at once.
@@ -259,7 +271,7 @@ export function answerOffer(game: Game, s: PlayerSession, id: string, take: bool
   const q = QUESTS_BY_ID[id];
   if (!q || p.quests.active.some((a) => a.id === id) || p.quests.done.includes(id)) return null;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
-  startQuest(game, p, q);
+  startQuest(game, p, q, s);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   return null;
 }
@@ -325,7 +337,8 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
     for (let guard = 0; guard < 4; guard++) {
       const st = q.steps[qs.step];
       if (!st) break;
-      const gained = stepGain(game, s, st, ev);
+      // The band's leader sunk: the hunt is won at a stroke.
+      const gained = st.type === 'sink' && ev.k === 'sink' && qs.leader !== undefined && ev.victim.id === qs.leader ? Math.max(1, stepCount(st) - qs.progress) : stepGain(game, s, st, ev);
       if (gained <= 0) break;
       qs.progress += gained;
       if (qs.progress + 1e-9 < stepCount(st)) break;

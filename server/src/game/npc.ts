@@ -16,7 +16,7 @@ import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
-import { depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { canBoard, startBoarding } from './boarding.ts';
 import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
@@ -925,6 +925,25 @@ export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number
     made++;
   }
   return made;
+}
+
+/** A hunt's quarry (docs/11 P6): the band's leader, a named captain on a heavier ship somewhere in the region's open
+ *  water, roaming it for an hour. Null when no open water was found. */
+export function spawnPackLeader(game: Game, region: RegionId, level: number): ShipEntity | null {
+  const [cx, cy] = REGIONS[region].center;
+  for (let k = 0; k < 20; k++) {
+    const a = game.rng.float() * Math.PI * 2, r = 1500 + game.rng.float() * 6000;
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region) continue;
+    const ship = game.spawnNpcShip('pirate', level >= 30 ? 'frigate' : 'brig', 'confederacy', x, y, game.rng.float() * Math.PI * 2);
+    const brain = game.npcs.get(ship.id)!;
+    brain.area = { x: cx, y: cy, r: 8000 };
+    brain.expiresAt = game.now + 3600;
+    ship.purse = (ship.purse ?? 0) + 300 + level * 20;
+    planWander(game, ship, brain);
+    return ship;
+  }
+  return null;
 }
 
 /** Abstract (off-screen) encounters: pirates raid merchants statistically. Creates shortages and rumours. */

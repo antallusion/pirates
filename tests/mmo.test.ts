@@ -234,3 +234,29 @@ test('a courier with a quest’s cargo aboard, out of the Crown’s peace, meets
   for (let i = 0; i < 400; i++) questEvent(game, s, { k: 'tick', dt: 1 }), (game.now += 1);
   assert.equal(game.npcs.size, n, 'only once per cargo');
 });
+
+test('a hunt has a band leader: named, on the chart, and sinking him wins the hunt at a stroke', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Hunter Hugh');
+  const s = game.sessionByName('Hunter Hugh')!;
+  s.profile!.level = 20;
+  const port = game.portById(s.ship!.docked!)!;
+  const hunt = JOBS.find((q) => q.steps.some((st) => st.type === 'sink' && st.region && st.role === 'pirate') && (q.requires.level ?? 1) <= 20)!;
+  void port;
+  QUESTS_BY_ID[hunt.id] = hunt;
+  // Taken through the offer path (as from a groupmate), which starts it the same way.
+  s.questOffer = { id: hunt.id, until: game.now + 100 };
+  c.push({ t: 'quest', action: 'accept', id: hunt.id });
+  const qs = s.profile!.quests.active.find((q) => q.id === hunt.id)!;
+  assert.ok(qs.leader !== undefined, 'a leader put out');
+  const leader = game.ships.get(qs.leader!)!;
+  assert.ok(c.all('toast').some((t) => t.msg.includes('leads them in the')), 'word of him');
+  // Walk to the hunt step and sink the leader.
+  qs.step = hunt.steps.findIndex((st) => st.type === 'sink');
+  qs.progress = 0;
+  const at = qs.step;
+  leader.attackers.set(s.ship!.id, game.now);
+  (game as unknown as { creditKill(k: unknown, v: unknown, how: string): void }).creditKill(s.ship!, leader, 'sunk');
+  const now = s.profile!.quests.active.find((q) => q.id === hunt.id);
+  assert.ok(!now || now.step > at || s.profile!.quests.done.includes(hunt.id), 'the hunt step is won at once');
+});
