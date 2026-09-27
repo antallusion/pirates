@@ -26,9 +26,10 @@ test('nests are found about the map, kept stocked, told to the map, and lapse in
   // Stocked on the tenth second.
   while (Math.floor(game.now) % 10 !== 0) game.now += 1;
   stepTasks(game);
-  assert.ok(list.some((t) => t.kind === 'nest') && list.some((t) => t.kind === 'wreck'), 'nests and wreck fields both');
+  assert.ok(['nest', 'wreck', 'haunt'].every((k) => list.some((t) => t.kind === k)), 'nests, wreck fields and haunted waters');
   for (const t of list) {
     if (t.kind === 'nest') assert.ok(t.pirates.filter((id) => game.ships.get(id)?.alive).length >= 3, 'three pirates at the nest');
+    else if (t.kind === 'haunt') assert.ok(t.pirates.filter((id) => game.ships.get(id)?.npcRole === 'ghost' && game.ships.get(id)?.alive).length >= 2, 'two of the drowned afloat');
     else assert.ok(t.crates.filter((id) => game.loot.has(id)).length >= 5, 'five crates afloat in the field');
   }
   const view = c.last('tasks')!;
@@ -108,6 +109,32 @@ test('a wreck field: each crate fished up counts, the fourth pays, and a crate i
   resetTasks(game);
 });
 
+test('haunted waters: two of the drowned laid to rest pay; a pirate sunk there does not count', () => {
+  const { game } = makeGame();
+  resetTasks(game);
+  const c = join(game, 'Ghost Gale');
+  const S = game.sessionByName('Ghost Gale')!;
+  stepTasks(game);
+  const t = activeTasks(game).find((x) => x.kind === 'haunt')!;
+  S.ship!.docked = null;
+  S.ship!.state.x = t.x;
+  S.ship!.state.y = t.y + 300;
+  const sink = (role: 'ghost' | 'pirate') => {
+    const v = game.spawnNpcShip(role, 'brig', role === 'ghost' ? 'choir' : 'confederacy', t.x + 200, t.y, 0);
+    v.attackers.set(S.ship!.id, game.now);
+    (game as unknown as Credit).creditKill(S.ship!, v, 'sunk');
+  };
+  sink('pirate');
+  assert.equal(t.tally.get(S.accountId) ?? 0, 0, 'a pirate is no ghost');
+  sink('ghost');
+  assert.equal(t.tally.get(S.accountId), 1);
+  sink('ghost');
+  assert.ok(t.done.has(S.accountId));
+  assert.ok(c.all('toast').some((m) => m.msg.startsWith('Task of the sea done — Haunted waters off')));
+  assert.equal(c.last('tasks')!.list.find((x) => x.id === t.id)!.need, 2);
+  resetTasks(game);
+});
+
 test('the tasks read in Russian', () => {
   // The world is made in English (as on the server), before the Russian tables are laid over the data.
   const { game } = makeGame();
@@ -123,6 +150,10 @@ test('the tasks read in Russian', () => {
     `News of the sea: a wreck field off ${island} in The Black Coast. Fish ${TASK_NEED} crates out of it within 45 min — anyone may.`,
     `Task of the sea done — Wreck field off ${island}: +520 silver, +720 XP.`,
     `Wreck field off ${island}: 3/${TASK_NEED}.`,
+    `Haunted waters off ${island}`,
+    `News of the sea: the drowned sail again off ${island} in The Black Coast. Sink 2 of their ships within 45 min — anyone may.`,
+    `Task of the sea done — Haunted waters off ${island}: +520 silver, +720 XP.`,
+    `Haunted waters off ${island}: 1/2.`,
   ].map((l) => serverText(l));
   setLang('en');
   applyDataLocale('en');
