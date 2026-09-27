@@ -1631,6 +1631,10 @@ body.touch #hud-region .rg-extra { display: none; }
 .jr-row b { font-weight: 600; display: flex; align-items: center; gap: 4px; }
 .jr-row .muted { font-size: 12px; }
 .jr-row:hover { border-color: var(--brass); }
+.jr-row .muted .ico-sm { vertical-align: -3px; margin-right: 2px; }
+/* Groupmates on the same quest (docs/11 P6): their names and steps under the steps. */
+.jr-mates { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: -2px 0 12px; font-size: 13px; }
+.jr-mate { padding: 2px 8px; border: 1px solid rgba(127, 212, 138, 0.35); background: rgba(127, 212, 138, 0.06); color: #cfe8cf; }
 .jr-row.on { border-color: var(--gold); background: rgba(217, 178, 90, 0.08); }
 .jr-day .map-daily { border: 1px solid rgba(111, 90, 56, 0.35); margin-bottom: 8px; }
 .jr-detail { min-width: 0; }

@@ -1227,6 +1227,20 @@ export class Game {
 
   /** Where each active quest's current step points, for the chart and the pointer: a place (and how near is
    *  there), or a region's heart (there once inside the region). */
+  /** Groupmates aboard on the same quests as this captain, and the step each is on (docs/11 P6). */
+  private questMates(s: PlayerSession): Record<string, { name: string; step: number }[]> | undefined {
+    const g = groupOfAccount(this, s.accountId);
+    if (!g) return undefined;
+    const mine = new Set(s.profile!.quests.active.map((q) => q.id));
+    const out: Record<string, { name: string; step: number }[]> = {};
+    for (const acc of g.members) {
+      const m = acc === s.accountId ? null : this.byAccount.get(acc);
+      if (!m?.profile) continue;
+      for (const q of m.profile.quests.active) if (mine.has(q.id)) (out[q.id] ??= []).push({ name: m.name, step: q.step + 1 });
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+
   private questTargets(p: Profile): Record<string, { x: number; y: number; r?: number; region?: RegionId }> {
     const out: Record<string, { x: number; y: number; r?: number; region?: RegionId }> = {};
     for (const qs of p.quests.active) {
@@ -1261,6 +1275,7 @@ export class Game {
     const p = s.profile!;
     return {
       questTargets: this.questTargets(p),
+      questMates: this.questMates(s),
       common: commonView(this, s.accountId),
       coves: this.coves,
       patrols: this.insiderPatrols(s),

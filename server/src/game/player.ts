@@ -302,6 +302,8 @@ export interface WorldView {
   questTargets?: Record<string, { x: number; y: number; r?: number; region?: RegionId }>;
   /** The sea's common cause today and this captain's part in it (docs/11 P6). */
   common?: PrivateState['common'];
+  /** Groupmates on the same quests: quest id → their names and steps (docs/11 P6). */
+  questMates?: Record<string, { name: string; step: number }[]>;
 }
 
 export function toPrivateState(s: PlayerSession, now: number, world: WorldView = { coves: [], patrols: [] }): PrivateState {
@@ -352,6 +354,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
         // For the journal (docs/11 P6): the giver's words, every step, the pay and the face.
         summary: def.summary, stepTexts: def.steps.map((x) => x.text), silver: def.reward.silver, xp: def.reward.xp, ...(q.fastUntil && q.fastUntil > now ? { fastIn: Math.round(q.fastUntil - now) } : {}), ...(def.portrait ? { portrait: def.portrait } : {}), ...(def.category ? { category: def.category } : {}),
         ...(q.pay ? { pay: q.pay, paid: questPayOf(q.pay, def.reward.silver, def.requires.level ?? 1) } : {}),
+        ...(world.questMates?.[q.id] ? { mates: world.questMates[q.id] } : {}),
       };
     }),
     questsDone: p.quests.done,

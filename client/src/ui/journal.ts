@@ -29,6 +29,8 @@ const EN = {
   kind_story: 'Story',
   kind_job: 'Job',
   fast: 'A quarter more if done within {m} min',
+  mates: 'In your group on it too',
+  mateStep: '{name}, step {step}',
 };
 const RU: typeof EN = {
   title: 'Журнал заданий',
@@ -46,6 +48,8 @@ const RU: typeof EN = {
   kind_story: 'Сюжет',
   kind_job: 'Поручение',
   fast: 'На четверть больше, если управитесь за {m} мин',
+  mates: 'В отряде тоже взялись',
+  mateStep: '{name}, шаг {step}',
 };
 const L = dict(EN, RU);
 
@@ -92,7 +96,7 @@ export class Journal {
   private row(q: Quest, on: boolean, tracked: boolean): string {
     return `<button class="jr-row${on ? ' on' : ''}${tracked ? ' tracked' : ''}" data-jq="${esc(q.id)}">
       <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b>
-      <span class="muted">${esc(L(`kind_${q.kind}` as 'kind_job'))} · ${q.step}/${q.steps}</span></button>`;
+      <span class="muted">${esc(L(`kind_${q.kind}` as 'kind_job'))} · ${q.step}/${q.steps}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>`;
   }
 
   private detail(q: Quest, tracked: boolean, inGroup: boolean): string {
@@ -113,6 +117,7 @@ export class Journal {
           ${q.summary ? `<p class="giver-say">«${esc(serverText(q.summary))}»</p>` : ''}
         </div></div>
       <div class="giver-steps"><div class="giver-h">${esc(L('steps'))}</div><ol class="jr-steps">${steps}</ol></div>
+      ${q.mates?.length ? `<div class="jr-mates"><span class="giver-h">${esc(L('mates'))}</span>${q.mates.map((m) => `<span class="jr-mate">${esc(L('mateStep', { name: m.name, step: m.step }))}</span>`).join('')}</div>` : ''}
       ${q.silver !== undefined ? `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${paidHtml(q.silver, q.pay, q.paid)}${xpBadge(q.xp ?? 0)}${q.fastIn ? `<span class="jr-fast">${esc(L('fast', { m: Math.max(1, Math.ceil(q.fastIn / 60)) }))}</span>` : ''}</div>` : ''}
       <div class="jr-acts">
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>

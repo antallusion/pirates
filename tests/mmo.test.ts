@@ -260,3 +260,24 @@ test('a hunt has a band leader: named, on the chart, and sinking him wins the hu
   const now = s.profile!.quests.active.find((q) => q.id === hunt.id);
   assert.ok(!now || now.step > at || s.profile!.quests.done.includes(hunt.id), 'the hunt step is won at once');
 });
+
+test('the journal shows groupmates on the same quest and the step each is on', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Ann Mates');
+  const b = join(game, 'Ben Mates');
+  a.push({ t: 'group', action: 'invite', name: 'Ben Mates' });
+  b.push({ t: 'group', action: 'accept', id: b.last('party')!.invites[0].id });
+  const A = game.sessionByName('Ann Mates')!, B = game.sessionByName('Ben Mates')!;
+  const job = JOBS.find((q) => q.steps.length >= 2)!;
+  A.profile!.quests.active.push({ id: job.id, step: 0, progress: 0, startedAt: game.now });
+  B.profile!.quests.active.push({ id: job.id, step: 1, progress: 0, startedAt: game.now });
+  game.pushSelf(A, true);
+  game.pushSelf(B, true);
+  const view = (c: typeof a) => (c.last('self')?.self ?? c.last('init')!.self).quests.find((q) => q.id === job.id);
+  assert.deepEqual(view(a)?.mates, [{ name: 'Ben Mates', step: 2 }]);
+  assert.deepEqual(view(b)?.mates, [{ name: 'Ann Mates', step: 1 }]);
+  // Out of the group: no one alongside.
+  b.push({ t: 'group', action: 'leave' });
+  game.pushSelf(A, true);
+  assert.equal(view(a)?.mates, undefined);
+});
