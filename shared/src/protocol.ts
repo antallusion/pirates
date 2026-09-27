@@ -19,6 +19,7 @@ import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
+import type { TaskView } from './data/worldtasks.ts';
 import type { GuildGoalKind } from './data/guildgoal.ts';
 
 export type Side = 'port' | 'starboard';
@@ -910,6 +911,8 @@ export type ServerMsg =
   | { t: 'info'; list: EntityInfo[] }
   | { t: 'boss'; list: BossView[] }
   | { t: 'events'; list: WorldEventView[] }
+  /** Tasks of the sea (docs/11 P6): the pirate nests about the map, with this captain's tally at each. */
+  | { t: 'tasks'; list: TaskView[] }
   | { t: 'legends'; view: LegendsView }
   | { t: 'onboarding'; view: OnboardingView }
   /** A moment of the First Watch: a step done or skipped, a contextual hint, a goal met, the edge of safe waters. */

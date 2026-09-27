@@ -31,6 +31,11 @@ const KIND: Record<string, string> = { Isle: 'Айл', Rock: 'Рок', Key: 'К�
 
 /** Named places that are not composed: the great whirlpools. */
 const FIXED: Record<string, string> = {
+  // The key ports' own islands whose ports have two words ("Port Gravesend" → "Gravesend Isle").
+  'Gravesend Isle': 'Грейвсенд-Айл',
+  'Blackwater Isle': 'Блэкуотер-Айл',
+  "Harpoon's Rest Isle": 'Айл Приюта Гарпуна',
+  'Saint Maw Isle': 'Сент-Мо-Айл',
   "The Widow's Eye": 'Вдовий Глаз',
   'The Gullet': 'Глотка',
   'Saltmouth Drain': 'Солёная Воронка',

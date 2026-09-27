@@ -1566,6 +1566,23 @@ body.touch #hud-region .rg-extra { display: none; }
 .mq-row b { font-weight: 600; }
 .mq-row .muted { font-size: 12px; }
 .mq-row.off { cursor: default; opacity: 0.8; }
+/* The logs under the chart (maps, orders, the common cause, tasks, quests) share one box that scrolls, at most
+   two fifths of the window: on a phone they had squeezed the chart to a strip. */
+.map-logs { flex: 0 1 auto; max-height: 40%; overflow-y: auto; min-height: 0; border-top: 1px solid rgba(111, 90, 56, 0.4); }
+.map-logs > :first-child { border-top: 0; }
+.map-logs .map-quests, .map-logs .map-maps { max-height: none; overflow: visible; }
+.map-wrap { flex: 1 1 auto; min-height: 45%; }
+/* A low, wide window (a phone on its side) or a wide one: the logs stand in a column beside the chart, which keeps the height. */
+@media (max-height: 520px) and (min-width: 700px), (min-width: 1100px) {
+  #modal-panel:has(> .map-logs) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 34%); grid-template-rows: auto minmax(0, 1fr); }
+  #modal-panel:has(> .map-logs) > .modal-head { grid-column: 1 / -1; }
+  #modal-panel:has(> .map-logs) > .map-wrap { grid-column: 1; grid-row: 2; min-height: 0; }
+  #modal-panel:has(> .map-logs) > .map-logs { grid-column: 2; grid-row: 2; max-height: none; border-top: 0; border-left: 1px solid rgba(111, 90, 56, 0.4); }
+}
+/* Tasks of the sea (docs/11 P6): orange rows; done ones greyed. */
+.map-tasks .mq-head { color: #f2b27a; }
+.mq-row.task { border-color: rgba(232, 140, 64, 0.45); }
+.mq-row.task.done { opacity: 0.6; border-color: rgba(111, 90, 56, 0.35); }
 .mq-row:not(.off):hover { border-color: var(--brass); }
 /* A quest card's head: its name, and under it who gives it (they were side by side and crowded a phone). */
 .card-h .q-title { display: grid; gap: 2px; min-width: 0; }

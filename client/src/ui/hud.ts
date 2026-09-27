@@ -468,6 +468,21 @@ export class Hud {
     };
     for (const a of self?.legendEcho ?? []) rim(a, '#e8c65a');
     for (const m of self?.maps ?? []) if (m.bearing !== undefined) rim(m.bearing, '#2ee6c8');
+    // Tasks of the sea (docs/11 P6): a nest in view as an orange ring with its mark; the nearest unfinished one
+    // beyond it as an orange tick on the rim.
+    let near: { x: number; y: number; d: number } | null = null;
+    for (const t of state.tasks) {
+      const d = Math.hypot(t.x - own.x, t.y - own.y);
+      if (Math.max(Math.abs(tx(t.x) - W / 2), Math.abs(ty(t.y) - H / 2)) < W / 2 - 4) {
+        g.strokeStyle = t.done ? 'rgba(160,160,160,0.6)' : 'rgba(232,140,64,0.95)';
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.arc(tx(t.x), ty(t.y), Math.max(4, t.r * k), 0, Math.PI * 2);
+        g.stroke();
+        g.lineWidth = 1;
+      } else if (!t.done && d < 20000 && (!near || d < near.d)) near = { x: t.x, y: t.y, d };
+    }
+    if (near) rim(Math.atan2(near.x - own.x, -(near.y - own.y)), '#e88c40');
     // The followed quest's goal (docs/11 P6): a gold diamond on the chart, or at the rim toward it.
     const qp = questPointer(trackedQuest(self?.quests), own.x, own.y, state.region);
     if (qp) {

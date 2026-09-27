@@ -6,6 +6,7 @@ import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
   BarterView, BoardFightView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
+import type { TaskView } from '../../shared/src/data/worldtasks.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
 import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
@@ -80,6 +81,9 @@ export class ClientState {
   friends: FriendView[] = [];
   /** Captains one does not hear. */
   ignored: string[] = [];
+  /** Tasks of the sea (docs/11 P6): the pirate nests about the map and this captain's tally at each; when told. */
+  tasks: TaskView[] = [];
+  tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
   who: { list: WhoView[]; total: number } | null = null;
   barter: BarterView | null = null;
@@ -232,6 +236,10 @@ export class ClientState {
         break;
       case 'who':
         this.who = { list: m.list, total: m.total };
+        break;
+      case 'tasks':
+        this.tasks = m.list;
+        this.tasksAt = performance.now();
         break;
       case 'friends':
         this.friends = m.list;

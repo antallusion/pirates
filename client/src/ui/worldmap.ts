@@ -22,7 +22,7 @@ const L = dict(EN, RU);
 /** The chart's key, in its own symbols. */
 const LEGEND: [string, Parameters<typeof L>[0]][] = [
   ['map_ship', 'lg.you'], ['map_port', 'lg.port'], ['map_contract', 'lg.contract'], ['map_treasure', 'lg.treasure'],
-  ['map_wreck', 'lg.wreck'], ['map_event', 'lg.event'], ['map_monster', 'lg.sighting'],
+  ['map_wreck', 'lg.wreck'], ['map_event', 'lg.event'], ['danger', 'lg.task'], ['map_monster', 'lg.sighting'],
 ];
 
 export class WorldMap {
@@ -33,6 +33,17 @@ export class WorldMap {
   private canvas: HTMLCanvasElement | null = null;
   private centred = false;
 
+  /** Tasks of the sea (docs/11 P6): each nest, its waters, the minutes left and one's tally. */
+  private tasksLog(state: ClientState): string {
+    if (!state.tasks.length) return '';
+    const gone = (performance.now() - state.tasksAt) / 1000;
+    const rows = state.tasks.map((t) => {
+      const m = Math.max(0, Math.ceil((t.endsIn - gone) / 60));
+      return `<button class="mq-row task${t.done ? ' done' : ''}" data-task="${t.id}"><b>${esc(serverText(`Pirate nest off ${t.island}`))}</b><span class="muted">${esc(placeName(REGIONS[t.region].name))} · ${t.done ? esc(L('taskDone')) : esc(L('taskRow', { m, k: t.mine, n: t.need }))}</span></button>`;
+    }).join('');
+    return `<div class="map-quests map-tasks" title="${esc(L('tasksHint'))}"><div class="mq-head">${icon('danger', '', 'ico-sm')}${esc(L('tasks'))}</div>${rows}</div>`;
+  }
+
   /** Set by the shell: a message to the server (sharing a quest with the group). */
   send: ((m: ClientMsg) => void) | null = null;
 
@@ -41,9 +52,18 @@ export class WorldMap {
     const inGroup = (state.party?.members.length ?? 0) > 1;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <details class="map-legend"${innerHeight > 520 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
-      ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
-      ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}`;
+      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
+      <div class="map-logs">${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
+      ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
+    // A task of the sea in the log: the chart turns to its nest.
+    root.querySelectorAll<HTMLElement>('[data-task]').forEach((b) => (b.onclick = () => {
+      const t = state.tasks.find((x) => x.id === Number(b.dataset.task));
+      if (!t) return;
+      this.cx = t.x;
+      this.cy = t.y;
+      this.zoom = Math.max(this.zoom, 4);
+      this.draw(state);
+    }));
     // Share a quest with the group: each groupmate who may take it is asked.
     root.querySelectorAll<HTMLElement>('[data-share]').forEach((b) => (b.onclick = () => this.send?.({ t: 'quest', action: 'share', id: b.dataset.share! })));
     // A quest in the log: it becomes the one followed (the gold mark on the screen's rim), and the chart turns to
@@ -418,6 +438,27 @@ export class WorldMap {
         g.fill();
       }
       label(placeName(c.name), tx(c.x), ty(c.y) - ms * 0.55, '#8fd0a8');
+    }
+    // Tasks of the sea: the nest's reach in orange, and its name, time and tally.
+    const gone = (performance.now() - state.tasksAt) / 1000;
+    for (const t of state.tasks) {
+      const x = tx(t.x), y = ty(t.y);
+      g.strokeStyle = t.done ? 'rgba(150,150,150,0.6)' : 'rgba(232,140,64,0.9)';
+      g.fillStyle = t.done ? 'rgba(120,120,120,0.08)' : 'rgba(232,140,64,0.12)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(x, y, Math.max(7, t.r * k), 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      if (!mark('icon.danger', x, y, ms * 0.9)) {
+        g.fillStyle = '#e88c40';
+        g.font = '700 14px Inter, system-ui, sans-serif';
+        g.textAlign = 'center';
+        g.fillText('!', x, y + 5);
+      }
+      g.font = '600 11px Inter, system-ui, sans-serif';
+      const m = Math.max(0, Math.ceil((t.endsIn - gone) / 60));
+      label(`${serverText(`Pirate nest off ${t.island}`)} · ${t.done ? L('taskDone') : L('taskRow', { m, k: t.mine, n: t.need })}`, x, y + ms * 0.9, t.done ? '#b8b8b8' : '#f2b27a');
     }
     // Where the quests point: a gold mark and the quest's name.
     for (const q of state.self?.quests ?? []) {

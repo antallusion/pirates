@@ -351,6 +351,9 @@ function onMessage(m: ServerMsg): void {
       if (m.view && m.view.startsIn === 5) hud.banner(L('duel'), m.view.sides.map((side) => side.map((x) => x.name).join(', ')).join(`  ${L('against')}  `));
       if (modal === 'company') refreshModal();
       break;
+    case 'tasks':
+      if (modal === 'map') refreshModal();
+      break;
     case 'party':
     case 'friends':
     case 'who':

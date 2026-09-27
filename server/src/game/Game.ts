@@ -6,6 +6,7 @@ import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '..
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
+import { pushTasks, stepTasks } from './worldtasks.ts';
 import {
   CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_CROWD, SNAP_CROWD_EVERY, SNAP_MID, SNAP_NEAR, SNAP_RANK_MID, SNAP_RANK_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
   SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight, xpForLevel,
@@ -670,6 +671,7 @@ export class Game {
     digNoise(this);
     stepSeasons(this);
     stepCommon(this);
+    stepTasks(this);
     stepEmpires(this);
     if (Math.floor(now) % 60 === 0) legendaryCalendar(this);
     // Nearest player distance for NPC LOD.
@@ -2964,6 +2966,7 @@ export class Game {
     if (s.ship?.docked) this.pushPort(s);
     if (s.pendingBoarding) this.sendTo(s, { t: 'boarding', result: s.pendingBoarding.result });
     sendEvents(this, s);
+    pushTasks(this, s);
     onboardingSeen(this, s);
     this.sendTo(s, { t: 'onboarding', view: onboardingView(s.profile!) });
     applyPantheon(this, s);

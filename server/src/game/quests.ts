@@ -26,6 +26,7 @@ import { spawnCargoAmbush, spawnPackLeader } from './npc.ts';
 import { ensureElite, eliteWord, todaysElite } from './elite.ts';
 import { eliteById } from '../../../shared/src/data/elite.ts';
 import { titlesDue } from '../../../shared/src/data/questtitles.ts';
+import { taskEvent } from './worldtasks.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
@@ -381,6 +382,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   dailyEvent(game, s, ev);
   commonEvent(game, s, ev);
   guildGoalEvent(game, s, ev);
+  if (ev.k === 'sink') taskEvent(game, s, ev.victim);
   for (const qs of [...p.quests.active]) {
     const q = QUESTS_BY_ID[qs.id];
     if (!q) continue;

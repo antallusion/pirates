@@ -157,7 +157,7 @@ function randomPointIn(game: Game, area: { x: number; y: number; r: number }): [
   return null;
 }
 
-function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
+export function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
   if (!brain.area) return false;
   const p = randomPointIn(game, brain.area);
   if (!p) return false;
@@ -934,7 +934,7 @@ export function spawnPackLeader(game: Game, region: RegionId, level: number): Sh
   for (let k = 0; k < 20; k++) {
     const a = game.rng.float() * Math.PI * 2, r = 1500 + game.rng.float() * 6000;
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
-    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region) continue;
+    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
     const ship = game.spawnNpcShip('pirate', level >= 30 ? 'frigate' : 'brig', 'confederacy', x, y, game.rng.float() * Math.PI * 2);
     const brain = game.npcs.get(ship.id)!;
     brain.area = { x: cx, y: cy, r: 8000 };
@@ -953,7 +953,7 @@ export function spawnElite(game: Game, region: RegionId, level: number): ShipEnt
   for (let k = 0; k < 30; k++) {
     const a = game.rng.float() * Math.PI * 2, r = 2500 + game.rng.float() * 6000;
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
-    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region) continue;
+    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
     const h = game.rng.float() * Math.PI * 2;
     const flag = game.spawnNpcShip('pirate', level >= 24 ? 'man_o_war' : level >= 16 ? 'galleon' : 'frigate', 'confederacy', x, y, h);
     const brain = game.npcs.get(flag.id)!;

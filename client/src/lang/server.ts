@@ -15,9 +15,10 @@ import { commonPatterns } from '../../../shared/src/data/commongoal.ts';
 import { guildGoalPatterns } from '../../../shared/src/data/guildgoal.ts';
 import { elitePatterns } from '../../../shared/src/data/elite.ts';
 import { questTitlePatterns } from '../../../shared/src/data/questtitles.ts';
+import { taskPatterns } from '../../../shared/src/data/worldtasks.ts';
 
 // The generated jobs' templates carry their Russian twins (shared/src/data/questgen.ts).
-const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...Object.fromEntries(commonPatterns()), ...Object.fromEntries(guildGoalPatterns()), ...Object.fromEntries(elitePatterns()), ...Object.fromEntries(questTitlePatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
+const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...Object.fromEntries(commonPatterns()), ...Object.fromEntries(guildGoalPatterns()), ...Object.fromEntries(elitePatterns()), ...Object.fromEntries(questTitlePatterns()), ...Object.fromEntries(taskPatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
 const exact = new Map<string, string>();
 let templates: { re: RegExp; ru: string; order: number[]; adjacent: number[] }[] | null = null;
 
