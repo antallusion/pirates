@@ -2312,13 +2312,13 @@ export class Game {
       case 'quest':
         // A job offered on an island's beach, or shared by a groupmate, is answered where it was offered.
         if (s.questOffer?.id === String(msg.id) && (msg.action === 'accept' || msg.action === 'decline')) {
-          err(answerOffer(this, s, String(msg.id), msg.action === 'accept'));
+          err(answerOffer(this, s, String(msg.id), msg.action === 'accept', msg.pay));
           this.pushSelf(s, true);
           return;
         }
         if (msg.action === 'share') return err(shareQuest(this, s, String(msg.id)));
         if (msg.action === 'decline') return;
-        if (msg.action === 'accept') return portAction((pt) => acceptQuest(this, s, pt, String(msg.id)));
+        if (msg.action === 'accept') return portAction((pt) => acceptQuest(this, s, pt, String(msg.id), msg.pay));
         if (msg.action === 'abandon') {
           err(abandonQuest(this, s, String(msg.id)));
           this.pushSelf(s, true);

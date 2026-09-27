@@ -319,7 +319,7 @@ function onMessage(m: ServerMsg): void {
     case 'quest_offer':
       // An island's people offer their job on the beach, or a groupmate shares theirs: the giver's window, then the
       // captain's answer.
-      void giverDialog(m.offer, m.from).then((ok) => net.send({ t: 'quest', action: ok ? 'accept' : 'decline', id: m.offer.id }));
+      void giverDialog(m.offer, m.from).then((pay) => net.send({ t: 'quest', action: pay ? 'accept' : 'decline', id: m.offer.id, ...(pay && pay !== 'silver' ? { pay } : {}) }));
       break;
     case 'quest_done': {
       // The herald: the quest's name and all it paid.
@@ -328,6 +328,7 @@ function onMessage(m: ServerMsg): void {
       if (m.fast) parts.push(L('questFast'));
       if (m.rep) parts.push(L('questRep', { faction: serverText(FACTIONS[m.rep.faction].name), n: m.rep.n }));
       if (m.extra) parts.push(L(m.extra === 'map' ? 'questMap' : 'questSupplies'));
+      if (m.stores) parts.push(L('questStores', { h: m.stores.heavy, f: m.stores.incendiary }));
       hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
       audio.bell();
       audio.coins();

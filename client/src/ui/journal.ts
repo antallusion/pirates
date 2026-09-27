@@ -10,6 +10,7 @@ import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { commonLog, dailyLog } from './daily.ts';
 import { esc, icon, money, xpBadge } from './dom.ts';
+import { paidHtml } from './giver.ts';
 import { setTracked, trackedQuest } from './track.ts';
 
 const EN = {
@@ -112,7 +113,7 @@ export class Journal {
           ${q.summary ? `<p class="giver-say">«${esc(serverText(q.summary))}»</p>` : ''}
         </div></div>
       <div class="giver-steps"><div class="giver-h">${esc(L('steps'))}</div><ol class="jr-steps">${steps}</ol></div>
-      ${q.silver !== undefined ? `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${money(q.silver)}${xpBadge(q.xp ?? 0)}${q.fastIn ? `<span class="jr-fast">${esc(L('fast', { m: Math.max(1, Math.ceil(q.fastIn / 60)) }))}</span>` : ''}</div>` : ''}
+      ${q.silver !== undefined ? `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${paidHtml(q.silver, q.pay, q.paid)}${xpBadge(q.xp ?? 0)}${q.fastIn ? `<span class="jr-fast">${esc(L('fast', { m: Math.max(1, Math.ceil(q.fastIn / 60)) }))}</span>` : ''}</div>` : ''}
       <div class="jr-acts">
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}

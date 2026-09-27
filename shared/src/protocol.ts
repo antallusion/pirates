@@ -18,6 +18,7 @@ import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
 import type { CommonKind } from './data/commongoal.ts';
+import type { QuestPay } from './data/questpay.ts';
 import type { GuildGoalKind } from './data/guildgoal.ts';
 
 export type Side = 'port' | 'starboard';
@@ -67,7 +68,8 @@ export type ClientMsg =
   | { t: 'press_gang'; qty: number }
   | { t: 'escort'; action: 'hire' | 'dismiss'; classId?: ShipClassId; id?: string }
   | { t: 'formation'; formation: 'line' | 'wedge' | 'ring' }
-  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline' | 'share'; id: string }
+  /** `pay`: how a job is to be paid, chosen on taking it (docs/11 P6). */
+  | { t: 'quest'; action: 'accept' | 'abandon' | 'decline' | 'share'; id: string; pay?: QuestPay }
   | { t: 'path'; to: CaptainId }
   | { t: 'oath'; oath: 'code' | 'marque' }
   | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }
@@ -374,7 +376,8 @@ export interface PrivateState {
   quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; target?: { x: number; y: number; r?: number; region?: RegionId };
     /** For the journal: the giver's words, every step's text, the pay, the giver's face, the job's kind. */
     summary?: string; stepTexts?: string[]; silver?: number; xp?: number; portrait?: string; category?: string;
-    /** seconds left to earn the speed bonus */ fastIn?: number }[];
+    /** seconds left to earn the speed bonus */ fastIn?: number;
+    /** The pay chosen on taking it, when not all in silver, and what it comes to. */ pay?: QuestPay; paid?: { silver: number; heavy: number; incendiary: number; rep: number } }[];
   questsDone: string[];
   /** Today's orders (docs/11 P6): each with its pay, the days in a row and the chest. */
   daily: { day: number; orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
@@ -497,7 +500,8 @@ export interface PortView {
   crewHireCost: number;
   tavern: TavernView;
   escorts: { classId: ShipClassId; price: number; upkeep: number; available: boolean }[];
-  questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string; portrait?: string; /** an arc's chapter, of three */ chapter?: number; /** asked for by the port's news (an epidemic, a blockade…) */ urgent?: boolean }[];
+  questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string; portrait?: string; /** an arc's chapter, of three */ chapter?: number; /** asked for by the port's news (an epidemic, a blockade…) */ urgent?: boolean;
+    /** The pay to choose from (docs/11 P6). */ pays?: QuestPayView }[];
   captainsHouse: boolean;
   oathOffer: 'code' | 'marque' | null;
   yard: { woods: WoodId[]; figurehead: FigureheadId | null; plans: boolean; master: boolean };
@@ -889,7 +893,8 @@ export type ServerMsg =
    *  may take it or leave it. */
   | { t: 'quest_offer'; offer: PortView['questOffers'][number]; island?: number; from?: string }
   /** A quest done: its name and all it paid (docs/11 P6). */
-  | { t: 'quest_done'; name: string; silver: number; xp: number; /** done within the speed window */ fast?: boolean; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies' }
+  | { t: 'quest_done'; name: string; silver: number; xp: number; /** done within the speed window */ fast?: boolean; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies';
+      /** fine shot put aboard, when the pay was taken partly in it */ stores?: { heavy: number; incendiary: number } }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number }
   | { t: 'fronts'; list: FrontData[]; forecast: boolean }
@@ -954,6 +959,15 @@ export interface PartyView {
   leader: number;
   convoy: boolean;
   members: PartyMember[];
+}
+
+/** A job's pay to choose from (docs/11 P6): all silver (with standing `rep` with `faction`), silver and fine
+ *  shot, or silver and the port's favour (where the job has a port). */
+export interface QuestPayView {
+  rep?: number;
+  faction?: FactionId;
+  stores: { silver: number; heavy: number; incendiary: number };
+  favour?: { silver: number; rep: number };
 }
 
 /** A captain on one's list of friends (docs/11 P6): who is at sea, at what level, in which waters or port. */

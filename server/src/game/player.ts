@@ -7,6 +7,7 @@ import { newPvp } from './pvp.ts';
 import type { PvpState } from './pvp.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import { questPayOf } from '../../../shared/src/data/questpay.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, FACTION_IDS, factionRelation, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
@@ -350,6 +351,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
         id: q.id, name: def.name, kind: def.kind, mentor: def.mentor, step: q.step + 1, steps: def.steps.length, text: st?.text ?? '', progress: st?.progress ?? 0, need: st?.need ?? 1, ...(target ? { target } : {}),
         // For the journal (docs/11 P6): the giver's words, every step, the pay and the face.
         summary: def.summary, stepTexts: def.steps.map((x) => x.text), silver: def.reward.silver, xp: def.reward.xp, ...(q.fastUntil && q.fastUntil > now ? { fastIn: Math.round(q.fastUntil - now) } : {}), ...(def.portrait ? { portrait: def.portrait } : {}), ...(def.category ? { category: def.category } : {}),
+        ...(q.pay ? { pay: q.pay, paid: questPayOf(q.pay, def.reward.silver, def.requires.level ?? 1) } : {}),
       };
     }),
     questsDone: p.quests.done,

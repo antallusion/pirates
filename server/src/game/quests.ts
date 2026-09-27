@@ -10,6 +10,9 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { hashString } from '../../../shared/src/rng.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { QuestDef, QuestStep } from '../../../shared/src/data/quests.ts';
+import { QUEST_PAYS, questPayOf, questRep } from '../../../shared/src/data/questpay.ts';
+import type { QuestPay } from '../../../shared/src/data/questpay.ts';
+import type { QuestPayView } from '../../../shared/src/protocol.ts';
 import { TREES, pointsInTree } from '../../../shared/src/data/talents.ts';
 import type { TreeId } from '../../../shared/src/data/talents.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
@@ -47,6 +50,24 @@ export interface QuestState {
   ambushed?: boolean;
   /** A hunt's quarry: the band leader's ship (docs/11 P6); sinking him ends the hunt at once. */
   leader?: number;
+  /** The pay chosen on taking it, when not all silver (docs/11 P6). */
+  pay?: QuestPay;
+}
+
+/** The pay a job offers to choose from (docs/11 P6): jobs and arcs of some worth; favour where there is a port. */
+export function payOptions(game: Game, q: QuestDef): QuestPayView | undefined {
+  if ((q.kind !== 'job' && q.kind !== 'story') || q.reward.silver < 200) return undefined;
+  const lvl = q.requires.level ?? 1;
+  const home = game.portById(q.port);
+  const st = questPayOf('stores', q.reward.silver, lvl), fv = questPayOf('favour', q.reward.silver, lvl);
+  return { stores: { silver: st.silver, heavy: st.heavy, incendiary: st.incendiary }, ...(home ? { rep: questRep(lvl), faction: home.faction, favour: { silver: fv.silver, rep: fv.rep } } : {}) };
+}
+
+/** A pay the captain asked for, if this job offers it. */
+function payAllowed(game: Game, q: QuestDef, pay: QuestPay | undefined): QuestPay | undefined {
+  if (!pay || pay === 'silver' || !QUEST_PAYS.includes(pay)) return undefined;
+  const o = payOptions(game, q);
+  return o && (pay === 'stores' || o.favour) ? pay : undefined;
 }
 
 /** A courier with a quest's cargo aboard, at sea in waters that are not the Crown's peace, meets raiders once:
@@ -94,9 +115,10 @@ export function fastWindow(game: Game, q: QuestDef): number | null {
   return Math.round(240 + (d / 7) * 1.35); // some 7 m/s under way, a third to spare, four minutes in port
 }
 
-function startQuest(game: Game, p: Profile, q: QuestDef, s?: PlayerSession): void {
+function startQuest(game: Game, p: Profile, q: QuestDef, s?: PlayerSession, pay?: QuestPay): void {
   const w = q.kind === 'job' ? fastWindow(game, q) : null;
-  const qs: QuestState = { id: q.id, step: 0, progress: 0, startedAt: game.now, ...(w ? { fastUntil: game.now + w } : {}) };
+  const chosen = payAllowed(game, q, pay);
+  const qs: QuestState = { id: q.id, step: 0, progress: 0, startedAt: game.now, ...(w ? { fastUntil: game.now + w } : {}), ...(chosen ? { pay: chosen } : {}) };
   // A hunt of pirates in a region: the band has a leader, and word of him comes with the job.
   const hunt = q.kind === 'job' ? q.steps.find((st) => st.type === 'sink' && st.region && st.role === 'pirate') : undefined;
   if (hunt && hunt.type === 'sink' && hunt.region && p.level >= 8) {
@@ -197,7 +219,7 @@ export function boardJobs(p: Profile, port: Port, now: number, favor: BoardFavor
   return scored.slice(0, JOBS_ON_BOARD).map((x) => x.q);
 }
 
-export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string): string | null {
+export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string, pay?: QuestPay): string | null {
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
   if (!q || q.port !== port.id) return 'Nobody here offers that';
@@ -205,7 +227,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   const why = questBlocked(p, q);
   if (why) return why;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
-  startQuest(game, p, q, s);
+  startQuest(game, p, q, s, pay);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   newsHint(game, s, 'journal');
   // A first step that is already satisfied (being in the right port) completes at once.
@@ -228,11 +250,12 @@ export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): 
   }
   // The giver speaks, and the captain decides (the offer stands while the boats are on the beach).
   s.questOffer = { id: q.id, island: islandId, until: game.now + 180 };
-  game.sendTo(s, { t: 'quest_offer', island: islandId, offer: offerView(q) });
+  game.sendTo(s, { t: 'quest_offer', island: islandId, offer: offerView(game, q) });
 }
 
-function offerView(q: QuestDef) {
-  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait };
+function offerView(game: Game, q: QuestDef) {
+  const pays = payOptions(game, q);
+  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait, ...(pays ? { pays } : {}) };
 }
 
 /** Share a quest with the group (docs/11 P6): each groupmate online who may take it is offered it, wherever they
@@ -255,14 +278,14 @@ export function shareQuest(game: Game, s: PlayerSession, id: string): string | n
       continue;
     }
     m.questOffer = { id, until: game.now + 180, from: s.name };
-    game.sendTo(m, { t: 'quest_offer', from: s.name, offer: offerView(q) });
+    game.sendTo(m, { t: 'quest_offer', from: s.name, offer: offerView(game, q) });
     offered++;
   }
   return offered ? null : 'Nobody in your group can take it on';
 }
 
 /** The captain answers an offer: take the job, or leave it (the beach asks again on the next landing). */
-export function answerOffer(game: Game, s: PlayerSession, id: string, take: boolean): string | null {
+export function answerOffer(game: Game, s: PlayerSession, id: string, take: boolean, pay?: QuestPay): string | null {
   const o = s.questOffer;
   if (!o || o.id !== id || game.now > o.until) return take ? (o?.from ? 'That offer has lapsed' : 'The people on the beach have gone back to their work') : null;
   s.questOffer = null;
@@ -271,7 +294,7 @@ export function answerOffer(game: Game, s: PlayerSession, id: string, take: bool
   const q = QUESTS_BY_ID[id];
   if (!q || p.quests.active.some((a) => a.id === id) || p.quests.done.includes(id)) return null;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
-  startQuest(game, p, q, s);
+  startQuest(game, p, q, s, pay);
   game.sendTo(s, { t: 'toast', msg: `${q.mentor}: “${q.summary}” — ${q.steps[0].text}`, kind: 'info' });
   return null;
 }
@@ -443,7 +466,9 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   p.quests.done.push(q.id);
   const company = Math.min(3, matesNear(game, s));
   const k = 1 + GROUP_QUEST_BONUS * company;
-  const silver = Math.round(q.reward.silver * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(q.reward.xp * k);
+  // The pay as chosen on taking it: all silver, or a part in fine shot or in the port's favour.
+  const pay = questPayOf(st?.pay ?? 'silver', q.reward.silver, q.requires.level ?? 1);
+  const silver = Math.round(pay.silver * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(q.reward.xp * k);
   p.gold += silver;
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);
@@ -453,7 +478,7 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   let rep: { faction: FactionId; n: number } | undefined;
   const home = game.portById(q.port);
   if (home && (q.kind === 'job' || q.kind === 'story')) {
-    rep = { faction: home.faction, n: 2 + Math.min(6, Math.round((q.requires.level ?? 1) / 10)) };
+    rep = { faction: home.faction, n: pay.rep };
     changeRep(p, rep.faction, rep.n);
   }
   // Now and then something more for the hold: supplies from a grateful quay, rarely a treasure map.
@@ -465,7 +490,13 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
     s.ship.ammo.chain = (s.ship.ammo.chain ?? 0) + 10;
     extra = 'supplies';
   }
-  game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(fast ? { fast: true } : {}), ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}) });
+  let stores: { heavy: number; incendiary: number } | undefined;
+  if ((pay.heavy || pay.incendiary) && s.ship) {
+    s.ship.ammo.heavy = (s.ship.ammo.heavy ?? 0) + pay.heavy;
+    s.ship.ammo.incendiary = (s.ship.ammo.incendiary ?? 0) + pay.incendiary;
+    stores = { heavy: pay.heavy, incendiary: pay.incendiary };
+  }
+  game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(fast ? { fast: true } : {}), ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}), ...(stores ? { stores } : {}) });
   if (q.reward.path && !p.paths.includes(q.reward.path)) {
     p.paths.push(q.reward.path);
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} teaches you the ${CAPTAINS[q.reward.path].archetype}'s Path. Change Path at any Captain's House.`, kind: 'gold' });

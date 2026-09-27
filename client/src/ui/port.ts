@@ -132,7 +132,7 @@ export class PortScreen {
         // The giver speaks first: their words, the steps and the pay; the captain takes it or leaves it.
         const q = state.portView?.questOffers.find((x) => x.id === d.id);
         if (!q) return this.send({ t: 'quest', action: 'accept', id: d.id! });
-        void giverDialog(q).then((ok) => ok && this.send({ t: 'quest', action: 'accept', id: d.id! }));
+        void giverDialog(q).then((pay) => pay && this.send({ t: 'quest', action: 'accept', id: d.id!, ...(pay !== 'silver' ? { pay } : {}) }));
         return;
       }
       case 'quest_abandon':
