@@ -1411,3 +1411,11 @@ body.touch #hud-region .rg-extra { display: none; }
 /* The chart closes with the X like every window (its own «[M] закрыть» line wrapped beside it); the menu shows
    the key. */
 .map-close { display: none; }
+/* The game's own question (in place of the browser's confirm()/alert()): a small framed card over everything,
+   the text in the middle, «Отмена» and the verb as two equal buttons (one in the middle for a notice). */
+#confirm { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; background: rgba(0, 0, 0, 0.55); }
+.confirm-panel { width: min(420px, 100%); box-sizing: border-box; padding: 18px 20px 16px; zoom: calc(var(--ui-scale) * var(--text-scale)); }
+.confirm-panel p { margin: 0 0 16px; font-family: var(--serif); font-size: 18px; line-height: 1.35; color: var(--bone); text-align: center; text-wrap: pretty; }
+.confirm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.confirm-row.one { grid-template-columns: minmax(0, 220px); justify-content: center; }
+.confirm-row .btn { min-height: 40px; }

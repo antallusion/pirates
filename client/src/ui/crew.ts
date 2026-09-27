@@ -11,6 +11,7 @@ import { EN, RU } from '../lang/ui/crew.ts';
 import { serverText } from '../lang/server.ts';
 import { keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
+import { ask } from './confirm.ts';
 import { dec1, esc, fmt, icon, money, officerIcon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -75,7 +76,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
   root.querySelectorAll<HTMLElement>('[data-form]').forEach((el) => (el.onclick = () => send({ t: 'formation', formation: el.dataset.form as 'line' })));
   root.querySelectorAll<HTMLElement>('[data-order]').forEach((el) => (el.onclick = () => send({ t: 'officer', action: 'order', id: el.dataset.order! })));
   root.querySelectorAll<HTMLElement>('[data-dismiss]').forEach((el) => (el.onclick = () => {
-    if (confirm(L('confirmPayOff'))) send({ t: 'officer', action: 'dismiss', id: el.dataset.dismiss! });
+    void ask(L('confirmPayOff')).then((ok) => ok && send({ t: 'officer', action: 'dismiss', id: el.dataset.dismiss! }));
   }));
 }
 

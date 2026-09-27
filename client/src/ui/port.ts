@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { ask, tell } from './confirm.ts';
 import { mapCard, placeName } from './maps.ts';
 import { personName } from '../lang/names.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
@@ -123,13 +124,13 @@ export class PortScreen {
       case 'quest_accept':
         return this.send({ t: 'quest', action: 'accept', id: d.id! });
       case 'quest_abandon':
-        if (confirm(L('confirm.questAbandon'))) this.send({ t: 'quest', action: 'abandon', id: d.id! });
+        void ask(L('confirm.questAbandon')).then((ok) => ok && this.send({ t: 'quest', action: 'abandon', id: d.id! }));
         return;
       case 'path':
-        if (confirm(L('confirm.path'))) this.send({ t: 'path', to: d.to as never });
+        void ask(L('confirm.path')).then((ok) => ok && this.send({ t: 'path', to: d.to as never }));
         return;
       case 'oath':
-        if (confirm(L('confirm.oath'))) this.send({ t: 'oath', oath: d.oath as 'code' });
+        void ask(L('confirm.oath')).then((ok) => ok && this.send({ t: 'oath', oath: d.oath as 'code' }));
         return;
       case 'build_order':
         return this.send({ t: 'build', req: { ...this.build, name: this.build.name || SHIP_CLASSES[this.build.classId].name } });
@@ -138,7 +139,7 @@ export class PortScreen {
       case 'berth_swap':
         return this.send({ t: 'berth', action: 'swap', index: Number(d.i) });
       case 'berth_sell':
-        if (confirm(L('confirm.berthSell'))) this.send({ t: 'berth', action: 'sell', index: Number(d.i) });
+        void ask(L('confirm.berthSell')).then((ok) => ok && this.send({ t: 'berth', action: 'sell', index: Number(d.i) }));
         return;
       case 'plan_buy':
         return this.send({ t: 'plan_buy', classId: this.build.classId });
@@ -150,14 +151,14 @@ export class PortScreen {
         const token = localStorage.getItem('gravetide.token') ?? '';
         fetch('/auth/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email, password }) })
           .then((r) => r.json())
-          .then((r: { error?: string }) => alert(r.error ? serverText(r.error) : L('alert.claimSaved')))
-          .catch(() => alert(L('alert.claimFail')));
+          .then((r: { error?: string }) => tell(r.error ? serverText(r.error) : L('alert.claimSaved')))
+          .catch(() => tell(L('alert.claimFail')));
         return;
       }
       case 'escort_hire':
         return this.send({ t: 'escort', action: 'hire', classId: d.cls as ShipClassId });
       case 'escort_dismiss':
-        if (confirm(L('confirm.escortDismiss'))) this.send({ t: 'escort', action: 'dismiss', id: d.id! });
+        void ask(L('confirm.escortDismiss')).then((ok) => ok && this.send({ t: 'escort', action: 'dismiss', id: d.id! }));
         return;
       case 'dregs':
         return this.send({ t: 'hire_crew', qty: 10, prof: 'sailor', dregs: true });
@@ -176,7 +177,7 @@ export class PortScreen {
       case 'mount':
         return this.send({ t: 'shipyard', action: 'mount', mount: d.mount as MountId });
       case 'ship':
-        if (confirm(L('confirm.shipTrade', { ship: SHIP_CLASSES[d.cls as ShipClassId].name }))) this.send({ t: 'shipyard', action: 'buy_ship', classId: d.cls as ShipClassId });
+        void ask(L('confirm.shipTrade', { ship: SHIP_CLASSES[d.cls as ShipClassId].name })).then((ok) => ok && this.send({ t: 'shipyard', action: 'buy_ship', classId: d.cls as ShipClassId }));
         return;
       case 'contract':
         return this.send({ t: 'contract', action: d.mode as never, id: d.id! });
@@ -190,8 +191,9 @@ export class PortScreen {
         return this.send({ t: 'treasure', action: d.mode as never, tier: Number(d.tier ?? 0) });
       case 'map': {
         const to = (root.querySelector<HTMLInputElement>(`input[data-for="${d.id}"]`)?.value ?? '').trim();
-        if (d.mode === 'burn' && !confirm(L('confirm.mapBurn'))) return;
-        return this.send({ t: 'map', action: d.mode as never, id: d.id, to: to || undefined });
+        const go = () => this.send({ t: 'map', action: d.mode as never, id: d.id, to: to || undefined });
+        if (d.mode === 'burn') return void ask(L('confirm.mapBurn')).then((ok) => ok && go());
+        return go();
       }
       case 'insure':
         return this.send({ t: 'insure', tier: d.tier as never });
@@ -231,7 +233,7 @@ export class PortScreen {
       case 'cleanse':
         return this.send({ t: 'cleanse' });
       case 'respec':
-        if (confirm(L('confirm.respec'))) this.send({ t: 'respec' });
+        void ask(L('confirm.respec')).then((ok) => ok && this.send({ t: 'respec' }));
         return;
     }
     void root;

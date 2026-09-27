@@ -24,6 +24,12 @@ export function dec1(n: number): string {
   return lang() === 'ru' ? s.replace('.', ',') : s;
 }
 
+/** A number with two decimals (a multiplier): 1.40 in English, 1,40 in Russian. */
+export function dec2(n: number): string {
+  const s = n.toFixed(2);
+  return lang() === 'ru' ? s.replace('.', ',') : s;
+}
+
 export function pct(v: number): string {
   return `${Math.round(Math.max(0, Math.min(1, v)) * 100)}%`;
 }

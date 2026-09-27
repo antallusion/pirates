@@ -9,6 +9,7 @@ import type { ClientState } from '../state.ts';
 import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/talents.ts';
 import { serverText } from '../lang/server.ts';
+import { ask } from './confirm.ts';
 import { esc, fmt, icon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -75,12 +76,12 @@ export class TalentScreen {
       this.send({ t: 'learn_talent', id: el.dataset.id! });
     }));
     root.querySelectorAll<HTMLElement>('[data-forget]').forEach((el) => (el.onclick = () => {
-      if (confirm(self.respec.free ? L('confirmForget') : L('confirmForgetCost', { cost: fmt(self.respec.forgetCost) }))) this.send({ t: 'respec', mode: 'forget', id: el.dataset.forget! });
+      void ask(self.respec.free ? L('confirmForget') : L('confirmForgetCost', { cost: fmt(self.respec.forgetCost) })).then((ok) => ok && this.send({ t: 'respec', mode: 'forget', id: el.dataset.forget! }));
     }));
     root.querySelectorAll<HTMLElement>('[data-loadout]:not([aria-current])').forEach((el) => (el.onclick = () => this.send({ t: 'loadout', slot: Number(el.dataset.loadout) })));
     root.querySelectorAll<HTMLElement>('[data-respec]').forEach((el) => (el.onclick = () => {
       const mode = el.dataset.respec as 'full' | 'token';
-      if (confirm(mode === 'token' ? L('confirmToken') : self.respec.free ? L('confirmResetFree') : L('confirmResetCost', { cost: fmt(self.respec.cleanSlateCost) }))) this.send({ t: 'respec', mode });
+      void ask(mode === 'token' ? L('confirmToken') : self.respec.free ? L('confirmResetFree') : L('confirmResetCost', { cost: fmt(self.respec.cleanSlateCost) })).then((ok) => ok && this.send({ t: 'respec', mode }));
     }));
   }
 

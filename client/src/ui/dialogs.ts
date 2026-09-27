@@ -1,6 +1,7 @@
 // Boarding plunder, shipwreck, ship/cargo and help dialogs.
 
 import { GOODS } from '../../../shared/src/data/goods.ts';
+import { ask } from './confirm.ts';
 import { placeName } from './maps.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, AMMO, SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
@@ -17,7 +18,7 @@ import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { dec1, esc, fmt, icon, money, xpBadge } from './dom.ts';
+import { dec1, dec2, esc, fmt, icon, money, xpBadge } from './dom.ts';
 
 const L = dict(EN, RU);
 
@@ -134,8 +135,8 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
       ${tile('tab_market', L('ship.hold'), esc(L('ship.holdVal', { used: dec1(used), max: st.holdVolume.toFixed(0), weight: st.holdWeight.toFixed(0) })))}
       ${tile(`gun_${self.loadout.guns.port}`, L('ship.port'), `${cls.gunPortsPerSide - self.gunsDisabled.port}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.port].name)}</small>`, true)}
       ${tile(`gun_${self.loadout.guns.starboard}`, L('ship.starboard'), `${cls.gunPortsPerSide - self.gunsDisabled.starboard}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.starboard].name)}</small>`)}
-      ${tile('fire', L('ship.gunMuls'), `×${st.reloadMul.toFixed(2)} / ×${st.spreadMul.toFixed(2)} / ×${st.gunDamageMul.toFixed(2)}`)}
-      ${tile('tree_boarding', L('ship.boarding'), esc(L('ship.boardingVal', { range: st.boardingRange.toFixed(0), power: st.boardingPower.toFixed(2) })))}
+      ${tile('fire', L('ship.gunMuls'), `×${dec2(st.reloadMul)} / ×${dec2(st.spreadMul)} / ×${dec2(st.gunDamageMul)}`)}
+      ${tile('tree_boarding', L('ship.boarding'), esc(L('ship.boardingVal', { range: st.boardingRange.toFixed(0), power: dec2(st.boardingPower) })))}
       ${tile('ab_spotters_eye', L('ship.detection'), esc(L('ship.detectionVal', { v: st.detection.toFixed(0) })))}
       ${tile('insurance', L('ship.insurance'), esc(self.insured ? L('ship.insured') : L('ship.none')))}
     </div>
@@ -146,7 +147,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
         const where = a ? state.ports.find((p) => p.id === a.port)?.name ?? a.port : '';
         const good = GOODS[g as GoodId];
         return `<div class="cargo-row">${icon(`good_${g}`, '', 'item-ico')}
-          <div class="item-text"><b class="${good.contraband ? 'contra' : ''}">${esc(good.name)}</b><span class="muted">${esc(L('ship.volume'))} ${((n ?? 0) * good.volume).toFixed(1)} · ${esc(L('ship.weight'))} ${((n ?? 0) * good.weight).toFixed(1)}${a ? ` · ${esc(where)}` : ''}</span></div>
+          <div class="item-text"><b class="${good.contraband ? 'contra' : ''}">${esc(good.name)}</b><span class="muted">${esc(L('ship.volume'))} ${dec1((n ?? 0) * good.volume)} · ${esc(L('ship.weight'))} ${dec1((n ?? 0) * good.weight)}${a ? ` · ${esc(where)}` : ''}</span></div>
           <b class="cargo-qty">×${Math.floor(n ?? 0)}</b>
           ${hasSale ? `<span class="cargo-sale">${a ? money(a.price * Math.floor(n ?? 0)) : ''}</span>` : ''}
           ${self.dockedAt ? '' : `<button class="btn btn-small btn-danger" data-dump="${g}" title="${esc(L('ship.overboard'))}">⤓</button>`}</div>`;
@@ -161,7 +162,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
   root.querySelectorAll<HTMLElement>('[data-dump]').forEach((el) => (el.onclick = () => {
     const g = el.dataset.dump as GoodId;
     const n = Math.floor(self.cargo[g] ?? 0);
-    if (send && confirm(L('ship.jettison', { n, good: GOODS[g].name }))) send({ t: 'jettison', good: g, qty: n });
+    if (send) void ask(L('ship.jettison', { n, good: lang() === 'ru' ? GOODS[g].name.toLowerCase() : GOODS[g].name })).then((ok) => ok && send({ t: 'jettison', good: g, qty: n }));
   }));
 }
 

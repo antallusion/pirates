@@ -22,6 +22,7 @@ import { serverText } from '../lang/server.ts';
 import { EN, RU } from '../lang/ui/company.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
+import { ask } from './confirm.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 
@@ -256,14 +257,14 @@ export class CompanyScreen {
     const q = <T extends HTMLElement>(sel: string) => body.querySelector<T>(sel);
     const num = (sel: string) => Number(q<HTMLInputElement>(sel)?.value ?? 0);
     body.querySelectorAll<HTMLElement>('[data-rent]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'rent', island: Number(el.dataset.rent), days: Number(el.dataset.days) })));
-    body.querySelectorAll<HTMLElement>('[data-siege]').forEach((el) => (el.onclick = () => confirm(L('isl_confirm_siege')) && this.send({ t: 'isle', action: 'siege', island: Number(el.dataset.siege) })));
+    body.querySelectorAll<HTMLElement>('[data-siege]').forEach((el) => (el.onclick = () => void ask(L('isl_confirm_siege')).then((ok) => ok && this.send({ t: 'isle', action: 'siege', island: Number(el.dataset.siege) }))));
     body.querySelectorAll<HTMLElement>('[data-sgc]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'siege_choice', island: Number(el.dataset.isl), choice: el.dataset.sgc as 'capture' })));
     body.querySelectorAll<HTMLElement>('[data-fortify]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'fortify', island: Number(el.dataset.fortify) })));
     body.querySelectorAll<HTMLElement>('[data-glease]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'lease', island: Number(el.dataset.glease), days: Number(el.dataset.days) })));
     body.querySelectorAll<HTMLInputElement>('[data-auto]').forEach((el) => (el.onchange = () => this.send({ t: 'isle', action: 'auto', island: Number(el.dataset.auto), on: el.checked })));
     body.querySelectorAll<HTMLElement>('[data-tin]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'treasury', island: Number(el.dataset.tin), amount: num(`[data-tamt="${el.dataset.tin}"]`) })));
     body.querySelectorAll<HTMLElement>('[data-tout]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'treasury', island: Number(el.dataset.tout), amount: -num(`[data-tamt="${el.dataset.tout}"]`) })));
-    body.querySelectorAll<HTMLElement>('[data-demolish]').forEach((el) => (el.onclick = () => confirm(L('isl_confirm_demolish')) && this.send({ t: 'isle', action: 'demolish', island: Number(el.dataset.demolish), index: Number(el.dataset.index) })));
+    body.querySelectorAll<HTMLElement>('[data-demolish]').forEach((el) => (el.onclick = () => void ask(L('isl_confirm_demolish')).then((ok) => ok && this.send({ t: 'isle', action: 'demolish', island: Number(el.dataset.demolish), index: Number(el.dataset.index) }))));
     body.querySelectorAll<HTMLElement>('[data-build]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'build', island: Number(el.dataset.build), building: el.dataset.bid as BuildingId })));
     const store = (id: string, sign: number) => this.send({ t: 'isle', action: 'store', island: Number(id), good: q<HTMLSelectElement>(`[data-sgood="${id}"]`)!.value as GoodId, qty: sign * num(`[data-sqty="${id}"]`) });
     body.querySelectorAll<HTMLElement>('[data-sin]').forEach((el) => (el.onclick = () => store(el.dataset.sin!, 1)));
@@ -344,15 +345,15 @@ export class CompanyScreen {
     on('#g-take', () => this.send({ t: 'guild', action: 'store', good: v('#g-good') as GoodId, qty: -Number(v('#g-qty')) }));
     on('#g-contract', () => this.send({ t: 'guild', action: 'contract', good: v('#g-cgood') as GoodId, qty: Number(v('#g-cqty')), reward: Number(v('#g-crew')) }));
     on('#g-return', () => this.send({ t: 'guild', action: 'return_ship' }));
-    on('#g-war', () => v('#g-dtag') && confirm(L('g_confirm_war', { tag: v('#g-dtag').toUpperCase() })) && this.send({ t: 'guild', action: 'war', tag: v('#g-dtag') }));
-    on('#g-leave', () => confirm(L('g_confirm_leave')) && this.send({ t: 'guild', action: 'leave' }));
-    on('#g-disband', () => confirm(L('g_confirm_disband')) && this.send({ t: 'guild', action: 'disband' }));
+    on('#g-war', () => v('#g-dtag') && void ask(L('g_confirm_war', { tag: v('#g-dtag').toUpperCase() })).then((ok) => ok && this.send({ t: 'guild', action: 'war', tag: v('#g-dtag') })));
+    on('#g-leave', () => void ask(L('g_confirm_leave')).then((ok) => ok && this.send({ t: 'guild', action: 'leave' })));
+    on('#g-disband', () => void ask(L('g_confirm_disband')).then((ok) => ok && this.send({ t: 'guild', action: 'disband' })));
     body.querySelectorAll<HTMLSelectElement>('[data-grank]').forEach((el) => (el.onchange = () => this.send({ t: 'guild', action: 'rank', account: Number(el.dataset.grank), rank: el.value as GuildRank })));
-    body.querySelectorAll<HTMLElement>('[data-gkick]').forEach((el) => (el.onclick = () => confirm(L('g_confirm_kick')) && this.send({ t: 'guild', action: 'kick', account: Number(el.dataset.gkick) })));
+    body.querySelectorAll<HTMLElement>('[data-gkick]').forEach((el) => (el.onclick = () => void ask(L('g_confirm_kick')).then((ok) => ok && this.send({ t: 'guild', action: 'kick', account: Number(el.dataset.gkick) }))));
     body.querySelectorAll<HTMLElement>('[data-gflag]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'flagship', account: Number(el.dataset.gflag) })));
     body.querySelectorAll<HTMLElement>('[data-gdrop]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'drop_contract', id: Number(el.dataset.gdrop) })));
     body.querySelectorAll<HTMLElement>('[data-gborrow]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'borrow_ship', id: Number(el.dataset.gborrow) })));
-    body.querySelectorAll<HTMLElement>('[data-ggive]').forEach((el) => (el.onclick = () => confirm(L('g_confirm_give')) && this.send({ t: 'guild', action: 'give_ship', berth: Number(el.dataset.ggive) })));
+    body.querySelectorAll<HTMLElement>('[data-ggive]').forEach((el) => (el.onclick = () => void ask(L('g_confirm_give')).then((ok) => ok && this.send({ t: 'guild', action: 'give_ship', berth: Number(el.dataset.ggive) }))));
     body.querySelectorAll<HTMLElement>('[data-gpeace]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'peace', tag: el.dataset.gpeace!, tribute: Number(q<HTMLInputElement>(`[data-gtrib="${el.dataset.gpeace}"]`)?.value ?? 0) })));
     body.querySelectorAll<HTMLElement>('[data-gbreak]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: el.dataset.gbreak === 'alliance' ? 'break_alliance' : 'break_pact', tag: el.dataset.tag! })));
     body.querySelectorAll<HTMLElement>('[data-gtreaty]').forEach((el) => (el.onclick = () => {
