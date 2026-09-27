@@ -25,6 +25,7 @@ import { newsHint } from './onboarding.ts';
 import { spawnCargoAmbush, spawnPackLeader } from './npc.ts';
 import { ensureElite, eliteWord, todaysElite } from './elite.ts';
 import { eliteById } from '../../../shared/src/data/elite.ts';
+import { titlesDue } from '../../../shared/src/data/questtitles.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
@@ -482,6 +483,16 @@ function matesNear(game: Game, s: PlayerSession): number {
   return n;
 }
 
+/** Titles for the work done (docs/11 P6): quests finished, contracts won, captains guided. */
+export function workTitles(game: Game, s: PlayerSession): void {
+  const p = s.profile!;
+  const counts = { quests: p.quests.done.length, contracts: p.quests.done.filter((id) => id.startsWith('elite_')).length, mentored: p.stats.mentored ?? 0 };
+  for (const title of titlesDue(counts, p.titles)) {
+    p.titles.push(title);
+    game.sendTo(s, { t: 'toast', msg: `A new title to wear before your name: “${title}” (the Legends tab).`, kind: 'gold' });
+  }
+}
+
 /** A tenth more for every groupmate in company, up to three. */
 export const GROUP_QUEST_BONUS = 0.1;
 
@@ -551,8 +562,11 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
     m.profile!.gold += fee;
     game.db.ledger(m.accountId, 'mentor', fee, q.id);
     seasonStat(game, m, 'mentored', 1);
+    m.profile!.stats.mentored = (m.profile!.stats.mentored ?? 0) + 1;
     game.sendTo(m, { t: 'toast', msg: `You saw ${s.name} through “${q.name}”: ${fee} silver for the guidance.`, kind: 'gold' });
+    workTitles(game, m);
   }
+  workTitles(game, s);
   if (q.reward.path && !p.paths.includes(q.reward.path)) {
     p.paths.push(q.reward.path);
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} teaches you the ${CAPTAINS[q.reward.path].archetype}'s Path. Change Path at any Captain's House.`, kind: 'gold' });

@@ -332,3 +332,25 @@ test('the season path’s titles read in Russian, the season named too', () => {
   setLang('en');
   assert.deepEqual(titles.filter((t) => /[A-Za-z]/.test(t)), []);
 });
+
+test('titles for the work done: the tenth quest, the fifth contract, the tenth captain guided', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Titled Tess');
+  const s = game.sessionByName('Titled Tess')!;
+  const quest: QuestDef = { id: 'test_title', kind: 'job', name: 'The Tenth', mentor: 'Test', port: 'saltmarrow', summary: '', requires: {}, steps: [{ type: 'chart', count: 1, text: 'Chart an island.' }], reward: { xp: 10, silver: 10 } };
+  QUESTS_BY_ID[quest.id] = quest;
+  s.profile!.quests.done = [...Array.from({ length: 4 }, (_, i) => `elite_saltmarrow_${i}`), ...Array.from({ length: 5 }, (_, i) => `x_${i}`)];
+  s.profile!.quests.active.push({ id: quest.id, step: 0, progress: 0, startedAt: game.now });
+  questEvent(game, s, { k: 'chart' });
+  assert.ok(s.profile!.titles.includes('Hand for Hire'), 'ten quests done');
+  assert.ok(!s.profile!.titles.includes('Flagship Breaker'), 'four contracts are not five');
+  assert.ok(c.all('toast').some((t) => t.msg === 'A new title to wear before your name: “Hand for Hire” (the Legends tab).'));
+  // The title is worn.
+  c.push({ t: 'season', action: 'title', value: 'Hand for Hire' });
+  assert.equal(s.profile!.title, 'Hand for Hire');
+  delete QUESTS_BY_ID[quest.id];
+  setLang('ru');
+  const ru = ['Hand for Hire', 'Flagship Breaker', 'Teacher of the Young', 'Legend of the Harbour Offices', 'A new title to wear before your name: “Friend of the Quays” (the Legends tab).'].map((t) => serverText(t));
+  setLang('en');
+  assert.deepEqual(ru.filter((t) => /[A-Za-z]/.test(t)), []);
+});

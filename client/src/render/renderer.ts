@@ -9,6 +9,7 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { nightFactor } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { placeName } from '../ui/maps.ts';
+import { serverText } from '../lang/server.ts';
 import type { IslandData, ShipInfo } from '../../../shared/src/protocol.ts';
 import { SF, curseStageFromFlags } from '../../../shared/src/protocol.ts';
 import { fbm } from '../../../shared/src/rng.ts';
@@ -2345,7 +2346,7 @@ export class Renderer {
     const label = info.isPlayer ? `${info.captainName} · ${info.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${placeName(info.name)}`;
     const cb = settings().colorblind;
     const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
-    const tag = info.isPlayer ? `${info.title ? info.title + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' ');
+    const tag = info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' ');
     // Both lines keep inside the screen: the name and, under it, the (often longer) class line.
     const nameW = g.measureText(label).width;
     g.font = '10px Inter, sans-serif';
