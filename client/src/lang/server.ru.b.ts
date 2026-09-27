@@ -925,4 +925,5 @@ export const SERVER_RU_B: Record<string, string> = {
   "You sail in no group": "Вы не в группе",
   "Nobody in your group can take it on": "В вашей группе никто не может за это взяться",
   "That offer has lapsed": "Предложение уже не в силе",
+  "You already sail in a group": "Вы уже в группе",
 };

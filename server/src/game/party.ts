@@ -7,6 +7,8 @@
 //    speed ×1.05, see 30% farther, and pay 30% less for League insurance.
 
 import { GROUP_MAX } from '../../../shared/src/protocol.ts';
+import type { CaptainId } from '../../../shared/src/data/captains.ts';
+import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { BarterSide, BarterView, PartyMember, PartyView } from '../../../shared/src/protocol.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -58,6 +60,8 @@ export class Social {
   groupOf = new Map<number, number>();
   invites = new Map<number, Invite>();
   barters = new Map<number, Barter>(); // either side's account id → the barter
+  /** Captains looking for a group (docs/11 P6): account → their note and when they posted it (wall ms). */
+  lfg = new Map<number, { note: string; since: number }>();
   private nextId = 1;
 
   id(): number {
@@ -136,7 +140,10 @@ export function groupAnswer(game: Game, s: PlayerSession, id: number, accept: bo
   // Other invitations to this captain lapse.
   for (const [k, v] of game.social.invites) if (v.to === s.accountId) game.social.invites.delete(k);
   groupNotice(game, g, `${s.name} joins the group.`);
+  // Found one: off the board (both of them).
+  const found = game.social.lfg.delete(s.accountId) || game.social.lfg.delete(inv.from);
   pushGroup(game, g);
+  if (found) lfgChanged(game);
   return null;
 }
 
@@ -252,7 +259,45 @@ export function partyView(game: Game, g: Group): PartyView {
 export function pushParty(game: Game, s: PlayerSession): void {
   const g = groupOfAccount(game, s.accountId);
   const invites = [...game.social.invites.values()].filter((i) => i.to === s.accountId).map((i) => ({ id: i.id, from: i.fromName }));
-  game.sendTo(s, { t: 'party', group: g ? partyView(game, g) : null, invites });
+  game.sendTo(s, { t: 'party', group: g ? partyView(game, g) : null, invites, lfg: lfgList(game, s.accountId), lfgMine: game.social.lfg.get(s.accountId)?.note ?? null });
+}
+
+// ------------------------------------------------------------------------------------------ looking for a group
+
+/** A posting stands half an hour. */
+export const LFG_SEC = 30 * 60;
+
+/** The captains looking for a group, as one captain sees them: not themselves, only the ones at sea, freshest first. */
+export function lfgList(game: Game, viewer: number): { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number }[] {
+  const wall = game.wallNow();
+  const out: { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number; since: number }[] = [];
+  for (const [acc, e] of game.social.lfg) {
+    if (wall - e.since > LFG_SEC * 1000) {
+      game.social.lfg.delete(acc);
+      continue;
+    }
+    const s = game.sessionByAccount(acc);
+    if (acc === viewer || !s?.profile || !s.ship) continue;
+    out.push({ name: s.name, level: s.profile.level, captain: s.profile.captain, region: s.ship.region, note: e.note, mins: Math.floor((wall - e.since) / 60000), since: e.since });
+  }
+  return out.sort((a, b) => b.since - a.since).slice(0, 20).map(({ since, ...x }) => (void since, x));
+}
+
+/** Post (or refresh) «looking for a group» with a short note; every captain at sea sees the board change. */
+export function lfgPost(game: Game, s: PlayerSession, note: string): string | null {
+  if (groupOfAccount(game, s.accountId)) return 'You already sail in a group';
+  const clean = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  game.social.lfg.set(s.accountId, { note: clean, since: game.wallNow() });
+  lfgChanged(game);
+  return null;
+}
+
+export function lfgClear(game: Game, s: PlayerSession): void {
+  if (game.social.lfg.delete(s.accountId)) lfgChanged(game);
+}
+
+function lfgChanged(game: Game): void {
+  for (const s of game.sessions) if (s.profile) pushParty(game, s);
 }
 
 function pushGroup(game: Game, g: Group): void {
@@ -526,6 +571,7 @@ export function stepSocial(game: Game): void {
 
 /** A captain leaves the world for good (logged out and the ship gone). */
 export function socialRetire(game: Game, s: PlayerSession): void {
+  if (game.social.lfg.delete(s.accountId)) lfgChanged(game);
   const b = game.social.barters.get(s.accountId);
   if (b) cancelBarter(game, b, `${s.name} has gone`);
   for (const [k, i] of game.social.invites) if (i.to === s.accountId || i.from === s.accountId) game.social.invites.delete(k);

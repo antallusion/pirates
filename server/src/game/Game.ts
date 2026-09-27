@@ -58,7 +58,7 @@ import {
   dismissOfficer, hireOfficer, maxRecruits, mutinyCourse, officerOrder, onDockCrew, onFightWon, onMagazineBlast, onSunkCrew, plunderShare, pressGang, recruitPrisoners,
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
-import { Social, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
+import { Social, lfgClear, lfgPost, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
 import { havenSecond } from './havens.ts';
 import { onboardingAction, onboardingProtected, onboardingRescue, onboardingSecond, onboardingSeen, onboardingStart, onboardingView } from './onboarding.ts';
@@ -2564,6 +2564,10 @@ export class Game {
             return err(groupConvoy(this, s, !!msg.on));
           case 'say':
             return err(groupSay(this, s, msg.text));
+          case 'lfg':
+            return err(lfgPost(this, s, msg.note));
+          case 'lfg_clear':
+            return lfgClear(this, s);
         }
         return;
       case 'barter':

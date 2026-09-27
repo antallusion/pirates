@@ -187,6 +187,7 @@ export class CompanyScreen {
       ${g ? `<button class="btn btn-danger" id="leave">${L('grp_leave')}</button>` : ''}
     </div><div>
       ${lead ? `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="invite">${L('invite')}</button></div></div>` : ''}
+      ${this.lfgCard(state, !!g, lead && (g?.members.length ?? 1) < GROUP_MAX)}
       <div class="card"><h4 class="card-h">${icon('tab_market', '', 'ico-md')}${L('grp_trade_title')}</h4><p class="muted">${L('grp_trade_text')}</p>
         <div class="row"><input id="bar-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="hail">${L('grp_hail')}</button></div></div>
       ${state.invites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
@@ -200,6 +201,19 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-decline]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'decline', id: Number(el.dataset.decline) })));
     body.querySelectorAll<HTMLElement>('[data-lead]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'lead', name: el.dataset.lead! })));
     body.querySelectorAll<HTMLElement>('[data-kick]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'kick', name: el.dataset.kick! })));
+    body.querySelector<HTMLElement>('#lfg-post')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg', note: val('#lfg-note') }));
+    body.querySelector<HTMLElement>('#lfg-stop')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg_clear' }));
+    body.querySelectorAll<HTMLElement>('[data-lfg-invite]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'invite', name: el.dataset.lfgInvite! })));
+  }
+
+  /** Looking for a group (docs/11 P6): one's own posting, and the captains at sea looking, to be called aboard. */
+  private lfgCard(state: ClientState, grouped: boolean, canInvite: boolean): string {
+    const mine = state.lfgMine;
+    const rows = state.lfg.map((e) => `<div class="lfg-row"><div><b>${esc(e.name)}</b> <span class="muted">${esc(L('lfg_row', { level: e.level, region: placeName(REGIONS[e.region]?.name ?? e.region), mins: e.mins }))}</span>${e.note ? `<div class="lfg-note">«${esc(e.note)}»</div>` : ''}</div>${canInvite ? `<button class="btn btn-small" data-lfg-invite="${esc(e.name)}">${L('lfg_invite')}</button>` : ''}</div>`).join('');
+    return `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('lfg_title')}</h4>
+      ${grouped ? '' : `<p class="muted">${L('lfg_text')}</p>${mine !== null ? `<p>${esc(L('lfg_mine', { note: mine || '—' }))}</p>` : ''}
+        <div class="row lfg-form"><input id="lfg-note" placeholder="${L('lfg_ph')}" maxlength="80" value="${esc(mine ?? '')}"><button class="btn btn-primary" id="lfg-post">${L(mine !== null ? 'lfg_update' : 'lfg_post')}</button>${mine !== null ? `<button class="btn" id="lfg-stop">${L('lfg_stop')}</button>` : ''}</div>`}
+      <div class="lfg-list">${rows || `<p class="muted">${L('lfg_none')}</p>`}</div></div>`;
   }
 
   private renderIsles(body: HTMLElement, state: ClientState): void {

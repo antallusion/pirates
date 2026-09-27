@@ -1643,3 +1643,10 @@ body.touch #hud-region .rg-extra { display: none; }
 .jr-fast { color: var(--gold); font-size: 13px; }
 .cm-leaders { font-size: 12px; margin-top: 3px; }
 .cm-leaders b { color: var(--bone); font-weight: 600; }
+/* Looking for a group: who, how seasoned, where, what for; the call aboard on the right. */
+.lfg-list { display: grid; gap: 6px; margin-top: 8px; }
+.lfg-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid rgba(111, 90, 56, 0.35); background: rgba(255, 255, 255, 0.03); }
+.lfg-row .muted { font-size: 12px; }
+.lfg-note { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--bone); }
+.lfg-form { flex-wrap: wrap; }
+.lfg-form input { flex: 1 1 180px; min-width: 0; }

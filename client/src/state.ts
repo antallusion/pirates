@@ -72,6 +72,9 @@ export class ClientState {
   portView: PortView | null = null;
   boarding: BoardingResult | null = null;
   party: PartyView | null = null;
+  /** Captains looking for a group, and this captain's own posting (docs/11 P6). */
+  lfg: NonNullable<Extract<ServerMsg, { t: 'party' }>['lfg']> = [];
+  lfgMine: string | null = null;
   invites: { id: number; from: string }[] = [];
   barter: BarterView | null = null;
   letters: LetterView[] = [];
@@ -218,6 +221,8 @@ export class ClientState {
       case 'party':
         this.party = m.group;
         this.invites = m.invites;
+        this.lfg = m.lfg ?? [];
+        this.lfgMine = m.lfgMine ?? null;
         break;
       case 'barter':
         this.barter = m.view;

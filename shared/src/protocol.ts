@@ -120,6 +120,8 @@ export type ClientMsg =
   | { t: 'group'; action: 'leave' }
   | { t: 'group'; action: 'convoy'; on: boolean }
   | { t: 'group'; action: 'say'; text: string }
+  | { t: 'group'; action: 'lfg'; note: string }
+  | { t: 'group'; action: 'lfg_clear' }
   | { t: 'barter'; action: 'propose'; name: string }
   | { t: 'barter'; action: 'offer'; gold: number; cargo: Cargo }
   | { t: 'barter'; action: 'ready' | 'cancel' }
@@ -911,7 +913,8 @@ export type ServerMsg =
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
   | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' }
-  | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[] }
+  | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[];
+      /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number }[]; lfgMine?: string | null }
   | { t: 'barter'; view: BarterView | null }
   | { t: 'mail'; letters: LetterView[]; unread: number }
   | { t: 'market'; view: MarketView }

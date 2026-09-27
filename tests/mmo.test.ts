@@ -185,3 +185,26 @@ test('the speed bonus: a courier job done inside its window pays a quarter more;
   assert.equal(done?.fast, true);
   assert.ok(done && done.silver >= Math.round(job.reward.silver * 1.25) - 1, 'a quarter more');
 });
+
+test('looking for a group: a posting every captain sees, a call aboard, and off the board once found', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Lone Lucy');
+  const b = join(game, 'Host Hal');
+  a.push({ t: 'undock' });
+  b.push({ t: 'undock' });
+  a.push({ t: 'group', action: 'lfg', note: 'Kraken   tonight' });
+  const board = b.last('party')?.lfg ?? [];
+  assert.equal(board.length, 1);
+  assert.equal(board[0].name, 'Lone Lucy');
+  assert.equal(board[0].note, 'Kraken tonight', 'the note, tidied');
+  assert.equal(a.last('party')?.lfgMine, 'Kraken tonight');
+  assert.equal((a.last('party')?.lfg ?? []).length, 0, 'one does not see oneself');
+  // Hal calls her aboard; she accepts: off the board.
+  b.push({ t: 'group', action: 'invite', name: 'Lone Lucy' });
+  a.push({ t: 'group', action: 'accept', id: a.last('party')!.invites[0].id });
+  assert.equal((b.last('party')?.lfg ?? []).length, 0, 'found: off the board');
+  assert.equal(a.last('party')?.lfgMine, null);
+  // In a group, no posting.
+  a.push({ t: 'group', action: 'lfg', note: 'more' });
+  assert.ok(a.all('toast').some((t) => /already sail in a group/.test(t.msg)));
+});
