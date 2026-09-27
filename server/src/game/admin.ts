@@ -9,7 +9,7 @@
 //   /time <hour>               wind the world clock forward to that hour
 //   /god                       no damage, hull and crew kept whole
 //   /ship <class>              change hull (in port or at sea)
-//   /heal · /ammo · /give <good> <n> · /reveal (chart every island)
+//   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink
 
 import { DAY_LENGTH_SEC, MAX_LEVEL, timeOfDay } from '../../../shared/src/constants.ts';
 import { BOSSES } from '../../../shared/src/data/bosses.ts';
@@ -33,7 +33,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -162,6 +162,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       game.pushSelf(s, true);
       return `She is a ${SHIP_CLASSES[cls].name} now.`;
     }
+    case 'sink':
+      // The death screen, the tow or the respawn, the losses — without waiting for a fight to go wrong.
+      if (ship.docked) return 'Put to sea first.';
+      ship.god = false;
+      ship.hull = 0;
+      game.beginSinking(ship);
+      return 'She goes down.';
     case 'heal':
       mend(ship);
       game.pushSelf(s, true);

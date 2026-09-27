@@ -228,7 +228,7 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    const html = `<div><span class="rg-name">${esc(r.name)}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"> · ${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${state.self?.quests[0] ? `<span style="color:var(--gold)">${esc(sv(state.self.quests[0].name))}:</span> <span class="muted">${esc(sv(state.self.quests[0].text))}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
+    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"> · ${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${state.self?.quests[0] ? `<span style="color:var(--gold)">${esc(sv(state.self.quests[0].name))}:</span> <span class="muted">${esc(sv(state.self.quests[0].text))}${state.self.quests[0].need > 1 ? ` ${state.self.quests[0].progress}/${state.self.quests[0].need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
     if (html !== this.lastRegion) {
       this.lastRegion = html;
       $('hud-region').innerHTML = html;
@@ -621,6 +621,8 @@ export class Hud {
   }
 
   banner(title: string, sub: string): void {
+    // A heading starts with a capital even when the name reads lower-case inside a sentence ("море Грейвуотер").
+    title = title.charAt(0).toUpperCase() + title.slice(1);
     // A phone has no free middle of the screen: the herald joins the toast column, where nothing covers it.
     if (matchMedia('(max-width: 699px), (max-height: 520px)').matches) {
       const el = document.createElement('div');
