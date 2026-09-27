@@ -1387,3 +1387,27 @@ body.touch #hud-region .rg-extra { display: none; }
   #hud-dive .dlog > div:not(:last-child) { display: none; }
   #hud-dive .dlog > div { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 }
+/* The world chart fills what the window leaves and never sizes itself: its canvas drew at the device's pixel
+   ratio and fed that back as its own height (on a phone it grew with every redraw — 2700px — and the key fell
+   off the screen). The treasure maps sit under the chart. */
+.map-wrap { min-height: 0; overflow: hidden; }
+#worldmap-canvas { position: absolute; inset: 0; }
+/* On a phone the chart's key stands under the chart instead of over its lower third. */
+@media (max-width: 699px) {
+  .map-wrap { display: flex; flex-direction: column; }
+  #worldmap-canvas { position: static; flex: 1 1 0; min-height: 0; height: auto; }
+  .map-legend { position: static; max-width: none; margin: 0; border-width: 1px 0 0; gap: 2px 10px; padding: 6px 10px; }
+  .map-legend .ico { width: 18px; height: 18px; }
+}
+/* The chart's key folds: open on a tall screen, a small plate in a low window (it covered a third of the chart). */
+.map-legend { display: block; }
+.map-legend > summary { cursor: pointer; list-style: none; font: 600 11px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+.map-legend > summary::-webkit-details-marker { display: none; }
+.map-legend > summary::before { content: '▸ '; }
+.map-legend[open] > summary { margin-bottom: 6px; }
+.map-legend[open] > summary::before { content: '▾ '; }
+.map-legend .lg-items { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+@media (max-width: 699px) { .map-legend .lg-items { gap: 2px 10px; } }
+/* The chart closes with the X like every window (its own «[M] закрыть» line wrapped beside it); the menu shows
+   the key. */
+.map-close { display: none; }

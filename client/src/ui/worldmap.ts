@@ -29,10 +29,10 @@ export class WorldMap {
   private centred = false;
 
   open(root: HTMLElement, state: ClientState): void {
-    root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L('sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
-      <div class="map-legend">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div>
-      ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}</div>`;
+      <details class="map-legend"${innerHeight > 520 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
+      ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}`;
     const c = root.querySelector('canvas')!;
     this.canvas = c;
     if (!this.centred && state.ownDisplay) {
@@ -102,6 +102,9 @@ export class WorldMap {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const W = c.clientWidth, H = c.clientHeight;
     const k = this.scale();
+    const keep = (v: number, half: number) => (WORLD_SIZE > 2 * half ? Math.max(half, Math.min(WORLD_SIZE - half, v)) : WORLD_SIZE / 2);
+    this.cx = keep(this.cx, W / 2 / k);
+    this.cy = keep(this.cy, H / 2 / k);
     const tx = (x: number) => (x - this.cx) * k + W / 2;
     const ty = (y: number) => (y - this.cy) * k + H / 2;
     // Painted chart symbols (Higgsfield `icon.map_*`, faction crests); the old ink shapes only while they load.
@@ -122,14 +125,21 @@ export class WorldMap {
     const label = (text: string, x: number, y: number, color = 'rgba(240,230,200,0.85)') => {
       const w = g.measureText(text).width;
       const a = g.textAlign;
-      const x0 = a === 'center' ? x - w / 2 : a === 'right' ? x - w : x;
+      // A label by the chart's edge slides inward rather than being cut by it; one whose mark is off the chart is
+      // not drawn at all (it would stand at the edge with nothing under it).
+      if (x < -4 || x > W + 4) return;
+      const want = a === 'center' ? x - w / 2 : a === 'right' ? x - w : x;
+      const x0 = w + 8 < W ? Math.max(4, Math.min(W - w - 4, want)) : want;
       const box: [number, number, number, number] = [x0 - 2, y - 12, x0 + w + 2, y + 4];
       if (placed.some((b) => box[0] < b[2] && b[0] < box[2] && box[1] < b[3] && b[1] < box[3])) return;
       placed.push(box);
+      g.save();
+      g.textAlign = 'left';
       g.fillStyle = 'rgba(0,0,0,0.55)';
-      g.fillText(text, x + 1, y + 1);
+      g.fillText(text, x0 + 1, y + 1);
       g.fillStyle = color;
-      g.fillText(text, x, y);
+      g.fillText(text, x0, y);
+      g.restore();
     };
     const chart = sprite('tex.chart');
     g.fillStyle = '#070a0e';
@@ -183,7 +193,9 @@ export class WorldMap {
       const r = REGIONS[id];
       g.font = `${Math.round(Math.max(12, 16 * Math.sqrt(this.zoom)))}px "IM Fell English SC", serif`;
       g.fillStyle = id === state.region ? 'rgba(224,184,98,0.55)' : 'rgba(216,210,196,0.22)';
-      g.fillText(r.name.toUpperCase(), tx(r.center[0]), ty(r.center[1]));
+      // A region's name by the chart's edge slides inward instead of being cut.
+      const name = r.name.toUpperCase(), half = g.measureText(name).width / 2, x = tx(r.center[0]);
+      g.fillText(name, half * 2 + 8 < W && x > 0 && x < W ? Math.max(4 + half, Math.min(W - 4 - half, x)) : x, ty(r.center[1]));
     }
     // Charted islands.
     for (const id of state.discovered) {
@@ -320,8 +332,7 @@ export class WorldMap {
         g.stroke();
       }
       g.font = 'italic 11px "Cormorant Garamond", serif';
-      g.fillStyle = g.strokeStyle;
-      g.fillText(L('seen', { name: placeName(sg.name), age: age(sg.t) }), x + 8, y - 6);
+      label(L('seen', { name: placeName(sg.name), age: age(sg.t) }), x + 8, y - 6, sg.kind === 'ghost' ? `rgba(46,230,200,${fresh})` : `rgba(208,106,94,${fresh})`);
     }
     g.textAlign = 'center';
     // Contract destinations.
@@ -391,15 +402,16 @@ export class WorldMap {
       g.closePath();
       g.fill();
       g.fillRect(tx(h.x) - 1, ty(h.y) - 12, 2, 12);
-      g.fillText(h.name, tx(h.x), ty(h.y) + 12);
+      label(placeName(h.name), tx(h.x), ty(h.y) + 12, '#e0b862');
     }
     // Your group.
     g.font = '12px serif';
     for (const m of state.party?.members ?? []) {
       if (m.name === state.self?.name || m.docked) continue;
-      g.fillStyle = m.online ? '#7fd08a' : 'rgba(127,208,138,0.45)';
+      const col = m.online ? '#7fd08a' : 'rgba(127,208,138,0.45)';
+      g.fillStyle = col;
       g.fillRect(tx(m.x) - 4, ty(m.y) - 4, 8, 8);
-      g.fillText(m.name, tx(m.x), ty(m.y) - 9);
+      label(m.name, tx(m.x), ty(m.y) - 9, col);
     }
     // You.
     const own = state.ownDisplay;
