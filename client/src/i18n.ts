@@ -49,7 +49,12 @@ export function onLang(f: () => void): void {
 export function t(key: Key, vars?: Record<string, string | number>): string {
   let s = DICTS[current][key] ?? EN[key] ?? key;
   if (vars) s = s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
-  return s;
+  return current === 'ru' ? typeset(s) : s;
+}
+
+/** Russian typesetting: a dash never opens a line, a one-letter word (в, с, к, и…) never ends one. */
+export function typeset(s: string): string {
+  return s.replace(/ ([—–])/g, '\u00a0$1').replace(/(?<=^|[\s(«„"])([вВкКсСуУоОиИаАяЯ]) /g, '$1\u00a0');
 }
 
 /** Whether a key exists (for ids that come from the server). */
@@ -90,6 +95,6 @@ export function dict<T extends Record<string, string>>(en: T, ru: Record<keyof T
   return (key, vars) => {
     let s = (current === 'ru' ? ru[key] : undefined) ?? en[key] ?? key;
     if (vars) s = s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
-    return s;
+    return current === 'ru' ? typeset(s) : s;
   };
 }

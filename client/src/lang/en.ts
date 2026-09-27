@@ -70,6 +70,7 @@ export const EN = {
   'prologue.2': 'Out past the breakwater a Crown frigate slides by — cold white lanterns. Out here, lights are a language.',
   'prologue.3': 'The ship is yours. The sea is not. Not yet.',
   'prologue.skip': 'click to skip',
+  'prologue.skipTouch': 'tap to skip',
   // Captain screen
   'captain.knowSea': 'I know the sea — skip the First Watch',
   // Logbook (Handbook)

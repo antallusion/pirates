@@ -3,7 +3,7 @@
 // first, then the most specific template — and the Russian twin is filled with the captured parts, which are
 // themselves translated when they are known names or phrases. Unknown text passes through unchanged.
 
-import { lang } from '../i18n.ts';
+import { lang, typeset } from '../i18n.ts';
 import { COMMON_RU, NAME_RU, TEXT_RU } from './data.ts';
 import { composedNameRu } from './names.ts';
 import { SERVER_RU_A } from './server.ru.a.ts';
@@ -102,7 +102,7 @@ const MONTHS_RU: Record<string, string> = { Jan: 'янв', Feb: 'фев', Mar: '
 export function serverText(s: string): string {
   if (lang() !== 'ru' || !s) return s;
   // Dates the server writes in English ("04 Oct 2026 00:36 UTC") keep their numbers, lose their English.
-  return translate(s, 0).replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
+  return typeset(translate(s, 0)).replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
 }
 
 /** For tests: how many patterns are known. */

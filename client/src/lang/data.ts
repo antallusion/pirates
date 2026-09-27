@@ -17,6 +17,7 @@ import * as shipbuild from '../../../shared/src/data/shipbuild.ts';
 import * as ships from '../../../shared/src/data/ships.ts';
 import * as talents from '../../../shared/src/data/talents.ts';
 import * as regions from '../../../shared/src/world/regions.ts';
+import { typeset } from '../i18n.ts';
 import type { Lang } from '../i18n.ts';
 import { DATA_RU_CORE } from './data.ru.ts';
 import { DATA_RU_TALENTS } from './data.talents.ru.ts';
@@ -54,12 +55,12 @@ export function applyDataLocale(lang: Lang): void {
     const en = originals.get(path)!;
     // Module namespaces are frozen, but the tables inside them are plain objects.
     try {
-      at.obj[at.key] = lang === 'ru' ? ru : en;
+      at.obj[at.key] = lang === 'ru' ? typeset(ru) : en;
     } catch {
       /* a frozen table keeps its English */
     }
     if (path.endsWith('.name')) NAME_RU.set(en, ru);
     if (path.startsWith('goods.') && path.endsWith('.name')) COMMON_RU.add(ru);
-    TEXT_RU.set(en, ru);
+    TEXT_RU.set(en, typeset(ru));
   }
 }

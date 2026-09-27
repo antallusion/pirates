@@ -61,11 +61,19 @@ test('two parts side by side are told apart: a port and what follows its name', 
   const { applyDataLocale } = await import('../client/src/lang/data.ts');
   setLang('ru');
   applyDataLocale('ru');
-  assert.equal(serverText('Fever in Saltmarrow (quarantine)'), 'Лихорадка в Солтмарроу (карантин)');
-  assert.equal(serverText('Fever in Saltmarrow'), 'Лихорадка в Солтмарроу');
-  assert.match(serverText('Deliver 12 Salt to Saltmarrow'), /^Доставить соль × 12 в Солтмарроу$/);
+  const plain = (x: string) => x.replace(/ /g, ' ');
+  assert.equal(plain(serverText('Fever in Saltmarrow (quarantine)')), 'Лихорадка в Солтмарроу (карантин)');
+  assert.equal(plain(serverText('Fever in Saltmarrow')), 'Лихорадка в Солтмарроу');
+  assert.match(plain(serverText('Deliver 12 Salt to Saltmarrow')), /^Доставить соль × 12 в Солтмарроу$/);
   const policy = serverText('The Gilded Ledger honours your policy: salvage fee waived, 120 silver for lost cargo.');
   assert.ok(!/policy|silver/.test(policy), policy);
   applyDataLocale('en');
   setLang('en');
+});
+
+test('Russian typesetting: no dash opens a line, no one-letter word ends one', async () => {
+  const { typeset } = await import('../client/src/i18n.ts');
+  assert.equal(typeset('Фрегат Короны — холодные огни'), 'Фрегат Короны — холодные огни');
+  assert.equal(typeset('вместе с приливом и в море'), 'вместе с приливом и в море');
+  assert.equal(typeset('В порту (и в море)'), 'В порту (и в море)');
 });

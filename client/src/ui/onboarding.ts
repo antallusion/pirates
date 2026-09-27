@@ -120,7 +120,7 @@ export class OnboardingUi {
 /** The prologue: three lines over the harbour at night, then the watch begins. Any click ends it. */
 export function playPrologue(done: () => void): void {
   const el = $('prologue');
-  el.innerHTML = `<p>${esc(t('prologue.1'))}</p><p>${esc(t('prologue.2'))}</p><p>${esc(t('prologue.3'))}</p><small>${esc(t('prologue.skip'))}</small>`;
+  el.innerHTML = `<p>${esc(t('prologue.1'))}</p><p>${esc(t('prologue.2'))}</p><p>${esc(t('prologue.3'))}</p><small>${esc(t(document.body.classList.contains('touch') ? 'prologue.skipTouch' : 'prologue.skip'))}</small>`;
   el.classList.remove('hidden');
   let over = false;
   const end = () => {
