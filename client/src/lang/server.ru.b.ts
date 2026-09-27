@@ -953,5 +953,6 @@ export const SERVER_RU_B: Record<string, string> = {
   "Not on your list of the unheard": "Этого капитана нет среди неслышимых",
   "You hear {0} again.": "Снова слышно: {0}.",
   "{0} is not listening to you": "{0} вас не слушает",
+  "the Deep Pastor of Saint Maw": "Глубинный пастор Сент-Мо",
   "You saw {0} through “{1}”: {2} silver for the guidance.": "Вы провели капитана {0} через «{1}»: {2} серебра за наставничество.",
 };

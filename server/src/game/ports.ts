@@ -27,6 +27,7 @@ import type { Profession } from '../../../shared/src/data/crew.ts';
 import { hireTrade, recruitCost, tavernOf } from './crew.ts';
 import { ESCORT_OFFERS } from './fleet.ts';
 import { eventFavor, payOptions, questOffers } from './quests.ts';
+import { todaysElite } from './elite.ts';
 import { woodAvailable } from './shipbuilding.ts';
 import { FIGUREHEADS, PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS } from '../../../shared/src/data/shipbuild.ts';
 import type { FigureheadId, WoodId } from '../../../shared/src/data/shipbuild.ts';
@@ -114,7 +115,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: crewCost(port, p),
     tavern: tavernView(game, port, p, ship),
-    questOffers: questOffers(p, port, game.now, favor).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: q.reward.silver, xp: q.reward.xp, path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}), ...(favor && q.kind === 'job' && favor(q) ? { urgent: true } : {}), ...((pays) => (pays ? { pays } : {}))(payOptions(game, q)) })),
+    questOffers: questOffers(p, port, game.now, favor, todaysElite(game, port)).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: q.reward.silver, xp: q.reward.xp, path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}), ...(favor && q.kind === 'job' && favor(q) ? { urgent: true } : {}), ...((pays) => (pays ? { pays } : {}))(payOptions(game, q)), ...(q.group ? { group: q.group } : {}) })),
     captainsHouse: CAPTAINS_HOUSES.includes(port.id),
     yard: {
       woods: (Object.keys(WOODS) as WoodId[]).filter((w) => woodAvailable(port, w)),

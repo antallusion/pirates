@@ -502,7 +502,8 @@ export interface PortView {
   tavern: TavernView;
   escorts: { classId: ShipClassId; price: number; upkeep: number; available: boolean }[];
   questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string; portrait?: string; /** an arc's chapter, of three */ chapter?: number; /** asked for by the port's news (an epidemic, a blockade…) */ urgent?: boolean;
-    /** The pay to choose from (docs/11 P6). */ pays?: QuestPayView }[];
+    /** The pay to choose from (docs/11 P6). */ pays?: QuestPayView;
+    /** A group contract: the company it is made for. */ group?: number }[];
   captainsHouse: boolean;
   oathOffer: 'code' | 'marque' | null;
   yard: { woods: WoodId[]; figurehead: FigureheadId | null; plans: boolean; master: boolean };

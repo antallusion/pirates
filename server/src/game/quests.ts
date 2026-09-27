@@ -23,6 +23,8 @@ import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { newsHint } from './onboarding.ts';
 import { spawnCargoAmbush, spawnPackLeader } from './npc.ts';
+import { ensureElite, eliteWord, todaysElite } from './elite.ts';
+import { eliteById } from '../../../shared/src/data/elite.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
@@ -91,6 +93,18 @@ function cargoAmbush(game: Game, s: PlayerSession): void {
   }
 }
 
+/** A group contract still to be won whose flagship is gone (sunk by strangers, or her two hours out): the day's
+ *  quarry is put to sea again, and the gold mark follows the new one. */
+function eliteAtSea(game: Game, s: PlayerSession): void {
+  for (const qs of s.profile!.quests.active) {
+    const q = QUESTS_BY_ID[qs.id];
+    if (q?.category !== 'elite' || qs.step !== 0) continue;
+    if (qs.leader !== undefined && game.ships.get(qs.leader)?.alive) continue;
+    const flag = ensureElite(game, q);
+    if (flag) qs.leader = flag.id;
+  }
+}
+
 /** The speed bonus: a quarter more silver for a job done within its window. */
 export const FAST_BONUS = 0.25;
 
@@ -119,6 +133,14 @@ function startQuest(game: Game, p: Profile, q: QuestDef, s?: PlayerSession, pay?
   const w = q.kind === 'job' ? fastWindow(game, q) : null;
   const chosen = payAllowed(game, q, pay);
   const qs: QuestState = { id: q.id, step: 0, progress: 0, startedAt: game.now, ...(w ? { fastUntil: game.now + w } : {}), ...(chosen ? { pay: chosen } : {}) };
+  // A group contract: the day's flagship, shared by all who hold it.
+  if (q.category === 'elite') {
+    const flag = ensureElite(game, q);
+    if (flag) {
+      qs.leader = flag.id;
+      if (s) eliteWord(game, s, flag, q);
+    }
+  }
   // A hunt of pirates in a region: the band has a leader, and word of him comes with the job.
   const hunt = q.kind === 'job' ? q.steps.find((st) => st.type === 'sink' && st.region && st.role === 'pirate') : undefined;
   if (hunt && hunt.type === 'sink' && hunt.region && p.level >= 8) {
@@ -189,10 +211,12 @@ export function eventFavor(game: Game, port: Port): BoardFavor {
     || (kinds.has('storm_century') && q.category === 'rescue');
 }
 
-export function questOffers(p: Profile, port: Port, now = 0, favor: BoardFavor = null): { q: QuestDef; blocked: string | null }[] {
+export function questOffers(p: Profile, port: Port, now = 0, favor: BoardFavor = null, elite: QuestDef | null = null): { q: QuestDef; blocked: string | null }[] {
   // An arc's chapter is offered once the chapter before it is done.
   const story = [...QUESTS, ...ARC_QUESTS].filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id) && (q.requires.done ?? []).every((d) => p.quests.done.includes(d)));
-  return [...story, ...boardJobs(p, port, now, favor)]
+  // The day's group contract heads the jobs (docs/11 P6).
+  const contract = elite && !p.quests.done.includes(elite.id) && !p.quests.active.some((a) => a.id === elite.id) ? [elite] : [];
+  return [...story, ...contract, ...boardJobs(p, port, now, favor)]
     .map((q) => ({ q, blocked: questBlocked(p, q) }))
     .filter((o) => o.blocked !== 'You already walk this Path' && o.blocked !== 'The deep already knows you');
 }
@@ -223,7 +247,7 @@ export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string
   const p = s.profile!;
   const q = QUESTS_BY_ID[id];
   if (!q || q.port !== port.id) return 'Nobody here offers that';
-  if (q.kind === 'job' && !boardJobs(p, port, game.now, eventFavor(game, port)).includes(q)) return 'That job is no longer on the board';
+  if (q.category === 'elite' ? q.id !== todaysElite(game, port)?.id : q.kind === 'job' && !boardJobs(p, port, game.now, eventFavor(game, port)).includes(q)) return 'That job is no longer on the board';
   const why = questBlocked(p, q);
   if (why) return why;
   if (p.quests.active.length >= MAX_ACTIVE_QUESTS) return `At most ${MAX_ACTIVE_QUESTS} quests at once`;
@@ -255,7 +279,7 @@ export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): 
 
 function offerView(game: Game, q: QuestDef) {
   const pays = payOptions(game, q);
-  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait, ...(pays ? { pays } : {}) };
+  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait, ...(pays ? { pays } : {}), ...(q.group ? { group: q.group } : {}) };
 }
 
 /** Share a quest with the group (docs/11 P6): each groupmate online who may take it is offered it, wherever they
@@ -349,7 +373,10 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   if (!p || !ship) return;
   // The day's orders and the sea's common cause move on with the same deeds.
   if (ev.k === 'dock') newsHint(game, s, 'daily');
-  if (ev.k === 'tick') cargoAmbush(game, s);
+  if (ev.k === 'tick') {
+    cargoAmbush(game, s);
+    eliteAtSea(game, s);
+  }
   dailyEvent(game, s, ev);
   commonEvent(game, s, ev);
   guildGoalEvent(game, s, ev);
@@ -602,6 +629,8 @@ export function sanitizeQuests(p: Profile): void {
   p.quests ??= newQuestLog();
   p.quests.active ??= [];
   p.quests.done ??= [];
+  // A group contract of a past day (after a restart) is found again by its id.
+  for (const q of p.quests.active) if (!QUESTS_BY_ID[q.id]) eliteById(q.id);
   p.quests.active = p.quests.active.filter((q) => QUESTS_BY_ID[q.id]);
   p.paths ??= [p.captain];
   if (!p.paths.includes(p.captain)) p.paths.push(p.captain);

@@ -31,7 +31,7 @@ import { serverText } from '../lang/server.ts';
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
   delivery: 'good_provisions', hunt: 'fire', rescue: 'map_cove', scouting: 'menu_map', smuggling: 'good_dreamleaf', treasure: 'map_treasure',
-  diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye',
+  diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye', elite: 'danger',
 };
 const L = dict(EN, RU);
 
@@ -435,7 +435,7 @@ ${orders}${berths}</div>` : ''}`;
       <div><h3 class="title-sm" style="font-size:20px">${esc(L('tavern.officers', { n: co.officers.length, max: co.slots }))}</h3>${officers}</div></div>
       <div class="cols">
       <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${[...new Set(view.rumors)].map((r) => `<p>${quote(serverText(r))}</p>`).join('')}</div>
-      <div>${dailyCard(self.daily)}${commonCard(self.common)}${view.questOffers.length ? `<h3 class="title-sm" style="font-size:20px">${esc(L('quest.board'))}</h3>` : ''}${view.questOffers.map((q) => `<div class="card"><h4 class="card-h">${(q.portrait && icon(`portrait.${q.portrait}`, '', 'ico-md ico-round q-face')) || icon(q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : q.kind === 'job' ? JOB_ICON[q.category ?? ''] ?? 'goal' : q.category === 'arc' ? 'tab_legends' : 'goal', '', 'ico-md')}<span class="q-title"><b>${esc(serverText(q.name))}</b><span class="muted">${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : q.category ? esc(L(`quest.cat.${q.category}` as 'quest.cat.delivery')) : ''}${q.chapter ? esc(L('quest.chapter', { n: q.chapter })) : ''}${q.urgent ? `<span class="q-urgent">${esc(L('quest.urgent'))}</span>` : ''}</span></span></h4>
+      <div>${dailyCard(self.daily)}${commonCard(self.common)}${view.questOffers.length ? `<h3 class="title-sm" style="font-size:20px">${esc(L('quest.board'))}</h3>` : ''}${view.questOffers.map((q) => `<div class="card"><h4 class="card-h">${(q.portrait && icon(`portrait.${q.portrait}`, '', 'ico-md ico-round q-face')) || icon(q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : q.kind === 'job' ? JOB_ICON[q.category ?? ''] ?? 'goal' : q.category === 'arc' ? 'tab_legends' : 'goal', '', 'ico-md')}<span class="q-title"><b>${esc(serverText(q.name))}</b><span class="muted">${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : q.category ? esc(L(`quest.cat.${q.category}` as 'quest.cat.delivery')) : ''}${q.chapter ? esc(L('quest.chapter', { n: q.chapter })) : ''}${q.urgent ? `<span class="q-urgent">${esc(L('quest.urgent'))}</span>` : ''}${q.group ? `<span class="q-group">${esc(L('quest.group', { n: q.group }))}</span>` : ''}</span></span></h4>
         <p>${esc(serverText(q.summary))}</p><ol class="muted" style="margin:4px 0 6px 18px">${q.steps.map((t) => `<li>${esc(serverText(t))}</li>`).join('')}</ol>
         <div class="row"><span class="reward">${money(q.silver)}${xpBadge(q.xp)}${q.path ? esc(L('quest.pathOf', { arch: CAPTAINS[q.path].archetype })) : ''}</span>
         ${q.blocked ? `<span class="muted">${esc(L('quest.needs', { x: serverText(q.blocked) }))}</span>` : `<button class="btn btn-small btn-primary" data-act="quest_accept" data-id="${q.id}">${esc(L('quest.take'))}</button>`}</div></div>`).join('')}

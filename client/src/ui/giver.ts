@@ -23,6 +23,7 @@ const EN = {
   pay_shot: 'heavy shot ×{h}, fire shot ×{f}',
   pay_pick: 'Choose the pay',
   pay_favour_n: 'favour +{n}',
+  group: 'A contract for a company of {n}: the flagship sails with two escorts. A groupmate\'s kill counts for all who hold it.',
 };
 const RU: typeof EN = {
   shared: '{name} делится с вами этим заданием',
@@ -37,6 +38,7 @@ const RU: typeof EN = {
   pay_shot: 'тяжёлые ядра ×{h}, огненные ×{f}',
   pay_pick: 'Выберите плату',
   pay_favour_n: 'почёт +{n}',
+  group: 'Контракт на отряд из {n}: флагман ходит с двумя конвоирами. Потопит любой из отряда — засчитается всем, кто взялся.',
 };
 const L = dict(EN, RU);
 
@@ -73,6 +75,7 @@ export function giverDialog(q: Offer, from?: string): Promise<QuestPay | null> {
       <p class="giver-say">«${esc(serverText(q.summary))}»</p>
     </div></div>
     <div class="giver-steps"><div class="giver-h">${esc(L('steps'))}</div><ol>${q.steps.map((t) => `<li>${esc(serverText(t))}</li>`).join('')}</ol></div>
+    ${q.group ? `<p class="giver-group">${esc(L('group', { n: q.group }))}</p>` : ''}
     ${q.pays ? `<div class="giver-pay giver-pay-pick"><span class="giver-h">${esc(L('pay'))}</span>${xpBadge(q.xp)}</div>${payPicker(q.silver, q.pays)}` : `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${money(q.silver)}${xpBadge(q.xp)}</div>`}`;
   // The choice is read as the captain says yes (the window is still in the page then).
   let pay: QuestPay = 'silver';

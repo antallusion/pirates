@@ -11,7 +11,7 @@ import type { TreeId } from './talents.ts';
 export type QuestStep =
   | { type: 'visit'; port: string; text: string }
   | { type: 'deliver'; port: string; good: GoodId; qty: number; text: string }
-  | { type: 'sink'; count: number; role?: 'pirate' | 'patrol' | 'merchant' | 'ghost' | 'hunter'; minTier?: number; region?: RegionId; text: string }
+  | { type: 'sink'; count: number; /** 'elite': only the contract's flagship counts (docs/11 P6) */ role?: 'pirate' | 'patrol' | 'merchant' | 'ghost' | 'hunter' | 'elite'; minTier?: number; region?: RegionId; text: string }
   /** Generated quests (docs/11 P4): take a cargo aboard at a port; land a party on an island (at one of its sites). */
   | { type: 'pickup'; port: string; good: GoodId; qty: number; text: string }
   | { type: 'land'; island: number; site?: string; text: string }
@@ -43,6 +43,8 @@ export interface QuestDef {
   island?: number;
   /** The giver's face: `giver_<profession>_<f|m>` (portrait.* in the art manifest). */
   portrait?: string;
+  /** A group contract: the company it is made for (docs/11 P6). */
+  group?: number;
 }
 
 export const QUESTS: QuestDef[] = [

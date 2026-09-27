@@ -26,7 +26,7 @@ test('the board offers the choice; the pay chosen is kept with the job and paid 
   const c = join(game, 'Paid Right');
   const s = game.sessionByName('Paid Right')!;
   const port = game.portById(s.ship!.docked!)!;
-  const offer = c.last('port')!.view!.questOffers.find((o) => o.kind === 'job' && o.silver >= 200);
+  const offer = c.last('port')!.view!.questOffers.find((o) => o.kind === 'job' && o.category !== 'elite' && o.silver >= 200);
   assert.ok(offer?.pays, 'a job on the board offers the pay to choose');
   assert.equal(offer!.pays!.faction, port.faction);
   assert.ok(offer!.pays!.favour && offer!.pays!.stores.heavy > 0);
@@ -71,7 +71,7 @@ test('taking a job at the board with a pay: the journal shows it; a pay the job 
   const c = join(game, 'Board Pay');
   const s = game.sessionByName('Board Pay')!;
   // A job that sends the captain elsewhere (so it is not done on the spot).
-  const offers = c.last('port')!.view!.questOffers.filter((o) => o.kind === 'job' && o.pays && !o.blocked);
+  const offers = c.last('port')!.view!.questOffers.filter((o) => o.kind === 'job' && o.category !== 'elite' && o.pays && !o.blocked);
   const job = offers.map((o) => JOBS.find((q) => q.id === o.id)!).find((q) => q && q.steps[0].type !== 'visit' && q.steps[0].type !== 'pickup')!;
   assert.ok(job, 'a job on the board that sends the captain elsewhere');
   c.push({ t: 'quest', action: 'accept', id: job.id, pay: 'favour' });

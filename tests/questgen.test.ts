@@ -129,3 +129,27 @@ test('a woman giver takes the woman\'s word for her trade in Russian', () => {
   }
   setLang('en');
 });
+
+test('the giver’s words as a job is taken read in Russian (a job’s own templates must not swallow the line)', () => {
+  setLang('ru');
+  applyDataLocale('ru');
+  const bad: string[] = [];
+  for (const q of quests) {
+    const ru = serverText(`${q.mentor}: “${q.summary}” — ${q.steps[0].text}`);
+    if (/[A-Za-z]{3,}/.test(ru)) bad.push(ru);
+  }
+  setLang('en');
+  assert.deepEqual(bad.slice(0, 3), []);
+});
+
+test('a quest’s next step, as the herald says it, reads in Russian (the quest’s name does not swallow the step)', () => {
+  setLang('ru');
+  applyDataLocale('ru');
+  const bad: string[] = [];
+  for (const q of quests) for (const st of q.steps.slice(1)) {
+    const ru = serverText(`${q.name}: ${st.text}`);
+    if (/[A-Za-z]{3,}/.test(ru)) bad.push(ru);
+  }
+  setLang('en');
+  assert.deepEqual(bad.slice(0, 3), []);
+});

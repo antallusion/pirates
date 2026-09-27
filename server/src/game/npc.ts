@@ -946,6 +946,35 @@ export function spawnPackLeader(game: Game, region: RegionId, level: number): Sh
   return null;
 }
 
+/** A group contract's quarry (docs/11 P6): a raiders' flagship — a frigate, a galleon in contested waters, a man
+ *  o' war in lawless ones — with two escorts at her side, a fat purse, out for two hours in the region. */
+export function spawnElite(game: Game, region: RegionId, level: number): ShipEntity | null {
+  const [cx, cy] = REGIONS[region].center;
+  for (let k = 0; k < 30; k++) {
+    const a = game.rng.float() * Math.PI * 2, r = 2500 + game.rng.float() * 6000;
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region) continue;
+    const h = game.rng.float() * Math.PI * 2;
+    const flag = game.spawnNpcShip('pirate', level >= 24 ? 'man_o_war' : level >= 16 ? 'galleon' : 'frigate', 'confederacy', x, y, h);
+    const brain = game.npcs.get(flag.id)!;
+    brain.area = { x: cx, y: cy, r: 9000 };
+    brain.expiresAt = game.now + 7200;
+    flag.purse = (flag.purse ?? 0) + 800 + level * 40;
+    planWander(game, flag, brain);
+    for (const side of [-1, 1]) {
+      const ex = x + Math.cos(h + side * 2.2) * 220, ey = y + Math.sin(h + side * 2.2) * 220;
+      if (isLand(game.world, ex, ey)) continue;
+      const esc = game.spawnNpcShip('pirate', level >= 24 ? 'frigate' : 'brig', 'confederacy', ex, ey, h);
+      const eb = game.npcs.get(esc.id)!;
+      eb.area = { x: cx, y: cy, r: 9000 };
+      eb.expiresAt = game.now + 7200;
+      planWander(game, esc, eb);
+    }
+    return flag;
+  }
+  return null;
+}
+
 /** Abstract (off-screen) encounters: pirates raid merchants statistically. Creates shortages and rumours. */
 export function abstractEncounters(game: Game): void {
   const pirates: ShipEntity[] = [];

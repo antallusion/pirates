@@ -1660,6 +1660,9 @@ body.touch #hud-region .rg-extra { display: none; }
 }
 /* A job the port's news asks for (an epidemic, a blockade): a small red seal on the notice. */
 .q-urgent { margin-left: 6px; padding: 0 5px; border: 1px solid rgba(178, 58, 58, 0.7); color: #e08a7a; font: 600 10px/16px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; font-style: normal; }
+/* A group contract (docs/11 P6): a brass chip on the board, a warning line in the giver's window. */
+.q-group { margin-left: 6px; padding: 0 5px; border: 1px solid rgba(176, 138, 72, 0.8); color: var(--brass); font: 600 10px/16px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; font-style: normal; white-space: nowrap; }
+.giver-group { margin: 0 0 10px; padding: 6px 10px; border-left: 3px solid var(--brass); background: rgba(176, 138, 72, 0.08); font-size: 14px; color: var(--bone); }
 .jr-fast { color: var(--gold); font-size: 13px; }
 .cm-leaders { font-size: 12px; margin-top: 3px; }
 .cm-leaders b { color: var(--bone); font-weight: 600; }

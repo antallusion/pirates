@@ -13,9 +13,10 @@ import { arcPatterns } from '../../../shared/src/data/questarcs.ts';
 import { dailyPatterns } from '../../../shared/src/data/dailies.ts';
 import { commonPatterns } from '../../../shared/src/data/commongoal.ts';
 import { guildGoalPatterns } from '../../../shared/src/data/guildgoal.ts';
+import { elitePatterns } from '../../../shared/src/data/elite.ts';
 
 // The generated jobs' templates carry their Russian twins (shared/src/data/questgen.ts).
-const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...Object.fromEntries(commonPatterns()), ...Object.fromEntries(guildGoalPatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
+const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...Object.fromEntries(commonPatterns()), ...Object.fromEntries(guildGoalPatterns()), ...Object.fromEntries(elitePatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
 const exact = new Map<string, string>();
 let templates: { re: RegExp; ru: string; order: number[]; adjacent: number[] }[] | null = null;
 
@@ -78,6 +79,12 @@ function translate(s: string, depth: number): string {
     const inner = translate(rest, 0);
     if (inner !== rest || !templates!.some((t) => t.re.test(s))) return `${exact.get('WORLD:') ?? 'Вести:'} ${inner}`;
   }
+  // A giver's words as a job is taken ("Name, trade: “words” — the first step"): each part on its own, for a
+  // job's own templates would swallow the whole line.
+  if (depth === 0 && !exact.has(s)) {
+    const a = s.indexOf(': “'), b = s.lastIndexOf('” — ');
+    if (a > 0 && b > a + 3) return `${translate(s.slice(0, a), 0)}: «${translate(s.slice(a + 3, b), 0)}» — ${translate(s.slice(b + 4), 0)}`;
+  }
   const hit = exact.get(s) ?? TEXT_RU.get(s) ?? composedNameRu(s);
   if (hit) return hit;
   for (const t of templates!) {
@@ -109,13 +116,25 @@ function translate(s: string, depth: number): string {
   return s;
 }
 
+const latin = (s: string) => (s.match(/[A-Za-z]/g) ?? []).length;
+
+/** A line of two parts ("A quest: its next step") may be read whole, or half by half when a template of one half
+ *  would swallow the other: the reading that leaves less English wins. */
+function translateLine(s: string): string {
+  const whole = translate(s, 0);
+  const i = s.indexOf(': ');
+  if (i <= 0 || !latin(whole)) return whole;
+  const split = `${translateLine(s.slice(0, i))}: ${translateLine(s.slice(i + 2))}`;
+  return latin(split) < latin(whole) ? split : whole;
+}
+
 const MONTHS_RU: Record<string, string> = { Jan: 'янв', Feb: 'фев', Mar: 'мар', Apr: 'апр', May: 'мая', Jun: 'июн', Jul: 'июл', Aug: 'авг', Sep: 'сен', Oct: 'окт', Nov: 'ноя', Dec: 'дек' };
 
 export function serverText(s: string): string {
   if (lang() !== 'ru' || !s) return s;
   // Dates the server writes in English ("04 Oct 2026 00:36 UTC") keep their numbers, lose their English.
   // Thousands the server writes with commas (1,020 silver) take the Russian space that does not break.
-  return typeset(feminineRu(s, translate(s, 0))).replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
+  return typeset(feminineRu(s, translateLine(s))).replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
 }
 
 /** For tests: how many patterns are known. */
