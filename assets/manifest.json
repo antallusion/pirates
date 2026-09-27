@@ -360,6 +360,8 @@
     "prop.life_hut":                  { "local": "props/life_hut.webp", "remote": "hf_20260927_191907_763a0fac-ffc2-472e-9f8d-31509e9ad128.png", "job": "763a0fac-ffc2-472e-9f8d-31509e9ad128", "fit": "keyed:768:#ff00ff" },
     "prop.life_boat":                 { "local": "props/life_boat.webp", "remote": "hf_20260927_192804_4797c867-fe82-4073-be50-80f8f7334974.png", "job": "4797c867-fe82-4073-be50-80f8f7334974", "fit": "keyed:768:#ff00ff" },
     "prop.life_tent":                 { "local": "props/life_tent.webp", "remote": "hf_20260927_193704_8df55a91-7c40-4b7d-a44d-ed147f6bddd4.png", "job": "8df55a91-7c40-4b7d-a44d-ed147f6bddd4", "fit": "keyed:768:#ff00ff" },
-    "prop.life_crates":               { "local": "props/life_crates.webp", "remote": "hf_20260927_194604_1aa1f603-8d33-43bb-98f6-a06f3afada5a.png", "job": "1aa1f603-8d33-43bb-98f6-a06f3afada5a", "fit": "keyed:768:#ff00ff" }
+    "prop.life_crates":               { "local": "props/life_crates.webp", "remote": "hf_20260927_194604_1aa1f603-8d33-43bb-98f6-a06f3afada5a.png", "job": "1aa1f603-8d33-43bb-98f6-a06f3afada5a", "fit": "keyed:768:#ff00ff" },
+    "prop.life_pirate_tent":          { "local": "props/life_pirate_tent.webp", "remote": "hf_20260927_195448_ea8d2353-4fd9-4e03-8a4f-8208b6e68c21.png", "job": "ea8d2353-4fd9-4e03-8a4f-8208b6e68c21", "fit": "keyed:768:#ff00ff" },
+    "prop.life_fort":                 { "local": "props/life_fort.webp", "remote": "hf_20260927_195518_c40ae99f-7fa3-4131-bf9d-c944d6e92382.png", "job": "c40ae99f-7fa3-4131-bf9d-c944d6e92382", "fit": "keyed:768:#ff00ff" }
   }
 }
