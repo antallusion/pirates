@@ -1197,3 +1197,8 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
   #prologue p { font-size: 20px; line-height: 1.35; }
   #prologue small { bottom: max(16px, env(safe-area-inset-bottom)); }
 }
+
+/* The ship's condition opened from the portrait: a solid sheet dropping from under the unit frame (it lay over
+   the crew bar and let the goals show through), as wide as the screen on a phone. */
+body.ship-open .ship-panel { top: calc(var(--uf-bottom, 104px) + 6px); background: linear-gradient(180deg, #0e0c0a, #080809); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7); z-index: 6; }
+@media (max-width: 699px) { body.ship-open .ship-panel { width: auto; right: calc(var(--sa-r, 0px) + 8px); max-height: calc(100dvh - var(--uf-bottom, 104px) - var(--hb-top, 0px) - 24px); } }
