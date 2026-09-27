@@ -29,6 +29,9 @@ const EN = {
   kind_story: 'Story',
   kind_job: 'Job',
   fast: 'A quarter more if done within {m} min',
+  done: 'Quests done: {n}',
+  lfg: 'Look for a group',
+  lfgHint: 'Put this contract on the board of captains looking for a group',
   mates: 'In your group on it too',
   mateStep: '{name}, step {step}',
 };
@@ -48,6 +51,9 @@ const RU: typeof EN = {
   kind_story: 'Сюжет',
   kind_job: 'Поручение',
   fast: 'На четверть больше, если управитесь за {m} мин',
+  done: 'Выполнено заданий: {n}',
+  lfg: 'Искать отряд',
+  lfgHint: 'Написать этот контракт в поиске группы',
   mates: 'В отряде тоже взялись',
   mateStep: '{name}, шаг {step}',
 };
@@ -74,6 +80,7 @@ export class Journal {
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
           <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}</div>
+          ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
       </div>`;
@@ -87,6 +94,8 @@ export class Journal {
       this.render(root, state);
     });
     root.querySelector<HTMLElement>('[data-share]')?.addEventListener('click', () => this.chosen && this.send({ t: 'quest', action: 'share', id: this.chosen }));
+    // A group contract: on the board of those looking for a group, by its name.
+    root.querySelector<HTMLElement>('[data-lfg]')?.addEventListener('click', () => q && this.send({ t: 'group', action: 'lfg', note: serverText(q.name) }));
     root.querySelector<HTMLElement>('[data-abandon]')?.addEventListener('click', () => {
       const id = this.chosen;
       if (id) void ask(L('confirmAbandon')).then((ok) => ok && this.send({ t: 'quest', action: 'abandon', id }));
@@ -122,6 +131,7 @@ export class Journal {
       <div class="jr-acts">
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}
+        ${q.category === 'elite' && !inGroup ? `<button class="btn btn-small" data-lfg title="${esc(L('lfgHint'))}">${esc(L('lfg'))}</button>` : ''}
         ${q.kind === 'job' || q.kind === 'story' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
       </div>`;
   }

@@ -363,6 +363,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
       };
     }),
     questsDone: p.quests.done,
+    questsRecent: p.quests.done.slice(-10).reverse().map((id) => QUESTS_BY_ID[id]?.name).filter((n): n is string => !!n),
     daily: dailyView(p),
     common: world.common ?? null,
     paths: p.paths,

@@ -385,6 +385,8 @@ export interface PrivateState {
     /** The pay chosen on taking it, when not all in silver, and what it comes to. */ pay?: QuestPay; paid?: { silver: number; heavy: number; incendiary: number; rep: number };
     /** Groupmates on the same quest (docs/11 P6), and the step each is on. */ mates?: { name: string; step: number }[] }[];
   questsDone: string[];
+  /** The names of the last ten quests done, the latest first (docs/11 P6). */
+  questsRecent: string[];
   /** Today's orders (docs/11 P6): each with its pay, the days in a row and the chest. */
   daily: { day: number; orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
   /** The sea's common cause today (docs/11 P6): the goal, the bar, this captain's deeds, seconds left. */

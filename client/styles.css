@@ -1656,6 +1656,11 @@ body.touch #hud-region .rg-extra { display: none; }
 .jr-mate { padding: 2px 8px; border: 1px solid rgba(127, 212, 138, 0.35); background: rgba(127, 212, 138, 0.06); color: #cfe8cf; }
 .jr-row.on { border-color: var(--gold); background: rgba(217, 178, 90, 0.08); }
 .jr-day .map-daily { border: 1px solid rgba(111, 90, 56, 0.35); margin-bottom: 8px; }
+/* Quests done (docs/11 P6): the count, and the last ten under it. */
+.jr-done { margin-top: 4px; font-size: 13px; }
+.jr-done > summary { cursor: pointer; color: var(--gold); font: 600 11px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; }
+.jr-done ol { margin: 6px 0 0 18px; padding: 0; color: var(--fog); }
+.jr-done li { margin: 1px 0; }
 .jr-detail { min-width: 0; }
 .jr-steps { list-style: none; margin: 4px 0 0; padding: 0; }
 .jr-steps li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; margin: 3px 0; }

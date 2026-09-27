@@ -354,3 +354,15 @@ test('titles for the work done: the tenth quest, the fifth contract, the tenth c
   setLang('en');
   assert.deepEqual(ru.filter((t) => /[A-Za-z]/.test(t)), []);
 });
+
+test('the journal knows the quests done: how many, and the last ten by name, the latest first', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Done Dora');
+  const s = game.sessionByName('Done Dora')!;
+  const ids = JOBS.slice(0, 12).map((q) => q.id);
+  s.profile!.quests.done = ids;
+  game.pushSelf(s, true);
+  const self = c.last('self')?.self ?? c.last('init')!.self;
+  assert.equal(self.questsDone.length, 12);
+  assert.deepEqual(self.questsRecent, ids.slice(-10).reverse().map((id) => QUESTS_BY_ID[id].name));
+});
