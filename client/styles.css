@@ -159,6 +159,20 @@ button { font-family: var(--sans); }
 #hud-stack { position: absolute; top: calc(var(--sa-t) + var(--top-h)); left: calc(var(--sa-l) + 8px); right: calc(var(--sa-r) + 8px); display: flex; flex-direction: column; gap: 6px; align-items: stretch; pointer-events: none; }
 #hud-stack > * { position: relative !important; left: auto !important; top: auto !important; right: auto !important; transform: none !important; width: auto !important; margin: 0; }
 #hud-stack > .hud-block, #hud-goals { pointer-events: auto; }
+/* Party frames (docs/11 P6): a groupmate a card — name, level, hull, where — in a wrapping row atop the stack. */
+#hud-party { display: flex; flex-wrap: wrap; gap: 4px; pointer-events: auto; }
+#hud-party.hidden { display: none; }
+.pf { display: grid; gap: 2px; width: 150px; padding: 3px 6px 4px; background: rgba(10, 11, 13, 0.72); border: 1px solid rgba(111, 90, 56, 0.55); border-left: 2px solid #7fd48a; color: var(--bone); font: 11px var(--sans); text-align: left; cursor: pointer; }
+.pf.off { opacity: 0.55; border-left-color: #5a5347; }
+.pf-top { display: flex; justify-content: space-between; gap: 6px; min-width: 0; }
+.pf-top b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-lv { color: var(--gold); font-variant-numeric: tabular-nums; }
+.pf .fbar.pf-hull { height: 4px; margin: 0; border-width: 1px; border-image: none; }
+.pf .fbar.pf-hull > i { background: linear-gradient(90deg, #7a2a24, #c0463a); }
+.pf-where { color: var(--fog); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-arrow { display: inline-block; font-style: normal; font-size: 8px; margin-right: 3px; color: #7fd48a; }
+.pf-more { align-self: center; color: var(--fog); font: 11px var(--sans); }
+@media (max-width: 480px) { .pf { width: calc(50% - 2px); } }
 body.touch #hud-stack { right: calc(var(--sa-r) + 60px); }
 
 /* Bottom stack: hints, the prompt, the context action and the action bar. */

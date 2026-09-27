@@ -77,6 +77,8 @@ const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
 // "Whisper" on a friend: the chat opens over the window, addressed to them.
 let whisperPrefill = '';
+// A groupmate's frame on the HUD: their card.
+hud.onPartyTap = (name) => net.send({ t: 'inspect', name });
 companyScreen.onWhisper = (name) => {
   const input = $('chat-input') as HTMLInputElement;
   $('chat').classList.add('open');

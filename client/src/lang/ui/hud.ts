@@ -88,6 +88,12 @@ export const EN = {
   chatGuild: '[guild]',
   chatWhisper: '[whisper]',
   rested: 'Rested: the next {n} XP in battle comes double',
+  partyAshore: 'ashore',
+  partyInPort: 'in port',
+  partyNear: 'alongside',
+  partyConvoy: 'in convoy',
+  m: 'm',
+  km: 'km',
   chatWhisperTo: '[whisper → {name}]',
 } as const;
 
@@ -179,5 +185,11 @@ export const RU: Record<keyof typeof EN, string> = {
   chatGuild: '[гильдия]',
   chatWhisper: '[шёпот]',
   rested: 'Отдых: следующие {n} опыта в бою — вдвое',
+  partyAshore: 'на берегу',
+  partyInPort: 'в порту',
+  partyNear: 'борт о борт',
+  partyConvoy: 'в конвое',
+  m: 'м',
+  km: 'км',
   chatWhisperTo: '[шёпот → {name}]',
 };

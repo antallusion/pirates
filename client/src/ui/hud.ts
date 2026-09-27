@@ -36,6 +36,9 @@ export class Hud {
   private lastShipKey = '';
   private lastCombatKey = '';
   private lastBossKey = '';
+  private lastPartyKey = '';
+  /** Tapping a groupmate's frame (main.ts): inspect them. */
+  onPartyTap: (name: string) => void = () => {};
   private toastsEl = $('toasts');
   private bannerTimer = 0;
   private minimap = $('minimap') as HTMLCanvasElement;
@@ -79,6 +82,7 @@ export class Hud {
     const self = state.self, you = state.you;
     if (!self || !you) return;
     this.drawBoss(state);
+    this.drawParty(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -719,6 +723,35 @@ export class Hud {
     b.classList.add('show');
     clearTimeout(this.bannerTimer);
     this.bannerTimer = window.setTimeout(() => b.classList.remove('show'), 3500);
+  }
+
+  /** Party frames (docs/11 P6), as WoW's: each groupmate's name, level and hull, and where they are — a bearing
+   *  and the distance, in port, or ashore. Four at most, then "+N". */
+  private drawParty(state: ClientState): void {
+    const el = $('hud-party');
+    const g = state.party;
+    const own = state.ownDisplay;
+    const mates = (g?.members ?? []).filter((m) => m.name !== state.self?.name);
+    if (!g || !mates.length || !own) {
+      if (this.lastPartyKey) {
+        this.lastPartyKey = '';
+        el.classList.add('hidden');
+        el.innerHTML = '';
+      }
+      return;
+    }
+    const rows = mates.slice(0, 4).map((m) => {
+      const d = Math.hypot(m.x - own.x, m.y - own.y);
+      const where = !m.online ? L('partyAshore') : m.docked ? L('partyInPort') : d < 150 ? L('partyNear') : `${d < 1000 ? `${Math.round(d / 10) * 10} ${L('m')}` : `${(d / 1000).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${L('km')}`}`;
+      const deg = Math.round((Math.atan2(m.x - own.x, -(m.y - own.y)) * 180) / Math.PI / 15) * 15;
+      return { m, where, deg: m.online && !m.docked && d >= 150 ? deg : null };
+    });
+    const key = `${lang()}|${g.leader}|${rows.map((r) => `${r.m.name}:${r.m.level}:${Math.round(r.m.hull * 20)}:${r.where}:${r.deg}:${r.m.inConvoy ? 1 : 0}`).join('|')}|${mates.length}`;
+    if (key === this.lastPartyKey) return;
+    this.lastPartyKey = key;
+    el.classList.remove('hidden');
+    el.innerHTML = rows.map(({ m, where, deg }) => `<button class="pf${m.online ? '' : ' off'}" data-pf="${esc(m.name)}"><span class="pf-top"><b>${m.accountId === g.leader ? '⚑ ' : ''}${esc(m.name)}</b><span class="pf-lv">${m.level}</span></span><span class="fbar pf-hull"><i style="width:${pct(m.hull)}"></i></span><span class="pf-where">${deg !== null ? `<i class="pf-arrow" style="transform:rotate(${deg}deg)">▲</i>` : ''}${esc(where)}${m.inConvoy ? ` · ${esc(L('partyConvoy'))}` : ''}</span></button>`).join('') + (mates.length > 4 ? `<span class="pf-more">+${mates.length - 4}</span>` : '');
+    el.querySelectorAll<HTMLElement>('[data-pf]').forEach((b) => (b.onclick = () => this.onPartyTap(b.dataset.pf!)));
   }
 
   chat(from: string, text: string, ch?: 'group' | 'guild' | 'whisper', to?: string): void {
