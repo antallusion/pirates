@@ -98,8 +98,33 @@ test('sharing a quest with the group: a groupmate is asked, takes it, and the jo
     questEvent(game, B, { k: 'dock', port: game.portById(last.port)! });
     const done = b.last('quest_done');
     assert.equal(done?.name, job.name);
-    assert.equal(done?.silver, job.reward.silver);
+    assert.equal(done?.silver, Math.round(job.reward.silver * (1 + 0.1 * (done?.company ?? 0))), 'the pay, a tenth more for a groupmate in company');
     assert.ok(done?.rep && done.rep.faction === port.faction && done.rep.n >= 2, 'standing with the port’s faction');
     assert.ok((B.profile!.reputation[port.faction] ?? 0) > rep0);
   }
+});
+
+test('a quest done in company pays a tenth more for every groupmate near (up to three)', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Cy Company');
+  const b = join(game, 'Di Company');
+  a.push({ t: 'group', action: 'invite', name: 'di company' });
+  b.push({ t: 'group', action: 'accept', id: b.last('party')!.invites[0].id });
+  const A = game.sessionByName('Cy Company')!, B = game.sessionByName('Di Company')!;
+  for (const [c, s, dx] of [[a, A, 0], [b, B, 200]] as const) {
+    c.push({ t: 'undock' });
+    s.ship!.docked = null;
+    s.ship!.state.x = 30000 + dx;
+    s.ship!.state.y = 30000;
+  }
+  const quest: QuestDef = { id: 'test_company', kind: 'job', name: 'In Company', mentor: 'Test', port: 'saltmarrow', summary: '', requires: {}, steps: [{ type: 'chart', count: 1, text: 'Chart an island.' }], reward: { xp: 100, silver: 1000 } };
+  QUESTS_BY_ID[quest.id] = quest;
+  A.profile!.quests.active.push({ id: quest.id, step: 0, progress: 0, startedAt: game.now });
+  const gold0 = A.profile!.gold;
+  questEvent(game, A, { k: 'chart' });
+  const done = a.last('quest_done');
+  assert.equal(done?.company, 1);
+  assert.equal(done?.silver, 1100, 'a tenth more with one groupmate near');
+  assert.ok(A.profile!.gold - gold0 >= 1100);
+  delete QUESTS_BY_ID[quest.id];
 });

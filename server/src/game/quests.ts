@@ -20,7 +20,7 @@ import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
-import { groupOfAccount } from './party.ts';
+import { CONVOY_RANGE, groupOfAccount } from './party.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -313,13 +313,33 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
   }
 }
 
+/** Groupmates at sea within convoy range of the captain (docs/11 P6): a quest done in company pays more. */
+function matesNear(game: Game, s: PlayerSession): number {
+  const g = groupOfAccount(game, s.accountId);
+  const ship = s.ship;
+  if (!g || !ship) return 0;
+  let n = 0;
+  for (const acc of g.members) {
+    if (acc === s.accountId) continue;
+    const m = game.sessionByAccount(acc)?.ship;
+    if (m && m.alive && Math.hypot(m.state.x - ship.state.x, m.state.y - ship.state.y) <= CONVOY_RANGE) n++;
+  }
+  return n;
+}
+
+/** A tenth more for every groupmate in company, up to three. */
+export const GROUP_QUEST_BONUS = 0.1;
+
 function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   const p = s.profile!;
   p.quests.active = p.quests.active.filter((a) => a.id !== q.id);
   p.quests.done.push(q.id);
-  p.gold += q.reward.silver;
-  game.db.ledger(s.accountId, 'quest', q.reward.silver, q.id);
-  game.grantXp(s, q.reward.xp, null);
+  const company = Math.min(3, matesNear(game, s));
+  const k = 1 + GROUP_QUEST_BONUS * company;
+  const silver = Math.round(q.reward.silver * k), xp = Math.round(q.reward.xp * k);
+  p.gold += silver;
+  game.db.ledger(s.accountId, 'quest', silver, q.id);
+  game.grantXp(s, xp, null);
   // The port whose people gave the work remembers who did it (docs/11 P6): standing with its faction.
   let rep: { faction: FactionId; n: number } | undefined;
   const home = game.portById(q.port);
@@ -336,7 +356,7 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
     s.ship.ammo.chain = (s.ship.ammo.chain ?? 0) + 10;
     extra = 'supplies';
   }
-  game.sendTo(s, { t: 'quest_done', name: q.name, silver: q.reward.silver, xp: q.reward.xp, ...(rep ? { rep } : {}), ...(extra ? { extra } : {}) });
+  game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}) });
   if (q.reward.path && !p.paths.includes(q.reward.path)) {
     p.paths.push(q.reward.path);
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} teaches you the ${CAPTAINS[q.reward.path].archetype}'s Path. Change Path at any Captain's House.`, kind: 'gold' });

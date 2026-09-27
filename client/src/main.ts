@@ -316,6 +316,7 @@ function onMessage(m: ServerMsg): void {
     case 'quest_done': {
       // The herald: the quest's name and all it paid.
       const parts = [L('questPaid', { silver: fmt(m.silver), xp: fmt(m.xp) })];
+      if (m.company) parts.push(L('questCompany', { n: m.company * 10 }));
       if (m.rep) parts.push(L('questRep', { faction: serverText(FACTIONS[m.rep.faction].name), n: m.rep.n }));
       if (m.extra) parts.push(L(m.extra === 'map' ? 'questMap' : 'questSupplies'));
       hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);

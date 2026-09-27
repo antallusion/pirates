@@ -882,7 +882,7 @@ export type ServerMsg =
    *  may take it or leave it. */
   | { t: 'quest_offer'; offer: PortView['questOffers'][number]; island?: number; from?: string }
   /** A quest done: its name and all it paid (docs/11 P6). */
-  | { t: 'quest_done'; name: string; silver: number; xp: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies' }
+  | { t: 'quest_done'; name: string; silver: number; xp: number; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies' }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number }
   | { t: 'fronts'; list: FrontData[]; forecast: boolean }
