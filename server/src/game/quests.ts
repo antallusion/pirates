@@ -19,6 +19,8 @@ import type { PlayerSession, Profile } from './player.ts';
 import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { newsHint } from './onboarding.ts';
+import { spawnCargoAmbush } from './npc.ts';
+import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dailyEvent } from './dailies.ts';
 import { commonEvent } from './commongoal.ts';
 import { guildGoalEvent } from './guildgoal.ts';
@@ -40,6 +42,30 @@ export interface QuestState {
   startedAt: number;
   /** Done before this (game seconds), a job pays a quarter more (docs/11 P6). */
   fastUntil?: number;
+  /** A courier's cargo draws raiders once (docs/11 P6): when, and whether they have come. */
+  ambushAt?: number;
+  ambushed?: boolean;
+}
+
+/** A courier with a quest's cargo aboard, at sea in waters that are not the Crown's peace, meets raiders once:
+ *  a minute and a half to four and a half after she puts out (docs/11 P6). */
+function cargoAmbush(game: Game, s: PlayerSession): void {
+  const p = s.profile!, ship = s.ship!;
+  if (ship.docked || REGIONS[ship.region].safety === 'safe' || p.level < 5) return;
+  for (const qs of p.quests.active) {
+    if (qs.ambushed) continue;
+    const q = QUESTS_BY_ID[qs.id];
+    const st = q?.steps[qs.step];
+    if (!q || !st || st.type !== 'deliver' || !q.steps.slice(0, qs.step).some((x) => x.type === 'pickup')) continue;
+    if (qs.ambushAt === undefined) {
+      qs.ambushAt = game.now + 90 + (hashString(`${qs.id}:${s.accountId}`) % 180);
+      continue;
+    }
+    if (game.now < qs.ambushAt) continue;
+    qs.ambushed = true;
+    if (spawnCargoAmbush(game, ship, s.accountId, p.level >= 15 ? 2 : 1) > 0) game.sendTo(s, { t: 'toast', msg: 'Sails on the horizon, closing fast — someone has word of your cargo.', kind: 'bad' });
+    return; // one band at a time
+  }
 }
 
 /** The speed bonus: a quarter more silver for a job done within its window. */
@@ -288,6 +314,7 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   if (!p || !ship) return;
   // The day's orders and the sea's common cause move on with the same deeds.
   if (ev.k === 'dock') newsHint(game, s, 'daily');
+  if (ev.k === 'tick') cargoAmbush(game, s);
   dailyEvent(game, s, ev);
   commonEvent(game, s, ev);
   guildGoalEvent(game, s, ev);

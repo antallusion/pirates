@@ -9,6 +9,7 @@ import type { QuestDef } from '../shared/src/data/quests.ts';
 import { questPointer } from '../client/src/ui/track.ts';
 import { newsHint } from '../server/src/game/onboarding.ts';
 import { join, makeGame, steps } from './helpers.ts';
+import { REGIONS } from '../shared/src/world/regions.ts';
 
 test('a group sails as one: the ship one captain sinks counts on a groupmate’s hunt nearby', () => {
   const { game } = makeGame();
@@ -207,4 +208,29 @@ test('looking for a group: a posting every captain sees, a call aboard, and off 
   // In a group, no posting.
   a.push({ t: 'group', action: 'lfg', note: 'more' });
   assert.ok(a.all('toast').some((t) => /already sail in a group/.test(t.msg)));
+});
+
+test('a courier with a quest’s cargo aboard, out of the Crown’s peace, meets raiders once', () => {
+  const { game } = makeGame();
+  const c = join(game, 'Carry Kate');
+  const s = game.sessionByName('Carry Kate')!;
+  s.profile!.level = 20;
+  const job = JOBS.find((q) => q.steps[0].type === 'pickup' && q.steps[1]?.type === 'deliver')!;
+  s.profile!.quests.active.push({ id: job.id, step: 1, progress: 0, startedAt: game.now });
+  // At sea in contested water.
+  const contested = game.world.islands.find((i) => REGIONS[i.region].safety === 'contested')!;
+  c.push({ t: 'undock' });
+  s.ship!.docked = null;
+  s.ship!.state.x = contested.x + contested.radius + 1500;
+  s.ship!.state.y = contested.y;
+  s.ship!.region = contested.region;
+  const npcs0 = game.npcs.size;
+  for (let i = 0; i < 400; i++) questEvent(game, s, { k: 'tick', dt: 1 }), (game.now += 1);
+  const qs = s.profile!.quests.active.find((q) => q.id === job.id)!;
+  assert.ok(qs.ambushed, 'the raiders came');
+  assert.ok(game.npcs.size > npcs0, 'pirates put out after her');
+  assert.ok(c.all('toast').some((t) => /word of your cargo/.test(t.msg)));
+  const n = game.npcs.size;
+  for (let i = 0; i < 400; i++) questEvent(game, s, { k: 'tick', dt: 1 }), (game.now += 1);
+  assert.equal(game.npcs.size, n, 'only once per cargo');
 });

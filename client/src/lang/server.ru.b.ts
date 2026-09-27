@@ -926,4 +926,5 @@ export const SERVER_RU_B: Record<string, string> = {
   "Nobody in your group can take it on": "В вашей группе никто не может за это взяться",
   "That offer has lapsed": "Предложение уже не в силе",
   "You already sail in a group": "Вы уже в группе",
+  "Sails on the horizon, closing fast — someone has word of your cargo.": "Паруса на горизонте идут наперерез — кто-то прознал о вашем грузе.",
 };

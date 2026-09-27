@@ -907,6 +907,26 @@ export function spawnHunter(game: Game, prey: ShipEntity, accountId: number): vo
   game.toastShip(prey, `A Crown bounty hunter has picked up your trail: ${ship.name}.`, 'bad');
 }
 
+/** Pirates who got word of a courier's cargo (docs/11 P6): n raiders a little over the horizon, closing on her,
+ *  giving up after ten minutes or when the wake goes cold. Returns how many put out. */
+export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number, n: number): number {
+  let made = 0;
+  for (let i = 0; i < n; i++) {
+    const a = game.rng.float() * Math.PI * 2;
+    const x = prey.state.x + Math.sin(a) * 2400, y = prey.state.y - Math.cos(a) * 2400;
+    if (isLand(game.world, x, y)) continue;
+    const cls = prey.level >= 25 ? (game.rng.chance(0.5) ? 'brig' : 'brigantine') : game.rng.chance(0.5) ? 'sloop' : 'schooner';
+    const ship = game.spawnNpcShip('pirate', cls, 'confederacy', x, y, headingOf(prey.state.x - x, prey.state.y - y));
+    const brain = game.npcs.get(ship.id)!;
+    brain.huntAccount = accountId;
+    brain.area = { x: prey.state.x, y: prey.state.y, r: 6000 };
+    brain.expiresAt = game.now + 600;
+    planWander(game, ship, brain);
+    made++;
+  }
+  return made;
+}
+
 /** Abstract (off-screen) encounters: pirates raid merchants statistically. Creates shortages and rumours. */
 export function abstractEncounters(game: Game): void {
   const pirates: ShipEntity[] = [];
