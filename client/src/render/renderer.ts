@@ -1510,14 +1510,36 @@ export class Renderer {
 
   // ------------------------------------------------------------------ overlays
 
+  private band = { top: 0, bottom: 0, at: -1 };
+  /** The free band of the screen between the top panels and the bottom block (measured twice a second). */
+  private hudBand(): { top: number; bottom: number } {
+    if (this.time - this.band.at > 0.5 || this.band.at < 0) {
+      let top = 0, bottom = this.h;
+      for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-stack > :not(.hidden)']) {
+        document.querySelectorAll<HTMLElement>(sel).forEach((e) => {
+          const r = e.getBoundingClientRect();
+          if (r.height > 0 && r.top < this.h * 0.45) top = Math.max(top, r.bottom);
+        });
+      }
+      for (const sel of ['#hud-bottom', '#tc-stick', '#tc-port']) {
+        const e = document.querySelector<HTMLElement>(sel);
+        const r = e?.getBoundingClientRect();
+        if (r && r.height > 0 && r.top > this.h * 0.5) bottom = Math.min(bottom, r.top);
+      }
+      this.band = { top: Math.min(top, this.h * 0.45), bottom: Math.max(bottom, this.h * 0.55), at: this.time };
+    }
+    return this.band;
+  }
+
   /** Hostile ships and bosses beyond the edge of the screen: a mark on the rim pointing at each, with the range,
    * so a phone's close view never hides who is coming. */
   private drawThreatMarks(ships: DrawShip[], own: SailState): void {
     const g = this.g;
-    // The rim keeps clear of the menu column a mouse gets on the right of a narrow window.
+    // The rim keeps clear of the HUD: below the top panels, above the bottom block, left of a narrow window's menu.
+    const band = this.hudBand();
     const menuCol = !document.body.classList.contains('touch') && this.w < 1100 ? 56 : 0;
-    const cx = this.w / 2 - menuCol / 2, cy = this.h / 2;
-    const rx = this.w / 2 - 26 - menuCol / 2, ry = this.h / 2 - Math.min(150, this.h * 0.2);
+    const cx = this.w / 2 - menuCol / 2, cy = (band.top + band.bottom) / 2;
+    const rx = this.w / 2 - 26 - menuCol / 2, ry = Math.max(60, (band.bottom - band.top) / 2 - 20);
     const marks: { s: DrawShip; d: number }[] = [];
     for (const s of ships) {
       if (s.own || s.sinkT > 0) continue;

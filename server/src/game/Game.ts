@@ -1423,6 +1423,11 @@ export class Game {
 
   beginSinking(ship: ShipEntity): void {
     if (ship.sinkingUntil) return;
+    // Admin god mode (play-testing only): whatever the cause, she stays afloat.
+    if (ship.god) {
+      mend(ship);
+      return;
+    }
     if (ship.bossOf && bossSinking(this, ship)) return; // the deep keeps its own dead
     recordEcho(this, ship); // what the Abyss takes, it sends back
     if (duelIntercept(this, ship)) return; // nobody sinks in a duel: she strikes

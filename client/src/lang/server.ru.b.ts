@@ -854,4 +854,6 @@ export const SERVER_RU_B: Record<string, string> = {
   "In the commandant's desk": "В столе коменданта",
   "Scratched inside the bell": "Нацарапано внутри колокола",
   "The hermit draws it in the sand": "Отшельник чертит её на песке",
+  // World news: the headline word, then the news itself (translated in its own right).
+  "WORLD: {0}": "МИР: {0}",
 };

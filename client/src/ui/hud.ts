@@ -53,6 +53,14 @@ export class Hud {
   constructor() {
     // The unit frame opens the ship's full condition on screens too small to keep it out.
     $('hud-captain').onclick = () => document.body.classList.toggle('ship-open');
+    // The toast column stands on top of the bottom block, whatever its height (a prompt, a two-row action bar).
+    const bottom = $('hud-bottom');
+    const place = () => {
+      const r = bottom.getBoundingClientRect();
+      document.body.style.setProperty('--hb-top', `${r.height > 0 ? Math.max(0, innerHeight - r.top) : 0}px`);
+    };
+    new ResizeObserver(place).observe(bottom);
+    addEventListener('resize', place);
   }
 
   show(on: boolean): void {

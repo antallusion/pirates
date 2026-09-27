@@ -598,7 +598,7 @@ body:not(.touch) #hud-stack { right: calc(var(--sa-r) + 60px); }
 @media (max-width: 699px), (max-height: 520px) {
   #hud-boss .bparts, #hud-boss .bhint, #hud-boss .byou { display: none; }
   #hud-boss .bname { font-size: 17px; }
-  #toasts { top: auto; bottom: calc(var(--sa-b) + var(--touch-h) + 150px); flex-direction: column-reverse; }
+  #toasts { top: auto; bottom: calc(max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h) + 150px) + 8px); flex-direction: column-reverse; }
 }
 @media (max-width: 699px) { #banner { top: calc(50% + 34px); font-size: 22px; max-width: 86vw; } #banner small { font-size: 13px; } }
 @media (max-width: 699px) { .captain-wrap .title-sm { font-size: 22px; } }
