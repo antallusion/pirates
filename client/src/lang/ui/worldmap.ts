@@ -43,7 +43,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'close': '[{key}] закрыть',
   'lg.port': 'порт',
   'lg.you': 'вы',
-  'lg.group': 'ваша группа',
+  'lg.group': 'ваш отряд',
   'lg.currents': 'течения',
   'lg.contract': 'порт назначения подряда',
   'lg.prices': 'цены N мин назад',
