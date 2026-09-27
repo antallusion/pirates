@@ -14,11 +14,12 @@ import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
 
-/** Stand-in art for the orders until their own icons are painted (docs/11 P5). */
-const ICON: Record<BoardTactic, string> = {
+/** Each order's own painting (icon.bt_*, docs/11 P5); the older art it stood in with until then, should it fail to load. */
+const STAND_IN: Record<BoardTactic, string> = {
   volley: 'ab_last_volley', charge: 'ab_red_hook_boarding', grenades: 'ammo_incendiary', hold: 'mod_hull_plating',
   officers: 'ab_spotters_eye', colours: 'ab_bribe_signal', captain: 'ab_war_cry',
 };
+const orderIcon = (t: BoardTactic) => icon(`bt_${t}`, '', 'ico') || icon(STAND_IN[t], '', 'ico');
 const ORDER: BoardTactic[] = [...BASIC_TACTICS, 'officers', 'colours', 'captain'];
 
 const tName = (t: BoardTactic) => L(`t.${t}` as keyof typeof EN);
@@ -133,7 +134,10 @@ export class BoardFightPanel {
       ? `<div class="bf-last ${v.last.edge > 0 ? 'win' : v.last.edge < 0 ? 'lose' : 'even'}">${esc(L(v.last.edge > 0 ? 'last.win' : v.last.edge < 0 ? 'last.lose' : 'last.even', { you: this.label(v.last.you, v.you), foe: this.label(v.last.foe, v.foe) }))} <span class="bf-toll">${esc(L('last.toll', { killed: v.last.killed, lost: v.last.lost }))}</span></div>`
       : '';
     const log = v.log.length ? `<div class="bf-log">${v.log.slice(-3).map((l) => `<div class="${l.you ? 'you' : 'foe'}">${esc(this.logLine(l, v))}</div>`).join('')}</div>` : '';
-    return `<div class="bf-panel panel${v.duel ? ' dueling' : ''}"><div class="bf-info">${head}<div class="bf-news">${last}${log}</div></div><div class="bf-act">${v.duel ? this.duel(v, touch) : this.orders(v, touch)}</div></div>`;
+    // The fight is fought on the boarding painting (bg.boarding) under a dark wash; the plain panel when it is missing.
+    const deck = assetUrl('bg.boarding');
+    const bg = deck ? ` style="--bf-deck:url('${deck}')"` : '';
+    return `<div class="bf-panel panel${v.duel ? ' dueling' : ''}${deck ? ' decked' : ''}"${bg}><div class="bf-info">${head}<div class="bf-news">${last}${log}</div></div><div class="bf-act">${v.duel ? this.duel(v, touch) : this.orders(v, touch)}</div></div>`;
   }
 
   private label(t: BoardTactic, s: BoardSideView): string {
@@ -153,14 +157,14 @@ export class BoardFightPanel {
     const kbd = (i: number) => (touch ? '' : `<kbd>${i}</kbd>`);
     const basic = BASIC_TACTICS.map((t, i) => {
       const beats = TACTICS[t].beats;
-      return `<button class="btn bf-order${v.choice === t ? ' on' : ''}" data-bt="${t}" title="${esc(L(`d.${t}` as keyof typeof EN))}">${icon(ICON[t], '', 'ico')}<span class="bf-on"><b>${esc(tName(t))}</b><small>${beats ? esc(L('beats', { name: L(`s.${beats}` as keyof typeof EN) })) : ''}</small></span>${kbd(i + 1)}</button>`;
+      return `<button class="btn bf-order${v.choice === t ? ' on' : ''}" data-bt="${t}" title="${esc(L(`d.${t}` as keyof typeof EN))}">${orderIcon(t)}<span class="bf-on"><b>${esc(tName(t))}</b><small>${beats ? esc(L('beats', { name: L(`s.${beats}` as keyof typeof EN) })) : ''}</small></span>${kbd(i + 1)}</button>`;
     }).join('');
     const move = moveOf(v.you);
     const special = (['officers', 'colours', 'captain'] as const).map((t, i) => {
       const cost = TACTICS[t].cost;
       const name = t === 'captain' && move ? L(`m.${move.id}` as keyof typeof EN) : tName(t);
       const desc = t === 'captain' && move ? L(`md.${move.id}` as keyof typeof EN) : L(`d.${t}` as keyof typeof EN);
-      return `<button class="btn bf-order special${v.choice === t ? ' on' : ''}" data-bt="${t}" ${v.you.momentum < cost ? 'disabled' : ''} title="${esc(desc)}">${icon(ICON[t], '', 'ico')}<span class="bf-on"><b>${esc(name)}</b><small>${esc(L('cost', { n: cost }))}</small></span>${kbd(i + 5)}</button>`;
+      return `<button class="btn bf-order special${v.choice === t ? ' on' : ''}" data-bt="${t}" ${v.you.momentum < cost ? 'disabled' : ''} title="${esc(desc)}">${orderIcon(t)}<span class="bf-on"><b>${esc(name)}</b><small>${esc(L('cost', { n: cost }))}</small></span>${kbd(i + 5)}</button>`;
     }).join('');
     const status = `<div class="bf-status${v.choice ? ' given' : ''}">${esc(v.choice ? L('ordered', { name: this.label(v.choice, v.you) }) : L('noOrder'))}</div>`;
     const foot = `<div class="bf-foot"><button class="btn" data-duel ${v.canDuel ? '' : 'disabled'} title="${esc(L('duelHint'))}">${esc(L('duel'))}</button>${v.canCut ? `<button class="btn btn-danger" data-cut>${esc(v.attacker ? L('fallBack') : L('cut'))}</button>` : ''}</div>`;

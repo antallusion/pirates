@@ -134,7 +134,7 @@ export class Hud {
     ];
     // The dash (dynamic combat): its readiness fills like a reload.
     const dashLeft = Math.max(0, (self.dashReadyAt ?? 0) - now);
-    gauges.push({ id: 'dash', label: L('dash'), key: 'dash', art: 'ab_hard_over', v: 1 - Math.min(1, dashLeft / DASH_COOLDOWN), ready: dashLeft <= 0 });
+    gauges.push({ id: 'dash', label: L('dash'), key: 'dash', art: assetUrl('icon.dash') ? 'dash' : 'ab_hard_over', v: 1 - Math.min(1, dashLeft / DASH_COOLDOWN), ready: dashLeft <= 0 });
     const tcDash = document.getElementById('tc-dash');
     if (tcDash) {
       tcDash.style.setProperty('--cd', (Math.min(1, dashLeft / DASH_COOLDOWN)).toFixed(3));

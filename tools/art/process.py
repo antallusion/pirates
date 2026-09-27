@@ -10,7 +10,12 @@ field in assets/manifest.json, or by its kind when absent:
     sprite:<px>   trim to the alpha box + 4% margin, longest side <= px (ships, monsters, props, icons)
     overlay:<px>  keep the frame (curse overlays are stretched over the hull), longest side <= px
     opaque:<px>   no alpha, longest side <= px (portraits, textures, backgrounds, key art)
-    ...:<gain>    an optional third part lifts brightness (1.3 = +30%), for textures that read too dark in play
+    keyed:<px>:#rrggbb  a sprite painted on a flat chroma-key colour (web-UI generations have no alpha): the key
+                  colour (sampled from the border, near the given one) becomes transparent, edges are unmixed
+    ...:<gain>    a numeric extra part lifts brightness (1.3 = +30%), for textures that read too dark in play
+    ...:seam      make an opaque texture tile without seams (the half-shifted copy blended in at the edges)
+
+An entry may also carry "crop": [x0, y0, x1, y1] in fractions of the original, to cut one cell of a sheet.
 
 Files are written as WebP (lossy with alpha; a tenth of the PNG) unless the local path says .png or .jpg.
 `--webp` moves every manifest entry to a .webp local path first (and removes the old baked file).
@@ -136,23 +141,70 @@ def to_webp(m):
     write_manifest(m)
 
 
+def chroma_key(img, hint):
+    """Flat key colour -> alpha, by colour difference: how far the key's own channels stand above the others.
+    The real key is the border's median (generators drift off the asked colour). A shadow on the key comes out as
+    part-clear black; part-clear pixels are unmixed from the key, and edges lose the key's spill."""
+    a = np.asarray(img.convert('RGB')).astype(np.float32)
+    border = np.concatenate([a[:4].reshape(-1, 3), a[-4:].reshape(-1, 3), a[:, :4].reshape(-1, 3), a[:, -4:].reshape(-1, 3)])
+    near = border[np.sqrt(((border - hint) ** 2).sum(-1)) < 120]
+    key = np.median(near if len(near) > 50 else border, axis=0)
+    hi = np.argsort(key)[::-1]
+    one = key[hi[0]] - key[hi[1]] > 100  # green, blue or red; else two channels (magenta, cyan, yellow)
+    own, rest = ([hi[0]], [hi[1], hi[2]]) if one else ([hi[0], hi[1]], [hi[2]])
+    diff = lambda px: px[..., own].min(-1) - px[..., rest].max(-1)
+    k = max(1.0, float(diff(key)))
+    alpha = 1 - np.clip((diff(a) / k - 0.14) / 0.72, 0, 1)
+    al = alpha[..., None]
+    rgb = np.clip((a - (1 - al) * key) / np.maximum(al, 0.05), 0, 255)
+    edge = alpha < 0.999
+    # Despill the edges: the key's channels no higher than the others there.
+    ex = np.clip(rgb[..., own].min(-1) - rgb[..., rest].max(-1), 0, None) * edge
+    for c in own:
+        rgb[..., c] -= ex
+    out = np.dstack([rgb, alpha * 255]).astype(np.uint8)
+    return Image.fromarray(out, 'RGBA')
+
+
+def seamless(img):
+    """Blend a half-shifted copy in toward the edges: the wrap then meets itself."""
+    a = np.asarray(img).astype(np.float32)
+    h, w = a.shape[:2]
+    shifted = np.roll(np.roll(a, h // 2, 0), w // 2, 1)
+    ys = np.minimum(np.arange(h), h - 1 - np.arange(h)) / (h / 2)
+    xs = np.minimum(np.arange(w), w - 1 - np.arange(w)) / (w / 2)
+    wgt = np.clip(np.minimum.outer(ys, xs) * 3, 0, 1)[..., None]
+    return Image.fromarray((a * wgt + shifted * (1 - wgt)).astype(np.uint8), img.mode)
+
+
 def bake(aid, entry, cdn):
     src = fetch_raw(cdn, entry)
     parts = fit_of(aid, entry).split(':')
     mode, px = parts[0], int(parts[1])
-    gain = float(parts[2]) if len(parts) > 2 else 1.0
+    extra = parts[2:]
+    gain = next((float(p) for p in extra if p[:1].isdigit()), 1.0)
+    key = next((p for p in extra if p.startswith('#')), '#00ff00')
     img = Image.open(src)
     img.load()
+    if entry.get('crop'):
+        x0, y0, x1, y1 = entry['crop']
+        img = img.crop((round(x0 * img.width), round(y0 * img.height), round(x1 * img.width), round(y1 * img.height)))
     target = os.path.join(ASSETS, entry['local'])
     os.makedirs(os.path.dirname(target), exist_ok=True)
     note = ''
     if mode == 'opaque':
-        img = shrink(img.convert('RGB'), px)
+        img = img.convert('RGB')
+        if 'seam' in extra:
+            img = seamless(img)
+        img = shrink(img, px)
         if gain != 1.0:
             from PIL import ImageEnhance
             img = ImageEnhance.Brightness(img).enhance(gain)
         save(img, target, 84)
     else:
+        if mode == 'keyed':
+            img = chroma_key(img, np.array([int(key[i:i + 2], 16) for i in (1, 3, 5)], np.float32))
+            mode = 'sprite'
         img = img.convert('RGBA')
         clear = transparency(img)
         if clear < 0.02:

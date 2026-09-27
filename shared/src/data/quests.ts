@@ -41,6 +41,8 @@ export interface QuestDef {
   template?: string;
   /** A job given by an island's people (on landing there), not on a port's board. */
   island?: number;
+  /** The giver's face: `giver_<profession>_<f|m>` (portrait.* in the art manifest). */
+  portrait?: string;
 }
 
 export const QUESTS: QuestDef[] = [

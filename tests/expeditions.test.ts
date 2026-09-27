@@ -36,7 +36,8 @@ function captainAt(game: Game, name: string, x: number, y: number, cls?: ShipCla
 }
 
 /** Door-by-door route through the maze (breadth first). */
-function route(rooms: Room[], from: number, to: number): ('n' | 'e' | 's' | 'w')[] {
+/** The shortest way through the maze's doors; `avoid` is a room not to pass through (a sealed vault). */
+function route(rooms: Room[], from: number, to: number, avoid = -1): ('n' | 'e' | 's' | 'w')[] {
   const dirs = [['n', 1, 0, -1], ['e', 2, 1, 0], ['s', 4, 0, 1], ['w', 8, -1, 0]] as const;
   const prev = new Map<number, [number, 'n' | 'e' | 's' | 'w']>();
   const q = [from];
@@ -47,7 +48,7 @@ function route(rooms: Room[], from: number, to: number): ('n' | 'e' | 's' | 'w')
     for (const [d, bit, dx, dy] of dirs) {
       if (!(rooms[c].doors & bit)) continue;
       const n = c + dy * MAZE_W + dx;
-      if (seen.has(n)) continue;
+      if (seen.has(n) || (n === avoid && n !== to)) continue;
       seen.add(n);
       prev.set(n, [c, d]);
       q.push(n);
@@ -62,8 +63,8 @@ function route(rooms: Room[], from: number, to: number): ('n' | 'e' | 's' | 'w')
   return out;
 }
 
-function walk(game: Game, c: FakeConn, run: DiveRun, to: number): void {
-  for (const d of route(run.rooms, run.pos, to)) {
+function walk(game: Game, c: FakeConn, run: DiveRun, to: number, avoid = -1): void {
+  for (const d of route(run.rooms, run.pos, to, avoid)) {
     run.air = run.airMax; // the test is about the maze, not the air
     // The test sends far faster than a hand could: keep under the server's flood guard (90 messages a real
     // second), or a fast machine drops the moves and the walk stalls.
@@ -126,7 +127,8 @@ test('a sunken city: anchored over the buoy, the bell goes down, the key opens t
     assert.match(c.last('toast')!.msg, /sealed/);
     assert.equal(run.pos, door);
   }
-  walk(game, c, run, key);
+  // The maze is new every hour: in some the shortest way from the vault door to the key runs through the sealed vault.
+  walk(game, c, run, key, run.keys === 0 ? vault : -1);
   assert.equal(run.keys >= 1 || run.rooms[vault].done, true, 'the key');
   walk(game, c, run, vault);
   assert.ok(run.rooms[vault].done && run.plan, 'the vault opened');

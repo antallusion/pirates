@@ -782,6 +782,8 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .prof-n { text-align: right; font: 600 18px var(--sans); color: var(--bone); font-variant-numeric: tabular-nums; }
 .card-h { display: flex; align-items: center; gap: 8px; }
 .card-h .ico-md, .card h4.card-h .ico-md { float: none; margin: 0; width: 32px; height: 32px; flex: none; }
+/* A quest giver's face on the notice board: the portrait's head, not its middle. */
+.card-h .ico-md.q-face, .card h4.card-h .ico-md.q-face { width: 40px; height: 40px; object-position: 50% 18%; }
 input[type=range] { accent-color: var(--gold); }
 .officer-card { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: start; }
 .officer-ico { width: 56px; height: 56px; object-fit: contain; }
@@ -1424,6 +1426,8 @@ body.touch #hud-region .rg-extra { display: none; }
 #board-fight { position: absolute; z-index: 12; left: 50%; transform: translateX(-50%); bottom: calc(var(--hb-top, 170px) + 10px); width: min(760px, calc(100vw - 32px)); pointer-events: auto; }
 .bf-panel { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; max-height: calc(100vh - var(--hb-top, 170px) - 30px); overflow-y: auto; scrollbar-width: none; zoom: calc(var(--ui-scale) * var(--text-scale)); }
 .skinned .bf-panel { border-width: 14px; border-image-width: 14px; }
+/* The boarding painting (bg.boarding) behind the fight, dark enough under the orders to read them. */
+.bf-panel.decked, .skinned .bf-panel.decked { background: linear-gradient(180deg, rgba(12, 10, 8, 0.78), rgba(8, 7, 6, 0.9)), var(--bf-deck) center 40% / cover no-repeat; background-color: #0c0b0a; background-clip: padding-box; }
 .bf-info, .bf-act { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .bf-head { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; }
 .bf-side { display: flex; gap: 8px; align-items: center; min-width: 0; }

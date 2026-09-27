@@ -115,3 +115,17 @@ test('a landing step: the party ashore on the right island (at the right site) c
   assert.equal(s.profile!.quests.active.find((a) => a.id === job.id)?.step ?? 99, job.steps.length > 1 ? 1 : 99, 'the landing counts');
   void c;
 });
+
+test('a woman giver takes the woman\'s word for her trade in Russian', () => {
+  setLang('ru');
+  applyDataLocale('ru');
+  const she = quests.find((q) => /, merchant$/.test(q.mentor) && GIVER_WOMEN.includes(q.mentor.split(' ')[0]))!;
+  const he = quests.find((q) => /, merchant$/.test(q.mentor) && GIVER_MEN.includes(q.mentor.split(' ')[0]))!;
+  assert.match(serverText(she.mentor), /, купчиха$/);
+  assert.match(serverText(he.mentor), /, купец$/);
+  // Every line about a woman giver is free of the man's word before her name.
+  for (const q of quests.filter((x) => GIVER_WOMEN.includes(x.mentor.split(' ')[0]))) {
+    for (const s of [q.mentor, q.summary]) assert.doesNotMatch(serverText(s), /(купца|скупщика|аптекаря|контрабандиста|посланника) \(/, s);
+  }
+  setLang('en');
+});

@@ -49,6 +49,8 @@ def main(path):
         entry = {'local': local, 'remote': url[len(m['cdn']):], 'job': b['job']}
         if b.get('fit'):
             entry['fit'] = b['fit']
+        if b.get('crop'):
+            entry['crop'] = b['crop']
         m['assets'][aid] = entry
         print(f'{aid} -> {local}')
     write_manifest(m)

@@ -57,8 +57,8 @@ const BIOME_BASE: Record<IslandBiome, string> = {
   temperate: '#2a3026', mossy: '#26322b', volcanic: '#1d1614', ice: '#8d98a3', ruins: '#2a3131', bone: '#6f6a5f', barren: '#3b372f',
   jungle: '#1f3a22', mangrove: '#24332a', atoll: '#b9a77c', saltflat: '#cfc9b8', blacksand: '#1e1c1c', fungal: '#34263a', crystal: '#4a5670',
 };
-/** The seven living-island biomes wear the old paintings under their own colour until theirs are painted
- *  (docs/11 P5): a glaze over the land. */
+/** The seven living-island biomes have their own paintings (docs/11 P5); should one fail to load, the island
+ *  wears an older painting under the biome's colour: a glaze over the land. */
 const BIOME_GLAZE: Partial<Record<IslandBiome, string>> = {
   jungle: 'rgba(10,70,20,0.38)', mangrove: 'rgba(18,52,40,0.4)', atoll: 'rgba(238,214,160,0.38)', saltflat: 'rgba(238,234,222,0.5)',
   blacksand: 'rgba(8,8,10,0.42)', fungal: 'rgba(96,40,118,0.36)', crystal: 'rgba(80,112,196,0.34)',
@@ -76,6 +76,25 @@ const BIOME_SHORE: Record<IslandBiome, string> = {
 const BIOME_DECOR: Record<IslandBiome, string> = {
   temperate: 'prop.decor_temperate', mossy: 'prop.decor_mossy', volcanic: 'prop.decor_volcanic', ice: 'prop.decor_ice', ruins: 'prop.decor_barren', bone: 'prop.decor_bone', barren: 'prop.decor_barren',
   jungle: 'prop.decor_temperate', mangrove: 'prop.decor_mossy', atoll: 'prop.decor_temperate', saltflat: 'prop.decor_barren', blacksand: 'prop.decor_volcanic', fungal: 'prop.decor_mossy', crystal: 'prop.decor_ice',
+};
+/** The seven living-island biomes' own land and decor (docs/11 P5), over the stand-ins above when loaded. */
+const BIOME_OWN: Partial<Record<IslandBiome, { land: string; decor: string; shore?: string }>> = {
+  jungle: { land: 'tex.land_jungle', decor: 'prop.decor_jungle' }, mangrove: { land: 'tex.land_mangrove', decor: 'prop.decor_mangrove' },
+  atoll: { land: 'tex.land_atoll', decor: 'prop.decor_atoll', shore: 'tex.shore_coral' }, saltflat: { land: 'tex.land_saltflat', decor: 'prop.decor_saltflat' },
+  blacksand: { land: 'tex.land_blacksand', decor: 'prop.decor_blacksand' }, fungal: { land: 'tex.land_fungal', decor: 'prop.decor_fungal' },
+  crystal: { land: 'tex.land_crystal', decor: 'prop.decor_crystal' },
+};
+const landArt = (b: IslandBiome): string => {
+  const own = BIOME_OWN[b]?.land;
+  return own && sprite(own) ? own : BIOME_LAND[b];
+};
+const shoreArt = (b: IslandBiome): string => {
+  const own = BIOME_OWN[b]?.shore;
+  return own && sprite(own) ? own : BIOME_SHORE[b];
+};
+const decorArt = (b: IslandBiome): string => {
+  const own = BIOME_OWN[b]?.decor;
+  return own && sprite(own) ? own : BIOME_DECOR[b];
 };
 /** Island features: the sprite, its size in metres, where it stands (salt, inset toward the centre). */
 const FEATURE_ART: Record<string, { id: string; size: number; salt: number; inset: number }> = {
@@ -643,19 +662,20 @@ export class Renderer {
     g.restore();
     // The shore: sand, black sand, ice or rock by biome, a band along the coast.
     this.path(is.poly);
-    const shore = this.tiled(BIOME_SHORE[is.biome], 60, is.id) ?? this.tiled('tex.sand', 60, is.id);
+    const shore = this.tiled(shoreArt(is.biome), 60, is.id) ?? this.tiled('tex.sand', 60, is.id);
     g.strokeStyle = shore ?? (is.biome === 'volcanic' ? '#241c19' : is.biome === 'ice' ? '#9aa4ad' : '#4d463b');
     g.lineWidth = 20 * this.zoom;
     g.stroke();
     // The land in its biome's painting (the old flat tint only when the art is missing).
-    const land = this.tiled(BIOME_LAND[is.biome], 150, is.id) ?? this.tiled('tex.land', 150, is.id);
+    const landId = landArt(is.biome);
+    const land = this.tiled(landId, 150, is.id) ?? this.tiled('tex.land', 150, is.id);
     g.fillStyle = land ?? BIOME_BASE[is.biome];
     g.fill();
-    if (!sprite(BIOME_LAND[is.biome])) {
+    if (!sprite(landId)) {
       g.fillStyle = BIOME_TINT[is.biome];
       g.fill();
     }
-    const glaze = BIOME_GLAZE[is.biome];
+    const glaze = landId === BIOME_LAND[is.biome] ? BIOME_GLAZE[is.biome] : undefined;
     if (glaze) {
       g.fillStyle = glaze;
       g.fill();
@@ -667,7 +687,7 @@ export class Renderer {
       this.path(is.poly);
       g.save();
       g.clip();
-      g.globalAlpha = sprite(BIOME_LAND[is.biome]) ? 0.5 : 1;
+      g.globalAlpha = sprite(landId) ? 0.5 : 1;
       g.drawImage(relief.canvas, this.sx(relief.x0), this.sy(relief.y0), relief.size * this.zoom, relief.size * this.zoom);
       g.restore();
     } else {
@@ -679,7 +699,9 @@ export class Renderer {
     }
     this.drawBiomeLand(is);
     // What grows and lies on the island.
-    const decor = sprite(BIOME_DECOR[is.biome]);
+    const decorId = decorArt(is.biome);
+    const decor = sprite(decorId);
+    const ownDecor = decorId !== BIOME_DECOR[is.biome];
     const grove = sprite('prop.grove');
     if (decor && this.zoom > 0.3) {
       for (const d of this.decorOf(is, state)) {
@@ -689,9 +711,9 @@ export class Renderer {
         g.save();
         g.translate(x, y);
         g.rotate(d.rot);
-        // Fungal and crystal isles grow their own shapes among the old clumps.
-        if (d.odd && is.biome === 'fungal') drawCaps(g, size);
-        else if (d.odd && is.biome === 'crystal') drawShards(g, size);
+        // Fungal and crystal isles grow their own shapes among the old clumps (until their own decor loads).
+        if (d.odd && !ownDecor && is.biome === 'fungal') drawCaps(g, size);
+        else if (d.odd && !ownDecor && is.biome === 'crystal') drawShards(g, size);
         else g.drawImage((d.grove && grove ? grove : decor).img, -size / 2, -size / 2, size, size);
         g.restore();
       }
@@ -785,6 +807,22 @@ export class Renderer {
     const t = this.time;
     const night = this.nightNow;
     const rnd = seeded(is.id * 97 + s.v * 13 + s.kind.length);
+    const along = Math.atan2(ty, tx);
+    const facingSea = Math.atan2(ox, -oy); // turns a sprite drawn head-up to face the sea
+    /** The painted sprite (docs/11 P5) at px size on its longest side; false when it has not loaded. */
+    const art = (id: string, px: number, py: number, size: number, rot = 0, kx = 1, ky = 1): boolean => {
+      const sp = sprite(id);
+      if (!sp) return false;
+      const k = size / Math.max(sp.img.naturalWidth, sp.img.naturalHeight);
+      const w = sp.img.naturalWidth * k, h = sp.img.naturalHeight * k;
+      g.save();
+      g.translate(px, py);
+      g.rotate(rot);
+      g.scale(kx, ky);
+      g.drawImage(sp.img, -w / 2, -h / 2, w, h);
+      g.restore();
+      return true;
+    };
     const hut = (hx: number, hy: number, w: number, roof: string) => {
       g.fillStyle = 'rgba(0,0,0,0.35)';
       g.fillRect(hx - w / 2 + 2 * z, hy - w / 2 + 3 * z, w, w * 0.8);
@@ -812,9 +850,12 @@ export class Renderer {
       case 'smugglers':
       case 'pirate_camp': {
         const people = s.kind === 'fishers';
+        const tentArt = people ? 'prop.life_hut' : s.kind === 'pirate_camp' ? 'prop.life_pirate_tent' : 'prop.life_tent';
+        const gap = sprite(tentArt) ? 21 : 16;
         for (let i = 0; i < s.n; i++) {
           const k = i - (s.n - 1) / 2;
-          const hx = x + tx * k * 16 * z - ox * 4 * z * (i % 2), hy = y + ty * k * 16 * z - oy * 4 * z * (i % 2);
+          const hx = x + tx * k * gap * z - ox * 4 * z * (i % 2), hy = y + ty * k * gap * z - oy * 4 * z * (i % 2);
+          if (art(tentArt, hx, hy, (people ? 20 : 17) * z, facingSea + (((i * 37) % 7) - 3) * 0.09)) continue;
           if (people) hut(hx, hy, 11 * z, '#6d5237');
           else {
             // Tents: canvas triangles, the pirates' black.
@@ -832,6 +873,7 @@ export class Renderer {
           for (let i = 0; i < 2; i++) {
             const bob = i === 1 ? Math.sin(t * 1.3 + s.v) * 1.5 * z : 0;
             const bx = x + ox * (14 + i * 22) * z + tx * (i * 10 - 5) * z, by = y + oy * (14 + i * 22) * z + ty * (i * 10 - 5) * z + bob;
+            if (art('prop.life_boat', bx, by, 15 * z, along + Math.PI / 2 + (i ? 0.25 : -0.15))) continue;
             g.save();
             g.translate(bx, by);
             g.rotate(Math.atan2(ty, tx));
@@ -846,7 +888,7 @@ export class Renderer {
           // Crates by the smugglers' fire; the pirates fly the black.
           if (s.kind === 'smugglers') {
             g.fillStyle = '#6b5032';
-            for (let i = 0; i < 3; i++) g.fillRect(x + (i * 5 - 7) * z + ox * 10 * z, y + oy * 10 * z + (i % 2) * 4 * z, 4 * z, 4 * z);
+            if (!art('prop.life_crates', x + ox * 11 * z, y + oy * 11 * z, 13 * z, facingSea)) for (let i = 0; i < 3; i++) g.fillRect(x + (i * 5 - 7) * z + ox * 10 * z, y + oy * 10 * z + (i % 2) * 4 * z, 4 * z, 4 * z);
           } else {
             const fx = x - ox * 12 * z, fy = y - oy * 12 * z;
             g.strokeStyle = '#2a1e14';
@@ -869,28 +911,30 @@ export class Renderer {
         break;
       }
       case 'garrison': {
-        // A small star fort of grey stone under the region's colours.
-        g.fillStyle = 'rgba(0,0,0,0.35)';
-        g.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const a = (i / 10) * Math.PI * 2, rr = (i % 2 ? 11 : 19) * z;
-          const px = x + 3 * z + Math.cos(a) * rr, py = y + 4 * z + Math.sin(a) * rr;
-          if (i) g.lineTo(px, py);
-          else g.moveTo(px, py);
+        // A small star fort of grey stone under the region's colours (painted, or drawn when the art is missing).
+        if (!art('prop.life_fort', x, y, 46 * z, facingSea)) {
+          g.fillStyle = 'rgba(0,0,0,0.35)';
+          g.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2, rr = (i % 2 ? 11 : 19) * z;
+            const px = x + 3 * z + Math.cos(a) * rr, py = y + 4 * z + Math.sin(a) * rr;
+            if (i) g.lineTo(px, py);
+            else g.moveTo(px, py);
+          }
+          g.fill();
+          g.fillStyle = '#6a6760';
+          g.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2, rr = (i % 2 ? 11 : 19) * z;
+            const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+            if (i) g.lineTo(px, py);
+            else g.moveTo(px, py);
+          }
+          g.closePath();
+          g.fill();
+          g.fillStyle = '#4c4a45';
+          g.fillRect(x - 5 * z, y - 5 * z, 10 * z, 10 * z);
         }
-        g.fill();
-        g.fillStyle = '#6a6760';
-        g.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const a = (i / 10) * Math.PI * 2, rr = (i % 2 ? 11 : 19) * z;
-          const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
-          if (i) g.lineTo(px, py);
-          else g.moveTo(px, py);
-        }
-        g.closePath();
-        g.fill();
-        g.fillStyle = '#4c4a45';
-        g.fillRect(x - 5 * z, y - 5 * z, 10 * z, 10 * z);
         const flap = Math.sin(t * 4 + s.v) * 1.5 * z;
         g.strokeStyle = '#2a2622';
         g.lineWidth = Math.max(1, z);
@@ -920,20 +964,25 @@ export class Renderer {
             const w = Math.sin(t * (1.4 + i * 0.3) + i) * 5 * z;
             bx += tx * w;
             by += ty * w;
+            if (art('creature.crab', bx, by, Math.max(5, 5.5 * z), facingSea + Math.sin(t * 3 + i) * 0.15)) continue;
             g.fillStyle = '#b8452f';
             g.beginPath();
             g.arc(bx, by, Math.max(1.2, 1.8 * z), 0, Math.PI * 2);
             g.fill();
           } else if (s.kind === 'seals') {
             const breathe = 1 + 0.06 * Math.sin(t * 1.1 + i * 2);
+            const lie = along + (rnd() - 0.5);
+            if (art('creature.seal', bx, by, 13 * z, lie + Math.PI / 2, 1, breathe)) continue;
             g.fillStyle = '#5d6168';
             g.beginPath();
-            g.ellipse(bx, by, 5.5 * z * breathe, 2.4 * z, Math.atan2(ty, tx) + (rnd() - 0.5), 0, Math.PI * 2);
+            g.ellipse(bx, by, 5.5 * z * breathe, 2.4 * z, lie, 0, Math.PI * 2);
             g.fill();
           } else {
             const crawl = Math.sin(t * 0.3 + i * 2) * 3 * z;
             bx += ox * crawl;
             by += oy * crawl;
+            // Head the way it crawls: to the sea while the wave of its walk rises, inland as it falls.
+            if (art('creature.turtle', bx, by, Math.max(6, 9 * z), facingSea + (Math.cos(t * 0.3 + i * 2) < 0 ? Math.PI : 0))) continue;
             g.fillStyle = '#4f5a34';
             g.beginPath();
             g.ellipse(bx, by, 3.6 * z, 3 * z, 0, 0, Math.PI * 2);
@@ -954,6 +1003,8 @@ export class Renderer {
           const gx = x + Math.cos(a) * rr * (0.7 + 0.3 * Math.sin(i)), gy = y + Math.sin(a) * rr * (0.7 + 0.3 * Math.cos(i));
           const flap = (2 + Math.sin(t * 8 + i * 1.7) * 1.6) * z;
           const span = 4 * z + 2;
+          // Heading along its circle; the wings beat by narrowing the span.
+          if (art('creature.gull', gx, gy, span * 2.4, Math.atan2(-Math.sin(a), -Math.cos(a)), 0.55 + 0.45 * Math.abs(Math.sin(t * 8 + i * 1.7)))) continue;
           g.beginPath();
           g.moveTo(gx - span, gy - flap);
           g.quadraticCurveTo(gx - span / 2, gy - flap * 0.2, gx, gy);

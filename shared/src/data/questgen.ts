@@ -21,8 +21,39 @@ export const GIVER_WOMEN = ['Edda', 'Isolde', 'Nell', 'Tamsin', 'Vesper', 'Bess'
 export const GIVER_FIRST = [...GIVER_MEN, ...GIVER_WOMEN];
 export const GIVER_LAST = ['Blackwater', 'Coldharbour', 'Drummond', 'Farrow', 'Gault', 'Holloway', 'Jessop', 'Kell', 'Lowe', 'Marrow', 'Nettle', 'Orme', 'Pike', 'Quill', 'Reeve', 'Thorne', 'Umber', 'Wick', 'Yeats', 'Crane', 'Marlow', 'Holt', 'Varga', 'Pryce', 'Lamb', 'Maddox', 'Blackwood', 'Moor', 'Frost', 'Tarrow', 'Grimsby', 'Vale', 'Hawthorne', 'Doyle', 'Carrow', 'Stroud'];
 
+/** Russian trades that change for a woman: the stories write the man's word before the giver's name — «купца (…)»,
+ *  «…, купец» — and a woman giver takes hers. (Words that stay the same for both, like «картограф», are not here.) */
+const FEMININE_RU: [string, string][] = [
+  ['аптекаря', 'аптекарши'], ['аптекарь', 'аптекарша'], ['купца', 'купчихи'], ['купцу', 'купчихе'], ['купец', 'купчиха'],
+  ['скупщика', 'скупщицы'], ['скупщику', 'скупщице'], ['скупщик', 'скупщица'], ['скупщик краденого', 'скупщица краденого'], ['контрабандиста', 'контрабандистки'],
+  ['контрабандисту', 'контрабандистке'], ['контрабандист', 'контрабандистка'], ['ловца', 'ныряльщицы'], ['ловец жемчуга', 'ныряльщица за жемчугом'],
+  ['посланника', 'посланницы'], ['посланник', 'посланница'], ['сектанта', 'сектантки'], ['сектант', 'сектантка'],
+  ['священника', 'жрицы'], ['священник', 'жрица'], ['отшельника', 'отшельницы'], ['отшельник', 'отшельница'],
+  ['смотрителя маяка', 'смотрительницы маяка'], ['смотритель маяка', 'смотрительница маяка'],
+];
+const FEM_BEFORE = new Map(FEMININE_RU);
+
+/** A job's Russian line when its giver is a woman (her name in the English line): the trade before «(name)» and
+ *  after «name, » takes the woman's word. Lines about a man, or about no giver, come back as they are. */
+export function feminineRu(en: string, ru: string): string {
+  if (!GIVER_WOMEN.some((w) => en.includes(`${w} `))) return ru;
+  return ru
+    .replace(/([А-Яа-яЁё]+(?: маяка| жемчуга| краденого)?) \(/g, (m, w: string) => {
+      const f = FEM_BEFORE.get(w.toLowerCase());
+      return f ? `${w[0] === w[0].toUpperCase() ? f[0].toUpperCase() + f.slice(1) : f} (` : m;
+    })
+    .replace(/, ([а-яё]+(?: маяка| жемчуга| краденого)?)$/, (m, w: string) => (FEM_BEFORE.has(w) ? `, ${FEM_BEFORE.get(w)}` : m));
+}
+
 export type Profession = 'harbour_master' | 'fishwife' | 'shipwright' | 'priest' | 'widow' | 'merchant' | 'smuggler' | 'old_salt' | 'apothecary' | 'cartographer'
   | 'garrison_captain' | 'tavern_keeper' | 'pearl_diver' | 'fence' | 'envoy' | 'hermit' | 'bosun' | 'lighthouse_keeper' | 'whaler' | 'cultist';
+
+/** The giver's portrait id: one face for each profession and sex (docs/11 P5). */
+export function giverPortrait(profession: Profession, giver: string): string {
+  const first = giver.split(' ')[0];
+  const sex = GIVER_WOMEN.includes(first) ? 'f' : GIVER_MEN.includes(first) ? 'm' : PROFESSION_SEX[profession] ?? 'm';
+  return `giver_${profession}_${sex}`;
+}
 
 /** Whom the stories speak of as "she" or "he" (the rest may be either). */
 export const PROFESSION_SEX: Partial<Record<Profession, 'f' | 'm'>> = {
@@ -538,7 +569,7 @@ function build(id: string, plot: Plot, flavor: Flavor, p: GenParams, levelBase: 
     id, kind: 'job', name: fill(flavor.name[0], v), mentor: `${p.giver}, ${PROFESSIONS[p.profession][0]}`, port: p.port.id,
     summary: fill(flavor.summary[0], v), requires: { level },
     steps, reward: { xp: Math.round(plot.xp * scale), silver: Math.round(plot.pay * scale) },
-    category: plot.category, template: `${plot.id}.${plot.flavors.indexOf(flavor)}`,
+    category: plot.category, template: `${plot.id}.${plot.flavors.indexOf(flavor)}`, portrait: giverPortrait(p.profession, p.giver),
   };
 }
 
