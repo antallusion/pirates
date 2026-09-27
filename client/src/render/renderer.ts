@@ -1514,8 +1514,10 @@ export class Renderer {
    * so a phone's close view never hides who is coming. */
   private drawThreatMarks(ships: DrawShip[], own: SailState): void {
     const g = this.g;
-    const cx = this.w / 2, cy = this.h / 2;
-    const rx = this.w / 2 - 26, ry = this.h / 2 - Math.min(150, this.h * 0.2);
+    // The rim keeps clear of the menu column a mouse gets on the right of a narrow window.
+    const menuCol = !document.body.classList.contains('touch') && this.w < 1100 ? 56 : 0;
+    const cx = this.w / 2 - menuCol / 2, cy = this.h / 2;
+    const rx = this.w / 2 - 26 - menuCol / 2, ry = this.h / 2 - Math.min(150, this.h * 0.2);
     const marks: { s: DrawShip; d: number }[] = [];
     for (const s of ships) {
       if (s.own || s.sinkT > 0) continue;
