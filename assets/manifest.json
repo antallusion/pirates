@@ -349,6 +349,7 @@
     "icon.bt_colours":                { "local": "icons/bt_colours.webp", "remote": "hf_20260927_172849_f398d3ef-35c7-437d-9ddf-2b019a7db6eb.png", "job": "f398d3ef-35c7-437d-9ddf-2b019a7db6eb", "fit": "opaque:192" },
     "icon.bt_captain":                { "local": "icons/bt_captain.webp", "remote": "hf_20260927_174815_960beb05-a56c-4550-8f5d-546c054cdbd8.png", "job": "960beb05-a56c-4550-8f5d-546c054cdbd8", "fit": "opaque:192" },
     "icon.dash":                      { "local": "icons/dash.webp", "remote": "hf_20260927_175753_6873357e-8034-4d27-919b-227fba685e52.png", "job": "6873357e-8034-4d27-919b-227fba685e52", "fit": "opaque:192" },
-    "tex.land_jungle":                { "local": "textures/land_jungle.webp", "remote": "hf_20260927_180720_64a69fbe-0f96-4853-b019-b5ed014e4654.png", "job": "64a69fbe-0f96-4853-b019-b5ed014e4654", "fit": "opaque:1024:1.6:seam" }
+    "tex.land_jungle":                { "local": "textures/land_jungle.webp", "remote": "hf_20260927_180720_64a69fbe-0f96-4853-b019-b5ed014e4654.png", "job": "64a69fbe-0f96-4853-b019-b5ed014e4654", "fit": "opaque:1024:1.6:seam" },
+    "tex.land_mangrove":              { "local": "textures/land_mangrove.webp", "remote": "hf_20260927_181617_7a70ae97-722c-47cd-bd58-50881d53bb1b.png", "job": "7a70ae97-722c-47cd-bd58-50881d53bb1b", "fit": "opaque:1024:1.1:seam" }
   }
 }
