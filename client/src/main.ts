@@ -727,6 +727,8 @@ function sendTalent(id: string): void {
 }
 
 function sendInput(now: number): void {
+  // Until the first snapshot tells us how she is rigged, the helm sends nothing (no default sail on a reconnect).
+  if (state.syncSail) return;
   const km = settings().keys;
   const held = (a: 'rudderLeft' | 'rudderRight') => km[a].some((k) => k && keys.has(k));
   const rudder = (held('rudderRight') ? 1 : 0) - (held('rudderLeft') ? 1 : 0);

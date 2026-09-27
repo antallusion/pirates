@@ -959,3 +959,25 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
   #modal-panel table.grid:not(.market) { display: block; max-width: 100%; overflow-x: auto; font-size: 12px; }
   #modal-panel table.grid:not(.market) td, #modal-panel table.grid:not(.market) th { white-space: nowrap; padding: 4px 6px; }
 }
+/* The diving bell: stats as chips, a d-pad of brass buttons, the surface order under it. */
+#hud-dive .dstats { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font: 600 12px var(--sans); color: var(--bone); margin: 2px 0; }
+#hud-dive .dstats > span { display: inline-flex; align-items: center; gap: 4px; }
+#hud-dive .dctl { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; margin-top: 4px; text-align: left; }
+#hud-dive .dpad { display: grid; grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 34px); gap: 3px; }
+#hud-dive .dpad .btn { min-width: 0; width: 34px; height: 34px; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+#hud-dive .dpad-mid { display: flex; align-items: center; justify-content: center; opacity: 0.7; }
+#hud-dive .dsurface { display: flex; align-items: center; justify-content: center; gap: 6px; }
+body.touch #hud-dive .dhint { display: none; }
+@media (max-width: 699px) { #hud-dive .dlog { max-height: 30px; } }
+/* A tall stack (the diving bell under the goals) scrolls within itself and leaves room above the bottom block
+   for two toasts. */
+@media (max-width: 699px), (max-height: 520px) {
+  #hud-stack { max-height: calc(100vh - var(--hb-top, 200px) - 250px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+  #hud-stack::-webkit-scrollbar { display: none; }
+}
+/* While the bell is down on a phone, the goals step aside: the maze and its helm need the room. */
+@media (max-width: 699px), (max-height: 520px) {
+  #hud-stack:has(#hud-dive:not(.hidden)) #hud-goals { display: none; }
+  #hud-dive .dpad { grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(3, 30px); }
+  #hud-dive .dpad .btn { width: 30px; height: 30px; }
+}

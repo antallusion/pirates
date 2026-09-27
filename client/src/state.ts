@@ -97,6 +97,8 @@ export class ClientState {
 
   input = { rudder: 0, sail: 2, seq: 0 };
   snapGap = 0.1; // seconds between snapshots (smoothed)
+  /** Take the sail order from the next snapshot (after init). */
+  syncSail = false;
   /** World seconds per real second (1 unless an admin server runs the clock faster). */
   timeScale = 1;
 
@@ -123,6 +125,9 @@ export class ClientState {
     const now = performance.now() / 1000;
     switch (m.t) {
       case 'init':
+        // A reload or a reconnect must not set sail on its own (a ship at anchor over a dive would drag it):
+        // the sail order is taken from the ship as she is.
+        this.syncSail = true;
         this.self = m.self;
         this.ports = m.ports;
         for (const p of this.ports) this.localize(p);
@@ -177,6 +182,10 @@ export class ClientState {
         this.region = m.region;
         this.fog = m.fog;
         if (m.you) {
+          if (this.syncSail) {
+            this.input.sail = Math.max(0, Math.min(4, Math.round(m.you.sailT * 4)));
+            this.syncSail = false;
+          }
           this.you = m.you;
           this.youServerTime = m.time;
           this.youArrival = now;

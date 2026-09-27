@@ -562,7 +562,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "the Sea Serpent figurehead": "носовая фигура «Морской змей»",
   "the Wren": "«Рен»",
   "the beached wreck": "выброшенный на берег остов",
-  "the bell buoy over {0}": "буй-колокол над {0}",
+  "the bell buoy over {0}": "буй-колокол ({0})",
   "the deep called and they answered": "глубина позвала, и они откликнулись",
   "the drowned shrine": "затонувшее святилище",
   "the gateway needs at least one world": "the gateway needs at least one world",
