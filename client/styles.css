@@ -1327,4 +1327,7 @@ body.touch #hud-region .rg-extra { display: none; }
 /* The centre cards (a mutiny, the edge of safe water, a shipwreck) stand in the middle of the sheet, not at
    its top with the lower half empty; they still scroll from the top when taller than the screen. */
 .modal-body:has(> .center-card) { display: flex; flex-direction: column; }
-.modal-body > .center-card { margin-block: auto; }
+.modal-body > .center-card { margin-block: auto; width: 100%; box-sizing: border-box; }
+/* A centre card's title fits its plate on every width (the edge of safe water's was cut at 34px in 560px). */
+.center-card .title-sm { font-size: clamp(20px, 2.6vw, 28px) !important; max-width: 100%; }
+@media (max-width: 699px) { .center-card .title-sm { white-space: normal; text-wrap: balance; margin-left: 0; margin-right: 0; overflow: visible; } }
