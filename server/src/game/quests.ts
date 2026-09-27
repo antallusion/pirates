@@ -458,6 +458,26 @@ function matesNear(game: Game, s: PlayerSession): number {
 /** A tenth more for every groupmate in company, up to three. */
 export const GROUP_QUEST_BONUS = 0.1;
 
+/** A mentor (docs/11 P6): a groupmate in company this many levels or more above the captain who does the quest. */
+export const MENTOR_GAP = 10;
+/** The apprentice learns this much faster under a mentor's eye; the mentor is paid this share of the silver. */
+export const MENTOR_XP = 0.1;
+export const MENTOR_PAY = 0.25;
+
+/** Veterans in the group within convoy range, ten levels or more above the captain: the two most senior. */
+function mentorsNear(game: Game, s: PlayerSession): PlayerSession[] {
+  const g = groupOfAccount(game, s.accountId);
+  const ship = s.ship;
+  if (!g || !ship) return [];
+  const out: PlayerSession[] = [];
+  for (const acc of g.members) {
+    const m = acc === s.accountId ? null : game.sessionByAccount(acc);
+    if (!m?.profile || !m.ship?.alive || m.profile.level < s.profile!.level + MENTOR_GAP) continue;
+    if (Math.hypot(m.ship.state.x - ship.state.x, m.ship.state.y - ship.state.y) <= CONVOY_RANGE) out.push(m);
+  }
+  return out.sort((a, b) => b.profile!.level - a.profile!.level).slice(0, 2);
+}
+
 function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   const p = s.profile!;
   const st = p.quests.active.find((a) => a.id === q.id);
@@ -468,7 +488,8 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   const k = 1 + GROUP_QUEST_BONUS * company;
   // The pay as chosen on taking it: all silver, or a part in fine shot or in the port's favour.
   const pay = questPayOf(st?.pay ?? 'silver', q.reward.silver, q.requires.level ?? 1);
-  const silver = Math.round(pay.silver * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(q.reward.xp * k);
+  const mentors = mentorsNear(game, s);
+  const silver = Math.round(pay.silver * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(q.reward.xp * k * (mentors.length ? 1 + MENTOR_XP : 1));
   p.gold += silver;
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);
@@ -496,7 +517,15 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
     s.ship.ammo.incendiary = (s.ship.ammo.incendiary ?? 0) + pay.incendiary;
     stores = { heavy: pay.heavy, incendiary: pay.incendiary };
   }
-  game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(fast ? { fast: true } : {}), ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}), ...(stores ? { stores } : {}) });
+  game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(fast ? { fast: true } : {}), ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}), ...(stores ? { stores } : {}), ...(mentors.length ? { mentor: mentors[0].name } : {}) });
+  // The mentors are paid for the guidance, and counted in the season's table of mentors.
+  for (const m of mentors) {
+    const fee = Math.max(50, Math.round(q.reward.silver * MENTOR_PAY));
+    m.profile!.gold += fee;
+    game.db.ledger(m.accountId, 'mentor', fee, q.id);
+    seasonStat(game, m, 'mentored', 1);
+    game.sendTo(m, { t: 'toast', msg: `You saw ${s.name} through “${q.name}”: ${fee} silver for the guidance.`, kind: 'gold' });
+  }
   if (q.reward.path && !p.paths.includes(q.reward.path)) {
     p.paths.push(q.reward.path);
     game.sendTo(s, { t: 'toast', msg: `${q.mentor} teaches you the ${CAPTAINS[q.reward.path].archetype}'s Path. Change Path at any Captain's House.`, kind: 'gold' });

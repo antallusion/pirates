@@ -895,7 +895,8 @@ export type ServerMsg =
   | { t: 'quest_offer'; offer: PortView['questOffers'][number]; island?: number; from?: string }
   /** A quest done: its name and all it paid (docs/11 P6). */
   | { t: 'quest_done'; name: string; silver: number; xp: number; /** done within the speed window */ fast?: boolean; /** groupmates in company (each a tenth more) */ company?: number; rep?: { faction: FactionId; n: number }; extra?: 'map' | 'supplies';
-      /** fine shot put aboard, when the pay was taken partly in it */ stores?: { heavy: number; incendiary: number } }
+      /** fine shot put aboard, when the pay was taken partly in it */ stores?: { heavy: number; incendiary: number };
+      /** a veteran groupmate in company who guided it (a tenth more experience) */ mentor?: string }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number }
   | { t: 'fronts'; list: FrontData[]; forecast: boolean }

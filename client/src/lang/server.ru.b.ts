@@ -809,6 +809,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "Ships sunk": "Потоплено кораблей",
   "Monster hunters": "Охотники на чудовищ",
   "Quests done": "Выполненные задания",
+  "Mentors": "Наставники",
   "Trade empires": "Торговые империи",
   "Treasure hunters": "Искатели сокровищ",
   "Longest logs (km)": "Дальние плавания (км)",
@@ -818,6 +819,10 @@ export const SERVER_RU_B: Record<string, string> = {
   "Sea-Dog of {0}": "Морской волк ({0})",
   "Veteran of {0}": "Ветеран ({0})",
   "Legend of {0}": "Легенда ({0})",
+  "Great Migration": "Великая миграция",
+  "War of Crown and Code": "Война Короны и Кодекса",
+  "Season of Storms": "Сезон бурь",
+  "Tide of the Dead": "Прилив мертвецов",
   // The bosses' phases (shared/src/data/bosses.ts).
   "The Hunt": "Охота",
   "Roar of the Deep": "Рёв глубин",
@@ -948,4 +953,5 @@ export const SERVER_RU_B: Record<string, string> = {
   "Not on your list of the unheard": "Этого капитана нет среди неслышимых",
   "You hear {0} again.": "Снова слышно: {0}.",
   "{0} is not listening to you": "{0} вас не слушает",
+  "You saw {0} through “{1}”: {2} silver for the guidance.": "Вы провели капитана {0} через «{1}»: {2} серебра за наставничество.",
 };

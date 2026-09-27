@@ -17,11 +17,12 @@ export const THEMES: Record<SeasonTheme, { name: string; text: string }> = {
 export const THEME_ORDER: SeasonTheme[] = ['migration', 'war', 'storm', 'dead_tide'];
 
 /** What the season tables count. */
-export type SeasonStat = 'sunk' | 'monsters' | 'trade' | 'treasure' | 'distance' | 'lawful' | 'plunder' | 'abyss' | 'quests';
+export type SeasonStat = 'sunk' | 'monsters' | 'trade' | 'treasure' | 'distance' | 'lawful' | 'plunder' | 'abyss' | 'quests' | 'mentored';
 
 export const STAT_NAMES: Record<SeasonStat, string> = {
   sunk: 'Ships sunk', monsters: 'Monster hunters', trade: 'Trade empires', treasure: 'Treasure hunters', distance: 'Longest logs (km)',
   lawful: 'Lawful exploits', plunder: 'Pirate glory', abyss: 'Deeds of the Abyss', quests: 'Quests done',
+  mentored: 'Mentors',
 };
 
 /** The three halls of the Pantheon, and the table each draws its three from. */

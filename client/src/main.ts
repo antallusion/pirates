@@ -329,6 +329,7 @@ function onMessage(m: ServerMsg): void {
       if (m.rep) parts.push(L('questRep', { faction: serverText(FACTIONS[m.rep.faction].name), n: m.rep.n }));
       if (m.extra) parts.push(L(m.extra === 'map' ? 'questMap' : 'questSupplies'));
       if (m.stores) parts.push(L('questStores', { h: m.stores.heavy, f: m.stores.incendiary }));
+      if (m.mentor) parts.push(L('questMentor', { name: m.mentor }));
       hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
       audio.bell();
       audio.coins();

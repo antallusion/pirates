@@ -10,6 +10,9 @@ import { questPointer } from '../client/src/ui/track.ts';
 import { newsHint } from '../server/src/game/onboarding.ts';
 import { join, makeGame, steps } from './helpers.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
+import { setLang } from '../client/src/i18n.ts';
+import { serverText } from '../client/src/lang/server.ts';
+import { trackReward } from '../shared/src/data/seasons.ts';
 
 test('a group sails as one: the ship one captain sinks counts on a groupmate’s hunt nearby', () => {
   const { game } = makeGame();
@@ -280,4 +283,52 @@ test('the journal shows groupmates on the same quest and the step each is on', (
   b.push({ t: 'group', action: 'leave' });
   game.pushSelf(A, true);
   assert.equal(view(a)?.mates, undefined);
+});
+
+test('a mentor: a veteran in company is paid for guiding a quest through, and the apprentice learns faster', () => {
+  const { game } = makeGame();
+  const a = join(game, 'Young Ada');
+  const b = join(game, 'Old Bart');
+  a.push({ t: 'group', action: 'invite', name: 'Old Bart' });
+  b.push({ t: 'group', action: 'accept', id: b.last('party')!.invites[0].id });
+  const A = game.sessionByName('Young Ada')!, B = game.sessionByName('Old Bart')!;
+  for (const [c, s, dx] of [[a, A, 0], [b, B, 300]] as const) {
+    c.push({ t: 'undock' });
+    s.ship!.docked = null;
+    s.ship!.state.x = 30000 + dx;
+    s.ship!.state.y = 30000;
+  }
+  B.profile!.level = A.profile!.level + 12;
+  const quest: QuestDef = { id: 'test_mentor', kind: 'job', name: 'Under Guidance', mentor: 'Test', port: 'saltmarrow', summary: '', requires: {}, steps: [{ type: 'chart', count: 1, text: 'Chart an island.' }], reward: { xp: 100, silver: 1000 } };
+  QUESTS_BY_ID[quest.id] = quest;
+  A.profile!.quests.active.push({ id: quest.id, step: 0, progress: 0, startedAt: game.now });
+  const bartGold = B.profile!.gold;
+  questEvent(game, A, { k: 'chart' });
+  const done = a.last('quest_done')!;
+  assert.equal(done.mentor, 'Old Bart');
+  assert.equal(done.xp, Math.round(100 * 1.1 * 1.1), 'a tenth more in company, and a tenth more under a mentor');
+  assert.equal(B.profile!.gold - bartGold, 250, 'the mentor is paid a quarter of the silver');
+  assert.equal(B.profile!.season.stats.mentored, 1);
+  assert.ok(b.all('toast').some((t) => t.msg === 'You saw Young Ada through “Under Guidance”: 250 silver for the guidance.'));
+  // A groupmate of the same years is company, not a mentor.
+  B.profile!.level = A.profile!.level + 3;
+  A.profile!.quests.done = [];
+  A.profile!.quests.active.push({ id: quest.id, step: 0, progress: 0, startedAt: game.now });
+  questEvent(game, A, { k: 'chart' });
+  assert.equal(a.last('quest_done')!.mentor, undefined);
+  delete QUESTS_BY_ID[quest.id];
+});
+
+test('the mentor’s word and table read in Russian', () => {
+  setLang('ru');
+  const lines = [serverText('You saw Ada through “Qqq”: 250 silver for the guidance.'), serverText('Mentors')];
+  setLang('en');
+  assert.deepEqual(lines.filter((l) => /[A-Za-z]{3,}/.test(l.replace(/Ada|Qqq/g, ''))), []);
+});
+
+test('the season path’s titles read in Russian, the season named too', () => {
+  setLang('ru');
+  const titles = (['migration', 'war', 'storm', 'dead_tide'] as const).flatMap((th) => [5, 20, 40].map((lv) => serverText(trackReward(lv, th)!.title!)));
+  setLang('en');
+  assert.deepEqual(titles.filter((t) => /[A-Za-z]/.test(t)), []);
 });
