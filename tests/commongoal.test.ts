@@ -35,6 +35,7 @@ test('every captain’s deed counts; the full bar pays every hand, and one ashor
   for (let i = 0; i < target - 1; i++) commonEvent(game, i % 3 ? A : B, deed);
   assert.equal(commonView(game, A.accountId).progress, target - 1);
   assert.ok(commonView(game, A.accountId).mine > commonView(game, B.accountId).mine, 'each captain’s own part');
+  assert.deepEqual(commonView(game, A.accountId).leaders!.map((l) => l.name), ['Ann Common', 'Bob Common'], 'the busiest hands by name');
   // Bob goes ashore before the end; Ann finishes it.
   const bobGold = B.profile!.gold;
   const bobAcc = B.accountId;

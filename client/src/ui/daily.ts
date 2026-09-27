@@ -17,6 +17,7 @@ const EN = {
   mine: 'Your deeds: {n}',
   commonDone: 'Done — every hand is paid',
   left: '{h} h {m} min left',
+  leaders: 'The busiest hands:',
 };
 const RU: typeof EN = {
   title: 'Поручения дня',
@@ -29,6 +30,7 @@ const RU: typeof EN = {
   mine: 'Ваших дел: {n}',
   commonDone: 'Сделано — каждому заплачено',
   left: 'Осталось {h} ч {m} мин',
+  leaders: 'Больше всех:',
 };
 const L = dict(EN, RU);
 
@@ -50,7 +52,8 @@ function commonBody(c: Common): string {
   const ru = lang() === 'ru' ? 1 : 0;
   const pct = Math.min(100, (c.progress / Math.max(1, c.target)) * 100);
   const tail = c.done ? esc(L('commonDone')) : `${esc(L('mine', { n: c.mine }))} · ${esc(L('left', { h: Math.floor(c.endsIn / 3600), m: Math.floor((c.endsIn % 3600) / 60) }))}`;
-  return `<div class="cm-text">${esc(commonText(c.kind, c.target, ru))}</div><div class="cm-bar${c.done ? ' done' : ''}"><i style="width:${pct.toFixed(1)}%"></i><span>${c.progress}/${c.target}</span></div><div class="dl-foot muted">${tail}</div>`;
+  const lead = c.leaders?.length ? `<div class="cm-leaders muted">${esc(L('leaders'))} ${c.leaders.map((x) => `<b>${esc(x.name)}</b> ${x.n}`).join(' · ')}</div>` : '';
+  return `<div class="cm-text">${esc(commonText(c.kind, c.target, ru))}</div><div class="cm-bar${c.done ? ' done' : ''}"><i style="width:${pct.toFixed(1)}%"></i><span>${c.progress}/${c.target}</span></div><div class="dl-foot muted">${tail}</div>${lead}`;
 }
 
 /** The tavern's card for the common cause. */

@@ -16,6 +16,8 @@ export interface CommonState {
   progress: number;
   /** Deeds by account. */
   hands: Record<string, number>;
+  /** The captains' names, for the day's leaders. */
+  names?: Record<string, string>;
   done: boolean;
   /** Pay not yet collected by captains who were ashore when the cause was done: account → silver, xp. */
   owed: Record<string, { silver: number; xp: number }>;
@@ -77,6 +79,7 @@ export function commonEvent(game: Game, s: PlayerSession, ev: QuestEvent): void 
   if (n <= 0) return;
   const acc = String(s.accountId);
   st.hands[acc] = (st.hands[acc] ?? 0) + n;
+  (st.names ??= {})[acc] = s.name;
   st.progress = Math.min(st.target, st.progress + n);
   if (st.progress >= st.target) finish(game, st);
   save(game);
@@ -113,10 +116,12 @@ export function commonCollect(game: Game, s: PlayerSession): void {
 }
 
 /** What a captain sees: the cause, the bar, their own part, and the time left. */
-export function commonView(game: Game, accountId: number): { kind: CommonKind; target: number; progress: number; mine: number; done: boolean; endsIn: number } {
+export function commonView(game: Game, accountId: number): { kind: CommonKind; target: number; progress: number; mine: number; done: boolean; endsIn: number; leaders: { name: string; n: number }[] } {
   const st = load(game);
   const end = (st.day + 1) * 86_400_000;
-  return { kind: st.kind, target: st.target, progress: st.progress, mine: st.hands[String(accountId)] ?? 0, done: st.done, endsIn: Math.max(0, Math.round((end - game.wallNow()) / 1000)) };
+  // The day's three busiest hands, by name.
+  const leaders = Object.entries(st.hands).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([acc, n]) => ({ name: st.names?.[acc] ?? '?', n }));
+  return { kind: st.kind, target: st.target, progress: st.progress, mine: st.hands[String(accountId)] ?? 0, done: st.done, endsIn: Math.max(0, Math.round((end - game.wallNow()) / 1000)), leaders };
 }
 
 /** For tests: forget the cached state (a new game in the same process). */

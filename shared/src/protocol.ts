@@ -374,7 +374,7 @@ export interface PrivateState {
   /** Today's orders (docs/11 P6): each with its pay, the days in a row and the chest. */
   daily: { day: number; orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
   /** The sea's common cause today (docs/11 P6): the goal, the bar, this captain's deeds, seconds left. */
-  common: { kind: CommonKind; target: number; progress: number; mine: number; done: boolean; endsIn: number } | null;
+  common: { kind: CommonKind; target: number; progress: number; mine: number; done: boolean; endsIn: number; /** the day's busiest hands */ leaders?: { name: string; n: number }[] } | null;
   paths: CaptainId[];
   oath: 'code' | 'marque' | null;
   pathSwitchAt: number;
