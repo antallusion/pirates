@@ -224,6 +224,23 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-unfriend]').forEach((el) => (el.onclick = () => void ask(L('fr_confirm_remove', { name: el.dataset.unfriend! })).then((ok) => ok && this.send({ t: 'friend', action: 'remove', name: el.dataset.unfriend! }))));
   }
 
+  /** The guild finder for a captain with no guild (docs/11 P6): the guilds recruiting, a word about oneself, a
+   *  request a guild. */
+  private recruitingCard(state: ClientState): string {
+    const rows = state.recruiting.map((r) => `<div class="lfg-row"><div><b>${esc(r.name)}</b> <span class="who-tag">[${esc(r.tag)}]</span> <span class="muted">${esc(L('gr_row', { n: r.members }))}</span>${r.note ? `<div class="lfg-note">«${esc(r.note)}»</div>` : ''}</div>${r.applied ? `<span class="muted">${L('gr_applied')}</span>` : `<button class="btn btn-small" data-gapply="${r.id}">${L('gr_apply')}</button>`}</div>`).join('');
+    return `<div class="card"><h4 class="card-h">${icon('tab_guild', '', 'ico-md')}${L('gr_title')}</h4>
+      ${rows ? `<p class="muted">${L('gr_text')}</p><div class="row lfg-form"><input id="gr-note" placeholder="${L('gr_ph')}" maxlength="120"></div><div class="lfg-list">${rows}</div>` : `<p class="muted">${L('gr_none')}</p>`}</div>`;
+  }
+
+  /** Recruiting for the guild's officers (docs/11 P6): the note captains with no guild see, and their requests. */
+  private recruitCard(g: NonNullable<ClientState['guild']>): string {
+    const open = g.recruit !== null && g.recruit !== undefined;
+    const reqs = (g.requests ?? []).map((r) => `<div class="lfg-row"><div>${r.online ? '●' : '○'} <b>${esc(r.name)}</b> <span class="muted">${esc(L('gr_req_row', { level: r.level }))}</span>${r.note ? `<div class="lfg-note">«${esc(r.note)}»</div>` : ''}</div><span class="fr-btns"><button class="btn btn-small btn-primary" data-greq="${r.account}" data-yes="1">${L('gr_accept')}</button><button class="btn btn-small" data-greq="${r.account}">${L('gr_decline')}</button></span></div>`).join('');
+    return `<div class="card"><h4 class="card-h">${icon('tab_guild', '', 'ico-md')}${L('gr_open_title')}</h4><p class="muted">${L('gr_open_text')}</p>
+      <div class="row lfg-form"><input id="gr-own" placeholder="${L('gr_note_ph')}" maxlength="120" value="${esc(g.recruit ?? '')}"><button class="btn btn-small${open ? '' : ' btn-primary'}" id="gr-set">${L(open ? 'gr_update' : 'gr_open')}</button>${open ? `<button class="btn btn-small" id="gr-close">${L('gr_close')}</button>` : ''}</div>
+      ${open ? `<div class="mq-head" style="margin-top:8px">${L('gr_requests')}</div><div class="lfg-list">${reqs || `<p class="muted">${L('gr_no_requests')}</p>`}</div>` : ''}</div>`;
+  }
+
   /** Who is at sea (docs/11 P6): a search of the captains aboard; each found may be whispered to, called aboard or
    *  befriended. */
   private whoCard(state: ClientState, canInvite: boolean): string {
@@ -366,6 +383,7 @@ export class CompanyScreen {
     if (!g) {
       body.innerHTML = `<div class="cols"><div>
         ${state.guildInvites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('g_invites', { by: esc(i.by), name: esc(i.name), tag: esc(i.tag) })}</h4><button class="btn btn-primary" data-gjoin="${i.id}">${L('join')}</button> <button class="btn" data-gno="${i.id}">${L('decline')}</button></div>`).join('') || `<p class="muted">${L('g_no_invites')}</p>`}
+        ${this.recruitingCard(state)}
       </div><div>
         <div class="card"><h4 class="card-h">${icon('tab_guild', '', 'ico-md')}${L('g_found_title')}</h4><p class="muted">${L('g_found_text', { cost: fmt(10000) })}</p>
           <input id="g-name" placeholder="${L('g_ph_name')}" maxlength="24" style="width:100%;margin-bottom:6px">
@@ -374,6 +392,7 @@ export class CompanyScreen {
       body.querySelector<HTMLElement>('#g-found')!.onclick = () => this.send({ t: 'guild', action: 'found', name: body.querySelector<HTMLInputElement>('#g-name')!.value, tag: body.querySelector<HTMLInputElement>('#g-tag')!.value });
       body.querySelectorAll<HTMLElement>('[data-gjoin]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'answer', id: Number(el.dataset.gjoin), accept: true })));
       body.querySelectorAll<HTMLElement>('[data-gno]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'answer', id: Number(el.dataset.gno), accept: false })));
+      body.querySelectorAll<HTMLElement>('[data-gapply]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'apply', id: Number(el.dataset.gapply), note: body.querySelector<HTMLInputElement>('#gr-note')?.value ?? '' })));
       return;
     }
     const at = (r: GuildRank) => RANK_ORDER.indexOf(g.rank) <= RANK_ORDER.indexOf(r);
@@ -383,6 +402,7 @@ export class CompanyScreen {
     body.innerHTML = `<div class="cols"><div>
       <div class="sec-head"><h3 class="title-sm" style="font-size:20px">${esc(g.name)} [${esc(g.tag)}]</h3><span class="h-count" title="${L('g_you_are', { rank: esc(RANK_NAMES(g.rank)) })}">${esc(RANK_NAMES(g.rank))}</span></div>
       ${this.guildWeek(g)}
+      ${at('commodore') ? this.recruitCard(g) : ''}
       <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${L('g_treasury', { n: fmt(g.treasury), tax: g.tax })}${g.torn ? L('g_torn') : g.flagship ? L('g_standard_on', { name: esc(g.flagship) }) : ''}</h4>
         <div class="row"><input type="number" id="g-amt" value="1000" step="500" style="width:100px"><button class="btn btn-small" id="g-dep" ${docked ? '' : 'disabled'}>${L('deposit')}</button>${at('vice') ? `<button class="btn btn-small" id="g-wd" ${docked ? '' : 'disabled'}>${L('withdraw')}</button>` : ''}
         ${g.rank === 'admiral' ? `<label>${L('g_tax')} <select id="g-tax">${Array.from({ length: 16 }, (_, i) => `<option ${i === g.tax ? 'selected' : ''}>${i}</option>`).join('')}</select>%</label>` : ''}</div></div>
@@ -428,6 +448,9 @@ export class CompanyScreen {
     on('#g-war', () => v('#g-dtag') && void ask(L('g_confirm_war', { tag: v('#g-dtag').toUpperCase() })).then((ok) => ok && this.send({ t: 'guild', action: 'war', tag: v('#g-dtag') })));
     on('#g-leave', () => void ask(L('g_confirm_leave')).then((ok) => ok && this.send({ t: 'guild', action: 'leave' })));
     on('#g-disband', () => void ask(L('g_confirm_disband')).then((ok) => ok && this.send({ t: 'guild', action: 'disband' })));
+    body.querySelector<HTMLElement>('#gr-set')?.addEventListener('click', () => this.send({ t: 'guild', action: 'recruit', note: body.querySelector<HTMLInputElement>('#gr-own')?.value ?? '' }));
+    body.querySelector<HTMLElement>('#gr-close')?.addEventListener('click', () => this.send({ t: 'guild', action: 'recruit', note: null }));
+    body.querySelectorAll<HTMLElement>('[data-greq]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'request', account: Number(el.dataset.greq), accept: !!el.dataset.yes })));
     body.querySelectorAll<HTMLSelectElement>('[data-grank]').forEach((el) => (el.onchange = () => this.send({ t: 'guild', action: 'rank', account: Number(el.dataset.grank), rank: el.value as GuildRank })));
     body.querySelectorAll<HTMLElement>('[data-gkick]').forEach((el) => (el.onclick = () => void ask(L('g_confirm_kick')).then((ok) => ok && this.send({ t: 'guild', action: 'kick', account: Number(el.dataset.gkick) }))));
     body.querySelectorAll<HTMLElement>('[data-gflag]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'flagship', account: Number(el.dataset.gflag) })));

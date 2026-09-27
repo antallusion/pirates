@@ -23,7 +23,7 @@ import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { dist } from '../../../shared/src/math.ts';
-import type { GuildRank, GuildView, RouteNodeView } from '../../../shared/src/protocol.ts';
+import type { GuildRank, GuildView, RecruitView, RouteNodeView } from '../../../shared/src/protocol.ts';
 import { cargoValue, cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -98,6 +98,9 @@ export interface Guild {
   nextId: number;
   /** The order of the week (docs/11 P6). */
   weekly?: GuildWeekly;
+  /** The guild finder (docs/11 P6): the recruiting note (none: not recruiting), and the captains asking in. */
+  recruit?: string | null;
+  requests?: { account: number; name: string; level: number; note: string; t: number }[];
 }
 
 export interface RouteNode {
@@ -305,6 +308,72 @@ export function answerInvite(game: Game, s: PlayerSession, gid: number, accept: 
   log(game, g, `${s.name} joins (on probation).`);
   tell(game, g, `${s.name} joins ${g.name}.`);
   retag(game, s.accountId);
+  return null;
+}
+
+/** A request stands three days. */
+const REQUEST_MS = 3 * DAY;
+
+/** Open, change or close the guild's recruiting (commodores and up). */
+export function setRecruit(game: Game, s: PlayerSession, note: string | null): string | null {
+  const g = game.guilds.of(game, s.accountId);
+  if (!g || !rankAtLeast(member(g, s.accountId), 'commodore')) return 'Commodores and up see to recruiting';
+  const clean = note === null ? null : String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  g.recruit = clean;
+  game.guilds.touch();
+  game.sendTo(s, { t: 'toast', msg: clean === null ? 'Recruiting is closed.' : 'Recruiting is open.', kind: 'info' });
+  return null;
+}
+
+/** A captain with no guild asks to join a recruiting one; its officers at sea hear of it. */
+export function applyTo(game: Game, s: PlayerSession, gid: number, note: string): string | null {
+  if (game.guilds.of(game, s.accountId)) return 'You already have a guild';
+  const g = game.guilds.get(game, gid);
+  if (!g || g.recruit === null || g.recruit === undefined) return 'That guild is not recruiting';
+  if (g.members.length >= GUILD_MAX) return 'The guild is full';
+  const now = game.wallNow();
+  const clean = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  g.requests = (g.requests ?? []).filter((r) => r.t + REQUEST_MS > now && r.account !== s.accountId).slice(-19);
+  g.requests.push({ account: s.accountId, name: s.name, level: s.profile?.level ?? 1, note: clean, t: now });
+  game.guilds.touch();
+  for (const m of g.members) {
+    if (!rankAtLeast(m, 'commodore')) continue;
+    const o = game.sessionByAccount(m.account);
+    if (!o) continue;
+    game.sendTo(o, { t: 'toast', msg: clean ? `${s.name} (level ${s.profile?.level ?? 1}) asks to join ${g.name} [${g.tag}]: “${clean}”. See the Guild tab [Y].` : `${s.name} (level ${s.profile?.level ?? 1}) asks to join ${g.name} [${g.tag}]. See the Guild tab [Y].`, kind: 'info' });
+    pushGuild(game, o);
+  }
+  game.sendTo(s, { t: 'toast', msg: `Your request to join ${g.name} [${g.tag}] is sent.`, kind: 'good' });
+  return null;
+}
+
+/** An officer answers a request: in on probation, or turned down. */
+export function answerRequest(game: Game, s: PlayerSession, account: number, accept: boolean): string | null {
+  const g = game.guilds.of(game, s.accountId);
+  if (!g || !rankAtLeast(member(g, s.accountId), 'commodore')) return 'Commodores and up see to recruiting';
+  const now = game.wallNow();
+  const r = (g.requests ?? []).find((x) => x.account === account && x.t + REQUEST_MS > now);
+  g.requests = (g.requests ?? []).filter((x) => x.account !== account);
+  game.guilds.touch();
+  if (!r) return 'That request has lapsed';
+  const them = game.sessionByAccount(account);
+  if (!accept) {
+    if (them) game.sendTo(them, { t: 'toast', msg: `${g.name} [${g.tag}] has turned down your request.`, kind: 'info' });
+    return null;
+  }
+  if (game.guilds.of(game, account)) return `${r.name} already has a guild`;
+  if (g.members.length >= GUILD_MAX) return 'The guild is full';
+  g.members.push({ account, name: r.name, rank: 'cabin_boy', joined: now, out: { day: 0, value: 0 } });
+  game.guilds.index(account, g.id);
+  // A captain in one guild asks no other.
+  for (const other of Object.values(game.guilds.store(game).guilds)) other.requests = (other.requests ?? []).filter((x) => x.account !== account);
+  log(game, g, `${r.name} joins (on probation).`);
+  tell(game, g, `${r.name} joins ${g.name}.`);
+  retag(game, account);
+  if (them) {
+    game.sendTo(them, { t: 'toast', msg: `Welcome aboard ${g.name} [${g.tag}]: your request is granted.`, kind: 'good' });
+    pushGuild(game, them);
+  }
   return null;
 }
 
@@ -910,12 +979,18 @@ export function stepGuilds(game: Game): void {
 
 // ------------------------------------------------------------------------------------------ views
 
-export function guildView(game: Game, s: PlayerSession): { guild: GuildView | null; invites: { id: number; name: string; tag: string; by: string }[] } {
+export function guildView(game: Game, s: PlayerSession): { guild: GuildView | null; invites: { id: number; name: string; tag: string; by: string }[]; recruiting?: RecruitView[] } {
   const st = game.guilds.store(game);
   const wall = game.wallNow();
   const invites = Object.values(st.guilds).flatMap((g) => g.invites.filter((i) => i.account === s.accountId && i.until > wall).map((i) => ({ id: g.id, name: g.name, tag: g.tag, by: i.by })));
   const g = game.guilds.of(game, s.accountId);
-  if (!g) return { guild: null, invites };
+  if (!g) {
+    // The guild finder: the guilds recruiting, the biggest first.
+    const recruiting = Object.values(st.guilds).filter((x) => x.recruit !== null && x.recruit !== undefined && x.members.length < GUILD_MAX)
+      .sort((a, b) => b.members.length - a.members.length).slice(0, 20)
+      .map((x) => ({ id: x.id, name: x.name, tag: x.tag, members: x.members.length, note: x.recruit ?? '', applied: (x.requests ?? []).some((r) => r.account === s.accountId && r.t + REQUEST_MS > wall) }));
+    return { guild: null, invites, recruiting };
+  }
   const me = member(g, s.accountId)!;
   const port = s.ship?.docked ?? null;
   const name = (id: number) => st.guilds[id] ? `${st.guilds[id].name} [${st.guilds[id].tag}]` : '?';
@@ -945,6 +1020,8 @@ export function guildView(game: Game, s: PlayerSession): { guild: GuildView | nu
       weekly: guildGoalView(game, g, s.accountId),
       islands: Object.values(game.holdings.map(game)).filter((h) => h.owner.kind === 'guild' && h.owner.id === g.id).map((h) => ({ island: h.island, name: game.world.islands[h.island].name, base: h.base ?? 0 })),
       log: g.log.slice(-40).reverse(),
+      recruit: g.recruit ?? null,
+      ...(rankAtLeast(me, 'commodore') ? { requests: (g.requests ?? []).filter((r) => r.t + REQUEST_MS > wall).map((r) => ({ account: r.account, name: r.name, level: r.level, note: r.note, online: !!game.sessionByAccount(r.account) })) } : {}),
     },
   };
 }

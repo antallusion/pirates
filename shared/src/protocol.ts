@@ -168,6 +168,10 @@ export type ClientMsg =
   | { t: 'guild'; action: 'found'; name: string; tag: string }
   | { t: 'guild'; action: 'invite'; name: string }
   | { t: 'guild'; action: 'answer'; id: number; accept: boolean }
+  /** The guild finder (docs/11 P6): a recruiting note (null closes it), a captain's request, an officer's answer. */
+  | { t: 'guild'; action: 'recruit'; note: string | null }
+  | { t: 'guild'; action: 'apply'; id: number; note: string }
+  | { t: 'guild'; action: 'request'; account: number; accept: boolean }
   | { t: 'guild'; action: 'leave' | 'disband' | 'office' | 'return_ship' }
   | { t: 'guild'; action: 'kick'; account: number }
   | { t: 'guild'; action: 'rank'; account: number; rank: GuildRank }
@@ -947,7 +951,8 @@ export type ServerMsg =
   | { t: 'market'; view: MarketView }
   | { t: 'duel'; view: DuelView | null }
   | { t: 'holdings'; mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[]; sieges: SiegeView[] }
-  | { t: 'guild'; guild: GuildView | null; invites: { id: number; name: string; tag: string; by: string }[] }
+  | { t: 'guild'; guild: GuildView | null; invites: { id: number; name: string; tag: string; by: string }[];
+      /** For a captain with no guild: the guilds recruiting (docs/11 P6). */ recruiting?: RecruitView[] }
   | { t: 'bounties'; list: BountyView[] }
   | { t: 'marks'; list: { name: string; x: number; y: number }[] }
   | { t: 'err'; msg: string }
@@ -1116,6 +1121,19 @@ export interface GuildView {
   weekly: { kind: GuildGoalKind; target: number; progress: number; mine: number; done: boolean; endsIn: number };
   islands: { island: number; name: string; base: number }[];
   log: { t: number; text: string }[];
+  /** The guild finder (docs/11 P6): the recruiting note, and (for commodores and up) the requests to join. */
+  recruit?: string | null;
+  requests?: { account: number; name: string; level: number; note: string; online: boolean }[];
+}
+
+/** A recruiting guild as a captain with no guild sees it (docs/11 P6). */
+export interface RecruitView {
+  id: number;
+  name: string;
+  tag: string;
+  members: number;
+  note: string;
+  applied: boolean;
 }
 
 // ------------------------------------------------------------------ islands and holdings

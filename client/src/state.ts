@@ -109,6 +109,8 @@ export class ClientState {
   holdings: { mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[]; sieges: SiegeView[] } = { mine: [], here: null, region: [], sieges: [] };
   guild: GuildView | null = null;
   guildInvites: { id: number; name: string; tag: string; by: string }[] = [];
+  /** The guilds recruiting, for a captain with none (docs/11 P6). */
+  recruiting: NonNullable<Extract<ServerMsg, { t: 'guild' }>['recruiting']> = [];
 
   input = { rudder: 0, sail: 2, seq: 0 };
   snapGap = 0.1; // seconds between snapshots (smoothed)
@@ -295,6 +297,7 @@ export class ClientState {
       case 'guild':
         this.guild = m.guild;
         this.guildInvites = m.invites;
+        this.recruiting = m.recruiting ?? [];
         break;
       case 'port':
         this.portView = m.view;
