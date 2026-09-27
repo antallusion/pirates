@@ -335,6 +335,10 @@
     "prop.bones":                     { "local": "props/bones.webp", "remote": "hf_20260926_235449_1c14871a-2edf-4f2e-8df8-c03feb3ff44c.png", "job": "1c14871a-2edf-4f2e-8df8-c03feb3ff44c" },
     "prop.bell_tower":                { "local": "props/bell_tower.webp", "remote": "hf_20260926_235449_f899fc56-ff5d-4e66-b88d-cebcd2b5407b.png", "job": "f899fc56-ff5d-4e66-b88d-cebcd2b5407b" },
     "prop.hermit":                    { "local": "props/hermit.webp", "remote": "hf_20260926_235449_ffd84643-e3b1-40eb-8149-c952beec9643.png", "job": "ffd84643-e3b1-40eb-8149-c952beec9643" },
-    "prop.spring":                    { "local": "props/spring.webp", "remote": "hf_20260926_235449_8b5aa00f-92cb-4271-a067-2d58f61f6882.png", "job": "8b5aa00f-92cb-4271-a067-2d58f61f6882" }
+    "prop.spring":                    { "local": "props/spring.webp", "remote": "hf_20260926_235449_8b5aa00f-92cb-4271-a067-2d58f61f6882.png", "job": "8b5aa00f-92cb-4271-a067-2d58f61f6882" },
+    "icon.sail_up":                   { "local": "icons/sail_up.webp", "remote": "hf_20260927_091722_245941ab-3c6c-4529-808f-a51561fb7668.png", "job": "245941ab-3c6c-4529-808f-a51561fb7668" },
+    "icon.sail_down":                 { "local": "icons/sail_down.webp", "remote": "hf_20260927_091722_56d068b3-7050-4283-80cc-13663db2528b.png", "job": "56d068b3-7050-4283-80cc-13663db2528b" },
+    "icon.menu_cabin":                { "local": "icons/menu_cabin.webp", "remote": "hf_20260927_091722_b0ba048e-40c4-4e84-b40f-8014ab43904c.png", "job": "b0ba048e-40c4-4e84-b40f-8014ab43904c" },
+    "part.pennant":                   { "local": "fx/pennant.webp", "remote": "hf_20260927_091723_709bbce0-01b1-4313-b322-1b7e04fb219d.png", "job": "709bbce0-01b1-4313-b322-1b7e04fb219d", "fit": "sprite:512" }
   }
 }

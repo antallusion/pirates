@@ -63,7 +63,7 @@ export class PortScreen {
     root.style.setProperty('--bg-port', bg ? `url('${bg}')` : 'none');
     const html = `
       <div class="modal-head port-head">
-        <div class="ph-title"><h2>${icon(`faction_${port.faction}`, '', 'ico-crest')}<span>${esc(placeName(port.name))}</span></h2><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(serverText(port.description))}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(serverText(e.title))}${e.kind === 'blockade' || e.kind === 'armada' ? esc(L('head.blockade')) : e.kind === 'epidemic' ? esc(L('head.epidemic')) : ''}</div>`).join('')}</div>
+        <div class="ph-title"><div class="ph-name">${icon(`faction_${port.faction}`, '', 'ph-crest')}<h2><span>${esc(placeName(port.name))}</span></h2></div><div class="sub">${esc(faction.name)} · ${esc(REGIONS[port.region].name)} — ${esc(serverText(port.description))}</div>${state.events.filter((e) => e.port === port.id).map((e) => `<div class="sub" style="color:var(--bad)">⚑ ${esc(serverText(e.title))}${e.kind === 'blockade' || e.kind === 'armada' ? esc(L('head.blockade')) : e.kind === 'epidemic' ? esc(L('head.epidemic')) : ''}</div>`).join('')}</div>
         <div class="ph-stats" title="${esc(L('head.hold', { vol: vol.toFixed(0), max: (state.ownStats?.holdVolume ?? 0).toFixed(0), crew: self.crew }))}">
           <span class="ph-chip gold">${money(self.gold)}</span>
           <span class="ph-chip">${icon('tab_market', '', 'ico-sm')}${vol.toFixed(0)}/${(state.ownStats?.holdVolume ?? 0).toFixed(0)}</span>

@@ -72,6 +72,9 @@ export class TouchControls {
     this.art('tc-port', 'icon.fire', true);
     this.art('tc-starboard', 'icon.fire');
     this.art('tc-chasers', 'icon.chasers');
+    this.art('tc-sail-up', 'icon.sail_up');
+    this.art('tc-sail-down', 'icon.sail_down');
+    this.art('tc-menu', 'icon.menu_cabin');
     this.mountArt = '';
   }
 

@@ -1096,6 +1096,27 @@ export class Renderer {
   }
 
   /** Faction pennant at the masthead, streaming downwind. Players fly black. */
+  private pennants = new Map<string, HTMLCanvasElement>();
+  /** The painted pennant dyed a colour (cached per colour): the cloth takes the hue, the gold stripe and the shading stay. */
+  private pennantArt(color: string): HTMLCanvasElement | null {
+    const spr = sprite('part.pennant');
+    if (!spr) return null;
+    let c = this.pennants.get(color);
+    if (c) return c;
+    c = document.createElement('canvas');
+    c.width = spr.img.naturalWidth || 512;
+    c.height = spr.img.naturalHeight || 216;
+    const x = c.getContext('2d')!;
+    x.drawImage(spr.img, 0, 0);
+    x.globalCompositeOperation = 'color';
+    x.fillStyle = color;
+    x.fillRect(0, 0, c.width, c.height);
+    x.globalCompositeOperation = 'destination-in';
+    x.drawImage(spr.img, 0, 0);
+    this.pennants.set(color, c);
+    return c;
+  }
+
   private drawPennant(s: DrawShip, len: number, beam: number, state: ClientState): void {
     const g = this.g;
     // A captain's colours: the Black Flag, the Green Pennant, or plain slate.
@@ -1105,6 +1126,18 @@ export class Renderer {
     const trim = s.own || s.info?.isPlayer ? '#d8d2c4' : 'rgba(0,0,0,0.6)';
     const wave = Math.sin(this.time * 6 + s.id) * beam * 0.12;
     const y0 = -len * 0.18;
+    // The painted streamer at the masthead, dyed to her colours, blowing downwind.
+    const art = this.pennantArt(color);
+    if (art) {
+      const flow = state.wind[0] - s.h - Math.PI / 2;
+      const w = beam * 1.5, h = w * 0.42;
+      g.save();
+      g.translate(0, y0);
+      g.rotate(flow + Math.sin(this.time * 3 + s.id) * 0.06);
+      g.drawImage(art, 0, -h / 2, w, h);
+      g.restore();
+      return;
+    }
     g.beginPath();
     g.moveTo(0, y0);
     g.quadraticCurveTo(beam * 0.5, y0 + len * 0.04 + wave, beam * 1.05, y0 + len * 0.09 + wave * 1.5);
