@@ -347,6 +347,7 @@
     "icon.bt_hold":                   { "local": "icons/bt_hold.webp", "remote": "hf_20260927_171104_ec3cdeb5-1a60-462c-a828-31c3f567568b.png", "job": "ec3cdeb5-1a60-462c-a828-31c3f567568b", "fit": "opaque:192" },
     "icon.bt_officers":               { "local": "icons/bt_officers.webp", "remote": "hf_20260927_171949_4e1ba6b5-8d95-45f7-b6c3-664dce367378.png", "job": "4e1ba6b5-8d95-45f7-b6c3-664dce367378", "fit": "opaque:192" },
     "icon.bt_colours":                { "local": "icons/bt_colours.webp", "remote": "hf_20260927_172849_f398d3ef-35c7-437d-9ddf-2b019a7db6eb.png", "job": "f398d3ef-35c7-437d-9ddf-2b019a7db6eb", "fit": "opaque:192" },
-    "icon.bt_captain":                { "local": "icons/bt_captain.webp", "remote": "hf_20260927_174815_960beb05-a56c-4550-8f5d-546c054cdbd8.png", "job": "960beb05-a56c-4550-8f5d-546c054cdbd8", "fit": "opaque:192" }
+    "icon.bt_captain":                { "local": "icons/bt_captain.webp", "remote": "hf_20260927_174815_960beb05-a56c-4550-8f5d-546c054cdbd8.png", "job": "960beb05-a56c-4550-8f5d-546c054cdbd8", "fit": "opaque:192" },
+    "icon.dash":                      { "local": "icons/dash.webp", "remote": "hf_20260927_175753_6873357e-8034-4d27-919b-227fba685e52.png", "job": "6873357e-8034-4d27-919b-227fba685e52", "fit": "opaque:192" }
   }
 }
