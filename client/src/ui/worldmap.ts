@@ -9,7 +9,7 @@ import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { setTracked, trackedQuest } from './track.ts';
-import { dailyLog } from './daily.ts';
+import { commonLog, dailyLog } from './daily.ts';
 import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/worldmap.ts';
 import { keyLabel, settings } from '../settings.ts';
@@ -43,7 +43,7 @@ export class WorldMap {
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
       <details class="map-legend"${innerHeight > 520 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
       ${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
-      ${dailyLog(state.self?.daily)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}`;
+      ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}`;
     // Share a quest with the group: each groupmate who may take it is asked.
     root.querySelectorAll<HTMLElement>('[data-share]').forEach((b) => (b.onclick = () => this.send?.({ t: 'quest', action: 'share', id: b.dataset.share! })));
     // A quest in the log: it becomes the one followed (the gold mark on the screen's rim), and the chart turns to

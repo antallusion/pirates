@@ -1576,6 +1576,12 @@ body.touch #hud-region .rg-extra { display: none; }
 .dl-count { color: var(--gold); font-variant-numeric: tabular-nums; }
 .dl-foot { margin-top: 4px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .map-daily { padding: 6px 10px; border-top: 1px solid rgba(111, 90, 56, 0.4); }
+/* The common cause: the goal, a bar the whole sea fills, one's own part. */
+.cm-text { font-size: 13px; margin: 2px 0 5px; }
+.cm-bar { position: relative; height: 16px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(111, 90, 56, 0.6); }
+.cm-bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #6b4a2a, #c9a25a); }
+.cm-bar.done i { background: linear-gradient(90deg, #3e5a3a, #7fa05a); }
+.cm-bar span { position: relative; display: block; text-align: center; font: 600 11px/16px var(--sans); color: var(--bone); text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
 /* The quest giver's window (docs/11 P6): face and words side by side, the steps, the pay; on a phone, stacked. */
 .confirm-panel.giver-panel { width: min(560px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; text-align: left; }
 /* The words scroll in a low window; the two buttons stay in sight. */

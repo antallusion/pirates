@@ -19,6 +19,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { dailyEvent } from './dailies.ts';
+import { commonEvent } from './commongoal.ts';
 import { groupOfAccount } from './party.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { ShipEntity } from './ship.ts';
@@ -222,8 +223,9 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   const p = s.profile;
   const ship = s.ship;
   if (!p || !ship) return;
-  // The day's orders move on with the same deeds.
+  // The day's orders and the sea's common cause move on with the same deeds.
   dailyEvent(game, s, ev);
+  commonEvent(game, s, ev);
   for (const qs of [...p.quests.active]) {
     const q = QUESTS_BY_ID[qs.id];
     if (!q) continue;

@@ -74,6 +74,7 @@ import { stepBridges } from './bridgefx.ts';
 import { buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { abandonQuest, acceptQuest, answerOffer, marqueBounty, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
+import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
 import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
@@ -663,6 +664,7 @@ export class Game {
     expeditionsSecond(this);
     digNoise(this);
     stepSeasons(this);
+    stepCommon(this);
     stepEmpires(this);
     if (Math.floor(now) % 60 === 0) legendaryCalendar(this);
     // Nearest player distance for NPC LOD.
@@ -1252,6 +1254,7 @@ export class Game {
     const p = s.profile!;
     return {
       questTargets: this.questTargets(p),
+      common: commonView(this, s.accountId),
       coves: this.coves,
       patrols: this.insiderPatrols(s),
       fleet: ship ? {
@@ -2891,6 +2894,7 @@ export class Game {
   }
 
   private sendInit(s: PlayerSession): void {
+    commonCollect(this, s);
     const ports: PortPublic[] = this.world.ports.map((p) => ({
       id: p.id, name: p.name, region: p.region, faction: p.faction, x: Math.round(p.x), y: Math.round(p.y), size: p.size,
       shipyardTier: p.shipyardTier, blackMarket: p.blackMarket, description: p.description,

@@ -17,6 +17,7 @@ import type { Cargo, AmmoStock, ShipLoadout } from './sim/shipstats.ts';
 import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
+import type { CommonKind } from './data/commongoal.ts';
 
 export type Side = 'port' | 'starboard';
 export type Station = 'balanced' | 'gunnery' | 'sailing' | 'damage_control';
@@ -368,6 +369,8 @@ export interface PrivateState {
   questsDone: string[];
   /** Today's orders (docs/11 P6): each with its pay, the days in a row and the chest. */
   daily: { day: number; orders: { kind: DailyKind; need: number; progress: number; done: boolean; silver: number }[]; streak: number; chest: boolean; chestSilver: number };
+  /** The sea's common cause today (docs/11 P6): the goal, the bar, this captain's deeds, seconds left. */
+  common: { kind: CommonKind; target: number; progress: number; mine: number; done: boolean; endsIn: number } | null;
   paths: CaptainId[];
   oath: 'code' | 'marque' | null;
   pathSwitchAt: number;

@@ -295,6 +295,8 @@ export interface WorldView {
   pvp?: PrivateState['pvp'];
   /** Where each active quest's current step points (a port, an island, a region's middle). */
   questTargets?: Record<string, { x: number; y: number; r?: number; region?: RegionId }>;
+  /** The sea's common cause today and this captain's part in it (docs/11 P6). */
+  common?: PrivateState['common'];
 }
 
 export function toPrivateState(s: PlayerSession, now: number, world: WorldView = { coves: [], patrols: [] }): PrivateState {
@@ -344,6 +346,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     }),
     questsDone: p.quests.done,
     daily: dailyView(p),
+    common: world.common ?? null,
     paths: p.paths,
     oath: p.oath,
     pathSwitchAt: p.pathSwitchAt,
