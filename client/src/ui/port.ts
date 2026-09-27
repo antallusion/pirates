@@ -304,11 +304,11 @@ ${ammo}${intel}`;
         <button class="btn btn-small item-btn" data-act="ship" data-cls="${s.classId}" ${s.classId === self.loadout.classId ? 'disabled' : ''}>${s.classId === self.loadout.classId ? esc(L('yard.yours')) : money(net)}</button></div>`;
     }).join('');
     return `<div class="cols"><div>
-        ${self.talents.shp_legendary_keel ? `<div class="card"><h4>${esc(L('keel.title'))}</h4><p class="muted">${esc(L('keel.text'))}</p><button class="btn btn-small" data-act="keel" ${self.loadout.keel ? 'disabled' : ''}>${esc(self.loadout.keel ? L('keel.has') : L('keel.lay'))}</button></div>` : ''}
-        <div class="card"><h4>${esc(L('repair.title'))}</h4><p>${esc(L('repair.state', { hull: state.you?.hull ?? 0, hullMax: state.you?.hullMax ?? 0, sails: state.you?.sails ?? 0, sailsMax: state.you?.sailsMax ?? 0, guns: self.gunsDisabled.port + self.gunsDisabled.starboard }))}</p>
+        ${self.talents.shp_legendary_keel ? `<div class="card"><h4 class="card-h">${icon('good_timber', '', 'ico-md')}${esc(L('keel.title'))}</h4><p class="muted">${esc(L('keel.text'))}</p><button class="btn btn-small" data-act="keel" ${self.loadout.keel ? 'disabled' : ''}>${esc(self.loadout.keel ? L('keel.has') : L('keel.lay'))}</button></div>` : ''}
+        <div class="card"><h4 class="card-h">${icon('good_planks', '', 'ico-md')}${esc(L('repair.title'))}</h4><p>${esc(L('repair.state', { hull: state.you?.hull ?? 0, hullMax: state.you?.hullMax ?? 0, sails: state.you?.sails ?? 0, sailsMax: state.you?.sailsMax ?? 0, guns: self.gunsDisabled.port + self.gunsDisabled.starboard }))}</p>
         <button class="btn btn-primary" data-act="repair" ${sy.repairCost ? '' : 'disabled'}>${esc(sy.repairCost ? L('repair.full', { cost: fmt(sy.repairCost) }) : L('repair.sound'))}</button></div>
         ${guns}</div><div>
-        <div class="card"><h4>${esc(L('mount.title'))}</h4>${sy.mounts.map((m) => {
+        <div class="card"><h4 class="card-h">${icon('mount_mortar', '', 'ico-md')}${esc(L('mount.title'))}</h4>${sy.mounts.map((m) => {
           const def = MOUNTS[m.mount];
           const fitted = self.loadout.mount === m.mount;
           return `<div class="item-row">${icon(`mount_${m.mount}`, '', 'item-ico')}<div class="item-text"><b>${esc(def.name)}</b><span class="muted">${esc(def.description)}</span></div><button class="btn btn-small item-btn" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : money(m.cost)}</button></div>`;
@@ -381,7 +381,7 @@ ${ammo}${intel}`;
         ${yard.plans ? `<p style="margin-top:8px"><button class="btn btn-small" data-act="plan_buy">${esc(L('build.planBuy', { ship: cls.name, cost: fmt(Math.round(cls.price * 0.3)) }))}</button></p>` : ''}
         ${yard.figurehead ? `<p><button class="btn btn-small" data-act="figurehead_buy">${esc(L('build.figureheadBuy', { fig: FIGUREHEADS[yard.figurehead].name, cost: fmt(FIGUREHEADS[yard.figurehead].price) }))}</button></p>` : ''}
       </div></div>
-      ${orders || berths ? `<div class="card"><h4>${esc(L('build.orders'))}</h4>
+      ${orders || berths ? `<div class="card"><h4 class="card-h">${icon('build_shipyard', '', 'ico-md')}${esc(L('build.orders'))}</h4>
 ${orders}${berths}</div>` : ''}`;
   }
 
@@ -398,7 +398,7 @@ ${orders}${berths}</div>` : ''}`;
     const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(o.name)} <span class="muted">— ${esc(L('officer.level', { role: OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${esc(o.taken ? L('officer.taken') : L('officer.sign', { cost: fmt(o.price) }))}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
-    return `${tv.shanty ? `<div class="card"><h4>${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4>${esc(L('tavern.sailors', { n: view.crewAvailable }))}</h4>
+    return `${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors', { n: view.crewAvailable }))}</h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
         <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}</div>
         <button class="btn btn-small btn-danger" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>
@@ -407,20 +407,20 @@ ${orders}${berths}</div>` : ''}`;
         <h4 style="margin-top:10px">${esc(L('tavern.tradesmen'))}</h4><div class="trade-list">${trades}</div></div>
       <div><h3 class="title-sm" style="font-size:20px">${esc(L('tavern.officers', { n: co.officers.length, max: co.slots }))}</h3>${officers}</div></div>
       <div class="cols">
-      <div class="card"><h4>${esc(L('tavern.rumours'))}</h4>${view.rumors.map((r) => `<p>“${esc(serverText(r))}”</p>`).join('')}</div>
-      <div>${view.questOffers.map((q) => `<div class="card"><h4>${esc(serverText(q.name))} <span class="muted">— ${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : ''}</span></h4>
+      <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${view.rumors.map((r) => `<p>“${esc(serverText(r))}”</p>`).join('')}</div>
+      <div>${view.questOffers.map((q) => `<div class="card"><h4 class="card-h">${icon(q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : 'goal', '', 'ico-md')}${esc(serverText(q.name))} <span class="muted">— ${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : ''}</span></h4>
         <p>${esc(serverText(q.summary))}</p><ol class="muted" style="margin:4px 0 6px 18px">${q.steps.map((t) => `<li>${esc(serverText(t))}</li>`).join('')}</ol>
         <div class="row"><span class="reward">${money(q.silver)}${xpBadge(q.xp)}${q.path ? esc(L('quest.pathOf', { arch: CAPTAINS[q.path].archetype })) : ''}</span>
         ${q.blocked ? `<span class="muted">${esc(L('quest.needs', { x: serverText(q.blocked) }))}</span>` : `<button class="btn btn-small btn-primary" data-act="quest_accept" data-id="${q.id}">${esc(L('quest.take'))}</button>`}</div></div>`).join('')}
-      ${self.quests.length ? `<div class="card"><h4>${esc(L('quest.underway'))}</h4>${self.quests.map((q) => `<div class="row" style="padding:2px 0"><span><b>${esc(serverText(q.name))}</b> ${q.step}/${q.steps}: ${esc(serverText(q.text))}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</span><button class="btn btn-small btn-danger" data-act="quest_abandon" data-id="${q.id}">${esc(L('quest.setAside'))}</button></div>`).join('')}</div>` : ''}</div></div>
-      <div class="card"><h4>${esc(L('carto.title'))}</h4>
+      ${self.quests.length ? `<div class="card"><h4 class="card-h">${icon('goal', '', 'ico-md')}${esc(L('quest.underway'))}</h4>${self.quests.map((q) => `<div class="row" style="padding:2px 0"><span><b>${esc(serverText(q.name))}</b> ${q.step}/${q.steps}: ${esc(serverText(q.text))}${q.need > 1 ? ` (${q.progress}/${q.need})` : ''}</span><button class="btn btn-small btn-danger" data-act="quest_abandon" data-id="${q.id}">${esc(L('quest.setAside'))}</button></div>`).join('')}</div>` : ''}</div></div>
+      <div class="card"><h4 class="card-h">${icon('map_port', '', 'ico-md')}${esc(L('carto.title'))}</h4>
         <p>${esc(L('carto.text', { brokers: port.faction === 'brokers' ? L('carto.brokers') : '' }))}</p>
         <div class="row"><span>${esc(L('carto.sellable', { n: view.charts.sellable, islands: plural(view.charts.sellable, L('carto.island1'), L('carto.island2'), L('carto.island5')) }))}</span>
           <button class="btn btn-small btn-primary" data-act="chart_sell" ${view.charts.sellable ? '' : 'disabled'}>${esc(L('carto.sell', { cost: fmt(view.charts.sellValue) }))}</button></div>
         ${view.charts.offers.map((o) => `<div class="row" style="padding:3px 0"><span>${esc(o.name)} <span class="muted">${esc(L('carto.uncharted', { n: o.islands, islands: plural(o.islands, L('carto.uncharted1'), L('carto.uncharted2'), L('carto.uncharted5')) }))}</span></span>
           <button class="btn btn-small" data-act="chart_buy" data-region="${o.region}">${esc(L('carto.buy', { cost: fmt(o.price) }))}</button></div>`).join('') || `<p class="muted">${esc(L('carto.none'))}</p>`}
       </div>
-      <div class="card"><h4>${esc(L('maps.title', { n: self.maps.filter((m) => m.kind !== 'fragment').length }))}</h4>
+      <div class="card"><h4 class="card-h">${icon('map_treasure', '', 'ico-md')}${esc(L('maps.title', { n: self.maps.filter((m) => m.kind !== 'fragment').length }))}</h4>
         <p>${esc(L('maps.text'))}</p>
         ${self.maps.map((m) => `${mapCard(m)}<div class="row" style="gap:4px;padding-bottom:4px"><button class="btn btn-small" data-act="map" data-mode="appraise" data-id="${esc(m.id)}">${esc(L('maps.appraise'))}</button>${port.faction === 'brokers' ? `<button class="btn btn-small" data-act="map" data-mode="seal" data-id="${esc(m.id)}">${esc(L('maps.seal'))}</button>` : ''}<input class="map-to" data-for="${esc(m.id)}" placeholder="${esc(L('maps.captainPh'))}" style="width:90px"><button class="btn btn-small" data-act="map" data-mode="give" data-id="${esc(m.id)}">${esc(L('btn.handOver'))}</button><button class="btn btn-small btn-danger" data-act="map" data-mode="burn" data-id="${esc(m.id)}">${esc(L('maps.burn'))}</button></div>`).join('')}
         ${port.blackMarket ? `<div class="row"><span class="muted">${esc(L('maps.forger'))}</span><button class="btn btn-small" data-act="map" data-mode="forge">${esc(L('maps.forge'))}</button></div>` : ''}
@@ -447,30 +447,30 @@ ${orders}${berths}</div>` : ''}`;
     const port = state.ports.find((p) => p.id === view.portId)!;
     const reps = Object.entries(self.reputation).map(([f, v]) => `<tr><td>${icon(`faction_${f}`)}${esc(FACTIONS[f as never as keyof typeof FACTIONS].name)}</td><td class="${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</td></tr>`).join('');
     return `<div class="cols"><div>
-        <div class="card"><h4>${esc(L('pardon.title'))}</h4>${view.pardonCost !== null ? `<p>${esc(L('pardon.text', { n: self.infamy }))}</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>${esc(L('pardon.buy', { cost: fmt(view.pardonCost) }))}</button>` : `<p class="muted">${esc(L('pardon.none'))}</p>`}</div>
-        ${view.licence ? `<div class="card"><h4>${esc(L('licence.title'))}</h4><p>${esc(view.licence.until > state.estServerTime() ? L('licence.textActive', { faction: FACTIONS[port.faction].short }) : L('licence.textDuty', { pct: Math.round(view.duty * 100) || '', faction: FACTIONS[port.faction].short }))}</p>
+        <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${esc(L('pardon.title'))}</h4>${view.pardonCost !== null ? `<p>${esc(L('pardon.text', { n: self.infamy }))}</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>${esc(L('pardon.buy', { cost: fmt(view.pardonCost) }))}</button>` : `<p class="muted">${esc(L('pardon.none'))}</p>`}</div>
+        ${view.licence ? `<div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('licence.title'))}</h4><p>${esc(view.licence.until > state.estServerTime() ? L('licence.textActive', { faction: FACTIONS[port.faction].short }) : L('licence.textDuty', { pct: Math.round(view.duty * 100) || '', faction: FACTIONS[port.faction].short }))}</p>
           ${view.licence.until > state.estServerTime() ? `<p class="good">${esc(licenceLeft(Math.round((view.licence.until - state.estServerTime()) / 60)))}</p>` : ''}
           <button class="btn" data-act="licence">${esc(L('licence.buy', { cost: fmt(view.licence.cost) }))}</button></div>` : ''}
-        ${self.captives.length ? `<div class="card"><h4>${esc(L('captives.title'))}</h4>${self.captives.map((c, i) => `<div class="row" style="padding:3px 0"><span>${esc(c.name)} <span class="muted">${esc(FACTIONS[c.faction].short)}</span></span><span>
+        ${self.captives.length ? `<div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('captives.title'))}</h4>${self.captives.map((c, i) => `<div class="row" style="padding:3px 0"><span>${esc(c.name)} <span class="muted">${esc(FACTIONS[c.faction].short)}</span></span><span>
           <button class="btn btn-small" data-act="captive" data-i="${i}" data-mode="ransom">${esc(L('captive.ransom', { cost: fmt(c.ransom) }))}</button>
           <button class="btn btn-small" data-act="captive" data-i="${i}" data-mode="hand_over" title="${esc(L('captive.handTitle'))}">${esc(L('btn.handOver'))}</button></span></div>`).join('')}</div>` : ''}
-        <div class="card"><h4>${esc(L('ins.title'))}</h4>${view.insurance.length ? `<p>${esc(L('ins.text'))}</p>
+        <div class="card"><h4 class="card-h">${icon('insurance', '', 'ico-md')}${esc(L('ins.title'))}</h4>${view.insurance.length ? `<p>${esc(L('ins.text'))}</p>
           ${self.policy ? `<p class="good">${esc(L('ins.insured', { tier: L(`ins.${self.policy}`) }))}</p>` : view.insurance.map((q) => `<div class="row" style="padding:3px 0"><span><b>${esc(q.tier === 'hull' ? L('ins.hull') : q.tier === 'cargo' ? L('ins.cargo') : L('ins.full'))}</b> <span class="muted">${q.hull ? esc(L('ins.salvage')) : ''}${q.hull && q.cover ? ' · ' : ''}${q.cover ? esc(L('ins.cover', { pct: Math.round(q.cover * 100), declared: fmt(q.declared), deductible: fmt(q.deductible) })) : ''}</span></span>
-            <button class="btn btn-small" data-act="insure" data-tier="${q.tier}" ${q.cover && q.declared < 50 ? 'disabled' : ''}>${fmt(q.premium)}</button></div>`).join('')}` : `<p class="muted">${esc(L('ins.none'))}</p>`}</div>
-        <div class="card"><h4>${esc(L('curse.title'))}</h4><p>${esc(L('curse.state', { n: self.curse }))}${self.curse >= 25 ? esc(L('curse.stage', { n: self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1 })) : ''}. ${esc(['harpoon', 'crown', 'league'].includes(port.faction) ? L('curse.yes') : L('curse.no'))}</p>
+            <button class="btn btn-small" data-act="insure" data-tier="${q.tier}" ${q.cover && q.declared < 50 ? 'disabled' : ''}>${money(q.premium)}</button></div>`).join('')}` : `<p class="muted">${esc(L('ins.none'))}</p>`}</div>
+        <div class="card"><h4 class="card-h">${icon('ammo_cursed', '', 'ico-md')}${esc(L('curse.title'))}</h4><p>${esc(L('curse.state', { n: self.curse }))}${self.curse >= 25 ? esc(L('curse.stage', { n: self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1 })) : ''}. ${esc(['harpoon', 'crown', 'league'].includes(port.faction) ? L('curse.yes') : L('curse.no'))}</p>
           <button class="btn" data-act="cleanse" ${self.curse >= 2 && ['harpoon', 'crown', 'league'].includes(port.faction) ? '' : 'disabled'}>${esc(L('curse.cleanse', { cost: fmt(Math.round(self.curse * 8 * (0.6 + SHIP_CLASSES[self.loadout.classId].tier * 0.4))) }))}</button></div>
-        ${view.captainsHouse ? `<div class="card"><h4>${esc(L('house.title'))}</h4><p>${esc(L('house.text'))}</p>
+        ${view.captainsHouse ? `<div class="card"><h4 class="card-h">${icon('menu_crew', '', 'ico-md')}${esc(L('house.title'))}</h4><p>${esc(L('house.text'))}</p>
           <div class="row" style="gap:6px;flex-wrap:wrap">${self.paths.map((c) => `<button class="btn btn-small ${c === self.captain ? 'btn-primary' : ''}" data-act="path" data-to="${c}" ${c === self.captain ? 'disabled' : ''}>${esc(CAPTAINS[c].archetype)}</button>`).join('')}</div>
           <p class="muted">${esc(L('house.other'))}</p></div>` : ''}
         ${view.oathOffer ? `<div class="card"><h4>${esc(view.oathOffer === 'code' ? L('oath.code') : L('oath.marque'))}</h4><p>${esc(view.oathOffer === 'code' ? L('oath.codeText') : L('oath.marqueText'))} ${esc(L('oath.one'))}</p>
           <button class="btn" data-act="oath" data-oath="${view.oathOffer}">${esc(L('oath.swear'))}</button></div>` : ''}
-        <div class="card"><h4>${esc(L('escort.title', { n: self.fleet.escorts.length, max: self.fleet.slots }))}</h4>${self.fleet.slots ? `<p>${esc(L('escort.text', { cost: fmt(self.fleet.upkeep) }))}</p>
+        <div class="card"><h4 class="card-h">${icon('ab_call_escort', '', 'ico-md')}${esc(L('escort.title', { n: self.fleet.escorts.length, max: self.fleet.slots }))}</h4>${self.fleet.slots ? `<p>${esc(L('escort.text', { cost: fmt(self.fleet.upkeep) }))}</p>
           ${self.fleet.escorts.map((e) => `<div class="row" style="padding:2px 0"><span>${esc(e.name)} <span class="muted">${esc(SHIP_CLASSES[e.classId].name)} · ${esc(L('escort.hull', { n: e.hull }))}</span></span><button class="btn btn-small btn-danger" data-act="escort_dismiss" data-id="${esc(e.id)}">${esc(L('escort.payOff'))}</button></div>`).join('')}
-          ${view.escorts.map((o) => `<button class="btn btn-small" data-act="escort_hire" data-cls="${o.classId}" ${o.available && self.fleet.escorts.length < self.fleet.slots ? '' : 'disabled'} title="${esc(L('escort.upkeep', { n: o.upkeep }))}">${esc(SHIP_CLASSES[o.classId].name)} — ${fmt(o.price)}</button>`).join(' ')}` : `<p class="muted">${esc(L('escort.none'))}</p>`}</div>
-        <div class="card"><h4>${esc(L('claim.title'))}</h4><p class="muted">${esc(L('claim.text'))}</p>
+          ${view.escorts.map((o) => `<button class="btn btn-small" data-act="escort_hire" data-cls="${o.classId}" ${o.available && self.fleet.escorts.length < self.fleet.slots ? '' : 'disabled'} title="${esc(L('escort.upkeep', { n: o.upkeep }))}">${esc(SHIP_CLASSES[o.classId].name)} — ${money(o.price)}</button>`).join(' ')}` : `<p class="muted">${esc(L('escort.none'))}</p>`}</div>
+        <div class="card"><h4 class="card-h">${icon('map_wreck', '', 'ico-md')}${esc(L('claim.title'))}</h4><p class="muted">${esc(L('claim.text'))}</p>
           <div class="row" style="gap:6px"><input id="claim-email" type="email" placeholder="${esc(L('claim.emailPh'))}" style="flex:1"><input id="claim-password" type="password" placeholder="${esc(L('claim.passwordPh'))}" style="flex:1"><button class="btn btn-small" data-act="claim">${esc(L('btn.save'))}</button></div></div>
-        <div class="card"><h4>${esc(L('respec.title'))}</h4><p>${esc(L('respec.text', { cost: fmt(60 * self.level) }))}</p><button class="btn btn-danger" data-act="respec">${esc(L('respec.btn'))}</button></div>
-      </div><div class="card"><h4>${esc(L('standing.title'))}</h4><table class="grid">${reps}</table>
+        <div class="card"><h4 class="card-h">${icon('menu_talents', '', 'ico-md')}${esc(L('respec.title'))}</h4><p>${esc(L('respec.text', { cost: fmt(60 * self.level) }))}</p><button class="btn btn-danger" data-act="respec">${esc(L('respec.btn'))}</button></div>
+      </div><div class="card"><h4 class="card-h">${icon('faction_league', '', 'ico-md')}${esc(L('standing.title'))}</h4><table class="grid">${reps}</table>
       <p class="muted" style="margin-top:8px">${esc(L('standing.stats', { sunk: self.stats.sunk, taken: self.stats.boarded, profit: fmt(self.stats.tradeProfit), km: fmt(self.stats.distance / 1000), islands: self.discoveredCount }))}</p></div></div>`;
 
   }
@@ -494,10 +494,10 @@ ${orders}${berths}</div>` : ''}`;
         <td><button class="btn btn-small" data-act="store" data-good="${g}" data-n="${held}" ${held ? '' : 'disabled'}>${esc(L('wh.storeAll'))}</button>
         <button class="btn btn-small" data-act="store" data-good="${g}" data-n="${-stored}" ${stored ? '' : 'disabled'}>${esc(L('wh.takeAll'))}</button></td></tr>`;
     }).join('');
-    return `<div class="cols"><div><div class="card"><h4>${esc(L('rights.title'))}</h4>
+    return `<div class="cols"><div><div class="card"><h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('rights.title'))}</h4>
         <p class="muted">${esc(L('rights.text'))}</p>
         ${sites ? `<table class="grid"><tr><th>${esc(L('th.island'))}</th><th>${esc(L('th.yield'))}</th><th>${esc(L('th.rate'))}</th><th>${esc(L('th.status'))}</th><th></th></tr>${sites}</table>` : `<p class="muted">${esc(L('rights.none'))}</p>`}</div></div>
-      <div><div class="card"><h4>${esc(L('wh.title'))} ${wh.rented ? `<span class="muted">${Math.round(wh.volume)}/${wh.capacity}</span>` : ''}</h4>
+      <div><div class="card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}${esc(L('wh.title'))} ${wh.rented ? `<span class="muted">${Math.round(wh.volume)}/${wh.capacity}</span>` : ''}</h4>
         <p class="muted">${esc(wh.rented ? L('wh.rented') : L('wh.rent', { cost: fmt(wh.rent) }))}</p>
         ${rows ? `<table class="grid"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.hold'))}</th><th>${esc(L('th.stored'))}</th><th></th></tr>${rows}</table>` : `<p class="muted">${esc(L('wh.empty'))}</p>`}</div></div></div>`;
   }
@@ -509,7 +509,7 @@ ${orders}${berths}</div>` : ''}`;
     const portName = (id: string) => state.ports.find((p) => p.id === id)?.name ?? id;
     const mins = (t: number) => L('unit.min', { n: Math.max(0, Math.round((t - now) / 60)) });
     const ex = view.exchange;
-    const forwards = ex?.forwards.map((f) => `<tr><td>${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(f.toName)}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${fmt(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td>
+    const forwards = ex?.forwards.map((f) => `<tr><td>${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(placeName(f.toName))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${fmt(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td>
       <td><button class="btn btn-small" data-act="forward" data-id="${esc(f.id)}">${esc(L('btn.sign'))}</button></td></tr>`).join('') ?? '';
     const mine = self.forwards.map((f) => `<tr><td>${f.delivered}/${f.qty} ${icon(`good_${f.good}`)}${esc(GOODS[f.good].name)}</td><td>${esc(portName(f.toPort))}</td><td class="gold">${esc(L('unit.perU', { n: f.price }))}</td><td>${fmt(f.collateral)}</td><td>${esc(mins(f.expiresAt))}</td></tr>`).join('');
     const orders = ex?.orders.map((o) => {
@@ -522,17 +522,17 @@ ${orders}${berths}</div>` : ''}`;
     const b = view.bank;
     const loan = b.loan ? `<p class="${b.loan.defaulted ? 'bad' : ''}">${esc(L('loan.owed', { owed: fmt(b.loan.owed), status: b.loan.defaulted ? L('loan.default') : L('loan.due', { t: mins(b.loan.due) }) }))}</p>` : '';
     return `<div class="cols"><div>
-        <div class="card"><h4>${esc(L('fwd.title'))}</h4>${ex ? `<p class="muted">${esc(L('fwd.text'))}</p>
+        <div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('fwd.title'))}</h4>${ex ? `<p class="muted">${esc(L('fwd.text'))}</p>
           ${forwards ? `<table class="grid"><tr><th>${esc(L('th.goods'))}</th><th>${esc(L('th.to'))}</th><th>${esc(L('th.price'))}</th><th>${esc(L('th.collateral'))}</th><th>${esc(L('th.deadline'))}</th><th></th></tr>${forwards}</table>` : `<p class="muted">${esc(L('fwd.none'))}</p>`}` : `<p class="muted">${esc(L('fwd.noExchange'))}</p>`}
           ${mine ? `<h4 style="margin-top:10px">${esc(L('fwd.mine'))}</h4><table class="grid">${mine}</table>` : ''}</div>
-        <div class="card"><h4>${esc(L('orders.title'))}</h4>${ex ? `<p class="muted">${esc(L('orders.text'))}</p>
+        <div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(L('orders.title'))}</h4>${ex ? `<p class="muted">${esc(L('orders.text'))}</p>
           ${orders ? `<table class="grid"><tr><th>${esc(L('th.buyer'))}</th><th>${esc(L('th.wants'))}</th><th>${esc(L('th.pays'))}</th><th>${esc(L('th.lapses'))}</th><th></th></tr>${orders}</table>` : `<p class="muted">${esc(L('orders.none'))}</p>`}
           <div class="row" style="gap:6px;margin-top:8px"><select id="ord-good">${goodsOpts}</select><input id="ord-qty" type="number" min="1" max="200" value="20" style="width:60px"><input id="ord-price" type="number" min="1" value="20" style="width:70px"><button class="btn btn-small" data-act="order_post">${esc(L('orders.post'))}</button></div>` : '<p class="muted">—</p>'}</div>
       </div><div>
-        ${self.talents.trd_speculator ? `<div class="card"><h4>${esc(L('opt.title'))}</h4><p class="muted">${esc(L('opt.text'))}</p>
+        ${self.talents.trd_speculator ? `<div class="card"><h4 class="card-h">${icon('tab_exchange', '', 'ico-md')}${esc(L('opt.title'))}</h4><p class="muted">${esc(L('opt.text'))}</p>
           ${self.options.map((o, i) => `<div class="row" style="padding:3px 0"><span>${o.qty} ${icon(`good_${o.good}`)}${esc(GOODS[o.good].name)} @ ${esc(state.ports.find((p) => p.id === o.port)?.name ?? o.port)} · ${fmt(o.price)} · ${esc(mins(o.until))}</span>${o.port === view.portId ? `<button class="btn btn-small" data-act="option_ex" data-i="${i}">${esc(L('opt.exercise', { cost: fmt(o.price - o.deposit) }))}</button>` : ''}</div>`).join('')}
           <div class="row" style="gap:6px;margin-top:6px"><select id="opt-good">${view.market.filter((r) => r.stock > 3).map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} ${esc(L('opt.stock', { buy: r.buy, stock: r.stock }))}</option>`).join('')}</select><input id="opt-qty" type="number" min="1" value="10" style="width:60px"><button class="btn btn-small" data-act="option_buy">${esc(L('opt.reserve'))}</button></div></div>` : ''}
-        <div class="card"><h4>${esc(L('bank.title'))}</h4>${b.available ? `<p>${L('bank.text', { balance: fmt(b.balance), pct: Math.round(b.withdrawFee * 100) })}</p>
+        <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('bank.title'))}</h4>${b.available ? `<p>${L('bank.text', { balance: fmt(b.balance), pct: Math.round(b.withdrawFee * 100) })}</p>
           <p>${L('bank.credit', { limit: fmt(b.limit), pct: Math.round(b.interest * 100), h: Math.round(b.term / 3600) })}</p>${loan}
           <div class="row" style="gap:6px"><input id="bank-amt" type="number" min="1" value="500" style="width:90px">
           ${(['deposit', 'withdraw', 'borrow', 'repay'] as const).map((m) => `<button class="btn btn-small" data-act="bank" data-mode="${m}">${esc(L(`bank.${m}`))}</button>`).join('')}</div>`

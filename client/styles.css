@@ -949,3 +949,13 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
   #hud-combat .ab-row { flex-wrap: wrap; justify-content: center; overflow: visible; row-gap: 4px; }
   #hud-combat .ab-sep { display: none; }
 }
+/* Rows of fields (the account claim: e-mail, password, save) wrap on a phone instead of pushing past the edge. */
+#modal-panel .row:has(> input) { flex-wrap: wrap; }
+#modal-panel .row > input { min-width: 0; flex: 1 1 120px; }
+#modal-panel input[type=email], #modal-panel input[type=password] {
+  background: #0e1013; border: 1px solid var(--slate); color: var(--bone); border-radius: 3px; padding: 7px 9px; font: 14px var(--sans); outline: none; }
+/* Wide ledgers (holdings, the exchange) on a phone: the table scrolls within itself, the window never does. */
+@media (max-width: 699px) {
+  #modal-panel table.grid:not(.market) { display: block; max-width: 100%; overflow-x: auto; font-size: 12px; }
+  #modal-panel table.grid:not(.market) td, #modal-panel table.grid:not(.market) th { white-space: nowrap; padding: 4px 6px; }
+}
