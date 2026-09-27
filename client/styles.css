@@ -416,6 +416,16 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 #chat-log div.chat-group, #chat-log div.chat-group b { color: #9fe0a8; }
 #chat-log div.chat-guild, #chat-log div.chat-guild b { color: #9fc3e8; }
 #chat-log div.chat-whisper, #chat-log div.chat-whisper b { color: #e0a8e8; }
+/* The chat's channels (docs/11 P6): tabs while open; a channel shows its own lines; closed, the last eight. */
+#chat-tabs { display: none; gap: 4px; margin-bottom: 6px; }
+#chat.open #chat-tabs { display: flex; }
+#chat-tabs .ct { padding: 2px 8px; font: 600 11px var(--sans); color: var(--fog); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(111, 90, 56, 0.45); cursor: pointer; }
+#chat-tabs .ct.on { color: var(--gold); border-color: var(--brass); }
+#chat:not(.open) #chat-log > div:nth-last-child(n+9) { display: none; }
+#chat.open #chat-log { max-height: 36vh; overflow-y: auto; }
+#chat.open[data-filter="group"] #chat-log > div:not(.chat-group),
+#chat.open[data-filter="guild"] #chat-log > div:not(.chat-guild),
+#chat.open[data-filter="whisper"] #chat-log > div:not(.chat-whisper) { display: none; }
 #unread { position: absolute; top: 6px; left: 8px; font-size: 13px; color: var(--brass); text-shadow: 0 1px 2px #000; pointer-events: none; }
 .card.letter.unread { border-color: var(--brass); }
 

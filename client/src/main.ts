@@ -38,6 +38,8 @@ import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './
 import type { PadEvent } from './gamepad.ts';
 import type { Action, Settings } from './settings.ts';
 import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
+import { EN as HUD_EN, RU as HUD_RU } from './lang/ui/hud.ts';
+const HUD_L = dict(HUD_EN, HUD_RU);
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
 import { serverText } from './lang/server.ts';
 import { FACTIONS } from '../../shared/src/data/factions.ts';
@@ -568,6 +570,13 @@ function buildMicroMenu(): void {
   $('hud-menu').querySelectorAll<HTMLElement>('[data-menu]').forEach((b) => (b.onclick = () => openMenuItem(b.dataset.menu as MenuItem)));
 }
 buildMicroMenu();
+// The chat's channels: a filter on the lines, and the field says where plain words go.
+const chatChannels = () => hud.chatTabs((ch) => {
+  const input = $('chat-input') as HTMLInputElement;
+  input.placeholder = ch === 'all' ? t(touch.enabled ? 'hud.chatPhTouch' : 'hud.chatPh') : HUD_L(`ph_${ch}`);
+});
+chatChannels();
+onLang(chatChannels);
 $('hud-map').onclick = () => toggle('map');
 // Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
 new MutationObserver(() => {
@@ -619,6 +628,10 @@ addEventListener('keydown', (e) => {
       if (/^\/ritual\b/i.test(said)) net.send({ t: 'abyss', action: 'ritual' });
       else if (/^\/gc\s/i.test(said)) net.send({ t: 'guild', action: 'say', text: said.slice(4) });
       else if (/^\/g\s/i.test(said)) net.send({ t: 'group', action: 'say', text: said.slice(3) });
+      // Words with no command go to the chosen channel: the group, the guild, the last whisperer, or all.
+      else if (said && !said.startsWith('/') && chat.dataset.filter === 'group') net.send({ t: 'group', action: 'say', text: said });
+      else if (said && !said.startsWith('/') && chat.dataset.filter === 'guild') net.send({ t: 'guild', action: 'say', text: said });
+      else if (said && !said.startsWith('/') && chat.dataset.filter === 'whisper') net.send({ t: 'chat', text: `/r ${said}` });
       else if (said) net.send({ t: 'chat', text: said });
       chatInput.value = '';
       chat.classList.remove('open');

@@ -762,9 +762,32 @@ export class Hud {
     const tag = ch === 'group' ? L('chatGroup') : ch === 'guild' ? L('chatGuild') : ch === 'whisper' ? (to ? L('chatWhisperTo', { name: to }) : L('chatWhisper')) : '';
     d.innerHTML = `${tag ? `<i>${esc(tag)}</i> ` : ''}${to ? '' : `<b>${esc(from)}:</b> `}${esc(text)}`;
     log.append(d);
-    while (log.children.length > 8) log.firstChild!.remove();
+    // Sixty lines kept (the channels filter them); closed, the chat shows its last eight.
+    while (log.children.length > 60) log.firstChild!.remove();
+    log.scrollTop = log.scrollHeight;
+  }
+
+  /** The chat's channels (docs/11 P6): all, the group, the guild, whispers — a filter on the lines, and where
+   *  words without a prefix go. */
+  chatTabs(onPick: (ch: ChatChannel) => void): void {
+    const el = $('chat-tabs');
+    const chat = $('chat');
+    const cur = (chat.dataset.filter as ChatChannel | undefined) ?? 'all';
+    el.innerHTML = CHAT_CHANNELS.map((ch) => `<button class="ct${ch === cur ? ' on' : ''}" data-ct="${ch}">${esc(L(`ct_${ch}`))}</button>`).join('');
+    el.querySelectorAll<HTMLElement>('[data-ct]').forEach((b) => b.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); // the field keeps its focus (and a phone its keyboard)
+      const ch = b.dataset.ct as ChatChannel;
+      chat.dataset.filter = ch;
+      el.querySelectorAll('.ct').forEach((x) => x.classList.toggle('on', x === b));
+      const log = $('chat-log');
+      log.scrollTop = log.scrollHeight;
+      onPick(ch);
+    }));
   }
 }
+
+export type ChatChannel = 'all' | 'group' | 'guild' | 'whisper';
+const CHAT_CHANNELS: ChatChannel[] = ['all', 'group', 'guild', 'whisper'];
 
 function sanityWord(v: number): string {
   return L(v > 75 ? 'sanity.clear' : v > 50 ? 'sanity.uneasy' : v > 25 ? 'sanity.afraid' : v > 10 ? 'sanity.terror' : 'sanity.madness');
