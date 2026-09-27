@@ -372,6 +372,7 @@
     "prop.decor_saltflat":            { "local": "props/decor_saltflat.webp", "remote": "hf_20260927_211158_3af098a4-a399-4cc6-bdcc-8a39bd524fc3.png", "job": "3af098a4-a399-4cc6-bdcc-8a39bd524fc3", "fit": "keyed:768:#ff00ff" },
     "prop.decor_atoll":               { "local": "props/decor_atoll.webp", "remote": "hf_20260927_212234_e9c384ca-9891-4680-8d97-ebbd5a935752.png", "job": "e9c384ca-9891-4680-8d97-ebbd5a935752", "fit": "keyed:768:#ff00ff" },
     "prop.decor_blacksand":           { "local": "props/decor_blacksand.webp", "remote": "hf_20260927_213135_7adead71-0e09-4906-856b-78ee901b433a.png", "job": "7adead71-0e09-4906-856b-78ee901b433a", "fit": "keyed:768:#ff00ff" },
-    "prop.decor_crystal":             { "local": "props/decor_crystal.webp", "remote": "hf_20260927_214246_32bb1715-b6bd-4b86-ab7b-6372df53c485.png", "job": "32bb1715-b6bd-4b86-ab7b-6372df53c485", "fit": "keyed:768:#ff00ff" }
+    "prop.decor_crystal":             { "local": "props/decor_crystal.webp", "remote": "hf_20260927_214246_32bb1715-b6bd-4b86-ab7b-6372df53c485.png", "job": "32bb1715-b6bd-4b86-ab7b-6372df53c485", "fit": "keyed:768:#ff00ff" },
+    "prop.decor_fungal":              { "local": "props/decor_fungal.webp", "remote": "hf_20260927_220333_5d75d54f-d615-40ca-938d-19f5082cff2a.png", "job": "5d75d54f-d615-40ca-938d-19f5082cff2a", "fit": "keyed:768:#ff00ff" }
   }
 }
