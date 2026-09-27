@@ -5,9 +5,10 @@ import { generateIslandJobs, generateQuests } from '../../../shared/src/data/que
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
+import { restAfter } from '../../../shared/src/data/rested.ts';
 import {
   CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_CROWD, SNAP_CROWD_EVERY, SNAP_MID, SNAP_NEAR, SNAP_RANK_MID, SNAP_RANK_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
-  SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight,
+  SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight, xpForLevel,
 } from '../../../shared/src/constants.ts';
 import { CAPTAINS, CAPTAIN_IDS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
@@ -1229,6 +1230,7 @@ export class Game {
 
   /** Where each active quest's current step points, for the chart and the pointer: a place (and how near is
    *  there), or a region's heart (there once inside the region). */
+  /** Back aboard after rest ashore (docs/11 P6): the pool grows by the hours away, and the captain is told. */
   /** Groupmates aboard on the same quests as this captain, and the step each is on (docs/11 P6). */
   private questMates(s: PlayerSession): Record<string, { name: string; step: number }[]> | undefined {
     const g = groupOfAccount(this, s.accountId);
@@ -1451,14 +1453,20 @@ export class Game {
     this.db.ledger(ship.accountId!, 'spend', -amount, reason);
   }
 
-  grantXp(s: PlayerSession, amount: number, reason: string | null): void {
+  grantXp(s: PlayerSession, amount: number, reason: string | null, battle = false): void {
     if (!s.profile || amount <= 0) return;
     // Frontier Spirit: lawless waters teach more.
     if (s.ship && REGIONS[s.ship.region].safety === 'lawless') amount *= 1 + tval(s.ship.stats, 'frontier');
+    // Rest ashore (docs/11 P6): battle experience comes double while the pool lasts.
+    const rest = battle ? Math.min(s.profile.rested ?? 0, amount) : 0;
+    if (rest > 0) {
+      s.profile.rested = (s.profile.rested ?? 0) - rest;
+      amount += rest;
+    }
     const gained = addXp(s.profile, amount);
     seasonXp(this, s, amount);
     if (s.ship) s.ship.level = s.profile.level;
-    if (reason) this.sendTo(s, { t: 'toast', msg: `+${Math.round(amount)} XP — ${reason}`, kind: 'xp' });
+    if (reason) this.sendTo(s, { t: 'toast', msg: rest >= 1 ? `+${Math.round(amount)} XP — ${reason} (rested +${Math.round(rest)})` : `+${Math.round(amount)} XP — ${reason}`, kind: 'xp' });
     if (gained > 0) {
       this.sendTo(s, { t: 'toast', msg: `Level ${s.profile.level}! A new talent point awaits.`, kind: 'good' });
       onLevelUp(this, s);
@@ -1618,8 +1626,8 @@ export class Game {
       for (const ms of mates) questEvent(this, ms, { k: 'fleet_win' });
     }
     checkStatDeeds(this, s);
-    this.grantXp(s, xp, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`);
-    for (const ms of mates) this.grantXp(ms, xp * 0.4, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`);
+    this.grantXp(s, xp, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`, true);
+    for (const ms of mates) this.grantXp(ms, xp * 0.4, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
     // Law and reputation (monsters and hulks answer to nobody).
     if (victim.faction !== 'player' && !victim.cls.monster) {
       const f = FACTIONS[victim.faction];
@@ -2932,6 +2940,7 @@ export class Game {
   }
 
   private sendInit(s: PlayerSession): void {
+    restReturn(this, s);
     commonCollect(this, s);
     guildGoalCollect(this, s);
     const ports: PortPublic[] = this.world.ports.map((p) => ({
@@ -2969,6 +2978,11 @@ export class Game {
     this.sessions.delete(s);
     if (!s.authed || this.byAccount.get(s.accountId) !== s) return;
     s.disconnectedAt = this.now;
+    // Rest ashore begins (docs/11 P6): full in port, a quarter at sea.
+    if (s.profile) {
+      s.profile.ashoreAt = this.wallNow();
+      s.profile.ashoreInPort = !!s.ship?.docked;
+    }
     const barter = this.social.barters.get(s.accountId);
     if (barter) cancelBarter(this, barter, `${s.name} has gone`);
     // Ships at sea linger (anti combat-logging); docked ships leave at once.
@@ -3391,4 +3405,17 @@ export function kthSmallest(a: number[], k: number): number {
     else return a[k];
   }
   return a[k];
+}
+
+/** Back aboard after rest ashore (docs/11 P6): the pool grows by the hours away (full in port, a quarter at sea),
+ *  and a captain with a pool worth telling of is told. */
+function restReturn(game: Game, s: PlayerSession): void {
+  const p = s.profile;
+  if (!p || p.ashoreAt === undefined) return;
+  const hours = (game.wallNow() - p.ashoreAt) / 3_600_000;
+  const before = p.rested ?? 0;
+  p.rested = restAfter(before, p.level, hours, !!p.ashoreInPort);
+  delete p.ashoreAt;
+  delete p.ashoreInPort;
+  if (p.rested - before >= 1 && p.rested >= xpForLevel(p.level) * 0.02) game.sendTo(s, { t: 'toast', msg: `Rested ashore: the next ${Math.round(p.rested)} XP won in battle comes double.`, kind: 'xp' });
 }

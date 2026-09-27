@@ -142,6 +142,8 @@ button { font-family: var(--sans); }
 .fbar.crew > i { background: linear-gradient(180deg, #6f8ea3, #2f4452); }
 .fbar.xp { height: 5px; border-width: 1px; border-image: none; margin-top: 3px; }
 .fbar.xp > i { background: linear-gradient(90deg, #2b4660, #8fb3d9); }
+/* Rest ashore (docs/11 P6): the stretch of the bar that will fill double, in a paler violet. */
+.fbar.xp > .xp-rest { position: absolute; top: 0; bottom: 0; background: rgba(176, 140, 230, 0.45); box-shadow: inset 0 0 0 1px rgba(200, 170, 255, 0.35); }
 
 /* Minimap: the chart in a compass ring; tap for the world chart. */
 .minimap-frame { position: absolute; top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + 8px); width: var(--mm); height: var(--mm); pointer-events: auto; cursor: pointer; }

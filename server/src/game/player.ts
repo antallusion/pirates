@@ -68,6 +68,10 @@ export interface Profile {
   friends?: { id: number; name: string }[];
   /** Captains one does not hear (chat, whispers, invitations). */
   ignored?: { id: number; name: string }[];
+  /** Rest ashore (docs/11 P6): the pool of doubled battle experience, and when and where the captain went ashore. */
+  rested?: number;
+  ashoreAt?: number;
+  ashoreInPort?: boolean;
   paths: CaptainId[]; // Paths this captain may take up at a Captain's House
   pathSwitchAt: number;
   oath: Oath | null; // the Code or a letter of marque
@@ -317,6 +321,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     level: p.level,
     xp: p.xp,
     xpNext: xpForLevel(p.level),
+    rested: Math.round(p.rested ?? 0),
     talentPoints: talentPointsAvailable(p),
     deeds: p.deeds,
     tokens: p.tokens,

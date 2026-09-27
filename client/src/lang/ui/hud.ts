@@ -87,6 +87,7 @@ export const EN = {
   chatGroup: '[group]',
   chatGuild: '[guild]',
   chatWhisper: '[whisper]',
+  rested: 'Rested: the next {n} XP in battle comes double',
   chatWhisperTo: '[whisper → {name}]',
 } as const;
 
@@ -177,5 +178,6 @@ export const RU: Record<keyof typeof EN, string> = {
   chatGroup: '[отряд]',
   chatGuild: '[гильдия]',
   chatWhisper: '[шёпот]',
+  rested: 'Отдых: следующие {n} опыта в бою — вдвое',
   chatWhisperTo: '[шёпот → {name}]',
 };

@@ -847,6 +847,8 @@ export const SERVER_RU_B: Record<string, string> = {
   "The Fall": "Падение",
   // Experience toasts: the extractor skips a line with no lower-case word, so this one is by hand.
   "+{0} XP — {1}": "+{0} опыта — {1}",
+  "+{0} XP — {1} (rested +{2})": "+{0} опыта — {1} (отдых +{2})",
+  "Rested ashore: the next {0} XP won in battle comes double.": "Отдых на берегу: следующие {0} опыта в бою — вдвое.",
   // Short sentences between holes (the extractor now finds them).
   "Bought: {0} {1}": "Куплено: {0} {1}",
   "Outbid: {0} {1}": "Ставку перебили: {0} {1}",

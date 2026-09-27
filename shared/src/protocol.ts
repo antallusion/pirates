@@ -337,6 +337,8 @@ export interface PrivateState {
   level: number;
   xp: number;
   xpNext: number;
+  /** Rest ashore (docs/11 P6): battle experience still to come double. */
+  rested: number;
   talentPoints: number;
   talents: TalentRanks;
   deeds: string[];
