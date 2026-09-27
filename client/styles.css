@@ -1538,3 +1538,10 @@ body.touch #hud-region .rg-extra { display: none; }
 @media (max-width: 1099px) and (min-width: 700px) and (min-height: 521px) { body:not(.touch) #board-fight { width: min(760px, calc(100vw - 150px)); left: calc(50% - 30px); } }
 /* While the captains fight, the round's clock stands still. */
 .bf-panel.dueling .bf-timer { visibility: hidden; }
+
+/* Dynamic combat: the dash button over the sails (a manoeuvre, under the left thumb; beside them on a narrow phone,
+   where the bottom row is free), its cooldown a dark sweep. */
+#tc-dash { position: absolute; left: calc(var(--sa-l) + var(--stick) + 18px); bottom: calc(var(--sa-b) + 164px); }
+@media (max-width: 699px) and (min-height: 521px) { #tc-dash { left: calc(var(--sa-l) + var(--stick) + 72px); bottom: calc(var(--sa-b) + 12px); } }
+.tc-cd { position: absolute; inset: 0; z-index: 3; border-radius: 50%; pointer-events: none; background: conic-gradient(rgba(0, 0, 0, 0.62) calc(var(--cd, 0) * 360deg), transparent 0); }
+#tc-dash.cooling { filter: saturate(0.4); }

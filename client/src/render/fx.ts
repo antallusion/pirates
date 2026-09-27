@@ -204,7 +204,20 @@ export class Fx {
             }
           }, flashDelay * 1000);
         }
-        if (e.ship === ownId) this.shake = Math.max(this.shake, 0.25);
+        if (e.ship === ownId) this.shake = Math.max(this.shake, e.perfect ? 0.45 : 0.25);
+        // A held broadside released in its window: the crews' shout over the smoke.
+        if (e.perfect && e.balls.length) {
+          const [x, y] = e.balls[Math.floor(e.balls.length / 2)];
+          if (e.ship === ownId) this.text(x, y - 14, L('perfect'), '#ffe28c');
+          this.add({ kind: 'ring', x, y, life: 0.6, size: 8, grow: 90, color: '#ffe28c' });
+        }
+        break;
+      }
+      case 'dash': {
+        // White water thrown up as she heels hard over.
+        const v = headingVec(e.h);
+        for (let i = 0; i < 6; i++) setTimeout(() => this.splash(e.x - v.x * i * 8 + (Math.random() - 0.5) * 10, e.y - v.y * i * 8 + (Math.random() - 0.5) * 10, i < 2), i * 70);
+        if (e.ship === ownId) this.shake = Math.max(this.shake, 0.3);
         break;
       }
       case 'hit': {
@@ -221,6 +234,8 @@ export class Fx {
         if (best) best.alive = false;
         if (e.dmg <= 0) {
           this.splash(e.x, e.y);
+          // The dash's moment: the ball flew wide of her.
+          if (e.evaded && !this.particles.some((p) => p.kind === 'text' && p.text === L('evaded') && p.t < 0.5 && Math.hypot(p.x - e.x, p.y - e.y) < 60)) this.text(e.x, e.y - 8, L('evaded'), '#9fc3d6');
           break;
         }
         this.splinters(e.x, e.y, e.ammo === 'grape' ? 3 : 8);

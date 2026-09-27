@@ -876,4 +876,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "Nothing to fight": "Сражаться не с кем",
   "One duel to a fight": "За бой — только одна дуэль",
   "The captains are fighting — wait for the duel": "Капитаны сошлись в дуэли — дождитесь её исхода",
+  // Dynamic combat: the dash.
+  "Cannot manoeuvre now": "Сейчас не до манёвров",
+  "The crew is still hauling the braces ({0} s)": "Команда ещё выбирает брасы ({0} с)",
 };

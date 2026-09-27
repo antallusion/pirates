@@ -31,6 +31,10 @@ export type ClientMsg =
   | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' }
   | { t: 'input'; seq: number; rudder: number; sail: number }
   | { t: 'fire'; side: Side; dist: number; x?: number; y?: number } // x, y: aim point (Improved Carriages)
+  /** The broadside's order is being held (dynamic combat): the charge runs from now until the fire. */
+  | { t: 'aim'; side: Side }
+  /** A hard turn with every hand on the braces: speed, a sharp helm and a moment of evasion. */
+  | { t: 'dash' }
   | { t: 'chase'; end: ChaserEnd; x: number; y: number }
   | { t: 'mount'; x: number; y: number }
   | { t: 'ammo'; ammo: AmmoId }
@@ -330,6 +334,8 @@ export interface PrivateState {
   talentCooldowns: Record<string, number>;
   heat: { port: number; starboard: number };
   rollingFire: boolean;
+  /** Server time the next dash is ready (dynamic combat). */
+  dashReadyAt: number;
   captives: { name: string; faction: FactionId; ransom: number }[];
   options: { port: string; good: GoodId; qty: number; price: number; deposit: number; until: number }[];
   /** Appraiser: best sell price you know for each good, and where. */
@@ -778,8 +784,9 @@ export interface SelfRow {
 }
 
 export type GameEvent =
-  | { k: 'volley'; ship: number; side: Side | ChaserEnd; ammo: AmmoId; balls: [number, number, number, number, number][]; spd?: number } // [x, y, heading, dist, delayMs]; spd = muzzle velocity multiplier
-  | { k: 'hit'; x: number; y: number; ship: number; dmg: number; ammo: AmmoId; crit?: string }
+  | { k: 'volley'; ship: number; side: Side | ChaserEnd; ammo: AmmoId; balls: [number, number, number, number, number][]; spd?: number; perfect?: true } // [x, y, heading, dist, delayMs]; spd = muzzle velocity multiplier; perfect = a held broadside released in its window
+  | { k: 'hit'; x: number; y: number; ship: number; dmg: number; ammo: AmmoId; crit?: string; evaded?: true }
+  | { k: 'dash'; ship: number; x: number; y: number; h: number }
   | { k: 'splash'; x: number; y: number }
   | { k: 'sunk'; ship: number; x: number; y: number; name: string }
   | { k: 'board_start'; a: number; b: number }

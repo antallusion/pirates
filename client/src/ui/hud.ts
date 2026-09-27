@@ -1,6 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { DASH_COOLDOWN } from '../../../shared/src/data/gunnery.ts';
 import { dict, lang, plural, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
 import { term } from './terms.ts';
@@ -131,6 +132,14 @@ export class Hud {
       { id: 'port', label: L('port'), key: 'firePort', art: 'fire', v: you.reload.port, ready: you.reload.port >= 1 },
       { id: 'starboard', label: L('starboard'), key: 'fireStarboard', art: 'fire', v: you.reload.starboard, ready: you.reload.starboard >= 1 },
     ];
+    // The dash (dynamic combat): its readiness fills like a reload.
+    const dashLeft = Math.max(0, (self.dashReadyAt ?? 0) - now);
+    gauges.push({ id: 'dash', label: L('dash'), key: 'dash', art: 'ab_hard_over', v: 1 - Math.min(1, dashLeft / DASH_COOLDOWN), ready: dashLeft <= 0 });
+    const tcDash = document.getElementById('tc-dash');
+    if (tcDash) {
+      tcDash.style.setProperty('--cd', (Math.min(1, dashLeft / DASH_COOLDOWN)).toFixed(3));
+      tcDash.classList.toggle('cooling', dashLeft > 0);
+    }
     if (shipCls.bowChasers + shipCls.sternChasers > 0) gauges.push({ id: 'chasers', label: L('chasers'), key: 'chasers', art: 'chasers', v: Math.max(you.reload.bow, you.reload.stern), ready: Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 });
     if (self.loadout.mount) gauges.push({ id: 'mount', label: MOUNTS[self.loadout.mount].name, art: `mount_${self.loadout.mount}`, v: you.reload.mount, ready: you.reload.mount >= 1 });
     const abil = cap.abilities.map((a) => {

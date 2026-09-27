@@ -1,6 +1,7 @@
 // Naval combat: broadsides, ballistics, hit resolution with angle-of-impact and subsystem damage,
 // crimes and kill credit. All numbers come from shared data; nothing here trusts the client.
 
+import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, aimFocus } from '../../../shared/src/data/gunnery.ts';
 import { onboardingVolley } from './onboarding.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
 import type { ChaserEnd } from '../../../shared/src/data/ships.ts';
@@ -143,7 +144,12 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const rolling = ship.rollingFire;
   const rollMul = rolling ? (ship.hasFlag('rolling_broadside') ? 0.8 : 1.15) : 1;
   const rangedIn = target?.hasEffect('ranged_in') ? 0.85 : 1;
-  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn;
+  // A held broadside (dynamic combat): released in its window the balls fly tight and hit harder.
+  // A hold left over from an order that never fired (the guns were not ready) is stale, not a long aim.
+  const held = ship.aimStart[side] >= 0 ? game.now - ship.aimStart[side] : 0;
+  const focus = aimFocus(held > AIM_CHARGE * 4 ? 0 : held);
+  ship.aimStart[side] = -1;
+  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn * focus.spread;
   // Shadow Strike: the first broadside from hiding, before she has seen you.
   const hiding = ship.hasFlag('hidden') || isNight(game.now) || game.weatherOf(ship) === 'fog';
   const shadowStrike = !!target && ship.hasFlag('shadow_strike') && hiding && !target.attackers.has(ship.id) && !ship.attackers.has(target.id) ? 1.3 : 1;
@@ -175,7 +181,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
       const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
         owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed, dist: d, traveled: 0, ammo,
-        damage: gun.damage * ship.stats.gunDamageMul * shadow * (ammo === 'cursed' ? cursedDamageMul(ship) : 1), maxRange: range, delay: delay / 1000, volley,
+        damage: gun.damage * ship.stats.gunDamageMul * shadow * focus.damage * (ammo === 'cursed' ? cursedDamageMul(ship) : 1), maxRange: range, delay: delay / 1000, volley,
       });
       rec.total++;
       balls.push([Math.round(bx), Math.round(by), Math.round(h * 1000) / 1000, Math.round(d), delay]);
@@ -199,7 +205,28 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   ship.lastCombat = game.now;
   ship.protectedUntil = 0;
   ship.repairing = ship.repairing && ship.hasFlag('battle_repair');
-  game.emit({ k: 'volley', ship: ship.id, side, ammo, balls, spd: shotSpeed !== 1 ? shotSpeed : undefined }, ship.state.x, ship.state.y);
+  game.emit({ k: 'volley', ship: ship.id, side, ammo, balls, spd: shotSpeed !== 1 ? shotSpeed : undefined, ...(focus.perfect ? { perfect: true as const } : {}) }, ship.state.x, ship.state.y);
+  return null;
+}
+
+/** The broadside's order is held: the charge counts from when the guns are loaded. */
+export function holdAim(game: Game, ship: ShipEntity, side: Side): void {
+  if (!ship.alive || ship.docked) return;
+  ship.aimStart[side] = game.now + Math.max(0, ship.reload[side]);
+}
+
+/** A hard turn with every hand on the braces: a burst of speed, a sharp helm, and for a moment half the balls
+ *  aimed at her fly wide. */
+export function dash(game: Game, ship: ShipEntity): string | null {
+  if (!ship.alive || ship.docked || ship.grappled || ship.surrendered || ship.boarding) return 'Cannot manoeuvre now';
+  const now = game.now;
+  if (now < ship.dashReadyAt) return `The crew is still hauling the braces (${Math.ceil(ship.dashReadyAt - now)} s)`;
+  ship.dashReadyAt = now + DASH_COOLDOWN;
+  ship.addEffect({ id: 'dash', until: now + DASH_TIME, mods: { maxSpeed: 0.45, accel: 1.5, turnRate: 0.7 } }, now);
+  ship.addEffect({ id: 'evasive', until: now + DASH_EVADE, flags: ['evasive'] }, now);
+  ship.state.speed = Math.min(ship.stats.maxSpeed * 1.3, ship.state.speed + 3);
+  ship.lastCombat = Math.max(ship.lastCombat, now - 1);
+  game.emit({ k: 'dash', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), h: Math.round(ship.state.heading * 1000) / 1000 }, ship.state.x, ship.state.y);
   return null;
 }
 
@@ -380,6 +407,11 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
 
 function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, hy: number): void {
   const shooter = game.ships.get(p.owner) ?? null;
+  // A ship in the moment of her dash: half the balls fly wide.
+  if (target.hasFlag('evasive') && game.rng.chance(DASH_EVADE_CHANCE)) {
+    game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: 0, ammo: p.ammo, evaded: true }, hx, hy);
+    return;
+  }
   const blocked = damageBlocked(game, shooter, target);
   if (blocked) {
     if (shooter?.isPlayer && blocked.length > 12) game.toastShip(shooter, blocked, 'bad');

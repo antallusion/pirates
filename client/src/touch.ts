@@ -8,7 +8,11 @@ import { $ } from './ui/dom.ts';
 export interface TouchHooks {
   /** Set sail steps up (+1) or down (−1). */
   sail(delta: number): void;
+  /** A broadside button pressed (the order is held) and released (it fires). */
+  hold(side: 'port' | 'starboard'): void;
   fire(side: 'port' | 'starboard'): void;
+  /** A hard turn with every hand on the braces. */
+  dash(): void;
   chasers(): void;
   mount(): void;
   context(): void;
@@ -72,6 +76,7 @@ export class TouchControls {
     this.art('tc-port', 'icon.fire', true);
     this.art('tc-starboard', 'icon.fire');
     this.art('tc-chasers', 'icon.chasers');
+    this.art('tc-dash', 'icon.ab_hard_over');
     this.art('tc-sail-up', 'icon.sail_up');
     this.art('tc-sail-down', 'icon.sail_down');
     this.art('tc-menu', 'icon.menu_cabin');
@@ -167,8 +172,32 @@ export class TouchControls {
     };
     tap('tc-sail-up', () => this.hooks.sail(1));
     tap('tc-sail-down', () => this.hooks.sail(-1));
-    tap('tc-port', () => this.hooks.fire('port'));
-    tap('tc-starboard', () => this.hooks.fire('starboard'));
+    // The broadsides fire on release: held, the crews take aim (the perfect window is on the aim's fan).
+    const hold = (id: string, side: 'port' | 'starboard') => {
+      const el = $(id);
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          /* the pointer is gone already */
+        }
+        el.classList.add('pressed');
+        this.hooks.hold(side);
+      });
+      const up = (e: PointerEvent) => {
+        if (!el.classList.contains('pressed')) return;
+        e.preventDefault();
+        el.classList.remove('pressed');
+        this.hooks.fire(side);
+      };
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    };
+    hold('tc-port', 'port');
+    hold('tc-starboard', 'starboard');
+    tap('tc-dash', () => this.hooks.dash());
     tap('tc-chasers', () => this.hooks.chasers());
     tap('tc-mount', () => this.hooks.mount());
     tap('tc-context', () => this.hooks.context());

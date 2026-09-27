@@ -4,7 +4,7 @@
 import { lang } from './i18n.ts';
 
 export type Action =
-  | 'sailUp' | 'sailDown' | 'rudderLeft' | 'rudderRight' | 'firePort' | 'fireStarboard' | 'chasers'
+  | 'sailUp' | 'sailDown' | 'rudderLeft' | 'rudderRight' | 'firePort' | 'fireStarboard' | 'chasers' | 'dash'
   | 'ammo1' | 'ammo2' | 'ammo3' | 'ammo4' | 'ammo5' | 'cursedShot'
   | 'talent1' | 'talent2' | 'talent3' | 'talent4' | 'talent5'
   | 'abilityZ' | 'abilityX' | 'abilityC' | 'abilityV' | 'fireMode'
@@ -12,7 +12,7 @@ export type Action =
   | 'map' | 'talents' | 'ship' | 'crew' | 'company' | 'help' | 'mute' | 'readAloud';
 
 export const ACTIONS: Action[] = [
-  'sailUp', 'sailDown', 'rudderLeft', 'rudderRight', 'firePort', 'fireStarboard', 'chasers',
+  'sailUp', 'sailDown', 'rudderLeft', 'rudderRight', 'firePort', 'fireStarboard', 'chasers', 'dash',
   'ammo1', 'ammo2', 'ammo3', 'ammo4', 'ammo5', 'cursedShot', 'talent1', 'talent2', 'talent3', 'talent4', 'talent5',
   'abilityZ', 'abilityX', 'abilityC', 'abilityV', 'fireMode', 'board', 'land', 'orders', 'repair', 'dock', 'formation', 'harbour',
   'map', 'talents', 'ship', 'crew', 'company', 'help', 'mute', 'readAloud',
@@ -23,7 +23,7 @@ export type Keymap = Record<Action, [string, string]>;
 
 const CLASSIC: Keymap = {
   sailUp: ['w', 'arrowup'], sailDown: ['s', 'arrowdown'], rudderLeft: ['a', 'arrowleft'], rudderRight: ['d', 'arrowright'],
-  firePort: ['q', ''], fireStarboard: ['e', ''], chasers: [' ', ''],
+  firePort: ['q', ''], fireStarboard: ['e', ''], chasers: [' ', ''], dash: ['tab', ''],
   ammo1: ['1', ''], ammo2: ['2', ''], ammo3: ['3', ''], ammo4: ['4', ''], ammo5: ['5', ''], cursedShot: ['u', ''],
   talent1: ['6', ''], talent2: ['7', ''], talent3: ['8', ''], talent4: ['9', ''], talent5: ['0', ''],
   abilityZ: ['z', ''], abilityX: ['x', ''], abilityC: ['c', ''], abilityV: ['v', ''], fireMode: ['k', ''],
@@ -89,6 +89,7 @@ export function conflicts(map: Keymap): Map<string, Action[]> {
 export function keyLabel(k: string): string {
   if (!k) return '—';
   if (k === ' ') return lang() === 'ru' ? 'Пробел' : 'Space';
+  if (k === 'tab') return 'Tab';
   if (k.startsWith('arrow')) return { arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→' }[k] ?? k;
   return k.length === 1 ? k.toUpperCase() : k[0].toUpperCase() + k.slice(1);
 }

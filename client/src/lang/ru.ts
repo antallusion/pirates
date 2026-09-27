@@ -167,6 +167,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'act.firePort': "Залп левым бортом",
   'act.fireStarboard': "Залп правым бортом",
   'act.chasers': "Погонные орудия",
+  'act.dash': "Рывок (резкий манёвр)",
   'act.ammo1': "Ядра",
   'act.ammo2': "Книппели",
   'act.ammo3': "Картечь",

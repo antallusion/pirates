@@ -119,6 +119,9 @@ export class ShipEntity {
   purse = 0; // NPC coin chest, looted on boarding
   reload: Record<Side, number> = { port: 0, starboard: 0 };
   lastReloadTotal: Record<Side, number> = { port: 1, starboard: 1 };
+  /** Dynamic combat: when each broadside's order began to be held (−1: not held), and when the next dash is ready. */
+  aimStart: Record<Side, number> = { port: -1, starboard: -1 };
+  dashReadyAt = 0;
   gunsDisabled: Record<Side, number> = { port: 0, starboard: 0 };
 
   region: RegionId = 'black_coast';

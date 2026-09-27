@@ -328,7 +328,10 @@ export class AudioEngine {
     if (!this.ctx) return;
     switch (e.k) {
       case 'volley':
-        for (const [x, y, , , delay] of e.balls.slice(0, 8)) this.cannon(x, y, delay / 1000, 0.8);
+        for (const [x, y, , , delay] of e.balls.slice(0, 8)) this.cannon(x, y, delay / 1000, e.perfect ? 1.05 : 0.8);
+        break;
+      case 'dash':
+        this.splash(e.x, e.y, true);
         break;
       case 'hit':
         if (e.dmg <= 0) this.splash(e.x, e.y, false);

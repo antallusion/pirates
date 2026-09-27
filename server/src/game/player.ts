@@ -311,6 +311,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     talentCooldowns: p.talentCooldowns,
     heat: ship ? { port: Math.round(ship.heat.port), starboard: Math.round(ship.heat.starboard) } : { port: 0, starboard: 0 },
     rollingFire: ship?.rollingFire ?? false,
+    dashReadyAt: ship?.dashReadyAt ?? 0,
     options: p.trade.options,
     coves: world.coves.filter((c) => p.smuggle.coves.includes(c.id) || ship?.hasFlag('cove_knowledge')).map((c) => ({ name: c.name, x: Math.round(c.x), y: Math.round(c.y) })),
     patrols: world.patrols,

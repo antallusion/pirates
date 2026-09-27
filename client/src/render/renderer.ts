@@ -27,6 +27,7 @@ import { buildRelief } from './terrain.ts';
 import type { Palette } from './terrain.ts';
 import { dict } from '../i18n.ts';
 import { dec1 } from '../ui/dom.ts';
+import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus } from '../../../shared/src/data/gunnery.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 
 const L = dict(REN, RRU);
@@ -228,7 +229,7 @@ export class Renderer {
   /** Main frame. */
   private frameNo = 0;
 
-  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null }): void {
+  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null }): void {
     this.time += dt;
     this.frameNo++;
     this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
@@ -294,7 +295,7 @@ export class Renderer {
     this.drawWeather(state, dt);
 
     // Overlays (not affected by darkness).
-    if (own && state.you && state.self) this.drawAim(state, own, aim);
+    if (own && state.you && state.self) this.drawAim(state, own, aim, ships);
     for (const s of ships) if (!s.own) this.drawLabel(s, state, aim.boardTarget === s.id);
     if (own) this.drawThreatMarks(ships, own);
     this.drawTexts();
@@ -1651,7 +1652,7 @@ export class Renderer {
     g.restore();
   }
 
-  private drawAim(state: ClientState, own: SailState, aim: { side: 'port' | 'starboard' | null; dist: number; chaser: 'bow' | 'stern' | null }): void {
+  private drawAim(state: ClientState, own: SailState, aim: { side: 'port' | 'starboard' | null; dist: number; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null }, ships: DrawShip[]): void {
     const g = this.g;
     const you = state.you!;
     const self = state.self!;
@@ -1687,7 +1688,13 @@ export class Renderer {
       const ready = you.reload[side] >= 1;
       const active = aim.side === side;
       const h = own.heading + (side === 'port' ? -Math.PI / 2 : Math.PI / 2);
-      const spread = (gun.spreadDeg * Math.PI) / 180 * 3 + 0.12;
+      // A held broadside (dynamic combat): the fan narrows as the crews take aim, glows in the perfect window and
+      // reddens when held too long.
+      const held = aim.charge?.side === side ? aim.charge.held : 0;
+      const focus = aimFocus(held);
+      const c = held / AIM_CHARGE;
+      const perfect = focus.perfect, waver = held >= AIM_TAP && c > AIM_WAVER;
+      const spread = ((gun.spreadDeg * Math.PI) / 180 * 3 + 0.12) * (held >= AIM_TAP ? focus.spread : 1);
       const x = this.sx(own.x), y = this.sy(own.y);
       const r = range * this.zoom;
       const grd = g.createRadialGradient(x, y, 0, x, y, r);
@@ -1702,18 +1709,87 @@ export class Renderer {
       if (active) {
         g.beginPath();
         g.arc(x, y, r, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
-        g.strokeStyle = ready ? 'rgba(224,184,98,0.5)' : 'rgba(150,120,90,0.35)';
-        g.lineWidth = 1.5;
+        g.strokeStyle = !ready ? 'rgba(150,120,90,0.35)' : perfect ? 'rgba(255,226,140,0.95)' : waver ? 'rgba(208,106,94,0.7)' : 'rgba(224,184,98,0.5)';
+        g.lineWidth = perfect ? 2.5 : 1.5;
         g.stroke();
         // Aim distance marker.
         const d = clamp(aim.dist, 40, range) * this.zoom;
         g.beginPath();
         g.arc(x, y, d, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
-        g.strokeStyle = ready ? 'rgba(240,200,110,0.9)' : 'rgba(150,120,90,0.6)';
-        g.lineWidth = 2;
+        g.strokeStyle = !ready ? 'rgba(150,120,90,0.6)' : perfect ? 'rgba(255,236,170,1)' : waver ? 'rgba(220,120,100,0.9)' : 'rgba(240,200,110,0.9)';
+        g.lineWidth = perfect ? 3 : 2;
         g.stroke();
+        if (held > 0) this.drawCharge(x, y, c, perfect, waver);
+        this.drawRakes(state, own, ships, side, range, h, spread);
       }
     }
+  }
+
+  /** The charge of a held broadside: a ring around your ship that fills, with the perfect window marked on it. */
+  private drawCharge(x: number, y: number, c: number, perfect: boolean, waver: boolean): void {
+    const g = this.g;
+    const r = 30 + 6 * this.zoom;
+    const full = AIM_WAVER + 0.1; // the ring's whole turn
+    const at = (v: number) => -Math.PI / 2 + (Math.min(v, full) / full) * Math.PI * 2;
+    g.save();
+    g.lineCap = 'round';
+    g.lineWidth = 4;
+    g.strokeStyle = 'rgba(8,10,14,0.55)';
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.stroke();
+    // The perfect window.
+    g.strokeStyle = 'rgba(255,226,140,0.45)';
+    g.lineWidth = 6;
+    g.beginPath();
+    g.arc(x, y, r, at(AIM_PERFECT[0]), at(AIM_PERFECT[1]));
+    g.stroke();
+    g.strokeStyle = perfect ? '#ffe28c' : waver ? '#d06a5e' : 'rgba(240,230,200,0.9)';
+    g.lineWidth = perfect ? 5 : 3;
+    if (perfect) {
+      g.shadowColor = 'rgba(255,220,130,0.9)';
+      g.shadowBlur = 12;
+    }
+    g.beginPath();
+    g.arc(x, y, r, at(0), at(c));
+    g.stroke();
+    g.restore();
+  }
+
+  /** Ships in the fan that would be raked (the balls running along their keel): a red mark along the keel. */
+  private drawRakes(state: ClientState, own: SailState, ships: DrawShip[], side: 'port' | 'starboard', range: number, h: number, spread: number): void {
+    const g = this.g;
+    for (const s of ships) {
+      if (s.own || s.sinkT > 0 || !(s.flags & SF.HOSTILE)) continue;
+      const dx = s.x - own.x, dy = s.y - own.y;
+      const d = Math.hypot(dx, dy);
+      if (d > range || d < 20) continue;
+      const bearing = Math.atan2(dx, -dy);
+      if (Math.abs(Math.atan2(Math.sin(bearing - h), Math.cos(bearing - h))) > spread + 0.05) continue;
+      const keel = headingVec(s.h);
+      const along = Math.abs((dx / d) * keel.x + (dy / d) * keel.y);
+      if (along < 0.87) continue;
+      const len = Math.max(14, SHIP_CLASSES[s.classId].length * 0.55) * this.zoom;
+      const x = this.sx(s.x), y = this.sy(s.y);
+      g.save();
+      g.strokeStyle = 'rgba(224,80,60,0.9)';
+      g.lineWidth = 2;
+      g.setLineDash([6, 4]);
+      g.beginPath();
+      g.moveTo(x - keel.x * len, y - keel.y * len);
+      g.lineTo(x + keel.x * len, y + keel.y * len);
+      g.stroke();
+      g.setLineDash([]);
+      g.font = '600 11px Inter, system-ui, sans-serif';
+      g.textAlign = 'center';
+      g.fillStyle = 'rgba(0,0,0,0.6)';
+      g.fillText(L('raking'), x + 1, y - len * 0.6 - 9);
+      g.fillStyle = '#ff9a80';
+      g.fillText(L('raking'), x, y - len * 0.6 - 10);
+      g.restore();
+    }
+    void state;
+    void side;
   }
 
   private drawLabel(s: DrawShip, state: ClientState, boardTarget: boolean): void {

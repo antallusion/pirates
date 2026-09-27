@@ -75,7 +75,9 @@ const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
 const touch = new TouchControls({
   sail: (d) => (state.input.sail = clamp(state.input.sail + d, 0, 4)),
-  fire: (side) => touchFire(side),
+  fire: (side) => releaseFire(side),
+  hold: (side) => holdFire(side),
+  dash: () => net.send({ t: 'dash' }),
   chasers: () => touchChasers(),
   mount: () => touchMount(),
   context: () => padContext(),
@@ -612,10 +614,14 @@ addEventListener('keydown', (e) => {
       state.input.sail = clamp(state.input.sail - 1, 0, 4);
       break;
     case 'firePort':
-      fire('port');
+      holdFire('port');
       break;
     case 'fireStarboard':
-      fire('starboard');
+      holdFire('starboard');
+      break;
+    case 'dash':
+      e.preventDefault();
+      net.send({ t: 'dash' });
       break;
     case 'ammo1':
     case 'ammo2':
@@ -716,8 +722,18 @@ addEventListener('keydown', (e) => {
       break;
   }
 });
-addEventListener('keyup', (e) => keys.delete(keyOf(e)));
-addEventListener('blur', () => keys.clear());
+addEventListener('keyup', (e) => {
+  const k = keyOf(e);
+  keys.delete(k);
+  // A held broadside fires when its key comes up.
+  const act = actionFor(settings().keys, k);
+  if (act === 'firePort') releaseFire('port');
+  else if (act === 'fireStarboard') releaseFire('starboard');
+});
+addEventListener('blur', () => {
+  keys.clear();
+  charge = null;
+});
 
 const canvas = $('world');
 canvas.addEventListener('mousemove', (e) => {
@@ -758,6 +774,31 @@ function aimDistance(): number {
   if (!own) return 300;
   const m = mouseWorld();
   return dist(own.x, own.y, m.x, m.y);
+}
+
+/** A broadside's order being held (dynamic combat): the charge runs from when the guns are loaded; the release
+ *  fires it. `start` is set once the side is loaded. */
+let charge: { side: 'port' | 'starboard'; start: number | null } | null = null;
+
+function holdFire(side: 'port' | 'starboard'): void {
+  if (state.self?.dockedAt || modal) return;
+  net.send({ t: 'aim', side });
+  charge = { side, start: null };
+}
+
+function releaseFire(side: 'port' | 'starboard'): void {
+  if (charge?.side !== side) return;
+  charge = null;
+  if (touch.enabled) touchFire(side);
+  else fire(side);
+}
+
+/** Seconds the broadside has been held loaded (for the aim's drawing). */
+function chargeHeld(): { side: 'port' | 'starboard'; held: number } | null {
+  if (!charge || !state.you) return null;
+  const now = performance.now();
+  if (charge.start === null && state.you.reload[charge.side] >= 1) charge.start = now;
+  return { side: charge.side, held: charge.start === null ? 0 : (now - charge.start) / 1000 };
 }
 
 function fire(side: 'port' | 'starboard'): void {
@@ -1025,13 +1066,19 @@ function touchTarget(reach: number, accept: (local: { x: number; y: number }) =>
 
 /** A touch broadside: laid on the best ship abeam on that side, or at two-thirds range when the sea is empty. */
 function touchFire(side: 'port' | 'starboard'): void {
+  if (!touchAim(side)) return;
+  fire(side);
+}
+
+/** A broadside button aims itself: at the nearest ship on that beam, else two thirds of the range out. */
+function touchAim(side: 'port' | 'starboard'): boolean {
   const own = state.ownDisplay;
-  if (!own || !state.self) return;
+  if (!own || !state.self) return false;
   const range = GUNS[state.self.loadout.guns[side]].range * (state.ownStats?.rangeMul ?? 1);
   const tgt = touchTarget(range * 1.05, (l) => (l.x < 0) === (side === 'port') && Math.abs(l.x) > Math.abs(l.y) * 0.5);
   const p = tgt ?? padAimPoint(own.x, own.y, own.heading, side, range * 0.66, 0);
   aimAt(p.x, p.y);
-  fire(side);
+  return true;
 }
 
 /** Chasers by touch: at a ship in the bow or stern arc, else dead ahead. */
@@ -1267,9 +1314,11 @@ function step(t: number): void {
     state.updateRemote();
     const own = state.updateOwn();
     // Touch has no hovering cursor: no aim arcs follow it (the broadside buttons aim themselves).
-    aimSide = touch.enabled ? null : sideUnderCursor();
+    const held = chargeHeld();
+    if (held && touch.enabled) touchAim(held.side);
+    aimSide = held ? held.side : touch.enabled ? null : sideUnderCursor();
     const prompt = computePrompt();
-    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled ? null : chaserEndUnderCursor() });
+    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled || held ? null : chaserEndUnderCursor(), charge: held });
     if (own) audio.listener = { x: own.x, y: own.y };
     audio.ambience(state.wind[1], state.weather, dt);
     if (own) {

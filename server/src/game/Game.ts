@@ -92,7 +92,7 @@ import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditions
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
-import { applyDamage, fireBroadside, fireChaser, reloadTime, stepProjectiles } from './combat.ts';
+import { applyDamage, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, takeCaptive, takePrize } from './prizes.ts';
@@ -2213,6 +2213,14 @@ export class Game {
         return err(craft(this, s, msg.recipe, Math.trunc(Number(msg.n))));
       case 'mount':
         return err(fireMount(this, ship, Number(msg.x), Number(msg.y)));
+      case 'aim':
+        if (msg.side === 'port' || msg.side === 'starboard') holdAim(this, ship, msg.side);
+        return;
+      case 'dash': {
+        const why = dash(this, ship);
+        if (!why) this.pushSelf(s);
+        return err(why);
+      }
       case 'chase':
         if (msg.end !== 'bow' && msg.end !== 'stern') return;
         return err(fireChaser(this, ship, msg.end, Number(msg.x), Number(msg.y)));

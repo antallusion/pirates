@@ -59,6 +59,8 @@ export type Flag =
   // shipwright
   | 'copper_sheathing' | 'master_fitter' | 'field_forge' | 'modular_refit' | 'ironbound_masts' | 'spare_rigging' | 'prize_refit'
   | 'legendary_keel' | 'boneyard_secrets' | 'iron_coffin' | 'overgunned'
+  // dynamic combat: the dash's moment of evasion
+  | 'evasive'
   // exploration
   | 'star_reader' | 'rumor_hound' | 'sounding_line' | 'ruin_reader' | 'map_of_the_dead' | 'lucky_dig' | 'leviathan_lore'
   | 'legend_seeker' | 'gold_fever' | 'beyond_the_edge' | 'gold_trail'
