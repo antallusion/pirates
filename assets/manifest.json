@@ -380,6 +380,7 @@
     "portrait.giver_shipwright_m":    { "local": "portraits/giver_shipwright_m.webp", "remote": "hf_20260927_224331_752a2f65-d186-49b9-a410-0602e49bf68d.png", "job": "752a2f65-d186-49b9-a410-0602e49bf68d" },
     "portrait.giver_shipwright_f":    { "local": "portraits/giver_shipwright_f.webp", "remote": "hf_20260927_230059_a5002629-64b7-4529-819e-960e21d8669e.png", "job": "a5002629-64b7-4529-819e-960e21d8669e" },
     "portrait.giver_priest_m":        { "local": "portraits/giver_priest_m.webp", "remote": "hf_20260927_231210_a38c4868-925f-4db8-bd45-2cb01fdb1612.png", "job": "a38c4868-925f-4db8-bd45-2cb01fdb1612" },
-    "portrait.giver_priest_f":        { "local": "portraits/giver_priest_f.webp", "remote": "hf_20260927_232420_0cef1975-5235-401a-9a20-7a6d8602a85c.png", "job": "0cef1975-5235-401a-9a20-7a6d8602a85c" }
+    "portrait.giver_priest_f":        { "local": "portraits/giver_priest_f.webp", "remote": "hf_20260927_232420_0cef1975-5235-401a-9a20-7a6d8602a85c.png", "job": "0cef1975-5235-401a-9a20-7a6d8602a85c" },
+    "portrait.giver_widow_f":         { "local": "portraits/giver_widow_f.webp", "remote": "hf_20260927_233501_4e58e0f8-d0de-42bd-962d-d8151229caa6.png", "job": "4e58e0f8-d0de-42bd-962d-d8151229caa6" }
   }
 }
