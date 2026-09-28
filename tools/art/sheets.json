@@ -264,5 +264,100 @@
    "portrait.skipper_1"
   ],
   "prompt": "Sheet of 8 portraits for a dark Pirate Gothic naval MMORPG, laid out in a strict grid of 4 columns and 2 rows of equal upright panels separated by thin pure black gutters. Each panel is its own realistic dark portrait, oil-painting texture over photographic realism, waist-up, three-quarter view, of a different person, the same lighting in all of them: warm amber lantern key light from below one side, cold blue moonlight rim from behind, deep chiaroscuro, rain droplets, wet skin and fabric sheen; a near-black stormy background with cold fog. Clothing heavy, waterlogged, worn, frayed, almost black; salt-darkened metal. The people, left to right, top row then bottom row: 1. the Red Baron, a heavyset pirate lord in his fifties with a greying red beard and a battered crimson admiral's coat hung with stolen medals. 2. the Iron Baron, a grim pirate lord with an iron gorget, an iron jaw plate over a ruined chin and a heavy black greatcoat. 3. the Salt Baron, a pirate lady in her forties with salt-white braided hair, kohl-rimmed eyes, rings on every finger and a silk scarf. 4. the Black Baron, a soot-streaked pirate lady with burn scars on her arms and a smith's leather apron over a captain's coat. 5. the Frost Baron, an old whaler lord with a frost-white beard, a sealskin coat and a whalebone harpoon over his shoulder. 6. the Grave Baron, a gaunt sun-scorched pirate lord with a skull-headed cane and a ragged black frock coat. 7. the Drowned Baron, a pale pirate lady with wet dark hair, a tarnished coral crown and barnacles on her collar, one faint turquoise vein at her temple. 8. a weathered merchant skipper in an oilskin coat with a clay pipe. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy. Adults, grim, grounded, realistic. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, fantasy armor, steampunk goggles, bright colors, clean new clothes, glamour makeup, glowing magic."
+ },
+ "cards_1": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_raft",
+   "card.enc_sinking_merchant",
+   "card.enc_pilgrims",
+   "card.enc_smuggler"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. a raft of lashed spars on a grey swell, castaways waving a rag tied to an oar. 2. a merchant fluyt low in the water and listing, a red flare arcing above her, her crew shouting from the rail. 3. a barge of grey-robed pilgrims rowing through fog under a lantern on a pole. 4. a dark schooner with shaded lanterns in thick fog, a man at her rail beckoning. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships."
+ },
+ "cards_2": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_derelict",
+   "card.enc_burning_ship",
+   "card.enc_skeleton_raft",
+   "card.enc_sunken_bell"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. an empty ship under full sail drifting past, one lit cabin window, nobody on deck. 2. a hulk burning to the waterline at night, flames reflected on black water. 3. a small raft with a skeleton slumped against a sea chest, one bony hand on its lid. 4. still black water with rings spreading, a drowned bell faintly visible deep below. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships."
+ },
+ "cards_3": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_signal_fire",
+   "card.enc_orcas_whale",
+   "card.enc_squall",
+   "card.enc_waterspout"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. a column of smoke and a small fire on a dark rocky islet at dusk. 2. a pod of orcas running down a young whale, the sea white with their hunt. 3. a black squall line racing across the sea toward the ship, curtains of rain, whitecaps. 4. a grey waterspout joining sea and sky ahead of the bow. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships."
+ },
+ "cards_4": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_glowing_sea",
+   "card.enc_iceberg",
+   "card.enc_giant_turtle",
+   "card.enc_tentacle"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. a night sea where every wave breaks in pale blue fire, the ship's wake a river of light. 2. a towering iceberg drifting past at night, the dark hull of an old ship frozen in its side. 3. a colossal ancient sea turtle surfacing beside the ship, a grove of palms on its mossy shell. 4. a grey tentacle as thick as a mast rising over the ship's rail and gripping the shrouds. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships."
+ },
+ "cards_5": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_albatross",
+   "card.enc_ghost_bargain",
+   "card.enc_sirens",
+   "card.enc_voice_in_fog"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. a great white albatross settling on a ship's yard against a stormy sky. 2. a pale ghost ship alongside in silence, her drowned captain holding out a small chest. 3. dark rocks in fog with pale singing shapes half seen on them, the helmsman at the wheel entranced. 4. thick white fog around the bow at night, a lone lantern, a faint shadowy figure in the mist. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships."
  }
 }

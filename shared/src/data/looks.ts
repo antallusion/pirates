@@ -140,6 +140,8 @@ export const HULLS: { hex: string | null; name: Tr }[] = [
 export const SAILS: Tr[] = [
   ['Plain canvas', 'Простое полотно'], ['Tarred', 'Просмолённые'], ['Blood red', 'Кроваво-красные'], ['Striped', 'Полосатые'],
   ['Crossed', 'С крестом'], ['Chequered', 'В клетку'], ['Halved', 'Двухцветные'], ['Regatta', 'Регатные'],
+  // The twelve of docs/12 P11: four more, painted on the cloth like the rest.
+  ['Slanted', 'Косые полосы'], ['Sun-bleached', 'Выгоревшие'], ['Mourning band', 'С траурной лентой'], ['Patchwork', 'Лоскутные'],
 ];
 
 export const LAMPS: { color: string; name: Tr }[] = [
@@ -186,11 +188,11 @@ export const STARTING_UNLOCKS: string[] = [
 /** What a deed opens. */
 export const DEED_UNLOCKS: Record<string, string[]> = {
   regatta: ['sail:7', 'color:7', 'field:9', 'emblem:54'],
-  dutchman: ['lamp:1', 'emblem:57', 'emblem:58', 'emblem:59', 'hull:7'],
+  dutchman: ['lamp:1', 'emblem:57', 'emblem:58', 'emblem:59', 'hull:7', 'sail:10'],
   revenge: ['emblem:52', 'emblem:53', 'hull:2'],
-  wonders: ['hull:3', 'hull:4', 'hull:5', 'hull:6', 'field:3', 'field:4', 'sail:4', 'sail:5', 'lamp:2', 'color:8', 'color:9', 'color:10', 'color:11', 'emblem:55'],
+  wonders: ['hull:3', 'hull:4', 'hull:5', 'hull:6', 'field:3', 'field:4', 'sail:4', 'sail:5', 'sail:11', 'lamp:2', 'color:8', 'color:9', 'color:10', 'color:11', 'emblem:55'],
   dice: ['emblem:56', 'emblem:27', 'emblem:28', 'emblem:29', 'lamp:3', 'field:6', 'field:7', 'field:8'],
-  quest: ['sail:2', 'sail:3', 'sail:6', ...Array.from({ length: 30 }, (_, i) => `emblem:${12 + i}`)],
+  quest: ['sail:2', 'sail:3', 'sail:6', 'sail:8', 'sail:9', ...Array.from({ length: 30 }, (_, i) => `emblem:${12 + i}`)],
   // The Storm of the Century's heart (docs/12 P10 #14) and the services' ranks (docs/12 P10 #15).
   storm: ['emblem:51'],
   crown_1: ['emblem:42'], crown_3: ['emblem:43'], crown_4: ['emblem:44'],

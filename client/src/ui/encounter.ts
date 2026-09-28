@@ -10,6 +10,10 @@ import type { Item } from '../../../shared/src/data/items.ts';
 import type { ClientMsg, EncounterView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import { esc, money } from './dom.ts';
+import { assetUrl } from '../assets.ts';
+
+/** Encounters without a painting of their own that borrow a kindred one. */
+const ENC_ART: Record<string, string> = { convict: 'raft', fishermen: 'raft', deserters: 'raft', mapmaker: 'raft', peddler: 'smuggler', pilot: 'signal_fire', bird_shoal: 'albatross', wisps: 'voice_in_fog' };
 
 const L = dict({ ok: 'So be it', close: 'Close' }, { ok: 'Так тому и быть', close: 'Закрыть' });
 const ru = () => (lang() === 'ru' ? 1 : 0);
@@ -46,6 +50,12 @@ export class EncounterCard {
     this.el = document.getElementById('encounter')!;
   }
 
+  /** The card's picture (docs/12 P11): the twenty key encounters are painted; a few others borrow a kindred scene. */
+  private art(def: string): string {
+    const url = assetUrl(`card.enc_${ENC_ART[def] ?? def}`);
+    return url ? `<div class="enc-art" style="background-image:url('${url}')"></div>` : '';
+  }
+
   /** A card opens (or closes, when it lapses). */
   open(view: EncounterView | null): void {
     if (!view) {
@@ -55,7 +65,7 @@ export class EncounterCard {
     const d = ENCOUNTERS[view.def];
     this.shown = view.id;
     this.hideAt = 0;
-    this.el.innerHTML = `<div class="enc-card"><div class="enc-h">${esc(d.title[ru()])}</div><p class="enc-text">${esc(d.text[ru()])}</p>
+    this.el.innerHTML = `<div class="enc-card">${this.art(view.def)}<div class="enc-h">${esc(d.title[ru()])}</div><p class="enc-text">${esc(d.text[ru()])}</p>
       <div class="enc-choices">${d.choices.map((c) => `<button class="btn btn-small" data-enc="${esc(c.id)}">${esc(c.label[ru()])}</button>`).join('')}</div></div>`;
     this.el.classList.remove('hidden');
     this.el.querySelectorAll<HTMLElement>('[data-enc]').forEach((b) => (b.onclick = () => {
@@ -68,7 +78,7 @@ export class EncounterCard {
   result(r: EncounterResult): void {
     const d = ENCOUNTERS[r.def];
     this.shown = r.id;
-    this.el.innerHTML = `<div class="enc-card"><div class="enc-h">${esc(d.title[ru()])}</div>${d.choices.length ? '' : `<p class="enc-text">${esc(d.text[ru()])}</p>`}
+    this.el.innerHTML = `<div class="enc-card">${this.art(r.def)}<div class="enc-h">${esc(d.title[ru()])}</div>${d.choices.length ? '' : `<p class="enc-text">${esc(d.text[ru()])}</p>`}
       <p class="enc-out">${outcomeHtml(r)}</p><div class="enc-choices"><button class="btn btn-small btn-primary" data-enc-ok>${esc(L(d.choices.length ? 'close' : 'ok'))}</button></div></div>`;
     this.el.classList.remove('hidden');
     this.el.querySelector<HTMLElement>('[data-enc-ok]')!.onclick = () => this.close();

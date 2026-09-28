@@ -6,7 +6,7 @@ import { assetUrl } from '../assets.ts';
 const SKIN = [
   'ui.frame', 'ui.plate', 'ui.button', 'ui.slot', 'ui.ring', 'ui.portrait_ring', 'ui.minimap_ring', 'ui.bar', 'ui.close',
   'ui.actionbar', 'ui.helm', 'ui.stick_base', 'tex.ebony', 'tex.chart', 'tex.panel', 'tex.parchment',
-  'bg.captain', 'bg.sunk', 'bg.prologue', 'bg.boarding', 'bg.cabin',
+  'bg.captain', 'bg.sunk', 'bg.prologue', 'bg.boarding', 'bg.cabin', 'ui.poster',
 ];
 
 export function applySkin(): void {
@@ -19,4 +19,6 @@ export function applySkin(): void {
     n++;
   }
   document.body.classList.toggle('skinned', n > 0);
+  // The wanted posters' paper (docs/12 P11): the drawn parchment stands in until it is loaded.
+  document.body.classList.toggle('has-poster', !!assetUrl('ui.poster'));
 }

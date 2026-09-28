@@ -168,6 +168,15 @@ function painted(src: HTMLCanvasElement, look: { hull: [number, number, number] 
           case 5: t = (Math.floor(u * 8) + Math.floor(v * 16)) % 2 ? look.c1 : look.c2; break;
           case 6: t = u < 0.5 ? look.c1 : look.c2; break;
           case 7: t = Math.floor(v * 10) % 2 ? [47, 134, 176] : BONE; break;
+          case 8: t = Math.floor((u + v) * 11) % 2 ? look.c1 : look.c2; break;
+          case 9: t = [206, 190, 150]; break;
+          case 10: t = Math.abs(v - 0.42) < 0.045 ? look.c1 : TAR; break;
+          case 11: {
+            // Patches of four cloths, sewn where they fell.
+            const k = (Math.floor(u * 6) * 7 + Math.floor(v * 9) * 13) % 4;
+            t = k === 0 ? look.c1 : k === 1 ? look.c2 : k === 2 ? BONE : [120, 104, 82];
+            break;
+          }
         }
         const w = cloth * 0.7, shade = lum * 1.15;
         d[i] = r + (Math.min(255, t[0] * shade) - r) * w;

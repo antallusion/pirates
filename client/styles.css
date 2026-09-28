@@ -1846,6 +1846,9 @@ body.touch #hud-region .rg-extra { display: none; }
 #encounter.hidden { display: none; }
 #encounter .enc-card { background: rgba(10, 12, 16, 0.94); border: 1px solid rgba(232, 196, 106, 0.55); border-radius: 6px; padding: 10px 12px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
 #encounter .enc-h { font-family: var(--serif); font-size: 18px; color: #e8c46a; margin-bottom: 4px; }
+/* The encounter's picture: a band across the top of the card, within its frame. */
+#encounter .enc-art { margin: -4px -6px 8px; aspect-ratio: 2.4 / 1; background: #0b0d10 center / cover no-repeat; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 4px; box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.7); }
+@media (max-height: 520px) { #encounter .enc-art { aspect-ratio: 4 / 1; margin-bottom: 6px; } }
 #encounter .enc-text, #encounter .enc-out { margin: 4px 0 8px; font-size: 14px; line-height: 1.45; color: var(--bone, #ddd); }
 #encounter .enc-out { color: #f2e6c8; }
 #encounter .enc-choices { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1923,6 +1926,8 @@ body.touch #hud-region .rg-extra { display: none; }
 .wanted-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 6px; }
 .poster { background: linear-gradient(#d9c9a0, #c7b27f); color: #2a1d10; border: 1px solid #6a5431; border-radius: 3px; padding: 6px 7px 8px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); min-width: 0; }
 .poster .po-head { font-family: var(--serif); font-weight: 700; letter-spacing: 2px; font-size: 13px; color: #5a1a10; }
+/* The painted paper, torn at the edges (docs/12 P11): no drawn border then, the shadow follows the tear. */
+body.has-poster .poster, body.has-poster .poster.po-baron { background: var(--ui-poster) center / 100% 100% no-repeat; border-color: transparent; box-shadow: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55)); padding: 12px 12px 14px; }
 .poster.po-baron { background: linear-gradient(#e2c98f, #b8914f); border-color: #8a2a1a; }
 .poster.po-baron .po-head { font-size: 11px; letter-spacing: 0.5px; }
 .poster .po-face { width: 84px; height: 84px; border: 1px solid #6a5431; overflow: hidden; background: #3a2a18; }
