@@ -62,6 +62,14 @@ def key_magenta(a: np.ndarray) -> np.ndarray:
     speck = wide & (cast > 6) & (np.abs(r - b) <= 14)
     r[speck] -= cast[speck]
     b[speck] -= cast[speck]
+    # A glow painted into the magenta (a ghostly sheen, a lure's light) comes out pink: in every half-seen pixel,
+    # and in the bright ones of a broad band round the shape, the magenta share goes entirely, leaving the glow its
+    # own colour. (Dark purples — a midnight field — are not bright, and keep theirs.)
+    cast = np.clip(np.minimum(r, b) - g, 0, None)
+    halo = solid & ~ndimage.binary_erosion(solid, iterations=40) & (np.maximum(r, b) > 140) & (cast > 12)
+    fix = (alpha < 0.95) | halo
+    r[fix] -= cast[fix]
+    b[fix] -= cast[fix]
     alpha = np.minimum(alpha, 0.5 * alpha + 0.5 * ndimage.grey_erosion(alpha, size=(3, 3)))
     out = np.dstack([np.clip(rgb, 0, 255), alpha * 255]).astype(np.uint8)
     return out
