@@ -423,5 +423,51 @@
    "icon.build_kennel_1"
   ],
   "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: sixteen separate small building dioramas laid out in a strict grid of 4 columns and 4 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all of them, bold readable silhouettes at small size. Left to right, top to bottom: 1. a timber counting-house, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 2. a stone smithy with a forge hearth, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 3. a low timber smokehouse, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 4. brick try-works with two iron pots, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 5. a dark timber hall with a whale jawbone arch over its door, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 6. a tall stone signal tower with an iron fire basket, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 7. two small timber cottages with a well, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 8. a small wooden kennel and pen, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 9. a timber counting-house fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 10. a stone smithy with a forge hearth fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 11. a low timber smokehouse fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 12. brick try-works with two iron pots fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 13. a dark timber hall with a whale jawbone arch over its door fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 14. a tall stone signal tower with an iron fire basket fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 15. two small timber cottages with a well fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 16. a small wooden kennel and pen fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm lights; low saturation. Background: flat solid pure magenta #FF00FF everywhere between and around the dioramas, no gradient, NO cast shadows on the background. NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours."
+ },
+ "residents_1": {
+  "grid": [
+   4,
+   2
+  ],
+  "mode": "tiles",
+  "px": 560,
+  "ratio": 0.8,
+  "square": false,
+  "dir": "portraits",
+  "aspect": "16:9",
+  "ids": [
+   "portrait.res_fisher_m",
+   "portrait.res_carpenter_m",
+   "portrait.res_smith_m",
+   "portrait.res_cook_m",
+   "portrait.res_cartographer_m",
+   "portrait.res_herbalist_m",
+   "portrait.res_gunner_m",
+   "portrait.res_pilot_m"
+  ],
+  "prompt": "Sheet of 8 portraits for a dark Pirate Gothic naval MMORPG, laid out in a strict grid of 4 columns and 2 rows of equal upright panels separated by thin pure black gutters. Each panel is its own realistic dark portrait, oil-painting texture over photographic realism, waist-up, three-quarter view, of a different islander of a pirate's island, the same lighting in all of them: warm amber lantern key light from below one side, cold blue moonlight rim from behind, deep chiaroscuro, rain droplets, wet skin and fabric sheen; a near-black stormy background with cold fog. Plain working clothes, heavy, worn, patched, almost black. The people, left to right, top row then bottom row: 1. a weathered fisherman with a knitted cap and a net over his shoulder. 2. a broad carpenter with sawdust in his beard and an adze on his shoulder. 3. a burly smith with soot on his face and a leather apron, tongs in hand. 4. a heavy ship's cook with a stained apron and a ladle. 5. an elderly cartographer with spectacles and a rolled chart. 6. a gaunt herbalist with bundles of dried herbs at his belt. 7. a grizzled gunner with a powder-blackened face and a linstock. 8. an old harbour pilot with a lantern and a lead line. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy. Adults, grim, grounded, realistic. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, fantasy armor, bright colors, clean new clothes, glamour makeup, glowing magic."
+ },
+ "residents_2": {
+  "grid": [
+   4,
+   2
+  ],
+  "mode": "tiles",
+  "px": 560,
+  "ratio": 0.8,
+  "square": false,
+  "dir": "portraits",
+  "aspect": "16:9",
+  "ids": [
+   "portrait.res_fisher_f",
+   "portrait.res_carpenter_f",
+   "portrait.res_smith_f",
+   "portrait.res_cook_f",
+   "portrait.res_cartographer_f",
+   "portrait.res_herbalist_f",
+   "portrait.res_gunner_f",
+   "portrait.res_pilot_f"
+  ],
+  "prompt": "Sheet of 8 portraits for a dark Pirate Gothic naval MMORPG, laid out in a strict grid of 4 columns and 2 rows of equal upright panels separated by thin pure black gutters. Each panel is its own realistic dark portrait, oil-painting texture over photographic realism, waist-up, three-quarter view, of a different islander of a pirate's island, the same lighting in all of them: warm amber lantern key light from below one side, cold blue moonlight rim from behind, deep chiaroscuro, rain droplets, wet skin and fabric sheen; a near-black stormy background with cold fog. Plain working clothes, heavy, worn, patched, almost black. The people, left to right, top row then bottom row: 1. a fisherwoman with wind-reddened cheeks, a headscarf and a basket of herring. 2. a woman carpenter with a pencil behind her ear and a coil of rope, holding a mallet. 3. a woman smith with cropped hair, a leather apron and a hammer, sparks behind her. 4. a woman cook with rolled sleeves, a stained apron and a steaming pot. 5. a woman cartographer with ink-stained fingers and a pair of brass dividers. 6. a woman herbalist with a satchel of dried herbs and a small clay pot. 7. a woman gunner with a powder horn and a smudge of soot on her cheek. 8. a woman pilot in an oilskin coat with a spyglass. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy. Adults, grim, grounded, realistic. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, fantasy armor, bright colors, clean new clothes, glamour makeup, glowing magic."
  }
 }
