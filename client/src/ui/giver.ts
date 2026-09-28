@@ -5,11 +5,10 @@ import { levelChip } from './levels.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { QuestPay } from '../../../shared/src/data/questpay.ts';
 import type { PortView, QuestPayView } from '../../../shared/src/protocol.ts';
-import { assetUrl } from '../assets.ts';
 import { dict } from '../i18n.ts';
 import { serverText } from '../lang/server.ts';
 import { askHtml } from './confirm.ts';
-import { esc, money, xpBadge } from './dom.ts';
+import { esc, money, portraitUrl, xpBadge } from './dom.ts';
 
 const EN = {
   shared: '{name} shares this quest with you',
@@ -69,7 +68,7 @@ export function paidHtml(silver: number, pay?: QuestPay, paid?: { silver: number
 /** The giver's window; resolves with the pay chosen when the captain takes the job, null when not now.
  *  `from`: the groupmate who shared it. */
 export function giverDialog(q: Offer, from?: string): Promise<QuestPay | null> {
-  const face = q.portrait ? assetUrl(`portrait.${q.portrait}`) : null;
+  const face = q.portrait ? portraitUrl(q.portrait) : null;
   const body = `${from ? `<div class="giver-shared">${esc(L('shared', { name: from }))}</div>` : ''}<div class="giver">
     ${face ? `<div class="giver-face" style="background-image:url('${face}')"></div>` : ''}
     <div class="giver-words">

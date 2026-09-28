@@ -78,8 +78,16 @@ const STAND_IN: Record<string, string> = {
   good_serpent_scale: 'mod_serpent_scale', tattoo_needle: 'role_sailmaker', storm_heart: 'weather_storm',
 };
 
+/** Faces still being painted, and who sits for them meanwhile (docs/12 P11). */
+const PORTRAIT_STAND_IN: Record<string, string> = { giver_old_needle: 'giver_hermit_f', skipper_1: 'giver_bosun_m' };
+
+/** A portrait's picture, or its stand-in's while it is being painted. */
+export function portraitUrl(id: string): string | null {
+  return assetUrl(`portrait.${id}`) ?? (PORTRAIT_STAND_IN[id] ? assetUrl(`portrait.${PORTRAIT_STAND_IN[id]}`) : null);
+}
+
 export function icon(id: string, glyph = '', cls = 'ico'): string {
-  const url = assetUrl(id.includes('.') ? id : `icon.${id}`) ?? (STAND_IN[id] ? assetUrl(`icon.${STAND_IN[id]}`) : null) ?? (id.startsWith('good_') ? assetUrl('icon.good_provisions') : null);
+  const url = (id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id.includes('.') ? id : `icon.${id}`)) ?? (STAND_IN[id] ? assetUrl(`icon.${STAND_IN[id]}`) : null) ?? (id.startsWith('good_') ? assetUrl('icon.good_provisions') : null);
   return url ? `<img class="${cls}" src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
 }
 

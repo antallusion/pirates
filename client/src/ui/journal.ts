@@ -20,7 +20,6 @@ import { BEASTS, BEAST_IDS } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { levelChip } from './levels.ts';
 import type { ClientMsg, FishingView } from '../../../shared/src/protocol.ts';
-import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
 import { FISH, FISH_IDS } from '../../../shared/src/data/fishing.ts';
@@ -28,7 +27,7 @@ import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { commonLog, dailyLog } from './daily.ts';
-import { esc, fishIcon, icon, money, xpBadge } from './dom.ts';
+import { esc, fishIcon, icon, money, portraitUrl, xpBadge } from './dom.ts';
 import { paidHtml } from './giver.ts';
 import { tasksLog } from './worldmap.ts';
 import { setTracked, trackedQuest } from './track.ts';
@@ -199,7 +198,7 @@ export class Journal {
   }
 
   private detail(q: Quest, tracked: boolean, inGroup: boolean): string {
-    const face = q.portrait ? assetUrl(`portrait.${q.portrait}`) : null;
+    const face = q.portrait ? portraitUrl(q.portrait) : null;
     const texts = q.stepTexts ?? [q.text];
     const steps = texts.map((t, i) => {
       const n = i + 1;
