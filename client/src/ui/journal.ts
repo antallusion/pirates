@@ -2,6 +2,10 @@
 // and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
 // «Follow», «Share» (in a group) and «Set aside».
 
+import { namedPirates } from '../../../shared/src/data/pirates.ts';
+import type { WantedView } from '../../../shared/src/protocol.ts';
+import { REGIONS } from '../../../shared/src/world/regions.ts';
+import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { BEASTS, BEAST_IDS } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { levelChip } from './levels.ts';
@@ -29,6 +33,13 @@ const EN = {
   fishRow: '{fish}: {n} taken, heaviest {kg} kg',
   fishUnknown: 'not yet taken',
   beasts: 'The hunt: {n} beasts taken',
+  guild: 'Hunters’ Guild: rank {rank} ({n} of {next} points)',
+  guildCaps: 'Named captains sunk: {n}',
+  guildSea: '{sea}: {n} of 3 captains — {baron}',
+  guildBaron: 'the baron hunts you',
+  guildBaronNot: 'the baron keeps hidden',
+  guildInformed: 'The informant’s word: {name} ({n} s)',
+  guildPerks: 'Rank 3: the wanted on the chart within 5 km · 5: +15% bounty · 7: the pennant · 10: the title',
   beastRow: '{beast}: {n}',
   pay: 'Pay',
   follow: 'Follow',
@@ -57,6 +68,13 @@ const RU: typeof EN = {
   fishRow: '{fish}: поймано {n}, самая тяжёлая — {kg} кг',
   fishUnknown: 'ещё не поймана',
   beasts: 'Охота: добыто зверей — {n}',
+  guild: 'Гильдия охотников: звание {rank} ({n} из {next} очков)',
+  guildCaps: 'Потоплено именных капитанов: {n}',
+  guildSea: '{sea}: капитанов {n} из 3 — {baron}',
+  guildBaron: 'барон охотится за вами',
+  guildBaronNot: 'барон прячется',
+  guildInformed: 'Слово осведомителя: {name} ({n} с)',
+  guildPerks: 'Звание 3: разыскиваемые на карте в 5 км · 5: +15% к награде · 7: вымпел · 10: титул',
   beastRow: '{beast}: {n}',
   pay: 'Плата',
   follow: 'Следовать',
@@ -97,7 +115,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${hunterLog(state.wanted)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
@@ -181,4 +199,16 @@ function beastLog(b: Partial<Record<BeastId, number>> | undefined): string {
   const ru = lang() === 'ru' ? 1 : 0;
   const total = kinds.reduce((a, id) => a + (b![id] ?? 0), 0);
   return `<div class="jr-fishing"><div class="giver-h">${esc(L('beasts', { n: total }))}</div>${kinds.map((id) => `<p class="jr-fish">${esc(L('beastRow', { beast: BEASTS[id].name[ru], n: b![id] ?? 0 }))}</p>`).join('')}</div>`;
+}
+
+/** The Hunters' Guild (docs/12 P5): the rank, the heads, each sea's way to its baron, the informant's word. */
+function hunterLog(w: WantedView | null): string {
+  if (!w || (!w.points && !w.informed)) return '';
+  const ru = lang() === 'ru' ? 1 : 0;
+  const seas = (Object.entries(w.seas) as [RegionId, number][]).filter(([, n]) => n > 0).map(([sea, n]) => `<p class="jr-fish">${esc(L('guildSea', { sea: REGIONS[sea].name, n: Math.min(3, n), baron: L(n >= 3 ? 'guildBaron' : 'guildBaronNot') }))}</p>`).join('');
+  const inf = w.informed ? namedPirates().find((p) => p.id === w.informed!.id) : undefined;
+  return `<div class="jr-fishing"><div class="giver-h">${esc(L('guild', { rank: w.rank, n: w.points, next: w.next }))}</div>
+    <p class="jr-fish">${esc(L('guildCaps', { n: w.captains }))}</p>${seas}
+    ${inf ? `<p class="jr-fish">${esc(L('guildInformed', { name: inf.name[ru], n: w.informed!.sec }))}</p>` : ''}
+    <p class="jr-fish muted">${esc(L('guildPerks'))}</p></div>`;
 }

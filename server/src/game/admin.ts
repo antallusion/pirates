@@ -11,6 +11,8 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { hunterRank, namedPirates, pirateById } from '../../../shared/src/data/pirates.ts';
+import { putToSea, sanitizeHunter } from './wanted.ts';
 import { BEASTS } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { spawnGroup, spawnWhiteOrca } from './beasts.ts';
@@ -208,6 +210,22 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       best.hull = 0;
       game.beginSinking(best);
       return `${best.name} slain ${Math.round(bd)} m off.`;
+    }
+    case 'named': {
+      // A named pirate put to sea near you (docs/12 P5): /named [id] — or the list of your sea's.
+      const id = args[0] ?? '';
+      const np = pirateById(id);
+      if (!np) return namedPirates().filter((x) => x.region === ship.region).map((x) => `${x.id} ${x.name[0]} ⚓${x.level}`).join(' · ') || 'No named pirates in these waters.';
+      const got = putToSea(game, np, ship);
+      return got ? `${np.name[0]} puts to sea ${Math.round(Math.hypot(got.state.x - ship.state.x, got.state.y - ship.state.y))} m off.` : 'No open water for her here.';
+    }
+    case 'hunter': {
+      // The Hunters' Guild: /hunter <points> (and three captains of this sea sunk, for its baron).
+      const p = s.profile!;
+      sanitizeHunter(p);
+      p.hunter!.points = num(0, 0);
+      p.hunter!.seas[ship.region] = Math.max(p.hunter!.seas[ship.region] ?? 0, 3);
+      return `Hunter's points ${p.hunter!.points}, rank ${hunterRank(p.hunter!.points)}.`;
     }
     case 'beast': {
       // A beast of the sea by the ship (docs/12 P4): /beast <kind> [level] [n].

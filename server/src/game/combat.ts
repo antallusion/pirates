@@ -1,6 +1,7 @@
 // Naval combat: broadsides, ballistics, hit resolution with angle-of-impact and subsystem damage,
 // crimes and kill credit. All numbers come from shared data; nothing here trusts the client.
 
+import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
 import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, aimFocus } from '../../../shared/src/data/gunnery.ts';
 import { onboardingVolley } from './onboarding.ts';
@@ -155,7 +156,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const hiding = ship.hasFlag('hidden') || isNight(game.now) || game.weatherOf(ship) === 'fog';
   const shadowStrike = !!target && ship.hasFlag('shadow_strike') && hiding && !target.attackers.has(ship.id) && !ship.attackers.has(target.id) ? 1.3 : 1;
   // Night Raider: the larger of the two counts.
-  const shadow = Math.max(shadowStrike, nightRaider(game, ship, target, hiding));
+  const shadow = Math.max(shadowStrike, nightRaider(game, ship, target, hiding)) * (ship.hasFlag('false_bulwark') && game.now - ship.lastCombat > 60 ? 1.25 : 1); // the false bulwark drops: the first broadside strikes harder
   if (shadowStrike > 1 && target) {
     ship.addEffect({ id: 'shadow', until: game.now + 4, flags: ['hidden'] }, game.now);
     const tb = game.npcs.get(target.id);
@@ -317,6 +318,7 @@ export function stepProjectiles(game: Game, dt: number): void {
       if (!p.skipped && game.ships.get(p.owner)?.hasFlag('skipping_shot') && skip(game, p)) continue;
       volleyBall(game, p, null);
       siegeImpact(game, p.x, p.y, p.damage, p.owner, false); // shot falling on a besieged island
+      lairImpact(game, p.x, p.y, p.damage, p.owner); // or on a pirate lair's battery (docs/12 P5)
       continue; // splash (clients simulate splashes themselves)
     }
     if (isLand(game.world, p.x, p.y)) {

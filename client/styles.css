@@ -1903,3 +1903,27 @@ body.touch #hud-region .rg-extra { display: none; }
   #hud-hunt .hp-row { margin: 2px 0; }
   #hud-hunt .fp-acts { margin-top: 3px; }
 }
+/* The board of the wanted (docs/12 P5): posters on a tavern wall. */
+.wanted-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 6px; }
+.poster { background: linear-gradient(#d9c9a0, #c7b27f); color: #2a1d10; border: 1px solid #6a5431; border-radius: 3px; padding: 6px 7px 8px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); min-width: 0; }
+.poster .po-head { font-family: var(--serif); font-weight: 700; letter-spacing: 2px; font-size: 13px; color: #5a1a10; }
+.poster.po-baron { background: linear-gradient(#e2c98f, #b8914f); border-color: #8a2a1a; }
+.poster.po-baron .po-head { font-size: 11px; letter-spacing: 0.5px; }
+.poster .po-face { width: 84px; height: 84px; border: 1px solid #6a5431; overflow: hidden; background: #3a2a18; }
+.poster .po-face img, .poster .po-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.poster .po-name { font-family: var(--serif); font-size: 14px; line-height: 1.15; overflow-wrap: anywhere; }
+.poster .po-ship { font-size: 11px; }
+.poster .po-bounty { font-weight: 700; font-size: 13px; color: #6a1a0e; }
+.poster .po-seen, .poster .po-habits, .poster .po-lair { font-size: 10.5px; color: #4d3a22 !important; line-height: 1.2; }
+.poster .btn { margin-top: 3px; width: 100%; }
+.poster.po-down { filter: grayscale(0.7) brightness(0.8); }
+.tg-wanted { color: #e0776b; font-weight: 700; }
+.poster .po-bounty .money { color: #6a1a0e; }
+.poster .po-bounty .money img { filter: brightness(0.75) contrast(1.2); }
+@media (max-width: 480px) {
+  .wanted-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .poster { padding: 5px 5px 6px; }
+  .poster .po-face { width: 64px; height: 64px; }
+  .poster .po-name { font-size: 13px; }
+  .poster .po-habits { display: none; }
+}

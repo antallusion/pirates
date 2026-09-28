@@ -458,7 +458,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   }
 
   // Fighters.
-  const lowHull = ship.hull < ship.stats.hullMax * 0.22;
+  const lowHull = ship.hull < ship.stats.hullMax * (ship.fleeAt ?? 0.22); // a named coward runs sooner, a brute never
   if (role === 'pirate' && lowHull && prey) {
     const away = headingOf(ship.state.x - (prey as ShipEntity).state.x, ship.state.y - (prey as ShipEntity).state.y);
     steer(game, ship, brain, away, 1);

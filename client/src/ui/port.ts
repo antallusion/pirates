@@ -1,5 +1,7 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { namedPirates } from '../../../shared/src/data/pirates.ts';
+import type { WantedPoster } from '../../../shared/src/protocol.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { ask, tell } from './confirm.ts';
@@ -241,6 +243,8 @@ export class PortScreen {
       }
       case 'licence':
         return this.send({ t: 'licence' });
+      case 'informant':
+        return this.send({ t: 'wanted', action: 'informant', id: d.id! });
       case 'captive':
         return this.send({ t: 'captive', index: Number(d.i), mode: d.mode as 'ransom' });
       case 'rights':
@@ -431,8 +435,9 @@ ${orders}${berths}</div>` : ''}`;
     const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(personName(o.name))} <span class="muted">— ${esc(L('officer.level', { role: lang() === 'ru' ? OFFICER_DEFS[o.role].name.toLowerCase() : OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? esc(L('officer.taken')) : `${esc(L('btn.hire'))} ${money(o.price)}`}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
+    const board = view.wanted ? wantedBoardHtml(view.wanted) : '';
     const recs = view.fishRecords?.length ? `<div class="card fish-records"><h4 class="card-h">${icon('build_fishing_village', '', 'ico-md')}${esc(L('fish.records'))}</h4>${view.fishRecords.map((r) => `<p class="fish-rec">${esc(L('fish.recordRow', { fish: FISH[r.fish].name[lang() === 'ru' ? 1 : 0], kg: r.kg.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), name: r.name }))}</p>`).join('')}</div>` : '';
-    return `${recs}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
+    return `${board}${recs}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
         <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}
         <button class="btn btn-small btn-danger hire-wide" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>
@@ -622,4 +627,30 @@ function refitCard(r: RefitView, name: string): string {
     <p class="muted refit-note">${esc(L('refit.hint'))}</p>
     ${r.blocked ? `<p class="refit-why">${esc(serverText(r.blocked))}</p>` : ''}
     <button class="btn btn-primary" data-act="refit" ${r.blocked ? 'disabled' : ''}>${esc(L('refit.go', { n: n.to }))} — ${money(n.silver)}</button></div>`;
+}
+
+/** The board of the wanted (docs/12 P5): a poster for each named pirate of these waters, the baron on top. */
+function wantedBoardHtml(list: WantedPoster[]): string {
+  if (!list.length) return `<div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('wanted.board'))}</h4><p class="muted">${esc(L('wanted.none'))}</p></div>`;
+  const ru = lang() === 'ru' ? 1 : 0;
+  const roster = new Map(namedPirates().map((p) => [p.id, p]));
+  const posters = list.map((w) => {
+    const np = roster.get(w.id);
+    const name = np ? np.name[ru] : w.name;
+    const ship = np ? np.ship[ru] : w.ship;
+    const where = w.seen ? (w.atSea && w.seen.ago <= 1 ? L('wanted.seenNow', { region: REGIONS[w.seen.region].name }) : L('wanted.seen', { ago: w.seen.ago, region: REGIONS[w.seen.region].name })) : L('wanted.unseen');
+    const habits = [L(`wanted.time.${w.time}` as 'wanted.time.any'), L(`wanted.weather.${w.weather}` as 'wanted.weather.any'), L(`wanted.trick.${w.trick}` as 'wanted.trick.fog'), L(`wanted.temper.${w.temper}` as 'wanted.temper.coward')].filter(Boolean).join(' · ');
+    return `<div class="poster${w.down ? ' po-down' : ''}${w.baron ? ' po-baron' : ''}">
+      <div class="po-head">${esc(w.baron ? L('wanted.baron') : L('wanted.head'))}</div>
+      <div class="po-face" style="filter: sepia(0.55) hue-rotate(${w.hue}deg) saturate(0.8)">${icon(`portrait.${w.portrait}`, '', 'po-img')}</div>
+      <b class="po-name">${esc(name)}</b>
+      <div class="po-ship">«${esc(ship)}» · ⚓${w.level}</div>
+      <div class="po-bounty">${esc(L('wanted.bounty', { n: w.bounty.toLocaleString(ru ? 'ru-RU' : 'en-GB') }))}</div>
+      <div class="po-seen muted">${esc(w.down ? L('wanted.down') : where)}</div>
+      <div class="po-habits muted">${esc(habits)}</div>
+      ${w.lair ? `<div class="po-lair muted">${esc(L('wanted.lair', { island: placeName(w.lair) }))}</div>` : ''}
+      <button class="btn btn-small" data-act="informant" data-id="${esc(w.id)}" ${w.atSea && !w.down ? '' : 'disabled'}>${esc(L('wanted.informant', { cost: w.informant }))}</button>
+    </div>`;
+  }).join('');
+  return `<div class="card wanted-card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('wanted.board'))}</h4><p class="muted">${esc(L('wanted.hint'))}</p><div class="wanted-grid">${posters}</div></div>`;
 }

@@ -1,6 +1,7 @@
 // Captain abilities. Data lives in shared/src/data/captains.ts; this module implements the
 // non-trivial effects (area damage, delayed strikes, summons, reveals). Simple buffs are pure data.
 
+import { lairImpact } from './wanted.ts';
 import { findAbility } from '../../../shared/src/data/captains.ts';
 import { dist, headingOf } from '../../../shared/src/math.ts';
 import { applyDamage, mastWreck } from './combat.ts';
@@ -158,6 +159,7 @@ export function stepStrikes(game: Game): void {
         const a = game.rng.float() * Math.PI * 2, r = Math.sqrt(game.rng.float()) * s.radius;
         const sx = s.x + Math.sin(a) * r, sy = s.y - Math.cos(a) * r;
         siegeImpact(game, sx, sy, s.hull, s.owner, true); // mortar shells on a besieged island
+        lairImpact(game, sx, sy, s.hull, s.owner);
         game.forShipsNear(sx, sy, 60, (o) => {
           if (o.id === s.owner || !o.alive) return;
           if (dist(o.state.x, o.state.y, sx, sy) < o.stats.length / 2 + 12) applyDamage(game, o, { hull: s.hull, crew: 1, morale: 2 }, owner);
@@ -185,6 +187,7 @@ export function stepStrikes(game: Game): void {
       game.emit({ k: 'fx', fx: 'drowned_hands', x: Math.round(s.x), y: Math.round(s.y), r: s.radius }, s.x, s.y);
     } else {
       siegeImpact(game, s.x, s.y, s.hull, s.owner, true);
+      lairImpact(game, s.x, s.y, s.hull, s.owner);
       game.forShipsNear(s.x, s.y, s.radius + 40, (o) => {
         if (o.id === s.owner || !o.alive) return;
         if (dist(o.state.x, o.state.y, s.x, s.y) > s.radius + o.stats.length / 3) return;

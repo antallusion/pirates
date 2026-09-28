@@ -218,6 +218,10 @@ export class ShipEntity {
   yardOf = '';
   /** An elite ⚔ built for a company (group contracts, barons): hull ×2.5, guns ×1.5 (canon D12). */
   elite = false;
+  /** A named pirate (docs/12 P5): her id on the roster; one of her lieutenants; the hull at which she runs (0: never). */
+  named?: string;
+  namedMate?: string;
+  fleeAt?: number;
   /** The captain's own gear (docs/12 P1; the ship's is in her loadout). */
   worn: Item[] = [];
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
@@ -360,7 +364,7 @@ export class ShipEntity {
     return {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
-      isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined,
+      isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined, named: this.named ?? this.namedMate,
       title: this.title ?? undefined, pennant: this.pennant ?? undefined,
     };
   }

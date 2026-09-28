@@ -104,6 +104,8 @@ export type ClientMsg =
   /** The hunt (docs/12 P4): pay out the line, cut it, flense a carcass alongside. */
   | { t: 'hunt'; action: 'slack' | 'cut' }
   | { t: 'hunt'; action: 'flense'; id: number }
+  /** The wanted (docs/12 P5): a tavern informant's word on a named pirate. */
+  | { t: 'wanted'; action: 'informant'; id: string }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -550,6 +552,8 @@ export interface PortView {
     /** The pay to choose from (docs/11 P6). */ pays?: QuestPayView;
     /** A group contract: the company it is made for. */ group?: number }[];
   captainsHouse: boolean;
+  /** The board of the wanted (docs/12 P5). */
+  wanted?: WantedPoster[];
   /** The sea's heaviest catches (docs/12 P3): the tavern's board. */
   fishRecords?: { fish: FishId; name: string; kg: number }[];
   oathOffer: 'code' | 'marque' | null;
@@ -604,6 +608,8 @@ export interface ShipInfo {
   shipLevel?: number;
   /** A strong ship built for a company (group contracts, barons): the gold frame of an elite. */
   elite?: boolean;
+  /** A named pirate's id on the roster (docs/12 P5). */
+  named?: string;
 }
 
 export interface LootInfo {
@@ -969,6 +975,7 @@ export type ServerMsg =
   | { t: 'shoals'; list: ShoalView[] }
   | { t: 'hunt'; view: HuntView | null }
   | { t: 'carcasses'; list: CarcassView[] }
+  | { t: 'wanted'; view: WantedView }
   | { t: 'fishfight'; view: FishFightView | null }
   | { t: 'encounter'; view: EncounterView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
@@ -1054,6 +1061,43 @@ export interface RefitView {
 }
 
 /** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+/** A poster on the board of the wanted (docs/12 P5). */
+export interface WantedPoster {
+  id: string;
+  name: string;
+  ship: string;
+  level: number;
+  cls: ShipClassId;
+  bounty: number;
+  portrait: string;
+  hue: number;
+  baron: boolean;
+  trick: string;
+  temper: string;
+  time: string;
+  weather: string;
+  /** Sunk, and not yet back under a new flag. */
+  down: boolean;
+  seen: { region: RegionId; ago: number } | null;
+  atSea: boolean;
+  informant: number;
+  lair: string | null;
+}
+
+/** A hunter's own (docs/12 P5): the guild's rank, the informant's word, the wanted in sight, the trail of rogues. */
+export interface WantedView {
+  points: number;
+  rank: number;
+  next: number;
+  captains: number;
+  seas: Partial<Record<RegionId, number>>;
+  informed: { id: string; x: number; y: number; sec: number } | null;
+  sight: { id: string; x: number; y: number }[];
+  rogues: { name: string; x: number; y: number; r: number }[];
+  /** Lairs within a few miles: where, how much of the battery stands (0..1), open to a landing. */
+  lairs: { id: string; x: number; y: number; hp: number; open: boolean }[];
+}
+
 /** The hunt for one captain (docs/12 P4): the beast on her line, the carcass she flenses, one alongside to flense. */
 export interface HuntView {
   line?: { beast: BeastId; level: number; tension: number; stamina: number; spent: boolean; snap: number; slack: number; good: [number, number]; payIn: number; hull: number };

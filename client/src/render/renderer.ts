@@ -3,6 +3,7 @@
 // projectiles & particles → darkness/light pass → fog/rain → screen-space overlays.
 // Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
 
+import { namedLabel } from '../ui/hud.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { drawCarcass } from './beasts.ts';
@@ -2424,10 +2425,11 @@ export class Renderer {
     g.font = '600 11px Inter, sans-serif';
     // The faction's sign leads every NPC's name (§11.1): never the lantern's colour alone.
     // NPC ships' names read in the player's language, as in every toast about them; captains name their own.
-    const label = info.isPlayer ? `${info.captainName} · ${info.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${placeName(info.name)}`;
+    const named = info.named ? namedLabel(info.named) : null;
+    const label = info.isPlayer ? `${info.captainName} · ${info.name}` : named ? `☠ ${named.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${placeName(info.name)}`;
     const cb = settings().colorblind;
     const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
-    const tag = info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' ');
+    const tag = named ? named.tag : info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' ');
     // Her level (canon D12) leads the name as WoW's does: the number in a frame coloured by how far she stands above
     // your own ship, a gold frame for an elite built for a company, a skull when no shot of yours would tell.
     const threat = info.shipLevel ? levelThreat(state, info.classId, info.shipLevel) : null;

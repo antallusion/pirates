@@ -268,7 +268,7 @@ export type ChaserEnd = 'bow' | 'stern';
 // ---------------------------------------------------------------- Shipyard modules
 
 export type ModuleId = 'hull_plating' | 'sail_plan' | 'rudder' | 'hold_expansion' | 'crew_quarters' | 'figurehead_kraken' | 'ghost_timbers'
-  | 'choir_bell' | 'lightning_rod'
+  | 'choir_bell' | 'lightning_rod' | 'false_bulwark'
   // Plans taken from world bosses (docs/02 §11.A.4).
   | 'bone_culverin' | 'kraken_beak' | 'lantern_cannon' | 'serpent_scale' | 'crown_old_pattern' | 'galleass_sweeps' | 'storm_glass' | 'lantern_gland';
 
@@ -294,6 +294,7 @@ export const MODULES: Record<ModuleId, ModuleDef> = {
   crew_quarters: { id: 'crew_quarters', name: 'Crew Quarters', maxLevel: 2, baseCost: 850, description: 'More hammocks, more hands.', perLevel: { crewMul: 0.12 } },
   ghost_timbers: { id: 'ghost_timbers', name: 'Ghost Timbers', maxLevel: 1, baseCost: 2200, blueprint: true, description: 'Pale wood from the boneyards of the Expanse, fitted to the plans of a ship that should not float. Light, quiet, uncanny.', perLevel: { speedMul: 0.04, sailHpMul: 0.1, signature: -0.06 } },
   choir_bell: { id: 'choir_bell', name: 'Choir Bell', maxLevel: 1, baseCost: 500, flags: ['choir_bell'], description: 'A bronze bell of the Choir on the forecastle. Its toll drowns the Song of the Drowned Whale for every ship within 400 m.', perLevel: {} },
+  false_bulwark: { id: 'false_bulwark', name: 'False Bulwark', maxLevel: 1, baseCost: 900, flags: ['false_bulwark'], description: 'Painted canvas over the gun ports: to a pirate she is a fat merchant — a full hold draws the named ones — and her first broadside out of a minute\'s quiet strikes a quarter harder.', perLevel: {} },
   lightning_rod: { id: 'lightning_rod', name: 'Lightning Rod', maxLevel: 1, baseCost: 450, flags: ['lightning_rod'], description: 'Copper down the mainmast to the sea: lightning strikes do 60% less damage.', perLevel: {} },
   bone_culverin: { id: 'bone_culverin', name: 'Bone Culverins', maxLevel: 1, baseCost: 3800, blueprint: true, mods: { gunDamageMul: 0.06, rangeMul: 0.05 }, description: 'Barrels bored from leviathan bone, to plans taken from its hoard: +6% gun damage, +5% range.', perLevel: {} },
   kraken_beak: { id: 'kraken_beak', name: "Kraken's Beak", maxLevel: 1, baseCost: 3200, blueprint: true, mods: { ramDealt: 0.35, ramTaken: -0.2 }, description: 'The beak of a Kraken sheathed on the stem: rams +35%, ramming damage taken −20%.', perLevel: {} },

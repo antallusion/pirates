@@ -2,6 +2,7 @@
 // grove, mine, pearl bank, shrine). It takes time, leaves the ship anchored and exposed, and can cost lives.
 // Features restock after a while, so islands stay worth revisiting. Rumours in taverns point to them.
 
+import { lairIsland, lairLanding } from './wanted.ts';
 import { raiseHull, salvageTarget } from './bridgefx.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -68,7 +69,7 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
     const d = Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2);
     if (d > LAND_RANGE || d >= bd) continue;
     // The island's features first, then her people and beasts.
-    const here: string[] = [...is.features, ...lifeOf(is).map((x) => x.kind)];
+    const here: string[] = [...is.features, ...lifeOf(is).map((x) => x.kind), ...(lairIsland(game, is.id) ? ['pirate_camp'] : [])];
     for (const f of here) {
       if (!LANDABLE.includes(f as LandableFeature)) continue;
       const t = p.explored[exploredKey(is.id, f as LandableFeature)] ?? -Infinity;
@@ -185,6 +186,8 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   const p = s.profile!;
   const rng = game.rng;
   const strange = REGIONS[island.region].strangeness;
+  // A named pirate's lair (docs/12 P5): its battery drives the boats off, or, silenced, the lair is stormed.
+  if (feature === 'pirate_camp' && lairLanding(game, s, island)) return;
   p.explored[exploredKey(island.id, feature)] = game.now;
   const got: string[] = [];
   const give = (good: GoodId, lo: number, hi: number) => {

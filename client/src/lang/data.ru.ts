@@ -734,4 +734,6 @@ export const DATA_RU_CORE: Record<string, string> = {
   "goods.GOODS.serpent_scale.description": "Чешуя морского змея, твёрдая, как железо, и зелёная, как бутылочное стекло.",
   "shipbuild.FIGUREHEADS.fh_white_orca.name": "Белая касатка",
   "shipbuild.FIGUREHEADS.fh_white_orca.description": "+4% к скорости; касатки никогда не нападают первыми; +10% урона по морским зверям. Взята у Белой касатки.",
+  "ships.MODULES.false_bulwark.name": "Фальшборт",
+  "ships.MODULES.false_bulwark.description": "Раскрашенная парусина поверх орудийных портов: для пирата это жирный купец — полный трюм приманивает именных, — а её первый залп после минуты тишины бьёт на четверть сильнее.",
 };

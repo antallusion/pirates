@@ -1,6 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { pirateById } from '../../../shared/src/data/pirates.ts';
 import { BEASTS, beastOfClass, hullNoise, noiseBand } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
@@ -518,6 +519,46 @@ export class Hud {
       g.fillText('?', tx(sg.x), ty(sg.y) + 4);
     }
     g.lineWidth = 1;
+    // The wanted (docs/12 P5): the informant's mark (at the rim when beyond the dial), the pirates a ranked hunter
+    // sees, the circles about wanted captains for a licensed hunter, and the lairs with their batteries.
+    const wantedV = state.wanted;
+    if (wantedV) {
+      const skull = (x: number, y: number, col: string, size: number) => {
+        g.font = `700 ${size}px Inter, sans-serif`;
+        g.lineWidth = 3;
+        g.strokeStyle = 'rgba(0,0,0,0.85)';
+        g.strokeText('☠', x, y + size / 3);
+        g.fillStyle = col;
+        g.fillText('☠', x, y + size / 3);
+      };
+      g.setLineDash([4, 3]);
+      g.strokeStyle = 'rgba(224,90,70,0.8)';
+      g.lineWidth = 1.2;
+      for (const r of wantedV.rogues) {
+        g.beginPath();
+        g.arc(tx(r.x), ty(r.y), Math.max(6, r.r * k), 0, Math.PI * 2);
+        g.stroke();
+      }
+      g.setLineDash([]);
+      for (const l of wantedV.lairs) {
+        const lx = tx(l.x), ly = ty(l.y);
+        if (Math.max(Math.abs(lx - W / 2), Math.abs(ly - H / 2)) > W / 2 - 6) continue;
+        g.fillStyle = l.open ? '#e8c46a' : l.hp > 0 ? '#b0302a' : '#777';
+        g.fillRect(lx - 3, ly - 3, 6, 6);
+      }
+      for (const sp of wantedV.sight) {
+        const sx = tx(sp.x), sy = ty(sp.y);
+        if (Math.max(Math.abs(sx - W / 2), Math.abs(sy - H / 2)) > W / 2 - 6) continue;
+        skull(sx, sy, '#e05a46', 11);
+      }
+      if (wantedV.informed) {
+        const dx = wantedV.informed.x - own.x, dy = wantedV.informed.y - own.y;
+        if (Math.hypot(dx, dy) * k < W / 2 - 8) skull(tx(wantedV.informed.x), ty(wantedV.informed.y), '#ff6a4a', 14);
+        else rim(Math.atan2(dx, -dy), '#ff6a4a');
+      }
+      g.lineWidth = 1;
+      g.font = '700 11px Inter, sans-serif';
+    }
     // The followed quest's goal (docs/11 P6): a gold diamond on the chart, or at the rim toward it.
     const qp = questPointer(trackedQuest(self?.quests), own.x, own.y, state.region);
     if (qp) {
@@ -791,7 +832,8 @@ export class Hud {
     this.lastTargetKey = key;
     el.classList.remove('hidden');
     const beast = beastOfClass(info.classId);
-    const name = beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : info.isPlayer ? `${info.captainName} · ${placeName(info.name)}` : placeName(info.name);
+    const named = info.named ? namedLabel(info.named) : null;
+    const name = beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : named ? named.name : info.isPlayer ? `${info.captainName} · ${placeName(info.name)}` : placeName(info.name);
     const role = info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
     const bar = (k: string, v: number) => `<span class="tg-bar tg-${k}"><i style="width:${pct(clamp(v, 0, 1))}"></i></span>`;
     if (beast) {
@@ -808,7 +850,7 @@ export class Hud {
     }
     el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
     el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
-      <div class="tg-sub muted">${esc([cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
+      <div class="tg-sub muted">${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
       <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}</div>`;
     el.onclick = info.isPlayer ? () => this.onTargetTap(info.captainName) : null;
@@ -1043,4 +1085,15 @@ function keyChip(a: Action): string {
 function keyless(s: string): string {
   // "[T]", "(T)", "(Y → Company)": a touch screen has no keys to name.
   return document.body.classList.contains('touch') ? s.replace(/\[[^\]]*\]\s*/g, '').replace(/\s*\((?:[A-Z0-9]{1,3}|[^()]*→[^()]*)\)/g, '').trim() : s;
+}
+
+/** A named pirate (docs/12 P5) or one of her lieutenants ("id#n"): the name in the player's tongue and the tag. */
+export function namedLabel(named: string): { name: string; tag: string } | null {
+  const [id, mate] = named.split('#');
+  const np = pirateById(id);
+  if (!np) return null;
+  const ru = lang() === 'ru' ? 1 : 0;
+  if (mate !== undefined) return { name: np.lieutenants[Number(mate)]?.name[ru] ?? np.name[ru], tag: L('tg.wantedMate') };
+  const n = np.bounty.toLocaleString(ru ? 'ru-RU' : 'en-GB');
+  return { name: np.name[ru], tag: np.baron ? L('tg.baron', { n }) : L('tg.wanted', { n }) };
 }
