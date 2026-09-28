@@ -5,8 +5,9 @@
 A like family (the tattoos, the catch, the goods and pets, the beasts) is painted as one sheet so the set is of one hand
 (docs/06 §17.4). Two kinds of sheet:
 
-  tiles  — opaque square tiles in a grid with dark gutters; the gutters are found as the darkest bands near each
-           expected cut, each tile is trimmed a little inside them and saved opaque at `px`.
+  tiles  — opaque tiles in a grid with dark gutters; the gutters are found as the darkest bands near each expected
+           cut, each tile is trimmed a little inside them and saved opaque, `px` high, `ratio` (width / height, 1 by
+           default) wide.
   keyed  — separate objects on flat magenta; the cuts are the emptiest bands near each expected cut, each cell is keyed
            (with its fringe), trimmed to what is painted in it and saved on transparency: set square on a `px` canvas
            for icons, or at its own shape with the longest side `px` for sprites.
@@ -76,9 +77,12 @@ def main(sheet_name: str, stem: str) -> None:
         if sh['mode'] == 'tiles':
             pad = round(min(x1 - x0, y1 - y0) * 0.04)
             tile = im.crop((x0 + pad, y0 + pad, x1 - pad, y1 - pad))
-            side = min(tile.size)
-            tile = tile.crop(((tile.width - side) // 2, (tile.height - side) // 2, (tile.width - side) // 2 + side, (tile.height - side) // 2 + side))
-            out = tile.resize((px, px), Image.LANCZOS)
+            # The tile's shape: square icons, or upright panels (portraits) at `ratio` = width / height.
+            ratio = sh.get('ratio', 1)
+            w = min(tile.width, round(tile.height * ratio))
+            h = round(w / ratio)
+            tile = tile.crop(((tile.width - w) // 2, (tile.height - h) // 2, (tile.width - w) // 2 + w, (tile.height - h) // 2 + h))
+            out = tile.resize((round(px * ratio), px), Image.LANCZOS)
         else:
             cell = np.array(im.crop((x0, y0, x1, y1)))
             alpha = cell[:, :, 3] > 24
