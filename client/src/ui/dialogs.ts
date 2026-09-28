@@ -1,5 +1,6 @@
 // Boarding plunder, shipwreck, ship/cargo and help dialogs.
 
+import { bindCompanion, companionCard } from './companion.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { ask } from './confirm.ts';
 import { placeName } from './maps.ts';
@@ -157,8 +158,10 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
         <div class="forge-grid"><button class="btn btn-small" data-craft="round">${icon('ammo_round', '', 'ico-sm')}${esc(L('ship.forgeRound'))}</button><button class="btn btn-small" data-craft="chain">${icon('ammo_chain', '', 'ico-sm')}${esc(L('ship.forgeChain'))}</button><button class="btn btn-small" data-craft="grape">${icon('ammo_grape', '', 'ico-sm')}${esc(L('ship.forgeGrape'))}</button><button class="btn btn-small" data-craft="planks">${icon('good_planks', '', 'ico-sm')}${esc(L('ship.forgePlanks'))}</button></div></div>` : ''}
     </div><div>
       <h3 class="title-sm" style="font-size:20px">${esc(L('ship.contracts'))}</h3>${self.contracts.map((c) => `<div class="card quest-card small">${icon(c.kind === 'bounty' ? 'wanted' : c.kind === 'delivery' && c.good ? `good_${c.good}` : 'map_contract', '', 'quest-ico')}<div class="quest-body"><b>${esc(serverText(c.title))}</b><div class="reward">${money(c.reward)}${xpBadge(c.xp)}</div></div></div>`).join('') || `<p class="muted">${esc(L('ship.noContracts'))}</p>`}
+      ${companionCard(state)}
     </div></div></div>`;
   root.querySelector<HTMLElement>('[data-open-gear]')?.addEventListener('click', () => openGear?.());
+  if (send) bindCompanion(root, send);
   root.querySelectorAll<HTMLElement>('[data-craft]').forEach((el) => (el.onclick = () => send?.({ t: 'craft', recipe: el.dataset.craft as 'round', n: 10 })));
   root.querySelectorAll<HTMLElement>('[data-dump]').forEach((el) => (el.onclick = () => {
     const g = el.dataset.dump as GoodId;

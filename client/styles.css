@@ -2027,3 +2027,15 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .jr-nemesis .nem-rank { color: #e8c46a; font-size: 12px; }
 .poster.po-nemesis { box-shadow: 0 0 0 2px #8a1a0e, 0 2px 8px rgba(0,0,0,0.6); }
 .poster .po-stamp { font: 700 min(10px, 6cqi) var(--sans); color: #fff; background: #8a1a0e; padding: 1px 5px; border-radius: 2px; letter-spacing: 0.04em; max-width: 100%; overflow-wrap: anywhere; }
+/* The orca calf (docs/12 P10 #2). */
+.cmp-card .cmp-lv { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.cmp-card .cmp-lv .bar { flex: 1; min-width: 60px; }
+.cmp-card .cmp-does { font-size: 12px; margin: 6px 0; }
+.cmp-card .cmp-name { display: flex; gap: 6px; margin-bottom: 6px; }
+.cmp-card .cmp-name .field { flex: 1; min-width: 0; }
+.cmp-card .cmp-h { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.cmp-card .cmp-h.on { background: rgba(232,196,106,0.06); }
+.cmp-card .cmp-h-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 12px; }
+.cmp-card .cmp-h-t b { font-size: 13px; }
+.cmp-card .cmp-cost { font-size: 11px; color: var(--fog, #9aa); }
+.cmp-card .cmp-forge { font-size: 11px; margin: 6px 0 0; }

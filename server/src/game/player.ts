@@ -1,5 +1,7 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { CompanionRec } from './companion.ts';
+import type { PetId } from '../../../shared/src/data/companions.ts';
 import type { NemesisRec } from './nemesis.ts';
 import type { TattooProfile } from './tattoos.ts';
 import type { PiracyProfile } from './raiding.ts';
@@ -179,6 +181,9 @@ export interface Profile {
   /** One's own island (docs/12 P7): when home was last sailed for; souls waiting aboard to settle there. */
   homeAt?: number;
   refugees?: number;
+  /** The White Orca's calf in her wake (docs/12 P10 #2) and the ship's pets (#3). */
+  companion?: CompanionRec | null;
+  pets?: { owned: PetId[]; deck: PetId | null };
   /** The named pirates who hold a grudge against her, and the heads of those she settled with (docs/12 P10 #1). */
   nemeses?: Record<string, NemesisRec>;
   nemesisHeads?: number;

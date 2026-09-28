@@ -3,7 +3,7 @@
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
 import { setNemeses } from './ui/nemesis.ts';
-import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView } from '../../shared/src/protocol.ts';
+import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight } from '../../shared/src/constants.ts';
@@ -106,6 +106,9 @@ export class ClientState {
   caravanSlots = 0;
   /** Tattoos and a chain's reward waiting to be chosen (docs/12 P9). */
   tattoos: TattooView | null = null;
+  /** The orca calf and the companions of the ships near (docs/12 P10 #2–3). */
+  companion: CompanionView | null = null;
+  pets = new Map<number, PetView>();
   choice: { quest: string; items: Item[] } | null = null;
   tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
@@ -294,6 +297,12 @@ export class ClientState {
         break;
       case 'tattoos':
         this.tattoos = m.view;
+        break;
+      case 'companion':
+        this.companion = m.view;
+        break;
+      case 'pets':
+        this.pets = new Map(m.list.map((x) => [x.ship, x]));
         break;
       case 'choice':
         this.choice = m.view;

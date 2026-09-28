@@ -6,7 +6,8 @@
 import { namedLabel } from '../ui/hud.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
-import { drawCarcass } from './beasts.ts';
+import { drawBeast, drawCarcass } from './beasts.ts';
+import { calfLength } from '../../../shared/src/data/companions.ts';
 import { drawShoals, drawSights } from './sights.ts';
 import { THREAT_COLOR, combatLevelOf, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import type { Threat } from '../../../shared/src/data/shiplevel.ts';
@@ -382,6 +383,7 @@ export class Renderer {
     this.drawDuelRing(state);
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, false); // no pulsing zones when motion is reduced
+    this.drawCompanions(state, ships);
     for (const s of ships) this.drawShip(s, state);
     this.drawTethers(state, ships);
     this.drawBalls();
@@ -2321,6 +2323,31 @@ export class Renderer {
     }
     void state;
     void side;
+  }
+
+  /** The orca calves in their captains' wakes (docs/12 P10 #2): on the starboard quarter, surfacing and diving. */
+  private drawCompanions(state: ClientState, ships: DrawShip[]): void {
+    const g = this.g;
+    for (const s of ships) {
+      const pet = state.pets.get(s.id);
+      if (!pet?.orca || s.sinkT > 0) continue;
+      const cls = SHIP_CLASSES[s.classId];
+      const x = this.sx(s.x), y = this.sy(s.y);
+      if (x < -200 || y < -200 || x > this.w + 200 || y > this.h + 200) continue;
+      const clen = calfLength(pet.orca) * this.zoom;
+      const t = settings().reduceMotion ? 0 : this.time;
+      // It rises and dives in a slow rhythm, weaving a little on the ship's quarter.
+      const dive = 0.55 + 0.45 * Math.sin(t * 0.7 + s.id);
+      const weave = Math.sin(t * 0.9 + s.id * 1.7) * cls.beam * 0.25 * this.zoom;
+      g.save();
+      g.translate(x, y);
+      g.rotate(s.h);
+      g.translate(cls.beam * 0.5 * this.zoom + clen * 0.45 + 3 * this.zoom + weave, cls.length * 0.12 * this.zoom);
+      g.rotate(Math.sin(t * 0.9 + s.id * 1.7) * 0.12);
+      g.globalAlpha = 0.35 + 0.65 * dive;
+      drawBeast(g, 'white_orca', clen, clen * 0.3, t, s.id);
+      g.restore();
+    }
   }
 
   /** The carcasses afloat (docs/12 P4), in their blood. */

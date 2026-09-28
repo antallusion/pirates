@@ -456,6 +456,9 @@ function onMessage(m: ServerMsg): void {
     case 'tattoos':
       if (modal === 'tattoos') refreshModal();
       break;
+    case 'companion':
+      if (modal === 'ship') refreshModal();
+      break;
     case 'choice':
       // A chain's reward (docs/12 P9): the three pieces open at once; taken, the window closes.
       if (m.view) openModal('choice');

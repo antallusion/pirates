@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { HarnessId, PetId } from './data/companions.ts';
 import type { NemesisCause } from './data/nemesis.ts';
 import type { CaravanTask, OnAttack } from './data/caravans.ts';
 import type { OutpostKind } from './data/estate.ts';
@@ -128,6 +129,8 @@ export type ClientMsg =
   | { t: 'tattoo'; action: 'set'; slot: number; id: string | null }
   | { t: 'tattoo'; action: 'view' }
   | { t: 'choice'; index: number }
+  /** The orca calf (docs/12 P10 #2): name it, have a harness made, put one on. */
+  | { t: 'companion'; action: 'name' | 'craft' | 'wear'; arg: string | null }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -1006,6 +1009,8 @@ export type ServerMsg =
   | { t: 'estate'; view: EstateView }
   | { t: 'caravans'; list: CaravanView[]; slots: number }
   | { t: 'tattoos'; view: TattooView }
+  | { t: 'companion'; view: CompanionView | null }
+  | { t: 'pets'; list: PetView[] }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1255,6 +1260,24 @@ export interface WantedView {
   /** The named pirates with a grudge against her, and the heads she has taken (docs/12 P10 #1). */
   nemeses: NemesisView[];
   heads: number;
+}
+
+/** A captain's orca calf (docs/12 P10 #2). */
+export interface CompanionView {
+  kind: 'orca';
+  name: string;
+  level: number;
+  xp: number;
+  next: number;
+  harness: HarnessId | null;
+  made: HarnessId[];
+}
+
+/** A ship's companions as the sea sees them: the calf's level, the pet on deck. */
+export interface PetView {
+  ship: number;
+  orca?: number;
+  deck?: PetId;
 }
 
 /** A nemesis as his captain knows him. */

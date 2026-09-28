@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { companionAction, stepCompanions } from './companion.ts';
 import { nemesisSankYou } from './nemesis.ts';
 import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
@@ -717,6 +718,7 @@ export class Game {
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
     if (Math.floor(this.now) % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
+    stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -2519,6 +2521,8 @@ export class Game {
       case 'choice':
         err(takeChoice(this, s, Math.trunc(Number(msg.index))));
         return this.pushSelf(s, true);
+      case 'companion':
+        return err(companionAction(this, s, String(msg.action), msg.arg === null || msg.arg === undefined ? null : String(msg.arg)));
       case 'caravan': {
         let e: string | null;
         if (msg.action === 'launch') e = launchCaravan(this, s, msg);

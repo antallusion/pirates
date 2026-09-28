@@ -11,6 +11,7 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { giveCalf, sendCompanion } from './companion.ts';
 import { sanitizeNemeses } from './nemesis.ts';
 import { NEMESIS_CAUSES } from '../../../shared/src/data/nemesis.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
@@ -251,6 +252,15 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const cause = (NEMESIS_CAUSES as string[]).includes(args[2] ?? '') ? (args[2] as NemesisCause) : 'boarding';
       sanitizeNemeses(s.profile!)[np.id] = { rank: Math.max(1, Math.min(5, num(1, 2))), epithet: `${cause}:0`, scars: [cause], lost: 1, fled: 1, lastAt: game.wallNow(), letterAt: 0, huntAt: -1e9 };
       return `${np.name[0]} will remember you: a new nemesis.`;
+    }
+    case 'calf': {
+      // The orca calf (docs/12 P10 #2 play-testing): /calf [level].
+      const p = s.profile!;
+      p.companion = null;
+      giveCalf(game, s, 'orphan');
+      p.companion!.level = Math.max(1, Math.min(10, num(0, 1)));
+      sendCompanion(game, s);
+      return `${p.companion!.name} grows: level ${p.companion!.level}.`;
     }
     case 'choice': {
       // A chain's reward (docs/12 P9): /choice offers three pieces.

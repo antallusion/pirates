@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { giveCalf } from './companion.ts';
 import { tattooCount } from './tattoos.ts';
 import { trophyBonus } from './estate.ts';
 import { BEASTS, BEAST_IDS, LINE, SACRED_WATERS, SPOOK_NOISE, beastOfClass, biteAt, hullNoise, lineStep, yieldScale } from '../../../shared/src/data/beasts.ts';
@@ -850,6 +851,7 @@ export function beastSlain(game: Game, b: ShipEntity): boolean {
     const s = killer?.accountId !== null && killer?.accountId !== undefined ? game.sessionByAccount(killer.accountId) : undefined;
     if (s?.profile) {
       for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} took the White Orca!`, kind: 'gold' });
+      giveCalf(game, s, 'orphan'); // her calf, orphaned, follows the one who took her (docs/12 P10 #2)
       if (!s.profile.figureheads.includes('fh_white_orca')) {
         s.profile.figureheads.push('fh_white_orca');
         game.sendTo(s, { t: 'toast', msg: 'The White Orca’s figurehead is yours.', kind: 'gold' });
