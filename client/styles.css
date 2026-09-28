@@ -1936,7 +1936,10 @@ body:has(#encounter:not(.hidden)) #hud-goals, body:has(#encounter:not(.hidden)) 
 .poster { background: linear-gradient(#d9c9a0, #c7b27f); color: #2a1d10; border: 1px solid #6a5431; border-radius: 3px; padding: 6px 7px 8px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); min-width: 0; }
 .poster .po-head { font-family: var(--serif); font-weight: 700; letter-spacing: 2px; font-size: 13px; color: #5a1a10; }
 /* The painted paper, torn at the edges (docs/12 P11): no drawn border then, the shadow follows the tear. */
-body.has-poster .poster, body.has-poster .poster.po-baron { background: var(--ui-poster) center / 100% 100% no-repeat; border-color: transparent; box-shadow: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55)); padding: 12px 12px 14px; }
+body.has-poster .poster, body.has-poster .poster.po-baron { background: var(--ui-poster) center / 100% 100% no-repeat; border-color: transparent; box-shadow: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55)); padding: 23% 11% 10%; }
+/* The paper has its own printed border a little inside the torn edge: everything stays within it. */
+body.has-poster .poster .po-head { margin-top: 0; }
+body.has-poster .poster .btn { max-width: 100%; }
 .poster.po-baron { background: linear-gradient(#e2c98f, #b8914f); border-color: #8a2a1a; }
 .poster.po-baron .po-head { font-size: 11px; letter-spacing: 0.5px; }
 .poster .po-face { width: 84px; height: 84px; border: 1px solid #6a5431; overflow: hidden; background: #3a2a18; }

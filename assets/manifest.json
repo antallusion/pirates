@@ -676,6 +676,7 @@
     "card.enc_albatross":                { "local": "cards/enc_albatross.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.0", "rev": 20260928180755},
     "card.enc_ghost_bargain":            { "local": "cards/enc_ghost_bargain.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.1", "rev": 20260928180755},
     "card.enc_sirens":                   { "local": "cards/enc_sirens.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.2", "rev": 20260928180755},
-    "card.enc_voice_in_fog":             { "local": "cards/enc_voice_in_fog.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.3", "rev": 20260928180755}
+    "card.enc_voice_in_fog":             { "local": "cards/enc_voice_in_fog.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.3", "rev": 20260928180755},
+    "ui.poster":                         { "local": "ui/poster.webp", "remote": "hf_20260928_182059_ac7d8d6d-04a2-473e-86c4-432309bb0237.png", "job": "ac7d8d6d-04a2-473e-86c4-432309bb0237", "fit": "keyed:640:#ff00ff" }
   }
 }
