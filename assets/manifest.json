@@ -603,6 +603,7 @@
     "monster.narwhal":                   { "local": "monsters/narwhal.webp", "remote": "hf_20260928_153315_ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac.png", "job": "ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac", "fit": "sheet:beasts_1.4", "rev": 20260928153315},
     "monster.shark":                     { "local": "monsters/shark.webp", "remote": "hf_20260928_153315_ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac.png", "job": "ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac", "fit": "sheet:beasts_1.5", "rev": 20260928153315},
     "monster.young_serpent":             { "local": "monsters/young_serpent.webp", "remote": "hf_20260928_153315_ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac.png", "job": "ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac", "fit": "sheet:beasts_1.6", "rev": 20260928153315},
-    "sight.giant_turtle":                { "local": "monsters/giant_turtle.webp", "remote": "hf_20260928_153315_ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac.png", "job": "ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac", "fit": "sheet:beasts_1.7", "rev": 20260928153315}
+    "sight.giant_turtle":                { "local": "monsters/giant_turtle.webp", "remote": "hf_20260928_153315_ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac.png", "job": "ba30fd7a-5b73-4a5a-af1d-8a1b7323e8ac", "fit": "sheet:beasts_1.7", "rev": 20260928153315},
+    "portrait.giver_old_needle":         { "local": "portraits/giver_old_needle.webp", "remote": "hf_20260928_154638_09dc7bf7-c990-4185-8c4a-f2bdbb625c4d.png", "job": "09dc7bf7-c990-4185-8c4a-f2bdbb625c4d", "crop": [0.1, 0, 0.9, 1]}
   }
 }
