@@ -3,6 +3,8 @@
 // projectiles & particles → darkness/light pass → fog/rain → screen-space overlays.
 // Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
 
+import { THREAT_COLOR, combatLevelOf, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
+import type { Threat } from '../../../shared/src/data/shiplevel.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GUNS, SHIP_CLASSES, AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -2347,16 +2349,39 @@ export class Renderer {
     const cb = settings().colorblind;
     const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
     const tag = info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' ');
+    // Her level (canon D12) leads the name as WoW's does: the number in a frame coloured by how far she stands above
+    // your own ship, a gold frame for an elite built for a company, a skull when no shot of yours would tell.
+    const threat = info.shipLevel ? levelThreat(state, info.classId, info.shipLevel) : null;
+    const badge = info.shipLevel ? (threat === 'skull' ? '☠' : String(info.shipLevel)) : '';
+    g.font = '700 10px Inter, sans-serif';
+    const pillW = badge ? g.measureText(badge).width + 8 : 0;
+    const badgeW = badge ? pillW + 4 : 0;
+    g.font = '600 11px Inter, sans-serif';
     // Both lines keep inside the screen: the name and, under it, the (often longer) class line.
-    const nameW = g.measureText(label).width;
+    const nameW = g.measureText(label).width + badgeW;
     g.font = '10px Inter, sans-serif';
     const half = Math.max(nameW, g.measureText(tag).width) / 2 + 6;
     g.font = '600 11px Inter, sans-serif';
     x = clamp(x, half, Math.max(half, this.w - half));
+    const lx = x + badgeW / 2;
+    if (badge) {
+      const px = x - nameW / 2, py = y - 10, ph = 13;
+      const col = THREAT_COLOR[threat!];
+      g.fillStyle = 'rgba(8,10,14,0.78)';
+      roundRect(g, px, py, pillW, ph, 3);
+      g.fill();
+      g.lineWidth = info.elite ? 2 : 1;
+      g.strokeStyle = info.elite ? '#e8c46a' : col;
+      g.stroke();
+      g.font = '700 10px Inter, sans-serif';
+      g.fillStyle = col;
+      g.fillText(badge, px + pillW / 2, py + 10);
+      g.font = '600 11px Inter, sans-serif';
+    }
     g.fillStyle = '#000';
-    g.fillText(label, x + 1, y + 1);
+    g.fillText(label, lx + 1, y + 1);
     g.fillStyle = cbColor(cb, hostile ? '#e0776b' : info.isPlayer ? '#cfe0f2' : faction ? faction.lantern : '#ccc');
-    g.fillText(label, x, y);
+    g.fillText(label, lx, y);
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
     const marks = info.isPlayer
@@ -2417,4 +2442,21 @@ export function shipHeel(heading: number, windDir: number, windStrength: number,
   const push = across * clamp(windStrength, 0, 1.5) * sail * (1.2 / (0.6 + tier * 0.4));
   const list = water * 0.35;
   return clamp(push * 0.8 + Math.sign(push || 1) * list + swell * 0.04 * (0.5 + windStrength), -1, 1);
+}
+
+/** How far a ship of this class and level stands above your own (canon D12), by the levels both fight at. */
+export function levelThreat(state: ClientState, classId: ShipClassId, level: number): Threat {
+  const mine = state.self ? combatLevelOf(state.self.loadout.classId, shipLevelOf(state.self.loadout)) : 1;
+  return threatOf(mine, combatLevelOf(classId, level));
+}
+
+/** A rounded rectangle path (the level's frame). */
+function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
 }

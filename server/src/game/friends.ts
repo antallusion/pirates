@@ -157,7 +157,7 @@ export function inspectView(game: Game, s: PlayerSession, name: string): Inspect
   void s;
   return {
     name: o.name, level: p.level, captain: p.captain, title: p.title, guild: g ? { name: g.name, tag: g.tag } : null,
-    ship: { name: o.ship.name, classId: o.ship.cls.id }, region: o.ship.region, deeds: p.deeds.length, seasonLevel: p.season.level,
+    ship: { name: o.ship.name, classId: o.ship.cls.id, level: o.ship.shipLevel }, region: o.ship.region, deeds: p.deeds.length, seasonLevel: p.season.level,
     questsDone: p.quests.done.length, contracts: p.quests.done.filter((id) => id.startsWith('elite_')).length, mentored: p.stats.mentored ?? 0,
     rating: Math.round(p.pvp.rating ?? 0), wanted: wantedLevel(p.infamy),
   };

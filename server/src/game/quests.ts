@@ -1,6 +1,7 @@
 // Path and Legend quests (docs/00 D1, docs/02 §7): mentors in their ports, step objectives driven by what the
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
+import { questShipLevel } from '../../../shared/src/data/shiplevel.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -281,7 +282,13 @@ export function islandJobOffer(game: Game, s: PlayerSession, islandId: number): 
 
 function offerView(game: Game, q: QuestDef) {
   const pays = payOptions(game, q);
-  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait, ...(pays ? { pays } : {}), ...(q.group ? { group: q.group } : {}) };
+  const ship = shipLevelOfQuest(q);
+  return { id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked: null, silver: q.reward.silver, xp: q.reward.xp, category: q.category, portrait: q.portrait, ...(pays ? { pays } : {}), ...(q.group ? { group: q.group } : {}), ...(ship ? { ship } : {}) };
+}
+
+/** The ship level a quest's fight asks for (canon D12), or null. */
+export function shipLevelOfQuest(q: QuestDef): number | null {
+  return questShipLevel(q, (r) => REGIONS[r as RegionId]?.safety ?? 'safe');
 }
 
 /** Share a quest with the group (docs/11 P6): each groupmate online who may take it is offered it, wherever they

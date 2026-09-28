@@ -14,7 +14,7 @@ import { placeName } from './maps.ts';
 
 const EN = {
   level: 'Level {n} · {path}',
-  ship: 'Sails the {ship} ({cls})',
+  ship: 'Sails the {ship} ({cls}{lvl})',
   waters: 'In {region}',
   deeds: 'Legend deeds',
   season: 'Season path',
@@ -30,7 +30,7 @@ const EN = {
 };
 const RU: typeof EN = {
   level: 'Уровень {n} · {path}',
-  ship: 'Ходит на «{ship}» ({cls})',
+  ship: 'Ходит на «{ship}» ({cls}{lvl})',
   waters: 'Воды: {region}',
   deeds: 'Подвиги легенды',
   season: 'Путь сезона',
@@ -64,7 +64,7 @@ export function inspectDialog(v: InspectView, acts: InspectActs, opts: { friend:
         ${v.title ? `<div class="giver-who muted">${esc(serverText(v.title))}</div>` : ''}
         ${v.guild ? `<div class="insp-guild">[${esc(v.guild.tag)}] ${esc(v.guild.name)}</div>` : ''}
         <p class="insp-line">${esc(L('level', { n: v.level, path: cap ? serverText(cap.archetype) : v.captain }))}</p>
-        <p class="insp-line">${esc(L('ship', { ship: placeName(v.ship.name), cls: SHIP_CLASSES[v.ship.classId]?.name ?? v.ship.classId }))}</p>
+        <p class="insp-line">${esc(L('ship', { ship: placeName(v.ship.name), cls: SHIP_CLASSES[v.ship.classId]?.name ?? v.ship.classId, lvl: v.ship.level ? ` · ⚓${v.ship.level}` : '' }))}</p>
         <p class="insp-line muted">${esc(L('waters', { region: placeName(REGIONS[v.region]?.name ?? v.region) }))}</p>
       </div></div>
     <div class="insp-stats">${stat('deeds', v.deeds)}${stat('season', v.seasonLevel)}${stat('quests', v.questsDone)}${stat('contracts', v.contracts)}${stat('mentored', v.mentored)}${stat('rating', v.rating)}${v.wanted ? stat('wanted', '☠'.repeat(v.wanted)) : ''}</div>

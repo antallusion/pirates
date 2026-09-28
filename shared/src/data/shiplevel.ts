@@ -267,3 +267,19 @@ export function eliteShipLevel(safety: string): number {
   const [, hi] = watersBand(safety);
   return safety === 'lawless' ? hi - 1 : hi;
 }
+
+/**
+ * The ship level a quest with a fight in it asks for (canon D12): by the captain's level it is written for and the
+ * waters it sends you to; a group contract's flagship names her own. Null for a quest with no fight.
+ */
+export function questShipLevel(q: { requires: { level?: number }; steps: { type: string; role?: string; region?: string }[] }, safetyOf: (region: string) => string): number | null {
+  const fights = q.steps.filter((x) => x.type === 'sink' || x.type === 'board' || x.type === 'prize' || x.type === 'fleet_win');
+  if (!fights.length) return null;
+  let lv = shipLevelForCaptain(q.requires.level ?? 1);
+  for (const f of fights) {
+    if (!f.region) continue;
+    const safety = safetyOf(f.region);
+    lv = Math.max(lv, f.role === 'elite' ? eliteShipLevel(safety) : watersBand(safety, f.region === 'the_abyss')[0]);
+  }
+  return lv;
+}

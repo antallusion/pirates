@@ -32,7 +32,7 @@ import { MUTINY_TIMEOUT, officerBerths, wageMul, expectedShare, loyaltyOf, mutin
 import type { Company } from './crew.ts';
 import { escortUpkeep, newFleet } from './fleet.ts';
 import type { Fleet } from './fleet.ts';
-import { newQuestLog, sanitizeQuests, stepProgress } from './quests.ts';
+import { newQuestLog, sanitizeQuests, shipLevelOfQuest, stepProgress } from './quests.ts';
 import { dailyView, newDaily, sanitizeDaily } from './dailies.ts';
 import type { DailyState } from '../../../shared/src/data/dailies.ts';
 import { sanitizeShipbuilding } from './shipbuilding.ts';
@@ -361,6 +361,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
         summary: def.summary, stepTexts: def.steps.map((x) => x.text), silver: def.reward.silver, xp: def.reward.xp, ...(q.fastUntil && q.fastUntil > now ? { fastIn: Math.round(q.fastUntil - now) } : {}), ...(def.portrait ? { portrait: def.portrait } : {}), ...(def.category ? { category: def.category } : {}),
         ...(q.pay ? { pay: q.pay, paid: questPayOf(q.pay, def.reward.silver, def.requires.level ?? 1) } : {}),
         ...(world.questMates?.[q.id] ? { mates: world.questMates[q.id] } : {}),
+        ...((lv) => (lv ? { ship: lv } : {}))(shipLevelOfQuest(def)),
       };
     }),
     questsDone: p.quests.done,

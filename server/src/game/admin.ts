@@ -11,6 +11,7 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { clampLevel } from '../../../shared/src/data/shiplevel.ts';
 import { DAY_LENGTH_SEC, MAX_LEVEL, timeOfDay } from '../../../shared/src/constants.ts';
 import { BOSSES } from '../../../shared/src/data/bosses.ts';
 import type { BossId } from '../../../shared/src/data/bosses.ts';
@@ -143,12 +144,14 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const cls = args[0] as ShipClassId;
       if (!SHIP_CLASSES[cls]) return `Classes: ${Object.keys(SHIP_CLASSES).join(', ')}`;
       ship.loadout.classId = cls;
+      // /ship class [level]: her level (canon D12), else her class's first.
+      ship.loadout.level = args[1] ? clampLevel(cls, num(1)) : undefined;
       ship.recompute(game.now);
       ship.hull = ship.stats.hullMax;
       ship.sails = ship.stats.sailHpMax;
       ship.crew = Math.max(ship.crew, ship.stats.crewMin);
       game.pushSelf(s, true);
-      return `She is a ${SHIP_CLASSES[cls].name} now (crew ${ship.crew}).`;
+      return `She is a ${SHIP_CLASSES[cls].name} now, level ${ship.shipLevel} (crew ${ship.crew}).`;
     }
     case 'spawn': {
       // A ship to fight, board or trade with, 300 m off the beam: /spawn [role] [class] [faction].
@@ -159,12 +162,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       // Off the beam if the water is open there, else the first open bearing (never on a reef or a shore).
       const [x, y] = openSpot(game, ship, [300, 500, 800], 200, Math.PI / 2);
       const o = game.spawnNpcShip(role, cls, faction, x, y, ship.state.heading);
+      if (args[3]) game.setNpcLevel(o, num(3)); // /spawn role class faction level (canon D12)
       if (role === 'merchant') o.cargo = { spices: 20, rum: 15, sugar: 20 };
       // Awake at once (a dormant ship is neither simulated nor sent until the sea wakes it).
       const brain = game.npcs.get(o.id);
       if (brain) brain.active = true;
       game.grid.upsert(o.id, o.state.x, o.state.y);
-      return `${o.name} (${SHIP_CLASSES[cls].name}, ${faction}) lies off your beam.`;
+      return `${o.name} (${SHIP_CLASSES[cls].name} ⚓${o.shipLevel}, ${faction}) lies off your beam.`;
     }
     case 'board': {
       // A deck fight at once: a crippled ship lashed alongside (/board [role] [class] [crew]).

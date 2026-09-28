@@ -1,6 +1,7 @@
 // The quest giver speaks (docs/11 P6): their face, their words, the steps and the pay — and the captain takes the
 // job or leaves it. Used by the tavern's notice board and by the people met on an island's beach.
 
+import { levelChip } from './levels.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { QuestPay } from '../../../shared/src/data/questpay.ts';
 import type { PortView, QuestPayView } from '../../../shared/src/protocol.ts';
@@ -15,6 +16,7 @@ const EN = {
   take: 'Take it on',
   leave: 'Not now',
   steps: 'What is to be done',
+  shipLevel: 'The fight asks for a ship of',
   pay: 'Pay',
   pay_silver: 'All in silver',
   pay_stores: 'Silver and fine shot',
@@ -30,6 +32,7 @@ const RU: typeof EN = {
   take: 'Взяться',
   leave: 'Не сейчас',
   steps: 'Что нужно сделать',
+  shipLevel: 'Для боя нужен корабль уровня',
   pay: 'Плата',
   pay_silver: 'Всё серебром',
   pay_stores: 'Серебро и ядра',
@@ -76,6 +79,7 @@ export function giverDialog(q: Offer, from?: string): Promise<QuestPay | null> {
     </div></div>
     <div class="giver-steps"><div class="giver-h">${esc(L('steps'))}</div><ol>${q.steps.map((t) => `<li>${esc(serverText(t))}</li>`).join('')}</ol></div>
     ${q.group ? `<p class="giver-group">${esc(L('group', { n: q.group }))}</p>` : ''}
+    ${q.ship ? `<p class="giver-level">${esc(L('shipLevel'))} ${levelChip(q.ship)}</p>` : ''}
     ${q.pays ? `<div class="giver-pay giver-pay-pick"><span class="giver-h">${esc(L('pay'))}</span>${xpBadge(q.xp)}</div>${payPicker(q.silver, q.pays)}` : `<div class="giver-pay"><span class="giver-h">${esc(L('pay'))}</span>${money(q.silver)}${xpBadge(q.xp)}</div>`}`;
   // The choice is read as the captain says yes (the window is still in the page then).
   let pay: QuestPay = 'silver';

@@ -2,6 +2,7 @@
 // and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
 // «Follow», «Share» (in a group) and «Set aside».
 
+import { levelChip } from './levels.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { assetUrl } from '../assets.ts';
 import { dict } from '../i18n.ts';
@@ -105,7 +106,7 @@ export class Journal {
 
   private row(q: Quest, on: boolean, tracked: boolean): string {
     return `<button class="jr-row${on ? ' on' : ''}${tracked ? ' tracked' : ''}" data-jq="${esc(q.id)}">
-      <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b>
+      <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}${q.ship ? ` ${levelChip(q.ship)}` : ''}</b>
       <span class="muted">${esc(L(`kind_${q.kind}` as 'kind_job'))} · ${q.step}/${q.steps}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>`;
   }
 

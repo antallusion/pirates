@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { ask, tell } from './confirm.ts';
 import { mapCard, placeName } from './maps.ts';
 import { personName } from '../lang/names.ts';
@@ -326,7 +327,7 @@ ${ammo}${intel}`;
       const net = Math.max(0, s.price - s.tradeIn);
       const art = assetUrl(c.sprite);
       return `<div class="card hull-card"><div class="hull-art">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div>
-        <div class="hull-text"><b>${esc(c.name)}</b> <span class="muted">${esc(L('unit.tier', { n: c.tier }))} · ${esc(c.role)}</span>
+        <div class="hull-text"><b>${esc(c.name)}</b> <span class="muted">${esc(levelSpan(c.id))} · ${esc(c.role)}</span>
           <div class="hull-stats"><span>${icon('stat_hull', '', 'ico-sm')}${c.hull}</span><span>${icon('stat_sails', '', 'ico-sm')}${c.maxSpeed}</span><span>${icon('fire', '', 'ico-sm')}${c.gunPortsPerSide}×2</span><span>${icon('tab_market', '', 'ico-sm')}${c.holdVolume}</span><span>${icon('stat_crew', '', 'ico-sm')}${c.crewMin}–${c.crewMax}</span></div></div>
         <button class="btn btn-small item-btn" data-act="ship" data-cls="${s.classId}" ${s.classId === self.loadout.classId ? 'disabled' : ''}>${s.classId === self.loadout.classId ? esc(L('yard.yours')) : money(net)}</button></div>`;
     }).join('');
@@ -390,7 +391,7 @@ ${ammo}${intel}`;
       ${x.port === view.portId ? `<span><button class="btn btn-small" data-act="berth_swap" data-i="${i}">${esc(L('berth.takeOut'))}</button> <button class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}">${esc(L('btn.sell'))}</button></span>` : ''}</div>`).join('');
     return `<h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('build.title'))}</h3>
       <div class="cols"><div class="card"><div class="form-grid build-form">
-        <label class="fg-wide">${esc(L('build.hull'))}<select data-build="classId">${classes.map((c) => `<option value="${c}" ${c === b.classId ? 'selected' : ''}>${esc(SHIP_CLASSES[c].name)} (${esc(L('unit.tier', { n: SHIP_CLASSES[c].tier }))})</option>`).join('')}</select></label>
+        <label class="fg-wide">${esc(L('build.hull'))}<select data-build="classId">${classes.map((c) => `<option value="${c}" ${c === b.classId ? 'selected' : ''}>${esc(SHIP_CLASSES[c].name)} (${esc(levelSpan(c))})</option>`).join('')}</select></label>
         <label class="fg-wide">${esc(L('build.name'))}<input data-build="name" value="${esc(b.name)}" maxlength="28" placeholder="${esc(cls.name)}"></label>
         <label>${esc(L('build.frame'))}<select data-build="frame">${yard.woods.map((w) => `<option value="${w}" ${w === b.frame ? 'selected' : ''}>${esc(WOODS[w].name)}</option>`).join('')}</select></label>
         <label>${esc(L('build.plank'))}<select data-build="plank">${yard.woods.map((w) => `<option value="${w}" ${w === b.plank ? 'selected' : ''}>${esc(WOODS[w].name)}</option>`).join('')}</select></label>
@@ -590,4 +591,10 @@ function landHow(): string {
 /** A contract's picture: sealed letters, a bounty poster, or the good to deliver. */
 function contractArt(c: { kind: string; good?: string }): string {
   return c.kind === 'bounty' ? 'wanted' : c.kind === 'delivery' && c.good ? `good_${c.good}` : 'map_contract';
+}
+
+/** A hull's levels (canon D12): ⚓3–5, the first she comes at and the last a refit takes her to. */
+function levelSpan(classId: ShipClassId): string {
+  const [lo, hi] = levelRange(classId);
+  return lo === hi ? `⚓${lo}` : `⚓${lo}–${hi}`;
 }

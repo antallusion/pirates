@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CAPTAIN_LEVEL_FOR_SHIP, LEVEL_RANGE, SHIP_LEVEL_MAX, combatLevelOf, hullRole, hullsFor, initialLevel, ladder, levelRange, npcSkill,
-  refitCost, threatOf, watersBand,
+  questShipLevel, refitCost, threatOf, watersBand, xpForGap,
 } from '../shared/src/data/shiplevel.ts';
 import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
 import type { ShipClassId } from '../shared/src/data/ships.ts';
@@ -176,4 +176,14 @@ test('the ladder’s refusal reads in Russian', () => {
   const ru = serverText('She is above your level: your boarders would not reach her deck');
   setLang('en');
   assert.doesNotMatch(ru, /[A-Za-z]{3,}/);
+});
+
+test('a quest with a fight names the ship level it asks for; the waters and a group contract raise it', () => {
+  const safety = (r: string) => REGIONS[r as keyof typeof REGIONS]?.safety ?? 'safe';
+  assert.equal(questShipLevel({ requires: { level: 1 }, steps: [{ type: 'visit' }] }, safety), null, 'no fight, no level');
+  assert.equal(questShipLevel({ requires: { level: 13 }, steps: [{ type: 'sink' }] }, safety), 3);
+  assert.equal(questShipLevel({ requires: { level: 1 }, steps: [{ type: 'sink', region: 'dead_mans_expanse' }] }, safety), 5, 'lawless waters ask ⚓5 at the least');
+  assert.equal(questShipLevel({ requires: { level: 1 }, steps: [{ type: 'sink', role: 'elite', region: 'gravewater' }] }, safety), 6, 'a contested contract’s flagship');
+  assert.equal(xpForGap(-3), 0, 'a grey prize gives nothing');
+  assert.ok(xpForGap(1) > xpForGap(0) && xpForGap(0) > xpForGap(-1));
 });

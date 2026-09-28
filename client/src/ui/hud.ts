@@ -1,6 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { DASH_COOLDOWN } from '../../../shared/src/data/gunnery.ts';
 import { dict, lang, plural, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
@@ -104,13 +105,14 @@ export class Hud {
     const cls = SHIP_CLASSES[self.loadout.classId];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1, state.ownStats?.cursedVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
-    const skey = `${lang()}|${self.abyss?.pressure ?? -1}|${self.abyss?.shards ?? 0}|${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
+    const lvl = shipLevelOf(self.loadout);
+    const skey = `${lang()}|${lvl}|${self.abyss?.pressure ?? -1}|${self.abyss?.shards ?? 0}|${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
     if (skey !== this.lastShipKey) {
       this.lastShipKey = skey;
       const steps = [0, 0.25, 0.5, 0.75, 1].slice(1).map((v) => `<span class="${you.sail >= v - 0.01 ? 'on' : ''} ${Math.abs(you.sailT - v) < 0.01 ? 'target' : ''}"></span>`).join('');
       if (document.body.classList.contains('ship-open')) placeShipPanel();
       $('hud-ship').innerHTML = `
-        <div class="row sp-head"><b>${icon('menu_ship', '', 'ico-sm')}${esc(self.loadout.name)}</b><span class="lbl">${esc(cls.name)}</span></div>
+        <div class="row sp-head"><b>${icon('menu_ship', '', 'ico-sm')}${esc(self.loadout.name)}</b><span class="lbl"><b class="ship-lvl">⚓${lvl}</b> ${esc(cls.name)}</span></div>
         <div class="row"><span class="lbl">${icon('stat_hull', '', 'ico-xs')}${esc(L('hull'))}</span><span class="val">${fmt(you.hull)} / ${fmt(you.hullMax)}</span></div>${bar('hull', you.hull / you.hullMax)}
         <div class="row"><span class="lbl">${icon('stat_sails', '', 'ico-xs')}${esc(L('sails'))}</span><span class="val">${fmt(you.sails)} / ${fmt(you.sailsMax)}${you.rudderHp < 0.99 ? ` · ${esc(L('rudder', { n: Math.round(you.rudderHp * 100) }))}` : ''}</span></div>${bar('sails', you.sails / you.sailsMax)}
         <div class="row"><span class="lbl">${icon('stat_crew', '', 'ico-xs')}${esc(L('crew'))}</span><span class="val">${you.crew} / ${you.crewMax}</span></div>${bar('crew', you.crew / you.crewMax)}

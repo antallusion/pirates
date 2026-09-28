@@ -386,7 +386,7 @@ export interface PrivateState {
   /** The crew as people (docs/02 §8). */
   company: CompanyView;
   /** Quests under way (Paths, Legends, the Descent). */
-  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; target?: { x: number; y: number; r?: number; region?: RegionId };
+  quests: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; step: number; steps: number; text: string; progress: number; need: number; /** the ship level its fight asks for (canon D12) */ ship?: number; target?: { x: number; y: number; r?: number; region?: RegionId };
     /** For the journal: the giver's words, every step's text, the pay, the giver's face, the job's kind. */
     summary?: string; stepTexts?: string[]; silver?: number; xp?: number; portrait?: string; category?: string;
     /** seconds left to earn the speed bonus */ fastIn?: number;
@@ -516,7 +516,7 @@ export interface PortView {
   crewHireCost: number;
   tavern: TavernView;
   escorts: { classId: ShipClassId; price: number; upkeep: number; available: boolean }[];
-  questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string; portrait?: string; /** an arc's chapter, of three */ chapter?: number; /** asked for by the port's news (an epidemic, a blockade…) */ urgent?: boolean;
+  questOffers: { id: string; name: string; kind: 'path' | 'legend' | 'story' | 'job'; mentor: string; summary: string; steps: string[]; blocked: string | null; silver: number; xp: number; path?: CaptainId; category?: string; portrait?: string; /** the ship level its fight asks for (canon D12) */ ship?: number; /** an arc's chapter, of three */ chapter?: number; /** asked for by the port's news (an epidemic, a blockade…) */ urgent?: boolean;
     /** The pay to choose from (docs/11 P6). */ pays?: QuestPayView;
     /** A group contract: the company it is made for. */ group?: number }[];
   captainsHouse: boolean;
@@ -1032,7 +1032,7 @@ export interface InspectView {
   captain: CaptainId;
   title: string | null;
   guild: { name: string; tag: string } | null;
-  ship: { name: string; classId: ShipClassId };
+  ship: { name: string; classId: ShipClassId; level?: number };
   region: RegionId;
   deeds: number;
   seasonLevel: number;
