@@ -291,6 +291,14 @@ function painted(g: G, id: BeastId, len: number, t: number, seed: number, limp: 
   const ph = t * (id === 'shark' ? 2.4 : id === 'young_serpent' ? 1.5 : 1.1) + seed * 0.61;
   const amp = limp ? 0 : id === 'young_serpent' ? 0.2 : id === 'shark' ? 0.11 : 0.07;
   const breathe = limp ? 1 : 1 + Math.sin(ph * 0.9) * 0.012;
+  // A soft shadow under the water beneath it (docs/12 P11), not for a carcass afloat.
+  if (!limp) {
+    g.save();
+    g.globalAlpha *= 0.35;
+    g.filter = `brightness(0) blur(${Math.max(1, Math.round(len * 0.03))}px)`;
+    g.drawImage(img, left + len * 0.04, top + len * 0.05, w, h);
+    g.restore();
+  }
   g.save();
   g.scale(breathe, 1);
   // The overlap hides the seams where a piece turns.
