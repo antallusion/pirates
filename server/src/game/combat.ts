@@ -38,6 +38,7 @@ import { grandBattery, nightRaider, stormGunnerRange } from './bridgefx.ts';
 import { cursedDamageMul, onCursedHit, onCursedVolley, onOwnCrewKilled, pactDamageMul } from './abyssfx.ts';
 import { bossIncoming, innerVolley, swallowedShield } from './bosses.ts';
 import { kegImpact } from './holidays.ts';
+import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 
 export interface Projectile {
   owner: number;
@@ -185,7 +186,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
       const d = dist * (1 + rng.gauss() * 0.045);
       const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
-        owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed, dist: d, traveled: 0, ammo,
+        owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed * SPEED_SCALE, dist: d, traveled: 0, ammo,
         damage: gun.damage * ship.stats.gunDamageMul * shadow * focus.damage * (ammo === 'cursed' ? cursedDamageMul(ship) : 1), maxRange: range, delay: delay / 1000, volley,
       });
       rec.total++;
@@ -260,7 +261,7 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
     const bh = h + game.rng.gauss() * gun.spreadDeg * DEG * 0.5 * ship.stats.spreadMul * game.seaSpread(ship);
     const bd = d * (1 + game.rng.gauss() * 0.04);
     const delay = i * 120;
-    game.projectiles.push({ owner: ship.id, x: ox, y: oy, heading: bh, speed: AMMO[ammo].speed * (1 + tval(ship.stats, 'shotSpeed')), dist: bd, traveled: 0, ammo, damage: gun.damage * ship.stats.gunDamageMul * (1 + tval(ship.stats, 'chaserDamage')), maxRange: range, delay: delay / 1000 });
+    game.projectiles.push({ owner: ship.id, x: ox, y: oy, heading: bh, speed: AMMO[ammo].speed * (1 + tval(ship.stats, 'shotSpeed')) * SPEED_SCALE, dist: bd, traveled: 0, ammo, damage: gun.damage * ship.stats.gunDamageMul * (1 + tval(ship.stats, 'chaserDamage')), maxRange: range, delay: delay / 1000 });
     balls.push([Math.round(ox), Math.round(oy), Math.round(bh * 1000) / 1000, Math.round(bd), delay]);
   }
   ship.ammo[ammo] -= shots;

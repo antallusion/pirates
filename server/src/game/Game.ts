@@ -37,8 +37,7 @@ import { pushTasks, stepTasks, taskSalvage } from './worldtasks.ts';
 import {
   DAY_LENGTH_SEC,
   CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_CROWD, SNAP_CROWD_EVERY, SNAP_MID, SNAP_NEAR, SNAP_RANK_MID, SNAP_RANK_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
-  SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight, xpForLevel,
-} from '../../../shared/src/constants.ts';
+  SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight, xpForLevel, SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { CAPTAINS, CAPTAIN_IDS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, WANTED_THRESHOLDS, WANTED_TITLES, wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -630,7 +629,7 @@ export class Game {
       if (depth < draft) {
         const over = draft - depth;
         if (ship.state.speed > 1) {
-          applyDamage(this, ship, { hull: over * ship.state.speed * 0.3 * ship.cls.tier * Math.max(0, 1 + tval(ship.stats, 'reefDamage')) }, null);
+          applyDamage(this, ship, { hull: over * ship.state.speed * SPEED_SCALE * 0.3 * ship.cls.tier * Math.max(0, 1 + tval(ship.stats, 'reefDamage')) }, null);
           if (this.tick % 20 === 0) this.toastShip(ship, depth < 2.5 ? 'Your keel grinds over the reef!' : 'Shoal water — she is dragging her keel.', 'bad');
         }
         ship.state.speed *= Math.max(0.9, 1 - over * 0.02);

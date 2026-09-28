@@ -2,7 +2,7 @@
 // simulation requires bumping PROTOCOL_VERSION so stale clients are rejected.
 
 export const GAME_NAME = 'GRAVETIDE';
-export const PROTOCOL_VERSION = 27;
+export const PROTOCOL_VERSION = 28;
 
 export const TICK_RATE = 20; // server simulation Hz
 export const TICK_DT = 1 / TICK_RATE;
@@ -13,6 +13,15 @@ export const WORLD_SIZE = 96_000; // meters, square world
 export const CHUNK_SIZE = 3_000; // meters, static-data & interest chunk
 export const CHUNKS_PER_SIDE = WORLD_SIZE / CHUNK_SIZE;
 export const NAV_CELL = 400; // meters, coarse navigation grid for NPC routing
+
+// The pace of the sea (owner, 2026-09-28: "the ships are far too slow — six times faster"). A ship's way is reckoned on
+// the old scale — the knots in the HUD, the stats, every "heave to under 1.5 m/s", ramming and grounding — and carried
+// across the world SPEED_SCALE times as fast; the shot flies as much faster, so a lead is the same length as before.
+// The helm answers TURN_SCALE times as quick, so a fast ship still comes about in a sane circle.
+export const SPEED_SCALE = 6;
+export const TURN_SCALE = 2.5;
+// A following wind drives her on, a head wind holds her back: up to this share of her way in a full breeze.
+export const WIND_PUSH = 0.45;
 
 export const INTEREST_RADIUS = 2_200; // dynamic entities replicated within this radius
 export const SNAP_NEAR = 700; // closer: every snapshot (10 Hz)

@@ -6,6 +6,7 @@ import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { AMMO } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import { headingVec } from '../../../shared/src/math.ts';
+import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import type { GameEvent } from '../../../shared/src/protocol.ts';
 
 const L = dict(REN, RRU);
@@ -188,7 +189,7 @@ export class Fx {
     switch (e.k) {
       case 'volley': {
         const ammo = AMMO[e.ammo];
-        const spd = ammo.speed * (e.spd ?? 1);
+        const spd = ammo.speed * (e.spd ?? 1) * SPEED_SCALE;
         for (const [x, y, h, d, delay] of e.balls) {
           const v = headingVec(h);
           this.balls.push({ x, y, vx: v.x * spd, vy: v.y * spd, left: d, delay: delay / 1000, ammo: e.ammo, owner: e.ship, alive: true, trail: [] });

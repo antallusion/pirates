@@ -16,7 +16,7 @@ import type { Threat } from '../../../shared/src/data/shiplevel.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GUNS, SHIP_CLASSES, AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
-import { nightFactor } from '../../../shared/src/constants.ts';
+import { nightFactor, SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { placeName } from '../ui/maps.ts';
 import { serverText } from '../lang/server.ts';
@@ -337,7 +337,8 @@ export class Renderer {
     if (own) {
       // Look slightly ahead of the ship.
       const v = headingVec(own.heading);
-      const lead = clamp(own.speed * 5, 0, 90);
+      // At the pace of the sea she needs to see further ahead.
+      const lead = clamp(own.speed * SPEED_SCALE * 1.2, 0, 220);
       // A long way off (the first frame, a respawn, a teleport): cut straight to her instead of flying the chart.
       const far = Math.hypot(own.x - this.camX, own.y - this.camY) > 1500;
       const k = far ? 1 : Math.min(1, dt * 4);

@@ -274,7 +274,7 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
   body.touch { --touch-h: 0px; }
   body.touch #hud-bottom, body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 64px)); }
   #hud-region { display: none; }
-  #hud-stack { left: calc(var(--sa-l) + 350px); right: calc(var(--sa-r) + var(--mm) + 64px); top: calc(var(--sa-t) + 8px); }
+  #hud-stack { left: calc(var(--sa-l) + 360px); right: calc(var(--sa-r) + var(--mm) + 64px); top: calc(var(--sa-t) + 8px); }
   body.touch #hud-stack { right: calc(var(--sa-r) + var(--mm) + 64px); }
   .tc-menu { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 16px); }
 }
@@ -286,7 +286,7 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
   .fbar { height: 15px; }
   #hud-stack, body.touch #hud-stack { left: 50%; right: auto; transform: translateX(-50%); width: min(460px, calc(100vw - 2 * var(--mm) - 420px)); min-width: 240px; }
   body.touch { --touch-h: 0px; }
-  body.touch #hud-bottom, body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 80px)); }
+  body.touch #hud-bottom, body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 68px)); }
   .tc-menu { top: calc(var(--sa-t) + var(--mm) + 64px); }
 }
 /* Desktops (a mouse): the ship column, compass and micro menu come out. */
@@ -614,7 +614,7 @@ table.grid td .ico { width: 1.9em; height: 1.9em; vertical-align: middle; margin
 body:not(.touch) .micro-menu { display: flex; flex-direction: column; gap: 6px; position: absolute; pointer-events: auto; right: calc(var(--sa-r) + 10px); top: calc(var(--sa-t) + var(--mm) + 58px); }
 body:not(.touch) #hud-stack { right: calc(var(--sa-r) + 60px); }
 @media (min-width: 700px) and (min-height: 521px) {
-  #hud-stack, body.touch #hud-stack, body:not(.touch) #hud-stack { top: calc(var(--sa-t) + var(--uf-p) + 54px); left: calc(var(--sa-l) + 8px); right: calc(var(--sa-r) + var(--mm) + 28px); transform: none; width: auto; min-width: 0; max-width: 520px; }
+  #hud-stack, body.touch #hud-stack, body:not(.touch) #hud-stack { top: calc(var(--sa-t) + var(--uf-p) + 54px); left: calc(var(--sa-l) + 8px); right: calc(var(--sa-r) + var(--mm) + 28px); transform: none; width: auto; min-width: 0; max-width: 500px; }
 }
 @media (min-width: 1100px) and (min-height: 600px) {
   #hud-stack, body.touch #hud-stack, body:not(.touch) #hud-stack { top: calc(var(--sa-t) + 12px); left: 50%; right: auto; transform: translateX(-50%); width: min(440px, calc(100vw - 2 * 380px)); }
@@ -658,6 +658,8 @@ body:not(.touch) #hud-stack { right: calc(var(--sa-r) + 60px); }
 .slot .k { left: 5px; top: 3px; }
 /* The region line: two short lines under the minimap, never wrapping into a third. */
 #hud-region > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Tablets: the region lines reach left over the empty sea (as far as the stack of panels allows) rather than being cut short. */
+@media (min-width: 700px) and (max-width: 1099px) { #hud-region { width: max(150px, min(240px, calc(100vw - 522px))); } }
 @media (max-width: 699px) { #hud-region { width: calc(var(--mm) + 70px); font-size: 11px; } }
 .map-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; max-width: calc(100% - 24px); }
 .map-legend span { white-space: nowrap; display: inline-flex; align-items: center; }

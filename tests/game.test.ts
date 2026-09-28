@@ -8,6 +8,7 @@ import { Game } from '../server/src/game/Game.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import { FakeConn, join, makeGame, steps, onHull } from './helpers.ts';
+import { SPEED_SCALE } from '../shared/src/constants.ts';
 
 function shipOf(game: Game, conn: FakeConn): ShipEntity {
   for (const s of game.sessions) if ((s.conn as unknown) === conn) return s.ship!;
@@ -232,7 +233,8 @@ test('reefs: a deep galleon grounds and splinters, a shallow-running sloop skate
     game.grid.upsert(npc.id, npc.state.x, npc.state.y);
     const hull0 = npc.hull;
     let minSpeed = 99;
-    for (let i = 0; i < 20 * 40; i++) {
+    // Straight across the reef: about 380 m of way, at the pace of the sea.
+    for (let i = 0; i < 20 * Math.ceil(40 / SPEED_SCALE); i++) {
       game.step();
       minSpeed = Math.min(minSpeed, npc.state.speed);
     }
@@ -372,6 +374,7 @@ test('curse: the Abyss claims a lingering ship in stages; a Crown yard scrapes i
   ship.state.x = 89000;
   ship.state.y = 9000; // The Abyss
   ship.protectedUntil = 1e9;
+  ship.input = { rudder: 0, sailTarget: 0 }; // lingering, not sailing on into the Wall
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   steps(game, 20 * 60 * 8);
   assert.ok(ship.curse >= 50, `curse ${ship.curse.toFixed(1)}`);

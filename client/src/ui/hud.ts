@@ -28,7 +28,7 @@ import { isNight, nightFactor, timeOfDay } from '../../../shared/src/constants.t
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { activeTalents } from '../../../shared/src/data/talents.ts';
-import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
+import { relWindDeg, windPush } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume, tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { seasonName } from '../../../shared/src/world/worldgen.ts';
@@ -306,7 +306,7 @@ export class Hud {
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
     const tq = trackedQuest(state.self?.quests);
-    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"> · ${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${tq ? `<span style="color:var(--gold)">${esc(sv(tq.name))}:</span> <span class="muted">${esc(sv(tq.text))}${tq.need > 1 ? ` ${tq.progress}/${tq.need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
+    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"><span class="rg-dot"> · </span>${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${tq ? `<span style="color:var(--gold)">${esc(sv(tq.name))}:</span> <span class="muted">${esc(sv(tq.text))}${tq.need > 1 ? ` ${tq.progress}/${tq.need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
     if (html !== this.lastRegion) {
       this.lastRegion = html;
       $('hud-region').innerHTML = html;
@@ -386,7 +386,10 @@ export class Hud {
     const rel = Math.round(relWindDeg(you.h, { dir: state.wind[0], strength: state.wind[1] }));
     const pt = rel < (state.ownStats?.noGoDeg ?? 50) ? 'irons' : rel < 80 ? 'close' : rel < 110 ? 'beam' : rel < 160 ? 'broad' : 'running';
     const point = term(`sail.${pt}` as Key, pt === 'irons' ? 'bad' : '');
-    $('nav-text').innerHTML = `${esc(t('hud.wind', { kn: Math.round(state.wind[1] * 30) }))} · ${point} (${rel}°)`;
+    // What the wind does for her way: a following breeze drives her on, a head wind holds her back.
+    const push = Math.round((windPush(rel, state.wind[1]) - 1) * 100);
+    const pushTag = Math.abs(push) >= 3 ? ` · <b style="color:var(${push > 0 ? '--good' : '--bad'})">${push > 0 ? '+' : '−'}${Math.abs(push)}%</b>` : '';
+    $('nav-text').innerHTML = `${esc(t('hud.wind', { kn: Math.round(state.wind[1] * 30) }))}<br>${point} (${rel}°)${pushTag}`;
   }
 
   private drawMinimap(state: ClientState): void {

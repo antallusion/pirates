@@ -34,6 +34,7 @@ import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import { repairCost } from './ports.ts';
 import type { ShipEntity } from './ship.ts';
+import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -539,7 +540,7 @@ function fireShoreGuns(game: Game, h: Holding, isl: Island, guns: number): void 
   const t = target as ShipEntity;
   // A salvo from every gun that bears, aimed where she will be; the more guns, the tighter the fall of shot.
   const lead = 1.4;
-  const v = { x: Math.sin(t.state.heading) * t.state.speed, y: -Math.cos(t.state.heading) * t.state.speed };
+  const v = { x: Math.sin(t.state.heading) * t.state.speed * SPEED_SCALE, y: -Math.cos(t.state.heading) * t.state.speed * SPEED_SCALE };
   game.strikes.push({ at: game.now + lead, x: t.state.x + v.x * lead, y: t.state.y + v.y * lead, radius: Math.max(22, 60 - guns * 1.2), hull: 45, rudder: 0, owner: 0, slow: 0, shells: Math.max(1, Math.round(guns)), fx: 'barrage' });
   game.holdings.nextSalvo.set(h.island, game.now + 12);
   game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(isl.x), y: Math.round(isl.y), r: 60 }, isl.x, isl.y);

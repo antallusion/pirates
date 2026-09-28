@@ -15,6 +15,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
+import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 
 export interface Tether {
   target: number;
@@ -77,7 +78,7 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
       const balls: [number, number, number, number, number][] = [];
       for (let i = 0; i < 3; i++) {
         const bh = h + game.rng.gauss() * 3 * DEG * ship.stats.spreadMul;
-        game.projectiles.push({ owner: ship.id, x: ship.state.x, y: ship.state.y, heading: bh, speed: AMMO.chain.speed, dist: reach, traveled: 0, ammo: 'chain', damage: 34 * ship.stats.gunDamageMul, maxRange: def.range, delay: i * 0.15 });
+        game.projectiles.push({ owner: ship.id, x: ship.state.x, y: ship.state.y, heading: bh, speed: AMMO.chain.speed * SPEED_SCALE, dist: reach, traveled: 0, ammo: 'chain', damage: 34 * ship.stats.gunDamageMul, maxRange: def.range, delay: i * 0.15 });
         balls.push([Math.round(ship.state.x), Math.round(ship.state.y), Math.round(bh * 1000) / 1000, Math.round(reach), i * 150]);
       }
       game.emit({ k: 'volley', ship: ship.id, side: 'bow', ammo: 'chain', balls }, ship.state.x, ship.state.y);

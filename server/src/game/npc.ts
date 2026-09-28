@@ -8,7 +8,7 @@ import { convoyFoe, raidEscort } from './raiding.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import { eliteShipLevel, hullsFor, npcSkill, shipLevelForCaptain, watersBand } from '../../../shared/src/data/shiplevel.ts';
 import type { NpcSkill } from '../../../shared/src/data/shiplevel.ts';
-import { NPC_ACTIVE_RADIUS, isNight } from '../../../shared/src/constants.ts';
+import { NPC_ACTIVE_RADIUS, SPEED_SCALE, isNight } from '../../../shared/src/constants.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -347,7 +347,7 @@ function abstractStep(game: Game, ship: ShipEntity, brain: NpcBrain, dt: number)
     if (!replan(game, ship, brain)) game.removeShip(ship.id);
     return;
   }
-  brain.traveled += cruiseSpeed(ship) * dt;
+  brain.traveled += cruiseSpeed(ship) * SPEED_SCALE * dt;
   const p = pointAlong(brain.path, brain.traveled);
   ship.state.x = p.x;
   ship.state.y = p.y;
@@ -556,7 +556,7 @@ function followPath(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     }
   }
   // Keep abstract progress roughly in sync for a clean demotion.
-  brain.traveled = Math.min(brain.length, brain.traveled + ship.state.speed * 0.3);
+  brain.traveled = Math.min(brain.length, brain.traveled + ship.state.speed * SPEED_SCALE * 0.3);
   steer(game, ship, brain, headingOf(wx - ship.state.x, wy - ship.state.y), 1);
 }
 
@@ -583,6 +583,7 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   // Her craft by her level (docs/12 §3.3): how much of the lead she allows, how wide she lets fly, her tricks.
   const sk = brain.skill ?? npcSkill(ship.shipLevel);
   // Lead the target by the ball's flight time (a green gunner allows only part of it).
+  // (The shot and the ship both go SPEED_SCALE times as fast across the world, so the lead is as it was.)
   const flight = (d / 180) * sk.lead;
   const tv = headingVec(target.state.heading);
   const px = target.state.x + tv.x * target.state.speed * flight;
@@ -719,7 +720,8 @@ export function spawnFireship(game: Game, prey: ShipEntity): ShipEntity | null {
   const from = wrapAngle(game.windFor(prey).dir + Math.PI);
   for (let i = 0; i < 8; i++) {
     const a = from + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.35;
-    const x = prey.state.x + Math.sin(a) * 1100, y = prey.state.y - Math.cos(a) * 1100;
+    // Far enough off that a captain at the pace of the sea still has time to sink her.
+    const x = prey.state.x + Math.sin(a) * 2000, y = prey.state.y - Math.cos(a) * 2000;
     if (depthAt(game.world, x, y) < 6) continue;
     const ship = game.spawnNpcShip('pirate', 'sloop', 'free', x, y, headingOf(prey.state.x - x, prey.state.y - y), { ship: 'Fireship', captain: 'No One' });
     const brain = game.npcs.get(ship.id)!;
@@ -753,8 +755,8 @@ function fireshipThink(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   }
   // Lead her mark a little, and never strike sail.
   const tv = headingVec(mark.state.heading);
-  const t = Math.min(6, d / Math.max(3, ship.state.speed + 1));
-  steer(game, ship, brain, headingOf(mark.state.x + tv.x * mark.state.speed * t - ship.state.x, mark.state.y + tv.y * mark.state.speed * t - ship.state.y), 1);
+  const t = Math.min(6, d / (Math.max(3, ship.state.speed + 1) * SPEED_SCALE));
+  steer(game, ship, brain, headingOf(mark.state.x + tv.x * mark.state.speed * SPEED_SCALE * t - ship.state.x, mark.state.y + tv.y * mark.state.speed * SPEED_SCALE * t - ship.state.y), 1);
 }
 
 /** The powder goes up: every hull within 80 m is holed, set alight and loses men; the fireship is gone. */

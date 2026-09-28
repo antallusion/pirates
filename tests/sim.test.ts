@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { polarEfficiency, stepSailing } from '../shared/src/sim/sailing.ts';
+import { polarEfficiency, stepSailing, targetSpeed, windPush } from '../shared/src/sim/sailing.ts';
 import type { SailParams, SailState } from '../shared/src/sim/sailing.ts';
 import { computeShipStats, cargoVolume } from '../shared/src/sim/shipstats.ts';
 import { canLearn, TALENTS } from '../shared/src/data/talents.ts';
 import { generateWorld, isLand, navBlocked } from '../shared/src/world/worldgen.ts';
-import { NAV_CELL, WORLD_SEED } from '../shared/src/constants.ts';
+import { NAV_CELL, SPEED_SCALE, WIND_PUSH, WORLD_SEED } from '../shared/src/constants.ts';
 import { segmentHitsHull } from '../shared/src/math.ts';
 
 const params = (over: Partial<SailParams> = {}): SailParams => ({
@@ -35,6 +35,29 @@ test('sailing: a ship accelerates downwind and stays put head to wind', () => {
   assert.ok(down.speed > 8, `downwind speed ${down.speed}`);
   assert.ok(down.y > 50, 'moved south');
   assert.ok(up.speed < 1, `head-to-wind speed ${up.speed}`);
+});
+
+test('the pace of the sea: her way is reckoned as before and carries her SPEED_SCALE times as far', () => {
+  let s: SailState = { x: 0, y: 0, heading: Math.PI / 2, speed: 10, sail: 0, rudder: 0 };
+  s = stepSailing(s, { rudder: 0, sailTarget: 0 }, params({ accel: 0 }), { dir: 0, strength: 0 }, { x: 0, y: 0 }, 0.05);
+  assert.ok(Math.abs(s.x - s.speed * SPEED_SCALE * 0.05) < 0.5, `moved ${s.x.toFixed(2)} m on ${s.speed.toFixed(2)} m/s`);
+  assert.ok(SPEED_SCALE === 6, 'six times the old pace (owner, 2026-09-28)');
+});
+
+test('the wind drives her on or holds her back: a run is faster than the beam, the beam than close-hauled', () => {
+  assert.equal(windPush(90, 1), 1);
+  assert.ok(Math.abs(windPush(180, 1) - (1 + WIND_PUSH)) < 1e-9, 'a following breeze drives her on');
+  assert.ok(Math.abs(windPush(0, 1) - (1 - WIND_PUSH)) < 1e-9, 'a head wind holds her back');
+  assert.ok(windPush(180, 0.3) < windPush(180, 1), 'the stronger the breeze, the more');
+  const st = (h: number): SailState => ({ x: 0, y: 0, heading: h, speed: 0, sail: 1, rudder: 0 });
+  const wind = { dir: Math.PI, strength: 1 }; // blowing south
+  const sq = params();
+  const run = targetSpeed(st(Math.PI), sq, wind), beam = targetSpeed(st(Math.PI / 2), sq, wind), close = targetSpeed(st(Math.PI / 2.6), sq, wind);
+  assert.ok(run > beam * 1.5, `a square-rigger runs: ${run.toFixed(1)} vs the beam ${beam.toFixed(1)}`);
+  assert.ok(beam > close, `beam ${beam.toFixed(1)} vs close-hauled ${close.toFixed(1)}`);
+  // A fore-and-aft rig is at her best on a broad reach, but the following wind still helps her.
+  const fa = params({ rig: 'fore_aft', noGoDeg: 42 });
+  assert.ok(targetSpeed(st(Math.PI), fa, wind) > targetSpeed(st(Math.PI / 2), fa, wind));
 });
 
 test('sailing: a stopped ship can still come about (no permanent irons)', () => {

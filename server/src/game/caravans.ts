@@ -39,6 +39,7 @@ import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { SKIPPER_RISK, SKIPPER_SALE, SKIPPER_SKIM, SKIPPER_SPEED } from '../../../shared/src/data/turncoats.ts';
 import { skipperHome, takeSkipper } from './turncoats.ts';
 import type { Skipper } from './turncoats.ts';
+import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 
 
 type Stop = { kind: 'isle' } | { kind: 'port'; id: string; act: 'sell' | 'buy' | 'trade_buy' | 'trade_sell' } | { kind: 'outpost'; id: string };
@@ -133,7 +134,7 @@ function speedOf(game: Game, c: Caravan): number {
   const h = island(game, c.island) ? game.holdings.get(game, c.island) : undefined;
   const pilot = h?.residents?.some((r) => r.prof === 'pilot') ? 1.1 : 1;
   const nav = c.skipperRec?.traits.includes('navigator') ? SKIPPER_SPEED : 1;
-  return slowest * 0.55 * pilot * nav;
+  return slowest * 0.55 * pilot * nav * SPEED_SCALE;
 }
 
 function value(cargo: Cargo): number {

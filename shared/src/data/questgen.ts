@@ -12,6 +12,7 @@ import type { RegionId } from '../world/regions.ts';
 import type { Island, Port, World } from '../world/worldgen.ts';
 import { islandLife } from '../world/islandlife.ts';
 import type { QuestDef, QuestStep } from './quests.ts';
+import { SPEED_SCALE } from '../constants.ts';
 
 // ------------------------------------------------------------------ the people who give the jobs
 
@@ -682,8 +683,8 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
     if (inReg.length) island = rng.pick(inReg);
   }
   const counted = plot.steps.some((s) => s.startsWith('sink') || s === 'board' || s === 'prize' || s === 'dive' || s === 'chart' || s === 'contraband');
-  // A race's time: the straight run at ten knots, and a margin (docs/12 P9).
-  const n = needs('race2') ? Math.max(5, Math.ceil((Math.hypot(port2!.x - port.x, port2!.y - port.y) * 1.4) / 10 / 60))
+  // A race's time: the straight run at ten knots (at the pace of the sea), and a margin (docs/12 P9).
+  const n = needs('race2') ? Math.max(3, Math.ceil((Math.hypot(port2!.x - port.x, port2!.y - port.y) * 1.4) / (10 * SPEED_SCALE) / 60))
     : needs('sink_named') || needs('find_letter') ? 1
     : needs('tribute') ? rng.int(1, 2)
     : needs('pickup') || needs('deliver2') || needs('deliver3') ? rng.int(4, 12) * (good === 'pearls' || good === 'medicine' ? 1 : 2)

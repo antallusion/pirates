@@ -35,6 +35,7 @@ import { changeRep } from './player.ts';
 import { hasLicence } from './ports.ts';
 import { questEvent } from './quests.ts';
 import type { ShipEntity } from './ship.ts';
+import { SPEED_SCALE, TURN_SCALE } from '../../../shared/src/constants.ts';
 
 type Mode = 'roam' | 'hunt' | 'flee' | 'line' | 'spent';
 
@@ -284,10 +285,12 @@ function spawnAbout(game: Game): void {
 
 function swim(game: Game, s: ShipEntity, tx: number, ty: number, speed: number, dt: number, turn = 1.4): void {
   const want = Math.atan2(tx - s.state.x, -(ty - s.state.y));
-  s.state.heading = wrapAngle(s.state.heading + clamp(wrapAngle(want - s.state.heading), -turn * dt, turn * dt));
-  const v = Math.min(speed, dist(s.state.x, s.state.y, tx, ty) / Math.max(dt, 1e-3));
+  // At the pace of the sea, as the ships (SPEED_SCALE, TURN_SCALE): her way is reckoned on the old scale.
+  const tr = turn * TURN_SCALE;
+  s.state.heading = wrapAngle(s.state.heading + clamp(wrapAngle(want - s.state.heading), -tr * dt, tr * dt));
+  const v = Math.min(speed, dist(s.state.x, s.state.y, tx, ty) / Math.max(dt * SPEED_SCALE, 1e-3));
   const h = headingVec(s.state.heading);
-  const nx = s.state.x + h.x * v * dt, ny = s.state.y + h.y * v * dt;
+  const nx = s.state.x + h.x * v * SPEED_SCALE * dt, ny = s.state.y + h.y * v * SPEED_SCALE * dt;
   if (isLand(game.world, nx, ny)) {
     // Land ahead: turn off it.
     s.state.heading = wrapAngle(s.state.heading + turn * dt * 2);

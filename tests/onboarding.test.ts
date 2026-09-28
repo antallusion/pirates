@@ -65,13 +65,16 @@ test('the First Watch: seven steps, each by doing; the HUD comes in a block at a
     ship.state.speed = 0;
     ship.input = { rudder: 0, sailTarget: 0 };
     const d0 = Math.hypot(raider.state.x - ship.state.x, raider.state.y - ship.state.y);
-    steps(game, 20 * 30);
-    const d1 = Math.hypot(raider.state.x - ship.state.x, raider.state.y - ship.state.y);
+    let d1 = d0;
+    for (let i = 0; i < 30; i++) {
+      steps(game, 20);
+      d1 = Math.min(d1, Math.hypot(raider.state.x - ship.state.x, raider.state.y - ship.state.y));
+    }
     assert.equal(game.npcs.get(raider.id)?.target, ship.id, 'she has the novice for her target');
     assert.ok(Object.entries(raider.ammo).every(([k, n]) => k === 'round' || n === 0), 'round shot only: a lesson, not a massacre');
     startMutiny(game, s, 'a test');
     assert.equal(s.profile!.company.mutiny, null, 'no mutiny during the First Watch');
-    assert.ok(d1 < d0 - 100, `the practice raider closes (${Math.round(d0)} → ${Math.round(d1)} m)`);
+    assert.ok(d1 < 300, `the practice raider comes within gunshot (${Math.round(d0)} → ${Math.round(d1)} m)`);
   }
   // 4. Three broadsides into the sea — the hint about the lead; then one that lands.
   for (let i = 0; i < 3; i++) onboardingVolley(game, ship, 0);

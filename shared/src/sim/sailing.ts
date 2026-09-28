@@ -4,6 +4,7 @@
 import { angleDiff, approach, clamp, DEG, headingVec, wrapAngle } from '../math.ts';
 import type { Rig } from '../data/ships.ts';
 import type { WindSample } from './wind.ts';
+import { SPEED_SCALE, TURN_SCALE, WIND_PUSH } from '../constants.ts';
 
 export interface SailState {
   x: number;
@@ -103,6 +104,12 @@ export function polarEfficiency(rig: Rig, relDeg: number, noGoDeg: number, weath
   return eff;
 }
 
+/** A following wind drives a ship on, a head wind holds her back (owner, 2026-09-28): 1 + WIND_PUSH at a run before a
+ * full breeze, 1 − WIND_PUSH head to it, nothing on the beam. `relDeg` is from windward (0 = head to wind). */
+export function windPush(relDeg: number, strength: number): number {
+  return 1 - WIND_PUSH * Math.min(1.15, strength) * Math.cos(relDeg * DEG);
+}
+
 /** Angle between heading and the direction the wind comes FROM, in degrees 0..180. */
 export function relWindDeg(heading: number, wind: WindSample): number {
   const from = wrapAngle(wind.dir + Math.PI);
@@ -122,7 +129,7 @@ export function targetSpeed(state: SailState, p: SailParams, wind: WindSample): 
   const sailFactor = Math.pow(state.sail, 0.85) * (tal && tal.silentRunning > 0 && state.sail <= 0.51 ? 1 + 0.05 * tal.silentRunning : 1);
   const sailHealth = 0.25 + 0.75 * p.sailHealth;
   const crew = 0.45 + 0.55 * p.crewFactor;
-  return p.maxSpeed * eff * windFactor * sailFactor * sailHealth * crew * p.loadFactor * p.speedMul;
+  return p.maxSpeed * eff * windFactor * windPush(rel, windS) * sailFactor * sailHealth * crew * p.loadFactor * p.speedMul;
 }
 
 export function stepSailing(s: SailState, input: SailInput, p: SailParams, wind: WindSample, current: { x: number; y: number }, dt: number): SailState {
@@ -154,11 +161,12 @@ export function stepSailing(s: SailState, input: SailInput, p: SailParams, wind:
   let turn = p.turnRate;
   if (tal?.stormRider) turn *= wind.strength >= 0.75 ? 1.25 : wind.strength < 0.35 ? 0.85 : 1;
   if (tal && tal.tackDrill > 0 && inIrons) turn *= 1 + 0.2 * tal.tackDrill;
-  const heading = wrapAngle(s.heading + rudder * turn * steerage * rudderEff * dt);
+  const heading = wrapAngle(s.heading + rudder * turn * TURN_SCALE * steerage * rudderEff * dt);
 
+  // Her way carries her across the world at the pace of the sea (SPEED_SCALE); the currents drift as they did.
   const fwd = headingVec(heading);
   const cm = 1 + p.currentMul;
-  const x = s.x + (fwd.x * speed + current.x * cm) * dt;
-  const y = s.y + (fwd.y * speed + current.y * cm) * dt;
+  const x = s.x + (fwd.x * speed * SPEED_SCALE + current.x * cm) * dt;
+  const y = s.y + (fwd.y * speed * SPEED_SCALE + current.y * cm) * dt;
   return { x, y, heading, speed, sail, rudder };
 }

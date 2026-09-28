@@ -43,7 +43,11 @@ function digAt(game: Game, c: ReturnType<typeof captain>['c'], s: PlayerSession,
   toSea(game, s, m.sx, m.sy);
   c.push({ t: 'land' });
   assert.equal(s.ship!.landing?.feature, 'dig', 'the boats go digging');
-  steps(game, 20 * Math.ceil(digTime(s.ship!, m.tier) + 1));
+  // An empty sea while they dig: no passing pirate pack comes in at the pace of the sea.
+  for (let i = 0; i < Math.ceil(digTime(s.ship!, m.tier) + 1); i++) {
+    for (const id of [...game.npcs.keys()]) if (game.ships.get(id)?.name !== 'Guardians of the Hoard') game.removeShip(id);
+    steps(game, 20);
+  }
 }
 
 test('map kinds: a circle, a riddle in verse, landmarks and paces, a drawing of the shore, a cursed needle', () => {

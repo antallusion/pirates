@@ -101,18 +101,18 @@ test('a ship in the moment of her dash: about half the balls fly wide', () => {
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Marksman');
   const npc = target(game, ship, 120);
-  const x0 = npc.state.x, y0 = npc.state.y;
   const evs = events(game);
   let evaded = 0, landed = 0;
   for (let i = 0; i < 12; i++) {
     npc.addEffect({ id: 'evasive', until: game.now + 30, flags: ['evasive'] }, game.now);
     npc.hull = npc.stats.hullMax;
     // She would run from the guns: back on the beam, stopped, for every volley.
-    npc.state.x = x0;
-    npc.state.y = y0;
+    const beam = headingVec(ship.state.heading + Math.PI / 2);
+    npc.state.x = ship.state.x + beam.x * 120;
+    npc.state.y = ship.state.y + beam.y * 120;
     npc.state.speed = 0;
     npc.state.heading = ship.state.heading;
-    game.grid.upsert(npc.id, x0, y0);
+    game.grid.upsert(npc.id, npc.state.x, npc.state.y);
     ship.reload.starboard = 0;
     evs.length = 0;
     c.push({ t: 'fire', side: 'starboard', dist: 120 });

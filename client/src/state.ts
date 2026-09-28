@@ -8,7 +8,7 @@ import { setNemeses } from './ui/nemesis.ts';
 import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
-import { isNight } from '../../shared/src/constants.ts';
+import { isNight, SPEED_SCALE } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
   BarterView, BoardFightView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
@@ -468,7 +468,7 @@ export class ClientState {
       if (rt >= c.t) {
         // Extrapolate briefly past the newest sample.
         const dt = Math.min(0.5, rt - c.t); // far ships arrive at 2.5 Hz
-        s.cur = { ...c, x: c.x + Math.sin(c.h) * c.spd * dt, y: c.y - Math.cos(c.h) * c.spd * dt };
+        s.cur = { ...c, x: c.x + Math.sin(c.h) * c.spd * SPEED_SCALE * dt, y: c.y - Math.cos(c.h) * c.spd * SPEED_SCALE * dt };
       } else if (rt <= a.t) {
         s.cur = a;
       } else {
@@ -506,7 +506,7 @@ export class ClientState {
     }
     // Smooth toward the predicted state to hide snapshot corrections.
     const d = this.ownDisplay;
-    if (!d || Math.hypot(d.x - s.x, d.y - s.y) > 40) this.ownDisplay = s;
+    if (!d || Math.hypot(d.x - s.x, d.y - s.y) > 40 * SPEED_SCALE / 2) this.ownDisplay = s;
     else this.ownDisplay = { ...s, x: lerp(d.x, s.x, 0.3), y: lerp(d.y, s.y, 0.3), heading: lerpAngle(d.heading, s.heading, 0.3) };
     return this.ownDisplay;
   }
