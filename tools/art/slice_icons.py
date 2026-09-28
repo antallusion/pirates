@@ -20,7 +20,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 RAW = os.path.join(ROOT, 'assets', 'raw')
 OUT = os.path.join(ROOT, 'assets', 'icons')
 sys.path.insert(0, os.path.dirname(__file__))
-from register import MANIFEST, write_manifest  # noqa: E402
+from register import MANIFEST, rev_of, write_manifest  # noqa: E402
 
 PX = 192
 
@@ -71,7 +71,7 @@ def main(sheet: int, stem: str) -> None:
         tile = tile.crop(((tile.width - side) // 2, (tile.height - side) // 2, (tile.width - side) // 2 + side, (tile.height - side) // 2 + side))
         tile = tile.resize((PX, PX), Image.LANCZOS)
         tile.save(os.path.join(OUT, f'item_{name}.webp'), 'WEBP', quality=90, method=6)
-        m['assets'][f'icon.item_{name}'] = {'local': f'icons/item_{name}.webp', 'remote': stem + '.png', 'job': job, 'fit': f'sheet:items{sheet}.{i}'}
+        m['assets'][f'icon.item_{name}'] = {'local': f'icons/item_{name}.webp', 'remote': stem + '.png', 'job': job, 'fit': f'sheet:items{sheet}.{i}', 'rev': rev_of(stem)}
         print('icon', name)
     write_manifest(m)
 

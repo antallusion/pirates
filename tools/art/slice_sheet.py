@@ -25,7 +25,7 @@ from scipy import ndimage
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, os.path.dirname(__file__))
-from register import MANIFEST, write_manifest  # noqa: E402
+from register import MANIFEST, rev_of, write_manifest  # noqa: E402
 from slice_flags import fetch, key_magenta  # noqa: E402
 
 SHEETS = os.path.join(os.path.dirname(__file__), 'sheets.json')
@@ -107,7 +107,7 @@ def main(sheet_name: str, stem: str) -> None:
         fname = name_of(aid)
         path = os.path.join(out_dir, fname + '.webp')
         out.save(path, 'WEBP', quality=90, method=6)
-        m['assets'][aid] = {'local': f"{sh['dir']}/{fname}.webp", 'remote': stem + '.png', 'job': job, 'fit': f'sheet:{sheet_name}.{i}'}
+        m['assets'][aid] = {'local': f"{sh['dir']}/{fname}.webp", 'remote': stem + '.png', 'job': job, 'fit': f'sheet:{sheet_name}.{i}', 'rev': rev_of(stem)}
         print(aid, (x0, y0, x1, y1), out.size)
     write_manifest(m)
 

@@ -21,7 +21,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 RAW = os.path.join(ROOT, 'assets', 'raw')
 OUT = os.path.join(ROOT, 'assets', 'flags')
 sys.path.insert(0, os.path.dirname(__file__))
-from register import MANIFEST, write_manifest  # noqa: E402
+from register import MANIFEST, rev_of, write_manifest  # noqa: E402
 
 W, H = 240, 160
 
@@ -111,7 +111,7 @@ def main(letter: str, stem: str) -> None:
         canvas.alpha_composite(piece, ((W - piece.width) // 2, (H - piece.height) // 2))
         name = f'f{base + i:02d}'
         canvas.save(os.path.join(OUT, name + '.webp'), 'WEBP', quality=92, method=6)
-        m['assets'][f'flag.{name}'] = {'local': f'flags/{name}.webp', 'remote': stem + '.png', 'job': job, 'fit': f'sheet:{letter}{i}'}
+        m['assets'][f'flag.{name}'] = {'local': f'flags/{name}.webp', 'remote': stem + '.png', 'job': job, 'fit': f'sheet:{letter}{i}', 'rev': rev_of(stem)}
         print('flag', name, (x0, y0, x1, y1))
     write_manifest(m)
 

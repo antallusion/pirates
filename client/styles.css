@@ -322,6 +322,8 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
 .map-maps { max-height: 150px; overflow-y: auto; font-size: 12px; padding: 6px 10px; border-top: 1px solid rgba(111,90,56,0.4); }
 #banner small { display: block; font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--fog); letter-spacing: 0.02em; }
 #banner.show { opacity: 1; }
+/* A window open over the sea: the region's name does not print across it. */
+body:has(#modal:not(.hidden)) #banner { visibility: hidden; }
 .toast { background: rgba(10, 11, 13, 0.85); border-left: 3px solid var(--steel); padding: 6px 10px; font-size: 12px; animation: fadein 0.2s; }
 .toast.good { border-color: var(--good); }
 .toast.bad { border-color: var(--bad); }

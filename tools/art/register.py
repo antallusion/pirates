@@ -21,6 +21,12 @@ FOLDER = {
 }
 
 
+def rev_of(stem):
+    """A cache-buster for a picture cut from a painting: the painting's timestamp (hf_YYYYMMDD_hhmmss_…), so a
+    repainted asset under the same file name is fetched afresh."""
+    return int(stem[3:11] + stem[12:18])
+
+
 def write_manifest(m):
     ids = list(m['assets'])
     width = max(len(i) for i in ids) + 3
