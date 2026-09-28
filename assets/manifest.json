@@ -404,6 +404,7 @@
     "portrait.giver_lighthouse_keeper_m":{ "local": "portraits/giver_lighthouse_keeper_m.webp", "remote": "hf_20260928_021637_c86fe3fd-c352-41d6-bd36-b15a2bf2dd7d.png", "job": "c86fe3fd-c352-41d6-bd36-b15a2bf2dd7d" },
     "portrait.giver_lighthouse_keeper_f":{ "local": "portraits/giver_lighthouse_keeper_f.webp", "remote": "hf_20260928_022551_470dfd4b-3396-417e-9685-9c0b42c1d15b.png", "job": "470dfd4b-3396-417e-9685-9c0b42c1d15b" },
     "portrait.giver_whaler_m":           { "local": "portraits/giver_whaler_m.webp", "remote": "hf_20260928_023441_c7908dd9-d754-482f-b699-bf2e71cd967c.png", "job": "c7908dd9-d754-482f-b699-bf2e71cd967c" },
-    "portrait.giver_cultist_m":          { "local": "portraits/giver_cultist_m.webp", "remote": "hf_20260928_024343_fd9fcbbf-b93e-42c1-b9c5-dc8d47e16d04.png", "job": "fd9fcbbf-b93e-42c1-b9c5-dc8d47e16d04" }
+    "portrait.giver_cultist_m":          { "local": "portraits/giver_cultist_m.webp", "remote": "hf_20260928_024343_fd9fcbbf-b93e-42c1-b9c5-dc8d47e16d04.png", "job": "fd9fcbbf-b93e-42c1-b9c5-dc8d47e16d04" },
+    "portrait.giver_cultist_f":          { "local": "portraits/giver_cultist_f.webp", "remote": "hf_20260928_025249_5aede225-8644-4619-b1f9-0ab50c830945.png", "job": "5aede225-8644-4619-b1f9-0ab50c830945" }
   }
 }

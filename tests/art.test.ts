@@ -44,8 +44,8 @@ test("every quest giver has a portrait id, and it is of the giver's sex", () => 
   assert.equal(FACES.length, 33);
 });
 
-// The Higgsfield batch is painted one picture at a time (docs/11 P5); this turns from TODO to a plain test once it is in.
-test("the new art is complete: orders, biomes, the islands' people and beasts, every giver's face", { todo: 'P5 art is still being painted' }, () => {
+// The Higgsfield batch (docs/11 P5), painted one picture at a time: all of it is in.
+test("the new art is complete: orders, biomes, the islands' people and beasts, every giver's face", () => {
   const missing = [...P5_ART, ...FACES].filter((id) => !baked(id));
   assert.deepEqual(missing, []);
 });
