@@ -151,7 +151,9 @@ def main(sheet_name: str, stem: str) -> None:
             # (`align`: {painting: 'left' | 'right'}).
             side = sh.get('align', {}).get(stem)
             left = 0 if side == 'left' else tile.width - w if side == 'right' else (tile.width - w) // 2
-            tile = tile.crop((left, (tile.height - h) // 2, left + w, (tile.height - h) // 2 + h))
+            # And from the top where a caption was painted along the foot of every panel (`valign`: 'top').
+            top = 0 if sh.get('valign', {}).get(stem) == 'top' else (tile.height - h) // 2
+            tile = tile.crop((left, top, left + w, top + h))
             out = tile.resize((round(px * ratio), px), Image.LANCZOS)
         else:
             cell = np.array(im.crop((x0, y0, x1, y1)))
