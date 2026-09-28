@@ -1,6 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { regattaPanel } from './regatta.ts';
 import { nemesisLabel } from './nemesis.ts';
 import { pirateById } from '../../../shared/src/data/pirates.ts';
 import { BEASTS, beastOfClass, hullNoise, noiseBand } from '../../../shared/src/data/beasts.ts';
@@ -56,6 +57,7 @@ export class Hud {
   onHunt: (action: 'slack' | 'cut' | 'flense', id?: number) => void = () => {};
   onTribute: (id: number) => void = () => {};
   private lastHuntKey = '';
+  private lastRegattaKey = '';
   private lastFishKey = '';
   private lastTargetKey = '';
   private toastsEl = $('toasts');
@@ -104,6 +106,7 @@ export class Hud {
     this.drawParty(state);
     this.drawFishing(state);
     this.drawHunt(state);
+    this.drawRegatta(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -894,6 +897,17 @@ export class Hud {
    * The hunt (docs/12 P4): the beast on the line — the tension against its band, its strength and hide — the carcass
    * being flensed, one alongside to flense, or, with a shy beast near, the noise of her way.
    */
+  /** The regatta's panel (docs/12 P10 #5): the buoy she sails for, where, and her time. */
+  private drawRegatta(state: ClientState): void {
+    const el = $('hud-regatta');
+    const html = regattaPanel(state);
+    const key = html ?? '';
+    if (key === this.lastRegattaKey) return;
+    this.lastRegattaKey = key;
+    el.classList.toggle('hidden', !html);
+    el.innerHTML = html ?? '';
+  }
+
   private drawHunt(state: ClientState): void {
     const el = $('hud-hunt');
     const v = state.hunt, own = state.ownDisplay, you = state.you;

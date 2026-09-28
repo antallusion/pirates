@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { regattaSignUp, sendRegatta, stepRegatta } from './regatta.ts';
 import { diceBid, diceJoin, diceLeave, diceLiar, diceOpen, diceStart, stepDice } from './dice.ts';
 import { catAboard, petAction, petsOnDock, stepPets } from './pets.ts';
 import { companionAction, stepCompanions } from './companion.ts';
@@ -723,6 +724,7 @@ export class Game {
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
     stepPets(this); // the parrots' watch (docs/12 P10 #3)
     stepDice(this); // the tavern tables (docs/12 P10 #4)
+    stepRegatta(this); // the Regatta of Equal Waters (docs/12 P10 #5)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -2535,6 +2537,9 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'regatta':
+        err(regattaSignUp(this, s));
+        return this.pushPort(s);
       case 'pet':
         err(petAction(this, s, String(msg.action), msg.pet === null || msg.pet === undefined ? null : String(msg.pet)));
         return this.pushPort(s);
@@ -3321,6 +3326,7 @@ export class Game {
     }
     questEvent(this, s, { k: 'dock', port });
     petsOnDock(this, s, port); // the monkey works the quay (docs/12 P10 #3)
+    sendRegatta(this, s); // the next regatta, on the harbour's board (docs/12 P10 #5)
     this.pushPort(s);
     this.pushSelf(s, true);
     this.saveSession(s);

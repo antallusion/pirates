@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { regattaCard } from './regatta.ts';
 import { diceCard } from './dice.ts';
 import { PETS } from '../../../shared/src/data/companions.ts';
 import { petIcon } from './companion.ts';
@@ -139,6 +140,8 @@ export class PortScreen {
         return this.send({ t: 'dice', action: 'join', id: Number(d.id) });
       case 'dice_davy':
         return this.send({ t: 'dice', action: 'open', stake: 0, davy: true });
+      case 'regatta':
+        return this.send({ t: 'regatta', action: 'signup' });
       case 'pet_buy':
         return this.send({ t: 'pet', action: 'buy', pet: d.pet as never });
       case 'sellall':
@@ -509,10 +512,11 @@ ${orders}${berths}</div>` : ''}`;
   }
 
   private harbour(view: PortView, state: ClientState): string {
+    const regatta = regattaCard(state, state.regatta, state.self?.dockedAt ?? null);
     const self = state.self!;
     const port = state.ports.find((p) => p.id === view.portId)!;
     const reps = Object.entries(self.reputation).map(([f, v]) => `<tr><td>${icon(`faction_${f}`)}${esc(FACTIONS[f as never as keyof typeof FACTIONS].name)}</td><td class="${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</td></tr>`).join('');
-    return `<div class="cols"><div>
+    return `${regatta}<div class="cols"><div>
         <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${esc(L('pardon.title'))}</h4>${view.pardonCost !== null ? `<p>${esc(L('pardon.text', { n: self.infamy }))}</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>${esc(L('pardon.buy', { cost: fmt(view.pardonCost) }))}</button>` : `<p class="muted">${esc(L('pardon.none'))}</p>`}</div>
         ${view.licence ? `<div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('licence.title'))}</h4><p>${esc(view.licence.until > state.estServerTime() ? L('licence.textActive', { faction: FACTIONS[port.faction].short }) : L('licence.textDuty', { pct: Math.round(view.duty * 100) || '', faction: FACTIONS[port.faction].short }))}</p>
           ${port.faction === 'harpoon' ? `<p class="muted">${esc(L('licence.whaling'))}</p>` : ''}

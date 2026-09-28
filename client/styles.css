@@ -2080,3 +2080,9 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .dice-card .dc-davy p { margin: 0 0 6px; }
 .dc-faces .giver-h { flex-basis: 100%; }
 .die.sm { width: 22px; height: 22px; vertical-align: middle; margin-left: 2px; }
+/* The Regatta of Equal Waters (docs/12 P10 #5). */
+#hud-regatta { pointer-events: none; padding: 6px 9px 7px; max-width: 320px; }
+#hud-regatta .fp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+#hud-regatta .fp-head b { font-family: var(--serif); font-size: 14px; color: #f0d9b0; }
+#hud-regatta .hp-lvl { font: 700 13px var(--sans); color: #e8c46a; font-variant-numeric: tabular-nums; }
+#hud-regatta .rg-next { font-size: 13px; color: #cfe0b0; }

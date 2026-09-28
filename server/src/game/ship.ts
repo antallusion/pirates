@@ -1,5 +1,6 @@
 // Server-side ship entity: the authoritative state of every vessel (player or NPC) at sea.
 
+import { regattaSail } from '../../../shared/src/data/regatta.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { combatLevelOf, onLadder, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
@@ -317,7 +318,7 @@ export class ShipEntity {
 
   sailParams(night: boolean): SailParams {
     const st = this.stats;
-    return {
+    const p: SailParams = {
       rig: st.rig,
       maxSpeed: st.maxSpeed,
       accel: st.accel,
@@ -335,6 +336,8 @@ export class ShipEntity {
       sweeps: this.cls.passive.id === 'sweeps',
       talent: sailTalents(st),
     };
+    // Equal waters (docs/12 P10 #5): a racer sails with the handling the regatta lends everyone.
+    return st.flags.has('regatta_equal') ? regattaSail(p) : p;
   }
 
   inCombat(now: number): boolean {

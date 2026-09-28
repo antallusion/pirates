@@ -379,6 +379,7 @@ export class Renderer {
     this.drawLoot(state);
     drawShoals(g, state.shoals, state.self?.fishing?.traps ?? [], (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
     this.drawCarcasses(state);
+    this.drawBuoys(state);
     drawSights(g, state.sights, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, own ? { x: own.x, y: own.y } : null, this.w, this.h);
     this.drawDuelRing(state);
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
@@ -2324,6 +2325,66 @@ export class Renderer {
     }
     void state;
     void side;
+  }
+
+  /** The regatta's buoys (docs/12 P10 #5): red and white, numbered; the one she sails for rings. */
+  private drawBuoys(state: ClientState): void {
+    const v = state.regatta;
+    if (!v || !v.buoys.length || !(v.signedUp || v.next !== null)) return;
+    const g = this.g;
+    const t = settings().reduceMotion ? 0 : this.time;
+    const r = Math.max(6, 7 * this.zoom);
+    v.buoys.forEach(([bx, by], i) => {
+      const x = this.sx(bx), y = this.sy(by);
+      const next = v.next === i;
+      if (x < -60 || y < -60 || x > this.w + 60 || y > this.h + 60) {
+        // The buoy she sails for, off the screen: an arrow at the edge points the way.
+        if (next) this.edgeArrow(x, y, '#ffe08a');
+        return;
+      }
+      if (next) {
+        const k = (t * 0.8) % 1;
+        g.strokeStyle = `rgba(255,224,138,${0.8 * (1 - k)})`;
+        g.lineWidth = 2;
+        g.beginPath(); g.arc(x, y, r * (1.4 + k * 2.2), 0, Math.PI * 2); g.stroke();
+      }
+      const bob = Math.sin(t * 1.6 + i) * r * 0.08;
+      g.fillStyle = 'rgba(0,0,0,0.35)';
+      g.beginPath(); g.ellipse(x + r * 0.25, y + r * 0.3, r, r * 0.7, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#b3261e';
+      g.beginPath(); g.arc(x, y + bob, r, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#efe6d0';
+      g.beginPath(); g.arc(x, y + bob, r, -Math.PI * 0.25, Math.PI * 0.25); g.lineTo(x, y + bob); g.fill();
+      g.beginPath(); g.arc(x, y + bob, r, Math.PI * 0.75, Math.PI * 1.25); g.lineTo(x, y + bob); g.fill();
+      g.strokeStyle = '#2a1a10'; g.lineWidth = 1.2;
+      g.beginPath(); g.arc(x, y + bob, r, 0, Math.PI * 2); g.stroke();
+      g.font = `700 ${Math.round(Math.max(11, r * 1.1))}px sans-serif`;
+      g.textAlign = 'center'; g.textBaseline = 'bottom';
+      g.fillStyle = next ? '#ffe08a' : '#f0e6cc';
+      g.strokeStyle = 'rgba(0,0,0,0.8)'; g.lineWidth = 3;
+      const label = i === 0 ? '⚑' : String(i);
+      g.strokeText(label, x, y - r * 1.2);
+      g.fillText(label, x, y - r * 1.2);
+    });
+  }
+
+  /** An arrow on the screen's edge toward a point beyond it. */
+  private edgeArrow(x: number, y: number, color: string): void {
+    const g = this.g;
+    const cx = this.w / 2, cy = this.h / 2;
+    const a = Math.atan2(y - cy, x - cx);
+    const m = 34;
+    const k = Math.min(Math.abs((cx - m) / Math.cos(a) || 1e9), Math.abs((cy - m) / Math.sin(a) || 1e9));
+    const ex = cx + Math.cos(a) * k, ey = cy + Math.sin(a) * k;
+    g.save();
+    g.translate(ex, ey);
+    g.rotate(a);
+    g.fillStyle = color;
+    g.strokeStyle = 'rgba(0,0,0,0.8)';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -10); g.lineTo(-3, 0); g.lineTo(-8, 10); g.closePath();
+    g.stroke(); g.fill();
+    g.restore();
   }
 
   /** The orca calves in their captains' wakes (docs/12 P10 #2): on the starboard quarter, surfacing and diving. */

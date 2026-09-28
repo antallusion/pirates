@@ -11,6 +11,7 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { regattaNow, regattaSignUp } from './regatta.ts';
 import { givePet, petAction } from './pets.ts';
 import { PETS, PET_IDS } from '../../../shared/src/data/companions.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
@@ -272,6 +273,14 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       givePet(game, s, pet);
       petAction(game, s, 'deck', pet);
       return `${PETS[pet].name[0]} is on deck now.`;
+    }
+    case 'regatta': {
+      // The Regatta of Equal Waters (docs/12 P10 #5 play-testing): /regatta [port] — a race off it in 30 s, signed up.
+      const portId = args[0] ?? ship.docked ?? 'saltmarrow';
+      if (!game.portById(portId)) return `No port or region "${portId}".`;
+      regattaNow(game, portId, 30_000);
+      if (ship.docked === portId) regattaSignUp(game, s);
+      return `Regatta of Equal Waters: ${portId}.`;
     }
     case 'choice': {
       // A chain's reward (docs/12 P9): /choice offers three pieces.

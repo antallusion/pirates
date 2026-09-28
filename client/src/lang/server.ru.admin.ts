@@ -67,4 +67,5 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'Encounters: {0}': 'Встречи: {0}',
   'Tattoos: {0}': 'Татуировки: {0}',
   'Pets: {0}': 'Питомцы: {0}',
+  'Regatta of Equal Waters: {0}.': 'Регата «Равные воды»: {0}.',
 };

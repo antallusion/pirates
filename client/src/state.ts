@@ -2,8 +2,9 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
-import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView } from '../../shared/src/protocol.ts';
+import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight } from '../../shared/src/constants.ts';
@@ -113,6 +114,8 @@ export class ClientState {
   /** The dice table she sits at (docs/12 P10 #4). */
   dice: DiceView | null = null;
   diceAt = 0;
+  /** The next regatta, and her race when she runs it (docs/12 P10 #5). */
+  regatta: RegattaView | null = null;
   choice: { quest: string; items: Item[] } | null = null;
   tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
@@ -311,6 +314,9 @@ export class ClientState {
       case 'petsown':
         this.petsOwn = m.view;
         break;
+      case 'regatta':
+        this.regatta = m.view;
+        break;
       case 'dice':
         this.dice = m.view;
         this.diceAt = performance.now();
@@ -446,13 +452,15 @@ export class ClientState {
       personalWind: false, weatherly: this.self.loadout.classId === 'schooner', sweeps: this.self.loadout.classId === 'xebec',
       talent: sailTalents(st),
     };
+    // A racer sails as the regatta lends (docs/12 P10 #5), as the server does.
+    const sail = st.flags.has('regatta_equal') ? regattaSail(params) : params;
     const wind = { dir: this.wind[0], strength: this.wind[1] };
     const cur = currentAt(this.currents, s.x, s.y, this.estServerTime(), this.whirlpools);
     const input = { rudder: this.input.rudder, sailTarget: sailSteps[this.input.sail] };
     let t = elapsed;
     while (t > 0) {
       const dt = Math.min(0.05, t);
-      s = stepSailing(s, input, params, wind, cur, dt);
+      s = stepSailing(s, input, sail, wind, cur, dt);
       t -= dt;
     }
     // Smooth toward the predicted state to hide snapshot corrections.

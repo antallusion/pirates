@@ -138,6 +138,8 @@ export type ClientMsg =
   | { t: 'dice'; action: 'join'; id: number }
   | { t: 'dice'; action: 'start' | 'liar' | 'leave' }
   | { t: 'dice'; action: 'bid'; q: number; f: number }
+  /** The Regatta of Equal Waters (docs/12 P10 #5). */
+  | { t: 'regatta'; action: 'signup' }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -1024,6 +1026,7 @@ export type ServerMsg =
   | { t: 'pets'; list: PetView[] }
   | { t: 'petsown'; view: PetsOwnView }
   | { t: 'dice'; view: DiceView | null }
+  | { t: 'regatta'; view: RegattaView }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1291,6 +1294,21 @@ export interface PetView {
   ship: number;
   orca?: number;
   deck?: PetId;
+}
+
+/** The Regatta of Equal Waters as a captain sees it (docs/12 P10 #5). */
+export interface RegattaView {
+  port: string;
+  phase: 'signup' | 'running' | 'done';
+  startsIn: number;
+  signedUp: boolean;
+  buoys: [number, number][];
+  /** The buoy she sails for (null: not racing). */
+  next: number | null;
+  passed: number;
+  time: number | null;
+  entrants: number;
+  records: { name: string; sec: number }[];
 }
 
 /** A table of Dead Man's Dice as one of its captains sees it (docs/12 P10 #4): her own cup, the others' counts. */

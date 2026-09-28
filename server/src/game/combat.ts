@@ -1,6 +1,7 @@
 // Naval combat: broadsides, ballistics, hit resolution with angle-of-impact and subsystem damage,
 // crimes and kill credit. All numbers come from shared data; nothing here trusts the client.
 
+import { regattaBlocked } from './regatta.ts';
 import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
@@ -397,6 +398,7 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   if (pv === 'duel_ok') return null;
   if (pv) return pv;
   if (b.protectedUntil > game.now) return 'protected';
+  if (regattaBlocked(a, b)) return 'No firing in a regatta.'; // equal waters (docs/12 P10 #5)
   if (a.isPlayer && (b.isPlayer || b.caravanId)) {
     const safety = REGIONS[b.region].safety;
     if (safety === 'safe') return 'Safe waters: no PvP here.';
