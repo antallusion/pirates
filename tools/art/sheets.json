@@ -172,7 +172,30 @@
    "icon.outpost_deep_shaft"
   ],
   "aspect": "16:9",
-  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: eighteen separate small building dioramas laid out in a strict grid of 6 columns and 3 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all eighteen, bold readable silhouettes at small size. Left to right, top to bottom: 1. a small timber counting-house with a hanging lantern sign, ledgers and cargo crates stacked by its door. 2. a stone smithy with a glowing forge hearth, an anvil and a quenching barrel under a sloped roof. 3. a low timber smokehouse with smoke seeping through its roof slats and fish hanging on racks. 4. brick try-works: two huge iron pots over a fire for rendering whale oil, oil casks beside them. 5. a dark timber hall with a whale jawbone arch over its door and captured flags on poles. 6. a tall stone signal tower with an iron fire basket on top and a bell. 7. two small weathered timber cottages with shingled roofs and a well between them. 8. a small wooden kennel and pen with a coop and a feeding trough. 9. a logging camp: stacked logs, a saw pit and a small tarred hut among dark pines. 10. a mine: a timber headframe over a shaft in grey rock, ore carts on rails. 11. salt pans: shallow square evaporation pools with white salt heaps and a rake shed. 12. a fishing station: a wooden jetty with drying fish racks, nets and a boat shed. 13. a whaling station: a slipway with a whale carcass, flensing tools and oil casks. 14. a pearl divers' camp: a hut on stilts over a lagoon, baskets of oyster shells. 15. a sulfur pit in black volcanic rock, yellow crusts, fuming vents and sacks. 16. a small plantation: rows of green crops, a drying shed and a cart. 17. a tar kiln: a smoking earth-mound kiln with barrels of black pine tar. 18. a deep shaft: a heavy iron winch tower over a black pit in dark rock, chains and lanterns. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm window lights; low saturation. Background: flat solid pure magenta #FF00FF everywhere between and around the dioramas, no gradient, NO cast shadows on the background. NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours."
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: eighteen separate small building dioramas laid out in a strict grid of 6 columns and 3 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all eighteen, bold readable silhouettes at small size. Left to right, top to bottom: 1. a small timber counting-house with a hanging lantern sign, ledgers and cargo crates stacked by its door. 2. a stone smithy with a glowing forge hearth, an anvil and a quenching barrel under a sloped roof. 3. a low timber smokehouse with smoke seeping through its roof slats and fish hanging on racks. 4. brick try-works: two huge iron pots over a fire for rendering whale oil, oil casks beside them. 5. a dark timber hall with a whale jawbone arch over its door and captured flags on poles. 6. a tall stone signal tower with an iron fire basket on top and a bell. 7. two small weathered timber cottages with shingled roofs and a well between them. 8. a small wooden kennel and pen with a coop and a feeding trough. 9. a logging camp: stacked logs, a saw pit and a small tarred hut among dark pines. 10. a mine: a timber headframe over a shaft in grey rock, ore carts on rails. 11. salt pans: shallow square evaporation pools with white salt heaps and a rake shed. 12. a fishing station: a wooden jetty with drying fish racks, nets and a boat shed. 13. a whaling station: a slipway with a whale carcass, flensing tools and oil casks. 14. a pearl divers' camp: a hut on stilts over a lagoon, baskets of oyster shells. 15. a sulfur pit in black volcanic rock, yellow crusts, fuming vents and sacks. 16. a small plantation: rows of green crops, a drying shed and a cart. 17. a tar kiln: a smoking earth-mound kiln with barrels of black pine tar. 18. a deep shaft: a heavy iron winch tower over a black pit in dark rock, chains and lanterns. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm window lights; low saturation. Background: flat solid pure magenta #FF00FF everywhere between and around the dioramas, no gradient, NO cast shadows on the background. NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours.",
+  "split": "blobs",
+  "picks": {
+   "hf_20260928_162003_3cf34567-f6ba-4536-b3f5-2c26bf87b43f": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18
+   ]
+  }
  },
  "pirates_1": {
   "grid": [

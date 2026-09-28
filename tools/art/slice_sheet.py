@@ -86,15 +86,32 @@ def main(sheet_name: str, stem: str) -> None:
             # the largest few, in reading order, rather than cut at even intervals.
             lab, n = ndimage.label(ndimage.binary_closing(keyed[:, :, 3] > 24, iterations=2))
             sizes = ndimage.sum(np.ones_like(lab), lab, range(1, n + 1))
-            want = len(sh['ids'])
-            top = sorted(np.argsort(sizes)[::-1][:want] + 1, key=lambda k: ndimage.center_of_mass(lab == k)[1])
+            # The painter may give a shape too many (or lay them out unevenly): `picks` names, for a given painting,
+            # which shape in reading order each id takes.
+            picks = sh.get('picks', {}).get(stem)
+            want = (max(picks) + 1) if picks else len(sh['ids'])
+            big = [int(k) + 1 for k in np.argsort(sizes)[::-1][:want]]
+            cm = {k: ndimage.center_of_mass(lab == k) for k in big}
+            # Reading order: rows by height (a new row where the gap is more than half a shape's height), then left
+            # to right.
+            hts = {k: (lambda sl: sl[0].stop - sl[0].start)(ndimage.find_objects((lab == k).astype(int))[0]) for k in big}
+            by_y = sorted(big, key=lambda k: cm[k][0])
+            rows_, cur = [], [by_y[0]]
+            for k in by_y[1:]:
+                if cm[k][0] - cm[cur[-1]][0] > 0.5 * np.median(list(hts.values())):
+                    rows_.append(cur)
+                    cur = [k]
+                else:
+                    cur.append(k)
+            rows_.append(cur)
+            order = [k for row in rows_ for k in sorted(row, key=lambda k: cm[k][1])]
             # A part come loose (a tusk, a fin tip) joins the shape nearest it.
-            cx = {k: ndimage.center_of_mass(lab == k)[1] for k in top}
             for k in range(1, n + 1):
-                if k in cx or sizes[k - 1] < 400:
+                if k in cm or sizes[k - 1] < 400:
                     continue
-                kx = ndimage.center_of_mass(lab == k)[1]
-                lab[lab == k] = min(top, key=lambda t: abs(cx[t] - kx))
+                ky, kx = ndimage.center_of_mass(lab == k)
+                lab[lab == k] = min(big, key=lambda t: (cm[t][0] - ky) ** 2 + (cm[t][1] - kx) ** 2)
+            top = [order[j] for j in picks] if picks else order
             blobs = (lab, top)
     for i, aid in enumerate(sh['ids']):
         if not aid:
@@ -108,8 +125,14 @@ def main(sheet_name: str, stem: str) -> None:
             only[lab[y0:y1, x0:x1] != top[i], 3] = 0
             ys_, xs_ = np.nonzero(only[:, :, 3] > 8)
             piece = Image.fromarray(only).crop((xs_.min(), ys_.min(), xs_.max() + 1, ys_.max() + 1))
-            s = px / max(piece.size)
-            out = piece.convert('RGBa').resize((max(1, round(piece.width * s)), max(1, round(piece.height * s))), Image.LANCZOS).convert('RGBA')
+            if sh['square']:
+                s = round(px * 0.9) / max(piece.size)
+                piece = piece.convert('RGBa').resize((max(1, round(piece.width * s)), max(1, round(piece.height * s))), Image.LANCZOS).convert('RGBA')
+                out = Image.new('RGBA', (px, px), (0, 0, 0, 0))
+                out.alpha_composite(piece, ((px - piece.width) // 2, (px - piece.height) // 2))
+            else:
+                s = px / max(piece.size)
+                out = piece.convert('RGBa').resize((max(1, round(piece.width * s)), max(1, round(piece.height * s))), Image.LANCZOS).convert('RGBA')
             fname = name_of(aid)
             out.save(os.path.join(out_dir, fname + '.webp'), 'WEBP', quality=90, method=6)
             m['assets'][aid] = {'local': f"{sh['dir']}/{fname}.webp", 'remote': stem + '.png', 'job': job, 'fit': f'sheet:{sheet_name}.{i}', 'rev': rev_of(stem)}
