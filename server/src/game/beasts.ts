@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { omenCarcassMul } from './omens.ts';
 import { giveCalf } from './companion.ts';
 import { tattooCount } from './tattoos.ts';
 import { trophyBonus } from './estate.ts';
@@ -1013,7 +1014,7 @@ function flensed(game: Game, s: PlayerSession, c: Carcass): void {
   const def = BEASTS[c.beast];
   const ship = s.ship!;
   S.carcasses.delete(c.id);
-  const k = yieldScale(c.beast, c.level) * (1 + trophyBonus(game, s.accountId, 'skull'));
+  const k = yieldScale(c.beast, c.level) * (1 + trophyBonus(game, s.accountId, 'skull')) * omenCarcassMul(game); // a whaler's day (docs/12 P10 #9)
   for (const [g, [lo, hi]] of Object.entries(def.yields) as [GoodId, [number, number]][]) {
     const n = Math.round(S.rng.range(lo, hi + 0.99) * k - 0.49);
     if (n > 0) giveGoods(ship, g, n);

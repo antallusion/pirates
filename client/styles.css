@@ -2104,3 +2104,5 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .jr-wonders .nem-text b { font-family: var(--serif); font-size: 14px; color: #e8c46a; }
 .jr-wonders .jr-wname { display: flex; gap: 6px; margin-top: 4px; }
 .jr-wonders .jr-wname .field { flex: 1; min-width: 0; }
+.jr-omen { border: 1px solid rgba(232,196,106,0.25); border-radius: 5px; padding: 6px 8px; background: rgba(30,26,16,0.5); }
+.jr-omen .btn { margin-top: 4px; }

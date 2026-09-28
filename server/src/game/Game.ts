@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { nailCoin, omenBroken, omenKept, sendOmen, stepOmens } from './omens.ts';
 import { nameWonder, stepWonders } from './wonders.ts';
 import { boardAction, buryChest } from './chests.ts';
 import { stepBottles, throwBottle } from './bottles.ts';
@@ -730,6 +731,7 @@ export class Game {
     stepRegatta(this); // the Regatta of Equal Waters (docs/12 P10 #5)
     if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
+    if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -1667,6 +1669,8 @@ export class Game {
     onFightWon(this, s);
     questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
     if (victim.npcRole === 'ghost' && this.weatherOf(victim) === 'fog') tattooCount(this, s, 'fog_ghosts'); // Whispers in the Fog (docs/12 P9)
+    if (how === 'sunk' && victim.npcRole === 'ghost') omenKept(this, s, 'ghost'); // the omen of the day (docs/12 P10 #9)
+    if (how === 'sunk' && victim.npcRole === 'merchant') omenBroken(this, s, 'merchant');
     wantedKill(this, s, victim); // a named pirate's head, the Hunters' Guild (docs/12 P5)
     raidKill(this, s, victim, how); // a merchant raided: the Brethren's fame, the lanes' heat (docs/12 P6)
     if (how === 'sunk') marqueBounty(this, s, victim);
@@ -2542,6 +2546,9 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'omen':
+        err(nailCoin(this, s));
+        return this.pushPort(s);
       case 'wonder':
         return err(nameWonder(this, s, String(msg.id ?? ''), String(msg.name ?? '')));
       case 'chest':
@@ -3341,6 +3348,7 @@ export class Game {
     questEvent(this, s, { k: 'dock', port });
     petsOnDock(this, s, port); // the monkey works the quay (docs/12 P10 #3)
     sendRegatta(this, s); // the next regatta, on the harbour's board (docs/12 P10 #5)
+    sendOmen(this, s); // the day's omen, told in the tavern (docs/12 P10 #9)
     this.pushPort(s);
     this.pushSelf(s, true);
     this.saveSession(s);
@@ -3373,6 +3381,7 @@ export class Game {
     // Fair Share: a paid crew sails cheerful.
     ship.morale = Math.min(100, ship.morale + 5 * ship.rank('cmd_fair_share'));
     if (ship.hasFlag('tattoo_heart')) ship.morale = Math.min(100, ship.morale + 10); // the Heart tattoo (docs/12 P9)
+    if (!catAboard(s.profile)) omenBroken(this, s, 'no_cat'); // the black cat's omen (docs/12 P10 #9)
     s.profile!.docked = null;
     const v = headingVec(away);
     ship.state = { x: port.x + v.x * 60, y: port.y + v.y * 60, heading: away, speed: 3, sail: 0.5, rudder: 0 };

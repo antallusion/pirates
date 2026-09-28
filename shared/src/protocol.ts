@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { OmenId } from './data/omens.ts';
 import type { WonderKind } from './data/wonders.ts';
 import type { HarnessId, PetId } from './data/companions.ts';
 import type { NemesisCause } from './data/nemesis.ts';
@@ -148,6 +149,8 @@ export type ClientMsg =
   | { t: 'mapboard'; action: 'post' | 'unpost' | 'buy'; id: string; price?: number }
   /** The atlas (docs/12 P10 #8): the first finder names a wonder. */
   | { t: 'wonder'; id: string; name: string }
+  /** The omen of the day's old custom (docs/12 P10 #9). */
+  | { t: 'omen'; action: 'coin' }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -1040,6 +1043,7 @@ export type ServerMsg =
   | { t: 'dice'; view: DiceView | null }
   | { t: 'regatta'; view: RegattaView }
   | { t: 'wonders'; view: WondersView }
+  | { t: 'omen'; id: OmenId }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }

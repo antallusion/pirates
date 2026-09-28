@@ -7,6 +7,7 @@
 //  - a deep line: lying still over deep water, the slow bite of the big and strange.
 // Every catch teaches the craft; the heaviest of each kind is the whole sea's record.
 
+import { omenKept } from './omens.ts';
 import { tattooCount } from './tattoos.ts';
 import { trophyBonus } from './estate.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -222,6 +223,7 @@ function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units
   const ship = s.ship!;
   const def = FISH[fish];
   const got = giveGoods(ship, def.good as GoodId, units);
+  if (got > 0) omenKept(game, s, 'fish'); // the dolphins' omen (docs/12 P10 #9)
   if (got <= 0) {
     // No room: the catch goes back over the side (said now and then, not every haul).
     if (every(game, s, 'full', 60)) game.sendTo(s, { t: 'toast', msg: 'The hold is full: the catch goes back over the side.', kind: 'bad' });

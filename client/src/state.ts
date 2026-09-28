@@ -2,6 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
 import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView } from '../../shared/src/protocol.ts';
@@ -118,6 +119,8 @@ export class ClientState {
   regatta: RegattaView | null = null;
   /** The Atlas of Sea Wonders (docs/12 P10 #8). */
   wonders: WondersView | null = null;
+  /** The omen of the day (docs/12 P10 #9). */
+  omen: OmenId | null = null;
   choice: { quest: string; items: Item[] } | null = null;
   tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
@@ -321,6 +324,9 @@ export class ClientState {
         break;
       case 'wonders':
         this.wonders = m.view;
+        break;
+      case 'omen':
+        this.omen = m.id;
         break;
       case 'dice':
         this.dice = m.view;

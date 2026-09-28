@@ -2,6 +2,8 @@
 // and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
 // «Follow», «Share» (in a group) and «Set aside».
 
+import { OMENS } from '../../../shared/src/data/omens.ts';
+import type { OmenId } from '../../../shared/src/data/omens.ts';
 import { WONDER_KINDS } from '../../../shared/src/data/wonders.ts';
 import type { WonderKind } from '../../../shared/src/data/wonders.ts';
 import type { WondersView } from '../../../shared/src/protocol.ts';
@@ -72,6 +74,8 @@ const EN = {
   wFirst: 'first found by {name}',
   wName: 'Name it',
   wNamePh: 'Your name for it',
+  omen: 'The omen of the day',
+  omenCoin: 'Nail a coin under the mast (50 silver)',
 };
 const RU: typeof EN = {
   title: 'Журнал заданий',
@@ -116,6 +120,8 @@ const RU: typeof EN = {
   wFirst: 'первым нашёл: {name}',
   wName: 'Назвать',
   wNamePh: 'Ваше имя для него',
+  omen: 'Примета дня',
+  omenCoin: 'Прибить монету под мачту (50 серебра)',
 };
 const L = dict(EN, RU);
 
@@ -141,7 +147,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${omenLog(state.omen)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
@@ -203,6 +209,14 @@ export class Journal {
         ${q.kind === 'job' || q.kind === 'story' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
       </div>`;
   }
+}
+
+/** The omen of the day (docs/12 P10 #9). */
+export function omenLog(id: OmenId | null, coin = false): string {
+  if (!id) return '';
+  const ru = lang() === 'ru' ? 1 : 0;
+  const o = OMENS[id];
+  return `<div class="jr-fishing jr-omen"><div class="giver-h">${esc(L('omen'))}: ${esc(o.name[ru])}</div><p class="jr-fish">${esc(o.text[ru])}</p>${coin && o.keep === 'coin' ? `<button class="btn btn-small" data-act="omen_coin">${esc(L('omenCoin'))}</button>` : ''}</div>`;
 }
 
 /** The Atlas of Sea Wonders (docs/12 P10 #8): the wonders found, who found them first, and a name to give. */
