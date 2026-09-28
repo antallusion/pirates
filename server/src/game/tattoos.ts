@@ -3,6 +3,7 @@
 // and 45 (and one for Old Needle's own mark), and changes them in any tavern. Hidden quests begin with a deed. A
 // chain's quests end with a choice of three pieces of gear.
 
+import { unlockDeed } from './looks.ts';
 import { HIDDEN_QUESTS, HIDDEN_SPECS, SIDE_QUESTS, TATTOOS, TATTOO_BY_ID, tattooSlots } from '../../../shared/src/data/sidequests.ts';
 import { makeItem } from '../../../shared/src/data/items.ts';
 import type { Item, Slot } from '../../../shared/src/data/items.ts';
@@ -202,6 +203,7 @@ export function offerChoice(game: Game, s: PlayerSession, q: QuestDef): void {
     items.push(makeItem(game.rng, p.itemSeq++, { ilvl: lvl, rarity: game.rng.chance(0.25) ? 3 : 2, slot }));
   }
   p.choice = { quest: q.name, items };
+  unlockDeed(game, s, 'quest'); // a chain's quest opens a little of the ship's look too (docs/12 P10 #12)
   choiceSent.add(s);
   game.sendTo(s, { t: 'choice', view: { quest: q.name, items } });
 }

@@ -3,6 +3,8 @@
 // projectiles & particles → darkness/light pass → fog/rain → screen-space overlays.
 // Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
 
+import { HULLS, LAMPS, LOOK_COLORS, decodeLook } from '../../../shared/src/data/looks.ts';
+import { flagCanvas } from './flag.ts';
 import { namedLabel } from '../ui/hud.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
@@ -1444,7 +1446,7 @@ export class Renderer {
     const imgH = len / hullImg.extentY;
     const imgW = imgH * (hullImg.canvas.width / hullImg.canvas.height);
     // From the atlas, in the colours she flies; the full image when she is drawn larger than her cell.
-    const a = this.atlas.get(`${cls.id}|${stage}|${hullImg.canvas.width}x${hullImg.canvas.height}`, () => hullImg.canvas, this.sailKey(s));
+    const a = this.atlas.get(`${cls.id}|${stage}|${hullImg.canvas.width}x${hullImg.canvas.height}`, () => hullImg.canvas, this.sailKey(s), this.lookPaint(s, state));
     if (Math.max(imgW, imgH) * this.dpr > CELL) g.drawImage(a.full, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
     else g.drawImage(a.page, a.sx, a.sy, a.sw, a.sh, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
     this.drawPennant(s, len, beam, state);
@@ -1549,6 +1551,15 @@ export class Renderer {
     return entry;
   }
 
+  /** A captain's look (docs/12 P10 #12): the paint and pattern the atlas gives her ship. */
+  private lookPaint(s: DrawShip, state: ClientState): { hull: [number, number, number] | null; sail: number; c1: [number, number, number]; c2: [number, number, number] } | undefined {
+    const l = decodeLook(s.own ? state.self?.look : s.info?.look);
+    if (!l || (l.hull === 0 && l.sail === 0)) return undefined;
+    const rgb = (hex: string): [number, number, number] => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+    const hull = HULLS[l.hull].hex;
+    return { hull: hull ? rgb(hull) : null, sail: l.sail, c1: rgb(LOOK_COLORS[l.c1].hex), c2: rgb(LOOK_COLORS[l.c2].hex) };
+  }
+
   /** Sail colours: navies and factions dye theirs; a captain under the Black Flag tars them. */
   private sailKey(s: DrawShip): SailKey {
     if (s.classId === 'ghost_ship') return 'none';
@@ -1584,6 +1595,22 @@ export class Renderer {
     // A captain's colours: the Black Flag, the Green Pennant, or plain slate.
     const player = s.own || s.info?.isPlayer;
     const season = s.own ? state.self?.pennant : s.info?.pennant;
+    // Her own flag (docs/12 P10 #12), unless she flies the Black Flag or the Green Pennant.
+    const lookKey = s.own ? state.self?.look : s.info?.look;
+    const look = player && !(s.flags & SF.BLACK_FLAG) && !(s.flags & SF.GREEN_PENNANT) ? decodeLook(lookKey) : null;
+    if (look && lookKey && (look.field || look.emblem || look.c1 || look.c2 !== 1 || look.c3 !== 2)) {
+      const flow = state.wind[0] - s.h - Math.PI / 2;
+      const w = beam * 1.5, h = w * 0.62;
+      g.save();
+      g.translate(0, -len * 0.18);
+      g.rotate(flow + Math.sin(this.time * 3 + s.id) * 0.06);
+      g.drawImage(flagCanvas(lookKey, look), 0, -h / 2, w, h);
+      g.strokeStyle = 'rgba(0,0,0,0.6)';
+      g.lineWidth = 1;
+      g.strokeRect(0, -h / 2, w, h);
+      g.restore();
+      return;
+    }
     const color = player ? (s.flags & SF.BLACK_FLAG ? '#0b0b0b' : s.flags & SF.GREEN_PENNANT ? '#3f7d4a' : season ?? '#3b4652') : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
     const trim = s.own || s.info?.isPlayer ? '#d8d2c4' : 'rgba(0,0,0,0.6)';
     const wave = Math.sin(this.time * 6 + s.id) * beam * 0.12;
@@ -1864,7 +1891,9 @@ export class Renderer {
       const lx = s.x + back.x * cls.length * 0.4, ly = s.y + back.y * cls.length * 0.4;
       hole(lx, ly, 55 + cls.length, 0.75);
       if (s.own) hole(s.x, s.y, 140, 0.35);
-      const fac = s.own ? '#f2b35a' : s.info && s.info.faction !== 'player' ? cbColor(opt.colorblind, FACTIONS[s.info.faction].lantern) : '#f2b35a';
+      // A captain's lanterns burn the colour of her look (docs/12 P10 #12).
+      const lamp = decodeLook(s.own ? state.self?.look : s.info?.look)?.lamp ?? 0;
+      const fac = s.own || s.info?.isPlayer ? LAMPS[lamp].color : s.info && s.info.faction !== 'player' ? cbColor(opt.colorblind, FACTIONS[s.info.faction].lantern) : '#f2b35a';
       // Lanterns flicker a little (unless the options still them).
       const flick = opt.lanternFlicker ? 0.88 + 0.12 * Math.sin(this.time * 9 + s.id * 1.7) * Math.sin(this.time * 3.1 + s.id) : 1;
       glows.push({ x: lx, y: ly, r: 16 + cls.length * 0.4, color: fac, a: 0.55 * flick });

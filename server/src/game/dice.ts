@@ -4,6 +4,7 @@
 // winner is named Master of Dice at the week's turn. At midnight in the Abyss, Davy Jones plays: a cursed thing
 // against a toll from the ship.
 
+import { unlockDeed } from './looks.ts';
 import { DAVY, DAVY_STAKE, DICE_HOUSE_CUT, DICE_MAX_SEATS, DICE_OPEN_S, DICE_REGULARS, DICE_STAKES, DICE_START, DICE_TURN_S, countFace, npcMove, validRaise } from '../../../shared/src/data/dice.ts';
 import type { Bid } from '../../../shared/src/data/dice.ts';
 import { timeOfDay } from '../../../shared/src/constants.ts';
@@ -404,6 +405,7 @@ function weekTurn(game: Game): void {
     const s = [...game.sessions].find((x) => x.name === top.name);
     if (s?.profile) {
       if (!s.profile.titles.includes('Master of Dice')) s.profile.titles.push('Master of Dice');
+      unlockDeed(game, s, 'dice');
       s.profile.gold += 5000;
     } else if (acc) deliver(game, acc, { from: 'The Tavern Keepers', subject: 'Master of Dice', body: `The week’s dice tournament is won by ${top.name}: ${top.wins} wins.`, gold: 5000, goods: null });
   }

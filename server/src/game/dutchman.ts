@@ -3,6 +3,7 @@
 // name his island; there he rises for the captain who has them; the first to sink him this week wins his figurehead
 // and a title; after that, his echo pays silver.
 
+import { unlockDeed } from './looks.ts';
 import { BATTLE_R, DAY_MS, DUTCHMAN_TITLE, PAGES, PAGE_R, RIDDLES, SHARE_R, WEEK_MS } from '../../../shared/src/data/dutchman.ts';
 import type { DutchmanView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -170,6 +171,7 @@ export function dutchmanSunk(game: Game, victim: ShipEntity, killer: ShipEntity 
     const p = m.profile!;
     if (first) {
       if (!p.figureheads.includes('fh_dutchman')) p.figureheads.push('fh_dutchman');
+      unlockDeed(game, m, 'dutchman');
       if (!p.titles.includes(DUTCHMAN_TITLE)) p.titles.push(DUTCHMAN_TITLE);
       game.sendTo(m, { t: 'toast', msg: 'The Dutchman’s figurehead is yours.', kind: 'gold' });
       game.grantXp(m, 5000, 'The Flying Dutchman', true);

@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { lookOf, setLook, unlockDeed } from './looks.ts';
 import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
 import { dutchmanSunk, stepDutchman } from './dutchman.ts';
 import { nailCoin, omenBroken, omenKept, sendOmen, stepOmens } from './omens.ts';
@@ -2555,6 +2556,8 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'look':
+        return err(setLook(this, s, String(msg.look ?? '')));
       case 'omen':
         err(nailCoin(this, s));
         return this.pushPort(s);
@@ -3182,6 +3185,7 @@ export class Game {
     ship.pressure = p.pressure;
     ship.title = p.title;
     ship.pennant = p.pennant;
+    ship.look = lookOf(p); // her colours (docs/12 P10 #12)
     ship.hull = p.hull < 0 ? ship.stats.hullMax : Math.max(1, Math.min(p.hull, ship.stats.hullMax));
     ship.sails = p.sails < 0 ? ship.stats.sailHpMax : Math.min(p.sails, ship.stats.sailHpMax);
     ship.rudderHp = p.rudderHp;

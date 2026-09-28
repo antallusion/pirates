@@ -1,5 +1,7 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { Look } from '../../../shared/src/data/looks.ts';
+import { STARTING_UNLOCKS, encodeLook } from '../../../shared/src/data/looks.ts';
 import type { CompanionRec } from './companion.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
 import type { NemesisRec } from './nemesis.ts';
@@ -191,6 +193,9 @@ export interface Profile {
   cartoFame?: number;
   /** The wonders of the sea she has found (docs/12 P10 #8). */
   wonders?: string[];
+  /** Her ship's look and the parts of it she has opened (docs/12 P10 #12). */
+  look?: Look;
+  unlocks?: string[];
   /** The Flying Dutchman's pages she has this week (docs/12 P10 #10). */
   dutchman?: { week: number; pages: number[] };
   /** Tattoos (docs/12 P9); a choice of three rewards waiting. */
@@ -438,6 +443,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     captainGear: p.captainGear,
     seaLetters: p.seaLetters ?? [],
     shipCat: !!p.shipCat,
+    look: p.look ? encodeLook(p.look) : null,
+    unlocks: p.unlocks ?? [...STARTING_UNLOCKS],
     cartoFame: p.cartoFame ?? 0,
     fishing: fishingView(p),
     beasts: p.beasts ?? {},

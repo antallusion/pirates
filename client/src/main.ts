@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { renderLook, resetLookDraft } from './ui/looks.ts';
 import { tell } from './ui/confirm.ts';
 import { beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
@@ -58,7 +59,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -539,6 +540,7 @@ setInterval(() => {
 }, 1000);
 
 function openModal(m: Modal): void {
+  if (m !== 'look') resetLookDraft();
   modal = m;
   $('modal').classList.toggle('hidden', m === null);
   refreshModal();
@@ -606,7 +608,7 @@ function renderModal(root: HTMLElement): void {
       journal.render(root, state);
       break;
     case 'ship':
-      renderShip(root, state, (m) => net.send(m), () => openModal('gear'));
+      renderShip(root, state, (m) => net.send(m), () => openModal('gear'), () => openModal('look'));
       break;
     case 'gear':
       renderGear(root, state, (m) => net.send(m), () => openModal('ship'));
@@ -648,6 +650,9 @@ function renderModal(root: HTMLElement): void {
     case 'dice':
       if (state.dice) renderDice(root, state, (m) => net.send(m));
       else closeModal();
+      break;
+    case 'look':
+      renderLook(root, state, (m) => net.send(m));
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);

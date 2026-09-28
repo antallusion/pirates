@@ -5,6 +5,7 @@
 // cabin by his rank, a fine or better piece, and his head among her trophies. Another captain sinking him ends
 // nothing: the Brethren's captains come back.
 
+import { unlockDeed } from './looks.ts';
 import { EPITHETS, NEMESIS_LETTERS, NEMESIS_LEVEL_BONUS, NEMESIS_MAX, NEMESIS_MAX_RANK, NEMESIS_RANKS, nemesisName, surnameOf, epithetOf } from '../../../shared/src/data/nemesis.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import { PIRATE_SEAS, pirateById } from '../../../shared/src/data/pirates.ts';
@@ -117,6 +118,7 @@ export function nemesisRevenge(game: Game, s: PlayerSession, np: NamedPirate): b
   if (!rec) return false;
   delete all[np.id];
   p.nemesisHeads = (p.nemesisHeads ?? 0) + 1;
+  unlockDeed(game, s, 'revenge');
   const [sur, ep] = [surnameOf(np)[0], epithetOf(rec.epithet)?.[0] ?? ''];
   const silver = Math.round(np.bounty * 0.5 * rec.rank);
   p.gold += silver;

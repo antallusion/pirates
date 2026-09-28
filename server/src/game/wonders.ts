@@ -2,6 +2,7 @@
 // experience); the first on the server to find one names it for everyone (and a purse of silver). Every ten found:
 // a pennant colour; the first ten, the Compass Rose tattoo. The wonders near her ship are sent to be drawn.
 
+import { unlockDeed } from './looks.ts';
 import { WONDER_NAME_RE, WONDER_PENNANTS, WONDER_R, placeWonders } from '../../../shared/src/data/wonders.ts';
 import type { WonderDef } from '../../../shared/src/data/wonders.ts';
 import type { WondersView } from '../../../shared/src/protocol.ts';
@@ -53,6 +54,7 @@ function discover(game: Game, s: PlayerSession, w: WonderDef): void {
     const colour = WONDER_PENNANTS[Math.min(WONDER_PENNANTS.length - 1, p.wonders.length / 10 - 1)];
     if (!p.pennants.includes(colour)) p.pennants.push(colour);
     game.sendTo(s, { t: 'toast', msg: `Wonders found: ${p.wonders.length}. A new pennant colour.`, kind: 'gold' });
+    unlockDeed(game, s, 'wonders');
   }
   tattooCount(game, s, 'wonders', 0); // the Compass Rose at ten (docs/12 P9)
   sendWonders(game, s, true);

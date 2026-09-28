@@ -152,6 +152,8 @@ export type ClientMsg =
   | { t: 'wonder'; id: string; name: string }
   /** The omen of the day's old custom (docs/12 P10 #9). */
   | { t: 'omen'; action: 'coin' }
+  /** A ship's look (docs/12 P10 #12). */
+  | { t: 'look'; look: string }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -492,6 +494,9 @@ export interface PrivateState {
   /** The letters of the sea found in bottles (docs/12 P2), and the ship's cat. */
   seaLetters: number[];
   shipCat: boolean;
+  /** Her ship's look and what of it she has opened (docs/12 P10 #12). */
+  look?: string | null;
+  unlocks?: string[];
   /** A cartographer's fame (docs/12 P10 #7). */
   cartoFame?: number;
   /** Fishing (docs/12 P3). */
@@ -662,6 +667,8 @@ export interface ShipInfo {
   guild?: string; // tag
   title?: string; // a captain's title (seasons, the Pantheon)
   pennant?: string; // a season pennant colour
+  /** A captain's look, encoded (docs/12 P10 #12). */
+  look?: string;
   /** Her level ⚓1–⚓10 (canon D12); absent for monsters and wreck hulks, which stand outside the ladder. */
   shipLevel?: number;
   /** A strong ship built for a company (group contracts, barons): the gold frame of an elite. */
