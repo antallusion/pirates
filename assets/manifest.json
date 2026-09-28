@@ -391,6 +391,7 @@
     "portrait.giver_cartographer_m":    { "local": "portraits/giver_cartographer_m.webp", "remote": "hf_20260928_002836_92d928e4-657d-4636-8457-78282e306f9b.png", "job": "92d928e4-657d-4636-8457-78282e306f9b" },
     "portrait.giver_cartographer_f":    { "local": "portraits/giver_cartographer_f.webp", "remote": "hf_20260928_003435_765b8169-2713-44ba-84e6-fb3645bc7a00.png", "job": "765b8169-2713-44ba-84e6-fb3645bc7a00" },
     "portrait.giver_garrison_captain_m":{ "local": "portraits/giver_garrison_captain_m.webp", "remote": "hf_20260928_004036_f9a1fc23-a45b-4011-8e90-24dc0f19d0a6.png", "job": "f9a1fc23-a45b-4011-8e90-24dc0f19d0a6" },
-    "portrait.giver_tavern_keeper_m":   { "local": "portraits/giver_tavern_keeper_m.webp", "remote": "hf_20260928_004636_9f275f21-7d1f-4c1b-b30d-161b74841f24.png", "job": "9f275f21-7d1f-4c1b-b30d-161b74841f24" }
+    "portrait.giver_tavern_keeper_m":   { "local": "portraits/giver_tavern_keeper_m.webp", "remote": "hf_20260928_004636_9f275f21-7d1f-4c1b-b30d-161b74841f24.png", "job": "9f275f21-7d1f-4c1b-b30d-161b74841f24" },
+    "portrait.giver_pearl_diver_m":     { "local": "portraits/giver_pearl_diver_m.webp", "remote": "hf_20260928_005538_9f0f2314-73ec-4b18-b7a4-db2c7e68877b.png", "job": "9f0f2314-73ec-4b18-b7a4-db2c7e68877b" }
   }
 }
