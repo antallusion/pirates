@@ -2097,6 +2097,26 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 #hud-storm .st-bar { height: 6px; margin-top: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
 #hud-storm .st-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6fb4ff, #e8f4ff); }
 #hud-storm .st-charge { font: 600 12px var(--sans); color: #b8d4f0; margin-top: 2px; font-variant-numeric: tabular-nums; }
+/* The Descent into the Abyss (docs/12 P10 #17). */
+#hud-descent { pointer-events: none; padding: 6px 9px 7px; max-width: 320px; border-color: rgba(46,230,200,0.35); }
+#hud-descent .fp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#hud-descent .fp-head b { display: inline-flex; align-items: center; gap: 5px; font-family: var(--serif); font-size: 14px; color: #cfe8e2; }
+#hud-descent .hp-lvl { font: 700 13px var(--sans); color: #8fe3d0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#hud-descent .rg-next { font-size: 13px; color: #d8e6e2; }
+#hud-descent .ds-left { font: 600 12px var(--sans); color: #a9c4bf; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.descent .ds-offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.descent .ds-boon { display: flex; flex-direction: column; gap: 4px; padding: 10px; border: 1px solid rgba(143,227,208,0.35); border-radius: 6px; background: rgba(8,18,20,0.85); }
+.descent .ds-boon.curse { border-color: rgba(200,70,60,0.5); background: rgba(24,8,8,0.85); }
+.descent .ds-boon b { font-family: var(--serif); font-size: 16px; color: #f0e6cc; }
+.descent .ds-boon p { margin: 0; flex: 1; }
+.descent .ds-boon .btn { align-self: flex-start; }
+.descent .ds-kind { font: 700 10px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: #8fe3d0; }
+.descent .ds-boon.curse .ds-kind { color: #e07a6a; }
+.descent .ds-row { display: flex; justify-content: space-between; gap: 8px; margin: 3px 0; }
+.descent .ds-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.descent .ds-row .muted { white-space: nowrap; }
+.descent .ds-taken { display: flex; flex-wrap: wrap; gap: 4px; }
+.descent .ds-foot { margin-top: 8px; }
 /* Captive captains in service (docs/12 P10 #16). */
 .tc-card .tc-cap { border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 0 6px; }
 .tc-card .tc-cap:first-of-type { border-top: 0; }

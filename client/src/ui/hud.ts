@@ -4,6 +4,7 @@
 import { regattaPanel } from './regatta.ts';
 import { stormPanel } from './storms.ts';
 import { orderPanel } from './marque.ts';
+import { descentPanel } from './descent.ts';
 import { nemesisLabel } from './nemesis.ts';
 import { pirateById } from '../../../shared/src/data/pirates.ts';
 import { BEASTS, beastOfClass, hullNoise, noiseBand } from '../../../shared/src/data/beasts.ts';
@@ -62,6 +63,7 @@ export class Hud {
   private lastRegattaKey = '';
   private lastStormKey = '';
   private lastOrderKey = '';
+  private lastDescentKey = '';
   private lastFishKey = '';
   private lastTargetKey = '';
   private toastsEl = $('toasts');
@@ -113,6 +115,7 @@ export class Hud {
     this.drawRegatta(state);
     this.drawStorm(state);
     this.drawOrder(state);
+    this.drawDescent(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -910,6 +913,17 @@ export class Hud {
     const key = html ?? '';
     if (key === this.lastRegattaKey) return;
     this.lastRegattaKey = key;
+    el.classList.toggle('hidden', !html);
+    el.innerHTML = html ?? '';
+  }
+
+  /** The Descent (docs/12 P10 #17): the tier, its creatures, current and darkness, and the clock. */
+  private drawDescent(state: ClientState): void {
+    const el = $('hud-descent');
+    const html = descentPanel(state);
+    const key = html ?? '';
+    if (key === this.lastDescentKey) return;
+    this.lastDescentKey = key;
     el.classList.toggle('hidden', !html);
     el.innerHTML = html ?? '';
   }

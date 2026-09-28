@@ -17,6 +17,7 @@ import type { EncounterId, SightKind } from './data/encounters.ts';
 import type { CaptainSlot, Item, Slot } from './data/items.ts';
 import type { OrderKind, ServiceId } from './data/marque.ts';
 import type { SkipperTrait } from './data/turncoats.ts';
+import type { BoonId, CurrentId, DarkId, HostId } from './data/descent.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
@@ -162,6 +163,9 @@ export type ClientMsg =
   /** Letters of marque (docs/12 P10 #15). */
   | { t: 'service'; action: 'enlist' | 'resign' | 'order' | 'livery' }
   | { t: 'service'; action: 'buy'; index: number }
+  /** The Descent into the Abyss (docs/12 P10 #17). */
+  | { t: 'descent'; action: 'choose'; pick: BoonId }
+  | { t: 'descent'; action: 'leave' }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   /** The Storm-Chaser set forged of hearts of the storm (docs/12 P10 #14). */
@@ -539,7 +543,7 @@ export interface PrivateState {
   sites: ResourceSiteView[]; // extraction rights you hold
   warehouses: Record<string, Cargo>;
   /** Island feature within reach of the boats, if any. */
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise'; blocked?: string } | null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent'; blocked?: string } | null;
   /** Landing party ashore. */
   landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;
@@ -1075,6 +1079,7 @@ export type ServerMsg =
   | { t: 'dutchman'; view: DutchmanView }
   | { t: 'hall'; view: HallView | null }
   | { t: 'storm'; view: StormView | null }
+  | { t: 'descent'; view: DescentView | null }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1190,6 +1195,29 @@ export interface ServicePortView {
   pay: number;
   payReady: boolean;
   wares: { item: Item; price: number; sold: boolean }[];
+}
+
+/** The Descent into the Abyss (docs/12 P10 #17): the week's Stair, her descent (if she is going down), the board. */
+export interface DescentView {
+  gate: { x: number; y: number; region: RegionId; r: number };
+  run: {
+    tier: number;
+    phase: 'fight' | 'choice' | 'breath';
+    hosts: HostId[];
+    current: CurrentId;
+    dark: DarkId;
+    boons: BoonId[];
+    /** The three offered between tiers (to the leader). */
+    offers: BoonId[] | null;
+    leader: boolean;
+    /** Seconds left in this phase. */
+    left: number;
+    enemies: number;
+    members: string[];
+    glory: number;
+    ripDir: number;
+  } | null;
+  week: { names: string[]; depth: number; glory: number }[];
 }
 
 /** The heart of the Storm of the Century as a captain in its region sees it (docs/12 P10 #14). */

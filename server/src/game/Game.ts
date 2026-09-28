@@ -166,6 +166,7 @@ import { SpatialGrid } from './spatial.ts';
 import { WEATHER_FOG, WEATHER_WIND, initWeather, seaStateSpread, stepFronts, stepWeather, weatherAtPoint } from './weather.ts';
 import type { Front, RegionWeather } from './weather.ts';
 import { captiveLoyalty, claimSkippers, sanitizeCaptive, turnCaptive, turnCost } from './turncoats.ts';
+import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, stepDescentSea } from './descent.ts';
 
 export interface Loot {
   id: number;
@@ -497,6 +498,7 @@ export class Game {
     stepBeasts(this, dt); // orcas, whales, sharks and the lines in them (docs/12 P4)
     stepExpeditions(this, dt);
     stepAbyssSea(this, dt);
+    stepDescentSea(this, dt); // the Descent's currents (docs/12 P10 #17)
     prof.lap('pve');
     stepZones(this, dt);
     prof.lap('zones');
@@ -739,6 +741,7 @@ export class Game {
     stepRegatta(this); // the Regatta of Equal Waters (docs/12 P10 #5)
     stepStorms(this); // the heart of the Storm of the Century (docs/12 P10 #14)
     if (Math.floor(this.now) % 2 === 0) stepService(this); // letters of marque: orders, sunsets, the law's eye (docs/12 P10 #15)
+    stepDescent(this); // the Descent into the Abyss (docs/12 P10 #17)
     if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
     if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
@@ -876,7 +879,10 @@ export class Game {
       const wreckWhy = wreck ? canDive(this, s, wreck) : null;
       const city = s.ship.docked || s.ship.landing ? null : cityPrompt(this, s);
       const legend = s.ship.docked || s.ship.landing ? null : legendWreckHere(this, s.ship);
-      s.landable = legend
+      const stair = s.ship.docked || s.ship.landing ? null : descentLandable(this, s);
+      s.landable = stair
+        ? stair
+        : legend
         ? { island: 'the sea floor', feature: `wreck of the ${LEGENDARY[legend.id].name}`, action: 'raise' as const, blocked: legend.owner === s.name ? undefined : `only ${legend.owner ?? 'her captain'} can raise her` }
         : city
         ? city
@@ -2569,6 +2575,8 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'descent':
+        return err(msg.action === 'choose' ? chooseBoon(this, s, msg.pick) : leaveDescent(this, s));
       case 'service':
         // Letters of marque (docs/12 P10 #15): leaving the service anywhere, the rest at a port of the flag.
         if (msg.action === 'resign') return err(resign(this, s));
@@ -2823,6 +2831,12 @@ export class Game {
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
         return;
       case 'land': {
+        // The Maelstrom Stair: the land key goes down (docs/12 P10 #17).
+        if (!ship.docked && descentLandable(this, s)) {
+          err(startDescent(this, s));
+          this.pushSelf(s, true);
+          return;
+        }
         const raised = ship.docked ? undefined : raiseLegend(this, s);
         if (raised !== undefined) return err(raised);
       }

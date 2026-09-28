@@ -62,6 +62,7 @@ import type { ShipEntity } from './ship.ts';
 import { FACTION_IDS } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { seizeCaptain, takeCaptive } from './prizes.ts';
+import { gateOf } from './descent.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -69,7 +70,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -288,6 +289,17 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       regattaNow(game, portId, 30_000);
       if (ship.docked === portId) regattaSignUp(game, s);
       return `Regatta of Equal Waters: ${portId}.`;
+    }
+    case 'descent': {
+      // The Descent (docs/12 P10 #17 play-testing): /descent — set down by the week's Maelstrom Stair.
+      const g = gateOf(game);
+      ship.docked = null;
+      ship.state.x = g.x + 300;
+      ship.state.y = g.y;
+      ship.state.speed = 0;
+      ship.region = g.region;
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      return 'The Maelstrom Stair';
     }
     case 'captive': {
       // Captive captains (docs/12 P10 #16 play-testing): /captive [n] — captains of pirates and merchants in irons.

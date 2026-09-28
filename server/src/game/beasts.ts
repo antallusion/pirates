@@ -132,6 +132,12 @@ export function beastBrain(game: Game, id: number): Readonly<Brain> | undefined 
   return bs(game).brains.get(id);
 }
 
+/** Set a beast on a ship (the Descent's creatures go for the divers, docs/12 P10 #17). */
+export function setBeastPrey(game: Game, id: number, prey: number): void {
+  const br = bs(game).brains.get(id);
+  if (br) br.prey = prey;
+}
+
 export function beastsAlive(game: Game): ShipEntity[] {
   const out: ShipEntity[] = [];
   for (const id of bs(game).brains.keys()) {

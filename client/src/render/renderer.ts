@@ -386,6 +386,7 @@ export class Renderer {
     this.drawWonders(state);
     this.drawLanterns(state);
     this.drawStormHeart(state);
+    this.drawStair(state);
     this.drawOrderMarks(state);
     drawSights(g, state.sights, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, own ? { x: own.x, y: own.y } : null, this.w, this.h);
     this.drawDuelRing(state);
@@ -412,6 +413,7 @@ export class Renderer {
     if (own) this.drawQuestMark(state, own);
     this.drawTexts();
     this.drawVignette(state.fog, night);
+    this.drawDescentDark(state);
     if (this.fx.flash > 0) {
       // Reduced flashes: a gentle 30% lift instead of a white-out.
       // Lightning lights the sea for an instant; it must not wash the whole screen white.
@@ -2072,7 +2074,7 @@ export class Renderer {
     if (this.time - this.band.at > 0.5 || this.band.at < 0) {
       let top = 0, bottom = this.h;
       this.hudRects = [];
-      for (const sel of ['#hud-captain', '#hud-map', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-sail', '#tc-port', '#tc-starboard', '#tc-chasers', '#tc-menu']) {
+      for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-goals:not(.hidden)', '#hud-prompt', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-sail', '#tc-port', '#tc-starboard', '#tc-chasers', '#tc-menu', '#tc-context:not(.hidden)']) {
         document.querySelectorAll<HTMLElement>(sel).forEach((e) => {
           const r = e.getBoundingClientRect();
           if (r.width > 0 && r.height > 0) this.hudRects.push(r);
@@ -2095,6 +2097,37 @@ export class Renderer {
   }
 
   /** Whether a threat mark (its circle and range) at x, y is clear of every HUD block and on the screen. */
+  /** Marks placed on the screen's edge this frame (threats, then the quest's), so none lies on another. */
+  private rimTaken: [number, number][] = [];
+
+  /** A place on the screen's edge for a mark pointing at angle a: where the ray leaves the screen, or the nearest place
+   *  along the edge clear of the HUD's blocks and of the marks already there. */
+  private rimSpot(a: number): [number, number] {
+    const menuCol = !document.body.classList.contains('touch') && this.w < 1100 ? 56 : 0;
+    const L = 30, R = this.w - 30 - menuCol, T = 30, B = this.h - 30;
+    const cx = this.w / 2, cy = this.h / 2;
+    const edge = (b: number): [number, number] => {
+      const dx = Math.cos(b), dy = Math.sin(b);
+      const kx = dx > 1e-6 ? (R - cx) / dx : dx < -1e-6 ? (L - cx) / dx : Infinity;
+      const ky = dy > 1e-6 ? (B - cy) / dy : dy < -1e-6 ? (T - cy) / dy : Infinity;
+      const k = Math.min(kx, ky);
+      return [cx + dx * k, cy + dy * k];
+    };
+    const free = (q: [number, number]) => this.clearOfHud(q[0], q[1]) && !this.rimTaken.some(([x, y]) => Math.hypot(x - q[0], y - q[1]) < 46);
+    for (let i = 0; i <= 90; i++) {
+      for (const b of i ? [a + i * 0.035, a - i * 0.035] : [a]) {
+        const q = edge(b);
+        if (free(q)) {
+          this.rimTaken.push(q);
+          return q;
+        }
+      }
+    }
+    const q = edge(a);
+    this.rimTaken.push(q);
+    return q;
+  }
+
   private clearOfHud(x: number, y: number): boolean {
     const m = 18;
     if (x < m || x > this.w - m || y < m || y > this.h - m) return false;
@@ -2105,11 +2138,8 @@ export class Renderer {
    * so a phone's close view never hides who is coming. */
   private drawThreatMarks(ships: DrawShip[], own: SailState): void {
     const g = this.g;
-    // The rim keeps clear of the HUD: below the top panels, above the bottom block, left of a narrow window's menu.
-    const band = this.hudBand();
-    const menuCol = !document.body.classList.contains('touch') && this.w < 1100 ? 56 : 0;
-    const cx = this.w / 2 - menuCol / 2, cy = (band.top + band.bottom) / 2;
-    const rx = this.w / 2 - 26 - menuCol / 2, ry = Math.max(60, (band.bottom - band.top) / 2 - 20);
+    this.hudBand(); // the HUD's blocks, measured
+    this.rimTaken = [];
     const marks: { s: DrawShip; d: number }[] = [];
     for (const s of ships) {
       if (s.own || s.sinkT > 0) continue;
@@ -2126,25 +2156,14 @@ export class Renderer {
     g.font = '600 11px Inter, system-ui, sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    const drawn: [number, number][] = [];
+    const drawn: number[] = [];
     for (const { s, d } of marks) {
-      if (drawn.length >= 5) break;
-      const a = Math.atan2(this.sy(s.y) - cy, this.sx(s.x) - cx);
-      // The rim is an ellipse inside the HUD's top and bottom bands.
-      // A mark that falls on a HUD block (a tall top stack in a low window: the bell's panel, a boss card) walks
-      // along the rim to the nearest free place.
-      const at = (b: number): [number, number] => {
-        const kb = 1 / Math.sqrt((Math.cos(b) / rx) ** 2 + (Math.sin(b) / ry) ** 2);
-        return [cx + Math.cos(b) * kb, cy + Math.sin(b) * kb];
-      };
-      let [x, y] = at(a);
-      for (let i = 1; i <= 60 && !this.clearOfHud(x, y); i++) {
-        const b = [a + i * 0.05, a - i * 0.05].map(at).find(([px, py]) => this.clearOfHud(px, py));
-        if (b) [x, y] = b;
-      }
+      if (this.rimTaken.length >= 5) break;
+      const a = Math.atan2(this.sy(s.y) - this.h / 2, this.sx(s.x) - this.w / 2);
       // One mark for a crowd (a kraken's eight arms): the nearest speaks for them.
-      if (drawn.some(([px, py]) => Math.hypot(px - x, py - y) < 44)) continue;
-      drawn.push([x, y]);
+      if (drawn.some((b) => Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a))) < 0.12)) continue;
+      drawn.push(a);
+      const [x, y] = this.rimSpot(a);
       const boss = s.info?.npcRole === 'boss';
       const col = boss ? '#2ee6c8' : '#e0503c';
       g.translate(x, y);
@@ -2204,21 +2223,10 @@ export class Renderer {
       g.restore();
       return;
     }
-    // Out of sight: on the same rim as the threat marks, walked clear of the HUD.
-    const band = this.hudBand();
-    const menuCol = !document.body.classList.contains('touch') && this.w < 1100 ? 56 : 0;
-    const cx = this.w / 2 - menuCol / 2, cy = (band.top + band.bottom) / 2;
-    const rx = this.w / 2 - 26 - menuCol / 2, ry = Math.max(60, (band.bottom - band.top) / 2 - 20);
-    const a = Math.atan2(py - cy, px - cx);
-    const at = (b: number): [number, number] => {
-      const kb = 1 / Math.sqrt((Math.cos(b) / rx) ** 2 + (Math.sin(b) / ry) ** 2);
-      return [cx + Math.cos(b) * kb, cy + Math.sin(b) * kb];
-    };
-    let [x, y] = at(a);
-    for (let i = 1; i <= 60 && !this.clearOfHud(x, y); i++) {
-      const b = [a + i * 0.05, a - i * 0.05].map(at).find(([qx, qy]) => this.clearOfHud(qx, qy));
-      if (b) [x, y] = b;
-    }
+    // Out of sight: on the screen's edge like the threat marks, clear of the HUD and of them.
+    this.hudBand();
+    const a = Math.atan2(py - this.h / 2, px - this.w / 2);
+    const [x, y] = this.rimSpot(a);
     g.translate(x, y);
     g.fillStyle = 'rgba(8,10,14,0.8)';
     g.beginPath();
@@ -2444,6 +2452,78 @@ export class Renderer {
       arrow = x < -60 || y < -60 || x > this.w + 60 || y > this.h + 60;
     }
     if (arrow) this.edgeArrow(this.sx(near[0]), this.sy(near[1]), '#f0d58a');
+  }
+
+  /** The Maelstrom Stair (docs/12 P10 #17): the painted maelstrom turning slowly over a pale-green light far below; the
+   *  arena's edge while she is going down; an arrow at the screen's edge toward it from the sea about. */
+  private drawStair(state: ClientState): void {
+    const v = state.descent;
+    if (!v) return;
+    const g = this.g;
+    const z = this.zoom;
+    const x = this.sx(v.gate.x), y = this.sy(v.gate.y);
+    const R = 260 * z, A = v.gate.r * z;
+    const t = settings().reduceMotion ? 0 : this.time;
+    const run = v.run;
+    if (x < -A || y < -A || x > this.w + A || y > this.h + A) {
+      if (!run) this.edgeArrow(x, y, '#8fe3d0');
+      else this.edgeArrow(x, y, '#e07a6a');
+      return;
+    }
+    g.save();
+    const glow = g.createRadialGradient(x, y, 0, x, y, R * 1.3);
+    glow.addColorStop(0, `rgba(120,230,200,${0.28 + 0.08 * Math.sin(t * 1.4)})`);
+    glow.addColorStop(0.35, 'rgba(10,30,34,0.55)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = glow;
+    g.beginPath(); g.arc(x, y, R * 1.3, 0, Math.PI * 2); g.fill();
+    const art = sprite('prop.whirlpool');
+    if (art) {
+      g.save();
+      g.translate(x, y);
+      g.rotate(-t * 0.3);
+      g.globalAlpha = run ? 0.45 : 0.9; // fighting in it, the hulls must read over the water
+      g.drawImage(art.img, -R, -R, R * 2, R * 2);
+      g.restore();
+    } else {
+      g.lineWidth = Math.max(1, 2 * z);
+      for (let arm = 0; arm < 5; arm++) {
+        g.beginPath();
+        for (let i = 0; i <= 50; i++) {
+          const k = i / 50, r = R * (1 - k * 0.92), a = -t * 0.3 + (arm / 5) * Math.PI * 2 - k * Math.PI * 3;
+          const px = x + Math.sin(a) * r, py = y - Math.cos(a) * r;
+          if (i) g.lineTo(px, py); else g.moveTo(px, py);
+        }
+        g.strokeStyle = 'rgba(200,225,220,0.16)';
+        g.stroke();
+      }
+    }
+    // The arena's edge while she is going down.
+    if (run) {
+      g.strokeStyle = 'rgba(143,227,208,0.35)';
+      g.lineWidth = Math.max(1.5, 2 * z);
+      g.setLineDash([14, 10]);
+      g.beginPath(); g.arc(x, y, A, 0, Math.PI * 2); g.stroke();
+      g.setLineDash([]);
+    }
+    g.restore();
+  }
+
+  /** The tier's darkness (docs/12 P10 #17): the sea beyond her lanterns goes black, dusk or pitch. */
+  private drawDescentDark(state: ClientState): void {
+    const run = state.descent?.run;
+    const own = state.ownDisplay;
+    if (!run || !own || run.dark === 'moonlit' || run.boons.includes('lantern')) return;
+    const g = this.g;
+    const x = this.sx(own.x), y = this.sy(own.y);
+    const inner = Math.max(120, 220 * this.zoom), outer = Math.max(this.w, this.h) * 0.75;
+    const a = run.dark === 'pitch' ? 0.88 : 0.6;
+    const grd = g.createRadialGradient(x, y, inner * 0.6, x, y, Math.max(inner + 40, outer));
+    grd.addColorStop(0, 'rgba(2,5,8,0)');
+    grd.addColorStop(0.35, `rgba(2,5,8,${a * 0.6})`);
+    grd.addColorStop(1, `rgba(2,5,8,${a})`);
+    g.fillStyle = grd;
+    g.fillRect(0, 0, this.w, this.h);
   }
 
   /** The heart of the Storm of the Century (docs/12 P10 #14): a turning dark eye with a pale rim, the lightning's

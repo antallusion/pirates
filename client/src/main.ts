@@ -55,12 +55,13 @@ import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
+import { renderDescent } from './ui/descent.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -472,6 +473,18 @@ function onMessage(m: ServerMsg): void {
         else openModal('hall');
       }
       break;
+    case 'descent': {
+      // The choice between tiers opens its window for the leader; the window follows the descent.
+      const run = m.view?.run;
+      if (run?.phase === 'choice' && run.leader && modal !== 'descent' && lastDescentTier !== run.tier) {
+        lastDescentTier = run.tier;
+        openModal('descent');
+      } else if (modal === 'descent') {
+        if (!run || run.phase === 'fight') closeModal();
+        else refreshModal();
+      }
+      break;
+    }
     case 'companion':
     case 'petsown':
       if (modal === 'ship') refreshModal();
@@ -663,6 +676,10 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'hall':
       if (state.hall) renderHall(root, state, (m) => net.send(m));
+      else closeModal();
+      break;
+    case 'descent':
+      if (state.descent) renderDescent(root, state, (m) => net.send(m));
       else closeModal();
       break;
     case 'sunk':
@@ -1114,6 +1131,9 @@ function keyOfAction(a: Action): string {
   return keyLabel(k1 || k2);
 }
 
+/** The descent's tier whose choice window was opened (once a tier). */
+let lastDescentTier = -1;
+
 function computePrompt(): string {
   const own = state.ownDisplay;
   const self = state.self;
@@ -1159,6 +1179,7 @@ function computePrompt(): string {
   else if (self.landable?.action === 'dig') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dig', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'raise') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('raise', { feature: sv(self.landable.feature.replace(/^wreck of the /, '')) }))}`);
   else if (self.landable?.action === 'expedition') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);
+  else if (self.landable?.action === 'descent') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('descent'))}`);
   else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
   else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
