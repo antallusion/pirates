@@ -77,6 +77,13 @@ export function residentName(n: number): Tr {
   return RES_FIRST[Math.abs(n) % RES_FIRST.length];
 }
 
+const RES_WOMEN = new Set(['Bessa', 'Dunya', 'Greta', 'Ilse', 'Lorna', 'Nora', 'Quenna', 'Ruth', 'Tilda', 'Vera']);
+
+/** Whether the resident of that number is a woman (her portrait, docs/12 P11). */
+export function residentIsWoman(n: number): boolean {
+  return RES_WOMEN.has(residentName(n)[0]);
+}
+
 /** Hiring a resident in a tavern of one's own island. */
 export const RESIDENT_HIRE = 800;
 /** A resident's hand in a building or an outpost; hired hands' at an outpost (and their wage a day). */

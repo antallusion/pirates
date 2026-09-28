@@ -1959,6 +1959,11 @@ body.has-poster .poster, body.has-poster .poster.po-baron { background: var(--ui
 .est-card .est-h { margin: 8px 0 4px; font-family: var(--serif); font-size: 14px; color: #e8c46a; }
 .est-res { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
 .est-res select { max-width: 45%; }
+.est-res > span { flex: 1; min-width: 0; }
+.est-res .est-face { width: 40px; height: 40px; flex: none; }
+/* Founding an outpost: a long line (its name and the materials) wraps inside its button on a phone. */
+.est-card .btn[data-est="found"] { white-space: normal; max-width: 100%; text-align: left; line-height: 1.25; height: auto; min-height: 30px; }
+.est-card .btn[data-est="found"] .ico-sm { vertical-align: -3px; }
 .est-op { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
 .est-op.est-raid { background: rgba(160, 30, 20, 0.18); }
 .est-op select { max-width: 100%; }

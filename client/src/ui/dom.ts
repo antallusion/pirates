@@ -92,7 +92,14 @@ export function outpostIcon(kind: string, level: number, cls = 'ico'): string {
 }
 
 /** Faces still being painted, and who sits for them meanwhile (docs/12 P11). */
-const PORTRAIT_STAND_IN: Record<string, string> = { giver_old_needle: 'giver_hermit_f', skipper_1: 'giver_bosun_m' };
+const PORTRAIT_STAND_IN: Record<string, string> = {
+  giver_old_needle: 'giver_hermit_f', skipper_1: 'giver_bosun_m',
+  // The island's residents by trade: a quest giver of the same trade sits for each meanwhile.
+  res_fisher_m: 'giver_old_salt_m', res_fisher_f: 'giver_fishwife_f', res_carpenter_m: 'giver_shipwright_m', res_carpenter_f: 'giver_shipwright_f',
+  res_smith_m: 'giver_shipwright_m', res_smith_f: 'giver_shipwright_f', res_cook_m: 'giver_tavern_keeper_m', res_cook_f: 'giver_widow_f',
+  res_cartographer_m: 'giver_cartographer_m', res_cartographer_f: 'giver_cartographer_f', res_herbalist_m: 'giver_apothecary_m', res_herbalist_f: 'giver_apothecary_f',
+  res_gunner_m: 'giver_garrison_captain_m', res_gunner_f: 'giver_fence_f', res_pilot_m: 'giver_lighthouse_keeper_m', res_pilot_f: 'giver_lighthouse_keeper_f',
+};
 
 /** A portrait's picture, or its stand-in's while it is being painted. */
 export function portraitUrl(id: string): string | null {

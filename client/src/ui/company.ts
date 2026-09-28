@@ -6,7 +6,7 @@ import { personName } from '../lang/names.ts';
 import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { CARAVAN_TASKS, ON_ATTACK, TASK_NAMES, escortCost } from '../../../shared/src/data/caravans.ts';
 import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts';
-import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS } from '../../../shared/src/data/estate.ts';
+import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS, residentIsWoman, residentName } from '../../../shared/src/data/estate.ts';
 import type { Guard, OutpostKind, Profession } from '../../../shared/src/data/estate.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
@@ -784,7 +784,8 @@ function estateHtml(state: ClientState): string {
     const hs = state.holdings.mine.find((h) => h.island === isle.island);
     const builds = hs?.buildings.map((b) => b.id) ?? [];
     const opts = (cur: string | null) => [`<option value="none"${cur === null ? ' selected' : ''}>${esc(L('est_idle'))}</option>`, ...builds.filter((b, i) => builds.indexOf(b) === i).map((b) => `<option value="${b}"${cur === b ? ' selected' : ''}>${esc(BUILDINGS[b].name)}</option>`), ...e.outposts.map((o) => `<option value="o:${o.id}"${cur === `o:${o.id}` ? ' selected' : ''}>${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(placeName(o.name))}</option>`)].join('');
-    const residents = isle.residents.map((r) => `<div class="est-res"><span><b>${esc(r.name)}</b> <span class="muted">${esc(PROFESSION_DEFS[r.prof as Profession].name[ru])}</span><br><i class="muted">«${esc(serverText(r.line))}»</i></span><select data-assign="${r.id}">${opts(r.at)}</select></div>`).join('');
+    // Her face by her trade (docs/12 P11) and her name in the reader's tongue.
+    const residents = isle.residents.map((r) => `<div class="est-res">${icon(`portrait.res_${r.prof}_${residentIsWoman(r.id * 7 + isle.island) ? 'f' : 'm'}`, '', 'ico-md ico-round est-face')}<span><b>${esc(residentName(r.id * 7 + isle.island)[ru])}</b> <span class="muted">${esc(PROFESSION_DEFS[r.prof as Profession].name[ru])}</span><br><i class="muted">«${esc(serverText(r.line))}»</i></span><select data-assign="${r.id}">${opts(r.at)}</select></div>`).join('');
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(L('est_isle', { name: placeName(isle.name), level: isle.level, title: serverText(isle.levelName) }))}</span></h4>
       <p class="muted">${esc(L('est_isle_meta', { slots: isle.slots, outposts: isle.outposts, n: isle.residents.length, cap: isle.cap }))}</p>
       ${isle.next ? `<p>${esc(L('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver), goods: goodsList(isle.next.goods) }))} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
