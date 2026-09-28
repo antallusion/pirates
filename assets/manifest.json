@@ -413,6 +413,8 @@
     "icon.tattoo_fish":                  { "local": "icons/tattoo_fish.webp", "remote": "hf_20260928_090748_fea34af9-5c95-461f-97c0-62b8217a7da0.png", "job": "fea34af9-5c95-461f-97c0-62b8217a7da0", "fit": "opaque:192" },
     "icon.tattoo_hook":                  { "local": "icons/tattoo_hook.webp", "remote": "hf_20260928_091803_d224e121-b3a0-4db3-953e-6528f01aae40.png", "job": "d224e121-b3a0-4db3-953e-6528f01aae40", "fit": "opaque:192" },
     "icon.tattoo_octopus":               { "local": "icons/tattoo_octopus.webp", "remote": "hf_20260928_092738_a14834e9-f171-4cb5-a44f-50a623be92ed.png", "job": "a14834e9-f171-4cb5-a44f-50a623be92ed", "fit": "opaque:192" },
-    "icon.tattoo_orca":                  { "local": "icons/tattoo_orca.webp", "remote": "hf_20260928_093712_8baef9fd-de4e-45bd-89fd-607a9a31b811.png", "job": "8baef9fd-de4e-45bd-89fd-607a9a31b811", "fit": "opaque:192" }
+    "icon.tattoo_orca":                  { "local": "icons/tattoo_orca.webp", "remote": "hf_20260928_093712_8baef9fd-de4e-45bd-89fd-607a9a31b811.png", "job": "8baef9fd-de4e-45bd-89fd-607a9a31b811", "fit": "opaque:192" },
+    "icon.tattoo_white_fin":             { "local": "icons/tattoo_white_fin.webp", "remote": "hf_20260928_094651_53dc04c4-2f19-4e8d-8a75-7d3da3ebfd83.png", "job": "53dc04c4-2f19-4e8d-8a75-7d3da3ebfd83", "fit": "opaque:192" },
+    "icon.tattoo_harpoon":               { "local": "icons/tattoo_harpoon.webp", "remote": "hf_20260928_095611_2a7ca335-5192-4189-9ece-86dfa89189ae.png", "job": "2a7ca335-5192-4189-9ece-86dfa89189ae", "fit": "opaque:192" }
   }
 }
