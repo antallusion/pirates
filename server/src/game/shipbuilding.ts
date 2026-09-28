@@ -3,6 +3,7 @@
 // yard; the old ship is berthed there and can be taken out again. Plus the living materials at sea
 // (cursed wood, drowned silk) and what the figureheads do.
 
+import { takeGearBack } from './gear.ts';
 import { refitHolds } from './refit.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -184,6 +185,8 @@ export function sellBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   const b = p.berths[index];
   if (!b || b.port !== port.id) return 'No such ship berthed here';
   if (b.loadout.legendary) return 'No yard would buy her, and no captain should sell her';
+  const back = takeGearBack(p, b.loadout); // her gear comes ashore first
+  if (back) return back;
   const v = Math.round(SHIP_CLASSES[b.loadout.classId].price * 0.4 * Math.max(0.3, b.hull));
   p.gold += v;
   game.db.ledger(s.accountId, 'ship_sold', v, b.loadout.classId);

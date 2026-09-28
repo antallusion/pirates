@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
 import { giverDialog } from './ui/giver.ts';
 import { inspectDialog } from './ui/inspect.ts';
@@ -51,7 +52,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -367,7 +368,7 @@ function onMessage(m: ServerMsg): void {
     case 'self_patch':
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
-      else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny' || modal === 'company' || modal === 'barter') refreshModal();
+      else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'gear' || modal === 'crew' || modal === 'mutiny' || modal === 'company' || modal === 'barter') refreshModal();
       break;
     case 'mutiny':
       if (m.mutineers > 0) {
@@ -539,7 +540,10 @@ function renderModal(root: HTMLElement): void {
       journal.render(root, state);
       break;
     case 'ship':
-      renderShip(root, state, (m) => net.send(m));
+      renderShip(root, state, (m) => net.send(m), () => openModal('gear'));
+      break;
+    case 'gear':
+      renderGear(root, state, (m) => net.send(m), () => openModal('ship'));
       break;
     case 'help':
       renderHelp(root, state.onboarding);

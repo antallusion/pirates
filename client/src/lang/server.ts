@@ -3,6 +3,7 @@
 // first, then the most specific template — and the Russian twin is filled with the captured parts, which are
 // themselves translated when they are known names or phrases. Unknown text passes through unchanged.
 
+import { gearPatterns, itemNamePatterns } from '../../../shared/src/data/items.ts';
 import { levelPatterns } from '../../../shared/src/data/shiplevel.ts';
 import { lang, typeset } from '../i18n.ts';
 import { COMMON_RU, NAME_RU, TEXT_RU } from './data.ts';
@@ -19,7 +20,11 @@ import { questTitlePatterns } from '../../../shared/src/data/questtitles.ts';
 import { taskPatterns } from '../../../shared/src/data/worldtasks.ts';
 
 // The generated jobs' templates carry their Russian twins (shared/src/data/questgen.ts).
-const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...Object.fromEntries(commonPatterns()), ...Object.fromEntries(guildGoalPatterns()), ...Object.fromEntries(elitePatterns()), ...Object.fromEntries(questTitlePatterns()), ...Object.fromEntries(taskPatterns()), ...Object.fromEntries(levelPatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
+const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...Object.fromEntries(commonPatterns()), ...Object.fromEntries(guildGoalPatterns()), ...Object.fromEntries(elitePatterns()), ...Object.fromEntries(questTitlePatterns()), ...Object.fromEntries(taskPatterns()), ...Object.fromEntries(levelPatterns()), ...Object.fromEntries(gearPatterns()), ...Object.fromEntries(itemNamePatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
+/** The whole English → Russian table of the server's lines: the static ones and every pattern generator's. */
+export function serverTable(): Record<string, string> {
+  return TABLE;
+}
 const exact = new Map<string, string>();
 let templates: { re: RegExp; ru: string; order: number[]; adjacent: number[] }[] | null = null;
 

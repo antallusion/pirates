@@ -1780,3 +1780,53 @@ body.touch #hud-region .rg-extra { display: none; }
 .card.refit .refit-note { margin: 2px 0; font-size: 12px; }
 .card.refit .refit-why { margin: 4px 0 6px; color: var(--bad, #e0776b); font-size: 13px; }
 .card.refit .refit-busy { color: #e8c46a; }
+
+/* The gear window (docs/12 P1): slot tiles, the locker's rows, and the open piece's card beside or under them. */
+.ship-head-r { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-left: auto; }
+.modal-body.gear .gear-tabs { margin-bottom: 8px; }
+.gear-main { display: flex; flex-direction: column; gap: 10px; }
+@media (min-width: 900px) { .gear-main { flex-direction: row; align-items: flex-start; } .gear-main .gear-body { flex: 1 1 60%; min-width: 0; } .gear-main .gear-detail { flex: 0 0 340px; position: sticky; top: 0; } }
+.gear-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.gear-grid .gs, .gear-list .gr { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 5px 8px; text-align: left; background: rgba(10, 12, 16, 0.72); border: 1px solid rgba(232, 196, 106, 0.18); border-radius: 4px; color: var(--bone, #ddd); cursor: pointer; min-width: 0; }
+.gear-grid .gs.on, .gear-list .gr.on { box-shadow: 0 0 0 2px rgba(232, 196, 106, 0.55) inset; }
+.gear-grid .gs.locked { opacity: 0.45; cursor: default; }
+.gear-grid .gs .gs-t, .gear-list .gr .gs-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.gear-grid .gs-slot { font-size: 11px; color: var(--fog, #9aa); text-transform: uppercase; letter-spacing: 0.04em; }
+.gs-t .gi-name, .gs-t .gs-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-t .gs-sub { font-size: 12px; }
+.gear-list { display: flex; flex-direction: column; gap: 5px; }
+.gear-list .gr { border-left-width: 4px; }
+.gear-list .gr .gr-price { margin-left: auto; flex: none; }
+.gear-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+.gear-side .gp { background: rgba(10, 12, 16, 0.6); border: 1px solid rgba(232, 196, 106, 0.14); border-radius: 4px; padding: 6px 8px; }
+.gi-h { font-size: 12px; color: #e8c46a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+.gl { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; line-height: 1.5; }
+.gl span { color: var(--bone, #ddd); }
+.gl.g-up b { color: #6fd46f; }
+.gl.g-down b { color: #e0776b; }
+.gi-head .gi-ico { width: 48px; height: 48px; flex: none; object-fit: contain; }
+.gi-card { background: rgba(8, 10, 14, 0.85); border: 2px solid; border-radius: 5px; padding: 8px 10px; }
+.gi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.gi-head .gi-name { font-size: 16px; font-family: var(--serif); }
+.gi-kind { font-size: 12px; }
+.gi-gift { margin: 6px 0 2px; color: #ff9d3c; font-style: italic; font-size: 13px; }
+.gi-set { margin-top: 6px; font-size: 12px; color: #e8c46a; }
+.gi-set .gi-bonus { color: var(--fog, #889); }
+.gi-set .gi-bonus.on { color: #6fd46f; }
+.gi-wear { margin-top: 6px; font-size: 12px; }
+.gi-cmp { margin-top: 8px; background: rgba(8, 10, 14, 0.6); border: 1px dashed rgba(232, 196, 106, 0.25); border-radius: 4px; padding: 6px 8px; }
+.gi-cmp-none { margin: 8px 0 0; font-size: 13px; }
+.gi-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.gear-mend { margin-top: 10px; }
+/* On a phone the piece's card rises as a sheet from the bottom, over the list, with its own ×. */
+.gear-detail { position: relative; }
+.gear-detail .gear-hide { position: absolute; top: 4px; right: 6px; z-index: 1; width: 30px; height: 30px; border: 0; background: rgba(0, 0, 0, 0.5); color: var(--bone, #ddd); border-radius: 50%; font-size: 20px; line-height: 1; cursor: pointer; }
+@media (max-width: 899px) {
+  .gear-main .gear-detail { position: sticky; bottom: 4px; max-height: 62vh; overflow-y: auto; z-index: 3; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.75); border-radius: 6px; background: #0b0d11; padding: 2px; }
+  .gear-main .gear-body { padding-bottom: 20px; }
+}
+.gi-reforge { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; width: 100%; }
+.gi-forge-note { width: 100%; margin: 2px 0 0; font-size: 12px; }
+.insp-gear { display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 8px 0 2px; font-size: 13px; }
+.insp-gear .insp-gear-h { width: 100%; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.gear-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }

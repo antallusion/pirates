@@ -1,5 +1,6 @@
 // Server-side ship entity: the authoritative state of every vessel (player or NPC) at sea.
 
+import type { Item } from '../../../shared/src/data/items.ts';
 import { combatLevelOf, onLadder, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { BoardTactic } from '../../../shared/src/data/boarding.ts';
@@ -217,6 +218,8 @@ export class ShipEntity {
   yardOf = '';
   /** An elite ⚔ built for a company (group contracts, barons): hull ×2.5, guns ×1.5 (canon D12). */
   elite = false;
+  /** The captain's own gear (docs/12 P1; the ship's is in her loadout). */
+  worn: Item[] = [];
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
   convoyOf: { guild: number; to: string } | null = null;
 
@@ -273,7 +276,7 @@ export class ShipEntity {
   /** Recompute derived stats after talents/loadout/effects change. Clamps pools to the new maxima. */
   recompute(now: number): void {
     this.effects = this.effects.filter((e) => e.until > now);
-    this.stats = computeShipStats(this.loadout, this.captain, this.talents, this.effects);
+    this.stats = computeShipStats(this.loadout, this.captain, this.talents, this.effects, this.worn);
     if (this.hull > this.stats.hullMax) this.hull = this.stats.hullMax;
     if (this.sails > this.stats.sailHpMax) this.sails = this.stats.sailHpMax;
     if (this.crew > this.stats.crewMax) this.crew = this.stats.crewMax;

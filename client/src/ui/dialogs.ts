@@ -111,7 +111,7 @@ export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: 
   root.querySelector('button')!.onclick = close;
 }
 
-export function renderShip(root: HTMLElement, state: ClientState, send?: (m: ClientMsg) => void): void {
+export function renderShip(root: HTMLElement, state: ClientState, send?: (m: ClientMsg) => void, openGear?: () => void): void {
   const self = state.self;
   const st = state.ownStats;
   if (!self || !st) return;
@@ -123,7 +123,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
     `<div class="stat-tile">${icon(pic, '', flip ? 'stat-ico flip' : 'stat-ico')}<span class="stat-l">${esc(label)}</span><b class="stat-v">${value}</b></div>`;
   const hasSale = cargo.some(([g]) => self.appraisal?.[g as GoodId]);
   const used = cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
-  root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div></div><div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div>
+  root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div></div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
     <div class="modal-body"><div class="stat-grid">
       ${tile('stat_sails', L('ship.speed'), esc(L('ship.speedVal', { v: dec1(st.maxSpeed) })))}
       ${tile('menu_ship', L('ship.turn'), esc(L('ship.turnVal', { v: dec1((st.turnRate * 180) / Math.PI) })))}
@@ -158,6 +158,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
     </div><div>
       <h3 class="title-sm" style="font-size:20px">${esc(L('ship.contracts'))}</h3>${self.contracts.map((c) => `<div class="card quest-card small">${icon(c.kind === 'bounty' ? 'wanted' : c.kind === 'delivery' && c.good ? `good_${c.good}` : 'map_contract', '', 'quest-ico')}<div class="quest-body"><b>${esc(serverText(c.title))}</b><div class="reward">${money(c.reward)}${xpBadge(c.xp)}</div></div></div>`).join('') || `<p class="muted">${esc(L('ship.noContracts'))}</p>`}
     </div></div></div>`;
+  root.querySelector<HTMLElement>('[data-open-gear]')?.addEventListener('click', () => openGear?.());
   root.querySelectorAll<HTMLElement>('[data-craft]').forEach((el) => (el.onclick = () => send?.({ t: 'craft', recipe: el.dataset.craft as 'round', n: 10 })));
   root.querySelectorAll<HTMLElement>('[data-dump]').forEach((el) => (el.onclick = () => {
     const g = el.dataset.dump as GoodId;

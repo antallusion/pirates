@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { CaptainSlot, Item, Slot } from './data/items.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
@@ -87,6 +88,14 @@ export type ClientMsg =
   | { t: 'shipyard'; action: 'buy_ship'; classId: ShipClassId }
   | { t: 'shipyard'; action: 'mount'; mount: MountId }
   | { t: 'shipyard'; action: 'refit' }
+  | { t: 'gear'; action: 'equip'; uid: number }
+  | { t: 'gear'; action: 'unequip'; slot: Slot }
+  | { t: 'gear'; action: 'sell'; uid: number }
+  | { t: 'gear'; action: 'salvage'; uid: number }
+  | { t: 'gear'; action: 'mend' }
+  | { t: 'gear'; action: 'buy'; index: number }
+  | { t: 'gear'; action: 'temper'; uid: number }
+  | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
   | { t: 'learn_talent'; id: string }
   | { t: 'respec'; mode?: 'full' | 'forget' | 'token'; id?: string }
@@ -419,6 +428,9 @@ export interface PrivateState {
   wanted: number;
   reputation: Partial<Record<FactionId, number>>;
   loadout: ShipLoadout;
+  /** The captain's locker and own gear (docs/12 P1); the ship's gear is in her loadout. */
+  stash: Item[];
+  captainGear: Partial<Record<CaptainSlot, Item>>;
   cargo: Cargo;
   ammo: AmmoStock;
   ammoSel: AmmoId;
@@ -532,6 +544,10 @@ export interface PortView {
     mounts: { mount: MountId; cost: number }[];
     /** Raising her a level (canon D12). */
     refit: RefitView;
+    /** The chandler's gear today (docs/12 P1). */
+    wares: Item[];
+    /** Mending all worn gear here. */
+    mendCost: number;
   };
   contracts: Contract[];
   rumors: string[];
@@ -1055,6 +1071,8 @@ export interface InspectView {
   mentored: number;
   rating: number;
   wanted: number;
+  /** What they wear, ship and captain (docs/12 P1). */
+  gear?: Item[];
 }
 
 export interface BarterSide {

@@ -4,6 +4,7 @@
 // And its other side, the unheard: a captain one will not hear — their chat lines, whispers, invitations to a
 // group, a barter or a duel do not reach one (letters still do: the packet boat reads no lists).
 
+import { wornItems } from './gear.ts';
 import { FRESH_LEVEL, FRIENDS_MAX, WHO_MAX } from '../../../shared/src/protocol.ts';
 import type { FriendView, InspectView, WhoView } from '../../../shared/src/protocol.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -160,6 +161,7 @@ export function inspectView(game: Game, s: PlayerSession, name: string): Inspect
     ship: { name: o.ship.name, classId: o.ship.cls.id, level: o.ship.shipLevel }, region: o.ship.region, deeds: p.deeds.length, seasonLevel: p.season.level,
     questsDone: p.quests.done.length, contracts: p.quests.done.filter((id) => id.startsWith('elite_')).length, mentored: p.stats.mentored ?? 0,
     rating: Math.round(p.pvp.rating ?? 0), wanted: wantedLevel(p.infamy),
+    gear: wornItems(p),
   };
 }
 

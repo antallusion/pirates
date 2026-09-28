@@ -11,6 +11,7 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { ITEM_BASES, makeItem } from '../../../shared/src/data/items.ts';
 import { clampLevel } from '../../../shared/src/data/shiplevel.ts';
 import { DAY_LENGTH_SEC, MAX_LEVEL, timeOfDay } from '../../../shared/src/constants.ts';
 import { BOSSES } from '../../../shared/src/data/bosses.ts';
@@ -152,6 +153,20 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.crew = Math.max(ship.crew, ship.stats.crewMin);
       game.pushSelf(s, true);
       return `She is a ${SHIP_CLASSES[cls].name} now, level ${ship.shipLevel} (crew ${ship.crew}).`;
+    }
+    case 'item': {
+      // An item into the locker: /item [base] [level] [rarity 0-4] — or /item random [level] [n].
+      const p = s.profile!;
+      const lv = args[1] ? num(1) : ship.shipLevel;
+      if (args[0] === 'random' || !args[0]) {
+        const n = Math.min(20, args[2] ? num(2) : 8);
+        for (let i = 0; i < n; i++) p.stash.push(makeItem(game.rng, p.itemSeq++, { ilvl: lv, source: 'elite' }));
+      } else {
+        if (!ITEM_BASES[args[0]]) return `Bases: ${Object.keys(ITEM_BASES).join(', ')}`;
+        p.stash.push(makeItem(game.rng, p.itemSeq++, { base: args[0], ilvl: lv, rarity: (args[2] ? Math.max(0, Math.min(4, num(2))) : 2) as 0 }));
+      }
+      game.pushSelf(s, true);
+      return `The locker holds ${p.stash.length}.`;
     }
     case 'spawn': {
       // A ship to fight, board or trade with, 300 m off the beam: /spawn [role] [class] [faction].

@@ -2,6 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
@@ -314,7 +315,7 @@ export class ClientState {
 
   refreshStats(): void {
     if (!this.self) return;
-    this.ownStats = computeShipStats(this.self.loadout, this.self.captain, this.self.talents, this.self.effects);
+    this.ownStats = computeShipStats(this.self.loadout, this.self.captain, this.self.talents, this.self.effects, Object.values(this.self.captainGear ?? {}).filter((x): x is Item => !!x));
     noteOwnShip(this.self.loadout);
   }
 

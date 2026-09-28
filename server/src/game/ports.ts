@@ -1,6 +1,8 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { chandlerWares, takeGearBack, wornItems } from './gear.ts';
+import { mendCost } from '../../../shared/src/data/items.ts';
 import { refitHolds, refitView } from './refit.ts';
 import { captainLevelFor, levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { onEventSale } from './events.ts';
@@ -141,6 +143,8 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       mounts: mountOffers(ship, port),
       guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
       refit: refitView(game, s, port),
+      wares: chandlerWares(game, port),
+      mendCost: wornItems(p).reduce((a, it) => a + mendCost(it), 0),
     },
     contracts: [...hotRun(game, s, port), ...game.contractsAt(port.id)],
     rumors: [poiRumor(game, s, port), ...game.rumorsNear(port.x, port.y, 3)].filter((r): r is string => !!r),
@@ -437,6 +441,8 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   const cost = Math.max(0, def.price - tradeIn);
   const p = s.profile!;
   if (p.gold < cost) return `Needs ${cost} silver after trade-in`;
+  const back = takeGearBack(p, ship.loadout); // the old hull's gear comes ashore into the locker
+  if (back) return back;
   const gun = defaultGunFor(def);
   const newLoadout: ShipLoadout = { classId, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {}, mount: def.fixedMount };
   p.gold -= cost;

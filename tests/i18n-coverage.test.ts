@@ -6,6 +6,7 @@ import { extract } from '../tools/i18n-server.ts';
 import { DATA_RU } from '../client/src/lang/data.ts';
 import { SERVER_RU_A } from '../client/src/lang/server.ru.a.ts';
 import { SERVER_RU_B } from '../client/src/lang/server.ru.b.ts';
+import { serverTable } from '../client/src/lang/server.ts';
 
 const holes = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
 const digits = (s: string) => (s.match(/\d+(?:[.,]\d+)?/g) ?? []).sort().join(' ');
@@ -21,7 +22,7 @@ test('every text field of the shared data has a Russian twin that keeps its numb
 });
 
 test('every sentence the server can say has a Russian pattern with the same placeholders', () => {
-  const table = { ...SERVER_RU_A, ...SERVER_RU_B };
+  const table = { ...serverTable(), ...SERVER_RU_A, ...SERVER_RU_B };
   const all = extract();
   const missing = all.filter((p) => table[p] === undefined);
   assert.ok(missing.length / all.length < 0.02, `${missing.length} of ${all.length} server sentences untranslated, e.g. ${JSON.stringify(missing.slice(0, 5))}`);

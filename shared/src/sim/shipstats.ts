@@ -1,6 +1,8 @@
 // Derived ship statistics: class base × shipyard modules × captain passive × talents × temporary effects.
 // Both server (authoritative) and client (HUD, shipyard previews) use this, so previews never lie.
 
+import { ITEM_BASES, MODULE_OF_SLOT, SHIP_SLOTS, SLOT_OPENS, gearSource } from '../data/items.ts';
+import type { Item, ShipSlot } from '../data/items.ts';
 import { CAPTAINS } from '../data/captains.ts';
 import type { CaptainId } from '../data/captains.ts';
 import { GOODS } from '../data/goods.ts';
@@ -40,6 +42,8 @@ export interface ShipLoadout {
   legendary?: LegendaryId;
   /** Her level ⚓1–⚓10 (canon D12); absent: the first level of her class. */
   level?: number;
+  /** Her gear in its slots (docs/12 P1): it stays with her in a berth. */
+  gear?: Partial<Record<ShipSlot, Item>>;
 }
 
 export interface ShipStats {
@@ -115,11 +119,18 @@ export function computeShipStats(
   captain: CaptainId,
   talents: TalentRanks,
   effects: ModifierSource[] = [],
+  worn: Item[] = [],
 ): ShipStats {
   const cls = SHIP_CLASSES[loadout.classId];
   const cap = CAPTAINS[captain];
-  // Permanent sources (captain passive, talents) are capped per 03 §3.3; temporary effects stack on top.
-  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents)]);
+  // Her gear in the slots her level has opened, and the captain's own (docs/12 P1).
+  const lvl = shipLevelOf(loadout);
+  const shipGear = SHIP_SLOTS.filter((sl) => loadout.gear?.[sl] && lvl >= SLOT_OPENS[sl]).map((sl) => loadout.gear![sl]!);
+  const gear = gearSource([...shipGear, ...worn]);
+  // Permanent sources (captain passive, talents, gear) are capped per 03 §3.3; temporary effects stack on top.
+  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents), { mods: gear.mods, flags: gear.flags }]);
+  // An item in a slot takes the place of the yard's old fitting there.
+  const replaced = new Set<string>(shipGear.map((it) => MODULE_OF_SLOT[ITEM_BASES[it.base].slot as ShipSlot]).filter((m): m is ModuleId => !!m));
   const m0 = (x: Record<StatKey, number>, k: StatKey) => mod(x, k);
   const eff = sumMods([...effects, ...buildSources(loadout.build, cls.armor), ...moduleSources(loadout)]);
   for (const f of eff.flags) flags.add(f);
@@ -135,7 +146,7 @@ export function computeShipStats(
   for (const id in loadout.modules) {
     const lvl = loadout.modules[id as ModuleId] ?? 0;
     const pl = MODULES[id as ModuleId]?.perLevel;
-    if (!pl || lvl <= 0) continue;
+    if (!pl || lvl <= 0 || replaced.has(id)) continue;
     const q = fit * (loadout.excellent?.includes(id as ModuleId) ? 1.5 : 1);
     const pos = (v: number | undefined) => (v ?? 0) * lvl * ((v ?? 0) > 0 ? q : ballast);
     hullMul += pos(pl.hullMul);

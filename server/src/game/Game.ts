@@ -1,6 +1,8 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
+import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
 import { ELITE_MODS, clampLevel, levelRange, npcSkill, xpForGap } from '../../../shared/src/data/shiplevel.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
@@ -154,6 +156,7 @@ export interface Loot {
   monster?: boolean; // left by a monster of the deep (Leviathan Lore)
   claim?: { account: number; until: number }; // the victor and their group have the first 30 s
   task?: number; // a crate of a wreck field, a task of the sea (docs/11 P6)
+  items?: Item[]; // gear a sunk ship left in the water (docs/12 P1)
 }
 
 interface Rumor {
@@ -1546,6 +1549,10 @@ export class Game {
       this.sunkHulls = this.sunkHulls.filter((h) => this.now - h.t < 600).slice(-40);
     }
     if (ship.hasFlag('scuttle_charges') && ship.isPlayer) blowMagazine(this, ship); // nobody gets her hold
+    if (ship.isPlayer) {
+      const sp = this.profileOf(ship);
+      if (sp) wearOnSinking(sp); // a tenth off every worn item
+    }
     ship.sinkingUntil = this.now + 6 + (ship.hasFlag('fh_saint_of_wrecks') ? 5 : 0); // the Saint of Wrecks holds her up
     ship.boarding = null;
     ship.repairing = false;
@@ -1603,9 +1610,10 @@ export class Game {
         if (gold && ship.accountId !== null) this.db.ledger(ship.accountId, 'loot_drop', -gold, 'wreck');
       }
     }
-    if (!Object.keys(cargo).length && gold <= 0) return;
+    const item = frac > 0 ? rollDrop(this, ship) : null; // gear in the water now and then (docs/12 P1)
+    if (!Object.keys(cargo).length && gold <= 0 && !item) return;
     const id = this.allocId();
-    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region, monster: isMonster(ship), claim: victor !== null ? { account: victor, until: this.now + 30 } : undefined });
+    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region, monster: isMonster(ship), claim: victor !== null ? { account: victor, until: this.now + 30 } : undefined, ...(item ? { items: [item] } : {}) });
   }
 
   private creditKill(killer: ShipEntity, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
@@ -1992,7 +2000,11 @@ export class Game {
       l.gold = 0;
     }
     if (got.length) this.toastShip(ship, `Salvaged: ${got.join(', ')}.`, 'gold');
-    if (!Object.keys(l.cargo).length) this.loot.delete(l.id);
+    if (l.items?.length) {
+      l.items = l.items.filter((it) => !takeItem(this, s, it));
+      this.pushSelf(s, true);
+    }
+    if (!Object.keys(l.cargo).length && !l.items?.length) this.loot.delete(l.id);
   }
 
   // ================================================================= discovery
@@ -2476,6 +2488,27 @@ export class Game {
         err(resolveMutiny(this, s, msg.choice));
         this.pushSelf(s, true);
         return;
+      case 'gear':
+        switch (msg.action) {
+          case 'equip':
+            return err(equip(this, s, Number(msg.uid)));
+          case 'unequip':
+            return err(unequip(this, s, msg.slot));
+          case 'sell':
+            return portAction(() => sellItem(this, s, Number(msg.uid)));
+          case 'salvage':
+            return portAction((pt) => salvageItem(this, s, pt, Number(msg.uid)));
+          case 'mend':
+            return portAction((pt) => mendGear(this, s, pt));
+          case 'buy':
+            return portAction((pt) => buyWare(this, s, pt, Math.trunc(Number(msg.index))));
+          case 'temper':
+            return portAction((pt) => temperItem(this, s, pt, Number(msg.uid)));
+          case 'reforge':
+            return portAction((pt) => reforgeItem(this, s, pt, Number(msg.uid), Math.trunc(Number(msg.line))));
+          default:
+            return err('Unknown order');
+        }
       case 'shipyard':
         return portAction((pt) => {
           // Modular Refit: fittings change in any port.
@@ -2960,6 +2993,8 @@ export class Game {
       loadout: p.loadout, talents: p.talents, x, y, heading,
     });
     ship.level = p.level;
+    ship.worn = Object.values(p.captainGear ?? {}).filter((x): x is Item => !!x);
+    ship.recompute(this.now);
     ship.cargo = p.cargo;
     ship.ammo = p.ammo;
     ship.ammoSel = p.ammoSel;
