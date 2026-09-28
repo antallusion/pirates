@@ -511,5 +511,191 @@
   "zoom": {
    "hf_20260928_192104_255e4aae-81e7-44de-913b-d74960dc708d": 1.14
   }
+ },
+ "cards_6": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_convict",
+   "card.enc_peddler",
+   "card.enc_fishermen",
+   "card.enc_pilot"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. a small gig on a black swell, a gaunt man at the oars holding up his branded wrist, a broken iron chain lying in the bilge. 2. an old man in a rowing boat heaped with bundles, sacks and a small lantern, holding up a wrapped object towards the ship. 3. two small fishing boats with their net fouled on a black rock, silver fish thrashing in the net, white foam of the rising tide around the rock. 4. a lean man standing in a dugout canoe among breaking reefs, pointing the way with a long pole, surf on the rocks behind him. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships."
+ },
+ "cards_7": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_deserters",
+   "card.enc_mapmaker",
+   "card.enc_bottle",
+   "card.enc_barrel"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. a navy ship's boat crowded with gunners in torn faded uniforms, raising their empty hands towards the ship. 2. a ship's boy clinging to a broken yard in dark water, a leather map tube strapped across his back. 3. a green glass bottle sealed with dark red wax bobbing in the foaming wake of the ship, a rolled paper inside it. 4. a stout iron-hooped cask rolling in a grey swell, still sealed, strands of weed trailing from it. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships.",
+  "painting": true
+ },
+ "cards_8": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_flotsam",
+   "card.enc_mine",
+   "card.enc_dolphins",
+   "card.enc_sharks"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. broken spars, planks and a few crates spread over the grey water after a wreck, a torn sail floating among them. 2. a black iron ball with short horns drifting on the tide just ahead of the bow, weed and barnacles on it. 3. a school of grey dolphins leaping in the bow wave under the ship's bowsprit. 4. grey shark fins circling the ship in dark water, one pale long shape just under the surface. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships.",
+  "painting": true
+ },
+ "cards_9": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_calm",
+   "card.enc_bird_shoal",
+   "card.enc_ambush",
+   "card.enc_patrol_search"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. a dead calm, the sea like black glass, the ship's grey sails hanging slack, a pale sun in a haze. 2. gulls wheeling and diving over a patch of boiling silver water, a shoal of fish right under the bow. 3. a lookout in the crow's nest pointing at two sets of dark sails on the stormy horizon to windward. 4. a navy cutter under a large naval ensign firing a signal gun, a puff of white smoke, officers watching from her rail. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships.",
+  "painting": true
+ },
+ "cards_10": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 540,
+  "ratio": 1.7777777777777777,
+  "square": false,
+  "dir": "cards",
+  "aspect": "16:9",
+  "ids": [
+   "card.enc_mutiny_brewing",
+   "card.enc_rats",
+   "card.enc_galley_fire",
+   "card.enc_wisps"
+  ],
+  "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, on board a sailing ship at night, on deck or below it by lantern light, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. below decks under a swinging lantern, sullen sailors muttering around a table, one fingering a knife, the bosun glancing back over his shoulder. 2. a ship's bread room by lantern light, rats swarming over torn sacks of biscuit and flour. 3. thick smoke and orange flames pouring from a ship's fore hatch at night, sailors running with leather buckets. 4. pale blue lights drifting among twisted mangrove roots over black water, the bow of the ship nosing in after them. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships.",
+  "painting": true
+ },
+ "builds_4": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.build_warehouse_2",
+   "icon.build_pier_2",
+   "icon.build_shipyard_2",
+   "icon.build_dry_dock_2",
+   "icon.build_tavern_2",
+   "icon.build_workshop_2",
+   "icon.build_hidden_cove_2",
+   "icon.build_smuggler_store_2",
+   "icon.build_warehouse_1",
+   "icon.build_pier_1",
+   "icon.build_shipyard_1",
+   "icon.build_dry_dock_1",
+   "icon.build_tavern_1",
+   "icon.build_workshop_1",
+   "icon.build_hidden_cove_1",
+   "icon.build_smuggler_store_1"
+  ],
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: sixteen separate small building dioramas laid out in a strict grid of 4 columns and 4 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all of them, bold readable silhouettes at small size. Left to right, top to bottom: 1. a dark timber warehouse with a loading hoist and stacked crates, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 2. a timber pier on piles with a moored rowing boat and a lantern post, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 3. a slipway with the bare ribs of a hull and a timber crane, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 4. a stone dry dock with a ship's hull inside and heavy timber gates, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 5. a two-storey timber tavern with lit windows and a hanging sign, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 6. an open-sided timber workshop with a workbench and a sail spread on the floor, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 7. a mossy sea cave with a boat moored hidden inside, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 8. a turf-roofed cellar dug into a mound with a green-lit doorway, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 9. a dark timber warehouse with a loading hoist and stacked crates fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 10. a timber pier on piles with a moored rowing boat and a lantern post fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 11. a slipway with the bare ribs of a hull and a timber crane fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 12. a stone dry dock with a ship's hull inside and heavy timber gates fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 13. a two-storey timber tavern with lit windows and a hanging sign fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 14. an open-sided timber workshop with a workbench and a sail spread on the floor fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 15. a mossy sea cave with a boat moored hidden inside fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 16. a turf-roofed cellar dug into a mound with a green-lit doorway fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm lights; low saturation. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) everywhere between and around the dioramas, not pink, no gradient, NO cast shadows on the background. NO captions or labels under or over the dioramas, NO words anywhere in the picture, NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours.",
+  "painting": true
+ },
+ "builds_5": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.build_battery_2",
+   "icon.build_fort_2",
+   "icon.build_lighthouse_2",
+   "icon.build_farm_2",
+   "icon.build_sawmill_2",
+   "icon.build_mine_2",
+   "icon.build_fishing_village_2",
+   "icon.build_plantation_2",
+   "icon.build_battery_1",
+   "icon.build_fort_1",
+   "icon.build_lighthouse_1",
+   "icon.build_farm_1",
+   "icon.build_sawmill_1",
+   "icon.build_mine_1",
+   "icon.build_fishing_village_1",
+   "icon.build_plantation_1"
+  ],
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: sixteen separate small building dioramas laid out in a strict grid of 4 columns and 4 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all of them, bold readable silhouettes at small size. Left to right, top to bottom: 1. an earthwork gun battery with three cannons behind a curved wall, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 2. a star-shaped stone fort with a keep and a black flag, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 3. a stone lighthouse on a rock, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 4. a moss-roofed stone farmhouse with a vegetable garden and a stone wall, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 5. a timber sawmill with a water wheel and stacked planks, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 6. a timber headframe over a mine tunnel in a rocky mound with an ore cart, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 7. turf-roofed fishermen's cottages above a shingle beach with boats, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 8. a two-storey planter's house with a veranda beside rows of crops, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 9. an earthwork gun battery with three cannons behind a curved wall fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 10. a star-shaped stone fort with a keep and a black flag fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 11. a stone lighthouse on a rock fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 12. a moss-roofed stone farmhouse with a vegetable garden and a stone wall fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 13. a timber sawmill with a water wheel and stacked planks fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 14. a timber headframe over a mine tunnel in a rocky mound with an ore cart fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 15. turf-roofed fishermen's cottages above a shingle beach with boats fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 16. a two-storey planter's house with a veranda beside rows of crops fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm lights; low saturation. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) everywhere between and around the dioramas, not pink, no gradient, NO cast shadows on the background. NO captions or labels under or over the dioramas, NO words anywhere in the picture, NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours.",
+  "painting": true
+ },
+ "builds_6": {
+  "grid": [
+   5,
+   2
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "21:9",
+  "ids": [
+   "icon.build_distillery_2",
+   "icon.build_powder_mill_2",
+   "icon.build_chapel_2",
+   "icon.build_chart_house_2",
+   "icon.build_barracks_2",
+   "icon.build_distillery_1",
+   "icon.build_powder_mill_1",
+   "icon.build_chapel_1",
+   "icon.build_chart_house_1",
+   "icon.build_barracks_1"
+  ],
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: ten separate small building dioramas laid out in a strict grid of 5 columns and 2 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all of them, bold readable silhouettes at small size. Left to right, top to bottom: 1. a brick distillery with a copper still, barrels and a tall chimney, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 2. a round stone powder magazine with a conical roof, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 3. a small stone chapel with a cross and a little graveyard, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 4. a tall narrow timber tower with an observatory dome, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 5. a long stone barracks with a walled drill yard, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 6. a brick distillery with a copper still, barrels and a tall chimney fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 7. a round stone powder magazine with a conical roof fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 8. a small stone chapel with a cross and a little graveyard fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 9. a tall narrow timber tower with an observatory dome fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 10. a long stone barracks with a walled drill yard fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm lights; low saturation. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) everywhere between and around the dioramas, not pink, no gradient, NO cast shadows on the background. NO captions or labels under or over the dioramas, NO words anywhere in the picture, NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours.",
+  "painting": true
  }
 }
