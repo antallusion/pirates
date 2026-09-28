@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { RefitOrder } from './refit.ts';
 import { newTutorial, sanitizeTutorial } from './onboarding.ts';
 import type { Tutorial } from './onboarding.ts';
 import type { SeasonStat } from '../../../shared/src/data/seasons.ts';
@@ -148,6 +149,8 @@ export interface Profile {
     hoardAboard: boolean; // Gold Fever: a trail follows you
   };
   keel: { classId: string; since: number } | null; // Legendary Keel
+  /** A yard at work raising her a level (canon D12, refit.ts). */
+  refit?: RefitOrder | null;
   trade: {
     lastDeparture: string;
     arrivalRoute: string;
@@ -455,6 +458,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   sanitizeShipbuilding(p);
   // Ship levels (canon D12): a ship from before them comes at her class's first level, one more if nearly all fitted.
   for (const l of [p.loadout, ...(p.berths ?? []).map((b) => b.loadout)]) if (l) l.level = l.level ? clampLevel(l.classId, l.level) : initialLevel(l.classId, l.modules ?? {});
+  p.refit ??= null;
   p.salvageDay ??= -1;
   p.fleet.escorts ??= [];
   p.fleet.formation ??= 'line';

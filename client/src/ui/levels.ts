@@ -22,3 +22,8 @@ export function levelChip(level: number, classId?: ShipClassId, title?: string):
   const t = threatTo(level, classId);
   return `<span class="lvl-chip lvl-${t}" style="color:${THREAT_COLOR[t]}"${title ? ` title="${esc(title)}"` : ''}>${t === 'skull' ? '☠' : ''}⚓${level}</span>`;
 }
+
+/** Your own ship's level: the chip in brass, no danger in it. */
+export function ownLevelChip(level: number): string {
+  return `<span class="lvl-chip lvl-own" style="color:#e8c46a">⚓${level}</span>`;
+}

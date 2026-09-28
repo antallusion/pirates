@@ -3,6 +3,7 @@
 // yard; the old ship is berthed there and can be taken out again. Plus the living materials at sea
 // (cursed wood, drowned silk) and what the figureheads do.
 
+import { refitHolds } from './refit.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -169,6 +170,8 @@ export function swapBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   const b = p.berths[index];
   if (!b) return 'No such berth';
   if (b.port !== port.id) return `She is berthed at ${game.portById(b.port)?.name ?? b.port}`;
+  const refitting = refitHolds(game, p);
+  if (refitting) return refitting; // the yard has her on the ways
   p.berths.splice(index, 1, { port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax });
   setShip(game, s, b.loadout, b.hull);
   game.toastShip(ship, `You take the ${b.loadout.name} out of her berth.`, 'info');

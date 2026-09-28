@@ -1,6 +1,8 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { refitHolds, refitView } from './refit.ts';
+import { captainLevelFor, levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { onEventSale } from './events.ts';
 import { levyFor, noteSale, payLevy, saleMul } from './empires.ts';
 import { seasonStat, shanty } from './seasons.ts';
@@ -138,6 +140,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       }),
       mounts: mountOffers(ship, port),
       guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
+      refit: refitView(game, s, port),
     },
     contracts: [...hotRun(game, s, port), ...game.contractsAt(port.id)],
     rumors: [poiRumor(game, s, port), ...game.rumorsNear(port.x, port.y, 3)].filter((r): r is string => !!r),
@@ -424,6 +427,11 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   if (def.tier > port.shipyardTier) return `${port.name} cannot build a ${def.name}`;
   if (def.factions && !def.factions.includes(port.faction)) return `Only ${def.factions.join(', ')} yards build the ${def.name}`;
   if (classId === ship.loadout.classId) return 'You already sail one';
+  const refitting = refitHolds(game, s.profile!);
+  if (refitting) return refitting; // the yard has her on the ways
+  // Canon D12: a hull comes at her class's first level, and the captain must be up to it.
+  const needLv = captainLevelFor(levelRange(classId)[0]);
+  if (s.profile!.level < needLv) return `Captain level ${needLv} is needed to command a ${def.name}`;
   if (ship.loadout.legendary) return 'Berth your legendary ship before you buy another hull';
   const tradeIn = Math.round(shipValue(ship) * 0.6);
   const cost = Math.max(0, def.price - tradeIn);

@@ -86,6 +86,7 @@ export type ClientMsg =
   | { t: 'shipyard'; action: 'guns'; side: Side; gun: GunId }
   | { t: 'shipyard'; action: 'buy_ship'; classId: ShipClassId }
   | { t: 'shipyard'; action: 'mount'; mount: MountId }
+  | { t: 'shipyard'; action: 'refit' }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
   | { t: 'learn_talent'; id: string }
   | { t: 'respec'; mode?: 'full' | 'forget' | 'token'; id?: string }
@@ -529,6 +530,8 @@ export interface PortView {
     modules: { module: ModuleId; level: number; cost: number; max: number; excellent: boolean }[];
     guns: { gun: GunId; cost: number }[];
     mounts: { mount: MountId; cost: number }[];
+    /** Raising her a level (canon D12). */
+    refit: RefitView;
   };
   contracts: Contract[];
   rumors: string[];
@@ -995,6 +998,17 @@ export interface QuestPayView {
   faction?: FactionId;
   stores: { silver: number; heavy: number; incendiary: number };
   favour?: { silver: number; rep: number };
+}
+
+/** The yard's page on a refit (canon D12): her level and her class's height, the next level's price, the yard at work. */
+export interface RefitView {
+  level: number;
+  max: number;
+  next: { to: number; silver: number; goods: { good: GoodId; qty: number; have: number }[]; sec: number; captain: number } | null;
+  /** The yard at work on her: to what level, seconds left, in which port. */
+  busy: { to: number; left: number; port: string } | null;
+  /** Why it cannot be ordered here and now. */
+  blocked: string | null;
 }
 
 /** A captain on one's list of friends (docs/11 P6): who is at sea, at what level, in which waters or port. */

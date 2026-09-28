@@ -283,3 +283,22 @@ export function questShipLevel(q: { requires: { level?: number }; steps: { type:
   }
   return lv;
 }
+
+/** The server's lines about ship levels and refits, English → Russian. */
+export function levelPatterns(): [string, string][] {
+  return [
+    ['She is above your level: your boarders would not reach her deck', 'Она выше вас уровнем: ваша абордажная команда не доберётся до её палубы'],
+    ['She is at the height of her class: only a bigger hull goes higher', 'Она на вершине своего класса: выше — только на корпусе крупнее'],
+    ['The yard is already at work on her', 'Верфь уже работает над ней'],
+    ['{0} cannot take a {1} in hand', 'Верфь порта {0} не возьмётся за корабль класса «{1}»'],
+    ['A legendary ship is not rebuilt', 'Легендарный корабль не перестраивают'],
+    ['A guild hull on loan is not yours to rebuild', 'Гильдейский корпус взят взаймы — перестраивать его не вам'],
+    ['Captain level {0} is needed to command her at level {1}', 'Чтобы командовать ею на уровне {1}, нужен уровень капитана {0}'],
+    ['Needs {0} silver', 'Нужно {0} серебра'],
+    ['Needs {0} {1} (in the hold or your warehouse here)', 'Нужно: {1} — {0} (в трюме или на вашем складе в этом порту)'],
+    ['The yard takes the {0} in hand: level {1} in {2} min. She stays in harbour till then.', 'Верфь берётся за «{0}»: уровень {1} через {2} мин. До тех пор она остаётся в гавани.'],
+    ['The yard is still at work on her: {0} min more', 'Верфь ещё работает над ней: осталось {0} мин'],
+    ['The yard is done: the {0} is level {1} now.', 'Верфь закончила: «{0}» теперь уровня {1}.'],
+    ['Captain level {0} is needed to command a {1}', 'Чтобы командовать кораблём класса «{1}», нужен уровень капитана {0}'],
+  ];
+}

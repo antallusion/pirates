@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { orderRefit, refitHolds, stepRefit } from './refit.ts';
 import { ELITE_MODS, clampLevel, levelRange, npcSkill, xpForGap } from '../../../shared/src/data/shiplevel.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
@@ -691,6 +692,7 @@ export class Game {
       this.nearestPlayer.set(id, best * 0.75);
     }
 
+    for (const s of this.sessions) stepRefit(this, s); // yards finish their work by the wall clock
     stepBoats(this);
     settleCrimes(this);
     stepSocial(this);
@@ -2494,6 +2496,8 @@ export class Game {
               return shipyardBuy(this, s, pt, msg.classId);
             case 'mount':
               return shipyardMount(this, s, pt, msg.mount);
+            case 'refit':
+              return orderRefit(this, s, pt);
             default:
               return 'Unknown order';
           }
@@ -3146,6 +3150,8 @@ export class Game {
   undock(s: PlayerSession): string | null {
     const ship = s.ship!;
     if (!ship.docked) return 'Not in port';
+    const refitting = refitHolds(this, s.profile!);
+    if (refitting) return refitting;
     const port = this.portById(ship.docked)!;
     const is = this.world.islands[port.islandId];
     // Leave harbour on the best point of sail within 90° of straight out to sea.

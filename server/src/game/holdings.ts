@@ -194,7 +194,8 @@ export function islePort(game: Game, h: Holding): Port {
   const isl = island(game, h.island)!;
   return {
     id: `isle:${h.island}`, name: isl.name, region: isl.region, faction: 'free', x: isl.x, y: isl.y, islandId: isl.id, size: 1,
-    shipyardTier: has(h, 'dry_dock') ? 4 : has(h, 'shipyard') ? 3 : 0, blackMarket: false, profile: { produces: {}, consumes: {} }, description: '', key: false,
+    // A guild's fortress (base level 4+) with a dry dock builds ships of the line (canon D12: the fifth tier).
+    shipyardTier: has(h, 'dry_dock') ? ((h.base ?? 0) >= 4 ? 5 : 4) : has(h, 'shipyard') ? 3 : 0, blackMarket: false, profile: { produces: {}, consumes: {} }, description: '', key: false,
   };
 }
 

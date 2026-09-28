@@ -9,7 +9,8 @@ import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
-import type { ClientMsg, PortView } from '../../../shared/src/protocol.ts';
+import type { ClientMsg, PortView, RefitView } from '../../../shared/src/protocol.ts';
+import { ownLevelChip } from './levels.ts';
 import { cargoVolume, computeShipStats } from '../../../shared/src/sim/shipstats.ts';
 import { BUILD_TIME, FIGUREHEADS, RARES, VARIANTS, WOODS, buildMaterials } from '../../../shared/src/data/shipbuild.ts';
 import type { FigureheadId, RareSlot, ShipBuild, WoodId } from '../../../shared/src/data/shipbuild.ts';
@@ -179,6 +180,8 @@ export class PortScreen {
         return this.send({ t: 'officer', action: 'hire', id: d.id! });
       case 'repair':
         return this.send({ t: 'shipyard', action: 'repair' });
+      case 'refit':
+        return this.send({ t: 'shipyard', action: 'refit' });
       case 'module':
         return this.send({ t: 'shipyard', action: 'module', module: d.module as never });
       case 'unfit':
@@ -335,6 +338,7 @@ ${ammo}${intel}`;
         ${self.talents.shp_legendary_keel ? `<div class="card"><h4 class="card-h">${icon('good_timber', '', 'ico-md')}${esc(L('keel.title'))}</h4><p class="muted">${esc(L('keel.text'))}</p><button class="btn btn-small" data-act="keel" ${self.loadout.keel ? 'disabled' : ''}>${esc(self.loadout.keel ? L('keel.has') : L('keel.lay'))}</button></div>` : ''}
         <div class="card"><h4 class="card-h">${icon('good_planks', '', 'ico-md')}${esc(L('repair.title'))}</h4><p>${esc(L('repair.state', { hull: state.you?.hull ?? 0, hullMax: state.you?.hullMax ?? 0, sails: state.you?.sails ?? 0, sailsMax: state.you?.sailsMax ?? 0, guns: self.gunsDisabled.port + self.gunsDisabled.starboard }))}</p>
         <button class="btn btn-primary" data-act="repair" ${sy.repairCost ? '' : 'disabled'}>${esc(sy.repairCost ? L('repair.full', { cost: fmt(sy.repairCost) }) : L('repair.sound'))}</button></div>
+        ${refitCard(sy.refit, self.loadout.name)}
         ${guns}</div><div>
         <div class="card"><h4 class="card-h">${icon('mount_mortar', '', 'ico-md')}${esc(L('mount.title'))}</h4>${sy.mounts.map((m) => {
           const def = MOUNTS[m.mount];
@@ -597,4 +601,22 @@ function contractArt(c: { kind: string; good?: string }): string {
 function levelSpan(classId: ShipClassId): string {
   const [lo, hi] = levelRange(classId);
   return lo === hi ? `⚓${lo}` : `⚓${lo}–${hi}`;
+}
+
+/** The yard's refit card (canon D12): her level, the next one's gain and price, the materials had and wanted. */
+function refitCard(r: RefitView, name: string): string {
+  const head = `<h4 class="card-h">${icon('good_timber', '', 'ico-md')}${esc(L('refit.title'))} ${ownLevelChip(r.level)}</h4><p class="muted refit-level">${esc(L('refit.level', { name: placeName(name), n: r.level, max: r.max }))}</p>`;
+  if (r.busy) {
+    return `<div class="card refit">${head}<p class="refit-busy">${esc(L('refit.busy', { n: r.busy.to, m: Math.max(1, Math.ceil(r.busy.left / 60)) }))}</p></div>`;
+  }
+  if (!r.next) return `<div class="card refit">${head}<p class="muted">${esc(L('refit.top'))}</p></div>`;
+  const n = r.next;
+  const goods = n.goods.map((g) => `<span class="refit-good${g.have < g.qty ? ' short' : ''}">${icon(`good_${g.good}`, '', 'ico-sm')}${esc(GOODS[g.good].name)} <b>${Math.min(g.have, g.qty)}/${g.qty}</b></span>`).join('');
+  return `<div class="card refit">${head}
+    <p>${esc(L('refit.gain', { n: n.to }))}</p>
+    <div class="refit-goods">${goods}</div>
+    <p class="muted refit-note">${esc(L('refit.captain', { n: n.captain }))} · ${esc(L('refit.time', { m: Math.max(1, Math.ceil(n.sec / 60)) }))}</p>
+    <p class="muted refit-note">${esc(L('refit.hint'))}</p>
+    ${r.blocked ? `<p class="refit-why">${esc(serverText(r.blocked))}</p>` : ''}
+    <button class="btn btn-primary" data-act="refit" ${r.blocked ? 'disabled' : ''}>${esc(L('refit.go', { n: n.to }))} — ${money(n.silver)}</button></div>`;
 }
