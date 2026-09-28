@@ -7,7 +7,7 @@ import type { SkipperTrait } from '../../../shared/src/data/turncoats.ts';
 import { dict, lang } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
 import { traitChips } from './crew.ts';
-import { esc, fmt, icon, money } from './dom.ts';
+import { esc, faceOf, fmt, icon, money } from './dom.ts';
 import { personName } from '../lang/names.ts';
 import { ESCAPE_BELOW, SKIPPER_TRAITS } from '../../../shared/src/data/turncoats.ts';
 
@@ -83,5 +83,5 @@ export function skippersCard(state: ClientState): string {
   const list = state.self?.skippers ?? [];
   if (!list.length) return '';
   return `<div class="card tc-card"><h4 class="card-h">${icon('role_pilot', '', 'ico-md')}${esc(L('skippers'))}</h4>
-    ${list.map((k) => `<div class="tc-cap"><div class="tc-head"><b>${esc(personName(k.name))}</b> <span class="muted">${esc(FACTIONS[k.faction].short)} · ${esc(L('voyages', { n: fmt(k.voyages) }))}</span><span class="tc-loy ${k.loyalty < 35 ? 'bad' : k.loyalty >= 60 ? 'good' : ''}">${esc(L('loyalty', { n: k.loyalty }))}</span></div><p>${skillChips(k.traits)}</p></div>`).join('')}</div>`;
+    ${list.map((k) => `<div class="tc-cap tc-skipper">${icon(`portrait.${faceOf(k.name)}`, '', 'ico-md ico-round tc-face')}<div class="tc-head"><b>${esc(personName(k.name))}</b> <span class="muted">${esc(FACTIONS[k.faction].short)} · ${esc(L('voyages', { n: fmt(k.voyages) }))}</span><span class="tc-loy ${k.loyalty < 35 ? 'bad' : k.loyalty >= 60 ? 'good' : ''}">${esc(L('loyalty', { n: k.loyalty }))}</span></div><p>${skillChips(k.traits)}</p></div>`).join('')}</div>`;
 }

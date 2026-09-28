@@ -2188,6 +2188,10 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .tc-card .tc-loy.good { color: var(--good); }
 .tc-card .tc-loy.bad { color: var(--bad); }
 .tc-card .tc-cap p { margin: 3px 0; }
+/* A turned skipper: her face beside her lines (docs/12 P11). */
+.tc-card .tc-skipper { display: grid; grid-template-columns: 40px 1fr; column-gap: 10px; align-items: start; }
+.tc-card .tc-skipper > .tc-face { grid-row: 1 / span 9; width: 40px; height: 40px; }
+.tc-card .tc-skipper > :not(.tc-face) { grid-column: 2; }
 .tc-card .tc-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 /* Letters of marque (docs/12 P10 #15). */
 #hud-order { pointer-events: none; padding: 6px 9px 7px; max-width: 320px; border-color: rgba(201,162,90,0.5); }

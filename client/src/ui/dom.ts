@@ -101,6 +101,17 @@ const PORTRAIT_STAND_IN: Record<string, string> = {
   res_gunner_m: 'giver_garrison_captain_m', res_gunner_f: 'giver_fence_f', res_pilot_m: 'giver_lighthouse_keeper_m', res_pilot_f: 'giver_lighthouse_keeper_f',
 };
 
+// The 24 painted pirate faces stand in for one another's absence with the older faces (docs/12 P11).
+const OLD_FACES = ['corsair', 'reaver', 'giver_smuggler_m', 'giver_smuggler_f', 'giver_fence_m', 'giver_fence_f', 'officer_iron_jaw', 'giver_bosun_m', 'giver_cultist_m', 'giver_hermit_m'];
+for (let i = 0; i < 24; i++) PORTRAIT_STAND_IN[`pirate_${String(i).padStart(2, '0')}`] = OLD_FACES[i % OLD_FACES.length];
+
+/** A face for a person known only by name (a turned skipper): one of the 24 pirate faces, the same each time. */
+export function faceOf(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return `pirate_${String(h % 24).padStart(2, '0')}`;
+}
+
 /** A portrait's picture, or its stand-in's while it is being painted. */
 export function portraitUrl(id: string): string | null {
   return assetUrl(`portrait.${id}`) ?? (PORTRAIT_STAND_IN[id] ? assetUrl(`portrait.${PORTRAIT_STAND_IN[id]}`) : null);
