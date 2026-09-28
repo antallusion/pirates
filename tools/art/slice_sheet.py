@@ -66,13 +66,55 @@ def main(sheet_name: str, stem: str) -> None:
         xs, ys = cuts(a.mean(axis=0), cols), cuts(a.mean(axis=1), rows)
     else:
         keyed = key_magenta(np.array(Image.open(src).convert('RGBA')))
+        # Hairlines the painter rules between the cells (asked not to, now and then does): a column or row that is
+        # solid nearly end to end is no part of anything — it goes.
+        solid0 = keyed[:, :, 3] > 128
+        for axis in (0, 1):
+            full = solid0.mean(axis=axis) > 0.97
+            idx = np.nonzero(full)[0]
+            for k in idx:
+                if axis == 0:
+                    keyed[:, max(0, k - 2):k + 3, 3] = 0
+                else:
+                    keyed[max(0, k - 2):k + 3, :, 3] = 0
         im = Image.fromarray(keyed)
         solid = keyed[:, :, 3].astype(np.float32) / 255
         xs, ys = cuts(solid.sum(axis=0), cols), cuts(solid.sum(axis=1), rows)
+        blobs = None
+        if sh.get('split') == 'blobs':
+            # Shapes of unequal size in a row (a whale beside a shark): each is found whole as a shape of its own,
+            # the largest few, in reading order, rather than cut at even intervals.
+            lab, n = ndimage.label(ndimage.binary_closing(keyed[:, :, 3] > 24, iterations=2))
+            sizes = ndimage.sum(np.ones_like(lab), lab, range(1, n + 1))
+            want = len(sh['ids'])
+            top = sorted(np.argsort(sizes)[::-1][:want] + 1, key=lambda k: ndimage.center_of_mass(lab == k)[1])
+            # A part come loose (a tusk, a fin tip) joins the shape nearest it.
+            cx = {k: ndimage.center_of_mass(lab == k)[1] for k in top}
+            for k in range(1, n + 1):
+                if k in cx or sizes[k - 1] < 400:
+                    continue
+                kx = ndimage.center_of_mass(lab == k)[1]
+                lab[lab == k] = min(top, key=lambda t: abs(cx[t] - kx))
+            blobs = (lab, top)
     for i, aid in enumerate(sh['ids']):
         if not aid:
             continue
         r, c = divmod(i, cols)
+        if sh['mode'] != 'tiles' and blobs:
+            lab, top = blobs
+            sl = ndimage.find_objects((lab == top[i]).astype(int))[0]
+            y0, y1, x0, x1 = sl[0].start, sl[0].stop, sl[1].start, sl[1].stop
+            only = np.array(im.crop((x0, y0, x1, y1)))
+            only[lab[y0:y1, x0:x1] != top[i], 3] = 0
+            ys_, xs_ = np.nonzero(only[:, :, 3] > 8)
+            piece = Image.fromarray(only).crop((xs_.min(), ys_.min(), xs_.max() + 1, ys_.max() + 1))
+            s = px / max(piece.size)
+            out = piece.convert('RGBa').resize((max(1, round(piece.width * s)), max(1, round(piece.height * s))), Image.LANCZOS).convert('RGBA')
+            fname = name_of(aid)
+            out.save(os.path.join(out_dir, fname + '.webp'), 'WEBP', quality=90, method=6)
+            m['assets'][aid] = {'local': f"{sh['dir']}/{fname}.webp", 'remote': stem + '.png', 'job': job, 'fit': f'sheet:{sheet_name}.{i}', 'rev': rev_of(stem)}
+            print(aid, (x0, y0, x1, y1), out.size)
+            continue
         x0, x1, y0, y1 = xs[c], xs[c + 1], ys[r], ys[r + 1]
         if sh['mode'] == 'tiles':
             pad = round(min(x1 - x0, y1 - y0) * 0.04)

@@ -284,7 +284,8 @@ function painted(g: G, id: BeastId, len: number, t: number, seed: number, limp: 
   const top = -h * spr.cy, left = -w * spr.cx;
   const head = spr.cy - spr.extentY / 2;
   const pieces = id === 'young_serpent' ? 5 : 4;
-  const fore = id === 'young_serpent' ? 0.3 : 0.42;
+  // The fore part holds still past the flippers (a humpback's reach half her length), so no cut runs through one.
+  const fore = id === 'young_serpent' ? 0.3 : id === 'humpback' ? 0.6 : id === 'sperm_whale' ? 0.5 : 0.46;
   const cut = [0];
   for (let k = 0; k < pieces - 1; k++) cut.push(head + spr.extentY * (fore + ((1 - fore) * k) / (pieces - 1)));
   cut.push(1);
@@ -302,7 +303,7 @@ function painted(g: G, id: BeastId, len: number, t: number, seed: number, limp: 
   g.save();
   g.scale(breathe, 1);
   // The overlap hides the seams where a piece turns.
-  const ov = 2 / ih;
+  const ov = 6 / ih;
   g.drawImage(img, 0, 0, iw, cut[1] * ih, left, top, w, cut[1] * h);
   g.translate(0, top + cut[1] * h);
   for (let k = 1; k < cut.length - 1; k++) {
