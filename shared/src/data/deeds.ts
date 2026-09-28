@@ -18,7 +18,7 @@ export const DEEDS: DeedDef[] = [
   { id: 'deed_first_prize', name: 'First Prize', condition: 'Take a ship by boarding.', path: 'combat' },
   { id: 'deed_hundred_wrecks', name: 'Hundred Wrecks', condition: 'Sink 100 ships.', path: 'combat' },
   { id: 'deed_ship_of_the_line', name: 'Ship of the Line', condition: 'Sink a man-o\'-war.', path: 'combat' },
-  { id: 'deed_convoy_breaker', name: 'Convoy Breaker', condition: 'Break a League convoy: every ship of it sunk or taken.', path: 'combat', awaits: 'League convoys (Phase 7 world events)' },
+  { id: 'deed_convoy_breaker', name: 'Convoy Breaker', condition: 'Break five League convoys: every merchant of each sunk, taken or struck.', path: 'combat' },
   { id: 'deed_captain_killer', name: 'Captain Killer', condition: 'Sink ten named pirate captains.', path: 'combat' },
   { id: 'deed_hundred_thousand', name: 'Hundred Thousand', condition: 'Sell 100,000 silver worth of goods.', path: 'trade' },
   { id: 'deed_grand_circuit', name: 'Grand Circuit', condition: 'Trade in 6 different ports in one voyage (between sinkings).', path: 'trade' },

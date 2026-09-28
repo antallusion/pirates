@@ -1,6 +1,7 @@
 // Path and Legend quests (docs/00 D1, docs/02 §7): mentors in their ports, step objectives driven by what the
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
+import { codeAnywhere } from './raiding.ts';
 import { inGroup } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { questShipLevel } from '../../../shared/src/data/shiplevel.ts';
@@ -642,7 +643,7 @@ export function swearOath(game: Game, s: PlayerSession, port: Port, oath: Oath):
   const p = s.profile!;
   if (p.oath) return `You are already bound: ${p.oath === 'code' ? 'the Code' : 'a letter of marque'}`;
   if (oath === 'code') {
-    if (port.id !== 'cinderhold') return 'The Code is sworn only at Cinderhold';
+    if (port.id !== 'cinderhold' && !(port.faction === 'confederacy' && codeAnywhere(p))) return 'The Code is sworn only at Cinderhold';
     if ((p.reputation.confederacy ?? 0) < 10) return 'The Brethren do not know you yet (Confederacy 10)';
     p.oath = 'code';
     changeRep(p, 'confederacy', 15);

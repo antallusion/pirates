@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import type { TipView } from '../../../shared/src/protocol.ts';
 import { namedPirates } from '../../../shared/src/data/pirates.ts';
 import type { WantedPoster } from '../../../shared/src/protocol.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
@@ -245,6 +246,10 @@ export class PortScreen {
         return this.send({ t: 'licence' });
       case 'informant':
         return this.send({ t: 'wanted', action: 'informant', id: d.id! });
+      case 'tip':
+        return this.send({ t: 'tip', action: 'buy', id: d.id! });
+      case 'clerk':
+        return this.send({ t: 'tip', action: 'clerk' });
       case 'captive':
         return this.send({ t: 'captive', index: Number(d.i), mode: d.mode as 'ransom' });
       case 'rights':
@@ -435,7 +440,7 @@ ${orders}${berths}</div>` : ''}`;
     const officers = tv.officers.map((o) => `<div class="card"><h4>${officerIcon(o)}${esc(personName(o.name))} <span class="muted">— ${esc(L('officer.level', { role: lang() === 'ru' ? OFFICER_DEFS[o.role].name.toLowerCase() : OFFICER_DEFS[o.role].name, n: o.level }))}</span></h4>
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? esc(L('officer.taken')) : `${esc(L('btn.hire'))} ${money(o.price)}`}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
-    const board = view.wanted ? wantedBoardHtml(view.wanted) : '';
+    const board = (view.raid ? tipsHtml(view.raid) : '') + (view.wanted ? wantedBoardHtml(view.wanted) : '');
     const recs = view.fishRecords?.length ? `<div class="card fish-records"><h4 class="card-h">${icon('build_fishing_village', '', 'ico-md')}${esc(L('fish.records'))}</h4>${view.fishRecords.map((r) => `<p class="fish-rec">${esc(L('fish.recordRow', { fish: FISH[r.fish].name[lang() === 'ru' ? 1 : 0], kg: r.kg.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), name: r.name }))}</p>`).join('')}</div>` : '';
     return `${board}${recs}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
@@ -653,4 +658,13 @@ function wantedBoardHtml(list: WantedPoster[]): string {
     </div>`;
   }).join('');
   return `<div class="card wanted-card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('wanted.board'))}</h4><p class="muted">${esc(L('wanted.hint'))}</p><div class="wanted-grid">${posters}</div></div>`;
+}
+
+/** The tavern's tips and the clerk (docs/12 P6). */
+function tipsHtml(r: { tips: TipView[]; clerk: { cost: number; until: number } }): string {
+  const ru = lang() === 'ru';
+  const rows = r.tips.map((t) => `<div class="tip-row"><span>${esc(L('tips.row', { cls: SHIP_CLASSES[t.cls].name, lvl: t.level, good: GOODS[t.good].name.toLowerCase(), value: t.value.toLocaleString(ru ? 'ru-RU' : 'en-GB'), from: placeName(t.from), to: placeName(t.to), min: Math.max(1, Math.round(t.departIn / 60)) }))}</span>
+    ${t.bought ? `<span class="good">${esc(L('tips.bought'))}</span>` : `<button class="btn btn-small" data-act="tip" data-id="${esc(t.id)}">${esc(L('tips.buy', { cost: t.cost }))}</button>`}</div>`).join('') || `<p class="muted">${esc(L('tips.none'))}</p>`;
+  const clerk = r.clerk.until > 0 ? `<p class="good">${esc(L('tips.clerkOn', { min: Math.ceil(r.clerk.until / 60) }))}</p>` : `<button class="btn btn-small" data-act="clerk">${esc(L('tips.clerk', { cost: r.clerk.cost }))}</button>`;
+  return `<div class="card tips-card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('tips.title'))}</h4><p class="muted">${esc(L('tips.hint'))}</p>${rows}<div class="row">${clerk}</div></div>`;
 }

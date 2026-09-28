@@ -116,6 +116,22 @@ function cycleTarget(): void {
   pinTarget(near[(i + 1) % near.length].id);
 }
 
+/** The glass on the frame's ship (docs/12 P6): her hold weighed, asked again every few seconds. */
+let glassId: number | null = null, glassAt = 0;
+function askGlass(id: number | null): void {
+  const now = performance.now();
+  if (id === null) {
+    glassId = null;
+    return;
+  }
+  const s = state.ships.get(id);
+  if (!s?.info || s.info.npcRole === 'beast' || SHIP_CLASSES[s.info.classId]?.monster) return;
+  if (id === glassId && now - glassAt < 4000) return;
+  glassId = id;
+  glassAt = now;
+  net.send({ t: 'appraise', id });
+}
+
 /** The frame's ship this frame: the pinned one while she is in sight, else the nearest hostile within a mile. */
 function resolveTarget(): number | null {
   const own = state.ownDisplay;
@@ -148,6 +164,7 @@ hud.onPartyTap = (name) => net.send({ t: 'inspect', name });
 hud.onTargetTap = (name) => net.send({ t: 'inspect', name });
 hud.onFishing = (action) => net.send({ t: 'fishing', action });
 hud.onHunt = (action, id) => net.send(action === 'flense' ? { t: 'hunt', action, id: id ?? 0 } : { t: 'hunt', action });
+hud.onTribute = (id) => net.send({ t: 'tribute', id });
 companyScreen.onWhisper = (name) => {
   const input = $('chat-input') as HTMLInputElement;
   $('chat').classList.add('open');
@@ -1506,6 +1523,7 @@ function step(t: number): void {
     }
     hud.update(state, prompt);
     targetId = resolveTarget();
+    askGlass(targetId);
     hud.drawTarget(state, targetId);
     if (touch.enabled && state.self) {
       const cls = SHIP_CLASSES[state.self.loadout.classId];

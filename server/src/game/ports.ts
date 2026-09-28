@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { heatPriceMul, tipViews } from './raiding.ts';
 import { wantedBoard } from './wanted.ts';
 import { fishRecords } from './fishing.ts';
 import type { FishId } from '../../../shared/src/data/fishing.ts';
@@ -66,6 +67,11 @@ export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0, ga
     const goodSell = { ...(mods.goodSell ?? {}) };
     for (const g of HUNT_GOODS) goodSell[g] = (goodSell[g] ?? 1) * ((1 - mods.duty * 0.7) / (1 - mods.duty));
     mods = { ...mods, goodSell };
+  }
+  // Hot lanes (docs/12 P6): the raided sea's goods are dearer; a runner who gets through sells high.
+  if (game) {
+    const h = heatPriceMul(game, port.region);
+    if (h.buy !== 1) mods = { ...mods, buyMul: mods.buyMul * h.buy, sellMul: mods.sellMul * h.sell };
   }
   // A festival's kind prices (docs/12 P2).
   if (game && festivalAt(game, port.id)) return { ...mods, buyMul: mods.buyMul * 0.9, sellMul: mods.sellMul * 1.05 };
@@ -139,6 +145,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     captainsHouse: CAPTAINS_HOUSES.includes(port.id),
     fishRecords: Object.entries(fishRecords(game)).map(([fish, r]) => ({ fish: fish as FishId, name: r.name, kg: r.kg })),
     wanted: wantedBoard(game, p, port),
+    raid: tipViews(game, s, port),
     yard: {
       woods: (Object.keys(WOODS) as WoodId[]).filter((w) => woodAvailable(port, w)),
       figurehead: (Object.values(FIGUREHEADS).find((f) => f.port === port.id)?.id ?? null) as FigureheadId | null,

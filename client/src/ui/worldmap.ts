@@ -250,7 +250,15 @@ export class WorldMap {
       g.fillStyle = id === state.region ? 'rgba(224,184,98,0.55)' : 'rgba(216,210,196,0.22)';
       // A region's name by the chart's edge slides inward instead of being cut.
       const name = r.name.toUpperCase(), half = g.measureText(name).width / 2, x = tx(r.center[0]);
-      g.fillText(name, half * 2 + 8 < W && x > 0 && x < W ? Math.max(4 + half, Math.min(W - 4 - half, x)) : x, ty(r.center[1]));
+      const lx = half * 2 + 8 < W && x > 0 && x < W ? Math.max(4 + half, Math.min(W - 4 - half, x)) : x;
+      g.fillText(name, lx, ty(r.center[1]));
+      // The heat of its lanes (docs/12 P6): raids make the League send escorts and the goods dear.
+      const heat = state.raid?.heat[id] ?? 0;
+      if (heat >= 10) {
+        g.font = `${Math.round(Math.max(11, 12 * Math.sqrt(this.zoom)))}px Inter, sans-serif`;
+        g.fillStyle = heat >= 60 ? 'rgba(232,90,64,0.95)' : heat >= 40 ? 'rgba(232,140,64,0.9)' : 'rgba(232,190,110,0.8)';
+        g.fillText(L('heatLabel', { n: heat }), lx, ty(r.center[1]) + Math.round(Math.max(14, 18 * Math.sqrt(this.zoom))));
+      }
     }
     // Charted islands.
     for (const id of state.discovered) {

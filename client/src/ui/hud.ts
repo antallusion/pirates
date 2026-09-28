@@ -53,6 +53,7 @@ export class Hud {
   /** A fishing order from the panel (main.ts). */
   onFishing: (action: 'trap' | 'haul' | 'deep' | 'salt') => void = () => {};
   onHunt: (action: 'slack' | 'cut' | 'flense', id?: number) => void = () => {};
+  onTribute: (id: number) => void = () => {};
   private lastHuntKey = '';
   private lastFishKey = '';
   private lastTargetKey = '';
@@ -551,6 +552,22 @@ export class Hud {
         if (Math.max(Math.abs(sx - W / 2), Math.abs(sy - H / 2)) > W / 2 - 6) continue;
         skull(sx, sy, '#e05a46', 11);
       }
+      // The tipped merchants at sea (docs/12 P6): gold diamonds, or at the rim.
+      for (const mk of state.raid?.marks ?? []) {
+        const dx = mk.x - own.x, dy = mk.y - own.y;
+        if (Math.hypot(dx, dy) * k < W / 2 - 8) {
+          g.fillStyle = '#f2c14e';
+          g.strokeStyle = 'rgba(0,0,0,0.8)';
+          g.beginPath();
+          g.moveTo(tx(mk.x), ty(mk.y) - 5);
+          g.lineTo(tx(mk.x) + 4, ty(mk.y));
+          g.lineTo(tx(mk.x), ty(mk.y) + 5);
+          g.lineTo(tx(mk.x) - 4, ty(mk.y));
+          g.closePath();
+          g.fill();
+          g.stroke();
+        } else rim(Math.atan2(dx, -dy), '#f2c14e');
+      }
       if (wantedV.informed) {
         const dx = wantedV.informed.x - own.x, dy = wantedV.informed.y - own.y;
         if (Math.hypot(dx, dy) * k < W / 2 - 8) skull(tx(wantedV.informed.x), ty(wantedV.informed.y), '#ff6a4a', 14);
@@ -827,7 +844,9 @@ export class Hud {
       c.flags & (SF.SLOWED | SF.TANGLED) ? L('tg.slowed') : '',
       c.flags & SF.REPAIRING ? L('tg.repairing') : '',
     ].filter(Boolean);
-    const key = `${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}`;
+    const ap = state.appraisal?.id === id ? state.appraisal : null;
+    const struck = !info.isPlayer && info.npcRole === 'merchant' && (c.flags & SF.SURRENDERED) !== 0 && d < 400;
+    const key = `${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}`;
     if (key === this.lastTargetKey) return;
     this.lastTargetKey = key;
     el.classList.remove('hidden');
@@ -852,7 +871,12 @@ export class Hud {
     el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
       <div class="tg-sub muted">${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
-      <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}</div>`;
+      ${ap ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}
+      <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}${struck ? `<button class="btn btn-small tg-tribute" data-tribute="${id}">${esc(L('tg.tribute'))}</button>` : ''}</div>`;
+    el.querySelector<HTMLElement>('[data-tribute]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.onTribute(id!);
+    });
     el.onclick = info.isPlayer ? () => this.onTargetTap(info.captainName) : null;
   }
 

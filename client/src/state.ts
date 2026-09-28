@@ -2,7 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
-import type { CarcassView, HuntView, ShoalView, SightView, WantedView } from '../../shared/src/protocol.ts';
+import type { AppraisalView, CarcassView, HuntView, RaidView, ShoalView, SightView, WantedView } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight } from '../../shared/src/constants.ts';
@@ -95,6 +95,9 @@ export class ClientState {
   carcasses: CarcassView[] = [];
   /** The Hunters' Guild's view (docs/12 P5). */
   wanted: WantedView | null = null;
+  /** The raider's trade (docs/12 P6): the glass's last word on a hold, the Brethren and the lanes. */
+  appraisal: AppraisalView | null = null;
+  raid: RaidView | null = null;
   tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
   who: { list: WhoView[]; total: number } | null = null;
@@ -265,6 +268,12 @@ export class ClientState {
         break;
       case 'wanted':
         this.wanted = m.view;
+        break;
+      case 'appraisal':
+        this.appraisal = m.view;
+        break;
+      case 'raid':
+        this.raid = m.view;
         break;
       case 'tasks':
         this.tasks = m.list;

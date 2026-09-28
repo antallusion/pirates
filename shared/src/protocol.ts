@@ -106,6 +106,11 @@ export type ClientMsg =
   | { t: 'hunt'; action: 'flense'; id: number }
   /** The wanted (docs/12 P5): a tavern informant's word on a named pirate. */
   | { t: 'wanted'; action: 'informant'; id: string }
+  /** The raider's trade (docs/12 P6): the glass on a ship, tribute from a merchant who has struck, the tavern's tips and clerk. */
+  | { t: 'appraise'; id: number }
+  | { t: 'tribute'; id: number }
+  | { t: 'tip'; action: 'buy'; id: string }
+  | { t: 'tip'; action: 'clerk' }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -554,6 +559,8 @@ export interface PortView {
   captainsHouse: boolean;
   /** The board of the wanted (docs/12 P5). */
   wanted?: WantedPoster[];
+  /** The tavern's tips and the clerk's manifest (docs/12 P6). */
+  raid?: { tips: TipView[]; clerk: { cost: number; until: number } };
   /** The sea's heaviest catches (docs/12 P3): the tavern's board. */
   fishRecords?: { fish: FishId; name: string; kg: number }[];
   oathOffer: 'code' | 'marque' | null;
@@ -650,6 +657,7 @@ export const SF = {
   SUBMERGED: 1 << 21, // under the surface (a diving monster, Abyss Step): nothing can touch her
   GRABBED: 1 << 22, // held by a Kraken's arm
   SWALLOWED: 1 << 23, // inside the Lantern Maw
+  GUARDED: 1 << 24, // a merchant under a friend's guns (docs/12 P6)
 } as const;
 
 /**
@@ -883,7 +891,7 @@ export type GameEvent =
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
-    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout'; x: number; y: number; r?: number; dir?: number }
+    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket'; x: number; y: number; r?: number; dir?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 
@@ -976,6 +984,8 @@ export type ServerMsg =
   | { t: 'hunt'; view: HuntView | null }
   | { t: 'carcasses'; list: CarcassView[] }
   | { t: 'wanted'; view: WantedView }
+  | { t: 'appraisal'; view: AppraisalView }
+  | { t: 'raid'; view: RaidView }
   | { t: 'fishfight'; view: FishFightView | null }
   | { t: 'encounter'; view: EncounterView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
@@ -1061,6 +1071,44 @@ export interface RefitView {
 }
 
 /** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+/** What the glass tells of a ship's hold (docs/12 P6). */
+export interface AppraisalView {
+  id: number;
+  value: number;
+  fill: number;
+  escorts: number;
+  crew: number;
+  /** From the clerk's manifest: the figure is exact and her port of call known. */
+  exact: boolean;
+  dest: string | null;
+}
+
+/** A tip in the tavern: a merchant who will put out at the hour given. */
+export interface TipView {
+  id: string;
+  good: GoodId;
+  cls: ShipClassId;
+  level: number;
+  from: string;
+  to: string;
+  departIn: number;
+  value: number;
+  cost: number;
+  bought: boolean;
+}
+
+/** The raider's own (docs/12 P6): the Brethren's rank, the tipped merchants at sea, the heat of the seas' lanes. */
+export interface RaidView {
+  fame: number;
+  rank: number;
+  next: number;
+  honour: number;
+  tributes: number;
+  convoys: number;
+  marks: { id: number; x: number; y: number }[];
+  heat: Partial<Record<RegionId, number>>;
+}
+
 /** A poster on the board of the wanted (docs/12 P5). */
 export interface WantedPoster {
   id: string;

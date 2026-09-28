@@ -222,6 +222,12 @@ export class ShipEntity {
   named?: string;
   namedMate?: string;
   fleeAt?: number;
+  /** The raider's trade (docs/12 P6): a League convoy's ships, an escort's charge, the port she sailed from, and a
+   *  merchant sailing under a friend's guns. */
+  convoyId?: number;
+  escortOf?: number;
+  originPort?: string;
+  guardedUntil = 0;
   /** The captain's own gear (docs/12 P1; the ship's is in her loadout). */
   worn: Item[] = [];
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
@@ -347,6 +353,7 @@ export class ShipEntity {
     if (this.hasEffect('undertow') || this.hasEffect('maw_slow')) f |= SF.SLOWED;
     if (this.hasEffect('fire')) f |= SF.FIRE;
     if (this.hasEffect('submerged')) f |= SF.SUBMERGED;
+    if (this.guardedUntil > now) f |= SF.GUARDED;
     if (this.hasEffect('grabbed')) f |= SF.GRABBED;
     if (this.hasEffect('swallowed')) f |= SF.SWALLOWED;
     const stage = curseStage(this.curse);

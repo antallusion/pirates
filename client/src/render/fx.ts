@@ -375,6 +375,13 @@ export class Fx {
             for (let i = 0; i < 10; i++) this.splash(e.x + (Math.random() - 0.5) * 120, e.y + (Math.random() - 0.5) * 120, true);
             this.shake = Math.max(this.shake, 0.9);
             break;
+          case 'rocket': {
+            // A distress rocket: a spark climbing, a flash, sparks falling.
+            this.add({ kind: 'flash', x: e.x, y: e.y, life: 0.5, size: 6, grow: 60, color: '#ffcf6a' });
+            this.light(e.x, e.y, 600, 'rgba(255,190,90,1)', 0.9, 1.4);
+            for (let i = 0; i < 12; i++) setTimeout(() => this.add({ kind: 'glow', x: e.x + (Math.random() - 0.5) * 60, y: e.y + (Math.random() - 0.5) * 60, life: 1.4, size: 3, grow: 0, color: '#ffd27a' }), 200 + i * 40);
+            break;
+          }
           case 'spout': {
             // A whale blows: a column of spray drifting on the wind.
             for (let i = 0; i < 14; i++) setTimeout(() => this.add({ kind: 'smoke', x: e.x + (Math.random() - 0.5) * 4, y: e.y + (Math.random() - 0.5) * 4, life: 2.2, size: 5 + Math.random() * 5, grow: 5, color: '#dfe9ee' }), i * 40);

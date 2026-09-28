@@ -2,6 +2,8 @@
 // and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
 // «Follow», «Share» (in a group) and «Set aside».
 
+import { BRETHREN_NAMES } from '../../../shared/src/data/raiding.ts';
+import type { RaidView } from '../../../shared/src/protocol.ts';
 import { namedPirates } from '../../../shared/src/data/pirates.ts';
 import type { WantedView } from '../../../shared/src/protocol.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -34,6 +36,10 @@ const EN = {
   fishUnknown: 'not yet taken',
   beasts: 'The hunt: {n} beasts taken',
   guild: 'Hunters’ Guild: rank {rank} ({n} of {next} points)',
+  brethren: 'The Brethren of the Coast: {rank} ({n} of {next} fame)',
+  brethrenStats: 'Tributes taken: {t} · convoys broken: {c} · honour: {h}',
+  brethrenPerks: 'Rank 1: the havens’ fences pay 66% · 2: a raid cheers the crew more · 3: the Code at any haven · 4: fences pay 75% · 5: the title',
+  heat: 'Hot lanes: {list}',
   guildCaps: 'Named captains sunk: {n}',
   guildSea: '{sea}: {n} of 3 captains — {baron}',
   guildBaron: 'the baron hunts you',
@@ -69,6 +75,10 @@ const RU: typeof EN = {
   fishUnknown: 'ещё не поймана',
   beasts: 'Охота: добыто зверей — {n}',
   guild: 'Гильдия охотников: звание {rank} ({n} из {next} очков)',
+  brethren: 'Береговое братство: {rank} ({n} из {next} славы)',
+  brethrenStats: 'Взято даней: {t} · разбито конвоев: {c} · честь: {h}',
+  brethrenPerks: 'Звание 1: скупщики гаваней платят 66% · 2: набег сильнее поднимает дух команды · 3: Кодекс в любой гавани · 4: скупщики платят 75% · 5: титул',
+  heat: 'Жаркие трассы: {list}',
   guildCaps: 'Потоплено именных капитанов: {n}',
   guildSea: '{sea}: капитанов {n} из 3 — {baron}',
   guildBaron: 'барон охотится за вами',
@@ -115,7 +125,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${hunterLog(state.wanted)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
@@ -211,4 +221,16 @@ function hunterLog(w: WantedView | null): string {
     <p class="jr-fish">${esc(L('guildCaps', { n: w.captains }))}</p>${seas}
     ${inf ? `<p class="jr-fish">${esc(L('guildInformed', { name: inf.name[ru], n: w.informed!.sec }))}</p>` : ''}
     <p class="jr-fish muted">${esc(L('guildPerks'))}</p></div>`;
+}
+
+/** The Brethren of the Coast (docs/12 P6): the raider's rank and deeds, and the seas whose lanes run hot. */
+function brethrenLog(r: RaidView | null): string {
+  if (!r) return '';
+  const ru = lang() === 'ru' ? 1 : 0;
+  const hot = (Object.entries(r.heat) as [RegionId, number][]).filter(([, h]) => h >= 10).map(([sea, h]) => `${REGIONS[sea].name} ${h}%`).join(', ');
+  if (!r.fame && !hot) return '';
+  return `<div class="jr-fishing"><div class="giver-h">${esc(L('brethren', { rank: BRETHREN_NAMES[r.rank][ru], n: r.fame, next: r.next }))}</div>
+    <p class="jr-fish">${esc(L('brethrenStats', { t: r.tributes, c: r.convoys, h: r.honour }))}</p>
+    ${hot ? `<p class="jr-fish">${esc(L('heat', { list: hot }))}</p>` : ''}
+    <p class="jr-fish muted">${esc(L('brethrenPerks'))}</p></div>`;
 }

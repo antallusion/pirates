@@ -1927,3 +1927,9 @@ body.touch #hud-region .rg-extra { display: none; }
   .poster .po-name { font-size: 13px; }
   .poster .po-habits { display: none; }
 }
+.tg-glass { font-size: 11px; color: #d9c9a0; margin-top: 3px; line-height: 1.25; }
+.tg-tribute { margin-left: auto; }
+#hud-target .tg-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tips-card .tip-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+.tips-card .tip-row > span:first-child { flex: 1; min-width: 0; }
+@media (max-width: 480px) { .tips-card .tip-row { flex-direction: column; align-items: stretch; } }

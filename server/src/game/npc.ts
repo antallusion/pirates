@@ -4,6 +4,7 @@
 //  * active — near a player: full sailing physics, perception, tacking and combat AI.
 // Every NPC has a purpose: merchants haul real cargo between real markets (docs/01 §5).
 
+import { convoyFoe, raidEscort } from './raiding.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import { eliteShipLevel, hullsFor, npcSkill, shipLevelForCaptain, watersBand } from '../../../shared/src/data/shiplevel.ts';
 import type { NpcSkill } from '../../../shared/src/data/shiplevel.ts';
@@ -118,6 +119,7 @@ export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain
   const ports = (owner?.profile ? game.world.ports.filter((p) => owner.profile!.regionsSeen.includes(`visited:${p.id}`)) : game.world.ports).filter((p) => game.inZone(p.x, p.y) && !avoidPort(game, p.id));
   const route = bestRoute(from, game.markets, ports, () => game.rng.float(), 38000);
   ship.caravanFrom = ship.caravanOf !== null ? from.id : null;
+  ship.originPort = from.id;
   let dest: Port | undefined;
   if (route) {
     dest = game.portById(route.to);
@@ -181,6 +183,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   // The beasts of the sea (docs/12 P4): the predators hunt captains; the sea's ships and the beasts leave each other be.
   if (role === 'beast') return other.isPlayer && (beastPredator(npc, other) || (npc.attackers.get(other.id) ?? -999) > game.now - 120);
   if (other.npcRole === 'beast') return false;
+  // A convoy's escort answers whoever fires on any of its ships; a merchant's escort, whoever fires on her.
+  if (npc.convoyId !== undefined && convoyFoe(game, npc.convoyId, other)) return true;
+  if (npc.escortOf !== undefined && ((game.ships.get(npc.escortOf)?.attackers.get(other.id) ?? -999) > game.now - 120)) return true;
   // A hidden cove is neutral water for those who know it.
   if (other.isPlayer && other.hasFlag('cove_knowledge') && coveAt(game, other)) return false;
   // False Colors: law and bounty hunters see a merchant.
@@ -207,6 +212,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
       case 'pirate':
         // Sworn to the Code: the Brethren do not fire first.
         if (p?.oath === 'code') return false;
+        // Under a friend's guns (docs/12 P6): only a pirate well above her dares.
+        if (other.guardedUntil > game.now && npc.shipLevel < other.shipLevel + 2) return false;
         // Gold Fever: a hoard in the hold draws pirates even into safe water.
         if (safety === 'safe' && !p?.explore.hoardAboard) return false;
         if (p && (p.reputation.confederacy ?? 0) >= 30) return false;
@@ -807,7 +814,10 @@ export function spawnMerchant(game: Game): void {
   ship.purse = 150 + game.rng.int(0, 500) * ship.cls.tier;
   const brain = game.npcs.get(ship.id)!;
   if (!planMerchantVoyage(game, ship, brain, port)) game.removeShip(ship.id);
-  else brain.traveled = game.rng.float() * brain.length * 0.8; // spread across the ocean at boot
+  else {
+    brain.traveled = game.rng.float() * brain.length * 0.8; // spread across the ocean at boot
+    raidEscort(game, ship, port.region); // hot lanes: a League escort (docs/12 P6)
+  }
 }
 
 const PIRATE_REGIONS: RegionId[] = ['gravewater', 'whispering', 'ashen_isles', 'dead_mans_expanse', 'leviathan_reach', 'drowned_crown'];

@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
 import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
 import { dropDeepLine, endFight, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
@@ -707,6 +708,7 @@ export class Game {
     stepFishing(this); // shoals, nets, rods, lamps and pots (docs/12 P3)
     beastSecond(this); // the beasts rise and go, the carcasses bleed and are flensed (docs/12 P4)
     stepWanted(this); // the named pirates, their trail, their lairs; the hunters (docs/12 P5)
+    stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
     stepBoats(this);
     settleCrimes(this);
     stepSocial(this);
@@ -1640,6 +1642,7 @@ export class Game {
     onFightWon(this, s);
     questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
     wantedKill(this, s, victim); // a named pirate's head, the Hunters' Guild (docs/12 P5)
+    raidKill(this, s, victim, how); // a merchant raided: the Brethren's fame, the lanes' heat (docs/12 P6)
     if (how === 'sunk') marqueBounty(this, s, victim);
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
@@ -1918,6 +1921,7 @@ export class Game {
     if (!target.isPlayer) target.purse = 0;
     target.lootLockedFor = null;
     const f = target.faction !== 'player' ? target.faction : null;
+    raidFate(this, s, target, fate);
     if (fate === 'prize') {
       const err2 = takePrize(this, s, target);
       if (!err2) {
@@ -2496,6 +2500,21 @@ export class Game {
         return;
       case 'encounter':
         return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
+      case 'appraise': {
+        const v = appraise(this, s, Number(msg.id));
+        if (typeof v === 'string') return err(v);
+        this.sendTo(s, { t: 'appraisal', view: v });
+        return;
+      }
+      case 'tribute':
+        return err(demandTribute(this, s, Number(msg.id)));
+      case 'tip': {
+        const port = ship.docked ? this.portById(ship.docked) : undefined;
+        if (!port) return err('Only a tavern knows where the wanted are.');
+        const e = msg.action === 'clerk' ? bribeClerk(this, s, port) : buyTip(this, s, port, String(msg.id));
+        if (!e) this.sendTo(s, { t: 'port', view: buildPortView(this, s, port) });
+        return err(e);
+      }
       case 'wanted': {
         const port = ship.docked ? this.portById(ship.docked) : undefined;
         if (!port) return err('Only a tavern knows where the wanted are.');

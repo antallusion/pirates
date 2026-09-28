@@ -2,6 +2,7 @@
 
 export const EN = {
   'title': 'Chart of the Known Sea',
+  'heatLabel': 'hot lanes {n}%',
   'sub': '{islands} charted · drag to pan, wheel or two fingers to zoom',
   'subTouch': '{islands} charted · drag to pan, pinch to zoom',
   'island.one': 'island',
@@ -47,6 +48,7 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   'title': 'Карта известного моря',
+  'heatLabel': 'жаркие трассы {n}%',
   'sub': 'Нанесено на карту: {islands} · тащите, чтобы сдвинуть; колесо или два пальца — масштаб',
   'subTouch': 'Нанесено на карту: {islands} · тащите, чтобы сдвинуть; двумя пальцами — масштаб',
   'island.one': 'остров',

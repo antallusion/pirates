@@ -2,6 +2,7 @@
 // jettisoned casks, hidden coves, night fences and the Black Ledger, witnesses for Nobody's Ship,
 // hunters losing a ghost wake, and the actives (False Colors, Slip Away, Decoy Barrels).
 
+import { FENCE_RANK, WARES_RANK, brethrenRank } from '../../../shared/src/data/raiding.ts';
 import { ghostTraderMul } from './bridgefx.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
 import { isNight } from '../../../shared/src/constants.ts';
@@ -142,6 +143,11 @@ export function portFence(game: Game, ship: ShipEntity, port: Port): number | nu
   if (safety === 'safe') return null;
   if (ship.hasFlag('black_ledger')) return 1;
   if (ship.hasFlag('night_market') && isNight(game.now)) return 0.85;
+  // The Brethren's havens (docs/12 P6): their fences take plunder at 60%, more for the Brethren's own.
+  if (port.faction === 'confederacy') {
+    const r = brethrenRank(game.profileOf(ship)?.piracy?.fame ?? 0);
+    return r >= WARES_RANK ? 0.75 : r >= FENCE_RANK ? 0.66 : 0.6;
+  }
   return null;
 }
 

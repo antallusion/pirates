@@ -2466,7 +2466,7 @@ export class Renderer {
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
     const marks = info.isPlayer
-      ? `${s.flags & SF.BLACK_FLAG ? L('blackFlag') : ''}${s.flags & SF.GREEN_PENNANT ? L('greenPennant') : ''}${s.flags & SF.SHAME ? L('shame') : ''}${s.flags & SF.BOUNTY ? L('bounty') : ''}${s.flags & SF.DUEL ? L('duel') : ''}`
+      ? `${s.flags & SF.BLACK_FLAG ? L('blackFlag') : ''}${s.flags & SF.GREEN_PENNANT ? L('greenPennant') : ''}${s.flags & SF.SHAME ? L('shame') : ''}${s.flags & SF.BOUNTY ? L('bounty') : ''}${s.flags & SF.DUEL ? L('duel') : ''}${s.flags & SF.GUARDED ? L('guarded') : ''}`
       : '';
     if (s.flags & SF.SHAME) g.fillStyle = 'rgba(224,119,107,0.9)';
     g.fillText(tag + marks + (s.flags & SF.SURRENDERED ? L('struck') : ''), x, y + 11);

@@ -1,6 +1,7 @@
 // Naval combat: broadsides, ballistics, hit resolution with angle-of-impact and subsystem damage,
 // crimes and kill credit. All numbers come from shared data; nothing here trusts the client.
 
+import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
 import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, aimFocus } from '../../../shared/src/data/gunnery.ts';
@@ -706,6 +707,7 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   const now = game.now;
   const prev = b.attackers.get(a.id);
   b.attackers.set(a.id, now);
+  if (a.isPlayer && !b.isPlayer && b.npcRole === 'merchant' && prev === undefined) tributeBroken(game, a, b); // a word given for tribute
   if (b.npcRole === 'boss' || a.npcRole === 'boss' || b.cls.monster) return; // no law and no flag at sea against the deep
   if (prev !== undefined && now - prev < 60) return; // same engagement
   if (inDuel(game, a) && inDuel(game, a) === inDuel(game, b)) return; // a duel is no crime
