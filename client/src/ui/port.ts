@@ -29,7 +29,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { dec1, esc, fmt, icon, money, officerIcon, quote, xpBadge } from './dom.ts';
+import { dec1, esc, fishIcon, fmt, icon, money, officerIcon, quote, xpBadge } from './dom.ts';
 import { keyLabel, settings } from '../settings.ts';
 import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
@@ -481,7 +481,7 @@ ${orders}${berths}</div>` : ''}`;
         ${o.story ? `<p class="muted">${esc(serverText(o.story))}</p>` : ''}<p>${traitChips(o.traits)}</p><p class="muted">${esc(OFFICER_DEFS[o.role].description)}</p>
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? esc(L('officer.taken')) : `${esc(L('btn.hire'))} ${money(o.price)}`}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
     const board = (view.raid ? tipsHtml(view.raid) : '') + (view.wanted ? wantedBoardHtml(view.wanted) : '');
-    const recs = view.fishRecords?.length ? `<div class="card fish-records"><h4 class="card-h">${icon('build_fishing_village', '', 'ico-md')}${esc(L('fish.records'))}</h4>${view.fishRecords.map((r) => `<p class="fish-rec">${esc(L('fish.recordRow', { fish: FISH[r.fish].name[lang() === 'ru' ? 1 : 0], kg: r.kg.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), name: r.name }))}</p>`).join('')}</div>` : '';
+    const recs = view.fishRecords?.length ? `<div class="card fish-records"><h4 class="card-h">${icon('build_fishing_village', '', 'ico-md')}${esc(L('fish.records'))}</h4>${view.fishRecords.map((r) => `<p class="fish-rec">${fishIcon(r.fish)}${esc(L('fish.recordRow', { fish: FISH[r.fish].name[lang() === 'ru' ? 1 : 0], kg: r.kg.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), name: r.name }))}</p>`).join('')}</div>` : '';
     // Old Needle's chair (docs/12 P9): tattoos are changed in port, inked in the havens of the Brethren.
     const tt = state.tattoos;
     const needle = `<div class="card tt-chair"><h4 class="card-h">${icon('tattoo_needle', '✒', 'ico-md')}${esc(L('tattoo.chair'))}</h4><p class="muted">${esc(L(port.faction === 'confederacy' ? 'tattoo.here' : 'tattoo.elsewhere'))}</p><button class="btn btn-small" data-tattoos>${esc(L('tattoo.open'))}${tt?.pending.length ? ` <span class="h-count">${tt.pending.length}</span>` : ''}</button></div>`;

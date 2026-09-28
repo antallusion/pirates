@@ -7,7 +7,7 @@ import { PROFESSION_DEFS as ISLE_PROFESSIONS } from '../../../shared/src/data/es
 import type { ClientMsg, HallView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
-import { esc, icon, money } from './dom.ts';
+import { esc, fishIcon, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 
 const L = dict({
@@ -60,7 +60,7 @@ export function renderHall(root: HTMLElement, state: ClientState, send: (m: Clie
   const ru = lang() === 'ru' ? 1 : 0;
   const tr = v.trophies;
   const people = Object.entries(v.people).map(([k, n]) => `${esc((ISLE_PROFESSIONS as unknown as Record<string, { name: [string, string] }>)[k]?.name[ru] ?? k)} × ${n}`).join(' · ');
-  const records = v.records.map((r) => `<p class="jr-fish">${esc(FISH[r.fish as FishId]?.name[ru] ?? r.fish)} — ${r.kg.toLocaleString(ru ? 'ru-RU' : 'en-GB')} ${ru ? 'кг' : 'kg'}</p>`).join('');
+  const records = v.records.map((r) => `<p class="jr-fish jr-catch">${fishIcon(r.fish)}${esc(FISH[r.fish as FishId]?.name[ru] ?? r.fish)} — ${r.kg.toLocaleString(ru ? 'ru-RU' : 'en-GB')} ${ru ? 'кг' : 'kg'}</p>`).join('');
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title', { owner: v.owner }))}</h2><div class="sub">${esc(L('sub', { island: placeName(v.name) }))}</div></div></div>
     <div class="modal-body hall"><div class="cols"><div>
       <div class="card"><h4 class="card-h">${icon('tab_legends', '', 'ico-md')}${esc(L('trophies'))}</h4>

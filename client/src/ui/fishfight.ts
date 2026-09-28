@@ -6,7 +6,7 @@ import { FISH, FIGHT_DT, fightParams, fightStart, fightStep } from '../../../sha
 import type { FightParams, FightState } from '../../../shared/src/data/fishing.ts';
 import type { ClientMsg, FishFightView } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
-import { esc } from './dom.ts';
+import { esc, fishIcon } from './dom.ts';
 
 const L = dict(
   { title: 'On the line: {fish}', kg: '{kg} kg', reel: 'Reel in', hint: 'Hold to reel in · let go when the line is taut', tension: 'Line', fish: 'Fish', landed: 'Landed!', snapped: 'The line snapped', escaped: 'It got away' },
@@ -64,7 +64,7 @@ export class FishFightPanel {
     this.last = performance.now();
     this.closeAt = 0;
     const name = FISH[view.fish].name[lang() === 'ru' ? 1 : 0];
-    this.el.innerHTML = `<div class="ff-card"><div class="ff-h">${esc(L('title', { fish: name }))} <span class="muted">${esc(L('kg', { kg: view.kg.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB') }))}</span></div>
+    this.el.innerHTML = `<div class="ff-card"><div class="ff-h">${fishIcon(view.fish, 'ico-md')}${esc(L('title', { fish: name }))} <span class="muted">${esc(L('kg', { kg: view.kg.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB') }))}</span></div>
       <div class="ff-bars"><div class="ff-row"><span>${esc(L('tension'))}</span><div class="ff-bar ff-t"><i></i><b class="ff-red"></b></div></div>
       <div class="ff-row"><span>${esc(L('fish'))}</span><div class="ff-bar ff-s"><i></i></div></div></div>
       <button class="btn btn-primary ff-reel" data-reel>${esc(L('reel'))}</button><p class="muted ff-hint">${esc(L('hint'))}</p><p class="ff-out"></p></div>`;

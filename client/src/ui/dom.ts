@@ -83,6 +83,11 @@ export function icon(id: string, glyph = '', cls = 'ico'): string {
   return url ? `<img class="${cls}" src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
 }
 
+/** A fish's painted icon (docs/12 P11, the catch sheet); the string of fish stands in for one not yet painted. */
+export function fishIcon(id: string, cls = 'ico-sm'): string {
+  return icon(`fish_${id}`, '', cls) || (assetUrl('icon.good_fish') ? icon('good_fish', '', cls) : '');
+}
+
 /** An officer's face: the unique officers have portraits, the rest the mark of their post. */
 export function officerIcon(o: { role: string; unique?: string }, cls = 'ico-md'): string {
   return (o.unique ? icon(`portrait.officer_${o.unique}`, '', `${cls} ico-round`) : '') || icon(`role_${o.role}`, '', cls);

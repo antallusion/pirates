@@ -28,7 +28,7 @@ import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { commonLog, dailyLog } from './daily.ts';
-import { esc, icon, money, xpBadge } from './dom.ts';
+import { esc, fishIcon, icon, money, xpBadge } from './dom.ts';
 import { paidHtml } from './giver.ts';
 import { tasksLog } from './worldmap.ts';
 import { setTracked, trackedQuest } from './track.ts';
@@ -271,7 +271,7 @@ function fishingLog(f: FishingView | undefined): string {
   const kinds = FISH_IDS.filter((id) => id !== 'goldfish' || f.caught.goldfish);
   const rows = kinds.map((id) => {
     const c = f.caught[id];
-    return `<p class="jr-fish${c ? '' : ' muted'}">${c ? esc(L('fishRow', { fish: FISH[id].name[ru], n: c.n, kg: c.best.toLocaleString(ru ? 'ru-RU' : 'en-GB') })) : `${esc(FISH[id].name[ru])} — ${esc(L('fishUnknown'))}`}</p>`;
+    return `<p class="jr-fish jr-catch${c ? '' : ' muted unknown'}">${fishIcon(id)}${c ? esc(L('fishRow', { fish: FISH[id].name[ru], n: c.n, kg: c.best.toLocaleString(ru ? 'ru-RU' : 'en-GB') })) : `${esc(FISH[id].name[ru])} — ${esc(L('fishUnknown'))}`}</p>`;
   }).join('');
   return `<div class="jr-fishing"><div class="giver-h">${esc(L('fishing', { n: f.skill, k: Object.keys(f.caught).length, max: kinds.length }))}</div>${rows}</div>`;
 }
