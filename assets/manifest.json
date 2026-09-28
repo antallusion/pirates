@@ -668,6 +668,10 @@
     "card.enc_signal_fire":              { "local": "cards/enc_signal_fire.webp", "remote": "hf_20260928_174622_e38b9ab3-7466-48ef-8ff3-c69001425201.png", "job": "e38b9ab3-7466-48ef-8ff3-c69001425201", "fit": "sheet:cards_3.0", "rev": 20260928174622},
     "card.enc_orcas_whale":              { "local": "cards/enc_orcas_whale.webp", "remote": "hf_20260928_174622_e38b9ab3-7466-48ef-8ff3-c69001425201.png", "job": "e38b9ab3-7466-48ef-8ff3-c69001425201", "fit": "sheet:cards_3.1", "rev": 20260928174622},
     "card.enc_squall":                   { "local": "cards/enc_squall.webp", "remote": "hf_20260928_174622_e38b9ab3-7466-48ef-8ff3-c69001425201.png", "job": "e38b9ab3-7466-48ef-8ff3-c69001425201", "fit": "sheet:cards_3.2", "rev": 20260928174622},
-    "card.enc_waterspout":               { "local": "cards/enc_waterspout.webp", "remote": "hf_20260928_174622_e38b9ab3-7466-48ef-8ff3-c69001425201.png", "job": "e38b9ab3-7466-48ef-8ff3-c69001425201", "fit": "sheet:cards_3.3", "rev": 20260928174622}
+    "card.enc_waterspout":               { "local": "cards/enc_waterspout.webp", "remote": "hf_20260928_174622_e38b9ab3-7466-48ef-8ff3-c69001425201.png", "job": "e38b9ab3-7466-48ef-8ff3-c69001425201", "fit": "sheet:cards_3.3", "rev": 20260928174622},
+    "card.enc_glowing_sea":              { "local": "cards/enc_glowing_sea.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.0", "rev": 20260928175902},
+    "card.enc_iceberg":                  { "local": "cards/enc_iceberg.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.1", "rev": 20260928175902},
+    "card.enc_giant_turtle":             { "local": "cards/enc_giant_turtle.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.2", "rev": 20260928175902},
+    "card.enc_tentacle":                 { "local": "cards/enc_tentacle.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.3", "rev": 20260928175902}
   }
 }
