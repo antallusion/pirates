@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { chooseEncounter, stepDirector } from './director.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
@@ -217,6 +218,8 @@ export class Game {
   abyss: AbyssMap;
   zones: DeepZone[] = [];
   sunkHulls: SunkHull[] = [];
+  /** The sea director at work (docs/12 P2); tests of other systems keep it still. */
+  directorOn = true;
   loot = new Map<number, Loot>();
   markets = new Map<string, Market>();
   tavernCrew = new Map<string, number>();
@@ -696,6 +699,7 @@ export class Game {
     }
 
     for (const s of this.sessions) stepRefit(this, s); // yards finish their work by the wall clock
+    stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepBoats(this);
     settleCrimes(this);
     stepSocial(this);
@@ -1013,14 +1017,7 @@ export class Game {
     for (const s of this.sessions) {
       const ship = s.ship;
       if (!ship || ship.docked || !s.profile) continue;
-      const safety = REGIONS[ship.region].safety;
-      if (safety !== 'safe' && this.rng.chance(0.04)) {
-        let pirateNear = false;
-        this.forShipsNear(ship.state.x, ship.state.y, 5000, (o) => {
-          if (o.npcRole === 'pirate') pirateNear = true;
-        });
-        if (!pirateNear) spawnPirate(this, ship);
-      }
+      // Pirate ambushes come from the sea director now (docs/12 P2), with the rest of what happens at sea.
       if (ship.wantedCache >= 3 && this.rng.chance(0.03)) {
         let hunted = false;
         for (const b of this.npcs.values()) if (b.huntAccount === s.accountId) hunted = true;
@@ -2488,6 +2485,8 @@ export class Game {
         err(resolveMutiny(this, s, msg.choice));
         this.pushSelf(s, true);
         return;
+      case 'encounter':
+        return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
       case 'gear':
         switch (msg.action) {
           case 'equip':

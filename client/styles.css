@@ -1830,3 +1830,16 @@ body.touch #hud-region .rg-extra { display: none; }
 .insp-gear { display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 8px 0 2px; font-size: 13px; }
 .insp-gear .insp-gear-h { width: 100%; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 .gear-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+
+/* An encounter's card (docs/12 P2): over the sea near the top, never over the helm and the guns. */
+#encounter { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 150px); transform: translateX(-50%); width: min(430px, calc(100vw - 24px)); z-index: 40; pointer-events: auto; }
+#encounter.hidden { display: none; }
+#encounter .enc-card { background: rgba(10, 12, 16, 0.94); border: 1px solid rgba(232, 196, 106, 0.55); border-radius: 6px; padding: 10px 12px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+#encounter .enc-h { font-family: var(--serif); font-size: 18px; color: #e8c46a; margin-bottom: 4px; }
+#encounter .enc-text, #encounter .enc-out { margin: 4px 0 8px; font-size: 14px; line-height: 1.45; color: var(--bone, #ddd); }
+#encounter .enc-out { color: #f2e6c8; }
+#encounter .enc-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+#encounter .enc-choices .btn { flex: 1 1 auto; min-height: 36px; }
+@media (max-height: 520px) { #encounter { top: calc(var(--sa-t, 0px) + 8px); left: calc(var(--sa-l, 0px) + 280px); transform: none; width: min(430px, calc(100vw - 280px - 170px - var(--sa-l, 0px) - var(--sa-r, 0px))); min-width: 260px; } #encounter .enc-text, #encounter .enc-out { font-size: 13px; margin: 2px 0 6px; } }
+.jr-letters { margin-top: 10px; }
+.jr-letter { margin: 4px 0; font-family: var(--serif); font-style: italic; font-size: 14px; color: #e6dcc4; }

@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { EncounterId, SightKind } from './data/encounters.ts';
 import type { CaptainSlot, Item, Slot } from './data/items.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
@@ -94,6 +95,7 @@ export type ClientMsg =
   | { t: 'gear'; action: 'salvage'; uid: number }
   | { t: 'gear'; action: 'mend' }
   | { t: 'gear'; action: 'buy'; index: number }
+  | { t: 'encounter'; id: number; choice: string }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -431,6 +433,9 @@ export interface PrivateState {
   /** The captain's locker and own gear (docs/12 P1); the ship's gear is in her loadout. */
   stash: Item[];
   captainGear: Partial<Record<CaptainSlot, Item>>;
+  /** The letters of the sea found in bottles (docs/12 P2), and the ship's cat. */
+  seaLetters: number[];
+  shipCat: boolean;
   cargo: Cargo;
   ammo: AmmoStock;
   ammoSel: AmmoId;
@@ -946,6 +951,9 @@ export type ServerMsg =
   | { t: 'events'; list: WorldEventView[] }
   /** Tasks of the sea (docs/11 P6): the pirate nests about the map, with this captain's tally at each. */
   | { t: 'tasks'; list: TaskView[] }
+  | { t: 'sights'; list: SightView[] }
+  | { t: 'encounter'; view: EncounterView | null }
+  | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
   | { t: 'legends'; view: LegendsView }
   | { t: 'onboarding'; view: OnboardingView }
   /** A moment of the First Watch: a step done or skipped, a contextual hint, a goal met, the edge of safe waters. */
@@ -1025,6 +1033,20 @@ export interface RefitView {
   busy: { to: number; left: number; port: string } | null;
   /** Why it cannot be ordered here and now. */
   blocked: string | null;
+}
+
+/** A sign on the horizon (docs/12 P2): something is happening there. */
+export interface SightView {
+  id: number;
+  kind: SightKind;
+  x: number;
+  y: number;
+}
+
+/** An encounter's card, open: the client draws its words from the shared data. */
+export interface EncounterView {
+  id: number;
+  def: EncounterId;
 }
 
 /** A captain on one's list of friends (docs/11 P6): who is at sea, at what level, in which waters or port. */

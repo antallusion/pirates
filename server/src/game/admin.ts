@@ -11,6 +11,9 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { ENCOUNTERS } from '../../../shared/src/data/encounters.ts';
+import type { EncounterId } from '../../../shared/src/data/encounters.ts';
+import { startEncounter } from './director.ts';
 import { ITEM_BASES, makeItem } from '../../../shared/src/data/items.ts';
 import { clampLevel } from '../../../shared/src/data/shiplevel.ts';
 import { DAY_LENGTH_SEC, MAX_LEVEL, timeOfDay } from '../../../shared/src/constants.ts';
@@ -153,6 +156,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.crew = Math.max(ship.crew, ship.stats.crewMin);
       game.pushSelf(s, true);
       return `She is a ${SHIP_CLASSES[cls].name} now, level ${ship.shipLevel} (crew ${ship.crew}).`;
+    }
+    case 'enc': {
+      // An encounter at once (docs/12 P2): /enc [id]; its sign a mile off, or aboard.
+      const id = args[0] as EncounterId;
+      if (!ENCOUNTERS[id]) return `Encounters: ${Object.keys(ENCOUNTERS).join(', ')}`;
+      const live = startEncounter(game, s, id);
+      return live ? `${id}: ${Math.round(Math.hypot(live.x - ship.state.x, live.y - ship.state.y))} m off.` : 'No open water for it here.';
     }
     case 'item': {
       // An item into the locker: /item [base] [level] [rarity 0-4] — or /item random [level] [n].

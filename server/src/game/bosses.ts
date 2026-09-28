@@ -1142,7 +1142,7 @@ function widowSecond(game: Game, f: Fight, body: ShipEntity, ships: ShipEntity[]
     const t = game.rng.pick(outside.filter((s) => s.cls.tier === top));
     const rod = t.hasFlag('lightning_rod') ? 0.4 : 1;
     hurt(game, f, t, 0.06 * rod, { sails: t.stats.sailHpMax * 0.1 * rod, crew: 2 * rod });
-    if (game.rng.chance(0.3 * rod)) t.addEffect({ id: 'fire', until: now + 8 }, now);
+    if (rod === 1 && game.rng.chance(0.3)) t.addEffect({ id: 'fire', until: now + 8 }, now); // a rod takes the fire to the sea too
     game.emit({ k: 'fx', fx: 'lightning', x: Math.round(t.state.x), y: Math.round(t.state.y), r: 30 }, t.state.x, t.state.y);
     game.toastShip(t, rod < 1 ? 'Lightning! The rod takes most of it.' : 'Lightning strikes your mainmast! (A Lightning Rod would ground it.)', 'bad');
   }

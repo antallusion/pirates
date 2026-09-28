@@ -157,6 +157,10 @@ export interface Profile {
   stash: Item[];
   captainGear: Partial<Record<CaptainSlot, Item>>;
   itemSeq: number;
+  /** The sea director's keepsakes (docs/12 P2): letters from bottles, souls rescued, a ship's cat. */
+  seaLetters?: number[];
+  rescued?: number;
+  shipCat?: boolean;
   trade: {
     lastDeparture: string;
     arrivalRoute: string;
@@ -397,6 +401,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     loadout: p.loadout,
     stash: p.stash,
     captainGear: p.captainGear,
+    seaLetters: p.seaLetters ?? [],
+    shipCat: !!p.shipCat,
     cargo: ship ? ship.cargo : p.cargo,
     ammo: ship ? ship.ammo : p.ammo,
     ammoSel: ship ? ship.ammoSel : p.ammoSel,

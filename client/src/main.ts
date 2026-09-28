@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { EncounterCard } from './ui/encounter.ts';
 import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
 import { giverDialog } from './ui/giver.ts';
@@ -173,6 +174,7 @@ const touch = new TouchControls({
   menu: () => toggle('menu'),
 });
 const onboarding = new OnboardingUi(state);
+const encounterCard = new EncounterCard((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
 // Options: applied now and on every change (docs/07 §11).
 function applySettings(o: Settings): void {
@@ -421,6 +423,13 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'tasks':
       if (modal === 'map') refreshModal();
+      break;
+    case 'encounter':
+      encounterCard.open(m.view);
+      break;
+    case 'encounter_result':
+      encounterCard.result(m);
+      if (modal === 'journal') refreshModal();
       break;
     case 'inspect': {
       // A captain's card (docs/11 P6): a whisper opens the chat to them; a call aboard or a friend's name at once.
@@ -1496,6 +1505,7 @@ function step(t: number): void {
     }
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
+    encounterCard.frame();
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
   }
 }

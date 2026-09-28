@@ -497,6 +497,18 @@ export class Hud {
       } else if (!t.done && d < 20000 && (!near || d < near.d)) near = { x: t.x, y: t.y, d };
     }
     if (near) rim(Math.atan2(near.x - own.x, -(near.y - own.y)), '#e88c40');
+    // Signs on the horizon (docs/12 P2): a gold "?" where something is happening.
+    g.font = '700 11px Inter, sans-serif';
+    g.textAlign = 'center';
+    for (const sg of state.sights) {
+      if (Math.max(Math.abs(tx(sg.x) - W / 2), Math.abs(ty(sg.y) - H / 2)) > W / 2 - 6) continue;
+      g.lineWidth = 3;
+      g.strokeStyle = 'rgba(0,0,0,0.8)';
+      g.strokeText('?', tx(sg.x), ty(sg.y) + 4);
+      g.fillStyle = '#e8c46a';
+      g.fillText('?', tx(sg.x), ty(sg.y) + 4);
+    }
+    g.lineWidth = 1;
     // The followed quest's goal (docs/11 P6): a gold diamond on the chart, or at the rim toward it.
     const qp = questPointer(trackedQuest(self?.quests), own.x, own.y, state.region);
     if (qp) {

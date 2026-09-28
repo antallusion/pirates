@@ -5,7 +5,8 @@
 import { levelChip } from './levels.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { assetUrl } from '../assets.ts';
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
+import { SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
 import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
@@ -20,6 +21,7 @@ const EN = {
   sub: 'Up to five quests at once. Take new ones on the notice boards in port and from the people on the islands.',
   none: 'No quests under way. The notice board in any tavern has work.',
   steps: 'The steps',
+  letters: 'Letters of the sea ({n} of {max})',
   pay: 'Pay',
   follow: 'Follow',
   following: 'Followed',
@@ -42,6 +44,7 @@ const RU: typeof EN = {
   sub: 'Не больше пяти заданий сразу. Новые — на досках объявлений в портах и у жителей островов.',
   none: 'Заданий нет. На доске объявлений в любой таверне есть работа.',
   steps: 'Шаги',
+  letters: 'Письма моря ({n} из {max})',
   pay: 'Плата',
   follow: 'Следовать',
   following: 'Отслеживается',
@@ -81,7 +84,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
@@ -137,4 +140,11 @@ export class Journal {
         ${q.kind === 'job' || q.kind === 'story' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
       </div>`;
   }
+}
+
+/** The letters of the sea found in bottles (docs/12 P2): a keepsake collection. */
+function lettersLog(found: number[]): string {
+  if (!found.length) return '';
+  const ru = lang() === 'ru' ? 1 : 0;
+  return `<div class="jr-letters"><div class="giver-h">${esc(L('letters', { n: found.length, max: SEA_LETTERS.length }))}</div>${found.map((i) => `<p class="jr-letter">${esc(SEA_LETTERS[i]?.[ru] ?? '')}</p>`).join('')}</div>`;
 }
