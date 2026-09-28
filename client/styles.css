@@ -2086,3 +2086,7 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 #hud-regatta .fp-head b { font-family: var(--serif); font-size: 14px; color: #f0d9b0; }
 #hud-regatta .hp-lvl { font: 700 13px var(--sans); color: #e8c46a; font-variant-numeric: tabular-nums; }
 #hud-regatta .rg-next { font-size: 13px; color: #cfe0b0; }
+.bottle-card textarea.field { width: 100%; min-height: 64px; resize: vertical; margin: 4px 0 6px; box-sizing: border-box; font: 13px var(--sans); }
+.bottle-card .bottle-row { align-items: center; }
+.bottle-card .bottle-silver { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 12px; }
+.bottle-card .bottle-silver .field { width: 90px; flex: none; }

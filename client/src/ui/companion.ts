@@ -2,6 +2,7 @@
 
 import { HARNESSES, HARNESS_IDS, PETS, calfFindEvery, calfFindRange, calfStrike } from '../../../shared/src/data/companions.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
+import { BOTTLE_COST, BOTTLE_MAX_NOTE, BOTTLE_MAX_SILVER } from '../../../shared/src/data/bottles.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -28,6 +29,11 @@ const L = dict({
   toDeck: 'On deck',
   below: 'Below',
   petsHint: 'One rides on deck at a time and does its trade. More are sold by a tavern’s pet seller.',
+  bottle: 'Bottle mail',
+  bottleText: 'A note in a bottle — and silver, if you like — into the sea. The currents carry it; after an hour afloat a captain may fish it out. The bottle costs {cost} silver.',
+  bottleNote: 'Your note (up to 240 letters)',
+  bottleSilver: 'Silver inside',
+  bottleThrow: 'Into the sea',
 }, {
   title: 'Спутник',
   level: 'Уровень {n}',
@@ -46,6 +52,11 @@ const L = dict({
   toDeck: 'На палубу',
   below: 'В кубрик',
   petsHint: 'На палубе — один, и он делает своё дело. Других продаёт торговец животными в таверне.',
+  bottle: 'Бутылочная почта',
+  bottleText: 'Записка в бутылке — и серебро, если хотите, — в море. Её понесут течения; через час её может выловить другой капитан. Бутылка стоит {cost} серебра.',
+  bottleNote: 'Ваша записка (до 240 знаков)',
+  bottleSilver: 'Серебро внутри',
+  bottleThrow: 'В море',
 });
 
 export function companionCard(state: ClientState): string {
@@ -91,7 +102,22 @@ export function petsCard(state: ClientState): string {
   return `<div class="card cmp-card"><h4 class="card-h">${petIcon(v.deck ?? v.owned[0], 'ico-md')}${esc(L('pets'))}</h4>${rows}<p class="muted cmp-forge">${esc(L('petsHint'))}</p></div>`;
 }
 
+/** Bottle mail (docs/12 P10 #6): a note, and silver if she likes, into the sea. */
+export function bottleCard(atSea: boolean): string {
+  if (!atSea) return '';
+  return `<div class="card cmp-card bottle-card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('bottle'))}</h4><p class="muted">${esc(L('bottleText', { cost: BOTTLE_COST }))}</p>
+    <textarea class="field" data-bnote maxlength="${BOTTLE_MAX_NOTE}" rows="3" aria-label="${esc(L('bottleNote'))}" placeholder="${esc(L('bottleNote'))}"></textarea>
+    <div class="cmp-name bottle-row"><label class="bottle-silver"><span class="muted">${esc(L('bottleSilver'))}</span><input class="field" data-bsilver type="number" min="0" max="${BOTTLE_MAX_SILVER}" value="0"></label><button class="btn btn-small btn-primary" data-bthrow>${esc(L('bottleThrow'))}</button></div></div>`;
+}
+
 export function bindCompanion(root: HTMLElement, send: (m: ClientMsg) => void): void {
+  root.querySelector<HTMLElement>('[data-bthrow]')?.addEventListener('click', () => {
+    const note = root.querySelector<HTMLTextAreaElement>('[data-bnote]')?.value ?? '';
+    const silver = Number(root.querySelector<HTMLInputElement>('[data-bsilver]')?.value ?? 0);
+    send({ t: 'bottle', note, silver });
+    const ta = root.querySelector<HTMLTextAreaElement>('[data-bnote]');
+    if (ta && note.trim()) ta.value = '';
+  });
   root.querySelectorAll<HTMLElement>('[data-petdeck]').forEach((b) => (b.onclick = () => send({ t: 'pet', action: 'deck', pet: (b.dataset.petdeck || null) as PetId | null })));
   root.querySelectorAll<HTMLElement>('[data-cmp]').forEach((b) => (b.onclick = () => {
     const action = b.dataset.cmp as 'name' | 'craft' | 'wear';

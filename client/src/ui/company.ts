@@ -647,8 +647,8 @@ export class CompanyScreen {
     const docked = state.self?.dockedAt ?? null;
     body.innerHTML = `<div class="cols"><div>
       <h3 class="title-sm" style="font-size:20px">${L('let_title')}</h3>
-      ${state.letters.map((l) => `<div class="card letter ${l.read ? '' : 'unread'}"><h4>${esc(l.subject)} <span class="muted">${L('let_meta', { from: esc(l.from), ago: ago(l.sentAt) })}</span></h4>
-        ${l.body ? `<p style="white-space:pre-wrap">${esc(l.body)}</p>` : ''}
+      ${state.letters.map((l) => `<div class="card letter ${l.read ? '' : 'unread'}"><h4>${esc(serverText(l.subject))} <span class="muted">${L('let_meta', { from: esc(serverText(l.from)), ago: ago(l.sentAt) })}</span></h4>
+        ${l.body ? `<p style="white-space:pre-wrap">${esc(serverText(l.body))}</p>` : ''}
         ${!l.taken ? `<p><b>${l.gold ? L('let_silver', { n: fmt(l.gold) }) : ''}${l.goods ? L('let_goods', { qty: l.goods.qty, good: esc(GOODS[l.goods.good].name), port: esc(state.ports.find((p) => p.id === l.goods!.port)?.name ?? l.goods.port) }) : ''}</b></p>` : ''}
         <div class="row" style="gap:6px">${!l.read ? `<button class="btn btn-small" data-read="${l.id}">${L('let_mark')}</button>` : ''}
           ${!l.taken ? `<button class="btn btn-small btn-primary" data-take="${l.id}" ${docked && (!l.goods || l.goods.port === docked) ? '' : `disabled title="${L('let_collect_port')}"`}>${L('let_collect')}</button>` : `<button class="btn btn-small" data-del="${l.id}">${L('let_burn')}</button>`}</div></div>`).join('') || `<p class="muted">${L('let_none')}</p>`}

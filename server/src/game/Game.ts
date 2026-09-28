@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { stepBottles, throwBottle } from './bottles.ts';
 import { regattaSignUp, sendRegatta, stepRegatta } from './regatta.ts';
 import { diceBid, diceJoin, diceLeave, diceLiar, diceOpen, diceStart, stepDice } from './dice.ts';
 import { catAboard, petAction, petsOnDock, stepPets } from './pets.ts';
@@ -725,6 +726,7 @@ export class Game {
     stepPets(this); // the parrots' watch (docs/12 P10 #3)
     stepDice(this); // the tavern tables (docs/12 P10 #4)
     stepRegatta(this); // the Regatta of Equal Waters (docs/12 P10 #5)
+    if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -2537,6 +2539,8 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'bottle':
+        return err(throwBottle(this, s, String(msg.note ?? ''), Number(msg.silver)));
       case 'regatta':
         err(regattaSignUp(this, s));
         return this.pushPort(s);

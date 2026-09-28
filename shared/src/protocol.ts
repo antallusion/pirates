@@ -140,6 +140,8 @@ export type ClientMsg =
   | { t: 'dice'; action: 'bid'; q: number; f: number }
   /** The Regatta of Equal Waters (docs/12 P10 #5). */
   | { t: 'regatta'; action: 'signup' }
+  /** Bottle mail (docs/12 P10 #6): a note, and silver if she likes, into the sea. */
+  | { t: 'bottle'; note: string; silver: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
