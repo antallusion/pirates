@@ -4,6 +4,9 @@
 // slow calendar), lasts wall-clock hours or days, touches at least three systems (markets, NPC traffic,
 // law and reputation, weather), and never more than two major events share a region.
 
+import { HAPPENING_KINDS } from '../../../shared/src/data/happenings.ts';
+import type { HappeningKind } from '../../../shared/src/data/happenings.ts';
+import { festivalDock, happeningFinish, happeningStillOn, happeningTriggers, lostFleet, tickHappening } from './happenings.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -19,7 +22,7 @@ import { sitesOfIsland } from './resources.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 
-export type EventKind = 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic';
+export type EventKind = 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | HappeningKind;
 
 export interface WorldEvent {
   id: number;
@@ -140,9 +143,14 @@ function regionLoad(game: Game, region: RegionId): number {
   return game.worldEvents.active(game).filter((e) => e.region === region && MAJOR.includes(e.kind)).length;
 }
 
+/** Starts a world event (the shorter ones of happenings.ts too). */
+export function startEvent(game: Game, e: Omit<WorldEvent, 'id' | 'started'>, text: string): WorldEvent | null {
+  return start(game, e, text);
+}
+
 function start(game: Game, e: Omit<WorldEvent, 'id' | 'started'>, text: string): WorldEvent | null {
   const st = game.worldEvents.data(game);
-  if (regionLoad(game, e.region) >= 2) return null; // never more than two major events on a region
+  if (MAJOR.includes(e.kind) && regionLoad(game, e.region) >= 2) return null; // never more than two major events on a region (the shorter ones are apart)
   const ev: WorldEvent = { ...e, id: st.seq++, started: game.wallNow() };
   st.list.push(ev);
   game.addRumor(ev.x, ev.y, text);
@@ -179,6 +187,7 @@ function finish(game: Game, e: WorldEvent): void {
         const after: Omit<WorldEvent, 'id' | 'started'> = { kind: 'storm_century', region: e.region, x: e.x, y: e.y, ends: game.wallNow() + DAY, title: `After the Great Storm in ${REGIONS[e.region].name}`, stage: 'aftermath' };
         st.list.push({ ...after, id: st.seq++, started: game.wallNow() });
         scatterWreckage(game, e.region, 8);
+        lostFleet(game, e.region); // and a whole fleet of drifting hulls (docs/12 P2)
         text = `The Storm of the Century blows itself out over ${REGIONS[e.region].name}. Wreckage everywhere; timber and canvas are dear.`;
       } else text = `${REGIONS[e.region].name} has mended from the Great Storm.`;
       break;
@@ -187,6 +196,8 @@ function finish(game: Game, e: WorldEvent): void {
       break;
     case 'new_island':
       break;
+    default:
+      if ((HAPPENING_KINDS as string[]).includes(e.kind)) text = happeningFinish(game, e, fleet);
   }
   if (text) {
     game.addRumor(e.x, e.y, text);
@@ -201,6 +212,7 @@ function portName(game: Game, id?: string): string {
 
 /** Whether an event still stands (a squadron sunk ends a blockade early; medicine ends a fever). */
 function stillOn(game: Game, e: WorldEvent): boolean {
+  if ((HAPPENING_KINDS as string[]).includes(e.kind)) return happeningStillOn(game, e);
   if (e.kind === 'armada' || (e.kind === 'blockade' && !e.by?.startsWith('['))) {
     const fleet = game.worldEvents.fleets.get(e.id);
     if (fleet && fleet.length && !fleet.some((id) => game.ships.get(id)?.alive)) return false;
@@ -257,6 +269,7 @@ function tick(game: Game, e: WorldEvent): boolean {
     case 'new_island':
       return eruption(game, e);
   }
+  if ((HAPPENING_KINDS as string[]).includes(e.kind)) return tickHappening(game, e);
   return false;
 }
 
@@ -339,6 +352,8 @@ function triggers(game: Game, st: EventStore, wall: number): boolean {
       }
     }
   }
+  // The shorter events: the silver galleon, the Brethren, a falling star, an eclipse, a festival (happenings.ts).
+  if (happeningTriggers(game, st.next, wall)) changed = true;
   // Epidemics: a port short of medicine, now and then.
   if (wall >= st.next.epidemic || game.worldEvents.rng.chance(0.002)) {
     const short = ports.filter((p) => {
@@ -436,7 +451,7 @@ function founderTraffic(game: Game, region: RegionId): void {
   }
 }
 
-function scatterWreckage(game: Game, region: RegionId, n: number): void {
+export function scatterWreckage(game: Game, region: RegionId, n: number): void {
   const [cx, cy] = REGIONS[region].center;
   for (let i = 0; i < n * 4 && n > 0; i++) {
     const x = cx + game.worldEvents.rng.range(-9000, 9000), y = cy + game.worldEvents.rng.range(-9000, 9000);
@@ -572,6 +587,7 @@ function feverAboard(game: Game): void {
 
 /** Docking: blockade runners are paid in glory; a fevered, quarantined port marks the ships that leave it. */
 export function onDockEvents(game: Game, s: PlayerSession, port: Port): void {
+  if (s.ship) festivalDock(game, s.ship, port);
   const ship = s.ship!;
   const b = game.worldEvents.blockaded(game, port.id);
   if (b && b.by !== `[${ship.guildTag}]`) {
@@ -638,7 +654,7 @@ export function eventViews(game: Game): WorldEventView[] {
 
 function broadcast(game: Game): void {
   const list = eventViews(game);
-  const key = JSON.stringify(list.map((x) => [x.id, x.title, x.stage]));
+  const key = JSON.stringify(list.map((x) => [x.id, x.title, x.stage, Math.round(x.x / 400), Math.round(x.y / 400)]));
   const hub = game.worldEvents;
   if (key === hub.lastSent) return;
   hub.lastSent = key;

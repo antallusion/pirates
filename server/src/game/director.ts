@@ -6,6 +6,7 @@
 //
 // Sailing faster brings things sooner; a harbour's waters and a fight keep the director still.
 
+import { eclipseOn, lostFleetIn } from './happenings.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { siteViews } from './expeditions.ts';
 import { ENCOUNTERS, ENCOUNTER_IDS, SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
@@ -119,9 +120,11 @@ export function fits(game: Game, s: PlayerSession, def: EncounterDef): boolean {
   if (w.safety && !w.safety.includes(reg.safety)) return false;
   if (w.regions && !w.regions.includes(ship.region)) return false;
   const night = isNight(game.now);
-  if (w.night && !night) return false;
+  if (w.night && !night && !(def.group === 'mystic' && eclipseOn(game))) return false;
   if (w.day && night) return false;
-  if (w.fog && game.weatherAt(ship.state.x, ship.state.y) !== 'fog') return false;
+  // In an eclipse the dark is as good as night and fog to the uncanny; a lost fleet's hulls drift in the open.
+  const eclipse = def.group === 'mystic' && eclipseOn(game);
+  if (w.fog && game.weatherAt(ship.state.x, ship.state.y) !== 'fog' && !eclipse && !(def.id === 'derelict' && lostFleetIn(game, ship.region))) return false;
   if (w.coast || w.open || w.biomes) {
     const n = nearestIsland(game, ship.state.x, ship.state.y);
     if (w.coast && n.d > 2500) return false;
@@ -145,6 +148,9 @@ export function fits(game: Game, s: PlayerSession, def: EncounterDef): boolean {
 /** The weight of an encounter here: danger grows in wilder waters. */
 function weightOf(game: Game, s: PlayerSession, def: EncounterDef): number {
   const safety = REGIONS[s.ship!.region].safety;
+  // An eclipse: the uncanny five times as often. A lost fleet: its hulls and wreckage everywhere.
+  if (def.group === 'mystic' && eclipseOn(game)) return def.weight * 5;
+  if ((def.id === 'derelict' || def.id === 'flotsam') && lostFleetIn(game, s.ship!.region)) return def.weight * 4;
   if (def.id === 'ambush') return safety === 'lawless' ? 30 : 20;
   if (def.group === 'danger' && safety === 'lawless') return def.weight * 1.5;
   return def.weight;

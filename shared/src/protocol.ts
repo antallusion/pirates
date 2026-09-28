@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { HappeningKind } from './data/happenings.ts';
 import type { EncounterId, SightKind } from './data/encounters.ts';
 import type { CaptainSlot, Item, Slot } from './data/items.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
@@ -780,7 +781,7 @@ export interface DiveView {
 /** A world event (events.ts): the Armada, a blockade, the Storm of the Century, a new island, a fever. */
 export interface WorldEventView {
   id: number;
-  kind: 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | 'glory';
+  kind: 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | 'glory' | HappeningKind;
   title: string;
   region: RegionId;
   port?: string;

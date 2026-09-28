@@ -157,6 +157,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       game.pushSelf(s, true);
       return `She is a ${SHIP_CLASSES[cls].name} now, level ${ship.shipLevel} (crew ${ship.crew}).`;
     }
+    case 'happen': {
+      // One of the sea's shorter events now (docs/12 P2): /happen silver_convoy|brethren|star|eclipse|festival.
+      const kind = args[0] ?? '';
+      if (!['silver_convoy', 'brethren', 'star', 'eclipse', 'festival'].includes(kind)) return 'Kinds: silver_convoy, brethren, star, eclipse, festival';
+      game.worldEvents.data(game).next[kind] = 0;
+      return `${kind}: due within ten seconds${kind === 'star' ? ' (by night)' : ''}.`;
+    }
     case 'enc': {
       // An encounter at once (docs/12 P2): /enc [id]; its sign a mile off, or aboard.
       const id = args[0] as EncounterId;

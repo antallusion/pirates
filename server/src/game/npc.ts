@@ -144,7 +144,7 @@ export function planMerchantVoyage(game: Game, ship: ShipEntity, brain: NpcBrain
   return true;
 }
 
-function setPath(brain: NpcBrain, path: Path): void {
+export function setPath(brain: NpcBrain, path: Path): void {
   brain.path = path;
   brain.traveled = 0;
   brain.length = pathLength(path);

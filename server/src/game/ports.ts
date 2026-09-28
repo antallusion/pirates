@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { festivalAt } from './happenings.ts';
 import { chandlerWares, takeGearBack, wornItems } from './gear.ts';
 import { mendCost } from '../../../shared/src/data/items.ts';
 import { refitHolds, refitView } from './refit.ts';
@@ -56,7 +57,10 @@ export function hasLicence(p: Profile, faction: string, now: number): boolean {
 
 export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0, game?: Game): PriceMods {
   const base = basePriceMods(ship, port, p, now);
-  return game && p ? talentPriceMods(game, ship, port, p, base) : base;
+  const mods = game && p ? talentPriceMods(game, ship, port, p, base) : base;
+  // A festival's kind prices (docs/12 P2).
+  if (game && festivalAt(game, port.id)) return { ...mods, buyMul: mods.buyMul * 0.9, sellMul: mods.sellMul * 1.05 };
+  return mods;
 }
 
 function basePriceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0): PriceMods {
