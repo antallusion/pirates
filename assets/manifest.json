@@ -405,6 +405,14 @@
     "portrait.giver_lighthouse_keeper_f":{ "local": "portraits/giver_lighthouse_keeper_f.webp", "remote": "hf_20260928_022551_470dfd4b-3396-417e-9685-9c0b42c1d15b.png", "job": "470dfd4b-3396-417e-9685-9c0b42c1d15b" },
     "portrait.giver_whaler_m":           { "local": "portraits/giver_whaler_m.webp", "remote": "hf_20260928_023441_c7908dd9-d754-482f-b699-bf2e71cd967c.png", "job": "c7908dd9-d754-482f-b699-bf2e71cd967c" },
     "portrait.giver_cultist_m":          { "local": "portraits/giver_cultist_m.webp", "remote": "hf_20260928_024343_fd9fcbbf-b93e-42c1-b9c5-dc8d47e16d04.png", "job": "fd9fcbbf-b93e-42c1-b9c5-dc8d47e16d04" },
-    "portrait.giver_cultist_f":          { "local": "portraits/giver_cultist_f.webp", "remote": "hf_20260928_025249_5aede225-8644-4619-b1f9-0ab50c830945.png", "job": "5aede225-8644-4619-b1f9-0ab50c830945" }
+    "portrait.giver_cultist_f":          { "local": "portraits/giver_cultist_f.webp", "remote": "hf_20260928_025249_5aede225-8644-4619-b1f9-0ab50c830945.png", "job": "5aede225-8644-4619-b1f9-0ab50c830945" },
+    "icon.tattoo_swallow":               { "local": "icons/tattoo_swallow.webp", "remote": "hf_20260928_082712_51a69a55-398c-4298-8059-1a3b8b8cfad2.png", "job": "51a69a55-398c-4298-8059-1a3b8b8cfad2", "fit": "opaque:192" },
+    "icon.tattoo_anchor":                { "local": "icons/tattoo_anchor.webp", "remote": "hf_20260928_083701_ecbabe11-dc1c-44d1-90b8-f2d8056e87fd.png", "job": "ecbabe11-dc1c-44d1-90b8-f2d8056e87fd", "fit": "opaque:192" },
+    "icon.tattoo_turtle":                { "local": "icons/tattoo_turtle.webp", "remote": "hf_20260928_084801_39684349-5698-4899-91f4-c8d4f64615cb.png", "job": "39684349-5698-4899-91f4-c8d4f64615cb", "fit": "opaque:192" },
+    "icon.tattoo_golden_dragon":         { "local": "icons/tattoo_golden_dragon.webp", "remote": "hf_20260928_085824_112dfefa-2823-437b-ae05-f82627f933a0.png", "job": "112dfefa-2823-437b-ae05-f82627f933a0", "fit": "opaque:192" },
+    "icon.tattoo_fish":                  { "local": "icons/tattoo_fish.webp", "remote": "hf_20260928_090748_fea34af9-5c95-461f-97c0-62b8217a7da0.png", "job": "fea34af9-5c95-461f-97c0-62b8217a7da0", "fit": "opaque:192" },
+    "icon.tattoo_hook":                  { "local": "icons/tattoo_hook.webp", "remote": "hf_20260928_091803_d224e121-b3a0-4db3-953e-6528f01aae40.png", "job": "d224e121-b3a0-4db3-953e-6528f01aae40", "fit": "opaque:192" },
+    "icon.tattoo_octopus":               { "local": "icons/tattoo_octopus.webp", "remote": "hf_20260928_092738_a14834e9-f171-4cb5-a44f-50a623be92ed.png", "job": "a14834e9-f171-4cb5-a44f-50a623be92ed", "fit": "opaque:192" },
+    "icon.tattoo_orca":                  { "local": "icons/tattoo_orca.webp", "remote": "hf_20260928_093712_8baef9fd-de4e-45bd-89fd-607a9a31b811.png", "job": "8baef9fd-de4e-45bd-89fd-607a9a31b811", "fit": "opaque:192" }
   }
 }
