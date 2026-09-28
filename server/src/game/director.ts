@@ -6,7 +6,7 @@
 //
 // Sailing faster brings things sooner; a harbour's waters and a fight keep the director still.
 
-import { eclipseOn, lostFleetIn } from './happenings.ts';
+import { eclipseOn, lostFleetIn, redTideAt } from './happenings.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { siteViews } from './expeditions.ts';
 import { ENCOUNTERS, ENCOUNTER_IDS, SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
@@ -151,6 +151,8 @@ function weightOf(game: Game, s: PlayerSession, def: EncounterDef): number {
   // An eclipse: the uncanny five times as often. A lost fleet: its hulls and wreckage everywhere.
   if (def.group === 'mystic' && eclipseOn(game)) return def.weight * 5;
   if ((def.id === 'derelict' || def.id === 'flotsam') && lostFleetIn(game, s.ship!.region)) return def.weight * 4;
+  // A red tide: the sharks and the thing with the arms come for the dead fish.
+  if ((def.id === 'sharks' || def.id === 'tentacle') && redTideAt(game, s.ship!.region)) return def.weight * 4;
   if (def.id === 'ambush') return safety === 'lawless' ? 30 : 20;
   if (def.group === 'danger' && safety === 'lawless') return def.weight * 1.5;
   return def.weight;

@@ -23,7 +23,7 @@ export function isShipSlot(s: Slot): s is ShipSlot {
 }
 
 /** The ship level at which each of her slots opens. */
-export const SLOT_OPENS: Record<ShipSlot, number> = { sails: 1, plating: 1, hold: 1, quarters: 1, battery: 1, rigging: 2, rudder: 2, tackle: 2, banner: 4, relic: 5 };
+export const SLOT_OPENS: Record<ShipSlot, number> = { sails: 1, plating: 1, hold: 1, quarters: 1, battery: 1, tackle: 1, rigging: 2, rudder: 2, banner: 4, relic: 5 };
 
 /** The yard's old fitting an item in this slot takes the place of. */
 export const MODULE_OF_SLOT: Partial<Record<ShipSlot, ModuleId>> = { sails: 'sail_plan', plating: 'hull_plating', rudder: 'rudder', hold: 'hold_expansion', quarters: 'crew_quarters' };

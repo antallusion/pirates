@@ -172,6 +172,8 @@ export type QuestEvent =
   | { k: 'fleet_win' }
   | { k: 'die'; region: RegionId }
   | { k: 'dive' }
+  /** Fish taken (docs/12 P3): the units into the hold, the weight of one, and whether it was fought on the line. */
+  | { k: 'catch'; units: number; kg: number; fought: boolean }
   | { k: 'dock'; port: Port }
   | { k: 'land'; island: number; feature: string };
 
@@ -357,6 +359,7 @@ function stepCount(st: QuestStep): number {
     case 'chart':
     case 'fleet_win':
     case 'dive':
+    case 'catch':
       return st.count;
     case 'sell_contraband':
       return st.qty;
@@ -476,6 +479,10 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       return ev.k === 'fleet_win' ? 1 : 0;
     case 'dive':
       return ev.k === 'dive' ? 1 : 0;
+    case 'catch':
+      if (ev.k !== 'catch') return 0;
+      if (st.minKg !== undefined) return ev.fought && ev.kg >= st.minKg ? 1 : 0;
+      return ev.units;
     case 'die_in':
       return ev.k === 'die' && ev.region === st.region ? 1 : 0;
     case 'reach':

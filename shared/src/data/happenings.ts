@@ -2,8 +2,8 @@
 // the Coast gathering round a baron, a star falling on an island, an eclipse, a fleet lost to the Great Storm, a port's
 // festival. The server writes their lines in English; here are the Russian twins.
 
-export type HappeningKind = 'silver_convoy' | 'brethren' | 'star' | 'eclipse' | 'lost_fleet' | 'festival';
-export const HAPPENING_KINDS: HappeningKind[] = ['silver_convoy', 'brethren', 'star', 'eclipse', 'lost_fleet', 'festival'];
+export type HappeningKind = 'silver_convoy' | 'brethren' | 'star' | 'eclipse' | 'lost_fleet' | 'festival' | 'herring_run' | 'red_tide';
+export const HAPPENING_KINDS: HappeningKind[] = ['silver_convoy', 'brethren', 'star', 'eclipse', 'lost_fleet', 'festival', 'herring_run', 'red_tide'];
 
 export function happeningPatterns(): [string, string][] {
   return [
@@ -27,6 +27,13 @@ export function happeningPatterns(): [string, string][] {
     ['The Great Storm has scattered a whole fleet over {0}: empty hulls drift everywhere, and their holds are full.', 'Великий шторм разметал по водам «{0}» целый флот: повсюду дрейфуют пустые корпуса, а трюмы у них полны.'],
     ['The last of the lost fleet sinks in {0}.', 'Последний корабль потерянного флота тонет в водах «{0}».'],
     ['Festival in {0}', 'Праздник в {0}'],
+    ['The herring run in {0}', 'Ход сельди в водах «{0}»'],
+    ['The herring are running along the coasts of {0}: the water boils with them, and every net comes up full. It lasts an hour.', 'У берегов в водах «{0}» идёт сельдь: вода кипит от рыбы, и каждая сеть поднимается полной. Это на час.'],
+    ['The herring have gone from {0}.', 'Сельдь ушла из вод «{0}».'],
+    ['Red tide in {0}', 'Красный прилив в водах «{0}»'],
+    ['The sea turns red over {0}: the fish die in their shoals, and the sharks and worse come for the dead. No net will bring anything up there for an hour.', 'Море в водах «{0}» становится красным: рыба гибнет косяками, а за мёртвой рыбой приходят акулы — и кое-что похуже. Целый час там ни одна сеть ничего не поднимет.'],
+    ['The red tide over {0} clears.', 'Красный прилив в водах «{0}» сходит.'],
+    ['The water is red and dead here: nothing bites.', 'Вода здесь красная и мёртвая: не клюёт ничего.'],
     ['{0} holds its festival: prices are kind, the taverns are loud, and there will be fireworks after dark.', 'В {0} праздник: цены добрые, в тавернах шумно, а после заката будет фейерверк.'],
     ['The festival in {0} is over.', 'Праздник в {0} закончился.'],
     ['The star-iron is yours: {0} of it in the hold.', 'Звёздное железо ваше: в трюме {0}.'],

@@ -2,7 +2,9 @@
 // a fire, fins, a squall line, lights in the dark — each a small moving thing that makes a captain turn to look, and
 // a gold "?" over it while it is still far off.
 
-import type { SightView } from '../../../shared/src/protocol.ts';
+import type { ShoalView, SightView } from '../../../shared/src/protocol.ts';
+import { FISH } from '../../../shared/src/data/fishing.ts';
+import { lang } from '../i18n.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -395,5 +397,58 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
     }
     default:
       puff(g, 0, 0, 6 * k, 0.8, '232,196,106');
+  }
+}
+
+/** Shoals (docs/12 P3): a darker boil on the water with birds over it; what swims in it once the craft reads the water.
+ *  And a captain's own pots, as red buoys. */
+export function drawShoals(g: G, list: ShoalView[], traps: { x: number; y: number }[], sx: (x: number) => number, sy: (y: number) => number, zoom: number, t: number, w: number, h: number): void {
+  for (const s of list) {
+    const x = sx(s.x), y = sy(s.y);
+    const r = s.r * zoom;
+    if (x < -r - 60 || y < -r - 60 || x > w + r + 60 || y > h + r + 60) continue;
+    g.save();
+    g.translate(x, y);
+    const gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
+    gr.addColorStop(0, `rgba(10,30,40,${0.18 + 0.2 * s.full})`);
+    gr.addColorStop(1, 'rgba(10,30,40,0)');
+    g.fillStyle = gr;
+    g.beginPath();
+    g.arc(0, 0, r, 0, Math.PI * 2);
+    g.fill();
+    // The boil of the water.
+    for (let i = 0; i < 8; i++) {
+      const a = i * 0.8 + t * 0.4, rr = r * (0.2 + ((i * 37) % 60) / 100);
+      puff(g, Math.cos(a) * rr, Math.sin(a) * rr, (1.5 + (i % 3)) * Math.max(0.6, zoom), 0.45 * s.full + 0.15, '210,230,238');
+    }
+    drawOne(g, 'birds', Math.max(0.55, zoom), t + s.id);
+    if (s.fish) {
+      g.font = `600 ${Math.round(10 + 2 * Math.min(1, zoom))}px Inter, sans-serif`;
+      g.textAlign = 'center';
+      g.lineWidth = 3;
+      g.strokeStyle = 'rgba(0,0,0,0.7)';
+      const label = FISH[s.fish].name[lang() === 'ru' ? 1 : 0];
+      g.strokeText(label, 0, r + 12);
+      g.fillStyle = '#bfe3ee';
+      g.fillText(label, 0, r + 12);
+    }
+    g.restore();
+  }
+  for (const tr of traps) {
+    const x = sx(tr.x), y = sy(tr.y);
+    if (x < -20 || y < -20 || x > w + 20 || y > h + 20) continue;
+    const bob = Math.sin(t * 2 + tr.x) * 2;
+    g.fillStyle = '#c23d33';
+    g.strokeStyle = 'rgba(0,0,0,0.7)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(x, y + bob, 4.5 * Math.max(0.7, zoom), 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+    g.strokeStyle = '#e8e2d0';
+    g.beginPath();
+    g.moveTo(x, y + bob - 4 * Math.max(0.7, zoom));
+    g.lineTo(x, y + bob - 12 * Math.max(0.7, zoom));
+    g.stroke();
   }
 }

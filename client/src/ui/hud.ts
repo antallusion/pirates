@@ -47,6 +47,9 @@ export class Hud {
   onPartyTap: (name: string) => void = () => {};
   /** Tapping the target frame of a captain's ship (main.ts): inspect them. */
   onTargetTap: (name: string) => void = () => {};
+  /** A fishing order from the panel (main.ts). */
+  onFishing: (action: 'trap' | 'haul' | 'deep' | 'salt') => void = () => {};
+  private lastFishKey = '';
   private lastTargetKey = '';
   private toastsEl = $('toasts');
   private bannerTimer = 0;
@@ -92,6 +95,7 @@ export class Hud {
     if (!self || !you) return;
     this.drawBoss(state);
     this.drawParty(state);
+    this.drawFishing(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -790,6 +794,47 @@ export class Hud {
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
       <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}</div>`;
     el.onclick = info.isPlayer ? () => this.onTargetTap(info.captainName) : null;
+  }
+
+  /** The fishing panel (docs/12 P3): the tackle, what it wants now, and the orders at hand. */
+  private drawFishing(state: ClientState): void {
+    const el = $('hud-fish');
+    const self = state.self, own = state.ownDisplay, you = state.you;
+    const f = self?.fishing;
+    const fishAboard = (self?.cargo.fish ?? 0) > 0 && (self?.cargo.salt ?? 0) > 0;
+    if (!self || !own || !you || !f || self.dockedAt || (!f.method && !fishAboard)) {
+      if (this.lastFishKey) {
+        this.lastFishKey = '';
+        el.classList.add('hidden');
+        el.innerHTML = '';
+      }
+      return;
+    }
+    const max = state.ownStats?.maxSpeed ?? 10;
+    const spd = you.spd;
+    const inShoal = state.shoals.some((s) => Math.hypot(s.x - own.x, s.y - own.y) <= s.r);
+    const night = isNight(state.estServerTime());
+    const need: Record<string, number> = { net: 1, rod: 1, trap: 15, lamp: 30 };
+    let line = '';
+    if (f.method && f.skill < need[f.method]) line = L('fish.low', { n: f.skill, need: need[f.method] });
+    else if (f.method === 'net') line = inShoal ? (spd > max * 0.4 || spd < 0.5 ? L('fish.slow') : L('fish.inShoal')) : L('fish.findShoal');
+    else if (f.method === 'rod') line = spd >= 2.5 && spd <= max * 0.8 ? L('fish.rodOk') : L('fish.rodPace');
+    else if (f.method === 'lamp') line = night && spd <= 1.5 ? L('fish.lampOk') : L('fish.lampNight');
+    else if (f.method === 'trap') line = L('fish.traps', { n: f.traps.length, max: 3 + Math.floor(f.skill / 25) });
+    const nearTrap = f.traps.some((t) => Math.hypot(t.x - own.x, t.y - own.y) < 90);
+    const acts: [string, string][] = [];
+    if (f.method === 'trap') acts.push(nearTrap ? ['haul', L('fish.haul')] : ['trap', L('fish.setTrap')]);
+    if (f.method === 'rod' && f.skill >= 60) acts.push(['deep', L('fish.deep')]);
+    if (fishAboard) acts.push(['salt', L('fish.salt')]);
+    const key = `${lang()}|${f.skill}|${Math.round((f.xp / Math.max(1, f.next)) * 20)}|${f.method}|${line}|${acts.map((a) => a[0]).join(',')}`;
+    if (key === this.lastFishKey) return;
+    this.lastFishKey = key;
+    el.classList.remove('hidden');
+    el.innerHTML = `<div class="fp-head"><b>${esc(L('fish.title', { n: f.skill }))}</b><span class="muted">${esc(f.method ? L(`fish.${f.method}` as 'fish.net') : L('fish.none'))}</span></div>
+      <span class="fp-xp"><i style="width:${pct(f.xp / Math.max(1, f.next))}"></i></span>
+      <div class="fp-line muted">${esc(line)}</div>
+      ${acts.length ? `<div class="fp-acts">${acts.map(([a, n]) => `<button class="btn btn-small" data-fish="${a}">${esc(n)}</button>`).join('')}</div>` : ''}`;
+    el.querySelectorAll<HTMLElement>('[data-fish]').forEach((b) => (b.onclick = () => this.onFishing(b.dataset.fish as 'trap')));
   }
 
   private drawParty(state: ClientState): void {

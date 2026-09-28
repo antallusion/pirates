@@ -3,10 +3,11 @@
 // «Follow», «Share» (in a group) and «Set aside».
 
 import { levelChip } from './levels.ts';
-import type { ClientMsg } from '../../../shared/src/protocol.ts';
+import type { ClientMsg, FishingView } from '../../../shared/src/protocol.ts';
 import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
+import { FISH, FISH_IDS } from '../../../shared/src/data/fishing.ts';
 import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
@@ -22,6 +23,9 @@ const EN = {
   none: 'No quests under way. The notice board in any tavern has work.',
   steps: 'The steps',
   letters: 'Letters of the sea ({n} of {max})',
+  fishing: 'Fishing: craft {n} — {k} of {max} kinds taken',
+  fishRow: '{fish}: {n} taken, heaviest {kg} kg',
+  fishUnknown: 'not yet taken',
   pay: 'Pay',
   follow: 'Follow',
   following: 'Followed',
@@ -45,6 +49,9 @@ const RU: typeof EN = {
   none: 'Заданий нет. На доске объявлений в любой таверне есть работа.',
   steps: 'Шаги',
   letters: 'Письма моря ({n} из {max})',
+  fishing: 'Промысел: навык {n} — поймано видов {k} из {max}',
+  fishRow: '{fish}: поймано {n}, самая тяжёлая — {kg} кг',
+  fishUnknown: 'ещё не поймана',
   pay: 'Плата',
   follow: 'Следовать',
   following: 'Отслеживается',
@@ -84,7 +91,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${lettersLog(self?.seaLetters ?? [])}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${fishingLog(self?.fishing)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
@@ -147,4 +154,16 @@ function lettersLog(found: number[]): string {
   if (!found.length) return '';
   const ru = lang() === 'ru' ? 1 : 0;
   return `<div class="jr-letters"><div class="giver-h">${esc(L('letters', { n: found.length, max: SEA_LETTERS.length }))}</div>${found.map((i) => `<p class="jr-letter">${esc(SEA_LETTERS[i]?.[ru] ?? '')}</p>`).join('')}</div>`;
+}
+
+/** The fishing atlas (docs/12 P3): every kind of fish, taken or not, with the heaviest. */
+function fishingLog(f: FishingView | undefined): string {
+  if (!f || (!Object.keys(f.caught).length && !f.method)) return '';
+  const ru = lang() === 'ru' ? 1 : 0;
+  const kinds = FISH_IDS.filter((id) => id !== 'goldfish' || f.caught.goldfish);
+  const rows = kinds.map((id) => {
+    const c = f.caught[id];
+    return `<p class="jr-fish${c ? '' : ' muted'}">${c ? esc(L('fishRow', { fish: FISH[id].name[ru], n: c.n, kg: c.best.toLocaleString(ru ? 'ru-RU' : 'en-GB') })) : `${esc(FISH[id].name[ru])} — ${esc(L('fishUnknown'))}`}</p>`;
+  }).join('');
+  return `<div class="jr-fishing"><div class="giver-h">${esc(L('fishing', { n: f.skill, k: Object.keys(f.caught).length, max: kinds.length }))}</div>${rows}</div>`;
 }

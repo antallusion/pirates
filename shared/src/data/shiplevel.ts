@@ -21,6 +21,7 @@ export const LEVEL_RANGE: Partial<Record<ShipClassId, [number, number]>> = {
   schooner: [3, 5],
   xebec: [3, 5],
   fluyt: [3, 5],
+  fishing_ketch: [3, 5],
   brigantine: [4, 6],
   brig: [5, 7],
   bomb_ketch: [5, 7],
@@ -42,6 +43,7 @@ export const HULL_ROLE: Partial<Record<ShipClassId, HullRole>> = {
   man_o_war: 'war',
   fluyt: 'trade',
   galleon: 'trade',
+  fishing_ketch: 'fish',
   fireship: 'special',
   ghost_ship: 'special',
 };

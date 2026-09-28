@@ -1,5 +1,7 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import { fishingView, sanitizeFishing } from './fishing.ts';
+import type { FishingProfile } from './fishing.ts';
 import type { CaptainSlot, Item } from '../../../shared/src/data/items.ts';
 import { sanitizeGear } from './gear.ts';
 import type { RefitOrder } from './refit.ts';
@@ -161,6 +163,8 @@ export interface Profile {
   seaLetters?: number[];
   rescued?: number;
   shipCat?: boolean;
+  /** Fishing (docs/12 P3, fishing.ts). */
+  fishing?: FishingProfile;
   trade: {
     lastDeparture: string;
     arrivalRoute: string;
@@ -209,7 +213,7 @@ export function newProfile(captain: CaptainId, shipName: string, startPort: stri
   if (captain === 'admiral') reputation.crown = -25;
   return {
     version: 1, captain, pvp: newPvp(), shipName, level: 1, xp: 0, talents: {}, gold: c.start.gold, infamy: 0, reputation, loadout,
-    cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0, fleet: newFleet(), exotic: {}, salvageDay: -1, builds: [], plans: [], berths: [], figureheads: [], stash: [], captainGear: {}, itemSeq: 1, quests: newQuestLog(), daily: newDaily(), paths: [captain], pathSwitchAt: -1e9, oath: null,
+    cargo: { ...c.start.cargo }, ammo: { ...emptyAmmo(), round: 60, chain: 20, grape: 20 }, ammoSel: 'round', crew: c.start.crew, morale: 80, sanity: 100, company: newCompany(captain, c.start.crew), crewAmbush: 0, fleet: newFleet(), exotic: {}, salvageDay: -1, builds: [], plans: [], berths: [], figureheads: [], stash: [], captainGear: {}, itemSeq: 1, fishing: { skill: 1, xp: 0, caught: {}, traps: [] }, quests: newQuestLog(), daily: newDaily(), paths: [captain], pathSwitchAt: -1e9, oath: null,
     hull: -1, sails: -1, rudderHp: 1, gunsDisabled: { port: 0, starboard: 0 }, lastPort: startPort, docked: startPort,
     contracts: [], discovered: [], regionsSeen: [], stats: { sunk: 0, boarded: 0, tradeProfit: 0, distance: 0, sold: 0, fogContraband: 0, harpoonContracts: 0 }, cooldowns: {},
     insured: false, priceIntel: {}, costBasis: {}, sightings: [], chartSales: {}, chartsBought: [], explored: {}, stolen: {}, licences: {}, warehouses: {}, forwards: [], bank: 0, loan: null, policy: null, claims: [], deeds: [], deedState: { region: '', crossing: '', blackStorm: 0, wantedTime: 0, voyagePorts: [] }, tokens: 0, tokenLevels: [], cleanSlates: [], loadouts: [{}], activeLoadout: 0, loadoutSwitchAt: 0, talentCooldowns: {}, captives: [], blueprints: [], trophies: [], bossKills: {}, bossLocks: {}, pressure: 0, ritualShards: 0, chapters: [], season: { id: -1, xp: 0, level: 0, stats: {} }, titles: [], title: null, pennants: [], pennant: null, nameRights: 0, pantheon: [], tutorial: newTutorial(false, 0), explore: { maps: [], fragments: 0, dived: {}, rumorDay: -1, tavernDeals: [], hoardAboard: false }, keel: null, trade: newTradeState(), smuggle: { stamped: {}, coves: [], brokerPassUsed: false, hotRun: null }, curse: captain === 'drowned' ? 30 : 0, createdAt: now,
@@ -403,6 +407,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     captainGear: p.captainGear,
     seaLetters: p.seaLetters ?? [],
     shipCat: !!p.shipCat,
+    fishing: fishingView(p),
     cargo: ship ? ship.cargo : p.cargo,
     ammo: ship ? ship.ammo : p.ammo,
     ammoSel: ship ? ship.ammoSel : p.ammoSel,
@@ -474,6 +479,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   for (const l of [p.loadout, ...(p.berths ?? []).map((b) => b.loadout)]) if (l) l.level = l.level ? clampLevel(l.classId, l.level) : initialLevel(l.classId, l.modules ?? {});
   p.refit ??= null;
   sanitizeGear(p);
+  sanitizeFishing(p);
   p.salvageDay ??= -1;
   p.fleet.escorts ??= [];
   p.fleet.formation ??= 'line';

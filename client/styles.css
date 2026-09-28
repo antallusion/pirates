@@ -1843,3 +1843,31 @@ body.touch #hud-region .rg-extra { display: none; }
 @media (max-height: 520px) { #encounter { top: calc(var(--sa-t, 0px) + 8px); left: calc(var(--sa-l, 0px) + 280px); transform: none; width: min(430px, calc(100vw - 280px - 170px - var(--sa-l, 0px) - var(--sa-r, 0px))); min-width: 260px; } #encounter .enc-text, #encounter .enc-out { font-size: 13px; margin: 2px 0 6px; } }
 .jr-letters { margin-top: 10px; }
 .jr-letter { margin: 4px 0; font-family: var(--serif); font-style: italic; font-size: 14px; color: #e6dcc4; }
+
+/* Fishing (docs/12 P3): the panel in the HUD stack and the fight on the line. */
+#hud-fish { pointer-events: auto; padding: 6px 9px 7px; max-width: 320px; }
+#hud-fish .fp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+#hud-fish .fp-head b { font-family: var(--serif); font-size: 14px; color: #bfe3ee; }
+#hud-fish .fp-head .muted { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud-fish .fp-xp { position: relative; display: block; height: 4px; margin: 3px 0; background: #0a0c0e; border: 1px solid #000; }
+#hud-fish .fp-xp > i { position: absolute; left: 0; top: 0; bottom: 0; background: #5aa6c4; }
+#hud-fish .fp-line { font-size: 12px; }
+#hud-fish .fp-acts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+#fishfight { position: fixed; left: 50%; bottom: calc(var(--sa-b, 0px) + 200px); transform: translateX(-50%); width: min(380px, calc(100vw - 24px)); z-index: 41; pointer-events: auto; }
+#fishfight.hidden { display: none; }
+#fishfight .ff-card { background: rgba(8, 14, 18, 0.95); border: 1px solid rgba(120, 190, 215, 0.55); border-radius: 6px; padding: 10px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+#fishfight .ff-h { font-family: var(--serif); font-size: 16px; color: #bfe3ee; margin-bottom: 6px; }
+#fishfight .ff-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
+#fishfight .ff-row > span { flex: 0 0 52px; color: var(--fog, #9aa); }
+#fishfight .ff-bar { position: relative; flex: 1; height: 12px; background: #0a0c0e; border: 1px solid #000; border-radius: 2px; overflow: hidden; }
+#fishfight .ff-bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: #6fd46f; }
+#fishfight .ff-t .ff-red { position: absolute; left: 80%; right: 0; top: 0; bottom: 0; background: rgba(224, 71, 58, 0.25); }
+#fishfight .ff-s > i { background: #5aa6c4; }
+#fishfight .ff-reel { width: 100%; min-height: 54px; margin-top: 8px; font-size: 18px; touch-action: none; user-select: none; }
+#fishfight .ff-reel.on { filter: brightness(1.3); }
+#fishfight .ff-hint { font-size: 12px; margin: 6px 0 0; text-align: center; }
+#fishfight .ff-out { margin: 4px 0 0; text-align: center; font-weight: 700; color: #f2e6c8; min-height: 1em; }
+@media (max-height: 520px) { #fishfight { bottom: auto; top: calc(var(--sa-t, 0px) + 8px); left: calc(var(--sa-l, 0px) + 280px); transform: none; width: min(380px, calc(100vw - 280px - 170px)); } #fishfight .ff-reel { min-height: 44px; } }
+.jr-fishing { margin-top: 10px; }
+.jr-fish { margin: 2px 0; font-size: 13px; }
+.fish-records .fish-rec { margin: 2px 0; font-size: 13px; }

@@ -73,7 +73,8 @@ export const PROFESSIONS: Record<Profession, [string, string]> = {
 
 /** Step kinds a plot is made of; each becomes a quest step with its text. */
 export type StepKind = 'pickup' | 'deliver2' | 'deliver3' | 'visit2' | 'visit3' | 'home' | 'back' | 'sink_pirates' | 'sink_ghosts' | 'sink_hunters' | 'sink_any'
-  | 'board' | 'prize' | 'land_site' | 'land_any' | 'land_any2' | 'dive' | 'chart' | 'reach' | 'time_in' | 'contraband' | 'customs';
+  | 'board' | 'prize' | 'land_site' | 'land_any' | 'land_any2' | 'dive' | 'chart' | 'reach' | 'time_in' | 'contraband' | 'customs'
+  | 'catch_any' | 'catch_big';
 
 export const STEP_TEXT: Record<StepKind, [string, string]> = {
   pickup: ['Take on {good} × {n} at {port}.', 'Примите груз в порту {port}: {good} × {n}.'],
@@ -98,6 +99,8 @@ export const STEP_TEXT: Record<StepKind, [string, string]> = {
   time_in: ['Keep the sea in {region} for {n} min.', 'Проведите в водах «{region}» {n} мин.'],
   contraband: ['Sell contraband at {port2}: {n}.', 'Продайте контрабанду в порту {port2}: {n}.'],
   customs: ['Pass a customs inspection without a fine.', 'Пройдите таможенный досмотр без штрафа.'],
+  catch_any: ['Take fish with nets, rods, pots or the lamp: {n}.', 'Наловите рыбы — сетями, удилищами, ловушками или на фонарь: {n}.'],
+  catch_big: ['Land a fish of {n} kg or more on the line.', 'Выведите на леске рыбу весом от {n} кг.'],
 };
 
 // ------------------------------------------------------------------ plots and the ways they are told
@@ -137,6 +140,25 @@ export const PLOTS: Plot[] = [
       F('harbour_master', 'A Berth Too Many', 'Лишний причал', '{giver} needs the quay cleared: take this cargo to {port2} before the tide turns.', '{giver} просит освободить пристань: отвезите этот груз в порт {port2}, пока не сменился прилив.'),
       F('tavern_keeper', 'Owed in {port2}', 'Долг в порту {port2}', 'A tavern in {port2} was promised this load; {giver} keeps promises.', 'Трактиру в порту {port2} обещали этот груз; {giver} держит слово.'),
       F('old_salt', 'One Last Run', 'Последний рейс', '{giver} is too old for the run to {port2}. Sail it for him.', '{giver} слишком стар для рейса в порт {port2}. Сходите вместо него.'),
+    ],
+  },
+  // ---------------------------------------------------------------- fishing (docs/12 P3)
+  {
+    id: 'fish_order', category: 'delivery', steps: ['catch_any', 'deliver2', 'home'], goods: ['salted_fish', 'fish'], level: 1, pay: 300, xp: 200, flavors: [
+      F('fishwife', 'The Fish Market of {port2}', 'Рыбный рынок {port2}', '{giver} promised {port2} a load of fish and her boats came home empty. Catch it, carry it.', '{giver} пообещала рынку {port2} рыбу, а её лодки вернулись пустыми. Наловите и отвезите.'),
+      F('tavern_keeper', 'Fish Friday', 'Рыбный день', 'Every tavern in {port2} serves fish on the feast day. {giver} has none to send.', 'В праздник все трактиры {port2} подают рыбу. Отправить её {giver} нечего.'),
+      F('priest', 'Loaves and Fishes', 'Хлеба и рыбы', 'The poor of {port2} have bread but no fish. {giver} asks a captain\'s charity.', 'У бедняков {port2} есть хлеб, но нет рыбы. {giver} просит капитанского милосердия.'),
+      F('old_salt', 'The Old Nets', 'Старые сети', '{giver} fished these waters forty years. Show him the sea still gives, and take the catch to {port2}.', '{giver} сорок лет рыбачил в этих водах. Покажите ему, что море ещё даёт, и отвезите улов в {port2}.'),
+      F('merchant', 'Salt Fish for the North', 'Солёная рыба для севера', 'Cold ports pay for salt fish; {giver} has buyers in {port2} and no fish.', 'Холодные порты платят за солёную рыбу; у купца ({giver}) есть покупатели в {port2}, а рыбы нет.'),
+    ],
+  },
+  {
+    id: 'trophy_fish', category: 'hunt', steps: ['catch_big', 'home'], level: 5, pay: 480, xp: 320, flavors: [
+      F('fishwife', 'The Big One', 'Та самая', '{giver} swears there is a fish out there bigger than any her husband ever landed. Prove her right.', '{giver} клянётся, что там ходит рыба крупнее всех, что вытаскивал её муж. Докажите её правоту.'),
+      F('tavern_keeper', 'For the Wall', 'Для стены', '{giver} wants a fish to hang over the bar that makes captains fall silent.', '{giver} хочет повесить над стойкой рыбу, при виде которой капитаны замолкают.'),
+      F('envoy', 'The Governor\'s Table', 'Стол губернатора', 'The governor dines with the League next week. {giver} needs a fish worth talking about.', 'На той неделе губернатор обедает с Лигой. Посланнику ({giver}) нужна рыба, о которой будут говорить.'),
+      F('old_salt', 'A Wager', 'Пари', '{giver} has bet his pipe that nobody in port can land a proper fish. Take his pipe.', '{giver} поставил свою трубку на то, что никто в порту не вытащит настоящую рыбу. Заберите трубку.'),
+      F('whaler', 'Not a Whale', 'Не кит', '{giver} hunts whales, but his crew want to see a captain fight a fish on a line.', '{giver} охотится на китов, но его команда хочет увидеть, как капитан бьётся с рыбой на леске.'),
     ],
   },
   {
@@ -551,6 +573,8 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
   }
   const counted = plot.steps.some((s) => s.startsWith('sink') || s === 'board' || s === 'prize' || s === 'dive' || s === 'chart' || s === 'contraband');
   const n = needs('pickup') || needs('deliver2') || needs('deliver3') ? rng.int(4, 12) * (good === 'pearls' || good === 'medicine' ? 1 : 2)
+    : needs('catch_big') ? rng.pick([6, 8, 10, 15, 25])
+    : needs('catch_any') ? rng.int(10, 30)
     : needs('time_in') ? rng.int(3, 8)
     : counted ? rng.int(1, needs('chart') ? 6 : needs('contraband') ? 10 : 3) : 1;
   void flavor;
@@ -619,6 +643,10 @@ function stepOf(k: StepKind, p: GenParams, text: string): QuestStep {
       return { type: 'sell_contraband', qty: p.n, port: p.port2!.id, text };
     case 'customs':
       return { type: 'customs', text };
+    case 'catch_any':
+      return { type: 'catch', count: p.n, text };
+    case 'catch_big':
+      return { type: 'catch', count: 1, minKg: p.n, text };
   }
 }
 

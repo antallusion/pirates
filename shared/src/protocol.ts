@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { FishId, FishMethod } from './data/fishing.ts';
 import type { HappeningKind } from './data/happenings.ts';
 import type { EncounterId, SightKind } from './data/encounters.ts';
 import type { CaptainSlot, Item, Slot } from './data/items.ts';
@@ -97,6 +98,8 @@ export type ClientMsg =
   | { t: 'gear'; action: 'mend' }
   | { t: 'gear'; action: 'buy'; index: number }
   | { t: 'encounter'; id: number; choice: string }
+  | { t: 'fishing'; action: 'fight'; id: number; holds: [number, number][] }
+  | { t: 'fishing'; action: 'trap' | 'haul' | 'deep' | 'salt' }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -437,6 +440,8 @@ export interface PrivateState {
   /** The letters of the sea found in bottles (docs/12 P2), and the ship's cat. */
   seaLetters: number[];
   shipCat: boolean;
+  /** Fishing (docs/12 P3). */
+  fishing: FishingView;
   cargo: Cargo;
   ammo: AmmoStock;
   ammoSel: AmmoId;
@@ -539,6 +544,8 @@ export interface PortView {
     /** The pay to choose from (docs/11 P6). */ pays?: QuestPayView;
     /** A group contract: the company it is made for. */ group?: number }[];
   captainsHouse: boolean;
+  /** The sea's heaviest catches (docs/12 P3): the tavern's board. */
+  fishRecords?: { fish: FishId; name: string; kg: number }[];
   oathOffer: 'code' | 'marque' | null;
   yard: { woods: WoodId[]; figurehead: FigureheadId | null; plans: boolean; master: boolean };
   shipyard: {
@@ -953,6 +960,8 @@ export type ServerMsg =
   /** Tasks of the sea (docs/11 P6): the pirate nests about the map, with this captain's tally at each. */
   | { t: 'tasks'; list: TaskView[] }
   | { t: 'sights'; list: SightView[] }
+  | { t: 'shoals'; list: ShoalView[] }
+  | { t: 'fishfight'; view: FishFightView | null }
   | { t: 'encounter'; view: EncounterView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
   | { t: 'legends'; view: LegendsView }
@@ -1034,6 +1043,37 @@ export interface RefitView {
   busy: { to: number; left: number; port: string } | null;
   /** Why it cannot be ordered here and now. */
   blocked: string | null;
+}
+
+/** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+export interface ShoalView {
+  id: number;
+  x: number;
+  y: number;
+  r: number;
+  /** How much is left of it, 0..1. */
+  full: number;
+  fish?: FishId;
+}
+
+/** A fish on the line: the client plays the same fight from the kind, weight and seed. */
+export interface FishFightView {
+  id: number;
+  fish: FishId;
+  kg: number;
+  seed: number;
+  craft: number;
+}
+
+/** The fishing part of a captain's papers. */
+export interface FishingView {
+  skill: number;
+  xp: number;
+  next: number;
+  caught: Partial<Record<FishId, { n: number; best: number }>>;
+  traps: { id: number; x: number; y: number; placed: number; island: string }[];
+  /** The tackle in her slot, if any. */
+  method: FishMethod | null;
 }
 
 /** A sign on the horizon (docs/12 P2): something is happening there. */

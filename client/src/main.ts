@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { FishFightPanel } from './ui/fishfight.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
@@ -144,6 +145,7 @@ let whisperPrefill = '';
 // A groupmate's frame on the HUD: their card.
 hud.onPartyTap = (name) => net.send({ t: 'inspect', name });
 hud.onTargetTap = (name) => net.send({ t: 'inspect', name });
+hud.onFishing = (action) => net.send({ t: 'fishing', action });
 companyScreen.onWhisper = (name) => {
   const input = $('chat-input') as HTMLInputElement;
   $('chat').classList.add('open');
@@ -175,6 +177,7 @@ const touch = new TouchControls({
 });
 const onboarding = new OnboardingUi(state);
 const encounterCard = new EncounterCard((m) => net.send(m));
+const fishFight = new FishFightPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
 // Options: applied now and on every change (docs/07 §11).
 function applySettings(o: Settings): void {
@@ -426,6 +429,9 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'encounter':
       encounterCard.open(m.view);
+      break;
+    case 'fishfight':
+      fishFight.open(m.view);
       break;
     case 'encounter_result':
       encounterCard.result(m);
@@ -1506,6 +1512,7 @@ function step(t: number): void {
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
     encounterCard.frame();
+    fishFight.frame();
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
   }
 }

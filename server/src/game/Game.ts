@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { dropDeepLine, endFight, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
 import { chooseEncounter, stepDirector } from './director.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
@@ -700,6 +701,7 @@ export class Game {
 
     for (const s of this.sessions) stepRefit(this, s); // yards finish their work by the wall clock
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
+    stepFishing(this); // shoals, nets, rods, lamps and pots (docs/12 P3)
     stepBoats(this);
     settleCrimes(this);
     stepSocial(this);
@@ -902,7 +904,7 @@ export class Game {
         const spoil = GOODS[g].spoilPerHour;
         const n = ship.cargo[g] ?? 0;
         if (!spoil || n <= 0 || g === 'provisions') continue; // provisions are eaten, not left to rot
-        const cold = Math.max(0, 1 + tval(st, 'spoilage')); // Cold Hold
+        const cold = Math.max(0, 1 + tval(st, 'spoilage')) * ((g === 'fish' || g === 'prime_fish') && ship.cls.passive.id === 'wet_well' ? 1 / 3 : 1); // Cold Hold; a fishing hull's iced well
         const acc = (ship.spoilAcc[g] ?? 0) + ((n * spoil * cold * ((ship.cargo.salt ?? 0) > 0 ? 0.5 : 1)) / ECON_HOUR) * (this.weatherOf(ship) === 'rain' ? 1.3 : 1);
         if (acc >= 1) {
           const lost = Math.floor(acc);
@@ -2487,6 +2489,21 @@ export class Game {
         return;
       case 'encounter':
         return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
+      case 'fishing':
+        switch (msg.action) {
+          case 'fight':
+            return err(endFight(this, s, Number(msg.id), msg.holds));
+          case 'trap':
+            return err(setTrap(this, s));
+          case 'haul':
+            return err(haulTrap(this, s));
+          case 'deep':
+            return err(dropDeepLine(this, s));
+          case 'salt':
+            return err(saltCatch(this, s));
+          default:
+            return err('Unknown order');
+        }
       case 'gear':
         switch (msg.action) {
           case 'equip':

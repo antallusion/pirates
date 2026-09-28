@@ -7,6 +7,8 @@
 //  - The lost fleet: after the Great Storm, the region's water full of drifting hulls and wreckage.
 //  - A festival: a lawful port's two kind hours — prices, a cheerful crew, fireworks after dark.
 
+import { herringShoals, killShoals } from './fishing.ts';
+import { FISH } from '../../../shared/src/data/fishing.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { makeItem } from '../../../shared/src/data/items.ts';
 import { hullsFor, watersBand } from '../../../shared/src/data/shiplevel.ts';
@@ -177,6 +179,34 @@ function festival(game: Game, wall: number): boolean {
     `${p.name} holds its festival: prices are kind, the taverns are loud, and there will be fireworks after dark.`);
 }
 
+/** The herring run (docs/12 P3): a northern sea's coasts boil with herring for an hour, by day. */
+function herringRun(game: Game, wall: number): boolean {
+  const regions = (FISH.herring.regions ?? []).filter((r) => !game.zone || game.zone.regions.has(r));
+  if (!regions.length) return false;
+  const region = game.worldEvents.rng.pick(regions);
+  const [x, y] = REGIONS[region].center;
+  const e = startEvent(game, { kind: 'herring_run', region, x, y, ends: wall + HOUR, title: `The herring run in ${REGIONS[region].name}` },
+    `The herring are running along the coasts of ${REGIONS[region].name}: the water boils with them, and every net comes up full. It lasts an hour.`);
+  if (e) herringShoals(game, region, 8);
+  return !!e;
+}
+
+/** A red tide (docs/12 P3): a warm sea's fish die, and the sharks come for them. */
+function redTide(game: Game, wall: number): boolean {
+  const regions = (Object.keys(REGIONS) as RegionId[]).filter((r) => REGIONS[r].safety !== 'safe' && r !== 'the_abyss' && (!game.zone || game.zone.regions.has(r)));
+  if (!regions.length) return false;
+  const region = game.worldEvents.rng.pick(regions);
+  const [x, y] = REGIONS[region].center;
+  const e = startEvent(game, { kind: 'red_tide', region, x, y, ends: wall + HOUR, title: `Red tide in ${REGIONS[region].name}` },
+    `The sea turns red over ${REGIONS[region].name}: the fish die in their shoals, and the sharks and worse come for the dead. No net will bring anything up there for an hour.`);
+  if (e) killShoals(game, region);
+  return !!e;
+}
+
+export function redTideAt(game: Game, region: RegionId): boolean {
+  return game.worldEvents.active(game).some((e) => e.kind === 'red_tide' && e.region === region);
+}
+
 /** After the Great Storm blows itself out: the lost fleet of that sea. */
 export function lostFleet(game: Game, region: RegionId): void {
   const [x, y] = REGIONS[region].center;
@@ -194,6 +224,8 @@ export function happeningTriggers(game: Game, next: Record<string, number>, wall
   next.star ??= wall + (2 + rng.float() * 4) * HOUR;
   next.eclipse ??= wall + (5 + rng.float() * 8) * HOUR;
   next.festival ??= wall + (1 + rng.float() * 3) * HOUR;
+  next.herring_run ??= wall + (1 + rng.float() * 3) * HOUR;
+  next.red_tide ??= wall + (4 + rng.float() * 8) * HOUR;
   if (wall >= next.silver_convoy && !active(game, 'silver_convoy')) {
     next.silver_convoy = wall + (5 + rng.float() * 2) * HOUR;
     if (silverConvoy(game, wall)) changed = true;
@@ -214,6 +246,15 @@ export function happeningTriggers(game: Game, next: Record<string, number>, wall
   if (wall >= next.festival && !active(game, 'festival')) {
     next.festival = wall + (20 + rng.float() * 8) * HOUR;
     if (festival(game, wall)) changed = true;
+  }
+  // The herring run only by day.
+  if (wall >= next.herring_run && !active(game, 'herring_run') && !isNight(game.now)) {
+    next.herring_run = wall + (8 + rng.float() * 6) * HOUR;
+    if (herringRun(game, wall)) changed = true;
+  }
+  if (wall >= next.red_tide && !active(game, 'red_tide')) {
+    next.red_tide = wall + (14 + rng.float() * 8) * HOUR;
+    if (redTide(game, wall)) changed = true;
   }
   return changed;
 }
@@ -307,6 +348,12 @@ export function happeningFinish(game: Game, e: WorldEvent, fleet: number[]): str
       break;
     case 'festival':
       text = `The festival in ${game.portById(e.port ?? '')?.name ?? 'the port'} is over.`;
+      break;
+    case 'herring_run':
+      text = `The herring have gone from ${REGIONS[e.region].name}.`;
+      break;
+    case 'red_tide':
+      text = `The red tide over ${REGIONS[e.region].name} clears.`;
       break;
   }
   for (const id of fleet) {

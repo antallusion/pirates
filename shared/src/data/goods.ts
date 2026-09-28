@@ -6,7 +6,9 @@ export type GoodId =
   | 'provisions' | 'rum' | 'sugar' | 'tobacco' | 'timber' | 'planks' | 'sailcloth'
   | 'iron' | 'coal' | 'gunpowder' | 'cloth' | 'spices' | 'medicine' | 'weapons'
   | 'whale_oil' | 'salt' | 'pearls' | 'dreamleaf' | 'cursed_relics' | 'abyssal_ore'
-  | 'leviathan_bone' | 'sulfur_iron' | 'drowned_silk' | 'kraken_ink';
+  | 'leviathan_bone' | 'sulfur_iron' | 'drowned_silk' | 'kraken_ink'
+  // The catch (docs/12 P3).
+  | 'fish' | 'prime_fish' | 'salted_fish';
 
 export type GoodCategory = 'staple' | 'luxury' | 'industrial' | 'military' | 'supply' | 'contraband' | 'mystic' | 'rare';
 
@@ -54,6 +56,10 @@ export const GOODS: Record<GoodId, GoodDef> = {
   sulfur_iron: g('sulfur_iron', 'Sulfur Iron', 'rare', 180, 3, 1, 0, 0, false, 'Volcanic iron from the Ashen Isles. Guns cast from it rarely burst.'),
   drowned_silk: g('drowned_silk', 'Drowned Silk', 'rare', 520, 0.3, 0.5, 0, 0, false, 'Sailcloth woven in the Drowned Crown. It mends itself. The crew does not like the sound it makes.'),
   kraken_ink: g('kraken_ink', 'Kraken Ink', 'rare', 380, 0.5, 0.3, 0, 0, false, 'Ink of the deep. A hull painted with it is hard to see.'),
+  // The catch (docs/12 P3): fresh fish rots fast at sea; salted it keeps.
+  fish: g('fish', 'Fresh Fish', 'supply', 7, 1, 1, 0.3, 0, false, 'Herring, cod and mackerel on ice or on nothing. Sell it quickly or salt it.'),
+  prime_fish: g('prime_fish', 'Prime Fish', 'luxury', 32, 1, 1, 0.3, 0, false, 'Tuna, swordfish, lobster and squid for the captains’ tables. It will not wait.'),
+  salted_fish: g('salted_fish', 'Salted Fish', 'staple', 16, 1, 1, 0, 0, false, 'Fish packed in salt in a barrel. Keeps a year; cold ports pay well for it.'),
 };
 
 export const GOOD_IDS = Object.keys(GOODS) as GoodId[];

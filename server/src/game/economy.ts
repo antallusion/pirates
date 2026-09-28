@@ -26,7 +26,7 @@ export interface Market {
   goods: Partial<Record<GoodId, GoodMarket>>;
 }
 
-const ALWAYS_TRADED: GoodId[] = ['provisions', 'rum', 'planks', 'sailcloth', 'salt'];
+const ALWAYS_TRADED: GoodId[] = ['provisions', 'rum', 'planks', 'sailcloth', 'salt', 'fish', 'prime_fish', 'salted_fish'];
 
 export function createMarket(port: Port): Market {
   const goods: Partial<Record<GoodId, GoodMarket>> = {};

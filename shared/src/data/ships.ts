@@ -6,7 +6,7 @@ import type { Flag, StatMods } from './stats.ts';
 
 export type ShipClassId =
   | 'sloop' | 'cutter' | 'schooner' | 'brigantine' | 'fluyt' | 'brig' | 'frigate' | 'galleon' | 'man_o_war' | 'ghost_ship'
-  | 'xebec' | 'bomb_ketch' | 'fireship'
+  | 'xebec' | 'bomb_ketch' | 'fireship' | 'fishing_ketch'
   // World bosses and their parts (docs/02 §11.A.4): never sold, never sailed by a captain.
   | 'leviathan' | 'kraken' | 'kraken_tentacle' | 'drowned_whale' | 'whale_heart' | 'lantern_maw' | 'black_serpent'
   | 'mother_of_wrecks' | 'wreck_core' | 'storm_widow'
@@ -134,6 +134,13 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 55, holdWeight: 60, crewMin: 20, crewMax: 80, gunPortsPerSide: 5, bowChasers: 2, sternChasers: 1,
     sailHp: 120, repairRate: 1.1, detection: 1500, price: 9500, purchasable: true, sprite: 'ship.xebec', factions: ['brokers', 'confederacy', 'free'],
     passive: { id: 'sweeps', name: 'Sweeps', description: '+25% speed in winds under half strength; oars give at least 3 m/s on any heading, even head to wind.' },
+  }),
+  fishing_ketch: ship({
+    id: 'fishing_ketch', name: 'Fishing Ketch', tier: 2, rig: 'fore_aft', role: 'A fishing hull: a big wet well and ice in the hold.',
+    length: 24, beam: 8, hull: 1400, armor: 0.05, maxSpeed: 14.5, accel: 2.0, turnRate: 20, draft: 2.4,
+    holdVolume: 110, holdWeight: 120, crewMin: 10, crewMax: 36, gunPortsPerSide: 3, bowChasers: 0, sternChasers: 1,
+    sailHp: 120, repairRate: 1.1, detection: 1450, price: 5600, purchasable: true, sprite: 'ship.fishing_ketch',
+    passive: { id: 'wet_well', name: 'Iced Well', description: 'Nets take twice the catch; fish in the hold spoils three times slower.' },
   }),
   bomb_ketch: ship({
     id: 'bomb_ketch', name: 'Bomb Ketch', tier: 3, rig: 'mixed', role: 'Rare. A floating mortar battery for sieges and ambushes.',

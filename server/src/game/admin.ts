@@ -11,6 +11,9 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { FISH } from '../../../shared/src/data/fishing.ts';
+import type { FishId } from '../../../shared/src/data/fishing.ts';
+import { startFight } from './fishing.ts';
 import { ENCOUNTERS } from '../../../shared/src/data/encounters.ts';
 import type { EncounterId } from '../../../shared/src/data/encounters.ts';
 import { startEncounter } from './director.ts';
@@ -157,10 +160,30 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       game.pushSelf(s, true);
       return `She is a ${SHIP_CLASSES[cls].name} now, level ${ship.shipLevel} (crew ${ship.crew}).`;
     }
+    case 'bite': {
+      // A fish on the line at once (docs/12 P3): /bite [kind].
+      const fish = (args[0] ?? 'tuna') as FishId;
+      if (!FISH[fish]) return `Fish: ${Object.keys(FISH).join(', ')}`;
+      startFight(game, s, fish, 'rod', 10);
+      return `${fish} on the line.`;
+    }
+    case 'clear':
+      // An empty hold for play-testing: /clear.
+      for (const k of Object.keys(ship.cargo)) delete ship.cargo[k as keyof typeof ship.cargo];
+      game.pushSelf(s, true);
+      return 'The hold is swept clean.';
+    case 'fish': {
+      // Fishing for play-testing (docs/12 P3): /fish <craft 1-100>.
+      const p = s.profile!;
+      p.fishing!.skill = Math.max(1, Math.min(100, num(0, 60)));
+      game.pushSelf(s, true);
+      return `Fishing craft ${p.fishing!.skill}.`;
+    }
     case 'happen': {
-      // One of the sea's shorter events now (docs/12 P2): /happen silver_convoy|brethren|star|eclipse|festival.
+      // One of the sea's shorter events now (docs/12 P2): /happen silver_convoy|brethren|star|eclipse|festival|herring_run|red_tide.
       const kind = args[0] ?? '';
-      if (!['silver_convoy', 'brethren', 'star', 'eclipse', 'festival'].includes(kind)) return 'Kinds: silver_convoy, brethren, star, eclipse, festival';
+      const kinds = ['silver_convoy', 'brethren', 'star', 'eclipse', 'festival', 'herring_run', 'red_tide'];
+      if (!kinds.includes(kind)) return `Kinds: ${kinds.join(', ')}`;
       game.worldEvents.data(game).next[kind] = 0;
       return `${kind}: due within ten seconds${kind === 'star' ? ' (by night)' : ''}.`;
     }

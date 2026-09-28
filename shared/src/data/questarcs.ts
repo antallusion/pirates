@@ -350,6 +350,10 @@ function arcStep(k: StepKind, p: ArcParams, text: string): QuestStep {
       return { type: 'sell_contraband', qty: p.n, port: p.port2!.id, text };
     case 'customs':
       return { type: 'customs', text };
+    case 'catch_any':
+      return { type: 'catch', count: p.n, text };
+    case 'catch_big':
+      return { type: 'catch', count: 1, minKg: p.n, text };
   }
 }
 

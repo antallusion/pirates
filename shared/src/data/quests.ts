@@ -24,7 +24,9 @@ export type QuestStep =
   | { type: 'time_in'; region: RegionId; seconds: number; weather?: 'black_storm'; text: string }
   | { type: 'fleet_win'; count: number; text: string }
   | { type: 'die_in'; region: RegionId; text: string }
-  | { type: 'dive'; count: number; text: string };
+  | { type: 'dive'; count: number; text: string }
+  /** Fish taken (docs/12 P3): any catch counted, or one fish on the line of at least `minKg`. */
+  | { type: 'catch'; count: number; minKg?: number; text: string };
 
 export interface QuestDef {
   id: string;
