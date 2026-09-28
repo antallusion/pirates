@@ -394,6 +394,7 @@
     "icon.mod_choir_bell":               { "local": "icons/mod_choir_bell.webp", "remote": "hf_20260926_193200_bc88cce3-3cce-4e32-a25a-8d252088d71c.png", "job": "bc88cce3-3cce-4e32-a25a-8d252088d71c" },
     "icon.mod_crew_quarters":            { "local": "icons/mod_crew_quarters.webp", "remote": "hf_20260926_193200_650d664c-924e-4eea-8c51-2f222ae01895.png", "job": "650d664c-924e-4eea-8c51-2f222ae01895" },
     "icon.mod_crown_old_pattern":        { "local": "icons/mod_crown_old_pattern.webp", "remote": "hf_20260926_193201_dbce04c9-3d56-4a59-a9f4-881e985ce489.png", "job": "dbce04c9-3d56-4a59-a9f4-881e985ce489" },
+    "icon.mod_false_bulwark":            { "local": "icons/mod_false_bulwark.png", "remote": "hf_20260928_232642_f6776c34-8580-487b-8a64-19821aad5c30.png", "job": "f6776c34-8580-487b-8a64-19821aad5c30", "fit": "keyed:192:#ff00ff", "rev": 20260928232642},
     "icon.mod_figurehead_kraken":        { "local": "icons/mod_figurehead_kraken.webp", "remote": "hf_20260926_193227_d0491b8f-d412-48a2-87ee-794f658a4bd3.png", "job": "d0491b8f-d412-48a2-87ee-794f658a4bd3" },
     "icon.mod_galleass_sweeps":          { "local": "icons/mod_galleass_sweeps.webp", "remote": "hf_20260926_193201_bc50c97e-86d7-4243-a8fe-5d94d678d689.png", "job": "bc50c97e-86d7-4243-a8fe-5d94d678d689" },
     "icon.mod_ghost_timbers":            { "local": "icons/mod_ghost_timbers.webp", "remote": "hf_20260926_193200_51b081c8-1561-4bcc-8c97-a957c4a1a770.png", "job": "51b081c8-1561-4bcc-8c97-a957c4a1a770" },
