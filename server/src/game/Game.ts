@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { catAboard, petAction, petsOnDock, stepPets } from './pets.ts';
 import { companionAction, stepCompanions } from './companion.ts';
 import { nemesisSankYou } from './nemesis.ts';
 import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
@@ -719,6 +720,7 @@ export class Game {
     if (Math.floor(this.now) % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
+    stepPets(this); // the parrots' watch (docs/12 P10 #3)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -923,7 +925,7 @@ export class Game {
         const spoil = GOODS[g].spoilPerHour;
         const n = ship.cargo[g] ?? 0;
         if (!spoil || n <= 0 || g === 'provisions') continue; // provisions are eaten, not left to rot
-        const cold = Math.max(0, 1 + tval(st, 'spoilage')) * ((g === 'fish' || g === 'prime_fish') && ship.cls.passive.id === 'wet_well' ? 1 / 3 : 1); // Cold Hold; a fishing hull's iced well
+        const cold = (catAboard(this.profileOf(ship)) ? 0.5 : 1) * Math.max(0, 1 + tval(st, 'spoilage')) * ((g === 'fish' || g === 'prime_fish') && ship.cls.passive.id === 'wet_well' ? 1 / 3 : 1); // Cold Hold; a fishing hull's iced well
         const acc = (ship.spoilAcc[g] ?? 0) + ((n * spoil * cold * ((ship.cargo.salt ?? 0) > 0 ? 0.5 : 1)) / ECON_HOUR) * (this.weatherOf(ship) === 'rain' ? 1.3 : 1);
         if (acc >= 1) {
           const lost = Math.floor(acc);
@@ -2521,6 +2523,9 @@ export class Game {
       case 'choice':
         err(takeChoice(this, s, Math.trunc(Number(msg.index))));
         return this.pushSelf(s, true);
+      case 'pet':
+        err(petAction(this, s, String(msg.action), msg.pet === null || msg.pet === undefined ? null : String(msg.pet)));
+        return this.pushPort(s);
       case 'companion':
         return err(companionAction(this, s, String(msg.action), msg.arg === null || msg.arg === undefined ? null : String(msg.arg)));
       case 'caravan': {
@@ -3303,6 +3308,7 @@ export class Game {
       this.grantXp(s, 60 + port.size * 40, `First visit to ${port.name}`);
     }
     questEvent(this, s, { k: 'dock', port });
+    petsOnDock(this, s, port); // the monkey works the quay (docs/12 P10 #3)
     this.pushPort(s);
     this.pushSelf(s, true);
     this.saveSession(s);

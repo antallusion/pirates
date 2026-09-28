@@ -2,6 +2,7 @@
 // tells her where (by the compass), strikes an enemy's rudder in a fight, grows with time at sea and in battle, and
 // wears a harness made at a forge. Everyone near sees it swim beside her ship.
 
+import { sendPetsOwn } from './pets.ts';
 import { BEASTS } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { CALF_MAX_LEVEL, CALF_NAME, HARNESSES, HARNESS_IDS, calfFindEvery, calfFindRange, calfStrike, calfXpNext, compassPoint } from '../../../shared/src/data/companions.ts';
@@ -75,6 +76,7 @@ export function stepCompanions(game: Game): void {
     if (p && !greeted.has(s)) {
       greeted.add(s);
       if (p.companion) sendCompanion(game, s);
+      if (p.pets?.owned.length || p.shipCat) sendPetsOwn(game, s);
     }
     const c = p?.companion;
     if (!c || !ship || !ship.alive || ship.docked) continue;

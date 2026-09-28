@@ -11,6 +11,9 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { givePet, petAction } from './pets.ts';
+import { PETS, PET_IDS } from '../../../shared/src/data/companions.ts';
+import type { PetId } from '../../../shared/src/data/companions.ts';
 import { giveCalf, sendCompanion } from './companion.ts';
 import { sanitizeNemeses } from './nemesis.ts';
 import { NEMESIS_CAUSES } from '../../../shared/src/data/nemesis.ts';
@@ -261,6 +264,14 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       p.companion!.level = Math.max(1, Math.min(10, num(0, 1)));
       sendCompanion(game, s);
       return `${p.companion!.name} grows: level ${p.companion!.level}.`;
+    }
+    case 'pet': {
+      // A ship's pet (docs/12 P10 #3 play-testing): /pet cat|parrot|monkey|dog.
+      const pet = (args[0] ?? '') as PetId;
+      if (!PET_IDS.includes(pet)) return `Pets: ${PET_IDS.join(', ')}`;
+      givePet(game, s, pet);
+      petAction(game, s, 'deck', pet);
+      return `${PETS[pet].name[0]} is on deck now.`;
     }
     case 'choice': {
       // A chain's reward (docs/12 P9): /choice offers three pieces.

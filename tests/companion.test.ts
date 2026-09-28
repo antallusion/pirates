@@ -153,7 +153,7 @@ test('the sea sees it: ships near get the calf beside her ship', () => {
 
 test('the companion reads in Russian', () => {
   setLang('ru');
-  assert.equal(serverText('Snowdrop dives and comes up to the north-east: whales.').replace(/ /g, ' '), 'Белянка ныряет и выныривает на северо-востоке: там киты.');
+  assert.equal(serverText('Snowdrop dives and comes up to the north-east: whales.').replace(/\u00a0/g, ' '), 'Белянка ныряет и выныривает на северо-востоке: там киты.');
   for (const [en, ru] of companionPatterns()) {
     const holes = (x: string) => (x.match(/\{\d\}/g) ?? []).sort().join();
     assert.equal(holes(en), holes(ru), en);

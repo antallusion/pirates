@@ -2039,3 +2039,4 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .cmp-card .cmp-h-t b { font-size: 13px; }
 .cmp-card .cmp-cost { font-size: 11px; color: var(--fog, #9aa); }
 .cmp-card .cmp-forge { font-size: 11px; margin: 6px 0 0; }
+.cmp-card .pet-ico { width: 40px; height: 40px; flex: none; border-radius: 5px; object-fit: cover; border: 1px solid rgba(232,196,106,0.3); }

@@ -3,6 +3,7 @@
 // captains play; at the season's end the top three of each hall enter the Pantheon forever, with a title and the
 // right to name an island. Bards in the taverns sing of the season's legends.
 
+import { shantyText } from '../../../shared/src/data/shanty.ts';
 import { HALLS, SEASON_DAYS, SEASON_EPOCH, SEASON_XP_SHARE, STAT_NAMES, THEMES, THEME_ORDER, TRACK_LEVELS, TRACK_XP, trackReward } from '../../../shared/src/data/seasons.ts';
 import type { HallId, SeasonStat, SeasonTheme } from '../../../shared/src/data/seasons.ts';
 import type { SeasonView } from '../../../shared/src/protocol.ts';
@@ -252,13 +253,7 @@ export function shanty(game: Game): string | null {
   const hist = (game.db.getKv<SeasonHistory[]>('season_history') ?? []).at(-1);
   const t = hist?.tables ?? {};
   const pick = (stat: SeasonStat) => t[stat]?.[0]?.name;
-  const lines: string[] = [];
-  if (pick('sunk')) lines.push(`Oh, ${pick('sunk')} sent them down, a-hundred ships and more`);
-  if (pick('monsters')) lines.push(`and ${pick('monsters')} took the beast that none had took before`);
-  if (pick('trade')) lines.push(`while ${pick('trade')} bought the harbour and sold it back for gold`);
-  if (pick('abyss')) lines.push(`and ${pick('abyss')} sailed the Abyss where the stars are wrong and cold`);
-  if (!lines.length) return null;
-  return `♪ ${lines.join(', ')} — heave away, me lads, heave away! ♪`;
+  return shantyText({ sunk: pick('sunk'), monsters: pick('monsters'), trade: pick('trade'), abyss: pick('abyss') });
 }
 
 export function seasonView(game: Game, s: PlayerSession): SeasonView {

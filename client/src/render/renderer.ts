@@ -385,6 +385,7 @@ export class Renderer {
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, false); // no pulsing zones when motion is reduced
     this.drawCompanions(state, ships);
     for (const s of ships) this.drawShip(s, state);
+    this.drawDeckPets(state, ships);
     this.drawTethers(state, ships);
     this.drawBalls();
     this.drawParticles(false);
@@ -2346,6 +2347,69 @@ export class Renderer {
       g.rotate(Math.sin(t * 0.9 + s.id * 1.7) * 0.12);
       g.globalAlpha = 0.35 + 0.65 * dive;
       drawBeast(g, 'white_orca', clen, clen * 0.3, t, s.id);
+      g.restore();
+    }
+  }
+
+  /** The pets on deck (docs/12 P10 #3): a cat on the stern, a parrot on a yard, a monkey in the shrouds, a dog aft. */
+  private drawDeckPets(state: ClientState, ships: DrawShip[]): void {
+    const g = this.g;
+    for (const s of ships) {
+      const pet = state.pets.get(s.id)?.deck;
+      if (!pet || s.sinkT > 0 || (s.flags & SF.HIDDEN)) continue;
+      const cls = SHIP_CLASSES[s.classId];
+      const x = this.sx(s.x), y = this.sy(s.y);
+      if (x < -100 || y < -100 || x > this.w + 100 || y > this.h + 100) continue;
+      const u = Math.max(1.6, this.zoom * 1.1); // a pet's size on screen (drawn larger than life to be seen)
+      const t = settings().reduceMotion ? 0 : this.time;
+      const L = cls.length * this.zoom, B = cls.beam * this.zoom;
+      g.save();
+      g.translate(x, y);
+      g.rotate(s.h);
+      switch (pet) {
+        case 'cat': {
+          g.translate(0, L * 0.34);
+          g.fillStyle = '#141414';
+          g.beginPath(); g.ellipse(0, 0, u * 1.1, u * 1.6, 0, 0, Math.PI * 2); g.fill();
+          g.beginPath(); g.arc(0, -u * 1.7, u * 0.8, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = '#141414'; g.lineWidth = u * 0.45; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(0, u * 1.4); g.quadraticCurveTo(u * 1.6 * Math.sin(t * 2), u * 2.4, u * 1.2, u * 2.8); g.stroke();
+          g.fillStyle = '#e8c46a';
+          g.fillRect(-u * 0.4, -u * 1.9, u * 0.22, u * 0.22); g.fillRect(u * 0.18, -u * 1.9, u * 0.22, u * 0.22);
+          break;
+        }
+        case 'parrot': {
+          g.translate(B * 0.32 + Math.sin(t * 3) * u * 0.2, -L * 0.1);
+          g.fillStyle = '#b3261e';
+          g.beginPath(); g.ellipse(0, 0, u * 0.8, u * 1.3, 0, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#2f7d4f';
+          g.beginPath(); g.ellipse(u * 0.5, u * 0.2, u * 0.45, u * 1.0, 0.3, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#e8c46a';
+          g.beginPath(); g.arc(0, -u * 1.3, u * 0.35, 0, Math.PI * 2); g.fill();
+          break;
+        }
+        case 'monkey': {
+          g.translate(-B * 0.3, -L * 0.18 + Math.sin(t * 1.5) * u);
+          g.fillStyle = '#6b4a2b';
+          g.beginPath(); g.ellipse(0, 0, u, u * 1.2, 0, 0, Math.PI * 2); g.fill();
+          g.beginPath(); g.arc(0, -u * 1.3, u * 0.75, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#9b2a1a';
+          g.fillRect(-u * 0.5, -u * 2.1, u, u * 0.45);
+          g.strokeStyle = '#6b4a2b'; g.lineWidth = u * 0.35; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(0, u); g.quadraticCurveTo(-u * 2, u * 2, -u * 1.4 + Math.sin(t * 2) * u * 0.5, u * 2.8); g.stroke();
+          break;
+        }
+        case 'dog': {
+          g.translate(-B * 0.12, L * 0.27);
+          g.fillStyle = '#8a8272';
+          g.beginPath(); g.ellipse(0, 0, u * 1.1, u * 2.0, 0, 0, Math.PI * 2); g.fill();
+          g.beginPath(); g.ellipse(0, -u * 2.2, u * 0.8, u * 0.95, 0, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#4a4438';
+          g.beginPath(); g.ellipse(-u * 0.7, -u * 2.3, u * 0.3, u * 0.55, -0.4, 0, Math.PI * 2); g.fill();
+          g.beginPath(); g.ellipse(u * 0.7, -u * 2.3, u * 0.3, u * 0.55, 0.4, 0, Math.PI * 2); g.fill();
+          break;
+        }
+      }
       g.restore();
     }
   }

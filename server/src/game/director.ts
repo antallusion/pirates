@@ -6,6 +6,7 @@
 //
 // Sailing faster brings things sooner; a harbour's waters and a fight keep the director still.
 
+import { catAboard, givePet, sanitizePets } from './pets.ts';
 import { tattooCount } from './tattoos.ts';
 import { questEvent } from './quests.ts';
 import { eclipseOn, lostFleetIn, redTideAt } from './happenings.ts';
@@ -539,8 +540,8 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
     case 'derelict': {
       if (choice === 'leave') return O('left');
       const r = rng.float();
-      if (r < 0.1 && !p.shipCat) {
-        p.shipCat = true;
+      if (r < 0.1 && !sanitizePets(p).owned.includes('cat')) {
+        givePet(game, s, 'cat');
         ship.morale = Math.min(100, ship.morale + 5);
         return O('cat');
       }
@@ -747,7 +748,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       ship.morale = Math.min(100, ship.morale + 15);
       return O('marooned', { n: loseHands(s, 3) });
     case 'rats':
-      if (p.shipCat || ship.hasFlag('tattoo_cat')) return O('cat');
+      if (catAboard(p) || ship.hasFlag('tattoo_cat')) return O('cat');
       return O('eaten', { n: provisions(ship, -Math.ceil((ship.cargo.provisions ?? 0) * 0.2)) });
     case 'galley_fire':
       if (choice === 'flood') return O('flooded', { n: provisions(ship, -Math.ceil((ship.cargo.provisions ?? 0) * 0.25)) });

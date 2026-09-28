@@ -74,3 +74,64 @@ export function companionPatterns(): [string, string][] {
   );
   return out;
 }
+
+// ------------------------------------------------------------------------------------------------ ship's pets (#3)
+
+export const PET_IDS: PetId[] = ['cat', 'parrot', 'monkey', 'dog'];
+
+export interface PetDef {
+  name: Tr;
+  gives: Tr;
+  /** A pet seller's price in a tavern. */
+  price: number;
+}
+
+export const PETS: Record<PetId, PetDef> = {
+  cat: { name: ['Ship’s Cat', 'Корабельный кот'], gives: ['Catches rats: stores spoil half as fast, and no rats come aboard', 'Ловит крыс: товары портятся вдвое медленнее, крысы не заводятся'], price: 400 },
+  parrot: { name: ['Parrot', 'Попугай'], gives: ['Screams when a hostile sail turns towards you, and curses your enemies', 'Кричит, когда к вам поворачивает враждебный парус, и бранит врагов'], price: 1200 },
+  monkey: { name: ['Monkey', 'Обезьянка'], gives: ['Comes back from the quay with other people’s small change', 'Приносит с причала чужую мелочь'], price: 900 },
+  dog: { name: ['Sea Dog', 'Морской пёс'], gives: ['Sniffs out buried things when a party goes ashore', 'Чует зарытое, когда десант сходит на берег'], price: 800 },
+};
+
+/** The pets a port's pet seller has today (two of four, by the port and the day). */
+export function petsForSale(portId: string, day: number): PetId[] {
+  let h = day * 7919;
+  for (const ch of portId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const a = h % 4, b = (a + 1 + ((h >>> 8) % 3)) % 4;
+  return [PET_IDS[a], PET_IDS[b]];
+}
+
+const PARROT_CURSES: Tr[] = [
+  ['“Bilge rats! Bilge rats!”', '«Трюмные крысы! Трюмные крысы!»'],
+  ['“Pieces of eight! Pieces of eight!”', '«Пиастры! Пиастры!»'],
+  ['“Cowards! Cowards!”', '«Трусы! Трусы!»'],
+  ['“Feed ’em to the fish!”', '«На корм рыбам!»'],
+];
+export function parrotCurse(i: number): Tr {
+  return PARROT_CURSES[i % PARROT_CURSES.length];
+}
+
+export function petPatterns(): [string, string][] {
+  const out: [string, string][] = [];
+  for (const p of Object.values(PETS)) out.push(p.name, p.gives);
+  for (const [en, ru] of [['north', 'севере'], ['north-east', 'северо-востоке'], ['east', 'востоке'], ['south-east', 'юго-востоке'], ['south', 'юге'], ['south-west', 'юго-западе'], ['west', 'западе'], ['north-west', 'северо-западе']]) {
+    out.push([`The parrot screams: “Sail to the ${en}! Sail to the ${en}!”`, `Попугай вопит: «Парус на ${ru}! Парус на ${ru}!»`]);
+  }
+  for (const c of PARROT_CURSES) out.push([`The parrot screeches at the enemy: ${c[0]}`, `Попугай орёт на врага: ${c[1]}`]);
+  out.push(
+    ['A new pet aboard: {0}.', 'Новый питомец на борту: {0}.'],
+    ['{0} is on deck now.', 'Теперь на палубе: {0}.'],
+    ['Your monkey comes back from the quay with a stolen purse: {0} silver.', 'Обезьянка возвращается с причала с чужим кошельком: {0} серебра.'],
+    ['Your monkey is caught at it: the harbour watch fines you {0} silver.', 'Обезьянку поймали за руку: портовая стража штрафует вас на {0} серебра.'],
+    ['Your dog digs by a rock and barks: {0} silver in an old tin.', 'Пёс роет у камня и лает: в старой жестянке {0} серебра.'],
+    ['Your dog sniffs out a buried scrap of chart.', 'Пёс вынюхивает зарытый обрывок карты.'],
+    ['A hamlet’s dog follows your party back aboard.', 'Пёс из посёлка увязывается за десантом на борт.'],
+    ['A monkey drops out of the trees onto your boat and will not leave.', 'Обезьянка прыгает с деревьев в вашу шлюпку и не хочет уходить.'],
+    ['You have that pet already.', 'Такой питомец у вас уже есть.'],
+    ['No pet seller here has that one.', 'У здешнего торговца такого нет.'],
+    ['That pet is not yours.', 'Это не ваш питомец.'],
+    ['Pet seller', 'Торговец животными'],
+    ['Dug up by your dog', 'Выкопал ваш пёс'],
+  );
+  return out;
+}

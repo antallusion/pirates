@@ -457,6 +457,7 @@ function onMessage(m: ServerMsg): void {
       if (modal === 'tattoos') refreshModal();
       break;
     case 'companion':
+    case 'petsown':
       if (modal === 'ship') refreshModal();
       break;
     case 'choice':

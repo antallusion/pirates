@@ -131,6 +131,8 @@ export type ClientMsg =
   | { t: 'choice'; index: number }
   /** The orca calf (docs/12 P10 #2): name it, have a harness made, put one on. */
   | { t: 'companion'; action: 'name' | 'craft' | 'wear'; arg: string | null }
+  /** The ship's pets (docs/12 P10 #3): put one on deck, buy one from a tavern's pet seller. */
+  | { t: 'pet'; action: 'deck' | 'buy'; pet: PetId | null }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -557,6 +559,8 @@ export interface CompanyView {
 export interface TavernView {
   /** The bard sings of the season's legends. */
   shanty: string | null;
+  /** The pet seller's two today (docs/12 P10 #3). */
+  pets?: { pet: PetId; price: number }[];
   stars: number;
   stock: Partial<Record<Profession, number>>;
   costs: Record<Profession, number>;
@@ -1011,6 +1015,7 @@ export type ServerMsg =
   | { t: 'tattoos'; view: TattooView }
   | { t: 'companion'; view: CompanionView | null }
   | { t: 'pets'; list: PetView[] }
+  | { t: 'petsown'; view: PetsOwnView }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1278,6 +1283,12 @@ export interface PetView {
   ship: number;
   orca?: number;
   deck?: PetId;
+}
+
+/** The pets a captain has, and the one on deck (docs/12 P10 #3). */
+export interface PetsOwnView {
+  owned: PetId[];
+  deck: PetId | null;
 }
 
 /** A nemesis as his captain knows him. */

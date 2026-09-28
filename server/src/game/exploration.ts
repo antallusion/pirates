@@ -2,6 +2,7 @@
 // grove, mine, pearl bank, shrine). It takes time, leaves the ship anchored and exposed, and can cost lives.
 // Features restock after a while, so islands stay worth revisiting. Rumours in taverns point to them.
 
+import { petsOnLand } from './pets.ts';
 import { lairIsland, lairLanding } from './wanted.ts';
 import { raiseHull, salvageTarget } from './bridgefx.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -362,6 +363,7 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   const what = got.length ? got.join(', ') : 'nothing but sand and bones';
   game.toastShip(ship, `The party returns from the ${FEATURE_NAMES[feature]} on ${island.name}: ${what}.${lost ? ` ${lost} lost ashore.` : ''}`, got.length ? 'gold' : 'info');
   questEvent(game, s, { k: 'land', island: island.id, feature });
+  petsOnLand(game, s, island, feature); // the dog digs; a pet may come back with the party (docs/12 P10 #3)
   // The hamlet's or the camp's people have a job of their own.
   if (feature === 'fishers' || feature === 'smugglers') islandJobOffer(game, s, island.id);
   // Treasure maps turn up in caches, wrecks and ruins.

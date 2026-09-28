@@ -1,6 +1,7 @@
 // Path and Legend quests (docs/00 D1, docs/02 §7): mentors in their ports, step objectives driven by what the
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
+import { givePet } from './pets.ts';
 import { giveCalf } from './companion.ts';
 import { earnTattoo, offerChoice } from './tattoos.ts';
 import { SIDE_QUESTS } from '../../../shared/src/data/sidequests.ts';
@@ -621,7 +622,8 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   }
   // Side quests (docs/12 P9): a tattoo for the chain's last, and a choice of three pieces of gear.
   if (q.reward.tattoo) earnTattoo(game, s, q.reward.tattoo);
-  if (q.id === 'side_ingrid_3') giveCalf(game, s, 'ingrid'); // Ingrid entrusts a White Orca calf (docs/12 P10 #2)
+  if (q.id === 'side_ingrid_3') giveCalf(game, s, 'ingrid');
+  if (q.id === 'side_cat_1') givePet(game, s, 'cat'); // Mother Grisel's kitten (docs/12 P10 #3) // Ingrid entrusts a White Orca calf (docs/12 P10 #2)
   if (q.reward.choice) offerChoice(game, s, q);
   game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(fast ? { fast: true } : {}), ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}), ...(stores ? { stores } : {}), ...(mentors.length ? { mentor: mentors[0].name } : {}) });
   // The mentors are paid for the guidance, and counted in the season's table of mentors.

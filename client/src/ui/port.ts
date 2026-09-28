@@ -1,5 +1,7 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { PETS } from '../../../shared/src/data/companions.ts';
+import { petIcon } from './companion.ts';
 import { nemesisPoster } from './nemesis.ts';
 import type { TipView } from '../../../shared/src/protocol.ts';
 import { namedPirates } from '../../../shared/src/data/pirates.ts';
@@ -130,6 +132,8 @@ export class PortScreen {
         return this.send({ t: 'trade', good: d.good as never, qty: this.qty });
       case 'sell':
         return this.send({ t: 'trade', good: d.good as never, qty: -Math.min(this.qty, Math.floor(state.self?.cargo[d.good as never] ?? 0)) || -1 });
+      case 'pet_buy':
+        return this.send({ t: 'pet', action: 'buy', pet: d.pet as never });
       case 'sellall':
         return this.send({ t: 'trade', good: d.good as never, qty: -Math.floor(state.self?.cargo[d.good as never] ?? 0) });
       case 'ammo':
@@ -449,7 +453,10 @@ ${orders}${berths}</div>` : ''}`;
     // Old Needle's chair (docs/12 P9): tattoos are changed in port, inked in the havens of the Brethren.
     const tt = state.tattoos;
     const needle = `<div class="card tt-chair"><h4 class="card-h">${icon('tattoo_needle', '✒', 'ico-md')}${esc(L('tattoo.chair'))}</h4><p class="muted">${esc(L(port.faction === 'confederacy' ? 'tattoo.here' : 'tattoo.elsewhere'))}</p><button class="btn btn-small" data-tattoos>${esc(L('tattoo.open'))}${tt?.pending.length ? ` <span class="h-count">${tt.pending.length}</span>` : ''}</button></div>`;
-    return `${board}${recs}${needle}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
+    // The pet seller (docs/12 P10 #3): two of four, new each day.
+    const owned = state.petsOwn?.owned ?? [];
+    const seller = tv.pets?.length ? `<div class="card cmp-card"><h4 class="card-h">${petIcon(tv.pets[0].pet, 'ico-md')}${esc(L('pet.seller'))}</h4>${tv.pets.map((x) => `<div class="cmp-h">${petIcon(x.pet, 'pet-ico')}<div class="cmp-h-t"><b>${esc(PETS[x.pet].name[lang() === 'ru' ? 1 : 0])}</b><span class="muted">${esc(PETS[x.pet].gives[lang() === 'ru' ? 1 : 0])}</span></div><button class="btn btn-small" data-act="pet_buy" data-pet="${x.pet}" ${owned.includes(x.pet) || self.gold < x.price ? 'disabled' : ''}>${owned.includes(x.pet) ? esc(L('pet.have')) : money(x.price)}</button></div>`).join('')}</div>` : '';
+    return `${board}${recs}${needle}${seller}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
         <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}
         <button class="btn btn-small btn-danger hire-wide" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>
