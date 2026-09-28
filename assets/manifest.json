@@ -660,6 +660,10 @@
     "card.enc_raft":                     { "local": "cards/enc_raft.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.0", "rev": 20260928172012},
     "card.enc_sinking_merchant":         { "local": "cards/enc_sinking_merchant.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.1", "rev": 20260928172012},
     "card.enc_pilgrims":                 { "local": "cards/enc_pilgrims.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.2", "rev": 20260928172012},
-    "card.enc_smuggler":                 { "local": "cards/enc_smuggler.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.3", "rev": 20260928172012}
+    "card.enc_smuggler":                 { "local": "cards/enc_smuggler.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.3", "rev": 20260928172012},
+    "card.enc_derelict":                 { "local": "cards/enc_derelict.webp", "remote": "hf_20260928_173352_9575c35c-2732-457b-a97d-628042ba7f1e.png", "job": "9575c35c-2732-457b-a97d-628042ba7f1e", "fit": "sheet:cards_2.0", "rev": 20260928173352},
+    "card.enc_burning_ship":             { "local": "cards/enc_burning_ship.webp", "remote": "hf_20260928_173352_9575c35c-2732-457b-a97d-628042ba7f1e.png", "job": "9575c35c-2732-457b-a97d-628042ba7f1e", "fit": "sheet:cards_2.1", "rev": 20260928173352},
+    "card.enc_skeleton_raft":            { "local": "cards/enc_skeleton_raft.webp", "remote": "hf_20260928_173352_9575c35c-2732-457b-a97d-628042ba7f1e.png", "job": "9575c35c-2732-457b-a97d-628042ba7f1e", "fit": "sheet:cards_2.2", "rev": 20260928173352},
+    "card.enc_sunken_bell":              { "local": "cards/enc_sunken_bell.webp", "remote": "hf_20260928_173352_9575c35c-2732-457b-a97d-628042ba7f1e.png", "job": "9575c35c-2732-457b-a97d-628042ba7f1e", "fit": "sheet:cards_2.3", "rev": 20260928173352}
   }
 }
