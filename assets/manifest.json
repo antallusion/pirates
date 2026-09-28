@@ -479,6 +479,22 @@
     "flag.f60":                          { "local": "flags/f60.webp", "remote": "hf_20260928_135640_0e5df992-5130-4477-95b5-d1781bcf7472.png", "job": "0e5df992-5130-4477-95b5-d1781bcf7472", "fit": "sheet:f0" },
     "flag.f61":                          { "local": "flags/f61.webp", "remote": "hf_20260928_135640_0e5df992-5130-4477-95b5-d1781bcf7472.png", "job": "0e5df992-5130-4477-95b5-d1781bcf7472", "fit": "sheet:f1" },
     "flag.f62":                          { "local": "flags/f62.webp", "remote": "hf_20260928_135640_0e5df992-5130-4477-95b5-d1781bcf7472.png", "job": "0e5df992-5130-4477-95b5-d1781bcf7472", "fit": "sheet:f2" },
-    "flag.f63":                          { "local": "flags/f63.webp", "remote": "hf_20260928_135640_0e5df992-5130-4477-95b5-d1781bcf7472.png", "job": "0e5df992-5130-4477-95b5-d1781bcf7472", "fit": "sheet:f3" }
+    "flag.f63":                          { "local": "flags/f63.webp", "remote": "hf_20260928_135640_0e5df992-5130-4477-95b5-d1781bcf7472.png", "job": "0e5df992-5130-4477-95b5-d1781bcf7472", "fit": "sheet:f3" },
+    "icon.item_canvas_sails":            { "local": "icons/item_canvas_sails.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.0" },
+    "icon.item_silk_sails":              { "local": "icons/item_silk_sails.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.1" },
+    "icon.item_storm_sails":             { "local": "icons/item_storm_sails.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.2" },
+    "icon.item_hemp_rigging":            { "local": "icons/item_hemp_rigging.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.3" },
+    "icon.item_iron_rigging":            { "local": "icons/item_iron_rigging.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.4" },
+    "icon.item_swift_rigging":           { "local": "icons/item_swift_rigging.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.5" },
+    "icon.item_oak_plating":             { "local": "icons/item_oak_plating.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.6" },
+    "icon.item_copper_sheathing":        { "local": "icons/item_copper_sheathing.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.7" },
+    "icon.item_iron_belt":               { "local": "icons/item_iron_belt.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.8" },
+    "icon.item_balanced_rudder":         { "local": "icons/item_balanced_rudder.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.9" },
+    "icon.item_iron_rudder":             { "local": "icons/item_iron_rudder.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.10" },
+    "icon.item_deep_hold":               { "local": "icons/item_deep_hold.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.11" },
+    "icon.item_ice_hold":                { "local": "icons/item_ice_hold.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.12" },
+    "icon.item_false_hold":              { "local": "icons/item_false_hold.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.13" },
+    "icon.item_hammocks":                { "local": "icons/item_hammocks.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.14" },
+    "icon.item_drill_deck":              { "local": "icons/item_drill_deck.webp", "remote": "hf_20260928_140745_c7df7964-ee06-443d-929e-c4781269f293.png", "job": "c7df7964-ee06-443d-929e-c4781269f293", "fit": "sheet:items1.15" }
   }
 }
