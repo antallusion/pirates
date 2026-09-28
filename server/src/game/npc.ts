@@ -4,6 +4,7 @@
 //  * active — near a player: full sailing physics, perception, tacking and combat AI.
 // Every NPC has a purpose: merchants haul real cargo between real markets (docs/01 §5).
 
+import { eliteShipLevel, hullsFor, npcSkill, shipLevelForCaptain, watersBand } from '../../../shared/src/data/shiplevel.ts';
 import { NPC_ACTIVE_RADIUS, isNight } from '../../../shared/src/constants.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -20,7 +21,7 @@ import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts
 import { canBoard, startBoarding } from './boarding.ts';
 import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
-import { applyDamage, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
+import { applyDamage, dash, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
@@ -558,8 +559,10 @@ function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntit
   const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
   const maxRange = Math.max(rangeOf('port'), rangeOf('starboard'));
   const bearing = headingOf(target.state.x - ship.state.x, target.state.y - ship.state.y);
-  // Lead the target by the ball's flight time.
-  const flight = d / 180;
+  // Her craft by her level (docs/12 §3.3): how much of the lead she allows, how wide she lets fly, her tricks.
+  const sk = npcSkill(ship.shipLevel);
+  // Lead the target by the ball's flight time (a green gunner allows only part of it).
+  const flight = (d / 180) * sk.lead;
   const tv = headingVec(target.state.heading);
   const px = target.state.x + tv.x * target.state.speed * flight;
   const py = target.state.y + tv.y * target.state.speed * flight;
@@ -599,8 +602,10 @@ function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntit
   for (const side of ['port', 'starboard'] as const) {
     if (ship.reload[side] > 0) continue;
     const off = Math.abs(angleDiff(sideHeading(ship, side), leadBearing));
-    if (off < 20 * DEG && leadD < rangeOf(side) * 0.98) fireBroadside(game, ship, side, leadD);
+    if (off < sk.arcDeg * DEG && leadD < rangeOf(side) * 0.98) fireBroadside(game, ship, side, leadD * (1 + (game.rng.float() * 2 - 1) * sk.rangeErr));
   }
+  // A seasoned captain dashes out of a broadside held on her.
+  if (sk.dash && d < 700 && (target.aimStart.port >= 0 || target.aimStart.starboard >= 0) && game.rng.chance(0.2)) dash(game, ship);
   // Chasers: pursuers fire from the bow, the pursued from the stern.
   const chaseRange = effectiveRange(ship, 'port', 'round') * 1.2;
   if (leadD < chaseRange) {
@@ -784,10 +789,14 @@ export function spawnMerchant(game: Game): void {
   const ports = game.zonePorts();
   const weights = ports.map((p) => [p, p.size * p.size] as const);
   const port = game.rng.weighted(weights);
-  const roll = game.rng.float();
-  const cls: ShipClassId = roll < 0.55 ? 'fluyt' : roll < 0.75 ? 'schooner' : port.size >= 2 && roll < 0.93 ? 'galleon' : 'brigantine';
+  // Her level (canon D12) by the port's waters, leaning low; the hull to match, flutes most of all.
+  const band = watersBand(REGIONS[port.region].safety, port.region === 'the_abyss');
+  const level = Math.min(game.rng.int(band[0], band[1]), game.rng.int(band[0], band[1]));
+  const hulls = hullsFor('merchant', level);
+  const cls: ShipClassId = hulls.includes('fluyt') && game.rng.chance(0.55) ? 'fluyt' : game.rng.pick(hulls);
   const faction: FactionId = port.faction === 'crown' ? 'league' : port.faction === 'choir' ? 'free' : port.faction === 'confederacy' ? 'free' : port.faction;
   const ship = game.spawnNpcShip('merchant', cls, faction, port.x, port.y, game.rng.range(0, Math.PI * 2));
+  game.setNpcLevel(ship, level);
   ship.purse = 150 + game.rng.int(0, 500) * ship.cls.tier;
   const brain = game.npcs.get(ship.id)!;
   if (!planMerchantVoyage(game, ship, brain, port)) game.removeShip(ship.id);
@@ -814,9 +823,12 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
     y += game.rng.range(-9000, 9000);
   }
   if (REGIONS[region].safety === 'safe' || isLand(game.world, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
-  const tierRoll = game.rng.float() + REGIONS[region].strangeness * 0.5;
-  const cls: ShipClassId = tierRoll < 0.45 ? 'sloop' : tierRoll < 0.72 ? 'schooner' : tierRoll < 0.8 ? 'xebec' : tierRoll < 1.0 ? 'brigantine' : 'brig';
+  // Her level (canon D12): an ambusher is sized to her prey, a little above in wilder waters; a rover to the band.
+  const band = watersBand(REGIONS[region].safety, region === 'the_abyss');
+  const level = near ? levelNear(game, near, region) : game.rng.int(band[0], band[1]);
+  const cls: ShipClassId = game.rng.pick(hullsFor('pirate', level));
   const ship = game.spawnNpcShip('pirate', cls, 'confederacy', x, y, game.rng.range(0, Math.PI * 2));
+  game.setNpcLevel(ship, level);
   ship.purse = 100 + game.rng.int(0, 400) * ship.cls.tier;
   const loot: GoodId[] = ['rum', 'gunpowder', 'weapons', 'tobacco', 'spices', 'dreamleaf'];
   ship.cargo[game.rng.pick(loot)] = game.rng.int(3, 8 + ship.cls.tier * 4);
@@ -839,11 +851,27 @@ export function spawnPirate(game: Game, near?: ShipEntity): ShipEntity | null {
   return ship;
 }
 
+/** A level in the band of a region's waters (merchants and fishers lean low). */
+export function bandLevel(game: Game, region: RegionId, low = false): number {
+  const band = watersBand(REGIONS[region].safety, region === 'the_abyss');
+  const roll = game.rng.int(band[0], band[1]);
+  return low ? Math.min(roll, game.rng.int(band[0], band[1])) : roll;
+}
+
+/** A ship put out after a captain (an ambush, raiders, a hunter's pack): sized to her level, higher in wild waters. */
+export function levelNear(game: Game, prey: ShipEntity, region: RegionId): number {
+  const safety = REGIONS[region].safety;
+  const r = game.rng.float();
+  const d = safety === 'lawless' ? (r < 0.5 ? 0 : r < 0.85 ? 1 : 2) : safety === 'contested' ? (r < 0.25 ? -1 : r < 0.75 ? 0 : 1) : r < 0.5 ? -1 : 0;
+  return Math.max(1, Math.min(10, prey.combatLevel + d));
+}
+
 export function spawnFisher(game: Game): void {
   const ports = game.zonePorts().filter((p) => REGIONS[p.region].safety !== 'lawless');
   if (!ports.length) return;
   const port = game.rng.pick(ports);
   const ship = game.spawnNpcShip('fisher', 'cutter', port.faction === 'crown' ? 'crown' : 'free', port.x, port.y, game.rng.range(0, 6.28));
+  game.setNpcLevel(ship, bandLevel(game, port.region, true));
   ship.cargo = { provisions: game.rng.int(4, 12), salt: game.rng.int(0, 5) };
   ship.purse = 30 + game.rng.int(0, 60);
   const brain = game.npcs.get(ship.id)!;
@@ -860,6 +888,7 @@ export function spawnPatrols(game: Game): void {
     for (let i = 0; i < n; i++) {
       const cls: ShipClassId = port.size >= 3 && i === 0 ? 'frigate' : i === 1 ? 'brig' : 'brigantine';
       const ship = game.spawnNpcShip('patrol', cls, port.faction, port.x, port.y, game.rng.range(0, 6.28));
+      game.setNpcLevel(ship, bandLevel(game, port.region) + 1); // the law sails a level above the waters
       ship.purse = 200 + game.rng.int(0, 300);
       const brain = game.npcs.get(ship.id)!;
       brain.area = { x: port.x, y: port.y, r: port.size >= 3 ? 11000 : 8000 };
@@ -884,6 +913,7 @@ export function spawnGhost(game: Game, everywhere = false): void {
   const x = cx + game.rng.range(-6000, 6000), y = cy + game.rng.range(-6000, 6000);
   if (isLand(game.world, x, y)) return;
   const ship = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', x, y, game.rng.range(0, 6.28), { ship: 'The Hollow Psalm', captain: 'Something Wearing a Captain' });
+  game.setNpcLevel(ship, bandLevel(game, region));
   ship.cargo = { cursed_relics: game.rng.int(3, 8), pearls: game.rng.int(2, 6), abyssal_ore: game.rng.int(1, 4) };
   ship.purse = 1500 + game.rng.int(0, 1500);
   const brain = game.npcs.get(ship.id)!;
@@ -895,9 +925,12 @@ export function spawnHunter(game: Game, prey: ShipEntity, accountId: number): vo
   const a = game.rng.float() * Math.PI * 2;
   const x = prey.state.x + Math.sin(a) * 3600, y = prey.state.y - Math.cos(a) * 3600;
   if (isLand(game.world, x, y)) return;
-  const ship = game.spawnNpcShip('hunter', game.rng.chance(0.5) ? 'frigate' : 'brig', 'crown', x, y, headingOf(prey.state.x - x, prey.state.y - y), {
+  // A bounty hunter sails one level above her quarry (canon D12).
+  const level = Math.min(10, prey.combatLevel + 1);
+  const ship = game.spawnNpcShip('hunter', game.rng.pick(hullsFor('hunter', level)), 'crown', x, y, headingOf(prey.state.x - x, prey.state.y - y), {
     ship: 'HMS ' + pick(game, ['Relentless', 'Verdict', 'Long Arm', 'Gallows Oath', 'Writ of Iron']), captain: 'Bounty Hunter ' + pick(game, CAPTAIN_NAMES),
   });
+  game.setNpcLevel(ship, level);
   ship.purse = 400;
   const brain = game.npcs.get(ship.id)!;
   brain.huntAccount = accountId;
@@ -915,8 +948,9 @@ export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number
     const a = game.rng.float() * Math.PI * 2;
     const x = prey.state.x + Math.sin(a) * 2400, y = prey.state.y - Math.cos(a) * 2400;
     if (isLand(game.world, x, y)) continue;
-    const cls = prey.level >= 25 ? (game.rng.chance(0.5) ? 'brig' : 'brigantine') : game.rng.chance(0.5) ? 'sloop' : 'schooner';
-    const ship = game.spawnNpcShip('pirate', cls, 'confederacy', x, y, headingOf(prey.state.x - x, prey.state.y - y));
+    const level = levelNear(game, prey, game.regionAt(x, y));
+    const ship = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', level)), 'confederacy', x, y, headingOf(prey.state.x - x, prey.state.y - y));
+    game.setNpcLevel(ship, level);
     const brain = game.npcs.get(ship.id)!;
     brain.huntAccount = accountId;
     brain.area = { x: prey.state.x, y: prey.state.y, r: 6000 };
@@ -935,7 +969,10 @@ export function spawnPackLeader(game: Game, region: RegionId, level: number): Sh
     const a = game.rng.float() * Math.PI * 2, r = 1500 + game.rng.float() * 6000;
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
     if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
-    const ship = game.spawnNpcShip('pirate', level >= 30 ? 'frigate' : 'brig', 'confederacy', x, y, game.rng.float() * Math.PI * 2);
+    // The leader sails a level above the captains the hunt is written for (canon D12).
+    const lv = Math.min(10, shipLevelForCaptain(level) + 1);
+    const ship = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, game.rng.float() * Math.PI * 2);
+    game.setNpcLevel(ship, lv);
     const brain = game.npcs.get(ship.id)!;
     brain.area = { x: cx, y: cy, r: 8000 };
     brain.expiresAt = game.now + 3600;
@@ -955,7 +992,11 @@ export function spawnElite(game: Game, region: RegionId, level: number): ShipEnt
     const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
     if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
     const h = game.rng.float() * Math.PI * 2;
-    const flag = game.spawnNpcShip('pirate', level >= 24 ? 'man_o_war' : level >= 16 ? 'galleon' : 'frigate', 'confederacy', x, y, h);
+    // An elite near the top of the waters' band, built for a company; her escorts a level below (canon D12).
+    const lv = eliteShipLevel(REGIONS[region].safety);
+    const flag = game.spawnNpcShip('pirate', hullsFor('pirate', lv).at(-1)!, 'confederacy', x, y, h); // the heaviest hull of her level
+    flag.elite = true;
+    game.setNpcLevel(flag, lv);
     const brain = game.npcs.get(flag.id)!;
     brain.area = { x: cx, y: cy, r: 9000 };
     brain.expiresAt = game.now + 7200;
@@ -964,7 +1005,8 @@ export function spawnElite(game: Game, region: RegionId, level: number): ShipEnt
     for (const side of [-1, 1]) {
       const ex = x + Math.cos(h + side * 2.2) * 220, ey = y + Math.sin(h + side * 2.2) * 220;
       if (isLand(game.world, ex, ey)) continue;
-      const esc = game.spawnNpcShip('pirate', level >= 24 ? 'frigate' : 'brig', 'confederacy', ex, ey, h);
+      const esc = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', Math.max(1, lv - 1))), 'confederacy', ex, ey, h);
+      game.setNpcLevel(esc, lv - 1);
       const eb = game.npcs.get(esc.id)!;
       eb.area = { x: cx, y: cy, r: 9000 };
       eb.expiresAt = game.now + 7200;

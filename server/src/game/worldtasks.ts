@@ -2,6 +2,7 @@
 // kept stocked with pirates while it lasts. Every captain's pirate sunk within the nest's reach counts on their own
 // tally (a groupmate's kill too, through the quest events); a full tally is paid once.
 
+import { hullsFor, shipLevelForCaptain } from '../../../shared/src/data/shiplevel.ts';
 import { TASKS_AT_ONCE, TASK_KINDS, TASK_NEED, TASK_RADIUS, TASK_SEC, taskLevel, taskName, taskNeed, taskReward } from '../../../shared/src/data/worldtasks.ts';
 import type { TaskKind, TaskView } from '../../../shared/src/data/worldtasks.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -83,7 +84,9 @@ function haunt(game: Game, t: WorldTask): void {
     const a = game.rng.float() * Math.PI * 2, r = 200 + game.rng.float() * 700;
     const x = t.x + Math.cos(a) * r, y = t.y + Math.sin(a) * r;
     if (isLand(game.world, x, y) || !game.inZone(x, y)) continue;
-    const ship = game.spawnNpcShip('ghost', t.level >= 10 ? 'ghost_ship' : 'brig', 'choir', x, y, game.rng.float() * Math.PI * 2);
+    const lv = shipLevelForCaptain(t.level) + 1;
+    const ship = game.spawnNpcShip('ghost', game.rng.pick(hullsFor('ghost', lv)), 'choir', x, y, game.rng.float() * Math.PI * 2);
+    game.setNpcLevel(ship, lv);
     const brain = game.npcs.get(ship.id);
     if (brain) {
       brain.area = { x: t.x, y: t.y, r: 1100 };
@@ -101,8 +104,9 @@ function stock(game: Game, t: WorldTask): void {
     const a = game.rng.float() * Math.PI * 2, r = 200 + game.rng.float() * 700;
     const x = t.x + Math.cos(a) * r, y = t.y + Math.sin(a) * r;
     if (isLand(game.world, x, y) || !game.inZone(x, y)) continue;
-    const cls = t.level >= 20 ? (game.rng.float() < 0.5 ? 'brig' : 'schooner') : t.level >= 10 ? 'schooner' : 'sloop';
-    const ship = game.spawnNpcShip('pirate', cls, 'confederacy', x, y, game.rng.float() * Math.PI * 2);
+    const lv = shipLevelForCaptain(t.level);
+    const ship = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, game.rng.float() * Math.PI * 2);
+    game.setNpcLevel(ship, lv);
     const brain = game.npcs.get(ship.id);
     if (brain) {
       brain.area = { x: t.x, y: t.y, r: 1100 };

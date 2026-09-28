@@ -7,7 +7,7 @@ import { applyDamage } from '../server/src/game/combat.ts';
 import { Game } from '../server/src/game/Game.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
-import { FakeConn, join, makeGame, steps } from './helpers.ts';
+import { FakeConn, join, makeGame, steps, onHull } from './helpers.ts';
 
 function shipOf(game: Game, conn: FakeConn): ShipEntity {
   for (const s of game.sessions) if ((s.conn as unknown) === conn) return s.ship!;
@@ -415,6 +415,7 @@ test('heavy shot pierces armour; fire shot starts fires', () => {
   const { game } = makeGame();
   const c = join(game, 'Ordnance Officer');
   const ship = undockAtSea(game, c);
+  onHull(game, ship, 'brig'); // a brig fights a merchant galleon on even terms (canon D12)
   const hit = (ammo: 'round' | 'heavy' | 'incendiary') => {
     const npc = npcAbeam(game, ship, 'starboard', 110);
     npc.loadout.classId = 'galleon';

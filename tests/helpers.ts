@@ -65,3 +65,15 @@ export function join(game: Game, name: string, captain: 'corsair' | 'reaver' | '
 export function steps(game: Game, n: number): void {
   for (let i = 0; i < n; i++) game.step();
 }
+
+/**
+ * Puts a captain's ship on another hull at a level (canon D12: the ladder of levels weighs on every blow, so tests
+ * of other rules fight dummies on even terms).
+ */
+export function onHull(game: Game, ship: { loadout: { classId: string; level?: number }; recompute(now: number): void; hull: number; sails: number; stats: { hullMax: number; sailHpMax: number } }, classId: string, level?: number): void {
+  ship.loadout.classId = classId;
+  ship.loadout.level = level;
+  ship.recompute(game.now);
+  ship.hull = ship.stats.hullMax;
+  ship.sails = ship.stats.sailHpMax;
+}

@@ -2,6 +2,8 @@
 // wages, loyalty and the Codex share, the morale ladder, wounds and deaths of officers, betrayal and
 // the three-phase road to mutiny, tavern hiring, press gangs and prisoners who sign on.
 
+import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
+import { levelNear } from './npc.ts';
 import { FACTIONS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import {
@@ -595,7 +597,9 @@ export function springAmbush(game: Game, s: PlayerSession): void {
   for (let i = 0; i < 2; i++) {
     const a = game.rng.float() * Math.PI * 2;
     const x = ship.state.x + Math.sin(a) * 1600, y = ship.state.y - Math.cos(a) * 1600;
-    const hunter = game.spawnNpcShip('pirate', ship.cls.tier >= 3 ? 'brigantine' : 'brig', 'confederacy', x, y, a + Math.PI);
+    const lv = levelNear(game, ship, game.regionAt(x, y));
+    const hunter = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, a + Math.PI);
+    game.setNpcLevel(hunter, lv);
     const b = game.npcs.get(hunter.id);
     if (b) b.chase = { id: ship.id, until: game.now + 300 };
   }

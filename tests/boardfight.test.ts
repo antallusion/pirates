@@ -25,6 +25,8 @@ function atSea(game: Game, name: string, captain: Cap = 'corsair'): { c: FakeCon
   ship.protectedUntil = 0;
   ship.input = { rudder: 0, sailTarget: 0 };
   s.profile!.level = 60; // past the newcomers' shelter, so captains may board each other
+  // A brig, the same level as the brigs she fights (canon D12: a sloop would be far below them).
+  ship.loadout.classId = 'brig';
   ship.recompute(game.now);
   ship.crew = ship.stats.crewMax;
   ship.morale = 80;

@@ -12,7 +12,7 @@ import { sanityDrain, stepMind } from '../server/src/game/mind.ts';
 import { canMend } from '../server/src/game/survivalfx.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { join, makeGame, steps, onHull } from './helpers.ts';
 
 function captain(game: Game, name: string, talents: TalentRanks, cap: CaptainId = 'drowned') {
   const c = join(game, name, cap);
@@ -180,6 +180,7 @@ test('Pact of Salt and Bone: the monsters bite softer, then let you be', () => {
   const { game } = makeGame();
   const { s, ship } = captain(game, 'Pact', { abs_pact_of_salt_and_bone: 2 });
   toSea(game, s);
+  onHull(game, ship, 'brig'); // even terms with the brigs she fights (canon D12)
   const ghost = dummy(game, ship, 300, 0, 'ghost');
   const h0 = ship.hull;
   applyDamage(game, ship, { hull: 100 }, ghost);

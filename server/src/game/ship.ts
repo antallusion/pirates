@@ -1,5 +1,6 @@
 // Server-side ship entity: the authoritative state of every vessel (player or NPC) at sea.
 
+import { combatLevelOf, onLadder, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { BoardTactic } from '../../../shared/src/data/boarding.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
@@ -214,6 +215,8 @@ export class ShipEntity {
   pennant: string | null = null;
   /** The Graveyard Captain of this graveyard (expeditions.ts). */
   yardOf = '';
+  /** An elite ⚔ built for a company (group contracts, barons): hull ×2.5, guns ×1.5 (canon D12). */
+  elite = false;
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
   convoyOf: { guild: number; to: string } | null = null;
 
@@ -241,6 +244,21 @@ export class ShipEntity {
 
   get cls() {
     return SHIP_CLASSES[this.loadout.classId];
+  }
+
+  /** Her level ⚓1–⚓10 (canon D12). */
+  get shipLevel(): number {
+    return shipLevelOf(this.loadout);
+  }
+
+  /** On the ladder of strength at all (bosses, their parts and wreck hulks are raids of their own). */
+  get onLadder(): boolean {
+    return onLadder(this.loadout.classId) && !this.cls.monster && this.npcRole !== 'boss' && !this.bossOf && !this.bossPart && !this.yardOf;
+  }
+
+  /** The level she fights at: a merchant two below her own, a fisher one. */
+  get combatLevel(): number {
+    return combatLevelOf(this.loadout.classId, this.shipLevel);
   }
 
   /** Locked alongside another ship (a jolly-boat raid leaves the mother ship free). */
@@ -334,12 +352,12 @@ export class ShipEntity {
   info(): ShipInfo {
     // False Colors: a nameless merchant under a borrowed flag.
     if (this.hasFlag('false_colors')) {
-      return { id: this.id, kind: 'ship', name: 'Unknown Merchant', classId: this.loadout.classId, faction: 'league', captainName: '', npcRole: 'merchant', isPlayer: false, level: 1, wanted: 0 };
+      return { id: this.id, kind: 'ship', name: 'Unknown Merchant', classId: this.loadout.classId, faction: 'league', captainName: '', npcRole: 'merchant', isPlayer: false, level: 1, wanted: 0, shipLevel: this.shipLevel };
     }
     return {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
-      isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined,
+      isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined,
       title: this.title ?? undefined, pennant: this.pennant ?? undefined,
     };
   }

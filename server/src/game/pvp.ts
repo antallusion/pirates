@@ -18,6 +18,7 @@
 //    a fleet three times the target's strength splits half of it.
 //  - Right of revenge: for 24 h the sunk captain sees who sank them within 3 km.
 
+import { onLadder } from '../../../shared/src/data/shiplevel.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { WANTED_THRESHOLDS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import { SF } from '../../../shared/src/protocol.ts';
@@ -166,9 +167,12 @@ export function shamed(game: Game, p: Profile | null): boolean {
   return !!p && p.pvp.shameUntil > game.wallNow();
 }
 
-/** Battle rating: tier and level of the hull, and half of every escort sailing with her. */
+/**
+ * Battle rating: the level she fights at (canon D12), and half of every escort sailing with her. 1.45 a level, so
+ * one two levels below is already under half — hunting her is hunting minnows.
+ */
 export function battleRating(game: Game, ship: ShipEntity): number {
-  const one = (sh: ShipEntity) => SHIP_CLASSES[sh.loadout.classId].tier * (1 + (sh.level ?? 1) / 20);
+  const one = (sh: ShipEntity) => Math.pow(1.45, sh.combatLevel - 1) * (onLadder(sh.loadout.classId) ? 1 : SHIP_CLASSES[sh.loadout.classId].tier);
   let br = one(ship);
   for (const o of game.ships.values()) if (o.ownerId === ship.id && o.alive) br += one(o) * 0.5;
   return br;

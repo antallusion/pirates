@@ -971,4 +971,5 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} gives the guild its word: “{1}”": "{0} даёт гильдии слово: «{1}»",
   "Guild: “{0}”": "Гильдия: «{0}»",
   "You saw {0} through “{1}”: {2} silver for the guidance.": "Вы провели капитана {0} через «{1}»: {2} серебра за наставничество.",
+  "She is above your level: your boarders would not reach her deck": "Она выше вас уровнем: ваша абордажная команда не доберётся до её палубы",
 };

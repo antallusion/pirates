@@ -8,7 +8,7 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { bountyOn, grantBubble, lootMul, onPlayerKill, pvpFlags, stepPvp } from '../server/src/game/pvp.ts';
 import type { RegionId } from '../shared/src/world/regions.ts';
-import { join, makeGame } from './helpers.ts';
+import { join, makeGame, onHull } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 function sess(game: Game, name: string): PlayerSession {
@@ -107,9 +107,9 @@ test('repeat kills pay less and cost more; hunting minnows brings the Shame', ()
   // Two hours on, a fresh start.
   game.wallNow = () => Date.now() + 2 * 3_600_000 + 1000;
   assert.equal(lootMul(game, A.ship!, B.ship!), 1);
-  // A level-60 captain against a level-1 one: the Shame.
-  A.ship!.level = 60;
-  B.ship!.level = 1;
+  // A ship three levels above against a sloop of the first: the Shame (canon D12 — the ladder is by ship level).
+  onHull(game, A.ship!, 'brigantine');
+  assert.equal(A.ship!.shipLevel - B.ship!.shipLevel, 3);
   const m = lootMul(game, A.ship!, B.ship!);
   assert.ok(m < 0.5 && m > 0);
   onPlayerKill(game, A.ship!, B.ship!, 'sunk');

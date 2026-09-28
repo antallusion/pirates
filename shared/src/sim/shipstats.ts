@@ -18,6 +18,7 @@ import type { LegendaryId } from '../data/legendary.ts';
 import type { ShipBuild } from '../data/shipbuild.ts';
 import type { SailTalents } from './sailing.ts';
 import { DEG } from '../math.ts';
+import { levelScale, shipLevelOf } from '../data/shiplevel.ts';
 
 export interface ShipLoadout {
   classId: ShipClassId;
@@ -37,6 +38,8 @@ export interface ShipLoadout {
   build?: ShipBuild;
   /** One of the server's legendary ships (docs/02 §14.A.5). */
   legendary?: LegendaryId;
+  /** Her level ⚓1–⚓10 (canon D12); absent: the first level of her class. */
+  level?: number;
 }
 
 export interface ShipStats {
@@ -154,6 +157,8 @@ export function computeShipStats(
 
   const passive = cls.passive.id;
   const baseRange = 34 + cls.length * 0.5;
+  // Her level (canon D12): hull and guns +14% a level above her class's first, a little more crew, hold and way.
+  const lv = levelScale(cls.id, shipLevelOf(loadout));
   // Caps (§3.3): a keystone lifts the cap of its own characteristic.
   const speedCap = has('nav_windborn') ? 0.35 : 0.2;
   const dmgCap = has('gun_iron_rain') ? 0.5 : 0.25;
@@ -171,28 +176,28 @@ export function computeShipStats(
     rig: cls.rig,
     length: cls.length,
     beam: cls.beam,
-    maxSpeed: cls.maxSpeed * Math.max(0.2, 1 + Math.min(speedCap, speedMul + m('maxSpeed')) + e('maxSpeed')),
+    maxSpeed: cls.maxSpeed * lv.speed * Math.max(0.2, 1 + Math.min(speedCap, speedMul + m('maxSpeed')) + e('maxSpeed')),
     accel: cls.accel * (1 + m('accel') + e('accel') + (passive === 'dispatch' ? 0.1 : 0)),
     turnRate: cls.turnRate * DEG * Math.max(0.2, 1 + Math.min(0.4, turnMul + m('turnRate')) + effTurn),
     noGoDeg: baseNoGo(cls.rig) + m('noGoDeg') + e('noGoDeg'),
     sailChangeRate: 0.45 * (1 + m('sailChangeRate') + e('sailChangeRate') + (passive === 'raider_rig' ? 0.2 : 0)),
     currentMul: m('currentMul') + e('currentMul'),
     nightSpeed: m('nightSpeed') + e('nightSpeed'),
-    hullMax: Math.round(cls.hull * Math.max(0.3, 1 + hullMul + m('hullMax') + e('hullMax'))),
+    hullMax: Math.round(cls.hull * lv.hull * Math.max(0.3, 1 + hullMul + m('hullMax') + e('hullMax'))),
     armor: Math.min(0.75, (cls.armor + armorAdd) * (1 + Math.min(armorCap, m('armorPct'))) + m('armor') + e('armor')),
-    sailHpMax: Math.round(cls.sailHp * (1 + sailHpMul + m('sailHpMax') + e('sailHpMax'))),
+    sailHpMax: Math.round(cls.sailHp * lv.hull * (1 + sailHpMul + m('sailHpMax') + e('sailHpMax'))),
     repairRate: cls.repairRate * (1 + m('repairRate') + e('repairRate')),
     battleRepairRate: m('battleRepairRate') + e('battleRepairRate'),
     crewMin: cls.crewMin,
-    crewMax: Math.round(cls.crewMax * (1 + crewMul + m('crewMax') + e('crewMax'))),
-    holdVolume: cls.holdVolume * (1 + holdMul + m('holdVolume') + e('holdVolume')),
-    holdWeight: cls.holdWeight * (1 + holdMul),
+    crewMax: Math.round(cls.crewMax * lv.crew * (1 + crewMul + m('crewMax') + e('crewMax'))),
+    holdVolume: cls.holdVolume * lv.hold * (1 + holdMul + m('holdVolume') + e('holdVolume')),
+    holdWeight: cls.holdWeight * lv.hold * (1 + holdMul),
     detection: cls.detection * (1 + Math.min(detectCap, m('detection') + (passive === 'hunter' ? 0.15 : 0)) + e('detection')),
     gunsPerSide: cls.gunPortsPerSide + (flags.has('overgunned') ? 2 : 0),
     bowChasers: cls.bowChasers + (flags.has('overgunned') ? 1 : 0),
     reloadMul: Math.max(0.2, 1 + Math.max(reloadFloor, m('reloadMul')) + e('reloadMul')),
     spreadMul: Math.max(0.2, 1 + m('spreadMul') + e('spreadMul')),
-    gunDamageMul: Math.max(0.1, 1 + Math.min(dmgCap, m('gunDamageMul')) + e('gunDamageMul')),
+    gunDamageMul: lv.guns * Math.max(0.1, 1 + Math.min(dmgCap, m('gunDamageMul')) + e('gunDamageMul')),
     rangeMul: 1 + m('rangeMul') + e('rangeMul'),
     doubleShotChance: m('doubleShotChance') + e('doubleShotChance'),
     crewKillMul: 1 + m('crewKillMul') + e('crewKillMul'),

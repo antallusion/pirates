@@ -562,6 +562,10 @@ export interface ShipInfo {
   guild?: string; // tag
   title?: string; // a captain's title (seasons, the Pantheon)
   pennant?: string; // a season pennant colour
+  /** Her level ⚓1–⚓10 (canon D12); absent for monsters and wreck hulks, which stand outside the ladder. */
+  shipLevel?: number;
+  /** A strong ship built for a company (group contracts, barons): the gold frame of an elite. */
+  elite?: boolean;
 }
 
 export interface LootInfo {

@@ -53,7 +53,7 @@ test('Chain and Grapple: a tangled ship is boarded from further and at any speed
   const { game } = makeGame();
   const { s, ship } = captain(game, 'Grapple', { brg_chain_and_grapple: 1 });
   toSea(game, s);
-  const foe = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x + 55, ship.state.y, 0);
+  const foe = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + 55, ship.state.y, 0);
   foe.hull = foe.stats.hullMax * 0.4;
   foe.state.speed = 9;
   assert.ok(canBoard(game, ship, foe) !== null);

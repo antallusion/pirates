@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { ELITE_MODS, clampLevel, levelRange, npcSkill, xpForGap } from '../../../shared/src/data/shiplevel.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
@@ -1148,6 +1149,8 @@ export class Game {
     ship.ammo = { ...emptyAmmo(), round: 400, chain: role === 'pirate' ? 120 : 40, grape: role === 'pirate' ? 120 : 40, incendiary: role === 'pirate' ? 20 : 0, heavy: role === 'patrol' || role === 'hunter' ? 60 : 0 };
     ship.level = role === 'ghost' ? 20 : ship.cls.tier * 3;
     ship.region = regionAt(this.world, x, y);
+    // Her level (canon D12): her class's first unless her spawner puts her in the band of her waters.
+    this.setNpcLevel(ship, levelRange(classId)[0]);
     ship.state.sail = 0.8;
     ship.input = { rudder: 0, sailTarget: 1 };
     this.ships.set(ship.id, ship);
@@ -1155,11 +1158,26 @@ export class Game {
     return ship;
   }
 
+  /** Puts one of the sea's ships at a level (canon D12): her hull and guns grow with it, her craft too. */
+  setNpcLevel(ship: ShipEntity, level: number): void {
+    const crewFrac = ship.crew / Math.max(1, ship.stats.crewMax);
+    ship.loadout.level = clampLevel(ship.loadout.classId, level);
+    const sk = npcSkill(ship.shipLevel);
+    ship.effects = ship.effects.filter((e) => e.id !== 'npc_craft');
+    if (sk.spread > 0) ship.effects.push({ id: 'npc_craft', until: 1e12, mods: { spreadMul: sk.spread } });
+    if (ship.elite) ship.effects.push({ id: 'elite', until: 1e12, mods: { ...ELITE_MODS } });
+    ship.recompute(this.now);
+    ship.hull = ship.stats.hullMax;
+    ship.sails = ship.stats.sailHpMax;
+    ship.crew = Math.round(ship.stats.crewMax * crewFrac);
+  }
+
   spawnEscort(owner: ShipEntity, duration: number): string | null {
     for (const s of this.ships.values()) if (s.ownerId === owner.id && !s.prize && !s.fleetId) return 'Your escort is already at sea';
     const back = headingVec(owner.state.heading + Math.PI);
     const x = owner.state.x + back.x * 300, y = owner.state.y + back.y * 300;
     const ship = this.spawnNpcShip('escort', 'brig', 'free', x, y, owner.state.heading, { ship: 'Hired Brig ' + this.rng.pick(['Tenacity', 'Warrant', 'Loyal Oath', 'Salt Debt']), captain: 'Sailing Master' });
+    this.setNpcLevel(ship, owner.shipLevel);
     ship.ownerId = owner.id;
     ship.removeAt = this.now + duration;
     const brain = this.npcs.get(ship.id)!;
@@ -1598,7 +1616,9 @@ export class Game {
     if (!s || !s.profile) return;
     const p = s.profile;
     const tier = victim.cls.monster ? 1 : victim.cls.tier; // a rotten hulk is no ship of the line
-    const xp = (how === 'sunk' ? 45 : 70) * tier * (1 + victim.level / 12);
+    // The colour of the prize (canon D12): nothing for a grey one, more for one above you.
+    const gap = victim.onLadder && killer.onLadder ? victim.combatLevel - killer.combatLevel : 0;
+    const xp = (how === 'sunk' ? 45 : 70) * tier * (1 + victim.level / 12) * xpForGap(gap);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
     this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);

@@ -101,6 +101,7 @@ export function launchFleet(game: Game, s: PlayerSession): void {
     const f = headingVec(owner.state.heading), r = headingVec(owner.state.heading + Math.PI / 2);
     const x = owner.state.x + f.x * off.y + r.x * off.x, y = owner.state.y + f.y * off.y + r.y * off.x;
     const esc = game.spawnNpcShip('escort', e.classId, 'free', x, y, owner.state.heading, { ship: e.name, captain: 'Sailing Master' });
+    game.setNpcLevel(esc, owner.shipLevel); // she sails at her commander's level, as far as her hull allows
     esc.ownerId = owner.id;
     esc.fleetId = e.id;
     esc.escortIndex = i;

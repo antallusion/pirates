@@ -39,6 +39,7 @@ import { sanitizeShipbuilding } from './shipbuilding.ts';
 import type { Berth, BuildOrder } from './shipbuilding.ts';
 import type { FigureheadId, Plan } from '../../../shared/src/data/shipbuild.ts';
 import type { Oath, QuestLog } from './quests.ts';
+import { clampLevel, initialLevel } from '../../../shared/src/data/shiplevel.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 
 export interface Profile {
@@ -451,6 +452,8 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.friends = (p.friends ?? []).filter((f) => f && typeof f.id === 'number' && typeof f.name === 'string').slice(0, 50);
   p.ignored = (p.ignored ?? []).filter((f) => f && typeof f.id === 'number' && typeof f.name === 'string').slice(0, 50);
   sanitizeShipbuilding(p);
+  // Ship levels (canon D12): a ship from before them comes at her class's first level, one more if nearly all fitted.
+  for (const l of [p.loadout, ...(p.berths ?? []).map((b) => b.loadout)]) if (l) l.level = l.level ? clampLevel(l.classId, l.level) : initialLevel(l.classId, l.modules ?? {});
   p.salvageDay ??= -1;
   p.fleet.escorts ??= [];
   p.fleet.formation ??= 'line';

@@ -1,6 +1,7 @@
 // Naval combat: broadsides, ballistics, hit resolution with angle-of-impact and subsystem damage,
 // crimes and kill credit. All numbers come from shared data; nothing here trusts the client.
 
+import { ladderBetween } from './ladder.ts';
 import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, aimFocus } from '../../../shared/src/data/gunnery.ts';
 import { onboardingVolley } from './onboarding.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
@@ -439,7 +440,10 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
   const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)));
   const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1); // Leviathan Lore, the Harpooneer, Saint Maw's Bell
-  let hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore;
+  // The ladder (canon D12): the gap of levels cuts or swells the shot, and a junior makes fewer criticals, or none.
+  const lad = ladderBetween(game, shooter, target);
+  const cx = lad.crits;
+  let hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt;
   // No single broadside may take more than 30% of a hull (Iron Coffin: 20%).
   if (p.volley !== undefined) {
     const rec = game.volleys.get(p.volley);
@@ -451,20 +455,20 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     }
   }
   const chain = p.ammo === 'chain' ? 1 + (sst ? tval(sst, 'chainSail') : 0) : 1;
-  const sailDmg = p.damage * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain;
+  const sailDmg = p.damage * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt;
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
   // Splinter Storm: every ball into the hull sends splinters through the gun deck.
   const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && hullDmg > 5 ? 1 : 0;
-  const crewKill = ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters;
+  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * lad.dealt;
 
   let crit: string | undefined;
   let rudderDmg = 0;
   const rudderChance = 0.14 + (raking && !fromBow && sst ? tval(sst, 'rakingFire') : 0);
-  if (p.ammo !== 'grape' && local.y < -target.stats.length * 0.33 && !target.hasFlag('iron_tiller') && game.rng.chance(rudderChance)) {
+  if (p.ammo !== 'grape' && local.y < -target.stats.length * 0.33 && !target.hasFlag('iron_tiller') && game.rng.chance(rudderChance * cx)) {
     rudderDmg = 0.2 + game.rng.float() * 0.15;
     crit = 'rudder';
   }
-  if (p.ammo === 'round' && game.rng.chance(0.06)) {
+  if (p.ammo === 'round' && game.rng.chance(0.06 * cx)) {
     const side: Side = local.x < 0 ? 'port' : 'starboard';
     if (target.gunsDisabled[side] < target.stats.gunsPerSide) {
       target.gunsDisabled[side]++;
@@ -473,13 +477,13 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   if (raking) crit = crit ?? 'raked';
   if (crit && crit !== 'raked') target.talentReady.patchPause = game.now + 3; // Patchwork Hull pauses
-  if ((p.ammo === 'round' || p.ammo === 'heavy') && hullDmg > 15 && target.leaks < MAX_LEAKS && game.rng.chance(leakChance(target, p.ammo === 'heavy'))) {
+  if ((p.ammo === 'round' || p.ammo === 'heavy') && hullDmg > 15 && target.leaks < MAX_LEAKS && game.rng.chance(leakChance(target, p.ammo === 'heavy') * cx)) {
     target.leaks++;
     crit = 'leak';
   }
 
   // Waterline Gunner: a breach below the waterline leaks through any armour.
-  if (sst && p.ammo !== 'grape' && hullDmg > 5 && game.rng.chance(tval(sst, 'breachChance'))) {
+  if (sst && p.ammo !== 'grape' && hullDmg > 5 && game.rng.chance(tval(sst, 'breachChance') * cx)) {
     target.addEffect({ id: 'breach', until: game.now + 10 * Math.max(0.2, 1 - tval(target.stats, 'damageControl')), source: shooter!.id }, game.now);
     crit = 'breach';
   }
@@ -494,7 +498,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       if (rec) (rec.battery ??= new Set()).add(target.id);
     }
   }
-  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: 0.35 + grapeMorale + battery }, shooter, { x: hx, y: hy });
+  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery) * lad.dealt, laddered: true }, shooter, { x: hx, y: hy });
   if (shooter && p.volley !== undefined && sst?.flags.has('splinter_storm') && target.crew < target.stats.crewMax * 0.3) {
     const rec = game.volleys.get(p.volley);
     if (rec && !rec.demoralised.has(target.id)) {
@@ -511,7 +515,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     if (game.rng.chance(0.07 * deepHold)) destroyRandomCargo(game, target, 1 + game.rng.int(0, 2));
     // Fire shot in the magazine burns like powder.
     const powder = (target.cargo.gunpowder ?? 0) + target.ammo.incendiary / 10;
-    if (powder >= 5 && game.rng.chance(0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10) * (target.hasFlag('sealed_magazine') ? 0.25 : 1))) {
+    if (powder >= 5 && game.rng.chance(cx * 0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10) * (target.hasFlag('sealed_magazine') ? 0.25 : 1))) {
       target.cargo.gunpowder = Math.floor(powder * 0.4);
       applyDamage(game, target, { hull: target.stats.hullMax * 0.14, crew: 3, morale: 12, sails: 10 }, shooter);
       igniteShip(game, target, 12, null);
@@ -524,7 +528,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   const fireRisk = Math.max(0, 1 + tval(target.stats, 'fireRisk'));
   const ignite = (p.ammo === 'incendiary' ? 0.25 * (shooter?.hasFlag('alchemist') ? 1.2 : 1) : p.ammo === 'round' && sst ? tval(sst, 'heatedShot') : 0) * fireRisk;
-  if (ignite > 0 && hullDmg > 5 && game.rng.chance(ignite)) {
+  if (ignite > 0 && hullDmg > 5 && game.rng.chance(ignite * cx)) {
     igniteShip(game, target, 10 + game.rng.float() * 6, shooter);
     crit = 'fire';
   }
@@ -579,6 +583,8 @@ export interface DamagePacket {
   crew?: number;
   rudder?: number;
   morale?: number;
+  /** The ladder of strength is already reckoned in (a cannonball, capped per broadside after it). */
+  laddered?: boolean;
 }
 
 /** A mast gone by the board: its wreckage drags alongside — the helm answers slowly, but the tangle of spars and
@@ -630,9 +636,14 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   }
   target.lastCombat = now;
   target.protectedUntil = 0;
+  // The ladder of strength (canon D12): the gap of levels cuts or swells the blow; a junior cannot bring a senior
+  // below her floor of hull and crew.
+  const lad = source && source !== target ? ladderBetween(game, source, target) : null;
+  if (lad && lad.dealt !== 1 && !d.laddered) d = { ...d, hull: (d.hull ?? 0) * lad.dealt, sails: (d.sails ?? 0) * lad.dealt, crew: (d.crew ?? 0) * lad.dealt, morale: (d.morale ?? 0) * lad.dealt };
   survivalOnHit(game, target, d);
   if (d.hull) {
-    const hull = screenFlagship(game, target, d.hull);
+    let hull = screenFlagship(game, target, d.hull);
+    if (lad?.floorHull) hull = Math.min(hull, Math.max(0, target.hull - lad.floorHull * target.stats.hullMax));
     target.hull -= hull;
     onHullDamage(game, target, hull, source);
   }
@@ -642,6 +653,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     let killed = Math.floor(d.crew);
     if (game.rng.float() < d.crew - killed) killed++;
     killed = Math.min(killed, target.crew);
+    if (lad?.floorCrew) killed = Math.min(killed, Math.max(0, target.crew - Math.ceil(lad.floorCrew * target.stats.crewMax)));
     target.crew -= killed;
     target.wounded += woundedOf(game, target, killed);
     onCrewKilled(game, target, killed, source);

@@ -6,7 +6,7 @@ import { applyDamage } from '../server/src/game/combat.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { onCrit, onGrapple, sanityDrain, stepMind } from '../server/src/game/mind.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { join, makeGame, steps, onHull } from './helpers.ts';
 
 function captain(game: Game, name: string, cap: CaptainId) {
   const c = join(game, name, cap);
@@ -41,6 +41,7 @@ test('resolve: trading blows charges the Ultimate; it fires only when full and e
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Vane', 'corsair');
   toSea(game, s);
+  onHull(game, ship, 'brig'); // even terms with the brigs she fights (canon D12)
   const foe = dummy(game, ship, 300, 0);
   c.push({ t: 'ability', id: 'last_volley' });
   assert.ok(!ship.hasEffect('last_volley'), 'refused at 0 resolve');
@@ -72,6 +73,7 @@ test('dread: the Drowned Captain bleeds into it, pays miracles with it, and the 
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Harrow', 'drowned');
   toSea(game, s);
+  onHull(game, ship, 'brig'); // even terms with the brigs she fights (canon D12)
   const foe = dummy(game, ship, 200, 0);
   c.push({ t: 'ability', id: 'deep_call', x: foe.state.x, y: foe.state.y });
   assert.equal(game.zones.length, 0, 'no Dread, no miracle');
@@ -104,6 +106,7 @@ test('Undertow drags a ship with no way on; the Maw takes a fifth of her hull, a
   const { game } = makeGame();
   const { c, s, ship } = captain(game, 'Undertow', 'drowned');
   toSea(game, s);
+  onHull(game, ship, 'brig'); // even terms with the brigs she fights (canon D12)
   ship.dread = 100;
   const foe = dummy(game, ship, 0, -200); // due north, in the race
   const y0 = foe.state.y;

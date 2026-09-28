@@ -2,6 +2,7 @@
 // of three; everyone who takes it hunts the same ship, a groupmate's kill counts for all, and a lost quarry is put
 // to sea again.
 
+import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ELITE_GROUP, eliteContractFor, eliteLevel, elitePatterns } from '../shared/src/data/elite.ts';
@@ -47,7 +48,8 @@ test('on the board, taken by two captains of a group: one flagship with her esco
   assert.ok(qa && qb, 'both hold it');
   assert.ok(qa.leader !== undefined && qa.leader === qb.leader, 'one flagship for all who hold the contract');
   const flag = game.ships.get(qa.leader!)!;
-  assert.ok(['frigate', 'galleon', 'man_o_war'].includes(flag.cls.id));
+  assert.ok(flag.elite, 'an elite built for a company (canon D12)');
+  assert.ok(flag.stats.hullMax > 2 * SHIP_CLASSES[flag.cls.id].hull, 'her hull is two and a half times her class');
   const escorts = [...game.ships.values()].filter((x) => x !== flag && x.alive && x.npcRole === 'pirate' && Math.hypot(x.state.x - flag.state.x, x.state.y - flag.state.y) < 400);
   assert.ok(escorts.length >= 1, 'escorts at her side');
   assert.ok(a.all('toast').some((t) => t.msg.includes('with two escorts in')), 'word of the quarry');

@@ -197,6 +197,7 @@ function practiceRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
     const x = ship.state.x + Math.sin(a) * 900, y = ship.state.y - Math.cos(a) * 900;
     if (coastLand(game, x, y)) continue;
     const r = game.spawnNpcShip('pirate', 'sloop', 'confederacy', x, y, a + Math.PI, { ship: 'Red Novice', captain: 'Jory Slack' });
+    game.setNpcLevel(r, 1); // the first fight is an even one
     r.purse = 120;
     r.cargo = { rum: 4 };
     // A lesson, not a massacre: round shot only (no grape to cut down a novice's crew), and she never boards.

@@ -4,6 +4,7 @@
 // orders and the captain's own move bought with momentum); a captain who waits holds the line. Either captain
 // may call the other out: a duel of three timed exchanges decides the fight.
 
+import { ladderBetween } from './ladder.ts';
 import { inDuel } from './pvp.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { clamp, dist } from '../../../shared/src/math.ts';
@@ -52,6 +53,8 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   const blocked = damageBlocked(game, a, b);
   if (blocked && blocked !== 'friendly') return blocked;
   if (blocked === 'friendly') return 'That ship sails with you';
+  // The ladder (canon D12): a lone junior among captains cannot board a senior; nor can one far below at sea.
+  if (!ladderBetween(game, a, b).board) return 'She is above your level: your boarders would not reach her deck';
   const anywhere = a.hasFlag('boarding_anywhere');
   const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
   // Chain and Grapple: tangled rigging is half-way to a grapple already.
@@ -194,7 +197,8 @@ function power(game: Game, s: ShipEntity, enemy: ShipEntity, defending: boolean)
   if (s.captain === 'reaver' && enemy.crew < enemy.stats.crewMax * 0.5) p *= 1.2; // Blood in the Water
   if (defending && s.cls.passive.id === 'castle') p *= 1.25;
   if (s.surrendered) p *= 0.1;
-  void game;
+  // The ladder (canon D12): the gap of levels weighs on the boarders as on the guns.
+  p *= ladderBetween(game, s, enemy).dealt || 0.1;
   return Math.max(0.1, p);
 }
 
