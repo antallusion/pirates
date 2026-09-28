@@ -40,6 +40,7 @@ import { giverDialog } from './giver.ts';
 import { EN, RU } from '../lang/ui/port.ts';
 import { serverText } from '../lang/server.ts';
 import { sendService, serviceCard } from './marque.ts';
+import { captivesCard } from './turncoats.ts';
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -284,7 +285,7 @@ export class PortScreen {
       case 'clerk':
         return this.send({ t: 'tip', action: 'clerk' });
       case 'captive':
-        return this.send({ t: 'captive', index: Number(d.i), mode: d.mode as 'ransom' });
+        return this.send({ t: 'captive', index: Number(d.i), mode: d.mode as 'ransom' | 'hand_over' | 'officer' | 'skipper' });
       case 'rights':
         return this.send({ t: 'rights', site: d.site! });
       case 'store':
@@ -543,9 +544,7 @@ ${orders}${berths}</div>` : ''}`;
           ${port.faction === 'harpoon' ? `<p class="muted">${esc(L('licence.whaling'))}</p>` : ''}
           ${view.licence.until > state.estServerTime() ? `<p class="good">${esc(licenceLeft(Math.round((view.licence.until - state.estServerTime()) / 60)))}</p>` : ''}
           <button class="btn" data-act="licence">${esc(L('licence.buy', { cost: fmt(view.licence.cost) }))}</button></div>` : ''}
-        ${self.captives.length ? `<div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('captives.title'))}</h4>${self.captives.map((c, i) => `<div class="row" style="padding:3px 0"><span>${esc(c.name)} <span class="muted">${esc(FACTIONS[c.faction].short)}</span></span><span>
-          <button class="btn btn-small" data-act="captive" data-i="${i}" data-mode="ransom">${esc(L('captive.ransom', { cost: fmt(c.ransom) }))}</button>
-          <button class="btn btn-small" data-act="captive" data-i="${i}" data-mode="hand_over" title="${esc(L('captive.handTitle'))}">${esc(L('btn.handOver'))}</button></span></div>`).join('')}</div>` : ''}
+        ${captivesCard(state)}
         <div class="card"><h4 class="card-h">${icon('insurance', '', 'ico-md')}${esc(L('ins.title'))}</h4>${view.insurance.length ? `<p>${esc(L('ins.text'))}</p>
           ${self.policy ? `<p class="good">${esc(L('ins.insured', { tier: L(`ins.${self.policy}`) }))}</p>` : view.insurance.map((q) => `<div class="row ins-row"><span><b>${esc(q.tier === 'hull' ? L('ins.hull') : q.tier === 'cargo' ? L('ins.cargo') : L('ins.full'))}</b> <span class="muted">${q.hull ? esc(L('ins.salvage')) : ''}${q.hull && q.cover ? ' · ' : ''}${q.cover ? esc(L('ins.cover', { pct: Math.round(q.cover * 100), declared: fmt(q.declared), deductible: fmt(q.deductible) })) : ''}</span></span>
             <button class="btn btn-small" data-act="insure" data-tier="${q.tier}" ${q.cover && q.declared < 50 ? 'disabled' : ''}>${money(q.premium)}</button></div>`).join('')}` : `<p class="muted">${esc(L('ins.none'))}</p>`}</div>

@@ -36,6 +36,9 @@ import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import { SKIPPER_RISK, SKIPPER_SALE, SKIPPER_SKIM, SKIPPER_SPEED } from '../../../shared/src/data/turncoats.ts';
+import { skipperHome, takeSkipper } from './turncoats.ts';
+import type { Skipper } from './turncoats.ts';
 
 
 type Stop = { kind: 'isle' } | { kind: 'port'; id: string; act: 'sell' | 'buy' | 'trade_buy' | 'trade_sell' } | { kind: 'outpost'; id: string };
@@ -52,6 +55,8 @@ export interface Caravan {
   ownerName: string;
   name: string;
   skipper: string;
+  /** A turned captain at the helm, with his gifts and loyalty (docs/12 P10 #16). */
+  skipperRec?: Skipper;
   island: number;
   ships: { loadout: ShipLoadout; hull: number }[];
   escorts: number;
@@ -127,7 +132,8 @@ function speedOf(game: Game, c: Caravan): number {
   const slowest = Math.min(...c.ships.map((x) => SHIP_CLASSES[x.loadout.classId].maxSpeed));
   const h = island(game, c.island) ? game.holdings.get(game, c.island) : undefined;
   const pilot = h?.residents?.some((r) => r.prof === 'pilot') ? 1.1 : 1;
-  return slowest * 0.55 * pilot;
+  const nav = c.skipperRec?.traits.includes('navigator') ? SKIPPER_SPEED : 1;
+  return slowest * 0.55 * pilot * nav;
 }
 
 function value(cargo: Cargo): number {
@@ -248,9 +254,9 @@ export function launchCaravan(game: Game, s: PlayerSession, o: LaunchOrder): str
   }
   if ((c.task === 'sell' || c.task === 'supply' || c.task === 'trade') && !c.port) return 'A caravan wants a destination.';
   if (c.task === 'trade' && !c.port2) return 'A caravan wants a destination.';
-  // The skipper: a captive captain for nothing, else one hired.
+  // The skipper: a turned captain of her own for nothing (docs/12 P10 #16), else one hired.
   const lvl = level(c);
-  const cost = escorts * escortCost(lvl) + (p.captives.length ? 0 : SKIPPER_COST);
+  const cost = escorts * escortCost(lvl) + ((p.skippers ?? []).length ? 0 : SKIPPER_COST);
   if (p.gold < cost) return `Needs ${cost} silver`;
   // What the island sends: the goods to sell.
   if (c.task === 'sell') {
@@ -269,9 +275,10 @@ export function launchCaravan(game: Game, s: PlayerSession, o: LaunchOrder): str
   if (!plan(game, c)) return 'A caravan wants a destination.';
   p.gold -= cost;
   game.db.ledger(s.accountId, 'caravan_fit', -cost, c.id);
-  if (p.captives.length) {
-    const cap = p.captives.shift()!;
-    c.skipper = cap.name;
+  const rec = takeSkipper(p);
+  if (rec) {
+    c.skipper = rec.name;
+    c.skipperRec = rec;
   } else c.skipper = S.rng.pick(['Aldous Crane', 'Bess Marlow', 'Cato Wrenfield', 'Dagny Holt', 'Esme Varga', 'Fenwick Pryce']);
   // The ships leave their berths for the voyage.
   for (const i of [...idx].sort((a, b) => b - a)) p.berths.splice(i, 1);
@@ -440,6 +447,7 @@ function rollAttack(game: Game, c: Caravan): void {
   if (c.orders.nightInPort) risk *= 0.6;
   const h = game.holdings.get(game, c.island);
   if (h && has(h, 'signal_tower') && island(game, c.island)?.region === region) risk *= 0.67;
+  if (c.skipperRec?.traits.includes('wary')) risk *= SKIPPER_RISK;
   if (!S.rng.chance(risk / 60)) return;
   attackNow(game, c);
 }
@@ -585,7 +593,8 @@ function arriveAt(game: Game, c: Caravan, stop: Stop): void {
         note(c, `${c.name} will not sell below ${Math.round(GOODS[g].basePrice * floor)}: the goods come home.`);
         continue;
       }
-      const got = Math.round(quoteSell(g, gm, n, mods) * profitMul);
+      const t = c.skipperRec?.traits ?? [];
+      const got = Math.round(quoteSell(g, gm, n, mods) * profitMul * (t.includes('trader') ? SKIPPER_SALE : 1) * (t.includes('light_fingered') ? SKIPPER_SKIM : 1));
       applyTrade(market, g, n);
       delete c.cargo[g];
       if (s?.profile) s.profile.gold += got;
@@ -661,7 +670,12 @@ function finish(game: Game, c: Caravan): void {
     touch(game);
     return;
   }
-  // Home: the hulls to their berths, what she could not unload with them.
+  // Home: her own skipper back to her pool — or, of low loyalty, gone with a hull (docs/12 P10 #16).
+  if (c.skipperRec) {
+    const took = skipperHome(game, c.owner, c.skipperRec, c.ships);
+    if (took >= 0) c.ships.splice(took, 1);
+  }
+  // The hulls to their berths, what she could not unload with them.
   const p = s?.profile;
   const key = `isle:${c.island}`;
   if (p) for (const x of c.ships) p.berths.push({ port: key, loadout: x.loadout, hull: x.hull });

@@ -2095,6 +2095,15 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 #hud-storm .st-bar { height: 6px; margin-top: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
 #hud-storm .st-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6fb4ff, #e8f4ff); }
 #hud-storm .st-charge { font: 600 12px var(--sans); color: #b8d4f0; margin-top: 2px; font-variant-numeric: tabular-nums; }
+/* Captive captains in service (docs/12 P10 #16). */
+.tc-card .tc-cap { border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 0 6px; }
+.tc-card .tc-cap:first-of-type { border-top: 0; }
+.tc-card .tc-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+.tc-card .tc-loy { margin-left: auto; font: 700 12px var(--sans); color: #d8c9a0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tc-card .tc-loy.good { color: var(--good); }
+.tc-card .tc-loy.bad { color: var(--bad); }
+.tc-card .tc-cap p { margin: 3px 0; }
+.tc-card .tc-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 /* Letters of marque (docs/12 P10 #15). */
 #hud-order { pointer-events: none; padding: 6px 9px 7px; max-width: 320px; border-color: rgba(201,162,90,0.5); }
 #hud-order .fp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

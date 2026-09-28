@@ -15,6 +15,9 @@ import type { PlayerSession } from './player.ts';
 import { changeRep } from './player.ts';
 import { plunderShare } from './crew.ts';
 import { questEvent } from './quests.ts';
+import type { OfficerRole, TraitId } from '../../../shared/src/data/crew.ts';
+import type { SkipperTrait } from '../../../shared/src/data/turncoats.ts';
+import { rollCaptive } from './turncoats.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const MAX_PRIZES = 2;
@@ -102,14 +105,29 @@ export interface Captive {
   faction: FactionId;
   tier: number;
   taken: number;
+  /** What he would make if turned (docs/12 P10 #16): an officer's post, traits and level, a skipper's gifts, and his
+   *  loyalty in irons; the game day he last refused. */
+  role?: OfficerRole;
+  traits?: TraitId[];
+  level?: number;
+  skills?: SkipperTrait[];
+  loyalty?: number;
+  tried?: number;
+}
+
+/** Captains a boarding party brought back without the Ransom talent (half of them are taken; the talent takes all). */
+const seized = new WeakSet<ShipEntity>();
+export function seizeCaptain(target: ShipEntity): void {
+  seized.add(target);
 }
 
 export function takeCaptive(game: Game, s: PlayerSession, target: ShipEntity): boolean {
   const p = s.profile!;
-  if (!s.ship!.hasFlag('ransom') || s.ship!.hasFlag('no_quarter') || target.isPlayer || target.faction === 'player' || target.prize) return false;
+  if (!(s.ship!.hasFlag('ransom') || seized.has(target)) || s.ship!.hasFlag('no_quarter') || target.isPlayer || target.faction === 'player' || target.prize) return false;
+  if (target.npcRole === 'ghost' || target.cls.monster) return false;
   if (p.captives.length >= MAX_CAPTIVES) return false;
-  p.captives.push({ name: target.captainName, faction: target.faction as FactionId, tier: target.cls.tier, taken: game.now });
-  game.sendTo(s, { t: 'toast', msg: `${target.captainName} is clapped in irons below. Ransom him at any harbour master.`, kind: 'info' });
+  p.captives.push(rollCaptive(game, target));
+  game.sendTo(s, { t: 'toast', msg: `${target.captainName} is clapped in irons below.`, kind: 'info' });
   return true;
 }
 

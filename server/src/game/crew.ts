@@ -541,6 +541,11 @@ function stepBetrayalWarnings(game: Game, s: PlayerSession): void {
       o.warnedAt = now;
       game.toastShip(s.ship!, `${o.name} counts the silver in the chest a little too often. (Loyalty ${Math.round(o.loyalty)} — a game day to win him back.)`, 'bad');
     }
+    // A turned enemy of low loyalty looks to his old flag (docs/12 P10 #16).
+    if (o.traits.includes('former_enemy') && o.loyalty < 15 && o.warnedAt === undefined) {
+      o.warnedAt = now;
+      game.toastShip(s.ship!, `${o.name} watches the horizon for his old flag. (Loyalty ${Math.round(o.loyalty)} — a game day to win him back.)`, 'bad');
+    }
     if (o.warnedAt !== undefined && o.loyalty >= 25) o.warnedAt = undefined;
   }
 }

@@ -32,6 +32,7 @@ import { assetUrl } from '../assets.ts';
 import { ask } from './confirm.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
+import { skippersCard } from './turncoats.ts';
 
 const L = dict(EN, RU);
 /** A name or sentence the server built, in the player's language. */
@@ -416,7 +417,7 @@ export class CompanyScreen {
     const free = state.caravanSlots - state.caravans.length;
     return `<div class="card est-card cv-card"><h4 class="card-h">${icon('tab_empire', '', 'ico-md')}${esc(L('cv_title', { n: state.caravans.length, max: state.caravanSlots }))}</h4>
       ${rows || `<p class="muted">${esc(L('cv_none'))}</p>`}
-      ${free > 0 ? (this.wiz ? this.wizardHtml(state) : `<button class="btn btn-primary" data-cv="new">${esc(L('cv_new'))}</button>`) : ''}</div>`;
+      ${free > 0 ? (this.wiz ? this.wizardHtml(state) : `<button class="btn btn-primary" data-cv="new">${esc(L('cv_new'))}</button>`) : ''}</div>${skippersCard(state)}`;
   }
 
   private wizardHtml(state: ClientState): string {

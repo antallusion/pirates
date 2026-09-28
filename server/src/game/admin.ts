@@ -61,6 +61,7 @@ import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { FACTION_IDS } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
+import { seizeCaptain, takeCaptive } from './prizes.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -68,7 +69,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -287,6 +288,19 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       regattaNow(game, portId, 30_000);
       if (ship.docked === portId) regattaSignUp(game, s);
       return `Regatta of Equal Waters: ${portId}.`;
+    }
+    case 'captive': {
+      // Captive captains (docs/12 P10 #16 play-testing): /captive [n] — captains of pirates and merchants in irons.
+      const n = Math.max(1, Math.min(3, Math.trunc(num(0, 2))));
+      for (let i = 0; i < n; i++) {
+        const role = i % 2 ? 'merchant' : 'pirate';
+        const o = game.spawnNpcShip(role, 'brig', role === 'pirate' ? 'confederacy' : 'league', ship.state.x + 900, ship.state.y, 0);
+        seizeCaptain(o);
+        takeCaptive(game, s, o);
+        game.removeShip(o.id);
+      }
+      game.pushSelf(s, true);
+      return `Captives: ${p.captives.length}.`;
     }
     case 'rep': {
       // Standing with a flag (docs/12 P10 #15 play-testing): /rep faction n.

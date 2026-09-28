@@ -16,6 +16,7 @@ import type { HappeningKind } from './data/happenings.ts';
 import type { EncounterId, SightKind } from './data/encounters.ts';
 import type { CaptainSlot, Item, Slot } from './data/items.ts';
 import type { OrderKind, ServiceId } from './data/marque.ts';
+import type { SkipperTrait } from './data/turncoats.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
@@ -66,7 +67,7 @@ export type ClientMsg =
   | { t: 'board_tactic'; tactic: BoardTactic }
   | { t: 'board_duel'; action: 'challenge' | 'accept' | 'decline' | 'strike'; at?: number }
   | { t: 'scuttle' }
-  | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' }
+  | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' | 'officer' | 'skipper' }
   | { t: 'repair'; on: boolean }
   | { t: 'dock'; bribe?: boolean }
   | { t: 'jettison'; good: GoodId; qty: number }
@@ -440,7 +441,9 @@ export interface PrivateState {
   rollingFire: boolean;
   /** Server time the next dash is ready (dynamic combat). */
   dashReadyAt: number;
-  captives: { name: string; faction: FactionId; ransom: number }[];
+  captives: { name: string; faction: FactionId; ransom: number; role?: OfficerRole; level?: number; traits?: TraitId[]; skills?: SkipperTrait[]; loyalty?: number; turnCost?: number; tried?: boolean }[];
+  /** Turned captains who skipper her caravans (docs/12 P10 #16). */
+  skippers?: { name: string; faction: FactionId; traits: SkipperTrait[]; loyalty: number; voyages: number }[];
   options: { port: string; good: GoodId; qty: number; price: number; deposit: number; until: number }[];
   /** Appraiser: best sell price you know for each good, and where. */
   appraisal: Partial<Record<GoodId, { price: number; port: string }>> | null;

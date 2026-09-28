@@ -56,6 +56,9 @@ import type { Oath, QuestLog } from './quests.ts';
 import { clampLevel, initialLevel } from '../../../shared/src/data/shiplevel.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 import type { ServiceRec } from './marque.ts';
+import type { Skipper } from './turncoats.ts';
+import type { SkipperTrait } from '../../../shared/src/data/turncoats.ts';
+import type { OfficerRole, TraitId } from '../../../shared/src/data/crew.ts';
 
 export interface Profile {
   version: 1;
@@ -195,6 +198,8 @@ export interface Profile {
   /** A letter of marque: the service, merit, rank, pay and order (docs/12 P10 #15); no service before this time. */
   service?: ServiceRec | null;
   serviceBan?: number;
+  /** Turned captains who skipper her caravans (docs/12 P10 #16). */
+  skippers?: Skipper[];
   /** A cartographer's fame: her buried chests dug up by others (docs/12 P10 #7). */
   cartoFame?: number;
   /** The wonders of the sea she has found (docs/12 P10 #8). */
@@ -370,6 +375,8 @@ export interface WorldView {
   questMates?: Record<string, { name: string; step: number }[]>;
   /** Her letter of marque (docs/12 P10 #15). */
   service?: PrivateState['service'];
+  /** What each captive would make if turned, and his loyalty now (docs/12 P10 #16). */
+  captives?: { name: string; role?: OfficerRole; level?: number; traits?: TraitId[]; skills?: SkipperTrait[]; loyalty?: number; turnCost?: number; tried?: boolean }[];
 }
 
 export function toPrivateState(s: PlayerSession, now: number, world: WorldView = { coves: [], patrols: [] }): PrivateState {
@@ -440,7 +447,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     inspect: world.inspect ?? [],
     monsters: world.monsters ?? [],
     appraisal: ship?.hasFlag('appraiser') ? appraise(p) : null,
-    captives: p.captives.map((c) => ({ name: c.name, faction: c.faction, ransom: captiveRansom(c, (ship?.rank('trd_prize_broker') ?? 0) > 0) })),
+    captives: p.captives.map((c) => ({ name: c.name, faction: c.faction, ransom: captiveRansom(c, (ship?.rank('trd_prize_broker') ?? 0) > 0), ...(world.captives?.find((x) => x.name === c.name) ?? {}) })),
+    skippers: p.skippers ?? [],
     talents: p.talents,
     gold: Math.floor(p.gold),
     infamy: Math.round(p.infamy),

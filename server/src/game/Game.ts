@@ -35,6 +35,7 @@ import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
 import { pushTasks, stepTasks, taskSalvage } from './worldtasks.ts';
 import {
+  DAY_LENGTH_SEC,
   CHUNK_STREAM_RADIUS, INTEREST_RADIUS, LOOT_LIFETIME_SEC, SNAP_CROWD, SNAP_CROWD_EVERY, SNAP_MID, SNAP_NEAR, SNAP_RANK_MID, SNAP_RANK_NEAR, LOGOUT_TIMER_SEC, PORT_DOCK_RADIUS, PROTOCOL_VERSION,
   SAIL_STEPS, SNAPSHOT_EVERY_TICKS, TICK_DT, WORLD_SEED, WORLD_SIZE, isNight, xpForLevel,
 } from '../../../shared/src/constants.ts';
@@ -132,7 +133,7 @@ import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossW
 import { applyDamage, cutMastWreck, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
-import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, takeCaptive, takePrize } from './prizes.ts';
+import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, seizeCaptain, takeCaptive, takePrize } from './prizes.ts';
 import type { JollyBoat } from './prizes.ts';
 import {
   bribeCost, buildCoves, contrabandValue, coveAt, coveSell, customsSearch, deferCrime, discoverCoves, dockOverride, fenceSale, portFence, settleCrimes, unmask, visibleRange, visibleRangeBase,
@@ -164,6 +165,7 @@ import type { NpcRole } from './ship.ts';
 import { SpatialGrid } from './spatial.ts';
 import { WEATHER_FOG, WEATHER_WIND, initWeather, seaStateSpread, stepFronts, stepWeather, weatherAtPoint } from './weather.ts';
 import type { Front, RegionWeather } from './weather.ts';
+import { captiveLoyalty, claimSkippers, sanitizeCaptive, turnCaptive, turnCost } from './turncoats.ts';
 
 export interface Loot {
   id: number;
@@ -1349,6 +1351,7 @@ export class Game {
       questMates: this.questMates(s),
       common: commonView(this, s.accountId),
       service: serviceView(this, p),
+      captives: p.captives.map((c) => ({ name: c.name, role: sanitizeCaptive(c).role, level: c.level, traits: c.traits, skills: c.skills, loyalty: captiveLoyalty(this, p, c), turnCost: turnCost(c), tried: c.tried === Math.floor(this.now / DAY_LENGTH_SEC) })),
       coves: this.coves,
       patrols: this.insiderPatrols(s),
       fleet: ship ? {
@@ -1863,7 +1866,9 @@ export class Game {
     if (sa) {
       const crew = prizeCrewNeeded(a, b);
       result.prize = crew !== null ? { crew, value: prizeValue(b, a) } : null;
-      result.captive = a.hasFlag('ransom') && !a.hasFlag('no_quarter') && !b.isPlayer;
+      // Her captain in irons: always with the Ransom talent, else one time in two (docs/12 P10 #16: he may be turned).
+      result.captive = !a.hasFlag('no_quarter') && !b.isPlayer && b.npcRole !== 'ghost' && !b.cls.monster && (a.hasFlag('ransom') || this.rng.chance(0.5));
+      if (result.captive) seizeCaptain(b);
       result.recruits = !b.isPlayer && sa.profile ? maxRecruits(a, b, sa.profile.company) : 0;
       // No Quarter in contested waters: the whole sea hears of it.
       if (a.hasFlag('no_quarter') && REGIONS[a.region].safety === 'contested' && sa.profile) {
@@ -2490,6 +2495,8 @@ export class Game {
       case 'scuttle':
         return err(lightFuse(this, ship));
       case 'captive':
+        // Ransomed, handed over — or turned into an officer or a caravan skipper (docs/12 P10 #16).
+        if (msg.mode === 'officer' || msg.mode === 'skipper') return portAction(() => turnCaptive(this, s, Math.trunc(Number(msg.index)), msg.mode as 'officer'));
         return portAction((pt) => captiveAction(this, s, pt, Math.trunc(Number(msg.index)), msg.mode === 'hand_over' ? 'hand_over' : 'ransom'));
       case 'loot_take':
         err(this.resolveLoot(s, msg.take ?? {}, msg.fate === 'prize' || msg.fate === 'ransom' || msg.fate === 'release' ? msg.fate : 'sink', Math.max(0, Math.trunc(Number(msg.recruit) || 0))));
@@ -3183,6 +3190,7 @@ export class Game {
       }
     }
     if (s.profile) claimBerths(this, s); // the caravans' hulls that came home while she was away (docs/12 P8)
+    if (s.profile) claimSkippers(this, s); // and their skippers (docs/12 P10 #16)
     this.sendTo(s, { t: 'welcome', v: PROTOCOL_VERSION, token: auth.token, accountId: s.accountId, name: s.name, hasCaptain: !!s.profile, worldSize: WORLD_SIZE, time: this.now });
     if (s.profile) this.sendInit(s);
   }
