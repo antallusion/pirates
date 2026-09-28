@@ -2,6 +2,8 @@
 // and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
 // «Follow», «Share» (in a group) and «Set aside».
 
+import type { DutchmanView } from '../../../shared/src/protocol.ts';
+import { placeName } from './maps.ts';
 import { OMENS } from '../../../shared/src/data/omens.ts';
 import type { OmenId } from '../../../shared/src/data/omens.ts';
 import { WONDER_KINDS } from '../../../shared/src/data/wonders.ts';
@@ -76,6 +78,11 @@ const EN = {
   wNamePh: 'Your name for it',
   omen: 'The omen of the day',
   omenCoin: 'Nail a coin under the mast (50 silver)',
+  dTitle: 'The Flying Dutchman: pages of his log ({n} of 5)',
+  dSeen: 'Seen near {island}: a green lantern on the water.',
+  dNext: 'The next page shows in {h} h.',
+  dBattle: 'All five pages: he waits off {island}.',
+  dWon: 'This week he went down to {name}.',
 };
 const RU: typeof EN = {
   title: 'Журнал заданий',
@@ -122,6 +129,11 @@ const RU: typeof EN = {
   wNamePh: 'Ваше имя для него',
   omen: 'Примета дня',
   omenCoin: 'Прибить монету под мачту (50 серебра)',
+  dTitle: 'Летучий Голландец: страницы его журнала ({n} из 5)',
+  dSeen: 'Видели у острова {island}: на воде зелёный фонарь.',
+  dNext: 'Следующая страница появится через {h} ч.',
+  dBattle: 'Все пять страниц: он ждёт у острова {island}.',
+  dWon: 'На этой неделе его упокоил капитан {name}.',
 };
 const L = dict(EN, RU);
 
@@ -147,7 +159,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${omenLog(state.omen)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${omenLog(state.omen)}${dutchmanLog(state.dutchman)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
@@ -209,6 +221,17 @@ export class Journal {
         ${q.kind === 'job' || q.kind === 'story' ? `<button class="btn btn-small btn-danger" data-abandon>${esc(L('abandon'))}</button>` : ''}
       </div>`;
   }
+}
+
+/** The Flying Dutchman's week (docs/12 P10 #10): the pages taken, where the others were seen, his island. */
+function dutchmanLog(v: DutchmanView | null): string {
+  if (!v) return '';
+  const taken = v.pages.filter((p) => p.taken).length;
+  const lines = v.pages.map((p) => p.taken ? `<p class="jr-letter">${esc(serverText(p.text ?? ''))}</p>` : `<p class="jr-fish muted">${esc(L('dSeen', { island: placeName(p.island) }))}</p>`).join('');
+  const next = v.nextIn !== null ? `<p class="jr-fish muted">${esc(L('dNext', { h: Math.max(1, Math.ceil(v.nextIn / 3600)) }))}</p>` : '';
+  const battle = v.battle ? `<p class="jr-fish dutch-go">${esc(L('dBattle', { island: placeName(v.battle.island) }))}</p>` : '';
+  const won = v.winner ? `<p class="jr-fish">${esc(L('dWon', { name: v.winner }))}</p>` : '';
+  return `<div class="jr-fishing jr-dutchman"><div class="giver-h">${esc(L('dTitle', { n: taken }))}</div>${lines}${next}${battle}${won}</div>`;
 }
 
 /** The omen of the day (docs/12 P10 #9). */

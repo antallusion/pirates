@@ -9,7 +9,7 @@ import type { Flag, StatMods } from './stats.ts';
 
 export type WoodId = 'pine' | 'oak' | 'teak' | 'black_oak' | 'ironwood' | 'cursed_wood';
 export type RareSlot = 'keel' | 'belt' | 'sails' | 'guns' | 'paint';
-export type FigureheadId = 'fh_crown_lion' | 'fh_red_devil' | 'fh_weeping_widow' | 'fh_fog_owl' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_serpent' | 'fh_saint_of_wrecks' | 'fh_white_orca';
+export type FigureheadId = 'fh_crown_lion' | 'fh_red_devil' | 'fh_weeping_widow' | 'fh_fog_owl' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_serpent' | 'fh_saint_of_wrecks' | 'fh_white_orca' | 'fh_dutchman';
 export type PlanQuality = 'common' | 'good' | 'masterwork' | 'legendary';
 export type VariantId = 'roomy_hold' | 'stiff_frame' | 'light_rig' | 'gun_deck' | 'fast_lines' | 'thick_skin' | 'wide_beam' | 'sharp_helm';
 
@@ -76,6 +76,7 @@ export const FIGUREHEADS: Record<FigureheadId, FigureheadDef> = {
   fh_gilded_scale: { id: 'fh_gilded_scale', name: 'Gilded Scale', port: 'hollowmere', price: 1100, mods: {}, flags: ['fh_gilded_scale'], description: 'League ports: +5% on what you sell.' },
   fh_drowned_man: { id: 'fh_drowned_man', name: 'Drowned Man', port: 'saint_maw', price: 1000, mods: {}, flags: ['fh_drowned_man'], description: 'The Drowned Captain enters every fight with 10 Dread.' },
   fh_serpent: { id: 'fh_serpent', name: 'Sea Serpent', port: null, price: 0, mods: { maxSpeed: 0.03, ramDealt: 0.1 }, description: '+3% speed, rams +10%. Found in ship graveyards.' },
+  fh_dutchman: { id: 'fh_dutchman', name: 'Flying Dutchman', port: null, price: 0, mods: { nightSpeed: 0.06, fogSight: 0.1 }, flags: ['fh_dutchman'], description: '+6% speed at night; +10% sight in fog; ghost ships never fire first. Taken from the Flying Dutchman.' },
   fh_white_orca: { id: 'fh_white_orca', name: 'White Orca', port: null, price: 0, mods: { maxSpeed: 0.04 }, flags: ['fh_white_orca'], description: '+4% speed; orcas never strike first; +10% damage against the beasts of the sea. Taken from the White Orca.' },
   fh_saint_of_wrecks: { id: 'fh_saint_of_wrecks', name: 'Saint of Wrecks', port: 'wrecktide', price: 900, mods: {}, flags: ['fh_saint_of_wrecks'], description: '+5 s before she goes down.' },
 };

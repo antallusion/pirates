@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { dutchmanSunk, stepDutchman } from './dutchman.ts';
 import { nailCoin, omenBroken, omenKept, sendOmen, stepOmens } from './omens.ts';
 import { nameWonder, stepWonders } from './wonders.ts';
 import { boardAction, buryChest } from './chests.ts';
@@ -732,6 +733,7 @@ export class Game {
     if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
     if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
+    if (Math.floor(this.now) % 5 === 0) stepDutchman(this); // the Flying Dutchman's week (docs/12 P10 #10)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -1602,6 +1604,7 @@ export class Game {
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
     if (!onboardingProtected(this.sessionOf(ship))) this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship), victor); // the First Watch loses nothing
     onShipSunk(this, ship, killer);
+    if (ship.dutchman) dutchmanSunk(this, ship, killer); // the Flying Dutchman laid to rest (docs/12 P10 #10)
     if (ship.isPlayer && killer && (killer.named || killer.namedMate)) nemesisSankYou(this, ship, killer); // he will remember her (docs/12 P10 #1)
     if (killer) this.creditKill(killer, ship, 'sunk');
   }

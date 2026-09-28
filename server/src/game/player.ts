@@ -191,6 +191,8 @@ export interface Profile {
   cartoFame?: number;
   /** The wonders of the sea she has found (docs/12 P10 #8). */
   wonders?: string[];
+  /** The Flying Dutchman's pages she has this week (docs/12 P10 #10). */
+  dutchman?: { week: number; pages: number[] };
   /** Tattoos (docs/12 P9); a choice of three rewards waiting. */
   tattoos?: TattooProfile;
   choice?: { quest: string; items: Item[] } | null;

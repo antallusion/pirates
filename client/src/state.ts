@@ -5,7 +5,7 @@
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
-import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView } from '../../shared/src/protocol.ts';
+import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight } from '../../shared/src/constants.ts';
@@ -121,6 +121,8 @@ export class ClientState {
   wonders: WondersView | null = null;
   /** The omen of the day (docs/12 P10 #9). */
   omen: OmenId | null = null;
+  /** The Flying Dutchman's week (docs/12 P10 #10). */
+  dutchman: DutchmanView | null = null;
   choice: { quest: string; items: Item[] } | null = null;
   tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
@@ -327,6 +329,9 @@ export class ClientState {
         break;
       case 'omen':
         this.omen = m.id;
+        break;
+      case 'dutchman':
+        this.dutchman = m.view;
         break;
       case 'dice':
         this.dice = m.view;

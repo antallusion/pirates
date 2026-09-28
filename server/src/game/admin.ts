@@ -11,6 +11,7 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { sendDutchman, weekPlan } from './dutchman.ts';
 import { wondersOf } from './wonders.ts';
 import { regattaNow, regattaSignUp } from './regatta.ts';
 import { givePet, petAction } from './pets.ts';
@@ -294,6 +295,19 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.state.speed = 0;
       game.grid.upsert(ship.id, ship.state.x, ship.state.y);
       return `Set down at ${w.name[0]}.`;
+    }
+    case 'dutchman': {
+      // The Flying Dutchman (docs/12 P10 #10 play-testing): /dutchman — all five pages, set down by his island.
+      const p = s.profile!;
+      const plan = weekPlan(game);
+      p.dutchman = { week: plan.week, pages: [0, 1, 2, 3, 4] };
+      ship.docked = null;
+      ship.state.x = plan.battle.x + 900;
+      ship.state.y = plan.battle.y;
+      ship.state.speed = 0;
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      sendDutchman(game, s, true);
+      return 'The Flying Dutchman';
     }
     case 'choice': {
       // A chain's reward (docs/12 P9): /choice offers three pieces.

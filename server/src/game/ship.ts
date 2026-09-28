@@ -223,6 +223,8 @@ export class ShipEntity {
   /** A named pirate (docs/12 P5): her id on the roster; one of her lieutenants; the hull at which she runs (0: never). */
   named?: string;
   namedMate?: string;
+  /** The Flying Dutchman himself (docs/12 P10 #10). */
+  dutchman?: boolean;
   /** How a player last hurt this named pirate: the scar he carries off if he gets away (docs/12 P10 #1). */
   scar?: NemesisCause;
   fleeAt?: number;

@@ -732,6 +732,8 @@ export const DATA_RU_CORE: Record<string, string> = {
   "goods.GOODS.shark_skin.description": "Шершавая, как напильник: для рукоятей, эфесов и полировки дерева.",
   "goods.GOODS.serpent_scale.name": "Чешуя змея",
   "goods.GOODS.serpent_scale.description": "Чешуя морского змея, твёрдая, как железо, и зелёная, как бутылочное стекло.",
+  "shipbuild.FIGUREHEADS.fh_dutchman.name": "Летучий Голландец",
+  "shipbuild.FIGUREHEADS.fh_dutchman.description": "+6% к скорости ночью; +10% обзора в тумане; корабли-призраки никогда не стреляют первыми. Взята у Летучего Голландца.",
   "shipbuild.FIGUREHEADS.fh_white_orca.name": "Белая касатка",
   "shipbuild.FIGUREHEADS.fh_white_orca.description": "+4% к скорости; касатки никогда не нападают первыми; +10% урона по морским зверям. Взята у Белой касатки.",
   "ships.MODULES.false_bulwark.name": "Фальшборт",

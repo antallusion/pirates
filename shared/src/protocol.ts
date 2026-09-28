@@ -1044,6 +1044,7 @@ export type ServerMsg =
   | { t: 'regatta'; view: RegattaView }
   | { t: 'wonders'; view: WondersView }
   | { t: 'omen'; id: OmenId }
+  | { t: 'dutchman'; view: DutchmanView }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1326,6 +1327,15 @@ export interface RegattaView {
   time: number | null;
   entrants: number;
   records: { name: string; sec: number }[];
+}
+
+/** The Flying Dutchman's week as a captain sees it (docs/12 P10 #10). */
+export interface DutchmanView {
+  week: number;
+  pages: { i: number; x: number; y: number; island: string; taken: boolean; text: string | null }[];
+  battle: { x: number; y: number; island: string } | null;
+  winner: string | null;
+  nextIn: number | null;
 }
 
 /** The Atlas of Sea Wonders (docs/12 P10 #8): what she has found, and the wonders near her to draw. */

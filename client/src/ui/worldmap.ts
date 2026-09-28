@@ -306,6 +306,22 @@ export class WorldMap {
       g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
       label(placeName(p.name), tx(p.x), ty(p.y) - ms * 0.55);
     }
+    // The Flying Dutchman's lanterns not yet visited, and his island once she has all five pages (docs/12 P10 #10).
+    for (const pg of state.dutchman?.pages ?? []) {
+      if (pg.taken) continue;
+      const x = tx(pg.x), y = ty(pg.y);
+      g.fillStyle = 'rgba(120,255,160,0.9)';
+      g.strokeStyle = 'rgba(0,0,0,0.8)';
+      g.lineWidth = 1.5;
+      g.beginPath(); g.arc(x, y, ms * 0.22, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+    if (state.dutchman?.battle) {
+      const x = tx(state.dutchman.battle.x), y = ty(state.dutchman.battle.y);
+      g.strokeStyle = 'rgba(120,255,160,0.95)';
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(x, y, ms * 0.45, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.moveTo(x - ms * 0.25, y - ms * 0.25); g.lineTo(x + ms * 0.25, y + ms * 0.25); g.moveTo(x + ms * 0.25, y - ms * 0.25); g.lineTo(x - ms * 0.25, y + ms * 0.25); g.stroke();
+    }
     // The wonders she has found (docs/12 P10 #8): a gold star each.
     for (const w of state.wonders?.found ?? []) {
       const x = tx(w.x), y = ty(w.y);

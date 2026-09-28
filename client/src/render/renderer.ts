@@ -381,6 +381,7 @@ export class Renderer {
     this.drawCarcasses(state);
     this.drawBuoys(state);
     this.drawWonders(state);
+    this.drawLanterns(state);
     drawSights(g, state.sights, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, own ? { x: own.x, y: own.y } : null, this.w, this.h);
     this.drawDuelRing(state);
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
@@ -2326,6 +2327,29 @@ export class Renderer {
     }
     void state;
     void side;
+  }
+
+  /** The Flying Dutchman's green lanterns on the water (docs/12 P10 #10), where his pages lie. */
+  private drawLanterns(state: ClientState): void {
+    const v = state.dutchman;
+    if (!v) return;
+    const g = this.g;
+    const t = settings().reduceMotion ? 0 : this.time;
+    for (const pg of v.pages) {
+      if (pg.taken) continue;
+      const x = this.sx(pg.x), y = this.sy(pg.y);
+      if (x < -120 || y < -120 || x > this.w + 120 || y > this.h + 120) continue;
+      const a = 0.6 + 0.3 * Math.sin(t * 2.3 + pg.i);
+      const gr = g.createRadialGradient(x, y, 0, x, y, 90 * this.zoom + 20);
+      gr.addColorStop(0, `rgba(140,255,170,${a})`);
+      gr.addColorStop(1, 'rgba(140,255,170,0)');
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(x, y, 90 * this.zoom + 20, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#1b2a20';
+      g.fillRect(x - 3, y - 7, 6, 10);
+      g.fillStyle = `rgba(200,255,210,${a})`;
+      g.fillRect(x - 2, y - 5, 4, 6);
+    }
   }
 
   /** The wonders of the sea (docs/12 P10 #8), drawn where they lie: a lagoon's glow, bones, an arch, drowned spires,
