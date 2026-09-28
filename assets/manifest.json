@@ -656,6 +656,10 @@
     "portrait.baron_leviathan_reach":    { "local": "portraits/baron_leviathan_reach.webp", "remote": "hf_20260928_170741_cb579790-82d7-4c46-954f-75575c05a368.png", "job": "cb579790-82d7-4c46-954f-75575c05a368", "fit": "sheet:barons_1.4", "rev": 20260928170741},
     "portrait.baron_dead_mans_expanse":  { "local": "portraits/baron_dead_mans_expanse.webp", "remote": "hf_20260928_170741_cb579790-82d7-4c46-954f-75575c05a368.png", "job": "cb579790-82d7-4c46-954f-75575c05a368", "fit": "sheet:barons_1.5", "rev": 20260928170741},
     "portrait.baron_drowned_crown":      { "local": "portraits/baron_drowned_crown.webp", "remote": "hf_20260928_170741_cb579790-82d7-4c46-954f-75575c05a368.png", "job": "cb579790-82d7-4c46-954f-75575c05a368", "fit": "sheet:barons_1.6", "rev": 20260928170741},
-    "portrait.skipper_1":                { "local": "portraits/skipper_1.webp", "remote": "hf_20260928_170741_cb579790-82d7-4c46-954f-75575c05a368.png", "job": "cb579790-82d7-4c46-954f-75575c05a368", "fit": "sheet:barons_1.7", "rev": 20260928170741}
+    "portrait.skipper_1":                { "local": "portraits/skipper_1.webp", "remote": "hf_20260928_170741_cb579790-82d7-4c46-954f-75575c05a368.png", "job": "cb579790-82d7-4c46-954f-75575c05a368", "fit": "sheet:barons_1.7", "rev": 20260928170741},
+    "card.enc_raft":                     { "local": "cards/enc_raft.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.0", "rev": 20260928172012},
+    "card.enc_sinking_merchant":         { "local": "cards/enc_sinking_merchant.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.1", "rev": 20260928172012},
+    "card.enc_pilgrims":                 { "local": "cards/enc_pilgrims.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.2", "rev": 20260928172012},
+    "card.enc_smuggler":                 { "local": "cards/enc_smuggler.webp", "remote": "hf_20260928_172012_15807c0e-6827-4556-ad85-0ef9884d9255.png", "job": "15807c0e-6827-4556-ad85-0ef9884d9255", "fit": "sheet:cards_1.3", "rev": 20260928172012}
   }
 }
