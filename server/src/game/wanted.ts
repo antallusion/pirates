@@ -4,6 +4,7 @@
 // captains; the lairs on the islands — a battery to silence from the sea, then a landing for the chest and the
 // prisoners; and the trail of a wanted captain for a licensed hunter.
 
+import { questEvent } from './quests.ts';
 import { trophyBonus } from './estate.ts';
 import {
   BARON_AFTER, CAPTAIN_KILLER, HUNTER_BONUS, HUNTER_BONUS_RANK, HUNTER_PENNANT, HUNTER_PENNANT_RANK, HUNTER_POINTS, HUNTER_RANKS, HUNTER_SIGHT_R,
@@ -505,6 +506,7 @@ export function wantedKill(game: Game, s: PlayerSession, victim: ShipEntity): vo
         if (b) game.sendTo(s, { t: 'toast', msg: `Three of his captains are sunk: ${b.name[0]}, baron of the Brethren in ${REGIONS[np.region].name}, will come for you himself.`, kind: 'bad' });
       }
       if (p.hunter!.captains >= CAPTAIN_KILLER) grantDeed(game, s, 'deed_captain_killer');
+      questEvent(game, s, { k: 'named' });
       addPoints(game, s, HUNTER_POINTS.captain);
     }
     game.grantXp(s, 120 * np.level, `Sank ${np.name[0]}`, true);

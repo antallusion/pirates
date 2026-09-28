@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
@@ -713,6 +714,7 @@ export class Game {
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
     if (Math.floor(this.now) % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
+    if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
     settleCrimes(this);
@@ -1647,6 +1649,7 @@ export class Game {
     this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);
     onFightWon(this, s);
     questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
+    if (victim.npcRole === 'ghost' && this.weatherOf(victim) === 'fog') tattooCount(this, s, 'fog_ghosts'); // Whispers in the Fog (docs/12 P9)
     wantedKill(this, s, victim); // a named pirate's head, the Hunters' Guild (docs/12 P5)
     raidKill(this, s, victim, how); // a merchant raided: the Brethren's fame, the lanes' heat (docs/12 P6)
     if (how === 'sunk') marqueBounty(this, s, victim);
@@ -2506,6 +2509,12 @@ export class Game {
         return;
       case 'encounter':
         return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
+      case 'tattoo':
+        if (msg.action === 'set') err(setTattoo(this, s, Math.trunc(Number(msg.slot)), msg.id === null ? null : String(msg.id)));
+        return sendTattoos(this, s);
+      case 'choice':
+        err(takeChoice(this, s, Math.trunc(Number(msg.index))));
+        return this.pushSelf(s, true);
       case 'caravan': {
         let e: string | null;
         if (msg.action === 'launch') e = launchCaravan(this, s, msg);
@@ -3317,6 +3326,7 @@ export class Game {
     springAmbush(this, s);
     // Fair Share: a paid crew sails cheerful.
     ship.morale = Math.min(100, ship.morale + 5 * ship.rank('cmd_fair_share'));
+    if (ship.hasFlag('tattoo_heart')) ship.morale = Math.min(100, ship.morale + 10); // the Heart tattoo (docs/12 P9)
     s.profile!.docked = null;
     const v = headingVec(away);
     ship.state = { x: port.x + v.x * 60, y: port.y + v.y * 60, heading: away, speed: 3, sail: 0.5, rudder: 0 };

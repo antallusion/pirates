@@ -59,6 +59,8 @@ export class PortScreen {
   build: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master: boolean } = { classId: 'sloop', name: '', frame: 'pine', plank: 'pine', rares: {}, master: false };
   private send: (m: ClientMsg) => void;
   private onClose: () => void;
+  /** Opens the tattoos window (docs/12 P9). */
+  openTattoos: (() => void) | null = null;
   constructor(send: (m: ClientMsg) => void, onClose: () => void) {
     this.send = send;
     this.onClose = onClose;
@@ -100,6 +102,7 @@ export class PortScreen {
       this.render(root, state);
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
+    root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
     root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-build]').forEach((el) => (el.onchange = () => {
       const k = el.dataset.build!;
       const v = el instanceof HTMLInputElement && el.type === 'checkbox' ? el.checked : el.value;
@@ -442,7 +445,10 @@ ${orders}${berths}</div>` : ''}`;
         <div class="row"><span>${esc(L('officer.loyalty', { n: o.loyalty }))}${o.rep ? esc(L('officer.needs', { n: o.rep })) : ''}</span><button class="btn btn-small btn-primary" data-act="officer_hire" data-id="${esc(o.id)}" ${o.taken || co.officers.length >= co.slots ? 'disabled' : ''}>${o.taken ? esc(L('officer.taken')) : `${esc(L('btn.hire'))} ${money(o.price)}`}</button></div></div>`).join('') || `<p class="muted">${esc(L('officer.none'))}</p>`;
     const board = (view.raid ? tipsHtml(view.raid) : '') + (view.wanted ? wantedBoardHtml(view.wanted) : '');
     const recs = view.fishRecords?.length ? `<div class="card fish-records"><h4 class="card-h">${icon('build_fishing_village', '', 'ico-md')}${esc(L('fish.records'))}</h4>${view.fishRecords.map((r) => `<p class="fish-rec">${esc(L('fish.recordRow', { fish: FISH[r.fish].name[lang() === 'ru' ? 1 : 0], kg: r.kg.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), name: r.name }))}</p>`).join('')}</div>` : '';
-    return `${board}${recs}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
+    // Old Needle's chair (docs/12 P9): tattoos are changed in port, inked in the havens of the Brethren.
+    const tt = state.tattoos;
+    const needle = `<div class="card tt-chair"><h4 class="card-h">${icon('tattoo_needle', '✒', 'ico-md')}${esc(L('tattoo.chair'))}</h4><p class="muted">${esc(L(port.faction === 'confederacy' ? 'tattoo.here' : 'tattoo.elsewhere'))}</p><button class="btn btn-small" data-tattoos>${esc(L('tattoo.open'))}${tt?.pending.length ? ` <span class="h-count">${tt.pending.length}</span>` : ''}</button></div>`;
+    return `${board}${recs}${needle}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
         <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}
         <button class="btn btn-small btn-danger hire-wide" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>

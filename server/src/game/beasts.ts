@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { tattooCount } from './tattoos.ts';
 import { trophyBonus } from './estate.ts';
 import { BEASTS, BEAST_IDS, LINE, SACRED_WATERS, SPOOK_NOISE, beastOfClass, biteAt, hullNoise, lineStep, yieldScale } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
@@ -725,7 +726,7 @@ function stepLines(game: Game, dt: number): void {
       game.grid.upsert(b.id, b.state.x, b.state.y);
     }
     if (l.tension < 60) l.len = Math.max(50, l.len - 3 * dt);
-    const snap = LINE.SNAP * (ship.cls.passive.id === 'flensing_deck' ? 1.33 : 1);
+    const snap = LINE.SNAP * (ship.cls.passive.id === 'flensing_deck' ? 1.33 : 1) * (ship.hasFlag('tattoo_harpoon') ? 1.15 : 1);
     l.over = l.tension > snap ? l.over + dt : 0;
     l.slack = !spent && l.tension < LINE.SLACK ? l.slack + dt : 0;
     if (l.over > LINE.SNAP_HOLD) {
@@ -964,7 +965,7 @@ function stepCarcasses(game: Game): void {
         game.forShipsNear(c.x, c.y, 120, (o) => {
           if (o.alive && o.loadout.classId === 'shark') sharks++;
         });
-        const rate = (1 / def.flense) * (ship.cls.passive.id === 'flensing_deck' ? 2 : 1) * Math.max(0.25, 1 - 0.25 * sharks);
+        const rate = (1 / def.flense) * (ship.cls.passive.id === 'flensing_deck' ? 2 : 1) * (ship.hasFlag('tattoo_shark') ? 1 : Math.max(0.25, 1 - 0.25 * sharks));
         c.progress = Math.min(1, c.progress + rate);
         c.until = Math.max(c.until, now + 30);
         if (c.progress >= 1) {
@@ -1026,6 +1027,7 @@ function flensed(game: Game, s: PlayerSession, c: Carcass): void {
     game.sendTo(s, { t: 'toast', msg: 'The Order of the Harpoon marks your catch.', kind: 'good' });
   }
   game.sendTo(s, { t: 'toast', msg: `Flensed: ${def.name[0]}.`, kind: 'good' });
+  tattooCount(game, s, 'flensed');
   sendHunt(game, ship, true);
 }
 

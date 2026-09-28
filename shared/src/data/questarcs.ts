@@ -360,6 +360,14 @@ function arcStep(k: StepKind, p: ArcParams, text: string): QuestStep {
       return { type: 'beast', count: p.n, group: 'orca', text };
     case 'hunt_shark':
       return { type: 'beast', count: p.n, group: 'shark', text };
+    case 'sink_named':
+      return { type: 'named', count: 1, text };
+    case 'tribute':
+      return { type: 'tribute', count: Math.min(2, p.n), text };
+    case 'find_letter':
+      return { type: 'letters', count: 1, text };
+    case 'race2':
+      return { type: 'race', port: p.port2!.id, seconds: Math.max(300, p.n * 60), text };
   }
 }
 

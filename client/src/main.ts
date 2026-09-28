@@ -36,6 +36,7 @@ import { TalentScreen } from './ui/talents.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 import { Journal } from './ui/journal.ts';
+import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
@@ -56,7 +57,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -67,6 +68,7 @@ renderer.onLightning = () => audio.thunder();
 for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });
 const worldMap = new WorldMap();
 const journal = new Journal((m) => net.send(m));
+journal.openTattoos = () => openModal('tattoos');
 worldMap.send = (m) => net.send(m);
 let modal: Modal = null;
 let inGame = false;
@@ -156,6 +158,7 @@ function resolveTarget(): number | null {
 }
 
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
+portScreen.openTattoos = () => openModal('tattoos');
 const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
 // "Whisper" on a friend: the chat opens over the window, addressed to them.
@@ -450,6 +453,14 @@ function onMessage(m: ServerMsg): void {
     case 'encounter':
       encounterCard.open(m.view);
       break;
+    case 'tattoos':
+      if (modal === 'tattoos') refreshModal();
+      break;
+    case 'choice':
+      // A chain's reward (docs/12 P9): the three pieces open at once; taken, the window closes.
+      if (m.view) openModal('choice');
+      else if (modal === 'choice') closeModal();
+      break;
     case 'fishfight':
       fishFight.open(m.view);
       break;
@@ -609,6 +620,13 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'menu':
       renderMenu(root, openMenuItem);
+      break;
+    case 'tattoos':
+      renderTattoos(root, state, (m) => net.send(m));
+      break;
+    case 'choice':
+      if (state.choice) renderChoice(root, state.choice, (m) => net.send(m));
+      else closeModal();
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);

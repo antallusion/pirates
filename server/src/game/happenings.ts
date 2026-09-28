@@ -7,6 +7,7 @@
 //  - The lost fleet: after the Great Storm, the region's water full of drifting hulls and wreckage.
 //  - A festival: a lawful port's two kind hours — prices, a cheerful crew, fireworks after dark.
 
+import { tattooCount } from './tattoos.ts';
 import { spawnWhiteOrca } from './beasts.ts';
 import { herringShoals, killShoals } from './fishing.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
@@ -326,6 +327,7 @@ export function tickHappening(game: Game, e: WorldEvent): boolean {
         e.ends = game.wallNow(); // claimed: it ends on the next step
         e.by = s.name;
         const n = giveGoods(ship, 'sulfur_iron', 5);
+        tattooCount(game, s, 'star');
         game.sendTo(s, { t: 'toast', msg: `The star-iron is yours: ${n} of it in the hold.`, kind: 'gold' });
         takeItem(game, s, makeItem(game.rng, 0, { ilvl: ship.shipLevel, source: 'elite' }));
         for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} claims the fallen star on ${is.name}!`, kind: 'gold' });

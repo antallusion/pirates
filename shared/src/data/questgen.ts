@@ -74,7 +74,9 @@ export const PROFESSIONS: Record<Profession, [string, string]> = {
 /** Step kinds a plot is made of; each becomes a quest step with its text. */
 export type StepKind = 'pickup' | 'deliver2' | 'deliver3' | 'visit2' | 'visit3' | 'home' | 'back' | 'sink_pirates' | 'sink_ghosts' | 'sink_hunters' | 'sink_any'
   | 'board' | 'prize' | 'land_site' | 'land_any' | 'land_any2' | 'dive' | 'chart' | 'reach' | 'time_in' | 'contraband' | 'customs'
-  | 'catch_any' | 'catch_big' | 'hunt_whale' | 'hunt_orca' | 'hunt_shark';
+  | 'catch_any' | 'catch_big' | 'hunt_whale' | 'hunt_orca' | 'hunt_shark'
+  // docs/12 P9
+  | 'sink_named' | 'tribute' | 'find_letter' | 'race2';
 
 export const STEP_TEXT: Record<StepKind, [string, string]> = {
   pickup: ['Take on {good} × {n} at {port}.', 'Примите груз в порту {port}: {good} × {n}.'],
@@ -104,6 +106,10 @@ export const STEP_TEXT: Record<StepKind, [string, string]> = {
   hunt_whale: ['Take whales: {n}.', 'Добудьте китов: {n}.'],
   hunt_orca: ['Kill orcas: {n}.', 'Убейте касаток: {n}.'],
   hunt_shark: ['Kill sharks: {n}.', 'Убейте акул: {n}.'],
+  sink_named: ['Sink wanted captains from the Guild’s board: {n}.', 'Потопите разыскиваемых капитанов с доски Гильдии: {n}.'],
+  tribute: ['Take tribute from merchant ships: {n}.', 'Возьмите дань с торговых кораблей: {n}.'],
+  find_letter: ['Fish letters in bottles out of the sea: {n}.', 'Выловите из моря письма в бутылках: {n}.'],
+  race2: ['Reach {port2} within {n} min.', 'Дойдите до порта {port2} за {n} мин.'],
 };
 
 // ------------------------------------------------------------------ plots and the ways they are told
@@ -168,6 +174,81 @@ export const PLOTS: Plot[] = [
       F('pearl_diver', 'Clear Water', 'Чистая вода', '{giver} will not go down while the sharks circle the beds. Thin them out.', '{giver} не нырнёт, пока над отмелями кружат акулы. Проредите их.'),
       F('tavern_keeper', 'Shark Fin Soup', 'Суп из акульих плавников', 'A guest from the south pays well for shark. {giver} has none.', 'Гость с юга хорошо платит за акулу. У капитана ({giver}) их нет.'),
       F('priest', 'The Drowned Deserve Rest', 'Утопленникам нужен покой', 'The sharks will not leave the drowned in peace. {giver} asks you to drive them off.', 'Акулы не дают покоя утопленникам. {giver} просит их отогнать.'),
+    ],
+  },
+  // ---------------------------------------------------------------- the living sea (docs/12 P9)
+  {
+    id: 'save_whale', category: 'rescue', steps: ['hunt_shark', 'home'], level: 3, pay: 380, xp: 300, regions: ['black_coast', 'gravewater', 'whispering', 'ashen_isles', 'dead_mans_expanse', 'drowned_crown'], flavors: [
+      F('whaler', 'The Cow and Her Calf', 'Китиха с китёнком', 'A whale cow lies wounded off {port} with her calf beside her, and the sharks have found them. {giver} hunts whales — but not like this.', 'У берегов {port} лежит раненая китиха с китёнком, и их нашли акулы. {giver} охотится на китов — но не так.'),
+      F('priest', 'Mercy on the Water', 'Милосердие на воде', 'The fishers say a whale is being eaten alive in the shallows. {giver} asks a captain to end the sharks, not the whale.', 'Рыбаки говорят, что на мелководье акулы заживо едят кита. {giver} просит капитана покончить с акулами, а не с китом.'),
+      F('lighthouse_keeper', 'The Singer', 'Певец', 'Every night a whale sings under the lighthouse, and every night the sharks come closer. {giver} would miss the song.', 'Каждую ночь под маяком поёт кит, и каждую ночь акулы подходят ближе. Смотрителю маяка ({giver}) будет не хватать этой песни.'),
+      F('fishwife', 'The Whale Brings the Fish', 'Кит приводит рыбу', 'Where the old whale feeds, the herring follow. {giver} wants the sharks off it before the shoals go with it.', 'Где кормится старый кит, туда идёт и сельдь. {giver} хочет отогнать от него акул, пока косяки не ушли вместе с ним.'),
+    ],
+  },
+  {
+    id: 'named_trail', category: 'hunt', steps: ['visit2', 'sink_named', 'home'], where: 'unsafe', level: 10, pay: 900, xp: 760, flavors: [
+      F('garrison_captain', 'A Name on the Wind', 'Имя на ветру', 'A drunk in {port2} is selling a wanted captain’s course. {giver} wants you to buy it — and use it.', 'Пьяница в порту {port2} продаёт курс разыскиваемого капитана. {giver} хочет, чтобы вы купили его — и воспользовались.'),
+      F('widow', 'The Man Who Burned Us', 'Тот, кто нас сжёг', 'Her husband’s ship was burned by a captain whose face is on every board. {giver} heard he drinks in {port2}. Find him at sea.', 'Корабль её мужа сжёг капитан, чьё лицо висит на каждой доске. {giver} слышала, что он пьёт в порту {port2}. Найдите его в море.'),
+      F('fence', 'Bad for Business', 'Плохо для дела', 'A wanted captain has been cutting into {giver}’s trade. A friend in {port2} knows where he waters. The rest is yours.', 'Разыскиваемый капитан отбивает дела у скупщика ({giver}). Друг в порту {port2} знает, где тот берёт воду. Остальное — за вами.'),
+      F('envoy', 'The Crown’s Displeasure', 'Немилость Короны', 'The Crown wants one of the Guild’s names sunk before the season’s end. {giver} has a lead in {port2}.', 'Корона желает, чтобы одно из имён Гильдии пошло на дно до конца сезона. У посланника ({giver}) есть зацепка в порту {port2}.'),
+      F('bosun', 'Old Shipmates', 'Старые товарищи', '{giver} sailed with a man who is now wanted by name. He says the man owes him a debt, and {port2} knows his course.', '{giver} ходил с человеком, которого теперь разыскивают по имени. Говорит, тот ему должен, а в порту {port2} знают его курс.'),
+    ],
+  },
+  {
+    id: 'merchant_tip', category: 'smuggling', steps: ['visit2', 'tribute', 'home'], where: 'unsafe', level: 8, pay: 720, xp: 560, flavors: [
+      F('fence', 'Fat and Slow', 'Жирный и медленный', 'A clerk in {port2} will tell you which merchant sails heavy this week. {giver} takes a share of the tribute.', 'Писарь в порту {port2} скажет, какой купец на этой неделе идёт гружёным. {giver} берёт долю с дани.'),
+      F('smuggler', 'Taxes of Our Own', 'Свои налоги', 'The League taxes us; we tax the League. {giver} has a friend in {port2} with sailing lists.', 'Лига берёт налоги с нас — мы берём с Лиги. У контрабандиста ({giver}) есть друг в порту {port2} со списками отплытий.'),
+      F('tavern_keeper', 'Loose Lips', 'Болтливые языки', 'Merchants drink in {giver}’s tavern and talk too much. The richest of them sails from {port2}. Make him pay.', 'Купцы пьют в трактире ({giver}) и болтают лишнее. Самый богатый из них выходит из порта {port2}. Пусть заплатит.'),
+      F('bosun', 'The Crew Wants Silver', 'Команда хочет серебра', 'The crew grumbles for want of pay. {giver} knows a merchant who pays rather than fights — ask in {port2}.', 'Команда ворчит без жалованья. {giver} знает купца, который скорее заплатит, чем будет драться, — спросите в порту {port2}.'),
+    ],
+  },
+  {
+    id: 'caravan_guard', category: 'delivery', steps: ['sink_pirates', 'visit2', 'home'], where: 'unsafe', level: 5, pay: 640, xp: 480, flavors: [
+      F('merchant', 'Wolves on the Road', 'Волки на дороге', 'A caravan leaves for {port2} and the pirates of {region} know it. {giver} pays for every one of them you sink before it sails in.', 'Караван уходит в порт {port2}, и пираты вод «{region}» об этом знают. {giver} платит за каждого, кого вы потопите, пока он не придёт.'),
+      F('harbour_master', 'Clear the Lane', 'Расчистить путь', 'The lane to {port2} is thick with pirates. {giver} will not let the grain ships out until it is clean.', 'Путь в порт {port2} кишит пиратами. {giver} не выпустит хлебные корабли, пока его не расчистят.'),
+      F('envoy', 'Gold for {port2}', 'Золото для порта {port2}', 'The governor’s gold goes to {port2} in a slow fluyt. {giver} wants the pirates in its way on the bottom.', 'Золото губернатора идёт в порт {port2} на медленном флейте. {giver} хочет, чтобы пираты на его пути легли на дно.'),
+      F('widow', 'Her Son’s First Voyage', 'Первый рейс её сына', 'Her son sails a caravan to {port2} for the first time. {giver} asks you to sail ahead and make the sea quieter.', 'Её сын впервые ведёт караван в порт {port2}. {giver} просит вас пройти вперёд и сделать море тише.'),
+    ],
+  },
+  {
+    id: 'outpost_defense', category: 'rescue', steps: ['land_site', 'sink_pirates', 'home'], where: 'unsafe', level: 6, pay: 680, xp: 520, site: 'people', flavors: [
+      F('harbour_master', 'The Hamlet Asks for Help', 'Посёлок просит помощи', 'Pirates took the nets of the {site} on {island} and promised to return for the rest. {giver} asks you to warn them — and to meet the pirates first.', 'Пираты забрали сети у поселения «{site}» на острове {island} и обещали вернуться за остальным. {giver} просит предупредить их — и встретить пиратов первым.'),
+      F('priest', 'The Chapel on {island}', 'Часовня на острове {island}', 'The {site} on {island} has a chapel and no guns. {giver} asks a captain to land, and then to stand guard at sea.', 'У поселения «{site}» на острове {island} есть часовня, но нет пушек. {giver} просит капитана высадиться, а потом встать на стражу в море.'),
+      F('fishwife', 'My Sister on {island}', 'Моя сестра на острове {island}', 'Her sister lives at the {site} on {island}, and the pirates of {region} have found it. {giver} begs you to go.', 'Её сестра живёт в поселении «{site}» на острове {island}, и пираты вод «{region}» его нашли. {giver} умоляет вас сходить туда.'),
+      F('garrison_captain', 'No Men to Spare', 'Некого послать', 'The garrison cannot spare a boat for the {site} on {island}. {giver} can spare silver for a captain who will.', 'Гарнизон не может отправить ни одной шлюпки к поселению «{site}» на острове {island}. {giver} найдёт серебро для капитана, который сходит сам.'),
+    ],
+  },
+  {
+    id: 'resident_request', category: 'delivery', steps: ['pickup', 'land_site', 'home'], goods: ['medicine', 'provisions', 'cloth', 'planks', 'rum'], level: 2, pay: 340, xp: 240, site: 'people', flavors: [
+      F('widow', 'A Parcel for {island}', 'Посылка на остров {island}', 'Her daughter married a fisher of {island}. {giver} sends {good} to the {site} — the sea is too wide for an old woman.', 'Её дочь вышла замуж за рыбака с острова {island}. {giver} отправляет в поселение «{site}» товар «{good}» — море слишком широко для старухи.'),
+      F('apothecary', 'Fever on {island}', 'Лихорадка на острове {island}', 'The {site} on {island} has fever and no apothecary. {giver} sends {good}, and a prayer.', 'В поселении «{site}» на острове {island} лихорадка, а аптекаря нет. Аптекарь ({giver}) отправляет туда товар «{good}» — и молитву.'),
+      F('priest', 'The Island Remembers', 'Остров помнит', 'Once the people of {island} fed {port} in a famine. {giver} would send {good} back to the {site}.', 'Когда-то люди с острова {island} кормили {port} в голод. {giver} хочет отправить в поселение «{site}» товар «{good}» в ответ.'),
+      F('merchant', 'A New Customer', 'Новый покупатель', 'The {site} on {island} pays in dried fish, and pays well. {giver} sends {good} to open the trade.', 'Поселение «{site}» на острове {island} платит вяленой рыбой, и платит щедро. {giver} отправляет туда товар «{good}», чтобы начать торговлю.'),
+    ],
+  },
+  {
+    id: 'bottle_letter', category: 'investigation', steps: ['find_letter', 'visit2', 'home'], level: 3, pay: 420, xp: 340, flavors: [
+      F('widow', 'His Last Letter', 'Его последнее письмо', 'Her husband wrote that he would put a letter in the sea every week he was gone. {giver} has none yet. Find one, and read it to the priest in {port2}.', 'Её муж писал, что будет бросать в море письмо каждую неделю, пока его нет. У вдовы ({giver}) нет ещё ни одного. Найдите письмо и прочтите его священнику в порту {port2}.'),
+      F('cartographer', 'Currents in a Bottle', 'Течения в бутылке', 'A bottle tells where the sea runs. {giver} wants one fished out and shown to the chartmakers of {port2}.', 'Бутылка рассказывает, куда течёт море. {giver} хочет, чтобы её выловили и показали картографам в порту {port2}.'),
+      F('hermit', 'The Sea Writes Back', 'Море пишет в ответ', '{giver} throws a letter into the sea every morning. He wants to know if the sea ever answers — and if it does, take it to {port2}.', '{giver} каждое утро бросает в море письмо. Он хочет знать, отвечает ли море, — и если ответит, отвезите ответ в порт {port2}.'),
+      F('tavern_keeper', 'Stories for the Fire', 'Истории у огня', 'The tavern in {port2} pays for a good story from the sea, and {giver} wants the credit. A letter in a bottle will do.', 'Трактир в порту {port2} платит за хорошую историю с моря, а {giver} хочет, чтобы хвалили его. Письмо в бутылке подойдёт.'),
+    ],
+  },
+  {
+    id: 'pet', category: 'treasure', steps: ['land_site', 'home'], level: 2, pay: 300, xp: 220, site: 'beasts', flavors: [
+      F('envoy', 'For the Governor’s Daughter', 'Для дочери губернатора', 'The governor’s daughter wants a pet no other girl in {port} has. {giver} has heard of the {site} on {island}.', 'Дочь губернатора хочет питомца, какого нет ни у одной девочки в {port}. Посланник ({giver}) слышал о месте «{site}» на острове {island}.'),
+      F('old_salt', 'A Friend for the Watch', 'Друг для вахты', '{giver} keeps the night watch alone. He wants something from the {site} on {island} to keep him company.', '{giver} стоит ночную вахту один. Ему нужен кто-нибудь с места «{site}» на острове {island}, для компании.'),
+      F('apothecary', 'A Living Specimen', 'Живой образец', 'Books are not enough: {giver} wants a living creature from the {site} on {island} to study.', 'Книг мало: аптекарю ({giver}) нужно живое существо с места «{site}» на острове {island}, чтобы изучать.'),
+      F('tavern_keeper', 'Something for the Bar', 'Что-нибудь для стойки', 'The tavern down the street has a parrot. {giver} wants something better, from the {site} on {island}.', 'В трактире напротив есть попугай. {giver} хочет что-нибудь получше — с места «{site}» на острове {island}.'),
+    ],
+  },
+  {
+    id: 'regatta', category: 'scouting', steps: ['race2', 'home'], level: 3, pay: 460, xp: 360, flavors: [
+      F('harbour_master', 'The Harbour Regatta', 'Портовая регата', 'Every year {port} races to {port2}. {giver} holds the watch: be there in time, and the purse is yours.', 'Каждый год {port} устраивает гонку до порта {port2}. {giver} держит часы: успейте вовремя — и кошелёк ваш.'),
+      F('merchant', 'First to Market', 'Первым на рынок', 'Whoever brings the news of the harvest to {port2} first sets the price. {giver} bets on you.', 'Кто первым принесёт в порт {port2} весть об урожае, тот и назначит цену. {giver} ставит на вас.'),
+      F('bosun', 'A Wager with the Navy', 'Пари с флотом', 'The Navy’s bosun says no merchant hull can make {port2} in time. {giver} says otherwise. Prove him right.', 'Флотский боцман говорит, что ни один торговый корпус не дойдёт до порта {port2} вовремя. {giver} говорит обратное. Докажите его правоту.'),
+      F('envoy', 'The Dispatch', 'Депеша', 'The treaty lapses at dawn unless the dispatch reaches {port2}. {giver} has no faster ship than yours.', 'Договор истечёт на рассвете, если депеша не дойдёт до порта {port2}. У посланника ({giver}) нет корабля быстрее вашего.'),
+      F('old_salt', 'The Old Record', 'Старый рекорд', '{giver} made the run to {port2} in his youth faster than anyone since. He wants to see it beaten before he dies.', '{giver} в молодости дошёл до порта {port2} быстрее всех, кто ходил после. Он хочет увидеть, как рекорд побьют, пока он жив.'),
     ],
   },
   // ---------------------------------------------------------------- fishing (docs/12 P3)
@@ -480,7 +561,7 @@ export const PLOTS: Plot[] = [
 
 // ------------------------------------------------------------------ the generator
 
-const PER_PORT = 70;
+const PER_PORT = 85;
 
 export interface GenParams {
   giver: string;
@@ -566,7 +647,7 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
   const port3 = reach.filter((p) => p !== port2).length ? rng.pick(reach.filter((p) => p !== port2)) : undefined;
   const good = plot.goods ? rng.pick(plot.goods) : undefined;
   const needs = (k: StepKind) => plot.steps.includes(k);
-  if ((needs('visit2') || needs('deliver2') || needs('contraband')) && !port2) return null;
+  if ((needs('visit2') || needs('deliver2') || needs('contraband') || needs('race2')) && !port2) return null;
   if ((needs('visit3') || needs('deliver3')) && !port3) return null;
   let island: Island | undefined, island2: Island | undefined, site: string | undefined;
   if (needs('land_site')) {
@@ -601,7 +682,11 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
     if (inReg.length) island = rng.pick(inReg);
   }
   const counted = plot.steps.some((s) => s.startsWith('sink') || s === 'board' || s === 'prize' || s === 'dive' || s === 'chart' || s === 'contraband');
-  const n = needs('pickup') || needs('deliver2') || needs('deliver3') ? rng.int(4, 12) * (good === 'pearls' || good === 'medicine' ? 1 : 2)
+  // A race's time: the straight run at ten knots, and a margin (docs/12 P9).
+  const n = needs('race2') ? Math.max(5, Math.ceil((Math.hypot(port2!.x - port.x, port2!.y - port.y) * 1.4) / 10 / 60))
+    : needs('sink_named') || needs('find_letter') ? 1
+    : needs('tribute') ? rng.int(1, 2)
+    : needs('pickup') || needs('deliver2') || needs('deliver3') ? rng.int(4, 12) * (good === 'pearls' || good === 'medicine' ? 1 : 2)
     : needs('catch_big') ? rng.pick([6, 8, 10, 15, 25])
     : needs('hunt_whale') ? rng.int(1, 2)
     : needs('hunt_orca') ? rng.int(2, 5)
@@ -685,6 +770,14 @@ function stepOf(k: StepKind, p: GenParams, text: string): QuestStep {
       return { type: 'beast', count: p.n, group: 'orca', text };
     case 'hunt_shark':
       return { type: 'beast', count: p.n, group: 'shark', text };
+    case 'sink_named':
+      return { type: 'named', count: p.n, text };
+    case 'tribute':
+      return { type: 'tribute', count: p.n, text };
+    case 'find_letter':
+      return { type: 'letters', count: p.n, text };
+    case 'race2':
+      return { type: 'race', port: p.port2!.id, seconds: p.n * 60, text };
   }
 }
 

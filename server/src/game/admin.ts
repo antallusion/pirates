@@ -11,6 +11,9 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } from './tattoos.ts';
+import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
 import { hunterRank, namedPirates, pirateById } from '../../../shared/src/data/pirates.ts';
 import { putToSea, sanitizeHunter } from './wanted.ts';
@@ -221,6 +224,27 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       s.profile!.berths.push({ port: `isle:${h.island}`, loadout: { classId: cls, name: `${SHIP_CLASSES[cls].name} ${s.profile!.berths.length + 1}`, guns: { port: 'light_6', starboard: 'light_6' }, modules: {}, level: args[1] ? clampLevel(cls, num(1)) : undefined }, hull: 1 });
       game.pushSelf(s, true);
       return `A ${SHIP_CLASSES[cls].name} berthed at your island.`;
+    }
+    case 'tattoo': {
+      // Tattoos (docs/12 P9 play-testing): /tattoo <id|all> earns them (Old Needle inks them in a haven), /tattoo ink inks at once.
+      const p = s.profile!;
+      const t = sanitizeTattoos(p);
+      if (args[0] === 'ink') {
+        for (const id of t.pending) if (!t.owned.includes(id)) t.owned.push(id);
+        t.pending = [];
+        applyTattoos(ship, p, game.now);
+        sendTattoos(game, s);
+        return `Inked: ${t.owned.length}.`;
+      }
+      const ids = args[0] === 'all' ? TATTOOS.map((x) => x.id) : [args[0] ?? ''];
+      if (!ids.every((id) => TATTOO_BY_ID[id])) return `Tattoos: ${TATTOOS.map((x) => x.id).join(', ')}`;
+      for (const id of ids) earnTattoo(game, s, id);
+      return `Earned: ${ids.length}.`;
+    }
+    case 'choice': {
+      // A chain's reward (docs/12 P9): /choice offers three pieces.
+      offerChoice(game, s, QUESTS_BY_ID.side_clerk_2);
+      return 'Three pieces to choose from.';
     }
     case 'named': {
       // A named pirate put to sea near you (docs/12 P5): /named [id] — or the list of your sea's.

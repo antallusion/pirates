@@ -223,7 +223,8 @@ export function lootMul(game: Game, killerShip: ShipEntity | null, victim: ShipE
   const killer = captainShip(game, killerShip);
   const pk = prof(game, killer);
   if (!killer || !pk) return 1;
-  if (!victim.isPlayer) return flying(pk) ? 1.15 : 1;
+  const dragon = killer.hasFlag('tattoo_dragon') && REGIONS[victim.region].safety === 'lawless' ? 1.05 : 1; // the Golden Dragon (docs/12 P9)
+  if (!victim.isPlayer) return (flying(pk) ? 1.15 : 1) * dragon;
   const pv = prof(game, victim);
   if (!pv || victim.accountId === null) return 1;
   let m = REPEAT_LOOT[Math.min(3, repeats(game, pk, victim.accountId))];

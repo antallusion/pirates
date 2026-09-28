@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { TattooProfile } from './tattoos.ts';
 import type { PiracyProfile } from './raiding.ts';
 import type { HunterProfile } from './wanted.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
@@ -177,6 +178,9 @@ export interface Profile {
   /** One's own island (docs/12 P7): when home was last sailed for; souls waiting aboard to settle there. */
   homeAt?: number;
   refugees?: number;
+  /** Tattoos (docs/12 P9); a choice of three rewards waiting. */
+  tattoos?: TattooProfile;
+  choice?: { quest: string; items: Item[] } | null;
   trade: {
     lastDeparture: string;
     arrivalRoute: string;

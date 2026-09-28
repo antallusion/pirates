@@ -1951,3 +1951,43 @@ body.touch #hud-region .rg-extra { display: none; }
 .cv-steps { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; margin-bottom: 6px; color: var(--fog, #9aa); }
 .cv-steps .on { color: #e8c46a; font-weight: 700; }
 .cv-pick { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 13px; }
+/* Tattoos (docs/12 P9). */
+.tattoos { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 12px; align-items: start; }
+.tt-figure-wrap { position: sticky; top: 0; }
+.tt-figure { position: relative; width: 100%; aspect-ratio: 1 / 1.05; max-width: 300px; margin: 4px auto; }
+.tt-body { display: block; width: 100%; height: 100%; fill: rgba(196, 170, 130, 0.14); stroke: rgba(232, 196, 106, 0.35); stroke-width: 0.6; }
+.tt-place { position: absolute; width: 22%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; padding: 0; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(circle, rgba(20, 22, 28, 0.95) 60%, rgba(8, 9, 12, 0.95)); border: 2px solid rgba(232, 196, 106, 0.6); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(0, 0, 0, 0.8); cursor: pointer; }
+.tt-place.on { border-color: #ffe08a; box-shadow: 0 0 10px rgba(255, 224, 138, 0.7); }
+.tt-place.locked { border-color: rgba(140, 140, 140, 0.35); cursor: default; opacity: 0.7; }
+.tt-place .tt-ico { width: 100%; height: 100%; border-radius: 50%; }
+.tt-empty { color: rgba(232, 196, 106, 0.7); font-size: 22px; line-height: 1; }
+.tt-lock { color: #a9a9a9; font-size: 12px; font-weight: 700; }
+.tt-ico { width: 44px; height: 44px; flex: none; border-radius: 6px; object-fit: cover; }
+.tt-ink { display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle, #1b2430, #0b0f15); color: #6f8fb0; font-family: var(--serif); font-size: 20px; border: 1px dashed rgba(111, 143, 176, 0.6); }
+.tt-hint { font-size: 12px; text-align: center; margin: 4px 0; }
+.tt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; margin-bottom: 10px; }
+.tt-tile { display: flex; gap: 8px; align-items: flex-start; text-align: left; padding: 6px; border-radius: 5px; background: rgba(10, 12, 16, 0.7); border: 1px solid rgba(232, 196, 106, 0.25); color: inherit; font: inherit; cursor: pointer; }
+.tt-tile.owned:hover { border-color: rgba(232, 196, 106, 0.7); }
+.tt-tile.worn { border-color: #e8c46a; }
+.tt-tile.pending { border-style: dashed; cursor: default; }
+.tt-tile.unknown { opacity: 0.55; cursor: default; }
+.tt-tile.unknown .tt-ico { filter: grayscale(1) brightness(0.6); }
+.tt-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; }
+.tt-text b { font-size: 13px; }
+.tt-gives { color: #cfe0b0; }
+.tt-how { font-size: 11px; }
+.tt-worn { font-size: 10px; color: #e8c46a; text-transform: uppercase; letter-spacing: 0.04em; }
+.jr-tattoos { margin-left: auto; align-self: center; }
+.choice3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.choice3 .ch-col { display: flex; flex-direction: column; gap: 6px; }
+.choice3 .ch-col .gi-card { flex: 1; }
+@media (max-width: 700px) {
+  .tattoos { grid-template-columns: 1fr; }
+  .tt-figure-wrap { position: static; }
+  .tt-figure { max-width: 230px; }
+  .tt-grid { grid-template-columns: 1fr; }
+  .choice3 { grid-template-columns: 1fr; }
+}
+.tt-figure-wrap > [data-untt] { display: block; margin: 4px auto 0; }
+@media (max-height: 500px) { .tt-figure-wrap { position: static; } .tt-figure { max-width: 190px; } }

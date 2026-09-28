@@ -82,7 +82,7 @@ test('sharing a quest with the group: a groupmate is asked, takes it, and the jo
   a.push({ t: 'group', action: 'invite', name: 'ben share' });
   b.push({ t: 'group', action: 'accept', id: b.last('party')!.invites[0].id });
   const A = game.sessionByName('Ada Share')!, B = game.sessionByName('Ben Share')!;
-  const job = JOBS.find((q) => (q.requires.level ?? 1) <= 5 && q.steps[0].type !== 'pickup')!;
+  const job = JOBS.find((q) => (q.requires.level ?? 1) <= 1 && q.steps[0].type !== 'pickup')!;
   A.profile!.quests.active.push({ id: job.id, step: 0, progress: 0, startedAt: game.now });
   a.push({ t: 'quest', action: 'share', id: job.id });
   const offer = b.last('quest_offer');

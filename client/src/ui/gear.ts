@@ -97,6 +97,11 @@ function card(it: Item, worn: Item[]): string {
     <div class="muted gi-wear">${it.dur <= 0 ? esc(L('broken')) : esc(L('wear', { n: it.dur }))}</div></div>`;
 }
 
+/** An item's card for other windows (a chain's reward to choose, docs/12 P9). */
+export function itemCardHtml(it: Item): string {
+  return card(it, []);
+}
+
 /** How a piece weighs against what is worn in its slot: every line's difference. */
 function compare(it: Item, cur: Item | undefined): string {
   if (!cur) return `<p class="muted gi-cmp-none">${esc(L('nothingWorn'))}</p>`;

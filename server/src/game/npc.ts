@@ -224,6 +224,7 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
         if (p && (p.reputation.confederacy ?? 0) >= 30) return false;
         return !other.surrendered;
       case 'ghost':
+        if (other.hasFlag('tattoo_dutchman')) return false; // the Flying Dutchman's mark (docs/12 P9)
         return !pactNeutral(other, npc, game.now);
       case 'boss':
         return true;

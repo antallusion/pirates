@@ -6,6 +6,8 @@
 //
 // Sailing faster brings things sooner; a harbour's waters and a fight keep the director still.
 
+import { tattooCount } from './tattoos.ts';
+import { questEvent } from './quests.ts';
 import { eclipseOn, lostFleetIn, redTideAt } from './happenings.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { siteViews } from './expeditions.ts';
@@ -415,6 +417,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       const n = giveHands(s, rng.int(2, 6)) ;
       if (vet) giveHands(s, 1, 'gunner');
       p.rescued = (p.rescued ?? 0) + n + (vet ? 1 : 0);
+      questEvent(game, s, { k: 'rescue', n: n + (vet ? 1 : 0) });
       p.refugees = (p.refugees ?? 0) + 1; // one of them will want a home ashore (docs/12 P7)
       return O(vet ? 'taken_vet' : 'taken', { n: n + (vet ? 1 : 0) });
     }
@@ -501,6 +504,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       if (choice === 'pass') return O('passed');
       giveHands(s, 1);
       p.rescued = (p.rescued ?? 0) + 1;
+      questEvent(game, s, { k: 'rescue', n: 1 });
       p.refugees = (p.refugees ?? 0) + 1;
       if (rng.chance(0.6)) {
         mapChance(game, s, 1, 1, 'The mapmaker’s boy');
@@ -510,6 +514,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
     // -------------------------------------------------------------- finds
     case 'bottle': {
       if (choice === 'pass') return O('passed');
+      questEvent(game, s, { k: 'letter' }); // every bottle opened is a letter for the quests (docs/12 P9)
       const r = rng.float();
       if (r < 0.6) {
         p.seaLetters ??= [];
@@ -742,7 +747,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       ship.morale = Math.min(100, ship.morale + 15);
       return O('marooned', { n: loseHands(s, 3) });
     case 'rats':
-      if (p.shipCat) return O('cat');
+      if (p.shipCat || ship.hasFlag('tattoo_cat')) return O('cat');
       return O('eaten', { n: provisions(ship, -Math.ceil((ship.cargo.provisions ?? 0) * 0.2)) });
     case 'galley_fire':
       if (choice === 'flood') return O('flooded', { n: provisions(ship, -Math.ceil((ship.cargo.provisions ?? 0) * 0.25)) });
@@ -761,6 +766,8 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       return O('accepted', { item: it });
     }
     case 'sirens':
+      tattooCount(game, s, 'sirens');
+      if (ship.hasFlag('tattoo_mermaid')) return O('waxed'); // the Mermaid: the song does not reach them
       if (choice === 'wax') {
         ship.morale = Math.max(0, ship.morale - 3);
         return O('waxed');

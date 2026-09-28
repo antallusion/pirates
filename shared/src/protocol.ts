@@ -123,6 +123,10 @@ export type ClientMsg =
   /** Caravans (docs/12 P8). */
   | { t: 'caravan'; action: 'launch'; ships: number[]; task: CaravanTask; outposts?: string[]; port?: string; port2?: string; goods?: GoodId[]; minPrice?: number; escorts: number; insured: boolean; orders: { repeat: boolean; avoidLawless: boolean; nightInPort: boolean; onAttack: OnAttack } }
   | { t: 'caravan'; action: 'recall' | 'repeat'; id: string }
+  /** Tattoos and a choice of rewards (docs/12 P9). */
+  | { t: 'tattoo'; action: 'set'; slot: number; id: string | null }
+  | { t: 'tattoo'; action: 'view' }
+  | { t: 'choice'; index: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -1000,6 +1004,8 @@ export type ServerMsg =
   | { t: 'raid'; view: RaidView }
   | { t: 'estate'; view: EstateView }
   | { t: 'caravans'; list: CaravanView[]; slots: number }
+  | { t: 'tattoos'; view: TattooView }
+  | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
   | { t: 'encounter'; view: EncounterView | null }
@@ -1086,6 +1092,14 @@ export interface RefitView {
 }
 
 /** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+/** A captain's tattoos (docs/12 P9). */
+export interface TattooView {
+  owned: string[];
+  pending: string[];
+  active: (string | null)[];
+  slots: number;
+}
+
 /** A caravan as its owner sees it (docs/12 P8). */
 export interface CaravanView {
   id: string;

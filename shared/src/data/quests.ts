@@ -29,7 +29,14 @@ export type QuestStep =
   /** Fish taken (docs/12 P3): any catch counted, or one fish on the line of at least `minKg`. */
   | { type: 'catch'; count: number; minKg?: number; text: string }
   /** Beasts of the sea taken (docs/12 P4): of a group — whales, orcas, sharks — or any. */
-  | { type: 'beast'; count: number; group: BeastGroup; text: string };
+  | { type: 'beast'; count: number; group: BeastGroup; text: string }
+  /** Side quests (docs/12 P9): named pirates sunk; tribute taken; letters of the sea found; a race to a port against
+   *  the clock from the moment the quest is taken; souls saved from the sea. */
+  | { type: 'named'; count: number; text: string }
+  | { type: 'tribute'; count: number; text: string }
+  | { type: 'letters'; count: number; text: string }
+  | { type: 'race'; port: string; seconds: number; text: string }
+  | { type: 'rescue'; count: number; text: string };
 
 export interface QuestDef {
   id: string;
@@ -40,7 +47,7 @@ export interface QuestDef {
   summary: string;
   requires: { level?: number; rep?: Partial<Record<FactionId, number>>; treePoints?: Partial<Record<TreeId, number>>; anyOf?: boolean; /** Quests that must be done first (an arc's earlier chapters). */ done?: string[] };
   steps: QuestStep[];
-  reward: { xp: number; silver: number; path?: CaptainId; deed?: string };
+  reward: { xp: number; silver: number; path?: CaptainId; deed?: string; /** docs/12 P9 */ tattoo?: string; choice?: boolean };
   /** A generated job's category and its template (plot.flavour). */
   category?: string;
   template?: string;
@@ -50,6 +57,8 @@ export interface QuestDef {
   portrait?: string;
   /** A group contract: the company it is made for (docs/11 P6). */
   group?: number;
+  /** A hidden quest (docs/12 P9): begun by a deed, never offered. */
+  hidden?: boolean;
 }
 
 export const QUESTS: QuestDef[] = [

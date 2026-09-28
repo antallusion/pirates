@@ -7,6 +7,7 @@
 //  - a deep line: lying still over deep water, the slow bite of the big and strange.
 // Every catch teaches the craft; the heaviest of each kind is the whole sea's record.
 
+import { tattooCount } from './tattoos.ts';
 import { trophyBonus } from './estate.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { questEvent } from './quests.ts';
@@ -194,7 +195,8 @@ export function shoalAt(game: Game, x: number, y: number): Shoal | null {
 
 function craftOf(p: Profile): number {
   const worn = [...Object.values(p.captainGear), ...Object.values(p.loadout.gear ?? {})].filter((x): x is Item => !!x);
-  return gearSource(worn).cap.craft ?? 0;
+  // The Hook tattoo (docs/12 P9): a fish on the line is easier to play.
+  return (gearSource(worn).cap.craft ?? 0) + (p.tattoos?.active.includes('hook') ? 10 : 0);
 }
 
 function tackleOf(p: Profile): FishMethod | null {
@@ -252,12 +254,15 @@ function oddCatch(game: Game, s: PlayerSession): void {
   } else if (r < 0.006) {
     p.seaLetters ??= [];
     const missing = SEA_LETTERS.map((_, i) => i).filter((i) => !p.seaLetters!.includes(i));
-    if (missing.length) {
-      p.seaLetters.push(fs(game).rng.pick(missing));
-      game.sendTo(s, { t: 'toast', msg: 'In the net: a bottle with a letter inside.', kind: 'info' });
-    }
+    if (missing.length) p.seaLetters.push(fs(game).rng.pick(missing));
+    questEvent(game, s, { k: 'letter' });
+    game.sendTo(s, { t: 'toast', msg: 'In the net: a bottle with a letter inside.', kind: 'info' });
   } else if (r < 0.01) {
     mapChance(game, s, 1, 1, 'In the net');
+  } else if (r < 0.013) {
+    // A skull: three of them, and a hidden quest begins (docs/12 P9).
+    game.sendTo(s, { t: 'toast', msg: 'A skull in the net.', kind: 'info' });
+    tattooCount(game, s, 'skulls');
   }
 }
 
@@ -340,7 +345,7 @@ function fishWith(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile): v
     const sh = shoalAt(game, ship.state.x, ship.state.y);
     if (!sh || spd < 0.5 || spd > max * 0.4 || !FISH[sh.fish].methods.includes('net')) return;
     if (!every(game, s, 'net', 5)) return;
-    const well = (ship.cls.passive.id === 'wet_well' ? 2 : 1) * (1 + trophyBonus(game, s.accountId, 'fish'));
+    const well = (ship.cls.passive.id === 'wet_well' ? 2 : 1) * (1 + trophyBonus(game, s.accountId, 'fish')) * (ship.hasFlag('tattoo_fish') ? 1.1 : 1);
     const n = Math.min(sh.stock, Math.max(1, Math.round(fs(game).rng.int(1, 3) * (1 + craft / 40) * (1 + f.skill / 100) * well)));
     if (FISH[sh.fish].skill > f.skill) return;
     sh.stock -= n;
@@ -408,6 +413,7 @@ export function endFight(game: Game, s: PlayerSession, id: number, holds: [numbe
   if (res.done === 'landed') {
     const units = Math.max(1, Math.round(f.kg / 10));
     landCatch(game, s, f.fish, f.kg, units, true);
+    tattooCount(game, s, 'fought');
     learn(game, s, 5 + Math.round(f.kg / 15));
     game.sendTo(s, { t: 'toast', msg: `Landed: ${def.name[0]}, ${f.kg} kg.`, kind: 'good' });
     if (f.fish === 'moray' && fs(game).rng.chance(0.25)) game.sendTo(s, { t: 'toast', msg: 'A moray bites a hand on the line.', kind: 'bad' });
@@ -442,7 +448,7 @@ export function setTrap(game: Game, s: PlayerSession): string | null {
   if (f.skill < METHOD_SKILL.trap) return `Your craft is not up to it yet (${f.skill} of ${METHOD_SKILL.trap})`;
   const n = nearestIsland(game, ship.state.x, ship.state.y);
   if (!n.is || n.d > 1500) return 'Pots go down in the shallows, within a mile of land';
-  if (f.traps.length >= trapsAllowed(f.skill)) return `You have ${f.traps.length} pots out already`;
+  if (f.traps.length >= trapsAllowed(f.skill) + (s.ship?.hasFlag('tattoo_octopus') ? 1 : 0)) return `You have ${f.traps.length} pots out already`;
   f.traps.push({ id: Date.now() * 10 + (trapSeq++ % 10), x: Math.round(ship.state.x), y: Math.round(ship.state.y), placed: game.wallNow(), island: n.is.name });
   game.sendTo(s, { t: 'toast', msg: 'A pot goes down: haul it in ten minutes or more.', kind: 'info' });
   game.pushSelf(s, true);

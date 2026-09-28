@@ -63,6 +63,7 @@ const EN = {
   lfgHint: 'Put this contract on the board of captains looking for a group',
   mates: 'In your group on it too',
   mateStep: '{name}, step {step}',
+  tattoos: 'Tattoos',
 };
 const RU: typeof EN = {
   title: 'Журнал заданий',
@@ -102,6 +103,7 @@ const RU: typeof EN = {
   lfgHint: 'Написать этот контракт в поиске группы',
   mates: 'В отряде тоже взялись',
   mateStep: '{name}, шаг {step}',
+  tattoos: 'Татуировки',
 };
 const L = dict(EN, RU);
 
@@ -109,6 +111,8 @@ type Quest = NonNullable<ClientState['self']>['quests'][number];
 
 export class Journal {
   private chosen: string | null = null;
+  /** Opens the tattoos window (docs/12 P9). */
+  openTattoos: (() => void) | null = null;
   private send: (m: ClientMsg) => void;
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
@@ -121,7 +125,7 @@ export class Journal {
     if (!this.chosen || !quests.some((q) => q.id === this.chosen)) this.chosen = tracked ?? quests[0]?.id ?? null;
     const q = quests.find((x) => x.id === this.chosen) ?? null;
     const inGroup = (state.party?.members.length ?? 0) > 1;
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub'))}</div></div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub'))}</div></div><button class="btn btn-small jr-tattoos" data-tattoos>${esc(L('tattoos'))}${state.tattoos?.pending.length ? ` <span class="h-count">${state.tattoos.pending.length}</span>` : ''}</button></div>
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
@@ -135,6 +139,7 @@ export class Journal {
       this.render(root, state);
       root.querySelector('.jr-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }));
+    root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
     root.querySelector<HTMLElement>('[data-follow]')?.addEventListener('click', () => {
       setTracked(this.chosen);
       this.render(root, state);

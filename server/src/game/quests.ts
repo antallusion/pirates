@@ -1,6 +1,8 @@
 // Path and Legend quests (docs/00 D1, docs/02 §7): mentors in their ports, step objectives driven by what the
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
+import { earnTattoo, offerChoice } from './tattoos.ts';
+import { SIDE_QUESTS } from '../../../shared/src/data/sidequests.ts';
 import { codeAnywhere } from './raiding.ts';
 import { inGroup } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
@@ -179,6 +181,11 @@ export type QuestEvent =
   | { k: 'catch'; units: number; kg: number; fought: boolean }
   /** A beast of the sea taken (docs/12 P4). */
   | { k: 'beast'; beast: BeastId }
+  /** Side quests (docs/12 P9). */
+  | { k: 'named' }
+  | { k: 'tribute' }
+  | { k: 'letter' }
+  | { k: 'rescue'; n: number }
   | { k: 'dock'; port: Port }
   | { k: 'land'; island: number; feature: string };
 
@@ -223,7 +230,7 @@ export function eventFavor(game: Game, port: Port): BoardFavor {
 
 export function questOffers(p: Profile, port: Port, now = 0, favor: BoardFavor = null, elite: QuestDef | null = null): { q: QuestDef; blocked: string | null }[] {
   // An arc's chapter is offered once the chapter before it is done.
-  const story = [...QUESTS, ...ARC_QUESTS].filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id) && (q.requires.done ?? []).every((d) => p.quests.done.includes(d)));
+  const story = [...QUESTS, ...ARC_QUESTS, ...SIDE_QUESTS].filter((q) => q.port === port.id && !p.quests.done.includes(q.id) && !p.quests.active.some((a) => a.id === q.id) && (q.requires.done ?? []).every((d) => p.quests.done.includes(d)));
   // The day's group contract heads the jobs (docs/11 P6).
   const contract = elite && !p.quests.done.includes(elite.id) && !p.quests.active.some((a) => a.id === elite.id) ? [elite] : [];
   return [...story, ...contract, ...boardJobs(p, port, now, favor)]
@@ -367,6 +374,10 @@ function stepCount(st: QuestStep): number {
     case 'dive':
     case 'catch':
     case 'beast':
+    case 'named':
+    case 'tribute':
+    case 'letters':
+    case 'rescue':
       return st.count;
     case 'sell_contraband':
       return st.qty;
@@ -408,6 +419,14 @@ export function questEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
   if (ev.k === 'sink') {
     taskEvent(game, s, ev.victim);
     eliteSunk(game, ev.victim, s);
+  }
+  // A race lost (docs/12 P9): past its time, the quest is abandoned.
+  if (ev.k === 'tick') for (const qs of [...p.quests.active]) {
+    const st = QUESTS_BY_ID[qs.id]?.steps[qs.step];
+    if (st?.type === 'race' && game.now - qs.startedAt > st.seconds) {
+      p.quests.active = p.quests.active.filter((a) => a.id !== qs.id);
+      game.sendTo(s, { t: 'toast', msg: `Too late: ${QUESTS_BY_ID[qs.id].name} is lost.`, kind: 'bad' });
+    }
   }
   for (const qs of [...p.quests.active]) {
     const q = QUESTS_BY_ID[qs.id];
@@ -465,7 +484,7 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       return 1;
     }
     case 'land':
-      return ev.k === 'land' && ev.island === st.island && (!st.site || st.site === ev.feature) ? 1 : 0;
+      return ev.k === 'land' && (ev.island === st.island || st.island < 0) && (!st.site || st.site === ev.feature) ? 1 : 0;
     case 'sink':
       if (ev.k !== 'sink') return 0;
       if (st.region && ev.victim.region !== st.region) return 0;
@@ -488,6 +507,16 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       return ev.k === 'dive' ? 1 : 0;
     case 'beast':
       return ev.k === 'beast' && inGroup(ev.beast, st.group) ? 1 : 0;
+    case 'named':
+      return ev.k === 'named' ? 1 : 0;
+    case 'tribute':
+      return ev.k === 'tribute' ? 1 : 0;
+    case 'letters':
+      return ev.k === 'letter' ? 1 : 0;
+    case 'rescue':
+      return ev.k === 'rescue' ? ev.n : 0;
+    case 'race':
+      return ev.k === 'dock' && ev.port.id === st.port ? 1 : 0;
     case 'catch':
       if (ev.k !== 'catch') return 0;
       if (st.minKg !== undefined) return ev.fought && ev.kg >= st.minKg ? 1 : 0;
@@ -589,6 +618,9 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
     s.ship.ammo.incendiary = (s.ship.ammo.incendiary ?? 0) + pay.incendiary;
     stores = { heavy: pay.heavy, incendiary: pay.incendiary };
   }
+  // Side quests (docs/12 P9): a tattoo for the chain's last, and a choice of three pieces of gear.
+  if (q.reward.tattoo) earnTattoo(game, s, q.reward.tattoo);
+  if (q.reward.choice) offerChoice(game, s, q);
   game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp, ...(fast ? { fast: true } : {}), ...(company ? { company } : {}), ...(rep ? { rep } : {}), ...(extra ? { extra } : {}), ...(stores ? { stores } : {}), ...(mentors.length ? { mentor: mentors[0].name } : {}) });
   // The mentors are paid for the guidance, and counted in the season's table of mentors.
   for (const m of mentors) {

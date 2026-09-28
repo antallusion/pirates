@@ -413,6 +413,14 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
 
 function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, hy: number): void {
   const shooter = game.ships.get(p.owner) ?? null;
+  // The Cannon tattoo counts the hits (docs/12 P9).
+  if (shooter?.isPlayer) {
+    const sp = game.profileOf(shooter);
+    if (sp) {
+      sp.tattoos ??= { owned: [], pending: [], active: [], counts: {} };
+      sp.tattoos.counts.hits = (sp.tattoos.counts.hits ?? 0) + 1;
+    }
+  }
   // A ship in the moment of her dash: half the balls fly wide.
   if (target.hasFlag('evasive') && game.rng.chance(DASH_EVADE_CHANCE)) {
     game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: 0, ammo: p.ammo, evaded: true }, hx, hy);
@@ -444,7 +452,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // Iron Strapping: extra armour against armour-piercing shot.
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
   const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)));
-  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_white_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1); // Leviathan Lore, the Harpooneer, Saint Maw's Bell
+  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_white_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('tattoo_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1); // Leviathan Lore, the Harpooneer, Saint Maw's Bell
   // The ladder (canon D12): the gap of levels cuts or swells the shot, and a junior makes fewer criticals, or none.
   const lad = ladderBetween(game, shooter, target);
   const cx = lad.crits;

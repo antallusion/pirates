@@ -4,6 +4,7 @@
 // one let go; the heat of a sea's lanes — escorts, League cutters and dearer goods where the raids are; the
 // Brethren's fame and ranks; and the mark of a merchant under a friend's guns.
 
+import { questEvent } from './quests.ts';
 import { BRETHREN_RANKS, CODE_RANK, CONVOY_EVERY, DEED_CONVOYS, FAME, HEAT, MORALE_RANK, TERROR_TITLE, TIP_WINDOW, TITLE_RANK, TRIBUTE, brethrenRank, clerkCost, heatPrices, tipCost } from '../../../shared/src/data/raiding.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -498,6 +499,7 @@ export function demandTribute(game: Game, s: PlayerSession, id: number): string 
   if (m.faction === 'league') changeRep(p, 'league', -2);
   const pr = sanitizePiracy(p);
   pr.tributes++;
+  questEvent(game, s, { k: 'tribute' });
   addFame(game, s, FAME.tribute);
   cheer(s);
   heatUp(game, m.region, HEAT.tribute);
