@@ -69,7 +69,7 @@ def clear(path: str, faction: str, fresh: bool = False) -> None:
             bands.append((s0, x))
         else:
             x += 1
-    widths = sorted(e - s0 for s0, e in bands)
+    widths = sorted(e - s0 for s0, e in bands if e - s0 >= w * 0.02) or sorted(e - s0 for s0, e in bands)
     wmed = widths[len(widths) // 2] if widths else 0
     cols = np.zeros(w, dtype=bool)
     for s0, e in bands:
@@ -88,6 +88,21 @@ def clear(path: str, faction: str, fresh: bool = False) -> None:
                     best, at = v, k
             s0, e = at, at + wmed
         cols[s0:e] = True
+    # The slips between the kept piers (their middle, as a share of the width) and how deep they run (as a share of
+    # the height below the quay line): where the Floating Bazaar's moored shadows lie (docs/12 P10 #19).
+    kept = [x for x in range(w) if cols[x]]
+    groups = []
+    for x in kept:
+        if groups and x - groups[-1][1] <= 1:
+            groups[-1][1] = x
+        else:
+            groups.append([x, x])
+    global SLIPS
+    SLIPS = []
+    for (a0, a1), (b0, b1) in zip(groups, groups[1:]):
+        depth = min(run[a0:a1 + 1].max(), run[b0:b1 + 1].max()) - wall
+        if 8 < b0 - a1 < w * 0.3 and depth > 8:
+            SLIPS.append([round((a1 + b0) / 2 / w, 4), round((b0 - a1) / w, 4), round((y0 + wall) / h, 4), round(float(depth) / h, 4)])
     keep = np.zeros((h, w), dtype=bool)
     keep[:y0 + wall + 2, :] = True
     for x in range(w):
@@ -107,10 +122,22 @@ def clear(path: str, faction: str, fresh: bool = False) -> None:
     print('cleared', path)
 
 
+SLIPS: list = []
+
+
 def main() -> None:
     names = sys.argv[1:] or FACTIONS
+    sys.path.insert(0, os.path.dirname(__file__))
+    from register import MANIFEST, write_manifest
+    import json
+    with open(MANIFEST, encoding='utf-8') as fh:
+        m = json.load(fh)
     for f in names:
         clear(os.path.join(ROOT, 'assets', 'props', f'port_{f}.webp'), f)
+        # The slips: [middle x, width, top y, depth] as shares of the painting.
+        m['assets'][f'prop.port_{f}']['slips'] = SLIPS
+        print(f, SLIPS)
+    write_manifest(m)
 
 
 if __name__ == '__main__':

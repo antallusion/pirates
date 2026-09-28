@@ -46,6 +46,16 @@ def key_magenta(a: np.ndarray) -> np.ndarray:
     spill = np.clip(np.minimum(r, b) - g, 0, None) * (1 - alpha)
     rgb[:, :, 0] -= spill
     rgb[:, :, 2] -= spill
+    # The rim: a two-pixel band inside the edge loses what magenta cast is left, and the edge itself softens by a
+    # pixel, so no hairline of pink shows on a dark sea.
+    solid = alpha > 0.5
+    band = solid & ~ndimage.binary_erosion(solid, iterations=2)
+    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+    cast = np.clip(np.minimum(r, b) - g, 0, None)
+    fix = band & (cast > 6)
+    r[fix] -= cast[fix] * 0.9
+    b[fix] -= cast[fix] * 0.9
+    alpha = np.minimum(alpha, 0.5 * alpha + 0.5 * ndimage.grey_erosion(alpha, size=(3, 3)))
     out = np.dstack([np.clip(rgb, 0, 255), alpha * 255]).astype(np.uint8)
     return out
 

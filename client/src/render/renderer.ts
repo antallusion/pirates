@@ -26,7 +26,7 @@ import { fbm } from '../../../shared/src/rng.ts';
 import type { SailState } from '../../../shared/src/sim/sailing.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { IslandBiome } from '../../../shared/src/world/regions.ts';
-import { pattern, sprite } from '../assets.ts';
+import { assetMeta, pattern, sprite } from '../assets.ts';
 import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
@@ -1346,7 +1346,7 @@ export class Renderer {
   }
 
   /** The Floating Bazaar's shadows (docs/12 P10 #19): a ghost of each stall's ship at its port's anchorage, a row
-   *  out from the ships in port, with its signboard. */
+   *  further out than the ships in port, with its signboard. */
   private stallShadows(state: ClientState): { ship: DrawShip; name: string }[] {
     const out: { ship: DrawShip; name: string }[] = [];
     const byPort = new Map<string, typeof state.bazaarShadows>();
@@ -1360,9 +1360,24 @@ export class Renderer {
       const p = state.ports.find((q) => q.id === id);
       if (!lay || !p) continue;
       const ax = Math.cos(lay.ang), ay = Math.sin(lay.ang), sx = -Math.sin(lay.ang), sy = Math.cos(lay.ang);
+      const slips = (sprite(`prop.port_${p.faction}`) ? assetMeta(`prop.port_${p.faction}`)?.slips : null) ?? [];
+      let free = 0;
       list.forEach((sh, i) => {
-        const row = 1 + Math.floor(i / 5), col = [0, 1, -1, 2, -2][i % 5];
-        const along = col * (Math.max(SHIP_CLASSES[sh.classId].length, 30) + 14);
+        const cls = SHIP_CLASSES[sh.classId];
+        // Moored in a slip between the piers, bow to the quay, where no ship sails: when she fits one.
+        const slip = slips[i];
+        if (slip && cls.length <= slip[3] * lay.size * 0.95 && cls.beam <= slip[1] * lay.size * 0.7) {
+          const lx = (slip[0] - 0.5) * lay.size, ly = (slip[2] + slip[3] / 2 - 0.5) * lay.size;
+          out.push({
+            name: sh.name,
+            ship: { id: -1_000_000 - sh.owner, x: lay.x + ax * lx + sx * ly, y: lay.y + ay * lx + sy * ly, h: lay.ang, spd: 0, sail: 0, hull: 1, sails: 1, flags: SF.HIDDEN, classId: sh.classId, info: null, own: false, sinkT: 0 },
+          });
+          return;
+        }
+        // Else two rows out from the anchorage: clear of the ships in port and of one riding there after leaving.
+        const k = free++;
+        const row = 2 + Math.floor(k / 5), col = [0, 1, -1, 2, -2][k % 5];
+        const along = col * (Math.max(cls.length, 30) + 14);
         out.push({
           name: sh.name,
           ship: { id: -1_000_000 - sh.owner, x: p.x + ax * along + sx * row * 38, y: p.y + ay * along + sy * row * 38, h: lay.ang + Math.PI / 2, spd: 0, sail: 0, hull: 1, sails: 1, flags: SF.HIDDEN, classId: sh.classId, info: null, own: false, sinkT: 0 },

@@ -6,6 +6,8 @@ interface ManifestEntry {
   remote: string;
   /** Bumped when the local file is reworked in place (a day's browser cache would keep the old one). */
   rev?: number;
+  /** A port painting's slips between its piers: [middle x, width, top y, depth] as shares of the painting. */
+  slips?: [number, number, number, number][];
 }
 
 interface Manifest {
@@ -97,6 +99,11 @@ export async function loadAssets(ids: string[] | null, onProgress?: (done: numbe
       onProgress?.(++done, list.length);
     }),
   );
+}
+
+/** What the manifest says of an asset (its slips, for a port). */
+export function assetMeta(id: string): ManifestEntry | null {
+  return manifest?.assets[id] ?? null;
 }
 
 export function sprite(id: string): Sprite | null {

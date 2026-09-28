@@ -40,7 +40,8 @@ const SLOT_ICON: Record<Slot, string> = {
 };
 
 export function itemIcon(it: Item | null, slot: Slot, cls = 'ico-md'): string {
-  return (it ? icon(`item_${it.base}`, '', cls) : '') || icon(SLOT_ICON[slot], '◆', cls);
+  // A legendary's own painting, else its base's (docs/12 P11), else the slot's mark.
+  return (it?.legendary ? icon(`item_${it.legendary}`, '', cls) : '') || (it ? icon(`item_${it.base}`, '', cls) : '') || icon(SLOT_ICON[slot], '◆', cls);
 }
 
 /** Stats where less is better (a green minus). */
