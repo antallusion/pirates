@@ -189,6 +189,8 @@ export interface Profile {
   /** The named pirates who hold a grudge against her, and the heads of those she settled with (docs/12 P10 #1). */
   nemeses?: Record<string, NemesisRec>;
   nemesisHeads?: number;
+  /** Hearts of the storm caught and not yet forged or built into a keel (docs/12 P10 #14). */
+  stormHearts?: number;
   /** A cartographer's fame: her buried chests dug up by others (docs/12 P10 #7). */
   cartoFame?: number;
   /** The wonders of the sea she has found (docs/12 P10 #8). */
@@ -446,6 +448,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     look: p.look ? encodeLook(p.look) : null,
     unlocks: p.unlocks ?? [...STARTING_UNLOCKS],
     cartoFame: p.cartoFame ?? 0,
+    stormHearts: p.stormHearts ?? 0,
     fishing: fishingView(p),
     beasts: p.beasts ?? {},
     cargo: ship ? ship.cargo : p.cargo,

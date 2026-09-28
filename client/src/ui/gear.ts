@@ -19,6 +19,7 @@ import type { ClientState } from '../state.ts';
 import { esc, icon, money } from './dom.ts';
 import { ownLevelChip } from './levels.ts';
 import { placeName } from './maps.ts';
+import { bindStormForge, stormForgeCard } from './storms.ts';
 
 const L = dict(EN, RU);
 const ru = () => lang() === 'ru';
@@ -213,6 +214,7 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
       ? `<p class="muted">${esc(L('shopNote'))}</p><div class="gear-list">${sy.wares.map((it, i) => `<button class="gr${pick?.kind === 'ware' && pick.index === i ? ' on' : ''}" data-gware="${i}" style="border-left-color:${RARITY_COLOR[it.rarity]}">${itemIcon(it, itemSlot(it))}<span class="gs-t">${coloured(it)}<span class="muted gs-sub">${esc(SLOT_NAMES[itemSlot(it)][ru() ? 1 : 0])} · ${esc(L('lv', { n: it.ilvl }))}</span></span><span class="gr-price">${money(itemValue(it))}</span></button>`).join('')}</div>`
       : `<p class="muted">${esc(L('noShop'))}</p>`;
     if (sy) body += `<div class="gi-acts gear-mend"><button class="btn btn-small" data-gmend ${sy.mendCost ? '' : 'disabled'}>${sy.mendCost ? `${esc(L('mend', { v: '' }))}${money(sy.mendCost)}` : esc(L('sound'))}</button></div>`;
+    if (forge) body += stormForgeCard(state);
   }
 
   const tabs: [Tab, string][] = [['ship', L('tab.ship')], ['captain', L('tab.captain')], ['locker', L('tab.locker', { n: self.stash.length, max: STASH_SIZE })]];
@@ -276,6 +278,7 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
   root.querySelectorAll<HTMLElement>('[data-greforge]').forEach((b) => (b.onclick = () => send({ t: 'gear', action: 'reforge', uid: Number(b.dataset.greforge), line: Number(b.dataset.line) })));
   root.querySelectorAll<HTMLElement>('[data-gbuy]').forEach((b) => (b.onclick = () => send({ t: 'gear', action: 'buy', index: Number(b.dataset.gbuy) })));
   root.querySelector<HTMLElement>('[data-gmend]')?.addEventListener('click', () => send({ t: 'gear', action: 'mend' }));
+  bindStormForge(root, send);
   root.querySelector<HTMLElement>('[data-ghide]')?.addEventListener('click', () => {
     pick = null;
     redo();

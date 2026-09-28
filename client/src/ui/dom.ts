@@ -75,7 +75,7 @@ const STAND_IN: Record<string, string> = {
   good_fish: 'build_fishing_village', good_prime_fish: 'build_fishing_village', good_smoked_fish: 'good_provisions', good_salted_fish: 'good_salt',
   good_tar: 'good_timber', good_scrimshaw: 'good_leviathan_bone', good_baleen: 'good_whale_oil', good_ambergris: 'good_spices',
   good_orca_tooth: 'good_leviathan_bone', good_whalebone: 'good_leviathan_bone', good_narwhal_tusk: 'good_leviathan_bone', good_shark_skin: 'good_cloth',
-  good_serpent_scale: 'mod_serpent_scale', tattoo_needle: 'role_sailmaker',
+  good_serpent_scale: 'mod_serpent_scale', tattoo_needle: 'role_sailmaker', storm_heart: 'weather_storm',
 };
 
 export function icon(id: string, glyph = '', cls = 'ico'): string {

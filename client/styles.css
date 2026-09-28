@@ -2086,6 +2086,18 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 #hud-regatta .fp-head b { font-family: var(--serif); font-size: 14px; color: #f0d9b0; }
 #hud-regatta .hp-lvl { font: 700 13px var(--sans); color: #e8c46a; font-variant-numeric: tabular-nums; }
 #hud-regatta .rg-next { font-size: 13px; color: #cfe0b0; }
+/* The heart of the storm (docs/12 P10 #14). */
+#hud-storm { pointer-events: none; padding: 6px 9px 7px; max-width: 320px; border-color: rgba(140,190,255,0.45); }
+#hud-storm .fp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#hud-storm .fp-head b { display: inline-flex; align-items: center; gap: 5px; font-family: var(--serif); font-size: 14px; color: #cfe2ff; }
+#hud-storm .hp-lvl { font: 700 13px var(--sans); color: #9fd0ff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#hud-storm .rg-next { font-size: 13px; color: #d8e6f5; }
+#hud-storm .st-bar { height: 6px; margin-top: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+#hud-storm .st-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6fb4ff, #e8f4ff); }
+#hud-storm .st-charge { font: 600 12px var(--sans); color: #b8d4f0; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.st-forge .st-have { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.st-forge .st-slots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.st-forge .st-slots .btn { max-width: 100%; white-space: normal; text-align: center; }
 .bottle-card textarea.field { width: 100%; min-height: 64px; resize: vertical; margin: 4px 0 6px; box-sizing: border-box; font: 13px var(--sans); }
 .bottle-card .bottle-row { align-items: center; }
 .bottle-card .bottle-silver { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 12px; }

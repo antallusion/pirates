@@ -10,6 +10,7 @@ import { nameWonder, stepWonders } from './wonders.ts';
 import { boardAction, buryChest } from './chests.ts';
 import { stepBottles, throwBottle } from './bottles.ts';
 import { regattaSignUp, sendRegatta, stepRegatta } from './regatta.ts';
+import { forgeStorm, stepStorms } from './storms.ts';
 import { diceBid, diceJoin, diceLeave, diceLiar, diceOpen, diceStart, stepDice } from './dice.ts';
 import { catAboard, petAction, petsOnDock, stepPets } from './pets.ts';
 import { companionAction, stepCompanions } from './companion.ts';
@@ -733,6 +734,7 @@ export class Game {
     stepPets(this); // the parrots' watch (docs/12 P10 #3)
     stepDice(this); // the tavern tables (docs/12 P10 #4)
     stepRegatta(this); // the Regatta of Equal Waters (docs/12 P10 #5)
+    stepStorms(this); // the heart of the Storm of the Century (docs/12 P10 #14)
     if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
     if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
@@ -2704,6 +2706,8 @@ export class Game {
             return gearAction((pt) => temperItem(this, s, pt, Number(msg.uid)));
           case 'reforge':
             return gearAction((pt) => reforgeItem(this, s, pt, Number(msg.uid), Math.trunc(Number(msg.line))));
+          case 'storm':
+            return gearAction((pt) => forgeStorm(this, s, pt, msg.slot));
           default:
             return err('Unknown order');
         }

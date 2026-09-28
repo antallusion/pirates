@@ -14,6 +14,8 @@
 import { sendDutchman, weekPlan } from './dutchman.ts';
 import { wondersOf } from './wonders.ts';
 import { regattaNow, regattaSignUp } from './regatta.ts';
+import { startEvent } from './events.ts';
+import { heartAt } from './storms.ts';
 import { givePet, petAction } from './pets.ts';
 import { PETS, PET_IDS } from '../../../shared/src/data/companions.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
@@ -64,7 +66,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -283,6 +285,30 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       regattaNow(game, portId, 30_000);
       if (ship.docked === portId) regattaSignUp(game, s);
       return `Regatta of Equal Waters: ${portId}.`;
+    }
+    case 'storm': {
+      // Storm chasers (docs/12 P10 #14 play-testing): /storm — the Storm of the Century over her sea, set down by its
+      // heart; /storm hearts N — hearts of the storm in hand.
+      if (args[0] === 'hearts') {
+        p.stormHearts = Math.max(0, Math.trunc(num(1, 2)));
+        game.pushSelf(s, true);
+        return `Hearts of the storm: ${p.stormHearts}.`;
+      }
+      const region = ship.region;
+      let e = game.worldEvents.active(game).find((x) => x.kind === 'storm_century' && x.stage === 'storm' && x.region === region);
+      if (!e) {
+        const [x, y] = REGIONS[region].center;
+        e = startEvent(game, { kind: 'storm_century', region, x, y, ends: game.wallNow() + 3 * 3600_000, title: `The Storm of the Century over ${REGIONS[region].name}`, stage: 'storm' },
+          `The Storm of the Century is breaking over ${REGIONS[region].name}. Make for harbour — or for the wrecks after.`) ?? undefined;
+      }
+      if (!e) return 'Too much is happening on this sea already.';
+      const h = heartAt(game, e);
+      ship.docked = null;
+      ship.state.x = h.x + 700;
+      ship.state.y = h.y;
+      ship.state.speed = 0;
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      return 'The heart of the storm is near.';
     }
     case 'wonder': {
       // The Atlas of Sea Wonders (docs/12 P10 #8 play-testing): /wonder — set down beside the nearest one not yet found.

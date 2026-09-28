@@ -123,6 +123,8 @@ export interface RefitCost {
   silver: number;
   goods: { good: 'planks' | 'iron' | 'sailcloth' | 'timber' | 'leviathan_bone' | 'sulfur_iron'; qty: number }[];
   sec: number;
+  /** Hearts of the storm in her keel (docs/12 P10 #14): the tenth level wants one. */
+  hearts?: number;
 }
 
 const REFIT: Record<number, RefitCost> = {
@@ -134,7 +136,7 @@ const REFIT: Record<number, RefitCost> = {
   7: { silver: 32000, goods: [{ good: 'planks', qty: 360 }, { good: 'iron', qty: 130 }, { good: 'sailcloth', qty: 60 }, { good: 'timber', qty: 70 }], sec: 3600 },
   8: { silver: 55000, goods: [{ good: 'planks', qty: 480 }, { good: 'iron', qty: 180 }, { good: 'sailcloth', qty: 80 }, { good: 'leviathan_bone', qty: 10 }], sec: 7200 },
   9: { silver: 90000, goods: [{ good: 'planks', qty: 650 }, { good: 'iron', qty: 250 }, { good: 'sailcloth', qty: 110 }, { good: 'leviathan_bone', qty: 20 }], sec: 10800 },
-  10: { silver: 150000, goods: [{ good: 'planks', qty: 900 }, { good: 'iron', qty: 320 }, { good: 'sailcloth', qty: 150 }, { good: 'leviathan_bone', qty: 30 }, { good: 'sulfur_iron', qty: 5 }], sec: 14400 },
+  10: { silver: 150000, goods: [{ good: 'planks', qty: 900 }, { good: 'iron', qty: 320 }, { good: 'sailcloth', qty: 150 }, { good: 'leviathan_bone', qty: 30 }, { good: 'sulfur_iron', qty: 5 }], sec: 14400, hearts: 1 },
 };
 
 export function refitCost(toLevel: number): RefitCost | null {

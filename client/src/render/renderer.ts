@@ -384,6 +384,7 @@ export class Renderer {
     this.drawBuoys(state);
     this.drawWonders(state);
     this.drawLanterns(state);
+    this.drawStormHeart(state);
     drawSights(g, state.sights, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, own ? { x: own.x, y: own.y } : null, this.w, this.h);
     this.drawDuelRing(state);
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
@@ -2379,6 +2380,68 @@ export class Renderer {
       g.fillStyle = `rgba(200,255,210,${a})`;
       g.fillRect(x - 2, y - 5, 4, 6);
     }
+  }
+
+  /** The heart of the Storm of the Century (docs/12 P10 #14): a turning dark eye with a pale rim, the lightning's
+   *  reach about it, a flash now and then; off the screen, an arrow at the edge. */
+  private drawStormHeart(state: ClientState): void {
+    const v = state.storm;
+    if (!v || v.rest > 0) return;
+    const g = this.g;
+    const z = this.zoom;
+    const x = this.sx(v.x), y = this.sy(v.y);
+    const R = v.core * z, O = v.r * z;
+    if (x < -O || y < -O || x > this.w + O || y > this.h + O) {
+      this.edgeArrow(x, y, '#9fd0ff');
+      return;
+    }
+    const t = settings().reduceMotion ? 0 : this.time;
+    g.save();
+    // The lightning's reach.
+    g.strokeStyle = 'rgba(160,200,255,0.22)';
+    g.lineWidth = 1.5;
+    g.setLineDash([10, 8]);
+    g.beginPath(); g.arc(x, y, O, 0, Math.PI * 2); g.stroke();
+    g.setLineDash([]);
+    // The eye: dark, turning.
+    const gr = g.createRadialGradient(x, y, 0, x, y, R * 1.4);
+    gr.addColorStop(0, 'rgba(6,10,20,0.55)');
+    gr.addColorStop(0.7, 'rgba(20,32,56,0.35)');
+    gr.addColorStop(1, 'rgba(20,32,56,0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, R * 1.4, 0, Math.PI * 2); g.fill();
+    g.translate(x, y);
+    g.rotate(t * 0.35);
+    g.lineCap = 'round';
+    for (let k = 0; k < 4; k++) {
+      g.rotate(Math.PI / 2);
+      g.strokeStyle = `rgba(190,215,255,${0.28 + 0.1 * Math.sin(t * 1.3 + k)})`;
+      g.lineWidth = Math.max(1.5, 4 * z);
+      g.beginPath(); g.arc(0, 0, R * (0.45 + k * 0.12), 0, Math.PI * 0.9); g.stroke();
+    }
+    g.rotate(-t * 0.35);
+    // Its pale rim, pulsing.
+    const pulse = 0.5 + 0.3 * Math.sin(t * 2.1);
+    g.strokeStyle = `rgba(200,228,255,${pulse})`;
+    g.lineWidth = Math.max(2, 3 * z);
+    g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.stroke();
+    // A flash inside now and then.
+    const beat = Math.floor(t * 1.7);
+    if (t && (beat * 7919) % 5 === 0 && (t * 1.7) % 1 < 0.25) {
+      const a0 = ((beat * 2654435761) % 628) / 100;
+      g.strokeStyle = 'rgba(235,245,255,0.9)';
+      g.lineWidth = Math.max(1.5, 2.5 * z);
+      g.beginPath();
+      let px = Math.cos(a0) * R * 0.9, py = Math.sin(a0) * R * 0.9;
+      g.moveTo(px, py);
+      for (let i = 1; i <= 5; i++) {
+        px = px * 0.72 + ((((beat + i) * 97) % 21) - 10) * z * 3;
+        py = py * 0.72 + ((((beat + i) * 61) % 21) - 10) * z * 3;
+        g.lineTo(px, py);
+      }
+      g.stroke();
+    }
+    g.restore();
   }
 
   /** The wonders of the sea (docs/12 P10 #8), drawn where they lie: a lagoon's glow, bones, an arch, drowned spires,

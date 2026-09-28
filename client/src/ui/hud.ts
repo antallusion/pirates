@@ -2,6 +2,7 @@
 // minimap, prompts, toasts, banners and chat.
 
 import { regattaPanel } from './regatta.ts';
+import { stormPanel } from './storms.ts';
 import { nemesisLabel } from './nemesis.ts';
 import { pirateById } from '../../../shared/src/data/pirates.ts';
 import { BEASTS, beastOfClass, hullNoise, noiseBand } from '../../../shared/src/data/beasts.ts';
@@ -58,6 +59,7 @@ export class Hud {
   onTribute: (id: number) => void = () => {};
   private lastHuntKey = '';
   private lastRegattaKey = '';
+  private lastStormKey = '';
   private lastFishKey = '';
   private lastTargetKey = '';
   private toastsEl = $('toasts');
@@ -107,6 +109,7 @@ export class Hud {
     this.drawFishing(state);
     this.drawHunt(state);
     this.drawRegatta(state);
+    this.drawStorm(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -904,6 +907,17 @@ export class Hud {
     const key = html ?? '';
     if (key === this.lastRegattaKey) return;
     this.lastRegattaKey = key;
+    el.classList.toggle('hidden', !html);
+    el.innerHTML = html ?? '';
+  }
+
+  /** The heart of the storm (docs/12 P10 #14): where it is, her charge, her hearts. */
+  private drawStorm(state: ClientState): void {
+    const el = $('hud-storm');
+    const html = stormPanel(state);
+    const key = html ?? '';
+    if (key === this.lastStormKey) return;
+    this.lastStormKey = key;
     el.classList.toggle('hidden', !html);
     el.innerHTML = html ?? '';
   }

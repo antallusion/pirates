@@ -21,9 +21,11 @@ export interface RefitOrder {
   until: number;
 }
 
-/** Whether a yard can take this hull in hand: the same tiers it builds. */
+/** Whether a yard can take this hull in hand: the same tiers it builds; the greatest yards take first-rates too (no
+ *  yard builds them, so without it no ship would ever reach ⚓10). */
 function yardTakes(port: Port, classId: ShipClassId): boolean {
-  return SHIP_CLASSES[classId].tier <= port.shipyardTier;
+  const tier = SHIP_CLASSES[classId].tier;
+  return tier <= port.shipyardTier || (tier === 5 && port.shipyardTier >= 4);
 }
 
 /** What she has of a good for the work: in her hold and in the captain's warehouse here. */
@@ -47,6 +49,7 @@ export function refitView(game: Game, s: PlayerSession, port: Port): RefitView {
     goods: cost.goods.map((g) => ({ good: g.good, qty: g.qty, have: have(s, port, g.good) })),
     sec: cost.sec,
     captain: captainLevelFor(level + 1),
+    ...(cost.hearts ? { hearts: { qty: cost.hearts, have: p.stormHearts ?? 0 } } : {}),
   };
   return { level, max: hi, next, busy, blocked: busy ? null : refitBlocked(game, s, port) };
 }
@@ -66,6 +69,7 @@ function refitBlocked(game: Game, s: PlayerSession, port: Port): string | null {
   const cost = refitCost(level + 1)!;
   if (p.gold < cost.silver) return `Needs ${cost.silver} silver`;
   for (const g of cost.goods) if (have(s, port, g.good) < g.qty) return `Needs ${g.qty} ${GOODS[g.good].name.toLowerCase()} (in the hold or your warehouse here)`;
+  if (cost.hearts && (p.stormHearts ?? 0) < cost.hearts) return 'Needs a heart of the storm in her keel (caught in the Storm of the Century)';
   return null;
 }
 
@@ -94,6 +98,7 @@ export function orderRefit(game: Game, s: PlayerSession, port: Port): string | n
       if (!wh[g.good]) delete wh[g.good];
     }
   }
+  if (cost.hearts) p.stormHearts = (p.stormHearts ?? 0) - cost.hearts;
   p.refit = { port: port.id, to, until: game.wallNow() + cost.sec * 1000 };
   game.sendTo(s, { t: 'toast', msg: `The yard takes the ${l.name} in hand: level ${to} in ${Math.ceil(cost.sec / 60)} min. She stays in harbour till then.`, kind: 'info' });
   return null;

@@ -159,6 +159,8 @@ export type ClientMsg =
   | { t: 'guest'; action: 'invite' | 'uninvite'; name: string }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
+  /** The Storm-Chaser set forged of hearts of the storm (docs/12 P10 #14). */
+  | { t: 'gear'; action: 'storm'; slot: Slot }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
   | { t: 'learn_talent'; id: string }
   | { t: 'respec'; mode?: 'full' | 'forget' | 'token'; id?: string }
@@ -502,6 +504,8 @@ export interface PrivateState {
   unlocks?: string[];
   /** A cartographer's fame (docs/12 P10 #7). */
   cartoFame?: number;
+  /** Hearts of the storm caught and not yet forged (docs/12 P10 #14). */
+  stormHearts?: number;
   /** Fishing (docs/12 P3). */
   fishing: FishingView;
   /** The beasts taken, by kind (docs/12 P4). */
@@ -1059,6 +1063,7 @@ export type ServerMsg =
   | { t: 'omen'; id: OmenId }
   | { t: 'dutchman'; view: DutchmanView }
   | { t: 'hall'; view: HallView | null }
+  | { t: 'storm'; view: StormView | null }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1138,7 +1143,7 @@ export interface QuestPayView {
 export interface RefitView {
   level: number;
   max: number;
-  next: { to: number; silver: number; goods: { good: GoodId; qty: number; have: number }[]; sec: number; captain: number } | null;
+  next: { to: number; silver: number; goods: { good: GoodId; qty: number; have: number }[]; sec: number; captain: number; hearts?: { qty: number; have: number } } | null;
   /** The yard at work on her: to what level, seconds left, in which port. */
   busy: { to: number; left: number; port: string } | null;
   /** Why it cannot be ordered here and now. */
@@ -1146,6 +1151,23 @@ export interface RefitView {
 }
 
 /** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+/** The heart of the Storm of the Century as a captain in its region sees it (docs/12 P10 #14). */
+export interface StormView {
+  x: number;
+  y: number;
+  /** Lightning within this; the charge gathered within `core`. */
+  r: number;
+  core: number;
+  charge: number;
+  need: number;
+  /** Seconds till the sky makes another heart (0: it is there). */
+  rest: number;
+  /** Hearts she has; caught in this storm, and the most one storm gives. */
+  hearts: number;
+  caught: number;
+  max: number;
+}
+
 /** A captain's tattoos (docs/12 P9). */
 export interface TattooView {
   owned: string[];
