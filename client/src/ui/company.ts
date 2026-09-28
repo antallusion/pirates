@@ -2,6 +2,7 @@
 // packet boat, and — in port — the captains' market board (and Tidewrack's trophy auction).
 // Plus the barter table, opened when two captains agree to trade.
 
+import { personName } from '../lang/names.ts';
 import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { CARAVAN_TASKS, ON_ATTACK, TASK_NAMES, escortCost } from '../../../shared/src/data/caravans.ts';
 import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts';
@@ -787,7 +788,8 @@ function estateHtml(state: ClientState): string {
       ${isle.next ? `<p>${esc(L('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver), goods: goodsList(isle.next.goods) }))} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
       <div class="row" style="gap:6px;flex-wrap:wrap">${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
       ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
-      ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}</div>`);
+      ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}
+      ${(state.self?.company.memorial ?? []).length ? `<div class="est-h">${esc(L('est_memorial'))}</div>${state.self!.company.memorial.map((m) => `<p class="muted">† ${esc(personName(m.name))} — ${esc(serverText(m.cause))}</p>`).join('')}` : ''}</div>`);
   } else if (!e.buy) parts.push(`<div class="card est-card"><p class="muted">${esc(L('est_none'))}</p></div>`);
   if (e.buy) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('est_buy_title', { name: placeName(e.buy.name) }))}</h4><p class="muted">${esc(L('est_buy_text'))}</p><button class="btn btn-primary" data-est="buy" data-isl="${e.buy.island}" data-price="${e.buy.price}">${esc(L('est_buy', { price: fmt(e.buy.price) }))}</button></div>`);
   if (e.outposts.length || e.kinds.length) {

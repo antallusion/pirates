@@ -1,6 +1,7 @@
 // Crew as people (docs/02 §8): professions in pools with a shared veterancy, named officers with traits,
 // loyalty, orders and wounds, the character a crew earns from its history, and the Codex share.
 
+import type { OfficerFate } from './fates.ts';
 import type { CaptainId } from './captains.ts';
 import type { Flag, StatMods } from './stats.ts';
 
@@ -133,6 +134,8 @@ export interface Officer {
   awayUntil?: number; // taken captive when the ship went down
   orderReady: number;
   acting?: boolean; // Field Promotion: a sailor standing in until the fight ends
+  /** Her officer's past, requests and loves (docs/12 P10 #11). */
+  fate?: OfficerFate;
 }
 
 export interface UniqueOfficer {

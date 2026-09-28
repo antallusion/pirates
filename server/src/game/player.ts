@@ -580,6 +580,7 @@ function companyView(p: Profile, ship: ShipEntity | null, now: number): PrivateS
       id: o.id, name: o.name, role: o.role, level: o.level, traits: o.traits, loyalty: Math.round(o.loyalty),
       wound: o.wound && o.wound.until > now ? (o.wound.heavy ? 'heavy' : 'light') : null, away: officerFactor(o, now) <= 0 && !o.wound,
       orderReady: o.orderReady, unique: o.unique, warned: o.warnedAt !== undefined,
+      ...(o.fate ? { fate: { past: o.fate.past, request: o.fate.request ? { ...o.fate.request } : null, love: o.fate.love ? { port: o.fate.love.port, name: o.fate.love.name } : null } } : {}),
     })),
     slots: ship ? officerBerths(ship) : 1,
     traits: c.traits,

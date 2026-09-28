@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { RequestKind } from './data/fates.ts';
 import type { OmenId } from './data/omens.ts';
 import type { WonderKind } from './data/wonders.ts';
 import type { HarnessId, PetId } from './data/companions.ts';
@@ -74,7 +75,7 @@ export type ClientMsg =
   | { t: 'trade'; good: GoodId; qty: number }
   | { t: 'buy_ammo'; ammo: AmmoId; qty: number }
   | { t: 'hire_crew'; qty: number; prof?: Profession; dregs?: boolean }
-  | { t: 'officer'; action: 'hire' | 'dismiss' | 'order'; id: string }
+  | { t: 'officer'; action: 'hire' | 'dismiss' | 'order' | 'fulfil'; id: string }
   | { t: 'codex'; share: number }
   | { t: 'mutiny'; choice: 'pay' | 'suppress' | 'yield' | 'duel' }
   | { t: 'press_gang'; qty: number }
@@ -558,6 +559,8 @@ export interface OfficerView {
   orderReady: number;
   unique?: string;
   warned: boolean;
+      /** Her past, a request, a love (docs/12 P10 #11). */
+      fate?: { past: number; request: { kind: RequestKind; port?: string; island?: number; n?: number; until: number } | null; love: { port: string; name: string } | null };
 }
 
 export interface CompanyView {

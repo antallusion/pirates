@@ -1,6 +1,8 @@
 // The crew screen (O): trades and veterancy, loyalty and the Codex share, officers and their orders,
 // the memorial; and the mutiny dialog.
 
+import { PASTS, REQUESTS } from '../../../shared/src/data/fates.ts';
+import { placeName } from './maps.ts';
 import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS, TRAITS } from '../../../shared/src/data/crew.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import type { ClientState } from '../state.ts';
@@ -64,6 +66,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
         const left = Math.max(0, o.orderReady - now);
         return `<div class="card officer-card">${officerIcon(o, 'officer-ico')}<div class="quest-body"><h4>${esc(personName(o.name))} <span class="muted">${esc(L('officerLevel', { role: lang() === 'ru' ? def.name.toLowerCase() : def.name, level: o.level }))}</span></h4>
           <p>${traitChips(o.traits)}</p>
+          ${o.fate ? fateHtml(state, o.id, o.fate) : ''}
           <p class="muted">${esc(def.description)}</p>
           <div class="row"><span class="with-ico">${icon('menu_crew', '', 'ico-sm')}${esc(L('loyalty', { n: o.loyalty }))}${o.warned ? ` <span class="bad">${esc(L('restless'))}</span>` : ''}${o.wound ? ` · <span class="bad">${esc(L(`wound.${o.wound}`))}</span>` : ''}${o.away ? ` · <span class="bad">${esc(L('captive'))}</span>` : ''}</span>
             <span><button class="btn btn-small" data-order="${o.id}" ${left > 0 || o.away ? 'disabled' : ''} title="${esc(def.order.description)}">${esc(def.order.name)}${left > 0 ? esc(L('cooldown', { s: Math.ceil(left) })) : ''}</button>
@@ -75,9 +78,25 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
   slider.onchange = () => send({ t: 'codex', share: Number(slider.value) });
   root.querySelectorAll<HTMLElement>('[data-form]').forEach((el) => (el.onclick = () => send({ t: 'formation', formation: el.dataset.form as 'line' })));
   root.querySelectorAll<HTMLElement>('[data-order]').forEach((el) => (el.onclick = () => send({ t: 'officer', action: 'order', id: el.dataset.order! })));
+  root.querySelectorAll<HTMLElement>('[data-fulfil]').forEach((el) => (el.onclick = () => send({ t: 'officer', action: 'fulfil', id: el.dataset.fulfil! })));
   root.querySelectorAll<HTMLElement>('[data-dismiss]').forEach((el) => (el.onclick = () => {
     void ask(L('confirmPayOff')).then((ok) => ok && send({ t: 'officer', action: 'dismiss', id: el.dataset.dismiss! }));
   }));
+}
+
+/** An officer's fate (docs/12 P10 #11): the past, a request (with its deed when it can be done here), a love. */
+function fateHtml(state: ClientState, id: string, f: NonNullable<NonNullable<ClientState['self']>['company']['officers'][number]['fate']>): string {
+  const ru = lang() === 'ru' ? 1 : 0;
+  const portName = (pid?: string) => placeName(state.ports.find((p) => p.id === pid)?.name ?? pid ?? '');
+  const r = f.request;
+  let req = '';
+  if (r) {
+    const text = REQUESTS[r.kind][ru].replace('{port}', portName(r.port)).replace('{island}', placeName(state.islands.get(r.island ?? -1)?.name ?? '…')).replace('{n}', String(r.n ?? 0));
+    const can = (r.kind === 'brother' || r.kind === 'debt') && state.self?.dockedAt === r.port;
+    req = `<div class="fate-req"><span class="giver-h">${esc(L('fate.request'))}</span><p><i>«${esc(text)}»</i></p>${can ? `<button class="btn btn-small btn-primary" data-fulfil="${esc(id)}">${esc(L('fate.pay', { n: r.n ?? 0 }))}</button>` : ''}</div>`;
+  }
+  const love = f.love ? `<p class="fate-love">${esc(L('fate.love', { name: f.love.name, port: portName(f.love.port) }))}</p>` : '';
+  return `<p class="fate-past muted"><i>${esc(PASTS[f.past]?.[ru] ?? '')}</i></p>${req}${love}`;
 }
 
 export function renderMutiny(root: HTMLElement, state: ClientState, send: (m: ClientMsg) => void): void {

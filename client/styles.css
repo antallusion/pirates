@@ -2108,3 +2108,8 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .jr-omen .btn { margin-top: 4px; }
 .jr-dutchman { border: 1px solid rgba(120,255,160,0.25); border-radius: 5px; padding: 6px 8px; background: rgba(12,28,20,0.5); }
 .jr-dutchman .dutch-go { color: #9ff0b8; font-weight: 600; }
+/* Crew with fates (docs/12 P10 #11). */
+.officer-card .fate-past { font-size: 12px; margin: 2px 0; }
+.officer-card .fate-req { border-left: 2px solid rgba(232,196,106,0.6); padding: 2px 0 4px 8px; margin: 4px 0; }
+.officer-card .fate-req p { margin: 2px 0 4px; font-size: 12px; }
+.officer-card .fate-love { font-size: 12px; color: #e0a0b0; margin: 2px 0; }

@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
 import { dutchmanSunk, stepDutchman } from './dutchman.ts';
 import { nailCoin, omenBroken, omenKept, sendOmen, stepOmens } from './omens.ts';
 import { nameWonder, stepWonders } from './wonders.ts';
@@ -734,6 +735,7 @@ export class Game {
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
     if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
     if (Math.floor(this.now) % 5 === 0) stepDutchman(this); // the Flying Dutchman's week (docs/12 P10 #10)
+    if (Math.floor(this.now) % 30 === 0) stepFates(this); // the officers' requests and loves (docs/12 P10 #11)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -2518,6 +2520,10 @@ export class Game {
         if (msg.action === 'order') return err(officerOrder(this, s, String(msg.id)));
         if (msg.action === 'hire') return portAction((pt) => hireOfficer(this, s, pt, String(msg.id)));
         if (msg.action === 'dismiss') return portAction(() => dismissOfficer(this, s, String(msg.id)));
+        if (msg.action === 'fulfil') {
+          err(fulfilRequest(this, s, String(msg.id)));
+          return this.pushSelf(s, true);
+        }
         return;
       case 'codex': {
         const share = Math.round(Number(msg.share));
@@ -3350,6 +3356,7 @@ export class Game {
     }
     questEvent(this, s, { k: 'dock', port });
     petsOnDock(this, s, port); // the monkey works the quay (docs/12 P10 #3)
+    fatesOnDock(this, s, port); // a letter home, rum for the lads, an evening with a love (docs/12 P10 #11)
     sendRegatta(this, s); // the next regatta, on the harbour's board (docs/12 P10 #5)
     sendOmen(this, s); // the day's omen, told in the tavern (docs/12 P10 #9)
     this.pushPort(s);

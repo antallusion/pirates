@@ -1,6 +1,9 @@
 // Words of the crew screen and the mutiny dialog (client/src/ui/crew.ts).
 
 export const EN = {
+  'fate.request': 'A favour asked',
+  'fate.pay': 'Pay {n} silver',
+  'fate.love': 'In love with {name} of {port}',
   'title': 'The Company',
   'sub': '{souls} aboard · veterancy {stars} ({skill}) · morale {morale} ({spirit}) · loyalty {loyalty}',
   'st.souls': 'Aboard',
@@ -59,6 +62,9 @@ export const EN = {
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
+  'fate.request': 'Просьба',
+  'fate.pay': 'Заплатить {n} серебра',
+  'fate.love': 'Сердце отдано: {name} из {port}',
   'title': 'Команда',
   'sub': 'На борту {souls} · выучка {stars} ({skill}) · дух {morale} ({spirit}) · верность {loyalty}',
   'st.souls': 'На борту',
