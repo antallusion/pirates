@@ -55,6 +55,7 @@ import type { FigureheadId, Plan } from '../../../shared/src/data/shipbuild.ts';
 import type { Oath, QuestLog } from './quests.ts';
 import { clampLevel, initialLevel } from '../../../shared/src/data/shiplevel.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
+import type { ServiceRec } from './marque.ts';
 
 export interface Profile {
   version: 1;
@@ -191,6 +192,9 @@ export interface Profile {
   nemesisHeads?: number;
   /** Hearts of the storm caught and not yet forged or built into a keel (docs/12 P10 #14). */
   stormHearts?: number;
+  /** A letter of marque: the service, merit, rank, pay and order (docs/12 P10 #15); no service before this time. */
+  service?: ServiceRec | null;
+  serviceBan?: number;
   /** A cartographer's fame: her buried chests dug up by others (docs/12 P10 #7). */
   cartoFame?: number;
   /** The wonders of the sea she has found (docs/12 P10 #8). */
@@ -364,6 +368,8 @@ export interface WorldView {
   common?: PrivateState['common'];
   /** Groupmates on the same quests: quest id → their names and steps (docs/11 P6). */
   questMates?: Record<string, { name: string; step: number }[]>;
+  /** Her letter of marque (docs/12 P10 #15). */
+  service?: PrivateState['service'];
 }
 
 export function toPrivateState(s: PlayerSession, now: number, world: WorldView = { coves: [], patrols: [] }): PrivateState {
@@ -449,6 +455,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     unlocks: p.unlocks ?? [...STARTING_UNLOCKS],
     cartoFame: p.cartoFame ?? 0,
     stormHearts: p.stormHearts ?? 0,
+    service: world.service ?? null,
     fishing: fishingView(p),
     beasts: p.beasts ?? {},
     cargo: ship ? ship.cargo : p.cargo,

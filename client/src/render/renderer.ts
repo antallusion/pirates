@@ -385,6 +385,7 @@ export class Renderer {
     this.drawWonders(state);
     this.drawLanterns(state);
     this.drawStormHeart(state);
+    this.drawOrderMarks(state);
     drawSights(g, state.sights, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, own ? { x: own.x, y: own.y } : null, this.w, this.h);
     this.drawDuelRing(state);
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
@@ -2380,6 +2381,40 @@ export class Renderer {
       g.fillStyle = `rgba(200,255,210,${a})`;
       g.fillRect(x - 2, y - 5, 4, 6);
     }
+  }
+
+  /** A letter of marque's order (docs/12 P10 #15): the patrol's marks (pennant buoys with a ring), and an arrow at the
+   *  screen's edge toward the nearest mark, the quarry or the port. */
+  private drawOrderMarks(state: ClientState): void {
+    const o = state.self?.service?.order;
+    const own = state.ownDisplay;
+    if (!o || o.kind === 'hunt' || !own || state.self?.dockedAt) return; // a hunt is anywhere in its sea
+    const g = this.g;
+    const t = settings().reduceMotion ? 0 : this.time;
+    const r = Math.max(6, 7 * this.zoom);
+    const targets: [number, number][] = o.marks?.length ? o.marks : [[o.x, o.y]];
+    const near = [...targets].sort((a, b) => Math.hypot(a[0] - own.x, a[1] - own.y) - Math.hypot(b[0] - own.x, b[1] - own.y))[0];
+    let arrow = true;
+    for (const [mx, my] of o.marks ?? []) {
+      const x = this.sx(mx), y = this.sy(my);
+      if (x < -60 || y < -60 || x > this.w + 60 || y > this.h + 60) continue;
+      if (mx === near[0] && my === near[1]) arrow = false;
+      const k = (t * 0.7) % 1;
+      g.strokeStyle = `rgba(240,213,138,${0.7 * (1 - k)})`;
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(x, y, r * (1.5 + k * 2.5), 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = '#2a1a10'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x, y + r); g.lineTo(x, y - r * 2.2); g.stroke();
+      g.fillStyle = '#c9a25a';
+      g.beginPath(); g.moveTo(x, y - r * 2.2); g.lineTo(x + r * 1.6, y - r * 1.7); g.lineTo(x, y - r * 1.2); g.closePath(); g.fill();
+      g.fillStyle = '#1b2a3a';
+      g.beginPath(); g.arc(x, y + r * 0.4, r * 0.7, 0, Math.PI * 2); g.fill();
+    }
+    if (!o.marks?.length) {
+      const x = this.sx(near[0]), y = this.sy(near[1]);
+      arrow = x < -60 || y < -60 || x > this.w + 60 || y > this.h + 60;
+    }
+    if (arrow) this.edgeArrow(this.sx(near[0]), this.sy(near[1]), '#f0d58a');
   }
 
   /** The heart of the Storm of the Century (docs/12 P10 #14): a turning dark eye with a pale rim, the lightning's

@@ -39,6 +39,7 @@ import { commonCard, dailyCard } from './daily.ts';
 import { giverDialog } from './giver.ts';
 import { EN, RU } from '../lang/ui/port.ts';
 import { serverText } from '../lang/server.ts';
+import { sendService, serviceCard } from './marque.ts';
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -176,6 +177,11 @@ export class PortScreen {
         return;
       case 'oath':
         void ask(L('confirm.oath')).then((ok) => ok && this.send({ t: 'oath', oath: d.oath as 'code' }));
+        return;
+      case 'service':
+        // Letters of marque (docs/12 P10 #15): leaving the service is asked first.
+        if (d.sact === 'resign') void ask(L('confirm.resign')).then((ok) => ok && sendService(this.send, 'resign'));
+        else sendService(this.send, d.sact!, Number(d.i));
         return;
       case 'build_order':
         return this.send({ t: 'build', req: { ...this.build, name: this.build.name || SHIP_CLASSES[this.build.classId].name } });
@@ -548,6 +554,7 @@ ${orders}${berths}</div>` : ''}`;
         ${view.captainsHouse ? `<div class="card"><h4 class="card-h">${icon('menu_crew', '', 'ico-md')}${esc(L('house.title'))}</h4><p>${esc(L('house.text'))}</p>
           <div class="row" style="gap:6px;flex-wrap:wrap">${self.paths.map((c) => `<button class="btn btn-small ${c === self.captain ? 'btn-primary' : ''}" data-act="path" data-to="${c}" ${c === self.captain ? 'disabled' : ''}>${esc(CAPTAINS[c].archetype)}</button>`).join('')}</div>
           <p class="muted">${esc(L('house.other'))}</p></div>` : ''}
+        ${serviceCard(state, view.service)}
         ${view.oathOffer ? `<div class="card"><h4>${esc(view.oathOffer === 'code' ? L('oath.code') : L('oath.marque'))}</h4><p>${esc(view.oathOffer === 'code' ? L('oath.codeText') : L('oath.marqueText'))} ${esc(L('oath.one'))}</p>
           <button class="btn" data-act="oath" data-oath="${view.oathOffer}">${esc(L('oath.swear'))}</button></div>` : ''}
         <div class="card"><h4 class="card-h">${icon('ab_call_escort', '', 'ico-md')}${esc(L('escort.title', { n: self.fleet.escorts.length, max: self.fleet.slots }))}</h4>${self.fleet.slots ? `<p>${esc(L('escort.text', { cost: fmt(self.fleet.upkeep) }))}</p>

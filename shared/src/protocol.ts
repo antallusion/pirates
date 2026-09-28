@@ -15,6 +15,7 @@ import type { FishId, FishMethod } from './data/fishing.ts';
 import type { HappeningKind } from './data/happenings.ts';
 import type { EncounterId, SightKind } from './data/encounters.ts';
 import type { CaptainSlot, Item, Slot } from './data/items.ts';
+import type { OrderKind, ServiceId } from './data/marque.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
@@ -157,6 +158,9 @@ export type ClientMsg =
   /** Guests on an island (docs/12 P10 #13). */
   | { t: 'guest'; action: 'call' | 'drink' | 'sign'; island: number; text?: string }
   | { t: 'guest'; action: 'invite' | 'uninvite'; name: string }
+  /** Letters of marque (docs/12 P10 #15). */
+  | { t: 'service'; action: 'enlist' | 'resign' | 'order' | 'livery' }
+  | { t: 'service'; action: 'buy'; index: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   /** The Storm-Chaser set forged of hearts of the storm (docs/12 P10 #14). */
@@ -506,6 +510,8 @@ export interface PrivateState {
   cartoFame?: number;
   /** Hearts of the storm caught and not yet forged (docs/12 P10 #14). */
   stormHearts?: number;
+  /** Her letter of marque: the service, rank, merit and the fleet order in hand (docs/12 P10 #15). */
+  service?: ServiceView | null;
   /** Fishing (docs/12 P3). */
   fishing: FishingView;
   /** The beasts taken, by kind (docs/12 P4). */
@@ -627,6 +633,8 @@ export interface PortView {
   /** The sea's heaviest catches (docs/12 P3): the tavern's board. */
   fishRecords?: { fish: FishId; name: string; kg: number }[];
   oathOffer: 'code' | 'marque' | null;
+  /** The service of this port's flag (docs/12 P10 #15). */
+  service?: ServicePortView;
   yard: { woods: WoodId[]; figurehead: FigureheadId | null; plans: boolean; master: boolean };
   shipyard: {
     tier: number;
@@ -1151,6 +1159,36 @@ export interface RefitView {
 }
 
 /** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+/** A fleet order under a letter of marque (docs/12 P10 #15): what, where, how far along, by when (game seconds). */
+export interface ServiceOrderView {
+  kind: OrderKind;
+  text: string;
+  n: number;
+  need: number;
+  until: number;
+  port: string;
+  x: number;
+  y: number;
+  marks?: [number, number][];
+  target?: number | null;
+}
+
+export interface ServiceView {
+  id: ServiceId;
+  rank: number;
+  merit: number;
+  order: ServiceOrderView | null;
+}
+
+/** A port's office of its flag's service: whether she may enlist, her pay, the quartermaster's stores. */
+export interface ServicePortView {
+  offer: ServiceId | null;
+  blocked: string | null;
+  pay: number;
+  payReady: boolean;
+  wares: { item: Item; price: number; sold: boolean }[];
+}
+
 /** The heart of the Storm of the Century as a captain in its region sees it (docs/12 P10 #14). */
 export interface StormView {
   x: number;

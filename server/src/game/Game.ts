@@ -11,6 +11,7 @@ import { boardAction, buryChest } from './chests.ts';
 import { stepBottles, throwBottle } from './bottles.ts';
 import { regattaSignUp, sendRegatta, stepRegatta } from './regatta.ts';
 import { forgeStorm, stepStorms } from './storms.ts';
+import { buyWare as buyServiceWare, enlist, flyLivery, resign, serviceKill, serviceOnDock, serviceView, stepService, takeOrder } from './marque.ts';
 import { diceBid, diceJoin, diceLeave, diceLiar, diceOpen, diceStart, stepDice } from './dice.ts';
 import { catAboard, petAction, petsOnDock, stepPets } from './pets.ts';
 import { companionAction, stepCompanions } from './companion.ts';
@@ -102,7 +103,7 @@ import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, mark
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
 import { buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
-import { abandonQuest, acceptQuest, answerOffer, marqueBounty, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
+import { abandonQuest, acceptQuest, answerOffer, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
 import { guildGoalCollect } from './guildgoal.ts';
@@ -735,6 +736,7 @@ export class Game {
     stepDice(this); // the tavern tables (docs/12 P10 #4)
     stepRegatta(this); // the Regatta of Equal Waters (docs/12 P10 #5)
     stepStorms(this); // the heart of the Storm of the Century (docs/12 P10 #14)
+    if (Math.floor(this.now) % 2 === 0) stepService(this); // letters of marque: orders, sunsets, the law's eye (docs/12 P10 #15)
     if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
     if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
@@ -1346,6 +1348,7 @@ export class Game {
       questTargets: this.questTargets(p),
       questMates: this.questMates(s),
       common: commonView(this, s.accountId),
+      service: serviceView(this, p),
       coves: this.coves,
       patrols: this.insiderPatrols(s),
       fleet: ship ? {
@@ -1682,7 +1685,7 @@ export class Game {
     if (how === 'sunk' && victim.npcRole === 'merchant') omenBroken(this, s, 'merchant');
     wantedKill(this, s, victim); // a named pirate's head, the Hunters' Guild (docs/12 P5)
     raidKill(this, s, victim, how); // a merchant raided: the Brethren's fame, the lanes' heat (docs/12 P6)
-    if (how === 'sunk') marqueBounty(this, s, victim);
+    serviceKill(this, s, victim, how); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
     eventShipLost(this, victim);
@@ -2559,6 +2562,14 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'service':
+        // Letters of marque (docs/12 P10 #15): leaving the service anywhere, the rest at a port of the flag.
+        if (msg.action === 'resign') return err(resign(this, s));
+        return portAction((pt) => msg.action === 'enlist' ? enlist(this, s, pt)
+          : msg.action === 'order' ? takeOrder(this, s, pt)
+          : msg.action === 'livery' ? flyLivery(this, s)
+          : msg.action === 'buy' ? buyServiceWare(this, s, pt, Math.trunc(Number(msg.index)))
+          : 'Unknown order');
       case 'guest': {
         const isl = Math.trunc(Number((msg as { island?: number }).island));
         const res = msg.action === 'call' ? callOn(this, s, isl)
@@ -3384,6 +3395,7 @@ export class Game {
     questEvent(this, s, { k: 'dock', port });
     petsOnDock(this, s, port); // the monkey works the quay (docs/12 P10 #3)
     fatesOnDock(this, s, port); // a letter home, rum for the lads, an evening with a love (docs/12 P10 #11)
+    serviceOnDock(this, s, port); // a letter of marque: the day's pay, an order's goods handed over (docs/12 P10 #15)
     sendRegatta(this, s); // the next regatta, on the harbour's board (docs/12 P10 #5)
     sendOmen(this, s); // the day's omen, told in the tavern (docs/12 P10 #9)
     this.pushPort(s);

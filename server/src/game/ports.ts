@@ -56,6 +56,7 @@ import { portFence } from './smugglefx.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { bankView, forwardOffers, forwardView, hasExchange, insuranceQuotes, orderView } from './finance.ts';
 import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
+import { servicePortView } from './marque.ts';
 
 export function hasLicence(p: Profile, faction: string, now: number): boolean {
   // A licence is void for anyone the law is hunting.
@@ -155,7 +156,8 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       plans: YARD_FACTIONS_WITH_PLANS.includes(port.faction as never) && (p.reputation[port.faction as never] ?? 0) >= PLAN_REP,
       master: port.shipyardTier >= 3,
     },
-    oathOffer: p.oath ? null : port.id === 'cinderhold' ? 'code' : port.id === 'gravesend' ? 'marque' : null,
+    oathOffer: p.oath ? null : port.id === 'cinderhold' ? 'code' : null,
+    service: servicePortView(game, s, port),
     escorts: ESCORT_OFFERS.map((o) => ({ classId: o.classId, price: o.price, upkeep: o.upkeep, available: port.shipyardTier >= o.yard })),
     shipyard: {
       tier,

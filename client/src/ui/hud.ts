@@ -3,6 +3,7 @@
 
 import { regattaPanel } from './regatta.ts';
 import { stormPanel } from './storms.ts';
+import { orderPanel } from './marque.ts';
 import { nemesisLabel } from './nemesis.ts';
 import { pirateById } from '../../../shared/src/data/pirates.ts';
 import { BEASTS, beastOfClass, hullNoise, noiseBand } from '../../../shared/src/data/beasts.ts';
@@ -60,6 +61,7 @@ export class Hud {
   private lastHuntKey = '';
   private lastRegattaKey = '';
   private lastStormKey = '';
+  private lastOrderKey = '';
   private lastFishKey = '';
   private lastTargetKey = '';
   private toastsEl = $('toasts');
@@ -110,6 +112,7 @@ export class Hud {
     this.drawHunt(state);
     this.drawRegatta(state);
     this.drawStorm(state);
+    this.drawOrder(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -907,6 +910,17 @@ export class Hud {
     const key = html ?? '';
     if (key === this.lastRegattaKey) return;
     this.lastRegattaKey = key;
+    el.classList.toggle('hidden', !html);
+    el.innerHTML = html ?? '';
+  }
+
+  /** A letter of marque's fleet order (docs/12 P10 #15): what, how far along, which way, the sunset. */
+  private drawOrder(state: ClientState): void {
+    const el = $('hud-order');
+    const html = orderPanel(state);
+    const key = html ?? '';
+    if (key === this.lastOrderKey) return;
+    this.lastOrderKey = key;
     el.classList.toggle('hidden', !html);
     el.innerHTML = html ?? '';
   }

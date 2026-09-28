@@ -698,17 +698,6 @@ export function swearOath(game: Game, s: PlayerSession, port: Port, oath: Oath):
   return null;
 }
 
-/** A privateer's pay: 50 silver a tier for every Confederacy ship or pirate sunk under a letter of marque. */
-export function marqueBounty(game: Game, s: PlayerSession, victim: ShipEntity): void {
-  const p = s.profile!;
-  if (p.oath !== 'marque') return;
-  if (victim.faction !== 'confederacy' && victim.npcRole !== 'pirate') return;
-  const pay = 50 * victim.cls.tier;
-  p.gold += pay;
-  game.db.ledger(s.accountId, 'marque', pay, victim.name);
-  changeRep(p, 'crown', 1);
-}
-
 export function sanitizeQuests(p: Profile): void {
   p.quests ??= newQuestLog();
   p.quests.active ??= [];

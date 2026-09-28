@@ -59,6 +59,8 @@ import { spawnFireship } from './npc.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { FACTION_IDS } from '../../../shared/src/data/factions.ts';
+import type { FactionId } from '../../../shared/src/data/factions.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -66,7 +68,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -285,6 +287,14 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       regattaNow(game, portId, 30_000);
       if (ship.docked === portId) regattaSignUp(game, s);
       return `Regatta of Equal Waters: ${portId}.`;
+    }
+    case 'rep': {
+      // Standing with a flag (docs/12 P10 #15 play-testing): /rep faction n.
+      const f = args[0] as FactionId;
+      if (!FACTION_IDS.includes(f)) return `Factions: ${FACTION_IDS.join(', ')}`;
+      p.reputation[f] = Math.max(-100, Math.min(100, num(1, 50)));
+      game.pushSelf(s, true);
+      return `Standing with ${f}: ${p.reputation[f]}.`;
     }
     case 'storm': {
       // Storm chasers (docs/12 P10 #14 play-testing): /storm — the Storm of the Century over her sea, set down by its

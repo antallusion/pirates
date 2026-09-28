@@ -39,7 +39,7 @@ const SLOT_ICON: Record<Slot, string> = {
   spyglass: 'ab_spotters_eye', compass: 'ab_star_fix', charm: 'role_deep_pastor', ring: 'coin',
 };
 
-function itemIcon(it: Item | null, slot: Slot, cls = 'ico-md'): string {
+export function itemIcon(it: Item | null, slot: Slot, cls = 'ico-md'): string {
   return (it ? icon(`item_${it.base}`, '', cls) : '') || icon(SLOT_ICON[slot], '◆', cls);
 }
 
@@ -73,7 +73,7 @@ function nameOf(it: Item): string {
   return itemName(it, ru());
 }
 
-function coloured(it: Item): string {
+export function coloured(it: Item): string {
   return `<b class="gi-name" style="color:${RARITY_COLOR[it.rarity]}">${esc(nameOf(it))}</b>`;
 }
 

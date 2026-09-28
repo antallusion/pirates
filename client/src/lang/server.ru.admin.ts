@@ -3,8 +3,8 @@
 
 export const SERVER_RU_ADMIN: Record<string, string> = {
   ' (by night)': ' (ночью)',
-  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast':
-    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast',
+  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast':
+    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast',
   'A fireship is coming.': 'Идёт брандер.',
   'A {0} berthed at your island.': 'У вашего острова стоит у причала: {0}.',
   'Dismasted.': 'Мачта сбита.',
@@ -70,6 +70,8 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'No wonders left.': 'Чудес не осталось.',
   'Regatta of Equal Waters: {0}.': 'Регата «Равные воды»: {0}.',
   'Hearts of the storm: {0}.': 'Сердец шторма: {0}.',
+  'Standing with {0}: {1}.': 'Репутация у {0}: {1}.',
+  'Factions: {0}': 'Фракции: {0}',
   'The heart of the storm is near.': 'Сердце шторма рядом.',
   'Too much is happening on this sea already.': 'На этом море и так слишком много всего происходит.',
 };
