@@ -11,6 +11,9 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { BEASTS } from '../../../shared/src/data/beasts.ts';
+import type { BeastId } from '../../../shared/src/data/beasts.ts';
+import { spawnGroup, spawnWhiteOrca } from './beasts.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import type { FishId } from '../../../shared/src/data/fishing.ts';
 import { startFight } from './fishing.ts';
@@ -26,8 +29,8 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { AMMO_IDS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
-import type { ShipClassId } from '../../../shared/src/data/ships.ts';
+import { AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { WeatherKind } from '../../../shared/src/protocol.ts';
 import { closestOnPolygon, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
@@ -153,6 +156,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.loadout.classId = cls;
       // /ship class [level]: her level (canon D12), else her class's first.
       ship.loadout.level = args[1] ? clampLevel(cls, num(1)) : undefined;
+      if (SHIP_CLASSES[cls].fixedMount) ship.loadout.mount = SHIP_CLASSES[cls].fixedMount;
       ship.recompute(game.now);
       ship.hull = ship.stats.hullMax;
       ship.sails = ship.stats.sailHpMax;
@@ -179,10 +183,46 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       game.pushSelf(s, true);
       return `Fishing craft ${p.fishing!.skill}.`;
     }
+    case 'mount': {
+      // A deck mount fitted at once: /mount harpoon|mortar|chain_gun|abyssal_lance|fire_charge.
+      const m = args[0] as MountId;
+      if (!MOUNTS[m]) return `Mounts: ${Object.keys(MOUNTS).join(', ')}`;
+      ship.loadout.mount = m;
+      ship.mountReload = 0;
+      game.pushSelf(s, true);
+      return `${MOUNTS[m].name} fitted.`;
+    }
+    case 'slay': {
+      // The nearest beast within a mile dies to your hand (docs/12 P4 play-testing: the carcass and the flensing).
+      let best: ShipEntity | null = null, bd = 1800;
+      for (const o of game.ships.values()) {
+        if (o.npcRole !== 'beast' || !o.alive) continue;
+        const d = Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
+        if (d < bd) {
+          bd = d;
+          best = o;
+        }
+      }
+      if (!best) return 'No beast within a mile.';
+      best.attackers.set(ship.id, game.now);
+      best.hull = 0;
+      game.beginSinking(best);
+      return `${best.name} slain ${Math.round(bd)} m off.`;
+    }
+    case 'beast': {
+      // A beast of the sea by the ship (docs/12 P4): /beast <kind> [level] [n].
+      const id = (args[0] ?? '') as BeastId;
+      if (!BEASTS[id]) return `Beasts: ${Object.keys(BEASTS).join(', ')}`;
+      const lv = args[1] ? num(1) : BEASTS[id].level[0];
+      const h = headingVec(ship.state.heading);
+      const x = ship.state.x + h.x * 450, y = ship.state.y + h.y * 450;
+      const g = id === 'white_orca' ? [spawnWhiteOrca(game, x, y)] : spawnGroup(game, id, x, y, lv, args[2] ? num(2) : undefined);
+      return `${g.length} × ${id} ⚓${lv} 450 m ahead.`;
+    }
     case 'happen': {
       // One of the sea's shorter events now (docs/12 P2): /happen silver_convoy|brethren|star|eclipse|festival|herring_run|red_tide.
       const kind = args[0] ?? '';
-      const kinds = ['silver_convoy', 'brethren', 'star', 'eclipse', 'festival', 'herring_run', 'red_tide'];
+      const kinds = ['silver_convoy', 'brethren', 'star', 'eclipse', 'festival', 'herring_run', 'red_tide', 'orca_migration', 'white_orca'];
       if (!kinds.includes(kind)) return `Kinds: ${kinds.join(', ')}`;
       game.worldEvents.data(game).next[kind] = 0;
       return `${kind}: due within ten seconds${kind === 'star' ? ' (by night)' : ''}.`;

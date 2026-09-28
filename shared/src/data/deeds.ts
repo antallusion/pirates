@@ -29,7 +29,7 @@ export const DEEDS: DeedDef[] = [
   { id: 'deed_expanse_crossing', name: 'Expanse Crossing', condition: "Cross Dead Man's Expanse from south to north without making port.", path: 'exploration' },
   { id: 'deed_ice_edge', name: 'Ice Edge', condition: 'Reach the ice edge of Leviathan Reach.', path: 'exploration' },
   { id: 'deed_legendary_hoard', name: 'Legendary Hoard', condition: 'Find a legendary hoard.', path: 'exploration' },
-  { id: 'deed_leviathan_slain', name: 'Leviathan Slain', condition: 'Take part in killing a leviathan (10% of its damage).', path: 'monsters', awaits: 'sea monsters (Phase 7)' },
+  { id: 'deed_leviathan_slain', name: 'Leviathan Slain', condition: 'Take part in killing a leviathan (10% of its damage).', path: 'monsters' },
   { id: 'deed_harpoon_contracts', name: 'Harpoon Contracts', condition: "Complete 10 contracts from Harpoon's Rest.", path: 'monsters' },
   { id: 'deed_first_descent', name: 'The First Descent', condition: 'Complete "The First Descent" at Saint Maw.', path: 'abyss' },
   { id: 'deed_black_storm', name: 'Black Storm', condition: 'Ride out two minutes of a black storm in the Abyss.', path: 'abyss' },

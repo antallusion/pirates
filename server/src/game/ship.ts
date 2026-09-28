@@ -88,7 +88,7 @@ export interface BoardDuel {
   winner: number | null;
 }
 
-export type NpcRole = 'merchant' | 'patrol' | 'pirate' | 'hunter' | 'fisher' | 'ghost' | 'escort' | 'boss';
+export type NpcRole = 'merchant' | 'patrol' | 'pirate' | 'hunter' | 'fisher' | 'ghost' | 'escort' | 'boss' | 'beast';
 
 export class ShipEntity {
   readonly id: number;
@@ -256,7 +256,7 @@ export class ShipEntity {
 
   /** On the ladder of strength at all (bosses, their parts and wreck hulks are raids of their own). */
   get onLadder(): boolean {
-    return onLadder(this.loadout.classId) && !this.cls.monster && this.npcRole !== 'boss' && !this.bossOf && !this.bossPart && !this.yardOf;
+    return onLadder(this.loadout.classId) && (!this.cls.monster || this.npcRole === 'beast') && this.npcRole !== 'boss' && !this.bossOf && !this.bossPart && !this.yardOf;
   }
 
   /** The level she fights at: a merchant two below her own, a fisher one. */

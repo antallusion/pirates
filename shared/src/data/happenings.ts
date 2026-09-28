@@ -2,8 +2,8 @@
 // the Coast gathering round a baron, a star falling on an island, an eclipse, a fleet lost to the Great Storm, a port's
 // festival. The server writes their lines in English; here are the Russian twins.
 
-export type HappeningKind = 'silver_convoy' | 'brethren' | 'star' | 'eclipse' | 'lost_fleet' | 'festival' | 'herring_run' | 'red_tide';
-export const HAPPENING_KINDS: HappeningKind[] = ['silver_convoy', 'brethren', 'star', 'eclipse', 'lost_fleet', 'festival', 'herring_run', 'red_tide'];
+export type HappeningKind = 'silver_convoy' | 'brethren' | 'star' | 'eclipse' | 'lost_fleet' | 'festival' | 'herring_run' | 'red_tide' | 'orca_migration' | 'white_orca';
+export const HAPPENING_KINDS: HappeningKind[] = ['silver_convoy', 'brethren', 'star', 'eclipse', 'lost_fleet', 'festival', 'herring_run', 'red_tide', 'orca_migration', 'white_orca'];
 
 export function happeningPatterns(): [string, string][] {
   return [

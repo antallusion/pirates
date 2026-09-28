@@ -507,8 +507,8 @@ export function stormDebris(game: Game, region: RegionId): void {
   }
 }
 
-/** Monsters of the deep for Leviathan Lore: ghost ships today, the great beasts of Phase 8 later. */
+/** Monsters of the deep for Leviathan Lore: ghost ships, the great bosses and the beasts of the sea. */
 export function isMonster(ship: ShipEntity): boolean {
-  return ship.npcRole === 'ghost' || ship.npcRole === 'boss';
+  return ship.npcRole === 'ghost' || ship.npcRole === 'boss' || ship.npcRole === 'beast';
 }
 

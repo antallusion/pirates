@@ -4,6 +4,7 @@
 //  * active — near a player: full sailing physics, perception, tacking and combat AI.
 // Every NPC has a purpose: merchants haul real cargo between real markets (docs/01 §5).
 
+import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import { eliteShipLevel, hullsFor, npcSkill, shipLevelForCaptain, watersBand } from '../../../shared/src/data/shiplevel.ts';
 import type { NpcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { NPC_ACTIVE_RADIUS, isNight } from '../../../shared/src/constants.ts';
@@ -177,6 +178,9 @@ export function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boole
 export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): boolean {
   if (npc.id === other.id || !other.alive || other.docked) return false;
   const role = npc.npcRole;
+  // The beasts of the sea (docs/12 P4): the predators hunt captains; the sea's ships and the beasts leave each other be.
+  if (role === 'beast') return other.isPlayer && (beastPredator(npc, other) || (npc.attackers.get(other.id) ?? -999) > game.now - 120);
+  if (other.npcRole === 'beast') return false;
   // A hidden cove is neutral water for those who know it.
   if (other.isPlayer && other.hasFlag('cove_knowledge') && coveAt(game, other)) return false;
   // False Colors: law and bounty hunters see a merchant.
@@ -1042,4 +1046,11 @@ export function abstractEncounters(game: Game): void {
       break;
     }
   }
+}
+
+/** A predator of the sea shows hostile to a captain (the orcas spare the White Orca's figure). */
+function beastPredator(npc: ShipEntity, other: ShipEntity): boolean {
+  const id = beastOfClass(npc.loadout.classId);
+  if (!id || !BEASTS[id].predator) return false;
+  return !(BEASTS[id].group === 'orca' && id === 'orca' && other.hasFlag('fh_white_orca'));
 }

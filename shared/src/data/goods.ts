@@ -8,7 +8,9 @@ export type GoodId =
   | 'whale_oil' | 'salt' | 'pearls' | 'dreamleaf' | 'cursed_relics' | 'abyssal_ore'
   | 'leviathan_bone' | 'sulfur_iron' | 'drowned_silk' | 'kraken_ink'
   // The catch (docs/12 P3).
-  | 'fish' | 'prime_fish' | 'salted_fish';
+  | 'fish' | 'prime_fish' | 'salted_fish'
+  // The hunt (docs/12 P4).
+  | 'baleen' | 'ambergris' | 'orca_tooth' | 'whalebone' | 'narwhal_tusk' | 'shark_skin' | 'serpent_scale';
 
 export type GoodCategory = 'staple' | 'luxury' | 'industrial' | 'military' | 'supply' | 'contraband' | 'mystic' | 'rare';
 
@@ -59,6 +61,13 @@ export const GOODS: Record<GoodId, GoodDef> = {
   // The catch (docs/12 P3): fresh fish rots fast at sea; salted it keeps.
   fish: g('fish', 'Fresh Fish', 'supply', 7, 1, 1, 0.3, 0, false, 'Herring, cod and mackerel on ice or on nothing. Sell it quickly or salt it.'),
   prime_fish: g('prime_fish', 'Prime Fish', 'luxury', 32, 1, 1, 0.3, 0, false, 'Tuna, swordfish, lobster and squid for the captains’ tables. It will not wait.'),
+  baleen: g('baleen', 'Baleen', 'industrial', 60, 1, 1, 0, 0, false, 'Whalebone plates from a whale’s mouth: stays, whips, springs. Every tailor wants it.'),
+  ambergris: g('ambergris', 'Ambergris', 'luxury', 900, 0.2, 0.2, 0, 0, false, 'A grey lump from a sperm whale’s gut. Perfumers pay its weight in gold.'),
+  orca_tooth: g('orca_tooth', 'Beast Teeth', 'luxury', 120, 0.2, 0.2, 0, 0, false, 'Teeth of orcas, sharks and whales, for scrimshaw and charms.'),
+  whalebone: g('whalebone', 'Whalebone', 'industrial', 45, 2, 1, 0, 0, false, 'Great bones of the whale: ribs for boats, knees for hulls.'),
+  narwhal_tusk: g('narwhal_tusk', 'Narwhal Tusk', 'luxury', 380, 1, 1, 0, 0, false, 'A spiral tusk of ivory. Sold as a unicorn’s horn in the southern ports.'),
+  shark_skin: g('shark_skin', 'Shark Skin', 'industrial', 55, 1, 1, 0, 0, false, 'Rough as a file: for grips, sword hilts and polishing wood.'),
+  serpent_scale: g('serpent_scale', 'Serpent Scale', 'luxury', 300, 1, 1, 0, 0, false, 'Scales of a sea serpent, hard as iron and green as bottle glass.'),
   salted_fish: g('salted_fish', 'Salted Fish', 'staple', 16, 1, 1, 0, 0, false, 'Fish packed in salt in a barrel. Keeps a year; cold ports pay well for it.'),
 };
 

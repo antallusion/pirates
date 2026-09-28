@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
 import { dropDeepLine, endFight, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
 import { chooseEncounter, stepDirector } from './director.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
@@ -471,6 +472,7 @@ export class Game {
     stepStrikes(this);
     prof.lap('boarding');
     stepBosses(this, dt);
+    stepBeasts(this, dt); // orcas, whales, sharks and the lines in them (docs/12 P4)
     stepExpeditions(this, dt);
     stepAbyssSea(this, dt);
     prof.lap('pve');
@@ -632,14 +634,14 @@ export class Game {
 
   private collideShips(): void {
     for (const a of this.ships.values()) {
-      if (a.docked || !a.alive || a.ghost || a.npcRole === 'boss') continue;
+      if (a.docked || !a.alive || a.ghost || a.npcRole === 'boss' || a.npcRole === 'beast') continue; // a beast's blows are its own (beasts.ts)
       const brainA = this.npcs.get(a.id);
       if (brainA && !brainA.active) continue;
       const ra = a.stats.length * 0.32;
       this.grid.query(a.state.x, a.state.y, 80, (id) => {
         if (id <= a.id) return;
         const b = this.ships.get(id);
-        if (!b || b.docked || !b.alive || b.ghost || b.npcRole === 'boss') return;
+        if (!b || b.docked || !b.alive || b.ghost || b.npcRole === 'boss' || b.npcRole === 'beast') return;
         if (a.boarding?.with === b.id) return;
         const rb = b.stats.length * 0.32;
         const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
@@ -702,6 +704,7 @@ export class Game {
     for (const s of this.sessions) stepRefit(this, s); // yards finish their work by the wall clock
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepFishing(this); // shoals, nets, rods, lamps and pots (docs/12 P3)
+    beastSecond(this); // the beasts rise and go, the carcasses bleed and are flensed (docs/12 P4)
     stepBoats(this);
     settleCrimes(this);
     stepSocial(this);
@@ -1003,7 +1006,7 @@ export class Game {
 
   private director(): void {
     const now = this.now;
-    const counts: Record<NpcRole, number> = { merchant: 0, patrol: 0, pirate: 0, hunter: 0, fisher: 0, ghost: 0, escort: 0, boss: 0 };
+    const counts: Record<NpcRole, number> = { merchant: 0, patrol: 0, pirate: 0, hunter: 0, fisher: 0, ghost: 0, escort: 0, boss: 0, beast: 0 };
     for (const b of this.npcs.values()) counts[b.role]++;
     for (let i = 0; counts.merchant + i < this.quota(QUOTA.merchants) && i < 2; i++) spawnMerchant(this);
     const mods = seasonMods(this);
@@ -1538,6 +1541,7 @@ export class Game {
       return;
     }
     if (ship.bossOf && bossSinking(this, ship)) return; // the deep keeps its own dead
+    if (ship.npcRole === 'beast' && beastSlain(this, ship)) return; // a beast leaves a carcass to flense, not a wreck
     recordEcho(this, ship); // what the Abyss takes, it sends back
     if (duelIntercept(this, ship)) return; // nobody sinks in a duel: she strikes
     if (ship.caravanOf !== null) caravanLost(this, ship);
@@ -2489,6 +2493,8 @@ export class Game {
         return;
       case 'encounter':
         return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
+      case 'hunt':
+        return err(huntOrder(this, s, String(msg.action), 'id' in msg ? Number(msg.id) : undefined));
       case 'fishing':
         switch (msg.action) {
           case 'fight':

@@ -375,6 +375,12 @@ export class Fx {
             for (let i = 0; i < 10; i++) this.splash(e.x + (Math.random() - 0.5) * 120, e.y + (Math.random() - 0.5) * 120, true);
             this.shake = Math.max(this.shake, 0.9);
             break;
+          case 'spout': {
+            // A whale blows: a column of spray drifting on the wind.
+            for (let i = 0; i < 14; i++) setTimeout(() => this.add({ kind: 'smoke', x: e.x + (Math.random() - 0.5) * 4, y: e.y + (Math.random() - 0.5) * 4, life: 2.2, size: 5 + Math.random() * 5, grow: 5, color: '#dfe9ee' }), i * 40);
+            this.splash(e.x, e.y, false);
+            break;
+          }
           case 'white_water':
             for (let i = 0; i < 30; i++) {
               const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (e.r ?? 70);

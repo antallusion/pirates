@@ -6,7 +6,9 @@ import type { Flag, StatMods } from './stats.ts';
 
 export type ShipClassId =
   | 'sloop' | 'cutter' | 'schooner' | 'brigantine' | 'fluyt' | 'brig' | 'frigate' | 'galleon' | 'man_o_war' | 'ghost_ship'
-  | 'xebec' | 'bomb_ketch' | 'fireship' | 'fishing_ketch'
+  | 'xebec' | 'bomb_ketch' | 'fireship' | 'fishing_ketch' | 'harpoon_whaler'
+  // The beasts of the sea (docs/12 P4): monsters with a level like a ship's.
+  | 'orca' | 'white_orca' | 'humpback' | 'sperm_whale' | 'narwhal' | 'shark' | 'young_serpent'
   // World bosses and their parts (docs/02 §11.A.4): never sold, never sailed by a captain.
   | 'leviathan' | 'kraken' | 'kraken_tentacle' | 'drowned_whale' | 'whale_heart' | 'lantern_maw' | 'black_serpent'
   | 'mother_of_wrecks' | 'wreck_core' | 'storm_widow'
@@ -142,6 +144,13 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     sailHp: 120, repairRate: 1.1, detection: 1450, price: 5600, purchasable: true, sprite: 'ship.fishing_ketch',
     passive: { id: 'wet_well', name: 'Iced Well', description: 'Nets take twice the catch; fish in the hold spoils three times slower.' },
   }),
+  harpoon_whaler: ship({
+    id: 'harpoon_whaler', name: 'Harpoon Whaler', tier: 3, rig: 'mixed', role: 'Rare. A whaling hull of the Order: a winch on the bow, a flensing deck, try-works amidships.',
+    length: 30, beam: 9, hull: 2000, armor: 0.12, maxSpeed: 14, accel: 1.6, turnRate: 17, draft: 3.0,
+    holdVolume: 150, holdWeight: 170, crewMin: 22, crewMax: 70, gunPortsPerSide: 4, bowChasers: 1, sternChasers: 0,
+    sailHp: 140, repairRate: 1.0, detection: 1700, price: 14000, purchasable: true, sprite: 'ship.harpoon_whaler', factions: ['harpoon'], fixedMount: 'harpoon',
+    passive: { id: 'flensing_deck', name: 'Flensing Deck', description: 'Flenses a carcass twice as fast; her line stands a third more strain; shy whales hear her a third less.' },
+  }),
   bomb_ketch: ship({
     id: 'bomb_ketch', name: 'Bomb Ketch', tier: 3, rig: 'mixed', role: 'Rare. A floating mortar battery for sieges and ambushes.',
     length: 30, beam: 10, hull: 2700, armor: 0.2, maxSpeed: 12, accel: 1.2, turnRate: 13, draft: 3.2,
@@ -175,6 +184,13 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
   wreck_core: monster('wreck_core', 'Wreck Core', 'A pulsing heart of the reef, deep in the maze.', 12, 12, 6000, 0.1, 0, 'Reachable only from within the maze.'),
   abyss_eye: monster('abyss_eye', 'The Eye of the Abyss', 'A hole in the sea that looks back.', 110, 110, 120000, 0.3, 0, 'It can only be hurt from its rim once it has begun to fall.'),
   hulk: monster('hulk', 'Rotten Hulk', 'A dead ship wedged in the graveyard. Mortars bring it down.', 44, 12, 1800, 0.55, 0, 'Cannon glance off its sodden timbers; bombs break it.'),
+  orca: monster('orca', 'Orca', 'A pack hunter of the cold seas: it goes for the rudder and the boats.', 8, 2.6, 320, 0.05, 16, 'A pod loses heart when half of it is gone.'),
+  white_orca: monster('white_orca', 'The White Orca', 'A scarred white queen of the Reach; she rams and dives under keels.', 11, 3.2, 6600, 0.1, 17, 'She calls her pod when she is hurt.'),
+  humpback: monster('humpback', 'Humpback Whale', 'A great slow singer of the warm seas. It flees a loud ship.', 15, 4.4, 2100, 0.1, 8, 'Shy: a quiet approach or none.'),
+  sperm_whale: monster('sperm_whale', 'Sperm Whale', 'A blunt-headed giant of the open sea. Harpooned, it turns and rams.', 18, 5, 2200, 0.15, 9, 'Rams the boat that struck it; ambergris in one of twelve.'),
+  narwhal: monster('narwhal', 'Narwhal', 'A spotted whale of the ice with a spiral tusk.', 5, 1.4, 480, 0.05, 11, 'The tusk goes through planking.'),
+  shark: monster('shark', 'Shark', 'Comes to blood. Takes men from the water.', 5, 1.2, 250, 0.05, 12, 'Blood in the water brings more.'),
+  young_serpent: monster('young_serpent', 'Young Sea Serpent', 'Not yet the size of its mother. Big enough to coil round a brig.', 30, 3, 2400, 0.2, 13, 'Its coils crush a hull caught in them.'),
   storm_widow: monster('storm_widow', 'The Storm Widow', 'A widow of wind and lightning walking on the waves.', 60, 60, 40000, 0.2, 6, 'She can only be hurt from inside the moving eye.'),
 };
 

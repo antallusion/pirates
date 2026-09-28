@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { fishingView, sanitizeFishing } from './fishing.ts';
 import type { FishingProfile } from './fishing.ts';
 import type { CaptainSlot, Item } from '../../../shared/src/data/items.ts';
@@ -165,6 +166,8 @@ export interface Profile {
   shipCat?: boolean;
   /** Fishing (docs/12 P3, fishing.ts). */
   fishing?: FishingProfile;
+  /** The beasts taken, by kind (docs/12 P4). */
+  beasts?: Partial<Record<BeastId, number>>;
   trade: {
     lastDeparture: string;
     arrivalRoute: string;
@@ -408,6 +411,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     seaLetters: p.seaLetters ?? [],
     shipCat: !!p.shipCat,
     fishing: fishingView(p),
+    beasts: p.beasts ?? {},
     cargo: ship ? ship.cargo : p.cargo,
     ammo: ship ? ship.ammo : p.ammo,
     ammoSel: ship ? ship.ammoSel : p.ammoSel,

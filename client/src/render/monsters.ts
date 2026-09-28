@@ -7,6 +7,8 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { BossView, PveSiteView } from '../../../shared/src/protocol.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { sprite } from '../assets.ts';
+import { drawBeast } from './beasts.ts';
+import { beastOfClass } from '../../../shared/src/data/beasts.ts';
 
 export interface MonsterDraw {
   id: number;
@@ -43,6 +45,8 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
     if (submerged) g.filter = 'brightness(0.22) blur(3px)';
     g.drawImage(spr.img, -imgW * spr.cx, -imgH * spr.cy, imgW, imgH);
     g.filter = 'none';
+  } else if (beastOfClass(m.classId)) {
+    drawBeast(g, beastOfClass(m.classId)!, len, beam, t, m.id);
   } else {
     switch (m.classId) {
       case 'leviathan': leviathan(g, len, beam, t, submerged); break;

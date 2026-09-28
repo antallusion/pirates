@@ -483,6 +483,7 @@ ${orders}${berths}</div>` : ''}`;
     return `<div class="cols"><div>
         <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${esc(L('pardon.title'))}</h4>${view.pardonCost !== null ? `<p>${esc(L('pardon.text', { n: self.infamy }))}</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>${esc(L('pardon.buy', { cost: fmt(view.pardonCost) }))}</button>` : `<p class="muted">${esc(L('pardon.none'))}</p>`}</div>
         ${view.licence ? `<div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('licence.title'))}</h4><p>${esc(view.licence.until > state.estServerTime() ? L('licence.textActive', { faction: FACTIONS[port.faction].short }) : L('licence.textDuty', { pct: Math.round(view.duty * 100) || '', faction: FACTIONS[port.faction].short }))}</p>
+          ${port.faction === 'harpoon' ? `<p class="muted">${esc(L('licence.whaling'))}</p>` : ''}
           ${view.licence.until > state.estServerTime() ? `<p class="good">${esc(licenceLeft(Math.round((view.licence.until - state.estServerTime()) / 60)))}</p>` : ''}
           <button class="btn" data-act="licence">${esc(L('licence.buy', { cost: fmt(view.licence.cost) }))}</button></div>` : ''}
         ${self.captives.length ? `<div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('captives.title'))}</h4>${self.captives.map((c, i) => `<div class="row" style="padding:3px 0"><span>${esc(c.name)} <span class="muted">${esc(FACTIONS[c.faction].short)}</span></span><span>

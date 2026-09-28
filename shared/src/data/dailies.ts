@@ -3,7 +3,7 @@
 
 import { Rng, hashString } from '../rng.ts';
 
-export type DailyKind = 'sink' | 'sink_pirates' | 'board' | 'prize' | 'land' | 'chart' | 'ports' | 'contraband' | 'fleet' | 'dive' | 'fish';
+export type DailyKind = 'sink' | 'sink_pirates' | 'board' | 'prize' | 'land' | 'chart' | 'ports' | 'contraband' | 'fleet' | 'dive' | 'fish' | 'beast';
 
 export interface DailyDef {
   kind: DailyKind;
@@ -27,6 +27,7 @@ export const DAILY_DEFS: Record<DailyKind, DailyDef> = {
   contraband: { kind: 'contraband', min: 5, max: 15, minLevel: 10, silver: 150, xp: 150, text: ['Sell contraband: {n}.', 'Продайте контрабанду: {n}.'] },
   fleet: { kind: 'fleet', min: 1, max: 2, minLevel: 20, silver: 180, xp: 220, text: ['Win fleet actions (two ships with you): {n}.', 'Выиграйте бои флотом (с вами два корабля): {n}.'] },
   fish: { kind: 'fish', min: 10, max: 25, minLevel: 1, silver: 80, xp: 100, text: ['Take fish: {n}.', 'Наловите рыбы: {n}.'] },
+  beast: { kind: 'beast', min: 1, max: 3, minLevel: 8, silver: 150, xp: 180, text: ['Take beasts of the sea: {n}.', 'Добудьте морских зверей: {n}.'] },
   dive: { kind: 'dive', min: 1, max: 1, minLevel: 35, silver: 220, xp: 260, text: ['Go down in a diving bell: {n}.', 'Спуститесь в водолазном колоколе: {n}.'] },
 };
 

@@ -2,6 +2,8 @@
 // and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
 // «Follow», «Share» (in a group) and «Set aside».
 
+import { BEASTS, BEAST_IDS } from '../../../shared/src/data/beasts.ts';
+import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { levelChip } from './levels.ts';
 import type { ClientMsg, FishingView } from '../../../shared/src/protocol.ts';
 import { assetUrl } from '../assets.ts';
@@ -26,6 +28,8 @@ const EN = {
   fishing: 'Fishing: craft {n} — {k} of {max} kinds taken',
   fishRow: '{fish}: {n} taken, heaviest {kg} kg',
   fishUnknown: 'not yet taken',
+  beasts: 'The hunt: {n} beasts taken',
+  beastRow: '{beast}: {n}',
   pay: 'Pay',
   follow: 'Follow',
   following: 'Followed',
@@ -52,6 +56,8 @@ const RU: typeof EN = {
   fishing: 'Промысел: навык {n} — поймано видов {k} из {max}',
   fishRow: '{fish}: поймано {n}, самая тяжёлая — {kg} кг',
   fishUnknown: 'ещё не поймана',
+  beasts: 'Охота: добыто зверей — {n}',
+  beastRow: '{beast}: {n}',
   pay: 'Плата',
   follow: 'Следовать',
   following: 'Отслеживается',
@@ -91,7 +97,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${fishingLog(self?.fishing)}${lettersLog(self?.seaLetters ?? [])}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
@@ -166,4 +172,13 @@ function fishingLog(f: FishingView | undefined): string {
     return `<p class="jr-fish${c ? '' : ' muted'}">${c ? esc(L('fishRow', { fish: FISH[id].name[ru], n: c.n, kg: c.best.toLocaleString(ru ? 'ru-RU' : 'en-GB') })) : `${esc(FISH[id].name[ru])} — ${esc(L('fishUnknown'))}`}</p>`;
   }).join('');
   return `<div class="jr-fishing"><div class="giver-h">${esc(L('fishing', { n: f.skill, k: Object.keys(f.caught).length, max: kinds.length }))}</div>${rows}</div>`;
+}
+
+/** The hunt's tally (docs/12 P4): the beasts taken, by kind. */
+function beastLog(b: Partial<Record<BeastId, number>> | undefined): string {
+  const kinds = BEAST_IDS.filter((id) => (b?.[id] ?? 0) > 0);
+  if (!kinds.length) return '';
+  const ru = lang() === 'ru' ? 1 : 0;
+  const total = kinds.reduce((a, id) => a + (b![id] ?? 0), 0);
+  return `<div class="jr-fishing"><div class="giver-h">${esc(L('beasts', { n: total }))}</div>${kinds.map((id) => `<p class="jr-fish">${esc(L('beastRow', { beast: BEASTS[id].name[ru], n: b![id] ?? 0 }))}</p>`).join('')}</div>`;
 }

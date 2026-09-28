@@ -287,7 +287,9 @@ export function stepProjectiles(game: Game, dt: number): void {
       if (id === p.owner || id === p.ignore) return;
       const s = game.ships.get(id);
       if (!s || s.docked || !s.alive) return;
-      const t = segmentHitsHull(p.x, p.y, nx, ny, s.state.x, s.state.y, s.state.heading, s.stats.length / 2, s.stats.beam / 2);
+      // A beast in the water is hurt by a ball striking close by, not only square on its back (docs/12 P4).
+      const beast = s.npcRole === 'beast';
+      const t = segmentHitsHull(p.x, p.y, nx, ny, s.state.x, s.state.y, s.state.heading, beast ? Math.max(s.stats.length / 2 + 3, 9) : s.stats.length / 2, beast ? Math.max(s.stats.beam / 2 + 3, 5) : s.stats.beam / 2);
       if (t >= 0 && t < bestT) {
         bestT = t;
         hit = s;
@@ -396,7 +398,7 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
     const safety = REGIONS[b.region].safety;
     if (safety === 'safe') return 'Safe waters: no PvP here.';
   }
-  if (a.isPlayer && a.hasFlag('honest_merchant') && !game.isHostile(b, a) && !b.attackers.has(a.id)) {
+  if (a.isPlayer && a.hasFlag('honest_merchant') && b.npcRole !== 'beast' && !game.isHostile(b, a) && !b.attackers.has(a.id)) {
     return 'Honest Merchant: you do not fire on peaceful ships.';
   }
   if (a.ownerId !== null && a.ownerId === b.id) return 'friendly';
@@ -439,7 +441,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // Iron Strapping: extra armour against armour-piercing shot.
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
   const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)));
-  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1); // Leviathan Lore, the Harpooneer, Saint Maw's Bell
+  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_white_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1); // Leviathan Lore, the Harpooneer, Saint Maw's Bell
   // The ladder (canon D12): the gap of levels cuts or swells the shot, and a junior makes fewer criticals, or none.
   const lad = ladderBetween(game, shooter, target);
   const cx = lad.crits;

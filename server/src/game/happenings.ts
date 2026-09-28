@@ -7,6 +7,7 @@
 //  - The lost fleet: after the Great Storm, the region's water full of drifting hulls and wreckage.
 //  - A festival: a lawful port's two kind hours — prices, a cheerful crew, fireworks after dark.
 
+import { spawnWhiteOrca } from './beasts.ts';
 import { herringShoals, killShoals } from './fishing.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import { isNight } from '../../../shared/src/constants.ts';
@@ -16,7 +17,7 @@ import { dist } from '../../../shared/src/math.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
-import { isLand } from '../../../shared/src/world/worldgen.ts';
+import { isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { giveGoods } from './director.ts';
 import type { WorldEvent } from './events.ts';
 import { scatterWreckage, startEvent } from './events.ts';
@@ -203,6 +204,38 @@ function redTide(game: Game, wall: number): boolean {
   return !!e;
 }
 
+/** The orca migration (docs/12 P4): a cold sea full of pods for two hours; now and then the White Orca with them. */
+function orcaMigration(game: Game, wall: number, next: Record<string, number>): boolean {
+  const rng = game.worldEvents.rng;
+  const regions = (['leviathan_reach', 'gravewater'] as RegionId[]).filter((r) => !game.zone || game.zone.regions.has(r));
+  if (!regions.length) return false;
+  const region = rng.pick(regions);
+  const [x, y] = REGIONS[region].center;
+  const e = startEvent(game, { kind: 'orca_migration', region, x, y, ends: wall + 2 * HOUR, title: 'The Orca Migration' },
+    `The orcas are running south through ${REGIONS[region].name}: pods everywhere, hungry, and something white among them.`);
+  if (e && rng.chance(0.25)) next.white_orca = wall;
+  return !!e;
+}
+
+/** The White Orca rises in the Reach: rumoured in every tavern, an hour to find her. */
+function whiteOrca(game: Game, wall: number): boolean {
+  if (game.zone && !game.zone.regions.has('leviathan_reach')) return false;
+  const rng = game.worldEvents.rng;
+  const [cx, cy] = REGIONS.leviathan_reach.center;
+  for (let k = 0; k < 20; k++) {
+    const x = cx + rng.range(-9000, 9000), y = cy + rng.range(-7000, 7000);
+    if (isLand(game.world, x, y) || regionAt(game.world, x, y) !== 'leviathan_reach') continue;
+    const e = startEvent(game, { kind: 'white_orca', region: 'leviathan_reach', x, y, ends: wall + HOUR, title: 'The White Orca' },
+      `Whalers have seen the White Orca in ${REGIONS.leviathan_reach.name}. She has sunk three boats this season.`);
+    if (!e) return false;
+    const queen = spawnWhiteOrca(game, x, y);
+    game.worldEvents.fleets.set(e.id, [queen.id]);
+    for (const p of game.world.ports) if (p.region === 'leviathan_reach' || p.region === 'gravewater') game.addRumor(p.x, p.y, `Whalers have seen the White Orca in ${REGIONS.leviathan_reach.name}. She has sunk three boats this season.`);
+    return true;
+  }
+  return false;
+}
+
 export function redTideAt(game: Game, region: RegionId): boolean {
   return game.worldEvents.active(game).some((e) => e.kind === 'red_tide' && e.region === region);
 }
@@ -226,6 +259,8 @@ export function happeningTriggers(game: Game, next: Record<string, number>, wall
   next.festival ??= wall + (1 + rng.float() * 3) * HOUR;
   next.herring_run ??= wall + (1 + rng.float() * 3) * HOUR;
   next.red_tide ??= wall + (4 + rng.float() * 8) * HOUR;
+  next.orca_migration ??= wall + (2 + rng.float() * 6) * HOUR;
+  next.white_orca ??= wall + (4 + rng.float() * 4) * HOUR;
   if (wall >= next.silver_convoy && !active(game, 'silver_convoy')) {
     next.silver_convoy = wall + (5 + rng.float() * 2) * HOUR;
     if (silverConvoy(game, wall)) changed = true;
@@ -255,6 +290,14 @@ export function happeningTriggers(game: Game, next: Record<string, number>, wall
   if (wall >= next.red_tide && !active(game, 'red_tide')) {
     next.red_tide = wall + (14 + rng.float() * 8) * HOUR;
     if (redTide(game, wall)) changed = true;
+  }
+  if (wall >= next.orca_migration && !active(game, 'orca_migration')) {
+    next.orca_migration = wall + (10 + rng.float() * 8) * HOUR;
+    if (orcaMigration(game, wall, next)) changed = true;
+  }
+  if (wall >= next.white_orca && !active(game, 'white_orca')) {
+    next.white_orca = wall + (5 + rng.float() * 2) * HOUR;
+    if (whiteOrca(game, wall)) changed = true;
   }
   return changed;
 }
@@ -290,6 +333,15 @@ export function tickHappening(game: Game, e: WorldEvent): boolean {
       }
       return false;
     }
+    case 'white_orca': {
+      const q = game.ships.get(game.worldEvents.fleets.get(e.id)?.[0] ?? -1);
+      if (q?.alive && game.worldEvents.secs % 10 === 0) {
+        e.x = q.state.x;
+        e.y = q.state.y;
+        return true;
+      }
+      return false;
+    }
     case 'festival': {
       // Fireworks over the port after dark.
       if (isNight(game.now) && game.worldEvents.secs % 4 === 0) {
@@ -304,6 +356,10 @@ export function tickHappening(game: Game, e: WorldEvent): boolean {
 
 /** Whether a shorter event still stands: the galleon and the baron end it when they go. */
 export function happeningStillOn(game: Game, e: WorldEvent): boolean {
+  if (e.kind === 'white_orca') {
+    const q = game.ships.get(game.worldEvents.fleets.get(e.id)?.[0] ?? -1);
+    return !!q?.alive;
+  }
   if (e.kind === 'silver_convoy' || e.kind === 'brethren') {
     const fleet = game.worldEvents.fleets.get(e.id);
     if (!fleet) return false; // after a restart the ships are gone with it
@@ -355,6 +411,17 @@ export function happeningFinish(game: Game, e: WorldEvent, fleet: number[]): str
     case 'red_tide':
       text = `The red tide over ${REGIONS[e.region].name} clears.`;
       break;
+    case 'orca_migration':
+      text = `The orcas have passed through ${REGIONS[e.region].name}.`;
+      break;
+    case 'white_orca': {
+      const q = fleet.length ? game.ships.get(fleet[0]) : undefined;
+      if (q?.alive) {
+        game.removeShip(q.id); // she sounds and is gone
+        text = `The White Orca is gone from ${REGIONS[e.region].name}, for now.`;
+      } else text = `The White Orca is slain in ${REGIONS[e.region].name}!`;
+      break;
+    }
   }
   for (const id of fleet) {
     const s = game.ships.get(id);

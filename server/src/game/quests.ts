@@ -1,6 +1,8 @@
 // Path and Legend quests (docs/00 D1, docs/02 §7): mentors in their ports, step objectives driven by what the
 // captain does at sea, Path unlocks and switching at a Captain's House, the First Descent, and faction oaths.
 
+import { inGroup } from '../../../shared/src/data/beasts.ts';
+import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { questShipLevel } from '../../../shared/src/data/shiplevel.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
@@ -174,6 +176,8 @@ export type QuestEvent =
   | { k: 'dive' }
   /** Fish taken (docs/12 P3): the units into the hold, the weight of one, and whether it was fought on the line. */
   | { k: 'catch'; units: number; kg: number; fought: boolean }
+  /** A beast of the sea taken (docs/12 P4). */
+  | { k: 'beast'; beast: BeastId }
   | { k: 'dock'; port: Port }
   | { k: 'land'; island: number; feature: string };
 
@@ -233,7 +237,8 @@ export function boardJobs(p: Profile, port: Port, now: number, favor: BoardFavor
   if (!mine.length) return [];
   const window = Math.floor(now / JOB_ROTATION_SEC);
   // The news of the port puts its jobs first (two at most), the rest turn as ever.
-  const scored = mine.map((q) => ({ q, k: ((hashString(q.id) ^ (window * 2654435761)) >>> 0) + ((q.requires.level ?? 1) > p.level + 5 ? 2 ** 32 : 0) }));
+  // Jobs a captain can take come first; a few above her level show what lies ahead; none far above.
+  const scored = mine.map((q) => ({ q, k: ((hashString(q.id) ^ (window * 2654435761)) >>> 0) / 2 + ((q.requires.level ?? 1) > p.level ? 2 ** 31 : 0) + ((q.requires.level ?? 1) > p.level + 5 ? 2 ** 32 : 0) }));
   if (favor) {
     let lifted = 0;
     for (const x of [...scored].sort((a, b) => a.k - b.k)) {
@@ -360,6 +365,7 @@ function stepCount(st: QuestStep): number {
     case 'fleet_win':
     case 'dive':
     case 'catch':
+    case 'beast':
       return st.count;
     case 'sell_contraband':
       return st.qty;
@@ -479,6 +485,8 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       return ev.k === 'fleet_win' ? 1 : 0;
     case 'dive':
       return ev.k === 'dive' ? 1 : 0;
+    case 'beast':
+      return ev.k === 'beast' && inGroup(ev.beast, st.group) ? 1 : 0;
     case 'catch':
       if (ev.k !== 'catch') return 0;
       if (st.minKg !== undefined) return ev.fought && ev.kg >= st.minKg ? 1 : 0;

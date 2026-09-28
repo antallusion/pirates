@@ -4,6 +4,7 @@
 //  chain_gun   — swivel firing three chain balls in any direction
 //  abyssal_lance — a cold beam that needs (and feeds) the curse
 
+import { harpoonBeast } from './beasts.ts';
 import { AMMO, MOUNTS } from '../../../shared/src/data/ships.ts';
 import type { MountId } from '../../../shared/src/data/ships.ts';
 import { DEG, dist, headingVec, segmentHitsHull } from '../../../shared/src/math.ts';
@@ -90,6 +91,12 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
       }
       const blocked = damageBlocked(game, ship, target);
       if (blocked && blocked !== 'friendly') return blocked;
+      // A beast of the sea: the line with the winch (docs/12 P4), not the tether.
+      if (target.npcRole === 'beast') {
+        const why = harpoonBeast(game, ship, target);
+        if (why) return why;
+        break;
+      }
       applyDamage(game, target, { hull: 40, crew: 1 }, ship);
       ship.tether = { target: target.id, until: now + 20, length: Math.max(40, dist(ship.state.x, ship.state.y, target.state.x, target.state.y)), strain: 0 };
       game.emit({ k: 'tether', a: ship.id, b: target.id, until: Math.round(now + 20) }, ship.state.x, ship.state.y);

@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { BeastId } from './data/beasts.ts';
 import type { FishId, FishMethod } from './data/fishing.ts';
 import type { HappeningKind } from './data/happenings.ts';
 import type { EncounterId, SightKind } from './data/encounters.ts';
@@ -100,6 +101,9 @@ export type ClientMsg =
   | { t: 'encounter'; id: number; choice: string }
   | { t: 'fishing'; action: 'fight'; id: number; holds: [number, number][] }
   | { t: 'fishing'; action: 'trap' | 'haul' | 'deep' | 'salt' }
+  /** The hunt (docs/12 P4): pay out the line, cut it, flense a carcass alongside. */
+  | { t: 'hunt'; action: 'slack' | 'cut' }
+  | { t: 'hunt'; action: 'flense'; id: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -442,6 +446,8 @@ export interface PrivateState {
   shipCat: boolean;
   /** Fishing (docs/12 P3). */
   fishing: FishingView;
+  /** The beasts taken, by kind (docs/12 P4). */
+  beasts: Partial<Record<BeastId, number>>;
   cargo: Cargo;
   ammo: AmmoStock;
   ammoSel: AmmoId;
@@ -871,7 +877,7 @@ export type GameEvent =
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
-    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton'; x: number; y: number; r?: number; dir?: number }
+    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout'; x: number; y: number; r?: number; dir?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 
@@ -961,6 +967,8 @@ export type ServerMsg =
   | { t: 'tasks'; list: TaskView[] }
   | { t: 'sights'; list: SightView[] }
   | { t: 'shoals'; list: ShoalView[] }
+  | { t: 'hunt'; view: HuntView | null }
+  | { t: 'carcasses'; list: CarcassView[] }
   | { t: 'fishfight'; view: FishFightView | null }
   | { t: 'encounter'; view: EncounterView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
@@ -1046,6 +1054,24 @@ export interface RefitView {
 }
 
 /** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+/** The hunt for one captain (docs/12 P4): the beast on her line, the carcass she flenses, one alongside to flense. */
+export interface HuntView {
+  line?: { beast: BeastId; level: number; tension: number; stamina: number; spent: boolean; snap: number; slack: number; good: [number, number]; payIn: number; hull: number };
+  flense?: { id: number; beast: BeastId; progress: number };
+  carcass?: { id: number; beast: BeastId };
+}
+
+/** A carcass afloat: its blood in the water while it is fresh or being flensed. */
+export interface CarcassView {
+  id: number;
+  beast: BeastId;
+  x: number;
+  y: number;
+  h: number;
+  progress: number;
+  blood: boolean;
+}
+
 export interface ShoalView {
   id: number;
   x: number;

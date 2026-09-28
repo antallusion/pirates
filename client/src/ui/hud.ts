@@ -1,6 +1,8 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { BEASTS, beastOfClass, hullNoise, noiseBand } from '../../../shared/src/data/beasts.ts';
+import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { placeName } from './maps.ts';
 import { THREAT_COLOR } from '../../../shared/src/data/shiplevel.ts';
@@ -49,6 +51,8 @@ export class Hud {
   onTargetTap: (name: string) => void = () => {};
   /** A fishing order from the panel (main.ts). */
   onFishing: (action: 'trap' | 'haul' | 'deep' | 'salt') => void = () => {};
+  onHunt: (action: 'slack' | 'cut' | 'flense', id?: number) => void = () => {};
+  private lastHuntKey = '';
   private lastFishKey = '';
   private lastTargetKey = '';
   private toastsEl = $('toasts');
@@ -96,6 +100,7 @@ export class Hud {
     this.drawBoss(state);
     this.drawParty(state);
     this.drawFishing(state);
+    this.drawHunt(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -785,15 +790,107 @@ export class Hud {
     if (key === this.lastTargetKey) return;
     this.lastTargetKey = key;
     el.classList.remove('hidden');
-    const name = info.isPlayer ? `${info.captainName} · ${placeName(info.name)}` : placeName(info.name);
+    const beast = beastOfClass(info.classId);
+    const name = beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : info.isPlayer ? `${info.captainName} · ${placeName(info.name)}` : placeName(info.name);
     const role = info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
     const bar = (k: string, v: number) => `<span class="tg-bar tg-${k}"><i style="width:${pct(clamp(v, 0, 1))}"></i></span>`;
+    if (beast) {
+      // A beast of the sea (docs/12 P4): its nature instead of a class and a role, and only its hide for a bar.
+      const temper = BEASTS[beast].temper;
+      const nature = temper === 'shy' || temper === 'tusk' ? L('tg.shy') : temper === 'ram' ? L('tg.ram') : L('tg.predator');
+      el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
+      el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
+      <div class="tg-sub muted">${esc(nature)}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
+      ${bar('hull', c.hull)}
+      <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}</div>`;
+      el.onclick = null;
+      return;
+    }
     el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
     el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
       <div class="tg-sub muted">${esc([cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
       <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}</div>`;
     el.onclick = info.isPlayer ? () => this.onTargetTap(info.captainName) : null;
+  }
+
+  /**
+   * The hunt (docs/12 P4): the beast on the line — the tension against its band, its strength and hide — the carcass
+   * being flensed, one alongside to flense, or, with a shy beast near, the noise of her way.
+   */
+  private drawHunt(state: ClientState): void {
+    const el = $('hud-hunt');
+    const v = state.hunt, own = state.ownDisplay, you = state.you;
+    const ru = lang() === 'ru' ? 1 : 0;
+    const bname = (id: BeastId) => BEASTS[id].name[ru];
+    let shy: BeastId | null = null;
+    if (!v && own && you && !state.self?.dockedAt) {
+      let bd = 1500;
+      for (const r of state.ships.values()) {
+        const id = r.info ? beastOfClass(r.info.classId) : undefined;
+        if (!id || !BEASTS[id].spookRange) continue;
+        const d = Math.hypot(r.cur.x - own.x, r.cur.y - own.y);
+        if (d < bd) {
+          bd = d;
+          shy = id;
+        }
+      }
+    }
+    if (!v && !shy) {
+      if (this.lastHuntKey) {
+        this.lastHuntKey = '';
+        el.classList.add('hidden');
+        el.innerHTML = '';
+      }
+      return;
+    }
+    const line = v?.line;
+    const mode = line ? (line.spent ? 'spent' : 'line') : v?.flense ? 'flense' : v?.carcass ? 'carcass' : 'noise';
+    const noise = you ? hullNoise(you.spd, state.ownStats?.maxSpeed ?? 10, you.combat ? 5 : 999) : 0;
+    const band = noiseBand(noise);
+    const key = `${lang()}|${mode}|${line?.beast ?? v?.flense?.beast ?? v?.carcass?.beast ?? shy}|${line?.payIn ?? ''}|${v?.carcass?.id ?? ''}|${mode === 'noise' ? band : ''}`;
+    if (key !== this.lastHuntKey) {
+      this.lastHuntKey = key;
+      el.classList.remove('hidden');
+      el.classList.toggle('hp-active', mode !== 'noise');
+      if (line) {
+        const b = bname(line.beast);
+        const top = Math.max(120, line.snap * 1.1);
+        el.innerHTML = `<div class="fp-head"><b>${esc(L(line.spent ? 'hunt.spent' : 'hunt.line', { beast: b }))}</b><span class="hp-lvl">⚓${line.level}</span></div>
+          <div class="hp-row"><span>${esc(L('hunt.tension'))}</span><div class="hp-bar hp-t"><em class="hp-good" style="left:${(line.good[0] / top) * 100}%;width:${((line.good[1] - line.good[0]) / top) * 100}%"></em><em class="hp-snap" style="left:${(line.snap / top) * 100}%"></em><em class="hp-slack" style="width:${(line.slack / top) * 100}%"></em><i></i></div></div>
+          <div class="hp-row"><span>${esc(L('hunt.stamina'))}</span><div class="hp-bar hp-s"><i></i></div></div>
+          <div class="hp-row"><span>${esc(L('hunt.hull'))}</span><div class="hp-bar hp-h"><i></i></div></div>
+          <div class="fp-line muted hp-hint">${esc(L(line.spent ? 'hunt.hintSpent' : 'hunt.hint'))}</div>
+          <div class="fp-acts">${line.spent ? '' : `<button class="btn btn-small" data-hunt="slack"${line.payIn ? ' disabled' : ''}>${esc(line.payIn ? L('hunt.slackIn', { n: line.payIn }) : L('hunt.slack'))}</button>`}<button class="btn btn-small" data-hunt="cut">${esc(L('hunt.cut'))}</button></div>`;
+      } else if (v?.flense) {
+        el.innerHTML = `<div class="fp-head"><b>${esc(L('hunt.flense', { beast: bname(v.flense.beast) }))}</b></div>
+          <div class="hp-row"><div class="hp-bar hp-f"><i></i></div></div>
+          <div class="fp-line muted hp-hint">${esc(L('hunt.flenseHint'))}</div>`;
+      } else if (v?.carcass) {
+        el.innerHTML = `<div class="fp-head"><b>${esc(L('hunt.carcass', { beast: bname(v.carcass.beast) }))}</b></div>
+          <div class="fp-line muted">${esc(L('hunt.carcassHint'))}</div>
+          <div class="fp-acts"><button class="btn btn-small btn-primary" data-hunt="flense" data-id="${v.carcass.id}">${esc(L('hunt.flenseGo'))}</button></div>`;
+      } else {
+        el.innerHTML = `<div class="fp-head"><b class="hp-noise hp-${band}">${esc(L('hunt.noise', { band: L(`hunt.${band}` as 'hunt.quiet') }))}</b></div>
+          <div class="fp-line muted">${esc(L('hunt.noiseHint', { beast: bname(shy!) }))}</div>`;
+      }
+      el.querySelectorAll<HTMLElement>('[data-hunt]').forEach((b) => (b.onclick = () => this.onHunt(b.dataset.hunt as 'slack', b.dataset.id ? Number(b.dataset.id) : undefined)));
+    }
+    // The bars move every frame without rebuilding the block.
+    if (line) {
+      const t = el.querySelector<HTMLElement>('.hp-t > i');
+      if (t) {
+        t.style.width = `${Math.min(100, (line.tension / Math.max(120, line.snap * 1.1)) * 100)}%`;
+        t.style.background = line.tension > line.snap * 0.92 || line.tension < line.slack ? '#e0473a' : line.tension >= line.good[0] && line.tension <= line.good[1] ? '#6fd46f' : '#e8a14a';
+      }
+      const s = el.querySelector<HTMLElement>('.hp-s > i');
+      if (s) s.style.width = `${line.stamina * 100}%`;
+      const h = el.querySelector<HTMLElement>('.hp-h > i');
+      if (h) h.style.width = `${line.hull * 100}%`;
+    } else if (v?.flense) {
+      const f = el.querySelector<HTMLElement>('.hp-f > i');
+      if (f) f.style.width = `${v.flense.progress * 100}%`;
+    }
   }
 
   /** The fishing panel (docs/12 P3): the tackle, what it wants now, and the orders at hand. */

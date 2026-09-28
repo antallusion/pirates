@@ -59,11 +59,20 @@ export function hasLicence(p: Profile, faction: string, now: number): boolean {
 
 export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0, game?: Game): PriceMods {
   const base = basePriceMods(ship, port, p, now);
-  const mods = game && p ? talentPriceMods(game, ship, port, p, base) : base;
+  let mods = game && p ? talentPriceMods(game, ship, port, p, base) : base;
+  // The Order's whaling licence (docs/12 P4): the catch of the hunt pays three tenths less duty in any port.
+  if (p && mods.duty > 0 && hasLicence(p, 'harpoon', now)) {
+    const goodSell = { ...(mods.goodSell ?? {}) };
+    for (const g of HUNT_GOODS) goodSell[g] = (goodSell[g] ?? 1) * ((1 - mods.duty * 0.7) / (1 - mods.duty));
+    mods = { ...mods, goodSell };
+  }
   // A festival's kind prices (docs/12 P2).
   if (game && festivalAt(game, port.id)) return { ...mods, buyMul: mods.buyMul * 0.9, sellMul: mods.sellMul * 1.05 };
   return mods;
 }
+
+/** What the hunt brings in: the goods the whaling licence eases. */
+export const HUNT_GOODS: GoodId[] = ['whale_oil', 'baleen', 'ambergris', 'orca_tooth', 'whalebone', 'narwhal_tusk', 'shark_skin', 'serpent_scale'];
 
 function basePriceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0): PriceMods {
   const licensed = p ? hasLicence(p, port.faction, now) : false;

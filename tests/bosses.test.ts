@@ -413,10 +413,11 @@ test('The Storm Widow: only hits from inside the eye land; the wind is hers; lig
   A.ship.loadout.modules.lightning_rod = 1;
   A.ship.recompute(game.now);
   A.ship.hull = A.ship.stats.hullMax;
+  A.ship.effects = A.ship.effects.filter((e) => e.id !== 'fire'); // the first bolt's fire is out: the rod alone is measured
   f.ready.lightning = 0;
   steps(game, SEC + 1);
   const lost = A.ship.stats.hullMax - A.ship.hull;
-  assert.ok(lost > 0 && lost < A.ship.stats.hullMax * 0.06 * 0.5);
+  assert.ok(lost > 0 && lost < A.ship.stats.hullMax * 0.06 * 0.5, `lost ${lost} of ${A.ship.stats.hullMax}`);
 });
 
 test('rare drops: once a week per captain; a second kill in the week brings no rare', () => {

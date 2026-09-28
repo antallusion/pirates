@@ -2,6 +2,7 @@
 // keeps the Path chosen at creation; the other base Paths open through their mentor's Path quest, the premium
 // Paths through a Legend quest. The First Descent opens the Abyssal tree to anyone who is not already drowned.
 
+import type { BeastGroup } from './beasts.ts';
 import type { CaptainId } from './captains.ts';
 import type { FactionId } from './factions.ts';
 import type { GoodId } from './goods.ts';
@@ -26,7 +27,9 @@ export type QuestStep =
   | { type: 'die_in'; region: RegionId; text: string }
   | { type: 'dive'; count: number; text: string }
   /** Fish taken (docs/12 P3): any catch counted, or one fish on the line of at least `minKg`. */
-  | { type: 'catch'; count: number; minKg?: number; text: string };
+  | { type: 'catch'; count: number; minKg?: number; text: string }
+  /** Beasts of the sea taken (docs/12 P4): of a group — whales, orcas, sharks — or any. */
+  | { type: 'beast'; count: number; group: BeastGroup; text: string };
 
 export interface QuestDef {
   id: string;

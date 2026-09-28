@@ -3,6 +3,9 @@
 // projectiles & particles → darkness/light pass → fog/rain → screen-space overlays.
 // Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
 
+import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
+import type { BeastId } from '../../../shared/src/data/beasts.ts';
+import { drawCarcass } from './beasts.ts';
 import { drawShoals, drawSights } from './sights.ts';
 import { THREAT_COLOR, combatLevelOf, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import type { Threat } from '../../../shared/src/data/shiplevel.ts';
@@ -29,7 +32,7 @@ import type { SailKey } from './atlas.ts';
 import { FACTION_SIGN } from './relation.ts';
 import { buildRelief } from './terrain.ts';
 import type { Palette } from './terrain.ts';
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
 import { dec1 } from '../ui/dom.ts';
 import { questPointer, trackedQuest } from '../ui/track.ts';
 import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus } from '../../../shared/src/data/gunnery.ts';
@@ -373,6 +376,7 @@ export class Renderer {
     this.drawWakes();
     this.drawLoot(state);
     drawShoals(g, state.shoals, state.self?.fishing?.traps ?? [], (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
+    this.drawCarcasses(state);
     drawSights(g, state.sights, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, own ? { x: own.x, y: own.y } : null, this.w, this.h);
     this.drawDuelRing(state);
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
@@ -1396,7 +1400,7 @@ export class Renderer {
         this.fx.light(s.x + v.x * cls.length * 0.62, s.y + v.y * cls.length * 0.62, 160, 'rgba(255,225,150,1)', 0.9, 0.05);
       }
       // Every horror of the deep glows a little: pale eyes, rot-light, the sheen of wet hide.
-      if (!(s.flags & SF.SUBMERGED) && s.classId !== 'kraken_tentacle' && s.classId !== 'hulk') this.fx.light(s.x, s.y, cls.length * 0.6, s.classId === 'black_serpent' ? 'rgba(201,224,74,1)' : 'rgba(150,190,200,1)', 0.2, 0.05);
+      if (!(s.flags & SF.SUBMERGED) && s.classId !== 'kraken_tentacle' && s.classId !== 'hulk' && !beastOfClass(s.classId)) this.fx.light(s.x, s.y, cls.length * 0.6, s.classId === 'black_serpent' ? 'rgba(201,224,74,1)' : 'rgba(150,190,200,1)', 0.2, 0.05);
       if (s.classId === 'wreck_core' || s.classId === 'whale_heart') this.fx.light(s.x, s.y, 60, s.classId === 'wreck_core' ? 'rgba(46,230,200,1)' : 'rgba(200,40,50,1)', 0.6, 0.05);
       return;
     }
@@ -2318,10 +2322,82 @@ export class Renderer {
     void side;
   }
 
+  /** The carcasses afloat (docs/12 P4), in their blood. */
+  private drawCarcasses(state: ClientState): void {
+    const g = this.g;
+    for (const c of state.carcasses) {
+      const cls = SHIP_CLASSES[BEASTS[c.beast].cls];
+      const x = this.sx(c.x), y = this.sy(c.y);
+      const len = cls.length * this.zoom, beam = cls.beam * this.zoom;
+      if (x < -len * 2 || y < -len * 2 || x > this.w + len * 2 || y > this.h + len * 2) continue;
+      g.save();
+      g.translate(x, y);
+      g.rotate(c.h + Math.sin(this.time * 0.3 + c.id) * 0.05);
+      drawCarcass(g, c.beast, len, beam, c.progress, c.blood, this.time, c.id);
+      g.restore();
+    }
+  }
+
+  private drawBeastLabel(s: DrawShip, state: ClientState, beast: BeastId, isTarget: boolean): void {
+    const g = this.g;
+    const cls = SHIP_CLASSES[s.classId];
+    const def = BEASTS[beast];
+    const lvl = s.info?.shipLevel ?? def.level[0];
+    const threat = levelThreat(state, s.classId, lvl);
+    const col = THREAT_COLOR[threat];
+    const badge = threat === 'skull' ? '☠' : String(lvl);
+    const name = def.name[lang() === 'ru' ? 1 : 0];
+    const x = this.sx(s.x), y = this.sy(s.y) - (Math.max(cls.length, 10) * this.zoom) / 2 - 14;
+    g.font = '700 10px Inter, sans-serif';
+    const pillW = g.measureText(badge).width + 8;
+    g.font = '600 11px Inter, sans-serif';
+    const nameW = g.measureText(name).width;
+    const total = pillW + 4 + nameW;
+    const px = clamp(x - total / 2, 2, Math.max(2, this.w - total - 2));
+    g.fillStyle = 'rgba(8,10,14,0.78)';
+    roundRect(g, px, y - 10, pillW, 13, 3);
+    g.fill();
+    g.lineWidth = s.info?.elite ? 2 : 1;
+    g.strokeStyle = s.info?.elite ? '#e8c46a' : col;
+    g.stroke();
+    g.textAlign = 'center';
+    g.font = '700 10px Inter, sans-serif';
+    g.fillStyle = col;
+    g.fillText(badge, px + pillW / 2, y);
+    g.textAlign = 'left';
+    g.font = '600 11px Inter, sans-serif';
+    g.fillStyle = '#000';
+    g.fillText(name, px + pillW + 5, y + 1);
+    g.fillStyle = def.predator ? '#e0a08a' : '#bcd3dc';
+    g.fillText(name, px + pillW + 4, y);
+    g.textAlign = 'center';
+    const w = 40;
+    g.fillStyle = 'rgba(0,0,0,0.7)';
+    g.fillRect(x - w / 2 - 1, y + 5, w + 2, 5);
+    g.fillStyle = '#b23a3a';
+    g.fillRect(x - w / 2, y + 6, w * clamp(s.hull, 0, 1), 3);
+    if (isTarget) {
+      g.strokeStyle = hexA(col, 0.85);
+      g.lineWidth = 1.5;
+      g.setLineDash([6, 5]);
+      g.beginPath();
+      g.ellipse(this.sx(s.x), this.sy(s.y), Math.max(cls.length, 10) * this.zoom * 0.62, Math.max(cls.length, 10) * this.zoom * 0.62, 0, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
+  }
+
   private drawLabel(s: DrawShip, state: ClientState, boardTarget: boolean, isTarget = false): void {
     const g = this.g;
     if (!s.info || s.flags & SF.HIDDEN) return;
     const cls = SHIP_CLASSES[s.classId];
+    // The beasts of the sea (docs/12 P4): a level in its frame, the name, and a bar of its strength.
+    const beast = beastOfClass(s.classId);
+    if (beast) {
+      if (s.flags & SF.SUBMERGED) return;
+      this.drawBeastLabel(s, state, beast, isTarget && !boardTarget);
+      return;
+    }
     // Monsters and their parts: the boss panel names them; over the water only a thin bar of their strength.
     if (cls.monster) {
       if (s.flags & SF.SUBMERGED) return;

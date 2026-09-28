@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { renderGear } from './ui/gear.ts';
@@ -146,6 +147,7 @@ let whisperPrefill = '';
 hud.onPartyTap = (name) => net.send({ t: 'inspect', name });
 hud.onTargetTap = (name) => net.send({ t: 'inspect', name });
 hud.onFishing = (action) => net.send({ t: 'fishing', action });
+hud.onHunt = (action, id) => net.send(action === 'flense' ? { t: 'hunt', action, id: id ?? 0 } : { t: 'hunt', action });
 companyScreen.onWhisper = (name) => {
   const input = $('chat-input') as HTMLInputElement;
   $('chat').classList.add('open');
@@ -1049,6 +1051,7 @@ function computePrompt(): string {
     const c = s.cur;
     if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED)) continue;
     const cls = SHIP_CLASSES[s.info.classId];
+    if (beastOfClass(s.info.classId)) continue; // no decks on a beast of the sea
     const d = dist(own.x, own.y, c.x, c.y);
     const range = st.boardingRange + (st.beam + cls.beam) / 2;
     if (d > range) continue;

@@ -354,6 +354,12 @@ function arcStep(k: StepKind, p: ArcParams, text: string): QuestStep {
       return { type: 'catch', count: p.n, text };
     case 'catch_big':
       return { type: 'catch', count: 1, minKg: p.n, text };
+    case 'hunt_whale':
+      return { type: 'beast', count: p.n, group: 'whale', text };
+    case 'hunt_orca':
+      return { type: 'beast', count: p.n, group: 'orca', text };
+    case 'hunt_shark':
+      return { type: 'beast', count: p.n, group: 'shark', text };
   }
 }
 

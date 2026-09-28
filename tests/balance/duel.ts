@@ -83,6 +83,11 @@ function put(game: Game, side: Side, role: 'patrol' | 'hunter', x: number, y: nu
   return { ship, brain };
 }
 
+/** A side put on the water alone (the hunt's sims). */
+export function putSide(game: Game, side: Side, x: number, y: number, h: number): { ship: ShipEntity; brain: NpcBrain } {
+  return put(game, side, 'patrol', x, y, h);
+}
+
 /** One duel: `a` against `b`, 900 m apart, until one is sunk or `maxSec` runs out. */
 export function duel(game: Game, a: Side, b: Side, k: number, maxSec = 900): DuelResult {
   const at = openWater(game, k);

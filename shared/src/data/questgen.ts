@@ -74,7 +74,7 @@ export const PROFESSIONS: Record<Profession, [string, string]> = {
 /** Step kinds a plot is made of; each becomes a quest step with its text. */
 export type StepKind = 'pickup' | 'deliver2' | 'deliver3' | 'visit2' | 'visit3' | 'home' | 'back' | 'sink_pirates' | 'sink_ghosts' | 'sink_hunters' | 'sink_any'
   | 'board' | 'prize' | 'land_site' | 'land_any' | 'land_any2' | 'dive' | 'chart' | 'reach' | 'time_in' | 'contraband' | 'customs'
-  | 'catch_any' | 'catch_big';
+  | 'catch_any' | 'catch_big' | 'hunt_whale' | 'hunt_orca' | 'hunt_shark';
 
 export const STEP_TEXT: Record<StepKind, [string, string]> = {
   pickup: ['Take on {good} × {n} at {port}.', 'Примите груз в порту {port}: {good} × {n}.'],
@@ -101,6 +101,9 @@ export const STEP_TEXT: Record<StepKind, [string, string]> = {
   customs: ['Pass a customs inspection without a fine.', 'Пройдите таможенный досмотр без штрафа.'],
   catch_any: ['Take fish with nets, rods, pots or the lamp: {n}.', 'Наловите рыбы — сетями, удилищами, ловушками или на фонарь: {n}.'],
   catch_big: ['Land a fish of {n} kg or more on the line.', 'Выведите на леске рыбу весом от {n} кг.'],
+  hunt_whale: ['Take whales: {n}.', 'Добудьте китов: {n}.'],
+  hunt_orca: ['Kill orcas: {n}.', 'Убейте касаток: {n}.'],
+  hunt_shark: ['Kill sharks: {n}.', 'Убейте акул: {n}.'],
 };
 
 // ------------------------------------------------------------------ plots and the ways they are told
@@ -126,6 +129,8 @@ export interface Plot {
   xp: number;
   /** Which kind of site a land_site step goes for. */
   site?: 'people' | 'beasts' | 'pirate_camp' | 'smugglers' | 'ruins';
+  /** Only in ports of these waters (the hunts go where their beasts live). */
+  regions?: RegionId[];
   flavors: Flavor[];
 }
 
@@ -140,6 +145,29 @@ export const PLOTS: Plot[] = [
       F('harbour_master', 'A Berth Too Many', 'Лишний причал', '{giver} needs the quay cleared: take this cargo to {port2} before the tide turns.', '{giver} просит освободить пристань: отвезите этот груз в порт {port2}, пока не сменился прилив.'),
       F('tavern_keeper', 'Owed in {port2}', 'Долг в порту {port2}', 'A tavern in {port2} was promised this load; {giver} keeps promises.', 'Трактиру в порту {port2} обещали этот груз; {giver} держит слово.'),
       F('old_salt', 'One Last Run', 'Последний рейс', '{giver} is too old for the run to {port2}. Sail it for him.', '{giver} слишком стар для рейса в порт {port2}. Сходите вместо него.'),
+    ],
+  },
+  // ---------------------------------------------------------------- the hunt (docs/12 P4)
+  {
+    id: 'whale_hunt', category: 'hunt', steps: ['hunt_whale', 'home'], level: 6, pay: 620, xp: 480, regions: ['black_coast', 'gravewater', 'whispering', 'ashen_isles', 'dead_mans_expanse', 'leviathan_reach'], flavors: [
+      F('whaler', 'Oil for the Lamps', 'Масло для ламп', '{giver} has lamps to fill and no whale in the try-works. Harpoon one — quietly, or it will sound.', 'Капитану ({giver}) нечем заправить лампы, а в салотопке пусто. Загарпуньте кита — тихо, иначе он уйдёт на глубину.'),
+      F('merchant', 'Baleen and Bone', 'Ус и кость', 'The tailors of {port} want baleen; {giver} wants the profit. A whale, then.', 'Портные в порту {port} хотят китовый ус, а {giver} — прибыль. Значит, нужен кит.'),
+      F('lighthouse_keeper', 'The Light Must Burn', 'Огонь должен гореть', 'The lighthouse eats oil by the barrel. {giver} asks for one whale before the winter fogs.', 'Маяк сжигает масло бочками. {giver} просит одного кита до зимних туманов.'),
+      F('old_salt', 'One More Whale', 'Ещё один кит', '{giver} struck forty whales in his time. He wants to see a young captain strike one.', '{giver} за свою жизнь загарпунил сорок китов. Он хочет увидеть, как это сделает молодой капитан.'),
+    ],
+  },
+  {
+    id: 'orca_cull', category: 'hunt', steps: ['hunt_orca', 'home'], level: 4, pay: 520, xp: 400, regions: ['gravewater', 'leviathan_reach'], flavors: [
+      F('fishwife', 'The Nets Come Up Torn', 'Сети рвутся', 'The orcas tear the nets and take the catch. {giver} wants a few of them gone.', 'Касатки рвут сети и забирают улов. {giver} хочет, чтобы их стало поменьше.'),
+      F('whaler', 'Wolves of the Sea', 'Морские волки', 'A pod took a whale from {giver}\'s boats yesterday — and a boat with it. Pay them back.', 'Вчера стая отняла у шлюпок капитана ({giver}) кита — и шлюпку заодно. Отплатите им.'),
+      F('harbour_master', 'The Rudders', 'Рули', 'Three ships limped in without rudders this week. {giver} blames the orcas.', 'За неделю в порт приковыляли три корабля без рулей. {giver} винит касаток.'),
+    ],
+  },
+  {
+    id: 'shark_bounty', category: 'hunt', steps: ['hunt_shark', 'home'], level: 2, pay: 320, xp: 240, regions: ['black_coast', 'gravewater', 'whispering', 'ashen_isles', 'dead_mans_expanse', 'drowned_crown'], flavors: [
+      F('pearl_diver', 'Clear Water', 'Чистая вода', '{giver} will not go down while the sharks circle the beds. Thin them out.', '{giver} не нырнёт, пока над отмелями кружат акулы. Проредите их.'),
+      F('tavern_keeper', 'Shark Fin Soup', 'Суп из акульих плавников', 'A guest from the south pays well for shark. {giver} has none.', 'Гость с юга хорошо платит за акулу. У капитана ({giver}) их нет.'),
+      F('priest', 'The Drowned Deserve Rest', 'Утопленникам нужен покой', 'The sharks will not leave the drowned in peace. {giver} asks you to drive them off.', 'Акулы не дают покоя утопленникам. {giver} просит их отогнать.'),
     ],
   },
   // ---------------------------------------------------------------- fishing (docs/12 P3)
@@ -475,6 +503,7 @@ export function fill(t: string, v: Record<string, string>): string {
 
 function safetyOk(plot: Plot, port: Port): boolean {
   const reg = REGIONS[port.region];
+  if (plot.regions && !plot.regions.includes(port.region)) return false;
   switch (plot.where ?? 'any') {
     case 'safe':
       return reg.safety === 'safe' || reg.safety === 'contested';
@@ -574,6 +603,9 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
   const counted = plot.steps.some((s) => s.startsWith('sink') || s === 'board' || s === 'prize' || s === 'dive' || s === 'chart' || s === 'contraband');
   const n = needs('pickup') || needs('deliver2') || needs('deliver3') ? rng.int(4, 12) * (good === 'pearls' || good === 'medicine' ? 1 : 2)
     : needs('catch_big') ? rng.pick([6, 8, 10, 15, 25])
+    : needs('hunt_whale') ? rng.int(1, 2)
+    : needs('hunt_orca') ? rng.int(2, 5)
+    : needs('hunt_shark') ? rng.int(2, 4)
     : needs('catch_any') ? rng.int(10, 30)
     : needs('time_in') ? rng.int(3, 8)
     : counted ? rng.int(1, needs('chart') ? 6 : needs('contraband') ? 10 : 3) : 1;
@@ -647,6 +679,12 @@ function stepOf(k: StepKind, p: GenParams, text: string): QuestStep {
       return { type: 'catch', count: p.n, text };
     case 'catch_big':
       return { type: 'catch', count: 1, minKg: p.n, text };
+    case 'hunt_whale':
+      return { type: 'beast', count: p.n, group: 'whale', text };
+    case 'hunt_orca':
+      return { type: 'beast', count: p.n, group: 'orca', text };
+    case 'hunt_shark':
+      return { type: 'beast', count: p.n, group: 'shark', text };
   }
 }
 

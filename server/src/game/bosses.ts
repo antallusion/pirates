@@ -4,6 +4,7 @@
 // taverns of the region; the spoils are personal, by contribution (damage, control, support), with a weekly
 // lockout on rare drops.
 
+import { grantDeed } from './progression.ts';
 import { BOSSES, BOSS_ANNOUNCE, BOSS_IDS, BOSS_LOCKOUT, BOSS_RANGE, lootFactor } from '../../../shared/src/data/bosses.ts';
 import type { BossDef, BossId } from '../../../shared/src/data/bosses.ts';
 import { FIGUREHEADS } from '../../../shared/src/data/shipbuild.ts';
@@ -1437,6 +1438,8 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
       lines.push(`a trophy: ${def.trophy}`);
     }
     p.bossKills[def.id] = (p.bossKills[def.id] ?? 0) + 1;
+    // Leviathan Slain (canon): a tenth of its death is one's own.
+    if ((def.id === 'leviathan' || def.id === 'ancient_leviathan') && share >= 0.1) grantDeed(game, s, 'deed_leviathan_slain');
     seasonStat(game, s, 'monsters', Math.round(share * 100));
     if (def.id === 'ancient_leviathan' || def.id === 'abyss_eye') seasonStat(game, s, 'abyss', Math.round(share * 100));
     // The Abyss's own: ritual shards for everyone who truly fought, and a chapter of the story.

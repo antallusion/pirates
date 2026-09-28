@@ -3,6 +3,8 @@
 
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
 import { duelSea, winRate } from './duel.ts';
+import { huntRate } from './hunt.ts';
+import type { BeastId } from '../../shared/src/data/beasts.ts';
 
 const N = Number(process.env.BALANCE_N ?? 60);
 const game = duelSea();
@@ -26,3 +28,20 @@ for (const [ca, la, cb, lb, cc, lc] of rows) {
 }
 const m = winRate(game, { cls: 'fluyt', level: 5, craft: 'perfect' }, { cls: 'brig', level: 5, craft: 'bot' }, N);
 console.log(`merchant fluyt 5 (perfect) against a brig 5: ${pct(m.wins)}`);
+
+// The hunt (docs/12 P4): a captain who fired first on a pod or a lone great beast.
+const hunts: [ShipClassId, number, 'average' | 'perfect', BeastId, number, number][] = [
+  ['schooner', 3, 'average', 'orca', 3, 4],
+  ['schooner', 3, 'perfect', 'orca', 4, 4],
+  ['schooner', 3, 'perfect', 'orca', 5, 4],
+  ['brig', 6, 'average', 'sperm_whale', 6, 1],
+  ['brig', 6, 'perfect', 'sperm_whale', 7, 1],
+  ['brig', 7, 'average', 'young_serpent', 7, 1],
+  ['brig', 7, 'perfect', 'young_serpent', 8, 1],
+  ['sloop', 2, 'average', 'shark', 2, 3],
+];
+console.log(`\nThe hunt, ${N} a cell (the captain's wins, and her hull left on average)`);
+for (const [cls, lv, craft, beast, bl, n] of hunts) {
+  const r = huntRate(game, cls, lv, craft, beast, bl, n, N);
+  console.log(`${`${cls} ${lv} ${craft}`.padEnd(22)} vs ${`${n}× ${beast} ${bl}`.padEnd(20)} ${pct(r.wins)}  hull ${r.hull}%`);
+}

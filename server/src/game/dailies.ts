@@ -54,6 +54,8 @@ function gain(kind: DailyKind, ev: QuestEvent, seen: string[] | undefined): numb
       return ev.k === 'dive' ? 1 : 0;
     case 'fish':
       return ev.k === 'catch' ? ev.units : 0;
+    case 'beast':
+      return ev.k === 'beast' ? 1 : 0;
   }
 }
 

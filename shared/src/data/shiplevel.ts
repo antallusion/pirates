@@ -11,7 +11,7 @@ import type { ShipClassId } from './ships.ts';
 export const SHIP_LEVEL_MIN = 1;
 export const SHIP_LEVEL_MAX = 10;
 
-export type HullRole = 'war' | 'all' | 'trade' | 'fish' | 'special';
+export type HullRole = 'war' | 'all' | 'trade' | 'fish' | 'special' | 'beast';
 
 /** Each hull's levels: the one she comes at and the highest a refit takes her. */
 export const LEVEL_RANGE: Partial<Record<ShipClassId, [number, number]>> = {
@@ -22,6 +22,7 @@ export const LEVEL_RANGE: Partial<Record<ShipClassId, [number, number]>> = {
   xebec: [3, 5],
   fluyt: [3, 5],
   fishing_ketch: [3, 5],
+  harpoon_whaler: [3, 5],
   brigantine: [4, 6],
   brig: [5, 7],
   bomb_ketch: [5, 7],
@@ -29,6 +30,14 @@ export const LEVEL_RANGE: Partial<Record<ShipClassId, [number, number]>> = {
   galleon: [7, 9],
   ghost_ship: [7, 10],
   man_o_war: [9, 10],
+  // The beasts (docs/12 P4): levels like ships', the ladder between them and a captain as between ships.
+  shark: [2, 6],
+  orca: [3, 8],
+  humpback: [4, 6],
+  narwhal: [5, 7],
+  sperm_whale: [6, 9],
+  young_serpent: [7, 9],
+  white_orca: [8, 8],
 };
 
 export const HULL_ROLE: Partial<Record<ShipClassId, HullRole>> = {
@@ -44,12 +53,20 @@ export const HULL_ROLE: Partial<Record<ShipClassId, HullRole>> = {
   fluyt: 'trade',
   galleon: 'trade',
   fishing_ketch: 'fish',
+  harpoon_whaler: 'all',
+  orca: 'beast',
+  white_orca: 'beast',
+  humpback: 'beast',
+  sperm_whale: 'beast',
+  narwhal: 'beast',
+  shark: 'beast',
+  young_serpent: 'beast',
   fireship: 'special',
   ghost_ship: 'special',
 };
 
 /** How many levels below her own a hull of this role fights. */
-const ROLE_SHIFT: Record<HullRole, number> = { war: 0, all: 0, trade: 2, fish: 1, special: 0 };
+const ROLE_SHIFT: Record<HullRole, number> = { war: 0, all: 0, trade: 2, fish: 1, special: 0, beast: 0 };
 
 /** Monsters, boss parts and wreck hulks stand outside the ladder: they are balanced as raids of their own. */
 export function onLadder(classId: ShipClassId): boolean {

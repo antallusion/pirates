@@ -1871,3 +1871,35 @@ body.touch #hud-region .rg-extra { display: none; }
 .jr-fishing { margin-top: 10px; }
 .jr-fish { margin: 2px 0; font-size: 13px; }
 .fish-records .fish-rec { margin: 2px 0; font-size: 13px; }
+/* The hunt (docs/12 P4): the line against its band, the beast's strength and hide, the flensing. */
+#hud-hunt { pointer-events: auto; padding: 6px 9px 7px; max-width: 320px; }
+#hud-hunt .fp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+#hud-hunt .fp-head b { font-family: var(--serif); font-size: 14px; color: #f0d9b0; }
+#hud-hunt .hp-lvl { font-size: 11px; color: #e8c46a; }
+#hud-hunt .hp-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 11px; }
+#hud-hunt .hp-row > span { flex: 0 0 44px; color: var(--fog, #9aa); }
+#hud-hunt .hp-bar { position: relative; flex: 1; height: 9px; background: #0a0c0e; border: 1px solid #000; border-radius: 2px; overflow: hidden; }
+#hud-hunt .hp-bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: #6fd46f; transition: width 0.15s linear; }
+#hud-hunt .hp-bar > em { position: absolute; top: 0; bottom: 0; }
+#hud-hunt .hp-good { background: rgba(111, 212, 111, 0.16); border-left: 1px solid rgba(111, 212, 111, 0.5); border-right: 1px solid rgba(111, 212, 111, 0.5); }
+#hud-hunt .hp-snap { right: 0; background: rgba(224, 71, 58, 0.28); }
+#hud-hunt .hp-slack { left: 0; background: rgba(224, 71, 58, 0.18); }
+#hud-hunt .hp-t > i { opacity: 0.85; }
+#hud-hunt .hp-s > i { background: #5aa6c4; }
+#hud-hunt .hp-h > i { background: #b23a3a; }
+#hud-hunt .hp-f > i { background: #c4483a; }
+#hud-hunt .fp-line { font-size: 12px; margin-top: 2px; }
+#hud-hunt .fp-acts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+#hud-hunt .hp-noise.hp-quiet { color: #8fd6a0; }
+#hud-hunt .hp-noise.hp-heard { color: #e8c46a; }
+#hud-hunt .hp-noise.hp-loud { color: #e0776b; }
+/* A beast on the line, a carcass to flense: the hunt's block leads the stack; on a phone the goals step aside. */
+#hud-stack > #hud-hunt.hp-active { order: -1; }
+@media (max-width: 699px), (max-height: 520px) {
+  #hud-stack:has(#hud-hunt.hp-active) #hud-goals, #hud-stack:has(#hud-hunt.hp-active) #hud-fish { display: none; }
+}
+@media (max-width: 699px), (max-height: 520px) {
+  #hud-hunt .hp-hint { display: none; }
+  #hud-hunt .hp-row { margin: 2px 0; }
+  #hud-hunt .fp-acts { margin-top: 3px; }
+}
