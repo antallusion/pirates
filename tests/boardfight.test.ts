@@ -103,8 +103,9 @@ test('an order given resolves the round at once, and the winning tactic takes th
   npc.boarding!.pick = 'charge';
   c.push({ t: 'board_tactic', tactic: 'grenades' });
   toNextRound(game, ship);
-  const w = c.last('board_fight')!.view!;
-  if (w.last) {
+  // The fight may be over after this round (the foe strikes): then there is nothing more to read.
+  const w = c.last('board_fight')!.view;
+  if (w?.last) {
     assert.equal(w.last.edge, -1, 'grenades fall to a charge');
     assert.equal(w.you.momentum, 40, 'a lost round still teaches a little');
   }
