@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { callOn, drink, hallView, invite, sign } from './guests.ts';
 import { lookOf, setLook, unlockDeed } from './looks.ts';
 import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
 import { dutchmanSunk, stepDutchman } from './dutchman.ts';
@@ -2556,6 +2557,23 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'guest': {
+        const isl = Math.trunc(Number((msg as { island?: number }).island));
+        const res = msg.action === 'call' ? callOn(this, s, isl)
+          : msg.action === 'drink' ? drink(this, s, isl)
+          : msg.action === 'sign' ? sign(this, s, isl, String((msg as { text?: string }).text ?? ''))
+          : invite(this, s, String((msg as { name?: string }).name ?? ''), msg.action === 'invite');
+        if (typeof res === 'string') return err(res);
+        if (msg.action === 'invite' || msg.action === 'uninvite') {
+          const own = Object.values(this.holdings.map(this)).find((h) => h.owned && h.owner.kind === 'player' && h.owner.id === s.accountId);
+          if (own) this.sendTo(s, { t: 'hall', view: hallView(this, s, own) });
+          return;
+        }
+        if (res) return this.sendTo(s, { t: 'hall', view: res });
+        const h = this.holdings.get(this, isl);
+        if (h) this.sendTo(s, { t: 'hall', view: hallView(this, s, h) });
+        return;
+      }
       case 'look':
         return err(setLook(this, s, String(msg.look ?? '')));
       case 'omen':
@@ -2615,9 +2633,10 @@ export class Game {
           case 'outpost':
             return done(outpostOrder(this, s, String(msg.id), String(msg.order), msg.arg));
           case 'visit': {
-            const v = visitHall(this, s, Math.trunc(Number(msg.island)));
+            // Guests on the island (docs/12 P10 #13): the whole hall, not a line.
+            const v = callOn(this, s, Math.trunc(Number(msg.island)));
             if (typeof v === 'string') return err(v);
-            return this.sendTo(s, { t: 'trophy_hall', view: v });
+            return this.sendTo(s, { t: 'hall', view: v });
           }
         }
         return;

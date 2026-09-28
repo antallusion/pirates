@@ -8,6 +8,7 @@
 // water. A trophy hall shows a hunter's heads, a whaler's skulls and a fisher's records, and lends each trade a
 // little; guests may look round it.
 
+import { welcome } from './guests.ts';
 import {
   BUY_MUL, BUY_REGIONS, CLAIM_DAYS, GUARDS, HANDS_BONUS, HANDS_WAGE, HOME_COOLDOWN, ISLE_LEVELS, ISLE_MAX, OUTPOSTS, OUTPOST_BUILD, OUTPOST_KINDS, OUTPOST_MAX_LEVEL,
   PROFESSIONS, PROFESSION_DEFS, RAID_DAY, RAID_MIN, RESIDENT_BONUS, RESIDENT_HIRE, ROB_SEC, TROPHY_MAX, TROPHY_STEP, claimCost, outpostCap, outpostFits, outpostGood,
@@ -682,7 +683,7 @@ export function estateView(game: Game, s: PlayerSession): EstateView {
     homeIn: Math.max(0, Math.ceil(((p.homeAt ?? -1e9) + HOME_COOLDOWN - game.now) / 60)),
     buy: nearIsle && !nearIsle.portId && !h && BUY_REGIONS.includes(nearIsle.region) && (!game.holdings.get(game, nearIsle.id) || mayUse(game, game.holdings.get(game, nearIsle.id)!, s.accountId)) && (!personalHolding(game, s.accountId) || personalHolding(game, s.accountId)!.island === nearIsle.id) ? { island: nearIsle.id, name: nearIsle.name, price: buyPrice(nearIsle) } : null,
     kinds: nearIsle && !nearIsle.portId && !game.holdings.get(game, nearIsle.id) && !Object.values(outposts(game)).some((o) => o.island === nearIsle.id) ? OUTPOST_KINDS.filter((k) => outpostFits(k, nearIsle)) : [],
-    hall: ((hh) => (hh && hh.owned && has(hh, 'trophy_hall') && hh.owner.id !== s.accountId ? { island: hh.island, owner: hh.owner.name } : null))(nearIsle ? game.holdings.get(game, nearIsle.id) : undefined),
+    hall: ((hh) => (hh && hh.owned && hh.owner.kind === 'player' && hh.owner.id !== s.accountId && welcome(game, s, hh) ? { island: hh.island, owner: hh.owner.name } : null))(nearIsle ? game.holdings.get(game, nearIsle.id) : undefined),
   };
 }
 

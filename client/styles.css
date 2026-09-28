@@ -2129,3 +2129,9 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .looks .lk-slot.on { border-color: #ffe08a; }
 .looks .lk-foot { margin-top: 6px; }
 @media (max-width: 700px) { .looks { grid-template-columns: 1fr; } .looks .lk-preview { position: static; } .looks .lk-flag { width: 200px; height: 125px; } }
+/* Guests on the island (docs/12 P10 #13). */
+.hall .hall-trophies { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 4px 10px; font-size: 13px; }
+.hall .hall-trophies span { display: inline-flex; align-items: center; gap: 4px; }
+.hall .hall-entry { font-size: 13px; margin: 4px 0; overflow-wrap: anywhere; }
+.hall .hall-invited { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.hall .hall-x { background: none; border: none; color: #d88; cursor: pointer; padding: 0 2px; font: 700 13px var(--sans); }

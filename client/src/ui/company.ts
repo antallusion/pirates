@@ -361,6 +361,7 @@ export class CompanyScreen {
     const num = (sel: string) => Number(q<HTMLInputElement>(sel)?.value ?? 0);
     body.querySelectorAll<HTMLElement>('[data-rent]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'rent', island: Number(el.dataset.rent), days: Number(el.dataset.days) })));
     // One's own island and outposts (docs/12 P7).
+    body.querySelectorAll<HTMLElement>('[data-guests]').forEach((b) => (b.onclick = () => this.send({ t: 'guest', action: 'call', island: Number(b.dataset.guests) })));
     body.querySelectorAll<HTMLElement>('[data-est]').forEach((el) => (el.onclick = () => {
       const a = el.dataset.est!;
       if (a === 'buy') return void ask(L('est_confirm_buy', { price: fmt(Number(el.dataset.price)) })).then((ok) => ok && this.send({ t: 'estate', action: 'buy', island: Number(el.dataset.isl) }));
@@ -786,7 +787,7 @@ function estateHtml(state: ClientState): string {
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(L('est_isle', { name: placeName(isle.name), level: isle.level, title: serverText(isle.levelName) }))}</span></h4>
       <p class="muted">${esc(L('est_isle_meta', { slots: isle.slots, outposts: isle.outposts, n: isle.residents.length, cap: isle.cap }))}</p>
       ${isle.next ? `<p>${esc(L('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver), goods: goodsList(isle.next.goods) }))} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
-      <div class="row" style="gap:6px;flex-wrap:wrap">${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button><button class="btn btn-small" data-guests="${isle.island}">${esc(L('est_guests'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
       ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
       ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}
       ${(state.self?.company.memorial ?? []).length ? `<div class="est-h">${esc(L('est_memorial'))}</div>${state.self!.company.memorial.map((m) => `<p class="muted">† ${esc(personName(m.name))} — ${esc(serverText(m.cause))}</p>`).join('')}` : ''}</div>`);

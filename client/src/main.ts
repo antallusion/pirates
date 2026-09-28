@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
 import { tell } from './ui/confirm.ts';
 import { beastOfClass } from '../../shared/src/data/beasts.ts';
@@ -59,7 +60,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -465,6 +466,12 @@ function onMessage(m: ServerMsg): void {
         else openModal('dice');
       } else if (modal === 'dice') closeModal();
       break;
+    case 'hall':
+      if (m.view) {
+        if (modal === 'hall') refreshModal();
+        else openModal('hall');
+      }
+      break;
     case 'companion':
     case 'petsown':
       if (modal === 'ship') refreshModal();
@@ -653,6 +660,10 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'look':
       renderLook(root, state, (m) => net.send(m));
+      break;
+    case 'hall':
+      if (state.hall) renderHall(root, state, (m) => net.send(m));
+      else closeModal();
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);

@@ -154,6 +154,9 @@ export type ClientMsg =
   | { t: 'omen'; action: 'coin' }
   /** A ship's look (docs/12 P10 #12). */
   | { t: 'look'; look: string }
+  /** Guests on an island (docs/12 P10 #13). */
+  | { t: 'guest'; action: 'call' | 'drink' | 'sign'; island: number; text?: string }
+  | { t: 'guest'; action: 'invite' | 'uninvite'; name: string }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -1055,6 +1058,7 @@ export type ServerMsg =
   | { t: 'wonders'; view: WondersView }
   | { t: 'omen'; id: OmenId }
   | { t: 'dutchman'; view: DutchmanView }
+  | { t: 'hall'; view: HallView | null }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1337,6 +1341,21 @@ export interface RegattaView {
   time: number | null;
   entrants: number;
   records: { name: string; sec: number }[];
+}
+
+/** A captain's island as her guest sees it (docs/12 P10 #13). */
+export interface HallView {
+  island: number;
+  name: string;
+  owner: string;
+  mine: boolean;
+  trophies: { flag: number; skull: number; fish: number; heads: number };
+  records: { fish: string; kg: number }[];
+  people: Record<string, number>;
+  tavern: boolean;
+  guestbook: { name: string; text: string; at: number }[];
+  invited: string[];
+  week: { owner: string; island: string; score: number }[];
 }
 
 /** The Flying Dutchman's week as a captain sees it (docs/12 P10 #10). */
