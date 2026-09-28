@@ -94,6 +94,16 @@ def main(letter: str, stem: str) -> None:
     job = stem.split('_', 3)[3]
     for i, (y0, y1, x0, x1) in enumerate([b for r in rows for b in r]):
         piece = im.crop((x0, y0, x1, y1))
+        # A pale hoist sleeve painted down the left edge (the holiday sheet has one) is not part of the cloth.
+        pa = np.asarray(piece).astype(np.float32)
+        lum = (pa[:, :, :3].mean(axis=2) * (pa[:, :, 3] > 128)).sum(axis=0) / np.maximum(1, (pa[:, :, 3] > 128).sum(axis=0))
+        pw = piece.width
+        edge, body = lum[: max(2, int(pw * 0.025))].mean(), lum[int(pw * 0.06): int(pw * 0.1)].mean()
+        if edge > body * 1.8 and edge > 110:
+            mid = (edge + body) / 2
+            cut = next((x for x in range(int(pw * 0.02), int(pw * 0.08)) if lum[x] < mid), 0)
+            if cut:
+                piece = piece.crop((cut + 2, 0, pw, piece.height))
         scale = min(W / piece.width, H / piece.height)
         # Premultiplied, so the keyed-out magenta under the transparent pixels never bleeds into the edge.
         piece = piece.convert('RGBa').resize((max(1, round(piece.width * scale)), max(1, round(piece.height * scale))), Image.LANCZOS).convert('RGBA')
