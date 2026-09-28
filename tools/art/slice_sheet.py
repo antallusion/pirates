@@ -144,9 +144,14 @@ def main(sheet_name: str, stem: str) -> None:
             tile = im.crop((x0 + pad, y0 + pad, x1 - pad, y1 - pad))
             # The tile's shape: square icons, or upright panels (portraits) at `ratio` = width / height.
             ratio = sh.get('ratio', 1)
-            w = min(tile.width, round(tile.height * ratio))
+            zoom = sh.get('zoom', {}).get(stem, 1)
+            w = min(tile.width, round(tile.height / zoom * ratio))
             h = round(w / ratio)
-            tile = tile.crop(((tile.width - w) // 2, (tile.height - h) // 2, (tile.width - w) // 2 + w, (tile.height - h) // 2 + h))
+            # Centred, or pushed to one side where a painting put something cut in half at the other edge
+            # (`align`: {painting: 'left' | 'right'}).
+            side = sh.get('align', {}).get(stem)
+            left = 0 if side == 'left' else tile.width - w if side == 'right' else (tile.width - w) // 2
+            tile = tile.crop((left, (tile.height - h) // 2, left + w, (tile.height - h) // 2 + h))
             out = tile.resize((round(px * ratio), px), Image.LANCZOS)
         else:
             cell = np.array(im.crop((x0, y0, x1, y1)))
