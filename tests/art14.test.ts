@@ -70,3 +70,12 @@ test('the sixty-four flags are painted, one set, all the same size', () => {
     assert.deepEqual(webpSize(path.join(ROOT, 'assets', e.local)), [240, 160], id);
   }
 });
+
+test('the living sea is painted: every id on every sheet is in the manifest and baked', () => {
+  const missing = [...onSheets].filter((id) => !manifest.assets[id] || !fs.existsSync(path.join(ROOT, 'assets', manifest.assets[id].local)));
+  assert.deepEqual(missing, []);
+  // The singles of P11: Old Needle, the two hulls, the poster's paper; and every item icon.
+  for (const id of ['portrait.giver_old_needle', 'ship.fishing_ketch', 'ship.harpoon_whaler', 'ui.poster', ...ITEM_ART.map((r) => `icon.item_${r[0]}`)]) {
+    assert.ok(manifest.assets[id] && fs.existsSync(path.join(ROOT, 'assets', manifest.assets[id].local)), id);
+  }
+});
