@@ -55,6 +55,13 @@ def key_magenta(a: np.ndarray) -> np.ndarray:
     fix = band & (cast > 6)
     r[fix] -= cast[fix] * 0.9
     b[fix] -= cast[fix] * 0.9
+    # The painter dithers specks of magenta into a frayed edge (dark, opaque, red and blue alike): in a wider band
+    # every pixel of that hue loses its cast entirely. A purple field stays purple (its blue outweighs its red).
+    wide = solid & ~ndimage.binary_erosion(solid, iterations=14)
+    cast = np.clip(np.minimum(r, b) - g, 0, None)
+    speck = wide & (cast > 6) & (np.abs(r - b) <= 14)
+    r[speck] -= cast[speck]
+    b[speck] -= cast[speck]
     alpha = np.minimum(alpha, 0.5 * alpha + 0.5 * ndimage.grey_erosion(alpha, size=(3, 3)))
     out = np.dstack([np.clip(rgb, 0, 255), alpha * 255]).astype(np.uint8)
     return out
@@ -88,7 +95,8 @@ def main(letter: str, stem: str) -> None:
     for i, (y0, y1, x0, x1) in enumerate([b for r in rows for b in r]):
         piece = im.crop((x0, y0, x1, y1))
         scale = min(W / piece.width, H / piece.height)
-        piece = piece.resize((max(1, round(piece.width * scale)), max(1, round(piece.height * scale))), Image.LANCZOS)
+        # Premultiplied, so the keyed-out magenta under the transparent pixels never bleeds into the edge.
+        piece = piece.convert('RGBa').resize((max(1, round(piece.width * scale)), max(1, round(piece.height * scale))), Image.LANCZOS).convert('RGBA')
         canvas = Image.new('RGBA', (W, H), (0, 0, 0, 0))
         canvas.alpha_composite(piece, ((W - piece.width) // 2, (H - piece.height) // 2))
         name = f'f{base + i:02d}'

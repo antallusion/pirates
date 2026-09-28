@@ -3,9 +3,12 @@
 // fin and a young serpent's coils — every one swimming (the flukes beat, the body flexes). A carcass floats belly
 // up, cut where it has been flensed, in a slick of its blood.
 //
-// The canvas is already at the beast's place and turned to its heading: the head is toward −y.
+// The canvas is already at the beast's place and turned to its heading: the head is toward −y. When the painted beast
+// is loaded (docs/12 P11, `monster.<id>` from one sheet) it is drawn instead, cut across in segments that turn one after
+// another so its tail still beats; the procedural beast is the stand-in.
 
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
+import { sprite } from '../assets.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -270,8 +273,43 @@ function youngSerpent(g: G, len: number, beam: number, t: number): void {
   }
 }
 
+/** The painted beast, `len` from snout to tail, its body in segments: the fore part still, each piece behind it turned a
+ * little more, the wave running down to the tail. False when it is not loaded. */
+function painted(g: G, id: BeastId, len: number, t: number, seed: number, limp: boolean): boolean {
+  const spr = sprite(`monster.${id}`);
+  if (!spr) return false;
+  const img = spr.img;
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const h = len / spr.extentY, w = h * (iw / ih);
+  const top = -h * spr.cy, left = -w * spr.cx;
+  const head = spr.cy - spr.extentY / 2;
+  const pieces = id === 'young_serpent' ? 5 : 4;
+  const fore = id === 'young_serpent' ? 0.3 : 0.42;
+  const cut = [0];
+  for (let k = 0; k < pieces - 1; k++) cut.push(head + spr.extentY * (fore + ((1 - fore) * k) / (pieces - 1)));
+  cut.push(1);
+  const ph = t * (id === 'shark' ? 2.4 : id === 'young_serpent' ? 1.5 : 1.1) + seed * 0.61;
+  const amp = limp ? 0 : id === 'young_serpent' ? 0.2 : id === 'shark' ? 0.11 : 0.07;
+  const breathe = limp ? 1 : 1 + Math.sin(ph * 0.9) * 0.012;
+  g.save();
+  g.scale(breathe, 1);
+  // The overlap hides the seams where a piece turns.
+  const ov = 2 / ih;
+  g.drawImage(img, 0, 0, iw, cut[1] * ih, left, top, w, cut[1] * h);
+  g.translate(0, top + cut[1] * h);
+  for (let k = 1; k < cut.length - 1; k++) {
+    g.rotate(amp * Math.sin(ph - k * 0.9));
+    const s0 = Math.max(0, cut[k] - ov), s1 = cut[k + 1];
+    g.drawImage(img, 0, s0 * ih, iw, (s1 - s0) * ih, left, (s0 - cut[k]) * h, w, (s1 - s0) * h);
+    g.translate(0, (cut[k + 1] - cut[k]) * h);
+  }
+  g.restore();
+  return true;
+}
+
 /** A beast at the canvas origin, head toward −y (len and beam in px). */
 export function drawBeast(g: G, id: BeastId, len: number, beam: number, t: number, seed: number): void {
+  if (painted(g, id, len, t, seed, false)) return;
   const ph = t + seed * 0.61;
   switch (id) {
     case 'orca': return orca(g, len, beam, ph, false);
@@ -297,6 +335,26 @@ export function drawCarcass(g: G, id: BeastId, len: number, beam: number, progre
     g.beginPath();
     g.ellipse(0, 0, r, r * 0.8, 0, 0, Math.PI * 2);
     g.fill();
+  }
+  // The painted one, turned belly up: pale, washed of its colour, the knife cuts across it.
+  if (sprite(`monster.${id}`)) {
+    g.save();
+    g.scale(-1, 1);
+    g.filter = 'saturate(0.25) brightness(1.4) contrast(0.85)';
+    painted(g, id, len, t, seed, true);
+    g.filter = 'none';
+    g.restore();
+    g.strokeStyle = 'rgba(170,20,26,0.85)';
+    g.lineWidth = Math.max(0.8, beam * 0.08);
+    const n = Math.round(progress * 8);
+    for (let i = 0; i < n; i++) {
+      const y = -len * 0.34 + (i * len * 0.6) / 8;
+      g.beginPath();
+      g.moveTo(-beam * 0.3, y);
+      g.lineTo(beam * 0.3, y + len * 0.02);
+      g.stroke();
+    }
+    return;
   }
   if (id === 'young_serpent') {
     g.globalAlpha *= 0.85;

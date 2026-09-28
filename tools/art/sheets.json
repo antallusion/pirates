@@ -1,0 +1,144 @@
+{
+ "tattoos_1": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "ids": [
+   "icon.tattoo_swallow",
+   "icon.tattoo_anchor",
+   "icon.tattoo_turtle",
+   "icon.tattoo_golden_dragon",
+   "icon.tattoo_fish",
+   "icon.tattoo_hook",
+   "icon.tattoo_octopus",
+   "icon.tattoo_orca",
+   "icon.tattoo_white_fin",
+   "icon.tattoo_harpoon",
+   "icon.tattoo_shark_tooth",
+   "icon.tattoo_skull",
+   "icon.tattoo_sabres",
+   "icon.tattoo_cannon",
+   "icon.tattoo_compass_rose",
+   "icon.tattoo_coin"
+  ],
+  "aspect": "1:1",
+  "prompt": "Sheet of sixteen square skill icons for a dark Pirate Gothic naval MMORPG, in the painterly style of World of Warcraft ability icons but grim and realistic, laid out in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters. Each tile is its own icon: one faded old sailor's tattoo inked on a patch of weathered, scarred skin that fills the whole tile edge to edge, traditional nautical flash tattoo linework in faded blue-black ink with a little muted red, warm amber lantern light on the skin, the design centred and readable at small size, rich painted detail, the same skin, ink and lighting across all sixteen. The tattoos, left to right and top to bottom: 1. a swallow in flight. 2. a fouled anchor wrapped in rope. 3. a sea turtle swimming. 4. a coiled eastern dragon in muted old-gold ink with blue-black outlines. 5. a leaping fish. 6. a barbed fish hook with a curl of line. 7. an octopus with curling tentacles. 8. a leaping orca. 9. a white orca's tall dorsal fin cutting a wave, the fin left as pale bare skin. 10. a whaling harpoon with a coil of rope. 11. a single large serrated shark's tooth. 12. a grinning skull. 13. two crossed sabres. 14. an old ship's cannon on its carriage. 15. a compass rose. 16. an old worn silver coin. Muted palette: weathered skin tones in amber lantern light, faded blue-black ink, a little muted red and old gold. NO frames, NO borders inside the tiles, NO text, NO letters, NO numbers, NO writing on banners, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours."
+ },
+ "tattoos_2": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "ids": [
+   "icon.tattoo_mermaid",
+   "icon.tattoo_eye",
+   "icon.tattoo_bell",
+   "icon.tattoo_heart",
+   "icon.tattoo_star",
+   "icon.tattoo_map",
+   "icon.tattoo_needle",
+   "icon.tattoo_cat",
+   "icon.tattoo_lantern",
+   "icon.tattoo_bottle",
+   "icon.tattoo_dutchman",
+   "icon.tattoo_kraken",
+   "icon.tattoo_crown",
+   "icon.tattoo_rose",
+   null,
+   null
+  ],
+  "aspect": "1:1",
+  "prompt": "Sheet of sixteen square skill icons for a dark Pirate Gothic naval MMORPG, in the painterly style of World of Warcraft ability icons but grim and realistic, laid out in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters. Each tile is its own icon: one faded old sailor's tattoo inked on a patch of weathered, scarred skin that fills the whole tile edge to edge, traditional nautical flash tattoo linework in faded blue-black ink with a little muted red, warm amber lantern light on the skin, the design centred and readable at small size, rich painted detail, the same skin, ink and lighting across all sixteen. The tattoos, left to right and top to bottom: 1. a mermaid with long hair and a scaled tail. 2. a single wide-open eye. 3. a ship's bell hanging from its bracket. 4. a heart with a blank ribbon banner across it, the banner empty, no letters. 5. a nautical star. 6. an old torn sea map with a dotted route and a cross. 7. an old tattoo needle bound to a bone handle, with a drop of ink. 8. a ship's cat sitting on a coil of rope. 9. a ship's lantern. 10. a message in a corked bottle floating on a wave. 11. the Flying Dutchman ghost ship under tattered sails. 12. a kraken rising from the waves with curling tentacles. 13. a crown. 14. a rose with thorns. 15. a small ship in full sail on a wave. 16. a lighthouse with rays of light. Muted palette: weathered skin tones in amber lantern light, faded blue-black ink, a little muted red and old gold. NO frames, NO borders inside the tiles, NO text, NO letters, NO numbers, NO writing on banners, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours."
+ },
+ "catch_1": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "ids": [
+   "icon.fish_herring",
+   "icon.fish_mackerel",
+   "icon.fish_cod",
+   "icon.fish_crab",
+   "icon.fish_ray",
+   "icon.fish_squid",
+   "icon.fish_moray",
+   "icon.fish_tuna",
+   "icon.fish_lobster",
+   "icon.fish_sunfish",
+   "icon.fish_swordfish",
+   "icon.fish_silver_eel",
+   "icon.fish_lanternfish",
+   "icon.fish_anglerfish",
+   "icon.fish_goldfish",
+   "icon.good_fish"
+  ],
+  "aspect": "1:1",
+  "prompt": "Game inventory icon sheet for a dark Pirate Gothic naval MMORPG, in the painterly style of World of Warcraft item icons but grim and realistic: sixteen separate catches of the sea laid out in a strict 4 by 4 grid, each one centred in its own equal square cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch or overlap. The same slight three-quarter view, the same warm lantern light from the upper left and one consistent painted style across all of them, bold readable silhouettes at small size, rich painted detail. Left to right and top to bottom: 1. a small silver herring with a blue-green back, lying in side profile, head to the left. 2. a mackerel with dark wavy stripes on a green-blue back, lying in side profile, head to the left. 3. a heavy mottled olive-brown cod with a chin barbel, lying in side profile, head to the left. 4. a red-brown shore crab with raised claws, seen from above. 5. a flat brown stingray with a long barbed tail, seen from above. 6. a pale pinkish squid with trailing tentacles, lying head to the left. 7. a coiled mottled green-brown moray eel with an open toothy mouth. 8. a big bluefin tuna with a dark blue back and silver belly, lying in side profile, head to the left. 9. a dark blue-black lobster with big claws, seen from above. 10. a huge round grey ocean sunfish, a flat disc body with tall fins, in side profile. 11. a swordfish with a long flat sword bill and a dark purple-grey back, lying in side profile, head to the left. 12. a slender eel of pale shining silver with a faint ghostly sheen, in a loose S-curve. 13. a small black deep-sea lanternfish with rows of glowing teal light spots, in side profile. 14. a dark deep-sea anglerfish with a huge fanged maw and a small glowing lure, in side profile. 15. a small fish of shining gold with long flowing fins, faintly glowing, in side profile. 16. a few freshly caught cod and herring tied through the gills with a cord. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, tarred oak, with small warm highlights; low saturation. Background: flat solid pure magenta #FF00FF everywhere between and around the objects, no gradient, NO cast shadows on the background, no ground, no water, no table. NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, glossy plastic."
+ },
+ "goods_1": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "ids": [
+   "icon.good_prime_fish",
+   "icon.good_tar",
+   "icon.good_smoked_fish",
+   "icon.good_salted_fish",
+   "icon.good_scrimshaw",
+   "icon.good_baleen",
+   "icon.good_ambergris",
+   "icon.good_orca_tooth",
+   "icon.good_whalebone",
+   "icon.good_narwhal_tusk",
+   "icon.good_shark_skin",
+   "icon.good_serpent_scale",
+   "icon.pet_cat",
+   "icon.pet_parrot",
+   "icon.pet_monkey",
+   "icon.pet_dog"
+  ],
+  "aspect": "1:1",
+  "prompt": "Game inventory icon sheet for a dark Pirate Gothic naval MMORPG, in the painterly style of World of Warcraft item icons but grim and realistic: sixteen separate objects and ship's pets laid out in a strict 4 by 4 grid, each one centred in its own equal square cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch or overlap. The same slight three-quarter view, the same warm lantern light from the upper left and one consistent painted style across all of them, bold readable silhouettes at small size, rich painted detail. Left to right and top to bottom: 1. a large silvery tuna-like catch with a rope through its gills. 2. a small wooden barrel of black pine tar with the lid off, tar dripping down the staves. 3. a bundle of smoked fish hanging from a cord, dark golden-brown and dry. 4. flat dried salt cod stacked in a small wooden crate, crusted with coarse salt. 5. a carved sperm whale tooth with a faint engraved ship scene in black ink lines. 6. a bundle of long dark whale baleen plates with fringed bristles, tied with rope. 7. a rough waxy lump of grey marbled ambergris on a scrap of sailcloth. 8. several large curved orca teeth strung on a leather cord. 9. a heavy curved whale rib bone, weathered, bound with rope for hauling. 10. a long spiral narwhal tusk, pale and ridged, lying diagonally. 11. a rolled piece of rough grey shark skin tied with twine. 12. one huge dark iridescent sea serpent scale, blue-black with a faint cold teal sheen, chipped at the edge. 13. a black ship's cat with yellow eyes sitting on a coil of rope. 14. a scarlet macaw parrot perched on a wooden belaying pin. 15. a small capuchin monkey in a tiny red sailor's cap, clutching a coin. 16. a scruffy grey terrier sea dog sitting on a scrap of deck planking. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, tarred oak, with small warm highlights; low saturation. Background: flat solid pure magenta #FF00FF everywhere between and around the objects, no gradient, NO cast shadows on the background, no ground, no water, no table. NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, glossy plastic."
+ },
+ "beasts_1": {
+  "grid": [
+   8,
+   1
+  ],
+  "mode": "keyed",
+  "px": 768,
+  "square": false,
+  "dir": "monsters",
+  "ids": [
+   "monster.orca",
+   "monster.white_orca",
+   "monster.humpback",
+   "monster.sperm_whale",
+   "monster.narwhal",
+   "monster.shark",
+   "monster.young_serpent",
+   "sight.giant_turtle"
+  ],
+  "aspect": "21:9",
+  "prompt": "Top-down orthographic game sprite sheet for a dark gothic pirate MMO sea map: eight sea creatures in a single row, each seen strictly from directly above, swimming straight up the picture with the head at the top and the tail at the bottom, each in its own equal tall narrow column with wide even gaps of empty background between them so that nothing touches, every whole body in frame from head to tail. Painted realistic style, wet, weathered, heavy, one consistent style and light across all eight. Left to right: 1. a black-and-white orca with white eye patches, pectoral flippers spread. 2. a legendary albino white orca, pale bone-white skin with dark old scars and a broken harpoon shaft in its back. 3. a dark grey humpback whale with very long white pectoral flippers and a knobbly head. 4. a dark grey sperm whale with a huge blunt box-shaped head and wrinkled skin. 5. a mottled grey narwhal with a long spiral tusk pointing straight up. 6. a large grey shark with swept-back pectoral fins and a tall tail fin. 7. a young dark sea serpent, a long scaled body in a gentle S-curve, a finned head at the top. 8. a colossal ancient sea turtle, its huge barnacled shell overgrown with moss and carrying a small grove of palm trees like an islet, four broad flippers. Muted palette: charcoal, graphite, slate grey, bone white, cold blue-grey; low saturation. Background: flat solid pure magenta #FF00FF everywhere, no gradient, NO cast shadow, NO water, NO waves, NO foam, NO ground. NO text, NO letters, NO numbers, NO labels, NO watermark, NO frame. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, side view, perspective."
+ }
+}

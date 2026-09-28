@@ -94,7 +94,7 @@ export function companionCard(state: ClientState): string {
       : `<button class="btn btn-small" data-cmp="craft" data-arg="${h}">${esc(L('make'))} ${money(def.silver)}</button>`;
     return `<div class="cmp-h${on ? ' on' : ''}"><div class="cmp-h-t"><b>${esc(def.name[ru])}${on ? ` <span class="tt-worn">${esc(L('worn'))}</span>` : ''}</b><span class="muted">${esc(def.gives[ru])}</span>${made ? '' : `<span class="cmp-cost">${cost}</span>`}</div>${btn}</div>`;
   }).join('');
-  return `<div class="card cmp-card"><h4 class="card-h">${icon('creature.beast_white_orca', '', 'ico-md') || icon('role_harpooner', '', 'ico-md')}${esc(L('title'))}: ${esc(name)}</h4>
+  return `<div class="card cmp-card"><h4 class="card-h">${icon('tattoo_white_fin', '', 'ico-md') || icon('role_harpooner', '', 'ico-md')}${esc(L('title'))}: ${esc(name)}</h4>
     <div class="cmp-lv"><span>${esc(c.next ? L('level', { n: c.level }) : L('max'))}</span>${c.next ? `${bar('xp', c.xp / c.next)}<span class="muted">${c.xp}/${c.next}</span>` : ''}</div>
     <p class="muted cmp-does">${esc(L('finds', { km, s: calfFindEvery(c.harness) }))}<br>${esc(L('strikes', { s: st.every }))}</p>
     <div class="cmp-name"><input class="field" data-cmp-name maxlength="20" value="${esc(name)}" aria-label="${esc(L('rename'))}"><button class="btn btn-small" data-cmp="name">${esc(L('rename'))}</button></div>

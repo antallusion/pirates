@@ -37,7 +37,13 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
   g.rotate(m.h);
   g.globalAlpha = (submerged ? 0.28 : 1) * (1 - sinkF * 0.85);
   const spr = sprite(cls.sprite);
-  if (spr) {
+  const beast = beastOfClass(m.classId);
+  if (beast) {
+    // A beast under the surface: its dark shadow. Painted or drawn, drawBeast chooses.
+    if (submerged) g.filter = 'brightness(0.22) blur(3px)';
+    drawBeast(g, beast, len, beam, t, m.id);
+    g.filter = 'none';
+  } else if (spr) {
     const imgH = len / spr.extentY;
     const imgW = imgH * (spr.img.naturalWidth / spr.img.naturalHeight);
     animate(g, m.classId, t, m.id, imgW, imgH, spr.cy);
@@ -45,8 +51,6 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
     if (submerged) g.filter = 'brightness(0.22) blur(3px)';
     g.drawImage(spr.img, -imgW * spr.cx, -imgH * spr.cy, imgW, imgH);
     g.filter = 'none';
-  } else if (beastOfClass(m.classId)) {
-    drawBeast(g, beastOfClass(m.classId)!, len, beam, t, m.id);
   } else {
     switch (m.classId) {
       case 'leviathan': leviathan(g, len, beam, t, submerged); break;

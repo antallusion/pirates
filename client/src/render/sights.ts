@@ -5,6 +5,7 @@
 import type { ShoalView, SightView } from '../../../shared/src/protocol.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import { lang } from '../i18n.ts';
+import { sprite } from '../assets.ts';
 
 type G = CanvasRenderingContext2D;
 
@@ -307,6 +308,15 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
     }
     case 'turtle': {
       g.rotate(Math.sin(t * 0.3) * 0.1);
+      // The painted turtle (docs/12 P11), head toward the bow of its drift (+x); the drawn one is its stand-in.
+      const spr = sprite('sight.giant_turtle');
+      if (spr) {
+        const len = 64 * k;
+        const ih = len / spr.extentY, iw = ih * (spr.img.naturalWidth / spr.img.naturalHeight);
+        g.rotate(Math.PI / 2);
+        g.drawImage(spr.img, -iw * spr.cx, -ih * spr.cy, iw, ih);
+        break;
+      }
       g.fillStyle = '#4a5a34';
       g.beginPath();
       g.ellipse(0, 0, 26 * k, 18 * k, 0, 0, Math.PI * 2);
