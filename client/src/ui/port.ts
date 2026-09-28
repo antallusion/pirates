@@ -42,6 +42,7 @@ import { serverText } from '../lang/server.ts';
 import { sendService, serviceCard } from './marque.ts';
 import { captivesCard } from './turncoats.ts';
 import { holidayCard } from './holidays.ts';
+import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -111,6 +112,7 @@ export class PortScreen {
       this.render(root, state);
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
+    bindBazaar(root);
     root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
     root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-build]').forEach((el) => (el.onchange = () => {
       const k = el.dataset.build!;
@@ -180,6 +182,9 @@ export class PortScreen {
       case 'oath':
         void ask(L('confirm.oath')).then((ok) => ok && this.send({ t: 'oath', oath: d.oath as 'code' }));
         return;
+      case 'bz':
+        // The Floating Bazaar (docs/12 P10 #19).
+        return bazaarAct(d, root, this.send);
       case 'service':
         // Letters of marque (docs/12 P10 #15): leaving the service is asked first.
         if (d.sact === 'resign') void ask(L('confirm.resign')).then((ok) => ok && sendService(this.send, 'resign'));
@@ -338,8 +343,8 @@ export class PortScreen {
       ? `<h3 class="title-sm" style="font-size:20px;margin-top:16px">${esc(L('market.intelTitle'))}</h3><table class="grid"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.port'))}</th><th>${esc(L('th.sellsFor'))}</th><th>${esc(L('th.age'))}</th></tr>${view.priceIntel.slice(0, 12).map((i) => `<tr><td>${icon(`good_${i.good}`)}${esc(GOODS[i.good].name)}</td><td>${esc(placeName(i.name))}</td><td>${money(i.sell)}</td><td class="muted">${esc(L('unit.min', { n: Math.round(i.ageSec / 60) }))}</td></tr>`).join('')}</table>`
       : '';
     const ammo = AMMO_IDS.map((a) => `<div class="card shop-row">${icon(`ammo_${a}`, '', 'shop-ico')}
-      <div class="shop-text"><b>${esc(AMMO[a].name)}</b><span class="muted">${esc(AMMO[a].description)}</span><span class="shop-have">${esc(L('market.inHold', { n: self.ammo[a], price: view.ammoPrices[a] }))}</span></div>
-      <div class="shop-buy">${[20, 50].map((n) => `<button class="btn btn-small" data-act="ammo" data-ammo="${a}" data-n="${n}"><b>+${n}</b>${money(Math.ceil(view.ammoPrices[a] * n))}</button>`).join('')}</div></div>`).join('');
+      <div class="shop-text"><b>${esc(AMMO[a].name)}</b><span class="muted">${esc(AMMO[a].description)}</span><span class="shop-have">${esc(view.ammoPrices[a] > 0 ? L('market.inHold', { n: self.ammo[a], price: view.ammoPrices[a] }) : L('market.inHoldOnly', { n: self.ammo[a] }))}</span></div>
+      ${view.ammoPrices[a] > 0 ? `<div class="shop-buy">${[20, 50].map((n) => `<button class="btn btn-small" data-act="ammo" data-ammo="${a}" data-n="${n}"><b>+${n}</b>${money(Math.ceil(view.ammoPrices[a] * n))}</button>`).join('')}</div>` : ''}</div>`).join('');
     const portDef = state.ports.find((p) => p.id === view.portId)!;
     return `<div class="row" style="margin-bottom:8px"><span class="muted">${esc(L('market.hint'))}
       ${view.duty ? L('market.duty', { pct: Math.round(view.duty * 100) }) : ''} ${portDef.blackMarket ? esc(L('market.blackMarket')) : ''}</span>
@@ -348,7 +353,7 @@ export class PortScreen {
       ${view.fence !== null ? `<div class="card" style="margin-top:10px"><h4>${esc(L('fence.title'))}</h4><p class="muted">${esc(L('fence.text', { pct: Math.round(view.fence * 100) }))}</p>
         ${(Object.keys(self.cargo) as (keyof typeof GOODS)[]).filter((g) => GOODS[g].contraband && (self.cargo[g] ?? 0) >= 1).map((g) => `<button class="btn btn-small" data-act="fence" data-good="${g}">${esc(L('fence.sell', { n: Math.floor(self.cargo[g] ?? 0), good: GOODS[g].name }))}</button>`).join(' ') || `<span class="muted">${esc(L('fence.nothing'))}</span>`}</div>` : ''}
       <h3 class="title-sm" style="font-size:20px;margin-top:16px">${esc(L('chandlery.title'))}</h3>
-${ammo}${intel}`;
+${ammo}${bazaarCard(state, view)}${intel}`;
   }
 
   private shipyard(view: PortView, state: ClientState): string {

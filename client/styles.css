@@ -2097,6 +2097,26 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 #hud-storm .st-bar { height: 6px; margin-top: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
 #hud-storm .st-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6fb4ff, #e8f4ff); }
 #hud-storm .st-charge { font: 600 12px var(--sans); color: #b8d4f0; margin-top: 2px; font-variant-numeric: tabular-nums; }
+/* The Floating Bazaar (docs/12 P10 #19). */
+.bz-card { margin-top: 12px; }
+.bz-card .bz-stall { border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 0 4px; }
+.bz-card .bz-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.bz-card .bz-head b { font-family: var(--serif); font-size: 15px; color: #f0e6cc; min-width: 0; }
+.bz-card .bz-head .muted { white-space: nowrap; font-size: 12px; }
+.bz-card .bz-line, .bz-card .bz-item > summary { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.bz-card .bz-item > summary { cursor: pointer; list-style: none; }
+.bz-card .bz-item > summary::-webkit-details-marker { display: none; }
+.bz-card .bz-item > :not(summary) { padding: 4px 0 8px 28px; }
+.bz-card .bz-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 20px; }
+.bz-card .bz-price { white-space: nowrap; font-variant-numeric: tabular-nums; line-height: 20px; display: inline-flex; align-items: center; gap: 4px; }
+.bz-card .bz-buy { display: flex; gap: 4px; }
+.bz-card .bz-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.bz-card .bz-form .giver-h { flex: 1 1 100%; margin: 0; }
+.bz-card .bz-form select { flex: 1 1 180px; min-width: 0; }
+.bz-card .bz-form label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.bz-card .bz-form input.field { width: 84px; }
+.bz-card .bz-foot { margin-top: 8px; }
+.bz-card .bz-else { margin: 6px 0; }
 /* The sea's holidays (docs/12 P10 #18). */
 #hud-holiday { pointer-events: none; display: flex; align-items: center; gap: 6px; padding: 4px 9px; max-width: 320px; border-color: rgba(232,196,106,0.45); }
 #hud-holiday.hidden { display: none; }

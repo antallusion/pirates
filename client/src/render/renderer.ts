@@ -37,6 +37,7 @@ import { FACTION_SIGN } from './relation.ts';
 import { buildRelief } from './terrain.ts';
 import type { Palette } from './terrain.ts';
 import { dict, lang } from '../i18n.ts';
+import { personName } from '../lang/names.ts';
 import { dec1 } from '../ui/dom.ts';
 import { questPointer, trackedQuest } from '../ui/track.ts';
 import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus } from '../../../shared/src/data/gunnery.ts';
@@ -377,6 +378,8 @@ export class Renderer {
       });
     }
     this.berth(ships, state);
+    const stalls = this.stallShadows(state);
+    ships.push(...stalls.map((x) => x.ship));
     for (const s of ships) this.updateWake(s, dt);
     this.drawWakes();
     this.drawLoot(state);
@@ -395,6 +398,7 @@ export class Renderer {
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, false); // no pulsing zones when motion is reduced
     this.drawCompanions(state, ships);
     for (const s of ships) this.drawShip(s, state);
+    this.drawStallSigns(stalls);
     this.drawDeckPets(state, ships);
     this.drawTethers(state, ships);
     this.drawBalls();
@@ -1339,6 +1343,59 @@ export class Renderer {
         s.h = lay.ang + Math.PI / 2;
       });
     }
+  }
+
+  /** The Floating Bazaar's shadows (docs/12 P10 #19): a ghost of each stall's ship at its port's anchorage, a row
+   *  out from the ships in port, with its signboard. */
+  private stallShadows(state: ClientState): { ship: DrawShip; name: string }[] {
+    const out: { ship: DrawShip; name: string }[] = [];
+    const byPort = new Map<string, typeof state.bazaarShadows>();
+    for (const sh of state.bazaarShadows) {
+      let list = byPort.get(sh.port);
+      if (!list) byPort.set(sh.port, (list = []));
+      list.push(sh);
+    }
+    for (const [id, list] of byPort) {
+      const lay = this.portLayout.get(id);
+      const p = state.ports.find((q) => q.id === id);
+      if (!lay || !p) continue;
+      const ax = Math.cos(lay.ang), ay = Math.sin(lay.ang), sx = -Math.sin(lay.ang), sy = Math.cos(lay.ang);
+      list.forEach((sh, i) => {
+        const row = 1 + Math.floor(i / 5), col = [0, 1, -1, 2, -2][i % 5];
+        const along = col * (Math.max(SHIP_CLASSES[sh.classId].length, 30) + 14);
+        out.push({
+          name: sh.name,
+          ship: { id: -1_000_000 - sh.owner, x: p.x + ax * along + sx * row * 38, y: p.y + ay * along + sy * row * 38, h: lay.ang + Math.PI / 2, spd: 0, sail: 0, hull: 1, sails: 1, flags: SF.HIDDEN, classId: sh.classId, info: null, own: false, sinkT: 0 },
+        });
+      });
+    }
+    return out;
+  }
+
+  /** A stall's signboard over its shadow: dark wood, a brass rim, the keeper's name. */
+  private drawStallSigns(stalls: { ship: DrawShip; name: string }[]): void {
+    if (!stalls.length) return;
+    const g = this.g;
+    const sign = lang() === 'ru' ? 'Лавка' : 'Stall';
+    g.save();
+    g.font = '600 11px Inter, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    for (const { ship, name } of stalls) {
+      const x = this.sx(ship.x), y = this.sy(ship.y) - SHIP_CLASSES[ship.classId].beam * this.zoom - 16;
+      if (x < -80 || y < -40 || x > this.w + 80 || y > this.h + 40) continue;
+      const text = `${sign} · ${personName(name)}`;
+      const w = g.measureText(text).width + 16, h = 18;
+      g.fillStyle = 'rgba(38,26,16,0.92)';
+      roundRect(g, x - w / 2, y - h / 2, w, h, 3);
+      g.fill();
+      g.strokeStyle = '#a88440';
+      g.lineWidth = 1;
+      g.stroke();
+      g.fillStyle = '#f0d9b0';
+      g.fillText(text, x, y + 0.5);
+    }
+    g.restore();
   }
 
   // ------------------------------------------------------------------ ships

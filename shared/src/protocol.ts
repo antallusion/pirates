@@ -167,6 +167,12 @@ export type ClientMsg =
   /** The Descent into the Abyss (docs/12 P10 #17). */
   | { t: 'descent'; action: 'choose'; pick: BoonId }
   | { t: 'descent'; action: 'leave' }
+  /** The Floating Bazaar (docs/12 P10 #19). */
+  | { t: 'bazaar'; action: 'open' | 'close' }
+  | { t: 'bazaar'; action: 'add_good'; good: GoodId; qty: number; price: number }
+  | { t: 'bazaar'; action: 'add_item'; uid: number; price: number }
+  | { t: 'bazaar'; action: 'remove'; kind: 'good' | 'item'; index: number }
+  | { t: 'bazaar'; action: 'buy'; owner: number; kind: 'good' | 'item'; index: number; qty: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   /** The Storm-Chaser set forged of hearts of the storm (docs/12 P10 #14). */
@@ -643,6 +649,8 @@ export interface PortView {
   oathOffer: 'code' | 'marque' | null;
   /** The service of this port's flag (docs/12 P10 #15). */
   service?: ServicePortView;
+  /** The Floating Bazaar here (docs/12 P10 #19): the others' stalls, hers, and where hers stands if elsewhere. */
+  bazaar?: { stalls: BazaarStallView[]; mine: BazaarStallView | null; elsewhere: { port: string; sold: number } | null };
   yard: { woods: WoodId[]; figurehead: FigureheadId | null; plans: boolean; master: boolean };
   shipyard: {
     tier: number;
@@ -1082,6 +1090,7 @@ export type ServerMsg =
   | { t: 'storm'; view: StormView | null }
   | { t: 'descent'; view: DescentView | null }
   | { t: 'holiday'; view: HolidayView }
+  | { t: 'bazaar'; shadows: BazaarShadow[] }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1197,6 +1206,28 @@ export interface ServicePortView {
   pay: number;
   payReady: boolean;
   wares: { item: Item; price: number; sold: boolean }[];
+}
+
+/** A stall of the Floating Bazaar (docs/12 P10 #19). */
+export interface BazaarStallView {
+  owner: number;
+  name: string;
+  ship: string;
+  classId: ShipClassId;
+  goods: { good: GoodId; qty: number; price: number }[];
+  items: { item: Item; price: number }[];
+  sold: number;
+  daysLeft: number;
+}
+
+/** A stall's shadow ship at a port's anchorage, as the sea near sees it. */
+export interface BazaarShadow {
+  owner: number;
+  port: string;
+  name: string;
+  ship: string;
+  classId: ShipClassId;
+  look: string | null;
 }
 
 /** The sea's holiday (docs/12 P10 #18): the one on (or the next), the tournament's top five, her points, kegs near. */

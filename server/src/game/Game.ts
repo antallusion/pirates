@@ -168,6 +168,7 @@ import type { Front, RegionWeather } from './weather.ts';
 import { captiveLoyalty, claimSkippers, sanitizeCaptive, turnCaptive, turnCost } from './turncoats.ts';
 import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, stepDescentSea } from './descent.ts';
 import { holidayGhostSunk, stepHolidays } from './holidays.ts';
+import { addGood, addItem, buyAtStall, claimBazaar, closeStall, openStall, removeLine, sendBazaarShadows, stepBazaar } from './bazaar.ts';
 
 export interface Loot {
   id: number;
@@ -744,6 +745,8 @@ export class Game {
     if (Math.floor(this.now) % 2 === 0) stepService(this); // letters of marque: orders, sunsets, the law's eye (docs/12 P10 #15)
     stepDescent(this); // the Descent into the Abyss (docs/12 P10 #17)
     if (Math.floor(this.now) % 5 === 0) stepHolidays(this); // the sea's holidays (docs/12 P10 #18)
+    if (Math.floor(this.now) % 60 === 0) stepBazaar(this); // the Floating Bazaar's takings and old stalls (docs/12 P10 #19)
+    if (Math.floor(this.now) % 10 === 0) for (const s of this.sessions) sendBazaarShadows(this, s);
     if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
     if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
@@ -2578,6 +2581,19 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'bazaar':
+        // The Floating Bazaar (docs/12 P10 #19): all of it in port.
+        return portAction((pt) => {
+          switch (msg.action) {
+            case 'open': return openStall(this, s, pt);
+            case 'close': return closeStall(this, s, pt);
+            case 'add_good': return addGood(this, s, pt, msg.good, Number(msg.qty), Number(msg.price));
+            case 'add_item': return addItem(this, s, pt, Math.trunc(Number(msg.uid)), Number(msg.price));
+            case 'remove': return removeLine(this, s, pt, msg.kind === 'item' ? 'item' : 'good', Math.trunc(Number(msg.index)));
+            case 'buy': return buyAtStall(this, s, pt, Math.trunc(Number(msg.owner)), msg.kind === 'item' ? 'item' : 'good', Math.trunc(Number(msg.index)), Number(msg.qty));
+            default: return 'Unknown order';
+          }
+        });
       case 'descent':
         return err(msg.action === 'choose' ? chooseBoon(this, s, msg.pick) : leaveDescent(this, s));
       case 'service':
@@ -3208,6 +3224,7 @@ export class Game {
     }
     if (s.profile) claimBerths(this, s); // the caravans' hulls that came home while she was away (docs/12 P8)
     if (s.profile) claimSkippers(this, s); // and their skippers (docs/12 P10 #16)
+    if (s.profile) claimBazaar(this, s); // and what a closed stall left (docs/12 P10 #19)
     this.sendTo(s, { t: 'welcome', v: PROTOCOL_VERSION, token: auth.token, accountId: s.accountId, name: s.name, hasCaptain: !!s.profile, worldSize: WORLD_SIZE, time: this.now });
     if (s.profile) this.sendInit(s);
   }

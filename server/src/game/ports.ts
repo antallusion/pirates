@@ -58,6 +58,7 @@ import { bankView, forwardOffers, forwardView, hasExchange, insuranceQuotes, ord
 import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
 import { servicePortView } from './marque.ts';
 import { holidaySale, leagueDayMods, petOffers } from './holidays.ts';
+import { bazaarPortView } from './bazaar.ts';
 
 export function hasLicence(p: Profile, faction: string, now: number): boolean {
   // A licence is void for anyone the law is hunting.
@@ -162,6 +163,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     },
     oathOffer: p.oath ? null : port.id === 'cinderhold' ? 'code' : null,
     service: servicePortView(game, s, port),
+    bazaar: bazaarPortView(game, s, port),
     escorts: ESCORT_OFFERS.map((o) => ({ classId: o.classId, price: o.price, upkeep: o.upkeep, available: port.shipyardTier >= o.yard })),
     shipyard: {
       tier,
