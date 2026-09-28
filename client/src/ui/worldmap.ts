@@ -260,6 +260,20 @@ export class WorldMap {
         g.fillText(L('heatLabel', { n: heat }), lx, ty(r.center[1]) + Math.round(Math.max(14, 18 * Math.sqrt(this.zoom))));
       }
     }
+    // One's own caravans (docs/12 P8): the leg under way, dashed, and where she is.
+    for (const cv of state.caravans) {
+      if (cv.path.length > 1) {
+        g.setLineDash([6, 5]);
+        g.strokeStyle = cv.attack !== null ? 'rgba(224,90,70,0.85)' : 'rgba(111,212,111,0.7)';
+        g.lineWidth = 1.5;
+        g.beginPath();
+        cv.path.forEach(([px, py], i) => (i ? g.lineTo(tx(px), ty(py)) : g.moveTo(tx(px), ty(py))));
+        g.stroke();
+        g.setLineDash([]);
+      }
+      g.fillStyle = cv.attack !== null ? '#e05a46' : '#6fd46f';
+      g.fillRect(tx(cv.x) - 4, ty(cv.y) - 4, 8, 8);
+    }
     // Charted islands.
     for (const id of state.discovered) {
       const is = state.islands.get(id);

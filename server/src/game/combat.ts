@@ -397,7 +397,7 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   if (pv === 'duel_ok') return null;
   if (pv) return pv;
   if (b.protectedUntil > game.now) return 'protected';
-  if (a.isPlayer && b.isPlayer) {
+  if (a.isPlayer && (b.isPlayer || b.caravanId)) {
     const safety = REGIONS[b.region].safety;
     if (safety === 'safe') return 'Safe waters: no PvP here.';
   }
@@ -723,6 +723,9 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
     onPlayerAttack(game, a, b);
     // Fair game (the Black Flag, Wanted 2+, a price on the head for a licensed hunter) costs nothing.
     if (!legalTarget(game, a, b)) infamy = 18 * zoneMul * crueltyMul(game, a, b);
+  } else if (b.caravanId) {
+    // A captain's caravan (docs/12 P8): a crime in contested water, fair game in lawless.
+    infamy = REGIONS[b.region].safety === 'lawless' ? 0 : 14 * zoneMul;
   } else if (b.faction !== 'player' && FACTIONS[b.faction].lawful) {
     infamy = (b.npcRole === 'patrol' ? 26 : 14) * zoneMul;
     game.adjustRep(a, b.faction, -8);

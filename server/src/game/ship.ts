@@ -228,6 +228,8 @@ export class ShipEntity {
   escortOf?: number;
   originPort?: string;
   guardedUntil = 0;
+  /** One of a captain's own caravans (docs/12 P8). */
+  caravanId?: string;
   /** The captain's own gear (docs/12 P1; the ship's is in her loadout). */
   worn: Item[] = [];
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */

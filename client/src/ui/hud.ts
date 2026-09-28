@@ -552,6 +552,15 @@ export class Hud {
         if (Math.max(Math.abs(sx - W / 2), Math.abs(sy - H / 2)) > W / 2 - 6) continue;
         skull(sx, sy, '#e05a46', 11);
       }
+      // One's own caravans (docs/12 P8): green squares, red while pirates are on them; at the rim when far.
+      for (const cv of state.caravans) {
+        const dx = cv.x - own.x, dy = cv.y - own.y;
+        const col = cv.attack !== null ? '#e05a46' : '#6fd46f';
+        if (Math.hypot(dx, dy) * k < W / 2 - 8) {
+          g.fillStyle = col;
+          g.fillRect(tx(cv.x) - 3, ty(cv.y) - 3, 6, 6);
+        } else if (cv.attack !== null) rim(Math.atan2(dx, -dy), col);
+      }
       // The tipped merchants at sea (docs/12 P6): gold diamonds, or at the rim.
       for (const mk of state.raid?.marks ?? []) {
         const dx = mk.x - own.x, dy = mk.y - own.y;

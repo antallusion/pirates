@@ -176,7 +176,7 @@ test('League Patron: the Ledger serves in every lawful port with a larger credit
   assert.ok(view.bank.limit >= 500 * p.level);
 });
 
-test('Counting House: caravans sail under your flag and pay a share of their margins', () => {
+test('Counting House (docs/12 P8): no temporary fluyts any more — one more caravan place, and the hold −40%', () => {
   const { game } = makeGame();
   const { s, p, ship } = captain(game, 'Tycoon', { trd_counting_house: 1 });
   p.regionsSeen.push(...game.world.ports.slice(0, 12).map((x) => `visited:${x.id}`));
@@ -185,29 +185,7 @@ test('Counting House: caravans sail under your flag and pay a share of their mar
   ship.state.y = 80000;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
   steps(game, 20 * 25);
-  const caravans = caravansOf(game, s.accountId);
-  assert.equal(caravans.length, 2, 'two caravans');
+  assert.equal(caravansOf(game, s.accountId).length, 0, 'no fluyts of its own');
   assert.ok(ship.stats.holdVolume < ship.cls.holdVolume * 0.7, 'hold −40%');
-  // A caravan sells where the good is dear: the owner gets 35% of the margin.
-  const car = caravans[0];
-  let paid = false;
-  for (const from of game.world.ports.slice(0, 12)) {
-    for (const to of game.world.ports.slice(0, 12)) {
-      const a = game.markets.get(from.id)!.goods.sugar, b = game.markets.get(to.id)!.goods.sugar;
-      if (!a || !b || midPrice('sugar', b) <= midPrice('sugar', a) + 5) continue;
-      const g0 = p.gold;
-      caravanSold(game, car, from, to, 'sugar', 20);
-      assert.ok(p.gold > g0, 'caravan share paid');
-      paid = true;
-      break;
-    }
-    if (paid) break;
-  }
-  assert.ok(paid, 'found a profitable leg');
-  // Losing a caravan costs League standing and a refit.
-  const rep = p.reputation.league ?? 0;
-  car.hull = 0;
-  game.beginSinking(car);
-  assert.ok((p.reputation.league ?? 0) < rep);
-  assert.ok(p.trade.caravanReadyAt > game.now);
+  assert.ok(ship.hasFlag('counting_house'));
 });

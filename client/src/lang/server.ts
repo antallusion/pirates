@@ -8,6 +8,7 @@ import { beastPatterns } from '../../../shared/src/data/beasts.ts';
 import { piratePatterns } from '../../../shared/src/data/pirates.ts';
 import { raidPatterns } from '../../../shared/src/data/raiding.ts';
 import { estatePatterns } from '../../../shared/src/data/estate.ts';
+import { caravanPatterns } from '../../../shared/src/data/caravans.ts';
 import { happeningPatterns } from '../../../shared/src/data/happenings.ts';
 import { encounterPatterns } from '../../../shared/src/data/encounters.ts';
 import { gearPatterns, itemNamePatterns } from '../../../shared/src/data/items.ts';
@@ -27,7 +28,7 @@ import { questTitlePatterns } from '../../../shared/src/data/questtitles.ts';
 import { taskPatterns } from '../../../shared/src/data/worldtasks.ts';
 
 // The generated jobs' templates carry their Russian twins (shared/src/data/questgen.ts).
-const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...Object.fromEntries(commonPatterns()), ...Object.fromEntries(guildGoalPatterns()), ...Object.fromEntries(elitePatterns()), ...Object.fromEntries(questTitlePatterns()), ...Object.fromEntries(taskPatterns()), ...Object.fromEntries(levelPatterns()), ...Object.fromEntries(gearPatterns()), ...Object.fromEntries(encounterPatterns()), ...Object.fromEntries(happeningPatterns()), ...Object.fromEntries(fishingPatterns()), ...Object.fromEntries(beastPatterns()), ...Object.fromEntries(piratePatterns()), ...Object.fromEntries(raidPatterns()), ...Object.fromEntries(estatePatterns()), ...Object.fromEntries(itemNamePatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
+const TABLE: Record<string, string> = { ...Object.fromEntries(questPatterns()), ...Object.fromEntries(arcPatterns()), ...Object.fromEntries(dailyPatterns()), ...Object.fromEntries(commonPatterns()), ...Object.fromEntries(guildGoalPatterns()), ...Object.fromEntries(elitePatterns()), ...Object.fromEntries(questTitlePatterns()), ...Object.fromEntries(taskPatterns()), ...Object.fromEntries(levelPatterns()), ...Object.fromEntries(gearPatterns()), ...Object.fromEntries(encounterPatterns()), ...Object.fromEntries(happeningPatterns()), ...Object.fromEntries(fishingPatterns()), ...Object.fromEntries(beastPatterns()), ...Object.fromEntries(piratePatterns()), ...Object.fromEntries(raidPatterns()), ...Object.fromEntries(estatePatterns()), ...Object.fromEntries(caravanPatterns()), ...Object.fromEntries(itemNamePatterns()), ...SERVER_RU_A, ...SERVER_RU_B };
 /** The whole English → Russian table of the server's lines: the static ones and every pattern generator's. */
 export function serverTable(): Record<string, string> {
   return TABLE;

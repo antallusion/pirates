@@ -203,10 +203,12 @@ export function tendCaravans(game: Game, s: PlayerSession, plan: (ship: ShipEnti
   const ship = s.ship!;
   const p = s.profile!;
   const own = caravansOf(game, s.accountId);
-  if (!ship.hasFlag('counting_house')) {
+  // The keystone no longer fits out fluyts of its own (docs/12 P8): a caravan's place and its profit instead.
+  if (own.length || !ship.hasFlag('counting_house')) {
     for (const c of own) game.removeShip(c.id);
     return;
   }
+  return;
   if (own.length >= CARAVANS || p.trade.caravanReadyAt > game.now) return;
   const visited = p.regionsSeen.filter((r) => r.startsWith('visited:')).map((r) => game.portById(r.slice(8))).filter((x): x is Port => !!x);
   if (visited.length < 2) return;

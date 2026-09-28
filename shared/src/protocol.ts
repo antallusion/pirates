@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { CaravanTask, OnAttack } from './data/caravans.ts';
 import type { OutpostKind } from './data/estate.ts';
 import type { BeastId } from './data/beasts.ts';
 import type { FishId, FishMethod } from './data/fishing.ts';
@@ -119,6 +120,9 @@ export type ClientMsg =
   | { t: 'estate'; action: 'found'; kind: OutpostKind }
   | { t: 'estate'; action: 'outpost'; id: string; order: 'upgrade' | 'workers' | 'guard' | 'haul' | 'renew' | 'auto' | 'rob'; arg?: string }
   | { t: 'estate'; action: 'visit'; island: number }
+  /** Caravans (docs/12 P8). */
+  | { t: 'caravan'; action: 'launch'; ships: number[]; task: CaravanTask; outposts?: string[]; port?: string; port2?: string; goods?: GoodId[]; minPrice?: number; escorts: number; insured: boolean; orders: { repeat: boolean; avoidLawless: boolean; nightInPort: boolean; onAttack: OnAttack } }
+  | { t: 'caravan'; action: 'recall' | 'repeat'; id: string }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -995,6 +999,7 @@ export type ServerMsg =
   | { t: 'appraisal'; view: AppraisalView }
   | { t: 'raid'; view: RaidView }
   | { t: 'estate'; view: EstateView }
+  | { t: 'caravans'; list: CaravanView[]; slots: number }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
   | { t: 'encounter'; view: EncounterView | null }
@@ -1081,6 +1086,32 @@ export interface RefitView {
 }
 
 /** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+/** A caravan as its owner sees it (docs/12 P8). */
+export interface CaravanView {
+  id: string;
+  name: string;
+  task: CaravanTask;
+  skipper: string;
+  ships: ShipClassId[];
+  escorts: number;
+  level: number;
+  from: string;
+  to: string;
+  progress: number;
+  /** Seconds to home. */
+  eta: number;
+  x: number;
+  y: number;
+  path: [number, number][];
+  cargo: { good: GoodId; n: number }[];
+  /** Seconds left to come to her rescue, while pirates are on her. */
+  attack: number | null;
+  log: string[];
+  repeat: boolean;
+  insured: boolean;
+  onAttack: OnAttack;
+}
+
 /** An outpost as its owner (or a would-be robber) sees it (docs/12 P7). */
 export interface OutpostView {
   id: string;

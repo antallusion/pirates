@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
@@ -711,6 +712,7 @@ export class Game {
     stepWanted(this); // the named pirates, their trail, their lairs; the hunters (docs/12 P5)
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
     if (Math.floor(this.now) % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
+    stepCaravans(this); // one's own caravans at sea (docs/12 P8)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
     settleCrimes(this);
@@ -1549,6 +1551,7 @@ export class Game {
     }
     if (ship.bossOf && bossSinking(this, ship)) return; // the deep keeps its own dead
     if (ship.npcRole === 'beast' && beastSlain(this, ship)) return; // a beast leaves a carcass to flense, not a wreck
+    if (ship.caravanId) caravanShipLost(this, ship); // a captain's caravan hull and her share of the cargo (docs/12 P8)
     recordEcho(this, ship); // what the Abyss takes, it sends back
     if (duelIntercept(this, ship)) return; // nobody sinks in a duel: she strikes
     if (ship.caravanOf !== null) caravanLost(this, ship);
@@ -2503,10 +2506,20 @@ export class Game {
         return;
       case 'encounter':
         return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
+      case 'caravan': {
+        let e: string | null;
+        if (msg.action === 'launch') e = launchCaravan(this, s, msg);
+        else e = caravanOrder(this, s, String(msg.id), msg.action);
+        err(e);
+        sendCaravans(this, s, true);
+        this.pushSelf(s, true);
+        return;
+      }
       case 'estate': {
         const done = (e: string | null) => {
           err(e);
           this.sendTo(s, { t: 'estate', view: estateView(this, s) });
+          sendCaravans(this, s, true);
           this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
           this.pushSelf(s, true);
         };
@@ -3063,6 +3076,7 @@ export class Game {
         this.spawnPlayerShip(s, row.x, row.y, row.heading);
       }
     }
+    if (s.profile) claimBerths(this, s); // the caravans' hulls that came home while she was away (docs/12 P8)
     this.sendTo(s, { t: 'welcome', v: PROTOCOL_VERSION, token: auth.token, accountId: s.accountId, name: s.name, hasCaptain: !!s.profile, worldSize: WORLD_SIZE, time: this.now });
     if (s.profile) this.sendInit(s);
   }

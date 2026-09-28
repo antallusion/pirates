@@ -2,6 +2,9 @@
 // packet boat, and — in port — the captains' market board (and Tidewrack's trophy auction).
 // Plus the barter table, opened when two captains agree to trade.
 
+import { levelRange } from '../../../shared/src/data/shiplevel.ts';
+import { CARAVAN_TASKS, ON_ATTACK, TASK_NAMES, escortCost } from '../../../shared/src/data/caravans.ts';
+import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts';
 import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS } from '../../../shared/src/data/estate.ts';
 import type { Guard, OutpostKind, Profession } from '../../../shared/src/data/estate.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
@@ -72,7 +75,10 @@ export class CompanyScreen {
     this.send({ t: 'friend', action: 'list' });
   }
 
+  private root: HTMLElement | null = null;
+
   render(root: HTMLElement, state: ClientState): void {
+    this.root = root;
     const docked = state.self?.dockedAt ?? null;
     if (this.tab !== 'letters') this.mailTo = '';
     if (this.tab === 'market' && !docked) this.tab = 'group';
@@ -342,7 +348,7 @@ export class CompanyScreen {
       ${x.phase === 'choose' && x.attacking ? `<div class="row" style="gap:6px"><button class="btn btn-small btn-primary" data-sgc="capture" data-isl="${x.island}">${L('sg_capture')}</button><button class="btn btn-small" data-sgc="plunder" data-isl="${x.island}">${L('sg_plunder')}</button><button class="btn btn-small btn-danger" data-sgc="raze" data-isl="${x.island}">${L('sg_raze')}</button></div>` : ''}
       ${x.phase === 'fortify' && !x.attacking ? `<button class="btn btn-small" data-fortify="${x.island}">${L('sg_rebuild')}</button>` : ''}
       ${x.notes.map((n) => `<p class="muted">${esc(sv(n))}</p>`).join('')}</div>`;
-    body.innerHTML = `${estateHtml(state)}<div class="cols"><div>
+    body.innerHTML = `${estateHtml(state)}${this.caravansHtml(state)}<div class="cols"><div>
       ${hs.sieges.map(siege).join('')}
       <h3 class="title-sm" style="font-size:20px">${L('isl_yours')}</h3>
       ${hs.mine.map(holding).join('') || `<p class="muted">${L('isl_none')}</p>`}
@@ -363,6 +369,7 @@ export class CompanyScreen {
       this.send({ t: 'estate', action: a as 'level' });
     }));
     body.querySelectorAll<HTMLSelectElement>('[data-assign]').forEach((el) => (el.onchange = () => this.send({ t: 'estate', action: 'assign', id: Number(el.dataset.assign), where: el.value })));
+    this.bindCaravans(body, state);
     body.querySelectorAll<HTMLSelectElement>('[data-guard]').forEach((el) => (el.onchange = () => this.send({ t: 'estate', action: 'outpost', id: el.dataset.guard!, order: 'guard', arg: el.value })));
     body.querySelectorAll<HTMLElement>('[data-siege]').forEach((el) => (el.onclick = () => void ask(L('isl_confirm_siege')).then((ok) => ok && this.send({ t: 'isle', action: 'siege', island: Number(el.dataset.siege) }))));
     body.querySelectorAll<HTMLElement>('[data-sgc]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'siege_choice', island: Number(el.dataset.isl), choice: el.dataset.sgc as 'capture' })));
@@ -385,6 +392,108 @@ export class CompanyScreen {
     }));
     body.querySelectorAll<HTMLElement>('[data-ylaunch]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'yard_launch', island: Number(el.dataset.ylaunch), id: el.dataset.id! })));
     body.querySelectorAll<HTMLElement>('[data-yberth]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'yard_berth', island: Number(el.dataset.yberth), index: Number(el.dataset.index) })));
+  }
+
+  /** Caravans (docs/12 P8): those at sea, and a new one in four steps (for a phone as for a desk). */
+  private wiz: { step: number; ships: Set<number>; task: CaravanTask; outposts: Set<string>; port: string; port2: string; goods: Set<GoodId>; minPrice: number; escorts: number; insured: boolean; repeat: boolean; avoid: boolean; night: boolean; onAttack: OnAttack } | null = null;
+
+  private caravansHtml(state: ClientState): string {
+    const e = state.estate;
+    if (!e?.isle) return '';
+    const ru = lang() === 'ru' ? 1 : 0;
+    const rows = state.caravans.map((c) => {
+      const cargo = c.cargo.map((x) => `${x.n} ${GOODS[x.good].name.toLowerCase()}`).join(', ') || L('cv_empty');
+      return `<div class="cv-row${c.attack !== null ? ' cv-alarm' : ''}"><div class="cv-head"><b>${esc(serverText(c.name))}</b> <span class="muted">⚓${c.level} · ${esc(TASK_NAMES[c.task][ru])}</span></div>
+        <div class="muted">${esc(L('cv_leg', { from: placeName(c.from), to: placeName(c.to), m: Math.ceil(c.eta / 60) }))}</div>
+        <div class="cm-bar"><i style="width:${Math.round(c.progress * 100)}%"></i></div>
+        <div class="muted">${esc(L('cv_ships', { n: c.ships.length, e: c.escorts, skipper: c.skipper }))} · ${esc(cargo)}</div>
+        ${c.attack !== null ? `<div class="bad">${esc(L('cv_alarm', { s: c.attack }))}</div>` : ''}
+        ${c.log.map((l) => `<div class="cv-log muted">${esc(serverText(l))}</div>`).join('')}
+        <div class="row" style="gap:4px"><button class="btn btn-small" data-cv="recall" data-id="${esc(c.id)}">${esc(L('cv_recall'))}</button><button class="btn btn-small" data-cv="repeat" data-id="${esc(c.id)}">${esc(c.repeat ? L('cv_repeat_off') : L('cv_repeat_on'))}</button></div></div>`;
+    }).join('');
+    const free = state.caravanSlots - state.caravans.length;
+    return `<div class="card est-card cv-card"><h4 class="card-h">${icon('tab_empire', '', 'ico-md')}${esc(L('cv_title', { n: state.caravans.length, max: state.caravanSlots }))}</h4>
+      ${rows || `<p class="muted">${esc(L('cv_none'))}</p>`}
+      ${free > 0 ? (this.wiz ? this.wizardHtml(state) : `<button class="btn btn-primary" data-cv="new">${esc(L('cv_new'))}</button>`) : ''}</div>`;
+  }
+
+  private wizardHtml(state: ClientState): string {
+    const w = this.wiz!;
+    const e = state.estate!;
+    const ru = lang() === 'ru' ? 1 : 0;
+    const key = `isle:${e.isle!.island}`;
+    const berths = (state.self?.berths ?? []).map((b, i) => ({ b, i })).filter((x) => x.b.port === key);
+    const ports = [...state.ports].sort((a, b) => a.name.localeCompare(b.name));
+    const portSel = (id: string, cur: string) => `<select data-wz="${id}">${ports.map((p) => `<option value="${esc(p.id)}"${p.id === cur ? ' selected' : ''}>${esc(placeName(p.name))}</option>`).join('')}</select>`;
+    const store = state.holdings.mine.find((h) => h.island === e.isle!.island)?.store ?? {};
+    let body = '';
+    if (w.step === 1) body = berths.length ? berths.map(({ b, i }) => `<label class="cv-pick"><input type="checkbox" data-wz-ship="${i}"${w.ships.has(i) ? ' checked' : ''}> ${esc(b.name)} <span class="muted">${esc(SHIP_CLASSES[b.classId].name)} · ${b.hull}%</span></label>`).join('') : `<p class="muted">${esc(L('cv_no_ships'))}</p>`;
+    else if (w.step === 2) {
+      body = `<div class="row" style="gap:6px;flex-wrap:wrap">${CARAVAN_TASKS.map((t) => `<label class="cv-pick"><input type="radio" name="cv-task" data-wz-task="${t}"${w.task === t ? ' checked' : ''}> ${esc(TASK_NAMES[t][ru])}</label>`).join('')}</div>`;
+      if (w.task === 'haul') body += e.outposts.map((o) => `<label class="cv-pick"><input type="checkbox" data-wz-op="${esc(o.id)}"${w.outposts.has(o.id) ? ' checked' : ''}> ${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(placeName(o.name))} · ${o.store}/${o.cap}</label>`).join('') || `<p class="muted">${esc(L('cv_no_ops'))}</p>`;
+      else if (w.task === 'sell') body += `<p>${esc(L('cv_port'))} ${portSel('port', w.port)}</p><div>${(Object.keys(store) as GoodId[]).map((g) => `<label class="cv-pick"><input type="checkbox" data-wz-good="${g}"${w.goods.has(g) ? ' checked' : ''}> ${esc(GOODS[g].name)} (${store[g]})</label>`).join('') || `<p class="muted">${esc(L('cv_store_empty'))}</p>`}</div><p>${esc(L('cv_floor'))} <select data-wz="minPrice">${[0.8, 0.9, 1, 1.1, 1.2].map((v) => `<option value="${v}"${v === w.minPrice ? ' selected' : ''}>${Math.round(v * 100)}%</option>`).join('')}</select></p>`;
+      else if (w.task === 'supply') body += `<p>${esc(L('cv_port'))} ${portSel('port', w.port)}</p><div>${(['planks', 'iron', 'tar', 'salt', 'provisions', 'gunpowder', 'timber', 'coal'] as GoodId[]).map((g) => `<label class="cv-pick"><input type="checkbox" data-wz-good="${g}"${w.goods.has(g) ? ' checked' : ''}> ${esc(GOODS[g].name)}</label>`).join('')}</div>`;
+      else body += `<p>${esc(L('cv_buy_at'))} ${portSel('port', w.port)}</p><p>${esc(L('cv_sell_at'))} ${portSel('port2', w.port2)}</p>`;
+    } else if (w.step === 3) {
+      body = `<label class="cv-pick"><input type="checkbox" data-wz-flag="repeat"${w.repeat ? ' checked' : ''}> ${esc(L('cv_o_repeat'))}</label>
+        <label class="cv-pick"><input type="checkbox" data-wz-flag="avoid"${w.avoid ? ' checked' : ''}> ${esc(L('cv_o_avoid'))}</label>
+        <label class="cv-pick"><input type="checkbox" data-wz-flag="night"${w.night ? ' checked' : ''}> ${esc(L('cv_o_night'))}</label>
+        <p>${esc(L('cv_o_attack'))} <select data-wz="onAttack">${ON_ATTACK.map((a) => `<option value="${a}"${a === w.onAttack ? ' selected' : ''}>${esc(L(`cv_a_${a}` as 'cv_a_fight'))}</option>`).join('')}</select></p>`;
+    } else {
+      const lvl = Math.min(10, ...[...w.ships].map((i) => state.self?.berths[i]).filter((b): b is NonNullable<typeof b> => !!b).map((b) => levelRange(b.classId)[0]));
+      body = `<p>${esc(L('cv_escorts'))} <select data-wz="escorts">${[0, 1, 2, 3].map((n) => `<option value="${n}"${n === w.escorts ? ' selected' : ''}>${n} (${fmt(n * escortCost(Math.max(1, lvl)))})</option>`).join('')}</select></p>
+        <label class="cv-pick"><input type="checkbox" data-wz-flag="insured"${w.insured ? ' checked' : ''}> ${esc(L('cv_insure'))}</label>
+        <p class="muted">${esc(L('cv_summary', { n: w.ships.size, task: TASK_NAMES[w.task][ru] }))}</p>`;
+    }
+    return `<div class="cv-wiz"><div class="cv-steps">${[1, 2, 3, 4].map((n) => `<span class="${n === w.step ? 'on' : ''}">${n}. ${esc(L(`cv_step${n}` as 'cv_step1'))}</span>`).join('')}</div>${body}
+      <div class="row" style="gap:6px;margin-top:6px"><button class="btn btn-small" data-cv="${w.step === 1 ? 'cancel' : 'back'}">${esc(w.step === 1 ? L('cv_cancel') : L('cv_back'))}</button>${w.step < 4 ? `<button class="btn btn-small btn-primary" data-cv="next" ${w.step === 1 && !w.ships.size ? 'disabled' : ''}>${esc(L('cv_next'))}</button>` : `<button class="btn btn-small btn-primary" data-cv="launch">${esc(L('cv_launch'))}</button>`}</div></div>`;
+  }
+
+  private bindCaravans(body: HTMLElement, state: ClientState): void {
+    const rerender = () => {
+      if (this.root) this.render(this.root, state);
+    };
+    body.querySelectorAll<HTMLElement>('[data-cv]').forEach((el) => (el.onclick = () => {
+      const a = el.dataset.cv!;
+      if (a === 'recall' || a === 'repeat') return this.send({ t: 'caravan', action: a, id: el.dataset.id! });
+      if (a === 'new') this.wiz = { step: 1, ships: new Set(), task: 'haul', outposts: new Set((state.estate?.outposts ?? []).map((o) => o.id)), port: state.ports[0]?.id ?? '', port2: state.ports[1]?.id ?? '', goods: new Set(), minPrice: 0.9, escorts: 0, insured: true, repeat: false, avoid: true, night: false, onAttack: 'flee' };
+      else if (a === 'cancel') this.wiz = null;
+      else if (a === 'back' && this.wiz) this.wiz.step--;
+      else if (a === 'next' && this.wiz) this.wiz.step++;
+      else if (a === 'launch' && this.wiz) {
+        const w = this.wiz;
+        this.send({ t: 'caravan', action: 'launch', ships: [...w.ships], task: w.task, outposts: [...w.outposts], port: w.port, port2: w.port2, goods: [...w.goods], minPrice: w.minPrice, escorts: w.escorts, insured: w.insured, orders: { repeat: w.repeat, avoidLawless: w.avoid, nightInPort: w.night, onAttack: w.onAttack } });
+        this.wiz = null;
+      }
+      rerender();
+    }));
+    const w = this.wiz;
+    if (!w) return;
+    body.querySelectorAll<HTMLInputElement>('[data-wz-ship]').forEach((el) => (el.onchange = () => {
+      const i = Number(el.dataset.wzShip);
+      if (el.checked) w.ships.add(i);
+      else w.ships.delete(i);
+      rerender();
+    }));
+    body.querySelectorAll<HTMLInputElement>('[data-wz-task]').forEach((el) => (el.onchange = () => {
+      w.task = el.dataset.wzTask as CaravanTask;
+      w.goods.clear();
+      rerender();
+    }));
+    body.querySelectorAll<HTMLInputElement>('[data-wz-op]').forEach((el) => (el.onchange = () => (el.checked ? w.outposts.add(el.dataset.wzOp!) : w.outposts.delete(el.dataset.wzOp!))));
+    body.querySelectorAll<HTMLInputElement>('[data-wz-good]').forEach((el) => (el.onchange = () => (el.checked ? w.goods.add(el.dataset.wzGood as GoodId) : w.goods.delete(el.dataset.wzGood as GoodId))));
+    body.querySelectorAll<HTMLInputElement>('[data-wz-flag]').forEach((el) => (el.onchange = () => {
+      const f = el.dataset.wzFlag as 'repeat' | 'avoid' | 'night' | 'insured';
+      w[f] = el.checked;
+    }));
+    body.querySelectorAll<HTMLSelectElement>('[data-wz]').forEach((el) => (el.onchange = () => {
+      const k = el.dataset.wz!;
+      if (k === 'port') w.port = el.value;
+      else if (k === 'port2') w.port2 = el.value;
+      else if (k === 'minPrice') w.minPrice = Number(el.value);
+      else if (k === 'escorts') w.escorts = Number(el.value);
+      else if (k === 'onAttack') w.onAttack = el.value as OnAttack;
+    }));
   }
 
   /** The guild's order of the week (docs/11 P6): the goal, the bar the members fill, one's own part, the time left. */

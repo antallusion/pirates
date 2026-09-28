@@ -1941,3 +1941,13 @@ body.touch #hud-region .rg-extra { display: none; }
 .est-op { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
 .est-op.est-raid { background: rgba(160, 30, 20, 0.18); }
 .est-op select { max-width: 100%; }
+/* Caravans (docs/12 P8). */
+.cv-card { margin-bottom: 8px; }
+.cv-row { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+.cv-row.cv-alarm { background: rgba(160, 30, 20, 0.18); }
+.cv-row .cm-bar { height: 6px; }
+.cv-log { font-size: 11px; font-style: italic; }
+.cv-wiz { border-top: 1px solid rgba(232,196,106,0.25); margin-top: 6px; padding-top: 6px; }
+.cv-steps { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; margin-bottom: 6px; color: var(--fog, #9aa); }
+.cv-steps .on { color: #e8c46a; font-weight: 700; }
+.cv-pick { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 13px; }

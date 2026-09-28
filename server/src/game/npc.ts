@@ -186,6 +186,11 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   // A convoy's escort answers whoever fires on any of its ships; a merchant's escort, whoever fires on her.
   if (npc.convoyId !== undefined && convoyFoe(game, npc.convoyId, other)) return true;
   if (npc.escortOf !== undefined && ((game.ships.get(npc.escortOf)?.attackers.get(other.id) ?? -999) > game.now - 120)) return true;
+  // A caravan's escort answers whoever fires on any ship of it.
+  if (npc.caravanId !== undefined && npc.npcRole === 'patrol') {
+    for (const o of game.ships.values()) if (o.caravanId === npc.caravanId && (o.attackers.get(other.id) ?? -999) > game.now - 120) return true;
+    return false;
+  }
   // A hidden cove is neutral water for those who know it.
   if (other.isPlayer && other.hasFlag('cove_knowledge') && coveAt(game, other)) return false;
   // False Colors: law and bounty hunters see a merchant.
@@ -352,6 +357,7 @@ function abstractStep(game: Game, ship: ShipEntity, brain: NpcBrain, dt: number)
 
 /** Arrival at the end of a path: merchants trade and re-plan, others pick a new leg. */
 function arrive(game: Game, ship: ShipEntity, brain: NpcBrain): void {
+  if (ship.caravanId) return; // a captain's caravan keeps its own route (caravans.ts)
   if (ship.convoyOf && brain.destPort === ship.convoyOf.to) return convoyArrived(game, ship);
   if (brain.destPort) {
     const port = game.portById(brain.destPort);

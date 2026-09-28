@@ -2,7 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
-import type { AppraisalView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView } from '../../shared/src/protocol.ts';
+import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight } from '../../shared/src/constants.ts';
@@ -100,6 +100,9 @@ export class ClientState {
   raid: RaidView | null = null;
   /** One's own island and outposts (docs/12 P7). */
   estate: EstateView | null = null;
+  /** One's own caravans (docs/12 P8). */
+  caravans: CaravanView[] = [];
+  caravanSlots = 0;
   tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
   who: { list: WhoView[]; total: number } | null = null;
@@ -279,6 +282,10 @@ export class ClientState {
         break;
       case 'estate':
         this.estate = m.view;
+        break;
+      case 'caravans':
+        this.caravans = m.list;
+        this.caravanSlots = m.slots;
         break;
       case 'tasks':
         this.tasks = m.list;

@@ -11,6 +11,7 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { ownIsland } from './estate.ts';
 import { hunterRank, namedPirates, pirateById } from '../../../shared/src/data/pirates.ts';
 import { putToSea, sanitizeHunter } from './wanted.ts';
 import { BEASTS } from '../../../shared/src/data/beasts.ts';
@@ -210,6 +211,16 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       best.hull = 0;
       game.beginSinking(best);
       return `${best.name} slain ${Math.round(bd)} m off.`;
+    }
+    case 'berth': {
+      // A cargo hull berthed at one's own island (docs/12 P8 play-testing): /berth [class] [level].
+      const h = ownIsland(game, s.accountId);
+      if (!h) return 'You have no island of your own.';
+      const cls = (args[0] ?? 'fluyt') as ShipClassId;
+      if (!SHIP_CLASSES[cls]) return `Classes: ${Object.keys(SHIP_CLASSES).join(', ')}`;
+      s.profile!.berths.push({ port: `isle:${h.island}`, loadout: { classId: cls, name: `${SHIP_CLASSES[cls].name} ${s.profile!.berths.length + 1}`, guns: { port: 'light_6', starboard: 'light_6' }, modules: {}, level: args[1] ? clampLevel(cls, num(1)) : undefined }, hull: 1 });
+      game.pushSelf(s, true);
+      return `A ${SHIP_CLASSES[cls].name} berthed at your island.`;
     }
     case 'named': {
       // A named pirate put to sea near you (docs/12 P5): /named [id] — or the list of your sea's.
