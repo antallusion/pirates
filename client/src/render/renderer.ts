@@ -376,6 +376,7 @@ export class Renderer {
         sails: state.you.sails / state.you.sailsMax, flags: state.you.flags, classId: state.self.loadout.classId, info: null, own: true, sinkT: 0,
       });
     }
+    this.berth(ships, state);
     for (const s of ships) this.updateWake(s, dt);
     this.drawWakes();
     this.drawLoot(state);
@@ -1280,15 +1281,14 @@ export class Renderer {
       g.clip();
       town();
       g.restore();
-      // The quays: the painting's foot, drawn out from the shore to the anchorage, so a ship in port lies at
-      // the end of a jetty and never over a street.
+      // The quays: the painting's foot at its own proportions (never stretched), out from the shore over the water.
+      // The anchorage lies off the pier heads, where ships in port ride broadside to the quay (berth()).
       g.save();
       g.translate(this.sx(lay.x), this.sy(lay.y));
       g.rotate(lay.ang);
       if (spr) {
         const iw = spr.img.naturalWidth || spr.img.width, ih = spr.img.naturalHeight || spr.img.height;
-        const len = clamp((lay.reach + 12) * this.zoom, size * 0.24, size * 0.9);
-        g.drawImage(spr.img, 0, ih * 0.735, iw, ih * 0.245, -size / 2, size * 0.235, size, len);
+        g.drawImage(spr.img, 0, ih * 0.735, iw, ih * 0.265, -size / 2, size * 0.235, size, size * 0.265);
       }
       g.restore();
       // Name & flag.
@@ -1305,6 +1305,34 @@ export class Renderer {
       g.beginPath();
       g.arc(this.sx(p.x), this.sy(p.y), 420 * this.zoom, 0, Math.PI * 2);
       g.stroke();
+    }
+  }
+
+  /** Ships in port ride at the anchorage off the pier heads, broadside to the quay and side by side: never on a jetty,
+   *  never on each other. */
+  private berth(ships: DrawShip[], state: ClientState): void {
+    const byPort = new Map<string, DrawShip[]>();
+    for (const s of ships) {
+      if (!(s.flags & SF.DOCKED)) continue;
+      const p = state.ports.find((q) => Math.hypot(q.x - s.x, q.y - s.y) < 250);
+      if (!p || !this.portLayout.has(p.id)) continue;
+      let list = byPort.get(p.id);
+      if (!list) byPort.set(p.id, (list = []));
+      list.push(s);
+    }
+    for (const [id, list] of byPort) {
+      const lay = this.portLayout.get(id)!;
+      const p = state.ports.find((q) => q.id === id)!;
+      list.sort((a, b) => Number(b.own) - Number(a.own) || a.id - b.id);
+      const ax = Math.cos(lay.ang), ay = Math.sin(lay.ang); // along the quay
+      const sx = -Math.sin(lay.ang), sy = Math.cos(lay.ang); // out to sea
+      list.forEach((s, i) => {
+        const row = Math.floor(i / 5), col = [0, 1, -1, 2, -2][i % 5];
+        const along = col * (Math.max(SHIP_CLASSES[s.classId].length, 30) + 14);
+        s.x = p.x + ax * along + sx * row * 34;
+        s.y = p.y + ay * along + sy * row * 34;
+        s.h = lay.ang + Math.PI / 2;
+      });
     }
   }
 
@@ -1602,14 +1630,15 @@ export class Renderer {
     const look = player && !(s.flags & SF.BLACK_FLAG) && !(s.flags & SF.GREEN_PENNANT) ? decodeLook(lookKey) : null;
     if (look && lookKey && (look.field || look.emblem || look.c1 || look.c2 !== 1 || look.c3 !== 2)) {
       const flow = state.wind[0] - s.h - Math.PI / 2;
-      const w = beam * 1.5, h = w * 0.62;
+      const w = beam * 0.62, h = w * 0.66; // a small flag at the masthead, not a sail
       g.save();
       g.translate(0, -len * 0.18);
       g.rotate(flow + Math.sin(this.time * 3 + s.id) * 0.06);
-      g.drawImage(flagCanvas(lookKey, look), 0, -h / 2, w, h);
-      g.strokeStyle = 'rgba(0,0,0,0.6)';
-      g.lineWidth = 1;
-      g.strokeRect(0, -h / 2, w, h);
+      const flag = flagCanvas(look.emblem);
+      g.globalAlpha = 0.35;
+      g.drawImage(flag, 1, 1 - h / 2, w, h); // its shadow on the deck and the sea
+      g.globalAlpha = 1;
+      g.drawImage(flag, 0, -h / 2, w, h);
       g.restore();
       return;
     }
@@ -1621,7 +1650,7 @@ export class Renderer {
     const art = this.pennantArt(color);
     if (art) {
       const flow = state.wind[0] - s.h - Math.PI / 2;
-      const w = beam * 1.5, h = w * 0.42;
+      const w = beam * 0.8, h = w * 0.4;
       g.save();
       g.translate(0, y0);
       g.rotate(flow + Math.sin(this.time * 3 + s.id) * 0.06);

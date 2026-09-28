@@ -181,6 +181,9 @@ def seamless(img):
 
 
 def bake(aid, entry, cdn):
+    if fit_of(aid, entry).startswith('sheet:'):
+        print(f'{aid}: cut from a sheet (tools/art/slice_flags.py), not baked here')
+        return
     src = fetch_raw(cdn, entry)
     parts = fit_of(aid, entry).split(':')
     mode, px = parts[0], int(parts[1])
@@ -217,6 +220,10 @@ def bake(aid, entry, cdn):
             img = trim(img)
         img = shrink(img, px)
         save(img, target, 88)
+        if aid.startswith('prop.port_'):
+            # The painted boats between the piers go: ships in port are the game's own (clear_quays.py).
+            from clear_quays import clear as clear_quays
+            clear_quays(target, aid.split('_', 1)[1], fresh=True)
     kb = os.path.getsize(target) // 1024
     print(f'{aid:34s} {img.width}x{img.height} {kb}KB -> assets/{entry["local"]}{note}')
 

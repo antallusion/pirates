@@ -706,6 +706,12 @@ glamour makeup, glowing magic, text, watermark.
 ```
 `{CURSE_LINE}` для `drowned`: `pale grey skin, faint turquoise veins at the neck and in the irises, kelp in wet hair, shells and pearls grown into the coat`. `{TURQUOISE_OPT}` добавляется (`, rare turquoise bioluminescence`) только при стадии проклятия ≥ 1.
 
+**Флаги (лист 4×3, docs/12 P10 #12):** флаги рисуются только листами по двенадцать, чтобы весь набор из шестидесяти был одной руки; лист режется `tools/art/slice_flags.py` на `flag.f00…f59` (3:2, 240×160). Список флагов и их краткие описания — `FLAGS` в `shared/src/data/looks.ts`.
+```
+Game UI asset sheet for a dark Pirate Gothic naval MMORPG: twelve ship flags laid out in a strict grid of 4 columns and 3 rows, all flags exactly the same size and the same rectangular 3:2 shape, each seen flat and straight front-on, centred in its grid cell with wide even gaps between the cells. Every flag is heavy weathered sailcloth with a hand-painted design, faded and salt-stained, slightly frayed at the fly edge, gentle cloth folds, the same soft even light on all twelve, painted realistic style, rich detail, one consistent style across the whole set. The flags, left to right and top to bottom: {12 FLAGS: "1. …. 2. …."} Muted palette: charcoal black, bone white, dried-blood red, tarnished old gold, slate grey, cold sea blue; low saturation, no bright colours. Background: flat solid pure magenta #FF00FF everywhere between and around the flags, no gradient, no shadow on the background. NO flagpoles, NO ropes, NO text, NO letters, NO numbers, NO labels, NO watermark, NO frame. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, glossy 3D render, perspective.
+```
+Соотношение сторон 16:9. На мачте флаг маленький (около 0,6 ширины корпуса), в редакторе облика — крупно.
+
 ### 17.5 Реестр `assets/manifest.json`
 Текущая схема (действует):
 ```json

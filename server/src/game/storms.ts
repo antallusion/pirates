@@ -13,6 +13,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
+import { unlockDeed } from './looks.ts';
 import type { WorldEvent } from './events.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
@@ -192,6 +193,7 @@ function catchHeart(game: Game, s: PlayerSession, e: WorldEvent, h: Heart, pos: 
     game.sendTo(o, { t: 'toast', msg: news, kind: 'info' });
     game.sendTo(o, { t: 'toast', msg: 'The heart of the storm is gone; the sky will make another.', kind: 'info' });
   }
+  unlockDeed(game, s, 'storm'); // the Storm Heart flag (docs/12 P10 #12)
   game.pushSelf(s, true);
 }
 

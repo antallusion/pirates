@@ -12,7 +12,7 @@ export function sanitizeLooks(p: Profile): { look: Look; unlocks: string[] } {
   return { look: p.look, unlocks: p.unlocks };
 }
 
-const KIND_WORD: Record<string, string> = { sail: 'sails', hull: 'a hull paint', lamp: 'lanterns', emblem: 'an emblem', color: 'a colour', field: 'a flag field' };
+const KIND_WORD: Record<string, string> = { sail: 'sails', hull: 'a hull paint', lamp: 'lanterns', emblem: 'a flag', color: 'a colour', field: 'a flag field' };
 
 /** A deed opens a part of the look (a few at random for the wonders and quests). */
 export function unlockDeed(game: Game, s: PlayerSession, deed: keyof typeof DEED_UNLOCKS | string): void {

@@ -4,6 +4,8 @@
 interface ManifestEntry {
   local: string;
   remote: string;
+  /** Bumped when the local file is reworked in place (a day's browser cache would keep the old one). */
+  rev?: number;
 }
 
 interface Manifest {
@@ -65,7 +67,7 @@ function measure(img: HTMLImageElement): Pick<Sprite, 'extentX' | 'extentY' | 'c
 
 async function loadEntry(id: string, e: ManifestEntry): Promise<void> {
   const attempts: [string, boolean][] = [
-    ['/assets/' + e.local, false],
+    ['/assets/' + e.local + (e.rev ? `?v=${e.rev}` : ''), false],
     [manifest!.cdn + e.remote, true],
     [manifest!.cdn + e.remote, false],
   ];

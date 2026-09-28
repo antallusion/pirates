@@ -39,21 +39,21 @@ export const SERVICES: Record<ServiceId, ServiceDef> = {
     enemies: ['confederacy', 'brokers'], friends: ['crown', 'league'],
     quarry: { role: 'merchant', faction: 'brokers', what: ['a smuggler', 'контрабандиста'] },
     wants: ['gunpowder', 'provisions', 'weapons'], orders: ['intercept', 'hunt', 'deliver', 'patrol'],
-    livery: { field: 6, c1: 3, c2: 1, c3: 5, emblem: 15, hull: 3, sail: 4, lamp: 0 },
+    livery: { field: 6, c1: 3, c2: 1, c3: 5, emblem: 42, hull: 3, sail: 4, lamp: 0 },
   },
   league: {
     id: 'league', name: ['The Gilded Ledger', 'Золочёный Гроссбух'], of: ['of the League', 'Лиги'], rep: 10, maxWanted: 2,
     enemies: ['confederacy'], friends: ['league', 'crown'],
     quarry: { role: 'pirate', faction: 'confederacy', what: ['a pirate', 'пирата'] },
     wants: ['spices', 'cloth', 'sugar', 'medicine'], orders: ['intercept', 'hunt', 'deliver', 'deliver'],
-    livery: { field: 2, c1: 5, c2: 0, c3: 1, emblem: 30, hull: 6, sail: 3, lamp: 0 },
+    livery: { field: 2, c1: 5, c2: 0, c3: 1, emblem: 45, hull: 6, sail: 3, lamp: 0 },
   },
   confederacy: {
     id: 'confederacy', name: ['The Brethren of the Red Tide', 'Братство Красного прилива'], of: ['of the Brethren', 'Братства'], rep: 10, maxWanted: 5,
     enemies: ['crown', 'league'], friends: ['confederacy'],
     quarry: { role: 'merchant', faction: 'league', what: ['a League merchant', 'купца Лиги'] },
     wants: ['gunpowder', 'rum', 'weapons'], orders: ['intercept', 'hunt', 'hunt', 'patrol'],
-    livery: { field: 0, c1: 2, c2: 0, c3: 1, emblem: 21, hull: 1, sail: 2, lamp: 3 },
+    livery: { field: 0, c1: 2, c2: 0, c3: 1, emblem: 48, hull: 1, sail: 2, lamp: 3 },
   },
 };
 
@@ -77,10 +77,10 @@ export function serviceTitle(id: ServiceId, rank: number): string {
   return `${RANKS[rank][0]} ${SERVICES[id].of[0]}`;
 }
 
-/** A commodore's livery flies its emblem ringed. */
+/** The service's flag by rank: the first to a commander, the second to a captain, the third to a commodore. */
 export function liveryOf(id: ServiceId, rank: number): Look {
   const l = { ...SERVICES[id].livery };
-  if (rank >= 4) l.emblem = Math.floor(l.emblem / 3) * 3 + 2;
+  l.emblem += rank >= 4 ? 2 : rank >= 3 ? 1 : 0;
   return l;
 }
 

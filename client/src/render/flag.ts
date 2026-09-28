@@ -1,8 +1,10 @@
-// A captain's flag painted from her look (docs/12 P10 #12): the field in two colours, the emblem in the third — filled,
-// outlined or ringed. Cached per look; the same painter serves the ships at sea and the editor.
+// A captain's flag (docs/12 P10 #12): one of sixty painted flags (`flag.fNN`, painted in sheets of twelve so the set
+// is of one hand), or, until its paint is in, its procedural stand-in — a field in two colours and a glyph in the third,
+// filled, outlined or ringed. Cached per flag; the same painter serves the ships at sea and the editor.
 
-import { GLYPHS, LOOK_COLORS } from '../../../shared/src/data/looks.ts';
+import { FLAGS, GLYPHS, LOOK_COLORS, flagAsset } from '../../../shared/src/data/looks.ts';
 import type { Look } from '../../../shared/src/data/looks.ts';
+import { sprite } from '../assets.ts';
 
 const cache = new Map<string, HTMLCanvasElement>();
 const paths = new Map<number, Path2D>();
@@ -57,14 +59,26 @@ export function paintFlag(g: CanvasRenderingContext2D, l: Look, w: number, h: nu
   g.restore();
 }
 
-/** The flag as a small canvas (cached per look). */
-export function flagCanvas(key: string, l: Look): HTMLCanvasElement {
+/** Paint flag number i at w×h: its painting when it is in, else its stand-in. */
+export function paintFlagDesign(g: CanvasRenderingContext2D, i: number, w: number, h: number): void {
+  const spr = sprite(flagAsset(i));
+  if (spr) {
+    g.drawImage(spr.img, 0, 0, w, h);
+    return;
+  }
+  const [field, c1, c2, c3, glyph, style] = (FLAGS[i] ?? FLAGS[0]).fb;
+  paintFlag(g, { field, c1, c2, c3, emblem: glyph * 3 + style, hull: 0, sail: 0, lamp: 0 }, w, h);
+}
+
+/** Flag number i as a small canvas (cached; painted again once its painting arrives). */
+export function flagCanvas(i: number): HTMLCanvasElement {
+  const key = `${i}|${sprite(flagAsset(i)) ? 'p' : 's'}`;
   let c = cache.get(key);
   if (!c) {
     c = document.createElement('canvas');
-    c.width = 96;
-    c.height = 60;
-    paintFlag(c.getContext('2d')!, l, 96, 60);
+    c.width = 120;
+    c.height = 80;
+    paintFlagDesign(c.getContext('2d')!, i, 120, 80);
     cache.set(key, c);
   }
   return c;

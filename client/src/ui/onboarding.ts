@@ -85,7 +85,7 @@ export class OnboardingUi {
     }
     el.classList.remove('hidden');
     const first = `goal.${goals[0]}` as Key;
-    el.innerHTML = `${icon('goal', '', 'ico-goal')}<span class="g-lbl">${esc(t('goals.title'))}</span> ${esc(touchless(has(first) ? t(first) : goals[0]))}${goals.length > 1 ? ` <span class="muted">+${goals.length - 1}</span>` : ''}<button class="g-x" title="${esc(t('goals.hide'))}">×</button>`;
+    el.innerHTML = `${icon('goal', '', 'ico-goal')}<span class="g-lbl">${esc(t('goals.title'))}</span><button class="g-x" title="${esc(t('goals.hide'))}" aria-label="${esc(t('goals.hide'))}">×</button><span class="g-t">${esc(touchless(has(first) ? t(first) : goals[0]))}${goals.length > 1 ? ` <span class="muted">+${goals.length - 1}</span>` : ''}</span>`;
     el.querySelector<HTMLButtonElement>('.g-x')!.onclick = () => this.send('hide_goals');
   }
 

@@ -23,6 +23,7 @@ import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import { planWander } from './npc.ts';
+import { unlockDeed } from './looks.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -129,7 +130,7 @@ function leave(game: Game, s: PlayerSession): void {
   const quarry = sv.order?.target ? game.ships.get(sv.order.target) : null;
   if (quarry?.alive) game.removeShip(quarry.id);
   // The livery comes down with the letter.
-  const liv = SERVICE_IDS.flatMap((id) => [0, 4].map((r) => encodeLook(liveryOf(id, r))));
+  const liv = SERVICE_IDS.flatMap((id) => [0, 3, 4].map((r) => encodeLook(liveryOf(id, r))));
   if (p.look && liv.includes(encodeLook(p.look))) {
     delete p.look;
     if (s.ship) s.ship.look = null;
@@ -248,6 +249,7 @@ function merit(game: Game, s: PlayerSession, d: number): void {
     setTitle(p, sv.id, r);
     changeRep(p, sv.id, 5);
     game.sendTo(s, { t: 'toast', msg: `You are promoted: ${serviceTitle(sv.id, r)}.`, kind: 'gold' });
+    for (let k = 1; k <= r; k++) unlockDeed(game, s, `${sv.id}_${k}`); // the service's flags by rank (docs/12 P10 #12)
     refresh(game, s);
   }
 }
