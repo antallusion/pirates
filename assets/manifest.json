@@ -388,6 +388,7 @@
     "portrait.giver_old_salt_m":      { "local": "portraits/giver_old_salt_m.webp", "remote": "hf_20260928_001036_8bc6996e-5199-4019-a021-3eb5ebfbf93f.png", "job": "8bc6996e-5199-4019-a021-3eb5ebfbf93f" },
     "portrait.giver_apothecary_m":    { "local": "portraits/giver_apothecary_m.webp", "remote": "hf_20260928_001635_ca62f197-8903-4974-ac2d-9f584ef6be82.png", "job": "ca62f197-8903-4974-ac2d-9f584ef6be82" },
     "portrait.giver_apothecary_f":    { "local": "portraits/giver_apothecary_f.webp", "remote": "hf_20260928_002235_4be33600-8366-459d-a05c-42cfc3411ef7.png", "job": "4be33600-8366-459d-a05c-42cfc3411ef7" },
-    "portrait.giver_cartographer_m":  { "local": "portraits/giver_cartographer_m.webp", "remote": "hf_20260928_002836_92d928e4-657d-4636-8457-78282e306f9b.png", "job": "92d928e4-657d-4636-8457-78282e306f9b" }
+    "portrait.giver_cartographer_m":  { "local": "portraits/giver_cartographer_m.webp", "remote": "hf_20260928_002836_92d928e4-657d-4636-8457-78282e306f9b.png", "job": "92d928e4-657d-4636-8457-78282e306f9b" },
+    "portrait.giver_cartographer_f":  { "local": "portraits/giver_cartographer_f.webp", "remote": "hf_20260928_003435_765b8169-2713-44ba-84e6-fb3645bc7a00.png", "job": "765b8169-2713-44ba-84e6-fb3645bc7a00" }
   }
 }
