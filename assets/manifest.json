@@ -471,6 +471,7 @@
     "icon.stat_crew":                    { "local": "icons/stat_crew.webp", "remote": "hf_20260926_200949_4e0ad8b6-5282-4d29-a97c-2f32aafac422.png", "job": "4e0ad8b6-5282-4d29-a97c-2f32aafac422", "fit": "sprite:128" },
     "icon.stat_hull":                    { "local": "icons/stat_hull.webp", "remote": "hf_20260926_200949_f6a14042-3b74-408a-8d8c-b9c08467d024.png", "job": "f6a14042-3b74-408a-8d8c-b9c08467d024", "fit": "sprite:128" },
     "icon.stat_sails":                   { "local": "icons/stat_sails.webp", "remote": "hf_20260926_200949_8a8b00eb-18ca-4f7c-b48a-5e3d62c9fec0.png", "job": "8a8b00eb-18ca-4f7c-b48a-5e3d62c9fec0", "fit": "sprite:128" },
+    "icon.storm_heart":                  { "local": "icons/storm_heart.png", "remote": "hf_20260928_233823_7534e09f-503e-4657-9e4b-b3096c0549db.png", "job": "7534e09f-503e-4657-9e4b-b3096c0549db", "fit": "keyed:192:#ff00ff", "rev": 20260928233823},
     "icon.tab_board":                    { "local": "icons/tab_board.webp", "remote": "hf_20260926_222150_c09c59c3-e211-448b-b8f4-20a94ed680d7.png", "job": "c09c59c3-e211-448b-b8f4-20a94ed680d7" },
     "icon.tab_contracts":                { "local": "icons/tab_contracts.webp", "remote": "hf_20260926_195437_0fa09f30-ba1c-4dec-8556-d974c9e5a2d6.png", "job": "0fa09f30-ba1c-4dec-8556-d974c9e5a2d6" },
     "icon.tab_empire":                   { "local": "icons/tab_empire.webp", "remote": "hf_20260926_222151_2a660da2-a3df-4d40-bf7c-722e441ab485.png", "job": "2a660da2-a3df-4d40-bf7c-722e441ab485" },
