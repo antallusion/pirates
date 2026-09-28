@@ -359,5 +359,69 @@
    "card.enc_voice_in_fog"
   ],
   "prompt": "Sheet of four wide event-card illustrations for a dark Pirate Gothic naval MMORPG, laid out in a strict 2 by 2 grid of equal wide panels separated by thin pure black gutters. Each panel is its own cinematic scene, painterly and realistic, as seen from the deck or rail of a sailing ship at dusk or at night, wet, cold, with drifting fog, the same muted palette and moody lighting in all four. The scenes, left to right, top row then bottom row: 1. a great white albatross settling on a ship's yard against a stormy sky. 2. a pale ghost ship alongside in silence, her drowned captain holding out a small chest. 3. dark rocks in fog with pale singing shapes half seen on them, the helmsman at the wheel entranced. 4. thick white fog around the bow at night, a lone lantern, a faint shadowy figure in the mist. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy, with small warm lantern highlights. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, bright colours, Caribbean turquoise water, clean new ships."
+ },
+ "builds_2": {
+  "grid": [
+   5,
+   4
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "5:4",
+  "ids": [
+   "icon.outpost_lumber_1",
+   "icon.outpost_mine_1",
+   "icon.outpost_saltworks_1",
+   "icon.outpost_fishery_1",
+   "icon.outpost_whaling_1",
+   "icon.outpost_lumber_2",
+   "icon.outpost_mine_2",
+   "icon.outpost_saltworks_2",
+   "icon.outpost_fishery_2",
+   "icon.outpost_whaling_2",
+   "icon.outpost_pearls_1",
+   "icon.outpost_sulfur_1",
+   "icon.outpost_plantation_1",
+   "icon.outpost_tar_1",
+   "icon.outpost_deep_shaft_1",
+   "icon.outpost_pearls_2",
+   "icon.outpost_sulfur_2",
+   "icon.outpost_plantation_2",
+   "icon.outpost_tar_2",
+   "icon.outpost_deep_shaft_2"
+  ],
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: twenty separate small building dioramas laid out in a strict grid of 5 columns and 4 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all of them, bold readable silhouettes at small size. Left to right, top to bottom: 1. a first logging camp: a lean-to, a few felled trunks and an axe in a stump among dark pines. 2. a first mine: a timber-framed hole in grey rock, a rope winch and a wheelbarrow. 3. a first salt pan: one shallow pool scraped in the shore and a few sacks. 4. a first fishing camp: a beached boat, a net hung on poles and a fire. 5. a first whaling camp: a tent, a stack of harpoons and a single cask. 6. a working logging camp: a log pile, a saw pit and a small tarred hut among dark pines. 7. a working mine: a small timber headframe over a shaft, a single ore cart on rails. 8. working salt pans: three evaporation pools, small salt heaps and a lean-to. 9. a working fishing station: a short jetty, a drying rack and a boat shed. 10. a working whaling station: a small slipway, flensing tools and oil casks. 11. a first pearl camp: a dugout canoe and a basket of shells on a sandbar. 12. a first sulfur dig: a crack in black rock with yellow crusts and a pick. 13. a first clearing: a few rows of seedlings, stumps and a hoe. 14. a first tar pit: a smoking hole in the ground and two barrels. 15. a first deep dig: a black hole in dark rock with a rope ladder and a lantern. 16. a working pearl camp: a small hut on stilts over a lagoon, baskets of shells. 17. a working sulfur pit: a shallow pit with yellow crusts, sacks and a hand cart. 18. a working plantation: rows of green crops and a small drying shed. 19. a working tar kiln: a small smoking earth mound kiln and a few barrels. 20. a working deep shaft: a timber winch tower over a black pit, chains and lanterns. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm lights; low saturation. Background: flat solid pure magenta #FF00FF everywhere between and around the dioramas, no gradient, NO cast shadows on the background. NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours."
+ },
+ "builds_3": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.build_caravan_office_2",
+   "icon.build_forge_2",
+   "icon.build_smokehouse_2",
+   "icon.build_try_works_2",
+   "icon.build_trophy_hall_2",
+   "icon.build_signal_tower_2",
+   "icon.build_residents_house_2",
+   "icon.build_kennel_2",
+   "icon.build_caravan_office_1",
+   "icon.build_forge_1",
+   "icon.build_smokehouse_1",
+   "icon.build_try_works_1",
+   "icon.build_trophy_hall_1",
+   "icon.build_signal_tower_1",
+   "icon.build_residents_house_1",
+   "icon.build_kennel_1"
+  ],
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: sixteen separate small building dioramas laid out in a strict grid of 4 columns and 4 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all of them, bold readable silhouettes at small size. Left to right, top to bottom: 1. a timber counting-house, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 2. a stone smithy with a forge hearth, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 3. a low timber smokehouse, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 4. brick try-works with two iron pots, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 5. a dark timber hall with a whale jawbone arch over its door, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 6. a tall stone signal tower with an iron fire basket, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 7. two small timber cottages with a well, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 8. a small wooden kennel and pen, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 9. a timber counting-house fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 10. a stone smithy with a forge hearth fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 11. a low timber smokehouse fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 12. brick try-works with two iron pots fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 13. a dark timber hall with a whale jawbone arch over its door fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 14. a tall stone signal tower with an iron fire basket fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 15. two small timber cottages with a well fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 16. a small wooden kennel and pen fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm lights; low saturation. Background: flat solid pure magenta #FF00FF everywhere between and around the dioramas, no gradient, NO cast shadows on the background. NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours."
  }
 }

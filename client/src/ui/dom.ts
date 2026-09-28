@@ -78,6 +78,19 @@ const STAND_IN: Record<string, string> = {
   good_serpent_scale: 'mod_serpent_scale', tattoo_needle: 'role_sailmaker', storm_heart: 'weather_storm',
 };
 
+/** A building as it stands (docs/12 P11): whole from 70% of its condition, worn below, a ruin under 35%; each
+ *  stage falls back to the whole one while its picture is being painted. */
+export function buildIcon(id: string, condition: number, cls = 'ico'): string {
+  const stage = condition >= 0.7 ? 0 : condition >= 0.35 ? 2 : 1;
+  return (stage && icon(`build_${id}_${stage}`, '', cls)) || icon(`build_${id}`, '', cls);
+}
+
+/** An outpost as it grows: a first camp at levels 1–2, a working post at 3–4, the full one at 5. */
+export function outpostIcon(kind: string, level: number, cls = 'ico'): string {
+  const stage = level >= 5 ? 0 : level >= 3 ? 2 : 1;
+  return (stage && icon(`outpost_${kind}_${stage}`, '', cls)) || icon(`outpost_${kind}`, '', cls);
+}
+
 /** Faces still being painted, and who sits for them meanwhile (docs/12 P11). */
 const PORTRAIT_STAND_IN: Record<string, string> = { giver_old_needle: 'giver_hermit_f', skipper_1: 'giver_bosun_m' };
 
