@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { diceBid, diceJoin, diceLeave, diceLiar, diceOpen, diceStart, stepDice } from './dice.ts';
 import { catAboard, petAction, petsOnDock, stepPets } from './pets.ts';
 import { companionAction, stepCompanions } from './companion.ts';
 import { nemesisSankYou } from './nemesis.ts';
@@ -721,6 +722,7 @@ export class Game {
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
     stepPets(this); // the parrots' watch (docs/12 P10 #3)
+    stepDice(this); // the tavern tables (docs/12 P10 #4)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -2523,6 +2525,16 @@ export class Game {
       case 'choice':
         err(takeChoice(this, s, Math.trunc(Number(msg.index))));
         return this.pushSelf(s, true);
+      case 'dice': {
+        const r = msg.action === 'open' ? diceOpen(this, s, Math.trunc(Number(msg.stake)), !!msg.davy)
+          : msg.action === 'join' ? diceJoin(this, s, Math.trunc(Number(msg.id)))
+          : msg.action === 'start' ? diceStart(this, s)
+          : msg.action === 'bid' ? diceBid(this, s, Number(msg.q), Number(msg.f))
+          : msg.action === 'liar' ? diceLiar(this, s)
+          : msg.action === 'leave' ? diceLeave(this, s) : 'Unknown order';
+        err(r);
+        return this.pushPort(s);
+      }
       case 'pet':
         err(petAction(this, s, String(msg.action), msg.pet === null || msg.pet === undefined ? null : String(msg.pet)));
         return this.pushPort(s);

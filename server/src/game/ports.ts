@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { diceAvailableDavy, openTables, weekBoard } from './dice.ts';
 import { PETS, petsForSale } from '../../../shared/src/data/companions.ts';
 import { heatPriceMul, tipViews } from './raiding.ts';
 import { wantedBoard } from './wanted.ts';
@@ -141,7 +142,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     ammoPrices,
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: crewCost(port, p),
-    tavern: tavernView(game, port, p, ship),
+    tavern: tavernView(game, port, p, ship, s),
     questOffers: questOffers(p, port, game.now, favor, todaysElite(game, port)).map(({ q, blocked }) => ({ id: q.id, name: q.name, kind: q.kind, mentor: q.mentor, summary: q.summary, steps: q.steps.map((x) => x.text), blocked, silver: q.reward.silver, xp: q.reward.xp, path: q.reward.path, category: q.category, portrait: q.portrait, ...(q.category === 'arc' ? { chapter: Number(q.id.split('_').pop()) } : {}), ...(favor && q.kind === 'job' && favor(q) ? { urgent: true } : {}), ...((pays) => (pays ? { pays } : {}))(payOptions(game, q)), ...(q.group ? { group: q.group } : {}), ...((ship) => (ship ? { ship } : {}))(shipLevelOfQuest(q)) })),
     captainsHouse: CAPTAINS_HOUSES.includes(port.id),
     fishRecords: Object.entries(fishRecords(game)).map(([fish, r]) => ({ fish: fish as FishId, name: r.name, kg: r.kg })),
@@ -691,12 +692,13 @@ export function buyChart(game: Game, s: PlayerSession, port: Port, region: Regio
   return null;
 }
 
-function tavernView(game: Game, port: Port, p: Profile, ship: ShipEntity): TavernView {
+function tavernView(game: Game, port: Port, p: Profile, ship: ShipEntity, s?: PlayerSession): TavernView {
   const t = tavernOf(game, port);
   const costs = {} as Record<Profession, number>;
   for (const k of PROFESSIONS) costs[k] = recruitCost(game, port, p, k, ship);
   return {
     shanty: shanty(game),
+    dice: { tables: openTables(game, port.id), week: weekBoard(game), davy: !!s && diceAvailableDavy(game, s) },
     pets: petsForSale(port.id, Math.floor(game.wallNow() / 86_400_000)).map((pet) => ({ pet, price: PETS[pet].price })),
     stars: Math.round(t.stars * 10) / 10,
     stock: Object.fromEntries(Object.entries(t.stock).map(([k, v]) => [k, Math.floor(v ?? 0)])),

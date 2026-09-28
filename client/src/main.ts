@@ -37,6 +37,7 @@ import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 import { Journal } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
+import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
@@ -57,7 +58,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -456,6 +457,13 @@ function onMessage(m: ServerMsg): void {
     case 'tattoos':
       if (modal === 'tattoos') refreshModal();
       break;
+    case 'dice':
+      // The table opens its window; the window follows the table; it closes when she is up.
+      if (m.view) {
+        if (modal === 'dice') refreshModal();
+        else openModal('dice');
+      } else if (modal === 'dice') closeModal();
+      break;
     case 'companion':
     case 'petsown':
       if (modal === 'ship') refreshModal();
@@ -524,6 +532,11 @@ function onMessage(m: ServerMsg): void {
 }
 
 // ------------------------------------------------------------------ modals
+
+// The dice table's clock ticks between the server's words.
+setInterval(() => {
+  if (modal === 'dice') tickDice($('modal-panel'), state);
+}, 1000);
 
 function openModal(m: Modal): void {
   modal = m;
@@ -630,6 +643,10 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'choice':
       if (state.choice) renderChoice(root, state.choice, (m) => net.send(m));
+      else closeModal();
+      break;
+    case 'dice':
+      if (state.dice) renderDice(root, state, (m) => net.send(m));
       else closeModal();
       break;
     case 'sunk':

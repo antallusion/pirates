@@ -133,6 +133,11 @@ export type ClientMsg =
   | { t: 'companion'; action: 'name' | 'craft' | 'wear'; arg: string | null }
   /** The ship's pets (docs/12 P10 #3): put one on deck, buy one from a tavern's pet seller. */
   | { t: 'pet'; action: 'deck' | 'buy'; pet: PetId | null }
+  /** Dead Man's Dice (docs/12 P10 #4). */
+  | { t: 'dice'; action: 'open'; stake: number; davy?: boolean }
+  | { t: 'dice'; action: 'join'; id: number }
+  | { t: 'dice'; action: 'start' | 'liar' | 'leave' }
+  | { t: 'dice'; action: 'bid'; q: number; f: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -559,6 +564,8 @@ export interface CompanyView {
 export interface TavernView {
   /** The bard sings of the season's legends. */
   shanty: string | null;
+  /** Dead Man's Dice: the open tables, the week's best, Davy's table at midnight in the Abyss (docs/12 P10 #4). */
+  dice?: { tables: { id: number; host: string; stake: number; seats: number }[]; week: { name: string; wins: number }[]; davy: boolean };
   /** The pet seller's two today (docs/12 P10 #3). */
   pets?: { pet: PetId; price: number }[];
   stars: number;
@@ -1016,6 +1023,7 @@ export type ServerMsg =
   | { t: 'companion'; view: CompanionView | null }
   | { t: 'pets'; list: PetView[] }
   | { t: 'petsown'; view: PetsOwnView }
+  | { t: 'dice'; view: DiceView | null }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1283,6 +1291,23 @@ export interface PetView {
   ship: number;
   orca?: number;
   deck?: PetId;
+}
+
+/** A table of Dead Man's Dice as one of its captains sees it (docs/12 P10 #4): her own cup, the others' counts. */
+export interface DiceView {
+  id: number;
+  stake: number;
+  pot: number;
+  phase: 'open' | 'play' | 'done';
+  davy: boolean;
+  turn: number;
+  bid: { q: number; f: number; by: number } | null;
+  sec: number;
+  seats: { name: string; dice: number; npc: boolean; me: boolean; cup?: number[] }[];
+  host: boolean;
+  log: string[];
+  reveal: { cups: number[][]; face: number; count: number; loser: number } | null;
+  winner: number | null;
 }
 
 /** The pets a captain has, and the one on deck (docs/12 P10 #3). */

@@ -3,7 +3,7 @@
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
 import { setNemeses } from './ui/nemesis.ts';
-import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView } from '../../shared/src/protocol.ts';
+import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight } from '../../shared/src/constants.ts';
@@ -110,6 +110,9 @@ export class ClientState {
   companion: CompanionView | null = null;
   pets = new Map<number, PetView>();
   petsOwn: PetsOwnView | null = null;
+  /** The dice table she sits at (docs/12 P10 #4). */
+  dice: DiceView | null = null;
+  diceAt = 0;
   choice: { quest: string; items: Item[] } | null = null;
   tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
@@ -307,6 +310,10 @@ export class ClientState {
         break;
       case 'petsown':
         this.petsOwn = m.view;
+        break;
+      case 'dice':
+        this.dice = m.view;
+        this.diceAt = performance.now();
         break;
       case 'choice':
         this.choice = m.view;

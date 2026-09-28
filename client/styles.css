@@ -2040,3 +2040,43 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .cmp-card .cmp-cost { font-size: 11px; color: var(--fog, #9aa); }
 .cmp-card .cmp-forge { font-size: 11px; margin: 6px 0 0; }
 .cmp-card .pet-ico { width: 40px; height: 40px; flex: none; border-radius: 5px; object-fit: cover; border: 1px solid rgba(232,196,106,0.3); }
+/* Dead Man's Dice (docs/12 P10 #4). */
+.dice .dc-rules { font-size: 12px; margin: 0 0 8px; }
+.dc-seats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.dc-seat { display: flex; flex-direction: column; gap: 3px; padding: 7px; border: 1px solid rgba(232,196,106,0.25); border-radius: 6px; background: rgba(10,12,16,0.75); min-width: 0; }
+.dc-seat b { font-family: var(--serif); font-size: 14px; overflow-wrap: anywhere; }
+.dc-seat.turn { border-color: #ffe08a; box-shadow: 0 0 10px rgba(255,224,138,0.35); }
+.dc-seat.me { background: rgba(40,34,20,0.8); }
+.dc-seat.out { opacity: 0.45; }
+.dc-seat.won { border-color: #7fd07f; }
+.dc-seat.lost { border-color: #d0584a; }
+.dc-cup { display: flex; flex-wrap: wrap; gap: 4px; }
+.die { width: 30px; height: 30px; flex: none; }
+.die rect { fill: #e9dfc6; stroke: #5a4a2a; stroke-width: 4; }
+.die circle { fill: #1b1410; }
+.die.wild rect { fill: #e8c46a; }
+.die.hid rect { fill: #3a2a18; stroke: #7a5a30; }
+.die.hid text { fill: #c9a86a; font: 700 44px var(--serif); }
+.die.hit rect { stroke: #7fd07f; stroke-width: 8; }
+.die.big { width: 38px; height: 38px; vertical-align: middle; }
+.dc-bid { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; font: 600 16px var(--serif); color: var(--gold); flex-wrap: wrap; }
+.dc-bid .muted { font: 12px var(--sans); }
+.dc-clock { font-size: 13px; margin: 4px 0 8px; }
+.dc-controls { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid rgba(232,196,106,0.3); border-radius: 6px; background: rgba(20,18,12,0.7); }
+.dc-step { display: flex; align-items: center; gap: 8px; }
+.dc-q { min-width: 28px; text-align: center; font: 700 20px var(--serif); color: var(--gold); }
+.dc-faces { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dc-face { padding: 2px; border: 2px solid transparent; border-radius: 8px; background: none; cursor: pointer; line-height: 0; }
+.dc-face.on { border-color: #ffe08a; }
+.dc-face .die { width: 40px; height: 40px; }
+.dc-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.dc-acts .btn { flex: 1 1 140px; }
+.dc-win { font: 600 18px var(--serif); color: #7fd07f; margin: 10px 0; }
+.dc-reveal { font-size: 13px; color: #cfe0b0; margin: 8px 0 0; }
+.dc-log { margin-top: 10px; font-size: 12px; color: var(--fog, #9aa); display: flex; flex-direction: column; gap: 2px; }
+.dc-foot { margin-top: 10px; display: flex; justify-content: flex-end; }
+.dice-card .dc-stakes { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.dice-card .dc-davy { border: 1px solid #7a2a1a; border-radius: 5px; padding: 6px 8px; margin: 6px 0; background: rgba(60,10,10,0.35); font-size: 12px; }
+.dice-card .dc-davy p { margin: 0 0 6px; }
+.dc-faces .giver-h { flex-basis: 100%; }
+.die.sm { width: 22px; height: 22px; vertical-align: middle; margin-left: 2px; }

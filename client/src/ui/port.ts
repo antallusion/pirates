@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { diceCard } from './dice.ts';
 import { PETS } from '../../../shared/src/data/companions.ts';
 import { petIcon } from './companion.ts';
 import { nemesisPoster } from './nemesis.ts';
@@ -132,6 +133,12 @@ export class PortScreen {
         return this.send({ t: 'trade', good: d.good as never, qty: this.qty });
       case 'sell':
         return this.send({ t: 'trade', good: d.good as never, qty: -Math.min(this.qty, Math.floor(state.self?.cargo[d.good as never] ?? 0)) || -1 });
+      case 'dice_open':
+        return this.send({ t: 'dice', action: 'open', stake: Number(d.stake) });
+      case 'dice_join':
+        return this.send({ t: 'dice', action: 'join', id: Number(d.id) });
+      case 'dice_davy':
+        return this.send({ t: 'dice', action: 'open', stake: 0, davy: true });
       case 'pet_buy':
         return this.send({ t: 'pet', action: 'buy', pet: d.pet as never });
       case 'sellall':
@@ -456,7 +463,8 @@ ${orders}${berths}</div>` : ''}`;
     // The pet seller (docs/12 P10 #3): two of four, new each day.
     const owned = state.petsOwn?.owned ?? [];
     const seller = tv.pets?.length ? `<div class="card cmp-card"><h4 class="card-h">${petIcon(tv.pets[0].pet, 'ico-md')}${esc(L('pet.seller'))}</h4>${tv.pets.map((x) => `<div class="cmp-h">${petIcon(x.pet, 'pet-ico')}<div class="cmp-h-t"><b>${esc(PETS[x.pet].name[lang() === 'ru' ? 1 : 0])}</b><span class="muted">${esc(PETS[x.pet].gives[lang() === 'ru' ? 1 : 0])}</span></div><button class="btn btn-small" data-act="pet_buy" data-pet="${x.pet}" ${owned.includes(x.pet) || self.gold < x.price ? 'disabled' : ''}>${owned.includes(x.pet) ? esc(L('pet.have')) : money(x.price)}</button></div>`).join('')}</div>` : '';
-    return `${board}${recs}${needle}${seller}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
+    const dice = tv.dice ? diceCard(tv.dice, self.gold) : '';
+    return `${board}${recs}${dice}${needle}${seller}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
         <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}
         <button class="btn btn-small btn-danger hire-wide" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>
