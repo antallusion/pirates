@@ -140,5 +140,129 @@
   ],
   "aspect": "21:9",
   "prompt": "Top-down orthographic game sprite sheet for a dark gothic pirate MMO sea map: eight sea creatures in a single row, each seen strictly from directly above, swimming straight up the picture with the head at the top and the tail at the bottom, each in its own equal tall narrow column with wide even gaps of empty background between them so that nothing touches, every whole body in frame from head to tail. Painted realistic style, wet, weathered, heavy, one consistent style and light across all eight. Left to right: 1. a black-and-white orca with white eye patches, pectoral flippers spread. 2. a legendary albino white orca, pale bone-white skin with dark old scars and a broken harpoon shaft in its back. 3. a dark grey humpback whale with very long white pectoral flippers and a knobbly head. 4. a dark grey sperm whale with a huge blunt box-shaped head and wrinkled skin. 5. a mottled grey narwhal with a long spiral tusk pointing straight up. 6. a large grey shark with swept-back pectoral fins and a tall tail fin. 7. a young dark sea serpent, a long scaled body in a gentle S-curve, a finned head at the top. 8. a colossal ancient sea turtle, its huge barnacled shell overgrown with moss and carrying a small grove of palm trees like an islet, four broad flippers. Muted palette: charcoal, graphite, slate grey, bone white, cold blue-grey; low saturation. Background: flat solid pure magenta #FF00FF everywhere, no gradient, NO cast shadow, NO water, NO waves, NO foam, NO ground. NO text, NO letters, NO numbers, NO labels, NO watermark, NO frame. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, side view, perspective."
+ },
+ "builds_1": {
+  "grid": [
+   6,
+   3
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "ids": [
+   "icon.build_caravan_office",
+   "icon.build_forge",
+   "icon.build_smokehouse",
+   "icon.build_try_works",
+   "icon.build_trophy_hall",
+   "icon.build_signal_tower",
+   "icon.build_residents_house",
+   "icon.build_kennel",
+   "icon.outpost_lumber",
+   "icon.outpost_mine",
+   "icon.outpost_saltworks",
+   "icon.outpost_fishery",
+   "icon.outpost_whaling",
+   "icon.outpost_pearls",
+   "icon.outpost_sulfur",
+   "icon.outpost_plantation",
+   "icon.outpost_tar",
+   "icon.outpost_deep_shaft"
+  ],
+  "aspect": "16:9",
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: eighteen separate small building dioramas laid out in a strict grid of 6 columns and 3 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all eighteen, bold readable silhouettes at small size. Left to right, top to bottom: 1. a small timber counting-house with a hanging lantern sign, ledgers and cargo crates stacked by its door. 2. a stone smithy with a glowing forge hearth, an anvil and a quenching barrel under a sloped roof. 3. a low timber smokehouse with smoke seeping through its roof slats and fish hanging on racks. 4. brick try-works: two huge iron pots over a fire for rendering whale oil, oil casks beside them. 5. a dark timber hall with a whale jawbone arch over its door and captured flags on poles. 6. a tall stone signal tower with an iron fire basket on top and a bell. 7. two small weathered timber cottages with shingled roofs and a well between them. 8. a small wooden kennel and pen with a coop and a feeding trough. 9. a logging camp: stacked logs, a saw pit and a small tarred hut among dark pines. 10. a mine: a timber headframe over a shaft in grey rock, ore carts on rails. 11. salt pans: shallow square evaporation pools with white salt heaps and a rake shed. 12. a fishing station: a wooden jetty with drying fish racks, nets and a boat shed. 13. a whaling station: a slipway with a whale carcass, flensing tools and oil casks. 14. a pearl divers' camp: a hut on stilts over a lagoon, baskets of oyster shells. 15. a sulfur pit in black volcanic rock, yellow crusts, fuming vents and sacks. 16. a small plantation: rows of green crops, a drying shed and a cart. 17. a tar kiln: a smoking earth-mound kiln with barrels of black pine tar. 18. a deep shaft: a heavy iron winch tower over a black pit in dark rock, chains and lanterns. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm window lights; low saturation. Background: flat solid pure magenta #FF00FF everywhere between and around the dioramas, no gradient, NO cast shadows on the background. NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours."
+ },
+ "pirates_1": {
+  "grid": [
+   4,
+   2
+  ],
+  "mode": "tiles",
+  "px": 560,
+  "ratio": 0.8,
+  "square": false,
+  "dir": "portraits",
+  "aspect": "16:9",
+  "ids": [
+   "portrait.pirate_00",
+   "portrait.pirate_01",
+   "portrait.pirate_02",
+   "portrait.pirate_03",
+   "portrait.pirate_04",
+   "portrait.pirate_05",
+   "portrait.pirate_06",
+   "portrait.pirate_07"
+  ],
+  "prompt": "Sheet of 8 portraits for a dark Pirate Gothic naval MMORPG, laid out in a strict grid of 4 columns and 2 rows of equal upright panels separated by thin pure black gutters. Each panel is its own realistic dark portrait, oil-painting texture over photographic realism, waist-up, three-quarter view, of a different person, the same lighting in all of them: warm amber lantern key light from below one side, cold blue moonlight rim from behind, deep chiaroscuro, rain droplets, wet skin and fabric sheen; a near-black stormy background with cold fog. Clothing heavy, waterlogged, worn, frayed, almost black; salt-darkened metal. The people, left to right, top row then bottom row: 1. a scarred bald pirate in his forties with a braided black beard and a gold earring. 2. a lean pirate woman in her thirties with cropped red hair and a burn scar on her cheek, a tricorne. 3. a grey-bearded old pirate with an eyepatch and a battered cocked hat. 4. a young West African pirate with a shaved head, a heavy gold chain and a cutlass on his shoulder. 5. a stern pirate woman in her fifties, grey-streaked hair tied back, a dark coat with tarnished buttons. 6. a gaunt pale pirate with lank black hair and hollow cheeks, a ragged cravat. 7. a broad-shouldered pirate with a dark red bandana, a broken nose and stubble. 8. a young mestiza pirate woman with long black braids, a knife scar on her lip and a bandolier. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy. Adults, grim, grounded, realistic. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, fantasy armor, steampunk goggles, bright colors, clean new clothes, glamour makeup, glowing magic."
+ },
+ "pirates_2": {
+  "grid": [
+   4,
+   2
+  ],
+  "mode": "tiles",
+  "px": 560,
+  "ratio": 0.8,
+  "square": false,
+  "dir": "portraits",
+  "aspect": "16:9",
+  "ids": [
+   "portrait.pirate_08",
+   "portrait.pirate_09",
+   "portrait.pirate_10",
+   "portrait.pirate_11",
+   "portrait.pirate_12",
+   "portrait.pirate_13",
+   "portrait.pirate_14",
+   "portrait.pirate_15"
+  ],
+  "prompt": "Sheet of 8 portraits for a dark Pirate Gothic naval MMORPG, laid out in a strict grid of 4 columns and 2 rows of equal upright panels separated by thin pure black gutters. Each panel is its own realistic dark portrait, oil-painting texture over photographic realism, waist-up, three-quarter view, of a different person, the same lighting in all of them: warm amber lantern key light from below one side, cold blue moonlight rim from behind, deep chiaroscuro, rain droplets, wet skin and fabric sheen; a near-black stormy background with cold fog. Clothing heavy, waterlogged, worn, frayed, almost black; salt-darkened metal. The people, left to right, top row then bottom row: 1. a heavy pirate with a shaggy blond beard and a fur-trimmed coat. 2. a sharp-faced pirate with a thin moustache and an old wig gone grey with salt. 3. a weathered East Asian pirate woman in her forties with a topknot and a dark silk jacket. 4. a young pirate with a missing ear, curly brown hair and a leather jerkin. 5. an old pirate woman with a clay pipe, deep wrinkles and a black headscarf. 6. a tall Black pirate woman with a shaved head, gold hoops and a stolen naval officer's coat. 7. a hook-nosed pirate with a pockmarked face and a wide-brimmed hat. 8. a boyish pirate woman with short blond hair, freckles and a torn shirt. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy. Adults, grim, grounded, realistic. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, fantasy armor, steampunk goggles, bright colors, clean new clothes, glamour makeup, glowing magic."
+ },
+ "pirates_3": {
+  "grid": [
+   4,
+   2
+  ],
+  "mode": "tiles",
+  "px": 560,
+  "ratio": 0.8,
+  "square": false,
+  "dir": "portraits",
+  "aspect": "16:9",
+  "ids": [
+   "portrait.pirate_16",
+   "portrait.pirate_17",
+   "portrait.pirate_18",
+   "portrait.pirate_19",
+   "portrait.pirate_20",
+   "portrait.pirate_21",
+   "portrait.pirate_22",
+   "portrait.pirate_23"
+  ],
+  "prompt": "Sheet of 8 portraits for a dark Pirate Gothic naval MMORPG, laid out in a strict grid of 4 columns and 2 rows of equal upright panels separated by thin pure black gutters. Each panel is its own realistic dark portrait, oil-painting texture over photographic realism, waist-up, three-quarter view, of a different person, the same lighting in all of them: warm amber lantern key light from below one side, cold blue moonlight rim from behind, deep chiaroscuro, rain droplets, wet skin and fabric sheen; a near-black stormy background with cold fog. Clothing heavy, waterlogged, worn, frayed, almost black; salt-darkened metal. The people, left to right, top row then bottom row: 1. a Barbary corsair with a trimmed black beard and a dark turban. 2. a thickset pirate with tattooed lines on his face and a shark-tooth necklace. 3. a red-bearded giant of a pirate with a bald, scarred scalp. 4. a thin elderly pirate with white stubble, cracked spectacles and a threadbare frock coat. 5. a pirate woman with a streak of white in her dark hair and a brass spyglass on a cord. 6. a young pirate with a goatee, a feathered hat and a sneer. 7. a hollow-eyed, half-drowned-looking pirate with pale wet skin and barnacle-crusted buttons. 8. a pirate woman with a patch over one eye, cropped black hair and a heavy fur collar. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy. Adults, grim, grounded, realistic. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, fantasy armor, steampunk goggles, bright colors, clean new clothes, glamour makeup, glowing magic."
+ },
+ "barons_1": {
+  "grid": [
+   4,
+   2
+  ],
+  "mode": "tiles",
+  "px": 560,
+  "ratio": 0.8,
+  "square": false,
+  "dir": "portraits",
+  "aspect": "16:9",
+  "ids": [
+   "portrait.baron_black_coast",
+   "portrait.baron_gravewater",
+   "portrait.baron_whispering",
+   "portrait.baron_ashen_isles",
+   "portrait.baron_leviathan_reach",
+   "portrait.baron_dead_mans_expanse",
+   "portrait.baron_drowned_crown",
+   "portrait.skipper_1"
+  ],
+  "prompt": "Sheet of 8 portraits for a dark Pirate Gothic naval MMORPG, laid out in a strict grid of 4 columns and 2 rows of equal upright panels separated by thin pure black gutters. Each panel is its own realistic dark portrait, oil-painting texture over photographic realism, waist-up, three-quarter view, of a different person, the same lighting in all of them: warm amber lantern key light from below one side, cold blue moonlight rim from behind, deep chiaroscuro, rain droplets, wet skin and fabric sheen; a near-black stormy background with cold fog. Clothing heavy, waterlogged, worn, frayed, almost black; salt-darkened metal. The people, left to right, top row then bottom row: 1. the Red Baron, a heavyset pirate lord in his fifties with a greying red beard and a battered crimson admiral's coat hung with stolen medals. 2. the Iron Baron, a grim pirate lord with an iron gorget, an iron jaw plate over a ruined chin and a heavy black greatcoat. 3. the Salt Baron, a pirate lady in her forties with salt-white braided hair, kohl-rimmed eyes, rings on every finger and a silk scarf. 4. the Black Baron, a soot-streaked pirate lady with burn scars on her arms and a smith's leather apron over a captain's coat. 5. the Frost Baron, an old whaler lord with a frost-white beard, a sealskin coat and a whalebone harpoon over his shoulder. 6. the Grave Baron, a gaunt sun-scorched pirate lord with a skull-headed cane and a ragged black frock coat. 7. the Drowned Baron, a pale pirate lady with wet dark hair, a tarnished coral crown and barnacles on her collar, one faint turquoise vein at her temple. 8. a weathered merchant skipper in an oilskin coat with a clay pipe. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy. Adults, grim, grounded, realistic. NO frames, NO borders inside the panels, NO text, NO letters, NO watermark. Avoid: cartoon, anime, fantasy armor, steampunk goggles, bright colors, clean new clothes, glamour makeup, glowing magic."
  }
 }

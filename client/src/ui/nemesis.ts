@@ -65,7 +65,7 @@ export function nemesisLog(v: NemesisView[] | undefined, heads: number): string 
     if (!np) return '';
     const scars = [...new Set(n.scars)].map((c) => SCARS[c][r]).join('; ');
     return `<div class="nem-row">
-      <div class="nem-face">${icon(`portrait.${np.portrait}`, '☠', 'nem-img')}</div>
+      <div class="nem-face">${icon(`portrait.${np.art}`, '', 'nem-img') || icon(`portrait.${np.portrait}`, '☠', 'nem-img')}</div>
       <div class="nem-text"><b>${esc(nemesisName(np, n.epithet)[r])}</b>
         <span class="nem-rank">${esc(L('rank', { rank: NEMESIS_RANKS[n.rank - 1][r], n: n.rank }))}</span>
         <span class="muted">${esc(L('sea', { sea: REGIONS[np.region].name }))} · <span class="nowrap">«${esc(np.ship[r])}» ⚓${np.level}</span></span>

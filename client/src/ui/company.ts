@@ -798,17 +798,17 @@ function estateHtml(state: ClientState): string {
     const rows = e.outposts.map((o) => {
       const full = o.fullIn <= 0 ? L('est_full') : L('est_full_in', { h: Math.floor(o.fullIn / 3600), m: Math.floor((o.fullIn % 3600) / 60) });
       const days = Math.max(0, Math.floor((o.claimUntil - Date.now()) / 86_400_000));
-      return `<div class="est-op${o.raid !== null ? ' est-raid' : ''}"><div><b>${esc(OUTPOSTS[o.kind].name[ru])}</b> · ${esc(placeName(o.name))} · ${esc(L('est_lvl', { n: o.level }))}
+      return `<div class="est-op${o.raid !== null ? ' est-raid' : ''}"><div>${icon(`outpost_${o.kind}`, '', 'ico')}<b>${esc(OUTPOSTS[o.kind].name[ru])}</b> · ${esc(placeName(o.name))} · ${esc(L('est_lvl', { n: o.level }))}
         <div class="muted">${esc(L('est_op_line', { rate: o.rate, good: GOODS[o.good].name.toLowerCase(), store: o.store, cap: o.cap, full, days }))}${o.residents ? ` · ${esc(L('est_op_res', { n: o.residents }))}` : ''}</div>
         ${o.raid !== null ? `<div class="bad">${esc(L('est_raid', { m: Math.floor(o.raid / 60), s: String(o.raid % 60).padStart(2, '0') }))}</div>` : ''}</div>
         <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="haul">${esc(L('est_haul'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="upgrade">${esc(L('est_upgrade'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="renew">${esc(L('est_renew'))}</button>
         <button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="workers" data-arg="${o.workers === 'hands' ? 'none' : 'hands'}">${esc(o.workers === 'hands' ? L('est_hands_off') : L('est_hands_on'))}</button>
         <select data-guard="${esc(o.id)}">${(Object.keys(GUARDS) as Guard[]).map((g) => `<option value="${g}"${o.guard === g ? ' selected' : ''}>${esc(L('est_guard', { name: GUARDS[g].name[ru], cost: fmt(GUARDS[g].cost) }))}</option>`).join('')}</select></div></div>`;
     }).join('');
-    const found = e.kinds.map((k: OutpostKind) => `<button class="btn btn-small" data-est="found" data-kind="${k}">${esc(L('est_found', { name: OUTPOSTS[k].name[ru], goods: goodsList(OUTPOST_BUILD) }))}</button>`).join('');
+    const found = e.kinds.map((k: OutpostKind) => `<button class="btn btn-small" data-est="found" data-kind="${k}">${icon(`outpost_${k}`, '', 'ico-sm')}${esc(L('est_found', { name: OUTPOSTS[k].name[ru], goods: goodsList(OUTPOST_BUILD) }))}</button>`).join('');
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('build_mine', '', 'ico-md')}${esc(serverText('Outposts'))}</h4>${rows || `<p class="muted">${esc(L('est_no_ops'))}</p>`}${found ? `<p class="muted">${esc(L('est_found_here'))}</p><div class="row" style="gap:4px;flex-wrap:wrap">${found}</div>` : ''}</div>`);
   }
-  if (e.near.length) parts.push(`<div class="card est-card"><h4 class="card-h">${esc(L('est_theirs'))}</h4>${e.near.map((o) => `<div class="est-op"><span>${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(o.owner)} · ${o.store}/${o.cap}</span><button class="btn btn-small btn-danger" data-est="op" data-id="${esc(o.id)}" data-order="rob">${esc(L('est_rob'))}</button></div>`).join('')}</div>`);
+  if (e.near.length) parts.push(`<div class="card est-card"><h4 class="card-h">${esc(L('est_theirs'))}</h4>${e.near.map((o) => `<div class="est-op"><span>${icon(`outpost_${o.kind}`, '', 'ico')}${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(o.owner)} · ${o.store}/${o.cap}</span><button class="btn btn-small btn-danger" data-est="op" data-id="${esc(o.id)}" data-order="rob">${esc(L('est_rob'))}</button></div>`).join('')}</div>`);
   if (e.hall) parts.push(`<div class="card est-card"><button class="btn btn-small" data-est="visit" data-isl="${e.hall.island}">${esc(L('est_visit', { name: e.hall.owner }))}</button></div>`);
   return parts.length ? `<div class="est-wrap">${parts.join('')}</div>` : '';
 }

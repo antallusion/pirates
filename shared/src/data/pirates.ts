@@ -35,6 +35,8 @@ export interface NamedPirate {
   weather: 'fog' | 'storm' | 'any';
   /** A face from the pool, and the tint of the poster it is printed on. */
   portrait: string;
+  /** The painted face of her own (docs/12 P11): one of 24 pirates, a baron her sea's; `portrait` stands in until it is loaded. */
+  art: string;
   hue: number;
   lieutenants: Lieutenant[];
   bounty: number;
@@ -116,6 +118,8 @@ export function namedPirates(): NamedPirate[] {
         time: rng.chance(0.35) ? 'night' : rng.chance(0.2) ? 'day' : 'any',
         weather: rng.chance(0.2) ? 'fog' : rng.chance(0.15) ? 'storm' : 'any',
         portrait: rng.pick(FACES), hue: rng.int(0, 359),
+        // Spread over the 24 faces (7 is prime to 24, so every face is used); drawn apart from the seeded rolls.
+        art: baron ? `baron_${region}` : `pirate_${String(((ri * PER_SEA + i) * 7) % 24).padStart(2, '0')}`,
         lieutenants: lts, bounty: bountyFor(level, baron), baron,
       });
     }

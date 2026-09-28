@@ -702,7 +702,7 @@ function wantedBoardHtml(list: WantedPoster[]): string {
     const habits = [L(`wanted.time.${w.time}` as 'wanted.time.any'), L(`wanted.weather.${w.weather}` as 'wanted.weather.any'), L(`wanted.trick.${w.trick}` as 'wanted.trick.fog'), L(`wanted.temper.${w.temper}` as 'wanted.temper.coward')].filter(Boolean).join(' · ');
     return `<div class="poster${w.down ? ' po-down' : ''}${w.baron ? ' po-baron' : ''}${nem ? ' po-nemesis' : ''}">
       <div class="po-head">${esc(w.baron ? L('wanted.baron') : L('wanted.head'))}</div>${nem ? `<div class="po-stamp">${esc(nem.stamp)}</div>` : ''}
-      <div class="po-face" style="filter: sepia(0.55) hue-rotate(${w.hue}deg) saturate(0.8)">${icon(`portrait.${w.portrait}`, '', 'po-img')}</div>
+      <div class="po-face" style="filter: sepia(0.55) hue-rotate(${w.hue}deg) saturate(0.8)">${(np && icon(`portrait.${np.art}`, '', 'po-img')) || icon(`portrait.${w.portrait}`, '', 'po-img')}</div>
       <b class="po-name">${esc(name)}</b>
       <div class="po-ship">«${esc(ship)}» · ⚓${w.level}</div>
       <div class="po-bounty">${esc(L('wanted.bounty', { n: w.bounty.toLocaleString(ru ? 'ru-RU' : 'en-GB') }))}</div>

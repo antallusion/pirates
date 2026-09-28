@@ -757,11 +757,14 @@ export class Hud {
     g.closePath();
     g.fill();
     g.restore();
-    // The wind on the rim: where it blows from, an arrow pointing where it goes (phones have no compass).
+    // The wind on the rim: where it blows from, an arrow pointing where it goes (phones have no compass). Green
+    // when it drives her on, red when it holds her back, blue on the beam.
     const wv = headingVec(state.wind[0]);
     const r0 = W / 2 - 22;
-    g.strokeStyle = 'rgba(143,179,217,0.9)';
-    g.fillStyle = 'rgba(143,179,217,0.9)';
+    const push = windPush(relWindDeg(own.heading, { dir: state.wind[0], strength: state.wind[1] }), state.wind[1]) - 1;
+    const tint = push > 0.05 ? 'rgba(127,181,138,0.95)' : push < -0.05 ? 'rgba(214,104,88,0.95)' : 'rgba(143,179,217,0.9)';
+    g.strokeStyle = tint;
+    g.fillStyle = tint;
     g.lineWidth = 2 + state.wind[1] * 2;
     g.beginPath();
     g.moveTo(W / 2 - wv.x * r0, H / 2 - wv.y * r0);
