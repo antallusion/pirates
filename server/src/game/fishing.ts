@@ -7,6 +7,7 @@
 //  - a deep line: lying still over deep water, the slow bite of the big and strange.
 // Every catch teaches the craft; the heaviest of each kind is the whole sea's record.
 
+import { trophyBonus } from './estate.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { questEvent } from './quests.ts';
 import { SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
@@ -339,7 +340,7 @@ function fishWith(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile): v
     const sh = shoalAt(game, ship.state.x, ship.state.y);
     if (!sh || spd < 0.5 || spd > max * 0.4 || !FISH[sh.fish].methods.includes('net')) return;
     if (!every(game, s, 'net', 5)) return;
-    const well = ship.cls.passive.id === 'wet_well' ? 2 : 1;
+    const well = (ship.cls.passive.id === 'wet_well' ? 2 : 1) * (1 + trophyBonus(game, s.accountId, 'fish'));
     const n = Math.min(sh.stock, Math.max(1, Math.round(fs(game).rng.int(1, 3) * (1 + craft / 40) * (1 + f.skill / 100) * well)));
     if (FISH[sh.fish].skill > f.skill) return;
     sh.stock -= n;

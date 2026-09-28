@@ -11,6 +11,8 @@
 //    a fort that fire on pirates and on whoever fires on you, a lighthouse (sight, witness, toll), farms, mines,
 //    plantations, a sawmill, a distillery, a powder mill, a chapel, a chart house, barracks.
 
+import { estateProduce, ownedSlots, residentMul } from './estate.ts';
+import type { Resident } from './estate.ts';
 import { BUILDINGS, ISLAND_CACHE_VOLUME, LIMIT_PERSONAL, RENT, RENT_DAYS, WAREHOUSE_ISLAND_VOLUME, islandSize, islandSlots, rentZoneMul } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId, RentDays } from '../../../shared/src/data/holdings.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
@@ -71,6 +73,11 @@ export interface Holding {
   lastSiege: number;
   base?: number; // guild base level (docs/02 §12.A.3): +2 slots a level
   siege?: Siege;
+  /** A captain's own island, bought outright (docs/12 P7): its level 1..10, its residents, its guests. */
+  owned?: boolean;
+  level?: number;
+  residents?: Resident[];
+  visitors?: number;
 }
 
 export class HoldingsHub {
@@ -134,6 +141,7 @@ export function strength(h: Holding, id: BuildingId): number {
 }
 
 export function slotsOf(isl: Island, h: Holding | undefined): number {
+  if (h?.owned) return ownedSlots(h, isl);
   return islandSlots(isl.radius, isl.region) + 2 * (h?.base ?? 0);
 }
 
@@ -581,8 +589,8 @@ function stepCalendar(game: Game, h: Holding): void {
     h.lastUpkeep += DAY;
     game.holdings.touch();
   }
-  // The lease.
-  if (wall < h.until) return;
+  // The lease (an island bought outright has none to run out).
+  if (h.owned || wall < h.until) return;
   const price = rentPrice(isl, 7);
   if (h.autoRenew && h.treasury >= price) {
     h.treasury -= price;
@@ -621,16 +629,19 @@ function produce(game: Game, h: Holding, isl: Island, hours: number): void {
     add(to, n * out);
   };
   const perDay = hours / 24;
-  add('provisions', 20 * perDay * strength(h, 'farm') + 10 * perDay * strength(h, 'fishing_village'));
+  // A resident at work: +40% a building (docs/12 P7).
+  const k = (id: BuildingId) => strength(h, id) * residentMul(h, id);
+  add('provisions', 20 * perDay * k('farm') + 10 * perDay * k('fishing_village'));
   // A mine gives six tons an hour of what the rock holds.
   const ore: GoodId = isl.biome === 'volcanic' || isl.biome === 'blacksand' || isl.biome === 'crystal' ? 'iron' : 'coal';
-  add(ore, (6 / GOODS[ore].weight) * hours * strength(h, 'mine'));
+  add(ore, (6 / GOODS[ore].weight) * hours * k('mine'));
   const crop: GoodId = isl.biome === 'mossy' ? 'tobacco' : isl.biome === 'jungle' ? 'spices' : 'sugar';
-  add(crop, (1.5 / GOODS[crop].weight) * hours * strength(h, 'plantation'));
+  add(crop, (1.5 / GOODS[crop].weight) * hours * k('plantation'));
   // Mills turn what is in the store.
-  convert({ timber: 10 }, 'planks', 13, Math.floor(6 * hours * strength(h, 'sawmill')));
-  convert({ sugar: 2 }, 'rum', 1, Math.floor(10 * hours * strength(h, 'distillery')));
-  convert({ salt: 2, coal: 1 }, 'gunpowder', 2, Math.floor(5 * hours * strength(h, 'powder_mill')));
+  convert({ timber: 10 }, 'planks', 13, Math.floor(6 * hours * k('sawmill')));
+  convert({ sugar: 2 }, 'rum', 1, Math.floor(10 * hours * k('distillery')));
+  convert({ salt: 2, coal: 1 }, 'gunpowder', 2, Math.floor(5 * hours * k('powder_mill')));
+  estateProduce(game, h, hours, add, convert);
 }
 
 function upkeep(game: Game, h: Holding, isl: Island): void {
@@ -704,7 +715,7 @@ export function holdingView(game: Game, h: Holding, accountId: number): HoldingV
     owner: h.owner.name, mine: mayUse(game, h, accountId), until: h.until, autoRenew: h.autoRenew, treasury: h.treasury, store: h.store, storeCap: storeCapacity(h),
     buildings: h.buildings.map((b) => ({ id: b.id, condition: Math.round(b.condition * 100) / 100, unpaid: b.unpaid })),
     upkeep: h.buildings.reduce((a, b) => a + BUILDINGS[b.id].upkeep, 0),
-    renew: rentPrice(isl, 7), window: h.window, windowNext: h.windowNext?.hour ?? null, shieldUntil: h.shieldUntil, base: h.base ?? 0, guild: h.owner.kind === 'guild',
+    renew: rentPrice(isl, 7), window: h.window, windowNext: h.windowNext?.hour ?? null, shieldUntil: h.shieldUntil, base: h.base ?? 0, guild: h.owner.kind === 'guild', owned: !!h.owned,
   };
 }
 

@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { trophyBonus } from './estate.ts';
 import { BEASTS, BEAST_IDS, LINE, SACRED_WATERS, SPOOK_NOISE, beastOfClass, biteAt, hullNoise, lineStep, yieldScale } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -1009,7 +1010,7 @@ function flensed(game: Game, s: PlayerSession, c: Carcass): void {
   const def = BEASTS[c.beast];
   const ship = s.ship!;
   S.carcasses.delete(c.id);
-  const k = yieldScale(c.beast, c.level);
+  const k = yieldScale(c.beast, c.level) * (1 + trophyBonus(game, s.accountId, 'skull'));
   for (const [g, [lo, hi]] of Object.entries(def.yields) as [GoodId, [number, number]][]) {
     const n = Math.round(S.rng.range(lo, hi + 0.99) * k - 0.49);
     if (n > 0) giveGoods(ship, g, n);

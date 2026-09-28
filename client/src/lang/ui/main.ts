@@ -2,6 +2,7 @@
 
 export const EN = {
   noReadAloud: 'This browser cannot read aloud.',
+  trophyHall: 'The trophy hall of {owner}: {flag} pirate flags, {skull} orca skulls, {fish} record fish.',
   verified: 'E-mail confirmed. Welcome aboard.',
   verifyFailed: 'That confirmation link has expired.',
   resetFailed: 'Could not reset.',
@@ -72,6 +73,7 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   noReadAloud: 'Этот браузер не умеет читать вслух.',
+  trophyHall: 'Зал трофеев капитана {owner}: пиратских флагов {flag}, черепов касаток {skull}, рекордных рыб {fish}.',
   verified: 'Почта подтверждена. Добро пожаловать на борт.',
   verifyFailed: 'Срок этой ссылки истёк.',
   resetFailed: 'Не удалось сменить пароль.',

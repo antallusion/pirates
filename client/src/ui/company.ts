@@ -2,6 +2,8 @@
 // packet boat, and — in port — the captains' market board (and Tidewrack's trophy auction).
 // Plus the barter table, opened when two captains agree to trade.
 
+import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS } from '../../../shared/src/data/estate.ts';
+import type { Guard, OutpostKind, Profession } from '../../../shared/src/data/estate.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -98,7 +100,10 @@ export class CompanyScreen {
       if (this.tab === 'market') this.send({ t: 'market', action: 'list' });
       if (this.tab === 'letters') this.send({ t: 'mail', action: 'list' });
       if (this.tab === 'law') this.send({ t: 'pvp', action: 'bounties' });
-      if (this.tab === 'isles') this.send({ t: 'isle', action: 'list' });
+      if (this.tab === 'isles') {
+        this.send({ t: 'isle', action: 'list' });
+        this.send({ t: 'estate', action: 'view' });
+      }
       if (this.tab === 'guild') this.send({ t: 'guild', action: 'view' });
       this.render(root, state);
     }));
@@ -310,7 +315,7 @@ export class CompanyScreen {
       const builds = (self?.builds ?? []).filter((b) => b.port === `isle:${h.island}`);
       const berths = (self?.berths ?? []).map((b, i) => ({ b, i })).filter((x) => x.b.port === `isle:${h.island}`);
       return `<div class="card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(placeName(h.name))} <span class="muted">${L('isl_hold_meta', { region: esc(REGIONS[h.region]?.name ?? h.region.replace(/_/g, ' ')), size: L(`size_${h.size}`), used, slots: h.slots })}${h.guild ? L('isl_guild', { base: h.base ? BASE_NAMES(h.base) : L('isl_island') }) : ''}</span></span></h4>
-        <p>${L('isl_lease')} <b>${days >= 1 ? `${Math.floor(days)} ${dayW(Math.floor(days))}` : days > 0 ? `${Math.ceil(days * 24)} ${hourW(Math.ceil(days * 24))}` : `<span class="bad">${L('isl_runout')}</span>`}</b> · ${L('isl_week', { price: fmt(h.renew) })} · <label><input type="checkbox" data-auto="${h.island}" ${h.autoRenew ? 'checked' : ''}> ${L('isl_auto')}</label></p>
+        ${h.owned ? `<p class="good">${L('isl_owned')}</p>` : ''}<p${h.owned ? ' hidden' : ''}>${L('isl_lease')} <b>${days >= 1 ? `${Math.floor(days)} ${dayW(Math.floor(days))}` : days > 0 ? `${Math.ceil(days * 24)} ${hourW(Math.ceil(days * 24))}` : `<span class="bad">${L('isl_runout')}</span>`}</b> · ${L('isl_week', { price: fmt(h.renew) })} · <label><input type="checkbox" data-auto="${h.island}" ${h.autoRenew ? 'checked' : ''}> ${L('isl_auto')}</label></p>
         <p>${L('isl_treasury')} ${money(h.treasury)} · ${L('isl_upkeep', { n: fmt(h.upkeep) })} · <input type="number" value="1000" step="500" style="width:90px" data-tamt="${h.island}"> <button class="btn btn-small" data-tin="${h.island}">${L('deposit')}</button> <button class="btn btn-small" data-tout="${h.island}">${L('withdraw')}</button></p>
         <table class="grid">${h.buildings.map((b, i) => `<tr><td>${icon(`build_${b.id}`)}${esc(BUILDINGS[b.id].name)}</td><td class="${b.unpaid ? 'bad' : 'muted'}">${Math.round(b.condition * 100)}%${b.unpaid ? L('isl_unpaid') : ''}</td><td>${near ? `<button class="btn btn-small btn-danger" data-demolish="${h.island}" data-index="${i}">${L('isl_demolish')}</button>` : ''}</td></tr>`).join('') || `<tr><td class="muted">${L('isl_bare')}</td></tr>`}</table>
         <p class="muted">${L('isl_store', { cap: h.storeCap, list: Object.entries(h.store).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `${n} ${esc(GOODS[g as GoodId].name)}`).join(', ') || L('empty') })}</p>
@@ -337,7 +342,7 @@ export class CompanyScreen {
       ${x.phase === 'choose' && x.attacking ? `<div class="row" style="gap:6px"><button class="btn btn-small btn-primary" data-sgc="capture" data-isl="${x.island}">${L('sg_capture')}</button><button class="btn btn-small" data-sgc="plunder" data-isl="${x.island}">${L('sg_plunder')}</button><button class="btn btn-small btn-danger" data-sgc="raze" data-isl="${x.island}">${L('sg_raze')}</button></div>` : ''}
       ${x.phase === 'fortify' && !x.attacking ? `<button class="btn btn-small" data-fortify="${x.island}">${L('sg_rebuild')}</button>` : ''}
       ${x.notes.map((n) => `<p class="muted">${esc(sv(n))}</p>`).join('')}</div>`;
-    body.innerHTML = `<div class="cols"><div>
+    body.innerHTML = `${estateHtml(state)}<div class="cols"><div>
       ${hs.sieges.map(siege).join('')}
       <h3 class="title-sm" style="font-size:20px">${L('isl_yours')}</h3>
       ${hs.mine.map(holding).join('') || `<p class="muted">${L('isl_none')}</p>`}
@@ -348,6 +353,17 @@ export class CompanyScreen {
     const q = <T extends HTMLElement>(sel: string) => body.querySelector<T>(sel);
     const num = (sel: string) => Number(q<HTMLInputElement>(sel)?.value ?? 0);
     body.querySelectorAll<HTMLElement>('[data-rent]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'rent', island: Number(el.dataset.rent), days: Number(el.dataset.days) })));
+    // One's own island and outposts (docs/12 P7).
+    body.querySelectorAll<HTMLElement>('[data-est]').forEach((el) => (el.onclick = () => {
+      const a = el.dataset.est!;
+      if (a === 'buy') return void ask(L('est_confirm_buy', { price: fmt(Number(el.dataset.price)) })).then((ok) => ok && this.send({ t: 'estate', action: 'buy', island: Number(el.dataset.isl) }));
+      if (a === 'found') return this.send({ t: 'estate', action: 'found', kind: el.dataset.kind as never });
+      if (a === 'visit') return this.send({ t: 'estate', action: 'visit', island: Number(el.dataset.isl) });
+      if (a === 'op') return this.send({ t: 'estate', action: 'outpost', id: el.dataset.id!, order: el.dataset.order as 'haul', arg: el.dataset.arg });
+      this.send({ t: 'estate', action: a as 'level' });
+    }));
+    body.querySelectorAll<HTMLSelectElement>('[data-assign]').forEach((el) => (el.onchange = () => this.send({ t: 'estate', action: 'assign', id: Number(el.dataset.assign), where: el.value })));
+    body.querySelectorAll<HTMLSelectElement>('[data-guard]').forEach((el) => (el.onchange = () => this.send({ t: 'estate', action: 'outpost', id: el.dataset.guard!, order: 'guard', arg: el.value })));
     body.querySelectorAll<HTMLElement>('[data-siege]').forEach((el) => (el.onclick = () => void ask(L('isl_confirm_siege')).then((ok) => ok && this.send({ t: 'isle', action: 'siege', island: Number(el.dataset.siege) }))));
     body.querySelectorAll<HTMLElement>('[data-sgc]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'siege_choice', island: Number(el.dataset.isl), choice: el.dataset.sgc as 'capture' })));
     body.querySelectorAll<HTMLElement>('[data-fortify]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'fortify', island: Number(el.dataset.fortify) })));
@@ -642,4 +658,44 @@ export function renderBarter(root: HTMLElement, state: ClientState, send: (m: Cl
 function cardArt(id: string): string {
   const url = assetUrl(id);
   return url ? `<div class="card-art" style="background-image:url('${url}')"></div>` : '';
+}
+
+/** One's own island, its residents and its outposts (docs/12 P7). */
+function estateHtml(state: ClientState): string {
+  const e = state.estate;
+  if (!e) return '';
+  const ru = lang() === 'ru' ? 1 : 0;
+  const goodsList = (g: Partial<Record<GoodId, number>>) => Object.entries(g).map(([k, n]) => `${n} ${GOODS[k as GoodId].name.toLowerCase()}`).join(', ');
+  const parts: string[] = [];
+  const isle = e.isle;
+  if (isle) {
+    const hs = state.holdings.mine.find((h) => h.island === isle.island);
+    const builds = hs?.buildings.map((b) => b.id) ?? [];
+    const opts = (cur: string | null) => [`<option value="none"${cur === null ? ' selected' : ''}>${esc(L('est_idle'))}</option>`, ...builds.filter((b, i) => builds.indexOf(b) === i).map((b) => `<option value="${b}"${cur === b ? ' selected' : ''}>${esc(BUILDINGS[b].name)}</option>`), ...e.outposts.map((o) => `<option value="o:${o.id}"${cur === `o:${o.id}` ? ' selected' : ''}>${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(placeName(o.name))}</option>`)].join('');
+    const residents = isle.residents.map((r) => `<div class="est-res"><span><b>${esc(r.name)}</b> <span class="muted">${esc(PROFESSION_DEFS[r.prof as Profession].name[ru])}</span><br><i class="muted">«${esc(serverText(r.line))}»</i></span><select data-assign="${r.id}">${opts(r.at)}</select></div>`).join('');
+    parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(L('est_isle', { name: placeName(isle.name), level: isle.level, title: serverText(isle.levelName) }))}</span></h4>
+      <p class="muted">${esc(L('est_isle_meta', { slots: isle.slots, outposts: isle.outposts, n: isle.residents.length, cap: isle.cap }))}</p>
+      ${isle.next ? `<p>${esc(L('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver), goods: goodsList(isle.next.goods) }))} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
+      <div class="row" style="gap:6px;flex-wrap:wrap">${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
+      ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
+      ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}</div>`);
+  } else if (!e.buy) parts.push(`<div class="card est-card"><p class="muted">${esc(L('est_none'))}</p></div>`);
+  if (e.buy) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('est_buy_title', { name: placeName(e.buy.name) }))}</h4><p class="muted">${esc(L('est_buy_text'))}</p><button class="btn btn-primary" data-est="buy" data-isl="${e.buy.island}" data-price="${e.buy.price}">${esc(L('est_buy', { price: fmt(e.buy.price) }))}</button></div>`);
+  if (e.outposts.length || e.kinds.length) {
+    const rows = e.outposts.map((o) => {
+      const full = o.fullIn <= 0 ? L('est_full') : L('est_full_in', { h: Math.floor(o.fullIn / 3600), m: Math.floor((o.fullIn % 3600) / 60) });
+      const days = Math.max(0, Math.floor((o.claimUntil - Date.now()) / 86_400_000));
+      return `<div class="est-op${o.raid !== null ? ' est-raid' : ''}"><div><b>${esc(OUTPOSTS[o.kind].name[ru])}</b> · ${esc(placeName(o.name))} · ${esc(L('est_lvl', { n: o.level }))}
+        <div class="muted">${esc(L('est_op_line', { rate: o.rate, good: GOODS[o.good].name.toLowerCase(), store: o.store, cap: o.cap, full, days }))}${o.residents ? ` · ${esc(L('est_op_res', { n: o.residents }))}` : ''}</div>
+        ${o.raid !== null ? `<div class="bad">${esc(L('est_raid', { m: Math.floor(o.raid / 60), s: String(o.raid % 60).padStart(2, '0') }))}</div>` : ''}</div>
+        <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="haul">${esc(L('est_haul'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="upgrade">${esc(L('est_upgrade'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="renew">${esc(L('est_renew'))}</button>
+        <button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="workers" data-arg="${o.workers === 'hands' ? 'none' : 'hands'}">${esc(o.workers === 'hands' ? L('est_hands_off') : L('est_hands_on'))}</button>
+        <select data-guard="${esc(o.id)}">${(Object.keys(GUARDS) as Guard[]).map((g) => `<option value="${g}"${o.guard === g ? ' selected' : ''}>${esc(L('est_guard', { name: GUARDS[g].name[ru], cost: fmt(GUARDS[g].cost) }))}</option>`).join('')}</select></div></div>`;
+    }).join('');
+    const found = e.kinds.map((k: OutpostKind) => `<button class="btn btn-small" data-est="found" data-kind="${k}">${esc(L('est_found', { name: OUTPOSTS[k].name[ru], goods: goodsList(OUTPOST_BUILD) }))}</button>`).join('');
+    parts.push(`<div class="card est-card"><h4 class="card-h">${icon('build_mine', '', 'ico-md')}${esc(serverText('Outposts'))}</h4>${rows || `<p class="muted">${esc(L('est_no_ops'))}</p>`}${found ? `<p class="muted">${esc(L('est_found_here'))}</p><div class="row" style="gap:4px;flex-wrap:wrap">${found}</div>` : ''}</div>`);
+  }
+  if (e.near.length) parts.push(`<div class="card est-card"><h4 class="card-h">${esc(L('est_theirs'))}</h4>${e.near.map((o) => `<div class="est-op"><span>${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(o.owner)} · ${o.store}/${o.cap}</span><button class="btn btn-small btn-danger" data-est="op" data-id="${esc(o.id)}" data-order="rob">${esc(L('est_rob'))}</button></div>`).join('')}</div>`);
+  if (e.hall) parts.push(`<div class="card est-card"><button class="btn btn-small" data-est="visit" data-isl="${e.hall.island}">${esc(L('est_visit', { name: e.hall.owner }))}</button></div>`);
+  return parts.length ? `<div class="est-wrap">${parts.join('')}</div>` : '';
 }

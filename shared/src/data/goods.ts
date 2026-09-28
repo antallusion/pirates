@@ -10,7 +10,9 @@ export type GoodId =
   // The catch (docs/12 P3).
   | 'fish' | 'prime_fish' | 'salted_fish'
   // The hunt (docs/12 P4).
-  | 'baleen' | 'ambergris' | 'orca_tooth' | 'whalebone' | 'narwhal_tusk' | 'shark_skin' | 'serpent_scale';
+  | 'baleen' | 'ambergris' | 'orca_tooth' | 'whalebone' | 'narwhal_tusk' | 'shark_skin' | 'serpent_scale'
+  // The island's trades (docs/12 P7).
+  | 'tar' | 'smoked_fish' | 'scrimshaw';
 
 export type GoodCategory = 'staple' | 'luxury' | 'industrial' | 'military' | 'supply' | 'contraband' | 'mystic' | 'rare';
 
@@ -61,6 +63,9 @@ export const GOODS: Record<GoodId, GoodDef> = {
   // The catch (docs/12 P3): fresh fish rots fast at sea; salted it keeps.
   fish: g('fish', 'Fresh Fish', 'supply', 7, 1, 1, 0.3, 0, false, 'Herring, cod and mackerel on ice or on nothing. Sell it quickly or salt it.'),
   prime_fish: g('prime_fish', 'Prime Fish', 'luxury', 32, 1, 1, 0.3, 0, false, 'Tuna, swordfish, lobster and squid for the captains’ tables. It will not wait.'),
+  tar: g('tar', 'Tar', 'industrial', 22, 1, 1, 0, 0, false, 'Pine tar boiled in a kiln: for seams, rigging and every yard in the sea.'),
+  smoked_fish: g('smoked_fish', 'Smoked Fish', 'staple', 34, 1, 1, 0.02, 0, false, 'Fish hung in oak smoke for a week. A delicacy in the southern ports.'),
+  scrimshaw: g('scrimshaw', 'Scrimshaw', 'luxury', 380, 0.2, 0.2, 0, 0, false, 'Teeth and bone carved by long evenings ashore: ships, mermaids, a captain’s face.'),
   baleen: g('baleen', 'Baleen', 'industrial', 60, 1, 1, 0, 0, false, 'Whalebone plates from a whale’s mouth: stays, whips, springs. Every tailor wants it.'),
   ambergris: g('ambergris', 'Ambergris', 'luxury', 900, 0.2, 0.2, 0, 0, false, 'A grey lump from a sperm whale’s gut. Perfumers pay its weight in gold.'),
   orca_tooth: g('orca_tooth', 'Beast Teeth', 'luxury', 120, 0.2, 0.2, 0, 0, false, 'Teeth of orcas, sharks and whales, for scrimshaw and charms.'),

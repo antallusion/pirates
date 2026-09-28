@@ -109,6 +109,7 @@ export function declareSiege(game: Game, s: PlayerSession, islandId: number): st
   const side = sideOf(game, s);
   if (!mayCommand(game, side, s)) return 'Commodores and up lead a guild’s siege';
   if (mayUse(game, h, s.accountId)) return 'That island is yours';
+  if (h.owned && h.owner.kind === 'player') return 'A captain’s own island cannot be besieged.';
   const safety = REGIONS[isl.region].safety;
   if (safety === 'safe') return 'No sieges on the Crown’s coast';
   const port = s.ship?.docked ? game.portById(s.ship.docked) : undefined;

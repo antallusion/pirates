@@ -415,6 +415,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       const n = giveHands(s, rng.int(2, 6)) ;
       if (vet) giveHands(s, 1, 'gunner');
       p.rescued = (p.rescued ?? 0) + n + (vet ? 1 : 0);
+      p.refugees = (p.refugees ?? 0) + 1; // one of them will want a home ashore (docs/12 P7)
       return O(vet ? 'taken_vet' : 'taken', { n: n + (vet ? 1 : 0) });
     }
     case 'convict':
@@ -500,6 +501,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       if (choice === 'pass') return O('passed');
       giveHands(s, 1);
       p.rescued = (p.rescued ?? 0) + 1;
+      p.refugees = (p.refugees ?? 0) + 1;
       if (rng.chance(0.6)) {
         mapChance(game, s, 1, 1, 'The mapmaker’s boy');
         return O('map');

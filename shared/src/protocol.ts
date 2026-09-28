@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { OutpostKind } from './data/estate.ts';
 import type { BeastId } from './data/beasts.ts';
 import type { FishId, FishMethod } from './data/fishing.ts';
 import type { HappeningKind } from './data/happenings.ts';
@@ -111,6 +112,13 @@ export type ClientMsg =
   | { t: 'tribute'; id: number }
   | { t: 'tip'; action: 'buy'; id: string }
   | { t: 'tip'; action: 'clerk' }
+  /** One's own island and outposts (docs/12 P7). */
+  | { t: 'estate'; action: 'buy'; island: number }
+  | { t: 'estate'; action: 'level' | 'home' | 'hire' | 'view' }
+  | { t: 'estate'; action: 'assign'; id: number; where: string }
+  | { t: 'estate'; action: 'found'; kind: OutpostKind }
+  | { t: 'estate'; action: 'outpost'; id: string; order: 'upgrade' | 'workers' | 'guard' | 'haul' | 'renew' | 'auto' | 'rob'; arg?: string }
+  | { t: 'estate'; action: 'visit'; island: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -986,6 +994,8 @@ export type ServerMsg =
   | { t: 'wanted'; view: WantedView }
   | { t: 'appraisal'; view: AppraisalView }
   | { t: 'raid'; view: RaidView }
+  | { t: 'estate'; view: EstateView }
+  | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
   | { t: 'encounter'; view: EncounterView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
@@ -1071,6 +1081,58 @@ export interface RefitView {
 }
 
 /** A shoal as a captain sees it (docs/12 P3): the birds over it; what swims in it once they read the water. */
+/** An outpost as its owner (or a would-be robber) sees it (docs/12 P7). */
+export interface OutpostView {
+  id: string;
+  kind: OutpostKind;
+  island: number;
+  name: string;
+  region: RegionId;
+  x: number;
+  y: number;
+  level: number;
+  good: GoodId;
+  rate: number;
+  store: number;
+  cap: number;
+  /** Seconds until the store is full (0: full). */
+  fullIn: number;
+  claimUntil: number;
+  workers: 'none' | 'hands';
+  residents: number;
+  guard: string;
+  /** Seconds left before raiders ruin it, while a raid is on. */
+  raid: number | null;
+  mine: boolean;
+  owner: string;
+  auto: boolean;
+}
+
+/** A captain's own island and outposts (docs/12 P7). */
+export interface EstateView {
+  isle: {
+    island: number;
+    name: string;
+    level: number;
+    levelName: string;
+    slots: number;
+    next: { name: string; silver: number; goods: Partial<Record<GoodId, number>> } | null;
+    residents: { id: number; name: string; prof: string; at: string | null; line: string }[];
+    cap: number;
+    refugees: number;
+    outposts: number;
+    trophies: { flag: number; skull: number; fish: number } | null;
+    visitors: number;
+  } | null;
+  outposts: OutpostView[];
+  near: OutpostView[];
+  homeIn: number;
+  buy: { island: number; name: string; price: number } | null;
+  kinds: OutpostKind[];
+  /** Another captain's trophy hall off the bow, to look round. */
+  hall: { island: number; owner: string } | null;
+}
+
 /** What the glass tells of a ship's hold (docs/12 P6). */
 export interface AppraisalView {
   id: number;
@@ -1385,6 +1447,8 @@ export interface HoldingView {
   shieldUntil: number;
   base: number; // guild base level 0..5
   guild: boolean;
+  /** Bought outright (docs/12 P7): no lease, no sieges. */
+  owned?: boolean;
 }
 
 export interface SiegeView {

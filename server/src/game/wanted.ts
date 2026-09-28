@@ -4,6 +4,7 @@
 // captains; the lairs on the islands — a battery to silence from the sea, then a landing for the chest and the
 // prisoners; and the trail of a wanted captain for a licensed hunter.
 
+import { trophyBonus } from './estate.ts';
 import {
   BARON_AFTER, CAPTAIN_KILLER, HUNTER_BONUS, HUNTER_BONUS_RANK, HUNTER_PENNANT, HUNTER_PENNANT_RANK, HUNTER_POINTS, HUNTER_RANKS, HUNTER_SIGHT_R,
   HUNTER_SIGHT_RANK, HUNTER_TITLE, HUNTER_TITLE_RANK, INFORMANT_SEC, PIRATE_SEAS, RESPAWN_H, baronOf, hunterRank, informantCost, namedPirates, pirateById,
@@ -220,6 +221,7 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   game.db.ledger(s.accountId, 'lair', chest, lair.id);
   const room = Math.max(0, ship.stats.crewMax - ship.crew);
   ship.crew += Math.min(room, prisoners);
+  p.refugees = (p.refugees ?? 0) + 2; // some would rather live ashore on their saviour's island (docs/12 P7)
   // The prisoners' people remember who freed them.
   const lawful = (['crown', 'league'] as const)[S.rng.int(0, 1)];
   changeRep(p, lawful, 5);
@@ -471,7 +473,7 @@ export function wantedKill(game: Game, s: PlayerSession, victim: ShipEntity): vo
     const r = (S.rec[np.id] ??= {});
     r.respawnAt = game.wallNow() + respawnDelay(S, np);
     seen(game, np.id, victim);
-    const bonus = hunterRank(p.hunter!.points) >= HUNTER_BONUS_RANK ? 1 + HUNTER_BONUS : 1;
+    const bonus = (hunterRank(p.hunter!.points) >= HUNTER_BONUS_RANK ? 1 + HUNTER_BONUS : 1) + trophyBonus(game, s.accountId, 'flag');
     const pay = Math.round(np.bounty * bonus);
     p.gold += pay;
     game.db.ledger(s.accountId, 'bounty', pay, np.id);

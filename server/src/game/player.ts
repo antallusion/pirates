@@ -174,6 +174,9 @@ export interface Profile {
   hunter?: HunterProfile;
   /** The Brethren of the Coast (docs/12 P6). */
   piracy?: PiracyProfile;
+  /** One's own island (docs/12 P7): when home was last sailed for; souls waiting aboard to settle there. */
+  homeAt?: number;
+  refugees?: number;
   trade: {
     lastDeparture: string;
     arrivalRoute: string;

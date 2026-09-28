@@ -47,7 +47,9 @@ export function islandSlots(radius: number, region: RegionId): number {
 export type BuildingId =
   | 'warehouse' | 'pier' | 'shipyard' | 'dry_dock' | 'tavern' | 'workshop' | 'hidden_cove' | 'smuggler_store' | 'battery' | 'fort'
   | 'lighthouse' | 'farm' | 'sawmill' | 'mine' | 'fishing_village' | 'plantation' | 'distillery' | 'powder_mill' | 'chapel'
-  | 'chart_house' | 'barracks';
+  | 'chart_house' | 'barracks'
+  // A captain's own island (docs/12 P7).
+  | 'caravan_office' | 'forge' | 'smokehouse' | 'try_works' | 'trophy_hall' | 'signal_tower' | 'residents_house';
 
 export interface BuildingDef {
   id: BuildingId;
@@ -88,6 +90,13 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   powder_mill: b({ id: 'powder_mill', name: 'Powder Mill', slots: 2, cost: 40_000, materials: { iron: 20, planks: 20 }, upkeep: 1_000, upkeepGoods: {}, notSafe: true, description: 'Saltpetre boiled from salt, charcoal from coal: 2 salt and 1 coal make 2 barrels of powder.' }),
   chapel: b({ id: 'chapel', name: 'Chapel', slots: 1, cost: 14_000, materials: { planks: 15 }, upkeep: 300, upkeepGoods: {}, description: 'Crews lying here recover 30 sanity every ten minutes, and the curse loosens.' }),
   chart_house: b({ id: 'chart_house', name: 'Chart House', slots: 1, cost: 12_000, materials: { planks: 10, cloth: 5 }, upkeep: 300, upkeepGoods: {}, description: 'Copies treasure maps without losing a line (500 silver a copy).' }),
+  caravan_office: b({ id: 'caravan_office', name: 'Caravan Office', slots: 1, cost: 16_000, materials: { planks: 30 }, upkeep: 500, upkeepGoods: {}, description: 'Sends the island’s caravans: their routes, their insurance, one more caravan at sea.' }),
+  forge: b({ id: 'forge', name: 'Forge', slots: 1, cost: 20_000, materials: { iron: 30, planks: 10 }, upkeep: 600, upkeepGoods: { coal: 2 }, description: 'Tempers, reforges, mends and breaks down gear for its owner lying off the island.' }),
+  smokehouse: b({ id: 'smokehouse', name: 'Smokehouse', slots: 1, cost: 9_000, materials: { planks: 20 }, upkeep: 200, upkeepGoods: {}, description: 'Three fish make a smoked fish, a delicacy; fish and salt make salted fish.' }),
+  try_works: b({ id: 'try_works', name: 'Try-Works', slots: 1, cost: 14_000, materials: { iron: 15, planks: 10 }, upkeep: 350, upkeepGoods: {}, description: 'Beast teeth and whalebone carved into scrimshaw.' }),
+  trophy_hall: b({ id: 'trophy_hall', name: 'Trophy Hall', slots: 1, cost: 18_000, materials: { planks: 25 }, upkeep: 300, upkeepGoods: {}, description: 'The flags of named pirates, orca skulls, record fish: each lends half a percent to its trade (to a tenth). Guests may look round.' }),
+  signal_tower: b({ id: 'signal_tower', name: 'Signal Tower', slots: 1, cost: 12_000, materials: { planks: 20, iron: 5 }, upkeep: 300, upkeepGoods: {}, description: 'Watches the outposts: five more minutes to answer a raid; the island’s caravans lose a third less in its sea.' }),
+  residents_house: b({ id: 'residents_house', name: 'Residents’ House', slots: 1, cost: 10_000, materials: { planks: 30 }, upkeep: 200, upkeepGoods: {}, description: 'Room for four more residents.' }),
   barracks: b({ id: 'barracks', name: 'Barracks', slots: 2, cost: 25_000, materials: { planks: 30, weapons: 10 }, upkeep: 800, upkeepGoods: { provisions: 5 }, description: 'A garrison of 60 against landing parties.' }),
 };
 

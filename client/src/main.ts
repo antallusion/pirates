@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { tell } from './ui/confirm.ts';
 import { beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { EncounterCard } from './ui/encounter.ts';
@@ -451,6 +452,9 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'fishfight':
       fishFight.open(m.view);
+      break;
+    case 'trophy_hall':
+      void tell(L('trophyHall', { owner: m.view.owner, flag: m.view.flag, skull: m.view.skull, fish: m.view.fish }));
       break;
     case 'encounter_result':
       encounterCard.result(m);

@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
 import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
@@ -709,6 +710,8 @@ export class Game {
     beastSecond(this); // the beasts rise and go, the carcasses bleed and are flensed (docs/12 P4)
     stepWanted(this); // the named pirates, their trail, their lairs; the hunters (docs/12 P5)
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
+    if (Math.floor(this.now) % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
+    for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
     settleCrimes(this);
     stepSocial(this);
@@ -2500,6 +2503,40 @@ export class Game {
         return;
       case 'encounter':
         return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
+      case 'estate': {
+        const done = (e: string | null) => {
+          err(e);
+          this.sendTo(s, { t: 'estate', view: estateView(this, s) });
+          this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
+          this.pushSelf(s, true);
+        };
+        switch (msg.action) {
+          case 'view':
+            return done(null);
+          case 'buy':
+            return done(buyIsland(this, s, Math.trunc(Number(msg.island))));
+          case 'level': {
+            const h = ownIsland(this, s.accountId);
+            return done(h ? isleLevelUp(this, s, h.island) : 'You have no island of your own.');
+          }
+          case 'home':
+            return done(goHome(this, s));
+          case 'hire':
+            return done(hireResident(this, s));
+          case 'assign':
+            return done(assignResident(this, s, Math.trunc(Number(msg.id)), String(msg.where)));
+          case 'found':
+            return done(foundOutpost(this, s, msg.kind));
+          case 'outpost':
+            return done(outpostOrder(this, s, String(msg.id), String(msg.order), msg.arg));
+          case 'visit': {
+            const v = visitHall(this, s, Math.trunc(Number(msg.island)));
+            if (typeof v === 'string') return err(v);
+            return this.sendTo(s, { t: 'trophy_hall', view: v });
+          }
+        }
+        return;
+      }
       case 'appraise': {
         const v = appraise(this, s, Number(msg.id));
         if (typeof v === 'string') return err(v);
@@ -2537,7 +2574,15 @@ export class Game {
           default:
             return err('Unknown order');
         }
-      case 'gear':
+      case 'gear': {
+        // At a port, or off one's own island with a forge (docs/12 P7).
+        const gearPort = port ?? isleForge(this, s);
+        const gearAction = (fn: (pt: Port) => string | null) => {
+          if (!gearPort) return err('You must be in port');
+          err(fn(gearPort));
+          this.pushPort(s);
+          this.pushSelf(s, true);
+        };
         switch (msg.action) {
           case 'equip':
             return err(equip(this, s, Number(msg.uid)));
@@ -2546,18 +2591,19 @@ export class Game {
           case 'sell':
             return portAction(() => sellItem(this, s, Number(msg.uid)));
           case 'salvage':
-            return portAction((pt) => salvageItem(this, s, pt, Number(msg.uid)));
+            return gearAction((pt) => salvageItem(this, s, pt, Number(msg.uid)));
           case 'mend':
-            return portAction((pt) => mendGear(this, s, pt));
+            return gearAction((pt) => mendGear(this, s, pt));
           case 'buy':
             return portAction((pt) => buyWare(this, s, pt, Math.trunc(Number(msg.index))));
           case 'temper':
-            return portAction((pt) => temperItem(this, s, pt, Number(msg.uid)));
+            return gearAction((pt) => temperItem(this, s, pt, Number(msg.uid)));
           case 'reforge':
-            return portAction((pt) => reforgeItem(this, s, pt, Number(msg.uid), Math.trunc(Number(msg.line))));
+            return gearAction((pt) => reforgeItem(this, s, pt, Number(msg.uid), Math.trunc(Number(msg.line))));
           default:
             return err('Unknown order');
         }
+      }
       case 'shipyard':
         return portAction((pt) => {
           // Modular Refit: fittings change in any port.
