@@ -35,6 +35,7 @@ import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
+import { sagaNote } from './saga.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -149,6 +150,7 @@ export function buyIsland(game: Game, s: PlayerSession, islandId: number): strin
   game.holdings.touch();
   changeRep(p, game.holdings.factionOf(game, isl.region), 5);
   game.sendTo(s, { t: 'toast', msg: `${isl.name} is yours for ever. Its upkeep is paid from its treasury, day by day.`, kind: 'gold' });
+  sagaNote(game, s, 'island', [isl.name]); // the saga (docs/12 P10 #20)
   return null;
 }
 

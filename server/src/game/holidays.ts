@@ -27,6 +27,7 @@ import { planWander } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
+import { sagaNote } from './saga.ts';
 
 interface Scores {
   key: string;
@@ -73,7 +74,10 @@ function addPoints(game: Game, s: PlayerSession, id: HolidayId, n: number): numb
   row.pts = Math.round((row.pts + n) * 10) / 10;
   game.db.setKv('holiday_scores', sc);
   // The holiday's flag, once the deed is done.
-  if (before < HOLIDAYS[id].need && row.pts >= HOLIDAYS[id].need) unlockDeed(game, s, id);
+  if (before < HOLIDAYS[id].need && row.pts >= HOLIDAYS[id].need) {
+    unlockDeed(game, s, id);
+    sagaNote(game, s, 'holiday_flag', [HOLIDAYS[id].name[0]]);
+  }
   return row.pts;
 }
 

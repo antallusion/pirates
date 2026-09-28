@@ -39,6 +39,8 @@ import { questPointer, trackedQuest } from './track.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
+import { sagaCardHtml } from './saga.ts';
+import type { SagaCard } from '../../../shared/src/protocol.ts';
 
 const L = dict(EN, RU);
 const RL = dict(REN, RRU);
@@ -1111,13 +1113,14 @@ export class Hud {
     el.querySelectorAll<HTMLElement>('[data-pf]').forEach((b) => (b.onclick = () => this.onPartyTap(b.dataset.pf!)));
   }
 
-  chat(from: string, text: string, ch?: 'group' | 'guild' | 'whisper', to?: string): void {
+  chat(from: string, text: string, ch?: 'group' | 'guild' | 'whisper', to?: string, card?: SagaCard): void {
     const log = $('chat-log');
     const d = document.createElement('div');
     if (ch) d.className = `chat-${ch}`;
     // A whisper: from someone, or one's own words to someone (echoed back).
     const tag = ch === 'group' ? L('chatGroup') : ch === 'guild' ? L('chatGuild') : ch === 'whisper' ? (to ? L('chatWhisperTo', { name: to }) : L('chatWhisper')) : '';
-    d.innerHTML = `${tag ? `<i>${esc(tag)}</i> ` : ''}${to ? '' : `<b>${esc(from)}:</b> `}${esc(text)}`;
+    // A chapter of a saga shared: a postcard (docs/12 P10 #20).
+    d.innerHTML = card ? `<b>${esc(from)}:</b> ${sagaCardHtml(card)}` : `${tag ? `<i>${esc(tag)}</i> ` : ''}${to ? '' : `<b>${esc(from)}:</b> `}${esc(text)}`;
     log.append(d);
     // Sixty lines kept (the channels filter them); closed, the chat shows its last eight.
     while (log.children.length > 60) log.firstChild!.remove();

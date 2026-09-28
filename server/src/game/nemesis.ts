@@ -18,6 +18,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
 import { liveNamed, namedRecord, putToSea } from './wanted.ts';
+import { sagaNote } from './saga.ts';
 
 export interface NemesisRec {
   rank: number;
@@ -119,6 +120,7 @@ export function nemesisRevenge(game: Game, s: PlayerSession, np: NamedPirate): b
   delete all[np.id];
   p.nemesisHeads = (p.nemesisHeads ?? 0) + 1;
   unlockDeed(game, s, 'revenge');
+  sagaNote(game, s, 'nemesis', [np.name[0]]);
   const [sur, ep] = [surnameOf(np)[0], epithetOf(rec.epithet)?.[0] ?? ''];
   const silver = Math.round(np.bounty * 0.5 * rec.rank);
   p.gold += silver;

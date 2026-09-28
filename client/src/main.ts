@@ -56,12 +56,13 @@ import { placeName } from './ui/maps.ts';
 import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
 import { renderDescent } from './ui/descent.ts';
+import { renderSaga } from './ui/saga.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -73,6 +74,7 @@ for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListen
 const worldMap = new WorldMap();
 const journal = new Journal((m) => net.send(m));
 journal.openTattoos = () => openModal('tattoos');
+journal.openSaga = () => openModal('saga');
 worldMap.send = (m) => net.send(m);
 let modal: Modal = null;
 let inGame = false;
@@ -445,7 +447,7 @@ function onMessage(m: ServerMsg): void {
       if (m.kind === 'gold') audio.coins();
       break;
     case 'chat':
-      hud.chat(m.from, m.text, m.ch, m.to);
+      hud.chat(m.from, m.text, m.ch, m.to, m.card);
       break;
     case 'duel':
       if (m.view && m.view.startsIn === 5) hud.banner(L('duel'), m.view.sides.map((side) => side.map((x) => x.name).join(', ')).join(`  ${L('against')}  `));
@@ -681,6 +683,9 @@ function renderModal(root: HTMLElement): void {
     case 'descent':
       if (state.descent) renderDescent(root, state, (m) => net.send(m));
       else closeModal();
+      break;
+    case 'saga':
+      renderSaga(root, state, (m) => net.send(m));
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);

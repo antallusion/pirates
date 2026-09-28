@@ -9,6 +9,7 @@ import type { WondersView } from '../../../shared/src/protocol.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { tattooCount } from './tattoos.ts';
+import { sagaNote } from './saga.ts';
 
 interface Rec {
   first: string;
@@ -41,6 +42,7 @@ function discover(game: Game, s: PlayerSession, w: WonderDef): void {
   p.wonders.push(w.id);
   const recs = records(game);
   game.sendTo(s, { t: 'toast', msg: `A wonder of the sea: ${wonderName(game, w)}.`, kind: 'gold' });
+  sagaNote(game, s, 'wonder', [wonderName(game, w)]);
   game.grantXp(s, 250, null);
   if (!recs[w.id]) {
     recs[w.id] = { first: s.name, account: s.accountId, named: null, at: game.wallNow() };

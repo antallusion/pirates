@@ -65,6 +65,7 @@ import { seizeCaptain, takeCaptive } from './prizes.ts';
 import { gateOf } from './descent.ts';
 import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
 import type { HolidayId } from '../../../shared/src/data/holidays.ts';
+import { sagaNote } from './saga.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -72,7 +73,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -291,6 +292,15 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       regattaNow(game, portId, 30_000);
       if (ship.docked === portId) regattaSignUp(game, s);
       return `Regatta of Equal Waters: ${portId}.`;
+    }
+    case 'saga': {
+      // A captain's saga (docs/12 P10 #20 play-testing): /saga — four chapters of the kinds the sea writes.
+      const near = game.nearestIslandName(ship.state.x, ship.state.y);
+      sagaNote(game, s, 'beast', ['Sperm Whale', near]);
+      sagaNote(game, s, 'storm_heart', [REGIONS[ship.region].name]);
+      sagaNote(game, s, 'descent', [], 6);
+      sagaNote(game, s, 'sunk', [p.loadout.name, near]);
+      return `Saga: ${(p.saga ?? []).length}.`;
     }
     case 'holiday': {
       // The sea's holidays (docs/12 P10 #18 play-testing): /holiday drowned_night|herring_run|powder_night|league_day|off.

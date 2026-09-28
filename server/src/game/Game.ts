@@ -169,6 +169,7 @@ import { captiveLoyalty, claimSkippers, sanitizeCaptive, turnCaptive, turnCost }
 import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, stepDescentSea } from './descent.ts';
 import { holidayGhostSunk, stepHolidays } from './holidays.ts';
 import { addGood, addItem, buyAtStall, claimBazaar, closeStall, openStall, removeLine, sendBazaarShadows, stepBazaar } from './bazaar.ts';
+import { sagaNote, shareSaga } from './saga.ts';
 
 export interface Loot {
   id: number;
@@ -1599,6 +1600,10 @@ export class Game {
     if (ship.caravanId) caravanShipLost(this, ship); // a captain's caravan hull and her share of the cargo (docs/12 P8)
     recordEcho(this, ship); // what the Abyss takes, it sends back
     if (duelIntercept(this, ship)) return; // nobody sinks in a duel: she strikes
+    if (ship.isPlayer) {
+      const owner = this.sessionOf(ship);
+      if (owner) sagaNote(this, owner, 'sunk', [ship.loadout.name, this.nearestIslandName(ship.state.x, ship.state.y)]); // the saga (docs/12 P10 #20)
+    }
     if (ship.caravanOf !== null) caravanLost(this, ship);
     this.sunkRecently.set(ship.id, this.now);
     // Salvage King: a hull that went down whole can be raised for a while.
@@ -1700,6 +1705,7 @@ export class Game {
     wantedKill(this, s, victim); // a named pirate's head, the Hunters' Guild (docs/12 P5)
     raidKill(this, s, victim, how); // a merchant raided: the Brethren's fame, the lanes' heat (docs/12 P6)
     if (how === 'sunk') holidayGhostSunk(this, s, victim); // the Night of the Drowned's cursed gifts (docs/12 P10 #18)
+    if (victim.npcRole === 'beast' && victim.cls.tier >= 3) sagaNote(this, s, 'beast', [victim.name, this.nearestIslandName(victim.state.x, victim.state.y)]); // the saga (docs/12 P10 #20)
     serviceKill(this, s, victim, how); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
@@ -2581,6 +2587,8 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'saga':
+        return err(shareSaga(this, s, Math.trunc(Number(msg.id))));
       case 'bazaar':
         // The Floating Bazaar (docs/12 P10 #19): all of it in port.
         return portAction((pt) => {

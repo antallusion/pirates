@@ -18,6 +18,7 @@ import type { WorldEvent } from './events.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { sagaNote } from './saga.ts';
 
 interface Heart {
   path: { x: number; y: number }[];
@@ -194,6 +195,7 @@ function catchHeart(game: Game, s: PlayerSession, e: WorldEvent, h: Heart, pos: 
     game.sendTo(o, { t: 'toast', msg: 'The heart of the storm is gone; the sky will make another.', kind: 'info' });
   }
   unlockDeed(game, s, 'storm'); // the Storm Heart flag (docs/12 P10 #12)
+  sagaNote(game, s, 'storm_heart', [REGIONS[e.region].name]);
   game.pushSelf(s, true);
 }
 

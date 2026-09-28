@@ -21,6 +21,7 @@ import { planWander } from './npc.ts';
 import { groupOfAccount } from './party.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { sagaNote } from './saga.ts';
 
 interface Run {
   id: number;
@@ -292,6 +293,7 @@ function finishMember(game: Game, run: Run, account: number): void {
       if (takeItem(game, o, it)) game.sendTo(o, { t: 'toast', msg: `The deep gives up ${itemName(it)}.`, kind: 'gold' });
     }
     if (depth >= 1 && o.ship) o.ship.cargo.abyssal_ore = (o.ship.cargo.abyssal_ore ?? 0) + depth * 2;
+    if (depth >= 3) sagaNote(game, o, 'descent', [], depth);
     game.sendTo(o, { t: 'toast', msg: `The descent is over at tier ${depth} (glory ${gl}).`, kind: 'info' });
     game.pushSelf(o, true);
     S.sent.add(o);

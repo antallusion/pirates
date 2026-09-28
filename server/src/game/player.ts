@@ -59,6 +59,7 @@ import type { ServiceRec } from './marque.ts';
 import type { Skipper } from './turncoats.ts';
 import type { SkipperTrait } from '../../../shared/src/data/turncoats.ts';
 import type { OfficerRole, TraitId } from '../../../shared/src/data/crew.ts';
+import type { SagaEntry } from '../../../shared/src/data/saga.ts';
 
 export interface Profile {
   version: 1;
@@ -200,6 +201,8 @@ export interface Profile {
   serviceBan?: number;
   /** Turned captains who skipper her caravans (docs/12 P10 #16). */
   skippers?: Skipper[];
+  /** Her saga's chapters (docs/12 P10 #20). */
+  saga?: SagaEntry[];
   /** A cartographer's fame: her buried chests dug up by others (docs/12 P10 #7). */
   cartoFame?: number;
   /** The wonders of the sea she has found (docs/12 P10 #8). */
@@ -464,6 +467,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     cartoFame: p.cartoFame ?? 0,
     stormHearts: p.stormHearts ?? 0,
     service: world.service ?? null,
+    saga: p.saga ?? [],
     fishing: fishingView(p),
     beasts: p.beasts ?? {},
     cargo: ship ? ship.cargo : p.cargo,

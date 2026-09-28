@@ -2097,6 +2097,15 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 #hud-storm .st-bar { height: 6px; margin-top: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
 #hud-storm .st-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6fb4ff, #e8f4ff); }
 #hud-storm .st-charge { font: 600 12px var(--sans); color: #b8d4f0; margin-top: 2px; font-variant-numeric: tabular-nums; }
+/* A captain's saga (docs/12 P10 #20). */
+.saga .saga-ch { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid rgba(201,162,90,0.3); border-radius: 6px; background: linear-gradient(180deg, rgba(40,30,18,0.55), rgba(16,12,8,0.75)); }
+.saga .saga-ch p { margin: 0; font-family: var(--serif); font-size: 15px; line-height: 1.35; color: #eadfc6; }
+@media (max-width: 560px) { .saga .saga-ch { grid-template-columns: auto 1fr; } .saga .saga-ch .btn { grid-column: 1 / 3; justify-self: end; } }
+.saga-card { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 2px; padding: 6px 8px; border: 1px solid rgba(201,162,90,0.45); border-radius: 5px; background: linear-gradient(180deg, rgba(48,36,20,0.85), rgba(20,14,8,0.9)); }
+.saga-card .saga-pic { width: 34px; height: 34px; object-fit: cover; border-radius: 4px; flex: none; }
+.saga-card .saga-text { font-family: var(--serif); font-size: 13px; line-height: 1.3; color: #eadfc6; }
+.saga-card .saga-flag { float: right; margin: 1px 0 2px 6px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
+.jr-head-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 /* The Floating Bazaar (docs/12 P10 #19). */
 .bz-card { margin-top: 12px; }
 .bz-card .bz-stall { border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 0 4px; }

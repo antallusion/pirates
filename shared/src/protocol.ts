@@ -19,6 +19,7 @@ import type { OrderKind, ServiceId } from './data/marque.ts';
 import type { SkipperTrait } from './data/turncoats.ts';
 import type { BoonId, CurrentId, DarkId, HostId } from './data/descent.ts';
 import type { HolidayId } from './data/holidays.ts';
+import type { SagaEntry } from './data/saga.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
@@ -173,6 +174,8 @@ export type ClientMsg =
   | { t: 'bazaar'; action: 'add_item'; uid: number; price: number }
   | { t: 'bazaar'; action: 'remove'; kind: 'good' | 'item'; index: number }
   | { t: 'bazaar'; action: 'buy'; owner: number; kind: 'good' | 'item'; index: number; qty: number }
+  /** A captain's saga (docs/12 P10 #20): a chapter shared in the chat. */
+  | { t: 'saga'; action: 'share'; id: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   /** The Storm-Chaser set forged of hearts of the storm (docs/12 P10 #14). */
@@ -526,6 +529,8 @@ export interface PrivateState {
   stormHearts?: number;
   /** Her letter of marque: the service, rank, merit and the fleet order in hand (docs/12 P10 #15). */
   service?: ServiceView | null;
+  /** Her saga's chapters (docs/12 P10 #20). */
+  saga?: SagaEntry[];
   /** Fishing (docs/12 P3). */
   fishing: FishingView;
   /** The beasts taken, by kind (docs/12 P4). */
@@ -1114,7 +1119,7 @@ export type ServerMsg =
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
   /** `whisper`: to this captain, or (with `to`) their own words to another, echoed back. */
-  | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' | 'whisper'; to?: string }
+  | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' | 'whisper'; to?: string; card?: SagaCard }
   /** The list of friends, and the names of the captains one does not hear. */
   | { t: 'friends'; list: FriendView[]; ignored?: string[] }
   | { t: 'who'; list: WhoView[]; total: number }
@@ -1206,6 +1211,13 @@ export interface ServicePortView {
   pay: number;
   payReady: boolean;
   wares: { item: Item; price: number; sold: boolean }[];
+}
+
+/** A chapter of a captain's saga shared in the chat (docs/12 P10 #20): her name, the chapter, her flag. */
+export interface SagaCard {
+  name: string;
+  entry: SagaEntry;
+  flag: number | null;
 }
 
 /** A stall of the Floating Bazaar (docs/12 P10 #19). */

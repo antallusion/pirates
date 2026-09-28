@@ -9,6 +9,7 @@ import type { RegattaView } from '../../../shared/src/protocol.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
+import { sagaNote } from './saga.ts';
 
 interface Entrant {
   account: number;
@@ -210,6 +211,7 @@ function finish(game: Game, s: PlayerSession, r: Race, e: Entrant, place: number
       game.sendTo(s, { t: 'toast', msg: 'A new pennant colour: the regatta’s.', kind: 'gold' });
     }
     if (prize.title && !p.titles.includes(prize.title)) p.titles.push(prize.title);
+    if (place === 1) sagaNote(game, s, 'regatta', [game.portById(r.port)?.name ?? r.port]);
   }
   game.grantXp(s, 400 - Math.min(300, (place - 1) * 50), 'Regatta', true);
   if (place <= 3) unlockDeed(game, s, 'regatta'); // the regatta's sails and colours (docs/12 P10 #12)

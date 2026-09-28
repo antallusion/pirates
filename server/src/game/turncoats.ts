@@ -19,6 +19,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { Captive } from './prizes.ts';
 import type { ShipEntity } from './ship.ts';
+import { sagaNote } from './saga.ts';
 
 export interface Skipper {
   name: string;
@@ -123,6 +124,7 @@ export function turnCaptive(game: Game, s: PlayerSession, index: number, as: 'of
     p.skippers = [...(p.skippers ?? []), { name: c.name, faction: c.faction, traits: [...c.skills!], loyalty, voyages: 0 }];
     game.sendTo(s, { t: 'toast', msg: `${c.name} will skipper your caravans.`, kind: 'good' });
   }
+  sagaNote(game, s, 'turncoat', [c.name]);
   game.pushSelf(s, true);
   return null;
 }

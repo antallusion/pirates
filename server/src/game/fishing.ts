@@ -31,6 +31,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { holidayCatch } from './holidays.ts';
+import { sagaNote } from './saga.ts';
 
 export interface Shoal {
   id: number;
@@ -240,6 +241,7 @@ function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units
     if (kg > (rec[fish]?.kg ?? 0)) {
       rec[fish] = { name: s.name, kg: Math.round(kg * 10) / 10 };
       game.db.setKv('fish_records', rec);
+      sagaNote(game, s, 'record_fish', [def.name[0]], Math.round(kg * 10) / 10);
       if (kg > def.kg[0] + (def.kg[1] - def.kg[0]) * 0.5) for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: A new record: ${s.name}, ${def.name[0]} ${Math.round(kg * 10) / 10} kg!`, kind: 'gold' });
     }
   }

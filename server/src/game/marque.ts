@@ -27,6 +27,7 @@ import { unlockDeed } from './looks.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { sagaNote } from './saga.ts';
 
 export interface ServiceOrder {
   kind: OrderKind;
@@ -250,6 +251,7 @@ function merit(game: Game, s: PlayerSession, d: number): void {
     changeRep(p, sv.id, 5);
     game.sendTo(s, { t: 'toast', msg: `You are promoted: ${serviceTitle(sv.id, r)}.`, kind: 'gold' });
     for (let k = 1; k <= r; k++) unlockDeed(game, s, `${sv.id}_${k}`); // the service's flags by rank (docs/12 P10 #12)
+    sagaNote(game, s, 'promotion', [serviceTitle(sv.id, r)]);
     refresh(game, s);
   }
 }

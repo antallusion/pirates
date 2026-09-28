@@ -36,6 +36,7 @@ import { changeRep } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { hunterLicence } from './pvp.ts';
 import type { ShipEntity } from './ship.ts';
+import { sagaNote } from './saga.ts';
 
 const HOUR = 3600_000;
 const WEEK = 7 * 24 * HOUR;
@@ -489,6 +490,7 @@ export function wantedKill(game: Game, s: PlayerSession, victim: ShipEntity): vo
     p.gold += pay;
     game.db.ledger(s.accountId, 'bounty', pay, np.id);
     game.sendTo(s, { t: 'toast', msg: `The bounty on ${np.name[0]}: ${pay} silver.`, kind: 'gold' });
+    sagaNote(game, s, 'named', [np.name[0], REGIONS[victim.region]?.name ?? '']);
     nemesisRevenge(game, s, np); // her own grudge settled (docs/12 P10 #1)
     // Groupmates near share a part.
     const g = groupOfAccount(game, s.accountId);

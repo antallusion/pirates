@@ -13,6 +13,7 @@ import type { Game } from './Game.ts';
 import { groupOfAccount } from './party.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { sagaNote } from './saga.ts';
 
 interface Spot {
   x: number;
@@ -173,6 +174,7 @@ export function dutchmanSunk(game: Game, victim: ShipEntity, killer: ShipEntity 
       if (!p.figureheads.includes('fh_dutchman')) p.figureheads.push('fh_dutchman');
       unlockDeed(game, m, 'dutchman');
       if (!p.titles.includes(DUTCHMAN_TITLE)) p.titles.push(DUTCHMAN_TITLE);
+      sagaNote(game, m, 'dutchman');
       game.sendTo(m, { t: 'toast', msg: 'The Dutchman’s figurehead is yours.', kind: 'gold' });
       game.grantXp(m, 5000, 'The Flying Dutchman', true);
     } else {
