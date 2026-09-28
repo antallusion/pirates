@@ -665,3 +665,12 @@ export function islandChunkKeys(is: Island): number[] {
   for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) out.push(chunkKey(cx, cy));
   return out;
 }
+
+/** The small settlements' one-line descriptions in Russian (every biome under every flag), for the client's table. */
+export function settlementPatterns(): [string, string][] {
+  const biome: Record<string, string> = { temperate: 'в умеренном краю', mossy: 'среди мхов и туманов', volcanic: 'у подножия вулканов', ice: 'среди льдов', barren: 'на голых скалах', ruins: 'среди затонувших руин', bone: 'на костяных отмелях', jungle: 'в джунглях', mangrove: 'в мангровых зарослях', atoll: 'на атолле', desert: 'на песчаном берегу' };
+  const flag: Record<string, string> = { crown: 'Адмиралтейства Короны', league: 'Золочёной книги', confederacy: 'Конфедерации Красного прилива', harpoon: 'Ордена Гарпуна', brokers: 'Туманных маклеров', choir: 'Хора Глубин', free: 'Вольных гаваней' };
+  const out: [string, string][] = [];
+  for (const [b, bru] of Object.entries(biome)) for (const [f, fru] of Object.entries(flag)) out.push([`A small ${b} settlement under ${f} colours.`, `Небольшое поселение ${bru} под флагом ${fru}.`]);
+  return out;
+}

@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { NemesisCause } from './data/nemesis.ts';
 import type { CaravanTask, OnAttack } from './data/caravans.ts';
 import type { OutpostKind } from './data/estate.ts';
 import type { BeastId } from './data/beasts.ts';
@@ -1251,6 +1252,20 @@ export interface WantedView {
   rogues: { name: string; x: number; y: number; r: number }[];
   /** Lairs within a few miles: where, how much of the battery stands (0..1), open to a landing. */
   lairs: { id: string; x: number; y: number; hp: number; open: boolean }[];
+  /** The named pirates with a grudge against her, and the heads she has taken (docs/12 P10 #1). */
+  nemeses: NemesisView[];
+  heads: number;
+}
+
+/** A nemesis as his captain knows him. */
+export interface NemesisView {
+  id: string;
+  rank: number;
+  epithet: string;
+  scars: NemesisCause[];
+  lost: number;
+  fled: number;
+  lastAt: number;
 }
 
 /** The hunt for one captain (docs/12 P4): the beast on her line, the carcass she flenses, one alongside to flense. */

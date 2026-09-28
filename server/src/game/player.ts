@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { NemesisRec } from './nemesis.ts';
 import type { TattooProfile } from './tattoos.ts';
 import type { PiracyProfile } from './raiding.ts';
 import type { HunterProfile } from './wanted.ts';
@@ -178,6 +179,9 @@ export interface Profile {
   /** One's own island (docs/12 P7): when home was last sailed for; souls waiting aboard to settle there. */
   homeAt?: number;
   refugees?: number;
+  /** The named pirates who hold a grudge against her, and the heads of those she settled with (docs/12 P10 #1). */
+  nemeses?: Record<string, NemesisRec>;
+  nemesisHeads?: number;
   /** Tattoos (docs/12 P9); a choice of three rewards waiting. */
   tattoos?: TattooProfile;
   choice?: { quest: string; items: Item[] } | null;

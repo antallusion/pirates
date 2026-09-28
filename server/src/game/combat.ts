@@ -433,6 +433,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     return;
   }
   const ammo = AMMO[p.ammo];
+  if (target.named && shooter?.isPlayer) target.scar = p.ammo === 'incendiary' ? 'fire' : 'cannon'; // the scar he will carry (docs/12 P10 #1)
   const falloff = 1 - 0.3 * clamp(p.traveled / Math.max(1, p.maxRange), 0, 1);
   // Angle of impact: how closely the ball travels along the target's keel line.
   const ball = headingVec(p.heading);

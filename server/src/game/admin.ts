@@ -11,6 +11,9 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { sanitizeNemeses } from './nemesis.ts';
+import { NEMESIS_CAUSES } from '../../../shared/src/data/nemesis.ts';
+import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } from './tattoos.ts';
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
@@ -240,6 +243,14 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       if (!ids.every((id) => TATTOO_BY_ID[id])) return `Tattoos: ${TATTOOS.map((x) => x.id).join(', ')}`;
       for (const id of ids) earnTattoo(game, s, id);
       return `Earned: ${ids.length}.`;
+    }
+    case 'nemesis': {
+      // A nemesis (docs/12 P10 #1 play-testing): /nemesis [id] [rank] [cause] — a grudge from a pirate of these waters.
+      const np = pirateById(args[0] ?? '') ?? namedPirates().find((x) => x.region === ship.region && !x.baron);
+      if (!np) return 'No named pirates in these waters.';
+      const cause = (NEMESIS_CAUSES as string[]).includes(args[2] ?? '') ? (args[2] as NemesisCause) : 'boarding';
+      sanitizeNemeses(s.profile!)[np.id] = { rank: Math.max(1, Math.min(5, num(1, 2))), epithet: `${cause}:0`, scars: [cause], lost: 1, fled: 1, lastAt: game.wallNow(), letterAt: 0, huntAt: -1e9 };
+      return `${np.name[0]} will remember you: a new nemesis.`;
     }
     case 'choice': {
       // A chain's reward (docs/12 P9): /choice offers three pieces.

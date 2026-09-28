@@ -1,5 +1,6 @@
 // Server-side ship entity: the authoritative state of every vessel (player or NPC) at sea.
 
+import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { combatLevelOf, onLadder, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
@@ -221,6 +222,8 @@ export class ShipEntity {
   /** A named pirate (docs/12 P5): her id on the roster; one of her lieutenants; the hull at which she runs (0: never). */
   named?: string;
   namedMate?: string;
+  /** How a player last hurt this named pirate: the scar he carries off if he gets away (docs/12 P10 #1). */
+  scar?: NemesisCause;
   fleeAt?: number;
   /** The raider's trade (docs/12 P6): a League convoy's ships, an escort's charge, the port she sailed from, and a
    *  merchant sailing under a friend's guns. */

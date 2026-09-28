@@ -1,6 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { nemesisLabel } from './nemesis.ts';
 import { pirateById } from '../../../shared/src/data/pirates.ts';
 import { BEASTS, beastOfClass, hullNoise, noiseBand } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
@@ -1127,6 +1128,8 @@ export function namedLabel(named: string): { name: string; tag: string } | null 
   if (!np) return null;
   const ru = lang() === 'ru' ? 1 : 0;
   if (mate !== undefined) return { name: np.lieutenants[Number(mate)]?.name[ru] ?? np.name[ru], tag: L('tg.wantedMate') };
+  const nem = nemesisLabel(id); // her own nemesis: his new name and the grudge's rank (docs/12 P10 #1)
+  if (nem) return nem;
   const n = np.bounty.toLocaleString(ru ? 'ru-RU' : 'en-GB');
   return { name: np.name[ru], tag: np.baron ? L('tg.baron', { n }) : L('tg.wanted', { n }) };
 }

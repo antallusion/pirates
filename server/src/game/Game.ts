@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { nemesisSankYou } from './nemesis.ts';
 import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
@@ -669,6 +670,8 @@ export class Game {
           // Reinforced Bow deals more and takes less; Iron Strapping shrugs off rams.
           const ramMul = (x: ShipEntity, y: ShipEntity) => Math.max(0, 1 + tval(x.stats, 'ramDealt')) * Math.max(0.2, 1 + tval(y.stats, 'ramTaken')) * Math.max(0.2, 1 - tval(y.stats, 'strapping'));
           applyDamage(this, b, { hull: base * ramA * (ma / (ma + mb)) * 2 * ramMul(a, b), crew: 1, morale: 4 }, a);
+          if (b.named && a.isPlayer) b.scar = 'ram';
+          if (a.named && b.isPlayer) a.scar = 'ram';
           applyDamage(this, a, { hull: ((base * (mb / (ma + mb)) * 2) / ramA) * ramMul(b, a), morale: 2 }, b);
           this.emit({ k: 'fx', fx: 'ram', x: Math.round((a.state.x + b.state.x) / 2), y: Math.round((a.state.y + b.state.y) / 2) }, a.state.x, a.state.y);
           a.state.speed *= 0.4;
@@ -1584,6 +1587,7 @@ export class Game {
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
     if (!onboardingProtected(this.sessionOf(ship))) this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship), victor); // the First Watch loses nothing
     onShipSunk(this, ship, killer);
+    if (ship.isPlayer && killer && (killer.named || killer.namedMate)) nemesisSankYou(this, ship, killer); // he will remember her (docs/12 P10 #1)
     if (killer) this.creditKill(killer, ship, 'sunk');
   }
 

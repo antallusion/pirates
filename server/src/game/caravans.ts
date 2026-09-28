@@ -7,6 +7,8 @@
 // their owner the fight is reckoned (escorts against pirates, with luck) and a letter tells how it went; within
 // 25 km of her the alarm sounds and the fight is real.
 
+import { caravanNemesis, caravanNemesisLine } from './nemesis.ts';
+import { liveNamed, putToSea } from './wanted.ts';
 import { COUNTING_HOUSE_PROFIT, INSURANCE_COVER, INSURANCE_PREMIUM, MAX_ESCORTS, RESCUE_R, RESCUE_SEC, RISK, SKIPPER_COST, TASK_NAMES, escortCost } from '../../../shared/src/data/caravans.ts';
 import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
@@ -447,8 +449,14 @@ export function attackNow(game: Game, c: Caravan): void {
   const [x, y] = here(game, c);
   const nearOwner = game.sessionByAccount(c.owner)?.ship;
   const nameAt = game.nearestIslandName(x, y);
+  const nem = caravanNemesis(game, c.owner); // her nemesis, now and then (docs/12 P10 #1)
   if (nearOwner && !nearOwner.docked && dist(nearOwner.state.x, nearOwner.state.y, x, y) < RESCUE_R) {
     materialize(game, c);
+    if (nem) {
+      const lead = game.ships.get(c.entities[0]);
+      if (lead && !liveNamed(game).some((l) => l.id === nem.np.id)) putToSea(game, nem.np, nearOwner);
+      game.sendTo(game.sessionByAccount(c.owner)!, { t: 'toast', msg: caravanNemesisLine(nem.np, nem.rec, c.name, nameAt), kind: 'bad' });
+    }
     const pirates: number[] = [];
     for (let i = 0; i < 2 + (cs(game).rng.chance(0.4) ? 1 : 0); i++) {
       const sp = spawnPirate(game);
@@ -469,17 +477,18 @@ export function attackNow(game: Game, c: Caravan): void {
     touch(game);
     return;
   }
-  resolveAttack(game, c, nameAt);
+  if (nem) mail(game, c, caravanNemesisLine(nem.np, nem.rec, c.name, nameAt));
+  resolveAttack(game, c, nameAt, nem ? 1 + 0.25 * nem.rec.rank : 1);
 }
 
 /** An attack reckoned: escorts and hulls against the pirates, with luck; the standing orders decide the rest. */
-function resolveAttack(game: Game, c: Caravan, nameAt: string): void {
+function resolveAttack(game: Game, c: Caravan, nameAt: string, strength = 1): void {
   const S = cs(game);
   const [x, y] = here(game, c);
   const region = regionAt(game.world, x, y);
   const lvl = level(c);
   const band = bandLevel(game, region);
-  const pirates = S.rng.int(2, 3) * levelPower(band);
+  const pirates = S.rng.int(2, 3) * levelPower(band) * strength;
   const own = c.escorts * levelPower(lvl) * 1.2 + c.ships.length * levelPower(lvl) * 0.35;
   let win = Math.max(0.1, Math.min(0.92, own / (own + pirates)));
   if (c.orders.onAttack === 'flee') win = Math.min(0.95, win + 0.15);

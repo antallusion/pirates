@@ -96,6 +96,8 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
   b.boarding = sideState(fight, { with: a.id, attacker: false, aggression, startedAt: now, nextRound: fight.deadline, rounds: 0, startCrew: b.crew, enemyStartCrew: a.crew, killed: 0, lost: 0 });
   a.repairing = false;
   b.repairing = false;
+  if (b.named && a.isPlayer) b.scar = 'boarding';
+  if (a.named && b.isPlayer) a.scar = 'boarding';
   a.lastCombat = now;
   b.lastCombat = now;
   // Grappling impact.

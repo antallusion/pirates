@@ -2,6 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import { setNemeses } from './ui/nemesis.ts';
 import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
@@ -276,6 +277,7 @@ export class ClientState {
         break;
       case 'wanted':
         this.wanted = m.view;
+        setNemeses(m.view.nemeses);
         break;
       case 'appraisal':
         this.appraisal = m.view;

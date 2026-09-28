@@ -2018,3 +2018,12 @@ body.touch #hud-region .rg-extra { display: none; }
 /* A table in a card never spills out of it: long names break, numbers and prices stay whole. */
 table.grid td { overflow-wrap: anywhere; }
 table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
+/* Nemeses (docs/12 P10 #1). */
+.jr-nemesis .nem-row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.jr-nemesis .nem-face { position: relative; flex: none; width: 48px; height: 48px; border: 1px solid #7a2a1a; border-radius: 3px; overflow: hidden; background: #1a0f0c; display: grid; place-items: center; }
+.jr-nemesis .nem-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(0.35) saturate(0.8); }
+.jr-nemesis .nem-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 12px; }
+.jr-nemesis .nem-text b { font-family: var(--serif); font-size: 14px; color: #e0664a; }
+.jr-nemesis .nem-rank { color: #e8c46a; font-size: 12px; }
+.poster.po-nemesis { box-shadow: 0 0 0 2px #8a1a0e, 0 2px 8px rgba(0,0,0,0.6); }
+.poster .po-stamp { font: 700 min(10px, 6cqi) var(--sans); color: #fff; background: #8a1a0e; padding: 1px 5px; border-radius: 2px; letter-spacing: 0.04em; max-width: 100%; overflow-wrap: anywhere; }

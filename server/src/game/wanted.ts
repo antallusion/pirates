@@ -4,6 +4,8 @@
 // captains; the lairs on the islands — a battery to silence from the sea, then a landing for the chest and the
 // prisoners; and the trail of a wanted captain for a licensed hunter.
 
+import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
+import { nemesisBonus, nemesisEscaped, nemesisRevenge, nemesisViews, stepNemesis } from './nemesis.ts';
 import { questEvent } from './quests.ts';
 import { trophyBonus } from './estate.ts';
 import {
@@ -284,13 +286,19 @@ export function putToSea(game: Game, np: NamedPirate, near: ShipEntity): ShipEnt
   const S = ws(game);
   const pt = freePoint(game, near.state.x, near.state.y, 3500, 6500, np.region);
   if (!pt) return null;
-  const ship = game.spawnNpcShip('pirate', np.cls, 'confederacy', pt[0], pt[1], S.rng.float() * Math.PI * 2, { ship: np.ship[0], captain: np.name[0] });
-  game.setNpcLevel(ship, np.level);
+  // A nemesis sails levels above himself against the captain he hunts, on a bigger hull if his own tops out
+  // (docs/12 P10 #1; the ladder of levels keeps each hull to its span).
+  const bonus = nemesisBonus(game, np, near);
+  const lvl = Math.min(10, np.level + bonus);
+  const hulls = bonus ? hullsFor('pirate', lvl) : [];
+  const cls = hulls.length && !hulls.includes(np.cls) ? hulls[S.rng.int(0, hulls.length - 1)] : np.cls;
+  const ship = game.spawnNpcShip('pirate', cls, 'confederacy', pt[0], pt[1], S.rng.float() * Math.PI * 2, { ship: np.ship[0], captain: np.name[0] });
+  game.setNpcLevel(ship, lvl);
   ship.named = np.id;
   ship.fleeAt = np.temper === 'coward' ? 0.45 : np.temper === 'brute' ? 0 : undefined;
   if (np.baron) {
     ship.elite = true;
-    game.setNpcLevel(ship, np.level);
+    game.setNpcLevel(ship, lvl);
   }
   ship.purse = (ship.purse ?? 0) + Math.round(np.bounty * 0.3);
   const brain = game.npcs.get(ship.id)!;
@@ -342,6 +350,7 @@ export function stepWanted(game: Game): void {
     if (!near) {
       if (now - live.farSince > 120 && !ship.inCombat(now)) {
         seen(game, id, ship);
+        nemesisEscaped(game, np, ship); // hurt and gone: a grudge on both sides
         for (const l of live.lts) game.removeShip(l);
         game.removeShip(ship.id);
         S.live.delete(id);
@@ -375,6 +384,7 @@ export function stepWanted(game: Game): void {
     }
   }
   if (game.directorOn && Math.floor(now) % 10 === 0) spawnAbout(game);
+  if (game.directorOn && Math.floor(now) % 60 === 0) stepNemesis(game); // a nemesis finds his captain's wake
   // Informants' word lapses.
   for (const [acc, inf] of S.informed) if (now > inf.until) S.informed.delete(acc);
   // The licensed hunters' trail of wanted captains: a 3 km circle about each, moved once a minute.
@@ -479,6 +489,7 @@ export function wantedKill(game: Game, s: PlayerSession, victim: ShipEntity): vo
     p.gold += pay;
     game.db.ledger(s.accountId, 'bounty', pay, np.id);
     game.sendTo(s, { t: 'toast', msg: `The bounty on ${np.name[0]}: ${pay} silver.`, kind: 'gold' });
+    nemesisRevenge(game, s, np); // her own grudge settled (docs/12 P10 #1)
     // Groupmates near share a part.
     const g = groupOfAccount(game, s.accountId);
     if (g) for (const acc of g.members) {
@@ -598,8 +609,10 @@ export function wantedView(game: Game, s: PlayerSession): WantedView {
   const ship = s.ship;
   const inf = S.informed.get(s.accountId);
   const sight: WantedView['sight'] = [];
-  if (rank >= HUNTER_SIGHT_RANK && ship && !ship.docked) {
+  if (ship && !ship.docked) {
     for (const live of S.live.values()) {
+      // A hunter of rank sees the wanted about her; everyone sees her own nemesis (docs/12 P10 #1).
+      if (rank < HUNTER_SIGHT_RANK && !p.nemeses?.[live.id]) continue;
       const o = game.ships.get(live.ship);
       if (!o?.alive || dist(o.state.x, o.state.y, ship.state.x, ship.state.y) > HUNTER_SIGHT_R) continue;
       sight.push({ id: live.id, x: Math.round(o.state.x), y: Math.round(o.state.y) });
@@ -619,6 +632,8 @@ export function wantedView(game: Game, s: PlayerSession): WantedView {
     informed: inf ? { id: inf.id, x: inf.x, y: inf.y, sec: Math.max(0, Math.ceil(inf.until - game.now)) } : null,
     sight,
     rogues: hunterLicence(p) ? S.rogues.filter((r) => r.name !== s.name).map((r) => ({ name: r.name, x: r.x, y: r.y, r: r.r })) : [],
+    nemeses: nemesisViews(p),
+    heads: p.nemesisHeads ?? 0,
   };
 }
 

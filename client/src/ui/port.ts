@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { nemesisPoster } from './nemesis.ts';
 import type { TipView } from '../../../shared/src/protocol.ts';
 import { namedPirates } from '../../../shared/src/data/pirates.ts';
 import type { WantedPoster } from '../../../shared/src/protocol.ts';
@@ -647,12 +648,13 @@ function wantedBoardHtml(list: WantedPoster[]): string {
   const roster = new Map(namedPirates().map((p) => [p.id, p]));
   const posters = list.map((w) => {
     const np = roster.get(w.id);
-    const name = np ? np.name[ru] : w.name;
+    const nem = nemesisPoster(w.id); // her nemesis: stamped, under his new name (docs/12 P10 #1)
+    const name = nem ? nem.name : np ? np.name[ru] : w.name;
     const ship = np ? np.ship[ru] : w.ship;
     const where = w.seen ? (w.atSea && w.seen.ago <= 1 ? L('wanted.seenNow', { region: REGIONS[w.seen.region].name }) : L('wanted.seen', { ago: w.seen.ago, region: REGIONS[w.seen.region].name })) : L('wanted.unseen');
     const habits = [L(`wanted.time.${w.time}` as 'wanted.time.any'), L(`wanted.weather.${w.weather}` as 'wanted.weather.any'), L(`wanted.trick.${w.trick}` as 'wanted.trick.fog'), L(`wanted.temper.${w.temper}` as 'wanted.temper.coward')].filter(Boolean).join(' · ');
-    return `<div class="poster${w.down ? ' po-down' : ''}${w.baron ? ' po-baron' : ''}">
-      <div class="po-head">${esc(w.baron ? L('wanted.baron') : L('wanted.head'))}</div>
+    return `<div class="poster${w.down ? ' po-down' : ''}${w.baron ? ' po-baron' : ''}${nem ? ' po-nemesis' : ''}">
+      <div class="po-head">${esc(w.baron ? L('wanted.baron') : L('wanted.head'))}</div>${nem ? `<div class="po-stamp">${esc(nem.stamp)}</div>` : ''}
       <div class="po-face" style="filter: sepia(0.55) hue-rotate(${w.hue}deg) saturate(0.8)">${icon(`portrait.${w.portrait}`, '', 'po-img')}</div>
       <b class="po-name">${esc(name)}</b>
       <div class="po-ship">«${esc(ship)}» · ⚓${w.level}</div>
