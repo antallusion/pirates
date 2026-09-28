@@ -11,6 +11,7 @@
 //   /ship <class>              change hull (in port or at sea)
 //   /heal · /ammo · /give <good> <n> · /reveal (chart every island) · /sink · /spawn [role] [class] [faction]
 
+import { wondersOf } from './wonders.ts';
 import { regattaNow, regattaSignUp } from './regatta.ts';
 import { givePet, petAction } from './pets.ts';
 import { PETS, PET_IDS } from '../../../shared/src/data/companions.ts';
@@ -281,6 +282,18 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       regattaNow(game, portId, 30_000);
       if (ship.docked === portId) regattaSignUp(game, s);
       return `Regatta of Equal Waters: ${portId}.`;
+    }
+    case 'wonder': {
+      // The Atlas of Sea Wonders (docs/12 P10 #8 play-testing): /wonder — set down beside the nearest one not yet found.
+      const found = new Set(s.profile!.wonders ?? []);
+      const w = wondersOf(game).filter((x) => !found.has(x.id)).sort((a, b) => Math.hypot(a.x - ship.state.x, a.y - ship.state.y) - Math.hypot(b.x - ship.state.x, b.y - ship.state.y))[0];
+      if (!w) return 'No wonders left.';
+      ship.docked = null;
+      ship.state.x = w.x + 300;
+      ship.state.y = w.y;
+      ship.state.speed = 0;
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      return `Set down at ${w.name[0]}.`;
     }
     case 'choice': {
       // A chain's reward (docs/12 P9): /choice offers three pieces.

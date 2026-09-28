@@ -306,6 +306,21 @@ export class WorldMap {
       g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
       label(placeName(p.name), tx(p.x), ty(p.y) - ms * 0.55);
     }
+    // The wonders she has found (docs/12 P10 #8): a gold star each.
+    for (const w of state.wonders?.found ?? []) {
+      const x = tx(w.x), y = ty(w.y);
+      g.fillStyle = '#e8c46a';
+      g.strokeStyle = 'rgba(0,0,0,0.8)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2 - Math.PI / 2, r = i % 2 ? ms * 0.14 : ms * 0.32;
+        g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      }
+      g.closePath();
+      g.stroke();
+      g.fill();
+    }
     // Sunken cities and graveyards.
     for (const s of state.pveSites) {
       if (!mark(s.kind === 'city' ? 'icon.map_city' : 'icon.map_graveyard', tx(s.x), ty(s.y))) {

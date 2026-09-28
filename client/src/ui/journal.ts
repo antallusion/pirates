@@ -2,6 +2,9 @@
 // and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
 // «Follow», «Share» (in a group) and «Set aside».
 
+import { WONDER_KINDS } from '../../../shared/src/data/wonders.ts';
+import type { WonderKind } from '../../../shared/src/data/wonders.ts';
+import type { WondersView } from '../../../shared/src/protocol.ts';
 import { nemesisLog } from './nemesis.ts';
 import { BRETHREN_NAMES } from '../../../shared/src/data/raiding.ts';
 import type { RaidView } from '../../../shared/src/protocol.ts';
@@ -65,6 +68,10 @@ const EN = {
   mates: 'In your group on it too',
   mateStep: '{name}, step {step}',
   tattoos: 'Tattoos',
+  wonders: 'Atlas of Sea Wonders ({n} of {max})',
+  wFirst: 'first found by {name}',
+  wName: 'Name it',
+  wNamePh: 'Your name for it',
 };
 const RU: typeof EN = {
   title: 'Журнал заданий',
@@ -105,6 +112,10 @@ const RU: typeof EN = {
   mates: 'В отряде тоже взялись',
   mateStep: '{name}, шаг {step}',
   tattoos: 'Татуировки',
+  wonders: 'Атлас чудес моря ({n} из {max})',
+  wFirst: 'первым нашёл: {name}',
+  wName: 'Назвать',
+  wNamePh: 'Ваше имя для него',
 };
 const L = dict(EN, RU);
 
@@ -130,7 +141,7 @@ export class Journal {
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
+          <div class="jr-day">${dailyLog(self?.daily)}${commonLog(self?.common)}${tasksLog(state, false)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
@@ -141,6 +152,11 @@ export class Journal {
       root.querySelector('.jr-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }));
     root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
+    root.querySelectorAll<HTMLElement>('[data-wname]').forEach((b) => (b.onclick = () => {
+      const id = b.dataset.wname!;
+      const name = root.querySelector<HTMLInputElement>(`input[data-wfor="${id}"]`)?.value ?? '';
+      this.send({ t: 'wonder', id, name });
+    }));
     root.querySelector<HTMLElement>('[data-follow]')?.addEventListener('click', () => {
       setTracked(this.chosen);
       this.render(root, state);
@@ -188,6 +204,17 @@ export class Journal {
       </div>`;
   }
 }
+
+/** The Atlas of Sea Wonders (docs/12 P10 #8): the wonders found, who found them first, and a name to give. */
+function wondersLog(v: WondersView | null): string {
+  if (!v || !v.found.length) return '';
+  const ru = lang() === 'ru' ? 1 : 0;
+  const rows = v.found.map((w) => `<div class="jr-wonder">${icon(WONDER_ICON[w.kind], '✦', 'ico-md')}<div class="nem-text"><b>${esc(serverText(w.name))}</b>
+      <span class="muted">${esc(WONDER_KINDS[w.kind].text[ru])}</span><span class="muted">${esc(REGIONS[w.region].name)}${w.first ? ` · ${esc(L('wFirst', { name: w.first }))}` : ''}</span>
+      ${w.canName ? `<span class="jr-wname"><input class="field" data-wfor="${esc(w.id)}" maxlength="24" placeholder="${esc(L('wNamePh'))}"><button class="btn btn-small" data-wname="${esc(w.id)}">${esc(L('wName'))}</button></span>` : ''}</div></div>`).join('');
+  return `<div class="jr-fishing jr-wonders"><div class="giver-h">${esc(L('wonders', { n: v.found.length, max: v.total }))}</div>${rows}</div>`;
+}
+const WONDER_ICON: Record<WonderKind, string> = { lagoon: 'map_whirlpool', bones: 'good_leviathan_bone', arch: 'map_cove', cathedral: 'map_city', geyser: 'fire', ice: 'weather_storm', coral: 'good_pearls', singing: 'opt_sound' };
 
 /** The letters of the sea found in bottles (docs/12 P2): a keepsake collection. */
 function lettersLog(found: number[]): string {

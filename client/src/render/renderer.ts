@@ -380,6 +380,7 @@ export class Renderer {
     drawShoals(g, state.shoals, state.self?.fishing?.traps ?? [], (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
     this.drawCarcasses(state);
     this.drawBuoys(state);
+    this.drawWonders(state);
     drawSights(g, state.sights, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, own ? { x: own.x, y: own.y } : null, this.w, this.h);
     this.drawDuelRing(state);
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
@@ -2325,6 +2326,112 @@ export class Renderer {
     }
     void state;
     void side;
+  }
+
+  /** The wonders of the sea (docs/12 P10 #8), drawn where they lie: a lagoon's glow, bones, an arch, drowned spires,
+   *  a boiling ring, ice, coral, singing rocks. */
+  private drawWonders(state: ClientState): void {
+    const near = state.wonders?.near;
+    if (!near?.length) return;
+    const g = this.g;
+    const t = settings().reduceMotion ? 0 : this.time;
+    const z = this.zoom;
+    for (const w of near) {
+      const x = this.sx(w.x), y = this.sy(w.y);
+      const R = 200 * z;
+      if (x < -R || y < -R || x > this.w + R || y > this.h + R) continue;
+      const seed = w.id.charCodeAt(1) * 13 + (w.id.charCodeAt(2) || 0);
+      g.save();
+      g.translate(x, y);
+      switch (w.kind) {
+        case 'lagoon': {
+          const gr = g.createRadialGradient(0, 0, 0, 0, 0, 160 * z);
+          const a = 0.35 + 0.15 * Math.sin(t * 0.8 + seed);
+          gr.addColorStop(0, `rgba(80,230,220,${a})`);
+          gr.addColorStop(1, 'rgba(80,230,220,0)');
+          g.fillStyle = gr;
+          g.beginPath(); g.arc(0, 0, 160 * z, 0, Math.PI * 2); g.fill();
+          break;
+        }
+        case 'bones': {
+          g.strokeStyle = 'rgba(226,214,186,0.85)';
+          g.lineWidth = Math.max(1.5, 3 * z);
+          g.rotate(seed);
+          for (let i = -4; i <= 4; i++) {
+            g.beginPath(); g.arc(i * 14 * z, 0, 22 * z, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
+          }
+          g.beginPath(); g.moveTo(-70 * z, 0); g.lineTo(70 * z, 0); g.stroke();
+          break;
+        }
+        case 'arch': {
+          g.rotate(seed);
+          g.fillStyle = '#3b3a38';
+          g.strokeStyle = '#1b1a18';
+          g.lineWidth = 2;
+          g.beginPath(); g.arc(0, 0, 36 * z, Math.PI, 0); g.arc(0, 0, 22 * z, 0, Math.PI, true); g.closePath(); g.fill(); g.stroke();
+          break;
+        }
+        case 'cathedral': {
+          g.fillStyle = 'rgba(20,34,40,0.55)';
+          for (let i = -2; i <= 2; i++) {
+            g.beginPath(); g.moveTo(i * 26 * z - 9 * z, 30 * z); g.lineTo(i * 26 * z, -(40 + (2 - Math.abs(i)) * 18) * z); g.lineTo(i * 26 * z + 9 * z, 30 * z); g.fill();
+          }
+          const k = (t * 0.3) % 1;
+          g.strokeStyle = `rgba(160,200,210,${0.4 * (1 - k)})`;
+          g.lineWidth = 1.5;
+          g.beginPath(); g.arc(0, 0, (30 + k * 90) * z, 0, Math.PI * 2); g.stroke();
+          break;
+        }
+        case 'geyser': {
+          const gr = g.createRadialGradient(0, 0, 0, 0, 0, 70 * z);
+          gr.addColorStop(0, 'rgba(255,140,60,0.45)');
+          gr.addColorStop(1, 'rgba(255,140,60,0)');
+          g.fillStyle = gr;
+          g.beginPath(); g.arc(0, 0, 70 * z, 0, Math.PI * 2); g.fill();
+          for (let i = 0; i < 6; i++) {
+            const k = ((t * 0.25 + i / 6) % 1);
+            g.fillStyle = `rgba(235,235,235,${0.35 * (1 - k)})`;
+            g.beginPath(); g.arc(Math.sin(i * 2.1 + seed) * 20 * z, -k * 90 * z, (10 + k * 26) * z, 0, Math.PI * 2); g.fill();
+          }
+          break;
+        }
+        case 'ice': {
+          g.fillStyle = 'rgba(200,230,245,0.9)';
+          g.strokeStyle = 'rgba(90,140,170,0.9)';
+          g.lineWidth = 1.2;
+          for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * Math.PI * 2 + seed, r = 26 * z;
+            const px = Math.cos(a) * r, py = Math.sin(a) * r, h = (22 + (i % 3) * 10) * z;
+            g.beginPath(); g.moveTo(px - 8 * z, py); g.lineTo(px, py - h); g.lineTo(px + 8 * z, py); g.closePath(); g.fill(); g.stroke();
+          }
+          break;
+        }
+        case 'coral': {
+          const cols = ['#e0605a', '#f0a050', '#c070d0', '#50c0b0', '#f0e070'];
+          for (let i = 0; i < 26; i++) {
+            const a = i * 2.39996 + seed, r = Math.sqrt(i / 26) * 90 * z;
+            g.fillStyle = cols[i % cols.length] + '99';
+            g.beginPath(); g.arc(Math.cos(a) * r, Math.sin(a) * r, (4 + (i % 3) * 2) * z, 0, Math.PI * 2); g.fill();
+          }
+          break;
+        }
+        case 'singing': {
+          g.fillStyle = '#4a4a48';
+          for (let i = 0; i < 4; i++) {
+            const a = i * 1.7 + seed;
+            g.beginPath(); g.ellipse(Math.cos(a) * 24 * z, Math.sin(a) * 24 * z, 10 * z, 7 * z, a, 0, Math.PI * 2); g.fill();
+          }
+          for (let i = 0; i < 3; i++) {
+            const k = ((t * 0.35 + i / 3) % 1);
+            g.strokeStyle = `rgba(220,220,200,${0.35 * (1 - k)})`;
+            g.lineWidth = 1.2;
+            g.beginPath(); g.arc(0, 0, (30 + k * 80) * z, 0, Math.PI * 2); g.stroke();
+          }
+          break;
+        }
+      }
+      g.restore();
+    }
   }
 
   /** The regatta's buoys (docs/12 P10 #5): red and white, numbered; the one she sails for rings. */

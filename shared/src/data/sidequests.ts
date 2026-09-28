@@ -20,6 +20,7 @@ export type TattooTrigger =
   | { kind: 'flensed'; n: number }
   | { kind: 'hits'; n: number }
   | { kind: 'charted'; n: number }
+  | { kind: 'wonders'; n: number }
   | { kind: 'sirens'; n: number }
   | { kind: 'dives'; n: number }
   | { kind: 'rescued'; n: number }
@@ -55,7 +56,7 @@ export const TATTOOS: TattooDef[] = [
   T('skull', ['Skull', 'Череп'], ['The Brethren’s quartermaster’s chain', 'Цепочка квартирмейстера Братства'], ['+4% boarding power', '+4% к натиску в абордаже'], { kind: 'chain', chain: 'quartermaster' }, { boardingPower: 0.04 }),
   T('sabres', ['Crossed Sabres', 'Скрещённые сабли'], ['The bounty hunter’s chain', 'Цепочка охотника за головами'], ['+5% in the captains’ duel and the melee', '+5% в дуэли капитанов и рукопашной'], { kind: 'chain', chain: 'hunter' }, { meleeDamage: 0.05 }),
   T('cannon', ['Cannon', 'Пушка'], ['Land a thousand hits', 'Попасть тысячу раз'], ['−4% reload', '−4% перезарядки'], { kind: 'hits', n: 1000 }, { reloadMul: -0.04 }),
-  T('compass_rose', ['Compass Rose', 'Роза ветров'], ['Chart a hundred islands', 'Нанести на карту сто островов'], ['Fog does not throw you off your course (+20% sight in fog)', 'Туман не сбивает с курса (+20% обзора в тумане)'], { kind: 'charted', n: 100 }, { fogSight: 0.2 }),
+  T('compass_rose', ['Compass Rose', 'Роза ветров'], ['Find ten wonders of the sea', 'Найти десять чудес моря'], ['Fog does not throw you off your course (+20% sight in fog)', 'Туман не сбивает с курса (+20% обзора в тумане)'], { kind: 'wonders', n: 10 }, { fogSight: 0.2 }),
   T('coin', ['Coin', 'Монета'], ['The League clerk’s chain', 'Торговая цепочка писаря Лиги'], ['+3% on what you sell', '+3% к цене продажи'], { kind: 'chain', chain: 'clerk' }, { sellMul: 0.03 }),
   T('mermaid', ['Mermaid', 'Русалка'], ['Live through the sirens three times', 'Трижды пережить сирен'], ['The sirens’ song does not reach your crew', 'Песнь сирен не действует на команду'], { kind: 'sirens', n: 3 }, undefined, ['tattoo_mermaid']),
   T('eye', ['Eye', 'Глаз'], ['The Choir chaplain’s chain', 'Цепочка капеллана Хора'], ['Ghosts and monsters show on the chart from afar', 'Призраки и чудовища видны на карте издалека'], { kind: 'chain', chain: 'chaplain' }, undefined, ['eyes_of_choir']),

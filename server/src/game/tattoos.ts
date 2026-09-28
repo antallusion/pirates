@@ -106,6 +106,7 @@ function checkTriggers(game: Game, s: PlayerSession): void {
       case 'flensed': ok = (t.counts.flensed ?? 0) >= tr.n; break;
       case 'hits': ok = (t.counts.hits ?? 0) >= tr.n; break;
       case 'charted': ok = s.discovered.size >= tr.n; break;
+      case 'wonders': ok = (p.wonders?.length ?? 0) >= tr.n; break;
       case 'sirens': ok = (t.counts.sirens ?? 0) >= tr.n; break;
       case 'dives': ok = Object.keys(p.explore?.dived ?? {}).length >= tr.n || (t.counts.dives ?? 0) >= tr.n; break;
       case 'rescued': ok = (p.rescued ?? 0) >= tr.n; break;

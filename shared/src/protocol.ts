@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { WonderKind } from './data/wonders.ts';
 import type { HarnessId, PetId } from './data/companions.ts';
 import type { NemesisCause } from './data/nemesis.ts';
 import type { CaravanTask, OnAttack } from './data/caravans.ts';
@@ -145,6 +146,8 @@ export type ClientMsg =
   /** Captains' treasure (docs/12 P10 #7): bury a chest; post, take down or buy a map on a port's board. */
   | { t: 'chest'; silver: number; riddle: string; good: GoodId | null; qty: number }
   | { t: 'mapboard'; action: 'post' | 'unpost' | 'buy'; id: string; price?: number }
+  /** The atlas (docs/12 P10 #8): the first finder names a wonder. */
+  | { t: 'wonder'; id: string; name: string }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -1036,6 +1039,7 @@ export type ServerMsg =
   | { t: 'petsown'; view: PetsOwnView }
   | { t: 'dice'; view: DiceView | null }
   | { t: 'regatta'; view: RegattaView }
+  | { t: 'wonders'; view: WondersView }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1318,6 +1322,13 @@ export interface RegattaView {
   time: number | null;
   entrants: number;
   records: { name: string; sec: number }[];
+}
+
+/** The Atlas of Sea Wonders (docs/12 P10 #8): what she has found, and the wonders near her to draw. */
+export interface WondersView {
+  total: number;
+  found: { id: string; kind: WonderKind; name: string; region: RegionId; x: number; y: number; first: string | null; canName: boolean }[];
+  near: { id: string; kind: WonderKind; x: number; y: number }[];
 }
 
 /** A map posted on a port's board (docs/12 P10 #7). */

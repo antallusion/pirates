@@ -2097,4 +2097,10 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .chest-card .bottle-silver { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 12px; }
 .chest-card .bottle-silver .field { width: 110px; flex: none; }
 /* The title plates' words sat 1.5–2 px low on wider screens (their larger face): lift them to the plate's middle. */
-@media (min-width: 700px) and (min-height: 521px) { .skinned .modal-head h2, .skinned .title-sm { padding-top: 0; padding-bottom: 3px; } }
+@media (min-width: 700px) and (min-height: 521px) { .skinned .modal-head h2, .skinned .title-sm { padding-top: 1px; padding-bottom: 2px; } }
+/* The Atlas of Sea Wonders (docs/12 P10 #8). */
+.jr-wonders .jr-wonder { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.jr-wonders .nem-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 12px; }
+.jr-wonders .nem-text b { font-family: var(--serif); font-size: 14px; color: #e8c46a; }
+.jr-wonders .jr-wname { display: flex; gap: 6px; margin-top: 4px; }
+.jr-wonders .jr-wname .field { flex: 1; min-width: 0; }

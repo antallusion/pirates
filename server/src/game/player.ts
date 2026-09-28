@@ -189,6 +189,8 @@ export interface Profile {
   nemesisHeads?: number;
   /** A cartographer's fame: her buried chests dug up by others (docs/12 P10 #7). */
   cartoFame?: number;
+  /** The wonders of the sea she has found (docs/12 P10 #8). */
+  wonders?: string[];
   /** Tattoos (docs/12 P9); a choice of three rewards waiting. */
   tattoos?: TattooProfile;
   choice?: { quest: string; items: Item[] } | null;
