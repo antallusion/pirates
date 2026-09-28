@@ -387,6 +387,7 @@ export class Renderer {
     this.drawLanterns(state);
     this.drawStormHeart(state);
     this.drawStair(state);
+    this.drawKegs(state);
     this.drawOrderMarks(state);
     drawSights(g, state.sights, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, own ? { x: own.x, y: own.y } : null, this.w, this.h);
     this.drawDuelRing(state);
@@ -408,7 +409,9 @@ export class Renderer {
 
     // Overlays (not affected by darkness).
     if (own && state.you && state.self) this.drawAim(state, own, aim, ships);
-    for (const s of ships) if (!s.own) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
+    // Names from the lowest on the screen up, each stepping above any it would lie on.
+    this.labelBoxes = [];
+    for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
     if (own) this.drawThreatMarks(ships, own);
     if (own) this.drawQuestMark(state, own);
     this.drawTexts();
@@ -2097,6 +2100,9 @@ export class Renderer {
   }
 
   /** Whether a threat mark (its circle and range) at x, y is clear of every HUD block and on the screen. */
+  /** Ships' name boxes drawn this frame, so no name lies on another. */
+  private labelBoxes: { l: number; r: number; t: number; b: number }[] = [];
+
   /** Marks placed on the screen's edge this frame (threats, then the quest's), so none lies on another. */
   private rimTaken: [number, number][] = [];
 
@@ -2452,6 +2458,41 @@ export class Renderer {
       arrow = x < -60 || y < -60 || x > this.w + 60 || y > this.h + 60;
     }
     if (arrow) this.edgeArrow(this.sx(near[0]), this.sy(near[1]), '#f0d58a');
+  }
+
+  /** Powder Night's kegs (docs/12 P10 #18): a staved keg afloat, iron hoops, a red powder mark, bobbing. */
+  private drawKegs(state: ClientState): void {
+    const kegs = state.holiday?.kegs;
+    if (!kegs?.length) return;
+    const g = this.g;
+    const t = settings().reduceMotion ? 0 : this.time;
+    const r = Math.max(6, 3.2 * this.zoom);
+    kegs.forEach(([kx, ky], i) => {
+      const x = this.sx(kx), y = this.sy(ky);
+      if (x < -30 || y < -30 || x > this.w + 30 || y > this.h + 30) return;
+      const bob = Math.sin(t * 1.7 + i * 1.3) * r * 0.12;
+      // A thin red ring pulsing about it: a target to aim at.
+      const k = (t * 0.6 + i * 0.3) % 1;
+      g.strokeStyle = `rgba(224,110,80,${0.65 * (1 - k)})`;
+      g.lineWidth = 1.5;
+      g.beginPath(); g.arc(x, y, r * (2 + k * 2.2), 0, Math.PI * 2); g.stroke();
+      g.save();
+      g.translate(x, y + bob);
+      g.rotate(Math.sin(t * 0.6 + i) * 0.3 + i);
+      g.fillStyle = 'rgba(0,0,0,0.35)';
+      g.beginPath(); g.ellipse(r * 0.3, r * 0.35, r * 1.35, r * 0.95, 0, 0, Math.PI * 2); g.fill();
+      const wood = g.createLinearGradient(-r, 0, r, 0);
+      wood.addColorStop(0, '#3a2414'); wood.addColorStop(0.5, '#7a5230'); wood.addColorStop(1, '#3a2414');
+      g.fillStyle = wood;
+      g.beginPath(); g.ellipse(0, 0, r * 1.25, r * 0.85, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#1c130c'; g.lineWidth = Math.max(1, r * 0.12);
+      g.stroke();
+      g.strokeStyle = '#4b4f55'; g.lineWidth = Math.max(1, r * 0.18);
+      for (const hx of [-0.55, 0.55]) { g.beginPath(); g.moveTo(r * hx, -r * 0.78); g.lineTo(r * hx, r * 0.78); g.stroke(); }
+      g.fillStyle = '#8e2a2a';
+      g.beginPath(); g.arc(0, 0, r * 0.28, 0, Math.PI * 2); g.fill();
+      g.restore();
+    });
   }
 
   /** The Maelstrom Stair (docs/12 P10 #17): the painted maelstrom turning slowly over a pale-green light far below; the
@@ -2936,7 +2977,7 @@ export class Renderer {
     const sxs = this.sx(s.x);
     if (sxs < 0 || sxs > this.w) return;
     let x = sxs;
-    const y = this.sy(s.y) - (cls.length * this.zoom) / 2 - 16;
+    let y = this.sy(s.y) - (cls.length * this.zoom) / 2 - 16;
     const hostile = (s.flags & SF.HOSTILE) !== 0;
     const info = s.info;
     const faction = info.faction !== 'player' ? FACTIONS[info.faction] : null;
@@ -2963,6 +3004,14 @@ export class Renderer {
     const half = Math.max(nameW, g.measureText(tag).width) / 2 + 6;
     g.font = '600 11px Inter, sans-serif';
     x = clamp(x, half, Math.max(half, this.w - half));
+    // Never on another ship's name: step up above it (the Admiral's Eye line makes a taller box).
+    const tall = state.self?.inspect.some((i) => i.id === s.id) ? 36 : 24;
+    for (let k = 0; k < 4; k++) {
+      const hit = this.labelBoxes.find((b) => x - half < b.r && x + half > b.l && y - 12 < b.b && y + tall > b.t);
+      if (!hit) break;
+      y = hit.t - tall - 3;
+    }
+    this.labelBoxes.push({ l: x - half, r: x + half, t: y - 12, b: y + tall });
     const lx = x + badgeW / 2;
     if (badge) {
       const px = x - nameW / 2, py = y - 10, ph = 13;

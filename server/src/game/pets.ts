@@ -11,6 +11,7 @@ import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
+import { petOffers } from './holidays.ts';
 
 const WARN_R = 2500;
 const WARN_AGAIN_S = 300;
@@ -62,11 +63,12 @@ export function petAction(game: Game, s: PlayerSession, action: string, pet: str
       const id = pet as PetId;
       if (!PET_IDS.includes(id)) return 'Unknown pet';
       const port = s.ship?.docked ? game.portById(s.ship.docked) : undefined;
-      if (!port || !petsForSale(port.id, Math.floor(game.wallNow() / 86_400_000)).includes(id)) return 'No pet seller here has that one.';
+      const offer = port ? petOffers(game, port.id).find((o) => o.pet === id) : undefined;
+      if (!offer) return 'No pet seller here has that one.';
       if (pets.owned.includes(id)) return 'You have that pet already.';
-      if (p.gold < PETS[id].price) return 'Not enough silver';
-      p.gold -= PETS[id].price;
-      game.db.ledger(s.accountId, 'pet', -PETS[id].price, id);
+      if (p.gold < offer.price) return 'Not enough silver';
+      p.gold -= offer.price;
+      game.db.ledger(s.accountId, 'pet', -offer.price, id);
       givePet(game, s, id);
       game.pushSelf(s, true);
       break;

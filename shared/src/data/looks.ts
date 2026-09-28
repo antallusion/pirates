@@ -117,6 +117,11 @@ export const FLAGS: FlagDef[] = [
   { name: ['Ghost Ship', 'Корабль-призрак'], art: 'a pale ghostly green ship silhouette on a black field', fb: [0, 0, 0, 4, 16, 0] },
   { name: ['Green Lantern Skull', 'Череп с зелёным фонарём'], art: 'a bone-white skull holding a pale green lantern in its jaws on a black field', fb: [0, 0, 0, 4, 0, 2] },
   { name: ['Drowned Hourglass', 'Утонувшие часы'], art: 'a pale green hourglass wrapped in rusted chains on a tattered black field', fb: [0, 0, 0, 4, 9, 1] },
+  // The holidays' flags (docs/12 P10 #18), won only while each lasts.
+  { name: ['Drowned Lantern', 'Фонарь утопленника'], art: 'a pale green lantern held up by a drowned hand rising out of black water, on a black field', fb: [1, 0, 3, 4, 11, 1] },
+  { name: ['Silver Herring', 'Серебряная сельдь'], art: 'three silver herring leaping in a ring on a deep sea-blue field', fb: [0, 3, 3, 1, 16, 2] },
+  { name: ['Rocket and Stars', 'Ракета и звёзды'], art: 'a rising signal rocket bursting into gold and red stars on a black field', fb: [0, 0, 0, 5, 3, 0] },
+  { name: ['League Seal', 'Печать Лиги'], art: 'a large tarnished gold wax seal stamped with merchant scales on a field halved black and dull gold', fb: [2, 0, 5, 5, 10, 2] },
 ];
 export const EMBLEM_COUNT = FLAGS.length;
 export const EMBLEM_STYLES: Tr[] = [['filled', 'сплошной'], ['outlined', 'контур'], ['ringed', 'в кольце']];
@@ -191,6 +196,8 @@ export const DEED_UNLOCKS: Record<string, string[]> = {
   crown_1: ['emblem:42'], crown_3: ['emblem:43'], crown_4: ['emblem:44'],
   league_1: ['emblem:45'], league_3: ['emblem:46'], league_4: ['emblem:47'],
   confederacy_1: ['emblem:48'], confederacy_3: ['emblem:49'], confederacy_4: ['emblem:50'],
+  // The holidays (docs/12 P10 #18).
+  drowned_night: ['emblem:60', 'lamp:1'], herring_run: ['emblem:61'], powder_night: ['emblem:62', 'lamp:3'], league_day: ['emblem:63'],
 };
 
 export function emblemName(i: number): Tr {

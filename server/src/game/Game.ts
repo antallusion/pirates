@@ -167,6 +167,7 @@ import { WEATHER_FOG, WEATHER_WIND, initWeather, seaStateSpread, stepFronts, ste
 import type { Front, RegionWeather } from './weather.ts';
 import { captiveLoyalty, claimSkippers, sanitizeCaptive, turnCaptive, turnCost } from './turncoats.ts';
 import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, stepDescentSea } from './descent.ts';
+import { holidayGhostSunk, stepHolidays } from './holidays.ts';
 
 export interface Loot {
   id: number;
@@ -742,6 +743,7 @@ export class Game {
     stepStorms(this); // the heart of the Storm of the Century (docs/12 P10 #14)
     if (Math.floor(this.now) % 2 === 0) stepService(this); // letters of marque: orders, sunsets, the law's eye (docs/12 P10 #15)
     stepDescent(this); // the Descent into the Abyss (docs/12 P10 #17)
+    if (Math.floor(this.now) % 5 === 0) stepHolidays(this); // the sea's holidays (docs/12 P10 #18)
     if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
     if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
@@ -1694,6 +1696,7 @@ export class Game {
     if (how === 'sunk' && victim.npcRole === 'merchant') omenBroken(this, s, 'merchant');
     wantedKill(this, s, victim); // a named pirate's head, the Hunters' Guild (docs/12 P5)
     raidKill(this, s, victim, how); // a merchant raided: the Brethren's fame, the lanes' heat (docs/12 P6)
+    if (how === 'sunk') holidayGhostSunk(this, s, victim); // the Night of the Drowned's cursed gifts (docs/12 P10 #18)
     serviceKill(this, s, victim, how); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');

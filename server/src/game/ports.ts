@@ -57,6 +57,7 @@ import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { bankView, forwardOffers, forwardView, hasExchange, insuranceQuotes, orderView } from './finance.ts';
 import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNearPort, supplyMaterials } from './resources.ts';
 import { servicePortView } from './marque.ts';
+import { holidaySale, leagueDayMods, petOffers } from './holidays.ts';
 
 export function hasLicence(p: Profile, faction: string, now: number): boolean {
   // A licence is void for anyone the law is hunting.
@@ -77,6 +78,9 @@ export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0, ga
     const h = heatPriceMul(game, port.region);
     if (h.buy !== 1) mods = { ...mods, buyMul: mods.buyMul * h.buy, sellMul: mods.sellMul * h.sell };
   }
+  // League Day's kind prices in the League's ports (docs/12 P10 #18).
+  const ld = game ? leagueDayMods(game, port) : null;
+  if (ld) mods = { ...mods, buyMul: mods.buyMul * ld.buy, sellMul: mods.sellMul * ld.sell };
   // A festival's kind prices (docs/12 P2).
   if (game && festivalAt(game, port.id)) return { ...mods, buyMul: mods.buyMul * 0.9, sellMul: mods.sellMul * 1.05 };
   return mods;
@@ -308,6 +312,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   game.db.ledger(s.accountId, 'sell', price, `${n} ${good} @ ${port.id}`);
   onSale(game, s, port, good, n, profit);
   onEventSale(game, s, port, good, n);
+  holidaySale(game, s, port, good, n); // League Day's seal (docs/12 P10 #18)
   noteSale(game, s, port, good, n);
   if (profit > 0) seasonStat(game, s, 'trade', profit);
   onSaleDeeds(game, s, port.id, good, n, price);
@@ -703,7 +708,7 @@ function tavernView(game: Game, port: Port, p: Profile, ship: ShipEntity, s?: Pl
     shanty: shanty(game),
     dice: { tables: openTables(game, port.id), week: weekBoard(game), davy: !!s && diceAvailableDavy(game, s) },
     maps: s ? boardView(game, s, port.id) : [],
-    pets: petsForSale(port.id, Math.floor(game.wallNow() / 86_400_000)).map((pet) => ({ pet, price: PETS[pet].price })),
+    pets: petOffers(game, port.id), // two of four, or on a holiday the fair (docs/12 P10 #18)
     stars: Math.round(t.stars * 10) / 10,
     stock: Object.fromEntries(Object.entries(t.stock).map(([k, v]) => [k, Math.floor(v ?? 0)])),
     costs,

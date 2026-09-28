@@ -63,6 +63,8 @@ import { FACTION_IDS } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { seizeCaptain, takeCaptive } from './prizes.ts';
 import { gateOf } from './descent.ts';
+import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
+import type { HolidayId } from '../../../shared/src/data/holidays.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -70,7 +72,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -289,6 +291,17 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       regattaNow(game, portId, 30_000);
       if (ship.docked === portId) regattaSignUp(game, s);
       return `Regatta of Equal Waters: ${portId}.`;
+    }
+    case 'holiday': {
+      // The sea's holidays (docs/12 P10 #18 play-testing): /holiday drowned_night|herring_run|powder_night|league_day|off.
+      const id = args[0] as HolidayId;
+      if (args[0] === 'off') {
+        game.db.setKv('holiday_force', { id: 'league_day', until: 0 });
+        return 'Holiday: off.';
+      }
+      if (!HOLIDAYS[id]) return `Holidays: ${Object.keys(HOLIDAYS).join(', ')}`;
+      game.db.setKv('holiday_force', { id, until: game.wallNow() + 2 * 3600_000 });
+      return `Holiday: ${HOLIDAYS[id].name[0]}.`;
     }
     case 'descent': {
       // The Descent (docs/12 P10 #17 play-testing): /descent — set down by the week's Maelstrom Stair.

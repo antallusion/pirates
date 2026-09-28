@@ -30,6 +30,7 @@ import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { holidayCatch } from './holidays.ts';
 
 export interface Shoal {
   id: number;
@@ -243,6 +244,7 @@ function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units
     }
   }
   questEvent(game, s, { k: 'catch', units: got, kg, fought });
+  holidayCatch(game, s, kg * Math.max(1, got)); // the Herring Run's tournament (docs/12 P10 #18)
   return got;
 }
 

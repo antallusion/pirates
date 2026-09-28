@@ -9,13 +9,13 @@ import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame } from './helpers.ts';
 
-test('sixty emblems; a look is encoded and read back; nonsense is refused', () => {
-  assert.equal(EMBLEM_COUNT, 60);
+test('sixty-four flags (sixty and the four holidays’); a look is encoded and read back; nonsense is refused', () => {
+  assert.equal(EMBLEM_COUNT, 64);
   const l = { field: 3, c1: 2, c2: 1, c3: 5, emblem: 42, hull: 3, sail: 4, lamp: 2 };
   assert.deepEqual(decodeLook(encodeLook(l)), l);
   assert.equal(decodeLook('1.2.3'), null);
   assert.equal(decodeLook('99.0.0.0.0.0.0.0'), null);
-  assert.equal(decodeLook('0.0.0.0.60.0.0.0'), null);
+  assert.equal(decodeLook('0.0.0.0.64.0.0.0'), null);
 });
 
 test('changed in port, only from what is hers; flown for all to see', () => {

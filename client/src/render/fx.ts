@@ -375,6 +375,19 @@ export class Fx {
             for (let i = 0; i < 10; i++) this.splash(e.x + (Math.random() - 0.5) * 120, e.y + (Math.random() - 0.5) * 120, true);
             this.shake = Math.max(this.shake, 0.9);
             break;
+          case 'firework': {
+            // A holiday firework (docs/12 P10 #18): a burst of gold, red and pale sparks, a flash, a slow fall.
+            const cols = ['#ffd27a', '#ff6a4a', '#e8f0ff', '#9fe8d0'];
+            const col = cols[Math.floor(Math.random() * cols.length)];
+            const r = e.r ?? 40;
+            this.add({ kind: 'flash', x: e.x, y: e.y, life: 0.4, size: 4, grow: r * 1.5, color: col });
+            this.light(e.x, e.y, r * 8, 'rgba(255,210,140,1)', 0.8, 1.2);
+            for (let i = 0; i < 26; i++) {
+              const a = (i / 26) * Math.PI * 2 + Math.random() * 0.2, s = r * (0.8 + Math.random() * 0.6);
+              this.add({ kind: 'glow', x: e.x, y: e.y, vx: Math.sin(a) * s, vy: -Math.cos(a) * s, life: 1.1 + Math.random() * 0.6, size: 2.2, grow: -0.6, color: col });
+            }
+            break;
+          }
           case 'rocket': {
             // A distress rocket: a spark climbing, a flash, sparks falling.
             this.add({ kind: 'flash', x: e.x, y: e.y, life: 0.5, size: 6, grow: 60, color: '#ffcf6a' });

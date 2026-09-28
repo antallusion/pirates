@@ -2,7 +2,8 @@
 
     python tools/art/slice_flags.py <sheet letter a..e> <higgsfield stem hf_..._<job>>
 
-Sheet a holds flags 0–11, b 12–23 … e 48–59 (shared/src/data/looks.ts FLAGS, in reading order). The magenta is keyed
+Sheet a holds flags 0–11, b 12–23 … e 48–59, f the holidays' four 60–63 in a 2×2 grid (shared/src/data/looks.ts
+FLAGS, in reading order). The magenta is keyed
 out (with its fringe), every flag is found as a large connected shape, trimmed, and set on a 240×160 (3:2) transparent
 canvas so the whole set sits the same way in the editor and at the masthead.
 """
@@ -58,17 +59,19 @@ def main(letter: str, stem: str) -> None:
     solid = ndimage.binary_closing(solid, iterations=3)
     lab, n = ndimage.label(solid)
     sizes = ndimage.sum(solid, lab, range(1, n + 1))
-    order = np.argsort(sizes)[::-1][:12]
+    rows_n, cols_n = (2, 2) if letter == 'f' else (3, 4)
+    count = rows_n * cols_n
+    order = np.argsort(sizes)[::-1][:count]
     boxes = []
     for k in order:
         sl = ndimage.find_objects((lab == k + 1).astype(int))[0]
         boxes.append((sl[0].start, sl[0].stop, sl[1].start, sl[1].stop))
-    if len(boxes) < 12:
+    if len(boxes) < count:
         raise SystemExit(f'only {len(boxes)} flags found')
-    # Reading order: three rows by the top edge, then left to right.
+    # Reading order: rows by the top edge, then left to right.
     boxes.sort(key=lambda b: b[0])
-    rows = [sorted(boxes[i * 4:(i + 1) * 4], key=lambda b: b[2]) for i in range(3)]
-    base = 'abcde'.index(letter) * 12
+    rows = [sorted(boxes[i * cols_n:(i + 1) * cols_n], key=lambda b: b[2]) for i in range(rows_n)]
+    base = 'abcdef'.index(letter) * 12
     os.makedirs(OUT, exist_ok=True)
     im = Image.fromarray(a)
     job = stem.split('_', 3)[3]

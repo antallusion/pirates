@@ -5,7 +5,7 @@
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
-import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView } from '../../shared/src/protocol.ts';
+import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight } from '../../shared/src/constants.ts';
@@ -129,6 +129,8 @@ export class ClientState {
   storm: StormView | null = null;
   /** The Descent into the Abyss: the week's Stair, her descent, the board (docs/12 P10 #17). */
   descent: DescentView | null = null;
+  /** The sea's holiday, or the next one (docs/12 P10 #18). */
+  holiday: HolidayView | null = null;
   choice: { quest: string; items: Item[] } | null = null;
   tasksAt = 0;
   /** The last "who is at sea" search (docs/11 P6): null until one is made. */
@@ -347,6 +349,9 @@ export class ClientState {
         break;
       case 'descent':
         this.descent = m.view;
+        break;
+      case 'holiday':
+        this.holiday = m.view;
         break;
       case 'dice':
         this.dice = m.view;

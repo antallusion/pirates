@@ -18,6 +18,7 @@ import type { CaptainSlot, Item, Slot } from './data/items.ts';
 import type { OrderKind, ServiceId } from './data/marque.ts';
 import type { SkipperTrait } from './data/turncoats.ts';
 import type { BoonId, CurrentId, DarkId, HostId } from './data/descent.ts';
+import type { HolidayId } from './data/holidays.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
@@ -971,7 +972,7 @@ export type GameEvent =
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
-    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket'; x: number; y: number; r?: number; dir?: number }
+    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket' | 'firework'; x: number; y: number; r?: number; dir?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 
@@ -1080,6 +1081,7 @@ export type ServerMsg =
   | { t: 'hall'; view: HallView | null }
   | { t: 'storm'; view: StormView | null }
   | { t: 'descent'; view: DescentView | null }
+  | { t: 'holiday'; view: HolidayView }
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
@@ -1195,6 +1197,17 @@ export interface ServicePortView {
   pay: number;
   payReady: boolean;
   wares: { item: Item; price: number; sold: boolean }[];
+}
+
+/** The sea's holiday (docs/12 P10 #18): the one on (or the next), the tournament's top five, her points, kegs near. */
+export interface HolidayView {
+  id: HolidayId | null;
+  next: HolidayId | null;
+  nextIn: number;
+  endsIn: number;
+  board: { name: string; pts: number }[];
+  mine: number;
+  kegs: [number, number][];
 }
 
 /** The Descent into the Abyss (docs/12 P10 #17): the week's Stair, her descent (if she is going down), the board. */

@@ -5,6 +5,7 @@ import { regattaPanel } from './regatta.ts';
 import { stormPanel } from './storms.ts';
 import { orderPanel } from './marque.ts';
 import { descentPanel } from './descent.ts';
+import { holidayLine } from './holidays.ts';
 import { nemesisLabel } from './nemesis.ts';
 import { pirateById } from '../../../shared/src/data/pirates.ts';
 import { BEASTS, beastOfClass, hullNoise, noiseBand } from '../../../shared/src/data/beasts.ts';
@@ -64,6 +65,7 @@ export class Hud {
   private lastStormKey = '';
   private lastOrderKey = '';
   private lastDescentKey = '';
+  private lastHolidayKey = '';
   private lastFishKey = '';
   private lastTargetKey = '';
   private toastsEl = $('toasts');
@@ -99,6 +101,11 @@ export class Hud {
     };
     new ResizeObserver(place).observe(bottom);
     addEventListener('resize', place);
+    // On a wide screen the toasts stand under the chart's lines, however many there are (a quest, world events).
+    const region = $('hud-region');
+    const under = () => document.body.style.setProperty('--rg-bottom', `${Math.round(region.getBoundingClientRect().bottom)}px`);
+    new ResizeObserver(under).observe(region);
+    addEventListener('resize', under);
   }
 
   show(on: boolean): void {
@@ -116,6 +123,7 @@ export class Hud {
     this.drawStorm(state);
     this.drawOrder(state);
     this.drawDescent(state);
+    this.drawHoliday(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -915,6 +923,16 @@ export class Hud {
     this.lastRegattaKey = key;
     el.classList.toggle('hidden', !html);
     el.innerHTML = html ?? '';
+  }
+
+  /** The sea's holiday (docs/12 P10 #18): a slim line while one is on. */
+  private drawHoliday(state: ClientState): void {
+    const el = $('hud-holiday');
+    const html = holidayLine(state);
+    if (html === this.lastHolidayKey) return;
+    this.lastHolidayKey = html;
+    el.classList.toggle('hidden', !html);
+    el.innerHTML = html;
   }
 
   /** The Descent (docs/12 P10 #17): the tier, its creatures, current and darkness, and the clock. */

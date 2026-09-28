@@ -37,6 +37,7 @@ import { screenFlagship } from './fleet.ts';
 import { grandBattery, nightRaider, stormGunnerRange } from './bridgefx.ts';
 import { cursedDamageMul, onCursedHit, onCursedVolley, onOwnCrewKilled, pactDamageMul } from './abyssfx.ts';
 import { bossIncoming, innerVolley, swallowedShield } from './bosses.ts';
+import { kegImpact } from './holidays.ts';
 
 export interface Projectile {
   owner: number;
@@ -321,6 +322,7 @@ export function stepProjectiles(game: Game, dt: number): void {
       volleyBall(game, p, null);
       siegeImpact(game, p.x, p.y, p.damage, p.owner, false); // shot falling on a besieged island
       lairImpact(game, p.x, p.y, p.damage, p.owner); // or on a pirate lair's battery (docs/12 P5)
+      kegImpact(game, p.x, p.y, p.owner); // or by a powder keg on Powder Night (docs/12 P10 #18)
       continue; // splash (clients simulate splashes themselves)
     }
     if (isLand(game.world, p.x, p.y)) {

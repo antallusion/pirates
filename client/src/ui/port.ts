@@ -41,6 +41,7 @@ import { EN, RU } from '../lang/ui/port.ts';
 import { serverText } from '../lang/server.ts';
 import { sendService, serviceCard } from './marque.ts';
 import { captivesCard } from './turncoats.ts';
+import { holidayCard } from './holidays.ts';
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -534,7 +535,7 @@ ${orders}${berths}</div>` : ''}`;
   }
 
   private harbour(view: PortView, state: ClientState): string {
-    const regatta = regattaCard(state, state.regatta, state.self?.dockedAt ?? null);
+    const regatta = regattaCard(state, state.regatta, state.self?.dockedAt ?? null) + holidayCard(state);
     const self = state.self!;
     const port = state.ports.find((p) => p.id === view.portId)!;
     const reps = Object.entries(self.reputation).map(([f, v]) => `<tr><td>${icon(`faction_${f}`)}${esc(FACTIONS[f as never as keyof typeof FACTIONS].name)}</td><td class="${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</td></tr>`).join('');
