@@ -142,6 +142,9 @@ export type ClientMsg =
   | { t: 'regatta'; action: 'signup' }
   /** Bottle mail (docs/12 P10 #6): a note, and silver if she likes, into the sea. */
   | { t: 'bottle'; note: string; silver: number }
+  /** Captains' treasure (docs/12 P10 #7): bury a chest; post, take down or buy a map on a port's board. */
+  | { t: 'chest'; silver: number; riddle: string; good: GoodId | null; qty: number }
+  | { t: 'mapboard'; action: 'post' | 'unpost' | 'buy'; id: string; price?: number }
   | { t: 'gear'; action: 'temper'; uid: number }
   | { t: 'gear'; action: 'reforge'; uid: number; line: number }
   | { t: 'contract'; action: 'accept' | 'abandon'; id: string }
@@ -482,6 +485,8 @@ export interface PrivateState {
   /** The letters of the sea found in bottles (docs/12 P2), and the ship's cat. */
   seaLetters: number[];
   shipCat: boolean;
+  /** A cartographer's fame (docs/12 P10 #7). */
+  cartoFame?: number;
   /** Fishing (docs/12 P3). */
   fishing: FishingView;
   /** The beasts taken, by kind (docs/12 P4). */
@@ -570,6 +575,8 @@ export interface TavernView {
   shanty: string | null;
   /** Dead Man's Dice: the open tables, the week's best, Davy's table at midnight in the Abyss (docs/12 P10 #4). */
   dice?: { tables: { id: number; host: string; stake: number; seats: number }[]; week: { name: string; wins: number }[]; davy: boolean };
+  /** The map board (docs/12 P10 #7). */
+  maps?: MapBoardView[];
   /** The pet seller's two today (docs/12 P10 #3). */
   pets?: { pet: PetId; price: number }[];
   stars: number;
@@ -703,7 +710,7 @@ export interface MapView {
   id: string;
   name: string;
   tier: number;
-  kind: 'circle' | 'riddle' | 'drawing' | 'landmark' | 'cursed' | 'fragment';
+  kind: 'circle' | 'riddle' | 'drawing' | 'landmark' | 'cursed' | 'fragment' | 'player';
   /** The search circle, where the map draws one (r = −1: it does not). */
   x: number;
   y: number;
@@ -1311,6 +1318,16 @@ export interface RegattaView {
   time: number | null;
   entrants: number;
   records: { name: string; sec: number }[];
+}
+
+/** A map posted on a port's board (docs/12 P10 #7). */
+export interface MapBoardView {
+  id: number;
+  name: string;
+  seller: string;
+  price: number;
+  mine: boolean;
+  riddle: string | null;
 }
 
 /** A table of Dead Man's Dice as one of its captains sees it (docs/12 P10 #4): her own cup, the others' counts. */

@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { boardAction, buryChest } from './chests.ts';
 import { stepBottles, throwBottle } from './bottles.ts';
 import { regattaSignUp, sendRegatta, stepRegatta } from './regatta.ts';
 import { diceBid, diceJoin, diceLeave, diceLiar, diceOpen, diceStart, stepDice } from './dice.ts';
@@ -2539,6 +2540,11 @@ export class Game {
         err(r);
         return this.pushPort(s);
       }
+      case 'chest':
+        return err(buryChest(this, s, Number(msg.silver), String(msg.riddle ?? ''), (msg.good ?? null) as never, Number(msg.qty)));
+      case 'mapboard':
+        err(boardAction(this, s, String(msg.action), String(msg.id ?? ''), Number(msg.price)));
+        return this.pushPort(s);
       case 'bottle':
         return err(throwBottle(this, s, String(msg.note ?? ''), Number(msg.silver)));
       case 'regatta':

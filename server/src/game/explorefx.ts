@@ -24,7 +24,7 @@ export const DIG_RANGE = 250;
 const BASE_RADIUS = [0, 900, 1400, 2000];
 const TIER_NAMES = ['', 'Stained', 'Captain\'s', 'Legendary'];
 
-export type MapKind = 'circle' | 'riddle' | 'drawing' | 'landmark' | 'cursed' | 'fragment';
+export type MapKind = 'circle' | 'riddle' | 'drawing' | 'landmark' | 'cursed' | 'fragment' | 'player';
 
 export interface TreasureMap {
   id: string;
@@ -97,7 +97,7 @@ export function makeMap(game: Game, tier: number, opts: { island?: Island; legen
   };
   if (kind !== 'circle') {
     m.clue = clueFor(game, kind, is, sx, sy);
-    m.name = { riddle: 'A riddle in verse', drawing: 'A shore drawn from the sea', landmark: 'Landmarks and paces', cursed: 'A map that whispers', circle: m.name, fragment: m.name }[kind];
+    m.name = { riddle: 'A riddle in verse', drawing: 'A shore drawn from the sea', landmark: 'Landmarks and paces', cursed: 'A map that whispers', circle: m.name, fragment: m.name, player: m.name }[kind];
     if (kind === 'cursed') m.tier = 4;
   }
   return m;

@@ -3,6 +3,7 @@
 // captains, the noise of digging, guardians and cave-ins, cursed maps and the season's legendary chart in
 // fragments whose holders hear each other. The base system (circles, digs, hoards) is in explorefx.ts.
 
+import { digPlayerChest } from './chests.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { DEG, dist } from '../../../shared/src/math.ts';
 import type { MapView } from '../../../shared/src/protocol.ts';
@@ -133,6 +134,7 @@ export function digOutcome(game: Game, s: PlayerSession, m: TreasureMap, share: 
     if (forger && forger !== s) game.sendTo(forger, { t: 'toast', msg: `${s.name} is digging where your forged map sent them (${Math.round(ship.state.x / 1000)} km E, ${Math.round(ship.state.y / 1000)} km S).`, kind: 'info' });
     return true;
   }
+  if (m.kind === 'player') return digPlayerChest(game, s, m); // a captain's own chest (docs/12 P10 #7)
   const dug = game.db.getKv<Record<string, number>>('dug_hoards') ?? {};
   const key = m.hoard ?? m.id;
   if (dug[key]) {
@@ -332,7 +334,7 @@ export function mapView(game: Game, s: PlayerSession, m: TreasureMap): MapView {
   const kind = m.kind ?? 'circle';
   const ship = s.ship;
   const base: MapView = { id: m.id, name: m.name, tier: m.tier, kind, x: 0, y: 0, r: -1, clue: m.clue, verdict: m.verdict, sealed: m.sealed || undefined, copy: m.copy || undefined };
-  if (kind === 'circle') return { ...base, ...round(mapCircle(m, ship)) };
+  if (kind === 'circle' || kind === 'player') return { ...base, ...round(mapCircle(m, ship)) };
   if (kind === 'fragment') {
     const c = legendCircle(game, s, m);
     return { ...base, ...(c ? round(c) : {}), piece: [(m.piece ?? 0) + 1, m.of ?? 0] };

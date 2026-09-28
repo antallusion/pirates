@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { boardView } from './chests.ts';
 import { diceAvailableDavy, openTables, weekBoard } from './dice.ts';
 import { PETS, petsForSale } from '../../../shared/src/data/companions.ts';
 import { heatPriceMul, tipViews } from './raiding.ts';
@@ -699,6 +700,7 @@ function tavernView(game: Game, port: Port, p: Profile, ship: ShipEntity, s?: Pl
   return {
     shanty: shanty(game),
     dice: { tables: openTables(game, port.id), week: weekBoard(game), davy: !!s && diceAvailableDavy(game, s) },
+    maps: s ? boardView(game, s, port.id) : [],
     pets: petsForSale(port.id, Math.floor(game.wallNow() / 86_400_000)).map((pet) => ({ pet, price: PETS[pet].price })),
     stars: Math.round(t.stars * 10) / 10,
     stock: Object.fromEntries(Object.entries(t.stock).map(([k, v]) => [k, Math.floor(v ?? 0)])),

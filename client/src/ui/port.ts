@@ -140,6 +140,12 @@ export class PortScreen {
         return this.send({ t: 'dice', action: 'join', id: Number(d.id) });
       case 'dice_davy':
         return this.send({ t: 'dice', action: 'open', stake: 0, davy: true });
+      case 'mb_buy':
+        return this.send({ t: 'mapboard', action: 'buy', id: d.id! });
+      case 'mb_unpost':
+        return this.send({ t: 'mapboard', action: 'unpost', id: d.id! });
+      case 'mb_post':
+        return this.send({ t: 'mapboard', action: 'post', id: d.id!, price: Number(root.querySelector<HTMLInputElement>(`[data-mbprice="${d.id}"]`)?.value ?? 0) });
       case 'regatta':
         return this.send({ t: 'regatta', action: 'signup' });
       case 'pet_buy':
@@ -467,7 +473,12 @@ ${orders}${berths}</div>` : ''}`;
     const owned = state.petsOwn?.owned ?? [];
     const seller = tv.pets?.length ? `<div class="card cmp-card"><h4 class="card-h">${petIcon(tv.pets[0].pet, 'ico-md')}${esc(L('pet.seller'))}</h4>${tv.pets.map((x) => `<div class="cmp-h">${petIcon(x.pet, 'pet-ico')}<div class="cmp-h-t"><b>${esc(PETS[x.pet].name[lang() === 'ru' ? 1 : 0])}</b><span class="muted">${esc(PETS[x.pet].gives[lang() === 'ru' ? 1 : 0])}</span></div><button class="btn btn-small" data-act="pet_buy" data-pet="${x.pet}" ${owned.includes(x.pet) || self.gold < x.price ? 'disabled' : ''}>${owned.includes(x.pet) ? esc(L('pet.have')) : money(x.price)}</button></div>`).join('')}</div>` : '';
     const dice = tv.dice ? diceCard(tv.dice, self.gold) : '';
-    return `${board}${recs}${dice}${needle}${seller}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
+    // The map board (docs/12 P10 #7): captains' maps at their price; her own to post.
+    const mb = tv.maps ?? [];
+    const mapBoard = `<div class="card cmp-card"><h4 class="card-h">${icon('map_treasure', '', 'ico-md')}${esc(L('mb.title'))}</h4><p class="muted">${esc(L('mb.text'))}</p>
+      ${mb.map((x) => `<div class="cmp-h"><div class="cmp-h-t"><b>${esc(serverText(x.name))}</b><span class="muted">${esc(x.seller)} · ${money(x.price)}</span>${x.riddle ? `<span class="muted"><i>«${esc(x.riddle)}»</i></span>` : ''}</div>${x.mine ? `<button class="btn btn-small" data-act="mb_unpost" data-id="${x.id}">${esc(L('mb.take'))}</button>` : `<button class="btn btn-small btn-primary" data-act="mb_buy" data-id="${x.id}" ${self.gold < x.price ? 'disabled' : ''}>${esc(L('mb.buy'))}</button>`}</div>`).join('') || `<p class="muted">${esc(L('mb.none'))}</p>`}
+      ${self.maps.length ? `<div class="giver-h">${esc(L('mb.post'))}</div>${self.maps.map((m) => `<div class="cmp-h"><div class="cmp-h-t"><b>${esc(serverText(m.name))}</b></div><input class="field" type="number" min="10" value="500" data-mbprice="${esc(m.id)}" style="width:80px" aria-label="${esc(L('mb.price'))}"><button class="btn btn-small" data-act="mb_post" data-id="${esc(m.id)}">${esc(L('mb.postBtn'))}</button></div>`).join('')}` : ''}</div>`;
+    return `${board}${recs}${dice}${mapBoard}${needle}${seller}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
         <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}
         <button class="btn btn-small btn-danger hire-wide" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>

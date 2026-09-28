@@ -34,6 +34,15 @@ const L = dict({
   bottleNote: 'Your note (up to 240 letters)',
   bottleSilver: 'Silver inside',
   bottleThrow: 'Into the sea',
+  chest: 'Bury a chest',
+  chestText: 'Off an island’s shore, bury silver (100–20000) and a good from your hold; you get its map with your riddle. Hand it over or post it on a port’s map board. Whoever digs it up takes it; you gain a cartographer’s fame. Costs 50 silver.',
+  chestRiddle: 'The riddle for the map',
+  chestSilver: 'Silver in the chest',
+  chestGood: 'A good from the hold',
+  chestNoGood: 'No goods',
+  chestQty: 'How many',
+  chestBury: 'Bury',
+  fame: 'Cartographer’s fame: {n}',
 }, {
   title: 'Спутник',
   level: 'Уровень {n}',
@@ -57,6 +66,15 @@ const L = dict({
   bottleNote: 'Ваша записка (до 240 знаков)',
   bottleSilver: 'Серебро внутри',
   bottleThrow: 'В море',
+  chest: 'Зарыть сундук',
+  chestText: 'У берега острова заройте серебро (100–20000) и товар из трюма — получите карту с вашей загадкой. Её можно отдать или выставить на доску карт в порту. Кто выкопает — заберёт, а вам — слава картографа. Стоит 50 серебра.',
+  chestRiddle: 'Загадка для карты',
+  chestSilver: 'Серебро в сундуке',
+  chestGood: 'Товар из трюма',
+  chestNoGood: 'Без товара',
+  chestQty: 'Сколько',
+  chestBury: 'Зарыть',
+  fame: 'Слава картографа: {n}',
 });
 
 export function companionCard(state: ClientState): string {
@@ -102,6 +120,18 @@ export function petsCard(state: ClientState): string {
   return `<div class="card cmp-card"><h4 class="card-h">${petIcon(v.deck ?? v.owned[0], 'ico-md')}${esc(L('pets'))}</h4>${rows}<p class="muted cmp-forge">${esc(L('petsHint'))}</p></div>`;
 }
 
+/** Captains' treasure (docs/12 P10 #7): a chest buried on the nearest island's shore, with a riddle for its map. */
+export function chestCard(state: ClientState): string {
+  const self = state.self;
+  if (!self || self.dockedAt) return '';
+  const goods = Object.entries(self.cargo).filter(([, n]) => (n ?? 0) >= 1);
+  return `<div class="card cmp-card chest-card"><h4 class="card-h">${icon('map_treasure', '', 'ico-md')}${esc(L('chest'))}</h4><p class="muted">${esc(L('chestText'))}</p>
+    <textarea class="field" data-criddle maxlength="200" rows="2" placeholder="${esc(L('chestRiddle'))}" aria-label="${esc(L('chestRiddle'))}"></textarea>
+    <div class="cmp-name bottle-row"><label class="bottle-silver"><span class="muted">${esc(L('chestSilver'))}</span><input class="field" data-csilver type="number" min="100" max="20000" value="500"></label></div>
+    ${goods.length ? `<div class="cmp-name bottle-row"><select class="field" data-cgood aria-label="${esc(L('chestGood'))}"><option value="">${esc(L('chestNoGood'))}</option>${goods.map(([g]) => `<option value="${g}">${esc(GOODS[g as GoodId].name)}</option>`).join('')}</select><input class="field" data-cqty type="number" min="0" value="0" style="width:80px" aria-label="${esc(L('chestQty'))}"></div>` : ''}
+    <div class="cmp-name bottle-row"><span class="muted">${esc(L('fame', { n: self.cartoFame ?? 0 }))}</span><button class="btn btn-small btn-primary" data-cbury>${esc(L('chestBury'))}</button></div></div>`;
+}
+
 /** Bottle mail (docs/12 P10 #6): a note, and silver if she likes, into the sea. */
 export function bottleCard(atSea: boolean): string {
   if (!atSea) return '';
@@ -111,6 +141,13 @@ export function bottleCard(atSea: boolean): string {
 }
 
 export function bindCompanion(root: HTMLElement, send: (m: ClientMsg) => void): void {
+  root.querySelector<HTMLElement>('[data-cbury]')?.addEventListener('click', () => {
+    const riddle = root.querySelector<HTMLTextAreaElement>('[data-criddle]')?.value ?? '';
+    const silver = Number(root.querySelector<HTMLInputElement>('[data-csilver]')?.value ?? 0);
+    const good = (root.querySelector<HTMLSelectElement>('[data-cgood]')?.value || null) as GoodId | null;
+    const qty = Number(root.querySelector<HTMLInputElement>('[data-cqty]')?.value ?? 0);
+    send({ t: 'chest', silver, riddle, good, qty });
+  });
   root.querySelector<HTMLElement>('[data-bthrow]')?.addEventListener('click', () => {
     const note = root.querySelector<HTMLTextAreaElement>('[data-bnote]')?.value ?? '';
     const silver = Number(root.querySelector<HTMLInputElement>('[data-bsilver]')?.value ?? 0);

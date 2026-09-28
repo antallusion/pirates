@@ -2090,3 +2090,11 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .bottle-card .bottle-row { align-items: center; }
 .bottle-card .bottle-silver { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 12px; }
 .bottle-card .bottle-silver .field { width: 90px; flex: none; }
+.chest-card textarea.field { width: 100%; min-height: 48px; resize: vertical; margin: 4px 0 6px; box-sizing: border-box; font: 13px var(--sans); }
+.chest-card select.field { flex: 1; min-width: 0; }
+.chest-card .bottle-row { justify-content: space-between; margin-bottom: 4px; }
+.chest-card .bottle-row { align-items: center; }
+.chest-card .bottle-silver { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 12px; }
+.chest-card .bottle-silver .field { width: 110px; flex: none; }
+/* The title plates' words sat 1.5–2 px low on wider screens (their larger face): lift them to the plate's middle. */
+@media (min-width: 700px) and (min-height: 521px) { .skinned .modal-head h2, .skinned .title-sm { padding-top: 0; padding-bottom: 3px; } }

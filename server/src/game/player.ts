@@ -187,6 +187,8 @@ export interface Profile {
   /** The named pirates who hold a grudge against her, and the heads of those she settled with (docs/12 P10 #1). */
   nemeses?: Record<string, NemesisRec>;
   nemesisHeads?: number;
+  /** A cartographer's fame: her buried chests dug up by others (docs/12 P10 #7). */
+  cartoFame?: number;
   /** Tattoos (docs/12 P9); a choice of three rewards waiting. */
   tattoos?: TattooProfile;
   choice?: { quest: string; items: Item[] } | null;
@@ -432,6 +434,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     captainGear: p.captainGear,
     seaLetters: p.seaLetters ?? [],
     shipCat: !!p.shipCat,
+    cartoFame: p.cartoFame ?? 0,
     fishing: fishingView(p),
     beasts: p.beasts ?? {},
     cargo: ship ? ship.cargo : p.cargo,
