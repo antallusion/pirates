@@ -672,6 +672,10 @@
     "card.enc_glowing_sea":              { "local": "cards/enc_glowing_sea.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.0", "rev": 20260928175902},
     "card.enc_iceberg":                  { "local": "cards/enc_iceberg.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.1", "rev": 20260928175902},
     "card.enc_giant_turtle":             { "local": "cards/enc_giant_turtle.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.2", "rev": 20260928175902},
-    "card.enc_tentacle":                 { "local": "cards/enc_tentacle.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.3", "rev": 20260928175902}
+    "card.enc_tentacle":                 { "local": "cards/enc_tentacle.webp", "remote": "hf_20260928_175902_77215d8f-2fea-4344-bf6b-0d639834819b.png", "job": "77215d8f-2fea-4344-bf6b-0d639834819b", "fit": "sheet:cards_4.3", "rev": 20260928175902},
+    "card.enc_albatross":                { "local": "cards/enc_albatross.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.0", "rev": 20260928180755},
+    "card.enc_ghost_bargain":            { "local": "cards/enc_ghost_bargain.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.1", "rev": 20260928180755},
+    "card.enc_sirens":                   { "local": "cards/enc_sirens.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.2", "rev": 20260928180755},
+    "card.enc_voice_in_fog":             { "local": "cards/enc_voice_in_fog.webp", "remote": "hf_20260928_180755_ebbc9bed-9400-4e8b-8083-eb550f82640c.png", "job": "ebbc9bed-9400-4e8b-8083-eb550f82640c", "fit": "sheet:cards_5.3", "rev": 20260928180755}
   }
 }

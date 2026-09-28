@@ -13,7 +13,9 @@ import { esc, money } from './dom.ts';
 import { assetUrl } from '../assets.ts';
 
 /** Encounters without a painting of their own that borrow a kindred one. */
-const ENC_ART: Record<string, string> = { convict: 'raft', fishermen: 'raft', deserters: 'raft', mapmaker: 'raft', peddler: 'smuggler', pilot: 'signal_fire', bird_shoal: 'albatross', wisps: 'voice_in_fog' };
+const ENC_ART: Record<string, string> = { convict: 'raft', fishermen: 'raft', deserters: 'raft', mapmaker: 'raft', peddler: 'smuggler', pilot: 'signal_fire', bird_shoal: 'albatross', wisps: 'voice_in_fog', bottle: 'sunken_bell', barrel: 'sunken_bell', ambush: 'smuggler', patrol_search: 'derelict' };
+/** The rest are set against their kind's sea, dimmed, as a mood rather than a picture of the thing. */
+const GROUP_ART: Record<string, string> = { people: 'pilgrims', finds: 'sunken_bell', nature: 'glowing_sea', danger: 'albatross', mystic: 'voice_in_fog' };
 
 const L = dict({ ok: 'So be it', close: 'Close' }, { ok: 'Так тому и быть', close: 'Закрыть' });
 const ru = () => (lang() === 'ru' ? 1 : 0);
@@ -52,8 +54,10 @@ export class EncounterCard {
 
   /** The card's picture (docs/12 P11): the twenty key encounters are painted; a few others borrow a kindred scene. */
   private art(def: string): string {
-    const url = assetUrl(`card.enc_${ENC_ART[def] ?? def}`);
-    return url ? `<div class="enc-art" style="background-image:url('${url}')"></div>` : '';
+    const own = assetUrl(`card.enc_${ENC_ART[def] ?? def}`);
+    const mood = own ? null : assetUrl(`card.enc_${GROUP_ART[ENCOUNTERS[def as keyof typeof ENCOUNTERS]?.group] ?? ''}`);
+    const url = own ?? mood;
+    return url ? `<div class="enc-art${mood ? ' enc-mood' : ''}" style="background-image:url('${url}')"></div>` : '';
   }
 
   /** A card opens (or closes, when it lapses). */

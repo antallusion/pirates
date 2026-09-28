@@ -1857,6 +1857,7 @@ body:has(#encounter:not(.hidden)) #hud-goals, body:has(#encounter:not(.hidden)) 
 /* The encounter's picture: a band across the top of the card, within its frame. */
 #encounter .enc-art { margin: -4px -6px 8px; aspect-ratio: 2.4 / 1; background: #0b0d10 center / cover no-repeat; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 4px; box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.7); }
 @media (max-height: 520px) { #encounter .enc-art { aspect-ratio: 4 / 1; margin-bottom: 6px; } }
+#encounter .enc-art.enc-mood { filter: brightness(0.6) saturate(0.65); }
 #encounter .enc-text, #encounter .enc-out { margin: 4px 0 8px; font-size: 14px; line-height: 1.45; color: var(--bone, #ddd); }
 #encounter .enc-out { color: #f2e6c8; }
 #encounter .enc-choices { display: flex; flex-wrap: wrap; gap: 6px; }
