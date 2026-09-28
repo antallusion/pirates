@@ -11,6 +11,8 @@ import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { StatKey } from '../../../shared/src/data/stats.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
+import { assetUrl } from '../assets.ts';
+import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/gear.ts';
 import type { ClientState } from '../state.ts';
@@ -143,6 +145,21 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
       ${itemIcon(it ?? null, slot)}<span class="gs-t"><span class="gs-slot">${esc(SLOT_NAMES[slot][ru() ? 1 : 0])}</span>${it ? coloured(it) : ''}<span class="muted gs-sub">${sub}</span></span></button>`;
   };
 
+  // The captain's sheet (WoW's paper doll): the portrait, the pieces in squares down both sides.
+  const dollSlot = (slot: Slot) => {
+    const it = capGear[slot as never] as Item | undefined;
+    const on = pick?.kind === 'slot' && pick.slot === slot;
+    const label = it ? nameOf(it) : SLOT_NAMES[slot][ru() ? 1 : 0];
+    return `<button class="doll-slot${it ? ' full' : ''}${on ? ' on' : ''}" data-gslot="${slot}" title="${esc(label)}" aria-label="${esc(label)}"${it ? ` style="border-color:${RARITY_COLOR[it.rarity]}"` : ''}>${itemIcon(it ?? null, slot, 'doll-ico')}${it ? `<span class="doll-lv">${it.ilvl}</span>` : ''}</button>`;
+  };
+  const half = Math.ceil(CAPTAIN_SLOTS.length / 2);
+  const face = assetUrl(CAPTAINS[self.captain].portrait);
+  const doll = `<div class="doll doll-gear">
+      <div class="doll-col">${CAPTAIN_SLOTS.slice(0, half).map(dollSlot).join('')}</div>
+      <div class="doll-face" style="background-image:${face ? `url('${face}')` : 'none'}"><div class="doll-plate"><b>${esc(self.name)}</b><span>${esc(L('capLv', { n: self.level }))}</span></div></div>
+      <div class="doll-col">${CAPTAIN_SLOTS.slice(half).map(dollSlot).join('')}</div>
+    </div>`;
+
   const sets = setBonuses(worn).active;
   const total = gearSource(worn);
   const statsPanel = (captain: boolean) => captain
@@ -189,7 +206,7 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
 
   let body = '';
   if (tab === 'ship') body = `<div class="gear-grid">${SHIP_SLOTS.map(slotCell).join('')}</div><div class="gear-side">${statsPanel(false)}${setsPanel}</div>`;
-  else if (tab === 'captain') body = `<div class="gear-grid">${CAPTAIN_SLOTS.map(slotCell).join('')}</div><div class="gear-side">${statsPanel(true)}${setsPanel}</div>`;
+  else if (tab === 'captain') body = `${doll}<div class="gear-side">${statsPanel(true)}${setsPanel}</div>`;
   else if (tab === 'locker') {
     // Best first: rarity, then level; one slot's pieces only when asked.
     const list = self.stash.filter((it) => !only || itemSlot(it) === only).sort((a, b) => b.rarity - a.rarity || b.ilvl - a.ilvl || a.base.localeCompare(b.base));

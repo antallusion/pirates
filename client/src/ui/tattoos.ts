@@ -3,6 +3,7 @@
 // Brethren, and the ones still to earn with the deed that earns them. They are changed in port. And the chain's
 // reward: a choice of three pieces of gear.
 
+import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import type { TattooDef } from '../../../shared/src/data/sidequests.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
@@ -31,6 +32,7 @@ const L = dict({
   choiceTitle: 'A reward of your choosing',
   choiceSub: '{quest}: take one of the three.',
   choose: 'Take this',
+  lv: 'Level {n}',
 }, {
   title: 'Татуировки',
   sub: 'Их набивает Старая Игла в гаванях Берегового братства. Менять — в любом порту.',
@@ -48,18 +50,28 @@ const L = dict({
   choiceTitle: 'Награда на выбор',
   choiceSub: '{quest}: возьмите одну из трёх.',
   choose: 'Взять',
+  lv: '{n} уровень',
 });
 
 const ru = () => (lang() === 'ru' ? 1 : 0);
 const MAX_PLACES = 6;
-/** Where each place sits on the silhouette (percent of the figure), in the order they open. */
-const PLACE_AT: [number, number][] = [[15, 62], [85, 62], [50, 47], [27, 31], [73, 31], [50, 77]];
+/** The places down the portrait's left side, then its right (as a character sheet shows its gear). */
+const LEFT = [0, 2, 4], RIGHT = [1, 3, 5];
+/** Until a tattoo's own picture is painted, the nearest painted icon stands in (never a bare letter). */
+const STAND_IN: Record<string, string> = {
+  swallow: 'ab_trim_sails', anchor: 'anchor', turtle: 'tree_navigation', golden_dragon: 'fh_gilded_scale', fish: 'build_fishing_village',
+  hook: 'ab_red_hook_boarding', octopus: 'mod_figurehead_kraken', orca: 'role_harpooner', white_fin: 'fh_harpooneer', harpoon: 'mount_harpoon',
+  shark_tooth: 'good_leviathan_bone', skull: 'wanted', sabres: 'tree_boarding', cannon: 'gun_long_9', compass_rose: 'ab_star_fix', coin: 'coin',
+  mermaid: 'fh_weeping_widow', eye: 'ab_spotters_eye', bell: 'mod_choir_bell', heart: 'prof_surgeon', star: 'xp', map: 'map_treasure',
+  needle: 'role_sailmaker', cat: 'fh_fog_owl', lantern: 'mod_lantern_gland', bottle: 'tab_letters', dutchman: 'mod_ghost_timbers',
+  kraken: 'mod_kraken_beak', crown: 'fh_crown_lion', rose: 'faction_free',
+};
 
 let sel: number | null = null;
 
-/** A tattoo's picture: its painted icon, or a round ink stamp with its first letter while the art is missing. */
+/** A tattoo's picture: its painted icon, the nearest painted one while it is missing, an ink stamp at the last. */
 export function tattooIcon(t: TattooDef, cls = 'tt-ico'): string {
-  const url = assetUrl(`icon.tattoo_${t.id}`);
+  const url = assetUrl(`icon.tattoo_${t.id}`) ?? (STAND_IN[t.id] ? assetUrl(`icon.${STAND_IN[t.id]}`) : null);
   if (url) return `<img class="${cls}" src="${url}" alt="" draggable="false" />`;
   return `<span class="${cls} tt-ink">${esc(t.name[ru()].charAt(0))}</span>`;
 }
@@ -78,20 +90,23 @@ export function renderTattoos(root: HTMLElement, state: ClientState, send: (m: C
   const level = state.self?.level ?? 1;
   const docked = !!state.portView;
   if (sel !== null && sel >= v.slots) sel = null;
-  const places = Array.from({ length: MAX_PLACES }, (_, i) => {
-    const [x, y] = PLACE_AT[i];
+  const place = (i: number) => {
     const open = i < v.slots;
     const id = v.active[i] ?? null;
     const t = id ? TATTOO_BY_ID[id] : undefined;
     const lock = lockOf(i, level, v.owned);
     const title = open ? (t ? t.name[ru()] : L('empty')) : lock[0];
-    return `<button class="tt-place${open ? '' : ' locked'}${sel === i ? ' on' : ''}" style="left:${x}%;top:${y}%" ${open ? `data-place="${i}"` : 'disabled'} title="${esc(title)}" aria-label="${esc(title)}">
-      ${t ? tattooIcon(t) : open ? '<span class="tt-empty">+</span>' : `<span class="tt-lock">${esc(lock[1])}</span>`}</button>`;
-  }).join('');
+    return `<button class="doll-slot${t ? ' full' : ''}${open ? '' : ' locked'}${sel === i ? ' on' : ''}" ${open ? `data-place="${i}"` : 'disabled'} title="${esc(title)}" aria-label="${esc(title)}">
+      ${t ? tattooIcon(t, 'doll-ico') : open ? '<span class="doll-empty">+</span>' : `<span class="doll-lock">${esc(lock[1])}</span>`}</button>`;
+  };
+  const cap = state.self ? CAPTAINS[state.self.captain] : undefined;
+  const face = cap ? assetUrl(cap.portrait) : null;
+  const chosen = sel !== null && v.active[sel] ? TATTOO_BY_ID[v.active[sel]!] : undefined;
   const worn = new Set(v.active.filter(Boolean) as string[]);
-  const tile = (t: TattooDef, kind: 'owned' | 'pending' | 'unknown') => `<button class="tt-tile ${kind}${worn.has(t.id) ? ' worn' : ''}" ${kind === 'owned' ? `data-tt="${esc(t.id)}"` : 'disabled'}>
+  // A card of the collection (a card, not a button: its words wrap as they need).
+  const tile = (t: TattooDef, kind: 'owned' | 'pending' | 'unknown') => `<div class="tt-tile ${kind}${worn.has(t.id) ? ' worn' : ''}" ${kind === 'owned' ? `data-tt="${esc(t.id)}" role="button" tabindex="0"` : 'aria-disabled="true"'}>
       ${tattooIcon(t)}<span class="tt-text"><b>${esc(t.name[ru()])}${worn.has(t.id) ? ` <span class="tt-worn">${esc(L('worn'))}</span>` : ''}</b>
-      <span class="tt-gives">${esc(t.gives[ru()])}</span>${kind === 'owned' ? '' : `<span class="muted tt-how">${esc(kind === 'pending' ? L('pendingHint') : t.how[ru()])}</span>`}</span></button>`;
+      <span class="tt-gives">${esc(t.gives[ru()])}</span>${kind === 'owned' ? '' : `<span class="muted tt-how">${esc(kind === 'pending' ? L('pendingHint') : t.how[ru()])}</span>`}</span></div>`;
   const owned = TATTOOS.filter((t) => v.owned.includes(t.id));
   const pending = TATTOOS.filter((t) => v.pending.includes(t.id));
   const unknown = TATTOOS.filter((t) => !v.owned.includes(t.id) && !v.pending.includes(t.id));
@@ -100,7 +115,14 @@ export function renderTattoos(root: HTMLElement, state: ClientState, send: (m: C
     <div class="modal-body tattoos">
       <div class="tt-figure-wrap">
         <div class="giver-h">${esc(L('places', { n: v.slots, max: MAX_PLACES }))}</div>
-        <div class="tt-figure">${FIGURE}${places}</div>
+        <div class="doll">
+          <div class="doll-col">${LEFT.map(place).join('')}</div>
+          <div class="doll-face" style="background-image:${face ? `url('${face}')` : 'none'}">
+            <div class="doll-plate"><b>${esc(state.self?.name ?? '')}</b><span>${esc(L('lv', { n: level }))}</span></div>
+          </div>
+          <div class="doll-col">${RIGHT.map(place).join('')}</div>
+        </div>
+        ${chosen ? `<p class="tt-chosen"><b>${esc(chosen.name[ru()])}</b> — ${esc(chosen.gives[ru()])}</p>` : ''}
         <p class="muted tt-hint">${esc(docked ? L('pick') : L('portOnly'))}</p>
         ${cur && docked ? `<button class="btn btn-small btn-danger" data-untt>${esc(L('take'))}</button>` : ''}
       </div>
@@ -127,12 +149,6 @@ export function renderTattoos(root: HTMLElement, state: ClientState, send: (m: C
     sel = null;
   });
 }
-
-/** A captain's figure, arms spread (the places sit on it). */
-const FIGURE = `<svg class="tt-body" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-  <path d="M50 4c-6 0-10 5-10 11s4 10 10 10 10-4 10-10-4-11-10-11z" />
-  <path d="M34 26c-8 2-14 6-18 12L4 66c-1 3 1 6 4 6l8-1 10-20 2 45h44l2-45 10 20 8 1c3 0 5-3 4-6L84 38c-4-6-10-10-18-12-4 3-10 4-16 4s-12-1-16-4z" />
-</svg>`;
 
 /** The chain's reward: three pieces of gear to choose one of. */
 export function renderChoice(root: HTMLElement, choice: { quest: string; items: Item[] }, send: (m: ClientMsg) => void): void {
