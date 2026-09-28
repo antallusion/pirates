@@ -73,6 +73,66 @@ let lastInputSent = 0;
 let lastInputKey = '';
 let boardTarget: number | null = null;
 let aimSide: 'port' | 'starboard' | null = null;
+/** The target frame's ship (canon D12): chosen by a tap, a click on her or the target key; else the nearest hostile. */
+let targetId: number | null = null;
+let targetPinned = false;
+
+/** The ship under a point on screen, if any (her hull, or a finger's width around it). */
+function shipAtScreen(px: number, py: number): number | null {
+  const m = renderer.toWorld(px, py);
+  let best: number | null = null, bd = Infinity;
+  for (const s of state.ships.values()) {
+    if (!s.info || s.id === state.entityId || s.cur.flags & (SF.SINKING | SF.DOCKED)) continue;
+    const cls = SHIP_CLASSES[s.info.classId];
+    const d = dist(m.x, m.y, s.cur.x, s.cur.y);
+    const reach = Math.max(cls.length * 0.6, 26 / Math.max(0.2, renderer.zoom));
+    if (d < reach && d < bd) {
+      bd = d;
+      best = s.id;
+    }
+  }
+  return best;
+}
+
+function pinTarget(id: number | null): void {
+  if (id === null) return;
+  targetId = id;
+  targetPinned = true;
+}
+
+/** The target key: the next ship out from you, round and round. */
+function cycleTarget(): void {
+  const own = state.ownDisplay;
+  if (!own) return;
+  const near = [...state.ships.values()]
+    .filter((s) => s.info && s.id !== state.entityId && !(s.cur.flags & (SF.SINKING | SF.DOCKED)) && dist(own.x, own.y, s.cur.x, s.cur.y) < 2500)
+    .sort((a, b) => dist(own.x, own.y, a.cur.x, a.cur.y) - dist(own.x, own.y, b.cur.x, b.cur.y));
+  if (!near.length) return;
+  const i = near.findIndex((s) => s.id === targetId);
+  pinTarget(near[(i + 1) % near.length].id);
+}
+
+/** The frame's ship this frame: the pinned one while she is in sight, else the nearest hostile within a mile. */
+function resolveTarget(): number | null {
+  const own = state.ownDisplay;
+  if (!own || state.self?.dockedAt) return null;
+  const alive = (id: number | null) => {
+    const s = id !== null ? state.ships.get(id) : undefined;
+    return !!s?.info && !(s.cur.flags & (SF.SINKING | SF.DOCKED)) && dist(own.x, own.y, s.cur.x, s.cur.y) < 3000;
+  };
+  if (targetPinned && alive(targetId)) return targetId;
+  targetPinned = false;
+  let best: number | null = null, bd = 1600;
+  for (const s of state.ships.values()) {
+    if (!s.info || !(s.cur.flags & SF.HOSTILE) || s.cur.flags & (SF.SINKING | SF.DOCKED)) continue;
+    const d = dist(own.x, own.y, s.cur.x, s.cur.y);
+    if (d < bd) {
+      bd = d;
+      best = s.id;
+    }
+  }
+  return best;
+}
 
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 const talentScreen = new TalentScreen((m) => net.send(m));
@@ -81,6 +141,7 @@ const companyScreen = new CompanyScreen((m) => net.send(m));
 let whisperPrefill = '';
 // A groupmate's frame on the HUD: their card.
 hud.onPartyTap = (name) => net.send({ t: 'inspect', name });
+hud.onTargetTap = (name) => net.send({ t: 'inspect', name });
 companyScreen.onWhisper = (name) => {
   const input = $('chat-input') as HTMLInputElement;
   $('chat').classList.add('open');
@@ -102,6 +163,7 @@ const touch = new TouchControls({
   aim: (px, py) => {
     renderer.mouseX = px;
     renderer.mouseY = py;
+    pinTarget(shipAtScreen(px, py)); // a tap on a ship makes her the target
   },
   zoom: (f) => {
     renderer.userZoomed = true;
@@ -694,6 +756,10 @@ addEventListener('keydown', (e) => {
       e.preventDefault();
       net.send({ t: 'dash' });
       break;
+    case 'target':
+      e.preventDefault();
+      cycleTarget();
+      break;
     case 'ammo1':
     case 'ammo2':
     case 'ammo3':
@@ -820,6 +886,7 @@ canvas.addEventListener('wheel', (e) => {
 });
 canvas.addEventListener('mousedown', (e) => {
   if (!inGame || e.button !== 0) return;
+  pinTarget(shipAtScreen(e.clientX, e.clientY)); // a click on a ship makes her the target (and fires at her)
   const side = sideUnderCursor();
   if (side) fire(side);
 });
@@ -1400,7 +1467,7 @@ function step(t: number): void {
     if (held && touch.enabled) touchAim(held.side);
     aimSide = held ? held.side : touch.enabled ? null : sideUnderCursor();
     const prompt = computePrompt();
-    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled || held ? null : chaserEndUnderCursor(), charge: held });
+    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled || held ? null : chaserEndUnderCursor(), charge: held, target: targetId });
     if (own) audio.listener = { x: own.x, y: own.y };
     audio.ambience(state.wind[1], state.weather, dt);
     if (own) {
@@ -1416,6 +1483,8 @@ function step(t: number): void {
       }, state.wind[1], own.sail, Math.abs(shipHeel(own.heading, state.wind[0], state.wind[1], own.sail, SHIP_CLASSES[state.self!.loadout.classId].tier, state.you?.water ?? 0, 0)), timeOfDay(state.estServerTime()), !state.self?.dockedAt);
     }
     hud.update(state, prompt);
+    targetId = resolveTarget();
+    hud.drawTarget(state, targetId);
     if (touch.enabled && state.self) {
       const cls = SHIP_CLASSES[state.self.loadout.classId];
       touch.setContext(contextLabel());

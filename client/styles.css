@@ -1755,3 +1755,19 @@ body.touch #hud-region .rg-extra { display: none; }
 /* Ship levels (canon D12): the anchor chip in the colour of the danger; the giver's line for a fight. */
 .lvl-chip { display: inline-block; font-weight: 700; font-size: 0.86em; line-height: 1.35; white-space: nowrap; padding: 0 4px; border: 1px solid currentColor; border-radius: 3px; background: rgba(8, 10, 14, 0.6); vertical-align: 1px; }
 .giver-level { margin: 6px 0 0; font-size: 13px; }
+
+/* The target frame (canon D12): her level, name, bars and the word on the fight — at the head of the HUD stack. */
+#hud-target { pointer-events: auto; padding: 6px 9px 7px; max-width: 320px; }
+#hud-target .tg-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+#hud-target .tg-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--serif); font-size: 14px; }
+#hud-target .tg-dist { flex: none; font-size: 11px; color: var(--fog, #9aa); }
+#hud-target .tg-sub { font-size: 11px; margin: 1px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud-target .tg-el { color: #e8c46a; }
+#hud-target .tg-bar { position: relative; display: block; height: 6px; margin-top: 3px; background: #0a0c0e; border: 1px solid #000; box-shadow: inset 0 0 0 1px rgba(232, 196, 106, 0.12); }
+#hud-target .tg-bar > i { position: absolute; left: 0; top: 0; bottom: 0; transition: width 0.2s; }
+#hud-target .tg-hull > i { background: linear-gradient(180deg, #a4523f, #5e2219); }
+#hud-target .tg-crew > i { background: linear-gradient(180deg, #5f7f9e, #2b4157); }
+#hud-target .tg-sails > i { background: linear-gradient(180deg, #b3ab96, #6f6a5c); }
+#hud-target .tg-foot { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 3px; font-size: 11px; }
+#hud-target .tg-fx { color: #e0776b; }
+#hud-target.tg-elite { box-shadow: inset 0 0 0 1px #e8c46a; }

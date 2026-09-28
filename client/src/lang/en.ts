@@ -183,6 +183,7 @@ export const EN = {
   'act.fireStarboard': "Fire starboard broadside",
   'act.chasers': "Chasers",
   'act.dash': "Dash (a hard turn)",
+  'act.target': "Next target",
   'act.ammo1': "Round shot",
   'act.ammo2': "Chain shot",
   'act.ammo3': "Grapeshot",

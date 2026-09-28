@@ -320,7 +320,7 @@ export class Renderer {
   /** Main frame. */
   private frameNo = 0;
 
-  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null }): void {
+  render(state: ClientState, own: SailState | null, dt: number, aim: { side: 'port' | 'starboard' | null; dist: number; boardTarget: number | null; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null; target?: number | null }): void {
     this.time += dt;
     this.frameNo++;
     this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
@@ -388,7 +388,7 @@ export class Renderer {
 
     // Overlays (not affected by darkness).
     if (own && state.you && state.self) this.drawAim(state, own, aim, ships);
-    for (const s of ships) if (!s.own) this.drawLabel(s, state, aim.boardTarget === s.id);
+    for (const s of ships) if (!s.own) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
     if (own) this.drawThreatMarks(ships, own);
     if (own) this.drawQuestMark(state, own);
     this.drawTexts();
@@ -2315,7 +2315,7 @@ export class Renderer {
     void side;
   }
 
-  private drawLabel(s: DrawShip, state: ClientState, boardTarget: boolean): void {
+  private drawLabel(s: DrawShip, state: ClientState, boardTarget: boolean, isTarget = false): void {
     const g = this.g;
     if (!s.info || s.flags & SF.HIDDEN) return;
     const cls = SHIP_CLASSES[s.classId];
@@ -2406,6 +2406,17 @@ export class Renderer {
       g.fillText(line, x + 1, y + 34);
       g.fillStyle = '#d9c9a0';
       g.fillText(line, x, y + 33);
+    }
+    // The target (canon D12): a thin ring under her in the colour of the danger she is to you.
+    if (isTarget && !boardTarget) {
+      const t = info.shipLevel ? levelThreat(state, info.classId, info.shipLevel) : 'even';
+      g.strokeStyle = hexA(THREAT_COLOR[t], 0.85);
+      g.lineWidth = 1.5;
+      g.setLineDash([6, 5]);
+      g.beginPath();
+      g.ellipse(this.sx(s.x), this.sy(s.y), cls.length * this.zoom * 0.62, cls.length * this.zoom * 0.62, 0, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
     }
     if (boardTarget || s.flags & SF.MARKED) {
       // A target ring: four brackets round her, not a dotted circle.

@@ -1,6 +1,10 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
+import { placeName } from './maps.ts';
+import { THREAT_COLOR } from '../../../shared/src/data/shiplevel.ts';
+import { levelChip, threatTo } from './levels.ts';
 import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { DASH_COOLDOWN } from '../../../shared/src/data/gunnery.ts';
 import { dict, lang, plural, t } from '../i18n.ts';
@@ -28,6 +32,7 @@ import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
 
 const L = dict(EN, RU);
+const RL = dict(REN, RRU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 const wantedTitle = (n: number): string => L(`wanted.${Math.max(0, Math.min(5, n))}` as keyof typeof EN & string);
@@ -40,6 +45,9 @@ export class Hud {
   private lastPartyKey = '';
   /** Tapping a groupmate's frame (main.ts): inspect them. */
   onPartyTap: (name: string) => void = () => {};
+  /** Tapping the target frame of a captain's ship (main.ts): inspect them. */
+  onTargetTap: (name: string) => void = () => {};
+  private lastTargetKey = '';
   private toastsEl = $('toasts');
   private bannerTimer = 0;
   private minimap = $('minimap') as HTMLCanvasElement;
@@ -729,6 +737,49 @@ export class Hud {
 
   /** Party frames (docs/11 P6), as WoW's: each groupmate's name, level and hull, and where they are — a bearing
    *  and the distance, in port, or ashore. Four at most, then "+N". */
+  /**
+   * The target frame (canon D12), as WoW's: her level in the colour of the danger, her name, class and role, how she
+   * holds (hull, crew, sails), what ails her, how far she lies, and in a word what a fight with her would be.
+   */
+  drawTarget(state: ClientState, id: number | null): void {
+    const el = $('hud-target');
+    const s = id !== null ? state.ships.get(id) : undefined;
+    const own = state.ownDisplay;
+    if (!s?.info || !own || state.self?.dockedAt) {
+      if (this.lastTargetKey) {
+        this.lastTargetKey = '';
+        el.classList.add('hidden');
+        el.innerHTML = '';
+      }
+      return;
+    }
+    const info = s.info, c = s.cur;
+    const cls = SHIP_CLASSES[info.classId];
+    const d = Math.hypot(c.x - own.x, c.y - own.y);
+    const dist = d < 1000 ? `${Math.round(d / 10) * 10} ${L('m')}` : `${(d / 1000).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${L('km')}`;
+    const threat = info.shipLevel ? threatTo(info.shipLevel, info.classId) : null;
+    const fx = [
+      c.flags & SF.FIRE ? L('tg.fire') : '',
+      c.flags & SF.SURRENDERED ? L('tg.struck') : '',
+      c.flags & SF.BOARDING ? L('tg.boarding') : '',
+      c.flags & (SF.SLOWED | SF.TANGLED) ? L('tg.slowed') : '',
+      c.flags & SF.REPAIRING ? L('tg.repairing') : '',
+    ].filter(Boolean);
+    const key = `${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}`;
+    if (key === this.lastTargetKey) return;
+    this.lastTargetKey = key;
+    el.classList.remove('hidden');
+    const name = info.isPlayer ? `${info.captainName} · ${placeName(info.name)}` : placeName(info.name);
+    const role = info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
+    const bar = (k: string, v: number) => `<span class="tg-bar tg-${k}"><i style="width:${pct(clamp(v, 0, 1))}"></i></span>`;
+    el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
+    el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
+      <div class="tg-sub muted">${esc([cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
+      ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
+      <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}</div>`;
+    el.onclick = info.isPlayer ? () => this.onTargetTap(info.captainName) : null;
+  }
+
   private drawParty(state: ClientState): void {
     const el = $('hud-party');
     const g = state.party;
