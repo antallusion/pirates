@@ -397,6 +397,7 @@
     "portrait.giver_fence_m":           { "local": "portraits/giver_fence_m.webp", "remote": "hf_20260928_011339_fa856f67-aa38-4ae5-9a49-9500f1f51485.png", "job": "fa856f67-aa38-4ae5-9a49-9500f1f51485" },
     "portrait.giver_fence_f":           { "local": "portraits/giver_fence_f.webp", "remote": "hf_20260928_012237_3f2f60ee-aee8-48f9-8be0-6c5a4ea86267.png", "job": "3f2f60ee-aee8-48f9-8be0-6c5a4ea86267" },
     "portrait.giver_envoy_m":           { "local": "portraits/giver_envoy_m.webp", "remote": "hf_20260928_013137_04cf0453-9d86-46d5-bb2b-a15d77a45158.png", "job": "04cf0453-9d86-46d5-bb2b-a15d77a45158" },
-    "portrait.giver_envoy_f":           { "local": "portraits/giver_envoy_f.webp", "remote": "hf_20260928_014040_60837bb5-fa5f-4bdc-b831-c1984fdf43f6.png", "job": "60837bb5-fa5f-4bdc-b831-c1984fdf43f6" }
+    "portrait.giver_envoy_f":           { "local": "portraits/giver_envoy_f.webp", "remote": "hf_20260928_014040_60837bb5-fa5f-4bdc-b831-c1984fdf43f6.png", "job": "60837bb5-fa5f-4bdc-b831-c1984fdf43f6" },
+    "portrait.giver_hermit_m":          { "local": "portraits/giver_hermit_m.webp", "remote": "hf_20260928_014947_c8c1b118-1e9e-4a6e-a8ce-a92ec15445cb.png", "job": "c8c1b118-1e9e-4a6e-a8ce-a92ec15445cb" }
   }
 }
