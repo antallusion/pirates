@@ -2004,3 +2004,17 @@ body.touch #hud-region .rg-extra { display: none; }
 .doll-gear { max-width: 340px; }
 .doll-slot:not(.full) .doll-ico { opacity: 0.32; filter: grayscale(1); object-fit: contain; padding: 8px; }
 .doll-lv { position: absolute; right: 2px; bottom: 1px; font: 700 11px var(--sans); color: #fff; text-shadow: 0 0 3px #000, 0 0 2px #000; line-height: 1; }
+/* The owner's rule: no word or number ever leaves its frame. A word too long for its box breaks inside it. */
+#modal-panel, #hud, #toasts, #encounter, #confirm { overflow-wrap: break-word; }
+.hull-text b { hyphens: auto; }
+.form-grid label.check input[type=checkbox], label.check input[type=checkbox] { width: auto; flex: none; }
+.poster { container-type: inline-size; }
+.poster .po-head { font-size: min(13px, 7.4cqi); letter-spacing: min(2px, 1cqi); max-width: 100%; }
+.poster.po-baron .po-head { font-size: min(11px, 6.6cqi); letter-spacing: min(0.5px, 0.4cqi); }
+@media (max-width: 699px) { .cols .title-sm { font-size: 15px !important; } }
+.doll-ship .doll-face { background-size: contain; background-repeat: no-repeat; background-position: center 30%; background-color: #0a1418; }
+.doll-lock-lv { position: relative; font: 700 12px var(--sans); color: #8d8d93; }
+.doll-slot.locked .doll-ico { opacity: 0.18; }
+/* A table in a card never spills out of it: long names break, numbers and prices stay whole. */
+table.grid td { overflow-wrap: anywhere; }
+table.grid td .money, table.grid td .btn { overflow-wrap: normal; }

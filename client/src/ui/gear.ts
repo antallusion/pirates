@@ -3,7 +3,7 @@
 // can be done with it here.
 
 import {
-  AFFIXES, CAPTAIN_SLOTS, CAP_STATS, CAP_STAT_NAMES, LEGENDARY_ITEMS, TEMPER_MAX, reforgeCost, temperCost, MODULE_OF_SLOT, RARITY_COLOR, RARITY_NAMES, SETS, SHIP_SLOTS, SLOT_NAMES, SLOT_OPENS,
+  AFFIXES, CAPTAIN_SLOTS, CAP_STATS, CAP_STAT_NAMES, LEGENDARY_ITEMS, TEMPER_MAX, reforgeCost, temperCost, RARITY_COLOR, RARITY_NAMES, SETS, SHIP_SLOTS, SLOT_NAMES, SLOT_OPENS,
   STASH_SIZE, captainIlvl, gearSource, isShipSlot, itemEffect, itemName, itemSlot, itemValue, setBonuses,
 } from '../../../shared/src/data/items.ts';
 import type { Item, Slot } from '../../../shared/src/data/items.ts';
@@ -134,31 +134,25 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
   const sy = docked ? state.portView?.shipyard : null;
   if (tab === 'shop' && !docked) tab = 'ship';
 
-  const slotCell = (slot: Slot) => {
-    const it = isShipSlot(slot) ? shipGear[slot] : capGear[slot as never];
-    const locked = isShipSlot(slot) && lvl < SLOT_OPENS[slot];
-    const mod = isShipSlot(slot) ? MODULE_OF_SLOT[slot] : undefined;
-    const yardLv = mod ? self.loadout.modules[mod] ?? 0 : 0;
-    const sub = it ? esc(L('lv', { n: it.ilvl })) + (it.dur < 50 ? ` · ${esc(L('wear', { n: it.dur }))}` : '') : locked ? esc(L('locked', { n: SLOT_OPENS[slot as never] })) : yardLv ? esc(L('yard', { n: yardLv })) : esc(L('empty'));
-    const on = pick?.kind === 'slot' && pick.slot === slot;
-    return `<button class="gs${it ? ' full' : ''}${locked ? ' locked' : ''}${on ? ' on' : ''}" data-gslot="${slot}" ${locked ? 'disabled' : ''}${it ? ` style="border-color:${RARITY_COLOR[it.rarity]}"` : ''}>
-      ${itemIcon(it ?? null, slot)}<span class="gs-t"><span class="gs-slot">${esc(SLOT_NAMES[slot][ru() ? 1 : 0])}</span>${it ? coloured(it) : ''}<span class="muted gs-sub">${sub}</span></span></button>`;
-  };
-
   // The captain's sheet (WoW's paper doll): the portrait, the pieces in squares down both sides.
+  // The ship's too: her picture between her ten places, the ones her level has not opened yet shut.
   const dollSlot = (slot: Slot) => {
-    const it = capGear[slot as never] as Item | undefined;
+    const it = (isShipSlot(slot) ? shipGear[slot] : capGear[slot as never]) as Item | undefined;
+    const locked = isShipSlot(slot) && lvl < SLOT_OPENS[slot];
     const on = pick?.kind === 'slot' && pick.slot === slot;
-    const label = it ? nameOf(it) : SLOT_NAMES[slot][ru() ? 1 : 0];
-    return `<button class="doll-slot${it ? ' full' : ''}${on ? ' on' : ''}" data-gslot="${slot}" title="${esc(label)}" aria-label="${esc(label)}"${it ? ` style="border-color:${RARITY_COLOR[it.rarity]}"` : ''}>${itemIcon(it ?? null, slot, 'doll-ico')}${it ? `<span class="doll-lv">${it.ilvl}</span>` : ''}</button>`;
+    const label = it ? nameOf(it) : locked ? `${SLOT_NAMES[slot][ru() ? 1 : 0]} — ${L('locked', { n: SLOT_OPENS[slot as never] })}` : SLOT_NAMES[slot][ru() ? 1 : 0];
+    return `<button class="doll-slot${it ? ' full' : ''}${locked ? ' locked' : ''}${on ? ' on' : ''}" data-gslot="${slot}" ${locked ? 'disabled' : ''} title="${esc(label)}" aria-label="${esc(label)}"${it ? ` style="border-color:${RARITY_COLOR[it.rarity]}"` : ''}>${itemIcon(it ?? null, slot, 'doll-ico')}${it ? `<span class="doll-lv">${it.ilvl}</span>` : locked ? `<span class="doll-lock-lv">⚓${SLOT_OPENS[slot as never]}</span>` : ''}</button>`;
   };
-  const half = Math.ceil(CAPTAIN_SLOTS.length / 2);
-  const face = assetUrl(CAPTAINS[self.captain].portrait);
-  const doll = `<div class="doll doll-gear">
-      <div class="doll-col">${CAPTAIN_SLOTS.slice(0, half).map(dollSlot).join('')}</div>
-      <div class="doll-face" style="background-image:${face ? `url('${face}')` : 'none'}"><div class="doll-plate"><b>${esc(self.name)}</b><span>${esc(L('capLv', { n: self.level }))}</span></div></div>
-      <div class="doll-col">${CAPTAIN_SLOTS.slice(half).map(dollSlot).join('')}</div>
+  const dollOf = (slots: readonly Slot[], face: string | null, name: string, sub: string, kind: string) => {
+    const half = Math.ceil(slots.length / 2);
+    return `<div class="doll doll-gear doll-${kind}">
+      <div class="doll-col">${slots.slice(0, half).map(dollSlot).join('')}</div>
+      <div class="doll-face" style="background-image:${face ? `url('${face}')` : 'none'}"><div class="doll-plate"><b>${esc(name)}</b><span>${esc(sub)}</span></div></div>
+      <div class="doll-col">${slots.slice(half).map(dollSlot).join('')}</div>
     </div>`;
+  };
+  const doll = dollOf(CAPTAIN_SLOTS, assetUrl(CAPTAINS[self.captain].portrait), self.name, L('capLv', { n: self.level }), 'captain');
+  const shipDoll = dollOf(SHIP_SLOTS, assetUrl(`ship.${self.loadout.classId}`), placeName(self.loadout.name), `${cls.name} · ⚓${lvl}`, 'ship');
 
   const sets = setBonuses(worn).active;
   const total = gearSource(worn);
@@ -205,7 +199,7 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
   }
 
   let body = '';
-  if (tab === 'ship') body = `<div class="gear-grid">${SHIP_SLOTS.map(slotCell).join('')}</div><div class="gear-side">${statsPanel(false)}${setsPanel}</div>`;
+  if (tab === 'ship') body = `${shipDoll}<div class="gear-side">${statsPanel(false)}${setsPanel}</div>`;
   else if (tab === 'captain') body = `${doll}<div class="gear-side">${statsPanel(true)}${setsPanel}</div>`;
   else if (tab === 'locker') {
     // Best first: rarity, then level; one slot's pieces only when asked.

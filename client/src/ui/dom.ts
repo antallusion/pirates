@@ -70,8 +70,16 @@ export function keepInputs(root: HTMLElement, render: () => void): void {
  * An icon from the art registry (`icon.<id>` by default), or the text glyph when the art has not loaded.
  * `cls` sizes it (`ico` inline with text, `ico-lg` in slots and tiles).
  */
+/** While a picture is still being painted, a kindred one stands in (a row with no icon breaks its grid). */
+const STAND_IN: Record<string, string> = {
+  good_fish: 'build_fishing_village', good_prime_fish: 'build_fishing_village', good_smoked_fish: 'good_provisions', good_salted_fish: 'good_salt',
+  good_tar: 'good_timber', good_scrimshaw: 'good_leviathan_bone', good_baleen: 'good_whale_oil', good_ambergris: 'good_spices',
+  good_orca_tooth: 'good_leviathan_bone', good_whalebone: 'good_leviathan_bone', good_narwhal_tusk: 'good_leviathan_bone', good_shark_skin: 'good_cloth',
+  good_serpent_scale: 'mod_serpent_scale', tattoo_needle: 'role_sailmaker',
+};
+
 export function icon(id: string, glyph = '', cls = 'ico'): string {
-  const url = assetUrl(id.includes('.') ? id : `icon.${id}`);
+  const url = assetUrl(id.includes('.') ? id : `icon.${id}`) ?? (STAND_IN[id] ? assetUrl(`icon.${STAND_IN[id]}`) : null) ?? (id.startsWith('good_') ? assetUrl('icon.good_provisions') : null);
   return url ? `<img class="${cls}" src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
 }
 
