@@ -146,9 +146,10 @@ const PVP_SENIOR = [1, 1.25, 1.5, 2];
 const PVP_FLOOR_HULL = [0, 0.25, 0.5, 1];
 const PVP_FLOOR_CREW = [0, 0.5, 0.7, 1];
 /** Against the sea's ships: softer, so a perfect captain wins now and then one level up. */
-const PVE_JUNIOR = [1, 0.75, 0.45, 0.15];
-const PVE_SENIOR = [1, 1.15, 1.35, 1.6];
-const PVE_CRITS = [1, 0.5, 0, 0];
+/** Tuned by the duel sims (tests/balance): a perfect captain wins about one fight in ten a level up, an average one hardly any. */
+export const PVE_JUNIOR = [1, 0.65, 0.45, 0.15];
+export const PVE_SENIOR = [1, 1.2, 1.35, 1.6];
+export const PVE_CRITS = [1, 0.35, 0, 0];
 
 /**
  * The ladder between a shooter at combat level `a` and a target at combat level `b`.
@@ -246,12 +247,16 @@ export interface NpcSkill {
   dash: boolean;
 }
 
+/**
+ * Tuned by the duel sims (tests/balance): a bot a little below an average captain of her level, so that one wins
+ * about seven fights in ten against her; a little craftier the higher she sails.
+ */
 export function npcSkill(level: number): NpcSkill {
-  if (level <= 2) return { lead: 0.55, rangeErr: 0.16, arcDeg: 22, spread: 0.35, react: 1.6, dash: false };
-  if (level <= 4) return { lead: 0.7, rangeErr: 0.11, arcDeg: 18, spread: 0.2, react: 1.2, dash: false };
-  if (level <= 6) return { lead: 0.82, rangeErr: 0.07, arcDeg: 15, spread: 0.1, react: 0.9, dash: false };
-  if (level <= 8) return { lead: 0.92, rangeErr: 0.05, arcDeg: 12, spread: 0.05, react: 0.7, dash: true };
-  return { lead: 1, rangeErr: 0.03, arcDeg: 10, spread: 0, react: 0.5, dash: true };
+  if (level <= 2) return { lead: 0.5, rangeErr: 0.2, arcDeg: 24, spread: 0.4, react: 1.8, dash: false };
+  if (level <= 4) return { lead: 0.55, rangeErr: 0.17, arcDeg: 23, spread: 0.35, react: 1.6, dash: false };
+  if (level <= 6) return { lead: 0.6, rangeErr: 0.15, arcDeg: 22, spread: 0.3, react: 1.5, dash: false };
+  if (level <= 8) return { lead: 0.65, rangeErr: 0.13, arcDeg: 21, spread: 0.25, react: 1.3, dash: true };
+  return { lead: 0.7, rangeErr: 0.12, arcDeg: 20, spread: 0.2, react: 1.2, dash: true };
 }
 
 /** An elite ⚔ (group contracts, barons): built for a company — hull ×2.5, guns ×1.5. */

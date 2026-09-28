@@ -5,6 +5,7 @@
 // Every NPC has a purpose: merchants haul real cargo between real markets (docs/01 §5).
 
 import { eliteShipLevel, hullsFor, npcSkill, shipLevelForCaptain, watersBand } from '../../../shared/src/data/shiplevel.ts';
+import type { NpcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { NPC_ACTIVE_RADIUS, isNight } from '../../../shared/src/constants.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -71,6 +72,8 @@ export interface NpcBrain {
   slot?: number;
   /** A fireship: the ship she steers for, burning, to lay herself alongside and blow up. */
   fireship?: number;
+  /** Her captain's craft when it is not her level's (the balance sims' scripted captains, docs/12 §3.6). */
+  skill?: NpcSkill;
 }
 
 const SHIP_NAMES = [
@@ -548,7 +551,7 @@ function chooseAmmo(ship: ShipEntity, target: ShipEntity, d: number, wantsBoard:
   return has('chain') ? 'chain' : 'grape';
 }
 
-function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntity, d: number): void {
+export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntity, d: number): void {
   // Pirates want the cargo, so they cripple and board; everyone else fights to sink.
   const wantsBoard = brain.role === 'pirate';
   ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard);
@@ -560,7 +563,7 @@ function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntit
   const maxRange = Math.max(rangeOf('port'), rangeOf('starboard'));
   const bearing = headingOf(target.state.x - ship.state.x, target.state.y - ship.state.y);
   // Her craft by her level (docs/12 §3.3): how much of the lead she allows, how wide she lets fly, her tricks.
-  const sk = npcSkill(ship.shipLevel);
+  const sk = brain.skill ?? npcSkill(ship.shipLevel);
   // Lead the target by the ball's flight time (a green gunner allows only part of it).
   const flight = (d / 180) * sk.lead;
   const tv = headingVec(target.state.heading);
