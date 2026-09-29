@@ -121,6 +121,8 @@ export function cbColor(mode: Colorblind, hex: string): string {
 export interface Settings {
   uiScale: number; // 0.7–2
   textScale: number; // 0.9–1.5
+  /** How solid the HUD's panels are (0.3–1): the sea shows through them. */
+  hudAlpha: number;
   colorblind: Colorblind;
   highContrast: boolean;
   plainFont: boolean;
@@ -140,7 +142,7 @@ export interface Settings {
 
 export function defaults(): Settings {
   return {
-    uiScale: 1, textScale: 1, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
+    uiScale: 1, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
     plainTerms: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
@@ -156,6 +158,7 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   for (const a of ACTIONS) if (!Array.isArray(s.keys[a]) || s.keys[a].length !== 2) s.keys[a] = d.keys[a];
   s.uiScale = Math.min(2, Math.max(0.7, Number(s.uiScale) || 1));
   s.textScale = Math.min(1.5, Math.max(0.9, Number(s.textScale) || 1));
+  s.hudAlpha = Math.min(1, Math.max(0.3, Number(s.hudAlpha) || 0.65));
   if (!['off', 'protan', 'deutan', 'tritan'].includes(s.colorblind)) s.colorblind = 'off';
   for (const k of ['master', 'sea', 'combat', 'ui', 'music'] as const) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
   return s;
@@ -204,6 +207,7 @@ export function applyToDocument(s: Settings): void {
   const root = document.documentElement;
   root.style.setProperty('--ui-scale', String(s.uiScale));
   root.style.setProperty('--text-scale', String(s.textScale));
+  root.style.setProperty('--hud-a', String(s.hudAlpha));
   const b = document.body.classList;
   b.toggle('hi-contrast', s.highContrast);
   b.toggle('plain-font', s.plainFont);

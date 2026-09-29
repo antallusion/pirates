@@ -142,6 +142,7 @@ export const EN = {
   'opt.lang': "Language",
   'opt.uiScale': "Interface scale",
   'opt.textScale': "Text scale",
+  'opt.hudAlpha': "Panel opacity",
   'opt.highContrast': "High-contrast HUD (solid backing, heavier lines)",
   'opt.plainFont': "Simplified font (no serifs or italics)",
   'opt.plainTerms': "Plain terms instead of sea jargon",

@@ -135,6 +135,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'opt.lang': "Язык",
   'opt.uiScale': "Масштаб интерфейса",
   'opt.textScale': "Масштаб текста",
+  'opt.hudAlpha': "Непрозрачность панелей",
   'opt.highContrast': "Высококонтрастный HUD (сплошная подложка, толще линии)",
   'opt.plainFont': "Упрощённый шрифт (без засечек и курсива)",
   'opt.plainTerms': "Простые термины вместо морского жаргона",

@@ -94,14 +94,14 @@ export class OptionsScreen {
 
   private body(s: Settings): string {
     const check = (k: keyof Settings, label: Key) => `<label class="check"><input type="checkbox" data-bool="${k}" ${s[k] ? 'checked' : ''}/> ${esc(t(label))}</label>`;
-    const range = (k: 'uiScale' | 'textScale', label: Key, min: number, max: number) =>
+    const range = (k: 'uiScale' | 'textScale' | 'hudAlpha', label: Key, min: number, max: number) =>
       `<label class="opt-range"><span class="opt-l">${esc(t(label))}</span><input type="range" data-num="${k}" min="${min}" max="${max}" step="0.05" value="${s[k]}"/><output>${Math.round(s[k] * 100)}%</output></label>`;
     const vol = (k: keyof Settings['volume'], label: Key) =>
       `<label class="opt-range"><span class="opt-l">${esc(t(label))}</span><input type="range" data-vol="${k}" min="0" max="1" step="0.05" value="${s.volume[k]}"/><output>${Math.round(s.volume[k] * 100)}%</output></label>`;
     switch (this.tab) {
       case 'ui':
         return `<label class="opt-range sel"><span class="opt-l">${icon('opt_lang', '', 'ico-sm')}${esc(t('opt.lang'))}</span><select data-sel="lang" class="field">${(['en', 'ru'] as Lang[]).map((l) => `<option value="${l}" ${lang() === l ? 'selected' : ''}>${l === 'en' ? 'English' : 'Русский'}</option>`).join('')}</select></label>
-          ${range('uiScale', 'opt.uiScale', 0.7, 2)}${range('textScale', 'opt.textScale', 0.9, 1.5)}
+          ${range('uiScale', 'opt.uiScale', 0.7, 2)}${range('textScale', 'opt.textScale', 0.9, 1.5)}${range('hudAlpha', 'opt.hudAlpha', 0.3, 1)}
           ${check('highContrast', 'opt.highContrast')}${check('plainFont', 'opt.plainFont')}${check('plainTerms', 'opt.plainTerms')}
           <p class="muted">${esc(t('opt.readAloud', { key: keyLabel(s.keys.readAloud[0] || s.keys.readAloud[1]) }))}</p>`;
       case 'vision':

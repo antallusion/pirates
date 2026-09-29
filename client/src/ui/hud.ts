@@ -49,6 +49,12 @@ const RL = dict(REN, RRU);
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 const wantedTitle = (n: number): string => L(`wanted.${Math.max(0, Math.min(5, n))}` as keyof typeof EN & string);
 
+/** How long a toast stays: short on a phone (the sea is small there), a little longer with a mouse. */
+function toastLife(kind: string): number {
+  const phone = document.body.classList.contains('touch') && innerWidth < 700;
+  return kind === 'xp' ? (phone ? 2500 : 3500) : kind === 'bad' ? (phone ? 5000 : 7000) : phone ? 3800 : 6000;
+}
+
 export class Hud {
   private lastCaptainKey = '';
   private lastShipKey = '';
@@ -889,7 +895,7 @@ export class Hud {
       badge.textContent = `×${n}`;
       this.toastsEl.prepend(same);
       clearTimeout(Number(same.dataset.timer));
-      same.dataset.timer = String(setTimeout(() => same.remove(), kind === 'xp' ? 3500 : 7000));
+      same.dataset.timer = String(setTimeout(() => same.remove(), toastLife(kind)));
       return;
     }
     const el = document.createElement('div');
@@ -900,7 +906,7 @@ export class Hud {
     decorateSums(el);
     this.toastsEl.prepend(el);
     while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
-    el.dataset.timer = String(setTimeout(() => el.remove(), kind === 'xp' ? 3500 : 7000));
+    el.dataset.timer = String(setTimeout(() => el.remove(), toastLife(kind)));
   }
 
   /** A sound caption at the edge of the screen it came from (docs/07 §11.5). */
