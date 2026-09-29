@@ -1,3 +1,6 @@
+import { startMinigame } from './minigames.ts';
+import { MINIGAMES, MINIGAME_IDS } from '../../../shared/src/data/minigames.ts';
+import type { MinigameId } from '../../../shared/src/data/minigames.ts';
 // Admin commands for play-testing (docs/09_ART_PASS.md P8). Typed in chat with a leading slash; they exist only
 // when the server runs with GRAVETIDE_ADMIN=1 — on a normal server a slash line is ordinary chat.
 //   /help                      the list
@@ -439,6 +442,12 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       if (!ENCOUNTERS[id]) return `Encounters: ${Object.keys(ENCOUNTERS).join(', ')}`;
       const live = startEncounter(game, s, id);
       return live ? `${id}: ${Math.round(Math.hypot(live.x - ship.state.x, live.y - ship.state.y))} m off.` : 'No open water for it here.';
+    }
+    case 'minigame': {
+      // A game of the islands (minigames.ts) at once, for QA: /minigame [id].
+      const id = args[0] as MinigameId | undefined;
+      if (id && !MINIGAMES[id]) return `Games: ${MINIGAME_IDS.join(', ')}`;
+      return startMinigame(game, s, { sea: true, ...(id ? { def: id } : {}) }) ? 'A game begins.' : 'No game now.';
     }
     case 'item': {
       // An item into the locker: /item [base] [level] [rarity 0-4] — or /item random [level] [n].

@@ -79,4 +79,7 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'Holidays: {0}': 'Праздники: {0}',
   'The heart of the storm is near.': 'Сердце шторма рядом.',
   'Too much is happening on this sea already.': 'На этом море и так слишком много всего происходит.',
+  'A game begins.': 'Игра начинается.',
+  'No game now.': 'Сейчас игры нет.',
+  'Games: {0}': 'Игры: {0}',
 };
