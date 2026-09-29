@@ -118,11 +118,11 @@ function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level
   const art = x.tree === 'bridge' ? `tree_${x.bridge?.trees[0] ?? 'command'}` : `tree_${x.tree}`;
   const pips = `<span class="pips">${Array.from({ length: x.maxRank }, (_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}" title="${esc(why ? serverText(why) : L('learn'))}">
-    ${icon(art, '✦', 'talent-ico')}<div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
+    ${icon(`talent_${x.id}`, '', 'talent-ico') || icon(art, '✦', 'talent-ico')}<div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
     <small>${esc(x.description)}</small>${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
 }
 
 function deeds(have: string[]): string {
   return `<h3 class="tree-h">${icon('goal', '', 'ico-md')}${esc(L('deeds'))}</h3><p class="motto">${esc(L('deedsMotto'))}</p>
-    <div class="deed-list">${DEEDS.map((d) => `<div class="deed-row ${have.includes(d.id) ? 'done' : ''}">${icon('goal', '✦', 'item-ico')}<div class="item-text"><b>${esc(d.name)}</b><span class="muted">${esc(d.condition)}${d.awaits ? ` ${esc(L('opensWith', { what: d.awaits }))}` : ''}</span></div>${have.includes(d.id) ? '<span class="good deed-tick">✔</span>' : '<span></span>'}</div>`).join('')}</div>`;
+    <div class="deed-list">${DEEDS.map((d) => `<div class="deed-row ${have.includes(d.id) ? 'done' : ''}">${icon(d.id, '', 'item-ico') || icon('goal', '✦', 'item-ico')}<div class="item-text"><b>${esc(d.name)}</b><span class="muted">${esc(d.condition)}${d.awaits ? ` ${esc(L('opensWith', { what: d.awaits }))}` : ''}</span></div>${have.includes(d.id) ? '<span class="good deed-tick">✔</span>' : '<span></span>'}</div>`).join('')}</div>`;
 }

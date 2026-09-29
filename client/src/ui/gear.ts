@@ -91,7 +91,7 @@ function card(it: Item, worn: Item[]): string {
   if (it.set) {
     const def = SETS[it.set];
     const have = worn.filter((w) => w.set === it.set).length;
-    set = `<div class="gi-set">${esc(L('set', { name: def.name[ru() ? 1 : 0], n: have, max: Object.keys(def.pieces).length }))}${def.bonus.map((b) => `<div class="gi-bonus${have >= b.n ? ' on' : ''}">(${b.n}) ${esc(b.text[ru() ? 1 : 0])}</div>`).join('')}</div>`;
+    set = `<div class="gi-set">${icon(`set_${it.set}`, '', 'ico-sm')}${esc(L('set', { name: def.name[ru() ? 1 : 0], n: have, max: Object.keys(def.pieces).length }))}${def.bonus.map((b) => `<div class="gi-bonus${have >= b.n ? ' on' : ''}">(${b.n}) ${esc(b.text[ru() ? 1 : 0])}</div>`).join('')}</div>`;
   }
   return `<div class="gi-card" style="border-color:${RARITY_COLOR[it.rarity]}">
     <div class="gi-head">${itemIcon(it, slot, 'ico-md gi-ico')}<div>${coloured(it)}<div class="muted gi-kind">${esc(RARITY_NAMES[it.rarity][ru() ? 1 : 0])} · ${esc(SLOT_NAMES[slot][ru() ? 1 : 0])} · ${esc(L('lv', { n: it.ilvl }))}${it.temper ? ` · ${esc(L('tempered', { n: it.temper }))}` : ''}</div></div></div>
@@ -161,7 +161,7 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
   const statsPanel = (captain: boolean) => captain
     ? `<div class="gp"><div class="gi-h">${esc(L('stats'))}</div>${CAP_STATS.map((c) => `<div class="gl"><span>${esc(CAP_STAT_NAMES[c][ru() ? 1 : 0])}</span><b>${total.cap[c] ?? 0}</b></div>`).join('')}</div>`
     : `<div class="gp"><div class="gi-h">${esc(L('fromGear'))}</div>${Object.entries(total.mods).filter(([, v]) => Math.abs(v ?? 0) > 1e-9).map(([k, v]) => statLine(k as StatKey, v ?? 0)).join('') || '<div class="muted">—</div>'}</div>`;
-  const setsPanel = `<div class="gp"><div class="gi-h">${esc(L('sets'))}</div>${sets.length ? sets.map((x) => `<div class="gl"><span>${esc(SETS[x.set].name[ru() ? 1 : 0])}</span><b>${x.n}/${Object.keys(SETS[x.set].pieces).length}</b></div>`).join('') : `<div class="muted">${esc(L('noSets'))}</div>`}</div>`;
+  const setsPanel = `<div class="gp"><div class="gi-h">${esc(L('sets'))}</div>${sets.length ? sets.map((x) => `<div class="gl"><span class="with-ico">${icon(`set_${x.set}`, '', 'ico-sm')}${esc(SETS[x.set].name[ru() ? 1 : 0])}</span><b>${x.n}/${Object.keys(SETS[x.set].pieces).length}</b></div>`).join('') : `<div class="muted">${esc(L('noSets'))}</div>`}</div>`;
 
   // A forge (a yard of the second rank or better): tempering, and reforging each extra line.
   const forge = docked && (sy?.tier ?? 0) >= 2;

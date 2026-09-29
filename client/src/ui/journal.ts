@@ -242,14 +242,14 @@ export function omenLog(id: OmenId | null, coin = false): string {
   if (!id) return '';
   const ru = lang() === 'ru' ? 1 : 0;
   const o = OMENS[id];
-  return `<div class="jr-fishing jr-omen"><div class="giver-h">${esc(L('omen'))}: ${esc(o.name[ru])}</div><p class="jr-fish">${esc(o.text[ru])}</p>${coin && o.keep === 'coin' ? `<button class="btn btn-small" data-act="omen_coin">${esc(L('omenCoin'))}</button>` : ''}</div>`;
+  return `<div class="jr-fishing jr-omen"><div class="giver-h with-ico">${icon(`omen_${id}`, '', 'ico-md')}${esc(L('omen'))}: ${esc(o.name[ru])}</div><p class="jr-fish">${esc(o.text[ru])}</p>${coin && o.keep === 'coin' ? `<button class="btn btn-small" data-act="omen_coin">${esc(L('omenCoin'))}</button>` : ''}</div>`;
 }
 
 /** The Atlas of Sea Wonders (docs/12 P10 #8): the wonders found, who found them first, and a name to give. */
 function wondersLog(v: WondersView | null): string {
   if (!v || !v.found.length) return '';
   const ru = lang() === 'ru' ? 1 : 0;
-  const rows = v.found.map((w) => `<div class="jr-wonder">${icon(WONDER_ICON[w.kind], '✦', 'ico-md')}<div class="nem-text"><b>${esc(serverText(w.name))}</b>
+  const rows = v.found.map((w) => `<div class="jr-wonder">${icon(`wonder_${w.kind}`, '', 'ico-md') || icon(WONDER_ICON[w.kind], '✦', 'ico-md')}<div class="nem-text"><b>${esc(serverText(w.name))}</b>
       <span class="muted">${esc(WONDER_KINDS[w.kind].text[ru])}</span><span class="muted">${esc(REGIONS[w.region].name)}${w.first ? ` · ${esc(L('wFirst', { name: w.first }))}` : ''}</span>
       ${w.canName ? `<span class="jr-wname"><input class="field" data-wfor="${esc(w.id)}" maxlength="24" placeholder="${esc(L('wNamePh'))}"><button class="btn btn-small" data-wname="${esc(w.id)}">${esc(L('wName'))}</button></span>` : ''}</div></div>`).join('');
   return `<div class="jr-fishing jr-wonders"><div class="giver-h">${esc(L('wonders', { n: v.found.length, max: v.total }))}</div>${rows}</div>`;

@@ -69,7 +69,7 @@ export function descentPanel(state: ClientState): string | null {
 function boonCard(b: BoonId, leader: boolean): string {
   const d = BOONS[b];
   return `<div class="ds-boon${d.curse ? ' curse' : ''}"><div class="ds-kind">${esc(d.curse ? L('curse') : L('blessing'))}</div>
-    <b>${esc(d.name[ru()])}</b><p>${esc(d.text[ru()])}</p>${leader ? `<button class="btn btn-small${d.curse ? ' btn-danger' : ' btn-primary'}" data-boon="${b}">${esc(L('choose'))}</button>` : ''}</div>`;
+    <b class="with-ico">${icon(`boon_${b}`, '', 'ico-md')}${esc(d.name[ru()])}</b><p>${esc(d.text[ru()])}</p>${leader ? `<button class="btn btn-small${d.curse ? ' btn-danger' : ' btn-primary'}" data-boon="${b}">${esc(L('choose'))}</button>` : ''}</div>`;
 }
 
 /** The window between tiers (and the board). */

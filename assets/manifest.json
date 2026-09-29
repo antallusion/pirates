@@ -799,6 +799,14 @@
     "icon.fh_dutchman":                  { "local": "icons/fh_dutchman.webp", "remote": "hf_20260929_093146_f3bcc065-f38a-4cf0-a61c-18a8399177f8.png", "job": "f3bcc065-f38a-4cf0-a61c-18a8399177f8" },
     "icon.fh_white_orca":                { "local": "icons/fh_white_orca.webp", "remote": "hf_20260929_093148_8aeb8955-4d6a-4ab0-8a7e-ace7f6d56485.png", "job": "8aeb8955-4d6a-4ab0-8a7e-ace7f6d56485" },
     "tex.panel":                         { "local": "textures/panel.webp", "remote": "hf_20260929_093313_34e75fd8-0fca-4213-ad92-3b90f71944a9.png", "job": "34e75fd8-0fca-4213-ad92-3b90f71944a9" },
-    "tex.parchment":                     { "local": "textures/parchment.webp", "remote": "hf_20260929_093313_97d9d86a-e838-448d-809d-e3712081afce.png", "job": "97d9d86a-e838-448d-809d-e3712081afce" }
+    "tex.parchment":                     { "local": "textures/parchment.webp", "remote": "hf_20260929_093313_97d9d86a-e838-448d-809d-e3712081afce.png", "job": "97d9d86a-e838-448d-809d-e3712081afce" },
+    "icon.talent_nav_windborn":          { "local": "icons/talent_nav_windborn.webp", "remote": "hf_20260929_092708_6feb8397-23c9-4bd6-9f87-ab6cbb5205d1.png", "job": "6feb8397-23c9-4bd6-9f87-ab6cbb5205d1", "fit": "opaque:192" },
+    "icon.talent_gun_heated_shot":       { "local": "icons/talent_gun_heated_shot.webp", "remote": "hf_20260929_093402_b559b98a-971a-49f7-a682-10f9aae9d53c.png", "job": "b559b98a-971a-49f7-a682-10f9aae9d53c", "fit": "opaque:192" },
+    "icon.omen_albatross":               { "local": "icons/omen_albatross.webp", "remote": "hf_20260929_092712_2ca36429-3d9d-48b2-995a-4e4da4c8ad73.png", "job": "2ca36429-3d9d-48b2-995a-4e4da4c8ad73", "fit": "opaque:192" },
+    "icon.wonder_bones":                 { "local": "icons/wonder_bones.webp", "remote": "hf_20260929_093052_383a1287-2370-4a02-8035-45c35e5a684a.png", "job": "383a1287-2370-4a02-8035-45c35e5a684a", "fit": "opaque:192" },
+    "icon.deed_first_prize":             { "local": "icons/deed_first_prize.webp", "remote": "hf_20260929_095441_ad8d1582-a8cf-44af-9c17-397c723a2a92.png", "job": "ad8d1582-a8cf-44af-9c17-397c723a2a92", "fit": "opaque:192" },
+    "icon.trait_lucky":                  { "local": "icons/trait_lucky.webp", "remote": "hf_20260929_095312_de2b7306-d237-4888-93f2-9cb3ee903746.png", "job": "de2b7306-d237-4888-93f2-9cb3ee903746", "fit": "opaque:192" },
+    "icon.boon_lantern":                 { "local": "icons/boon_lantern.webp", "remote": "hf_20260929_095528_a74ffefa-e865-4201-acd5-2d60ac4a7c97.png", "job": "a74ffefa-e865-4201-acd5-2d60ac4a7c97", "fit": "opaque:192" },
+    "icon.set_admiralty":                { "local": "icons/set_admiralty.webp", "remote": "hf_20260929_095721_e249aebf-450c-4c50-898a-896dbdc9e5bc.png", "job": "e249aebf-450c-4c50-898a-896dbdc9e5bc", "fit": "sprite:192" }
   }
 }
