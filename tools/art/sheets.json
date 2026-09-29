@@ -696,5 +696,90 @@
    "icon.build_barracks_1"
   ],
   "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: ten separate small building dioramas laid out in a strict grid of 5 columns and 2 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a building on its own little patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, weathered, wet, the same warm lantern light and one consistent style across all of them, bold readable silhouettes at small size. Left to right, top to bottom: 1. a brick distillery with a copper still, barrels and a tall chimney, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 2. a round stone powder magazine with a conical roof, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 3. a small stone chapel with a cross and a little graveyard, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 4. a tall narrow timber tower with an observatory dome, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 5. a long stone barracks with a walled drill yard, weathered and neglected: missing shingles, a sagging door, moss and a broken window. 6. a brick distillery with a copper still, barrels and a tall chimney fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 7. a round stone powder magazine with a conical roof fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 8. a small stone chapel with a cross and a little graveyard fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 9. a tall narrow timber tower with an observatory dome fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. 10. a long stone barracks with a walled drill yard fallen into ruin: a collapsed roof, charred and broken timbers, weeds growing through. Muted palette: charcoal, graphite, tarred oak, weathered stone, rust, old brass, with small warm lights; low saturation. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) everywhere between and around the dioramas, not pink, no gradient, NO cast shadows on the background. NO captions or labels under or over the dioramas, NO words anywhere in the picture, NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours."
+ },
+ "monuments_1": {
+  "grid": [
+   2,
+   4
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.monument_obelisk",
+   "icon.monument_statue",
+   "icon.monument_fountain",
+   "icon.monument_well",
+   "icon.monument_shrine",
+   "icon.monument_gallows",
+   "icon.monument_anchor",
+   "icon.monument_lighthouse_ruin"
+  ],
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: eight separate stone monument dioramas laid out in a strict grid of 2 columns and 4 rows, each one centred in its own equal cell and filling about 75% of it, with wide even gaps of empty background between the cells so that no two touch. Every one is a small isometric three-quarter view of a weathered stone monument on its own patch of dark ground, painterly and realistic in the style of World of Warcraft icons but grim, ancient, corroded, the same cool grey light and one consistent style across all of them, bold readable silhouettes at small size. Left to right, top to bottom: 1. a weathered stone obelisk with faded carvings and lichen, broken tip, plinthe broken. 2. a crumbling stone statue of an old pirate captain, nose worn away, barnacled and stained. 3. an ornate stone fountain plaza with a leaking central basin and a broken cherub sculpture. 4. an old timber-and-rope stone well with a rotted bucket and frayed rope, weeds around the rim. 5. a small weathered stone shrine with a dark wooden cross, candle stubs, tarnished silver offering plate. 6. a heavy timber gallows frame with a noose, weathered black wood, single rope, driftwood patina. 7. a massive cast-iron ship anchor half-sunk in sand, covered in rust streaks and barnacles, chain wrapped. 8. the crumbling top of a stone lighthouse with broken windows, rust-red iron railings, a cracked mirror inside. Muted palette: charcoal, weathered stone, rust, lichen-green, tarnished iron, old brass accents. Background: flat, fully saturated pure magenta #FF00FF everywhere between and around the monuments, not pink, no gradient, NO cast shadows on the background. NO captions or labels, NO words anywhere in the picture, NO frames, NO borders, NO grid lines, NO text, NO letters, NO numbers, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours.",
+  "painting": true
+ },
+ "perks_1": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.perk_steel_nerve",
+   "icon.perk_steady_hand",
+   "icon.perk_keen_eye",
+   "icon.perk_salt_blood",
+   "icon.perk_iron_will",
+   "icon.perk_wave_rider",
+   "icon.perk_shadow_step",
+   "icon.perk_quick_draw",
+   "icon.perk_stone_skin",
+   "icon.perk_sharp_edge",
+   "icon.perk_deep_breath",
+   "icon.perk_iron_stomach",
+   "icon.perk_cold_heart",
+   "icon.perk_steady_aim",
+   "icon.perk_true_course",
+   "icon.perk_blood_oath"
+  ],
+  "prompt": "Sheet of sixteen square perk-tattoo icons for a dark Pirate Gothic naval MMORPG, in the painterly style of World of Warcraft ability icons but grim and realistic, laid out in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters. Each tile is its own icon: one sailor's faded old tattoo inked on weathered, scarred skin that fills the whole tile edge to edge, traditional nautical flash linework in faded blue-black ink with a little muted red, warm amber lantern light on the skin, the design centred and readable at small size, rich painted detail, the same skin, ink and lighting across all sixteen. The perks, left to right and top to bottom: 1. a skull with crossed daggers through it, bold simplified linework. 2. a palm with an eye open in its center, tattooed in faded blue-black. 3. a single large watchful eye with long lashes, inked in old blue. 4. a heart wrapped in a coiled rope, weathered ink. 5. a clinched fist, knuckles tattooed with tiny nails, stern style. 6. a wavy line becoming a ship in profile, flowing water-ink style. 7. a footprint fading into dots, disappearing leftward, subtle fade. 8. a curved saber with lightning bolts trailing, dynamic old ink. 9. a shield with crossed anchors behind it, weathered bronze tone. 10. a honing stone with a curved blade reflected in its face, grey-black. 11. lungs made of coral branches, organic blue-black fading. 12. a barrel or keg with a fork and spoon crossed over it, simple. 13. a frozen teardrop or icicle, pale ink on dark skin. 14. a cannon sight crosshair merged with an eye, technical style. 15. a compass rose with a sword point at north, bright old-gold accent. 16. interlocked hands with a small crown or ship above, bonding tattoo..  Muted palette: weathered skin tones in amber lantern light, faded blue-black ink, a little muted red and old gold. NO frames, NO borders inside the tiles, NO text, NO letters, NO numbers, NO writing on banners, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours.",
+  "painting": true
+ },
+ "fishing_1": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.fishing_rod_basic",
+   "icon.fishing_rod_improved",
+   "icon.fishing_net_cast",
+   "icon.fishing_net_trawl",
+   "icon.fishing_trap_crab",
+   "icon.fishing_trap_lobster",
+   "icon.fishing_float_cork",
+   "icon.fishing_float_bone",
+   "icon.fishing_bait_fish",
+   "icon.fishing_bait_worm",
+   "icon.fishing_catch_common",
+   "icon.fishing_catch_rare",
+   "icon.fishing_catch_lobster",
+   "icon.fishing_catch_crab",
+   "icon.fishing_hook_barbed",
+   "icon.fishing_line_braided"
+  ],
+  "prompt": "Game UI icon sheet for a dark Pirate Gothic naval MMORPG: sixteen separate fishing tool and catch icons laid out in a strict 4 by 4 grid of equal square cells separated by thin pure black gutters. Each icon is a single fishing tool or freshly caught fish or crustacean, centred and filling about 75% of its cell, with a slight three-quarter view and warm lantern light from the upper left, bold readable silhouette at small size, rich painted detail, realistic weathered fishing-trade texture. 1. a simple wooden fishing rod with a cork handle and thread line, lean and weathered. 2. a reinforced fishing rod with wrapped grip, bone or ivory accents, strong construction. 3. a circular cast net folded in a coil, bronze weighted rings visible, ready to throw. 4. a large dragging trawl net mesh bunched in a rope net-bag, industrial and heavy. 5. a small wicker or woven cage trap for crabs, wooden frame, tied shut with cordage. 6. a larger, sturdier lobster trap with a tapered funnel-entrance, salt-weathered wood. 7. a cork or wooden float-buoy with a rope tied on, simple and round, bobbing suggestion. 8. a carved bone float in a whale-vertebra shape, pale cream against dark rope, rare. 9. dried salted small fish tied with twine, realistic grey-silver, curled, ready to use. 10. a pile of fat bait worms in a clay pot, natural browns and creams, slightly writhing. 11. a realistic grey-silver common fish, scaled and detailed, 8-10 inches long, head up. 12. a beautiful ornate fish with patterned scales, turquoise markings, rarer catch, vibrant. 13. a red-brown cooked lobster with claws raised, realistic shell texture, food-ready. 14. a dark crab shell viewed from above, claws raised defensively, barnacle-rough carapace. 15. a large barbed fishing hook with cord tied at the eye, rusty iron, realistic curve. 16. a coil of braided fishing line in natural tan, tightly wound, showing texture..  Muted palette: charcoal, tarred rope, wet wood, grey-silver scales, browns and reds, tarnished bronze. Background: flat, fully saturated pure magenta #FF00FF everywhere between and around the icons, not pink, no gradient, NO cast shadows on the background. NO text, NO labels, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours.",
+  "painting": true
  }
 }
