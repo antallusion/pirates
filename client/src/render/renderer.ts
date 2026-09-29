@@ -255,6 +255,10 @@ export class Renderer {
   readonly atlas = new SpriteAtlas();
   /** A look-ahead offset in metres (the gamepad's right stick). */
   look = { x: 0, y: 0 };
+  /** The camera's look ahead of her bow, eased on its own so a turn does not swing her across the screen. */
+  private lead = { x: 0, y: 0 };
+  /** Where a gunner's mark is drawn before it is laid on the sea. */
+  private fallCanvas: HTMLCanvasElement | null = null;
   private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
   private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
 
@@ -340,15 +344,18 @@ export class Renderer {
     this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
     const g = this.g;
     if (own) {
-      // Look slightly ahead of the ship.
+      // Look a little ahead of the ship, further at the pace of the sea, but never so far that she leaves the middle
+      // of the screen: the look ahead eases slower than she turns, so she stays put and the sea turns about her.
       const v = headingVec(own.heading);
-      // At the pace of the sea she needs to see further ahead.
-      const lead = clamp(own.speed * SPEED_SCALE * 1.2, 0, 220);
+      const reach = Math.min(own.speed * SPEED_SCALE * 0.8, (Math.min(this.w, this.h) * 0.18) / Math.max(0.1, this.zoom));
       // A long way off (the first frame, a respawn, a teleport): cut straight to her instead of flying the chart.
       const far = Math.hypot(own.x - this.camX, own.y - this.camY) > 1500;
-      const k = far ? 1 : Math.min(1, dt * 4);
-      this.camX += (own.x + v.x * lead + this.look.x - this.camX) * k;
-      this.camY += (own.y + v.y * lead + this.look.y - this.camY) * k;
+      const kl = far ? 1 : Math.min(1, dt * 0.8);
+      this.lead.x += (v.x * reach - this.lead.x) * kl;
+      this.lead.y += (v.y * reach - this.lead.y) * kl;
+      const k = far ? 1 : Math.min(1, dt * 6);
+      this.camX += (own.x + this.lead.x + this.look.x - this.camX) * k;
+      this.camY += (own.y + this.lead.y + this.look.y - this.camY) * k;
     }
     // Particle LOD: the frame time picks it; nothing decorative is born off screen.
     this.fx.frame(dt * 1000);
@@ -2004,14 +2011,15 @@ export class Renderer {
       const cls = SHIP_CLASSES[s.classId];
       const back = headingVec(s.h + Math.PI);
       const lx = s.x + back.x * cls.length * 0.4, ly = s.y + back.y * cls.length * 0.4;
-      hole(lx, ly, 55 + cls.length, 0.75);
-      if (s.own) hole(s.x, s.y, 140, 0.35);
+      hole(lx, ly, 40 + cls.length * 0.8, 0.6);
+      if (s.own) hole(s.x, s.y, 90, 0.22); // her own deck just readable, no halo
       // A captain's lanterns burn the colour of her look (docs/12 P10 #12).
       const lamp = decodeLook(s.own ? state.self?.look : s.info?.look)?.lamp ?? 0;
       const fac = s.own || s.info?.isPlayer ? LAMPS[lamp].color : s.info && s.info.faction !== 'player' ? cbColor(opt.colorblind, FACTIONS[s.info.faction].lantern) : '#f2b35a';
       // Lanterns flicker a little (unless the options still them).
       const flick = opt.lanternFlicker ? 0.88 + 0.12 * Math.sin(this.time * 9 + s.id * 1.7) * Math.sin(this.time * 3.1 + s.id) : 1;
-      glows.push({ x: lx, y: ly, r: 16 + cls.length * 0.4, color: fac, a: 0.55 * flick });
+      // A lantern is a point of warm light on the water, not a cloud about the hull.
+      glows.push({ x: lx, y: ly, r: 4 + cls.length * 0.14, color: fac, a: 0.3 * flick });
       // Lantern marks: the faction's sign by her lantern at battle zoom.
       if (opt.lanternMarks && this.zoom >= 1.4 && s.info && s.info.faction !== 'player') marks.push({ x: lx, y: ly, sign: FACTION_SIGN[s.info.faction], color: fac });
     }
@@ -2343,33 +2351,20 @@ export class Renderer {
   }
 
   private drawAim(state: ClientState, own: SailState, aim: { side: 'port' | 'starboard' | null; dist: number; chaser: 'bow' | 'stern' | null; charge?: { side: 'port' | 'starboard'; held: number } | null }, ships: DrawShip[]): void {
-    const g = this.g;
     const you = state.you!;
     const self = state.self!;
+    const cls = SHIP_CLASSES[self.loadout.classId];
+    const x = this.sx(own.x), y = this.sy(own.y);
+    // The guns stand at her side: the marks start there, not in her middle.
+    const hull = cls.beam * this.zoom * 0.6;
     if (aim.chaser) {
-      const cls = SHIP_CLASSES[self.loadout.classId];
       const has = aim.chaser === 'bow' ? cls.bowChasers : cls.sternChasers;
       if (has) {
         const ready = you.reload[aim.chaser] >= 1;
         const keel = aim.chaser === 'bow' ? own.heading : own.heading + Math.PI;
-        const r = GUNS.long_9.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel === 'grape' ? 'round' : you.ammoSel].rangeMul * this.zoom;
-        const x = this.sx(own.x), y = this.sy(own.y);
-        // A soft fan of light that fades toward the range, and the range itself as a short bright arc — no rays
-        // running off the screen.
-        const grd = g.createRadialGradient(x, y, 0, x, y, r);
-        grd.addColorStop(0, ready ? 'rgba(143,179,217,0.16)' : 'rgba(90,100,110,0.08)');
-        grd.addColorStop(1, 'rgba(143,179,217,0)');
-        g.beginPath();
-        g.moveTo(x, y);
-        g.arc(x, y, r, keel - Math.PI / 2 - CHASER_CONE, keel - Math.PI / 2 + CHASER_CONE);
-        g.closePath();
-        g.fillStyle = grd;
-        g.fill();
-        g.beginPath();
-        g.arc(x, y, r, keel - Math.PI / 2 - CHASER_CONE, keel - Math.PI / 2 + CHASER_CONE);
-        g.strokeStyle = ready ? 'rgba(143,179,217,0.55)' : 'rgba(90,100,110,0.35)';
-        g.lineWidth = 1.5;
-        g.stroke();
+        const range = GUNS.long_9.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel === 'grape' ? 'round' : you.ammoSel].rangeMul;
+        const d = clamp(aim.dist, 40, range) * this.zoom;
+        this.drawFall(x, y, keel - Math.PI / 2, CHASER_CONE * 0.5, cls.length * this.zoom * 0.5, range * this.zoom, d, ready ? [143, 179, 217] : [110, 118, 126], ready ? 1 : 0.5);
       }
     }
     for (const side of ['port', 'starboard'] as const) {
@@ -2378,40 +2373,100 @@ export class Renderer {
       const ready = you.reload[side] >= 1;
       const active = aim.side === side;
       const h = own.heading + (side === 'port' ? -Math.PI / 2 : Math.PI / 2);
-      // A held broadside (dynamic combat): the fan narrows as the crews take aim, glows in the perfect window and
-      // reddens when held too long.
+      const a = h - Math.PI / 2;
+      if (!active) {
+        // The other side only says it is loaded: a short row of brass dots off her side.
+        if (ready) this.dots(x, y, a, hull + 6, hull + 34, 7, [224, 184, 98], 0.35);
+        continue;
+      }
+      // A held broadside (dynamic combat): the mark narrows as the crews take aim, burns gold in the perfect window
+      // and reddens when held too long.
       const held = aim.charge?.side === side ? aim.charge.held : 0;
       const focus = aimFocus(held);
       const c = held / AIM_CHARGE;
       const perfect = focus.perfect, waver = held >= AIM_TAP && c > AIM_WAVER;
       const spread = ((gun.spreadDeg * Math.PI) / 180 * 3 + 0.12) * (held >= AIM_TAP ? focus.spread : 1);
-      const x = this.sx(own.x), y = this.sy(own.y);
-      const r = range * this.zoom;
-      const grd = g.createRadialGradient(x, y, 0, x, y, r);
-      grd.addColorStop(0, active ? (ready ? 'rgba(224,184,98,0.2)' : 'rgba(150,120,90,0.1)') : ready ? 'rgba(224,184,98,0.06)' : 'rgba(0,0,0,0)');
-      grd.addColorStop(1, 'rgba(224,184,98,0)');
+      const d = clamp(aim.dist, 40, range) * this.zoom;
+      const tone: [number, number, number] = !ready ? [150, 130, 105] : perfect ? [255, 226, 140] : waver ? [214, 112, 96] : [224, 184, 98];
+      this.drawFall(x, y, a, spread, hull, range * this.zoom, d, tone, !ready ? 0.45 : perfect ? 1.35 : 1);
+      if (held > 0) this.drawCharge(x, y, c, perfect, waver);
+      this.drawRakes(state, own, ships, side, range, h, spread);
+    }
+  }
+
+  /** A gunner's mark on the water instead of a lit wedge: where the shot will fall (a feathered band at the aim range,
+   * as wide as the spread there, soft at its ends), the line of flight to it in dots, the reach as a faint row of dots. */
+  private drawFall(x: number, y: number, a: number, spread: number, r0: number, reach: number, d: number, tone: [number, number, number], k: number): void {
+    const g = this.g;
+    const [cr, cg, cb] = tone;
+    const col = (al: number) => `rgba(${cr},${cg},${cb},${Math.min(1, al * k).toFixed(3)})`;
+    g.save();
+    // The fall: a band some 12% of the range deep, drawn apart (radial fade across it, then an angular fade toward
+    // its ends) and laid on the sea in one piece, so it has no seams and no straight edges.
+    const depth = Math.max(10, reach * 0.06);
+    const inner = Math.max(r0, d - depth), outer = d + depth;
+    const size = Math.ceil(outer * 2 + 4);
+    const fc = (this.fallCanvas ??= document.createElement('canvas'));
+    if (fc.width < size || fc.height < size) { fc.width = size; fc.height = size; }
+    const fg = fc.getContext('2d')!;
+    const o = size / 2;
+    fg.clearRect(0, 0, size, size);
+    fg.globalCompositeOperation = 'source-over';
+    const grd = fg.createRadialGradient(o, o, inner, o, o, outer);
+    grd.addColorStop(0, col(0));
+    grd.addColorStop(0.5, col(0.3));
+    grd.addColorStop(1, col(0));
+    fg.fillStyle = grd;
+    fg.beginPath();
+    fg.arc(o, o, outer, a - spread, a + spread);
+    fg.arc(o, o, inner, a + spread, a - spread, true);
+    fg.closePath();
+    fg.fill();
+    const cone = fg.createConicGradient(a - spread, o, o);
+    const w = (spread * 2) / (Math.PI * 2);
+    cone.addColorStop(0, 'rgba(0,0,0,0)');
+    cone.addColorStop(w * 0.3, 'rgba(0,0,0,1)');
+    cone.addColorStop(w * 0.7, 'rgba(0,0,0,1)');
+    cone.addColorStop(w, 'rgba(0,0,0,0)');
+    cone.addColorStop(Math.min(1, w + 0.001), 'rgba(0,0,0,0)');
+    fg.globalCompositeOperation = 'destination-in';
+    fg.fillStyle = cone;
+    fg.fillRect(0, 0, size, size);
+    fg.globalCompositeOperation = 'source-over';
+    g.drawImage(fc, 0, 0, size, size, x - o, y - o, size, size);
+    // Where the middle of the fall lies: a short bright tick across the band.
+    g.strokeStyle = col(0.85);
+    g.lineWidth = 2;
+    g.lineCap = 'round';
+    const span = Math.min(spread * 0.55, 18 / Math.max(1, d));
+    g.beginPath();
+    g.arc(x, y, d, a - span, a + span);
+    g.stroke();
+    g.restore();
+    // The line of flight, and the reach.
+    this.dots(x, y, a, r0 + 8, Math.max(r0 + 8, inner - 6), 12, tone, 0.45 * k);
+    const step = 16 / Math.max(1, reach);
+    g.fillStyle = col(0.3);
+    for (let t = a - spread; t <= a + spread; t += step) {
+      const f = Math.sin(((t - (a - spread)) / (spread * 2)) * Math.PI);
+      g.globalAlpha = f;
       g.beginPath();
-      g.moveTo(x, y);
-      g.arc(x, y, r, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
-      g.closePath();
-      g.fillStyle = grd;
+      g.arc(x + Math.cos(t) * reach, y + Math.sin(t) * reach, 1.3, 0, Math.PI * 2);
       g.fill();
-      if (active) {
-        g.beginPath();
-        g.arc(x, y, r, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
-        g.strokeStyle = !ready ? 'rgba(150,120,90,0.35)' : perfect ? 'rgba(255,226,140,0.95)' : waver ? 'rgba(208,106,94,0.7)' : 'rgba(224,184,98,0.5)';
-        g.lineWidth = perfect ? 2.5 : 1.5;
-        g.stroke();
-        // Aim distance marker.
-        const d = clamp(aim.dist, 40, range) * this.zoom;
-        g.beginPath();
-        g.arc(x, y, d, h - Math.PI / 2 - spread, h - Math.PI / 2 + spread);
-        g.strokeStyle = !ready ? 'rgba(150,120,90,0.6)' : perfect ? 'rgba(255,236,170,1)' : waver ? 'rgba(220,120,100,0.9)' : 'rgba(240,200,110,0.9)';
-        g.lineWidth = perfect ? 3 : 2;
-        g.stroke();
-        if (held > 0) this.drawCharge(x, y, c, perfect, waver);
-        this.drawRakes(state, own, ships, side, range, h, spread);
-      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  /** A row of small dots from r0 to r1 along an angle, fading in toward the far end. */
+  private dots(x: number, y: number, a: number, r0: number, r1: number, gap: number, tone: [number, number, number], alpha: number): void {
+    const g = this.g;
+    const cx = Math.cos(a), cy = Math.sin(a);
+    for (let r = r0; r <= r1; r += gap) {
+      const f = r1 > r0 ? 0.35 + 0.65 * ((r - r0) / (r1 - r0)) : 1;
+      g.fillStyle = `rgba(${tone[0]},${tone[1]},${tone[2]},${(alpha * f).toFixed(3)})`;
+      g.beginPath();
+      g.arc(x + cx * r, y + cy * r, 1.4, 0, Math.PI * 2);
+      g.fill();
     }
   }
 

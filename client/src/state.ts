@@ -472,8 +472,18 @@ export class ClientState {
       } else if (rt <= a.t) {
         s.cur = a;
       } else {
-        const t = (rt - a.t) / Math.max(1e-4, c.t - a.t);
-        s.cur = { ...c, x: lerp(a.x, c.x, t), y: lerp(a.y, c.y, t), h: lerpAngle(a.h, c.h, t), spd: lerp(a.spd, c.spd, t), sail: lerp(a.sail, c.sail, t) };
+        const span = Math.max(1e-4, c.t - a.t);
+        const t = (rt - a.t) / span;
+        // Along a curve, not a broken line: each sample's own heading and speed set the way she leaves it (a cubic
+        // Hermite), so a turn is an arc and she never pivots on a corner between two snapshots.
+        const t2 = t * t, t3 = t2 * t;
+        const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
+        const va = a.spd * SPEED_SCALE * span, vc = c.spd * SPEED_SCALE * span;
+        const x = h00 * a.x + h10 * Math.sin(a.h) * va + h01 * c.x + h11 * Math.sin(c.h) * vc;
+        const y = h00 * a.y - h10 * Math.cos(a.h) * va + h01 * c.y - h11 * Math.cos(c.h) * vc;
+        // A jump (a teleport, a respawn) is no curve: straight between the two.
+        const jump = Math.hypot(c.x - a.x, c.y - a.y) > Math.max(60, (a.spd + c.spd) * SPEED_SCALE * span * 2);
+        s.cur = { ...c, x: jump ? lerp(a.x, c.x, t) : x, y: jump ? lerp(a.y, c.y, t) : y, h: lerpAngle(a.h, c.h, t), spd: lerp(a.spd, c.spd, t), sail: lerp(a.sail, c.sail, t) };
       }
     }
   }

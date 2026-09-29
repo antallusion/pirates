@@ -169,6 +169,23 @@ function spawnShoal(game: Game, region: RegionId, force?: FishId, stockMul = 1):
 }
 
 /** Every shoal afloat (for the tests and the admin). */
+/** A small shoal breaking the surface near a point, for a few minutes (the sea's small life, sealife.ts). */
+export function shoalNear(game: Game, x: number, y: number, region: RegionId): boolean {
+  const S = fs(game);
+  const rng = S.rng;
+  for (let k = 0; k < 10; k++) {
+    const a = rng.float() * Math.PI * 2, r = rng.range(300, 900);
+    const sx = x + Math.cos(a) * r, sy = y + Math.sin(a) * r;
+    if (isLand(game.world, sx, sy) || regionAt(game.world, sx, sy) !== region || !game.inZone(sx, sy)) continue;
+    const fish = pickFish(game, sx, sy, 'net', SKILL_MAX) ?? pickFish(game, sx, sy, 'rod', SKILL_MAX);
+    if (!fish) continue;
+    const max = rng.int(20, 45);
+    S.shoals.set(S.seq, { id: S.seq++, fish, x: sx, y: sy, r: rng.range(80, 150), stock: max, max, vx: rng.range(-0.5, 0.5), vy: rng.range(-0.5, 0.5), until: game.now + 240, region });
+    return true;
+  }
+  return false;
+}
+
 export function shoalsOf(game: Game): Shoal[] {
   return [...fs(game).shoals.values()];
 }

@@ -281,6 +281,18 @@ function spawnAbout(game: Game): void {
   }
 }
 
+/** Beasts passing within a mile or so of one captain (the sea's small life, sealife.ts); false when none fits. */
+export function beastsPass(game: Game, ship: ShipEntity): boolean {
+  const S = bs(game);
+  if (S.brains.size >= WORLD_CAP) return false;
+  const kind = pickKind(game, ship.region, ship.shipLevel);
+  if (!kind) return false;
+  const pt = openPoint(game, ship.state.x, ship.state.y, 1200, 2000, ship.region);
+  if (!pt) return false;
+  const d = BEASTS[kind];
+  return spawnGroup(game, kind, pt[0], pt[1], clamp(ship.shipLevel + S.rng.int(-1, 1), d.level[0], d.level[1])).length > 0;
+}
+
 // ------------------------------------------------------------------------------------------------ movement
 
 function swim(game: Game, s: ShipEntity, tx: number, ty: number, speed: number, dt: number, turn = 1.4): void {

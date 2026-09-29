@@ -33,6 +33,7 @@ import { levelNear, newBrain, spawnPirate } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { groupOfAccount } from './party.ts';
+import { isBeast } from './beasts.ts';
 
 /** How close a sign must be for its card to open, and how far a captain may leave it before it is gone. */
 export const OPEN_R = 380;
@@ -41,7 +42,7 @@ const LIFE_SEC = 6 * 60;
 /** No encounters within this of a port. */
 const HARBOUR_R = 1500;
 /** The same encounter not again within this. */
-const REPEAT_SEC = 30 * 60;
+const REPEAT_SEC = 12 * 60;
 
 interface Pace {
   tension: number;
@@ -75,9 +76,10 @@ function st(game: Game): DirectorState {
   return s;
 }
 
-/** The quiet sea's patience before the next thing happens, by the safety of the waters (seconds of sailing). */
+/** The quiet sea's patience before the next thing happens, by the safety of the waters (tension: ~0.8 s of sailing
+ * each at a cruising speed). Between these the small life of the sea (sealife.ts) keeps her company. */
 function newThreshold(game: Game, safety: string): number {
-  return safety === 'safe' ? game.rng.range(150, 240) : game.rng.range(90, 180);
+  return safety === 'safe' ? game.rng.range(70, 110) : game.rng.range(50, 90);
 }
 
 function nearestIsland(game: Game, x: number, y: number): { is: Island | null; d: number } {
@@ -102,10 +104,16 @@ function busyElsewhere(game: Game, s: PlayerSession): boolean {
   if (onboardingProtected(s) || ship.landing || ship.hasEffect('submerged')) return true;
   let deep = false;
   game.forShipsNear(ship.state.x, ship.state.y, 6000, (o) => {
-    if (o.cls.monster || o.bossOf || o.npcRole === 'boss') deep = true;
+    if ((o.cls.monster && !isBeast(o)) || o.bossOf || o.npcRole === 'boss') deep = true; // whales passing are no boss
   });
   if (deep) return true;
   return siteViews(game).some((site) => dist(site.x, site.y, ship.state.x, ship.state.y) < 3000);
+}
+
+/** Whether a captain sails quiet water the sea may stir: under way, out of a fight, a harbour and a boarding. */
+export function quietSea(game: Game, s: PlayerSession): boolean {
+  const ship = s.ship!;
+  return !(ship.inCombat(game.now) || ship.state.speed < 1.5 || nearPort(game, ship.state.x, ship.state.y) || !!ship.boarding || busyElsewhere(game, s));
 }
 
 /** Stolen or contraband goods aboard (for the Crown's patrols). */
@@ -251,7 +259,7 @@ export function stepDirector(game: Game): void {
     const pace = paceOf(game, s);
     const safety = REGIONS[ship.region].safety;
     const mine = [...S.live.values()].some((l) => l.account === s.accountId && !l.resolved);
-    const still = ship.inCombat(now) || ship.state.speed < 1.5 || nearPort(game, ship.state.x, ship.state.y) || !!ship.boarding || busyElsewhere(game, s);
+    const still = !quietSea(game, s);
     if (!still && !mine) pace.tension += Math.min(2, 0.6 + ship.state.speed / 12);
     if (pace.tension >= pace.threshold && !mine && !still) {
       pace.tension = 0;

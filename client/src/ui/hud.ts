@@ -32,7 +32,7 @@ import { relWindDeg, windPush } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume, tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { seasonName } from '../../../shared/src/world/worldgen.ts';
-import { assetUrl } from '../assets.ts';
+import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
 import { questPointer, trackedQuest } from './track.ts';
@@ -337,51 +337,94 @@ export class Hud {
     // A frightened crew reads a wandering compass (±15°); in the Abyss the stars themselves lie (±30°).
     if ((state.you?.sanity ?? 100) <= 50) g.rotate(Math.sin(performance.now() / 2300) * 0.26);
     if (state.self?.abyss?.skew) g.rotate(state.self.abyss.skew);
-    // Ring.
-    g.strokeStyle = 'rgba(176,141,87,0.6)';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(0, 0, R, 0, Math.PI * 2);
-    g.stroke();
-    g.fillStyle = 'rgba(216,210,196,0.8)';
+    // The dial: the kit's brass rose under a dark wash so the needles read on it (a drawn ring until it is loaded).
+    const dial = sprite('ui.stick_base');
+    if (dial) {
+      const d = R * 2 + 22;
+      g.drawImage(dial.img, -d / 2, -d / 2, d, d);
+      const wash = g.createRadialGradient(0, 0, R * 0.2, 0, 0, R - 6);
+      wash.addColorStop(0, 'rgba(6,7,9,0.62)');
+      wash.addColorStop(1, 'rgba(6,7,9,0.3)');
+      g.fillStyle = wash;
+      g.beginPath();
+      g.arc(0, 0, R - 6, 0, Math.PI * 2);
+      g.fill();
+    } else {
+      g.strokeStyle = 'rgba(176,141,87,0.6)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(0, 0, R, 0, Math.PI * 2);
+      g.stroke();
+    }
     g.font = '16px "IM Fell English SC", serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    for (const [t, a] of [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]] as const) g.fillText(L(`compass.${t}`), Math.sin(a) * (R - 14), -Math.cos(a) * (R - 14));
+    for (const [t, a] of [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]] as const) {
+      const lx = Math.sin(a) * (R - 16), ly = -Math.cos(a) * (R - 16);
+      g.fillStyle = 'rgba(0,0,0,0.8)';
+      g.fillText(L(`compass.${t}`), lx + 1, ly + 1);
+      g.fillStyle = t === 'N' ? '#e8c46a' : 'rgba(216,210,196,0.9)';
+      g.fillText(L(`compass.${t}`), lx, ly);
+    }
     const you = state.you!;
-    // No-go wedge (relative to wind source).
+    // The no-go sector: a red haze toward the wind, soft at the rim, no hard wedge.
     const from = state.wind[0] + Math.PI;
     const nogo = ((state.ownStats?.noGoDeg ?? 50) * Math.PI) / 180;
-    g.fillStyle = 'rgba(208,106,94,0.18)';
+    const haze = g.createRadialGradient(0, 0, 0, 0, 0, R - 8);
+    haze.addColorStop(0, 'rgba(208,106,94,0)');
+    haze.addColorStop(0.55, 'rgba(208,106,94,0.22)');
+    haze.addColorStop(1, 'rgba(208,106,94,0.05)');
+    g.fillStyle = haze;
     g.beginPath();
     g.moveTo(0, 0);
-    g.arc(0, 0, R - 2, from - nogo - Math.PI / 2, from + nogo - Math.PI / 2);
+    g.arc(0, 0, R - 8, from - nogo - Math.PI / 2, from + nogo - Math.PI / 2);
     g.closePath();
     g.fill();
-    // Wind arrow (blowing toward).
+    // The wind: a tapered steel-blue vane from where it blows toward where it goes, broader in a strong wind.
     const wv = headingVec(state.wind[0]);
-    g.strokeStyle = 'rgba(143,179,217,0.95)';
-    g.lineWidth = 3 + state.wind[1] * 3;
+    const nx = -wv.y, ny = wv.x;
+    const half = 2 + state.wind[1] * 3.5;
+    const tail = -R * 0.72, neck = R * 0.34, tip = R * 0.62;
+    const vane = g.createLinearGradient(wv.x * tail, wv.y * tail, wv.x * tip, wv.y * tip);
+    vane.addColorStop(0, 'rgba(143,179,217,0.15)');
+    vane.addColorStop(1, 'rgba(170,200,230,0.95)');
+    g.fillStyle = vane;
     g.beginPath();
-    g.moveTo(-wv.x * R * 0.8, -wv.y * R * 0.8);
-    g.lineTo(wv.x * R * 0.5, wv.y * R * 0.5);
-    g.stroke();
-    g.fillStyle = 'rgba(143,179,217,0.95)';
-    g.beginPath();
-    g.moveTo(wv.x * R * 0.7, wv.y * R * 0.7);
-    g.lineTo(wv.x * R * 0.45 - wv.y * 10, wv.y * R * 0.45 + wv.x * 10);
-    g.lineTo(wv.x * R * 0.45 + wv.y * 10, wv.y * R * 0.45 - wv.x * 10);
-    g.fill();
-    // Ship heading.
-    g.rotate(you.h);
-    g.fillStyle = '#e0b862';
-    g.beginPath();
-    g.moveTo(0, -R * 0.6);
-    g.lineTo(9, 10);
-    g.lineTo(0, 4);
-    g.lineTo(-9, 10);
+    g.moveTo(wv.x * tail + nx * 1, wv.y * tail + ny * 1);
+    g.lineTo(wv.x * neck + nx * half, wv.y * neck + ny * half);
+    g.lineTo(wv.x * neck + nx * (half + 6), wv.y * neck + ny * (half + 6));
+    g.lineTo(wv.x * tip, wv.y * tip);
+    g.lineTo(wv.x * neck - nx * (half + 6), wv.y * neck - ny * (half + 6));
+    g.lineTo(wv.x * neck - nx * half, wv.y * neck - ny * half);
+    g.lineTo(wv.x * tail - nx * 1, wv.y * tail - ny * 1);
     g.closePath();
     g.fill();
+    // Her heading: a brass needle, lit on one flank and shaded on the other, on a dark pin.
+    g.rotate(you.h);
+    g.shadowColor = 'rgba(0,0,0,0.7)';
+    g.shadowBlur = 4;
+    g.fillStyle = '#e8c46a';
+    g.beginPath();
+    g.moveTo(0, -R * 0.64);
+    g.lineTo(7, 0);
+    g.lineTo(0, R * 0.2);
+    g.closePath();
+    g.fill();
+    g.shadowBlur = 0;
+    g.fillStyle = '#9c7a3c';
+    g.beginPath();
+    g.moveTo(0, -R * 0.64);
+    g.lineTo(-7, 0);
+    g.lineTo(0, R * 0.2);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#1a140d';
+    g.beginPath();
+    g.arc(0, 0, 4, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = '#c9a25a';
+    g.lineWidth = 1.5;
+    g.stroke();
     g.restore();
     const rel = Math.round(relWindDeg(you.h, { dir: state.wind[0], strength: state.wind[1] }));
     const pt = rel < (state.ownStats?.noGoDeg ?? 50) ? 'irons' : rel < 80 ? 'close' : rel < 110 ? 'beam' : rel < 160 ? 'broad' : 'running';

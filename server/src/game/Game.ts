@@ -24,6 +24,7 @@ import { payInformant, stepWanted, wantedKill } from './wanted.ts';
 import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
 import { dropDeepLine, endFight, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
 import { chooseEncounter, stepDirector } from './director.ts';
+import { stepSeaLife } from './sealife.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
@@ -731,6 +732,7 @@ export class Game {
 
     for (const s of this.sessions) stepRefit(this, s); // yards finish their work by the wall clock
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
+    stepSeaLife(this); // the small life of the sea between the director's encounters
     stepFishing(this); // shoals, nets, rods, lamps and pots (docs/12 P3)
     beastSecond(this); // the beasts rise and go, the carcasses bleed and are flensed (docs/12 P4)
     stepWanted(this); // the named pirates, their trail, their lairs; the hunters (docs/12 P5)
