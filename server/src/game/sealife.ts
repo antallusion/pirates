@@ -8,6 +8,7 @@ import { headingVec } from '../../../shared/src/math.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { beastsPass } from './beasts.ts';
 import { quietSea } from './director.ts';
+import { onboardingProtected } from './onboarding.ts';
 import { shoalNear } from './fishing.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
@@ -59,14 +60,17 @@ export function stepSeaLife(game: Game): void {
       due.set(s.accountId, game.now + game.rng.range(LIFE_EVERY[0], LIFE_EVERY[1]));
       continue;
     }
-    if (!quietSea(game, s)) {
+    // The First Watch keeps the director's cards away, not the sea's small life (no beasts for a novice, though).
+    const novice = onboardingProtected(s);
+    const calm = novice ? !ship.inCombat(game.now) && ship.state.speed >= 1.5 && !ship.boarding : quietSea(game, s);
+    if (!calm) {
       due.set(s.accountId, Math.max(at, game.now + 8)); // a fight or a harbour puts it off, not ahead
       continue;
     }
     if (game.now < at) continue;
     due.set(s.accountId, game.now + game.rng.range(LIFE_EVERY[0], LIFE_EVERY[1]));
     const roll = game.rng.float();
-    const done = roll < 0.45 ? flotsam(game, s) : roll < 0.75 ? shoalNear(game, ship.state.x, ship.state.y, ship.region) : beastsPass(game, ship);
+    const done = roll < 0.45 ? flotsam(game, s) : roll < 0.75 || novice ? shoalNear(game, ship.state.x, ship.state.y, ship.region) : beastsPass(game, ship);
     if (!done) flotsam(game, s);
   }
 }

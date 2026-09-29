@@ -61,14 +61,17 @@ export function stepTraffic(game: Game): void {
   for (const s of game.sessions) {
     const ship = s.ship;
     if (!ship || !s.profile || ship.docked || !ship.alive || ship.ghost || (tick + s.accountId) % 3 !== 0) continue;
-    if (onboardingProtected(s) || mine.size >= CAP) continue;
+    if (mine.size >= CAP) continue;
+    // In the First Watch the sea is peaceful but not empty: merchants, fishers and patrols, no rovers.
+    const novice = onboardingProtected(s);
     const safety = REGIONS[ship.region].safety;
     let count = 0;
     game.forShipsNear(ship.state.x, ship.state.y, TRAFFIC_R, (o) => {
       if (o.npcRole && COUNTED.has(o.npcRole) && o.alive) count++;
     });
     if (count >= (TRAFFIC_WANT[safety] ?? 5)) continue;
-    const role = game.rng.weighted(MIX[safety] ?? MIX.contested);
+    const mix = (MIX[safety] ?? MIX.contested).filter(([r]) => !novice || r !== 'pirate');
+    const role = game.rng.weighted(mix);
     // Mostly ahead of her or abeam, where she will meet it; now and then astern, overtaking.
     for (let k = 0; k < 6; k++) {
       const a = ship.state.heading + (game.rng.chance(0.8) ? game.rng.range(-1.8, 1.8) : Math.PI + game.rng.range(-0.8, 0.8));
