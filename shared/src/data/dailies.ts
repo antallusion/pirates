@@ -47,6 +47,8 @@ export interface DailyOrder {
 }
 
 export interface DailyState {
+  /** The days a captain came to sea in a row, and the last of them (the login bonus). */
+  login?: { day: number; streak: number };
   day: number; // days since 1970 (UTC)
   orders: DailyOrder[];
   streak: number; // days in a row with all three done, before today

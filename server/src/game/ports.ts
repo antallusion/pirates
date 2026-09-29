@@ -608,6 +608,25 @@ export function generateContracts(game: Game, port: Port): Contract[] {
       description: `${dest.name} is short of ${GOODS[good].name.toLowerCase()}. Buy it anywhere — the buyer pays on delivery, on top of market price.`,
     });
   }
+  // Errands (owner, 2026-09-29: short jobs with a clock): ten minutes, paid double — letters to the next harbour,
+  // and in the wild waters a rover seen off the harbour mouth.
+  const nearby = game.world.ports.filter((p) => p.id !== port.id && dist(p.x, p.y, port.x, port.y) >= 2500 && dist(p.x, p.y, port.x, port.y) < 10000);
+  if (nearby.length) {
+    const dest = nearby.reduce((a, b) => (dist(a.x, a.y, port.x, port.y) < dist(b.x, b.y, port.x, port.y) ? a : b));
+    const d = dist(dest.x, dest.y, port.x, port.y);
+    out.push({
+      id: `c${contractSeq++}`, kind: 'courier', title: `Urgent: sealed letters to ${dest.name}`, fromPort: port.id, toPort: dest.id,
+      reward: Math.round((240 + d / 25) * game.econRewardMul), xp: Math.round(120 + d / 60), expiresAt: now + 600,
+      description: 'Ten minutes, and the dispatch is worth nothing. The quickest captain in port is paid double.',
+    });
+  }
+  if (REGIONS[port.region].safety !== 'safe') {
+    out.push({
+      id: `c${contractSeq++}`, kind: 'bounty', title: 'Urgent bounty: 1 pirate ship', fromPort: port.id, targetFaction: 'confederacy', kills: 1, progress: 0,
+      reward: Math.round((520 + rng.int(0, 120)) * game.econRewardMul), xp: 300, expiresAt: now + 600,
+      description: 'A rover was sighted off the harbour mouth. Sink or take her within ten minutes.',
+    });
+  }
   return out;
 }
 

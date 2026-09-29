@@ -248,15 +248,24 @@ export function buyWare(game: Game, s: PlayerSession, port: Port, index: number)
 // ------------------------------------------------------------------------------------------------ loot
 
 const DROP: Partial<Record<string, number>> = { pirate: 0.35, merchant: 0.25, patrol: 0.3, hunter: 0.45, ghost: 0.45, escort: 0.1 };
+/** Every ship of the sea is worth the chase (owner, 2026-09-29): the chance on top of DROP, a fisher's boat too. It is
+ * rolled on the wreck's own dice, so the sea's stream of chance (and the balance sims that replay it) is unchanged. */
+const DROP_MORE: Partial<Record<string, number>> = { pirate: 0.1, merchant: 0.1, patrol: 0.05, hunter: 0.05, ghost: 0.05, escort: 0.05, fisher: 0.12 };
 
 /** What a sunk ship of the sea leaves in the water besides her cargo: an item now and then (an elite's always). */
 export function rollDrop(game: Game, victim: ShipEntity): Item | null {
   if (victim.isPlayer || !victim.onLadder || !victim.npcRole) return null;
   const elite = victim.elite;
-  if (!elite && !game.rng.chance(DROP[victim.npcRole] ?? 0)) return null;
+  let rng = game.rng;
+  if (!elite && !game.rng.chance(DROP[victim.npcRole] ?? 0)) {
+    const more = DROP_MORE[victim.npcRole] ?? 0;
+    const own = new Rng(victim.id * 7919 + Math.floor(game.now));
+    if (!own.chance(more / Math.max(0.01, 1 - (DROP[victim.npcRole] ?? 0)))) return null;
+    rng = own;
+  }
   // Merchants carry trade gear, warships the gun deck's, pirates the captain's own.
   const slots: Slot[] = victim.npcRole === 'merchant' ? ['hold', 'ring', 'banner', 'compass', 'coat'] : victim.npcRole === 'pirate' ? [...CAPTAIN_SLOTS, 'battery', 'banner', 'quarters'] : [...SHIP_SLOTS.filter((x) => x !== 'tackle'), 'spyglass', 'hat', 'pistols'];
-  return makeItem(game.rng, 0, { ilvl: victim.shipLevel, source: elite ? 'elite' : 'common', slots });
+  return makeItem(rng, 0, { ilvl: victim.shipLevel, source: elite ? 'elite' : 'common', slots });
 }
 
 /** An item fished out of the water into the locker; a full locker leaves it floating. */

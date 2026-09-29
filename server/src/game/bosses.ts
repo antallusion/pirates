@@ -88,7 +88,7 @@ export interface Fight {
 
 interface Schedule {
   next: Partial<Record<BossId, number>>; // wall-clock ms of the next rising
-  pending: Partial<Record<BossId, { at: number; x: number; y: number }>>;
+  pending: Partial<Record<BossId, { at: number; x: number; y: number; warned?: boolean }>>;
 }
 
 const KRAKEN_ARMS = 8;
@@ -153,6 +153,13 @@ export class BossHub {
         dirty = true;
         continue;
       }
+      // Five minutes before, the whole sea hears it (owner, 2026-09-29: events everyone sails to).
+      if (pend && !pend.warned && wall >= pend.at - 5 * 60_000) {
+        pend.warned = true;
+        dirty = true;
+        const region = REGIONS[regionAt(game.world, pend.x, pend.y)].name;
+        for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${def.name} rises in ${region} within five minutes!`, kind: 'bad' });
+      }
       if (pend && wall >= pend.at) {
         const late = wall - pend.at > (def.every * 1000) / 2;
         if (!late && !windowOpen(game, def, regionAt(game.world, pend.x, pend.y))) continue;
@@ -161,6 +168,8 @@ export class BossHub {
         dirty = true;
         if (late || !game.rng.chance(def.chance)) continue;
         summon(game, id, pend.x, pend.y);
+        const region = REGIONS[regionAt(game.world, pend.x, pend.y)].name;
+        for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${def.name} has risen in ${region}. Every captain who dares, to arms!`, kind: 'bad' });
       }
     }
     if (dirty) this.save(game);
@@ -236,6 +245,12 @@ function announce(game: Game, def: BossDef, x: number, y: number, mins: number):
     const governor = gov !== null && game.guilds.of(game, s.accountId)?.id === gov;
     if (governor) game.sendTo(s, { t: 'toast', msg: `Governor's dispatch: ${text}`, kind: 'gold' });
     else if (def.regions.includes(sh.region) || dist(sh.state.x, sh.state.y, x, y) < 20000) game.sendTo(s, { t: 'toast', msg: `Tavern talk: ${text}`, kind: 'info' });
+  }
+  // The rest of the sea hears of it too, as world news with the time left.
+  for (const s of game.sessions) {
+    const sh = s.ship;
+    if (sh && (def.regions.includes(sh.region) || dist(sh.state.x, sh.state.y, x, y) < 20000)) continue;
+    game.sendTo(s, { t: 'toast', msg: `WORLD: ${def.name} will rise in ${region} in about ${Math.max(1, mins)} min.`, kind: 'info' });
   }
   game.log(`[boss] ${def.id} announced at ${Math.round(x)},${Math.round(y)} (in ~${mins} min)`);
 }

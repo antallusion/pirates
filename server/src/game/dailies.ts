@@ -4,6 +4,8 @@
 import { DAILY_DEFS, chestReward, dailyReward, dayOf, rollDailies } from '../../../shared/src/data/dailies.ts';
 import type { DailyKind, DailyState } from '../../../shared/src/data/dailies.ts';
 import type { Game } from './Game.ts';
+import { fishOfDay } from './fishing.ts';
+import { FISH } from '../../../shared/src/data/fishing.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { QuestEvent } from './quests.ts';
 
@@ -26,6 +28,17 @@ export function dailyRollover(game: Game, s: PlayerSession): boolean {
   if (p.daily.day === today) return false;
   if (p.daily.lastFullDay < today - 1) p.daily.streak = 0;
   p.daily = { ...p.daily, day: today, orders: rollDailies(String(s.accountId), today, p.level), chest: false };
+  // The day's welcome (owner, 2026-09-29: a reason to come back): silver by the days in a row, up to a week, and the
+  // fish of the day to look for.
+  if (!game.directorOn) return true; // the living sea's own welcome (off in most tests)
+  const last = p.daily.login;
+  const streak = last && last.day === today - 1 ? Math.min(30, last.streak + 1) : 1;
+  p.daily.login = { day: today, streak };
+  const silver = Math.round(60 * Math.min(7, streak) * (1 + p.level / 20));
+  p.gold += silver;
+  game.db.ledger(s.accountId, 'login', silver, `day ${streak}`);
+  game.sendTo(s, { t: 'toast', msg: `Day ${streak} at sea in a row: the harbour-master pays you ${silver} silver.`, kind: 'gold' });
+  game.sendTo(s, { t: 'toast', msg: `Fish of the day: ${FISH[fishOfDay(game)].name[0]} — twice the catch.`, kind: 'info' });
   return true;
 }
 

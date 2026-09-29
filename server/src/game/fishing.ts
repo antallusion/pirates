@@ -260,8 +260,17 @@ function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units
   }
   const f = s.profile!.fishing!;
   const c = (f.caught[fish] ??= { n: 0, best: 0 });
-  c.n += got;
+  // The fish of the day (owner, 2026-09-29): one kind a day, twice the catch of it.
+  let bonus = 0;
+  if (fish === fishOfDay(game)) bonus = giveGoods(ship, def.good as GoodId, got);
+  c.n += got + bonus;
+  const first = c.best <= 0;
+  const best = !first && kg > c.best;
   if (kg > c.best) c.best = Math.round(kg * 10) / 10;
+  // Every haul is told (not only a fight): what came up, and a best of the kind.
+  if (bonus > 0) game.sendTo(s, { t: 'toast', msg: `Fish of the day! ${def.name[0]} ×${got + bonus}`, kind: 'gold' });
+  else if (!fought) game.sendTo(s, { t: 'toast', msg: `Into the net: ${def.name[0]} ×${got}`, kind: 'good' });
+  if (best && (fought || def.trophy)) game.sendTo(s, { t: 'toast', msg: `Your best ${def.name[0]} yet: ${Math.round(kg * 10) / 10} kg!`, kind: 'gold' });
   // The sea's record for the kind: a fish fought on the line, or a trophy in the net.
   if (fought || def.trophy) {
     const rec = game.db.getKv<Record<string, { name: string; kg: number }>>('fish_records') ?? {};
@@ -275,6 +284,13 @@ function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units
   questEvent(game, s, { k: 'catch', units: got, kg, fought });
   holidayCatch(game, s, kg * Math.max(1, got)); // the Herring Run's tournament (docs/12 P10 #18)
   return got;
+}
+
+/** The day's kind (the same for everyone, by the calendar day): the common net fish, one in turn. */
+export function fishOfDay(game: Game): FishId {
+  const day = Math.floor(game.wallNow() / 86_400_000);
+  const pool = FISH_IDS.filter((id) => FISH[id].methods.includes('net') && FISH[id].skill <= 20);
+  return pool[((day % pool.length) + pool.length) % pool.length];
 }
 
 /** Now and then the water gives more than fish. */

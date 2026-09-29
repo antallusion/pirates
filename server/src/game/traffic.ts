@@ -7,7 +7,8 @@
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dist, headingVec } from '../../../shared/src/math.ts';
 import { onboardingProtected } from './onboarding.ts';
-import { spawnTraffic } from './npc.ts';
+import { spawnPirate, spawnTraffic } from './npc.ts';
+import { quietSea } from './director.ts';
 import type { Game } from './Game.ts';
 
 /** How near counts as about her, and how far off a new ship is put out (beyond her screen, inside her chart). */
@@ -29,11 +30,64 @@ type Role = 'merchant' | 'fisher' | 'patrol' | 'pirate';
 const COUNTED = new Set(['merchant', 'fisher', 'patrol', 'pirate', 'escort', 'hunter', 'ghost']);
 
 const local = new WeakMap<Game, Set<number>>();
+/** When each captain is next hunted (wild waters only). */
+const hunts = new WeakMap<Game, Map<number, number>>();
+/** Seconds between two rovers put out after a captain in contested and lawless waters. */
+export const HUNT_EVERY: [number, number] = [210, 330];
+
+/** The eight points of the compass, from a bearing (0 = north, clockwise). */
+export function compassPoint(a: number): string {
+  const names = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+  return names[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8];
+}
+
+/** A rover put out after her now and then in the wild waters, with the lookout's warning where she comes from. */
+function hunt(game: Game, s: import('./player.ts').PlayerSession): void {
+  const ship = s.ship!;
+  let due = hunts.get(game);
+  if (!due) hunts.set(game, (due = new Map()));
+  const at = due.get(s.accountId);
+  if (at === undefined) {
+    due.set(s.accountId, game.now + game.rng.range(HUNT_EVERY[0] * 0.5, HUNT_EVERY[1] * 0.5));
+    return;
+  }
+  if (game.now < at) return;
+  if (REGIONS[ship.region].safety === 'safe' || onboardingProtected(s) || !quietSea(game, s)) return;
+  // One rover at a time is enough.
+  for (const b of game.npcs.values()) if (b.chase?.id === ship.id && game.ships.get(b.id)?.alive) return;
+  due.set(s.accountId, game.now + game.rng.range(HUNT_EVERY[0], HUNT_EVERY[1]));
+  const p = spawnPirate(game, ship);
+  if (!p) return;
+  localTraffic(game).add(p.id);
+  game.grid.upsert(p.id, p.state.x, p.state.y);
+  const a = Math.atan2(p.state.x - ship.state.x, -(p.state.y - ship.state.y));
+  const km = (dist(p.state.x, p.state.y, ship.state.x, ship.state.y) / 1000).toFixed(1);
+  game.toastShip(ship, `Sail to the ${compassPoint(a)}, ${km} km off: a pirate is coming for you!`, 'bad');
+}
 
 export function localTraffic(game: Game): Set<number> {
   let s = local.get(game);
   if (!s) local.set(game, (s = new Set()));
   return s;
+}
+
+const hails = new WeakMap<Game, Map<number, number>>();
+
+/** A patrol near her speaks: a salute to an honest captain, a long look at a known one, guns for a wanted one. */
+function hail(game: Game, s: import('./player.ts').PlayerSession): void {
+  const ship = s.ship!;
+  let last = hails.get(game);
+  if (!last) hails.set(game, (last = new Map()));
+  if (game.now - (last.get(s.accountId) ?? -1e9) < 120) return;
+  let patrol: import('./ship.ts').ShipEntity | null = null;
+  game.forShipsNear(ship.state.x, ship.state.y, 700, (o) => {
+    if (o.npcRole === 'patrol' && o.alive && !patrol) patrol = o;
+  });
+  if (!patrol) return;
+  last.set(s.accountId, game.now);
+  const w = ship.wantedCache;
+  const msg = w >= 3 ? `${(patrol as import('./ship.ts').ShipEntity).name} runs out her guns: the Crown wants your head!` : w >= 1 ? `${(patrol as import('./ship.ts').ShipEntity).name} has her glasses on you: the Crown knows your face.` : `${(patrol as import('./ship.ts').ShipEntity).name} dips her ensign to you: fair winds, captain.`;
+  game.toastShip(ship, msg, w >= 3 ? 'bad' : 'info');
 }
 
 /** Every second (a captain's turn every three): top up the traffic about her; let the far ones go. */
@@ -60,7 +114,10 @@ export function stepTraffic(game: Game): void {
   const tick = Math.floor(game.now);
   for (const s of game.sessions) {
     const ship = s.ship;
-    if (!ship || !s.profile || ship.docked || !ship.alive || ship.ghost || (tick + s.accountId) % 3 !== 0) continue;
+    if (!ship || !s.profile || ship.docked || !ship.alive || ship.ghost) continue;
+    hunt(game, s);
+    hail(game, s);
+    if ((tick + s.accountId) % 3 !== 0) continue;
     if (mine.size >= CAP) continue;
     // In the First Watch the sea is peaceful but not empty: merchants, fishers and patrols, no rovers.
     const novice = onboardingProtected(s);
@@ -80,6 +137,13 @@ export function stepTraffic(game: Game): void {
       const out = spawnTraffic(game, role, ship.state.x + v.x * r, ship.state.y + v.y * r, { x: ship.state.x, y: ship.state.y });
       if (out) {
         mine.add(out.id);
+        // Now and then a rich one, deep in the water: a prize worth the chase, and the lookout says so.
+        if (role === 'merchant' && !novice && game.rng.chance(0.15)) {
+          out.purse *= 4;
+          for (const g in out.cargo) out.cargo[g as keyof typeof out.cargo] = (out.cargo[g as keyof typeof out.cargo] ?? 0) * 2;
+          const b = Math.atan2(out.state.x - ship.state.x, -(out.state.y - ship.state.y));
+          game.toastShip(ship, `Lookout: a rich merchant, ${out.name}, deep in the water to the ${compassPoint(b)}!`, 'gold');
+        }
         break;
       }
     }

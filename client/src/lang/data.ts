@@ -17,6 +17,7 @@ import * as shipbuild from '../../../shared/src/data/shipbuild.ts';
 import * as ships from '../../../shared/src/data/ships.ts';
 import * as talents from '../../../shared/src/data/talents.ts';
 import * as regions from '../../../shared/src/world/regions.ts';
+import { FISH } from '../../../shared/src/data/fishing.ts';
 import { typeset } from '../i18n.ts';
 import type { Lang } from '../i18n.ts';
 import { DATA_RU_CORE } from './data.ru.ts';
@@ -32,6 +33,8 @@ export const NAME_RU = new Map<string, string>();
 export const COMMON_RU = new Set<string>();
 /** Every English data text → Russian (descriptions that reach the client through the server, e.g. a port's). */
 export const TEXT_RU = new Map<string, string>();
+// The catch carries both names in its own table (not the flat overlay): the fish in a server sentence, in Russian.
+for (const f of Object.values(FISH)) NAME_RU.set(f.name[0], f.name[1]);
 
 function resolve(path: string): { obj: Record<string, unknown>; key: string } | null {
   const parts = path.split('.');

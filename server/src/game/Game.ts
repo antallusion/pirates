@@ -907,6 +907,15 @@ export class Game {
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
       if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });
+      // A storm is an event, not only a danger (owner, 2026-09-29): told the stakes as it breaks, paid for riding it out.
+      if (wPrev && wPrev !== wNow && wNow === 'storm' && !s.ship.docked) this.sendTo(s, { t: 'toast', msg: 'Ride out the storm at sea: the sea pays back those who stay.', kind: 'info' });
+      if (wPrev === 'storm' && wNow !== 'storm' && !s.ship.docked && s.ship.alive) {
+        this.grantXp(s, 120 + s.ship.cls.tier * 40, 'Rode out the storm');
+        const v = headingVec(this.rng.float() * Math.PI * 2);
+        const good = this.rng.pick(['sailcloth', 'planks', 'spices', 'rum', 'pearls'] as GoodId[]);
+        this.dropPrivateLoot(s.accountId, s.ship.state.x + v.x * 220, s.ship.state.y + v.y * 220, { [good]: good === 'pearls' ? this.rng.int(1, 3) : this.rng.int(3, 8) }, 300);
+        this.sendTo(s, { t: 'toast', msg: 'The storm has passed. Something floats where it raged.', kind: 'good' });
+      }
       this.lastWeather.set(s, wNow);
       if (this.tick % 60 < 20) this.sendFronts(s);
       const region = s.ship.region;
@@ -1670,7 +1679,8 @@ export class Game {
     }
     // The hull itself breaks up into salvage.
     for (const [g, n] of Object.entries(wreckSalvage(ship))) cargo[g as GoodId] = (cargo[g as GoodId] ?? 0) + (n ?? 0);
-    let gold = ship.isPlayer ? 0 : Math.floor(ship.purse * 0.5);
+    // A ship of the sea always leaves some silver in the water, by her size (none is a waste of a broadside).
+    let gold = ship.isPlayer ? 0 : Math.max(Math.floor(ship.purse * 0.5), frac > 0 ? 25 * ship.cls.tier + (ship.id % 20) : 0);
     if (ship.isPlayer) {
       const p = this.profileOf(ship);
       if (p) {
@@ -1703,6 +1713,11 @@ export class Game {
     this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);
     onFightWon(this, s);
     questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
+    // The taverns talk (owner, 2026-09-29: the ports should know what a captain has done).
+    if (!victim.cls.monster || victim.npcRole === 'beast') {
+      const where = this.nearestIslandName(victim.state.x, victim.state.y);
+      this.addRumor(victim.state.x, victim.state.y, how === 'sunk' ? `${s.name} sent ${victim.name} to the bottom off ${where}.` : `${s.name} took ${victim.name} by boarding off ${where}.`);
+    }
     if (victim.npcRole === 'ghost' && this.weatherOf(victim) === 'fog') tattooCount(this, s, 'fog_ghosts'); // Whispers in the Fog (docs/12 P9)
     if (how === 'sunk' && victim.npcRole === 'ghost') omenKept(this, s, 'ghost'); // the omen of the day (docs/12 P10 #9)
     if (how === 'sunk' && victim.npcRole === 'merchant') omenBroken(this, s, 'merchant');
@@ -1984,7 +1999,25 @@ export class Game {
       for (const o of s.profile.company.officers) if (o.traits.includes('cruel')) o.loyalty = Math.max(0, o.loyalty - 10);
     }
     if (!target.isPlayer) mapChance(this, s, target.npcRole === 'pirate' ? 0.1 : 0.05, target.npcRole === 'pirate' ? 2 : 1, "In her captain's cabin");
-    const kept = plunderShare(this, s, pend.result.gold);
+    let kept = plunderShare(this, s, pend.result.gold);
+    // A group shares the purse (owner, 2026-09-29): the mates within convoy range each get an equal part.
+    const g = groupOfAccount(this, s.accountId);
+    const mates: PlayerSession[] = [];
+    for (const acc of g?.members ?? []) {
+      if (acc === s.accountId) continue;
+      const ms = this.sessionByAccount(acc);
+      if (ms?.ship && ms.profile && ms.ship.alive && dist(ms.ship.state.x, ms.ship.state.y, target.state.x, target.state.y) <= CONVOY_RANGE) mates.push(ms);
+    }
+    if (mates.length && kept > 0) {
+      const part = Math.floor(kept / (mates.length + 1));
+      for (const ms of mates) {
+        ms.profile!.gold += part;
+        this.db.ledger(ms.accountId, 'plunder', part, target.name);
+        this.sendTo(ms, { t: 'toast', msg: `Your share of ${target.name}'s purse: ${part} silver.`, kind: 'gold' });
+        this.pushSelf(ms, true);
+      }
+      kept -= part * mates.length;
+    }
     s.profile.gold += kept;
     if (pend.result.gold) this.db.ledger(s.accountId, 'plunder', kept, target.name);
     if (!target.isPlayer) target.purse = 0;

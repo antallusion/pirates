@@ -41,12 +41,31 @@ const LOSE_R = 4500;
 const LIFE_SEC = 6 * 60;
 /** No encounters within this of a port. */
 const HARBOUR_R = 1500;
+/** Encounters that lead on (owner, 2026-09-29: one thing should lead to the next): what she chose, what may follow,
+ * how likely, and after how many seconds. The follow-up still has to fit her waters; it shows as a sign as usual. */
+export const FOLLOW: Partial<Record<EncounterId, { choice: string; next: EncounterId; chance: number; after: number }[]>> = {
+  raft: [{ choice: 'take', next: 'bottle', chance: 0.5, after: 40 }],
+  bottle: [{ choice: 'fish', next: 'flotsam', chance: 0.45, after: 35 }],
+  flotsam: [{ choice: 'gather', next: 'barrel', chance: 0.45, after: 30 }],
+  barrel: [{ choice: 'fish', next: 'derelict', chance: 0.3, after: 45 }],
+  derelict: [{ choice: 'search', next: 'ambush', chance: 0.4, after: 25 }],
+  burning_ship: [{ choice: 'grab', next: 'ambush', chance: 0.35, after: 25 }],
+  fishermen: [{ choice: 'help', next: 'peddler', chance: 0.4, after: 40 }, { choice: 'help', next: 'bird_shoal', chance: 0.3, after: 30 }],
+  mapmaker: [{ choice: 'rescue', next: 'sunken_bell', chance: 0.35, after: 50 }],
+  smuggler: [{ choice: 'buy', next: 'patrol_search', chance: 0.45, after: 45 }],
+  sinking_merchant: [{ choice: 'save', next: 'raft', chance: 0.35, after: 40 }],
+  dolphins: [{ choice: '', next: 'bird_shoal', chance: 0.3, after: 30 }],
+  albatross: [{ choice: 'shoot', next: 'squall', chance: 0.6, after: 30 }],
+};
+
 /** The same encounter not again within this. */
 const REPEAT_SEC = 12 * 60;
 
 interface Pace {
   tension: number;
   threshold: number;
+  /** The next link of a chain (FOLLOW): what comes of what she chose, and when. */
+  chain?: { def: EncounterId; at: number } | null;
   last: Partial<Record<EncounterId, number>>;
   sightsKey: string;
 }
@@ -261,6 +280,15 @@ export function stepDirector(game: Game): void {
     const mine = [...S.live.values()].some((l) => l.account === s.accountId && !l.resolved);
     const still = !quietSea(game, s);
     if (!still && !mine) pace.tension += Math.min(2, 0.6 + ship.state.speed / 12);
+    // A chain's next link comes in its own time, before the next of the sea's own.
+    if (pace.chain && game.now >= pace.chain.at && !mine && !still) {
+      const next = pace.chain.def;
+      pace.chain = null;
+      if (fits(game, s, ENCOUNTERS[next]) && startEncounter(game, s, next)) {
+        pace.tension = 0;
+        continue;
+      }
+    }
     if (pace.tension >= pace.threshold && !mine && !still) {
       pace.tension = 0;
       pace.threshold = newThreshold(game, safety);
@@ -321,6 +349,13 @@ interface Vars {
 function settle(game: Game, s: PlayerSession, live: Live, choice: string): void {
   live.resolved = true;
   const r = resolve(game, s, live, choice);
+  const pace = paceOf(game, s);
+  for (const f of FOLLOW[live.def] ?? []) {
+    if (f.choice !== choice && !(f.choice === '' && !ENCOUNTERS[live.def].choices.length)) continue;
+    if (!game.rng.chance(f.chance)) continue;
+    pace.chain = { def: f.next, at: game.now + f.after };
+    break;
+  }
   for (const w of watchers(game, live)) game.sendTo(w, { t: 'encounter_result', id: live.id, def: live.def, outcome: r.outcome, vars: r.vars });
   game.pushSelf(s, true);
 }
