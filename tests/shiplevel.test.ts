@@ -77,14 +77,16 @@ test('a merchant carries at least two and a half times a warship of her level, a
   assert.equal(combatLevelOf('brig', 5), 5);
 });
 
-test('the ladder: among captains a junior is cut hard and floored; at sea he is cut softer; a group of juniors lifts the floor', () => {
+test('the ladder: among captains a junior is cut hard and floored; at sea he is cut softer; a group of juniors lifts the floor or the cut', () => {
   const j1 = ladder(1, 2, true);
   assert.deepEqual([j1.dealt, j1.crits, j1.board, j1.floorHull], [0.5, 0, false, 0.25]);
   assert.equal(ladder(2, 1, true).dealt, 1.25);
   assert.equal(ladder(1, 4, true).dealt, 0, 'three levels up: the shot does nothing');
   assert.equal(ladder(1, 2, true, true).floorHull, 0, 'a company of juniors may finish her');
   const e1 = ladder(1, 2, false);
-  assert.deepEqual([e1.dealt, e1.crits, e1.board, e1.floorHull], [0.65, 0.35, true, 0]);
+  assert.deepEqual([e1.dealt, e1.crits, e1.board, e1.floorHull], [0.5, 0.35, true, 0]);
+  assert.equal(ladder(1, 2, false, true).dealt, 1, 'a company of juniors fights a bot a level up as her equals');
+  assert.ok(ladder(1, 4, false, true).floorHull > 0, 'three levels up she is a skull to a company too');
   assert.equal(ladder(1, 3, false).board, false);
   assert.ok(ladder(1, 4, false).floorHull > 0, 'a bot three levels up cannot be sunk');
   assert.deepEqual(ladder(3, 3, true), { dealt: 1, crits: 1, board: true, floorHull: 0, floorCrew: 0 });

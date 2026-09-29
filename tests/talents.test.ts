@@ -31,6 +31,7 @@ function atSea(game: Game, name: string): { s: PlayerSession; ship: ShipEntity; 
   ship.state.y = 80000;
   ship.state.heading = 0;
   ship.state.speed = 0;
+  ship.state.sail = 0; // lying to: under any canvas a ship makes way now
   ship.protectedUntil = 0;
   ship.input = { rudder: 0, sailTarget: 0 };
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
@@ -47,9 +48,13 @@ function setTalents(game: Game, s: PlayerSession, ranks: TalentRanks): void {
 function enemyAbeam(game: Game, ship: ShipEntity, distance: number, cls: 'fluyt' | 'brig' = 'fluyt'): ShipEntity {
   const v = headingVec(ship.state.heading + Math.PI / 2);
   const npc = game.spawnNpcShip('pirate', cls, 'confederacy', ship.state.x + v.x * distance, ship.state.y + v.y * distance, ship.state.heading);
-  game.npcs.delete(npc.id); // a hulk that holds still
+  game.npcs.delete(npc.id); // a hulk that holds still, exactly abeam
+  npc.state.x = ship.state.x + v.x * distance;
+  npc.state.y = ship.state.y + v.y * distance;
+  npc.state.heading = ship.state.heading;
   npc.input = { rudder: 0, sailTarget: 0 };
   npc.state.speed = 0;
+  npc.state.sail = 0;
   game.grid.upsert(npc.id, npc.state.x, npc.state.y);
   return npc;
 }

@@ -1,0 +1,70 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gravetide",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "server/src/main.ts"
+      ],
+      "env": {
+        "PORT": "58521"
+      },
+      "port": 58521
+    },
+    {
+      "name": "showcase-port",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "tools/showcase-server.ts"
+      ],
+      "env": {
+        "PORT": "8093",
+        "SHOWCASE": "port"
+      },
+      "port": 8093
+    },
+    {
+      "name": "showcase-kraken",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "tools/showcase-server.ts"
+      ],
+      "env": {
+        "PORT": "8094",
+        "SHOWCASE": "boss:kraken"
+      },
+      "port": 8094
+    },
+    {
+      "name": "showcase-rich",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "tools/showcase-server.ts"
+      ],
+      "env": {
+        "PORT": "8095",
+        "SHOWCASE": "rich"
+      },
+      "port": 8095
+    },
+    {
+      "name": "gravetide-admin",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "server/src/main.ts"
+      ],
+      "env": {
+        "PORT": "58530",
+        "GRAVETIDE_ADMIN": "1",
+        "DB_PATH": "data/qa.db"
+      },
+      "port": 58530
+    }
+  ]
+}

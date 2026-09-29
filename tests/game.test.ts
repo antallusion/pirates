@@ -211,7 +211,11 @@ test('NPC pirates hunt, fight at range, board once and spare the plundered victi
   brain.chase = { id: ship.id, until: 1e9 };
   brain.area = { x: ship.state.x, y: ship.state.y, r: 2000 };
   game.grid.upsert(pirate.id, pirate.state.x, pirate.state.y);
-  steps(game, 20 * 200);
+  // The two of them alone: the contested water's own traffic (a roaming fireship, a patrol) is kept off.
+  for (let t = 0; t < 200; t++) {
+    for (const o of [...game.ships.values()]) if (!o.isPlayer && o.id !== pirate.id && Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 3000) game.removeShip(o.id);
+    steps(game, 20);
+  }
   const evs = c.all('ev').flatMap((m) => m.list);
   assert.ok(evs.filter((e) => e.k === 'volley' && e.ship === pirate.id).length >= 3, 'pirate fired broadsides');
   assert.ok(ship.hull < ship.stats.hullMax, 'player hull damaged');
@@ -503,11 +507,14 @@ test('deck mounts: harpoon tethers and drags, mortar bombs a point, chain gun st
   steps(game, 20 * 6);
   const d1 = Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y);
   assert.ok(d1 < d0 + 60, `cable holds the pair together (${d0.toFixed(0)} → ${d1.toFixed(0)})`);
-  // Mortar: bomb a stationary target.
+  // Mortar: bomb a stationary target (both lying to, the target's brain out of it).
   ship.tether = null;
+  ship.input = { rudder: 0, sailTarget: 0 };
+  ship.state.speed = 0;
   ship.loadout.mount = 'mortar';
   ship.mountReload = 0;
   const far = npcAbeam(game, ship, 'port', 400);
+  game.npcs.delete(far.id);
   const hull0 = far.hull;
   let hit = false;
   for (let i = 0; i < 6 && !hit; i++) {
@@ -540,6 +547,7 @@ test('rare hulls: faction yards, xebec sweeps, bomb ketch twin mortars, fireship
   ship.recompute(game.now);
   ship.hull = ship.stats.hullMax;
   const victim = npcAbeam(game, ship, 'port', 40);
+  game.npcs.delete(victim.id); // she lies to beside the fireship
   const hull0 = victim.hull;
   c.push({ t: 'mount', x: victim.state.x, y: victim.state.y });
   assert.ok(ship.fuseAt > 0);

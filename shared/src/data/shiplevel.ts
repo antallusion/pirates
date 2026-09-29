@@ -168,13 +168,17 @@ const PVP_FLOOR_HULL = [0, 0.25, 0.5, 1];
 const PVP_FLOOR_CREW = [0, 0.5, 0.7, 1];
 /** Against the sea's ships: softer, so a perfect captain wins now and then one level up. */
 /** Tuned by the duel sims (tests/balance): a perfect captain wins about one fight in ten a level up, an average one hardly any. */
-export const PVE_JUNIOR = [1, 0.65, 0.45, 0.15];
+export const PVE_JUNIOR = [1, 0.5, 0.3, 0.15];
 export const PVE_SENIOR = [1, 1.2, 1.35, 1.6];
 export const PVE_CRITS = [1, 0.35, 0, 0];
+/** Juniors who together outweigh a ship of the sea (a company against one a level up) are cut less; three levels
+ *  up she is a skull to a company too. */
+export const PVE_GROUP = [1, 1, 0.6, 0.15];
 
 /**
  * The ladder between a shooter at combat level `a` and a target at combat level `b`.
- * `pvp`: both are captains' ships. `group`: the juniors attacking together outweigh the target (no floor then).
+ * `pvp`: both are captains' ships. `group`: the juniors attacking together outweigh the target (between captains no
+ * floor then; against the sea's ships a softer cut, a skull still floored).
  */
 export function ladder(a: number, b: number, pvp: boolean, group = false): LadderMods {
   const gap = b - a;
@@ -184,7 +188,7 @@ export function ladder(a: number, b: number, pvp: boolean, group = false): Ladde
   if (pvp) {
     return { dealt: PVP_JUNIOR[d], crits: 0, board: false, floorHull: group ? 0 : PVP_FLOOR_HULL[d], floorCrew: group ? 0 : PVP_FLOOR_CREW[d] };
   }
-  return { dealt: PVE_JUNIOR[d], crits: PVE_CRITS[d], board: d < 2, floorHull: d >= 3 ? 0.4 : 0, floorCrew: d >= 3 ? 0.6 : 0 };
+  return { dealt: (group ? PVE_GROUP : PVE_JUNIOR)[d], crits: PVE_CRITS[d], board: d < 2, floorHull: d >= 3 ? 0.4 : 0, floorCrew: d >= 3 ? 0.6 : 0 };
 }
 
 /** Juniors together beat a senior when their budgets reach 1.2 of hers. */

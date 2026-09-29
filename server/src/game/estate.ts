@@ -406,7 +406,7 @@ export function outpostOrder(game: Game, s: PlayerSession, id: string, action: s
     case 'upgrade': {
       if (o.level >= OUTPOST_MAX_LEVEL) return 'It is at its greatest';
       if (!nearOutpost(game, ship, o)) return `Sail to ${isl.name}, or ask at a harbour office in ${REGIONS[isl.region].name}`;
-      const c = outpostUpgrade(o.level);
+      const c = outpostUpgrade(o.level, o.kind);
       const lack = (Object.entries(c.goods) as [GoodId, number][]).filter(([g, n]) => (ship.cargo[g] ?? 0) < n);
       if (lack.length) return `Bring ${Object.entries(c.goods).map(([g, n]) => `${n} ${GOODS[g as GoodId].name.toLowerCase()}`).join(', ')} in the hold to found it.`;
       if (p.gold < c.silver) return `Needs ${c.silver} silver`;

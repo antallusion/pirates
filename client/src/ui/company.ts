@@ -6,7 +6,7 @@ import { personName } from '../lang/names.ts';
 import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { CARAVAN_TASKS, ON_ATTACK, TASK_NAMES, escortCost } from '../../../shared/src/data/caravans.ts';
 import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts';
-import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS, residentIsWoman, residentName } from '../../../shared/src/data/estate.ts';
+import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS, residentIsWoman, residentName, OUTPOST_MAX_LEVEL, outpostUpgrade } from '../../../shared/src/data/estate.ts';
 import type { Guard, OutpostKind, Profession } from '../../../shared/src/data/estate.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
@@ -801,6 +801,7 @@ function estateHtml(state: ClientState): string {
       const days = Math.max(0, Math.floor((o.claimUntil - Date.now()) / 86_400_000));
       return `<div class="est-op${o.raid !== null ? ' est-raid' : ''}"><div>${outpostIcon(o.kind, o.level)}<b>${esc(OUTPOSTS[o.kind].name[ru])}</b> · ${esc(placeName(o.name))} · ${esc(L('est_lvl', { n: o.level }))}
         <div class="muted">${esc(L('est_op_line', { rate: o.rate, good: GOODS[o.good].name.toLowerCase(), store: o.store, cap: o.cap, full, days }))}${o.residents ? ` · ${esc(L('est_op_res', { n: o.residents }))}` : ''}</div>
+        ${o.level < OUTPOST_MAX_LEVEL ? `<div class="muted">${esc(L('est_up_cost', { n: o.level + 1, silver: fmt(outpostUpgrade(o.level, o.kind).silver), goods: goodsList(outpostUpgrade(o.level, o.kind).goods) }))}</div>` : ''}
         ${o.raid !== null ? `<div class="bad">${esc(L('est_raid', { m: Math.floor(o.raid / 60), s: String(o.raid % 60).padStart(2, '0') }))}</div>` : ''}</div>
         <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="haul">${esc(L('est_haul'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="upgrade">${esc(L('est_upgrade'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="renew">${esc(L('est_renew'))}</button>
         <button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="workers" data-arg="${o.workers === 'hands' ? 'none' : 'hands'}">${esc(o.workers === 'hands' ? L('est_hands_off') : L('est_hands_on'))}</button>

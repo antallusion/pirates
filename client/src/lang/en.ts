@@ -90,7 +90,7 @@ export const EN = {
   'hud.wind': "Wind {kn} kn",
   'sail.irons': "in irons",
   'sail.irons.plain': "bow into the wind",
-  'sail.irons.tip': "Head to wind: the sails are aback and she barely moves. Turn until the wind comes onto the side.",
+  'sail.irons.tip': "Head to wind: the sails are aback and she makes half her way at best. Turn until the wind comes onto the side.",
   'sail.close': "close-hauled",
   'sail.close.plain': "sharp into the wind",
   'sail.close.tip': "As close to the wind as she will sail: slower, but it gains ground to windward.",

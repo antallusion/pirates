@@ -14,11 +14,15 @@ import { TATTOOS } from '../shared/src/data/sidequests.ts';
 import { FISH_IDS } from '../shared/src/data/fishing.ts';
 import { PET_IDS } from '../shared/src/data/companions.ts';
 import { BEAST_IDS } from '../shared/src/data/beasts.ts';
+import { ENCOUNTER_IDS } from '../shared/src/data/encounters.ts';
+import { BUILDING_IDS } from '../shared/src/data/holdings.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'manifest.json'), 'utf8')) as { assets: Record<string, { local: string; fit?: string }> };
-const sheets = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'art', 'sheets.json'), 'utf8')) as Record<string, { ids: (string | null)[]; px: number; ratio?: number; square: boolean; mode: string }>;
+const sheets = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'art', 'sheets.json'), 'utf8')) as Record<string, { ids: (string | null)[]; px: number; ratio?: number; square: boolean; mode: string; painting?: boolean }>;
 const onSheets = new Set(Object.values(sheets).flatMap((s) => s.ids.filter((x): x is string => !!x)));
+/** Ids on sheets already painted and cut (a sheet still in the painter's queue is flagged `painting`). */
+const painted = new Set(Object.values(sheets).filter((s) => !s.painting).flatMap((s) => s.ids.filter((x): x is string => !!x)));
 
 /** A webp's size, from its header (VP8, VP8L or VP8X). */
 function webpSize(file: string): [number, number] {
@@ -34,6 +38,7 @@ function webpSize(file: string): [number, number] {
 
 test('what the sheets have given is baked, at its family\'s size', () => {
   for (const [name, sh] of Object.entries(sheets)) {
+    if (sh.painting) continue;
     for (const id of sh.ids) {
       if (!id || !manifest.assets[id]) continue;
       const file = path.join(ROOT, 'assets', manifest.assets[id].local);
@@ -55,6 +60,9 @@ test('every family the game asks for is on a sheet', () => {
     ...namedPirates().map((p) => `portrait.${p.art}`),
     ...PROFESSIONS.flatMap((p) => [`portrait.res_${p}_m`, `portrait.res_${p}_f`]),
     ...['caravan_office', 'forge', 'smokehouse', 'try_works', 'trophy_hall', 'signal_tower', 'residents_house'].map((b) => `icon.build_${b}`),
+    // Every encounter has a card of its own; every island building is painted worn and ruined as well as whole.
+    ...ENCOUNTER_IDS.map((e) => `card.enc_${e}`),
+    ...BUILDING_IDS.flatMap((b) => [`icon.build_${b}_1`, `icon.build_${b}_2`]),
   ];
   const off = [...new Set(want)].filter((id) => !onSheets.has(id));
   assert.deepEqual(off, []);
@@ -72,7 +80,7 @@ test('the sixty-four flags are painted, one set, all the same size', () => {
 });
 
 test('the living sea is painted: every id on every sheet is in the manifest and baked', () => {
-  const missing = [...onSheets].filter((id) => !manifest.assets[id] || !fs.existsSync(path.join(ROOT, 'assets', manifest.assets[id].local)));
+  const missing = [...painted].filter((id) => !manifest.assets[id] || !fs.existsSync(path.join(ROOT, 'assets', manifest.assets[id].local)));
   assert.deepEqual(missing, []);
   // The singles of P11: Old Needle, the two hulls, the poster's paper; and every item icon.
   for (const id of ['portrait.giver_old_needle', 'ship.fishing_ketch', 'ship.harpoon_whaler', 'ui.poster', ...ITEM_ART.map((r) => `icon.item_${r[0]}`)]) {

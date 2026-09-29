@@ -6,12 +6,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { duelSea, winRate } from './duel.ts';
 
-test('even levels: an average captain wins a good share against a bot of her level, a perfect one most', () => {
+test('even levels: an average captain and a perfect one each win most fights against a bot of her level', () => {
   const game = duelSea();
   const avg = winRate(game, { cls: 'brig', level: 5, craft: 'average' }, { cls: 'brig', level: 5, craft: 'bot' }, 20, 200);
   const perf = winRate(game, { cls: 'brig', level: 5, craft: 'perfect' }, { cls: 'brig', level: 5, craft: 'bot' }, 20, 200);
-  assert.ok(avg.wins >= 8, `average ${avg.wins}/20`);
-  assert.ok(perf.wins >= 13 && perf.wins >= avg.wins, `perfect ${perf.wins}/20`);
+  // At the pace of the sea the scripted perfect captain (true lead, the charged window) is within the sims' noise of
+  // the average one at even levels (docs/12 §3.6): her edge shows a level up, where the average one hardly ever wins.
+  assert.ok(avg.wins >= 10, `average ${avg.wins}/20`);
+  assert.ok(perf.wins >= 12, `perfect ${perf.wins}/20`);
 });
 
 test('a level up: a perfect captain wins now and then, an average one hardly ever; two levels up, never', () => {

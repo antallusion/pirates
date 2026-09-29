@@ -9,7 +9,7 @@
 
 import { caravanNemesis, caravanNemesisLine } from './nemesis.ts';
 import { liveNamed, putToSea } from './wanted.ts';
-import { COUNTING_HOUSE_PROFIT, INSURANCE_COVER, INSURANCE_PREMIUM, MAX_ESCORTS, RESCUE_R, RESCUE_SEC, RISK, SKIPPER_COST, TASK_NAMES, escortCost } from '../../../shared/src/data/caravans.ts';
+import { COUNTING_HOUSE_PROFIT, INSURANCE_COVER, INSURANCE_PREMIUM, MAX_ESCORTS, RESCUE_R, RESCUE_SEC, RISK, SKIPPER_COST, TASK_NAMES, defenceOdds, escortCost } from '../../../shared/src/data/caravans.ts';
 import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -497,10 +497,7 @@ function resolveAttack(game: Game, c: Caravan, nameAt: string, strength = 1): vo
   const region = regionAt(game.world, x, y);
   const lvl = level(c);
   const band = bandLevel(game, region);
-  const pirates = S.rng.int(2, 3) * levelPower(band) * strength;
-  const own = c.escorts * levelPower(lvl) * 1.2 + c.ships.length * levelPower(lvl) * 0.35;
-  let win = Math.max(0.1, Math.min(0.92, own / (own + pirates)));
-  if (c.orders.onAttack === 'flee') win = Math.min(0.95, win + 0.15);
+  const win = defenceOdds({ escorts: c.escorts, ships: c.ships.length, level: lvl, band, pirates: S.rng.int(2, 3), flee: c.orders.onAttack === 'flee', strength });
   if (S.rng.chance(win)) {
     mail(game, c, `Caravan ${c.name} fought them off near ${nameAt}.`);
     return;

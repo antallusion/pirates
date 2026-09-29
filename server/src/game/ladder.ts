@@ -1,6 +1,7 @@
 // The ladder of strength on the server (canon D12, docs/12 §3): what a shot from one ship does to another across a
 // gap of levels. Between two captains a lone junior never beats a senior; against the sea's ships a perfect captain
-// wins one level up now and then. Juniors together may beat a senior when their budgets reach 1.2 of hers.
+// wins one level up now and then. Juniors together may beat a senior when their budgets reach 1.2 of hers; against
+// the sea's ships they are then cut less.
 
 import { GROUP_OUTWEIGHS, ladder, levelPower } from '../../../shared/src/data/shiplevel.ts';
 import type { LadderMods } from '../../../shared/src/data/shiplevel.ts';
@@ -17,13 +18,14 @@ export function laddered(s: ShipEntity): boolean {
   return s.onLadder;
 }
 
-/** Everyone attacking her lately, with the shooter: do their budgets outweigh hers? */
-function outweighed(game: Game, a: ShipEntity, b: ShipEntity): boolean {
+/** Everyone attacking her lately, with the shooter: do their budgets outweigh hers? Between captains only captains
+ *  count; against the sea's ships every hull on the ladder does (a captain's escorts, a squadron). */
+function outweighed(game: Game, a: ShipEntity, b: ShipEntity, pvp: boolean): boolean {
   let sum = levelPower(a.combatLevel);
   for (const [id, t] of b.attackers) {
     if (id === a.id || game.now - t > GROUP_WINDOW) continue;
     const x = game.ships.get(id);
-    if (x?.alive && x.isPlayer && laddered(x)) sum += levelPower(x.combatLevel);
+    if (x?.alive && (x.isPlayer || !pvp) && laddered(x)) sum += levelPower(x.combatLevel);
   }
   return sum >= GROUP_OUTWEIGHS * levelPower(b.combatLevel);
 }
@@ -33,5 +35,5 @@ export function ladderBetween(game: Game, a: ShipEntity | null, b: ShipEntity): 
   if (!a || a === b || !laddered(a) || !laddered(b)) return NONE;
   const pvp = a.isPlayer && b.isPlayer;
   const junior = b.combatLevel > a.combatLevel;
-  return ladder(a.combatLevel, b.combatLevel, pvp, pvp && junior && outweighed(game, a, b));
+  return ladder(a.combatLevel, b.combatLevel, pvp, junior && outweighed(game, a, b, pvp));
 }

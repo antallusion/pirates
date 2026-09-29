@@ -2,6 +2,8 @@
 // hauling the outposts' stores home, selling the island's goods in a port, trading between ports, fetching what
 // the island needs — under a skipper, with hired escorts and the League's insurance, on standing orders.
 
+import { levelPower } from './shiplevel.ts';
+
 export type Tr = [string, string];
 export type CaravanTask = 'haul' | 'sell' | 'trade' | 'supply';
 export const CARAVAN_TASKS: CaravanTask[] = ['haul', 'sell', 'trade', 'supply'];
@@ -29,6 +31,16 @@ export const INSURANCE_COVER = 0.6;
 export const COUNTING_HOUSE_PROFIT = 0.15;
 /** Hourly chance of an attack by the sea's pirates, by the waters. */
 export const RISK: Record<string, number> = { safe: 0, contested: 0.06, lawless: 0.18 };
+
+/** A caravan's odds of beating off an attack reckoned far from its owner (docs/12 P8, balanced in P12): its
+ *  escorts and hulls at its level against two or three pirates of the waters' band (`pirates`, 2.5 on average),
+ *  with luck; running for it adds a little. */
+export function defenceOdds(o: { escorts: number; ships: number; level: number; band: number; pirates?: number; flee?: boolean; strength?: number }): number {
+  const pirates = (o.pirates ?? 2.5) * levelPower(o.band) * (o.strength ?? 1);
+  const own = o.escorts * levelPower(o.level) * 1.2 + o.ships * levelPower(o.level) * 0.35;
+  const win = Math.max(0.1, Math.min(0.92, own / (own + pirates)));
+  return o.flee ? Math.min(0.95, win + 0.15) : win;
+}
 /** Owner within this reach: the attack is fought for real, with an alarm. */
 export const RESCUE_R = 25000;
 export const RESCUE_SEC = 300;

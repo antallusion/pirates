@@ -426,7 +426,7 @@ function contextHints(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile
     return;
   }
   // Ten seconds in irons: the wind.
-  const inIrons = ship.state.sail > 0.3 && ship.state.speed < 1 && relWindDeg(ship.state.heading, game.windFor(ship)) < ship.sailParams(false).noGoDeg;
+  const inIrons = ship.state.sail > 0.3 && ship.state.speed < ship.stats.maxSpeed * 0.35 && relWindDeg(ship.state.heading, game.windFor(ship)) < ship.sailParams(false).noGoDeg;
   w.irons = inIrons ? w.irons + 1 : 0;
   if (w.irons >= 10) {
     hint(game, s, 'irons');

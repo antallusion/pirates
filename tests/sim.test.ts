@@ -24,7 +24,7 @@ test('polar: a smaller no-go angle (talents) opens up the close-hauled course', 
   assert.ok(polarEfficiency('square', 60, 55) > 0.3);
 });
 
-test('sailing: a ship accelerates downwind and stays put head to wind', () => {
+test('sailing: a ship accelerates downwind; head to wind she is slower, never dead', () => {
   const wind = { dir: Math.PI, strength: 0.8 }; // blowing south
   let down: SailState = { x: 0, y: 0, heading: Math.PI, speed: 0, sail: 1, rudder: 0 };
   let up: SailState = { x: 0, y: 0, heading: 0, speed: 0, sail: 1, rudder: 0 };
@@ -34,7 +34,10 @@ test('sailing: a ship accelerates downwind and stays put head to wind', () => {
   }
   assert.ok(down.speed > 8, `downwind speed ${down.speed}`);
   assert.ok(down.y > 50, 'moved south');
-  assert.ok(up.speed < 1, `head-to-wind speed ${up.speed}`);
+  // Head to wind she keeps a real way on (owner, 2026-09-28: "without a following wind it crawls"), though well
+  // under half her run in a strong breeze.
+  assert.ok(up.speed > down.speed / 5 && up.speed < down.speed / 2, `head-to-wind speed ${up.speed} against ${down.speed}`);
+  assert.ok(up.y < -15, 'she makes way to windward');
 });
 
 test('the pace of the sea: her way is reckoned as before and carries her SPEED_SCALE times as far', () => {

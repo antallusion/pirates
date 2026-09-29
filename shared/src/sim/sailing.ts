@@ -104,6 +104,17 @@ export function polarEfficiency(rig: Rig, relDeg: number, noGoDeg: number, weath
   return eff;
 }
 
+/** The least share of her way a ship makes head to wind; the floor rises to SAIL_BEAM on a beam reach. */
+export const SAIL_BASE = 0.5;
+export const SAIL_BEAM = 0.8;
+
+/** The floor under the polar: no heading is dead (owner, 2026-09-28: "without a following wind it crawls"). Abaft
+ *  the beam it falls away again, so a schooner still runs worse than a square-rigger. */
+export function sailFloor(relDeg: number): number {
+  if (relDeg <= 90) return SAIL_BASE + (SAIL_BEAM - SAIL_BASE) * (relDeg / 90);
+  return SAIL_BEAM - 0.2 * ((relDeg - 90) / 90);
+}
+
 /** A following wind drives a ship on, a head wind holds her back (owner, 2026-09-28): 1 + WIND_PUSH at a run before a
  * full breeze, 1 − WIND_PUSH head to it, nothing on the beam. `relDeg` is from windward (0 = head to wind). */
 export function windPush(relDeg: number, strength: number): number {
@@ -122,7 +133,10 @@ export function targetSpeed(state: SailState, p: SailParams, wind: WindSample): 
   let eff = polarEfficiency(p.rig, rel, p.noGoDeg, p.weatherly);
   const tal = p.talent;
   if (tal && tal.polarBoost > 0 && rel >= p.noGoDeg) eff += (1 - eff) * Math.min(0.6, tal.polarBoost);
-  let windFactor = 0.3 + 0.7 * Math.min(1.15, windS);
+  // A ship never lies dead: against the wind she is slower, not stopped, and a light air slows her rather than
+  // stopping her. The polar still pays for a well-trimmed reach and a run before the wind.
+  eff = Math.max(sailFloor(rel), eff);
+  let windFactor = 0.6 + 0.4 * Math.min(1.15, windS);
   if (p.sweeps && windS < 0.5) windFactor *= 1.25;
   windFactor *= 1 - seaSpeedPenalty(wind.strength, tal?.seaPenalty ?? 0);
   if (tal?.stormRider) windFactor *= wind.strength >= 0.75 ? 1.2 : wind.strength < 0.35 ? 0.7 : 1;
@@ -139,10 +153,10 @@ export function stepSailing(s: SailState, input: SailInput, p: SailParams, wind:
 
   const tal = p.talent;
   let tgt = targetSpeed({ ...s, sail }, p, wind);
-  // Sweeps: the crew rows when the wind fails.
-  const row = tal ? tal.rowSpeed : p.sweeps ? 3 : 0;
-  if (row > 0 && input.sailTarget > 0) tgt = Math.max(tgt, row * (0.45 + 0.55 * p.crewFactor));
   const rel = relWindDeg(s.heading, wind);
+  // Sweeps: the crew rows when the wind is against her or fails — the oars add their way, most of it head to wind.
+  const row = tal ? tal.rowSpeed : p.sweeps ? 3 : 0;
+  if (row > 0 && input.sailTarget > 0) tgt += row * (0.45 + 0.55 * p.crewFactor) * (rel < 90 || wind.strength < 0.35 ? 1 : 0.4);
   const inIrons = !p.personalWind && rel < p.noGoDeg;
   let accel = p.accel;
   if (tal && tal.runningFree > 0 && rel > 150) accel *= 1 + tal.runningFree;

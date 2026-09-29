@@ -426,6 +426,14 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       preyD = dist(ship.state.x, ship.state.y, hunted.state.x, hunted.state.y);
     }
   }
+  // The First Watch's raider has one pupil: a merchantman passing nearer does not lure her off the lesson.
+  if (brain.practice !== undefined) {
+    const p = game.ships.get(brain.practice);
+    if (p && p.alive && !p.docked && !p.hasFlag('hidden')) {
+      prey = p;
+      preyD = dist(ship.state.x, ship.state.y, p.state.x, p.state.y);
+    }
+  }
   if (!prey && brain.chase) {
     const c = game.ships.get(brain.chase.id);
     if (!c || !c.alive || c.docked || now > brain.chase.until || !npcHostileTo(game, ship, c) || c.hasFlag('hidden')) brain.chase = null;

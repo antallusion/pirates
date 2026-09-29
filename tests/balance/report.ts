@@ -2,7 +2,11 @@
 // ladder, 60 a cell by default (BALANCE_N to change).
 
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
-import { duelSea, winRate } from './duel.ts';
+import { duelSea, squad, winRate } from './duel.ts';
+import { OUTPOSTS, OUTPOST_KINDS, OUTPOST_MAX_LEVEL, outpostCap, outpostRate, outpostUpgrade } from '../../shared/src/data/estate.ts';
+import { GOODS } from '../../shared/src/data/goods.ts';
+import type { GoodId } from '../../shared/src/data/goods.ts';
+import { defenceOdds } from '../../shared/src/data/caravans.ts';
 import { huntRate } from './hunt.ts';
 import type { BeastId } from '../../shared/src/data/beasts.ts';
 
@@ -44,4 +48,31 @@ console.log(`\nThe hunt, ${N} a cell (the captain's wins, and her hull left on a
 for (const [cls, lv, craft, beast, bl, n] of hunts) {
   const r = huntRate(game, cls, lv, craft, beast, bl, n, N);
   console.log(`${`${cls} ${lv} ${craft}`.padEnd(22)} vs ${`${n}× ${beast} ${bl}`.padEnd(20)} ${pct(r.wins)}  hull ${r.hull}%`);
+}
+
+// The weight of numbers (docs/12 §3.6): three of a level against one a level up.
+console.log(`
+Three against one a level up, ${N} a cell (the three's wins)`);
+for (const [cls, lv] of [['sloop', 1], ['schooner', 3], ['brig', 5], ['frigate', 7], ['man_o_war', 9]] as [ShipClassId, number][]) {
+  let w = 0;
+  for (let k = 0; k < N; k++) if (squad(game, { cls, level: lv, craft: 'bot' }, 3, { cls, level: lv + 1, craft: 'bot' }, k) === 'many') w++;
+  console.log(`${`${cls} ${lv}`.padEnd(12)} ${pct(w)}`);
+}
+
+// Caravans against pirates, reckoned far from their owner (docs/12 P8): odds of beating them off.
+console.log(`
+Caravans (two hulls) against the waters’ pirates: odds by escorts (rows) and level against the band (columns −1 … +2)`);
+for (let e = 0; e <= 3; e++) console.log(`escorts ${e}:  ${[-1, 0, 1, 2].map((g) => `${Math.round(defenceOdds({ escorts: e, ships: 2, level: 5 + g, band: 5 }) * 100)}%`.padStart(5)).join(' ')}`);
+
+// Outposts (docs/12 P7): a day's yield with two hauls, and the days each level takes to pay for itself.
+console.log(`
+Outposts: silver a day at levels 1 … 5 (two hauls), and days to pay back each level`);
+for (const k of OUTPOST_KINDS) {
+  const day = (lv: number) => Math.min(outpostRate(k, lv) * 24, outpostCap(k, lv) * 2) * GOODS[OUTPOSTS[k].good].basePrice;
+  const days = Array.from({ length: OUTPOST_MAX_LEVEL - 1 }, (_, i) => {
+    const up = outpostUpgrade(i + 1, k);
+    const cost = up.silver + Object.entries(up.goods).reduce((a, [g, n]) => a + GOODS[g as GoodId].basePrice * (n ?? 0), 0);
+    return (cost / (day(i + 2) - day(i + 1))).toFixed(1);
+  });
+  console.log(`${k.padEnd(11)} ${[1, 2, 3, 4, 5].map((lv) => String(Math.round(day(lv))).padStart(6)).join('')} | ${days.join(' ')}`);
 }

@@ -132,3 +132,36 @@ export function winRate(game: Game, a: Side, b: Side, n: number, from = 0): { wi
   }
   return { wins, losses, draws, rate: wins / n };
 }
+
+/** Several ships against one (docs/12 §3.6: three of a level against one a level up). Each side's ships all take the
+ *  nearest foe; `many` wins when `one` is sunk, `one` when all of `many` are. */
+export function squad(game: Game, many: Side, count: number, one: Side, k: number, maxSec = 900): 'many' | 'one' | 'draw' {
+  const at = openWater(game, k);
+  const h = ((k * 2.399) % (Math.PI * 2));
+  const team = Array.from({ length: count }, (_, i) => put(game, many, 'patrol', at.x + Math.sin(h + Math.PI / 2) * (i - (count - 1) / 2) * 160, at.y - Math.cos(h + Math.PI / 2) * (i - (count - 1) / 2) * 160, h));
+  const B = put(game, one, 'hunter', at.x + Math.sin(h + 1.3) * 900, at.y - Math.cos(h + 1.3) * 900, h + Math.PI);
+  const t0 = game.now;
+  const next = new Map<number, number>();
+  const think = (me: { ship: ShipEntity; brain: NpcBrain }, foes: ShipEntity[]) => {
+    if ((next.get(me.ship.id) ?? 0) > game.now) return;
+    next.set(me.ship.id, game.now + (me.brain.skill?.react ?? 0.5));
+    let foe = foes[0], bd = Infinity;
+    for (const f of foes) {
+      const d = Math.hypot(f.state.x - me.ship.state.x, f.state.y - me.ship.state.y);
+      if (d < bd) {
+        bd = d;
+        foe = f;
+      }
+    }
+    if (foe) engage(game, me.ship, me.brain, foe, bd);
+  };
+  const alive = () => team.filter((t) => t.ship.alive);
+  while (game.now - t0 < maxSec && B.ship.alive && alive().length) {
+    for (const t of alive()) think(t, [B.ship]);
+    think(B, alive().map((t) => t.ship));
+    game.step();
+  }
+  const res = !B.ship.alive && alive().length ? 'many' : B.ship.alive && !alive().length ? 'one' : 'draw';
+  for (const s of [...team.map((t) => t.ship), B.ship]) if (game.ships.has(s.id)) game.removeShip(s.id);
+  return res;
+}

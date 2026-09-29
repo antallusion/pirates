@@ -6,6 +6,7 @@
 
 import type { GoodId } from './goods.ts';
 import type { IslandBiome, RegionId } from '../world/regions.ts';
+import { GOODS } from './goods.ts';
 
 export type Tr = [string, string];
 
@@ -129,8 +130,18 @@ export const OUTPOSTS: Record<OutpostKind, OutpostDef> = {
 export const OUTPOST_MAX_LEVEL = 5;
 /** Founding: materials brought in the hold; a level up, the same again times the level; a week's claim. */
 export const OUTPOST_BUILD: Partial<Record<GoodId, number>> = { planks: 40, iron: 10 };
-export function outpostUpgrade(level: number): { silver: number; goods: Partial<Record<GoodId, number>> } {
-  return { silver: 3000 * level, goods: { planks: 30 * level, iron: 10 * level } };
+export function outpostUpgrade(level: number, kind?: OutpostKind): { silver: number; goods: Partial<Record<GoodId, number>> } {
+  // Priced by what the outpost is worth (docs/12 P12): a salt pan is not raised for what a mine is, so every
+  // kind's next level pays for itself within a fortnight of hauling.
+  const w = kind ? outpostWorth(kind) : 1;
+  return { silver: Math.round((3000 * level * w) / 50) * 50, goods: { planks: Math.ceil(30 * level * w), iron: Math.ceil(10 * level * w) } };
+}
+
+/** An outpost's worth beside a lumber camp's (0.35 .. 1.25): what its first level yields in a day of two hauls. */
+export function outpostWorth(kind: OutpostKind): number {
+  const d = OUTPOSTS[kind];
+  const day = Math.min(d.rate[0] * 24, d.cap[0] * 2) * GOODS[d.good].basePrice;
+  return Math.max(0.35, Math.min(1.25, day / 2400));
 }
 export function claimCost(safety: 'safe' | 'contested' | 'lawless'): number {
   return safety === 'lawless' ? 0 : safety === 'contested' ? 1500 : 2500;

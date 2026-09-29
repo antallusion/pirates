@@ -1,0 +1,21 @@
+# The game's checks on every push and pull request: the types, the tests, and the balance sims among them
+# (tests/balance: the ladder of levels, the roles of hulls, the hunt, caravans against pirates, the outposts'
+# earnings against their costs — docs/12 P12).
+name: check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
