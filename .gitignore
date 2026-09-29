@@ -5,3 +5,4 @@ data/*.db-*
 .DS_Store
 assets/raw/
 __pycache__/
+assets/future/**/*.png
