@@ -793,6 +793,12 @@
     "ui.poster":                         { "local": "ui/poster.webp", "remote": "hf_20260928_182059_ac7d8d6d-04a2-473e-86c4-432309bb0237.png", "job": "ac7d8d6d-04a2-473e-86c4-432309bb0237", "fit": "keyed:640:#ff00ff" },
     "ui.ring":                           { "local": "ui/ring.webp", "remote": "hf_20260926_184426_33c8744d-df57-428a-a709-fca0a42f97f5.png", "job": "33c8744d-df57-428a-a709-fca0a42f97f5", "fit": "sprite:256" },
     "ui.slot":                           { "local": "ui/slot.webp", "remote": "hf_20260926_184425_473efaf4-a04b-42d2-bcba-745de6db3e2a.png", "job": "473efaf4-a04b-42d2-bcba-745de6db3e2a", "fit": "sprite:192" },
-    "ui.stick_base":                     { "local": "ui/stick_base.webp", "remote": "hf_20260926_184426_fc28e775-e69e-4fb2-a490-f0d3be62dec4.png", "job": "fc28e775-e69e-4fb2-a490-f0d3be62dec4", "fit": "sprite:320" }
+    "ui.stick_base":                     { "local": "ui/stick_base.webp", "remote": "hf_20260926_184426_fc28e775-e69e-4fb2-a490-f0d3be62dec4.png", "job": "fc28e775-e69e-4fb2-a490-f0d3be62dec4", "fit": "sprite:320" },
+    "monster.ancient_leviathan":         { "local": "monsters/ancient_leviathan.webp", "remote": "hf_20260929_092710_54654538-2730-4720-be9e-d033a64acb1c.png", "job": "54654538-2730-4720-be9e-d033a64acb1c" },
+    "monster.hollow_admiral":            { "local": "monsters/hollow_admiral.webp", "remote": "hf_20260929_093146_63c5cca2-89b6-4cf6-993c-5ddb44950d84.png", "job": "63c5cca2-89b6-4cf6-993c-5ddb44950d84", "fit": "sprite:768" },
+    "icon.fh_dutchman":                  { "local": "icons/fh_dutchman.webp", "remote": "hf_20260929_093146_f3bcc065-f38a-4cf0-a61c-18a8399177f8.png", "job": "f3bcc065-f38a-4cf0-a61c-18a8399177f8" },
+    "icon.fh_white_orca":                { "local": "icons/fh_white_orca.webp", "remote": "hf_20260929_093148_8aeb8955-4d6a-4ab0-8a7e-ace7f6d56485.png", "job": "8aeb8955-4d6a-4ab0-8a7e-ace7f6d56485" },
+    "tex.panel":                         { "local": "textures/panel.webp", "remote": "hf_20260929_093313_34e75fd8-0fca-4213-ad92-3b90f71944a9.png", "job": "34e75fd8-0fca-4213-ad92-3b90f71944a9" },
+    "tex.parchment":                     { "local": "textures/parchment.webp", "remote": "hf_20260929_093313_97d9d86a-e838-448d-809d-e3712081afce.png", "job": "97d9d86a-e838-448d-809d-e3712081afce" }
   }
 }

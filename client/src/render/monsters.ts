@@ -19,6 +19,8 @@ export interface MonsterDraw {
   flags: number;
   hull: number; // 0..1
   sinkT: number;
+  /** A boss's own painting over its class's. */
+  art?: string;
 }
 
 function rnd(seed: number): () => number {
@@ -36,7 +38,7 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
   g.translate(m.x, m.y);
   g.rotate(m.h);
   g.globalAlpha = (submerged ? 0.28 : 1) * (1 - sinkF * 0.85);
-  const spr = sprite(cls.sprite);
+  const spr = sprite(m.art ?? cls.sprite);
   const beast = beastOfClass(m.classId);
   if (beast) {
     // A beast under the surface: its dark shadow. Painted or drawn, drawBeast chooses.

@@ -109,6 +109,11 @@ const decorArt = (b: IslandBiome): string => {
   const own = BIOME_OWN[b]?.decor;
   return own && sprite(own) ? own : BIOME_DECOR[b];
 };
+/** A world boss painted apart from its class (the Hollow Admiral's flagship, the Ancient Leviathan), when loaded. */
+const bossArt = (id: number, state: ClientState): string | undefined => {
+  const b = state.bosses.find((f) => f.id === id);
+  return b && sprite(`monster.${b.kind}`) ? `monster.${b.kind}` : undefined;
+};
 /** Island features: the sprite, its size in metres, where it stands (salt, inset toward the centre). */
 const FEATURE_ART: Record<string, { id: string; size: number; salt: number; inset: number }> = {
   lighthouse: { id: 'prop.lighthouse', size: 70, salt: 1, inset: 0.04 },
@@ -1511,7 +1516,7 @@ export class Renderer {
     const x = this.sx(s.x), y = this.sy(s.y);
     if (x < -len * 2 || y < -len * 2 || x > this.w + len * 2 || y > this.h + len * 2) return;
     if (cls.monster) {
-      drawMonster(g, { id: s.id, x, y, h: s.h, classId: s.classId, flags: s.flags, hull: s.hull, sinkT: s.sinkT }, this.zoom, this.time);
+      drawMonster(g, { id: s.id, x, y, h: s.h, classId: s.classId, flags: s.flags, hull: s.hull, sinkT: s.sinkT, art: bossArt(s.id, state) }, this.zoom, this.time);
       if (s.classId === 'lantern_maw' && !(s.flags & SF.SUBMERGED)) {
         const v = headingVec(s.h);
         this.fx.light(s.x + v.x * cls.length * 0.62, s.y + v.y * cls.length * 0.62, 160, 'rgba(255,225,150,1)', 0.9, 0.05);
@@ -1549,12 +1554,13 @@ export class Renderer {
     }
     g.globalAlpha = (hidden ? 0.45 : 1) * (1 - sinkF * 0.85);
     const stage = curseStageFromFlags(s.flags);
-    const hullImg = this.shipImage(cls.id, stage);
+    const art = bossArt(s.id, state) ?? cls.sprite;
+    const hullImg = this.shipImage(cls.id, stage, art);
     // Scale so the drawn subject matches hull length.
     const imgH = len / hullImg.extentY;
     const imgW = imgH * (hullImg.canvas.width / hullImg.canvas.height);
     // From the atlas, in the colours she flies; the full image when she is drawn larger than her cell.
-    const a = this.atlas.get(`${cls.id}|${stage}|${hullImg.canvas.width}x${hullImg.canvas.height}`, () => hullImg.canvas, this.sailKey(s), this.lookPaint(s, state));
+    const a = this.atlas.get(`${art}|${stage}|${hullImg.canvas.width}x${hullImg.canvas.height}`, () => hullImg.canvas, this.sailKey(s), this.lookPaint(s, state));
     if (Math.max(imgW, imgH) * this.dpr > CELL) g.drawImage(a.full, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
     else g.drawImage(a.page, a.sx, a.sy, a.sw, a.sh, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
     this.drawPennant(s, len, beam, state);
@@ -1592,9 +1598,9 @@ export class Renderer {
    * Ship image with curse growth baked in, clipped to the hull silhouette ('source-atop').
    * Cached per class and stage; procedural hull and growth when sprites are unavailable.
    */
-  private shipImage(id: ShipClassId, stage: number): { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number } {
-    const spr = sprite(SHIP_CLASSES[id].sprite);
-    const key = `${id}|${stage}|${spr ? 1 : 0}|${sprite('fx.curse_growth') ? 1 : 0}`;
+  private shipImage(id: ShipClassId, stage: number, art = SHIP_CLASSES[id].sprite): { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number } {
+    const spr = sprite(art);
+    const key = `${id}|${art}|${stage}|${spr ? 1 : 0}|${sprite('fx.curse_growth') ? 1 : 0}`;
     const hit = this.shipCache.get(key);
     if (hit) return hit;
     const c = document.createElement('canvas');
