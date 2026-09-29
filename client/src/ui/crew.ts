@@ -24,7 +24,7 @@ const stars = (v: number) => '★'.repeat(Math.floor(v)) + (v % 1 >= 0.5 ? '½' 
 export function traitChips(traits: string[]): string {
   return traits.map((t) => {
     const d = TRAITS[t as keyof typeof TRAITS];
-    return d ? `<span class="chip ${d.good ? 'good' : 'bad'}" title="${esc(d.description)}">${icon(`trait_${t}`, '', 'ico-xs')}${esc(d.name)}</span>` : '';
+    return d ? `<span class="chip ${d.good ? 'good' : 'bad'}" title="${esc(d.description)}">${esc(d.name)}</span>` : '';
   }).join(' ');
 }
 

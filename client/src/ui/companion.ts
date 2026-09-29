@@ -92,7 +92,7 @@ export function companionCard(state: ClientState): string {
     const btn = on ? `<button class="btn btn-small" data-cmp="wear" data-arg="">${esc(L('off'))}</button>`
       : made ? `<button class="btn btn-small" data-cmp="wear" data-arg="${h}">${esc(L('wear'))}</button>`
       : `<button class="btn btn-small" data-cmp="craft" data-arg="${h}">${esc(L('make'))} ${money(def.silver)}</button>`;
-    return `<div class="cmp-h${on ? ' on' : ''}"><div class="cmp-h-t"><b>${esc(def.name[ru])}${on ? ` <span class="tt-worn">${esc(L('worn'))}</span>` : ''}</b><span class="muted">${esc(def.gives[ru])}</span>${made ? '' : `<span class="cmp-cost">${cost}</span>`}</div>${btn}</div>`;
+    return `<div class="cmp-h${on ? ' on' : ''}">${icon(`harness_${h}`, '', 'ico-md')}<div class="cmp-h-t"><b>${esc(def.name[ru])}${on ? ` <span class="tt-worn">${esc(L('worn'))}</span>` : ''}</b><span class="muted">${esc(def.gives[ru])}</span>${made ? '' : `<span class="cmp-cost">${cost}</span>`}</div>${btn}</div>`;
   }).join('');
   return `<div class="card cmp-card"><h4 class="card-h">${icon('tattoo_white_fin', '', 'ico-md') || icon('role_harpooner', '', 'ico-md')}${esc(L('title'))}: ${esc(name)}</h4>
     <div class="cmp-lv"><span>${esc(c.next ? L('level', { n: c.level }) : L('max'))}</span>${c.next ? `${bar('xp', c.xp / c.next)}<span class="muted">${c.xp}/${c.next}</span>` : ''}</div>

@@ -77,7 +77,7 @@ export function serviceCard(state: ClientState, v: ServicePortView | undefined):
   if (!sv) {
     if (!v.offer) return '';
     const def = SERVICES[v.offer];
-    return `<div class="card mq-card"><h4 class="card-h">${icon(`faction_${v.offer}`, '', 'ico-md')}${esc(L('title'))}</h4>
+    return `<div class="card mq-card"><h4 class="card-h">${icon(`service_${v.offer}`, '', 'ico-md') || icon(`faction_${v.offer}`, '', 'ico-md')}${esc(L('title'))}</h4>
       <p>${esc(L('offer', { service: def.name[ru()] }))}</p><p class="muted">${esc(L('text'))}</p>
       <p class="muted">${RANKS.map((r, i) => `${esc(r[ru()])} — ${money(RANK_PAY[i])}`).join(' · ')}</p>
       ${v.blocked ? `<p class="refit-why">${esc(serverText(v.blocked))}</p>` : ''}
@@ -94,7 +94,7 @@ export function serviceCard(state: ClientState, v: ServicePortView | undefined):
   const store = here && v.wares.length ? `<div class="giver-h">${esc(L('store'))}</div><p class="muted">${esc(L('storeText'))}</p>
     <div class="mq-wares">${v.wares.map((w, i) => `<details class="mq-ware"><summary>${itemIcon(w.item, itemSlot(w.item))}<span class="gs-t">${coloured(w.item)}<span class="muted gs-sub">${esc(SLOT_NAMES[itemSlot(w.item)][ru()])} · ⚓${w.item.ilvl}</span></span>
       ${w.sold ? `<span class="muted mq-sold">${esc(L('sold'))}</span>` : `<button class="btn btn-small" data-act="service" data-sact="buy" data-i="${i}" ${self.gold < w.price ? 'disabled' : ''}>${money(w.price)}</button>`}</summary>${itemCardHtml(w.item)}</details>`).join('')}</div>` : '';
-  return `<div class="card mq-card"><h4 class="card-h">${icon(`faction_${sv.id}`, '', 'ico-md')}${esc(def.name[ru()])}</h4>
+  return `<div class="card mq-card"><h4 class="card-h">${icon(`service_${sv.id}`, '', 'ico-md') || icon(`faction_${sv.id}`, '', 'ico-md')}${esc(def.name[ru()])}</h4>
     <p class="mq-rank"><b>${esc(L('rank', { rank: RANKS[sv.rank][ru()], m: sv.merit }))}</b></p>
     <div class="st-bar mq-bar"><i style="width:${pct}%"></i></div>
     <p class="muted">${esc(nextM ? L('next', { n: nextM }) : L('top'))}</p>

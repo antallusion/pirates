@@ -4,6 +4,7 @@
 import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
 import { dict, lang } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
+import { assetUrl } from '../assets.ts';
 import { esc, icon, money } from './dom.ts';
 import { TOURNAMENT_PRIZES } from '../../../shared/src/data/holidays.ts';
 import { personName } from '../lang/names.ts';
@@ -65,7 +66,8 @@ export function holidayCard(state: ClientState): string {
   const won = (state.self?.unlocks ?? []).includes(`emblem:${h.flag}`);
   const tourney = v.id === 'herring_run' || v.id === 'powder_night';
   const pts = (n: number) => (v.id === 'herring_run' ? `${Math.round(n)} ${ru() ? 'кг' : 'kg'}` : String(Math.round(n)));
-  return `<div class="card hol-card"><h4 class="card-h">${icon('xp', '', 'ico-md')}${esc(h.name[ru()])} <span class="muted hol-left">${esc(L('ends', { t: left(v.endsIn) }))}</span></h4>
+  const art = assetUrl(`card.holiday_${v.id}`);
+  return `<div class="card hol-card">${art ? `<div class="hol-art" style="background-image:url('${art}')"></div>` : ''}<h4 class="card-h">${icon('xp', '', 'ico-md')}${esc(h.name[ru()])} <span class="muted hol-left">${esc(L('ends', { t: left(v.endsIn) }))}</span></h4>
     <p>${esc(h.text[ru()])}</p>
     <p class="hol-deed${won ? ' good' : ''}">${esc(won ? L('won') : L('deed', { deed: h.deed[ru()], n: Math.min(Math.round(v.mine), h.need), need: h.need }))}</p>
     ${tourney ? `<div class="giver-h">${esc(L('board'))}</div>${v.board.length ? v.board.map((r, i) => `<p class="hol-row"><span>${i + 1}. ${esc(personName(r.name))}</span><b>${esc(pts(r.pts))}</b></p>`).join('') : `<p class="muted">${esc(L('empty'))}</p>`}<p class="muted hol-prizes">${esc(L('prizes', { a: '@A@', b: '@B@', c: '@C@' })).replace('@A@', money(TOURNAMENT_PRIZES[0])).replace('@B@', money(TOURNAMENT_PRIZES[1])).replace('@C@', money(TOURNAMENT_PRIZES[2]))}</p>` : ''}
