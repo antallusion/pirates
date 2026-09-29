@@ -13,6 +13,8 @@
 
 import { estateProduce, ownedSlots, residentMul } from './estate.ts';
 import type { Resident } from './estate.ts';
+import { reckonBase, startBuild } from './base.ts';
+import type { Yard } from './base.ts';
 import { BUILDINGS, ISLAND_CACHE_VOLUME, LIMIT_PERSONAL, RENT, RENT_DAYS, WAREHOUSE_ISLAND_VOLUME, islandSize, islandSlots, rentZoneMul } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId, RentDays } from '../../../shared/src/data/holdings.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
@@ -52,6 +54,9 @@ export interface Building {
   id: BuildingId;
   condition: number; // 0..1
   unpaid: boolean;
+  /** On a captain's own island (docs/15): the plot it stands on, and its level (1 unless raised). */
+  plot?: number;
+  level?: number;
 }
 
 export interface Holding {
@@ -79,6 +84,8 @@ export interface Holding {
   level?: number;
   residents?: Resident[];
   visitors?: number;
+  /** The own island as a base (docs/15 items 1–3): producers, the builders' work, the yard. */
+  yard?: Yard;
 }
 
 export class HoldingsHub {
@@ -298,6 +305,8 @@ export function build(game: Game, s: PlayerSession, islandId: number, id: Buildi
   if (!h || !isl || !mayUse(game, h, s.accountId)) return 'Not your island';
   const def = BUILDINGS[id];
   if (!def) return 'Unknown building';
+  // One's own island builds by its plots, its crews and its yard (docs/15): the first free plot.
+  if (h.owned && h.owner.kind === 'player') return startBuild(game, s, null, id);
   if (islandNear(game, s.ship!)?.id !== isl.id) return `The builders must be landed at ${isl.name}`;
   if (id !== 'battery' && has(h, id)) return `${isl.name} already has a ${def.name.toLowerCase()}`;
   if (slotsUsed(h) + def.slots > slotsOf(isl, h)) return `No room: ${isl.name} has ${slotsOf(isl, h)} slots`;
@@ -572,6 +581,8 @@ function stepTolls(game: Game, holdings: Holding[]): void {
 function stepCalendar(game: Game, h: Holding): void {
   const wall = game.wallNow();
   const isl = island(game, h.island)!;
+  // One's own island: the builders' work finished and the producers' yield (docs/15).
+  if (h.owned) reckonBase(game, h);
   if (h.windowNext && wall >= h.windowNext.from) {
     h.window = h.windowNext.hour;
     h.windowNext = null;

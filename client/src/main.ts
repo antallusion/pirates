@@ -28,6 +28,7 @@ import { showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
 import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
+import { BaseWindow } from './ui/base.ts';
 import { $, decorateSums, esc, fmt, icon, keepInputs } from './ui/dom.ts';
 import { Hud } from './ui/hud.ts';
 import { MENU_ITEMS, menuLabel, renderMenu } from './ui/menu.ts';
@@ -63,7 +64,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'base' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -170,6 +171,13 @@ const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 portScreen.openTattoos = () => openModal('tattoos');
 const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
+// One's own island as a base (docs/15): from the Company's islands, the captain's cabin, and at sea off the island.
+const baseWindow = new BaseWindow((m) => net.send(m));
+companyScreen.onBase = () => openBase();
+function openBase(): void {
+  baseWindow.open();
+  openModal('base');
+}
 // "Whisper" on a friend: the chat opens over the window, addressed to them.
 let whisperPrefill = '';
 // A groupmate's frame on the HUD: their card.
@@ -406,7 +414,7 @@ function onMessage(m: ServerMsg): void {
     case 'self_patch':
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
-      else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'gear' || modal === 'crew' || modal === 'mutiny' || modal === 'company' || modal === 'barter') refreshModal();
+      else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'gear' || modal === 'crew' || modal === 'mutiny' || modal === 'company' || modal === 'barter' || modal === 'base') refreshModal();
       break;
     case 'mutiny':
       if (m.mutineers > 0) {
@@ -502,6 +510,9 @@ function onMessage(m: ServerMsg): void {
         else openModal('hall');
       }
       break;
+    case 'base':
+      if (modal === 'base') refreshModal();
+      break;
     case 'descent': {
       // The choice between tiers opens its window for the leader; the window follows the descent.
       const run = m.view?.run;
@@ -586,6 +597,7 @@ function onMessage(m: ServerMsg): void {
 // The dice table's clock ticks between the server's words.
 setInterval(() => {
   if (modal === 'dice') tickDice($('modal-panel'), state);
+  if (modal === 'base') baseWindow.tick($('modal-panel'), state);
 }, 1000);
 
 function openModal(m: Modal): void {
@@ -687,7 +699,7 @@ function renderModal(root: HTMLElement): void {
       if (state.barter) keepInputs(root, () => renderBarter(root, state, (m) => net.send(m)));
       break;
     case 'menu':
-      renderMenu(root, openMenuItem);
+      renderMenu(root, openMenuItem, state.self?.homeIsle !== null && state.self?.homeIsle !== undefined ? ['base'] : []);
       break;
     case 'tattoos':
       renderTattoos(root, state, (m) => net.send(m));
@@ -713,6 +725,9 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'saga':
       renderSaga(root, state, (m) => net.send(m));
+      break;
+    case 'base':
+      baseWindow.render(root, state);
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
@@ -769,7 +784,8 @@ function openMenuItem(m: MenuItem): void {
   } else if (m === 'company') {
     companyScreen.open();
     openModal('company');
-  } else openModal(m);
+  } else if (m === 'base') openBase();
+  else openModal(m);
 }
 
 /** The desktop micro menu: every screen one click away, in icons (glyphs until the art loads). */
@@ -786,6 +802,9 @@ const chatChannels = () => hud.chatTabs((ch) => {
 chatChannels();
 onLang(chatChannels);
 $('hud-map').onclick = () => toggle('map');
+$('hud-prompt').addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('[data-open-base]')) openBase();
+});
 // Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
 new MutationObserver(() => {
   if (touch.enabled) stripKeyHints($('modal-panel'));
@@ -1215,6 +1234,8 @@ function computePrompt(): string {
   else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
   else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
+  const home = nearHome();
+  if (home) parts.push(`${esc(L('isleHere', { name: placeName(home.name) }))} <button class="btn btn-small prompt-btn" data-open-base>${esc(L('isleOpen'))}</button>`);
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
   if (port) parts.push(`<kbd>${esc(keyOfAction('dock'))}</kbd> ${esc(L('enter', { port: sv(port.name) }))}`);
   if (you.flags & SF.PROTECTED) parts.push(`<span class="muted">${esc(L('protected'))}</span>`);
@@ -1282,8 +1303,19 @@ function padContext(): void {
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void requestDock(false);
   if (state.self?.landable && !state.self.landable.blocked) return void net.send({ t: 'land' });
   if (mastWreck()) return void net.send({ t: 'cut_mast' });
+  if (nearHome()) return openBase();
   const you = state.you;
   if (you && (you.flags & SF.REPAIRING || !you.combat)) net.send({ t: 'repair', on: !(you.flags & SF.REPAIRING) });
+}
+
+/** Lying off one's own island (docs/15): the way into its base. */
+function nearHome(): { name: string } | null {
+  const id = state.self?.homeIsle;
+  const own = state.ownDisplay;
+  if (id === null || id === undefined || !own || state.self?.dockedAt) return null;
+  const isl = state.islands.get(id);
+  if (!isl || dist(isl.x, isl.y, own.x, own.y) - isl.r > 900) return null;
+  return { name: isl.name };
 }
 
 /** A fallen mast's wreckage drags alongside (it can be cut away). */
@@ -1339,6 +1371,7 @@ function contextLabel(): string | null {
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
   if (state.self?.landable && !state.self.landable.blocked) return L('tc.land');
   if (mastWreck()) return L('tc.cutMast');
+  if (nearHome() && modal !== 'base') return L('tc.base');
   // Nothing else at hand: a damaged ship out of the fight can set the carpenters to work (R on a keyboard).
   const you = state.you;
   if (you && you.flags & SF.REPAIRING) return L('tc.repairStop');
@@ -1653,4 +1686,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : openModal(m)), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : openModal(m)), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight };

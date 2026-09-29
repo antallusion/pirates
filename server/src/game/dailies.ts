@@ -8,6 +8,9 @@ import { fishOfDay } from './fishing.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { QuestEvent } from './quests.ts';
+import { grantSpeedups } from './base.ts';
+import { ownIsland } from './estate.ts';
+import { TOKENS_LOGIN, TOKENS_ORDER, TOKEN_SECS } from '../../../shared/src/data/base.ts';
 
 export function newDaily(): DailyState {
   return { day: -1, orders: [], streak: 0, lastFullDay: -2, chest: false };
@@ -39,6 +42,9 @@ export function dailyRollover(game: Game, s: PlayerSession): boolean {
   game.db.ledger(s.accountId, 'login', silver, `day ${streak}`);
   game.sendTo(s, { t: 'toast', msg: `Day ${streak} at sea in a row: the harbour-master pays you ${silver} silver.`, kind: 'gold' });
   game.sendTo(s, { t: 'toast', msg: `Fish of the day: ${FISH[fishOfDay(game)].name[0]} — twice the catch.`, kind: 'info' });
+  // The island's builders' free speed-ups (docs/15 item 2), kept for the day she has an island to build on.
+  const got = grantSpeedups(p, TOKENS_LOGIN);
+  if (got > 0 && ownIsland(game, s.accountId)) game.sendTo(s, { t: 'toast', msg: `Your island’s builders are rested: ${got} speed-ups of ${TOKEN_SECS / 60} minutes.`, kind: 'good' });
   return true;
 }
 
@@ -91,6 +97,7 @@ export function dailyEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
     game.db.ledger(s.accountId, 'daily', r.silver, o.kind);
     game.grantXp(s, r.xp, 'Daily order');
     game.sendTo(s, { t: 'toast', msg: `Daily order done: ${DAILY_DEFS[o.kind].text[0].replace('{n}', String(o.need))} +${r.silver} silver.`, kind: 'gold' });
+    if (grantSpeedups(p, TOKENS_ORDER) > 0 && ownIsland(game, s.accountId)) game.sendTo(s, { t: 'toast', msg: `A speed-up for your island’s builders (${TOKEN_SECS / 60} minutes).`, kind: 'info' });
   }
   if (changed && !p.daily.chest && p.daily.orders.length && p.daily.orders.every((o) => o.done)) {
     // The chest: days in a row before today fill it more.

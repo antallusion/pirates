@@ -30,6 +30,9 @@ import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } from './tattoos.ts';
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
+import { capOf, grantSpeedups, yardOf } from './base.ts';
+import { BASE_RES } from '../../../shared/src/data/base.ts';
+import { BUY_REGIONS, ISLE_MAX } from '../../../shared/src/data/estate.ts';
 import { hunterRank, namedPirates, pirateById } from '../../../shared/src/data/pirates.ts';
 import { putToSea, sanitizeHunter } from './wanted.ts';
 import { BEASTS } from '../../../shared/src/data/beasts.ts';
@@ -246,6 +249,38 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       s.profile!.berths.push({ port: `isle:${h.island}`, loadout: { classId: cls, name: `${SHIP_CLASSES[cls].name} ${s.profile!.berths.length + 1}`, guns: { port: 'light_6', starboard: 'light_6' }, modules: {}, level: args[1] ? clampLevel(cls, num(1)) : undefined }, hull: 1 });
       game.pushSelf(s, true);
       return `A ${SHIP_CLASSES[cls].name} berthed at your island.`;
+    }
+    case 'isle': {
+      // An island of one's own for play-testing the base (docs/15): /isle [level] — the nearest wild island of a
+      // safe or contested sea is given outright, or one's own raised to that level.
+      let h = ownIsland(game, s.accountId);
+      if (!h) {
+        const wild = game.world.islands.filter((i) => !i.portId && BUY_REGIONS.includes(i.region) && i.radius > 150 && !game.holdings.get(game, i.id));
+        const best = wild.sort((a, b) => Math.hypot(a.x - ship.state.x, a.y - ship.state.y) - Math.hypot(b.x - ship.state.x, b.y - ship.state.y))[0];
+        if (!best) return 'No wild island to give.';
+        const now = game.wallNow();
+        h = {
+          island: best.id, owner: { kind: 'player', id: s.accountId, name: s.name }, since: now, until: 4_102_444_800_000, lastDays: 30, autoRenew: false,
+          treasury: 0, store: {}, buildings: [], lastUpkeep: now, lastWork: now, toll: { day: 0, paid: 0 }, warned: false,
+          window: 19, windowNext: null, shieldUntil: 4_102_444_800_000, lastSiege: 0, owned: true, level: 1, residents: [],
+        };
+        game.holdings.map(game)[best.id] = h;
+      }
+      if (args[0] !== undefined) h.level = Math.max(1, Math.min(ISLE_MAX, Math.round(num(0, 1))));
+      game.holdings.touch();
+      game.pushSelf(s, true);
+      return `Your island: ${game.world.islands[h.island].name}, level ${h.level ?? 1}.`;
+    }
+    case 'yard': {
+      // The island's yard filled for play-testing (docs/15): /yard [n] — n of every resource, and ten speed-ups.
+      const h = ownIsland(game, s.accountId);
+      if (!h) return 'You have no island of your own.';
+      const y = yardOf(game, h);
+      const n = Math.max(0, Math.round(num(0, 200)));
+      for (const g of BASE_RES) y.res[g] = Math.min(capOf(h), (y.res[g] ?? 0) + n);
+      grantSpeedups(p, 10);
+      game.holdings.touch();
+      return `The yard holds ${n} more of each.`;
     }
     case 'tattoo': {
       // Tattoos (docs/12 P9 play-testing): /tattoo <id|all> earns them (Old Needle inks them in a haven), /tattoo ink inks at once.

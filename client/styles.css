@@ -2335,3 +2335,121 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
   #hud-goals .g-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; }
   .skinned .hud-block, .skinned #hud-goals { border-width: 6px; border-image-width: 6px; }
 }
+
+/* ---------- My Island: one's own island as a base (docs/15 items 1–3). A diamond grid of plots in CSS; the
+   isometric buildings stand on them; the sheet beside (desk, landscape) or below (portrait). */
+#modal-panel[data-modal="base"] { --base-h: calc(min(760px, 92vh) - 210px); }
+.base-head .sub { font-size: 14px; }
+.base-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 6px 14px; border-bottom: 1px solid rgba(111, 90, 56, 0.35); }
+.base-res { display: flex; flex-wrap: wrap; gap: 4px; }
+.bres { display: inline-flex; flex-direction: column; align-items: stretch; gap: 1px; min-width: 74px; padding: 2px 6px 3px; background: rgba(6, 6, 7, 0.6); border: 1px solid rgba(140, 107, 58, 0.35); border-radius: 3px; font: 600 13px/1.2 var(--sans); color: var(--bone); white-space: nowrap; }
+.bres-top { display: flex; align-items: center; gap: 2px; }
+.bres-top .ico-sm { width: 18px; height: 18px; object-fit: contain; }
+.bres i { font-style: normal; color: var(--steel); font-weight: 400; font-size: 11px; }
+.bres em { font-style: normal; color: var(--good); font-size: 10px; font-weight: 500; text-align: center; }
+.bres.full b { color: var(--gold); }
+.bfill { display: block; height: 3px; background: #1b1512; }
+.bfill i { display: block; height: 100%; background: var(--brass); }
+.bres.full .bfill i { background: var(--gold); }
+.base-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--fog); }
+.bmeta { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+#modal-panel[data-modal="base"] .modal-body.base-body { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 14px; overflow: hidden; padding: 8px 12px 10px; }
+.base-stage { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.base-board { position: relative; width: min(100%, calc(var(--base-h) * var(--ar, 1.6))); aspect-ratio: var(--ar, 1.6); background: radial-gradient(ellipse 60% 55% at 50% 58%, rgba(40, 70, 78, 0.55), rgba(8, 14, 18, 0) 72%); }
+/* A plot is touched on its diamond (and on its building's picture), not on the square box around it. */
+.bplot { position: absolute; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; pointer-events: none; }
+.bplot .bground { position: absolute; inset: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: #5b4a2c; pointer-events: auto; }
+.bplot.locked .bground { pointer-events: none; }
+/* The body of a building over its diamond answers a touch too (the middle of it: the back plots stay reachable). */
+.bhit { position: absolute; left: 28%; width: 44%; bottom: 50%; height: 110%; pointer-events: auto; }
+.bplot .bground::after { content: ''; position: absolute; inset: 3% 2.5%; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: linear-gradient(160deg, #56643a 0%, #3c4a2a 55%, #2c351f 100%); }
+.bplot.empty .bground::after { background: linear-gradient(160deg, #6b6a45 0%, #4b4a30 60%, #36341f 100%); }
+.bplot.empty:hover .bground, .bplot.target .bground { background: var(--gold); }
+.bplot.sel .bground { background: var(--gold); }
+.bplot.sel .bground::after { inset: 6% 5%; }
+.bplot.target .bground { animation: ctx-pulse 1.4s ease-in-out infinite; }
+.bplot.locked { cursor: default; }
+.bplot.locked .bground { opacity: 0.18; }
+.bplot.locked.soon .bground { opacity: 0.4; }
+.block { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font: 600 10px var(--sans); color: var(--fog); white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.bplus { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -54%); font: 700 18px/1 var(--sans); color: var(--gold); text-shadow: 0 1px 3px #000; opacity: 0.85; }
+.bart { position: absolute; left: -2%; width: 104%; height: auto; aspect-ratio: 1; bottom: -6%; pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55)); }
+.bplot.raising .bart { filter: sepia(0.6) brightness(0.8) drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55)); }
+.bplot.idle .bart { filter: saturate(0.6) brightness(0.85) drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55)); }
+.blvl { position: absolute; left: 50%; transform: translateX(-50%); bottom: 4%; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: #16110d; border: 1px solid var(--brass); font: 700 10px/14px var(--sans); color: var(--gold); text-align: center; }
+.bover { position: absolute; pointer-events: none; }
+.btimer { position: absolute; left: 50%; bottom: 58%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: stretch; gap: 1px; padding: 1px 4px 2px; background: rgba(10, 9, 8, 0.85); border: 1px solid var(--brass-dim); border-radius: 3px; font: 600 10px/1.2 var(--sans); color: var(--bone); white-space: nowrap; z-index: 2; }
+.bprog { display: block; height: 3px; background: #1b1512; }
+.bprog i { display: block; height: 100%; background: var(--gold); width: 0; }
+.bprog.big { height: 8px; margin: 6px 0; border: 1px solid rgba(111, 90, 56, 0.8); }
+.bfresh { position: absolute; left: 50%; bottom: 72%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 1px; padding: 0 5px 0 2px; border-radius: 9px; background: rgba(20, 30, 18, 0.92); border: 1px solid var(--good); font: 700 10px/16px var(--sans); color: #bfe3c8; white-space: nowrap; z-index: 2; }
+.bfresh .ico-sm { width: 14px; height: 14px; }
+.base-sheet { min-width: 0; min-height: 0; overflow: auto; padding: 2px 4px 6px 2px; font-size: 13px; }
+.base-sheet p { margin: 2px 0 6px; }
+.bhint { color: var(--fog); font-family: var(--serif); font-size: 15px; }
+.bsheet-h { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 6px; }
+.bsheet-h b { font-family: var(--serif); font-size: 17px; }
+.bthumb { width: 72px; height: 72px; object-fit: contain; flex: none; }
+.bthumb-empty { display: flex; align-items: center; justify-content: center; color: var(--gold); font: 700 24px var(--sans); width: 64px; height: 40px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: rgba(110, 100, 62, 0.55); }
+.bdesc { font-size: 12px; }
+.bsec { font: 600 11px var(--sans); text-transform: uppercase; letter-spacing: 0.08em; color: var(--brass); margin: 10px 0 4px; }
+.bopt { display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 1px solid rgba(111, 90, 56, 0.22); }
+.bopt-art { width: 48px; height: 48px; object-fit: contain; flex: none; }
+.bopt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bopt-main b { font-family: var(--serif); font-size: 15px; }
+.bopt-text { font-size: 12px; line-height: 1.25; }
+.bopt.off .bopt-art { opacity: 0.55; filter: grayscale(0.6); }
+.bopt .btn { flex: none; }
+.bcosts { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 12px; color: var(--bone); }
+.bcost { display: inline-flex; align-items: center; gap: 1px; white-space: nowrap; }
+.bcost .ico-sm { width: 16px; height: 16px; object-fit: contain; }
+.bcost.lack, .bcost.lack .money { color: var(--bad); }
+.btimec { color: var(--fog); }
+.bno summary { cursor: pointer; color: var(--fog); margin-top: 8px; font-size: 12px; }
+.bjob { display: flex; gap: 8px; align-items: center; width: 100%; padding: 4px; margin: 0 0 4px; background: rgba(6, 6, 7, 0.5); border: 1px solid rgba(140, 107, 58, 0.3); color: var(--bone); text-align: left; font: 13px var(--sans); cursor: pointer; }
+.bjob .bthumb { width: 44px; height: 44px; }
+.bjobcard, .bupcard { padding: 8px; margin: 6px 0; background: rgba(6, 6, 7, 0.5); border: 1px solid rgba(140, 107, 58, 0.3); }
+.bjobcard .row, .bupcard .row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.bupcard .btn { margin-top: 6px; }
+.bspeed { display: flex; flex-wrap: wrap; gap: 6px; }
+.bspeed .btn { display: inline-flex; align-items: center; gap: 3px; }
+.bactions { margin-top: 6px; }
+.bfoot { margin-top: 12px; font-size: 11px; line-height: 1.4; }
+.prompt-btn { pointer-events: auto; margin-left: 6px; }
+/* Portrait tablets: the board above, the sheet below. */
+@media (max-aspect-ratio: 1/1) {
+  #modal-panel[data-modal="base"] { --base-h: min(340px, 36vh); }
+  #modal-panel[data-modal="base"] .modal-body.base-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+}
+/* Phones: the window fills the screen; resources in five even cells. */
+@media (max-width: 699px) {
+  #modal-panel[data-modal="base"] { --base-h: 40vh; }
+  .base-bar { padding: 4px 6px; gap: 4px; }
+  .base-res { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; }
+  .bres { min-width: 0; padding: 2px 3px; font-size: 12px; }
+  .bres i { display: none; }
+  .bres-top { justify-content: center; }
+  .base-meta { width: 100%; justify-content: space-between; gap: 4px 8px; }
+  .base-head .sub { font-size: 12px; }
+  #modal-panel[data-modal="base"] .modal-body.base-body { padding: 4px 6px 8px; }
+  .btimer, .bfresh, .blvl { font-size: 9px; }
+}
+@media (max-width: 440px) {
+  .bm-w { display: none; }
+  .block { font-size: 9px; }
+}
+/* Landscape phones: board and sheet side by side under a thin header. */
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  #modal-panel[data-modal="base"] { --base-h: calc(100dvh - 128px); }
+  #modal-panel[data-modal="base"] .modal-head { padding-top: 4px; padding-bottom: 2px; }
+  #modal-panel[data-modal="base"] .modal-head h2 { font-size: 17px; }
+  .base-head .sub { font-size: 12px; }
+  .base-bar { padding: 2px 8px; gap: 4px 8px; }
+  .bres { flex-direction: row; align-items: center; gap: 4px; min-width: 0; padding: 1px 5px; font-size: 12px; }
+  .bres .bfill, .bres i, .bm-w { display: none; }
+  .bres { background-image: linear-gradient(90deg, var(--brass) var(--fill, 0%), transparent 0); background-size: 100% 2px; background-position: bottom; background-repeat: no-repeat; }
+  .base-bar { flex-wrap: nowrap; }
+  .base-res { flex-wrap: nowrap; }
+  #modal-panel[data-modal="base"] .modal-body.base-body { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 8px; padding: 4px 8px 6px; }
+  .bthumb { width: 56px; height: 56px; }
+}

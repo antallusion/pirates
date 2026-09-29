@@ -18,6 +18,7 @@ import { companionAction, stepCompanions } from './companion.ts';
 import { nemesisSankYou } from './nemesis.ts';
 import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
+import { baseView, collectYard, moveTo, speedup, startBuild, upgradeAt } from './base.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
@@ -1374,6 +1375,7 @@ export class Game {
     const ship = s.ship;
     const p = s.profile!;
     return {
+      homeIsle: ownIsland(this, s.accountId)?.island ?? null,
       questTargets: this.questTargets(p),
       questMates: this.questMates(s),
       common: commonView(this, s.accountId),
@@ -2734,6 +2736,29 @@ export class Game {
             if (typeof v === 'string') return err(v);
             return this.sendTo(s, { t: 'hall', view: v });
           }
+        }
+        return;
+      }
+      case 'base': {
+        // One's own island as a base (docs/15 items 1–3).
+        const done = (e: string | null) => {
+          err(e);
+          this.sendTo(s, { t: 'base', view: baseView(this, s) });
+          this.pushSelf(s, true);
+        };
+        switch (msg.action) {
+          case 'view':
+            return done(null);
+          case 'collect':
+            return done(collectYard(this, s));
+          case 'build':
+            return done(startBuild(this, s, Math.trunc(Number(msg.plot)), String(msg.what)));
+          case 'upgrade':
+            return done(upgradeAt(this, s, Math.trunc(Number(msg.plot))));
+          case 'move':
+            return done(moveTo(this, s, Math.trunc(Number(msg.plot)), Math.trunc(Number(msg.to))));
+          case 'speedup':
+            return done(speedup(this, s, Math.trunc(Number(msg.job)), String(msg.pay)));
         }
         return;
       }

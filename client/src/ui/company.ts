@@ -64,6 +64,8 @@ export class CompanyScreen {
   private send: (m: ClientMsg) => void;
   /** "Whisper" on a friend: the chat opens addressed to them (main.ts). */
   onWhisper: (name: string) => void = () => {};
+  /** "My Island": one's own island's base (docs/15), opened by main.ts. */
+  onBase: () => void = () => {};
   /** "Letter" on a friend: the letters tab opens with them as the addressee. */
   private mailTo = '';
 
@@ -329,11 +331,11 @@ export class CompanyScreen {
         <p class="muted">${L('isl_store', { cap: h.storeCap, list: Object.entries(h.store).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `${n} ${esc(GOODS[g as GoodId].name)}`).join(', ') || L('empty') })}</p>
         ${near ? `<div class="row"><select data-sgood="${h.island}">${GOOD_IDS.map((g) => `<option value="${g}">${esc(GOODS[g].name)}</option>`).join('')}</select><input type="number" value="10" style="width:70px" data-sqty="${h.island}"><button class="btn btn-small" data-sin="${h.island}">${L('isl_land')}</button><button class="btn btn-small" data-sout="${h.island}">${L('isl_load')}</button></div>
           <div class="row" style="gap:6px;flex-wrap:wrap">${has('shipyard') ? `<button class="btn btn-small" data-svc="repair" data-isl="${h.island}">${L('isl_repair')}</button>` : ''}${has('tavern') ? `<button class="btn btn-small" data-svc="hire" data-isl="${h.island}" data-arg="5">${L('isl_hire')}</button>` : ''}${has('workshop') ? `<button class="btn btn-small" data-svc="craft" data-isl="${h.island}" data-arg="planks">${L('isl_planks')}</button><button class="btn btn-small" data-svc="craft" data-isl="${h.island}" data-arg="sailcloth">${L('isl_sailcloth')}</button>` : ''}${has('chart_house') ? (self?.maps ?? []).map((m) => `<button class="btn btn-small" data-svc="copy_map" data-isl="${h.island}" data-arg="${esc(m.id)}">${L('isl_copy', { name: esc(m.name) })}</button>`).join('') : ''}</div>
-          <details><summary>${L('build')}</summary>${BUILDING_IDS.map((id) => {
+          ${h.owned ? `<p class="muted">${L('isl_base_hint')} <button class="btn btn-small btn-primary" data-est="base">${L('est_base')}</button></p>` : `<details><summary>${L('build')}</summary>${BUILDING_IDS.map((id) => {
             const d = BUILDINGS[id];
             const mats = Object.entries(d.materials).map(([g, n]) => `${n} ${GOODS[g as GoodId].name.toLowerCase()}`).join(', ');
             return `<div class="row" style="padding:2px 0"><span title="${esc(d.description)}">${icon(`build_${id}`)}<b>${esc(d.name)}</b> <span class="muted">${L('isl_bmeta', { n: d.slots, slotw: slotW(d.slots), cost: fmt(d.cost), mats: mats ? ` + ${esc(mats)}` : '', upkeep: fmt(d.upkeep) })}</span></span><button class="btn btn-small" data-build="${h.island}" data-bid="${id}">${L('build')}</button></div>`;
-          }).join('')}</details>
+          }).join('')}</details>`}
           ${yardTier ? `<details><summary>${L('isl_yard', { tier: yardTier === 4 ? 'IV' : 'III' })}</summary>
             <div class="row"><select data-ycls="${h.island}">${(Object.keys(SHIP_CLASSES) as ShipClassId[]).filter((c) => SHIP_CLASSES[c].purchasable && SHIP_CLASSES[c].tier <= yardTier && !SHIP_CLASSES[c].factions).map((c) => `<option value="${c}">${esc(SHIP_CLASSES[c].name)}</option>`).join('')}</select>
             <select data-ywood="${h.island}">${(Object.keys(WOODS) as WoodId[]).filter((w) => WOODS[w].ports === 'all').map((w) => `<option value="${w}">${esc(WOODS[w].name)}</option>`).join('')}</select>
@@ -368,6 +370,7 @@ export class CompanyScreen {
       if (a === 'buy') return void ask(L('est_confirm_buy', { price: fmt(Number(el.dataset.price)) })).then((ok) => ok && this.send({ t: 'estate', action: 'buy', island: Number(el.dataset.isl) }));
       if (a === 'found') return this.send({ t: 'estate', action: 'found', kind: el.dataset.kind as never });
       if (a === 'visit') return this.send({ t: 'estate', action: 'visit', island: Number(el.dataset.isl) });
+      if (a === 'base') return this.onBase();
       if (a === 'op') return this.send({ t: 'estate', action: 'outpost', id: el.dataset.id!, order: el.dataset.order as 'haul', arg: el.dataset.arg });
       this.send({ t: 'estate', action: a as 'level' });
     }));
@@ -789,7 +792,7 @@ function estateHtml(state: ClientState): string {
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(L('est_isle', { name: placeName(isle.name), level: isle.level, title: serverText(isle.levelName) }))}</span></h4>
       <p class="muted">${esc(L('est_isle_meta', { slots: isle.slots, outposts: isle.outposts, n: isle.residents.length, cap: isle.cap }))}</p>
       ${isle.next ? `<p>${esc(L('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver), goods: goodsList(isle.next.goods) }))} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
-      <div class="row" style="gap:6px;flex-wrap:wrap">${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button><button class="btn btn-small" data-guests="${isle.island}">${esc(L('est_guests'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn btn-small btn-primary" data-est="base">${esc(L('est_base'))}</button>${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button><button class="btn btn-small" data-guests="${isle.island}">${esc(L('est_guests'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
       ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
       ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}
       ${(state.self?.company.memorial ?? []).length ? `<div class="est-h">${esc(L('est_memorial'))}</div>${state.self!.company.memorial.map((m) => `<p class="muted">† ${esc(personName(m.name))} — ${esc(serverText(m.cause))}</p>`).join('')}` : ''}</div>`);

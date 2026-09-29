@@ -166,13 +166,21 @@ export function isleLevelUp(game: Game, s: PlayerSession, islandId: number): str
   const lvl = h.level ?? 1;
   if (lvl >= ISLE_MAX) return 'Your island is at its greatest.';
   const need = ISLE_LEVELS[lvl + 1];
-  const lack = (Object.entries(need.goods) as [GoodId, number][]).filter(([g, n]) => (h.store[g] ?? 0) < n);
-  if (lack.length) return `The island’s store lacks ${lack.map(([g, n]) => `${n - (h.store[g] ?? 0)} ${GOODS[g].name.toLowerCase()}`).join(', ')}.`;
+  // The store first, then the island's yard (docs/15: its timber and iron count too).
+  const yard = h.yard?.res ?? {};
+  const have = (g: GoodId) => (h.store[g] ?? 0) + (yard[g] ?? 0);
+  const lack = (Object.entries(need.goods) as [GoodId, number][]).filter(([g, n]) => have(g) < n);
+  if (lack.length) return `The island’s store lacks ${lack.map(([g, n]) => `${n - have(g)} ${GOODS[g].name.toLowerCase()}`).join(', ')}.`;
   if (h.treasury < need.silver) return `The treasury lacks ${need.silver - h.treasury} silver.`;
   h.treasury -= need.silver;
   for (const [g, n] of Object.entries(need.goods) as [GoodId, number][]) {
-    h.store[g] = (h.store[g] ?? 0) - n;
+    const fromStore = Math.min(n, h.store[g] ?? 0);
+    h.store[g] = (h.store[g] ?? 0) - fromStore;
     if (!h.store[g]) delete h.store[g];
+    if (n > fromStore) {
+      yard[g] = (yard[g] ?? 0) - (n - fromStore);
+      if (!yard[g]) delete yard[g];
+    }
   }
   h.level = lvl + 1;
   game.holdings.touch();

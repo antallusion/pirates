@@ -5,7 +5,7 @@
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
-import type { AppraisalView, CaravanView, CarcassView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
+import type { AppraisalView, CaravanView, CarcassView, BaseView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
 import { isNight, SPEED_SCALE } from '../../shared/src/constants.ts';
@@ -103,6 +103,9 @@ export class ClientState {
   raid: RaidView | null = null;
   /** One's own island and outposts (docs/12 P7). */
   estate: EstateView | null = null;
+  /** One's own island as a base (docs/15), and when (Date.now) the view came, for its timers. */
+  base: BaseView | null = null;
+  baseAt = 0;
   /** One's own caravans (docs/12 P8). */
   caravans: CaravanView[] = [];
   caravanSlots = 0;
@@ -314,6 +317,10 @@ export class ClientState {
         break;
       case 'estate':
         this.estate = m.view;
+        break;
+      case 'base':
+        this.base = m.view;
+        this.baseAt = Date.now();
         break;
       case 'caravans':
         this.caravans = m.list;

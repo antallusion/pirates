@@ -133,6 +133,12 @@ export type ClientMsg =
   | { t: 'estate'; action: 'found'; kind: OutpostKind }
   | { t: 'estate'; action: 'outpost'; id: string; order: 'upgrade' | 'workers' | 'guard' | 'haul' | 'renew' | 'auto' | 'rob'; arg?: string }
   | { t: 'estate'; action: 'visit'; island: number }
+  /** One's own island as a base (docs/15 items 1–3): plots, the builders' work, the yard. */
+  | { t: 'base'; action: 'view' | 'collect' }
+  | { t: 'base'; action: 'build'; plot: number; what: string }
+  | { t: 'base'; action: 'upgrade'; plot: number }
+  | { t: 'base'; action: 'move'; plot: number; to: number }
+  | { t: 'base'; action: 'speedup'; job: number; pay: 'silver' | 'res' | 'token' }
   /** Caravans (docs/12 P8). */
   | { t: 'caravan'; action: 'launch'; ships: number[]; task: CaravanTask; outposts?: string[]; port?: string; port2?: string; goods?: GoodId[]; minPrice?: number; escorts: number; insured: boolean; orders: { repeat: boolean; avoidLawless: boolean; nightInPort: boolean; onAttack: OnAttack } }
   | { t: 'caravan'; action: 'recall' | 'repeat'; id: string }
@@ -471,6 +477,8 @@ export interface PrivateState {
   maps: MapView[];
   /** Fragments of the season's legendary chart held by other captains within 10 km: bearings (radians). */
   legendEcho: number[];
+  /** One's own island (docs/15), for the way into its base from the sea. */
+  homeIsle?: number | null;
   /** The pennant colour you fly (a season reward), if any. */
   pennant: string | null;
   /** The Abyss: pressure, the lying stars, visions, the Islands of Light, the chapters (null until it matters). */
@@ -1084,6 +1092,7 @@ export type ServerMsg =
   | { t: 'appraisal'; view: AppraisalView }
   | { t: 'raid'; view: RaidView }
   | { t: 'estate'; view: EstateView }
+  | { t: 'base'; view: BaseView | null }
   | { t: 'caravans'; list: CaravanView[]; slots: number }
   | { t: 'tattoos'; view: TattooView }
   | { t: 'companion'; view: CompanionView | null }
@@ -1381,6 +1390,56 @@ export interface EstateView {
   kinds: OutpostKind[];
   /** Another captain's trophy hall off the bow, to look round. */
   hall: { island: number; owner: string } | null;
+}
+
+/** What a step of the builders' work costs (docs/15): silver from the purse, goods from the yard, seconds of work. */
+export interface BaseCostView {
+  silver: number;
+  goods: Partial<Record<GoodId, number>>;
+  secs: number;
+}
+
+/** A plot of one's own island (docs/15 item 1). */
+export interface BaseCellView {
+  plot: number;
+  /** A building (its id), a producer ('p:lumber'), or nothing; while it is first raised, what is being raised. */
+  what: string | null;
+  level: number;
+  condition: number;
+  unpaid: boolean;
+  /** The builders at work here: to what level, when they started and finish (wall ms), and what finishing now costs. */
+  job: { id: number; level: number; start: number; end: number; silver: number; goods: Partial<Record<GoodId, number>> } | null;
+  /** The next level, or null at the greatest; `why` says what stands in the way. */
+  up: (BaseCostView & { level: number; why: string | null }) | null;
+  /** A producer's yield since the last collection; and whether it stands idle (its resource at the yard's cap). */
+  fresh: number;
+  idle: boolean;
+}
+
+/** One's own island as a base (docs/15 items 1–3). */
+export interface BaseView {
+  island: number;
+  name: string;
+  biome: IslandBiome;
+  level: number;
+  levelName: string;
+  size: IslandSize;
+  plots: number;
+  /** Plots still shut, with the island level that opens each. */
+  locked: { plot: number; level: number }[];
+  cells: BaseCellView[];
+  /** The yard: each resource, its cap and its yield by the hour. */
+  store: { good: GoodId; n: number; cap: number; rate: number }[];
+  crews: { n: number; busy: number; next: number | null };
+  speedups: number;
+  tokenSecs: number;
+  /** What an empty plot may take, and what stands in the way of each. */
+  catalog: (BaseCostView & { what: string; why: string | null })[];
+  slots: { used: number; total: number };
+  /** The server's wall clock (ms) when the view was made, for the timers. */
+  now: number;
+  /** Lying off the island: the hold pays too. */
+  near: boolean;
 }
 
 /** What the glass tells of a ship's hold (docs/12 P6). */

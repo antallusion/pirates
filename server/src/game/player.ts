@@ -189,6 +189,8 @@ export interface Profile {
   /** One's own island (docs/12 P7): when home was last sailed for; souls waiting aboard to settle there. */
   homeAt?: number;
   refugees?: number;
+  /** Free speed-up tokens for the island's builders (docs/15 item 2): the daily welcome and the daily orders. */
+  speedups?: number;
   /** The White Orca's calf in her wake (docs/12 P10 #2) and the ship's pets (#3). */
   companion?: CompanionRec | null;
   pets?: { owned: PetId[]; deck: PetId | null };
@@ -363,6 +365,8 @@ export function pardonCost(p: Profile): number {
 }
 
 export interface WorldView {
+  /** One's own island (docs/15). */
+  homeIsle?: number | null;
   coves: { id: number; name: string; x: number; y: number }[];
   patrols: [number, number][];
   fleet?: PrivateState['fleet'];
@@ -414,6 +418,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     patrols: world.patrols,
     maps: world.explore?.maps ?? [],
     legendEcho: world.explore?.legendEcho ?? [],
+    homeIsle: world.homeIsle ?? null,
     pennant: p.pennant,
     abyss: world.abyss ?? null,
     fragments: p.explore.fragments,

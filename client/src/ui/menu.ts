@@ -7,7 +7,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export type MenuItem = 'map' | 'journal' | 'ship' | 'crew' | 'talents' | 'company' | 'help' | 'options' | 'chat';
+export type MenuItem = 'map' | 'journal' | 'ship' | 'crew' | 'talents' | 'company' | 'help' | 'options' | 'chat' | 'base';
 export const MENU_ITEMS: { id: MenuItem; glyph: string; art?: string }[] = [
   { id: 'map', glyph: '🗺' },
   { id: 'journal', glyph: '📜', art: 'tab_letters' },
@@ -24,8 +24,12 @@ export function menuLabel(id: MenuItem): string {
   return L(id);
 }
 
-export function renderMenu(root: HTMLElement, open: (m: MenuItem) => void): void {
+/** Screens that are there only for some captains (her own island's base, docs/15). */
+const EXTRA_ART: Partial<Record<MenuItem, { glyph: string; art: string }>> = { base: { glyph: '⌂', art: 'build_residents_house' } };
+
+export function renderMenu(root: HTMLElement, open: (m: MenuItem) => void, extra: MenuItem[] = []): void {
+  const items = [...MENU_ITEMS.slice(0, 6), ...extra.map((id) => ({ id, ...EXTRA_ART[id]! })), ...MENU_ITEMS.slice(6)];
   root.innerHTML = `<div class="modal-head"><h2>${esc(L('title'))}</h2></div>
-    <div class="modal-body"><div class="menu-grid">${MENU_ITEMS.map((m) => `<button class="menu-tile" data-menu="${m.id}">${icon(m.art ?? `menu_${m.id}`, m.glyph, 'ico-lg')}<span>${esc(L(m.id))}</span></button>`).join('')}</div></div>`;
+    <div class="modal-body"><div class="menu-grid">${items.map((m) => `<button class="menu-tile" data-menu="${m.id}">${icon(m.art ?? `menu_${m.id}`, m.glyph, 'ico-lg')}<span>${esc(L(m.id))}</span></button>`).join('')}</div></div>`;
   root.querySelectorAll<HTMLElement>('[data-menu]').forEach((b) => (b.onclick = () => open(b.dataset.menu as MenuItem)));
 }

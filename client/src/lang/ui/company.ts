@@ -54,6 +54,8 @@ export const EN = {
   biome_blacksand: 'black sand',
   biome_fungal: 'fungal wood',
   biome_crystal: 'crystal cliffs',
+  est_base: 'My Island',
+  isl_base_hint: 'Your own island is built from its plan: plots, builders and the yard.',
 
   // common
   none: 'none',
@@ -614,6 +616,8 @@ export const RU: Record<keyof typeof EN, string> = {
   biome_blacksand: 'чёрный песок',
   biome_fungal: 'грибной лес',
   biome_crystal: 'хрустальные скалы',
+  est_base: 'Мой остров',
+  isl_base_hint: 'Свой остров строится по его плану: участки, строители и двор.',
 
   none: 'нет',
   nobody: 'никто',
