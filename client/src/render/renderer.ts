@@ -39,7 +39,7 @@ import type { Palette } from './terrain.ts';
 import { dict, lang } from '../i18n.ts';
 import { personName } from '../lang/names.ts';
 import { dec1 } from '../ui/dom.ts';
-import { questPointer, trackedQuest } from '../ui/track.ts';
+import { objective } from '../ui/track.ts';
 import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus } from '../../../shared/src/data/gunnery.ts';
 import { islandLife } from '../../../shared/src/world/islandlife.ts';
 import type { LifeSite } from '../../../shared/src/world/islandlife.ts';
@@ -424,6 +424,7 @@ export class Renderer {
 
     // Overlays (not affected by darkness).
     if (own && state.you && state.self) this.drawAim(state, own, aim, ships);
+    if (own && state.self) this.drawOwnMark(state, own);
     // Names from the lowest on the screen up, each stepping above any it would lie on.
     this.labelBoxes = [];
     for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
@@ -2285,8 +2286,10 @@ export class Renderer {
   /** The tracked quest's goal (docs/11 P6): a gold ring on it when in sight, else a gold mark on the rim pointing
    *  the way with the range — gone once there (inside the region, or near the port or island). */
   private drawQuestMark(state: ClientState, own: SailState): void {
-    const p = questPointer(trackedQuest(state.self?.quests), own.x, own.y, state.region);
-    if (!p) return;
+    // The HUD's «Now:» — the followed quest, a contract's port, the nearest sign: one gold mark leads there.
+    const o = objective(state, own.x, own.y);
+    if (!o || o.x === undefined || o.y === undefined || o.d === undefined || o.d < 150) return;
+    const p = { x: o.x, y: o.y, d: o.d };
     const g = this.g;
     const gold = '#d9b25a';
     const px = this.sx(p.x), py = this.sy(p.y);
@@ -2390,6 +2393,33 @@ export class Renderer {
       if (held > 0) this.drawCharge(x, y, c, perfect, waver);
       this.drawRakes(state, own, ships, side, range, h, spread);
     }
+  }
+
+  /** Her own ship always found on the dark water (owner, 2026-09-29): a thin brass ring, and the law's marks over her. */
+  private drawOwnMark(state: ClientState, own: SailState): void {
+    const g = this.g;
+    const cls = SHIP_CLASSES[state.self!.loadout.classId];
+    const x = this.sx(own.x), y = this.sy(own.y);
+    const r = Math.max(16, cls.length * this.zoom * 0.62);
+    g.save();
+    g.strokeStyle = `rgba(217,178,90,${0.28 + 0.2 * this.nightNow})`;
+    g.lineWidth = 1.5;
+    g.setLineDash([3, 5]);
+    g.lineDashOffset = -this.time * 4;
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.stroke();
+    g.setLineDash([]);
+    const w = state.self!.wanted ?? 0;
+    if (w > 0) {
+      g.font = '600 12px Inter, sans-serif';
+      g.textAlign = 'center';
+      g.fillStyle = 'rgba(0,0,0,0.7)';
+      g.fillText('☠'.repeat(w), x + 1, y - r - 5);
+      g.fillStyle = cbColor(settings().colorblind, '#e0776b');
+      g.fillText('☠'.repeat(w), x, y - r - 6);
+    }
+    g.restore();
   }
 
   /** A gunner's mark on the water instead of a lit wedge: where the shot will fall (a feathered band at the aim range,

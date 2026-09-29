@@ -82,6 +82,8 @@ let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; p
 /** The prologue plays once, for a captain who has just taken the First Watch. */
 let prologuePending = false;
 const keys = new Set<string>();
+/** The signs on the horizon the lookout has already called. */
+const seenSights = new Set<number>();
 let lastInputSent = 0;
 let lastInputKey = '';
 let boardTarget: number | null = null;
@@ -443,9 +445,28 @@ function onMessage(m: ServerMsg): void {
         requestDock(pendingDock?.bribe ?? false, true);
         break;
       }
-      hud.toast(serverText(m.msg), m.kind);
+      // World news goes to the feed (owner, 2026-09-29: the sea's news in a corner), the rest to the toasts.
+      if (m.msg.startsWith('WORLD: ')) hud.feed(serverText(m.msg));
+      else hud.toast(serverText(m.msg), m.kind);
       if (m.kind === 'gold') audio.coins();
+      if (/a pirate is coming for you/.test(m.msg)) audio.bell(); // the lookout's alarm
+      // A reward floats up over her: the experience and the silver of it.
+      {
+        const own = state.ownDisplay;
+        const xp = /^\+(\d+) XP/.exec(m.msg), sil = m.kind === 'gold' || m.kind === 'good' ? /(\d[\d,]*) silver/.exec(m.msg) : null;
+        if (own && (xp || sil)) renderer.fx.text(own.x, own.y - 14, xp ? `+${xp[1]} ✦` : `+${sil![1].replace(/,/g, '')} ⛁`, xp ? '#a9c8e8' : '#e8c46a');
+      }
       break;
+    case 'sights': {
+      // A new sign on the horizon: the lookout calls where (owner, 2026-09-29).
+      const own = state.ownDisplay;
+      for (const sg of m.list) {
+        if (seenSights.has(sg.id)) continue;
+        seenSights.add(sg.id);
+        if (own) hud.lookout(sg.x - own.x, sg.y - own.y);
+      }
+      break;
+    }
     case 'chat':
       hud.chat(m.from, m.text, m.ch, m.to, m.card);
       break;

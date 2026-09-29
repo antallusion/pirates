@@ -34,8 +34,9 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
-import { $, bar, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
-import { questPointer, trackedQuest } from './track.ts';
+import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
+import { compassKey, objective, questPointer, trackedQuest } from './track.ts';
+import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
@@ -305,12 +306,31 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    const tq = trackedQuest(state.self?.quests);
-    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"><span class="rg-dot"> · </span>${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${tq ? `<span style="color:var(--gold)">${esc(sv(tq.name))}:</span> <span class="muted">${esc(sv(tq.text))}${tq.need > 1 ? ` ${tq.progress}/${tq.need}` : ''}</span><br>` : ''}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
+    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"><span class="rg-dot"> · </span>${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${this.objectiveLine(state)}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
     if (html !== this.lastRegion) {
       this.lastRegion = html;
       $('hud-region').innerHTML = html;
     }
+  }
+
+  /** «Now: …» — what she is about and where it lies (owner, 2026-09-29: an objective always on the screen). */
+  private objectiveLine(state: ClientState): string {
+    const own = state.ownDisplay;
+    const o = own ? objective(state, own.x, own.y) : null;
+    if (!o) return '';
+    const dist = o.d === undefined ? '' : o.d >= 1000 ? RL('dist.km', { n: dec1(o.d / 1000) }) : RL('dist.m', { n: Math.round(o.d / 10) * 10 });
+    const where = o.dir && o.kind !== 'sight' ? ` · ${esc(L(`dir.${o.dir}` as never))}, ${esc(dist)}` : '';
+    const left = o.left !== undefined ? ` · <span style="color:${o.left < 180 ? 'var(--bad)' : 'var(--fog)'}">${esc(L('obj.left', { n: Math.max(1, Math.ceil(o.left / 60)) }))}</span>` : '';
+    let body: string;
+    if (o.kind === 'quest') body = `${esc(sv(o.title))}: <span class="muted">${esc(sv(o.text))}</span>${where}`;
+    else if (o.kind === 'contract') body = `${esc(L('obj.contract'))} — ${esc(sv(o.title))}${o.text ? ` ${esc(o.text)}` : ''}${where}${left}`;
+    else if (o.kind === 'map') body = `${esc(L('obj.map'))} — ${esc(sv(o.title))}${where}`;
+    else if (o.kind === 'sight') body = esc(L('obj.sight', { dir: L(`dir.${o.dir!}` as never), d: dist }));
+    else if (o.kind === 'daily') {
+      const def = DAILY_DEFS[o.title as keyof typeof DAILY_DEFS];
+      body = `${esc(L('obj.daily'))} — <span class="muted">${esc(def ? def.text[lang() === 'ru' ? 1 : 0].replace('{n}', o.text.split('/')[1]) : o.title)} ${esc(o.text)}</span>`;
+    } else body = `<span class="muted">${esc(L('obj.sail'))}</span>`;
+    return `<span class="rg-now"><b style="color:var(--gold)">${esc(L('now'))}</b> ${body}</span><br>`;
   }
 
   /** World events in these waters, with the time they have left. */
@@ -823,6 +843,31 @@ export class Hud {
   }
 
   private recentToasts = new Map<string, number>();
+
+  /** The lookout's call for a new sign: its bearing and range. */
+  lookout(dx: number, dy: number): void {
+    const d = Math.hypot(dx, dy);
+    const dist = d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 });
+    this.toast(L('obj.sight', { dir: L(`dir.${compassKey(Math.atan2(dx, -dy))}` as never), d: dist }), 'info');
+  }
+
+  /** The sea's news (world announcements), kept in their own small column for a while, newest on top. */
+  feed(msg: string): void {
+    const el = $('hud-feed');
+    const now = performance.now();
+    this.feedItems = [{ msg, at: now }, ...this.feedItems.filter((f) => f.msg !== msg && now - f.at < 60_000)].slice(0, 4);
+    const draw = () => {
+      const t = performance.now();
+      this.feedItems = this.feedItems.filter((f) => t - f.at < 60_000);
+      el.classList.toggle('hidden', !this.feedItems.length);
+      el.innerHTML = this.feedItems.length ? `<div class="feed-h">${esc(L('feed.title'))}</div>${this.feedItems.map((f) => `<div class="feed-line">${esc(f.msg.replace(/^(Вести|WORLD):\s*/, ''))}</div>`).join('')}` : '';
+    };
+    draw();
+    clearTimeout(this.feedTimer);
+    this.feedTimer = setTimeout(draw, 61_000);
+  }
+  private feedItems: { msg: string; at: number }[] = [];
+  private feedTimer: ReturnType<typeof setTimeout> | undefined;
 
   toast(msg: string, kind: string): void {
     // Collapse repeats (e.g. mashing fire while reloading).
