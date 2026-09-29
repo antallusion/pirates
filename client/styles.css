@@ -2453,3 +2453,57 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
   #modal-panel[data-modal="base"] .modal-body.base-body { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 8px; padding: 4px 8px 6px; }
   .bthumb { width: 56px; height: 56px; }
 }
+
+/* ---------- My Island: the shipyard tab and her own ships (docs/15 items 4–5). */
+.base-head { gap: 10px; flex-wrap: wrap; }
+.btabs { display: flex; gap: 4px; flex: none; }
+.btab { padding: 6px 12px; min-height: 34px; cursor: pointer; color: var(--fog); background: rgba(6, 6, 7, 0.55); border: 1px solid rgba(140, 107, 58, 0.4); border-radius: 3px; font: 600 12px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.btab i { font-style: normal; color: var(--steel); font-weight: 500; }
+.btab.sel { color: var(--gold); border-color: var(--brass); background: #14120e; }
+.bpower { color: var(--bone); }
+.blevel .row b { font-family: var(--serif); font-size: 15px; }
+.blevel .bcosts { margin-top: 4px; }
+#modal-panel[data-modal="base"] .modal-body.base-body.yard-body { display: block; overflow: auto; padding: 8px 12px 12px; }
+.sy-info { margin: 2px 0 4px; font-size: 13px; }
+.sy-squad { margin: 0 0 8px; font-size: 12px; line-height: 1.35; }
+.sy-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 8px; }
+.sy-card { min-width: 0; padding: 8px 10px; background: rgba(6, 6, 7, 0.55); border: 1px solid rgba(140, 107, 58, 0.4); border-radius: 3px; font-size: 13px; }
+.sy-card.st-laid_up { border-color: rgba(170, 70, 60, 0.6); }
+.sy-card.st-sea { border-color: rgba(120, 170, 130, 0.55); }
+.sy-top { display: flex; align-items: center; gap: 10px; }
+.sy-pic { position: relative; flex: none; width: 104px; height: 44px; overflow: hidden; background: radial-gradient(ellipse 70% 60% at 50% 55%, rgba(40, 70, 78, 0.55), rgba(8, 14, 18, 0) 75%); }
+.sy-pic img { position: absolute; left: 50%; top: 50%; height: 100px; width: auto; transform: translate(-50%, -50%) rotate(90deg); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); pointer-events: none; }
+.sy-pic-sm { width: 76px; height: 34px; }
+.sy-pic-sm img { height: 72px; }
+.st-laid_up .sy-pic img { filter: grayscale(0.8) brightness(0.6); }
+.st-building .sy-pic img { filter: sepia(0.7) brightness(0.75); }
+.sy-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sy-name { font-family: var(--serif); font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; }
+.sy-sub { color: var(--fog); font-size: 12px; overflow-wrap: anywhere; }
+.sy-lvl { flex: none; padding: 1px 6px; border: 1px solid var(--brass); border-radius: 9px; background: #16110d; font: 700 12px/16px var(--sans); color: var(--gold); }
+.sy-state { margin: 6px 0 4px; color: var(--bone); font-size: 12px; }
+.st-laid_up .sy-state { color: var(--bad); }
+.st-sea .sy-state { color: var(--good); }
+.sy-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sy-bar { position: relative; display: block; min-width: 0; height: 18px; background: #1b1512; border: 1px solid rgba(111, 90, 56, 0.7); overflow: hidden; }
+.sy-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(120, 150, 90, 0.75); }
+.sy-bar.low i { background: rgba(170, 70, 60, 0.8); }
+.sy-bar.xp i { background: rgba(160, 125, 60, 0.8); }
+.sy-bar.xp.ready i { background: var(--gold); }
+.sy-bar em { position: relative; z-index: 1; display: block; padding: 0 5px; font: 600 11px/16px var(--sans); font-style: normal; color: var(--bone); text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sy-bonus { margin: 5px 0 2px; color: var(--fog); font-size: 12px; }
+.sy-job, .sy-act { padding: 6px; margin: 6px 0 0; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(140, 107, 58, 0.25); }
+.sy-job .row, .sy-act .row { display: flex; justify-content: space-between; gap: 4px 8px; align-items: baseline; flex-wrap: wrap; }
+.sy-act .btn { margin-top: 4px; }
+.sy-acts { margin-top: 6px; gap: 6px; }
+.sy-why { margin: 2px 0; font-size: 12px; }
+.sy-offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 0 12px; }
+.sy-cls { font-family: var(--sans); font-size: 12px; }
+@media (max-width: 699px) {
+  .btab { padding: 4px 8px; min-height: 32px; font-size: 11px; }
+  #modal-panel[data-modal="base"] .modal-body.base-body.yard-body { padding: 4px 6px 10px; }
+}
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  .btab { min-height: 28px; padding: 2px 8px; }
+}
+.blevel .good { color: var(--good); } .blevel .bad { color: var(--bad); }

@@ -19,6 +19,7 @@ import { nemesisSankYou } from './nemesis.ts';
 import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
 import { baseView, collectYard, moveTo, speedup, startBuild, upgradeAt } from './base.ts';
+import { ownShipsKill, shipBuild, shipLaunch, shipRecall, shipRepair, shipUpgrade, squadronOf, stepOwnShips } from './baseships.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
@@ -848,6 +849,7 @@ export class Game {
       stepMind(this, s.ship);
       stepCompany(this, s);
       stepFleet(this, s);
+      stepOwnShips(this, s); // her own ships: hold, sight, the fisher's nets (docs/15 item 4)
       stepAbyss(this, s);
       stepBridges(this, s);
       stepBuiltShip(this, s);
@@ -1386,9 +1388,10 @@ export class Game {
       fleet: ship ? {
         escorts: p.fleet.escorts.map((e) => {
           const at = [...this.ships.values()].find((x) => x.fleetId === e.id && x.alive);
-          return { id: e.id, name: e.name, classId: e.classId, hull: Math.round((at ? at.hull / at.stats.hullMax : e.hull) * 100), atSea: !!at };
+          return { id: e.id, name: e.name, classId: e.classId, hull: Math.round((at ? at.hull / at.stats.hullMax : e.hull) * 100), atSea: !!at, own: !!e.own };
         }),
-        slots: escortSlots(p, ship), formation: p.fleet.formation, upkeep: Math.round(escortUpkeep(p, ship)),
+        // Her own ships take the berths first; they need no commander (docs/15 item 4).
+        slots: Math.max(escortSlots(p, ship), squadronOf(s).own), formation: p.fleet.formation, upkeep: Math.round(escortUpkeep(p, ship)),
       } : undefined,
       inspect: ship ? admiralsEye(this, ship) : [],
       monsters: ship?.hasFlag('eyes_of_choir') ? this.monstersNear(ship) : [],
@@ -1707,6 +1710,7 @@ export class Game {
       if (owner) return this.creditKill(owner, victim, how);
     }
     if (!s || !s.profile) return;
+    ownShipsKill(this, s, victim); // her own ships near share in it (docs/15 item 4)
     const p = s.profile;
     const tier = victim.cls.monster ? 1 : victim.cls.tier; // a rotten hulk is no ship of the line
     // The colour of the prize (canon D12): nothing for a grey one, more for one above you.
@@ -2759,6 +2763,17 @@ export class Game {
             return done(moveTo(this, s, Math.trunc(Number(msg.plot)), Math.trunc(Number(msg.to))));
           case 'speedup':
             return done(speedup(this, s, Math.trunc(Number(msg.job)), String(msg.pay)));
+          // The island's shipyard (docs/15 item 4).
+          case 'ship_build':
+            return done(shipBuild(this, s, msg.role));
+          case 'ship_launch':
+            return done(shipLaunch(this, s, String(msg.ship)));
+          case 'ship_recall':
+            return done(shipRecall(this, s, String(msg.ship)));
+          case 'ship_repair':
+            return done(shipRepair(this, s, String(msg.ship)));
+          case 'ship_upgrade':
+            return done(shipUpgrade(this, s, String(msg.ship)));
         }
         return;
       }

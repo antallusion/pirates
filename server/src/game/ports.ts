@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { ownShipsTrade } from './baseships.ts';
 import { boardView } from './chests.ts';
 import { diceAvailableDavy, openTables, weekBoard } from './dice.ts';
 import { PETS, petsForSale } from '../../../shared/src/data/companions.ts';
@@ -312,6 +313,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   // Trade builds standing with the port's faction.
   game.adjustRepProfile(s, port.faction, Math.min(3, price / 1500) * (1 + tx(ship.stats, 'tradeRep')));
   game.db.ledger(s.accountId, 'sell', price, `${n} ${good} @ ${port.id}`);
+  ownShipsTrade(game, s, price); // a merchant of her own shares in the trade (docs/15 item 4)
   onSale(game, s, port, good, n, profit);
   onEventSale(game, s, port, good, n);
   holidaySale(game, s, port, good, n); // League Day's seal (docs/12 P10 #18)

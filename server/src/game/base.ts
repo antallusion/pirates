@@ -18,6 +18,10 @@ import type { BuildingId } from '../../../shared/src/data/holdings.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { BaseCellView, BaseView } from '../../../shared/src/protocol.ts';
+import { ISLE_POWER, POWER_CREW, islePower } from '../../../shared/src/data/baseships.ts';
+import { finishShipJob, ownYardView } from './baseships.ts';
+import type { OwnShip } from './baseships.ts';
+import { isleLevelWhy } from './estate.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
@@ -45,6 +49,9 @@ export interface BaseJob {
   level: number;
   start: number;
   end: number;
+  /** The shipyard's work on one of her own ships (docs/15 item 4): no plot (-1), no builders' crew. */
+  ship?: string;
+  kind?: 'build' | 'upgrade' | 'repair';
 }
 
 export interface Yard {
@@ -57,6 +64,8 @@ export interface Yard {
   jobs: BaseJob[];
   lastYield: number;
   seq: number;
+  /** Her own ships of the island's shipyard (docs/15 item 4). */
+  ships?: OwnShip[];
 }
 
 // ------------------------------------------------------------------------------------------------ the yard
@@ -70,6 +79,7 @@ export function yardOf(game: Game, h: Holding): Yard {
   y.producers ??= [];
   y.jobs ??= [];
   y.seq ??= 1;
+  y.ships ??= [];
   placeLoose(game, h, y);
   return y;
 }
@@ -164,6 +174,7 @@ export function reckonBase(game: Game, h: Holding): void {
 
 function finish(game: Game, h: Holding, y: Yard, isl: Island, j: BaseJob): void {
   y.jobs = y.jobs.filter((x) => x.id !== j.id);
+  if (j.ship) return finishShipJob(game, h, y, isl, j);
   const kind = producerOf(j.what);
   let name = '';
   if (kind) {
@@ -221,14 +232,14 @@ function stock(h: Holding, y: Yard, s: PlayerSession, near: boolean, g: GoodId):
   return (y.res[g] ?? 0) + (h.store[g] ?? 0) + (near ? (s.ship?.cargo[g] ?? 0) : 0);
 }
 
-function lacking(h: Holding, y: Yard, s: PlayerSession, near: boolean, goods: Partial<Record<GoodId, number>>): string | null {
+export function lacking(h: Holding, y: Yard, s: PlayerSession, near: boolean, goods: Partial<Record<GoodId, number>>): string | null {
   const lack = (Object.entries(goods) as [GoodId, number][]).filter(([g, n]) => stock(h, y, s, near, g) < n);
   if (!lack.length) return null;
   const [g, n] = lack[0];
   return `The yard lacks ${Math.ceil(n - stock(h, y, s, near, g))} ${GOODS[g].name.toLowerCase()}.`;
 }
 
-function takeGoods(h: Holding, y: Yard, s: PlayerSession, near: boolean, goods: Partial<Record<GoodId, number>>): void {
+export function takeGoods(h: Holding, y: Yard, s: PlayerSession, near: boolean, goods: Partial<Record<GoodId, number>>): void {
   for (const [g, n0] of Object.entries(goods) as [GoodId, number][]) {
     let n = n0;
     const from = (bag: Partial<Record<GoodId, number>>) => {
@@ -244,11 +255,11 @@ function takeGoods(h: Holding, y: Yard, s: PlayerSession, near: boolean, goods: 
   }
 }
 
-function lyingOff(game: Game, s: PlayerSession, h: Holding): boolean {
+export function lyingOff(game: Game, s: PlayerSession, h: Holding): boolean {
   return !!s.ship && islandNear(game, s.ship)?.id === h.island;
 }
 
-function mine(game: Game, s: PlayerSession): { h: Holding; y: Yard; isl: Island } | string {
+export function mine(game: Game, s: PlayerSession): { h: Holding; y: Yard; isl: Island } | string {
   const h = ownIsland(game, s.accountId);
   const isl = h ? island(game, h.island) : undefined;
   if (!h || !isl) return 'You have no island of your own.';
@@ -282,8 +293,26 @@ function whyNot(h: Holding, y: Yard, isl: Island, what: string): string | null {
   return null;
 }
 
+/** The island's power (docs/15 item 5): its buildings' and producers' levels, and three times each ship's of its own
+ *  that is afloat (a laid-up hull counts nothing until she is mended). */
+export function powerOf(h: Holding): number {
+  const things = [...h.buildings.map((b) => b.level ?? 1), ...(h.yard?.producers ?? []).map((p) => p.level)];
+  const ships = (h.yard?.ships ?? []).filter((x) => x.state !== 'building' && x.state !== 'laid_up').map((x) => x.level);
+  return islePower(things, ships);
+}
+
+/** The builders' crews: by the island's level, and one more for an island of great power. */
+export function crewsOf(h: Holding): number {
+  return crewsAt(h.level ?? 1, powerOf(h) >= POWER_CREW ? 1 : 0);
+}
+
+/** The builders' work (the shipwrights' on her ships is apart). */
+export function buildersBusy(y: Yard): number {
+  return y.jobs.filter((j) => !j.ship).length;
+}
+
 function crewFree(h: Holding, y: Yard): string | null {
-  return y.jobs.length >= crewsAt(h.level ?? 1) ? 'All your builders are at work.' : null;
+  return buildersBusy(y) >= crewsOf(h) ? 'All your builders are at work.' : null;
 }
 
 /** Lay a thing on a plot (null: the first free plot). */
@@ -312,6 +341,20 @@ function pay(game: Game, s: PlayerSession, h: Holding, y: Yard, plot: number, wh
   game.db.ledger(s.accountId, 'isle_base', -cost.silver, `${h.island}:${what}:${level}`);
   const now = game.wallNow();
   y.jobs.push({ id: y.seq++, plot, what, level, start: now, end: now + cost.secs * 1000 });
+  game.holdings.touch();
+  return null;
+}
+
+/** Pay a cost from the purse and the yard (null: paid), as the builders' work does. */
+export function payCost(game: Game, s: PlayerSession, h: Holding, y: Yard, cost: { silver: number; goods: Partial<Record<GoodId, number>> }, tag: string): string | null {
+  const p = s.profile!;
+  const near = lyingOff(game, s, h);
+  const lack = lacking(h, y, s, near, cost.goods);
+  if (lack) return lack;
+  if (p.gold < cost.silver) return `Needs ${cost.silver} silver`;
+  p.gold -= cost.silver;
+  takeGoods(h, y, s, near, cost.goods);
+  game.db.ledger(s.accountId, 'isle_ship', -cost.silver, `${h.island}:${tag}`);
   game.holdings.touch();
   return null;
 }
@@ -423,6 +466,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
   const cap = capOf(h);
   const rates = ratesOf(h, isl);
   const busy = crewFree(h, y);
+  const power = powerOf(h);
   const jobView = (j: BaseJob) => {
     const left = Math.max(0, (j.end - now) / 1000);
     return { id: j.id, level: j.level, start: j.start, end: j.end, silver: speedupSilver(left), goods: speedupGoods(left) };
@@ -431,7 +475,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
   for (let k = 0; k < n; k++) {
     const o = occupant(h, y, k);
     const what = whatOf(o);
-    const job = y.jobs.find((j) => j.plot === k) ?? null;
+    const job = y.jobs.find((j) => j.plot === k && !j.ship) ?? null;
     const level = !o ? 0 : 'b' in o ? (o.b.level ?? 1) : 'p' in o ? o.p.level : 0;
     let up: BaseCellView['up'] = null;
     if (what && o && !('j' in o) && level < maxLevel(what)) {
@@ -467,10 +511,16 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
   return {
     island: h.island, name: isl.name, biome: isl.biome, level: lvl, levelName: ISLE_LEVELS[lvl].name[0], size, plots: n, locked, cells,
     store: BASE_RES.map((g: BaseRes) => ({ good: g, n: Math.floor(y.res[g] ?? 0), cap, rate: Math.round((rates[g] ?? 0) * 10) / 10 })),
-    crews: { n: crewsAt(lvl), busy: y.jobs.length, next: nextCrewAt(lvl) },
+    crews: { n: crewsOf(h), busy: buildersBusy(y), next: nextCrewAt(lvl) },
     speedups: p.speedups ?? 0, tokenSecs: TOKEN_SECS, catalog,
     slots: { used: slotsUsed(h), total: slotsOf(isl, h) },
     now, near: lyingOff(game, s, h),
+    power: { now: power, need: lvl < ISLE_MAX ? ISLE_POWER[lvl + 1] : null, crew: POWER_CREW, crewHas: power >= POWER_CREW },
+    levelUp: lvl < ISLE_MAX ? {
+      level: lvl + 1, silver: ISLE_LEVELS[lvl + 1].silver, goods: ISLE_LEVELS[lvl + 1].goods, secs: 0, treasury: h.treasury, power: ISLE_POWER[lvl + 1],
+      why: isleLevelWhy(h),
+    } : null,
+    shipyard: ownYardView(game, s, h, y),
   };
 }
 

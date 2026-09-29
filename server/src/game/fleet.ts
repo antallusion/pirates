@@ -14,6 +14,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { flagshipYardMods } from './bridgefx.ts';
+import { ownPortRepairFleet, ownShipLost } from './baseships.ts';
 
 export type Formation = 'line' | 'wedge' | 'ring';
 export const FORMATIONS: Formation[] = ['line', 'wedge', 'ring'];
@@ -23,6 +24,9 @@ export interface FleetEscort {
   classId: ShipClassId;
   name: string;
   hull: number; // fraction of her hull, kept while she rides at anchor
+  /** One of the captain's own ships from her island's shipyard (docs/15 item 4): her record there, and her level. */
+  own?: string;
+  level?: number;
 }
 
 export interface Fleet {
@@ -52,7 +56,7 @@ export function escortSlots(p: Profile, ship: ShipEntity): number {
 export function escortUpkeep(p: Profile, ship: ShipEntity | null): number {
   const logistics = ship ? tx(ship.stats, 'fleetLogistics') : 0;
   let u = 0;
-  for (const e of p.fleet.escorts) u += ESCORT_OFFERS.find((o) => o.classId === e.classId)?.upkeep ?? 40;
+  for (const e of p.fleet.escorts) if (!e.own) u += ESCORT_OFFERS.find((o) => o.classId === e.classId)?.upkeep ?? 40;
   return u * Math.max(0.2, 1 - 0.2 * logistics);
 }
 
@@ -71,6 +75,7 @@ export function hireEscort(game: Game, s: PlayerSession, port: Port, classId: Sh
   if (port.shipyardTier < offer.yard) return `This yard cannot fit out a ${SHIP_CLASSES[classId].name}`;
   const slots = escortSlots(p, ship);
   if (slots <= 0) return 'Escorts answer only to a commander (10 points in Command)';
+  // Her own ships at sea take the berths first (docs/15 item 4).
   if (p.fleet.escorts.length >= slots) return `You have berths for ${slots} escort${slots === 1 ? '' : 's'}`;
   if (p.gold < offer.price) return `A ${SHIP_CLASSES[classId].name} and her crew cost ${offer.price} silver`;
   p.gold -= offer.price;
@@ -85,6 +90,7 @@ export function dismissEscort(game: Game, s: PlayerSession, id: string): string 
   const p = s.profile!;
   const e = p.fleet.escorts.find((x) => x.id === id);
   if (!e) return 'No such escort';
+  if (e.own) return 'She is your own ship: send her home from the island’s shipyard.';
   if (!s.ship!.docked) return 'Pay her off in port';
   p.fleet.escorts = p.fleet.escorts.filter((x) => x !== e);
   game.toastShip(s.ship!, `${e.name} is paid off.`, 'info');
@@ -96,20 +102,26 @@ export function launchFleet(game: Game, s: PlayerSession): void {
   const p = s.profile!;
   const owner = s.ship!;
   owner.formation = p.fleet.formation;
-  p.fleet.escorts.forEach((e, i) => {
-    const off = formationOffset(p.fleet.formation, i);
-    const f = headingVec(owner.state.heading), r = headingVec(owner.state.heading + Math.PI / 2);
-    const x = owner.state.x + f.x * off.y + r.x * off.x, y = owner.state.y + f.y * off.y + r.y * off.x;
-    const esc = game.spawnNpcShip('escort', e.classId, 'free', x, y, owner.state.heading, { ship: e.name, captain: 'Sailing Master' });
-    game.setNpcLevel(esc, owner.shipLevel); // she sails at her commander's level, as far as her hull allows
-    esc.ownerId = owner.id;
-    esc.fleetId = e.id;
-    esc.escortIndex = i;
-    esc.hull = Math.max(1, esc.stats.hullMax * e.hull);
-    const brain = game.npcs.get(esc.id);
-    if (brain) brain.active = true;
-    game.grid.upsert(esc.id, x, y);
-  });
+  p.fleet.escorts.forEach((e, i) => spawnEscortShip(game, s, e, i));
+}
+
+/** One ship of the squadron put to sea at her station (a hired escort at her commander's level, her own at hers). */
+export function spawnEscortShip(game: Game, s: PlayerSession, e: FleetEscort, i: number): ShipEntity {
+  const p = s.profile!;
+  const owner = s.ship!;
+  const off = formationOffset(p.fleet.formation, i);
+  const f = headingVec(owner.state.heading), r = headingVec(owner.state.heading + Math.PI / 2);
+  const x = owner.state.x + f.x * off.y + r.x * off.x, y = owner.state.y + f.y * off.y + r.y * off.x;
+  const esc = game.spawnNpcShip('escort', e.classId, 'free', x, y, owner.state.heading, { ship: e.name, captain: 'Sailing Master' });
+  game.setNpcLevel(esc, e.own ? (e.level ?? 1) : owner.shipLevel); // she sails at her commander's level, as far as her hull allows
+  esc.ownerId = owner.id;
+  esc.fleetId = e.id;
+  esc.escortIndex = i;
+  esc.hull = Math.max(1, esc.stats.hullMax * e.hull);
+  const brain = game.npcs.get(esc.id);
+  if (brain) brain.active = true;
+  game.grid.upsert(esc.id, x, y);
+  return esc;
 }
 
 /** Making port (or leaving the sea): the squadron anchors and remembers her damage. */
@@ -127,8 +139,9 @@ export function anchorFleet(game: Game, s: PlayerSession, hullCap = 1): void {
 /** In port the yard patches the squadron, if you pay. */
 export function repairFleet(game: Game, s: PlayerSession): void {
   const p = s.profile!;
+  ownPortRepairFleet(game, s); // her own ships: by their own reckoning (docs/15 item 4)
   for (const e of p.fleet.escorts) {
-    if (e.hull >= 0.999) continue;
+    if (e.hull >= 0.999 || e.own) continue;
     const price = ESCORT_OFFERS.find((o) => o.classId === e.classId)?.price ?? 1800;
     const cost = Math.round((1 - e.hull) * price * 0.15);
     if (p.gold < cost) continue;
@@ -143,6 +156,8 @@ export function escortLost(game: Game, esc: ShipEntity): void {
   const owner = esc.ownerId !== null ? game.ships.get(esc.ownerId) : undefined;
   const s = owner ? game.sessionOf(owner) : null;
   if (!s?.profile || !esc.fleetId) return;
+  // Her own ship is not lost: she is towed home and laid up at the island (docs/15 item 4).
+  if (s.profile.fleet.escorts.some((e) => e.id === esc.fleetId && e.own)) return ownShipLost(game, s, esc);
   s.profile.fleet.escorts = s.profile.fleet.escorts.filter((e) => e.id !== esc.fleetId);
   game.toastShip(owner!, `Your escort ${esc.name} is lost with all hands.`, 'bad');
 }

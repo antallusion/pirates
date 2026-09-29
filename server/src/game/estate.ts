@@ -36,6 +36,8 @@ import type { PlayerSession, Profile } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
 import { sagaNote } from './saga.ts';
+import { powerOf } from './base.ts';
+import { ISLE_POWER } from '../../../shared/src/data/baseships.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -160,18 +162,31 @@ export function ownedSlots(h: Holding, isl?: Island): number {
   return ISLE_LEVELS[Math.max(1, Math.min(ISLE_MAX, h.level ?? 1))].slots + (size === 'large' ? 2 : size === 'medium' ? 1 : 0);
 }
 
-export function isleLevelUp(game: Game, s: PlayerSession, islandId: number): string | null {
-  const h = game.holdings.get(game, islandId);
-  if (!h || !h.owned || !mayUse(game, h, s.accountId)) return 'You have no island of your own.';
+/** What stands in the way of the island's next level (null: nothing): its power (docs/15 item 5), then the goods of
+ *  its store and yard, then the treasury's silver. */
+export function isleLevelWhy(h: Holding): string | null {
   const lvl = h.level ?? 1;
   if (lvl >= ISLE_MAX) return 'Your island is at its greatest.';
   const need = ISLE_LEVELS[lvl + 1];
+  const power = powerOf(h);
+  if (power < ISLE_POWER[lvl + 1]) return `The island’s power is ${power} of the ${ISLE_POWER[lvl + 1]} its next level asks: raise its buildings and its ships.`;
   // The store first, then the island's yard (docs/15: its timber and iron count too).
   const yard = h.yard?.res ?? {};
   const have = (g: GoodId) => (h.store[g] ?? 0) + (yard[g] ?? 0);
   const lack = (Object.entries(need.goods) as [GoodId, number][]).filter(([g, n]) => have(g) < n);
   if (lack.length) return `The island’s store lacks ${lack.map(([g, n]) => `${n - have(g)} ${GOODS[g].name.toLowerCase()}`).join(', ')}.`;
   if (h.treasury < need.silver) return `The treasury lacks ${need.silver - h.treasury} silver.`;
+  return null;
+}
+
+export function isleLevelUp(game: Game, s: PlayerSession, islandId: number): string | null {
+  const h = game.holdings.get(game, islandId);
+  if (!h || !h.owned || !mayUse(game, h, s.accountId)) return 'You have no island of your own.';
+  const lvl = h.level ?? 1;
+  const why = isleLevelWhy(h);
+  if (why) return why;
+  const need = ISLE_LEVELS[lvl + 1];
+  const yard = h.yard?.res ?? {};
   h.treasury -= need.silver;
   for (const [g, n] of Object.entries(need.goods) as [GoodId, number][]) {
     const fromStore = Math.min(n, h.store[g] ?? 0);
@@ -684,7 +699,7 @@ export function estateView(game: Game, s: PlayerSession): EstateView {
   return {
     isle: h && isl ? {
       island: h.island, name: isl.name, level: lvl, levelName: ISLE_LEVELS[lvl].name[0], slots: ownedSlots(h, isl),
-      next: next ? { name: next.name[0], silver: next.silver, goods: next.goods } : null,
+      next: next ? { name: next.name[0], silver: next.silver, goods: next.goods, power: ISLE_POWER[lvl + 1] } : null, power: powerOf(h),
       residents: (h.residents ?? []).map((r) => ({ id: r.id, name: residentName(r.id * 7 + h.island)[0], prof: r.prof, at: r.at ? ('b' in r.at ? r.at.b : `o:${r.at.o}`) : null, line: PROFESSION_DEFS[r.prof].lines[(r.id + Math.floor(game.wallNow() / HOUR)) % PROFESSION_DEFS[r.prof].lines.length][0] })),
       cap: residentCap(h), refugees: p.refugees ?? 0, outposts: ISLE_LEVELS[lvl].outposts, trophies: has(h, 'trophy_hall') ? trophies(game, p, s.name) : null, visitors: h.visitors ?? 0,
     } : null,

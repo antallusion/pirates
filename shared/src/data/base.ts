@@ -99,8 +99,9 @@ export function producerOf(what: string): ProducerKind | null {
   return isProducer(what) ? (what.slice(2) as ProducerKind) : null;
 }
 
-/** Buildings that grow a level after the first (the warehouse widens the yard). */
-export const UPGRADABLE: BuildingId[] = ['warehouse'];
+/** Buildings that grow a level after the first (the warehouse widens the yard; the shipyard builds her own ships
+ *  to higher levels, docs/15 item 4). */
+export const UPGRADABLE: BuildingId[] = ['warehouse', 'shipyard'];
 export const BUILDING_MAX = 5;
 
 export function maxLevel(what: string): number {
@@ -143,6 +144,15 @@ export function baseCost(what: string, level: number): BaseCost {
   }
   const d = BUILDINGS[what as BuildingId];
   if (!d) return { silver: 0, goods: {}, secs: 0 };
+  // The shipyard's later levels are paid mostly in the island's own timber, tar and iron (docs/15 item 4).
+  if (what === 'shipyard' && level >= 2) {
+    const n = level - 1;
+    return {
+      silver: round50(15_000 * n ** 1.3),
+      goods: { timber: 40 + 40 * n, coal: 20 * n, tar: 20 + 15 * n, iron: 15 * n + 10 },
+      secs: levelTime(Math.round(600 * Math.sqrt(d.cost / 10_000)), level),
+    };
+  }
   // Half the silver of a leased island's building: the rest is paid in the island's own timber, stone and tar.
   const w = d.cost / 10_000;
   const goods: Partial<Record<GoodId, number>> = {
@@ -186,7 +196,7 @@ export const PLOT_CELLS: [number, number][] = (() => {
   return cells.sort((a, b) => ring(a) - ring(b) || man(a) - man(b) || a[1] + a[0] - (b[1] + b[0]) || a[1] - b[1]);
 })();
 
-/** The island levels at which each builders' crew is had (item 5 may add more by the same list). */
+/** The island levels at which each builders' crew is had (item 5: the island's power adds one more, POWER_CREW). */
 export const CREW_LEVELS = [1, 3];
 
 export function crewsAt(isleLevel: number, extra = 0): number {

@@ -3139,7 +3139,9 @@ export class Renderer {
     const tag = named ? named.tag : info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' ');
     // Her level (canon D12) leads the name as WoW's does: the number in a frame coloured by how far she stands above
     // your own ship, a gold frame for an elite built for a company, a skull when no shot of yours would tell.
-    const threat = info.shipLevel ? levelThreat(state, info.classId, info.shipLevel) : null;
+    // Her own ships from the island's shipyard (docs/15) sail on her side: their level, never a threat's skull.
+    const ownShip = info.npcRole === 'escort' && !!state.self?.fleet?.escorts.some((e) => e.own && e.atSea && e.name === info.name);
+    const threat = info.shipLevel ? (ownShip ? 'even' : levelThreat(state, info.classId, info.shipLevel)) : null;
     const badge = info.shipLevel ? (threat === 'skull' ? '☠' : String(info.shipLevel)) : '';
     g.font = '700 10px Inter, sans-serif';
     const pillW = badge ? g.measureText(badge).width + 8 : 0;

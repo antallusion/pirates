@@ -10,6 +10,7 @@ import type { HarnessId, PetId } from './data/companions.ts';
 import type { NemesisCause } from './data/nemesis.ts';
 import type { CaravanTask, OnAttack } from './data/caravans.ts';
 import type { OutpostKind } from './data/estate.ts';
+import type { OwnRole } from './data/baseships.ts';
 import type { BeastId } from './data/beasts.ts';
 import type { FishId, FishMethod } from './data/fishing.ts';
 import type { HappeningKind } from './data/happenings.ts';
@@ -139,6 +140,9 @@ export type ClientMsg =
   | { t: 'base'; action: 'upgrade'; plot: number }
   | { t: 'base'; action: 'move'; plot: number; to: number }
   | { t: 'base'; action: 'speedup'; job: number; pay: 'silver' | 'res' | 'token' }
+  /** The island's shipyard (docs/15 item 4): her own ships built, raised, mended, taken to sea and sent home. */
+  | { t: 'base'; action: 'ship_build'; role: OwnRole }
+  | { t: 'base'; action: 'ship_launch' | 'ship_recall' | 'ship_repair' | 'ship_upgrade'; ship: string }
   /** Caravans (docs/12 P8). */
   | { t: 'caravan'; action: 'launch'; ships: number[]; task: CaravanTask; outposts?: string[]; port?: string; port2?: string; goods?: GoodId[]; minPrice?: number; escorts: number; insured: boolean; orders: { repeat: boolean; avoidLawless: boolean; nightInPort: boolean; onAttack: OnAttack } }
   | { t: 'caravan'; action: 'recall' | 'repeat'; id: string }
@@ -515,7 +519,7 @@ export interface PrivateState {
   berths: { port: string; name: string; classId: ShipClassId; hull: number }[];
   figureheads: FigureheadId[];
   /** Hired escorts (Command) and the formation signal. */
-  fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
+  fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean; own?: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
   /** Admiral's Eye: what you can read of ships near you. */
   inspect: { id: number; hull: number; crew: number; morale: number; port: boolean; starboard: boolean }[];
   /** Eyes of the Choir: monsters and ghost ships far beyond sight. */
@@ -1375,7 +1379,9 @@ export interface EstateView {
     level: number;
     levelName: string;
     slots: number;
-    next: { name: string; silver: number; goods: Partial<Record<GoodId, number>> } | null;
+    next: { name: string; silver: number; goods: Partial<Record<GoodId, number>>; power?: number } | null;
+    /** The island's power (docs/15 item 5). */
+    power?: number;
     residents: { id: number; name: string; prof: string; at: string | null; line: string }[];
     cap: number;
     refugees: number;
@@ -1440,6 +1446,50 @@ export interface BaseView {
   now: number;
   /** Lying off the island: the hold pays too. */
   near: boolean;
+  /** The island's power (docs/15 item 5): what it is, what the next level asks, and the step up itself. */
+  power: { now: number; need: number | null; crew: number; crewHas: boolean };
+  levelUp: (BaseCostView & { level: number; treasury: number; power: number; why: string | null }) | null;
+  /** The island's shipyard and her own ships (docs/15 item 4). */
+  shipyard: OwnYardView;
+}
+
+/** One of the captain's own ships (docs/15 item 4). */
+export interface OwnShipView {
+  id: string;
+  role: OwnRole;
+  name: [string, string];
+  classId: ShipClassId;
+  level: number;
+  xp: number;
+  xpNext: number;
+  hull: number;
+  state: 'building' | 'home' | 'sea' | 'laid_up' | 'refit';
+  /** The shipwrights at work on her. */
+  job: { id: number; kind: 'build' | 'upgrade' | 'repair'; level: number; start: number; end: number; silver: number; goods: Partial<Record<GoodId, number>> } | null;
+  /** The next level at the shipyard (null at her greatest) and what stands in the way. */
+  up: (BaseCostView & { level: number; classId: ShipClassId; why: string | null }) | null;
+  /** Mending her at the island (null: she is whole). */
+  repair: (BaseCostView & { why: string | null }) | null;
+  /** Why she may not be taken to sea now (null: she may), or sent home. */
+  launchWhy: string | null;
+  recallWhy: string | null;
+  /** What she lends her captain: hold (m³), sight (share), fish a haul. */
+  bonus: { hold: number; sight: number; haul: number };
+  /** Catch aboard her, to the island's yard when she comes home. */
+  catch: number;
+}
+
+export interface OwnYardView {
+  /** The shipyard's level (0: none built yet) and the greatest level it builds to. */
+  level: number;
+  plot: number | null;
+  shipMax: number;
+  max: number;
+  ships: OwnShipView[];
+  offers: (BaseCostView & { role: OwnRole; classId: ShipClassId; why: string | null })[];
+  /** The squadron: her own ships at sea, hired escorts, and all the berths she has. */
+  squadron: { own: number; ownMax: number; hired: number; berths: number };
+  busy: boolean;
 }
 
 /** What the glass tells of a ship's hold (docs/12 P6). */

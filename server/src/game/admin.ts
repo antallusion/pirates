@@ -31,6 +31,9 @@ import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } f
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
 import { capOf, grantSpeedups, yardOf } from './base.ts';
+import { OWN_NAMES, OWN_ROLES, OWN_SHIPS_MAX, SHIPYARD_MAX, YARD_SHIP_LEVEL, hullFor, ownXpNext, roleLevels, yardLevelFor } from '../../../shared/src/data/baseships.ts';
+import type { OwnRole } from '../../../shared/src/data/baseships.ts';
+import { escortsOf } from './fleet.ts';
 import { BASE_RES } from '../../../shared/src/data/base.ts';
 import { BUY_REGIONS, ISLE_MAX } from '../../../shared/src/data/estate.ts';
 import { hunterRank, namedPirates, pirateById } from '../../../shared/src/data/pirates.ts';
@@ -281,6 +284,46 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       grantSpeedups(p, 10);
       game.holdings.touch();
       return `The yard holds ${n} more of each.`;
+    }
+    case 'oship': {
+      // The island's own ships for play-testing (docs/15 item 4): /oship <war|merchant|fisher|scout> [level] — one
+      // built at once (a shipyard raised for her if need be); /oship xp — all of them seasoned; /oship sink — the
+      // first at sea sent down (to be laid up).
+      const h = ownIsland(game, s.accountId);
+      if (!h) return 'You have no island of your own.';
+      const y = yardOf(game, h);
+      const ships = y.ships ?? [];
+      if (args[0] === 'xp') {
+        for (const x of ships) x.xp = ownXpNext(x.level);
+        game.holdings.touch();
+        return `Seasoned: ${ships.length}.`;
+      }
+      if (args[0] === 'sink') {
+        const ent = escortsOf(game, ship).find((e) => p.fleet.escorts.some((f) => f.id === e.fleetId && f.own));
+        if (!ent) return 'None of your own ships is at sea.';
+        ent.hull = 0;
+        game.beginSinking(ent);
+        return `${ent.name} is going down.`;
+      }
+      const role = (args[0] ?? 'war') as OwnRole;
+      if (!OWN_ROLES.includes(role)) return `Roles: ${OWN_ROLES.join(', ')}.`;
+      if (ships.length >= OWN_SHIPS_MAX) return `The island keeps ${OWN_SHIPS_MAX} ships of its own.`;
+      const level = Math.max(1, Math.min(YARD_SHIP_LEVEL[SHIPYARD_MAX], Math.round(num(1, 1))));
+      const lvl = roleLevels(role).filter((l) => l <= level).pop() ?? 1;
+      let yard = h.buildings.find((b) => b.id === 'shipyard');
+      if (!yard) {
+        yard = { id: 'shipyard', condition: 1, unpaid: false, level: 1 };
+        h.buildings.push(yard);
+      }
+      yard.level = Math.max(yard.level ?? 1, yardLevelFor(lvl));
+      const used = new Set(ships.map((x) => x.name));
+      let name = h.island % OWN_NAMES.length;
+      while (used.has(name) && used.size < OWN_NAMES.length) name = (name + 1) % OWN_NAMES.length;
+      ships.push({ id: `o${h.island}_${y.seq++}`, role, classId: hullFor(role, lvl), level: lvl, xp: 0, name, hull: 1, state: 'home' });
+      y.ships = ships;
+      yardOf(game, h); // the shipyard takes a plot
+      game.holdings.touch();
+      return `${OWN_NAMES[name][0]} lies at your island: level ${lvl}.`;
     }
     case 'tattoo': {
       // Tattoos (docs/12 P9 play-testing): /tattoo <id|all> earns them (Old Needle inks them in a haven), /tattoo ink inks at once.

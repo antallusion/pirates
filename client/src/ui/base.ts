@@ -11,7 +11,11 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { BUILDINGS } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId } from '../../../shared/src/data/holdings.ts';
-import type { BaseCellView, BaseView, ClientMsg } from '../../../shared/src/protocol.ts';
+import type { BaseCellView, BaseView, ClientMsg, OwnShipView } from '../../../shared/src/protocol.ts';
+import { OWN_ROLE_DEFS } from '../../../shared/src/data/baseships.ts';
+import type { OwnRole } from '../../../shared/src/data/baseships.ts';
+import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { dict, lang } from '../i18n.ts';
 import { serverText } from '../lang/server.ts';
 import { EN, RU } from '../lang/ui/base.ts';
@@ -90,8 +94,16 @@ function tilePos(plot: number, g: Layout): { left: number; top: number; w: numbe
   return { left, top, w: g.tw * 100, hh: ((g.tw / 2) / g.h) * 100, z: (i + j) * 10 + i + 1 };
 }
 
+/** A ship's top-down picture laid on its side, bow to the right (the world's own sprites, docs/15 item 4). */
+function shipPic(classId: ShipClassId, cls = 'sy-pic'): string {
+  const url = assetUrl(SHIP_CLASSES[classId]?.sprite ?? '');
+  return `<span class="${cls}">${url ? `<img src="${url}" alt="" draggable="false">` : ''}</span>`;
+}
+
 export class BaseWindow {
   sel: number | null = null;
+  /** The island's plots, or its shipyard (docs/15 item 4). */
+  tab: 'plots' | 'yard' = 'plots';
   moving: number | null = null;
   private send: (m: ClientMsg) => void;
   private asked = 0;
@@ -125,10 +137,16 @@ export class BaseWindow {
     const bar = `<div class="base-bar"><div class="base-res">${res}</div>
       <div class="base-meta"><span class="bmeta" title="${esc(`${L('crews')}${v.crews.next ? ` · ${L('crew_next', { n: v.crews.next })}` : ''}`)}">${icon('menu_crew', '', 'ico-sm')}<span class="bm-w">${esc(L('crews'))}</span> ${v.crews.busy}/${v.crews.n}</span>
       <span class="bmeta" title="${esc(`${L('tokens')} · ${L('tokens_tip', { m: v.tokenSecs / 60 })}`)}">⌛<span class="bm-w">${esc(L('tokens'))}:</span> ${v.speedups}</span>
+      <span class="bmeta bpower" title="${esc(L('power_tip', { now: v.power.now, need: v.power.need ?? '—', crew: v.power.crew }))}">${icon('tab_isles', '', 'ico-sm')}<span class="bm-w">${esc(L('power'))}</span> ${v.power.now}${v.power.need !== null ? `/${v.power.need}` : ''}</span>
       <span class="bmeta">${money(state.self?.gold ?? 0)}</span>
       <button class="btn btn-small${fresh ? ' btn-primary' : ''}" data-bcollect title="${esc(L('collect_tip'))}"${fresh ? '' : ' disabled'}>${esc(L('collect'))}${fresh ? ` +${fmt(fresh)}` : ''}</button></div></div>`;
-    root.innerHTML = `<div class="modal-head base-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: placeName(v.name), level: v.level, title }))} · ${esc(L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') }))}</div></div></div>
-      ${bar}<div class="modal-body base-body"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}">${this.board(v)}</div></div><div class="base-sheet">${this.sheet(v, state)}</div></div>`;
+    const sy = v.shipyard;
+    const tabs = `<div class="btabs" role="tablist"><button class="btab${this.tab === 'plots' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'plots'}" data-btab="plots">${esc(L('tab_plots'))}</button><button class="btab${this.tab === 'yard' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'yard'}" data-btab="yard">${esc(L('tab_yard'))} <i>${sy.ships.length}/${sy.max}</i></button></div>`;
+    const body = this.tab === 'yard'
+      ? `<div class="modal-body base-body yard-body">${this.yard(v, state)}</div>`
+      : `<div class="modal-body base-body"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}">${this.board(v)}</div></div><div class="base-sheet">${this.sheet(v, state)}</div></div>`;
+    root.innerHTML = `<div class="modal-head base-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: placeName(v.name), level: v.level, title }))} · ${esc(L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') }))}</div></div>${tabs}</div>
+      ${bar}${body}`;
     this.bind(root, state);
     this.tick(root, state);
   }
@@ -186,7 +204,7 @@ export class BaseWindow {
     }
     if (this.sel === null) {
       const jobs = v.cells.filter((c) => c.job);
-      return `<p class="bhint">${esc(L('pick'))}</p>
+      return `<p class="bhint">${esc(L('pick'))}</p>${this.levelCard(v)}
         <div class="bsec">${esc(L('work'))}</div>${jobs.map((c) => `<button class="bjob" data-plot="${c.plot}">${this.thumb(c)}<span><b>${esc(baseName(c.what!))}</b><br><span class="muted">${esc(c.job!.level <= 1 ? L('raising') : L('upgrading', { n: c.job!.level }))} · </span><span class="btime" data-end="${c.job!.end}">${esc(timeText((c.job!.end - v.now) / 1000))}</span></span></button>`).join('') || `<p class="muted">${esc(L('no_work'))}</p>`}${foot}`;
     }
     const c = v.cells[this.sel];
@@ -221,6 +239,59 @@ export class BaseWindow {
       ${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${foot}`;
   }
 
+  /** The island's next level (docs/15 item 5): its power, its treasury and its goods, and the step itself. */
+  private levelCard(v: BaseView): string {
+    const ru = lang() === 'ru' ? 1 : 0;
+    const u = v.levelUp;
+    if (!u) return `<p class="muted">${esc(L('isle_max'))}</p>`;
+    const goods = (Object.entries(u.goods) as [GoodId, number][]).map(([g, n]) => `<span class="bcost" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('');
+    return `<div class="bupcard blevel"><div class="row"><b>${esc(L('isle_up', { n: u.level, title: ISLE_LEVELS[u.level]?.name[ru] ?? '' }))}</b><span class="${v.power.now >= u.power ? 'good' : 'bad'}">${esc(L('isle_power', { now: v.power.now, need: u.power }))}</span></div>
+      <span class="bcosts"><span class="bcost${u.treasury < u.silver ? ' lack' : ''}">${esc(L('isle_treasury', { have: fmt(u.treasury), need: fmt(u.silver) }))}</span></span>
+      ${goods ? `<span class="bcosts"><span class="muted">${esc(L('isle_goods'))}</span>${goods}</span>` : ''}
+      ${u.why ? `<p class="muted">${esc(sv(u.why))}</p>` : ''}<button class="btn btn-small btn-primary" data-blevel${u.why ? ' disabled' : ''}>${esc(L('isle_raise'))}</button></div>`;
+  }
+
+  /** The shipyard: her own ships as cards, what the slipway may build, the squadron's berths (docs/15 item 4). */
+  private yard(v: BaseView, state: ClientState): string {
+    const y = v.shipyard;
+    const gold = state.self?.gold ?? 0;
+    const ru = lang() === 'ru' ? 1 : 0;
+    const head = y.level
+      ? `<p class="sy-info"><b>${esc(L('sy_level', { n: y.level, max: y.shipMax }))}</b>${y.level < 5 ? ` <span class="muted">${esc(L('sy_next'))}</span>` : ''}</p>`
+      : `<p class="sy-info bad">${esc(L('sy_none'))}</p>`;
+    const sq = `<p class="sy-squad"><span>${esc(L('sy_squad', { own: y.squadron.own, max: y.squadron.ownMax, hired: y.squadron.hired, berths: y.squadron.berths }))}</span> <span class="muted">${esc(L('sy_rule'))}</span></p>`;
+    const cards = y.ships.map((x) => this.shipCard(v, x, gold, ru)).join('');
+    const offers = y.level && y.ships.length < y.max
+      ? `<div class="bsec">${esc(L('sy_new', { n: y.ships.length, max: y.max }))}</div><div class="sy-offers">${y.offers.map((o) => `<div class="bopt sy-offer${o.why ? ' off' : ''}">${shipPic(o.classId, 'sy-pic sy-pic-sm')}<div class="bopt-main"><b>${esc(OWN_ROLE_DEFS[o.role].name[ru])} <span class="muted sy-cls">${esc(SHIP_CLASSES[o.classId].name)}</span></b><span class="muted bopt-text">${esc(o.why ? sv(o.why) : OWN_ROLE_DEFS[o.role].text[ru])}</span>${this.costHtml(v, o, gold)}</div>${o.why ? '' : `<button class="btn btn-small btn-primary" data-sybuild="${o.role}">${esc(L('sy_build'))}</button>`}</div>`).join('')}</div>`
+      : '';
+    return `${head}${sq}${cards ? `<div class="sy-cards">${cards}</div>` : ''}${offers}`;
+  }
+
+  private shipCard(v: BaseView, x: OwnShipView, gold: number, ru: number): string {
+    const d = OWN_ROLE_DEFS[x.role as OwnRole];
+    const hullPct = Math.round(x.hull * 100);
+    const xpPct = Math.round(Math.min(1, x.xp / Math.max(1, x.xpNext)) * 100);
+    const bonus = x.role === 'merchant' ? L('sy_b_hold', { n: x.bonus.hold }) : x.role === 'scout' ? L('sy_b_sight', { n: Math.round(x.bonus.sight * 100) }) : x.role === 'fisher' ? L('sy_b_haul', { n: x.bonus.haul }) : L('sy_b_war');
+    const j = x.job;
+    const job = j ? `<div class="sy-job"><div class="row"><b>${esc(j.kind === 'upgrade' ? L('sy_job_upgrade', { n: j.level }) : j.kind === 'repair' ? L('sy_job_repair') : L('sy_job_build'))}</b><span>${esc(L('left', { t: '\u0000' })).replace('\u0000', `<span class="btime" data-end="${j.end}">${esc(timeText((j.end - v.now) / 1000))}</span>`)}</span></div>
+      <span class="bprog big"><i data-start="${j.start}" data-stop="${j.end}"></i></span>
+      <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${j.id}">${esc(L('finish'))} <span data-price="${j.end}">${money(j.silver)}</span></button>
+      <button class="btn btn-small" data-bspeed="res" data-job="${j.id}">${esc(L('finish'))} ${(Object.entries(j.goods) as [GoodId, number][]).map(([g, n]) => `${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}`).join(' ')}</button>
+      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>⌛ ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>` : '';
+    const acts: string[] = [];
+    if (x.state === 'sea') acts.push(`<button class="btn btn-small" data-syrecall="${esc(x.id)}"${x.recallWhy ? ` disabled title="${esc(sv(x.recallWhy))}"` : ''}>${esc(L('sy_recall'))}</button>`);
+    else if (x.state === 'home') acts.push(`<button class="btn btn-small btn-primary" data-sylaunch="${esc(x.id)}"${x.launchWhy ? ' disabled' : ''}>${esc(L('sy_launch'))}</button>`);
+    const why = x.state === 'home' && x.launchWhy ? `<p class="muted sy-why">${esc(sv(x.launchWhy))}</p>` : '';
+    const repair = x.repair && !j ? `<div class="sy-act"><div class="row"><b>${esc(L('sy_repair'))}</b>${this.costHtml(v, x.repair, gold)}</div>${x.repair.why ? `<p class="muted sy-why">${esc(sv(x.repair.why))}</p>` : ''}<button class="btn btn-small${x.state === 'laid_up' ? ' btn-primary' : ''}" data-syrepair="${esc(x.id)}"${x.repair.why ? ' disabled' : ''}>${esc(L('sy_repair'))}</button></div>` : '';
+    const up = j || x.state === 'laid_up' ? '' : x.up
+      ? `<div class="sy-act"><div class="row"><b>${esc(x.up.classId !== x.classId ? L('sy_up_hull', { n: x.up.level, hull: SHIP_CLASSES[x.up.classId].name }) : L('sy_up', { n: x.up.level }))}</b>${this.costHtml(v, x.up, gold)}</div>${x.up.why ? `<p class="muted sy-why">${esc(sv(x.up.why))}</p>` : ''}<button class="btn btn-small" data-syup="${esc(x.id)}"${x.up.why ? ' disabled' : ''}>${esc(L('sy_up', { n: x.up.level }))}</button></div>`
+      : `<p class="muted">${esc(L('sy_max'))}</p>`;
+    return `<div class="sy-card st-${x.state}"><div class="sy-top">${shipPic(x.classId)}<div class="sy-id"><b class="sy-name">${esc(x.name[ru])}</b><span class="sy-sub">${esc(d.name[ru])} · ${esc(SHIP_CLASSES[x.classId].name)}</span></div><span class="sy-lvl" title="${esc(L('level', { n: x.level }))}">⚓${x.level}</span></div>
+      <p class="sy-state">${esc(L(`sy_st_${x.state}` as 'sy_st_home'))}${x.catch ? ` · ${esc(L('sy_catch', { n: x.catch }))}` : ''}</p>
+      <div class="sy-bars"><span class="sy-bar hull${hullPct < 50 ? ' low' : ''}"><em>${esc(L('sy_hull', { n: hullPct }))}</em><i style="width:${hullPct}%"></i></span><span class="sy-bar xp${xpPct >= 100 ? ' ready' : ''}"><em>${esc(xpPct >= 100 && x.up ? L('sy_ready') : L('sy_xp', { xp: x.xp, next: x.xpNext }))}</em><i style="width:${xpPct}%"></i></span></div>
+      ${x.state === 'laid_up' ? '' : `<p class="sy-bonus">${esc(bonus)}</p>`}${job}${why}${acts.length ? `<div class="row sy-acts">${acts.join('')}</div>` : ''}${repair}${up}</div>`;
+  }
+
   private thumb(c: BaseCellView): string {
     const art = c.what ? baseArt(c.what, Math.max(1, c.level), c.condition, c.unpaid, !!c.job && c.job.level <= 1) : null;
     return art ? `<img class="bthumb" src="${art}" alt="">` : '<span class="bthumb bthumb-empty">+</span>';
@@ -246,6 +317,18 @@ export class BaseWindow {
       this.sel = this.sel === k && !el.classList.contains('bjob') ? null : k;
       redraw();
     }));
+    root.querySelectorAll<HTMLElement>('[data-btab]').forEach((el) => (el.onclick = () => {
+      this.tab = el.dataset.btab === 'yard' ? 'yard' : 'plots';
+      redraw();
+    }));
+    root.querySelector<HTMLElement>('[data-blevel]')?.addEventListener('click', () => {
+      this.send({ t: 'estate', action: 'level' });
+      this.send({ t: 'base', action: 'view' });
+    });
+    root.querySelectorAll<HTMLElement>('[data-sybuild]').forEach((el) => (el.onclick = () => this.send({ t: 'base', action: 'ship_build', role: el.dataset.sybuild as OwnRole })));
+    for (const [attr, action] of [['sylaunch', 'ship_launch'], ['syrecall', 'ship_recall'], ['syrepair', 'ship_repair'], ['syup', 'ship_upgrade']] as const) {
+      root.querySelectorAll<HTMLElement>(`[data-${attr}]`).forEach((el) => (el.onclick = () => this.send({ t: 'base', action, ship: el.dataset[attr]! })));
+    }
     root.querySelector<HTMLElement>('[data-bcollect]')?.addEventListener('click', () => this.send({ t: 'base', action: 'collect' }));
     root.querySelector<HTMLElement>('[data-bcancel]')?.addEventListener('click', () => {
       this.moving = null;
