@@ -1093,4 +1093,14 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} bids {1} {2}.": "{0} ставит {1} {2}.",
   "{0} dives and comes up to the {1}: {2}.": "{0} ныряет и выныривает на {1}: {2}.",
   "{0} has landed at your {1} on {2}. Five minutes and the store is theirs.": "{0} высадился у вашей постройки «{1}» на {2}. Пять минут — и склад их.",
+  // Island scenes and mini-games (server/src/game/minigames.ts; the haunts' names from shared/src/data/minigames.ts).
+  "castaway's fire": "костёр отшельника",
+  "grog shack": "хижина с грогом",
+  "old cairn": "старый каменный курган",
+  "sea cave": "морской грот",
+  "lookout crag": "дозорная скала",
+  "landing place": "место высадки",
+  "A gift at sea": "Подарок в море",
+  "Found ashore": "Найдено на берегу",
+  "The party finds the {0} on {1} deserted.": "{0} на {1}: ни души. Отряд возвращается ни с чем.",
 };

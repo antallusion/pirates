@@ -21,9 +21,13 @@ import type { ShipEntity } from './ship.ts';
 import { haulSite, ownSiteNear } from './resources.ts';
 import { canDive, digTime, makeMap, grantMap, mapChance, mapHere, resolveDig, resolveDive, wreckHere } from './explorefx.ts';
 import { islandJobOffer, questEvent, questLandsHere } from './quests.ts';
+import { landingMinigame, openMinigame, startMinigame } from './minigames.ts';
+import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
+import type { HauntId } from '../../../shared/src/data/minigames.ts';
 
-/** An island feature, or one of the island's people or beasts (living islands, docs/11 P3). */
-export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'> | LandSite;
+/** An island feature, or one of the island's people or beasts (living islands, docs/11 P3), or an island's haunt
+ * with its mini-games (2026-09-30: 'scene', on every island with nothing else ashore). */
+export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'> | LandSite | 'scene';
 export const LANDABLE: LandableFeature[] = ['cache', 'wreck', 'ruins', 'grove', 'mine', 'pearl_bank', 'shrine', 'fort', 'volcano', 'bones', 'bell', 'hermit', 'spring', ...LAND_SITES];
 
 /** Who and what lives on an island (the same list the client draws). */
@@ -35,13 +39,29 @@ export const FEATURE_NAMES: Record<LandableFeature, string> = {
   cache: "smugglers' cache", wreck: 'beached wreck', ruins: 'ruins', grove: 'timber grove', mine: 'surface mine', pearl_bank: 'pearl bank', shrine: 'drowned shrine',
   fort: 'abandoned fort', volcano: 'smoking volcano', bones: 'leviathan bones', bell: 'drowned bell tower', hermit: "hermit's hut", spring: 'freshwater spring',
   fishers: 'fishing hamlet', smugglers: "smugglers' camp", pirate_camp: 'pirate camp', garrison: 'garrisoned fort', seals: 'seal colony', crabs: 'crab beach', turtles: 'turtle beach',
+  scene: 'landing place',
 };
+
+/** An island's haunt (her mini-games), if she has nothing else ashore: no feature, no people or beasts to land for,
+ * no port. Fixed by her id. */
+export function islandScene(is: Island): HauntId | null {
+  if (is.portId) return null;
+  if ([...is.features, ...lifeOf(is).map((x) => x.kind)].some((f) => LANDABLE.includes(f as LandableFeature))) return null;
+  return islandHaunt(is.id);
+}
+
+/** What the boats row for, by name (a haunt is named for the island's own). */
+export function featureName(is: Island, f: LandableFeature): string {
+  return f === 'scene' ? HAUNT_NAMES[islandHaunt(is.id)][0] : FEATURE_NAMES[f];
+}
 
 const DURATION: Record<LandableFeature, number> = {
   cache: 20, wreck: 25, ruins: 40, grove: 30, mine: 35, pearl_bank: 30, shrine: 25, fort: 40, volcano: 35, bones: 30, bell: 30, hermit: 20, spring: 20,
-  fishers: 20, smugglers: 25, pirate_camp: 40, garrison: 25, seals: 20, crabs: 15, turtles: 20,
+  fishers: 20, smugglers: 25, pirate_camp: 40, garrison: 25, seals: 20, crabs: 15, turtles: 20, scene: 12,
 };
 const RESTOCK_SEC = 2 * 3600; // a feature can be worked again two real hours later
+/** An island's haunt has a new game for the same captain half an hour later. */
+export const SCENE_COOLDOWN = 30 * 60;
 const LAND_RANGE = 260; // meters from the coastline
 
 export interface Landing {
@@ -72,13 +92,20 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
     if (d > LAND_RANGE || d >= bd) continue;
     // The island's features first, then her people and beasts.
     const here: string[] = [...is.features, ...lifeOf(is).map((x) => x.kind), ...(lairIsland(game, is.id) ? ['pirate_camp'] : [])];
+    let found = false;
     for (const f of here) {
       if (!LANDABLE.includes(f as LandableFeature)) continue;
       const t = p.explored[exploredKey(is.id, f as LandableFeature)] ?? -Infinity;
       if (game.now - t < RESTOCK_SEC && !questLandsHere(p, is.id, f)) continue;
       best = { island: is, feature: f as LandableFeature };
       bd = d;
+      found = true;
       break;
+    }
+    // Nothing else ashore: the island's haunt and her games, once the last game there is half an hour old.
+    if (!found && islandScene(is) && !openMinigame(game, s) && game.now - (p.explored[exploredKey(is.id, 'scene')] ?? -Infinity) >= SCENE_COOLDOWN) {
+      best = { island: is, feature: 'scene' };
+      bd = d;
     }
   }
   return best;
@@ -132,7 +159,7 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   const dur = DURATION[target.feature];
   ship.landing = { islandId: target.island.id, feature: target.feature, until: game.now + dur, started: game.now, party };
   ship.input = { rudder: 0, sailTarget: 0 };
-  game.toastShip(ship, `Boats away: ${party} hands row for the ${FEATURE_NAMES[target.feature]} on ${target.island.name} (${dur}s). The ship lies at anchor.`, 'info');
+  game.toastShip(ship, `Boats away: ${party} hands row for the ${featureName(target.island, target.feature)} on ${target.island.name} (${dur}s). The ship lies at anchor.`, 'info');
   return null;
 }
 
@@ -191,6 +218,16 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   // A named pirate's lair (docs/12 P5): its battery drives the boats off, or, silenced, the lair is stormed.
   if (feature === 'pirate_camp' && lairLanding(game, s, island)) return;
   p.explored[exploredKey(island.id, feature)] = game.now;
+  // An island's haunt: her mini-game opens (it pays, and counts as a landing, when it is played out).
+  if (feature === 'scene') {
+    if (!startMinigame(game, s, { haunt: islandHaunt(island.id), islandId: island.id, scene: true, share })) {
+      game.toastShip(ship, `The party finds the ${featureName(island, feature)} on ${island.name} deserted.`, 'info');
+      game.grantXp(s, 10 * share, null);
+    }
+    petsOnLand(game, s, island, feature);
+    fatesOnLand(game, s, island.id);
+    return;
+  }
   const got: string[] = [];
   const give = (good: GoodId, lo: number, hi: number) => {
     const n = addCargo(ship, good, Math.round(rng.int(lo, hi) * share));
@@ -368,6 +405,8 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   fatesOnLand(game, s, island.id); // an old captain's grave (docs/12 P10 #11) // the dog digs; a pet may come back with the party (docs/12 P10 #3)
   // The hamlet's or the camp's people have a job of their own.
   if (feature === 'fishers' || feature === 'smugglers') islandJobOffer(game, s, island.id);
+  // Now and then the party stumbles on one of the island games too.
+  landingMinigame(game, s, island.id, share);
   // Treasure maps turn up in caches, wrecks and ruins.
   if (feature === 'cache') mapChance(game, s, 0.15, 1, 'In the cache');
   if (feature === 'wreck') mapChance(game, s, 0.1, 1, 'In a captain\'s chest');

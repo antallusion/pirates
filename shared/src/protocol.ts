@@ -14,6 +14,7 @@ import type { BeastId } from './data/beasts.ts';
 import type { FishId, FishMethod } from './data/fishing.ts';
 import type { HappeningKind } from './data/happenings.ts';
 import type { EncounterId, SightKind } from './data/encounters.ts';
+import type { MinigameId } from './data/minigames.ts';
 import type { CaptainSlot, Item, Slot } from './data/items.ts';
 import type { OrderKind, ServiceId } from './data/marque.ts';
 import type { SkipperTrait } from './data/turncoats.ts';
@@ -111,6 +112,8 @@ export type ClientMsg =
   | { t: 'gear'; action: 'mend' }
   | { t: 'gear'; action: 'buy'; index: number }
   | { t: 'encounter'; id: number; choice: string }
+  /** An island scene or mini-game (2026-09-30): a choice or an answer; `ms` for a timing game, `seq` for a call repeated. */
+  | { t: 'minigame'; id: number; pick: string; ms?: number; seq?: number[] }
   | { t: 'fishing'; action: 'fight'; id: number; holds: [number, number][] }
   | { t: 'fishing'; action: 'trap' | 'haul' | 'deep' | 'salt' }
   /** The hunt (docs/12 P4): pay out the line, cut it, flense a carcass alongside. */
@@ -1100,6 +1103,7 @@ export type ServerMsg =
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
   | { t: 'encounter'; view: EncounterView | null }
+  | { t: 'minigame'; view: MinigameView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
   | { t: 'legends'; view: LegendsView }
   | { t: 'onboarding'; view: OnboardingView }
@@ -1619,6 +1623,52 @@ export interface SightView {
   kind: SightKind;
   x: number;
   y: number;
+}
+
+/** An island scene or mini-game (2026-09-30), as far as its captain may see it: the words come from the shared data,
+ * the dice, the calls and the prices from the server. `result` once it is settled. */
+export interface MinigameView {
+  id: number;
+  def: MinigameId;
+  /** The tale's step, or 'play' (and 'counter' at a haggle). */
+  step: string;
+  /** Riddles and the stars: the questions asked (indices into the pool), how many are answered, each one's option order. */
+  q?: number[];
+  qi?: number;
+  order?: number[][];
+  stake?: number;
+  /** Liar's dice: her own five, and the keeper's bid [count, face 1..6]. */
+  dice?: number[];
+  bid?: [number, number];
+  /** Memory: the call to repeat (symbol indices). */
+  seq?: number[];
+  /** Three shells: where the pearl starts and the swaps (0: left-middle, 1: middle-right, 2: left-right). */
+  pea?: number;
+  swaps?: number[];
+  /** Timing: the needle's period (ms) and phase (0..1) for each try, and the tries so far. */
+  period?: number[];
+  phase?: number[];
+  hits?: boolean[];
+  /** The haggle: the price asked, and the lot. */
+  price?: number;
+  item?: Item;
+  /** The stakes and purses are smaller: the shores have heard of her. */
+  weary?: boolean;
+  result?: { outcome: string; win: boolean; vars: MinigameVars };
+}
+
+export interface MinigameVars {
+  silver?: number;
+  lost?: number;
+  stake?: number;
+  n?: number;
+  good?: GoodId;
+  item?: Item;
+  crew?: number;
+  roll?: number[];
+  count?: number;
+  map?: boolean;
+  xp?: number;
 }
 
 /** An encounter's card, open: the client draws its words from the shared data. */
