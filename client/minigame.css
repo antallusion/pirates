@@ -1,0 +1,98 @@
+/* The island games' window (client/src/ui/minigame.ts, 2026-09-30). Kept apart from styles.css; the same kit — a dark
+   card with a brass edge like the encounter card, the painted scene at its head. Phone-first: 375×812 and up. */
+
+#minigame { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 96px); transform: translateX(-50%); width: min(440px, calc(100vw - 20px)); max-height: calc(100vh - var(--sa-t, 0px) - var(--sa-b, 0px) - 110px); overflow-y: auto; z-index: 41; pointer-events: auto; overscroll-behavior: contain; overflow-wrap: break-word; -webkit-tap-highlight-color: transparent; }
+#minigame.hidden { display: none; }
+body:has(#minigame:not(.hidden)) #encounter { visibility: hidden; }
+body:has(#minigame:not(.hidden)) #hud-goals, body:has(#minigame:not(.hidden)) #hud-stack { visibility: hidden; }
+@media (max-width: 699px) { body:has(#minigame:not(.hidden)) #tc-menu, body:has(#minigame:not(.hidden)) #hud-menu { visibility: hidden; } }
+
+#minigame .mg-card { background: rgba(10, 12, 16, 0.95); border: 1px solid rgba(232, 196, 106, 0.55); border-radius: 6px; padding: 10px 12px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+#minigame .mg-art { position: relative; margin: -4px -6px 8px; aspect-ratio: 2.6 / 1; background: #0b0d10 center / cover no-repeat; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 4px; box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.8); overflow: hidden; }
+#minigame .mg-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 12, 16, 0) 40%, rgba(10, 12, 16, 0.75)); pointer-events: none; }
+#minigame .mg-face { position: absolute; right: 10px; bottom: 8px; width: 64px; height: 64px; object-fit: cover; border-radius: 50%; border: 2px solid rgba(232, 196, 106, 0.7); background: rgba(10, 12, 16, 0.85); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7); z-index: 1; }
+#minigame .mg-h { font-family: var(--serif); font-size: 19px; font-weight: 700; color: #e8c46a; margin-bottom: 4px; line-height: 1.15; }
+#minigame .mg-text, #minigame .mg-q, #minigame .mg-out { margin: 4px 0 8px; font-size: 14px; line-height: 1.45; color: var(--bone, #ddd); }
+#minigame .mg-text { color: #bfb8a8; font-size: 13px; }
+#minigame .mg-q { color: #f2e6c8; font-size: 15px; }
+#minigame .mg-out { color: #f2e6c8; font-size: 15px; padding: 8px 10px; border-radius: 4px; background: rgba(255, 255, 255, 0.03); border-left: 3px solid rgba(232, 196, 106, 0.6); }
+#minigame .mg-out.mg-lost { border-left-color: rgba(180, 70, 60, 0.8); }
+#minigame .mg-note { font-size: 12px; color: #9a9384; letter-spacing: 0.04em; text-transform: uppercase; margin: 2px 0 4px; }
+#minigame .mg-note.mg-good { color: #9fd49a; }
+#minigame .mg-note.mg-bad { color: #e6a39a; }
+#minigame .mg-stake { font-size: 13px; color: #e8c46a; margin: 2px 0 6px; }
+#minigame .mg-weary { font-size: 12px; color: #c9a36a; font-style: italic; margin: 0 0 6px; }
+
+#minigame .mg-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+#minigame .mg-choices .btn, #minigame .mg-pads .btn { flex: 1 1 auto; min-height: 44px; font-size: 13px; padding: 6px 10px; white-space: normal; line-height: 1.25; touch-action: manipulation; }
+#minigame .mg-choices .mg-opt { flex: 1 1 calc(50% - 6px); }
+#minigame .mg-choices .mg-walk { flex: 0 1 auto; opacity: 0.8; }
+#minigame .mg-choices .mg-sym-btn { flex: 1 1 calc(33% - 6px); display: flex; align-items: center; justify-content: center; gap: 6px; }
+#minigame .mg-sym { font-size: 18px; line-height: 1; color: #e8c46a; }
+
+/* Dice. */
+#minigame .mg-dice { display: flex; gap: 6px; justify-content: center; margin: 4px 0 6px; }
+#minigame .mg-die { display: inline-block; font-size: 38px; line-height: 1; color: #efe6d0; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8); }
+#minigame .mg-die-hot { color: #e8c46a; }
+#minigame .mg-die-sm { font-size: 22px; vertical-align: -3px; }
+
+/* The coin. */
+#minigame .mg-coin { display: flex; justify-content: center; margin: 2px 0 6px; }
+#minigame .mg-coin-img { width: 54px; height: 54px; animation: mg-spin 2.4s linear infinite; }
+@keyframes mg-spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
+
+/* Three shells. */
+#minigame .mg-shells { position: relative; height: 74px; margin: 6px 4px 8px; }
+#minigame .mg-shell { position: absolute; top: 12px; width: 33.34%; height: 58px; display: flex; justify-content: center; transition: left 0.42s cubic-bezier(0.5, 0, 0.3, 1); cursor: pointer; }
+#minigame .mg-shell::before { content: ''; position: absolute; top: 0; left: 50%; margin-left: -32px; width: 64px; height: 48px; border-radius: 50% 50% 12px 12px / 70% 70% 12px 12px; background: radial-gradient(ellipse at 40% 30%, #e9d9b8, #9a7d56 70%, #5b4631); box-shadow: 0 6px 10px rgba(0, 0, 0, 0.6), inset 0 -6px 10px rgba(0, 0, 0, 0.35); transition: transform 0.3s; z-index: 1; }
+#minigame .mg-pearl { position: absolute; top: 34px; left: 50%; margin-left: -8px; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #d9d4e6 55%, #9a93ad); box-shadow: 0 0 8px rgba(255, 255, 255, 0.5); opacity: 0; transition: opacity 0.2s; }
+#minigame .mg-shell.mg-lift::before { transform: translateY(-18px); }
+#minigame .mg-shell.mg-lift .mg-pearl { opacity: 1; }
+
+/* Memory: the call shown, then the pads. */
+#minigame .mg-seq { display: flex; gap: 5px; justify-content: center; margin: 4px 0 8px; }
+#minigame .mg-slot { width: 30px; height: 30px; border-radius: 4px; border: 1px dashed rgba(232, 196, 106, 0.4); display: flex; align-items: center; justify-content: center; }
+#minigame .mg-slot .mg-flag { width: 20px; height: 14px; margin: 0; }
+#minigame .mg-pads { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 6px; }
+#minigame .mg-pad { display: flex; align-items: center; justify-content: center; gap: 6px; }
+#minigame .mg-pad:disabled { opacity: 0.75; }
+#minigame .mg-pad.mg-lit { border-color: #e8c46a; background: rgba(232, 196, 106, 0.28); box-shadow: 0 0 16px rgba(232, 196, 106, 0.55); opacity: 1; color: #fff; }
+#minigame .mg-flag { display: inline-block; width: 22px; height: 15px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 2px; }
+
+/* Timing: the dial with its swinging needle, the lagoon with its fish. */
+#minigame .mg-tries { display: flex; gap: 6px; justify-content: center; margin: 2px 0 2px; }
+#minigame .mg-try { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(232, 196, 106, 0.35); display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9a9384; }
+#minigame .mg-try-now { border-color: #e8c46a; color: #e8c46a; }
+#minigame .mg-try-hit { background: rgba(120, 190, 110, 0.25); color: #bfe6b8; border-color: #7fb877; }
+#minigame .mg-try-miss { background: rgba(180, 70, 60, 0.25); color: #e6a39a; border-color: #b4463c; }
+#minigame .mg-dial { position: relative; width: 220px; max-width: 80%; aspect-ratio: 2 / 1; margin: 6px auto 4px; border-radius: 220px 220px 0 0; background: radial-gradient(circle at 50% 100%, #1d1a14, #0d0c0a 70%); border: 2px solid rgba(176, 141, 87, 0.8); border-bottom: none; overflow: hidden; }
+#minigame .mg-zone { position: absolute; inset: 0; background: conic-gradient(from calc(-1 * var(--z)) at 50% 100%, rgba(232, 196, 106, 0.55) 0deg calc(2 * var(--z)), transparent calc(2 * var(--z)) 360deg); }
+#minigame .mg-needle { position: absolute; left: 50%; bottom: 0; width: 4px; height: 92%; transform-origin: 50% 100%; background: linear-gradient(180deg, #d94a3a, #d94a3a 45%, #cfc6b4 45%); border-radius: 2px; transform: translateX(-50%); box-shadow: 0 0 6px rgba(0, 0, 0, 0.8); }
+#minigame .mg-hub { position: absolute; left: 50%; bottom: -8px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #b08d57; }
+#minigame .mg-lagoon { position: relative; height: 64px; margin: 6px 0 4px; border-radius: 6px; background: linear-gradient(180deg, #0f3a44, #0a262e); border: 1px solid rgba(120, 190, 200, 0.35); overflow: hidden; }
+#minigame .mg-mark { position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); background: rgba(232, 196, 106, 0.28); border-left: 1px solid rgba(232, 196, 106, 0.8); border-right: 1px solid rgba(232, 196, 106, 0.8); }
+#minigame .mg-fish { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 28px; color: rgba(0, 0, 0, 0.6); }
+#minigame .mg-fish-img { width: 40px; height: 40px; object-fit: contain; filter: brightness(0.25) blur(0.6px); }
+#minigame .mg-stop { font-size: 16px !important; min-height: 52px !important; letter-spacing: 0.06em; }
+
+/* The haggle's lot. */
+#minigame .mg-lot { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; font-size: 14px; }
+#minigame .mg-lot-img { width: 36px; height: 36px; object-fit: contain; }
+
+/* What came of it. */
+#minigame .mg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 4px; }
+#minigame .mg-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 8px; border-radius: 12px; background: rgba(232, 196, 106, 0.12); border: 1px solid rgba(232, 196, 106, 0.35); color: #e8c46a; }
+
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) { #minigame { top: calc(var(--sa-t, 0px) + var(--mm, 0px) + 56px); } }
+@media (max-width: 420px) {
+  #minigame { top: calc(var(--sa-t, 0px) + 70px); width: calc(100vw - 16px); }
+  #minigame .mg-face { width: 52px; height: 52px; }
+  #minigame .mg-h { font-size: 18px; }
+  #minigame .mg-die { font-size: 34px; }
+}
+@media (max-height: 520px) {
+  #minigame { top: calc(var(--sa-t, 0px) + 8px); max-height: calc(100vh - 16px); }
+  #minigame .mg-art { aspect-ratio: 5 / 1; }
+  #minigame .mg-face { width: 40px; height: 40px; bottom: 4px; }
+  #minigame .mg-text { display: none; }
+}

@@ -6,6 +6,7 @@ import { tell } from './ui/confirm.ts';
 import { beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { EncounterCard } from './ui/encounter.ts';
+import { MinigameWindow } from './ui/minigame.ts';
 import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
 import { giverDialog } from './ui/giver.ts';
@@ -208,6 +209,7 @@ const touch = new TouchControls({
 });
 const onboarding = new OnboardingUi(state);
 const encounterCard = new EncounterCard((m) => net.send(m));
+const minigameWindow = new MinigameWindow((m) => net.send(m));
 const fishFight = new FishFightPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
 // Options: applied now and on every change (docs/07 §11).
@@ -479,6 +481,10 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'encounter':
       encounterCard.open(m.view);
+      break;
+    case 'minigame':
+      // An island scene or mini-game (2026-09-30): its window opens, follows the game, and shows what came of it.
+      minigameWindow.open(m.view);
       break;
     case 'tattoos':
       if (modal === 'tattoos') refreshModal();

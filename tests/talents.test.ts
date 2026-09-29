@@ -324,11 +324,13 @@ test('Thunderous Broadside and Spotter: every ball home stuns; three volleys ran
   ship.crew = ship.stats.crewMax;
   ship.ammo.round = 500;
   ship.addEffect({ id: 'test_aim', until: game.now + 999, mods: { spreadMul: -0.95 } }, game.now);
-  const npc = enemyAbeam(game, ship, 120, 'brig');
+  // At 80 m every ball of a tight volley lands (at 120 m the range error alone made one miss in four runs a matter of
+  // the dice, and any change to the world's rolls could flip it).
+  const npc = enemyAbeam(game, ship, 80, 'brig');
   npc.hull = 1e6;
   for (let i = 0; i < 3; i++) {
     ship.reload.starboard = 0;
-    fireBroadside(game, ship, 'starboard', 120);
+    fireBroadside(game, ship, 'starboard', 80);
     steps(game, 40);
   }
   assert.ok(npc.hasEffect('stunned_crew'), 'stunned');

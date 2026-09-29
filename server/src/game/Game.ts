@@ -115,7 +115,8 @@ import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, esc
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
-import { FEATURE_NAMES, findLandable, startLanding, stepLanding } from './exploration.ts';
+import { featureName, findLandable, startLanding, stepLanding } from './exploration.ts';
+import { playMinigame, stepMinigames } from './minigames.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, cutGrapples, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { legendsView } from './legends.ts';
@@ -733,6 +734,7 @@ export class Game {
 
     for (const s of this.sessions) stepRefit(this, s); // yards finish their work by the wall clock
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
+    stepMinigames(this); // island scenes and mini-games left open lapse
     stepSeaLife(this); // the small life of the sea between the director's encounters
     stepTraffic(this); // the sea's own ships kept about every captain at sea
     stepFishing(this); // shoals, nets, rods, lamps and pots (docs/12 P3)
@@ -903,7 +905,7 @@ export class Game {
         ? { island: 'the sea floor', feature: `wreck of the ${wreck.name} (${wreck.depth} m)`, action: 'dive', blocked: wreckWhy ?? undefined }
         : own
         ? { island: own.island.name, feature: `stockpile of ${GOODS[own.site.good].name.toLowerCase()} (${Math.floor(own.site.stock)})` }
-        : land ? { island: land.island.name, feature: FEATURE_NAMES[land.feature] } : null;
+        : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
       if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });
@@ -2608,6 +2610,8 @@ export class Game {
         return;
       case 'encounter':
         return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
+      case 'minigame':
+        return err(playMinigame(this, s, Number(msg.id), String(msg.pick), msg.ms, msg.seq));
       case 'tattoo':
         if (msg.action === 'set') err(setTattoo(this, s, Math.trunc(Number(msg.slot)), msg.id === null ? null : String(msg.id)));
         return sendTattoos(this, s);

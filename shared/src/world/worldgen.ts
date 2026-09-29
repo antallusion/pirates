@@ -91,6 +91,8 @@ export interface World {
   regionGrid: Uint8Array; // 1 km cells -> region index
   navGrid: Uint8Array; // NAV_CELL cells: 1 = blocked
   navSize: number;
+  /** The first of the outer islands (step 4 of the generation): every island before her is as she ever was. */
+  outerFrom: number;
 }
 
 const REGION_CELL = 1000;
@@ -429,6 +431,65 @@ export function generateWorld(seed: number): World {
       placed++;
     }
   }
+  // 4) The outer islands (2026-09-30: more islands, each with something ashore): some 45% more, appended after
+  // everything above from their own generator, so every island, port and reef rolled before keeps her id and
+  // place. They keep off the ports, the lanes between neighbouring ports, the currents, the maelstroms, the reefs
+  // and each other, and take their biome and features from their region like the rest.
+  const outerFrom = islands.length;
+  const lanes = portLanes(ports);
+  const orng = new Rng((seed * 197 + 4099) >>> 0);
+  for (const rid of REGION_IDS) {
+    const reg = REGIONS[rid];
+    const want = outerIslandCount(rid);
+    let placed = 0, attempts = 0;
+    while (placed < want && attempts < want * 120) {
+      attempts++;
+      const x = orng.range(WORLD_EDGE_MARGIN + 1500, WORLD_SIZE - WORLD_EDGE_MARGIN - 1500);
+      const y = orng.range(WORLD_EDGE_MARGIN + 1500, WORLD_SIZE - WORLD_EDGE_MARGIN - 1500);
+      if (regionOf(x, y) !== rid) continue;
+      const roll = orng.float();
+      let r = roll < 0.6 ? orng.range(90, 240) : roll < 0.92 ? orng.range(240, 560) : orng.range(560, 1000);
+      r *= reg.islandScale;
+      if (distanceToCurrents(x, y) < r + 700) continue;
+      if (WHIRLPOOLS.some((w) => Math.hypot(w.x - x, w.y - y) < w.radius * 1.4 + r)) continue;
+      if (ports.some((p) => Math.hypot(p.x - x, p.y - y) < r * 1.25 + 2500)) continue;
+      if (islands.some((is) => Math.hypot(is.x - x, is.y - y) < is.radius + r * 1.25 + 420)) continue;
+      if (reefs.some((q) => Math.hypot(q.x - x, q.y - y) < q.radius + r * 1.25 + 300)) continue;
+      if (lanes.some(([ax, ay, bx, by]) => segDist(x, y, ax, ay, bx, by) < r * 1.25 + 900)) continue;
+      const poly = islandPoly(orng, x, y, r, seed + 20000 + islands.length * 7);
+      const id = islands.length;
+      const biome = biomeFromMix(rid, orng.float());
+      const features: IslandFeature[] = [];
+      const strange = reg.strangeness;
+      if (orng.chance(0.06 + strange * 0.25)) features.push('ruins');
+      if (orng.chance(0.06)) features.push('wreck');
+      if (biome === 'mossy' && orng.chance(0.1)) features.push('pearl_bank');
+      if (biome === 'atoll' && orng.chance(0.2)) features.push('pearl_bank');
+      if ((biome === 'volcanic' || biome === 'blacksand' || biome === 'crystal') && r > 220 && orng.chance(0.15)) features.push('mine');
+      if ((biome === 'temperate' || biome === 'ice' || biome === 'jungle' || biome === 'mangrove') && r > 280 && orng.chance(0.15)) features.push('grove');
+      if (orng.chance(0.03 + strange * 0.1)) features.push('shrine');
+      if (orng.chance(0.05)) features.push('cache');
+      if ((biome === 'ice' || biome === 'bone') && orng.chance(0.12)) features.push('bones');
+      if ((biome === 'ruins' || biome === 'mossy') && orng.chance(0.08)) features.push('bell');
+      if ((biome === 'temperate' || biome === 'mossy' || biome === 'jungle') && r > 240 && orng.chance(0.08)) features.push('spring');
+      if (r > 200 && orng.chance(0.04)) features.push('hermit');
+      // Named from the region's own syllables, like every island before her (the names the client has in Russian).
+      const is: Island = { id, name: islandName(orng, reg.biome, usedNames), region: rid, biome, x, y, radius: r * 1.25, poly, features };
+      islands.push(is);
+      const [x0, y0] = chunkOf(is.x - is.radius, is.y - is.radius);
+      const [x1, y1] = chunkOf(is.x + is.radius, is.y + is.radius);
+      for (let cy = y0; cy <= y1; cy++) {
+        for (let cx = x0; cx <= x1; cx++) {
+          const k = chunkKey(cx, cy);
+          let list = chunks.get(k);
+          if (!list) chunks.set(k, (list = []));
+          list.push(is.id);
+        }
+      }
+      placed++;
+    }
+  }
+
   const reefChunks = new Map<number, number[]>();
   for (const rf of reefs) {
     const [x0, y0] = chunkOf(rf.x - rf.radius, rf.y - rf.radius);
@@ -490,7 +551,7 @@ export function generateWorld(seed: number): World {
     navGrid[gy * navSize + gx] = 0;
   }
 
-  return { seed, whirlpools: WHIRLPOOLS, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize };
+  return { seed, whirlpools: WHIRLPOOLS, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize, outerFrom };
 }
 
 /** Anchor point `offset` meters beyond the outermost coastline crossing along `heading` from the island centre. */
@@ -502,6 +563,35 @@ function coastAnchor(poly: number[], cx: number, cy: number, heading: number, of
   }
   const d = lastInside + offset;
   return [cx + dir.x * d, cy + dir.y * d];
+}
+
+/** How many outer islands a region gains (step 4 of the generation): some 45% of her own count; the Crown's home
+ * waters, where the First Watch learns the helm, a little fewer (40%). */
+export function outerIslandCount(rid: RegionId): number {
+  return Math.round(REGIONS[rid].islandCount * (rid === 'black_coast' ? 0.4 : 0.45));
+}
+
+/** The sea lanes: straight runs from every port to her three nearest neighbours, as [ax, ay, bx, by]. */
+export function portLanes(ports: { x: number; y: number }[]): [number, number, number, number][] {
+  const out: [number, number, number, number][] = [];
+  const seen = new Set<string>();
+  ports.forEach((p, i) => {
+    const near = ports.map((q, j) => ({ j, d: Math.hypot(q.x - p.x, q.y - p.y) })).filter((o) => o.j !== i).sort((a, b) => a.d - b.d).slice(0, 3);
+    for (const { j } of near) {
+      const key = i < j ? `${i}:${j}` : `${j}:${i}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push([p.x, p.y, ports[j].x, ports[j].y]);
+    }
+  });
+  return out;
+}
+
+function segDist(x: number, y: number, ax: number, ay: number, bx: number, by: number): number {
+  const abx = bx - ax, aby = by - ay;
+  const l2 = abx * abx + aby * aby;
+  const t = l2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * abx + (y - ay) * aby) / l2)) : 0;
+  return Math.hypot(ax + abx * t - x, ay + aby * t - y);
 }
 
 function distanceToCurrents(x: number, y: number): number {

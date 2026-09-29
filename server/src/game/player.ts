@@ -1,6 +1,7 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
 import type { Look } from '../../../shared/src/data/looks.ts';
+import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import { STARTING_UNLOCKS, encodeLook } from '../../../shared/src/data/looks.ts';
 import type { CompanionRec } from './companion.ts';
 import type { PetId } from '../../../shared/src/data/companions.ts';
@@ -490,7 +491,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     sites: s.siteViews,
     warehouses: p.warehouses,
     landable: s.landable,
-    landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature, until: ship.landing.until, started: ship.landing.started } : null,
+    landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature === 'scene' ? HAUNT_NAMES[islandHaunt(ship.landing.islandId)][0] : ship.landing.feature, until: ship.landing.until, started: ship.landing.started } : null,
     discoveredCount: s.discovered.size,
     intel: Object.entries(p.priceIntel).map(([portId, rec]) => ({
       portId,

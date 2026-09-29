@@ -34,6 +34,7 @@ import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { groupOfAccount } from './party.ts';
 import { isBeast } from './beasts.ts';
+import { SEA_MINI_CHANCE, openMinigame, seaMinigame } from './minigames.ts';
 
 /** How close a sign must be for its card to open, and how far a captain may leave it before it is gone. */
 export const OPEN_R = 380;
@@ -120,7 +121,7 @@ function nearPort(game: Game, x: number, y: number): boolean {
 /** The sea keeps still for a captain in the First Watch, with a party ashore, at a boss or at an expedition's site. */
 function busyElsewhere(game: Game, s: PlayerSession): boolean {
   const ship = s.ship!;
-  if (onboardingProtected(s) || ship.landing || ship.hasEffect('submerged')) return true;
+  if (onboardingProtected(s) || ship.landing || ship.hasEffect('submerged') || openMinigame(game, s)) return true;
   let deep = false;
   game.forShipsNear(ship.state.x, ship.state.y, 6000, (o) => {
     if ((o.cls.monster && !isBeast(o)) || o.bossOf || o.npcRole === 'boss') deep = true; // whales passing are no boss
@@ -292,6 +293,8 @@ export function stepDirector(game: Game): void {
     if (pace.tension >= pace.threshold && !mine && !still) {
       pace.tension = 0;
       pace.threshold = newThreshold(game, safety);
+      // Now and then a passing boat offers one of the games of the islands (a riddle, dice, a hoist, the stars).
+      if (game.rng.chance(SEA_MINI_CHANCE) && seaMinigame(game, s)) continue;
       const def = pickEncounter(game, s, pace);
       if (def) startEncounter(game, s, def);
     }
@@ -361,7 +364,7 @@ function settle(game: Game, s: PlayerSession, live: Live, choice: string): void 
 }
 
 /** Silver scaled to her level: more at sea for bigger ships. */
-function purse(s: PlayerSession, base: number): number {
+export function purse(s: PlayerSession, base: number): number {
   return Math.round(base * (1 + 0.5 * (s.ship!.shipLevel - 1)));
 }
 
@@ -382,7 +385,7 @@ export function giveGoods(ship: ShipEntity, good: GoodId, n: number): number {
 }
 
 /** Hands into the crew (as far as her berths go), of a trade. */
-function giveHands(s: PlayerSession, n: number, prof: 'sailor' | 'gunner' | 'marine' = 'sailor'): number {
+export function giveHands(s: PlayerSession, n: number, prof: 'sailor' | 'gunner' | 'marine' = 'sailor'): number {
   const ship = s.ship!;
   const k = Math.max(0, Math.min(n, ship.stats.crewMax - ship.crew));
   ship.crew += k;
@@ -391,7 +394,7 @@ function giveHands(s: PlayerSession, n: number, prof: 'sailor' | 'gunner' | 'mar
   return k;
 }
 
-function loseHands(s: PlayerSession, n: number): number {
+export function loseHands(s: PlayerSession, n: number): number {
   const ship = s.ship!;
   const k = Math.min(n, Math.max(0, ship.crew - 1));
   ship.crew -= k;
