@@ -12,7 +12,7 @@ import { duelSea, squad, winRate } from './duel.ts';
 
 test('three of a level against one a level up: the three win more often than not, along the whole ladder', () => {
   const game = duelSea();
-  const n = 12;
+  const n = 18; // at the pace of three a sloop's pack sits near the line: twelve fights are too few to tell
   let all = 0;
   for (const [cls, lv] of [['sloop', 1], ['schooner', 3], ['brig', 5], ['frigate', 7], ['man_o_war', 9]] as [ShipClassId, number][]) {
     let w = 0;

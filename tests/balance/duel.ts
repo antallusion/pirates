@@ -6,6 +6,7 @@
 import type { NpcSkill } from '../../shared/src/data/shiplevel.ts';
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
 import { isLand } from '../../shared/src/world/worldgen.ts';
+import { SPEED_SCALE } from '../../shared/src/constants.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import { engage, newBrain } from '../../server/src/game/npc.ts';
 import type { NpcBrain } from '../../server/src/game/npc.ts';
@@ -36,6 +37,9 @@ export interface DuelResult {
 }
 
 /** A sea emptied for duels: every NPC gone, nothing more to put out. */
+/** A fight's time: fifteen minutes at the old pace of six, as long again as the sea is slower (the same sea-miles). */
+export const FIGHT_SEC = Math.round((900 * 6) / SPEED_SCALE);
+
 export function duelSea(): Game {
   const { game } = makeGame();
   for (const id of [...game.npcs.keys()]) game.removeShip(id);
@@ -89,7 +93,7 @@ export function putSide(game: Game, side: Side, x: number, y: number, h: number)
 }
 
 /** One duel: `a` against `b`, 900 m apart, until one is sunk or `maxSec` runs out. */
-export function duel(game: Game, a: Side, b: Side, k: number, maxSec = 900): DuelResult {
+export function duel(game: Game, a: Side, b: Side, k: number, maxSec = FIGHT_SEC): DuelResult {
   const at = openWater(game, k);
   const h = ((k * 2.399) % (Math.PI * 2));
   const A = put(game, a, 'patrol', at.x, at.y, h);
@@ -135,7 +139,7 @@ export function winRate(game: Game, a: Side, b: Side, n: number, from = 0): { wi
 
 /** Several ships against one (docs/12 §3.6: three of a level against one a level up). Each side's ships all take the
  *  nearest foe; `many` wins when `one` is sunk, `one` when all of `many` are. */
-export function squad(game: Game, many: Side, count: number, one: Side, k: number, maxSec = 900): 'many' | 'one' | 'draw' {
+export function squad(game: Game, many: Side, count: number, one: Side, k: number, maxSec = FIGHT_SEC): 'many' | 'one' | 'draw' {
   const at = openWater(game, k);
   const h = ((k * 2.399) % (Math.PI * 2));
   const team = Array.from({ length: count }, (_, i) => put(game, many, 'patrol', at.x + Math.sin(h + Math.PI / 2) * (i - (count - 1) / 2) * 160, at.y - Math.cos(h + Math.PI / 2) * (i - (count - 1) / 2) * 160, h));

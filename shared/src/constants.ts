@@ -18,8 +18,9 @@ export const NAV_CELL = 400; // meters, coarse navigation grid for NPC routing
 // the old scale — the knots in the HUD, the stats, every "heave to under 1.5 m/s", ramming and grounding — and carried
 // across the world SPEED_SCALE times as fast; the shot flies as much faster, so a lead is the same length as before.
 // The helm answers TURN_SCALE times as quick, so a fast ship still comes about in a sane circle.
-export const SPEED_SCALE = 6;
-export const TURN_SCALE = 2.5;
+// Owner, 2026-09-30: "too fast, I can't even aim" — halved from 6, the helm eased from 2.5 to match.
+export const SPEED_SCALE = 3;
+export const TURN_SCALE = 1.8;
 // A following wind drives her on, a head wind holds her back: up to this share of her way in a full breeze.
 export const WIND_PUSH = 0.45;
 

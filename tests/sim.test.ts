@@ -44,7 +44,7 @@ test('the pace of the sea: her way is reckoned as before and carries her SPEED_S
   let s: SailState = { x: 0, y: 0, heading: Math.PI / 2, speed: 10, sail: 0, rudder: 0 };
   s = stepSailing(s, { rudder: 0, sailTarget: 0 }, params({ accel: 0 }), { dir: 0, strength: 0 }, { x: 0, y: 0 }, 0.05);
   assert.ok(Math.abs(s.x - s.speed * SPEED_SCALE * 0.05) < 0.5, `moved ${s.x.toFixed(2)} m on ${s.speed.toFixed(2)} m/s`);
-  assert.ok(SPEED_SCALE === 6, 'six times the old pace (owner, 2026-09-28)');
+  assert.equal(SPEED_SCALE, 3, 'three times the old pace (owner, 2026-09-30: six was too fast to aim)');
 });
 
 test('the wind drives her on or holds her back: a run is faster than the beam, the beam than close-hauled', () => {
