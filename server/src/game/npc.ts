@@ -913,6 +913,73 @@ export function spawnFisher(game: Game): void {
   if (!planWander(game, ship, brain)) game.removeShip(ship.id);
 }
 
+/** The goods a passing merchant might carry (the local traffic's). */
+const TRAFFIC_GOODS: GoodId[] = ['provisions', 'rum', 'sugar', 'tobacco', 'timber', 'cloth', 'spices', 'salt', 'sailcloth', 'iron', 'medicine'];
+
+/**
+ * One ship of the local traffic about a captain (traffic.ts): put out a little beyond her sight, of her waters' level,
+ * sailing the sea's own ways — a merchant crossing her track toward the far side, a fisher working the water, a patrol
+ * on its beat, a rover looking for prey. Null when the spot is land or the role has no place here.
+ */
+export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' | 'pirate', x: number, y: number, past: { x: number; y: number }): ShipEntity | null {
+  if (isLand(game.world, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
+  const region = regionAt(game.world, x, y);
+  const safety = REGIONS[region].safety;
+  const port = game.nearestPort(x, y);
+  let faction: FactionId;
+  if (role === 'merchant') faction = !port || port.faction === 'crown' ? 'league' : port.faction === 'choir' || port.faction === 'confederacy' ? 'free' : port.faction;
+  else if (role === 'fisher') faction = port?.faction === 'crown' ? 'crown' : 'free';
+  else if (role === 'patrol') {
+    if (!port || safety === 'lawless' || (port.faction !== 'crown' && port.faction !== 'league' && port.faction !== 'harpoon')) return null;
+    faction = port.faction;
+  } else {
+    if (safety === 'safe') return null;
+    faction = 'confederacy';
+  }
+  const level = role === 'patrol' ? Math.min(10, bandLevel(game, region) + 1) : bandLevel(game, region, role !== 'pirate');
+  const hulls = role === 'fisher' ? (['cutter'] as ShipClassId[]) : hullsFor(role, level);
+  const cls: ShipClassId = role === 'merchant' && hulls.includes('fluyt') && game.rng.chance(0.5) ? 'fluyt' : game.rng.pick(hulls);
+  const h = headingOf(past.x - x, past.y - y);
+  const ship = game.spawnNpcShip(role, cls, faction, x, y, h);
+  game.setNpcLevel(ship, level);
+  game.grid.upsert(ship.id, x, y); // counted about her at once, not a tick later
+  const brain = game.npcs.get(ship.id)!;
+  if (role === 'merchant') {
+    ship.purse = 150 + game.rng.int(0, 500) * ship.cls.tier;
+    ship.cargo[game.rng.pick(TRAFFIC_GOODS)] = game.rng.int(6, 12 + ship.cls.tier * 6);
+    // Across her track: to a point as far beyond her as the merchant is before her, a little to one side.
+    const dx = past.x - x, dy = past.y - y, l = Math.hypot(dx, dy) || 1;
+    const side = game.rng.range(-900, 900);
+    const tx = past.x + (dx / l) * game.rng.range(1500, 3000) - (dy / l) * side, ty = past.y + (dy / l) * game.rng.range(1500, 3000) + (dx / l) * side;
+    const path = isLand(game.world, tx, ty) ? null : findPath(game.world, x, y, tx, ty, 20000);
+    if (!path) {
+      game.removeShip(ship.id);
+      return null;
+    }
+    setPath(brain, path);
+    brain.destPort = null;
+    return ship;
+  }
+  if (role === 'fisher') {
+    ship.cargo = { provisions: game.rng.int(4, 12), fish: game.rng.int(2, 10) };
+    ship.purse = 30 + game.rng.int(0, 60);
+    brain.area = { x, y, r: 2500 };
+  } else if (role === 'patrol') {
+    ship.purse = 200 + game.rng.int(0, 300);
+    brain.area = { x: past.x, y: past.y, r: 5000 };
+  } else {
+    ship.purse = 100 + game.rng.int(0, 400) * ship.cls.tier;
+    const loot: GoodId[] = ['rum', 'gunpowder', 'weapons', 'tobacco', 'spices'];
+    ship.cargo[game.rng.pick(loot)] = game.rng.int(3, 8 + ship.cls.tier * 4);
+    brain.area = { x, y, r: 6000 };
+  }
+  if (!planWander(game, ship, brain)) {
+    game.removeShip(ship.id);
+    return null;
+  }
+  return ship;
+}
+
 export function spawnPatrols(game: Game): void {
   for (const port of game.zonePorts()) {
     if (!port.key) continue;

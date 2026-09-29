@@ -257,8 +257,6 @@ export class Renderer {
   look = { x: 0, y: 0 };
   /** The camera's look ahead of her bow, eased on its own so a turn does not swing her across the screen. */
   private lead = { x: 0, y: 0 };
-  /** Where a gunner's mark is drawn before it is laid on the sea. */
-  private fallCanvas: HTMLCanvasElement | null = null;
   private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
   private wakes = new Map<number, { x: number; y: number; t: number; w: number }[]>();
 
@@ -2401,39 +2399,24 @@ export class Renderer {
     const [cr, cg, cb] = tone;
     const col = (al: number) => `rgba(${cr},${cg},${cb},${Math.min(1, al * k).toFixed(3)})`;
     g.save();
-    // The fall: a band some 12% of the range deep, drawn apart (radial fade across it, then an angular fade toward
-    // its ends) and laid on the sea in one piece, so it has no seams and no straight edges.
-    const depth = Math.max(10, reach * 0.06);
-    const inner = Math.max(r0, d - depth), outer = d + depth;
-    const size = Math.ceil(outer * 2 + 4);
-    const fc = (this.fallCanvas ??= document.createElement('canvas'));
-    if (fc.width < size || fc.height < size) { fc.width = size; fc.height = size; }
-    const fg = fc.getContext('2d')!;
-    const o = size / 2;
-    fg.clearRect(0, 0, size, size);
-    fg.globalCompositeOperation = 'source-over';
-    const grd = fg.createRadialGradient(o, o, inner, o, o, outer);
-    grd.addColorStop(0, col(0));
-    grd.addColorStop(0.5, col(0.3));
-    grd.addColorStop(1, col(0));
-    fg.fillStyle = grd;
-    fg.beginPath();
-    fg.arc(o, o, outer, a - spread, a + spread);
-    fg.arc(o, o, inner, a + spread, a - spread, true);
-    fg.closePath();
-    fg.fill();
-    const cone = fg.createConicGradient(a - spread, o, o);
-    const w = (spread * 2) / (Math.PI * 2);
-    cone.addColorStop(0, 'rgba(0,0,0,0)');
-    cone.addColorStop(w * 0.3, 'rgba(0,0,0,1)');
-    cone.addColorStop(w * 0.7, 'rgba(0,0,0,1)');
-    cone.addColorStop(w, 'rgba(0,0,0,0)');
-    cone.addColorStop(Math.min(1, w + 0.001), 'rgba(0,0,0,0)');
-    fg.globalCompositeOperation = 'destination-in';
-    fg.fillStyle = cone;
-    fg.fillRect(0, 0, size, size);
-    fg.globalCompositeOperation = 'source-over';
-    g.drawImage(fc, 0, 0, size, size, x - o, y - o, size, size);
+    // The fall: where the shot will land, as dotted arcs across the spread (no fill: a filled band reads as a blot on
+    // the water) — the middle arc bright, two faint ones before and beyond it for the scatter in range.
+    const depth = Math.max(8, reach * 0.05);
+    const inner = Math.max(r0, d - depth);
+    const arcDots = (r: number, gap: number, size: number, alpha: number) => {
+      const step = gap / Math.max(1, r);
+      for (let t = a - spread; t <= a + spread + 1e-6; t += step) {
+        const f = Math.sin(((t - (a - spread)) / (spread * 2)) * Math.PI);
+        if (f < 0.08) continue;
+        g.fillStyle = col(alpha * (0.35 + 0.65 * f));
+        g.beginPath();
+        g.arc(x + Math.cos(t) * r, y + Math.sin(t) * r, size, 0, Math.PI * 2);
+        g.fill();
+      }
+    };
+    arcDots(d, 8, 1.7, 0.8);
+    if (d - depth > r0 + 4) arcDots(d - depth, 11, 1.2, 0.35);
+    arcDots(d + depth, 11, 1.2, 0.35);
     // Where the middle of the fall lies: a short bright tick across the band.
     g.strokeStyle = col(0.85);
     g.lineWidth = 2;

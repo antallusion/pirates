@@ -83,6 +83,8 @@ export interface FishingProfile {
   xp: number;
   caught: Partial<Record<FishId, { n: number; best: number }>>;
   traps: { id: number; x: number; y: number; placed: number; island: string }[];
+  /** The plain drift net every captain is given once, so the first shoal on her way can be worked. */
+  netGiven?: boolean;
 }
 
 export function sanitizeFishing(p: Profile): void {
@@ -90,6 +92,14 @@ export function sanitizeFishing(p: Profile): void {
   p.fishing.skill = Math.max(1, Math.min(SKILL_MAX, p.fishing.skill ?? 1));
   p.fishing.caught ??= {};
   p.fishing.traps ??= [];
+  // Nobody fished (owner, 2026-09-29): the tackle slot came empty and nets were only in the ports' shops. Every
+  // captain now has a plain drift net aboard once; she can sell it, swap it or buy better.
+  if (!p.fishing.netGiven) {
+    p.fishing.netGiven = true;
+    p.loadout.gear ??= {};
+    p.itemSeq ??= 1;
+    if (!p.loadout.gear.tackle) p.loadout.gear.tackle = { uid: p.itemSeq++, base: 'drift_net', ilvl: 1, rarity: 0, affixes: [], dur: 100 };
+  }
 }
 
 /** Shoals kept in each sea: more near the busy coasts. */
