@@ -10,7 +10,8 @@ import { TAC_BLOCKING, TAC_H, TAC_SPELLS, TAC_W, hexIndex, hexNeighbors, hexX, h
 import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { ClientMsg, TacAction, TacEvent, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
+import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
 import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
 import { $, esc, icon } from './dom.ts';
@@ -20,6 +21,9 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 
 const L = dict(EN, RU);
+/** An order's name and words, from the order book (docs/17 H2) — every page of it, old and new. */
+const spName = (id: TacSpellId) => (ORDERS[id]?.name ?? [id, id])[lang() === 'ru' ? 1 : 0];
+const spText = (id: TacSpellId) => (ORDERS[id]?.text ?? [id, id])[lang() === 'ru' ? 1 : 0];
 type K = keyof typeof EN;
 
 const SQ3 = Math.sqrt(3);
@@ -250,7 +254,7 @@ export class TacticalPanel {
           this.bursts.push({ id: e.id === 'call_of_the_deep' ? 'part.splash' : 'part.smoke', x: cc.x, y: cc.y, t0: t + Math.random() * 200, size: w * 1.3 });
         }
       }
-      this.floats.push({ text: L(`sp.${e.id}` as K), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+      this.floats.push({ text: spName(e.id as TacSpellId), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
     } else if (e.k === 'order') {
       const c = at(hexOf(e.s));
       if (c) this.floats.push({ text: L(`o.${e.id}` as K), x: c.x, y: c.y - w * 0.6, t0: t, color: '#e0b862' });
@@ -279,8 +283,10 @@ export class TacticalPanel {
       const url = h.captain ? assetUrl(CAPTAINS[h.captain].portrait) : null;
       const pips = (n: number, cls: string) => `<span class="tb-pip ${cls}${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(cls === 'm' ? 'morale' : 'luck'))}">${cls === 'm' ? '⚑' : '✦'}${n > 0 ? `+${n}` : n}</span>`;
       const mine = x === v.you;
+      // The hero beside the field (docs/17 H2): her four primaries and her will.
+      const prim = h.prim ? `<span class="tb-prims">${PRIMS.map((p) => `<span class="tb-prim" title="${esc(PRIM_NAMES[p][lang() === 'ru' ? 1 : 0])}">${icon(PRIM_ICON[p], '', 'ico-xs')}${p === 'will' ? `${h.mana ?? 0}/${h.manaMax ?? 0}` : h.prim![p]}</span>`).join('')}</span>` : '';
       return `<div class="tb-face" style="background-image:${url ? `url('${url}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small><span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small>${prim}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
@@ -299,10 +305,13 @@ export class TacticalPanel {
     el.querySelector('.tb-lines')!.innerHTML = words.map((w, i) => `<div class="${i === words.length - 1 ? 'new' : ''}">${esc(w)}</div>`).join('');
     // The captain's orders.
     const me = v.heroes[v.you];
-    el.querySelector('.tb-spells')!.innerHTML = me.spells.map((sp) => {
+    // The book's pages (docs/17 H2): each order's will beside it; the will left on the book's spine.
+    const will = me.mana !== undefined ? `<div class="tb-will" title="${esc(L('will'))}">${icon('icon.ab_brine_mend', '', 'ico-sm')}<b>${me.mana}</b><small>/${me.manaMax ?? 0}</small></div>` : '';
+    el.querySelector('.tb-spells')!.innerHTML = will + me.spells.map((sp) => {
       const wait = Math.max(0, sp.ready - v.round);
-      const off = !v.mine || me.cast || wait > 0;
-      return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(L(`spd.${sp.id}` as K))}">${icon(TAC_SPELLS[sp.id].icon, '', 'ico')}<span><b>${esc(L(`sp.${sp.id}` as K))}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : esc(L(`spd.${sp.id}` as K))}</small></span></button>`;
+      const poor = sp.cost !== undefined && me.mana !== undefined && me.mana < sp.cost;
+      const off = !v.mine || me.cast || wait > 0 || poor;
+      return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(spText(sp.id))}">${icon(TAC_SPELLS[sp.id].icon, '', 'ico')}<span><b>${esc(spName(sp.id))}${sp.cost !== undefined ? ` <em class="tb-cost">${sp.cost}</em>` : ''}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L('noWill')) : esc(spText(sp.id))}</small></span></button>`;
     }).join('');
     el.querySelectorAll<HTMLElement>('[data-spell]').forEach((b) => (b.onclick = () => this.spell(b.dataset.spell as TacSpellId)));
     // The stack's own orders and the fight's.
@@ -345,7 +354,7 @@ export class TacticalPanel {
       case 'die':
         return L('log.die', { a: name(e.s) });
       case 'spell':
-        return L('log.spell', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: L(`sp.${e.id}` as K), kills: e.kills ?? 0 });
+        return L('log.spell', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: spName(e.id as TacSpellId), kills: e.kills ?? 0 });
       case 'order':
         return L('log.order', { a: name(e.s), name: L(`o.${e.id}` as K) });
       case 'round':

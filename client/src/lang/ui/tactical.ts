@@ -48,6 +48,8 @@ export const EN = {
   'st.def.on': 'Defending',
   'morale': 'Morale',
   'luck': 'Luck',
+  'will': 'Will',
+  'noWill': 'not enough will',
   // The captain's orders and the officers' words.
   'sp.grenades': 'Grenades',
   'sp.point_blank': 'Point-blank volley',
@@ -178,6 +180,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'st.def.on': 'В защите',
   'morale': 'Боевой дух',
   'luck': 'Удача',
+  'will': 'Воля',
+  'noWill': 'не хватает воли',
   'sp.grenades': 'Гранаты',
   'sp.point_blank': 'Залп в упор',
   'sp.smoke_and_knives': 'Дым и ножи',

@@ -206,7 +206,7 @@ export function takeGearBack(p: Profile, loadout: { gear?: Partial<Record<string
 
 /** Wear from a sinking: a tenth off every worn item. */
 export function wearOnSinking(p: Profile): void {
-  for (const it of wornItems(p)) it.dur = Math.max(0, it.dur - 10);
+  for (const it of wornItems(p)) if (!it.art) it.dur = Math.max(0, it.dur - 10); // artifacts never wear (docs/17 H2)
 }
 
 // ------------------------------------------------------------------------------------------------ the chandler

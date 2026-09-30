@@ -2,6 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import { skillSeaMods } from '../../shared/src/data/hero.ts';
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
@@ -499,7 +500,7 @@ export class ClientState {
 
   refreshStats(): void {
     if (!this.self) return;
-    this.ownStats = computeShipStats(this.self.loadout, this.self.captain, this.self.talents, this.self.effects, Object.values(this.self.captainGear ?? {}).filter((x): x is Item => !!x));
+    this.ownStats = computeShipStats(this.self.loadout, this.self.captain, this.self.talents, this.self.effects, Object.values(this.self.captainGear ?? {}).filter((x): x is Item => !!x), this.self.hero ? { mods: skillSeaMods(this.self.hero.skills) } : null);
     noteOwnShip(this.self.loadout);
   }
 
