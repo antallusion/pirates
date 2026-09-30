@@ -10,7 +10,7 @@ import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { drawBeast, drawCarcass } from './beasts.ts';
 import { calfLength } from '../../../shared/src/data/companions.ts';
-import { drawShoals, drawSights } from './sights.ts';
+import { drawShoalBirds, drawShoals, drawSights } from './sights.ts';
 import { THREAT_COLOR, combatLevelOf, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import type { Threat } from '../../../shared/src/data/shiplevel.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -409,6 +409,7 @@ export class Renderer {
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, false); // no pulsing zones when motion is reduced
     this.drawCompanions(state, ships);
     for (const s of ships) this.drawShip(s, state);
+    drawShoalBirds(g, state.shoals, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
     this.drawStallSigns(stalls);
     this.drawDeckPets(state, ships);
     this.drawTethers(state, ships);
