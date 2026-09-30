@@ -11,6 +11,8 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, ChaserEnd } from '../../../shared/src/data/ships.ts';
 import { emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { armyAdd, armyFit, armyMen, armyRemove, armySlots, armyTidy } from '../../../shared/src/data/army.ts';
+import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import type { Flag, StatMods } from '../../../shared/src/data/stats.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import type { Aggression, ShipInfo, Side, Station } from '../../../shared/src/protocol.ts';
@@ -119,7 +121,9 @@ export class ShipEntity {
   hull = 0;
   sails = 0;
   rudderHp = 1;
-  crew = 0;
+  /** The fighting men aboard as stacks (docs/17 H1); `crew`, the head count the rest of the game reads, is their sum. */
+  private _army: ArmyStack[] = [];
+  private _men = 0;
   morale = 80;
   cargo: Cargo = {};
   ammo: AmmoStock = emptyAmmo();
@@ -272,6 +276,61 @@ export class ShipEntity {
     this.sails = this.stats.sailHpMax;
   }
 
+  /** The head count: every man of every stack. Setting it takes men off the stacks by their exposure (the weaker
+   *  and the less armoured first) or signs new hands on as deckhands. */
+  get crew(): number {
+    return this._men;
+  }
+
+  set crew(v: number) {
+    const n = Math.max(0, Math.round(Number.isFinite(v) ? v : 0));
+    const d = n - this._men;
+    if (d < 0) armyRemove(this._army, -d);
+    else if (d > 0) armyAdd(this._army, d, this.armySlots);
+    this._men = armyMen(this._army);
+  }
+
+  /** Her stacks, the strongest first. */
+  get army(): readonly ArmyStack[] {
+    return this._army;
+  }
+
+  /** Stacks her class carries. */
+  get armySlots(): number {
+    return armySlots(this.cls.tier);
+  }
+
+  /** Put a whole army aboard (a save, the sea's spawn, a battle's survivors). */
+  setArmy(a: readonly ArmyStack[]): void {
+    this._army = armyTidy(a);
+    armyFit(this._army, this.armySlots);
+    this._men = armyMen(this._army);
+  }
+
+  /** Men of a kind signed on (into their stack, or the lowest one when the slots are full). */
+  addMen(u: UnitId, n: number): void {
+    armyAdd(this._army, n, this.armySlots, u);
+    this._men = armyMen(this._army);
+  }
+
+  /** `n` men fall from the stacks by exposure; what each stack lost. */
+  loseMen(n: number): ArmyStack[] {
+    const lost = armyRemove(this._army, Math.min(n, this._men));
+    this._men = armyMen(this._army);
+    return lost;
+  }
+
+  /** `n` men fall from one stack (the boarding battle knows whose); what could not come off it is not taken. */
+  loseFrom(u: UnitId, n: number): number {
+    const s = this._army.find((x) => x.u === u);
+    const k = Math.max(0, Math.min(Math.floor(n), s?.n ?? 0));
+    if (!s || !k) return 0;
+    s.n -= k;
+    if (s.n <= 0) this._army.splice(this._army.indexOf(s), 1);
+    this._men = armyMen(this._army);
+    return k;
+  }
+
   get isPlayer(): boolean {
     return this.accountId !== null;
   }
@@ -311,6 +370,7 @@ export class ShipEntity {
     if (this.hull > this.stats.hullMax) this.hull = this.stats.hullMax;
     if (this.sails > this.stats.sailHpMax) this.sails = this.stats.sailHpMax;
     if (this.crew > this.stats.crewMax) this.crew = this.stats.crewMax;
+    if (this._army.length > this.armySlots) this.setArmy(this._army);
   }
 
   addEffect(e: StatusEffect, now: number): void {
