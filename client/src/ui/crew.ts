@@ -16,6 +16,7 @@ import type { Action } from '../settings.ts';
 import { ask } from './confirm.ts';
 import { dec1, esc, fmt, icon, money, officerIcon } from './dom.ts';
 import { LC, officerName, practiceHtml, woundedHtml } from './crewlife.ts';
+import { armyPanel } from './army.ts';
 
 const L = dict(EN, RU);
 const kb = (a: Action) => keyLabel(settings().keys[a][0] || settings().keys[a][1]);
@@ -47,6 +48,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
       ${tile('tree_command', L('st.morale'), `${morale} <small>${esc(spirit)}</small>${c.mood ? ` <small class="${c.mood === 'shanty' ? 'good' : 'bad'}">${c.mood === 'shanty' ? '♪ ' : ''}${esc(LC(`mood.${c.mood}`))}</small>` : ''}`)}
       ${tile('menu_crew', L('st.loyalty'), String(c.loyalty))}
     </div>
+    ${armyPanel(c.army ?? [], c.armySlots ?? 7)}
     ${c.unrest ? `<div class="alert-row">${icon('danger', '', 'ico-md')}<span class="bad">${esc(serverText(c.unrest))}</span></div>` : ''}
     <div class="cols" style="margin-top:12px"><div>
       <h3 class="title-sm" style="font-size:20px">${esc(L('trades'))}</h3>

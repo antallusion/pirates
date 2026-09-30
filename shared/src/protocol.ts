@@ -33,6 +33,7 @@ import type { BuildingId, IslandSize } from './data/holdings.ts';
 import type { CaptainId } from './data/captains.ts';
 import type { BoardTactic } from './data/boarding.ts';
 import type { TacKind, TacOrderId, TacSpellId } from './data/tactical.ts';
+import type { ArmyStack, ArmyWord, UnitId, UnitSpecial } from './data/army.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
 import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';
@@ -705,6 +706,9 @@ export interface OfficerView {
 }
 
 export interface CompanyView {
+  /** The fighting men as stacks (docs/17 H1), the strongest first, and the stacks her class carries. */
+  army: ArmyStack[];
+  armySlots: number;
   pools: Record<Profession, number>;
   skill: number;
   loyalty: number;
@@ -832,6 +836,10 @@ export interface ShipInfo {
   elite?: boolean;
   /** A named pirate's id on the roster (docs/12 P5). */
   named?: string;
+  /** Her army at a glance (docs/17 H1, HoMM3's "a horde of…"): her hammocks (the snapshot's crew share of them is
+   *  her head count) and the kinds of man in her stacks, the strongest first. */
+  crewMax?: number;
+  units?: UnitId[];
 }
 
 export interface LootInfo {
@@ -1159,6 +1167,8 @@ export type GameEvent =
   | { k: 'volley'; ship: number; side: Side | ChaserEnd; ammo: AmmoId; balls: [number, number, number, number, number][]; spd?: number; perfect?: true } // [x, y, heading, dist, delayMs]; spd = muzzle velocity multiplier; perfect = a held broadside released in its window
   | { k: 'hit'; x: number; y: number; ship: number; dmg: number; ammo: AmmoId; crit?: string; evaded?: true }
   | { k: 'dash'; ship: number; x: number; y: number; h: number }
+  /** Men of her stacks killed by a broadside, a fire, a hole (docs/17 H1): the "−N" rising over her. */
+  | { k: 'men'; ship: number; x: number; y: number; n: number }
   | { k: 'splash'; x: number; y: number }
   | { k: 'sunk'; ship: number; x: number; y: number; name: string }
   | { k: 'board_start'; a: number; b: number }
@@ -1283,7 +1293,9 @@ export type TacAction =
   | { a: 'spell'; id: TacSpellId; target?: number }
   | { a: 'auto'; on: boolean }
   | { a: 'quick' }
-  | { a: 'surrender' };
+  | { a: 'surrender' }
+  /** Pay the other side off (docs/17 H1, HoMM3's surrender): the fight ends, your ship and her men are your own. */
+  | { a: 'ransom' };
 
 /** A stack on the field. `hex` its place; `count` men with `hp` left on the foremost; `ret` may still strike back
  *  this round. */
@@ -1291,6 +1303,11 @@ export interface TacStackView {
   id: number;
   side: 0 | 1;
   kind: TacKind;
+  /** The kind of man (docs/17 H1) and his specials. */
+  unit: UnitId;
+  sp: UnitSpecial[];
+  /** A captain's Mark Target lies on her. */
+  marked?: boolean;
   count: number;
   start: number;
   hp: number;
@@ -1321,13 +1338,16 @@ export interface TacHeroView {
   /** Has given an order this round. */
   cast: boolean;
   auto: boolean;
+  /** Men on deck, and as the grapples bit. */
+  men: number;
+  menStart: number;
 }
 
 /** One thing that happened, for the feed and the field's marks. */
 export interface TacEvent {
   /** Its number in the battle (the client marks each once). */
   i: number;
-  k: 'move' | 'hit' | 'shot' | 'ret' | 'die' | 'wait' | 'defend' | 'morale' | 'fear' | 'luck' | 'spell' | 'order' | 'round' | 'timeout';
+  k: 'move' | 'hit' | 'shot' | 'ret' | 'die' | 'wait' | 'defend' | 'morale' | 'fear' | 'luck' | 'spell' | 'order' | 'round' | 'timeout' | 'burn';
   side: 0 | 1;
   s?: number;
   t?: number;
@@ -1359,9 +1379,13 @@ export interface TacView {
   heroes: [TacHeroView, TacHeroView];
   log: TacEvent[];
   seq: number;
-  over: null | { winner: 0 | 1; why: 'rout' | 'struck' | 'rounds' };
+  over: null | { winner: 0 | 1; why: 'rout' | 'struck' | 'rounds' | 'ransom' };
   canCut: boolean;
   canStrike: boolean;
+  /** Silver it would cost this captain to pay the other side off (null: not offered). */
+  ransom?: number | null;
+  /** The reckoning once it is over: the men each side lost by kind, what the captain learnt, the silver paid. */
+  result?: { lost: { u: UnitId; n: number }[]; killed: { u: UnitId; n: number }[]; xp: number; paid?: number };
 }
 
 export type ServerMsg =

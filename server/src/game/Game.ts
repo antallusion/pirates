@@ -112,6 +112,15 @@ import { besieging, chooseOutcome, declareSiege, fortify, stepSieges } from './s
 import type { ZoneRuntime } from '../zones/zone.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
+import { menLost, npcArmy } from './army.ts';
+
+/** The priorities of the sea (docs/17 H1): a ship taken by boarding gives all her hold that survived the fight and her
+ *  whole purse; one sunk by the guns a quarter of her hold and three-tenths of her purse. The captain learns more from
+ *  a ship carried than from one sent down. */
+export const SINK_LOOT = 0.25;
+export const SINK_PURSE = 0.3;
+export const XP_SUNK = 40;
+export const XP_BOARDED = 90;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { abandonQuest, acceptQuest, answerOffer, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
@@ -150,7 +159,7 @@ import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditions
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
-import { applyDamage, cutMastWreck, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
+import { applyDamage, cutMastWreck, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, seizeCaptain, takeCaptive, takePrize } from './prizes.ts';
@@ -1111,7 +1120,16 @@ export class Game {
     // Leaks, pumps and plugs.
     if (stepFlooding(this, ship)) return;
     // Fire (a fireship's own blaze is her weapon, not her end: she burns without burning down).
-    if (ship.hasEffect('fire') && this.npcs.get(ship.id)?.fireship === undefined) applyDamage(this, ship, { hull: st.hullMax * 0.006 * (ship.hasFlag('wet_decks') ? 0.6 : 1), sails: 1.5 }, null);
+    if (ship.hasEffect('fire') && this.npcs.get(ship.id)?.fireship === undefined) {
+      applyDamage(this, ship, { hull: st.hullMax * 0.006 * (ship.hasFlag('wet_decks') ? 0.6 : 1), sails: 1.5 }, null);
+      // The fire burns men out of her stacks, at the guns and aloft (docs/17 H1): about a man in 250 a second.
+      ship.burnMen += Math.max(0.2, ship.crew * 0.004) * (ship.hasFlag('wet_decks') ? 0.6 : 1);
+      if (ship.burnMen >= 1 && ship.alive) {
+        const n = Math.floor(ship.burnMen);
+        ship.burnMen -= n;
+        menLost(this, ship, killMen(this, ship, n, null));
+      }
+    }
     // Storms punish full canvas.
     const w = this.weatherOf(ship);
     const canvas = ship.hasFlag('storm_rider') ? 0 : Math.max(0, 1 + tval(st, 'stormSailDamage'));
@@ -1303,6 +1321,8 @@ export class Game {
     ship.hull = ship.stats.hullMax;
     ship.sails = ship.stats.sailHpMax;
     ship.crew = Math.round(ship.stats.crewMax * crewFrac);
+    // Her army (docs/17 H1): the stacks of her level's waters and her trade.
+    ship.setArmy(npcArmy(ship));
   }
 
   spawnEscort(owner: ShipEntity, duration: number): string | null {
@@ -1713,7 +1733,9 @@ export class Game {
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
     if (ship.yardOf) onYardCaptainSunk(this, ship);
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
-    if (!onboardingProtected(this.sessionOf(ship))) this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship) * streakAhead(this, killer, ship), victor); // the First Watch loses nothing
+    // Boarding is the way to take a ship (docs/17 H1): sunk by the guns, a ship of the sea gives up a quarter of her
+    // hold and little of her purse (a captain's ship still spills her two-fifths).
+    if (!onboardingProtected(this.sessionOf(ship))) this.dropWreckage(ship, (ship.isPlayer ? 0.4 : SINK_LOOT) * lootMul(this, killer, ship) * streakAhead(this, killer, ship), victor); // the First Watch loses nothing
     onShipSunk(this, ship, killer);
     if (ship.dutchman) dutchmanSunk(this, ship, killer); // the Flying Dutchman laid to rest (docs/12 P10 #10)
     if (ship.isPlayer && killer && (killer.named || killer.namedMate)) nemesisSankYou(this, ship, killer); // he will remember her (docs/12 P10 #1)
@@ -1750,7 +1772,7 @@ export class Game {
     // The hull itself breaks up into salvage.
     for (const [g, n] of Object.entries(wreckSalvage(ship))) cargo[g as GoodId] = (cargo[g as GoodId] ?? 0) + (n ?? 0);
     // A ship of the sea always leaves some silver in the water, by her size (none is a waste of a broadside).
-    let gold = ship.isPlayer ? 0 : Math.max(Math.floor(ship.purse * 0.5), frac > 0 ? 25 * ship.cls.tier + (ship.id % 20) : 0);
+    let gold = ship.isPlayer ? 0 : Math.max(Math.floor(ship.purse * SINK_PURSE), frac > 0 ? 25 * ship.cls.tier + (ship.id % 20) : 0);
     if (ship.isPlayer) {
       const p = this.profileOf(ship);
       if (p) {
@@ -1780,7 +1802,7 @@ export class Game {
     const gap = victim.onLadder && killer.onLadder ? victim.combatLevel - killer.combatLevel : 0;
     // A streak of ships without making port swells it (docs/16 #4).
     const streak = onStreakKill(this, s, killer, victim);
-    const xp = (how === 'sunk' ? 45 : 70) * tier * (1 + victim.level / 12) * xpForGap(gap);
+    const xp = (how === 'sunk' ? XP_SUNK : XP_BOARDED) * tier * (1 + victim.level / 12) * xpForGap(gap);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
     this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);
@@ -3557,7 +3579,8 @@ export class Game {
     ship.cargo = p.cargo;
     ship.ammo = p.ammo;
     ship.ammoSel = p.ammoSel;
-    ship.crew = Math.min(p.crew, ship.stats.crewMax);
+    ship.setArmy(p.army ?? []);
+    ship.crew = Math.min(p.crew, ship.stats.crewMax); // the head count rules: a save's stacks made whole against it
     ship.morale = p.morale;
     ship.sanity = p.sanity;
     ship.pressure = p.pressure;
@@ -4000,6 +4023,7 @@ export class Game {
       p.ammo = ship.ammo;
       p.ammoSel = ship.ammoSel;
       p.crew = ship.crew;
+      p.army = ship.army.map((x) => ({ u: x.u, n: x.n }));
       p.morale = ship.morale;
       p.sanity = Math.round(ship.sanity * 10) / 10;
       p.pressure = Math.round(ship.pressure * 10) / 10;

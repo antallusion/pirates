@@ -31,7 +31,7 @@ import { FACTIONS, FACTION_IDS, factionRelation, wantedLevel } from '../../../sh
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { AMMO_IDS, emptyAmmo } from '../../../shared/src/data/ships.ts';
+import { AMMO_IDS, SHIP_CLASSES, emptyAmmo } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import { totalPointsSpent } from '../../../shared/src/data/talents.ts';
@@ -60,7 +60,7 @@ import { sanitizeShipbuilding } from './shipbuilding.ts';
 import type { Berth, BuildOrder } from './shipbuilding.ts';
 import type { FigureheadId, Plan } from '../../../shared/src/data/shipbuild.ts';
 import type { Oath, QuestLog } from './quests.ts';
-import { clampLevel, initialLevel } from '../../../shared/src/data/shiplevel.ts';
+import { clampLevel, initialLevel, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 import type { ServiceRec } from './marque.ts';
 import type { Skipper } from './turncoats.ts';
@@ -69,6 +69,8 @@ import type { OfficerRole, TraitId } from '../../../shared/src/data/crew.ts';
 import type { SagaEntry } from '../../../shared/src/data/saga.ts';
 import type { LogEntry } from '../../../shared/src/data/captainlog.ts';
 import type { RenownProfile } from './renown.ts';
+import { armyFromSave, armySlots } from '../../../shared/src/data/army.ts';
+import type { ArmyStack } from '../../../shared/src/data/army.ts';
 
 export interface Profile {
   version: 1;
@@ -86,6 +88,8 @@ export interface Profile {
   ammo: AmmoStock;
   ammoSel: AmmoId;
   crew: number;
+  /** The fighting men as stacks (docs/17 H1); their sum is `crew`. Absent in a save from before them. */
+  army?: ArmyStack[];
   morale: number;
   sanity: number;
   company: Company;
@@ -623,6 +627,8 @@ export function sanitizeProfile(raw: Profile): Profile {
   // Ship levels (canon D12): a ship from before them comes at her class's first level, one more if nearly all fitted.
   for (const l of [p.loadout, ...(p.berths ?? []).map((b) => b.loadout)]) if (l) l.level = l.level ? clampLevel(l.classId, l.level) : initialLevel(l.classId, l.modules ?? {});
   p.refit ??= null;
+  // The army (docs/17 H1): a save from before the stacks takes the ladder's spread of her level.
+  p.army = armyFromSave(p.army, p.crew, shipLevelOf(p.loadout), armySlots(SHIP_CLASSES[p.loadout.classId]?.tier ?? 1));
   sanitizeGear(p);
   sanitizeFishing(p);
   p.salvageDay ??= -1;
@@ -683,6 +689,8 @@ export function sanitizeProfile(raw: Profile): Profile {
 function companyView(p: Profile, ship: ShipEntity | null, now: number): PrivateState['company'] {
   const c = p.company;
   return {
+    army: ship ? ship.army.map((x) => ({ u: x.u, n: x.n })) : (p.army ?? []).map((x) => ({ u: x.u, n: x.n })),
+    armySlots: ship ? ship.armySlots : armySlots(SHIP_CLASSES[p.loadout.classId]?.tier ?? 1),
     pools: { ...c.pools },
     skill: Math.round(c.skill * 100) / 100,
     loyalty: Math.round(loyaltyOf(c, now)),

@@ -1424,4 +1424,12 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} turns down your map.": "Капитан {0} отказывается от вашей карты.",
   ...Object.fromEntries(TIDAL_NAMES),
   ...Object.fromEntries(SEASON_NAMES),
+  // The ship's army and the boarding battle (docs/17 H1).
+  "Boarders do not pay: fall back instead": "Абордажники не платят выкуп: отступайте",
+  "No ransom to pay": "Выкупа платить некому",
+  "Not enough silver for the ransom": "Не хватает серебра на выкуп",
+  "The ransom is paid in silver aboard": "Выкуп платится серебром на борту",
+  "The ransom is paid: your boarders come back with the silver.": "Выкуп уплачен: ваши абордажники возвращаются с серебром.",
+  "Won the boarding battle with {0}": "Победа в абордажном бою с «{0}»",
+  "You pay {0} silver and the boarders go back over the rail.": "Вы платите {0} серебра, и абордажники уходят за борт.",
 };

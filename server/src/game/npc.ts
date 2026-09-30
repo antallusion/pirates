@@ -24,6 +24,7 @@ import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { canBoard, startBoarding } from './boarding.ts';
+import { npcWouldBoard } from './army.ts';
 import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
 import { applyDamage, dash, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
@@ -611,7 +612,7 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   // Pirates want the cargo, so they cripple and board; everyone else fights to sink.
   const wantsBoard = brain.role === 'pirate';
   ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard);
-  if (wantsBoard && canBoard(game, ship, target) === null) {
+  if (wantsBoard && canBoard(game, ship, target) === null && npcWouldBoard(game, ship, target)) {
     startBoarding(game, ship, target, 'standard');
     return;
   }

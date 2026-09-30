@@ -15,6 +15,9 @@ import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
 import { $, esc, icon } from './dom.ts';
 import { placeName } from './maps.ts';
+import { specialName, specialNote, unitArt, unitName, unitNote } from './army.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
+import type { UnitId } from '../../../shared/src/data/army.ts';
 
 const L = dict(EN, RU);
 type K = keyof typeof EN;
@@ -39,15 +42,15 @@ interface Burst {
   size: number;
 }
 
-/** The stack's painted face: an officer's portrait (the uniques) or his post's mark, else his trade's icon. */
+/** The stack's painted face (docs/17 H1): its kind of man's portrait; an officer's own party his face or post. */
 function stackArt(s: TacStackView): string {
-  if (s.officer) return s.officer.unique && sprite(`portrait.officer_${s.officer.unique}`) ? `portrait.officer_${s.officer.unique}` : `icon.role_${s.officer.role}`;
-  return s.kind === 'hands' ? 'icon.prof_sailor' : s.kind === 'marines' ? 'icon.prof_marine' : 'icon.prof_gunner';
+  if (s.officer && s.kind === 'officer') return s.officer.unique && sprite(`portrait.officer_${s.officer.unique}`) ? `portrait.officer_${s.officer.unique}` : `icon.role_${s.officer.role}`;
+  return s.unit ? unitArt(s.unit) : s.kind === 'hands' ? 'icon.prof_sailor' : s.kind === 'marines' ? 'icon.prof_marine' : 'icon.prof_gunner';
 }
 
 function stackName(s: TacStackView): string {
-  if (s.officer) return L('k.officer', { role: OFFICER_DEFS[s.officer.role].name });
-  return L(`k.${s.kind}` as K);
+  if (s.officer && s.kind === 'officer') return L('k.officer', { role: OFFICER_DEFS[s.officer.role].name });
+  return s.unit ? unitName(s.unit) : L(`k.${s.kind}` as K);
 }
 
 /** The wood of a deck, drawn once: planks along the ship, seams, grain and nails. */
@@ -109,6 +112,7 @@ export class TacticalPanel {
   private info: number | null = null;
   private hover: number | null = null;
   private strikeArmed = 0;
+  private ransomArmed = 0;
   private seen = 0;
   private floats: Float[] = [];
   private bursts: Burst[] = [];
@@ -132,6 +136,7 @@ export class TacticalPanel {
     const was = this.view;
     this.view = v;
     document.body.classList.toggle('tac', !!v);
+    document.body.classList.toggle('tac-over', !!v?.over);
     if (!v) {
       if (this.el) {
         root.classList.add('hidden');
@@ -220,7 +225,9 @@ export class TacticalPanel {
     if (e.k === 'hit' || e.k === 'shot' || e.k === 'ret') {
       const c = at(e.hex ?? hexOf(e.t));
       if (c) this.floats.push({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#f3d7a0' });
-      if (e.k === 'shot') {
+      if (e.k === 'shot' && e.id === 'blast') {
+        if (c) this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 1.4 });
+      } else if (e.k === 'shot') {
         const s = at(hexOf(e.s));
         if (s) this.bursts.push({ id: 'part.muzzle', x: s.x, y: s.y, t0: t, size: w * 0.9 });
         if (c) this.bursts.push({ id: 'part.smoke', x: c.x, y: c.y, t0: t, size: w * 0.8 });
@@ -247,6 +254,12 @@ export class TacticalPanel {
     } else if (e.k === 'order') {
       const c = at(hexOf(e.s));
       if (c) this.floats.push({ text: L(`o.${e.id}` as K), x: c.x, y: c.y - w * 0.6, t0: t, color: '#e0b862' });
+    } else if (e.k === 'burn') {
+      const c = at(e.hex ?? hexOf(e.s));
+      if (c) {
+        this.floats.push({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#ff9a4a' });
+        this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 0.9 });
+      }
     } else if (e.k === 'die') {
       const c = at(e.hex);
       if (c) this.bursts.push({ id: 'part.smoke', x: c.x, y: c.y, t0: t, size: w * 1.2 });
@@ -258,7 +271,7 @@ export class TacticalPanel {
   private dom(v: TacView): void {
     const el = this.el!;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.strikeArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
@@ -267,7 +280,7 @@ export class TacticalPanel {
       const pips = (n: number, cls: string) => `<span class="tb-pip ${cls}${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(cls === 'm' ? 'morale' : 'luck'))}">${cls === 'm' ? '⚑' : '✦'}${n > 0 ? `+${n}` : n}</span>`;
       const mine = x === v.you;
       return `<div class="tb-face" style="background-image:${url ? `url('${url}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small><span class="tb-pips">${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small><span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
@@ -302,6 +315,7 @@ export class TacticalPanel {
       `<button class="btn${me.auto ? ' on' : ''}" data-a="auto">${esc(me.auto ? L('autoOff') : L('auto'))}</button>`,
       `<button class="btn" data-a="quick" ${v.over ? 'disabled' : ''}>${esc(L('quick'))}</button>`,
       v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut">${esc(v.you === 0 ? L('fallBack') : L('cut'))}</button>` : '',
+      v.ransom && !v.over ? `<button class="btn${this.ransomArmed > performance.now() ? ' on' : ''}" data-a="ransom" title="${esc(L('ransomTip'))}">${esc(this.ransomArmed > performance.now() ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom }))}</button>` : '',
       v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on' : ''}" data-a="surrender">${esc(armed ? L('strikeSure') : L('strike'))}</button>` : '',
     ].join('');
     el.querySelectorAll<HTMLElement>('[data-a]').forEach((b) => (b.onclick = () => this.button(b.dataset.a!)));
@@ -310,9 +324,12 @@ export class TacticalPanel {
     banner.classList.toggle('hidden', !v.over);
     if (v.over) {
       const won = v.over.winner === v.you;
-      const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : 'why.rounds';
-      banner.className = `tb-banner ${won ? 'won' : 'lost'}`;
-      banner.innerHTML = `<b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(L(why as K))}</span>`;
+      const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : 'why.rounds';
+      banner.className = `tb-banner ${won ? 'won' : 'lost'}${v.result ? ' tb-result' : ''}`;
+      // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
+      const r = v.result;
+      const faces = (xs: { u: UnitId; n: number }[]) => xs.length ? xs.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${icon(unitArt(x.u), '', 'tb-rs-ico')}<i>−${x.n}</i></span>`).join('') : `<em class="muted">${esc(L('res.none'))}</em>`;
+      banner.innerHTML = `<b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(L(why as K))}</span>${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}`;
     }
     this.hint(v);
     if (this.info !== null) this.showInfo(this.info);
@@ -333,10 +350,13 @@ export class TacticalPanel {
         return L('log.order', { a: name(e.s), name: L(`o.${e.id}` as K) });
       case 'round':
         return L('log.round', { n: e.n ?? 0 });
+      case 'burn':
+        return L('log.burn', { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
+      case 'fear':
+        return L(e.id === 'terror' ? 'log.terror' : 'log.fear', { a: name(e.s) });
       case 'wait':
       case 'defend':
       case 'morale':
-      case 'fear':
       case 'luck':
       case 'timeout':
         return L(`log.${e.k}`, { a: name(e.s) });
@@ -367,11 +387,13 @@ export class TacticalPanel {
     }
     const row = (k: K, val: string) => `<div><span>${esc(L(k))}</span><b>${esc(val)}</b></div>`;
     const o = s.officer;
+    const d = s.unit ? UNITS[s.unit] : null;
     card.className = `tb-card ${s.side === v.you ? 'you' : 'foe'}`;
-    card.innerHTML = `<div class="tb-card-h">${icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b>${o ? `<small>${esc(personName(o.name))}</small>` : ''}</div></div>
+    card.innerHTML = `<div class="tb-card-h">${icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b><small>${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}${s.marked ? ` · <span class="bad">${esc(L('marked'))}</span>` : ''}</small></div></div>
       <div class="tb-stats">${row('st.count', `${s.count} / ${s.start}`)}${row('st.atk', String(s.atk))}${row('st.def', String(s.def))}${row('st.dmg', `${s.dmg[0]}–${s.dmg[1]}`)}${row('st.hp', `${s.hp} / ${s.hpMax}`)}${row('st.speed', String(s.speed))}${row('st.init', String(s.init))}${s.shotsMax ? row('st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
       ${s.defending ? `<p class="tb-def">${esc(L('st.def.on'))}</p>` : ''}
-      <p class="muted">${esc(L(`kd.${s.kind}` as K))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
+      ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<span class="chip" title="${esc(specialNote(x))}">${esc(specialName(x))}</span>`).join('')}</div>` : ''}
+      <p class="muted">${esc(s.kind === 'officer' || !s.unit ? L(`kd.${s.kind}` as K) : unitNote(s.unit))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
   }
 
   // ------------------------------------------------------------------ orders
@@ -387,7 +409,16 @@ export class TacticalPanel {
     else if (a === 'auto') this.order({ a: 'auto', on: !v.heroes[v.you].auto });
     else if (a === 'quick') this.order({ a: 'quick' });
     else if (a === 'cut') this.send({ t: 'board_cut' });
-    else if (a === 'surrender') {
+    else if (a === 'ransom') {
+      if (this.ransomArmed > performance.now()) {
+        this.ransomArmed = 0;
+        this.order({ a: 'ransom' });
+      } else {
+        this.ransomArmed = performance.now() + 3000;
+        this.key = '';
+        this.dom(v);
+      }
+    } else if (a === 'surrender') {
       if (this.strikeArmed > performance.now()) {
         this.strikeArmed = 0;
         this.order({ a: 'surrender' });
@@ -413,7 +444,7 @@ export class TacticalPanel {
     this.dom(v);
   }
 
-  /** Keys: W wait, D defend, O the officer's word, A auto-battle, 1–2 the captain's orders, Esc lets go. */
+  /** Keys: W wait, D defend, O the officer's word, A auto-battle, 1–4 the captain's orders, Esc lets go. */
   onKey(e: KeyboardEvent): boolean {
     const v = this.view;
     if (!v || e.ctrlKey || e.metaKey || e.altKey) return false;
@@ -430,8 +461,8 @@ export class TacticalPanel {
     else if (code === 'KeyD') this.order({ a: 'defend' });
     else if (code === 'KeyO') this.order({ a: 'order' });
     else if (code === 'KeyA') this.order({ a: 'auto', on: !v.heroes[v.you].auto });
-    else if (code === 'Digit1' || code === 'Digit2') {
-      const sp = v.heroes[v.you].spells[code === 'Digit1' ? 0 : 1];
+    else if (/^Digit[1-4]$/.test(code)) {
+      const sp = v.heroes[v.you].spells[Number(code.slice(5)) - 1];
       if (sp) this.spell(sp.id);
     } else return /^Key|^Digit|^Arrow|^Space/.test(code); // the helm and the guns wait while the decks fight
     return true;
@@ -745,6 +776,7 @@ export class TacticalPanel {
       else if (c0 === 'C') this.cannon(g, p.x, p.y, w, hexY(i) === 0 ? -1 : 1);
       else if (c0 === 'B') this.barrel(g, p.x, p.y, w);
       else if (c0 === 'K') this.crates(g, p.x, p.y, w);
+      else if (c0 === 'H') this.hole(g, p.x, p.y, w, i);
     }
     return c;
   }
@@ -841,6 +873,73 @@ export class TacticalPanel {
     }
   }
 
+  /** A shot-hole through the deck (docs/17 H1): broken planks round a black gap, splinters sprung up at its edge. */
+  private hole(g: CanvasRenderingContext2D, x: number, y: number, w: number, seed: number): void {
+    const n = 9;
+    const pts: [number, number][] = [];
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const r = w * (0.26 + 0.12 * (((seed * 7 + k * 13) % 5) / 4));
+      pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r * 0.85]);
+    }
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.beginPath();
+    g.ellipse(x, y, w * 0.44, w * 0.36, 0, 0, Math.PI * 2);
+    g.fill();
+    const hg = g.createRadialGradient(x, y, w * 0.05, x, y, w * 0.4);
+    hg.addColorStop(0, '#020303');
+    hg.addColorStop(0.7, '#0b0c0c');
+    hg.addColorStop(1, '#2a1a0d');
+    g.fillStyle = hg;
+    g.beginPath();
+    pts.forEach(([px, py], k) => (k ? g.lineTo(px, py) : g.moveTo(px, py)));
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#8a6a44';
+    g.lineWidth = Math.max(1, w * 0.035);
+    for (let k = 0; k < n; k += 2) {
+      const [px, py] = pts[k];
+      const a = (k / n) * Math.PI * 2;
+      g.beginPath();
+      g.moveTo(px, py);
+      g.lineTo(px + Math.cos(a + 0.4) * w * 0.12, py + Math.sin(a + 0.4) * w * 0.1);
+      g.stroke();
+    }
+    // Sea water glinting far below.
+    g.fillStyle = 'rgba(80,150,160,0.25)';
+    g.beginPath();
+    g.ellipse(x + w * 0.04, y + w * 0.05, w * 0.08, w * 0.04, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  /** A fire on deck, flickering (drawn each frame). */
+  private flames(g: CanvasRenderingContext2D, x: number, y: number, w: number, t: number, seed: number): void {
+    const glow = g.createRadialGradient(x, y, w * 0.05, x, y, w * 0.55);
+    glow.addColorStop(0, 'rgba(255,170,60,0.55)');
+    glow.addColorStop(1, 'rgba(255,90,20,0)');
+    g.fillStyle = glow;
+    g.beginPath();
+    g.arc(x, y, w * 0.55, 0, Math.PI * 2);
+    g.fill();
+    for (let k = 0; k < 5; k++) {
+      const ph = t / 140 + k * 1.7 + seed;
+      const fx = x + (k - 2) * w * 0.1 + Math.sin(ph) * w * 0.03;
+      const hgt = w * (0.28 + 0.12 * Math.abs(Math.sin(ph * 1.3)));
+      const fw = w * 0.09;
+      const fg = g.createLinearGradient(fx, y + w * 0.12, fx, y + w * 0.12 - hgt);
+      fg.addColorStop(0, 'rgba(255,220,120,0.95)');
+      fg.addColorStop(0.5, 'rgba(255,130,40,0.85)');
+      fg.addColorStop(1, 'rgba(200,40,10,0)');
+      g.fillStyle = fg;
+      g.beginPath();
+      g.moveTo(fx - fw, y + w * 0.12);
+      g.quadraticCurveTo(fx - fw * 0.6, y + w * 0.12 - hgt * 0.6, fx + Math.sin(ph) * fw * 0.5, y + w * 0.12 - hgt);
+      g.quadraticCurveTo(fx + fw * 0.6, y + w * 0.12 - hgt * 0.6, fx + fw, y + w * 0.12);
+      g.closePath();
+      g.fill();
+    }
+  }
+
   private crates(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
     for (const [dx, dy, s, rot] of [[-0.12, 0.06, 0.4, -0.12], [0.14, -0.1, 0.32, 0.18]] as const) {
       const cx = x + dx * w, cy = y + dy * w, hs = (s * w) / 2;
@@ -874,8 +973,9 @@ export class TacticalPanel {
     if (bar) bar.style.width = `${v.over ? 0 : Math.min(1, left / 30) * 100}%`;
     const secs = el.querySelector<HTMLElement>('.tb-secs');
     if (secs) secs.textContent = v.mine && !v.over ? L('secs', { n: Math.ceil(left) }) : '';
-    if (this.strikeArmed && this.strikeArmed < performance.now()) {
+    if ((this.strikeArmed && this.strikeArmed < performance.now()) || (this.ransomArmed && this.ransomArmed < performance.now())) {
       this.strikeArmed = 0;
+      this.ransomArmed = 0;
       this.key = '';
       this.dom(v);
     }
@@ -896,6 +996,12 @@ export class TacticalPanel {
     const t = performance.now();
     const pulse = 0.5 + 0.5 * Math.sin(t / 260);
     const r = w / SQ3;
+    // Fires still burning on her deck (docs/17 H1).
+    for (let i = 0; i < v.cells.length; i++) {
+      if (v.cells[i] !== 'F') continue;
+      const p = this.lc(i);
+      this.flames(g, p.x, p.y, w, t, i);
+    }
     // The reach of the stack whose turn it is.
     if (v.mine) {
       for (const h of v.reach) {
@@ -1023,13 +1129,41 @@ export class TacticalPanel {
       g.font = `700 ${Math.round(R)}px Inter, system-ui, sans-serif`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText(s.kind[0].toUpperCase(), x, y);
+      g.fillText(String(s.unit ? UNITS[s.unit].tier : ''), x, y);
     }
     g.strokeStyle = col;
     g.lineWidth = Math.max(2, w * 0.07);
     g.beginPath();
     g.arc(x, y, R, 0, Math.PI * 2);
     g.stroke();
+    // An upgraded kind: a thin gold ring inside the side's colour; its tier in pips over the head.
+    const d = s.unit ? UNITS[s.unit] : null;
+    if (d?.up) {
+      g.strokeStyle = '#e0b862';
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.arc(x, y, R - Math.max(2, w * 0.07), 0, Math.PI * 2);
+      g.stroke();
+    }
+    if (d && w >= 22) {
+      g.fillStyle = d.up ? '#e0b862' : 'rgba(240,230,210,0.8)';
+      for (let k = 0; k < d.tier; k++) {
+        g.beginPath();
+        g.arc(x + (k - (d.tier - 1) / 2) * Math.max(2.6, w * 0.075), y - R - (s.shotsMax ? 8 : 3), Math.max(0.9, w * 0.024), 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    if (s.marked) {
+      g.strokeStyle = `rgba(240,120,60,${0.6 + 0.4 * pulse})`;
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(x, y, R + 6, 0, Math.PI * 2);
+      for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+        g.moveTo(x + Math.cos(a) * (R + 2), y + Math.sin(a) * (R + 2));
+        g.lineTo(x + Math.cos(a) * (R + 10), y + Math.sin(a) * (R + 10));
+      }
+      g.stroke();
+    }
     // Health: what is left of the stack as it came aboard.
     const frac = Math.max(0, Math.min(1, ((s.count - 1) * s.hpMax + s.hp) / Math.max(1, s.start * s.hpMax)));
     const bw = w * 0.78, bh = Math.max(3, w * 0.09);

@@ -35,6 +35,8 @@ const ROUND_KILL = 0.17;
 const MOMENTUM = { win: 35, even: 15, lose: 5 } as const;
 /** Captain's moves that take the round whatever the other side chose. */
 const TAKES_ROUND = new Set(['point_blank', 'smoke_and_knives', 'turn_the_flank']);
+/** The speed between the hulls the grapples still hold at (knots). */
+export const BOARD_REL_SPEED = 8;
 
 export function boardingRangeBetween(a: ShipEntity, b: ShipEntity): number {
   // Bow and Stern: the reach runs the length of both hulls, not just the beams.
@@ -64,17 +66,12 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (d > boardingRangeBetween(a, b) * (tangled ? 1.5 : 1)) return 'Too far to throw grapples';
   // Kraken's Embrace: the deep holds her still for the grapples.
   const held = b.effects.some((e) => e.id === 'kraken_hold' && e.source === a.id) || tangled;
+  // Boarding at once (docs/17 H1): any ship within the grapples' reach, whole or wrecked — the guns only thin her
+  // stacks before the battle. Only a ship tearing past faster than the lines can hold slips them.
   if (!anywhere && !held) {
     const relSpeed = Math.abs(a.state.speed - b.state.speed);
     const rammed = a.ramTarget === b.id && a.ramUntil > game.now; // Hull to Hull
-    if (relSpeed > 5.5 * (1 + tx(a.stats, 'matchSpeed')) && !b.surrendered && a.tether?.target !== b.id && !rammed) return 'Match her speed before boarding';
-    const weakened =
-      b.surrendered ||
-      b.hull <= b.stats.hullMax * 0.6 ||
-      b.crew <= b.stats.crewMax * 0.5 ||
-      b.sails <= b.stats.sailHpMax * 0.35 ||
-      b.state.speed < 2;
-    if (!weakened) return 'She is too strong to board — cripple her hull, sails or crew first';
+    if (relSpeed > BOARD_REL_SPEED * (1 + tx(a.stats, 'matchSpeed')) && !b.surrendered && a.tether?.target !== b.id && !rammed) return 'Match her speed before boarding';
   }
   if (a.crew < Math.max(4, a.stats.crewMin * 0.5)) return 'Not enough hands for a boarding party';
   // A crew with no nerve left breaks in the first rush: say so instead of throwing them over the rail.
@@ -246,7 +243,13 @@ export function stepBoarding(game: Game): void {
     const fight = bs.fight;
     // Decided (the duel's last blow): held a moment so both captains see how.
     if (fight.endsAt !== null) {
-      if (now >= fight.endsAt) finishBoarding(game, a, b, fight.winner === a.id);
+      if (now >= fight.endsAt) {
+        // Bought off (docs/17 H1): the boarders go back over the rail with the silver, and no prize is taken.
+        if (fight.tac?.over?.why === 'ransom') {
+          endBoarding(game, a, b);
+          game.toastShip(a, 'The ransom is paid: your boarders come back with the silver.', 'good');
+        } else finishBoarding(game, a, b, fight.winner === a.id);
+      }
       continue;
     }
     if (fight.tac) {
