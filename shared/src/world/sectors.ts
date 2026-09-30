@@ -128,7 +128,7 @@ export function sectorAt(src: SectorSource, x: number, y: number): Sector {
 }
 
 /** The captain levels a square is for: from the level that commands its lowest ships to the one before its highest's
- *  next (a square ⚓3–5 is for captains of about 8 to 32). */
+ *  next (a square ⚓3–5 is for captains of about 8 to 25). */
 export function captainBand(band: [number, number]): [number, number] {
   const lo = CAPTAIN_LEVEL_FOR_SHIP[band[0]];
   const hi = band[1] >= SHIP_LEVEL_MAX ? 60 : CAPTAIN_LEVEL_FOR_SHIP[band[1] + 1] - 1;

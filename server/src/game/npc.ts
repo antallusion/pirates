@@ -5,6 +5,7 @@
 // Every NPC has a purpose: merchants haul real cargo between real markets (docs/01 §5).
 
 import { convoyFoe, raidEscort } from './raiding.ts';
+import { joinedRaid } from './npcwars.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import { eliteShipLevel, hullsFor, npcSkill, shipLevelForCaptain, watersBand } from '../../../shared/src/data/shiplevel.ts';
 import type { NpcSkill } from '../../../shared/src/data/shiplevel.ts';
@@ -186,10 +187,13 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   const role = npc.npcRole;
   // The beasts of the sea (docs/12 P4): the predators hunt captains; the sea's ships and the beasts leave each other be.
   if (role === 'beast') return other.isPlayer && (beastPredator(npc, other) || (npc.attackers.get(other.id) ?? -999) > game.now - 120);
-  if (other.npcRole === 'beast') return false;
+  // The Harpoon's whalers and the hunters go for the beasts they see (docs/16 P1).
+  if (other.npcRole === 'beast') return (role === 'hunter' || npc.faction === 'harpoon') && npc.ownerId === null && !other.hasEffect('submerged');
   // A convoy's escort answers whoever fires on any of its ships; a merchant's escort, whoever fires on her.
   if (npc.convoyId !== undefined && convoyFoe(game, npc.convoyId, other)) return true;
   if (npc.escortOf !== undefined && ((game.ships.get(npc.escortOf)?.attackers.get(other.id) ?? -999) > game.now - 120)) return true;
+  // ...and goes for a raider bearing down on her before the first shot (docs/16 P1).
+  if (npc.escortOf !== undefined && !other.isPlayer && game.npcs.get(other.id)?.target === npc.escortOf) return true;
   // A caravan's escort answers whoever fires on any ship of it.
   if (npc.caravanId !== undefined && npc.npcRole === 'patrol') {
     for (const o of game.ships.values()) if (o.caravanId === npc.caravanId && (o.attackers.get(other.id) ?? -999) > game.now - 120) return true;
@@ -221,6 +225,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
       case 'pirate':
         // Sworn to the Code: the Brethren do not fire first.
         if (p?.oath === 'code') return false;
+        // A captain who joined them on their prey sails with them for a while (docs/16 P1).
+        if (joinedRaid(game, npc, other)) return false;
         // Under a friend's guns (docs/12 P6): only a pirate well above her dares.
         if (other.guardedUntil > game.now && npc.shipLevel < other.shipLevel + 2) return false;
         // Gold Fever: a hoard in the hold draws pirates even into safe water.
@@ -934,7 +940,7 @@ const TRAFFIC_GOODS: GoodId[] = ['provisions', 'rum', 'sugar', 'tobacco', 'timbe
  * sailing the sea's own ways — a merchant crossing her track toward the far side, a fisher working the water, a patrol
  * on its beat, a rover looking for prey. Null when the spot is land or the role has no place here.
  */
-export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' | 'pirate', x: number, y: number, past: { x: number; y: number }): ShipEntity | null {
+export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter', x: number, y: number, past: { x: number; y: number }): ShipEntity | null {
   if (isLand(game.world, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) return null;
   const region = regionAt(game.world, x, y);
   const safety = REGIONS[region].safety;
@@ -945,13 +951,17 @@ export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' 
   else if (role === 'patrol') {
     if (!port || safety === 'lawless' || (port.faction !== 'crown' && port.faction !== 'league' && port.faction !== 'harpoon')) return null;
     faction = port.faction;
+  } else if (role === 'hunter') {
+    // The Harpoon's whalers work the wild waters for the beasts (docs/16 P1).
+    if (safety === 'safe') return null;
+    faction = 'harpoon';
   } else {
     if (safety === 'safe') return null;
     faction = 'confederacy';
   }
   // Her level by the square she puts out in (docs/16 P2); the law a level above it.
   const level = role === 'patrol' ? Math.min(10, sectorLevel(game, x, y) + 1) : sectorLevel(game, x, y, role !== 'pirate');
-  const hulls = role === 'fisher' ? (['cutter'] as ShipClassId[]) : hullsFor(role, level);
+  const hulls = role === 'fisher' ? (['cutter'] as ShipClassId[]) : role === 'hunter' && level <= 5 ? (['harpoon_whaler'] as ShipClassId[]) : hullsFor(role, level);
   const cls: ShipClassId = role === 'merchant' && hulls.includes('fluyt') && game.rng.chance(0.5) ? 'fluyt' : game.rng.pick(hulls);
   const h = headingOf(past.x - x, past.y - y);
   const ship = game.spawnNpcShip(role, cls, faction, x, y, h);
@@ -981,6 +991,10 @@ export function spawnTraffic(game: Game, role: 'merchant' | 'fisher' | 'patrol' 
   } else if (role === 'patrol') {
     ship.purse = 200 + game.rng.int(0, 300);
     brain.area = { x: past.x, y: past.y, r: 5000 };
+  } else if (role === 'hunter') {
+    ship.purse = 150 + game.rng.int(0, 250);
+    ship.cargo = { whale_oil: game.rng.int(2, 8) };
+    brain.area = { x, y, r: 5000 };
   } else {
     ship.purse = 100 + game.rng.int(0, 400) * ship.cls.tier;
     const loot: GoodId[] = ['rum', 'gunpowder', 'weapons', 'tobacco', 'spices'];

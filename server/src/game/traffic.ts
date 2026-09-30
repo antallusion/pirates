@@ -9,6 +9,7 @@ import { dist, headingVec } from '../../../shared/src/math.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { spawnPirate, spawnTraffic } from './npc.ts';
 import { quietSea } from './director.ts';
+import { stirWars } from './npcwars.ts';
 import type { Game } from './Game.ts';
 
 /** How near counts as about her, and how far off a new ship is put out (beyond her screen, inside her chart). */
@@ -22,12 +23,12 @@ export const TRAFFIC_WANT: Record<string, number> = { safe: 16, contested: 20, l
 /** Who sails where. */
 const MIX: Record<string, [Role, number][]> = {
   safe: [['merchant', 45], ['fisher', 35], ['patrol', 20]],
-  contested: [['merchant', 40], ['fisher', 20], ['patrol', 15], ['pirate', 25]],
-  lawless: [['merchant', 25], ['fisher', 10], ['pirate', 65]],
+  contested: [['merchant', 40], ['fisher', 20], ['patrol', 15], ['pirate', 25], ['hunter', 8]],
+  lawless: [['merchant', 25], ['fisher', 10], ['pirate', 65], ['hunter', 7]],
 };
 /** No more local ships than this in the whole sea, whatever the crowd. */
 const CAP = 900;
-type Role = 'merchant' | 'fisher' | 'patrol' | 'pirate';
+type Role = 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter';
 const COUNTED = new Set(['merchant', 'fisher', 'patrol', 'pirate', 'escort', 'hunter', 'ghost']);
 
 const local = new WeakMap<Game, Set<number>>();
@@ -118,6 +119,12 @@ export function stepTraffic(game: Game): void {
     if (!ship || !s.profile || ship.docked || !ship.alive || ship.ghost) continue;
     hunt(game, s);
     hail(game, s);
+    // The sea's own wars (docs/16 P1): now and then a fight staged in her sight.
+    stirWars(game, s, onboardingProtected(s), (x, y, past) => {
+      const p = spawnTraffic(game, 'pirate', x, y, past);
+      if (p) mine.add(p.id);
+      return p;
+    });
     if ((tick + s.accountId) % 3 !== 0) continue;
     if (mine.size >= CAP) continue;
     // In the First Watch the sea is peaceful but not empty: merchants, fishers and patrols, no rovers.

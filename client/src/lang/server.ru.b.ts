@@ -1265,4 +1265,12 @@ export const SERVER_RU_B: Record<string, string> = {
   "Your streak of {0} ships ends with your ship.": "Ваша серия ({0} подряд) закончилась вместе с кораблём.",
   "{0} hands take the {1} as your trophy. She will lie in a berth at the next port with a yard.": "{0} человек берут {1} трофеем. Она встанет к причалу в ближайшем порту с верфью.",
   "{0} ships in a row without making port: plunder and experience ×{1}.": "Кораблей подряд без захода в порт: {0}. Добыча и опыт ×{1}.",
+  // The sea's own wars (docs/16 P1).
+  "A bounty on raiders of the low waters: {0} silver more.": "Награда за налётчиков на мелководье: ещё {0} серебра.",
+  "The merchant": "Купец",
+  "The raiders on {0} hold their fire: you are in this together.": "Налётчики на «{0}» не стреляют по вам: теперь вы заодно.",
+  "{0} dips her flag to you: {1} silver for the rescue.": "«{0}» приспускает флаг в вашу честь: {1} серебра за спасение.",
+  "{0} drove the raiders off {1} near {2}.": "{0} отогнал(а) налётчиков от «{1}» у {2}.",
+  "{0} is under attack by a ghost ship {1} km off, bearing {2}: she calls for help!": "«{0}» атакует корабль-призрак в {1} км, пеленг — {2}: она зовёт на помощь!",
+  "{0} is under attack by pirates {1} km off, bearing {2}: she calls for help!": "«{0}» атакуют пираты в {1} км, пеленг — {2}: она зовёт на помощь!",
 };

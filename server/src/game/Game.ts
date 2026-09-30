@@ -31,6 +31,7 @@ import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap,
 import { chooseEncounter, stepDirector } from './director.ts';
 import { stepSeaLife } from './sealife.ts';
 import { localTraffic, stepTraffic } from './traffic.ts';
+import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { orderRefit, refitHolds, stepRefit } from './refit.ts';
@@ -1608,6 +1609,7 @@ export class Game {
   npcOnDamaged(target: ShipEntity, source: ShipEntity | null): void {
     const brain = this.npcs.get(target.id);
     if (!brain || !source) return;
+    onNpcHit(this, target, source); // a merchant under a raider's guns calls for help (docs/16 P1)
     if (brain.role === 'merchant' || brain.role === 'fisher') brain.fleeFrom = source.id;
     // Holed below the waterline: every hand to the pumps (merchants) or keep the guns manned (warships).
     if (target.leaks >= 2 && target.station !== 'damage_control' && (brain.role === 'merchant' || target.leaks >= 4)) setStation(this, target, 'damage_control');
@@ -1660,6 +1662,8 @@ export class Game {
       killerId = id;
     }
     const killer = killerId !== null ? this.ships.get(killerId) ?? null : null;
+    raiderSunk(this, ship); // a raider on a merchant's call: her rescuers are paid (docs/16 P1)
+    callClosed(this, ship.id);
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
     if (ship.yardOf) onYardCaptainSunk(this, ship);
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
