@@ -85,7 +85,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -609,6 +609,41 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       game.grid.upsert(o.id, o.state.x, o.state.y);
       return `${o.name} (${SHIP_CLASSES[cls].name} ⚓${o.shipLevel}, ${faction}) lies off your beam.`;
     }
+    case 'war': {
+      // The sea's own wars in sight (docs/16 P1): /war — a rover falls on a merchant off your bow; /war patrol — and
+      // the law comes for the rover.
+      const [mx, my] = openSpot(game, ship, [380, 500, 650], 150, 0.35);
+      const m = game.spawnNpcShip('merchant', 'fluyt', 'league', mx, my, ship.state.heading + Math.PI / 2);
+      m.cargo = { spices: 20, rum: 15, sugar: 20 };
+      const [px, py] = openSpot(game, ship, [620, 800, 950], 150, 0.8);
+      const pr = game.spawnNpcShip('pirate', 'schooner', 'confederacy', px, py, ship.state.heading);
+      game.setNpcLevel(m, 4);
+      game.setNpcLevel(pr, 4);
+      for (const o of [m, pr]) {
+        const b = game.npcs.get(o.id);
+        if (b) {
+          b.active = true;
+          b.area = { x: o.state.x, y: o.state.y, r: 2000 };
+        }
+        o.region = game.regionAt(o.state.x, o.state.y);
+        game.grid.upsert(o.id, o.state.x, o.state.y);
+      }
+      game.npcs.get(pr.id)!.chase = { id: m.id, until: game.now + 300 };
+      if (args[0] === 'patrol') {
+        const [qx, qy] = openSpot(game, ship, [600, 800], 150, -0.5);
+        const pa = game.spawnNpcShip('patrol', 'brig', 'crown', qx, qy, ship.state.heading);
+        game.setNpcLevel(pa, 5);
+        const b = game.npcs.get(pa.id);
+        if (b) {
+          b.active = true;
+          b.chase = { id: pr.id, until: game.now + 300 };
+          b.area = { x: qx, y: qy, r: 2000 };
+        }
+        pa.region = game.regionAt(qx, qy);
+        game.grid.upsert(pa.id, qx, qy);
+      }
+      return `${pr.name} falls on ${m.name} off your bow.`;
+    }
     case 'strike': {
       // A battered ship off your beam strikes her colours to you (docs/16 #3): /strike [role] [class].
       if (ship.docked) return 'Put to sea first.';
@@ -699,7 +734,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'reveal': {
       let n = 0;
       for (const is of game.world.islands) {
-        if (s.discovered.has(is.id)) continue;
+        if (s.discovered.has(is.id) || is.minor) continue;
         game.chartIsland(s, is);
         n++;
       }

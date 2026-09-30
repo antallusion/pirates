@@ -27,3 +27,11 @@ export function questPayOf(pay: QuestPay, silver: number, level: number): { silv
   const worth = (silver - kept) * STORES_WORTH;
   return { silver: kept, rep, heavy: Math.floor(worth / 2 / AMMO.heavy.price), incendiary: Math.floor(worth / 2 / AMMO.incendiary.price) };
 }
+
+/**
+ * A job's silver for the captain who does it (docs/16 P2: reasons to come back to the low waters): a port pays a
+ * veteran more for the same work — 2.5% for every level she stands above the job, up to twice the job's own pay.
+ */
+export function veteranPay(captainLevel: number, jobLevel: number): number {
+  return 1 + Math.min(1, Math.max(0, captainLevel - jobLevel) * 0.025);
+}

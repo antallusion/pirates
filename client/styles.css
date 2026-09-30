@@ -2963,3 +2963,5 @@ body.tac #toasts { top: 22%; }
   .tb-turn { font-size: 13px; }
   .tb-timer { width: 260px; }
 }
+/* The square of the sea (docs/16 P2): on a phone the level alone, the captains it is for from a tablet up. */
+@media (max-width: 699px) { #hud-region .rg-cap { display: none; } }

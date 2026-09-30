@@ -77,7 +77,7 @@ export function gateOf(game: Game): Gate {
   const seas = [...SEAS].sort(() => rng.float() - 0.5).filter((r) => !game.zone || game.zone.regions.has(r));
   let gate: Gate | null = null;
   for (const region of seas.length ? seas : SEAS) {
-    const isl = game.world.islands.filter((i) => i.region === region);
+    const isl = game.world.islands.filter((i) => i.region === region && !i.minor);
     for (let k = 0; k < 80 && !gate; k++) {
       const is = isl[Math.floor(rng.float() * isl.length)];
       if (!is) break;

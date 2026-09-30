@@ -24,6 +24,10 @@ export interface Island {
   poly: number[]; // flat [x0,y0,...] world coords, clockwise
   features: IslandFeature[];
   portId?: string;
+  /** A sea stack, a rock, an ice floe or a spire of the dense sea (docs/16 P3): land to steer round, not to chart. */
+  minor?: boolean;
+  /** A floating town's hulks lashed together (docs/16 P3): its "land" is the moored hulls. */
+  raft?: boolean;
 }
 
 export interface Port {
@@ -40,6 +44,23 @@ export interface Port {
   profile: PortProfile;
   description: string;
   key: boolean;
+  /** A floating town (docs/16 P3): a small free port on moored hulks in the open sea. */
+  raft?: boolean;
+}
+
+/** The dense sea's marks that are not land (docs/16 P3): a field of wrecks, a lane buoy, a lantern float, driftwood,
+ *  floating bones, an ice floe. Seen, not steered round. */
+export type SeaMarkKind = 'wreck' | 'buoy' | 'lantern' | 'drift' | 'bones' | 'floe';
+
+export interface SeaMark {
+  id: number;
+  kind: SeaMarkKind;
+  region: RegionId;
+  x: number;
+  y: number;
+  r: number;
+  rot: number;
+  seed: number;
 }
 
 export interface Current {
@@ -93,6 +114,13 @@ export interface World {
   navSize: number;
   /** The first of the outer islands (step 4 of the generation): every island before her is as she ever was. */
   outerFrom: number;
+  /** The first island of the dense sea (step 5: floating towns and sea stacks); every island before her is as she was. */
+  minorFrom: number;
+  /** The first reef of the dense sea (step 5). */
+  reefsFrom: number;
+  /** The dense sea's marks (docs/16 P3) and their chunk index. */
+  marks: SeaMark[];
+  markChunks: Map<number, number[]>;
 }
 
 const REGION_CELL = 1000;
@@ -490,6 +518,165 @@ export function generateWorld(seed: number): World {
     }
   }
 
+  // 5) The dense sea (owner, 2026-09-30, docs/16 P3: "every minute of sailing there should be islands, floating towns,
+  // reefs or something else"): floating towns in the open water, then every gap of open sea wider than a mile or so
+  // gets something — a sea stack, a reef, a field of wrecks, a buoy on a lane, driftwood, bones or a floe. All of it
+  // from its own generator and after everything above, so every island, port and reef before keeps her id and place.
+  // The lanes between ports, the currents, the maelstroms and the harbours stay clear of anything a keel can strike.
+  const minorFrom = islands.length;
+  const reefsFrom = reefs.length;
+  const marks: SeaMark[] = [];
+  const srng = new Rng((seed * 229 + 7331) >>> 0);
+  const indexIsland = (is: Island) => {
+    const [x0, y0] = chunkOf(is.x - is.radius, is.y - is.radius);
+    const [x1, y1] = chunkOf(is.x + is.radius, is.y + is.radius);
+    for (let cy = y0; cy <= y1; cy++) {
+      for (let cx = x0; cx <= x1; cx++) {
+        const k = chunkKey(cx, cy);
+        let list = chunks.get(k);
+        if (!list) chunks.set(k, (list = []));
+        list.push(is.id);
+      }
+    }
+  };
+  const laneDist = (x: number, y: number) => {
+    let best = Infinity;
+    for (const [ax, ay, bx, by] of lanes) best = Math.min(best, segDist(x, y, ax, ay, bx, by));
+    return best;
+  };
+  const portDist = (x: number, y: number) => {
+    let best = Infinity;
+    for (const p of ports) best = Math.min(best, Math.hypot(p.x - x, p.y - y));
+    return best;
+  };
+  const inPool = (x: number, y: number, pad: number) => WHIRLPOOLS.some((w) => Math.hypot(w.x - x, w.y - y) < w.radius * 2.2 + pad);
+  // 5a) Floating towns: moored hulks lashed together far out from any harbour, each a small free port.
+  let raftN = 0;
+  for (const rid of REGION_IDS) {
+    let placed = 0, attempts = 0;
+    while (placed < RAFT_WANT[rid] && attempts < 600) {
+      attempts++;
+      const x = srng.range(WORLD_EDGE_MARGIN + 3000, WORLD_SIZE - WORLD_EDGE_MARGIN - 3000);
+      const y = srng.range(WORLD_EDGE_MARGIN + 3000, WORLD_SIZE - WORLD_EDGE_MARGIN - 3000);
+      if (regionOf(x, y) !== rid) continue;
+      const r = srng.range(115, 150);
+      if (distanceToCurrents(x, y) < r + 600 || inPool(x, y, r + 800)) continue;
+      if (portDist(x, y) < 6000) continue;
+      if (islands.some((is) => Math.hypot(is.x - x, is.y - y) < is.radius + r + 900)) continue;
+      if (reefs.some((q) => Math.hypot(q.x - x, q.y - y) < q.radius + r + 800)) continue;
+      if (laneDist(x, y) < r + 700) continue;
+      const id = islands.length;
+      const name = RAFT_NAMES[raftN % RAFT_NAMES.length];
+      const rot = srng.range(0, TAU);
+      const poly: number[] = [];
+      for (let i = 0; i < 18; i++) {
+        const a = (i / 18) * TAU;
+        const ex = Math.sin(a) * r, ey = -Math.cos(a) * r * 0.62;
+        poly.push(x + ex * Math.cos(rot) - ey * Math.sin(rot), y + ex * Math.sin(rot) + ey * Math.cos(rot));
+      }
+      const portId = `raft_${raftN}`;
+      const is: Island = { id, name, region: rid, biome: REGIONS[rid].biome, x, y, radius: r * 1.25, poly, features: ['port'], portId, raft: true };
+      islands.push(is);
+      indexIsland(is);
+      const [ax, ay] = coastAnchor(poly, x, y, rot + Math.PI / 2 + (srng.chance(0.5) ? Math.PI : 0), 150);
+      const produces: Partial<Record<GoodId, number>> = {};
+      const consumes: Partial<Record<GoodId, number>> = { provisions: srng.int(6, 12), rum: srng.int(3, 8) };
+      for (const g of [srng.pick(RAFT_GOODS), srng.pick(RAFT_GOODS)]) produces[g] = srng.int(6, 14);
+      ports.push({
+        id: portId, name, region: rid, faction: 'free', x: ax, y: ay, islandId: id, size: 1, shipyardTier: 1, blackMarket: true,
+        profile: { produces, consumes }, description: RAFT_DESCRIPTION, key: false, raft: true,
+      });
+      raftN++;
+      placed++;
+    }
+  }
+  // 5b) The gaps: a coarse bucket index of everything a captain can see, then a jittered sweep over the sea.
+  const B = 2000, BN = WORLD_SIZE / B;
+  const buckets: [number, number, number][][] = Array.from({ length: BN * BN }, () => []);
+  const addPoi = (x: number, y: number, r: number) => {
+    const bx0 = Math.max(0, Math.floor((x - r) / B)), bx1 = Math.min(BN - 1, Math.floor((x + r) / B));
+    const by0 = Math.max(0, Math.floor((y - r) / B)), by1 = Math.min(BN - 1, Math.floor((y + r) / B));
+    for (let by = by0; by <= by1; by++) for (let bx = bx0; bx <= bx1; bx++) buckets[by * BN + bx].push([x, y, r]);
+  };
+  const nearest = (x: number, y: number) => {
+    let best = Infinity;
+    const bx = Math.floor(x / B), by = Math.floor(y / B);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const gx = bx + dx, gy = by + dy;
+      if (gx < 0 || gy < 0 || gx >= BN || gy >= BN) continue;
+      for (const [px, py, pr] of buckets[gy * BN + gx]) best = Math.min(best, Math.hypot(px - x, py - y) - pr);
+    }
+    return best;
+  };
+  for (const is of islands) addPoi(is.x, is.y, is.radius);
+  for (const q of reefs) addPoi(q.x, q.y, q.radius);
+  for (const p of ports) addPoi(p.x, p.y, 300);
+  for (const w of WHIRLPOOLS) addPoi(w.x, w.y, w.radius * 1.6);
+  const G = 1250;
+  const GN = Math.floor(WORLD_SIZE / G);
+  const order: number[] = [];
+  for (let i = 0; i < GN * GN; i++) order.push(i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(srng.float() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const lo = WORLD_EDGE_MARGIN + 1300, hi = WORLD_SIZE - WORLD_EDGE_MARGIN - 1300;
+  for (const cell of order) {
+    const x = ((cell % GN) + 0.5) * G + srng.range(-450, 450);
+    const y = (Math.floor(cell / GN) + 0.5) * G + srng.range(-450, 450);
+    const roll = srng.float(), size = srng.float(), turn = srng.range(0, TAU), mseed = srng.int(0, 1e9);
+    if (x < lo || y < lo || x > hi || y > hi) continue;
+    if (nearest(x, y) < DENSE_GAP) continue;
+    if (inPool(x, y, 200)) continue;
+    const rid = regionOf(x, y);
+    const lane = laneDist(x, y), cur = distanceToCurrents(x, y), port = portDist(x, y);
+    let kind: SeaMarkKind | 'stack' | 'reef';
+    if (lane < 450 || port < 2600) kind = rid === 'drowned_crown' || rid === 'the_abyss' || rid === 'whispering' ? 'lantern' : 'buoy';
+    else if (cur < 200) kind = roll < 0.6 ? 'drift' : 'wreck';
+    else {
+      const mix = DENSE_MIX[rid];
+      let t = roll * mix.reduce((a, [, w]) => a + w, 0);
+      kind = mix[mix.length - 1][0];
+      for (const [k, w] of mix) {
+        if (t < w) {
+          kind = k;
+          break;
+        }
+        t -= w;
+      }
+    }
+    if (kind === 'stack' || kind === 'reef') {
+      const r = kind === 'stack' ? 30 + size * 55 : 50 + size * 90;
+      // Anything a keel can strike keeps off the lanes, the currents and the harbours.
+      if (lane < r * 1.25 + 550 || cur < r * 1.25 + 400 || port < 2200 || inPool(x, y, r + 400)) kind = rid === 'leviathan_reach' ? 'floe' : 'wreck';
+      else if (kind === 'stack') {
+        const id = islands.length;
+        const poly = islandPoly(srng, x, y, r, seed + 40000 + id * 7);
+        const is: Island = { id, name: islandName(srng, REGIONS[rid].biome, usedNames), region: rid, biome: STACK_BIOME[rid], x, y, radius: r * 1.25, poly, features: [], minor: true };
+        islands.push(is);
+        indexIsland(is);
+        addPoi(x, y, is.radius);
+        continue;
+      } else {
+        const poly = islandPoly(srng, x, y, r, seed + 60000 + reefs.length);
+        reefs.push({ id: reefs.length, region: rid, x, y, radius: r * 1.25, poly, depth: Math.round((1.2 + size * 1.6) * 10) / 10 });
+        addPoi(x, y, r * 1.25);
+        continue;
+      }
+    }
+    const [m0, m1] = MARK_SIZE[kind];
+    const r = m0 + size * (m1 - m0);
+    marks.push({ id: marks.length, kind, region: rid, x, y, r, rot: turn, seed: mseed });
+    addPoi(x, y, r);
+  }
+  const markChunks = new Map<number, number[]>();
+  for (const m of marks) {
+    const k = chunkKey(...chunkOf(m.x, m.y));
+    let list = markChunks.get(k);
+    if (!list) markChunks.set(k, (list = []));
+    list.push(m.id);
+  }
+
   const reefChunks = new Map<number, number[]>();
   for (const rf of reefs) {
     const [x0, y0] = chunkOf(rf.x - rf.radius, rf.y - rf.radius);
@@ -504,22 +691,32 @@ export function generateWorld(seed: number): World {
     }
   }
 
-  // Navigation grid: blocked if the cell center is on land or within 160 m of a coast, or outside the Maelstrom Wall.
   const navSize = WORLD_SIZE / NAV_CELL;
-  const navGrid = new Uint8Array(navSize * navSize);
+  const navGrid = buildNavGrid({ islands, chunks, reefs, ports }, true, minorFrom, reefsFrom);
+
+  return { seed, whirlpools: WHIRLPOOLS, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize, outerFrom, minorFrom, reefsFrom, marks, markChunks };
+}
+
+/** Navigation grid: blocked if the cell center is on land or within 160 m of a coast, or outside the Maelstrom Wall;
+ *  maelstrom eyes and reefs too. `dense` false: the sea as it was before its dense sea (step 5), for the balance sims. */
+export function buildNavGrid(w: { islands: Island[]; chunks: Map<number, number[]>; reefs: Reef[]; ports: Port[] }, dense = true, minorFrom = Infinity, reefsFrom = Infinity): Uint8Array {
+  const { islands, chunks, reefs, ports } = w;
+  const navSize = WORLD_SIZE / NAV_CELL;
+  const grid = new Uint8Array(navSize * navSize);
   for (let gy = 0; gy < navSize; gy++) {
     for (let gx = 0; gx < navSize; gx++) {
       const x = gx * NAV_CELL + NAV_CELL / 2;
       const y = gy * NAV_CELL + NAV_CELL / 2;
       if (x < WORLD_EDGE_MARGIN || y < WORLD_EDGE_MARGIN || x > WORLD_SIZE - WORLD_EDGE_MARGIN || y > WORLD_SIZE - WORLD_EDGE_MARGIN) {
-        navGrid[gy * navSize + gx] = 1;
+        grid[gy * navSize + gx] = 1;
         continue;
       }
       for (const id of chunks.get(chunkKey(...chunkOf(x, y))) ?? []) {
+        if (!dense && id >= minorFrom) continue;
         const is = islands[id];
         if (Math.hypot(is.x - x, is.y - y) > is.radius + 260) continue;
         if (pointInPolygon(x, y, is.poly) || closestOnPolygon(x, y, is.poly).d2 < 160 * 160) {
-          navGrid[gy * navSize + gx] = 1;
+          grid[gy * navSize + gx] = 1;
           break;
         }
       }
@@ -530,28 +727,73 @@ export function generateWorld(seed: number): World {
     const r = w.radius * 0.6;
     for (let gy = Math.floor((w.y - r) / NAV_CELL); gy <= Math.floor((w.y + r) / NAV_CELL); gy++) {
       for (let gx = Math.floor((w.x - r) / NAV_CELL); gx <= Math.floor((w.x + r) / NAV_CELL); gx++) {
-        if (Math.hypot(gx * NAV_CELL + NAV_CELL / 2 - w.x, gy * NAV_CELL + NAV_CELL / 2 - w.y) < r) navGrid[gy * navSize + gx] = 1;
+        if (Math.hypot(gx * NAV_CELL + NAV_CELL / 2 - w.x, gy * NAV_CELL + NAV_CELL / 2 - w.y) < r) grid[gy * navSize + gx] = 1;
       }
     }
   }
   // Reefs: rasterise each one; any cell the reef touches (half a cell diagonal) is blocked.
   for (const rf of reefs) {
+    if (!dense && rf.id >= reefsFrom) continue;
     const pad = rf.radius + 300;
     for (let gy = Math.floor((rf.y - pad) / NAV_CELL); gy <= Math.floor((rf.y + pad) / NAV_CELL); gy++) {
       for (let gx = Math.floor((rf.x - pad) / NAV_CELL); gx <= Math.floor((rf.x + pad) / NAV_CELL); gx++) {
         if (gx < 0 || gy < 0 || gx >= navSize || gy >= navSize) continue;
         const x = gx * NAV_CELL + NAV_CELL / 2, y = gy * NAV_CELL + NAV_CELL / 2;
-        if (pointInPolygon(x, y, rf.poly) || closestOnPolygon(x, y, rf.poly).d2 < 290 * 290) navGrid[gy * navSize + gx] = 1;
+        if (pointInPolygon(x, y, rf.poly) || closestOnPolygon(x, y, rf.poly).d2 < 290 * 290) grid[gy * navSize + gx] = 1;
       }
     }
   }
   // Make sure port anchors are reachable.
   for (const p of ports) {
+    if (!dense && p.raft) continue;
     const gx = Math.floor(p.x / NAV_CELL), gy = Math.floor(p.y / NAV_CELL);
-    navGrid[gy * navSize + gx] = 0;
+    grid[gy * navSize + gx] = 0;
   }
+  return grid;
+}
 
-  return { seed, whirlpools: WHIRLPOOLS, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize, outerFrom };
+// The dense sea's tables (step 5 of the generation, docs/16 P3).
+/** No open water wider than this (metres to the nearest thing in sight) is left empty. */
+export const DENSE_GAP = 820;
+const RAFT_WANT: Record<RegionId, number> = { black_coast: 1, gravewater: 2, whispering: 1, ashen_isles: 2, leviathan_reach: 2, dead_mans_expanse: 3, drowned_crown: 2, the_abyss: 0 };
+export const RAFT_NAMES = ['Driftmarket', 'The Lashings', 'Hulkhaven', 'Cable Town', 'Barnacle Row', 'The Tethered Fleet', 'Knotwater', 'Tarry Rest', 'Wrackmoor', 'Keelsmoke', 'The Moorings', 'Chain Harbour', 'Lantern Raft', 'Saltlash'];
+/** The floating towns' names in Russian, in the same order (the client's table). */
+export const RAFT_NAMES_RU = ['Дрейфовый Рынок', 'Сцепка', 'Гавань Остовов', 'Канатный Город', 'Ракушечный Ряд', 'Флот на Привязи', 'Узловодье', 'Смоляной Приют', 'Обломный Причал', 'Килевой Дым', 'Швартовы', 'Цепная Гавань', 'Фонарный Плот', 'Солёная Сцепка'];
+export const RAFT_DESCRIPTION = "A floating town of moored hulks lashed together: a few stalls, a tavern in a galleon's hold, a carpenter with salvaged planks.";
+const RAFT_DESCRIPTION_RU = 'Плавучий город из пришвартованных друг к другу остовов: пара лавок, таверна в трюме галеона, плотник с досками из обломков.';
+const RAFT_GOODS: GoodId[] = ['planks', 'sailcloth', 'salt', 'provisions', 'rum', 'iron', 'fish'];
+const STACK_BIOME: Record<RegionId, IslandBiome> = {
+  black_coast: 'blacksand', gravewater: 'temperate', whispering: 'mossy', ashen_isles: 'volcanic', leviathan_reach: 'ice', dead_mans_expanse: 'barren', drowned_crown: 'ruins', the_abyss: 'bone',
+};
+const DENSE_MIX: Record<RegionId, [SeaMarkKind | 'stack' | 'reef', number][]> = {
+  black_coast: [['stack', 30], ['reef', 15], ['wreck', 20], ['drift', 15], ['buoy', 20]],
+  gravewater: [['stack', 30], ['reef', 15], ['wreck', 30], ['drift', 15], ['buoy', 10]],
+  whispering: [['stack', 35], ['reef', 30], ['wreck', 15], ['lantern', 10], ['drift', 10]],
+  ashen_isles: [['stack', 45], ['reef', 10], ['wreck', 25], ['drift', 20]],
+  leviathan_reach: [['stack', 20], ['floe', 35], ['bones', 20], ['wreck', 15], ['reef', 10]],
+  dead_mans_expanse: [['stack', 15], ['reef', 20], ['wreck', 45], ['bones', 10], ['drift', 10]],
+  drowned_crown: [['stack', 30], ['reef', 20], ['wreck', 20], ['lantern', 20], ['drift', 10]],
+  the_abyss: [['stack', 35], ['bones', 35], ['lantern', 15], ['wreck', 15]],
+};
+const MARK_SIZE: Record<SeaMarkKind, [number, number]> = { wreck: [55, 110], buoy: [6, 8], lantern: [7, 9], drift: [25, 55], bones: [35, 75], floe: [30, 70] };
+
+/** The floating towns' names and description, English → Russian (the client's table of server text). */
+export function raftPatterns(): [string, string][] {
+  return [...RAFT_NAMES.map((n, i) => [n, RAFT_NAMES_RU[i]] as [string, string]), [RAFT_DESCRIPTION, RAFT_DESCRIPTION_RU]];
+}
+
+/** The marks of the dense sea about a point (its chunk and the eight round it), within `r` of it when given. */
+export function marksNear(world: World, x: number, y: number, r = 0): SeaMark[] {
+  const out: SeaMark[] = [];
+  const [cx, cy] = chunkOf(x, y);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (cx + dx < 0 || cy + dy < 0 || cx + dx >= CHUNKS_PER_SIDE || cy + dy >= CHUNKS_PER_SIDE) continue;
+    for (const id of world.markChunks.get(chunkKey(cx + dx, cy + dy)) ?? []) {
+      const m = world.marks[id];
+      if (!r || Math.hypot(m.x - x, m.y - y) < r + m.r) out.push(m);
+    }
+  }
+  return out;
 }
 
 /** Anchor point `offset` meters beyond the outermost coastline crossing along `heading` from the island centre. */

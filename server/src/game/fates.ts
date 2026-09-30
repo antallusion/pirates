@@ -28,7 +28,7 @@ function ask(game: Game, s: PlayerSession, o: Officer, f: OfficerFate): void {
   const kind = REQUEST_KINDS[game.rng.int(0, REQUEST_KINDS.length - 1)];
   const near = game.world.ports.filter((p) => !p.id.includes('_v')).sort((a, b) => Math.hypot(a.x - ship.state.x, a.y - ship.state.y) - Math.hypot(b.x - ship.state.x, b.y - ship.state.y)).slice(0, 8);
   const port = near[game.rng.int(0, Math.max(0, near.length - 1))];
-  const isles = game.world.islands.filter((is) => !is.portId && is.region === ship.region);
+  const isles = game.world.islands.filter((is) => !is.portId && !is.minor && is.region === ship.region);
   const island = isles.length ? isles[game.rng.int(0, isles.length - 1)] : undefined;
   const until = game.now + REQUEST_LASTS_DAYS * DAY_LENGTH_SEC;
   if (kind === 'grave' && island) f.request = { kind, island: island.id, until };

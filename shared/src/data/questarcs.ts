@@ -250,11 +250,12 @@ export function generateArcs(world: World, seed: number): QuestDef[] {
   for (const arc of ARCS) {
     const rng = new Rng((hashString(arc.id) ^ (seed * 40503)) >>> 0);
     const [cx, cy] = REGIONS[arc.region].center;
-    const regionPorts = world.ports.filter((p) => p.region === arc.region).sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
-    const home: Port | undefined = regionPorts[0] ?? world.ports.slice().sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy))[0];
+    const ports = world.ports.filter((p) => !p.raft); // the floating towns keep out of the stories (docs/16 P3)
+    const regionPorts = ports.filter((p) => p.region === arc.region).sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
+    const home: Port | undefined = regionPorts[0] ?? ports.slice().sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy))[0];
     if (!home) continue;
-    const others = world.ports.filter((p) => p.id !== home.id).sort((a, b) => Math.hypot(a.x - home.x, a.y - home.y) - Math.hypot(b.x - home.x, b.y - home.y)).slice(0, 6);
-    const islands = world.islands.filter((is) => is.region === arc.region && !is.portId);
+    const others = ports.filter((p) => p.id !== home.id).sort((a, b) => Math.hypot(a.x - home.x, a.y - home.y) - Math.hypot(b.x - home.x, b.y - home.y)).slice(0, 6);
+    const islands = world.islands.filter((is) => is.region === arc.region && !is.portId && !is.minor);
     const level = [1, 6, 10, 14, 18, 16, 22, 40][REGION_IDS.indexOf(arc.region)] ?? 10;
     let prev: string | null = null;
     arc.chapters.forEach((ch, i) => {
@@ -269,7 +270,7 @@ export function generateArcs(world: World, seed: number): QuestDef[] {
       };
       // The site in the arc's own waters, else on the nearest island that has it (safe waters keep no smugglers' camps).
       let siteIslands = ch.site ? islands.filter((is) => fits(is)) : [];
-      if (ch.site && !siteIslands.length) siteIslands = world.islands.filter((is) => !is.portId && fits(is)).sort((a, b) => Math.hypot(a.x - home.x, a.y - home.y) - Math.hypot(b.x - home.x, b.y - home.y)).slice(0, 5);
+      if (ch.site && !siteIslands.length) siteIslands = world.islands.filter((is) => !is.portId && !is.minor && fits(is)).sort((a, b) => Math.hypot(a.x - home.x, a.y - home.y) - Math.hypot(b.x - home.x, b.y - home.y)).slice(0, 5);
       const landable = islands.filter((is) => is.features.some((f) => f !== 'port'));
       const island = ch.site ? (siteIslands.length ? rng.pick(siteIslands) : undefined) : landable.length ? rng.pick(landable) : islands.length ? rng.pick(islands) : undefined;
       // A chapter that needs a site the region lacks lands anywhere on the island instead.

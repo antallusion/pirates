@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { omenCarcassMul } from './omens.ts';
 import { giveCalf } from './companion.ts';
 import { tattooCount } from './tattoos.ts';
@@ -258,7 +259,7 @@ function spawnAbout(game: Game): void {
     const migrating = orcaMigrationIn(game, ship.region);
     if (near >= (migrating ? 10 : 6)) continue;
     if (!S.rng.chance(migrating ? 0.25 : 0.12)) continue;
-    const lvl = ship.shipLevel;
+    const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
     const kind = pickKind(game, ship.region, lvl);
     if (!kind) continue;
     const pt = openPoint(game, ship.state.x, ship.state.y, SPAWN_R[0], SPAWN_R[1], ship.region);
@@ -285,12 +286,13 @@ function spawnAbout(game: Game): void {
 export function beastsPass(game: Game, ship: ShipEntity): boolean {
   const S = bs(game);
   if (S.brains.size >= WORLD_CAP) return false;
-  const kind = pickKind(game, ship.region, ship.shipLevel);
+  const lvl = sectorAt(game.world, ship.state.x, ship.state.y).level; // the beasts of the square (docs/16 P2)
+  const kind = pickKind(game, ship.region, lvl);
   if (!kind) return false;
   const pt = openPoint(game, ship.state.x, ship.state.y, 1200, 2000, ship.region);
   if (!pt) return false;
   const d = BEASTS[kind];
-  return spawnGroup(game, kind, pt[0], pt[1], clamp(ship.shipLevel + S.rng.int(-1, 1), d.level[0], d.level[1])).length > 0;
+  return spawnGroup(game, kind, pt[0], pt[1], clamp(lvl + S.rng.int(-1, 1), d.level[0], d.level[1])).length > 0;
 }
 
 // ------------------------------------------------------------------------------------------------ movement

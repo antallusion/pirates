@@ -125,6 +125,7 @@ const SHOAL_VIEW = 4500;
 function nearestIsland(game: Game, x: number, y: number): { is: Island | null; d: number } {
   let best: Island | null = null, bd = Infinity;
   for (const is of game.world.islands) {
+    if (is.minor) continue; // a sea stack is no coast to fish (docs/16 P3)
     const d = dist(is.x, is.y, x, y) - is.radius;
     if (d < bd) {
       bd = d;
@@ -172,7 +173,7 @@ function spawnShoal(game: Game, region: RegionId, force?: FishId, stockMul = 1):
     // Half by the coasts, half on open water (a forced coastal kind always by a coast).
     let x: number, y: number;
     if (force ? !!FISH[force].coast : rng.chance(0.5)) {
-      const isl = game.world.islands.filter((is) => is.region === region);
+      const isl = game.world.islands.filter((is) => is.region === region && !is.minor);
       if (!isl.length) continue;
       const is = rng.pick(isl);
       const a = rng.float() * Math.PI * 2, r = is.radius + rng.range(300, 1800);

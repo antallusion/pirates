@@ -5,7 +5,7 @@
 
 import type { NpcSkill } from '../../shared/src/data/shiplevel.ts';
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
-import { isLand } from '../../shared/src/world/worldgen.ts';
+import { buildNavGrid, isLand } from '../../shared/src/world/worldgen.ts';
 import { SPEED_SCALE } from '../../shared/src/constants.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import { engage, newBrain } from '../../server/src/game/npc.ts';
@@ -42,6 +42,12 @@ export const FIGHT_SEC = Math.round((900 * 6) / SPEED_SCALE);
 
 export function duelSea(): Game {
   const { game } = makeGame();
+  // The sims weigh ship against ship on the open sea they were tuned on: the dense sea's stacks and reefs (docs/16 P3)
+  // are taken off their chart.
+  const w = game.world;
+  for (const [k, list] of w.chunks) w.chunks.set(k, list.filter((id) => id < w.minorFrom));
+  for (const [k, list] of w.reefChunks) w.reefChunks.set(k, list.filter((id) => id < w.reefsFrom));
+  w.navGrid = buildNavGrid(w, false, w.minorFrom, w.reefsFrom);
   for (const id of [...game.npcs.keys()]) game.removeShip(id);
   (game as unknown as { quota: () => number }).quota = () => 0;
   (game as unknown as { patrolsSpawnedAt: number }).patrolsSpawnedAt = 1e15;

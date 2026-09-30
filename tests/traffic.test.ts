@@ -34,7 +34,7 @@ test('ships are put out about a captain at sea, up to her waters’ number, and 
   assert.ok(near >= TRAFFIC_WANT.contested - 1, `only ${near} about her`);
   const mine = [...localTraffic(game)];
   assert.ok(mine.length > 0);
-  for (const id of mine) assert.ok(['merchant', 'fisher', 'patrol', 'pirate'].includes(game.ships.get(id)!.npcRole!));
+  for (const id of mine) assert.ok(['merchant', 'fisher', 'patrol', 'pirate', 'hunter'].includes(game.ships.get(id)!.npcRole!)); // the Harpoon's whalers too (docs/16 P1)
   // She sails far away: they are gone.
   ship.state.x = 15000;
   ship.state.y = 15000;

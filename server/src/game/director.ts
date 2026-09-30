@@ -105,6 +105,7 @@ function newThreshold(game: Game, safety: string): number {
 function nearestIsland(game: Game, x: number, y: number): { is: Island | null; d: number } {
   let best: Island | null = null, bd = Infinity;
   for (const is of game.world.islands) {
+    if (is.minor) continue;
     const d = dist(is.x, is.y, x, y) - is.radius;
     if (d < bd) {
       bd = d;

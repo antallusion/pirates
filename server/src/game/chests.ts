@@ -67,7 +67,7 @@ export function buryChest(game: Game, s: PlayerSession, silverRaw: number, riddl
   let best = null as null | { id: number; x: number; y: number };
   let bd = Infinity;
   for (const is of game.world.islands) {
-    if (is.portId) continue;
+    if (is.portId || is.minor) continue;
     const d = Math.hypot(is.x - ship.state.x, is.y - ship.state.y) - is.radius;
     if (d < bd) {
       bd = d;

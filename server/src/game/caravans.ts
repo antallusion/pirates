@@ -31,7 +31,7 @@ import type { Game } from './Game.ts';
 import { has, island, storeCapacity } from './holdings.ts';
 import { findPath, pointAlong } from './nav.ts';
 import type { Path } from './nav.ts';
-import { bandLevel, setPath, spawnPirate } from './npc.ts';
+import { sectorLevel, setPath, spawnPirate } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
@@ -496,7 +496,7 @@ function resolveAttack(game: Game, c: Caravan, nameAt: string, strength = 1): vo
   const [x, y] = here(game, c);
   const region = regionAt(game.world, x, y);
   const lvl = level(c);
-  const band = bandLevel(game, region);
+  const band = sectorLevel(game, x, y); // the square of the sea she is in (docs/16 P2)
   const win = defenceOdds({ escorts: c.escorts, ships: c.ships.length, level: lvl, band, pirates: S.rng.int(2, 3), flee: c.orders.onAttack === 'flee', strength });
   if (S.rng.chance(win)) {
     mail(game, c, `Caravan ${c.name} fought them off near ${nameAt}.`);

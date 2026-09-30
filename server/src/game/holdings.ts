@@ -188,7 +188,7 @@ export function islandNear(game: Game, ship: ShipEntity): Island | null {
   if (ship.docked) return null;
   let best: Island | null = null, bd = Infinity;
   for (const isl of game.world.islands) {
-    if (isl.portId) continue;
+    if (isl.portId || isl.minor) continue; // a sea stack is no estate (docs/16 P3)
     const d = dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius;
     if (d < REACH && d < bd) {
       bd = d;

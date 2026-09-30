@@ -2,6 +2,7 @@
 // never beats a senior captain; a merchant fights two levels below her own but carries far more; the sea's ships are
 // levelled by their waters and sized to the captain they are sent after.
 
+import { sectorAt } from '../shared/src/world/sectors.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -147,16 +148,16 @@ test('the sea’s ships: in the band of their waters, sized to the captain they 
     assert.ok(Math.abs(ship.shipLevel - P.ship!.combatLevel) <= 3, `an ambusher near her prey: ⚓${ship.shipLevel}`);
     game.removeShip(ship.id);
   }
-  // Merchants put out in the band of their port's waters (as far as their hull allows).
+  // Merchants put out in the band of their port's square of the sea (docs/16 P2; as far as their hull allows).
   const before = new Set(game.ships.keys());
   for (let i = 0; i < 12; i++) spawnMerchant(game);
   const fresh = [...game.ships.values()].filter((x) => !before.has(x.id) && x.npcRole === 'merchant');
   assert.ok(fresh.length > 5, `${fresh.length} merchants`);
   for (const m of fresh) {
-    const [lo, hi] = watersBand(REGIONS[game.regionAt(m.state.x, m.state.y)].safety);
+    const [lo, hi] = sectorAt(game.world, m.state.x, m.state.y).band;
     const [clo, chi] = levelRange(m.loadout.classId);
-    assert.ok(m.shipLevel >= Math.max(lo, clo) - 0 || m.shipLevel === clo, `⚓${m.shipLevel} ${m.loadout.classId}`);
-    assert.ok(m.shipLevel <= Math.max(hi, clo) && m.shipLevel <= chi, `⚓${m.shipLevel} ${m.loadout.classId} in ${lo}-${hi}`);
+    assert.ok(m.shipLevel >= Math.max(lo, clo) - 0 || m.shipLevel === clo, `⚓${m.shipLevel} ${m.loadout.classId} under ${lo}-${hi} at ${Math.round(m.state.x)},${Math.round(m.state.y)}`);
+    assert.ok(m.shipLevel <= Math.max(hi, clo) && m.shipLevel <= chi, `⚓${m.shipLevel} ${m.loadout.classId} in ${lo}-${hi} at ${Math.round(m.state.x)},${Math.round(m.state.y)}`);
   }
   assert.ok(npcSkill(1).spread > npcSkill(9).spread && npcSkill(1).lead < npcSkill(9).lead && !npcSkill(1).dash && npcSkill(9).dash);
   for (const r of Object.values(REGIONS)) assert.ok(watersBand(r.safety)[0] >= 1);

@@ -11,7 +11,7 @@ import { noteOwnShip } from './ui/levels.ts';
 import { isNight, SPEED_SCALE } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
+  BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, SeaMarkData, SectorData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
 import type { TaskView } from '../../shared/src/data/worldtasks.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -61,6 +61,10 @@ export class ClientState {
   loot = new Map<number, { x: number; y: number; value: number }>();
   islands = new Map<number, IslandData>();
   reefs = new Map<number, ReefData>();
+  /** The dense sea's marks that are not land (docs/16 P3). */
+  seaMarks = new Map<number, SeaMarkData>();
+  /** The squares of the sea and their ship levels (docs/16 P2), row by row. */
+  sectors: SectorData[] = [];
   ports: PortPublic[] = [];
   currents: CurrentData[] = [];
   whirlpools: WhirlpoolData[] = [];
@@ -206,6 +210,7 @@ export class ClientState {
         for (const p of this.ports) this.localize(p);
         this.currents = m.currents;
         this.whirlpools = m.whirlpools;
+        this.sectors = m.sectors ?? [];
         this.discovered = new Set(m.discovered);
         this.entityId = m.entityId;
         this.serverTime = m.time;
@@ -230,6 +235,7 @@ export class ClientState {
           this.islands.set(is.id, is);
         }
         for (const rf of m.reefs ?? []) this.reefs.set(rf.id, rf);
+        for (const mk of m.marks ?? []) this.seaMarks.set(mk.id, mk);
         break;
       case 'info':
         for (const i of m.list) this.infos.set(i.id, i);

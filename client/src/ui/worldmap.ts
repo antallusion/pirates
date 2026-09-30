@@ -5,6 +5,8 @@ import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
+import { bandOf, SECTOR_SIZE, SECTORS_PER_SIDE } from '../../../shared/src/world/sectors.ts';
+import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -63,7 +65,7 @@ export class WorldMap {
     const inGroup = (state.party?.members.length ?? 0) > 1;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button>
-      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
+      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span></div></details></div>
       <div class="map-logs">${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     // A task of the sea in the log: the chart turns to its nest.
@@ -256,6 +258,27 @@ export class WorldMap {
       g.moveTo(tx(0), ty(v));
       g.lineTo(tx(WORLD_SIZE), ty(v));
       g.stroke();
+    }
+    // The squares of the sea (docs/16 P2), faint: a wash by their level and the level in a corner, a pocket marked.
+    if (state.sectors.length) {
+      const side = SECTOR_SIZE * k;
+      const own = state.self ? shipLevelOf(state.self.loadout) : 1;
+      g.font = `${Math.round(Math.max(9, Math.min(13, side * 0.16)))}px Inter, sans-serif`;
+      g.textAlign = 'left';
+      state.sectors.forEach((sec, i) => {
+        const sx = i % SECTORS_PER_SIDE, sy = Math.floor(i / SECTORS_PER_SIDE);
+        const x = tx(sx * SECTOR_SIZE), y = ty(sy * SECTOR_SIZE);
+        if (x > W || y > H || x + side < 0 || y + side < 0) return;
+        const t = (sec.l - 1) / 9;
+        g.fillStyle = `rgba(${Math.round(90 + 150 * t)},${Math.round(170 - 110 * t)},${Math.round(110 - 60 * t)},0.07)`;
+        g.fillRect(x, y, side, side);
+        if (side < 26) return;
+        const band = bandOf(sec.l);
+        g.fillStyle = THREAT_COLOR[threatOf(own, sec.l)];
+        g.globalAlpha = 0.55;
+        g.fillText(`⚓${band[0]}–${band[1]}${sec.p === 'calm' ? ' ☼' : sec.p === 'wild' ? ' ☠' : ''}`, x + 4, y + Math.max(11, side * 0.18));
+        g.globalAlpha = 1;
+      });
     }
     // Maelstrom wall.
     g.strokeStyle = 'rgba(142,42,42,0.28)';
