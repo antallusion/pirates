@@ -959,8 +959,9 @@ export class Game {
     ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
-    // Provisions: 6 units feed 40 sailors for a minute.
-    if (ship.isPlayer && this.tick % 200 === 0) {
+    // Provisions: 6 units feed 40 sailors for a minute, eaten every tenth second of each ship's own. (This runs on the
+    // ship's own tick of each second, so `tick % 200` alone matched only ships whose id is a multiple of 20.)
+    if (ship.isPlayer && Math.floor(this.tick / 20) % 10 === 0) {
       const frontier = REGIONS[ship.region].safety === 'lawless' ? Math.max(0.5, 1 - 1.25 * tval(st, 'frontier')) : 1;
       const eat = (provisionsPerMinute(ship.crew, st.provisionUse) / 6) * frontier; // ten seconds of it (shared/src/data/voyage.ts)
       const have = ship.cargo.provisions ?? 0;
