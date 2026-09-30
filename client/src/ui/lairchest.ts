@@ -6,7 +6,6 @@ import type { LairChestView } from '../../../shared/src/protocol.ts';
 import { assetUrl } from '../assets.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/livesea.ts';
-import { personName } from '../lang/names.ts';
 import { serverText } from '../lang/server.ts';
 import { esc, fmt, icon } from './dom.ts';
 import { placeName } from './maps.ts';
@@ -25,7 +24,7 @@ export class LairChestCard {
     const art = assetUrl('prop.cache');
     const row = (ico: string, text: string, style = '') => `<li>${icon(ico, '', 'ico-md')}<span${style}>${text}</span></li>`;
     this.el.innerHTML = `<div class="enc-card lc-card">
-      <div class="lc-head">${art ? `<img class="lc-art" src="${art}" alt="" draggable="false" />` : ''}<div><div class="enc-h">${esc(L('chest.title', { captain: personName(v.captain) }))}</div>
+      <div class="lc-head">${art ? `<img class="lc-art" src="${art}" alt="" draggable="false" />` : ''}<div><div class="enc-h">${esc(L('chest.title', { captain: serverText(v.captain) }))}</div>
       <div class="lc-sub muted">${esc(L('chest.sub', { island: placeName(v.island) }))}</div></div></div>
       <ul class="lc-list">
         ${row('coin', esc(L('chest.silver', { n: fmt(v.silver) })))}

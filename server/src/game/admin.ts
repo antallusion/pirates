@@ -78,7 +78,7 @@ import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
 import type { HolidayId } from '../../../shared/src/data/holidays.ts';
 import { sagaNote } from './saga.ts';
 import { struck } from './struck.ts';
-import { podJoins } from './omenpod.ts';
+import { endPod, podJoins } from './omenpod.ts';
 import type { PodKind } from '../../../shared/src/protocol.ts';
 import { convoysAt, learnConvoy, sailConvoy } from './raiding.ts';
 import { lairAdmin, lairsAll } from './wanted.ts';
@@ -90,7 +90,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /convoy [region|know] · /lair [silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /convoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -654,7 +654,8 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const kind = (['dolphins', 'humpback', 'orcas'].includes(args[0]) ? args[0] : 'dolphins') as PodKind;
       if (ship.docked) return 'Put to sea first.';
       ship.lastCombat = -1e9;
-      return podJoins(game, s, kind) ? `${kind} alongside.` : 'They will not come now.';
+      endPod(game, s);
+      return podJoins(game, s, kind) ? 'They come alongside.' : 'They will not come now.';
     }
     case 'convoy': {
       // A League convoy off your beam (docs/16 #6): /convoy [region] — sailed from a port of the sea, run a few miles
@@ -681,18 +682,22 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       }
       const p = pointAlong(lead.path, lead.traveled);
       const side = headingVec(p.heading + Math.PI / 2);
-      ship.state = { ...ship.state, x: p.x + side.x * 700, y: p.y + side.y * 700, heading: p.heading, speed: 0 };
+      ship.state = { ...ship.state, x: p.x + side.x * 320, y: p.y + side.y * 320, heading: p.heading, speed: 0 };
       ship.region = game.regionAt(ship.state.x, ship.state.y);
       game.grid.upsert(ship.id, ship.state.x, ship.state.y);
       game.pushSelf(s, true);
       return `A convoy of ${c.members.length} with ${c.escorts.length} escorts off your beam.`;
     }
     case 'lair': {
-      // A pirate lair (docs/16 #7): /lair — to the nearest, 450 m off its guns; /lair silence|sink|rebuild.
+      // A pirate lair (docs/16 #7): /lair [close] — to the nearest, off its guns (close: within the boats' reach);
+      // /lair wake|silence|sink|rebuild.
       const all = lairsAll(game);
       if (!all.length) return 'No lairs.';
-      const near = all.reduce((a, b) => (Math.hypot(b.x - ship.state.x, b.y - ship.state.y) < Math.hypot(a.x - ship.state.x, a.y - ship.state.y) ? b : a));
-      if (args[0] === 'silence' || args[0] === 'sink' || args[0] === 'rebuild') {
+      // The lair last gone to keeps being the one meant (two lairs may lie a mile apart).
+      const picked = args[0] ? all.find((l) => l.id === lairPick.get(s)) : undefined;
+      const near = picked ?? all.reduce((a, b) => (Math.hypot(b.x - ship.state.x, b.y - ship.state.y) < Math.hypot(a.x - ship.state.x, a.y - ship.state.y) ? b : a));
+      lairPick.set(s, near.id);
+      if (args[0] === 'silence' || args[0] === 'sink' || args[0] === 'rebuild' || args[0] === 'wake') {
         lairAdmin(game, near.id, args[0]);
         return `The lair on ${near.name}: ${args[0]}.`;
       }
@@ -700,10 +705,12 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const [gx, gy] = near.guns[1] ?? [near.x, near.y];
       const ax = gx - (island?.x ?? near.x), ay = gy - (island?.y ?? near.y), al = Math.hypot(ax, ay) || 1;
       let x = gx, y = gy;
-      for (const d of [450, 520, 600, 700, 800]) {
+      const close = args[0] === 'close';
+      for (let d = close ? 60 : 330; d < 1200; d += 20) {
         x = gx + (ax / al) * d;
         y = gy + (ay / al) * d;
-        if (!isLand(game.world, x, y)) break;
+        if (isLand(game.world, x, y)) continue;
+        if (!close || (island && Math.sqrt(closestOnPolygon(x, y, island.poly).d2) > 150)) break;
       }
       if (ship.docked) return 'Put to sea first.';
       ship.state = { ...ship.state, x, y, heading: Math.atan2(-ay, ax) + Math.PI / 2, speed: 0 };
@@ -849,6 +856,9 @@ export function mend(ship: { hull: number; sails: number; crew: number; water: n
 
 /** Open water off the ship: the first bearing (from `start` off the bow, every 30°) at each range in turn with no
  * shore within `margin` metres; the ship's own spot when the sea has none. */
+/** The lair an admin last went to (docs/16 #7 play-testing). */
+const lairPick = new WeakMap<PlayerSession, string>();
+
 function openSpot(game: Game, ship: ShipEntity, ranges: number[], margin: number, start = 0): [number, number] {
   for (const r of ranges) {
     for (let k = 0; k < 12; k++) {

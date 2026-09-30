@@ -235,7 +235,7 @@ const LS = dict(SEN, SRU);
 
 /** A lair's name and state over its fort (docs/16 #7). */
 function lairLabel(l: LairView): { name: string; state: string | null; color: string } {
-  const name = LS('lair.label', { captain: personName(l.captain), level: l.level });
+  const name = LS('lair.label', { captain: serverText(l.captain), level: l.level });
   if (l.stormed) return { name, state: LS('lair.stormed'), color: '#9a9a9a' };
   if (l.open) return { name, state: LS('lair.open'), color: '#f2c14e' };
   const bits = [l.hp <= 0 ? LS('lair.silenced') : null, l.garrison ? LS('lair.garrison', { n: l.garrison }) : null].filter(Boolean) as string[];
@@ -3360,33 +3360,67 @@ export class Renderer {
       g.rotate(s.h);
       if (pod === 'dolphins') {
         // Five of them riding the bow wave and along her sides, each leaping in its turn.
-        const spots: [number, number][] = [[-0.9, -0.62], [0.9, -0.55], [-1.5, -0.2], [1.6, -0.05], [0.2, -0.78]];
+        // Drawn larger than life (as the pets are) so they read at sea: each leaps in its turn, white water where it
+        // breaks the surface and falls back.
+        const spots: [number, number][] = [[-1.5, -0.62], [1.5, -0.55], [-2.3, -0.18], [2.4, -0.05], [0.25, -0.86]];
+        const base = Math.max(15, 6.5 * this.zoom);
         spots.forEach(([bx, by], i) => {
           const ph = t * 1.6 + i * 1.3;
           const leap = Math.max(0, Math.sin(ph));
-          const len = Math.max(5, 5.5 * this.zoom) * (1 + leap * 0.25);
-          const px = bx * B * 0.8 + Math.sin(t * 0.8 + i) * B * 0.12, py = by * L - Math.cos(ph) * L * 0.04;
+          const len = base * (1 + leap * 0.3);
+          const px = bx * B * 0.6 + Math.sin(t * 0.8 + i) * B * 0.12, py = by * L - Math.cos(ph) * L * 0.05;
           g.save();
           g.translate(px, py);
-          g.globalAlpha = leap > 0.35 ? 1 : 0.45 + leap;
-          if (leap > 0.35 && leap < 0.45) {
-            g.fillStyle = 'rgba(230,240,245,0.6)';
+          // The wake it cuts: two short white strokes behind it.
+          g.strokeStyle = `rgba(225,235,240,${0.25 + 0.35 * leap})`;
+          g.lineWidth = Math.max(1, base * 0.08);
+          g.beginPath();
+          g.moveTo(-base * 0.12, base * 0.45);
+          g.lineTo(-base * 0.3, base * 1.2);
+          g.moveTo(base * 0.12, base * 0.45);
+          g.lineTo(base * 0.3, base * 1.2);
+          g.stroke();
+          if (leap < 0.25 || (leap > 0.9 && Math.cos(ph) < 0)) {
+            g.fillStyle = `rgba(235,244,248,${0.55 - leap * 0.4})`;
             g.beginPath();
-            g.arc(0, len * 0.5, len * 0.35, 0, Math.PI * 2);
+            g.ellipse(0, len * 0.1, len * 0.42, len * 0.28, 0, 0, Math.PI * 2);
+            g.fill();
+          }
+          g.globalAlpha = 0.55 + 0.45 * Math.min(1, leap * 2);
+          if (leap > 0.3) {
+            g.fillStyle = 'rgba(0,0,0,0.25)';
+            g.beginPath();
+            g.ellipse(len * 0.12, len * 0.18, len * 0.14, len * 0.42, 0, 0, Math.PI * 2);
             g.fill();
           }
           drawDolphin(g, len, t, s.id + i);
           g.restore();
         });
       } else if (pod === 'humpback') {
-        const len = Math.max(14, 15 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.45 + s.id);
-        g.translate(B * 0.5 + len * 0.3 + 5 * this.zoom, -L * 0.05 + Math.sin(t * 0.3) * L * 0.05);
-        g.globalAlpha = 0.35 + 0.65 * dive;
+        const len = Math.max(46, 17 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.45 + s.id);
+        g.translate(B * 0.5 + len * 0.35 + 6 * this.zoom, -L * 0.05 + Math.sin(t * 0.3) * L * 0.05);
+        // The white water about her back as she rolls, and her spout when she breathes.
+        g.fillStyle = `rgba(222,234,240,${0.12 + 0.2 * dive})`;
+        g.beginPath();
+        g.ellipse(0, 0, len * 0.3, len * 0.6, 0, 0, Math.PI * 2);
+        g.fill();
+        g.globalAlpha = 0.45 + 0.55 * dive;
         drawBeast(g, 'humpback', len, len * 0.28, t, s.id);
+        const breath = (t * 0.45 + s.id) % (Math.PI * 2);
+        if (breath > 1.2 && breath < 2.2) {
+          const k = 1 - Math.abs(breath - 1.7) / 0.5;
+          g.globalAlpha = 0.7 * k;
+          g.fillStyle = '#eef4f7';
+          for (let i = 0; i < 5; i++) {
+            g.beginPath();
+            g.arc(Math.sin(i * 2.1) * len * 0.05, -len * (0.3 + i * 0.05 * k), len * (0.04 + 0.02 * i) * (0.6 + k), 0, Math.PI * 2);
+            g.fill();
+          }
+        }
       } else {
         // Three orcas in her wake, weaving.
         for (let i = 0; i < 3; i++) {
-          const len = Math.max(9, 8 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.8 + i * 2 + s.id);
+          const len = Math.max(18, 8 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.8 + i * 2 + s.id);
           g.save();
           g.translate((i - 1) * B * 0.9 + Math.sin(t * 0.9 + i) * B * 0.2, L * (0.62 + i * 0.12));
           g.globalAlpha = 0.35 + 0.65 * dive;

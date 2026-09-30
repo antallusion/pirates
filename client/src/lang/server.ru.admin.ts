@@ -3,8 +3,8 @@
 
 export const SERVER_RU_ADMIN: Record<string, string> = {
   ' (by night)': ' (ночью)',
-  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /convoy [region|know] · /lair [silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]':
-    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast · /strike [роль] [класс] · /war [patrol] · /convoy [регион|know] · /lair [silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading градусы|wind · /isle [уровень] · /yard [n] · /oship роль [уровень] · /raid [land|tax|calm]',
+  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /convoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]':
+    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast · /strike [роль] [класс] · /war [patrol] · /convoy [регион|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading градусы|wind · /isle [уровень] · /yard [n] · /oship роль [уровень] · /raid [land|tax|calm]',
   'A fireship is coming.': 'Идёт брандер.',
   'A {0} berthed at your island.': 'У вашего острова стоит у причала: {0}.',
   'Dismasted.': 'Мачта сбита.',
@@ -97,5 +97,5 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   "The lair on {0}: {1}.": "Логово на {0}: {1}.",
   "They will not come now.": "Сейчас они не придут.",
   "{0} convoys on your chart.": "На вашей карте конвоев: {0}.",
-  "{0} alongside.": "У борта: {0}.",
+  "They come alongside.": "Они идут у борта.",
 };

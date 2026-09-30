@@ -311,15 +311,15 @@ export class Fx {
             const d = e.dir ?? 0, r = e.r ?? 300, v = headingVec(d);
             const spd = AMMO.round.speed * SPEED_SCALE;
             const mx = e.x + v.x * 9, my = e.y + v.y * 9;
-            this.muzzles.push({ x: mx, y: my, dir: d, t: 0, life: 0.3 });
+            this.muzzles.push({ x: mx, y: my, dir: d, t: 0, life: 0.5 });
             this.gunShots.set(`${e.x},${e.y}`, { dir: d, at: (globalThis.performance?.now() ?? Date.now()) / 1000 });
             this.add({ kind: 'flash', x: mx, y: my, life: 0.18, size: 7, grow: 70, color: '#ffd28a' });
             this.light(mx, my, 160, 'rgba(255,190,110,1)', 0.9, 0.3);
-            for (let i = 0; i < 7; i++) {
+            for (let i = 0; i < 10; i++) {
               this.add({
-                kind: 'smoke', x: mx + v.x * (3 + i * 5) + (Math.random() - 0.5) * 6, y: my + v.y * (3 + i * 5) + (Math.random() - 0.5) * 6,
-                vx: v.x * (5 - i * 0.5) + (Math.random() - 0.5) * 2, vy: v.y * (5 - i * 0.5) + (Math.random() - 0.5) * 2,
-                life: 4 + Math.random() * 3, size: 7 + Math.random() * 6, grow: 5, color: '#7c7f83',
+                kind: 'smoke', x: mx + v.x * (3 + i * 6) + (Math.random() - 0.5) * 10, y: my + v.y * (3 + i * 6) + (Math.random() - 0.5) * 10,
+                vx: v.x * (6 - i * 0.5) + (Math.random() - 0.5) * 3, vy: v.y * (6 - i * 0.5) + (Math.random() - 0.5) * 3,
+                life: 6 + Math.random() * 4, size: 12 + Math.random() * 10, grow: 6, color: '#7c7f83',
               });
             }
             const left = Math.max(10, r - 9);

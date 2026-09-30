@@ -105,6 +105,12 @@ function part(game: Game, s: PlayerSession, p: Pod, msg: string | null): void {
   game.pushSelf(s, true);
 }
 
+/** The admin: the pod about her goes (so another can come). */
+export function endPod(game: Game, s: PlayerSession): void {
+  const p = pods(game).get(s.accountId);
+  if (p) part(game, s, p, null);
+}
+
 /** Every second: the pods keep with their ships, cheer the crews, and go. */
 export function stepPods(game: Game): void {
   const P = pods(game);

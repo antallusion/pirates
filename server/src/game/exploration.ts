@@ -91,7 +91,8 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
     const d = Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2);
     if (d > LAND_RANGE || d >= bd) continue;
     // The island's features first, then her people and beasts.
-    const here: string[] = [...is.features, ...lifeOf(is).map((x) => x.kind), ...(lairIsland(game, is.id) ? ['pirate_camp'] : [])];
+    // A named pirate's lair is the first thing on its island (docs/16 #7): the boats go for the camp.
+    const here: string[] = lairIsland(game, is.id) ? ['pirate_camp', ...is.features, ...lifeOf(is).map((x) => x.kind)] : [...is.features, ...lifeOf(is).map((x) => x.kind)];
     let found = false;
     for (const f of here) {
       if (!LANDABLE.includes(f as LandableFeature)) continue;

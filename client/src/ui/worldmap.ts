@@ -17,7 +17,6 @@ import { commonLog, dailyLog } from './daily.ts';
 import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/worldmap.ts';
 import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
-import { personName } from '../lang/names.ts';
 import { keyLabel, settings } from '../settings.ts';
 import { mapCard, placeName } from './maps.ts';
 import { esc } from './dom.ts';
@@ -194,6 +193,8 @@ export class WorldMap {
   draw(state: ClientState): void {
     const c = this.canvas;
     if (!c || !c.isConnected) return;
+    // Not laid out yet (the window still opening): nothing to scale the chart to.
+    if (!c.clientWidth || !c.clientHeight) return;
     const dpr = Math.min(2, devicePixelRatio || 1);
     c.width = c.clientWidth * dpr;
     c.height = c.clientHeight * dpr;
@@ -376,7 +377,7 @@ export class WorldMap {
       g.strokeRect(tx(l.x) - 5, ty(l.y) - 5, 10, 10);
       g.font = '600 11px Inter, sans-serif';
       g.textAlign = 'center';
-      label(LS('lair.label', { captain: personName(l.captain), level: l.level }), tx(l.x), ty(l.y) - 9, 'rgba(232,150,130,0.95)');
+      if (this.zoom >= 3.5) label(LS('lair.label', { captain: serverText(l.captain), level: l.level }), tx(l.x), ty(l.y) - 9, 'rgba(232,150,130,0.95)');
     }
     // Charted islands.
     for (const id of state.discovered) {

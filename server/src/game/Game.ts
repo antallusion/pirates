@@ -926,7 +926,7 @@ export class Game {
         : own
         ? { island: own.island.name, feature: `stockpile of ${GOODS[own.site.good].name.toLowerCase()} (${Math.floor(own.site.stock)})` }
         : convoy
-        ? { island: `League convoy for ${convoy.to}`, feature: `escort contract: ${convoy.pay} silver on arrival`, action: 'escort' as const, blocked: convoy.blocked }
+        ? { island: `League convoy for ${convoy.to}`, feature: `${convoy.pay} silver on arrival`, action: 'escort' as const, blocked: convoy.blocked }
         : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);

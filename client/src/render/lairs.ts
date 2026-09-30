@@ -52,6 +52,16 @@ export function drawLair(g: G, l: LairView, c: LairCtx): void {
   const ox0 = mgx - l.x, oy0 = mgy - l.y, ol = Math.hypot(ox0, oy0) || 1;
   const ox = ox0 / ol, oy = oy0 / ol, tx = -oy, ty = ox;
   const facingSea = Math.atan2(ox, -oy);
+  // The cleared ground of the fort and its guns: bare earth and trodden sand, so the stone stands out of the green.
+  g.fillStyle = 'rgba(150,132,104,0.42)';
+  g.beginPath();
+  g.ellipse(x, y, 62 * z, 62 * z, 0, 0, Math.PI * 2);
+  g.fill();
+  for (const [gx, gy] of l.guns) {
+    g.beginPath();
+    g.arc(c.sx(gx), c.sy(gy), 20 * z, 0, Math.PI * 2);
+    g.fill();
+  }
   // The camp behind the fort: two tents, the stores.
   for (const side of [-1, 1]) {
     const px = x + (-ox * 34 + tx * side * 30) * z, py = y + (-oy * 34 + ty * side * 30) * z;
@@ -91,18 +101,53 @@ export function drawLair(g: G, l: LairView, c: LairCtx): void {
     const px = c.sx(gx), py = c.sy(gy);
     const shot = c.fx.gunShots.get(`${gx},${gy}`);
     const aim = shot && nowS - shot.at < 30 ? shot.dir : Math.atan2(gx - l.x, -(gy - l.y));
-    art(g, 'prop.life_fort', px, py, 30 * z, aim, 0.3);
-    const recoil = shot && nowS - shot.at < 0.4 ? (1 - (nowS - shot.at) / 0.4) * 3 * z : 0;
+    // A stone platform with a parapet, the painted small fort on it, the gun's black barrel over it.
+    g.fillStyle = down ? '#4a463f' : '#8d877b';
+    g.strokeStyle = 'rgba(20,16,12,0.9)';
+    g.lineWidth = Math.max(1, 1.6 * z);
+    g.beginPath();
+    g.arc(px, py, 11 * z, 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+    art(g, 'prop.life_fort', px, py, 26 * z, aim, 0.3);
+    const since = shot ? nowS - shot.at : 99;
+    const recoil = since < 0.5 ? (1 - since / 0.5) * 4 * z : 0;
     g.save();
     g.translate(px, py);
     g.rotate(down ? aim + 0.6 : aim);
-    g.fillStyle = down ? '#2a2724' : '#15171a';
-    g.fillRect(-2.2 * z, -15 * z + recoil, 4.4 * z, 14 * z);
+    g.fillStyle = down ? '#2a2724' : '#0d0f11';
+    g.fillRect(-2.6 * z, -19 * z + recoil, 5.2 * z, 18 * z);
+    g.fillRect(-3.4 * z, -20 * z + recoil, 6.8 * z, 3 * z);
     g.fillStyle = down ? '#3a3632' : '#2a2e33';
     g.beginPath();
-    g.arc(0, 0, 3.6 * z, 0, Math.PI * 2);
+    g.arc(0, recoil * 0.3, 4.4 * z, 0, Math.PI * 2);
     g.fill();
     g.restore();
+    // After the shot: the barrel's mouth glows and a bank of powder smoke hangs over the gun for a few seconds.
+    if (since < 4) {
+      const k = 1 - since / 4;
+      const smoke = sprite('part.smoke');
+      const mx = px + Math.sin(aim) * 20 * z, my = py - Math.cos(aim) * 20 * z;
+      if (smoke) {
+        g.save();
+        g.globalAlpha = 0.55 * k;
+        const d = (34 + 40 * (1 - k)) * z;
+        g.translate(mx + Math.sin(aim) * (1 - k) * 18 * z, my - Math.cos(aim) * (1 - k) * 18 * z);
+        g.rotate(aim + since * 0.3);
+        g.filter = 'grayscale(1) brightness(0.8)';
+        g.drawImage(smoke.img, -d / 2, -d / 2, d, d);
+        g.restore();
+      }
+      if (since < 0.6) {
+        const grd = g.createRadialGradient(mx, my, 0, mx, my, 14 * z);
+        grd.addColorStop(0, `rgba(255,200,120,${0.9 * (1 - since / 0.6)})`);
+        grd.addColorStop(1, 'rgba(255,120,40,0)');
+        g.fillStyle = grd;
+        g.beginPath();
+        g.arc(mx, my, 14 * z, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
     if (down && Math.random() < 0.02) c.fx.smoke(gx, gy, 1, 8, true);
     // Its boat drawn up below it.
     art(g, 'prop.life_boat', px + ox * 24 * z, py + oy * 24 * z, 12 * z, facingSea + Math.PI / 2, 0.25);

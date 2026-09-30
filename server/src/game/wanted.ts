@@ -17,7 +17,7 @@ import { SETS } from '../../../shared/src/data/items.ts';
 import type { Slot } from '../../../shared/src/data/items.ts';
 import { itemName, makeItem } from '../../../shared/src/data/items.ts';
 import { isNight } from '../../../shared/src/constants.ts';
-import { dist } from '../../../shared/src/math.ts';
+import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
 import type { LairView, WantedPoster, WantedView } from '../../../shared/src/protocol.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { grantMap, makeMap } from './explorefx.ts';
@@ -136,26 +136,32 @@ function save(game: Game): void {
 
 // ------------------------------------------------------------------------------------------------ the lairs
 
-/** Its guns on the shore (docs/16 #7): three, a little inland of the coast nearest the camp, spread along it. */
-function lairGuns(is: Island, x: number, y: number): [number, number][] {
-  const n = is.poly.length / 2;
-  let best = 0, bd = Infinity;
-  for (let i = 0; i < n; i++) {
-    const d = Math.hypot(is.poly[i * 2] - x, is.poly[i * 2 + 1] - y);
-    if (d < bd) {
-      bd = d;
-      best = i;
+/** The fort and its guns (docs/16 #7) on the shore nearest the camp: the fort a little inland over the beach, three
+ *  guns spread along the coast either side of it, just above the waterline, covering the water off it. */
+function lairSite(world: Game['world'], is: Island, x: number, y: number): { x: number; y: number; guns: [number, number][] } {
+  const c = closestOnPolygon(x, y, is.poly);
+  // Inland: toward the island's middle from that point of the coast.
+  let nx = is.x - c.x, ny = is.y - c.y;
+  const nl = Math.hypot(nx, ny) || 1;
+  nx /= nl;
+  ny /= nl;
+  const tx = -ny, ty = nx;
+  const inland = (px: number, py: number, d0: number): [number, number] => {
+    for (let d = d0; d < d0 + 200; d += 10) {
+      const qx = px + nx * d, qy = py + ny * d;
+      if (isLand(world, qx, qy)) return [Math.round(qx), Math.round(qy)];
     }
+    return [Math.round(px + nx * d0), Math.round(py + ny * d0)];
+  };
+  const [fx, fy] = inland(c.x, c.y, Math.min(60, nl * 0.4));
+  const guns: [number, number][] = [];
+  for (const k of [-1, 0, 1]) {
+    // Along the coast from the fort's beach: the shore there, then a few metres up it.
+    const px = c.x + tx * k * 80, py = c.y + ty * k * 80;
+    const shore = closestOnPolygon(px, py, is.poly);
+    guns.push(inland(shore.x, shore.y, 14));
   }
-  const step = Math.max(1, Math.round(n / 10));
-  const out: [number, number][] = [];
-  for (const k of [-step, 0, step]) {
-    const i = (((best + k) % n) + n) % n;
-    const vx = is.poly[i * 2], vy = is.poly[i * 2 + 1];
-    // A fifth of the way from the coast toward the camp: on the land, over the water it covers.
-    out.push([Math.round(vx + (x - vx) * 0.2), Math.round(vy + (y - vy) * 0.2)]);
-  }
-  return out;
+  return { x: fx, y: fy, guns };
 }
 
 /** Each named captain's lair: an island of her sea with a pirates' camp (the same on every boot of the world). */
@@ -184,7 +190,8 @@ function placeLairs(game: Game, S: WantedState): void {
     if (!pool.length) continue;
     namedPirates().filter((p) => p.region === region).forEach((p, i) => {
       const c = pool[i % pool.length];
-      S.lairs.set(p.id, { id: p.id, island: c.is.id, name: c.is.name, x: c.x, y: c.y, max: 800 + 220 * p.level, guns: lairGuns(c.is, c.x, c.y), level: p.level, captain: p.name[0] });
+      const site = lairSite(game.world, c.is, c.x, c.y);
+      S.lairs.set(p.id, { id: p.id, island: c.is.id, name: c.is.name, x: site.x, y: site.y, max: 800 + 220 * p.level, guns: site.guns, level: p.level, captain: p.name[0] });
     });
   }
 }
@@ -311,7 +318,7 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   game.sendTo(s, { t: 'toast', msg: `The lair of ${np.name[0]} is stormed: ${chest} silver from its chest, ${prisoners} prisoners freed.`, kind: 'gold' });
   if (room > 0) game.sendTo(s, { t: 'toast', msg: 'The freed prisoners join your crew.', kind: 'good' });
   game.sendTo(s, { t: 'lairchest', view: { island: lair.name, captain: np.name[0], silver: chest, prisoners, item: kept ? { name: itemName(it), rarity: it.rarity, base: it.base } : null, map: mapped ? m.name : null } });
-  game.grantXp(s, 300 + 60 * np.level, `Sank ${np.name[0]}`);
+  game.grantXp(s, 300 + 60 * np.level, `The lair of ${np.name[0]}`);
   sendWanted(game, s, true);
   return true;
 }
@@ -390,9 +397,8 @@ function stepLairs(game: Game): void {
       let target: ShipEntity | null = null, td = Infinity;
       game.forShipsNear(lair.x, lair.y, reach + 200, (o) => {
         if (!o.isPlayer || !o.alive || o.docked) return;
-        const d = dist(o.state.x, o.state.y, lair.x, lair.y);
-        if (d > reach) return;
         const dg = dist(o.state.x, o.state.y, gx, gy);
+        if (dg > reach && dist(o.state.x, o.state.y, lair.x, lair.y) > reach) return;
         if (dg < td) {
           td = dg;
           target = o;
@@ -842,12 +848,13 @@ export function lairsAll(game: Game): Readonly<Lair>[] {
   return [...ws(game).lairs.values()];
 }
 
-export function lairAdmin(game: Game, id: string, what: 'silence' | 'sink' | 'rebuild'): void {
+export function lairAdmin(game: Game, id: string, what: 'silence' | 'sink' | 'rebuild' | 'wake'): void {
   const S = ws(game);
   const lair = S.lairs.get(id);
   if (!lair) return;
   const r = (S.rec[id] ??= {});
-  if (what === 'silence') {
+  if (what === 'wake') r.awakeUntil = game.now + 300;
+  else if (what === 'silence') {
     r.battery = 0;
     r.lairOpenUntil = game.wallNow() + LAIR_OPEN_MIN * 60_000;
     r.lairRebuildAt = game.wallNow() + LAIR_REBUILD_H * HOUR;

@@ -752,9 +752,10 @@ export class Hud {
       g.textAlign = 'center';
       g.lineWidth = 3;
       g.strokeStyle = 'rgba(0,0,0,0.9)';
-      g.strokeText(text, W / 2, 20);
+      const wy = H / 2 - W * 0.27; // inside the dial, clear of the brass ring over its edge
+      g.strokeText(text, W / 2, wy);
       g.fillStyle = '#ff8a6a';
-      g.fillText(text, W / 2, 20);
+      g.fillText(text, W / 2, wy);
       g.lineWidth = 1;
     }
     for (const cv of state.raid?.known ?? []) {
@@ -1518,7 +1519,7 @@ export const POD_ICON = { dolphins: 'omen_dolphins', humpback: 'omen_whale_spout
 /** Its badge on the portrait, opposite the level: the beast's icon and the seconds it stays; the tooltip says why. */
 export function podBadge(p: { kind: 'dolphins' | 'humpback' | 'orcas'; speed: number; left: number }): string {
   const title = LS('pod.title', { what: LS(`pod.${p.kind}`), speed: Math.round(p.speed * 100), n: p.left });
-  return `<b class="uf-pod" title="${esc(title)}" aria-label="${esc(title)}">${icon(POD_ICON[p.kind], '🐬', 'ico-sm')}+${Math.round(p.speed * 100)}%</b>`;
+  return `<b class="uf-pod" title="${esc(title)}" aria-label="${esc(title)}">${icon(POD_ICON[p.kind], '🐬', 'ico-sm')}<i>+${Math.round(p.speed * 100)}%</i></b>`;
 }
 
 /** The win streak's badge on the captain's portrait (docs/16 #4): the flame and the bonus from the third ship, the

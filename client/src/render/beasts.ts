@@ -411,21 +411,21 @@ export function drawDolphin(g: G, len: number, t: number, seed: number): void {
   const beam = len * 0.24;
   const ph = t * 7 + seed * 1.37;
   const bend = Math.sin(ph) * beam * 0.35;
-  fins(g, len, beam, 0.34, beam * 0.75, 0.75, beam * 0.26, '#46525c', Math.sin(ph * 0.5) * 0.08);
-  flukes(g, len, beam, bend, 1.5, '#3f4a53');
+  fins(g, len, beam, 0.34, beam * 0.75, 0.75, beam * 0.26, '#5d6d79', Math.sin(ph * 0.5) * 0.08);
+  flukes(g, len, beam, bend, 1.5, '#56656f');
   body(g, len, beam, bend, 0.32, 0.5);
-  g.fillStyle = '#5c6b77';
+  g.fillStyle = '#7f909c';
   g.fill();
   g.save();
   g.clip();
   // The pale flank blaze and the darker cape along the back.
-  g.fillStyle = 'rgba(200,210,215,0.55)';
+  g.fillStyle = 'rgba(222,230,234,0.7)';
   for (const side of [-1, 1]) {
     g.beginPath();
     g.ellipse(side * beam * 0.42, -len * 0.02, beam * 0.14, len * 0.22, side * 0.08, 0, Math.PI * 2);
     g.fill();
   }
-  g.fillStyle = 'rgba(30,38,45,0.55)';
+  g.fillStyle = 'rgba(44,54,62,0.6)';
   g.beginPath();
   g.ellipse(0, -len * 0.05, beam * 0.2, len * 0.3, 0, 0, Math.PI * 2);
   g.fill();
