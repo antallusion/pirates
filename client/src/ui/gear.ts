@@ -23,11 +23,13 @@ import { bindStormForge, stormForgeCard } from './storms.ts';
 import { LOWER_BETTER, compareRows } from './gearcmp.ts';
 import { ARTIFACTS, ART_CLASS_NAMES, ART_SETS } from '../../../shared/src/data/artifacts.ts';
 import { PRIMS, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
+import { EN as HERO_EN, RU as HERO_RU } from '../lang/ui/hero.ts';
 import type { CmpRow } from './gearcmp.ts';
 import { EN as EASE_EN, RU as EASE_RU } from '../lang/ui/ease.ts';
 
 const L = dict(EN, RU);
 const EL = dict(EASE_EN, EASE_RU);
+const HL = dict(HERO_EN, HERO_RU);
 const ru = () => lang() === 'ru';
 
 type Tab = 'ship' | 'captain' | 'locker' | 'shop';
@@ -182,10 +184,14 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
 
   const sets = setBonuses(worn).active;
   const total = gearSource(worn);
+  // The hero's primaries with what her artifacts add (docs/17 H2).
+  const hero = self.hero;
+  const heroPanel = hero ? `<div class="gp"><div class="gi-h">${esc(HL('prims'))}</div>${PRIMS.map((k) => `<div class="gl${hero.artPrim[k] ? ' g-up' : ''}"><span>${esc(PRIM_NAMES[k][ru() ? 1 : 0])}</span><b>${hero.prim[k] + hero.artPrim[k]}${hero.artPrim[k] ? ` (+${hero.artPrim[k]})` : ''}</b></div>`).join('')}</div>` : '';
   const statsPanel = (captain: boolean) => captain
-    ? `<div class="gp"><div class="gi-h">${esc(L('stats'))}</div>${CAP_STATS.map((c) => `<div class="gl"><span>${esc(CAP_STAT_NAMES[c][ru() ? 1 : 0])}</span><b>${total.cap[c] ?? 0}</b></div>`).join('')}</div>`
+    ? `${heroPanel}<div class="gp"><div class="gi-h">${esc(L('stats'))}</div>${CAP_STATS.map((c) => `<div class="gl"><span>${esc(CAP_STAT_NAMES[c][ru() ? 1 : 0])}</span><b>${total.cap[c] ?? 0}</b></div>`).join('')}</div>`
     : `<div class="gp"><div class="gi-h">${esc(L('fromGear'))}</div>${Object.entries(total.mods).filter(([, v]) => Math.abs(v ?? 0) > 1e-9).map(([k, v]) => statLine(k as StatKey, v ?? 0)).join('') || '<div class="muted">—</div>'}</div>`;
-  const setsPanel = `<div class="gp"><div class="gi-h">${esc(L('sets'))}</div>${sets.length ? sets.map((x) => `<div class="gl"><span class="with-ico">${icon(`set_${x.set}`, '', 'ico-sm')}${esc(SETS[x.set].name[ru() ? 1 : 0])}</span><b>${x.n}/${Object.keys(SETS[x.set].pieces).length}</b></div>`).join('') : `<div class="muted">${esc(L('noSets'))}</div>`}</div>`;
+  const artSets = (hero?.sets ?? []) as (keyof typeof ART_SETS)[];
+  const setsPanel = `<div class="gp"><div class="gi-h">${esc(L('sets'))}</div>${artSets.map((id) => `<div class="gl g-up"><span>${esc(ART_SETS[id].name[ru() ? 1 : 0])}</span><b>${ART_SETS[id].pieces.length}/${ART_SETS[id].pieces.length}</b></div>`).join('')}${sets.length || artSets.length ? sets.map((x) => `<div class="gl"><span class="with-ico">${icon(`set_${x.set}`, '', 'ico-sm')}${esc(SETS[x.set].name[ru() ? 1 : 0])}</span><b>${x.n}/${Object.keys(SETS[x.set].pieces).length}</b></div>`).join('') : `<div class="muted">${esc(L('noSets'))}</div>`}</div>`;
 
   // A forge (a yard of the second rank or better): tempering, and reforging each extra line.
   const forge = docked && (sy?.tier ?? 0) >= 2;

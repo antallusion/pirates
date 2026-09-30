@@ -97,7 +97,7 @@ export class HeroWindow {
       ? `<div class="hx-offer card"><h4 class="card-h">${icon('xp', '', 'ico-md')}${esc(L('levelUp'))}<span class="muted hx-pend">${esc(L('pending', { n: h.pending }))}</span></h4>
         <div class="hx-picks">${h.offer.map((o, i) => {
           const d = SKILLS[o.id];
-          return `<button class="hx-pick" data-hpick="${i}">${icon(d.icon, '✦', 'ico-lg')}<span class="hx-pick-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))} · ${esc(T(RANK_NAMES[o.r - 1]))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small><small class="muted">${esc(L('kin', { tree: TREES[d.tree].name }))}</small></span><span class="btn btn-small btn-primary">${esc(L('take'))}</span></button>`;
+          return `<div class="hx-pick">${icon(d.icon, '✦', 'ico-lg')}<span class="hx-pick-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))} · ${esc(T(RANK_NAMES[o.r - 1]))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small><small class="muted">${esc(L('kin', { tree: TREES[d.tree].name }))}</small></span><button class="btn btn-small btn-primary" data-hpick="${i}">${esc(L('take'))}</button></div>`;
         }).join('')}</div></div>`
       : `<p class="muted hx-none">${esc(h.skills.length >= SKILL_SLOTS && h.skills.every((x) => x.r >= 3) ? L('allExpert') : L('noPending', { n: level + 1 }))}</p>`;
     const slots = Array.from({ length: SKILL_SLOTS }, (_, i) => {
@@ -179,7 +179,7 @@ export function drawSeaOrders(el: HTMLElement, state: ClientState, send: (m: Cli
     el.innerHTML = '';
     return;
   }
-  el.innerHTML = `<button class="so-will" data-sobook title="${esc(L('seaOrders'))}">${icon('ab_brine_mend', '', 'ico-sm')}<b>${h!.will}</b><small>/${h!.willMax}</small></button>${sea.map((id: OrderId, i) => {
+  el.innerHTML = `<button class="so-will" data-sobook title="${esc(`${L('seaOrders')} · ${L('will')} ${h!.will}/${h!.willMax}`)}">${icon('ab_brine_mend', '', 'ico-sm')}<b>${h!.will}</b></button>${sea.map((id: OrderId, i) => {
     const d = ORDERS[id];
     const cost = h!.costs[id] ?? d.cost;
     const off = waits[i] > 0 || h!.will < cost;

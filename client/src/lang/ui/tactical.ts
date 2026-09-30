@@ -50,6 +50,8 @@ export const EN = {
   'luck': 'Luck',
   'will': 'Will',
   'noWill': 'not enough will',
+  'book': 'Order book',
+  'book.n': '{n} pages',
   // The captain's orders and the officers' words.
   'sp.grenades': 'Grenades',
   'sp.point_blank': 'Point-blank volley',
@@ -182,6 +184,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'luck': 'Удача',
   'will': 'Воля',
   'noWill': 'не хватает воли',
+  'book': 'Книга приказов',
+  'book.n': 'страниц: {n}',
   'sp.grenades': 'Гранаты',
   'sp.point_blank': 'Залп в упор',
   'sp.smoke_and_knives': 'Дым и ножи',

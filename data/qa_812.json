@@ -1,0 +1,48 @@
+{
+ "tag": "812x375_ru",
+ "res": {
+  "captain": {
+   "lay": [],
+   "latin": [
+   ]
+  },
+  "levelup": {
+   "lay": [],
+   "latin": [
+   ]
+  },
+  "book": {
+   "lay": [],
+   "latin": [
+   ]
+  },
+  "port": {
+   "lay": [],
+   "latin": [
+   ]
+  },
+  "seacast": {
+   "lay": [
+    "SPILL 3px small «/70» out of button.so-will «56/70»"
+   ],
+   "latin": [
+   ]
+  },
+  "battle": {
+   "lay": [
+    "OVERFLOW -801px img.ico-sm «»",
+    "SPILL 10px small «/70» out of div.tb-will «56/70»",
+    "TALL-BTN 71px button.btn.tb-spell «Метка цели 2Два раунда: кажд»",
+    "TALL-BTN 71px button.btn.tb-bookbtn «Книга приказовстраниц: 15»"
+   ],
+   "latin": [
+   ]
+  },
+  "artifacts": {
+   "lay": [],
+   "latin": [
+   ]
+  }
+ },
+ "errors": []
+}

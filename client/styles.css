@@ -3410,7 +3410,7 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .hx-offer .card-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .hx-pend { font-size: 12px; margin-left: auto; }
 .hx-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.hx-pick { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; border: 1px solid rgba(176, 141, 87, 0.55); border-radius: 8px; background: rgba(30, 22, 12, 0.7); color: var(--bone); cursor: pointer; text-align: center; min-width: 0; }
+.hx-pick { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; border: 1px solid rgba(176, 141, 87, 0.55); border-radius: 8px; background: rgba(30, 22, 12, 0.7); color: var(--bone); text-align: center; min-width: 0; }
 .hx-pick:hover { border-color: var(--gold); background: rgba(60, 44, 22, 0.75); }
 .hx-pick .ico-lg { width: 48px; height: 48px; }
 .hx-pick-t { display: flex; flex-direction: column; gap: 3px; align-items: center; min-width: 0; }
@@ -3466,10 +3466,11 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 /* The HUD's sea orders. */
 #hud-orders { display: flex; align-items: stretch; gap: 3px; padding: 3px 4px !important; pointer-events: auto; }
 #hud-orders.hidden { display: none; }
-#hud-orders button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 40px; min-height: 40px; padding: 2px 3px; border: 1px solid rgba(176, 141, 87, 0.5); border-radius: 5px; background: rgba(16, 20, 28, 0.8); color: var(--bone); cursor: pointer; }
+#hud-orders button { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 0; min-height: 40px; padding: 2px 3px; border: 1px solid rgba(176, 141, 87, 0.5); border-radius: 5px; background: rgba(16, 20, 28, 0.8); color: var(--bone); cursor: pointer; }
 #hud-orders button .ico-sm { width: 24px; height: 24px; border-radius: 3px; object-fit: cover; }
 #hud-orders button small { font-size: 10px; line-height: 1; color: #9cc6f0; }
-#hud-orders .so-will { flex-direction: row; gap: 3px; min-width: 56px; border-color: rgba(90, 140, 200, 0.6); }
+#hud-orders .so-will { flex: 1.6 1 0; flex-direction: row; gap: 2px; border-color: rgba(90, 140, 200, 0.6); }
+#hud-orders .so-will .ico-sm { width: 18px; height: 18px; }
 #hud-orders .so-will b { font-size: 13px; color: #9cc6f0; }
 #hud-orders .so-btn.off { opacity: 0.45; }
 #hud-orders .so-btn.sent { box-shadow: 0 0 8px #6fb4e8; }
@@ -3483,3 +3484,26 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .tb-will small { color: var(--fog); }
 .tb-cost { font-style: normal; font-size: 11px; color: #9cc6f0; margin-left: 2px; }
 .tb-spell.poor { opacity: 0.55; }
+.tb-bookbtn { display: flex; align-items: center; gap: 6px; text-align: left; padding: 4px 8px; min-height: 44px; min-width: 0; border-color: var(--gold); }
+.tb-bookbtn .ico { width: 30px; height: 30px; flex: none; margin: 0; border-radius: 4px; }
+.tb-bookbtn span { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.tb-bookbtn b { font-size: 12px; }
+.tb-bookbtn small { font-size: 10px; color: var(--fog); }
+.tb-book { position: absolute; inset: 4% 6% auto; max-height: 92%; z-index: 6; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--gold); border-radius: 8px; background: rgba(18, 13, 8, 0.96); box-shadow: 0 0 24px #000; overflow: auto; }
+.tb-book.hidden { display: none; }
+.tb-book-head { display: flex; align-items: center; justify-content: space-between; font-family: var(--display); font-size: 18px; color: var(--gold); }
+.tb-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.tb-book-grid .tb-spell { min-height: 44px; }
+.tb-book-grid .tb-spell small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-will { grid-column: 1 / -1; min-height: 22px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .tb-will { min-height: 18px; font-size: 11px; }
+  .tb-bookbtn { justify-content: center; padding: 2px; min-height: 34px; gap: 0; }
+  .tb-bookbtn .ico { width: 20px; height: 20px; }
+  .tb-bookbtn span { display: none; }
+  .tb-book { inset: 2% 3%; padding: 6px 8px; }
+  .tb-book .tb-spell { justify-content: flex-start; gap: 4px; padding: 2px 4px; }
+  .tb-book .tb-spell span { display: flex; }
+  .tb-book .tb-spell small { display: none; }
+  .tb-book-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; }
+}

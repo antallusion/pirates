@@ -1,0 +1,57 @@
+{
+ "tag": "820x1180_ru",
+ "res": {
+  "captain": {
+   "lay": [],
+   "latin": [
+    "Hero s7fl · уровень 30 · Корсар"
+   ]
+  },
+  "levelup": {
+   "lay": [],
+   "latin": [
+    "Hero s7fl · уровень 30 · Корсар"
+   ]
+  },
+  "book": {
+   "lay": [],
+   "latin": [
+    "Hero s7fl · уровень 30 · Корсар"
+   ]
+  },
+  "port": {
+   "lay": [],
+   "latin": [
+    "Hero s7fl · уровень 30 · Корсар"
+   ]
+  },
+  "seacast": {
+   "lay": [],
+   "latin": [
+    "Hero s7fl"
+   ]
+  },
+  "battle": {
+   "lay": [],
+   "latin": [
+    "Hero s7fl",
+    "Iron Verdict"
+   ]
+  },
+  "battlebook": {
+   "lay": [],
+   "latin": [
+    "Hero s7fl",
+    "Iron Verdict"
+   ]
+  },
+  "artifacts": {
+   "lay": [],
+   "latin": [
+    "«Iron Verdict» · Шлюп · капитан ур. 30",
+    "Hero s7fl"
+   ]
+  }
+ },
+ "errors": []
+}

@@ -1,0 +1,59 @@
+{
+ "tag": "1440x900_ru",
+ "res": {
+  "captain": {
+   "lay": [],
+   "latin": [
+    "Hero sft3 · уровень 30 · Корсар"
+   ]
+  },
+  "levelup": {
+   "lay": [],
+   "latin": [
+    "Hero sft3 · уровень 30 · Корсар"
+   ]
+  },
+  "book": {
+   "lay": [],
+   "latin": [
+    "Hero sft3 · уровень 30 · Корсар"
+   ]
+  },
+  "port": {
+   "lay": [],
+   "latin": [
+    "Hero sft3 · уровень 30 · Корсар"
+   ]
+  },
+  "seacast": {
+   "lay": [],
+   "latin": [
+    "Hero sft3",
+    "Iron Verdict",
+    "Tab"
+   ]
+  },
+  "battle": {
+   "lay": [],
+   "latin": [
+    "Hero sft3",
+    "Iron Verdict"
+   ]
+  },
+  "battlebook": {
+   "lay": [],
+   "latin": [
+    "Hero sft3",
+    "Iron Verdict"
+   ]
+  },
+  "artifacts": {
+   "lay": [],
+   "latin": [
+    "«Iron Verdict» · Шлюп · капитан ур. 30",
+    "Hero sft3"
+   ]
+  }
+ },
+ "errors": []
+}

@@ -113,6 +113,8 @@ export class TacticalPanel {
   private key = '';
   private preview: number | null = null;
   private targeting: TacSpellId | null = null;
+  /** The order book open over the field (docs/17 H2: more pages than the panel holds). */
+  private bookOpen = false;
   private info: number | null = null;
   private hover: number | null = null;
   private strikeArmed = 0;
@@ -166,7 +168,7 @@ export class TacticalPanel {
     root.innerHTML = `<div class="tb-root">
       <div class="tb-hero you"></div><div class="tb-mid"></div><div class="tb-hero foe"></div>
       <div class="tb-queue" aria-label="${esc(L('order.label'))}"></div>
-      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-card hidden"></div><div class="tb-banner hidden"></div></div>
+      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-card hidden"></div><div class="tb-banner hidden"></div><div class="tb-book hidden"></div></div>
       <div class="tb-feed"><div class="tb-hint"></div><div class="tb-lines"></div></div>
       <div class="tb-spells"></div>
       <div class="tb-acts"></div>
@@ -275,7 +277,7 @@ export class TacticalPanel {
   private dom(v: TacView): void {
     const el = this.el!;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
@@ -307,13 +309,32 @@ export class TacticalPanel {
     const me = v.heroes[v.you];
     // The book's pages (docs/17 H2): each order's will beside it; the will left on the book's spine.
     const will = me.mana !== undefined ? `<div class="tb-will" title="${esc(L('will'))}">${icon('icon.ab_brine_mend', '', 'ico-sm')}<b>${me.mana}</b><small>/${me.manaMax ?? 0}</small></div>` : '';
-    el.querySelector('.tb-spells')!.innerHTML = will + me.spells.map((sp) => {
+    const page = (sp: (typeof me.spells)[number]) => {
       const wait = Math.max(0, sp.ready - v.round);
       const poor = sp.cost !== undefined && me.mana !== undefined && me.mana < sp.cost;
       const off = !v.mine || me.cast || wait > 0 || poor;
       return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(spText(sp.id))}">${icon(TAC_SPELLS[sp.id].icon, '', 'ico')}<span><b>${esc(spName(sp.id))}${sp.cost !== undefined ? ` <em class="tb-cost">${sp.cost}</em>` : ''}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L('noWill')) : esc(spText(sp.id))}</small></span></button>`;
-    }).join('');
-    el.querySelectorAll<HTMLElement>('[data-spell]').forEach((b) => (b.onclick = () => this.spell(b.dataset.spell as TacSpellId)));
+    };
+    // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3.
+    const more = me.spells.length > 4;
+    el.querySelector('.tb-spells')!.innerHTML = will + me.spells.slice(0, 4).map(page).join('') + (more ? `<button class="btn tb-bookbtn${this.bookOpen ? ' on' : ''}" data-book>${icon('icon.bt_captain', '', 'ico')}<span><b>${esc(L('book'))}</b><small>${esc(L('book.n', { n: me.spells.length }))}</small></span></button>` : '');
+    const book = el.querySelector<HTMLElement>('.tb-book')!;
+    book.classList.toggle('hidden', !(more && this.bookOpen));
+    book.innerHTML = more && this.bookOpen ? `<div class="tb-book-head"><b>${esc(L('book'))}</b><button class="btn btn-small" data-bookclose>${esc(L('close'))}</button></div><div class="tb-book-grid">${[...me.spells].sort((a, b) => (ORDERS[a.id]?.school ?? '').localeCompare(ORDERS[b.id]?.school ?? '') || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0)).map(page).join('')}</div>` : '';
+    el.querySelectorAll<HTMLElement>('[data-spell]').forEach((b) => (b.onclick = () => {
+      this.bookOpen = false;
+      this.spell(b.dataset.spell as TacSpellId);
+    }));
+    el.querySelector<HTMLElement>('[data-book]')?.addEventListener('click', () => {
+      this.bookOpen = !this.bookOpen;
+      this.key = '';
+      this.dom(v);
+    });
+    el.querySelector<HTMLElement>('[data-bookclose]')?.addEventListener('click', () => {
+      this.bookOpen = false;
+      this.key = '';
+      this.dom(v);
+    });
     // The stack's own orders and the fight's.
     const officer = v.mine && act?.officer?.ready ? act.officer : null;
     const armed = this.strikeArmed > performance.now();
