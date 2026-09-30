@@ -5,6 +5,7 @@
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
+import type { IslesView } from '../../shared/src/protocol.ts';
 import type { AppraisalView, CaravanView, CarcassView, BaseView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
@@ -74,6 +75,8 @@ export class ClientState {
   frontsAt = 0;
   forecast = false;
   discovered = new Set<number>();
+  /** Batch E of docs/16: lighthouses, lookouts, the banks the tide bares, her caches. */
+  isles: IslesView | null = null;
 
   wind: [number, number] = [0, 0.5];
   weather: WeatherKind = 'breeze';
@@ -230,6 +233,9 @@ export class ClientState {
       case 'self_patch':
         if (this.self) Object.assign(this.self, m.patch);
         this.refreshStats();
+        break;
+      case 'isles':
+        this.isles = m.view;
         break;
       case 'chunk':
         for (const is of m.islands) {

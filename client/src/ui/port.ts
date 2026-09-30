@@ -1,5 +1,6 @@
 // Port screen: Market, Chandlery, Shipyard, Tavern, Contracts, Harbour Master.
 
+import { EN as ISLES_EN, RU as ISLES_RU } from '../lang/ui/isles.ts';
 import { omenLog } from './journal.ts';
 import { regattaCard } from './regatta.ts';
 import { diceCard } from './dice.ts';
@@ -53,6 +54,7 @@ const JOB_ICON: Record<string, string> = {
   diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye', elite: 'danger',
 };
 const L = dict(EN, RU);
+const LI = dict(ISLES_EN, ISLES_RU);
 
 function licenceLeft(n: number): string {
   return L('licence.left', { n, minutes: plural(n, L('licence.min1'), L('licence.min2'), L('licence.min5')) });
@@ -162,7 +164,7 @@ export class PortScreen {
       case 'mb_unpost':
         return this.send({ t: 'mapboard', action: 'unpost', id: d.id! });
       case 'mb_post':
-        return this.send({ t: 'mapboard', action: 'post', id: d.id!, price: Number(root.querySelector<HTMLInputElement>(`[data-mbprice="${d.id}"]`)?.value ?? 0) });
+        return this.send({ t: 'mapboard', action: 'post', id: d.id!, price: Number(root.querySelector<HTMLInputElement>(`[data-mbprice="${d.id}"]`)?.value ?? 0), copy: !!root.querySelector<HTMLInputElement>(`[data-mbcopy="${d.id}"]`)?.checked });
       case 'regatta':
         return this.send({ t: 'regatta', action: 'signup' });
       case 'pet_buy':
@@ -505,8 +507,8 @@ ${orders}${berths}</div>` : ''}`;
     // The map board (docs/12 P10 #7): captains' maps at their price; her own to post.
     const mb = tv.maps ?? [];
     const mapBoard = `<div class="card cmp-card"><h4 class="card-h">${icon('map_treasure', '', 'ico-md')}${esc(L('mb.title'))}</h4><p class="muted">${esc(L('mb.text'))}</p>
-      ${mb.map((x) => `<div class="cmp-h"><div class="cmp-h-t"><b>${esc(serverText(x.name))}</b><span class="muted">${esc(x.seller)} · ${money(x.price)}</span>${x.riddle ? `<span class="muted"><i>«${esc(x.riddle)}»</i></span>` : ''}</div>${x.mine ? `<button class="btn btn-small" data-act="mb_unpost" data-id="${x.id}">${esc(L('mb.take'))}</button>` : `<button class="btn btn-small btn-primary" data-act="mb_buy" data-id="${x.id}" ${self.gold < x.price ? 'disabled' : ''}>${esc(L('mb.buy'))}</button>`}</div>`).join('') || `<p class="muted">${esc(L('mb.none'))}</p>`}
-      ${self.maps.length ? `<div class="giver-h">${esc(L('mb.post'))}</div>${self.maps.map((m) => `<div class="cmp-h"><div class="cmp-h-t"><b>${esc(serverText(m.name))}</b></div><input class="field" type="number" min="10" value="500" data-mbprice="${esc(m.id)}" style="width:80px" aria-label="${esc(L('mb.price'))}"><button class="btn btn-small" data-act="mb_post" data-id="${esc(m.id)}">${esc(L('mb.postBtn'))}</button></div>`).join('')}` : ''}</div>`;
+      ${mb.map((x) => `<div class="cmp-h"><div class="cmp-h-t"><b>${esc(serverText(x.name))}${x.chest ? `<span class="mb-tag">${esc(LI('mb.chest'))}</span>` : ''}${x.copy ? `<span class="mb-tag">${esc(LI('mb.copyTag'))}</span>` : ''}</b><span class="muted">${esc(x.seller)} · ${money(x.price)}</span>${x.riddle ? `<span class="muted"><i>«${esc(x.riddle)}»</i></span>` : ''}</div>${x.mine ? `<button class="btn btn-small" data-act="mb_unpost" data-id="${x.id}">${esc(L('mb.take'))}</button>` : `<button class="btn btn-small btn-primary" data-act="mb_buy" data-id="${x.id}" ${self.gold < x.price ? 'disabled' : ''}>${esc(L('mb.buy'))}</button>`}</div>`).join('') || `<p class="muted">${esc(L('mb.none'))}</p>`}
+      ${self.maps.length ? `<div class="giver-h">${esc(L('mb.post'))}</div>${self.maps.map((m) => `<div class="cmp-h"><div class="cmp-h-t"><b>${esc(serverText(m.name))}</b></div><input class="field" type="number" min="10" value="500" data-mbprice="${esc(m.id)}" style="width:80px" aria-label="${esc(L('mb.price'))}">${m.kind === 'player' ? `<label class="muted mb-copy"><input type="checkbox" data-mbcopy="${esc(m.id)}"> ${esc(LI('mb.copy'))}</label>` : ''}<button class="btn btn-small" data-act="mb_post" data-id="${esc(m.id)}">${esc(L('mb.postBtn'))}</button></div>`).join('')}` : ''}</div>`;
     const omen = omenLog(state.omen, true);
     return `${omen}${board}${recs}${dice}${mapBoard}${needle}${seller}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>

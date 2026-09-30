@@ -10,6 +10,9 @@ import { dict, lang } from '../i18n.ts';
 import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
 import { bar, esc, icon, money } from './dom.ts';
+import { EN as ISLES_EN, RU as ISLES_RU } from '../lang/ui/isles.ts';
+
+const LI = dict(ISLES_EN, ISLES_RU);
 
 const L = dict({
   title: 'Companion',
@@ -129,7 +132,29 @@ export function chestCard(state: ClientState): string {
     <textarea class="field" data-criddle maxlength="200" rows="2" placeholder="${esc(L('chestRiddle'))}" aria-label="${esc(L('chestRiddle'))}"></textarea>
     <div class="cmp-name bottle-row"><label class="bottle-silver"><span class="muted">${esc(L('chestSilver'))}</span><input class="field" data-csilver type="number" min="100" max="20000" value="500"></label></div>
     ${goods.length ? `<div class="cmp-name bottle-row"><select class="field" data-cgood aria-label="${esc(L('chestGood'))}"><option value="">${esc(L('chestNoGood'))}</option>${goods.map(([g]) => `<option value="${g}">${esc(GOODS[g as GoodId].name)}</option>`).join('')}</select><input class="field" data-cqty type="number" min="0" value="0" style="width:80px" aria-label="${esc(L('chestQty'))}"></div>` : ''}
-    <div class="cmp-name bottle-row"><span class="muted">${esc(L('fame', { n: self.cartoFame ?? 0 }))}</span><button class="btn btn-small btn-primary" data-cbury>${esc(L('chestBury'))}</button></div></div>`;
+    <div class="cmp-name bottle-row"><span class="muted">${esc(L('fame', { n: self.cartoFame ?? 0 }))}</span><button class="btn btn-small btn-primary" data-cbury>${esc(L('chestBury'))}</button></div>${cachesHtml(state)}</div>`;
+}
+
+/** Her buried chests and where their maps are; a map to sell to a captain alongside (docs/16 #22). */
+function cachesHtml(state: ClientState): string {
+  const self = state.self!;
+  const list = state.isles?.caches ?? [];
+  const rows = list.map((c) => {
+    const bits = [LI(c.mapHeld ? 'cache.held' : 'cache.gone')];
+    if (c.posted.length) bits.push(LI('cache.posted', { ports: c.posted.map((x) => serverText(x)).join(', ') }));
+    if (c.sold) bits.push(LI('cache.sold', { n: c.sold }));
+    return `<div class="cache-row"><b>${LI('cache.row', { island: esc(serverText(c.island)), silver: money(c.silver) })}</b><span class="muted">${esc(bits.join(' · '))}</span></div>`;
+  }).join('');
+  const own = state.ownDisplay;
+  const near = own ? [...state.ships.values()].filter((x) => x.info?.isPlayer && x.id !== state.entityId && Math.hypot(x.cur.x - own.x, x.cur.y - own.y) <= 1000) : [];
+  const maps = self.maps.filter((m) => m.kind !== 'fragment');
+  const sell = maps.length ? `<div class="giver-h">${esc(LI('cache.sell'))}</div>${near.length
+    ? `<div class="cache-sell"><select class="field" data-msmap aria-label="${esc(LI('cache.sell'))}">${maps.map((m) => `<option value="${esc(m.id)}">${esc(serverText(m.name))}</option>`).join('')}</select>
+      <select class="field" data-msto aria-label="${esc(LI('cache.to'))}">${near.map((x) => `<option value="${x.id}">${esc(x.info!.captainName || x.info!.name)}</option>`).join('')}</select>
+      <input class="field" type="number" min="10" value="500" data-msprice aria-label="${esc(L('chestSilver'))}" style="max-width:96px">
+      <label><input type="checkbox" data-mscopy> ${esc(LI('cache.copy'))}</label><button class="btn btn-small" data-mssell>${esc(LI('cache.offer'))}</button></div>`
+    : `<p class="muted">${esc(LI('cache.nobody'))}</p>`}` : '';
+  return (list.length ? `<div class="giver-h">${esc(LI('cache.mine'))}</div><div class="cache-list">${rows}</div>` : '') + sell;
 }
 
 /** Bottle mail (docs/12 P10 #6): a note, and silver if she likes, into the sea. */
@@ -147,6 +172,13 @@ export function bindCompanion(root: HTMLElement, send: (m: ClientMsg) => void): 
     const good = (root.querySelector<HTMLSelectElement>('[data-cgood]')?.value || null) as GoodId | null;
     const qty = Number(root.querySelector<HTMLInputElement>('[data-cqty]')?.value ?? 0);
     send({ t: 'chest', silver, riddle, good, qty });
+  });
+  root.querySelector<HTMLElement>('[data-mssell]')?.addEventListener('click', () => {
+    const map = root.querySelector<HTMLSelectElement>('[data-msmap]')?.value ?? '';
+    const to = Number(root.querySelector<HTMLSelectElement>('[data-msto]')?.value ?? 0);
+    const price = Number(root.querySelector<HTMLInputElement>('[data-msprice]')?.value ?? 0);
+    const copy = !!root.querySelector<HTMLInputElement>('[data-mscopy]')?.checked;
+    send({ t: 'mapsell', map, to, price, copy });
   });
   root.querySelector<HTMLElement>('[data-bthrow]')?.addEventListener('click', () => {
     const note = root.querySelector<HTMLTextAreaElement>('[data-bnote]')?.value ?? '';
