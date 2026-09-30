@@ -2747,3 +2747,7 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
   #hud #hud-stack { top: calc(var(--sa-t) + var(--uf-p) + 62px); }
   #hud-chat #chat { top: calc(var(--sa-t) + var(--uf-p) + 62px); }
 }
+/* …and the sheet rises no higher than the menu button under the minimap (the region's line and the button stay seen). */
+@media (max-width: 699px) and (min-height: 521px) {
+  #hud-chat #chat { max-height: calc(100dvh - max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h)) - var(--sa-t) - var(--top-h) - 54px); min-height: 180px; }
+}
