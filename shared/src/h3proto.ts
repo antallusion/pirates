@@ -60,6 +60,9 @@ export interface DwellView {
   /** Men may be taken aboard now (null), or why not. */
   why: string | null;
   week: WeekView;
+  /** Picked men (tier 4 and up) she may still berth, of the most her ship's level allows. */
+  picked: number;
+  pickedMax: number;
 }
 
 export interface MineView {

@@ -7,7 +7,7 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { TOWN, affordable, dwellingOf, portDwellings } from '../../../shared/src/data/town.ts';
+import { PICKED_TIER, TOWN, affordable, dwellingOf, portDwellings } from '../../../shared/src/data/town.ts';
 import { KEY_PORTS } from '../../../shared/src/world/regions.ts';
 import type { Price, TownId } from '../../../shared/src/data/town.ts';
 import { WEEKS } from '../../../shared/src/data/week.ts';
@@ -91,7 +91,8 @@ export class RecruitWindow {
     if (!unit || r.why || v.why) return 0;
     const room = Math.max(0, v.crewMax - v.crew);
     if (!v.army.some((x) => x.u === u) && v.army.length >= v.slots) return 0;
-    return affordable(u, (n) => priceOf(unit.per, unit.goods, n), v.gold, v.have, Math.min(r.pool, room));
+    const picked = UNITS[u].tier >= PICKED_TIER ? v.picked : Infinity;
+    return affordable(u, (n) => priceOf(unit.per, unit.goods, n), v.gold, v.have, Math.min(r.pool, room, picked));
   }
 
   render(root: HTMLElement, state: ClientState): void {
@@ -109,7 +110,7 @@ export class RecruitWindow {
     }
     const men = v.army.reduce((a, s) => a + s.n, 0);
     const head = `<div class="modal-head rc-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L(v.src === 'port' ? 'sub.port' : 'sub.isle', { place: placeName(v.place) }))} · ${esc(weekLine(v.week))}</div></div>
-      <div class="rc-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${icon('stat_crew', '', 'ico-sm')}${esc(L('room', { n: men, max: v.crewMax }))}</span><span class="ph-chip">${esc(L('slots', { n: v.army.length, max: v.slots }))}</span></div></div>`;
+      <div class="rc-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${icon('stat_crew', '', 'ico-sm')}${esc(L('room', { n: men, max: v.crewMax }))}</span><span class="ph-chip">${esc(L('slots', { n: v.army.length, max: v.slots }))}</span><span class="ph-chip" title="${esc(L('picked.tip'))}">${esc(L('picked', { n: v.pickedMax - v.picked, max: v.pickedMax }))}</span></div></div>`;
     const cards = v.rows.map((r) => {
       const units = r.units.map((x) => {
         const d = UNITS[x.u];
@@ -127,7 +128,7 @@ export class RecruitWindow {
       const most = this.most(v, r, u);
       this.n = Math.max(0, Math.min(most, this.n || (most > 0 ? 1 : 0)));
       const price = priceOf(unit.per, unit.goods, this.n);
-      const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : most <= 0 ? L('lack') : '';
+      const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : most <= 0 ? L('lack') : '';
       pick = `<div class="rc-pick"><div class="rc-ph">${icon(unitArt(u), '', 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted">${esc(L('avail', { n: r.pool }))}</span></div></div>
         <div class="rc-slide"><input type="range" min="0" max="${most}" value="${this.n}" data-rcn aria-label="${esc(unitName(u))}"${most <= 0 ? ' disabled' : ''}><b class="rc-count" data-rccount>${this.n}</b><button class="btn btn-small" data-rcmax${most <= 0 ? ' disabled' : ''}>${esc(L('max'))} ${most}</button></div>
         <div class="rc-cost"><span class="muted">${esc(L('cost'))}</span><span data-rccost>${costLine(price, v.gold, v.have)}</span></div>

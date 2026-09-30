@@ -8,7 +8,7 @@
 
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
-import { POOL_WEEKS, TIER_UNIT, UNIT_GOODS, dwellingOf, portDwellings, portGrowth, recruitPrice, upgradePrice, PORT_MARKUP } from '../../../shared/src/data/town.ts';
+import { PICKED_TIER, POOL_WEEKS, TIER_SHIP_LEVEL, TIER_UNIT, pickedShare, UNIT_GOODS, dwellingOf, portDwellings, portGrowth, recruitPrice, upgradePrice, PORT_MARKUP } from '../../../shared/src/data/town.ts';
 import type { Price } from '../../../shared/src/data/town.ts';
 import { weekGrowth } from '../../../shared/src/data/week.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
@@ -190,9 +190,15 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   if (d.deep && !keepsDeep(s)) return 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
   const ship = s.ship!;
   const p = s.profile!;
+  if (ship.shipLevel < TIER_SHIP_LEVEL[d.tier]) return tierWhy(d.tier);
   const pools = poolsOf(game, at);
-  const n = Math.min(Math.floor(Number(want)), Math.floor(pools[d.tier] ?? 0), ship.stats.crewMax - ship.crew);
-  if (!Number.isFinite(n) || n <= 0) return ship.crew >= ship.stats.crewMax ? 'No hammocks left aboard' : 'Nobody waiting in that dwelling this week.';
+  const picked = d.tier >= PICKED_TIER ? pickedRoom(s) : Infinity;
+  const n = Math.min(Math.floor(Number(want)), Math.floor(pools[d.tier] ?? 0), ship.stats.crewMax - ship.crew, picked);
+  if (!Number.isFinite(n) || n <= 0) {
+    if (ship.crew >= ship.stats.crewMax) return 'No hammocks left aboard';
+    if (picked <= 0) return `A ship of level ${ship.shipLevel} berths ${pickedMax(s)} picked men (tier 4 and up) at most.`;
+    return 'Nobody waiting in that dwelling this week.';
+  }
   if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
   const price = priceOf(game, s, at, u, n);
   const l = lack(game, s, at, price.goods);
@@ -215,6 +221,15 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   game.toastShip(ship, `${n} ${plural(u, n)} sign on for ${price.silver} silver.`, 'good');
   return null;
 }
+
+/** Picked men (tier 4 and up) she may still berth, and at most. */
+export const pickedMax = (s: PlayerSession): number => Math.floor(s.ship!.stats.crewMax * pickedShare(s.ship!.shipLevel));
+export function pickedRoom(s: PlayerSession): number {
+  const aboard = s.ship!.army.filter((x) => UNITS[x.u].tier >= PICKED_TIER).reduce((a, x) => a + x.n, 0);
+  return Math.max(0, pickedMax(s) - aboard);
+}
+
+const tierWhy = (tier: number) => `Men of tier ${tier} serve a ship of level ${TIER_SHIP_LEVEL[tier]} and up.`;
 
 const NAMES: Record<UnitId, string> = {
   deckhand: 'deckhands', sailor: 'seasoned sailors', marine: 'marines', sea_guard: 'sea guards', musketeer: 'musketeers', sharpshooter: 'sharpshooters',
@@ -295,7 +310,7 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
     rows.push({
       tier, name: at.port && tier === 1 ? 'tavern' : dwellingOf(tier), up, pool: Math.floor(pools[tier] ?? 0), growth: Math.round(growthOf(game, at, tier) * 10) / 10,
       units: kinds.map((u) => ({ u, per: Math.round(perMan(game, s, at, u) * 100) / 100, goods: UNIT_GOODS[u] ?? {} })),
-      why: UNITS[base].deep && !deep ? 'Only a captain of the Choir or of a cursed ship keeps the drowned.' : null,
+      why: UNITS[base].deep && !deep ? 'Only a captain of the Choir or of a cursed ship keeps the drowned.' : ship.shipLevel < TIER_SHIP_LEVEL[tier] ? tierWhy(tier) : null,
     });
   }
   const ups: DwellUp[] = [];
@@ -311,7 +326,7 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
   }
   return {
     src, place: at.place, rows, ups, army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
-    gold: Math.floor(s.profile!.gold), have: have(game, s, at), why: at.why ?? busy(game, s), week: weekView(game),
+    gold: Math.floor(s.profile!.gold), have: have(game, s, at), why: at.why ?? busy(game, s), week: weekView(game), picked: pickedRoom(s), pickedMax: pickedMax(s),
   };
 }
 

@@ -21,11 +21,19 @@ import type { ClientState } from '../state.ts';
 import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 import { costLine, townName } from './recruit.ts';
-import { timeText } from './base.ts';
 
 const L = dict(EN, RU);
 const B = dict(B_EN, B_RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
+
+/** A timer's words, as the island's window writes them (its own copy: the base window reads the screen's shape). */
+function timeText(secs: number): string {
+  const s = Math.max(0, Math.ceil(secs));
+  if (s < 60) return B('t_s', { s });
+  if (s < 3600) return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const m = Math.floor(s / 60);
+  return B('t_hm', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') });
+}
 
 function art(id: TownId, level: number, working: boolean): string {
   const a = `build_${TOWN[id].art}`;
