@@ -306,7 +306,7 @@ export const DATA_RU_TALENTS: Record<string, string> = {
   "talents.TALENTS.151.name": "Трюмные помпы",
   "talents.TALENTS.151.description": "Через течи поступает на 20% меньше воды за ранг.",
   "talents.TALENTS.152.name": "Корабельный лекарь",
-  "talents.TALENTS.152.description": "10% за ранг «убитых» в бою матросов лишь ранены и возвращаются в строй через 2 минуты после боя.",
+  "talents.TALENTS.152.description": "Ещё 10% за ранг «убитых» в бою матросов лишь ранены, и каждый ранг лечит раненых в кубрике, как корабельный лекарь.",
   "talents.TALENTS.153.name": "Железный корпус",
   "talents.TALENTS.153.description": "Максимальная прочность корпуса +5% за ранг.",
   "talents.TALENTS.154.name": "Лайм и соль",

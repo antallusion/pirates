@@ -11,7 +11,7 @@ export const SURVIVAL: TalentDef[] = [
   t({ id: 'srv_ration_master', name: 'Ration Master', tier: 1, maxRank: 2, keystone: false, description: 'Provisions consumption −15% per rank.', perRank: { provisionUse: -0.15 } }),
   t({ id: 'srv_bucket_brigade', name: 'Bucket Brigade', tier: 1, maxRank: 3, keystone: false, description: 'Fires aboard are put out 15% faster per rank.', perRank: { fireFight: -0.15 } }),
   t({ id: 'srv_bilge_pumps', name: 'Bilge Pumps', tier: 1, maxRank: 2, keystone: false, description: 'Leaks let in 20% less water per rank.', perRank: { leakInflow: -0.2 } }),
-  t({ id: 'srv_ships_surgeon', name: "Ship's Surgeon", tier: 1, maxRank: 2, keystone: false, description: '10% per rank of the sailors "killed" in battle are only wounded and return to duty 2 minutes after the fight.', perRank: { surgeon: 0.1 } }),
+  t({ id: 'srv_ships_surgeon', name: "Ship's Surgeon", tier: 1, maxRank: 2, keystone: false, description: '10% more per rank of the sailors "killed" in battle are only wounded, and each rank tends the wounded below as a surgeon would.', perRank: { surgeon: 0.1 } }),
   // T2
   t({ id: 'srv_iron_hull', name: 'Iron Hull', tier: 2, maxRank: 3, keystone: false, description: 'Maximum hull +5% per rank.', perRank: { hullMax: 0.05 } }),
   t({ id: 'srv_lime_and_salt', name: 'Lime and Salt', tier: 2, maxRank: 1, keystone: false, description: 'Immune to scurvy on long voyages.', flags: ['lime_and_salt'] }),
