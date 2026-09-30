@@ -146,6 +146,7 @@ export const EN = {
   'opt.highContrast': "High-contrast HUD (solid backing, heavier lines)",
   'opt.plainFont': "Simplified font (no serifs or italics)",
   'opt.plainTerms': "Plain terms instead of sea jargon",
+  'opt.classicBoarding': "Boarding round by round (the old deck fight) instead of the turn-based battle",
   'opt.readAloud': "Read the open screen aloud: {key}",
   'opt.colorblind': "Colour-blind palette",
   'opt.cb.off': "Off",

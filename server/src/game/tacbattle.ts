@@ -102,6 +102,7 @@ export interface TacBattle {
   turnEnds: number;
   aiAt: number;
   log: TacEvent[];
+  events: number;
   seq: number;
   over: null | { winner: 0 | 1; why: 'rout' | 'struck' | 'rounds' };
   /** Men fallen on each side so far. */
@@ -223,7 +224,7 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   const sb = buildStacks(b, 1, cells, sa.length + 1);
   const bt: TacBattle = {
     cells, stacks: [...sa, ...sb], heroes: [newHero(a, sa), newHero(b, sb)], round: 0, queue: [], active: null, turnEnds: now, aiAt: now,
-    log: [], seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0],
+    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0],
   };
   checkOver(bt);
   if (!bt.over) newRound(bt, now, rng);
@@ -370,8 +371,8 @@ function hurt(bt: TacBattle, t: TacStack, dmg: number, by: 0 | 1): number {
   return kills;
 }
 
-function push(bt: TacBattle, e: TacEvent): void {
-  bt.log.push(e);
+function push(bt: TacBattle, e: Omit<TacEvent, 'i'>): void {
+  bt.log.push({ i: ++bt.events, ...e });
   if (bt.log.length > 40) bt.log.splice(0, bt.log.length - 40);
   bt.seq++;
 }

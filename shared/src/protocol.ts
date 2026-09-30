@@ -1171,6 +1171,8 @@ export interface TacHeroView {
 
 /** One thing that happened, for the feed and the field's marks. */
 export interface TacEvent {
+  /** Its number in the battle (the client marks each once). */
+  i: number;
   k: 'move' | 'hit' | 'shot' | 'ret' | 'die' | 'wait' | 'defend' | 'morale' | 'fear' | 'luck' | 'spell' | 'order' | 'round' | 'timeout';
   side: 0 | 1;
   s?: number;

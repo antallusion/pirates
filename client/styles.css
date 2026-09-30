@@ -2843,3 +2843,117 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 @media (max-width: 699px) and (min-height: 521px) {
   #hud-chat #chat { max-height: calc(100dvh - max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h)) - var(--sa-t) - var(--top-h) - 54px); min-height: 180px; }
 }
+
+/* ---------- the turn-based boarding battle (docs/16 P4): the decks on a hex field over the whole screen, the
+   captains on either side, the order of the round, the feed, the orders. A phone upright stacks it all; on its
+   side and on a desk the captains stand left and right of the field. */
+#board-tac { position: fixed; inset: 0; z-index: 25; background: #0a0908; touch-action: none; user-select: none; -webkit-user-select: none; }
+.tb-root { position: absolute; inset: 0; box-sizing: border-box; display: grid; gap: 6px;
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) calc(env(safe-area-inset-right, 0px) + 6px) calc(env(safe-area-inset-bottom, 0px) + 6px) calc(env(safe-area-inset-left, 0px) + 6px);
+  grid-template-columns: minmax(0, 1fr) minmax(88px, auto) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "you mid foe" "queue queue queue" "stage stage stage" "feed feed feed" "spells spells spells" "acts acts acts";
+  background: linear-gradient(180deg, rgba(12, 10, 8, 0.88), rgba(8, 7, 6, 0.95)), var(--tb-deck, none) center 40% / cover no-repeat; background-color: #0c0b0a; font-size: 12px; }
+.tb-hero { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tb-hero.you { grid-area: you; }
+.tb-hero.foe { grid-area: foe; flex-direction: row-reverse; text-align: right; }
+.tb-face { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #1b1f25 center / cover; border: 2px solid #7fb0d0; box-shadow: 0 0 8px rgba(0, 0, 0, 0.6); }
+.tb-hero.foe .tb-face { border-color: #d2473a; }
+.tb-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.tb-who b { font-family: var(--display); font-weight: 400; font-size: 15px; color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-who small { color: var(--fog); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-pips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.tb-hero.foe .tb-pips { justify-content: flex-end; }
+.tb-pip { font-size: 11px; color: var(--fog); padding: 0 4px; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
+.tb-pip.up { color: #a8dca2; }
+.tb-pip.down { color: #e3998a; }
+.tb-auto { font-size: 10px; color: var(--gold); border: 1px solid var(--brass-dim); border-radius: 6px; padding: 0 4px; }
+.tb-mid { grid-area: mid; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; }
+.tb-round { font-family: var(--display); font-size: 16px; color: var(--gold); letter-spacing: 0.04em; white-space: nowrap; }
+.tb-turn { font-size: 11.5px; color: var(--fog); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.tb-turn.mine { color: #bfeee4; font-weight: 600; }
+.tb-turn em { font-style: normal; color: var(--gold); }
+.tb-dot { width: 8px; height: 8px; border-radius: 50%; background: #7fb0d0; }
+.tb-dot.foe { background: #d2473a; }
+.tb-timer { width: 100%; min-width: 80px; height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; overflow: hidden; }
+.tb-timer > i { display: block; height: 100%; background: linear-gradient(90deg, #d0503e, #e0b862); }
+.tb-queue { grid-area: queue; display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; min-height: 34px; }
+.tb-q { position: relative; flex: none; width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 2px solid #7fb0d0; background: #15110d; cursor: pointer; }
+.tb-q.foe { border-color: #d2473a; }
+.tb-q.on { box-shadow: 0 0 0 2px var(--gold), 0 0 10px rgba(224, 184, 98, 0.7); }
+.tb-q.next { opacity: 0.55; transform: scale(0.85); }
+.tb-q .ico { width: 100%; height: 100%; margin: 0; border-radius: 50%; object-fit: cover; vertical-align: 0; }
+.tb-q b { position: absolute; right: -4px; bottom: -4px; min-width: 14px; padding: 0 2px; font-size: 9.5px; line-height: 13px; border-radius: 4px; background: #111; color: var(--bone); border: 1px solid #555; }
+.tb-qsep { flex: none; width: 2px; height: 26px; background: var(--brass-dim); margin: 0 3px; }
+.tb-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; overflow: hidden; }
+.tb-board { position: absolute; left: 0; top: 0; display: block; touch-action: none; cursor: pointer; }
+.tb-hint { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 3px 10px; border-radius: 10px; background: rgba(10, 9, 8, 0.72); color: #bfeee4; font-size: 11.5px; text-align: center; pointer-events: none; box-sizing: border-box; }
+.tb-card { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); width: min(300px, calc(100% - 16px)); box-sizing: border-box; padding: 8px 10px; background: rgba(14, 12, 10, 0.95); border: 1px solid var(--brass-dim); border-top: 3px solid #7fb0d0; border-radius: 6px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); cursor: pointer; z-index: 2; }
+.tb-card.foe { border-top-color: #d2473a; }
+.tb-card-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.tb-card-h .ico-md { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.tb-card-h b { display: block; font-family: var(--display); font-weight: 400; font-size: 16px; }
+.tb-card-h small { color: var(--fog); }
+.tb-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px 8px; }
+.tb-stats > div { display: flex; flex-direction: column; min-width: 0; }
+.tb-stats span { font-size: 10px; color: var(--fog); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-stats b { font-size: 13px; color: var(--bone); }
+.tb-card p { margin: 6px 0 0; font-size: 11.5px; line-height: 1.3; }
+.tb-card .tb-def { color: var(--gold); }
+.tb-banner { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 26px; text-align: center; background: rgba(10, 9, 8, 0.86); border: 1px solid var(--brass); border-radius: 8px; box-shadow: 0 0 40px rgba(0, 0, 0, 0.8); z-index: 3; pointer-events: none; max-width: calc(100% - 24px); box-sizing: border-box; }
+.tb-banner b { display: block; font-family: var(--display); font-weight: 400; font-size: 34px; letter-spacing: 0.06em; }
+.tb-banner.won b { color: var(--gold); text-shadow: 0 0 18px rgba(224, 184, 98, 0.5); }
+.tb-banner.lost b { color: #e3998a; }
+.tb-banner span { color: var(--fog); font-size: 12.5px; }
+.tb-feed { grid-area: feed; min-height: 44px; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; font-size: 11.5px; line-height: 1.3; color: var(--fog); overflow: hidden; }
+.tb-feed .new { color: var(--bone); }
+.tb-spells { grid-area: spells; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.tb-spell { display: flex; align-items: center; gap: 6px; text-align: left; padding: 4px 8px; min-height: 44px; min-width: 0; }
+.tb-spell .ico { width: 30px; height: 30px; flex: none; margin: 0; border-radius: 4px; }
+.tb-spell span { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.tb-spell b { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-spell small { font-size: 10px; color: var(--fog); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-spell.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(224, 184, 98, 0.45); }
+.tb-acts { grid-area: acts; display: flex; flex-wrap: wrap; gap: 5px; }
+.tb-acts .btn { flex: 1 1 auto; min-height: 38px; padding: 4px 8px; font-size: 12px; white-space: nowrap; }
+.tb-acts .btn.on { border-color: var(--gold); color: var(--gold); }
+body.tac #hud-bottom, body.tac #touch, body.tac #board-fight { visibility: hidden; }
+/* A phone on its side: the field in the middle as tall as the screen, the captains and the orders left and right. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .tb-root { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas: "you stage foe" "mid stage queue" "spells stage feed" "acts stage feed"; font-size: 11px; }
+  .tb-stage { width: min(62vw, calc((100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 1.36)); }
+  .tb-face { width: 32px; height: 32px; }
+  .tb-who b { font-size: 13px; }
+  .tb-queue { flex-wrap: wrap; overflow: visible; align-content: flex-start; min-height: 0; }
+  .tb-q { width: 26px; height: 26px; }
+  .tb-qsep { height: 20px; }
+  .tb-spells { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .tb-spell { min-height: 36px; padding: 2px 6px; }
+  .tb-spell .ico { width: 24px; height: 24px; }
+  .tb-spell small { display: none; }
+  .tb-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; align-content: start; }
+  .tb-acts .btn { min-height: 32px; padding: 2px 4px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+  .tb-feed { justify-content: flex-start; min-height: 0; font-size: 10.5px; }
+  .tb-hint { font-size: 10.5px; }
+  .tb-banner b { font-size: 26px; }
+}
+/* A desk: the captains' columns either side of a large field. */
+@media (min-width: 1100px) and (min-height: 521px) {
+  .tb-root { grid-template-columns: 280px minmax(0, 1fr) 280px; grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "you mid foe" "spells stage queue" "acts stage feed"; gap: 10px; padding: 12px 16px; font-size: 13px; }
+  .tb-face { width: 58px; height: 58px; }
+  .tb-who b { font-size: 19px; }
+  .tb-spells { grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .tb-spell { min-height: 54px; }
+  .tb-spell b { font-size: 14px; }
+  .tb-spell small { font-size: 11px; white-space: normal; }
+  .tb-queue { flex-wrap: wrap; align-content: flex-start; overflow: visible; }
+  .tb-q { width: 40px; height: 40px; }
+  .tb-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: end; }
+  .tb-acts .btn { min-height: 40px; font-size: 13px; }
+  .tb-feed { font-size: 13px; justify-content: flex-end; }
+  .tb-round { font-size: 22px; }
+  .tb-turn { font-size: 13px; }
+  .tb-timer { width: 260px; }
+}

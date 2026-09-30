@@ -134,6 +134,7 @@ export interface Settings {
   effects: 'auto' | 'low';
   webgl: boolean;
   plainTerms: boolean; // "close to the wind" for "close-hauled"
+  classicBoarding: boolean; // the round-by-round deck fight instead of the turn-based battle (docs/16 P4)
   captions: boolean; // sound captions with direction
   mono: boolean;
   volume: { master: number; sea: number; combat: number; ui: number; music: number };
@@ -144,7 +145,7 @@ export function defaults(): Settings {
   return {
     uiScale: 1, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
+    plainTerms: false, classicBoarding: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
 }

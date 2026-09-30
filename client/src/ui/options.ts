@@ -102,7 +102,7 @@ export class OptionsScreen {
       case 'ui':
         return `<label class="opt-range sel"><span class="opt-l">${icon('opt_lang', '', 'ico-sm')}${esc(t('opt.lang'))}</span><select data-sel="lang" class="field">${(['en', 'ru'] as Lang[]).map((l) => `<option value="${l}" ${lang() === l ? 'selected' : ''}>${l === 'en' ? 'English' : 'Русский'}</option>`).join('')}</select></label>
           ${range('uiScale', 'opt.uiScale', 0.7, 2)}${range('textScale', 'opt.textScale', 0.9, 1.5)}${range('hudAlpha', 'opt.hudAlpha', 0.3, 1)}
-          ${check('highContrast', 'opt.highContrast')}${check('plainFont', 'opt.plainFont')}${check('plainTerms', 'opt.plainTerms')}
+          ${check('highContrast', 'opt.highContrast')}${check('plainFont', 'opt.plainFont')}${check('plainTerms', 'opt.plainTerms')}${check('classicBoarding', 'opt.classicBoarding')}
           <p class="muted">${esc(t('opt.readAloud', { key: keyLabel(s.keys.readAloud[0] || s.keys.readAloud[1]) }))}</p>`;
       case 'vision':
         return `<label class="opt-range sel"><span class="opt-l">${esc(t('opt.colorblind'))}</span><select data-sel="colorblind" class="field">${(['off', 'protan', 'deutan', 'tritan'] as Colorblind[]).map((c) => `<option value="${c}" ${s.colorblind === c ? 'selected' : ''}>${esc(t(`opt.cb.${c}` as Key))}</option>`).join('')}</select></label>

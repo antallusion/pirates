@@ -139,6 +139,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'opt.highContrast': "Высококонтрастный HUD (сплошная подложка, толще линии)",
   'opt.plainFont': "Упрощённый шрифт (без засечек и курсива)",
   'opt.plainTerms': "Простые термины вместо морского жаргона",
+  'opt.classicBoarding': "Абордаж по раундам (прежний бой на палубе) вместо пошаговой битвы",
   'opt.readAloud': "Прочитать открытый экран вслух: {key}",
   'opt.colorblind': "Палитра для цветовой слепоты",
   'opt.cb.off': "Выкл.",

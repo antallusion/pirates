@@ -11,7 +11,7 @@ import { noteOwnShip } from './ui/levels.ts';
 import { isNight, SPEED_SCALE } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BoardFightView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
+  BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
 import type { TaskView } from '../../shared/src/data/worldtasks.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -159,6 +159,8 @@ export class ClientState {
   dive: DiveView | null = null;
   /** A deck fight in progress (Boarding 2.0). */
   boardFight: BoardFightView | null = null;
+  /** The turn-based boarding battle (docs/16 P4). */
+  boardTac: TacView | null = null;
   eventsAt = 0;
   holdings: { mine: HoldingView[]; here: IslandOffer | null; region: IslandOffer[]; sieges: SiegeView[] } = { mine: [], here: null, region: [], sieges: [] };
   guild: GuildView | null = null;
@@ -422,6 +424,9 @@ export class ClientState {
         break;
       case 'board_fight':
         this.boardFight = m.view;
+        break;
+      case 'board_tac':
+        this.boardTac = m.view;
         break;
       case 'events':
         this.events = m.list;

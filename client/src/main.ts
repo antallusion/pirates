@@ -15,6 +15,7 @@ import { DivePanel } from './ui/dive.ts';
 import { giverDialog } from './ui/giver.ts';
 import { inspectDialog } from './ui/inspect.ts';
 import { BoardFightPanel } from './ui/boardfight.ts';
+import { TacticalPanel } from './ui/tactical.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
@@ -205,6 +206,7 @@ companyScreen.onWhisper = (name) => {
 };
 const divePanel = new DivePanel((m) => net.send(m));
 const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServerTime());
+const tactical = new TacticalPanel((m) => net.send(m), () => state.estServerTime());
 const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
 const touch = new TouchControls({
@@ -245,6 +247,13 @@ function applySettings(o: Settings): void {
 }
 applySettings(settings());
 onSettings(applySettings);
+// The boarding battle's form follows the option at once (docs/16 P4).
+let classicSent = settings().classicBoarding;
+onSettings((s) => {
+  if (s.classicBoarding === classicSent) return;
+  classicSent = s.classicBoarding;
+  net.send({ t: 'board_pref', classic: s.classicBoarding });
+});
 document.documentElement.lang = lang();
 applyDataLocale(lang());
 translateDom();
@@ -396,6 +405,8 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'init':
       inGame = true;
+      // The old round-by-round deck fight, for a captain who asked for it in the options (docs/16 P4).
+      net.send({ t: 'board_pref', classic: settings().classicBoarding });
       audio.ownId = m.entityId;
       $('screen-captain').classList.add('hidden');
       hud.show(true);
@@ -920,7 +931,7 @@ addEventListener('keydown', (e) => {
   }
   if (typing()) return;
   // A deck fight takes the digits for its orders and Space for the duel's blade.
-  if (!modal && boardFight.onKey(e)) {
+  if (!modal && (tactical.onKey(e) || boardFight.onKey(e))) {
     e.preventDefault();
     return;
   }
@@ -1757,6 +1768,7 @@ function step(t: number): void {
     }
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
+    tactical.render(state.boardTac);
     encounterCard.frame();
     surrenderCard.frame(state);
     fishFight.frame();
@@ -1768,4 +1780,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : openModal(m)), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : openModal(m)), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical };
