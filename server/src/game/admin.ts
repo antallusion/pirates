@@ -64,7 +64,9 @@ import type { WeatherKind } from '../../../shared/src/protocol.ts';
 import { closestOnPolygon, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
 import { isLand, islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { summon } from './bosses.ts';
-import { startBoarding } from './boarding.ts';
+import { boardingRangeBetween, canBoard, startBoarding } from './boarding.ts';
+import { UNITS, UNIT_IDS, armyForLevel, armyMen, armyWord } from '../../../shared/src/data/army.ts';
+import type { UnitId } from '../../../shared/src/data/army.ts';
 import { mastWreck } from './combat.ts';
 import { spawnFireship } from './npc.ts';
 import type { Game } from './Game.ts';
@@ -102,7 +104,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away H';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away H · /army [unit n|level L|clear] · /foe [role] [class] [m] · /board (alongside: grapple her)';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -771,7 +773,73 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       game.pushSelf(s, true);
       return `Heading ${Math.round((((h * 180) / Math.PI) % 360 + 360) % 360)}°.`;
     }
+    case 'army': {
+      // The ship's army (docs/17 H1): /army shows it; /army <unit> <n> sets a stack; /army level L spreads the crew
+      // by the ladder of that level; /army clear makes them all deckhands.
+      if (!args[0]) return `Army (${ship.crew}/${ship.stats.crewMax}, ${ship.army.length}/${ship.armySlots} stacks, ${armyWord(ship.crew)}): ${ship.army.map((x) => `${x.u} ×${x.n}`).join(', ') || 'none'}.`;
+      if (args[0] === 'clear') {
+        const n = ship.crew;
+        ship.setArmy([{ u: 'deckhand', n }]);
+      } else if (args[0] === 'level') {
+        const lv = Math.max(1, Math.min(10, Math.round(num(1, ship.shipLevel))));
+        ship.setArmy(armyForLevel(lv, ship.crew, ship.armySlots, 'player'));
+      } else {
+        const u = args[0] as UnitId;
+        if (!UNITS[u]) return `Units: ${UNIT_IDS.join(', ')}`;
+        const n = Math.max(0, Math.floor(num(1, 10)));
+        const rest = ship.army.filter((x) => x.u !== u).map((x) => ({ ...x }));
+        // Room in the hammocks: the deckhands make way first, then the smallest stacks.
+        let over = armyMen(rest) + n - ship.stats.crewMax;
+        for (const x of [...rest].sort((a, b) => UNITS[a.u].tier - UNITS[b.u].tier || a.n - b.n)) {
+          if (over <= 0) break;
+          const k = Math.min(x.n, over);
+          x.n -= k;
+          over -= k;
+        }
+        const kept = rest.filter((x) => x.n > 0);
+        if (n > 0 && kept.length >= ship.armySlots) kept.sort((a, b) => UNITS[b.u].tier - UNITS[a.u].tier).pop();
+        ship.setArmy([...kept, ...(n > 0 ? [{ u, n: Math.min(n, ship.stats.crewMax) }] : [])]);
+      }
+      game.pushSelf(s, true);
+      return `Army: ${ship.army.map((x) => `${x.u} ×${x.n}`).join(', ') || 'none'} (${ship.crew} men).`;
+    }
+    case 'foe': {
+      // A whole ship of the sea alongside, not grappled (/foe [role] [class] [metres]): to try the guns on her men, or
+      // to grapple at once (docs/17 H1).
+      if (ship.docked) return 'Put to sea first.';
+      const role = (args[0] ?? 'pirate') as 'pirate';
+      const cls = (args[1] ?? 'brig') as ShipClassId;
+      if (!SHIP_CLASSES[cls]) return `Classes: ${Object.keys(SHIP_CLASSES).join(', ')}`;
+      const d = Math.max(20, Math.min(900, num(2, 140)));
+      const v = headingVec(ship.state.heading + Math.PI / 2);
+      const o = game.spawnNpcShip(role, cls, role === 'pirate' ? 'free' : role === 'ghost' ? 'choir' : 'league', ship.state.x + v.x * d, ship.state.y + v.y * d, ship.state.heading);
+      game.setNpcLevel(o, ship.shipLevel);
+      const brain = game.npcs.get(o.id);
+      if (brain) brain.active = true;
+      o.input = { rudder: 0, sailTarget: 0 };
+      o.state.speed = ship.state.speed = 0;
+      game.grid.upsert(o.id, o.state.x, o.state.y);
+      return `${o.name} lies ${Math.round(d)} m off your beam: ${o.army.map((x) => `${x.u} ×${x.n}`).join(', ')}.`;
+    }
     case 'board': {
+      // Alongside a ship already: grapple her at once, whole as she is (docs/17 H1).
+      if (!args.length && !ship.docked) {
+        let near: ShipEntity | null = null, nd = Infinity;
+        for (const o of game.ships.values()) {
+          if (o === ship || !o.alive || o.docked || o.npcRole === 'beast') continue;
+          const dd = Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
+          if (dd < nd && dd <= boardingRangeBetween(ship, o) * 1.5) {
+            nd = dd;
+            near = o;
+          }
+        }
+        if (near) {
+          const why = canBoard(game, ship, near);
+          if (why) return why;
+          startBoarding(game, ship, near, 'standard');
+          return `Grappled: ${near.name}.`;
+        }
+      }
       // A deck fight at once: a crippled ship lashed alongside (/board [role] [class] [crew]).
       if (ship.docked) return 'Put to sea first.';
       const role = (args[0] ?? 'pirate') as 'pirate';

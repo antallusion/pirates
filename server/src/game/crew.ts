@@ -903,7 +903,9 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   if (n > ship.crew * 0.2) c.fights = 0;
   // New hands of a trade thin its practice by their share (docs/16 #18).
   c.practice[prof] = (c.practice[prof] ?? 0) * c.pools[prof] / Math.max(1, c.pools[prof] + n);
-  ship.crew += n;
+  // Into the army (docs/17 H1): marines to the marines' stack, gunners to the musketeers', the rest as deckhands —
+  // or as seasoned sailors from a tavern of veterans.
+  ship.addMen(prof === 'marine' ? 'marine' : prof === 'gunner' ? 'musketeer' : tav.stars >= 3.5 ? 'sailor' : 'deckhand', n);
   c.pools[prof] += n;
   if (prof === 'sailor') game.tavernCrew.set(port.id, avail - n);
   else tav.stock[prof] = avail - n;
@@ -976,10 +978,11 @@ export function recruitPrisoners(game: Game, s: PlayerSession, target: ShipEntit
   const n = Math.max(0, Math.min(Math.floor(want), Math.floor(target.crew * 0.3), ship.stats.crewMax - ship.crew));
   if (n <= 0) return 0;
   reconcile(game, c, ship.crew);
-  target.crew -= n;
   const total = ship.crew + n;
   c.loyalty = (c.loyalty * ship.crew + 20 * n) / total;
-  ship.crew += n;
+  // They sign on as the men they are (docs/17 H1, as HoMM3's creatures that join): her deckhands as deckhands, her
+  // marines as marines.
+  for (const x of target.loseMen(n)) ship.addMen(x.u, x.n);
   c.pools.sailor += n;
   return n;
 }
