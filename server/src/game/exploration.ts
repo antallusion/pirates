@@ -26,6 +26,7 @@ import { startTrek, trekBusy } from './trek.ts';
 import { bankHere, bankName, bankUp, climbLookout, combBank, lookoutReady } from './isles.ts';
 import { tidalIsles } from '../../../shared/src/world/tidal.ts';
 import { hearsayCacheBonus } from './hearsay.ts';
+import { onShrine, onSpring } from './hero.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import type { HauntId } from '../../../shared/src/data/minigames.ts';
 
@@ -346,6 +347,7 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
       xp = 40;
       break;
     case 'spring':
+      onSpring(game, s); // docs/17 H2: HoMM3's well
       give('provisions', 6, 14);
       morale = 10;
       xp = 25;
@@ -419,6 +421,7 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
       xp = 20;
       break;
     case 'shrine':
+      onShrine(game, s, island.id); // docs/17 H2: an order, and the will whole
       if (rng.chance(0.5)) {
         give('cursed_relics', 1, 3);
         morale = -15;

@@ -39,6 +39,7 @@ import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
 import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';
 import type { TalentRanks } from './data/talents.ts';
+import type { HeroPortView, HeroView } from './data/hero.ts';
 import type { Flag, StatMods } from './data/stats.ts';
 import type { Cargo, AmmoStock, ShipLoadout, TrophyHistory } from './sim/shipstats.ts';
 import type { IslandFeature } from './world/worldgen.ts';
@@ -59,6 +60,8 @@ export type WeatherKind = 'calm' | 'breeze' | 'wind' | 'fog' | 'rain' | 'storm' 
 // ------------------------------------------------------------------ client -> server
 
 export type ClientMsg =
+  /** The captain as a hero (docs/17 H2): a skill chosen of two, an order learnt at a guild, a sea order, an artifact bought, the port's offer. */
+  | { t: 'hero'; action: 'skill' | 'learn' | 'cast' | 'buy' | 'view'; pick?: number; id?: string; index?: number }
   | { t: 'hello'; v: number; token?: string; name?: string }
   | { t: 'create_captain'; captain: CaptainId; shipName: string; tutorial?: boolean } // tutorial: the First Watch (docs/07 §13)
   | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' }
@@ -526,6 +529,8 @@ export interface Contract {
 }
 
 export interface PrivateState {
+  /** The captain as a hero (docs/17 H2). */
+  hero?: HeroView;
   accountId: number;
   name: string;
   /** The title she flies with the ship's name (docs/16 #29). */
@@ -1397,6 +1402,8 @@ export interface TacView {
 }
 
 export type ServerMsg =
+  /** What a port offers the hero: its guild of orders, its artifact merchant (docs/17 H2). */
+  | { t: 'hero_port'; view: HeroPortView | null }
   /** A job offered (docs/11 P6) by an island's people on the beach, or shared by a groupmate (`from`): the captain
    *  may take it or leave it. */
   | { t: 'quest_offer'; offer: PortView['questOffers'][number]; island?: number; from?: string }

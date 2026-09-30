@@ -71,6 +71,8 @@ import type { LogEntry } from '../../../shared/src/data/captainlog.ts';
 import type { RenownProfile } from './renown.ts';
 import { armyFromSave, armySlots } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
+import { heroOf, heroView } from './hero.ts';
+import type { HeroRec } from './hero.ts';
 
 export interface Profile {
   version: 1;
@@ -263,6 +265,8 @@ export interface Profile {
   renown?: RenownProfile;
   /** docs/16 Batch C: the merchants' runs, the whispers paid for, the auction's pieces waiting for room. */
   dealings?: Dealings;
+  /** The captain as a HoMM3 hero (docs/17 H2, hero.ts): primaries, skills, the order book, her will. */
+  hero?: HeroRec;
 }
 
 export interface Dealings {
@@ -596,6 +600,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     forwards: p.forwards.map((f) => ({ ...f, fromName: f.fromPort, toName: f.toPort })),
     bank: p.bank,
     loan: p.loan,
+    hero: heroView(p),
   };
 }
 
@@ -683,6 +688,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));
   p.gold = Math.max(0, p.gold ?? 0);
   p.gunsDisabled ??= { port: 0, starboard: 0 };
+  heroOf(p); // docs/17 H2: a captain from before the heroes grown from her level
   return p;
 }
 

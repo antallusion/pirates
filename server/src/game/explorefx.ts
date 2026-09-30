@@ -18,6 +18,7 @@ import { grantPlan } from './shipbuilding.ts';
 import { digOutcome, legendCircle, legendFragment } from './treasure.ts';
 import { seasonStat } from './seasons.ts';
 import type { ShipEntity } from './ship.ts';
+import { maybeArtifact } from './hero.ts';
 
 export const MAX_MAPS = 6;
 export const DIG_RANGE = 250;
@@ -219,6 +220,7 @@ export function resolveDig(game: Game, s: PlayerSession, mapId: string, share: n
   }
   p.explore.maps = p.explore.maps.filter((x) => x !== m);
   hoard(game, s, m.tier + (ship.hasFlag('gold_fever') ? 1 : 0), share);
+  maybeArtifact(game, s, 'chest', 0.15 + 0.15 * m.tier); // docs/17 H2: an artifact in the hoard
   if (m.tier >= 3) grantDeed(game, s, 'deed_legendary_hoard');
   game.grantXp(s, 150 * m.tier, `Dug up the ${m.name}`);
 }

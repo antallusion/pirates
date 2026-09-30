@@ -71,6 +71,7 @@ import {
 } from './finance.ts';
 import type { BuyOrder, Forward } from './finance.ts';
 import { econCheckpoint, economyReport } from './econmetrics.ts';
+import { heroAction, heroSecond, heroSource } from './hero.ts';
 import { checkChartDeed, checkDeeds, checkStatDeeds, grantDeed, learnContext, onDockDeeds, onLevelUp, respec, switchLoadout, unspentPoints } from './progression.ts';
 import type { RespecMode } from './progression.ts';
 import type { EconomyReport, IndexPoint } from './econmetrics.ts';
@@ -928,6 +929,7 @@ export class Game {
       if (this.tick % 1200 < 20) priceLetters(this, s, (pt) => recordIntel(this, s, pt));
       if (this.tick % 200 < 20) tendCaravans(this, s, (c, from) => planMerchantVoyage(this, c, this.npcs.get(c.id)!, from));
       checkDeeds(this, s, 1);
+      heroSecond(this, s); // the hero's will by the day and in port (docs/17 H2)
       onboardingSecond(this, s);
       abyssSecond(this, s);
       legendarySecond(this, s);
@@ -3130,6 +3132,8 @@ export class Game {
         return;
       case 'signal':
         return err(sendSignal(this, s, msg.kind));
+      case 'hero':
+        return err(heroAction(this, s, msg)); // docs/17 H2
       case 'autosail':
         // The helmsman takes her to her mark, or gives the wheel back (docs/16 #36).
         if (msg.stop) return stopAutosail(this, s, 'manual');
@@ -3585,6 +3589,7 @@ export class Game {
     });
     ship.level = p.level;
     ship.worn = Object.values(p.captainGear ?? {}).filter((x): x is Item => !!x);
+    ship.hero = heroSource(p); // docs/17 H2
     ship.recompute(this.now);
     ship.cargo = p.cargo;
     ship.ammo = p.ammo;
