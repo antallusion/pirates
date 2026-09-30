@@ -286,6 +286,31 @@ export class AudioEngine {
     for (const [ratio, amp] of [[1, 1], [2.0, 0.5], [2.4, 0.4], [3.0, 0.25], [4.2, 0.15]] as const) this.tone(v.out, v.at, 220 * ratio, 3.5 / ratio + 0.8, amp * 0.4);
   }
 
+  /** The men's shanty at the capstan (docs/16 #17): a Dorian call-and-answer in two voices over stamping feet,
+   *  about six seconds on the music bus. */
+  shanty(): void {
+    const v = this.voice(0.22, 0, 0.05, 'music');
+    if (!v) return;
+    // D Dorian: the call (a lone voice), then the whole crew answering an octave lower with a fifth above.
+    const D = 146.83;
+    const st = (n: number) => D * Math.pow(2, n / 12);
+    const beat = 0.36;
+    const call: [number, number][] = [[7, 1], [7, 0.5], [7, 0.5], [7, 1], [0, 1], [3, 1], [7, 1], [10, 2]];
+    const answer: [number, number][] = [[5, 1], [5, 0.5], [5, 0.5], [5, 1], [-2, 1], [2, 1], [5, 1], [9, 2]];
+    let t = v.at;
+    for (const [n, d] of call) {
+      this.tone(v.out, t, st(n + 12), d * beat * 0.95, 0.35, 'triangle');
+      t += d * beat;
+    }
+    for (const [n, d] of answer) {
+      this.tone(v.out, t, st(n), d * beat * 0.95, 0.4, 'sawtooth');
+      this.tone(v.out, t, st(n + 7), d * beat * 0.9, 0.18, 'triangle');
+      t += d * beat;
+    }
+    // Stamping on the deck on every beat, heavier on the downbeat.
+    for (let i = 0; i < 16; i++) this.noiseBurst(v.out, v.at + i * beat, 0.12, 'lowpass', 160, 0.7, i % 4 === 0 ? 0.9 : 0.5);
+  }
+
   coins(): void {
     const v = this.voice(0.2, 0, 0, 'ui');
     if (!v) return;

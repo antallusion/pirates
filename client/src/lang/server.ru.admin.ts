@@ -3,8 +3,8 @@
 
 export const SERVER_RU_ADMIN: Record<string, string> = {
   ' (by night)': ' (ночью)',
-  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room':
-    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast · /strike [роль] [класс] · /war [patrol] · /streak N · /heading градусы|wind · /isle [уровень] · /yard [n] · /oship роль [уровень] · /raid [land|tax|calm] · /hurt N · /auction end|room',
+  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /log':
+    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast · /strike [роль] [класс] · /war [patrol] · /streak N · /heading градусы|wind · /isle [уровень] · /yard [n] · /oship роль [уровень] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /log',
   'A fireship is coming.': 'Идёт брандер.',
   'A {0} berthed at your island.': 'У вашего острова стоит у причала: {0}.',
   'Dismasted.': 'Мачта сбита.',
@@ -90,4 +90,12 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'No ship.': 'Корабля нет.',
   'Hull at {0}%.': 'Корпус на {0}%.',
   '{0} lots stirred.': 'Лотов расшевелено: {0}.',
+  "Morale at {0}.": "Мораль: {0}.",
+  "Practice set.": "Сноровка выставлена.",
+  "The log is written.": "Журнал записан.",
+  "{0} wounded below.": "Раненых в кубрике: {0}.",
+  "Black Bess": "Чёрная Бесс",
+  "Gilded Heron": "Золочёная Цапля",
+  "Salt Lady": "Соляная Леди",
+  "Silas Gault": "Сайлас Голт",
 };

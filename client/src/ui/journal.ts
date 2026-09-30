@@ -32,6 +32,7 @@ import { paidHtml } from './giver.ts';
 import { tasksLog } from './worldmap.ts';
 import { setTracked, trackedQuest } from './track.ts';
 import { sagaButton } from './saga.ts';
+import { LC } from './crewlife.ts';
 
 const EN = {
   title: 'Quest journal',
@@ -145,6 +146,8 @@ export class Journal {
   openTattoos: (() => void) | null = null;
   /** Opens her saga (docs/12 P10 #20). */
   openSaga: (() => void) | null = null;
+  /** Opens the captain's log (docs/16 #20). */
+  openLog: (() => void) | null = null;
   private send: (m: ClientMsg) => void;
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
@@ -157,7 +160,7 @@ export class Journal {
     if (!this.chosen || !quests.some((q) => q.id === this.chosen)) this.chosen = tracked ?? quests[0]?.id ?? null;
     const q = quests.find((x) => x.id === this.chosen) ?? null;
     const inGroup = (state.party?.members.length ?? 0) > 1;
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub'))}</div></div><div class="jr-head-btns"><button class="btn btn-small" data-saga>${esc(sagaButton())}${self?.saga?.length ? ` <span class="h-count">${self.saga.length}</span>` : ''}</button><button class="btn btn-small jr-tattoos" data-tattoos>${esc(L('tattoos'))}${state.tattoos?.pending.length ? ` <span class="h-count">${state.tattoos.pending.length}</span>` : ''}</button></div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub'))}</div></div><div class="jr-head-btns"><button class="btn btn-small" data-log>${esc(LC('log'))}${self?.log?.length ? ` <span class="h-count">${self.log.filter((e) => e.day === self.log!.at(-1)!.day).length}</span>` : ''}</button><button class="btn btn-small" data-saga>${esc(sagaButton())}${self?.saga?.length ? ` <span class="h-count">${self.saga.length}</span>` : ''}</button><button class="btn btn-small jr-tattoos" data-tattoos>${esc(L('tattoos'))}${state.tattoos?.pending.length ? ` <span class="h-count">${state.tattoos.pending.length}</span>` : ''}</button></div></div>
       <div class="modal-body journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
@@ -173,6 +176,7 @@ export class Journal {
     }));
     root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
     root.querySelector<HTMLElement>('[data-saga]')?.addEventListener('click', () => this.openSaga?.());
+    root.querySelector<HTMLElement>('[data-log]')?.addEventListener('click', () => this.openLog?.());
     root.querySelectorAll<HTMLElement>('[data-wname]').forEach((b) => (b.onclick = () => {
       const id = b.dataset.wname!;
       const name = root.querySelector<HTMLInputElement>(`input[data-wfor="${id}"]`)?.value ?? '';

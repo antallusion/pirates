@@ -64,12 +64,13 @@ import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
 import { renderDescent } from './ui/descent.ts';
 import { renderSaga } from './ui/saga.ts';
+import { crewSayParts, renderLog } from './ui/crewlife.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'base' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -82,6 +83,7 @@ const worldMap = new WorldMap();
 const journal = new Journal((m) => net.send(m));
 journal.openTattoos = () => openModal('tattoos');
 journal.openSaga = () => openModal('saga');
+journal.openLog = () => openModal('log');
 worldMap.send = (m) => net.send(m);
 let modal: Modal = null;
 let inGame = false;
@@ -482,6 +484,13 @@ function onMessage(m: ServerMsg): void {
       audio.coins();
       break;
     }
+    case 'crew_say': {
+      // The crew speaks (docs/16 #16–17): an officer's line with his face, the men's grumble, the shanty and its tune.
+      const t = crewSayParts(m);
+      if (t.line) hud.talk(t.face, t.who, t.line, t.kind);
+      if (m.ev === 'shanty') audio.shanty();
+      break;
+    }
     case 'toast':
       // The harbour turned her away for her speed: take in sail and try again when she slows.
       if (m.msg === 'Take in sail before entering harbour') {
@@ -763,6 +772,9 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'saga':
       renderSaga(root, state, (m) => net.send(m));
+      break;
+    case 'log':
+      renderLog(root, state);
       break;
     case 'base':
       baseWindow.render(root, state);

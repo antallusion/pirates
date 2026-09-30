@@ -40,6 +40,7 @@ import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
+import { LC as LCREW, moodMark } from './crewlife.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
 import { ChatPanel } from './chat.ts';
 import type { ChatChannel, ChatLine } from './chat.ts';
@@ -157,11 +158,11 @@ export class Hud {
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
     const url = assetUrl(cap.portrait);
     const streak = self.streak && self.streak.n >= 2 ? self.streak : null;
-    const ckey = `${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}`;
+    const ckey = `${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}|${self.company.mood ?? ''}:${self.company.shantyUntil ?? 0}`;
     if (ckey !== this.lastCaptainKey) {
       this.lastCaptainKey = ckey;
       $('hud-captain').innerHTML = `
-        <div class="uf-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"><b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${streak ? streakBadge(streak) : ''}</div>
+        <div class="uf-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"><b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${streak ? streakBadge(streak) : ''}${moodMark(self.company.mood, (self.company.shantyUntil ?? 0) - state.estServerTime())}</div>
         <div class="uf-body">
           <div class="uf-top"><span class="uf-name">${esc(self.name)}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span></div>
           ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
@@ -175,7 +176,9 @@ export class Hud {
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1, state.ownStats?.cursedVolumeMul ?? 1);
     const holdMax = state.ownStats?.holdVolume ?? cls.holdVolume;
     const lvl = shipLevelOf(self.loadout);
-    const skey = `${lang()}|${lvl}|${self.abyss?.pressure ?? -1}|${self.abyss?.shards ?? 0}|${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}`;
+    const wd = self.company.wounded;
+    const wk = wd && wd.n > 0 ? `${wd.n}:${wd.healPerMin}:${wd.diePerMin}` : '';
+    const skey = `${lang()}|${lvl}|${self.abyss?.pressure ?? -1}|${self.abyss?.shards ?? 0}|${Math.round(you.water * 50)}|${you.leaks}|${you.station}|${self.curse}|${you.hull}|${you.sails}|${you.crew}|${you.morale}|${Math.round(you.spd * 10)}|${you.sailT}|${Math.round(you.sail * 4)}|${vol.toFixed(1)}|${you.rudderHp}|${you.flags}|${Math.round(you.sanity)}|${Math.round(you.dread)}|${self.company.unrest}|${self.company.mood ?? ''}|${wk}`;
     if (skey !== this.lastShipKey) {
       this.lastShipKey = skey;
       const steps = [0, 0.25, 0.5, 0.75, 1].slice(1).map((v) => `<span class="${you.sail >= v - 0.01 ? 'on' : ''} ${Math.abs(you.sailT - v) < 0.01 ? 'target' : ''}"></span>`).join('');
@@ -185,9 +188,10 @@ export class Hud {
         <div class="row"><span class="lbl">${icon('stat_hull', '', 'ico-xs')}${esc(L('hull'))}</span><span class="val">${fmt(you.hull)} / ${fmt(you.hullMax)}</span></div>${bar('hull', you.hull / you.hullMax)}
         <div class="row"><span class="lbl">${icon('stat_sails', '', 'ico-xs')}${esc(L('sails'))}</span><span class="val">${fmt(you.sails)} / ${fmt(you.sailsMax)}${you.rudderHp < 0.99 ? ` · ${esc(L('rudder', { n: Math.round(you.rudderHp * 100) }))}` : ''}</span></div>${bar('sails', you.sails / you.sailsMax)}
         <div class="row"><span class="lbl">${icon('stat_crew', '', 'ico-xs')}${esc(L('crew'))}</span><span class="val">${you.crew} / ${you.crewMax}</span></div>${bar('crew', you.crew / you.crewMax)}
+        ${wd && wd.n > 0 ? `<div class="row sp-wounded" title="${esc(LCREW('woundedAdvice'))}"><span class="lbl" style="color:${wd.diePerMin > 0 ? 'var(--bad)' : 'var(--fog)'}">${icon('prof_surgeon', '', 'ico-xs')}${esc(LCREW('woundedShort'))}</span><span class="val">${esc(wd.diePerMin > 0 ? LCREW('woundedRowDie', { n: wd.n, h: wd.healPerMin, d: wd.diePerMin }) : LCREW('woundedRow', { n: wd.n, h: wd.healPerMin }))}</span></div>` : ''}
         ${you.water > 0.01 || you.leaks ? `<div class="row"><span class="lbl" style="color:var(--xp)">${esc(L('water'))}</span><span class="val">${Math.round(you.water * 100)}%${you.leaks ? ` · ${you.leaks} ${esc(plural(you.leaks, L('leak.one'), L('leak.few'), L('leak.many')))}` : ''}${you.water > 0.4 ? ` · ${esc(L('listing'))}` : ''}</span></div>${bar('crew', you.water)}` : ''}
         <div class="row"><span class="lbl">${icon('menu_crew', '', 'ico-xs')}${esc(keyless(L('orders')))}</span><span class="val">${esc(L(`station.${you.station}`))}</span></div>
-        <div class="row"><span class="lbl">${icon('tree_command', '', 'ico-xs')}${esc(L('morale'))}</span><span class="val">${you.morale}</span></div>${bar('morale', you.morale / 100)}
+        <div class="row"><span class="lbl">${icon('tree_command', '', 'ico-xs')}${esc(L('morale'))}</span><span class="val">${you.morale}${self.company.mood ? ` · <span class="${self.company.mood === 'shanty' ? 'good' : 'bad'}">${esc(LCREW(`mood.${self.company.mood}`))}</span>` : ''}</span></div>${bar('morale', you.morale / 100)}
         ${self.abyss && (self.abyss.inside || self.abyss.pressure > 0) ? `<div class="row" title="${esc(L('pressureTip'))}"><span class="lbl" style="color:${self.abyss.pressure < 60 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('pressure'))}</span><span class="val">${self.abyss.pressure}${self.abyss.shards ? ` · ${esc(L('shards', { n: self.abyss.shards }))}` : ''}</span></div>${bar('sanity', self.abyss.pressure / 100)}` : ''}${you.sanity < 99.5 ? `<div class="row" title="${esc(L('sanityTip'))}"><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('sanity'))}</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
         ${self.company.unrest ? `<div class="row" title="${esc(L('unrestTip'))}"><span class="lbl" style="color:var(--bad)">${esc(L('crew'))}</span><span class="val" style="color:var(--bad)">${esc(sv(self.company.unrest))}</span></div>` : ''}
         ${self.captain === 'drowned' ? `<div class="row" title="${esc(L('dreadTip'))}"><span class="lbl" style="color:var(--turq)">${esc(L('dread'))}</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ` · ${esc(L('theCall'))}` : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
@@ -970,6 +974,19 @@ export class Hud {
   }
   private feedItems: { msg: string; at: number }[] = [];
   private feedTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** A line said aboard (docs/16 #16–17): the speaker's face and name over his words, in the toasts' column. */
+  talk(face: string, who: string, line: string, kind: string): void {
+    const box = modalOpen() ? $('modal-toasts') : this.toastsEl;
+    const el = document.createElement('div');
+    el.className = `toast talk ${kind}`;
+    el.dataset.msg = line;
+    el.innerHTML = `${face}<span class="talk-body"><b class="talk-who">${esc(who)}</b><span class="talk-line">${esc(line)}</span></span>`;
+    el.title = `${who}: ${line}`;
+    box.prepend(el);
+    while (box.children.length > (box === this.toastsEl ? 7 : 2)) box.lastChild!.remove();
+    el.dataset.timer = String(setTimeout(() => el.remove(), toastLife('bad') + 1500));
+  }
 
   toast(msg: string, kind: string): void {
     // Collapse repeats (e.g. mashing fire while reloading).

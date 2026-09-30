@@ -15,6 +15,7 @@ import { keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
 import { ask } from './confirm.ts';
 import { dec1, esc, fmt, icon, money, officerIcon } from './dom.ts';
+import { LC, practiceHtml, woundedHtml } from './crewlife.ts';
 
 const L = dict(EN, RU);
 const kb = (a: Action) => keyLabel(settings().keys[a][0] || settings().keys[a][1]);
@@ -43,7 +44,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
     <div class="modal-body"><div class="stat-grid four">
       ${tile('stat_crew', L('st.souls'), esc(souls))}
       ${tile('xp', L('st.skill'), `<span class="stars">${stars(c.skill)}</span> ${dec1(c.skill)}`)}
-      ${tile('tree_command', L('st.morale'), `${morale} <small>${esc(spirit)}</small>`)}
+      ${tile('tree_command', L('st.morale'), `${morale} <small>${esc(spirit)}</small>${c.mood ? ` <small class="${c.mood === 'shanty' ? 'good' : 'bad'}">${c.mood === 'shanty' ? '♪ ' : ''}${esc(LC(`mood.${c.mood}`))}</small>` : ''}`)}
       ${tile('menu_crew', L('st.loyalty'), String(c.loyalty))}
     </div>
     ${c.unrest ? `<div class="alert-row">${icon('danger', '', 'ico-md')}<span class="bad">${esc(serverText(c.unrest))}</span></div>` : ''}
@@ -54,6 +55,8 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
       <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('codex'))}</h4>
         <div class="row"><input id="codex" type="range" min="0" max="50" step="5" value="${c.share}" style="flex:1"><b id="codex-v">${c.share}%</b></div>
         <p class="muted">${esc(L('codexFair', { share: c.expectedShare }))}</p></div>
+      ${woundedHtml(c.wounded)}
+      ${practiceHtml(c.pools, c.practice)}
       ${c.traits.length ? `<div class="card"><h4 class="card-h">${icon('menu_crew', '', 'ico-md')}${esc(L('character'))}</h4>${traitChips(c.traits)}</div>` : ''}
       ${self.fleet.slots || self.fleet.escorts.length ? `<div class="card"><h4 class="card-h">${icon('ab_call_escort', '', 'ico-md')}${esc(L('squadron', { n: self.fleet.escorts.length, slots: self.fleet.slots, key: kb('formation') }))}</h4>
         ${self.fleet.escorts.map((e) => `<p>${esc(e.name)} <span class="muted">${esc(e.atSea ? L('escortHull', { hull: e.hull }) : L('atAnchor'))}</span></p>`).join('') || `<p class="muted">${esc(L('hireEscorts'))}</p>`}

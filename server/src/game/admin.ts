@@ -77,6 +77,12 @@ import { gateOf } from './descent.ts';
 import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
 import type { HolidayId } from '../../../shared/src/data/holidays.ts';
 import { sagaNote } from './saga.ts';
+import { logNote } from './captainlog.ts';
+import { officerSays, resetTalk } from './crewlife.ts';
+import { TALK_EVENTS } from '../../../shared/src/data/crewtalk.ts';
+import type { TalkEvent } from '../../../shared/src/data/crewtalk.ts';
+import { OFFICER_ROLES, PROFESSIONS, UNIQUE_OFFICERS } from '../../../shared/src/data/crew.ts';
+import type { OfficerRole, Profession } from '../../../shared/src/data/crew.ts';
 import { struck } from './struck.ts';
 import { lotsOf } from './auction.ts';
 
@@ -86,7 +92,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /log';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -721,6 +727,58 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.sails = ship.stats.sailHpMax * Math.min(1, (n + 20) / 100);
       game.pushSelf(s, true);
       return `Hull at ${Math.round(n)}%.`;
+    }
+    case 'say': {
+      // An officer's line on an event now (docs/16 #16); with no officer aboard, one is signed on for the trial.
+      const ev = (args[0] ?? 'storm') as TalkEvent;
+      if (!TALK_EVENTS.includes(ev)) return `Events: ${TALK_EVENTS.join(', ')}`;
+      if (!p.company.officers.length) {
+        const role = (OFFICER_ROLES.includes(args[1] as OfficerRole) ? args[1] : 'lieutenant') as OfficerRole;
+        p.company.officers.push({ id: `o${game.allocId()}`, name: 'Silas Gault', role, level: 3, xp: 0, traits: ['lucky'], loyalty: 60, wound: null, hiredAt: game.now, orderReady: 0, ...(args[1] === 'unique' ? { unique: 'old_bones', name: UNIQUE_OFFICERS[0].name, role: UNIQUE_OFFICERS[0].role } : {}) });
+      }
+      officerSays(game, s, ev, args.slice(2).join(' ') || (ev === 'new_sea' ? REGIONS[ship.region].name : ev === 'boss' ? BOSSES.lantern_maw.name : ev === 'victory' || ev === 'merchant' ? 'Salt Lady' : undefined), true);
+      return null;
+    }
+    case 'morale': {
+      // Morale to N (docs/16 #17): under 30 the men grumble; at 80 and over, out of a fight, they sing.
+      ship.morale = Math.max(0, Math.min(100, num(0, 90)));
+      if (ship.morale >= 80) ship.lastCombat = Math.min(ship.lastCombat, game.now - 200);
+      resetTalk(s);
+      return `Morale at ${Math.round(ship.morale)}.`;
+    }
+    case 'wounded': {
+      // N wounded below (docs/16 #19), out of the crew.
+      const n = Math.max(0, Math.min(ship.crew - 1, Math.floor(num(0, 10))));
+      ship.crew -= n;
+      ship.wounded += n;
+      p.company.wounded = ship.wounded;
+      ship.lastCombat = Math.min(ship.lastCombat, game.now - 60);
+      game.pushSelf(s, true);
+      return `${ship.wounded} wounded below.`;
+    }
+    case 'practice': {
+      // Practice points to a trade, or to all (docs/16 #18).
+      const k = args[0] as Profession;
+      const pts = num(1, 700);
+      for (const t of PROFESSIONS) if (!k || k === t || args[0] === 'all') p.company.practice[t] = pts;
+      ship.companyKey = '';
+      game.pushSelf(s, true);
+      return 'Practice set.';
+    }
+    case 'log': {
+      // A day's worth of lines in the captain's log (docs/16 #20).
+      const where = game.nearestIslandName(ship.state.x, ship.state.y);
+      logNote(game, s, 'storm', [REGIONS[ship.region].name]);
+      logNote(game, s, 'sank', ['Black Bess', where]);
+      logNote(game, s, 'sank', ['Salt Lady', where]);
+      logNote(game, s, 'prize', ['Gilded Heron', where]);
+      logNote(game, s, 'crew_lost', [where, '4'], 3);
+      logNote(game, s, 'boss_seen', [BOSSES.lantern_maw.name]);
+      logNote(game, s, 'sea', [REGIONS[ship.region].name]);
+      logNote(game, s, 'level', [], p.level);
+      logNote(game, s, 'wounded_died', [], 2);
+      game.pushSelf(s, true);
+      return 'The log is written.';
     }
     case 'auction': {
       // The trophy auction (docs/16 #13): its lots here close in seconds, or the room bids at once.

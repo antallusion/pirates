@@ -3021,3 +3021,40 @@ body.tac #toasts { top: 22%; }
 .rep-way p { margin: 5px 0 0; font-size: 12px; line-height: 1.35; }
 .rep-way.port { border-color: rgba(224, 184, 98, 0.35); }
 @media (max-width: 560px) { .rep-cmp { grid-template-columns: minmax(0, 1fr); } .au-time { margin-left: 0; } }
+
+/* ---------- docs/16 Batch D: the crew speaks, the men's mood, practice, the wounded, the captain's log */
+.toast.talk { display: flex; align-items: flex-start; gap: 8px; border-left-color: var(--brass); background: linear-gradient(90deg, rgba(34, 26, 16, 0.94), rgba(10, 11, 13, 0.88)); padding: 6px 10px 6px 6px; text-align: left; }
+.toast.talk.bad { border-left-color: var(--bad); }
+.toast.talk.good { border-left-color: var(--good); }
+.toast.talk .talk-face { flex: none; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px rgba(201, 162, 90, 0.7), 0 1px 4px #000; background: #16110b; }
+.toast.talk .talk-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.toast.talk .talk-who { font: 700 11px/1.2 var(--sans); color: var(--gold); letter-spacing: 0.02em; }
+.toast.talk .talk-line { font: italic 13px/1.3 var(--serif); color: #eadfc6; overflow-wrap: anywhere; }
+#modal-toasts .toast.talk .talk-face { width: 26px; height: 26px; }
+.uf-mood { position: absolute; left: -10%; bottom: -8%; z-index: 3; width: 36%; height: 36%; min-width: 16px; min-height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font: 700 12px/1 var(--sans); pointer-events: auto; box-shadow: 0 1px 4px #000; }
+.uf-mood.shanty { color: #ffe39a; background: radial-gradient(circle at 40% 35%, #3a2c14, #120d06 70%); border: 1.5px solid #e8b44a; animation: uf-sing 1.1s ease-in-out infinite alternate; }
+.uf-mood.grumble { color: #ffb4a8; background: radial-gradient(circle at 40% 35%, #3a1612, #120706 70%); border: 1.5px solid var(--bad); border-bottom-left-radius: 2px; }
+@keyframes uf-sing { from { transform: translateY(0) rotate(-6deg); } to { transform: translateY(-2px) rotate(6deg); } }
+.pr-card .pr-row { display: grid; grid-template-columns: 18px minmax(64px, 0.9fr) minmax(40px, 1fr) auto; grid-template-areas: 'ico name bar lv' '. edge edge edge'; column-gap: 8px; align-items: center; padding: 4px 0; border-top: 1px solid rgba(140, 107, 58, 0.16); }
+.pr-card .pr-row:first-of-type { border-top: 0; }
+.pr-card .pr-row > .ico-sm { grid-area: ico; }
+.pr-card .pr-name { grid-area: name; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-card .pr-bar { grid-area: bar; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.pr-card .pr-bar i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a32, #e8c46a); }
+.pr-card .pr-lv { grid-area: lv; font-size: 12px; color: var(--gold); white-space: nowrap; }
+.pr-card .pr-edge { grid-area: edge; font-size: 12px; color: var(--good); }
+.pr-card .pr-edge:empty { display: none; }
+.pr-card .pr-hint { font-size: 12px; margin: 6px 0 0; }
+.wd-card p { margin: 4px 0; }
+.wd-card .wd-n { font-size: 15px; }
+.captain-log { padding: 12px 18px 18px; overflow-y: auto; }
+.captain-log .lg-day { margin-bottom: 14px; padding: 10px 14px; border: 1px solid rgba(201, 162, 90, 0.28); border-radius: 6px; background: linear-gradient(180deg, rgba(40, 30, 18, 0.5), rgba(16, 12, 8, 0.7)); }
+.captain-log .lg-h { margin: 0 0 6px; font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--bone); }
+.captain-log .lg-list { list-style: none; margin: 0; padding: 0; }
+.captain-log .lg-list li { display: grid; grid-template-columns: 18px 44px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 4px 0; border-top: 1px dashed rgba(140, 107, 58, 0.2); font-family: var(--serif); font-size: 15px; line-height: 1.35; color: #eadfc6; }
+.captain-log .lg-list li:first-child { border-top: 0; }
+.captain-log .lg-list li .ico-sm { align-self: center; }
+.captain-log .lg-list time { font: 600 12px/1.2 var(--sans); color: var(--fog); font-variant-numeric: tabular-nums; }
+.captain-log .lg-list li span { overflow-wrap: anywhere; }
+.captain-log .lg-tally { margin-top: 6px; font-size: 12px; color: var(--brass); letter-spacing: 0.02em; }
+.sp-wounded .lbl { display: inline-flex; align-items: center; gap: 3px; }

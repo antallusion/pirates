@@ -49,6 +49,7 @@ interface LifeState {
   fightDead: number;
   fightWounded: number;
   woundBase: number;
+  woundAt: number;
   healedToast: number;
   healedAt: number;
   restored: boolean;
@@ -69,7 +70,7 @@ function life(s: PlayerSession): LifeState {
   if (!st) {
     st = {
       lastAt: -Infinity, evAt: {}, lastLine: new Map(), weather: '', region: '', hungry: false, hungerAt: 0, low: false, bosses: new Set(), merchants: new Set(),
-      lastHull: -1, grumbleAt: 0, shantyAt: 0, highSince: -1, fighting: false, fightDead: 0, fightWounded: 0, woundBase: 0, healedToast: 0, healedAt: 0, restored: false,
+      lastHull: -1, grumbleAt: 0, shantyAt: 0, highSince: -1, fighting: false, fightDead: 0, fightWounded: 0, woundBase: 0, woundAt: -Infinity, healedToast: 0, healedAt: 0, restored: false,
     };
     lives.set(s, st);
   }
@@ -168,9 +169,9 @@ export function playerWounded(target: ShipEntity, killed: number): number {
   return n;
 }
 
-/** The surgeons aboard. */
+/** The surgeons aboard: the trade's men, and the captain's own Ship's Surgeon (a surgeon a rank). */
 export function surgeonsOf(s: PlayerSession): number {
-  return s.profile?.company.pools.surgeon ?? 0;
+  return (s.profile?.company.pools.surgeon ?? 0) + (s.ship?.rank('srv_ships_surgeon') ?? 0);
 }
 
 function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
@@ -181,6 +182,7 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
     st.restored = true;
     if (c.wounded > ship.wounded) ship.wounded = c.wounded;
   }
+  if (ship.wounded <= 0 || st.woundAt === -Infinity) st.woundAt = now - 1;
   if (ship.wounded <= 0) {
     c.wounded = 0;
     return;
@@ -196,7 +198,10 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
     if (back > 0) game.toastShip(ship, `The harbour's surgeons send ${back} wounded back to duty.`, 'good');
     return;
   }
-  if (now - ship.lastCombat < HEAL_AFTER) {
+  // The surgeon's time since the last round (the second's step, or longer if the world clock jumped), after the fight.
+  const dt = Math.max(0, Math.min(600, now - st.woundAt, now - ship.lastCombat - HEAL_AFTER));
+  st.woundAt = now;
+  if (dt <= 0) {
     c.wounded = ship.wounded;
     return;
   }
@@ -204,7 +209,7 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
   const med = (ship.cargo.medicine ?? 0) >= 1;
   const r = woundRates(ship.wounded, surgeons, med, practiceLevel(c.practice.surgeon ?? 0));
   const acc = c.woundAcc;
-  acc.heal += r.healPerMin / 60;
+  acc.heal += (r.healPerMin * dt) / 60;
   let healed = Math.min(Math.floor(acc.heal), ship.wounded, room);
   acc.heal -= Math.floor(acc.heal);
   if (healed > 0) {
@@ -222,7 +227,7 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
     }
     st.healedToast += healed;
   } else healed = 0;
-  acc.die += r.diePerMin / 60;
+  acc.die += (r.diePerMin * dt) / 60;
   const died = Math.min(Math.floor(acc.die), ship.wounded);
   acc.die -= Math.floor(acc.die);
   if (died > 0) {

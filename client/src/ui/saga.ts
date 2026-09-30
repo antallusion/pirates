@@ -69,6 +69,17 @@ export function tellSaga(e: SagaEntry, captain: string): string {
   return TELL[e.kind][ru()].replace('{d}', dayPhrase(e)).replace('{c}', personName(captain)).replace('{n}', String(e.n ?? '')).replace(/\{(\d)\}/g, (_, i: string) => name(e.a[Number(i)] ?? ''));
 }
 
+/** A chapter as a line of the captain's log (docs/16 #20): the same telling without the day, which the log heads. */
+export function tellSagaShort(kind: SagaKind, a: string[], n: number | undefined, captain: string): string {
+  const t = TELL[kind]?.[ru()];
+  if (!t) return '';
+  const s = t.replace(/^\{d\},?\s*/, '').replace('{c}', personName(captain)).replace('{n}', String(n ?? '')).replace(/\{(\d)\}/g, (_, i: string) => name(a[Number(i)] ?? ''));
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** A name as the server said it, in the reader's tongue (a place, a person, a ship). */
+export const sagaName = name;
+
 function flagImg(flag: number | null, w: number, h: number): string {
   if (flag === null) return '';
   const c = document.createElement('canvas');
