@@ -8,6 +8,7 @@ import type { OmenId } from './data/omens.ts';
 import type { CareerId, SetId, WeeklyKind } from './data/renown.ts';
 import type { GuildProject, LfgGoal, SignalKind, WorldGoalKind } from './data/social.ts';
 import type { WonderKind } from './data/wonders.ts';
+import type { AutosailStop } from './data/autosail.ts';
 import type { HarnessId, PetId } from './data/companions.ts';
 import type { NemesisCause } from './data/nemesis.ts';
 import type { CaravanTask, OnAttack } from './data/caravans.ts';
@@ -279,6 +280,8 @@ export type ClientMsg =
   | { t: 'barter'; action: 'ready'; rev?: number }
   /** docs/16 #35: a signal flag to the group, at her own ship. */
   | { t: 'signal'; kind: SignalKind }
+  /** docs/16 #36: the helmsman takes her to a mark on the chart (with the sail she will carry), or gives the wheel back. */
+  | { t: 'autosail'; x?: number; y?: number; sail?: number; stop?: boolean }
   /** docs/16 #32: the sea's goals of the week. */
   | { t: 'wgoals' }
   /** docs/16 #34: the guild's shipyard on the leader's island. */
@@ -1457,6 +1460,8 @@ export type ServerMsg =
       /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: LfgEntry[]; lfgMine?: string | null; lfgGoal?: LfgMine | null }
   /** docs/16 #35: a groupmate's signal flag. */
   | { t: 'signal'; from: string; kind: SignalKind; x: number; y: number }
+  /** docs/16 #36: the helmsman has the wheel for a mark, or has given it back and why. */
+  | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop }
   /** docs/16 #32: the sea's goals of the week. */
   | { t: 'wgoals'; list: WorldGoalView[] }
   | { t: 'barter'; view: BarterView | null }

@@ -50,7 +50,7 @@ class MinHeap {
   }
 }
 
-function nearestFree(world: World, gx: number, gy: number): [number, number] | null {
+export function nearestFree(world: World, gx: number, gy: number): [number, number] | null {
   if (!navBlocked(world, gx, gy)) return [gx, gy];
   for (let r = 1; r < 12; r++) {
     for (let dy = -r; dy <= r; dy++) {
@@ -63,7 +63,7 @@ function nearestFree(world: World, gx: number, gy: number): [number, number] | n
   return null;
 }
 
-function lineFree(world: World, x0: number, y0: number, x1: number, y1: number): boolean {
+export function lineFree(world: World, x0: number, y0: number, x1: number, y1: number): boolean {
   const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (NAV_CELL * 0.5));
   for (let i = 1; i < steps; i++) {
     const t = i / steps;

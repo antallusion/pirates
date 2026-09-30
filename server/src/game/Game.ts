@@ -141,6 +141,7 @@ import type { LegendaryId } from '../../../shared/src/data/legendary.ts';
 import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown, stepRenown } from './renown.ts';
 import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
 import { sendSignal } from './signals.ts';
+import { autosailInput, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
 import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
@@ -511,6 +512,7 @@ export class Game {
       }
       updateNpc(this, ship, brain, dt, this.nearestPlayer.get(id) ?? Infinity);
     }
+    stepAutosail(this); // the helmsmen at their captains' wheels (docs/16 #36)
     prof.lap('npcAi');
 
     // Movement for every physically simulated ship.
@@ -2576,6 +2578,10 @@ export class Game {
       case 'input': {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;
         if (s.profile?.company.mutiny) return; // the mutineers hold the wheel
+        if (autosailInput(this, s, msg.rudder, msg.sail)) {
+          if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
+          return; // the helmsman has the wheel (docs/16 #36)
+        }
         ship.input = { rudder: clamp(msg.rudder, -1, 1), sailTarget: SAIL_STEPS[clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1)] };
         if (ship.hasFlag('unsinkable') && ship.captain !== 'drowned') ship.input.sailTarget = Math.min(ship.input.sailTarget, 0.9);
         if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
@@ -3102,6 +3108,10 @@ export class Game {
         return;
       case 'signal':
         return err(sendSignal(this, s, msg.kind));
+      case 'autosail':
+        // The helmsman takes her to her mark, or gives the wheel back (docs/16 #36).
+        if (msg.stop) return stopAutosail(this, s, 'manual');
+        return err(startAutosail(this, s, Number(msg.x), Number(msg.y), msg.sail === undefined ? undefined : Number(msg.sail)));
       case 'wgoals':
         return sendWorldGoals(this, s);
       case 'gyard': {
