@@ -301,6 +301,11 @@ export class Fx {
         break;
       case 'fx':
         switch (e.fx) {
+          case 'struck':
+            // She strikes her colours (docs/16 #3): a white ring and the word over her.
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 0.9, size: 10, grow: 60, color: '#f4f0e6' });
+            this.add({ kind: 'text', x: e.x, y: e.y - 30, vy: -5, life: 2.6, size: 15, color: '#f4f0e6', text: L('strikes') });
+            break;
           case 'explosion':
             this.explosion(e.x, e.y, e.r ?? 40);
             break;

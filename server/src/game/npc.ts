@@ -25,6 +25,7 @@ import { canBoard, startBoarding } from './boarding.ts';
 import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
 import { applyDamage, dash, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
+import { SURRENDER_WAIT, strikeColours, struck, surrenderClosed } from './struck.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
@@ -54,6 +55,8 @@ export interface NpcBrain {
   tackSide: number;
   tackUntil: number;
   surrenderedAt: number;
+  /** She has struck her colours once in this life (docs/16 #3): having thought better of it, she fights on. */
+  struck?: boolean;
   expiresAt: number;
   huntAccount: number | null;
   chase: { id: number; until: number } | null; // spotted from the crow's nest: pursue beyond detection range
@@ -293,10 +296,11 @@ export function updateNpc(game: Game, ship: ShipEntity, brain: NpcBrain, dt: num
   if (ship.surrendered) {
     ship.input = { rudder: 0, sailTarget: 0 };
     if (!brain.surrenderedAt) brain.surrenderedAt = now;
-    if (now - brain.surrenderedAt > 75 && !ship.lootLockedFor) {
+    if (now - brain.surrenderedAt > SURRENDER_WAIT && !ship.lootLockedFor) {
       ship.surrendered = false;
       brain.surrenderedAt = 0;
       brain.fleeFrom = null;
+      surrenderClosed(game, ship); // she thinks better of it: the card goes
     }
     return;
   }
@@ -464,9 +468,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     if (danger && dist(ship.state.x, ship.state.y, danger.state.x, danger.state.y) < 1400) {
       const beaten = ship.hull < ship.stats.hullMax * 0.35 || ship.crew < ship.stats.crewMax * 0.3 || ship.sails < ship.stats.sailHpMax * 0.25;
       if (beaten && ship.inCombat(now)) {
-        ship.surrendered = true;
-        brain.surrenderedAt = now;
-        game.toastNear(ship, `${ship.name} strikes her colours!`);
+        struck(game, ship, brain, danger); // the card to the captain on her (docs/16 #3)
         return;
       }
       const away = headingOf(ship.state.x - danger.state.x, ship.state.y - danger.state.y);
@@ -479,7 +481,8 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     return;
   }
 
-  // Fighters.
+  // Fighters. Battered past bearing and outgunned by a captain on her, she strikes her colours (docs/16 #3).
+  if (strikeColours(game, ship, brain, (prey ?? threat) as ShipEntity | null)) return;
   const lowHull = ship.hull < ship.stats.hullMax * (ship.fleeAt ?? 0.22); // a named coward runs sooner, a brute never
   if (role === 'pirate' && lowHull && prey) {
     const away = headingOf(ship.state.x - (prey as ShipEntity).state.x, ship.state.y - (prey as ShipEntity).state.y);

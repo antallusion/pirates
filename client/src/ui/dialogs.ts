@@ -20,6 +20,10 @@ import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
 import { dec1, dec2, esc, fmt, icon, money, xpBadge } from './dom.ts';
+import { trophyCard } from './surrender.ts';
+import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
+
+const LC = dict(CEN, CRU);
 
 const L = dict(EN, RU);
 
@@ -52,7 +56,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
   }
   const draw = () => {
     const used = base + cargoVolume(take, mul);
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: placeName(r.targetName) }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div>${r.report ? `<div class="sub board-report">${esc([L('board.report', { rounds: r.report.rounds, won: r.report.won, lost: r.report.lost }), r.report.duel === 'won' ? L('board.duelWon') : '', r.report.moves ? L('board.moves', { n: r.report.moves }) : ''].filter(Boolean).join(' · '))}</div>` : ''}</div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: placeName(r.targetName) }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div>${r.struck ? `<div class="sub board-report">${esc(LC('board.struck'))}</div>` : ''}${r.report ? `<div class="sub board-report">${esc([L('board.report', { rounds: r.report.rounds, won: r.report.won, lost: r.report.lost }), r.report.duel === 'won' ? L('board.duelWon') : '', r.report.moves ? L('board.moves', { n: r.report.moves }) : ''].filter(Boolean).join(' · '))}</div>` : ''}</div></div>
       <div class="modal-body"><div class="cols"><div>
         <h3 class="title-sm" style="font-size:20px">${esc(L('board.cargo'))}</h3>
         ${goods.length ? goods.map((g) => `<div class="loot-grid">${icon(`good_${g}`, '', 'item-ico')}<div class="item-text"><b>${esc(GOODS[g].name)}</b><span class="muted">${esc(L('board.aboard', { n: r.cargo[g] ?? 0 }))}${state.self?.appraisal?.[g] ? ` · ${money(state.self.appraisal[g]!.price)}` : ''}</span></div><b class="loot-take">${take[g] ?? 0}</b>
@@ -70,6 +74,7 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
           <button class="btn choice" data-fate="release">${icon('anchor', '', 'choice-ico')}<span>${esc(L('board.release'))}</span></button>
           ${r.npc ? `<button class="btn btn-primary choice" data-fate="ransom">${icon('coin', '', 'choice-ico')}<span>${esc(L('board.ransom', { sum: fmt(r.ransom) }))}</span></button>` : ''}
           ${r.prize ? `<button class="btn btn-primary choice" data-fate="prize" title="${esc(L('board.prizeTip'))}">${icon('menu_ship', '', 'choice-ico')}<span>${esc(L('board.prize', { crew: r.prize.crew, value: fmt(r.prize.value) }))}</span></button>` : ''}
+          ${r.prize && r.trophy ? `<button class="btn choice" data-fate="trophy" title="${esc(LC('board.trophyTip'))}">${icon('build_trophy_hall', '', 'choice-ico')}<span>${esc(LC('board.trophy', { crew: r.prize.crew }))}</span></button>` : ''}
           </div>`}
         </div></div></div></div>`;
     root.querySelectorAll<HTMLInputElement>('input[type=range][data-g]').forEach((el) => (el.oninput = () => {
@@ -158,7 +163,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
         <div class="forge-grid"><button class="btn btn-small" data-craft="round">${icon('ammo_round', '', 'ico-sm')}${esc(L('ship.forgeRound'))}</button><button class="btn btn-small" data-craft="chain">${icon('ammo_chain', '', 'ico-sm')}${esc(L('ship.forgeChain'))}</button><button class="btn btn-small" data-craft="grape">${icon('ammo_grape', '', 'ico-sm')}${esc(L('ship.forgeGrape'))}</button><button class="btn btn-small" data-craft="planks">${icon('good_planks', '', 'ico-sm')}${esc(L('ship.forgePlanks'))}</button></div></div>` : ''}
     </div><div>
       <h3 class="title-sm" style="font-size:20px">${esc(L('ship.contracts'))}</h3>${self.contracts.map((c) => `<div class="card quest-card small">${icon(c.kind === 'bounty' ? 'wanted' : c.kind === 'delivery' && c.good ? `good_${c.good}` : 'map_contract', '', 'quest-ico')}<div class="quest-body"><b>${esc(serverText(c.title))}</b><div class="reward">${money(c.reward)}${xpBadge(c.xp)}</div></div></div>`).join('') || `<p class="muted">${esc(L('ship.noContracts'))}</p>`}
-      ${companionCard(state)}${petsCard(state)}${chestCard(state)}${bottleCard(!self.dockedAt)}
+      ${self.loadout.trophy ? trophyCard(self.loadout.trophy) : ''}${companionCard(state)}${petsCard(state)}${chestCard(state)}${bottleCard(!self.dockedAt)}
     </div></div></div>`;
   root.querySelector<HTMLElement>('[data-open-gear]')?.addEventListener('click', () => openGear?.());
   root.querySelector<HTMLElement>('[data-open-look]')?.addEventListener('click', () => openLook?.());

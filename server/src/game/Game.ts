@@ -55,7 +55,7 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
 import { angleDiff, clamp, closestOnPolygon, dist, headingOf, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
 import type {
-  BoardingResult, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow, Side,
+  BoardingResult, SurrenderFate, ClientMsg, EntityInfo, GameEvent, IslandData, LootRow, PortPublic, SelfRow, ServerMsg, ShipRow, Side,
   PrivateState,
 } from '../../../shared/src/protocol.ts';
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
@@ -108,7 +108,7 @@ import type { ZoneRuntime } from '../zones/zone.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
 import { stepBridges } from './bridgefx.ts';
-import { buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
+import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { abandonQuest, acceptQuest, answerOffer, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
@@ -122,7 +122,9 @@ import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { featureName, findLandable, startLanding, stepLanding } from './exploration.ts';
 import { playMinigame, stepMinigames } from './minigames.ts';
 import type { DelayedStrike } from './abilities.ts';
-import { canBoard, cutGrapples, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
+import { canBoard, claimPrize, cutGrapples, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
+import { surrenderBlocked, surrenderClosed } from './struck.ts';
+import { endStreak, onStreakKill, streakAhead } from './streak.ts';
 import { legendsView } from './legends.ts';
 import { EmpireHub, GOVERNOR_PENNANT, empireAction, empireView, governsAny, stepEmpires } from './empires.ts';
 import { deliver, ensureLegendary, legendaryCalendar, legendarySecond, legendarySunk, legendWreckHere, raiseLegend } from './legendary.ts';
@@ -1614,6 +1616,7 @@ export class Game {
 
   beginSinking(ship: ShipEntity): void {
     if (ship.sinkingUntil) return;
+    if (ship.surrendered) surrenderClosed(this, ship); // a struck ship going down: no terms left to take
     // Admin god mode (play-testing only): whatever the cause, she stays afloat.
     if (ship.god) {
       mend(ship);
@@ -1654,7 +1657,7 @@ export class Game {
     this.emit({ k: 'sunk', ship: ship.id, x: Math.round(ship.state.x), y: Math.round(ship.state.y), name: ship.name }, ship.state.x, ship.state.y);
     if (ship.yardOf) onYardCaptainSunk(this, ship);
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
-    if (!onboardingProtected(this.sessionOf(ship))) this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship), victor); // the First Watch loses nothing
+    if (!onboardingProtected(this.sessionOf(ship))) this.dropWreckage(ship, 0.4 * lootMul(this, killer, ship) * streakAhead(this, killer, ship), victor); // the First Watch loses nothing
     onShipSunk(this, ship, killer);
     if (ship.dutchman) dutchmanSunk(this, ship, killer); // the Flying Dutchman laid to rest (docs/12 P10 #10)
     if (ship.isPlayer && killer && (killer.named || killer.namedMate)) nemesisSankYou(this, ship, killer); // he will remember her (docs/12 P10 #1)
@@ -1719,6 +1722,8 @@ export class Game {
     const tier = victim.cls.monster ? 1 : victim.cls.tier; // a rotten hulk is no ship of the line
     // The colour of the prize (canon D12): nothing for a grey one, more for one above you.
     const gap = victim.onLadder && killer.onLadder ? victim.combatLevel - killer.combatLevel : 0;
+    // A streak of ships without making port swells it (docs/16 #4).
+    const streak = onStreakKill(this, s, killer, victim);
     const xp = (how === 'sunk' ? 45 : 70) * tier * (1 + victim.level / 12) * xpForGap(gap);
     if (how === 'sunk') p.stats.sunk++;
     else p.stats.boarded++;
@@ -1769,7 +1774,7 @@ export class Game {
       for (const ms of mates) questEvent(this, ms, { k: 'fleet_win' });
     }
     checkStatDeeds(this, s);
-    this.grantXp(s, xp, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`, true);
+    this.grantXp(s, xp * streak, `${how === 'sunk' ? 'Sank' : 'Took'} ${victim.name}`, true);
     for (const ms of mates) this.grantXp(ms, xp * 0.4, `${s.name} ${how === 'sunk' ? 'sank' : 'took'} ${victim.name}`, true);
     // Law and reputation (monsters and hulks answer to nobody).
     if (victim.faction !== 'player' && !victim.cls.monster) {
@@ -1814,6 +1819,7 @@ export class Game {
 
   private playerDeath(s: PlayerSession, ship: ShipEntity): void {
     const p = s.profile!;
+    endStreak(this, s, 'sunk'); // and so does going down
     // The First Watch: a Crown patrol tows her home; nothing is lost.
     if (onboardingRescue(this, s)) {
       const home = this.portById(p.lastPort) ?? this.portById(START_PORT)!;
@@ -1908,13 +1914,47 @@ export class Game {
     this.dockShip(s, port);
   }
 
+  /** A struck ship's surrender being taken (docs/16 #3): her terms go through the boarding's result, the card of the
+   *  hold shown only when the captain asked to open it. */
+  private surrenderTaking: SurrenderFate | null = null;
+
+  /** The captain takes a struck ship's surrender on her terms (docs/16 #3): her ransom and let her go, her hold opened
+   *  (the plunder's card), a prize crew aboard for the court — or to keep her as a trophy (docs/16 #5). */
+  acceptSurrender(s: PlayerSession, id: number, fate: SurrenderFate): string | null {
+    const target = this.ships.get(id);
+    const why = surrenderBlocked(this, s, target);
+    if (why) return why;
+    const t = target!;
+    if ((fate === 'prize' || fate === 'trophy') && prizeCrewNeeded(s.ship!, t) === null) return 'She cannot be taken as a prize';
+    surrenderClosed(this, t);
+    this.surrenderTaking = fate;
+    try {
+      claimPrize(this, s.ship!, t, 0, 0, 0, 'careful');
+    } finally {
+      this.surrenderTaking = null;
+    }
+    if (fate === 'cargo' || !s.pendingBoarding) return null;
+    const err = this.resolveLoot(s, {}, fate === 'ransom' ? 'ransom' : fate);
+    this.pushSelf(s, true);
+    return err;
+  }
+
   onBoardingWon(a: ShipEntity, b: ShipEntity, result: BoardingResult): void {
     if (b.bossOf && bossBoarded(this, a, b)) return;
     if (b.caravanOf !== null) caravanLost(this, b);
+    surrenderClosed(this, b); // carried by boarding: no terms to offer
     const sa = this.sessionOf(a);
     if (sa) {
       const crew = prizeCrewNeeded(a, b);
       result.prize = crew !== null ? { crew, value: prizeValue(b, a) } : null;
+      if (this.surrenderTaking) result.struck = true;
+      // A streak of ships without making port swells the purse and the ransom (docs/16 #4).
+      const smul = streakAhead(this, a, b);
+      if (smul > 1) {
+        result.gold = Math.round(result.gold * smul);
+        result.ransom = Math.round(result.ransom * smul);
+      }
+      result.trophy = crew !== null && !!sa.profile && sa.profile.berths.length < MAX_BERTHS;
       // Her captain in irons: always with the Ransom talent, else one time in two (docs/12 P10 #16: he may be turned).
       result.captive = !a.hasFlag('no_quarter') && !b.isPlayer && b.npcRole !== 'ghost' && !b.cls.monster && (a.hasFlag('ransom') || this.rng.chance(0.5));
       if (result.captive) seizeCaptain(b);
@@ -1927,7 +1967,8 @@ export class Game {
       sa.pendingBoarding = { result, targetId: b.id };
       const loser = this.sessionOf(b);
       if (loser?.profile) stealMaps(this, sa, loser); // the captain's chest goes with the ship
-      this.sendTo(sa, { t: 'boarding', result });
+      // A surrender on terms settled at once shows no card of the hold (docs/16 #3).
+      if (this.surrenderTaking === null || this.surrenderTaking === 'cargo') this.sendTo(sa, { t: 'boarding', result });
       this.creditKill(a, b, 'boarded');
       const sb = this.sessionOf(b);
       if (sb) this.sendTo(sb, { t: 'toast', msg: `${a.captainName} has taken your ship! Pray for mercy.`, kind: 'bad' });
@@ -1961,7 +2002,7 @@ export class Game {
     }
   }
 
-  private resolveLoot(s: PlayerSession, take: Cargo, fateAsked: 'sink' | 'release' | 'ransom' | 'prize', recruit = 0): string | null {
+  private resolveLoot(s: PlayerSession, take: Cargo, fateAsked: 'sink' | 'release' | 'ransom' | 'prize' | 'trophy', recruit = 0): string | null {
     // No Quarter: whatever is chosen, she goes down.
     const fate = s.ship?.hasFlag('no_quarter') ? 'sink' : fateAsked;
     const pend = s.pendingBoarding;
@@ -2000,7 +2041,7 @@ export class Game {
       ship.transferUntil = this.now + (3 + moved * 0.06) * speed;
       this.toastShip(ship, `Swaying ${moved} units across (${Math.ceil(ship.transferUntil - this.now)} s alongside).`, 'info');
     }
-    if (fate === 'sink' || fate === 'prize') takeCaptive(this, s, target);
+    if (fate === 'sink' || fate === 'prize' || fate === 'trophy') takeCaptive(this, s, target);
     // Prisoners who sign on.
     if (recruit > 0 && !target.isPlayer) {
       const n = recruitPrisoners(this, s, target, recruit);
@@ -2035,16 +2076,16 @@ export class Game {
     if (!target.isPlayer) target.purse = 0;
     target.lootLockedFor = null;
     const f = target.faction !== 'player' ? target.faction : null;
-    raidFate(this, s, target, fate);
-    if (fate === 'prize') {
-      const err2 = takePrize(this, s, target);
+    raidFate(this, s, target, fate === 'trophy' ? 'prize' : fate);
+    if (fate === 'prize' || fate === 'trophy') {
+      const err2 = takePrize(this, s, target, fate === 'trophy' ? (pend.result.struck ? 'struck' : 'boarded') : undefined);
       if (!err2) {
         if (f) changeRep(s.profile, f, -6);
         return null;
       }
       this.toastShip(ship, `${err2} — she is scuttled instead.`, 'bad');
     }
-    if (fate === 'sink' || fate === 'prize') {
+    if (fate === 'sink' || fate === 'prize' || fate === 'trophy') {
       this.dropWreckage(target, 0.3);
       target.cargo = {};
       target.attackers.set(ship.id, this.now);
@@ -2565,8 +2606,12 @@ export class Game {
         // Ransomed, handed over — or turned into an officer or a caravan skipper (docs/12 P10 #16).
         if (msg.mode === 'officer' || msg.mode === 'skipper') return portAction(() => turnCaptive(this, s, Math.trunc(Number(msg.index)), msg.mode as 'officer'));
         return portAction((pt) => captiveAction(this, s, pt, Math.trunc(Number(msg.index)), msg.mode === 'hand_over' ? 'hand_over' : 'ransom'));
+      case 'surrender':
+        err(this.acceptSurrender(s, Math.trunc(Number(msg.id)), msg.fate === 'ransom' || msg.fate === 'prize' || msg.fate === 'trophy' ? msg.fate : 'cargo'));
+        this.pushSelf(s, true);
+        return;
       case 'loot_take':
-        err(this.resolveLoot(s, msg.take ?? {}, msg.fate === 'prize' || msg.fate === 'ransom' || msg.fate === 'release' ? msg.fate : 'sink', Math.max(0, Math.trunc(Number(msg.recruit) || 0))));
+        err(this.resolveLoot(s, msg.take ?? {}, msg.fate === 'prize' || msg.fate === 'trophy' || msg.fate === 'ransom' || msg.fate === 'release' ? msg.fate : 'sink', Math.max(0, Math.trunc(Number(msg.recruit) || 0))));
         this.sendTo(s, { t: 'boarding', result: null });
         this.pushSelf(s, true);
         return;
@@ -3500,6 +3545,7 @@ export class Game {
     const ship = s.ship!;
     const p = s.profile!;
     onDockDeeds(this, s);
+    endStreak(this, s, 'port'); // making port ends a streak (docs/16 #4)
     syncKeel(this, s);
     ship.voyageStart = 0;
     p.explore.hoardAboard = false;

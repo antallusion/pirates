@@ -9,6 +9,8 @@ import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { dist } from '../../../shared/src/math.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
+import type { TrophyHistory } from '../../../shared/src/sim/shipstats.ts';
+import { MAX_BERTHS } from './shipbuilding.ts';
 import { boardingRangeBetween, canBoard, claimPrize, startBoatBoarding } from './boarding.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
@@ -43,13 +45,24 @@ export function prizesOf(game: Game, owner: ShipEntity): ShipEntity[] {
   return out;
 }
 
-/** Put a prize crew aboard; she follows you and sells in the next port with a prize court. */
-export function takePrize(game: Game, s: PlayerSession, target: ShipEntity): string | null {
+/** Who she was, and where, when and by whom she was taken: the story a trophy ship keeps (docs/16 #5). */
+export function trophyHistory(game: Game, s: PlayerSession, target: ShipEntity, how: TrophyHistory['how']): TrophyHistory {
+  return {
+    was: target.name, cls: target.loadout.classId, faction: target.faction, ...(target.npcRole ? { role: target.npcRole } : {}), ...(target.captainName ? { captain: target.captainName } : {}),
+    by: s.name, region: target.region, place: game.nearestIslandName(target.state.x, target.state.y), at: Date.now(), how,
+  };
+}
+
+/** Put a prize crew aboard; she follows you and sells in the next port with a prize court — or, kept as a trophy
+ *  (`keep`, docs/16 #5), she keeps her name and her story and goes to a berth there. */
+export function takePrize(game: Game, s: PlayerSession, target: ShipEntity, keep?: TrophyHistory['how']): string | null {
   const ship = s.ship!;
   const need = prizeCrewNeeded(ship, target);
   if (need === null) return 'She cannot be taken as a prize';
   if (prizesOf(game, ship).length >= MAX_PRIZES) return `You can shepherd at most ${MAX_PRIZES} prizes`;
   if (ship.crew - need < Math.max(4, ship.stats.crewMin * 0.5)) return `A prize crew of ${need} would leave you short-handed`;
+  if (keep && s.profile!.berths.length + prizesOf(game, ship).filter((p) => p.trophy).length >= MAX_BERTHS) return `No berth free for a trophy (${MAX_BERTHS} at most)`;
+  if (keep) target.trophy = trophyHistory(game, s, target, keep);
   ship.crew -= need;
   target.crew = need;
   target.prize = true;
@@ -58,7 +71,7 @@ export function takePrize(game: Game, s: PlayerSession, target: ShipEntity): str
   target.surrendered = false;
   target.lootLockedFor = null;
   target.morale = 60;
-  target.name = `Prize ${target.name}`;
+  if (!keep) target.name = `Prize ${target.name}`; // a trophy keeps her own
   // Prize Crew: patched up on the spot (Prize Refit: fully).
   target.hull = ship.hasFlag('prize_refit') ? target.stats.hullMax : Math.min(target.stats.hullMax, target.hull + target.stats.hullMax * (tx(ship.stats, 'prizeCrew') / 2));
   const brain = game.npcs.get(target.id);
@@ -70,7 +83,8 @@ export function takePrize(game: Game, s: PlayerSession, target: ShipEntity): str
     brain.path = null;
   }
   target.attackers.clear();
-  game.toastShip(ship, `${need} hands take ${target.name} as your prize. Bring her to any port with a yard.`, 'good');
+  if (keep) game.toastShip(ship, `${need} hands take the ${target.name} as your trophy. She will lie in a berth at the next port with a yard.`, 'good');
+  else game.toastShip(ship, `${need} hands take ${target.name} as your prize. Bring her to any port with a yard.`, 'good');
   return null;
 }
 
@@ -80,6 +94,18 @@ export function sellPrizes(game: Game, s: PlayerSession, port: Port): void {
   if (port.shipyardTier < 1) return;
   for (const prize of prizesOf(game, ship)) {
     if (dist(prize.state.x, prize.state.y, port.x, port.y) > 3000) continue;
+    // A trophy (docs/16 #5): into a berth here, her name and her story with her — unless every berth is taken.
+    if (prize.trophy && s.profile!.berths.length < MAX_BERTHS) {
+      const { gear: _gear, ...rest } = prize.loadout;
+      void _gear;
+      s.profile!.berths.push({ port: port.id, loadout: { ...rest, name: prize.trophy.was, trophy: prize.trophy }, hull: Math.max(0.2, prize.hull / prize.stats.hullMax) });
+      ship.crew = Math.min(ship.stats.crewMax, ship.crew + prize.crew);
+      game.sendTo(s, { t: 'toast', msg: `The ${prize.trophy.was} is warped into a berth at ${port.name}: your trophy, her name and her story kept.`, kind: 'gold' });
+      game.removeShip(prize.id);
+      questEvent(game, s, { k: 'prize' });
+      continue;
+    }
+    if (prize.trophy) game.sendTo(s, { t: 'toast', msg: `No berth free for the ${prize.trophy.was}: the prize court buys her.`, kind: 'info' });
     const value = plunderShare(game, s, Math.round(prizeValue(prize, ship) * (ship.hasFlag('prize_refit') && (port.faction === 'free' || port.faction === 'confederacy') ? 1.2 : 1)));
     s.profile!.gold += value;
     ship.crew = Math.min(ship.stats.crewMax, ship.crew + prize.crew);

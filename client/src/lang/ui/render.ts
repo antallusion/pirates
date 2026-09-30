@@ -45,6 +45,7 @@ export const EN = {
   'tag.npc': '{cls} · {faction} {role}',
   'dist.m': '{n} m',
   drift: 'wind {n} m',
+  strikes: 'Colours struck!',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -92,4 +93,5 @@ export const RU: Record<keyof typeof EN, string> = {
   'tag.npc': '{cls} · {role} · {faction}',
   'dist.m': '{n} м',
   drift: 'снос {n} м',
+  strikes: 'Флаг спущен!',
 };

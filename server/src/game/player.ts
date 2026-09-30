@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import { streakView } from './streak.ts';
 import type { Look } from '../../../shared/src/data/looks.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import { STARTING_UNLOCKS, encodeLook } from '../../../shared/src/data/looks.ts';
@@ -91,6 +92,8 @@ export interface Profile {
   ignored?: { id: number; name: string }[];
   /** Rest ashore (docs/11 P6): the pool of doubled battle experience, and when and where the captain went ashore. */
   rested?: number;
+  /** Ships sunk or taken in a row since she last made port (docs/16 #4). */
+  streak?: number;
   ashoreAt?: number;
   ashoreInPort?: boolean;
   paths: CaptainId[]; // Paths this captain may take up at a Captain's House
@@ -458,7 +461,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     pathSwitchAt: p.pathSwitchAt,
     builds: p.builds.map((b) => ({ id: b.id, port: b.port, classId: b.classId, name: b.name, done: b.done, start: b.start, frame: b.build.frame, plank: b.build.plank, quality: b.build.quality })),
     plans: p.plans.map((x) => ({ id: x.id, classId: x.classId, quality: x.quality, variants: x.variants, uses: x.uses })),
-    berths: p.berths.map((b) => ({ port: b.port, name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100) })),
+    berths: p.berths.map((b) => ({ port: b.port, name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100), ...(b.loadout.trophy ? { trophy: b.loadout.trophy } : {}) })),
+    streak: streakView(p),
     figureheads: p.figureheads,
     fleet: world.fleet ?? { escorts: [], slots: 0, formation: p.fleet.formation, upkeep: 0 },
     inspect: world.inspect ?? [],

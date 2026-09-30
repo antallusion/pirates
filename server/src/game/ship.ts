@@ -16,7 +16,7 @@ import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import type { Aggression, ShipInfo, Side, Station } from '../../../shared/src/protocol.ts';
 import { SF, curseStage } from '../../../shared/src/protocol.ts';
 import type { SailInput, SailParams, SailState } from '../../../shared/src/sim/sailing.ts';
-import type { AmmoStock, Cargo, ShipLoadout, ShipStats } from '../../../shared/src/sim/shipstats.ts';
+import type { AmmoStock, Cargo, ShipLoadout, ShipStats, TrophyHistory } from '../../../shared/src/sim/shipstats.ts';
 import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../../shared/src/sim/shipstats.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Landing } from './exploration.ts';
@@ -227,6 +227,8 @@ export class ShipEntity {
   namedMate?: string;
   /** The Flying Dutchman himself (docs/12 P10 #10). */
   dutchman?: boolean;
+  /** A prize to be kept as a trophy (docs/16 #5): her story, and she goes to a berth instead of the prize court. */
+  trophy?: TrophyHistory;
   /** How a player last hurt this named pirate: the scar he carries off if he gets away (docs/12 P10 #1). */
   scar?: NemesisCause;
   fleeAt?: number;

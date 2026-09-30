@@ -1862,6 +1862,38 @@ body:has(#encounter:not(.hidden)) #hud-goals, body:has(#encounter:not(.hidden)) 
 #encounter .enc-out { color: #f2e6c8; }
 #encounter .enc-choices { display: flex; flex-wrap: wrap; gap: 6px; }
 #encounter .enc-choices .btn { flex: 1 1 auto; min-height: 36px; }
+/* A ship strikes her colours to you (docs/16 #3): the terms card, placed like an encounter's, over the sea. */
+#surrender { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 150px); transform: translateX(-50%); width: min(460px, calc(100vw - 24px)); z-index: 41; pointer-events: auto; }
+#surrender.hidden { display: none; }
+#surrender .enc-card { background: rgba(10, 12, 16, 0.95); border: 1px solid rgba(240, 234, 220, 0.6); border-radius: 6px; padding: 10px 12px 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+#surrender .enc-h { font-family: var(--serif); font-size: 18px; color: #f4efe2; display: flex; align-items: center; gap: 6px; line-height: 1.2; }
+#surrender .enc-text { margin: 6px 0 8px; font-size: 13px; line-height: 1.4; color: var(--bone, #ddd); }
+#surrender .sur-head { display: flex; align-items: center; gap: 10px; }
+#surrender .sur-ship { width: 58px; height: 58px; object-fit: contain; flex: none; filter: drop-shadow(0 2px 4px #000); transform: rotate(90deg); }
+#surrender .sur-sub { font-size: 12px; margin-top: 2px; }
+#surrender .sur-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#surrender .sur-choice { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 8px; text-align: left; justify-content: flex-start; }
+#surrender .sur-choice span { display: flex; flex-direction: column; min-width: 0; }
+#surrender .sur-choice b { font-size: 13px; line-height: 1.2; }
+#surrender .sur-choice small { font-size: 11px; line-height: 1.25; opacity: 0.8; font-weight: 400; }
+#surrender .sur-choice .choice-ico { width: 26px; height: 26px; flex: none; }
+#surrender .sur-choice:disabled { opacity: 0.45; }
+#surrender .sur-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; flex-wrap: wrap; }
+#surrender .sur-dist { flex: 1 1 auto; min-width: 0; }
+#surrender .sur-dist.good { color: #9fd49a; }
+#surrender .sur-dist.warn { color: #e8c46a; }
+#surrender .sur-foot .btn { margin-left: auto; }
+@media (max-width: 699px) { #surrender .sur-choices { grid-template-columns: 1fr 1fr; } #surrender .sur-choice small { display: none; } #surrender .sur-ship { width: 44px; height: 44px; } }
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) { #surrender { top: calc(var(--sa-t, 0px) + var(--mm) + 56px); } }
+@media (max-height: 520px) { #surrender { top: calc(var(--sa-t, 0px) + 8px); left: calc(var(--sa-l, 0px) + 360px); transform: none; width: min(460px, calc(100vw - 360px - 110px - var(--sa-l, 0px) - var(--sa-r, 0px))); min-width: 280px; } #surrender .sur-head .sur-ship { display: none; } #surrender .enc-text { margin: 2px 0 6px; } #surrender .sur-choice { min-height: 40px; } #surrender .sur-choice small { display: none; } }
+/* A trophy ship (docs/16 #5): her story on the ship card, a tag by her name in the berths. */
+.trophy-card p { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--bone, #ddd); }
+.trophy-tag { display: inline-flex; align-items: center; gap: 3px; margin-left: 4px; padding: 0 6px; border: 1px solid rgba(232, 196, 106, 0.5); border-radius: 9px; font-size: 11px; color: #e8c46a; vertical-align: middle; cursor: help; }
+.trophy-line { display: block; font-size: 12px; color: var(--fog); line-height: 1.35; margin-top: 2px; }
+/* The win streak (docs/16 #4): a small flame badge on the captain's portrait, opposite her level. */
+.uf-streak { position: absolute; left: -12%; top: -8%; z-index: 3; display: inline-flex; align-items: center; gap: 1px; padding: 1px 4px 1px 2px; border-radius: 9px; background: rgba(12, 9, 6, 0.9); border: 1px solid rgba(201, 162, 90, 0.6); font: 700 10px/1.2 var(--sans); color: var(--fog); white-space: nowrap; box-shadow: 0 1px 4px #000; pointer-events: auto; }
+.uf-streak .ico-sm { width: 12px; height: 12px; }
+.uf-streak.on { color: #ffd66e; border-color: #e8a040; box-shadow: 0 0 8px rgba(255, 160, 60, 0.55), 0 1px 4px #000; }
 @media (max-height: 520px) { #encounter { top: calc(var(--sa-t, 0px) + 8px); left: calc(var(--sa-l, 0px) + 360px); transform: none; width: min(430px, calc(100vw - 360px - 110px - var(--sa-l, 0px) - var(--sa-r, 0px))); min-width: 260px; } #encounter .enc-text, #encounter .enc-out { font-size: 13px; margin: 2px 0 6px; } }
 .jr-letters { margin-top: 10px; }
 .jr-letter { margin: 4px 0; font-family: var(--serif); font-style: italic; font-size: 14px; color: #e6dcc4; }

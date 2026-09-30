@@ -32,7 +32,7 @@ import type { GoodId } from './data/goods.ts';
 import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';
 import type { TalentRanks } from './data/talents.ts';
 import type { Flag, StatMods } from './data/stats.ts';
-import type { Cargo, AmmoStock, ShipLoadout } from './sim/shipstats.ts';
+import type { Cargo, AmmoStock, ShipLoadout, TrophyHistory } from './sim/shipstats.ts';
 import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
@@ -66,7 +66,10 @@ export type ClientMsg =
   | { t: 'ammo'; ammo: AmmoId }
   | { t: 'ability'; id: string; x?: number; y?: number }
   | { t: 'board'; target: number; aggression: Aggression }
-  | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize'; recruit?: number }
+  | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize' | 'trophy'; recruit?: number }
+  /** A struck ship's surrender taken on the captain's terms (docs/16 #3): released for her ransom, her hold opened, or
+   *  taken as a prize for the court — or as a trophy to keep (docs/16 #5). */
+  | { t: 'surrender'; id: number; fate: SurrenderFate }
   | { t: 'board_cut' }
   /** Boarding 2.0: this round's tactic; the captains' duel (challenge, answer, a strike at server time `at`). */
   | { t: 'board_tactic'; tactic: BoardTactic }
@@ -523,7 +526,9 @@ export interface PrivateState {
   /** Shipbuilding (docs/02 §3). */
   builds: { id: string; port: string; classId: ShipClassId; name: string; done: number; start: number; frame: WoodId; plank: WoodId; quality: PlanQuality }[];
   plans: { id: string; classId: ShipClassId | null; quality: PlanQuality; variants: VariantId[]; uses: number }[];
-  berths: { port: string; name: string; classId: ShipClassId; hull: number }[];
+  berths: { port: string; name: string; classId: ShipClassId; hull: number; trophy?: TrophyHistory }[];
+  /** Ships sunk or taken in a row since she last made port (docs/16 #4), and what it adds to plunder and experience. */
+  streak?: { n: number; mul: number };
   figureheads: FigureheadId[];
   /** Hired escorts (Command) and the formation signal. */
   fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean; own?: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
@@ -1007,9 +1012,34 @@ export type GameEvent =
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
-    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket' | 'firework'; x: number; y: number; r?: number; dir?: number }
+    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket' | 'firework' | 'struck'; x: number; y: number; r?: number; dir?: number }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
+
+export type SurrenderFate = 'ransom' | 'cargo' | 'prize' | 'trophy';
+
+/** A ship that struck her colours to a captain (docs/16 #3), as the choice card shows her. */
+export interface SurrenderOffer {
+  id: number;
+  name: string;
+  classId: ShipClassId;
+  faction: FactionId | 'player';
+  role: string | null;
+  captain: string;
+  /** Silver her people pay to have her back. */
+  ransom: number;
+  /** Units in her hold and the silver in her purse. */
+  cargo: number;
+  gold: number;
+  /** A prize crew's size and what a prize court pays; null when she cannot be taken. */
+  prize: { crew: number; value: number } | null;
+  /** A berth free for her as a trophy (docs/16 #5). */
+  trophy: boolean;
+  /** How close the captain must come to take the surrender (metres). */
+  range: number;
+  /** When she will think better of it (server time). */
+  until: number;
+}
 
 export interface BoardingResult {
   targetName: string;
@@ -1029,6 +1059,10 @@ export interface BoardingResult {
   /** Prisoners who would sign on (up to 30% of her surviving crew). */
   recruits: number;
   noQuarter: boolean; // No Quarter: she sinks within the minute whatever you choose
+  /** She struck her colours (docs/16 #3) rather than being carried by boarding. */
+  struck?: boolean;
+  /** A berth is free to keep her as a trophy (docs/16 #5). */
+  trophy?: boolean;
   /** How the deck fight went: rounds fought, won and lost, the captains' duel. */
   report?: { rounds: number; won: number; lost: number; duel: 'won' | 'lost' | null; moves: number };
 }
@@ -1140,6 +1174,8 @@ export type ServerMsg =
   | { t: 'self_patch'; patch: Partial<PrivateState> } // only the fields that changed
   | { t: 'port'; view: PortView | null }
   | { t: 'boarding'; result: BoardingResult | null }
+  /** A ship has struck her colours to you (docs/16 #3): the choice card, or null when the offer is gone. */
+  | { t: 'surrender_offer'; offer: SurrenderOffer | null }
   | { t: 'board_fight'; view: BoardFightView | null }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
