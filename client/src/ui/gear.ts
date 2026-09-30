@@ -20,8 +20,12 @@ import { esc, icon, money } from './dom.ts';
 import { ownLevelChip } from './levels.ts';
 import { placeName } from './maps.ts';
 import { bindStormForge, stormForgeCard } from './storms.ts';
+import { LOWER_BETTER, compareRows } from './gearcmp.ts';
+import type { CmpRow } from './gearcmp.ts';
+import { EN as EASE_EN, RU as EASE_RU } from '../lang/ui/ease.ts';
 
 const L = dict(EN, RU);
+const EL = dict(EASE_EN, EASE_RU);
 const ru = () => lang() === 'ru';
 
 type Tab = 'ship' | 'captain' | 'locker' | 'shop';
@@ -44,8 +48,6 @@ export function itemIcon(it: Item | null, slot: Slot, cls = 'ico-md'): string {
   return (it?.legendary ? icon(`item_${it.legendary}`, '', cls) : '') || (it ? icon(`item_${it.base}`, '', cls) : '') || icon(SLOT_ICON[slot], '◆', cls);
 }
 
-/** Stats where less is better (a green minus). */
-const LOWER_BETTER = new Set<StatKey>(['reloadMul', 'spreadMul', 'fireRisk', 'leakInflow', 'signature', 'moraleLoss', 'sanityLoss', 'spoilage', 'stormSailDamage', 'stormHull', 'dutyMul', 'buyMul', 'provisionUse', 'incomingDamageMul']);
 
 function statLabel(k: StatKey): string {
   const key = `stat.${k}` as keyof typeof EN;
@@ -106,25 +108,34 @@ export function itemCardHtml(it: Item): string {
   return card(it, []);
 }
 
-/** How a piece weighs against what is worn in its slot: every line's difference. */
+/** How a piece weighs against what is worn in its slot (docs/16 #38): each line's value on both, and the difference
+ *  in green where this piece is better, red where it is worse. */
 function compare(it: Item, cur: Item | undefined): string {
-  if (!cur) return `<p class="muted gi-cmp-none">${esc(L('nothingWorn'))}</p>`;
-  const a = gearSource([it]), b = gearSource([cur]);
-  const keys = new Set([...Object.keys(a.mods), ...Object.keys(b.mods)]) as Set<StatKey>;
-  const caps = new Set([...Object.keys(a.cap), ...Object.keys(b.cap)]);
-  const rows: string[] = [];
-  for (const k of keys) {
-    const d = (a.mods[k] ?? 0) - (b.mods[k] ?? 0);
-    if (Math.abs(d) > 1e-6) rows.push(statLine(k, d, 'cmp'));
-  }
-  for (const c of caps) {
-    const d = (a.cap[c as never] ?? 0) - (b.cap[c as never] ?? 0);
-    if (d) rows.push(capLine(c, d, 'cmp'));
-  }
-  return `<div class="gi-cmp"><div class="gi-h">${esc(L('compare'))}: ${coloured(cur)}</div>${rows.join('') || '<div class="muted">=</div>'}</div>`;
+  const rows = compareRows(it, cur);
+  const val = (r: CmpRow, v: number) => (Math.abs(v) < 1e-9 ? '—' : r.kind === 'stat' ? statValue(r.key as StatKey, v) : `${v > 0 ? '+' : '−'}${Math.abs(v)}`);
+  const label = (r: CmpRow) => (r.kind === 'stat' ? statLabel(r.key as StatKey) : CAP_STAT_NAMES[r.key as keyof typeof CAP_STAT_NAMES][ru() ? 1 : 0]);
+  const body = rows.map((r) => `<tr class="${r.good === true ? 'g-up' : r.good === false ? 'g-down' : 'g-eq'}"><td>${esc(label(r))}</td><td>${esc(val(r, r.a))}</td><td>${esc(val(r, r.b))}</td><td class="gc-d">${r.good === null ? '=' : esc(val(r, r.d))}</td></tr>`).join('');
+  const head = cur ? `${esc(L('compare'))}: ${coloured(cur)}` : esc(L('compare'));
+  return `<div class="gi-cmp"><div class="gi-h">${head}</div>${cur ? '' : `<p class="muted gi-cmp-none">${esc(EL('cmp_none'))}</p>`}${rows.length ? `<table class="gc-t"><thead><tr><th></th><th>${esc(EL('cmp_this'))}</th><th>${esc(EL('cmp_worn'))}</th><th>Δ</th></tr></thead><tbody>${body}</tbody></table>` : '<div class="muted">=</div>'}</div>`;
 }
 
+/** The piece a row of the locker or the chandler's stands for, and what is worn in its slot. */
+function hoverPair(self: NonNullable<ClientState['self']>, el: HTMLElement, wares: Item[] | undefined): { it: Item; cur: Item | undefined } | null {
+  const it = el.dataset.gitem ? self.stash.find((x) => x.uid === Number(el.dataset.gitem)) : el.dataset.gware ? wares?.[Number(el.dataset.gware)] : undefined;
+  if (!it) return null;
+  const slot = itemSlot(it);
+  const cur = (isShipSlot(slot) ? (self.loadout.gear ?? {})[slot] : (self.captainGear ?? {})[slot as never]) as Item | undefined;
+  return { it, cur };
+}
+
+// A card left floating when its window closed under the cursor goes with the next move.
+globalThis.addEventListener?.('pointermove', (e) => {
+  const tip = document.querySelector('.gear-tip');
+  if (tip && !(e.target instanceof Element && e.target.closest('[data-gitem], [data-gware]'))) tip.remove();
+}, { passive: true });
+
 export function renderGear(root: HTMLElement, state: ClientState, send: (m: ClientMsg) => void, close: () => void): void {
+  document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
   const self = state.self;
   if (!self) return;
   const lvl = shipLevelOf(self.loadout);
@@ -280,6 +291,27 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
   root.querySelectorAll<HTMLElement>('[data-gbuy]').forEach((b) => (b.onclick = () => send({ t: 'gear', action: 'buy', index: Number(b.dataset.gbuy) })));
   root.querySelector<HTMLElement>('[data-gmend]')?.addEventListener('click', () => send({ t: 'gear', action: 'mend' }));
   bindStormForge(root, send);
+  // On a desktop a row under the cursor shows its card beside what is worn, without a click (docs/16 #38).
+  if (!document.body.classList.contains('touch') && matchMedia('(hover: hover)').matches) {
+    const hide = () => document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
+    root.querySelectorAll<HTMLElement>('[data-gitem], [data-gware]').forEach((row) => {
+      row.onmouseenter = () => {
+        hide();
+        const pair = hoverPair(self, row, sy?.wares);
+        if (!pair || (pick?.kind === 'item' && pick.uid === pair.it.uid)) return;
+        const tip = document.createElement('div');
+        tip.className = 'gear-tip';
+        tip.innerHTML = `<div class="gt-name">${itemIcon(pair.it, itemSlot(pair.it), 'ico-sm')}${coloured(pair.it)}<span class="muted"> · ${esc(L('lv', { n: pair.it.ilvl }))}</span></div>${compare(pair.it, pair.cur)}`;
+        document.body.appendChild(tip);
+        const r = row.getBoundingClientRect(), t = tip.getBoundingClientRect();
+        const right = r.right + 8 + t.width <= innerWidth - 4;
+        tip.style.left = `${Math.max(4, right ? r.right + 8 : r.left - 8 - t.width)}px`;
+        tip.style.top = `${Math.max(4, Math.min(innerHeight - t.height - 4, r.top))}px`;
+      };
+      row.onmouseleave = hide;
+    });
+    root.addEventListener('click', hide);
+  }
   root.querySelector<HTMLElement>('[data-ghide]')?.addEventListener('click', () => {
     pick = null;
     redo();

@@ -466,8 +466,14 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 label.check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-family: var(--sans); font-size: 13px; color: var(--fog); cursor: pointer; }
 
 /* Options & accessibility (docs/07 §11) */
-:root { --ui-scale: 1; --text-scale: 1; }
+:root { --ui-scale: 1; --text-scale: 1; --density: 1; }
 #hud, .hud-layer { zoom: var(--ui-scale); }
+/* The interface's density (docs/16 #40): compact / normal / large — one scale on what the HUD's plates say (each
+   plate of the top stack, the ship's panel, the toasts), most felt on a phone (settings.ts DENSITY_SCALE). The plates
+   keep their places and their one width; the helm, the guns and the buttons keep their size for the fingers. */
+body.dens-compact { --density: 0.86; }
+body.dens-large { --density: 1.14; }
+#hud-stack > *, #hud-ship > *, #toasts > .toast { zoom: var(--density); }
 #modal-panel { zoom: calc(var(--ui-scale) * var(--text-scale)); }
 #toasts, #chat, #hud-hint, #hud-watch { font-size: calc(1em * var(--text-scale)); }
 body.hi-contrast .hud-block, body.hi-contrast #hud-goals, body.hi-contrast .toast, body.hi-contrast #hud-hint { background: rgba(4, 5, 7, 0.92) !important; border-width: 2px; border-color: var(--bone); backdrop-filter: none; }
@@ -1834,7 +1840,7 @@ body.touch #hud-region .rg-extra { display: none; }
 .gi-set .gi-bonus.on { color: #6fd46f; }
 .gi-wear { margin-top: 6px; font-size: 12px; }
 .gi-cmp { margin-top: 8px; background: rgba(8, 10, 14, 0.6); border: 1px dashed rgba(232, 196, 106, 0.25); border-radius: 4px; padding: 6px 8px; }
-.gi-cmp-none { margin: 8px 0 0; font-size: 13px; }
+.gi-cmp-none { margin: 2px 0 4px; font-size: 12px; }
 .gi-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .gear-mend { margin-top: 10px; }
 /* On a phone the piece's card rises as a sheet from the bottom, over the list, with its own ×. */
@@ -2729,8 +2735,10 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 .btn.est-found { display: inline-flex; align-items: center; gap: 5px; }
 
 /* The chart's own mark (owner, 2026-09-30): a button to take it off, over the chart's top right. */
-.map-wrap .map-wp-clear { position: absolute; top: 10px; right: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; }
-.map-wrap .map-wp-clear.hidden { display: none; }
+.map-wrap .map-wp-acts { position: absolute; top: 10px; right: 10px; z-index: 2; display: flex; gap: 6px; align-items: center; pointer-events: none; }
+.map-wrap .map-wp-acts > .btn { pointer-events: auto; }
+.map-wrap .map-wp-clear, .map-wrap .map-wp-sail { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.map-wrap .map-wp-clear.hidden, .map-wrap .map-wp-sail.hidden { display: none; }
 
 /* ---------- One width for every plate (owner, 2026-09-30: "all plates more compact and — most important — of one
    width"). The target, the fishing, hunt, storm, order, descent, holiday and boss cards, the goals and the news share
@@ -3350,3 +3358,33 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 @media (min-width: 900px) and (min-height: 521px) and (min-aspect-ratio: 7/5) {
   body.tac #toasts { top: 46%; }
 }
+/* ---------- docs/16 Batch H: ease and polish ---------- */
+/* #36 the auto-sail pill: one line at the top of the stack, the stop a finger wide. */
+#hud-stack > #hud-autosail { order: -3; }
+#hud-autosail { display: flex; align-items: center; gap: 6px; padding: 2px 3px 2px 8px !important; font: 11.5px/1.25 var(--sans); color: var(--bone); border-color: rgba(232, 196, 106, 0.6); }
+#hud-autosail.hidden { display: none; }
+#hud-autosail .as-ico { flex: none; font-size: 13px; color: var(--gold); }
+#hud-autosail .as-lbl { flex: none; color: var(--gold); text-transform: uppercase; letter-spacing: 0.08em; font-size: 9.5px; font-weight: 600; }
+#hud-autosail .as-d { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--fog); font-variant-numeric: tabular-nums; }
+#hud-autosail .as-stop { flex: none; min-height: 28px; min-width: 52px; padding: 2px 10px; background: rgba(120, 32, 26, 0.55); border: 1px solid #b0302a; border-radius: 3px; color: var(--bone); font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; }
+#hud-autosail .as-stop:hover, #hud-autosail .as-stop:focus-visible { background: rgba(176, 48, 42, 0.7); }
+/* #37 the first-time hint: one compact line in the plates' width. */
+#hud-stack > #hud-tip { order: -2; }
+#hud-tip { display: flex; align-items: flex-start; gap: 6px; padding: 3px 3px 3px 7px !important; font: 11.5px/1.3 var(--sans); color: var(--bone); border-color: var(--brass); }
+#hud-tip.hidden { display: none; }
+#hud-tip .tp-lbl { flex: none; margin-top: 1px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.08em; font-size: 9.5px; font-weight: 600; }
+#hud-tip .tp-t { flex: 1 1 auto; min-width: 0; }
+#hud-tip .tp-x { flex: none; width: 24px; height: 24px; margin: -1px 0; padding: 0; background: none; border: 1px solid rgba(111, 90, 56, 0.55); border-radius: 3px; color: var(--fog); font: 15px/1 var(--sans); cursor: pointer; }
+#hud-tip .tp-x:hover { color: var(--bone); border-color: var(--brass); }
+@media (max-width: 520px), (max-height: 520px) { #hud-tip { font-size: 11px; } #hud-tip .tp-lbl { display: none; } }
+/* #38 gear beside what is worn: the two values and the difference in green or red. */
+.gc-t { width: 100%; border-collapse: collapse; font: 12px/1.35 var(--sans); font-variant-numeric: tabular-nums; }
+.gc-t th { font-weight: 600; font-size: 10px; color: var(--brass); text-transform: uppercase; letter-spacing: 0.06em; text-align: right; padding: 0 0 2px 6px; }
+.gc-t td { padding: 1px 0 1px 6px; text-align: right; white-space: nowrap; color: var(--fog); }
+.gc-t td:first-child, .gc-t th:first-child { text-align: left; padding-left: 0; color: var(--bone); white-space: normal; }
+.gc-t tr.g-up .gc-d { color: #6fd46f; font-weight: 600; }
+.gc-t tr.g-down .gc-d { color: #e0776b; font-weight: 600; }
+.gc-t tr.g-eq .gc-d { color: var(--fog); }
+.gear-tip { position: fixed; z-index: 400; width: 300px; max-width: calc(100vw - 8px); box-sizing: border-box; padding: 7px 9px; background: rgba(10, 11, 13, 0.96); border: 1px solid var(--brass); border-radius: 4px; pointer-events: none; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); }
+.gear-tip .gt-name { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+.gear-tip .gi-cmp { margin-top: 5px; }

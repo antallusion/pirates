@@ -24,12 +24,15 @@ import { TacticalPanel } from './ui/tactical.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
-import { clamp, dist, toShipLocal } from '../../shared/src/math.ts';
+import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
 import { assetUrl, loadAssets } from './assets.ts';
-import { AudioEngine } from './audio.ts';
+import { AudioEngine, turnCreakLoad } from './audio.ts';
+import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, tipForState } from './ui/ease.ts';
+import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
+import { setWaypoint as setMark, waypoint as markOf } from './ui/track.ts';
 import { Net } from './net.ts';
 import { Renderer, shipHeel } from './render/renderer.ts';
 import { ClientState } from './state.ts';
@@ -90,6 +93,18 @@ journal.openTattoos = () => openModal('tattoos');
 journal.openSaga = () => openModal('saga');
 journal.openLog = () => openModal('log');
 worldMap.send = (m) => net.send(m);
+worldMap.onAutosail = (wp) => {
+  touch.course = null; // the helm stick lets go, or it would take the wheel straight back
+  net.send(autosailRequest(state, wp));
+  closeModal();
+};
+// docs/16 #36: the helmsman takes her to her mark; the pill at the top of the stack stops him.
+const EL = dict(EASE_EN, EASE_RU);
+const autosailPill = new AutosailPill();
+autosailPill.onStop = () => net.send({ t: 'autosail', stop: true });
+// docs/16 #37: a line the first time she meets each of the sea's mechanics.
+const firstTips = new FirstTips();
+firstTips.covered = () => modal !== null;
 let modal: Modal = null;
 let inGame = false;
 let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; port: string; towed: boolean } | null = null;
@@ -251,9 +266,18 @@ const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
 // Options: applied now and on every change (docs/07 §11).
+let lastZoomKey = '';
 function applySettings(o: Settings): void {
   applyToDocument(o);
+  // A new scale or density: what the HUD measures of itself is measured again (docs/16 #40).
+  const zk = `${o.uiScale}|${o.density}`;
+  if (zk !== lastZoomKey) {
+    const first = !lastZoomKey;
+    lastZoomKey = zk;
+    if (!first) requestAnimationFrame(() => dispatchEvent(new Event('resize')));
+  }
   audio.configure(o.volume.master, { sea: o.volume.sea, combat: o.volume.combat, ui: o.volume.ui, music: o.volume.music }, o.mono);
+  audio.voices = o.shipVoices;
   renderer.fx.forceLod = o.effects === 'low' ? 2 : null;
   audio.onCaption = o.captions
     ? (kind, dir, far) => hud.caption(t(`cap.${kind}` as Key, { dir: t(`dir.${dir}` as Key), far: far ? t('cap.far') : '' }), dir)
@@ -402,7 +426,19 @@ net.on(onMessage);
 
 function onMessage(m: ServerMsg): void {
   state.apply(m);
+  if (inGame) firstTips.offer(tipForMsg(m));
   switch (m.t) {
+    case 'autosail': {
+      // docs/16 #36: the helmsman has the wheel, or has given it back and why.
+      if (m.on) hud.toast(EL('as_on'), 'info');
+      else {
+        const w = autosailStopText(m.why);
+        hud.toast(w.text, w.kind);
+        if (m.why === 'arrived') setMark(null);
+        if (w.kind === 'bad') audio.bell();
+      }
+      break;
+    }
     case 'err':
       if (m.msg === 'auth_required') {
         net.forget();
@@ -456,7 +492,15 @@ function onMessage(m: ServerMsg): void {
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
-      else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'gear' || modal === 'crew' || modal === 'mutiny' || modal === 'company' || modal === 'barter' || modal === 'base') refreshModal();
+      else if (modal === 'company' || modal === 'base' || modal === 'gear') {
+        // The Company and island windows redraw only when what they show of her changed (a redraw every second on
+        // the private state's beat lost taps).
+        const key = selfKeyFor(modal);
+        if (key !== lastSelfKey) {
+          lastSelfKey = key;
+          refreshModal();
+        }
+      } else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny' || modal === 'barter') refreshModal();
       break;
     case 'mutiny':
       if (m.mutineers > 0) {
@@ -738,7 +782,17 @@ function restoreScroll(root: HTMLElement, marks: { view: string; at: Map<string,
   }
 }
 
+/** What the Company, island and gear windows show of her private state (they redraw when it changes). */
+let lastSelfKey = '';
+function selfKeyFor(m: Modal): string {
+  const s = state.self;
+  if (!s) return '';
+  if (m === 'gear') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.stash, s.loadout, s.captainGear, s.cargo]);
+  return m === 'company' ? JSON.stringify([m, lang(), s.name, s.dockedAt, s.berths, s.pvp, s.maps, s.company, s.cargo, s.builds, s.gold]) : JSON.stringify([m, lang(), s.gold, s.cargo, s.dockedAt, s.homeIsle]);
+}
+
 function refreshModal(): void {
+  lastSelfKey = modal === 'company' || modal === 'base' || modal === 'gear' ? selfKeyFor(modal) : '';
   const root = $('modal-panel');
   const marks = root.dataset.modal === (modal ?? '') ? scrollMarks(root) : null;
   // Screens dress by name in the stylesheet (header art, backgrounds).
@@ -1778,6 +1832,45 @@ addEventListener('gamepadconnected', () => {
   padSeen = false;
 });
 
+// ------------------------------------------------------------------ docs/16 Batch H: the ship's voice, the first hints
+
+let easeAt = 0;
+let lastHeading: { h: number; t: number } | null = null;
+const heardShips = new Set<number>();
+let heardIslands = -1;
+let heardSince = 0;
+function easeSecond(t: number, own: ClientState['ownDisplay']): void {
+  // The timbers on a hard turn (docs/16 #39), every frame.
+  if (own && !state.self?.dockedAt) {
+    if (lastHeading && t > lastHeading.t) {
+      const rate = angleDiff(lastHeading.h, own.heading) / ((t - lastHeading.t) / 1000);
+      const load = turnCreakLoad(rate, own.speed);
+      if (load > 0) audio.turnCreak(load);
+    }
+    lastHeading = { h: own.heading, t };
+  } else lastHeading = null;
+  if (t - easeAt < 1000) return;
+  easeAt = t;
+  firstTips.offer(tipForState(state, !!markOf()));
+  // The lookout's cry (docs/16 #39): a sail that comes into sight, an island seen for the first time. Not in the
+  // first seconds at sea (everything is new then), nor for her own groupmates.
+  if (!own || state.self?.dockedAt) {
+    heardSince = t;
+    return;
+  }
+  const settled = t - heardSince > 8000;
+  let sail: { x: number } | null = null;
+  for (const [id, sh] of state.ships) {
+    if (heardShips.has(id) || id === state.entityId) continue;
+    heardShips.add(id);
+    if (settled && Math.hypot(sh.cur.x - own.x, sh.cur.y - own.y) > 900) sail = { x: sh.cur.x - own.x };
+  }
+  if (heardShips.size > 4000) heardShips.clear();
+  if (sail) audio.lookoutCry('sail', sail.x / 1500);
+  if (heardIslands >= 0 && state.discovered.size > heardIslands && settled) audio.lookoutCry('land');
+  heardIslands = state.discovered.size;
+}
+
 // ------------------------------------------------------------------ main loop
 
 let last = performance.now();
@@ -1825,6 +1918,9 @@ function step(t: number): void {
     hud.castKey = touch.enabled ? '' : ` (${keyOfAction('land')})`; // a phone has its button, not a key
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
+    autosailPill.draw(state);
+    easeSecond(t, own);
+    firstTips.frame(t);
     targetId = resolveTarget();
     askGlass(targetId);
     hud.drawTarget(state, targetId);

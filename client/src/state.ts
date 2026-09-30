@@ -190,6 +190,8 @@ export class ClientState {
   recruiting: NonNullable<Extract<ServerMsg, { t: 'guild' }>['recruiting']> = [];
 
   input = { rudder: 0, sail: 2, seq: 0 };
+  /** docs/16 #36: the helmsman has the wheel for this mark (the server steers; the prediction follows its rudder). */
+  autosail: { x: number; y: number } | null = null;
   snapGap = 0.1; // seconds between snapshots (smoothed)
   /** Take the sail order from the next snapshot (after init). */
   syncSail = false;
@@ -322,6 +324,11 @@ export class ClientState {
         break;
       case 'signal':
         this.signals = [...this.signals.filter((x) => now - x.at < SIGNAL_TTL && x.from !== m.from), { from: m.from, kind: m.kind, x: m.x, y: m.y, at: now }];
+        break;
+      case 'autosail':
+        // The helmsman has the wheel for a mark, or has given it back (docs/16 #36).
+        this.autosail = m.on && m.x !== undefined && m.y !== undefined ? { x: m.x, y: m.y } : null;
+        if (m.on && m.sail !== undefined) this.input.sail = m.sail;
         break;
       case 'wgoals':
         this.worldGoals = m.list;
@@ -560,7 +567,7 @@ export class ClientState {
     const sail = st.flags.has('regatta_equal') ? regattaSail(params) : params;
     const wind = { dir: this.wind[0], strength: this.wind[1] };
     const cur = currentAt(this.currents, s.x, s.y, this.estServerTime(), this.whirlpools);
-    const input = { rudder: this.input.rudder, sailTarget: sailSteps[this.input.sail] };
+    const input = { rudder: this.autosail ? you.rud : this.input.rudder, sailTarget: sailSteps[this.input.sail] };
     let t = elapsed;
     while (t > 0) {
       const dt = Math.min(0.05, t);
