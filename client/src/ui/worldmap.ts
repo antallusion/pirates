@@ -30,14 +30,14 @@ type Intel = NonNullable<ClientState['self']>['intel'][number];
 /** By a port's crest: the goods dear there over a gold rule, the cheap ones over a blue (docs/16 #11). Talk of the
  *  quay (not seen for herself) in a dashed frame. */
 function demandMarks(g: CanvasRenderingContext2D, it: Intel, x: number, y: number, size: number, fresh: number): void {
-  const rows: [string[] | undefined, string, number][] = [[it.dear, '224,184,98', -size * 0.62], [it.cheap, '120,190,230', size * 0.62]];
+  const rows: [string[] | undefined, string, number][] = [[it.dear, '224,184,98', -size * 0.05], [it.cheap, '120,190,230', size * 1.12]];
   g.save();
   for (const [goods, rgb, dy] of rows) {
     (goods ?? []).forEach((good, i) => {
       const cx = x + i * (size + 3) + size / 2, cy = y + dy;
       g.globalAlpha = fresh;
-      g.fillStyle = 'rgba(10,9,8,0.72)';
-      g.strokeStyle = `rgba(${rgb},0.95)`;
+      g.fillStyle = 'rgba(226,212,178,0.92)';
+      g.strokeStyle = `rgba(${rgb},1)`;
       g.lineWidth = 1.4;
       g.setLineDash(it.heard ? [2.5, 2] : []);
       g.beginPath();
@@ -49,7 +49,7 @@ function demandMarks(g: CanvasRenderingContext2D, it: Intel, x: number, y: numbe
       if (art) g.drawImage(art.img, cx - size * 0.42, cy - size * 0.42, size * 0.84, size * 0.84);
       // An arrow: up for dear (sell here), down for cheap (buy here).
       g.fillStyle = `rgba(${rgb},1)`;
-      const ax = cx + size * 0.5, ay = cy - size * 0.38, up = dy < 0 ? -1 : 1;
+      const ax = cx + size * 0.5, ay = cy - size * 0.38, up = dy < size * 0.5 ? -1 : 1;
       g.beginPath();
       g.moveTo(ax - 3, ay + (up < 0 ? 2 : -2));
       g.lineTo(ax + 3, ay + (up < 0 ? 2 : -2));
@@ -529,11 +529,11 @@ export class WorldMap {
       // Price notes only at a closer zoom, and only where they fit (under the marks when there are any).
       if (this.zoom < 1.6) continue;
       g.font = '10px Inter, sans-serif';
-      label(it.heard ? DL('map.heard', { age: age(it.t) }) : L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.55, ty(p.y) + (marked ? dm * 1.45 + 6 : ms * 0.15), `rgba(143,179,217,${0.85 * fresh})`);
+      label(it.heard ? DL('map.heard', { age: age(it.t) }) : L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.55, ty(p.y) + (marked ? dm * 2.05 + 6 : ms * 0.15), `rgba(143,179,217,${0.85 * fresh})`);
       if (this.zoom > 1.8) {
         it.top.forEach(([good, price], i) => {
           g.fillStyle = `rgba(224,184,98,${0.9 * fresh})`;
-          g.fillText(`${GOODS[good].name} ${price}`, tx(p.x) + ms * 0.55, ty(p.y) + (marked ? dm * 1.45 + 6 : ms * 0.15) + 12 + i * 11);
+          g.fillText(`${GOODS[good].name} ${price}`, tx(p.x) + ms * 0.55, ty(p.y) + (marked ? dm * 2.05 + 6 : ms * 0.15) + 12 + i * 11);
         });
       }
     }

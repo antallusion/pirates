@@ -88,14 +88,15 @@ test('making port records what is dear and cheap there; the quay tells of the po
     assert.ok(game.now - r.t >= 900 - 1e-6, 'hearsay is a while old');
     assert.deepEqual(r.sell, {}, 'the talk gives no figures');
   }
+  // The chart sees it: dear/cheap for every captain, the age, hearsay marked.
+  const seen = priv(game, s).intel;
+  assert.ok(seen.some((i) => i.heard && (i.dear || i.cheap)));
   // Her own fresher visit is not overwritten by talk.
   const [pid] = heard[0];
   s.profile!.priceIntel[pid] = { t: game.now, sell: { rum: 10 }, dear: [], cheap: [] };
   hearOfPorts(game, s, port);
   assert.equal(s.profile!.priceIntel[pid].heard, undefined);
-  // The chart sees it: dear/cheap for every captain, the age, hearsay marked.
   const intel = priv(game, s).intel;
-  assert.ok(intel.some((i) => i.heard));
   assert.ok(intel.find((i) => i.portId === port.id)!.t === game.now);
   void c;
 });

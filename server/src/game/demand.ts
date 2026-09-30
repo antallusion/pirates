@@ -31,7 +31,8 @@ export function demandOf(market: Market, blackMarket: boolean): { dear: GoodId[]
 export function hearOfPorts(game: Game, s: PlayerSession, port: Port): number {
   const p = s.profile!;
   const near = game.world.ports
-    .filter((q) => q.id !== port.id && dist(q.x, q.y, port.x, port.y) < HEARD_RANGE)
+    // A village is talked of only to one who knows where it is (the chart draws no other).
+    .filter((q) => q.id !== port.id && dist(q.x, q.y, port.x, port.y) < HEARD_RANGE && (!q.id.includes('_v') || s.discovered.has(q.islandId)))
     .sort((a, b) => dist(a.x, a.y, port.x, port.y) - dist(b.x, b.y, port.x, port.y));
   let told = 0;
   for (const q of near) {
