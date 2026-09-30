@@ -367,7 +367,7 @@ export class WorldMap {
       }
       g.font = '600 11px Inter, sans-serif';
       g.textAlign = 'center';
-      label(`${LS('cv.label', { level: cv.level, to: placeName(cv.to) })} · ${LS('cv.hulls', { n: cv.hulls, size: cv.size })}`, tx(cv.x), ty(cv.y) - 9, col);
+      label(`${LS('cv.label', { level: cv.level, to: placeName(cv.to) })} · ${LS('cv.hulls', { n: cv.hulls, size: cv.size })}`, tx(cv.x), ty(cv.y) - Math.max(12, ms * 0.8), col); // above her own mark when she sails with it
     }
     // The pirate lairs near her (docs/16 #7): red while its battery stands, gold when open to a landing.
     for (const l of state.wanted?.lairs ?? []) {
