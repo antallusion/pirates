@@ -79,7 +79,7 @@ export class Hud {
   /** A fishing order from the panel (main.ts). */
   onFishing: (action: 'trap' | 'haul' | 'deep' | 'salt' | 'cast') => void = () => {};
   /** The key that casts the net (main.ts: the player may rebind it) and whether a haul is being played. */
-  castKey = 'L';
+  castKey = ' (L)';
   hauling = false;
   onHunt: (action: 'slack' | 'cut' | 'flense', id?: number) => void = () => {};
   onTribute: (id: number) => void = () => {};

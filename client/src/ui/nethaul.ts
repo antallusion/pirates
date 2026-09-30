@@ -60,7 +60,7 @@ export class NetHaulPanel {
         if (h) h.innerHTML = fishIcon(got.fish, 'ico-md');
       }
       this.sent = true;
-      this.closeAt = performance.now() + 1800;
+      this.closeAt = performance.now() + 2600;
       return;
     }
     this.view = view;

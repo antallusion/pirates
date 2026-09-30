@@ -211,6 +211,14 @@ export function shoalNear(game: Game, x: number, y: number, region: RegionId): b
   return false;
 }
 
+/** A shoal of a kind right here (the admin's /shoal, for play-testing). */
+export function shoalHere(game: Game, x: number, y: number, fish: FishId): Shoal {
+  const S = fs(game);
+  const sh: Shoal = { id: S.seq++, fish, x, y, r: 160, stock: 60, max: 60, vx: 0, vy: 0, until: game.now + SHOAL_LIFE, region: regionAt(game.world, x, y) };
+  S.shoals.set(sh.id, sh);
+  return sh;
+}
+
 export function shoalsOf(game: Game): Shoal[] {
   return [...fs(game).shoals.values()];
 }

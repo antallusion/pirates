@@ -113,7 +113,7 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
     }
     case 'birds': {
       // Gulls (the painted top-down gull) wheeling over the water.
-      if (gulls(g, 5, k, t, 26 * k)) break;
+      if (gulls(g, 5, Math.min(1.4, k) * 0.8, t, 26 * k)) break;
       g.strokeStyle = 'rgba(235,235,230,0.9)';
       g.lineWidth = 1.5;
       for (let i = 0; i < 6; i++) {
@@ -352,7 +352,7 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
     }
     case 'albatross': {
       // One great bird gliding wide circles: the gull's art, larger and slower.
-      if (gulls(g, 1, k * 1.9, t * 0.6, 22 * k)) break;
+      if (gulls(g, 1, Math.min(1.4, k) * 1.5, t * 0.6, 22 * k)) break;
       const a = t * 0.6;
       const bx = Math.cos(a) * 20 * k, by = Math.sin(a) * 10 * k - 14 * k;
       const flap = Math.sin(t * 4) * 3 * k;
@@ -421,8 +421,8 @@ const shapes = new Map<string, HTMLCanvasElement>();
 const FISH_HEAD = (160 * Math.PI) / 180;
 
 /** The painted fish of the catch sheet laid flat — head to +x, squashed as if seen from above — in one dark colour. */
-function fishShape(fish: string): HTMLCanvasElement | null {
-  const key = `fish:${fish}`;
+function fishShape(fish: string, tone: string): HTMLCanvasElement | null {
+  const key = `fish:${fish}:${tone}`;
   const hit = shapes.get(key);
   if (hit) return hit;
   const spr = sprite(`icon.fish_${fish}`);
@@ -432,13 +432,13 @@ function fishShape(fish: string): HTMLCanvasElement | null {
   c.height = 30;
   const x = c.getContext('2d')!;
   x.translate(36, 15);
-  x.scale(1, 0.5);
+  x.scale(1, 0.72);
   x.rotate(-FISH_HEAD);
   const s = 78, ar = spr.img.naturalHeight / spr.img.naturalWidth;
   x.drawImage(spr.img, -s * spr.cx, -s * ar * spr.cy, s, s * ar);
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.globalCompositeOperation = 'source-in';
-  x.fillStyle = '#05131b';
+  x.fillStyle = tone;
   x.fillRect(0, 0, c.width, c.height);
   shapes.set(key, c);
   return c;
@@ -476,7 +476,7 @@ function gulls(g: G, n: number, k: number, t: number, radius: number): boolean {
     // Heading along its circle (the art faces up the image).
     const dx = -Math.sin(a) * dir, dy = Math.cos(a) * 0.75 * dir;
     const rot = Math.atan2(dx, -dy);
-    const size = (13 + (i % 3) * 2.5) * k;
+    const size = (21 + (i % 3) * 3) * k;
     // Now a few beats, now a glide.
     const beat = Math.sin(t * 7 + i * 2.1);
     const flap = Math.sin(t * 0.9 + i) > 0.2 ? 0.62 + 0.38 * Math.abs(beat) : 1;
@@ -532,10 +532,11 @@ export function drawShoals(g: G, list: ShoalView[], traps: { x: number; y: numbe
       g.stroke();
     }
     // The fish themselves: a few dark shapes turning slowly round the heart of the shoal.
-    const shape = fishShape(s.fish ?? 'herring');
-    if (shape) {
-      const n = 3 + Math.round(s.full * 4);
-      const len = Math.max(9, Math.min(26, 14 * zoom));
+    // Pale backs glinting under the water over their own dark shadows (the sea is dark: a dark fish alone is lost).
+    const shape = fishShape(s.fish ?? 'herring', '#b9dde6'), under = fishShape(s.fish ?? 'herring', '#02080c');
+    if (shape && under) {
+      const n = 3 + Math.round(s.full * 4) + (r > 260 ? 3 : 0);
+      const len = Math.max(12, Math.min(30, 13 * zoom));
       const dir = s.id % 2 ? 1 : -1;
       for (let i = 0; i < n; i++) {
         const a = dir * t * (0.22 + (i % 3) * 0.04) + (i * Math.PI * 2) / n + s.id;
@@ -544,10 +545,12 @@ export function drawShoals(g: G, list: ShoalView[], traps: { x: number; y: numbe
         // Nose along the circle, with a small wriggle.
         const heading = Math.atan2(Math.cos(a) * dir, -Math.sin(a) * dir) + Math.sin(t * 3 + i) * 0.12;
         g.save();
-        g.globalAlpha = 0.42 + 0.18 * Math.sin(t * 0.8 + i * 1.3);
         g.translate(fx, fy);
         g.rotate(heading);
-        g.drawImage(shape, -len / 2, -len * 0.21, len, len * 0.42);
+        g.globalAlpha = 0.4;
+        g.drawImage(under, -len / 2 + 2, -len * 0.26 + 2.5, len, len * 0.52);
+        g.globalAlpha = 0.3 + 0.16 * Math.sin(t * 0.8 + i * 1.3);
+        g.drawImage(shape, -len / 2, -len * 0.26, len, len * 0.52);
         g.restore();
       }
     }
@@ -558,7 +561,8 @@ export function drawShoals(g: G, list: ShoalView[], traps: { x: number; y: numbe
       const icon = sprite(`icon.fish_${s.fish}`);
       const iw = icon ? fs + 8 : 0;
       const tw = g.measureText(label).width;
-      const ly = r + 14;
+      // Under the shoal, or inside its rim when it fills the screen.
+      const ly = Math.min(r + 14, Math.max(56, r * 0.42));
       const x0 = -(tw + iw + (icon ? 3 : 0)) / 2;
       g.fillStyle = 'rgba(5,12,16,0.62)';
       g.beginPath();

@@ -1716,7 +1716,7 @@ function step(t: number): void {
         anomaly: state.bosses.some((b) => dist(b.x, b.y, own.x, own.y) < 3000),
       }, state.wind[1], own.sail, Math.abs(shipHeel(own.heading, state.wind[0], state.wind[1], own.sail, SHIP_CLASSES[state.self!.loadout.classId].tier, state.you?.water ?? 0, 0)), timeOfDay(state.estServerTime()), !state.self?.dockedAt);
     }
-    hud.castKey = keyOfAction('land');
+    hud.castKey = touch.enabled ? '' : ` (${keyOfAction('land')})`; // a phone has its button, not a key
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
     targetId = resolveTarget();

@@ -10,6 +10,7 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'Dismasted.': 'Мачта сбита.',
   'Earned: {0}.': 'Заслужено: {0}.',
   'Fishing craft {0}.': 'Навык промысла: {0}.',
+  'A shoal of {0} rises under her keel.': 'Под килем поднимается косяк: {0}.',
   'Five hundred of every shot.': 'По пятьсот зарядов каждого вида.',
   'God mode off.': 'Бессмертие выключено.',
   'God mode on: nothing harms her.': 'Бессмертие включено: кораблю ничто не вредит.',

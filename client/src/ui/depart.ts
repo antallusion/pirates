@@ -67,10 +67,10 @@ function row(o: Offer, i: number, state: ClientState): string {
   let ico = '', title = '', line = '', btn = '', none = '';
   switch (n.kind) {
     case 'food': {
-      const left = n.have <= 0 ? L('depart.foodNone') : L('depart.foodLeft', { n: Math.max(0, Math.floor(foodMinutes(n.have, crew, state.ownStats?.provisionUse ?? 1))) });
+      const left = L('depart.foodLeft', { n: Math.max(0, Math.floor(foodMinutes(n.have, crew, state.ownStats?.provisionUse ?? 1))) });
       ico = 'good_provisions';
       title = L('depart.food');
-      line = L('depart.foodLine', { have: n.have, left, want: n.want, min: n.minutes });
+      line = n.have <= 0 ? L('depart.foodNone', { want: n.want, min: n.minutes }) : L('depart.foodLine', { have: n.have, left, want: n.want, min: n.minutes });
       btn = L('depart.buyN', { n: o.n });
       none = n.buy <= 0 ? L('depart.foodNoRoom') : L('depart.notSold');
       break;
