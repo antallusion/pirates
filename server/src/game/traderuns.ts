@@ -11,6 +11,7 @@ import { dist } from '../../../shared/src/math.ts';
 import type { TradeRunView } from '../../../shared/src/protocol.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { applyTrade, midPrice } from './economy.ts';
+import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Game } from './Game.ts';
 import { dealings } from './player.ts';
 import type { PlayerSession } from './player.ts';
@@ -48,7 +49,7 @@ export function makeRun(game: Game, from: Port, leg: number, house = game.rng.in
   const gm = here.goods[good]!;
   const d = dist(to.x, to.y, from.x, from.y);
   const vol = Math.max(0.2, GOODS[good].volume);
-  const qty = Math.max(4, Math.min(40, Math.floor(gm.stock * 0.4), Math.round(game.rng.int(14, 30) / vol)));
+  const qty = Math.max(4, Math.min(40, Math.floor(gm.stock * 0.4), Math.round(game.rng.int(8, 18) / vol)));
   const cost = Math.ceil(midPrice(good, gm) * 1.06);
   // The house's price there: what the far market pays, and never less than a tenth over what it cost here.
   const pay = Math.round(Math.max(midPrice(good, game.markets.get(to.id)!.goods[good]!), cost * 1.1));
@@ -87,9 +88,15 @@ export function acceptRun(game: Game, s: PlayerSession, port: Port, id: string):
   const chained = d.next && d.next.id === id && d.next.from === port.id && d.next.deadline > game.now ? d.next : null;
   const offer = chained ?? board.find((r) => r.id === id);
   if (!offer) return 'That run has been taken';
-  const bought = trade(game, s, port, offer.good, offer.qty);
+  // A smaller hold takes a smaller lot (the bonus in proportion), down to a third of it.
+  const ship = s.ship!;
+  const per = Math.max(0.01, GOODS[offer.good].volume);
+  const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
+  const fit = Math.min(offer.qty, Math.floor((free + 1e-6) / per));
+  if (fit < Math.max(3, Math.ceil(offer.qty / 3))) return `Your hold has room for only ${Math.max(0, fit)} of the ${offer.qty}`;
+  const bought = trade(game, s, port, offer.good, fit);
   if (bought) return bought;
-  const run: TradeRun = { ...offer, early: game.now + Math.round(offer.window * (1 - RUN_EARLY_SHARE)), deadline: game.now + offer.window };
+  const run: TradeRun = { ...offer, qty: fit, bonus: Math.round((offer.bonus * fit) / offer.qty), early: game.now + Math.round(offer.window * (1 - RUN_EARLY_SHARE)), deadline: game.now + offer.window };
   d.runs.push(run);
   if (chained) d.next = null;
   else board.splice(board.indexOf(offer), 1);
@@ -128,7 +135,7 @@ export function settleRuns(game: Game, s: PlayerSession, port: Port): void {
     const paid = r.qty * r.pay + bonus + closed;
     p.gold += paid;
     d.runs = d.runs.filter((x) => x !== r);
-    game.db.ledger(s.accountId, 'trade_run', paid, `${r.qty} ${r.good} ${r.from}->${r.to} leg ${r.leg}`);
+    game.db.ledger(s.accountId, 'trade_run', paid, `${r.good}:${r.from}>${r.to}:${r.leg}`);
     game.adjustRepProfile(s, port.faction, 2);
     game.grantXp(s, 40 + r.qty * 3 + r.leg * 20, null);
     const house = RUN_HOUSES[r.house][0];
