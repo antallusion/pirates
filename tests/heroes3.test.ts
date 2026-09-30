@@ -430,7 +430,8 @@ test('the admin: /week next|now|kind, /dwell [fill], /mine, /res, /town; the Rus
   assert.match(runAdmin(game, s, '/week next')!, /^Week \d+ begins/);
   assert.match(runAdmin(game, s, '/week marine')!, /Week of the Marine/);
   assert.match(runAdmin(game, s, '/week now')!, /^Week \d+, day \d/);
-  assert.match(runAdmin(game, s, '/dwell fill')!, /^Dwellings — Port Gravesend/);
+  assert.match(runAdmin(game, s, '/dwell fill')!, /are full/);
+  assert.match(runAdmin(game, s, '/dwell')!, /^Dwellings — Port Gravesend/);
   assert.match(runAdmin(game, s, '/res 20')!, /20 of each resource/);
   assert.equal(s.ship!.cargo.pearls, 20);
   assert.match(runAdmin(game, s, '/town')!, /^Town raised/);

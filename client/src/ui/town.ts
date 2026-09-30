@@ -48,7 +48,7 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
   const pic = art(t.id, t.level, !!t.job);
   const lvl = t.level > 0 ? L('town.lvl', { n: t.level, max: t.max }) : L('town.not');
   const pool = d.tier && t.level > 0 ? `<p class="tw-pool">${esc(L('town.pool', { n: t.pool ?? 0, g: dec1(t.growth ?? 0).replace(/[.,]0$/, '') }))}</p>` : '';
-  const extra = t.id === 'guild' && t.level > 0 ? `<p class="muted tw-note">${esc(L('town.guild'))}</p>` : '';
+  const extra = '';
   const j = t.job;
   const job = j ? `<div class="tw-job"><span class="muted">${esc(L('town.building'))}</span> <span class="btime" data-end="${j.end}">${esc(timeText((j.end - now) / 1000))}</span>
       <span class="bprog"><i data-start="${j.start}" data-stop="${j.end}" style="width:0%"></i></span>
@@ -142,5 +142,5 @@ export function weekChip(state: ClientState): string {
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60);
   const t = h > 0 ? B('t_hm', { h, m: String(m).padStart(2, '0') }) : B('t_m', { m: Math.max(1, m) });
   const d = WEEKS[w.kind];
-  return `<span class="rg-week" title="${esc(L('hud.tip', { n: w.n, d: w.day, name: d.name[ru()], text: d.text[ru()], t }))}"><span class="rg-dot"> · </span>${esc(L('hud.week', { n: w.n, d: w.day }))} <span class="rg-wk">${esc(d.name[ru()])}</span></span>`;
+  return `<div class="rg-week" title="${esc(L('hud.tip', { n: w.n, d: w.day, name: d.name[ru()], text: d.text[ru()], t }))}">${esc(L('hud.week', { n: w.n, d: w.day }))}<span class="rg-dot"> · </span><span class="rg-wk">${esc(d.name[ru()])}</span></div>`;
 }

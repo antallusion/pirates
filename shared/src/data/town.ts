@@ -171,7 +171,7 @@ export const TOWN: Record<TownId, TownDef> = {
   dw6: dw(6, ['Admiralty', 'Адмиралтейство'], ['Admiralty Court', 'Адмиралтейский двор'], ['The officers’ guard; upgraded, the life guard. Paid in pearls as well.', 'Офицерская гвардия; улучшенное — лейб-гвардия. Платят и жемчугом.'], 'chart_house'),
   dw7: dw(7, ['Drowned Shrine', 'Святилище утопленников'], ['Abyssal Altar', 'Алтарь бездны'], ['The drowned rise for the Choir and the cursed; upgraded, the deep’s spawn. Pearls for the sea.', 'Утопленники встают для Хора и проклятых; улучшенное — порождения бездны. Жемчуг — морю.'], 'chapel'),
   market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Exchange', 'Биржа'], ['Merchants’ Guild', 'Гильдия купцов']], text: ['Trades the island’s resources for silver and for each other — at poor rates, better with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по плохому курсу, с каждым уровнем чуть лучше.'], art: 'caravan_office', max: 3 },
-  guild: { id: 'guild', names: [['Guild of Orders', 'Гильдия приказов']], text: ['Where a captain will learn her orders when the orders come to the sea (docs/17 H2). For now its doors are shut.', 'Здесь капитан будет изучать приказы, когда они придут на море (docs/17 H2). Пока двери закрыты.'], art: 'lighthouse', max: 1 },
+  guild: { id: 'guild', names: [['Guild of Orders', 'Гильдия приказов']], text: ['Where a captain will learn her orders when the orders come to the sea. For now its doors are shut.', 'Здесь капитан будет изучать приказы, когда они придут на море. Пока двери закрыты.'], art: 'lighthouse', max: 1 },
 };
 
 export const townWhat = (id: TownId): string => `t:${id}`;

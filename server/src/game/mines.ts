@@ -15,6 +15,7 @@ import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
 import { Rng, hashString } from '../../../shared/src/rng.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
+import { depthAt } from '../../../shared/src/world/worldgen.ts';
 import { capOf, yardOf } from './base.ts';
 import { weekNow } from './calendar.ts';
 import { ownIsland } from './estate.ts';
@@ -307,6 +308,27 @@ function haul(game: Game, s: PlayerSession, ship: ShipEntity, x: MineSite, st: M
 
 // ------------------------------------------------------------------------------------------------ the admin
 
+/** For the admin: her ship off an island's farthest headland, clear of the rocks, hove to. */
+export function offIsland(game: Game, s: PlayerSession, islandId: number): void {
+  const ship = s.ship!;
+  const is = game.world.islands[islandId];
+  let bx = is.x, by = is.y, bd = -1;
+  for (let i = 0; i < is.poly.length; i += 2) {
+    const d = Math.hypot(is.poly[i] - is.x, is.poly[i + 1] - is.y);
+    if (d > bd) [bx, by, bd] = [is.poly[i], is.poly[i + 1], d];
+  }
+  // Out from the headland until the water is deep enough for her keel (still within the boats' reach).
+  let d = 120;
+  for (; d < 240; d += 20) {
+    const k = d / Math.max(1, bd);
+    if (depthAt(game.world, bx + (bx - is.x) * k, by + (by - is.y) * k) > ship.cls.draft + 1) break;
+  }
+  const k = d / Math.max(1, bd);
+  if (ship.docked) game.undock(s);
+  ship.state = { ...ship.state, x: bx + (bx - is.x) * k, y: by + (by - is.y) * k, speed: 0, sail: 0 };
+  ship.input = { rudder: 0, sailTarget: 0 };
+}
+
 /** `/mine`: the mines near and hers; `take` the nearest is hers; `lose` the raiders take it; `pay` a dawn's pay. */
 export function adminMine(game: Game, s: PlayerSession, arg: string): string {
   const ship = s.ship!;
@@ -323,16 +345,7 @@ export function adminMine(game: Game, s: PlayerSession, arg: string): string {
     return 'The mines have paid a day.';
   }
   if (arg === 'go' && near) {
-    const is = game.world.islands[near.islandId];
-    // Off the island's farthest headland, clear of the rocks.
-    let bx = is.x, by = is.y, bd = -1;
-    for (let i = 0; i < is.poly.length; i += 2) {
-      const d = Math.hypot(is.poly[i] - is.x, is.poly[i + 1] - is.y);
-      if (d > bd) [bx, by, bd] = [is.poly[i], is.poly[i + 1], d];
-    }
-    const k = 150 / Math.max(1, bd);
-    if (ship.docked) game.undock(s);
-    ship.state = { ...ship.state, x: bx + (bx - is.x) * k, y: by + (by - is.y) * k, speed: 0, sail: 0 };
+    offIsland(game, s, near.islandId);
     return `Off ${near.name}, by the ${MINES[near.kind].name[0]}.`;
   }
   const mine = m.sites.filter((x) => mineState(game, x.id).owner === s.accountId);

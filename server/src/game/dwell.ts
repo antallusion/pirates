@@ -351,5 +351,6 @@ export function adminDwell(game: Game, s: PlayerSession, arg: string): string {
     game.holdings.touch();
     out.push(`${m.isl.name}: ${[1, 2, 3, 4, 5, 6, 7].filter((t) => townLevel(m.y, dwellingOf(t)) > 0).map((t) => `${TIER_UNIT[t]} ${Math.floor(pools[t])}`).join(', ') || 'no dwellings'}`);
   }
-  return out.length ? `Dwellings — ${out.join(' · ')}.` : 'No dwellings here: dock in a port or build them on your island.';
+  if (!out.length) return 'No dwellings here: dock in a port or build them on your island.';
+  return arg === 'fill' ? 'The dwellings here and on your island are full: two weeks of men.' : `Dwellings — ${out.join(' · ')}.`;
 }

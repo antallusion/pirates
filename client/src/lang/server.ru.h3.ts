@@ -83,6 +83,7 @@ export const SERVER_RU_H3: Record<string, string> = {
   'a captain': 'капитан',
   // The admin's replies.
   'Dwellings — {0}.': 'Жилища — {0}.',
+  'The dwellings here and on your island are full: two weeks of men.': 'Жилища здесь и на вашем острове полны: бойцы за две недели.',
   'No dwellings here: dock in a port or build them on your island.': 'Здесь нет жилищ: встаньте в порту или постройте их на своём острове.',
   'no dwellings': 'жилищ нет',
   'Mines: {0}; yours {1}. Nearest: the {2} on {3}, {4} m away.': 'Шахт: {0}; ваших {1}. Ближайшая: {2}, остров {3}, в {4} м.',
@@ -92,6 +93,7 @@ export const SERVER_RU_H3: Record<string, string> = {
   'No mines in this sea.': 'В этом море нет шахт.',
   'The mines have paid a day.': 'Шахты выплатили за день.',
   'Off {0}, by the {1}.': 'У острова {0}, рядом: {1}.',
+  'Off {0}.': 'У острова {0}.',
   'the raiders’': 'у налётчиков',
   'Town raised: {0}; the dwellings full ({1}).': 'Город построен: {0}; жилища полны ({1}).',
   '{0} of each resource in the hold{1}.': 'По {0} каждого ресурса в трюме{1}.',

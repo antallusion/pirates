@@ -3354,7 +3354,6 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 /* ---------- The Heroes' economy (docs/17 H3): the week in the HUD, the recruit window, the island's town. */
 .rg-week { white-space: nowrap; }
 .rg-wk { color: var(--gold); }
-@media (max-width: 560px) { .rg-wk { display: none; } }
 /* The recruit window: the dwellings and their kinds of men on the left, the chosen kind with its slider on the right. */
 .rc-head { flex-wrap: wrap; gap: 8px; }
 .rc-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }

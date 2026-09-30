@@ -533,7 +533,7 @@ ${orders}${berths}</div>` : ''}`;
         <p>${esc(L('carto.text', { brokers: port.faction === 'brokers' ? L('carto.brokers') : '' }))}</p>
         <div class="row"><span>${esc(L('carto.sellable', { n: view.charts.sellable, islands: plural(view.charts.sellable, L('carto.island1'), L('carto.island2'), L('carto.island5')) }))}</span>
           <button class="btn btn-small btn-primary" data-act="chart_sell" ${view.charts.sellable ? '' : 'disabled'}>${esc(L('carto.sell', { cost: fmt(view.charts.sellValue) }))}</button></div>
-        ${view.charts.offers.map((o) => `<div class="row" style="padding:3px 0"><span>${esc(o.name)} <span class="muted">${esc(L('carto.uncharted', { n: o.islands, islands: plural(o.islands, L('carto.uncharted1'), L('carto.uncharted2'), L('carto.uncharted5')) }))}</span></span>
+        ${view.charts.offers.map((o) => `<div class="row" style="padding:3px 0"><span>${esc(serverText(o.name))} <span class="muted">${esc(L('carto.uncharted', { n: o.islands, islands: plural(o.islands, L('carto.uncharted1'), L('carto.uncharted2'), L('carto.uncharted5')) }))}</span></span>
           <button class="btn btn-small" data-act="chart_buy" data-region="${o.region}">${esc(L('carto.buy', { cost: fmt(o.price) }))}</button></div>`).join('') || `<p class="muted">${esc(L('carto.none'))}</p>`}
       </div>
       <div class="card"><h4 class="card-h">${icon('map_treasure', '', 'ico-md')}${esc(L('maps.title', { n: self.maps.filter((m) => m.kind !== 'fragment').length }))}</h4>

@@ -77,7 +77,14 @@ const PERSON: Record<string, string> = {
 };
 
 /** A person's Russian name when every part of it is known ("Morrow Ickes" → «Морроу Икс»), else null. */
+/** The sea's named officers, whole (their nicknames and double names are not parts of the table). */
+const UNIQUE_RU: Record<string, string> = {
+  'Jory "Old Bones" Pike': 'Джори «Старые Кости» Пайк', 'Sister Anwen Coil': 'Сестра Анвен Койл', 'Ruy Salazar-Ketch': 'Руй Саласар-Кетч',
+  'Nell "Tallow" Marsh': 'Нелл «Сальная» Марш', 'Ezekiel Thorne': 'Иезекииль Торн', 'Magda "Iron-Jaw" Rusk': 'Магда «Железная Челюсть» Раск',
+};
+
 export function personNameRu(en: string): string | null {
+  if (UNIQUE_RU[en.trim()]) return UNIQUE_RU[en.trim()];
   const parts = en.trim().split(/\s+/);
   if (parts.length < 2 || parts.length > 3) return null;
   const ru = parts.map((p) => PERSON[p]);

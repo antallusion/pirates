@@ -106,7 +106,7 @@ import { weekNumber, weeklyChallenges } from '../../../shared/src/data/renown.ts
 import { FISH_IDS } from '../../../shared/src/data/fishing.ts';
 import { adminWeek } from './calendar.ts';
 import { adminDwell } from './dwell.ts';
-import { adminMine } from './mines.ts';
+import { adminMine, offIsland } from './mines.ts';
 import { adminTown } from './town.ts';
 import { RES_GOODS } from '../../../shared/src/data/mines.ts';
 import { OMEN_IDS } from '../../../shared/src/data/omens.ts';
@@ -117,7 +117,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -1106,7 +1106,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       // The mines (docs/17 H3): the nearest `take`n, `lose` to the raiders, `free`d, a dawn's `pay`, `go` to it.
       return adminMine(game, s, args[0] ?? '');
     case 'town':
-      // Her island's town (docs/17 H3): every building at its greatest, or at a level.
+      // Her island's town (docs/17 H3): every building at its greatest, or at a level; `go`: off her island.
+      if (args[0] === 'go') {
+        const h = ownIsland(game, s.accountId);
+        if (!h) return 'You have no island of your own.';
+        offIsland(game, s, h.island);
+        return `Off ${game.world.islands[h.island].name}.`;
+      }
       return adminTown(game, s, args[0] !== undefined && Number.isFinite(num(0)) ? Math.max(0, Math.min(3, Math.floor(num(0)))) : undefined);
     case 'res': {
       // The seven resources (docs/17 H3): n of each of the six goods into the hold, and into her island's yard.
