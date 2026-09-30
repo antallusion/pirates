@@ -6,6 +6,7 @@ import { tell } from './ui/confirm.ts';
 import { beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
+import { departOrAsk } from './ui/depart.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { MinigameWindow } from './ui/minigame.ts';
 import { renderGear } from './ui/gear.ts';
@@ -1001,7 +1002,7 @@ addEventListener('keydown', (e) => {
       net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
       break;
     case 'dock':
-      if (docked) net.send({ t: 'undock' });
+      if (docked) departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
       else requestDock(e.shiftKey);
       break;
     case 'map':
@@ -1321,7 +1322,7 @@ function actionsRadial(): { label: string; run: () => void }[] {
 /** The pad's context action: board, dock, land, set sail — whatever the prompt offers first. */
 function padContext(): void {
   if (grabbed()) return void net.send({ t: 'board', target: state.entityId ?? 0, aggression: 'standard' });
-  if (state.self?.dockedAt) return void (touch.enabled && modal !== 'port' ? openModal('port') : net.send({ t: 'undock' }));
+  if (state.self?.dockedAt) return void (touch.enabled && modal !== 'port' ? openModal('port') : departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' })));
   if (boardTarget !== null) return void net.send({ t: 'board', target: boardTarget, aggression: 'standard' });
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void requestDock(false);
