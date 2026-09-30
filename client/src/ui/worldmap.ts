@@ -25,6 +25,7 @@ import { keyLabel, settings } from '../settings.ts';
 import { mapCard, placeName } from './maps.ts';
 import { esc } from './dom.ts';
 import { serverText } from '../lang/server.ts';
+import { drawMines } from './minemap.ts';
 import { taskName } from '../../../shared/src/data/worldtasks.ts';
 
 const L = dict(EN, RU);
@@ -859,6 +860,7 @@ export class WorldMap {
       g.fillRect(tx(h.x) - 1, ty(h.y) - 12, 2, 12);
       label(placeName(h.name), tx(h.x), ty(h.y) + 12, '#e0b862');
     }
+    drawMines(g, state, tx, ty, this.zoom, ms, mark, label); // the mines and their flags (docs/17 H3)
     // Your group.
     g.font = '12px serif';
     for (const m of state.party?.members ?? []) {

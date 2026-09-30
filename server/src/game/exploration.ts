@@ -19,6 +19,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { haulSite, ownSiteNear } from './resources.ts';
+import { flagLanded, startFlag } from './mines.ts';
 import { canDive, digTime, makeMap, grantMap, mapChance, mapHere, resolveDig, resolveDive, wreckHere } from './explorefx.ts';
 import { islandJobOffer, questEvent, questLandsHere } from './quests.ts';
 import { landingMinigame, openMinigame } from './minigames.ts';
@@ -72,7 +73,7 @@ export const TIDAL_LANDING_SEC = 18;
 
 export interface Landing {
   islandId: number;
-  feature: LandableFeature | 'haul' | 'dig' | 'dive' | 'tidal';
+  feature: LandableFeature | 'haul' | 'dig' | 'dive' | 'tidal' | 'flag';
   siteId?: string;
   mapId?: string;
   wreckId?: number;
@@ -174,6 +175,9 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
     game.toastShip(ship, `Boats away: ${party} hands row for ${bankName(bank)} while the sea is out (${TIDAL_LANDING_SEC}s).`, 'info');
     return null;
   }
+  // A mine ashore (docs/17 H3): the flag first.
+  const flag = startFlag(game, s);
+  if (flag !== undefined) return flag;
   const target = findLandable(game, s);
   if (!target) return 'Nothing worth landing for within reach of the boats';
   const party = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
@@ -225,6 +229,7 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
     if (bank) combBank(game, s, bank, recalled ? 0.5 : 1);
     return;
   }
+  if (l.feature === 'flag') return flagLanded(game, s, ship, l, recalled);
   if (l.feature === 'haul') {
     const site = game.sites.find((x) => x.id === l.siteId);
     if (!site || site.holder !== s.accountId) return;

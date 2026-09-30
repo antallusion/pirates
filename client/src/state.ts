@@ -6,6 +6,7 @@ import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
 import type { IslesView } from '../../shared/src/protocol.ts';
+import type { DwellView, MineView, WeekView } from '../../shared/src/h3proto.ts';
 import type { AppraisalView, CaravanView, CarcassView, BaseView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
@@ -124,6 +125,11 @@ export class ClientState {
   /** One's own island as a base (docs/15), and when (Date.now) the view came, for its timers. */
   base: BaseView | null = null;
   baseAt = 0;
+  /** docs/17 H3: the recruit window's dwellings, the sea's week, the mines on the chart. */
+  dwell: DwellView | null = null;
+  week: WeekView | null = null;
+  weekAt = 0;
+  mines: MineView[] = [];
   /** One's own caravans (docs/12 P8). */
   caravans: CaravanView[] = [];
   caravanSlots = 0;
@@ -358,6 +364,16 @@ export class ClientState {
       case 'base':
         this.base = m.view;
         this.baseAt = Date.now();
+        break;
+      case 'dwell':
+        this.dwell = m.view;
+        break;
+      case 'week':
+        this.week = m.view;
+        this.weekAt = Date.now();
+        break;
+      case 'mines':
+        this.mines = m.list;
         break;
       case 'caravans':
         this.caravans = m.list;

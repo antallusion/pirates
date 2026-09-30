@@ -47,6 +47,7 @@ import { holidayCard } from './holidays.ts';
 import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
 import { departOrAsk, voyageFoodCard } from './depart.ts';
 import { auctionCard, bindDealings, dealingsAct, hearsayCard, repairCompare, runsCard } from './dealings.ts';
+import { dwellCard } from './recruit.ts';
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -76,6 +77,8 @@ export class PortScreen {
   private onClose: () => void;
   /** Opens the tattoos window (docs/12 P9). */
   openTattoos: (() => void) | null = null;
+  /** Opens the recruit window of the port's dwellings (docs/17 H3). */
+  openDwell: (() => void) | null = null;
   constructor(send: (m: ClientMsg) => void, onClose: () => void) {
     this.send = send;
     this.onClose = onClose;
@@ -120,6 +123,7 @@ export class PortScreen {
     bindBazaar(root);
     bindDealings(root);
     root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
+    root.querySelector<HTMLElement>('[data-dwell]')?.addEventListener('click', () => this.openDwell?.());
     root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-build]').forEach((el) => (el.onchange = () => {
       const k = el.dataset.build!;
       const v = el instanceof HTMLInputElement && el.type === 'checkbox' ? el.checked : el.value;
@@ -510,7 +514,7 @@ ${orders}${berths}</div>` : ''}`;
       ${mb.map((x) => `<div class="cmp-h"><div class="cmp-h-t"><b>${esc(serverText(x.name))}${x.chest ? `<span class="mb-tag">${esc(LI('mb.chest'))}</span>` : ''}${x.copy ? `<span class="mb-tag">${esc(LI('mb.copyTag'))}</span>` : ''}</b><span class="muted">${esc(x.seller)} · ${money(x.price)}</span>${x.riddle ? `<span class="muted"><i>«${esc(x.riddle)}»</i></span>` : ''}</div>${x.mine ? `<button class="btn btn-small" data-act="mb_unpost" data-id="${x.id}">${esc(L('mb.take'))}</button>` : `<button class="btn btn-small btn-primary" data-act="mb_buy" data-id="${x.id}" ${self.gold < x.price ? 'disabled' : ''}>${esc(L('mb.buy'))}</button>`}</div>`).join('') || `<p class="muted">${esc(L('mb.none'))}</p>`}
       ${self.maps.length ? `<div class="giver-h">${esc(L('mb.post'))}</div>${self.maps.map((m) => `<div class="cmp-h"><div class="cmp-h-t"><b>${esc(serverText(m.name))}</b></div><input class="field" type="number" min="10" value="500" data-mbprice="${esc(m.id)}" style="width:80px" aria-label="${esc(L('mb.price'))}">${m.kind === 'player' ? `<label class="muted mb-copy"><input type="checkbox" data-mbcopy="${esc(m.id)}"> ${esc(LI('mb.copy'))}</label>` : ''}<button class="btn btn-small" data-act="mb_post" data-id="${esc(m.id)}">${esc(L('mb.postBtn'))}</button></div>`).join('')}` : ''}</div>`;
     const omen = omenLog(state.omen, true);
-    return `${omen}${board}${recs}${dice}${mapBoard}${needle}${seller}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
+    return `${dwellCard(port)}${omen}${board}${recs}${dice}${mapBoard}${needle}${seller}${tv.shanty ? `<div class="card"><h4 class="card-h">${icon('opt_sound', '', 'ico-md')}${esc(L('tavern.bard'))}</h4><p><i>${esc(serverText(tv.shanty))}</i></p></div>` : ""}<div class="cols"><div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('tavern.sailors'))}<span class="h-count" title="${esc(L('tavern.sailorsTitle'))}">${view.crewAvailable}</span></h4>
         <p>${esc(L('tavern.bounty', { cost: view.crewHireCost, stars: '★'.repeat(Math.round(tv.stars)), n: tv.stars, room }))}</p>
         <div class="hire-grid">${[1, 5, 10, 25].map((n) => `<button class="btn btn-small" data-act="crew" data-n="${n}"><b>+${n}</b>${money(n * view.crewHireCost)}</button>`).join('')}
         <button class="btn btn-small btn-danger hire-wide" data-act="crew" data-n="-5">${esc(L('tavern.discharge'))}</button>

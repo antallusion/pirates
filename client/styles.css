@@ -3350,3 +3350,91 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 @media (min-width: 900px) and (min-height: 521px) and (min-aspect-ratio: 7/5) {
   body.tac #toasts { top: 46%; }
 }
+
+/* ---------- The Heroes' economy (docs/17 H3): the week in the HUD, the recruit window, the island's town. */
+.rg-week { white-space: nowrap; }
+.rg-wk { color: var(--gold); }
+@media (max-width: 560px) { .rg-wk { display: none; } }
+/* The recruit window: the dwellings and their kinds of men on the left, the chosen kind with its slider on the right. */
+.rc-head { flex-wrap: wrap; gap: 8px; }
+.rc-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.rc-body { display: flex; flex-direction: column; gap: 6px; }
+.rc-army { display: flex; flex-direction: column; gap: 0; }
+.rc-army .army-row { max-width: 460px; margin: 2px 0 2px; }
+.rc-have { margin: 0; display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; font-size: 12px; }
+.rc-main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(250px, 1fr); gap: 12px; align-items: start; }
+.rc-list { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rc-dwell { padding: 6px 8px; background: rgba(6, 6, 7, 0.55); border: 1px solid rgba(140, 107, 58, 0.4); border-radius: 3px; min-width: 0; }
+.rc-dwell.off { opacity: 0.6; }
+.rc-dh { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.rc-art { width: 48px; height: 40px; object-fit: contain; flex: none; margin: 0; }
+.rc-dt { display: flex; flex-direction: column; min-width: 0; font-size: 12px; }
+.rc-dt b { font-family: var(--serif); font-size: 15px; color: var(--bone); }
+.rc-units { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 6px; margin-top: 6px; }
+.rc-unit { display: grid; grid-template-columns: 38px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 6px; align-items: center; text-align: left; padding: 4px 6px; min-height: 48px; cursor: pointer; color: var(--bone); background: rgba(20, 16, 12, 0.7); border: 2px solid #5c4a33; border-radius: 5px; font: inherit; }
+.rc-unit.up { border-color: #8f7640; }
+.rc-unit.sel { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.4); }
+.rc-unit.off { opacity: 0.55; }
+.rc-unit .rc-face { grid-row: span 2; width: 38px; height: 38px; margin: 0; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
+.rc-unit b { font-size: 12.5px; line-height: 1.15; overflow-wrap: anywhere; }
+.rc-per .bcosts { font-size: 11px; gap: 0 5px; }
+.rc-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rc-pick { padding: 8px 10px; background: rgba(6, 6, 7, 0.6); border: 1px solid var(--brass, #8a6a44); border-radius: 3px; display: flex; flex-direction: column; gap: 6px; }
+.rc-ph { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.rc-ph > div { display: flex; flex-direction: column; min-width: 0; font-size: 12px; }
+.rc-ph b { font-family: var(--serif); font-size: 16px; color: var(--bone); }
+.rc-big { width: 64px; height: 64px; flex: none; margin: 0; border-radius: 6px; object-fit: cover; border: 2px solid #8a6a44; }
+.rc-slide { display: flex; align-items: center; gap: 8px; }
+.rc-slide input[type="range"] { flex: 1; min-width: 0; accent-color: var(--gold); min-height: 28px; }
+.rc-count { min-width: 34px; text-align: center; font-size: 16px; color: var(--gold); }
+.rc-cost { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 13px; }
+.rc-why { margin: 0; font-size: 12px; }
+.rc-go { align-self: stretch; min-height: 36px; }
+.rc-train { padding: 6px 8px; background: rgba(6, 6, 7, 0.45); border: 1px solid rgba(140, 107, 58, 0.3); border-radius: 3px; }
+.rc-train > p { font-size: 11.5px; margin: 0 0 4px; }
+.rc-up { display: flex; align-items: center; gap: 4px; padding: 4px 0; border-top: 1px solid rgba(111, 90, 56, 0.22); min-width: 0; }
+.rc-up .rc-face { width: 30px; height: 30px; margin: 0; flex: none; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
+.rc-up .rc-face.up { border-color: #c9a45a; }
+.rc-arrow { color: var(--gold); }
+.rc-ut { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 12px; }
+.rc-ut b { overflow-wrap: anywhere; }
+.rc-card .card-h { flex-wrap: wrap; }
+@media (max-width: 760px) { .rc-main { grid-template-columns: minmax(0, 1fr); } .rc-side { order: -1; } }
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  .rc-main { grid-template-columns: minmax(0, 1.3fr) minmax(220px, 1fr); gap: 8px; }
+  .rc-side { order: 0; }
+  .rc-army .army-row { max-width: 300px; }
+  .rc-big { width: 44px; height: 44px; }
+  .rc-head .sub { font-size: 11px; }
+}
+/* The island's town: HoMM3's town hall screen as a grid of its buildings' cards. */
+.town { display: flex; flex-direction: column; gap: 8px; }
+.tw-head > p { margin: 0 0 4px; font-size: 12px; }
+.tw-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.tw-meta .btn { margin-left: auto; }
+.tw-week b { color: var(--gold); font-weight: 600; }
+.tw-res { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; margin-top: 4px; font-size: 12px; }
+.tw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 8px; }
+.tw-card { min-width: 0; padding: 6px 8px 8px; background: rgba(6, 6, 7, 0.5); border: 1px solid rgba(140, 107, 58, 0.3); border-radius: 3px; font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; }
+.tw-card.built { border-color: rgba(140, 107, 58, 0.6); background: rgba(10, 9, 8, 0.7); }
+.tw-card:not(.built) .tw-art { opacity: 0.7; filter: grayscale(0.4); }
+.tw-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tw-art { width: 64px; height: 54px; object-fit: contain; flex: none; margin: 0; }
+.tw-id { display: flex; flex-direction: column; min-width: 0; }
+.tw-id b { font-family: var(--serif); font-size: 15px; color: var(--bone); overflow-wrap: anywhere; }
+.tw-text { margin: 0; font-size: 11.5px; line-height: 1.3; }
+.tw-pool { margin: 0; color: var(--good); font-size: 12px; }
+.tw-note, .tw-why, .tw-max { margin: 0; font-size: 11.5px; }
+.tw-next { display: flex; flex-direction: column; gap: 3px; margin-top: auto; padding-top: 4px; border-top: 1px solid rgba(111, 90, 56, 0.22); }
+.tw-nn { font-size: 12px; color: var(--bone); }
+.tw-next .btn { align-self: flex-start; }
+.tw-job { display: flex; flex-direction: column; gap: 3px; margin-top: auto; }
+.tw-job .bspeed { display: flex; flex-wrap: wrap; gap: 4px; }
+.tw-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 8px; }
+.tw-mine { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 12.5px; }
+.tw-mk { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; }
+.tw-mk .field { min-height: 30px; }
+.tw-mk input.field { width: 90px; }
+.tw-mkout { margin: 4px 0 0; color: var(--gold); font-size: 13px; }
+.tw-rates { margin: 0 0 4px; font-size: 11.5px; }
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) { .tw-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); } .tw-art { width: 48px; height: 40px; } }
