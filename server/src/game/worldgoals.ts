@@ -107,7 +107,7 @@ function finish(game: Game, g: WorldGoal): void {
   for (const [acc, mine] of Object.entries(g.hands)) {
     if (mine < min) continue;
     const s = game.sessionByAccount(Number(acc));
-    if (s?.profile) pay(game, s, worldGoalReward(s.profile.level, mine, g.target));
+    if (s?.profile && s.disconnectedAt === null) pay(game, s, worldGoalReward(s.profile.level, mine, g.target));
     else {
       const r = worldGoalReward(40, mine, g.target);
       const o = (st.owed[acc] ??= { silver: 0, xp: 0 });
