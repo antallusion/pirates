@@ -349,3 +349,38 @@ test('the hunt reads in Russian', () => {
   }
   setLang('en');
 });
+
+test('beasts keep off the land and its shallows: they turn away from a coast as ships do, and rise only in open water', async () => {
+  const { makeGame } = await import('./helpers.ts');
+  const { BEAST_DEPTH, beastsPass, openWater } = await import('../server/src/game/beasts.ts');
+  const { depthAt } = await import('../shared/src/world/worldgen.ts');
+  const { game } = makeGame();
+  clearBeasts(game);
+  // An island the size of a roaming circle: a shark set to roam round its middle would cross it.
+  const is = game.world.islands.find((x) => x.radius > 350 && x.radius < 700)!;
+  assert.ok(is, 'an island to test by');
+  let sx = 0, sy = 0;
+  for (let a = 0; a < Math.PI * 2; a += 0.2) {
+    sx = is.x + Math.cos(a) * (is.radius + 260);
+    sy = is.y + Math.sin(a) * (is.radius + 260);
+    if (openWater(game, sx, sy)) break;
+  }
+  const shark = spawnBeast(game, 'shark', sx, sy, 3);
+  (beastBrain(game, shark.id) as { home: { x: number; y: number } }).home = { x: is.x, y: is.y };
+  let worst = Infinity, moved = 0, px = shark.state.x, py = shark.state.y;
+  for (let i = 0; i < 20 * 90; i++) {
+    game.now += 0.05;
+    stepBeasts(game, 0.05);
+    if (!shark.alive) break;
+    worst = Math.min(worst, depthAt(game.world, shark.state.x, shark.state.y));
+    moved += Math.hypot(shark.state.x - px, shark.state.y - py);
+    px = shark.state.x;
+    py = shark.state.y;
+    assert.equal(isLand(game.world, shark.state.x, shark.state.y), null, 'never over land');
+  }
+  assert.ok(worst >= BEAST_DEPTH - 1e-6, `never in the shallows: ${worst.toFixed(2)} m`);
+  assert.ok(moved > 300, `still swimming about: ${Math.round(moved)} m`);
+  // The sea's small life raises beasts only in water deep enough.
+  for (let k = 0; k < 30; k++) beastsPass(game, shark); // spawned about the shark's own place, by the coast
+  for (const b of beastsAlive(game)) assert.ok(openWater(game, b.state.x, b.state.y), 'risen in open water');
+});

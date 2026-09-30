@@ -24,7 +24,7 @@ import type { CarcassView, HuntView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
 import { giveGoods } from './director.ts';
 import type { Game } from './Game.ts';
@@ -188,7 +188,7 @@ export function spawnGroup(game: Game, id: BeastId, x: number, y: number, level:
   for (let i = 0; i < count; i++) {
     const a = (i / Math.max(1, count)) * Math.PI * 2, r = count > 1 ? 40 + S.rng.float() * 40 : 0;
     const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
-    if (isLand(game.world, px, py)) continue;
+    if (!openWater(game, px, py)) continue;
     out.push(spawnBeast(game, id, px, py, level + (i && S.rng.chance(0.3) ? S.rng.int(-1, 0) : 0), pack));
   }
   if (pack) S.packs.get(pack)!.size = out.length;
@@ -236,7 +236,7 @@ function openPoint(game: Game, x: number, y: number, r0: number, r1: number, reg
   for (let k = 0; k < 12; k++) {
     const a = S.rng.float() * Math.PI * 2, r = S.rng.range(r0, r1);
     const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
-    if (isLand(game.world, px, py) || !game.inZone(px, py)) continue;
+    if (!openWater(game, px, py) || !game.inZone(px, py)) continue;
     if (region && regionAt(game.world, px, py) !== region) continue;
     return [px, py];
   }
@@ -295,16 +295,49 @@ export function beastsPass(game: Game, ship: ShipEntity): boolean {
 
 // ------------------------------------------------------------------------------------------------ movement
 
+/** The least depth a beast swims in: off the land and out of the shallows along it (owner, 2026-09-30: sharks
+ *  were seen swimming over an island). The shallow band runs 1.5 m at the waterline to 5.5 m some 90 m out. */
+export const BEAST_DEPTH = 4.5;
+
+/** Water deep enough for a beast. */
+export function openWater(game: Game, x: number, y: number): boolean {
+  return depthAt(game.world, x, y) >= BEAST_DEPTH;
+}
+
 function swim(game: Game, s: ShipEntity, tx: number, ty: number, speed: number, dt: number, turn = 1.4): void {
-  const want = Math.atan2(tx - s.state.x, -(ty - s.state.y));
+  // Put ashore somehow (towed, shoved, an old save): back into the nearest open water.
+  if (isLand(game.world, s.state.x, s.state.y)) {
+    const p = openPoint(game, s.state.x, s.state.y, 40, 500);
+    if (p) {
+      s.state.x = p[0];
+      s.state.y = p[1];
+      game.grid.upsert(s.id, p[0], p[1]);
+    }
+  }
+  let want = Math.atan2(tx - s.state.x, -(ty - s.state.y));
   // At the pace of the sea, as the ships (SPEED_SCALE, TURN_SCALE): her way is reckoned on the old scale.
   const tr = turn * TURN_SCALE;
-  s.state.heading = wrapAngle(s.state.heading + clamp(wrapAngle(want - s.state.heading), -tr * dt, tr * dt));
   const v = Math.min(speed, dist(s.state.x, s.state.y, tx, ty) / Math.max(dt * SPEED_SCALE, 1e-3));
+  // Shoal water ahead: she turns off it the way a helmsman would, to the side with the deeper water (and about,
+  // if both are shoal), before her nose is over it.
+  const look = Math.max(60, s.stats.length * 0.7 + v * SPEED_SCALE * 1.2);
+  const probe = (a: number, r: number) => {
+    const h = headingVec(a);
+    return depthAt(game.world, s.state.x + h.x * r, s.state.y + h.y * r);
+  };
+  let steer = 1;
+  if (probe(want, look) < BEAST_DEPTH || probe(s.state.heading, look) < BEAST_DEPTH) {
+    const l = probe(s.state.heading - 0.8, look), r = probe(s.state.heading + 0.8, look);
+    if (l >= BEAST_DEPTH || r >= BEAST_DEPTH) want = s.state.heading + (r >= l ? 0.8 : -0.8);
+    else want = s.state.heading + Math.PI;
+    steer = 2.5;
+  }
+  s.state.heading = wrapAngle(s.state.heading + clamp(wrapAngle(want - s.state.heading), -tr * steer * dt, tr * steer * dt));
   const h = headingVec(s.state.heading);
   const nx = s.state.x + h.x * v * SPEED_SCALE * dt, ny = s.state.y + h.y * v * SPEED_SCALE * dt;
-  if (isLand(game.world, nx, ny)) {
-    // Land ahead: turn off it.
+  // Never into the shallows; out of them if she is somehow there (only deeper).
+  const here = depthAt(game.world, s.state.x, s.state.y), there = depthAt(game.world, nx, ny);
+  if (there < BEAST_DEPTH && !(there > here) && !isLand(game.world, s.state.x, s.state.y)) {
     s.state.heading = wrapAngle(s.state.heading + turn * dt * 2);
     s.state.speed = v * 0.3;
     return;
