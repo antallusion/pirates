@@ -31,6 +31,9 @@ import { ownIsland } from './estate.ts';
 import { has, island, islandNear, slotsOf, slotsUsed } from './holdings.ts';
 import type { Building, Holding } from './holdings.ts';
 import type { PlayerSession, Profile } from './player.ts';
+import { finishTown, townView } from './town.ts';
+import type { TownState } from './town.ts';
+import { townOf } from '../../../shared/src/data/town.ts';
 
 const HOUR = 3_600_000;
 /** Production is reckoned for three days at most at once (the yard is full long before). */
@@ -68,6 +71,8 @@ export interface Yard {
   seq: number;
   /** Her own ships of the island's shipyard (docs/15 item 4). */
   ships?: OwnShip[];
+  /** The town of the Heroes over the base (docs/17 H3 item 13). */
+  town?: TownState;
 }
 
 // ------------------------------------------------------------------------------------------------ the yard
@@ -177,6 +182,7 @@ export function reckonBase(game: Game, h: Holding): void {
 function finish(game: Game, h: Holding, y: Yard, isl: Island, j: BaseJob): void {
   y.jobs = y.jobs.filter((x) => x.id !== j.id);
   if (j.ship) return finishShipJob(game, h, y, isl, j);
+  if (townOf(j.what)) return finishTown(game, h, y, isl, j);
   const kind = producerOf(j.what);
   let name = '';
   if (kind) {
@@ -298,7 +304,7 @@ function whyNot(h: Holding, y: Yard, isl: Island, what: string): string | null {
 /** The island's power (docs/15 item 5): its buildings' and producers' levels, and three times each ship's of its own
  *  that is afloat (a laid-up hull counts nothing until she is mended). */
 export function powerOf(h: Holding): number {
-  const things = [...h.buildings.map((b) => b.level ?? 1), ...(h.yard?.producers ?? []).map((p) => p.level)];
+  const things = [...h.buildings.map((b) => b.level ?? 1), ...(h.yard?.producers ?? []).map((p) => p.level), ...Object.values(h.yard?.town?.b ?? {}).filter((n) => (n ?? 0) > 0) as number[]];
   const ships = (h.yard?.ships ?? []).filter((x) => x.state !== 'building' && x.state !== 'laid_up').map((x) => x.level);
   return islePower(things, ships);
 }
@@ -313,7 +319,7 @@ export function buildersBusy(y: Yard): number {
   return y.jobs.filter((j) => !j.ship).length;
 }
 
-function crewFree(h: Holding, y: Yard): string | null {
+export function crewFree(h: Holding, y: Yard): string | null {
   return buildersBusy(y) >= crewsOf(h) ? 'All your builders are at work.' : null;
 }
 
@@ -525,6 +531,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     shipyard: ownYardView(game, s, h, y),
     claim: claimView(game, s, h),
     guildYard: game.guilds.of(game, s.accountId) ? gyardView(game, s) : null,
+    town: townView(game, s, h, y),
   };
 }
 

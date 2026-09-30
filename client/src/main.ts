@@ -72,13 +72,14 @@ import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
 import { renderDescent } from './ui/descent.ts';
 import { renderSaga } from './ui/saga.ts';
 import { renderAway } from './ui/renown.ts';
+import { RecruitWindow } from './ui/recruit.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -200,6 +201,16 @@ const talentScreen = new TalentScreen((m) => net.send(m));
 const companyScreen = new CompanyScreen((m) => net.send(m));
 // One's own island as a base (docs/15): from the Company's islands, the captain's cabin, and at sea off the island.
 const baseWindow = new BaseWindow((m) => net.send(m));
+// The recruit window of the Heroes (docs/17 H3): from a port's tavern and from the island's town.
+const recruitWindow = new RecruitWindow((m) => net.send(m));
+let recruitFrom: 'port' | 'isle' = 'port';
+function openRecruit(src: 'port' | 'isle'): void {
+  recruitFrom = src;
+  recruitWindow.open(src);
+  openModal('recruit');
+}
+portScreen.openDwell = () => openRecruit('port');
+baseWindow.onRecruit = () => openRecruit('isle');
 companyScreen.onBase = () => openBase();
 baseWindow.onSail = () => closeModal();
 baseWindow.onLayout = () => { if (modal === 'base') refreshModal(); };
@@ -639,6 +650,9 @@ function onMessage(m: ServerMsg): void {
     case 'base':
       if (modal === 'base') refreshModal();
       break;
+    case 'dwell':
+      if (modal === 'recruit') refreshModal();
+      break;
     case 'descent': {
       // The choice between tiers opens its window for the leader; the window follows the descent.
       const run = m.view?.run;
@@ -749,6 +763,8 @@ function closeModal(): void {
   modal = null;
   $('modal').classList.add('hidden');
   releaseModalToasts();
+  // The recruit window opened from the island's town goes back to it (docs/17 H3).
+  if (was === 'recruit' && recruitFrom === 'isle') return openBase();
   // While docked, closing another screen returns to the harbour (Esc on the harbour itself hides it; P reopens).
   if (was !== 'port' && state.portView) openModal('port');
 }
@@ -883,6 +899,9 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'base':
       baseWindow.render(root, state);
+      break;
+    case 'recruit':
+      recruitWindow.render(root, state);
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);

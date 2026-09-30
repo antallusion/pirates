@@ -87,3 +87,12 @@ test('a warship of her own is worth about one hired escort of her level, never m
   assert.equal(hullFor('war', 8), 'frigate');
   assert.ok(ownParity('frigate', 8) < 1 && ownParity('brig', 6) === 1);
 });
+
+test('docs/17 H3: the town hall\'s daily silver keeps the island\'s pace — level 5 in about a week, level 10 in weeks', () => {
+  const r = simulate({ ...NORMAL, town: true });
+  assert.ok(daysTo(r, 5) >= 5 && daysTo(r, 5) <= 9, `level 5 on day ${daysTo(r, 5).toFixed(1)}`);
+  assert.ok(daysTo(r, 10) >= 28 && daysTo(r, 10) <= 70, `level 10 on day ${daysTo(r, 10).toFixed(1)}`);
+  assert.ok((r.townIncome ?? 0) > 0 && (r.townIncome ?? 0) < r.earned * 0.15, `the hall brought ${Math.round(r.townIncome ?? 0)} of ${Math.round(r.earned)}`);
+  const heavy = simulate({ ...NORMAL, hours: 5, town: true });
+  assert.ok(daysTo(heavy, 10) >= 21, `heavy play with the hall: level 10 on day ${daysTo(heavy, 10).toFixed(1)}`);
+});

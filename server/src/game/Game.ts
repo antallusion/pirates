@@ -207,6 +207,8 @@ import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.t
 import { buyHearsay, forgetHearsay, stepHearsay } from './hearsay.ts';
 import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
+import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
+import { mineLandable } from './mines.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
 
 export interface Loot {
@@ -812,6 +814,7 @@ export class Game {
     if (Math.floor(this.now) % 5 === 0) stepRenown(this); // careers, the week's challenges, the album, feats (docs/16 #26–29)
     if (Math.floor(this.now) % 5 === 0) stepWorldGoals(this); // the sea's goals of the week (docs/16 #32)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
+    if (Math.floor(this.now) % 5 === 0) stepH3(this); // the Heroes' calendar: dawns, weeks, mines, halls (docs/17 H3)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
     settleCrimes(this);
@@ -972,6 +975,9 @@ export class Game {
         : isle
         ? isle
         : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
+      // A mine ashore (docs/17 H3): the flag goes up before the boats row for anything else on its island.
+      const flag = s.ship.docked || s.ship.landing ? null : mineLandable(this, s);
+      if (flag && (!s.landable || (land && s.landable.island === land.island.name && !s.landable.action))) s.landable = flag;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
       if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });
@@ -2593,6 +2599,7 @@ export class Game {
       this.pushSelf(s, true);
     };
 
+    if (msg.t === 'h3') return h3Message(this, s, msg); // docs/17 H3
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);

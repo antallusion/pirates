@@ -44,6 +44,7 @@ import type { Cargo, AmmoStock, ShipLoadout, TrophyHistory } from './sim/shipsta
 import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
+import type { H3ClientMsg, H3ServerMsg, TownView } from './h3proto.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
 import type { TaskView } from './data/worldtasks.ts';
@@ -287,6 +288,8 @@ export type ClientMsg =
   | { t: 'wgoals' }
   /** docs/16 #34: the guild's shipyard on the leader's island. */
   | { t: 'gyard'; action: 'view' | 'start' | 'give' | 'cancel'; kind?: GuildProject; good?: GoodId; qty?: number; silver?: number }
+  /** docs/17 H3: the week, the dwellings, the island's town, the mines. */
+  | H3ClientMsg
   | { t: 'mail'; action: 'list' }
   | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
   | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
@@ -1498,6 +1501,8 @@ export type ServerMsg =
   | { t: 'bounties'; list: BountyView[] }
   | { t: 'marks'; list: { name: string; x: number; y: number }[] }
   | { t: 'err'; msg: string }
+  /** docs/17 H3: the week, the dwellings, the mines. */
+  | H3ServerMsg
   | { t: 'pong'; c: number; s: number };
 
 // ------------------------------------------------------------------ groups, barter, letters, the market
@@ -1920,6 +1925,8 @@ export interface BaseView {
   levelUp: (BaseCostView & { level: number; treasury: number; power: number; why: string | null }) | null;
   /** The island's shipyard and her own ships (docs/15 item 4). */
   shipyard: OwnYardView;
+  /** docs/17 H3: the island's town of the Heroes. */
+  town?: TownView;
   /** Its waters, tax and defence, and a raid under way (docs/15 items 6–7). */
   claim: IsleClaimView;
   /** docs/16 #34: the guild's shipyard here, when she leads a guild. */

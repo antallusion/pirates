@@ -28,9 +28,12 @@ import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
 import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
+import { bindTown, townTab } from './town.ts';
+import { EN as H_EN, RU as H_RU } from '../lang/ui/h3.ts';
 
 const L = dict(EN, RU);
 const CO = dict(CO_EN, CO_RU);
+const H = dict(H_EN, H_RU);
 
 /** A thing's name in the reader's tongue (buildings are swapped in place by the data overlay). */
 export function baseName(what: string): string {
@@ -110,12 +113,16 @@ const LANDSCAPE = matchMedia('(max-height: 520px) and (min-aspect-ratio: 1/1)');
 export class BaseWindow {
   sel: number | null = null;
   /** The island's plots, or its shipyard (docs/15 item 4). */
-  tab: 'plots' | 'yard' = 'plots';
+  tab: 'plots' | 'yard' | 'town' = 'plots';
   moving: number | null = null;
   private send: (m: ClientMsg) => void;
   private asked = 0;
   /** "Sail to defend": the window closes and the HUD's «Now:» points to the raiders (docs/15 item 7). */
   onSail: () => void = () => {};
+  /** The town's recruit window (docs/17 H3). */
+  onRecruit: () => void = () => {};
+  /** The market's order being drawn up (docs/17 H3). */
+  private mk: { give: string; get: string; n: number } = { give: 'silver', get: 'timber', n: 100 };
 
   /** The layout changed (a phone turned): the window is drawn afresh. */
   onLayout: () => void = () => {};
@@ -154,12 +161,15 @@ export class BaseWindow {
       <span class="bmeta">${money(state.self?.gold ?? 0)}</span>
       <button class="btn btn-small${fresh ? ' btn-primary' : ''}" data-bcollect title="${esc(L('collect_tip'))}"${fresh ? '' : ' disabled'}>${esc(L('collect'))}${fresh ? ` +${fmt(fresh)}` : ''}</button></div></div>`;
     const sy = v.shipyard;
-    const tabs = `<div class="btabs" role="tablist"><button class="btab${this.tab === 'plots' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'plots'}" data-btab="plots">${esc(L('tab_plots'))}</button><button class="btab${this.tab === 'yard' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'yard'}" data-btab="yard">${esc(L('tab_yard'))} <i>${sy.ships.length}/${sy.max}</i></button></div>`;
+    const tabs = `<div class="btabs" role="tablist"><button class="btab${this.tab === 'plots' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'plots'}" data-btab="plots">${esc(L('tab_plots'))}</button><button class="btab${this.tab === 'yard' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'yard'}" data-btab="yard">${esc(L('tab_yard'))} <i>${sy.ships.length}/${sy.max}</i></button>${v.town ? `<button class="btab${this.tab === 'town' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'town'}" data-btab="town">${esc(H('tab'))}</button>` : ''}</div>`;
     // A phone on its side (docs/15 item 8): the board fills the left, and the resources, the waters and the sheet
     // scroll together on the right, so the board is not squeezed under three header rows.
     const land = LANDSCAPE.matches;
     const top = `${bar}${this.defence(v)}`;
-    const body = this.tab === 'yard'
+    if (this.tab === 'town' && !v.town) this.tab = 'plots';
+    const body = this.tab === 'town'
+      ? `<div class="modal-body base-body yard-body town-body">${land ? top : ''}${townTab(v, state, this.mk)}</div>`
+      : this.tab === 'yard'
       ? `<div class="modal-body base-body yard-body">${land ? top : ''}${this.yard(v, state)}</div>`
       : `<div class="modal-body base-body${land ? ' base-land' : ''}"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}">${this.board(v)}</div></div><div class="base-sheet">${land ? top : ''}${this.sheet(v, state)}</div></div>`;
     root.innerHTML = `<div class="modal-head base-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: placeName(v.name), level: v.level, title }))} · ${esc(L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') }))}</div></div>${tabs}</div>
@@ -368,7 +378,7 @@ export class BaseWindow {
       redraw();
     }));
     root.querySelectorAll<HTMLElement>('[data-btab]').forEach((el) => (el.onclick = () => {
-      this.tab = el.dataset.btab === 'yard' ? 'yard' : 'plots';
+      this.tab = el.dataset.btab === 'yard' ? 'yard' : el.dataset.btab === 'town' ? 'town' : 'plots';
       redraw();
     }));
     root.querySelector<HTMLElement>('[data-blevel]')?.addEventListener('click', () => {
@@ -380,6 +390,7 @@ export class BaseWindow {
       root.querySelectorAll<HTMLElement>(`[data-${attr}]`).forEach((el) => (el.onclick = () => this.send({ t: 'base', action, ship: el.dataset[attr]! })));
     }
     root.querySelector<HTMLElement>('[data-bcollect]')?.addEventListener('click', () => this.send({ t: 'base', action: 'collect' }));
+    bindTown(root, this.send, this.mk, () => this.onRecruit(), redraw);
     root.querySelector<HTMLElement>('[data-bsail]')?.addEventListener('click', () => this.onSail());
     root.querySelector<HTMLElement>('[data-babandon]')?.addEventListener('click', () => void ask(L('abandon_confirm', { name: placeName(v.name), refund: fmt(v.claim.refund), h: 72 })).then((ok) => {
       if (!ok) return;
