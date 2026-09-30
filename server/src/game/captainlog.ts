@@ -8,10 +8,12 @@ import type { LogEntry, LogKind } from '../../../shared/src/data/captainlog.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 
-/** The day of her voyages: game days since she first sailed (the saga's count). */
+/** The day of her voyages: game days since she first sailed (the saga's count). A captain is made at a world time
+ *  (seconds); a very old record may hold the wall clock (ms) instead. */
 export function voyageDay(game: Game, createdAt: number | undefined): number {
-  const now = game.wallNow();
-  return Math.max(1, Math.floor((now - (createdAt ?? now)) / (DAY_LENGTH_SEC * 1000)) + 1);
+  if (createdAt === undefined || !Number.isFinite(createdAt)) return 1;
+  if (createdAt > 1e11) return Math.max(1, Math.floor((game.wallNow() - createdAt) / (DAY_LENGTH_SEC * 1000)) + 1);
+  return Math.max(1, Math.floor((game.now - createdAt) / DAY_LENGTH_SEC) + 1);
 }
 
 /** A line of the day in her log. */

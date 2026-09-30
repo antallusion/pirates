@@ -4,7 +4,7 @@
 
 import { LOG_DAYS, LOG_ICON } from '../../../shared/src/data/captainlog.ts';
 import type { LogEntry } from '../../../shared/src/data/captainlog.ts';
-import { PROFESSIONS, PROFESSION_DEFS } from '../../../shared/src/data/crew.ts';
+import { PROFESSIONS, PROFESSION_DEFS, UNIQUE_OFFICERS } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
 import { GRUMBLES, PRACTICE_MAX, PRACTICE_PER_LEVEL, SHANTIES, TALK, practiceLevel, practiceProgress } from '../../../shared/src/data/crewtalk.ts';
 import type { SagaKind } from '../../../shared/src/data/saga.ts';
@@ -22,6 +22,12 @@ const ru = () => (lang() === 'ru' ? 1 : 0);
 
 type Say = Extract<ServerMsg, { t: 'crew_say' }>;
 
+/** An officer's name in the reader's tongue: a legend's from the table (translated with the data), the rest by parts. */
+export function officerName(o: { name: string; unique?: string }): string {
+  const u = o.unique ? UNIQUE_OFFICERS.find((x) => x.id === o.unique) : undefined;
+  return u?.name ?? personName(o.name);
+}
+
 /** What was said, in the reader's tongue; the face and the speaker's name. */
 export function crewSayParts(m: Say): { face: string; who: string; line: string; kind: 'info' | 'good' | 'bad' } {
   const x = m.x ? sagaName(m.x) : '';
@@ -32,7 +38,7 @@ export function crewSayParts(m: Say): { face: string; who: string; line: string;
   const ev = m.ev as keyof (typeof TALK)['lieutenant'];
   const line = (TALK[m.who.role]?.[ev]?.[m.i]?.[ru()] ?? '').replace('{x}', x);
   const kind = ev === 'victory' ? 'good' : ev === 'hunger' || ev === 'low_morale' || ev === 'boss' ? 'bad' : 'info';
-  return { face: officerIcon(m.who, 'talk-face'), who: personName(m.who.name), line, kind };
+  return { face: officerIcon(m.who, 'talk-face'), who: officerName(m.who), line, kind };
 }
 
 /** The mark of the men's mood on the captain's frame. */
@@ -60,15 +66,17 @@ export function practiceHtml(pools: Record<Profession, number>, practice: Partia
     const none = (pools[k] ?? 0) <= 0;
     return `<div class="pr-row${none ? ' muted' : ''}">${icon(`prof_${k}`, '', 'ico-sm')}<span class="pr-name">${esc(PROFESSION_DEFS[k].name)}</span>
       <span class="pr-bar" title="${esc(lv >= PRACTICE_MAX ? LC('practiceMax') : `${Math.round(prog * 100)}%`)}"><i style="width:${Math.round(prog * 100)}%"></i></span>
-      <b class="pr-lv">${esc(lv >= PRACTICE_MAX ? LC('practiceMax') : LC('practiceLv', { n: lv }))}</b><span class="pr-edge">${lv > 0 ? esc(edge(k, lv)) : ''}</span></div>`;
+      <b class="pr-lv">${esc(lv >= PRACTICE_MAX ? LC('practiceMax') : LC('practiceLv', { n: lv }))}</b><span class="pr-edge">${lv > 0 && !none ? esc(edge(k, lv)) : ''}</span></div>`;
   }).join('');
   return `<div class="card pr-card"><h4 class="card-h">${icon('xp', '', 'ico-md')}${esc(LC('practice'))}</h4>${rows}<p class="muted pr-hint">${esc(LC('practiceHint'))}</p></div>`;
 }
 
 /** The wounded below: how many, the pace of healing and of dying, what would help. */
+export const fmt1 = (n: number): string => (Math.round(n * 10) / 10).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB');
+
 export function woundedHtml(w: NonNullable<NonNullable<ClientState['self']>['company']['wounded']> | undefined): string {
   if (!w) return '';
-  const fmt1 = (n: number) => (Math.round(n * 10) / 10).toLocaleString(ru() ? 'ru-RU' : 'en-GB');
+
   const body = w.n > 0
     ? `<p class="wd-n"><b class="${w.diePerMin > 0 ? 'bad' : 'good'}">${esc(LC('woundedN', { n: w.n }))}</b></p>
        <p>${esc(LC('woundedHeal', { h: fmt1(w.healPerMin) }))} · ${w.diePerMin > 0 ? `<span class="bad">${esc(LC('woundedDie', { d: fmt1(w.diePerMin) }))}</span>` : `<span class="good">${esc(LC('woundedSafe'))}</span>`}</p>`
@@ -109,7 +117,7 @@ function dayRows(list: LogEntry[], captain: string): Row[] {
       let j = i;
       while (j + 1 < list.length && list[j + 1].kind === e.kind) j++;
       if (j > i) {
-        const names = list.slice(i, j + 1).map((x) => `«${sagaName(x.a[0] ?? '')}»`);
+        const names = list.slice(i, j + 1).map((x) => (ru() ? `«${sagaName(x.a[0] ?? '')}»` : `“${sagaName(x.a[0] ?? '')}”`));
         const shown = names.length > 4 ? [...names.slice(0, 4), '…'] : names;
         rows.push({ tod: list[j].tod, icon: LOG_ICON[e.kind], text: LC(e.kind === 'sank' ? 'lg.sankMany' : 'lg.prizeMany', { n: names.length, list: shown.join(', ') }) });
         i = j;

@@ -15,7 +15,7 @@ import { keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
 import { ask } from './confirm.ts';
 import { dec1, esc, fmt, icon, money, officerIcon } from './dom.ts';
-import { LC, practiceHtml, woundedHtml } from './crewlife.ts';
+import { LC, officerName, practiceHtml, woundedHtml } from './crewlife.ts';
 
 const L = dict(EN, RU);
 const kb = (a: Action) => keyLabel(settings().keys[a][0] || settings().keys[a][1]);
@@ -55,8 +55,6 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
       <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('codex'))}</h4>
         <div class="row"><input id="codex" type="range" min="0" max="50" step="5" value="${c.share}" style="flex:1"><b id="codex-v">${c.share}%</b></div>
         <p class="muted">${esc(L('codexFair', { share: c.expectedShare }))}</p></div>
-      ${woundedHtml(c.wounded)}
-      ${practiceHtml(c.pools, c.practice)}
       ${c.traits.length ? `<div class="card"><h4 class="card-h">${icon('menu_crew', '', 'ico-md')}${esc(L('character'))}</h4>${traitChips(c.traits)}</div>` : ''}
       ${self.fleet.slots || self.fleet.escorts.length ? `<div class="card"><h4 class="card-h">${icon('ab_call_escort', '', 'ico-md')}${esc(L('squadron', { n: self.fleet.escorts.length, slots: self.fleet.slots, key: kb('formation') }))}</h4>
         ${self.fleet.escorts.map((e) => `<p>${esc(e.name)} <span class="muted">${esc(e.atSea ? L('escortHull', { hull: e.hull }) : L('atAnchor'))}</span></p>`).join('') || `<p class="muted">${esc(L('hireEscorts'))}</p>`}
@@ -67,7 +65,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
       ${c.officers.map((o) => {
         const def = OFFICER_DEFS[o.role];
         const left = Math.max(0, o.orderReady - now);
-        return `<div class="card officer-card">${officerIcon(o, 'officer-ico')}<div class="quest-body"><h4>${esc(personName(o.name))} <span class="muted">${esc(L('officerLevel', { role: lang() === 'ru' ? def.name.toLowerCase() : def.name, level: o.level }))}</span></h4>
+        return `<div class="card officer-card">${officerIcon(o, 'officer-ico')}<div class="quest-body"><h4>${esc(officerName(o))} <span class="muted">${esc(L('officerLevel', { role: lang() === 'ru' ? def.name.toLowerCase() : def.name, level: o.level }))}</span></h4>
           <p>${traitChips(o.traits)}</p>
           ${o.fate ? fateHtml(state, o.id, o.fate) : ''}
           <p class="muted">${esc(def.description)}</p>
@@ -75,6 +73,8 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
             <span><button class="btn btn-small" data-order="${o.id}" ${left > 0 || o.away ? 'disabled' : ''} title="${esc(def.order.description)}">${esc(def.order.name)}${left > 0 ? esc(L('cooldown', { s: Math.ceil(left) })) : ''}</button>
             ${self.dockedAt ? `<button class="btn btn-small btn-danger" data-dismiss="${o.id}">${esc(L('payOff'))}</button>` : ''}</span></div></div></div>`;
       }).join('') || `<p class="muted">${esc(L('noOfficers'))}</p>`}
+      ${woundedHtml(c.wounded)}
+      ${practiceHtml(c.pools, c.practice)}
     </div></div></div>`;
   const slider = root.querySelector<HTMLInputElement>('#codex')!;
   slider.oninput = () => (root.querySelector('#codex-v')!.textContent = `${slider.value}%`);

@@ -40,7 +40,7 @@ import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
-import { LC as LCREW, moodMark } from './crewlife.ts';
+import { LC as LCREW, fmt1, moodMark } from './crewlife.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
 import { ChatPanel } from './chat.ts';
 import type { ChatChannel, ChatLine } from './chat.ts';
@@ -188,7 +188,7 @@ export class Hud {
         <div class="row"><span class="lbl">${icon('stat_hull', '', 'ico-xs')}${esc(L('hull'))}</span><span class="val">${fmt(you.hull)} / ${fmt(you.hullMax)}</span></div>${bar('hull', you.hull / you.hullMax)}
         <div class="row"><span class="lbl">${icon('stat_sails', '', 'ico-xs')}${esc(L('sails'))}</span><span class="val">${fmt(you.sails)} / ${fmt(you.sailsMax)}${you.rudderHp < 0.99 ? ` · ${esc(L('rudder', { n: Math.round(you.rudderHp * 100) }))}` : ''}</span></div>${bar('sails', you.sails / you.sailsMax)}
         <div class="row"><span class="lbl">${icon('stat_crew', '', 'ico-xs')}${esc(L('crew'))}</span><span class="val">${you.crew} / ${you.crewMax}</span></div>${bar('crew', you.crew / you.crewMax)}
-        ${wd && wd.n > 0 ? `<div class="row sp-wounded" title="${esc(LCREW('woundedAdvice'))}"><span class="lbl" style="color:${wd.diePerMin > 0 ? 'var(--bad)' : 'var(--fog)'}">${icon('prof_surgeon', '', 'ico-xs')}${esc(LCREW('woundedShort'))}</span><span class="val">${esc(wd.diePerMin > 0 ? LCREW('woundedRowDie', { n: wd.n, h: wd.healPerMin, d: wd.diePerMin }) : LCREW('woundedRow', { n: wd.n, h: wd.healPerMin }))}</span></div>` : ''}
+        ${wd && wd.n > 0 ? `<div class="row sp-wounded" title="${esc(LCREW('woundedAdvice'))}"><span class="lbl" style="color:${wd.diePerMin > 0 ? 'var(--bad)' : 'var(--fog)'}">${icon('prof_surgeon', '', 'ico-xs')}${esc(LCREW('woundedShort'))}</span><span class="val">${esc(wd.diePerMin > 0 ? LCREW('woundedRowDie', { n: wd.n, h: fmt1(wd.healPerMin), d: fmt1(wd.diePerMin) }) : LCREW('woundedRow', { n: wd.n, h: fmt1(wd.healPerMin) }))}</span></div>` : ''}
         ${you.water > 0.01 || you.leaks ? `<div class="row"><span class="lbl" style="color:var(--xp)">${esc(L('water'))}</span><span class="val">${Math.round(you.water * 100)}%${you.leaks ? ` · ${you.leaks} ${esc(plural(you.leaks, L('leak.one'), L('leak.few'), L('leak.many')))}` : ''}${you.water > 0.4 ? ` · ${esc(L('listing'))}` : ''}</span></div>${bar('crew', you.water)}` : ''}
         <div class="row"><span class="lbl">${icon('menu_crew', '', 'ico-xs')}${esc(keyless(L('orders')))}</span><span class="val">${esc(L(`station.${you.station}`))}</span></div>
         <div class="row"><span class="lbl">${icon('tree_command', '', 'ico-xs')}${esc(L('morale'))}</span><span class="val">${you.morale}${self.company.mood ? ` · <span class="${self.company.mood === 'shanty' ? 'good' : 'bad'}">${esc(LCREW(`mood.${self.company.mood}`))}</span>` : ''}</span></div>${bar('morale', you.morale / 100)}
