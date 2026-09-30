@@ -112,6 +112,8 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       break;
     }
     case 'birds': {
+      // Gulls (the painted top-down gull) wheeling over the water.
+      if (gulls(g, 5, Math.min(1.4, k) * 0.8, t, 26 * k)) break;
       g.strokeStyle = 'rgba(235,235,230,0.9)';
       g.lineWidth = 1.5;
       for (let i = 0; i < 6; i++) {
@@ -125,8 +127,6 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
         g.lineTo(bx + 4 * k, by - flap);
         g.stroke();
       }
-      // The boiling water under them.
-      for (let i = 0; i < 4; i++) puff(g, Math.sin(t * 3 + i * 2) * 8 * k, Math.cos(t * 2.4 + i) * 5 * k, 2.5 * k, 0.6, '220,235,240');
       break;
     }
     case 'raft':
@@ -351,6 +351,8 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
       break;
     }
     case 'albatross': {
+      // One great bird gliding wide circles: the gull's art, larger and slower.
+      if (gulls(g, 1, Math.min(1.4, k) * 1.5, t * 0.6, 22 * k)) break;
       const a = t * 0.6;
       const bx = Math.cos(a) * 20 * k, by = Math.sin(a) * 10 * k - 14 * k;
       const flap = Math.sin(t * 4) * 3 * k;
@@ -410,37 +412,168 @@ function drawOne(g: G, kind: string, k: number, t: number): void {
   }
 }
 
-/** Shoals (docs/12 P3): a darker boil on the water with birds over it; what swims in it once the craft reads the water.
- *  And a captain's own pots, as red buoys. */
+// ------------------------------------------------------------------------------------------------ shoals and gulls
+
+/** The art darkened into a flat shape (a fish seen through the water, a bird's shadow), cached per id. */
+const shapes = new Map<string, HTMLCanvasElement>();
+
+/** The sheet's fish lie head low-left, tail high-right: about 160° from +x. */
+const FISH_HEAD = (160 * Math.PI) / 180;
+
+/** The painted fish of the catch sheet laid flat — head to +x, squashed as if seen from above — in one dark colour. */
+function fishShape(fish: string, tone: string): HTMLCanvasElement | null {
+  const key = `fish:${fish}:${tone}`;
+  const hit = shapes.get(key);
+  if (hit) return hit;
+  const spr = sprite(`icon.fish_${fish}`);
+  if (!spr) return null;
+  const c = document.createElement('canvas');
+  c.width = 72;
+  c.height = 30;
+  const x = c.getContext('2d')!;
+  x.translate(36, 15);
+  x.scale(1, 0.72);
+  x.rotate(-FISH_HEAD);
+  const s = 78, ar = spr.img.naturalHeight / spr.img.naturalWidth;
+  x.drawImage(spr.img, -s * spr.cx, -s * ar * spr.cy, s, s * ar);
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.globalCompositeOperation = 'source-in';
+  x.fillStyle = tone;
+  x.fillRect(0, 0, c.width, c.height);
+  shapes.set(key, c);
+  return c;
+}
+
+/** The gull's shadow on the water: the painted gull, dark. */
+function gullShadow(): HTMLCanvasElement | null {
+  const hit = shapes.get('gull');
+  if (hit) return hit;
+  const spr = sprite('creature.gull');
+  if (!spr) return null;
+  const c = document.createElement('canvas');
+  c.width = 96;
+  c.height = Math.round((96 * spr.img.naturalHeight) / spr.img.naturalWidth);
+  const x = c.getContext('2d')!;
+  x.drawImage(spr.img, 0, 0, c.width, c.height);
+  x.globalCompositeOperation = 'source-in';
+  x.fillStyle = '#000';
+  x.fillRect(0, 0, c.width, c.height);
+  shapes.set('gull', c);
+  return c;
+}
+
+/** Gulls wheeling round the origin (the painted top-down gull, beating its wings), their shadows on the water. */
+function gulls(g: G, n: number, k: number, t: number, radius: number): boolean {
+  const spr = sprite('creature.gull');
+  if (!spr) return false;
+  const shadow = gullShadow();
+  const aspect = spr.img.naturalHeight / spr.img.naturalWidth;
+  for (let i = 0; i < n; i++) {
+    const dir = i % 3 === 2 ? -1 : 1;
+    const a = dir * t * (0.5 + (i % 2) * 0.13) + (i * Math.PI * 2) / n + i * 0.7;
+    const r = radius * (0.7 + 0.3 * Math.sin(i * 1.9 + 0.4));
+    const x = Math.cos(a) * r, y = Math.sin(a) * r * 0.75 - 6 * k;
+    // Heading along its circle (the art faces up the image).
+    const dx = -Math.sin(a) * dir, dy = Math.cos(a) * 0.75 * dir;
+    const rot = Math.atan2(dx, -dy);
+    const size = (21 + (i % 3) * 3) * k;
+    // Now a few beats, now a glide.
+    const beat = Math.sin(t * 7 + i * 2.1);
+    const flap = Math.sin(t * 0.9 + i) > 0.2 ? 0.62 + 0.38 * Math.abs(beat) : 1;
+    const w = size, h = size * aspect;
+    if (shadow) {
+      g.save();
+      g.globalAlpha = 0.16;
+      g.translate(x + 7 * k, y + 11 * k);
+      g.rotate(rot);
+      g.scale(flap * 0.85, 0.85);
+      g.drawImage(shadow, -w / 2, -h / 2, w, h);
+      g.restore();
+    }
+    g.save();
+    g.translate(x, y);
+    g.rotate(rot);
+    g.scale(flap, 1);
+    g.drawImage(spr.img, -w / 2, -h / 2, w, h);
+    g.restore();
+  }
+  return true;
+}
+
+function onScreen(x: number, y: number, r: number, w: number, h: number): boolean {
+  return !(x < -r - 60 || y < -r - 60 || x > w + r + 60 || y > h + r + 60);
+}
+
+/** Shoals (docs/12 P3; art, 2026-09-30): a dark ripple on the water with the shapes of its fish turning in it — the
+ *  painted fish of the catch sheet, laid flat and dark — and, once the craft reads the water, its fish and name.
+ *  The gulls over it come after the ships (drawShoalBirds). And a captain's own pots, as red buoys. */
 export function drawShoals(g: G, list: ShoalView[], traps: { x: number; y: number }[], sx: (x: number) => number, sy: (y: number) => number, zoom: number, t: number, w: number, h: number): void {
   for (const s of list) {
     const x = sx(s.x), y = sy(s.y);
     const r = s.r * zoom;
-    if (x < -r - 60 || y < -r - 60 || x > w + r + 60 || y > h + r + 60) continue;
+    if (!onScreen(x, y, r, w, h)) continue;
     g.save();
     g.translate(x, y);
     const gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
-    gr.addColorStop(0, `rgba(10,30,40,${0.18 + 0.2 * s.full})`);
-    gr.addColorStop(1, 'rgba(10,30,40,0)');
+    gr.addColorStop(0, `rgba(6,22,30,${0.2 + 0.18 * s.full})`);
+    gr.addColorStop(0.7, `rgba(6,22,30,${0.1 + 0.08 * s.full})`);
+    gr.addColorStop(1, 'rgba(6,22,30,0)');
     g.fillStyle = gr;
     g.beginPath();
     g.arc(0, 0, r, 0, Math.PI * 2);
     g.fill();
-    // The boil of the water.
-    for (let i = 0; i < 8; i++) {
-      const a = i * 0.8 + t * 0.4, rr = r * (0.2 + ((i * 37) % 60) / 100);
-      puff(g, Math.cos(a) * rr, Math.sin(a) * rr, (1.5 + (i % 3)) * Math.max(0.6, zoom), 0.45 * s.full + 0.15, '210,230,238');
+    // The ripple of fish working under the surface: two slow rings.
+    g.lineWidth = Math.max(1, 1.2 * zoom);
+    for (let i = 0; i < 2; i++) {
+      const life = (t * 0.18 + i * 0.5 + s.id * 0.13) % 1;
+      g.strokeStyle = `rgba(190,220,232,${0.14 * (1 - life)})`;
+      g.beginPath();
+      g.ellipse(0, 0, r * (0.25 + life * 0.6), r * (0.2 + life * 0.5), 0.3, 0, Math.PI * 2);
+      g.stroke();
     }
-    drawOne(g, 'birds', Math.max(0.55, zoom), t + s.id);
+    // The fish themselves: a few dark shapes turning slowly round the heart of the shoal.
+    // Pale backs glinting under the water over their own dark shadows (the sea is dark: a dark fish alone is lost).
+    const shape = fishShape(s.fish ?? 'herring', '#b9dde6'), under = fishShape(s.fish ?? 'herring', '#02080c');
+    if (shape && under) {
+      const n = 3 + Math.round(s.full * 4) + (r > 260 ? 3 : 0);
+      const len = Math.max(12, Math.min(30, 13 * zoom));
+      const dir = s.id % 2 ? 1 : -1;
+      for (let i = 0; i < n; i++) {
+        const a = dir * t * (0.22 + (i % 3) * 0.04) + (i * Math.PI * 2) / n + s.id;
+        const rr = r * (0.18 + ((i * 37 + s.id * 11) % 50) / 100);
+        const fx = Math.cos(a) * rr, fy = Math.sin(a) * rr;
+        // Nose along the circle, with a small wriggle.
+        const heading = Math.atan2(Math.cos(a) * dir, -Math.sin(a) * dir) + Math.sin(t * 3 + i) * 0.12;
+        g.save();
+        g.translate(fx, fy);
+        g.rotate(heading);
+        g.globalAlpha = 0.4;
+        g.drawImage(under, -len / 2 + 2, -len * 0.26 + 2.5, len, len * 0.52);
+        g.globalAlpha = 0.3 + 0.16 * Math.sin(t * 0.8 + i * 1.3);
+        g.drawImage(shape, -len / 2, -len * 0.26, len, len * 0.52);
+        g.restore();
+      }
+    }
     if (s.fish) {
-      g.font = `600 ${Math.round(10 + 2 * Math.min(1, zoom))}px Inter, sans-serif`;
-      g.textAlign = 'center';
-      g.lineWidth = 3;
-      g.strokeStyle = 'rgba(0,0,0,0.7)';
       const label = FISH[s.fish].name[lang() === 'ru' ? 1 : 0];
-      g.strokeText(label, 0, r + 12);
+      const fs = Math.round(10 + 2 * Math.min(1, zoom));
+      g.font = `600 ${fs}px Inter, sans-serif`;
+      const icon = sprite(`icon.fish_${s.fish}`);
+      const iw = icon ? fs + 8 : 0;
+      const tw = g.measureText(label).width;
+      // Under the shoal, or inside its rim when it fills the screen.
+      const ly = Math.min(r + 14, Math.max(56, r * 0.42));
+      const x0 = -(tw + iw + (icon ? 3 : 0)) / 2;
+      g.fillStyle = 'rgba(5,12,16,0.62)';
+      g.beginPath();
+      g.roundRect(x0 - 5, ly - fs / 2 - 4, tw + iw + (icon ? 3 : 0) + 10, fs + 8, 4);
+      g.fill();
+      if (icon) g.drawImage(icon.img, x0, ly - iw / 2, iw, iw);
+      g.textAlign = 'left';
+      g.textBaseline = 'middle';
       g.fillStyle = '#bfe3ee';
-      g.fillText(label, 0, r + 12);
+      g.fillText(label, x0 + iw + (icon ? 3 : 0), ly + 0.5);
+      g.textBaseline = 'alphabetic';
     }
     g.restore();
   }
@@ -460,5 +593,19 @@ export function drawShoals(g: G, list: ShoalView[], traps: { x: number; y: numbe
     g.moveTo(x, y + bob - 4 * Math.max(0.7, zoom));
     g.lineTo(x, y + bob - 12 * Math.max(0.7, zoom));
     g.stroke();
+  }
+}
+
+/** The gulls over the shoals, drawn above the ships (a shoal is known by its birds). */
+export function drawShoalBirds(g: G, list: ShoalView[], sx: (x: number) => number, sy: (y: number) => number, zoom: number, t: number, w: number, h: number): void {
+  for (const s of list) {
+    const x = sx(s.x), y = sy(s.y);
+    const r = s.r * zoom;
+    if (!onScreen(x, y, r, w, h)) continue;
+    g.save();
+    g.translate(x, y);
+    const k = Math.max(0.8, Math.min(1.6, zoom));
+    gulls(g, 3 + (s.id % 2) + (s.full > 0.6 ? 1 : 0), k, t + s.id * 3.1, Math.max(24 * k, r * 0.55));
+    g.restore();
   }
 }

@@ -10,7 +10,7 @@ import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { drawBeast, drawCarcass } from './beasts.ts';
 import { calfLength } from '../../../shared/src/data/companions.ts';
-import { drawShoals, drawSights } from './sights.ts';
+import { drawShoalBirds, drawShoals, drawSights } from './sights.ts';
 import { THREAT_COLOR, combatLevelOf, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import type { Threat } from '../../../shared/src/data/shiplevel.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -409,6 +409,7 @@ export class Renderer {
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, false); // no pulsing zones when motion is reduced
     this.drawCompanions(state, ships);
     for (const s of ships) this.drawShip(s, state);
+    drawShoalBirds(g, state.shoals, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
     this.drawStallSigns(stalls);
     this.drawDeckPets(state, ships);
     this.drawTethers(state, ships);
@@ -1493,25 +1494,51 @@ export class Renderer {
     g.restore();
   }
 
+  /** Floating loot (art, 2026-09-30): the painted flotsam — the bigger wreckage for a rich haul — riding the swell on
+   *  its own soft shadow, with a small plate of what it is worth. */
   private drawLoot(state: ClientState): void {
     const g = this.g;
-    const spr = sprite('prop.flotsam') ?? sprite('prop.wreckage');
     for (const l of state.loot.values()) {
-      const size = 38 * this.zoom;
-      const bob = Math.sin(this.time * 1.5 + l.x) * 0.1;
+      const rich = l.value >= 400;
+      const spr = sprite(rich ? 'prop.wreckage' : 'prop.flotsam') ?? sprite('prop.flotsam') ?? sprite('prop.wreckage');
+      const size = Math.max(26, (rich ? 46 : 36) * this.zoom);
+      const x = this.sx(l.x), y = this.sy(l.y);
+      if (x < -size || y < -size || x > this.w + size || y > this.h + size) continue;
+      const bob = settings().reduceMotion ? 0 : Math.sin(this.time * 1.5 + l.x) * 0.08;
       g.save();
-      g.translate(this.sx(l.x), this.sy(l.y));
-      g.rotate(bob);
-      if (spr) g.drawImage(spr.img, -size / 2, -size / 2, size, size);
-      else {
+      g.translate(x, y);
+      // The water darkens a little under it.
+      const sh = g.createRadialGradient(size * 0.06, size * 0.08, 0, size * 0.06, size * 0.08, size * 0.62);
+      sh.addColorStop(0, 'rgba(0,0,0,0.32)');
+      sh.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = sh;
+      g.beginPath();
+      g.arc(size * 0.06, size * 0.08, size * 0.62, 0, Math.PI * 2);
+      g.fill();
+      g.rotate(bob + ((l.x * 0.37) % (Math.PI * 2)));
+      if (spr) {
+        const k = size / Math.max(spr.img.naturalWidth, spr.img.naturalHeight);
+        g.drawImage(spr.img, (-spr.img.naturalWidth * k) / 2, (-spr.img.naturalHeight * k) / 2, spr.img.naturalWidth * k, spr.img.naturalHeight * k);
+      } else {
         g.fillStyle = '#6b5436';
         for (let k = 0; k < 5; k++) g.fillRect(Math.sin(k * 2.1) * size * 0.3, Math.cos(k * 1.7) * size * 0.3, size * 0.18, size * 0.12);
       }
       g.restore();
-      g.fillStyle = 'rgba(224,184,98,0.8)';
-      g.font = '11px Inter, sans-serif';
-      g.textAlign = 'center';
-      g.fillText(L('salvage', { n: l.value }), this.sx(l.x), this.sy(l.y) + size * 0.7);
+      if (l.value > 0 && this.zoom > 0.35) {
+        const label = L('salvage', { n: Math.round(l.value).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB') });
+        g.font = '600 11px Inter, sans-serif';
+        const tw = g.measureText(label).width;
+        const ly = y + size * 0.5 + 11;
+        g.fillStyle = 'rgba(5,10,14,0.6)';
+        g.beginPath();
+        g.roundRect(x - tw / 2 - 5, ly - 9, tw + 10, 16, 4);
+        g.fill();
+        g.fillStyle = 'rgba(232,200,120,0.95)';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(label, x, ly);
+        g.textBaseline = 'alphabetic';
+      }
     }
   }
 

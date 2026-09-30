@@ -116,7 +116,9 @@ export type ClientMsg =
   /** An island scene or mini-game (2026-09-30): a choice or an answer; `ms` for a timing game, `seq` for a call repeated. */
   | { t: 'minigame'; id: number; pick: string; ms?: number; seq?: number[] }
   | { t: 'fishing'; action: 'fight'; id: number; holds: [number, number][] }
-  | { t: 'fishing'; action: 'trap' | 'haul' | 'deep' | 'salt' }
+  | { t: 'fishing'; action: 'trap' | 'haul' | 'deep' | 'salt' | 'cast' }
+  /** The net hauled in (owner, 2026-09-30): the pulls, seconds from the cast, judged by replaying the floats. */
+  | { t: 'fishing'; action: 'net'; id: number; pulls: number[] }
   /** The hunt (docs/12 P4): pay out the line, cut it, flense a carcass alongside. */
   | { t: 'hunt'; action: 'slack' | 'cut' }
   | { t: 'hunt'; action: 'flense'; id: number }
@@ -1120,6 +1122,8 @@ export type ServerMsg =
   | { t: 'choice'; view: { quest: string; items: Item[] } | null }
   | { t: 'trophy_hall'; view: { owner: string; flag: number; skull: number; fish: number } }
   | { t: 'fishfight'; view: FishFightView | null }
+  /** A net (or a lamp) out: the haul to play; `null` when judged (with what came up) or lost. */
+  | { t: 'nethaul'; view: NetHaulView | null; got?: { fish: FishId; n: number; hits: number } }
   | { t: 'encounter'; view: EncounterView | null }
   | { t: 'minigame'; view: MinigameView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
@@ -1779,6 +1783,15 @@ export interface FishFightView {
   kg: number;
   seed: number;
   craft: number;
+}
+
+/** A net cast (owner, 2026-09-30): the client plays the floats from the seed; `fish` when the water is read. */
+export interface NetHaulView {
+  id: number;
+  seed: number;
+  craft: number;
+  method: 'net' | 'lamp';
+  fish?: FishId;
 }
 
 /** The fishing part of a captain's papers. */

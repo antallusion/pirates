@@ -1,9 +1,10 @@
 // Fishing on the server (docs/12 P3). Shoals drift about every sea (near the coasts and out on the open water),
-// shown by the birds over them; a captain with tackle in the slot fishes as the tackle allows:
-//  - nets: through a shoal at a walking pace, a haul every few seconds while the shoal lasts;
+// shown by the birds over them; a captain with tackle in the slot fishes as the tackle allows — and every catch is her
+// own doing (owner, 2026-09-30: «fishing must not be automatic»):
+//  - nets: in a shoal at a walking pace she casts, and hauls in as the floats dip (a quick mini-game, judged here);
 //  - trolling rods: at a steady pace on open water, now and then a bite — and the fight on the line;
 //  - pots: set on the shallows, hauled after ten minutes to half an hour (in lawless waters anyone may haul them);
-//  - a lamp: by night, lying still, squid and eels come to the light;
+//  - a lamp: by night, lying still, she hangs it out and hauls in what comes to the light (the same mini-game);
 //  - a deep line: lying still over deep water, the slow bite of the big and strange.
 // Every catch teaches the craft; the heaviest of each kind is the whole sea's record.
 
@@ -13,19 +14,20 @@ import { trophyBonus } from './estate.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { questEvent } from './quests.ts';
 import { SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
-import { FISH, FISH_IDS, METHOD_SKILL, READ_WATER, SKILL_MAX, TACKLE_METHOD, TRAP_FULL_SEC, TRAP_MIN_SEC, craftXpNext, fightParams, playFight, trapsAllowed } from '../../../shared/src/data/fishing.ts';
+import { CAST_COOLDOWN, FISH, FISH_IDS, HAUL_SHARE, METHOD_SKILL, READ_WATER, SKILL_MAX, TACKLE_METHOD, TRAP_FULL_SEC, TRAP_MIN_SEC, craftXpNext, fightParams, haulParams, judgeHaul, playFight, trapsAllowed } from '../../../shared/src/data/fishing.ts';
 import type { FishDef, FishId, FishMethod } from '../../../shared/src/data/fishing.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { gearSource } from '../../../shared/src/data/items.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { dist } from '../../../shared/src/math.ts';
-import type { FishFightView, FishingView, ShoalView } from '../../../shared/src/protocol.ts';
+import type { FishFightView, FishingView, NetHaulView, ShoalView } from '../../../shared/src/protocol.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { giveGoods } from './director.ts';
+import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -57,10 +59,23 @@ interface Fight {
   method: FishMethod;
 }
 
+/** A net (or a lamp) out: the haul the captain is playing. */
+interface Haul {
+  id: number;
+  seed: number;
+  craft: number;
+  at: number;
+  method: 'net' | 'lamp';
+  /** The shoal the net went into (a lamp's catch comes to the light, no shoal). */
+  shoal: number | null;
+  fish: FishId;
+}
+
 interface FishState {
   shoals: Map<number, Shoal>;
   seq: number;
   fights: Map<number, Fight>;
+  hauls: Map<number, Haul>;
   /** A deep line down: account → when it bites. */
   deep: Map<number, { at: number; x: number; y: number }>;
   /** Last haul by tackle: account → world time. */
@@ -74,7 +89,7 @@ const states = new WeakMap<Game, FishState>();
 
 function fs(game: Game): FishState {
   let s = states.get(game);
-  if (!s) states.set(game, (s = { shoals: new Map(), seq: 1, fights: new Map(), deep: new Map(), last: new Map(), sentKey: new Map(), rng: new Rng(game.world.seed ^ 0xf154) }));
+  if (!s) states.set(game, (s = { shoals: new Map(), seq: 1, fights: new Map(), hauls: new Map(), deep: new Map(), last: new Map(), sentKey: new Map(), rng: new Rng(game.world.seed ^ 0xf154) }));
   return s;
 }
 
@@ -196,6 +211,14 @@ export function shoalNear(game: Game, x: number, y: number, region: RegionId): b
   return false;
 }
 
+/** A shoal of a kind right here (the admin's /shoal, for play-testing). */
+export function shoalHere(game: Game, x: number, y: number, fish: FishId): Shoal {
+  const S = fs(game);
+  const sh: Shoal = { id: S.seq++, fish, x, y, r: 160, stock: 60, max: 60, vx: 0, vy: 0, until: game.now + SHOAL_LIFE, region: regionAt(game.world, x, y) };
+  S.shoals.set(sh.id, sh);
+  return sh;
+}
+
 export function shoalsOf(game: Game): Shoal[] {
   return [...fs(game).shoals.values()];
 }
@@ -248,7 +271,7 @@ function learn(game: Game, s: PlayerSession, xp: number): void {
 }
 
 /** A catch into the hold (as goods), the tally and the record. */
-function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units: number, fought = false): number {
+function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units: number, fought = false, quiet = false): number {
   const ship = s.ship!;
   const def = FISH[fish];
   const got = giveGoods(ship, def.good as GoodId, units);
@@ -269,7 +292,7 @@ function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units
   if (kg > c.best) c.best = Math.round(kg * 10) / 10;
   // Every haul is told (not only a fight): what came up, and a best of the kind.
   if (bonus > 0) game.sendTo(s, { t: 'toast', msg: `Fish of the day! ${def.name[0]} ×${got + bonus}`, kind: 'gold' });
-  else if (!fought) game.sendTo(s, { t: 'toast', msg: `Into the net: ${def.name[0]} ×${got}`, kind: 'good' });
+  else if (!fought && !quiet) game.sendTo(s, { t: 'toast', msg: `Into the net: ${def.name[0]} ×${got}`, kind: 'good' });
   if (best && (fought || def.trophy)) game.sendTo(s, { t: 'toast', msg: `Your best ${def.name[0]} yet: ${Math.round(kg * 10) / 10} kg!`, kind: 'gold' });
   // The sea's record for the kind: a fish fought on the line, or a trophy in the net.
   if (fought || def.trophy) {
@@ -345,6 +368,12 @@ export function stepFishing(game: Game): void {
     fishWith(game, s, ship, p);
     sendShoals(game, s);
   }
+  // A net nobody hauls is lost with its catch (the screen closed, the wire dropped).
+  for (const [acc, h] of S.hauls) if (now - h.at > haulParams(h.seed, h.craft).end + 20) {
+    S.hauls.delete(acc);
+    const s = game.sessionByAccount(acc);
+    if (s) game.sendTo(s, { t: 'nethaul', view: null });
+  }
   // A line nobody plays for 45 s is lost.
   for (const [acc, f] of S.fights) if (now - f.at > 45) {
     S.fights.delete(acc);
@@ -388,32 +417,8 @@ function fishWith(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile): v
       startFight(game, s, fish, 'deep', craft);
     }
   }
-  if (!method || S.fights.has(s.accountId)) return;
+  if (!method || S.fights.has(s.accountId) || S.hauls.has(s.accountId)) return;
   if (f.skill < METHOD_SKILL[method]) return;
-  if (method === 'net') {
-    const sh = shoalAt(game, ship.state.x, ship.state.y);
-    if (!sh || spd < 0.5 || spd > max * 0.4 || !FISH[sh.fish].methods.includes('net')) return;
-    if (!every(game, s, 'net', 5)) return;
-    const well = (ship.cls.passive.id === 'wet_well' ? 2 : 1) * (1 + trophyBonus(game, s.accountId, 'fish')) * (ship.hasFlag('tattoo_fish') ? 1.1 : 1);
-    const n = Math.min(sh.stock, Math.max(1, Math.round(fs(game).rng.int(1, 3) * (1 + craft / 40) * (1 + f.skill / 100) * well)));
-    if (FISH[sh.fish].skill > f.skill) return;
-    sh.stock -= n;
-    const kg = FISH[sh.fish].kg[0] + fs(game).rng.float() * (FISH[sh.fish].kg[1] - FISH[sh.fish].kg[0]);
-    const got = landCatch(game, s, sh.fish, kg, n);
-    if (got) learn(game, s, got);
-    if (sh.fish === 'ray' && fs(game).rng.chance(0.08)) {
-      ship.crew = Math.max(1, ship.crew - 1);
-      game.sendTo(s, { t: 'toast', msg: 'A stingray lashes a man in the net.', kind: 'bad' });
-    }
-    // Rocks tear a net now and then.
-    if (fs(game).rng.chance(0.02) && nearestIsland(game, ship.state.x, ship.state.y).d < 400) {
-      const it = p.loadout.gear?.tackle;
-      if (it) it.dur = Math.max(0, it.dur - 10);
-      game.sendTo(s, { t: 'toast', msg: 'The net tears on the rocks.', kind: 'bad' });
-    }
-    oddCatch(game, s);
-    return;
-  }
   if (method === 'rod') {
     if (spd < 2.5 || spd > max * 0.8) return; // a steady pace (light airs allowed), not a chase
     if (!every(game, s, 'rod', 10)) return;
@@ -422,17 +427,125 @@ function fishWith(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile): v
     if (fish) startFight(game, s, fish, 'rod', craft);
     return;
   }
+}
+
+// ------------------------------------------------------------------------------------------------ casting and hauling
+
+function holdUsed(ship: ShipEntity): number {
+  const st = ship.stats;
+  return cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+}
+
+/** Why the net (or the lamp) cannot go out here and now, or what it goes into. */
+function castCheck(game: Game, s: PlayerSession): string | { method: 'net' | 'lamp'; shoal: Shoal | null; fish: FishId } {
+  const ship = s.ship;
+  const p = s.profile;
+  if (!ship || !p || !ship.alive) return 'Not at sea';
+  if (ship.docked) return 'Not in port: cast the net at sea';
+  const f = p.fishing!;
+  const method = tackleOf(p);
+  if (method !== 'net' && method !== 'lamp') return method ? 'That tackle is not cast: it works on the line' : 'No net in the tackle slot';
+  if (f.skill < METHOD_SKILL[method]) return `Your craft is not up to it yet (${f.skill} of ${METHOD_SKILL[method]})`;
+  const S = fs(game);
+  if (S.hauls.has(s.accountId) || S.fights.has(s.accountId)) return 'Your hands are full: finish this haul first';
+  if (redTideIn(game, ship.region)) return 'The water is red and dead here: nothing bites.';
+  const spd = ship.state.speed, max = Math.max(1, ship.stats.maxSpeed);
+  const last = S.last.get(`${s.accountId}:cast`) ?? -1e9;
+  if (game.now - last < CAST_COOLDOWN) return `The net is still being made ready (${Math.ceil(CAST_COOLDOWN - (game.now - last))} s)`;
+  if (ship.stats.holdVolume - holdUsed(ship) < 0.5) return 'The hold is full: no room for the catch';
   if (method === 'lamp') {
-    if (spd > 1.5 || !isNight(game.now)) return;
-    if (!every(game, s, 'lamp', 8)) return;
+    if (!isNight(game.now)) return 'The lamp draws them only by night';
+    if (spd > 1.5) return 'Lie still to hang out the lamp';
     const fish = pickFish(game, ship.state.x, ship.state.y, 'lamp', f.skill);
-    if (!fish) return;
-    const def = FISH[fish];
-    const kg = def.kg[0] + fs(game).rng.float() * (def.kg[1] - def.kg[0]);
-    const got = landCatch(game, s, fish, kg, fs(game).rng.int(1, 2) + Math.floor(craft / 30));
-    if (got) learn(game, s, got * 2);
-    oddCatch(game, s);
+    if (!fish) return 'Nothing comes to the light in these waters';
+    return { method, shoal: null, fish };
   }
+  const sh = shoalAt(game, ship.state.x, ship.state.y);
+  if (!sh) return 'No shoal here: look for the gulls over the water';
+  if (!FISH[sh.fish].methods.includes('net')) return 'This shoal will not go into a net: it wants a rod';
+  if (FISH[sh.fish].skill > f.skill) return `This shoal is beyond your craft yet (${f.skill} of ${FISH[sh.fish].skill})`;
+  if (spd > max * 0.4) return 'Too fast to cast: slow to a walking pace';
+  return { method, shoal: sh, fish: sh.fish };
+}
+
+/** Whether the net can be cast now. */
+export function canCast(game: Game, s: PlayerSession): boolean {
+  return typeof castCheck(game, s) !== 'string';
+}
+
+/** The captain casts the net (or hangs out the lamp): the haul begins, to be played on her screen. */
+export function castNet(game: Game, s: PlayerSession): string | null {
+  const c = castCheck(game, s);
+  if (typeof c === 'string') return c;
+  const S = fs(game);
+  const p = s.profile!;
+  S.last.set(`${s.accountId}:cast`, game.now);
+  const craft = craftOf(p);
+  const haul: Haul = { id: S.seq++, seed: S.rng.int(1, 2 ** 30), craft, at: game.now, method: c.method, shoal: c.shoal?.id ?? null, fish: c.fish };
+  S.hauls.set(s.accountId, haul);
+  const read = (p.fishing?.skill ?? 1) >= READ_WATER || c.method === 'lamp';
+  const view: NetHaulView = { id: haul.id, seed: haul.seed, craft, method: c.method, ...(read ? { fish: c.fish } : {}) };
+  game.sendTo(s, { t: 'nethaul', view });
+  return null;
+}
+
+/** The haul judged from the captain's pulls (seconds from the cast): the catch by the floats pulled in time. */
+export function endHaul(game: Game, s: PlayerSession, id: number, pulls: number[]): string | null {
+  const S = fs(game);
+  const h = S.hauls.get(s.accountId);
+  if (!h || h.id !== id) return 'That net is already in';
+  const par = haulParams(h.seed, h.craft);
+  // Not before the last float could have dipped (a little slack for the wire).
+  if (game.now - h.at < par.dips[par.dips.length - 1] - 2) return 'The net is still out';
+  S.hauls.delete(s.accountId);
+  const { hits } = judgeHaul(par, Array.isArray(pulls) ? pulls.map(Number) : []);
+  const ship = s.ship;
+  const p = s.profile!;
+  if (!ship) return null;
+  const f = p.fishing!;
+  const def = FISH[h.fish];
+  const share = HAUL_SHARE[hits] ?? 0;
+  const rng = S.rng;
+  const told = (n: number) => game.sendTo(s, { t: 'nethaul', view: null, got: { fish: h.fish, n, hits } });
+  if (share <= 0) {
+    told(0);
+    game.sendTo(s, { t: 'toast', msg: h.method === 'lamp' ? 'They slip away from the light: nothing in the net.' : 'The net comes up empty: every float was missed.', kind: 'info' });
+    return null;
+  }
+  let n: number;
+  if (h.method === 'net') {
+    const sh = h.shoal !== null ? S.shoals.get(h.shoal) : undefined;
+    if (!sh || sh.stock <= 0) {
+      told(0);
+      game.sendTo(s, { t: 'toast', msg: 'The shoal has moved on: the net comes up empty.', kind: 'info' });
+      return null;
+    }
+    const well = (ship.cls.passive.id === 'wet_well' ? 2 : 1) * (1 + trophyBonus(game, s.accountId, 'fish')) * (ship.hasFlag('tattoo_fish') ? 1.1 : 1);
+    n = Math.min(sh.stock, Math.max(1, Math.round(rng.int(2, 5) * (1 + h.craft / 40) * (1 + f.skill / 100) * well * share)));
+    sh.stock -= n;
+  } else n = Math.max(1, Math.round((rng.int(2, 3) + Math.floor(h.craft / 24)) * share));
+  const kg = def.kg[0] + rng.float() * (def.kg[1] - def.kg[0]);
+  const got = landCatch(game, s, h.fish, kg, n, false, true);
+  told(got);
+  if (got > 0) {
+    learn(game, s, h.method === 'lamp' ? got * 2 : got);
+    game.sendTo(s, { t: 'toast', msg: hits >= 3 ? `A full haul: ${def.name[0]} ×${got}` : `Hauled in: ${def.name[0]} ×${got}`, kind: 'good' });
+  }
+  if (h.method === 'net') {
+    if (h.fish === 'ray' && rng.chance(0.08)) {
+      ship.crew = Math.max(1, ship.crew - 1);
+      game.sendTo(s, { t: 'toast', msg: 'A stingray lashes a man in the net.', kind: 'bad' });
+    }
+    // Rocks tear a net now and then.
+    if (rng.chance(0.04) && nearestIsland(game, ship.state.x, ship.state.y).d < 400) {
+      const it = p.loadout.gear?.tackle;
+      if (it) it.dur = Math.max(0, it.dur - 10);
+      game.sendTo(s, { t: 'toast', msg: 'The net tears on the rocks.', kind: 'bad' });
+    }
+  }
+  oddCatch(game, s);
+  game.pushSelf(s, true);
+  return null;
 }
 
 // ------------------------------------------------------------------------------------------------ the fight on the line

@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
 import { callOn, drink, hallView, invite, sign } from './guests.ts';
 import { lookOf, setLook, unlockDeed } from './looks.ts';
 import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
@@ -25,7 +26,7 @@ import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome,
 import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
 import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
-import { dropDeepLine, endFight, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
+import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
 import { chooseEncounter, stepDirector } from './director.ts';
 import { stepSeaLife } from './sealife.ts';
 import { localTraffic, stepTraffic } from './traffic.ts';
@@ -958,10 +959,10 @@ export class Game {
     ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
-    // Provisions: 1 unit feeds 40 sailors for a minute.
+    // Provisions: 6 units feed 40 sailors for a minute.
     if (ship.isPlayer && this.tick % 200 === 0) {
       const frontier = REGIONS[ship.region].safety === 'lawless' ? Math.max(0.5, 1 - 1.25 * tval(st, 'frontier')) : 1;
-      const eat = (ship.crew / 40) * (10 / 60) * 6 * st.provisionUse * frontier;
+      const eat = (provisionsPerMinute(ship.crew, st.provisionUse) / 6) * frontier; // ten seconds of it (shared/src/data/voyage.ts)
       const have = ship.cargo.provisions ?? 0;
       if (have > 0) {
         const left = Math.max(0, have - eat);
@@ -2819,6 +2820,10 @@ export class Game {
             return err(dropDeepLine(this, s));
           case 'salt':
             return err(saltCatch(this, s));
+          case 'cast':
+            return err(castNet(this, s));
+          case 'net':
+            return err(endHaul(this, s, Number(msg.id), msg.pulls));
           default:
             return err('Unknown order');
         }

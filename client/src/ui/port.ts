@@ -43,6 +43,7 @@ import { sendService, serviceCard } from './marque.ts';
 import { captivesCard } from './turncoats.ts';
 import { holidayCard } from './holidays.ts';
 import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
+import { departOrAsk, voyageFoodCard } from './depart.ts';
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -133,9 +134,14 @@ export class PortScreen {
   private act(d: DOMStringMap, root: HTMLElement, state: ClientState): void {
     switch (d.act) {
       case 'undock':
-        this.send({ t: 'undock' });
-        this.onClose();
+        // What is short for the voyage is asked first (depart.ts).
+        departOrAsk(state, this.send, () => {
+          this.send({ t: 'undock' });
+          this.onClose();
+        });
         return;
+      case 'buyn':
+        return this.send({ t: 'trade', good: d.good as never, qty: Number(d.n) });
       case 'buy':
         return this.send({ t: 'trade', good: d.good as never, qty: this.qty });
       case 'sell':
@@ -349,6 +355,7 @@ export class PortScreen {
     return `<div class="row" style="margin-bottom:8px"><span class="muted">${esc(L('market.hint'))}
       ${view.duty ? L('market.duty', { pct: Math.round(view.duty * 100) }) : ''} ${portDef.blackMarket ? esc(L('market.blackMarket')) : ''}</span>
       <label class="lbl">${esc(L('market.qty'))} <select data-qty class="btn">${qtys.map((q) => `<option ${q === this.qty ? 'selected' : ''}>${q}</option>`).join('')}</select></label></div>
+      ${voyageFoodCard(state)}
       <table class="grid market"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.stock'))}</th><th>${esc(L('th.buy'))}</th><th>${esc(L('th.sell'))}</th><th>${esc(L('th.perUnit'))}</th><th>${esc(L('th.hold'))}</th><th></th></tr>${rows}</table>
       ${view.fence !== null ? `<div class="card" style="margin-top:10px"><h4>${esc(L('fence.title'))}</h4><p class="muted">${esc(L('fence.text', { pct: Math.round(view.fence * 100) }))}</p>
         ${(Object.keys(self.cargo) as (keyof typeof GOODS)[]).filter((g) => GOODS[g].contraband && (self.cargo[g] ?? 0) >= 1).map((g) => `<button class="btn btn-small" data-act="fence" data-good="${g}">${esc(L('fence.sell', { n: Math.floor(self.cargo[g] ?? 0), good: GOODS[g].name }))}</button>`).join(' ') || `<span class="muted">${esc(L('fence.nothing'))}</span>`}</div>` : ''}

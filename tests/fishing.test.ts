@@ -4,12 +4,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FISH, FISH_IDS, fightParams, fightStart, fightStep, fishingPatterns, playFight } from '../shared/src/data/fishing.ts';
+import { CAST_COOLDOWN, FISH, FISH_IDS, HAUL_FLOATS, fightParams, fightStart, fightStep, fishingPatterns, haulParams, judgeHaul, playFight } from '../shared/src/data/fishing.ts';
 import type { FishId } from '../shared/src/data/fishing.ts';
 import type { Item } from '../shared/src/data/items.ts';
 import { DAY_LENGTH_SEC } from '../shared/src/constants.ts';
 import { depthAt } from '../shared/src/world/worldgen.ts';
-import { dropDeepLine, endFight, haulTrap, saltCatch, setTrap, shoalAt, shoalsOf, stepFishing } from '../server/src/game/fishing.ts';
+import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap, shoalAt, shoalsOf, stepFishing } from '../server/src/game/fishing.ts';
 import { stepEvents } from '../server/src/game/events.ts';
 import { questEvent } from '../server/src/game/quests.ts';
 import { JOBS } from '../shared/src/data/quests.ts';
@@ -68,17 +68,8 @@ test('the fish: fifteen kinds in both languages; the fight is the same wherever 
   assert.equal(playFight(p, smartHolds('swordfish', 300, 777, 10), 10).done, 'landed', 'a good hand lands it');
 });
 
-test('nets through a shoal at a walking pace fill the hold and teach the craft; the shoal thins', () => {
-  const { game } = makeGame();
-  const { s } = fisher(game, 'Netter Ned', 'drift_net');
-  for (let i = 0; i < 12; i++) {
-    stepFishing(game);
-    game.now += 1;
-  }
-  const S = [...((game as unknown as { __fish?: unknown }).__fish ? [] : [])];
-  void S;
-  // Put her in a herring shoal of her own.
-  const ship = s.ship!;
+/** A net shoal for the captain, sat right on her with plenty in it. */
+function netShoal(game: Game, s: PlayerSession): Shoal {
   let sh: Shoal | null = null;
   for (let k = 0; k < 40 && !sh; k++) {
     stepFishing(game);
@@ -86,30 +77,109 @@ test('nets through a shoal at a walking pace fill the hold and teach the craft; 
     sh = shoalsOf(game).find((a) => FISH[a.fish].methods.includes('net') && FISH[a.fish].skill <= 1) ?? null;
   }
   assert.ok(sh, 'a net shoal somewhere');
-  const stock0 = sh!.stock;
+  const ship = s.ship!;
   ship.state.x = sh!.x;
   ship.state.y = sh!.y;
+  sh!.vx = sh!.vy = 0;
+  sh!.until = game.now + 99999;
+  sh!.stock = sh!.max = 999;
   ship.state.speed = ship.stats.maxSpeed * 0.25;
-  const xp0 = s.profile!.fishing!.xp;
-  for (let i = 0; i < 12; i++) {
-    sh!.x = ship.state.x;
-    sh!.y = ship.state.y;
-    sh!.until = game.now + 999;
+  return sh!;
+}
+
+/** Casts, lets the floats play out and hauls with the given pulls; the fish that came up. */
+function haul(game: Game, c: FakeConn, s: PlayerSession, pulls: (p: ReturnType<typeof haulParams>) => number[]): number {
+  const ship = s.ship!;
+  const before = (ship.cargo.fish ?? 0) + (ship.cargo.prime_fish ?? 0);
+  assert.equal(castNet(game, s), null);
+  const view = c.last('nethaul')!.view!;
+  assert.ok(view, 'the haul is on her screen');
+  const p = haulParams(view.seed, view.craft);
+  assert.equal(endHaul(game, s, view.id, pulls(p)), 'The net is still out', 'not before the floats have dipped');
+  game.now += Math.ceil(p.end);
+  assert.equal(endHaul(game, s, view.id, pulls(p)), null);
+  assert.equal(endHaul(game, s, view.id, []), 'That net is already in');
+  return (ship.cargo.fish ?? 0) + (ship.cargo.prime_fish ?? 0) - before;
+}
+
+const perfect = (p: ReturnType<typeof haulParams>) => p.dips.map((d) => d + p.window / 2);
+
+test('the floats: the same seed makes the same haul; only a pull on the dip counts, a pull too soon spooks it', () => {
+  const p = haulParams(4242, 10);
+  assert.deepEqual(p, haulParams(4242, 10));
+  assert.equal(p.dips.length, HAUL_FLOATS);
+  assert.ok(p.end < 10, `a quick haul: ${p.end} s`);
+  for (let i = 1; i < p.dips.length; i++) assert.ok(p.dips[i] - p.dips[i - 1] > p.window + 0.9, 'the floats dip one by one');
+  assert.ok(haulParams(4242, 50).window > p.window, 'the craft widens the dip');
+  assert.equal(judgeHaul(p, perfect(p)).hits, 3);
+  assert.equal(judgeHaul(p, []).hits, 0);
+  assert.deepEqual(judgeHaul(p, [p.dips[0] - 0.3, p.dips[1] + 0.1]).marks, ['early', 'hit', 'missed']);
+  // Mashing the button is no play: a pull every tenth of a second takes the floats too soon.
+  const mash = Array.from({ length: 80 }, (_, i) => i * 0.1);
+  assert.ok(judgeHaul(p, mash).hits <= 1, 'mashing is punished');
+});
+
+test('no fishing by itself: the net catches only when cast and hauled — the better the play, the bigger the haul', () => {
+  const { game } = makeGame();
+  const { c, s } = fisher(game, 'Netter Ned', 'drift_net');
+  const ship = s.ship!;
+  const sh = netShoal(game, s);
+  // A minute idle in the shoal at a walking pace: nothing.
+  for (let i = 0; i < 60; i++) {
     stepFishing(game);
     game.now += 1;
   }
-  const fish = (ship.cargo.fish ?? 0) + (ship.cargo.prime_fish ?? 0);
-  assert.ok(fish > 0, 'fish in the hold');
-  assert.ok(sh!.stock < stock0);
-  assert.ok(s.profile!.fishing!.xp > xp0 || s.profile!.fishing!.skill > 1);
-  // Too fast: nothing.
-  const before = fish;
+  assert.equal((ship.cargo.fish ?? 0) + (ship.cargo.prime_fish ?? 0), 0, 'nothing without a cast');
+  const stock0 = sh.stock, xp0 = s.profile!.fishing!.xp;
+  const full = haul(game, c, s, perfect);
+  assert.ok(full >= 3, `a full haul: ${full}`);
+  assert.ok(sh.stock < stock0, 'the shoal thins');
+  assert.ok(s.profile!.fishing!.xp > xp0 || s.profile!.fishing!.skill > 1, 'the craft is taught');
+  assert.equal(c.last('nethaul')!.got?.hits, 3);
+  // One haul at a time, and a pause between casts.
+  game.now += CAST_COOLDOWN;
+  const t0 = game.now;
+  assert.equal(castNet(game, s), null);
+  assert.equal(castNet(game, s), 'Your hands are full: finish this haul first');
+  const v = c.last('nethaul')!.view!;
+  game.now += 20;
+  assert.equal(endHaul(game, s, v.id, []), null);
+  game.now = t0 + 5;
+  assert.equal(castNet(game, s), 'The net is still being made ready (5 s)');
+  game.now = t0 + CAST_COOLDOWN + 30;
+  // Every float missed: an empty net.
+  assert.equal(haul(game, c, s, () => []), 0);
+  assert.ok(c.all('toast').some((t) => t.msg === 'The net comes up empty: every float was missed.'));
+  // Too fast: no cast.
+  game.now += CAST_COOLDOWN;
   ship.state.speed = ship.stats.maxSpeed * 0.9;
-  for (let i = 0; i < 12; i++) {
-    stepFishing(game);
-    game.now += 1;
+  assert.equal(castNet(game, s), 'Too fast to cast: slow to a walking pace');
+  // Out of the shoal: no cast.
+  ship.state.speed = 1;
+  ship.state.x += sh.r * 3;
+  assert.equal(castNet(game, s), 'No shoal here: look for the gulls over the water');
+  ship.state.x -= sh.r * 3;
+  // A full hold: no cast.
+  ship.cargo.timber = 1e6;
+  assert.equal(castNet(game, s), 'The hold is full: no room for the catch');
+});
+
+test('the net keeps the old catch rate, a little better to an attentive hand', () => {
+  const { game } = makeGame();
+  const { c, s } = fisher(game, 'Steady Stan', 'drift_net');
+  netShoal(game, s);
+  // The old drift net: 1–3 fish every 5 s at craft 0 and skill 1 — 0.4 a second on average.
+  const oldPerSec = 2 * 1.01 / 5;
+  let fish = 0, secs = 0;
+  for (let i = 0; i < 40; i++) {
+    const t0 = game.now;
+    fish += haul(game, c, s, perfect);
+    game.now = Math.max(game.now + 2, t0 + CAST_COOLDOWN); // the hand is ready again a couple of seconds after
+    secs += game.now - t0;
+    s.ship!.cargo = {};
   }
-  assert.equal((ship.cargo.fish ?? 0) + (ship.cargo.prime_fish ?? 0), before);
+  const perSec = fish / secs;
+  assert.ok(perSec > oldPerSec * 1.0 && perSec < oldPerSec * 1.6, `perfect play ${perSec.toFixed(3)}/s against the old ${oldPerSec.toFixed(3)}/s`);
 });
 
 test('a rod on open water: a bite, the fight, landed by a good hand — a big one heard by all; an idle one gets away', () => {

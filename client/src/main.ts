@@ -5,6 +5,8 @@ import { renderLook, resetLookDraft } from './ui/looks.ts';
 import { tell } from './ui/confirm.ts';
 import { beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
+import { NetHaulPanel } from './ui/nethaul.ts';
+import { departOrAsk } from './ui/depart.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { MinigameWindow } from './ui/minigame.ts';
 import { renderGear } from './ui/gear.ts';
@@ -14,7 +16,7 @@ import { inspectDialog } from './ui/inspect.ts';
 import { BoardFightPanel } from './ui/boardfight.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
-import { PORT_DOCK_RADIUS, timeOfDay } from '../../shared/src/constants.ts';
+import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
 import { clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
@@ -228,6 +230,7 @@ const onboarding = new OnboardingUi(state);
 const encounterCard = new EncounterCard((m) => net.send(m));
 const minigameWindow = new MinigameWindow((m) => net.send(m));
 const fishFight = new FishFightPanel((m) => net.send(m));
+const netHaul = new NetHaulPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
 // Options: applied now and on every change (docs/07 §11).
 function applySettings(o: Settings): void {
@@ -545,6 +548,9 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'fishfight':
       fishFight.open(m.view);
+      break;
+    case 'nethaul':
+      netHaul.open(m.view, m.got);
       break;
     case 'trophy_hall':
       void tell(L('trophyHall', { owner: m.view.owner, flag: m.view.flag, skull: m.view.skull, fish: m.view.fish }));
@@ -983,7 +989,9 @@ addEventListener('keydown', (e) => {
       } else hud.toast(L('noCrippled'), 'bad');
       break;
     case 'land':
-      net.send(mastWreck() && !state.self?.landable ? { t: 'cut_mast' } : { t: 'land' });
+      // With nothing ashore to land at, the same key casts the net into a shoal (owner, 2026-09-30).
+      if (!state.self?.landable && !mastWreck() && castable()) net.send({ t: 'fishing', action: 'cast' });
+      else net.send(mastWreck() && !state.self?.landable ? { t: 'cut_mast' } : { t: 'land' });
       break;
     case 'orders': {
       const cur = state.you?.station ?? 'balanced';
@@ -994,7 +1002,7 @@ addEventListener('keydown', (e) => {
       net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
       break;
     case 'dock':
-      if (docked) net.send({ t: 'undock' });
+      if (docked) departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
       else requestDock(e.shiftKey);
       break;
     case 'map':
@@ -1246,6 +1254,8 @@ function computePrompt(): string {
   else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
   else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
+  const cast = !self.landable && !mastWreck() ? castable() : null;
+  if (cast) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L(cast === 'lamp' ? 'castLamp' : 'castNet'))}`);
   const home = nearHome();
   if (home) parts.push(`${esc(L('isleHere', { name: placeName(home.name) }))} <button class="btn btn-small prompt-btn" data-open-base>${esc(L('isleOpen'))}</button>`);
   // A wild island off the bow she may claim (docs/15 item 6): its terms on the Company's islands card.
@@ -1312,12 +1322,13 @@ function actionsRadial(): { label: string; run: () => void }[] {
 /** The pad's context action: board, dock, land, set sail — whatever the prompt offers first. */
 function padContext(): void {
   if (grabbed()) return void net.send({ t: 'board', target: state.entityId ?? 0, aggression: 'standard' });
-  if (state.self?.dockedAt) return void (touch.enabled && modal !== 'port' ? openModal('port') : net.send({ t: 'undock' }));
+  if (state.self?.dockedAt) return void (touch.enabled && modal !== 'port' ? openModal('port') : departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' })));
   if (boardTarget !== null) return void net.send({ t: 'board', target: boardTarget, aggression: 'standard' });
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void requestDock(false);
   if (state.self?.landable && !state.self.landable.blocked) return void net.send({ t: 'land' });
   if (mastWreck()) return void net.send({ t: 'cut_mast' });
+  if (castable()) return void net.send({ t: 'fishing', action: 'cast' });
   if (nearHome()) return openBase();
   // A wild island she may claim (docs/15 item 6): its terms, as the prompt's «Claim…» opens them.
   if (state.self?.claimIsle) return openClaim();
@@ -1333,6 +1344,17 @@ function nearHome(): { name: string } | null {
   const isl = state.islands.get(id);
   if (!isl || dist(isl.x, isl.y, own.x, own.y) - isl.r > 900) return null;
   return { name: isl.name };
+}
+
+/** Whether the net (or the lamp) can be cast here and now, as the server will judge it (fishing.ts castCheck). */
+function castable(): 'net' | 'lamp' | null {
+  const self = state.self, own = state.ownDisplay, you = state.you;
+  const f = self?.fishing;
+  if (!self || !own || !you || !f || self.dockedAt || netHaul.active || fishFight.active) return null;
+  const spd = you.spd, max = state.ownStats?.maxSpeed ?? 10;
+  if (f.method === 'net' && spd <= max * 0.4 && state.shoals.some((s) => Math.hypot(s.x - own.x, s.y - own.y) <= s.r)) return 'net';
+  if (f.method === 'lamp' && f.skill >= 30 && spd <= 1.5 && isNight(state.estServerTime())) return 'lamp';
+  return null;
 }
 
 /** A fallen mast's wreckage drags alongside (it can be cut away). */
@@ -1388,6 +1410,8 @@ function contextLabel(): string | null {
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
   if (state.self?.landable && !state.self.landable.blocked) return L('tc.land');
   if (mastWreck()) return L('tc.cutMast');
+  const cast = castable();
+  if (cast) return L(cast === 'lamp' ? 'tc.lamp' : 'tc.cast');
   if (nearHome() && modal !== 'base') return L('tc.base');
   if (state.self?.claimIsle && !nearHome() && modal !== 'company') return L('tc.claim');
   // Nothing else at hand: a damaged ship out of the fight can set the carpenters to work (R on a keyboard).
@@ -1692,6 +1716,8 @@ function step(t: number): void {
         anomaly: state.bosses.some((b) => dist(b.x, b.y, own.x, own.y) < 3000),
       }, state.wind[1], own.sail, Math.abs(shipHeel(own.heading, state.wind[0], state.wind[1], own.sail, SHIP_CLASSES[state.self!.loadout.classId].tier, state.you?.water ?? 0, 0)), timeOfDay(state.estServerTime()), !state.self?.dockedAt);
     }
+    hud.castKey = touch.enabled ? '' : ` (${keyOfAction('land')})`; // a phone has its button, not a key
+    hud.hauling = netHaul.active;
     hud.update(state, prompt);
     targetId = resolveTarget();
     askGlass(targetId);
@@ -1709,6 +1735,7 @@ function step(t: number): void {
     boardFight.render(state.boardFight);
     encounterCard.frame();
     fishFight.frame();
+    netHaul.frame();
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
   }
 }

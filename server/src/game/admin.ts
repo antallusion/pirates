@@ -45,7 +45,7 @@ import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { spawnGroup, spawnWhiteOrca } from './beasts.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import type { FishId } from '../../../shared/src/data/fishing.ts';
-import { startFight } from './fishing.ts';
+import { shoalHere, startFight } from './fishing.ts';
 import { ENCOUNTERS } from '../../../shared/src/data/encounters.ts';
 import type { EncounterId } from '../../../shared/src/data/encounters.ts';
 import { startEncounter } from './director.ts';
@@ -212,6 +212,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       for (const k of Object.keys(ship.cargo)) delete ship.cargo[k as keyof typeof ship.cargo];
       game.pushSelf(s, true);
       return 'The hold is swept clean.';
+    case 'shoal': {
+      // A shoal right under her keel (docs/12 P3 play-testing): /shoal [fish].
+      const fish = (args[0] ?? 'herring') as FishId;
+      if (!FISH[fish]) return `Fish: ${Object.keys(FISH).join(', ')}`;
+      shoalHere(game, ship.state.x, ship.state.y, fish);
+      return `A shoal of ${FISH[fish].name[0]} rises under her keel.`;
+    }
     case 'fish': {
       // Fishing for play-testing (docs/12 P3): /fish <craft 1-100>.
       const p = s.profile!;

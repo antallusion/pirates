@@ -821,7 +821,12 @@ function estateHtml(state: ClientState): string {
   const e = state.estate;
   if (!e) return '';
   const ru = lang() === 'ru' ? 1 : 0;
-  const goodsList = (g: Partial<Record<GoodId, number>>) => Object.entries(g).map(([k, n]) => `${n} ${GOODS[k as GoodId].name.toLowerCase()}`).join(', ');
+  // Goods as their pictures with the count (owner, 2026-09-30: «40 доски и смола» read badly in Russian); the name in
+  // the tooltip, and «name ×n» where only words will do.
+  const goodsText = (g: Partial<Record<GoodId, number>>) => Object.entries(g).map(([k, n]) => `${GOODS[k as GoodId].name} ×${n}`).join(', ');
+  const goodsChips = (g: Partial<Record<GoodId, number>>) => Object.entries(g).map(([k, n]) => `<span class="gq" title="${esc(GOODS[k as GoodId].name)}">${icon(`good_${k}`, '', 'ico-xs')}${n}</span>`).join(' ');
+  /** A line with the goods put in as chips. */
+  const withGoods = (key: 'est_next' | 'est_up_cost' | 'est_found', vars: Record<string, string | number>, g: Partial<Record<GoodId, number>>) => esc(L(key, { ...vars, goods: '\u0000' })).replace('\u0000', goodsChips(g));
   const parts: string[] = [];
   const isle = e.isle;
   if (isle) {
@@ -832,7 +837,7 @@ function estateHtml(state: ClientState): string {
     const residents = isle.residents.map((r) => `<div class="est-res">${icon(`portrait.res_${r.prof}_${residentIsWoman(r.id * 7 + isle.island) ? 'f' : 'm'}`, '', 'ico-md ico-round est-face')}<span><b>${esc(residentName(r.id * 7 + isle.island)[ru])}</b> <span class="muted">${esc(PROFESSION_DEFS[r.prof as Profession].name[ru])}</span><br><i class="muted">«${esc(serverText(r.line))}»</i></span><select data-assign="${r.id}">${opts(r.at)}</select></div>`).join('');
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(L('est_isle', { name: placeName(isle.name), level: isle.level, title: serverText(isle.levelName) }))}</span></h4>
       <p class="muted">${esc(L('est_isle_meta', { slots: isle.slots, outposts: isle.outposts, n: isle.residents.length, cap: isle.cap }))}</p>
-      ${isle.next ? `<p>${esc(L('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver), goods: goodsList(isle.next.goods) }))}${isle.next.power ? ` <span class="${(isle.power ?? 0) >= isle.next.power ? 'good' : 'bad'}">${esc(L('est_power', { now: isle.power ?? 0, need: isle.next.power }))}</span>` : ''} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
+      ${isle.next ? `<p>${withGoods('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver) }, isle.next.goods)}${isle.next.power ? ` <span class="${(isle.power ?? 0) >= isle.next.power ? 'good' : 'bad'}">${esc(L('est_power', { now: isle.power ?? 0, need: isle.next.power }))}</span>` : ''} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
       <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn btn-small btn-primary" data-est="base">${esc(L('est_base'))}</button>${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button><button class="btn btn-small" data-guests="${isle.island}">${esc(L('est_guests'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
       ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
       ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}
@@ -846,13 +851,13 @@ function estateHtml(state: ClientState): string {
       const days = Math.max(0, Math.floor((o.claimUntil - Date.now()) / 86_400_000));
       return `<div class="est-op${o.raid !== null ? ' est-raid' : ''}"><div>${outpostIcon(o.kind, o.level)}<b>${esc(OUTPOSTS[o.kind].name[ru])}</b> · ${esc(placeName(o.name))} · ${esc(L('est_lvl', { n: o.level }))}
         <div class="muted">${esc(L('est_op_line', { rate: o.rate, good: GOODS[o.good].name.toLowerCase(), store: o.store, cap: o.cap, full, days }))}${o.residents ? ` · ${esc(L('est_op_res', { n: o.residents }))}` : ''}</div>
-        ${o.level < OUTPOST_MAX_LEVEL ? `<div class="muted">${esc(L('est_up_cost', { n: o.level + 1, silver: fmt(outpostUpgrade(o.level, o.kind).silver), goods: goodsList(outpostUpgrade(o.level, o.kind).goods) }))}</div>` : ''}
+        ${o.level < OUTPOST_MAX_LEVEL ? `<div class="muted">${withGoods('est_up_cost', { n: o.level + 1, silver: fmt(outpostUpgrade(o.level, o.kind).silver) }, outpostUpgrade(o.level, o.kind).goods)}</div>` : ''}
         ${o.raid !== null ? `<div class="bad">${esc(L('est_raid', { m: Math.floor(o.raid / 60), s: String(o.raid % 60).padStart(2, '0') }))}</div>` : ''}</div>
         <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="haul">${esc(L('est_haul'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="upgrade">${esc(L('est_upgrade'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="renew">${esc(L('est_renew'))}</button>
         <button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="workers" data-arg="${o.workers === 'hands' ? 'none' : 'hands'}">${esc(o.workers === 'hands' ? L('est_hands_off') : L('est_hands_on'))}</button>
         <select data-guard="${esc(o.id)}">${(Object.keys(GUARDS) as Guard[]).map((g) => `<option value="${g}"${o.guard === g ? ' selected' : ''}>${esc(L('est_guard', { name: GUARDS[g].name[ru], cost: fmt(GUARDS[g].cost) }))}</option>`).join('')}</select></div></div>`;
     }).join('');
-    const found = e.kinds.map((k: OutpostKind) => `<button class="btn btn-small" data-est="found" data-kind="${k}">${icon(`outpost_${k}`, '', 'ico-sm')}${esc(L('est_found', { name: OUTPOSTS[k].name[ru], goods: goodsList(OUTPOST_BUILD) }))}</button>`).join('');
+    const found = e.kinds.map((k: OutpostKind) => `<button class="btn btn-small est-found" data-est="found" data-kind="${k}" title="${esc(L('est_found_title', { name: OUTPOSTS[k].name[ru], goods: goodsText(OUTPOST_BUILD) }))}">${icon(`outpost_${k}`, '', 'ico-sm')}${withGoods('est_found', { name: OUTPOSTS[k].name[ru] }, OUTPOST_BUILD)}</button>`).join('');
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('build_mine', '', 'ico-md')}${esc(serverText('Outposts'))}</h4>${rows || `<p class="muted">${esc(L('est_no_ops'))}</p>`}${found ? `<p class="muted">${esc(L('est_found_here'))}</p><div class="row" style="gap:4px;flex-wrap:wrap">${found}</div>` : ''}</div>`);
   }
   if (e.near.length) parts.push(`<div class="card est-card"><h4 class="card-h">${esc(L('est_theirs'))}</h4>${e.near.map((o) => `<div class="est-op"><span>${icon(`outpost_${o.kind}`, '', 'ico')}${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(o.owner)} · ${o.store}/${o.cap}</span><button class="btn btn-small btn-danger" data-est="op" data-id="${esc(o.id)}" data-order="rob">${esc(L('est_rob'))}</button></div>`).join('')}</div>`);
