@@ -188,6 +188,8 @@ import { abandonRun, acceptRun, expireRuns, settleRuns } from './traderuns.ts';
 import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.ts';
 import { buyHearsay, forgetHearsay, stepHearsay } from './hearsay.ts';
 import { sagaNote, shareSaga } from './saga.ts';
+import { logNote } from './captainlog.ts';
+import { crewOnKill, stepCrewLife } from './crewlife.ts';
 
 export interface Loot {
   id: number;
@@ -869,6 +871,7 @@ export class Game {
       havenSecond(this, s);
       stepExplorer(this, s);
       stepMind(this, s.ship);
+      stepCrewLife(this, s); // officers speak, the men's mood, practice, the wounded (docs/16 #16–19)
       stepCompany(this, s);
       stepFleet(this, s);
       stepOwnShips(this, s); // her own ships: hold, sight, the fisher's nets (docs/15 item 4)
@@ -1607,6 +1610,7 @@ export class Game {
     if (gained > 0) {
       this.sendTo(s, { t: 'toast', msg: `Level ${s.profile.level}! A new talent point awaits.`, kind: 'good' });
       onLevelUp(this, s);
+      logNote(this, s, 'level', [], s.profile.level);
     }
   }
 
@@ -1753,6 +1757,7 @@ export class Game {
     else p.stats.boarded++;
     this.shared?.bump(how === 'sunk' ? 'sunk' : 'boarded', s.accountId, s.name, 1);
     onFightWon(this, s);
+    crewOnKill(this, s, victim, how); // an officer's word, the log, the marines' practice (docs/16 #16, 18, 20)
     questEvent(this, s, how === 'sunk' ? { k: 'sink', victim } : { k: 'board', victim });
     // The taverns talk (owner, 2026-09-29: the ports should know what a captain has done).
     if (!victim.cls.monster || victim.npcRole === 'beast') {
@@ -3637,6 +3642,7 @@ export class Game {
     if (!p.regionsSeen.includes(visitedKey)) {
       p.regionsSeen.push(visitedKey);
       this.grantXp(s, 60 + port.size * 40, `First visit to ${port.name}`);
+      logNote(this, s, 'port', [port.name]); // the captain's log (docs/16 #20)
     }
     questEvent(this, s, { k: 'dock', port });
     petsOnDock(this, s, port); // the monkey works the quay (docs/12 P10 #3)

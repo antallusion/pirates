@@ -7,6 +7,7 @@ import { tx } from '../../../shared/src/sim/shipstats.ts';
 import type { DamagePacket } from './combat.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
+import { playerWounded } from './crewlife.ts';
 
 const WEARY_AFTER = 3600; // a crew tires of the sea after an hour away from port
 const SCURVY_AFTER = 3600;
@@ -43,8 +44,8 @@ export function stepSurvival(game: Game, ship: ShipEntity): void {
   // Double Planking refills a minute after the fight.
   const planking = tx(st, 'planking');
   if (planking > 0 && now - ship.lastCombat > 60) ship.planking = st.hullMax * planking;
-  // The wounded come back on deck two minutes after the fight.
-  if (ship.wounded > 0 && now - ship.lastCombat > 120) {
+  // The wounded come back on deck two minutes after the fight (a captain's surgeon works on hers: crewlife.ts).
+  if (ship.wounded > 0 && now - ship.lastCombat > 120 && !ship.isPlayer) {
     const back = Math.min(ship.wounded, st.crewMax - ship.crew);
     ship.crew += back;
     ship.wounded = 0;
@@ -101,6 +102,7 @@ export function survivalOnHit(game: Game, target: ShipEntity, d: DamagePacket): 
 /** Ship's Surgeon: part of the dead were only wounded. */
 export function woundedOf(game: Game, target: ShipEntity, killed: number): number {
   if (target.hasFlag('crew_of_drowned')) return 0; // the dead rise instead
+  if (target.isPlayer) return playerWounded(target, killed); // a quarter and more of hers are only wounded (docs/16 #19)
   const share = tx(target.stats, 'surgeon');
   if (share <= 0 || killed <= 0) return 0;
   const x = killed * share;

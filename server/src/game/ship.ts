@@ -187,6 +187,7 @@ export class ShipEntity {
   pendingDump: { good: GoodId; qty: number; at: number } | null = null; // cargo going over the side
   voyageStart = 0; // world time she left port (0 = in port / NPC)
   wounded = 0; // Ship's Surgeon: back on deck after the fight
+  woundCarry = 0; // a captain's ship: the fraction of a wounded man carried to the next blow (docs/16 #19)
   planking = 0; // Double Planking buffer
   scuttleAt = 0; // Scuttle Charges fuse
   // Minds (server/src/game/mind.ts).

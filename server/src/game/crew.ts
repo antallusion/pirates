@@ -23,6 +23,8 @@ import type { ShipEntity } from './ship.ts';
 import { escortUpkeep } from './fleet.ts';
 import { grantDeed } from './progression.ts';
 import { onboardingProtected } from './onboarding.ts';
+import { PRACTICE_PER_LEVEL, practiceLevel } from '../../../shared/src/data/crewtalk.ts';
+import { logNote } from './captainlog.ts';
 
 export type Pools = Record<Profession, number>;
 
@@ -46,6 +48,11 @@ export interface Company {
   uniquesGone: string[];
   ghostsSeen: boolean;
   seaHours: number;
+  /** The trades' practice points (docs/16 #18): grown by doing the work. */
+  practice: Pools;
+  /** The wounded below, kept with her between voyages (docs/16 #19), and the fractions of healing, dying, medicine. */
+  wounded: number;
+  woundAcc: { heal: number; die: number; med: number };
 }
 
 export const MUTINY_TIMEOUT = 60;
@@ -72,6 +79,7 @@ export function newCompany(captain: CaptainId, crew: number): Company {
   return {
     pools: startingPools(captain, crew), skill: 2, loyalty: 60, share: 25, officers: [], traits: [], fights: 0, owed: 0, unpaid: 0,
     unrest: { phase: 0, t: 0 }, voyageStartCrew: crew, voyageLost: 0, memoryUntil: 0, memorial: [], mutiny: null, course: null, uniquesGone: [], ghostsSeen: false, seaHours: 0,
+    practice: emptyPools(), wounded: 0, woundAcc: { heal: 0, die: 0, med: 0 },
   };
 }
 
@@ -97,6 +105,14 @@ export function sanitizeCompany(p: Profile): void {
   c.uniquesGone ??= [];
   c.ghostsSeen ??= false;
   c.seaHours ??= 0;
+  c.practice = { ...emptyPools(), ...(c.practice ?? {}) };
+  for (const k of PROFESSIONS) c.practice[k] = Math.max(0, Number(c.practice[k]) || 0);
+  c.wounded = Math.max(0, Math.floor(c.wounded ?? 0));
+  c.woundAcc ??= { heal: 0, die: 0, med: 0 };
+}
+
+export function emptyPools(): Pools {
+  return { sailor: 0, gunner: 0, helmsman: 0, carpenter: 0, surgeon: 0, marine: 0, cook: 0 };
 }
 
 export function poolTotal(pools: Pools): number {
@@ -208,6 +224,12 @@ export function companyMods(ship: ShipEntity, c: Company, now: number): { mods: 
     }
   }
   for (const t of c.traits) for (const k in TRAITS[t].mods ?? {}) add(k as StatKey, TRAITS[t].mods![k as StatKey] ?? 0);
+  // The trades' practice (docs/16 #18): a small edge a level, while any of that trade are aboard.
+  for (const k of PROFESSIONS) {
+    const lv = P[k] > 0 ? practiceLevel(c.practice?.[k] ?? 0) : 0;
+    const e = PRACTICE_PER_LEVEL[k];
+    if (lv > 0 && e.key !== 'heal') add(e.key, e.v * lv);
+  }
   // Superstition: cursed cargo and black storms unsettle them.
   const superstitious = c.traits.includes('superstitious') || c.officers.some((o) => o.traits.includes('superstitious'));
   if (superstitious && ((ship.cargo.cursed_relics ?? 0) > 0)) add('moraleBase', -5);
@@ -639,6 +661,7 @@ export function killOfficer(game: Game, s: PlayerSession, o: Officer, cause: str
   c.memorial.push({ name: o.name, role: o.role, t: Date.now(), cause });
   if (c.memorial.length > 30) c.memorial.shift();
   c.memoryUntil = game.now + 7 * 86400;
+  logNote(game, s, 'officer_dead', [o.name, cause]); // the captain's log (docs/16 #20)
   game.toastShip(s.ship!, `${o.name}, your ${OFFICER_DEFS[o.role].name.toLowerCase()}, is dead — ${cause}. The crew will remember.`, 'bad');
 }
 
@@ -878,6 +901,8 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   c.skill = (c.skill * ship.crew + tav.stars * n) / total;
   c.loyalty = (c.loyalty * ship.crew + (port.faction === 'confederacy' ? 35 : 50) * n) / total;
   if (n > ship.crew * 0.2) c.fights = 0;
+  // New hands of a trade thin its practice by their share (docs/16 #18).
+  c.practice[prof] = (c.practice[prof] ?? 0) * c.pools[prof] / Math.max(1, c.pools[prof] + n);
   ship.crew += n;
   c.pools[prof] += n;
   if (prof === 'sailor') game.tavernCrew.set(port.id, avail - n);

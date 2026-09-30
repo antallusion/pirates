@@ -29,6 +29,7 @@ import { addHeat, upwindOf } from './talentfx.ts';
 import { callPatrols } from './tradefx.ts';
 import { unmask } from './smugglefx.ts';
 import { survivalOnHit, woundedOf } from './survivalfx.ts';
+import { gunPractice } from './crewlife.ts';
 import { isMonster } from './explorefx.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { onCrewKilled, onCrit, onHullDamage } from './mind.ts';
@@ -215,6 +216,7 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   rec.left = rec.total;
   game.volleys.set(volley, rec);
   ship.ammo[ammo] -= shots;
+  gunPractice(game, ship, shots, 0); // and from every shot fired (docs/16 #18)
   if (ammo === 'cursed') onCursedVolley(game, ship);
   ship.reload[side] = reloadTime(ship, side, game.now);
   ship.lastReloadTotal[side] = ship.reload[side];
@@ -445,6 +447,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       sp.tattoos ??= { owned: [], pending: [], active: [], counts: {} };
       sp.tattoos.counts.hits = (sp.tattoos.counts.hits ?? 0) + 1;
     }
+    gunPractice(game, shooter, 0, 1); // the gunners learn from every hit (docs/16 #18)
   }
   // A ship in the moment of her dash: half the balls fly wide.
   if (target.hasFlag('evasive') && game.rng.chance(DASH_EVADE_CHANCE)) {

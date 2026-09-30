@@ -48,6 +48,9 @@ import type { TradeOption } from './tradefx.ts';
 import type { TreasureMap } from './explorefx.ts';
 import { MUTINY_TIMEOUT, officerBerths, wageMul, expectedShare, loyaltyOf, mutinyPayCost, newCompany, officerFactor, sanitizeCompany, unrestWord, wagesPerHour } from './crew.ts';
 import type { Company } from './crew.ts';
+import { moodOf } from './crewlife.ts';
+import { practiceLevel, woundRates } from '../../../shared/src/data/crewtalk.ts';
+import type { Profession } from '../../../shared/src/data/crew.ts';
 import { escortUpkeep, newFleet } from './fleet.ts';
 import type { Fleet } from './fleet.ts';
 import { newQuestLog, sanitizeQuests, shipLevelOfQuest, stepProgress } from './quests.ts';
@@ -64,6 +67,7 @@ import type { Skipper } from './turncoats.ts';
 import type { SkipperTrait } from '../../../shared/src/data/turncoats.ts';
 import type { OfficerRole, TraitId } from '../../../shared/src/data/crew.ts';
 import type { SagaEntry } from '../../../shared/src/data/saga.ts';
+import type { LogEntry } from '../../../shared/src/data/captainlog.ts';
 
 export interface Profile {
   version: 1;
@@ -213,6 +217,8 @@ export interface Profile {
   skippers?: Skipper[];
   /** Her saga's chapters (docs/12 P10 #20). */
   saga?: SagaEntry[];
+  /** The captain's log: the last few days, line by line (docs/16 #20). */
+  log?: LogEntry[];
   /** A cartographer's fame: her buried chests dug up by others (docs/12 P10 #7). */
   cartoFame?: number;
   /** The wonders of the sea she has found (docs/12 P10 #8). */
@@ -530,6 +536,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     stormHearts: p.stormHearts ?? 0,
     service: world.service ?? null,
     saga: p.saga ?? [],
+    log: p.log ?? [],
     fishing: fishingView(p),
     beasts: p.beasts ?? {},
     cargo: ship ? ship.cargo : p.cargo,
@@ -687,5 +694,19 @@ function companyView(p: Profile, ship: ShipEntity | null, now: number): PrivateS
     owed: Math.round(c.owed),
     memorial: c.memorial,
     mutiny: c.mutiny ? { ringleader: c.mutiny.ringleader, mutineers: c.mutiny.mutineers, payCost: mutinyPayCost(c), left: Math.max(0, Math.round(MUTINY_TIMEOUT - (now - c.mutiny.at))) } : null,
+    practice: Object.fromEntries(Object.entries(c.practice ?? {}).map(([k, v]) => [k, Math.floor(v)])) as Record<Profession, number>,
+    wounded: woundedView(p, ship),
+    mood: moodOf(ship),
+    shantyUntil: Math.round(ship?.effects.find((e) => e.id === 'shanty')?.until ?? 0),
   };
+}
+
+/** The wounded below and what the surgeon can do for them (docs/16 #19). */
+function woundedView(p: Profile, ship: ShipEntity | null): NonNullable<PrivateState['company']['wounded']> {
+  const c = p.company;
+  const n = ship ? ship.wounded : c.wounded ?? 0;
+  const surgeons = c.pools.surgeon ?? 0;
+  const medicine = Math.floor((ship ? ship.cargo.medicine : p.cargo.medicine) ?? 0);
+  const r = woundRates(n, surgeons, medicine >= 1, practiceLevel(c.practice?.surgeon ?? 0));
+  return { n, surgeons, medicine, healPerMin: Math.round(r.healPerMin * 10) / 10, diePerMin: Math.round(r.diePerMin * 10) / 10 };
 }

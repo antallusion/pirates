@@ -33,6 +33,7 @@ import { chapter, giveShard, spawnEcho } from './abyss.ts';
 import { seasonStat, seasonMods } from './seasons.ts';
 import { onFirstKill } from './legendary.ts';
 import { governorsOfRegion } from './empires.ts';
+import { logNote } from './captainlog.ts';
 
 type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add';
 
@@ -1422,6 +1423,7 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
     const s = game.sessionByAccount(account);
     const p = s?.profile;
     if (!s || !p) continue;
+    logNote(game, s, 'boss', [def.name]); // the captain's log (docs/16 #20)
     const k = lootFactor(def, share);
     const cargo: Cargo = {};
     for (const [g, [lo, hi]] of Object.entries(def.goods) as [GoodId, [number, number]][]) cargo[g] = Math.max(1, Math.round(lo + (hi - lo) * k));

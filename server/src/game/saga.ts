@@ -9,6 +9,7 @@ import type { Game } from './Game.ts';
 import { currentHoliday } from './holidays.ts';
 import { ignores } from './friends.ts';
 import type { PlayerSession } from './player.ts';
+import { logNote } from './captainlog.ts';
 
 const shared = new WeakMap<PlayerSession, number>();
 
@@ -24,6 +25,7 @@ export function sagaNote(game: Game, s: PlayerSession, kind: SagaKind, a: string
   const e: SagaEntry = { id, at: now, day, holiday: h?.id ?? null, kind, a, ...(n !== undefined ? { n } : {}) };
   p.saga.push(e);
   if (p.saga.length > SAGA_MAX) p.saga.splice(0, p.saga.length - SAGA_MAX);
+  logNote(game, s, 'saga', [kind, ...a], n); // the day's great moment in her log too (docs/16 #20)
   game.sendTo(s, { t: 'toast', msg: 'A new chapter of your saga.', kind: 'info' });
   game.pushSelf(s, true);
 }

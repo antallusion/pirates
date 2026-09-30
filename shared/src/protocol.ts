@@ -22,6 +22,8 @@ import type { SkipperTrait } from './data/turncoats.ts';
 import type { BoonId, CurrentId, DarkId, HostId } from './data/descent.ts';
 import type { HolidayId } from './data/holidays.ts';
 import type { SagaEntry } from './data/saga.ts';
+import type { LogEntry } from './data/captainlog.ts';
+import type { TalkEvent } from './data/crewtalk.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
@@ -592,6 +594,8 @@ export interface PrivateState {
   service?: ServiceView | null;
   /** Her saga's chapters (docs/12 P10 #20). */
   saga?: SagaEntry[];
+  /** The captain's log of the last few days (docs/16 #20). */
+  log?: LogEntry[];
   /** Fishing (docs/12 P3). */
   fishing: FishingView;
   /** The beasts taken, by kind (docs/12 P4). */
@@ -681,6 +685,13 @@ export interface CompanyView {
   owed: number;
   memorial: { name: string; role: OfficerRole; t: number; cause: string }[];
   mutiny: { ringleader: string; mutineers: number; payCost: number; left: number } | null;
+  /** The trades' practice points, by trade (docs/16 #18). */
+  practice?: Record<Profession, number>;
+  /** The wounded below (docs/16 #19): how many, the surgeons and medicine aboard, a minute's healing and dying. */
+  wounded?: { n: number; surgeons: number; medicine: number; healPerMin: number; diePerMin: number };
+  /** The men's mood on deck (docs/16 #17): grumbling, singing, or neither; the shanty's lift lasts to (world time). */
+  mood?: 'grumble' | 'shanty' | null;
+  shantyUntil?: number;
 }
 
 export interface TavernView {
@@ -1323,6 +1334,9 @@ export type ServerMsg =
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
+  /** The crew speaks (docs/16 #16–17): an officer's line on an event (his name, role, portrait), or the men's grumble or
+   *  shanty (`who` null); `i` the line of the table, `x` the event's name (a sea, a ship, a beast). */
+  | { t: 'crew_say'; who: { name: string; role: OfficerRole; unique?: string } | null; ev: TalkEvent | 'grumble' | 'shanty'; i: number; x?: string }
   /** `whisper`: to this captain, or (with `to`) their own words to another, echoed back. */
   /** A chat line; `face` is the speaker's captain (a portrait id), `fac` her flag when sworn, `lv` her level. */
   | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' | 'whisper'; to?: string; card?: SagaCard; face?: string; fac?: 'free' | 'crown'; lv?: number }
