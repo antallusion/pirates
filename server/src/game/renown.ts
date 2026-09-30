@@ -442,6 +442,8 @@ interface ChronicleLine { at: number; msg: string }
 /** A line in the sea's book of great events (the bosses slain, the weeks closed), for those who were away. */
 export function chronicle(game: Game, msg: string): void {
   const list = game.db.getKv<ChronicleLine[]>('world_chronicle') ?? [];
+  const last = list[list.length - 1];
+  if (last && last.msg === msg && game.wallNow() - last.at < 3_600_000) return; // same news twice is one line
   list.push({ at: game.wallNow(), msg });
   game.db.setKv('world_chronicle', list.slice(-40));
 }
@@ -487,7 +489,7 @@ export function awayReturn(game: Game, s: PlayerSession): AwayView | null {
     isle: isle ? { name: isle.name, goods: isle.goods - a.goods, treasury: isle.treasury - a.treasury, raids: letters.filter((l) => ISLE_FROM.includes(l.from)).map((l) => l.subject).slice(-4) } : null,
     auction: letters.filter((l) => AUCTION_FROM.includes(l.from)).map((l) => l.subject).slice(-4),
     letters: { n: letters.length, unread: letters.filter((l) => !l.read).length, from: [...new Set(letters.map((l) => l.from))].slice(0, 5) },
-    world: (game.db.getKv<ChronicleLine[]>('world_chronicle') ?? []).filter((c) => c.at > a.at).map((c) => c.msg).slice(-6),
+    world: (game.db.getKv<ChronicleLine[]>('world_chronicle') ?? []).filter((c) => c.at > a.at).map((c) => c.msg).filter((m, i, all) => all.indexOf(m) === i).slice(-6),
     weekly: w.challenges.map((c) => ({ kind: c.kind, region: c.region, place: c.place, value: c.mine, leader: c.top[0]?.name ?? null })),
     lastWeek: hist.flatMap((h) => h.list.filter((c) => c.top.length).map((c) => ({ kind: c.kind, region: c.region, winner: c.top[0].name }))).slice(-6),
     gift: r.gift ?? null,
