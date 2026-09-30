@@ -1,0 +1,119 @@
+// The turn-based boarding battle (docs/16 P4, «like Heroes of Might and Magic III»): two decks side by side on a
+// hex field, joined by planks where the grapples bit; the crews fight as stacks (hands, marines, musketeers, an
+// officer's party) in the order of their initiative, the captains stand on the side panel with two orders each.
+// The server holds the battle (server/src/game/tactical.ts); the client draws it (client/src/ui/tactical.ts).
+
+import type { CaptainId } from './captains.ts';
+import type { OfficerRole } from './crew.ts';
+
+/** The field: 11 columns by 9 rows of hexes, odd rows pushed half a hex to the right and one hex shorter ('#'). */
+export const TAC_W = 11;
+export const TAC_H = 9;
+/** The water between the hulls; the planks cross it on a few rows. */
+export const TAC_GAP = 5;
+/** Seconds a captain has for each of his stacks' turns; then the stack defends. */
+export const TAC_TURN = 30;
+/** Seconds the sea's captains take over a stack's turn, so a player sees what they did. */
+export const TAC_AI_DELAY = 0.7;
+/** A battle not decided in this many rounds goes to the side with the more of its strength left. */
+export const TAC_MAX_ROUNDS = 20;
+/** Shots at more than this many hexes do half damage. */
+export const TAC_LONG_SHOT = 6;
+/** Each point of morale or luck: 4% a turn (HoMM3), at most three points. */
+export const TAC_CHANCE_PER_POINT = 0.04;
+
+/** Terrain of a hex: deck, water between the hulls, a plank across it, and what stands on the deck. */
+export type TacCell = '.' | '~' | '=' | 'M' | 'C' | 'B' | 'K' | '#';
+export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#']);
+
+export type TacKind = 'hands' | 'marines' | 'gunners' | 'officer';
+export const TAC_KINDS: TacKind[] = ['hands', 'marines', 'gunners', 'officer'];
+
+export interface TacUnitDef {
+  kind: TacKind;
+  atk: number;
+  def: number;
+  dmin: number;
+  dmax: number;
+  hp: number;
+  speed: number;
+  init: number;
+  /** Musket balls a stack carries (0: steel only). */
+  shots: number;
+  /** The painted icon it shows. */
+  icon: string;
+}
+
+/** One man of each kind (HoMM3 scale). Gunners carry the muskets and pistols; the officer's party is picked men. */
+export const TAC_UNITS: Record<TacKind, TacUnitDef> = {
+  hands: { kind: 'hands', atk: 4, def: 3, dmin: 1, dmax: 3, hp: 6, speed: 4, init: 5, shots: 0, icon: 'icon.prof_sailor' },
+  marines: { kind: 'marines', atk: 7, def: 6, dmin: 2, dmax: 4, hp: 9, speed: 4, init: 7, shots: 0, icon: 'icon.prof_marine' },
+  gunners: { kind: 'gunners', atk: 5, def: 3, dmin: 2, dmax: 3, hp: 5, speed: 3, init: 4, shots: 4, icon: 'icon.prof_gunner' },
+  officer: { kind: 'officer', atk: 8, def: 7, dmin: 3, dmax: 5, hp: 10, speed: 5, init: 8, shots: 0, icon: 'icon.role_lieutenant' },
+};
+
+/** A captain's orders from the side panel (one a round, each with its cooldown in rounds). */
+export type TacSpellId = 'grenades' | 'point_blank' | 'smoke_and_knives' | 'red_harvest' | 'turn_the_flank' | 'call_of_the_deep' | 'iron_discipline';
+export interface TacSpellDef {
+  id: TacSpellId;
+  /** Rounds before it may be given again. */
+  cd: number;
+  /** 'enemy': the captain points at a foe's stack; 'none': the order is for the whole deck. */
+  target: 'enemy' | 'none';
+  icon: string;
+}
+export const TAC_SPELLS: Record<TacSpellId, TacSpellDef> = {
+  grenades: { id: 'grenades', cd: 3, target: 'enemy', icon: 'icon.bt_grenades' },
+  point_blank: { id: 'point_blank', cd: 4, target: 'enemy', icon: 'icon.bt_volley' },
+  smoke_and_knives: { id: 'smoke_and_knives', cd: 4, target: 'none', icon: 'icon.bt_hold' },
+  red_harvest: { id: 'red_harvest', cd: 4, target: 'none', icon: 'icon.bt_charge' },
+  turn_the_flank: { id: 'turn_the_flank', cd: 4, target: 'none', icon: 'icon.bt_officers' },
+  call_of_the_deep: { id: 'call_of_the_deep', cd: 5, target: 'none', icon: 'icon.bt_colours' },
+  iron_discipline: { id: 'iron_discipline', cd: 4, target: 'none', icon: 'icon.bt_captain' },
+};
+/** Each captain's own order (the Boarding 2.0 captain's move, docs/11 P1) beside the grenades everyone has. */
+export const TAC_SIGNATURE: Record<CaptainId, TacSpellId> = {
+  corsair: 'point_blank', smuggler: 'smoke_and_knives', reaver: 'red_harvest', navigator: 'turn_the_flank', drowned: 'call_of_the_deep', admiral: 'iron_discipline',
+};
+export function captainSpells(captain: CaptainId | null): TacSpellId[] {
+  return captain ? [TAC_SIGNATURE[captain], 'grenades'] : ['grenades'];
+}
+
+/** An officer's party acts on the officer's word once a fight (instead of striking): what each post gives. */
+export type TacOrderId = 'rally' | 'all_hands' | 'lay_true' | 'steady';
+export const TAC_ORDER_OF: Record<OfficerRole, TacOrderId> = {
+  lieutenant: 'rally', boatswain: 'all_hands', quartermaster: 'steady', master_gunner: 'lay_true', pilot: 'all_hands',
+  alchemist: 'lay_true', deep_pastor: 'rally', sailmaker: 'steady', harpooner: 'lay_true',
+};
+
+// ------------------------------------------------------------------ hexes
+
+export const hexIndex = (x: number, y: number): number => y * TAC_W + x;
+export const hexX = (i: number): number => i % TAC_W;
+export const hexY = (i: number): number => Math.floor(i / TAC_W);
+export const onField = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < TAC_W && y < TAC_H;
+
+const EVEN: [number, number][] = [[1, 0], [-1, 0], [0, -1], [-1, -1], [0, 1], [-1, 1]];
+const ODD: [number, number][] = [[1, 0], [-1, 0], [1, -1], [0, -1], [1, 1], [0, 1]];
+
+/** The (up to) six hexes around one. */
+export function hexNeighbors(i: number): number[] {
+  const x = hexX(i), y = hexY(i);
+  const out: number[] = [];
+  for (const [dx, dy] of y & 1 ? ODD : EVEN) if (onField(x + dx, y + dy)) out.push(hexIndex(x + dx, y + dy));
+  return out;
+}
+
+/** The same hex seen from the other rail. */
+export function hexMirror(i: number): number {
+  const x = hexX(i), y = hexY(i);
+  return hexIndex((y & 1 ? TAC_W - 2 : TAC_W - 1) - x, y);
+}
+
+/** Steps between two hexes. */
+export function hexDist(a: number, b: number): number {
+  const ay = hexY(a), by = hexY(b);
+  const aq = hexX(a) - (ay - (ay & 1)) / 2, bq = hexX(b) - (by - (by & 1)) / 2;
+  const dq = aq - bq, dr = ay - by;
+  return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
+}

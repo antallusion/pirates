@@ -283,6 +283,8 @@ export class PlayerSession {
   readonly conn: GameConn;
   accountId = 0;
   name = '';
+  /** Would rather fight boardings round by round than turn by turn (docs/16 P4). */
+  classicBoarding = false;
   token = '';
   profile: Profile | null = null;
   chartedCache = { region: '', size: -1, full: false };

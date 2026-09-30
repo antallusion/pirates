@@ -613,12 +613,12 @@ export function springAmbush(game: Game, s: PlayerSession): void {
 
 // ------------------------------------------------------------------ officers: wounds, deaths, orders
 
-export function woundOfficer(game: Game, s: PlayerSession, heavy: boolean, why: string): void {
+export function woundOfficer(game: Game, s: PlayerSession, heavy: boolean, why: string, who?: Officer): void {
   const c = s.profile!.company;
   const now = game.now;
   const pool = c.officers.filter((o) => officerFactor(o, now) > 0);
-  if (!pool.length) return;
-  const o = game.rng.pick(pool);
+  if (!pool.length && !who) return;
+  const o = who ?? game.rng.pick(pool);
   const light = o.traits.includes('lucky') && heavy && game.rng.chance(0.5);
   o.wound = { until: now + (heavy && !light ? 1800 : 600), heavy: heavy && !light };
   game.toastShip(s.ship!, `${o.name} is ${heavy && !light ? 'badly' : 'lightly'} wounded (${why}).`, 'bad');

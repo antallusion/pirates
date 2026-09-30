@@ -21,6 +21,7 @@ import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { onCrewKilled, onGrapple } from './mind.ts';
 import { moraleLossMul } from './crew.ts';
 import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx.ts';
+import { closeTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
 
 const AGG = {
   careful: { tempo: 0.75, cargo: 0.55, ownLoss: 0.9 },
@@ -109,7 +110,9 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
   drownedBoardersRise(game, b);
   game.emit({ k: 'board_start', a: a.id, b: b.id }, a.state.x, a.state.y);
   game.registerBoardingCrime(a, b);
-  openRound(game, a, b);
+  // Turn by turn on the hexes (docs/16 P4) when a captain is aboard; the round-by-round fight otherwise.
+  if (wantsTactical(game, a, b)) startTactical(game, a, b);
+  else openRound(game, a, b);
 }
 
 /** Pistol Volley and Boarding Axes fire the moment the grapples (or the boat) bite. */
@@ -159,6 +162,12 @@ export function cutGrapples(game: Game, ship: ShipEntity): string | null {
   // Iron Grip: the attacker's grapnels cannot be cut at first.
   const grip = Math.max(tx(a.stats, 'ironGrip'), a.hasFlag('chain_and_grapple') && b.hasEffect('tangled') ? 5 : 0);
   if (now - a.boarding!.startedAt < grip) return 'The grapnels are chained — they will not part yet';
+  // In the turn-based battle the axemen try once a round.
+  const tac = bs.fight.tac;
+  if (tac) {
+    if (tac.heroes[1].cutTried >= tac.round) return 'Your axemen try again next round';
+    tac.heroes[1].cutTried = tac.round;
+  }
   const pa = power(game, a, b, false), pb = power(game, b, a, true);
   const chance = clamp(0.35 + (pb / pa - 1) * 0.3, 0.1, 0.8);
   if (!game.rng.chance(chance)) {
@@ -238,6 +247,10 @@ export function stepBoarding(game: Game): void {
     // Decided (the duel's last blow): held a moment so both captains see how.
     if (fight.endsAt !== null) {
       if (now >= fight.endsAt) finishBoarding(game, a, b, fight.winner === a.id);
+      continue;
+    }
+    if (fight.tac) {
+      stepTactical(game, a, b);
       continue;
     }
     if (fight.duel && fight.duel.state !== 'done') {
@@ -434,6 +447,7 @@ export function setTactic(game: Game, ship: ShipEntity, tactic: BoardTactic): st
   if (!st) return 'You are not grappled';
   if (!(tactic in TACTICS)) return 'No such order';
   const fight = st.fight;
+  if (fight.tac) return 'This boarding is fought turn by turn';
   if (fight.duel && fight.duel.state !== 'done') return 'The captains are fighting — wait for the duel';
   if (fight.endsAt !== null) return null;
   if (st.momentum < TACTICS[tactic].cost) return 'Not enough momentum for that order';
@@ -451,6 +465,7 @@ export function duelAction(game: Game, ship: ShipEntity, action: 'challenge' | '
   if (!other?.boarding) return 'Nothing to fight';
   const a = st.attacker ? ship : other, b = st.attacker ? other : ship;
   const fight = st.fight;
+  if (fight.tac) return 'This boarding is fought turn by turn';
   const d = fight.duel;
   const now = game.now;
   if (fight.endsAt !== null) return null;
@@ -598,7 +613,7 @@ export function fightView(game: Game, ship: ShipEntity): BoardFightView | null {
 /** Tell the captains aboard how the fight stands (`b` null: only `a`). */
 function sendFight(game: Game, a: ShipEntity, b: ShipEntity | null): void {
   for (const s of b ? [a, b] : [a]) {
-    if (!s.isPlayer) continue;
+    if (!s.isPlayer || s.boarding?.fight.tac) continue;
     const ses = game.sessionOf(s);
     if (ses) game.sendTo(ses, { t: 'board_fight', view: fightView(game, s) });
   }
@@ -606,6 +621,7 @@ function sendFight(game: Game, a: ShipEntity, b: ShipEntity | null): void {
 
 function closeFight(game: Game, s: ShipEntity): void {
   if (!s.isPlayer) return;
+  closeTac(game, s);
   const ses = game.sessionOf(s);
   if (ses) game.sendTo(ses, { t: 'board_fight', view: null });
 }
@@ -633,7 +649,7 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   // take it to nothing.
   const lossFrac = clamp(a.stats.boardingCargoLoss * agg.cargo * (b.surrendered ? 0.5 : 1) + bs.rounds * 0.012 + fight.fires * 0.015, 0, 0.45);
   const duel = fight.duel?.winner != null ? (fight.duel.winner === a.id ? 'won' : 'lost') : null;
-  claimPrize(game, a, b, lossFrac, bs.lost, bs.killed, bs.aggression, { rounds: fight.round, won: bs.won, lost: bs.lostRounds, duel, moves: bs.moves });
+  claimPrize(game, a, b, lossFrac, bs.lost, bs.killed, bs.aggression, { rounds: fight.round, won: bs.won, lost: bs.lostRounds, duel, moves: bs.moves, ...(fight.tac ? { tac: true } : {}) });
 }
 
 /** A ship that struck (boarded, or surrendered on terms) hands her hold to the victor. */

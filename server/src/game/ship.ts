@@ -23,6 +23,7 @@ import type { Landing } from './exploration.ts';
 import type { Tether } from './mounts.ts';
 import type { SanityState } from './mind.ts';
 import type { Formation } from './fleet.ts';
+import type { TacBattle } from './tacbattle.ts';
 
 export interface StatusEffect {
   id: string;
@@ -73,6 +74,10 @@ export interface BoardFight {
   /** Set when the fight is decided but held a moment so both captains see how (the duel's last blow). */
   endsAt: number | null;
   winner: number | null;
+  /** The turn-based battle (docs/16 P4) when this boarding is fought on the hexes, and the fallen already taken
+   *  off each crew. */
+  tac?: TacBattle;
+  tacSync?: [number, number];
 }
 
 export interface BoardDuel {

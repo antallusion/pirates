@@ -53,6 +53,8 @@ export function makeGame(): { game: Game; db: Database } {
   const game = new Game({ db, auth: new AuthService(db), log: () => {} });
   // The sea director keeps still in tests of other systems (its own tests start it: tests/director.test.ts).
   game.directorOn = false;
+  // The older rules' tests fight the round-by-round deck fight; tests/tactical-boarding.test.ts turns the hexes on.
+  game.tacticalBoarding = false;
   return { game, db };
 }
 

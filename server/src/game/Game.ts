@@ -124,6 +124,7 @@ import { featureName, findLandable, startLanding, stepLanding } from './explorat
 import { playMinigame, stepMinigames } from './minigames.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, claimPrize, cutGrapples, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
+import { tacAction } from './tactical.ts';
 import { surrenderBlocked, surrenderClosed } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
 import { legendsView } from './legends.ts';
@@ -257,6 +258,9 @@ export class Game {
   sunkHulls: SunkHull[] = [];
   /** The sea director at work (docs/12 P2); tests of other systems keep it still. */
   directorOn = true;
+  /** Boardings with a captain aboard are fought turn by turn on the hexes (docs/16 P4); off, the round-by-round deck
+   *  fight of Boarding 2.0 (GRAVETIDE_CLASSIC_BOARDING=1, and the tests of the older rules). */
+  tacticalBoarding = process.env.GRAVETIDE_CLASSIC_BOARDING !== '1';
   loot = new Map<number, Loot>();
   markets = new Map<string, Market>();
   tavernCrew = new Map<string, number>();
@@ -2604,6 +2608,11 @@ export class Game {
         return err(setTactic(this, ship, msg.tactic));
       case 'board_duel':
         return err(duelAction(this, ship, msg.action, typeof msg.at === 'number' ? msg.at : undefined));
+      case 'tac':
+        return err(tacAction(this, ship, msg.act));
+      case 'board_pref':
+        s.classicBoarding = msg.classic === true;
+        return;
       case 'scuttle':
         return err(lightFuse(this, ship));
       case 'captive':

@@ -27,6 +27,7 @@ import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './d
 import type { BuildingId, IslandSize } from './data/holdings.ts';
 import type { CaptainId } from './data/captains.ts';
 import type { BoardTactic } from './data/boarding.ts';
+import type { TacKind, TacOrderId, TacSpellId } from './data/tactical.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
 import type { AmmoId, ChaserEnd, GunId, ModuleId, MountId, ShipClassId } from './data/ships.ts';
@@ -74,6 +75,10 @@ export type ClientMsg =
   /** Boarding 2.0: this round's tactic; the captains' duel (challenge, answer, a strike at server time `at`). */
   | { t: 'board_tactic'; tactic: BoardTactic }
   | { t: 'board_duel'; action: 'challenge' | 'accept' | 'decline' | 'strike'; at?: number }
+  /** The turn-based boarding battle (docs/16 P4): what the active stack (or the captain) does. */
+  | { t: 'tac'; act: TacAction }
+  /** The captain would rather fight boardings the old way, round by round (Boarding 2.0). */
+  | { t: 'board_pref'; classic: boolean }
   | { t: 'scuttle' }
   | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' | 'officer' | 'skipper' }
   | { t: 'repair'; on: boolean }
@@ -1064,7 +1069,7 @@ export interface BoardingResult {
   /** A berth is free to keep her as a trophy (docs/16 #5). */
   trophy?: boolean;
   /** How the deck fight went: rounds fought, won and lost, the captains' duel. */
-  report?: { rounds: number; won: number; lost: number; duel: 'won' | 'lost' | null; moves: number };
+  report?: { rounds: number; won: number; lost: number; duel: 'won' | 'lost' | null; moves: number; /** fought turn by turn (docs/16 P4): won/lost count stacks broken */ tac?: boolean };
 }
 
 /** One side of a deck fight as its captain sees it. */
@@ -1109,6 +1114,98 @@ export interface BoardFightView {
   duel: BoardDuelView | null;
   canDuel: boolean;
   canCut: boolean;
+}
+
+/** An order in the turn-based boarding battle: the active stack moves, strikes (from a chosen hex, else the nearest),
+ *  shoots, waits, defends or gives its officer's word; the captain gives one of his orders; auto-battle; quick combat;
+ *  strike the colours. */
+export type TacAction =
+  | { a: 'move'; to: number }
+  | { a: 'attack'; target: number; from?: number }
+  | { a: 'shoot'; target: number }
+  | { a: 'wait' }
+  | { a: 'defend' }
+  | { a: 'order' }
+  | { a: 'spell'; id: TacSpellId; target?: number }
+  | { a: 'auto'; on: boolean }
+  | { a: 'quick' }
+  | { a: 'surrender' };
+
+/** A stack on the field. `hex` its place; `count` men with `hp` left on the foremost; `ret` may still strike back
+ *  this round. */
+export interface TacStackView {
+  id: number;
+  side: 0 | 1;
+  kind: TacKind;
+  count: number;
+  start: number;
+  hp: number;
+  hpMax: number;
+  hex: number;
+  atk: number;
+  def: number;
+  dmg: [number, number];
+  speed: number;
+  init: number;
+  shots: number;
+  shotsMax: number;
+  ret: boolean;
+  defending: boolean;
+  waited: boolean;
+  /** The officer who leads the party: his post and name, his face, his order and whether it is still to give. */
+  officer?: { role: OfficerRole; name: string; unique?: string; order: TacOrderId; ready: boolean };
+}
+
+/** A captain on the side panel. */
+export interface TacHeroView {
+  name: string;
+  ship: string;
+  captain: CaptainId | null;
+  morale: number;
+  luck: number;
+  spells: { id: TacSpellId; ready: number }[];
+  /** Has given an order this round. */
+  cast: boolean;
+  auto: boolean;
+}
+
+/** One thing that happened, for the feed and the field's marks. */
+export interface TacEvent {
+  k: 'move' | 'hit' | 'shot' | 'ret' | 'die' | 'wait' | 'defend' | 'morale' | 'fear' | 'luck' | 'spell' | 'order' | 'round' | 'timeout';
+  side: 0 | 1;
+  s?: number;
+  t?: number;
+  dmg?: number;
+  kills?: number;
+  hex?: number;
+  id?: string;
+  n?: number;
+}
+
+/** The whole battle as one captain sees it. Side 0 is the boarder, on the left deck. */
+export interface TacView {
+  you: 0 | 1;
+  round: number;
+  maxRounds: number;
+  cells: string;
+  stacks: TacStackView[];
+  /** Who is still to act this round, the active stack first; then the next round's first few. */
+  order: number[];
+  next: number[];
+  active: number | null;
+  mine: boolean;
+  /** Server time the active turn runs out. */
+  ends: number;
+  /** For my active stack: where it may step, whom it may strike and whom it may shoot. */
+  reach: number[];
+  melee: number[];
+  shoot: number[];
+  heroes: [TacHeroView, TacHeroView];
+  log: TacEvent[];
+  seq: number;
+  over: null | { winner: 0 | 1; why: 'rout' | 'struck' | 'rounds' };
+  canCut: boolean;
+  canStrike: boolean;
 }
 
 export type ServerMsg =
@@ -1177,6 +1274,7 @@ export type ServerMsg =
   /** A ship has struck her colours to you (docs/16 #3): the choice card, or null when the offer is gone. */
   | { t: 'surrender_offer'; offer: SurrenderOffer | null }
   | { t: 'board_fight'; view: BoardFightView | null }
+  | { t: 'board_tac'; view: TacView | null }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
