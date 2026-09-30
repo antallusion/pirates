@@ -62,7 +62,7 @@ import { AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.t
 import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { WeatherKind } from '../../../shared/src/protocol.ts';
 import { closestOnPolygon, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
-import { islandsNear } from '../../../shared/src/world/worldgen.ts';
+import { isLand, islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { summon } from './bosses.ts';
 import { startBoarding } from './boarding.ts';
 import { mastWreck } from './combat.ts';
@@ -78,6 +78,11 @@ import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
 import type { HolidayId } from '../../../shared/src/data/holidays.ts';
 import { sagaNote } from './saga.ts';
 import { struck } from './struck.ts';
+import { podJoins } from './omenpod.ts';
+import type { PodKind } from '../../../shared/src/protocol.ts';
+import { convoysAt, learnConvoy, sailConvoy } from './raiding.ts';
+import { lairAdmin, lairsAll } from './wanted.ts';
+import { pointAlong } from './nav.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -85,7 +90,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /convoy [region|know] · /lair [silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -643,6 +648,77 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         game.grid.upsert(pa.id, qx, qy);
       }
       return `${pr.name} falls on ${m.name} off your bow.`;
+    }
+    case 'pod': {
+      // A good omen alongside (docs/16 #9): /pod [dolphins|humpback|orcas].
+      const kind = (['dolphins', 'humpback', 'orcas'].includes(args[0]) ? args[0] : 'dolphins') as PodKind;
+      if (ship.docked) return 'Put to sea first.';
+      ship.lastCombat = -1e9;
+      return podJoins(game, s, kind) ? `${kind} alongside.` : 'They will not come now.';
+    }
+    case 'convoy': {
+      // A League convoy off your beam (docs/16 #6): /convoy [region] — sailed from a port of the sea, run a few miles
+      // down its route, and you by its lead ship; /convoy know — every convoy at sea on your chart.
+      if (args[0] === 'know') {
+        for (const c of convoysAt(game)) learnConvoy(game, s.accountId, c.id);
+        return `${convoysAt(game).length} convoys on your chart.`;
+      }
+      const region = (args[0] as RegionId) ?? ship.region;
+      const c = sailConvoy(game, REGIONS[region] && REGIONS[region].safety !== 'safe' ? region : 'gravewater');
+      if (!c) return 'No convoy could sail from that sea.';
+      const lead = game.npcs.get(c.members[0]);
+      if (!lead?.path) return 'No route.';
+      const at = Math.min(lead.length * 0.5, 6000);
+      for (const id of [...c.members, ...c.escorts]) {
+        const b = game.npcs.get(id);
+        const o = game.ships.get(id);
+        if (!b || !o || !b.path) continue;
+        b.traveled += at;
+        const p = pointAlong(b.path, b.traveled);
+        o.state.x = p.x;
+        o.state.y = p.y;
+        o.state.heading = p.heading;
+      }
+      const p = pointAlong(lead.path, lead.traveled);
+      const side = headingVec(p.heading + Math.PI / 2);
+      ship.state = { ...ship.state, x: p.x + side.x * 700, y: p.y + side.y * 700, heading: p.heading, speed: 0 };
+      ship.region = game.regionAt(ship.state.x, ship.state.y);
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      game.pushSelf(s, true);
+      return `A convoy of ${c.members.length} with ${c.escorts.length} escorts off your beam.`;
+    }
+    case 'lair': {
+      // A pirate lair (docs/16 #7): /lair — to the nearest, 450 m off its guns; /lair silence|sink|rebuild.
+      const all = lairsAll(game);
+      if (!all.length) return 'No lairs.';
+      const near = all.reduce((a, b) => (Math.hypot(b.x - ship.state.x, b.y - ship.state.y) < Math.hypot(a.x - ship.state.x, a.y - ship.state.y) ? b : a));
+      if (args[0] === 'silence' || args[0] === 'sink' || args[0] === 'rebuild') {
+        lairAdmin(game, near.id, args[0]);
+        return `The lair on ${near.name}: ${args[0]}.`;
+      }
+      const island = game.world.islands[near.island];
+      const [gx, gy] = near.guns[1] ?? [near.x, near.y];
+      const ax = gx - (island?.x ?? near.x), ay = gy - (island?.y ?? near.y), al = Math.hypot(ax, ay) || 1;
+      let x = gx, y = gy;
+      for (const d of [450, 520, 600, 700, 800]) {
+        x = gx + (ax / al) * d;
+        y = gy + (ay / al) * d;
+        if (!isLand(game.world, x, y)) break;
+      }
+      if (ship.docked) return 'Put to sea first.';
+      ship.state = { ...ship.state, x, y, heading: Math.atan2(-ay, ax) + Math.PI / 2, speed: 0 };
+      ship.region = game.regionAt(x, y);
+      game.grid.upsert(ship.id, x, y);
+      game.pushSelf(s, true);
+      return `Off the lair of ${near.captain} on ${near.name} (⚓${near.level}).`;
+    }
+    case 'front': {
+      // A storm front bearing down on your course (docs/16 #10): /front [black] — 9 km ahead, drifting at you.
+      const v = headingVec(ship.state.heading);
+      const side = headingVec(ship.state.heading + Math.PI / 2);
+      const x = ship.state.x + v.x * 9000 + side.x * 1500, y = ship.state.y + v.y * 9000 + side.y * 1500;
+      game.fronts.push({ id: 900000 + game.rng.int(0, 99999), kind: args[0] === 'black' ? 'black_storm' : 'storm', x, y, vx: -v.x * 6, vy: -v.y * 6, radius: 4500, until: game.now + 1800 });
+      return 'A storm front makes for your course.';
     }
     case 'strike': {
       // A battered ship off your beam strikes her colours to you (docs/16 #3): /strike [role] [class].

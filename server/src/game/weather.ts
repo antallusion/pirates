@@ -109,6 +109,31 @@ export function stepFronts(fronts: Front[], rng: Rng, now: number, dt: number, w
   return alive;
 }
 
+/** How far ahead a captain is warned of a storm front on her course (docs/16 #10), seconds. */
+export const FRONT_WARN_SEC = 480;
+
+/** The first storm front that will reach a ship holding her course (x, y, moving vx, vy metres a second) within
+ *  `horizon` seconds, both drifting as they do now (and the front lasting till then) — and when. Null when none
+ *  will, or she is in one already. */
+export function frontOnCourse(fronts: Front[], now: number, x: number, y: number, vx: number, vy: number, horizon = FRONT_WARN_SEC): { front: Front; sec: number } | null {
+  let best: { front: Front; sec: number } | null = null;
+  for (const f of fronts) {
+    if (f.kind !== 'storm' && f.kind !== 'black_storm') continue;
+    const rx = f.x - x, ry = f.y - y;
+    if (rx * rx + ry * ry < f.radius * f.radius) return null; // she is in it already
+    // Relative motion: where the front's edge meets her as time runs.
+    const dvx = f.vx - vx, dvy = f.vy - vy;
+    const a = dvx * dvx + dvy * dvy, b = 2 * (rx * dvx + ry * dvy), c = rx * rx + ry * ry - f.radius * f.radius;
+    if (a < 1e-6) continue;
+    const disc = b * b - 4 * a * c;
+    if (disc < 0) continue;
+    const t = (-b - Math.sqrt(disc)) / (2 * a);
+    if (t <= 0 || t > horizon || t > f.until - now) continue;
+    if (!best || t < best.sec) best = { front: f, sec: t };
+  }
+  return best;
+}
+
 /** Local weather: the most severe front overhead, else the regional baseline. */
 export function weatherAtPoint(fronts: Front[], base: WeatherKind, x: number, y: number): WeatherKind {
   let w = base;

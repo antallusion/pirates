@@ -24,13 +24,14 @@ import { baseView, collectYard, moveTo, speedup, startBuild, upgradeAt } from '.
 import { ownShipsKill, shipBuild, shipLaunch, shipRecall, shipRepair, shipUpgrade, squadronOf, stepOwnShips } from './baseships.ts';
 import { abandonIsland, claimPrompt, raidPointer, robIsland } from './baseclaim.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
+import { stepPods } from './omenpod.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, escortOffer, raidFate, raidKill, signEscort, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
 import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
 import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
 import { chooseEncounter, stepDirector } from './director.ts';
 import { stepSeaLife } from './sealife.ts';
-import { localTraffic, stepTraffic } from './traffic.ts';
+import { compassPoint, localTraffic, stepTraffic } from './traffic.ts';
 import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
@@ -61,6 +62,7 @@ import type {
   PrivateState,
 } from '../../../shared/src/protocol.ts';
 import { SF, STATIONS, curseStage } from '../../../shared/src/protocol.ts';
+import type { FrontWarn } from '../../../shared/src/protocol.ts';
 import { buildSites, buyRights, ownSiteNear, siteView, tickSites, warehouseAction } from './resources.ts';
 import type { ResourceSite } from './resources.ts';
 import {
@@ -175,7 +177,7 @@ import {
 import { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
 import { SpatialGrid } from './spatial.ts';
-import { WEATHER_FOG, WEATHER_WIND, initWeather, seaStateSpread, stepFronts, stepWeather, weatherAtPoint } from './weather.ts';
+import { WEATHER_FOG, WEATHER_WIND, frontOnCourse, initWeather, seaStateSpread, stepFronts, stepWeather, weatherAtPoint } from './weather.ts';
 import type { Front, RegionWeather } from './weather.ts';
 import { captiveLoyalty, claimSkippers, sanitizeCaptive, turnCaptive, turnCost } from './turncoats.ts';
 import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, stepDescentSea } from './descent.ts';
@@ -751,6 +753,7 @@ export class Game {
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepMinigames(this); // island scenes and mini-games left open lapse
     stepSeaLife(this); // the small life of the sea between the director's encounters
+    stepPods(this); // good omens alongside: dolphins, a humpback, orcas (docs/16 #9)
     stepTraffic(this); // the sea's own ships kept about every captain at sea
     stepFishing(this); // shoals, nets, rods, lamps and pots (docs/12 P3)
     beastSecond(this); // the beasts rise and go, the carcasses bleed and are flensed (docs/12 P4)
@@ -2198,9 +2201,30 @@ export class Game {
     const range = navigator ? 45000 : 15000;
     const list = this.fronts
       .filter((f) => Math.hypot(f.x - ship.state.x, f.y - ship.state.y) < range + f.radius)
-      .map((f) => ({ id: f.id, kind: f.kind, x: Math.round(f.x), y: Math.round(f.y), r: Math.round(f.radius), vx: navigator ? Math.round(f.vx * 10) / 10 : 0, vy: navigator ? Math.round(f.vy * 10) / 10 : 0, ttl: navigator ? Math.round(f.until - this.now) : 0 }));
-    this.sendTo(s, { t: 'fronts', list, forecast: navigator });
+      .map((f) => ({ id: f.id, kind: f.kind, x: Math.round(f.x), y: Math.round(f.y), r: Math.round(f.radius), vx: Math.round(f.vx * 10) / 10, vy: Math.round(f.vy * 10) / 10, ttl: navigator ? Math.round(f.until - this.now) : 0 }));
+    // Everyone reads which way the clouds drift (docs/16 #10); a storm front on her course is called out once, with
+    // the choice: go round it, or ride it out for what the sea pays those who stay.
+    let warn: FrontWarn | null = null;
+    if (!ship.docked && ship.alive) {
+      const v = headingVec(ship.state.heading), sp = ship.state.speed * SPEED_SCALE;
+      const hit = frontOnCourse(this.fronts.filter((f) => list.some((l) => l.id === f.id)), this.now, ship.state.x, ship.state.y, v.x * sp, v.y * sp);
+      if (hit) {
+        const f = hit.front;
+        const bearing = Math.atan2(f.x - ship.state.x, -(f.y - ship.state.y));
+        warn = { id: f.id, kind: f.kind as FrontWarn['kind'], sec: Math.round(hit.sec), bearing: Math.round(bearing * 100) / 100 };
+        const told = this.frontsTold.get(s) ?? new Set<number>();
+        this.frontsTold.set(s, told);
+        if (!told.has(f.id)) {
+          told.add(f.id);
+          const min = Math.max(1, Math.round(hit.sec / 60));
+          this.sendTo(s, { t: 'toast', msg: f.kind === 'black_storm' ? `A black storm will cross your course in about ${min} min, from the ${compassPoint(bearing)}. Go round it — or ride it out for the storm's reward.` : `A storm front will cross your course in about ${min} min, from the ${compassPoint(bearing)}. Go round it — or ride it out for the storm's reward.`, kind: 'bad' });
+        }
+      }
+    }
+    this.sendTo(s, { t: 'fronts', list, forecast: navigator, warn });
   }
+  /** The storm fronts each captain has been warned of (docs/16 #10). */
+  private frontsTold = new WeakMap<PlayerSession, Set<number>>();
 
   /** Notable ships the captain has laid eyes on are logged with time and place for the chart. */
   /** Ships worth a lookout's shout (ghosts, hunters, notorious captains): listed once a second, not per captain. */

@@ -356,10 +356,10 @@ function stepLairs(game: Game): void {
     const r = S.rec[lair.id] ?? {};
     // The garrison: out when a captain comes near a manned lair, home again when all have gone; sunk, the lair lies
     // open to a landing once its battery is silenced too.
-    if (gar) {
+    if (gar?.length) {
       const afloat = garrisonAfloat(game, lair);
-      if (!afloat.length && gar.length) {
-        S.garrison.set(lair.id, []);
+      if (!afloat.length) {
+        S.garrison.delete(lair.id);
         (S.rec[lair.id] ??= {}).garrisonDown = true;
         S.dirty = true;
         for (const s of game.sessions) {
@@ -832,4 +832,32 @@ export function clearWanted(game: Game): void {
     game.removeShip(l.ship);
   }
   S.live.clear();
+}
+
+/** The admin (play-testing, docs/16 #7): every lair; silence its battery (opening it for a landing); sink its
+ *  garrison. */
+export function lairsAll(game: Game): Readonly<Lair>[] {
+  return [...ws(game).lairs.values()];
+}
+
+export function lairAdmin(game: Game, id: string, what: 'silence' | 'sink' | 'rebuild'): void {
+  const S = ws(game);
+  const lair = S.lairs.get(id);
+  if (!lair) return;
+  const r = (S.rec[id] ??= {});
+  if (what === 'silence') {
+    r.battery = 0;
+    r.lairOpenUntil = game.wallNow() + LAIR_OPEN_MIN * 60_000;
+    r.lairRebuildAt = game.wallNow() + LAIR_REBUILD_H * HOUR;
+  } else if (what === 'sink') {
+    for (const g of garrisonAfloat(game, lair)) game.removeShip(g.id);
+    S.garrison.delete(id);
+    r.garrisonDown = true;
+  } else {
+    delete r.battery;
+    delete r.lairOpenUntil;
+    delete r.lairRebuildAt;
+    delete r.garrisonDown;
+  }
+  S.dirty = true;
 }
