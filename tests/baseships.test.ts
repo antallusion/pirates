@@ -6,6 +6,7 @@
 // its next level asks for it; every word in both languages.
 
 import { test } from 'node:test';
+import { lairIsland } from '../server/src/game/wanted.ts';
 import assert from 'node:assert/strict';
 import { BASE_RES, crewsAt } from '../shared/src/data/base.ts';
 import {
@@ -70,7 +71,7 @@ function owner(game: Game, name = 'Yard Mistress', talents: TalentRanks = {}): {
   s.profile!.talents = talents;
   s.ship!.talents = talents;
   s.ship!.recompute(game.now);
-  const home = game.world.islands.find((i) => !i.portId && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id))!;
+  const home = game.world.islands.find((i) => !i.portId && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id))!;
   offShore(game, s.ship!, home);
   assert.equal(buyIsland(game, s, home.id), null);
   const h = ownIsland(game, s.accountId)!;

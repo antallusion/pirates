@@ -20,6 +20,7 @@ import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
 import { baseView, collectYard, moveTo, speedup, startBuild, upgradeAt } from './base.ts';
 import { ownShipsKill, shipBuild, shipLaunch, shipRecall, shipRepair, shipUpgrade, squadronOf, stepOwnShips } from './baseships.ts';
+import { abandonIsland, claimPrompt, raidPointer, robIsland } from './baseclaim.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
 import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
@@ -1378,6 +1379,8 @@ export class Game {
     const p = s.profile!;
     return {
       homeIsle: ownIsland(this, s.accountId)?.island ?? null,
+      isleRaid: raidPointer(this, s),
+      claimIsle: claimPrompt(this, s),
       questTargets: this.questTargets(p),
       questMates: this.questMates(s),
       common: commonView(this, s.accountId),
@@ -2726,6 +2729,11 @@ export class Game {
           }
           case 'home':
             return done(goHome(this, s));
+          // Moving house, and robbers in lawless water (docs/15 item 6).
+          case 'abandon':
+            return done(abandonIsland(this, s));
+          case 'rob_isle':
+            return done(robIsland(this, s, Math.trunc(Number(msg.island))));
           case 'hire':
             return done(hireResident(this, s));
           case 'assign':

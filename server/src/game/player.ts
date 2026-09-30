@@ -191,6 +191,8 @@ export interface Profile {
   refugees?: number;
   /** Free speed-up tokens for the island's builders (docs/15 item 2): the daily welcome and the daily orders. */
   speedups?: number;
+  /** When she last gave up an island of her own (docs/15 item 6: another is claimed after a wait), wall ms. */
+  isleLeftAt?: number;
   /** The White Orca's calf in her wake (docs/12 P10 #2) and the ship's pets (#3). */
   companion?: CompanionRec | null;
   pets?: { owned: PetId[]; deck: PetId | null };
@@ -367,6 +369,9 @@ export function pardonCost(p: Profile): number {
 export interface WorldView {
   /** One's own island (docs/15). */
   homeIsle?: number | null;
+  /** Raiders at her island (docs/15 item 7), and a wild island off the bow she may claim (item 6). */
+  isleRaid?: PrivateState['isleRaid'];
+  claimIsle?: PrivateState['claimIsle'];
   coves: { id: number; name: string; x: number; y: number }[];
   patrols: [number, number][];
   fleet?: PrivateState['fleet'];
@@ -419,6 +424,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     maps: world.explore?.maps ?? [],
     legendEcho: world.explore?.legendEcho ?? [],
     homeIsle: world.homeIsle ?? null,
+    isleRaid: world.isleRaid ?? null,
+    claimIsle: world.claimIsle ?? null,
     pennant: p.pennant,
     abyss: world.abyss ?? null,
     fragments: p.explore.fragments,

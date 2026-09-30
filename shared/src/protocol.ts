@@ -129,7 +129,8 @@ export type ClientMsg =
   | { t: 'tip'; action: 'clerk' }
   /** One's own island and outposts (docs/12 P7). */
   | { t: 'estate'; action: 'buy'; island: number }
-  | { t: 'estate'; action: 'level' | 'home' | 'hire' | 'view' }
+  | { t: 'estate'; action: 'level' | 'home' | 'hire' | 'view' | 'abandon' }
+  | { t: 'estate'; action: 'rob_isle'; island: number }
   | { t: 'estate'; action: 'assign'; id: number; where: string }
   | { t: 'estate'; action: 'found'; kind: OutpostKind }
   | { t: 'estate'; action: 'outpost'; id: string; order: 'upgrade' | 'workers' | 'guard' | 'haul' | 'renew' | 'auto' | 'rob'; arg?: string }
@@ -483,6 +484,10 @@ export interface PrivateState {
   legendEcho: number[];
   /** One's own island (docs/15), for the way into its base from the sea. */
   homeIsle?: number | null;
+  /** Raiders at her island (docs/15 item 7): where they lie, when they land (world seconds), the island. */
+  isleRaid?: { x: number; y: number; until: number; name: string } | null;
+  /** A wild island off the bow she may claim as her own (docs/15 item 6). */
+  claimIsle?: { island: number; name: string; price: number; waters: 'safe' | 'contested' | 'lawless' } | null;
   /** The pennant colour you fly (a season reward), if any. */
   pennant: string | null;
   /** The Abyss: pressure, the lying stars, visions, the Islands of Light, the chapters (null until it matters). */
@@ -1393,9 +1398,68 @@ export interface EstateView {
   near: OutpostView[];
   homeIn: number;
   buy: { island: number; name: string; price: number } | null;
+  /** The terms of claiming the island off the bow (docs/15 item 6), whether or not it may be claimed now. */
+  claim: ClaimTermsView | null;
+  /** Another captain's island off the bow in lawless water, to rob (docs/15 item 6). */
+  rob: { island: number; name: string; owner: string; why: string | null; robbing: number | null } | null;
   kinds: OutpostKind[];
   /** Another captain's trophy hall off the bow, to look round. */
   hall: { island: number; owner: string } | null;
+}
+
+/** What claiming an island as one's own asks and brings, by its waters (docs/15 item 6). */
+export interface ClaimTermsView {
+  island: number;
+  name: string;
+  region: RegionId;
+  waters: 'safe' | 'contested' | 'lawless';
+  size: IslandSize;
+  price: number;
+  /** A lease still to run counted off the price. */
+  credit: number;
+  /** Tax a week for each level of the island (0: none), to the waters' ruling faction. */
+  tax: number;
+  faction: string;
+  /** Pirate raids on a fat store: a chance a day (0: never), their strength against a middling sea's, their ships. */
+  raidDay: number;
+  raidMul: number;
+  raiders: number;
+  /** Other captains may land and rob the yard. */
+  robbable: boolean;
+  /** Moving house: the share of the price given back, and the hours before another is claimed. */
+  refund: number;
+  cooldownH: number;
+  /** What stands in the way now (null: it may be claimed). */
+  why: string | null;
+}
+
+/** One's own island's waters, tax and defence, and a raid under way (docs/15 items 6–7). */
+export interface IsleClaimView {
+  waters: 'safe' | 'contested' | 'lawless';
+  region: RegionId;
+  faction: string;
+  /** This week's tax, when it falls due (wall ms), and weeks unpaid in a row. */
+  tax: number;
+  taxAt: number;
+  unpaid: number;
+  treasury: number;
+  /** The island's defence without its owner: its rating, what makes it up, and its odds against a raid now. */
+  defence: number;
+  batteries: number;
+  forts: number;
+  ships: number;
+  strength: number;
+  odds: number;
+  /** The yard and store's worth against the mark that draws raiders. */
+  worth: number;
+  fat: number;
+  /** No raid before (wall ms); the share lost today and the day's cap. */
+  calmUntil: number;
+  lost: number;
+  lossCap: number;
+  raid: { until: number; x: number; y: number; ships: number; alive: number; strength: number } | null;
+  refund: number;
+  abandonWhy: string | null;
 }
 
 /** What a step of the builders' work costs (docs/15): silver from the purse, goods from the yard, seconds of work. */
@@ -1451,6 +1515,8 @@ export interface BaseView {
   levelUp: (BaseCostView & { level: number; treasury: number; power: number; why: string | null }) | null;
   /** The island's shipyard and her own ships (docs/15 item 4). */
   shipyard: OwnYardView;
+  /** Its waters, tax and defence, and a raid under way (docs/15 items 6–7). */
+  claim: IsleClaimView;
 }
 
 /** One of the captain's own ships (docs/15 item 4). */

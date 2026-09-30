@@ -31,6 +31,8 @@ import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } f
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
 import { capOf, grantSpeedups, yardOf } from './base.ts';
+import { claimOf, isleWorth, raidNow, startIsleRaid, stepIsleClaim } from './baseclaim.ts';
+import { fatMark } from '../../../shared/src/data/baseclaim.ts';
 import { OWN_NAMES, OWN_ROLES, OWN_SHIPS_MAX, SHIPYARD_MAX, YARD_SHIP_LEVEL, hullFor, ownXpNext, roleLevels, yardLevelFor } from '../../../shared/src/data/baseships.ts';
 import type { OwnRole } from '../../../shared/src/data/baseships.ts';
 import { escortsOf } from './fleet.ts';
@@ -82,7 +84,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -284,6 +286,39 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       grantSpeedups(p, 10);
       game.holdings.touch();
       return `The yard holds ${n} more of each.`;
+    }
+    case 'raid': {
+      // Raids on one's own island for play-testing (docs/15 item 7): /raid — pirates make for it now (the yard filled
+      // fat first if it is lean); /raid land — their ten minutes run out now; /raid tax — the week's tax falls due now;
+      // /raid calm — no raid under way, no cooldown, nothing lost today.
+      const h = ownIsland(game, s.accountId);
+      if (!h) return 'You have no island of your own.';
+      const c = claimOf(game, h);
+      if (args[0] === 'land') {
+        if (!c.raid) return 'No raiders lie off the island.';
+        raidNow(game, h);
+        stepIsleClaim(game, h);
+        return 'The raiders land.';
+      }
+      if (args[0] === 'tax') {
+        c.taxAt = game.wallNow();
+        stepIsleClaim(game, h);
+        return `Tax reckoned; weeks unpaid: ${c.unpaid}.`;
+      }
+      if (args[0] === 'calm') {
+        if (c.raid) for (const id of c.raid.ships) if (game.ships.get(id)) game.removeShip(id);
+        c.raid = null;
+        c.calmUntil = 0;
+        c.lossShare = 0;
+        game.holdings.touch();
+        game.pushSelf(s, true);
+        return 'The island is calm.';
+      }
+      const y = yardOf(game, h);
+      for (let k = 0; k < 40 && isleWorth(h) < fatMark(h.level ?? 1); k++) for (const g of BASE_RES) y.res[g] = Math.min(capOf(h), (y.res[g] ?? 0) + 20);
+      const why = startIsleRaid(game, h);
+      game.holdings.touch();
+      return why ?? `Raiders make for your island: ${c.raid?.ships.length ?? 0} ships.`;
     }
     case 'oship': {
       // The island's own ships for play-testing (docs/15 item 4): /oship <war|merchant|fisher|scout> [level] — one

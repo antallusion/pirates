@@ -4,6 +4,7 @@
 // capped yard; the yard paying for the work; a building moved to a free plot; every word in both languages.
 
 import { test } from 'node:test';
+import { lairIsland } from '../server/src/game/wanted.ts';
 import assert from 'node:assert/strict';
 import {
   BASE_PLOTS, BASE_RES, BUILD_MAX_SECS, CREW_LEVELS, PLOT_CELLS, PRODUCERS, PRODUCER_KINDS, PRODUCER_MAX, TOKEN_MAX, TOKEN_SECS, TOKENS_LOGIN, baseCost, crewsAt, maxLevel,
@@ -61,7 +62,7 @@ function owner(game: Game, name = 'Base Builder'): { c: FakeConn; s: PlayerSessi
   const s = game.sessionByName(name)!;
   onHull(game, s.ship!, 'brig', 5);
   s.profile!.gold = 2_000_000;
-  const home = game.world.islands.find((i) => !i.portId && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id))!;
+  const home = game.world.islands.find((i) => !i.portId && i.region === 'gravewater' && i.radius > 150 && !game.holdings.get(game, i.id) && !lairIsland(game, i.id))!;
   assert.ok(home, 'a wild island to buy');
   offShore(game, s.ship!, home);
   assert.equal(buyIsland(game, s, home.id), null);

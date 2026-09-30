@@ -100,8 +100,8 @@ export function producerOf(what: string): ProducerKind | null {
 }
 
 /** Buildings that grow a level after the first (the warehouse widens the yard; the shipyard builds her own ships
- *  to higher levels, docs/15 item 4). */
-export const UPGRADABLE: BuildingId[] = ['warehouse', 'shipyard'];
+ *  to higher levels, docs/15 item 4; the shore battery and the fort defend the island harder against raids, item 7). */
+export const UPGRADABLE: BuildingId[] = ['warehouse', 'shipyard', 'battery', 'fort'];
 export const BUILDING_MAX = 5;
 
 export function maxLevel(what: string): number {
@@ -150,6 +150,16 @@ export function baseCost(what: string, level: number): BaseCost {
     return {
       silver: round50(15_000 * n ** 1.3),
       goods: { timber: 40 + 40 * n, coal: 20 * n, tar: 20 + 15 * n, iron: 15 * n + 10 },
+      secs: levelTime(Math.round(600 * Math.sqrt(d.cost / 10_000)), level),
+    };
+  }
+  // The guns' later levels (docs/15 item 7): the island's own timber, stone, iron and tar, and silver for the guns.
+  if ((what === 'battery' || what === 'fort') && level >= 2) {
+    const n = level - 1;
+    const fort = what === 'fort';
+    return {
+      silver: round50((fort ? 20_000 : 6_000) * n ** 1.3),
+      goods: fort ? { timber: 80 + 50 * n, coal: 40 * n, tar: 20 + 10 * n, iron: 30 + 20 * n } : { timber: 30 + 25 * n, coal: 20 * n, tar: 10 * n, iron: 10 + 10 * n },
       secs: levelTime(Math.round(600 * Math.sqrt(d.cost / 10_000)), level),
     };
   }

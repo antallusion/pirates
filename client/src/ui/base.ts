@@ -13,6 +13,9 @@ import { BUILDINGS } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId } from '../../../shared/src/data/holdings.ts';
 import type { BaseCellView, BaseView, ClientMsg, OwnShipView } from '../../../shared/src/protocol.ts';
 import { OWN_ROLE_DEFS } from '../../../shared/src/data/baseships.ts';
+import { WATERS } from '../../../shared/src/data/baseclaim.ts';
+import { FACTIONS } from '../../../shared/src/data/factions.ts';
+import { ask } from './confirm.ts';
 import type { OwnRole } from '../../../shared/src/data/baseships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -107,6 +110,8 @@ export class BaseWindow {
   moving: number | null = null;
   private send: (m: ClientMsg) => void;
   private asked = 0;
+  /** "Sail to defend": the window closes and the HUD's «Now:» points to the raiders (docs/15 item 7). */
+  onSail: () => void = () => {};
 
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
@@ -146,7 +151,7 @@ export class BaseWindow {
       ? `<div class="modal-body base-body yard-body">${this.yard(v, state)}</div>`
       : `<div class="modal-body base-body"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}">${this.board(v)}</div></div><div class="base-sheet">${this.sheet(v, state)}</div></div>`;
     root.innerHTML = `<div class="modal-head base-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: placeName(v.name), level: v.level, title }))} · ${esc(L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') }))}</div></div>${tabs}</div>
-      ${bar}${body}`;
+      ${bar}${this.defence(v)}${body}`;
     this.bind(root, state);
     this.tick(root, state);
   }
@@ -204,7 +209,7 @@ export class BaseWindow {
     }
     if (this.sel === null) {
       const jobs = v.cells.filter((c) => c.job);
-      return `<p class="bhint">${esc(L('pick'))}</p>${this.levelCard(v)}
+      return `<p class="bhint">${esc(L('pick'))}</p>${this.levelCard(v)}${this.watersCard(v)}
         <div class="bsec">${esc(L('work'))}</div>${jobs.map((c) => `<button class="bjob" data-plot="${c.plot}">${this.thumb(c)}<span><b>${esc(baseName(c.what!))}</b><br><span class="muted">${esc(c.job!.level <= 1 ? L('raising') : L('upgrading', { n: c.job!.level }))} · </span><span class="btime" data-end="${c.job!.end}">${esc(timeText((c.job!.end - v.now) / 1000))}</span></span></button>`).join('') || `<p class="muted">${esc(L('no_work'))}</p>`}${foot}`;
     }
     const c = v.cells[this.sel];
@@ -237,6 +242,38 @@ export class BaseWindow {
       : `<p class="muted">${esc(kind || c.level > 1 ? L('max') : L('one_level'))}</p>`;
     return `<div class="bsheet-h">${this.thumb(c)}<div><b>${esc(baseName(c.what))}</b> <span class="muted">${esc(L('plot', { n: c.plot + 1 }))}${c.level && !raising ? ` · ${esc(L('level', { n: c.level }))}` : ''}</span><p class="muted bdesc">${esc(baseText(c.what))}</p></div></div>
       ${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${foot}`;
+  }
+
+  /** The island's waters, tax and defence under the resources, and a raid under way over everything (docs/15 items 6–7). */
+  private defence(v: BaseView): string {
+    const c = v.claim;
+    const ru = lang() === 'ru' ? 1 : 0;
+    const faction = serverText(FACTIONS[c.faction as keyof typeof FACTIONS]?.name ?? c.faction);
+    const tax = c.tax > 0
+      ? `<span class="bmeta${c.unpaid ? ' bad' : ''}" title="${esc(L('def_tax_tip', { faction, n: fmt(c.tax), have: fmt(c.treasury), when: spanText((c.taxAt - v.now) / 1000) }))}">${icon('coin', '', 'ico-sm')}${esc(L('def_tax', { n: fmt(c.tax) }))}${c.unpaid ? ` · ${esc(L('def_unpaid', { n: c.unpaid }))}` : ''}</span>`
+      : `<span class="bmeta muted">${esc(L('def_tax_none'))}</span>`;
+    const guard = c.strength > 0
+      ? `<span class="bmeta" title="${esc(L('def_tip', { b: c.batteries, f: c.forts, s: c.ships, n: c.defence, r: c.strength }))}">${icon('build_battery', '', 'ico-sm')}${esc(L('def_rating', { n: c.defence }))} · <span class="${c.odds >= 0.5 ? 'good' : 'bad'}">${esc(L('def_odds', { p: Math.round(c.odds * 100) }))}</span></span>`
+      : `<span class="bmeta good">${esc(L('def_safe'))}</span>`;
+    const strip = `<div class="base-def"><span class="bdef-w w-${c.waters}">${esc(WATERS[c.waters].name[ru])}</span>${tax}${guard}</div>`;
+    const r = c.raid;
+    if (!r) return strip;
+    return `${strip}<div class="base-raid" role="alert"><div class="braid-main"><b>${esc(L('raid_title'))}</b>
+      <span class="braid-clock">${esc(L('raid_land'))} <span class="btime" data-end="${r.until}">${esc(timeText((r.until - v.now) / 1000))}</span></span>
+      <span class="muted">${esc(r.ships ? L('raid_ships', { a: r.alive, n: r.ships, r: r.strength }) : L('raid_far'))} · ${esc(L('raid_hold', { p: Math.round(c.odds * 100) }))}</span></div>
+      ${r.ships ? `<button class="btn btn-small btn-danger" data-bsail>${esc(L('raid_sail'))}</button>` : ''}</div>`;
+  }
+
+  /** The waters card on the plots' sheet: what draws raiders, the day's losses, and moving house (docs/15 items 6–7). */
+  private watersCard(v: BaseView): string {
+    const c = v.claim;
+    const ru = lang() === 'ru' ? 1 : 0;
+    const calm = c.strength > 0 && c.calmUntil > v.now && !c.raid ? `<p class="muted">${esc(L('def_calm', { t: spanText((c.calmUntil - v.now) / 1000) }))}</p>` : '';
+    const lines = c.strength > 0
+      ? `<p class="${c.worth >= c.fat ? 'bad' : 'muted'}">${esc(L('def_worth', { w: fmt(c.worth), f: fmt(c.fat) }))}</p>${calm}${c.lost > 0 ? `<p class="muted">${esc(L('def_lost', { n: Math.round(c.lost * 100), cap: Math.round(c.lossCap * 100) }))}</p>` : ''}<p class="muted">${esc(L('def_help'))}</p>`
+      : `<p class="muted">${esc(L('def_safe'))}</p>`;
+    return `<div class="bupcard bwaters"><div class="row"><b>${esc(L('def_card'))}</b><span class="bdef-w w-${c.waters}">${esc(WATERS[c.waters].name[ru])}</span></div>${lines}
+      <button class="btn btn-small btn-danger" data-babandon${c.abandonWhy ? ` disabled title="${esc(sv(c.abandonWhy))}"` : ''}>${esc(L('abandon'))}</button>${c.abandonWhy ? `<p class="muted">${esc(sv(c.abandonWhy))}</p>` : ''}</div>`;
   }
 
   /** The island's next level (docs/15 item 5): its power, its treasury and its goods, and the step itself. */
@@ -330,6 +367,12 @@ export class BaseWindow {
       root.querySelectorAll<HTMLElement>(`[data-${attr}]`).forEach((el) => (el.onclick = () => this.send({ t: 'base', action, ship: el.dataset[attr]! })));
     }
     root.querySelector<HTMLElement>('[data-bcollect]')?.addEventListener('click', () => this.send({ t: 'base', action: 'collect' }));
+    root.querySelector<HTMLElement>('[data-bsail]')?.addEventListener('click', () => this.onSail());
+    root.querySelector<HTMLElement>('[data-babandon]')?.addEventListener('click', () => void ask(L('abandon_confirm', { name: placeName(v.name), refund: fmt(v.claim.refund), h: 72 })).then((ok) => {
+      if (!ok) return;
+      this.send({ t: 'estate', action: 'abandon' });
+      this.send({ t: 'base', action: 'view' });
+    }));
     root.querySelector<HTMLElement>('[data-bcancel]')?.addEventListener('click', () => {
       this.moving = null;
       redraw();

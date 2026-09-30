@@ -1,5 +1,5 @@
-// A captain's own island and her outposts (docs/12 P7). The island is bought outright (a lease bought out, or a
-// wild island of a safe or contested sea): it is never besieged and grows through ten levels on goods from all
+// A captain's own island and her outposts (docs/12 P7). The island is bought outright (a lease bought out, or any
+// wild island that is not a port's, priced by its size and waters — docs/15 item 6, baseclaim.ts): it is never besieged and grows through ten levels on goods from all
 // over the sea, each level more slots, outposts, caravans and residents. Residents — souls rescued at sea,
 // prisoners freed from pirate lairs, hands hired in the island's tavern — each work a building or an outpost for
 // +40% and a knack of their trade. Outposts on wild islands take a resource by the hour without their owner, up
@@ -10,12 +10,14 @@
 
 import { welcome } from './guests.ts';
 import {
-  BUY_MUL, BUY_REGIONS, CLAIM_DAYS, GUARDS, HANDS_BONUS, HANDS_WAGE, HOME_COOLDOWN, ISLE_LEVELS, ISLE_MAX, OUTPOSTS, OUTPOST_BUILD, OUTPOST_KINDS, OUTPOST_MAX_LEVEL,
+  CLAIM_DAYS, GUARDS, HANDS_BONUS, HANDS_WAGE, HOME_COOLDOWN, ISLE_LEVELS, ISLE_MAX, OUTPOSTS, OUTPOST_BUILD, OUTPOST_KINDS, OUTPOST_MAX_LEVEL,
   PROFESSIONS, PROFESSION_DEFS, RAID_DAY, RAID_MIN, RESIDENT_BONUS, RESIDENT_HIRE, ROB_SEC, TROPHY_MAX, TROPHY_STEP, claimCost, outpostCap, outpostFits, outpostGood,
   outpostRate, outpostUpgrade, residentName,
 } from '../../../shared/src/data/estate.ts';
 import type { Guard, OutpostKind, Profession, TrophyKind } from '../../../shared/src/data/estate.ts';
-import { RENT, islandSize, rentZoneMul } from '../../../shared/src/data/holdings.ts';
+import { islandSize } from '../../../shared/src/data/holdings.ts';
+import { claimPrice, isleTax } from '../../../shared/src/data/baseclaim.ts';
+import { claimTerms, claimWhy, leaseCredit, newClaim, robView, stepIsleRobbers, watersOf } from './baseclaim.ts';
 import type { BuildingId } from '../../../shared/src/data/holdings.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -108,31 +110,25 @@ export function ownIsland(game: Game, account: number): Holding | undefined {
   return Object.values(game.holdings.map(game)).find((h) => h.owned && h.owner.kind === 'player' && h.owner.id === account);
 }
 
-function personalHolding(game: Game, account: number): Holding | undefined {
-  return Object.values(game.holdings.map(game)).find((h) => h.owner.kind === 'player' && h.owner.id === account);
-}
-
+/** The price of an island claimed as one's own: by its size and its waters (docs/15 item 6). */
 export function buyPrice(isl: Island): number {
-  return Math.round(RENT[islandSize(isl.radius)][30] * BUY_MUL * (rentZoneMul(isl.region) ?? 1));
+  return claimPrice(islandSize(isl.radius), watersOf(isl));
 }
 
-/** Buy an island outright: a wild island of a safe or contested sea, or one's own leased island bought out (the
- *  lease still to run counts against the price). */
+/** Claim an island outright (docs/15 item 6): any wild island that is not a port's, held, worked or a lair — or one's
+ *  own leased island bought out (the lease still to run counts against the price); one island of one's own. */
 export function buyIsland(game: Game, s: PlayerSession, islandId: number): string | null {
   const isl = island(game, islandId);
   if (!isl || isl.portId) return 'No such island';
-  if (!BUY_REGIONS.includes(isl.region)) return 'Islands are bought outright only in the safe and contested seas.';
   const ship = s.ship!;
   const near = ship.docked ? game.portById(ship.docked)?.region === isl.region : islandNear(game, ship)?.id === isl.id;
   if (!near) return `Sail to ${isl.name}, or ask at a harbour office in ${REGIONS[isl.region].name}`;
   const p = s.profile!;
   const cur = game.holdings.get(game, islandId);
-  const mine = personalHolding(game, s.accountId);
-  if (cur && !mayUse(game, cur, s.accountId)) return `${isl.name} is held by ${cur.owner.name}.`;
-  if (mine && mine.island !== islandId) return 'A captain may hold one island of their own';
-  if (cur?.owned) return 'Your island is at its greatest.';
+  const why = claimWhy(game, s, isl);
+  if (why) return why;
   let price = buyPrice(isl);
-  if (cur) price = Math.max(Math.round(price * 0.4), price - Math.round(Math.max(0, cur.until - game.wallNow()) / DAY / 30 * RENT[islandSize(isl.radius)][30]));
+  price -= leaseCredit(game, s, isl, price);
   if (p.gold < price) return `The island costs ${price} silver.`;
   p.gold -= price;
   game.db.ledger(s.accountId, 'island_buy', -price, String(isl.id));
@@ -148,10 +144,13 @@ export function buyIsland(game: Game, s: PlayerSession, islandId: number): strin
   h.autoRenew = false;
   h.shieldUntil = FAR_FUTURE;
   h.residents ??= [];
+  h.claim = newClaim(game, price);
   game.holdings.map(game)[isl.id] = h;
   game.holdings.touch();
   changeRep(p, game.holdings.factionOf(game, isl.region), 5);
   game.sendTo(s, { t: 'toast', msg: `${isl.name} is yours for ever. Its upkeep is paid from its treasury, day by day.`, kind: 'gold' });
+  const tax = isleTax(watersOf(isl), 1);
+  if (tax > 0) game.sendTo(s, { t: 'toast', msg: `The harbour office taxes it ${tax} silver a week for each of its levels, from its treasury.`, kind: 'info' });
   sagaNote(game, s, 'island', [isl.name]); // the saga (docs/12 P10 #20)
   return null;
 }
@@ -577,6 +576,7 @@ export function stepEstate(game: Game): void {
     touch(game);
     game.sendTo(s, { t: 'toast', msg: `The store of ${o.ownerName}’s outpost is yours: ${n} units.`, kind: 'gold' });
   }
+  stepIsleRobbers(game); // robbers on captains' islands (docs/15 item 6)
   if (Math.floor(game.now) % 60 === 0) {
     payWages(game);
     save(game);
@@ -706,7 +706,10 @@ export function estateView(game: Game, s: PlayerSession): EstateView {
     outposts: outpostsOf(game, s.accountId).map((o) => outpostView(game, o, s.accountId)),
     near,
     homeIn: Math.max(0, Math.ceil(((p.homeAt ?? -1e9) + HOME_COOLDOWN - game.now) / 60)),
-    buy: nearIsle && !nearIsle.portId && !h && BUY_REGIONS.includes(nearIsle.region) && (!game.holdings.get(game, nearIsle.id) || mayUse(game, game.holdings.get(game, nearIsle.id)!, s.accountId)) && (!personalHolding(game, s.accountId) || personalHolding(game, s.accountId)!.island === nearIsle.id) ? { island: nearIsle.id, name: nearIsle.name, price: buyPrice(nearIsle) } : null,
+    buy: nearIsle && !h && !claimWhy(game, s, nearIsle) ? { island: nearIsle.id, name: nearIsle.name, price: buyPrice(nearIsle) - leaseCredit(game, s, nearIsle, buyPrice(nearIsle)) } : null,
+    // The terms of the island off the bow (docs/15 item 6): shown whether or not she may claim it now.
+    claim: nearIsle && !h && (!game.holdings.get(game, nearIsle.id) || mayUse(game, game.holdings.get(game, nearIsle.id)!, s.accountId)) ? claimTerms(game, s, nearIsle) : null,
+    rob: robView(game, s),
     kinds: nearIsle && !nearIsle.portId && !game.holdings.get(game, nearIsle.id) && !Object.values(outposts(game)).some((o) => o.island === nearIsle.id) ? OUTPOST_KINDS.filter((k) => outpostFits(k, nearIsle)) : [],
     hall: ((hh) => (hh && hh.owned && hh.owner.kind === 'player' && hh.owner.id !== s.accountId && welcome(game, s, hh) ? { island: hh.island, owner: hh.owner.name } : null))(nearIsle ? game.holdings.get(game, nearIsle.id) : undefined),
   };

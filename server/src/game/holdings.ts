@@ -15,6 +15,8 @@ import { estateProduce, ownedSlots, residentMul } from './estate.ts';
 import type { Resident } from './estate.ts';
 import { reckonBase, startBuild } from './base.ts';
 import type { Yard } from './base.ts';
+import type { IsleClaim } from './baseclaim.ts';
+import { stepIsleClaim } from './baseclaim.ts';
 import { BUILDINGS, ISLAND_CACHE_VOLUME, LIMIT_PERSONAL, RENT, RENT_DAYS, WAREHOUSE_ISLAND_VOLUME, islandSize, islandSlots, rentZoneMul } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId, RentDays } from '../../../shared/src/data/holdings.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
@@ -86,6 +88,8 @@ export interface Holding {
   visitors?: number;
   /** The own island as a base (docs/15 items 1–3): producers, the builders' work, the yard. */
   yard?: Yard;
+  /** Its claim (docs/15 items 6–7): what was paid, the waters' tax, raids and robbers. */
+  claim?: IsleClaim;
 }
 
 export class HoldingsHub {
@@ -582,7 +586,10 @@ function stepCalendar(game: Game, h: Holding): void {
   const wall = game.wallNow();
   const isl = island(game, h.island)!;
   // One's own island: the builders' work finished and the producers' yield (docs/15).
-  if (h.owned) reckonBase(game, h);
+  if (h.owned) {
+    reckonBase(game, h);
+    stepIsleClaim(game, h); // the waters' tax, raids (docs/15 items 6–7)
+  }
   if (h.windowNext && wall >= h.windowNext.from) {
     h.window = h.windowNext.hour;
     h.windowNext = null;

@@ -174,9 +174,16 @@ const companyScreen = new CompanyScreen((m) => net.send(m));
 // One's own island as a base (docs/15): from the Company's islands, the captain's cabin, and at sea off the island.
 const baseWindow = new BaseWindow((m) => net.send(m));
 companyScreen.onBase = () => openBase();
+baseWindow.onSail = () => closeModal();
 function openBase(): void {
   baseWindow.open();
   openModal('base');
+}
+/** The terms of the island off the bow (docs/15 item 6), on the Company's islands card. */
+function openClaim(): void {
+  companyScreen.open('isles');
+  net.send({ t: 'estate', action: 'view' });
+  openModal('company');
 }
 // "Whisper" on a friend: the chat opens over the window, addressed to them.
 let whisperPrefill = '';
@@ -804,6 +811,7 @@ onLang(chatChannels);
 $('hud-map').onclick = () => toggle('map');
 $('hud-prompt').addEventListener('click', (e) => {
   if ((e.target as HTMLElement).closest('[data-open-base]')) openBase();
+  if ((e.target as HTMLElement).closest('[data-open-claim]')) openClaim();
 });
 // Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
 new MutationObserver(() => {
@@ -1236,6 +1244,9 @@ function computePrompt(): string {
   if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
   const home = nearHome();
   if (home) parts.push(`${esc(L('isleHere', { name: placeName(home.name) }))} <button class="btn btn-small prompt-btn" data-open-base>${esc(L('isleOpen'))}</button>`);
+  // A wild island off the bow she may claim (docs/15 item 6): its terms on the Company's islands card.
+  const wild = self.claimIsle;
+  if (wild && !home) parts.push(`${esc(L('isleWild', { name: placeName(wild.name), price: fmt(wild.price) }))} <button class="btn btn-small prompt-btn" data-open-claim>${esc(L('isleClaim'))}</button>`);
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
   if (port) parts.push(`<kbd>${esc(keyOfAction('dock'))}</kbd> ${esc(L('enter', { port: sv(port.name) }))}`);
   if (you.flags & SF.PROTECTED) parts.push(`<span class="muted">${esc(L('protected'))}</span>`);

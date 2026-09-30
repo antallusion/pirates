@@ -5,6 +5,7 @@
 // the trophy hall and its guests; the island's forge.
 
 import { test } from 'node:test';
+import { lairIsland } from '../server/src/game/wanted.ts';
 import assert from 'node:assert/strict';
 import { ISLE_LEVELS, OUTPOST_BUILD, OUTPOST_KINDS, ROB_SEC, estatePatterns, outpostCap, outpostFits } from '../shared/src/data/estate.ts';
 import type { OutpostKind } from '../shared/src/data/estate.ts';
@@ -61,7 +62,7 @@ function offShore(game: Game, ship: ShipEntity, is: Island): void {
 }
 
 function wildIsland(game: Game, region: RegionId, pred: (is: Island) => boolean = () => true): Island {
-  const is = game.world.islands.find((i) => !i.portId && i.region === region && i.radius > 150 && pred(i) && !game.holdings.get(game, i.id));
+  const is = game.world.islands.find((i) => !i.portId && i.region === region && i.radius > 150 && pred(i) && !game.holdings.get(game, i.id) && !lairIsland(game, i.id));
   assert.ok(is, `a wild island in ${region}`);
   return is!;
 }
@@ -74,7 +75,7 @@ function owner(game: Game, name = 'Isle Owner'): { c: FakeConn; s: PlayerSession
   return { ...cap, home };
 }
 
-test('buying an island outright: for ever, never besieged; a lease bought out costs less; not in lawless water', () => {
+test('buying an island outright: for ever, never besieged; a lease bought out costs less; lawless water too', () => {
   const game = world();
   const { c, s, home } = owner(game);
   const h = ownIsland(game, s.accountId)!;
@@ -94,11 +95,11 @@ test('buying an island outright: for ever, never besieged; a lease bought out co
   const g0 = b.profile!.gold;
   assert.equal(buyIsland(game, b, other.id), null);
   assert.ok(g0 - b.profile!.gold < buyPrice(other), 'the lease left counts');
-  // The lawless seas are for outposts.
+  // Any wild island now (docs/15 item 6): the lawless seas too, and cheaper (tests/baseclaim.test.ts has the rest).
   const { s: c2, ship: cs } = captain(game, 'Lawless Larry');
   const wild = wildIsland(game, 'ashen_isles');
   offShore(game, cs, wild);
-  assert.equal(buyIsland(game, c2, wild.id), 'Islands are bought outright only in the safe and contested seas.');
+  assert.equal(buyIsland(game, c2, wild.id), null);
 });
 
 test('the island grows a level on its store and treasury; home from a port once in half an hour', () => {

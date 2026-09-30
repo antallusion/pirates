@@ -18,7 +18,9 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { WOODS } from '../../../shared/src/data/shipbuild.ts';
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { FRESH_LEVEL, FRIENDS_MAX, GROUP_MAX } from '../../../shared/src/protocol.ts';
-import type { GuildRank, HoldingView, IslandOffer, SiegeView } from '../../../shared/src/protocol.ts';
+import type { ClaimTermsView, GuildRank, HoldingView, IslandOffer, SiegeView } from '../../../shared/src/protocol.ts';
+import { WATERS, raidDayOdds } from '../../../shared/src/data/baseclaim.ts';
+import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { ClientMsg, ListingView } from '../../../shared/src/protocol.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -368,6 +370,17 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-est]').forEach((el) => (el.onclick = () => {
       const a = el.dataset.est!;
       if (a === 'buy') return void ask(L('est_confirm_buy', { price: fmt(Number(el.dataset.price)) })).then((ok) => ok && this.send({ t: 'estate', action: 'buy', island: Number(el.dataset.isl) }));
+      // Claiming any wild island (docs/15 item 6): the terms repeated in the question.
+      if (a === 'claim') {
+        const t = state.estate?.claim;
+        if (!t) return;
+        return void ask(L('ct_confirm', { name: placeName(t.name), price: fmt(t.price), tax: taxText(t), danger: dangerText(t) })).then((ok) => ok && this.send({ t: 'estate', action: 'buy', island: t.island }));
+      }
+      if (a === 'rob_isle') {
+        const r = state.estate?.rob;
+        if (!r) return;
+        return void ask(L('est_rob_confirm', { name: placeName(r.name), owner: r.owner })).then((ok) => ok && this.send({ t: 'estate', action: 'rob_isle', island: r.island }));
+      }
       if (a === 'found') return this.send({ t: 'estate', action: 'found', kind: el.dataset.kind as never });
       if (a === 'visit') return this.send({ t: 'estate', action: 'visit', island: Number(el.dataset.isl) });
       if (a === 'base') return this.onBase();
@@ -775,6 +788,34 @@ function cardArt(id: string): string {
   return url ? `<div class="card-art" style="background-image:url('${url}')"></div>` : '';
 }
 
+const factionName = (id: string) => serverText(FACTIONS[id as keyof typeof FACTIONS]?.name ?? id);
+
+function taxText(t: ClaimTermsView): string {
+  return t.tax > 0 ? L('ct_tax_n', { n: fmt(t.tax), faction: factionName(t.faction) }) : L('ct_tax_none');
+}
+
+function dangerText(t: ClaimTermsView): string {
+  if (!t.raidDay) return L('ct_raids_none');
+  return `${L('ct_raids', { p: Math.round(raidDayOdds(t.waters) * 100), n: t.raiders, m: t.raidMul })}${t.robbable ? L('ct_rob') : ''}`;
+}
+
+/** The terms of claiming an island as one's own (docs/15 item 6): its waters, price, tax, danger, moving house. */
+export function claimCard(t: ClaimTermsView): string {
+  const ru = lang() === 'ru' ? 1 : 0;
+  const row = (k: string, v: string) => `<div class="ct-row"><dt>${esc(k)}</dt><dd>${v}</dd></div>`;
+  return `<div class="card est-card claim-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}<span>${esc(L('est_claim_title', { name: placeName(t.name) }))}</span></h4>
+    <p class="muted">${esc(L('est_claim_text'))}</p>
+    <dl class="ct-terms">
+      ${row(L('ct_waters'), `<b class="ct-w w-${t.waters}">${esc(WATERS[t.waters].name[ru])}</b> <span class="muted">· ${esc(serverText(REGIONS[t.region].name))} · ${esc(L(`size_${t.size}` as 'size_small'))}</span>`)}
+      ${row(L('ct_price'), `${money(t.price)}${t.credit ? ` <span class="muted">(${esc(L('ct_credit', { n: fmt(t.credit) }))})</span>` : ''}`)}
+      ${row(L('ct_tax'), esc(taxText(t)))}
+      ${row(L('ct_danger'), `<span class="${t.raidDay ? 'bad' : 'good'}">${esc(dangerText(t))}</span>`)}
+      ${row(L('ct_move'), esc(L('ct_move_n', { r: Math.round(t.refund * 100), h: t.cooldownH })))}
+    </dl>
+    ${t.why ? `<p class="bad">${esc(serverText(t.why))}</p>` : ''}
+    <button class="btn btn-primary" data-est="claim"${t.why ? ' disabled' : ''}>${esc(L('ct_claim', { price: fmt(t.price) }))}</button></div>`;
+}
+
 /** One's own island, its residents and its outposts (docs/12 P7). */
 function estateHtml(state: ClientState): string {
   const e = state.estate;
@@ -796,8 +837,9 @@ function estateHtml(state: ClientState): string {
       ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
       ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}
       ${(state.self?.company.memorial ?? []).length ? `<div class="est-h">${esc(L('est_memorial'))}</div>${state.self!.company.memorial.map((m) => `<p class="muted">† ${esc(personName(m.name))} — ${esc(serverText(m.cause))}</p>`).join('')}` : ''}</div>`);
-  } else if (!e.buy) parts.push(`<div class="card est-card"><p class="muted">${esc(L('est_none'))}</p></div>`);
-  if (e.buy) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('est_buy_title', { name: placeName(e.buy.name) }))}</h4><p class="muted">${esc(L('est_buy_text'))}</p><button class="btn btn-primary" data-est="buy" data-isl="${e.buy.island}" data-price="${e.buy.price}">${esc(L('est_buy', { price: fmt(e.buy.price) }))}</button></div>`);
+  } else if (!e.claim) parts.push(`<div class="card est-card"><p class="muted">${esc(L('est_none'))}</p></div>`);
+  if (e.claim) parts.push(claimCard(e.claim));
+  else if (e.buy) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}${esc(L('est_buy_title', { name: placeName(e.buy.name) }))}</h4><p class="muted">${esc(L('est_buy_text'))}</p><button class="btn btn-primary" data-est="buy" data-isl="${e.buy.island}" data-price="${e.buy.price}">${esc(L('est_buy', { price: fmt(e.buy.price) }))}</button></div>`);
   if (e.outposts.length || e.kinds.length) {
     const rows = e.outposts.map((o) => {
       const full = o.fullIn <= 0 ? L('est_full') : L('est_full_in', { h: Math.floor(o.fullIn / 3600), m: Math.floor((o.fullIn % 3600) / 60) });
@@ -814,6 +856,8 @@ function estateHtml(state: ClientState): string {
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('build_mine', '', 'ico-md')}${esc(serverText('Outposts'))}</h4>${rows || `<p class="muted">${esc(L('est_no_ops'))}</p>`}${found ? `<p class="muted">${esc(L('est_found_here'))}</p><div class="row" style="gap:4px;flex-wrap:wrap">${found}</div>` : ''}</div>`);
   }
   if (e.near.length) parts.push(`<div class="card est-card"><h4 class="card-h">${esc(L('est_theirs'))}</h4>${e.near.map((o) => `<div class="est-op"><span>${icon(`outpost_${o.kind}`, '', 'ico')}${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(o.owner)} · ${o.store}/${o.cap}</span><button class="btn btn-small btn-danger" data-est="op" data-id="${esc(o.id)}" data-order="rob">${esc(L('est_rob'))}</button></div>`).join('')}</div>`);
+  // Another captain's island in lawless water (docs/15 item 6).
+  if (e.rob) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}<span>${esc(L('est_rob_title', { name: placeName(e.rob.name), owner: e.rob.owner }))}</span></h4><p class="muted">${esc(L('est_rob_text'))}</p>${e.rob.robbing !== null ? `<p class="bad">${esc(L('est_robbing', { n: e.rob.robbing }))}</p>` : e.rob.why ? `<p class="muted">${esc(serverText(e.rob.why))}</p>` : ''}<button class="btn btn-small btn-danger" data-est="rob_isle"${e.rob.why || e.rob.robbing !== null ? ' disabled' : ''}>${esc(L('est_rob_btn'))}</button></div>`);
   if (e.hall) parts.push(`<div class="card est-card"><button class="btn btn-small" data-est="visit" data-isl="${e.hall.island}">${esc(L('est_visit', { name: e.hall.owner }))}</button></div>`);
   return parts.length ? `<div class="est-wrap">${parts.join('')}</div>` : '';
 }

@@ -40,7 +40,7 @@ export function compassKey(a: number): 'north' | 'north-east' | 'east' | 'south-
 
 /** What the captain is about now (owner, 2026-09-29: an objective always on the screen), and where it lies. */
 export interface Objective {
-  kind: 'quest' | 'contract' | 'map' | 'sight' | 'daily' | 'sail';
+  kind: 'raid' | 'quest' | 'contract' | 'map' | 'sight' | 'daily' | 'sail';
   /** Server words (translated by the HUD) or a key's parts. */
   title: string;
   text: string;
@@ -61,12 +61,15 @@ interface ObjState {
   estServerTime(): number;
 }
 
-/** The first of: the followed quest, a contract with a port to reach (or a count to make), the nearest sign on the
+/** The first of: pirates raiding her own island (docs/15 item 7: before everything, with where they lie and the minutes
+ * left), the followed quest, a contract with a port to reach (or a count to make), the nearest sign on the
  * horizon, the day's next order; at sea with none of these, to go and look. */
 export function objective(state: ObjState, x: number, y: number): Objective | null {
   const self = state.self;
   if (!self) return null;
   const at = (tx: number, ty: number) => ({ x: tx, y: ty, d: Math.hypot(tx - x, ty - y), dir: compassKey(Math.atan2(tx - x, -(ty - y))) });
+  const raid = self.isleRaid;
+  if (raid) return { kind: 'raid', title: raid.name, text: '', left: Math.max(0, raid.until - state.estServerTime()), ...at(raid.x, raid.y) };
   const q = trackedQuest(self.quests);
   if (q) {
     const p = questPointer(q, x, y, state.region);

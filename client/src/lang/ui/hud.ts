@@ -185,6 +185,7 @@ export const EN = {
   "dir.north-west": "north-west",
   "feed.title": "News of the sea",
   "obj.map": "Treasure map",
+  "obj.raid": "Pirates off {name}!",
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -371,4 +372,5 @@ export const RU: Record<keyof typeof EN, string> = {
   "dir.north-west": "северо-западе",
   "feed.title": "Вести моря",
   "obj.map": "Карта сокровищ",
+  "obj.raid": "Пираты у острова {name}!",
 };

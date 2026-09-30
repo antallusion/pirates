@@ -2338,7 +2338,7 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
 
 /* ---------- My Island: one's own island as a base (docs/15 items 1–3). A diamond grid of plots in CSS; the
    isometric buildings stand on them; the sheet beside (desk, landscape) or below (portrait). */
-#modal-panel[data-modal="base"] { --base-h: calc(min(760px, 92vh) - 210px); }
+#modal-panel[data-modal="base"] { --base-h: calc(min(760px, 92vh) - 236px); }
 .base-head .sub { font-size: 14px; }
 .base-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 6px 14px; border-bottom: 1px solid rgba(111, 90, 56, 0.35); }
 .base-res { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -2440,7 +2440,7 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
 }
 /* Landscape phones: board and sheet side by side under a thin header. */
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) {
-  #modal-panel[data-modal="base"] { --base-h: calc(100dvh - 128px); }
+  #modal-panel[data-modal="base"] { --base-h: calc(100dvh - 146px); }
   #modal-panel[data-modal="base"] .modal-head { padding-top: 4px; padding-bottom: 2px; }
   #modal-panel[data-modal="base"] .modal-head h2 { font-size: 17px; }
   .base-head .sub { font-size: 12px; }
@@ -2452,6 +2452,43 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
   .base-res { flex-wrap: nowrap; }
   #modal-panel[data-modal="base"] .modal-body.base-body { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 8px; padding: 4px 8px 6px; }
   .bthumb { width: 56px; height: 56px; }
+}
+
+/* ---------- My Island: its waters, tax and defence; a raid under way (docs/15 items 6–7). */
+.base-def { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; padding: 3px 14px; font-size: 12px; color: var(--fog); border-bottom: 1px solid rgba(111, 90, 56, 0.25); }
+.base-def .bmeta.bad { color: var(--bad); }
+.bdef-w { display: inline-block; padding: 0 6px; border-radius: 3px; font: 600 11px/18px var(--sans); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; border: 1px solid currentColor; }
+.bdef-w.w-safe, .ct-w.w-safe { color: var(--good); }
+.bdef-w.w-contested, .ct-w.w-contested { color: var(--gold); }
+.bdef-w.w-lawless, .ct-w.w-lawless { color: var(--bad); }
+.base-raid { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; padding: 5px 14px; background: linear-gradient(90deg, rgba(90, 20, 18, 0.55), rgba(40, 10, 10, 0.25)); border-bottom: 1px solid rgba(170, 60, 50, 0.6); font-size: 12px; }
+.braid-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.braid-main b { font-family: var(--serif); font-size: 15px; color: #f0b3a4; }
+.braid-clock { color: var(--bone); white-space: nowrap; }
+.braid-clock .btime { font: 700 14px var(--sans); color: var(--bad); }
+.base-raid .btn { flex: none; }
+.bwaters .row .bdef-w { font-size: 10px; line-height: 16px; }
+.bwaters p { font-size: 12px; }
+/* The claim's terms (Company → Islands). */
+.ct-terms { margin: 6px 0 8px; display: grid; gap: 4px; }
+.ct-row { display: grid; grid-template-columns: minmax(84px, max-content) minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.ct-row dt { font: 600 11px var(--sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--brass); }
+.ct-row dd { margin: 0; font-size: 13px; line-height: 1.35; }
+.ct-w { font-weight: 700; }
+#modal-panel[data-modal="base"]:has(.base-raid) { --base-h: calc(min(760px, 92vh) - 290px); }
+@media (max-aspect-ratio: 1/1) {
+  #modal-panel[data-modal="base"]:has(.base-raid) { --base-h: min(310px, 32vh); }
+}
+@media (max-width: 699px) {
+  #modal-panel[data-modal="base"]:has(.base-raid) { --base-h: 34vh; }
+  .base-def, .base-raid { padding: 3px 6px; gap: 2px 8px; }
+  .ct-row { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  .base-def { padding: 1px 8px; font-size: 11px; }
+  .base-raid { padding: 2px 8px; }
+  .base-raid .muted { display: none; }
+  #modal-panel[data-modal="base"]:has(.base-raid) { --base-h: calc(100dvh - 180px); }
 }
 
 /* ---------- My Island: the shipyard tab and her own ships (docs/15 items 4–5). */

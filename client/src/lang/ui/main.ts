@@ -73,6 +73,8 @@ export const EN = {
   'tc.cutMast': 'Cut the wreckage',
   'tc.repair': 'Repair',
   'tc.repairStop': 'Stop repairs',
+  isleWild: '{name}: a wild island, {price} silver',
+  isleClaim: 'Claim…',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -148,4 +150,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'tc.cutMast': 'Срубить обломки',
   'tc.repair': 'Ремонт',
   'tc.repairStop': 'Хватит чинить',
+  isleWild: '{name}: дикий остров, {price} серебра',
+  isleClaim: 'Занять…',
 };
