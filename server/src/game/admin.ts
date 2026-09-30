@@ -31,7 +31,14 @@ import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { applyTattoos, earnTattoo, offerChoice, sanitizeTattoos, sendTattoos } from './tattoos.ts';
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
-import { capOf, grantSpeedups, yardOf } from './base.ts';
+import { capOf, grantSpeedups, plotCount, yardOf } from './base.ts';
+import { lfgPost } from './party.ts';
+import { worldGoalsAdd } from './worldgoals.ts';
+import { gyardFill, gyardStart } from './guildyard.ts';
+import { sendSignal } from './signals.ts';
+import { foundGuild } from './guilds.ts';
+import { LFG_GOALS, SIGNALS } from '../../../shared/src/data/social.ts';
+import type { LfgGoal, SignalKind } from '../../../shared/src/data/social.ts';
 import { claimOf, isleWorth, raidNow, startIsleRaid, stepIsleClaim } from './baseclaim.ts';
 import { fatMark } from '../../../shared/src/data/baseclaim.ts';
 import { OWN_NAMES, OWN_ROLES, OWN_SHIPS_MAX, SHIPYARD_MAX, YARD_SHIP_LEVEL, hullFor, ownXpNext, roleLevels, yardLevelFor } from '../../../shared/src/data/baseships.ts';
@@ -103,7 +110,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away Htide [up|down|off|here] · /light [dark] · /lookout · /trek';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away Htide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -913,6 +920,65 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       p.seaLetters = [...new Set([...(p.seaLetters ?? []), 0, 1, 2])];
       sendRenown(game, s, true);
       return 'The album is filled in.';
+    }
+    case 'lfg': {
+      // Looking for company (docs/16 #31): /lfg goal [lo hi] — one's own posting, flown over the ship.
+      const goal = (args[0] ?? 'hunt') as LfgGoal;
+      if (!LFG_GOALS.includes(goal)) return `Usage: /lfg ${LFG_GOALS.join('|')} [lo hi]`;
+      const e = lfgPost(game, s, 'QA', goal, args[1] !== undefined ? num(1) : undefined, args[2] !== undefined ? num(2) : undefined);
+      return e ?? 'Posted: looking for company.';
+    }
+    case 'near': {
+      // Alongside another captain at sea (docs/16 #33 QA): /near name — 150 m off her beam.
+      const t = game.sessionByName(args.join(' '));
+      if (!t?.ship || t === s) return 'No captain of that name is at sea.';
+      if (t.ship.docked) return 'That captain is in port.';
+      ship.docked = null;
+      p.docked = null;
+      ship.state.x = t.ship.state.x + 150;
+      ship.state.y = t.ship.state.y;
+      ship.region = t.ship.region;
+      game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+      game.pushSelf(s, true);
+      return `Alongside ${t.name}.`;
+    }
+    case 'wgoal': {
+      // The sea's goals of the week (docs/16 #32): /wgoal [n|near|done] — deeds of one's own into every goal.
+      const a = args[0] === 'near' || args[0] === 'done' ? args[0] : Math.max(1, Math.round(num(0, 10)));
+      worldGoalsAdd(game, s, a);
+      return 'The sea’s goals are stirred.';
+    }
+    case 'gyard': {
+      // The guild's shipyard (docs/16 #34): /gyard found — a guild of one's own, an island with a shipyard and a
+      // project on the slipway; /gyard fill — the project most of the way; /gyard done — finished.
+      if (args[0] === 'fill' || args[0] === 'done') return gyardFill(game, s, args[0] === 'done' ? 1 : 0.8) ?? 'The guild’s project is filled in.';
+      if (!game.guilds.of(game, s.accountId)) {
+        const was = ship.docked;
+        ship.docked = ship.docked ?? 'admin';
+        p.gold += 200_000;
+        const tag = `Q${String(s.accountId % 1000).padStart(3, '0')}`.slice(0, 4);
+        const e = foundGuild(game, s, `${s.name.split(' ')[0]} Wrights`, tag);
+        ship.docked = was;
+        if (e) return e;
+      }
+      runAdmin(game, s, '/isle 3');
+      const h = ownIsland(game, s.accountId)!;
+      if (!h.buildings.some((b) => b.id === 'shipyard')) {
+        const y = yardOf(game, h);
+        const used = new Set<number>([...h.buildings.map((b) => b.plot ?? -1), ...y.producers.map((x) => x.plot)]);
+        let plot = 0;
+        while (used.has(plot) && plot < plotCount(game, h)) plot++;
+        h.buildings.push({ id: 'shipyard', condition: 1, unpaid: false, plot, level: 2 });
+        game.holdings.touch();
+      }
+      const e = gyardStart(game, s, args[1] === 'yard' ? 'yard' : 'ship');
+      return e && !/already/.test(e) ? e : 'The guild’s shipyard is ready.';
+    }
+    case 'signal': {
+      // A signal flag to the group (docs/16 #35): /signal follow|attack|help|regroup|treasure.
+      const k = (args[0] ?? 'help') as SignalKind;
+      if (!SIGNALS.includes(k)) return `Usage: /signal ${SIGNALS.join('|')}`;
+      return sendSignal(game, s, k) ?? 'Signal hoisted.';
     }
     case 'week': {
       // The week's tables (docs/16 #27): a few rivals on each; "close" writes this week into the book as if it ended.

@@ -3,6 +3,8 @@
 // projectiles & particles → darkness/light pass → fog/rain → screen-space overlays.
 // Art rules: docs/06_ART_DIRECTION.md (near-black water, warm lanterns vs cold ocean, turquoise ≤ 8%).
 
+import { LFG_GOAL_DEFS, parseLfgTag } from '../../../shared/src/data/social.ts';
+import { lfgLabel } from '../ui/social.ts';
 import { HULLS, LAMPS, LOOK_COLORS, decodeLook } from '../../../shared/src/data/looks.ts';
 import { flagCanvas } from './flag.ts';
 import { namedLabel } from '../ui/hud.ts';
@@ -3676,12 +3678,13 @@ export class Renderer {
     x = clamp(x, half, Math.max(half, this.w - half));
     // Never on another ship's name: step up above it (the Admiral's Eye line makes a taller box).
     const tall = state.self?.inspect.some((i) => i.id === s.id) ? 36 : 24;
+    const over = info.isPlayer && info.lfg ? 12 : 0; // her pennant for company rides over the name (docs/16 #31)
     for (let k = 0; k < 4; k++) {
-      const hit = this.labelBoxes.find((b) => x - half < b.r && x + half > b.l && y - 12 < b.b && y + tall > b.t);
+      const hit = this.labelBoxes.find((b) => x - half < b.r && x + half > b.l && y - 12 - over < b.b && y + tall > b.t);
       if (!hit) break;
       y = hit.t - tall - 3;
     }
-    this.labelBoxes.push({ l: x - half, r: x + half, t: y - 12, b: y + tall });
+    this.labelBoxes.push({ l: x - half, r: x + half, t: y - 12 - over, b: y + tall });
     const lx = x + badgeW / 2;
     if (badge) {
       const px = x - nameW / 2, py = y - 10, ph = 13;
@@ -3701,6 +3704,23 @@ export class Renderer {
     g.fillText(label, lx + 1, y + 1);
     g.fillStyle = cbColor(cb, hostile ? '#e0776b' : info.isPlayer ? '#cfe0f2' : faction ? faction.lantern : '#ccc');
     g.fillText(label, lx, y);
+    // Looking for company (docs/16 #31): her pennant over the name, with the goal and the levels asked.
+    const lf = info.isPlayer ? parseLfgTag(info.lfg) : null;
+    if (lf) {
+      const text = lfgLabel(info.lfg)!;
+      g.font = '600 10px Inter, sans-serif';
+      const tw = g.measureText(text).width;
+      const fx = x - tw / 2 - 6, fy = y - 13;
+      g.fillStyle = 'rgba(8,10,14,0.72)';
+      roundRect(g, fx - 4, fy - 10, tw + 16, 13, 3);
+      g.fill();
+      g.fillStyle = '#e8dcc0';
+      g.fillRect(fx, fy - 8, 1, 9);
+      g.fillStyle = LFG_GOAL_DEFS[lf.goal].color;
+      g.fillRect(fx + 1, fy - 8, 6, 4);
+      g.fillText(text, x + 4, fy);
+      g.font = '600 11px Inter, sans-serif';
+    }
     g.font = '10px Inter, sans-serif';
     g.fillStyle = 'rgba(180,180,180,0.8)';
     const marks = info.isPlayer

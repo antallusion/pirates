@@ -1,5 +1,6 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
+import { drawLfgFlag, drawSignalFlag, lfgLabel, lfgLog, liveSignals, signalName, wireLfgRows, worldGoalsLog } from './social.ts';
 import { icon } from './dom.ts';
 import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -218,13 +219,22 @@ export class WorldMap {
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button>
       <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span></div></details></div>
       <div class="map-logs">${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
-      ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
+      ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     // A task of the sea in the log: the chart turns to its nest.
     root.querySelectorAll<HTMLElement>('[data-task]').forEach((b) => (b.onclick = () => {
       const t = state.tasks.find((x) => x.id === Number(b.dataset.task));
       if (!t) return;
       this.cx = t.x;
       this.cy = t.y;
+      this.zoom = Math.max(this.zoom, 4);
+      this.draw(state);
+    }));
+    // Those looking for company (docs/16 #31): one tap asks to join; the row turns the chart to her.
+    if (this.send) wireLfgRows(root, this.send);
+    root.querySelectorAll<HTMLElement>('[data-lf-at]').forEach((b) => (b.onclick = () => {
+      const [x, y] = b.dataset.lfAt!.split(',').map(Number);
+      this.cx = x;
+      this.cy = y;
       this.zoom = Math.max(this.zoom, 4);
       this.draw(state);
     }));
@@ -857,6 +867,18 @@ export class WorldMap {
       g.fillStyle = col;
       g.fillRect(tx(m.x) - 4, ty(m.y) - 4, 8, 8);
       label(m.name, tx(m.x), ty(m.y) - 9, col);
+    }
+    // Captains looking for company (docs/16 #31): a pennant in the goal's colour, the goal and levels under it.
+    for (const e of state.lfg) {
+      if (!e.goal || e.x === undefined || e.y === undefined) continue;
+      const x = tx(e.x), y = ty(e.y);
+      drawLfgFlag(g, x, y, e.goal, 1.3);
+      if (this.zoom >= 2) label(`${e.name} · ${lfgLabel(`${e.goal}:${e.lo}-${e.hi}`) ?? ''}`, x, y + 12, e.fits === false ? 'rgba(200,190,170,0.6)' : '#efe1b8');
+    }
+    // Groupmates' signal flags (docs/16 #35): a pennant and a ring pulsing out while it lasts.
+    for (const sg of liveSignals(state)) {
+      drawSignalFlag(g, tx(sg.x), ty(sg.y), sg.kind, sg.age, 1.4);
+      label(`${sg.from}: ${signalName(sg.kind)}`, tx(sg.x), ty(sg.y) + 12, '#efe1b8');
     }
     // Her own mark: a dashed course from the ship, a gold pennant on a pole in a pulsing ring, and the range.
     const wp = waypoint();

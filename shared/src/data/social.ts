@@ -162,7 +162,11 @@ export function socialPatterns(): [string, string][] {
     const ru = d.text[1].replace('{n}', '{0}').replace('{port}', '{1}');
     out.push([`The sea’s goal is met: ${en} Every hand in it is paid.`, `Общая цель моря достигнута: ${ru} Каждому, кто внёс вклад, заплачено.`]);
     out.push([`The sea’s goal was met: ${en}`, `Общая цель моря достигнута: ${ru}`]);
+    out.push([en, ru]);
   }
+  out.push(['WORLD: The sea’s goal is met: {0} Every hand in it is paid.', 'Вести: общая цель моря достигнута: {0} Каждому, кто внёс вклад, заплачено.']);
+  out.push(['The sea’s goal is met: {0} Every hand in it is paid.', 'Общая цель моря достигнута: {0} Каждому, кто внёс вклад, заплачено.']);
+  out.push(['The sea’s goal was met: {0}', 'Общая цель моря достигнута: {0}']);
   for (const d of Object.values(GUILD_PROJECT_DEFS)) out.push([d.name[0], d.name[1]]);
   for (const d of Object.values(SIGNAL_DEFS)) out.push([d.name[0], d.name[1]]);
   for (const d of Object.values(LFG_GOAL_DEFS)) out.push([d.name[0], d.name[1]]);

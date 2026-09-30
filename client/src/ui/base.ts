@@ -4,6 +4,7 @@
 // opens a compact sheet: what may be built there and what it costs, the work under way and its speed-ups, the next
 // level, a move to another free plot. Phones first (portrait and landscape), then tablets and the desk.
 
+import { guildYardCard, wireGuildYard } from './social.ts';
 import { GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate, speedupSilver } from '../../../shared/src/data/base.ts';
 import type { ProducerKind } from '../../../shared/src/data/base.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
@@ -164,6 +165,7 @@ export class BaseWindow {
     root.innerHTML = `<div class="modal-head base-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: placeName(v.name), level: v.level, title }))} · ${esc(L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') }))}</div></div>${tabs}</div>
       ${land ? '' : top}${body}`;
     this.bind(root, state);
+    wireGuildYard(root, this.send); // docs/16 #34
     this.tick(root, state);
   }
 
@@ -312,7 +314,7 @@ export class BaseWindow {
     const offers = y.level && y.ships.length < y.max
       ? `<div class="bsec">${esc(L('sy_new', { n: y.ships.length, max: y.max }))}</div><div class="sy-offers">${y.offers.map((o) => `<div class="bopt sy-offer${o.why ? ' off' : ''}">${shipPic(o.classId, 'sy-pic sy-pic-sm')}<div class="bopt-main"><b>${esc(OWN_ROLE_DEFS[o.role].name[ru])} <span class="muted sy-cls">${esc(SHIP_CLASSES[o.classId].name)}</span></b><span class="muted bopt-text">${esc(o.why ? sv(o.why) : OWN_ROLE_DEFS[o.role].text[ru])}</span>${this.costHtml(v, o, gold)}</div>${o.why ? '' : `<button class="btn btn-small btn-primary" data-sybuild="${o.role}">${esc(L('sy_build'))}</button>`}</div>`).join('')}</div>`
       : '';
-    return `${head}${sq}${cards ? `<div class="sy-cards">${cards}</div>` : ''}${offers}`;
+    return `${head}${sq}${cards ? `<div class="sy-cards">${cards}</div>` : ''}${offers}${guildYardCard(v.guildYard)}`;
   }
 
   private shipCard(v: BaseView, x: OwnShipView, gold: number, ru: number): string {

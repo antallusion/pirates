@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { liveSignals, signalToast } from './ui/social.ts';
 import { noteHearsay, repairPrompt } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
@@ -201,6 +202,8 @@ function openClaim(): void {
 let whisperPrefill = '';
 // A groupmate's frame on the HUD: their card.
 hud.onPartyTap = (name) => net.send({ t: 'inspect', name });
+hud.onSignal = (kind) => net.send({ t: 'signal', kind }); // docs/16 #35
+hud.onWorldGoal = () => openModal('journal'); // docs/16 #32
 hud.onTargetTap = (name) => net.send({ t: 'inspect', name });
 hud.onFishing = (action) => net.send({ t: 'fishing', action });
 hud.onHunt = (action, id) => net.send(action === 'flense' ? { t: 'hunt', action, id: id ?? 0 } : { t: 'hunt', action });
@@ -504,6 +507,16 @@ function onMessage(m: ServerMsg): void {
       if (m.ev === 'shanty') audio.shanty();
       break;
     }
+    case 'signal':
+      // A groupmate's signal flag (docs/16 #35): a toast, and the flag on the charts.
+      hud.toast(signalToast(state, m), m.kind === 'help' || m.kind === 'attack' ? 'bad' : 'info');
+      if (m.kind === 'help') audio.bell();
+      if (modal === 'map') worldMap.draw(state);
+      break;
+    case 'wgoals':
+      // The sea's goals of the week (docs/16 #32).
+      if (modal === 'journal') refreshModal();
+      break;
     case 'toast':
       // The harbour turned her away for her speed: take in sail and try again when she slows.
       if (m.msg === 'Take in sail before entering harbour') {
@@ -1831,7 +1844,9 @@ function step(t: number): void {
     surrenderCard.frame(state);
     fishFight.frame();
     netHaul.frame();
-    if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);
+    // The chart once a second; four times while a signal flag pulses on it (docs/16 #35).
+    const tick = state.signals.length && liveSignals(state).length ? 250 : 1000;
+    if (modal === 'map' && Math.floor(t / tick) !== Math.floor((t - dt * 1000) / tick)) worldMap.draw(state);
   }
 }
 requestAnimationFrame(frame);

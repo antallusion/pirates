@@ -36,6 +36,7 @@ import { buildIcon, esc, fmt, icon, money, outpostIcon } from './dom.ts';
 import { placeName } from './maps.ts';
 import { skippersCard } from './turncoats.ts';
 import { renderAlbum, renderCareer, renownTab } from './renown.ts';
+import { askCard, guildYardCard, lfgCard, renderTrade, wireGuildYard, wireLfg } from './social.ts';
 
 const L = dict(EN, RU);
 /** A name or sentence the server built, in the player's language. */
@@ -214,12 +215,12 @@ export class CompanyScreen {
       ${g ? `<button class="btn btn-danger" id="leave">${L('grp_leave')}</button>` : ''}
     </div><div>
       ${lead ? `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="invite">${L('invite')}</button></div></div>` : ''}
-      ${this.lfgCard(state, !!g, lead && (g?.members.length ?? 1) < GROUP_MAX)}
+      ${lfgCard(state, !!g, lead, lead && (g?.members.length ?? 1) < GROUP_MAX)}
       ${this.friendsCard(state, lead && (g?.members.length ?? 1) < GROUP_MAX, g?.members.map((m) => m.name) ?? [])}
       ${this.whoCard(state, lead && (g?.members.length ?? 1) < GROUP_MAX)}
       <div class="card"><h4 class="card-h">${icon('tab_market', '', 'ico-md')}${L('grp_trade_title')}</h4><p class="muted">${L('grp_trade_text')}</p>
         <div class="row"><input id="bar-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="hail">${L('grp_hail')}</button></div></div>
-      ${state.invites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
+      ${state.invites.map((i) => i.ask ? askCard(i) : `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
     </div></div>`;
     const val = (id: string) => body.querySelector<HTMLInputElement>(id)?.value.trim() ?? '';
     body.querySelector<HTMLElement>('#invite')?.addEventListener('click', () => val('#inv-name') && this.send({ t: 'group', action: 'invite', name: val('#inv-name') }));
@@ -230,9 +231,7 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-decline]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'decline', id: Number(el.dataset.decline) })));
     body.querySelectorAll<HTMLElement>('[data-lead]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'lead', name: el.dataset.lead! })));
     body.querySelectorAll<HTMLElement>('[data-kick]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'kick', name: el.dataset.kick! })));
-    body.querySelector<HTMLElement>('#lfg-post')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg', note: val('#lfg-note') }));
-    body.querySelector<HTMLElement>('#lfg-stop')?.addEventListener('click', () => this.send({ t: 'group', action: 'lfg_clear' }));
-    body.querySelectorAll<HTMLElement>('[data-lfg-invite]').forEach((el) => (el.onclick = () => this.send({ t: 'group', action: 'invite', name: el.dataset.lfgInvite! })));
+    wireLfg(body, this.send);
     body.querySelectorAll<HTMLElement>('[data-letter]').forEach((el) => (el.onclick = () => {
       this.mailTo = el.dataset.letter!;
       body.closest('#modal-panel')?.querySelector<HTMLElement>('[data-tab="letters"]')?.click();
@@ -301,16 +300,6 @@ export class CompanyScreen {
       <div class="row lfg-form fr-form"><input id="fr-name" placeholder="${L('fr_ph')}" maxlength="40"><button class="btn" id="fr-add">${L('fr_add')}</button><button class="btn" id="fr-ignore">${L('fr_ignore')}</button></div>
       <div class="fr-list">${rows || `<p class="muted">${L('fr_none')}</p>`}</div>
       ${state.ignored.length ? `<div class="fr-ign"><span class="muted">${L('fr_ignored')}</span>${state.ignored.map((n) => `<button class="btn btn-small" data-unignore="${esc(n)}" title="${esc(L('fr_unignore', { name: n }))}">${esc(n)} ✕</button>`).join('')}</div>` : ''}</div>`;
-  }
-
-  /** Looking for a group (docs/11 P6): one's own posting, and the captains at sea looking, to be called aboard. */
-  private lfgCard(state: ClientState, grouped: boolean, canInvite: boolean): string {
-    const mine = state.lfgMine;
-    const rows = state.lfg.map((e) => `<div class="lfg-row"><div><b>${esc(e.name)}</b> <span class="muted">${esc(L('lfg_row', { level: e.level, region: placeName(REGIONS[e.region]?.name ?? e.region), mins: e.mins }))}</span>${e.note ? `<div class="lfg-note">«${esc(e.note)}»</div>` : ''}</div>${canInvite ? `<button class="btn btn-small" data-lfg-invite="${esc(e.name)}">${L('lfg_invite')}</button>` : ''}</div>`).join('');
-    return `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('lfg_title')}</h4>
-      ${grouped ? '' : `<p class="muted">${L('lfg_text')}</p>${mine !== null ? `<p>${esc(L('lfg_mine', { note: mine || '—' }))}</p>` : ''}
-        <div class="row lfg-form"><input id="lfg-note" placeholder="${L('lfg_ph')}" maxlength="80" value="${esc(mine ?? '')}"><button class="btn btn-primary" id="lfg-post">${L(mine !== null ? 'lfg_update' : 'lfg_post')}</button>${mine !== null ? `<button class="btn" id="lfg-stop">${L('lfg_stop')}</button>` : ''}</div>`}
-      <div class="lfg-list">${rows || `<p class="muted">${L('lfg_none')}</p>`}</div></div>`;
   }
 
   private renderIsles(body: HTMLElement, state: ClientState): void {
@@ -558,6 +547,7 @@ export class CompanyScreen {
       <div class="sec-head"><h3 class="title-sm" style="font-size:20px">${esc(g.name)} [${esc(g.tag)}]</h3><span class="h-count" title="${L('g_you_are', { rank: esc(RANK_NAMES(g.rank)) })}">${esc(RANK_NAMES(g.rank))}</span></div>
       ${g.motd || at('vice') ? `<div class="card g-motd"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('gm_title')}</h4>${g.motd ? `<p class="lfg-note">«${esc(g.motd)}»</p>` : `<p class="muted">${L('gm_none')}</p>`}${at('vice') ? `<div class="row lfg-form"><input id="gm-text" placeholder="${L('gm_ph')}" maxlength="160" value="${esc(g.motd ?? '')}"><button class="btn btn-small" id="gm-set">${L('gm_set')}</button></div>` : ''}</div>` : ''}
       ${this.guildWeek(g)}
+      ${guildYardCard(g.yard)}
       ${at('commodore') ? this.recruitCard(g) : ''}
       <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${L('g_treasury', { n: fmt(g.treasury), tax: g.tax })}${g.torn ? L('g_torn') : g.flagship ? L('g_standard_on', { name: esc(g.flagship) }) : ''}</h4>
         <div class="row"><input type="number" id="g-amt" value="1000" step="500" style="width:100px"><button class="btn btn-small" id="g-dep" ${docked ? '' : 'disabled'}>${L('deposit')}</button>${at('vice') ? `<button class="btn btn-small" id="g-wd" ${docked ? '' : 'disabled'}>${L('withdraw')}</button>` : ''}
@@ -604,6 +594,7 @@ export class CompanyScreen {
     on('#g-war', () => v('#g-dtag') && void ask(L('g_confirm_war', { tag: v('#g-dtag').toUpperCase() })).then((ok) => ok && this.send({ t: 'guild', action: 'war', tag: v('#g-dtag') })));
     on('#g-leave', () => void ask(L('g_confirm_leave')).then((ok) => ok && this.send({ t: 'guild', action: 'leave' })));
     on('#g-disband', () => void ask(L('g_confirm_disband')).then((ok) => ok && this.send({ t: 'guild', action: 'disband' })));
+    wireGuildYard(body, this.send);
     body.querySelector<HTMLElement>('#gm-set')?.addEventListener('click', () => this.send({ t: 'guild', action: 'motd', text: body.querySelector<HTMLInputElement>('#gm-text')?.value ?? '' }));
     body.querySelector<HTMLElement>('#gr-set')?.addEventListener('click', () => this.send({ t: 'guild', action: 'recruit', note: body.querySelector<HTMLInputElement>('#gr-own')?.value ?? '' }));
     body.querySelector<HTMLElement>('#gr-close')?.addEventListener('click', () => this.send({ t: 'guild', action: 'recruit', note: null }));
@@ -756,34 +747,9 @@ export class CompanyScreen {
   }
 }
 
-/** The barter table: your offer on the left, theirs on the right. */
+/** The trade table (docs/16 #33): your offer, theirs, the locks and the confirmations. */
 export function renderBarter(root: HTMLElement, state: ClientState, send: (m: ClientMsg) => void): void {
-  const b = state.barter;
-  if (!b) return;
-  const hold = state.self?.cargo ?? {};
-  const list = (c: Cargo) => Object.entries(c).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(GOODS[g as GoodId].name)}</span><b>×${n}</b></div>`).join('') || `<p class="muted">${L('bt_no_goods')}</p>`;
-  root.innerHTML = `<div class="modal-head"><div><h2>${L('bt_trading', { name: esc(b.them.name) })}</h2><div class="sub">${b.atSea ? L('bt_sea') : L('bt_quay')}${b.transfer ? L('bt_boats', { n: b.transfer }) : ''}</div></div><div class="muted">${L('bt_walk_hint')}</div></div>
-    <div class="modal-body"><div class="cols"><div>
-      <h3 class="title-sm" style="font-size:20px">${L('bt_you_give')} ${b.me.ready ? `<span class="good">${L('bt_ready')}</span>` : ''}</h3>
-      <div class="card"><div class="barter-row">${icon('coin', '', 'item-ico')}<span>${L('bt_silver')}</span><input id="b-gold" class="field" type="number" min="0" value="${b.me.gold}"></div>
-        ${Object.entries(hold).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(GOODS[g as GoodId].name)} <span class="muted">(${n})</span></span><input class="field" type="number" min="0" max="${n}" value="${b.me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
-        <button class="btn btn-block" id="b-offer">${L('bt_set')}</button></div>
-    </div><div>
-      <h3 class="title-sm" style="font-size:20px">${L('bt_they_give', { name: esc(b.them.name) })} ${b.them.ready ? `<span class="good">${L('bt_ready')}</span>` : ''}</h3>
-      <div class="card"><div class="barter-row">${icon('coin', '', 'item-ico')}<span>${L('bt_silver')}</span><b>${money(b.them.gold)}</b></div>${list(b.them.cargo)}</div>
-      <div class="form-grid"><button class="btn btn-primary" id="b-ready" ${b.me.ready ? 'disabled' : ''}>${L('bt_agree')}</button><button class="btn btn-danger" id="b-cancel">${L('bt_walk')}</button></div>
-      <p class="muted">${L('bt_note')}</p>
-    </div></div></div>`;
-  root.querySelector<HTMLElement>('#b-offer')!.onclick = () => {
-    const cargo: Cargo = {};
-    root.querySelectorAll<HTMLInputElement>('[data-give]').forEach((el) => {
-      const n = Math.floor(Number(el.value));
-      if (n > 0) cargo[el.dataset.give as GoodId] = n;
-    });
-    send({ t: 'barter', action: 'offer', gold: Math.floor(Number(root.querySelector<HTMLInputElement>('#b-gold')!.value) || 0), cargo });
-  };
-  root.querySelector<HTMLElement>('#b-ready')!.onclick = () => send({ t: 'barter', action: 'ready' });
-  root.querySelector<HTMLElement>('#b-cancel')!.onclick = () => send({ t: 'barter', action: 'cancel' });
+  renderTrade(root, state, send);
 }
 
 /** A painted card above an entry (legendary ships), or nothing until the art loads. */

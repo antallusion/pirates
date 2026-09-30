@@ -1,6 +1,8 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { drawLfgFlag, drawSignalFlag, liveSignals, signalBar, worldGoalPlate } from './social.ts';
+import type { SignalKind } from '../../../shared/src/data/social.ts';
 import { regattaPanel } from './regatta.ts';
 import { stormPanel } from './storms.ts';
 import { orderPanel } from './marque.ts';
@@ -147,6 +149,8 @@ export class Hud {
     if (!self || !you) return;
     this.drawBoss(state);
     this.drawParty(state);
+    this.drawSignals(state);
+    this.drawWorldGoal(state);
     this.drawFishing(state);
     this.drawHunt(state);
     this.drawRegatta(state);
@@ -1002,6 +1006,13 @@ export class Hud {
       const mx = clamp(tx(m.x), 3, c.width - 3), my = clamp(ty(m.y), 3, c.height - 3);
       g.fillRect(mx - 2.5, my - 2.5, 5, 5);
     }
+    // Captains looking for company within the dial (docs/16 #31): a small pennant in the goal's colour.
+    for (const e of state.lfg) {
+      if (!e.goal || e.x === undefined || e.y === undefined || Math.abs(e.x - own.x) > range || Math.abs(e.y - own.y) > range) continue;
+      drawLfgFlag(g, tx(e.x), ty(e.y), e.goal, 0.9);
+    }
+    // Groupmates' signal flags (docs/16 #35): held on the rim when beyond the dial, with a pulsing ring.
+    for (const sg of liveSignals(state)) drawSignalFlag(g, clamp(tx(sg.x), 8, c.width - 8), clamp(ty(sg.y), 12, c.height - 4), sg.kind, sg.age, 1);
     // World bosses within reach: a large violet ring.
     g.strokeStyle = '#b07ae0';
     g.lineWidth = 2;
@@ -1448,6 +1459,38 @@ export class Hud {
       <div class="fp-line muted">${esc(line)}</div>
       ${acts.length ? `<div class="fp-acts">${acts.map(([a, n]) => `<button class="btn btn-small" data-fish="${a}">${esc(n)}</button>`).join('')}</div>` : ''}`;
     el.querySelectorAll<HTMLElement>('[data-fish]').forEach((b) => (b.onclick = () => this.onFishing(b.dataset.fish as 'trap')));
+  }
+
+  /** docs/16 #35: the signal flags, a finger wide each, for a captain in a group at sea. */
+  private lastSignalsKey = '';
+  onSignal: (kind: SignalKind) => void = () => {};
+  private drawSignals(state: ClientState): void {
+    const el = $('hud-signals');
+    const on = (state.party?.members.length ?? 0) > 1 && !!state.ownDisplay && !state.self?.dockedAt;
+    const key = on ? lang() : '';
+    if (key === this.lastSignalsKey) return;
+    this.lastSignalsKey = key;
+    el.classList.toggle('hidden', !on);
+    el.innerHTML = on ? signalBar() : '';
+    el.querySelectorAll<HTMLElement>('[data-signal]').forEach((b) => (b.onclick = () => {
+      this.onSignal(b.dataset.signal as SignalKind);
+      b.classList.add('sent');
+      setTimeout(() => b.classList.remove('sent'), 600);
+    }));
+  }
+
+  /** docs/16 #32: the sea's goal nearest its end, one line and a thin bar; a tap opens the journal. */
+  private lastWorldKey = '';
+  onWorldGoal: () => void = () => {};
+  private drawWorldGoal(state: ClientState): void {
+    const el = $('hud-world');
+    const p = state.self?.dockedAt ? null : worldGoalPlate(state);
+    const key = p?.key ?? '';
+    if (key === this.lastWorldKey) return;
+    this.lastWorldKey = key;
+    el.classList.toggle('hidden', !p);
+    el.innerHTML = p?.html ?? '';
+    el.onclick = () => this.onWorldGoal();
   }
 
   private drawParty(state: ClientState): void {

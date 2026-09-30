@@ -12,8 +12,10 @@ import { noteOwnShip } from './ui/levels.ts';
 import { isNight, SPEED_SCALE } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, RenownView, AwayView, FrontWarn, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, SeaMarkData, SectorData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
+  LfgMine, WorldGoalView, BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, RenownView, AwayView, FrontWarn, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, SeaMarkData, SectorData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
 import type { TaskView } from '../../shared/src/data/worldtasks.ts';
+import { SIGNAL_TTL } from '../../shared/src/data/social.ts';
+import type { SignalKind } from '../../shared/src/data/social.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
 import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
@@ -91,7 +93,14 @@ export class ClientState {
   /** Captains looking for a group, and this captain's own posting (docs/11 P6). */
   lfg: NonNullable<Extract<ServerMsg, { t: 'party' }>['lfg']> = [];
   lfgMine: string | null = null;
-  invites: { id: number; from: string }[] = [];
+  /** docs/16 #31: one's own posting's goal and levels. */
+  lfgGoal: LfgMine | null = null;
+  invites: { id: number; from: string; ask?: boolean }[] = [];
+  /** docs/16 #35: groupmates' signal flags on the charts, with when they came (performance.now s). */
+  signals: { from: string; kind: SignalKind; x: number; y: number; at: number }[] = [];
+  /** docs/16 #32: the sea's goals of the week, and when they were told (performance.now s). */
+  worldGoals: WorldGoalView[] = [];
+  worldGoalsAt = 0;
   /** The list of friends (docs/11 P6). */
   friends: FriendView[] = [];
   /** Captains one does not hear. */
@@ -309,6 +318,14 @@ export class ClientState {
         this.invites = m.invites;
         this.lfg = m.lfg ?? [];
         this.lfgMine = m.lfgMine ?? null;
+        this.lfgGoal = m.lfgGoal ?? null;
+        break;
+      case 'signal':
+        this.signals = [...this.signals.filter((x) => now - x.at < SIGNAL_TTL && x.from !== m.from), { from: m.from, kind: m.kind, x: m.x, y: m.y, at: now }];
+        break;
+      case 'wgoals':
+        this.worldGoals = m.list;
+        this.worldGoalsAt = now;
         break;
       case 'who':
         this.who = { list: m.list, total: m.total };
