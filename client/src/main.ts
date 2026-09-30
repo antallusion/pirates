@@ -266,8 +266,16 @@ const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
 // Options: applied now and on every change (docs/07 §11).
+let lastZoomKey = '';
 function applySettings(o: Settings): void {
   applyToDocument(o);
+  // A new scale or density: what the HUD measures of itself is measured again (docs/16 #40).
+  const zk = `${o.uiScale}|${o.density}`;
+  if (zk !== lastZoomKey) {
+    const first = !lastZoomKey;
+    lastZoomKey = zk;
+    if (!first) requestAnimationFrame(() => dispatchEvent(new Event('resize')));
+  }
   audio.configure(o.volume.master, { sea: o.volume.sea, combat: o.volume.combat, ui: o.volume.ui, music: o.volume.music }, o.mono);
   audio.voices = o.shipVoices;
   renderer.fx.forceLod = o.effects === 'low' ? 2 : null;
@@ -484,7 +492,7 @@ function onMessage(m: ServerMsg): void {
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
-      else if (modal === 'company' || modal === 'base') {
+      else if (modal === 'company' || modal === 'base' || modal === 'gear') {
         // The Company and island windows redraw only when what they show of her changed (a redraw every second on
         // the private state's beat lost taps).
         const key = selfKeyFor(modal);
@@ -492,7 +500,7 @@ function onMessage(m: ServerMsg): void {
           lastSelfKey = key;
           refreshModal();
         }
-      } else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'gear' || modal === 'crew' || modal === 'mutiny' || modal === 'barter') refreshModal();
+      } else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny' || modal === 'barter') refreshModal();
       break;
     case 'mutiny':
       if (m.mutineers > 0) {
@@ -774,16 +782,17 @@ function restoreScroll(root: HTMLElement, marks: { view: string; at: Map<string,
   }
 }
 
-/** What the Company and island windows show of her private state (they redraw when it changes). */
+/** What the Company, island and gear windows show of her private state (they redraw when it changes). */
 let lastSelfKey = '';
 function selfKeyFor(m: Modal): string {
   const s = state.self;
   if (!s) return '';
+  if (m === 'gear') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.stash, s.loadout, s.captainGear, s.cargo]);
   return m === 'company' ? JSON.stringify([m, lang(), s.name, s.dockedAt, s.berths, s.pvp, s.maps, s.company, s.cargo, s.builds, s.gold]) : JSON.stringify([m, lang(), s.gold, s.cargo, s.dockedAt, s.homeIsle]);
 }
 
 function refreshModal(): void {
-  lastSelfKey = modal === 'company' || modal === 'base' ? selfKeyFor(modal) : '';
+  lastSelfKey = modal === 'company' || modal === 'base' || modal === 'gear' ? selfKeyFor(modal) : '';
   const root = $('modal-panel');
   const marks = root.dataset.modal === (modal ?? '') ? scrollMarks(root) : null;
   // Screens dress by name in the stylesheet (header art, backgrounds).

@@ -127,15 +127,17 @@ export class Hud {
     $('hud-ship').onclick = () => document.body.classList.contains('touch') && document.body.classList.remove('ship-open');
     // The toast column stands on top of the bottom block, whatever its height (a prompt, a two-row action bar).
     const bottom = $('hud-bottom');
+    // In the HUD's own pixels: the HUD is zoomed by the interface scale and density (docs/16 #40).
+    const zoom = () => Number(getComputedStyle($('hud')).zoom) || 1;
     const place = () => {
       const r = bottom.getBoundingClientRect();
-      document.body.style.setProperty('--hb-top', `${r.height > 0 ? Math.max(0, innerHeight - r.top) : 0}px`);
+      document.body.style.setProperty('--hb-top', `${r.height > 0 ? Math.max(0, innerHeight - r.top) / zoom() : 0}px`);
     };
     new ResizeObserver(place).observe(bottom);
     addEventListener('resize', place);
     // On a wide screen the toasts stand under the chart's lines, however many there are (a quest, world events).
     const region = $('hud-region');
-    const under = () => document.body.style.setProperty('--rg-bottom', `${Math.round(region.getBoundingClientRect().bottom)}px`);
+    const under = () => document.body.style.setProperty('--rg-bottom', `${Math.round(region.getBoundingClientRect().bottom / zoom())}px`);
     new ResizeObserver(under).observe(region);
     addEventListener('resize', under);
   }

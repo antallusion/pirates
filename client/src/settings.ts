@@ -118,7 +118,8 @@ export function cbColor(mode: Colorblind, hex: string): string {
 
 // ------------------------------------------------------------------ the options
 
-/** The interface's density (docs/16 #40): one scale on the HUD, most felt on a phone. */
+/** The interface's density (docs/16 #40): one scale on what the HUD's plates say (the `dens-*` class on <body> sets
+ *  `--density` in the stylesheet), most felt on a phone. */
 export type Density = 'compact' | 'normal' | 'large';
 export const DENSITIES: readonly Density[] = ['compact', 'normal', 'large'];
 export const DENSITY_SCALE: Record<Density, number> = { compact: 0.86, normal: 1, large: 1.14 };
@@ -220,7 +221,6 @@ export function applyToDocument(s: Settings): void {
   if (!globalThis.document) return;
   const root = document.documentElement;
   root.style.setProperty('--ui-scale', String(s.uiScale));
-  root.style.setProperty('--density', String(DENSITY_SCALE[s.density]));
   root.style.setProperty('--text-scale', String(s.textScale));
   root.style.setProperty('--hud-a', String(s.hudAlpha));
   const b = document.body.classList;

@@ -467,8 +467,13 @@ label.check { display: flex; gap: 8px; align-items: center; margin-top: 10px; fo
 
 /* Options & accessibility (docs/07 §11) */
 :root { --ui-scale: 1; --text-scale: 1; --density: 1; }
-/* The interface's density (docs/16 #40): compact / normal / large, one scale over the whole HUD. */
-#hud, .hud-layer { zoom: calc(var(--ui-scale) * var(--density)); }
+#hud, .hud-layer { zoom: var(--ui-scale); }
+/* The interface's density (docs/16 #40): compact / normal / large — one scale on what the HUD's plates say (each
+   plate of the top stack, the ship's panel, the toasts), most felt on a phone (settings.ts DENSITY_SCALE). The plates
+   keep their places and their one width; the helm, the guns and the buttons keep their size for the fingers. */
+body.dens-compact { --density: 0.86; }
+body.dens-large { --density: 1.14; }
+#hud-stack > *, #hud-ship > *, #toasts > .toast { zoom: var(--density); }
 #modal-panel { zoom: calc(var(--ui-scale) * var(--text-scale)); }
 #toasts, #chat, #hud-hint, #hud-watch { font-size: calc(1em * var(--text-scale)); }
 body.hi-contrast .hud-block, body.hi-contrast #hud-goals, body.hi-contrast .toast, body.hi-contrast #hud-hint { background: rgba(4, 5, 7, 0.92) !important; border-width: 2px; border-color: var(--bone); backdrop-filter: none; }
@@ -1835,7 +1840,7 @@ body.touch #hud-region .rg-extra { display: none; }
 .gi-set .gi-bonus.on { color: #6fd46f; }
 .gi-wear { margin-top: 6px; font-size: 12px; }
 .gi-cmp { margin-top: 8px; background: rgba(8, 10, 14, 0.6); border: 1px dashed rgba(232, 196, 106, 0.25); border-radius: 4px; padding: 6px 8px; }
-.gi-cmp-none { margin: 8px 0 0; font-size: 13px; }
+.gi-cmp-none { margin: 2px 0 4px; font-size: 12px; }
 .gi-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .gear-mend { margin-top: 10px; }
 /* On a phone the piece's card rises as a sheet from the bottom, over the list, with its own ×. */
@@ -2672,7 +2677,7 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
    one line each, the newest (and a bad one) only on a phone. */
 #modal { flex-direction: column; }
 #modal-panel { flex: 0 1 auto; min-height: 0; }
-#modal-toasts { flex: none; display: flex; flex-direction: column; gap: 2px; width: min(1100px, 95vw); padding: 3px 0 2px; pointer-events: none; zoom: calc(var(--ui-scale) * var(--density)); font-size: calc(1em * var(--text-scale)); }
+#modal-toasts { flex: none; display: flex; flex-direction: column; gap: 2px; width: min(1100px, 95vw); padding: 3px 0 2px; pointer-events: none; zoom: var(--ui-scale); font-size: calc(1em * var(--text-scale)); }
 #modal-toasts:empty { display: none; }
 #modal-toasts .toast { padding: 2px 8px; font-size: 12px; line-height: 18px; background: rgba(8, 9, 11, 0.94); animation: fadein 0.2s; }
 #modal-toasts .toast > span { display: block; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

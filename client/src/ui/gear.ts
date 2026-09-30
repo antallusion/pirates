@@ -115,8 +115,8 @@ function compare(it: Item, cur: Item | undefined): string {
   const val = (r: CmpRow, v: number) => (Math.abs(v) < 1e-9 ? '—' : r.kind === 'stat' ? statValue(r.key as StatKey, v) : `${v > 0 ? '+' : '−'}${Math.abs(v)}`);
   const label = (r: CmpRow) => (r.kind === 'stat' ? statLabel(r.key as StatKey) : CAP_STAT_NAMES[r.key as keyof typeof CAP_STAT_NAMES][ru() ? 1 : 0]);
   const body = rows.map((r) => `<tr class="${r.good === true ? 'g-up' : r.good === false ? 'g-down' : 'g-eq'}"><td>${esc(label(r))}</td><td>${esc(val(r, r.a))}</td><td>${esc(val(r, r.b))}</td><td class="gc-d">${r.good === null ? '=' : esc(val(r, r.d))}</td></tr>`).join('');
-  const head = cur ? `${esc(L('compare'))}: ${coloured(cur)}` : esc(EL('cmp_none'));
-  return `<div class="gi-cmp"><div class="gi-h">${head}</div>${rows.length ? `<table class="gc-t"><thead><tr><th></th><th>${esc(EL('cmp_this'))}</th><th>${esc(EL('cmp_worn'))}</th><th>Δ</th></tr></thead><tbody>${body}</tbody></table>` : '<div class="muted">=</div>'}</div>`;
+  const head = cur ? `${esc(L('compare'))}: ${coloured(cur)}` : esc(L('compare'));
+  return `<div class="gi-cmp"><div class="gi-h">${head}</div>${cur ? '' : `<p class="muted gi-cmp-none">${esc(EL('cmp_none'))}</p>`}${rows.length ? `<table class="gc-t"><thead><tr><th></th><th>${esc(EL('cmp_this'))}</th><th>${esc(EL('cmp_worn'))}</th><th>Δ</th></tr></thead><tbody>${body}</tbody></table>` : '<div class="muted">=</div>'}</div>`;
 }
 
 /** The piece a row of the locker or the chandler's stands for, and what is worn in its slot. */

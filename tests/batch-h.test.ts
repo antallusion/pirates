@@ -340,6 +340,11 @@ test('the ship’s voice: the six watches of the day, and the timbers only on a 
 test('interface density: three steps, a broken save falls back to normal; hints and the ship’s voice default on', async () => {
   const { DENSITIES, DENSITY_SCALE, defaults, sanitize } = await import('../client/src/settings.ts');
   assert.deepEqual([...DENSITIES], ['compact', 'normal', 'large']);
+  // The stylesheet carries the same steps (the class on <body> sets the variable).
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8');
+  assert.ok(css.includes(`body.dens-compact { --density: ${DENSITY_SCALE.compact}; }`) && css.includes(`body.dens-large { --density: ${DENSITY_SCALE.large}; }`));
+  assert.ok(css.includes('#hud-stack > *, #hud-ship > *, #toasts > .toast { zoom: var(--density); }'), 'the HUD’s plates are zoomed by it');
   assert.ok(DENSITY_SCALE.compact < DENSITY_SCALE.normal && DENSITY_SCALE.normal === 1 && DENSITY_SCALE.large > 1);
   assert.equal(defaults().density, 'normal');
   assert.equal(sanitize({ density: 'huge' as never }).density, 'normal');

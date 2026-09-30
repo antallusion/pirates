@@ -67,6 +67,7 @@ export class DivePanel {
 /** The height the top stack may give the bell's panel: from its top down to the bottom block. */
 function roomBelow(): number {
   const top = $('hud-stack').getBoundingClientRect().top;
-  const bottom = parseFloat(document.body.style.getPropertyValue('--hb-top')) || 0;
+  // --hb-top is in the HUD's own pixels (zoomed by the interface scale and density, docs/16 #40).
+  const bottom = (parseFloat(document.body.style.getPropertyValue('--hb-top')) || 0) * (Number(getComputedStyle($('hud')).zoom) || 1);
   return innerHeight - bottom - top - 8;
 }
