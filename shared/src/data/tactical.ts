@@ -5,6 +5,8 @@
 
 import type { CaptainId } from './captains.ts';
 import type { OfficerRole } from './crew.ts';
+import { UNITS } from './army.ts';
+import type { UnitId } from './army.ts';
 
 /** The field: 11 columns by 9 rows of hexes, odd rows pushed half a hex to the right and one hex shorter ('#'). */
 export const TAC_W = 11;
@@ -22,12 +24,26 @@ export const TAC_LONG_SHOT = 6;
 /** Each point of morale or luck: 4% a turn (HoMM3), at most three points. */
 export const TAC_CHANCE_PER_POINT = 0.04;
 
-/** Terrain of a hex: deck, water between the hulls, a plank across it, and what stands on the deck. */
-export type TacCell = '.' | '~' | '=' | 'M' | 'C' | 'B' | 'K' | '#';
-export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#']);
+/** Terrain of a hex: deck, water between the hulls, a plank across it, and what stands on the deck — and what the
+ *  guns left of her deck before the grapples bit (docs/17 H1): a hole shot through it ('H', no footing) and a fire
+ *  ('F', burning whoever stands in it as his turn comes). */
+export type TacCell = '.' | '~' | '=' | 'M' | 'C' | 'B' | 'K' | '#' | 'H' | 'F';
+export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#', 'H']);
+/** A stack on a burning hex loses this share of its strength (at least a man's hit points) as its turn comes. */
+export const TAC_BURN = 0.1;
+/** The deep's own freeze a living stack of the other side one turn in ten. */
+export const TAC_FEAR = 0.1;
 
-export type TacKind = 'hands' | 'marines' | 'gunners' | 'officer';
-export const TAC_KINDS: TacKind[] = ['hands', 'marines', 'gunners', 'officer'];
+/** What a stack is, broadly (the old four, and the tiers above them). */
+export type TacKind = 'hands' | 'marines' | 'gunners' | 'officer' | 'boarders' | 'guard' | 'deep';
+export const TAC_KINDS: TacKind[] = ['hands', 'marines', 'gunners', 'officer', 'boarders', 'guard', 'deep'];
+
+/** The broad kind of a kind of man. */
+export function kindOfUnit(u: UnitId): TacKind {
+  const d = UNITS[u];
+  if (d.specials.includes('shooter')) return 'gunners';
+  return d.tier <= 1 ? 'hands' : d.tier === 5 ? 'boarders' : d.tier === 6 ? 'guard' : d.tier >= 7 ? 'deep' : 'marines';
+}
 
 export interface TacUnitDef {
   kind: TacKind;
@@ -45,7 +61,7 @@ export interface TacUnitDef {
 }
 
 /** One man of each kind (HoMM3 scale). Gunners carry the muskets and pistols; the officer's party is picked men. */
-export const TAC_UNITS: Record<TacKind, TacUnitDef> = {
+export const TAC_UNITS: Record<'hands' | 'marines' | 'gunners' | 'officer', TacUnitDef> = {
   hands: { kind: 'hands', atk: 4, def: 3, dmin: 1, dmax: 3, hp: 6, speed: 4, init: 5, shots: 0, icon: 'icon.prof_sailor' },
   marines: { kind: 'marines', atk: 7, def: 6, dmin: 2, dmax: 4, hp: 9, speed: 4, init: 7, shots: 0, icon: 'icon.prof_marine' },
   gunners: { kind: 'gunners', atk: 5, def: 3, dmin: 2, dmax: 3, hp: 5, speed: 3, init: 4, shots: 4, icon: 'icon.prof_gunner' },
@@ -53,7 +69,9 @@ export const TAC_UNITS: Record<TacKind, TacUnitDef> = {
 };
 
 /** A captain's orders from the side panel (one a round, each with its cooldown in rounds). */
-export type TacSpellId = 'grenades' | 'point_blank' | 'smoke_and_knives' | 'red_harvest' | 'turn_the_flank' | 'call_of_the_deep' | 'iron_discipline';
+export type TacSpellId = 'grenades' | 'point_blank' | 'smoke_and_knives' | 'red_harvest' | 'turn_the_flank' | 'call_of_the_deep' | 'iron_discipline'
+  /** The order book's common pages (docs/17 H1), after the captains' own abilities at sea. */
+  | 'mark_target' | 'double_shot' | 'war_cry' | 'brine_mend';
 export interface TacSpellDef {
   id: TacSpellId;
   /** Rounds before it may be given again. */
@@ -70,13 +88,28 @@ export const TAC_SPELLS: Record<TacSpellId, TacSpellDef> = {
   turn_the_flank: { id: 'turn_the_flank', cd: 4, target: 'none', icon: 'icon.bt_officers' },
   call_of_the_deep: { id: 'call_of_the_deep', cd: 5, target: 'none', icon: 'icon.bt_colours' },
   iron_discipline: { id: 'iron_discipline', cd: 4, target: 'none', icon: 'icon.bt_captain' },
+  mark_target: { id: 'mark_target', cd: 3, target: 'enemy', icon: 'icon.ab_mark_target' },
+  double_shot: { id: 'double_shot', cd: 4, target: 'none', icon: 'icon.ab_double_shot' },
+  war_cry: { id: 'war_cry', cd: 4, target: 'none', icon: 'icon.ab_war_cry' },
+  brine_mend: { id: 'brine_mend', cd: 5, target: 'none', icon: 'icon.ab_brine_mend' },
 };
 /** Each captain's own order (the Boarding 2.0 captain's move, docs/11 P1) beside the grenades everyone has. */
 export const TAC_SIGNATURE: Record<CaptainId, TacSpellId> = {
   corsair: 'point_blank', smuggler: 'smoke_and_knives', reaver: 'red_harvest', navigator: 'turn_the_flank', drowned: 'call_of_the_deep', admiral: 'iron_discipline',
 };
+/** The captain's order book (docs/17 H1, as a HoMM3 hero's spell book): his own move, the grenades everyone has, and
+ *  two pages after his abilities at sea — the corsair's Double Shot and Mark Target, the Reaver's War Cry, the
+ *  Drowned's Brine Mend… One order a round from the side panel. */
+export const TAC_BOOK: Record<CaptainId, TacSpellId[]> = {
+  corsair: ['point_blank', 'grenades', 'double_shot', 'mark_target'],
+  smuggler: ['smoke_and_knives', 'grenades', 'mark_target', 'brine_mend'],
+  reaver: ['red_harvest', 'grenades', 'war_cry', 'mark_target'],
+  navigator: ['turn_the_flank', 'grenades', 'mark_target', 'brine_mend'],
+  drowned: ['call_of_the_deep', 'grenades', 'brine_mend', 'war_cry'],
+  admiral: ['iron_discipline', 'grenades', 'double_shot', 'war_cry'],
+};
 export function captainSpells(captain: CaptainId | null): TacSpellId[] {
-  return captain ? [TAC_SIGNATURE[captain], 'grenades'] : ['grenades'];
+  return captain ? [...TAC_BOOK[captain]] : ['grenades'];
 }
 
 /** An officer's party acts on the officer's word once a fight (instead of striking): what each post gives. */

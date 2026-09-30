@@ -26,6 +26,7 @@ import type { Tether } from './mounts.ts';
 import type { SanityState } from './mind.ts';
 import type { Formation } from './fleet.ts';
 import type { TacBattle } from './tacbattle.ts';
+import type { Rng } from '../../../shared/src/rng.ts';
 
 export interface StatusEffect {
   id: string;
@@ -80,6 +81,12 @@ export interface BoardFight {
    *  off each crew. */
   tac?: TacBattle;
   tacSync?: [number, number];
+  /** The battle's own dice, each stack's men as last taken off the ship's army, the experience each captain learnt,
+   *  the silver a ransom cost (docs/17 H1). */
+  tacRng?: Rng;
+  tacSeen?: Map<number, number>;
+  tacXp?: [number, number];
+  tacPaid?: number;
 }
 
 export interface BoardDuel {
@@ -458,6 +465,7 @@ export class ShipEntity {
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
       isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined, named: this.named ?? this.namedMate,
       title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined,
+      ...(this.cls.monster || this.npcRole === 'beast' ? {} : { crewMax: this.stats.crewMax, units: this._army.map((s) => s.u) }),
     };
   }
 }

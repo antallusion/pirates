@@ -686,6 +686,8 @@ export function sanitizeProfile(raw: Profile): Profile {
 function companyView(p: Profile, ship: ShipEntity | null, now: number): PrivateState['company'] {
   const c = p.company;
   return {
+    army: ship ? ship.army.map((x) => ({ u: x.u, n: x.n })) : (p.army ?? []).map((x) => ({ u: x.u, n: x.n })),
+    armySlots: ship ? ship.armySlots : armySlots(SHIP_CLASSES[p.loadout.classId]?.tier ?? 1),
     pools: { ...c.pools },
     skill: Math.round(c.skill * 100) / 100,
     loyalty: Math.round(loyaltyOf(c, now)),

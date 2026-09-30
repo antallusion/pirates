@@ -243,7 +243,13 @@ export function stepBoarding(game: Game): void {
     const fight = bs.fight;
     // Decided (the duel's last blow): held a moment so both captains see how.
     if (fight.endsAt !== null) {
-      if (now >= fight.endsAt) finishBoarding(game, a, b, fight.winner === a.id);
+      if (now >= fight.endsAt) {
+        // Bought off (docs/17 H1): the boarders go back over the rail with the silver, and no prize is taken.
+        if (fight.tac?.over?.why === 'ransom') {
+          endBoarding(game, a, b);
+          game.toastShip(a, 'The ransom is paid: your boarders come back with the silver.', 'good');
+        } else finishBoarding(game, a, b, fight.winner === a.id);
+      }
       continue;
     }
     if (fight.tac) {
