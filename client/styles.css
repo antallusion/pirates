@@ -2609,3 +2609,55 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 /* The chart's own mark (owner, 2026-09-30): a button to take it off, over the chart's top right. */
 .map-wrap .map-wp-clear { position: absolute; top: 10px; right: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; }
 .map-wrap .map-wp-clear.hidden { display: none; }
+
+/* ---------- One width for every plate (owner, 2026-09-30: "all plates more compact and — most important — of one
+   width"). The target, the fishing, hunt, storm, order, descent, holiday and boss cards, the goals and the news share
+   --plate-w in each layout (and the ship panel on a desktop); frames are thinner, lines tighter, titles one line. */
+:root { --plate-w: calc(100vw - var(--sa-l) - var(--sa-r) - 68px); }
+@media (max-height: 520px) { :root { --plate-w: max(200px, min(300px, calc(100vw - var(--sa-l) - var(--sa-r) - 360px - var(--mm) - 64px))); } }
+@media (min-width: 700px) and (min-height: 521px) { :root { --plate-w: 340px; } }
+@media (min-width: 1100px) and (min-height: 600px) { :root { --plate-w: 320px; } }
+#hud #hud-stack { width: var(--plate-w); right: auto; min-width: 0; max-width: none; gap: 4px; }
+@media (min-width: 1100px) and (min-height: 600px) { #hud #hud-stack { left: 50%; transform: translateX(-50%); } }
+#hud #hud-stack > * { width: 100% !important; max-width: none !important; min-width: 0; box-sizing: border-box; }
+@media (min-width: 1100px) and (min-height: 600px) { body:not(.touch) #hud .ship-panel { width: var(--plate-w); } }
+@media (min-width: 700px) and (min-height: 521px) { body.ship-open #hud .ship-panel { width: var(--plate-w); } }
+/* Compact: a slimmer brass frame, less padding, tighter lines. */
+#hud-stack > .hud-block, #hud-stack > #hud-goals { line-height: 1.25; }
+.skinned #hud-stack > .hud-block, .skinned #hud-stack > #hud-goals, .skinned #hud .ship-panel { border-width: 7px; border-image-width: 7px; }
+.skinned #hud-stack > .hud-block { padding: 1px 5px 2px; }
+.skinned #hud-stack > #hud-goals { padding: 0 5px 1px; }
+@media (max-width: 699px) {
+  .skinned #hud-stack > .hud-block, .skinned #hud-stack > #hud-goals { border-width: 6px; border-image-width: 6px; }
+}
+/* Titles on one line, cut with an ellipsis; the side figure (a level, a clock, a count) keeps its room. */
+#hud-stack .fp-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+#hud-stack .fp-head > b { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; line-height: 1.25; }
+#hud-stack .fp-head > b .ico-sm { flex: none; }
+#hud-stack .fp-head > .muted, #hud-stack .fp-head > .hp-lvl { flex: 1 1 0; min-width: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud-stack .fp-head > .hp-lvl { flex: 0 0 auto; }
+#hud-target .tg-name { font-size: 13.5px; }
+#hud-target .tg-bar { margin-top: 2px; }
+#hud-target .tg-foot { margin-top: 2px; }
+#hud-target .tg-glass { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
+#hud-stack .rg-next, #hud-stack .fp-line { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12px; }
+#hud-stack .fp-acts { margin-top: 3px; }
+#hud-stack .fp-acts .btn { padding: 2px 8px; font-size: 11px; }
+#hud-goals .g-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#hud-goals .g-t { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#hud-goals .ico-goal { width: 20px; height: 20px; }
+#hud-feed .feed-h { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
+#hud-feed .feed-line { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#hud-holiday .hol-line { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud-boss .bname { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud-watch .w-head b { font-size: 15px; }
+@media (max-width: 699px) {
+  #hud-goals .g-t { display: block; white-space: nowrap; }
+  #hud-feed .feed-line { display: block; }
+}
+@media (max-width: 699px), (max-height: 520px) {
+  #hud-target .tg-glass { display: block; white-space: nowrap; text-overflow: ellipsis; }
+  #hud-target .tg-bar { height: 5px; }
+  .skinned #hud-target .tg-bar { height: 7px; }
+  #hud-stack .fp-line, #hud-stack .rg-next { -webkit-line-clamp: 1; line-clamp: 1; }
+}
