@@ -2659,3 +2659,7 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 .card.voyage-food .shop-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .card.voyage-food .btn { flex: none; white-space: nowrap; }
 @media (max-width: 480px) { .card.voyage-food { flex-wrap: wrap; } .card.voyage-food .btn { width: 100%; } }
+/* Goods as their picture and count (the outposts' costs). */
+.gq { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gq .ico-xs { width: 16px; height: 16px; margin: 0; }
+.btn.est-found { display: inline-flex; align-items: center; gap: 5px; }
