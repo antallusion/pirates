@@ -161,6 +161,7 @@ test('raiding a convoy: the League marks her name, the escorts answer, her contr
 function lairScene(game: Game) {
   const np = namedPirates().find((p) => p.region === 'dead_mans_expanse' && !p.baron && lairOf(game, p.id))!;
   const lair = lairOf(game, np.id)!;
+  game.directorOn = true; // the garrison is the sea's own doing, like the director's
   const who = captain(game, 'Storm Sal', 'dead_mans_expanse', 'frigate', 8);
   who.ship.state.x = lair.x + 300;
   who.ship.state.y = lair.y;

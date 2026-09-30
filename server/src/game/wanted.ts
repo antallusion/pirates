@@ -310,8 +310,9 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   S.dirty = true;
   game.sendTo(s, { t: 'toast', msg: `The lair of ${np.name[0]} is stormed: ${chest} silver from its chest, ${prisoners} prisoners freed.`, kind: 'gold' });
   if (room > 0) game.sendTo(s, { t: 'toast', msg: 'The freed prisoners join your crew.', kind: 'good' });
-  game.sendTo(s, { t: 'lairchest', view: { island: lair.name, captain: np.name[0], silver: chest, prisoners, item: kept ? { name: itemName(it), rarity: it.rarity } : null, map: mapped ? m.name : null } });
+  game.sendTo(s, { t: 'lairchest', view: { island: lair.name, captain: np.name[0], silver: chest, prisoners, item: kept ? { name: itemName(it), rarity: it.rarity, base: it.base } : null, map: mapped ? m.name : null } });
   game.grantXp(s, 300 + 60 * np.level, `Sank ${np.name[0]}`);
+  sendWanted(game, s, true);
   return true;
 }
 
@@ -370,7 +371,8 @@ function stepLairs(game: Game): void {
         for (const g of afloat) game.removeShip(g.id);
         S.garrison.delete(lair.id);
       }
-    } else if (near < GARRISON_R && !r.garrisonDown && !lairEmpty(game, lair)) {
+    } else if (game.directorOn && near < GARRISON_R && !r.garrisonDown && !lairEmpty(game, lair)) {
+      // (The sea's own doings: still in the tests of other systems, as the director is.)
       S.garrison.set(lair.id, manGarrison(game, lair));
     }
     if (hp <= 0 || near > LAIR_BATTERY_R + 800) continue;

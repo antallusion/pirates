@@ -1865,7 +1865,7 @@ export interface LairChestView {
   captain: string;
   silver: number;
   prisoners: number;
-  item: { name: string; rarity: number } | null;
+  item: { name: string; rarity: number; base: string } | null;
   map: string | null;
 }
 

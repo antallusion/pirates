@@ -8,7 +8,10 @@ import { flagCanvas } from './flag.ts';
 import { namedLabel } from '../ui/hud.ts';
 import { BEASTS, beastOfClass } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
-import { drawBeast, drawCarcass } from './beasts.ts';
+import { drawBeast, drawCarcass, drawDolphin } from './beasts.ts';
+import { drawLair, drawMuzzles } from './lairs.ts';
+import type { LairView } from '../../../shared/src/protocol.ts';
+import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
 import { calfLength } from '../../../shared/src/data/companions.ts';
 import { drawShoalBirds, drawShoals, drawSights } from './sights.ts';
 import { THREAT_COLOR, combatLevelOf, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
@@ -228,6 +231,17 @@ interface DrawShip {
   sinkT: number;
 }
 
+const LS = dict(SEN, SRU);
+
+/** A lair's name and state over its fort (docs/16 #7). */
+function lairLabel(l: LairView): { name: string; state: string | null; color: string } {
+  const name = LS('lair.label', { captain: personName(l.captain), level: l.level });
+  if (l.stormed) return { name, state: LS('lair.stormed'), color: '#9a9a9a' };
+  if (l.open) return { name, state: LS('lair.open'), color: '#f2c14e' };
+  const bits = [l.hp <= 0 ? LS('lair.silenced') : null, l.garrison ? LS('lair.garrison', { n: l.garrison }) : null].filter(Boolean) as string[];
+  return { name, state: bits.length ? bits.join(' · ') : null, color: l.hp <= 0 ? '#e8c46a' : '#e07a5a' };
+}
+
 export class Renderer {
   readonly canvas: HTMLCanvasElement;
   readonly g: CanvasRenderingContext2D;
@@ -371,6 +385,7 @@ export class Renderer {
 
     const night = nightFactor(state.estServerTime());
     this.nightNow = night;
+    const opt0 = settings();
     const region = REGIONS[state.region];
     this.drawOcean(state, region.waterTint);
     this.drawCurrents(state);
@@ -381,6 +396,11 @@ export class Renderer {
     for (const is of islands) this.drawShallows(is);
     for (const is of islands) this.drawIsland(is, state);
     this.drawPorts(state);
+    // The pirate lairs near her (docs/16 #7): the fort, its guns on the shore, the camp.
+    if (this.zoom >= 0.12) {
+      const ctx = { sx: (x: number) => this.sx(x), sy: (y: number) => this.sy(y), zoom: this.zoom, time: opt0.reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, fx: this.fx, label: (l: LairView) => lairLabel(l) };
+      for (const l of state.wanted?.lairs ?? []) drawLair(g, l, ctx);
+    }
 
     // Ships.
     const ships: DrawShip[] = [];
@@ -411,7 +431,9 @@ export class Renderer {
     drawPveSites(g, state.pveSites, (x) => this.sx(x), (y) => this.sy(y), this.zoom, this.time, this.w, this.h);
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, false); // no pulsing zones when motion is reduced
     this.drawCompanions(state, ships);
+    this.drawPods(state, ships);
     for (const s of ships) this.drawShip(s, state);
+    drawMuzzles(g, this.fx, (x) => this.sx(x), (y) => this.sy(y), this.zoom);
     drawShoalBirds(g, state.shoals, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
     this.drawStallSigns(stalls);
     this.drawDeckPets(state, ships);
@@ -3319,6 +3341,61 @@ export class Renderer {
     g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -10); g.lineTo(-3, 0); g.lineTo(-8, 10); g.closePath();
     g.stroke(); g.fill();
     g.restore();
+  }
+
+  /** Good omens alongside (docs/16 #9): dolphins leaping in the bow wave, a humpback abeam, orcas in the wake —
+   *  beside every ship that has them, as the orca calves are. */
+  private drawPods(state: ClientState, ships: DrawShip[]): void {
+    const g = this.g;
+    const t = settings().reduceMotion ? 0 : this.time;
+    for (const s of ships) {
+      const pod = state.pets.get(s.id)?.pod;
+      if (!pod || s.sinkT > 0) continue;
+      const cls = SHIP_CLASSES[s.classId];
+      const x = this.sx(s.x), y = this.sy(s.y);
+      if (x < -300 || y < -300 || x > this.w + 300 || y > this.h + 300) continue;
+      const L = cls.length * this.zoom, B = cls.beam * this.zoom;
+      g.save();
+      g.translate(x, y);
+      g.rotate(s.h);
+      if (pod === 'dolphins') {
+        // Five of them riding the bow wave and along her sides, each leaping in its turn.
+        const spots: [number, number][] = [[-0.9, -0.62], [0.9, -0.55], [-1.5, -0.2], [1.6, -0.05], [0.2, -0.78]];
+        spots.forEach(([bx, by], i) => {
+          const ph = t * 1.6 + i * 1.3;
+          const leap = Math.max(0, Math.sin(ph));
+          const len = Math.max(5, 5.5 * this.zoom) * (1 + leap * 0.25);
+          const px = bx * B * 0.8 + Math.sin(t * 0.8 + i) * B * 0.12, py = by * L - Math.cos(ph) * L * 0.04;
+          g.save();
+          g.translate(px, py);
+          g.globalAlpha = leap > 0.35 ? 1 : 0.45 + leap;
+          if (leap > 0.35 && leap < 0.45) {
+            g.fillStyle = 'rgba(230,240,245,0.6)';
+            g.beginPath();
+            g.arc(0, len * 0.5, len * 0.35, 0, Math.PI * 2);
+            g.fill();
+          }
+          drawDolphin(g, len, t, s.id + i);
+          g.restore();
+        });
+      } else if (pod === 'humpback') {
+        const len = Math.max(14, 15 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.45 + s.id);
+        g.translate(B * 0.5 + len * 0.3 + 5 * this.zoom, -L * 0.05 + Math.sin(t * 0.3) * L * 0.05);
+        g.globalAlpha = 0.35 + 0.65 * dive;
+        drawBeast(g, 'humpback', len, len * 0.28, t, s.id);
+      } else {
+        // Three orcas in her wake, weaving.
+        for (let i = 0; i < 3; i++) {
+          const len = Math.max(9, 8 * this.zoom), dive = 0.55 + 0.45 * Math.sin(t * 0.8 + i * 2 + s.id);
+          g.save();
+          g.translate((i - 1) * B * 0.9 + Math.sin(t * 0.9 + i) * B * 0.2, L * (0.62 + i * 0.12));
+          g.globalAlpha = 0.35 + 0.65 * dive;
+          drawBeast(g, 'orca', len, len * 0.3, t, s.id + i);
+          g.restore();
+        }
+      }
+      g.restore();
+    }
   }
 
   /** The orca calves in their captains' wakes (docs/12 P10 #2): on the starboard quarter, surfacing and diving. */

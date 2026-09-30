@@ -41,6 +41,7 @@ import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHo
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
+import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
 import { ChatPanel } from './chat.ts';
 import type { ChatChannel, ChatLine } from './chat.ts';
 import { NAME_RU } from '../lang/data.ts';
@@ -157,11 +158,12 @@ export class Hud {
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
     const url = assetUrl(cap.portrait);
     const streak = self.streak && self.streak.n >= 2 ? self.streak : null;
-    const ckey = `${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}`;
+    const pod = podEffect(self.effects, state.estServerTime());
+    const ckey = `${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${pod ? `${pod.kind}:${Math.ceil(pod.left / 10)}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}`;
     if (ckey !== this.lastCaptainKey) {
       this.lastCaptainKey = ckey;
       $('hud-captain').innerHTML = `
-        <div class="uf-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"><b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${streak ? streakBadge(streak) : ''}</div>
+        <div class="uf-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"><b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${streak ? streakBadge(streak) : ''}${pod ? podBadge(pod) : ''}</div>
         <div class="uf-body">
           <div class="uf-top"><span class="uf-name">${esc(self.name)}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span></div>
           ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
@@ -332,7 +334,7 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"><span class="rg-dot"> · </span>${esc(seasonWord(seasonName(now)))}</span></div>${this.sectorLine(state)}<div class="rg-extra">${this.objectiveLine(state)}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
+    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"><span class="rg-dot"> · </span>${esc(seasonWord(seasonName(now)))}</span></div>${this.sectorLine(state)}<div class="rg-extra">${this.objectiveLine(state)}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}${this.seaLines(state)}</div>`;
     if (html !== this.lastRegion) {
       this.lastRegion = html;
       $('hud-region').innerHTML = html;
@@ -378,6 +380,19 @@ export class Hud {
   }
 
   /** World events in these waters, with the time they have left. */
+/** The living sea's lines (docs/16 #6, #10): a storm front on her course, the convoy she escorts. */
+  private seaLines(state: ClientState): string {
+    let out = '';
+    const w = state.frontWarn;
+    if (w) {
+      const n = Math.max(1, Math.round((w.sec - (performance.now() - state.frontsAt) / 1000) / 60));
+      out += `<br><span style="color:var(--bad)">⛈ ${esc(LS(w.kind === 'black_storm' ? 'front.warnBlack' : 'front.warn', { n, dir: LS(`dir.${compass8(w.bearing)}`) }))}</span>`;
+    }
+    const mine = state.raid?.known?.find((k) => k.mine);
+    if (mine) out += `<br><span style="color:var(--gold)">${esc(LS('cv.mine', { to: placeName(mine.to), n: mine.hulls, size: mine.size, pay: fmt(mine.pay) }))}</span>${mine.raided ? ` <span style="color:var(--bad)">${esc(LS('cv.raided'))}</span>` : ''}`;
+    return out;
+  }
+
   private eventLines(state: ClientState): string {
     const left = (secs: number) => {
       const s = Math.max(0, secs - (performance.now() - state.eventsAt) / 1000);
@@ -553,12 +568,74 @@ export class Hud {
       g.fillStyle = m.kind === 'buoy' ? 'rgba(200,70,60,0.8)' : m.kind === 'lantern' ? 'rgba(240,200,110,0.85)' : m.kind === 'floe' ? 'rgba(200,215,225,0.6)' : 'rgba(150,130,100,0.6)';
       g.fillRect(tx(m.x) - 1, ty(m.y) - 1, 2, 2);
     }
-    // Weather fronts on the horizon.
+    // Weather fronts on the horizon (docs/16 #10): the cloud, its edge, and an arrow on the edge nearest her for
+    // where it drifts; one on her course ringed in red.
+    const warnId = state.frontWarn?.id ?? -1;
     for (const f of state.fronts) {
+      const storm = f.kind === 'storm' || f.kind === 'black_storm';
       g.fillStyle = f.kind === 'black_storm' ? 'rgba(46,230,200,0.10)' : f.kind === 'storm' ? 'rgba(160,170,190,0.16)' : f.kind === 'fog' ? 'rgba(170,180,185,0.10)' : 'rgba(120,150,190,0.10)';
       g.beginPath();
       g.arc(tx(f.x), ty(f.y), f.r * k, 0, Math.PI * 2);
       g.fill();
+      if (storm || f.id === warnId) {
+        g.setLineDash([5, 4]);
+        g.strokeStyle = f.id === warnId ? 'rgba(232,90,64,0.95)' : f.kind === 'black_storm' ? 'rgba(46,230,200,0.55)' : 'rgba(190,200,215,0.5)';
+        g.lineWidth = f.id === warnId ? 2 : 1.2;
+        g.beginPath();
+        g.arc(tx(f.x), ty(f.y), f.r * k, 0, Math.PI * 2);
+        g.stroke();
+        g.setLineDash([]);
+      }
+      const sp = Math.hypot(f.vx, f.vy);
+      if (sp > 0.2) {
+        // The point of the edge toward her, clamped into the dial.
+        const dx = own.x - f.x, dy = own.y - f.y, dd = Math.hypot(dx, dy) || 1;
+        const edge = Math.min(dd, f.r);
+        let ax = tx(f.x + (dx / dd) * edge), ay = ty(f.y + (dy / dd) * edge);
+        const ox = ax - W / 2, oy = ay - H / 2, od = Math.hypot(ox, oy), lim = W / 2 - 14;
+        if (od > lim) {
+          ax = W / 2 + (ox / od) * lim;
+          ay = H / 2 + (oy / od) * lim;
+        }
+        const a = Math.atan2(f.vy, f.vx), len = 16;
+        g.strokeStyle = f.id === warnId ? '#ff7a5a' : storm ? '#dfe6f0' : 'rgba(200,210,220,0.75)';
+        g.fillStyle = g.strokeStyle;
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(ax - Math.cos(a) * len / 2, ay - Math.sin(a) * len / 2);
+        g.lineTo(ax + Math.cos(a) * len / 2, ay + Math.sin(a) * len / 2);
+        g.stroke();
+        g.beginPath();
+        g.moveTo(ax + Math.cos(a) * (len / 2 + 4), ay + Math.sin(a) * (len / 2 + 4));
+        g.lineTo(ax + Math.cos(a + 2.5) * 6 + Math.cos(a) * len / 2, ay + Math.sin(a + 2.5) * 6 + Math.sin(a) * len / 2);
+        g.lineTo(ax + Math.cos(a - 2.5) * 6 + Math.cos(a) * len / 2, ay + Math.sin(a - 2.5) * 6 + Math.sin(a) * len / 2);
+        g.closePath();
+        g.fill();
+        g.lineWidth = 1;
+      }
+    }
+    // The League convoys she knows of (docs/16 #6): the route dashed, the column where it is; hers in gold, one under
+    // fire in red.
+    for (const cv of state.raid?.known ?? []) {
+      const col = cv.raided ? '#e05a46' : cv.mine ? '#f2c14e' : '#8fc3e8';
+      g.setLineDash([4, 4]);
+      g.strokeStyle = cv.raided ? 'rgba(224,90,70,0.6)' : cv.mine ? 'rgba(242,193,78,0.6)' : 'rgba(143,195,232,0.45)';
+      g.lineWidth = 1.2;
+      g.beginPath();
+      cv.route.forEach(([x, y], i) => (i ? g.lineTo(tx(x), ty(y)) : g.moveTo(tx(x), ty(y))));
+      g.stroke();
+      g.setLineDash([]);
+      const dx = cv.x - own.x, dy = cv.y - own.y;
+      if (Math.hypot(dx, dy) * k < W / 2 - 8) {
+        g.fillStyle = col;
+        g.strokeStyle = 'rgba(0,0,0,0.85)';
+        for (let i = 0; i < 3; i++) {
+          g.beginPath();
+          g.rect(tx(cv.x) - 2.5 + (i - 1) * 5, ty(cv.y) - 2.5, 5, 5);
+          g.fill();
+          g.stroke();
+        }
+      }
     }
     // Whirlpools are felt, not charted: 2.5 km, further with Anomaly Sense.
     const sense = 2500 * (1 + (state.ownStats ? tval(state.ownStats, 'anomalySight') : 0) + ((state.self?.talents.abs_drowned_eyes ?? 0) >= 2 ? 0.3 : 0));
@@ -664,6 +741,26 @@ export class Hud {
       g.lineWidth = 1;
     };
     for (const a of self?.legendEcho ?? []) rim(a, '#e8c65a');
+    // A storm front on her course (docs/16 #10): a red tick toward it and the minutes at the top of the dial, on
+    // every screen; the convoy she escorts, a gold tick when it is beyond the dial.
+    const fw = state.frontWarn;
+    if (fw) {
+      rim(fw.bearing, '#ff7a5a');
+      const n = Math.max(1, Math.round((fw.sec - (performance.now() - state.frontsAt) / 1000) / 60));
+      const text = LS('front.warnShort', { n });
+      g.font = '700 11px Inter, sans-serif';
+      g.textAlign = 'center';
+      g.lineWidth = 3;
+      g.strokeStyle = 'rgba(0,0,0,0.9)';
+      g.strokeText(text, W / 2, 20);
+      g.fillStyle = '#ff8a6a';
+      g.fillText(text, W / 2, 20);
+      g.lineWidth = 1;
+    }
+    for (const cv of state.raid?.known ?? []) {
+      const dx = cv.x - own.x, dy = cv.y - own.y;
+      if (cv.mine && Math.hypot(dx, dy) * k >= W / 2 - 8) rim(Math.atan2(dx, -dy), '#f2c14e');
+    }
     for (const m of self?.maps ?? []) if (m.bearing !== undefined) rim(m.bearing, '#2ee6c8');
     // Tasks of the sea (docs/11 P6): a nest in view as an orange ring with its mark; the nearest unfinished one
     // beyond it as an orange tick on the rim.
@@ -1399,6 +1496,30 @@ export function namedLabel(named: string): { name: string; tag: string } | null 
 }
 
 const LC = dict(CEN, CRU);
+const LS = dict(SEN, SRU);
+
+/** The eight points of the compass from a bearing (0 north, clockwise). */
+export function compass8(a: number): 'north' | 'north-east' | 'east' | 'south-east' | 'south' | 'south-west' | 'west' | 'north-west' {
+  const names = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'] as const;
+  return names[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8];
+}
+
+/** A good omen swimming alongside (docs/16 #9), from her effects: which, its speed, how long it stays. */
+export function podEffect(effects: { id: string; until: number; mods?: Record<string, number | undefined> }[], now: number): { kind: 'dolphins' | 'humpback' | 'orcas'; speed: number; left: number } | null {
+  const e = effects.find((x) => x.id.startsWith('omen_pod_'));
+  if (!e) return null;
+  const kind = e.id.slice(9) as 'dolphins' | 'humpback' | 'orcas';
+  if (kind !== 'dolphins' && kind !== 'humpback' && kind !== 'orcas') return null;
+  return { kind, speed: e.mods?.maxSpeed ?? 0, left: Math.max(0, Math.round(e.until - now)) };
+}
+
+export const POD_ICON = { dolphins: 'omen_dolphins', humpback: 'omen_whale_spout', orcas: 'monster.orca' } as const;
+
+/** Its badge on the portrait, opposite the level: the beast's icon and the seconds it stays; the tooltip says why. */
+export function podBadge(p: { kind: 'dolphins' | 'humpback' | 'orcas'; speed: number; left: number }): string {
+  const title = LS('pod.title', { what: LS(`pod.${p.kind}`), speed: Math.round(p.speed * 100), n: p.left });
+  return `<b class="uf-pod" title="${esc(title)}" aria-label="${esc(title)}">${icon(POD_ICON[p.kind], '🐬', 'ico-sm')}+${Math.round(p.speed * 100)}%</b>`;
+}
 
 /** The win streak's badge on the captain's portrait (docs/16 #4): the flame and the bonus from the third ship, the
  *  count before it; its tooltip says what it is and what ends it. */

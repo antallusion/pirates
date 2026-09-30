@@ -165,6 +165,7 @@ test('the lair: its battery fires on ships near and drives boats off; silenced f
   const np = namedPirates().find((p) => p.region === 'dead_mans_expanse' && !p.baron && lairOf(game, p.id))!;
   const lair = lairOf(game, np.id)!;
   assert.ok(lair, 'a lair on an island of her sea');
+  game.directorOn = true; // the lair's garrison is the sea's own doing (docs/16 #7)
   const { c, s, ship } = hunter(game, 'Lair Stormer', 'dead_mans_expanse', 'frigate', 8);
   ship.state.x = lair.x + 300;
   ship.state.y = lair.y;

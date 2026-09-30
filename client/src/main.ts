@@ -9,6 +9,7 @@ import { NetHaulPanel } from './ui/nethaul.ts';
 import { departOrAsk } from './ui/depart.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { SurrenderCard } from './ui/surrender.ts';
+import { LairChestCard } from './ui/lairchest.ts';
 import { MinigameWindow } from './ui/minigame.ts';
 import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
@@ -232,6 +233,7 @@ const touch = new TouchControls({
 const onboarding = new OnboardingUi(state);
 const encounterCard = new EncounterCard((m) => net.send(m));
 const surrenderCard = new SurrenderCard((m) => net.send(m));
+const lairChest = new LairChestCard();
 const minigameWindow = new MinigameWindow((m) => net.send(m));
 const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
@@ -448,6 +450,11 @@ function onMessage(m: ServerMsg): void {
         audio.bell();
         hud.banner(L('mutiny'), L('mutinySub', { name: m.ringleader, n: m.mutineers, men: plural(m.mutineers, L('men.one'), L('men.few'), L('men.many')) }));
       }
+      break;
+    case 'lairchest':
+      // A stormed lair's chest (docs/16 #7).
+      audio.bell();
+      lairChest.open(m.view);
       break;
     case 'surrender_offer':
       // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.
@@ -1286,6 +1293,7 @@ function computePrompt(): string {
   else if (self.landable?.action === 'raise') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('raise', { feature: sv(self.landable.feature.replace(/^wreck of the /, '')) }))}`);
   else if (self.landable?.action === 'expedition') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'descent') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('descent'))}`);
+  else if (self.landable?.action === 'escort') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('escortSign', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
   else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
@@ -1443,7 +1451,7 @@ function contextLabel(): string | null {
   if (boardTarget !== null) return L('tc.board');
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
-  if (state.self?.landable && !state.self.landable.blocked) return L('tc.land');
+  if (state.self?.landable && !state.self.landable.blocked) return L(state.self.landable.action === 'escort' ? 'tc.escort' : 'tc.land');
   if (mastWreck()) return L('tc.cutMast');
   const cast = castable();
   if (cast) return L(cast === 'lamp' ? 'tc.lamp' : 'tc.cast');
