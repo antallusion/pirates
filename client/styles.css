@@ -3095,7 +3095,6 @@ body.tac #toasts { top: 22%; }
 #trek.hidden { display: none; }
 body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack, body:has(#trek:not(.hidden)) #encounter { visibility: hidden; }
 @media (max-width: 699px) { body:has(#trek:not(.hidden)) #tc-menu, body:has(#trek:not(.hidden)) #hud-menu { visibility: hidden; } }
-@media (max-height: 520px) { #trek { top: calc(var(--sa-t, 0px) + 8px); max-height: calc(100vh - var(--sa-t, 0px) - var(--sa-b, 0px) - 16px); width: min(420px, calc(100vw - 2 * (var(--mm) + 40px))); } #trek .mg-art { aspect-ratio: 4.2 / 1; } }
 #trek .mg-card { background: rgba(10, 12, 16, 0.95); border: 1px solid rgba(232, 196, 106, 0.55); border-radius: 6px; padding: 10px 12px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
 #trek .mg-art { position: relative; margin: -4px -6px 8px; aspect-ratio: 3.2 / 1; background: #0b0d10 center / cover no-repeat; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 4px; box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.8); overflow: hidden; }
 #trek .mg-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 12, 16, 0) 40%, rgba(10, 12, 16, 0.75)); pointer-events: none; }
@@ -3108,7 +3107,7 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 #trek .mg-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 #trek .mg-choices .btn { flex: 1 1 auto; min-height: 44px; font-size: 13px; padding: 6px 10px; white-space: normal; line-height: 1.25; touch-action: manipulation; }
 #trek .mg-walk { flex: 0 1 auto !important; opacity: 0.8; }
-#trek .trek-paths .trek-path { flex: 1 1 calc(33% - 6px); display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 96px; }
+#trek .trek-paths .trek-path { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
 #trek .trek-path .ico-sm { width: 22px; height: 22px; flex: none; }
 #trek .mg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
 #trek .mg-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: rgba(232, 196, 106, 0.1); border: 1px solid rgba(232, 196, 106, 0.3); color: #e8d8a8; }
@@ -3120,11 +3119,17 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 #trek .trek-dot.done { background: rgba(232, 196, 106, 0.18); }
 #trek .trek-dot.bad { border-color: rgba(200, 90, 70, 0.8); background: rgba(160, 60, 50, 0.25); }
 #trek .trek-dot-ico { width: 16px; height: 16px; object-fit: contain; }
+/* Phones held sideways: the card between the helm and the minimap, its painting a thin strip. */
+@media (max-height: 520px) { #trek { top: calc(var(--sa-t, 0px) + 8px); max-height: calc(100vh - var(--sa-t, 0px) - var(--sa-b, 0px) - 16px); width: min(420px, calc(100vw - 2 * (var(--mm) + 40px))); } #trek .mg-art { aspect-ratio: 6 / 1; margin-bottom: 6px; } #trek .mg-face { width: 36px; height: 36px; bottom: 4px; } #trek .mg-choices .btn { min-height: 40px; } }
 /* Her caches (docs/16 #22) in the chest card. */
 .cache-list { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
 .cache-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 13px; padding: 4px 6px; border-left: 2px solid rgba(232, 196, 106, 0.4); background: rgba(255, 255, 255, 0.02); }
 .cache-row .muted { font-size: 12px; }
-.cache-sell { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.cache-sell select, .cache-sell input { min-width: 0; flex: 1 1 110px; }
-.cache-sell label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.cache-sell { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 6px; align-items: center; }
+.cache-sell [data-msmap] { grid-column: 1 / -1; min-width: 0; width: 100%; }
+.cache-sell [data-msto] { min-width: 0; width: 100%; }
+.cache-sell [data-msprice] { min-width: 0; width: 100%; max-width: none !important; }
+.cache-sell label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; min-width: 0; }
+.cache-sell input[type=checkbox] { width: 16px; height: 16px; flex: none; margin: 0; }
+.cache-sell .btn { justify-self: stretch; }
 .mb-tag { display: inline-block; font-size: 11px; padding: 0 6px; margin-left: 4px; border-radius: 8px; border: 1px solid rgba(232, 196, 106, 0.4); color: #e8c46a; }

@@ -266,24 +266,17 @@ export function combBank(game: Game, s: PlayerSession, b: TidalIsle, share: numb
     return;
   }
   islesOf(p).tides[b.id] = tidalRise(b, game.now);
-  const got: string[] = [];
   const silver = Math.round(purse(s, rng.int(TIDAL_SILVER[0], TIDAL_SILVER[1])) * share);
   p.gold += silver;
   game.db.ledger(s.accountId, 'bank', silver, name);
-  got.push(`${silver} silver`);
   const good = TIDAL_GOODS[rng.int(0, TIDAL_GOODS.length - 1)];
   const n = giveGoods(ship, good, Math.max(1, Math.round(rng.int(1, 3) * share)));
-  if (n > 0) got.push(`${n} ${GOODS[good].name}`);
-  if (rng.chance(TIDAL_ITEM * share)) {
-    const it = makeItem(rng, 0, { ilvl: ship.shipLevel, rarity: rng.chance(0.3) ? 3 : 2 });
-    if (takeItem(game, s, it)) got.push('a piece of rare gear');
-  }
-  const maps = p.explore.maps.length;
+  // Gear and a map say so themselves (the locker's and the map chest's own words).
+  if (rng.chance(TIDAL_ITEM * share)) takeItem(game, s, makeItem(rng, 0, { ilvl: ship.shipLevel, rarity: rng.chance(0.3) ? 3 : 2 }));
   mapChance(game, s, TIDAL_MAP * share, 2, 'On the bared bank');
-  if (p.explore.maps.length > maps) got.push('a treasure map');
   game.grantXp(s, Math.round(90 * share * (1 + 0.15 * (ship.shipLevel - 1))), null);
   ship.morale = Math.min(100, ship.morale + 4);
-  game.toastShip(ship, `The party combs ${name} while the sea is out: ${got.join(', ')}.`, 'gold');
+  game.toastShip(ship, n > 0 ? `The party combs ${name} while the sea is out: ${silver} silver and ${n} ${GOODS[good].name}.` : `The party combs ${name} while the sea is out: ${silver} silver.`, 'gold');
   sendIsles(game, s, true);
 }
 
@@ -390,11 +383,16 @@ export function islesAdmin(game: Game, s: PlayerSession, cmd: string, args: stri
       return `${bankName(b)}: ${how}.`;
     }
     case 'light': {
-      const list = lighthouseIslands(game).map((id) => game.world.islands[id]).filter((is) => REGIONS[is.region].safety !== 'safe');
+      // A keeper's lighthouse with shoals in its reach, and her set down between it and the nearest of them.
+      const reefNear = (is: Island) => game.world.reefs.filter((rf) => dist(rf.x, rf.y, is.x, is.y) < LIGHT_R * 0.8).sort((a, b) => dist(a.x, a.y, is.x, is.y) - dist(b.x, b.y, is.x, is.y))[0];
+      const list = lighthouseIslands(game).map((id) => game.world.islands[id]).filter((is) => REGIONS[is.region].safety !== 'safe' && reefNear(is));
       const is = near(list);
       if (!is) return 'No lighthouses.';
       if (args[0] === 'dark') st(game).paid.delete(is.id);
-      else parkOff(game, s, is.x, is.y, is.poly, [ship.state.x, ship.state.y], 600);
+      else {
+        const rf = reefNear(is)!;
+        parkOff(game, s, is.x, is.y, is.poly, [rf.x, rf.y], 600);
+      }
       sendIsles(game, s, true);
       game.pushSelf(s, true);
       return `Off the lighthouse of ${is.name}.`;

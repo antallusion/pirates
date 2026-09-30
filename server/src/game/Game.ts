@@ -942,6 +942,8 @@ export class Game {
         ? city
         : cove
         ? { island: cove.name, feature: 'buyers for contraband (90% of Fogmouth)' }
+        : tmap && tmap.kind === 'player'
+        ? { island: this.world.islands[tmap.island ?? -1]?.name ?? tmap.name, feature: "a captain's buried chest", action: 'dig' } // docs/16 #22
         : tmap
         ? { island: tmap.name.replace(/^.* — /, ''), feature: `buried treasure (${tmap.name.replace(/ — .*$/, '').toLowerCase()})`, action: 'dig' }
         : wreck

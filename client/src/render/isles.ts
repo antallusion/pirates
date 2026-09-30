@@ -80,7 +80,7 @@ export function drawBanks(g: G, state: ClientState, c: IslesCtx): void {
       g.stroke();
     }
     // A painted scatter on it (the atoll's or the ice's bits), and a glint where something waits.
-    const deco = sprite(b.kind === 'season' && b.season === 3 ? 'prop.decor_ice' : 'prop.decor_atoll');
+    const deco = sprite(b.kind === 'season' && b.season === 3 ? 'prop.decor_ice' : 'prop.decor_saltflat');
     if (deco && c.zoom > 0.25) {
       const s = Math.min(b.r * 0.9, 70) * c.zoom;
       g.globalAlpha = 0.85;
