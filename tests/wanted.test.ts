@@ -13,7 +13,7 @@ import { isLand, regionAt } from '../shared/src/world/worldgen.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
-import { clearWanted, lairImpact, lairLanding, lairOf, liveNamed, namedRecord, payInformant, putToSea, stepWanted, wantedBoard, wantedView } from '../server/src/game/wanted.ts';
+import { clearWanted, lairGarrison, lairImpact, lairLanding, lairOf, liveNamed, namedRecord, payInformant, putToSea, stepWanted, wantedBoard, wantedView } from '../server/src/game/wanted.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame, onHull } from './helpers.ts';
@@ -183,6 +183,11 @@ test('the lair: its battery fires on ships near and drives boats off; silenced f
   // Silence it.
   for (let i = 0; i < 400; i++) lairImpact(game, lair.x + 20, lair.y, 100, ship.id);
   assert.ok(c.all('toast').some((t) => t.msg.includes('is silenced')));
+  // Its garrison put out as she came (docs/16 #7): the boats cannot land while it is afloat.
+  assert.ok(lairGarrison(game, np.id).length >= 2, 'the garrison is out');
+  assert.equal(lairLanding(game, s, island), true);
+  assert.ok(c.all('toast').some((t) => t.msg.startsWith('The garrison’s ships still guard the lair')));
+  for (const id of lairGarrison(game, np.id)) game.removeShip(id);
   const gold0 = s.profile!.gold;
   ship.crew = 20;
   assert.equal(lairLanding(game, s, island), true);

@@ -42,7 +42,25 @@ export function tipCost(value: number): number {
   return Math.round(Math.max(120, Math.min(900, value * 0.04)) / 10) * 10;
 }
 export const TIP_WINDOW = 900; // seconds between a port's new tips
-export const CONVOY_EVERY: [number, number] = [1200, 2400];
+export const CONVOY_EVERY: [number, number] = [600, 1200];
+/** Convoys at sea at once (docs/16 #6). */
+export const CONVOY_MAX = 4;
+/** A captain within this of a convoy's ship has seen it: its route goes on her chart. */
+export const CONVOY_SPOT_R = 4000;
+/** Close enough to a convoy's ship to hail the commodore and sign on as escort. */
+export const ESCORT_SIGN_R = 1200;
+/** An escort is paid if she is this near the convoy or its port when it comes in. */
+export const ESCORT_KEEP_R = 5000;
+/** What the League pays an escort on arrival (a convoy of a level), before the share of hulls brought in. */
+export function escortPay(level: number): number {
+  return Math.round(150 + 55 * level);
+}
+/** The strongbox a broken convoy leaves to its raiders, shared among those within reach. */
+export function convoyStrongbox(level: number): number {
+  return Math.round(250 + 100 * level);
+}
+/** League standing lost for the first shot at one of its convoys. */
+export const CONVOY_INFAMY = 6;
 export const DEED_CONVOYS = 5;
 
 export function raidPatterns(): [string, string][] {

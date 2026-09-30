@@ -230,6 +230,8 @@ export class ShipEntity {
   /** A named pirate (docs/12 P5): her id on the roster; one of her lieutenants; the hull at which she runs (0: never). */
   named?: string;
   namedMate?: string;
+  /** Of the garrison of a named pirate's lair (docs/16 #7): the lair's id. She goes for any captain at the lair. */
+  lairGuard?: string;
   /** The Flying Dutchman himself (docs/12 P10 #10). */
   dutchman?: boolean;
   /** A prize to be kept as a trophy (docs/16 #5): her story, and she goes to a berth instead of the prize court. */

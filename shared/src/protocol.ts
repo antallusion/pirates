@@ -357,7 +357,16 @@ export interface WhirlpoolData {
   clockwise: boolean;
 }
 
-/** A weather front. vx/vy/ttl are only filled in for captains who can forecast (Navigator). */
+/** A storm front on a captain's course (docs/16 #10): it reaches her in `sec` seconds, coming from `bearing` (rad). */
+export interface FrontWarn {
+  id: number;
+  kind: 'storm' | 'black_storm';
+  sec: number;
+  bearing: number;
+}
+
+/** A weather front: where it is, how big, and which way it drifts (everyone reads the clouds, docs/16 #10); `ttl`
+ *  — how long it lasts — only for captains who can forecast (Navigator), who also read them further out. */
 export interface FrontData {
   id: number;
   kind: 'storm' | 'black_storm' | 'fog' | 'rain';
@@ -610,7 +619,7 @@ export interface PrivateState {
   sites: ResourceSiteView[]; // extraction rights you hold
   warehouses: Record<string, Cargo>;
   /** Island feature within reach of the boats, if any. */
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent'; blocked?: string } | null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort'; blocked?: string } | null;
   /** Landing party ashore. */
   landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;
@@ -1040,7 +1049,9 @@ export type GameEvent =
   | { k: 'tether'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
-    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket' | 'firework' | 'struck'; x: number; y: number; r?: number; dir?: number }
+    | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket' | 'firework' | 'struck'
+    /** A lair's gun fires (docs/16 #7): from x,y toward dir, the ball falling r metres off — a hit when `hit`. */
+    | 'lair_gun'; x: number; y: number; r?: number; dir?: number; hit?: boolean }
   | { k: 'discover'; islandId: number; name: string; region: RegionId; quiet?: boolean }
   | { k: 'region'; region: RegionId; safety: string };
 
@@ -1243,7 +1254,9 @@ export type ServerMsg =
       /** a veteran groupmate in company who guided it (a tenth more experience) */ mentor?: string }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number; sectors?: SectorData[] }
-  | { t: 'fronts'; list: FrontData[]; forecast: boolean }
+  /** `warn`: a storm front that will cross her course (docs/16 #10) — which, in how many seconds, from which bearing. */
+  | { t: 'fronts'; list: FrontData[]; forecast: boolean; warn?: FrontWarn | null }
+  | { t: 'lairchest'; view: LairChestView }
   | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[]; marks?: SeaMarkData[] }
   | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number; /** world time per real second, when an admin has changed it */ k?: number }
   | { t: 'info'; list: EntityInfo[] }
@@ -1758,6 +1771,32 @@ export interface RaidView {
   convoys: number;
   marks: { id: number; x: number; y: number }[];
   heat: Partial<Record<RegionId, number>>;
+  /** The League convoys she knows of (docs/16 #6): heard of as they sailed, seen, or escorted. */
+  known: ConvoyView[];
+}
+
+/** A League convoy on a captain's chart (docs/16 #6). */
+export interface ConvoyView {
+  id: number;
+  /** Where its lead ship is now. */
+  x: number;
+  y: number;
+  from: string;
+  to: string;
+  level: number;
+  /** Merchantmen still sailing, of how many; its own escorts afloat. */
+  hulls: number;
+  size: number;
+  escorts: number;
+  /** Its route from port to port, a few points. */
+  route: [number, number][];
+  /** In her sight now. */
+  seen: boolean;
+  /** She sails as its escort, for this pay on arrival. */
+  mine: boolean;
+  pay: number;
+  /** Under a raider's guns in the last half-minute. */
+  raided: boolean;
 }
 
 /** A poster on the board of the wanted (docs/12 P5). */
@@ -1794,10 +1833,40 @@ export interface WantedView {
   sight: { id: string; x: number; y: number }[];
   rogues: { name: string; x: number; y: number; r: number }[];
   /** Lairs within a few miles: where, how much of the battery stands (0..1), open to a landing. */
-  lairs: { id: string; x: number; y: number; hp: number; open: boolean }[];
+  lairs: LairView[];
   /** The named pirates with a grudge against her, and the heads she has taken (docs/12 P10 #1). */
   nemeses: NemesisView[];
   heads: number;
+}
+
+/** A pirate lair's fortress as a captain near it sees it (docs/16 #7). */
+export interface LairView {
+  id: string;
+  x: number;
+  y: number;
+  /** The battery's strength left, 0..1; open to a landing (silenced, the garrison sunk, not yet stormed). */
+  hp: number;
+  open: boolean;
+  /** The island, the named captain it belongs to, the fort's level. */
+  name: string;
+  captain: string;
+  level: number;
+  /** Its guns on the shore. */
+  guns: [number, number][];
+  /** The garrison's ships afloat. */
+  garrison: number;
+  /** Stormed and empty until it is rebuilt. */
+  stormed: boolean;
+}
+
+/** What a stormed lair's chest held (docs/16 #7). */
+export interface LairChestView {
+  island: string;
+  captain: string;
+  silver: number;
+  prisoners: number;
+  item: { name: string; rarity: number } | null;
+  map: string | null;
 }
 
 /** A captain's orca calf (docs/12 P10 #2). */
@@ -1816,7 +1885,12 @@ export interface PetView {
   ship: number;
   orca?: number;
   deck?: PetId;
+  /** A good omen swimming alongside (docs/16 #9). */
+  pod?: PodKind;
 }
+
+/** The beasts that may run alongside a ship for a while as a good omen (docs/16 #9). */
+export type PodKind = 'dolphins' | 'humpback' | 'orcas';
 
 /** The Regatta of Equal Waters as a captain sees it (docs/12 P10 #5). */
 export interface RegattaView {

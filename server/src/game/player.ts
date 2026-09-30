@@ -309,7 +309,7 @@ export class PlayerSession {
   disconnectedAt: number | null = null;
   lingerUntil = 0;
   lastRegion = '';
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent'; blocked?: string } | null = null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort'; blocked?: string } | null = null;
   siteViews: ResourceSiteView[] = [];
 
   constructor(conn: GameConn) {

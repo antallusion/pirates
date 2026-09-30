@@ -225,6 +225,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
       case 'pirate':
         // Sworn to the Code: the Brethren do not fire first.
         if (p?.oath === 'code') return false;
+        // A lair's garrison (docs/16 #7) goes for any captain who comes to its island.
+        if (npc.lairGuard && !other.surrendered) return true;
         // A captain who joined them on their prey sails with them for a while (docs/16 P1).
         if (joinedRaid(game, npc, other)) return false;
         // Under a friend's guns (docs/12 P6): only a pirate well above her dares.

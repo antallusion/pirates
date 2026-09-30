@@ -24,7 +24,7 @@ import { baseView, collectYard, moveTo, speedup, startBuild, upgradeAt } from '.
 import { ownShipsKill, shipBuild, shipLaunch, shipRecall, shipRepair, shipUpgrade, squadronOf, stepOwnShips } from './baseships.ts';
 import { abandonIsland, claimPrompt, raidPointer, robIsland } from './baseclaim.ts';
 import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome, hireResident, isleLevelUp, outpostOrder, ownIsland, settleRefugees, stepEstate, visitHall } from './estate.ts';
-import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
+import { appraise, bribeClerk, buyTip, demandTribute, escortOffer, raidFate, raidKill, signEscort, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
 import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
 import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
@@ -907,6 +907,7 @@ export class Game {
       const city = s.ship.docked || s.ship.landing ? null : cityPrompt(this, s);
       const legend = s.ship.docked || s.ship.landing ? null : legendWreckHere(this, s.ship);
       const stair = s.ship.docked || s.ship.landing ? null : descentLandable(this, s);
+      const convoy = s.ship.docked || s.ship.landing ? null : escortOffer(this, s); // sign on as a League convoy's escort (docs/16 #6)
       s.landable = stair
         ? stair
         : legend
@@ -921,6 +922,8 @@ export class Game {
         ? { island: 'the sea floor', feature: `wreck of the ${wreck.name} (${wreck.depth} m)`, action: 'dive', blocked: wreckWhy ?? undefined }
         : own
         ? { island: own.island.name, feature: `stockpile of ${GOODS[own.site.good].name.toLowerCase()} (${Math.floor(own.site.stock)})` }
+        : convoy
+        ? { island: `League convoy for ${convoy.to}`, feature: `escort contract: ${convoy.pay} silver on arrival`, action: 'escort' as const, blocked: convoy.blocked }
         : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
@@ -3021,6 +3024,12 @@ export class Game {
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
         return;
       case 'land': {
+        // By a League convoy: sign on as its escort (docs/16 #6).
+        if (!ship.docked && s.landable?.action === 'escort') {
+          err(signEscort(this, s));
+          this.pushSelf(s, true);
+          return;
+        }
         // The Maelstrom Stair: the land key goes down (docs/12 P10 #17).
         if (!ship.docked && descentLandable(this, s)) {
           err(startDescent(this, s));
