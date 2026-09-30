@@ -297,3 +297,17 @@ export function armyWord(men: number): ArmyWord {
   for (let k = 0; k < ARMY_WORD_MIN.length; k++) if (men >= ARMY_WORD_MIN[k]) i = k;
   return ARMY_WORDS[i];
 }
+
+/** A saved army made whole against the head count it was saved with (docs/17 H1): a save from before the stacks
+ *  becomes the ladder's spread of its level (deckhands and sailors, and the higher tiers as the level allows); one
+ *  that disagrees with its count loses men by exposure or signs deckhands on. */
+export function armyFromSave(saved: unknown, crew: number, level: number, slots: number): ArmyStack[] {
+  crew = Math.max(0, Math.floor(Number.isFinite(crew) ? crew : 0));
+  if (!Array.isArray(saved)) return armyForLevel(level, crew, slots, 'player');
+  const army = armyTidy(saved.filter((s): s is ArmyStack => !!s && typeof s === 'object' && typeof (s as ArmyStack).u === 'string' && Number.isFinite((s as ArmyStack).n)));
+  armyFit(army, slots);
+  const d = crew - armyMen(army);
+  if (d < 0) armyRemove(army, -d);
+  else if (d > 0) armyAdd(army, d, slots);
+  return armyTidy(army);
+}

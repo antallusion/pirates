@@ -1295,8 +1295,8 @@ function computePrompt(): string {
     const d = dist(own.x, own.y, c.x, c.y);
     const range = st.boardingRange + (st.beam + cls.beam) / 2;
     if (d > range) continue;
-    const weak = c.flags & SF.SURRENDERED || c.hull <= 0.6 || c.sails <= 0.35 || c.crew <= 0.5 || c.spd < 2;
-    if (!weak) continue;
+    // Boarding at once (docs/17 H1): any ship in the grapples' reach, whole or wrecked; the server says why not.
+    if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(c.flags & SF.HOSTILE)) continue;
     if (d < bd) {
       bd = d;
       best = s.id;

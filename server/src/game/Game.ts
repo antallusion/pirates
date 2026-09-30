@@ -112,6 +112,7 @@ import { besieging, chooseOutcome, declareSiege, fortify, stepSieges } from './s
 import type { ZoneRuntime } from '../zones/zone.ts';
 import { PostOffice, mailDelete, mailOnLogin, mailRead, mailSend, mailTake, marketAuction, marketBid, marketBuyOrder, marketCancel, marketFill, marketSell, sendMail, sendMarket, stepPost } from './post.ts';
 import type { Tavern } from './crew.ts';
+import { menLost, npcArmy } from './army.ts';
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { abandonQuest, acceptQuest, answerOffer, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
@@ -145,7 +146,7 @@ import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditions
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
-import { applyDamage, cutMastWreck, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
+import { applyDamage, cutMastWreck, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, seizeCaptain, takeCaptive, takePrize } from './prizes.ts';
@@ -1092,7 +1093,16 @@ export class Game {
     // Leaks, pumps and plugs.
     if (stepFlooding(this, ship)) return;
     // Fire (a fireship's own blaze is her weapon, not her end: she burns without burning down).
-    if (ship.hasEffect('fire') && this.npcs.get(ship.id)?.fireship === undefined) applyDamage(this, ship, { hull: st.hullMax * 0.006 * (ship.hasFlag('wet_decks') ? 0.6 : 1), sails: 1.5 }, null);
+    if (ship.hasEffect('fire') && this.npcs.get(ship.id)?.fireship === undefined) {
+      applyDamage(this, ship, { hull: st.hullMax * 0.006 * (ship.hasFlag('wet_decks') ? 0.6 : 1), sails: 1.5 }, null);
+      // The fire burns men out of her stacks, at the guns and aloft (docs/17 H1): about a man in 250 a second.
+      ship.burnMen += Math.max(0.2, ship.crew * 0.004) * (ship.hasFlag('wet_decks') ? 0.6 : 1);
+      if (ship.burnMen >= 1 && ship.alive) {
+        const n = Math.floor(ship.burnMen);
+        ship.burnMen -= n;
+        menLost(this, ship, killMen(this, ship, n, null));
+      }
+    }
     // Storms punish full canvas.
     const w = this.weatherOf(ship);
     const canvas = ship.hasFlag('storm_rider') ? 0 : Math.max(0, 1 + tval(st, 'stormSailDamage'));
@@ -1284,6 +1294,8 @@ export class Game {
     ship.hull = ship.stats.hullMax;
     ship.sails = ship.stats.sailHpMax;
     ship.crew = Math.round(ship.stats.crewMax * crewFrac);
+    // Her army (docs/17 H1): the stacks of her level's waters and her trade.
+    ship.setArmy(npcArmy(ship));
   }
 
   spawnEscort(owner: ShipEntity, duration: number): string | null {
@@ -3506,7 +3518,8 @@ export class Game {
     ship.cargo = p.cargo;
     ship.ammo = p.ammo;
     ship.ammoSel = p.ammoSel;
-    ship.crew = Math.min(p.crew, ship.stats.crewMax);
+    ship.setArmy(p.army ?? []);
+    ship.crew = Math.min(p.crew, ship.stats.crewMax); // the head count rules: a save's stacks made whole against it
     ship.morale = p.morale;
     ship.sanity = p.sanity;
     ship.pressure = p.pressure;
@@ -3945,6 +3958,7 @@ export class Game {
       p.ammo = ship.ammo;
       p.ammoSel = ship.ammoSel;
       p.crew = ship.crew;
+      p.army = ship.army.map((x) => ({ u: x.u, n: x.n }));
       p.morale = ship.morale;
       p.sanity = Math.round(ship.sanity * 10) / 10;
       p.pressure = Math.round(ship.pressure * 10) / 10;

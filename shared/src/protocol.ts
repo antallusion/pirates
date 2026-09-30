@@ -1139,6 +1139,8 @@ export type GameEvent =
   | { k: 'volley'; ship: number; side: Side | ChaserEnd; ammo: AmmoId; balls: [number, number, number, number, number][]; spd?: number; perfect?: true } // [x, y, heading, dist, delayMs]; spd = muzzle velocity multiplier; perfect = a held broadside released in its window
   | { k: 'hit'; x: number; y: number; ship: number; dmg: number; ammo: AmmoId; crit?: string; evaded?: true }
   | { k: 'dash'; ship: number; x: number; y: number; h: number }
+  /** Men of her stacks killed by a broadside, a fire, a hole (docs/17 H1): the "−N" rising over her. */
+  | { k: 'men'; ship: number; x: number; y: number; n: number }
   | { k: 'splash'; x: number; y: number }
   | { k: 'sunk'; ship: number; x: number; y: number; name: string }
   | { k: 'board_start'; a: number; b: number }

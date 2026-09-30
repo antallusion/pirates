@@ -40,6 +40,7 @@ import { cursedDamageMul, onCursedHit, onCursedVolley, onOwnCrewKilled, pactDama
 import { bossIncoming, innerVolley, swallowedShield } from './bosses.ts';
 import { kegImpact } from './holidays.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
+import { killFactor, menLost, wallsOf } from './army.ts';
 
 export interface Projectile {
   owner: number;
@@ -69,6 +70,7 @@ export interface VolleyRec {
   dealt: Map<number, number>; // hull damage per target (volley cap)
   t: number;
   battery?: Set<number>; // Grand Battery: targets already shaken by this volley
+  men?: Map<number, number>; // men killed per target (docs/17 H1: one "−N" a broadside)
 }
 
 export const COMBAT_TAG = 20;
@@ -388,6 +390,10 @@ function volleyBall(game: Game, p: Projectile, target: ShipEntity | null): void 
   if (target) rec.hits.set(target.id, (rec.hits.get(target.id) ?? 0) + 1);
   if (--rec.left > 0) return;
   game.volleys.delete(p.volley);
+  if (rec.men) for (const [id, n] of rec.men) {
+    const t = game.ships.get(id);
+    if (t) menLost(game, t, n);
+  }
   const owner = game.ships.get(rec.owner);
   if (!owner) return;
   if (owner.isPlayer) onboardingVolley(game, owner, [...rec.hits.values()].reduce((x, y) => x + y, 0));
@@ -501,7 +507,10 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
   // Splinter Storm: every ball into the hull sends splinters through the gun deck.
   const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && hullDmg > 5 ? 1 : 0;
-  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * lad.dealt;
+  // The hull is the wall the stacks stand behind (docs/17 H1): grape sweeps the open deck, a ball kills more through a
+  // shattered side than through a sound one; and the men fall out of her stacks, the tougher and the better covered
+  // her army the fewer.
+  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
 
   let crit: string | undefined;
   let rudderDmg = 0;
@@ -549,7 +558,12 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       if (rec) (rec.battery ??= new Set()).add(target.id);
     }
   }
-  applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery) * lad.dealt, laddered: true }, shooter, { x: hx, y: hy });
+  const men = applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery) * lad.dealt, laddered: true }, shooter, { x: hx, y: hy });
+  if (men > 0) {
+    const rec = p.volley !== undefined ? game.volleys.get(p.volley) : undefined;
+    if (rec) (rec.men ??= new Map()).set(target.id, (rec.men.get(target.id) ?? 0) + men);
+    else menLost(game, target, men);
+  }
   if (shooter && p.volley !== undefined && sst?.flags.has('splinter_storm') && target.crew < target.stats.crewMax * 0.3) {
     const rec = game.volleys.get(p.volley);
     if (rec && !rec.demoralised.has(target.id)) {
@@ -668,18 +682,21 @@ export function cutMastWreck(game: Game, ship: ShipEntity): string | null {
   return null;
 }
 
-/** Central damage entry point for cannon fire, abilities, collisions and hazards. */
-export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, source: ShipEntity | null, at?: { x: number; y: number }): void {
-  if (!target.alive || target.docked || target.god) return;
+/** Central damage entry point for cannon fire, abilities, collisions and hazards. Returns the men it killed. */
+export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, source: ShipEntity | null, at?: { x: number; y: number }): number {
+  if (!target.alive || target.docked || target.god) return 0;
   // A ship across a zone line: the hit is hers to take in her own zone.
-  if (target.ghost) return game.zone?.forwardHit(target, d, source);
+  if (target.ghost) {
+    game.zone?.forwardHit(target, d, source);
+    return 0;
+  }
   // Under black water (Abyss Step, the Drowned King) nothing can touch her.
-  if (target.hasEffect('submerged') || target.hasEffect('ghost_return')) return;
+  if (target.hasEffect('submerged') || target.hasEffect('ghost_return')) return 0;
   // Inside the Lantern Maw nothing reaches her but the Maw; a boss decides how a hit lands on it.
-  if (swallowedShield(target, source)) return;
+  if (swallowedShield(target, source)) return 0;
   if (target.bossOf) {
     const landed = bossIncoming(game, target, d, source, at);
-    if (!landed) return;
+    if (!landed) return 0;
     d = landed;
   }
   const now = game.now;
@@ -690,7 +707,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   // Nobody reaches into a duel, and duellists reach nobody else.
   if (source && source !== target) {
     const pv = pvpBlocked(game, source, target);
-    if (pv && pv !== 'duel_ok') return;
+    if (pv && pv !== 'duel_ok') return 0;
   }
   if (source) {
     registerAggression(game, source, target);
@@ -711,18 +728,13 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   }
   if (d.sails) target.sails = Math.max(0, target.sails - d.sails);
   if (d.rudder && !target.hasFlag('iron_tiller')) target.rudderHp = Math.max(0, target.rudderHp - d.rudder);
+  let fell = 0;
   if (d.crew) {
     let killed = Math.floor(d.crew);
     if (game.rng.float() < d.crew - killed) killed++;
     killed = Math.min(killed, target.crew);
     if (lad?.floorCrew) killed = Math.min(killed, Math.max(0, target.crew - Math.ceil(lad.floorCrew * target.stats.crewMax)));
-    target.crew -= killed;
-    target.wounded += woundedOf(game, target, killed);
-    onCrewKilled(game, target, killed, source);
-    onOwnCrewKilled(target, killed, now);
-    // Crew of the Drowned: the fallen rise; the crew never drops under 40%.
-    if (target.hasFlag('crew_of_drowned')) target.crew = Math.max(target.crew, Math.ceil(target.stats.crewMax * 0.4));
-    target.morale -= killed * 0.8 * moraleLossMul(target);
+    fell = killMen(game, target, killed, source);
   }
   if (d.morale) target.morale -= d.morale * moraleLossMul(target);
   // Terror: crews under 30% break twice as fast.
@@ -757,6 +769,23 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     target.talentReady.patrols = now + 10;
     callPatrols(game, target, source);
   }
+  return fell;
+}
+
+/** `killed` men fall from her stacks (by their exposure): the wounded among them, the crew's nerve, the Drowned's
+ *  rising dead. No dice: every roll was made before. Returns the men actually lost. */
+export function killMen(game: Game, target: ShipEntity, killed: number, source: ShipEntity | null): number {
+  killed = Math.max(0, Math.min(Math.floor(killed), target.crew));
+  if (!killed) return 0;
+  const before = target.crew;
+  target.loseMen(killed);
+  target.wounded += woundedOf(game, target, killed);
+  onCrewKilled(game, target, killed, source);
+  onOwnCrewKilled(target, killed, game.now);
+  // Crew of the Drowned: the fallen rise; the crew never drops under 40%.
+  if (target.hasFlag('crew_of_drowned')) target.crew = Math.max(target.crew, Math.ceil(target.stats.crewMax * 0.4));
+  target.morale -= killed * 0.8 * moraleLossMul(target);
+  return Math.max(0, before - target.crew);
 }
 
 /** First blood between two ships decides crimes, reputation and self-defence windows. */

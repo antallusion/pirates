@@ -124,6 +124,8 @@ export class ShipEntity {
   /** The fighting men aboard as stacks (docs/17 H1); `crew`, the head count the rest of the game reads, is their sum. */
   private _army: ArmyStack[] = [];
   private _men = 0;
+  /** A fire's toll on the men, carried from second to second until a whole man falls. */
+  burnMen = 0;
   morale = 80;
   cargo: Cargo = {};
   ammo: AmmoStock = emptyAmmo();
