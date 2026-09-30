@@ -38,10 +38,10 @@ import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
+import { ChatPanel } from './chat.ts';
+import type { ChatChannel, ChatLine } from './chat.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
-import { sagaCardHtml } from './saga.ts';
-import type { SagaCard } from '../../../shared/src/protocol.ts';
 
 const L = dict(EN, RU);
 const RL = dict(REN, RRU);
@@ -341,7 +341,7 @@ export class Hud {
     const where = o.dir && o.kind !== 'sight' ? ` · ${esc(L(`dir.${o.dir}` as never))}, ${esc(dist)}` : '';
     const left = o.left !== undefined ? ` · <span style="color:${o.left < 180 ? 'var(--bad)' : 'var(--fog)'}">${esc(L('obj.left', { n: Math.max(1, Math.ceil(o.left / 60)) }))}</span>` : '';
     let body: string;
-    if (o.kind === 'waypoint') body = `${icon('goal', '', 'ico-sm')}${esc(L('obj.waypoint'))}${where}`;
+    if (o.kind === 'waypoint') body = `${icon('goal', '', 'ico-sm')}${esc(L('obj.waypoint', { dir: L(`dir.${o.dir!}` as never), d: dist }))}`;
     else if (o.kind === 'raid') body = `<span style="color:var(--bad)">${esc(L('obj.raid', { name: placeName(o.title) }))}</span>${where}${left.replace('var(--fog)', 'var(--bad)')}`;
     else if (o.kind === 'quest') body = `${esc(sv(o.title))}: <span class="muted">${esc(sv(o.text))}</span>${where}`;
     else if (o.kind === 'contract') body = `${esc(L('obj.contract'))} — ${esc(sv(o.title))}${o.text ? ` ${esc(o.text)}` : ''}${where}${left}`;
@@ -1252,41 +1252,23 @@ export class Hud {
     el.querySelectorAll<HTMLElement>('[data-pf]').forEach((b) => (b.onclick = () => this.onPartyTap(b.dataset.pf!)));
   }
 
-  chat(from: string, text: string, ch?: 'group' | 'guild' | 'whisper', to?: string, card?: SagaCard): void {
-    const log = $('chat-log');
-    const d = document.createElement('div');
-    if (ch) d.className = `chat-${ch}`;
-    // A whisper: from someone, or one's own words to someone (echoed back).
-    const tag = ch === 'group' ? L('chatGroup') : ch === 'guild' ? L('chatGuild') : ch === 'whisper' ? (to ? L('chatWhisperTo', { name: to }) : L('chatWhisper')) : '';
-    // A chapter of a saga shared: a postcard (docs/12 P10 #20).
-    d.innerHTML = card ? `<b>${esc(from)}:</b> ${sagaCardHtml(card)}` : `${tag ? `<i>${esc(tag)}</i> ` : ''}${to ? '' : `<b>${esc(from)}:</b> `}${esc(text)}`;
-    log.append(d);
-    // Sixty lines kept (the channels filter them); closed, the chat shows its last eight.
-    while (log.children.length > 60) log.firstChild!.remove();
-    log.scrollTop = log.scrollHeight;
+  /** The players' chat (client/src/ui/chat.ts). */
+  readonly chatPanel = new ChatPanel();
+
+  chat(m: ChatLine): void {
+    this.chatPanel.add(m);
   }
 
   /** The chat's channels (docs/11 P6): all, the group, the guild, whispers — a filter on the lines, and where
    *  words without a prefix go. */
   chatTabs(onPick: (ch: ChatChannel) => void): void {
-    const el = $('chat-tabs');
-    const chat = $('chat');
-    const cur = (chat.dataset.filter as ChatChannel | undefined) ?? 'all';
-    el.innerHTML = CHAT_CHANNELS.map((ch) => `<button class="ct${ch === cur ? ' on' : ''}" data-ct="${ch}">${esc(L(`ct_${ch}`))}</button>`).join('');
-    el.querySelectorAll<HTMLElement>('[data-ct]').forEach((b) => b.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); // the field keeps its focus (and a phone its keyboard)
-      const ch = b.dataset.ct as ChatChannel;
-      chat.dataset.filter = ch;
-      el.querySelectorAll('.ct').forEach((x) => x.classList.toggle('on', x === b));
-      const log = $('chat-log');
-      log.scrollTop = log.scrollHeight;
-      onPick(ch);
-    }));
+    this.chatPanel.onPick = onPick;
+    this.chatPanel.tabs();
   }
 }
 
-export type ChatChannel = 'all' | 'group' | 'guild' | 'whisper';
-const CHAT_CHANNELS: ChatChannel[] = ['all', 'group', 'guild', 'whisper'];
+export type { ChatChannel };
+
 
 function sanityWord(v: number): string {
   return L(v > 75 ? 'sanity.clear' : v > 50 ? 'sanity.uneasy' : v > 25 ? 'sanity.afraid' : v > 10 ? 'sanity.terror' : 'sanity.madness');

@@ -235,7 +235,7 @@ export const EN = {
   'login.hint': 'A pirate-gothic sea for many captains · early build',
   'captain.choose': 'Choose your captain',
   'hud.unread': 'Letters waiting — [Y]',
-  'hud.chatPh': 'Enter to speak…',
+  'hud.chatPh': 'Say a word…',
   'hud.chatPhTouch': 'Say a word… (/g — your group, /w Name — a whisper)',
   'conn.reconnecting': 'Reconnecting to the Admiralty…',
   'opt.music': 'Music',

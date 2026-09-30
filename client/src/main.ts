@@ -196,7 +196,7 @@ hud.onHunt = (action, id) => net.send(action === 'flense' ? { t: 'hunt', action,
 hud.onTribute = (id) => net.send({ t: 'tribute', id });
 companyScreen.onWhisper = (name) => {
   const input = $('chat-input') as HTMLInputElement;
-  $('chat').classList.add('open');
+  hud.chatPanel.open(false);
   input.value = whisperPrefill = `${lang() === 'ru' ? '/ш' : '/w'} ${name} `;
   input.focus();
 };
@@ -281,6 +281,8 @@ loadAssets(null).then(() => {
   buildMicroMenu();
   hud.artEpoch++;
   touch.dress();
+  hud.chatPanel.art();
+  hud.chatPanel.tabs();
   const url = assetUrl('art.keyart');
   const ka = document.querySelector<HTMLElement>('.keyart');
   if (ka && url) ka.style.backgroundImage = `url('${url}')`;
@@ -487,7 +489,7 @@ function onMessage(m: ServerMsg): void {
       break;
     }
     case 'chat':
-      hud.chat(m.from, m.text, m.ch, m.to, m.card);
+      hud.chat(m);
       break;
     case 'duel':
       if (m.view && m.view.startsIn === 5) hud.banner(L('duel'), m.view.sides.map((side) => side.map((x) => x.name).join(', ')).join(`  ${L('against')}  `));
@@ -787,11 +789,10 @@ function stripKeyHints(root: HTMLElement): void {
 function openMenuItem(m: MenuItem): void {
   if (m === 'chat') {
     if (modal) closeModal();
-    $('chat').classList.add('open');
     const input = $('chat-input') as HTMLInputElement;
-    // A touch keyboard has no Enter to name: the hint says what to do, and a tap away closes an empty chat.
-    if (touch.enabled) input.placeholder = t('hud.chatPhTouch');
-    input.focus();
+    // A touch keyboard has no Enter to name: the hint says what to do.
+    if (touch.enabled && hud.chatPanel.filter === 'all') input.placeholder = t('hud.chatPhTouch');
+    hud.chatPanel.open(!touch.enabled);
   } else if (m === 'company') {
     companyScreen.open();
     openModal('company');
@@ -812,6 +813,37 @@ const chatChannels = () => hud.chatTabs((ch) => {
 });
 chatChannels();
 onLang(chatChannels);
+onLang(() => hud.chatPanel.art());
+// Who the reader is and who is near her: the colour of each name in the chat.
+hud.chatPanel.context = () => ({
+  self: state.self?.name ?? null,
+  group: (state.party?.members ?? []).map((x) => x.name),
+  guild: (state.guild?.members ?? []).map((x) => x.name),
+  friends: state.friends.map((f) => f.name),
+});
+hud.chatPanel.onSend = () => sendChat();
+
+/** What is in the chat's field goes where it is addressed: a command, the channel picked, or everyone. */
+function sendChat(): void {
+  const chatInput = $('chat-input') as HTMLInputElement;
+  const filter = hud.chatPanel.filter;
+  const said = chatInput.value.trim();
+  if (said === whisperPrefill.trim()) {
+    chatInput.value = '';
+    return;
+  }
+  // "/g …" speaks to your group only.
+  if (/^\/ritual\b/i.test(said)) net.send({ t: 'abyss', action: 'ritual' });
+  else if (/^\/gc\s/i.test(said)) net.send({ t: 'guild', action: 'say', text: said.slice(4) });
+  else if (/^\/g\s/i.test(said)) net.send({ t: 'group', action: 'say', text: said.slice(3) });
+  // Words with no command go to the chosen channel: the group, the guild, the last whisperer, or all.
+  else if (said && !said.startsWith('/') && filter === 'group') net.send({ t: 'group', action: 'say', text: said });
+  else if (said && !said.startsWith('/') && filter === 'guild') net.send({ t: 'guild', action: 'say', text: said });
+  else if (said && !said.startsWith('/') && filter === 'whisper') net.send({ t: 'chat', text: `/r ${said}` });
+  else if (said) net.send({ t: 'chat', text: said });
+  chatInput.value = '';
+  whisperPrefill = '';
+}
 $('hud-map').onclick = () => toggle('map');
 $('hud-prompt').addEventListener('click', (e) => {
   if ((e.target as HTMLElement).closest('[data-open-base]')) openBase();
@@ -838,47 +870,33 @@ function typing(): boolean {
   return !!a && (a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.tagName === 'TEXTAREA');
 }
 
-// The chat folds away when its field is left empty (a tap elsewhere on a phone); Esc closes it on a keyboard.
+// The chat stays open until its button, its × or Esc folds it away; a whisper's address left alone is cleared.
 ($('chat-input') as HTMLInputElement).addEventListener('blur', () => {
   const input = $('chat-input') as HTMLInputElement;
   setTimeout(() => {
-    if (document.activeElement === input) return;
-    // Nothing said (a whisper's address alone counts as nothing): the chat folds away.
-    if (input.value === whisperPrefill) input.value = '';
-    if (!input.value.trim()) $('chat').classList.remove('open');
+    if (document.activeElement !== input && whisperPrefill && input.value === whisperPrefill) input.value = '';
   }, 150);
 });
 
 addEventListener('keydown', (e) => {
   if (!inGame) return;
   const chatInput = $('chat-input') as HTMLInputElement;
-  if (e.key === 'Escape' && $('chat').classList.contains('open')) {
-    chatInput.value = '';
-    $('chat').classList.remove('open');
-    chatInput.blur();
+  if (e.key === 'Escape' && hud.chatPanel.isOpen) {
+    // Esc in the field leaves it (the keys steer the ship again); Esc once more folds the chat away.
+    if (document.activeElement === chatInput) {
+      if (chatInput.value === whisperPrefill) chatInput.value = '';
+      chatInput.blur();
+    } else hud.chatPanel.close();
     e.preventDefault();
     return;
   }
   if (e.key === 'Enter') {
-    const chat = $('chat');
-    if (chat.classList.contains('open')) {
-      const said = chatInput.value.trim();
-      // "/g …" speaks to your group only.
-      if (/^\/ritual\b/i.test(said)) net.send({ t: 'abyss', action: 'ritual' });
-      else if (/^\/gc\s/i.test(said)) net.send({ t: 'guild', action: 'say', text: said.slice(4) });
-      else if (/^\/g\s/i.test(said)) net.send({ t: 'group', action: 'say', text: said.slice(3) });
-      // Words with no command go to the chosen channel: the group, the guild, the last whisperer, or all.
-      else if (said && !said.startsWith('/') && chat.dataset.filter === 'group') net.send({ t: 'group', action: 'say', text: said });
-      else if (said && !said.startsWith('/') && chat.dataset.filter === 'guild') net.send({ t: 'guild', action: 'say', text: said });
-      else if (said && !said.startsWith('/') && chat.dataset.filter === 'whisper') net.send({ t: 'chat', text: `/r ${said}` });
-      else if (said) net.send({ t: 'chat', text: said });
-      chatInput.value = '';
-      chat.classList.remove('open');
-      chatInput.blur();
-    } else {
-      chat.classList.add('open');
-      chatInput.focus();
-    }
+    // Enter opens the chat and its field; Enter in the field sends (an empty field gives the keys back).
+    if (document.activeElement === chatInput) {
+      if (chatInput.value.trim()) sendChat();
+      else chatInput.blur();
+    } else if (!typing()) hud.chatPanel.open(true);
+    else return;
     e.preventDefault();
     return;
   }

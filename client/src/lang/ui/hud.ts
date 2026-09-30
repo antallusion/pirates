@@ -102,6 +102,9 @@ export const EN = {
   m: 'm',
   km: 'km',
   chatWhisperTo: '[whisper → {name}]',
+  chatSend: 'Send',
+  chatClose: 'Close the chat',
+  chatOpen: 'Chat [Enter]',
   // The target frame (canon D12).
   'tg.trivial': 'not worth the powder',
   'tg.easy': 'easy prey',
@@ -186,7 +189,7 @@ export const EN = {
   "feed.title": "News of the sea",
   "obj.map": "Treasure map",
   "obj.raid": "Pirates off {name}!",
-  "obj.waypoint": "Your mark",
+  "obj.waypoint": "Your mark to the {dir}, {d}",
   "wpArrived": "You are at your mark: it comes off the chart.",
 } as const;
 
@@ -292,6 +295,9 @@ export const RU: Record<keyof typeof EN, string> = {
   m: 'м',
   km: 'км',
   chatWhisperTo: '[шёпот → {name}]',
+  chatSend: 'Отправить',
+  chatClose: 'Закрыть чат',
+  chatOpen: 'Чат [Enter]',
   'tg.trivial': 'не стоит пороха',
   'tg.easy': 'лёгкая добыча',
   'tg.even': 'равный бой',
@@ -375,6 +381,6 @@ export const RU: Record<keyof typeof EN, string> = {
   "feed.title": "Вести моря",
   "obj.map": "Карта сокровищ",
   "obj.raid": "Пираты у острова {name}!",
-  "obj.waypoint": "Ваша отметка",
+  "obj.waypoint": "Ваша отметка на {dir}, {d}",
   "wpArrived": "Вы у своей отметки — она снята с карты.",
 };
