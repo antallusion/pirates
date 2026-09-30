@@ -523,15 +523,17 @@ export class WorldMap {
       if (!p) continue;
       const fresh = Math.max(0.25, 1 - (now - it.t) / 5400); // knowledge fades over ~1.5 h
       // What is dear and cheap there (docs/16 #11): small goods by the crest, faded with the knowledge's age.
-      if (this.zoom >= 1.3) demandMarks(g, it, tx(p.x) + ms * 0.62, ty(p.y), Math.max(12, Math.min(18, 8 + this.zoom * 1.6)), fresh);
-      // Price notes only at a closer zoom, and only where they fit.
+      const dm = Math.max(15, Math.min(24, 11 + this.zoom * 2));
+      const marked = this.zoom >= 1.3 && !!(it.dear?.length || it.cheap?.length);
+      if (marked) demandMarks(g, it, tx(p.x) + ms * 0.55, ty(p.y), dm, fresh);
+      // Price notes only at a closer zoom, and only where they fit (under the marks when there are any).
       if (this.zoom < 1.6) continue;
       g.font = '10px Inter, sans-serif';
-      label(it.heard ? DL('map.heard', { age: age(it.t) }) : L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.6, ty(p.y) + ms * 0.15 + (it.dear?.length || it.cheap?.length ? 9 : 0), `rgba(143,179,217,${0.85 * fresh})`);
+      label(it.heard ? DL('map.heard', { age: age(it.t) }) : L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.55, ty(p.y) + (marked ? dm * 1.45 + 6 : ms * 0.15), `rgba(143,179,217,${0.85 * fresh})`);
       if (this.zoom > 1.8) {
         it.top.forEach(([good, price], i) => {
           g.fillStyle = `rgba(224,184,98,${0.9 * fresh})`;
-          g.fillText(`${GOODS[good].name} ${price}`, tx(p.x) + ms * 0.6, ty(p.y) + ms * 0.15 + 12 + i * 11);
+          g.fillText(`${GOODS[good].name} ${price}`, tx(p.x) + ms * 0.55, ty(p.y) + (marked ? dm * 1.45 + 6 : ms * 0.15) + 12 + i * 11);
         });
       }
     }

@@ -2,7 +2,7 @@
 // ports (#13), the tavern's whispers for silver (#14), repairs at sea set against the yard's (#15). The clocks tick in
 // place (no redraw of the harbour page, so a half-typed bid is not lost); a whisper bought becomes her mark.
 
-import { RELIABILITY, RESERVE_MAX, RESERVE_MIN, RUN_HOUSES, RUN_LEGS, RUN_SLOTS, OWN_LOTS } from '../../../shared/src/data/dealings.ts';
+import { AUCTION_BIDDERS, RELIABILITY, RESERVE_MAX, RESERVE_MIN, RUN_HOUSES, RUN_LEGS, RUN_SLOTS, OWN_LOTS } from '../../../shared/src/data/dealings.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { RARITY_NAMES, SLOT_NAMES, itemName, itemSlot, itemValue } from '../../../shared/src/data/items.ts';
 import type { ClientMsg, HearsayView, PortView, PrivateState, TradeRunView } from '../../../shared/src/protocol.ts';
@@ -17,6 +17,8 @@ import { compassKey, setWaypoint } from './track.ts';
 
 const L = dict(EN, RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
+/** A tenth-precise number the reader's way (6.7 / 6,7). */
+const num1 = (n: number) => (ru() ? String(n).replace('.', ',') : String(n));
 
 // ------------------------------------------------------------------ the clocks
 
@@ -55,6 +57,12 @@ if (typeof window !== 'undefined') window.setInterval(tick, 1000);
 function clockFor(state: ClientState): void {
   worldNow = () => state.estServerTime();
   queueMicrotask(tick);
+}
+
+/** A bidder of the room by its own name in her language; a captain by hers. */
+function bidder(n: string): string {
+  const b = AUCTION_BIDDERS.find((x) => x[0] === n);
+  return b ? b[ru()] : personName(n);
 }
 
 function portNameOf(state: ClientState, id: string): string {
@@ -109,7 +117,7 @@ export function auctionCard(view: PortView, state: ClientState): string {
   const lots = au.lots.map((l) => {
     const slot = itemSlot(l.item);
     const who = l.mine ? L('au.mine') : l.seller ? L('au.seller', { name: personName(l.seller) }) : L('au.house');
-    const lead = l.leading ? `<span class="dl-lead">${esc(L('au.you'))}</span>` : l.leader ? `<span class="muted">${esc(L('au.leader', { name: personName(l.leader) }))}</span>` : '';
+    const lead = l.leading ? `<span class="dl-lead">${esc(L('au.you'))}</span>` : l.leader ? `<span class="muted">${esc(L('au.leader', { name: bidder(l.leader) }))}</span>` : '';
     const can = !l.mine && !l.leading;
     return `<div class="au-lot"><details><summary>${itemIcon(l.item, slot, 'ico-md')}<span class="au-name">${coloured(l.item)}<span class="muted">${esc(RARITY_NAMES[l.item.rarity][ru()])} · ${esc(SLOT_NAMES[slot][ru()])} · ⚓${l.item.ilvl} · ${esc(who)}</span></span></summary>${itemCardHtml(l.item)}</details>
       <div class="au-state"><span class="au-bid">${esc(l.bids ? L('au.standing') : L('au.opening'))} ${money(l.bid)}</span><span class="muted">${esc(L('au.worth', { n: fmt(l.worth) }))}${l.bids ? ` · ${esc(L('au.bids', { n: l.bids }))}` : ''}</span>${lead}
@@ -174,9 +182,9 @@ export function noteHearsay(self: PrivateState | null): void {
 export function repairCompare(view: PortView): string {
   const r = view.seaRepair;
   if (!r) return '';
-  return `<div class="rep-cmp"><div class="rep-way sea"><b>${icon('good_planks', '', 'ico-sm')}${esc(L('rep.sea'))}</b><span class="tag">${esc(L('rep.slow'))}</span>
-      <p>${esc(L('rep.seaText', { hull: r.hullPerMin, sails: r.sailsPerMin }))}</p>${r.minutes ? `<p class="muted">${esc(L('rep.seaNeeds', { min: r.minutes, planks: r.planks, cloth: r.cloth, hp: r.havePlanks, hc: r.haveCloth }))}</p>` : ''}</div>
-    <div class="rep-way port"><b>${icon('anchor', '', 'ico-sm')}${esc(L('rep.port'))}</b><span class="tag tag-gold">${esc(L('rep.fast'))}</span><p>${esc(L('rep.portText'))}</p></div></div>`;
+  return `<div class="rep-cmp"><div class="rep-way sea"><div class="rep-h"><b>${icon('good_planks', '', 'ico-sm')}${esc(L('rep.sea'))}</b><span class="tag">${esc(L('rep.slow'))}</span></div>
+      <p>${esc(L('rep.seaText', { hull: num1(r.hullPerMin), sails: num1(r.sailsPerMin) }))}</p>${r.minutes ? `<p class="muted">${esc(L('rep.seaNeeds', { min: r.minutes, planks: r.planks, cloth: r.cloth, hp: r.havePlanks, hc: r.haveCloth }))}</p>` : ''}</div>
+    <div class="rep-way port"><div class="rep-h"><b>${icon('anchor', '', 'ico-sm')}${esc(L('rep.port'))}</b><span class="tag tag-gold">${esc(L('rep.fast'))}</span></div><p>${esc(L('rep.portText'))}</p></div></div>`;
 }
 
 /** The line at sea: what mending would take, or how the carpenters are getting on. */
@@ -186,9 +194,9 @@ export function repairPrompt(self: PrivateState, you: { hull: number; hullMax: n
   const hurt = you.hull < you.hullMax * 0.97 || you.sails < you.sailsMax * 0.95;
   if (!hurt) return '';
   const btn = `<button class="btn btn-small prompt-btn" data-sea-repair>${esc(repairing ? L('rep.stop') : L('rep.start'))}</button>`;
-  if (repairing) return `${esc(L('rep.working', { rate: String(r.hullPerMin).replace('.', ru() ? ',' : '.'), min: r.minutes, planks: r.havePlanks, cloth: r.haveCloth }))} ${btn}`;
+  if (repairing) return `${esc(L('rep.working', { rate: num1(r.hullPerMin), min: r.minutes, planks: r.havePlanks, cloth: r.haveCloth }))} ${btn}`;
   if (r.havePlanks < Math.min(1, r.planks) && r.haveCloth < Math.min(1, r.cloth)) return `<span class="muted">${esc(L('rep.short', { planks: r.havePlanks, need: r.planks, cloth: r.haveCloth, needc: r.cloth }))}</span>`;
-  const line = esc(L('rep.prompt', { pct: Math.round((you.hull / you.hullMax) * 100), key: '\u0000', rate: String(r.hullPerMin).replace('.', ru() ? ',' : '.'), planks: r.planks })).replace('\u0000', `<kbd>${esc(key)}</kbd>`);
+  const line = esc(L('rep.prompt', { pct: Math.round((you.hull / you.hullMax) * 100), key: '\u0000', rate: num1(r.hullPerMin), planks: r.planks })).replace('\u0000', `<kbd>${esc(key)}</kbd>`);
   return `${line} ${btn}`;
 }
 

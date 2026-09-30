@@ -2944,9 +2944,10 @@ body.tac #toasts { top: 22%; }
   .tb-hint { font-size: 10.5px; }
   .tb-banner b { font-size: 26px; }
 }
-/* A desk: the captains' columns either side of a large field. */
-@media (min-width: 1100px) and (min-height: 521px) {
-  .tb-root { grid-template-columns: 280px minmax(0, 1fr) 280px; grid-template-rows: auto minmax(0, 1fr) auto;
+/* A desk (and a tablet on its side, a desk window at 125–150%): the captains' columns either side of a large field,
+   as narrow as their words allow, so the hexes take the width (docs/16 batch C: the field was a third of a desk). */
+@media (min-width: 900px) and (min-height: 521px) and (min-aspect-ratio: 7/5) {
+  .tb-root { grid-template-columns: clamp(172px, 16vw, 236px) minmax(0, 1fr) clamp(172px, 16vw, 236px); grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas: "you mid foe" "spells stage queue" "acts stage feed"; gap: 10px; padding: 12px 16px; font-size: 13px; }
   .tb-face { width: 58px; height: 58px; }
   .tb-who b { font-size: 19px; }
@@ -2957,7 +2958,9 @@ body.tac #toasts { top: 22%; }
   .tb-queue { flex-wrap: wrap; align-content: flex-start; overflow: visible; }
   .tb-q { width: 40px; height: 40px; }
   .tb-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: end; }
-  .tb-acts .btn { min-height: 40px; font-size: 13px; }
+  .tb-acts .btn { min-height: 40px; font-size: clamp(11px, 0.9vw, 13px); white-space: normal; line-height: 1.1; padding: 4px 3px; letter-spacing: 0; }
+  .tb-acts .btn-danger { grid-column: span 2; }
+  .tb-spell small { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .tb-feed { font-size: 13px; justify-content: flex-end; }
   .tb-round { font-size: 22px; }
   .tb-turn { font-size: 13px; }
@@ -3009,8 +3012,10 @@ body.tac #toasts { top: 22%; }
 .hs-row > .btn, .hs-row > .tag { flex: none; }
 .rep-cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .rep-way { border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 7px 9px; background: rgba(0, 0, 0, 0.18); min-width: 0; }
-.rep-way > b { display: inline-flex; align-items: center; gap: 5px; font-family: var(--serif); font-size: 14.5px; color: #f0e6cc; }
-.rep-way .tag { margin-left: 6px; }
+.rep-h { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.rep-h > b { display: inline-flex; align-items: center; gap: 5px; font-family: var(--serif); font-size: 14.5px; color: #f0e6cc; }
+.rep-h .tag { margin: 0; }
+.rep-way p { font-family: var(--sans); }
 .rep-way p { margin: 5px 0 0; font-size: 12px; line-height: 1.35; }
 .rep-way.port { border-color: rgba(224, 184, 98, 0.35); }
 @media (max-width: 560px) { .rep-cmp { grid-template-columns: minmax(0, 1fr); } .au-time { margin-left: 0; } }

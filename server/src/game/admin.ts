@@ -78,6 +78,7 @@ import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
 import type { HolidayId } from '../../../shared/src/data/holidays.ts';
 import { sagaNote } from './saga.ts';
 import { struck } from './struck.ts';
+import { lotsOf } from './auction.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -85,7 +86,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -678,6 +679,24 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.hull = 0;
       game.beginSinking(ship);
       return 'She goes down.';
+    case 'hurt': {
+      // Hull and sails down to N% (repairs at sea, docs/16 #15).
+      const n = Math.max(1, Math.min(100, num(0, 50)));
+      ship.hull = ship.stats.hullMax * n / 100;
+      ship.sails = ship.stats.sailHpMax * Math.min(1, (n + 20) / 100);
+      game.pushSelf(s, true);
+      return `Hull at ${Math.round(n)}%.`;
+    }
+    case 'auction': {
+      // The trophy auction (docs/16 #13): its lots here close in seconds, or the room bids at once.
+      const here = ship.docked;
+      const lots = lotsOf(game).filter((l) => !here || l.port === here);
+      for (const l of lots) {
+        if (args[0] === 'end') l.endsAt = game.wallNow() + 5000;
+        else l.roomAt = game.wallNow();
+      }
+      return `${lots.length} lots stirred.`;
+    }
     case 'heal':
       mend(ship);
       ship.crew = Math.max(ship.crew, ship.stats.crewMax);

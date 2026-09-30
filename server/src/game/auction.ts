@@ -60,6 +60,12 @@ function save(game: Game): void {
   game.db.setKv('auction', house(game));
 }
 
+/** The captains in that port see the block as it stands now. */
+function refresh(game: Game, ports: Set<string>): void {
+  if (!ports.size) return;
+  for (const s of game.sessions) if (s.ship?.docked && ports.has(s.ship.docked)) game.pushPort(s);
+}
+
 /** The next bid the lot will take. */
 export function nextBid(l: Lot): number {
   return l.bid > 0 ? l.bid + minRaise(l.bid) : l.open;
@@ -167,6 +173,7 @@ export function bid(game: Game, s: PlayerSession, port: Port, id: string, amount
   game.db.ledger(s.accountId, 'auction_bid', -amount, l.id);
   place(game, l, amount, { account: s.accountId, name: s.name });
   save(game);
+  refresh(game, new Set([port.id]));
   return null;
 }
 
@@ -221,11 +228,13 @@ export function stepAuction(game: Game): void {
   const h = house(game);
   const now = game.wallNow();
   let changed = stock(game);
+  const moved = new Set<string>();
   for (const l of [...h.lots]) {
     if (now >= l.endsAt) {
       close(game, l);
       h.lots = h.lots.filter((x) => x !== l);
       changed = true;
+      moved.add(l.port);
       continue;
     }
     // The room: it bids when a captain leads (or no one has bid), up to what the piece is worth to it.
@@ -237,9 +246,12 @@ export function stepAuction(game: Game): void {
       const who = game.rng.pick(AUCTION_BIDDERS)[0];
       place(game, l, nextBid(l), { account: null, name: who });
       changed = true;
+      moved.add(l.port);
     }
   }
   if (changed) save(game);
+  if (moved.size && stock(game)) save(game);
+  refresh(game, moved);
 }
 
 export function auctionView(game: Game, s: PlayerSession, port: Port): AuctionView | null {

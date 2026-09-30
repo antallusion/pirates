@@ -3,8 +3,8 @@
 
 export const SERVER_RU_ADMIN: Record<string, string> = {
   ' (by night)': ' (ночью)',
-  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]':
-    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast · /strike [роль] [класс] · /streak N · /heading градусы|wind · /isle [уровень] · /yard [n] · /oship роль [уровень] · /raid [land|tax|calm]',
+  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room':
+    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast · /strike [роль] [класс] · /streak N · /heading градусы|wind · /isle [уровень] · /yard [n] · /oship роль [уровень] · /raid [land|tax|calm] · /hurt N · /auction end|room',
   'A fireship is coming.': 'Идёт брандер.',
   'A {0} berthed at your island.': 'У вашего острова стоит у причала: {0}.',
   'Dismasted.': 'Мачта сбита.',
@@ -87,4 +87,6 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   'Streak: {0}.': 'Серия: {0}.',
   'Heading {0}°.': 'Курс {0}°.',
   'No ship.': 'Корабля нет.',
+  'Hull at {0}%.': 'Корпус на {0}%.',
+  '{0} lots stirred.': 'Лотов расшевелено: {0}.',
 };

@@ -53,7 +53,7 @@ export function makeRun(game: Game, from: Port, leg: number, house = game.rng.in
   const cost = Math.ceil(midPrice(good, gm) * 1.06);
   // The house's price there: what the far market pays, and never less than a tenth over what it cost here.
   const pay = Math.round(Math.max(midPrice(good, game.markets.get(to.id)!.goods[good]!), cost * 1.1));
-  const bonus = Math.round((qty * cost * 0.12 + d / 40) * (1 + RUN_CHAIN_STEP * (leg - 1)) * game.econRewardMul);
+  const bonus = Math.round((qty * cost * 0.1 + d / 60) * (1 + RUN_CHAIN_STEP * (leg - 1)) * game.econRewardMul);
   return { id: `run${seq++}`, house, leg, good, qty, from: from.id, to: to.id, pay, cost, bonus, window: runWindow(d), early: 0, deadline: 0, dist: Math.round(d) };
 }
 
