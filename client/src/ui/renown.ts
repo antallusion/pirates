@@ -84,6 +84,10 @@ export function renderCareer(body: HTMLElement, state: ClientState, send: (m: Cl
 // ------------------------------------------------------------------ 28. the album
 
 const BEAST_ICON: Record<BeastId, string> = { orca: 'good_orca_tooth', white_orca: 'item_white_orca_tooth', humpback: 'good_baleen', sperm_whale: 'good_ambergris', narwhal: 'good_narwhal_tusk', shark: 'good_shark_skin', young_serpent: 'good_serpent_scale' };
+const TROPHY_ICON: Record<string, string> = {
+  'Leviathan Skull': 'deed_leviathan_slain', 'Kraken Eye': 'tattoo_kraken', 'Bell of the Whale': 'tattoo_bell', 'Lure of the Maw': 'boon_lantern', 'Serpent Fang': 'mod_serpent_scale',
+  "Drey's Lantern": 'tattoo_lantern', 'Crown of Wrecks': 'map_wreck', 'Veil of the Widow': 'fh_weeping_widow', 'Skull of an Ancient': 'tattoo_skull', 'A Shard of the Eye': 'tattoo_eye',
+};
 const SET_ICON: Record<SetId, string> = { fish: 'fish_tuna', wonders: 'wonder_coral', omens: 'omen_albatross', trophies: 'map_monster', beasts: 'good_whalebone', letters: 'tattoo_bottle' };
 
 function piece(set: SetId, id: string): { ico: string; name: string } {
@@ -91,7 +95,7 @@ function piece(set: SetId, id: string): { ico: string; name: string } {
     case 'fish': return { ico: fishIcon(id, 'rn-ico'), name: FISH[id as FishId].name[ru()] };
     case 'wonders': return { ico: icon(`wonder_${id}`, '✦', 'rn-ico'), name: WONDER_KINDS[id as WonderKind].name[ru()] };
     case 'omens': return { ico: icon(`omen_${id}`, '✦', 'rn-ico'), name: OMENS[id as OmenId].name[ru()] };
-    case 'trophies': return { ico: icon('map_monster', '✦', 'rn-ico'), name: sv(id) };
+    case 'trophies': return { ico: icon(TROPHY_ICON[id] ?? 'map_monster', '✦', 'rn-ico'), name: sv(id) };
     case 'beasts': return { ico: icon(BEAST_ICON[id as BeastId], '✦', 'rn-ico'), name: BEASTS[id as BeastId].name[ru()] };
     case 'letters': return { ico: `${icon('tattoo_bottle', '✉', 'rn-ico')}<b class="rn-n">${Number(id) + 1}</b>`, name: L('letter', { n: Number(id) + 1 }) };
   }
@@ -138,7 +142,7 @@ export function weeklyLog(w: WeeklyView | null | undefined): string {
       <span class="${c.place && c.place <= 3 ? 'gold' : 'muted'}">${esc(L('weeklyMine', { v: fmt(c.mine), unit: def.unit[ru()] }))}${c.place ? ` · ${esc(L('weeklyPlace', { n: c.place }))}` : ''}</span>${top}</div></div>`;
   }).join('');
   const last = w.last?.filter((c) => c.top.length).map((c) => `<p class="jr-fish muted">${esc(weeklyWhat(c.kind, c.region))}: <b>${esc(c.top[0].name)}</b></p>`).join('') ?? '';
-  return `<div class="jr-fishing jr-weekly"><div class="giver-h with-ico">${icon('goal', '', 'ico-md')}${esc(L('weekly'))} <span class="muted">· ${esc(left)}</span></div>${rows}
+  return `<div class="jr-fishing jr-weekly"><div class="giver-h with-ico">${icon('goal', '', 'ico-md')}${esc(L('weekly'))}</div><p class="jr-fish muted wk-left">${esc(left)}</p>${rows}
     <p class="jr-fish muted">${esc(L('weeklyPrizes', { a: fmt(w.prizes[0]), b: fmt(w.prizes[1]), c: fmt(w.prizes[2]), title: sv(WEEKLY_TITLE) }))}</p>
     ${last ? `<div class="giver-h">${esc(L('weeklyLast'))}</div>${last}` : ''}</div>`;
 }

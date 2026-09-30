@@ -3,8 +3,8 @@
 
 export const SERVER_RU_ADMIN: Record<string, string> = {
   ' (by night)': ' (ночью)',
-  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /log · /career crown|league|confederacy N · /album · /week [close] · /away H':
-    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast · /strike [роль] [класс] · /war [patrol] · /streak N · /heading градусы|wind · /isle [уровень] · /yard [n] · /oship роль [уровень] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /log · /career crown|league|confederacy N · /album · /week [close] · /away H',
+  '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away H':
+    '/speed N · /xp N · /level N · /silver N · /tp порт|регион|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather погода [регион] · /time час · /god · /ship класс · /heal · /ammo · /give товар n · /reveal · /sink · /spawn роль класс фракция · /board [роль] [класс] [экипаж] · /fireship · /mast · /strike [роль] [класс] · /war [patrol] · /streak N · /heading градусы|wind · /isle [уровень] · /yard [n] · /oship роль [уровень] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away H',
   'A fireship is coming.': 'Идёт брандер.',
   'A {0} berthed at your island.': 'У вашего острова стоит у причала: {0}.',
   'Dismasted.': 'Мачта сбита.',
@@ -100,6 +100,8 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   "Silas Gault": "Сайлас Голт",
   "Usage: /career crown|league|confederacy N": "Формат: /career crown|league|confederacy N",
   "Career deeds set: {0}.": "Очки дел карьеры: {0}.",
+  "A lot of yours sold while you were ashore.": "Ваш лот продан, пока вы были на берегу.",
+  "Feats counted.": "Подвиги засчитаны.",
   "The album is filled in.": "Альбом заполнен.",
   "The week’s tables are stirred.": "Таблицы недели оживлены.",
   "Not long enough ashore.": "Слишком мало времени на берегу.",

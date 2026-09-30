@@ -3109,10 +3109,19 @@ body.tac #toasts { top: 22%; }
 .jr-weekly .giver-h .muted { font-weight: 400; text-transform: none; letter-spacing: 0; }
 .away .aw-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 8px; }
 .away .aw-cards .card { margin: 0; }
-.away .aw-line { margin: 3px 0; font-size: 13px; line-height: 1.4; }
+.away .aw-line { margin: 3px 0; font: 13px/1.4 var(--sans); }
 .away .aw-gift { border-color: var(--gold); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .away .aw-gift h4 { flex: 1 0 100%; margin: 0; }
 .away .aw-gift .aw-line { flex: 1 1 220px; }
 .away .aw-acts { display: flex; justify-content: flex-end; margin-top: 8px; }
 .uf-name .uf-title { display: block; font: italic 11px/1.1 var(--sans); color: var(--gold); overflow: hidden; text-overflow: ellipsis; }
 .tg .tg-title { color: var(--gold); font-style: italic; }
+/* The company window has ten tabs with the career and the album (docs/16 #26, 28): on a wide screen too they share
+   the strip evenly as pictures (the name on hover), and the open tab's name stands under the strip. */
+@media (min-width: 700px) and (min-height: 521px) {
+  .tabs.icon-tabs.company-tabs { display: grid; grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); padding: 0 12px; }
+  .company-tabs .tab { justify-content: center; min-width: 0; padding-left: 2px; padding-right: 2px; }
+  .company-tabs .tab .ico { margin: 0; width: 32px; height: 32px; }
+  .company-tabs .tab span { display: none; }
+  .company-tabs + .tab-caption { display: block; padding: 6px 12px 4px; font: 600 12px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); text-align: center; border-bottom: 1px solid rgba(140, 107, 58, 0.35); }
+}
