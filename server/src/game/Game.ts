@@ -25,7 +25,7 @@ import { assignResident, buyIsland, estateView, isleForge, foundOutpost, goHome,
 import { appraise, bribeClerk, buyTip, demandTribute, raidFate, raidKill, stepRaiding } from './raiding.ts';
 import { payInformant, stepWanted, wantedKill } from './wanted.ts';
 import { beastSecond, beastSlain, huntOrder, stepBeasts } from './beasts.ts';
-import { dropDeepLine, endFight, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
+import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap, stepFishing } from './fishing.ts';
 import { chooseEncounter, stepDirector } from './director.ts';
 import { stepSeaLife } from './sealife.ts';
 import { localTraffic, stepTraffic } from './traffic.ts';
@@ -2819,6 +2819,10 @@ export class Game {
             return err(dropDeepLine(this, s));
           case 'salt':
             return err(saltCatch(this, s));
+          case 'cast':
+            return err(castNet(this, s));
+          case 'net':
+            return err(endHaul(this, s, Number(msg.id), msg.pulls));
           default:
             return err('Unknown order');
         }

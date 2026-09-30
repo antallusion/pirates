@@ -163,6 +163,64 @@ export function playFight(p: FightParams, holds: [number, number][], craft: numb
   return st;
 }
 
+// ------------------------------------------------------------------------------------------------ hauling the net
+
+/**
+ * Hauling a net (owner, 2026-09-30: «fishing must not be automatic»): the captain casts, the net's floats dip one by
+ * one, and a pull in time on each dip brings that stretch of net in full. A pull too soon spooks it (the stretch is
+ * lost), none at all lets it go. The floats twitch now and then before they dip — only the dip counts. The same
+ * seed makes the same haul on the client (to play it) and the server (to judge the pulls sent back).
+ */
+export interface HaulParams {
+  /** When each float dips, seconds from the cast. */
+  dips: number[];
+  /** How long a dip lasts: a pull within it counts. */
+  window: number;
+  /** Twitches before the dips (seconds from the cast): feints, they count for nothing. */
+  twitches: number[];
+  /** The haul is over (and judged) by then. */
+  end: number;
+}
+
+export const HAUL_FLOATS = 3;
+/** What a haul brings for 0..3 floats pulled in time, as a share of the net's full haul. */
+export const HAUL_SHARE = [0, 0.6, 1, 1.3];
+/** Seconds between casts of the net, from one cast to the next. */
+export const CAST_COOLDOWN = 10;
+
+export function haulParams(seed: number, craft: number): HaulParams {
+  const rnd = mulberry(seed ^ 0x5eed);
+  const window = Math.round((0.55 + Math.min(0.25, Math.max(0, craft) / 200)) * 100) / 100;
+  const dips: number[] = [];
+  const twitches: number[] = [];
+  let t = 0.4;
+  for (let i = 0; i < HAUL_FLOATS; i++) {
+    const wait = (i === 0 ? 1.0 : 1.1) + rnd() * 1.4;
+    // A feint in the wait now and then (never within half a second of the dip itself).
+    if (rnd() < 0.75) twitches.push(Math.round((t + 0.25 + rnd() * Math.max(0.1, wait - 0.8)) * 100) / 100);
+    t += wait;
+    dips.push(Math.round(t * 100) / 100);
+    t += window;
+  }
+  return { dips, window, twitches, end: Math.round((t + 0.4) * 100) / 100 };
+}
+
+export type HaulMark = 'hit' | 'early' | 'missed';
+
+/** The haul judged from the captain's pulls (seconds from the cast): the first pull in each float's turn decides it. */
+export function judgeHaul(p: HaulParams, pulls: number[]): { hits: number; marks: HaulMark[] } {
+  const ps = (Array.isArray(pulls) ? pulls : []).filter((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0).slice(0, 40).sort((a, b) => a - b);
+  const marks: HaulMark[] = [];
+  let from = 0;
+  for (const d of p.dips) {
+    const to = d + p.window;
+    const first = ps.find((x) => x >= from && x <= to);
+    marks.push(first === undefined ? 'missed' : first >= d ? 'hit' : 'early');
+    from = to + 1e-6;
+  }
+  return { hits: marks.filter((m) => m === 'hit').length, marks };
+}
+
 /** The server's lines about fishing, English → Russian. */
 export function fishingPatterns(): [string, string][] {
   const out: [string, string][] = [

@@ -77,7 +77,10 @@ export class Hud {
   /** Tapping the target frame of a captain's ship (main.ts): inspect them. */
   onTargetTap: (name: string) => void = () => {};
   /** A fishing order from the panel (main.ts). */
-  onFishing: (action: 'trap' | 'haul' | 'deep' | 'salt') => void = () => {};
+  onFishing: (action: 'trap' | 'haul' | 'deep' | 'salt' | 'cast') => void = () => {};
+  /** The key that casts the net (main.ts: the player may rebind it) and whether a haul is being played. */
+  castKey = 'L';
+  hauling = false;
   onHunt: (action: 'slack' | 'cut' | 'flense', id?: number) => void = () => {};
   onTribute: (id: number) => void = () => {};
   private lastHuntKey = '';
@@ -1183,12 +1186,16 @@ export class Hud {
     const need: Record<string, number> = { net: 1, rod: 1, trap: 15, lamp: 30 };
     let line = '';
     if (f.method && f.skill < need[f.method]) line = L('fish.low', { n: f.skill, need: need[f.method] });
-    else if (f.method === 'net') line = inShoal ? (spd > max * 0.4 || spd < 0.5 ? L('fish.slow') : L('fish.inShoal')) : L('fish.findShoal');
+    else if (this.hauling) line = L('fish.hauling');
+    else if (f.method === 'net') line = inShoal ? (spd > max * 0.4 ? L('fish.slow') : L('fish.inShoal', { key: this.castKey })) : L('fish.findShoal');
     else if (f.method === 'rod') line = spd >= 2.5 && spd <= max * 0.8 ? L('fish.rodOk') : L('fish.rodPace');
-    else if (f.method === 'lamp') line = night && spd <= 1.5 ? L('fish.lampOk') : L('fish.lampNight');
+    else if (f.method === 'lamp') line = night && spd <= 1.5 ? L('fish.lampOk', { key: this.castKey }) : L('fish.lampNight');
     else if (f.method === 'trap') line = L('fish.traps', { n: f.traps.length, max: 3 + Math.floor(f.skill / 25) });
     const nearTrap = f.traps.some((t) => Math.hypot(t.x - own.x, t.y - own.y) < 90);
     const acts: [string, string][] = [];
+    // Every catch is the captain's own doing (owner, 2026-09-30): the net is cast by hand.
+    if (!this.hauling && f.method === 'net' && f.skill >= need.net && inShoal && spd <= max * 0.4) acts.push(['cast', L('fish.cast')]);
+    if (!this.hauling && f.method === 'lamp' && f.skill >= need.lamp && night && spd <= 1.5) acts.push(['cast', L('fish.lampCast')]);
     if (f.method === 'trap') acts.push(nearTrap ? ['haul', L('fish.haul')] : ['trap', L('fish.setTrap')]);
     if (f.method === 'rod' && f.skill >= 60) acts.push(['deep', L('fish.deep')]);
     if (fishAboard) acts.push(['salt', L('fish.salt')]);
