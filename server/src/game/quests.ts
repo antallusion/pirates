@@ -18,7 +18,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { hashString } from '../../../shared/src/rng.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { QuestDef, QuestStep } from '../../../shared/src/data/quests.ts';
-import { QUEST_PAYS, questPayOf, questRep } from '../../../shared/src/data/questpay.ts';
+import { QUEST_PAYS, questPayOf, questRep, veteranPay } from '../../../shared/src/data/questpay.ts';
 import type { QuestPay } from '../../../shared/src/data/questpay.ts';
 import type { QuestPayView } from '../../../shared/src/protocol.ts';
 import { TREES, pointsInTree } from '../../../shared/src/data/talents.ts';
@@ -592,7 +592,9 @@ function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   // The pay as chosen on taking it: all silver, or a part in fine shot or in the port's favour.
   const pay = questPayOf(st?.pay ?? 'silver', q.reward.silver, q.requires.level ?? 1);
   const mentors = mentorsNear(game, s);
-  const silver = Math.round(pay.silver * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(q.reward.xp * k * (mentors.length ? 1 + MENTOR_XP : 1));
+  // A job pays a veteran more (docs/16 P2); a story pays what it pays.
+  const vet = q.kind === 'job' ? veteranPay(p.level, q.requires.level ?? 1) : 1;
+  const silver = Math.round(pay.silver * vet * k * (fast ? 1 + FAST_BONUS : 1)), xp = Math.round(q.reward.xp * k * (mentors.length ? 1 + MENTOR_XP : 1));
   p.gold += silver;
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);
