@@ -642,7 +642,9 @@ function settleBarter(game: Game, b: Barter): string | null {
     const after: Cargo = { ...s.ship!.cargo };
     for (const [g, n] of Object.entries(give.cargo)) after[g as GoodId] = (after[g as GoodId] ?? 0) - (n ?? 0);
     for (const [g, n] of Object.entries(take.cargo)) after[g as GoodId] = (after[g as GoodId] ?? 0) + (n ?? 0);
-    const noRoom = cargoVolume(after, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul) > st.holdVolume + 1e-6 ? `${s.name}'s hold has no room for it`
+    const vol = (c: Cargo) => cargoVolume(c, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+    // A hold already over its room (a storm's salvage) is no bar to a trade that does not add to it.
+    const noRoom = vol(after) > st.holdVolume + 1e-6 && vol(after) > vol(s.ship!.cargo) + 1e-6 ? `${s.name}'s hold has no room for it`
       : s.profile!.stash.length - give.items.length + take.items.length > STASH_SIZE ? `${s.name}'s locker has no room for the gear` : null;
     if (noRoom) {
       for (const o of b.offers.values()) o.ready = false;

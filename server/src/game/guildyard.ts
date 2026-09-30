@@ -81,7 +81,7 @@ export function gyardStart(game: Game, s: PlayerSession, kind: GuildProject): st
   if (why || !h) return why;
   if (kind === 'yard' && shipyardLevel(h) >= SHIPYARD_MAX) return 'The shipyard is at its greatest';
   g.yardProject = { kind, goods: {}, silver: 0, hands: {}, started: game.wallNow() };
-  log(game, g, `${s.name} lays down ${GUILD_PROJECT_DEFS[kind].name[0].toLowerCase()} at the admiral’s island.`);
+  log(game, g, `${s.name} lays down “${GUILD_PROJECT_DEFS[kind].name[0]}” at the admiral’s island.`);
   tellMembers(game, g, `The guild’s shipyard takes a new project: ${GUILD_PROJECT_DEFS[kind].name[0]}.`);
   game.guilds.touch();
   return null;
@@ -226,8 +226,6 @@ export function gyardFill(game: Game, s: PlayerSession, share: number): string |
   p.silver = Math.max(p.silver, Math.floor(n.silver * share));
   const acc = String(s.accountId);
   p.hands[acc] = { name: s.name, units: Math.max(p.hands[acc]?.units ?? 0, Math.round(unitsIn(p) * 0.6)) };
-  p.hands['900001'] ??= { name: 'Anne Vey', units: Math.round(unitsIn(p) * 0.3) };
-  p.hands['900002'] ??= { name: 'Morrow Kett', units: Math.round(unitsIn(p) * 0.01) };
   game.guilds.touch();
   const place = yardPlace(game, g);
   if (complete(p) && place.h && place.isl) finish(game, g, place.h, place.isl);

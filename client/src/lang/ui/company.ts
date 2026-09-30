@@ -180,7 +180,7 @@ export const EN = {
   grp_leave: 'Leave the group',
   grp_invite_title: 'Invite a captain',
   grp_trade_title: 'Trade with a captain',
-  grp_trade_text: 'In the same port, or hove-to within 120 m at sea (the goods cross by boat).',
+  grp_trade_text: 'In the same port, or at sea within 300 m: silver, goods and gear; both lock, both confirm.',
   grp_hail: 'Hail to trade',
   grp_invited: '{from} asks you to sail with them',
 
@@ -761,7 +761,7 @@ export const RU: Record<keyof typeof EN, string> = {
   grp_leave: 'Покинуть отряд',
   grp_invite_title: 'Пригласить капитана',
   grp_trade_title: 'Торговать с капитаном',
-  grp_trade_text: 'В одном порту или в море, легши в дрейф в пределах 120 м (товар переправляют шлюпкой).',
+  grp_trade_text: 'В одном порту или в море в пределах 300 м: серебро, товары и снаряжение; оба фиксируют, оба подтверждают.',
   grp_hail: 'Окликнуть для торга',
   grp_invited: '{from} зовёт вас идти вместе',
 

@@ -57,6 +57,9 @@ function lfgRow(state: ClientState, e: LfgEntry, canAsk: boolean, canInvite: boo
   return `<div class="lfg-row lf-row${e.fits === false ? ' lf-off' : ''}"${e.x !== undefined ? ` data-lf-at="${e.x},${e.y}"` : ''}><span class="lf-flag" style="border-color:${def.color}">${icon(def.icon, '⚑', 'ico-sm')}</span><div class="lf-who"><b>${esc(e.name)}</b> <span class="lf-lvl">${e.level}</span> <span class="lf-goal" style="color:${def.color}">${esc(goalName(goal))}</span><div class="muted lf-meta">${esc(meta)}</div>${e.note && !compact ? `<div class="lfg-note">«${esc(e.note)}»</div>` : ''}</div>${btn}</div>`;
 }
 
+/** The goal picked on the card and not yet posted (the card is drawn afresh as the board changes). */
+let pickedGoal: LfgGoal | null = null;
+
 /** The Company screen's card: one's own flag (goal, levels, a word) and the board of those looking. */
 export function lfgCard(state: ClientState, grouped: boolean, lead: boolean, canInvite: boolean): string {
   const mine = state.lfgGoal;
@@ -66,7 +69,7 @@ export function lfgCard(state: ClientState, grouped: boolean, lead: boolean, can
   const form = grouped && !lead ? `<p class="muted">${esc(L('lf_leader_only'))}</p>`
     : `<p class="muted">${esc(L('lf_text'))}</p>
       ${mine ? `<p class="lf-mine">${icon(LFG_GOAL_DEFS[mine.goal].icon, '', 'ico-sm')}${esc(L('lf_mine', { goal: goalName(mine.goal), lo: mine.lo, hi: mine.hi }))}</p>` : ''}
-      <div class="lf-goals" role="radiogroup" aria-label="${esc(L('lf_goal'))}">${LFG_GOALS.map((g) => `<button type="button" class="lf-goal-btn${(mine?.goal ?? 'hunt') === g ? ' on' : ''}" data-lf-goal="${g}" aria-pressed="${(mine?.goal ?? 'hunt') === g}">${icon(LFG_GOAL_DEFS[g].icon, '', 'ico-sm')}<span>${esc(goalName(g))}</span></button>`).join('')}</div>
+      <div class="lf-goals" role="radiogroup" aria-label="${esc(L('lf_goal'))}">${LFG_GOALS.map((g) => `<button type="button" class="lf-goal-btn${(pickedGoal ?? mine?.goal ?? 'hunt') === g ? ' on' : ''}" data-lf-goal="${g}" aria-pressed="${(pickedGoal ?? mine?.goal ?? 'hunt') === g}">${icon(LFG_GOAL_DEFS[g].icon, '', 'ico-sm')}<span>${esc(goalName(g))}</span></button>`).join('')}</div>
       <div class="row lfg-form lf-form"><label class="lf-lvls">${esc(L('lf_levels'))} <input id="lf-lo" type="number" min="1" max="60" value="${lo}"> – <input id="lf-hi" type="number" min="1" max="60" value="${hi}"></label>
         <input id="lfg-note" placeholder="${esc(L('lf_note_ph'))}" maxlength="80" value="${esc(state.lfgMine ?? '')}"></div>
       <div class="row lf-acts"><button class="btn btn-primary" id="lfg-post">${esc(L(mine ? 'lf_update' : 'lf_post'))}</button>${mine ? `<button class="btn" id="lfg-stop">${esc(L('lf_stop'))}</button>` : ''}</div>`;
@@ -79,13 +82,17 @@ export function wireLfg(body: HTMLElement, send: (m: ClientMsg) => void): void {
   let goal: LfgGoal = (body.querySelector<HTMLElement>('.lf-goal-btn.on')?.dataset.lfGoal as LfgGoal) ?? 'hunt';
   body.querySelectorAll<HTMLElement>('[data-lf-goal]').forEach((b) => (b.onclick = () => {
     goal = b.dataset.lfGoal as LfgGoal;
+    pickedGoal = goal;
     body.querySelectorAll<HTMLElement>('[data-lf-goal]').forEach((x) => {
       x.classList.toggle('on', x === b);
       x.setAttribute('aria-pressed', String(x === b));
     });
   }));
   const num = (id: string) => Number(body.querySelector<HTMLInputElement>(id)?.value);
-  body.querySelector<HTMLElement>('#lfg-post')?.addEventListener('click', () => send({ t: 'group', action: 'lfg', note: body.querySelector<HTMLInputElement>('#lfg-note')?.value.trim() ?? '', goal, lo: num('#lf-lo'), hi: num('#lf-hi') }));
+  body.querySelector<HTMLElement>('#lfg-post')?.addEventListener('click', () => {
+    send({ t: 'group', action: 'lfg', note: body.querySelector<HTMLInputElement>('#lfg-note')?.value.trim() ?? '', goal, lo: num('#lf-lo'), hi: num('#lf-hi') });
+    pickedGoal = null;
+  });
   body.querySelector<HTMLElement>('#lfg-stop')?.addEventListener('click', () => send({ t: 'group', action: 'lfg_clear' }));
   wireLfgRows(body, send);
 }
@@ -132,8 +139,8 @@ function goalRow(g: WorldGoalView, gone: number): string {
   const f = g.progress / Math.max(1, g.target);
   const mine = g.mine > 0 ? (g.mine >= g.min ? L('wg_mine_ok', { n: fmt(g.mine) }) : L('wg_mine', { n: fmt(g.mine), min: fmt(g.min) })) : L('wg_join', { min: fmt(g.min) });
   return `<div class="wg-row${g.done ? ' done' : ''}">${icon(WORLD_GOAL_DEFS[g.kind].icon, '', 'ico-sm')}<div class="wg-body"><b>${esc(worldGoalText(g))}</b>
-    <span class="fbar wg-bar"><i style="width:${pct(f)}"></i></span>
-    <span class="muted wg-meta">${esc(g.done ? L('wg_done') : `${fmt(g.progress)} / ${fmt(g.target)} · ${leftText(Math.max(0, g.endsIn - gone))}`)} · ${esc(mine)}${g.hands ? ` · ${esc(L('wg_hands', { n: g.hands }))}` : ''}</span>
+    <div class="cm-bar${g.done ? ' done' : ''}"><i style="width:${pct(f)}"></i><span>${fmt(g.progress)}/${fmt(g.target)}</span></div>
+    <span class="muted wg-meta">${esc(g.done ? L('wg_done') : leftText(Math.max(0, g.endsIn - gone)))} · ${esc(mine)}${g.hands ? ` · ${esc(L('wg_hands', { n: g.hands }))}` : ''}</span>
     ${g.leaders.length ? `<span class="muted wg-lead">${esc(L('wg_lead', { list: g.leaders.map((x) => `${x.name} (${fmt(x.n)})`).join(', ') }))}</span>` : ''}</div></div>`;
 }
 
@@ -176,15 +183,28 @@ export function renderTrade(root: HTMLElement, state: ClientState, send: (m: Cli
   const where = b.atSea ? L('tr_sea', { d: b.dist ?? 0, r: range }) : L('tr_quay');
   const state2 = (s: typeof me) => s.ready ? `<span class="tr-st ok">${esc(L('tr_confirmed'))}</span>` : s.locked ? `<span class="tr-st lock">${esc(L('tr_locked'))}</span>` : `<span class="tr-st">${esc(L('tr_open'))}</span>`;
   const far = b.atSea && (b.dist ?? 0) > range * 0.8;
+  const subText = `${where}${b.transfer ? ` · ${L('tr_boats', { n: b.transfer })}` : ''}`;
+  // The distance and the boats' clock change every other second: only that line is rewritten, so a finger on a
+  // button is never lost to a fresh table.
+  const key = JSON.stringify([lang(), me, them, b.rev, b.atSea, stash.map((i) => i.uid), Object.entries(hold)]);
+  const sub = root.querySelector<HTMLElement>('.tr-where');
+  if (sub && root.dataset.trKey === key) {
+    sub.textContent = subText;
+    sub.classList.toggle('tr-far', far);
+    return;
+  }
+  root.dataset.trKey = key;
+  // The pieces picked but not yet put on the table survive a fresh table.
+  const picked = new Set([...root.querySelectorAll<HTMLElement>('[data-tr-item].on')].map((el) => Number(el.dataset.trItem)));
   const mineBody = me.locked
     ? `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><b>${money(me.gold)}</b></div>${listCargo(me.cargo)}${(me.items ?? []).map((it) => gearChip(it, false, true)).join('')}${!me.gold && !Object.keys(me.cargo).length && !(me.items ?? []).length ? `<p class="muted">${esc(L('tr_nothing'))}</p>` : ''}`
     : `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><input id="b-gold" class="field" type="number" min="0" value="${me.gold}"></div>
       ${Object.entries(hold).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(goodName(g as GoodId))} <span class="muted">(${n})</span></span><input class="field" type="number" min="0" max="${n}" value="${me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
       <div class="tr-sub">${esc(L('tr_gear', { n: TRADE_ITEMS_MAX }))}</div>
-      <div class="tr-gears">${stash.length ? stash.map((it) => gearChip(it, true, offered.has(it.uid))).join('') : `<p class="muted">${esc(L('tr_no_gear'))}</p>`}</div>
+      <div class="tr-gears">${stash.length ? stash.map((it) => gearChip(it, true, offered.has(it.uid) || picked.has(it.uid))).join('') : `<p class="muted">${esc(L('tr_no_gear'))}</p>`}</div>
       <button class="btn btn-block" id="b-offer">${esc(L('tr_set'))}</button>`;
   const theirs = `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><b>${money(them.gold)}</b></div>${listCargo(them.cargo)}${(them.items ?? []).map((it) => gearChip(it, false, true)).join('')}${!them.gold && !Object.keys(them.cargo).length && !(them.items ?? []).length ? `<p class="muted">${esc(L('tr_nothing'))}</p>` : ''}`;
-  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('tr_title', { name: them.name }))}</h2><div class="sub${far ? ' tr-far' : ''}">${esc(where)}${b.transfer ? ` · ${esc(L('tr_boats', { n: b.transfer }))}` : ''}</div></div></div>
+  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('tr_title', { name: them.name }))}</h2><div class="sub tr-where${far ? ' tr-far' : ''}">${esc(subText)}</div></div></div>
     <div class="modal-body tr-body"><div class="cols tr-cols"><div>
       <h3 class="title-sm tr-h">${esc(L('tr_you'))} ${state2(me)}</h3>
       <div class="card tr-card${me.locked ? ' locked' : ''}">${mineBody}</div>

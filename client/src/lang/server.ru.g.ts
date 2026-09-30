@@ -41,7 +41,7 @@ export const SERVER_RU_G: Record<string, string> = {
   'Unknown project': 'Неизвестный проект',
   'A project is already on the guild’s slipway': 'На стапеле гильдии уже есть проект',
   'The shipyard is at its greatest': 'Верфь уже на высшем уровне',
-  '{0} lays down {1} at the admiral’s island.': '{0} закладывает проект «{1}» на острове адмирала.',
+  '{0} lays down “{1}” at the admiral’s island.': '{0} закладывает «{1}» на острове адмирала.',
   'The guild’s shipyard takes a new project: {0}.': 'Верфь гильдии берёт новый проект: {0}.',
   'Nothing is on the guild’s slipway': 'Стапель гильдии пуст',
   '{0} takes the project off the slipway.': '{0} снимает проект со стапеля.',
@@ -56,7 +56,6 @@ export const SERVER_RU_G: Record<string, string> = {
   'The shipyard on {0} rises to level {1}. Built by {2}.': 'Верфь на острове {0} поднята до уровня {1}. Строили: {2}.',
   'The guild’s shipyard on {0} rises to level {1}.': 'Верфь гильдии на острове {0} поднята до уровня {1}.',
   'the guild': 'гильдия',
-  '{0} Wrights': 'Корабелы {0}',
   'The guild’s project is filled in.': 'Проект гильдии почти собран.',
   'The guild’s shipyard is ready.': 'Верфь гильдии готова.',
   // 35. signal flags

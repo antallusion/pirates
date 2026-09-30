@@ -957,7 +957,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         ship.docked = ship.docked ?? 'admin';
         p.gold += 200_000;
         const tag = `Q${String(s.accountId % 1000).padStart(3, '0')}`.slice(0, 4);
-        const e = foundGuild(game, s, `${s.name.split(' ')[0]} Wrights`, tag);
+        const e = foundGuild(game, s, s.name.slice(0, 24), tag);
         ship.docked = was;
         if (e) return e;
       }

@@ -3272,13 +3272,17 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .tr-steps, .tr-note { font-size: 12px; margin: 6px 0 0; }
 .tr-far { color: var(--bad); }
 /* #34 the guild's shipyard. */
+.yard-body .gy-card { max-width: 760px; }
 .gy-card .gy-where { font-size: 12px; margin: 2px 0 6px; }
 .gy-proj { display: grid; gap: 2px; margin-bottom: 6px; }
 .gy-proj .muted { font-size: 12px; }
 .gy-total { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; }
 .gy-total .gy-tbar { flex: 1; height: 8px !important; }
 .gy-total b { flex: none; color: var(--gold); font-size: 12px; }
-.gy-row { display: grid; grid-template-columns: 22px minmax(70px, 1fr) minmax(50px, 1.2fr) auto 58px; align-items: center; gap: 6px; padding: 2px 0; font-size: 12px; }
+.gy-row { display: grid; grid-template-columns: 24px minmax(64px, 1fr) minmax(40px, 1.2fr) auto 66px; align-items: center; gap: 6px; padding: 2px 0; font-size: 12px; }
+.gy-row .item-ico { width: 24px; height: 24px; }
+.gy-row .gy-bar { height: 6px !important; }
+.gy-row .btn { white-space: nowrap; }
 .gy-row .gy-g { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gy-row .gy-n { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
 .gy-row .btn { padding: 2px 4px; min-height: 26px; }

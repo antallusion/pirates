@@ -878,7 +878,7 @@ export class WorldMap {
     // Groupmates' signal flags (docs/16 #35): a pennant and a ring pulsing out while it lasts.
     for (const sg of liveSignals(state)) {
       drawSignalFlag(g, tx(sg.x), ty(sg.y), sg.kind, sg.age, 1.4);
-      label(`${sg.from}: ${signalName(sg.kind)}`, tx(sg.x), ty(sg.y) + 12, '#efe1b8');
+      label(`${sg.from}: ${signalName(sg.kind)}`, tx(sg.x), ty(sg.y) - 20, '#efe1b8');
     }
     // Her own mark: a dashed course from the ship, a gold pennant on a pole in a pulsing ring, and the range.
     const wp = waypoint();

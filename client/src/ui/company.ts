@@ -214,13 +214,13 @@ export class CompanyScreen {
         <button class="btn ${g.convoy ? 'btn-primary' : ''}" id="convoy">${g.convoy ? L('grp_convoy_down') : L('grp_convoy_up')}</button></div>` : g?.convoy ? `<p class="muted">${L('grp_convoy_flying')}</p>` : ''}
       ${g ? `<button class="btn btn-danger" id="leave">${L('grp_leave')}</button>` : ''}
     </div><div>
+      ${state.invites.map((i) => i.ask ? askCard(i) : `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
       ${lead ? `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="invite">${L('invite')}</button></div></div>` : ''}
       ${lfgCard(state, !!g, lead, lead && (g?.members.length ?? 1) < GROUP_MAX)}
       ${this.friendsCard(state, lead && (g?.members.length ?? 1) < GROUP_MAX, g?.members.map((m) => m.name) ?? [])}
       ${this.whoCard(state, lead && (g?.members.length ?? 1) < GROUP_MAX)}
       <div class="card"><h4 class="card-h">${icon('tab_market', '', 'ico-md')}${L('grp_trade_title')}</h4><p class="muted">${L('grp_trade_text')}</p>
         <div class="row"><input id="bar-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="hail">${L('grp_hail')}</button></div></div>
-      ${state.invites.map((i) => i.ask ? askCard(i) : `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
     </div></div>`;
     const val = (id: string) => body.querySelector<HTMLInputElement>(id)?.value.trim() ?? '';
     body.querySelector<HTMLElement>('#invite')?.addEventListener('click', () => val('#inv-name') && this.send({ t: 'group', action: 'invite', name: val('#inv-name') }));
