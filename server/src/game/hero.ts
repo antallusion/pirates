@@ -271,9 +271,7 @@ export function castSea(game: Game, s: PlayerSession, id: string): string | null
   const dur = def.dur ?? 0;
   const others = (r: number): ShipEntity[] => {
     const out: ShipEntity[] = [];
-    game.forShipsNear(ship.state.x, ship.state.y, r, (o) => {
-      if (o !== ship && o.alive && !o.docked && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) <= r) out.push(o);
-    });
+    for (const o of game.ships.values()) if (o !== ship && o.alive && !o.docked && dist(o.state.x, o.state.y, ship.state.x, ship.state.y) <= r) out.push(o);
     return out;
   };
   switch (id as SeaOrderId) {
