@@ -5,6 +5,9 @@
 import { connect } from 'node:net';
 import type { Socket } from 'node:net';
 
+/** Who speaks in a chat line from another process: the captain's portrait, flag and level. */
+export interface ChatWho { face?: string; fac?: 'free' | 'crown'; lv?: number }
+
 export type RedisReply = string | number | null | RedisReply[];
 
 export class RedisClient {
@@ -131,7 +134,7 @@ export class SharedState {
   private cmd: RedisClient;
   private sub: RedisClient;
   readonly origin: string;
-  private onChat: (from: string, text: string) => void = () => {};
+  private onChat: (from: string, text: string, who?: ChatWho) => void = () => {};
   onlineCount = 0;
 
   private constructor(cmd: RedisClient, sub: RedisClient, origin: string) {
@@ -146,8 +149,8 @@ export class SharedState {
     const st = new SharedState(cmd, sub, origin);
     await sub.subscribe('gt:chat', (_ch, raw) => {
       try {
-        const m = JSON.parse(raw) as { origin: string; from: string; text: string };
-        if (m.origin !== origin) st.onChat(m.from, m.text);
+        const m = JSON.parse(raw) as { origin: string; from: string; text: string; who?: ChatWho };
+        if (m.origin !== origin) st.onChat(m.from, m.text, m.who);
       } catch {
         // ignore malformed messages
       }
@@ -156,12 +159,12 @@ export class SharedState {
   }
 
   /** Chat from other processes arrives here. */
-  listenChat(fn: (from: string, text: string) => void): void {
+  listenChat(fn: (from: string, text: string, who?: ChatWho) => void): void {
     this.onChat = fn;
   }
 
-  publishChat(from: string, text: string): void {
-    void this.cmd.command('PUBLISH', 'gt:chat', JSON.stringify({ origin: this.origin, from, text })).catch(() => {});
+  publishChat(from: string, text: string, who?: ChatWho): void {
+    void this.cmd.command('PUBLISH', 'gt:chat', JSON.stringify({ origin: this.origin, from, text, ...(who ? { who } : {}) })).catch(() => {});
   }
 
   /** Heartbeat for the captains sailing in this process; prunes the silent. */

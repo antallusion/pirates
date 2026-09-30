@@ -947,6 +947,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "No one has whispered to you yet": "Вам ещё никто не шептал",
   "{0} is not at sea": "{0} сейчас не в море",
   "Whisper to whom? /w Name words": "Кому шепнуть? /ш Имя слова",
+  "You speak too fast: wait a moment": "Вы говорите слишком часто — подождите немного",
   "You mutter to yourself": "Вы бормочете себе под нос",
   "You cannot stop hearing yourself": "Себя самого не заглушить",
   "You already do not hear {0}": "Вы и так не слышите: {0}",

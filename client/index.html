@@ -140,10 +140,13 @@
   <div id="fishfight" class="hidden"></div>
   <div id="nethaul" class="hidden"></div>
   <div id="hud-chat" class="hud-layer hidden">
-    <div id="chat">
-      <div id="chat-tabs"></div>
+    <!-- The players' chat: a button with the count of unread lines opens the panel (tabs, the log, the emblems, the field). -->
+    <button id="chat-toggle" class="chat-toggle" type="button" aria-label="Chat"><span class="chat-tg-ico"></span><i id="chat-unread" class="chat-unread hidden"></i></button>
+    <div id="chat" data-filter="all">
+      <div class="chat-head"><div id="chat-tabs"></div><button id="chat-close" class="chat-x" type="button" aria-label="Close">×</button></div>
       <div id="chat-log"></div>
-      <input id="chat-input" maxlength="200" placeholder="Enter to speak…" data-i18n-ph="hud.chatPh" />
+      <div id="chat-emotes" class="hidden"></div>
+      <div class="chat-row"><button id="chat-emote-btn" class="chat-emo-btn" type="button" aria-label=":)"></button><input id="chat-input" maxlength="200" placeholder="Say a word…" data-i18n-ph="hud.chatPh" autocomplete="off" enterkeyhint="send" /><button id="chat-send" class="btn btn-small chat-send" type="button"></button></div>
     </div>
   </div>
 

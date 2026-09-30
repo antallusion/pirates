@@ -8,7 +8,9 @@ import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
-import { setTracked, trackedQuest } from './track.ts';
+import { setTracked, setWaypoint, trackedQuest, waypoint } from './track.ts';
+import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
+import { dec1 } from './dom.ts';
 import { commonLog, dailyLog } from './daily.ts';
 import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/worldmap.ts';
@@ -19,6 +21,7 @@ import { serverText } from '../lang/server.ts';
 import { taskName } from '../../../shared/src/data/worldtasks.ts';
 
 const L = dict(EN, RU);
+const RL = dict(REN, RRU);
 
 /** The chart's key, in its own symbols. */
 /** Tasks of the sea (docs/11 P6): each nest, field or haunted waters, the minutes left and one's tally — under the
@@ -59,7 +62,7 @@ export class WorldMap {
     const tracked = trackedQuest(state.self?.quests)?.id;
     const inGroup = (state.party?.members.length ?? 0) > 1;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
-      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>
+      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button>
       <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
       <div class="map-logs">${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
@@ -109,8 +112,18 @@ export class WorldMap {
       return p && q ? Math.hypot(p.x - q.x, p.y - q.y) : 0;
     };
     c.style.touchAction = 'none';
+    // A tap (not a pan, not a pinch) sets her mark, or takes it off when it lands on the mark.
+    let tap: { id: number; x: number; y: number; t: number } | null = null;
+    const clearBtn = root.querySelector<HTMLElement>('.map-wp-clear')!;
+    const showClear = () => clearBtn.classList.toggle('hidden', !waypoint());
+    clearBtn.onclick = () => {
+      setWaypoint(null);
+      showClear();
+      this.draw(state);
+    };
     c.onpointerdown = (e) => {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      tap = pts.size === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() } : null;
       if (pts.size === 1) this.drag = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy };
       else {
         this.drag = null;
@@ -120,6 +133,7 @@ export class WorldMap {
     c.onpointermove = (e) => {
       if (!pts.has(e.pointerId)) return;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) tap = null;
       if (pts.size >= 2) {
         const d = spread();
         if (pinch > 0 && d > 0) {
@@ -134,11 +148,36 @@ export class WorldMap {
         this.draw(state);
       }
     };
-    c.onpointerup = c.onpointercancel = c.onpointerleave = (e) => {
+    c.onpointerup = (e) => {
+      const t = tap;
+      tap = null;
+      if (t && t.id === e.pointerId && pts.size === 1 && performance.now() - t.t < 600 && Math.hypot(e.clientX - t.x, e.clientY - t.y) <= 8) this.tapAt(state, e.clientX, e.clientY, showClear);
       pts.delete(e.pointerId);
       if (pts.size < 2) pinch = 0;
       if (!pts.size) this.drag = null;
     };
+    c.onpointercancel = c.onpointerleave = (e) => {
+      if (tap?.id === e.pointerId) tap = null;
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = 0;
+      if (!pts.size) this.drag = null;
+    };
+    this.draw(state);
+  }
+
+  /** A tap on the chart at a point of the screen: her mark there, or off when the tap lands on it. */
+  private tapAt(state: ClientState, clientX: number, clientY: number, after: () => void): void {
+    const c = this.canvas;
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    const k = this.scale();
+    const x = this.cx + (clientX - r.left - c.clientWidth / 2) / k;
+    const y = this.cy + (clientY - r.top - c.clientHeight / 2) / k;
+    if (x < 0 || y < 0 || x > WORLD_SIZE || y > WORLD_SIZE) return;
+    const cur = waypoint();
+    const hit = Math.max(18, Math.min(30, 12 + this.zoom * 2)) / k; // the mark's own size on the screen, in metres
+    setWaypoint(cur && Math.hypot(cur.x - x, cur.y - y) < hit ? null : { x, y });
+    after();
     this.draw(state);
   }
 
@@ -561,8 +600,51 @@ export class WorldMap {
       g.fillRect(tx(m.x) - 4, ty(m.y) - 4, 8, 8);
       label(m.name, tx(m.x), ty(m.y) - 9, col);
     }
-    // You.
+    // Her own mark: a dashed course from the ship, a gold pennant on a pole in a pulsing ring, and the range.
+    const wp = waypoint();
     const own = state.ownDisplay;
+    // Reached while the chart is open: its button goes too.
+    c.parentElement?.querySelector('.map-wp-clear')?.classList.toggle('hidden', !wp);
+    if (wp) {
+      const x = tx(wp.x), y = ty(wp.y);
+      if (own) {
+        g.save();
+        g.setLineDash([5, 6]);
+        g.strokeStyle = 'rgba(232,196,106,0.75)';
+        g.lineWidth = 1.6;
+        g.beginPath();
+        g.moveTo(tx(own.x), ty(own.y));
+        g.lineTo(x, y);
+        g.stroke();
+        g.restore();
+      }
+      g.strokeStyle = 'rgba(232,196,106,0.9)';
+      g.fillStyle = 'rgba(232,196,106,0.14)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(x, y, ms * 0.5, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      g.fillStyle = '#e8c46a';
+      g.strokeStyle = 'rgba(0,0,0,0.85)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(x, y + ms * 0.12);
+      g.lineTo(x, y - ms * 0.62);
+      g.lineTo(x + ms * 0.42, y - ms * 0.47);
+      g.lineTo(x, y - ms * 0.3);
+      g.closePath();
+      g.stroke();
+      g.fill();
+      g.beginPath();
+      g.arc(x, y + ms * 0.12, 2.5, 0, Math.PI * 2);
+      g.fill();
+      const d = own ? Math.hypot(wp.x - own.x, wp.y - own.y) : 0;
+      g.font = '600 12px Inter, system-ui, sans-serif';
+      g.textAlign = 'center';
+      label(L('wp.label', { d: d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 }) }), x, y + ms * 0.95, '#f0d48e');
+    }
+    // You.
     if (own) {
       // What your lookouts can see: a soft pool of light around you.
       const sight = g.createRadialGradient(tx(own.x), ty(own.y), 0, tx(own.x), ty(own.y), Math.max(12, 2200 * k));

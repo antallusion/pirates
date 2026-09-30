@@ -1181,7 +1181,8 @@ export type ServerMsg =
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
   /** `whisper`: to this captain, or (with `to`) their own words to another, echoed back. */
-  | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' | 'whisper'; to?: string; card?: SagaCard }
+  /** A chat line; `face` is the speaker's captain (a portrait id), `fac` her flag when sworn, `lv` her level. */
+  | { t: 'chat'; from: string; text: string; ch?: 'group' | 'guild' | 'whisper'; to?: string; card?: SagaCard; face?: string; fac?: 'free' | 'crown'; lv?: number }
   /** The list of friends, and the names of the captains one does not hear. */
   | { t: 'friends'; list: FriendView[]; ignored?: string[] }
   | { t: 'who'; list: WhoView[]; total: number }

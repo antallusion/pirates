@@ -4,6 +4,7 @@
 // And its other side, the unheard: a captain one will not hear — their chat lines, whispers, invitations to a
 // group, a barter or a duel do not reach one (letters still do: the packet boat reads no lists).
 
+import { chatFace } from './chat.ts';
 import { wornItems } from './gear.ts';
 import { FRESH_LEVEL, FRIENDS_MAX, WHO_MAX } from '../../../shared/src/protocol.ts';
 import type { FriendView, InspectView, WhoView } from '../../../shared/src/protocol.ts';
@@ -195,8 +196,9 @@ export function whisper(game: Game, s: PlayerSession, text: string, reply = fals
   if (!words) return 'Whisper to whom? /w Name words';
   if (to === s) return 'You mutter to yourself';
   if (ignores(to, s.accountId)) return `${to.name} is not listening to you`;
-  game.sendTo(to, { t: 'chat', from: s.name, text: words, ch: 'whisper' });
-  game.sendTo(s, { t: 'chat', from: s.name, to: to.name, text: words, ch: 'whisper' });
+  const who = chatFace(s);
+  game.sendTo(to, { t: 'chat', from: s.name, text: words, ch: 'whisper', ...who });
+  game.sendTo(s, { t: 'chat', from: s.name, to: to.name, text: words, ch: 'whisper', ...who });
   game.social.lastWhisper.set(to.accountId, s.name);
   return null;
 }

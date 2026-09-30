@@ -2,6 +2,7 @@
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
 import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
+import { CHAT_TOO_FAST, chatAllowed, chatFace, cleanChat } from './chat.ts';
 import { callOn, drink, hallView, invite, sign } from './guests.ts';
 import { lookOf, setLook, unlockDeed } from './looks.ts';
 import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
@@ -325,8 +326,10 @@ export class Game {
     this.log = opts.log ?? ((m) => console.log(m));
     this.shared = opts.shared ?? null;
     // Chat from captains in other processes.
-    this.shared?.listenChat((from, text) => {
-      for (const o of this.sessions) if (!ignores(o, from)) this.sendTo(o, { t: 'chat', from, text });
+    this.shared?.listenChat((from, text, who) => {
+      const line = cleanChat(text);
+      if (!line) return;
+      for (const o of this.sessions) if (!ignores(o, from)) this.sendTo(o, { t: 'chat', from, text: line, ...(who ?? {}) });
     });
     this.guildMember = (gid, acct) => this.guilds.of(this, acct)?.id === gid;
     this.guildNotify = (gid, subject, body) => guildNotify(this, gid, subject, body);
@@ -3280,11 +3283,13 @@ export class Game {
             return done(null);
           case 'say': {
             const g = this.guilds.of(this, s.accountId);
-            const text = String(msg.text ?? '').slice(0, 200).trim();
+            const text = cleanChat(msg.text);
             if (!g || !text) return;
+            if (!chatAllowed(s, this.now)) return err(CHAT_TOO_FAST);
+            const who = chatFace(s);
             for (const m of g.members) {
               const ms = this.byAccount.get(m.account);
-              if (ms && !ignores(ms, s.accountId)) this.sendTo(ms, { t: 'chat', from: `[${g.tag}] ${s.name}`, text, ch: 'guild' });
+              if (ms && !ignores(ms, s.accountId)) this.sendTo(ms, { t: 'chat', from: `[${g.tag}] ${s.name}`, text, ch: 'guild', ...who });
             }
             return;
           }
@@ -3292,10 +3297,10 @@ export class Game {
         return;
       }
       case 'chat': {
-        const text = String(msg.text ?? '').slice(0, 200).trim();
+        const text = cleanChat(msg.text);
         if (!text) return;
         const w = whisperCommand(text);
-        if (w) return err(whisper(this, s, w.rest, w.reply));
+        if (w) return err(chatAllowed(s, this.now) ? whisper(this, s, w.rest, w.reply) : CHAT_TOO_FAST);
         const deaf = ignoreCommand(text);
         if (deaf) return err(ignoreAdd(this, s, deaf));
         if (text.startsWith('/') && adminEnabled()) {
@@ -3303,8 +3308,10 @@ export class Game {
           if (reply) this.sendTo(s, { t: 'toast', msg: reply, kind: 'info' });
           return;
         }
-        for (const o of this.sessions) if (!ignores(o, s.accountId)) this.sendTo(o, { t: 'chat', from: s.name, text });
-        this.shared?.publishChat(s.name, text);
+        if (!chatAllowed(s, this.now)) return err(CHAT_TOO_FAST);
+        const who = chatFace(s);
+        for (const o of this.sessions) if (!ignores(o, s.accountId)) this.sendTo(o, { t: 'chat', from: s.name, text, ...who });
+        this.shared?.publishChat(s.name, text, who);
         return;
       }
       default:
