@@ -293,7 +293,7 @@ export function lineOfBattle(game: Game, owner: ShipEntity, side: 'port' | 'star
     const eside: 'port' | 'starboard' = rel >= 0 ? 'starboard' : 'port';
     if (e.reload[eside] > 0) continue;
     e.addEffect({ id: 'synchronised', until: game.now + 3, mods: { gunDamageMul: 0.1 } }, game.now);
-    fireBroadside(game, e, eside, de);
+    fireBroadside(game, e, eside, de, undefined, 1); // her escorts' gunners know the wind
   }
 }
 

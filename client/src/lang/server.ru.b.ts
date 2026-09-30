@@ -1248,4 +1248,6 @@ export const SERVER_RU_B: Record<string, string> = {
   "The shoal has moved on: the net comes up empty.": "Косяк ушёл: сеть пуста.",
   "A full haul: {0} ×{1}": "Полная сеть: {0} ×{1}",
   "Hauled in: {0} ×{1}": "Выбрали сеть: {0} ×{1}",
+  "The topmast is shot away: she loses way for a while.": "Стеньгу сбило: корабль на время теряет ход.",
+  "A ball in the powder room — the magazine goes up!": "Ядро в крюйт-камере — пороховой погреб взлетает на воздух!",
 };

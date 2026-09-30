@@ -632,7 +632,7 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   for (const side of ['port', 'starboard'] as const) {
     if (ship.reload[side] > 0) continue;
     const off = Math.abs(angleDiff(sideHeading(ship, side), leadBearing));
-    if (off < sk.arcDeg * DEG && leadD < rangeOf(side) * 0.98) fireBroadside(game, ship, side, leadD * (1 + (game.rng.float() * 2 - 1) * sk.rangeErr));
+    if (off < sk.arcDeg * DEG && leadD < rangeOf(side) * 0.98) fireBroadside(game, ship, side, leadD * (1 + (game.rng.float() * 2 - 1) * sk.rangeErr), undefined, 1); // the sea's own gunners know their wind and allow for it
   }
   // A seasoned captain dashes out of a broadside held on her.
   if (sk.dash && d < 700 && (target.aimStart.port >= 0 || target.aimStart.starboard >= 0) && game.rng.chance(0.2)) dash(game, ship);
@@ -640,8 +640,8 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   const chaseRange = effectiveRange(ship, 'port', 'round') * 1.2;
   if (leadD < chaseRange) {
     const offBow = Math.abs(angleDiff(ship.state.heading, leadBearing));
-    if (offBow < CHASER_CONE && ship.chaserReload.bow <= 0 && ship.cls.bowChasers) fireChaser(game, ship, 'bow', px, py);
-    else if (Math.PI - offBow < CHASER_CONE && ship.chaserReload.stern <= 0 && ship.cls.sternChasers) fireChaser(game, ship, 'stern', px, py);
+    if (offBow < CHASER_CONE && ship.chaserReload.bow <= 0 && ship.cls.bowChasers) fireChaser(game, ship, 'bow', px, py, 1);
+    else if (Math.PI - offBow < CHASER_CONE && ship.chaserReload.stern <= 0 && ship.cls.sternChasers) fireChaser(game, ship, 'stern', px, py, 1);
   }
 }
 
