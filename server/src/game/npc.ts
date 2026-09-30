@@ -13,10 +13,10 @@ import { NPC_ACTIVE_RADIUS, SPEED_SCALE, isNight } from '../../../shared/src/con
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
-import type { AmmoId, ShipClassId } from '../../../shared/src/data/ships.ts';
+import type { AmmoId, Rig, ShipClassId } from '../../../shared/src/data/ships.ts';
 import { CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import { angleDiff, clamp, DEG, dist, headingOf, headingVec, wrapAngle } from '../../../shared/src/math.ts';
-import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
+import { polarEfficiency, relWindDeg, sailFloor, windPush } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
@@ -56,6 +56,10 @@ export interface NpcBrain {
   nextThink: number;
   tackSide: number;
   tackUntil: number;
+  /** Beating to a mark (docs/16 P5): the last moment she was (a beat lapsed 3 s starts afresh on the better tack), and
+   *  her last going about. */
+  beatAt?: number;
+  tackAt?: number;
   surrenderedAt: number;
   /** She has struck her colours once in this life (docs/16 #3): having thought better of it, she fights on. */
   struck?: boolean;
@@ -630,7 +634,10 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   if (brain.flank !== undefined && (brain.flankUntil ?? 0) > game.now && d > maxRange * 0.7) {
     const side = headingVec(target.state.heading + brain.flank);
     const fx = target.state.x + side.x * maxRange * 0.75, fy = target.state.y + side.y * maxRange * 0.75;
-    if (dist(ship.state.x, ship.state.y, fx, fy) > 180) {
+    // Her quarter dead to windward (docs/16 P5): beating round to it would cost more than it wins, so she goes
+    // straight in.
+    if (relWindDeg(headingOf(fx - ship.state.x, fy - ship.state.y), game.windFor(ship)) < FLANK_UPWIND_DEG) brain.flank = undefined;
+    else if (dist(ship.state.x, ship.state.y, fx, fy) > 180) {
       steer(game, ship, brain, headingOf(fx - ship.state.x, fy - ship.state.y), 1);
       return;
     }
@@ -653,7 +660,7 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
     if (d > range) desired = wrapAngle(desired + inward * 0.85);
     else if (d > range * 0.75) desired = wrapAngle(desired + inward * 0.4);
     else if (d < range * 0.35 && !wantsBoard) desired = wrapAngle(desired - inward * 0.35);
-    steer(game, ship, brain, desired, 1);
+    steer(game, ship, brain, desired, 1, true);
   }
   for (const side of ['port', 'starboard'] as const) {
     if (ship.reload[side] > 0) continue;
@@ -671,22 +678,68 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   }
 }
 
-/** Steering with tacking and island avoidance. */
-function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, sail: number): void {
+/** The best angle off the wind to beat at (degrees from where it blows), by rig, no-go edge and wind: the heading that
+ *  makes the most ground to windward. The sea's floor under the polar (no heading is dead, sailing.ts) and the head
+ *  wind's push make it narrower than the no-go edge: a ship pinches up well inside it rather than reaching off along
+ *  the edge (docs/16 P5). Cached; 0 means straight at it. */
+const beatCache = new Map<string, number>();
+export function beatAngle(rig: Rig, noGoDeg: number, weatherly: boolean, strength: number): number {
+  const key = `${rig}|${Math.round(noGoDeg)}|${weatherly ? 1 : 0}|${Math.round(strength * 20)}`;
+  let best = beatCache.get(key);
+  if (best !== undefined) return best;
+  let bv = -Infinity;
+  best = 0;
+  for (let rel = 0; rel <= 90; rel += 2) {
+    const eff = Math.max(sailFloor(rel), polarEfficiency(rig, rel, noGoDeg, weatherly));
+    const vmg = eff * windPush(rel, strength) * Math.cos(rel * DEG);
+    if (vmg > bv + 1e-9) {
+      bv = vmg;
+      best = rel;
+    }
+  }
+  beatCache.set(key, best);
+  return best;
+}
+
+/** Steering with tacking and island avoidance. To windward (docs/16 P5): on the tack that points nearer her mark,
+ *  held until the other tack points clearly nearer (the mark has crossed the wind's eye), then about. */
+function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, sail: number, fight = false): void {
   const now = game.now;
   const wind = game.windFor(ship);
-  const noGo = ship.stats.noGoDeg + 6;
   const rel = relWindDeg(desired, wind);
-  if (rel < noGo) {
-    const from = wrapAngle(wind.dir + Math.PI);
-    if (now > brain.tackUntil) {
-      // Beating to windward: start on the nearer tack, then come about every leg so the zig-zag makes ground.
-      const a = wrapAngle(from + noGo * DEG), b = wrapAngle(from - noGo * DEG);
-      const stillBeating = now - brain.tackUntil < 3;
-      brain.tackSide = stillBeating ? -brain.tackSide : Math.abs(angleDiff(a, desired)) < Math.abs(angleDiff(b, desired)) ? 1 : -1;
-      brain.tackUntil = now + 22 + game.rng.float() * 10;
+  const from = wrapAngle(wind.dir + Math.PI);
+  if (fight) {
+    // Holding a broadside on her foe: she keeps off the no-go edge and zig-zags as she always did (the ladder of
+    // levels is tuned on this, tests/balance/).
+    const noGo = ship.stats.noGoDeg + 6;
+    if (rel < noGo) {
+      if (now > brain.tackUntil) {
+        const a = wrapAngle(from + noGo * DEG), b = wrapAngle(from - noGo * DEG);
+        const stillBeating = now - brain.tackUntil < 3;
+        brain.tackSide = stillBeating ? -brain.tackSide : Math.abs(angleDiff(a, desired)) < Math.abs(angleDiff(b, desired)) ? 1 : -1;
+        brain.tackUntil = now + 22 + game.rng.float() * 10;
+      }
+      desired = wrapAngle(from + brain.tackSide * noGo * DEG);
     }
-    desired = wrapAngle(from + brain.tackSide * noGo * DEG);
+  } else {
+    // Going somewhere (docs/16 P5): a mark inside her best beat is made good on the tack that points nearer it,
+    // held until the other tack points clearly nearer (the mark has crossed the wind's eye), then about.
+    const beat = beatAngle(ship.cls.rig, ship.stats.noGoDeg, ship.cls.passive.id === 'weatherly', wind.strength);
+    if (beat > 0 && rel < beat) {
+      const a = wrapAngle(from + beat * DEG), b = wrapAngle(from - beat * DEG);
+      const offA = Math.abs(angleDiff(a, desired)), offB = Math.abs(angleDiff(b, desired));
+      const better = offA <= offB ? 1 : -1;
+      // A fresh beat (none within 3 s) starts on the better tack; one under way comes about only when the other tack
+      // points 12° nearer, and not within 6 s of the last time (her way must come back first).
+      const fresh = now - (brain.beatAt ?? -Infinity) > 3;
+      if (fresh) brain.tackSide = better;
+      else if (better !== brain.tackSide && Math.abs(offA - offB) > 12 * DEG && now - (brain.tackAt ?? -Infinity) > 6) {
+        brain.tackSide = better;
+        brain.tackAt = now;
+      }
+      brain.beatAt = now;
+      desired = brain.tackSide > 0 ? a : b;
+    }
   }
   // Island avoidance probes.
   const look = 180 + ship.state.speed * 7;
@@ -723,6 +776,11 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   ship.input = { rudder: clamp(diff * 2.2, -1, 1), sailTarget: sail };
 }
 
+/** A pack member's swing round to her quarter of the prey lasts this long at most (then she goes straight in), and
+ *  is not tried at all for a quarter this near the wind's eye (docs/16 P5). */
+export const FLANK_SEC = 60;
+export const FLANK_UPWIND_DEG = 45;
+
 /** A wolf pack: a pirate that goes for a captain calls up to two idle pirates within 3 km; they come round to
  *  her quarters from either side while the first closes from where she is. */
 export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): number {
@@ -737,7 +795,7 @@ export function rallyPack(game: Game, ship: ShipEntity, prey: ShipEntity): numbe
     b.target = prey.id;
     b.chase = { id: prey.id, until: now + 120 };
     b.flank = sides[n];
-    b.flankUntil = now + 90;
+    b.flankUntil = now + FLANK_SEC;
     b.ambushing = false;
     n++;
   });

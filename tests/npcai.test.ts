@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { isNight } from '../shared/src/constants.ts';
 import { headingVec } from '../shared/src/math.ts';
 import type { Game } from '../server/src/game/Game.ts';
-import { rallyPack, runLighter, spawnPatrols } from '../server/src/game/npc.ts';
+import { FLANK_SEC, beatAngle, rallyPack, runLighter, spawnPatrols } from '../server/src/game/npc.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import { join, makeGame, steps } from './helpers.ts';
 
@@ -59,6 +59,34 @@ test('a wolf pack: the pirate who goes for a captain calls two idle pirates, one
     best = Math.min(best, Math.hypot(a.state.x - prey.state.x, a.state.y - prey.state.y));
   }
   assert.ok(best < d0 - 200, `the pack closes (${Math.round(d0)} → ${Math.round(best)} m)`);
+});
+
+test('beating to windward (docs/16 P5): a pack dead to leeward of a hove-to captain closes on her within two minutes', () => {
+  // The best beat is well inside the no-go edge (the sea never lies dead, sailing.ts): a square-rigger pinches up.
+  const beat = beatAngle('square', 65, false, 0.7);
+  assert.ok(beat > 10 && beat < 65, `square rig beats at ${beat}°`);
+  const { game } = makeGame();
+  const prey = captainAtSea(game, 'Hove To');
+  prey.input = { rudder: 0, sailTarget: 0 };
+  prey.state.sail = 0;
+  prey.state.speed = 0;
+  // The wind blows from her to the pack: every pirate has her dead to windward.
+  game.windFor = () => ({ dir: Math.PI / 2, strength: 0.7 });
+  const first = npcAt(game, 'pirate', prey.state.x + 900, prey.state.y);
+  const a = npcAt(game, 'pirate', prey.state.x + 2600, prey.state.y + 300);
+  const b = npcAt(game, 'pirate', prey.state.x + 2400, prey.state.y - 500);
+  assert.equal(rallyPack(game, first, prey), 2);
+  for (const o of [a, b]) assert.ok((game.npcs.get(o.id)!.flankUntil ?? 0) <= game.now + FLANK_SEC, 'the swing round is capped');
+  const d0 = [a, b].map((o) => Math.hypot(o.state.x - prey.state.x, o.state.y - prey.state.y));
+  const best = [...d0];
+  for (let i = 0; i < 24; i++) {
+    steps(game, 20 * 5);
+    [a, b].forEach((o, k) => (best[k] = Math.min(best[k], Math.hypot(o.state.x - prey.state.x, o.state.y - prey.state.y))));
+  }
+  // Before the fix she reached off along the no-go edge and made ~100 m to windward in two minutes.
+  [0, 1].forEach((k) => assert.ok(best[k] < d0[k] - 800, `pack member ${k} beats up to her (${Math.round(d0[k])} → ${Math.round(best[k])} m)`));
+  // A quarter dead to windward is not worth the beat: she forgot it and went straight in.
+  assert.ok([a, b].some((o) => game.npcs.get(o.id)!.flank === undefined), 'the upwind quarter was given up');
 });
 
 test('a merchant run down throws a third of her hold over the side, at most three times, to run lighter', () => {
