@@ -15,10 +15,13 @@ import {
 import type { NamedPirate } from '../../../shared/src/data/pirates.ts';
 import { SETS } from '../../../shared/src/data/items.ts';
 import type { Slot } from '../../../shared/src/data/items.ts';
-import { makeItem } from '../../../shared/src/data/items.ts';
+import { itemName, makeItem } from '../../../shared/src/data/items.ts';
 import { isNight } from '../../../shared/src/constants.ts';
-import { dist } from '../../../shared/src/math.ts';
-import type { WantedPoster, WantedView } from '../../../shared/src/protocol.ts';
+import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
+import type { LairView, WantedPoster, WantedView } from '../../../shared/src/protocol.ts';
+import { sectorAt } from '../../../shared/src/world/sectors.ts';
+import { grantMap, makeMap } from './explorefx.ts';
+import { planWander } from './npc.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -46,6 +49,13 @@ const LAIR_BATTERY_R = 550;
 const LAIR_HIT_R = 140;
 const LAIR_OPEN_MIN = 20;
 const LAIR_REBUILD_H = 6;
+/** Each gun of a lair's battery reloads in this (docs/16 #7). */
+const LAIR_GUN_RELOAD = 6;
+/** Its garrison puts out when a captain comes this near (Manhattan metres), goes home when all are this far. */
+const GARRISON_R = 4000;
+const GARRISON_GONE_R = 9000;
+/** A garrison ship this near the lair keeps the boats off. */
+const GARRISON_GUARD_R = 2500;
 
 interface Live {
   id: string;
@@ -68,6 +78,8 @@ interface Rec {
   lairRebuildAt?: number;
   /** Game time until which the battery, struck, answers every ship in range. */
   awakeUntil?: number;
+  /** The lair's garrison was sunk (it mans again when the battery is rebuilt). */
+  garrisonDown?: boolean;
 }
 
 interface Lair {
@@ -77,12 +89,19 @@ interface Lair {
   x: number;
   y: number;
   max: number;
+  /** Its guns on the shore, the named captain's level and name (docs/16 #7). */
+  guns: [number, number][];
+  level: number;
+  captain: string;
 }
 
 interface WantedState {
   live: Map<string, Live>;
   rec: Record<string, Rec>;
   lairs: Map<string, Lair>;
+  /** The garrison's ships at sea about each lair; each gun's next shot. */
+  garrison: Map<string, number[]>;
+  gunNext: Map<string, number[]>;
   informed: Map<number, { id: string; x: number; y: number; until: number }>;
   rogues: { name: string; x: number; y: number; r: number; t: number }[];
   roguesAt: number;
@@ -97,7 +116,7 @@ const states = new WeakMap<Game, WantedState>();
 function ws(game: Game): WantedState {
   let s = states.get(game);
   if (!s) {
-    s = { live: new Map(), rec: {}, lairs: new Map(), informed: new Map(), rogues: [], roguesAt: -1e9, sent: new Map(), rng: new Rng(game.world.seed ^ 0x3a17ed), loaded: false, dirty: false };
+    s = { live: new Map(), rec: {}, lairs: new Map(), garrison: new Map(), gunNext: new Map(), informed: new Map(), rogues: [], roguesAt: -1e9, sent: new Map(), rng: new Rng(game.world.seed ^ 0x3a17ed), loaded: false, dirty: false };
     states.set(game, s);
   }
   if (!s.loaded) {
@@ -117,6 +136,34 @@ function save(game: Game): void {
 
 // ------------------------------------------------------------------------------------------------ the lairs
 
+/** The fort and its guns (docs/16 #7) on the shore nearest the camp: the fort a little inland over the beach, three
+ *  guns spread along the coast either side of it, just above the waterline, covering the water off it. */
+function lairSite(world: Game['world'], is: Island, x: number, y: number): { x: number; y: number; guns: [number, number][] } {
+  const c = closestOnPolygon(x, y, is.poly);
+  // Inland: toward the island's middle from that point of the coast.
+  let nx = is.x - c.x, ny = is.y - c.y;
+  const nl = Math.hypot(nx, ny) || 1;
+  nx /= nl;
+  ny /= nl;
+  const tx = -ny, ty = nx;
+  const inland = (px: number, py: number, d0: number): [number, number] => {
+    for (let d = d0; d < d0 + 200; d += 10) {
+      const qx = px + nx * d, qy = py + ny * d;
+      if (isLand(world, qx, qy)) return [Math.round(qx), Math.round(qy)];
+    }
+    return [Math.round(px + nx * d0), Math.round(py + ny * d0)];
+  };
+  const [fx, fy] = inland(c.x, c.y, Math.min(60, nl * 0.4));
+  const guns: [number, number][] = [];
+  for (const k of [-1, 0, 1]) {
+    // Along the coast from the fort's beach: the shore there, then a few metres up it.
+    const px = c.x + tx * k * 80, py = c.y + ty * k * 80;
+    const shore = closestOnPolygon(px, py, is.poly);
+    guns.push(inland(shore.x, shore.y, 14));
+  }
+  return { x: fx, y: fy, guns };
+}
+
 /** Each named captain's lair: an island of her sea with a pirates' camp (the same on every boot of the world). */
 function placeLairs(game: Game, S: WantedState): void {
   // Islands with a pirates' camp of their own first; in a sea without one, any islet off the shipping (the lair
@@ -124,7 +171,7 @@ function placeLairs(game: Game, S: WantedState): void {
   const camps = new Map<RegionId, { is: Island; x: number; y: number }[]>();
   const islets = new Map<RegionId, { is: Island; x: number; y: number }[]>();
   for (const is of game.world.islands) {
-    if (is.portId) continue;
+    if (is.portId || is.minor) continue;
     const camp = islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: is.radius, poly: is.poly, features: is.features }).find((l) => l.kind === 'pirate_camp');
     if (camp) {
       const list = camps.get(is.region) ?? [];
@@ -143,7 +190,8 @@ function placeLairs(game: Game, S: WantedState): void {
     if (!pool.length) continue;
     namedPirates().filter((p) => p.region === region).forEach((p, i) => {
       const c = pool[i % pool.length];
-      S.lairs.set(p.id, { id: p.id, island: c.is.id, name: c.is.name, x: c.x, y: c.y, max: 800 + 220 * p.level });
+      const site = lairSite(game.world, c.is, c.x, c.y);
+      S.lairs.set(p.id, { id: p.id, island: c.is.id, name: c.is.name, x: site.x, y: site.y, max: 800 + 220 * p.level, guns: site.guns, level: p.level, captain: p.name[0] });
     });
   }
 }
@@ -164,22 +212,40 @@ export function lairOf(game: Game, id: string): Readonly<Lair> | undefined {
   return ws(game).lairs.get(id);
 }
 
-/** A lair's battery: whole unless silenced (and rebuilt after six hours). */
+/** A lair's battery: whole unless silenced (and rebuilt, its garrison manned again, after six hours). */
 function battery(game: Game, lair: Lair): number {
   const r = ws(game).rec[lair.id] ?? {};
   if (r.lairRebuildAt && game.wallNow() >= r.lairRebuildAt) {
     delete r.lairRebuildAt;
     delete r.lairOpenUntil;
+    delete r.garrisonDown;
     r.battery = lair.max;
   }
   return r.battery ?? lair.max;
 }
 
-/** Shot falling near a lair's camp (from combat, where balls land): the battery takes it. */
+/** The garrison's ships afloat. */
+function garrisonAfloat(game: Game, lair: Lair): ShipEntity[] {
+  const out: ShipEntity[] = [];
+  for (const id of ws(game).garrison.get(lair.id) ?? []) {
+    const g = game.ships.get(id);
+    if (g?.alive && !g.surrendered && !g.prize) out.push(g);
+  }
+  return out;
+}
+
+/** Stormed (or its chance let pass) and empty until it is rebuilt. */
+function lairEmpty(game: Game, lair: Lair): boolean {
+  const r = ws(game).rec[lair.id] ?? {};
+  return battery(game, lair) <= 0 && !(r.lairOpenUntil && game.wallNow() < r.lairOpenUntil);
+}
+
+/** Shot falling near a lair's camp or one of its guns (from combat, where balls land): the battery takes it. */
 export function lairImpact(game: Game, x: number, y: number, damage: number, owner: number): void {
   const S = ws(game);
   for (const lair of S.lairs.values()) {
-    if (Math.abs(lair.x - x) > LAIR_HIT_R || Math.abs(lair.y - y) > LAIR_HIT_R || dist(lair.x, lair.y, x, y) > LAIR_HIT_R) continue;
+    if (Math.abs(lair.x - x) > LAIR_HIT_R + 400 || Math.abs(lair.y - y) > LAIR_HIT_R + 400) continue;
+    if (dist(lair.x, lair.y, x, y) > LAIR_HIT_R && !lair.guns.some(([gx, gy]) => dist(gx, gy, x, y) < LAIR_HIT_R * 0.7)) continue;
     const hp = battery(game, lair);
     if (hp <= 0) return;
     const r = (S.rec[lair.id] ??= {});
@@ -189,16 +255,21 @@ export function lairImpact(game: Game, x: number, y: number, damage: number, own
     if (r.battery <= 0) {
       r.lairOpenUntil = game.wallNow() + LAIR_OPEN_MIN * 60_000;
       r.lairRebuildAt = game.wallNow() + LAIR_REBUILD_H * HOUR;
-      const by = game.ships.get(owner);
-      for (const s of game.sessions) if (s.ship && dist(s.ship.state.x, s.ship.state.y, lair.x, lair.y) < 3000) game.sendTo(s, { t: 'toast', msg: `The lair’s battery on ${lair.name} is silenced. Land now — the lair is open.`, kind: 'gold' });
-      void by;
+      game.emit({ k: 'fx', fx: 'explosion', x: Math.round(lair.x), y: Math.round(lair.y), r: 60 }, lair.x, lair.y);
+      const guard = garrisonAfloat(game, lair).length;
+      for (const s of game.sessions) {
+        if (!s.ship || dist(s.ship.state.x, s.ship.state.y, lair.x, lair.y) > 3000) continue;
+        game.sendTo(s, { t: 'toast', msg: guard ? `The lair’s battery on ${lair.name} is silenced. Sink its garrison, then land.` : `The lair’s battery on ${lair.name} is silenced. Land now — the lair is open.`, kind: 'gold' });
+      }
+      void owner;
     }
     return;
   }
 }
 
-/** A landing at an island's pirate camp (exploration): a lair's battery drives the boats off; a silenced one lets
- *  the party storm the lair — its chest and its prisoners. Returns true when it was a lair's landing. */
+/** A landing at an island's pirate camp (exploration): a lair's battery drives the boats off; its garrison's ships
+ *  must be sunk first; a silenced one with none afloat lets the party storm the lair — its chest (silver, a piece of
+ *  gear, a treasure map) and its prisoners. Returns true when it was a lair's landing. */
 export function lairLanding(game: Game, s: PlayerSession, island: Island): boolean {
   const S = ws(game);
   const lair = [...S.lairs.values()].find((l) => l.island === island.id);
@@ -218,7 +289,14 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
     // Silenced but already stormed (or the chance is past): an empty camp.
     return false;
   }
+  if (garrisonAfloat(game, lair).some((g) => dist(g.state.x, g.state.y, lair.x, lair.y) < GARRISON_GUARD_R)) {
+    game.sendTo(s, { t: 'toast', msg: `The garrison’s ships still guard the lair on ${lair.name}: sink them first.`, kind: 'bad' });
+    return true;
+  }
   const np = pirateById(lair.id)!;
+  // The last of the garrison ashore sell their lives dear.
+  const fallen = Math.min(Math.max(0, ship.crew - 2), S.rng.int(1, 3));
+  ship.crew -= fallen;
   const chest = Math.round((1200 + 380 * np.level) * S.rng.range(0.8, 1.2));
   const prisoners = S.rng.int(4, 10);
   p.gold += chest;
@@ -229,34 +307,132 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   // The prisoners' people remember who freed them.
   const lawful = (['crown', 'league'] as const)[S.rng.int(0, 1)];
   changeRep(p, lawful, 5);
+  // A piece of gear from the captain's own cabin, and a map from her chart table (docs/16 #7).
+  const it = makeItem(game.rng, p.itemSeq++, { ilvl: np.level, rarity: S.rng.chance(0.25) ? 3 : 2 });
+  const kept = takeItem(game, s, it);
+  const tier = REGIONS[island.region].safety === 'lawless' ? 3 : 2;
+  const m = makeMap(game, tier);
+  const mapped = grantMap(game, s, m, `The lair of ${np.name[0]}`);
   delete r.lairOpenUntil;
   S.dirty = true;
   game.sendTo(s, { t: 'toast', msg: `The lair of ${np.name[0]} is stormed: ${chest} silver from its chest, ${prisoners} prisoners freed.`, kind: 'gold' });
   if (room > 0) game.sendTo(s, { t: 'toast', msg: 'The freed prisoners join your crew.', kind: 'good' });
-  game.grantXp(s, 300 + 60 * np.level, `Sank ${np.name[0]}`);
+  game.sendTo(s, { t: 'lairchest', view: { island: lair.name, captain: np.name[0], silver: chest, prisoners, item: kept ? { name: itemName(it), rarity: it.rarity, base: it.base } : null, map: mapped ? m.name : null } });
+  game.grantXp(s, 300 + 60 * np.level, `The lair of ${np.name[0]}`);
+  sendWanted(game, s, true);
   return true;
 }
 
+/** The lair's garrison puts out when a captain comes near: two or three rovers of the square's band. */
+function manGarrison(game: Game, lair: Lair): number[] {
+  const S = ws(game);
+  const ids: number[] = [];
+  const island = game.world.islands[lair.island];
+  const n = 2 + (lair.level >= 6 ? 1 : 0);
+  const band = sectorAt(game.world, lair.x, lair.y).band;
+  for (let k = 0; k < 24 && ids.length < n; k++) {
+    const a = S.rng.float() * Math.PI * 2;
+    const rr = (island?.radius ?? 300) + S.rng.range(350, 800);
+    const cx = island?.x ?? lair.x, cy = island?.y ?? lair.y;
+    const x = cx + Math.sin(a) * rr, y = cy - Math.cos(a) * rr;
+    if (isLand(game.world, x, y) || !game.inZone(x, y)) continue;
+    const lv = Math.max(band[0], Math.min(band[1] + 1, lair.level - S.rng.int(0, 2)));
+    const g = game.spawnNpcShip('pirate', S.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, a + Math.PI / 2, { ship: S.rng.pick(GUARD_SHIPS), captain: `Warden of ${lair.name}` });
+    game.setNpcLevel(g, lv);
+    g.lairGuard = lair.id;
+    g.purse = 120 + 50 * lv;
+    const b = game.npcs.get(g.id)!;
+    b.area = { x: cx, y: cy, r: (island?.radius ?? 300) + 900 };
+    planWander(game, g, b);
+    ids.push(g.id);
+  }
+  return ids;
+}
+
+const GUARD_SHIPS = ['Chain of the Cove', 'Watchdog', 'Gaoler', 'Harbour Wolf', 'Black Sentry', 'Turnkey', 'Rook of the Reef'];
+
 function stepLairs(game: Game): void {
   const S = ws(game);
-  if (Math.floor(game.now) % 6 !== 0) return;
+  const now = game.now;
+  const captains: ShipEntity[] = [];
+  for (const s of game.sessions) if (s.ship && !s.ship.docked && s.ship.alive) captains.push(s.ship);
   for (const lair of S.lairs.values()) {
-    if (battery(game, lair) <= 0) continue;
-    // Asleep, it fires only on a ship that comes too close, and never in safe waters; struck, on all in range.
-    const awake = (S.rec[lair.id]?.awakeUntil ?? 0) > game.now;
+    let near = Infinity;
+    for (const o of captains) near = Math.min(near, Math.abs(o.state.x - lair.x) + Math.abs(o.state.y - lair.y));
+    const gar = S.garrison.get(lair.id);
+    const hp = battery(game, lair);
+    const r = S.rec[lair.id] ?? {};
+    // The garrison: out when a captain comes near a manned lair, home again when all have gone; sunk, the lair lies
+    // open to a landing once its battery is silenced too.
+    if (gar?.length) {
+      const afloat = garrisonAfloat(game, lair);
+      if (!afloat.length) {
+        S.garrison.delete(lair.id);
+        (S.rec[lair.id] ??= {}).garrisonDown = true;
+        S.dirty = true;
+        for (const s of game.sessions) {
+          if (!s.ship || dist(s.ship.state.x, s.ship.state.y, lair.x, lair.y) > 4000) continue;
+          game.sendTo(s, { t: 'toast', msg: hp > 0 ? `The garrison of the lair on ${lair.name} is sunk. Now silence its battery.` : `The garrison of the lair on ${lair.name} is sunk. Land now — the lair is open.`, kind: 'gold' });
+        }
+      } else if (near > GARRISON_GONE_R && !afloat.some((g) => g.inCombat(now))) {
+        for (const g of afloat) game.removeShip(g.id);
+        S.garrison.delete(lair.id);
+      }
+    } else if (game.directorOn && near < GARRISON_R && !r.garrisonDown && !lairEmpty(game, lair)) {
+      // (The sea's own doings: still in the tests of other systems, as the director is.)
+      S.garrison.set(lair.id, manGarrison(game, lair));
+    }
+    if (hp <= 0 || near > LAIR_BATTERY_R + 800) continue;
+    // Its guns: asleep, they fire only on a ship that comes too close, and never in safe waters; struck (or its
+    // garrison fighting), on all in range. Each gun on its own reload, a ball that may miss.
+    const awake = (r.awakeUntil ?? 0) > now || garrisonAfloat(game, lair).some((g) => g.inCombat(now));
     const island = game.world.islands[lair.island];
     const unsafe = !!island && REGIONS[island.region].safety !== 'safe';
     if (!awake && !unsafe) continue;
-    game.forShipsNear(lair.x, lair.y, LAIR_BATTERY_R, (o) => {
-      if (!o.isPlayer || !o.alive || o.docked) return;
-      const d = dist(o.state.x, o.state.y, lair.x, lair.y);
-      if (d > (awake ? LAIR_BATTERY_R : 350)) return;
-      applyDamage(game, o, { hull: o.stats.hullMax * 0.03, sails: o.stats.sailHpMax * 0.02 }, null);
+    const reach = awake ? LAIR_BATTERY_R : 350;
+    const next = S.gunNext.get(lair.id) ?? lair.guns.map((_, i) => now + i * 2);
+    S.gunNext.set(lair.id, next);
+    lair.guns.forEach(([gx, gy], i) => {
+      if (now < next[i]) return;
+      let target: ShipEntity | null = null, td = Infinity;
+      game.forShipsNear(lair.x, lair.y, reach + 200, (o) => {
+        if (!o.isPlayer || !o.alive || o.docked) return;
+        const dg = dist(o.state.x, o.state.y, gx, gy);
+        if (dg > reach && dist(o.state.x, o.state.y, lair.x, lair.y) > reach) return;
+        if (dg < td) {
+          td = dg;
+          target = o;
+        }
+      });
+      if (!target) return;
+      const o = target as ShipEntity;
+      next[i] = now + LAIR_GUN_RELOAD + S.rng.range(-0.5, 0.5);
+      const hit = S.rng.float() < 0.8 - td / 2000;
+      const dir = Math.atan2(o.state.x - gx, -(o.state.y - gy));
+      const fall = hit ? td : td + S.rng.range(-60, 60);
+      game.emit({ k: 'fx', fx: 'lair_gun', x: gx, y: gy, dir: Math.round(dir * 1000) / 1000, r: Math.round(fall), hit }, gx, gy);
       if (!o.attackers.has(-lair.island)) game.toastShip(o, `The lair’s battery on ${lair.name} opens fire!`, 'bad');
-      o.attackers.set(-lair.island, game.now);
-      game.emit({ k: 'fx', fx: 'barrage', x: Math.round(o.state.x), y: Math.round(o.state.y), r: 40 }, o.state.x, o.state.y);
+      o.attackers.set(-lair.island, now);
+      if (hit) applyDamage(game, o, { hull: o.stats.hullMax * 0.016, sails: o.stats.sailHpMax * 0.01, crew: S.rng.chance(0.4) ? 1 : 0 }, null);
     });
   }
+}
+
+/** A lair's fortress as a captain near it sees it. */
+function lairView(game: Game, l: Lair): LairView {
+  const r = ws(game).rec[l.id] ?? {};
+  const hp = battery(game, l);
+  const guard = garrisonAfloat(game, l).length;
+  const window = !!r.lairOpenUntil && game.wallNow() < r.lairOpenUntil;
+  return {
+    id: l.id, x: Math.round(l.x), y: Math.round(l.y), hp: Math.round((hp / l.max) * 100) / 100, open: hp <= 0 && window && !guard,
+    name: l.name, captain: l.captain, level: l.level, guns: l.guns, garrison: guard, stormed: hp <= 0 && !window,
+  };
+}
+
+/** Tests and the admin: the garrison of a lair (the ships' ids). */
+export function lairGarrison(game: Game, id: string): number[] {
+  return ws(game).garrison.get(id) ?? [];
 }
 
 // ------------------------------------------------------------------------------------------------ at sea
@@ -624,8 +800,7 @@ export function wantedView(game: Game, s: PlayerSession): WantedView {
   if (ship && !ship.docked) {
     for (const l of S.lairs.values()) {
       if (Math.abs(l.x - ship.state.x) > 4500 || Math.abs(l.y - ship.state.y) > 4500) continue;
-      const r = S.rec[l.id] ?? {};
-      lairs.push({ id: l.id, x: Math.round(l.x), y: Math.round(l.y), hp: Math.round((battery(game, l) / l.max) * 100) / 100, open: !!r.lairOpenUntil && game.wallNow() < r.lairOpenUntil });
+      lairs.push(lairView(game, l));
     }
   }
   return {
@@ -665,4 +840,33 @@ export function clearWanted(game: Game): void {
     game.removeShip(l.ship);
   }
   S.live.clear();
+}
+
+/** The admin (play-testing, docs/16 #7): every lair; silence its battery (opening it for a landing); sink its
+ *  garrison. */
+export function lairsAll(game: Game): Readonly<Lair>[] {
+  return [...ws(game).lairs.values()];
+}
+
+export function lairAdmin(game: Game, id: string, what: 'silence' | 'sink' | 'rebuild' | 'wake'): void {
+  const S = ws(game);
+  const lair = S.lairs.get(id);
+  if (!lair) return;
+  const r = (S.rec[id] ??= {});
+  if (what === 'wake') r.awakeUntil = game.now + 300;
+  else if (what === 'silence') {
+    r.battery = 0;
+    r.lairOpenUntil = game.wallNow() + LAIR_OPEN_MIN * 60_000;
+    r.lairRebuildAt = game.wallNow() + LAIR_REBUILD_H * HOUR;
+  } else if (what === 'sink') {
+    for (const g of garrisonAfloat(game, lair)) game.removeShip(g.id);
+    S.garrison.delete(id);
+    r.garrisonDown = true;
+  } else {
+    delete r.battery;
+    delete r.lairOpenUntil;
+    delete r.lairRebuildAt;
+    delete r.garrisonDown;
+  }
+  S.dirty = true;
 }

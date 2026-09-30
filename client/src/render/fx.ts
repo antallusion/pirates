@@ -66,6 +66,10 @@ const THIN = [0, 0.4, 0.7];
 export class Fx {
   particles: Particle[] = [];
   balls: Ball[] = [];
+  /** A shore gun's flash, drawn from the painted muzzle blast (docs/16 #7): where, which way, how old. */
+  muzzles: { x: number; y: number; dir: number; t: number; life: number }[] = [];
+  /** When each lair gun last fired (x,y key → performance seconds), so the fort's barrel follows its shot. */
+  gunShots = new Map<string, { dir: number; at: number }>();
   lights: Light[] = [];
   tethers: { a: number; b: number; until: number }[] = [];
   beams: { x: number; y: number; x2: number; y2: number; t: number }[] = [];
@@ -301,6 +305,34 @@ export class Fx {
         break;
       case 'fx':
         switch (e.fx) {
+          case 'lair_gun': {
+            // A lair's shore gun (docs/16 #7): the muzzle blast from the painted flash, a bank of powder smoke rolling
+            // off the battery, the ball in flight — and splinters where it strikes, a splash where it misses.
+            const d = e.dir ?? 0, r = e.r ?? 300, v = headingVec(d);
+            const spd = AMMO.round.speed * SPEED_SCALE;
+            const mx = e.x + v.x * 9, my = e.y + v.y * 9;
+            this.muzzles.push({ x: mx, y: my, dir: d, t: 0, life: 0.5 });
+            this.gunShots.set(`${e.x},${e.y}`, { dir: d, at: (globalThis.performance?.now() ?? Date.now()) / 1000 });
+            this.add({ kind: 'flash', x: mx, y: my, life: 0.18, size: 7, grow: 70, color: '#ffd28a' });
+            this.light(mx, my, 160, 'rgba(255,190,110,1)', 0.9, 0.3);
+            for (let i = 0; i < 10; i++) {
+              this.add({
+                kind: 'smoke', x: mx + v.x * (3 + i * 6) + (Math.random() - 0.5) * 10, y: my + v.y * (3 + i * 6) + (Math.random() - 0.5) * 10,
+                vx: v.x * (6 - i * 0.5) + (Math.random() - 0.5) * 3, vy: v.y * (6 - i * 0.5) + (Math.random() - 0.5) * 3,
+                life: 6 + Math.random() * 4, size: 12 + Math.random() * 10, grow: 6, color: '#7c7f83',
+              });
+            }
+            const left = Math.max(10, r - 9);
+            this.balls.push({ x: mx, y: my, vx: v.x * spd, vy: v.y * spd, left, delay: 0, ammo: 'round', owner: -1, alive: true, trail: [] });
+            if (e.hit) {
+              const hx = e.x + v.x * r, hy = e.y + v.y * r;
+              setTimeout(() => {
+                this.splinters(hx, hy, 12);
+                this.add({ kind: 'flash', x: hx, y: hy, life: 0.2, size: 5, grow: 45, color: '#ffc27a' });
+              }, (left / spd) * 1000);
+            }
+            break;
+          }
           case 'struck':
             // She strikes her colours (docs/16 #3): a white ring and the word over her.
             this.add({ kind: 'ring', x: e.x, y: e.y, life: 0.9, size: 10, grow: 60, color: '#f4f0e6' });
@@ -526,6 +558,8 @@ export class Fx {
       }
     }
     this.balls = this.balls.filter((b) => b.alive);
+    for (const m of this.muzzles) m.t += dt;
+    this.muzzles = this.muzzles.filter((m) => m.t < m.life);
     for (const p of this.particles) {
       p.t += dt;
       p.x += p.vx * dt;

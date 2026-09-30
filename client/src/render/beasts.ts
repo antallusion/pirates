@@ -404,3 +404,43 @@ export function drawCarcass(g: G, id: BeastId, len: number, beam: number, progre
   // The flukes, limp.
   flukes(g, len, beam, 0, 1.2, '#8a8277');
 }
+
+/** A dolphin from above (docs/16 #9 — no painting of one, drawn by hand): a slate-grey spindle with a paler belly
+ *  line, a short beak, a swept dorsal fin and small flukes, its tail beating fast. Head toward −y, len in px. */
+export function drawDolphin(g: G, len: number, t: number, seed: number): void {
+  const beam = len * 0.24;
+  const ph = t * 7 + seed * 1.37;
+  const bend = Math.sin(ph) * beam * 0.35;
+  fins(g, len, beam, 0.34, beam * 0.75, 0.75, beam * 0.26, '#5d6d79', Math.sin(ph * 0.5) * 0.08);
+  flukes(g, len, beam, bend, 1.5, '#56656f');
+  body(g, len, beam, bend, 0.32, 0.5);
+  g.fillStyle = '#7f909c';
+  g.fill();
+  g.save();
+  g.clip();
+  // The pale flank blaze and the darker cape along the back.
+  g.fillStyle = 'rgba(222,230,234,0.7)';
+  for (const side of [-1, 1]) {
+    g.beginPath();
+    g.ellipse(side * beam * 0.42, -len * 0.02, beam * 0.14, len * 0.22, side * 0.08, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = 'rgba(44,54,62,0.6)';
+  g.beginPath();
+  g.ellipse(0, -len * 0.05, beam * 0.2, len * 0.3, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+  // The beak.
+  g.fillStyle = '#4c5963';
+  g.beginPath();
+  g.ellipse(0, -len * 0.5, beam * 0.12, len * 0.06, 0, 0, Math.PI * 2);
+  g.fill();
+  // The dorsal fin, swept back.
+  g.fillStyle = '#2b343b';
+  g.beginPath();
+  g.moveTo(0, -len * 0.04);
+  g.lineTo(beam * 0.08 + bend * 0.15, len * 0.14);
+  g.lineTo(-beam * 0.06, len * 0.1);
+  g.closePath();
+  g.fill();
+}

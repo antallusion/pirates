@@ -11,7 +11,7 @@ import { noteOwnShip } from './ui/levels.ts';
 import { isNight, SPEED_SCALE } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, SeaMarkData, SectorData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
+  BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, FrontWarn, ReefData, SeaMarkData, SectorData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
 import type { TaskView } from '../../shared/src/data/worldtasks.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -69,6 +69,8 @@ export class ClientState {
   currents: CurrentData[] = [];
   whirlpools: WhirlpoolData[] = [];
   fronts: FrontData[] = [];
+  /** A storm front on her course (docs/16 #10). */
+  frontWarn: FrontWarn | null = null;
   frontsAt = 0;
   forecast = false;
   discovered = new Set<number>();
@@ -291,6 +293,7 @@ export class ClientState {
         this.fronts = m.list;
         this.frontsAt = now;
         this.forecast = m.forecast;
+        this.frontWarn = m.warn ?? null;
         break;
       case 'party':
         this.party = m.group;

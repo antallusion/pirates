@@ -5,14 +5,14 @@
 // Brethren's fame and ranks; and the mark of a merchant under a friend's guns.
 
 import { questEvent } from './quests.ts';
-import { BRETHREN_RANKS, CODE_RANK, CONVOY_EVERY, DEED_CONVOYS, FAME, HEAT, MORALE_RANK, TERROR_TITLE, TIP_WINDOW, TITLE_RANK, TRIBUTE, brethrenRank, clerkCost, heatPrices, tipCost } from '../../../shared/src/data/raiding.ts';
+import { BRETHREN_RANKS, CODE_RANK, CONVOY_EVERY, CONVOY_INFAMY, CONVOY_MAX, CONVOY_SPOT_R, DEED_CONVOYS, ESCORT_KEEP_R, ESCORT_SIGN_R, convoyStrongbox, escortPay, FAME, HEAT, MORALE_RANK, TERROR_TITLE, TIP_WINDOW, TITLE_RANK, TRIBUTE, brethrenRank, clerkCost, heatPrices, tipCost } from '../../../shared/src/data/raiding.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { dist, headingOf } from '../../../shared/src/math.ts';
-import type { AppraisalView, RaidView, TipView } from '../../../shared/src/protocol.ts';
+import type { AppraisalView, ConvoyView, RaidView, TipView } from '../../../shared/src/protocol.ts';
 import { Rng, hashString } from '../../../shared/src/rng.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
@@ -38,6 +38,19 @@ interface Convoy {
   broken: boolean;
   until: number;
   raiders: Set<number>;
+  /** Its level ⚓ (of the square it sails from) and its route, a few points, for the chart (docs/16 #6). */
+  level: number;
+  route: [number, number][];
+  /** Captains who know of it: heard of it as it sailed, or saw it. */
+  known: Set<number>;
+  /** Captains signed on as its escort → the pay promised on arrival; when the first signed on. */
+  hired: Map<number, number>;
+  hiredAt: number;
+  /** The sea has sent raiders at it once while it had an escort of captains. */
+  stirred: boolean;
+  delivered: boolean;
+  /** Game time a raider last fired on it. */
+  raidedAt: number;
 }
 
 interface Tip {
@@ -295,13 +308,27 @@ function lawfulPorts(game: Game, region: RegionId): Port[] {
   return game.world.ports.filter((p) => p.region === region && (p.faction === 'crown' || p.faction === 'league') && game.inZone(p.x, p.y));
 }
 
-/** A League convoy on a contested sea's lanes: three to six merchantmen of one hull, one or two escorts. */
+/** A route of many nodes cut to a few points for the chart. */
+function thinRoute(path: [number, number][], most = 20): [number, number][] {
+  if (path.length <= most) return path.map(([x, y]) => [Math.round(x), Math.round(y)]);
+  const out: [number, number][] = [];
+  for (let i = 0; i < most - 1; i++) {
+    const [x, y] = path[Math.floor((i * (path.length - 1)) / (most - 1))];
+    out.push([Math.round(x), Math.round(y)]);
+  }
+  const [lx, ly] = path[path.length - 1];
+  out.push([Math.round(lx), Math.round(ly)]);
+  return out;
+}
+
+/** A League convoy on the lanes of the contested and lawless seas (docs/12 P6, docs/16 #6): three to five
+ *  merchantmen of one hull, one or two escorts, at the level of the square it sails from. */
 export function sailConvoy(game: Game, region: RegionId): Convoy | null {
   const S = rs(game);
-  const froms = lawfulPorts(game, region).concat(game.world.ports.filter((p) => p.region === region && p.faction === 'free' && game.inZone(p.x, p.y)));
+  const froms = lawfulPorts(game, region).concat(game.world.ports.filter((p) => p.region === region && p.faction === 'free' && !p.raft && game.inZone(p.x, p.y)));
   if (!froms.length) return null;
   const from = S.rng.pick(froms);
-  const tos = game.world.ports.filter((p) => p.id !== from.id && (p.faction === 'crown' || p.faction === 'league' || p.faction === 'free') && Math.hypot(p.x - from.x, p.y - from.y) > 12000 && Math.hypot(p.x - from.x, p.y - from.y) < 50000 && game.inZone(p.x, p.y));
+  const tos = game.world.ports.filter((p) => p.id !== from.id && !p.raft && (p.faction === 'crown' || p.faction === 'league' || p.faction === 'free') && Math.hypot(p.x - from.x, p.y - from.y) > 12000 && Math.hypot(p.x - from.x, p.y - from.y) < 50000 && game.inZone(p.x, p.y));
   if (!tos.length) return null;
   const to = S.rng.pick(tos);
   const path = game.routes.between(from, to);
@@ -309,18 +336,22 @@ export function sailConvoy(game: Game, region: RegionId): Convoy | null {
   const band = sectorAt(game.world, from.x, from.y).band; // her port's square of the sea (docs/16 P2)
   const level = S.rng.int(band[0], band[1]);
   const cls: ShipClassId = level >= 7 ? 'galleon' : 'fluyt';
-  const n = S.rng.int(3, 6);
+  const n = S.rng.int(3, 5);
   const id = S.seq++;
-  const c: Convoy = { id, region, from: from.id, to: to.id, members: [], escorts: [], size: n, broken: false, until: game.now + 5400, raiders: new Set() };
+  const c: Convoy = {
+    id, region, from: from.id, to: to.id, members: [], escorts: [], size: n, broken: false, until: game.now + 5400, raiders: new Set(),
+    level, route: thinRoute(path), known: new Set(), hired: new Map(), hiredAt: 0, stirred: false, delivered: false, raidedAt: -1e9,
+  };
   const h = headingOf(to.x - from.x, to.y - from.y);
   for (let i = 0; i < n; i++) {
     const m = game.spawnNpcShip('merchant', cls, 'league', from.x, from.y, h);
     game.setNpcLevel(m, level);
     m.convoyId = id;
     m.originPort = from.id;
-    m.purse = 300 + 80 * level;
+    // A convoy carries the League's silver as well as its goods: a richer prize than a lone merchantman.
+    m.purse = 500 + 120 * level;
     const good = S.rng.pick(['spices', 'sugar', 'cloth', 'tobacco', 'medicine', 'rum'] as GoodId[]);
-    m.cargo = { [good]: Math.floor(m.stats.holdVolume * 0.8 / GOODS[good].volume) };
+    m.cargo = { [good]: Math.floor(m.stats.holdVolume * 0.9 / GOODS[good].volume) };
     const b = game.npcs.get(m.id)!;
     setPath(b, path);
     b.destPort = to.id;
@@ -339,8 +370,14 @@ export function sailConvoy(game: Game, region: RegionId): Convoy | null {
     b.slot = i + 1;
     c.escorts.push(e.id);
   }
+  keepEscorts(game, c);
   S.convoys.set(id, c);
-  for (const s of game.sessions) if (s.ship?.region === region) game.sendTo(s, { t: 'toast', msg: `A League convoy of ${n} sails from ${from.name} for ${to.name}.`, kind: 'info' });
+  // The word of its sailing goes round the sea it sails in: those captains know of it (its route is on their chart).
+  for (const s of game.sessions) {
+    if (s.ship?.region !== region) continue;
+    c.known.add(s.accountId);
+    game.sendTo(s, { t: 'toast', msg: `A League convoy of ${n} sails from ${from.name} for ${to.name}.`, kind: 'info' });
+  }
   return c;
 }
 
@@ -351,27 +388,161 @@ export function convoyFoe(game: Game, convoyId: number, other: ShipEntity): bool
   return c.raiders.has(other.accountId);
 }
 
+/** Its merchantmen still sailing under the League's flag. */
+function standingOf(game: Game, c: Convoy): ShipEntity[] {
+  const out: ShipEntity[] = [];
+  for (const mid of c.members) {
+    const m = game.ships.get(mid);
+    if (m && m.alive && !m.surrendered && !m.prize && !m.lootLockedFor) out.push(m);
+  }
+  return out;
+}
+
+/** The escorts keep to the first merchantman still sailing: in formation when near a captain, along her route when
+ *  the convoy is far from everyone (they would wander off on their own otherwise). */
+function keepEscorts(game: Game, c: Convoy): void {
+  const lead = standingOf(game, c)[0];
+  if (!lead) return;
+  const lb = game.npcs.get(lead.id);
+  for (const e of c.escorts) {
+    const b = game.npcs.get(e);
+    if (!b) continue;
+    b.leader = lead.id;
+    if (!b.active && lb?.path) {
+      b.path = lb.path;
+      b.length = lb.length;
+      b.traveled = Math.max(0, lb.traveled - 200 * (b.slot ?? 1));
+      b.destPort = null;
+    }
+  }
+}
+
+/** A captain learns of a convoy (a tavern's word, a lookout's): its route goes on her chart. */
+export function learnConvoy(game: Game, accountId: number, convoyId: number): boolean {
+  const c = rs(game).convoys.get(convoyId);
+  if (!c || c.broken || c.delivered) return false;
+  c.known.add(accountId);
+  return true;
+}
+
+/** The convoy a captain at sea could sign on to escort, if any: near one of its ships, not a raider of it, not
+ *  already its escort. `blocked` says why the commodore will not have her. */
+export function escortOffer(game: Game, s: PlayerSession): { id: number; to: string; pay: number; blocked?: string } | null {
+  const ship = s.ship;
+  if (!ship || ship.docked || !ship.alive || !s.profile) return null;
+  for (const c of rs(game).convoys.values()) {
+    if (c.broken || c.delivered || c.hired.has(s.accountId)) continue;
+    const near = standingOf(game, c).some((m) => Math.abs(m.state.x - ship.state.x) < ESCORT_SIGN_R && Math.abs(m.state.y - ship.state.y) < ESCORT_SIGN_R && dist(m.state.x, m.state.y, ship.state.x, ship.state.y) < ESCORT_SIGN_R);
+    if (!near) continue;
+    const to = game.portById(c.to)?.name ?? c.to;
+    const pay = escortPay(c.level);
+    if (c.raiders.has(s.accountId)) return { id: c.id, to, pay, blocked: 'the commodore does not sign on those who fired on his ships' };
+    if (ship.wantedCache >= 2) return { id: c.id, to, pay, blocked: 'the commodore does not sign on a wanted captain' };
+    if ((s.profile.reputation.league ?? 0) <= -30) return { id: c.id, to, pay, blocked: 'the League does not trust you with its convoy' };
+    return { id: c.id, to, pay };
+  }
+  return null;
+}
+
+/** She signs on as escort (the land key by a convoy): paid on arrival if she is with it when it comes in. */
+export function signEscort(game: Game, s: PlayerSession): string | null {
+  const o = escortOffer(game, s);
+  if (!o) return 'No convoy within hail';
+  if (o.blocked) return o.blocked;
+  const c = rs(game).convoys.get(o.id)!;
+  if (!c.hired.size) c.hiredAt = game.now;
+  c.hired.set(s.accountId, o.pay);
+  c.known.add(s.accountId);
+  game.sendTo(s, { t: 'toast', msg: `You sign on as escort of the League convoy for ${o.to}: ${o.pay} silver on arrival. Keep with it.`, kind: 'good' });
+  sendRaid(game, s, true);
+  return null;
+}
+
+/** The sea sends raiders at a convoy a captain escorts, once, a minute or so after she signs on. */
+function stirConvoy(game: Game, c: Convoy, lead: ShipEntity): void {
+  const S = rs(game);
+  c.stirred = true;
+  const h = lead.state.heading;
+  let sent = 0;
+  for (let k = 0; k < 10 && sent < 2; k++) {
+    const a = h + S.rng.range(-1.2, 1.2);
+    const x = lead.state.x + Math.sin(a) * 2000, y = lead.state.y - Math.cos(a) * 2000;
+    if (isLand(game.world, x, y) || !game.inZone(x, y)) continue;
+    const lv = Math.max(1, Math.min(10, c.level + S.rng.int(-1, 0)));
+    const p = game.spawnNpcShip('pirate', S.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, headingOf(lead.state.x - x, lead.state.y - y));
+    game.setNpcLevel(p, lv);
+    p.purse = 150 + 60 * lv;
+    const b = game.npcs.get(p.id)!;
+    b.area = { x: lead.state.x, y: lead.state.y, r: 4000 };
+    b.chase = { id: lead.id, until: game.now + 300 };
+    b.expiresAt = game.now + 600;
+    planWander(game, p, b);
+    sent++;
+  }
+  if (!sent) return;
+  for (const acc of c.hired.keys()) {
+    const s = game.sessionByAccount(acc);
+    if (s) game.sendTo(s, { t: 'toast', msg: 'Sails on the horizon: raiders bear down on the convoy!', kind: 'bad' });
+  }
+}
+
+/** The convoy is in: its escorts of captains are paid, by the share of its hulls brought in. */
+function deliverConvoy(game: Game, c: Convoy, standing: number): void {
+  c.delivered = true;
+  const port = game.portById(c.to);
+  const name = port?.name ?? c.to;
+  const share = standing / Math.max(1, c.size);
+  for (const [acc, pay] of c.hired) {
+    const s = game.sessionByAccount(acc);
+    const ship = s?.ship;
+    if (!s?.profile || !ship || !ship.alive) continue;
+    const near = (port && dist(ship.state.x, ship.state.y, port.x, port.y) < ESCORT_KEEP_R) || c.members.some((mid) => {
+      const m = game.ships.get(mid);
+      return !!m && dist(ship.state.x, ship.state.y, m.state.x, m.state.y) < ESCORT_KEEP_R;
+    });
+    if (!near || c.raiders.has(acc)) {
+      game.sendTo(s, { t: 'toast', msg: `The convoy made ${name} without you: no pay.`, kind: 'bad' });
+      continue;
+    }
+    const n = Math.round(pay * (0.5 + 0.5 * share));
+    s.profile.gold += n;
+    game.db.ledger(acc, 'convoy_escort', n, c.to);
+    changeRep(s.profile, 'league', 4);
+    game.grantXp(s, 80 + 20 * c.level, 'Escorted a League convoy');
+    game.sendTo(s, { t: 'toast', msg: `The League convoy is in at ${name}: ${n} silver for the escort (${standing} of ${c.size} hulls brought in).`, kind: 'gold' });
+  }
+}
+
 function stepConvoys(game: Game): void {
   const S = rs(game);
   for (const [id, c] of S.convoys) {
-    // Who has fired on it.
+    // Who has fired on it: the League marks them.
     for (const mid of [...c.members, ...c.escorts]) {
       const m = game.ships.get(mid);
       if (!m) continue;
       for (const [aid, t] of m.attackers) {
         if (t < game.now - 5) continue;
         const acc = game.ships.get(aid)?.accountId;
-        if (acc !== null && acc !== undefined) c.raiders.add(acc);
+        if (acc === null || acc === undefined) continue;
+        c.raidedAt = game.now;
+        if (c.raiders.has(acc)) continue;
+        c.raiders.add(acc);
+        c.known.add(acc);
+        const s = game.sessionByAccount(acc);
+        if (s?.profile) {
+          changeRep(s.profile, 'league', -CONVOY_INFAMY);
+          game.sendTo(s, { t: 'toast', msg: `The League marks your name: you fired on its convoy (−${CONVOY_INFAMY} League standing).`, kind: 'bad' });
+          if (c.hired.delete(acc)) game.sendTo(s, { t: 'toast', msg: 'You turned on the convoy you were paid to guard: the contract is void.', kind: 'bad' });
+        }
       }
     }
-    const standing = c.members.filter((mid) => {
-      const m = game.ships.get(mid);
-      return m && m.alive && !m.surrendered && !m.prize && !m.lootLockedFor;
-    });
+    const standing = standingOf(game, c);
     if (!c.broken && !standing.length && c.raiders.size) {
       c.broken = true;
       heatUp(game, c.region, HEAT.convoy);
       const names: string[] = [];
+      // The strongbox: the League's silver, shared among the raiders still about the wrecks.
+      const near: PlayerSession[] = [];
       for (const acc of c.raiders) {
         const s = game.sessionByAccount(acc);
         if (!s?.profile) continue;
@@ -380,11 +551,40 @@ function stepConvoys(game: Game): void {
         pr.convoys++;
         addFame(game, s, FAME.convoy);
         if (pr.convoys >= DEED_CONVOYS) grantDeed(game, s, 'deed_convoy_breaker');
+        const ship = s.ship;
+        if (ship?.alive && c.members.some((mid) => {
+          const m = game.ships.get(mid);
+          return !!m && dist(ship.state.x, ship.state.y, m.state.x, m.state.y) < 3000;
+        })) near.push(s);
+      }
+      if (near.length) {
+        const each = Math.round(convoyStrongbox(c.level) / near.length);
+        for (const s of near) {
+          s.profile!.gold += each;
+          game.db.ledger(s.accountId, 'convoy_strongbox', each, String(c.id));
+          game.sendTo(s, { t: 'toast', msg: `The convoy's strongbox: ${each} silver.`, kind: 'gold' });
+        }
       }
       if (names.length) for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${names.join(', ')} broke a League convoy in ${REGIONS[c.region].name}!`, kind: 'gold' });
     }
+    // In port: a merchantman of it has reached its harbour and planned her next voyage.
+    if (!c.broken && !c.delivered && standing.some((m) => {
+      const b = game.npcs.get(m.id);
+      return !!b && b.destPort !== c.to;
+    })) deliverConvoy(game, c, standing.length);
+    // Seen: a captain within sight of it has its route on her chart.
+    const lead = standing[0];
+    if (lead && !c.broken && !c.delivered) {
+      for (const s of game.sessions) {
+        const ship = s.ship;
+        if (!ship || ship.docked || c.known.has(s.accountId)) continue;
+        if (Math.abs(ship.state.x - lead.state.x) < CONVOY_SPOT_R && Math.abs(ship.state.y - lead.state.y) < CONVOY_SPOT_R) c.known.add(s.accountId);
+      }
+      keepEscorts(game, c);
+      if (c.hired.size && !c.stirred && game.now - c.hiredAt > 50 && game.npcs.get(lead.id)?.active) stirConvoy(game, c, lead);
+    }
     // Delivered, broken or old: the convoy's story ends; its ships sail on as the sea's own.
-    if (c.broken || game.now > c.until || !c.members.some((mid) => game.ships.has(mid))) {
+    if (c.broken || c.delivered || game.now > c.until || !c.members.some((mid) => game.ships.has(mid))) {
       for (const e of c.escorts) {
         const s = game.ships.get(e);
         if (s) {
@@ -397,14 +597,40 @@ function stepConvoys(game: Game): void {
           }
         }
       }
+      for (const acc of c.hired.keys()) {
+        const s = game.sessionByAccount(acc);
+        if (s && !c.delivered) game.sendTo(s, { t: 'toast', msg: 'The convoy you escorted is lost: no pay.', kind: 'bad' });
+        if (s) sendRaid(game, s, true);
+      }
       S.convoys.delete(id);
     }
   }
   if (game.directorOn && game.now >= S.nextConvoy) {
     S.nextConvoy = game.now + S.rng.range(CONVOY_EVERY[0], CONVOY_EVERY[1]);
-    const regions = REGION_IDS.filter((r) => REGIONS[r].safety === 'contested' && (!game.zone || game.zone.regions.has(r)) && [...game.sessions].some((s) => s.ship?.region === r));
-    if (regions.length) sailConvoy(game, S.rng.pick(regions));
+    const busy = new Set([...S.convoys.values()].map((c) => c.region));
+    const regions = REGION_IDS.filter((r) => REGIONS[r].safety !== 'safe' && r !== 'the_abyss' && !busy.has(r) && (!game.zone || game.zone.regions.has(r)) && [...game.sessions].some((s) => s.ship?.region === r));
+    if (regions.length && S.convoys.size < CONVOY_MAX) sailConvoy(game, S.rng.pick(regions));
   }
+}
+
+/** The convoys a captain knows of, for her chart (docs/16 #6). */
+function convoyViews(game: Game, s: PlayerSession): ConvoyView[] {
+  const out: ConvoyView[] = [];
+  const ship = s.ship;
+  for (const c of rs(game).convoys.values()) {
+    if (c.broken || c.delivered || (!c.known.has(s.accountId) && !c.hired.has(s.accountId))) continue;
+    const standing = standingOf(game, c);
+    const lead = standing[0] ?? game.ships.get(c.members.find((mid) => game.ships.has(mid)) ?? -1);
+    if (!lead) continue;
+    const seen = !!ship && !ship.docked && dist(ship.state.x, ship.state.y, lead.state.x, lead.state.y) < CONVOY_SPOT_R;
+    out.push({
+      id: c.id, x: Math.round(lead.state.x / 10) * 10, y: Math.round(lead.state.y / 10) * 10,
+      from: game.portById(c.from)?.name ?? c.from, to: game.portById(c.to)?.name ?? c.to,
+      level: c.level, hulls: standing.length, size: c.size, escorts: c.escorts.filter((e) => game.ships.get(e)?.alive).length,
+      route: c.route, seen, mine: c.hired.has(s.accountId), pay: c.hired.get(s.accountId) ?? escortPay(c.level), raided: game.now - c.raidedAt < 30,
+    });
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------------------------------------ the merchant's answer
@@ -618,7 +844,7 @@ export function raidView(game: Game, s: PlayerSession): RaidView {
   }
   const heat: RaidView['heat'] = {};
   for (const [r, h] of Object.entries(S.heat)) if ((h ?? 0) >= 1) heat[r as RegionId] = Math.round(h!);
-  return { fame: pr.fame, rank, next: BRETHREN_RANKS[Math.min(5, rank + 1)], honour: pr.honour, tributes: pr.tributes, convoys: pr.convoys, marks, heat };
+  return { fame: pr.fame, rank, next: BRETHREN_RANKS[Math.min(5, rank + 1)], honour: pr.honour, tributes: pr.tributes, convoys: pr.convoys, marks, heat, known: convoyViews(game, s) };
 }
 
 function sendRaid(game: Game, s: PlayerSession, force = false): void {

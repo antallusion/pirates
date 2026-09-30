@@ -16,6 +16,7 @@ import { shoalsOf } from './fishing.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { podOfShip } from './omenpod.ts';
 
 export interface CompanionRec {
   kind: 'orca';
@@ -130,8 +131,9 @@ function sendPets(game: Game): void {
   for (const s of game.sessions) {
     const c = s.profile?.companion, ship = s.ship;
     const deck = s.profile?.pets?.deck ?? null;
-    if (!ship || !ship.alive || ship.docked || (!c && !deck)) continue;
-    withPets.push({ ship, view: { ship: ship.id, ...(c ? { orca: c.level } : {}), ...(deck ? { deck } : {}) } });
+    const pod = ship ? podOfShip(game, ship.id) : undefined; // a good omen alongside (docs/16 #9)
+    if (!ship || !ship.alive || ship.docked || (!c && !deck && !pod)) continue;
+    withPets.push({ ship, view: { ship: ship.id, ...(c ? { orca: c.level } : {}), ...(deck ? { deck } : {}), ...(pod ? { pod } : {}) } });
   }
   for (const s of game.sessions) {
     const ship = s.ship;

@@ -7,6 +7,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { headingVec } from '../../../shared/src/math.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { beastsPass } from './beasts.ts';
+import { POD_CHANCE, podJoins } from './omenpod.ts';
 import { quietSea } from './director.ts';
 import { onboardingProtected } from './onboarding.ts';
 import { shoalNear } from './fishing.ts';
@@ -69,6 +70,8 @@ export function stepSeaLife(game: Game): void {
     }
     if (game.now < at) continue;
     due.set(s.accountId, game.now + game.rng.range(LIFE_EVERY[0], LIFE_EVERY[1]));
+    // Now and then a good omen: dolphins, a humpback or orcas take station alongside (docs/16 #9).
+    if (game.rng.chance(POD_CHANCE) && podJoins(game, s)) continue;
     const roll = game.rng.float();
     const done = roll < 0.45 ? flotsam(game, s) : roll < 0.75 || novice ? shoalNear(game, ship.state.x, ship.state.y, ship.region) : beastsPass(game, ship);
     if (!done) flotsam(game, s);

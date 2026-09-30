@@ -17,6 +17,7 @@ import { commonLog, dailyLog } from './daily.ts';
 import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/worldmap.ts';
 import { EN as DEN, RU as DRU } from '../lang/ui/dealings.ts';
+import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
 import { keyLabel, settings } from '../settings.ts';
 import { mapCard, placeName } from './maps.ts';
 import { esc } from './dom.ts';
@@ -24,6 +25,7 @@ import { serverText } from '../lang/server.ts';
 import { taskName } from '../../../shared/src/data/worldtasks.ts';
 
 const L = dict(EN, RU);
+const LS = dict(SEN, SRU);
 const RL = dict(REN, RRU);
 const DL = dict(DEN, DRU);
 
@@ -137,7 +139,7 @@ export class WorldMap {
     const inGroup = (state.party?.members.length ?? 0) > 1;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button>
-      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}</div></details></div>
+      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span></div></details></div>
       <div class="map-logs">${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     // A task of the sea in the log: the chart turns to its nest.
@@ -263,6 +265,8 @@ export class WorldMap {
   draw(state: ClientState): void {
     const c = this.canvas;
     if (!c || !c.isConnected) return;
+    // Not laid out yet (the window still opening): nothing to scale the chart to.
+    if (!c.clientWidth || !c.clientHeight) return;
     const dpr = Math.min(2, devicePixelRatio || 1);
     c.width = c.clientWidth * dpr;
     c.height = c.clientHeight * dpr;
@@ -408,6 +412,45 @@ export class WorldMap {
       g.fillStyle = cv.attack !== null ? '#e05a46' : '#6fd46f';
       g.fillRect(tx(cv.x) - 4, ty(cv.y) - 4, 8, 8);
     }
+    // The League convoys she knows of (docs/16 #6): heard of as they sailed, seen, or escorted — the route from port
+    // to port dashed, the column where it is, its level and harbour; hers in gold, one under fire in red.
+    for (const cv of state.raid?.known ?? []) {
+      const col = cv.raided ? '#e05a46' : cv.mine ? '#f2c14e' : '#8fc3e8';
+      g.setLineDash([7, 5]);
+      g.strokeStyle = cv.raided ? 'rgba(224,90,70,0.8)' : cv.mine ? 'rgba(242,193,78,0.8)' : 'rgba(143,195,232,0.65)';
+      g.lineWidth = 1.6;
+      g.beginPath();
+      cv.route.forEach(([px, py], i) => (i ? g.lineTo(tx(px), ty(py)) : g.moveTo(tx(px), ty(py))));
+      g.stroke();
+      g.setLineDash([]);
+      const [ex, ey] = cv.route[cv.route.length - 1];
+      g.strokeStyle = col;
+      g.beginPath();
+      g.arc(tx(ex), ty(ey), 5, 0, Math.PI * 2);
+      g.stroke();
+      g.lineWidth = 1;
+      g.fillStyle = col;
+      g.strokeStyle = 'rgba(0,0,0,0.85)';
+      for (let i = 0; i < 3; i++) {
+        g.beginPath();
+        g.rect(tx(cv.x) - 3.5 + (i - 1) * 7, ty(cv.y) - 3.5, 7, 7);
+        g.fill();
+        g.stroke();
+      }
+      g.font = '600 11px Inter, sans-serif';
+      g.textAlign = 'center';
+      label(`${LS('cv.label', { level: cv.level, to: placeName(cv.to) })} · ${LS('cv.hulls', { n: cv.hulls, size: cv.size })}`, tx(cv.x), ty(cv.y) - Math.max(12, ms * 0.8), col); // above her own mark when she sails with it
+    }
+    // The pirate lairs near her (docs/16 #7): red while its battery stands, gold when open to a landing.
+    for (const l of state.wanted?.lairs ?? []) {
+      g.fillStyle = l.open ? '#e8c46a' : l.stormed ? '#777' : l.hp > 0 ? '#b0302a' : '#d08a40';
+      g.strokeStyle = 'rgba(0,0,0,0.85)';
+      g.fillRect(tx(l.x) - 5, ty(l.y) - 5, 10, 10);
+      g.strokeRect(tx(l.x) - 5, ty(l.y) - 5, 10, 10);
+      g.font = '600 11px Inter, sans-serif';
+      g.textAlign = 'center';
+      if (this.zoom >= 3.5) label(LS('lair.label', { captain: serverText(l.captain), level: l.level }), tx(l.x), ty(l.y) - 9, 'rgba(232,150,130,0.95)');
+    }
     // Charted islands.
     for (const id of state.discovered) {
       const is = state.islands.get(id);
@@ -523,15 +566,42 @@ export class WorldMap {
         g.fillStyle = 'rgba(216,210,196,0.7)';
         g.fillText(L(`front.${f.kind}`), tx(f.x), ty(f.y));
       }
-      if (state.forecast && (f.vx || f.vy)) {
-        const t = Math.min(600, f.ttl);
-        g.strokeStyle = 'rgba(143,179,217,0.55)';
-        g.lineWidth = 1.2;
+      // Where it drifts (docs/16 #10): an arrow for everyone, ten minutes of it; the Navigator's forecast also marks
+      // where the storm will be.
+      if (f.vx || f.vy) {
+        const t = state.forecast ? Math.min(600, f.ttl) : 600;
+        const x0 = tx(f.x), y0 = ty(f.y), x1 = tx(f.x + f.vx * t), y1 = ty(f.y + f.vy * t);
+        const a = Math.atan2(y1 - y0, x1 - x0), len = Math.max(ms * 0.9, Math.hypot(x1 - x0, y1 - y0));
+        const ex = x0 + Math.cos(a) * len, ey = y0 + Math.sin(a) * len;
+        const warned = state.frontWarn?.id === f.id;
+        g.strokeStyle = warned ? 'rgba(255,122,90,0.95)' : f.kind === 'storm' || f.kind === 'black_storm' ? 'rgba(223,230,240,0.85)' : 'rgba(143,179,217,0.7)';
+        g.fillStyle = g.strokeStyle;
+        g.lineWidth = 2;
         g.beginPath();
-        g.moveTo(tx(f.x), ty(f.y));
-        g.lineTo(tx(f.x + f.vx * t), ty(f.y + f.vy * t));
+        g.moveTo(x0 + Math.cos(a) * ms * 0.5, y0 + Math.sin(a) * ms * 0.5);
+        g.lineTo(ex, ey);
         g.stroke();
-        mark('icon.map_storm', tx(f.x + f.vx * t), ty(f.y + f.vy * t), ms * 0.7);
+        g.beginPath();
+        g.moveTo(ex + Math.cos(a) * 7, ey + Math.sin(a) * 7);
+        g.lineTo(ex + Math.cos(a + 2.5) * 8, ey + Math.sin(a + 2.5) * 8);
+        g.lineTo(ex + Math.cos(a - 2.5) * 8, ey + Math.sin(a - 2.5) * 8);
+        g.closePath();
+        g.fill();
+        g.lineWidth = 1;
+        if (state.forecast) mark('icon.map_storm', x1, y1, ms * 0.7);
+        if (warned) {
+          g.setLineDash([6, 4]);
+          g.lineWidth = 2;
+          g.beginPath();
+          g.arc(x0, y0, rr, 0, Math.PI * 2);
+          g.stroke();
+          g.setLineDash([]);
+          g.lineWidth = 1;
+          g.font = '600 12px Inter, sans-serif';
+          g.textAlign = 'center';
+          const n = Math.max(1, Math.round((state.frontWarn!.sec - (performance.now() - state.frontsAt) / 1000) / 60));
+          label(LS('front.chart', { n }), x0, y0 + ms * 0.9, 'rgba(255,150,120,0.95)');
+        }
       }
     }
     // Market knowledge: every visited port carries the age of what you know about it.
