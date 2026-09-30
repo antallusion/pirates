@@ -346,7 +346,7 @@ export class Hud {
     const band = bandOf(sec.l), cap = captainBand(band);
     const color = THREAT_COLOR[threatTo(sec.l)];
     const pocket = sec.p ? `<span class="rg-dot"> · </span><span class="muted">${esc(L(sec.p === 'calm' ? 'sector.calm' : 'sector.wild'))}</span>` : '';
-    return `<div class="rg-sector"><span style="color:${color}">${esc(L('sector', { band: band[0] === band[1] ? `${band[0]}` : `${band[0]}–${band[1]}` }))}</span><span class="rg-dot"> · </span><span class="muted">${esc(L('sector.cap', { lo: cap[0], hi: cap[1] }))}</span>${pocket}</div>`;
+    return `<div class="rg-sector"><span style="color:${color}">${esc(L('sector', { band: band[0] === band[1] ? `${band[0]}` : `${band[0]}–${band[1]}` }))}</span><span class="rg-cap"><span class="rg-dot"> · </span><span class="muted">${esc(L('sector.cap', { lo: cap[0], hi: cap[1] }))}</span>${pocket}</span></div>`;
   }
 
   private sectorHere(state: ClientState): SectorData | null {

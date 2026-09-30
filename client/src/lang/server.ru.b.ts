@@ -1268,6 +1268,7 @@ export const SERVER_RU_B: Record<string, string> = {
   // The sea's own wars (docs/16 P1).
   "A bounty on raiders of the low waters: {0} silver more.": "Награда за налётчиков на мелководье: ещё {0} серебра.",
   "The merchant": "Купец",
+  "The patrol {0} ran down the rover {1} near {2}.": "Патруль «{0}» настиг и потопил пирата «{1}» у {2}.",
   "The raiders on {0} hold their fire: you are in this together.": "Налётчики на «{0}» не стреляют по вам: теперь вы заодно.",
   "{0} dips her flag to you: {1} silver for the rescue.": "«{0}» приспускает флаг в вашу честь: {1} серебра за спасение.",
   "{0} drove the raiders off {1} near {2}.": "{0} отогнал(а) налётчиков от «{1}» у {2}.",

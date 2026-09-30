@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { WORLD_SEED } from '../shared/src/constants.ts';
 import { levelRange } from '../shared/src/data/shiplevel.ts';
+import { veteranPay } from '../shared/src/data/questpay.ts';
 import { Rng } from '../shared/src/rng.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import { bandOf, captainBand, sectorAt, sectorGrid, SECTOR_SIZE, SECTORS_PER_SIDE } from '../shared/src/world/sectors.ts';
@@ -196,6 +197,9 @@ test('sector bands: the same for the seed, rising with the danger of the waters,
     assert.deepEqual(s.band, bandOf(s.level));
     if (s.pocket === 'calm') assert.ok(world.ports.some((p) => Math.floor(p.x / SECTOR_SIZE) === s.sx && Math.floor(p.y / SECTOR_SIZE) === s.sy), 'a quiet pocket is a harbour’s');
   }
+  // Reasons to come back to the low waters: a port's job pays a veteran more, up to twice its pay.
+  assert.equal(veteranPay(5, 5), 1);
+  assert.ok(veteranPay(30, 6) > 1.5 && veteranPay(60, 1) === 2);
   // The captains a square is for: a ⚓3–5 square for captains of about 8 to 25.
   assert.deepEqual(captainBand([3, 5]), [8, 25]);
   assert.deepEqual(captainBand([9, 10]), [49, 60]);

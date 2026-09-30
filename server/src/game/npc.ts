@@ -1182,6 +1182,19 @@ export function abstractEncounters(game: Game): void {
       break;
     }
   }
+  // The law's own wars out of sight (docs/16 P1): a patrol that falls in with a rover off-screen now and then sinks her.
+  for (const [id, b] of game.npcs) {
+    if (b.active || b.role !== 'patrol' || b.leader !== undefined) continue;
+    const pa = game.ships.get(id);
+    if (!pa) continue;
+    for (const p of pirates) {
+      if (!p.alive || !game.ships.has(p.id) || dist(p.state.x, p.state.y, pa.state.x, pa.state.y) > 2000) continue;
+      if (game.rng.float() > 0.08) continue;
+      game.addRumor(p.state.x, p.state.y, `The patrol ${pa.name} ran down the rover ${p.name} near ${game.nearestIslandName(p.state.x, p.state.y)}.`);
+      game.removeShip(p.id);
+      break;
+    }
+  }
 }
 
 /** A predator of the sea shows hostile to a captain (the orcas spare the White Orca's figure). */
