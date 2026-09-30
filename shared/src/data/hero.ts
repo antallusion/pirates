@@ -61,11 +61,11 @@ export const PRIM_BASE: Record<CaptainId, Prims> = {
 /** The odds of each primary at a level-up, by path (per cent). Calibrated so that captains of a level stay even in a
  *  boarding whatever their paths (tests/hero.test.ts). */
 export const PRIM_WEIGHTS: Record<CaptainId, Prims> = {
-  corsair: { atk: 35, def: 30, pow: 20, will: 15 },
-  smuggler: { atk: 20, def: 25, pow: 30, will: 25 },
-  reaver: { atk: 45, def: 30, pow: 15, will: 10 },
-  navigator: { atk: 20, def: 25, pow: 30, will: 25 },
-  drowned: { atk: 15, def: 25, pow: 35, will: 25 },
+  corsair: { atk: 30, def: 30, pow: 20, will: 20 },
+  smuggler: { atk: 25, def: 30, pow: 30, will: 15 },
+  reaver: { atk: 40, def: 30, pow: 20, will: 10 },
+  navigator: { atk: 25, def: 30, pow: 30, will: 15 },
+  drowned: { atk: 20, def: 25, pow: 40, will: 15 },
   admiral: { atk: 25, def: 40, pow: 20, will: 15 },
 };
 
@@ -346,7 +346,7 @@ export function orderLevelCap(level: number, mystic: number): number {
 /** How much stronger her orders are: her Power (+4% a point, to double at most), her school's kin skill and Deep
  *  Mysticism, and what artifacts add. */
 export function orderMul(pow: number, schoolRank: number, mystic: number, extra = 0): number {
-  return Math.min(2, 1 + 0.04 * Math.max(0, pow)) * (1 + [0, 0.15, 0.3, 0.5][Math.max(0, Math.min(3, schoolRank))] + 0.1 * Math.max(0, mystic) + extra);
+  return Math.min(3, 1 + 0.07 * Math.max(0, pow)) * (1 + [0, 0.15, 0.3, 0.5][Math.max(0, Math.min(3, schoolRank))] + 0.1 * Math.max(0, mystic) + extra);
 }
 
 /** The will an order costs her: the school's kin skill eases it (−15/−25/−35%), and some artifacts. */
@@ -443,7 +443,16 @@ export function heroBattle(prim: Prims, skills: readonly SkillSlot[], art: ArtTo
  *  the grenades). */
 export function npcHeroBattle(shipLevel: number, captain: CaptainId | null): HeroBattle {
   const prim = npcPrims(shipLevel);
-  return heroBattle(prim, [], null, captain ? startingOrders(captain) : ['grenades'], manaMaxOf(prim.will));
+  return heroBattle(prim, [], null, captain ? startingOrders(captain) : npcBook(shipLevel), manaMaxOf(prim.will));
+}
+
+/** A sea captain's book without a path of her own: the grenades, and the common pages as her waters grow harder. */
+export function npcBook(shipLevel: number): OrderId[] {
+  const out: OrderId[] = ['grenades'];
+  if (shipLevel >= 2) out.push('mark_target');
+  if (shipLevel >= 3) out.push('war_cry');
+  if (shipLevel >= 5) out.push('brine_mend');
+  return out;
 }
 
 // ------------------------------------------------------------------ what the captain sees
