@@ -2,7 +2,7 @@
 
 export const EN = {
   reef: 'reef · {m} m',
-  salvage: 'salvage ~{n}',
+  salvage: 'flotsam · ≈{n} silver',
   level: 'Lv {n}',
   boss: 'World boss — a horror of the deep',
   hulk: 'A dead ship — mortars break it',
@@ -40,7 +40,7 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   reef: 'риф · {m} м',
-  salvage: 'обломки ~{n}',
+  salvage: 'обломки · ≈{n} серебра',
   level: 'ур. {n}',
   boss: 'Мировой босс — ужас глубин',
   hulk: 'Мёртвый корабль — его ломают мортиры',
