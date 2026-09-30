@@ -8,6 +8,7 @@ import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
 import { departOrAsk } from './ui/depart.ts';
 import { EncounterCard } from './ui/encounter.ts';
+import { SurrenderCard } from './ui/surrender.ts';
 import { MinigameWindow } from './ui/minigame.ts';
 import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
@@ -228,6 +229,7 @@ const touch = new TouchControls({
 });
 const onboarding = new OnboardingUi(state);
 const encounterCard = new EncounterCard((m) => net.send(m));
+const surrenderCard = new SurrenderCard((m) => net.send(m));
 const minigameWindow = new MinigameWindow((m) => net.send(m));
 const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
@@ -433,6 +435,10 @@ function onMessage(m: ServerMsg): void {
         audio.bell();
         hud.banner(L('mutiny'), L('mutinySub', { name: m.ringleader, n: m.mutineers, men: plural(m.mutineers, L('men.one'), L('men.few'), L('men.many')) }));
       }
+      break;
+    case 'surrender_offer':
+      // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.
+      surrenderCard.open(m.offer);
       break;
     case 'boarding':
       if (m.result) openModal('boarding');
@@ -1734,6 +1740,7 @@ function step(t: number): void {
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
     encounterCard.frame();
+    surrenderCard.frame(state);
     fishFight.frame();
     netHaul.frame();
     if (modal === 'map' && Math.floor(t / 1000) !== Math.floor((t - dt * 1000) / 1000)) worldMap.draw(state);

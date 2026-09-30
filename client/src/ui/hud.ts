@@ -38,6 +38,7 @@ import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts
 import { compassKey, objective, questPointer, trackedQuest } from './track.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
+import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
 import { sagaCardHtml } from './saga.ts';
@@ -151,11 +152,12 @@ export class Hud {
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
     const url = assetUrl(cap.portrait);
-    const ckey = `${lang()}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}`;
+    const streak = self.streak && self.streak.n >= 2 ? self.streak : null;
+    const ckey = `${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}`;
     if (ckey !== this.lastCaptainKey) {
       this.lastCaptainKey = ckey;
       $('hud-captain').innerHTML = `
-        <div class="uf-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"><b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b></div>
+        <div class="uf-portrait" style="background-image:${url ? `url('${url}')` : 'none'}"><b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${streak ? streakBadge(streak) : ''}</div>
         <div class="uf-body">
           <div class="uf-top"><span class="uf-name">${esc(self.name)}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span></div>
           ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
@@ -1333,4 +1335,15 @@ export function namedLabel(named: string): { name: string; tag: string } | null 
   if (nem) return nem;
   const n = np.bounty.toLocaleString(ru ? 'ru-RU' : 'en-GB');
   return { name: np.name[ru], tag: np.baron ? L('tg.baron', { n }) : L('tg.wanted', { n }) };
+}
+
+const LC = dict(CEN, CRU);
+
+/** The win streak's badge on the captain's portrait (docs/16 #4): the flame and the bonus from the third ship, the
+ *  count before it; its tooltip says what it is and what ends it. */
+export function streakBadge(st: { n: number; mul: number }): string {
+  const on = st.mul > 1;
+  const mul = lang() === 'ru' ? String(st.mul).replace('.', ',') : String(st.mul);
+  const title = on ? LC('streak.title', { n: st.n, mul }) : LC('streak.titleSoon', { n: st.n });
+  return `<b class="uf-streak${on ? ' on' : ''}" title="${esc(title)}">${icon('fire', '', 'ico-sm')}${esc(on ? LC('streak.badge', { mul }) : String(st.n))}</b>`;
 }

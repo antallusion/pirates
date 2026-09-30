@@ -44,6 +44,29 @@ export interface ShipLoadout {
   level?: number;
   /** Her gear in its slots (docs/12 P1): it stays with her in a berth. */
   gear?: Partial<Record<ShipSlot, Item>>;
+  /** A trophy ship (docs/16 #5): taken from her people, she keeps her name and her story. */
+  trophy?: TrophyHistory;
+}
+
+/** Who a trophy ship was, and where, when and by whom she was taken (docs/16 #5). */
+export interface TrophyHistory {
+  /** Her name as her people called her (she keeps it). */
+  was: string;
+  /** Her class when taken. */
+  cls: ShipClassId;
+  /** Her flag and her trade (merchant, pirate, patrol, hunter…) and her captain. */
+  faction: string;
+  role?: string;
+  captain?: string;
+  /** The captain who took her. */
+  by: string;
+  /** The sea and the nearest island where she was taken. */
+  region: string;
+  place?: string;
+  /** When (ms since the epoch). */
+  at: number;
+  /** She struck her colours, or she was carried by boarding. */
+  how: 'struck' | 'boarded';
 }
 
 export interface ShipStats {

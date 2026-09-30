@@ -5,7 +5,7 @@ import { regattaBlocked } from './regatta.ts';
 import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
-import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, aimFocus } from '../../../shared/src/data/gunnery.ts';
+import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
 import { onboardingVolley } from './onboarding.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
 import type { ChaserEnd } from '../../../shared/src/data/ships.ts';
@@ -72,6 +72,15 @@ export interface VolleyRec {
 
 export const COMBAT_TAG = 20;
 
+/** Critical hits on her parts (docs/16 #2). Chain shot amidships into rigging already half torn brings a topmast down
+ *  (the chance a hit, the seconds and the share of her speed it costs); a heavy ball may find her powder room. All
+ *  times the ladder's share of criticals (a junior makes fewer, or none). Tuned against tests/balance: three of a
+ *  level still beat one a level up. */
+export const MAST_CRIT_CHAIN = 0.04;
+export const MAST_CRIT_TIME = 20;
+export const MAST_CRIT_SLOW = 0.1;
+export const MAGAZINE_CRIT_HEAVY = 0.01;
+
 export function sideHeading(ship: ShipEntity, side: Side): number {
   return wrapAngle(ship.state.heading + (side === 'port' ? -Math.PI / 2 : Math.PI / 2));
 }
@@ -115,8 +124,17 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
   return t;
 }
 
-/** Fires a broadside. Returns null on success, or a reason string. */
-export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number, aimAt?: { x: number; y: number }): string | null {
+/** How far the cross wind turns a ball's line (docs/16 #1), less what her gunners allow for it (`allow` 0..1: a
+ *  captain aims off herself — 0; the sea's gunners allow by their craft). */
+export function shotDrift(game: Game, ship: ShipEntity, heading: number, dist: number, ammo: AmmoId, allow = 0): number {
+  const w = game.windFor(ship);
+  const speed = AMMO[ammo].speed * (1 + tval(ship.stats, 'shotSpeed'));
+  return windDriftAngle(w.dir, w.strength, heading, dist, speed) * (1 - clamp(allow, 0, 1));
+}
+
+/** Fires a broadside. Returns null on success, or a reason string. `windAllow`: how much of the wind's drift her
+ *  gunners aim off for (0 for a captain, who sees the drift on her mark and leads it herself). */
+export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number, aimAt?: { x: number; y: number }, windAllow = 0): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
   if (ship.hasEffect('submerged') || ship.hasEffect('ghost_return')) return 'The guns are under black water';
   if (ship.reload[side] > 0) return 'Guns are still loading';
@@ -182,8 +200,9 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     const by = ship.state.y + fwd.y * along + outward.y * ship.stats.beam * 0.55;
     const n = doubleShot || rng.chance(ship.stats.doubleShotChance) ? 2 : 1;
     for (let k = 0; k < n; k++) {
-      const h = baseHeading + rng.gauss() * spreadRad * 0.5;
+      const h0 = baseHeading + rng.gauss() * spreadRad * 0.5;
       const d = dist * (1 + rng.gauss() * 0.045);
+      const h = h0 + shotDrift(game, ship, h0, d, ammo, windAllow); // the cross wind carries her downwind
       const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
         owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed * SPEED_SCALE, dist: d, traveled: 0, ammo,
@@ -237,7 +256,7 @@ export function dash(game: Game, ship: ShipEntity): string | null {
 }
 
 /** Bow/stern chasers: long guns aimed at a point within a cone along the keel. Great for chases. */
-export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: number, ty: number): string | null {
+export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: number, ty: number, windAllow = 0): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
   const count = end === 'bow' ? ship.stats.bowChasers : ship.cls.sternChasers;
   if (count <= 0) return `No ${end} chasers on a ${ship.cls.name}`;
@@ -258,8 +277,9 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
   const ox = ship.state.x + v.x * ship.stats.length * 0.5, oy = ship.state.y + v.y * ship.stats.length * 0.5;
   const balls: [number, number, number, number, number][] = [];
   for (let i = 0; i < shots; i++) {
-    const bh = h + game.rng.gauss() * gun.spreadDeg * DEG * 0.5 * ship.stats.spreadMul * game.seaSpread(ship);
+    const bh0 = h + game.rng.gauss() * gun.spreadDeg * DEG * 0.5 * ship.stats.spreadMul * game.seaSpread(ship);
     const bd = d * (1 + game.rng.gauss() * 0.04);
+    const bh = bh0 + shotDrift(game, ship, bh0, bd, ammo, windAllow);
     const delay = i * 120;
     game.projectiles.push({ owner: ship.id, x: ox, y: oy, heading: bh, speed: AMMO[ammo].speed * (1 + tval(ship.stats, 'shotSpeed')) * SPEED_SCALE, dist: bd, traveled: 0, ammo, damage: gun.damage * ship.stats.gunDamageMul * (1 + tval(ship.stats, 'chaserDamage')), maxRange: range, delay: delay / 1000 });
     balls.push([Math.round(ox), Math.round(oy), Math.round(bh * 1000) / 1000, Math.round(bd), delay]);
@@ -494,6 +514,15 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       crit = 'gun';
     }
   }
+  // A mast shot through (docs/16 #2): chain shot amidships into rigging already torn — the topmast comes down, the
+  // canvas with it, and she is slower for a while.
+  const midships = Math.abs(local.y) < target.stats.length * 0.22;
+  if (midships && p.ammo === 'chain' && target.sails < target.stats.sailHpMax * 0.5 && !target.hasFlag('ironbound_masts') && !target.hasEffect('broken_mast') && !target.hasEffect('topmast_down') && target.npcRole !== 'beast' && !target.cls.monster && game.rng.chance(MAST_CRIT_CHAIN * cx)) {
+    target.addEffect({ id: 'topmast_down', until: game.now + MAST_CRIT_TIME, mods: { maxSpeed: -MAST_CRIT_SLOW }, source: shooter?.id }, game.now);
+    target.sails = Math.max(0, target.sails - target.stats.sailHpMax * 0.06);
+    game.toastShip(target, 'The topmast is shot away: she loses way for a while.', 'bad');
+    crit = 'mast';
+  }
   if (raking) crit = crit ?? 'raked';
   if (crit && crit !== 'raked') target.talentReady.patchPause = game.now + 3; // Patchwork Hull pauses
   if ((p.ammo === 'round' || p.ammo === 'heavy') && hullDmg > 15 && target.leaks < MAX_LEAKS && game.rng.chance(leakChance(target, p.ammo === 'heavy') * cx)) {
@@ -525,7 +554,11 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       target.morale = Math.max(0, target.morale - 5);
     }
   }
-  if (shooter) talentHitEffects(game, shooter, target, p);
+  let mastByTalent = false;
+  if (shooter && talentHitEffects(game, shooter, target, p)) {
+    crit = 'mast';
+    mastByTalent = true; // Mast Breaker counts its own critical
+  }
   if (p.ammo === 'cursed') onCursedHit(game, shooter, target);
 
   // Cargo destroyed by hull hits; powder may go up.
@@ -534,12 +567,16 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     if (game.rng.chance(0.07 * deepHold)) destroyRandomCargo(game, target, 1 + game.rng.int(0, 2));
     // Fire shot in the magazine burns like powder.
     const powder = (target.cargo.gunpowder ?? 0) + target.ammo.incendiary / 10;
-    if (powder >= 5 && game.rng.chance(cx * 0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10) * (target.hasFlag('sealed_magazine') ? 0.25 : 1))) {
-      target.cargo.gunpowder = Math.floor(powder * 0.4);
+    const sealed = target.hasFlag('sealed_magazine') ? 0.25 : 1;
+    const hold = powder >= 5 ? cx * 0.012 * GOODS.gunpowder.danger * Math.min(3, powder / 10) * sealed : 0;
+    // Her own magazine (docs/16 #2): a forged ball that goes deep amidships may find the powder room itself.
+    const magazine = p.ammo === 'heavy' && midships && hullDmg > 15 && !target.cls.monster && target.npcRole !== 'beast' ? cx * MAGAZINE_CRIT_HEAVY * sealed : 0;
+    if ((hold > 0 || magazine > 0) && game.rng.chance(hold + magazine)) {
+      if (target.cargo.gunpowder) target.cargo.gunpowder = Math.floor(target.cargo.gunpowder * 0.4);
       applyDamage(game, target, { hull: target.stats.hullMax * 0.14, crew: 3, morale: 12, sails: 10 }, shooter);
       igniteShip(game, target, 12, null);
       game.emit({ k: 'fx', fx: 'explosion', x: Math.round(target.state.x), y: Math.round(target.state.y), r: 40 }, target.state.x, target.state.y);
-      game.toastShip(target, 'Powder explosion in the hold!', 'bad');
+      game.toastShip(target, hold > 0 ? 'Powder explosion in the hold!' : 'A ball in the powder room — the magazine goes up!', 'bad');
       const ts = game.sessionOf(target);
       if (ts?.profile) onMagazineBlast(game, ts);
       crit = 'powder';
@@ -554,7 +591,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   if (p.ammo === 'chain' && shooter?.hasFlag('tangled_rigging')) {
     target.addEffect({ id: 'tangled', until: game.now + 6, mods: { turnRate: -0.35 }, source: shooter.id }, game.now);
   }
-  if (crit === 'rudder' || crit === 'gun' || crit === 'powder' || crit === 'fire') onCrit(shooter);
+  if (crit === 'rudder' || crit === 'gun' || crit === 'powder' || crit === 'fire' || (crit === 'mast' && !mastByTalent)) onCrit(shooter);
   game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: Math.round(hullDmg), ammo: p.ammo, crit }, hx, hy);
 }
 
@@ -564,9 +601,10 @@ export function igniteShip(game: Game, target: ShipEntity, seconds: number, sour
   target.addEffect({ id: 'fire', until: game.now + dur, source: source?.id }, game.now);
 }
 
-/** Per-hit talent rules of the shooter: Mast Breaker and Crossfire. */
-function talentHitEffects(game: Game, shooter: ShipEntity, target: ShipEntity, p: Projectile): void {
+/** Per-hit talent rules of the shooter: Mast Breaker and Crossfire. True when a mast went by the board. */
+function talentHitEffects(game: Game, shooter: ShipEntity, target: ShipEntity, p: Projectile): boolean {
   const now = game.now;
+  let mast = false;
   if (p.ammo === 'chain' && !target.hasFlag('ironbound_masts') && target.sails < target.stats.sailHpMax * 0.5 && !target.hasEffect('broken_mast') && game.rng.chance(tval(shooter.stats, 'mastBreak'))) {
     // Stays until a shipyard steps a new mast (cleared by port repairs).
     target.addEffect({ id: 'broken_mast', until: now + 1e9, mods: { maxSpeed: -0.3 }, source: shooter.id }, now);
@@ -574,6 +612,7 @@ function talentHitEffects(game: Game, shooter: ShipEntity, target: ShipEntity, p
     game.emit({ k: 'fx', fx: 'broken_mast', x: Math.round(target.state.x), y: Math.round(target.state.y) }, target.state.x, target.state.y);
     game.toastShip(target, 'A mast goes by the board!', 'bad');
     onCrit(shooter);
+    mast = true;
   }
   target.recentHits = target.recentHits.filter((h) => now - h.t < 3);
   if (shooter.hasFlag('crossfire') && (target.talentReady.crossfire ?? 0) <= now) {
@@ -586,6 +625,7 @@ function talentHitEffects(game: Game, shooter: ShipEntity, target: ShipEntity, p
     }
   }
   target.recentHits.push({ t: now, dir: p.heading, shooter: shooter.id });
+  return mast;
 }
 
 export function destroyRandomCargo(game: Game, ship: ShipEntity, units: number): void {

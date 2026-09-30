@@ -77,6 +77,7 @@ import { gateOf } from './descent.ts';
 import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
 import type { HolidayId } from '../../../shared/src/data/holidays.ts';
 import { sagaNote } from './saga.ts';
+import { struck } from './struck.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -84,7 +85,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -607,6 +608,38 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       if (brain) brain.active = true;
       game.grid.upsert(o.id, o.state.x, o.state.y);
       return `${o.name} (${SHIP_CLASSES[cls].name} ⚓${o.shipLevel}, ${faction}) lies off your beam.`;
+    }
+    case 'strike': {
+      // A battered ship off your beam strikes her colours to you (docs/16 #3): /strike [role] [class].
+      if (ship.docked) return 'Put to sea first.';
+      const role = (['pirate', 'patrol', 'hunter', 'merchant'].includes(args[0]) ? args[0] : 'pirate') as 'pirate' | 'patrol' | 'hunter' | 'merchant';
+      const cls = (args[1] ?? 'brig') as ShipClassId;
+      if (!SHIP_CLASSES[cls]) return `Classes: ${Object.keys(SHIP_CLASSES).join(', ')}`;
+      const [x, y] = openSpot(game, ship, [260, 330, 400], 150, Math.PI / 2);
+      const o = game.spawnNpcShip(role, cls, role === 'pirate' ? 'confederacy' : role === 'patrol' ? 'crown' : 'league', x, y, ship.state.heading);
+      if (role === 'merchant') o.cargo = { spices: 20, rum: 15, sugar: 20 };
+      const brain = game.npcs.get(o.id);
+      if (!brain) return 'No ship.';
+      brain.active = true;
+      o.hull = o.stats.hullMax * 0.15;
+      o.state.speed = 0;
+      o.attackers.set(ship.id, game.now);
+      o.lastCombat = ship.lastCombat = game.now;
+      game.grid.upsert(o.id, o.state.x, o.state.y);
+      struck(game, o, brain, ship);
+      return `${o.name} strikes her colours to you.`;
+    }
+    case 'streak':
+      // A win streak without making port (docs/16 #4): /streak N.
+      p.streak = Math.max(0, Math.trunc(num(0, 3)));
+      game.pushSelf(s, true);
+      return `Streak: ${p.streak}.`;
+    case 'heading': {
+      // Her heading in degrees, or "wind": running before it, her broadsides square across it (docs/16 #1).
+      const h = args[0] === 'wind' ? game.windFor(ship).dir : (num(0, 0) * Math.PI) / 180;
+      ship.state = { ...ship.state, heading: h, speed: 0 };
+      game.pushSelf(s, true);
+      return `Heading ${Math.round((((h * 180) / Math.PI) % 360 + 360) % 360)}°.`;
     }
     case 'board': {
       // A deck fight at once: a crippled ship lashed alongside (/board [role] [class] [crew]).

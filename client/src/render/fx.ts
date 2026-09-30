@@ -25,7 +25,15 @@ export interface Particle {
   text?: string;
   /** Damage a hit number carries: the hits of one broadside on one ship add up into it. */
   sum?: number;
+  /** A critical hit on one of her parts (docs/16 #2): the word goes up on a plate with its picture. */
+  badge?: CritPart;
+  /** The ship it stands over. */
+  ship?: number;
 }
+
+/** Her parts a critical hit can strike, each with its plate over the target (docs/16 #2). */
+export type CritPart = 'rudder' | 'mast' | 'powder' | 'gun' | 'fire' | 'leak' | 'breach';
+export const CRIT_PARTS: readonly CritPart[] = ['rudder', 'mast', 'powder', 'gun', 'fire', 'leak', 'breach'];
 
 export interface Ball {
   x: number;
@@ -181,6 +189,24 @@ export class Fx {
     }
   }
 
+  /** A critical hit on one of her parts (docs/16 #2): the damage as ever, and over the ship a plate with the part's
+   *  picture and its word — «Руль!», «Мачта!», «Погреб!» — that pops up and climbs; a gold ring and a burst of sparks
+   *  where it struck (a white-hot flash for the powder room). One plate per part and ship at a time. */
+  critHit(x: number, y: number, ship: number, part: CritPart, dmg: number, own: boolean): void {
+    if (dmg > 0) this.add({ kind: 'text', x, y: y - 6, vy: -9, life: 1.3, size: 13, color: own ? '#e07a6a' : '#f0c060', text: String(dmg) });
+    const color = own ? '#ff9a86' : '#ffd66e';
+    if (!this.particles.some((p) => p.badge === part && p.ship === ship && p.t < 0.9)) {
+      this.add({ kind: 'text', x, y: y - 26, vy: -6, life: 2.2, size: 16, color, text: L(`critBig.${part}`), badge: part, ship });
+    }
+    this.add({ kind: 'ring', x, y, life: 0.5, size: 6, grow: 70, color: own ? '#ff8a70' : '#ffd66e' });
+    for (let i = 0; i < 8; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 20 + Math.random() * 30;
+      this.add({ kind: 'spark', x, y, vx: Math.sin(a) * sp, vy: -Math.cos(a) * sp, life: 0.35 + Math.random() * 0.3, size: 1.2, grow: 0, color: '#ffe0a0' });
+    }
+    if (part === 'powder') this.add({ kind: 'flash', x, y, life: 0.25, size: 10, grow: 90, color: '#fff4d0' });
+    if (own) this.shake = Math.max(this.shake, part === 'powder' ? 0.7 : 0.45);
+  }
+
   text(x: number, y: number, text: string, color: string): void {
     this.add({ kind: 'text', x, y, vy: -9, life: 1.3, size: 13, color, text });
   }
@@ -243,7 +269,8 @@ export class Fx {
         this.smoke(e.x, e.y, 2, 5, true);
         this.light(e.x, e.y, 50, 'rgba(255,170,90,1)', 0.5, 0.2);
         const color = e.ship === ownId ? '#e07a6a' : e.crit ? '#f0c060' : '#e8e0cc';
-        if (e.crit) this.text(e.x, e.y - 6, `${e.dmg} ${`crit.${e.crit}` in REN ? L(`crit.${e.crit}` as 'crit.fire') : e.crit.toUpperCase()}`, color);
+        if (e.crit && (CRIT_PARTS as readonly string[]).includes(e.crit)) this.critHit(e.x, e.y, e.ship, e.crit as CritPart, e.dmg, e.ship === ownId);
+        else if (e.crit) this.text(e.x, e.y - 6, `${e.dmg} ${`crit.${e.crit}` in REN ? L(`crit.${e.crit}` as 'crit.fire') : e.crit.toUpperCase()}`, color);
         else {
           // The balls of one broadside land together: their damage reads as one rising number, not a pile.
           const near = this.particles.find((p) => p.kind === 'text' && p.sum !== undefined && p.t < 0.35 && p.color === color && Math.hypot(p.x - e.x, p.y - (e.y - 6)) < 40);
@@ -274,6 +301,11 @@ export class Fx {
         break;
       case 'fx':
         switch (e.fx) {
+          case 'struck':
+            // She strikes her colours (docs/16 #3): a white ring and the word over her.
+            this.add({ kind: 'ring', x: e.x, y: e.y, life: 0.9, size: 10, grow: 60, color: '#f4f0e6' });
+            this.add({ kind: 'text', x: e.x, y: e.y - 30, vy: -5, life: 2.6, size: 15, color: '#f4f0e6', text: L('strikes') });
+            break;
           case 'explosion':
             this.explosion(e.x, e.y, e.r ?? 40);
             break;

@@ -29,6 +29,7 @@ import type { IslandBiome } from '../../../shared/src/world/regions.ts';
 import { assetMeta, pattern, sprite } from '../assets.ts';
 import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
+import type { CritPart } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 import { GlSea, GlSky, glWanted } from './gl.ts';
 import { CELL, SpriteAtlas } from './atlas.ts';
@@ -40,7 +41,8 @@ import { dict, lang } from '../i18n.ts';
 import { personName } from '../lang/names.ts';
 import { dec1 } from '../ui/dom.ts';
 import { objective } from '../ui/track.ts';
-import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus } from '../../../shared/src/data/gunnery.ts';
+import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus, windDrift } from '../../../shared/src/data/gunnery.ts';
+import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { islandLife } from '../../../shared/src/world/islandlife.ts';
 import type { LifeSite } from '../../../shared/src/world/islandlife.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
@@ -1992,8 +1994,17 @@ export class Renderer {
   private drawTexts(): void {
     const g = this.g;
     g.textAlign = 'center';
+    // Plates of several parts struck on one ship stand one above another, the newest on top of the stack.
+    const stack = new Map<number, number>();
+    for (let i = this.fx.particles.length - 1; i >= 0; i--) {
+      const p = this.fx.particles[i];
+      if (p.kind !== 'text' || !p.badge) continue;
+      const k = p.ship ?? -1, n = stack.get(k) ?? 0;
+      stack.set(k, n + 1);
+      this.drawCritBadge(p.badge, p.text!, this.sx(p.x), this.sy(p.y) - n * 28, p.t, p.life, p.color);
+    }
     for (const p of this.fx.particles) {
-      if (p.kind !== 'text' || !p.text) continue;
+      if (p.kind !== 'text' || !p.text || p.badge) continue;
       const a = 1 - p.t / p.life;
       g.globalAlpha = a;
       g.font = `600 ${p.size}px Inter, sans-serif`;
@@ -2003,6 +2014,35 @@ export class Renderer {
       g.fillText(p.text, this.sx(p.x), this.sy(p.y));
     }
     g.globalAlpha = 1;
+  }
+
+  /** A critical hit's plate over the target (docs/16 #2): a dark plate with a gold rim, the struck part drawn on the
+   *  left and its word beside it; it pops up in the first moment, holds, and fades as it climbs. */
+  private drawCritBadge(part: CritPart, text: string, x: number, y: number, t: number, life: number, color: string): void {
+    const g = this.g;
+    const pop = t < 0.14 ? 0.6 + (t / 0.14) * 0.55 : t < 0.26 ? 1.15 - ((t - 0.14) / 0.12) * 0.15 : 1;
+    const alpha = t > life - 0.6 ? Math.max(0, (life - t) / 0.6) : 1;
+    g.save();
+    g.globalAlpha = alpha;
+    g.translate(x, y);
+    g.scale(pop, pop);
+    g.font = '700 15px Inter, sans-serif';
+    const tw = g.measureText(text).width;
+    const w = tw + 34, h = 24;
+    const x0 = -w / 2, y0 = -h / 2;
+    g.fillStyle = 'rgba(12,10,8,0.84)';
+    g.beginPath();
+    g.roundRect(x0, y0, w, h, 6);
+    g.fill();
+    g.strokeStyle = color;
+    g.lineWidth = 1.5;
+    g.stroke();
+    critIcon(g, part, x0 + 13, 0, color);
+    g.textAlign = 'left';
+    g.textBaseline = 'middle';
+    g.fillStyle = color;
+    g.fillText(text, x0 + 25, 1);
+    g.restore();
   }
 
   // ------------------------------------------------------------------ light
@@ -2391,8 +2431,9 @@ export class Renderer {
         const ready = you.reload[aim.chaser] >= 1;
         const keel = aim.chaser === 'bow' ? own.heading : own.heading + Math.PI;
         const range = GUNS.long_9.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel === 'grape' ? 'round' : you.ammoSel].rangeMul;
-        const d = clamp(aim.dist, 40, range) * this.zoom;
-        this.drawFall(x, y, keel - Math.PI / 2, CHASER_CONE * 0.5, cls.length * this.zoom * 0.5, range * this.zoom, d, ready ? [143, 179, 217] : [110, 118, 126], ready ? 1 : 0.5);
+        const dw = clamp(aim.dist, 40, range);
+        const d = dw * this.zoom;
+        this.drawFall(x, y, keel - Math.PI / 2, CHASER_CONE * 0.5, cls.length * this.zoom * 0.5, range * this.zoom, d, ready ? [143, 179, 217] : [110, 118, 126], ready ? 1 : 0.5, this.driftOf(state, keel, dw, you.ammoSel === 'grape' ? 'round' : you.ammoSel));
       }
     }
     for (const side of ['port', 'starboard'] as const) {
@@ -2414,9 +2455,10 @@ export class Renderer {
       const c = held / AIM_CHARGE;
       const perfect = focus.perfect, waver = held >= AIM_TAP && c > AIM_WAVER;
       const spread = ((gun.spreadDeg * Math.PI) / 180 * 3 + 0.12) * (held >= AIM_TAP ? focus.spread : 1);
-      const d = clamp(aim.dist, 40, range) * this.zoom;
+      const dw = clamp(aim.dist, 40, range);
+      const d = dw * this.zoom;
       const tone: [number, number, number] = !ready ? [150, 130, 105] : perfect ? [255, 226, 140] : waver ? [214, 112, 96] : [224, 184, 98];
-      this.drawFall(x, y, a, spread, hull, range * this.zoom, d, tone, !ready ? 0.45 : perfect ? 1.35 : 1);
+      this.drawFall(x, y, a, spread, hull, range * this.zoom, d, tone, !ready ? 0.45 : perfect ? 1.35 : 1, this.driftOf(state, h, dw, you.ammoSel));
       if (held > 0) this.drawCharge(x, y, c, perfect, waver);
       this.drawRakes(state, own, ships, side, range, h, spread);
     }
@@ -2449,13 +2491,64 @@ export class Renderer {
     g.restore();
   }
 
+  /** The cross wind's drift of a ball laid `dist` metres along world heading `h` (docs/16 #1), in metres (+ to the
+   *  right of her line) — the same reckoning as the server's (shared/src/data/gunnery.ts). */
+  private driftOf(state: ClientState, h: number, dist: number, ammo: keyof typeof AMMO): number {
+    const speed = AMMO[ammo].speed * (1 + (state.ownStats ? tval(state.ownStats, 'shotSpeed') : 0));
+    return windDrift(state.wind[0], state.wind[1], h, dist, speed);
+  }
+
   /** A gunner's mark on the water instead of a lit wedge: where the shot will fall (a feathered band at the aim range,
-   * as wide as the spread there, soft at its ends), the line of flight to it in dots, the reach as a faint row of dots. */
-  private drawFall(x: number, y: number, a: number, spread: number, r0: number, reach: number, d: number, tone: [number, number, number], k: number): void {
+   * as wide as the spread there, soft at its ends), the line of flight to it in dots, the reach as a faint row of dots.
+   * `drift` (metres, + to the right): the cross wind carries the fall downwind of the line she lays — the band stands
+   * where the balls will land, a hollow ring where she laid them, and a short hook from one to the other. */
+  private drawFall(x: number, y: number, a0: number, spread: number, r0: number, reach: number, d: number, tone: [number, number, number], k: number, drift = 0): void {
     const g = this.g;
     const [cr, cg, cb] = tone;
     const col = (al: number) => `rgba(${cr},${cg},${cb},${Math.min(1, al * k).toFixed(3)})`;
+    const dm = d / Math.max(1e-6, this.zoom); // the aim range in metres
+    const a = a0 + Math.atan2(drift, Math.max(1, dm));
     g.save();
+    if (Math.abs(drift) * this.zoom >= 2.5) {
+      // Where she laid them: a hollow ring, and the hook of the wind to the fall.
+      const lx = x + Math.cos(a0) * d, ly = y + Math.sin(a0) * d;
+      g.strokeStyle = col(0.55);
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.arc(lx, ly, 3.2, 0, Math.PI * 2);
+      g.stroke();
+      const n = Math.max(2, Math.round(Math.abs(a - a0) * d / 5));
+      for (let i = 1; i < n; i++) {
+        const t = a0 + ((a - a0) * i) / n;
+        g.fillStyle = col(0.3 + 0.5 * (i / n));
+        g.beginPath();
+        g.arc(x + Math.cos(t) * d, y + Math.sin(t) * d, 1.1, 0, Math.PI * 2);
+        g.fill();
+      }
+      // An arrowhead at the fall, pointing downwind along the hook.
+      const fx = x + Math.cos(a) * d, fy = y + Math.sin(a) * d;
+      const dir = a + (Math.sign(a - a0) * Math.PI) / 2;
+      g.fillStyle = col(0.9);
+      g.beginPath();
+      g.moveTo(fx + Math.cos(dir) * 4, fy + Math.sin(dir) * 4);
+      g.lineTo(fx + Math.cos(dir + 2.5) * 4, fy + Math.sin(dir + 2.5) * 4);
+      g.lineTo(fx + Math.cos(dir - 2.5) * 4, fy + Math.sin(dir - 2.5) * 4);
+      g.closePath();
+      g.fill();
+      // How far, in words, beyond the fall.
+      if (Math.abs(drift) >= 1.5) {
+        g.font = '600 11px Inter, sans-serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        const far = d + Math.max(8, reach * 0.05) + 16; // beyond the fall's outer arc
+        const tx = x + Math.cos(a) * far, ty = y + Math.sin(a) * far;
+        const label = L('drift', { n: Math.round(Math.abs(drift)) });
+        g.fillStyle = `rgba(0,0,0,${Math.min(0.8, 0.7 * k).toFixed(3)})`;
+        g.fillText(label, tx + 1, ty + 1);
+        g.fillStyle = col(0.95);
+        g.fillText(label, tx, ty);
+      }
+    }
     // The fall: where the shot will land, as dotted arcs across the spread (no fill: a filled band reads as a blot on
     // the water) — the middle arc bright, two faint ones before and beyond it for the scatter in range.
     const depth = Math.max(8, reach * 0.05);
@@ -3295,4 +3388,101 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
   g.arcTo(x, y + h, x, y, r);
   g.arcTo(x, y, x + w, y, r);
   g.closePath();
+}
+
+/** The struck part in a few strokes (docs/16 #2), about 14 px across, centred on (x, y). */
+export function critIcon(g: CanvasRenderingContext2D, part: CritPart, x: number, y: number, color: string): void {
+  g.save();
+  g.translate(x, y);
+  g.strokeStyle = color;
+  g.fillStyle = color;
+  g.lineWidth = 1.6;
+  g.lineCap = 'round';
+  g.beginPath();
+  switch (part) {
+    case 'rudder': {
+      // The ship's wheel: a rim, a hub and eight spokes with their handles.
+      g.arc(0, 0, 5, 0, Math.PI * 2);
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4;
+        g.moveTo(Math.cos(a) * 1.5, Math.sin(a) * 1.5);
+        g.lineTo(Math.cos(a) * 7.5, Math.sin(a) * 7.5);
+      }
+      g.stroke();
+      break;
+    }
+    case 'mast': {
+      // A mast snapped: the stump, the broken top leaning away, a yard across.
+      g.moveTo(-1, 7);
+      g.lineTo(-1, -1);
+      g.moveTo(0.5, -2);
+      g.lineTo(5, -7);
+      g.moveTo(-6, 2);
+      g.lineTo(4, 2);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(-5, -1);
+      g.lineTo(-1, -7);
+      g.lineTo(-1, -1);
+      g.closePath();
+      g.fill();
+      break;
+    }
+    case 'powder': {
+      // A keg with its hoops, and the spark that finds it.
+      g.ellipse(-1, 1.5, 4.5, 5.5, 0, 0, Math.PI * 2);
+      g.moveTo(-5.2, -1);
+      g.lineTo(3.2, -1);
+      g.moveTo(-5.2, 4);
+      g.lineTo(3.2, 4);
+      g.stroke();
+      g.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4, r = i % 2 ? 1.2 : 3;
+        g.lineTo(4 + Math.cos(a) * r, -5 + Math.sin(a) * r);
+      }
+      g.closePath();
+      g.fill();
+      break;
+    }
+    case 'gun': {
+      // A barrel off its carriage.
+      g.lineWidth = 3.2;
+      g.moveTo(-6, 2);
+      g.lineTo(5, -3);
+      g.stroke();
+      g.lineWidth = 1.6;
+      g.beginPath();
+      g.arc(-3, 5, 2.2, 0, Math.PI * 2);
+      g.stroke();
+      break;
+    }
+    case 'fire': {
+      g.moveTo(0, 7);
+      g.bezierCurveTo(-6, 5, -5, -1, -1, -7);
+      g.bezierCurveTo(0, -2, 5, -1, 4, 3);
+      g.bezierCurveTo(4, 5.5, 2, 7, 0, 7);
+      g.fill();
+      break;
+    }
+    case 'leak':
+    case 'breach': {
+      // Water coming in: a drop, and for a breach a jagged split above it.
+      g.moveTo(0, -4);
+      g.bezierCurveTo(4, 1, 4, 6, 0, 6);
+      g.bezierCurveTo(-4, 6, -4, 1, 0, -4);
+      g.fill();
+      if (part === 'breach') {
+        g.beginPath();
+        g.moveTo(-6, -6);
+        g.lineTo(-3, -4);
+        g.lineTo(0, -7);
+        g.lineTo(3, -4);
+        g.lineTo(6, -6);
+        g.stroke();
+      }
+      break;
+    }
+  }
+  g.restore();
 }

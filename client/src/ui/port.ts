@@ -13,6 +13,7 @@ import { FISH } from '../../../shared/src/data/fishing.ts';
 import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { ask, tell } from './confirm.ts';
 import { mapCard, placeName } from './maps.ts';
+import { trophyLine, trophyTag } from './surrender.ts';
 import { personName } from '../lang/names.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -448,7 +449,7 @@ ${ammo}${bazaarCard(state, view)}${intel}`;
       return `<div class="row order-row"><span><b>${esc(o.name)}</b> <span class="muted">${o.name === SHIP_CLASSES[o.classId].name ? '' : `${esc(SHIP_CLASSES[o.classId].name)} · `}${esc(WOODS[o.frame].name)}/${esc(WOODS[o.plank].name)} · ${esc(L('build.orderInfo', { quality: L(`quality.${o.quality}`), port: state.ports.find((p) => p.id === o.port)?.name ?? o.port }))}</span></span>
         ${left > 0 ? `<span class="muted nowrap">${esc(L('unit.min', { n: Math.ceil(left / 60) }))}</span>` : here ? `<button class="btn btn-small btn-primary" data-act="launch" data-id="${o.id}">${esc(L('build.launch'))}</button>` : `<span class="gold">${esc(L('build.ready'))}</span>`}</div>`;
     }).join('');
-    const berths = self.berths.map((x, i) => `<div class="row" style="padding:3px 0"><span>${esc(x.name)} <span class="muted">${esc(SHIP_CLASSES[x.classId].name)} · ${esc(L('berth.info', { hull: x.hull, port: state.ports.find((p) => p.id === x.port)?.name ?? (x.port.startsWith('isle:') ? state.islands.get(Number(x.port.slice(5)))?.name ?? L('berth.yourIsland') : x.port) }))}</span></span>
+    const berths = self.berths.map((x, i) => `<div class="row" style="padding:3px 0"><span>${esc(placeName(x.name))}${trophyTag(x.trophy)} <span class="muted">${esc(SHIP_CLASSES[x.classId].name)} · ${esc(L('berth.info', { hull: x.hull, port: state.ports.find((p) => p.id === x.port)?.name ?? (x.port.startsWith('isle:') ? state.islands.get(Number(x.port.slice(5)))?.name ?? L('berth.yourIsland') : x.port) }))}</span>${x.trophy ? `<span class="trophy-line">${esc(trophyLine(x.trophy))}</span>` : ''}</span>
       ${x.port === view.portId ? `<span><button class="btn btn-small" data-act="berth_swap" data-i="${i}">${esc(L('berth.takeOut'))}</button> <button class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}">${esc(L('btn.sell'))}</button></span>` : ''}</div>`).join('');
     return `<h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('build.title'))}</h3>
       <div class="cols"><div class="card"><div class="form-grid build-form">
