@@ -50,6 +50,17 @@ const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverTex
 const wantedTitle = (n: number): string => L(`wanted.${Math.max(0, Math.min(5, n))}` as keyof typeof EN & string);
 
 /** How long a toast stays: short on a phone (the sea is small there), a little longer with a mouse. */
+/** A window is open over the sea (the toasts keep to its strip then). */
+function modalOpen(): boolean {
+  return !$('modal').classList.contains('hidden');
+}
+
+/** The window closed: what its strip still shows goes back to the column, to run out its time there. */
+export function releaseModalToasts(): void {
+  const strip = $('modal-toasts'), col = $('toasts');
+  for (const el of [...strip.children].reverse()) col.prepend(el);
+}
+
 function toastLife(kind: string): number {
   const phone = document.body.classList.contains('touch') && innerWidth < 700;
   return kind === 'xp' ? (phone ? 2500 : 3500) : kind === 'bad' ? (phone ? 5000 : 7000) : phone ? 3800 : 6000;
@@ -882,8 +893,11 @@ export class Hud {
     if ((this.recentToasts.get(msg) ?? 0) > now - 2500) return;
     this.recentToasts.set(msg, now);
     if (this.recentToasts.size > 50) this.recentToasts.clear();
+    // A window open (docs/15 item 8): the toast goes to the window's own strip under it, one line, so nothing lies
+    // over what the captain reads; the column comes back when the window closes.
+    const box = modalOpen() ? $('modal-toasts') : this.toastsEl;
     // The same words still on screen: that toast comes back to the top with a count, it is not stacked twice.
-    const same = [...this.toastsEl.children].find((c) => (c as HTMLElement).dataset.msg === msg) as HTMLElement | undefined;
+    const same = [...box.children].find((c) => (c as HTMLElement).dataset.msg === msg) as HTMLElement | undefined;
     if (same) {
       const n = Number(same.dataset.n ?? 1) + 1;
       same.dataset.n = String(n);
@@ -894,7 +908,7 @@ export class Hud {
         same.append(badge);
       }
       badge.textContent = `×${n}`;
-      this.toastsEl.prepend(same);
+      box.prepend(same);
       clearTimeout(Number(same.dataset.timer));
       same.dataset.timer = String(setTimeout(() => same.remove(), toastLife(kind)));
       return;
@@ -905,8 +919,9 @@ export class Hud {
     const art = kind === 'gold' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'bad' ? 'danger' : kind === 'good' ? 'anchor' : '';
     el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(keyless(msg))}</span>`;
     decorateSums(el);
-    this.toastsEl.prepend(el);
-    while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
+    el.title = keyless(msg);
+    box.prepend(el);
+    while (box.children.length > (box === this.toastsEl ? 7 : 2)) box.lastChild!.remove();
     el.dataset.timer = String(setTimeout(() => el.remove(), toastLife(kind)));
   }
 
@@ -935,6 +950,7 @@ export class Hud {
       const el = document.createElement('div');
       el.className = 'toast herald';
       el.innerHTML = `<b>${esc(title)}</b><small>${esc(sub)}</small>`;
+      if (modalOpen()) return; // a window open: the herald's words are for the sea, not over the window
       this.toastsEl.prepend(el);
       while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
       setTimeout(() => el.remove(), 5000);

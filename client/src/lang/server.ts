@@ -104,10 +104,23 @@ function known(s: string): boolean {
   return /^[\d\s.,:;×x+\-%]*$/.test(s) || NAME_RU.has(s) || exact.has(s) || TEXT_RU.has(s) || !!composedNameRu(s) || !!personNameRu(s) || lowerName(s) !== undefined;
 }
 
+/** "30 planks & pitch, 20 iron": counts of goods (or of anything the names know), one or a list (docs/15 item 8:
+ *  the island's store lacks them). */
+function counted(s: string): string | undefined {
+  const out: string[] = [];
+  for (const it of s.split(', ')) {
+    const m = /^(\d[\d,.]*) (.+)$/.exec(it);
+    const n = m ? (lowerName(m[2]) ?? NAME_RU.get(m[2])) : undefined;
+    if (!m || !n) return undefined;
+    out.push(`${n.charAt(0).toLowerCase()}${n.slice(1)} — ${m[1]}`); // «доски и смола — 30», as the yard's own line
+  }
+  return out.join(', ');
+}
+
 /** A captured fragment: a known name, a known phrase, or itself. */
 function part(s: string, depth: number): string {
   if (!s) return s;
-  return NAME_RU.get(s) ?? lowerName(s) ?? exact.get(s) ?? composedNameRu(s) ?? personNameRu(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
+  return NAME_RU.get(s) ?? lowerName(s) ?? exact.get(s) ?? composedNameRu(s) ?? personNameRu(s) ?? counted(s) ?? (depth < 2 ? translate(s, depth + 1) : s);
 }
 
 function translate(s: string, depth: number): string {

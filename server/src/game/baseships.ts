@@ -59,6 +59,8 @@ const nameOf = (x: OwnShip): string => OWN_NAMES[x.name % OWN_NAMES.length][0];
 function shipsOf(h: Holding): OwnShip[] {
   if (!h.yard) return [];
   h.yard.ships ??= [];
+  // Her hull is her role's at her level (the warship's frigate from ⚓8 only since docs/15 item 8).
+  for (const x of h.yard.ships) if (OWN_ROLE_DEFS[x.role]) x.classId = hullFor(x.role, x.level);
   return h.yard.ships;
 }
 

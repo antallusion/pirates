@@ -11,10 +11,11 @@ import assert from 'node:assert/strict';
 import { BASE_RES, crewsAt } from '../shared/src/data/base.ts';
 import {
   FISH_EVERY, ISLE_POWER, OWN_ROLES, OWN_ROLE_DEFS, OWN_SHIPS_MAX, POWER_CREW, SHIP_POWER, YARD_SHIP_LEVEL, hullFor, merchantHold, nextOwnLevel, ownBuildCost,
-  ownRepairCost, ownUpgradeCost, ownXpNext, roleLevels, scoutSight,
+  ownParity, ownRepairCost, ownUpgradeCost, ownXpNext, roleLevels, scoutSight,
 } from '../shared/src/data/baseships.ts';
+import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
 import { ISLE_LEVELS, ISLE_MAX } from '../shared/src/data/estate.ts';
-import { levelRange } from '../shared/src/data/shiplevel.ts';
+import { levelRange, levelScale } from '../shared/src/data/shiplevel.ts';
 import type { TalentRanks } from '../shared/src/data/talents.ts';
 import type { Island } from '../shared/src/world/worldgen.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
@@ -189,6 +190,16 @@ test('taken out off the island she sails at her station and counts in the squadr
   assert.equal(w.state, 'home');
   assert.equal(escortsOf(game, ship).length, 1);
   assert.equal(squadronOf(s).own, 1);
+  // The island's frigate (⚓8) sails lighter built and lighter gunned: no more than 1.3 hired escorts (docs/15 item 8).
+  w.level = 8;
+  assert.equal(shipLaunch(game, s, w.id), null);
+  const fr = escortsOf(game, ship).find((e) => s.profile!.fleet.escorts.some((f) => f.id === e.fleetId && f.own === w.id))!;
+  assert.equal(fr.loadout.classId, 'frigate');
+  const p = ownParity('frigate', 8);
+  assert.ok(p < 1 && fr.effects.some((e) => e.id === 'own_parity'));
+  assert.ok(Math.abs(fr.stats.hullMax / (SHIP_CLASSES.frigate.hull * levelScale('frigate', 8).hull) - p) < 0.02, `hull ${fr.stats.hullMax}`);
+  assert.equal(shipRecall(game, s, w.id), null);
+  w.level = 1;
   // A captain without Command still takes two of her own, and hires none.
   const g2 = world();
   const o2 = owner(g2, 'Plain Captain');

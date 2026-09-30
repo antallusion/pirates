@@ -277,10 +277,18 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       return `Your island: ${game.world.islands[h.island].name}, level ${h.level ?? 1}.`;
     }
     case 'yard': {
-      // The island's yard filled for play-testing (docs/15): /yard [n] — n of every resource, and ten speed-ups.
+      // The island's yard filled for play-testing (docs/15): /yard [n] — n of every resource, and ten speed-ups;
+      // /yard hours [n] — the producers have worked n hours more.
       const h = ownIsland(game, s.accountId);
       if (!h) return 'You have no island of your own.';
       const y = yardOf(game, h);
+      if (args[0] === 'hours') {
+        // /yard hours [n]: the producers' clock set back n hours (the yield of a morning away, to collect).
+        const hrs = Math.max(0, Math.min(72, Number(args[1] ?? 3) || 0));
+        y.lastYield -= hrs * 3_600_000;
+        game.holdings.touch();
+        return `The island's producers have worked ${hrs} hours more.`;
+      }
       const n = Math.max(0, Math.round(num(0, 200)));
       for (const g of BASE_RES) y.res[g] = Math.min(capOf(h), (y.res[g] ?? 0) + n);
       grantSpeedups(p, 10);

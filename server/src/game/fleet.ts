@@ -15,6 +15,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { flagshipYardMods } from './bridgefx.ts';
 import { ownPortRepairFleet, ownShipLost } from './baseships.ts';
+import { ownParity } from '../../../shared/src/data/baseships.ts';
 
 export type Formation = 'line' | 'wedge' | 'ring';
 export const FORMATIONS: Formation[] = ['line', 'wedge', 'ring'];
@@ -114,6 +115,13 @@ export function spawnEscortShip(game: Game, s: PlayerSession, e: FleetEscort, i:
   const x = owner.state.x + f.x * off.y + r.x * off.x, y = owner.state.y + f.y * off.y + r.y * off.x;
   const esc = game.spawnNpcShip('escort', e.classId, 'free', x, y, owner.state.heading, { ship: e.name, captain: 'Sailing Master' });
   game.setNpcLevel(esc, e.own ? (e.level ?? 1) : owner.shipLevel); // she sails at her commander's level, as far as her hull allows
+  // Her own ship is worth no more than 1.3 hired escorts of her level (docs/15 item 8): the island's frigate sails
+  // lighter built and lighter gunned.
+  const parity = e.own ? ownParity(esc.loadout.classId, esc.shipLevel) : 1;
+  if (parity < 1) {
+    esc.effects.push({ id: 'own_parity', until: 1e12, mods: { hullMax: parity - 1, gunDamageMul: parity - 1 } });
+    esc.recompute(game.now);
+  }
   esc.ownerId = owner.id;
   esc.fleetId = e.id;
   esc.escortIndex = i;

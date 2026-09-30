@@ -103,6 +103,9 @@ function shipPic(classId: ShipClassId, cls = 'sy-pic'): string {
   return `<span class="${cls}">${url ? `<img src="${url}" alt="" draggable="false">` : ''}</span>`;
 }
 
+/** A phone lying on its side: the landscape layout of the window (the same query as its styles). */
+const LANDSCAPE = matchMedia('(max-height: 520px) and (min-aspect-ratio: 1/1)');
+
 export class BaseWindow {
   sel: number | null = null;
   /** The island's plots, or its shipyard (docs/15 item 4). */
@@ -113,8 +116,12 @@ export class BaseWindow {
   /** "Sail to defend": the window closes and the HUD's «Now:» points to the raiders (docs/15 item 7). */
   onSail: () => void = () => {};
 
+  /** The layout changed (a phone turned): the window is drawn afresh. */
+  onLayout: () => void = () => {};
+
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
+    LANDSCAPE.addEventListener('change', () => this.onLayout());
   }
 
   open(): void {
@@ -142,16 +149,20 @@ export class BaseWindow {
     const bar = `<div class="base-bar"><div class="base-res">${res}</div>
       <div class="base-meta"><span class="bmeta" title="${esc(`${L('crews')}${v.crews.next ? ` · ${L('crew_next', { n: v.crews.next })}` : ''}`)}">${icon('menu_crew', '', 'ico-sm')}<span class="bm-w">${esc(L('crews'))}</span> ${v.crews.busy}/${v.crews.n}</span>
       <span class="bmeta" title="${esc(`${L('tokens')} · ${L('tokens_tip', { m: v.tokenSecs / 60 })}`)}">⌛<span class="bm-w">${esc(L('tokens'))}:</span> ${v.speedups}</span>
-      <span class="bmeta bpower" title="${esc(L('power_tip', { now: v.power.now, need: v.power.need ?? '—', crew: v.power.crew }))}">${icon('tab_isles', '', 'ico-sm')}<span class="bm-w">${esc(L('power'))}</span> ${v.power.now}${v.power.need !== null ? `/${v.power.need}` : ''}</span>
+      <span class="bmeta bpower" title="${esc(L('power_tip', { now: v.power.now, need: v.power.need ?? '—', crew: v.power.crew }))}">${icon('tab_isles', '', 'ico-sm')}<span class="bm-w">${esc(L('power'))}</span> ${v.power.now}${v.power.need ? `/${v.power.need}` : ''}</span>
       <span class="bmeta">${money(state.self?.gold ?? 0)}</span>
       <button class="btn btn-small${fresh ? ' btn-primary' : ''}" data-bcollect title="${esc(L('collect_tip'))}"${fresh ? '' : ' disabled'}>${esc(L('collect'))}${fresh ? ` +${fmt(fresh)}` : ''}</button></div></div>`;
     const sy = v.shipyard;
     const tabs = `<div class="btabs" role="tablist"><button class="btab${this.tab === 'plots' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'plots'}" data-btab="plots">${esc(L('tab_plots'))}</button><button class="btab${this.tab === 'yard' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'yard'}" data-btab="yard">${esc(L('tab_yard'))} <i>${sy.ships.length}/${sy.max}</i></button></div>`;
+    // A phone on its side (docs/15 item 8): the board fills the left, and the resources, the waters and the sheet
+    // scroll together on the right, so the board is not squeezed under three header rows.
+    const land = LANDSCAPE.matches;
+    const top = `${bar}${this.defence(v)}`;
     const body = this.tab === 'yard'
-      ? `<div class="modal-body base-body yard-body">${this.yard(v, state)}</div>`
-      : `<div class="modal-body base-body"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}">${this.board(v)}</div></div><div class="base-sheet">${this.sheet(v, state)}</div></div>`;
+      ? `<div class="modal-body base-body yard-body">${land ? top : ''}${this.yard(v, state)}</div>`
+      : `<div class="modal-body base-body${land ? ' base-land' : ''}"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}">${this.board(v)}</div></div><div class="base-sheet">${land ? top : ''}${this.sheet(v, state)}</div></div>`;
     root.innerHTML = `<div class="modal-head base-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: placeName(v.name), level: v.level, title }))} · ${esc(L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') }))}</div></div>${tabs}</div>
-      ${bar}${this.defence(v)}${body}`;
+      ${land ? '' : top}${body}`;
     this.bind(root, state);
     this.tick(root, state);
   }
@@ -282,7 +293,7 @@ export class BaseWindow {
     const u = v.levelUp;
     if (!u) return `<p class="muted">${esc(L('isle_max'))}</p>`;
     const goods = (Object.entries(u.goods) as [GoodId, number][]).map(([g, n]) => `<span class="bcost" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('');
-    return `<div class="bupcard blevel"><div class="row"><b>${esc(L('isle_up', { n: u.level, title: ISLE_LEVELS[u.level]?.name[ru] ?? '' }))}</b><span class="${v.power.now >= u.power ? 'good' : 'bad'}">${esc(L('isle_power', { now: v.power.now, need: u.power }))}</span></div>
+    return `<div class="bupcard blevel"><div class="row"><b>${esc(L('isle_up', { n: u.level, title: ISLE_LEVELS[u.level]?.name[ru] ?? '' }))}</b>${u.power ? `<span class="${v.power.now >= u.power ? 'good' : 'bad'}">${esc(L('isle_power', { now: v.power.now, need: u.power }))}</span>` : ''}</div>
       <span class="bcosts"><span class="bcost${u.treasury < u.silver ? ' lack' : ''}">${esc(L('isle_treasury', { have: fmt(u.treasury), need: fmt(u.silver) }))}</span></span>
       ${goods ? `<span class="bcosts"><span class="muted">${esc(L('isle_goods'))}</span>${goods}</span>` : ''}
       ${u.why ? `<p class="muted">${esc(sv(u.why))}</p>` : ''}<button class="btn btn-small btn-primary" data-blevel${u.why ? ' disabled' : ''}>${esc(L('isle_raise'))}</button></div>`;

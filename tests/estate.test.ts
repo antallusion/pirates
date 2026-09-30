@@ -107,8 +107,8 @@ test('the island grows a level on its store and treasury; home from a port once 
   const { s, ship, home } = owner(game);
   const h = ownIsland(game, s.accountId)!;
   assert.match(isleLevelUp(game, s, home.id)!, /store lacks/);
-  h.store.planks = 60;
-  h.treasury = 1000;
+  h.store.planks = ISLE_LEVELS[2].goods.planks;
+  h.treasury = ISLE_LEVELS[2].silver - 1;
   assert.match(isleLevelUp(game, s, home.id)!, /treasury lacks/);
   h.treasury = 5000;
   assert.equal(isleLevelUp(game, s, home.id), null);

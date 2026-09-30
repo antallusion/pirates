@@ -25,15 +25,15 @@ export interface IsleLevel {
 export const ISLE_LEVELS: IsleLevel[] = [
   { name: ['', ''], slots: 0, outposts: 0, caravans: 0, residents: 0, silver: 0, goods: {} },
   { name: ['Anchorage', 'Стоянка'], slots: 3, outposts: 1, caravans: 1, residents: 2, silver: 0, goods: {} },
-  { name: ['Homestead', 'Хутор'], slots: 4, outposts: 2, caravans: 1, residents: 4, silver: 2_000, goods: { planks: 60 } },
-  { name: ['Settlement', 'Посёлок'], slots: 5, outposts: 2, caravans: 2, residents: 6, silver: 6_000, goods: { planks: 150, iron: 40 } },
-  { name: ['Trading Post', 'Фактория'], slots: 6, outposts: 3, caravans: 2, residents: 8, silver: 12_000, goods: { planks: 260, iron: 80, tar: 40 } },
-  { name: ['Harbour', 'Гавань'], slots: 7, outposts: 4, caravans: 3, residents: 10, silver: 25_000, goods: { planks: 400, iron: 140, salt: 60 } },
-  { name: ['Township', 'Городок'], slots: 8, outposts: 5, caravans: 3, residents: 12, silver: 45_000, goods: { planks: 500, iron: 180, pearls: 20, spices: 40 } },
-  { name: ['Stronghold', 'Крепость'], slots: 9, outposts: 6, caravans: 4, residents: 14, silver: 70_000, goods: { planks: 600, iron: 220, gunpowder: 80, sulfur_iron: 4 } },
-  { name: ['Bastion', 'Твердыня'], slots: 10, outposts: 7, caravans: 4, residents: 16, silver: 110_000, goods: { planks: 700, iron: 260, timber: 200, whalebone: 30 } },
-  { name: ['Citadel', 'Цитадель'], slots: 11, outposts: 8, caravans: 5, residents: 18, silver: 160_000, goods: { planks: 800, iron: 300, ambergris: 2, serpent_scale: 6 } },
-  { name: ['Pirate Capital', 'Пиратская столица'], slots: 12, outposts: 8, caravans: 6, residents: 20, silver: 250_000, goods: { planks: 1000, iron: 400, sulfur_iron: 10 } },
+  { name: ['Homestead', 'Хутор'], slots: 4, outposts: 2, caravans: 1, residents: 4, silver: 1_000, goods: { planks: 30 } },
+  { name: ['Settlement', 'Посёлок'], slots: 5, outposts: 2, caravans: 2, residents: 6, silver: 2_500, goods: { planks: 60, iron: 20 } },
+  { name: ['Trading Post', 'Фактория'], slots: 6, outposts: 3, caravans: 2, residents: 8, silver: 4_000, goods: { planks: 100, iron: 40, tar: 30 } },
+  { name: ['Harbour', 'Гавань'], slots: 7, outposts: 4, caravans: 3, residents: 10, silver: 5_000, goods: { planks: 120, iron: 50, salt: 40 } },
+  { name: ['Township', 'Городок'], slots: 8, outposts: 5, caravans: 3, residents: 12, silver: 20_000, goods: { planks: 250, iron: 120, pearls: 20, spices: 40 } },
+  { name: ['Stronghold', 'Крепость'], slots: 9, outposts: 6, caravans: 4, residents: 14, silver: 55_000, goods: { planks: 500, iron: 200, gunpowder: 80, sulfur_iron: 4 } },
+  { name: ['Bastion', 'Твердыня'], slots: 10, outposts: 7, caravans: 4, residents: 16, silver: 85_000, goods: { planks: 600, iron: 240, timber: 200, whalebone: 30 } },
+  { name: ['Citadel', 'Цитадель'], slots: 11, outposts: 8, caravans: 5, residents: 18, silver: 110_000, goods: { planks: 700, iron: 280, ambergris: 2, serpent_scale: 6 } },
+  { name: ['Pirate Capital', 'Пиратская столица'], slots: 12, outposts: 8, caravans: 6, residents: 20, silver: 160_000, goods: { planks: 900, iron: 360, sulfur_iron: 10 } },
 ];
 export const ISLE_MAX = 10;
 

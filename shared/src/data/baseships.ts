@@ -14,9 +14,9 @@
 
 import type { BaseCost, BaseRes } from './base.ts';
 import type { Tr } from './estate.ts';
-import { SHIP_CLASSES } from './ships.ts';
+import { GUNS, SHIP_CLASSES, defaultGunFor } from './ships.ts';
 import type { ShipClassId } from './ships.ts';
-import { levelRange, levelScale } from './shiplevel.ts';
+import { levelPower, levelRange, levelScale } from './shiplevel.ts';
 
 export type OwnRole = 'war' | 'merchant' | 'fisher' | 'scout';
 export const OWN_ROLES: OwnRole[] = ['war', 'merchant', 'fisher', 'scout'];
@@ -27,6 +27,8 @@ export interface OwnRoleDef {
   text: Tr;
   /** Her hulls as she grows, smallest first; the hull at a level is the last whose levels take it. */
   hulls: ShipClassId[];
+  /** A hull first taken later than her class's first level (the warship's frigate only at ⚓8, docs/15 item 8). */
+  from?: Partial<Record<ShipClassId, number>>;
   /** Building her: silver, the yard's goods and seconds of work. */
   silver: number;
   goods: Partial<Record<BaseRes, number>>;
@@ -36,7 +38,7 @@ export interface OwnRoleDef {
 export const OWN_ROLE_DEFS: Record<OwnRole, OwnRoleDef> = {
   war: {
     id: 'war', name: ['Warship', 'Боевой корабль'], text: ['Fights at your side and takes the blows meant for you.', 'Бьётся рядом с вами и принимает удары на себя.'],
-    hulls: ['cutter', 'brigantine', 'brig', 'frigate'], silver: 2500, goods: { timber: 80, coal: 20, tar: 25, iron: 30, provisions: 30 }, secs: 1200,
+    hulls: ['cutter', 'brigantine', 'brig', 'frigate'], from: { frigate: 8 }, silver: 2500, goods: { timber: 80, coal: 20, tar: 25, iron: 30, provisions: 30 }, secs: 1200,
   },
   merchant: {
     id: 'merchant', name: ['Merchant', 'Торговый корабль'], text: ['Carries for you: half her hold is added to yours while she sails with you.', 'Везёт за вас: половина её трюма прибавляется к вашему, пока она идёт с вами.'],
@@ -58,11 +60,17 @@ export const OWN_SHIPS_MAX = 2;
 export const YARD_SHIP_LEVEL = [0, 3, 4, 5, 7, 8];
 export const SHIPYARD_MAX = YARD_SHIP_LEVEL.length - 1;
 
+/** The levels a role takes a hull at: her class's, from the role's own first level for it. */
+function hullLevels(role: OwnRole, c: ShipClassId): [number, number] {
+  const [lo, hi] = levelRange(c);
+  return [Math.max(lo, OWN_ROLE_DEFS[role].from?.[c] ?? lo), hi];
+}
+
 /** Every level a role's hulls take, in order. */
 export function roleLevels(role: OwnRole): number[] {
   const out = new Set<number>();
   for (const c of OWN_ROLE_DEFS[role].hulls) {
-    const [lo, hi] = levelRange(c);
+    const [lo, hi] = hullLevels(role, c);
     for (let l = lo; l <= hi; l++) out.add(l);
   }
   return [...out].sort((a, b) => a - b);
@@ -73,10 +81,47 @@ export function hullFor(role: OwnRole, level: number): ShipClassId {
   const hulls = OWN_ROLE_DEFS[role].hulls;
   let best = hulls[0];
   for (const c of hulls) {
-    const [lo, hi] = levelRange(c);
+    const [lo, hi] = hullLevels(role, c);
     if (level >= lo && level <= hi) best = c;
   }
   return best;
+}
+
+// ------------------------------------------------------------------------------------------------ worth in a fight
+
+/** The hulls a harbour master hires out as escorts (fleet.ts ESCORT_OFFERS): they sail at their commander's level,
+ *  as far as each hull's levels go. */
+export const HIRED_HULLS: ShipClassId[] = ['cutter', 'brigantine', 'brig'];
+
+/** A hull's worth in a fight at a level, as the ladder reckons strength (docs/12 §3: hull times guns): her hull
+ *  against her armour, times her broadside's weight of shot a second with her class's own guns. */
+export function combatWorth(classId: ShipClassId, level: number): number {
+  const d = SHIP_CLASSES[classId];
+  const k = levelScale(classId, level);
+  const g = GUNS[defaultGunFor(d)];
+  return ((d.hull * k.hull) / (1 - d.armor)) * ((d.gunPortsPerSide * g.damage) / g.reload) * k.guns;
+}
+
+/** The best hired escort's worth at a level; beyond every hired hull's levels, the greatest of them grown by the
+ *  ladder's 1.3 a level (what a hired hull of that level would be). */
+export function hiredWorth(level: number): number {
+  let best = 0, top = 0;
+  for (const c of HIRED_HULLS) {
+    const [lo, hi] = levelRange(c);
+    if (level >= lo && level <= hi) best = Math.max(best, combatWorth(c, level));
+    top = Math.max(top, combatWorth(c, Math.min(level, hi)) * levelPower(level - Math.min(level, hi) + 1));
+  }
+  return best || top;
+}
+
+/** Her own warship is worth no more than this many hired escorts of her level (docs/15 item 8). */
+export const OWN_PARITY = 1.3;
+
+/** The share of her hull and of her guns an own ship sails with, so that she is worth no more than OWN_PARITY hired
+ *  escorts of her level (1: all of both; the island's frigate is lighter built and lighter gunned, ~0.83 each). */
+export function ownParity(classId: ShipClassId, level: number): number {
+  const w = combatWorth(classId, level), cap = OWN_PARITY * hiredWorth(level);
+  return w <= cap ? 1 : Math.round(Math.sqrt(cap / w) * 1000) / 1000;
 }
 
 /** The level after this one (a bigger hull may skip one), or null at the role's greatest. */
@@ -160,7 +205,7 @@ export const XP_TRADE_MAX = 60;
 /** A ship of her own counts three times her level in the island's power; a building or producer its level. */
 export const SHIP_POWER = 3;
 /** The power the step up to each island level asks (index: the level; levels 1 and 2 ask none). */
-export const ISLE_POWER = [0, 0, 0, 6, 14, 24, 36, 50, 66, 84, 104];
+export const ISLE_POWER = [0, 0, 0, 5, 12, 20, 32, 46, 62, 80, 100];
 /** Power that brings a third crew of builders. */
 export const POWER_CREW = 60;
 

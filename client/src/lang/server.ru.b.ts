@@ -1133,6 +1133,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "No wild island to give.": "Нет дикого острова, который можно отдать.",
   "Your island: {0}, level {1}.": "Ваш остров: {0}, уровень {1}.",
   "The yard holds {0} more of each.": "На дворе прибавилось по {0} каждого.",
+  "The island's producers have worked {0} hours more.": "Промыслы острова отработали ещё {0} ч.",
   // The island's own ships and its power (docs/15 items 4–5).
   "Bring her home to the island first.": "Сначала верните его к острову.",
   "Bring her home to the island, or put in at a port with a yard.": "Верните его к острову или зайдите в порт с верфью.",

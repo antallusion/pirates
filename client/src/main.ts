@@ -30,7 +30,7 @@ import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
 import { BaseWindow } from './ui/base.ts';
 import { $, decorateSums, esc, fmt, icon, keepInputs } from './ui/dom.ts';
-import { Hud } from './ui/hud.ts';
+import { Hud, releaseModalToasts } from './ui/hud.ts';
 import { MENU_ITEMS, menuLabel, renderMenu } from './ui/menu.ts';
 import type { MenuItem } from './ui/menu.ts';
 import { applySkin } from './ui/skin.ts';
@@ -175,6 +175,7 @@ const companyScreen = new CompanyScreen((m) => net.send(m));
 const baseWindow = new BaseWindow((m) => net.send(m));
 companyScreen.onBase = () => openBase();
 baseWindow.onSail = () => closeModal();
+baseWindow.onLayout = () => { if (modal === 'base') refreshModal(); };
 function openBase(): void {
   baseWindow.open();
   openModal('base');
@@ -211,6 +212,7 @@ const touch = new TouchControls({
   chasers: () => touchChasers(),
   mount: () => touchMount(),
   context: () => padContext(),
+  context2: () => (nearHome() ? openBase() : openClaim()),
   aim: (px, py) => {
     renderer.mouseX = px;
     renderer.mouseY = py;
@@ -611,6 +613,7 @@ function openModal(m: Modal): void {
   if (m !== 'look') resetLookDraft();
   modal = m;
   $('modal').classList.toggle('hidden', m === null);
+  if (m === null) releaseModalToasts();
   refreshModal();
 }
 
@@ -618,6 +621,7 @@ function closeModal(): void {
   const was = modal;
   modal = null;
   $('modal').classList.add('hidden');
+  releaseModalToasts();
   // While docked, closing another screen returns to the harbour (Esc on the harbour itself hides it; P reopens).
   if (was !== 'port' && state.portView) openModal('port');
 }
@@ -1315,6 +1319,8 @@ function padContext(): void {
   if (state.self?.landable && !state.self.landable.blocked) return void net.send({ t: 'land' });
   if (mastWreck()) return void net.send({ t: 'cut_mast' });
   if (nearHome()) return openBase();
+  // A wild island she may claim (docs/15 item 6): its terms, as the prompt's «Claim…» opens them.
+  if (state.self?.claimIsle) return openClaim();
   const you = state.you;
   if (you && (you.flags & SF.REPAIRING || !you.combat)) net.send({ t: 'repair', on: !(you.flags & SF.REPAIRING) });
 }
@@ -1383,11 +1389,20 @@ function contextLabel(): string | null {
   if (state.self?.landable && !state.self.landable.blocked) return L('tc.land');
   if (mastWreck()) return L('tc.cutMast');
   if (nearHome() && modal !== 'base') return L('tc.base');
+  if (state.self?.claimIsle && !nearHome() && modal !== 'company') return L('tc.claim');
   // Nothing else at hand: a damaged ship out of the fight can set the carpenters to work (R on a keyboard).
   const you = state.you;
   if (you && you.flags & SF.REPAIRING) return L('tc.repairStop');
   if (you && !you.combat && (you.hull < you.hullMax * 0.98 || you.sails < you.sailsMax * 0.98)) return L('tc.repair');
   return null;
+}
+
+/** The second touch context button (docs/15 item 8): the way into her island, or to claim a wild one, when the
+ *  first button does something else there. */
+function secondContext(first: string | null): string | null {
+  if (!first) return null;
+  if (nearHome()) return first === L('tc.base') || modal === 'base' ? null : L('tc.base');
+  return state.self?.claimIsle && first !== L('tc.claim') && modal !== 'company' ? L('tc.claim') : null;
 }
 
 /** The nearest ship within reach that a touch aims at: hostile ones count double, `accept` narrows the arc. */
@@ -1683,7 +1698,11 @@ function step(t: number): void {
     hud.drawTarget(state, targetId);
     if (touch.enabled && state.self) {
       const cls = SHIP_CLASSES[state.self.loadout.classId];
-      touch.setContext(contextLabel());
+      const ctx = contextLabel();
+      touch.setContext(ctx);
+      // Off her own island, or a wild one she may claim, while the first button lands a party (or docks, boards…):
+      // «My Island» or «Claim» beside it.
+      touch.setContext(secondContext(ctx), 'tc-context2');
       touch.frame(own?.heading ?? null, state.input.sail, cls.bowChasers + cls.sternChasers > 0, state.self.loadout.mount ?? null);
     }
     divePanel.render(state.dive);

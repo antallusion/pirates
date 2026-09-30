@@ -230,7 +230,7 @@ test('the yard pays for the work: resources spent, and wanting them the work is 
   assert.equal(y.res.timber ?? 0, 0);
   assert.equal(h.store.timber ?? 0, 0);
   h.treasury = 10_000;
-  y.res.planks = 60;
+  y.res.planks = ISLE_LEVELS[2].goods.planks;
   assert.equal(isleLevelUp(game, s, h.island), null);
   assert.equal(h.level, 2);
   assert.equal(y.res.planks ?? 0, 0, 'the planks came from the yard');

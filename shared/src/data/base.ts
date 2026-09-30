@@ -60,11 +60,11 @@ export interface ProducerDef {
 }
 
 export const PRODUCERS: Record<ProducerKind, ProducerDef> = {
-  lumber: { id: 'lumber', name: ['Logging Camp', 'Лесоповал'], text: ['Fells the island’s trees: timber by the hour.', 'Валит лес острова: брёвна каждый час.'], good: 'timber', rate: 8, art: 'outpost_lumber', stages: 'growth', silver: 600, goods: {}, secs: 180 },
-  quarry: { id: 'quarry', name: ['Quarry', 'Каменоломня'], text: ['Breaks the island’s rock: stone and coal by the hour.', 'Ломает камень острова: камень и уголь каждый час.'], good: 'coal', rate: 6, art: 'build_mine', stages: 'condition', silver: 900, goods: { timber: 20 }, secs: 300 },
-  tar: { id: 'tar', name: ['Tar Kiln', 'Смолокурня'], text: ['Boils pine tar from the island’s wood.', 'Гонит смолу из леса острова.'], good: 'tar', rate: 4, art: 'outpost_tar', stages: 'growth', silver: 900, goods: { timber: 25 }, secs: 300 },
-  mine: { id: 'mine', name: ['Iron Mine', 'Железный рудник'], text: ['Digs iron ore where the rock holds it.', 'Добывает железную руду там, где она есть в скале.'], good: 'iron', rate: 3, art: 'outpost_mine', stages: 'growth', silver: 1500, goods: { timber: 25, coal: 20 }, secs: 480 },
-  fishery: { id: 'fishery', name: ['Fishing Crew', 'Рыбная артель'], text: ['Nets and smokes the catch: provisions by the hour.', 'Ловит и коптит рыбу: провизия каждый час.'], good: 'provisions', rate: 8, art: 'outpost_fishery', stages: 'growth', silver: 600, goods: { timber: 15 }, secs: 240 },
+  lumber: { id: 'lumber', name: ['Logging Camp', 'Лесоповал'], text: ['Fells the island’s trees: timber by the hour.', 'Валит лес острова: брёвна каждый час.'], good: 'timber', rate: 8, art: 'outpost_lumber', stages: 'growth', silver: 500, goods: {}, secs: 180 },
+  quarry: { id: 'quarry', name: ['Quarry', 'Каменоломня'], text: ['Breaks the island’s rock: stone and coal by the hour.', 'Ломает камень острова: камень и уголь каждый час.'], good: 'coal', rate: 6, art: 'build_mine', stages: 'condition', silver: 700, goods: { timber: 20 }, secs: 300 },
+  tar: { id: 'tar', name: ['Tar Kiln', 'Смолокурня'], text: ['Boils pine tar from the island’s wood.', 'Гонит смолу из леса острова.'], good: 'tar', rate: 4, art: 'outpost_tar', stages: 'growth', silver: 700, goods: { timber: 25 }, secs: 300 },
+  mine: { id: 'mine', name: ['Iron Mine', 'Железный рудник'], text: ['Digs iron ore where the rock holds it.', 'Добывает железную руду там, где она есть в скале.'], good: 'iron', rate: 3, art: 'outpost_mine', stages: 'growth', silver: 1100, goods: { timber: 25, coal: 20 }, secs: 480 },
+  fishery: { id: 'fishery', name: ['Fishing Crew', 'Рыбная артель'], text: ['Nets and smokes the catch: provisions by the hour.', 'Ловит и коптит рыбу: провизия каждый час.'], good: 'provisions', rate: 8, art: 'outpost_fishery', stages: 'growth', silver: 500, goods: { timber: 15 }, secs: 240 },
 };
 
 export const PRODUCER_MAX = 5;
@@ -127,6 +127,11 @@ const levelMul = (level: number) => (level <= 1 ? 1 : level ** 1.5);
 export const BUILD_MAX_SECS = 4 * 3600;
 const levelTime = (secs: number, level: number) => Math.min(BUILD_MAX_SECS, Math.round(secs * 2.2 ** (Math.max(1, level) - 1)));
 
+/** A producer's silver grows by its level to this power (level 5: ×8; docs/15 item 8, was 1.6: ×13). */
+export const PRODUCER_SILVER_EXP = 1.3;
+/** Founding the island's shipyard (a leased island's pays half its 60 000). */
+export const SHIPYARD_FOUND = 20_000;
+
 /** What raising a thing to a level costs (level 1: founding it). */
 export function baseCost(what: string, level: number): BaseCost {
   const kind = producerOf(what);
@@ -140,15 +145,20 @@ export function baseCost(what: string, level: number): BaseCost {
       goods.coal = (goods.coal ?? 0) + 10 * (level - 1);
     }
     if (level >= 3) goods.iron = (goods.iron ?? 0) + 6 * (level - 2);
-    return { silver: round50(d.silver * level ** 1.6), goods, secs: levelTime(d.secs, level) };
+    return { silver: round50(d.silver * level ** PRODUCER_SILVER_EXP), goods, secs: levelTime(d.secs, level) };
   }
   const d = BUILDINGS[what as BuildingId];
   if (!d) return { silver: 0, goods: {}, secs: 0 };
-  // The shipyard's later levels are paid mostly in the island's own timber, tar and iron (docs/15 item 4).
+  // The island's shipyard is founded for a third of a leased island's (docs/15 item 8: 20 000, not 30 000); its later
+  // levels are paid mostly in the island's own timber, tar and iron (docs/15 item 4).
+  if (what === 'shipyard' && level <= 1) {
+    const w = d.cost / 10_000;
+    return { silver: SHIPYARD_FOUND, goods: { timber: Math.ceil(15 + 20 * w), coal: Math.ceil(8 + 10 * w), tar: Math.ceil(2 + 4 * w), iron: d.materials.iron ?? 20 }, secs: levelTime(Math.round(600 * Math.sqrt(w)), 1) };
+  }
   if (what === 'shipyard' && level >= 2) {
     const n = level - 1;
     return {
-      silver: round50(15_000 * n ** 1.3),
+      silver: round50(10_000 * n ** 1.3),
       goods: { timber: 40 + 40 * n, coal: 20 * n, tar: 20 + 15 * n, iron: 15 * n + 10 },
       secs: levelTime(Math.round(600 * Math.sqrt(d.cost / 10_000)), level),
     };

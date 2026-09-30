@@ -2544,3 +2544,64 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
   .btab { min-height: 28px; padding: 2px 8px; }
 }
 .blevel .good { color: var(--good); } .blevel .bad { color: var(--bad); }
+
+/* ---------- My Island on a phone on its side (docs/15 item 8): a thin header; the board fills the left half and
+   the resources, the waters, a raid and the sheet scroll together on the right, at the windows' landscape sizes. */
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  #modal-panel[data-modal="base"], #modal-panel[data-modal="base"]:has(.base-raid) { --base-h: calc(100dvh - 86px); }
+  #modal-panel[data-modal="base"] .modal-head.base-head { flex-wrap: nowrap; align-items: center; gap: 8px; padding: 4px 54px 4px 10px; }
+  #modal-panel[data-modal="base"] .base-head > div:first-child { min-width: 0; flex: 1; }
+  #modal-panel[data-modal="base"] .base-head .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #modal-panel[data-modal="base"] .modal-body.base-body.base-land { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 10px; padding: 2px 8px 6px; }
+  .base-land .base-stage { align-items: center; }
+  .base-land .base-sheet { padding: 0 4px 8px 0; font-size: 13px; }
+  .base-sheet .base-bar, .yard-body .base-bar { flex-wrap: wrap; padding: 0 0 4px; gap: 4px; }
+  .base-sheet .base-res, .yard-body .base-res { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; gap: 3px; }
+  .base-sheet .bres, .yard-body .bres { flex-direction: column; align-items: stretch; gap: 0; padding: 1px 3px 3px; font-size: 13px; }
+  .base-sheet .bres-top, .yard-body .bres-top { justify-content: center; }
+  .base-sheet .bres em, .yard-body .bres em { font-size: 10px; }
+  .base-sheet .base-meta, .yard-body .base-meta { width: 100%; justify-content: space-between; gap: 2px 8px; }
+  .base-sheet .base-def, .base-sheet .base-raid, .yard-body .base-def, .yard-body .base-raid { padding: 3px 4px; font-size: 12px; }
+  .base-sheet .base-raid .muted, .yard-body .base-raid .muted { display: inline; }
+  .base-sheet .base-raid, .yard-body .base-raid { margin: 2px 0 4px; border: 1px solid rgba(170, 60, 50, 0.6); }
+  .base-sheet .bhint { font-size: 14px; margin-top: 6px; }
+}
+
+/* ---------- My Island on a tablet held upright (docs/15 item 8): the window takes most of the screen, a tall board. */
+@media (min-width: 700px) and (max-aspect-ratio: 1/1) {
+  #modal-panel[data-modal="base"] { width: 96vw; height: calc(100dvh - 140px); --base-h: min(520px, 42vh); }
+  #modal-panel[data-modal="base"]:has(.base-raid) { --base-h: min(480px, 38vh); }
+}
+
+/* ---------- Toasts while a window is open (docs/15 item 8): not over the window, but in a strip of their own under
+   it — in the margin below the window on a large screen, else a line the window gives up while a toast shows —
+   one line each, the newest (and a bad one) only on a phone. */
+#modal { flex-direction: column; }
+#modal-panel { flex: 0 1 auto; min-height: 0; }
+#modal-toasts { flex: none; display: flex; flex-direction: column; gap: 2px; width: min(1100px, 95vw); padding: 3px 0 2px; pointer-events: none; zoom: var(--ui-scale); font-size: calc(1em * var(--text-scale)); }
+#modal-toasts:empty { display: none; }
+#modal-toasts .toast { padding: 2px 8px; font-size: 12px; line-height: 18px; background: rgba(8, 9, 11, 0.94); animation: fadein 0.2s; }
+#modal-toasts .toast > span { display: block; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#modal-toasts .toast .ico-toast { width: 16px; height: 16px; flex: none; }
+#modal-toasts .t-count { flex: none; }
+@media (max-width: 699px), (max-height: 520px) {
+  #modal-toasts { width: 100%; padding: 0 calc(var(--sa-r) + 2px) calc(var(--sa-b) + 1px) calc(var(--sa-l) + 2px); background: #060607; }
+  #modal-toasts .toast:nth-child(n+2):not(.bad) { display: none; }
+  #modal-toasts .toast { font-size: 11.5px; }
+}
+@media (min-width: 700px) and (min-height: 890px) {
+  #modal-toasts { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); padding: 0; }
+}
+
+/* ---------- The touch context buttons (docs/15 item 8): a second one beside the first, «Claim» off a wild island
+   while the first lands a party or docks. */
+#tc-ctx-row { display: flex; gap: 8px; justify-content: center; align-items: center; pointer-events: none; }
+#tc-ctx-row:not(:has(.tc-context:not(.hidden))) { display: none; }
+body.touch .tc-context2:not(.hidden) { min-width: 0; animation: none; }
+/* The column's toasts wait under an open window (the strip takes the new ones); they come back when it closes. */
+body:has(#modal:not(.hidden)) #toasts { display: none; }
+#modal-toasts { overflow: hidden; }
+#modal-toasts .toast { box-sizing: border-box; max-width: 100%; min-width: 0; overflow: hidden; }
+@media (max-width: 699px), (max-height: 520px) {
+  #modal:has(#modal-toasts:not(:empty)) { background: #060607; }
+}

@@ -16,6 +16,8 @@ export interface TouchHooks {
   chasers(): void;
   mount(): void;
   context(): void;
+  /** The second context action, when the first is taken by another (a wild island to claim, docs/15 item 8). */
+  context2(): void;
   /** Aim the "cursor" at a screen point (abilities and the mount aim where you last touched the sea). */
   aim(px: number, py: number): void;
   zoom(factor: number): void;
@@ -99,9 +101,9 @@ export class TouchControls {
     b.prepend(img);
   }
 
-  /** Show or hide the context button, with what it will do. */
-  setContext(label: string | null): void {
-    const b = $('tc-context');
+  /** Show or hide the context button (or the second one), with what it will do. */
+  setContext(label: string | null, id = 'tc-context'): void {
+    const b = $(id);
     b.classList.toggle('hidden', !label);
     if (label && b.dataset.label !== label) {
       b.dataset.label = label;
@@ -160,6 +162,15 @@ export class TouchControls {
   }
 
   private bindButtons(): void {
+    // A button run on the finger's touch may open a window under it: the click the browser still sends when the
+    // finger lifts must not fall on that window's buttons (docs/15 item 8: «Claim» once rented an island).
+    let swallow = 0;
+    document.addEventListener('click', (e) => {
+      if (performance.now() > swallow) return;
+      swallow = 0;
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
     const tap = (id: string, run: () => void) => {
       $(id).addEventListener('pointerdown', (e) => {
         e.preventDefault();
@@ -167,6 +178,7 @@ export class TouchControls {
         const el = e.currentTarget as HTMLElement;
         el.classList.add('pressed');
         setTimeout(() => el.classList.remove('pressed'), 160);
+        if (e.pointerType !== 'mouse') swallow = performance.now() + 700;
         run();
       });
     };
@@ -201,6 +213,7 @@ export class TouchControls {
     tap('tc-chasers', () => this.hooks.chasers());
     tap('tc-mount', () => this.hooks.mount());
     tap('tc-context', () => this.hooks.context());
+    tap('tc-context2', () => this.hooks.context2());
     tap('tc-menu', () => this.hooks.menu());
   }
 
