@@ -111,8 +111,8 @@ export function onNpcHit(game: Game, victim: ShipEntity, source: ShipEntity): vo
     if (d > HELP_R) continue;
     const km = (d / 1000).toFixed(1), dir = bearingWord(sh.state.x, sh.state.y, victim.state.x, victim.state.y);
     game.toastShip(sh, source.npcRole === 'ghost'
-      ? `${victim.name} is under attack by a ghost ship ${km} km off, bearing ${dir}: she calls for help!`
-      : `${victim.name} is under attack by pirates ${km} km off, bearing ${dir}: she calls for help!`, 'gold');
+      ? `A ghost ship attacks ${victim.name}, ${km} km ${dir}: she calls for help!`
+      : `Pirates attack ${victim.name}, ${km} km ${dir}: she calls for help!`, 'gold');
   }
 }
 

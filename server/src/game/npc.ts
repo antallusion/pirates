@@ -445,6 +445,20 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       preyD = dist(ship.state.x, ship.state.y, p.state.x, p.state.y);
     }
   }
+  // A fighter at work on one of the sea's ships keeps to her (docs/16 P1): a captain sailing nearer does not lure her
+  // off it, unless that captain fires on her.
+  {
+    const focusId = brain.target ?? brain.chase?.id ?? null;
+    const f = focusId !== null && focusId !== (prey as ShipEntity | null)?.id ? game.ships.get(focusId) : undefined;
+    const p = prey as ShipEntity | null;
+    if (f && p && !f.isPlayer && f.alive && !f.docked && npcHostileTo(game, ship, f) && (ship.attackers.get(p.id) ?? -999) < now - 60) {
+      const fd = dist(ship.state.x, ship.state.y, f.state.x, f.state.y);
+      if (fd < ship.stats.detection * 1.3) {
+        prey = f;
+        preyD = fd;
+      }
+    }
+  }
   if (!prey && brain.chase) {
     const c = game.ships.get(brain.chase.id);
     if (!c || !c.alive || c.docked || now > brain.chase.until || !npcHostileTo(game, ship, c) || c.hasFlag('hidden')) brain.chase = null;

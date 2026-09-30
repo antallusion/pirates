@@ -54,6 +54,7 @@ export function islandLife(is: LifeIsland): LifeSite[] {
 
 /** The roll itself, without the cache (tests compare the server's and the client's view of an island). */
 export function rollLife(is: LifeIsland): LifeSite[] {
+  if (is.portId?.startsWith('raft_')) return []; // a floating town's hulks have no beach (docs/16 P3)
   const rng = new Rng((is.id * 2654435761 + Math.round(is.x) * 31 + Math.round(is.y)) >>> 0);
   const r = Math.round(is.r / 1.25); // the island's own size, not its bounding circle
   const reg = REGIONS[is.region];

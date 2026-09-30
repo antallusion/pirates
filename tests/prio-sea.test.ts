@@ -150,7 +150,7 @@ test('the call is heard with a bearing: every captain within a few miles, none b
   const heard = toasts.filter(([, t]) => t.includes('calls for help'));
   assert.equal(heard.length, 1, heard.join(' / '));
   assert.equal(heard[0][0], near.ship!.id);
-  assert.match(heard[0][1], /2\.0 km off, bearing east/);
+  assert.match(heard[0][1], /^Pirates attack .+, 2\.0 km east: she calls for help!$/);
   assert.ok(!heard.some(([id]) => id === far.ship!.id));
 });
 

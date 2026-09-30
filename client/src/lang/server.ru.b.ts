@@ -1271,6 +1271,6 @@ export const SERVER_RU_B: Record<string, string> = {
   "The raiders on {0} hold their fire: you are in this together.": "Налётчики на «{0}» не стреляют по вам: теперь вы заодно.",
   "{0} dips her flag to you: {1} silver for the rescue.": "«{0}» приспускает флаг в вашу честь: {1} серебра за спасение.",
   "{0} drove the raiders off {1} near {2}.": "{0} отогнал(а) налётчиков от «{1}» у {2}.",
-  "{0} is under attack by a ghost ship {1} km off, bearing {2}: she calls for help!": "«{0}» атакует корабль-призрак в {1} км, пеленг — {2}: она зовёт на помощь!",
-  "{0} is under attack by pirates {1} km off, bearing {2}: she calls for help!": "«{0}» атакуют пираты в {1} км, пеленг — {2}: она зовёт на помощь!",
+  "A ghost ship attacks {0}, {1} km {2}: she calls for help!": "Корабль-призрак атакует «{0}» — {1} км, {2}: зовёт на помощь!",
+  "Pirates attack {0}, {1} km {2}: she calls for help!": "Пираты атакуют «{0}» — {1} км, {2}: зовёт на помощь!",
 };
