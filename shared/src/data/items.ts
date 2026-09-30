@@ -10,6 +10,7 @@
 
 import type { ModuleId } from './ships.ts';
 import type { Flag, StatKey, StatMods } from './stats.ts';
+import { ARTIFACTS, artSeaSource } from './artifacts.ts';
 
 export type ShipSlot = 'sails' | 'rigging' | 'plating' | 'rudder' | 'hold' | 'quarters' | 'battery' | 'banner' | 'relic' | 'tackle';
 export type CaptainSlot = 'hat' | 'coat' | 'sash' | 'boots' | 'blade' | 'pistols' | 'spyglass' | 'compass' | 'charm' | 'ring';
@@ -341,6 +342,8 @@ export interface Item {
   temper?: number;
   /** Who made it. */
   maker?: string;
+  /** A hero's artifact (docs/17 H2, shared/src/data/artifacts.ts): its own name, primaries and gifts; it never wears. */
+  art?: string;
 }
 
 export function itemSlot(it: Item): Slot {
@@ -350,6 +353,7 @@ export function itemSlot(it: Item): Slot {
 /** Its name in English (the server's) or Russian. */
 export function itemName(it: Item, ru = false): string {
   const k = ru ? 1 : 0;
+  if (it.art && ARTIFACTS[it.art]) return ARTIFACTS[it.art].name[k];
   if (it.legendary) return LEGENDARY_ITEMS[it.legendary].name[k];
   if (it.set) return SETS[it.set].pieces[itemSlot(it)]?.[k] ?? ITEM_BASES[it.base].name[k];
   return ITEM_BASES[it.base].name[k];
@@ -371,6 +375,13 @@ export function itemEffect(it: Item): { mods: StatMods; cap: Partial<Record<CapS
   const mods: StatMods = {};
   const cap: Partial<Record<CapStat, number>> = {};
   const flags: Flag[] = [];
+  if (it.art) {
+    // An artifact's sea lines are its own (its primaries and battle gifts are the hero's: shared/src/data/hero.ts).
+    const d = ARTIFACTS[it.art];
+    for (const k in d?.mods ?? {}) mods[k as StatKey] = d!.mods![k as StatKey] ?? 0;
+    flags.push(...(d?.flags ?? []));
+    return { mods, cap, flags };
+  }
   if (it.dur <= 0) return { mods, cap, flags };
   const base = ITEM_BASES[it.base];
   const s = mainScale(it);
@@ -436,6 +447,10 @@ export function gearSource(worn: Item[]): { mods: StatMods; flags: Flag[]; cap: 
   const sets = setBonuses(worn);
   addMods(sets.mods);
   flags.push(...sets.flags);
+  // The hero's artifact sets worn whole (docs/17 H2).
+  const arts = artSeaSource(worn);
+  addMods(arts.mods);
+  flags.push(...arts.flags);
   return { mods, flags, cap };
 }
 
@@ -493,6 +508,7 @@ export function makeItem(rng: Rng, uid: number, opts: { ilvl: number; rarity?: R
 
 /** An item's worth to a port chandler (sold for a quarter of it). */
 export function itemValue(it: Item): number {
+  if (it.art && ARTIFACTS[it.art]) return ARTIFACTS[it.art].price;
   return Math.round(120 * ilvlScale(it.ilvl) * it.ilvl * [1, 2.5, 6, 15, 40][it.rarity]);
 }
 

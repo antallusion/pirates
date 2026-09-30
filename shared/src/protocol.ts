@@ -1337,7 +1337,12 @@ export interface TacHeroView {
   captain: CaptainId | null;
   morale: number;
   luck: number;
-  spells: { id: TacSpellId; ready: number }[];
+  /** Each order and the round it is ready; its will (docs/17 H2) when her captain is a hero. */
+  spells: { id: TacSpellId; ready: number; cost?: number }[];
+  /** The hero's primaries and will (docs/17 H2). */
+  prim?: { atk: number; def: number; pow: number; will: number };
+  mana?: number;
+  manaMax?: number;
   /** Has given an order this round. */
   cast: boolean;
   auto: boolean;
