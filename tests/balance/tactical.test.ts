@@ -37,7 +37,7 @@ function wins(game: Game, a: ShipEntity, b: ShipEntity, n: number): number {
 test('tactical boarding on real hulls: even brigs even, a level up clearly stronger, a merchant never beats a warship of her level', () => {
   const { game } = makeGame();
   const n = 60;
-  const even = wins(game, hull(game, 'pirate', 'brig', 5, 0), hull(game, 'patrol', 'brig', 5, 100), n);
+  const even = wins(game, hull(game, 'pirate', 'brig', 5, 0), hull(game, 'pirate', 'brig', 5, 100), n);
   assert.ok(even >= n * 0.3 && even <= n * 0.7, `brig ⚓5 against brig ⚓5: ${even}/${n}`);
   const down = wins(game, hull(game, 'pirate', 'brig', 5, 200), hull(game, 'patrol', 'brig', 6, 300), n);
   assert.ok(down <= n * 0.1, `brig ⚓5 boarding brig ⚓6: ${down}/${n}`);

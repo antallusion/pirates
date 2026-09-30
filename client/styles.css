@@ -2887,7 +2887,7 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 .tb-qsep { flex: none; width: 2px; height: 26px; background: var(--brass-dim); margin: 0 3px; }
 .tb-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; overflow: hidden; }
 .tb-board { position: absolute; left: 0; top: 0; display: block; touch-action: none; cursor: pointer; }
-.tb-hint { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 3px 10px; border-radius: 10px; background: rgba(10, 9, 8, 0.72); color: #bfeee4; font-size: 11.5px; text-align: center; pointer-events: none; box-sizing: border-box; }
+.tb-hint { color: #bfeee4; font-size: 11.5px; font-weight: 600; }
 .tb-card { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); width: min(300px, calc(100% - 16px)); box-sizing: border-box; padding: 8px 10px; background: rgba(14, 12, 10, 0.95); border: 1px solid var(--brass-dim); border-top: 3px solid #7fb0d0; border-radius: 6px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); cursor: pointer; z-index: 2; }
 .tb-card.foe { border-top-color: #d2473a; }
 .tb-card-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
@@ -2906,6 +2906,7 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 .tb-banner.lost b { color: #e3998a; }
 .tb-banner span { color: var(--fog); font-size: 12.5px; }
 .tb-feed { grid-area: feed; min-height: 44px; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; font-size: 11.5px; line-height: 1.3; color: var(--fog); overflow: hidden; }
+.tb-lines { display: flex; flex-direction: column; gap: 1px; }
 .tb-feed .new { color: var(--bone); }
 .tb-spells { grid-area: spells; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .tb-spell { display: flex; align-items: center; gap: 6px; text-align: left; padding: 4px 8px; min-height: 44px; min-width: 0; }
@@ -2918,6 +2919,9 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 .tb-acts .btn { flex: 1 1 auto; min-height: 38px; padding: 4px 8px; font-size: 12px; white-space: nowrap; }
 .tb-acts .btn.on { border-color: var(--gold); color: var(--gold); }
 body.tac #hud-bottom, body.tac #touch, body.tac #board-fight { visibility: hidden; }
+/* While the decks fight, the sea's news waits; what the battle itself says (a refusal, a win) still shows. */
+body.tac #toasts .toast:not(.bad):not(.good):not(.xp) { display: none; }
+body.tac #toasts { top: 22%; }
 /* A phone on its side: the field in the middle as tall as the screen, the captains and the orders left and right. */
 @media (max-height: 520px) and (orientation: landscape) {
   .tb-root { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr);
@@ -2933,7 +2937,9 @@ body.tac #hud-bottom, body.tac #touch, body.tac #board-fight { visibility: hidde
   .tb-spell .ico { width: 24px; height: 24px; }
   .tb-spell small { display: none; }
   .tb-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; align-content: start; }
-  .tb-acts .btn { min-height: 32px; padding: 2px 4px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+  .tb-acts .btn { min-height: 32px; padding: 2px 2px; font-size: 10px; letter-spacing: 0; line-height: 1.05; white-space: normal; }
+  .tb-acts .btn-danger { grid-column: span 2; }
+  .tb-acts .btn .ico-sm { display: none; }
   .tb-feed { justify-content: flex-start; min-height: 0; font-size: 10.5px; }
   .tb-hint { font-size: 10.5px; }
   .tb-banner b { font-size: 26px; }

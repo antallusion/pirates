@@ -100,7 +100,9 @@ export class TacticalPanel {
   private canvas: HTMLCanvasElement | null = null;
   private bg: HTMLCanvasElement | null = null;
   private bgKey = '';
-  private size = { w: 0, cw: 0, ch: 0, ox: 0, oy: 0, dpr: 1 };
+  /** The hex's width, the stage, the board's corner, and its turn: 0 as the decks lie side by side, 1 upright with
+   *  the boarders' deck below, −1 upright with the defenders' below (a phone held upright: your deck at the thumb). */
+  private size = { w: 0, cw: 0, ch: 0, ox: 0, oy: 0, dpr: 1, rot: 0 as 0 | 1 | -1, bw: 0, bh: 0 };
   private key = '';
   private preview: number | null = null;
   private targeting: TacSpellId | null = null;
@@ -155,8 +157,8 @@ export class TacticalPanel {
     root.innerHTML = `<div class="tb-root">
       <div class="tb-hero you"></div><div class="tb-mid"></div><div class="tb-hero foe"></div>
       <div class="tb-queue" aria-label="${esc(L('order.label'))}"></div>
-      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-hint"></div><div class="tb-card hidden"></div><div class="tb-banner hidden"></div></div>
-      <div class="tb-feed"></div>
+      <div class="tb-stage"><canvas class="tb-board"></canvas><div class="tb-card hidden"></div><div class="tb-banner hidden"></div></div>
+      <div class="tb-feed"><div class="tb-hint"></div><div class="tb-lines"></div></div>
       <div class="tb-spells"></div>
       <div class="tb-acts"></div>
     </div>`;
@@ -281,7 +283,7 @@ export class TacticalPanel {
     el.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => this.showInfo(Number(b.dataset.info))));
     // The feed: the last three things, in words.
     const words = v.log.filter((e) => e.k !== 'move').slice(-3).map((e) => this.words(e, v)).filter(Boolean);
-    el.querySelector('.tb-feed')!.innerHTML = words.map((w, i) => `<div class="${i === words.length - 1 ? 'new' : ''}">${esc(w)}</div>`).join('');
+    el.querySelector('.tb-lines')!.innerHTML = words.map((w, i) => `<div class="${i === words.length - 1 ? 'new' : ''}">${esc(w)}</div>`).join('');
     // The captain's orders.
     const me = v.heroes[v.you];
     el.querySelector('.tb-spells')!.innerHTML = me.spells.map((sp) => {
@@ -299,8 +301,8 @@ export class TacticalPanel {
       officer ? `<button class="btn btn-primary" data-a="order" title="${esc(L(`od.${officer.order}` as K))}">${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${esc(L(`o.${officer.order}` as K))}</button>` : '',
       `<button class="btn${me.auto ? ' on' : ''}" data-a="auto">${esc(me.auto ? L('autoOff') : L('auto'))}</button>`,
       `<button class="btn" data-a="quick" ${v.over ? 'disabled' : ''}>${esc(L('quick'))}</button>`,
-      v.canCut ? `<button class="btn btn-danger" data-a="cut">${esc(v.you === 0 ? L('fallBack') : L('cut'))}</button>` : '',
-      v.canStrike ? `<button class="btn btn-danger${armed ? ' on' : ''}" data-a="surrender">${esc(armed ? L('strikeSure') : L('strike'))}</button>` : '',
+      v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut">${esc(v.you === 0 ? L('fallBack') : L('cut'))}</button>` : '',
+      v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on' : ''}" data-a="surrender">${esc(armed ? L('strikeSure') : L('strike'))}</button>` : '',
     ].join('');
     el.querySelectorAll<HTMLElement>('[data-a]').forEach((b) => (b.onclick = () => this.button(b.dataset.a!)));
     // The end.
@@ -534,11 +536,33 @@ export class TacticalPanel {
 
   // ------------------------------------------------------------------ drawing
 
-  private center(i: number): { x: number; y: number } {
-    const { w, ox, oy } = this.size;
+  /** A hex's centre on the board as it lies (the decks side by side, the corner at 0,0). */
+  private lc(i: number): { x: number; y: number } {
+    const { w } = this.size;
     const h = (w * 2) / SQ3;
     const x = hexX(i), y = hexY(i);
-    return { x: ox + w * (x + 0.5 + (y & 1 ? 0.5 : 0)), y: oy + h / 2 + y * h * 0.75 };
+    return { x: w * (x + 0.5 + (y & 1 ? 0.5 : 0)), y: h / 2 + y * h * 0.75 };
+  }
+
+  /** The board's turn onto the screen: screen = (a·x + c·y + e, b·x + d·y + f). */
+  private xf(): [number, number, number, number, number, number] {
+    const { ox, oy, rot, bw, bh } = this.size;
+    if (rot === 1) return [0, -1, 1, 0, ox, oy + bw];
+    if (rot === -1) return [0, 1, -1, 0, ox + bh, oy];
+    return [1, 0, 0, 1, ox, oy];
+  }
+
+  /** A hex's centre on the screen. */
+  private center(i: number): { x: number; y: number } {
+    const p = this.lc(i);
+    const [a, b, c, d, e, f] = this.xf();
+    return { x: a * p.x + c * p.y + e, y: b * p.x + d * p.y + f };
+  }
+
+  private turned(g: CanvasRenderingContext2D): void {
+    const k = this.size.dpr;
+    const [a, b, c, d, e, f] = this.xf();
+    g.setTransform(a * k, b * k, c * k, d * k, e * k, f * k);
   }
 
   private at(p: { x: number; y: number; fx: number; fy: number; t0: number }, t: number): { x: number; y: number } {
@@ -554,10 +578,15 @@ export class TacticalPanel {
     const cw = stage.clientWidth, ch = stage.clientHeight;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     if (cw === this.size.cw && ch === this.size.ch && dpr === this.size.dpr) return false;
-    const w = Math.max(12, Math.min(cw / TAC_W, ch / (((TAC_H - 1) * 0.75 + 1) * (2 / SQ3))));
-    const bw = w * TAC_W, bh = ((TAC_H - 1) * 0.75 + 1) * (w * 2) / SQ3;
+    // Side by side, or upright when that gives the bigger hexes (a phone held upright).
+    const depth = ((TAC_H - 1) * 0.75 + 1) * (2 / SQ3);
+    const flat = Math.min(cw / TAC_W, ch / depth), up = Math.min(cw / depth, ch / TAC_W);
+    const rot: 0 | 1 | -1 = up > flat * 1.08 ? (this.view?.you === 1 ? -1 : 1) : 0;
+    const w = Math.max(12, rot ? up : flat);
+    const bw = w * TAC_W, bh = depth * w;
     const old = this.size;
-    this.size = { w, cw, ch, ox: (cw - bw) / 2, oy: (ch - bh) / 2, dpr };
+    const sw = rot ? bh : bw, sh = rot ? bw : bh;
+    this.size = { w, cw, ch, ox: (cw - sw) / 2, oy: (ch - sh) / 2, dpr, rot, bw, bh };
     c.width = Math.round(cw * dpr);
     c.height = Math.round(ch * dpr);
     c.style.width = `${cw}px`;
@@ -599,7 +628,7 @@ export class TacticalPanel {
   }
 
   private background(v: TacView): HTMLCanvasElement {
-    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}`;
+    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}`;
     if (this.bg && key === this.bgKey) return this.bg;
     this.bgKey = key;
     const { cw, ch, dpr, w } = this.size;
@@ -607,24 +636,25 @@ export class TacticalPanel {
     c.width = Math.round(cw * dpr);
     c.height = Math.round(ch * dpr);
     const g = c.getContext('2d')!;
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.clearRect(0, 0, cw, ch);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, c.width, c.height);
+    this.turned(g);
     this.planks ??= [plankTexture(false), plankTexture(true)];
     const r = w / SQ3; // the hex's corner radius
     const cells = v.cells;
     const deck = (i: number | null) => i !== null && cells[i] !== '~' && cells[i] !== '#' && cells[i] !== '=';
     // The sea between and around the hulls.
-    const sea = g.createLinearGradient(0, 0, 0, ch);
+    const sea = g.createLinearGradient(0, 0, 0, this.size.bh);
     sea.addColorStop(0, '#0b1d22');
     sea.addColorStop(1, '#07141a');
     g.fillStyle = sea;
-    const b0 = this.center(0), b1 = this.center(TAC_W * TAC_H - 1);
+    const b0 = this.lc(0), b1 = this.lc(TAC_W * TAC_H - 1);
     g.fillRect(b0.x - w * 0.6, b0.y - r * 1.1, b1.x - b0.x + w * 1.2, b1.y - b0.y + r * 2.2);
     g.strokeStyle = 'rgba(120,190,200,0.12)';
     g.lineWidth = 1;
     for (let y = 0; y < TAC_H * 2; y++) {
       const yy = b0.y - r + (y * (b1.y - b0.y + r * 2)) / (TAC_H * 2);
-      const mid = this.center(hexIndex(5, 0)).x;
+      const mid = this.lc(hexIndex(5, 0)).x;
       g.beginPath();
       g.moveTo(mid - w * 0.9, yy);
       g.quadraticCurveTo(mid, yy + 3, mid + w * 0.9, yy);
@@ -633,7 +663,7 @@ export class TacticalPanel {
     // The decks: planks, each ship her own wood (hers darker), the hex grid faint on them.
     for (let i = 0; i < cells.length; i++) {
       if (!deck(i)) continue;
-      const p = this.center(i);
+      const p = this.lc(i);
       const hers = (hexX(i) > 5) === (v.you === 0);
       g.save();
       this.hexPath(g, p.x, p.y, r + 0.6);
@@ -647,14 +677,14 @@ export class TacticalPanel {
     g.lineWidth = 1;
     for (let i = 0; i < cells.length; i++) {
       if (!deck(i)) continue;
-      const p = this.center(i);
+      const p = this.lc(i);
       this.hexPath(g, p.x, p.y, r);
       g.stroke();
     }
     // The rails: every deck edge that looks on water or the field's end, a heavy timber with a light top.
     for (let i = 0; i < cells.length; i++) {
       if (!deck(i)) continue;
-      const p = this.center(i);
+      const p = this.lc(i);
       for (let k = 0; k < 6; k++) {
         const n = this.across(i, k);
         if (n !== null && (deck(n) || cells[n] === '=')) continue;
@@ -678,7 +708,7 @@ export class TacticalPanel {
     // The planks across the water, lashed with the grapple lines.
     for (let i = 0; i < cells.length; i++) {
       if (cells[i] !== '=') continue;
-      const p = this.center(i);
+      const p = this.lc(i);
       g.save();
       g.translate(p.x, p.y);
       g.fillStyle = 'rgba(0,0,0,0.35)';
@@ -710,7 +740,7 @@ export class TacticalPanel {
     for (let i = 0; i < cells.length; i++) {
       const c0 = cells[i];
       if (!TAC_BLOCKING.has(c0 as TacCell) || c0 === '~' || c0 === '#') continue;
-      const p = this.center(i);
+      const p = this.lc(i);
       if (c0 === 'M') this.mast(g, p.x, p.y, w);
       else if (c0 === 'C') this.cannon(g, p.x, p.y, w, hexY(i) === 0 ? -1 : 1);
       else if (c0 === 'B') this.barrel(g, p.x, p.y, w);
@@ -861,14 +891,15 @@ export class TacticalPanel {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, c.width, c.height);
     g.drawImage(this.background(v), 0, 0);
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // The marks on the hexes lie with the board (turned upright on a phone), the tokens and numbers stand straight.
+    this.turned(g);
     const t = performance.now();
     const pulse = 0.5 + 0.5 * Math.sin(t / 260);
     const r = w / SQ3;
     // The reach of the stack whose turn it is.
     if (v.mine) {
       for (const h of v.reach) {
-        const p = this.center(h);
+        const p = this.lc(h);
         this.hexPath(g, p.x, p.y, r - 1.5);
         g.fillStyle = h === this.preview ? 'rgba(46,230,200,0.42)' : h === this.hover ? 'rgba(46,230,200,0.3)' : 'rgba(46,230,200,0.16)';
         g.fill();
@@ -879,23 +910,17 @@ export class TacticalPanel {
     }
     const active = v.stacks.find((s) => s.id === v.active);
     if (active) {
-      const p = this.center(active.hex);
+      const p = this.lc(active.hex);
       this.hexPath(g, p.x, p.y, r - 1);
       g.fillStyle = `rgba(224,184,98,${0.18 + 0.12 * pulse})`;
       g.fill();
-    }
-    // The stacks, the active one ringed in gold.
-    for (const s of v.stacks) {
-      const pp = this.pos.get(s.id) ?? { ...this.center(s.hex), fx: 0, fy: 0, t0: 0 };
-      const p = this.at(pp, t);
-      this.token(g, s, p.x, p.y, w, s.id === v.active, pulse, v);
     }
     // Whom the active stack may strike or fire on.
     if (v.mine) {
       for (const s of v.stacks) {
         const shoot = v.shoot.includes(s.id), melee = v.melee.includes(s.id);
         if (!shoot && !melee && !(this.targeting && s.side !== v.you)) continue;
-        const p = this.center(s.hex);
+        const p = this.lc(s.hex);
         g.strokeStyle = this.targeting ? `rgba(240,160,60,${0.6 + 0.4 * pulse})` : `rgba(230,80,60,${0.55 + 0.45 * pulse})`;
         g.lineWidth = 2.5;
         this.hexPath(g, p.x, p.y, r - 1);
@@ -911,6 +936,15 @@ export class TacticalPanel {
           g.stroke();
         }
       }
+    }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // The stacks, the active one ringed in gold.
+    for (const s of v.stacks) {
+      const pp = this.pos.get(s.id) ?? { ...this.center(s.hex), fx: 0, fy: 0, t0: 0 };
+      const p = this.at(pp, t);
+      this.token(g, s, p.x, p.y, w, s.id === v.active, pulse, v);
+    }
+    if (v.mine) {
       // A ghost of the stack where it would step.
       if (this.preview !== null && active) {
         const p = this.center(this.preview);

@@ -428,6 +428,8 @@ export function startMutiny(game: Game, s: PlayerSession, why: string): void {
   const c = s.profile!.company;
   const ship = s.ship!;
   if (c.mutiny || ship.docked) return;
+  // With boarders on deck the crew fights first and settles its grievances after.
+  if (ship.boarding) return;
   // The First Watch is a lesson: no crew rises against a captain still learning the ropes.
   if (onboardingProtected(s)) return;
   // The mutineers already hold the helm (a mutiny given in to, bound for port): there is nobody left to rise.
