@@ -16,6 +16,7 @@ import type { FishId, FishMethod } from './data/fishing.ts';
 import type { HappeningKind } from './data/happenings.ts';
 import type { EncounterId, SightKind } from './data/encounters.ts';
 import type { MinigameId } from './data/minigames.ts';
+import type { TrekPath } from './data/isles.ts';
 import type { CaptainSlot, Item, Slot } from './data/items.ts';
 import type { OrderKind, ServiceId } from './data/marque.ts';
 import type { SkipperTrait } from './data/turncoats.ts';
@@ -126,6 +127,11 @@ export type ClientMsg =
   | { t: 'encounter'; id: number; choice: string }
   /** An island scene or mini-game (2026-09-30): a choice or an answer; `ms` for a timing game, `seq` for a call repeated. */
   | { t: 'minigame'; id: number; pick: string; ms?: number; seq?: number[] }
+  /** Batch E of docs/16: a step of the walk across an island (a path, a choice, 'back' to the boats, 'close'); a captain's
+   *  map offered to a captain alongside, and the answer to such an offer. */
+  | { t: 'trek'; pick: string }
+  | { t: 'mapsell'; map: string; to: number; price: number; copy?: boolean }
+  | { t: 'mapdeal'; id: number; accept: boolean }
   | { t: 'fishing'; action: 'fight'; id: number; holds: [number, number][] }
   | { t: 'fishing'; action: 'trap' | 'haul' | 'deep' | 'salt' | 'cast' }
   /** The net hauled in (owner, 2026-09-30): the pulls, seconds from the cast, judged by replaying the floats. */
@@ -184,7 +190,7 @@ export type ClientMsg =
   | { t: 'bottle'; note: string; silver: number }
   /** Captains' treasure (docs/12 P10 #7): bury a chest; post, take down or buy a map on a port's board. */
   | { t: 'chest'; silver: number; riddle: string; good: GoodId | null; qty: number }
-  | { t: 'mapboard'; action: 'post' | 'unpost' | 'buy'; id: string; price?: number }
+  | { t: 'mapboard'; action: 'post' | 'unpost' | 'buy'; id: string; price?: number; copy?: boolean }
   /** The atlas (docs/12 P10 #8): the first finder names a wonder. */
   | { t: 'wonder'; id: string; name: string }
   /** The omen of the day's old custom (docs/12 P10 #9). */
@@ -629,7 +635,7 @@ export interface PrivateState {
   sites: ResourceSiteView[]; // extraction rights you hold
   warehouses: Record<string, Cargo>;
   /** Island feature within reach of the boats, if any. */
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort'; blocked?: string } | null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper'; blocked?: string } | null;
   /** Landing party ashore. */
   landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;
@@ -1326,6 +1332,11 @@ export type ServerMsg =
   | { t: 'nethaul'; view: NetHaulView | null; got?: { fish: FishId; n: number; hits: number } }
   | { t: 'encounter'; view: EncounterView | null }
   | { t: 'minigame'; view: MinigameView | null }
+  /** Batch E of docs/16: the walk across an island; what the lighthouses, lookouts, banks and her caches show; a map
+   *  offered to her by a captain alongside. */
+  | { t: 'trek'; view: TrekView | null }
+  | { t: 'isles'; view: IslesView }
+  | { t: 'mapoffer'; offer: MapOfferView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
   | { t: 'legends'; view: LegendsView }
   | { t: 'onboarding'; view: OnboardingView }
@@ -2066,6 +2077,9 @@ export interface MapBoardView {
   price: number;
   mine: boolean;
   riddle: string | null;
+  /** A captain's own buried chest (docs/16 #22), and a copy its author sells while keeping her own. */
+  chest?: boolean;
+  copy?: boolean;
 }
 
 /** A table of Dead Man's Dice as one of its captains sees it (docs/12 P10 #4): her own cup, the others' counts. */
@@ -2488,4 +2502,114 @@ export interface OnboardingView {
   goals: string[] | null; // the three goals under way, or null (hidden, or still in the watch)
   goalsDone: number;
   hints: string[]; // hints seen, for the logbook
+}
+
+// ------------------------------------------------------------------ batch E of docs/16: islands and the shore
+
+/** The walk across an island (docs/16 #21): the steps, the paths to choose, the last thing met and what it gave. */
+export interface TrekView {
+  id: number;
+  island: string;
+  /** Steps walked, of how many. */
+  step: number;
+  steps: number;
+  /** The ways on from here (null while a choice or the haunt's game waits, and at the end). */
+  paths: TrekPath[] | null;
+  /** The thing met at this step, whether it waits for her choice, and how it went. */
+  event: string | null;
+  choice: boolean;
+  outcome: string | null;
+  vars: TrekVars;
+  /** The way walked so far. */
+  trail: { path: TrekPath | 'landing'; event: string; good: boolean }[];
+  /** The haunt's game is open (the card waits behind it). */
+  game: boolean;
+  /** The far side reached: its cache. */
+  end: TrekVars | null;
+  done: boolean;
+  /** Silver she may spend (for a price at a smugglers' fire). */
+  cost?: number;
+}
+
+export interface TrekVars {
+  silver?: number;
+  n?: number;
+  good?: GoodId;
+  crew?: number;
+  hands?: number;
+  charted?: number;
+  cost?: number;
+  item?: Item;
+  map?: boolean;
+  xp?: number;
+}
+
+/** A lighthouse near her (docs/16 #23): lit by the Crown's keepers, for a keeper's pay, or her own island's. */
+export interface LightView {
+  island: number;
+  name: string;
+  x: number;
+  y: number;
+  r: number;
+  lit: 'crown' | 'paid' | 'own' | null;
+  until?: number;
+}
+
+/** A lookout on a headland (docs/16 #24). */
+export interface LookoutView {
+  island: number;
+  x: number;
+  y: number;
+  /** She climbed it lately (world time), if she did. */
+  at?: number;
+}
+
+/** A bank the tide or a season raises (docs/16 #25). `poly` only near her. */
+export interface TidalView {
+  id: number;
+  name: number;
+  kind: 'tide' | 'season';
+  season: number;
+  x: number;
+  y: number;
+  r: number;
+  up: boolean;
+  /** When it goes under or comes up next (world time). */
+  turn: number;
+  /** She has combed it this rise. */
+  combed: boolean;
+  poly?: number[];
+}
+
+/** One of her own buried chests (docs/16 #22), where its maps are. */
+export interface CacheView {
+  id: number;
+  island: string;
+  x: number;
+  y: number;
+  silver: number;
+  goods: Cargo;
+  buried: number;
+  /** Her own copy is in her chest of maps; boards it is posted on; copies sold. */
+  mapHeld: boolean;
+  posted: string[];
+  sold: number;
+}
+
+export interface IslesView {
+  lights: LightView[];
+  lookouts: LookoutView[];
+  tidal: TidalView[];
+  caches: CacheView[];
+}
+
+/** A captain alongside offers her a map (docs/16 #22). */
+export interface MapOfferView {
+  id: number;
+  from: string;
+  name: string;
+  riddle: string | null;
+  price: number;
+  chest: boolean;
+  until: number;
 }

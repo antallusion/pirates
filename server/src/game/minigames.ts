@@ -16,6 +16,7 @@ import type { Game } from './Game.ts';
 import { takeItem } from './gear.ts';
 import type { PlayerSession } from './player.ts';
 import { questEvent } from './quests.ts';
+import { trekAfterGame } from './trek.ts';
 
 /** How long an open game waits for its captain before it lapses (as if she walked away). */
 export const MINI_LIFE_SEC = 180;
@@ -369,6 +370,8 @@ function settle(game: Game, s: PlayerSession, live: MiniLive, outcome: string, e
   send(game, s, live);
   // A landing party at an island's haunt: the quests and the day's orders count it as a landing.
   if (live.scene && live.islandId !== null && outcome !== 'walk') questEvent(game, s, { k: 'land', island: live.islandId, feature: 'scene' });
+  // A game met on the walk across an island (docs/16 #21): the walk goes on.
+  trekAfterGame(game, s, live, outcome);
   game.pushSelf(s, true);
   return null;
 }

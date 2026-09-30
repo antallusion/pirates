@@ -5,7 +5,8 @@
 
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
-import type { MapBoardView } from '../../../shared/src/protocol.ts';
+import type { CacheView, MapBoardView, MapOfferView } from '../../../shared/src/protocol.ts';
+import { dist } from '../../../shared/src/math.ts';
 import { MAX_MAPS, chestCount } from './explorefx.ts';
 import type { TreasureMap } from './explorefx.ts';
 import type { Game } from './Game.ts';
@@ -30,6 +31,8 @@ interface Chest {
   silver: number;
   goods: Partial<Record<GoodId, number>>;
   buried: number;
+  /** Copies of its map sold (docs/16 #22). */
+  sold?: number;
 }
 
 interface BoardItem {
@@ -139,7 +142,7 @@ export function digPlayerChest(game: Game, s: PlayerSession, m: TreasureMap): bo
 }
 
 /** The map board of a port: post a map at a price, take it down, or buy one. */
-export function boardAction(game: Game, s: PlayerSession, action: string, idRaw: string, priceRaw: number): string | null {
+export function boardAction(game: Game, s: PlayerSession, action: string, idRaw: string, priceRaw: number, copy = false): string | null {
   const p = s.profile!, ship = s.ship!;
   const port = ship.docked ? game.portById(ship.docked) : undefined;
   if (!port) return 'Only in port';
@@ -150,6 +153,15 @@ export function boardAction(game: Game, s: PlayerSession, action: string, idRaw:
       if (!m) return 'No such map';
       const price = Math.floor(Number(priceRaw) || 0);
       if (price < 10 || price > 100000) return 'A price of 10 to 100000 silver.';
+      // The author of a buried chest may sell copies of its map and keep her own (docs/16 #22); whoever digs first
+      // takes the chest.
+      if (copy) {
+        if (!ownChest(game, s, m)) return 'Only the author of a chest may sell copies of its map.';
+        if (b.items.filter((x) => x.seller === s.accountId && x.map.hoard === m.hoard).length >= 3) return 'Three copies of that map are on the boards already.';
+        const id = b.seq++;
+        b.items.push({ id, port: port.id, seller: s.accountId, sellerName: s.name, price, map: { ...m, id: `${m.id}_c${id}`, copy: true } });
+        break;
+      }
       p.explore.maps = p.explore.maps.filter((x) => x !== m);
       b.items.push({ id: b.seq++, port: port.id, seller: s.accountId, sellerName: s.name, price, map: m });
       break;
@@ -157,9 +169,10 @@ export function boardAction(game: Game, s: PlayerSession, action: string, idRaw:
     case 'unpost': {
       const it = b.items.find((x) => x.id === Number(idRaw) && x.seller === s.accountId);
       if (!it) return 'No such map';
-      if (chestCount(p.explore.maps) >= MAX_MAPS) return 'Your map chest is full';
+      // A copy taken down is only torn up: her own map never left her.
+      if (!it.map.copy && chestCount(p.explore.maps) >= MAX_MAPS) return 'Your map chest is full';
       b.items = b.items.filter((x) => x !== it);
-      p.explore.maps.push(it.map);
+      if (!it.map.copy) p.explore.maps.push(it.map);
       break;
     }
     case 'buy': {
@@ -171,6 +184,7 @@ export function boardAction(game: Game, s: PlayerSession, action: string, idRaw:
       p.gold -= it.price;
       b.items = b.items.filter((x) => x !== it);
       p.explore.maps.push({ ...it.map, copy: undefined });
+      countSale(game, it.map);
       const paid = Math.floor(it.price * (1 - BOARD_FEE));
       deliver(game, it.seller, { from: `The map board, ${port.name}`, subject: 'Your map is sold', body: `${s.name} bought your map "${it.map.name}".`, gold: paid, goods: null });
       game.db.ledger(s.accountId, 'map_bought', -it.price, it.map.id);
@@ -187,5 +201,132 @@ export function boardAction(game: Game, s: PlayerSession, action: string, idRaw:
 
 /** A port's board as a captain sees it. */
 export function boardView(game: Game, s: PlayerSession, portId: string): MapBoardView[] {
-  return board(game).items.filter((x) => x.port === portId).map((x) => ({ id: x.id, name: x.map.name, seller: x.sellerName, price: x.price, mine: x.seller === s.accountId, riddle: x.map.clue ?? null }));
+  return board(game).items.filter((x) => x.port === portId).map((x) => ({ id: x.id, name: x.map.name, seller: x.sellerName, price: x.price, mine: x.seller === s.accountId, riddle: x.map.clue ?? null, ...(x.map.kind === 'player' ? { chest: true } : {}), ...(x.map.copy ? { copy: true } : {}) }));
 }
+
+// ------------------------------------------------------------------ docs/16 #22: her caches, and a map sold alongside
+
+function chestKey(m: TreasureMap): string {
+  return (m.hoard ?? m.id).replace(/^pc_/, '');
+}
+
+/** Whether a map leads to a chest she buried herself (and still lies buried). */
+function ownChest(game: Game, s: PlayerSession, m: TreasureMap): boolean {
+  if (m.kind !== 'player') return false;
+  const c = chests(game)[chestKey(m)];
+  return !!c && c.author === s.accountId;
+}
+
+/** A copy of a chest's map sold: its author's tally. */
+function countSale(game: Game, m: TreasureMap): void {
+  if (m.kind !== 'player') return;
+  const all = chests(game);
+  const c = all[chestKey(m)];
+  if (!c) return;
+  c.sold = (c.sold ?? 0) + 1;
+  game.db.setKv('player_chests', all);
+}
+
+/** Her own buried chests, where they lie and where their maps are. */
+export function myCaches(game: Game, s: PlayerSession): CacheView[] {
+  const all = Object.values(chests(game)).filter((c) => c.author === s.accountId);
+  if (!all.length) return [];
+  const items = board(game).items;
+  const maps = s.profile?.explore.maps ?? [];
+  return all.map((c) => ({
+    id: c.id, island: game.world.islands[c.island]?.name ?? '?', x: c.x, y: c.y, silver: c.silver, goods: c.goods, buried: c.buried,
+    mapHeld: maps.some((m) => m.kind === 'player' && chestKey(m) === String(c.id)),
+    posted: [...new Set(items.filter((x) => x.seller === s.accountId && x.map.kind === 'player' && chestKey(x.map) === String(c.id)).map((x) => game.portById(x.port)?.name ?? x.port))],
+    sold: c.sold ?? 0,
+  }));
+}
+
+interface MapOffer {
+  id: number;
+  from: number;
+  fromName: string;
+  to: number;
+  map: TreasureMap;
+  price: number;
+  copy: boolean;
+  until: number;
+}
+
+const OFFER_SEC = 60;
+export const SELL_RANGE = 1000;
+const offers = new WeakMap<Game, { seq: number; list: MapOffer[] }>();
+function offerBook(game: Game): { seq: number; list: MapOffer[] } {
+  let o = offers.get(game);
+  if (!o) offers.set(game, (o = { seq: 1, list: [] }));
+  o.list = o.list.filter((x) => x.until > game.now);
+  return o;
+}
+
+function offerView(o: MapOffer): MapOfferView {
+  return { id: o.id, from: o.fromName, name: o.map.name, riddle: o.map.clue ?? null, price: o.price, chest: o.map.kind === 'player', until: o.until };
+}
+
+/** Whether two captains are alongside for a trade: both at sea within a kilometre, or in the same port. */
+function alongside(a: PlayerSession, b: PlayerSession): boolean {
+  const x = a.ship, y = b.ship;
+  if (!x || !y || !x.alive || !y.alive) return false;
+  if (x.docked || y.docked) return !!x.docked && x.docked === y.docked;
+  return dist(x.state.x, x.state.y, y.state.x, y.state.y) <= SELL_RANGE;
+}
+
+/** She offers a map (or, her own chest's, a copy) to a captain alongside at her price. */
+export function sellMap(game: Game, s: PlayerSession, mapId: string, toShip: number, priceRaw: number, copy: boolean): string | null {
+  const p = s.profile!;
+  const m = p.explore.maps.find((x) => x.id === mapId);
+  if (!m) return 'No such map';
+  const price = Math.floor(Number(priceRaw) || 0);
+  if (price < 10 || price > 100000) return 'A price of 10 to 100000 silver.';
+  if (copy && !ownChest(game, s, m)) return 'Only the author of a chest may sell copies of its map.';
+  const target = game.sessionOf(game.ships.get(Math.trunc(Number(toShip))) ?? null);
+  if (!target || target === s || !target.profile) return 'No such captain alongside';
+  if (!alongside(s, target)) return 'Come within a kilometre of her first (or meet in port).';
+  const book = offerBook(game);
+  if (book.list.some((o) => o.from === s.accountId && o.to === target.accountId)) return 'She is still thinking over your last offer.';
+  const id = book.seq++;
+  const o: MapOffer = { id, from: s.accountId, fromName: s.name, to: target.accountId, map: copy ? { ...m, id: `${m.id}_x${id}`, copy: true } : m, price, copy, until: game.now + OFFER_SEC };
+  book.list.push(o);
+  game.sendTo(target, { t: 'mapoffer', offer: offerView(o) });
+  game.sendTo(s, { t: 'toast', msg: `Your offer is made to ${target.name}: ${m.name} for ${price} silver.`, kind: 'info' });
+  return null;
+}
+
+/** Her answer to a map offered alongside. */
+export function answerMapOffer(game: Game, s: PlayerSession, idRaw: number, accept: boolean): string | null {
+  const book = offerBook(game);
+  const o = book.list.find((x) => x.id === Math.trunc(Number(idRaw)) && x.to === s.accountId);
+  game.sendTo(s, { t: 'mapoffer', offer: null });
+  if (!o) return 'That offer has lapsed';
+  book.list = book.list.filter((x) => x !== o);
+  const seller = game.sessionByAccount(o.from);
+  if (!accept) {
+    if (seller) game.sendTo(seller, { t: 'toast', msg: `${s.name} turns down your map.`, kind: 'info' });
+    return null;
+  }
+  const p = s.profile!;
+  if (!seller || !seller.profile || !alongside(s, seller)) return 'The seller is no longer alongside';
+  if (p.gold < o.price) return 'Not enough silver';
+  if (chestCount(p.explore.maps) >= MAX_MAPS) return 'Your map chest is full';
+  const sp = seller.profile;
+  if (!o.copy) {
+    const had = sp.explore.maps.find((x) => x.id === o.map.id);
+    if (!had) return 'The seller no longer has that map';
+    sp.explore.maps = sp.explore.maps.filter((x) => x !== had);
+  } else if (!ownChest(game, seller, o.map)) return 'That chest is dug up already';
+  p.gold -= o.price;
+  sp.gold += o.price;
+  p.explore.maps.push({ ...o.map, copy: undefined });
+  countSale(game, o.map);
+  game.db.ledger(s.accountId, 'map_bought', -o.price, o.map.id);
+  game.db.ledger(seller.accountId, 'map_sold', o.price, o.map.id);
+  game.sendTo(s, { t: 'toast', msg: `A map bought: ${o.map.name}.`, kind: 'gold' });
+  game.sendTo(seller, { t: 'toast', msg: `${s.name} buys your map "${o.map.name}" for ${o.price} silver.`, kind: 'gold' });
+  game.pushSelf(s, true);
+  game.pushSelf(seller, true);
+  return null;
+}
+

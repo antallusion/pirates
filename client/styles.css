@@ -249,7 +249,7 @@ body.touch #touch { display: block; }
 .skinned .tc-btn::after { content: ''; position: absolute; inset: -3px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
 .tc-btn img, .tc-fire img { position: absolute; inset: 16%; width: 68%; height: 68%; object-fit: contain; border-radius: 50%; }
 .tc-btn.pressed, .tc-fire.pressed { transform: scale(0.92); filter: brightness(1.4); }
-.tc-fire { position: absolute; bottom: calc(var(--sa-b) + 12px); width: var(--fire); height: var(--fire); padding: 0; border-radius: 50%; border: 2px solid var(--brass); background: radial-gradient(circle, #3a1714 0 55%, #140c0a 70%); color: var(--bone); font: 700 20px var(--sans); pointer-events: auto; touch-action: manipulation; box-shadow: 0 0 14px rgba(0, 0, 0, 0.8); }
+.tc-fire { position: absolute; bottom: calc(var(--sa-b) + 12px); width: var(--fire); height: var(--fire); padding: 0; border-radius: 50%; border: 2px solid var(--brass); background: radial-gradient(circle, #3a1714 0 55%, #140c0a 70%); color: var(--bone); font: 700 20px var(--sans); line-height: 1.2; pointer-events: auto; touch-action: manipulation; box-shadow: 0 0 14px rgba(0, 0, 0, 0.8); }
 .skinned .tc-fire { border: 0; }
 .skinned .tc-fire::after { content: ''; position: absolute; inset: -4px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
 .tc-fire b, .tc-btn b { position: relative; z-index: 2; text-shadow: 0 1px 3px #000; }
@@ -272,7 +272,9 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
 @media (max-height: 520px) {
   :root { --mm: 86px; --uf-p: 46px; --top-h: 108px; --stick: 112px; --fire: 58px; --slot: 40px; }
   body.touch { --touch-h: 0px; }
-  body.touch #hud-bottom, body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 64px)); }
+  body.touch #hud-bottom { max-width: calc(100vw - 2 * (var(--stick) + 64px)); }
+  /* The row inside the bar's own padding (8px a side), so the bar fits between the helm and the guns. */
+  body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 64px) - 16px); }
   #hud-region { display: none; }
   #hud-stack { left: calc(var(--sa-l) + 360px); right: calc(var(--sa-r) + var(--mm) + 64px); top: calc(var(--sa-t) + 8px); }
   body.touch #hud-stack { right: calc(var(--sa-r) + var(--mm) + 64px); }
@@ -286,7 +288,12 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
   .fbar { height: 15px; }
   #hud-stack, body.touch #hud-stack { left: 50%; right: auto; transform: translateX(-50%); width: min(460px, calc(100vw - 2 * var(--mm) - 420px)); min-width: 240px; }
   body.touch { --touch-h: 0px; }
-  body.touch #hud-bottom, body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 68px)); }
+  body.touch #hud-bottom { max-width: calc(100vw - 2 * (var(--stick) + 68px)); }
+  /* A portrait tablet (820×1180): the row inside the bar's padding, and a long bar breaks into rows between its
+     groups rather than spilling past the helm and the guns. */
+  body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 68px) - 16px); }
+  body.touch #hud-combat .ab-row { flex-wrap: wrap; justify-content: center; overflow: visible; row-gap: 4px; }
+  body.touch #hud-combat .ab-sep { display: none; }
   .tc-menu { top: calc(var(--sa-t) + var(--mm) + 64px); }
 }
 /* Desktops (a mouse): the ship column, compass and micro menu come out. */

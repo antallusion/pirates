@@ -1,6 +1,7 @@
 // Russian for what the server says (second half of tools/i18n-server.ts), English pattern → Russian pattern.
 
 import { AUCTION_BIDDERS, RUN_HOUSES } from '../../../shared/src/data/dealings.ts';
+import { SEASON_NAMES, TIDAL_NAMES } from '../../../shared/src/data/isles.ts';
 export const SERVER_RU_B: Record<string, string> = {
   "The Brokers want this moved quietly. No questions, no receipts, a fat purse.": "Маклеры хотят, чтобы это перевезли тихо. Без вопросов, без расписок — и с тугим кошельком.",
   "The Brokers' forged licence passes. Once.": "Поддельная лицензия Маклеров проходит. Один раз.",
@@ -1391,4 +1392,36 @@ export const SERVER_RU_B: Record<string, string> = {
   "League Escort Warrant": "«Ордер», конвой Лиги",
   "League Escort Dividend": "«Дивиденд», конвой Лиги",
   "League Escort Bond": "«Залог», конвой Лиги",
+  // Batch E of docs/16: the walk across an island, lighthouses, lookouts, bared banks, captains' caches.
+  "Boats away: {0} hands row for {1} while the sea is out ({2}s).": "Шлюпки на воду: {0} человек гребут к отмели «{1}», пока море отступило ({2} с).",
+  "Come within a kilometre of her first (or meet in port).": "Сначала подойдите к ней ближе чем на километр (или встретьтесь в порту).",
+  "From the lookout on {0} the sea lies open for {1} km: {2} islands, {3} reefs and {4} wrecks newly on your chart.": "Со смотровой на острове {0} море видно на {1} км: на карту нанесено островов — {2}, рифов — {3}, обломков — {4}.",
+  "No keeper within hail": "Смотрителя маяка не докричаться",
+  "No such captain alongside": "Рядом нет такого капитана",
+  "No such path": "Такой тропы нет",
+  "On the bared bank": "На обнажившейся отмели",
+  "Only the author of a chest may sell copies of its map.": "Продавать копии карты может только тот, кто зарыл сундук.",
+  "Ran aground on a bank the tide has bared!": "Корабль сел на отмель, обнажённую отливом!",
+  "She is still thinking over your last offer.": "Она ещё думает над вашим прошлым предложением.",
+  "That chest is dug up already": "Этот сундук уже выкопан",
+  "The keeper of {0} takes {1} silver and lights the lamp. The shoals within 3.5 km show in its light.": "Смотритель маяка острова {0} берёт {1} серебра и зажигает огонь. В его свете видны мели на 3,5 км вокруг.",
+  "The landing party hurries back to the boats.": "Десант спешит обратно к шлюпкам.",
+  "The party combs {0} while the sea is out: {1}.": "Пока море отступило, отряд прочёсывает отмель «{0}»: {1}.",
+  "The party is back aboard": "Отряд уже на борту",
+  "The sea comes back over {0} before the party is done: {1} swept away, the rest row back empty-handed.": "Море возвращается на отмель «{0}» раньше, чем отряд управился: смыло {1}, остальные гребут назад ни с чем.",
+  "The seller is no longer alongside": "Продавца уже нет рядом",
+  "The seller no longer has that map": "У продавца больше нет этой карты",
+  "Three copies of that map are on the boards already.": "Три копии этой карты уже висят на досках.",
+  "Your offer is made to {0}: {1} for {2} silver.": "Предложение отправлено капитану {0}: {1} за {2} серебра.",
+  "a piece of rare gear": "редкая вещь",
+  "a treasure map": "карта сокровищ",
+  "bank bared by the ebb": "отмель, обнажённая отливом",
+  "bank bared in {0}": "отмель, что стоит над водой в сезон «{0}»",
+  "bared bank": "обнажённая отмель",
+  "far side": "дальний край",
+  "lookout": "смотровая на мысе",
+  "{0} buys your map \"{1}\" for {2} silver.": "Капитан {0} покупает вашу карту «{1}» за {2} серебра.",
+  "{0} turns down your map.": "Капитан {0} отказывается от вашей карты.",
+  ...Object.fromEntries(TIDAL_NAMES),
+  ...Object.fromEntries(SEASON_NAMES),
 };
