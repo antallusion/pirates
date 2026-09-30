@@ -6,6 +6,7 @@
 import type { RequestKind } from './data/fates.ts';
 import type { OmenId } from './data/omens.ts';
 import type { CareerId, SetId, WeeklyKind } from './data/renown.ts';
+import type { GuildProject, LfgGoal, SignalKind, WorldGoalKind } from './data/social.ts';
 import type { WonderKind } from './data/wonders.ts';
 import type { HarnessId, PetId } from './data/companions.ts';
 import type { NemesisCause } from './data/nemesis.ts';
@@ -266,11 +267,22 @@ export type ClientMsg =
   | { t: 'group'; action: 'leave' }
   | { t: 'group'; action: 'convoy'; on: boolean }
   | { t: 'group'; action: 'say'; text: string }
-  | { t: 'group'; action: 'lfg'; note: string }
+  /** Looking for company (docs/16 #31): the note, the goal and the levels asked; asking to join a posting. */
+  | { t: 'group'; action: 'lfg'; note: string; goal?: LfgGoal; lo?: number; hi?: number }
   | { t: 'group'; action: 'lfg_clear' }
+  | { t: 'group'; action: 'ask'; name: string }
   | { t: 'barter'; action: 'propose'; name: string }
-  | { t: 'barter'; action: 'offer'; gold: number; cargo: Cargo }
-  | { t: 'barter'; action: 'ready' | 'cancel' }
+  /** docs/16 #33: goods, silver and gear from the locker (by uid) on the table. */
+  | { t: 'barter'; action: 'offer'; gold: number; cargo: Cargo; items?: number[] }
+  /** Lock one's own offer; confirm (`rev`: the table as the captain saw it) once both are locked. */
+  | { t: 'barter'; action: 'lock' | 'unlock' | 'cancel' }
+  | { t: 'barter'; action: 'ready'; rev?: number }
+  /** docs/16 #35: a signal flag to the group, at her own ship. */
+  | { t: 'signal'; kind: SignalKind }
+  /** docs/16 #32: the sea's goals of the week. */
+  | { t: 'wgoals' }
+  /** docs/16 #34: the guild's shipyard on the leader's island. */
+  | { t: 'gyard'; action: 'view' | 'start' | 'give' | 'cancel'; kind?: GuildProject; good?: GoodId; qty?: number; silver?: number }
   | { t: 'mail'; action: 'list' }
   | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
   | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
@@ -810,6 +822,8 @@ export interface ShipInfo {
   guild?: string; // tag
   title?: string; // a captain's title (seasons, the Pantheon)
   pennant?: string; // a season pennant colour
+  /** Looking for company (docs/16 #31): "goal:lo-hi". */
+  lfg?: string;
   /** A captain's look, encoded (docs/12 P10 #12). */
   look?: string;
   /** Her level ⚓1–⚓10 (canon D12); absent for monsters and wreck hulks, which stand outside the ladder. */
@@ -1439,8 +1453,12 @@ export type ServerMsg =
   | { t: 'friends'; list: FriendView[]; ignored?: string[] }
   | { t: 'who'; list: WhoView[]; total: number }
   | { t: 'inspect'; view: InspectView }
-  | { t: 'party'; group: PartyView | null; invites: { id: number; from: string }[];
-      /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number }[]; lfgMine?: string | null }
+  | { t: 'party'; group: PartyView | null; invites: { id: number; from: string; ask?: boolean }[];
+      /** Captains looking for a group (docs/11 P6), and this captain's own posting */ lfg?: LfgEntry[]; lfgMine?: string | null; lfgGoal?: LfgMine | null }
+  /** docs/16 #35: a groupmate's signal flag. */
+  | { t: 'signal'; from: string; kind: SignalKind; x: number; y: number }
+  /** docs/16 #32: the sea's goals of the week. */
+  | { t: 'wgoals'; list: WorldGoalView[] }
   | { t: 'barter'; view: BarterView | null }
   | { t: 'mail'; letters: LetterView[]; unread: number }
   | { t: 'market'; view: MarketView }
@@ -1456,6 +1474,71 @@ export type ServerMsg =
 // ------------------------------------------------------------------ groups, barter, letters, the market
 
 export const GROUP_MAX = 8;
+
+/** A posting on the board of those looking for company (docs/11 P6, docs/16 #31). */
+export interface LfgEntry {
+  name: string;
+  level: number;
+  captain: CaptainId;
+  region: RegionId;
+  note: string;
+  mins: number;
+  goal?: LfgGoal;
+  lo?: number;
+  hi?: number;
+  /** Where she is (to 250 m), and how many already sail with her. */
+  x?: number;
+  y?: number;
+  size?: number;
+  /** Whether the viewer is within the levels asked. */
+  fits?: boolean;
+}
+
+export interface LfgMine {
+  goal: LfgGoal;
+  lo: number;
+  hi: number;
+}
+
+/** docs/16 #32: one of the sea's goals of the week, as a captain sees it. */
+export interface WorldGoalView {
+  id: number;
+  kind: WorldGoalKind;
+  target: number;
+  progress: number;
+  port: string | null;
+  mine: number;
+  /** A hand's least share for the reward. */
+  min: number;
+  hands: number;
+  done: boolean;
+  endsIn: number;
+  leaders: { name: string; n: number }[];
+}
+
+/** docs/16 #34: the guild's shipyard on its leader's island. */
+export interface GuildYardView {
+  island: string | null;
+  x: number;
+  y: number;
+  leader: string;
+  yardLevel: number;
+  /** Why no project may run now (no island of the leader's, no shipyard on it). */
+  why: string | null;
+  project: {
+    kind: GuildProject;
+    goods: { good: GoodId; need: number; have: number }[];
+    silver: { need: number; have: number };
+    pct: number;
+    hands: { name: string; units: number; builder: boolean }[];
+    mine: number;
+  } | null;
+  done: { kind: GuildProject; at: number }[];
+  canStart: boolean;
+  /** Lying off the leader's island: her hold may give. */
+  near: boolean;
+  hold: { good: GoodId; n: number }[];
+}
 
 export interface PartyMember {
   accountId: number;
@@ -1810,6 +1893,8 @@ export interface BaseView {
   shipyard: OwnYardView;
   /** Its waters, tax and defence, and a raid under way (docs/15 items 6–7). */
   claim: IsleClaimView;
+  /** docs/16 #34: the guild's shipyard here, when she leads a guild. */
+  guildYard?: GuildYardView | null;
 }
 
 /** One of the captain's own ships (docs/15 item 4). */
@@ -2357,6 +2442,9 @@ export interface BarterSide {
   gold: number;
   cargo: Cargo;
   ready: boolean;
+  /** docs/16 #33: gear on the table, and the offer locked. */
+  items?: Item[];
+  locked?: boolean;
 }
 
 export interface BarterView {
@@ -2365,6 +2453,10 @@ export interface BarterView {
   atSea: boolean;
   /** At sea the goods cross on boats: seconds left once both are ready. */
   transfer: number;
+  /** docs/16 #33: the table's revision (any change raises it), the distance between the ships and the reach. */
+  rev?: number;
+  dist?: number;
+  range?: number;
 }
 
 export interface LetterView {
@@ -2443,6 +2535,8 @@ export interface GuildView {
   recruit?: string | null;
   /** The guild's word of the day (docs/11 P6). */
   motd?: string;
+  /** docs/16 #34: the guild's shipyard on the leader's island. */
+  yard?: GuildYardView | null;
   requests?: { account: number; name: string; level: number; note: string; online: boolean }[];
 }
 

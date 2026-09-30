@@ -23,6 +23,7 @@ import { finishShipJob, ownYardView } from './baseships.ts';
 import type { OwnShip } from './baseships.ts';
 import { isleLevelWhy } from './estate.ts';
 import { claimView } from './baseclaim.ts';
+import { gyardView } from './guildyard.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
@@ -523,6 +524,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     } : null,
     shipyard: ownYardView(game, s, h, y),
     claim: claimView(game, s, h),
+    guildYard: game.guilds.of(game, s.accountId) ? gyardView(game, s) : null,
   };
 }
 

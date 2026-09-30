@@ -10,7 +10,11 @@ import { CHAT_TOO_FAST, chatAllowed, chatFace, cleanChat } from './chat.ts';
 import { GROUP_MAX } from '../../../shared/src/protocol.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import type { BarterSide, BarterView, PartyMember, PartyView } from '../../../shared/src/protocol.ts';
+import type { BarterSide, BarterView, LfgEntry, PartyMember, PartyView } from '../../../shared/src/protocol.ts';
+import { LFG_GOALS, LFG_SEC, TRADE_GOODS_MAX, TRADE_ITEMS_MAX, TRADE_RANGE, lfgRange, lfgTag } from '../../../shared/src/data/social.ts';
+import type { LfgGoal } from '../../../shared/src/data/social.ts';
+import { STASH_SIZE } from '../../../shared/src/data/items.ts';
+import type { Item } from '../../../shared/src/data/items.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { cargoVolume, computeShipStats, tx } from '../../../shared/src/sim/shipstats.ts';
@@ -23,7 +27,8 @@ import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 
 export const CONVOY_RANGE = 1500;
-export const BARTER_RANGE = 120;
+/** docs/16 #33: two ships trade at sea within 300 m of each other (no heaving to). */
+export const BARTER_RANGE = TRADE_RANGE;
 const INVITE_SEC = 60;
 
 export interface Group {
@@ -39,11 +44,17 @@ interface Invite {
   fromName: string;
   to: number;
   until: number;
+  /** docs/16 #31: a captain asking to join a posting (from: the asker, to: the group's leader). */
+  ask?: boolean;
 }
 
 interface Offer {
   gold: number;
   cargo: Cargo;
+  /** docs/16 #33: gear from the locker, by uid. */
+  items: number[];
+  /** The offer is locked: it stands as it is until unlocked. */
+  locked: boolean;
   ready: boolean;
 }
 
@@ -55,6 +66,8 @@ export interface Barter {
   port: string | null;
   transferAt: number; // world time the boats finish (at sea), 0 = not under way
   since: number;
+  /** Any change to the table raises it; a confirmation names the revision it saw (docs/16 #33). */
+  rev: number;
 }
 
 export class Social {
@@ -63,7 +76,9 @@ export class Social {
   invites = new Map<number, Invite>();
   barters = new Map<number, Barter>(); // either side's account id → the barter
   /** Captains looking for a group (docs/11 P6): account → their note and when they posted it (wall ms). */
-  lfg = new Map<number, { note: string; since: number }>();
+  lfg = new Map<number, { note: string; since: number; goal?: LfgGoal; lo?: number; hi?: number }>();
+  /** docs/16 #35: each captain's recent signal flags (world seconds). */
+  signals = new Map<number, number[]>();
   /** Captains come aboard (friends.ts): whose friends have heard of it. */
   aboard = new Set<number>();
   /** Account → the name of the last captain who whispered to them (for "/r"). */
@@ -129,14 +144,27 @@ export function groupAnswer(game: Game, s: PlayerSession, id: number, accept: bo
     return null;
   }
   if (!from || !from.profile) return `${inv.fromName} is no longer at sea`;
+  // A captain who asked to join (docs/16 #31): the leader takes them aboard.
+  if (inv.ask) {
+    if (groupOfAccount(game, from.accountId)) return `${from.name} already sails with a group`;
+    const mine = groupOfAccount(game, s.accountId);
+    if (mine && mine.leader !== s.accountId) return 'Only the leader takes captains aboard';
+    return joinGroup(game, s, from);
+  }
   if (groupOfAccount(game, s.accountId)) return 'Leave your group first';
-  let g = groupOfAccount(game, inv.from);
+  const g = groupOfAccount(game, inv.from);
   if (g && g.leader !== inv.from) return 'They no longer lead their group';
+  return joinGroup(game, from, s);
+}
+
+/** A captain joins the leader's group (formed now if the leader sailed alone). */
+function joinGroup(game: Game, leader: PlayerSession, s: PlayerSession): string | null {
+  let g = groupOfAccount(game, leader.accountId);
   if (g && g.members.length >= GROUP_MAX) return 'Their group is full';
   if (!g) {
-    g = { id: game.social.id(), leader: inv.from, members: [inv.from], convoy: false };
+    g = { id: game.social.id(), leader: leader.accountId, members: [leader.accountId], convoy: false };
     game.social.groups.set(g.id, g);
-    game.social.groupOf.set(inv.from, g.id);
+    game.social.groupOf.set(leader.accountId, g.id);
   }
   g.members.push(s.accountId);
   game.social.groupOf.set(s.accountId, g.id);
@@ -144,13 +172,39 @@ export function groupAnswer(game: Game, s: PlayerSession, id: number, accept: bo
     const ms = game.sessionByAccount(m);
     if (ms && ms !== s) tie(game, s, ms); // sailing together: no bounties between them for a day
   }
-  // Other invitations to this captain lapse.
-  for (const [k, v] of game.social.invites) if (v.to === s.accountId) game.social.invites.delete(k);
+  // Other invitations to this captain, and their own asks, lapse.
+  for (const [k, v] of game.social.invites) if (v.to === s.accountId || (v.ask && v.from === s.accountId)) game.social.invites.delete(k);
   groupNotice(game, g, `${s.name} joins the group.`);
-  // Found one: off the board (both of them).
-  const found = game.social.lfg.delete(s.accountId) || game.social.lfg.delete(inv.from);
+  // Found one: off the board — the leader's too, unless the leader posted for more hands and there is room.
+  let found = dropLfg(game, s.accountId);
+  if (g.members.length >= GROUP_MAX || !game.social.lfg.get(leader.accountId)?.goal) found = dropLfg(game, leader.accountId) || found;
   pushGroup(game, g);
   if (found) lfgChanged(game);
+  return null;
+}
+
+/** Ask to join a captain's posting (docs/16 #31): one tap on the board or the chart. */
+export function groupAsk(game: Game, s: PlayerSession, name: string): string | null {
+  const t = game.sessionByName(String(name ?? ''));
+  if (!t || !t.profile || t === s) return 'No captain of that name is at sea';
+  if (ignores(t, s.accountId)) return `${t.name} is not listening to you`;
+  if (groupOfAccount(game, s.accountId)) return 'Leave your group first';
+  const post = game.social.lfg.get(t.accountId);
+  if (!post) return `${t.name} is not looking for company`;
+  const lvl = s.profile!.level;
+  if (post.lo !== undefined && post.hi !== undefined && (lvl < post.lo || lvl > post.hi)) return `${t.name} asks for captains of levels ${post.lo}–${post.hi}`;
+  const g = groupOfAccount(game, t.accountId);
+  if (g && g.members.length >= GROUP_MAX) return 'Their group is full';
+  const to = g ? g.leader : t.accountId;
+  for (const i of game.social.invites.values()) if (i.ask && i.from === s.accountId && i.to === to) return 'You have already asked';
+  const inv: Invite = { id: game.social.id(), from: s.accountId, fromName: s.name, to, until: game.now + INVITE_SEC, ask: true };
+  game.social.invites.set(inv.id, inv);
+  const lead = game.sessionByAccount(to);
+  if (lead) {
+    game.sendTo(lead, { t: 'toast', msg: `${s.name} (level ${lvl}) asks to join your company. Answer in the Company screen [Y].`, kind: 'info' });
+    pushParty(game, lead);
+  }
+  game.sendTo(s, { t: 'toast', msg: `You ask ${t.name} to take you aboard.`, kind: 'info' });
   return null;
 }
 
@@ -267,42 +321,76 @@ export function partyView(game: Game, g: Group): PartyView {
 
 export function pushParty(game: Game, s: PlayerSession): void {
   const g = groupOfAccount(game, s.accountId);
-  const invites = [...game.social.invites.values()].filter((i) => i.to === s.accountId).map((i) => ({ id: i.id, from: i.fromName }));
-  game.sendTo(s, { t: 'party', group: g ? partyView(game, g) : null, invites, lfg: lfgList(game, s.accountId), lfgMine: game.social.lfg.get(s.accountId)?.note ?? null });
+  const invites = [...game.social.invites.values()].filter((i) => i.to === s.accountId).map((i) => (i.ask ? { id: i.id, from: i.fromName, ask: true } : { id: i.id, from: i.fromName }));
+  const mine = game.social.lfg.get(s.accountId);
+  game.sendTo(s, { t: 'party', group: g ? partyView(game, g) : null, invites, lfg: lfgList(game, s.accountId), lfgMine: mine?.note ?? null, lfgGoal: mine?.goal ? { goal: mine.goal, lo: mine.lo ?? 1, hi: mine.hi ?? 1 } : null });
 }
 
 // ------------------------------------------------------------------------------------------ looking for a group
 
-/** A posting stands half an hour. */
-export const LFG_SEC = 30 * 60;
+export { LFG_SEC };
 
-/** The captains looking for a group, as one captain sees them: not themselves, only the ones at sea, freshest first. */
-export function lfgList(game: Game, viewer: number): { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number }[] {
+/** The captains looking for a group, as one captain sees them: not themselves, only the ones at sea, freshest first;
+ *  each with the goal, the levels asked, where she is (to 250 m) and how many sail with her (docs/16 #31). */
+export function lfgList(game: Game, viewer: number): LfgEntry[] {
   const wall = game.wallNow();
-  const out: { name: string; level: number; captain: CaptainId; region: RegionId; note: string; mins: number; since: number }[] = [];
+  const me = game.sessionByAccount(viewer)?.profile?.level ?? 1;
+  const out: (LfgEntry & { since: number })[] = [];
   for (const [acc, e] of game.social.lfg) {
     if (wall - e.since > LFG_SEC * 1000) {
-      game.social.lfg.delete(acc);
+      dropLfg(game, acc);
       continue;
     }
     const s = game.sessionByAccount(acc);
     if (acc === viewer || !s?.profile || !s.ship) continue;
-    out.push({ name: s.name, level: s.profile.level, captain: s.profile.captain, region: s.ship.region, note: e.note, mins: Math.floor((wall - e.since) / 60000), since: e.since });
+    const row: LfgEntry & { since: number } = { name: s.name, level: s.profile.level, captain: s.profile.captain, region: s.ship.region, note: e.note, mins: Math.floor((wall - e.since) / 60000), since: e.since };
+    if (e.goal) {
+      row.goal = e.goal;
+      row.lo = e.lo;
+      row.hi = e.hi;
+      row.fits = me >= (e.lo ?? 1) && me <= (e.hi ?? 99);
+      row.size = groupOfAccount(game, acc)?.members.length ?? 1;
+      if (!s.ship.docked) {
+        row.x = Math.round(s.ship.state.x / 250) * 250;
+        row.y = Math.round(s.ship.state.y / 250) * 250;
+      }
+    }
+    out.push(row);
   }
   return out.sort((a, b) => b.since - a.since).slice(0, 20).map(({ since, ...x }) => (void since, x));
 }
 
-/** Post (or refresh) «looking for a group» with a short note; every captain at sea sees the board change. */
-export function lfgPost(game: Game, s: PlayerSession, note: string): string | null {
-  if (groupOfAccount(game, s.accountId)) return 'You already sail in a group';
+/** Post (or refresh) «looking for company» with a short note, a goal and the levels asked; every captain at sea
+ *  sees the board change, and the flag flies over her ship. A group's leader may post for more hands. */
+export function lfgPost(game: Game, s: PlayerSession, note: string, goal?: string, lo?: number, hi?: number): string | null {
+  const g = groupOfAccount(game, s.accountId);
+  if (g && g.leader !== s.accountId) return 'You already sail in a group';
+  if (g && g.members.length >= GROUP_MAX) return 'Your group is full';
   const clean = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
-  game.social.lfg.set(s.accountId, { note: clean, since: game.wallNow() });
+  const aim = LFG_GOALS.includes(goal as LfgGoal) ? (goal as LfgGoal) : 'hunt';
+  const [a, b] = lfgRange(s.profile!.level, lo === undefined || lo === null ? undefined : Number(lo), hi === undefined || hi === null ? undefined : Number(hi));
+  game.social.lfg.set(s.accountId, { note: clean, since: game.wallNow(), goal: aim, lo: a, hi: b });
+  if (s.ship) {
+    s.ship.lfg = lfgTag(aim, a, b);
+    game.refreshInfo(s.ship);
+  }
   lfgChanged(game);
   return null;
 }
 
 export function lfgClear(game: Game, s: PlayerSession): void {
-  if (game.social.lfg.delete(s.accountId)) lfgChanged(game);
+  if (dropLfg(game, s.accountId)) lfgChanged(game);
+}
+
+/** A posting off the board, and its flag off the ship. */
+function dropLfg(game: Game, account: number): boolean {
+  const had = game.social.lfg.delete(account);
+  const ship = game.sessionByAccount(account)?.ship;
+  if (ship?.lfg) {
+    ship.lfg = null;
+    game.refreshInfo(ship);
+  }
+  return had;
 }
 
 function lfgChanged(game: Game): void {
@@ -350,19 +438,28 @@ function stepConvoy(game: Game, g: Group): void {
 }
 
 // ------------------------------------------------------------------------------------------ barter
+//
+// docs/16 #33: two captains trade across the quay in one port, or at sea within 300 m of each other. Each puts
+// silver, goods and gear from the locker on the table; each locks the offer; once both are locked, each confirms
+// the table as they saw it (its revision). Any change unlocks the one who made it and calls both confirmations
+// back. At sea the goods cross on boats; the table is called off when the ships part beyond reach, either is in a
+// fight, sinks, puts in or leaves the sea. Everything is checked again at the moment it changes hands, and it
+// changes hands all at once or not at all.
 
 function alongside(game: Game, a: PlayerSession, b: PlayerSession): { ok: boolean; atSea: boolean; port: string | null; why?: string } {
   const sa = a.ship, sb = b.ship;
   if (!sa || !sb || !sa.alive || !sb.alive) return { ok: false, atSea: false, port: null, why: 'Both ships must be afloat' };
+  if (a.disconnectedAt !== null || b.disconnectedAt !== null) return { ok: false, atSea: false, port: null, why: 'a captain has gone' };
   if (sa.docked || sb.docked) {
     if (sa.docked && sa.docked === sb.docked) return { ok: true, atSea: false, port: sa.docked };
-    return { ok: false, atSea: false, port: null, why: 'Trade across the quay in the same port, or heave to alongside at sea' };
+    return { ok: false, atSea: false, port: null, why: 'Trade across the quay in the same port, or come alongside at sea' };
   }
   if (dist(sa.state.x, sa.state.y, sb.state.x, sb.state.y) > BARTER_RANGE) return { ok: false, atSea: true, port: null, why: `Come within ${BARTER_RANGE} m to pass goods across` };
-  if (Math.abs(sa.state.speed) > 2 || Math.abs(sb.state.speed) > 2) return { ok: false, atSea: true, port: null, why: 'Both ships must heave to (under 2 m/s) to pass goods across' };
   if (sa.inCombat(game.now) || sb.inCombat(game.now)) return { ok: false, atSea: true, port: null, why: 'Not in the middle of a fight' };
   return { ok: true, atSea: true, port: null };
 }
+
+const emptyOffer = (): Offer => ({ gold: 0, cargo: {}, items: [], locked: false, ready: false });
 
 export function barterPropose(game: Game, s: PlayerSession, name: string): string | null {
   const t = game.sessionByName(String(name ?? ''));
@@ -379,6 +476,7 @@ export function barterPropose(game: Game, s: PlayerSession, name: string): strin
     theirs.open = true;
     theirs.port = where.port;
     theirs.since = game.now;
+    theirs.rev++;
     game.social.barters.set(s.accountId, theirs);
     pushBarter(game, theirs);
     return null;
@@ -389,10 +487,11 @@ export function barterPropose(game: Game, s: PlayerSession, name: string): strin
     a: s.accountId,
     b: t.accountId,
     open: false,
-    offers: new Map([[s.accountId, { gold: 0, cargo: {}, ready: false }], [t.accountId, { gold: 0, cargo: {}, ready: false }]]),
+    offers: new Map([[s.accountId, emptyOffer()], [t.accountId, emptyOffer()]]),
     port: where.port,
     transferAt: 0,
     since: game.now,
+    rev: 1,
   };
   game.social.barters.set(s.accountId, b);
   game.sendTo(t, { t: 'toast', msg: `${s.name} wants to trade. Open the Company screen [Y] to accept.`, kind: 'info' });
@@ -408,9 +507,36 @@ export function barterHails(game: Game, accountId: number): string[] {
   return out.filter(Boolean);
 }
 
-export function barterOffer(game: Game, s: PlayerSession, gold: number, cargo: Cargo): string | null {
+/** Everything on the table changed: both confirmations called back, the boats stopped, the revision raised. */
+function changed(b: Barter): void {
+  for (const o of b.offers.values()) o.ready = false;
+  b.transferAt = 0;
+  b.rev++;
+}
+
+/** Gear a captain may put on the table: in her locker (not worn), not bound, each once. */
+function tradeItems(s: PlayerSession, uids: unknown): number[] | string {
+  if (uids === undefined || uids === null) return [];
+  if (!Array.isArray(uids)) return 'Bad offer';
+  const out: number[] = [];
+  for (const v of uids) {
+    const uid = Math.trunc(Number(v));
+    if (!Number.isFinite(uid)) return 'Bad offer';
+    if (out.includes(uid)) continue;
+    const it = s.profile!.stash.find((x) => x.uid === uid);
+    if (!it) return 'That piece is not in your locker';
+    if (it.bound) return 'Bound gear does not change hands';
+    out.push(uid);
+    if (out.length > TRADE_ITEMS_MAX) return `${TRADE_ITEMS_MAX} pieces of gear at most`;
+  }
+  return out;
+}
+
+export function barterOffer(game: Game, s: PlayerSession, gold: number, cargo: Cargo, items?: unknown): string | null {
   const b = game.social.barters.get(s.accountId);
   if (!b || !b.open) return 'No trade is open';
+  const mine = b.offers.get(s.accountId)!;
+  if (mine.locked) return 'Unlock your offer to change it';
   const ship = s.ship!;
   const g = Math.floor(Number(gold));
   if (!Number.isFinite(g) || g < 0) return 'Bad offer';
@@ -422,28 +548,49 @@ export function barterOffer(game: Game, s: PlayerSession, gold: number, cargo: C
     if (!GOODS[k as GoodId] || !Number.isFinite(n) || n <= 0) continue;
     if (n > (ship.cargo[k as GoodId] ?? 0)) return `You carry only ${ship.cargo[k as GoodId] ?? 0} ${GOODS[k as GoodId].name}`;
     clean[k as GoodId] = n;
-    if (++lines > 12) return 'Twelve kinds of goods at most';
+    if (++lines > TRADE_GOODS_MAX) return 'Twelve kinds of goods at most';
   }
-  b.offers.set(s.accountId, { gold: g, cargo: clean, ready: false });
+  const gear = tradeItems(s, items);
+  if (typeof gear === 'string') return gear;
+  b.offers.set(s.accountId, { gold: g, cargo: clean, items: gear, locked: false, ready: false });
   // Any change calls both captains back to the table.
-  for (const o of b.offers.values()) o.ready = false;
-  b.transferAt = 0;
+  changed(b);
   pushBarter(game, b);
   return null;
 }
 
-export function barterReady(game: Game, s: PlayerSession): string | null {
+/** Lock one's offer as it stands (it is checked again now), or unlock it to change it. */
+export function barterLock(game: Game, s: PlayerSession, lock: boolean): string | null {
+  const b = game.social.barters.get(s.accountId);
+  if (!b || !b.open) return 'No trade is open';
+  const o = b.offers.get(s.accountId)!;
+  if (lock) {
+    const why = offerWhy(s, o);
+    if (why) return why;
+  }
+  o.locked = lock;
+  changed(b);
+  pushBarter(game, b);
+  return null;
+}
+
+export function barterReady(game: Game, s: PlayerSession, rev?: number): string | null {
   const b = game.social.barters.get(s.accountId);
   if (!b || !b.open) return 'No trade is open';
   const other = game.sessionByAccount(b.a === s.accountId ? b.b : b.a);
   if (!other) return cancelBarter(game, b, 'They have gone');
   const where = alongside(game, s, other);
   if (!where.ok) return where.why!;
+  if (![...b.offers.values()].every((o) => o.locked)) return 'Both captains must lock their offers first';
+  if (rev !== undefined && rev !== null && Number(rev) !== b.rev) {
+    pushBarter(game, b);
+    return 'The table has changed: look again before you confirm';
+  }
   b.offers.get(s.accountId)!.ready = true;
   if ([...b.offers.values()].every((o) => o.ready)) {
     if (!where.atSea) return settleBarter(game, b);
     // At sea the goods go across on boats.
-    const vol = [...b.offers.values()].reduce((a, o) => a + cargoVolume(o.cargo), 0);
+    const vol = [...b.offers.values()].reduce((a, o) => a + cargoVolume(o.cargo) + o.items.length, 0);
     // Dockhands on either ship speed the boats.
     const hands = Math.max(...[b.a, b.b].map((id) => { const sh = game.sessionByAccount(id)?.ship; return sh ? tx(sh.stats, 'transferSpeed') : 0; }));
     b.transferAt = game.now + Math.max(4, Math.min(30, 5 + vol / 8)) / (1 + hands);
@@ -464,40 +611,78 @@ export function cancelBarter(game: Game, b: Barter, why: string | null): string 
   return null;
 }
 
+/** Why an offer can no longer be kept (null: it can): silver, goods and gear all still hers. */
+function offerWhy(s: PlayerSession, o: Offer): string | null {
+  const p = s.profile!;
+  if (p.gold < o.gold) return `${s.name} no longer has the silver`;
+  for (const [g, n] of Object.entries(o.cargo)) if ((s.ship!.cargo[g as GoodId] ?? 0) < (n ?? 0)) return `${s.name} no longer carries the goods`;
+  for (const uid of o.items) {
+    const it = p.stash.find((x) => x.uid === uid);
+    if (!it) return `${s.name} no longer has that gear`;
+    if (it.bound) return 'Bound gear does not change hands';
+  }
+  return null;
+}
+
 function settleBarter(game: Game, b: Barter): string | null {
   const A = game.sessionByAccount(b.a), B = game.sessionByAccount(b.b);
   if (!A?.ship || !B?.ship || !A.profile || !B.profile) return cancelBarter(game, b, 'a captain has gone');
+  const where = alongside(game, A, B);
+  if (!where.ok || (b.port ?? null) !== where.port) return cancelBarter(game, b, where.why ?? 'the ships have parted');
   const oa = b.offers.get(b.a)!, ob = b.offers.get(b.b)!;
-  // Check everything first: silver, goods still aboard, room in each hold after its own goods go out.
+  if (!oa.locked || !ob.locked || !oa.ready || !ob.ready) return 'Both captains must lock and confirm';
+  // Check everything first: silver, goods and gear still aboard, room in each hold and locker after its own go out.
   for (const [s, o] of [[A, oa], [B, ob]] as const) {
-    if (s.profile!.gold < o.gold) return cancelBarter(game, b, `${s.name} no longer has the silver`);
-    for (const [g, n] of Object.entries(o.cargo)) if ((s.ship!.cargo[g as GoodId] ?? 0) < (n ?? 0)) return cancelBarter(game, b, `${s.name} no longer carries the goods`);
+    const why = offerWhy(s, o);
+    if (why) return cancelBarter(game, b, why);
   }
   for (const [s, give, take] of [[A, oa, ob], [B, ob, oa]] as const) {
-    if (Object.keys(take.cargo).length && hasPennant(game, s.profile!)) return cancelBarter(game, b, `${s.name} sails under the Green Pennant and may take no goods from other captains`);
+    if ((Object.keys(take.cargo).length || take.items.length) && hasPennant(game, s.profile!)) return cancelBarter(game, b, `${s.name} sails under the Green Pennant and may take no goods from other captains`);
     const st = s.ship!.stats;
     const after: Cargo = { ...s.ship!.cargo };
     for (const [g, n] of Object.entries(give.cargo)) after[g as GoodId] = (after[g as GoodId] ?? 0) - (n ?? 0);
     for (const [g, n] of Object.entries(take.cargo)) after[g as GoodId] = (after[g as GoodId] ?? 0) + (n ?? 0);
-    if (cargoVolume(after, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul) > st.holdVolume + 1e-6) {
+    const noRoom = cargoVolume(after, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul) > st.holdVolume + 1e-6 ? `${s.name}'s hold has no room for it`
+      : s.profile!.stash.length - give.items.length + take.items.length > STASH_SIZE ? `${s.name}'s locker has no room for the gear` : null;
+    if (noRoom) {
       for (const o of b.offers.values()) o.ready = false;
       b.transferAt = 0;
+      b.rev++;
       pushBarter(game, b);
-      return `${s.name}'s hold has no room for it`;
+      return noRoom;
     }
   }
+  // All at once.
+  const gearA = take(A, oa.items), gearB = take(B, ob.items);
   move(A, B, oa);
   move(B, A, ob);
+  for (const it of gearA) B.profile.stash.push({ ...it, uid: B.profile.itemSeq++ });
+  for (const it of gearB) A.profile.stash.push({ ...it, uid: A.profile.itemSeq++ });
+  if (oa.gold) game.db.ledger(A.accountId, 'barter', -oa.gold, B.name);
+  if (ob.gold) game.db.ledger(B.accountId, 'barter', -ob.gold, A.name);
+  if (oa.gold) game.db.ledger(B.accountId, 'barter', oa.gold, A.name);
+  if (ob.gold) game.db.ledger(A.accountId, 'barter', ob.gold, B.name);
   tie(game, A, B);
   A.ship.recompute(game.now);
   B.ship.recompute(game.now);
-  const line = (o: Offer) => [o.gold ? `${o.gold} silver` : '', ...Object.entries(o.cargo).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`)].filter(Boolean).join(', ') || 'nothing';
-  game.sendTo(A, { t: 'toast', msg: `Trade done with ${B.name}: gave ${line(oa)}, got ${line(ob)}.`, kind: 'good' });
-  game.sendTo(B, { t: 'toast', msg: `Trade done with ${A.name}: gave ${line(ob)}, got ${line(oa)}.`, kind: 'good' });
+  const line = (o: Offer, gear: Item[]) => [o.gold ? `${o.gold} silver` : '', ...Object.entries(o.cargo).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`), gear.length ? `${gear.length} gear` : ''].filter(Boolean).join(', ') || 'nothing';
+  game.sendTo(A, { t: 'toast', msg: `Trade done with ${B.name}: gave ${line(oa, gearA)}, got ${line(ob, gearB)}.`, kind: 'good' });
+  game.sendTo(B, { t: 'toast', msg: `Trade done with ${A.name}: gave ${line(ob, gearB)}, got ${line(oa, gearA)}.`, kind: 'good' });
   cancelBarter(game, b, null);
   game.pushSelf(A, true);
   game.pushSelf(B, true);
   return null;
+}
+
+/** The pieces out of a captain's locker (checked to be there just before). */
+function take(s: PlayerSession, uids: number[]): Item[] {
+  const p = s.profile!;
+  const out: Item[] = [];
+  for (const uid of uids) {
+    const i = p.stash.findIndex((x) => x.uid === uid);
+    if (i >= 0) out.push(...p.stash.splice(i, 1));
+  }
+  return out;
 }
 
 /** Goods keep their taint (stolen) and their price paid as they change hands. */
@@ -523,10 +708,14 @@ function move(from: PlayerSession, to: PlayerSession, o: Offer): void {
 }
 
 function side(game: Game, id: number, o: Offer): BarterSide {
-  return { name: game.sessionByAccount(id)?.name ?? '?', gold: o.gold, cargo: o.cargo, ready: o.ready };
+  const s = game.sessionByAccount(id);
+  const items = o.items.map((uid) => s?.profile?.stash.find((x) => x.uid === uid)).filter((x): x is Item => !!x);
+  return { name: s?.name ?? '?', gold: o.gold, cargo: o.cargo, ready: o.ready, items, locked: o.locked };
 }
 
 function pushBarter(game: Game, b: Barter): void {
+  const A = game.sessionByAccount(b.a)?.ship, B = game.sessionByAccount(b.b)?.ship;
+  const d = A && B && b.port === null ? Math.round(dist(A.state.x, A.state.y, B.state.x, B.state.y)) : 0;
   for (const id of [b.a, b.b]) {
     const ms = game.sessionByAccount(id);
     if (!ms) continue;
@@ -536,6 +725,9 @@ function pushBarter(game: Game, b: Barter): void {
       them: side(game, other, b.offers.get(other)!),
       atSea: b.port === null,
       transfer: b.transferAt ? Math.max(0, Math.ceil(b.transferAt - game.now)) : 0,
+      rev: b.rev,
+      dist: d,
+      range: BARTER_RANGE,
     };
     game.sendTo(ms, { t: 'barter', view: b.open ? view : null });
   }
@@ -575,13 +767,16 @@ export function stepSocial(game: Game): void {
     if (b.transferAt && game.now >= b.transferAt) {
       const e = settleBarter(game, b);
       if (e) for (const s of [A, B]) game.sendTo(s, { t: 'toast', msg: e, kind: 'bad' });
-    } else if (b.transferAt) pushBarter(game, b);
+    } else if (b.transferAt || (b.port === null && Math.floor(game.now) % 2 === 0)) pushBarter(game, b); // the boats, the distance
   }
+  // The board of those looking for company: where they sail now, every ten seconds (docs/16 #31).
+  if (soc.lfg.size && Math.floor(game.now) % 10 === 0) lfgChanged(game);
 }
 
 /** A captain leaves the world for good (logged out and the ship gone). */
 export function socialRetire(game: Game, s: PlayerSession): void {
-  if (game.social.lfg.delete(s.accountId)) lfgChanged(game);
+  if (dropLfg(game, s.accountId)) lfgChanged(game);
+  game.social.signals.delete(s.accountId);
   const b = game.social.barters.get(s.accountId);
   if (b) cancelBarter(game, b, `${s.name} has gone`);
   for (const [k, i] of game.social.invites) if (i.to === s.accountId || i.from === s.accountId) game.social.invites.delete(k);

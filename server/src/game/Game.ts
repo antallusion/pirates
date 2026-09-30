@@ -100,7 +100,7 @@ import {
   resolveMutiny, springAmbush, stepCompany, stepSpirit,
 } from './crew.ts';
 import { friendAdd, friendRemove, friendsPresence, ignoreAdd, ignoreCommand, ignoreRemove, ignores, inspectView, pushFriends, whisper, whisperCommand, whoList } from './friends.ts';
-import { Social, lfgClear, lfgPost, barterOffer, barterPropose, barterReady, cancelBarter, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
+import { Social, lfgClear, lfgPost, barterLock, barterOffer, barterPropose, barterReady, cancelBarter, groupAsk, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
 import { havenSecond } from './havens.ts';
 import { onboardingAction, onboardingProtected, onboardingRescue, onboardingSecond, onboardingSeen, onboardingStart, onboardingView } from './onboarding.ts';
@@ -139,6 +139,9 @@ import { deliver, ensureLegendary, legendaryCalendar, legendarySecond, legendary
 import { LEGENDARY } from '../../../shared/src/data/legendary.ts';
 import type { LegendaryId } from '../../../shared/src/data/legendary.ts';
 import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown, stepRenown } from './renown.ts';
+import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
+import { sendSignal } from './signals.ts';
+import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
 import type { AbyssMap } from './abyss.ts';
@@ -796,6 +799,7 @@ export class Game {
     if (Math.floor(this.now) % 5 === 0) stepDutchman(this); // the Flying Dutchman's week (docs/12 P10 #10)
     if (Math.floor(this.now) % 30 === 0) stepFates(this); // the officers' requests and loves (docs/12 P10 #11)
     if (Math.floor(this.now) % 5 === 0) stepRenown(this); // careers, the week's challenges, the album, feats (docs/16 #26–29)
+    if (Math.floor(this.now) % 5 === 0) stepWorldGoals(this); // the sea's goals of the week (docs/16 #32)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -1796,6 +1800,7 @@ export class Game {
     if (how === 'sunk') holidayGhostSunk(this, s, victim); // the Night of the Drowned's cursed gifts (docs/12 P10 #18)
     if (victim.npcRole === 'beast' && victim.cls.tier >= 3) sagaNote(this, s, 'beast', [victim.name, this.nearestIslandName(victim.state.x, victim.state.y)]); // the saga (docs/12 P10 #20)
     renownKill(this, s, victim, how); // careers, feats, the week's pirates and prizes (docs/16 #26–29)
+    worldGoalKill(this, s, victim, how); // the sea's goals of the week (docs/16 #32)
     serviceKill(this, s, victim, how); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
@@ -3095,6 +3100,20 @@ export class Game {
       case 'renown':
         sendRenown(this, s, true);
         return;
+      case 'signal':
+        return err(sendSignal(this, s, msg.kind));
+      case 'wgoals':
+        return sendWorldGoals(this, s);
+      case 'gyard': {
+        // The guild's shipyard on the admiral's island (docs/16 #34).
+        if (msg.action === 'start') err(gyardStart(this, s, msg.kind as 'ship'));
+        else if (msg.action === 'cancel') err(gyardCancel(this, s));
+        else if (msg.action === 'give') err(gyardGive(this, s, msg.good, Math.trunc(Number(msg.qty) || 0), Math.trunc(Number(msg.silver) || 0)));
+        pushGuild(this, s);
+        const bv = baseView(this, s);
+        if (bv) this.sendTo(s, { t: 'base', view: bv });
+        return;
+      }
       case 'away':
         if (msg.action === 'take') err(awayTake(this, s));
         return;
@@ -3195,7 +3214,9 @@ export class Game {
           case 'say':
             return err(groupSay(this, s, msg.text));
           case 'lfg':
-            return err(lfgPost(this, s, msg.note));
+            return err(lfgPost(this, s, msg.note, msg.goal, msg.lo, msg.hi));
+          case 'ask':
+            return err(groupAsk(this, s, msg.name));
           case 'lfg_clear':
             return lfgClear(this, s);
         }
@@ -3217,9 +3238,12 @@ export class Game {
           case 'propose':
             return err(barterPropose(this, s, msg.name));
           case 'offer':
-            return err(barterOffer(this, s, msg.gold, msg.cargo));
+            return err(barterOffer(this, s, msg.gold, msg.cargo, msg.items));
+          case 'lock':
+          case 'unlock':
+            return err(barterLock(this, s, msg.action === 'lock'));
           case 'ready':
-            return err(barterReady(this, s));
+            return err(barterReady(this, s, msg.rev));
           case 'cancel': {
             const b = this.social.barters.get(s.accountId);
             if (b) cancelBarter(this, b, `${s.name} walked away`);
@@ -3567,6 +3591,7 @@ export class Game {
     const away = awayReturn(this, s); // back after a long time ashore (docs/16 #30)
     restReturn(this, s);
     commonCollect(this, s);
+    worldGoalsCollect(this, s);
     guildGoalCollect(this, s);
     motdOnLogin(this, s);
     const ports: PortPublic[] = this.world.ports.map((p) => ({
@@ -3603,6 +3628,7 @@ export class Game {
     mailOnLogin(this, s);
     this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
     sendRenown(this, s, true);
+    sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
     if (away) this.sendTo(s, { t: 'away', view: away });
   }
 

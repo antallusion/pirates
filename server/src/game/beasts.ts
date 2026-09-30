@@ -10,6 +10,7 @@
 // it lies on the water to be finished. Its carcass floats for five minutes to be flensed alongside, hove to, and the
 // blood in the water brings the sharks — and in the cold seas the orcas.
 
+import { worldGoalBeast } from './worldgoals.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { omenCarcassMul } from './omens.ts';
 import { giveCalf } from './companion.ts';
@@ -890,6 +891,7 @@ export function beastSlain(game: Game, b: ShipEntity): boolean {
     p.beasts ??= {};
     p.beasts[br.beast] = (p.beasts[br.beast] ?? 0) + 1;
     questEvent(game, s, { k: 'beast', beast: br.beast });
+    worldGoalBeast(game, s); // the sea's goals of the week (docs/16 #32)
     // A group sails as one.
     const g = groupOfAccount(game, acc);
     if (g && k === 1) for (const m of g.members) {

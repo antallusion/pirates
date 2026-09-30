@@ -16,6 +16,7 @@
 //  - Islands: up to six guild islands (leased from the treasury by vice-admirals); a base on one raises it through
 //    five levels (+2 slots a level, weekly upkeep from the island's treasury).
 
+import { gyardView } from './guildyard.ts';
 import { upkeepMul } from './empires.ts';
 import { guildGoalView } from './guildgoal.ts';
 import type { GuildWeekly } from './guildgoal.ts';
@@ -103,6 +104,9 @@ export interface Guild {
   requests?: { account: number; name: string; level: number; note: string; t: number }[];
   /** The word of the day (docs/11 P6). */
   motd?: string;
+  /** docs/16 #34: the project on the guild's slipway at the admiral's island, and the ones finished. */
+  yardProject?: import('./guildyard.ts').GuildYard | null;
+  yardDone?: { kind: import('../../../shared/src/data/social.ts').GuildProject; at: number }[];
 }
 
 export interface RouteNode {
@@ -1044,6 +1048,7 @@ export function guildView(game: Game, s: PlayerSession): { guild: GuildView | nu
       log: g.log.slice(-40).reverse(),
       recruit: g.recruit ?? null,
       ...(g.motd ? { motd: g.motd } : {}),
+      yard: gyardView(game, s),
       ...(rankAtLeast(me, 'commodore') ? { requests: (g.requests ?? []).filter((r) => r.t + REQUEST_MS > wall).map((r) => ({ account: r.account, name: r.name, level: r.level, note: r.note, online: !!game.sessionByAccount(r.account) })) } : {}),
     },
   };

@@ -143,9 +143,13 @@ test('barter across the quay: offers, both ready, silver and goods change hands 
   assert.ok(a.last('barter')!.view, 'the table is open');
   a.push({ t: 'barter', action: 'offer', gold: 0, cargo: { rum: 6 } });
   b.push({ t: 'barter', action: 'offer', gold: 300, cargo: {} });
+  a.push({ t: 'barter', action: 'lock' });
+  b.push({ t: 'barter', action: 'lock' });
   a.push({ t: 'barter', action: 'ready' });
   // A change of terms calls both back to the table.
+  b.push({ t: 'barter', action: 'unlock' });
   b.push({ t: 'barter', action: 'offer', gold: 250, cargo: {} });
+  b.push({ t: 'barter', action: 'lock' });
   assert.equal(a.last('barter')!.view!.me.ready, false);
   assert.equal(a.last('barter')!.view!.them.gold, 250);
   a.push({ t: 'barter', action: 'ready' });
@@ -164,14 +168,14 @@ test('barter across the quay: offers, both ready, silver and goods change hands 
   assert.match(a.last('toast')!.msg, /silver/);
 });
 
-test('barter at sea: hove-to alongside, the boats take time, and parting calls it off', () => {
+test('barter at sea: within reach, the boats take time, and parting calls it off', () => {
   const { game } = makeGame();
   const a = join(game, 'Anne Swell');
   const b = join(game, 'Bram Swell');
   const A = sess(game, 'Anne Swell'), B = sess(game, 'Bram Swell');
   A.profile!.level = B.profile!.level = 20;
   atSea(game, a, A, 50_000, 50_000);
-  atSea(game, b, B, 50_300, 50_000);
+  atSea(game, b, B, 50_400, 50_000);
   A.ship!.cargo = { sugar: 8 };
   B.ship!.cargo = {};
   a.push({ t: 'barter', action: 'propose', name: 'Bram Swell' });
@@ -181,6 +185,8 @@ test('barter at sea: hove-to alongside, the boats take time, and parting calls i
   b.push({ t: 'barter', action: 'propose', name: 'Anne Swell' });
   a.push({ t: 'barter', action: 'offer', gold: 0, cargo: { sugar: 8 } });
   b.push({ t: 'barter', action: 'offer', gold: 100, cargo: {} });
+  a.push({ t: 'barter', action: 'lock' });
+  b.push({ t: 'barter', action: 'lock' });
   a.push({ t: 'barter', action: 'ready' });
   b.push({ t: 'barter', action: 'ready' });
   assert.ok(a.last('barter')!.view!.transfer > 0, 'boats under way');
@@ -192,6 +198,8 @@ test('barter at sea: hove-to alongside, the boats take time, and parting calls i
   b.push({ t: 'barter', action: 'propose', name: 'Anne Swell' });
   a.push({ t: 'barter', action: 'propose', name: 'Bram Swell' });
   b.push({ t: 'barter', action: 'offer', gold: 0, cargo: { sugar: 8 } });
+  a.push({ t: 'barter', action: 'lock' });
+  b.push({ t: 'barter', action: 'lock' });
   a.push({ t: 'barter', action: 'ready' });
   b.push({ t: 'barter', action: 'ready' });
   B.ship!.state.x = 51_000;

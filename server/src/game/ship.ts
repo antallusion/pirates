@@ -223,6 +223,8 @@ export class ShipEntity {
   /** A captain's chosen title and pennant colour (seasons.ts). */
   title: string | null = null;
   pennant: string | null = null;
+  /** Looking for company (docs/16 #31): the posting's goal and levels, flown over the ship ("hunt:4-9"). */
+  lfg: string | null = null;
   /** Her look, encoded (docs/12 P10 #12). */
   look: string | null = null;
   /** The Graveyard Captain of this graveyard (expeditions.ts). */
@@ -395,7 +397,7 @@ export class ShipEntity {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
       isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined, named: this.named ?? this.namedMate,
-      title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined,
+      title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined, lfg: this.lfg ?? undefined,
     };
   }
 }

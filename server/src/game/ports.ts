@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { worldGoalSale } from './worldgoals.ts';
 import { careerBuyMul, careerYardBonus, renownTrade } from './renown.ts';
 import { veteranPay } from '../../../shared/src/data/questpay.ts';
 import { ownShipsTrade } from './baseships.ts';
@@ -335,6 +336,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   onEventSale(game, s, port, good, n);
   holidaySale(game, s, port, good, n); // League Day's seal (docs/12 P10 #18)
   noteSale(game, s, port, good, n);
+  worldGoalSale(game, s, port, good, n); // the sea's goals of the week: goods delivered (docs/16 #32)
   if (profit > 0) seasonStat(game, s, 'trade', profit);
   renownTrade(game, s, port, price); // the flag's deeds, the week's trade (docs/16 #26–27)
   onSaleDeeds(game, s, port.id, good, n, price);

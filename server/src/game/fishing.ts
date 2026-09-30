@@ -8,6 +8,7 @@
 //  - a deep line: lying still over deep water, the slow bite of the big and strange.
 // Every catch teaches the craft; the heaviest of each kind is the whole sea's record.
 
+import { worldGoalCatch } from './worldgoals.ts';
 import { omenKept } from './omens.ts';
 import { tattooCount } from './tattoos.ts';
 import { trophyBonus } from './estate.ts';
@@ -308,6 +309,7 @@ function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units
     }
   }
   questEvent(game, s, { k: 'catch', units: got, kg, fought });
+  worldGoalCatch(game, s, got); // the sea's goals of the week (docs/16 #32)
   holidayCatch(game, s, kg * Math.max(1, got)); // the Herring Run's tournament (docs/12 P10 #18)
   return got;
 }
