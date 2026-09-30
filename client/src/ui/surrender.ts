@@ -21,6 +21,11 @@ import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
 
+/** A ship's name as it reads: in Russian within «», once. */
+const shipName = (n: string) => {
+  const t = placeName(n);
+  return lang() === 'ru' && !t.startsWith('«') ? `«${t}»` : t;
+};
 const factionName = (f: string) => (f in FACTIONS ? FACTIONS[f as FactionId].short : f);
 const roleName = (r: string | null | undefined) => (r && `role.${r}` in EN ? L(`role.${r}` as 'role.pirate') : r ?? '');
 
@@ -28,7 +33,7 @@ const roleName = (r: string | null | undefined) => (r && `role.${r}` in EN ? L(`
 export function trophyLine(t: TrophyHistory): string {
   const date = new Date(t.at).toLocaleDateString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   return L('trophy.line', {
-    was: placeName(t.was), faction: factionName(t.faction), role: roleName(t.role) || SHIP_CLASSES[t.cls]?.name || t.cls,
+    was: shipName(t.was), faction: factionName(t.faction), role: roleName(t.role) || SHIP_CLASSES[t.cls]?.name || t.cls,
     captain: t.captain ? L('trophy.captain', { name: personName(t.captain) }) : '', how: L(t.how === 'struck' ? 'trophy.struck' : 'trophy.boarded'),
     place: placeName(t.place ?? ''), region: REGIONS[t.region as RegionId]?.name ?? t.region, date, by: t.by,
   });
@@ -113,7 +118,7 @@ export class SurrenderCard {
     const choice = (fate: SurrenderFate, ico: string, title: string, sub: string, off = false, primary = false) =>
       `<button class="btn choice sur-choice${primary ? ' btn-primary' : ''}" data-sur="${fate}" data-off="${off ? 1 : 0}"${!near || off ? ' disabled' : ''}>${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><small>${esc(sub)}</small></span></button>`;
     this.el.innerHTML = `<div class="enc-card sur-card">
-      <div class="sur-head">${art ? `<img class="sur-ship" src="${art}" alt="" draggable="false" />` : ''}<div><div class="enc-h">${icon('talent_brd_surrender_terms', '', 'ico-md')}${esc(L('sur.title', { name: placeName(o.name) }))}</div>
+      <div class="sur-head">${art ? `<img class="sur-ship" src="${art}" alt="" draggable="false" />` : ''}<div><div class="enc-h">${icon('talent_brd_surrender_terms', '', 'ico-md')}${esc(L('sur.title', { name: shipName(o.name) }))}</div>
       <div class="sur-sub muted">${esc(L('sur.sub', { cls: cls.name, faction: o.faction === 'player' ? '' : factionName(o.faction), role: roleName(o.role), captain: personName(o.captain) }))}</div></div></div>
       <p class="enc-text">${esc(L('sur.text'))} <span class="muted">${esc(o.cargo ? L('sur.hold', { n: o.cargo, gold: fmt(o.gold) }) : L('sur.holdEmpty', { gold: fmt(o.gold) }))}</span></p>
       <div class="sur-choices">

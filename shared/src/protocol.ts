@@ -528,7 +528,7 @@ export interface PrivateState {
   plans: { id: string; classId: ShipClassId | null; quality: PlanQuality; variants: VariantId[]; uses: number }[];
   berths: { port: string; name: string; classId: ShipClassId; hull: number; trophy?: TrophyHistory }[];
   /** Ships sunk or taken in a row since she last made port (docs/16 #4), and what it adds to plunder and experience. */
-  streak?: { n: number; mul: number };
+  streak?: { n: number; mul: number } | null;
   figureheads: FigureheadId[];
   /** Hired escorts (Command) and the formation signal. */
   fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean; own?: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };

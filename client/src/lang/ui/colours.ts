@@ -40,7 +40,7 @@ export const EN = {
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
-  'sur.title': '«{name}» спускает флаг!',
+  'sur.title': '{name} спускает флаг!',
   'sur.sub': '{cls} · {role} · {faction} · капитан {captain}',
   'sur.text': 'Её капитан просит пощады. Ваши условия:',
   'sur.hold': 'В трюме: {n} ед. · казна {gold}',
@@ -68,10 +68,10 @@ export const RU: Record<keyof typeof EN, string> = {
   'board.trophy': 'Оставить трофеем ({crew} чел.)',
   'board.trophyTip': 'Она сохранит имя и историю и встанет к причалу в ближайшем порту с верфью.',
   'streak.badge': '×{mul}',
-  'streak.title': '{n} кораблей подряд без захода в порт: добыча и опыт ×{mul}. Заход в порт или гибель корабля обрывают серию.',
-  'streak.titleSoon': '{n} кораблей подряд без захода в порт. С третьего растут добыча и опыт (×1,1 … ×1,5).',
+  'streak.title': 'Кораблей подряд без захода в порт: {n}. Добыча и опыт ×{mul}. Заход в порт или гибель корабля обрывают серию.',
+  'streak.titleSoon': 'Кораблей подряд без захода в порт: {n}. С третьего растут добыча и опыт (×1,1 … ×1,5).',
   'trophy.h': 'Трофей',
-  'trophy.line': 'Прежде — «{was}», {role} ({faction}){captain}. Взята {how} у {place} ({region}), {date}; её взял {by}.',
+  'trophy.line': 'Прежде — {was}, {role} ({faction}){captain}. Взята {how} у {place} ({region}), {date}; её взял {by}.',
   'trophy.captain': ', капитан {name}',
   'trophy.struck': 'после сдачи',
   'trophy.boarded': 'на абордаж',

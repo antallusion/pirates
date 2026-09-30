@@ -66,6 +66,6 @@ export function endStreak(game: Game, s: PlayerSession, why: 'port' | 'sunk'): v
 }
 
 /** What the HUD shows of it. */
-export function streakView(p: { streak?: number }): { n: number; mul: number } | undefined {
-  return p.streak ? { n: p.streak, mul: streakMul(p.streak) } : undefined;
+export function streakView(p: { streak?: number }): { n: number; mul: number } | null {
+  return p.streak ? { n: p.streak, mul: streakMul(p.streak) } : null; // null, not absent: a patch must clear it
 }

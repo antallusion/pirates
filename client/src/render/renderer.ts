@@ -1994,12 +1994,17 @@ export class Renderer {
   private drawTexts(): void {
     const g = this.g;
     g.textAlign = 'center';
+    // Plates of several parts struck on one ship stand one above another, the newest on top of the stack.
+    const stack = new Map<number, number>();
+    for (let i = this.fx.particles.length - 1; i >= 0; i--) {
+      const p = this.fx.particles[i];
+      if (p.kind !== 'text' || !p.badge) continue;
+      const k = p.ship ?? -1, n = stack.get(k) ?? 0;
+      stack.set(k, n + 1);
+      this.drawCritBadge(p.badge, p.text!, this.sx(p.x), this.sy(p.y) - n * 28, p.t, p.life, p.color);
+    }
     for (const p of this.fx.particles) {
-      if (p.kind !== 'text' || !p.text) continue;
-      if (p.badge) {
-        this.drawCritBadge(p.badge, p.text, this.sx(p.x), this.sy(p.y), p.t, p.life, p.color);
-        continue;
-      }
+      if (p.kind !== 'text' || !p.text || p.badge) continue;
       const a = 1 - p.t / p.life;
       g.globalAlpha = a;
       g.font = `600 ${p.size}px Inter, sans-serif`;
@@ -2535,7 +2540,8 @@ export class Renderer {
         g.font = '600 11px Inter, sans-serif';
         g.textAlign = 'center';
         g.textBaseline = 'middle';
-        const tx = x + Math.cos(a) * (d + 16), ty = y + Math.sin(a) * (d + 16);
+        const far = d + Math.max(8, reach * 0.05) + 16; // beyond the fall's outer arc
+        const tx = x + Math.cos(a) * far, ty = y + Math.sin(a) * far;
         const label = L('drift', { n: Math.round(Math.abs(drift)) });
         g.fillStyle = `rgba(0,0,0,${Math.min(0.8, 0.7 * k).toFixed(3)})`;
         g.fillText(label, tx + 1, ty + 1);
