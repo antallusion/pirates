@@ -270,3 +270,86 @@ test('the helmsman’s words are in Russian too', () => {
     assert.ok(!/[A-Za-z]/.test(table[w]), `no Latin in "${table[w]}"`);
   }
 });
+
+// ================================================================== the client's pure parts
+
+test('first-time hints: which message or sea shows which mechanic, once', async () => {
+  const { TIP_IDS, tipForMsg, tipForState } = await import('../client/src/ui/ease.ts');
+  const { EN, RU } = await import('../client/src/lang/ui/ease.ts');
+  for (const id of TIP_IDS) {
+    assert.ok(EN[`tip.${id}`], `EN for ${id}`);
+    assert.ok(RU[`tip.${id}`] && !/[A-Za-z]/.test(RU[`tip.${id}`]), `RU for ${id}, no Latin`);
+  }
+  assert.equal(tipForMsg({ t: 'shoals', list: [] }), null);
+  assert.equal(tipForMsg({ t: 'shoals', list: [{} as never] }), 'fishing');
+  assert.equal(tipForMsg({ t: 'trek', view: {} as never }), 'trek');
+  assert.equal(tipForMsg({ t: 'trek', view: null }), null);
+  assert.equal(tipForMsg({ t: 'board_tac', view: {} as never }), 'boarding');
+  assert.equal(tipForMsg({ t: 'barter', view: {} as never }), 'trade');
+  assert.equal(tipForMsg({ t: 'party', group: { members: [{}, {}] } as never, invites: [] }), 'signals');
+  assert.equal(tipForMsg({ t: 'party', group: { members: [{}] } as never, invites: [] }), null, 'alone: no one to signal');
+  const own = { x: 1000, y: 1000, heading: 0, speed: 3, sail: 1, rudder: 0 };
+  assert.equal(tipForState({ weather: 'storm', isles: null, ownDisplay: own, self: null }, false), 'storm');
+  assert.equal(tipForState({ weather: 'breeze', isles: { lights: [{ island: 1, name: 'x', x: 1500, y: 1000, r: 300, lit: null }], lookouts: [], tidal: [], caches: [] }, ownDisplay: own, self: null }, false), 'lighthouse');
+  assert.equal(tipForState({ weather: 'breeze', isles: null, ownDisplay: own, self: null }, true), 'waypoint');
+  assert.equal(tipForState({ weather: 'storm', isles: null, ownDisplay: own, self: { dockedAt: 'p' } as never }, false), null, 'not in port');
+});
+
+test('gear beside what is worn: both values, the difference, green for a gain (some lines are better lower)', async () => {
+  const { makeItem } = await import('../shared/src/data/items.ts');
+  const { Rng } = await import('../shared/src/rng.ts');
+  const { compareRows, compareTally } = await import('../client/src/ui/gearcmp.ts');
+  const a = makeItem(new Rng(7), 1, { ilvl: 10, rarity: 3 });
+  const rowsNone = compareRows(a, null);
+  assert.ok(rowsNone.length > 0);
+  assert.ok(rowsNone.every((r) => r.b === 0 && r.d === r.a), 'nothing worn: every line is this piece’s own');
+  const same = compareRows(a, a);
+  assert.ok(same.every((r) => r.good === null && r.d === 0), 'the same piece: all equal');
+  // Against a weaker piece: a lower reload multiplier (and its kin) is a gain, a higher one a loss.
+  const b = makeItem(new Rng(99), 2, { ilvl: 2, rarity: 0 });
+  const rows = compareRows(a, b);
+  for (const r of rows) {
+    assert.ok(Math.abs(r.d - (r.a - r.b)) < 1e-9);
+    if (r.good !== null && r.kind === 'stat') {
+      const lower = ['reloadMul', 'spreadMul', 'fireRisk', 'leakInflow', 'signature', 'moraleLoss', 'sanityLoss', 'spoilage', 'stormSailDamage', 'stormHull', 'dutyMul', 'buyMul', 'provisionUse', 'incomingDamageMul'].includes(r.key);
+      assert.equal(r.good, lower ? r.d < 0 : r.d > 0, r.key);
+    }
+  }
+  const tally = compareTally(rows);
+  assert.equal(tally.up + tally.down + rows.filter((r) => r.good === null).length, rows.length);
+  // Gains come first, then losses, then the equal.
+  const order = rows.map((r) => (r.good === true ? 0 : r.good === false ? 1 : 2));
+  assert.deepEqual(order, [...order].sort((x, y) => x - y));
+});
+
+test('the ship’s voice: the six watches of the day, and the timbers only on a hard turn with way on', async () => {
+  const { turnCreakLoad, watchIndex } = await import('../client/src/audio.ts');
+  assert.equal(watchIndex(0), 0);
+  assert.equal(watchIndex(0.17), 1);
+  assert.equal(watchIndex(0.5), 3);
+  assert.equal(watchIndex(0.999), 5);
+  assert.equal(watchIndex(1.2), 1);
+  assert.equal(turnCreakLoad(0.1, 8), 0, 'a gentle turn is silent');
+  assert.equal(turnCreakLoad(0.8, 0.5), 0, 'no way on, no strain');
+  assert.ok(turnCreakLoad(0.3, 6) > 0);
+  assert.ok(turnCreakLoad(0.6, 6) > turnCreakLoad(0.3, 6), 'harder turns groan louder');
+  assert.ok(turnCreakLoad(-0.6, 6) === turnCreakLoad(0.6, 6), 'either way');
+  assert.ok(turnCreakLoad(5, 12) <= 1);
+});
+
+test('interface density: three steps, a broken save falls back to normal; hints and the ship’s voice default on', async () => {
+  const { DENSITIES, DENSITY_SCALE, defaults, sanitize } = await import('../client/src/settings.ts');
+  assert.deepEqual([...DENSITIES], ['compact', 'normal', 'large']);
+  assert.ok(DENSITY_SCALE.compact < DENSITY_SCALE.normal && DENSITY_SCALE.normal === 1 && DENSITY_SCALE.large > 1);
+  assert.equal(defaults().density, 'normal');
+  assert.equal(sanitize({ density: 'huge' as never }).density, 'normal');
+  assert.equal(sanitize({ density: 'compact' }).density, 'compact');
+  assert.equal(sanitize({}).firstHints, true);
+  assert.equal(sanitize({ firstHints: false }).firstHints, false);
+  assert.equal(sanitize({ shipVoices: false }).shipVoices, false);
+  const { autosailStopText } = await import('../client/src/ui/ease.ts');
+  assert.equal(autosailStopText('arrived').kind, 'good');
+  assert.equal(autosailStopText('hostile').kind, 'bad');
+  assert.equal(autosailStopText('manual').kind, 'info');
+  assert.equal(autosailStopText('nonsense' as never).kind, 'info');
+});

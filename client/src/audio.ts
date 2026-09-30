@@ -18,6 +18,19 @@ export function spatial(lx: number, ly: number, sx: number, sy: number, range = 
   return { gain, pan };
 }
 
+/** The watch of the day (docs/16 #39): six of four hours, the first from midnight. */
+export function watchIndex(timeOfDay01: number): number {
+  return Math.floor((((timeOfDay01 % 1) + 1) % 1) * 6) % 6;
+}
+
+/** How hard the timbers work on a turn (docs/16 #39): nothing on a gentle one or with no way on, up to 1 on a hard
+ *  turn at speed. `rate` in radians a second, `speed` in metres a second. */
+export function turnCreakLoad(rate: number, speed: number): number {
+  const r = Math.abs(rate);
+  if (r < 0.18 || speed < 1.2) return 0;
+  return Math.min(1, ((r - 0.18) / 0.4) * Math.min(1, speed / 6) + 0.25);
+}
+
 export type Bus = 'sea' | 'combat' | 'ui' | 'music';
 export type CaptionKind = 'volley' | 'explosion' | 'deep' | 'thunder' | 'sinking';
 export type CaptionDir = 'ahead' | 'astern' | 'port' | 'starboard' | 'near';
@@ -52,6 +65,11 @@ export class AudioEngine {
   private captionAt = new Map<string, number>();
   listener = { x: 0, y: 0 };
   private lastThunder = 0;
+  /** The ship's own voice (options): the watch bells and pipe, the lookout's cry, the timbers on a hard turn. */
+  voices = true;
+  private watch = -1;
+  private lastCry = 0;
+  private lastTurnCreak = 0;
 
   /** Must be called from a user gesture (browser autoplay policy). */
   unlock(): void {
@@ -152,7 +170,108 @@ export class AudioEngine {
     if (!this.ctx || !this.buses) return;
     this.music.update(dt, scene);
     if (atSea) this.music.creak(dt, wind, sail, heel, this.buses.sea);
-    this.music.shipsBell(timeOfDay01, this.buses.ui);
+    if (this.voices) this.music.shipsBell(timeOfDay01, this.buses.ui);
+    // The change of the watch (docs/16 #39): the bosun's pipe calls the new watch after its eight bells.
+    const w = watchIndex(timeOfDay01);
+    if (w !== this.watch) {
+      const first = this.watch < 0;
+      this.watch = w;
+      if (!first && this.voices && atSea) this.bosunPipe(4.8);
+    }
+  }
+
+  /** The bosun's call: a thin whistle that rises, trills and falls, quiet on the interface bus. */
+  bosunPipe(delay = 0): void {
+    const ctx = this.ctx;
+    const v = this.voice(0.07, 0, delay, 'ui');
+    if (!ctx || !v) return;
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    const f = o.frequency, t = v.at;
+    f.setValueAtTime(1500, t);
+    f.exponentialRampToValueAtTime(2300, t + 0.35);
+    for (let i = 0; i < 6; i++) f.setValueAtTime(i % 2 ? 2300 : 2550, t + 0.45 + i * 0.07);
+    f.setValueAtTime(2300, t + 0.9);
+    f.exponentialRampToValueAtTime(1400, t + 1.5);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(0.5, t + 0.08);
+    env.gain.setValueAtTime(0.5, t + 1.3);
+    env.gain.exponentialRampToValueAtTime(0.001, t + 1.6);
+    o.connect(env).connect(v.out);
+    o.start(t);
+    o.stop(t + 1.7);
+  }
+
+  /** The lookout's cry from the masthead (docs/16 #39): «Sail ho!» or «Land ho!» — a voice of two syllables, a
+   *  rising call and a long falling vowel, through two formants; far and a little muffled. At most every 12 s. */
+  lookoutCry(kind: 'sail' | 'land', pan = 0): void {
+    const ctx = this.ctx;
+    const now = performance.now();
+    if (!ctx || !this.voices || now - this.lastCry < 12_000) return;
+    this.lastCry = now;
+    const v = this.voice(0.09, this.mono ? 0 : Math.max(-0.6, Math.min(0.6, pan)), 0.05, 'sea');
+    if (!v) return;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 2600;
+    lp.connect(v.out);
+    const syllable = (at: number, dur: number, f0: number, f1: number, formants: [number, number]) => {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f0, at);
+      o.frequency.linearRampToValueAtTime(f1, at + dur);
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0, at);
+      env.gain.linearRampToValueAtTime(0.6, at + 0.05);
+      env.gain.setValueAtTime(0.6, at + dur * 0.7);
+      env.gain.exponentialRampToValueAtTime(0.001, at + dur);
+      for (const [fq, q, g] of [[formants[0], 6, 1], [formants[1], 8, 0.6]] as const) {
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = fq;
+        bp.Q.value = q;
+        const gg = ctx.createGain();
+        gg.gain.value = g;
+        o.connect(bp).connect(gg).connect(env);
+      }
+      env.connect(lp);
+      o.start(at);
+      o.stop(at + dur + 0.05);
+    };
+    // «Sail» /eɪ/ or «Land» /æ/, then «ho» /oʊ/ held and falling.
+    syllable(v.at, 0.32, kind === 'sail' ? 250 : 235, kind === 'sail' ? 290 : 270, kind === 'sail' ? [520, 1900] : [700, 1700]);
+    syllable(v.at + 0.38, 0.85, 320, 230, [480, 900]);
+    // The wind across the masthead under it.
+    this.noiseBurst(v.out, v.at, 1.3, 'bandpass', 900, 0.8, 0.08);
+  }
+
+  /** The timbers on a hard turn (docs/16 #39): a low groan of the hull and the rudder stock, louder the harder she
+   *  turns. At most every 1.1 s. */
+  turnCreak(load: number): void {
+    const ctx = this.ctx;
+    const now = performance.now();
+    if (!ctx || !this.noise || !this.voices || load <= 0 || now - this.lastTurnCreak < 1100 + Math.random() * 900) return;
+    this.lastTurnCreak = now;
+    const v = this.voice(0.16 * Math.min(1, load), 0, 0, 'sea');
+    if (!v) return;
+    const dur = 0.45 + load * 0.5;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 14;
+    const f0 = 210 + Math.random() * 90;
+    bp.frequency.setValueAtTime(f0, v.at);
+    bp.frequency.exponentialRampToValueAtTime(f0 * 0.62, v.at + dur);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, v.at);
+    env.gain.linearRampToValueAtTime(1, v.at + dur * 0.35);
+    env.gain.exponentialRampToValueAtTime(0.001, v.at + dur);
+    src.connect(bp).connect(env).connect(v.out);
+    src.start(v.at, Math.random() * 1.5);
+    src.stop(v.at + dur + 0.05);
+    this.tone(v.out, v.at + 0.02, 96, dur * 0.8, 0.12, 'triangle', 70);
   }
 
   private voice(gain: number, pan: number, delay = 0, bus: Bus = 'combat'): { out: GainNode; at: number } | null {

@@ -12,6 +12,7 @@ import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { setTracked, setWaypoint, trackedQuest, waypoint } from './track.ts';
+import { EN as EASE_EN, RU as EASE_RU } from '../lang/ui/ease.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { dec1 } from './dom.ts';
 import { commonLog, dailyLog } from './daily.ts';
@@ -32,6 +33,7 @@ const LI = dict(IEN, IRU);
 const LS = dict(SEN, SRU);
 const RL = dict(REN, RRU);
 const DL = dict(DEN, DRU);
+const EL = dict(EASE_EN, EASE_RU);
 
 type Intel = NonNullable<ClientState['self']>['intel'][number];
 
@@ -209,6 +211,9 @@ export class WorldMap {
     return tasksLog(state, true);
   }
 
+  /** Set by the shell: auto-sail to her mark (docs/16 #36). */
+  onAutosail: ((wp: { x: number; y: number }) => void) | null = null;
+
   /** Set by the shell: a message to the server (sharing a quest with the group). */
   send: ((m: ClientMsg) => void) | null = null;
 
@@ -216,7 +221,7 @@ export class WorldMap {
     const tracked = trackedQuest(state.self?.quests)?.id;
     const inGroup = (state.party?.members.length ?? 0) > 1;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
-      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button>
+      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><div class="map-wp-acts">${this.onAutosail ? `<button class="btn btn-small btn-primary map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" title="${esc(EL('as_goTitle'))}">⛵ ${esc(EL('as_go'))}</button>` : ''}<button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button></div>
       <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span>${socialLegend()}</div></details></div>
       <div class="map-logs">${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
@@ -278,7 +283,16 @@ export class WorldMap {
     // A tap (not a pan, not a pinch) sets her mark, or takes it off when it lands on the mark.
     let tap: { id: number; x: number; y: number; t: number } | null = null;
     const clearBtn = root.querySelector<HTMLElement>('.map-wp-clear')!;
-    const showClear = () => clearBtn.classList.toggle('hidden', !waypoint());
+    const sailBtn = root.querySelector<HTMLElement>('.map-wp-sail');
+    const showClear = () => {
+      clearBtn.classList.toggle('hidden', !waypoint());
+      sailBtn?.classList.toggle('hidden', !waypoint() || !!state.self?.dockedAt);
+    };
+    // docs/16 #36: the helmsman takes her to the mark.
+    if (sailBtn) sailBtn.onclick = () => {
+      const wp = waypoint();
+      if (wp) this.onAutosail?.(wp);
+    };
     clearBtn.onclick = () => {
       setWaypoint(null);
       showClear();

@@ -118,8 +118,18 @@ export function cbColor(mode: Colorblind, hex: string): string {
 
 // ------------------------------------------------------------------ the options
 
+/** The interface's density (docs/16 #40): one scale on the HUD, most felt on a phone. */
+export type Density = 'compact' | 'normal' | 'large';
+export const DENSITIES: readonly Density[] = ['compact', 'normal', 'large'];
+export const DENSITY_SCALE: Record<Density, number> = { compact: 0.86, normal: 1, large: 1.14 };
+
 export interface Settings {
   uiScale: number; // 0.7–2
+  density: Density;
+  /** A line the first time the captain meets each of the sea's mechanics (docs/16 #37). */
+  firstHints: boolean;
+  /** The ship's own voice (docs/16 #39): the watch bell, the lookout's cry, the timbers on a hard turn. */
+  shipVoices: boolean;
   textScale: number; // 0.9–1.5
   /** How solid the HUD's panels are (0.3–1): the sea shows through them. */
   hudAlpha: number;
@@ -143,7 +153,7 @@ export interface Settings {
 
 export function defaults(): Settings {
   return {
-    uiScale: 1, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
+    uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
     plainTerms: false, classicBoarding: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
@@ -161,6 +171,9 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   s.textScale = Math.min(1.5, Math.max(0.9, Number(s.textScale) || 1));
   s.hudAlpha = Math.min(1, Math.max(0.3, Number(s.hudAlpha) || 0.65));
   if (!['off', 'protan', 'deutan', 'tritan'].includes(s.colorblind)) s.colorblind = 'off';
+  if (!DENSITIES.includes(s.density)) s.density = 'normal';
+  s.firstHints = s.firstHints !== false;
+  s.shipVoices = s.shipVoices !== false;
   for (const k of ['master', 'sea', 'combat', 'ui', 'music'] as const) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
   return s;
 }
@@ -207,6 +220,7 @@ export function applyToDocument(s: Settings): void {
   if (!globalThis.document) return;
   const root = document.documentElement;
   root.style.setProperty('--ui-scale', String(s.uiScale));
+  root.style.setProperty('--density', String(DENSITY_SCALE[s.density]));
   root.style.setProperty('--text-scale', String(s.textScale));
   root.style.setProperty('--hud-a', String(s.hudAlpha));
   const b = document.body.classList;
@@ -214,4 +228,5 @@ export function applyToDocument(s: Settings): void {
   b.toggle('plain-font', s.plainFont);
   b.toggle('reduce-motion', s.reduceMotion);
   for (const m of ['protan', 'deutan', 'tritan']) b.toggle(`cb-${m}`, s.colorblind === m);
+  for (const d of DENSITIES) b.toggle(`dens-${d}`, s.density === d);
 }

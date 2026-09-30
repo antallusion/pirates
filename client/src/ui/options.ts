@@ -2,7 +2,7 @@
 
 import { lang, setLang, t } from '../i18n.ts';
 import type { Key, Lang } from '../i18n.ts';
-import { ACTIONS, conflicts, keyLabel, keyOf, PRESETS, settings, update } from '../settings.ts';
+import { ACTIONS, DENSITIES, conflicts, keyLabel, keyOf, PRESETS, settings, update } from '../settings.ts';
 import type { Action, Colorblind, Settings } from '../settings.ts';
 import { esc, icon } from './dom.ts';
 
@@ -101,8 +101,9 @@ export class OptionsScreen {
     switch (this.tab) {
       case 'ui':
         return `<label class="opt-range sel"><span class="opt-l">${icon('opt_lang', '', 'ico-sm')}${esc(t('opt.lang'))}</span><select data-sel="lang" class="field">${(['en', 'ru'] as Lang[]).map((l) => `<option value="${l}" ${lang() === l ? 'selected' : ''}>${l === 'en' ? 'English' : 'Русский'}</option>`).join('')}</select></label>
+          <label class="opt-range sel"><span class="opt-l">${esc(t('opt.density'))}</span><select data-sel="density" class="field">${DENSITIES.map((d) => `<option value="${d}" ${s.density === d ? 'selected' : ''}>${esc(t(`opt.dens.${d}` as Key))}</option>`).join('')}</select></label>
           ${range('uiScale', 'opt.uiScale', 0.7, 2)}${range('textScale', 'opt.textScale', 0.9, 1.5)}${range('hudAlpha', 'opt.hudAlpha', 0.3, 1)}
-          ${check('highContrast', 'opt.highContrast')}${check('plainFont', 'opt.plainFont')}${check('plainTerms', 'opt.plainTerms')}${check('classicBoarding', 'opt.classicBoarding')}
+          ${check('highContrast', 'opt.highContrast')}${check('plainFont', 'opt.plainFont')}${check('plainTerms', 'opt.plainTerms')}${check('classicBoarding', 'opt.classicBoarding')}${check('firstHints', 'opt.firstHints')}
           <p class="muted">${esc(t('opt.readAloud', { key: keyLabel(s.keys.readAloud[0] || s.keys.readAloud[1]) }))}</p>`;
       case 'vision':
         return `<label class="opt-range sel"><span class="opt-l">${esc(t('opt.colorblind'))}</span><select data-sel="colorblind" class="field">${(['off', 'protan', 'deutan', 'tritan'] as Colorblind[]).map((c) => `<option value="${c}" ${s.colorblind === c ? 'selected' : ''}>${esc(t(`opt.cb.${c}` as Key))}</option>`).join('')}</select></label>
@@ -110,7 +111,7 @@ export class OptionsScreen {
           <label class="opt-range sel"><span class="opt-l">${esc(t('opt.effects'))}</span><select data-sel="effects" class="field"><option value="auto" ${s.effects === 'auto' ? 'selected' : ''}>${esc(t('opt.effects.auto'))}</option><option value="low" ${s.effects === 'low' ? 'selected' : ''}>${esc(t('opt.effects.low'))}</option></select></label>
           ${check('webgl', 'opt.webgl')}`;
       case 'sound':
-        return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}`;
+        return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('shipVoices', 'opt.shipVoices')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}`;
       case 'controls': {
         const clash = conflicts(s.keys);
         const bad = new Set([...clash.keys()]);
