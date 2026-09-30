@@ -448,10 +448,16 @@ export interface WoundRates {
   diePerMin: number;
 }
 
+/** Men the surgeons can put back on their feet a minute (however many lie below). */
+export function healRate(surgeons: number, medicine: boolean, surgeonLevel = 0): number {
+  const s = Math.min(5, surgeons);
+  return (s > 0 ? HEAL_SURGEON + HEAL_PER_SURGEON * (s - 1) : HEAL_NO_SURGEON) * (medicine ? HEAL_MEDICINE_MUL : 1) * (1 + 0.1 * surgeonLevel);
+}
+
 /** How fast her wounded come back and how many die, a minute, for this many wounded. */
 export function woundRates(wounded: number, surgeons: number, medicine: boolean, surgeonLevel = 0): WoundRates {
   const s = Math.min(5, surgeons);
-  const heal = (s > 0 ? HEAL_SURGEON + HEAL_PER_SURGEON * (s - 1) : HEAL_NO_SURGEON) * (medicine ? HEAL_MEDICINE_MUL : 1) * (1 + 0.1 * surgeonLevel);
+  const heal = healRate(surgeons, medicine, surgeonLevel);
   const die = s > 0 ? (medicine ? 0 : DIE_SURGEON) : medicine ? DIE_MEDICINE : DIE_ALONE;
   return { healPerMin: Math.min(wounded, heal), diePerMin: wounded * die };
 }

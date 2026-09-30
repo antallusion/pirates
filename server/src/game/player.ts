@@ -696,7 +696,7 @@ function companyView(p: Profile, ship: ShipEntity | null, now: number): PrivateS
     mutiny: c.mutiny ? { ringleader: c.mutiny.ringleader, mutineers: c.mutiny.mutineers, payCost: mutinyPayCost(c), left: Math.max(0, Math.round(MUTINY_TIMEOUT - (now - c.mutiny.at))) } : null,
     practice: Object.fromEntries(Object.entries(c.practice ?? {}).map(([k, v]) => [k, Math.floor(v)])) as Record<Profession, number>,
     wounded: woundedView(p, ship),
-    mood: moodOf(ship),
+    mood: moodOf(ship, now),
     shantyUntil: Math.round(ship?.effects.find((e) => e.id === 'shanty')?.until ?? 0),
   };
 }

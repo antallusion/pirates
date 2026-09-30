@@ -8,7 +8,7 @@
 
 import {
   GRUMBLES, GRUMBLE_BELOW, GRUMBLE_EVERY, HEAL_AFTER, HEALED_PER_MEDICINE, PRACTICE_GAIN, SHANTIES, SHANTY_AT, SHANTY_EVERY, SHANTY_MODS, SHANTY_TIME,
-  TALK, TALK_EVENT_GAP, TALK_GAP, TALK_PREFERS, WOUNDED_BASE, WOUNDED_MAX, practiceLevel, woundRates,
+  TALK, TALK_EVENT_GAP, TALK_GAP, TALK_PREFERS, WOUNDED_BASE, WOUNDED_MAX, healRate, practiceLevel, woundRates,
 } from '../../../shared/src/data/crewtalk.ts';
 import type { TalkEvent } from '../../../shared/src/data/crewtalk.ts';
 import type { Officer, Profession } from '../../../shared/src/data/crew.ts';
@@ -47,8 +47,6 @@ interface LifeState {
   highSince: number;
   fighting: boolean;
   fightDead: number;
-  fightWounded: number;
-  woundBase: number;
   woundAt: number;
   healedToast: number;
   healedAt: number;
@@ -70,7 +68,7 @@ function life(s: PlayerSession): LifeState {
   if (!st) {
     st = {
       lastAt: -Infinity, evAt: {}, lastLine: new Map(), weather: '', region: '', hungry: false, hungerAt: 0, low: false, bosses: new Set(), merchants: new Set(),
-      lastHull: -1, grumbleAt: 0, shantyAt: 0, highSince: -1, fighting: false, fightDead: 0, fightWounded: 0, woundBase: 0, woundAt: -Infinity, healedToast: 0, healedAt: 0, restored: false,
+      lastHull: -1, grumbleAt: 0, shantyAt: 0, highSince: -1, fighting: false, fightDead: 0, woundAt: -Infinity, healedToast: 0, healedAt: 0, restored: false,
     };
     lives.set(s, st);
   }
@@ -166,6 +164,7 @@ export function playerWounded(target: ShipEntity, killed: number): number {
   target.woundCarry += killed * share;
   const n = Math.floor(target.woundCarry);
   target.woundCarry -= n;
+  target.woundedTally += n;
   return n;
 }
 
@@ -209,16 +208,16 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
   const med = (ship.cargo.medicine ?? 0) >= 1;
   const r = woundRates(ship.wounded, surgeons, med, practiceLevel(c.practice.surgeon ?? 0));
   const acc = c.woundAcc;
-  acc.heal += (r.healPerMin * dt) / 60;
-  let healed = Math.min(Math.floor(acc.heal), ship.wounded, room);
-  acc.heal -= Math.floor(acc.heal);
+  acc.heal += (healRate(surgeons, med, practiceLevel(c.practice.surgeon ?? 0)) * dt) / 60;
+  let healed = Math.min(Math.floor(acc.heal + 1e-9), ship.wounded, room);
+  acc.heal -= Math.floor(acc.heal + 1e-9);
   if (healed > 0) {
     ship.crew += healed;
     ship.wounded -= healed;
     if (surgeons > 0) practise(game, s, 'surgeon', healed * PRACTICE_GAIN.healed);
     if (med) {
       acc.med += healed / HEALED_PER_MEDICINE;
-      const used = Math.floor(acc.med);
+      const used = Math.floor(acc.med + 1e-9);
       if (used > 0) {
         acc.med -= used;
         ship.cargo.medicine = Math.max(0, (ship.cargo.medicine ?? 0) - used);
@@ -228,8 +227,8 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
     st.healedToast += healed;
   } else healed = 0;
   acc.die += (r.diePerMin * dt) / 60;
-  const died = Math.min(Math.floor(acc.die), ship.wounded);
-  acc.die -= Math.floor(acc.die);
+  const died = Math.min(Math.floor(acc.die + 1e-9), ship.wounded);
+  acc.die -= Math.floor(acc.die + 1e-9);
   if (died > 0) {
     ship.wounded -= died;
     ship.crewDeaths += died; // the dead weigh on the living (crew.ts)
@@ -268,16 +267,15 @@ export function stepCrewLife(game: Game, s: PlayerSession): void {
   // The fight's toll, into the log when the guns fall silent.
   const fighting = ship.inCombat(now);
   if (fighting) {
-    if (!st.fighting) st.woundBase = ship.wounded;
     st.fightDead += ship.crewDeaths;
-    st.fightWounded = Math.max(st.fightWounded, ship.wounded - st.woundBase);
     st.fighting = true;
   } else if (st.fighting) {
     st.fighting = false;
-    const dead = Math.max(0, st.fightDead - st.fightWounded);
-    if (dead > 0 || st.fightWounded > 0) logNote(game, s, 'crew_lost', [game.nearestIslandName(ship.state.x, ship.state.y), String(st.fightWounded)], dead);
+    const hurt = ship.woundedTally;
+    const dead = Math.max(0, st.fightDead - hurt);
+    if (dead > 0 || hurt > 0) logNote(game, s, 'crew_lost', [game.nearestIslandName(ship.state.x, ship.state.y), String(hurt)], dead);
     st.fightDead = 0;
-    st.fightWounded = 0;
+    ship.woundedTally = 0;
   }
   if (ship.docked) {
     st.hungry = false;
@@ -319,7 +317,7 @@ export function stepCrewLife(game: Game, s: PlayerSession): void {
   const high = ship.morale >= SHANTY_AT && !fighting && now - ship.lastCombat > 90;
   if (!high) st.highSince = -1;
   else if (st.highSince < 0) st.highSince = now;
-  if (high && now - st.highSince >= 30 && now >= st.shantyAt && !ship.hasEffect('shanty')) {
+  if (high && now - st.highSince >= 30 && now >= st.shantyAt && !singing(ship, now)) {
     ship.addEffect({ id: 'shanty', until: now + SHANTY_TIME, mods: { ...SHANTY_MODS } }, now);
     st.shantyAt = now + SHANTY_EVERY;
     crewSays(game, s, 'shanty');
@@ -357,10 +355,15 @@ export function stepCrewLife(game: Game, s: PlayerSession): void {
   void c;
 }
 
+/** The shanty's lift still on. */
+export function singing(ship: ShipEntity, now: number): boolean {
+  return ship.effects.some((e) => e.id === 'shanty' && e.until > now);
+}
+
 /** The men's mood as the screens show it. */
-export function moodOf(ship: ShipEntity | null): 'grumble' | 'shanty' | null {
+export function moodOf(ship: ShipEntity | null, now: number): 'grumble' | 'shanty' | null {
   if (!ship || ship.docked) return null;
-  if (ship.hasEffect('shanty')) return 'shanty';
+  if (singing(ship, now)) return 'shanty';
   return ship.morale < GRUMBLE_BELOW ? 'grumble' : null;
 }
 
