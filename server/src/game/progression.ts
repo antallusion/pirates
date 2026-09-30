@@ -186,7 +186,7 @@ export function checkStatDeeds(game: Game, s: PlayerSession): void {
 
 /** Whispering Chart: called when islands are charted. */
 export function checkChartDeed(game: Game, s: PlayerSession): void {
-  const islands = game.world.islands.filter((i) => i.region === 'whispering');
+  const islands = game.world.islands.filter((i) => i.region === 'whispering' && !i.minor);
   if (!islands.length) return;
   let known = 0;
   for (const i of islands) if (s.discovered.has(i.id)) known++;

@@ -666,7 +666,7 @@ function coveHidden(game: Game, islandId: number, accountId: number): boolean {
 
 function chartForRegion(game: Game, s: PlayerSession, port: Port, region: RegionId): Island[] {
   return game.world.islands
-    .filter((is) => is.region === region && !s.discovered.has(is.id) && !coveHidden(game, is.id, s.accountId))
+    .filter((is) => is.region === region && !is.minor && !s.discovered.has(is.id) && !coveHidden(game, is.id, s.accountId))
     .sort((a, b) => dist(a.x, a.y, port.x, port.y) - dist(b.x, b.y, port.x, port.y))
     .slice(0, 15);
 }

@@ -426,7 +426,7 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
 export function poiRumor(game: Game, s: PlayerSession, port: Port): string | null {
   const p = s.profile!;
   const candidates = game.world.islands
-    .filter((is) => !is.portId && dist(is.x, is.y, port.x, port.y) < 22000)
+    .filter((is) => !is.portId && !is.minor && dist(is.x, is.y, port.x, port.y) < 22000)
     .flatMap((is) => is.features.filter((f) => LANDABLE.includes(f as LandableFeature)).map((f) => ({ is, f: f as LandableFeature })))
     .filter(({ is, f }) => game.now - (p.explored[exploredKey(is.id, f)] ?? -Infinity) >= RESTOCK_SEC);
   if (!candidates.length) return null;

@@ -472,7 +472,7 @@ export function stepExplorer(game: Game, s: PlayerSession): void {
 export function regionCharted(game: Game, s: PlayerSession, region: RegionId): boolean {
   const cache = s.chartedCache;
   if (cache.region === region && cache.size === s.discovered.size) return cache.full;
-  const isl = game.world.islands.filter((i) => i.region === region);
+  const isl = game.world.islands.filter((i) => i.region === region && !i.minor); // the stacks are not charted (docs/16 P3)
   const full = isl.length > 0 && isl.every((i) => s.discovered.has(i.id));
   s.chartedCache = { region, size: s.discovered.size, full };
   return full;

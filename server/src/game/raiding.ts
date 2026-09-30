@@ -8,7 +8,8 @@ import { questEvent } from './quests.ts';
 import { BRETHREN_RANKS, CODE_RANK, CONVOY_EVERY, DEED_CONVOYS, FAME, HEAT, MORALE_RANK, TERROR_TITLE, TIP_WINDOW, TITLE_RANK, TRIBUTE, brethrenRank, clerkCost, heatPrices, tipCost } from '../../../shared/src/data/raiding.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { hullsFor, watersBand } from '../../../shared/src/data/shiplevel.ts';
+import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
+import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { dist, headingOf } from '../../../shared/src/math.ts';
 import type { AppraisalView, RaidView, TipView } from '../../../shared/src/protocol.ts';
@@ -199,7 +200,7 @@ function tipsFor(game: Game, port: Port): Tip[] {
       const dest = rng.pick(to);
       const goods = (['spices', 'sugar', 'tobacco', 'cloth', 'pearls', 'medicine', 'weapons', 'rum', 'whale_oil'] as GoodId[]);
       const good = rng.pick(goods);
-      const band = watersBand(REGIONS[port.region].safety, port.region === 'the_abyss');
+      const band = sectorAt(game.world, port.x, port.y).band; // her port's square of the sea (docs/16 P2)
       const level = rng.int(band[0], band[1]);
       const hulls = hullsFor('merchant', level);
       const cls = hulls.includes('fluyt') ? 'fluyt' : rng.pick(hulls);
@@ -305,7 +306,7 @@ export function sailConvoy(game: Game, region: RegionId): Convoy | null {
   const to = S.rng.pick(tos);
   const path = game.routes.between(from, to);
   if (!path) return null;
-  const band = watersBand(REGIONS[region].safety);
+  const band = sectorAt(game.world, from.x, from.y).band; // her port's square of the sea (docs/16 P2)
   const level = S.rng.int(band[0], band[1]);
   const cls: ShipClassId = level >= 7 ? 'galleon' : 'fluyt';
   const n = S.rng.int(3, 6);

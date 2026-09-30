@@ -1315,6 +1315,7 @@ export class Game {
   nearestIslandName(x: number, y: number): string {
     let best: Island | null = null, bd = Infinity;
     for (const is of this.world.islands) {
+      if (is.minor) continue; // named after a proper island, not a sea stack (docs/16 P3)
       const d = dist(is.x, is.y, x, y);
       if (d < bd) {
         bd = d;
@@ -2244,6 +2245,7 @@ export class Game {
         for (const id of list) {
           if (s.discovered.has(id)) continue;
           const is = this.world.islands[id];
+          if (is.minor) continue; // a sea stack is seen, not charted (docs/16 P3)
           if (dist(is.x, is.y, ship.state.x, ship.state.y) > r + is.radius * 0.6) continue;
           this.markDiscovered(s, is);
         }
@@ -2284,7 +2286,7 @@ export class Game {
     if (!s) return 0;
     let n = 0;
     for (const is of this.world.islands) {
-      if (s.discovered.has(is.id)) continue;
+      if (s.discovered.has(is.id) || is.minor) continue;
       if (dist(is.x, is.y, ship.state.x, ship.state.y) > r) continue;
       this.markDiscovered(s, is);
       n++;

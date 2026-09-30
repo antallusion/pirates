@@ -699,7 +699,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'reveal': {
       let n = 0;
       for (const is of game.world.islands) {
-        if (s.discovered.has(is.id)) continue;
+        if (s.discovered.has(is.id) || is.minor) continue;
         game.chartIsland(s, is);
         n++;
       }
