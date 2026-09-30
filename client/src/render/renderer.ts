@@ -3673,7 +3673,9 @@ export class Renderer {
     // Both lines keep inside the screen: the name and, under it, the (often longer) class line.
     const nameW = g.measureText(label).width + badgeW;
     g.font = '10px Inter, sans-serif';
-    const half = Math.max(nameW, g.measureText(tag).width) / 2 + 6;
+    const lfText = info.isPlayer ? lfgLabel(info.lfg) : null;
+    const lfW = lfText ? g.measureText(lfText).width + 16 : 0; // her pennant for company (docs/16 #31)
+    const half = Math.max(nameW, g.measureText(tag).width, lfW) / 2 + 6;
     g.font = '600 11px Inter, sans-serif';
     x = clamp(x, half, Math.max(half, this.w - half));
     // Never on another ship's name: step up above it (the Admiral's Eye line makes a taller box).

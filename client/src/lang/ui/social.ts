@@ -25,6 +25,7 @@ export const EN = {
   lf_asks: '{name} asks to join',
   lf_take: 'Take aboard',
   lf_refuse: 'Refuse',
+  lf_legend: 'Looking for company',
   // 32
   wg_title: 'The sea’s goals',
   wg_plate: 'The sea',
@@ -82,9 +83,10 @@ export const EN = {
   sg_help: 'Help',
   sg_regroup: 'Regroup',
   sg_treasure: 'Treasure',
-  sg_toast: '{name}: «{signal}» · {where}',
-  sg_you: 'You hoist «{signal}».',
+  sg_toast: '{name}: “{signal}” · {where}',
+  sg_you: 'You hoist “{signal}”.',
   sg_near: 'alongside',
+  sg_legend: 'A mate’s signal flag',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -110,6 +112,7 @@ export const RU: Record<keyof typeof EN, string> = {
   lf_asks: '{name} просится в компанию',
   lf_take: 'Принять',
   lf_refuse: 'Отказать',
+  lf_legend: 'Ищут компанию',
   wg_title: 'Цели моря',
   wg_plate: 'Цель моря',
   wg_hint: 'Дела всех капитанов заполняют одну шкалу; когда она полна, платят каждому, кто внёс свою долю.',
@@ -166,4 +169,5 @@ export const RU: Record<keyof typeof EN, string> = {
   sg_toast: '{name}: «{signal}» · {where}',
   sg_you: 'Вы подняли сигнал «{signal}».',
   sg_near: 'рядом',
+  sg_legend: 'Сигнал товарища',
 };

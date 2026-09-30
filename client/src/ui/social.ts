@@ -118,6 +118,11 @@ export function lfgLog(state: ClientState): string {
   return `<div class="map-quests map-lfg"><div class="mq-head">${icon('tab_group', '', 'ico-sm')}${esc(L('lf_title'))}</div>${list.slice(0, 6).map((e) => lfgRow(state, e, !grouped, false, true)).join('')}</div>`;
 }
 
+/** The chart's key for the pennants of company and the signal flags. */
+export function socialLegend(): string {
+  return `<span><b style="color:${LFG_GOAL_DEFS.hunt.color};font-weight:400">⚑</b>&nbsp;${esc(L('lf_legend'))}</span><span><b style="color:${SIGNAL_DEFS.help.color};font-weight:400">⚑</b>&nbsp;${esc(L('sg_legend'))}</span>`;
+}
+
 /** An answer card for a captain who asked to join (the leader's side). */
 export function askCard(i: { id: number; from: string }): string {
   return `<div class="card lf-askcard"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${esc(L('lf_asks', { name: i.from }))}</h4><button class="btn btn-primary" data-accept="${i.id}">${esc(L('lf_take'))}</button> <button class="btn" data-decline="${i.id}">${esc(L('lf_refuse'))}</button></div>`;
@@ -199,7 +204,7 @@ export function renderTrade(root: HTMLElement, state: ClientState, send: (m: Cli
   const mineBody = me.locked
     ? `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><b>${money(me.gold)}</b></div>${listCargo(me.cargo)}${(me.items ?? []).map((it) => gearChip(it, false, true)).join('')}${!me.gold && !Object.keys(me.cargo).length && !(me.items ?? []).length ? `<p class="muted">${esc(L('tr_nothing'))}</p>` : ''}`
     : `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><input id="b-gold" class="field" type="number" min="0" value="${me.gold}"></div>
-      ${Object.entries(hold).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(goodName(g as GoodId))} <span class="muted">(${n})</span></span><input class="field" type="number" min="0" max="${n}" value="${me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
+      ${Object.entries(hold).filter(([, n]) => (n ?? 0) >= 1).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(goodName(g as GoodId))} <span class="muted">(${fmt(Math.floor(n ?? 0))})</span></span><input class="field" type="number" min="0" max="${Math.floor(n ?? 0)}" value="${me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
       <div class="tr-sub">${esc(L('tr_gear', { n: TRADE_ITEMS_MAX }))}</div>
       <div class="tr-gears">${stash.length ? stash.map((it) => gearChip(it, true, offered.has(it.uid) || picked.has(it.uid))).join('') : `<p class="muted">${esc(L('tr_no_gear'))}</p>`}</div>
       <button class="btn btn-block" id="b-offer">${esc(L('tr_set'))}</button>`;

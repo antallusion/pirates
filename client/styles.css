@@ -3294,3 +3294,5 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .gy-bld { font-style: normal; font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.05em; }
 .gy-starts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .gy-done { font-size: 12px; margin-top: 6px; }
+/* A phone on its side keeps a short stack: the signal flags ride at its top so a finger always finds them. */
+@media (max-height: 520px) { #hud-stack > #hud-signals { order: -2; } }
