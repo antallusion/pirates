@@ -27,6 +27,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import { depthAt, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { giveGoods } from './director.ts';
+import { renownCatch } from './renown.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
@@ -291,6 +292,7 @@ function landCatch(game: Game, s: PlayerSession, fish: FishId, kg: number, units
   const first = c.best <= 0;
   const best = !first && kg > c.best;
   if (kg > c.best) c.best = Math.round(kg * 10) / 10;
+  renownCatch(game, s, kg); // the week's heaviest catch (docs/16 #27)
   // Every haul is told (not only a fight): what came up, and a best of the kind.
   if (bonus > 0) game.sendTo(s, { t: 'toast', msg: `Fish of the day! ${def.name[0]} ×${got + bonus}`, kind: 'gold' });
   else if (!fought && !quiet) game.sendTo(s, { t: 'toast', msg: `Into the net: ${def.name[0]} ×${got}`, kind: 'good' });

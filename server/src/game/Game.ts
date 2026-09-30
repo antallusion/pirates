@@ -134,6 +134,7 @@ import { EmpireHub, GOVERNOR_PENNANT, empireAction, empireView, governsAny, step
 import { deliver, ensureLegendary, legendaryCalendar, legendarySecond, legendarySunk, legendWreckHere, raiseLegend } from './legendary.ts';
 import { LEGENDARY } from '../../../shared/src/data/legendary.ts';
 import type { LegendaryId } from '../../../shared/src/data/legendary.ts';
+import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown, stepRenown } from './renown.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
 import type { AbyssMap } from './abyss.ts';
@@ -782,6 +783,7 @@ export class Game {
     if (Math.floor(this.now) % 5 === 0) stepOmens(this); // the omen of the day (docs/12 P10 #9)
     if (Math.floor(this.now) % 5 === 0) stepDutchman(this); // the Flying Dutchman's week (docs/12 P10 #10)
     if (Math.floor(this.now) % 30 === 0) stepFates(this); // the officers' requests and loves (docs/12 P10 #11)
+    if (Math.floor(this.now) % 5 === 0) stepRenown(this); // careers, the week's challenges, the album, feats (docs/16 #26–29)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -961,6 +963,7 @@ export class Game {
       if (s.ship.distanceLog > 0) {
         s.profile.stats.distance += s.ship.distanceLog;
         seasonStat(this, s, 'distance', s.ship.distanceLog / 1000);
+        renownDistance(this, s, s.ship.distanceLog / 1000); // the week's longest log (docs/16 #27)
         s.ship.distanceLog = 0;
       }
       this.pushSelf(s);
@@ -1771,6 +1774,7 @@ export class Game {
     raidKill(this, s, victim, how); // a merchant raided: the Brethren's fame, the lanes' heat (docs/12 P6)
     if (how === 'sunk') holidayGhostSunk(this, s, victim); // the Night of the Drowned's cursed gifts (docs/12 P10 #18)
     if (victim.npcRole === 'beast' && victim.cls.tier >= 3) sagaNote(this, s, 'beast', [victim.name, this.nearestIslandName(victim.state.x, victim.state.y)]); // the saga (docs/12 P10 #20)
+    renownKill(this, s, victim, how); // careers, feats, the week's pirates and prizes (docs/16 #26–29)
     serviceKill(this, s, victim, how); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
@@ -3028,6 +3032,10 @@ export class Game {
       case 'season':
         err(seasonAction(this, s, String(msg.action), msg.value, msg.islandId !== undefined ? Number(msg.islandId) : undefined));
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
+        if (msg.action === 'title') {
+          sendRenown(this, s, true);
+          this.pushSelf(s, true);
+        }
         return;
       case 'empire':
         if (msg.action !== 'view') err(empireAction(this, s, port, msg));
@@ -3035,6 +3043,12 @@ export class Game {
         return;
       case 'legends':
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
+        return;
+      case 'renown':
+        sendRenown(this, s, true);
+        return;
+      case 'away':
+        if (msg.action === 'take') err(awayTake(this, s));
         return;
       case 'abyss':
         err(raisingRitual(this, s));
@@ -3490,6 +3504,7 @@ export class Game {
   }
 
   private sendInit(s: PlayerSession): void {
+    const away = awayReturn(this, s); // back after a long time ashore (docs/16 #30)
     restReturn(this, s);
     commonCollect(this, s);
     guildGoalCollect(this, s);
@@ -3525,6 +3540,8 @@ export class Game {
     pushFriends(this, s);
     mailOnLogin(this, s);
     this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
+    sendRenown(this, s, true);
+    if (away) this.sendTo(s, { t: 'away', view: away });
   }
 
   private onDisconnect(s: PlayerSession): void {
@@ -3534,6 +3551,7 @@ export class Game {
     // Rest ashore begins (docs/11 P6): full in port, a quarter at sea.
     if (s.profile) {
       s.profile.ashoreAt = this.wallNow();
+      awayMark(this, s); // what happens while she is away is told when she is back (docs/16 #30)
       s.profile.ashoreInPort = !!s.ship?.docked;
     }
     const barter = this.social.barters.get(s.accountId);

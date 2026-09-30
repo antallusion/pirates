@@ -3058,3 +3058,61 @@ body.tac #toasts { top: 22%; }
 .captain-log .lg-list li span { overflow-wrap: anywhere; }
 .captain-log .lg-tally { margin-top: 6px; font-size: 12px; color: var(--brass); letter-spacing: 0.02em; }
 .sp-wounded .lbl { display: inline-flex; align-items: center; gap: 3px; }
+
+/* docs/16 Batch F — careers, titles for feats, the album, the week's challenges, the welcome back. */
+.rn-sub { margin: 0 0 8px; font-size: 12px; }
+.rn-careers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 8px; }
+.rn-careers .card { margin: 0; }
+.rn-career .rn-rank { font: 600 17px/1.2 var(--display); color: var(--gold); margin: 2px 0 4px; }
+.rn-career .rn-pts { font-size: 12px; }
+.rn-career .rn-rep { font-size: 11px; line-height: 1.35; margin: 3px 0 6px; }
+.rn-career .rn-now { font-size: 12px; margin-bottom: 4px; }
+.rn-career .rn-counts { font-size: 11px; line-height: 1.35; margin: 6px 0 0; }
+.rn-bar { height: 6px; background: #1b1512; border: 1px solid rgba(111, 90, 56, 0.8); margin: 3px 0; }
+.rn-bar i { display: block; height: 100%; background: var(--gold); }
+.rn-bar.thin { height: 4px; }
+.rn-ladder { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; }
+.rn-ladder li { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 6px; font-size: 12px; opacity: 0.62; }
+.rn-ladder li.on, .rn-ladder li.next { opacity: 1; }
+.rn-ladder li .muted { grid-column: 2; font-size: 11px; line-height: 1.3; }
+.rn-ladder .rn-mark { grid-row: span 2; width: 18px; height: 18px; border: 1px solid var(--brass, #8c6b3a); border-radius: 50%; display: grid; place-items: center; font-size: 10px; }
+.rn-ladder li.on .rn-mark { background: var(--gold); color: #1a1208; border-color: var(--gold); }
+.rn-ladder li.on b { color: var(--gold); }
+.rn-feats { margin-top: 8px; }
+.rn-title-sel { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; flex-wrap: wrap; }
+.rn-title-sel select { flex: 1 1 180px; max-width: 320px; }
+.rn-feat-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 6px 12px; }
+.rn-feat { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; opacity: 0.8; }
+.rn-feat .ico-md { width: 36px; height: 36px; flex: none; filter: grayscale(0.85) brightness(0.7); }
+.rn-feat.done { opacity: 1; }
+.rn-feat.done .ico-md { filter: none; }
+.rn-feat.done b { color: var(--gold); }
+.rn-feat-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; font-size: 12px; }
+.rn-feat-text .muted { font-size: 11px; line-height: 1.3; }
+.rn-num { font-variant-numeric: tabular-nums; }
+.rn-sets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr)); gap: 8px; }
+.rn-sets .card { margin: 0; }
+.rn-set.done { border-color: var(--gold); }
+.rn-set p { font-size: 12px; margin: 4px 0; }
+.rn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 4px; margin: 6px 0; }
+.rn-piece { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border: 1px solid rgba(140, 107, 58, 0.25); background: #0b0c0e; min-width: 0; }
+.rn-piece .rn-ico { width: 38px; height: 38px; object-fit: contain; filter: grayscale(1) brightness(0.28); }
+.rn-piece.got .rn-ico { filter: none; }
+.rn-piece.got { border-color: rgba(224, 184, 98, 0.55); }
+.rn-piece i { font-style: normal; font-size: 9.5px; line-height: 1.15; text-align: center; color: var(--fog); max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.rn-piece.got i { color: var(--bone); }
+.rn-piece .rn-n { position: absolute; top: 2px; right: 4px; font-size: 10px; color: var(--gold); }
+.rn-reward { color: var(--gold); }
+.jr-weekly .wk-row { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.jr-weekly .wk-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 12px; }
+.jr-weekly .wk-top { margin: 2px 0 0; padding-left: 18px; font-size: 11.5px; }
+.jr-weekly .giver-h .muted { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.away .aw-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 8px; }
+.away .aw-cards .card { margin: 0; }
+.away .aw-line { margin: 3px 0; font-size: 13px; line-height: 1.4; }
+.away .aw-gift { border-color: var(--gold); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.away .aw-gift h4 { flex: 1 0 100%; margin: 0; }
+.away .aw-gift .aw-line { flex: 1 1 220px; }
+.away .aw-acts { display: flex; justify-content: flex-end; margin-top: 8px; }
+.uf-name .uf-title { display: block; font: italic 11px/1.1 var(--sans); color: var(--gold); overflow: hidden; text-overflow: ellipsis; }
+.tg .tg-title { color: var(--gold); font-style: italic; }

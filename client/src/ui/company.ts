@@ -35,6 +35,7 @@ import { ask } from './confirm.ts';
 import { buildIcon, esc, fmt, icon, money, outpostIcon } from './dom.ts';
 import { placeName } from './maps.ts';
 import { skippersCard } from './turncoats.ts';
+import { renderAlbum, renderCareer, renownTab } from './renown.ts';
 
 const L = dict(EN, RU);
 /** A name or sentence the server built, in the player's language. */
@@ -43,7 +44,7 @@ const dayW = (n: number) => plural(n, L('day_one'), L('day_few'), L('day_many'))
 const hourW = (n: number) => plural(n, L('hour_one'), L('hour_few'), L('hour_many'));
 const slotW = (n: number) => plural(n, L('slot_one'), L('slot_few'), L('slot_many'));
 
-export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles' | 'legends' | 'empires';
+export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles' | 'legends' | 'empires' | 'career' | 'album';
 
 const ago = (ms: number) => {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
@@ -88,10 +89,10 @@ export class CompanyScreen {
     const docked = state.self?.dockedAt ?? null;
     if (this.tab !== 'letters') this.mailTo = '';
     if (this.tab === 'market' && !docked) this.tab = 'group';
-    const TAB_ICON: Record<CompanyTab, string> = { group: 'tab_group', guild: 'tab_guild', law: 'tab_law', letters: 'tab_letters', isles: 'tab_isles', empires: 'tab_empire', legends: 'tab_legends', market: 'tab_board' };
-    const tabName = (t: CompanyTab) => t === 'group' ? L('tab_group') : t === 'law' ? L('tab_law') : t === 'isles' ? L('tab_isles') : t === 'legends' ? L('tab_legends') : t === 'empires' ? L('tab_empires') : t === 'guild' ? (state.guild ? L('tab_guild_tag', { tag: esc(state.guild.tag) }) : L('tab_guild')) : t === 'letters' ? L('tab_letters') : state.market?.auction ? L('tab_market_auction') : L('tab_market');
+    const TAB_ICON: Record<CompanyTab, string> = { group: 'tab_group', guild: 'tab_guild', law: 'tab_law', letters: 'tab_letters', isles: 'tab_isles', empires: 'tab_empire', legends: 'tab_legends', market: 'tab_board', career: 'service_crown', album: 'tattoo_compass_rose' };
+    const tabName = (t: CompanyTab) => t === 'career' || t === 'album' ? renownTab(t) : t === 'group' ? L('tab_group') : t === 'law' ? L('tab_law') : t === 'isles' ? L('tab_isles') : t === 'legends' ? L('tab_legends') : t === 'empires' ? L('tab_empires') : t === 'guild' ? (state.guild ? L('tab_guild_tag', { tag: esc(state.guild.tag) }) : L('tab_guild')) : t === 'letters' ? L('tab_letters') : state.market?.auction ? L('tab_market_auction') : L('tab_market');
     const badge = (t: CompanyTab) => t === 'law' ? state.self?.pvp.challenges.length ?? 0 : t === 'guild' ? state.guildInvites.length : t === 'letters' ? state.unread : 0;
-    const shown = (['group', 'guild', 'law', 'letters', 'isles', 'empires', 'legends', 'market'] as CompanyTab[]).filter((t) => t !== 'market' || docked);
+    const shown = (['group', 'guild', 'law', 'letters', 'isles', 'empires', 'career', 'album', 'legends', 'market'] as CompanyTab[]).filter((t) => t !== 'market' || docked);
     const tabs = shown.map((t) => `<button class="tab ${this.tab === t ? 'active' : ''}" data-tab="${t}" title="${tabName(t)}">${icon(TAB_ICON[t])}<span>${tabName(t)}</span>${badge(t) ? `<i class="tab-badge">${badge(t)}</i>` : ''}</button>`).join('');
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2></div><div class="muted">${L('close_hint')}</div></div>
       <div class="tabs icon-tabs company-tabs" style="--n:${shown.length}">${tabs}</div><div class="tab-caption">${tabName(this.tab)}</div>
@@ -104,10 +105,13 @@ export class CompanyScreen {
     else if (this.tab === 'guild') this.renderGuild(body, state);
     else if (this.tab === 'legends') this.renderLegends(body, state);
     else if (this.tab === 'empires') this.renderEmpires(body, state);
+    else if (this.tab === 'career') renderCareer(body, state, this.send);
+    else if (this.tab === 'album') renderAlbum(body, state, this.send);
     else this.renderMarket(body, state);
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
       if (el.dataset.tab === 'legends') this.send({ t: 'legends' });
       if (el.dataset.tab === 'empires') this.send({ t: 'empire', action: 'view' });
+      if (el.dataset.tab === 'career' || el.dataset.tab === 'album') this.send({ t: 'renown' });
       this.tab = el.dataset.tab as CompanyTab;
       if (this.tab === 'market') this.send({ t: 'market', action: 'list' });
       if (this.tab === 'letters') this.send({ t: 'mail', action: 'list' });

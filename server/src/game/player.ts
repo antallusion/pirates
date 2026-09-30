@@ -68,6 +68,7 @@ import type { SkipperTrait } from '../../../shared/src/data/turncoats.ts';
 import type { OfficerRole, TraitId } from '../../../shared/src/data/crew.ts';
 import type { SagaEntry } from '../../../shared/src/data/saga.ts';
 import type { LogEntry } from '../../../shared/src/data/captainlog.ts';
+import type { RenownProfile } from './renown.ts';
 
 export interface Profile {
   version: 1;
@@ -251,6 +252,8 @@ export interface Profile {
     hotRun: Contract | null;
   };
   createdAt: number;
+  /** docs/16 Batch F: careers, feats, the album, the week's titles, the welcome back (renown.ts). */
+  renown?: RenownProfile;
   /** docs/16 Batch C: the merchants' runs, the whispers paid for, the auction's pieces waiting for room. */
   dealings?: Dealings;
 }
@@ -452,6 +455,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
   return {
     accountId: s.accountId,
     name: s.name,
+    title: p.title,
     pvp: world.pvp ?? { blackFlag: p.pvp.blackFlag, pennant: false, pennantHoursLeft: 0, shameUntil: p.pvp.shameUntil, bubbleUntil: p.pvp.bubbleUntil, rating: p.pvp.rating, duels: p.pvp.duels, duelWins: p.pvp.duelWins, bounty: 0, hunter: false, sunkBy: [], challenges: [] },
     captain: p.captain,
     level: p.level,
