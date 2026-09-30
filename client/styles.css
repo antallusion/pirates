@@ -2740,3 +2740,10 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 #hud-chat .chat-emo-btn { flex: none; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(111, 90, 56, 0.55); border-radius: 3px; cursor: pointer; }
 #hud-chat .chat-emo-btn .ico-sm { width: 20px; height: 20px; margin: 0; vertical-align: 0; }
 #hud-chat .chat-send { flex: none; height: 32px; padding: 0 10px; white-space: nowrap; }
+/* A phone held upright: the open sheet spans the width, so its button steps aside (the × folds it). */
+@media (max-width: 699px) and (min-height: 521px) { body.chat-open #hud-chat .chat-toggle { display: none; } }
+/* A tablet: the stack (and the chat in its place) starts clear of the unit frame's lowest line. */
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
+  #hud #hud-stack { top: calc(var(--sa-t) + var(--uf-p) + 62px); }
+  #hud-chat #chat { top: calc(var(--sa-t) + var(--uf-p) + 62px); }
+}

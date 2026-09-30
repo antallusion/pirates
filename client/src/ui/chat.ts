@@ -90,7 +90,8 @@ export class ChatPanel {
   onSend: () => void = () => {};
 
   constructor() {
-    this.toggleBtn.onclick = () => (this.isOpen ? this.close() : this.open(true));
+    // A phone's keyboard comes up only when the field is touched: the button just opens the log.
+    this.toggleBtn.onclick = () => (this.isOpen ? this.close() : this.open(!document.body.classList.contains('touch')));
     document.getElementById('chat-close')!.onclick = () => this.close();
     const send = document.getElementById('chat-send')!;
     send.addEventListener('pointerdown', (e) => e.preventDefault()); // a phone keeps its keyboard up

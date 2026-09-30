@@ -603,6 +603,8 @@ export class WorldMap {
     // Her own mark: a dashed course from the ship, a gold pennant on a pole in a pulsing ring, and the range.
     const wp = waypoint();
     const own = state.ownDisplay;
+    // Reached while the chart is open: its button goes too.
+    c.parentElement?.querySelector('.map-wp-clear')?.classList.toggle('hidden', !wp);
     if (wp) {
       const x = tx(wp.x), y = ty(wp.y);
       if (own) {
