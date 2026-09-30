@@ -18,6 +18,9 @@ import { ISLE_POWER, OWN_SHIPS_MAX, POWER_CREW, SHIP_POWER, XP_FIGHT, XP_FIGHT_L
 import type { OwnRole } from '../../shared/src/data/baseships.ts';
 import { AWAY_MUL, ISLE_RAID_MIN, LOSS_DAY_CAP, RAID_COOLDOWN_H, RAID_LOSS, WATERS, isleDefence, isleTax, raidOdds, raidPrize, raidStrength } from '../../shared/src/data/baseclaim.ts';
 import type { Waters } from '../../shared/src/data/baseclaim.ts';
+import { HALL_INCOME, townCost } from '../../shared/src/data/town.ts';
+import type { TownId } from '../../shared/src/data/town.ts';
+import { DAY_LENGTH_SEC } from '../../shared/src/constants.ts';
 import type { IslandBiome } from '../../shared/src/world/regions.ts';
 
 // ------------------------------------------------------------------------------------------------ the sea's hour
@@ -50,6 +53,9 @@ export interface Plan {
   /** Finish the builders' work with silver whenever the island's purse allows. */
   rush: boolean;
   days: number;
+  /** docs/17 H3: she raises the town hall (and the keep a capitol asks) as the island allows, and its silver comes in
+   *  every dawn of the sea's calendar (thirty a real day). */
+  town?: boolean;
 }
 
 export const NORMAL: Plan = { biome: 'temperate', size: 'small', waters: 'safe', hours: 3, share: 0.5, shipLevel: 4, shipEvery: 5, tokens: 5, rush: false, days: 90 };
@@ -69,6 +75,8 @@ export interface SimResult {
   /** The week's tax at each level. */
   taxAt: number[];
   power: number;
+  /** docs/17 H3: the town hall's silver over the run. */
+  townIncome?: number;
   things: Thing[];
   ships: Ship[];
 }
@@ -86,6 +94,7 @@ export function simulate(plan: Plan = NORMAL): SimResult {
   const jobs: Job[] = [];
   let level = 1;
   let purse = 0; // the island's share of her silver, not yet spent
+  let hall = 0, townIncome = 0; // docs/17 H3: the town hall's level and its silver
   let treasury = 0;
   let tokens = 0;
   const spent = { build: 0, speedup: 0, treasury: 0, goods: 0, upkeep: 0, tax: 0 };
@@ -286,6 +295,21 @@ export function simulate(plan: Plan = NORMAL): SimResult {
     const dt = t - lastProd;
     lastProd = t;
     for (const g of BASE_RES) res[g] = Math.min(cap(), res[g] + rate(g) * dt);
+    if (hour === 0 && plan.town) {
+      // The town hall (docs/17 H3): each level as soon as the island and the purse allow; a capitol asks a castle.
+      const want = level >= 6 ? 3 : level >= 3 ? 2 : 1;
+      while (hall < want) {
+        const steps: [TownId, number][] = hall === 2 ? [['keep', 1], ['keep', 2], ['keep', 3], ['hall', 3]] : [['hall', hall + 1]];
+        const cost = steps.reduce((a, [id, l]) => a + townCost(id, l).silver + worthOf(townCost(id, l).goods) * BUY, 0);
+        if (purse < cost) break;
+        purse -= cost;
+        spent.build += cost;
+        hall++;
+      }
+      const inc = HALL_INCOME[hall] * (86_400 / DAY_LENGTH_SEC);
+      purse += inc;
+      townIncome += inc;
+    }
     if (hour === 0) {
       tokens = Math.min(20, tokens + plan.tokens);
       // Upkeep a day, the tax a week, both from the treasury, fed from the purse.
@@ -313,7 +337,7 @@ export function simulate(plan: Plan = NORMAL): SimResult {
     if (!yieldAt[level] && t >= at[level] + 24) yieldAt[level] = yieldValue();
   }
   if (!yieldAt[level]) yieldAt[level] = yieldValue();
-  return { at, spent, earned, yieldAt, taxAt, power: power(), things, ships };
+  return { at, spent, earned, yieldAt, taxAt, power: power(), things, ships, townIncome };
 }
 
 /** Days to a level (NaN: never within the run). */

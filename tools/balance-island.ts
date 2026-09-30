@@ -25,6 +25,8 @@ row('poor land (bone)', { ...NORMAL, biome: 'bone' });
 row('rich land (jungle, large)', { ...NORMAL, biome: 'jungle', size: 'large' });
 row('light play (1.5 h)', { ...NORMAL, hours: 1.5 });
 row('heavy play (5 h)', { ...NORMAL, hours: 5 });
+row('with the town hall (H3)', { ...NORMAL, town: true });
+row('heavy play with the hall', { ...NORMAL, hours: 5, town: true });
 console.log('\nlevel  best yield/h  sea hour ⚓L  share   tax/week safe  tax vs a week of yield');
 for (let l = 1; l <= ISLE_MAX; l++) {
   const y = bestYield(l, 'jungle');
