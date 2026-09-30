@@ -3148,3 +3148,48 @@ body.tac #toasts { top: 22%; }
   .company-tabs .tab span { display: none; }
   .company-tabs + .tab-caption { display: block; padding: 6px 12px 4px; font: 600 12px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); text-align: center; border-bottom: 1px solid rgba(140, 107, 58, 0.35); }
 }
+
+/* ---------- the ship's army (docs/17 H1): HoMM3's row of army slots — each stack's face, its count in the corner,
+   its tier in pips, the upgraded kinds in gold; her empty slots left open. */
+.army-card .card-h { flex-wrap: wrap; }
+.army-sum { font-family: var(--sans, inherit); font-size: 12px; margin-left: auto; }
+.army-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 4px 0 8px; }
+.army-slot { position: relative; aspect-ratio: 1; min-width: 0; border-radius: 6px; border: 2px solid #5c4a33; background: radial-gradient(circle at 50% 35%, #2a2118, #120e0a); box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8); overflow: hidden; }
+.army-slot.up { border-color: #c9a45a; box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8), 0 0 6px rgba(224, 184, 98, 0.35); }
+.army-slot.empty { border-style: dashed; border-color: #3a3024; background: rgba(20, 16, 12, 0.6); }
+.army-slot .army-face { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; object-fit: cover; }
+.army-n { position: absolute; right: 2px; bottom: 2px; min-width: 16px; padding: 0 3px; font-size: 12px; line-height: 16px; text-align: center; border-radius: 4px; background: rgba(8, 6, 4, 0.9); color: #f2ead8; border: 1px solid #8a6a44; }
+.army-tier { position: absolute; left: 3px; top: 1px; font-style: normal; font-size: 9px; letter-spacing: -1px; color: rgba(240, 230, 210, 0.85); text-shadow: 0 0 3px #000; }
+.army-slot.up .army-tier { color: var(--gold); }
+.army-list { display: flex; flex-direction: column; gap: 4px; }
+.army-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.army-face-sm { width: 30px; height: 30px; flex: none; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
+.army-line .item-text { min-width: 0; }
+.army-line .item-text > span { font-size: 11px; }
+.army-hint { font-size: 11.5px; margin: 8px 0 0; }
+@media (max-width: 560px) { .army-row { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; } .army-n { font-size: 10.5px; line-height: 14px; min-width: 13px; } }
+/* Her army at a glance in the target frame. */
+.tg-army { display: flex; align-items: center; gap: 4px; margin: 3px 0 1px; font-size: 11.5px; min-width: 0; flex-wrap: wrap; }
+.tg-army-w { color: #f3c9a0; font-weight: 600; }
+.tg-army-faces { display: inline-flex; gap: 2px; margin-left: auto; }
+.army-mini { display: inline-block; width: 16px; height: 16px; border-radius: 50%; overflow: hidden; border: 1px solid #5c4a33; }
+.army-mini.up { border-color: #c9a45a; }
+.army-face-xs { width: 100%; height: 100%; margin: 0; object-fit: cover; display: block; }
+/* The battle's reckoning on the end banner. */
+.tb-banner.tb-result { pointer-events: auto; min-width: min(320px, calc(100% - 24px)); }
+.tb-res { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; text-align: left; }
+.tb-res small { color: var(--fog); font-size: 11px; }
+.tb-rs-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.tb-rs { position: relative; display: inline-block; width: 30px; height: 30px; }
+.tb-rs-ico { width: 30px; height: 30px; margin: 0; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
+.tb-rs i { position: absolute; right: -4px; bottom: -3px; font-style: normal; font-size: 10px; line-height: 13px; padding: 0 2px; border-radius: 3px; background: #2a0f0c; color: #f3d7a0; border: 1px solid #7a3a2a; }
+.tb-xp { color: var(--gold); font-size: 12.5px; }
+.tb-sps { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.tb-sps .chip { font-size: 10.5px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .tb-spells { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tb-spell { justify-content: center; padding: 2px; min-height: 34px; }
+  .tb-spell span { display: none; }
+  .tb-banner.tb-result { padding: 8px 14px; }
+  .tb-rs, .tb-rs-ico { width: 24px; height: 24px; }
+}
