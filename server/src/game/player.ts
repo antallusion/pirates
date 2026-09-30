@@ -1,6 +1,7 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
 import { streakView } from './streak.ts';
+import { seaRepairView } from './searepair.ts';
 import type { Look } from '../../../shared/src/data/looks.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import { STARTING_UNLOCKS, encodeLook } from '../../../shared/src/data/looks.ts';
@@ -14,6 +15,7 @@ import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { fishingView, sanitizeFishing } from './fishing.ts';
 import type { FishingProfile } from './fishing.ts';
 import type { CaptainSlot, Item } from '../../../shared/src/data/items.ts';
+import type { HearsayKind, Reliability } from '../../../shared/src/data/dealings.ts';
 import { sanitizeGear } from './gear.ts';
 import type { RefitOrder } from './refit.ts';
 import { newTutorial, sanitizeTutorial } from './onboarding.ts';
@@ -35,7 +37,7 @@ import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import { totalPointsSpent } from '../../../shared/src/data/talents.ts';
 import { MAX_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src/constants.ts';
 import { MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
-import type { BoardingResult, Contract, PrivateState, ResourceSiteView } from '../../../shared/src/protocol.ts';
+import type { BoardingResult, Contract, PrivateState, ResourceSiteView, TradeRunView } from '../../../shared/src/protocol.ts';
 import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import type { GameConn } from '../net/conn.ts';
 import type { ShipEntity } from './ship.ts';
@@ -118,7 +120,7 @@ export interface Profile {
   stats: { sunk: number; boarded: number; tradeProfit: number; distance: number; sold: number; fogContraband: number; harpoonContracts: number; /** captains guided through quests (docs/11 P6) */ mentored?: number };
   cooldowns: Record<string, number>;
   insured: boolean;
-  priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>> }>;
+  priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>>; dear?: GoodId[]; cheap?: GoodId[]; heard?: boolean }>;
   costBasis: Partial<Record<GoodId, number>>;
   sightings: { name: string; kind: string; x: number; y: number; t: number }[];
   chartSales: Record<string, number[]>; // port id -> island ids whose charts that port already bought
@@ -243,6 +245,46 @@ export interface Profile {
     hotRun: Contract | null;
   };
   createdAt: number;
+  /** docs/16 Batch C: the merchants' runs, the whispers paid for, the auction's pieces waiting for room. */
+  dealings?: Dealings;
+}
+
+export interface Dealings {
+  runs: TradeRunView[];
+  /** The next leg of a chain, waiting at the port she delivered to (its `deadline` is when the offer lapses). */
+  next: TradeRunView | null;
+  hearsay: Hearsay[];
+  /** Pieces won at auction, or her own unsold, while her locker is full. */
+  held: Item[];
+}
+
+/** A whisper she paid for (docs/16 #14); `truth` is hers to find out. */
+export interface Hearsay {
+  id: string;
+  kind: HearsayKind;
+  reliability: Reliability;
+  truth: boolean;
+  x: number;
+  y: number;
+  r: number;
+  heading?: number;
+  speed?: number;
+  name: string;
+  islandId?: number;
+  shipId?: number;
+  /** She has been told a true cache is there (once). */
+  told?: boolean;
+  t: number;
+  expiresAt: number;
+}
+
+export function dealings(p: Profile): Dealings {
+  const d = (p.dealings ??= { runs: [], next: null, hearsay: [], held: [] });
+  d.runs ??= [];
+  d.next ??= null;
+  d.hearsay ??= [];
+  d.held ??= [];
+  return d;
 }
 
 /** Best known sell price per good across remembered markets. */
@@ -519,7 +561,14 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
       top: ship?.hasFlag('market_sense')
         ? (Object.entries(rec.sell) as [GoodId, number][]).sort((a, b) => b[1] - a[1]).slice(0, 3)
         : [],
+      // What is dear and what is cheap there (docs/16 #11), for every captain.
+      ...(rec.dear?.length ? { dear: rec.dear } : {}),
+      ...(rec.cheap?.length ? { cheap: rec.cheap } : {}),
+      ...(rec.heard ? { heard: true } : {}),
     })),
+    ...(p.dealings?.runs.length ? { runs: p.dealings.runs } : {}),
+    ...(p.dealings?.hearsay.length ? { hearsay: p.dealings.hearsay.map(({ truth: _t, islandId: _i, shipId: _s, told: _d, ...v }) => v) } : {}),
+    ...(ship ? { seaRepair: seaRepairView(ship) } : {}),
     sightings: p.sightings,
     stats: p.stats,
     protectedUntil: ship?.protectedUntil ?? 0,

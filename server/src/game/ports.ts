@@ -60,6 +60,11 @@ import { MODULE_MATERIALS, WAREHOUSE_RENT, WAREHOUSE_VOLUME, siteView, sitesNear
 import { servicePortView } from './marque.ts';
 import { holidaySale, leagueDayMods, petOffers } from './holidays.ts';
 import { bazaarPortView } from './bazaar.ts';
+import { demandOf } from './demand.ts';
+import { runBoard } from './traderuns.ts';
+import { auctionView } from './auction.ts';
+import { hearsayView } from './hearsay.ts';
+import { seaRepairView } from './searepair.ts';
 
 export function hasLicence(p: Profile, faction: string, now: number): boolean {
   // A licence is void for anyone the law is hunting.
@@ -156,6 +161,10 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     fishRecords: Object.entries(fishRecords(game)).map(([fish, r]) => ({ fish: fish as FishId, name: r.name, kg: r.kg })),
     wanted: wantedBoard(game, p, port),
     raid: tipViews(game, s, port),
+    runs: runBoard(game, s, port),
+    auction: auctionView(game, s, port),
+    hearsay: hearsayView(game, s, port),
+    seaRepair: seaRepairView(ship),
     yard: {
       woods: (Object.keys(WOODS) as WoodId[]).filter((w) => woodAvailable(port, w)),
       figurehead: (Object.values(FIGUREHEADS).find((f) => f.port === port.id)?.id ?? null) as FigureheadId | null,
@@ -231,7 +240,7 @@ export function recordIntel(game: Game, s: PlayerSession, port: Port): void {
   const rows = marketRows(market, priceMods(ship, port, s.profile!, game.now, game));
   const sell: Partial<Record<GoodId, number>> = {};
   for (const r of rows) sell[r.good] = r.sell;
-  s.profile!.priceIntel[port.id] = { t: game.now, sell };
+  s.profile!.priceIntel[port.id] = { t: game.now, sell, ...demandOf(market, port.blackMarket) };
 }
 
 // ------------------------------------------------------------------ transactions

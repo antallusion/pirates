@@ -179,6 +179,12 @@ import { captiveLoyalty, claimSkippers, sanitizeCaptive, turnCaptive, turnCost }
 import { chooseBoon, descentLandable, leaveDescent, startDescent, stepDescent, stepDescentSea } from './descent.ts';
 import { holidayGhostSunk, stepHolidays } from './holidays.ts';
 import { addGood, addItem, buyAtStall, claimBazaar, closeStall, openStall, removeLine, sendBazaarShadows, stepBazaar } from './bazaar.ts';
+import { HULL_PER_PLANK, SAILS_PER_CLOTH, SEA_HULL_PER_MIN, SEA_RUDDER_PER_MIN, SEA_SAILS_PER_MIN } from '../../../shared/src/data/dealings.ts';
+import { seaCrewShare } from './searepair.ts';
+import { hearOfPorts } from './demand.ts';
+import { abandonRun, acceptRun, expireRuns, settleRuns } from './traderuns.ts';
+import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.ts';
+import { buyHearsay, forgetHearsay, stepHearsay } from './hearsay.ts';
 import { sagaNote, shareSaga } from './saga.ts';
 
 export interface Loot {
@@ -765,6 +771,7 @@ export class Game {
     stepDescent(this); // the Descent into the Abyss (docs/12 P10 #17)
     if (Math.floor(this.now) % 5 === 0) stepHolidays(this); // the sea's holidays (docs/12 P10 #18)
     if (Math.floor(this.now) % 60 === 0) stepBazaar(this); // the Floating Bazaar's takings and old stalls (docs/12 P10 #19)
+    stepAuction(this); // the trophy auction of the free ports (docs/16 #13)
     if (Math.floor(this.now) % 10 === 0) for (const s of this.sessions) sendBazaarShadows(this, s);
     if (Math.floor(this.now) % 10 === 0) stepBottles(this); // bottles adrift (docs/12 P10 #6)
     if (Math.floor(this.now) % 5 === 0) stepWonders(this); // the wonders of the sea (docs/12 P10 #8)
@@ -854,6 +861,8 @@ export class Game {
       if (s.ship.landing) stepLanding(this, s.ship);
       expireForwards(this, s);
       expireOptions(this, s);
+      expireRuns(this, s); // the merchants' runs (docs/16 #12)
+      stepHearsay(this, s); // where the tavern's whispers led (docs/16 #14)
       discoverCoves(this, s);
       havenSecond(this, s);
       stepExplorer(this, s);
@@ -1010,31 +1019,32 @@ export class Game {
         ship.repairing = false;
         this.toastShip(ship, 'Carpenters cannot work under fire.', 'bad');
       } else {
-        const crewF = Math.min(1, ship.crew / Math.max(1, st.crewMin * 2));
-        const hullGain = Math.min(st.hullMax - ship.hull, st.hullMax * 0.012 * st.repairRate * crewF * rate);
+        // Slow at sea (docs/16 #15): a few hundredths a minute from planks and sailcloth; the yard does it at once for silver.
+        const crewF = seaCrewShare(ship);
+        const hullGain = Math.min(st.hullMax - ship.hull, st.hullMax * (SEA_HULL_PER_MIN / 60) * st.repairRate * crewF * rate);
         const use = Math.max(0.3, 1 + tval(st, 'materialUse')); // Spare Timber
-        const planksNeeded = (hullGain / 40) * use;
-        const sailGain = Math.min(st.sailHpMax - ship.sails, st.sailHpMax * 0.02 * st.repairRate * crewF * sailRate);
-        const clothNeeded = (sailGain / 20) * use;
+        const planksNeeded = (hullGain / HULL_PER_PLANK) * use;
+        const sailGain = Math.min(st.sailHpMax - ship.sails, st.sailHpMax * (SEA_SAILS_PER_MIN / 60) * st.repairRate * crewF * sailRate);
+        const clothNeeded = (sailGain / SAILS_PER_CLOTH) * use;
         // A hidden cove has timber and canvas to spare for those who know it.
         const cove = ship.hasFlag('cove_knowledge') && coveAt(this, ship) !== null;
         const oldSalt = ship.hasFlag('old_salt'); // makes do with what the sea gives, at half speed
         const planks = cove ? 1e9 : ship.cargo.planks ?? 0, cloth = cove ? 1e9 : ship.cargo.sailcloth ?? 0;
         let did = false;
-        if (hullGain > 0.5 && (planks >= planksNeeded || oldSalt)) {
+        if (hullGain > 0.05 && (planks >= planksNeeded || oldSalt)) {
           const stocked = planks >= planksNeeded;
           ship.hull += stocked ? hullGain : hullGain * 0.5;
           if (!cove && stocked) ship.cargo.planks = Math.round((planks - planksNeeded) * 100) / 100;
           did = true;
         }
-        if (sailGain > 0.2 && (cloth >= clothNeeded || oldSalt)) {
+        if (sailGain > 0.02 && (cloth >= clothNeeded || oldSalt)) {
           const stocked = cloth >= clothNeeded;
           ship.sails += stocked ? sailGain : sailGain * 0.5;
           if (!cove && stocked) ship.cargo.sailcloth = Math.round((cloth - clothNeeded) * 100) / 100;
           did = true;
         }
         if (ship.rudderHp < 1 && (planks > 0.2 || oldSalt)) {
-          ship.rudderHp = Math.min(1, ship.rudderHp + 0.01 * st.repairRate * (1 + tval(st, 'damageControl')));
+          ship.rudderHp = Math.min(1, ship.rudderHp + (SEA_RUDDER_PER_MIN / 60) * st.repairRate * (1 + tval(st, 'damageControl')));
           did = true;
         }
         if ((ship.cargo.planks ?? 0) <= 0.01) delete ship.cargo.planks;
@@ -2852,6 +2862,19 @@ export class Game {
       }
       case 'tribute':
         return err(demandTribute(this, s, Number(msg.id)));
+      case 'run':
+        // A merchant house's chained run (docs/16 #12).
+        return portAction((pt) => (msg.action === 'abandon' ? abandonRun(this, s, String(msg.id)) : acceptRun(this, s, pt, String(msg.id))));
+      case 'auction':
+        // The trophy auction of a free port (docs/16 #13).
+        return portAction((pt) => (msg.action === 'bid' ? auctionBid(this, s, pt, String(msg.id), Number(msg.amount)) : putUp(this, s, pt, Math.trunc(Number(msg.uid)), Number(msg.reserve))));
+      case 'hearsay':
+        // A whisper for silver in the tavern (docs/16 #14); one may be forgotten at sea too.
+        if (msg.action === 'forget') {
+          err(forgetHearsay(this, s, String(msg.id)));
+          return this.pushSelf(s, true);
+        }
+        return portAction((pt) => buyHearsay(this, s, pt, String(msg.id)));
       case 'tip': {
         const port = ship.docked ? this.portById(ship.docked) : undefined;
         if (!port) return err('Only a tavern knows where the wanted are.');
@@ -3389,6 +3412,7 @@ export class Game {
     if (s.profile) claimBerths(this, s); // the caravans' hulls that came home while she was away (docs/12 P8)
     if (s.profile) claimSkippers(this, s); // and their skippers (docs/12 P10 #16)
     if (s.profile) claimBazaar(this, s); // and what a closed stall left (docs/12 P10 #19)
+    if (s.profile) claimAuction(this, s); // and what the auction house holds for her (docs/16 #13)
     this.sendTo(s, { t: 'welcome', v: PROTOCOL_VERSION, token: auth.token, accountId: s.accountId, name: s.name, hasCaptain: !!s.profile, worldSize: WORLD_SIZE, time: this.now });
     if (s.profile) this.sendInit(s);
   }
@@ -3590,7 +3614,10 @@ export class Game {
       p.insured = false;
     }
     recordIntel(this, s, port);
+    hearOfPorts(this, s, port); // the quay's talk of the ports near (docs/16 #11)
     this.checkDeliveries(s, port);
+    settleRuns(this, s, port); // the merchants' runs bound here (docs/16 #12)
+    claimAuction(this, s); // pieces the auction house holds for her (docs/16 #13)
     settleForwards(this, s, port);
     settleOrders(this, s, port);
     collectDebt(this, s, port);

@@ -41,6 +41,7 @@ import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
 import type { TaskView } from './data/worldtasks.ts';
 import type { GuildGoalKind } from './data/guildgoal.ts';
+import type { HearsayKind, Reliability } from './data/dealings.ts';
 
 export type Side = 'port' | 'starboard';
 export type Station = 'balanced' | 'gunnery' | 'sailing' | 'damage_control';
@@ -137,6 +138,11 @@ export type ClientMsg =
   | { t: 'tribute'; id: number }
   | { t: 'tip'; action: 'buy'; id: string }
   | { t: 'tip'; action: 'clerk' }
+  /** docs/16 Batch C: a merchant's chained run (#12), the trophy auction (#13), the tavern's paid whispers (#14). */
+  | { t: 'run'; action: 'accept' | 'abandon'; id: string }
+  | { t: 'auction'; action: 'bid'; id: string; amount: number }
+  | { t: 'auction'; action: 'sell'; uid: number; reserve: number }
+  | { t: 'hearsay'; action: 'buy' | 'forget'; id: string }
   /** One's own island and outposts (docs/12 P7). */
   | { t: 'estate'; action: 'buy'; island: number }
   | { t: 'estate'; action: 'level' | 'home' | 'hire' | 'view' | 'abandon' }
@@ -592,7 +598,13 @@ export interface PrivateState {
   landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;
   /** What the captain knows about each visited market, and how old that knowledge is. */
-  intel: { portId: string; t: number; top: [GoodId, number][] }[];
+  intel: { portId: string; t: number; top: [GoodId, number][]; dear?: GoodId[]; cheap?: GoodId[]; heard?: boolean }[];
+  /** docs/16 #12: the merchants' runs she carries. */
+  runs?: TradeRunView[];
+  /** docs/16 #14: the whispers she has paid for (where they point, how sure, how old). */
+  hearsay?: HearsayView[];
+  /** docs/16 #15: her carpenters' pace at sea and what all the mending would take. */
+  seaRepair?: SeaRepairView;
   /** Last known positions of notable ships (ghosts, hunters, notorious captains). */
   sightings: { name: string; kind: string; x: number; y: number; t: number }[];
   stats: { sunk: number; boarded: number; tradeProfit: number; distance: number };
@@ -681,6 +693,14 @@ export interface PortView {
   wanted?: WantedPoster[];
   /** The tavern's tips and the clerk's manifest (docs/12 P6). */
   raid?: { tips: TipView[]; clerk: { cost: number; until: number } };
+  /** docs/16 #12: the merchants' runs on the board, and the next leg of her chain waiting here. */
+  runs?: { offers: TradeRunView[]; next: TradeRunView | null };
+  /** docs/16 #13: the trophy auction of a free port. */
+  auction?: AuctionView | null;
+  /** docs/16 #14: whispers for silver in the tavern. */
+  hearsay?: HearsayOfferView[];
+  /** docs/16 #15: what her carpenters could do at sea, set against the yard's price. */
+  seaRepair?: SeaRepairView;
   /** The sea's heaviest catches (docs/12 P3): the tavern's board. */
   fishRecords?: { fish: FishId; name: string; kg: number }[];
   oathOffer: 'code' | 'marque' | null;
@@ -1712,6 +1732,90 @@ export interface AppraisalView {
 }
 
 /** A tip in the tavern: a merchant who will put out at the hour given. */
+/** A merchant house's run (docs/16 #12): buy here, sell there by the deadline, paid more the sooner she comes. */
+export interface TradeRunView {
+  id: string;
+  house: number; // index into RUN_HOUSES
+  leg: number; // 1..RUN_LEGS
+  good: GoodId;
+  qty: number;
+  from: string;
+  to: string;
+  /** Silver a unit the consignee pays at the far end. */
+  pay: number;
+  /** What a unit costs here now (the market's asking price), for an offer. */
+  cost: number;
+  /** The most the speed bonus pays. */
+  bonus: number;
+  window: number;
+  /** World time: the full bonus until `early`, nothing after `deadline`. */
+  early: number;
+  deadline: number;
+  dist: number;
+}
+
+/** A lot of the trophy auction (docs/16 #13). */
+export interface AuctionLotView {
+  id: string;
+  item: Item;
+  seller: string | null; // a captain's name, or null for the house
+  mine: boolean;
+  bid: number; // standing bid (or the opening price when no one has bid)
+  bids: number;
+  leader: string | null;
+  leading: boolean;
+  endsIn: number; // seconds
+  next: number; // the least she may bid now
+  worth: number;
+}
+
+export interface AuctionView {
+  lots: AuctionLotView[];
+  /** Pieces of her own she may put up (not bound, not worn), and how many of hers are on the block. */
+  own: number;
+  cut: number;
+}
+
+/** A whisper on offer in the tavern (docs/16 #14): what it is about and how sure the teller is. */
+export interface HearsayOfferView {
+  id: string;
+  kind: HearsayKind;
+  reliability: Reliability;
+  price: number;
+  /** A hint of where: the bearing and the distance from here. */
+  bearing: number;
+  km: number;
+  bought: boolean;
+}
+
+/** A whisper she paid for: the mark it puts on her chart. */
+export interface HearsayView {
+  id: string;
+  kind: HearsayKind;
+  reliability: Reliability;
+  x: number;
+  y: number;
+  r: number;
+  /** A caravan's heading when she was seen (radians, 0 = north) and her speed. */
+  heading?: number;
+  speed?: number;
+  name: string;
+  t: number; // world time heard
+  expiresAt: number;
+}
+
+/** Repairs at sea set against the yard's (docs/16 #15). */
+export interface SeaRepairView {
+  hullPerMin: number;
+  sailsPerMin: number;
+  /** Minutes her carpenters would need for all of it, and what they would use. */
+  minutes: number;
+  planks: number;
+  cloth: number;
+  havePlanks: number;
+  haveCloth: number;
+}
+
 export interface TipView {
   id: string;
   good: GoodId;
