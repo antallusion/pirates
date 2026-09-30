@@ -14,6 +14,7 @@ import { dec1 } from './dom.ts';
 import { commonLog, dailyLog } from './daily.ts';
 import { dict, plural } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/worldmap.ts';
+import { EN as DEN, RU as DRU } from '../lang/ui/dealings.ts';
 import { keyLabel, settings } from '../settings.ts';
 import { mapCard, placeName } from './maps.ts';
 import { esc } from './dom.ts';
@@ -22,6 +23,75 @@ import { taskName } from '../../../shared/src/data/worldtasks.ts';
 
 const L = dict(EN, RU);
 const RL = dict(REN, RRU);
+const DL = dict(DEN, DRU);
+
+type Intel = NonNullable<ClientState['self']>['intel'][number];
+
+/** By a port's crest: the goods dear there over a gold rule, the cheap ones over a blue (docs/16 #11). Talk of the
+ *  quay (not seen for herself) in a dashed frame. */
+function demandMarks(g: CanvasRenderingContext2D, it: Intel, x: number, y: number, size: number, fresh: number): void {
+  const rows: [string[] | undefined, string, number][] = [[it.dear, '224,184,98', -size * 0.62], [it.cheap, '120,190,230', size * 0.62]];
+  g.save();
+  for (const [goods, rgb, dy] of rows) {
+    (goods ?? []).forEach((good, i) => {
+      const cx = x + i * (size + 3) + size / 2, cy = y + dy;
+      g.globalAlpha = fresh;
+      g.fillStyle = 'rgba(10,9,8,0.72)';
+      g.strokeStyle = `rgba(${rgb},0.95)`;
+      g.lineWidth = 1.4;
+      g.setLineDash(it.heard ? [2.5, 2] : []);
+      g.beginPath();
+      g.arc(cx, cy, size * 0.56, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      g.setLineDash([]);
+      const art = sprite(`icon.good_${good}`);
+      if (art) g.drawImage(art.img, cx - size * 0.42, cy - size * 0.42, size * 0.84, size * 0.84);
+      // An arrow: up for dear (sell here), down for cheap (buy here).
+      g.fillStyle = `rgba(${rgb},1)`;
+      const ax = cx + size * 0.5, ay = cy - size * 0.38, up = dy < 0 ? -1 : 1;
+      g.beginPath();
+      g.moveTo(ax - 3, ay + (up < 0 ? 2 : -2));
+      g.lineTo(ax + 3, ay + (up < 0 ? 2 : -2));
+      g.lineTo(ax, ay + (up < 0 ? -3 : 3));
+      g.closePath();
+      g.fill();
+    });
+  }
+  g.restore();
+}
+
+/** Where the whispers point: a cache's island ringed, a caravan where she was seen with her heading and how far she
+ *  may have sailed since; old whispers fade. */
+function hearsayMarks(
+  g: CanvasRenderingContext2D, list: NonNullable<ClientState['self']>['hearsay'] & object, tx: (x: number) => number, ty: (y: number) => number, k: number, ms: number, now: number,
+  mark: (id: string, x: number, y: number, size?: number, rot?: number) => boolean, label: (text: string, x: number, y: number, color?: string) => void, age: (t: number) => string,
+): void {
+  for (const h of list) {
+    const x = tx(h.x), y = ty(h.y);
+    const fresh = Math.max(0.35, 1 - (now - h.t) / Math.max(60, h.expiresAt - h.t));
+    g.save();
+    g.globalAlpha = fresh;
+    g.setLineDash([4, 4]);
+    g.strokeStyle = h.kind === 'cache' ? 'rgba(232,196,106,0.95)' : 'rgba(150,210,160,0.95)';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.arc(x, y, Math.max(ms * 0.55, h.r * k), 0, Math.PI * 2);
+    g.stroke();
+    if (h.kind === 'caravan' && h.heading !== undefined) {
+      const run = (h.speed ?? 6) * Math.max(0, now - h.t);
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(tx(h.x + Math.sin(h.heading) * run), ty(h.y - Math.cos(h.heading) * run));
+      g.stroke();
+    }
+    g.setLineDash([]);
+    mark(h.kind === 'cache' ? 'icon.map_treasure' : 'icon.map_ship', x, y, ms * 0.85, h.kind === 'caravan' ? h.heading ?? 0 : 0);
+    g.restore();
+    g.font = 'italic 12px "Cormorant Garamond", serif';
+    label(h.kind === 'cache' ? DL('map.cache', { name: placeName(h.name) }) : DL('map.caravan', { age: age(h.t) }), x, y - ms * 0.7, h.kind === 'cache' ? '#e8c46a' : '#a8dcb0');
+  }
+}
 
 /** The chart's key, in its own symbols. */
 /** Tasks of the sea (docs/11 P6): each nest, field or haunted waters, the minutes left and one's tally — under the
@@ -41,6 +111,8 @@ const LEGEND: [string, Parameters<typeof L>[0]][] = [
   ['map_ship', 'lg.you'], ['map_port', 'lg.port'], ['map_contract', 'lg.contract'], ['map_treasure', 'lg.treasure'],
   ['map_wreck', 'lg.wreck'], ['map_event', 'lg.event'], ['danger', 'lg.task'], ['map_monster', 'lg.sighting'],
 ];
+/** docs/16 #11, #14: the chart's key for the dear/cheap goods and the whispers. */
+const LEGEND_C: [string, Parameters<typeof DL>[0]][] = [['tab_market', 'lg.demand'], ['map_treasure', 'lg.hearsay']];
 
 export class WorldMap {
   private zoom = 1;
@@ -63,7 +135,7 @@ export class WorldMap {
     const inGroup = (state.party?.members.length ?? 0) > 1;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button>
-      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}</div></details></div>
+      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}</div></details></div>
       <div class="map-logs">${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     // A task of the sea in the log: the chart turns to its nest.
@@ -450,10 +522,12 @@ export class WorldMap {
       const p = state.ports.find((q) => q.id === it.portId);
       if (!p) continue;
       const fresh = Math.max(0.25, 1 - (now - it.t) / 5400); // knowledge fades over ~1.5 h
+      // What is dear and cheap there (docs/16 #11): small goods by the crest, faded with the knowledge's age.
+      if (this.zoom >= 1.3) demandMarks(g, it, tx(p.x) + ms * 0.62, ty(p.y), Math.max(12, Math.min(18, 8 + this.zoom * 1.6)), fresh);
       // Price notes only at a closer zoom, and only where they fit.
       if (this.zoom < 1.6) continue;
       g.font = '10px Inter, sans-serif';
-      label(L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.6, ty(p.y) + ms * 0.15, `rgba(143,179,217,${0.85 * fresh})`);
+      label(it.heard ? DL('map.heard', { age: age(it.t) }) : L('prices', { age: age(it.t) }), tx(p.x) + ms * 0.6, ty(p.y) + ms * 0.15 + (it.dear?.length || it.cheap?.length ? 9 : 0), `rgba(143,179,217,${0.85 * fresh})`);
       if (this.zoom > 1.8) {
         it.top.forEach(([good, price], i) => {
           g.fillStyle = `rgba(224,184,98,${0.9 * fresh})`;
@@ -515,6 +589,15 @@ export class WorldMap {
       g.fill();
       mark('icon.map_treasure', tx(m.x), ty(m.y), ms);
       label(placeName(m.name), tx(m.x), ty(m.y) - ms * 0.65, m.tier >= 3 ? '#e8c65a' : '#c9a25a');
+    }
+    // The tavern's whispers she paid for (docs/16 #14) and her merchants' runs (#12).
+    hearsayMarks(g, state.self?.hearsay ?? [], tx, ty, k, ms, now, mark, label, age);
+    for (const r of state.self?.runs ?? []) {
+      const p = state.ports.find((q) => q.id === r.to);
+      if (!p) continue;
+      mark(`icon.good_${r.good}`, tx(p.x) - ms * 0.62, ty(p.y) - ms * 0.62, ms * 0.7);
+      g.font = '600 11px Inter, system-ui, sans-serif';
+      label(DL('map.run', { good: GOODS[r.good].name, min: Math.max(0, Math.ceil((r.deadline - now) / 60)) }), tx(p.x), ty(p.y) + ms * 0.95, '#f0d48e');
     }
     for (const w of state.self?.wrecks ?? []) {
       g.strokeStyle = '#78bec8';

@@ -2963,3 +2963,54 @@ body.tac #toasts { top: 22%; }
   .tb-turn { font-size: 13px; }
   .tb-timer { width: 260px; }
 }
+
+/* ---------- docs/16 Batch C: the merchants' runs, the trophy auction, the tavern's whispers, repairs at sea. */
+.dl-card { margin-top: 10px; }
+.dl-card > p.muted { margin: 2px 0 8px; font-size: 12.5px; line-height: 1.35; }
+.dl-card .giver-h { margin: 10px 0 4px; display: flex; align-items: center; gap: 6px; }
+.dl-run { border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 8px 0 6px; }
+.dl-run.dl-next { border: 1px solid rgba(224, 184, 98, 0.45); border-radius: 6px; padding: 8px; background: rgba(224, 184, 98, 0.06); }
+.dl-run-h { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dl-run-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.dl-run-t b { font-family: var(--serif); font-size: 15px; color: #f0e6cc; font-weight: 600; }
+.dl-run-t .muted { font-size: 12px; }
+.dl-facts { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 6px 0 4px; font-size: 12.5px; }
+.dl-facts .gold, .dl-card .gold { color: var(--gold); }
+.dl-clock { font-variant-numeric: tabular-nums; color: var(--bone); }
+.dl-clock.dl-hot { color: #e8a060; }
+.dl-clock.dl-late { color: var(--fog); font-weight: 400; }
+.au-lots { display: flex; flex-direction: column; gap: 6px; }
+.au-lot { border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 6px 0 4px; }
+.au-lot > details > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; min-width: 0; }
+.au-lot > details > summary::-webkit-details-marker { display: none; }
+.au-lot > details > :not(summary) { margin: 6px 0 4px 40px; }
+.au-name { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.au-name .gi-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.au-name .muted { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.au-state { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; margin: 5px 0 3px; font-size: 12.5px; }
+.au-bid { display: inline-flex; align-items: center; gap: 4px; }
+.au-time { margin-left: auto; white-space: nowrap; }
+.dl-lead { color: #a8dca2; font-weight: 600; }
+.au-form, .au-put { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+.au-form input.field { width: 110px; }
+.au-put { margin-top: 10px; }
+.au-put .giver-h { flex: 1 1 100%; margin: 0; }
+.au-put select { flex: 1 1 180px; min-width: 0; }
+.au-put label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.au-put input.field { width: 96px; }
+.hs-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.hs-t { flex: 1; display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.hs-t b { font-weight: 600; color: #f0e6cc; }
+.hs-grade { font-size: 11.5px; }
+.hs-grade.sure { color: #a8dca2; }
+.hs-grade.likely { color: var(--gold); }
+.hs-grade.doubtful { color: #e3998a; }
+.hs-btns { display: flex; gap: 4px; flex: none; }
+.hs-row > .btn, .hs-row > .tag { flex: none; }
+.rep-cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.rep-way { border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 7px 9px; background: rgba(0, 0, 0, 0.18); min-width: 0; }
+.rep-way > b { display: inline-flex; align-items: center; gap: 5px; font-family: var(--serif); font-size: 14.5px; color: #f0e6cc; }
+.rep-way .tag { margin-left: 6px; }
+.rep-way p { margin: 5px 0 0; font-size: 12px; line-height: 1.35; }
+.rep-way.port { border-color: rgba(224, 184, 98, 0.35); }
+@media (max-width: 560px) { .rep-cmp { grid-template-columns: minmax(0, 1fr); } .au-time { margin-left: 0; } }

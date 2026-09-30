@@ -250,10 +250,11 @@ export function auctionView(game: Game, s: PlayerSession, port: Port): AuctionVi
   return {
     lots: h.lots.filter((l) => l.port === port.id).map((l) => ({
       id: l.id, item: l.item, seller: l.sellerName, mine: l.seller === s.accountId, bid: l.bid || l.open, bids: l.bids, leader: l.leaderName,
-      leading: l.leader === s.accountId, endsIn: Math.max(0, Math.ceil((l.endsAt - now) / 1000)), next: nextBid(l), worth: l.worth,
+      leading: l.leader === s.accountId, endsAt: l.endsAt, next: nextBid(l), worth: l.worth,
     })),
     own: h.lots.filter((l) => l.seller === s.accountId).length,
     cut: AUCTION_CUT,
+    wall: now,
   };
 }
 

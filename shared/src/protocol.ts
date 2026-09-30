@@ -1764,7 +1764,7 @@ export interface AuctionLotView {
   bids: number;
   leader: string | null;
   leading: boolean;
-  endsIn: number; // seconds
+  endsAt: number; // the house's wall clock, ms (only a late bid moves it)
   next: number; // the least she may bid now
   worth: number;
 }
@@ -1774,6 +1774,8 @@ export interface AuctionView {
   /** Pieces of her own she may put up (not bound, not worn), and how many of hers are on the block. */
   own: number;
   cut: number;
+  /** The house's wall clock now (ms), to count the lots down by. */
+  wall: number;
 }
 
 /** A whisper on offer in the tavern (docs/16 #14): what it is about and how sure the teller is. */
