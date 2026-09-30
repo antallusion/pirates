@@ -217,5 +217,6 @@ test('the inspect card shows what a captain wears', () => {
   W.profile!.captainGear.hat = { ...item('tricorne', 1, { rarity: 3 }), uid: 5 };
   a.push({ t: 'inspect', name: 'Worn Wes' });
   const v = a.last('inspect')!.view!;
-  assert.equal(v.gear?.[0].base, 'tricorne');
+  // Her hat among the rest (every captain has the starter drift net aboard too).
+  assert.ok(v.gear?.some((g) => g.base === 'tricorne'), JSON.stringify(v.gear?.map((g) => g.base)));
 });
