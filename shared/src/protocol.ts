@@ -319,6 +319,27 @@ export interface IslandData {
   poly: number[]; // rounded to meters
   features: IslandFeature[];
   portId?: string;
+  /** A sea stack of the dense sea (docs/16 P3). */
+  minor?: boolean;
+  /** A floating town's moored hulks (docs/16 P3). */
+  raft?: boolean;
+}
+
+/** A mark of the dense sea that is not land (docs/16 P3). */
+export interface SeaMarkData {
+  id: number;
+  kind: 'wreck' | 'buoy' | 'lantern' | 'drift' | 'bones' | 'floe';
+  x: number;
+  y: number;
+  r: number;
+  rot: number;
+  seed: number;
+}
+
+/** A square of the sea and its ship level (docs/16 P2): `l` the level, `p` a pocket (calm in the wild, wild in the calm). */
+export interface SectorData {
+  l: number;
+  p?: 'calm' | 'wild';
 }
 
 export interface WhirlpoolData {
@@ -427,6 +448,8 @@ export interface PortPublic {
   shipyardTier: number;
   blackMarket: boolean;
   description: string;
+  /** A floating town (docs/16 P3). */
+  raft?: boolean;
 }
 
 export interface CurrentData {
@@ -1120,9 +1143,9 @@ export type ServerMsg =
       /** fine shot put aboard, when the pay was taken partly in it */ stores?: { heavy: number; incendiary: number };
       /** a veteran groupmate in company who guided it (a tenth more experience) */ mentor?: string }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
-  | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number }
+  | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number; sectors?: SectorData[] }
   | { t: 'fronts'; list: FrontData[]; forecast: boolean }
-  | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[] }
+  | { t: 'chunk'; key: number; islands: IslandData[]; reefs?: ReefData[]; marks?: SeaMarkData[] }
   | { t: 'snap'; tick: number; time: number; ack: number; you: SelfRow | null; ships: ShipRow[]; loot: LootRow[]; wind: [number, number]; weather: WeatherKind; region: RegionId; fog: number; /** world time per real second, when an admin has changed it */ k?: number }
   | { t: 'info'; list: EntityInfo[] }
   | { t: 'boss'; list: BossView[] }

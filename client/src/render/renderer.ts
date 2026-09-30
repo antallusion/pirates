@@ -377,6 +377,7 @@ export class Renderer {
     const islands = this.visibleIslands(state);
     this.drawWhirlpools(state);
     this.drawReefs(state);
+    this.drawSeaMarks(state);
     for (const is of islands) this.drawShallows(is);
     for (const is of islands) this.drawIsland(is, state);
     this.drawPorts(state);
@@ -697,7 +698,262 @@ export class Renderer {
     g.restore();
   }
 
+  /** The dense sea's marks (docs/16 P3): wreck fields half awash, lane buoys, lantern floats, driftwood, floating
+   *  bones and ice floes — from the painted wrecks and flotsam where they are, drawn by hand where they are not. */
+  private drawSeaMarks(state: ClientState): void {
+    if (!state.seaMarks.size) return;
+    const g = this.g;
+    const z = this.zoom;
+    const hw = this.w / 2 / z + 150, hh = this.h / 2 / z + 150;
+    const t = settings().reduceMotion ? 0 : this.time;
+    const spriteAt = (id: string, px: number, py: number, sz: number, rot: number, alpha: number): boolean => {
+      const spr = sprite(id);
+      if (!spr) return false;
+      g.save();
+      g.globalAlpha = alpha;
+      g.translate(px, py);
+      g.rotate(rot);
+      g.drawImage(spr.img, -sz / 2, -sz / 2, sz, sz);
+      g.restore();
+      return true;
+    };
+    for (const m of state.seaMarks.values()) {
+      if (Math.abs(m.x - this.camX) - m.r > hw || Math.abs(m.y - this.camY) - m.r > hh) continue;
+      const x = this.sx(m.x), y = this.sy(m.y), size = m.r * 2 * z;
+      const rnd = seeded(m.seed);
+      switch (m.kind) {
+        case 'wreck': {
+          // Dark water over the sunken part, the broken hull awash, planks and casks about it.
+          g.fillStyle = 'rgba(4,10,14,0.28)';
+          g.beginPath();
+          g.ellipse(x, y, size * 0.55, size * 0.4, m.rot, 0, Math.PI * 2);
+          g.fill();
+          if (!spriteAt('prop.shipwreck', x, y, size, m.rot, 0.82)) {
+            g.fillStyle = '#2b2119';
+            g.beginPath();
+            g.ellipse(x, y, size * 0.4, size * 0.13, m.rot, 0, Math.PI * 2);
+            g.fill();
+          }
+          for (let k = 0; k < 3; k++) {
+            const a = rnd() * Math.PI * 2, d = (0.45 + rnd() * 0.35) * size;
+            spriteAt('prop.flotsam', x + Math.cos(a) * d, y + Math.sin(a) * d, size * (0.22 + rnd() * 0.14), rnd() * 6.28, 0.8);
+          }
+          // Foam where the swell breaks on the timbers.
+          g.strokeStyle = `rgba(215,225,228,${0.14 + 0.08 * Math.sin(t * 1.5 + m.id)})`;
+          g.lineWidth = Math.max(1, 1.5 * z);
+          g.setLineDash([2 * z, 6 * z]);
+          g.beginPath();
+          g.ellipse(x, y, size * 0.5, size * 0.3, m.rot, 0, Math.PI * 2);
+          g.stroke();
+          g.setLineDash([]);
+          break;
+        }
+        case 'drift':
+          for (let k = 0; k < 3; k++) {
+            const a = rnd() * Math.PI * 2, d = rnd() * size * 0.45;
+            const px = x + Math.cos(a) * d + Math.sin(t * 0.3 + k) * 2 * z, py = y + Math.sin(a) * d;
+            if (!spriteAt(k === 0 ? 'prop.wreckage' : 'prop.flotsam', px, py, size * (k === 0 ? 0.7 : 0.4), rnd() * 6.28 + t * 0.02, 0.85)) {
+              g.fillStyle = '#3a2c1f';
+              g.fillRect(px - 6 * z, py - 1.5 * z, 12 * z, 3 * z);
+            }
+          }
+          break;
+        case 'bones':
+          g.fillStyle = 'rgba(4,10,14,0.22)';
+          g.beginPath();
+          g.ellipse(x, y, size * 0.5, size * 0.35, m.rot, 0, Math.PI * 2);
+          g.fill();
+          if (!spriteAt('prop.bones', x, y, size, m.rot, 0.8)) {
+            g.strokeStyle = '#cfc6b0';
+            g.lineWidth = 3 * z;
+            for (let k = 0; k < 6; k++) {
+              const a = m.rot + (k - 2.5) * 0.25;
+              g.beginPath();
+              g.arc(x, y, size * 0.35, a - 0.4, a + 0.4);
+              g.stroke();
+            }
+          }
+          break;
+        case 'floe': {
+          const n = 9;
+          g.beginPath();
+          for (let k = 0; k < n; k++) {
+            const a = (k / n) * Math.PI * 2 + m.rot, r = m.r * z * (0.7 + rnd() * 0.3);
+            const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r * 0.8;
+            if (k) g.lineTo(px, py);
+            else g.moveTo(px, py);
+          }
+          g.closePath();
+          g.save();
+          g.translate(4 * z, 6 * z);
+          g.fillStyle = 'rgba(0,0,0,0.25)';
+          g.fill();
+          g.restore();
+          g.fillStyle = '#c9d6de';
+          g.fill();
+          g.strokeStyle = 'rgba(240,248,252,0.8)';
+          g.lineWidth = Math.max(1, 1.5 * z);
+          g.stroke();
+          break;
+        }
+        case 'buoy':
+        case 'lantern': {
+          const r = Math.max(3, m.r * z);
+          const by = y - Math.sin(t * 1.3 + m.id) * r * 0.3;
+          g.fillStyle = 'rgba(0,0,0,0.35)';
+          g.beginPath();
+          g.ellipse(x + r * 0.3, y + r * 0.4, r * 1.1, r * 0.7, 0, 0, Math.PI * 2);
+          g.fill();
+          // A ring of ripples about her.
+          g.strokeStyle = 'rgba(210,222,228,0.18)';
+          g.lineWidth = 1;
+          g.beginPath();
+          g.arc(x, y, r * (1.8 + 0.3 * Math.sin(t * 1.3 + m.id)), 0, Math.PI * 2);
+          g.stroke();
+          if (m.kind === 'buoy') {
+            g.fillStyle = '#9e2a22';
+            g.beginPath();
+            g.arc(x, by, r, 0, Math.PI * 2);
+            g.fill();
+            g.fillStyle = '#e6dcc4';
+            g.beginPath();
+            g.arc(x, by, r, -Math.PI * 0.2, Math.PI * 0.2);
+            g.lineTo(x, by);
+            g.fill();
+            g.beginPath();
+            g.arc(x, by, r, Math.PI * 0.8, Math.PI * 1.2);
+            g.lineTo(x, by);
+            g.fill();
+            g.strokeStyle = '#1b120b';
+            g.lineWidth = 1;
+            g.beginPath();
+            g.arc(x, by, r, 0, Math.PI * 2);
+            g.stroke();
+            if (this.nightNow > 0.3) this.fx.light(m.x, m.y, 70, 'rgba(255,90,70,1)', 0.5 * this.nightNow * (0.6 + 0.4 * Math.sin(t * 2 + m.id)), 0.05);
+          } else {
+            // A lantern on a little raft of planks: the candles set out for the drowned.
+            g.fillStyle = '#3b2c1e';
+            g.fillRect(x - r * 1.2, by - r * 0.7, r * 2.4, r * 1.4);
+            g.fillStyle = '#f2c46a';
+            g.beginPath();
+            g.arc(x, by, r * 0.5, 0, Math.PI * 2);
+            g.fill();
+            this.fx.light(m.x, m.y, 110, 'rgba(255,190,110,1)', (0.25 + 0.5 * this.nightNow) * (0.8 + 0.2 * Math.sin(t * 5 + m.id)), 0.05);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  /** A floating town (docs/16 P3): old hulls moored side by side in two rows, gangplanks along the middle, huts and
+   *  crates on the decks, a breakwater of wreckage at either end and lanterns at night — all from the painted ships
+   *  and props, top-down. Its land is the hulks: ships moor off its side as at any quay. */
+  private drawRaftTown(is: IslandData): void {
+    const g = this.g;
+    const z = this.zoom;
+    const n = is.poly.length / 2;
+    // The long axis: the farthest vertex from the middle.
+    let r = 0, rot = 0;
+    for (let i = 0; i < n; i++) {
+      const dx = is.poly[i * 2] - is.x, dy = is.poly[i * 2 + 1] - is.y, d = Math.hypot(dx, dy);
+      if (d > r) {
+        r = d;
+        rot = Math.atan2(dy, dx);
+      }
+    }
+    const short = r * 0.62;
+    const rnd = seeded(is.id * 7717 + 3);
+    g.save();
+    g.translate(this.sx(is.x), this.sy(is.y));
+    g.rotate(rot);
+    // Dark, still water in the lee of the hulls.
+    g.fillStyle = 'rgba(3,8,11,0.35)';
+    g.beginPath();
+    g.ellipse(0, 0, r * 1.08 * z, short * 1.12 * z, 0, 0, Math.PI * 2);
+    g.fill();
+    const hulls: ShipClassId[] = ['galleon', 'fluyt', 'brig', 'frigate', 'schooner', 'xebec'];
+    const beam = short * 0.5;
+    const len = short * 0.95;
+    const decks: [number, number][] = [];
+    for (const row of [-1, 1]) {
+      for (let u = -r * 0.82; u <= r * 0.82; u += beam * 0.62) {
+        const v = row * short * 0.47;
+        if ((u * u) / (r * r) + (v * v) / (short * short) > 0.78) continue;
+        const img = this.shipImage(hulls[Math.floor(rnd() * hulls.length)], 1);
+        const h = len * z * (0.85 + rnd() * 0.2);
+        const w = h * (img.canvas.width / img.canvas.height);
+        g.save();
+        g.translate(u * z, v * z);
+        // Bows out: each row's hulls lie across the town, sterns to the middle walk.
+        g.rotate((row > 0 ? Math.PI : 0) + (rnd() - 0.5) * 0.12);
+        g.drawImage(img.canvas, -w / 2, -h * 0.55, w, h);
+        g.restore();
+        decks.push([u, v]);
+      }
+    }
+    // The middle walk: gangplanks from hull to hull along the long axis.
+    g.strokeStyle = '#4a3624';
+    g.lineWidth = Math.max(2, short * 0.12 * z);
+    g.beginPath();
+    g.moveTo(-r * 0.8 * z, 0);
+    g.lineTo(r * 0.8 * z, 0);
+    g.stroke();
+    g.strokeStyle = 'rgba(20,12,6,0.6)';
+    g.lineWidth = 1;
+    for (let u = -r * 0.8; u < r * 0.8; u += 7) {
+      g.beginPath();
+      g.moveTo(u * z, -short * 0.06 * z);
+      g.lineTo(u * z, short * 0.06 * z);
+      g.stroke();
+    }
+    // A breakwater of wreckage at either end.
+    const wall = sprite('prop.wreck_wall');
+    if (wall) {
+      const ww = short * 1.5 * z, wh = ww * ((wall.img.naturalHeight || wall.img.height) / (wall.img.naturalWidth || wall.img.width));
+      for (const end of [-1, 1]) {
+        g.save();
+        g.translate(end * r * 0.93 * z, 0);
+        g.rotate(Math.PI / 2 + (end > 0 ? Math.PI : 0));
+        g.drawImage(wall.img, -ww / 2, -wh / 2, ww, wh);
+        g.restore();
+      }
+    }
+    // Huts, crates and boats on and by the decks.
+    const prop = (id: string, u: number, v: number, sz: number, a: number) => {
+      const spr = sprite(id);
+      if (!spr) return;
+      g.save();
+      g.translate(u * z, v * z);
+      g.rotate(a);
+      g.drawImage(spr.img, (-sz / 2) * z, (-sz / 2) * z, sz * z, sz * z);
+      g.restore();
+    };
+    decks.forEach(([u, v], i) => {
+      if (i % 3 === 0) prop('prop.life_hut', u, v * 0.7, short * 0.34, rnd() * 6.28);
+      else if (i % 3 === 1) prop('prop.life_crates', u, v * 0.6, short * 0.22, rnd() * 6.28);
+    });
+    prop('prop.life_boat', 0, short * 1.12, short * 0.3, Math.PI / 2);
+    prop('prop.life_boat', r * 0.4, -short * 1.1, short * 0.28, -Math.PI / 2);
+    g.restore();
+    // Lanterns strung along the walk.
+    const glow = 0.25 + 0.65 * this.nightNow;
+    for (let k = -2; k <= 2; k++) {
+      const u = k * r * 0.35;
+      const wx = is.x + Math.cos(rot) * u, wy = is.y + Math.sin(rot) * u;
+      g.fillStyle = `rgba(255,200,120,${0.5 + 0.4 * this.nightNow})`;
+      g.beginPath();
+      g.arc(this.sx(wx), this.sy(wy), Math.max(1.5, 2.2 * z), 0, Math.PI * 2);
+      g.fill();
+      if (glow > 0.3) this.fx.light(wx, wy, 90, 'rgba(255,170,90,1)', glow * 0.6, 0.05);
+    }
+  }
+
   private drawIsland(is: IslandData, state: ClientState): void {
+    if (is.raft) {
+      this.drawRaftTown(is);
+      return;
+    }
     const g = this.g;
     g.save();
     g.lineJoin = 'round';
@@ -1276,7 +1532,7 @@ export class Renderer {
     const g = this.g;
     for (const p of state.ports) {
       if (Math.abs(p.x - this.camX) * this.zoom > this.w + 600 * this.zoom || Math.abs(p.y - this.camY) * this.zoom > this.h + 600 * this.zoom) continue;
-      const spr = sprite(`prop.port_${p.faction}`) ?? sprite('prop.port_town');
+      const spr = p.raft ? undefined : sprite(`prop.port_${p.faction}`) ?? sprite('prop.port_town');
       const island = [...state.islands.values()].find((is) => is.portId === p.id);
       if (!island) continue;
       let lay = this.portLayout.get(p.id);
@@ -1299,12 +1555,15 @@ export class Renderer {
           g.fillRect(-size * 0.4, -size * 0.4, size * 0.8, size * 0.64);
         }
       };
-      // The town's streets and walls stand only on the land — no ship sails through a house.
-      g.save();
-      path();
-      g.clip();
-      town();
-      g.restore();
+      // The town's streets and walls stand only on the land — no ship sails through a house. (A floating town is its
+      // hulks, drawn with the island.)
+      if (!p.raft) {
+        g.save();
+        path();
+        g.clip();
+        town();
+        g.restore();
+      }
       // The quays: the painting's foot at its own proportions (never stretched), out from the shore over the water.
       // The anchorage lies off the pier heads, where ships in port ride broadside to the quay (berth()).
       g.save();

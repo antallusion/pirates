@@ -5,6 +5,8 @@ import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
+import { bandOf, SECTOR_SIZE, SECTORS_PER_SIDE } from '../../../shared/src/world/sectors.ts';
+import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -256,6 +258,27 @@ export class WorldMap {
       g.moveTo(tx(0), ty(v));
       g.lineTo(tx(WORLD_SIZE), ty(v));
       g.stroke();
+    }
+    // The squares of the sea (docs/16 P2), faint: a wash by their level and the level in a corner, a pocket marked.
+    if (state.sectors.length) {
+      const side = SECTOR_SIZE * k;
+      const own = state.self ? shipLevelOf(state.self.loadout) : 1;
+      g.font = `${Math.round(Math.max(9, Math.min(13, side * 0.16)))}px Inter, sans-serif`;
+      g.textAlign = 'left';
+      state.sectors.forEach((sec, i) => {
+        const sx = i % SECTORS_PER_SIDE, sy = Math.floor(i / SECTORS_PER_SIDE);
+        const x = tx(sx * SECTOR_SIZE), y = ty(sy * SECTOR_SIZE);
+        if (x > W || y > H || x + side < 0 || y + side < 0) return;
+        const t = (sec.l - 1) / 9;
+        g.fillStyle = `rgba(${Math.round(90 + 150 * t)},${Math.round(170 - 110 * t)},${Math.round(110 - 60 * t)},0.07)`;
+        g.fillRect(x, y, side, side);
+        if (side < 26) return;
+        const band = bandOf(sec.l);
+        g.fillStyle = THREAT_COLOR[threatOf(own, sec.l)];
+        g.globalAlpha = 0.55;
+        g.fillText(`⚓${band[0]}–${band[1]}${sec.p === 'calm' ? ' ☼' : sec.p === 'wild' ? ' ☠' : ''}`, x + 4, y + Math.max(11, side * 0.18));
+        g.globalAlpha = 1;
+      });
     }
     // Maelstrom wall.
     g.strokeStyle = 'rgba(142,42,42,0.28)';

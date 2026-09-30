@@ -32,6 +32,8 @@ import { relWindDeg, windPush } from '../../../shared/src/sim/sailing.ts';
 import { cargoVolume, tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { seasonName } from '../../../shared/src/world/worldgen.ts';
+import { bandOf, captainBand, SECTOR_SIZE, sectorIndex } from '../../../shared/src/world/sectors.ts';
+import type { SectorData } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
@@ -330,11 +332,27 @@ export class Hud {
     const tod = timeOfDay(now);
     const hours = Math.floor(tod * 24), mins = Math.floor((tod * 24 - hours) * 60);
     const r = REGIONS[state.region];
-    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"><span class="rg-dot"> · </span>${esc(seasonWord(seasonName(now)))}</span></div><div class="rg-extra">${this.objectiveLine(state)}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
+    const html = `<div><span class="rg-name">${esc(r.name.charAt(0).toUpperCase() + r.name.slice(1))}</span><span class="rg-dot"> · </span><span class="rg-safe" style="color:${r.safety === 'safe' ? 'var(--good)' : r.safety === 'contested' ? 'var(--gold)' : 'var(--bad)'}">${esc(L(`safety.${r.safety}`))}</span></div><div>${icon(weatherArt(state.weather), '', 'ico-sm')}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${esc(weatherWord(state.weather))}<span class="rg-season"><span class="rg-dot"> · </span>${esc(seasonWord(seasonName(now)))}</span></div>${this.sectorLine(state)}<div class="rg-extra">${this.objectiveLine(state)}${state.self?.forecast ? `<span class="muted">${esc(L('forecast', { kind: weatherWord(state.self.forecast.kind), n: Math.max(1, Math.round(state.self.forecast.in / 60)) }))}</span>` : ''}${this.eventLines(state)}</div>`;
     if (html !== this.lastRegion) {
       this.lastRegion = html;
       $('hud-region').innerHTML = html;
     }
+  }
+
+  /** The square of the sea she is in (docs/16 P2): its ship levels, the captains it is for, a pocket. */
+  private sectorLine(state: ClientState): string {
+    const sec = this.sectorHere(state);
+    if (!sec) return '';
+    const band = bandOf(sec.l), cap = captainBand(band);
+    const color = THREAT_COLOR[threatTo(sec.l)];
+    const pocket = sec.p ? `<span class="rg-dot"> · </span><span class="muted">${esc(L(sec.p === 'calm' ? 'sector.calm' : 'sector.wild'))}</span>` : '';
+    return `<div class="rg-sector"><span style="color:${color}">${esc(L('sector', { band: band[0] === band[1] ? `${band[0]}` : `${band[0]}–${band[1]}` }))}</span><span class="rg-dot"> · </span><span class="muted">${esc(L('sector.cap', { lo: cap[0], hi: cap[1] }))}</span>${pocket}</div>`;
+  }
+
+  private sectorHere(state: ClientState): SectorData | null {
+    const own = state.ownDisplay;
+    if (!own || !state.sectors.length) return null;
+    return state.sectors[sectorIndex(own.x, own.y)] ?? null;
   }
 
   /** «Now: …» — what she is about and where it lies (owner, 2026-09-29: an objective always on the screen). */
@@ -529,6 +547,12 @@ export class Hud {
       g.arc(tx(rf.x), ty(rf.y), Math.max(1.5, rf.r * k * 0.8), 0, Math.PI * 2);
       g.stroke();
     }
+    // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold.
+    for (const m of state.seaMarks.values()) {
+      if (Math.abs(m.x - own.x) > range || Math.abs(m.y - own.y) > range) continue;
+      g.fillStyle = m.kind === 'buoy' ? 'rgba(200,70,60,0.8)' : m.kind === 'lantern' ? 'rgba(240,200,110,0.85)' : m.kind === 'floe' ? 'rgba(200,215,225,0.6)' : 'rgba(150,130,100,0.6)';
+      g.fillRect(tx(m.x) - 1, ty(m.y) - 1, 2, 2);
+    }
     // Weather fronts on the horizon.
     for (const f of state.fronts) {
       g.fillStyle = f.kind === 'black_storm' ? 'rgba(46,230,200,0.10)' : f.kind === 'storm' ? 'rgba(160,170,190,0.16)' : f.kind === 'fog' ? 'rgba(170,180,185,0.10)' : 'rgba(120,150,190,0.10)';
@@ -596,6 +620,39 @@ export class Hud {
       g.stroke();
     }
     g.setLineDash([]);
+    // The squares of the sea (docs/16 P2): their borders faint on the dial, her own square's levels at its foot.
+    if (state.sectors.length) {
+      g.strokeStyle = 'rgba(200,190,150,0.22)';
+      g.setLineDash([2, 4]);
+      g.lineWidth = 1;
+      const x0 = Math.ceil((own.x - range) / SECTOR_SIZE) * SECTOR_SIZE, y0 = Math.ceil((own.y - range) / SECTOR_SIZE) * SECTOR_SIZE;
+      for (let x = x0; x < own.x + range; x += SECTOR_SIZE) {
+        g.beginPath();
+        g.moveTo(tx(x), 0);
+        g.lineTo(tx(x), H);
+        g.stroke();
+      }
+      for (let y = y0; y < own.y + range; y += SECTOR_SIZE) {
+        g.beginPath();
+        g.moveTo(0, ty(y));
+        g.lineTo(W, ty(y));
+        g.stroke();
+      }
+      g.setLineDash([]);
+      const sec = this.sectorHere(state);
+      if (sec) {
+        const band = bandOf(sec.l);
+        const text = `⚓${band[0]}–${band[1]}`;
+        g.font = '700 10px Inter, sans-serif';
+        g.textAlign = 'center';
+        g.lineWidth = 3;
+        g.strokeStyle = 'rgba(0,0,0,0.85)';
+        g.strokeText(text, W / 2, H - 9);
+        g.fillStyle = THREAT_COLOR[threatTo(sec.l)];
+        g.fillText(text, W / 2, H - 9);
+        g.lineWidth = 1;
+      }
+    }
     // Holders of the legendary chart you can hear, and where a cursed map pulls: ticks at the rim.
     const rim = (a: number, color: string) => {
       g.strokeStyle = color;

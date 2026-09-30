@@ -82,6 +82,7 @@ import { windAt } from '../../../shared/src/sim/wind.ts';
 import type { WindSample } from '../../../shared/src/sim/wind.ts';
 import { REGIONS, WORLD_EDGE_MARGIN } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
+import { sectorGrid } from '../../../shared/src/world/sectors.ts';
 import { chunkKey, chunkOf, currentAt, depthAt, whirlpoolAt, generateWorld, islandsNear, raiseIsland, regionAt } from '../../../shared/src/world/worldgen.ts';
 import type { Island, Port, RaisedIsland, World } from '../../../shared/src/world/worldgen.ts';
 import type { AuthService } from '../auth.ts';
@@ -2309,7 +2310,11 @@ export class Game {
           const rf = this.world.reefs[id];
           return { id: rf.id, x: Math.round(rf.x), y: Math.round(rf.y), r: Math.round(rf.radius), poly: rf.poly.map((v) => Math.round(v)), depth: rf.depth };
         });
-        this.sendTo(s, { t: 'chunk', key: k, islands: list.map((id) => this.islandData(this.world.islands[id])), reefs });
+        const marks = (this.world.markChunks.get(k) ?? []).map((id) => {
+          const m = this.world.marks[id];
+          return { id: m.id, kind: m.kind, x: Math.round(m.x), y: Math.round(m.y), r: Math.round(m.r), rot: Math.round(m.rot * 100) / 100, seed: m.seed };
+        });
+        this.sendTo(s, { t: 'chunk', key: k, islands: list.map((id) => this.islandData(this.world.islands[id])), reefs, ...(marks.length ? { marks } : {}) });
       }
     }
   }
@@ -2323,7 +2328,7 @@ export class Game {
   islandData(is: Island): IslandData {
     let d = this.islandCache.get(is.id);
     if (!d) {
-      d = { id: is.id, name: is.name, region: is.region, biome: is.biome, x: Math.round(is.x), y: Math.round(is.y), r: Math.round(is.radius), poly: is.poly.map((v) => Math.round(v)), features: is.features, portId: is.portId };
+      d = { id: is.id, name: is.name, region: is.region, biome: is.biome, x: Math.round(is.x), y: Math.round(is.y), r: Math.round(is.radius), poly: is.poly.map((v) => Math.round(v)), features: is.features, portId: is.portId, ...(is.minor ? { minor: true } : {}), ...(is.raft ? { raft: true } : {}) };
       this.islandCache.set(is.id, d);
     }
     return d;
@@ -3449,7 +3454,7 @@ export class Game {
     motdOnLogin(this, s);
     const ports: PortPublic[] = this.world.ports.map((p) => ({
       id: p.id, name: p.name, region: p.region, faction: p.faction, x: Math.round(p.x), y: Math.round(p.y), size: p.size,
-      shipyardTier: p.shipyardTier, blackMarket: p.blackMarket, description: p.description,
+      shipyardTier: p.shipyardTier, blackMarket: p.blackMarket, description: p.description, ...(p.raft ? { raft: true } : {}),
     }));
     s.knownEntities.clear();
     s.sentRows.clear();
@@ -3457,6 +3462,7 @@ export class Game {
     this.lastSelf.delete(s); // the init carries the whole private state
     this.sendTo(s, {
       t: 'init', self: toPrivateState(s, this.now, this.worldView(s)), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
+      sectors: sectorGrid(this.world).map((x) => (x.pocket ? { l: x.level, p: x.pocket } : { l: x.level })), // the squares of the sea (docs/16 P2)
     });
     // Islands the captain has charted are sent up front so the world map is complete.
     this.sendIslands(s, [...s.discovered]);
