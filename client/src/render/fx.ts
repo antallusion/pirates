@@ -288,7 +288,7 @@ export class Fx {
       }
       case 'men':
         // Men of her stacks fallen to a broadside or a fire (docs/17 H1): a "−N men" rising over her.
-        this.add({ kind: 'text', x: e.x, y: e.y - 20, vy: -7, life: 1.8, size: 14, color: e.ship === ownId ? '#ff8f7a' : '#f3c9a0', text: L('menLost', { n: e.n }) });
+        this.add({ kind: 'text', x: e.x, y: e.y - 34, vy: -6, life: 2.2, size: 17, color: e.ship === ownId ? '#ff8f7a' : '#ffd08a', text: L('menLost', { n: e.n }) });
         break;
       case 'tether':
         this.tethers = this.tethers.filter((t) => t.a !== e.a);

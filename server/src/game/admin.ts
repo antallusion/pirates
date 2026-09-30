@@ -801,7 +801,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         ship.setArmy([...kept, ...(n > 0 ? [{ u, n: Math.min(n, ship.stats.crewMax) }] : [])]);
       }
       game.pushSelf(s, true);
-      return `Army: ${ship.army.map((x) => `${x.u} ×${x.n}`).join(', ') || 'none'} (${ship.crew} men).`;
+      return `Army set: ${ship.crew} men in ${ship.army.length} stacks.`;
     }
     case 'foe': {
       // A whole ship of the sea alongside, not grappled (/foe [role] [class] [metres]): to try the guns on her men, or
@@ -819,7 +819,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       o.input = { rudder: 0, sailTarget: 0 };
       o.state.speed = ship.state.speed = 0;
       game.grid.upsert(o.id, o.state.x, o.state.y);
-      return `${o.name} lies ${Math.round(d)} m off your beam: ${o.army.map((x) => `${x.u} ×${x.n}`).join(', ')}.`;
+      return `${o.name} lies ${Math.round(d)} m off your beam, ${o.crew} men in ${o.army.length} stacks.`;
     }
     case 'board': {
       // Alongside a ship already: grapple her at once, whole as she is (docs/17 H1).

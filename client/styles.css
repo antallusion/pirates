@@ -2945,6 +2945,8 @@ body.tac #hud-bottom, body.tac #touch, body.tac #board-fight { visibility: hidde
 /* While the decks fight, the sea's news waits; what the battle itself says (a refusal, a win) still shows. */
 body.tac #toasts .toast:not(.bad):not(.good):not(.xp) { display: none; }
 body.tac #toasts { top: 22%; }
+/* The battle decided: its banner says it all (the experience too); the sea's news waits for the deck to clear. */
+body.tac.tac-over #toasts { display: none; }
 /* A phone on its side: the field in the middle as tall as the screen, the captains and the orders left and right. */
 @media (max-height: 520px) and (orientation: landscape) {
   .tb-root { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr);
@@ -3187,9 +3189,16 @@ body.tac #toasts { top: 22%; }
 .tb-sps { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
 .tb-sps .chip { font-size: 10.5px; }
 @media (max-height: 520px) and (orientation: landscape) {
-  .tb-spells { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .tb-spell { justify-content: center; padding: 2px; min-height: 34px; }
+  .tb-spells { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+  .tb-spell { justify-content: center; padding: 2px; min-height: 34px; min-width: 0; gap: 0; }
+  .tb-spell .ico { width: 20px; height: 20px; }
+  .skinned .tb-spell { border-width: 5px; padding: 1px; }
   .tb-spell span { display: none; }
   .tb-banner.tb-result { padding: 8px 14px; }
   .tb-rs, .tb-rs-ico { width: 24px; height: 24px; }
+}
+.tb-pip.tb-men { color: var(--bone); }
+/* A desk: the battle's own toasts in the right column's open middle, clear of the order of the round. */
+@media (min-width: 900px) and (min-height: 521px) and (min-aspect-ratio: 7/5) {
+  body.tac #toasts { top: 46%; }
 }

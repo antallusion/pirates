@@ -136,6 +136,7 @@ export class TacticalPanel {
     const was = this.view;
     this.view = v;
     document.body.classList.toggle('tac', !!v);
+    document.body.classList.toggle('tac-over', !!v?.over);
     if (!v) {
       if (this.el) {
         root.classList.add('hidden');
@@ -279,7 +280,7 @@ export class TacticalPanel {
       const pips = (n: number, cls: string) => `<span class="tb-pip ${cls}${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(cls === 'm' ? 'morale' : 'luck'))}">${cls === 'm' ? '⚑' : '✦'}${n > 0 ? `+${n}` : n}</span>`;
       const mine = x === v.you;
       return `<div class="tb-face" style="background-image:${url ? `url('${url}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))} · ${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</small><span class="tb-pips">${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small><span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
