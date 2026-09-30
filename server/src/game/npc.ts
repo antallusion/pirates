@@ -814,7 +814,7 @@ export interface NpcQuota {
   ghosts: number;
 }
 
-export const QUOTA: NpcQuota = { merchants: 70, pirates: 34, fishers: 16, ghosts: 2 };
+export const QUOTA: NpcQuota = { merchants: 140, pirates: 68, fishers: 40, ghosts: 3 };
 
 export function spawnMerchant(game: Game): void {
   const ports = game.zonePorts();

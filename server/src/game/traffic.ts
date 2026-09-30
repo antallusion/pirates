@@ -12,12 +12,13 @@ import { quietSea } from './director.ts';
 import type { Game } from './Game.ts';
 
 /** How near counts as about her, and how far off a new ship is put out (beyond her screen, inside her chart). */
-export const TRAFFIC_R = 3800;
-const SPAWN_R: [number, number] = [2400, 3400];
+// Owner, 2026-09-30: four times the ships to meet. A wider ring about her, and many more in it.
+export const TRAFFIC_R = 5000;
+const SPAWN_R: [number, number] = [2200, 4400];
 /** Gone when no captain is within this and she is not fighting. */
 const GONE_R = 9000;
 /** How many of the sea's ships about her, by her waters. */
-export const TRAFFIC_WANT: Record<string, number> = { safe: 5, contested: 6, lawless: 5 };
+export const TRAFFIC_WANT: Record<string, number> = { safe: 16, contested: 20, lawless: 18 };
 /** Who sails where. */
 const MIX: Record<string, [Role, number][]> = {
   safe: [['merchant', 45], ['fisher', 35], ['patrol', 20]],
@@ -25,7 +26,7 @@ const MIX: Record<string, [Role, number][]> = {
   lawless: [['merchant', 25], ['fisher', 10], ['pirate', 65]],
 };
 /** No more local ships than this in the whole sea, whatever the crowd. */
-const CAP = 220;
+const CAP = 900;
 type Role = 'merchant' | 'fisher' | 'patrol' | 'pirate';
 const COUNTED = new Set(['merchant', 'fisher', 'patrol', 'pirate', 'escort', 'hunter', 'ghost']);
 
@@ -33,7 +34,7 @@ const local = new WeakMap<Game, Set<number>>();
 /** When each captain is next hunted (wild waters only). */
 const hunts = new WeakMap<Game, Map<number, number>>();
 /** Seconds between two rovers put out after a captain in contested and lawless waters. */
-export const HUNT_EVERY: [number, number] = [210, 330];
+export const HUNT_EVERY: [number, number] = [90, 150];
 
 /** The eight points of the compass, from a bearing (0 = north, clockwise). */
 export function compassPoint(a: number): string {
@@ -126,8 +127,11 @@ export function stepTraffic(game: Game): void {
     game.forShipsNear(ship.state.x, ship.state.y, TRAFFIC_R, (o) => {
       if (o.npcRole && COUNTED.has(o.npcRole) && o.alive) count++;
     });
-    if (count >= (TRAFFIC_WANT[safety] ?? 5)) continue;
+    const want = TRAFFIC_WANT[safety] ?? 5;
+    if (count >= want) continue;
     const mix = (MIX[safety] ?? MIX.contested).filter(([r]) => !novice || r !== 'pirate');
+    // Up to three at a turn while the sea about her is thin, so a new sea fills within a minute.
+    for (let n = Math.min(3, want - count); n > 0; n--) {
     const role = game.rng.weighted(mix);
     // Mostly ahead of her or abeam, where she will meet it; now and then astern, overtaking.
     for (let k = 0; k < 6; k++) {
@@ -146,6 +150,7 @@ export function stepTraffic(game: Game): void {
         }
         break;
       }
+    }
     }
   }
 }
