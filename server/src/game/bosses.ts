@@ -6,6 +6,7 @@
 
 import { tattooCount } from './tattoos.ts';
 import { grantDeed } from './progression.ts';
+import { chronicle } from './renown.ts';
 import { BOSSES, BOSS_ANNOUNCE, BOSS_IDS, BOSS_LOCKOUT, BOSS_RANGE, lootFactor } from '../../../shared/src/data/bosses.ts';
 import type { BossDef, BossId } from '../../../shared/src/data/bosses.ts';
 import { FIGUREHEADS } from '../../../shared/src/data/shipbuild.ts';
@@ -1473,6 +1474,7 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
   }
   const who = names.slice(0, 4).join(', ') + (names.length > 4 ? ` and ${names.length - 4} more` : '');
   game.addRumor(x, y, `${def.name} was slain by ${who || 'nobody the taverns can name'}.`);
+  if (names.length) chronicle(game, `${def.name} was slain by ${who}.`); // for those ashore (docs/16 #30)
   for (const s of game.sessions) if (s.ship && !f.contrib.has(s.accountId) && dist(s.ship.state.x, s.ship.state.y, x, y) < 20000) game.sendTo(s, { t: 'toast', msg: `WORLD: ${def.name} was slain by ${who}.`, kind: 'info' });
   // The first kill on the server goes in the book (the Pantheon, Phase 9).
   const firsts = game.db.getKv<Record<string, { names: string[]; at: number }>>('boss_firsts') ?? {};

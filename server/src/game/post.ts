@@ -115,6 +115,11 @@ function saveMailbox(game: Game, accountId: number, box: Mailbox): void {
   game.db.setKv(`mail:${accountId}`, box);
 }
 
+/** The letters that reached her box since a time (wall ms), oldest first (docs/16 #30). */
+export function lettersSince(game: Game, accountId: number, since: number): Letter[] {
+  return mailbox(game, accountId).letters.filter((l) => l.sentAt >= since);
+}
+
 /** Puts a letter in a captain's box (online or not). */
 export function deliver(game: Game, accountId: number, l: Omit<Letter, 'id' | 'sentAt' | 'arriveAt' | 'read' | 'taken'>, delayMs = 0): Letter {
   const box = mailbox(game, accountId);

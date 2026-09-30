@@ -5,6 +5,7 @@
 
 import type { RequestKind } from './data/fates.ts';
 import type { OmenId } from './data/omens.ts';
+import type { CareerId, SetId, WeeklyKind } from './data/renown.ts';
 import type { WonderKind } from './data/wonders.ts';
 import type { HarnessId, PetId } from './data/companions.ts';
 import type { NemesisCause } from './data/nemesis.ts';
@@ -232,6 +233,9 @@ export type ClientMsg =
   | { t: 'dive_surface' }
   | { t: 'abyss'; action: 'ritual' }
   | { t: 'legends' }
+  /** docs/16 Batch F: the careers, the week's challenges, the album and the titles; the welcome gift taken. */
+  | { t: 'renown' }
+  | { t: 'away'; action: 'take' | 'close' }
   | { t: 'empire'; action: 'view' | 'charter' | 'convoy' | 'cancel' | 'bid'; from?: string; to?: string; good?: string; qty?: number; every?: number; escorts?: number; id?: number; amount?: number; lot?: number }
   | { t: 'legendary'; action: 'deliver'; id: string }
   | { t: 'season'; action: 'title' | 'pennant' | 'name'; value?: string; islandId?: number }
@@ -502,6 +506,8 @@ export interface Contract {
 export interface PrivateState {
   accountId: number;
   name: string;
+  /** The title she flies with the ship's name (docs/16 #29). */
+  title?: string | null;
   captain: CaptainId;
   level: number;
   xp: number;
@@ -929,6 +935,69 @@ export interface EmpireView {
 }
 
 /** A captain's legend (legends.ts): trophies, the monsters slain, the chapters of the Abyss, and the book of the sea. */
+/** docs/16 #26: a career under a flag. */
+export interface CareerView {
+  id: CareerId;
+  rank: number;
+  points: number;
+  rep: number;
+  deeds: number;
+  merit: number;
+  /** What the next rank asks (null at the top). */
+  next: { points: number; rep: number } | null;
+  discount: number;
+  yard: boolean;
+  gifts: number[];
+}
+
+/** docs/16 #29: a title for a feat, won or on the way. */
+export interface FeatView {
+  id: string;
+  value: number;
+  need: number;
+  done: boolean;
+}
+
+/** docs/16 #28: a set of the album. */
+export interface SetView {
+  id: SetId;
+  have: string[];
+  items: string[];
+  done: boolean;
+  silver: number;
+  title: string;
+}
+
+/** docs/16 #27: the week's challenges and their tables. */
+export interface WeeklyView {
+  week: number;
+  endsIn: number;
+  challenges: { kind: WeeklyKind; region: RegionId; mine: number; place: number | null; top: { name: string; value: number }[] }[];
+  last: { kind: WeeklyKind; region: RegionId; top: { name: string; value: number }[] }[] | null;
+  prizes: number[];
+}
+
+export interface RenownView {
+  careers: CareerView[];
+  feats: FeatView[];
+  sets: SetView[];
+  weekly: WeeklyView;
+  titles: string[];
+  title: string | null;
+}
+
+/** docs/16 #30: what happened while she was away, and the gift. */
+export interface AwayView {
+  hours: number;
+  isle: { name: string; goods: number; treasury: number; raids: string[] } | null;
+  auction: string[];
+  letters: { n: number; unread: number; from: string[] };
+  world: string[];
+  weekly: { kind: WeeklyKind; region: RegionId; place: number | null; value: number; leader: string | null }[];
+  lastWeek: { kind: WeeklyKind; region: RegionId; winner: string }[];
+  gift: { silver: number; speedups: number; provisions: number } | null;
+}
+
 export interface LegendsView {
   trophies: string[];
   bossKills: { name: string; n: number }[];
@@ -1328,6 +1397,8 @@ export type ServerMsg =
   | { t: 'minigame'; view: MinigameView | null }
   | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item } }
   | { t: 'legends'; view: LegendsView }
+  | { t: 'renown'; view: RenownView }
+  | { t: 'away'; view: AwayView }
   | { t: 'onboarding'; view: OnboardingView }
   /** A moment of the First Watch: a step done or skipped, a contextual hint, a goal met, the edge of safe waters. */
   | { t: 'onb'; kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge'; id: string }

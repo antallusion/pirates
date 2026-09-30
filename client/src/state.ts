@@ -11,7 +11,7 @@ import { noteOwnShip } from './ui/levels.ts';
 import { isNight, SPEED_SCALE } from '../../shared/src/constants.ts';
 import { lerp, lerpAngle } from '../../shared/src/math.ts';
 import type {
-  BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, FrontWarn, ReefData, SeaMarkData, SectorData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
+  BarterView, BoardFightView, TacView, FriendView, WhoView, BossView, DiveView, EmpireView, LegendsView, RenownView, AwayView, FrontWarn, PveSiteView, WorldEventView, BountyView, DuelView, GuildView, HoldingView, IslandOffer, SiegeView, BoardingResult, CurrentData, LetterView, MarketView, PartyView, FrontData, ReefData, SeaMarkData, SectorData, WhirlpoolData, EntityInfo, IslandData, PortPublic, PortView, PrivateState, SelfRow, ServerMsg, ShipInfo, WeatherKind, OnboardingView } from '../../shared/src/protocol.ts';
 import type { TaskView } from '../../shared/src/data/worldtasks.ts';
 import { stepSailing } from '../../shared/src/sim/sailing.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
@@ -160,6 +160,9 @@ export class ClientState {
   /** Sunken cities and ship graveyards; the diving bell when one of ours is down (expeditions.ts). */
   pveSites: PveSiteView[] = [];
   legends: LegendsView | null = null;
+  /** docs/16 #26–29: careers, feats, the album, the week's challenges; #30: what happened while she was away. */
+  renown: RenownView | null = null;
+  away: AwayView | null = null;
   onboarding: OnboardingView | null = null;
   empire: EmpireView | null = null;
   dive: DiveView | null = null;
@@ -418,6 +421,12 @@ export class ClientState {
         break;
       case 'legends':
         this.legends = m.view;
+        break;
+      case 'renown':
+        this.renown = m.view;
+        break;
+      case 'away':
+        this.away = m.view;
         break;
       case 'onboarding':
         this.onboarding = m.view;

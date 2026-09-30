@@ -90,6 +90,11 @@ import type { PodKind } from '../../../shared/src/protocol.ts';
 import { convoysAt, learnConvoy, sailConvoy } from './raiding.ts';
 import { lairAdmin, lairsAll } from './wanted.ts';
 import { pointAlong } from './nav.ts';
+import { deliver } from './post.ts';
+import { awayMark, awayReturn, chronicle, closeWeek, rn, sendRenown, weeklyAdd } from './renown.ts';
+import { weekNumber, weeklyChallenges } from '../../../shared/src/data/renown.ts';
+import { FISH_IDS } from '../../../shared/src/data/fishing.ts';
+import { OMEN_IDS } from '../../../shared/src/data/omens.ts';
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -97,7 +102,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away H';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -872,6 +877,67 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         else l.roomAt = game.wallNow();
       }
       return `${lots.length} lots stirred.`;
+    }
+    case 'career': {
+      // Deed points for a flag's career (docs/16 #26); standing comes from /rep.
+      const id = args[0] as 'crown' | 'league' | 'confederacy';
+      if (id !== 'crown' && id !== 'league' && id !== 'confederacy') return 'Usage: /career crown|league|confederacy N';
+      rn(p).deeds[id] = Math.max(0, num(1, 500));
+      sendRenown(game, s, true);
+      return `Career deeds set: ${rn(p).deeds[id]}.`;
+    }
+    case 'feats': {
+      // Tallies for a few feats (docs/16 #29): 25 League ships, 30 pirates, the Kraken; the titles come within 5 s.
+      const r = rn(p);
+      r.kills.league = Math.max(r.kills.league ?? 0, 25);
+      r.kills.pirate = Math.max(r.kills.pirate ?? 0, 30);
+      p.bossKills.kraken = Math.max(p.bossKills.kraken ?? 0, 1);
+      return 'Feats counted.';
+    }
+    case 'album': {
+      // Most of the album filled in (docs/16 #28): all fish but one, most omens, two trophies, three beasts.
+      p.fishing ??= { skill: 1, xp: 0, caught: {}, traps: [] };
+      for (const f of FISH_IDS.slice(0, -2)) p.fishing.caught[f] ??= { n: 3, best: 2 };
+      const r = rn(p);
+      for (const o of OMEN_IDS.slice(0, 7)) if (!r.omens.includes(o)) r.omens.push(o);
+      for (const t of ['Kraken Eye', 'Serpent Fang']) if (!p.trophies.includes(t)) p.trophies.push(t);
+      p.beasts = { ...(p.beasts ?? {}), orca: 2, shark: 4, humpback: 1 };
+      p.seaLetters = [...new Set([...(p.seaLetters ?? []), 0, 1, 2])];
+      sendRenown(game, s, true);
+      return 'The album is filled in.';
+    }
+    case 'week': {
+      // The week's tables (docs/16 #27): a few rivals on each; "close" writes this week into the book as if it ended.
+      const list = weeklyChallenges(weekNumber(game.wallNow()));
+      list.forEach((c, i) => weeklyAdd(game, s, c.kind, c.region, 10 + i * 7));
+      const board = game.db.getKv<Record<string, { name: string; v: number[] }>>(`weekly_board:${weekNumber(game.wallNow())}`) ?? {};
+      ['Anne Vey', 'Morrow Kett', 'Isabel Crane'].forEach((name, k) => (board[900000 + k] = { name, v: list.map((_, i) => 30 - k * 9 + i * 3) }));
+      game.db.setKv(`weekly_board:${weekNumber(game.wallNow())}`, board);
+      if (args[0] === 'close') {
+        const last = weekNumber(game.wallNow()) - 1;
+        const lb = game.db.getKv<Record<string, { name: string; v: number[] }>>(`weekly_board:${last}`) ?? {};
+        ['Anne Vey', 'Morrow Kett'].forEach((name, k) => (lb[900000 + k] = { name, v: [20 - k * 5, 14 + k, 9 - k] }));
+        lb[s.accountId] = { name: s.name, v: [4, 16, 2] };
+        game.db.setKv(`weekly_board:${last}`, lb);
+        game.db.setKv('weekly_hist', (game.db.getKv<{ week: number }[]>('weekly_hist') ?? []).filter((h) => h.week !== last));
+        closeWeek(game, last);
+      }
+      sendRenown(game, s, true);
+      return 'The week’s tables are stirred.';
+    }
+    case 'away': {
+      // As if she had been ashore N hours (docs/16 #30): the welcome back window and its gift.
+      awayMark(game, s);
+      const a = rn(p).away!;
+      a.at -= num(0, 36) * 3_600_000;
+      a.goods = Math.max(0, a.goods - 40);
+      a.treasury = Math.max(0, a.treasury - 600);
+      deliver(game, s.accountId, { from: 'The Auction House', subject: 'Sold at Tidewrack', body: 'A lot of yours sold while you were ashore.', gold: 640, goods: null });
+      chronicle(game, 'Kraken was slain by Anne Vey, Morrow Kett.');
+      const v = awayReturn(game, s);
+      if (!v) return 'Not long enough ashore.';
+      game.sendTo(s, { t: 'away', view: v });
+      return null;
     }
     case 'heal':
       mend(ship);

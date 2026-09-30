@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { careerBuyMul, careerYardBonus, renownTrade } from './renown.ts';
 import { veteranPay } from '../../../shared/src/data/questpay.ts';
 import { ownShipsTrade } from './baseships.ts';
 import { boardView } from './chests.ts';
@@ -89,6 +90,11 @@ export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0, ga
   // League Day's kind prices in the League's ports (docs/12 P10 #18).
   const ld = game ? leagueDayMods(game, port) : null;
   if (ld) mods = { ...mods, buyMul: mods.buyMul * ld.buy, sellMul: mods.sellMul * ld.sell };
+  // A career under the port's flag (docs/16 #26): goods a little cheaper by rank.
+  if (p) {
+    const c = careerBuyMul(p, port.faction);
+    if (c !== 1) mods = { ...mods, buyMul: mods.buyMul * c };
+  }
   // A festival's kind prices (docs/12 P2).
   if (game && festivalAt(game, port.id)) return { ...mods, buyMul: mods.buyMul * 0.9, sellMul: mods.sellMul * 1.05 };
   return mods;
@@ -179,7 +185,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     shipyard: {
       tier,
       repairCost: repairCost(ship),
-      ships: SHIP_CLASS_IDS.filter((id) => SHIP_CLASSES[id].purchasable && SHIP_CLASSES[id].tier <= tier && (!SHIP_CLASSES[id].factions || SHIP_CLASSES[id].factions!.includes(port.faction))).map((id) => ({
+      ships: SHIP_CLASS_IDS.filter((id) => SHIP_CLASSES[id].purchasable && SHIP_CLASSES[id].tier <= tier + careerYardBonus(p, port.faction) && (!SHIP_CLASSES[id].factions || SHIP_CLASSES[id].factions!.includes(port.faction))).map((id) => ({
         classId: id, price: SHIP_CLASSES[id].price, tradeIn: Math.round(shipValue(ship) * 0.6),
       })),
       modules: MODULE_IDS.filter((m) => !(m === 'figurehead_kraken' && tier < 2 && !ship.hasFlag('modular_refit')) && (!MODULES[m].blueprint || p.blueprints.includes(m))).map((m) => {
@@ -278,6 +284,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     // Forged Papers rank 2: the Brokers stamp what they sell you.
     if (def.contraband && port.faction === 'brokers' && ship.rank('smg_forged_papers') >= 2) p.smuggle.stamped[good] = (p.smuggle.stamped[good] ?? 0) + qty;
     game.db.ledger(s.accountId, 'buy', -price, `${qty} ${good} @ ${port.id}`);
+    renownTrade(game, s, port, price); // the flag's deeds, the week's trade (docs/16 #26–27)
     return null;
   }
   let n = -qty;
@@ -329,6 +336,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   holidaySale(game, s, port, good, n); // League Day's seal (docs/12 P10 #18)
   noteSale(game, s, port, good, n);
   if (profit > 0) seasonStat(game, s, 'trade', profit);
+  renownTrade(game, s, port, price); // the flag's deeds, the week's trade (docs/16 #26–27)
   onSaleDeeds(game, s, port.id, good, n, price);
   game.checkDeliveries(s, port);
   return null;
@@ -477,7 +485,7 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   const ship = s.ship!;
   const def = SHIP_CLASSES[classId];
   if (!def || !def.purchasable) return 'Not for sale';
-  if (def.tier > port.shipyardTier) return `${port.name} cannot build a ${def.name}`;
+  if (def.tier > port.shipyardTier + careerYardBonus(s.profile!, port.faction)) return `${port.name} cannot build a ${def.name}`;
   if (def.factions && !def.factions.includes(port.faction)) return `Only ${def.factions.join(', ')} yards build the ${def.name}`;
   if (classId === ship.loadout.classId) return 'You already sail one';
   const refitting = refitHolds(game, s.profile!);

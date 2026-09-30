@@ -65,13 +65,14 @@ import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
 import { renderDescent } from './ui/descent.ts';
 import { renderSaga } from './ui/saga.ts';
+import { renderAway } from './ui/renown.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -553,6 +554,10 @@ function onMessage(m: ServerMsg): void {
         else openModal('dice');
       } else if (modal === 'dice') closeModal();
       break;
+    case 'away':
+      // Back after a long time ashore (docs/16 #30): what happened, and the gift.
+      if (modal !== 'boarding' && modal !== 'mutiny') openModal('away');
+      break;
     case 'hall':
       if (m.view) {
         if (modal === 'hall') refreshModal();
@@ -618,7 +623,9 @@ function onMessage(m: ServerMsg): void {
     case 'guild':
     case 'legends':
     case 'empire':
+    case 'renown':
       if (modal === 'company') refreshModal();
+      if (m.t === 'renown' && modal === 'journal') refreshModal();
       hud.setUnread(state.unread);
       break;
     case 'barter':
@@ -662,6 +669,11 @@ function openModal(m: Modal): void {
 
 function closeModal(): void {
   const was = modal;
+  // The welcome gift is never lost by closing its window (docs/16 #30).
+  if (was === 'away' && state.away?.gift) {
+    net.send({ t: 'away', action: 'take' });
+    state.away.gift = null;
+  }
   modal = null;
   $('modal').classList.add('hidden');
   releaseModalToasts();
@@ -779,6 +791,10 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'saga':
       renderSaga(root, state, (m) => net.send(m));
+      break;
+    case 'away':
+      if (state.away) renderAway(root, state.away, (m) => net.send(m), () => closeModal());
+      else closeModal();
       break;
     case 'log':
       renderLog(root, state);
