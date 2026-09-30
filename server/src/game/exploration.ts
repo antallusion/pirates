@@ -22,6 +22,7 @@ import { haulSite, ownSiteNear } from './resources.ts';
 import { canDive, digTime, makeMap, grantMap, mapChance, mapHere, resolveDig, resolveDive, wreckHere } from './explorefx.ts';
 import { islandJobOffer, questEvent, questLandsHere } from './quests.ts';
 import { landingMinigame, openMinigame, startMinigame } from './minigames.ts';
+import { hearsayCacheBonus } from './hearsay.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import type { HauntId } from '../../../shared/src/data/minigames.ts';
 
@@ -237,7 +238,7 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   let morale = 0;
   switch (feature) {
     case 'cache':
-      silver = rng.int(80, 260);
+      silver = rng.int(80, 260) + hearsayCacheBonus(game, s, island.id); // a true whisper's finder's share (docs/16 #14)
       give(rng.pick(['rum', 'weapons', 'tobacco', 'dreamleaf'] as GoodId[]), 3, 10);
       if (rng.chance(0.15)) lost = rng.int(1, 3); // trapped
       xp = 40;

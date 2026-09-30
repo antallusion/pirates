@@ -45,6 +45,7 @@ import { captivesCard } from './turncoats.ts';
 import { holidayCard } from './holidays.ts';
 import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
 import { departOrAsk, voyageFoodCard } from './depart.ts';
+import { auctionCard, bindDealings, dealingsAct, hearsayCard, repairCompare, runsCard } from './dealings.ts';
 
 /** A generated job's picture by its kind (docs/11 P4). */
 const JOB_ICON: Record<string, string> = {
@@ -115,6 +116,7 @@ export class PortScreen {
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));
     bindBazaar(root);
+    bindDealings(root);
     root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
     root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-build]').forEach((el) => (el.onchange = () => {
       const k = el.dataset.build!;
@@ -189,6 +191,9 @@ export class PortScreen {
       case 'oath':
         void ask(L('confirm.oath')).then((ok) => ok && this.send({ t: 'oath', oath: d.oath as 'code' }));
         return;
+      case 'dl':
+        // Runs, the auction, whispers (docs/16 Batch C).
+        return dealingsAct(d, root, this.send);
       case 'bz':
         // The Floating Bazaar (docs/12 P10 #19).
         return bazaarAct(d, root, this.send);
@@ -361,7 +366,7 @@ export class PortScreen {
       ${view.fence !== null ? `<div class="card" style="margin-top:10px"><h4>${esc(L('fence.title'))}</h4><p class="muted">${esc(L('fence.text', { pct: Math.round(view.fence * 100) }))}</p>
         ${(Object.keys(self.cargo) as (keyof typeof GOODS)[]).filter((g) => GOODS[g].contraband && (self.cargo[g] ?? 0) >= 1).map((g) => `<button class="btn btn-small" data-act="fence" data-good="${g}">${esc(L('fence.sell', { n: Math.floor(self.cargo[g] ?? 0), good: GOODS[g].name }))}</button>`).join(' ') || `<span class="muted">${esc(L('fence.nothing'))}</span>`}</div>` : ''}
       <h3 class="title-sm" style="font-size:20px;margin-top:16px">${esc(L('chandlery.title'))}</h3>
-${ammo}${bazaarCard(state, view)}${intel}`;
+${ammo}${auctionCard(view, state)}${bazaarCard(state, view)}${intel}`;
   }
 
   private shipyard(view: PortView, state: ClientState): string {
@@ -395,7 +400,7 @@ ${ammo}${bazaarCard(state, view)}${intel}`;
     return `<div class="cols"><div>
         ${self.talents.shp_legendary_keel ? `<div class="card"><h4 class="card-h">${icon('good_timber', '', 'ico-md')}${esc(L('keel.title'))}</h4><p class="muted">${esc(L('keel.text'))}</p><button class="btn btn-small" data-act="keel" ${self.loadout.keel ? 'disabled' : ''}>${esc(self.loadout.keel ? L('keel.has') : L('keel.lay'))}</button></div>` : ''}
         <div class="card"><h4 class="card-h">${icon('good_planks', '', 'ico-md')}${esc(L('repair.title'))}</h4><p>${esc(L('repair.state', { hull: state.you?.hull ?? 0, hullMax: state.you?.hullMax ?? 0, sails: state.you?.sails ?? 0, sailsMax: state.you?.sailsMax ?? 0, guns: self.gunsDisabled.port + self.gunsDisabled.starboard }))}</p>
-        <button class="btn btn-primary" data-act="repair" ${sy.repairCost ? '' : 'disabled'}>${esc(sy.repairCost ? L('repair.full', { cost: fmt(sy.repairCost) }) : L('repair.sound'))}</button></div>
+        <button class="btn btn-primary" data-act="repair" ${sy.repairCost ? '' : 'disabled'}>${esc(sy.repairCost ? L('repair.full', { cost: fmt(sy.repairCost) }) : L('repair.sound'))}</button>${repairCompare(view)}</div>
         ${refitCard(sy.refit, self.loadout.name)}
         ${guns}</div><div>
         <div class="card"><h4 class="card-h">${icon('mount_mortar', '', 'ico-md')}${esc(L('mount.title'))}</h4>${sy.mounts.map((m) => {
@@ -512,7 +517,7 @@ ${orders}${berths}</div>` : ''}`;
         <h4 style="margin-top:10px">${esc(L('tavern.tradesmen'))}</h4><div class="trade-list">${trades}</div></div>
       <div><h3 class="title-sm" style="font-size:20px">${esc(L('tavern.officers', { n: co.officers.length, max: co.slots }))}</h3>${officers}</div></div>
       <div class="cols">
-      <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${[...new Set(view.rumors)].map((r) => `<p>${quote(serverText(r))}</p>`).join('')}</div>
+      <div><div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${esc(L('tavern.rumours'))}</h4>${[...new Set(view.rumors)].map((r) => `<p>${quote(serverText(r))}</p>`).join('')}</div>${hearsayCard(view, state)}</div>
       <div>${dailyCard(self.daily)}${commonCard(self.common)}${view.questOffers.length ? `<h3 class="title-sm" style="font-size:20px">${esc(L('quest.board'))}</h3>` : ''}${view.questOffers.map((q) => `<div class="card"><h4 class="card-h">${(q.portrait && icon(`portrait.${q.portrait}`, '', 'ico-md ico-round q-face')) || icon(q.kind === 'legend' ? 'tab_legends' : q.kind === 'path' ? 'menu_crew' : q.kind === 'job' ? JOB_ICON[q.category ?? ''] ?? 'goal' : q.category === 'arc' ? 'tab_legends' : 'goal', '', 'ico-md')}<span class="q-title"><b>${esc(serverText(q.name))}</b><span class="muted">${esc(serverText(q.mentor))}${q.kind === 'legend' ? esc(L('quest.legend')) : q.kind === 'path' ? esc(L('quest.path')) : q.category ? esc(L(`quest.cat.${q.category}` as 'quest.cat.delivery')) : ''}${q.chapter ? esc(L('quest.chapter', { n: q.chapter })) : ''}${q.urgent ? `<span class="q-urgent">${esc(L('quest.urgent'))}</span>` : ''}${q.group ? `<span class="q-group">${esc(L('quest.group', { n: q.group }))}</span>` : ''}</span></span></h4>
         <p>${esc(serverText(q.summary))}</p><ol class="muted" style="margin:4px 0 6px 18px">${q.steps.map((t) => `<li>${esc(serverText(t))}</li>`).join('')}</ol>
         <div class="row"><span class="reward">${money(q.silver)}${xpBadge(q.xp)}${q.path ? esc(L('quest.pathOf', { arch: CAPTAINS[q.path].archetype })) : ''}</span>
@@ -544,7 +549,7 @@ ${orders}${berths}</div>` : ''}`;
       <button class="btn btn-small btn-danger" data-act="contract" data-mode="abandon" data-id="${c.id}">${esc(L('btn.abandon'))}</button></div></div></div>`).join('') || `<p class="muted">${esc(L('contract.none'))}</p>`;
     const offered = view.contracts.map((c) => `<div class="card quest-card">${icon(contractArt(c), '', 'quest-ico')}<div class="quest-body"><h4>${esc(serverText(c.title))}</h4><p>${esc(serverText(c.description))}</p>
       <div class="row"><span class="reward">${money(c.reward)}${xpBadge(c.xp)}</span><button class="btn btn-small btn-primary" data-act="contract" data-mode="accept" data-id="${c.id}">${esc(L('btn.accept'))}</button></div></div></div>`).join('') || `<p class="muted">${esc(L('contract.empty'))}</p>`;
-    return `<div class="cols"><div><h3 class="title-sm" style="font-size:20px">${esc(L('contract.posted'))}</h3>${offered}</div><div><div class="sec-head"><h3 class="title-sm" style="font-size:20px">${esc(L('contract.mine'))}</h3><span class="h-count" title="${esc(L('contract.slots'))}">${self.contracts.length}/${3 + ((self.talents.trd_contract_broker ?? 0) > 0 ? 1 : 0)}</span></div>${mine}</div></div>`;
+    return `${runsCard(view, state)}<div class="cols"><div><h3 class="title-sm" style="font-size:20px">${esc(L('contract.posted'))}</h3>${offered}</div><div><div class="sec-head"><h3 class="title-sm" style="font-size:20px">${esc(L('contract.mine'))}</h3><span class="h-count" title="${esc(L('contract.slots'))}">${self.contracts.length}/${3 + ((self.talents.trd_contract_broker ?? 0) > 0 ? 1 : 0)}</span></div>${mine}</div></div>`;
   }
 
   private harbour(view: PortView, state: ClientState): string {

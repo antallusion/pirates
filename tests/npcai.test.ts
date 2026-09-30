@@ -36,6 +36,8 @@ function npcAt(game: Game, role: 'pirate' | 'merchant', x: number, y: number): S
 test('a wolf pack: the pirate who goes for a captain calls two idle pirates, one to each quarter', () => {
   const { game } = makeGame();
   const prey = captainAtSea(game, 'Hunted');
+  // A steady wind blowing from the pack toward her: this test is of the pack's teamwork, not of beating to windward.
+  game.windFor = () => ({ dir: -Math.PI / 2, strength: 0.7 });
   const first = npcAt(game, 'pirate', prey.state.x + 900, prey.state.y);
   const a = npcAt(game, 'pirate', first.state.x + 1500, first.state.y + 800);
   const b = npcAt(game, 'pirate', first.state.x - 1200, first.state.y + 1500);
@@ -49,8 +51,14 @@ test('a wolf pack: the pirate who goes for a captain calls two idle pirates, one
   assert.equal(game.npcs.get(far.id)!.target, null, 'a pirate beyond 3 km did not hear');
   // They close in.
   const d0 = Math.hypot(a.state.x - prey.state.x, a.state.y - prey.state.y);
-  steps(game, 20 * 15);
-  assert.ok(Math.hypot(a.state.x - prey.state.x, a.state.y - prey.state.y) < d0, 'the pack closes');
+  // She swings out to her quarter of the prey first (which may take her further off), then closes: within two
+  // minutes she has been nearer than she began.
+  let best = d0;
+  for (let i = 0; i < 24; i++) {
+    steps(game, 20 * 5);
+    best = Math.min(best, Math.hypot(a.state.x - prey.state.x, a.state.y - prey.state.y));
+  }
+  assert.ok(best < d0 - 200, `the pack closes (${Math.round(d0)} → ${Math.round(best)} m)`);
 });
 
 test('a merchant run down throws a third of her hold over the side, at most three times, to run lighter', () => {

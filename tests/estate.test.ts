@@ -1,3 +1,4 @@
+import { claimOf } from '../server/src/game/baseclaim.ts';
 // One's own island and outposts (docs/12 P7): bought outright (a lease bought out for less), never besieged, grown
 // through its levels on the store and the treasury; home from a port; residents who settle, are hired and work for
 // +40%; outposts founded on fitting wild islands with materials brought, working by the hour to their store, raised
@@ -141,7 +142,9 @@ test('residents: the rescued settle when their captain comes home, the tavern hi
   h.buildings.push({ id: 'tavern', condition: 1, unpaid: false }, { id: 'farm', condition: 1, unpaid: false });
   assert.equal(hireResident(game, s), null);
   assert.equal(h.residents!.length, 1);
-  // A day of the farm alone, then a day with a resident on it.
+  // A day of the farm alone, then a day with a resident on it (no pirate raid on the store between: a fair count).
+  claimOf(game, h).calmUntil = 1e15;
+  h.treasury = 1_000_000; // both days' upkeep paid alike (the tavern's takings are chance)
   h.store = {};
   h.lastWork = clock;
   clock += 24 * 3_600_000;

@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { noteHearsay, repairPrompt } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
 import { tell } from './ui/confirm.ts';
@@ -439,6 +440,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'self':
     case 'self_patch':
+      noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
       else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'gear' || modal === 'crew' || modal === 'mutiny' || modal === 'company' || modal === 'barter' || modal === 'base') refreshModal();
@@ -871,6 +873,7 @@ $('hud-map').onclick = () => toggle('map');
 $('hud-prompt').addEventListener('click', (e) => {
   if ((e.target as HTMLElement).closest('[data-open-base]')) openBase();
   if ((e.target as HTMLElement).closest('[data-open-claim]')) openClaim();
+  if ((e.target as HTMLElement).closest('[data-sea-repair]')) net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
 });
 // Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
 new MutationObserver(() => {
@@ -1299,6 +1302,9 @@ function computePrompt(): string {
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
   if (port) parts.push(`<kbd>${esc(keyOfAction('dock'))}</kbd> ${esc(L('enter', { port: sv(port.name) }))}`);
   if (you.flags & SF.PROTECTED) parts.push(`<span class="muted">${esc(L('protected'))}</span>`);
+  // Mending at sea (docs/16 #15): the carpenters' pace and what it takes, or how they get on.
+  const mend = repairPrompt(self, you, !!(you.flags & SF.REPAIRING), keyOfAction('repair'));
+  if (mend) parts.push(mend);
   if (you.combat && !(you.flags & SF.REPAIRING) && you.hull < you.hullMax * 0.5) parts.push(`<span class="muted">${esc(L('repairLull', { key: '\u0000' })).replace('\u0000', `<kbd>${esc(keyOfAction('repair'))}</kbd>`)}</span>`);
   return parts.join('<br>');
 }

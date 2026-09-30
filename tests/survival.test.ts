@@ -101,7 +101,7 @@ test('Old Salt repairs without planks; Patchwork Hull heals under fire', () => {
   ship.cargo = {};
   ship.hull = ship.stats.hullMax * 0.5;
   c.push({ t: 'repair', on: true });
-  steps(game, 20 * 5);
+  steps(game, 20 * 60); // repairs at sea are slow now (docs/16 #15): a minute of it
   assert.ok(ship.hull > ship.stats.hullMax * 0.51, 'repairing without planks');
   const { ship: pw } = atSea(game, 'Patch', { srv_patchwork_hull: 1 });
   pw.hull = pw.stats.hullMax * 0.5;
