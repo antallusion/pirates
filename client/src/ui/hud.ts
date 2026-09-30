@@ -35,7 +35,7 @@ import { seasonName } from '../../../shared/src/world/worldgen.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, dec1, decorateSums, esc, fmt, icon, knots, pct } from './dom.ts';
-import { compassKey, objective, questPointer, trackedQuest } from './track.ts';
+import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
 import { NAME_RU } from '../lang/data.ts';
@@ -106,6 +106,8 @@ export class Hud {
   artEpoch = 0;
 
   constructor() {
+    // Her own mark reached: a word, and the «Now:» line moves on.
+    waypointHooks.onArrive = () => this.toast(L('wpArrived'), 'good');
     // The unit frame opens the ship's full condition on screens too small to keep it out.
     // It drops open under the frame's lowest edge (portrait, bars and the line under them), measured as it opens.
     $('hud-captain').onclick = () => {
@@ -339,7 +341,8 @@ export class Hud {
     const where = o.dir && o.kind !== 'sight' ? ` · ${esc(L(`dir.${o.dir}` as never))}, ${esc(dist)}` : '';
     const left = o.left !== undefined ? ` · <span style="color:${o.left < 180 ? 'var(--bad)' : 'var(--fog)'}">${esc(L('obj.left', { n: Math.max(1, Math.ceil(o.left / 60)) }))}</span>` : '';
     let body: string;
-    if (o.kind === 'raid') body = `<span style="color:var(--bad)">${esc(L('obj.raid', { name: placeName(o.title) }))}</span>${where}${left.replace('var(--fog)', 'var(--bad)')}`;
+    if (o.kind === 'waypoint') body = `${icon('goal', '', 'ico-sm')}${esc(L('obj.waypoint'))}${where}`;
+    else if (o.kind === 'raid') body = `<span style="color:var(--bad)">${esc(L('obj.raid', { name: placeName(o.title) }))}</span>${where}${left.replace('var(--fog)', 'var(--bad)')}`;
     else if (o.kind === 'quest') body = `${esc(sv(o.title))}: <span class="muted">${esc(sv(o.text))}</span>${where}`;
     else if (o.kind === 'contract') body = `${esc(L('obj.contract'))} — ${esc(sv(o.title))}${o.text ? ` ${esc(o.text)}` : ''}${where}${left}`;
     else if (o.kind === 'map') body = `${esc(L('obj.map'))} — ${esc(sv(o.title))}${where}`;
@@ -615,6 +618,25 @@ export class Hud {
       } else if (!t.done && d < 20000 && (!near || d < near.d)) near = { x: t.x, y: t.y, d };
     }
     if (near) rim(Math.atan2(near.x - own.x, -(near.y - own.y)), '#e88c40');
+    // Her own mark (set on the chart): a gold diamond in view, a gold tick on the rim beyond it.
+    const wp = waypoint();
+    if (wp) {
+      const wx = tx(wp.x), wy = ty(wp.y);
+      if (Math.hypot(wx - W / 2, wy - H / 2) < W / 2 - 8) {
+        g.fillStyle = '#e8c46a';
+        g.strokeStyle = 'rgba(0,0,0,0.85)';
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.moveTo(wx, wy - 6);
+        g.lineTo(wx + 5, wy);
+        g.lineTo(wx, wy + 6);
+        g.lineTo(wx - 5, wy);
+        g.closePath();
+        g.stroke();
+        g.fill();
+        g.lineWidth = 1;
+      } else rim(Math.atan2(wp.x - own.x, -(wp.y - own.y)), '#f0d48e');
+    }
     // Signs on the horizon (docs/12 P2): a gold "?" where something is happening.
     g.font = '700 11px Inter, sans-serif';
     g.textAlign = 'center';

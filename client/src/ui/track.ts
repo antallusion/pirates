@@ -22,6 +22,31 @@ export function trackedQuest(quests: Quest[] | undefined): Quest | null {
   return qs.find((q) => q.id === id) ?? qs.find((q) => q.target) ?? qs[0] ?? null;
 }
 
+/** The captain's own mark on the chart (owner, 2026-09-30: "put a point and this point would lead"): kept in the
+ *  browser, it leads the «Now:» line and the gold marks until she reaches it. */
+const WP_KEY = 'gravetide.waypoint';
+/** Within this many metres of her mark she has arrived and it is taken off. */
+export const WAYPOINT_ARRIVE = 150;
+
+export function waypoint(): { x: number; y: number } | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(WP_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as { x?: unknown; y?: unknown };
+    return typeof p.x === 'number' && typeof p.y === 'number' && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Told when she reaches her mark (the HUD says so). */
+export const waypointHooks: { onArrive: (() => void) | null } = { onArrive: null };
+
+export function setWaypoint(p: { x: number; y: number } | null): void {
+  if (p) globalThis.localStorage?.setItem(WP_KEY, JSON.stringify({ x: Math.round(p.x), y: Math.round(p.y) }));
+  else globalThis.localStorage?.removeItem(WP_KEY);
+}
+
 /** Where the pointer should lead, or null when there is nowhere to go (no place, or already there). */
 export function questPointer(q: Quest | null, x: number, y: number, region: string): { x: number; y: number; d: number } | null {
   const t = q?.target;
@@ -40,7 +65,7 @@ export function compassKey(a: number): 'north' | 'north-east' | 'east' | 'south-
 
 /** What the captain is about now (owner, 2026-09-29: an objective always on the screen), and where it lies. */
 export interface Objective {
-  kind: 'raid' | 'quest' | 'contract' | 'map' | 'sight' | 'daily' | 'sail';
+  kind: 'waypoint' | 'raid' | 'quest' | 'contract' | 'map' | 'sight' | 'daily' | 'sail';
   /** Server words (translated by the HUD) or a key's parts. */
   title: string;
   text: string;
@@ -61,13 +86,19 @@ interface ObjState {
   estServerTime(): number;
 }
 
-/** The first of: pirates raiding her own island (docs/15 item 7: before everything, with where they lie and the minutes
+/** The first of: her own mark on the chart (taken off once she is there), pirates raiding her own island (docs/15 item 7: before everything, with where they lie and the minutes
  * left), the followed quest, a contract with a port to reach (or a count to make), the nearest sign on the
  * horizon, the day's next order; at sea with none of these, to go and look. */
 export function objective(state: ObjState, x: number, y: number): Objective | null {
   const self = state.self;
   if (!self) return null;
   const at = (tx: number, ty: number) => ({ x: tx, y: ty, d: Math.hypot(tx - x, ty - y), dir: compassKey(Math.atan2(tx - x, -(ty - y))) });
+  const wp = waypoint();
+  if (wp) {
+    if (Math.hypot(wp.x - x, wp.y - y) > WAYPOINT_ARRIVE) return { kind: 'waypoint', title: '', text: '', ...at(wp.x, wp.y) };
+    setWaypoint(null);
+    waypointHooks.onArrive?.();
+  }
   const raid = self.isleRaid;
   if (raid) return { kind: 'raid', title: raid.name, text: '', left: Math.max(0, raid.until - state.estServerTime()), ...at(raid.x, raid.y) };
   const q = trackedQuest(self.quests);

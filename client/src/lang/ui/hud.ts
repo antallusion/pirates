@@ -186,6 +186,8 @@ export const EN = {
   "feed.title": "News of the sea",
   "obj.map": "Treasure map",
   "obj.raid": "Pirates off {name}!",
+  "obj.waypoint": "Your mark",
+  "wpArrived": "You are at your mark: it comes off the chart.",
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -373,4 +375,6 @@ export const RU: Record<keyof typeof EN, string> = {
   "feed.title": "Вести моря",
   "obj.map": "Карта сокровищ",
   "obj.raid": "Пираты у острова {name}!",
+  "obj.waypoint": "Ваша отметка",
+  "wpArrived": "Вы у своей отметки — она снята с карты.",
 };
