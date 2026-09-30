@@ -699,6 +699,14 @@ export function onFightWon(game: Game, s: PlayerSession): void {
   c.skill = Math.min(5, c.skill + 0.03 * (1 + 0.25 * tx(s.ship!.stats, 'drill')));
   c.fights++;
   changeLoyalty(c, 1, game.now);
+  // Men lost in a won fight are mourned, not held against the captain: they weigh half on loyalty and
+  // don't count toward the "too many dead this voyage" mutiny (docs/17 H1 — boarding is the heart of the game).
+  const ship = s.ship!;
+  if (ship.crewDeaths > 0) {
+    changeLoyalty(c, -(ship.crewDeaths / Math.max(1, ship.stats.crewMax)) * 10, game.now);
+    ship.crewDeaths = 0;
+  }
+  c.voyageLost = Math.floor(c.voyageLost / 2);
   if (c.fights >= 50 && !c.traits.includes('seasoned')) {
     c.traits.push('seasoned');
     game.toastShip(s.ship!, 'Fifty fights without breaking up: your crew is Seasoned.', 'good');
