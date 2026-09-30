@@ -12,6 +12,12 @@ import { drawBeast, drawCarcass, drawDolphin } from './beasts.ts';
 import { drawLair, drawMuzzles } from './lairs.ts';
 import type { LairView } from '../../../shared/src/protocol.ts';
 import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
+import { EN as IEN, RU as IRU } from '../lang/ui/isles.ts';
+import { SEASON_NAMES, TIDAL_NAMES } from '../../../shared/src/data/isles.ts';
+import { drawBanks, drawBeams, drawLookouts, drawReefLight, litLights, reefInLight, towerPoints } from './isles.ts';
+import type { IslesCtx } from './isles.ts';
+import type { TidalView } from '../../../shared/src/protocol.ts';
+const LI = dict(IEN, IRU);
 import { calfLength } from '../../../shared/src/data/companions.ts';
 import { drawShoalBirds, drawShoals, drawSights } from './sights.ts';
 import { THREAT_COLOR, combatLevelOf, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
@@ -391,11 +397,14 @@ export class Renderer {
     this.drawCurrents(state);
     const islands = this.visibleIslands(state);
     this.drawWhirlpools(state);
-    this.drawReefs(state);
+    const ictx = this.islesCtx(state, night);
+    this.drawReefs(state, ictx);
     this.drawSeaMarks(state);
+    drawBanks(g, state, ictx); // banks the tide or a season has bared (docs/16 #25)
     for (const is of islands) this.drawShallows(is);
     for (const is of islands) this.drawIsland(is, state);
     this.drawPorts(state);
+    drawLookouts(g, state, ictx, state.wind[0]); // lookouts on the headlands (docs/16 #24)
     // The pirate lairs near her (docs/16 #7): the fort, its guns on the shore, the camp.
     if (this.zoom >= 0.12) {
       const ctx = { sx: (x: number) => this.sx(x), sy: (y: number) => this.sy(y), zoom: this.zoom, time: opt0.reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, fx: this.fx, label: (l: LairView) => lairLabel(l) };
@@ -444,6 +453,8 @@ export class Renderer {
     // The Islands of Light burn in the Abyss's dark.
     for (const l of state.self?.abyss?.lights ?? []) this.fx.light(l.x, l.y, 700, 'rgba(255,245,210,1)', 0.9, 0.05);
     this.drawLighting(state, ships, night);
+    // The lit lighthouses' beams sweep the dark (docs/16 #23).
+    { const lit = litLights(state); if (lit.length) drawBeams(g, lit, towerPoints(state.islands, lit, (is) => this.featurePoint(is, 1, 0.04)), ictx); }
     drawBossZones(g, state.bosses, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, true);
     this.drawParticles(true);
     this.drawWeather(state, dt);
@@ -663,9 +674,23 @@ export class Renderer {
     }
   }
 
-  private drawReefs(state: ClientState): void {
+  /** The frame's context for batch E's drawing (docs/16 #23–25). */
+  private islesCtx(state: ClientState, night: number): IslesCtx {
+    const now = state.estServerTime();
+    const ru = lang() === 'ru' ? 1 : 0;
+    const label = (b: TidalView) => {
+      const name = TIDAL_NAMES[b.name][ru];
+      const n = Math.max(1, Math.round((b.turn - now) / 60));
+      return b.kind === 'season' ? LI('tide.seasonUp', { name, season: SEASON_NAMES[b.season][ru] }) : LI('tide.up', { name, n });
+    };
+    return { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: settings().reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, label, lookLabel: (c) => LI(c ? 'look.done' : 'look.label') };
+  }
+
+  private drawReefs(state: ClientState, ictx?: IslesCtx): void {
     const g = this.g;
     const hw = this.w / 2 / this.zoom + 300, hh = this.h / 2 / this.zoom + 300;
+    // Shoals within reach of a lit lighthouse take its warm edge at night (docs/16 #23).
+    const lit = ictx && ictx.night >= 0.35 ? litLights(state) : [];
     for (const rf of state.reefs.values()) {
       if (Math.abs(rf.x - this.camX) - rf.r > hw || Math.abs(rf.y - this.camY) - rf.r > hh) continue;
       g.save();
@@ -701,6 +726,7 @@ export class Renderer {
         g.textAlign = 'center';
         g.fillText(L('reef', { m: rf.depth.toFixed(1) }), this.sx(rf.x), this.sy(rf.y));
       }
+      if (lit.length && ictx && reefInLight(lit, rf)) drawReefLight(g, rf, ictx, () => this.path(rf.poly));
       g.restore();
     }
   }
@@ -2374,15 +2400,20 @@ export class Renderer {
       hole(p.x, p.y, 520, 0.8);
       glows.push({ x: p.x, y: p.y, r: 90, color: cbColor(opt.colorblind, FACTIONS[p.faction].lantern), a: 0.28 });
     }
+    // A lighthouse burns only when it is lit (docs/16 #23): by the Crown, for a keeper's pay, or its island's own.
+    const litIds = new Set(litLights(state).map((l) => l.island));
     for (const is of state.islands.values()) {
-      if (!is.features.includes('lighthouse')) continue;
+      if (!is.features.includes('lighthouse') || !litIds.has(is.id)) continue;
       const p = this.featurePoint(is, 1, 0.04);
       hole(p.x, p.y, 260, 0.85);
       glows.push({ x: p.x, y: p.y, r: 40, color: '#f5c77a', a: 0.6 });
       // Rotating beam.
       const a = this.time * 0.6 + is.id;
-      const v = headingVec(a);
-      hole(p.x + v.x * 500, p.y + v.y * 500, 260, 0.35);
+      for (const off of [0, Math.PI]) {
+        const v = headingVec(a + off);
+        hole(p.x + v.x * 500, p.y + v.y * 500, 260, 0.35);
+        hole(p.x + v.x * 1000, p.y + v.y * 1000, 300, 0.25);
+      }
       if (REGIONS[is.region].strangeness > 0.3 && is.features.includes('shrine')) glows.push({ x: is.x, y: is.y, r: 70, color: '#2ee6c8', a: 0.25 });
     }
     for (const l of this.fx.lights) {

@@ -21,14 +21,17 @@ import type { ShipEntity } from './ship.ts';
 import { haulSite, ownSiteNear } from './resources.ts';
 import { canDive, digTime, makeMap, grantMap, mapChance, mapHere, resolveDig, resolveDive, wreckHere } from './explorefx.ts';
 import { islandJobOffer, questEvent, questLandsHere } from './quests.ts';
-import { landingMinigame, openMinigame, startMinigame } from './minigames.ts';
+import { landingMinigame, openMinigame } from './minigames.ts';
+import { startTrek, trekBusy } from './trek.ts';
+import { bankHere, bankName, bankUp, climbLookout, combBank, lookoutReady } from './isles.ts';
+import { tidalIsles } from '../../../shared/src/world/tidal.ts';
 import { hearsayCacheBonus } from './hearsay.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import type { HauntId } from '../../../shared/src/data/minigames.ts';
 
 /** An island feature, or one of the island's people or beasts (living islands, docs/11 P3), or an island's haunt
  * with its mini-games (2026-09-30: 'scene', on every island with nothing else ashore). */
-export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'> | LandSite | 'scene';
+export type LandableFeature = Exclude<IslandFeature, 'port' | 'lighthouse'> | LandSite | 'scene' | 'lookout';
 export const LANDABLE: LandableFeature[] = ['cache', 'wreck', 'ruins', 'grove', 'mine', 'pearl_bank', 'shrine', 'fort', 'volcano', 'bones', 'bell', 'hermit', 'spring', ...LAND_SITES];
 
 /** Who and what lives on an island (the same list the client draws). */
@@ -40,7 +43,7 @@ export const FEATURE_NAMES: Record<LandableFeature, string> = {
   cache: "smugglers' cache", wreck: 'beached wreck', ruins: 'ruins', grove: 'timber grove', mine: 'surface mine', pearl_bank: 'pearl bank', shrine: 'drowned shrine',
   fort: 'abandoned fort', volcano: 'smoking volcano', bones: 'leviathan bones', bell: 'drowned bell tower', hermit: "hermit's hut", spring: 'freshwater spring',
   fishers: 'fishing hamlet', smugglers: "smugglers' camp", pirate_camp: 'pirate camp', garrison: 'garrisoned fort', seals: 'seal colony', crabs: 'crab beach', turtles: 'turtle beach',
-  scene: 'landing place',
+  scene: 'landing place', lookout: 'lookout',
 };
 
 /** An island's haunt (her mini-games), if she has nothing else ashore: no feature, no people or beasts to land for,
@@ -58,16 +61,18 @@ export function featureName(is: Island, f: LandableFeature): string {
 
 const DURATION: Record<LandableFeature, number> = {
   cache: 20, wreck: 25, ruins: 40, grove: 30, mine: 35, pearl_bank: 30, shrine: 25, fort: 40, volcano: 35, bones: 30, bell: 30, hermit: 20, spring: 20,
-  fishers: 20, smugglers: 25, pirate_camp: 40, garrison: 25, seals: 20, crabs: 15, turtles: 20, scene: 12,
+  fishers: 20, smugglers: 25, pirate_camp: 40, garrison: 25, seals: 20, crabs: 15, turtles: 20, scene: 12, lookout: 15,
 };
 const RESTOCK_SEC = 2 * 3600; // a feature can be worked again two real hours later
 /** An island's haunt has a new game for the same captain half an hour later. */
 export const SCENE_COOLDOWN = 30 * 60;
 const LAND_RANGE = 260; // meters from the coastline
+/** A bared bank is combed quickly: the sea is coming back. */
+export const TIDAL_LANDING_SEC = 18;
 
 export interface Landing {
   islandId: number;
-  feature: LandableFeature | 'haul' | 'dig' | 'dive';
+  feature: LandableFeature | 'haul' | 'dig' | 'dive' | 'tidal';
   siteId?: string;
   mapId?: string;
   wreckId?: number;
@@ -95,6 +100,12 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
     // A named pirate's lair is the first thing on its island (docs/16 #7): the boats go for the camp.
     const here: string[] = lairIsland(game, is.id) ? ['pirate_camp', ...is.features, ...lifeOf(is).map((x) => x.kind)] : [...is.features, ...lifeOf(is).map((x) => x.kind)];
     let found = false;
+    // A lookout on her headland (docs/16 #24): climbed first, once in two hours.
+    if (lookoutReady(game, s, is.id)) {
+      best = { island: is, feature: 'lookout' };
+      bd = d;
+      continue;
+    }
     for (const f of here) {
       if (!LANDABLE.includes(f as LandableFeature)) continue;
       const t = p.explored[exploredKey(is.id, f as LandableFeature)] ?? -Infinity;
@@ -105,7 +116,7 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
       break;
     }
     // Nothing else ashore: the island's haunt and her games, once the last game there is half an hour old.
-    if (!found && islandScene(is) && !openMinigame(game, s) && game.now - (p.explored[exploredKey(is.id, 'scene')] ?? -Infinity) >= SCENE_COOLDOWN) {
+    if (!found && islandScene(is) && !openMinigame(game, s) && !trekBusy(game, s) && game.now - (p.explored[exploredKey(is.id, 'scene')] ?? -Infinity) >= SCENE_COOLDOWN) {
       best = { island: is, feature: 'scene' };
       bd = d;
     }
@@ -154,6 +165,15 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
     game.toastShip(ship, `Boats away to haul the ${GOODS[own.site.good].name.toLowerCase()} stockpile on ${own.island.name} (${Math.round(haul)}s).`, 'info');
     return null;
   }
+  // A bank the ebb or the season has bared (docs/16 #25).
+  const bank = bankHere(game, s);
+  if (bank) {
+    const party = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
+    ship.landing = { islandId: 0, feature: 'tidal', siteId: String(bank.id), until: game.now + TIDAL_LANDING_SEC, started: game.now, party };
+    ship.input = { rudder: 0, sailTarget: 0 };
+    game.toastShip(ship, `Boats away: ${party} hands row for ${bankName(bank)} while the sea is out (${TIDAL_LANDING_SEC}s).`, 'info');
+    return null;
+  }
   const target = findLandable(game, s);
   if (!target) return 'Nothing worth landing for within reach of the boats';
   const party = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
@@ -176,6 +196,13 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
   }
   // Recalled: the captain sets sail or the enemy arrives. The party scrambles back with less.
   const recalled = ship.input.sailTarget > 0 || ship.inCombat(game.now);
+  // A bared bank the sea takes back before the party is done (docs/16 #25).
+  const bank = l.feature === 'tidal' ? tidalIsles(game.world)[Number(l.siteId)] : undefined;
+  if (bank && !bankUp(game, bank)) {
+    ship.landing = null;
+    combBank(game, s, bank, 0);
+    return;
+  }
   if (!recalled && game.now < l.until) return;
   ship.landing = null;
   const island = game.world.islands[l.islandId];
@@ -192,6 +219,10 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
   }
   if (l.feature === 'dive') {
     resolveDive(game, s, l.wreckId!, recalled ? 0.5 : 1);
+    return;
+  }
+  if (l.feature === 'tidal') {
+    if (bank) combBank(game, s, bank, recalled ? 0.5 : 1);
     return;
   }
   if (l.feature === 'haul') {
@@ -220,9 +251,16 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
   // A named pirate's lair (docs/12 P5): its battery drives the boats off, or, silenced, the lair is stormed.
   if (feature === 'pirate_camp' && lairLanding(game, s, island)) return;
   p.explored[exploredKey(island.id, feature)] = game.now;
+  // A lookout on the headland (docs/16 #24): the sea about charted.
+  if (feature === 'lookout') {
+    climbLookout(game, s, island, share);
+    questEvent(game, s, { k: 'land', island: island.id, feature });
+    return;
+  }
   // An island's haunt: her mini-game opens (it pays, and counts as a landing, when it is played out).
   if (feature === 'scene') {
-    if (!startMinigame(game, s, { haunt: islandHaunt(island.id), islandId: island.id, scene: true, share })) {
+    // docs/16 #21: the party meets what waits at the haunt (its game), then walks on across the island.
+    if (!startTrek(game, s, island, share)) {
       game.toastShip(ship, `The party finds the ${featureName(island, feature)} on ${island.name} deserted.`, 'info');
       game.grantXp(s, 10 * share, null);
     }

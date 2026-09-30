@@ -249,7 +249,7 @@ body.touch #touch { display: block; }
 .skinned .tc-btn::after { content: ''; position: absolute; inset: -3px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
 .tc-btn img, .tc-fire img { position: absolute; inset: 16%; width: 68%; height: 68%; object-fit: contain; border-radius: 50%; }
 .tc-btn.pressed, .tc-fire.pressed { transform: scale(0.92); filter: brightness(1.4); }
-.tc-fire { position: absolute; bottom: calc(var(--sa-b) + 12px); width: var(--fire); height: var(--fire); padding: 0; border-radius: 50%; border: 2px solid var(--brass); background: radial-gradient(circle, #3a1714 0 55%, #140c0a 70%); color: var(--bone); font: 700 20px var(--sans); pointer-events: auto; touch-action: manipulation; box-shadow: 0 0 14px rgba(0, 0, 0, 0.8); }
+.tc-fire { position: absolute; bottom: calc(var(--sa-b) + 12px); width: var(--fire); height: var(--fire); padding: 0; border-radius: 50%; border: 2px solid var(--brass); background: radial-gradient(circle, #3a1714 0 55%, #140c0a 70%); color: var(--bone); font: 700 20px var(--sans); line-height: 1.2; pointer-events: auto; touch-action: manipulation; box-shadow: 0 0 14px rgba(0, 0, 0, 0.8); }
 .skinned .tc-fire { border: 0; }
 .skinned .tc-fire::after { content: ''; position: absolute; inset: -4px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
 .tc-fire b, .tc-btn b { position: relative; z-index: 2; text-shadow: 0 1px 3px #000; }
@@ -272,7 +272,9 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
 @media (max-height: 520px) {
   :root { --mm: 86px; --uf-p: 46px; --top-h: 108px; --stick: 112px; --fire: 58px; --slot: 40px; }
   body.touch { --touch-h: 0px; }
-  body.touch #hud-bottom, body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 64px)); }
+  body.touch #hud-bottom { max-width: calc(100vw - 2 * (var(--stick) + 64px)); }
+  /* The row inside the bar's own padding (8px a side), so the bar fits between the helm and the guns. */
+  body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 64px) - 16px); }
   #hud-region { display: none; }
   #hud-stack { left: calc(var(--sa-l) + 360px); right: calc(var(--sa-r) + var(--mm) + 64px); top: calc(var(--sa-t) + 8px); }
   body.touch #hud-stack { right: calc(var(--sa-r) + var(--mm) + 64px); }
@@ -286,7 +288,12 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
   .fbar { height: 15px; }
   #hud-stack, body.touch #hud-stack { left: 50%; right: auto; transform: translateX(-50%); width: min(460px, calc(100vw - 2 * var(--mm) - 420px)); min-width: 240px; }
   body.touch { --touch-h: 0px; }
-  body.touch #hud-bottom, body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 68px)); }
+  body.touch #hud-bottom { max-width: calc(100vw - 2 * (var(--stick) + 68px)); }
+  /* A portrait tablet (820×1180): the row inside the bar's padding, and a long bar breaks into rows between its
+     groups rather than spilling past the helm and the guns. */
+  body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 68px) - 16px); }
+  body.touch #hud-combat .ab-row { flex-wrap: wrap; justify-content: center; overflow: visible; row-gap: 4px; }
+  body.touch #hud-combat .ab-sep { display: none; }
   .tc-menu { top: calc(var(--sa-t) + var(--mm) + 64px); }
 }
 /* Desktops (a mouse): the ship column, compass and micro menu come out. */
@@ -3148,3 +3155,47 @@ body.tac #toasts { top: 22%; }
   .company-tabs .tab span { display: none; }
   .company-tabs + .tab-caption { display: block; padding: 6px 12px 4px; font: 600 12px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); text-align: center; border-bottom: 1px solid rgba(140, 107, 58, 0.35); }
 }
+/* Batch E of docs/16: the walk across an island (client/src/ui/trek.ts) — the island games' card kit, one step at a
+   time: the steps as dots with the path's picture, what was met, the ways on as big buttons that wrap. */
+#trek { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 96px); transform: translateX(-50%); width: min(420px, calc(100vw - 20px)); max-height: calc(100vh - var(--sa-t, 0px) - var(--sa-b, 0px) - 110px); overflow-y: auto; z-index: 40; pointer-events: auto; overscroll-behavior: contain; overflow-wrap: break-word; -webkit-tap-highlight-color: transparent; }
+#trek.hidden { display: none; }
+body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack, body:has(#trek:not(.hidden)) #encounter { visibility: hidden; }
+@media (max-width: 699px) { body:has(#trek:not(.hidden)) #tc-menu, body:has(#trek:not(.hidden)) #hud-menu { visibility: hidden; } }
+#trek .mg-card { background: rgba(10, 12, 16, 0.95); border: 1px solid rgba(232, 196, 106, 0.55); border-radius: 6px; padding: 10px 12px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+#trek .mg-art { position: relative; margin: -4px -6px 8px; aspect-ratio: 3.2 / 1; background: #0b0d10 center / cover no-repeat; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 4px; box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.8); overflow: hidden; }
+#trek .mg-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 12, 16, 0) 40%, rgba(10, 12, 16, 0.75)); pointer-events: none; }
+#trek .mg-face { position: absolute; right: 10px; bottom: 8px; width: 52px; height: 52px; object-fit: cover; border-radius: 50%; border: 2px solid rgba(232, 196, 106, 0.7); background: rgba(10, 12, 16, 0.85); z-index: 1; }
+#trek .mg-h { font-family: var(--serif); font-size: 19px; font-weight: 700; color: #e8c46a; line-height: 1.15; }
+#trek .mg-text { margin: 4px 0 6px; font-size: 13px; line-height: 1.45; color: #bfb8a8; }
+#trek .mg-out { margin: 4px 0 8px; color: #f2e6c8; font-size: 14px; line-height: 1.45; padding: 7px 10px; border-radius: 4px; background: rgba(255, 255, 255, 0.03); border-left: 3px solid rgba(232, 196, 106, 0.6); }
+#trek .mg-out.mg-lost { border-left-color: rgba(180, 70, 60, 0.8); }
+#trek .mg-note { font-size: 12px; color: #9a9384; letter-spacing: 0.04em; text-transform: uppercase; margin: 2px 0 4px; }
+#trek .mg-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+#trek .mg-choices .btn { flex: 1 1 auto; min-height: 44px; font-size: 13px; padding: 6px 10px; white-space: normal; line-height: 1.25; touch-action: manipulation; }
+#trek .mg-walk { flex: 0 1 auto !important; opacity: 0.8; }
+#trek .trek-paths .trek-path { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+#trek .trek-path .ico-sm { width: 22px; height: 22px; flex: none; }
+#trek .mg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+#trek .mg-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: rgba(232, 196, 106, 0.1); border: 1px solid rgba(232, 196, 106, 0.3); color: #e8d8a8; }
+#trek .trek-steps { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 6px; }
+#trek .trek-steps .mg-note { margin: 0; }
+#trek .trek-dots { display: flex; gap: 6px; }
+#trek .trek-dot { position: relative; width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(232, 196, 106, 0.45); background: rgba(0, 0, 0, 0.4); display: inline-flex; align-items: center; justify-content: center; }
+#trek .trek-dot.now { border-color: #e8c46a; box-shadow: 0 0 6px rgba(232, 196, 106, 0.6); }
+#trek .trek-dot.done { background: rgba(232, 196, 106, 0.18); }
+#trek .trek-dot.bad { border-color: rgba(200, 90, 70, 0.8); background: rgba(160, 60, 50, 0.25); }
+#trek .trek-dot-ico { width: 16px; height: 16px; object-fit: contain; }
+/* Phones held sideways: the card between the helm and the minimap, its painting a thin strip. */
+@media (max-height: 520px) { #trek { top: calc(var(--sa-t, 0px) + 8px); max-height: calc(100vh - var(--sa-t, 0px) - var(--sa-b, 0px) - 16px); width: min(420px, calc(100vw - 2 * (var(--mm) + 40px))); } #trek .mg-art { aspect-ratio: 6 / 1; margin-bottom: 6px; } #trek .mg-face { width: 36px; height: 36px; bottom: 4px; } #trek .mg-choices .btn { min-height: 40px; } }
+/* Her caches (docs/16 #22) in the chest card. */
+.cache-list { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
+.cache-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 13px; padding: 4px 6px; border-left: 2px solid rgba(232, 196, 106, 0.4); background: rgba(255, 255, 255, 0.02); }
+.cache-row .muted { font-size: 12px; }
+.cache-sell { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 6px; align-items: center; }
+.cache-sell [data-msmap] { grid-column: 1 / -1; min-width: 0; width: 100%; }
+.cache-sell [data-msto] { min-width: 0; width: 100%; }
+.cache-sell [data-msprice] { min-width: 0; width: 100%; max-width: none !important; }
+.cache-sell label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; min-width: 0; }
+.cache-sell input[type=checkbox] { width: 16px; height: 16px; flex: none; margin: 0; }
+.cache-sell .btn { justify-self: stretch; }
+.mb-tag { display: inline-block; font-size: 11px; padding: 0 6px; margin-left: 4px; border-radius: 8px; border: 1px solid rgba(232, 196, 106, 0.4); color: #e8c46a; }

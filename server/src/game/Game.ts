@@ -9,7 +9,7 @@ import { fatesOnDock, fulfilRequest, stepFates } from './fates.ts';
 import { dutchmanSunk, stepDutchman } from './dutchman.ts';
 import { nailCoin, omenBroken, omenKept, sendOmen, stepOmens } from './omens.ts';
 import { nameWonder, stepWonders } from './wonders.ts';
-import { boardAction, buryChest } from './chests.ts';
+import { answerMapOffer, boardAction, buryChest, sellMap } from './chests.ts';
 import { stepBottles, throwBottle } from './bottles.ts';
 import { regattaSignUp, sendRegatta, stepRegatta } from './regatta.ts';
 import { forgeStorm, stepStorms } from './storms.ts';
@@ -126,6 +126,8 @@ import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { featureName, findLandable, startLanding, stepLanding } from './exploration.ts';
 import { playMinigame, stepMinigames } from './minigames.ts';
+import { playTrek, stepTreks } from './trek.ts';
+import { bankCollide, islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
 import type { DelayedStrike } from './abilities.ts';
 import { canBoard, claimPrize, cutGrapples, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { tacAction } from './tactical.ts';
@@ -651,6 +653,12 @@ export class Game {
         ship.state.speed *= 0.25;
       }
     }
+    // A bank the ebb or the season has bared strikes like land (docs/16 #25).
+    const way = ship.state.speed;
+    if (bankCollide(this, ship, probes) && way > 3.5) {
+      applyDamage(this, ship, { hull: way * way * 1.4 * (0.6 + ship.cls.tier * 0.2), sails: 2, morale: 3 }, null);
+      this.toastShip(ship, 'Ran aground on a bank the tide has bared!', 'bad');
+    }
     // Shoals and reefs: a keel deeper than the water drags and splinters (Shallow Runners skate over).
     const draft = ship.cls.draft * Math.max(0.5, 1 + tval(ship.stats, 'draftMul'));
     if (ship.cls.passive.id !== 'shallow_runner' && ship.state.speed > 0.4) {
@@ -761,6 +769,7 @@ export class Game {
     for (const s of this.sessions) stepRefit(this, s); // yards finish their work by the wall clock
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepMinigames(this); // island scenes and mini-games left open lapse
+    stepTreks(this); // walks across the islands left alone lapse (docs/16 #21)
     stepSeaLife(this); // the small life of the sea between the director's encounters
     stepPods(this); // good omens alongside: dolphins, a humpback, orcas (docs/16 #9)
     stepTraffic(this); // the sea's own ships kept about every captain at sea
@@ -874,6 +883,7 @@ export class Game {
       stepHearsay(this, s); // where the tavern's whispers led (docs/16 #14)
       discoverCoves(this, s);
       havenSecond(this, s);
+      islesSecond(this, s); // lighthouses, lookouts, bared banks, her caches (docs/16 #22–25)
       stepExplorer(this, s);
       stepMind(this, s.ship);
       stepCrewLife(this, s); // officers speak, the men's mood, practice, the wounded (docs/16 #16–19)
@@ -925,6 +935,7 @@ export class Game {
       const legend = s.ship.docked || s.ship.landing ? null : legendWreckHere(this, s.ship);
       const stair = s.ship.docked || s.ship.landing ? null : descentLandable(this, s);
       const convoy = s.ship.docked || s.ship.landing ? null : escortOffer(this, s); // sign on as a League convoy's escort (docs/16 #6)
+      const isle = s.ship.docked || s.ship.landing || own ? null : islesPrompt(this, s); // a dark lighthouse's keeper, a bared bank (docs/16 #23, #25)
       s.landable = stair
         ? stair
         : legend
@@ -933,6 +944,8 @@ export class Game {
         ? city
         : cove
         ? { island: cove.name, feature: 'buyers for contraband (90% of Fogmouth)' }
+        : tmap && tmap.kind === 'player'
+        ? { island: this.world.islands[tmap.island ?? -1]?.name ?? tmap.name, feature: "a captain's buried chest", action: 'dig' } // docs/16 #22
         : tmap
         ? { island: tmap.name.replace(/^.* — /, ''), feature: `buried treasure (${tmap.name.replace(/ — .*$/, '').toLowerCase()})`, action: 'dig' }
         : wreck
@@ -941,6 +954,8 @@ export class Game {
         ? { island: own.island.name, feature: `stockpile of ${GOODS[own.site.good].name.toLowerCase()} (${Math.floor(own.site.stock)})` }
         : convoy
         ? { island: `League convoy for ${convoy.to}`, feature: `${convoy.pay} silver on arrival`, action: 'escort' as const, blocked: convoy.blocked }
+        : isle
+        ? isle
         : land ? { island: land.island.name, feature: featureName(land.island, land.feature) } : null;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
@@ -2737,6 +2752,12 @@ export class Game {
         return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
       case 'minigame':
         return err(playMinigame(this, s, Number(msg.id), String(msg.pick), msg.ms, msg.seq));
+      case 'trek':
+        return err(playTrek(this, s, String(msg.pick)));
+      case 'mapsell':
+        return err(sellMap(this, s, String(msg.map), Number(msg.to), Number(msg.price), !!msg.copy));
+      case 'mapdeal':
+        return err(answerMapOffer(this, s, Number(msg.id), !!msg.accept));
       case 'tattoo':
         if (msg.action === 'set') err(setTattoo(this, s, Math.trunc(Number(msg.slot)), msg.id === null ? null : String(msg.id)));
         return sendTattoos(this, s);
@@ -2805,7 +2826,7 @@ export class Game {
       case 'chest':
         return err(buryChest(this, s, Number(msg.silver), String(msg.riddle ?? ''), (msg.good ?? null) as never, Number(msg.qty)));
       case 'mapboard':
-        err(boardAction(this, s, String(msg.action), String(msg.id ?? ''), Number(msg.price)));
+        err(boardAction(this, s, String(msg.action), String(msg.id ?? ''), Number(msg.price), !!msg.copy));
         return this.pushPort(s);
       case 'bottle':
         return err(throwBottle(this, s, String(msg.note ?? ''), Number(msg.silver)));
@@ -3090,6 +3111,12 @@ export class Game {
         this.sendTo(s, { t: 'legends', view: legendsView(this, s) });
         return;
       case 'land': {
+        // Off a dark lighthouse at dusk: pay its keeper (docs/16 #23).
+        if (!ship.docked && s.landable?.action === 'keeper') {
+          err(payKeeper(this, s));
+          this.pushSelf(s, true);
+          return;
+        }
         // By a League convoy: sign on as its escort (docs/16 #6).
         if (!ship.docked && s.landable?.action === 'escort') {
           err(signEscort(this, s));
@@ -3556,6 +3583,8 @@ export class Game {
     });
     // Islands the captain has charted are sent up front so the world map is complete.
     this.sendIslands(s, [...s.discovered]);
+    recallLookouts(this, s); // the waters her lookouts charted (docs/16 #24)
+    if (s.ship && !s.ship.docked) sendIsles(this, s, true);
     this.streamChunks(s);
     if (s.ship && !s.ship.docked) this.sendFronts(s);
     s.lastRegion = '';

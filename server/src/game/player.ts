@@ -222,6 +222,9 @@ export interface Profile {
   log?: LogEntry[];
   /** A cartographer's fame: her buried chests dug up by others (docs/12 P10 #7). */
   cartoFame?: number;
+  /** Batch E of docs/16: the lookouts she has climbed (island → world time) and the banks the tide raised that she
+   *  has combed (bank → which rise). */
+  isles?: { lookouts: Record<string, number>; tides: Record<string, number> };
   /** The wonders of the sea she has found (docs/12 P10 #8). */
   wonders?: string[];
   /** Her ship's look and the parts of it she has opened (docs/12 P10 #12). */
@@ -360,7 +363,7 @@ export class PlayerSession {
   disconnectedAt: number | null = null;
   lingerUntil = 0;
   lastRegion = '';
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort'; blocked?: string } | null = null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper'; blocked?: string } | null = null;
   siteViews: ResourceSiteView[] = [];
 
   constructor(conn: GameConn) {
@@ -563,7 +566,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     sites: s.siteViews,
     warehouses: p.warehouses,
     landable: s.landable,
-    landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature === 'scene' ? HAUNT_NAMES[islandHaunt(ship.landing.islandId)][0] : ship.landing.feature, until: ship.landing.until, started: ship.landing.started } : null,
+    landing: ship?.landing ? { island: String(ship.landing.islandId), feature: ship.landing.feature === 'scene' ? HAUNT_NAMES[islandHaunt(ship.landing.islandId)][0] : ship.landing.feature === 'tidal' ? 'bared bank' : ship.landing.feature, until: ship.landing.until, started: ship.landing.started } : null,
     discoveredCount: s.discovered.size,
     intel: Object.entries(p.priceIntel).map(([portId, rec]) => ({
       portId,

@@ -3,7 +3,7 @@
 import { noteHearsay, repairPrompt } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
-import { tell } from './ui/confirm.ts';
+import { ask, tell } from './ui/confirm.ts';
 import { beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
@@ -12,6 +12,8 @@ import { EncounterCard } from './ui/encounter.ts';
 import { SurrenderCard } from './ui/surrender.ts';
 import { LairChestCard } from './ui/lairchest.ts';
 import { MinigameWindow } from './ui/minigame.ts';
+import { TrekWindow } from './ui/trek.ts';
+import { EN as ISLES_EN, RU as ISLES_RU } from './lang/ui/isles.ts';
 import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
 import { giverDialog } from './ui/giver.ts';
@@ -239,6 +241,9 @@ const encounterCard = new EncounterCard((m) => net.send(m));
 const surrenderCard = new SurrenderCard((m) => net.send(m));
 const lairChest = new LairChestCard();
 const minigameWindow = new MinigameWindow((m) => net.send(m));
+// The walk across an island (docs/16 #21): its card waits behind an island game's window.
+const trekWindow = new TrekWindow((m) => net.send(m), () => minigameWindow.isOpen);
+const LI = dict(ISLES_EN, ISLES_RU);
 const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
@@ -543,6 +548,16 @@ function onMessage(m: ServerMsg): void {
     case 'minigame':
       // An island scene or mini-game (2026-09-30): its window opens, follows the game, and shows what came of it.
       minigameWindow.open(m.view);
+      break;
+    case 'trek':
+      trekWindow.open(m.view);
+      break;
+    case 'mapoffer':
+      // A captain alongside offers a map (docs/16 #22): yes or no.
+      if (m.offer) {
+        const o = m.offer;
+        void ask(LI('offer.ask', { from: o.from, name: sv(o.name), price: `${o.price}`, riddle: o.riddle ? LI('offer.riddle', { riddle: o.riddle }) : '' })).then((yes) => net.send({ t: 'mapdeal', id: o.id, accept: yes }));
+      }
       break;
     case 'tattoos':
       if (modal === 'tattoos') refreshModal();
@@ -1324,6 +1339,7 @@ function computePrompt(): string {
   else if (self.landable?.action === 'raise') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('raise', { feature: sv(self.landable.feature.replace(/^wreck of the /, '')) }))}`);
   else if (self.landable?.action === 'expedition') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'descent') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('descent'))}`);
+  else if (self.landable?.action === 'keeper') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(LI('keeper.prompt', { island: sv(self.landable.island), price: self.landable.feature }))}`);
   else if (self.landable?.action === 'escort') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('escortSign', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
   else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
@@ -1485,7 +1501,7 @@ function contextLabel(): string | null {
   if (boardTarget !== null) return L('tc.board');
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
-  if (state.self?.landable && !state.self.landable.blocked) return L(state.self.landable.action === 'escort' ? 'tc.escort' : 'tc.land');
+  if (state.self?.landable && !state.self.landable.blocked) return state.self.landable.action === 'keeper' ? LI('tc.keeper') : L(state.self.landable.action === 'escort' ? 'tc.escort' : 'tc.land');
   if (mastWreck()) return L('tc.cutMast');
   const cast = castable();
   if (cast) return L(cast === 'lamp' ? 'tc.lamp' : 'tc.cast');

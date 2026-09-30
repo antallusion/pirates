@@ -551,20 +551,63 @@ export class Hud {
       g.fill();
     }
     g.strokeStyle = 'rgba(90,160,150,0.7)';
-    // Night navigation by lights: in the dark a shoal shows only within reach of a light — a lighthouse (3 km),
-    // a port (2.5 km) or your own lanterns (600 m).
+    // Night navigation by lights: in the dark a shoal shows only within reach of a light — a lit lighthouse
+    // (3.5 km, docs/16 #23: by the Crown, a keeper's pay or one's own island; its shoals in its warm light), a port
+    // (2.5 km) or your own lanterns (600 m).
     const dark = nightFactor(state.estServerTime()) > 0.6;
     const lights: [number, number, number][] = dark ? [[own.x, own.y, 600]] : [];
+    const lit = (state.isles?.lights ?? []).filter((l) => l.lit);
     if (dark) {
       for (const p of state.ports) if (Math.abs(p.x - own.x) < range + 2500 && Math.abs(p.y - own.y) < range + 2500) lights.push([p.x, p.y, 2500]);
-      for (const is of state.islands.values()) if (is.features.includes('lighthouse') && Math.abs(is.x - own.x) < range + 3000 && Math.abs(is.y - own.y) < range + 3000) lights.push([is.x, is.y, 3000]);
     }
     for (const rf of state.reefs.values()) {
       if (Math.abs(rf.x - own.x) > range + rf.r || Math.abs(rf.y - own.y) > range + rf.r) continue;
-      if (dark && !lights.some(([lx, ly, lr]) => Math.hypot(rf.x - lx, rf.y - ly) < lr + rf.r)) continue;
+      const inLit = dark && lit.some((l) => Math.hypot(rf.x - l.x, rf.y - l.y) < l.r + rf.r);
+      if (dark && !inLit && !lights.some(([lx, ly, lr]) => Math.hypot(rf.x - lx, rf.y - ly) < lr + rf.r)) continue;
       g.beginPath();
-      g.arc(tx(rf.x), ty(rf.y), Math.max(1.5, rf.r * k * 0.8), 0, Math.PI * 2);
+      g.arc(tx(rf.x), ty(rf.y), Math.max(inLit ? 2.2 : 1.5, rf.r * k * 0.8), 0, Math.PI * 2);
+      if (inLit) {
+        g.fillStyle = 'rgba(245,199,122,0.25)';
+        g.fill();
+        g.strokeStyle = 'rgba(245,199,122,0.9)';
+        g.stroke();
+        g.strokeStyle = 'rgba(90,160,150,0.7)';
+      } else g.stroke();
+    }
+    // A lit light's reach, faint on the dial at night.
+    if (dark) for (const l of lit) {
+      if (Math.abs(l.x - own.x) > range + l.r || Math.abs(l.y - own.y) > range + l.r) continue;
+      g.strokeStyle = 'rgba(245,199,122,0.22)';
+      g.setLineDash([2, 4]);
+      g.beginPath();
+      g.arc(tx(l.x), ty(l.y), l.r * k, 0, Math.PI * 2);
       g.stroke();
+      g.setLineDash([]);
+      g.strokeStyle = 'rgba(90,160,150,0.7)';
+    }
+    // Banks the tide or a season has bared (docs/16 #25): sand on the dial while they stand.
+    for (const b of state.isles?.tidal ?? []) {
+      if (!b.up || Math.abs(b.x - own.x) > range + b.r || Math.abs(b.y - own.y) > range + b.r) continue;
+      g.fillStyle = '#b9a47a';
+      g.beginPath();
+      g.arc(tx(b.x), ty(b.y), Math.max(2.5, b.r * k), 0, Math.PI * 2);
+      g.fill();
+      if (!b.combed) {
+        g.strokeStyle = 'rgba(255,230,160,0.9)';
+        g.stroke();
+        g.strokeStyle = 'rgba(90,160,150,0.7)';
+      }
+    }
+    // Lookouts on the headlands (docs/16 #24): a small red pennant, grey once climbed.
+    for (const l of state.isles?.lookouts ?? []) {
+      if (Math.abs(l.x - own.x) > range || Math.abs(l.y - own.y) > range) continue;
+      g.fillStyle = l.at ? 'rgba(160,170,150,0.8)' : '#d0503a';
+      g.beginPath();
+      g.moveTo(tx(l.x), ty(l.y) - 4);
+      g.lineTo(tx(l.x) + 4, ty(l.y) + 3);
+      g.lineTo(tx(l.x) - 4, ty(l.y) + 3);
+      g.closePath();
+      g.fill();
     }
     // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold.
     for (const m of state.seaMarks.values()) {
@@ -650,10 +693,11 @@ export class Hud {
       g.arc(tx(w.x), ty(w.y), w.radius * k, 0, Math.PI * 2);
       g.stroke();
     }
-    // Lighthouses are landmarks: a warm star on the chart.
+    // Lighthouses are landmarks: a warm star on the chart when lit, a grey one when dark.
+    const litIds = new Set(lit.map((l) => l.island));
     for (const is of state.islands.values()) {
       if (!is.features.includes('lighthouse') || Math.abs(is.x - own.x) > range || Math.abs(is.y - own.y) > range) continue;
-      g.fillStyle = dark ? '#f5c77a' : 'rgba(245,199,122,0.6)';
+      g.fillStyle = !litIds.has(is.id) ? 'rgba(150,150,140,0.7)' : dark ? '#f5c77a' : 'rgba(245,199,122,0.6)';
       g.beginPath();
       g.arc(tx(is.x), ty(is.y), dark ? 3.2 : 2.2, 0, Math.PI * 2);
       g.fill();

@@ -1,3 +1,4 @@
+import { islesAdmin } from './isles.ts';
 import { startMinigame } from './minigames.ts';
 import { MINIGAMES, MINIGAME_IDS } from '../../../shared/src/data/minigames.ts';
 import type { MinigameId } from '../../../shared/src/data/minigames.ts';
@@ -102,7 +103,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away H';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close] · /away Htide [up|down|off|here] · /light [dark] · /lookout · /trek';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -731,6 +732,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       game.pushSelf(s, true);
       return `Off the lair of ${near.captain} on ${near.name} (⚓${near.level}).`;
     }
+    case 'tide':
+    case 'light':
+    case 'lookout':
+    case 'trek':
+      // Batch E of docs/16: /tide [up|down|off|here] the nearest bank, /light [dark] a keeper's lighthouse, /lookout,
+      // /trek an island to walk across — set before her.
+      return islesAdmin(game, s, cmd.toLowerCase(), args);
     case 'front': {
       // A storm front bearing down on your course (docs/16 #10): /front [black] — 9 km ahead, drifting at you.
       const v = headingVec(ship.state.heading);
