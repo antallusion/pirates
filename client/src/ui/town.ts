@@ -142,5 +142,5 @@ export function weekChip(state: ClientState): string {
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60);
   const t = h > 0 ? B('t_hm', { h, m: String(m).padStart(2, '0') }) : B('t_m', { m: Math.max(1, m) });
   const d = WEEKS[w.kind];
-  return `<div class="rg-week" title="${esc(L('hud.tip', { n: w.n, d: w.day, name: d.name[ru()], text: d.text[ru()], t }))}">${esc(L('hud.week', { n: w.n, d: w.day }))}<span class="rg-dot"> · </span><span class="rg-wk">${esc(d.name[ru()])}</span></div>`;
+  return `<div class="rg-week" title="${esc(L('hud.tip', { n: w.n, d: w.day, name: d.name[ru()], text: d.text[ru()], t }))}"><span class="rg-wn">${esc(L('hud.week', { n: w.n, d: w.day }))}<span class="rg-dot"> · </span></span><span class="rg-wk">${esc(d.name[ru()])}</span></div>`;
 }

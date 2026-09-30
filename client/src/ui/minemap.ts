@@ -21,9 +21,17 @@ export function drawMines(
     // Others' mines only once the chart is looked at closely, and on charted islands' waters.
     if (!mine && zoom < 1.5) continue;
     const x = tx(m.x), y = ty(m.y);
-    const size = ms * (mine ? 0.8 : 0.6);
-    mark(`icon.${MINES[m.kind].art}`, x, y, size);
+    const size = ms * (mine ? 1.15 : 0.85);
     const col = mine ? COLOUR.you : m.holder === 'raiders' ? COLOUR.raiders : m.holder ? COLOUR.other : COLOUR.free;
+    // A pale disc under the outpost's picture, ringed in its holder's colour: the dark art reads on the dark chart.
+    g.beginPath();
+    g.arc(x, y, size * 0.48, 0, Math.PI * 2);
+    g.fillStyle = 'rgba(232, 220, 190, 0.28)';
+    g.fill();
+    g.lineWidth = mine ? 2 : 1.2;
+    g.strokeStyle = col;
+    g.stroke();
+    mark(`icon.${MINES[m.kind].art}`, x, y, size);
     const px = x + size * 0.35, py = y - size * 0.5;
     g.fillStyle = col;
     g.fillRect(px - 1, py, 2, size * 0.5);
