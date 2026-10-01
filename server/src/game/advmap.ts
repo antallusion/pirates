@@ -183,6 +183,7 @@ export function guardUp(game: Game, g: AdvGuard): boolean {
 
 /** The guard standing before a thing or a mine (null: none, or it is down). */
 export function guardOfSite(game: Game, at: string): AdvGuard | null {
+  if (quiet.has(game)) return null;
   for (const g of adv(game).map.guards) if (g.at === at && guardUp(game, g)) return g;
   return null;
 }
@@ -317,6 +318,12 @@ function guardGone(game: Game, g: AdvGuard): void {
 }
 
 const guardName = (g: AdvGuard) => GUARDS[g.kind].name[0];
+
+/** A guard down by decree (the admin, the tests). */
+export function downGuard(game: Game, id: string): void {
+  const g = adv(game).guardById.get(id);
+  if (g) guardGone(game, g);
+}
 
 function openLine(game: Game, g: AdvGuard): string {
   const w = guardWhat(game, g);
