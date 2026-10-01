@@ -3691,7 +3691,9 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 .mm-tip { position: fixed; z-index: 60; pointer-events: none; max-width: 280px; padding: 5px 9px; border-radius: 6px; background: rgba(10, 12, 14, 0.92); border: 1px solid rgba(176, 141, 87, 0.55); color: #e8dcc0; font: 600 12px/1.35 Inter, sans-serif; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); }
 .mm-tip.hidden { display: none; }
 .isle-lv { font-weight: 700; white-space: nowrap; }
-.map-zone .mq-row span { white-space: normal; text-align: left; }
+.zone-hint { display: flex; align-items: center; gap: 8px; padding: 4px 2px; font-size: 13px; }
+.zone-hint span { flex: 1; min-width: 0; }
+.zone-hint .btn { flex: none; }
 .sup-body { display: block; }
 .sup-head h3 { margin: 4px 0 2px; font-size: 16px; }
 .sup-head p { margin: 0 0 8px; font-size: 13px; }

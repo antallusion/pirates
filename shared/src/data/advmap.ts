@@ -338,8 +338,9 @@ export function offshore(world: World, is: Island, angle: number, off: number): 
 
 const cache = new WeakMap<World, AdvMap>();
 
-/** The adventure map of a world: every thing and every guard, where the world alone puts them. */
-export function buildAdv(world: World): AdvMap {
+/** The adventure map of a world: every thing and every guard, where the world alone puts them. `keep` false: worked
+ *  out and not kept (step 6 of the generation looks at it before the islands the sea has raised since are put back). */
+export function buildAdv(world: World, keep = true): AdvMap {
   const hit = cache.get(world);
   if (hit) return hit;
   // docs/18 III: placed on the world as it stood before her new islands (which keep off all of it).
@@ -433,6 +434,6 @@ export function buildAdv(world: World): AdvMap {
     }
   }
   const out = { objs, guards };
-  cache.set(world, out);
+  if (keep) cache.set(world, out);
   return out;
 }

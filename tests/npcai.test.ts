@@ -9,6 +9,7 @@ import { headingVec } from '../shared/src/math.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { FLANK_SEC, beatAngle, rallyPack, runLighter, spawnPatrols } from '../server/src/game/npc.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
+import { legacyWorld } from '../shared/src/world/worldgen.ts';
 import { join, makeGame, steps } from './helpers.ts';
 
 function captainAtSea(game: Game, name: string): ShipEntity {
@@ -66,6 +67,12 @@ test('beating to windward (docs/16 P5): a pack dead to leeward of a hove-to capt
   const beat = beatAngle('square', 65, false, 0.7);
   assert.ok(beat > 10 && beat < 65, `square rig beats at ${beat}°`);
   const { game } = makeGame();
+  // The beat is weighed on the open water it was tuned on: the islands of docs/18 III taken off this sea (one lies 2 km
+  // off her, and what lives on it draws the pack's eye).
+  const w = game.world;
+  w.islands.length = w.isleFrom;
+  for (const [k, list] of w.chunks) w.chunks.set(k, list.filter((id) => id < w.isleFrom));
+  w.navGrid = legacyWorld(w).navGrid;
   const prey = captainAtSea(game, 'Hove To');
   prey.input = { rudder: 0, sailTarget: 0 };
   prey.state.sail = 0;

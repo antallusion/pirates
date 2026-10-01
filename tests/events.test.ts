@@ -195,7 +195,9 @@ test('a new island: the sea boils for six hours, then land; the first captain as
   c.add(6 * 3600_000 + 1000);
   steps(game, SEC * 2);
   assert.equal(e.stage, 'risen');
-  assert.equal(game.world.islands.length, count + 1);
+  // docs/18 III: she takes the first of the places kept for raised islands (the id she would have had before step 6).
+  assert.equal(game.world.islands.length, count);
+  assert.ok(e.islandId! < game.world.isleFrom && !game.world.islands[e.islandId!].slot, 'in the room kept for her');
   const is = game.world.islands[e.islandId!];
   assert.ok(isLand(game.world, is.x, is.y), 'land');
   assert.ok(game.sites.some((x) => x.islandId === is.id), 'something to mine');

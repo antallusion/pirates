@@ -248,7 +248,7 @@ export function zoneHint(state: ClientState): string {
   const inside = Math.hypot(dx, dy) < z.r;
   const dir = L(DIRS[Math.round(((Math.atan2(dx, -dy) / (Math.PI * 2)) * 8 + 8)) % 8]);
   const text = inside ? L('zone.here', { lv, name: placeName(z.name), zl: z.level, n: z.n }) : L('zone.hint', { lv, name: placeName(z.name), zl: z.level, n: z.n, km, dir });
-  return `<div class="map-quests map-zone">${head}<button class="mq-row" data-zone="${z.id}" title="${esc(L('zone.show'))}"><span>${esc(text)}</span></button></div>`;
+  return `<div class="map-quests map-zone">${head}<div class="zone-hint"><span>${esc(text)}</span><button class="btn btn-small" data-zone="${z.id}">${esc(L('zone.show'))}</button></div></div>`;
 }
 
 /** Her supply routes on the chart: a dashed line from each linked lair island to her own. */

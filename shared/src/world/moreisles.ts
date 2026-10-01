@@ -17,6 +17,8 @@ import type { IslandBiome, RegionId } from './regions.ts';
 import type { Island, IslandFeature, World } from './worldgen.ts';
 import { SYLLABLES, WHIRLPOOLS, chunkKey, legacyOf, chunkOf, distanceToCurrents, islandName, islandPoly, portLanes, regionAt, segDist } from './worldgen.ts';
 
+/** The ids kept for the islands the sea raises after the world is made (an eruption's new land). */
+export const RAISED_ROOM = 64;
 /** How many more islands, as a share of those of steps 1–5 in the same sea (docs/18 #25: 40–60 %). */
 export const MORE_ISLES_SHARE = 0.5;
 /** The open water kept between a new island and any land or reef before her (a sailing channel). */
@@ -94,8 +96,14 @@ interface Spot {
 export function appendIsles(old: World): World {
   const seed = old.seed;
   const rng = new Rng((seed * 271 + 0x18e3) >>> 0);
-  const isleFrom = old.islands.length;
+  // Room first for the islands the sea throws up (world events, worldgen.raiseIsland): each keeps the id she had before
+  // step 6 (the next after the islands of steps 1–5), so a saved chart, a claim or a quest on one still finds her.
   const islands = old.islands.slice();
+  for (let k = 0; k < RAISED_ROOM; k++) {
+    const x = -90000 - k * 10;
+    islands.push({ id: islands.length, name: '', region: 'the_abyss', biome: 'bone', x, y: -90000, radius: 1, poly: [x, -90001, x + 1, -89999, x - 1, -89999], features: [], minor: true, slot: true });
+  }
+  const isleFrom = islands.length;
   const chunks = new Map<number, number[]>();
   for (const [k, v] of old.chunks) chunks.set(k, v.slice());
   const navGrid = old.navGrid.slice();
@@ -103,7 +111,7 @@ export function appendIsles(old: World): World {
   const regionOf = (x: number, y: number) => regionAt(old, x, y);
   // The lanes between every port and between the harbours of the land (the floating towns left out): both kept open.
   const lanes = [...portLanes(old.ports), ...portLanes(old.ports.filter((p) => !p.raft))];
-  const adv = buildAdv(old);
+  const adv = buildAdv(old, false);
   // A coarse index of everything to keep off: [x, y, r, pad].
   const B = 2000, BN = WORLD_SIZE / B;
   const buckets: Spot[][] = Array.from({ length: BN * BN }, () => []);
@@ -170,7 +178,7 @@ export function appendIsles(old: World): World {
   };
   // Each sea's count of islands before; the new ones are half as many again.
   const count = new Map<RegionId, number>();
-  for (const is of old.islands) count.set(is.region, (count.get(is.region) ?? 0) + 1);
+  for (const is of old.islands) count.set(is.region, (count.get(is.region) ?? 0) + 1); // (the raised islands' room not counted)
   for (const rid of REGION_IDS) {
     const reg = REGIONS[rid];
     const want = Math.round((count.get(rid) ?? 0) * MORE_ISLES_SHARE);
@@ -232,7 +240,7 @@ export function appendIsles(old: World): World {
       if (!is.features.includes('cache')) is.features.push('cache');
     }
   }
-  const world: World = { ...old, islands, chunks, navGrid, isleFrom };
+  const world: World = { ...old, islands, chunks, navGrid, isleFrom, raisedNext: old.islands.length };
   legacyOf.set(world, old);
   return world;
 }

@@ -14,10 +14,10 @@ import { buildMines } from '../shared/src/data/mines.ts';
 import { dist } from '../shared/src/math.ts';
 import { ISLE_TYPES, ISLE_TYPE_DEFS, SUPPLY_MAX, isleDanger, isleLevel, isleType, isleZones, nearestZone, supplyWeek } from '../shared/src/world/archipelago.ts';
 import { TURTLE_CYCLE, TURTLE_DOWN, TURTLE_UP, turtlePos, turtleRise, turtleTurn, turtleUp, turtles } from '../shared/src/world/drift.ts';
-import { MORE_ISLES_SHARE } from '../shared/src/world/moreisles.ts';
+import { MORE_ISLES_SHARE, RAISED_ROOM } from '../shared/src/world/moreisles.ts';
 import { sectorAt } from '../shared/src/world/sectors.ts';
 import { SANDBAR_COUNT, TIDAL_COUNT, tidalIsles, tideLevel } from '../shared/src/world/tidal.ts';
-import { generateWorld, legacyIslands, legacyWorld, portLanes, segDist } from '../shared/src/world/worldgen.ts';
+import { generateWorld, isLand, legacyIslands, legacyWorld, portLanes, raiseIsland, segDist } from '../shared/src/world/worldgen.ts';
 import { findPath } from '../server/src/game/nav.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
 import { yardOf } from '../server/src/game/base.ts';
@@ -46,18 +46,33 @@ function captain(game: Game, name: string): PlayerSession {
 
 test('#25 half as many islands again — small islands, atolls and ridges — appended after every island before', () => {
   for (const w of [world, generateWorld(1)]) {
+    const before = legacyWorld(w).islands.length;
     const added = w.islands.length - w.isleFrom;
-    assert.ok(added >= w.isleFrom * 0.4 && added <= w.isleFrom * 0.6, `${added} new to ${w.isleFrom}`);
+    assert.ok(added >= before * 0.4 && added <= before * 0.6, `${added} new to ${before}`);
     const fresh = w.islands.slice(w.isleFrom);
     for (const k of ['small', 'atoll', 'ridge'] as const) assert.ok(fresh.filter((i) => i.isle === k).length >= 10, `${k}s`);
     assert.ok(fresh.every((i, n) => i.id === w.isleFrom + n && !i.portId && !i.raft), 'appended, with ids of their own');
-    // The islands before are the very islands of the world before step 6.
-    assert.equal(h(legacyIslands(w)), h(legacyWorld(w).islands));
-    assert.equal(legacyWorld(w).islands.length, w.isleFrom);
+    // The islands before are the very islands of the world before step 6, then the room kept for raised islands.
+    assert.equal(h(legacyIslands(w).slice(0, before)), h(legacyWorld(w).islands));
+    assert.equal(w.isleFrom, before + RAISED_ROOM);
+    assert.ok(w.islands.slice(before, w.isleFrom).every((i) => i.slot && i.minor && i.x < 0 && i.y < 0), 'empty places, off the chart');
   }
   assert.equal(MORE_ISLES_SHARE, 0.5);
   // The same seed, the same new islands.
   assert.equal(h(generateWorld(WORLD_SEED).islands.slice(world.isleFrom)), h(world.islands.slice(world.isleFrom)));
+});
+
+test('#25 an island the sea raises takes the id she had before step 6, in the world before it too', () => {
+  const w = generateWorld(WORLD_SEED);
+  const before = legacyWorld(w).islands.length;
+  const r = { x: 40000, y: 60000, radius: 300, seed: 77, name: 'Newfire', region: 'gravewater' as const, biome: 'volcanic' as const, features: [] };
+  const is = raiseIsland(w, r);
+  assert.equal(is.id, before, 'the next after the islands of steps 1–5, as before step 6');
+  assert.equal(w.islands[before], is);
+  assert.equal(legacyWorld(w).islands[before]?.name, 'Newfire', 'and in the world the mines and the map are placed on');
+  assert.ok(isLand(w, 40000, 60000) && isLand(legacyWorld(w), 40000, 60000));
+  assert.equal(raiseIsland(w, { ...r, x: 41000, name: 'Second' }).id, before + 1);
+  assert.equal(raiseIsland(w, r), is, 'raised once');
 });
 
 test('#25 the mines, the adventure map and the quests stand where they stood; the new land keeps off all of it', () => {

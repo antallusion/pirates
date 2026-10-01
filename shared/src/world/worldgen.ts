@@ -33,6 +33,8 @@ export interface Island {
   isle?: 'small' | 'atoll' | 'ridge';
   /** docs/18 #30: a hidden island — charted only from a lookout, by a map or an obelisk. */
   hidden?: boolean;
+  /** docs/18 III: an empty place kept for an island the sea may raise (far off the chart, never drawn or sailed). */
+  slot?: boolean;
 }
 
 export interface Port {
@@ -128,6 +130,8 @@ export interface World {
   markChunks: Map<number, number[]>;
   /** The first island of step 6 (docs/18 III: small islands, atolls, ridges); every island before her is as she was. */
   isleFrom: number;
+  /** The next empty place for a raised island (before isleFrom; once they are all taken, raised islands go on the end). */
+  raisedNext?: number;
 }
 
 const REGION_CELL = 1000;
@@ -992,8 +996,16 @@ export function raiseIsland(world: World, r: RaisedIsland): Island {
   if (existing) return existing;
   const rng = new Rng(r.seed);
   const poly = islandPoly(rng, r.x, r.y, r.radius / 1.25, r.seed);
-  const is: Island = { id: world.islands.length, name: r.name, region: r.region, biome: r.biome, x: r.x, y: r.y, radius: r.radius, poly, features: [...r.features] };
-  world.islands.push(is);
+  // docs/18 III: into the room kept for her before the islands of step 6 — the id she had before them — and into the
+  // world before step 6 too (where the mines and the adventure map are placed), with the same id.
+  const slot = world.raisedNext !== undefined && world.raisedNext < world.isleFrom && world.islands[world.raisedNext]?.slot ? world.raisedNext : -1;
+  const is: Island = { id: slot >= 0 ? slot : world.islands.length, name: r.name, region: r.region, biome: r.biome, x: r.x, y: r.y, radius: r.radius, poly, features: [...r.features] };
+  if (slot >= 0) {
+    world.islands[slot] = is;
+    world.raisedNext = slot + 1;
+    const old = legacyOf.get(world);
+    if (old && old.islands.length === slot) raiseIsland(old, r);
+  } else world.islands.push(is);
   const [x0, y0] = chunkOf(is.x - is.radius, is.y - is.radius);
   const [x1, y1] = chunkOf(is.x + is.radius, is.y + is.radius);
   for (let cy = y0; cy <= y1; cy++) {

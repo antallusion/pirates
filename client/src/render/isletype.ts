@@ -47,36 +47,22 @@ const HALO: Record<IsleType, string> = {
   dead: 'rgba(110,200,196,0.11)',
 };
 
-/** The water about her coast, by her kind (under the island). */
+/** The water about her coast, by her kind (under the island): one wide stroke of her coast, the cheapest mark there is. */
 export function drawIsleHalo(g: G, is: IslandData, c: IsleTypeCtx): void {
   if (!is.ty || is.mist || is.raft || c.zoom < 0.08) return;
-  g.save();
-  g.lineJoin = 'round';
   c.path(is.poly);
-  g.strokeStyle = HALO[is.ty];
-  g.lineWidth = (is.ty === 'tropical' ? 70 : is.ty === 'rocky' ? 40 : 60) * c.zoom;
+  let style = HALO[is.ty];
+  // The Choir's pale light under the water breathes, brighter by night; a fire mountain's sea glows by night.
+  if (is.ty === 'dead') style = `rgba(110,210,200,${(0.1 + 0.04 * Math.sin(c.time * 0.8 + is.id) + 0.08 * c.night).toFixed(3)})`;
+  else if (is.ty === 'volcanic' && c.night > 0.3) style = `rgba(${Math.round(22 + 90 * c.night)},${Math.round(12 + 20 * c.night)},10,0.5)`;
+  g.strokeStyle = style;
+  g.lineJoin = 'round';
+  g.lineWidth = (is.ty === 'tropical' ? 90 : is.ty === 'rocky' ? 40 : is.ty === 'dead' ? 80 : 60) * c.zoom;
   g.stroke();
-  if (is.ty === 'tropical') {
-    // Pale sandy shallows, a shade of the dark sea (docs/06 §6.1: never azure — turquoise is the deep's own light).
-    g.strokeStyle = 'rgba(150,160,130,0.12)';
-    g.lineWidth = 120 * c.zoom;
-    g.stroke();
-  }
-  if (is.ty === 'volcanic' && c.night > 0.3) {
-    g.strokeStyle = `rgba(255,96,40,${0.12 * c.night})`;
-    g.lineWidth = 30 * c.zoom;
-    g.stroke();
-  }
-  if (is.ty === 'dead') {
-    // A pale light under the water that breathes.
-    g.strokeStyle = `rgba(120,230,214,${0.06 + 0.05 * Math.sin(c.time * 0.8 + is.id) + 0.1 * c.night})`;
-    g.lineWidth = 90 * c.zoom;
-    g.stroke();
-  }
-  g.restore();
 }
 
-/** Her kind on her land (over the painting, under what grows and stands on it). */
+/** Her kind on her land (over the painting, under what grows and stands on it): fills and strokes inside her coast,
+ *  no clipping (a frame's few marks, not a pass of their own). */
 export function drawIsleOver(g: G, is: IslandData, c: IsleTypeCtx): void {
   if (!is.ty || is.mist || is.raft) return;
   const z = c.zoom;
@@ -108,77 +94,73 @@ export function drawIsleOver(g: G, is: IslandData, c: IsleTypeCtx): void {
     g.lineTo(x + Math.sin(a) * is.r * 0.95 * z, y - Math.cos(a) * is.r * 0.95 * z);
     g.stroke();
   }
-  c.path(is.poly);
-  g.clip();
   switch (is.ty) {
     case 'tropical':
-      // Bright sand along the waterline.
-      c.path(is.poly);
-      g.strokeStyle = 'rgba(244,226,168,0.42)';
-      g.lineWidth = 16 * z;
+      // Bright sand along the waterline (just inside it).
+      c.path(is.poly, 0.97, is.x, is.y);
+      g.strokeStyle = 'rgba(244,226,168,0.36)';
+      g.lineWidth = 9 * z;
       g.stroke();
       break;
     case 'rocky':
-      c.path(is.poly);
+      c.path(is.poly, 0.97, is.x, is.y);
       g.strokeStyle = 'rgba(34,34,36,0.5)';
-      g.lineWidth = 10 * z;
+      g.lineWidth = 6 * z;
       g.stroke();
-      g.fillStyle = 'rgba(120,124,128,0.12)';
-      g.fill();
       break;
     case 'volcanic': {
-      g.fillStyle = 'rgba(30,14,10,0.22)';
       c.path(is.poly);
+      g.fillStyle = 'rgba(30,14,10,0.22)';
       g.fill();
-      // Cracks of fire from the middle, glowing by night.
+      if (z < 0.2) break;
+      // Cracks of fire from the middle, glowing by night (short enough to stay ashore).
       const glow = 0.5 + 0.4 * c.night + 0.1 * Math.sin(c.time * 2 + is.id);
-      g.strokeStyle = `rgba(255,${100 + Math.round(50 * c.night)},36,${Math.min(0.9, glow)})`;
+      g.strokeStyle = `rgba(255,${100 + Math.round(50 * c.night)},36,${Math.min(0.9, glow).toFixed(3)})`;
       g.lineWidth = Math.max(1.4, 3.2 * z);
       g.lineCap = 'round';
+      g.beginPath();
       for (let k = 0; k < 5; k++) {
-        let a = r() * Math.PI * 2, d = 0;
+        let a = r() * Math.PI * 2;
         let px = is.x, py = is.y;
-        g.beginPath();
         g.moveTo(c.sx(px), c.sy(py));
-        for (let s = 0; s < 5; s++) {
+        for (let st = 0; st < 5; st++) {
           a += (r() - 0.5) * 0.9;
-          d = is.r * 0.12 * (1 + r());
+          const d = is.r * 0.055 * (1 + r());
           px += Math.sin(a) * d;
           py -= Math.cos(a) * d;
           g.lineTo(c.sx(px), c.sy(py));
         }
-        g.stroke();
       }
+      g.stroke();
       break;
     }
     case 'swamp': {
+      c.path(is.poly);
       g.fillStyle = 'rgba(18,40,18,0.26)';
-      c.path(is.poly);
       g.fill();
+      if (z < 0.2) break;
       // Black pools among the reeds.
+      g.fillStyle = 'rgba(10,20,14,0.45)';
+      g.beginPath();
       for (let k = 0; k < 6; k++) {
-        const a = r() * Math.PI * 2, d = r() * is.r * 0.55;
-        g.fillStyle = 'rgba(10,20,14,0.45)';
-        g.beginPath();
-        g.ellipse(c.sx(is.x + Math.sin(a) * d), c.sy(is.y - Math.cos(a) * d), (14 + r() * 26) * z, (8 + r() * 14) * z, r() * 3, 0, Math.PI * 2);
-        g.fill();
+        const a = r() * Math.PI * 2, d = r() * is.r * 0.45;
+        const ex = c.sx(is.x + Math.sin(a) * d), ey = c.sy(is.y - Math.cos(a) * d), rx = (14 + r() * 26) * z, ry = (8 + r() * 14) * z, rot = r() * 3;
+        g.moveTo(ex + rx * Math.cos(rot), ey + rx * Math.sin(rot));
+        g.ellipse(ex, ey, rx, ry, rot, 0, Math.PI * 2);
       }
+      g.fill();
       break;
     }
-    case 'graveyard': {
+    case 'graveyard':
+      c.path(is.poly);
       g.fillStyle = 'rgba(70,58,44,0.22)';
-      c.path(is.poly);
       g.fill();
       break;
-    }
-    case 'dead': {
-      g.fillStyle = 'rgba(40,50,70,0.34)';
+    case 'dead':
       c.path(is.poly);
-      g.fill();
-      g.fillStyle = `rgba(190,215,220,${0.06 + 0.04 * c.night})`;
+      g.fillStyle = `rgba(${Math.round(40 + 150 * 0.08)},${Math.round(50 + 165 * 0.08)},${Math.round(70 + 150 * 0.08)},${(0.36 + 0.03 * c.night).toFixed(3)})`;
       g.fill();
       break;
-    }
   }
   g.restore();
   // The hulks of a graveyard, run up on her shore and rotting in her shallows (the painted wrecks), and flotsam.
