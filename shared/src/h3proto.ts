@@ -20,6 +20,8 @@ export interface DwellUnit {
   u: UnitId;
   per: number;
   goods: Partial<Record<GoodId, number>>;
+  /** Men of this kind her army's might still has room for (docs/17 H5; -1: no cap — tier 1). */
+  room?: number;
 }
 
 export interface DwellRow {
@@ -43,6 +45,8 @@ export interface DwellUp {
   n: number;
   per: number;
   goods: Partial<Record<GoodId, number>>;
+  /** Of them, how many her army's might has room to train up (docs/17 H5). */
+  room?: number;
 }
 
 export interface DwellView {
@@ -63,6 +67,9 @@ export interface DwellView {
   /** Picked men (tier 4 and up) she may still berth, of the most her ship's level allows. */
   picked: number;
   pickedMax: number;
+  /** Her army's weight in a boarding against the most a ship of her level carries (docs/17 H5), as whole numbers. */
+  might?: number;
+  mightMax?: number;
 }
 
 export interface MineView {

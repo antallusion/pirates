@@ -14,8 +14,8 @@
 // an hour at sea at ⚓6 (seaHour, tests/balance/island.ts), and a castle doubles it; a pool keeps two weeks' growth at
 // most, so a captain who looks in once a day finds two weeks and not four.
 
-import { UNITS } from './army.ts';
-import type { UnitId } from './army.ts';
+import { UNITS, armyForLevel, armyWeight } from './army.ts';
+import type { ArmyStack, UnitId } from './army.ts';
 import type { BaseCost } from './base.ts';
 import { BUILD_MAX_SECS } from './base.ts';
 import type { Tr } from './estate.ts';
@@ -45,6 +45,44 @@ export function pickedShare(shipLevel: number): number {
   return Math.min(0.45, 0.12 + 0.03 * Math.max(1, Math.min(10, shipLevel)));
 }
 export const PICKED_TIER = 4;
+
+/** The picked men's might cap (docs/17 H5): the trained men a ship signs on from the dwellings (tier 2 and up) and the
+ *  upgrades she pays for keep her army's weight in a boarding (armyWeight, the square law) to this many times the
+ *  ladder's own crew of her level and hammocks — the empty hammocks counted as deckhands, so nothing is gamed by
+ *  signing the deckhands on last. A month of a castle's men was three times the sea's armies of her level (every
+ *  boarding of a pirate of her level won); under the cap about four in five. Deckhands and seasoned sailors (tier 1)
+ *  are never held back. */
+export const MIGHT_CAP = [1, 1, 1, 1, 1, 1.05, 1.05, 1.15, 1.25, 1.25, 1.3];
+
+export function mightCap(level: number, crewMax: number, slots: number, k = MIGHT_CAP[Math.max(1, Math.min(10, Math.round(level)))]): number {
+  return k * armyWeight(armyForLevel(level, crewMax, slots, 'player'));
+}
+
+/** How many men of kind `u` (trained up from `from`, if given) may join `army` under the cap. */
+export function mightRoom(army: readonly ArmyStack[], u: UnitId, level: number, crewMax: number, slots: number, from?: UnitId, k?: number): number {
+  if (UNITS[u].tier <= 1) return Infinity;
+  const cap = mightCap(level, crewMax, slots, k);
+  const men = army.reduce((a, x) => a + x.n, 0);
+  const trial = (n: number): ArmyStack[] => {
+    const out = army.map((x) => ({ ...x }));
+    if (from) {
+      const f = out.find((x) => x.u === from);
+      if (f) f.n -= n;
+    }
+    out.push({ u, n });
+    const room = Math.max(0, crewMax - men - (from ? 0 : n));
+    if (room > 0) out.push({ u: 'deckhand', n: room });
+    return out.filter((x) => x.n > 0);
+  };
+  let lo = 0, hi = from ? army.find((x) => x.u === from)?.n ?? 0 : Math.max(0, crewMax - men);
+  if (armyWeight(trial(0)) > cap) return 0;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (armyWeight(trial(mid)) <= cap) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
+}
 
 /** A man bought in a port costs a quarter more than at one's own dwellings. */
 export const PORT_MARKUP = 1.25;

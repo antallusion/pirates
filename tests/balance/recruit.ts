@@ -9,7 +9,7 @@ import { UNITS, armyFit, armyForLevel, armyMen, armyPower, armyTidy } from '../.
 import type { ArmyStack, UnitId } from '../../shared/src/data/army.ts';
 import { DAY_LENGTH_SEC } from '../../shared/src/constants.ts';
 import { GOODS } from '../../shared/src/data/goods.ts';
-import { GROWTH, KEEP_GROWTH, PICKED_TIER, POOL_WEEKS, PORT_GROWTH, TIER_SHIP_LEVEL, TIER_UNIT, UNIT_GOODS, pickedShare, portDwellings } from '../../shared/src/data/town.ts';
+import { GROWTH, KEEP_GROWTH, PICKED_TIER, mightRoom, POOL_WEEKS, PORT_GROWTH, TIER_SHIP_LEVEL, TIER_UNIT, UNIT_GOODS, pickedShare, portDwellings } from '../../shared/src/data/town.ts';
 import type { Port } from '../../shared/src/world/worldgen.ts';
 import { WEEK_DAYS } from '../../shared/src/data/week.ts';
 import { seaHour } from './island.ts';
@@ -68,6 +68,8 @@ export interface MonthPlan {
   /** Weeks of growth she finds waiting each day (two: she looks in once a day and the pools keep two weeks). */
   weeksFound: number;
   days: number;
+  /** The picked men's might cap (docs/17 H5) as a multiple of the ladder's crew; 0: none (H3's month before it). */
+  cap?: number;
 }
 
 export const MONTH: MonthPlan = { level: 7, crewMax: 220, keep: 3, top: 6, loss: 0.25, hours: 3, share: 0.5, weeksFound: POOL_WEEKS, days: 30 };
@@ -106,7 +108,9 @@ export function month(plan: MonthPlan): MonthResult {
       if (plan.level < TIER_SHIP_LEVEL[t]) continue;
       const u = UNITS[TIER_UNIT[t]].upgrade!;
       const have = Math.floor(GROWTH[t] * KEEP_GROWTH[plan.keep] * plan.weeksFound);
-      const n = Math.min(have, room, Math.floor(Math.max(0, purse) / (manWorth(u) - UNITS.deckhand.cost)), t >= PICKED_TIER ? Math.max(0, picked) : Infinity);
+      // The picked men's might cap (docs/17 H5), as the dwellings hold to it.
+      const capN = plan.cap === 0 ? Infinity : mightRoom(army, u, plan.level, plan.crewMax, 7, undefined, plan.cap);
+      const n = Math.min(have, room, capN, Math.floor(Math.max(0, purse) / (manWorth(u) - UNITS.deckhand.cost)), t >= PICKED_TIER ? Math.max(0, picked) : Infinity);
       if (t >= PICKED_TIER) picked -= Math.max(0, n);
       if (n <= 0) continue;
       purse -= n * (manWorth(u) - UNITS.deckhand.cost);

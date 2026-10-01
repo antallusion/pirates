@@ -4,8 +4,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { UNITS, armyForLevel, armyMen } from '../../shared/src/data/army.ts';
-import { PICKED_TIER, POOL_WEEKS, TIER_UNIT, pickedShare, recruitPrice } from '../../shared/src/data/town.ts';
+import { UNITS, armyForLevel, armyMen, armyWeight } from '../../shared/src/data/army.ts';
+import { PICKED_TIER, POOL_WEEKS, TIER_UNIT, mightCap, pickedShare, recruitPrice } from '../../shared/src/data/town.ts';
 import { PVE_JUNIOR, PVE_SENIOR, ladder } from '../../shared/src/data/shiplevel.ts';
 import { generateWorld } from '../../shared/src/world/worldgen.ts';
 import { seaHour } from './island.ts';
@@ -48,15 +48,20 @@ test('a month refilling a frigate from a castle: a real share of the income, the
   const r = month(MONTH);
   const L = MONTH.level, M = MONTH.crewMax;
   assert.equal(armyMen(r.army), M, 'the hammocks full');
-  assert.ok(r.spent / r.earned >= 0.25 && r.spent / r.earned <= 0.55, `spent ${Math.round((r.spent / r.earned) * 100)}% of the income`);
+  // Under the picked men's might cap (docs/17 H5) the castle's men are a smaller share of the income than in H3 (40%).
+  assert.ok(r.spent / r.earned >= 0.1 && r.spent / r.earned <= 0.55, `spent ${Math.round((r.spent / r.earned) * 100)}% of the income`);
   assert.ok(r.highShare <= pickedShare(L) + 0.01, `picked men ${Math.round(r.highShare * 100)}%`);
   const end = r.ratio[r.ratio.length - 1];
-  assert.ok(end >= 1.5 && end <= 5, `might ×${end.toFixed(2)} of the ladder's army`);
-  // Her town is worth having: her crew takes a pirate of her level; the ladder's own crew is an even fight.
+  assert.ok(end >= 1.3 && end <= 3, `might ×${end.toFixed(2)} of the ladder's army`);
+  assert.ok(armyWeight(r.army) <= mightCap(L, M, 7) * 1.1, `weight ${Math.round(armyWeight(r.army))} under the cap ${Math.round(mightCap(L, M, 7))}`);
+  // Her town is worth having: her crew takes a pirate of her level about four times in five (H3, without the cap:
+  // every time); the ladder's own crew is an even fight.
   const lad = armyForLevel(L, M, 7, 'player');
   const even = winRate(lad, armyForLevel(L, M, 7, 'pirate'));
   assert.ok(even >= 0.3 && even <= 0.7, `the ladder's crew against a pirate of her level: ${even}`);
-  assert.ok(winRate(r.army, armyForLevel(L, M, 7, 'pirate')) >= 0.9, 'the town-bred crew wins');
+  const town = winRate(r.army, armyForLevel(L, M, 7, 'pirate'), 80);
+  assert.ok(town >= 0.7 && town <= 0.95, `the town-bred crew: ${town}`);
+  assert.equal(winRate(month({ ...MONTH, cap: 0 }).army, armyForLevel(L, M, 7, 'pirate')), 1, 'without the cap, every boarding won (H3)');
   // Canon D12: two levels up is not boarded at all; one level up under the ladder is hard for a keep's crew.
   assert.equal(ladder(L, L + 2, false).board, false);
   const keep = month({ ...MONTH, keep: 1 });

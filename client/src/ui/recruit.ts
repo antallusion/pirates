@@ -92,7 +92,8 @@ export class RecruitWindow {
     const room = Math.max(0, v.crewMax - v.crew);
     if (!v.army.some((x) => x.u === u) && v.army.length >= v.slots) return 0;
     const picked = UNITS[u].tier >= PICKED_TIER ? v.picked : Infinity;
-    return affordable(u, (n) => priceOf(unit.per, unit.goods, n), v.gold, v.have, Math.min(r.pool, room, picked));
+    const might = unit.room === undefined || unit.room < 0 ? Infinity : unit.room;
+    return affordable(u, (n) => priceOf(unit.per, unit.goods, n), v.gold, v.have, Math.min(r.pool, room, picked, might));
   }
 
   render(root: HTMLElement, state: ClientState): void {
@@ -110,7 +111,7 @@ export class RecruitWindow {
     }
     const men = v.army.reduce((a, s) => a + s.n, 0);
     const head = `<div class="modal-head rc-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L(v.src === 'port' ? 'sub.port' : 'sub.isle', { place: placeName(v.place) }))} · ${esc(weekLine(v.week))}</div></div>
-      <div class="rc-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${icon('stat_crew', '', 'ico-sm')}${esc(L('room', { n: men, max: v.crewMax }))}</span><span class="ph-chip">${esc(L('slots', { n: v.army.length, max: v.slots }))}</span><span class="ph-chip" title="${esc(L('picked.tip'))}">${esc(L('picked', { n: v.pickedMax - v.picked, max: v.pickedMax }))}</span></div></div>`;
+      <div class="rc-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${icon('stat_crew', '', 'ico-sm')}${esc(L('room', { n: men, max: v.crewMax }))}</span><span class="ph-chip">${esc(L('slots', { n: v.army.length, max: v.slots }))}</span><span class="ph-chip" title="${esc(L('picked.tip'))}">${esc(L('picked', { n: v.pickedMax - v.picked, max: v.pickedMax }))}</span>${v.mightMax ? `<span class="ph-chip${(v.might ?? 0) >= v.mightMax ? ' warn' : ''}" title="${esc(L('might.tip'))}">${esc(L('might', { n: v.might ?? 0, max: v.mightMax }))}</span>` : ''}</div></div>`;
     const cards = v.rows.map((r) => {
       const units = r.units.map((x) => {
         const d = UNITS[x.u];
@@ -128,7 +129,7 @@ export class RecruitWindow {
       const most = this.most(v, r, u);
       this.n = Math.max(0, Math.min(most, this.n || (most > 0 ? 1 : 0)));
       const price = priceOf(unit.per, unit.goods, this.n);
-      const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : most <= 0 ? L('lack') : '';
+      const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : unit.room === 0 ? L('might.full') : most <= 0 ? L('lack') : '';
       pick = `<div class="rc-pick"><div class="rc-ph">${icon(unitArt(u), '', 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted">${esc(L('avail', { n: r.pool }))}</span></div></div>
         <div class="rc-slide"><input type="range" min="0" max="${most}" value="${this.n}" data-rcn aria-label="${esc(unitName(u))}"${most <= 0 ? ' disabled' : ''}><b class="rc-count" data-rccount>${this.n}</b><button class="btn btn-small" data-rcmax${most <= 0 ? ' disabled' : ''}>${esc(L('max'))} ${most}</button></div>
         <div class="rc-cost"><span class="muted">${esc(L('cost'))}</span><span data-rccost>${costLine(price, v.gold, v.have)}</span></div>
@@ -139,9 +140,10 @@ export class RecruitWindow {
     const res = have.length ? `<p class="rc-have"><span class="muted">${esc(L('have'))}:</span> ${have.map(([g, n]) => `<span class="bcost" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}</p>` : '';
     const ups = v.ups.length
       ? v.ups.map((x) => {
-        const p = priceOf(x.per, x.goods, x.n);
-        const ok = !v.why && p.silver <= v.gold && (Object.entries(p.goods) as [GoodId, number][]).every(([g, k]) => (v.have[g] ?? 0) >= k);
-        return `<div class="rc-up">${icon(unitArt(x.u), '', 'rc-face')}<span class="rc-arrow">→</span>${icon(unitArt(x.to), '', 'rc-face up')}<div class="rc-ut"><b>${esc(unitName(x.u))} → ${esc(unitName(x.to))}</b>${costLine(p, v.gold, v.have)}</div><button class="btn btn-small" data-rctrain="${x.u}" data-n="${x.n}"${ok ? '' : ' disabled'}>${esc(L('train.btn', { n: x.n }))}</button></div>`;
+        const n = Math.max(0, Math.min(x.n, x.room ?? x.n));
+        const p = priceOf(x.per, x.goods, n);
+        const ok = n > 0 && !v.why && p.silver <= v.gold && (Object.entries(p.goods) as [GoodId, number][]).every(([g, k]) => (v.have[g] ?? 0) >= k);
+        return `<div class="rc-up">${icon(unitArt(x.u), '', 'rc-face')}<span class="rc-arrow">→</span>${icon(unitArt(x.to), '', 'rc-face up')}<div class="rc-ut"><b>${esc(unitName(x.u))} → ${esc(unitName(x.to))}</b>${n > 0 ? costLine(p, v.gold, v.have) : `<span class="muted">${esc(L('might.full'))}</span>`}</div><button class="btn btn-small" data-rctrain="${x.u}" data-n="${n}"${ok ? '' : ' disabled'}>${esc(L('train.btn', { n }))}</button></div>`;
       }).join('')
       : `<p class="muted">${esc(L('train.none'))}</p>`;
     const hasUp = v.rows.some((x) => x.up);

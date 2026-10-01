@@ -440,6 +440,23 @@ function rollBase(s: TacStack, rng: Rng | null): number {
   return ((s.count * (s.dmin + s.dmax)) / 2) * (0.9 + rng.float() * 0.2);
 }
 
+/** Backs to the rail (docs/17 H5): a side whose living strength on deck (hit points) is less than the other's strikes
+ *  harder — by TAC_DESPERATION of the shortfall, up to TAC_DESPERATION_MAX. HoMM3's square law left a tenth fewer
+ *  men a lost fight nine times in ten; with it, seven in ten. */
+export const TAC_DESPERATION = 1;
+export const TAC_DESPERATION_MAX = 0.3;
+
+export function desperation(bt: TacBattle, side: 0 | 1): number {
+  let mine = 0, foe = 0;
+  for (const o of bt.stacks) {
+    if (o.count <= 0) continue;
+    if (o.side === side) mine += hpOf(o);
+    else foe += hpOf(o);
+  }
+  if (mine >= foe || foe <= 0) return 1;
+  return 1 + Math.min(TAC_DESPERATION_MAX, TAC_DESPERATION * (1 - mine / foe));
+}
+
 /** Damage `s` does to `t` (rng null: the expected blow, for the sea's mind). */
 export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot' | 'ret', rng: Rng | null, from = s.hex): { dmg: number; lucky: boolean } {
   const h = bt.heroes[s.side], e = bt.heroes[t.side];
@@ -469,6 +486,9 @@ export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'sh
   // Flanking: a foe already engaged by another of ours on her other side.
   // Turn the Flank: the navigator reads the deck, every blow of his men lands as from the flank.
   if (how === 'melee' && (has(h, 'turn_the_flank', r) || alive(bt).some((o) => o.side === s.side && o !== s && hexNeighbors(t.hex).includes(o.hex)))) mul *= 1.2;
+  // Backs to the rail (docs/17 H5): the side with less of her strength left on deck strikes harder by the shortfall —
+  // a tenth fewer men is a hard fight, not a lost one.
+  mul *= desperation(bt, s.side);
   const lucky = !!rng && rng.chance(h.luck * TAC_CHANCE_PER_POINT);
   if (lucky) mul *= 2;
   return { dmg: Math.max(1, Math.round(rollBase(s, rng) * mod * mul)), lucky };

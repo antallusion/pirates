@@ -279,6 +279,22 @@ export function armyPower(army: readonly ArmyStack[]): number {
   return p;
 }
 
+/** The army's weight in a boarding battle (docs/17 H5): HoMM3's square law — the fight an army puts up grows with
+ *  its blows times its hit points, not man by man — as the head count of plain deckhands it is worth. A few elite men
+ *  are no longer reckoned a whole crew. */
+export function armyWeight(army: readonly ArmyStack[]): number {
+  let blows = 0, hp = 0;
+  for (const s of army) {
+    const d = UNITS[s.u];
+    const k = 1 + 0.05 * (d.atk + d.def) / 2;
+    blows += s.n * ((d.dmin + d.dmax) / 2) * k * (d.shots ? 1.15 : 1) * (d.specials.includes('double_strike') ? 1.5 : 1);
+    hp += s.n * d.hp * k;
+  }
+  const one = UNITS.deckhand;
+  const k1 = 1 + 0.05 * (one.atk + one.def) / 2;
+  return Math.sqrt((blows * hp) / (((one.dmin + one.dmax) / 2) * k1 * one.hp * k1));
+}
+
 /** Silver the army is worth, man by man. */
 export function armyCost(army: readonly ArmyStack[]): number {
   let c = 0;

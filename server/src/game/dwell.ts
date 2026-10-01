@@ -6,9 +6,9 @@
 // ship's stacks: a kind already aboard joins its stack, a new kind takes a free slot, and the hammocks (crewMax) are
 // the limit. An upgraded dwelling trains a stack of its tier's plain kind up for the difference in price.
 
-import { UNITS } from '../../../shared/src/data/army.ts';
+import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
-import { PICKED_TIER, POOL_WEEKS, TIER_SHIP_LEVEL, TIER_UNIT, pickedShare, UNIT_GOODS, dwellingOf, portDwellings, portGrowth, recruitPrice, upgradePrice, PORT_MARKUP } from '../../../shared/src/data/town.ts';
+import { PICKED_TIER, mightCap, mightRoom, POOL_WEEKS, TIER_SHIP_LEVEL, TIER_UNIT, pickedShare, UNIT_GOODS, dwellingOf, portDwellings, portGrowth, recruitPrice, upgradePrice, PORT_MARKUP } from '../../../shared/src/data/town.ts';
 import type { Price } from '../../../shared/src/data/town.ts';
 import { weekGrowth } from '../../../shared/src/data/week.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
@@ -193,10 +193,12 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   if (ship.shipLevel < TIER_SHIP_LEVEL[d.tier]) return tierWhy(d.tier);
   const pools = poolsOf(game, at);
   const picked = d.tier >= PICKED_TIER ? pickedRoom(s) : Infinity;
-  const n = Math.min(Math.floor(Number(want)), Math.floor(pools[d.tier] ?? 0), ship.stats.crewMax - ship.crew, picked);
+  const might = mightRoom(ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots);
+  const n = Math.min(Math.floor(Number(want)), Math.floor(pools[d.tier] ?? 0), ship.stats.crewMax - ship.crew, picked, might);
   if (!Number.isFinite(n) || n <= 0) {
     if (ship.crew >= ship.stats.crewMax) return 'No hammocks left aboard';
     if (picked <= 0) return `A ship of level ${ship.shipLevel} berths ${pickedMax(s)} picked men (tier 4 and up) at most.`;
+    if (might <= 0) return mightWhy(ship.shipLevel);
     return 'Nobody waiting in that dwelling this week.';
   }
   if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
@@ -227,6 +229,15 @@ export const pickedMax = (s: PlayerSession): number => Math.floor(s.ship!.stats.
 export function pickedRoom(s: PlayerSession): number {
   const aboard = s.ship!.army.filter((x) => UNITS[x.u].tier >= PICKED_TIER).reduce((a, x) => a + x.n, 0);
   return Math.max(0, pickedMax(s) - aboard);
+}
+
+/** The picked men's might cap (docs/17 H5): her army is as strong as a ship of her level carries. */
+const mightWhy = (level: number) => `Your crew is as strong as a ship of level ${level} carries: raise her level for better men.`;
+
+/** How many more men of a kind her army's might has room for (the cap of docs/17 H5). */
+export function mightLeft(s: PlayerSession, u: UnitId, from?: UnitId): number {
+  const ship = s.ship!;
+  return mightRoom(ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots, from);
 }
 
 const tierWhy = (tier: number) => `Men of tier ${tier} serve a ship of level ${TIER_SHIP_LEVEL[tier]} and up.`;
@@ -269,7 +280,9 @@ export function train(game: Game, s: PlayerSession, src: Src, u: UnitId, want: n
   if (UNITS[to].deep && !keepsDeep(s)) return 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
   const ship = s.ship!;
   const stack = ship.army.find((x) => x.u === u);
-  const n = Math.min(Math.floor(Number(want)), stack?.n ?? 0);
+  const might = mightRoom(ship.army, to, ship.shipLevel, ship.stats.crewMax, ship.armySlots, u);
+  const n = Math.min(Math.floor(Number(want)), stack?.n ?? 0, might);
+  if (stack && might <= 0) return mightWhy(ship.shipLevel);
   if (!stack || !Number.isFinite(n) || n <= 0) return 'None of them aboard.';
   if (n < stack.n && !ship.army.some((x) => x.u === to) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
   const price = upgradePrice(u, n, !!at.port)!;
@@ -309,7 +322,7 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
     const kinds: UnitId[] = up ? [base, UNITS[base].upgrade!] : [base];
     rows.push({
       tier, name: at.port && tier === 1 ? 'tavern' : dwellingOf(tier), up, pool: Math.floor(pools[tier] ?? 0), growth: Math.round(growthOf(game, at, tier) * 10) / 10,
-      units: kinds.map((u) => ({ u, per: Math.round(perMan(game, s, at, u) * 100) / 100, goods: UNIT_GOODS[u] ?? {} })),
+      units: kinds.map((u) => { const room = mightLeft(s, u); return { u, per: Math.round(perMan(game, s, at, u) * 100) / 100, goods: UNIT_GOODS[u] ?? {}, room: Number.isFinite(room) ? room : -1 }; }),
       why: UNITS[base].deep && !deep ? 'Only a captain of the Choir or of a cursed ship keeps the drowned.' : ship.shipLevel < TIER_SHIP_LEVEL[tier] ? tierWhy(tier) : null,
     });
   }
@@ -322,11 +335,12 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
     const per = (UNITS[d.upgrade].cost - d.cost) * (at.port ? PORT_MARKUP : 1);
     const goods: Partial<Record<GoodId, number>> = {};
     for (const g of Object.keys(one.goods) as GoodId[]) goods[g] = Math.max(0, (UNIT_GOODS[d.upgrade]?.[g] ?? 0) - (UNIT_GOODS[x.u]?.[g] ?? 0));
-    ups.push({ u: x.u, to: d.upgrade, n: x.n, per, goods });
+    ups.push({ u: x.u, to: d.upgrade, n: x.n, per, goods, room: Math.min(x.n, mightLeft(s, d.upgrade, x.u)) });
   }
   return {
     src, place: at.place, rows, ups, army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
     gold: Math.floor(s.profile!.gold), have: have(game, s, at), why: at.why ?? busy(game, s), week: weekView(game), picked: pickedRoom(s), pickedMax: pickedMax(s),
+    might: Math.round(armyWeight(ship.army)), mightMax: Math.round(mightCap(ship.shipLevel, ship.stats.crewMax, ship.armySlots)),
   };
 }
 
