@@ -37,7 +37,7 @@ import { dwellHooks, pickedMax, pickedRoom } from './dwell.ts';
 import type { Game } from './Game.ts';
 import { afterBattle, artifactFind } from './hero.ts';
 import { bankUp } from './isles.ts';
-import { claimLair, turtleUpNow } from './isles18.ts';
+import { claimLair, turtleUpNow, warnLanding } from './isles18.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { questEvent } from './quests.ts';
 import { chronicle } from './renown.ts';
@@ -128,6 +128,14 @@ interface L18 {
 
 const KEY = 'h18:lairs';
 const all = new WeakMap<Game, L18>();
+/** The lairs kept still for a game (the tick's A/B measure; the tests of other systems keep them still with the
+ *  adventure map, advQuiet). */
+const still = new WeakSet<Game>();
+export function quietLairs(game: Game, on = true): void {
+  if (on) still.add(game);
+  else still.delete(game);
+}
+const quiet = (game: Game): boolean => advQuiet(game) || still.has(game);
 
 function L(game: Game): L18 {
   let x = all.get(game);
@@ -331,7 +339,7 @@ function card(game: Game, s: PlayerSession, l: Lair): LairCard {
 function cardLair(game: Game, s: PlayerSession): Lair | null {
   const ship = s.ship;
   if (!ship || ship.docked || ship.boarding || !s.profile) return null;
-  if (advQuiet(game)) return null;
+  if (quiet(game)) return null;
   const S = L(game);
   let best: Lair | null = null, bd = LAIR_CARD_R;
   for (const l of S.lairs) {
@@ -369,7 +377,7 @@ export function lairPrompt(game: Game, s: PlayerSession): { island: string; feat
 
 /** The land key off a lair: the boats go ashore against it (undefined: no lair here, the landing goes on as ever). */
 export function lairLanding(game: Game, s: PlayerSession): string | null | undefined {
-  if (advQuiet(game)) return undefined;
+  if (quiet(game)) return undefined;
   const l = cardLair(game, s);
   if (!l || !lairUp(game, l) || !inReach(game, s, l)) return undefined;
   return startFight(game, s, l.id);
@@ -414,7 +422,7 @@ export function sendLairs(game: Game, s: PlayerSession, force: boolean): void {
 
 /** Every second: what each captain at sea has newly seen, her marks (every other second) and her card. */
 export function stepLairs(game: Game): void {
-  if (advQuiet(game)) return;
+  if (quiet(game)) return;
   const S = L(game);
   const even = Math.floor(game.now) % 2 === 0;
   for (const s of game.sessions) {
@@ -467,6 +475,7 @@ export function startFight(game: Game, s: PlayerSession, id: string): string | n
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.state.speed = 0;
   const n = armyMen(party);
+  if (l.island >= 0) warnLanding(game, s, game.world.islands[l.island]); // docs/18 #28: an island above her level
   game.toastShip(ship, `Boats away: ${n} hands land on ${islandName(game, l)} against the ${lairName(l)}.`, 'info');
   sendLairCard(game, s, true);
   sendFight(game, s);
@@ -1031,7 +1040,7 @@ export function adminLair(game: Game, s: PlayerSession, args: string[]): string 
   const l = nearestOf(game, up.length ? up : list, ship.state.x, ship.state.y);
   if (!l) return 'No lairs.';
   const name = lairName(l);
-  const where = `${name} on ${islandName(game, l)} (⚓${l.level}, ${armyMen(lairMen(game, l))} creatures)`;
+  const isl = islandName(game, l), n = armyMen(lairMen(game, l));
   const see = () => {
     seenOf(game, s).add(l.id);
     lairsOf(s.profile!).seen = [...seenOf(game, s)];
@@ -1048,7 +1057,7 @@ export function adminLair(game: Game, s: PlayerSession, args: string[]): string 
       see();
       sendLairs(game, s, true);
       sendLairCard(game, s, true);
-      return `Off the ${where}.`;
+      return `Off the ${name} on ${isl} (⚓${l.level}, ${n} creatures).`;
     }
     case 'fight': {
       if (S.store.st[l.id]) delete S.store.st[l.id];
@@ -1058,7 +1067,7 @@ export function adminLair(game: Game, s: PlayerSession, args: string[]): string 
         const lp = lairsOf(s.profile!);
         for (const id of [`l${l.island}s`, `l${l.island}g`].slice(0, l.chain)) lp.v[id] = week1(game);
       }
-      return startFight(game, s, l.id) ?? `Ashore: the ${where}.`;
+      return startFight(game, s, l.id) ?? `Ashore: the ${name} on ${isl} (⚓${l.level}, ${n} creatures).`;
     }
     case 'beat': {
       lairGone(game, l);
@@ -1084,11 +1093,11 @@ export function adminLair(game: Game, s: PlayerSession, args: string[]): string 
       const d = S.store.dw[l.id];
       d.pool = DWELL_WEEKS * dwellGrowth(LAIRS[l.kind].mix[0][0]);
       save(game);
-      return `Your flag over the ${where}.`;
+      return `Your flag over the ${name} on ${isl} (⚓${l.level}, ${n} creatures).`;
     }
   }
   const standing = S.lairs.filter((x) => lairUp(game, x)).length;
-  return `Lairs: ${S.lairs.length}, standing ${standing}. Nearest: the ${where}, ${Math.round(dist(lairPos(game, l).x, lairPos(game, l).y, ship.state.x, ship.state.y))} m away.`;
+  return `Lairs: ${S.lairs.length}, standing ${standing}. Nearest: the ${name} on ${isl} (⚓${l.level}, ${n} creatures), ${Math.round(dist(lairPos(game, l).x, lairPos(game, l).y, ship.state.x, ship.state.y))} m away.`;
 }
 
 /** `/beast [kind] [n]`: creatures of a kind into her army (the list of kinds without one). */

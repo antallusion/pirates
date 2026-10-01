@@ -36,7 +36,7 @@ export const BEASTS: Record<BeastId, UnitDef> = {
   surf_drowned: B('surf_drowned', 5, { atk: 11, def: 9, dmin: 4, dmax: 6, hp: 20, speed: 4, init: 6, shots: 0, specials: ['undead', 'diving'], art: 'portrait.drowned', cost: 190 }),
   young_serpent: B('young_serpent', 6, { atk: 14, def: 11, dmin: 6, dmax: 10, hp: 32, speed: 6, init: 10, shots: 0, specials: ['poison', 'diving'], art: 'monster.young_serpent', cost: 360 }),
   lantern_maw: B('lantern_maw', 6, { atk: 13, def: 12, dmin: 6, dmax: 9, hp: 30, speed: 5, init: 8, shots: 0, specials: ['terror', 'regen'], art: 'monster.lantern_maw', cost: 350 }),
-  ancient_turtle: B('ancient_turtle', 7, { atk: 15, def: 22, dmin: 8, dmax: 14, hp: 70, speed: 2, init: 4, shots: 0, specials: ['shell', 'regen', 'retaliate_all'], art: 'monster.giant_turtle', cost: 700 }),
+  ancient_turtle: B('ancient_turtle', 7, { atk: 15, def: 22, dmin: 8, dmax: 14, hp: 70, speed: 2, init: 4, shots: 0, specials: ['shell', 'regen', 'retaliate_all'], art: 'sight.giant_turtle', cost: 700 }),
   shoal_leviathan: B('shoal_leviathan', 7, { atk: 20, def: 16, dmin: 12, dmax: 18, hp: 60, speed: 5, init: 8, shots: 0, specials: ['terror', 'diving', 'sweep'], art: 'creature.leviathan', cost: 800 }),
 };
 
