@@ -3525,3 +3525,7 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 .pz-status { font-size: 14px; }
 #modal-panel[data-modal="puzzle"] { max-width: 900px; }
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) { .pz-wrap { flex: 0 0 auto; width: min(300px, calc(100vh - 120px)); } }
+/* The Grail in the town (docs/17 H4): its card gilded. */
+.tw-card[data-town="grail"] { border-color: rgba(232, 196, 106, 0.55); }
+.tw-card[data-town="grail"].built { box-shadow: 0 0 18px rgba(232, 196, 106, 0.35), inset 0 0 22px rgba(232, 196, 106, 0.12); }
+.tw-card[data-town="grail"] .tw-art { filter: drop-shadow(0 0 8px rgba(255, 210, 120, 0.7)); }
