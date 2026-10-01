@@ -3710,3 +3710,4 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
   .sup-row { grid-template-columns: minmax(0, 1fr) auto; }
   .sup-good { grid-column: 1 / -1; grid-row: 2; }
 }
+.sup-n { display: inline-flex; align-items: center; gap: 5px; }

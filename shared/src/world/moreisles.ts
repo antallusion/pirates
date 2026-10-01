@@ -15,7 +15,7 @@ import { Rng } from '../rng.ts';
 import { REGIONS, REGION_IDS, WORLD_EDGE_MARGIN, biomeFromMix } from './regions.ts';
 import type { IslandBiome, RegionId } from './regions.ts';
 import type { Island, IslandFeature, World } from './worldgen.ts';
-import { WHIRLPOOLS, chunkKey, legacyOf, chunkOf, distanceToCurrents, islandName, islandPoly, portLanes, regionAt, segDist } from './worldgen.ts';
+import { SYLLABLES, WHIRLPOOLS, chunkKey, legacyOf, chunkOf, distanceToCurrents, islandName, islandPoly, portLanes, regionAt, segDist } from './worldgen.ts';
 
 /** How many more islands, as a share of those of steps 1–5 in the same sea (docs/18 #25: 40–60 %). */
 export const MORE_ISLES_SHARE = 0.5;
@@ -64,6 +64,23 @@ function rockPoly(rng: Rng, x: number, y: number, r: number, axis: number): numb
     out.push(x + u * ca - v * sa, y + u * sa + v * ca);
   }
   return out;
+}
+
+/** A name from her own biome's syllables, else her sea's (the client has every one of them in Russian); a number only
+ *  when both are spent. */
+function freshName(rng: Rng, biomes: IslandBiome[], used: Set<string>): string {
+  for (const b of biomes) {
+    const [a, c] = SYLLABLES[b];
+    for (let i = 0; i < 30; i++) {
+      const n = rng.pick(a) + rng.pick(c);
+      const name = rng.chance(0.3) ? `${n} ${rng.pick(['Isle', 'Rock', 'Key', 'Holm'])}` : n;
+      if (!used.has(name)) {
+        used.add(name);
+        return name;
+      }
+    }
+  }
+  return islandName(rng, biomes[biomes.length - 1], used);
 }
 
 interface Spot {
@@ -175,7 +192,7 @@ export function appendIsles(old: World): World {
         const ca = Math.cos(turn), sa = Math.sin(turn);
         let u = -len / 2;
         const head = islands.length;
-        const name = islandName(rng, reg.biome, usedNames);
+        const name = freshName(rng, [RIDGE_BIOME[rid], reg.biome], usedNames);
         for (let i = 0; i < n; i++) {
           if (i > 0) u += gaps[i - 1];
           const v = rng.range(-40, 40);
@@ -196,7 +213,7 @@ export function appendIsles(old: World): World {
       if (!ok(x, y, r * 1.25, LANE_PAD)) continue;
       const biome = atoll ? RING_BIOME[rid] : biomeFromMix(rid, rng.float());
       const poly = atoll ? atollPoly(rng, x, y, r) : islandPoly(rng, x, y, r, seed + 80000 + islands.length * 7);
-      push({ id: islands.length, name: islandName(rng, reg.biome, usedNames), region: rid, biome, x, y, radius: r * 1.25, poly, features: features(rid, biome, r), isle: atoll ? 'atoll' : 'small' });
+      push({ id: islands.length, name: freshName(rng, [biome, reg.biome], usedNames), region: rid, biome, x, y, radius: r * 1.25, poly, features: features(rid, biome, r), isle: atoll ? 'atoll' : 'small' });
       add(x, y, r * 1.25, CHANNEL);
       placed++;
     }

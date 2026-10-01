@@ -39,7 +39,7 @@ export function supplyTab(state: ClientState): string {
       ? `<button class="btn btn-small" data-sup-unlink="${s.island}">${esc(L('sup.unlink'))}</button>`
       : `<button class="btn btn-small btn-primary" data-sup-link="${s.island}"${s.why ? ` disabled title="${esc(serverText(s.why))}"` : ''}>${esc(L('sup.link'))}</button>`;
     return `<div class="sup-row${s.linked ? ' on' : ''}"><div class="sup-name"><b>${esc(placeName(s.name))}</b> <b style="color:${THREAT_COLOR[threatOf(mine, s.level)]}">⚓${s.level}</b><span class="muted">${esc(meta)}</span></div>
-      <div class="sup-good">${icon(`good_${s.good}`, '', 'ico-sm')}<span>${esc(L('sup.week', { n: s.n }))} · ${esc(good ? good.name : s.good)}</span>${s.linked ? `<span class="good">${esc(L('sup.linked'))}${s.last ? ` · ${esc(L('sup.last', { n: s.last }))}` : ''}</span>` : s.why ? `<span class="muted">${esc(serverText(s.why))}</span>` : ''}</div>${btn}</div>`;
+      <div class="sup-good"><span class="sup-n">${icon(`good_${s.good}`, '', 'ico-sm')}${esc(L('sup.week', { n: s.n }))} · ${esc(good ? good.name : s.good)}</span>${s.linked ? `<span class="good">${esc(L('sup.linked'))}${s.last ? ` · ${esc(L('sup.last', { n: s.last }))}` : ''}</span>` : s.why ? `<span class="muted">${esc(serverText(s.why))}</span>` : ''}</div>${btn}</div>`;
   }).join('');
   return `${head}<div class="sup-list">${rows}</div>`;
 }

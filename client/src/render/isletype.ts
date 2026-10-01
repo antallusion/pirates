@@ -231,7 +231,7 @@ export function drawIsleLevel(g: G, is: IslandData, c: IsleTypeCtx, mine: number
   const x = c.sx(is.x), y = c.sy(is.y + is.r * 0.82) + 14;
   if (x < -40 || y < -20 || x > c.w + 40 || y > c.h + 20) return;
   const d = isleDanger(mine, is.lv);
-  const text = d === 'deadly' ? `☠ ⚓${is.lv} ${deadly}` : `⚓${is.lv}`;
+  const text = `${is.secret ? '✦ ' : ''}${d === 'deadly' ? `☠ ⚓${is.lv} ${deadly}` : `⚓${is.lv}`}`; // ✦ a hidden island she has found
   g.save();
   g.font = '700 11px Inter, sans-serif';
   const w = g.measureText(text).width + 10;

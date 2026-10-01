@@ -97,6 +97,11 @@ test('Contract Broker, Cold Hold, Heavy Hauler, Honest Merchant, Appraiser', () 
   // Cold Hold: medicine lasts.
   c.push({ t: 'undock' });
   ship.cargo = { medicine: 100, provisions: 50 };
+  // A dry week: the cold hold is weighed against the hold's own damp, not the rain the sea's dice blow in (×1.3).
+  for (const w of Object.values(game.weather)) {
+    w.kind = 'breeze';
+    w.until = game.now + 1e6;
+  }
   steps(game, 20 * 700);
   assert.ok((ship.cargo.medicine ?? 0) === 100, `cold hold: ${ship.cargo.medicine}`);
   // Appraiser.

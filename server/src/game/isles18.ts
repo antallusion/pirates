@@ -512,7 +512,8 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
         sendSupply(game, s, true);
         return 'The week’s supply delivered.';
       }
-      const is = nearest(land.filter((i) => !i.minor && !i.hidden && i.id !== ownIsland(game, s.accountId)?.island), x, y);
+      const mine = store(game).claims[s.accountId] ?? {};
+      const is = nearest(land.filter((i) => !i.minor && !i.hidden && i.id !== ownIsland(game, s.accountId)?.island && !mine[i.id]), x, y);
       if (!is) return 'No island.';
       claimLair(game, s.accountId, is.id, 'admin');
       if (sub === 'link') {

@@ -15,6 +15,14 @@ const FIRST: Record<string, string> = {
   Drowned: 'Драунд', Sunk: 'Санк', Saint: 'Сейнт', Hollow: 'Холлоу', Crown: 'Краун', Choir: 'Куайр', Idol: 'Айдол', Altar: 'Олтар', Vesper: 'Веспер',
   Marrow: 'Марроу', Rib: 'Риб', Skull: 'Скалл', Black: 'Блэк', Silent: 'Сайлент', Lightless: 'Лайтлесс', Deep: 'Дип', Grave: 'Грейв', Eyeless: 'Айлесс',
   Dead: 'Дэд', Bleached: 'Бличт', Lost: 'Лост', Wreck: 'Рэк', Last: 'Ласт', Empty: 'Эмпти', Gull: 'Галл', Tern: 'Терн', Drear: 'Дрир',
+  // The living islands' own syllables (docs/11 P3), named since docs/18 III gave them islands of their own.
+  Green: 'Грин', Parrot: 'Пэррот', Vine: 'Вайн', Fever: 'Фивер', Palm: 'Палм', Howler: 'Хаулер', Orchid: 'Оркид', Monkey: 'Манки', Tangle: 'Тэнгл', Steam: 'Стим',
+  Root: 'Рут', Mud: 'Мад', Heron: 'Херон', Tide: 'Тайд', Crab: 'Крэб', Brack: 'Брэк', Stilt: 'Стилт', Eel: 'Ил', Knot: 'Нот',
+  Coral: 'Корал', Ring: 'Ринг', Lagoon: 'Лагун', Pearl: 'Перл', Blue: 'Блу', Turtle: 'Тёртл', Conch: 'Конк', Sun: 'Сан', Reef: 'Риф',
+  Brine: 'Брайн', Crust: 'Краст', Glare: 'Глэр', Dry: 'Драй', Bitter: 'Биттер', Chalk: 'Чок', Blind: 'Блайнд',
+  Jet: 'Джет', Coal: 'Коул', Night: 'Найт', Tar: 'Тар', Ink: 'Инк', Crow: 'Кроу', Sable: 'Сейбл',
+  Spore: 'Спор', Glow: 'Глоу', Rot: 'Рот', Cap: 'Кэп', Mould: 'Моулд', Blight: 'Блайт', Gill: 'Гилл', Mire: 'Майр',
+  Prism: 'Призм', Shard: 'Шард', Quartz: 'Кварц', Gleam: 'Глим', Facet: 'Фасет', Spar: 'Спар', Singing: 'Сингинг', Star: 'Стар',
 };
 
 const SECOND: Record<string, string> = {
@@ -25,6 +33,9 @@ const SECOND: Record<string, string> = {
   chapel: 'чепел', gate: 'гейт', throne: 'троун', arch: 'арч', steps: 'степс', nave: 'нейв', crypt: 'крипт', court: 'корт', tomb: 'тум',
   reef: 'риф', spine: 'спайн', jaw: 'джо', coil: 'койл', teeth: 'тиз', ossuary: 'оссуари', vault: 'волт', rift: 'рифт', pit: 'пит', shell: 'шелл',
   bar: 'бар', stack: 'стэк', mark: 'марк', ledge: 'ледж',
+  hold: 'холд', bight: 'байт', cove: 'коув', wood: 'вуд', slough: 'слау', mire: 'майр', creek: 'крик', fen: 'фен', atoll: 'атолл', ring: 'ринг',
+  lagoon: 'лагун', pan: 'пэн', flat: 'флэт', marsh: 'марш', spit: 'спит', strand: 'стрэнд', beach: 'бич', shore: 'шор', head: 'хед', grove: 'гроув',
+  rise: 'райз', deep: 'дип', fang: 'фэнг', crown: 'краун',
 };
 
 const KIND: Record<string, string> = { Isle: 'Айл', Rock: 'Рок', Key: 'Ки', Holm: 'Холм' };
@@ -50,7 +61,8 @@ export function composedNameRu(en: string): string | null {
   const m = /^([A-Z][a-z]+)(?: (Isle|Rock|Key|Holm))?(?: (\d+))?$/.exec(en);
   if (!m) return null;
   const word = m[1];
-  const first = firstKeys.find((f) => word.startsWith(f));
+  // The longest first part whose rest is a second part ("Sunkey" is Sun + key, not Sunk + ey).
+  const first = firstKeys.find((f) => word.startsWith(f) && SECOND[word.slice(f.length)] !== undefined) ?? firstKeys.find((f) => word.startsWith(f));
   const second = first ? SECOND[word.slice(first.length)] : undefined;
   // A key port's own island ("Cinderhold Isle"): the port's Russian name with the kind.
   const known = !second && m[2] ? NAME_RU.get(word) : undefined;

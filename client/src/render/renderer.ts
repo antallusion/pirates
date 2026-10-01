@@ -748,6 +748,7 @@ export class Renderer {
   }
 
   private drawShallows(is: IslandData): void {
+    if (is.mist) return; // a hidden island's mist hides her shallows too (docs/18 #30)
     const g = this.g;
     g.save();
     g.lineJoin = 'round';

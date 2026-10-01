@@ -169,7 +169,7 @@ export function regionAt(world: World, x: number, y: number): RegionId {
   return REGION_IDS[world.regionGrid[gy * REGION_GRID + gx]];
 }
 
-const SYLLABLES: Record<IslandBiome, [string[], string[]]> = {
+export const SYLLABLES: Record<IslandBiome, [string[], string[]]> = {
   temperate: [['Grey', 'Raven', 'Salt', 'Widow', 'Bell', 'Cold', 'Lantern', 'Gallows', 'Mourn', 'Iron'], ['rock', 'holm', 'cliff', 'reach', 'mouth', 'point', 'wick', 'stead', 'isle', 'haven']],
   mossy: [['Hush', 'Moss', 'Whisper', 'Murk', 'Veil', 'Sallow', 'Drift', 'Fen', 'Low', 'Silt'], ['key', 'cay', 'holt', 'islet', 'shoal', 'reed', 'mere', 'hollow', 'bank', 'wisp']],
   volcanic: [['Cinder', 'Ash', 'Brim', 'Char', 'Slag', 'Ember', 'Soot', 'Pyre', 'Scorch', 'Clinker'], ['crag', 'cone', 'vent', 'maw', 'forge', 'spire', 'caldera', 'scar', 'tooth', 'heap']],

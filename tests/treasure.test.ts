@@ -103,6 +103,8 @@ test('one chest for every copy: whoever digs first takes it; the second finds a 
   const gold = A.p.gold;
   digAt(game, A.c, A.s, m);
   assert.ok(A.p.gold > gold);
+  // She knows these waters already: no island newly charted on the way pays a day's order into her purse meanwhile.
+  for (const is of game.world.islands) B.s.discovered.add(is.id);
   const gb = B.p.gold;
   digAt(game, B.c, B.s, B.p.explore.maps[0]);
   assert.equal(B.p.gold, gb, 'nothing left');
