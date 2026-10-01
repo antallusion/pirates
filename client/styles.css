@@ -3853,3 +3853,5 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 .warn { color: var(--gold); }
 @media (max-width: 600px) { .tm-row { flex-wrap: wrap; } .tm-acts { width: 100%; justify-content: flex-start; } }
 #advcard { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+@media (max-height: 520px) { #advcard .dm-mini .ac-acts { flex-wrap: wrap; } #advcard .dm-go { min-width: 0; } #advcard .dm-mini .btn { white-space: normal; } }
+.tm-stars .off { font-style: normal; opacity: 0.25; }

@@ -51,7 +51,7 @@ function captureBlock(c: CaptureOffer): string {
  *  spoils, an artifact, a young one for the pen, the island's chest, the island cleared, the dwelling. */
 function lootBlock(l: LairLoot): string {
   // docs/18 IV: a drift beaten at sea — its silver and lesson, and the beaten who would follow.
-  if (l.drift) return `<div class="tb-loot"><small>${esc(DL('loot.drift', { s: l.drift.silver, x: l.drift.xp }))}</small><div class="tb-lchips"><span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.drift.silver}</span><span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.drift.xp }))}</span></div></div>${l.capture ? captureBlock(l.capture) : ''}`;
+  if (l.drift) return `<div class="tb-loot"><small>${esc(DL('loot.drift', { s: l.drift.silver, x: l.drift.xp }))}</small><div class="tb-lchips"><span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.drift.silver}</span><span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.drift.xp }))}</span></div></div>`;
   if (l.looted) return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="muted">${esc(LL('loot.looted'))}</div></div>`;
   const ru = lang() === 'ru' ? 1 : 0;
   const chips: string[] = [];
@@ -68,7 +68,7 @@ function lootBlock(l: LairLoot): string {
   if (l.chest) lines.push(esc(LL('loot.chest', { s: l.chest.silver, x: l.chest.xp })) + (l.chest.artifact ? ` · ${esc(ARTIFACTS[l.chest.artifact]?.name[ru] ?? '')}` : ''));
   if (l.claimed) lines.push(esc(LL('loot.claimed', { island: placeName(l.claimed) })));
   if (l.dwell) lines.push(esc(LL('loot.dwell')));
-  return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>${l.capture ? captureBlock(l.capture) : ''}`;
+  return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
 }
 /** An order's name and words, from the order book (docs/17 H2) — every page of it, old and new. */
 const spName = (id: TacSpellId) => (ORDERS[id]?.name ?? [id, id])[lang() === 'ru' ? 1 : 0];
@@ -497,7 +497,8 @@ export class TacticalPanel {
       // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
       const r = v.result;
       const faces = (xs: { u: UnitId; n: number }[]) => xs.length ? xs.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i>−${x.n}</i></span>`).join('') : `<em class="muted">${esc(L('res.none'))}</em>`;
-      banner.innerHTML = `<b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(whyText)}</span>${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}${r?.loot ? lootBlock(r.loot) : ''}${v.land ? `<button class="btn btn-primary tb-landclose" data-landclose>${esc(LL('close'))}</button>` : ''}`;
+      // docs/18 #36: the beaten who would follow her come first (on a phone the reckoning scrolls under them).
+      banner.innerHTML = `<b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(whyText)}</span>${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}${r?.loot ? lootBlock(r.loot) : ''}${v.land ? `<button class="btn btn-primary tb-landclose" data-landclose>${esc(LL('close'))}</button>` : ''}`;
       banner.querySelector<HTMLElement>('[data-landclose]')?.addEventListener('click', () => this.send({ t: 'lair', action: 'close' }));
       banner.querySelectorAll<HTMLElement>('[data-cap]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'capture', choice: b.dataset.cap as 'take' })));
     }

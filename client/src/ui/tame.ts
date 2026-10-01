@@ -17,7 +17,7 @@ const L = dict(EN, RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
 
 function stars(r: number): string {
-  return `<span class="tm-stars">${'★'.repeat(r)}${'☆'.repeat(3 - r)}</span>`;
+  return `<span class="tm-stars">${'★'.repeat(r)}<i class="off">${'★'.repeat(3 - r)}</i></span>`;
 }
 
 export class TameWindow {
