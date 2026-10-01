@@ -3855,3 +3855,35 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 #advcard { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 @media (max-height: 520px) { #advcard .dm-mini .ac-acts { flex-wrap: wrap; } #advcard .dm-go { min-width: 0; } #advcard .dm-mini .btn { white-space: normal; } }
 .tm-stars .off { font-style: normal; opacity: 0.25; }
+/* docs/18 V: the land's resources in the town, a settled dwelling and its kind's week on the lair's card, the paths'
+   favourite creatures, the bestiary's pages; the minimap pressed long on a touch screen. */
+.tw-lands { margin-top: 8px; }
+.tw-land .card-h { gap: 6px; }
+.tw-lstore { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 6px 0; }
+.tw-lres { display: inline-flex; align-items: center; gap: 6px; }
+.tw-lres .bcost .muted { font-weight: 400; margin-left: 1px; }
+.tw-craft { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(140, 107, 58, 0.2); }
+.tw-craft:first-of-type { border-top: 0; }
+.tw-craft > .ico-md { flex: none; }
+.tw-craft-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+.tw-craft-t .bcosts { margin-top: 2px; }
+.tw-craft > .btn { flex: none; }
+@media (max-width: 480px) { .tw-craft { flex-wrap: wrap; } .tw-craft > .btn { margin-left: auto; } }
+#advcard .ac-settle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
+#advcard .ac-settled { font-size: 12px; }
+#advcard .ac-week { font-size: 12px; }
+.pb-fav { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.pb-fav-k { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 999px; background: rgba(10, 12, 16, 0.5); font-size: 12px; }
+.pb-fav-k .ico-md { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+.pb-fav-k i { font-style: normal; color: var(--bone); }
+button.rn-piece { font: inherit; color: inherit; cursor: pointer; }
+button.rn-piece.open { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.rn-page { margin-top: 8px; padding: 8px 10px; border: 1px solid rgba(224, 184, 98, 0.45); border-radius: 6px; background: rgba(12, 10, 8, 0.6); font-size: 12.5px; }
+.rn-page-h { display: flex; align-items: center; gap: 10px; }
+.rn-page-h > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rn-page-h b { font-family: var(--serif); font-size: 16px; color: #f4efe2; }
+.rn-page-h .ico-lg { width: 56px; height: 56px; object-fit: contain; flex: none; }
+.rn-page-stats { margin: 6px 0; color: var(--bone); line-height: 1.4; }
+.rn-page-list { margin: 2px 0 6px; padding-left: 18px; line-height: 1.4; }
+.rn-page-loot { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 2px 0 6px; }
+#minimap { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

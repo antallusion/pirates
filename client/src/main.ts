@@ -241,6 +241,20 @@ function openPuzzle(): void {
 }
 advCard.onPuzzle = openPuzzle;
 advCard.onHire = () => openRecruit('lair'); // a creature dwelling of hers (docs/18 #19)
+// docs/18 #50: where the card's subjects stand on the screen, so it never covers them on a phone.
+advCard.where = (ids) => {
+  const pts: { x: number; y: number }[] = [];
+  const at = (x: number, y: number) => pts.push({ x: renderer.sx(x), y: renderer.sy(y) });
+  const o = ids.obj ? state.adv?.objs.find((x) => x.id === ids.obj) : undefined;
+  if (o) at(o.x, o.y);
+  const g = ids.guard ? state.adv?.guards.find((x) => x.id === ids.guard) : undefined;
+  if (g) at(g.x, g.y);
+  const l = ids.lair ? state.lairs?.list.find((x) => x.id === ids.lair) : undefined;
+  if (l) at(l.x, l.y);
+  const d = ids.drift !== undefined ? state.drifts.find((x) => x.id === ids.drift) : undefined;
+  if (d) at(d.x, d.y);
+  return pts;
+};
 worldMap.onPuzzle = openPuzzle;
 baseWindow.onRecruit = () => openRecruit('isle');
 companyScreen.onBase = () => openBase();

@@ -85,23 +85,67 @@ export function wireMiniTip(canvas: HTMLCanvasElement, view: () => MiniView | nu
   tip.className = 'mm-tip hidden';
   document.body.appendChild(tip);
   const hide = () => tip.classList.add('hidden');
-  canvas.addEventListener('pointerleave', hide);
-  canvas.addEventListener('pointermove', (e) => {
+  /** The words at a point of the minimap, shown beside it (under the cursor; above a finger). */
+  const show = (cx: number, cy: number, finger: boolean): boolean => {
     const v = view(), state = stateOf();
-    if (!v || !state || e.pointerType === 'touch') return hide();
+    if (!v || !state) return false;
     const r = canvas.getBoundingClientRect();
     const k = r.width / (v.range * 2);
-    const wx = v.x + (e.clientX - r.left - r.width / 2) / k, wy = v.y + (e.clientY - r.top - r.height / 2) / k;
-    const text = tipAt(state, wx, wy, 12 / k);
-    if (!text) return hide();
+    const wx = v.x + (cx - r.left - r.width / 2) / k, wy = v.y + (cy - r.top - r.height / 2) / k;
+    const text = tipAt(state, wx, wy, (finger ? 22 : 12) / k);
+    if (!text) return false;
     tip.innerHTML = text;
     tip.classList.remove('hidden');
-    tip.style.left = `${Math.round(e.clientX + 14)}px`;
-    tip.style.top = `${Math.round(e.clientY + 12)}px`;
+    tip.style.left = `${Math.round(cx + 14)}px`;
+    tip.style.top = `${Math.round(finger ? cy - 48 : cy + 12)}px`;
     const tr = tip.getBoundingClientRect();
-    if (tr.right > innerWidth - 4) tip.style.left = `${Math.round(e.clientX - tr.width - 10)}px`;
-    if (tr.bottom > innerHeight - 4) tip.style.top = `${Math.round(e.clientY - tr.height - 10)}px`;
+    if (tr.right > innerWidth - 4) tip.style.left = `${Math.round(Math.max(4, cx - tr.width - 10))}px`;
+    if (tr.bottom > innerHeight - 4) tip.style.top = `${Math.round(cy - tr.height - 10)}px`;
+    if (tr.top < 4) tip.style.top = `${Math.round(cy + 28)}px`;
+    return true;
+  };
+  canvas.addEventListener('pointerleave', (e) => {
+    if (e.pointerType !== 'touch') hide();
   });
+  canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch') {
+      // A finger that wanders off its point is a drag, not a press.
+      if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 12) cancelPress();
+      return;
+    }
+    if (!show(e.clientX, e.clientY, false)) hide();
+  });
+  // docs/18 #50: on a touch screen, a long press on the minimap shows the same words (the tap still opens the chart).
+  let press: { x: number; y: number; t: number } | null = null;
+  let shown = false, hideAt = 0;
+  const cancelPress = () => {
+    if (press) clearTimeout(press.t);
+    press = null;
+  };
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    cancelPress();
+    shown = false;
+    const x = e.clientX, y = e.clientY;
+    press = { x, y, t: window.setTimeout(() => {
+      press = null;
+      shown = show(x, y, true);
+      if (shown) {
+        clearTimeout(hideAt);
+        hideAt = window.setTimeout(hide, 2600);
+      }
+    }, 450) };
+  });
+  canvas.addEventListener('pointerup', cancelPress);
+  canvas.addEventListener('pointercancel', cancelPress);
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  // The tap that ended a long press does not open the chart.
+  canvas.addEventListener('click', (e) => {
+    if (!shown) return;
+    shown = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
 }
 
 /** The words for what lies at a point of the sea (within `slack` metres). */

@@ -207,19 +207,58 @@ export class AdvCard {
    *  wounded, the nerve: docs/17 H5's QA), and no lower than the screen allows. */
   place(): void {
     // Where the card ends (a phone held sideways keeps its newest toast just under it: styles.css).
-    requestAnimationFrame(() => {
-      // docs/18 IV: several cards at once (a lair's and a drift's) scroll within the screen rather than run off it.
-      const top = this.el.getBoundingClientRect().top;
-      this.el.style.maxHeight = `${Math.max(140, Math.round(innerHeight - top - 8))}px`;
-      document.body.style.setProperty('--ac-bottom', `${Math.round(this.el.getBoundingClientRect().bottom)}px`);
-    });
+    requestAnimationFrame(() => this.fit());
     if (innerWidth < 1100 || innerHeight <= 520) {
       this.el.style.top = '';
+      this.watch();
       return;
     }
     const ship = document.getElementById('hud-ship')?.getBoundingClientRect();
     const top = ship && ship.height > 0 ? Math.round(ship.bottom + 8) : 384;
     this.el.style.top = `${Math.max(120, Math.min(top, innerHeight - 260))}px`;
+  }
+  /** docs/18 #50: on a phone or a tablet the card never lies over what it is about (the lair's, the drift's, the
+   *  thing's token on the sea): it ends above the token, or stands below it when the token is high on the screen. */
+  private fit(): void {
+    if (this.el.classList.contains('hidden')) return;
+    const narrow = innerWidth < 1100 || innerHeight <= 520;
+    if (narrow) this.el.style.top = '';
+    this.el.style.maxHeight = '';
+    let r = this.el.getBoundingClientRect();
+    // docs/18 IV: several cards at once (a lair's and a drift's) scroll within the screen rather than run off it.
+    let max = Math.max(140, Math.round(innerHeight - r.top - 8));
+    if (narrow && innerHeight > 520) {
+      for (const p of this.subjects()) {
+        if (p.x < r.left - 24 || p.x > r.right + 24 || p.y < r.top - 30 || p.y > Math.min(r.bottom, r.top + max) + 30) continue;
+        if (p.y - r.top >= 170) max = Math.round(p.y - 40 - r.top);
+        else {
+          // The token high on the screen: the card goes under it.
+          this.el.style.top = `${Math.round(p.y + 44)}px`;
+          r = this.el.getBoundingClientRect();
+          max = Math.max(140, Math.round(innerHeight - r.top - 8));
+        }
+      }
+    }
+    this.el.style.maxHeight = `${max}px`;
+    document.body.style.setProperty('--ac-bottom', `${Math.round(this.el.getBoundingClientRect().bottom)}px`);
+  }
+  private fitTimer = 0;
+  /** While the card shows on a small screen, its place is looked at again as the sea moves under it. */
+  private watch(): void {
+    if (this.fitTimer) return;
+    this.fitTimer = window.setInterval(() => {
+      if (this.el.classList.contains('hidden') || !(innerWidth < 1100 || innerHeight <= 520)) {
+        clearInterval(this.fitTimer);
+        this.fitTimer = 0;
+        return;
+      }
+      this.fit();
+    }, 400);
+  }
+  /** The screen points of what the cards are about (set by main.ts from the renderer). */
+  where: (ids: { obj?: string; guard?: string; lair?: string; drift?: number }) => { x: number; y: number }[] = () => [];
+  private subjects(): { x: number; y: number }[] {
+    return this.where({ obj: this.adv?.obj?.id, guard: this.adv?.guard?.id ?? this.adv?.obj?.guard?.id, lair: this.lc?.id, drift: this.dc?.id });
   }
   private key = '';
   private closed = '';
