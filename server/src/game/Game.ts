@@ -208,6 +208,7 @@ import { buyHearsay, forgetHearsay, stepHearsay } from './hearsay.ts';
 import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
+import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { mineLandable } from './mines.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
 
@@ -815,6 +816,7 @@ export class Game {
     if (Math.floor(this.now) % 5 === 0) stepWorldGoals(this); // the sea's goals of the week (docs/16 #32)
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     if (Math.floor(this.now) % 5 === 0) stepH3(this); // the Heroes' calendar: dawns, weeks, mines, halls (docs/17 H3)
+    stepH4(this); // the adventure map: guards, things to visit, the Grail's diggers (docs/17 H4)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
     settleCrimes(this);
@@ -2600,6 +2602,7 @@ export class Game {
     };
 
     if (msg.t === 'h3') return h3Message(this, s, msg); // docs/17 H3
+    if (msg.t === 'h4') return h4Message(this, s, msg); // docs/17 H4
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);

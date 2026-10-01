@@ -20,6 +20,8 @@ import type { Game } from './Game.ts';
 import type { Holding } from './holdings.ts';
 import { minesDailyOf, ownMines } from './mines.ts';
 import type { PlayerSession } from './player.ts';
+import { GRAIL_GROWTH, GRAIL_SILVER } from '../../../shared/src/data/advmap.ts';
+import { grailRaised, grailToRaise } from './grail.ts';
 
 export interface TownState {
   /** Each town building's level. */
@@ -55,11 +57,14 @@ export function keepsDeep(s: PlayerSession): boolean {
 /** A dwelling's men a week on this island now. */
 export function isleWeekGrowth(game: Game, y: Yard, tier: number, week = thisWeek(game)): number {
   if (townLevel(y, dwellingOf(tier)) <= 0) return 0;
-  return isleGrowth(tier, townLevel(y, 'keep'), weekGrowth(kindOfWeek(game, week), tier));
+  return isleGrowth(tier, townLevel(y, 'keep'), weekGrowth(kindOfWeek(game, week), tier)) * grailGrowth(y);
 }
 
+/** The Grail over the town (docs/17 H4): every dwelling grows half as many men again. */
+export const grailGrowth = (y: Yard): number => (townLevel(y, 'grail') > 0 ? GRAIL_GROWTH : 1);
+
 function poolCap(game: Game, y: Yard, tier: number): number {
-  return POOL_WEEKS * isleGrowth(tier, townLevel(y, 'keep'), Math.max(1, weekGrowth(weekNow(game), tier)));
+  return POOL_WEEKS * isleGrowth(tier, townLevel(y, 'keep'), Math.max(1, weekGrowth(weekNow(game), tier))) * grailGrowth(y);
 }
 
 /** The island's pools grown to this week (two weeks' growth at most wait in a dwelling). */
@@ -92,6 +97,7 @@ export function townWhy(game: Game, s: PlayerSession, h: Holding, y: Yard, id: T
   if ((h.level ?? 1) < g.isle) return `Raise the island to level ${g.isle} first.`;
   if (g.keep && townLevel(y, 'keep') < g.keep) return g.keep >= 3 ? 'Raise the keep to a castle first.' : 'Build the keep first.';
   if (id === 'dw7' && !keepsDeep(s)) return 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
+  if (id === 'grail' && !grailToRaise(s)) return 'Dig up the Grail first: the obelisks’ chart shows where.';
   return crewFree(h, y);
 }
 
@@ -115,6 +121,7 @@ export function buildTown(game: Game, s: PlayerSession, id: TownId): string | nu
   game.db.ledger(s.accountId, 'isle_town', -cost.silver, `${h.island}:${id}:${level}`);
   const now = game.wallNow();
   y.jobs.push({ id: y.seq++, plot: -1, what: `t:${id}`, level, start: now, end: now + cost.secs * 1000 });
+  if (id === 'grail') grailRaised(s); // the Grail is the town's now (docs/17 H4)
   game.holdings.touch();
   return null;
 }
@@ -146,15 +153,16 @@ export function hallsDay(game: Game, _day: number): void {
   for (const h of Object.values(game.holdings.map(game))) {
     if (!h.owned || !h.yard?.town) continue;
     const lvl = townLevel(h.yard, 'hall');
-    if (lvl <= 0) continue;
-    h.treasury += Math.round(HALL_INCOME[lvl] * mul);
+    const grail = townLevel(h.yard, 'grail') > 0 ? GRAIL_SILVER : 0; // the Grail's silver (docs/17 H4)
+    if (lvl <= 0 && !grail) continue;
+    h.treasury += Math.round(HALL_INCOME[lvl] * mul) + grail;
     any = true;
   }
   if (any) game.holdings.touch();
 }
 
 export function hallDaily(game: Game, y: Yard): number {
-  return Math.round(HALL_INCOME[townLevel(y, 'hall')] * weekHall(weekNow(game)));
+  return Math.round(HALL_INCOME[townLevel(y, 'hall')] * weekHall(weekNow(game))) + (townLevel(y, 'grail') > 0 ? GRAIL_SILVER : 0);
 }
 
 // ------------------------------------------------------------------------------------------------ the market
@@ -259,11 +267,11 @@ export function adminTown(game: Game, s: PlayerSession, level?: number): string 
   if (typeof m === 'string') return m;
   const { h, y } = m;
   const t = townState(y);
-  for (const id of TOWN_IDS) t.b[id] = Math.min(TOWN[id].max, level ?? TOWN[id].max);
+  for (const id of TOWN_IDS) if (id !== 'grail') t.b[id] = Math.min(TOWN[id].max, level ?? TOWN[id].max); // the Grail is dug up, not raised by decree
   islePools(game, y);
   for (let tier = 1; tier <= 7; tier++) t.pool[tier] = poolCap(game, y, tier);
   reckonBase(game, h);
   game.holdings.touch();
-  return `Town raised: ${TOWN_IDS.map((id) => `${id} ${t.b[id]}`).join(', ')}; the dwellings full (${TIER_UNIT.slice(1).map((u, i) => `${u} ${Math.floor(t.pool[i + 1])}`).join(', ')}).`;
+  return `Town raised: ${TOWN_IDS.filter((id) => id !== 'grail').map((id) => `${id} ${t.b[id]}`).join(', ')}; the dwellings full (${TIER_UNIT.slice(1).map((u, i) => `${u} ${Math.floor(t.pool[i + 1])}`).join(', ')}).`;
 }
 

@@ -7,6 +7,7 @@ import { AuthService } from '../server/src/auth.ts';
 import { Game } from '../server/src/game/Game.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import { Database } from '../server/src/persistence/db.ts';
+import { quietAdv } from '../server/src/game/advmap.ts';
 
 export class FakeConn {
   onMessage: (text: string) => void = () => {};
@@ -55,6 +56,8 @@ export function makeGame(): { game: Game; db: Database } {
   game.directorOn = false;
   // The older rules' tests fight the round-by-round deck fight; tests/tactical-boarding.test.ts turns the hexes on.
   game.tacticalBoarding = false;
+  // The adventure map's guards stay out of the water in tests of other systems (tests/heroes4.test.ts wakes them).
+  quietAdv(game);
   return { game, db };
 }
 

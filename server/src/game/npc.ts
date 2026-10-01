@@ -38,6 +38,7 @@ import { formationOffset } from './fleet.ts';
 import { pactNeutral } from './abyssfx.ts';
 import type { Path } from './nav.ts';
 import type { NpcRole, ShipEntity } from './ship.ts';
+import { holdGuard } from './advmap.ts';
 
 export interface NpcBrain {
   id: number;
@@ -189,6 +190,8 @@ export function planWander(game: Game, ship: ShipEntity, brain: NpcBrain): boole
 
 export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): boolean {
   if (npc.id === other.id || !other.alive || other.docked) return false;
+  // The adventure map's guards (docs/17 H4): they bar a captain's way; the sea's own ships leave them be.
+  if (npc.guardOf || other.guardOf) return !!npc.guardOf && other.isPlayer;
   const role = npc.npcRole;
   // The beasts of the sea (docs/12 P4): the predators hunt captains; the sea's ships and the beasts leave each other be.
   if (role === 'beast') return other.isPlayer && (beastPredator(npc, other) || (npc.attackers.get(other.id) ?? -999) > game.now - 120);
@@ -283,6 +286,7 @@ function detectionRange(game: Game, npc: ShipEntity, other: ShipEntity): number 
 export function updateNpc(game: Game, ship: ShipEntity, brain: NpcBrain, dt: number, nearestPlayerDist: number): void {
   const now = game.now;
   if (!ship.alive) return;
+  if (ship.guardOf) return holdGuard(game, ship); // a guard of the adventure map stands where it is (docs/17 H4)
   if (brain.expiresAt && now > brain.expiresAt && nearestPlayerDist > 2500) {
     game.removeShip(ship.id);
     return;

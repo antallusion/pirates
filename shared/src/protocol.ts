@@ -45,6 +45,7 @@ import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
 import type { H3ClientMsg, H3ServerMsg, TownView } from './h3proto.ts';
+import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
 import type { TaskView } from './data/worldtasks.ts';
@@ -290,6 +291,8 @@ export type ClientMsg =
   | { t: 'gyard'; action: 'view' | 'start' | 'give' | 'cancel'; kind?: GuildProject; good?: GoodId; qty?: number; silver?: number }
   /** docs/17 H3: the week, the dwellings, the island's town, the mines. */
   | H3ClientMsg
+  /** docs/17 H4: the adventure map's visits, the guards' offers, the Grail. */
+  | H4ClientMsg
   | { t: 'mail'; action: 'list' }
   | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
   | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
@@ -1503,6 +1506,8 @@ export type ServerMsg =
   | { t: 'err'; msg: string }
   /** docs/17 H3: the week, the dwellings, the mines. */
   | H3ServerMsg
+  /** docs/17 H4: the adventure map, its card, the Grail's puzzle. */
+  | H4ServerMsg
   | { t: 'pong'; c: number; s: number };
 
 // ------------------------------------------------------------------ groups, barter, letters, the market

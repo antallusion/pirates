@@ -71,6 +71,7 @@ import type { LogEntry } from '../../../shared/src/data/captainlog.ts';
 import type { RenownProfile } from './renown.ts';
 import { armyFromSave, armySlots } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
+import type { AdvProfile } from './advmap.ts';
 
 export interface Profile {
   version: 1;
@@ -263,6 +264,8 @@ export interface Profile {
   renown?: RenownProfile;
   /** docs/16 Batch C: the merchants' runs, the whispers paid for, the auction's pieces waiting for room. */
   dealings?: Dealings;
+  /** docs/17 H4: the adventure map — her visits, what she has seen, the altars' points, the Grail's hunt. */
+  adv?: AdvProfile;
 }
 
 export interface Dealings {
@@ -382,7 +385,7 @@ export class PlayerSession {
 // ------------------------------------------------------------------ progression
 
 export function talentPointsAvailable(p: Profile): number {
-  return talentPointsForLevel(p.level) + Math.min(p.deeds.length, MAX_COUNTED_DEEDS) - totalPointsSpent(p.talents);
+  return talentPointsForLevel(p.level) + Math.min(p.deeds.length, MAX_COUNTED_DEEDS) + (p.adv?.pts ?? 0) - totalPointsSpent(p.talents);
 }
 
 /** Adds XP, handles level-ups. Returns number of levels gained. */

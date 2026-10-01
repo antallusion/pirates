@@ -143,8 +143,8 @@ export function portGrowth(tier: number, size: number): number {
 
 // ------------------------------------------------------------------------------------------------ the island's town
 
-export type TownId = 'hall' | 'keep' | 'dw1' | 'dw2' | 'dw3' | 'dw4' | 'dw5' | 'dw6' | 'dw7' | 'market' | 'guild';
-export const TOWN_IDS: TownId[] = ['hall', 'keep', 'dw1', 'dw2', 'dw3', 'dw4', 'dw5', 'dw6', 'dw7', 'market', 'guild'];
+export type TownId = 'hall' | 'keep' | 'dw1' | 'dw2' | 'dw3' | 'dw4' | 'dw5' | 'dw6' | 'dw7' | 'market' | 'guild' | 'grail';
+export const TOWN_IDS: TownId[] = ['hall', 'keep', 'dw1', 'dw2', 'dw3', 'dw4', 'dw5', 'dw6', 'dw7', 'market', 'guild', 'grail'];
 
 export interface TownDef {
   id: TownId;
@@ -172,6 +172,8 @@ export const TOWN: Record<TownId, TownDef> = {
   dw7: dw(7, ['Drowned Shrine', 'Святилище утопленников'], ['Abyssal Altar', 'Алтарь бездны'], ['The drowned rise for the Choir and the cursed; upgraded, the deep’s spawn. Pearls for the sea.', 'Утопленники встают для Хора и проклятых; улучшенное — порождения бездны. Жемчуг — морю.'], 'chapel'),
   market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Exchange', 'Биржа'], ['Merchants’ Guild', 'Гильдия купцов']], text: ['Trades the island’s resources for silver and for each other — at poor rates, better with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по плохому курсу, с каждым уровнем чуть лучше.'], art: 'caravan_office', max: 3 },
   guild: { id: 'guild', names: [['Guild of Orders', 'Гильдия приказов']], text: ['Where a captain will learn her orders when the orders come to the sea. For now its doors are shut.', 'Здесь капитан будет изучать приказы, когда они придут на море. Пока двери закрыты.'], art: 'lighthouse', max: 1 },
+  // docs/17 H4 item 16: the legendary treasure the obelisks' chart leads to, raised over the town.
+  grail: { id: 'grail', names: [['The Grail', 'Грааль']], text: ['The legendary treasure raised over the town: every dwelling grows half as many men again, 500 silver a day into the treasury, and the captain’s will runs deeper.', 'Легендарное сокровище над городом: все жилища дают в полтора раза больше бойцов, 500 серебра в день в казну, а воля капитана глубже.'], art: 'signal_tower', max: 1 },
 };
 
 export const townWhat = (id: TownId): string => `t:${id}`;
@@ -228,6 +230,8 @@ export function townCost(id: TownId, level: number): BaseCost {
       ][Math.min(2, L - 1)];
     case 'guild':
       return { silver: 6_000, goods: { timber: 40, coal: 30, tar: 20, pearls: 3 }, secs: 1200 };
+    case 'grail':
+      return { silver: 5_000, goods: { timber: 40, coal: 40, pearls: 6 }, secs: 1800 };
     default: {
       const t = TOWN[id].tier ?? 1;
       const goods: Partial<Record<GoodId, number>> = { timber: 20 + 10 * t, coal: 10 + 8 * t };
@@ -262,6 +266,8 @@ export function townGate(id: TownId, level: number): TownGate {
       return { isle: [1, 3, 5][Math.min(2, L - 1)] };
     case 'guild':
       return { isle: 2 };
+    case 'grail':
+      return { isle: 1 };
     default: {
       const t = TOWN[id].tier ?? 1;
       return { isle: Math.min(10, L >= 2 ? t + 1 : t), keep: 1 };

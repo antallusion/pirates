@@ -268,6 +268,8 @@ export class ShipEntity {
   worn: Item[] = [];
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
   convoyOf: { guild: number; to: string } | null = null;
+  /** A neutral guard of the adventure map (docs/17 H4): its id there. It stands where it is put and never moves. */
+  guardOf?: string;
 
   constructor(opts: {
     id: number; name: string; captainName: string; captain: CaptainId; faction: FactionId | 'player'; accountId: number | null;
@@ -467,7 +469,7 @@ export class ShipEntity {
       captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, npcRole: this.npcRole ?? undefined,
       isPlayer: this.isPlayer, level: this.level, wanted: this.wantedCache, guild: this.guildTag ?? undefined, shipLevel: this.onLadder ? this.shipLevel : undefined, elite: this.elite || undefined, named: this.named ?? this.namedMate,
       title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined, lfg: this.lfg ?? undefined,
-      ...(this.cls.monster || this.npcRole === 'beast' ? {} : { crewMax: this.stats.crewMax, units: this._army.map((s) => s.u) }),
+      ...(this.cls.monster || this.npcRole === 'beast' ? {} : { crewMax: this.guardOf ? Math.max(this.stats.crewMax, this._men) : this.stats.crewMax, units: this._army.map((s) => s.u) }),
     };
   }
 }

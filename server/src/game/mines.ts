@@ -24,6 +24,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
+import { guardOfSite } from './advmap.ts';
 
 /** RAIDERS: the sea's raiders hold it. */
 const RAIDERS = -1;
@@ -223,6 +224,7 @@ function flagWhy(game: Game, s: PlayerSession, x: MineSite): string | null {
   if (st.owner !== undefined && st.owner !== RAIDERS && st.owner !== s.accountId && game.now - (st.since ?? 0) < FLAG_HOLD_SECS) return 'A flag was planted there only minutes ago.';
   if (st.owner !== s.accountId && mines(game).sites.filter((y) => mineState(game, y.id).owner === s.accountId).length >= MINES_MAX) return `A captain holds ${MINES_MAX} mines at most.`;
   if (st.owner === RAIDERS && flagParty(ship) < raidersGarrison(x.region)) return `Too few hands to beat the raiders ashore (${raidersGarrison(x.region)} of them).`;
+  if (st.owner === undefined && guardOfSite(game, x.id)) return 'A guard stands off the mine: beat them first.'; // docs/17 H4
   return null;
 }
 
