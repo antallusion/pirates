@@ -426,8 +426,9 @@ function stepUnrest(game: Game, s: PlayerSession): void {
         : 'The crew is disobedient: orders come late and a fifth of the men will not board.', 'bad');
     }
   }
-  // Losing four in ten on one voyage is a mutiny all by itself.
-  if (!c.mutiny && !ship.hasFlag('crew_of_drowned') && c.voyageStartCrew > 5 && c.voyageLost > c.voyageStartCrew * 0.4 && loyal < 60) {
+  // Losing four in ten on one voyage is a mutiny all by itself — reckoned once the fight is over, so a won
+  // boarding's dead are counted as a victory's (onFightWon), not as a rout's.
+  if (!c.mutiny && !ship.inCombat(now) && !ship.boarding && !ship.hasFlag('crew_of_drowned') && c.voyageStartCrew > 5 && c.voyageLost > c.voyageStartCrew * 0.4 && loyal < 60) {
     c.voyageLost = 0;
     startMutiny(game, s, 'too many dead this voyage');
   }
