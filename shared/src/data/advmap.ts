@@ -66,8 +66,13 @@ export const GUARDS: Record<GuardKind, GuardDef> = {
 
 /** Men a captain of ⚓L usually carries (the ladder's usual hull, a little short of her hammocks). */
 export const REF_MEN = [0, 24, 26, 34, 50, 80, 100, 150, 190, 260, 400];
-/** A guard's might against that captain's army: a weak one, an average one, a strong one. */
-export const GUARD_SIZE: Record<GuardSize, number> = { weak: 0.45, avg: 0.75, strong: 1.05 };
+/** What a guard of a size costs that captain in the boarding battle: the share of her men lost, on average over
+ *  many fights (a fight lost counts as all of them) — a weak guard an easy win, an average one a real price, a strong
+ *  one an even fight. */
+export const GUARD_LOSS: Record<GuardSize, number> = { weak: 0.12, avg: 0.3, strong: 0.6 };
+export const GUARD_SIZES: GuardSize[] = ['weak', 'avg', 'strong'];
+/** A guard's chest and lesson grow with its size. */
+export const GUARD_SIZE: Record<GuardSize, number> = { weak: 0.5, avg: 1, strong: 1.6 };
 /** A guard beaten, fled or signed on stands again after two days of the sea (96 real minutes). */
 export const GUARD_RESPAWN_SEC = 2 * DAY_LENGTH_SEC;
 /** HoMM3's offer: an army this many times the guard's might sees them flee or sign on. */
@@ -75,16 +80,41 @@ export const JOIN_RATIO = 3;
 /** The share of the guard's men who sign on (as many as the hammocks take). */
 export const JOIN_SHARE = 0.5;
 
-/** The might a guard of a size stands for at ⚓L: that share of the might of the army of a captain of ⚓L. */
-export function guardMight(level: number, size: GuardSize): number {
+/** The might a guard's men are first reckoned at: three quarters of the might of the army of a captain of ⚓L. */
+export function guardBaseMight(level: number): number {
   const L = Math.max(1, Math.min(10, level));
-  return armyPower(armyForLevel(L, REF_MEN[L], 7, 'player')) * GUARD_SIZE[size];
+  return armyPower(armyForLevel(L, REF_MEN[L], 7, 'player')) * 0.75;
 }
 
-/** A guard's stacks: its might, made of its own men. No dice: the same guard stands with the same men. */
+/** How many times the first reckoning of its men each kind of guard stands with, by level (1–10) and size, so that
+ *  it costs the reference captain its GUARD_LOSS — a crowd of green men fights above its might, a few drowned below
+ *  it. Calibrated by the boarding battle itself (node tools/balance-guards.ts --calibrate; tests/balance/guards.test.ts
+ *  holds it to its targets). */
+export const GUARD_CAL: Record<GuardKind, [number, number, number][]> = {
+  holdout: [[0, 0, 0], [0.58, 0.86, 1.19], [0.47, 0.84, 1.22], [0.53, 0.73, 1.07], [0.5, 0.92, 1.17], [0.68, 0.93, 1.21], [0.7, 0.9, 1.13], [0.75, 1.07, 1.42], [0.79, 1.12, 1.47], [0.71, 1.1, 1.38], [0.71, 1.09, 1.38]],
+  hulk: [[0, 0, 0], [0.58, 0.87, 1.12], [0.4, 0.69, 0.98], [0.39, 0.64, 0.87], [0.4, 0.62, 0.84], [0.36, 0.54, 0.84], [0.39, 0.61, 0.79], [0.35, 0.53, 0.75], [0.31, 0.53, 0.71], [0.3, 0.53, 0.6], [0.3, 0.51, 0.6]],
+  // (The deep's things keep to their waters — the wreck from ⚓5, the pack from ⚓6; the rows below are never stood.)
+  wreck: [[0, 0, 0], [1.04, 1.46, 1.75], [1.04, 1.46, 1.75], [1.04, 1.46, 1.75], [1.04, 1.46, 1.75], [1.04, 1.46, 1.75], [1.17, 1.57, 2.24], [0.99, 1.5, 1.93], [1.25, 2.06, 2.5], [1.3, 1.95, 2.5], [1.36, 1.92, 2.38]],
+  beasts: [[0, 0, 0], [2.5, 3.5, 5.49], [2.5, 3.5, 5.49], [2.5, 3.5, 5.49], [2.5, 3.5, 5.49], [2.5, 3.5, 5.49], [2.5, 3.5, 5.49], [2.75, 4.25, 5.49], [2.38, 3.38, 4.37], [2.21, 2.78, 3.25], [2.14, 2.77, 3.5]],
+};
+
+/** A guard's stacks: its men first reckoned by might, then scaled by its calibration. No dice: the same guard stands
+ *  with the same men. */
 export function guardArmy(kind: GuardKind, level: number, size: GuardSize): ArmyStack[] {
   const L = Math.max(1, Math.min(10, level));
-  const might = guardMight(L, size);
+  const k = GUARD_CAL[kind][L][GUARD_SIZES.indexOf(size)];
+  return guardBaseArmy(kind, L).map((s) => ({ u: s.u, n: Math.max(1, Math.round(s.n * k)) }));
+}
+
+/** The might of a guard as it stands. */
+export function guardMight(level: number, size: GuardSize, kind: GuardKind = 'holdout'): number {
+  return armyPower(guardArmy(kind, level, size));
+}
+
+/** A guard's men at their first reckoning (three quarters of the reference captain's might, made of its own men). */
+export function guardBaseArmy(kind: GuardKind, level: number): ArmyStack[] {
+  const L = Math.max(1, Math.min(10, level));
+  const might = guardBaseMight(L);
   if (kind === 'beasts') {
     // The deep's own spawn alone: the drowned, and their risen kind as the waters grow stranger.
     const up = Math.min(0.8, upgradedShare(L) + 0.1);
@@ -118,15 +148,25 @@ function deepSpawn(n: number, up: number): ArmyStack[] {
 
 /** What a guard of each kind stands for at a level (the kinds the waters of that level keep). */
 export function guardKindsAt(level: number, strange: boolean): GuardKind[] {
-  if (level <= 3) return ['hulk', 'holdout'];
+  if (level <= 4) return ['hulk', 'holdout'];
   if (level <= 5) return strange ? ['holdout', 'hulk', 'wreck'] : ['holdout', 'hulk'];
   return strange ? ['holdout', 'wreck', 'beasts'] : ['holdout', 'wreck', 'beasts'];
 }
 
 /** Silver and experience for beating a guard (its chest and the fight's lesson, beside the battle's own). */
 export function guardPay(level: number, size: GuardSize): { silver: number; xp: number } {
-  const k = GUARD_SIZE[size];
-  return { silver: round10(advHour(level) * 0.08 * k), xp: round10(advLevelXp(level) * 0.05 * k) };
+  // Its own chest pays half the men it costs (a guard alone is a lesson, not a profit); the lesson grows with its size.
+  return { silver: round10(0.5 * refill(level, size)), xp: round10(advLevelXp(level) * 0.04 * GUARD_SIZE[size]) };
+}
+
+/** Silver the men an average guard costs the reference captain of ⚓L to refill when she wins (measured in the boarding
+ *  battle: node tools/balance-guards.ts --calibrate; the higher tiers die dearer than their share of the heads). */
+export const GUARD_REFILL = [0, 165, 264, 467, 831, 1362, 2115, 3327, 4538, 9555, 15135];
+
+/** Silver the men a guard of a size costs the reference captain of ⚓L to refill, on average. */
+export function refill(level: number, size: GuardSize): number {
+  const L = Math.max(1, Math.min(10, level));
+  return GUARD_REFILL[L] * (GUARD_LOSS[size] / GUARD_LOSS.avg);
 }
 
 // ------------------------------------------------------------------------------------------------ 15. things on the map
@@ -184,7 +224,9 @@ export const MILL_GOODS: GoodId[] = ['timber', 'iron', 'tar', 'gunpowder', 'pear
 
 /** A treasure chest: silver, or its owner's knowledge (a guarded chest holds more). */
 export function chestPay(level: number, guarded: boolean): { silver: number; xp: number } {
-  return { silver: round50(advHour(level) * (guarded ? 0.4 : 0.15)), xp: round10(advLevelXp(level) * (guarded ? 0.2 : 0.08)) };
+  // Behind its (average) guard a chest holds a quarter of an hour at sea more than the men it cost, the guard's own
+  // chest counted (half of them): the fight is worth it at every level, never a mint.
+  return { silver: round50(guarded ? advHour(level) * 0.25 + 0.5 * refill(level, 'avg') : advHour(level) * 0.15), xp: round10(advLevelXp(level) * (guarded ? 0.2 : 0.08)) };
 }
 
 /** An altar a captain has used up her points on: a quarter of a level of experience. */
