@@ -9,7 +9,7 @@ import type { FishId } from '../shared/src/data/fishing.ts';
 import type { Item } from '../shared/src/data/items.ts';
 import { DAY_LENGTH_SEC } from '../shared/src/constants.ts';
 import { depthAt } from '../shared/src/world/worldgen.ts';
-import { castNet, dropDeepLine, endFight, endHaul, haulTrap, saltCatch, setTrap, shoalAt, shoalsOf, stepFishing } from '../server/src/game/fishing.ts';
+import { castNet, dropDeepLine, fishOfDay, endFight, endHaul, haulTrap, saltCatch, setTrap, shoalAt, shoalsOf, stepFishing } from '../server/src/game/fishing.ts';
 import { stepEvents } from '../server/src/game/events.ts';
 import { questEvent } from '../server/src/game/quests.ts';
 import { JOBS } from '../shared/src/data/quests.ts';
@@ -167,7 +167,9 @@ test('no fishing by itself: the net catches only when cast and hauled — the be
 test('the net keeps the old catch rate, a little better to an attentive hand', () => {
   const { game } = makeGame();
   const { c, s } = fisher(game, 'Steady Stan', 'drift_net');
-  netShoal(game, s);
+  const sh = netShoal(game, s);
+  // Not on the day this shoal's fish is the fish of the day (twice the catch): the rate must not hang on the calendar.
+  for (let d = 0; fishOfDay(game) === sh.fish && d < 30; d++) { const t = (d + 1) * 86_400_000; game.wallNow = () => t; }
   // The old drift net: 1–3 fish every 5 s at craft 0 and skill 1 — 0.4 a second on average.
   const oldPerSec = 2 * 1.01 / 5;
   let fish = 0, secs = 0;
