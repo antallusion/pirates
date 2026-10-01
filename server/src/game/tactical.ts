@@ -19,6 +19,7 @@ import { ladderBetween } from './ladder.ts';
 import { officerFactor, onFightWon, woundOfficer } from './crew.ts';
 import { onCrewKilled } from './mind.ts';
 import { bloodAndSalt, drownedTakeLosses } from './bridgefx.ts';
+import { afterBattle, heroInput, maybeArtifact } from './hero.ts';
 import { act, endByRansom, killedHp, lossesOf, newBattle, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 
@@ -112,6 +113,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
     holes: deck.holes,
     gunsOut: deck.gunsOut,
     fire: deck.fire,
+    hero: heroInput(game, ship), // docs/17 H2
   };
 }
 
@@ -213,6 +215,16 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
       const s = game.sessionOf(hurt.side ? b : a);
       const o = s?.profile?.company.officers.find((x) => x.id === hurt.id);
       if (s && o) woundOfficer(game, s, hurt.heavy, 'in the boarding', o);
+    }
+    // The heroes' will spent, First Aid's patched-up men, a guarded ship's artifact (docs/17 H2).
+    for (const side of [0, 1] as const) {
+      const ship = side ? b : a;
+      afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side), bt.heroes[side].input.hero?.raise ?? 0);
+    }
+    {
+      const w = bt.over.winner === 0 ? a : b, l = w === a ? b : a;
+      const ws0 = game.sessionOf(w);
+      if (ws0?.profile && !game.sessionOf(l) && bt.over.why !== 'ransom') maybeArtifact(game, ws0, 'guard', l.elite ? 0.6 : Math.min(0.3, bt.heroes[w === a ? 1 : 0].startMen / 400));
     }
     // The victor's captain learns from the men his side cut down (HoMM3: the experience of a battle won).
     const wSide = bt.over.winner;

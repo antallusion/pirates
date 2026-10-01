@@ -13,7 +13,7 @@ import { emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { armyAdd, armyFit, armyMen, armyRemove, armySlots, armyTidy } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
-import type { Flag, StatMods } from '../../../shared/src/data/stats.ts';
+import type { Flag, ModifierSource, StatMods } from '../../../shared/src/data/stats.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import type { Aggression, ShipInfo, Side, Station } from '../../../shared/src/protocol.ts';
 import { SF, curseStage } from '../../../shared/src/protocol.ts';
@@ -266,6 +266,8 @@ export class ShipEntity {
   caravanId?: string;
   /** The captain's own gear (docs/12 P1; the ship's is in her loadout). */
   worn: Item[] = [];
+  /** The captain as a hero (docs/17 H2): her skills' sea lines (server/src/game/hero.ts). */
+  hero: ModifierSource | null = null;
   /** A trading house's convoy merchantman (empires.ts): whose, and bound where. */
   convoyOf: { guild: number; to: string } | null = null;
 
@@ -377,7 +379,7 @@ export class ShipEntity {
   /** Recompute derived stats after talents/loadout/effects change. Clamps pools to the new maxima. */
   recompute(now: number): void {
     this.effects = this.effects.filter((e) => e.until > now);
-    this.stats = computeShipStats(this.loadout, this.captain, this.talents, this.effects, this.worn);
+    this.stats = computeShipStats(this.loadout, this.captain, this.talents, this.effects, this.worn, this.hero);
     if (this.hull > this.stats.hullMax) this.hull = this.stats.hullMax;
     if (this.sails > this.stats.sailHpMax) this.sails = this.stats.sailHpMax;
     if (this.crew > this.stats.crewMax) this.crew = this.stats.crewMax;

@@ -71,7 +71,9 @@ export const TAC_UNITS: Record<'hands' | 'marines' | 'gunners' | 'officer', TacU
 /** A captain's orders from the side panel (one a round, each with its cooldown in rounds). */
 export type TacSpellId = 'grenades' | 'point_blank' | 'smoke_and_knives' | 'red_harvest' | 'turn_the_flank' | 'call_of_the_deep' | 'iron_discipline'
   /** The order book's common pages (docs/17 H1), after the captains' own abilities at sea. */
-  | 'mark_target' | 'double_shot' | 'war_cry' | 'brine_mend';
+  | 'mark_target' | 'double_shot' | 'war_cry' | 'brine_mend'
+  /** The order book's further pages (docs/17 H2, shared/src/data/hero.ts): learnt at guilds and shrines. */
+  | 'musket_storm' | 'powder_keg' | 'following_wind' | 'head_wind' | 'tide_returns' | 'maelstrom' | 'shield_wall' | 'fury' | 'dread';
 export interface TacSpellDef {
   id: TacSpellId;
   /** Rounds before it may be given again. */
@@ -92,6 +94,15 @@ export const TAC_SPELLS: Record<TacSpellId, TacSpellDef> = {
   double_shot: { id: 'double_shot', cd: 4, target: 'none', icon: 'icon.ab_double_shot' },
   war_cry: { id: 'war_cry', cd: 4, target: 'none', icon: 'icon.ab_war_cry' },
   brine_mend: { id: 'brine_mend', cd: 5, target: 'none', icon: 'icon.ab_brine_mend' },
+  musket_storm: { id: 'musket_storm', cd: 4, target: 'none', icon: 'icon.bt_volley' },
+  powder_keg: { id: 'powder_keg', cd: 5, target: 'enemy', icon: 'icon.ab_admiralty_barrage' },
+  following_wind: { id: 'following_wind', cd: 3, target: 'none', icon: 'icon.ab_current_rider' },
+  head_wind: { id: 'head_wind', cd: 3, target: 'none', icon: 'icon.ab_hard_over' },
+  tide_returns: { id: 'tide_returns', cd: 6, target: 'none', icon: 'icon.prof_surgeon' },
+  maelstrom: { id: 'maelstrom', cd: 5, target: 'none', icon: 'icon.ab_maw_of_the_deep' },
+  shield_wall: { id: 'shield_wall', cd: 3, target: 'none', icon: 'icon.ab_smoke_pots' },
+  fury: { id: 'fury', cd: 4, target: 'none', icon: 'icon.ab_red_hook_boarding' },
+  dread: { id: 'dread', cd: 5, target: 'none', icon: 'icon.ab_deep_call' },
 };
 /** Each captain's own order (the Boarding 2.0 captain's move, docs/11 P1) beside the grenades everyone has. */
 export const TAC_SIGNATURE: Record<CaptainId, TacSpellId> = {

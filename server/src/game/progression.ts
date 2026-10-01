@@ -8,6 +8,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { TALENTS_BY_ID, TREES, canUnlearn, totalPointsSpent, validateBuild } from '../../../shared/src/data/talents.ts';
 import type { LearnContext, TalentRanks } from '../../../shared/src/data/talents.ts';
 import type { Game } from './Game.ts';
+import { heroLevelUp } from './hero.ts';
 import type { PlayerSession, Profile } from './player.ts';
 
 export const FREE_RESPEC_LEVEL = 20;
@@ -48,6 +49,7 @@ export function grantDeed(game: Game, s: PlayerSession, id: string): boolean {
 /** Level milestones hand out Clean Logbook tokens; a full purse of tokens pays out silver instead. */
 export function onLevelUp(game: Game, s: PlayerSession): void {
   const p = s.profile!;
+  heroLevelUp(game, s); // docs/17 H2: a primary grows, a skill to choose
   for (const lvl of TOKEN_LEVELS) {
     if (p.level < lvl || p.tokenLevels.includes(lvl)) continue;
     p.tokenLevels.push(lvl);

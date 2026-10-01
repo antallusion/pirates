@@ -223,7 +223,7 @@ test('a lair’s garrison puts out as she comes and goes for her; the boats cann
   assert.equal(lairLanding(game, s, island), true);
   const chest = c.last('lairchest')!.view;
   assert.ok(chest.silver >= 1000 && s.profile!.gold - gold0 === chest.silver, 'silver');
-  assert.ok(chest.item && s.profile!.stash.length === items0 + 1, 'a piece of gear');
+  assert.ok(chest.item && s.profile!.stash.length - items0 === 1 + s.profile!.stash.slice(items0).filter((x) => x.art).length, 'a piece of gear (and the garrison’s artifact now and then, docs/17 H2)');
   assert.ok(chest.map && s.profile!.explore.maps.length === maps0 + 1, 'a treasure map');
   assert.equal(chest.captain, np.name[0]);
   // Stormed: empty, no garrison, until it is rebuilt.

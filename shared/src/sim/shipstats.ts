@@ -143,6 +143,8 @@ export function computeShipStats(
   talents: TalentRanks,
   effects: ModifierSource[] = [],
   worn: Item[] = [],
+  /** The captain as a hero (docs/17 H2): her secondary skills' sea lines, beside the talents and within their caps. */
+  hero: ModifierSource | null = null,
 ): ShipStats {
   const cls = SHIP_CLASSES[loadout.classId];
   const cap = CAPTAINS[captain];
@@ -151,7 +153,7 @@ export function computeShipStats(
   const shipGear = SHIP_SLOTS.filter((sl) => loadout.gear?.[sl] && lvl >= SLOT_OPENS[sl]).map((sl) => loadout.gear![sl]!);
   const gear = gearSource([...shipGear, ...worn]);
   // Permanent sources (captain passive, talents, gear) are capped per 03 §3.3; temporary effects stack on top.
-  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents), { mods: gear.mods, flags: gear.flags }]);
+  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents), { mods: gear.mods, flags: gear.flags }, ...(hero ? [hero] : [])]);
   // An item in a slot takes the place of the yard's old fitting there.
   const replaced = new Set<string>(shipGear.map((it) => MODULE_OF_SLOT[ITEM_BASES[it.base].slot as ShipSlot]).filter((m): m is ModuleId => !!m));
   const m0 = (x: Record<StatKey, number>, k: StatKey) => mod(x, k);

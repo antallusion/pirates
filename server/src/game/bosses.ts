@@ -35,6 +35,7 @@ import { seasonStat, seasonMods } from './seasons.ts';
 import { onFirstKill } from './legendary.ts';
 import { governorsOfRegion } from './empires.ts';
 import { logNote } from './captainlog.ts';
+import { artifactFind } from './hero.ts';
 
 type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add';
 
@@ -1468,6 +1469,7 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
       chapter(game, s, def.id === 'abyss_eye' ? 'eye' : 'ancient');
     }
     game.grantXp(s, def.xp * (0.3 + 0.7 * k), `${def.name} slain`);
+    if (share >= 0.1) artifactFind(game, s, 'boss'); // docs/17 H2: a boss keeps an artifact
     const pct = Math.round(share * 100);
     game.sendTo(s, { t: 'toast', msg: `${def.name} is slain! Your part: ${pct}%. Your share of the spoils floats where it died${lines.length ? `; and ${lines.join(', ')}` : ''}.`, kind: 'gold' });
     game.saveSession(s);

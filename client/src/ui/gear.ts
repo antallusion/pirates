@@ -21,11 +21,15 @@ import { ownLevelChip } from './levels.ts';
 import { placeName } from './maps.ts';
 import { bindStormForge, stormForgeCard } from './storms.ts';
 import { LOWER_BETTER, compareRows } from './gearcmp.ts';
+import { ARTIFACTS, ART_CLASS_NAMES, ART_SETS } from '../../../shared/src/data/artifacts.ts';
+import { PRIMS, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
+import { EN as HERO_EN, RU as HERO_RU } from '../lang/ui/hero.ts';
 import type { CmpRow } from './gearcmp.ts';
 import { EN as EASE_EN, RU as EASE_RU } from '../lang/ui/ease.ts';
 
 const L = dict(EN, RU);
 const EL = dict(EASE_EN, EASE_RU);
+const HL = dict(HERO_EN, HERO_RU);
 const ru = () => lang() === 'ru';
 
 type Tab = 'ship' | 'captain' | 'locker' | 'shop';
@@ -44,7 +48,8 @@ const SLOT_ICON: Record<Slot, string> = {
 };
 
 export function itemIcon(it: Item | null, slot: Slot, cls = 'ico-md'): string {
-  // A legendary's own painting, else its base's (docs/12 P11), else the slot's mark.
+  // An artifact's painting (docs/17 H2), a legendary's own, else its base's (docs/12 P11), else the slot's mark.
+  if (it?.art && ARTIFACTS[it.art]) return icon(ARTIFACTS[it.art].icon, '', cls) || icon(SLOT_ICON[slot], '◆', cls);
   return (it?.legendary ? icon(`item_${it.legendary}`, '', cls) : '') || (it ? icon(`item_${it.base}`, '', cls) : '') || icon(SLOT_ICON[slot], '◆', cls);
 }
 
@@ -89,6 +94,15 @@ function card(it: Item, worn: Item[]): string {
     ...Object.entries(e.cap).filter(([, v]) => v).map(([c, v]) => capLine(c, v ?? 0)),
   ].join('');
   const leg = it.legendary ? LEGENDARY_ITEMS[it.legendary] : null;
+  // A hero's artifact (docs/17 H2): its primaries, its words, its set.
+  const art = it.art ? ARTIFACTS[it.art] : null;
+  const artLines = art ? PRIMS.filter((p) => art.prim?.[p]).map((p) => `<div class="gl g-up"><span>${esc(PRIM_NAMES[p][ru() ? 1 : 0])}</span><b>+${art.prim![p]}</b></div>`).join('') : '';
+  let artSet = '';
+  if (art?.set) {
+    const def = ART_SETS[art.set];
+    const have = def.pieces.filter((p) => worn.some((w) => w.art === p)).length;
+    artSet = `<div class="gi-set">${esc(def.name[ru() ? 1 : 0])} (${have}/${def.pieces.length})<div class="gi-bonus${have >= def.pieces.length ? ' on' : ''}">(${def.pieces.length}) ${esc(def.text[ru() ? 1 : 0])}</div><div class="muted">${esc(def.pieces.map((p) => ARTIFACTS[p].name[ru() ? 1 : 0]).join(' · '))}</div></div>`;
+  }
   let set = '';
   if (it.set) {
     const def = SETS[it.set];
@@ -96,11 +110,12 @@ function card(it: Item, worn: Item[]): string {
     set = `<div class="gi-set">${icon(`set_${it.set}`, '', 'ico-sm')}${esc(L('set', { name: def.name[ru() ? 1 : 0], n: have, max: Object.keys(def.pieces).length }))}${def.bonus.map((b) => `<div class="gi-bonus${have >= b.n ? ' on' : ''}">(${b.n}) ${esc(b.text[ru() ? 1 : 0])}</div>`).join('')}</div>`;
   }
   return `<div class="gi-card" style="border-color:${RARITY_COLOR[it.rarity]}">
-    <div class="gi-head">${itemIcon(it, slot, 'ico-md gi-ico')}<div>${coloured(it)}<div class="muted gi-kind">${esc(RARITY_NAMES[it.rarity][ru() ? 1 : 0])} · ${esc(SLOT_NAMES[slot][ru() ? 1 : 0])} · ${esc(L('lv', { n: it.ilvl }))}${it.temper ? ` · ${esc(L('tempered', { n: it.temper }))}` : ''}</div></div></div>
-    <div class="gi-lines">${lines}</div>
+    <div class="gi-head">${itemIcon(it, slot, 'ico-md gi-ico')}<div>${coloured(it)}<div class="muted gi-kind">${esc(art ? ART_CLASS_NAMES[art.cls][ru() ? 1 : 0] : RARITY_NAMES[it.rarity][ru() ? 1 : 0])} · ${esc(SLOT_NAMES[slot][ru() ? 1 : 0])} · ${esc(L('lv', { n: it.ilvl }))}${it.temper ? ` · ${esc(L('tempered', { n: it.temper }))}` : ''}</div></div></div>
+    <div class="gi-lines">${artLines}${lines}</div>
     ${leg ? `<div class="gi-gift">${esc(leg.text[ru() ? 1 : 0])}</div>` : ''}
-    ${set}
-    <div class="muted gi-wear">${it.dur <= 0 ? esc(L('broken')) : esc(L('wear', { n: it.dur }))}</div></div>`;
+    ${art ? `<div class="gi-gift">${esc(art.text[ru() ? 1 : 0])}</div>` : ''}
+    ${set}${artSet}
+    ${art ? '' : `<div class="muted gi-wear">${it.dur <= 0 ? esc(L('broken')) : esc(L('wear', { n: it.dur }))}</div>`}</div>`;
 }
 
 /** An item's card for other windows (a chain's reward to choose, docs/12 P9). */
@@ -113,7 +128,7 @@ export function itemCardHtml(it: Item): string {
 function compare(it: Item, cur: Item | undefined): string {
   const rows = compareRows(it, cur);
   const val = (r: CmpRow, v: number) => (Math.abs(v) < 1e-9 ? '—' : r.kind === 'stat' ? statValue(r.key as StatKey, v) : `${v > 0 ? '+' : '−'}${Math.abs(v)}`);
-  const label = (r: CmpRow) => (r.kind === 'stat' ? statLabel(r.key as StatKey) : CAP_STAT_NAMES[r.key as keyof typeof CAP_STAT_NAMES][ru() ? 1 : 0]);
+  const label = (r: CmpRow) => (r.kind === 'stat' ? statLabel(r.key as StatKey) : r.kind === 'prim' ? PRIM_NAMES[r.key as keyof typeof PRIM_NAMES][ru() ? 1 : 0] : CAP_STAT_NAMES[r.key as keyof typeof CAP_STAT_NAMES][ru() ? 1 : 0]);
   const body = rows.map((r) => `<tr class="${r.good === true ? 'g-up' : r.good === false ? 'g-down' : 'g-eq'}"><td>${esc(label(r))}</td><td>${esc(val(r, r.a))}</td><td>${esc(val(r, r.b))}</td><td class="gc-d">${r.good === null ? '=' : esc(val(r, r.d))}</td></tr>`).join('');
   const head = cur ? `${esc(L('compare'))}: ${coloured(cur)}` : esc(L('compare'));
   return `<div class="gi-cmp"><div class="gi-h">${head}</div>${cur ? '' : `<p class="muted gi-cmp-none">${esc(EL('cmp_none'))}</p>`}${rows.length ? `<table class="gc-t"><thead><tr><th></th><th>${esc(EL('cmp_this'))}</th><th>${esc(EL('cmp_worn'))}</th><th>Δ</th></tr></thead><tbody>${body}</tbody></table>` : '<div class="muted">=</div>'}</div>`;
@@ -169,10 +184,14 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
 
   const sets = setBonuses(worn).active;
   const total = gearSource(worn);
+  // The hero's primaries with what her artifacts add (docs/17 H2).
+  const hero = self.hero;
+  const heroPanel = hero ? `<div class="gp"><div class="gi-h">${esc(HL('prims'))}</div>${PRIMS.map((k) => `<div class="gl${hero.artPrim[k] ? ' g-up' : ''}"><span>${esc(PRIM_NAMES[k][ru() ? 1 : 0])}</span><b>${hero.prim[k] + hero.artPrim[k]}${hero.artPrim[k] ? ` (+${hero.artPrim[k]})` : ''}</b></div>`).join('')}</div>` : '';
   const statsPanel = (captain: boolean) => captain
-    ? `<div class="gp"><div class="gi-h">${esc(L('stats'))}</div>${CAP_STATS.map((c) => `<div class="gl"><span>${esc(CAP_STAT_NAMES[c][ru() ? 1 : 0])}</span><b>${total.cap[c] ?? 0}</b></div>`).join('')}</div>`
+    ? `${heroPanel}<div class="gp"><div class="gi-h">${esc(L('stats'))}</div>${CAP_STATS.map((c) => `<div class="gl"><span>${esc(CAP_STAT_NAMES[c][ru() ? 1 : 0])}</span><b>${total.cap[c] ?? 0}</b></div>`).join('')}</div>`
     : `<div class="gp"><div class="gi-h">${esc(L('fromGear'))}</div>${Object.entries(total.mods).filter(([, v]) => Math.abs(v ?? 0) > 1e-9).map(([k, v]) => statLine(k as StatKey, v ?? 0)).join('') || '<div class="muted">—</div>'}</div>`;
-  const setsPanel = `<div class="gp"><div class="gi-h">${esc(L('sets'))}</div>${sets.length ? sets.map((x) => `<div class="gl"><span class="with-ico">${icon(`set_${x.set}`, '', 'ico-sm')}${esc(SETS[x.set].name[ru() ? 1 : 0])}</span><b>${x.n}/${Object.keys(SETS[x.set].pieces).length}</b></div>`).join('') : `<div class="muted">${esc(L('noSets'))}</div>`}</div>`;
+  const artSets = (hero?.sets ?? []) as (keyof typeof ART_SETS)[];
+  const setsPanel = `<div class="gp"><div class="gi-h">${esc(L('sets'))}</div>${artSets.map((id) => `<div class="gl g-up"><span>${esc(ART_SETS[id].name[ru() ? 1 : 0])}</span><b>${ART_SETS[id].pieces.length}/${ART_SETS[id].pieces.length}</b></div>`).join('')}${sets.length || artSets.length ? sets.map((x) => `<div class="gl"><span class="with-ico">${icon(`set_${x.set}`, '', 'ico-sm')}${esc(SETS[x.set].name[ru() ? 1 : 0])}</span><b>${x.n}/${Object.keys(SETS[x.set].pieces).length}</b></div>`).join('') : `<div class="muted">${esc(L('noSets'))}</div>`}</div>`;
 
   // A forge (a yard of the second rank or better): tempering, and reforging each extra line.
   const forge = docked && (sy?.tier ?? 0) >= 2;

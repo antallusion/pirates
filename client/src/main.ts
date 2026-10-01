@@ -49,6 +49,7 @@ import { applySkin } from './ui/skin.ts';
 import { rudderToward, TouchControls } from './touch.ts';
 import { PortScreen } from './ui/port.ts';
 import { TalentScreen } from './ui/talents.ts';
+import { HeroWindow, drawSeaOrders } from './ui/hero.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 import { Journal } from './ui/journal.ts';
@@ -79,7 +80,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -198,6 +199,13 @@ function resolveTarget(): number | null {
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
 portScreen.openTattoos = () => openModal('tattoos');
 const talentScreen = new TalentScreen((m) => net.send(m));
+// The captain as a hero (docs/17 H2): primaries, skills, the order book, a port's guild and artifact merchant.
+const heroWindow = new HeroWindow((m) => net.send(m));
+heroWindow.onClose = () => closeModal();
+function openHero(tab?: 'hero' | 'book' | 'port'): void {
+  heroWindow.open(tab);
+  openModal('hero');
+}
 const companyScreen = new CompanyScreen((m) => net.send(m));
 // One's own island as a base (docs/15): from the Company's islands, the captain's cabin, and at sea off the island.
 const baseWindow = new BaseWindow((m) => net.send(m));
@@ -503,7 +511,7 @@ function onMessage(m: ServerMsg): void {
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
-      else if (modal === 'company' || modal === 'base' || modal === 'gear') {
+      else if (modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero') {
         // The Company and island windows redraw only when what they show of her changed (a redraw every second on
         // the private state's beat lost taps).
         const key = selfKeyFor(modal);
@@ -518,6 +526,10 @@ function onMessage(m: ServerMsg): void {
         audio.bell();
         hud.banner(L('mutiny'), L('mutinySub', { name: m.ringleader, n: m.mutineers, men: plural(m.mutineers, L('men.one'), L('men.few'), L('men.many')) }));
       }
+      break;
+    case 'hero_port':
+      heroWindow.port = m.view;
+      if (modal === 'hero') refreshModal();
       break;
     case 'lairchest':
       // A stormed lair's chest (docs/16 #7).
@@ -804,11 +816,12 @@ function selfKeyFor(m: Modal): string {
   const s = state.self;
   if (!s) return '';
   if (m === 'gear') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.stash, s.loadout, s.captainGear, s.cargo]);
+  if (m === 'hero') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.hero, s.captainGear]);
   return m === 'company' ? JSON.stringify([m, lang(), s.name, s.dockedAt, s.berths, s.pvp, s.maps, s.company, s.cargo, s.builds, s.gold]) : JSON.stringify([m, lang(), s.gold, s.cargo, s.dockedAt, s.homeIsle]);
 }
 
 function refreshModal(): void {
-  lastSelfKey = modal === 'company' || modal === 'base' || modal === 'gear' ? selfKeyFor(modal) : '';
+  lastSelfKey = modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero' ? selfKeyFor(modal) : '';
   const root = $('modal-panel');
   const marks = root.dataset.modal === (modal ?? '') ? scrollMarks(root) : null;
   // Screens dress by name in the stylesheet (header art, backgrounds).
@@ -825,6 +838,9 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'talents':
       talentScreen.render(root, state);
+      break;
+    case 'hero':
+      heroWindow.render(root, state);
       break;
     case 'map':
       worldMap.open(root, state);
@@ -958,6 +974,7 @@ function openMenuItem(m: MenuItem): void {
     companyScreen.open();
     openModal('company');
   } else if (m === 'base') openBase();
+  else if (m === 'hero') openHero();
   else openModal(m);
 }
 
@@ -1938,6 +1955,7 @@ function step(t: number): void {
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
     autosailPill.draw(state);
+    drawSeaOrders($('hud-orders'), state, (m) => net.send(m), () => openHero('book'));
     easeSecond(t, own);
     firstTips.frame(t);
     targetId = resolveTarget();
@@ -1968,4 +1986,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : openModal(m)), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : openModal(m)), hero: (tab?: 'hero' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical };

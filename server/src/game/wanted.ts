@@ -40,6 +40,7 @@ import { grantDeed } from './progression.ts';
 import { hunterLicence } from './pvp.ts';
 import type { ShipEntity } from './ship.ts';
 import { sagaNote } from './saga.ts';
+import { maybeArtifact } from './hero.ts';
 
 const HOUR = 3600_000;
 const WEEK = 7 * 24 * HOUR;
@@ -319,6 +320,7 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   if (room > 0) game.sendTo(s, { t: 'toast', msg: 'The freed prisoners join your crew.', kind: 'good' });
   game.sendTo(s, { t: 'lairchest', view: { island: lair.name, captain: np.name[0], silver: chest, prisoners, item: kept ? { name: itemName(it), rarity: it.rarity, base: it.base } : null, map: mapped ? m.name : null } });
   game.grantXp(s, 300 + 60 * np.level, `The lair of ${np.name[0]}`);
+  maybeArtifact(game, s, 'guard', 0.5); // docs/17 H2: the garrison guarded an artifact
   sendWanted(game, s, true);
   return true;
 }

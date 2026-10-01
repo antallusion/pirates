@@ -2,6 +2,8 @@
 // difference, green where the new piece is better and red where it is worse (some lines are better lower).
 
 import { gearSource } from '../../../shared/src/data/items.ts';
+import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
+import { PRIMS } from '../../../shared/src/data/hero.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import type { StatKey } from '../../../shared/src/data/stats.ts';
 
@@ -9,8 +11,8 @@ import type { StatKey } from '../../../shared/src/data/stats.ts';
 export const LOWER_BETTER = new Set<StatKey>(['reloadMul', 'spreadMul', 'fireRisk', 'leakInflow', 'signature', 'moraleLoss', 'sanityLoss', 'spoilage', 'stormSailDamage', 'stormHull', 'dutyMul', 'buyMul', 'provisionUse', 'incomingDamageMul']);
 
 export interface CmpRow {
-  /** A ship stat, or a captain's (`cap`). */
-  kind: 'stat' | 'cap';
+  /** A ship stat, a captain's characteristic (`cap`), or a hero's primary (`prim`, an artifact's: docs/17 H2). */
+  kind: 'stat' | 'cap' | 'prim';
   key: string;
   /** This piece's value, the worn one's, and this less that. */
   a: number;
@@ -37,6 +39,14 @@ export function compareRows(it: Item, cur: Item | undefined | null): CmpRow[] {
     if (!va && !vb) continue;
     const d = va - vb;
     rows.push({ kind: 'cap', key: c, a: va, b: vb, d, good: d === 0 ? null : d > 0 });
+  }
+  // An artifact's primaries (Attack, Defense, Power, Will).
+  const pa = it.art ? ARTIFACTS[it.art]?.prim ?? {} : {}, pb = cur?.art ? ARTIFACTS[cur.art]?.prim ?? {} : {};
+  for (const k of PRIMS) {
+    const va = pa[k] ?? 0, vb = pb[k] ?? 0;
+    if (!va && !vb) continue;
+    const d = va - vb;
+    rows.push({ kind: 'prim', key: k, a: va, b: vb, d, good: d === 0 ? null : d > 0 });
   }
   const rank = (r: CmpRow) => (r.good === true ? 0 : r.good === false ? 1 : 2);
   return rows.sort((x, y) => rank(x) - rank(y) || Math.abs(y.d) - Math.abs(x.d) || x.key.localeCompare(y.key));
