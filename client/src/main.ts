@@ -65,6 +65,7 @@ import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts'
 import { EN as HUD_EN, RU as HUD_RU } from './lang/ui/hud.ts';
 const HUD_L = dict(HUD_EN, HUD_RU);
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
+import { personName } from './lang/names.ts';
 import { serverText } from './lang/server.ts';
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
@@ -535,7 +536,7 @@ function onMessage(m: ServerMsg): void {
     case 'mutiny':
       if (m.mutineers > 0) {
         audio.bell();
-        hud.banner(L('mutiny'), L('mutinySub', { name: m.ringleader, n: m.mutineers, men: plural(m.mutineers, L('men.one'), L('men.few'), L('men.many')) }));
+        hud.banner(L('mutiny'), L('mutinySub', { name: personName(m.ringleader), n: m.mutineers, men: plural(m.mutineers, L('men.one'), L('men.few'), L('men.many')) }));
       }
       break;
     case 'hero_port':
