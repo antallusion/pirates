@@ -2,9 +2,14 @@
 // town-fed crew against the sea's armies of her level, the guards' chests, recruits against income, artifacts and will.
 // node tools/balance-h5.ts
 
-import { armyForLevel, armyMen } from '../shared/src/data/army.ts';
+import { UNITS, armyCost, armyForLevel, armyMen } from '../shared/src/data/army.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
+import { ART_WEIGHTS } from '../shared/src/data/artifacts.ts';
+import { CHEST_ART, GUARD_ART, chestPay } from '../shared/src/data/advmap.ts';
+import { WILL_DAY, WILL_PORT, manaMaxOf } from '../shared/src/data/hero.ts';
+import { MIGHT_CAP, recruitPrice } from '../shared/src/data/town.ts';
 import { MONTH, month, winRate } from '../tests/balance/recruit.ts';
+import { seaHour } from '../tests/balance/island.ts';
 
 function thin(a: ArmyStack[], share: number): ArmyStack[] {
   const out = a.map((x) => ({ ...x }));
@@ -18,15 +23,38 @@ function thin(a: ArmyStack[], share: number): ArmyStack[] {
 }
 
 const N = Number(process.argv[2] ?? 200);
-console.log('Steepness (⚓5 pirates, 100 men, the defender thinned):');
+console.log('Steepness: the first side wins against the second thinned by a share (100 men, pirates of a level):');
 for (const L of [3, 5, 7]) {
   const a = armyForLevel(L, 100, 6, 'pirate');
   const row = [0, 0.05, 0.1, 0.2, 0.34].map((f) => `${Math.round(f * 100)}% fewer: ${Math.round(winRate(a, thin(a, f), N) * 100)}%`);
   console.log(`  ⚓${L}: ${row.join(' · ')}`);
 }
-console.log('\nThe town-fed crew against the sea (a month of MONTH):');
-for (const [L, M] of [[4, 110], [7, 220], [10, 600]] as const) {
-  const r = month({ ...MONTH, level: L, crewMax: M });
-  const lad = armyForLevel(L, M, 7, 'player');
-  console.log(`  ⚓${L} (${M}): town-fed vs pirate ⚓${L}: ${Math.round(winRate(r.army, armyForLevel(L, M, 7, 'pirate'), N / 2) * 100)}% · ladder vs pirate: ${Math.round(winRate(lad, armyForLevel(L, M, 7, 'pirate'), N / 2) * 100)}% · vs navy: ${Math.round(winRate(r.army, armyForLevel(L, M, 7, 'navy'), N / 2) * 100)}% / ${Math.round(winRate(lad, armyForLevel(L, M, 7, 'navy'), N / 2) * 100)}%`);
+// The picked men's might cap, level by level (the town-fed month under it, H3's without it).
+console.log('\nThe picked men\'s might cap (MIGHT_CAP) — a month of a castle\'s men against a pirate of her level:');
+const HAMMOCKS = [0, 40, 60, 80, 110, 140, 180, 220, 300, 400, 600];
+for (let L = 2; L <= 10; L++) {
+  const M = HAMMOCKS[L];
+  const capped = month({ ...MONTH, level: L, crewMax: M }), free = month({ ...MONTH, level: L, crewMax: M, cap: 0 });
+  const pir = armyForLevel(L, M, 7, 'pirate'), lad = armyForLevel(L, M, 7, 'player');
+  console.log(`  ⚓${L} (${M}): cap ×${MIGHT_CAP[L]} · town-fed ${Math.round(winRate(capped.army, pir, N / 2) * 100)}% (uncapped ${Math.round(winRate(free.army, pir, N / 2) * 100)}%) · ladder ${Math.round(winRate(lad, pir, N / 2) * 100)}% · spent ${Math.round((capped.spent / capped.earned) * 100)}% of income (uncapped ${Math.round((free.spent / free.earned) * 100)}%)`);
+}
+
+// Sanity: men against income, artifacts' worth, will.
+console.log('\nSanity — men against the hour at sea:');
+for (const L of [1, 3, 5, 7, 10]) {
+  const lad = armyForLevel(L, HAMMOCKS[L], 7, 'player');
+  console.log(`  ⚓${L}: a hour at sea ${seaHour(L)} · the ladder's crew (${HAMMOCKS[L]}) worth ${armyCost(lad)} = ${(armyCost(lad) / seaHour(L)).toFixed(2)} h · a quarter of it lost refilled in ${((armyCost(lad) * 0.25) / seaHour(L)).toFixed(2)} h · a deckhand ${UNITS.deckhand.cost}, a marine ${recruitPrice('marine', 1, true).silver} in port`);
+}
+const evArt = (src: keyof typeof ART_WEIGHTS) => {
+  const w = ART_WEIGHTS[src];
+  const tot = Object.values(w).reduce((a, b) => a + b, 0);
+  return (Object.entries(w) as [keyof typeof w, number][]).reduce((a, [c, k]) => a + (k / tot) * ({ treasure: 1500, minor: 4000, major: 11000, relic: 30000 }[c]), 0);
+};
+console.log(`\nSanity — artifacts: a chest's artifact is worth ${Math.round(evArt('chest'))} on average (sold for a quarter: ${Math.round(evArt('chest') / 4)}); a map chest holds one ${CHEST_ART.open * 100}% of weeks (behind a guard ${CHEST_ART.guarded * 100}%), a guard's chest ${GUARD_ART.weak * 100}/${GUARD_ART.avg * 100}/${GUARD_ART.strong * 100}% (weak/avg/strong, once a week a captain)`);
+for (const L of [1, 5, 10]) console.log(`  ⚓${L}: guarded chest ${chestPay(L, true).silver} silver vs its artifact's resale ${Math.round(evArt('chest') / 4)} (the artifact is taken instead of the silver)`);
+console.log('  An artifact\'s primary +1 = ±5% on every stack in a boarding (cap ×0.3–×3); the 16 altars teach +4 of each primary over the world (a captain of level 30 has ~35 points from her levels).');
+console.log('\nSanity — will:');
+for (const w of [1, 2, 4, 8]) {
+  const max = manaMaxOf(w);
+  console.log(`  Will ${w}: store ${max} · a day at sea (48 min) +${Math.round(max * WILL_DAY)} · a port +${Math.round(max * WILL_PORT)} · cheapest battle order 3, a level-5 order 15–16: ${Math.floor(max / 3)} cheap or ${Math.floor(max / 16)} great orders a full store`);
 }
