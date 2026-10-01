@@ -203,10 +203,11 @@ export function armyFit(army: ArmyStack[], slots: number): void {
  *  captain's company, a boss's picked crew. */
 export type ArmyMix = 'merchant' | 'pirate' | 'navy' | 'deep' | 'player' | 'boss';
 
-/** Each tier's share against the ladder's rule, by who she is (tier 1 takes whatever is left). */
+/** Each tier's share against the ladder's rule, by who she is (tier 1 takes whatever is left). The pirates' row is
+ *  their own (`pirateShares`): a few marines, many shooters, gunners, some boarders. */
 const MIX: Record<ArmyMix, number[]> = {
   merchant: [1, 0, 0.4, 0, 0, 0, 0],
-  pirate: [1, 0.8, 1, 0.6, 1.6, 0.6, 0],
+  pirate: [1, 1, 1.3, 0.7, 1, 0.5, 0],
   navy: [1, 1.4, 1.2, 1.2, 0.6, 1.5, 0],
   deep: [1, 0.6, 0.6, 0.4, 1, 0.5, 2.5],
   player: [1, 1, 1, 0.8, 0.8, 0.6, 0],
@@ -234,27 +235,54 @@ export function upgradedShare(level: number): number {
   return Math.max(0, Math.min(0.8, 0.1 * (Math.max(1, level) - 1)));
 }
 
+/** The sea's pirates (docs/17, after H5): the hands, marines, many musketeers, gunners and some boarders — one kind
+ *  a tier above the hands, the plain kinds to ⚓8 and the upgraded from ⚓9 (PIRATE_UP_LEVEL). Their marines and
+ *  musketeers (the first number) and their gunners, boarders and guards (the second) are scaled by PIRATE_CAL,
+ *  measured by the boarding battle itself so that the ladder's own crew of the level and her hammocks wins half the
+ *  boardings at every level (`node tools/balance-h5.ts`; tests/heroes6.test.ts holds it). At ⚓1–2, before the
+ *  gunners and the boarders, a pirate's crew is the sea's common one. (Eight kinds folded into seven slots made a
+ *  pirate's might jump with a man more or less; one kind a tier keeps it smooth in the head count.) */
+export const PIRATE_CAL: [number, number][] = [[1, 1], [1, 1], [1, 1], [0.6, 1.8], [1.4, 1], [0.5, 1], [0.63, 0.63], [0.76, 0.76], [0.92, 0.92], [0.69, 0.69], [0.69, 0.69]];
+export const PIRATE_UP_LEVEL = 9;
+
+function pirateShares(level: number): { u: UnitId; x: number }[] {
+  const L = Math.max(1, Math.min(10, Math.round(level)));
+  const [common, elite] = PIRATE_CAL[L];
+  const share = tierShares(L).map((b, i) => (i ? b * MIX.pirate[i] * (i >= 3 ? elite : common) : 0));
+  const upper = share.reduce((a, b) => a + b, 0);
+  const k = upper > 0.75 ? 0.75 / upper : 1;
+  for (let i = 1; i < 7; i++) share[i] *= k;
+  share[0] = 1 - share.reduce((a, b) => a + b, 0);
+  const up = upgradedShare(L);
+  const out: { u: UnitId; x: number }[] = [{ u: 'deckhand', x: share[0] * (1 - up) }, { u: 'sailor', x: share[0] * up }];
+  for (let i = 1; i < 7; i++) if (share[i] > 0) out.push({ u: L >= PIRATE_UP_LEVEL ? UNITS[TIER_BASE[i]].upgrade! : TIER_BASE[i], x: share[i] });
+  return out;
+}
+
 /** An army of `men` for a crew of ship level ⚓`level`, spread over the tiers by the ladder and the mix, in at most
  *  `slots` stacks. No dice: the same ship always carries the same men. */
 export function armyForLevel(level: number, men: number, slots: number, mix: ArmyMix = 'player'): ArmyStack[] {
   men = Math.max(0, Math.floor(men));
   if (men <= 0) return [];
-  const base = tierShares(level);
-  const m = MIX[mix];
-  const share = base.map((b, i) => (i ? b * m[i] : 0));
-  const upper = share.reduce((a, b) => a + b, 0);
-  const k = upper > 0.75 ? 0.75 / upper : 1;
-  for (let i = 1; i < 7; i++) share[i] *= k;
-  share[0] = 1 - share.reduce((a, b) => a + b, 0);
-  const up = upgradedShare(level);
   const want: { u: UnitId; x: number }[] = [];
-  share.forEach((s, i) => {
-    if (s <= 0) return;
-    const b = TIER_BASE[i];
-    const upg = UNITS[b].upgrade!;
-    want.push({ u: b, x: s * (1 - up) * men });
-    if (up > 0) want.push({ u: upg, x: s * up * men });
-  });
+  if (mix === 'pirate' && level >= 3) for (const w of pirateShares(level)) want.push({ u: w.u, x: w.x * men });
+  else {
+    const base = tierShares(level);
+    const m = MIX[mix === 'pirate' ? 'player' : mix];
+    const share = base.map((b, i) => (i ? b * m[i] : 0));
+    const upper = share.reduce((a, b) => a + b, 0);
+    const k = upper > 0.75 ? 0.75 / upper : 1;
+    for (let i = 1; i < 7; i++) share[i] *= k;
+    share[0] = 1 - share.reduce((a, b) => a + b, 0);
+    const up = upgradedShare(level);
+    share.forEach((s, i) => {
+      if (s <= 0) return;
+      const b = TIER_BASE[i];
+      const upg = UNITS[b].upgrade!;
+      want.push({ u: b, x: s * (1 - up) * men });
+      if (up > 0) want.push({ u: upg, x: s * up * men });
+    });
+  }
   // Whole men by the largest remainders; a kind under one man is not a stack.
   const alloc = want.map((w) => ({ u: w.u, n: Math.floor(w.x), r: w.x - Math.floor(w.x) }));
   let rest = men - alloc.reduce((a, b) => a + b.n, 0);

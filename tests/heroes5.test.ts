@@ -28,7 +28,7 @@ import { learnAtIsle, townState, townView } from '../server/src/game/town.ts';
 import { lairIsland } from '../server/src/game/wanted.ts';
 import { mineSites } from '../server/src/game/mines.ts';
 import { runAdmin } from '../server/src/game/admin.ts';
-import { desperation, newBattle, quickFinish } from '../server/src/game/tacbattle.ts';
+import { TAC_DESPERATION_MAX, desperation, newBattle, quickFinish } from '../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../server/src/game/tacbattle.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { setLang } from '../client/src/i18n.ts';
@@ -304,17 +304,18 @@ test('backs to the rail: a tenth fewer men is a hard fight, not a lost one; a th
   const tenth = 1 - wins(thin(a, 0.1), a, 120);
   assert.ok(tenth >= 0.6 && tenth <= 0.8, `a tenth fewer: lost ${Math.round(tenth * 100)}% (H1: 93%)`);
   assert.ok(1 - wins(thin(a, 0.34), a, 60) >= 0.85, 'a third shot away: still lost');
-  // The rule itself: only the side with less strength left, by the shortfall, to a third at most.
+  // The rule itself: only the side with less strength left, by twice the shortfall, to 40% at most (after H5).
   const rng = new Rng(1);
   const bt = newBattle(side(a), side(thin(a, 0.5)), 3, 0, rng);
   assert.equal(desperation(bt, 0), 1);
-  assert.ok(desperation(bt, 1) > 1.25 && desperation(bt, 1) <= 1.3);
+  assert.ok(desperation(bt, 1) > 1 + TAC_DESPERATION_MAX - 0.05 && desperation(bt, 1) <= 1 + TAC_DESPERATION_MAX);
+  assert.equal(TAC_DESPERATION_MAX, 0.4);
 });
 
 test('the picked men\'s might cap: a ship\'s trained men and upgrades held to her level\'s weight; deckhands always sign on', () => {
   for (let L = 2; L <= 10; L++) assert.ok(MIGHT_CAP[L] >= MIGHT_CAP[L - 1] && MIGHT_CAP[L] >= 1, `⚓${L}`);
   const lad = armyForLevel(7, 220, 7, 'player');
-  assert.ok(armyWeight(lad) < mightCap(7, 220, 7), 'the ladder\'s crew is under it');
+  assert.ok(armyWeight(lad) <= mightCap(7, 220, 7) + 1e-9, "the ladder's crew is not over it (×1 to ⚓7 after H5)");
   assert.equal(mightRoom(lad, 'deckhand', 7, 220, 7), Infinity, 'tier 1 never held back');
   assert.ok(armyWeight([{ u: 'life_guard', n: 220 }]) > mightCap(7, 220, 7), 'a crew of life guards is over it');
   // On her island's dwellings: over the cap no marines, deckhands all the same; under it, marines.

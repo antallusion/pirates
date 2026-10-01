@@ -91,11 +91,11 @@ export function guardBaseMight(level: number): number {
  *  it. Calibrated by the boarding battle itself (node tools/balance-guards.ts --calibrate; tests/balance/guards.test.ts
  *  holds it to its targets). */
 export const GUARD_CAL: Record<GuardKind, [number, number, number][]> = {
-  holdout: [[0, 0, 0], [0.53, 0.81, 1.09], [0.41, 0.78, 1.15], [0.48, 0.7, 0.92], [0.5, 0.78, 1.17], [0.68, 0.84, 1.12], [0.6, 0.83, 1.06], [0.72, 0.95, 1.28], [0.71, 1.04, 1.37], [0.66, 1.01, 1.3], [0.65, 1.02, 1.28]],
-  hulk: [[0, 0, 0], [0.53, 0.78, 1.07], [0.4, 0.59, 0.93], [0.32, 0.61, 0.79], [0.37, 0.55, 0.76], [0.3, 0.5, 0.7], [0.37, 0.56, 0.72], [0.3, 0.47, 0.71], [0.29, 0.47, 0.67], [0.3, 0.42, 0.59], [0.3, 0.41, 0.59]],
+  holdout: [[0, 0, 0], [0.47, 0.84, 1.09], [0.41, 0.78, 1.09], [0.3, 0.55, 0.87], [0.47, 0.92, 1.25], [0.56, 0.75, 1.06], [0.52, 0.79, 1.02], [0.72, 0.99, 1.33], [0.68, 1.09, 1.34], [0.67, 1.01, 1.35], [0.61, 0.97, 1.28]],
+  hulk: [[0, 0, 0], [0.53, 0.78, 1.03], [0.31, 0.59, 0.88], [0.32, 0.58, 0.79], [0.37, 0.53, 0.73], [0.29, 0.48, 0.64], [0.37, 0.55, 0.69], [0.29, 0.46, 0.68], [0.28, 0.45, 0.65], [0.3, 0.41, 0.59], [0.25, 0.4, 0.58]],
   // (The deep's things keep to their waters — the wreck from ⚓5, the pack from ⚓6; the rows below are never stood.)
-  wreck: [[0, 0, 0], [0.88, 1.25, 1.75], [0.88, 1.25, 1.75], [0.88, 1.25, 1.75], [0.88, 1.25, 1.75], [0.88, 1.25, 1.75], [1.1, 1.5, 2.11], [0.93, 1.48, 1.64], [1.25, 1.78, 2.28], [1.25, 1.82, 2.45], [1.21, 1.79, 2.21]],
-  beasts: [[0, 0, 0], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.75, 3.76, 5.25], [2.13, 3.13, 3.89], [1.78, 2.5, 3.22], [1.96, 2.5, 3.16]],
+  wreck: [[0, 0, 0], [0.94, 1.47, 1.75], [0.94, 1.47, 1.75], [0.94, 1.47, 1.75], [0.94, 1.47, 1.75], [0.94, 1.47, 1.75], [1.35, 1.75, 2.38], [0.86, 1.37, 1.69], [1.25, 1.73, 2.25], [1.1, 1.5, 1.9], [1.04, 1.39, 1.82]],
+  beasts: [[0, 0, 0], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.5, 3.5, 5.2], [2.75, 4.25, 5.25], [2.13, 3.13, 3.89], [1.78, 2.5, 3.08], [1.86, 2.41, 3.16]],
 };
 
 /** A guard's stacks: its men first reckoned by might, then scaled by its calibration. No dice: the same guard stands
@@ -161,7 +161,7 @@ export function guardPay(level: number, size: GuardSize): { silver: number; xp: 
 
 /** Silver the men an average guard costs the reference captain of ⚓L to refill when she wins (measured in the boarding
  *  battle: node tools/balance-guards.ts --calibrate; the higher tiers die dearer than their share of the heads). */
-export const GUARD_REFILL = [0, 192, 268, 523, 847, 1678, 1902, 3429, 4448, 9571, 14651];
+export const GUARD_REFILL = [0, 178, 281, 475, 952, 1572, 2028, 3396, 4659, 9018, 13853];
 
 /** Silver the men a guard of a size costs the reference captain of ⚓L to refill, on average. */
 export function refill(level: number, size: GuardSize): number {

@@ -51,8 +51,9 @@ export const PICKED_TIER = 4;
  *  ladder's own crew of her level and hammocks — the empty hammocks counted as deckhands, so nothing is gamed by
  *  signing the deckhands on last. A month of a castle's men was three times the sea's armies of her level (every
  *  boarding of a pirate of her level won); under the cap about four in five. Deckhands and seasoned sailors (tier 1)
- *  are never held back. */
-export const MIGHT_CAP = [1, 1, 1, 1, 1, 1.05, 1.05, 1.15, 1.25, 1.25, 1.3];
+ *  are never held back. Recalibrated after H5 with the sea's pirates even against the ladder's crew (army.ts
+ *  PIRATE_CAL): ×1 to ⚓7 (the seasoned sailors alone carry four boardings in five there), ×1.1 from ⚓8. */
+export const MIGHT_CAP = [1, 1, 1, 1, 1, 1, 1, 1, 1.1, 1.1, 1.1];
 
 export function mightCap(level: number, crewMax: number, slots: number, k = MIGHT_CAP[Math.max(1, Math.min(10, Math.round(level)))]): number {
   return k * armyWeight(armyForLevel(level, crewMax, slots, 'player'));

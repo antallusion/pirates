@@ -29,15 +29,28 @@ for (const L of [3, 5, 7]) {
   const row = [0, 0.05, 0.1, 0.2, 0.34].map((f) => `${Math.round(f * 100)}% fewer: ${Math.round(winRate(a, thin(a, f), N) * 100)}%`);
   console.log(`  ⚓${L}: ${row.join(' · ')}`);
 }
-// The picked men's might cap, level by level (the town-fed month under it, H3's without it).
-console.log('\nThe picked men\'s might cap (MIGHT_CAP) — a month of a castle\'s men against a pirate of her level:');
+// The picked men's might cap, level by level (the town-fed month under it, H3's without it), and the ladder's own
+// crew against the sea's pirates of her level (docs/17, after H5: even at every level).
+console.log("\nThe picked men's might cap (MIGHT_CAP) — a month of a castle's men against a pirate of her level; the ladder's own crew against her:");
 const HAMMOCKS = [0, 40, 60, 80, 110, 140, 180, 220, 300, 400, 600];
-for (let L = 2; L <= 10; L++) {
+const lads: number[] = [], towns: number[] = [];
+for (let L = 1; L <= 10; L++) {
   const M = HAMMOCKS[L];
-  const capped = month({ ...MONTH, level: L, crewMax: M }), free = month({ ...MONTH, level: L, crewMax: M, cap: 0 });
   const pir = armyForLevel(L, M, 7, 'pirate'), lad = armyForLevel(L, M, 7, 'player');
-  console.log(`  ⚓${L} (${M}): cap ×${MIGHT_CAP[L]} · town-fed ${Math.round(winRate(capped.army, pir, N / 2) * 100)}% (uncapped ${Math.round(winRate(free.army, pir, N / 2) * 100)}%) · ladder ${Math.round(winRate(lad, pir, N / 2) * 100)}% · spent ${Math.round((capped.spent / capped.earned) * 100)}% of income (uncapped ${Math.round((free.spent / free.earned) * 100)}%)`);
+  const ladder = winRate(lad, pir, N);
+  lads.push(ladder);
+  if (L === 1) {
+    console.log(`  ⚓1 (${M}): ladder ${Math.round(ladder * 100)}%`);
+    continue;
+  }
+  const capped = month({ ...MONTH, level: L, crewMax: M }), free = month({ ...MONTH, level: L, crewMax: M, cap: 0 });
+  const town = winRate(capped.army, pir, N / 2);
+  towns.push(town);
+  console.log(`  ⚓${L} (${M}): cap ×${MIGHT_CAP[L]} · town-fed ${Math.round(town * 100)}% (uncapped ${Math.round(winRate(free.army, pir, N / 2) * 100)}%) · ladder ${Math.round(ladder * 100)}% · spent ${Math.round((capped.spent / capped.earned) * 100)}% of income (uncapped ${Math.round((free.spent / free.earned) * 100)}%)`);
 }
+const avg = (a: number[]) => Math.round((a.reduce((x, y) => x + y, 0) / a.length) * 100);
+console.log(`  on average: town-fed ${avg(towns)}%, the ladder ${avg(lads)}% (${Math.round(Math.min(...lads) * 100)}–${Math.round(Math.max(...lads) * 100)}%)`);
+console.log(`  the pirates of each level: ${[3, 5, 7, 10].map((L) => `⚓${L} ${armyForLevel(L, HAMMOCKS[L], 7, 'pirate').map((x) => `${x.n} ${x.u}`).join(', ')}`).join('; ')}`);
 
 // Sanity: men against income, artifacts' worth, will.
 console.log('\nSanity — men against the hour at sea:');

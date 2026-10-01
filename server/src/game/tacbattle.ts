@@ -442,9 +442,10 @@ function rollBase(s: TacStack, rng: Rng | null): number {
 
 /** Backs to the rail (docs/17 H5): a side whose living strength on deck (hit points) is less than the other's strikes
  *  harder — by TAC_DESPERATION of the shortfall, up to TAC_DESPERATION_MAX. HoMM3's square law left a tenth fewer
- *  men a lost fight nine times in ten; with it, seven in ten. */
-export const TAC_DESPERATION = 1;
-export const TAC_DESPERATION_MAX = 0.3;
+ *  men a lost fight nine times in ten; with it, seven in ten. (After H5 the sea's pirates carry more shooters, whose
+ *  fights are steeper: twice the shortfall, to 40%, keeps the tenth fewer at seven in ten.) */
+export const TAC_DESPERATION = 2;
+export const TAC_DESPERATION_MAX = 0.4;
 
 export function desperation(bt: TacBattle, side: 0 | 1): number {
   let mine = 0, foe = 0;
