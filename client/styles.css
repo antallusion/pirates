@@ -3667,7 +3667,11 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
    the captain's plate and the right column's buttons (the card stood over the plate, the toasts climbed over both);
    two toasts at most, so the column stays under the card. */
 @media (max-height: 520px) {
-  #advcard { left: calc(var(--sa-l) + 360px); width: min(410px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); }
+  #advcard { left: calc(var(--sa-l) + 360px); width: min(410px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); min-width: 0; }
+  #advcard .ac-acts .btn { padding: 2px 6px; font-size: 11px; }
+  #advcard .ac-sub, #advcard .ac-warn { display: none; }
+  /* While the card is up, the newest toast alone, under it. */
+  body:has(#advcard:not(.hidden)) #toasts .toast:nth-child(n+2) { display: none !important; }
   #toasts { left: calc(var(--sa-l) + 360px); transform: none; width: min(360px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); }
   #toasts .toast:nth-child(n+3) { display: none !important; }
 }
@@ -3678,3 +3682,6 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
   body:not(.touch) #hud-nav { bottom: 108px; }
   #toasts .toast:nth-child(n+6) { display: none !important; }
 }
+/* docs/17 H5 (QA): the First Watch's step heads the top stack (a phone's stack scrolls; the step fell out of sight
+   under the target frame and the fishing card once the guns came in). */
+#hud-stack > #hud-watch { order: -3; }
