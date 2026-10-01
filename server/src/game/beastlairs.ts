@@ -289,13 +289,13 @@ function chainWhy(game: Game, s: PlayerSession, l: Lair): string | null {
 }
 
 /** Why she cannot land against it now (null: she can). */
-function fightWhy(game: Game, s: PlayerSession, l: Lair): string | null {
+function fightWhy(game: Game, s: PlayerSession, l: Lair, force = false): string | null {
   const ship = s.ship;
   if (!ship || ship.docked) return 'Put to sea first.';
   if (ship.boarding || ship.landing) return 'Not now';
   if (L(game).fights.has(s.accountId)) return 'Your party is ashore already.';
   if (!lairUp(game, l)) return 'They are gone';
-  if (ship.inCombat(game.now)) return 'Not while under fire';
+  if (ship.inCombat(game.now) && !force) return 'Not while under fire';
   if (!inReach(game, s, l)) return 'Come in to the shore: within the boats’ reach.';
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
   if (ship.crew < 3) return 'Too few hands to spare a landing party';
@@ -450,11 +450,11 @@ export function stepLairs(game: Game): void {
 // ------------------------------------------------------------------------------------------------ 15. the battle ashore
 
 /** The boats go ashore against a lair: the battle opens on the land field, her party against its creatures. */
-export function startFight(game: Game, s: PlayerSession, id: string): string | null {
+export function startFight(game: Game, s: PlayerSession, id: string, force = false): string | null {
   const S = L(game);
   const l = S.byId.get(id);
   if (!l) return 'Nothing here';
-  const why = fightWhy(game, s, l);
+  const why = fightWhy(game, s, l, force);
   if (why) return why;
   const ship = s.ship!;
   const base = sideOf(game, ship, ship, true);
@@ -989,16 +989,19 @@ function goTo(game: Game, s: PlayerSession, l: Lair): void {
   const ship = s.ship!;
   if (l.island >= 0) {
     const is = game.world.islands[l.island];
-    // Out from the island's middle through the lair, to the first open water past the shore.
-    let ax = l.x - is.x, ay = l.y - is.y;
-    const al = Math.hypot(ax, ay) || 1;
-    [ax, ay] = al > 1 ? [ax / al, ay / al] : [0, -1];
-    let x = l.x, y = l.y;
-    for (let d = 0; d < is.radius * 2 + 800; d += 10) {
-      x = l.x + ax * d;
-      y = l.y + ay * d;
-      if (!pointInPolygon(x, y, is.poly) && !isLand(game.world, x, y) && Math.sqrt(closestOnPolygon(x, y, is.poly).d2) >= 110) break;
+    // The nearest water off the shore from the lair, whichever way it lies (a grotto lies deep inland).
+    let best: [number, number] | null = null, bd = Infinity;
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * Math.PI * 2, ax = Math.sin(a), ay = -Math.cos(a);
+      for (let d = 0; d < is.radius * 2 + 800 && d < bd; d += 10) {
+        const px = l.x + ax * d, py = l.y + ay * d;
+        if (!pointInPolygon(px, py, is.poly) && !isLand(game.world, px, py) && Math.sqrt(closestOnPolygon(px, py, is.poly).d2) >= 110) {
+          if (d < bd) [best, bd] = [[px, py], d];
+          break;
+        }
+      }
     }
+    const [x, y] = best ?? [l.x, l.y];
     parkNear(game, s, x, y, 1);
   } else {
     const p = lairPos(game, l);
@@ -1060,14 +1063,14 @@ export function adminLair(game: Game, s: PlayerSession, args: string[]): string 
       return `Off the ${name} on ${isl} (⚓${l.level}, ${n} creatures).`;
     }
     case 'fight': {
-      if (S.store.st[l.id]) delete S.store.st[l.id];
+      if (S.store.st[l.id]?.down !== undefined) delete S.store.st[l.id]; // down: standing again (a thinned lair stays thin)
       goTo(game, s, l);
       see();
       if (l.chain) {
         const lp = lairsOf(s.profile!);
         for (const id of [`l${l.island}s`, `l${l.island}g`].slice(0, l.chain)) lp.v[id] = week1(game);
       }
-      return startFight(game, s, l.id) ?? `Ashore: the ${name} on ${isl} (⚓${l.level}, ${n} creatures).`;
+      return startFight(game, s, l.id, true) ?? `Ashore: the ${name} on ${isl} (⚓${l.level}, ${n} creatures).`;
     }
     case 'beat': {
       lairGone(game, l);

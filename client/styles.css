@@ -3805,3 +3805,6 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 .tw-egg { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 3px; border: 1px solid rgba(232, 196, 106, 0.45); border-radius: 12px; background: rgba(20, 16, 10, 0.6); color: var(--text, #e8dcc0); font: inherit; font-size: 11.5px; cursor: pointer; }
 .tw-egg[disabled] { opacity: 0.5; cursor: default; }
 .tw-egg .ico-sm { border-radius: 50%; }
+/* docs/18 II: the reckoning with the spoils fits the stage on a phone (it scrolls rather than run off it). */
+.tb-banner.tb-result { max-height: calc(100% - 8px); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 699px), (max-height: 520px) { .tb-banner.tb-result b { font-size: 22px; } .tb-loot { margin-top: 4px; gap: 3px; } .tb-res { gap: 3px; margin-top: 4px; } .tb-landclose { margin-top: 6px; } }

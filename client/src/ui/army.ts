@@ -23,7 +23,7 @@ export const unitArt = (u: UnitId): string => UNITS[u]?.art ?? 'icon.prof_sailor
  *  (docs/18 II, BEAST_TINT). */
 export function unitIcon(u: UnitId, cls: string): string {
   const tint = BEAST_TINT[u as BeastId];
-  const html = unitIcon(u, `${cls}${UNITS[u]?.beast ? ' beast-face' : ''}${tint ? ' beast-tok' : ''}`);
+  const html = icon(unitArt(u), '', `${cls}${UNITS[u]?.beast ? ' beast-face' : ''}${tint ? ' beast-tok' : ''}`);
   return tint ? html.replace('<img ', `<img style="filter:${tint}" `) : html;
 }
 

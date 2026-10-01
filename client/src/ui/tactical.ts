@@ -18,6 +18,8 @@ import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
 import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
 import type { LairLoot } from '../../../shared/src/lairproto.ts';
+import { LAIRS } from '../../../shared/src/data/lairs.ts';
+import type { LairKind } from '../../../shared/src/data/lairs.ts';
 import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
@@ -389,7 +391,7 @@ export class TacticalPanel {
       // A face of the art (docs/18 II: a lair's creature) or a named captain's portrait.
       const face = h.face ? (h.face.includes('.') && !h.face.startsWith('portrait.') ? assetUrl(h.face) : portraitUrl(h.face.replace(/^portrait\./, ''))) ?? url : url;
       return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? h.name) : personName(h.name))}</b><small>${esc(placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
