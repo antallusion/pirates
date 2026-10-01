@@ -760,7 +760,8 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
       }
       if (s.count <= 0) continue;
     }
-    // Low morale: the stack freezes and loses its turn.
+    // Bad morale (HoMM3): the stack freezes in fear and loses its turn, 1/25 a point below nought — a crew's 0..100
+    // heart is −3 at under 10, −2 at 10–25, −1 at 26–41 (moralePoints), so a crew all but broken loses one turn in eight.
     const m = stackMorale(bt, s);
     if (m < 0 && rng.chance(-m * TAC_CHANCE_PER_POINT)) {
       push(bt, { k: 'fear', side: s.side, s: s.id });
@@ -812,16 +813,8 @@ export function checkOver(bt: TacBattle): void {
     bt.seq++;
     return;
   }
-  // A crew with no heart left strikes (the old boarding's rule: morale all but gone) — unless the dead fight for her.
-  for (const side of [0, 1] as const) {
-    const dead = alive(bt).filter((s) => s.side === side).every((s) => sp(s, 'undead'));
-    if (!dead && bt.heroes[side].morale <= 5 && bt.heroes[1 - side].morale > 5) {
-      bt.over = { winner: (1 - side) as 0 | 1, why: 'rout' };
-      bt.active = null;
-      bt.seq++;
-      return;
-    }
-  }
+  // No crew strikes of herself (docs/17, after H5): a heart all but gone is HoMM3's bad morale — her stacks freeze in
+  // fear and lose turns (nextTurn) — and striking, the ransom and falling back stay her captain's own orders.
 }
 
 /** The battle ended by a ransom paid (tactical.ts takes the silver): the side that paid keeps her ship. */

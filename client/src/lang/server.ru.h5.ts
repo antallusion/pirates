@@ -17,4 +17,7 @@ export const SERVER_RU_H5: Record<string, string> = {
   'Lie off your island to learn at its guild.': 'Чтобы учиться в гильдии, встаньте у своего острова.',
   'Your island has no guild of orders.': 'На вашем острове нет гильдии приказов.',
   'Your guild does not teach that order': 'Ваша гильдия такому приказу не учит',
+  // After H5: the season's first Grail is the whole sea's news.
+  'WORLD: {0} has found the first Grail of the season on {1}. Yours still lies where your obelisks point.': 'Вести: {0} нашёл первый Грааль сезона на острове {1}. Ваш всё ещё лежит там, куда указывают ваши обелиски.',
+  '{0} has found the first Grail of the season on {1}. Yours still lies where your obelisks point.': '{0} нашёл первый Грааль сезона на острове {1}. Ваш всё ещё лежит там, куда указывают ваши обелиски.',
 };

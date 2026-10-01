@@ -197,6 +197,9 @@ export function grailFound(game: Game, s: PlayerSession, island: Island): void {
   const first = !book || book.season !== season;
   game.db.setKv('h4:grails', { season, n: first ? 1 : book!.n + 1 });
   chronicle(game, first ? `${s.name} has found the first Grail of the season on ${island.name}.` : `${s.name} has found a Grail on ${island.name}.`);
+  // The season's first find is the whole sea's news (docs/17, after H5): every captain at sea hears it — each still
+  // hunts a Grail of her own, at her own spot.
+  if (first) for (const o of game.sessions) if (o !== s && o.profile) game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} has found the first Grail of the season on ${island.name}. Yours still lies where your obelisks point.`, kind: 'gold' });
   game.grantXp(s, Math.round(xpForLevel(p.level) * 0.5), 'Found the Grail');
   if (a.built) {
     const silver = Math.round(advHour(level) * GRAIL_TREASURE_HOURS);

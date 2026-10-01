@@ -240,7 +240,7 @@ export class TacticalPanel {
       } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: t, size: w * 0.8 });
     } else if (e.k === 'luck' || e.k === 'morale' || e.k === 'fear') {
       const c = at(hexOf(e.s));
-      if (c) this.floats.push({ text: L(e.k === 'luck' ? 'luck' : 'morale') + (e.k === 'fear' ? ' −' : ' +'), x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
+      if (c) this.floats.push({ text: e.k === 'fear' ? (e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
     } else if (e.k === 'spell') {
       const c = at(e.hex ?? hexOf(e.t));
       if (e.id === 'grenades' && c) {
@@ -383,7 +383,7 @@ export class TacticalPanel {
       case 'burn':
         return L('log.burn', { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'fear':
-        return L(e.id === 'terror' ? 'log.terror' : 'log.fear', { a: name(e.s) });
+        return L(e.id === 'terror' ? 'log.terror' : e.id === 'dread' ? 'log.dread' : 'log.fear', { a: name(e.s) });
       case 'wait':
       case 'defend':
       case 'morale':
