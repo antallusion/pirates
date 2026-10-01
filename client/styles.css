@@ -3670,8 +3670,9 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
   #advcard { left: calc(var(--sa-l) + 360px); width: min(410px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); min-width: 0; }
   #advcard .ac-acts .btn { padding: 2px 6px; font-size: 11px; }
   #advcard .ac-sub, #advcard .ac-warn { display: none; }
-  /* While the card is up, the newest toast alone, under it. */
+  /* While the card is up, the newest toast alone, just under it (a hint above the action bar leaves no room below). */
   body:has(#advcard:not(.hidden)) #toasts .toast:nth-child(n+2) { display: none !important; }
+  body:has(#advcard:not(.hidden)) #toasts { top: calc(var(--ac-bottom, 110px) + 4px); bottom: auto; }
   #toasts { left: calc(var(--sa-l) + 360px); transform: none; width: min(360px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); }
   #toasts .toast:nth-child(n+3) { display: none !important; }
 }

@@ -95,6 +95,8 @@ export class AdvCard {
   /** On a wide screen the card stands in the left column, under the ship's panel however tall it has grown (the
    *  wounded, the nerve: docs/17 H5's QA), and no lower than the screen allows. */
   place(): void {
+    // Where the card ends (a phone held sideways keeps its newest toast just under it: styles.css).
+    requestAnimationFrame(() => document.body.style.setProperty('--ac-bottom', `${Math.round(this.el.getBoundingClientRect().bottom)}px`));
     if (innerWidth < 1100 || innerHeight <= 520) {
       this.el.style.top = '';
       return;
