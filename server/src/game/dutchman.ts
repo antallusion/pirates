@@ -43,7 +43,7 @@ function ds(game: Game): DutchState {
 const SEAS: RegionId[] = ['black_coast', 'gravewater', 'whispering', 'ashen_isles', 'leviathan_reach', 'dead_mans_expanse', 'drowned_crown'];
 
 function spotNear(game: Game, rng: Rng, region: RegionId): Spot | null {
-  const isl = game.world.islands.filter((is) => is.region === region && !is.portId && is.radius > 120);
+  const isl = game.world.islands.filter((is) => is.region === region && !is.portId && !is.hidden && !is.minor && is.radius > 120);
   for (let k = 0; k < 40 && isl.length; k++) {
     const is = isl[Math.floor(rng.float() * isl.length)];
     const a = rng.float() * Math.PI * 2, r = is.radius + 700;

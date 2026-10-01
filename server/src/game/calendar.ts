@@ -4,6 +4,7 @@
 // is never touched) and the dwellings' new men are counted when next they are looked at. The admin's `/week next` moves
 // the calendar on a week without touching the world's clock, and `/week <kind>` names this week anew.
 
+import { supplyWeekly } from './isles18.ts';
 import { DAY_LENGTH_SEC } from '../../../shared/src/constants.ts';
 import { WEEKS, WEEK_DAYS, WEEK_KINDS, dayIndex, secsToDawn, weekKind, weekOfDay } from '../../../shared/src/data/week.ts';
 import type { WeekKind } from '../../../shared/src/data/week.ts';
@@ -74,6 +75,7 @@ function dawn(game: Game, day: number): void {
   minesDay(game, day);
   hallsDay(game, day);
   if (day % WEEK_DAYS === 0) {
+    supplyWeekly(game, weekOfDay(day)); // docs/18 #32: the supply routes deliver
     const cry = weekCry(game);
     for (const s of game.sessions) if (s.profile) game.sendTo(s, { t: 'toast', msg: cry, kind: 'info' });
   }

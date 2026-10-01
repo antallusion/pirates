@@ -4,6 +4,7 @@
 // captains; the lairs on the islands — a battery to silence from the sea, then a landing for the chest and the
 // prisoners; and the trail of a wanted captain for a licensed hunter.
 
+import { claimLair } from './isles18.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
 import { nemesisBonus, nemesisEscaped, nemesisRevenge, nemesisViews, stepNemesis } from './nemesis.ts';
@@ -317,6 +318,7 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   const mapped = grantMap(game, s, m, `The lair of ${np.name[0]}`);
   delete r.lairOpenUntil;
   S.dirty = true;
+  claimLair(game, s.accountId, island.id, 'pirate'); // docs/18 #32: hers to link to her island
   game.sendTo(s, { t: 'toast', msg: `The lair of ${np.name[0]} is stormed: ${chest} silver from its chest, ${prisoners} prisoners freed.`, kind: 'gold' });
   if (room > 0) game.sendTo(s, { t: 'toast', msg: 'The freed prisoners join your crew.', kind: 'good' });
   game.sendTo(s, { t: 'lairchest', view: { island: lair.name, captain: np.name[0], silver: chest, prisoners, item: kept ? { name: itemName(it), rarity: it.rarity, base: it.base } : null, map: mapped ? m.name : null } });

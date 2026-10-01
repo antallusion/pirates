@@ -248,6 +248,10 @@ export const TIDAL_NAMES: Tr[] = [
   ['Salt Tooth', 'Соляной зуб'], ['The Shifting Key', 'Блуждающий риф'], ['Crab Tables', 'Крабьи столы'], ['Moon Sand', 'Лунный песок'],
   ['The Ghost Bar', 'Призрачный бар'], ['Kelp Crown', 'Венец из ламинарий'], ['Pilgrim Shoal', 'Отмель паломников'], ['The Low Door', 'Низкая дверь'],
   ['Ashbar', 'Пепельный бар'], ['Winter Spit', 'Зимняя коса'], ['Thaw Holm', 'Оттаявший холм'], ['The Tide\'s Purse', 'Кошель прилива'],
+  // docs/18 #31: the sandbars of the low tide.
+  ['Shell Bar', 'Ракушечный бар'], ['The Long Spit', 'Долгая коса'], ['Ebbsand', 'Отливной песок'], ['Plover Bank', 'Ржанкина банка'],
+  ['The Low Cay', 'Низкий кей'], ['Sandpiper Bar', 'Куличья отмель'], ['Wrack Spit', 'Коса водорослей'], ['Mermaid Sand', 'Русалочий песок'],
+  ['The Brief Isle', 'Остров-миг'], ['Cockle Bank', 'Сердцевидная банка'], ['Tern Bar', 'Крачкин бар'], ['The Turning Sand', 'Песок на повороте'],
 ];
 /** A seasonal isle stands above the sea through one of the year's four seasons (worldgen.seasonName). */
 export const SEASON_NAMES: Tr[] = [['Thaw', 'Оттепель'], ['High Tide', 'Большая вода'], ['Ashfall', 'Пеплопад'], ['Deep Winter', 'Глухая зима']];

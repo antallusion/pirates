@@ -2,6 +2,7 @@
 // divers, wake trails, soundings, weather forecasts, the gold trail, and the edge of the map.
 // The base treasure system lives here; Phase 8 adds multi-part maps, riddles and map theft on top.
 
+import { mapReveals } from './isles18.ts';
 import { DEG, dist, headingVec } from '../../../shared/src/math.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -161,6 +162,7 @@ export function grantMap(game: Game, s: PlayerSession, m: TreasureMap, source: s
   }
   p.explore.maps.push(m);
   game.sendTo(s, { t: 'toast', msg: `${source}: a treasure map! ${m.name}. (M to see the circle)`, kind: 'gold' });
+  mapReveals(game, s, m); // docs/18 #30: a map may show a hidden island
   return true;
 }
 

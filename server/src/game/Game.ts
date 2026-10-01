@@ -210,6 +210,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
+import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
@@ -675,7 +676,7 @@ export class Game {
     }
     // A bank the ebb or the season has bared strikes like land (docs/16 #25).
     const way = ship.state.speed;
-    if (bankCollide(this, ship, probes) && way > 3.5) {
+    if ((bankCollide(this, ship, probes) || turtleCollide(this, ship, probes)) && way > 3.5) { // and a turtle island's shell (docs/18 #31)
       applyDamage(this, ship, { hull: way * way * 1.4 * (0.6 + ship.cls.tier * 0.2), sails: 2, morale: 3 }, null);
       this.toastShip(ship, 'Ran aground on a bank the tide has bared!', 'bad');
     }
@@ -907,6 +908,7 @@ export class Game {
       discoverCoves(this, s);
       havenSecond(this, s);
       islesSecond(this, s); // lighthouses, lookouts, bared banks, her caches (docs/16 #22–25)
+      isle18Second(this, s); // the zones, the turtle islands, the supply routes (docs/18 III)
       stepExplorer(this, s);
       stepMind(this, s.ship);
       stepCrewLife(this, s); // officers speak, the men's mood, practice, the wounded (docs/16 #16–19)
@@ -984,6 +986,9 @@ export class Game {
       // A mine ashore (docs/17 H3): the flag goes up before the boats row for anything else on its island.
       const flag = s.ship.docked || s.ship.landing ? null : mineLandable(this, s);
       if (flag && (!s.landable || (land && s.landable.island === land.island.name && !s.landable.action))) s.landable = flag;
+      // docs/18 #28, #31: an island's level against hers on the prompt; a turtle island's back when nothing else calls.
+      if (land && s.landable && s.landable.island === land.island.name && !s.landable.action) s.landable = { ...s.landable, ...landDanger(this, s, land.island) };
+      if (!s.landable && !s.ship.docked && !s.ship.landing) s.landable = turtlePrompt(this, s);
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
       if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });
@@ -1396,7 +1401,7 @@ export class Game {
   nearestIslandName(x: number, y: number): string {
     let best: Island | null = null, bd = Infinity;
     for (const is of this.world.islands) {
-      if (is.minor) continue; // named after a proper island, not a sea stack (docs/16 P3)
+      if (is.minor || is.hidden) continue; // named after a proper island, not a sea stack (docs/16 P3) nor a hidden one (docs/18 #30)
       const d = dist(is.x, is.y, x, y);
       if (d < bd) {
         bd = d;
@@ -2356,7 +2361,7 @@ export class Game {
         for (const id of list) {
           if (s.discovered.has(id)) continue;
           const is = this.world.islands[id];
-          if (is.minor) continue; // a sea stack is seen, not charted (docs/16 P3)
+          if (is.minor || is.hidden) continue; // a sea stack is seen, not charted (docs/16 P3); a hidden island not by sight (docs/18 #30)
           if (dist(is.x, is.y, ship.state.x, ship.state.y) > r + is.radius * 0.6) continue;
           this.markDiscovered(s, is);
         }
@@ -2372,6 +2377,7 @@ export class Game {
     s.profile!.discovered.push(is.id);
     this.sendIslands(s, [is.id]);
     this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region, quiet: true }] });
+    if (is.hidden) onHiddenCharted(this, s, is); // docs/18 #30
   }
 
   markDiscovered(s: PlayerSession, is: Island): void {
@@ -2397,7 +2403,7 @@ export class Game {
     if (!s) return 0;
     let n = 0;
     for (const is of this.world.islands) {
-      if (s.discovered.has(is.id) || is.minor) continue;
+      if (s.discovered.has(is.id) || is.minor || is.hidden) continue;
       if (dist(is.x, is.y, ship.state.x, ship.state.y) > r) continue;
       this.markDiscovered(s, is);
       n++;
@@ -2424,21 +2430,21 @@ export class Game {
           const m = this.world.marks[id];
           return { id: m.id, kind: m.kind, x: Math.round(m.x), y: Math.round(m.y), r: Math.round(m.r), rot: Math.round(m.rot * 100) / 100, seed: m.seed };
         });
-        this.sendTo(s, { t: 'chunk', key: k, islands: list.map((id) => this.islandData(this.world.islands[id])), reefs, ...(marks.length ? { marks } : {}) });
+        this.sendTo(s, { t: 'chunk', key: k, islands: list.map((id) => islandFor(this, s, this.world.islands[id])), reefs, ...(marks.length ? { marks } : {}) });
       }
     }
   }
 
   private sendIslands(s: PlayerSession, ids: number[]): void {
     if (!ids.length) return;
-    this.sendTo(s, { t: 'chunk', key: -1, islands: ids.map((id) => this.islandData(this.world.islands[id])) });
+    this.sendTo(s, { t: 'chunk', key: -1, islands: ids.map((id) => islandFor(this, s, this.world.islands[id])) });
   }
 
   private islandCache = new Map<number, IslandData>();
   islandData(is: Island): IslandData {
     let d = this.islandCache.get(is.id);
     if (!d) {
-      d = { id: is.id, name: is.name, region: is.region, biome: is.biome, x: Math.round(is.x), y: Math.round(is.y), r: Math.round(is.radius), poly: is.poly.map((v) => Math.round(v)), features: is.features, portId: is.portId, ...(is.minor ? { minor: true } : {}), ...(is.raft ? { raft: true } : {}) };
+      d = { id: is.id, name: is.name, region: is.region, biome: is.biome, x: Math.round(is.x), y: Math.round(is.y), r: Math.round(is.radius), poly: is.poly.map((v) => Math.round(v)), features: is.features, portId: is.portId, ...(is.minor ? { minor: true } : {}), ...(is.raft ? { raft: true } : {}), ...isleExtras(this, is) };
       this.islandCache.set(is.id, d);
     }
     return d;
@@ -2607,6 +2613,7 @@ export class Game {
 
     if (msg.t === 'h3') return h3Message(this, s, msg); // docs/17 H3
     if (msg.t === 'h4') return h4Message(this, s, msg); // docs/17 H4
+    if (msg.t === 'isle18') return isle18Message(this, s, msg); // docs/18 #32
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);

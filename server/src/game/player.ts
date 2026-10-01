@@ -232,6 +232,8 @@ export interface Profile {
   /** Batch E of docs/16: the lookouts she has climbed (island → world time) and the banks the tide raised that she
    *  has combed (bank → which rise). */
   isles?: { lookouts: Record<string, number>; tides: Record<string, number> };
+  /** docs/18 #31: the turtle islands whose backs she has combed (turtle → which rise). */
+  isle18?: { turtles: Record<string, number> };
   /** The wonders of the sea she has found (docs/12 P10 #8). */
   wonders?: string[];
   /** Her ship's look and the parts of it she has opened (docs/12 P10 #12). */
@@ -374,7 +376,7 @@ export class PlayerSession {
   disconnectedAt: number | null = null;
   lingerUntil = 0;
   lastRegion = '';
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper'; blocked?: string } | null = null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper'; blocked?: string; /** docs/18 #28 */ lv?: number; danger?: 'warn' | 'deadly' } | null = null;
   siteViews: ResourceSiteView[] = [];
 
   constructor(conn: GameConn) {

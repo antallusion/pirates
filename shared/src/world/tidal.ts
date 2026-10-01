@@ -31,6 +31,9 @@ export interface TidalIsle {
 /** How many banks, and how far apart at least. */
 export const TIDAL_COUNT = 20;
 const TIDAL_SPACING = 7000;
+/** docs/18 #31: the sandbars of the low tide that follow them. */
+export const SANDBAR_COUNT = 12;
+const SANDBAR_SPACING = 4500;
 /** The season some seas' banks keep (the ice of Leviathan Reach in Deep Winter, the ash banks in Ashfall). */
 const SEASON_OF: Partial<Record<RegionId, number>> = { leviathan_reach: 3, ashen_isles: 2, whispering: 1, drowned_crown: 1 };
 
@@ -58,6 +61,27 @@ export function tidalIsles(world: World): TidalIsle[] {
     list.push({
       id: n, reef: rf.id, kind: seasonal ? 'season' : 'tide', season: SEASON_OF[rf.region] ?? rng.int(0, 3), phase: (regionIndex.get(rf.region)! * 0.137) % 1,
       name: n % TIDAL_NAMES.length, region: rf.region, x: Math.round(rf.x), y: Math.round(rf.y), r: Math.round(rf.radius * 0.72), poly,
+    });
+  }
+  // docs/18 #31: a dozen more sandbars bared at every low tide, from their own generator after the banks above (whose
+  // ids and places stay as they were), each as far from any bank as the sea allows.
+  const rng2 = new Rng((world.seed * 617 + 0x5a4d) >>> 0);
+  const rest = pool.filter((rf) => !list.some((t) => t.reef === rf.id));
+  for (let i = rest.length - 1; i > 0; i--) {
+    const j = Math.floor(rng2.float() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  const firstCount = list.length;
+  for (const rf of rest) {
+    if (list.length >= firstCount + SANDBAR_COUNT) break;
+    if (list.some((t) => Math.hypot(t.x - rf.x, t.y - rf.y) < SANDBAR_SPACING)) continue;
+    if (!regionIndex.has(rf.region)) regionIndex.set(rf.region, regionIndex.size);
+    const n = list.length;
+    const poly: number[] = [];
+    for (let k = 0; k < rf.poly.length; k += 2) poly.push(Math.round(rf.x + (rf.poly[k] - rf.x) * 0.72), Math.round(rf.y + (rf.poly[k + 1] - rf.y) * 0.72));
+    list.push({
+      id: n, reef: rf.id, kind: 'tide', season: 0, phase: ((regionIndex.get(rf.region)! * 0.137) + 0.5) % 1,
+      name: TIDAL_COUNT + ((n - firstCount) % (TIDAL_NAMES.length - TIDAL_COUNT)), region: rf.region, x: Math.round(rf.x), y: Math.round(rf.y), r: Math.round(rf.radius * 0.72), poly,
     });
   }
   cache.set(world, list);

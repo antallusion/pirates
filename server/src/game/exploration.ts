@@ -26,6 +26,8 @@ import { landingMinigame, openMinigame } from './minigames.ts';
 import { startTrek, trekBusy } from './trek.ts';
 import { bankHere, bankName, bankUp, climbLookout, combBank, lookoutReady } from './isles.ts';
 import { tidalIsles } from '../../../shared/src/world/tidal.ts';
+import { turtles } from '../../../shared/src/world/drift.ts';
+import { combTurtle, hiddenCache, turtleHere, turtleName, turtleUpNow, warnLanding } from './isles18.ts';
 import { hearsayCacheBonus } from './hearsay.ts';
 import { onShrine, onSpring } from './hero.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
@@ -74,7 +76,7 @@ export const TIDAL_LANDING_SEC = 18;
 
 export interface Landing {
   islandId: number;
-  feature: LandableFeature | 'haul' | 'dig' | 'dive' | 'tidal' | 'flag';
+  feature: LandableFeature | 'haul' | 'dig' | 'dive' | 'tidal' | 'flag' | 'turtle';
   siteId?: string;
   mapId?: string;
   wreckId?: number;
@@ -96,6 +98,7 @@ export function findLandable(game: Game, s: PlayerSession): { island: Island; fe
   for (const id of islandsNear(game.world, ship.state.x, ship.state.y)) {
     const is = game.world.islands[id];
     if (dist(is.x, is.y, ship.state.x, ship.state.y) > is.radius + LAND_RANGE) continue;
+    if (is.hidden && !s.discovered.has(is.id)) continue; // a hidden island in her mist (docs/18 #30)
     const d = Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2);
     if (d > LAND_RANGE || d >= bd) continue;
     // The island's features first, then her people and beasts.
@@ -176,6 +179,15 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
     game.toastShip(ship, `Boats away: ${party} hands row for ${bankName(bank)} while the sea is out (${TIDAL_LANDING_SEC}s).`, 'info');
     return null;
   }
+  // A turtle island basking (docs/18 #31).
+  const turtle = turtleHere(game, s);
+  if (turtle) {
+    const party = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
+    ship.landing = { islandId: 0, feature: 'turtle', siteId: String(turtle.id), until: game.now + TIDAL_LANDING_SEC, started: game.now, party };
+    ship.input = { rudder: 0, sailTarget: 0 };
+    game.toastShip(ship, `Boats away: ${party} hands row for the back of ${turtleName(turtle)} while she basks (${TIDAL_LANDING_SEC}s).`, 'info');
+    return null;
+  }
   // A mine ashore (docs/17 H3): the flag first.
   const flag = startFlag(game, s);
   if (flag !== undefined) return flag;
@@ -186,6 +198,7 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   const dur = DURATION[target.feature];
   ship.landing = { islandId: target.island.id, feature: target.feature, until: game.now + dur, started: game.now, party };
   ship.input = { rudder: 0, sailTarget: 0 };
+  warnLanding(game, s, target.island); // docs/18 #28: an island above her level
   game.toastShip(ship, `Boats away: ${party} hands row for the ${featureName(target.island, target.feature)} on ${target.island.name} (${dur}s). The ship lies at anchor.`, 'info');
   return null;
 }
@@ -208,6 +221,13 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
     combBank(game, s, bank, 0);
     return;
   }
+  // A turtle island that sounds before the party is done (docs/18 #31).
+  const turtle = l.feature === 'turtle' ? turtles(game.world)[Number(l.siteId)] : undefined;
+  if (turtle && !turtleUpNow(game, turtle)) {
+    ship.landing = null;
+    combTurtle(game, s, turtle, 0);
+    return;
+  }
   if (!recalled && game.now < l.until) return;
   ship.landing = null;
   const island = game.world.islands[l.islandId];
@@ -228,6 +248,10 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
   }
   if (l.feature === 'tidal') {
     if (bank) combBank(game, s, bank, recalled ? 0.5 : 1);
+    return;
+  }
+  if (l.feature === 'turtle') {
+    if (turtle) combTurtle(game, s, turtle, recalled ? 0.5 : 1);
     return;
   }
   if (l.feature === 'flag') return flagLanded(game, s, ship, l, recalled);
@@ -436,6 +460,13 @@ export function resolveLanding(game: Game, s: PlayerSession, ship: ShipEntity, i
       }
       xp = 60 + strange * 150;
       break;
+  }
+  // A hidden island's cache (docs/18 #30): richer, pearls with it, now and then a piece of gear a tier up.
+  if (feature === 'cache' && island.hidden) {
+    const h = hiddenCache(game, s, island, share);
+    silver = Math.round(silver * h.silverMul);
+    got.push(...h.got);
+    xp = Math.round(xp * 1.5);
   }
   silver = Math.round(silver * share);
   if (silver) {

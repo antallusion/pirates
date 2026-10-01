@@ -48,7 +48,7 @@ export function activeTasks(game: Game): WorldTask[] {
 
 /** A nest by an island in open water, clear of ports: none in the Abyss. */
 function placeTask(game: Game, kind: TaskKind): WorldTask | null {
-  const islands = game.world.islands.filter((is) => is.region !== 'the_abyss' && !is.minor);
+  const islands = game.world.islands.filter((is) => is.region !== 'the_abyss' && !is.minor && !is.hidden);
   for (let k = 0; k < 40; k++) {
     const is = islands[Math.floor(game.rng.float() * islands.length)];
     if (!is) return null;

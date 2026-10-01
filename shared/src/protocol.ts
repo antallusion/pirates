@@ -47,6 +47,8 @@ import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
 import type { H3ClientMsg, H3ServerMsg, TownView } from './h3proto.ts';
 import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
+import type { IsleClientMsg, IsleServerMsg } from './isleproto.ts';
+import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
 import type { TaskView } from './data/worldtasks.ts';
@@ -296,6 +298,8 @@ export type ClientMsg =
   | H3ClientMsg
   /** docs/17 H4: the adventure map's visits, the guards' offers, the Grail. */
   | H4ClientMsg
+  /** docs/18 #32: the supply routes. */
+  | IsleClientMsg
   | { t: 'mail'; action: 'list' }
   | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
   | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
@@ -371,6 +375,14 @@ export interface IslandData {
   minor?: boolean;
   /** A floating town's moored hulks (docs/16 P3). */
   raft?: boolean;
+  /** docs/18 III: her level ⚓1–10 (her square's), her kind, and what step 6 made her (a small island, an atoll, a ridge). */
+  lv?: number;
+  ty?: IsleType;
+  isle?: 'small' | 'atoll' | 'ridge';
+  /** docs/18 #30: a hidden island not yet shown to this captain — a bank of mist, no name, no coast. */
+  mist?: boolean;
+  /** docs/18 #30: a hidden island this captain has found (a lookout, a map, an obelisk). */
+  secret?: boolean;
 }
 
 /** A mark of the dense sea that is not land (docs/16 P3). */
@@ -668,7 +680,7 @@ export interface PrivateState {
   sites: ResourceSiteView[]; // extraction rights you hold
   warehouses: Record<string, Cargo>;
   /** Island feature within reach of the boats, if any. */
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper'; blocked?: string } | null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper'; blocked?: string; /** docs/18 #28 */ lv?: number; danger?: 'warn' | 'deadly' } | null;
   /** Landing party ashore. */
   landing: { island: string; feature: string; until: number; started: number } | null;
   discoveredCount: number;
@@ -1520,6 +1532,8 @@ export type ServerMsg =
   | H3ServerMsg
   /** docs/17 H4: the adventure map, its card, the Grail's puzzle. */
   | H4ServerMsg
+  /** docs/18 III: the zones of one level, the turtle islands, the supply routes. */
+  | IsleServerMsg
   | { t: 'pong'; c: number; s: number };
 
 // ------------------------------------------------------------------ groups, barter, letters, the market

@@ -258,7 +258,8 @@ test('cartography: charts sell once per port, bought charts reveal islands witho
   const s = [...game.sessions][0];
   const p = s.profile!;
   // Chart five nearby islands by sailing past (simulated discovery).
-  const known = game.world.islands.filter((is) => !is.portId && is.region === 'black_coast').slice(0, 5);
+  // (Five she has not had from the tavern's whisper on arrival: that one is a bought chart's, not hers to sell.)
+  const known = game.world.islands.filter((is) => !is.portId && is.region === 'black_coast' && !s.discovered.has(is.id)).slice(0, 5);
   for (const is of known) s.discovered.add(is.id);
   game.pushPort(s);
   const view = c.last('port')!.view!;

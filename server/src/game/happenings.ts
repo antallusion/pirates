@@ -49,7 +49,7 @@ function active(game: Game, kind: WorldEvent['kind']): WorldEvent | undefined {
 
 /** An island of the region, not a port's, with open water round it. */
 function wildIsland(game: Game, region: RegionId): Island | null {
-  const pool = game.world.islands.filter((is) => is.region === region && !game.world.ports.some((p) => p.islandId === is.id) && is.radius > 150);
+  const pool = game.world.islands.filter((is) => is.region === region && !is.hidden && !is.minor && !game.world.ports.some((p) => p.islandId === is.id) && is.radius > 150);
   return pool.length ? game.worldEvents.rng.pick(pool) : null;
 }
 

@@ -15,6 +15,7 @@
 //
 // Nothing here draws on the sea's rng: what varies is hashed from the thing and the week.
 
+import { obeliskReveals } from './isles18.ts';
 import { ALTAR_POINTS, altarPrim, GUARDS, openWater, GUARD_RESPAWN_SEC, JOIN_RATIO, JOIN_SHARE, MILL_DAYS, MILL_GOODS, OBJS, STORE_DAYS, TOWER_R, WELL_MORALE, WELL_SANITY, altarXp, buildAdv, chestPay, guardArmy, guardPay, millLoad } from '../../../shared/src/data/advmap.ts';
 import type { AdvGuard, AdvMap, AdvObj, ObjKind } from '../../../shared/src/data/advmap.ts';
 import { UNITS, armyMen, armyPower } from '../../../shared/src/data/army.ts';
@@ -639,6 +640,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
       const pieces = piecesOf(game, p);
       if (!pieces.includes(o.id)) pieces.push(o.id);
       line = readObelisk(game, s, o);
+      obeliskReveals(game, s, o.x, o.y); // docs/18 #30: the stone shows a hidden island near
       break;
     }
   }

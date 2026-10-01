@@ -293,8 +293,9 @@ test('a lookout on a headland: climbed first, it charts the islands, reefs and w
 
 test('banks the tide raises: twenty on the dense sea\'s reefs, apart; a tide bank stands a third of each tide, a season bank its season', () => {
   const { game } = makeGame();
-  const banks = tidalIsles(game.world);
-  assert.equal(banks.length, 20);
+  // The twenty of docs/16 #25 first; docs/18 #31's sandbars of the low tide follow them (tests/islands18.test.ts).
+  const banks = tidalIsles(game.world).slice(0, 20);
+  assert.equal(tidalIsles(game.world).length, 32);
   for (const b of banks) {
     const rf = game.world.reefs[b.reef];
     assert.ok(rf.id >= game.world.reefsFrom && rf.region !== 'the_abyss', 'on a dense-sea reef');
