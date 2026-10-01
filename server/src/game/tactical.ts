@@ -19,7 +19,8 @@ import { ladderBetween } from './ladder.ts';
 import { officerFactor, onFightWon, woundOfficer } from './crew.ts';
 import { onCrewKilled } from './mind.ts';
 import { bloodAndSalt, drownedTakeLosses } from './bridgefx.ts';
-import { afterBattle, heroInput, maybeArtifact } from './hero.ts';
+import { afterBattle, heroFace, heroInput, maybeArtifact } from './hero.ts';
+import { npcPathOf } from './pathbook.ts';
 import { act, endByRansom, killedHp, lossesOf, newBattle, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 
@@ -97,7 +98,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
   const count = (f: (x: TacArmyEntry) => boolean) => army.filter(f).reduce((n, x) => n + x.n, 0);
   const deck = deckState(ship);
   return {
-    name: s?.name ?? ship.captainName, ship: ship.name, captain: ship.captain ?? null,
+    name: s?.name ?? ship.captainName, ship: ship.name, captain: (s ? null : npcPathOf(ship)) ?? ship.captain ?? null,
     hands: count((x) => UNITS[x.u].tier === 1), marines: count((x) => kindOfUnit(x.u) === 'marines'), gunners: count((x) => hasSpecial(x.u, 'shooter')),
     army, officers, skill, morale: ship.morale,
     dealt: ladderBetween(game, ship, enemy).dealt || 0.1,
@@ -114,6 +115,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
     gunsOut: deck.gunsOut,
     fire: deck.fire,
     hero: heroInput(game, ship), // docs/17 H2
+    ...(heroFace(game, ship) ? { face: heroFace(game, ship) } : {}), // docs/18 item 8: a named captain's own face
   };
 }
 
@@ -219,7 +221,7 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
     // The heroes' will spent, First Aid's patched-up men, a guarded ship's artifact (docs/17 H2).
     for (const side of [0, 1] as const) {
       const ship = side ? b : a;
-      afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side), bt.heroes[side].input.hero?.raise ?? 0);
+      afterBattle(game, ship, bt.heroes[side].mana, lossesOf(bt, side), bt.heroes[side].input.hero?.raise ?? 0, bt.heroes[side].stam, bt.heroes[side].scrollsUsed);
     }
     {
       const w = bt.over.winner === 0 ? a : b, l = w === a ? b : a;

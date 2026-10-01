@@ -14,6 +14,7 @@ import { hashString, Rng } from '../../../shared/src/rng.ts';
 import { advHooks } from './advmap.ts';
 import { thisWeek } from './calendar.ts';
 import { applyHero, artifactFind, fillWill, heroOf, maybeArtifact } from './hero.ts';
+import { maybeScroll } from './pathbook.ts';
 
 /** The artifact a chest on the map holds for her this week (null: none). */
 export function chestArtifact(week: number, account: number, chestId: string, guarded: boolean): string | null {
@@ -54,6 +55,7 @@ export function installHeroHooks(): void {
   };
   advHooks.guardChest = (game, s, g) => {
     maybeArtifact(game, s, 'guard', GUARD_ART[g.size]);
+    maybeScroll(game, s, 'guard'); // docs/18 item 10
     return null;
   };
 }

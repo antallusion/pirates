@@ -7,6 +7,8 @@ import type { CaptainId } from './captains.ts';
 import type { OfficerRole } from './crew.ts';
 import { UNITS } from './army.ts';
 import type { UnitId } from './army.ts';
+import { PATH_PAGES, PATH_PAGE_IDS } from './paths.ts';
+import type { PathPageId } from './paths.ts';
 
 /** The field: 11 columns by 9 rows of hexes, odd rows pushed half a hex to the right and one hex shorter ('#'). */
 export const TAC_W = 11;
@@ -73,13 +75,15 @@ export type TacSpellId = 'grenades' | 'point_blank' | 'smoke_and_knives' | 'red_
   /** The order book's common pages (docs/17 H1), after the captains' own abilities at sea. */
   | 'mark_target' | 'double_shot' | 'war_cry' | 'brine_mend'
   /** The order book's further pages (docs/17 H2, shared/src/data/hero.ts): learnt at guilds and shrines. */
-  | 'musket_storm' | 'powder_keg' | 'following_wind' | 'head_wind' | 'tide_returns' | 'maelstrom' | 'shield_wall' | 'fury' | 'dread';
+  | 'musket_storm' | 'powder_keg' | 'following_wind' | 'head_wind' | 'tide_returns' | 'maelstrom' | 'shield_wall' | 'fury' | 'dread'
+  /** The path books (docs/18 item 3, shared/src/data/paths.ts). */
+  | PathPageId;
 export interface TacSpellDef {
   id: TacSpellId;
   /** Rounds before it may be given again. */
   cd: number;
-  /** 'enemy': the captain points at a foe's stack; 'none': the order is for the whole deck. */
-  target: 'enemy' | 'none';
+  /** 'enemy': the captain points at a foe's stack; 'own': at one of her own (docs/18); 'none': the whole deck. */
+  target: 'enemy' | 'own' | 'none';
   icon: string;
 }
 export const TAC_SPELLS: Record<TacSpellId, TacSpellDef> = {
@@ -103,6 +107,7 @@ export const TAC_SPELLS: Record<TacSpellId, TacSpellDef> = {
   shield_wall: { id: 'shield_wall', cd: 3, target: 'none', icon: 'icon.ab_smoke_pots' },
   fury: { id: 'fury', cd: 4, target: 'none', icon: 'icon.ab_red_hook_boarding' },
   dread: { id: 'dread', cd: 5, target: 'none', icon: 'icon.ab_deep_call' },
+  ...(Object.fromEntries(PATH_PAGE_IDS.map((id) => [id, { id, cd: PATH_PAGES[id].cd, target: PATH_PAGES[id].fx.target, icon: `icon.${PATH_PAGES[id].icon}` }])) as Record<PathPageId, TacSpellDef>),
 };
 /** Each captain's own order (the Boarding 2.0 captain's move, docs/11 P1) beside the grenades everyone has. */
 export const TAC_SIGNATURE: Record<CaptainId, TacSpellId> = {
@@ -123,12 +128,16 @@ export function captainSpells(captain: CaptainId | null): TacSpellId[] {
   return captain ? [...TAC_BOOK[captain]] : ['grenades'];
 }
 
-/** An officer's party acts on the officer's word once a fight (instead of striking): what each post gives. */
-export type TacOrderId = 'rally' | 'all_hands' | 'lay_true' | 'steady';
+/** An officer's party acts on the officer's word once a fight (instead of striking): what each post gives. Each post
+ *  its own small ability (docs/18 item 7): the boatswain's stack braces (steady, a third less taken), the master
+ *  gunner calls a volley from every musket that can see, the alchemist binds wounds, the sailmaker hangs wet canvas
+ *  against her shot, the harpooner pins her worst stack. */
+export type TacOrderId = 'rally' | 'all_hands' | 'lay_true' | 'steady' | 'brace' | 'volley' | 'bandage' | 'canvas' | 'harpoon';
 export const TAC_ORDER_OF: Record<OfficerRole, TacOrderId> = {
-  lieutenant: 'rally', boatswain: 'all_hands', quartermaster: 'steady', master_gunner: 'lay_true', pilot: 'all_hands',
-  alchemist: 'lay_true', deep_pastor: 'rally', sailmaker: 'steady', harpooner: 'lay_true',
+  lieutenant: 'rally', boatswain: 'brace', quartermaster: 'steady', master_gunner: 'volley', pilot: 'all_hands',
+  alchemist: 'bandage', deep_pastor: 'rally', sailmaker: 'canvas', harpooner: 'harpoon',
 };
+export const TAC_ORDER_IDS: TacOrderId[] = ['rally', 'all_hands', 'lay_true', 'steady', 'brace', 'volley', 'bandage', 'canvas', 'harpoon'];
 
 // ------------------------------------------------------------------ hexes
 

@@ -28,6 +28,11 @@ import type { TreeId } from './talents.ts';
 import { TAC_BOOK } from './tactical.ts';
 import type { TacSpellId } from './tactical.ts';
 import { Rng } from '../rng.ts';
+import {
+  FOREIGN_COST, HOME_COST, HOME_MUL, PATH_PAGES, PATH_PAGE_IDS, PATH_SCHOOL, SCHOOL_KIND, STAM_ROUND, ULT_LEVEL, isPathPage, pathPagesAt, pathPatterns, stamMaxOf, talentBook,
+} from './paths.ts';
+import type { PathPageId, School } from './paths.ts';
+export type { School } from './paths.ts';
 
 // ------------------------------------------------------------------ 6. primary skills
 
@@ -262,14 +267,25 @@ export function skillOffer(skills: readonly SkillSlot[], favoured: readonly Tree
 
 // ------------------------------------------------------------------ 8. the order book
 
-export type School = 'fire' | 'wind' | 'water' | 'steel';
-export const SCHOOLS: School[] = ['fire', 'wind', 'water', 'steel'];
+/** The six schools (docs/18 item 2): H2's four, and the hook and the boarding, fog and shadow, which the paths
+ *  bring. Fire, steel and the hook are physical (Stamina); wind, water and fog magical (Will). */
+export const SCHOOLS: School[] = ['fire', 'steel', 'board', 'wind', 'water', 'fog'];
+/** H2's four, which the guilds' common orders are in. */
+export const COMMON_SCHOOLS: School[] = ['fire', 'wind', 'water', 'steel'];
 export const SCHOOL_NAMES: Record<School, [string, string]> = {
   fire: ['Fire and powder', 'Огонь и порох'], wind: ['Wind', 'Ветер'], water: ['Water and the deep', 'Вода и глубина'], steel: ['Steel and men', 'Сталь и люди'],
+  board: ['The hook and the boarding', 'Крюк и абордаж'], fog: ['Fog and shadow', 'Туман и тень'],
 };
-export const SCHOOL_ICON: Record<School, string> = { fire: 'bt_grenades', wind: 'ab_storm_chaser', water: 'ab_undertow', steel: 'bt_charge' };
+export const SCHOOL_ICON: Record<School, string> = { fire: 'bt_grenades', wind: 'ab_storm_chaser', water: 'ab_undertow', steel: 'bt_charge', board: 'ab_red_hook_boarding', fog: 'ab_vanish_into_fog' };
 /** Each school's kin skill: it raises the school's orders and eases their cost. */
-export const SCHOOL_SKILL: Record<School, SkillId> = { fire: 'artillery', wind: 'navigation', water: 'first_aid', steel: 'leadership' };
+export const SCHOOL_SKILL: Record<School, SkillId> = { fire: 'artillery', wind: 'navigation', water: 'first_aid', steel: 'leadership', board: 'boarding', fog: 'scouting' };
+/** What an order spends (docs/18 item 4): the path books' physical moves Stamina, their magical ones and every
+ *  common order of docs/17 Will (as before). */
+export type OrderRes = 'stam' | 'will';
+export function orderRes(id: string): OrderRes {
+  const d = ORDERS[id as OrderId];
+  return d?.path && SCHOOL_KIND[d.school] === 'phys' ? 'stam' : 'will';
+}
 
 export type SeaOrderId = 'fair_wind' | 'fog_bank' | 'becalm' | 'gale' | 'mend_hull' | 'deep_sight';
 export type OrderId = TacSpellId | SeaOrderId;
@@ -289,6 +305,8 @@ export interface OrderDef {
   text: [string, string];
   /** A captain's own page (her path's move): always in her book, never taught. */
   sig?: CaptainId;
+  /** A page of a path book (docs/18 item 3): open to her path by her level; to another's at a guild, dearer. */
+  path?: CaptainId;
 }
 
 const O = (id: OrderId, school: School, level: OrderDef['level'], use: OrderDef['use'], cost: number, icon: string, name: [string, string], text: [string, string], rest: Partial<OrderDef> = {}): OrderDef => ({ id, school, level, use, cost, icon, name, text, ...rest });
@@ -320,16 +338,21 @@ export const ORDERS: Record<OrderId, OrderDef> = Object.fromEntries([
   O('dread', 'steel', 4, 'battle', 12, 'ab_deep_call', ['Dread', 'Ужас'], ['Two rounds: her morale −2, and a fifth of her turns lost to fear.', 'Два раунда: её дух −2, а пятая часть её ходов теряется от страха.']),
   // The captains' own pages (their paths' moves, docs/11 P1).
   O('point_blank', 'fire', 3, 'battle', 6, 'bt_volley', ['Point-blank volley', 'Залп в упор'], ['Pistols at arm\'s length: a heavy blow on one stack, no answer.', 'Пистолеты в упор: тяжёлый удар по одному отряду, без ответа.'], { sig: 'corsair' }),
-  O('smoke_and_knives', 'wind', 3, 'battle', 6, 'bt_hold', ['Smoke and knives', 'Дым и ножи'], ['Smoke on her deck: her blows at half this round.', 'Дым на её палубе: её удары вдвое слабее в этом раунде.'], { sig: 'smuggler' }),
-  O('red_harvest', 'steel', 3, 'battle', 6, 'bt_charge', ['Red harvest', 'Кровавая жатва'], ['Your blows +25% for two rounds; her morale −1.', 'Ваши удары +25% на два раунда; её боевой дух −1.'], { sig: 'reaver' }),
+  O('smoke_and_knives', 'fog', 3, 'battle', 6, 'bt_hold', ['Smoke and knives', 'Дым и ножи'], ['Smoke on her deck: her blows at half this round.', 'Дым на её палубе: её удары вдвое слабее в этом раунде.'], { sig: 'smuggler' }),
+  O('red_harvest', 'board', 3, 'battle', 6, 'bt_charge', ['Blood frenzy', 'Кровавый угар'], ['Your blows +25% for two rounds; her morale −1.', 'Ваши удары +25% на два раунда; её боевой дух −1.'], { sig: 'reaver' }),
   O('turn_the_flank', 'wind', 3, 'battle', 6, 'bt_officers', ['Turn the flank', 'Обход с фланга'], ['Two rounds: your men faster, first to act, every blow a flank.', 'Два раунда: ваши люди быстрее, ходят первыми, каждый удар — с фланга.'], { sig: 'navigator' }),
   O('call_of_the_deep', 'water', 3, 'battle', 6, 'bt_colours', ['Call of the deep', 'Зов бездны'], ['The drowned drag a twelfth of every stack of hers under; her morale −1.', 'Утопленники утаскивают двенадцатую часть каждого её отряда; её дух −1.'], { sig: 'drowned' }),
   O('iron_discipline', 'steel', 3, 'battle', 6, 'bt_captain', ['Iron discipline', 'Железная дисциплина'], ['Two rounds: your stacks stand firm and strike harder; morale +1.', 'Два раунда: ваши отряды стоят крепче и бьют сильнее; дух +1.'], { sig: 'admiral' }),
+  // The path books (docs/18 item 3): six pages a path, levels 1–5.
+  ...PATH_PAGE_IDS.map((id) => {
+    const pg = PATH_PAGES[id];
+    return O(id, pg.school, pg.level, 'battle', pg.cost, pg.icon, pg.name, pg.text, { path: pg.path });
+  }),
 ].map((o) => [o.id, o])) as Record<OrderId, OrderDef>;
 
 export const ORDER_IDS = Object.keys(ORDERS) as OrderId[];
 /** The orders a guild or a shrine can teach (the captains' own pages are not taught). */
-export const LEARNABLE: OrderId[] = ORDER_IDS.filter((id) => !ORDERS[id].sig);
+export const LEARNABLE: OrderId[] = ORDER_IDS.filter((id) => !ORDERS[id].sig && !ORDERS[id].path);
 export const isOrder = (id: string): id is OrderId => id in ORDERS;
 
 /** The book a captain starts with: her H1 book (her own move, the grenades and two pages after her abilities). */
@@ -365,7 +388,7 @@ export function guildOf(portId: string, size: number): OrderId[] | null {
   const pool = LEARNABLE.filter((id) => ORDERS[id].level <= top);
   const out: OrderId[] = [];
   // One of each school first, then the rest.
-  for (const sc of SCHOOLS) {
+  for (const sc of COMMON_SCHOOLS) {
     const list = pool.filter((id) => ORDERS[id].school === sc && !out.includes(id));
     if (list.length) out.push(rng.pick(list));
   }
@@ -436,45 +459,101 @@ export interface HeroBattle {
   init1: number;
   /** A share of her fallen patched up after the battle (First Aid, artifacts). */
   raise: number;
-  /** Each school's orders: how much stronger; each order's will. */
+  /** Each school's orders: how much stronger; each order's will (or stamina, by its school). */
   mul: Record<School, number>;
   cost: Partial<Record<TacSpellId, number>>;
+  /** docs/18: her path (null: a captain of the sea without one) and her hero level. */
+  path?: CaptainId | null;
+  level?: number;
+  /** Stamina for the physical moves (docs/18 item 4): now, at most, back each round. */
+  stam?: number;
+  stamMax?: number;
+  stamRegen?: number;
+  /** Her path's innate move and (from level 20) her ultimate, as strong as this (talents lift them); her path
+   *  book's pages as strong as this (talents). */
+  innateMul?: number;
+  pageMul?: number;
+  ult?: boolean;
+  /** Scrolls she carries of pages she does not know (docs/18 item 10): a battle cast each, free. */
+  scroll?: Partial<Record<TacSpellId, number>>;
 }
 
-/** Her battle self from her primaries (artifacts' included), skills, artifacts, book and will now. */
-export function heroBattle(prim: Prims, skills: readonly SkillSlot[], art: ArtTotals | null, book: readonly OrderId[], mana: number): HeroBattle {
+/** What the paths add to her battle self (docs/18): her path and level, her talents, her stamina now, her scrolls. */
+export interface HeroPathInput {
+  path: CaptainId | null;
+  level: number;
+  talents?: Record<string, number> | null;
+  stam?: number;
+  scrolls?: Partial<Record<string, number>> | null;
+}
+
+/** Her battle self from her primaries (artifacts' included), skills, artifacts, book and will now — and, with
+ *  `ext`, her path's book, home school, stamina, innate move and ultimate (docs/18). */
+export function heroBattle(prim: Prims, skills: readonly SkillSlot[], art: ArtTotals | null, book: readonly OrderId[], mana: number, ext?: HeroPathInput): HeroBattle {
   const sb = skillBattle(skills);
   const ab = art?.battle;
+  const path = ext?.path ?? null;
+  const lift = talentBook(ext?.talents);
   const mul = {} as Record<School, number>;
-  for (const sc of SCHOOLS) mul[sc] = orderMul(prim.pow, rankOf(skills, SCHOOL_SKILL[sc]), sb.mystic, (ab?.orders ?? 0) + (ab?.school[sc] ?? 0));
-  const battleBook = book.filter((id): id is TacSpellId => ORDERS[id]?.use === 'battle');
+  for (const sc of SCHOOLS) mul[sc] = orderMul(prim.pow, rankOf(skills, SCHOOL_SKILL[sc]), sb.mystic, (ab?.orders ?? 0) + (ab?.school[sc] ?? 0)) * (path && PATH_SCHOOL[path] === sc ? HOME_MUL : 1);
+  // Her path's pages open at her level; scrolls add pages for a cast each.
+  const all: OrderId[] = [...book];
+  if (ext && path) for (const id of pathPagesAt(path, ext.level)) if (!all.includes(id)) all.push(id);
+  const scroll: Partial<Record<TacSpellId, number>> = {};
+  for (const [id, n] of Object.entries(ext?.scrolls ?? {})) {
+    // A scroll of a page she knows stays in her bag.
+    if (!isPathPage(id) || !(Number(n) > 0) || all.includes(id)) continue;
+    scroll[id] = Math.floor(Number(n));
+    all.push(id);
+  }
+  const battleBook = all.filter((id): id is TacSpellId => ORDERS[id]?.use === 'battle');
   const cost: Partial<Record<TacSpellId, number>> = {};
-  for (const id of battleBook) cost[id] = orderCost(id, rankOf(skills, SCHOOL_SKILL[ORDERS[id].school]), 1 - (ab?.cost ?? 0));
-  const manaMax = manaMaxOf(prim.will);
-  return {
+  for (const id of battleBook) {
+    const d = ORDERS[id];
+    let k = 1 - (ab?.cost ?? 0);
+    if (path && PATH_SCHOOL[path] === d.school) k *= HOME_COST;
+    if (d.path && d.path !== path) k *= FOREIGN_COST;
+    if (d.path && d.path === path) k *= 1 - lift.cost;
+    cost[id] = orderCost(id, rankOf(skills, SCHOOL_SKILL[d.school]), k);
+  }
+  const manaMax = manaMaxOf(prim.will) + (ext ? lift.will : 0);
+  const out: HeroBattle = {
     atk: Math.max(0, prim.atk), def: Math.max(0, prim.def), pow: Math.max(0, prim.pow), will: Math.max(0, prim.will),
-    mana: Math.max(0, Math.min(manaMax, mana)), manaMax, book: battleBook,
+    mana: Math.max(0, Math.min(manaMax, mana + (ext ? lift.will : 0))), manaMax, book: battleBook,
     melee: sb.melee + (ab?.melee ?? 0), shot: sb.shot + (ab?.shot ?? 0), taken: Math.min(0.5, sb.taken + (ab?.taken ?? 0)),
     morale: sb.morale + (ab?.morale ?? 0), luck: sb.luck + (ab?.luck ?? 0), tactics: sb.tactics, init1: sb.init1,
     raise: Math.min(0.5, sb.raise + (ab?.raise ?? 0)), mul, cost,
   };
+  if (ext) {
+    const stamMax = stamMaxOf(out.atk, out.def) + lift.stam;
+    out.path = path;
+    out.level = Math.max(1, Math.round(ext.level));
+    out.stamMax = stamMax;
+    out.stam = Math.max(0, Math.min(stamMax, ext.stam ?? stamMax));
+    out.stamRegen = Math.max(1, Math.round(stamMax * STAM_ROUND));
+    out.innateMul = 1 + lift.innate;
+    out.ult = !!path && out.level >= ULT_LEVEL;
+    out.pageMul = 1 + lift.mul;
+    if (Object.keys(scroll).length) out.scroll = scroll;
+  }
+  return out;
 }
 
-/** A sea captain's battle self for her ship's level: an even hand of primaries, a full store, her path's book (none:
- *  the grenades). */
-export function npcHeroBattle(shipLevel: number, captain: CaptainId | null): HeroBattle {
+/** A sea captain's battle self for her ship's level: an even hand of primaries, a full store; a named captain of the
+ *  sea (docs/18 item 8) her path's book, home school, stamina, innate move and ultimate, as a captain of her level;
+ *  the rest the sea's own book. */
+export function npcHeroBattle(shipLevel: number, path: CaptainId | null): HeroBattle {
   const prim = npcPrims(shipLevel);
-  return heroBattle(prim, [], null, captain ? startingOrders(captain) : npcBook(shipLevel), manaMaxOf(prim.will));
+  if (!path) return heroBattle(prim, [], null, npcBook(shipLevel), manaMaxOf(prim.will), { path: null, level: npcHeroLevel(shipLevel) });
+  return heroBattle(prim, [], null, startingOrders(path), manaMaxOf(prim.will), { path, level: npcHeroLevel(shipLevel) });
 }
 
 /** A sea captain's book without a path of her own: the grenades, and the common pages as her waters grow harder. */
 export function npcBook(shipLevel: number): OrderId[] {
-  const out: OrderId[] = ['grenades'];
-  if (shipLevel >= 2) out.push('mark_target');
-  if (shipLevel >= 3) out.push('war_cry');
-  if (shipLevel >= 5) out.push('brine_mend');
-  return out;
+  return SEA_BOOK.filter(([lv]) => shipLevel >= lv).map(([, id]) => id);
 }
+/** The sea's book by her waters (docs/18: weighed against the paths' starting books, tools/balance-paths.ts). */
+export const SEA_BOOK: [number, OrderId][] = [[1, 'grenades'], [2, 'mark_target'], [2, 'point_blank'], [2, 'double_shot'], [4, 'war_cry'], [4, 'brine_mend'], [7, 'shield_wall'], [9, 'fury']];
 
 // ------------------------------------------------------------------ what the captain sees
 
@@ -497,6 +576,13 @@ export interface HeroView {
   costs: Partial<Record<OrderId, number>>;
   /** Her full artifact sets. */
   sets: string[];
+  /** docs/18: her stamina now and at most; the scrolls she carries; the pages of her path open to her; the talents
+   *  that lift her book and by how much. */
+  stam?: number;
+  stamMax?: number;
+  scrolls?: Partial<Record<OrderId, number>>;
+  pages?: OrderId[];
+  lift?: { mul: number; cost: number; stam: number; will: number; innate: number; nodes: string[] };
 }
 
 /** What a port offers the hero: its guild's list and prices, and its artifact merchant's pieces today. */
@@ -504,6 +590,8 @@ export interface HeroPortView {
   port: string;
   guild: { id: OrderId; price: number }[] | null;
   wares: { art: string; price: number }[] | null;
+  /** Other paths' pages the guild teaches, at twice the price (docs/18 item 10). */
+  foreign?: { id: OrderId; price: number }[] | null;
 }
 
 /** The server's words about the hero, English → Russian. */
@@ -542,5 +630,6 @@ export function heroPatterns(): [string, string][] {
   for (const s of SKILL_IDS) out.push(SKILLS[s].name);
   for (const r of RANK_NAMES) out.push(r);
   for (const o of ORDER_IDS) out.push(ORDERS[o].name);
+  out.push(...pathPatterns());
   return out;
 }

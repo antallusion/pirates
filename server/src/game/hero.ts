@@ -29,6 +29,8 @@ import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { takeItem } from './gear.ts';
 import { grailWill } from './grail.ts';
+import { foreignAt, learnForeign, npcFaceOf, npcPathOf, spendScrolls, stamMax, stamOf } from './pathbook.ts';
+import { STAM_REST_SEC, TALENT_BOOK, isPathPage, pathPagesAt, talentBook } from '../../../shared/src/data/paths.ts';
 
 /** What the profile keeps of the hero. */
 export interface HeroRec {
@@ -49,6 +51,9 @@ export interface HeroRec {
   bought: string[];
   /** The will the Grail in her town adds to her store (docs/17 H4–H5: grailWill), as last reckoned. */
   gw?: number;
+  /** docs/18: her stamina (absent: whole), and the scrolls of pages in her bag. */
+  stam?: number;
+  scrolls?: Partial<Record<OrderId, number>>;
 }
 
 /** The hero's own dice (like the auction house's: server/src/game/auction.ts). */
@@ -64,7 +69,9 @@ export function heroOf(p: Profile): HeroRec {
   const h = p.hero;
   if (h && typeof h.seed === 'number' && h.prim) {
     h.skills = (h.skills ?? []).filter((x) => x && SKILLS[x.id] && x.r >= 1).slice(0, SKILL_SLOTS).map((x) => ({ id: x.id, r: Math.min(SKILL_MAX, x.r) as SkillSlot['r'] }));
-    h.orders = [...new Set((h.orders ?? []).filter(isOrder))];
+    // Her own path's pages open by her level and are not kept in the book (docs/18); another path's are.
+    h.orders = [...new Set((h.orders ?? []).filter((id) => isOrder(id) && ORDERS[id].path !== p.captain))];
+    if (h.scrolls) for (const id of Object.keys(h.scrolls)) if (!isPathPage(id) || !((h.scrolls[id as OrderId] ?? 0) > 0)) delete h.scrolls[id as OrderId];
     for (const o of startingOrders(p.captain)) if (!h.orders.includes(o)) h.orders.push(o);
     h.cd ??= {};
     h.bought ??= [];
@@ -173,7 +180,7 @@ export function pickSkill(game: Game, s: PlayerSession, i: number): string | nul
 export function learnOrder(game: Game, s: PlayerSession, id: string, silent = false): string | null {
   const p = s.profile!;
   const h = heroOf(p);
-  if (!isOrder(id) || ORDERS[id].sig) return 'No such order';
+  if (!isOrder(id) || ORDERS[id].sig || ORDERS[id].path) return 'No such order';
   if (h.orders.includes(id)) return 'You know that order already';
   const cap = orderLevelCap(p.level, rankOf(h.skills, 'mysticism'));
   if (ORDERS[id].level > cap) return `Orders of level ${ORDERS[id].level} are beyond you yet (Deep Mysticism or more levels open them)`;
@@ -187,6 +194,7 @@ export function learnAtGuild(game: Game, s: PlayerSession, port: Port, id: strin
   const p = s.profile!;
   const list = guildOf(port.id, port.size);
   if (!list) return 'No guild of orders here';
+  if (isPathPage(id)) return learnForeign(game, s, port, id); // another path's page, twice the price (docs/18)
   if (!isOrder(id) || !list.includes(id)) return 'This guild does not teach that order';
   const price = guildPrice(id);
   if (p.gold < price) return `Needs ${price} silver`;
@@ -238,6 +246,13 @@ export function heroSecond(game: Game, s: PlayerSession): void {
     h.day = day;
   }
   const docked = ship.docked ?? null;
+  // Stamina comes back with rest (docs/18 item 4): whole in port, over a few minutes at sea, not while boarding.
+  if (h.stam !== undefined && !ship.boarding) {
+    const sm = stamMax(p, h);
+    if (docked) delete h.stam;
+    else if (h.stam < sm) h.stam = Math.min(sm, h.stam + sm / STAM_REST_SEC);
+    if ((h.stam ?? sm) >= sm) delete h.stam;
+  }
   if (docked && lastDock.get(s) !== docked && lastDock.has(s)) {
     const port = game.portById(docked);
     const full = port && guildOf(port.id, port.size);
@@ -324,18 +339,26 @@ export function castSea(game: Game, s: PlayerSession, id: string): string | null
 export function heroInput(game: Game, ship: ShipEntity): HeroBattle {
   const s = game.sessionOf(ship);
   const p = s?.profile;
-  if (!p) return npcHeroBattle(ship.shipLevel, ship.captain ?? null);
+  if (!p) return npcHeroBattle(ship.shipLevel, npcPathOf(ship)); // docs/18 item 8: the named captains walk paths
   const h = heroOf(p);
-  return heroBattle(heroPrims(p, h), h.skills, artTotals(wornOf(p)), h.orders, h.mana);
+  return heroBattle(heroPrims(p, h), h.skills, artTotals(wornOf(p)), h.orders, h.mana, { path: p.captain, level: p.level, talents: p.talents, stam: stamOf(p, h), scrolls: h.scrolls });
+}
+
+/** The face a ship's captain shows beside the field (a named captain of the sea her own). */
+export function heroFace(game: Game, ship: ShipEntity): string | undefined {
+  return game.sessionOf(ship)?.profile ? undefined : npcFaceOf(ship);
 }
 
 /** After a battle: the will she spent, and the fallen her First Aid patches up. */
-export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { u: string; n: number }[], raise: number): void {
+export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { u: string; n: number }[], raise: number, stamLeft = -1, scrolls: readonly string[] = []): void {
   const s = game.sessionOf(ship);
   const p = s?.profile;
   if (!s || !p) return;
   const h = heroOf(p);
-  if (left >= 0) h.mana = Math.max(0, Math.min(willMax(p, h), left));
+  // The battle's own lift of her will by her talents (docs/18) does not stay in her store.
+  if (left >= 0) h.mana = Math.max(0, Math.min(willMax(p, h), left - talentBook(p.talents).will));
+  if (stamLeft >= 0) h.stam = Math.max(0, Math.min(stamMax(p, h), stamLeft));
+  spendScrolls(h, scrolls);
   if (raise <= 0 || !ship.alive) return;
   let room = Math.max(0, ship.stats.crewMax - ship.crew), n = 0;
   for (const x of lost) {
@@ -393,10 +416,16 @@ export function heroView(p: Profile): HeroView {
   const bs = heroBattle(heroPrims(p, h), h.skills, a, h.orders, h.mana);
   for (const id of h.orders) costs[id] = ORDERS[id].use === 'sea' ? seaCost(p, h, id) : bs.cost[id as keyof typeof bs.cost] ?? ORDERS[id].cost;
   const pending = pendingChoices(p, h);
+  // docs/18: her path's pages (open by her level), stamina, scrolls and the talents that lift her book.
+  const pb = heroBattle(heroPrims(p, h), h.skills, a, h.orders, h.mana, { path: p.captain, level: p.level, talents: p.talents, stam: stamOf(p, h), scrolls: h.scrolls });
+  for (const id of pb.book) if (ORDERS[id].path) costs[id] = pb.cost[id] ?? ORDERS[id].cost;
+  const lift = talentBook(p.talents);
   return {
     prim: { ...h.prim }, artPrim: a.prim, will: Math.floor(h.mana), willMax: willMax(p, h), skills: h.skills.map((x) => ({ ...x })),
     pending, offer: pending > 0 ? currentOffer(p, h) : [], orders: [...h.orders], cap: orderLevelCap(p.level, rankOf(h.skills, 'mysticism')),
     cd: { ...h.cd }, costs, sets: a.sets,
+    stam: Math.floor(stamOf(p, h)), stamMax: stamMax(p, h), scrolls: { ...(h.scrolls ?? {}) }, pages: pathPagesAt(p.captain, p.level),
+    lift: { ...lift, nodes: Object.keys(p.talents ?? {}).filter((id) => TALENT_BOOK[id] && (p.talents[id] ?? 0) > 0) },
   };
 }
 
@@ -411,6 +440,7 @@ export function heroPortView(game: Game, s: PlayerSession): HeroPortView | null 
     port: port.id,
     guild: g ? g.map((id) => ({ id, price: guildPrice(id) })) : null,
     wares: artMerchantAt(port.id, port.size) ? artWares(port.id, day).map((art, i) => ({ art, price: h.bought.includes(`${day}:${port.id}:${i}`) ? -1 : ARTIFACTS[art].price })) : null,
+    foreign: foreignAt(port, s.profile.captain),
   };
 }
 
