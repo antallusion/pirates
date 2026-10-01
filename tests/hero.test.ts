@@ -10,7 +10,7 @@ import { armyForLevel } from '../shared/src/data/army.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
 import {
-  LEARNABLE, ORDERS, ORDER_IDS, PRIM_BASE, SCHOOLS, SKILLS, SKILL_IDS, TACTICS_DEPLOY, guildOf, heroBattle, heroSeed, npcHeroBattle, orderCost, orderLevelCap, orderMul, primsAtLevel,
+  COMMON_SCHOOLS, LEARNABLE, ORDERS, ORDER_IDS, PRIM_BASE, SCHOOLS, SKILLS, SKILL_IDS, TACTICS_DEPLOY, guildOf, heroBattle, heroSeed, npcHeroBattle, orderCost, orderLevelCap, orderMul, primsAtLevel,
   shrineOrder, skillOffer, skillSeaMods, startingOrders, zeroPrims,
 } from '../shared/src/data/hero.ts';
 import type { HeroBattle, Prims, SkillSlot } from '../shared/src/data/hero.ts';
@@ -213,8 +213,10 @@ test('First Aid: after the battle a share of her fallen stand again; the will sh
 
 test('the book: 4 schools, levels 1–5, 20 orders to learn (the H1 book among them) and the six paths\' own', () => {
   assert.equal(LEARNABLE.length, 20);
-  assert.equal(ORDER_IDS.length - LEARNABLE.length, 6);
-  for (const sc of SCHOOLS) assert.ok(LEARNABLE.filter((id) => ORDERS[id].school === sc).length >= 4, sc);
+  assert.equal(ORDER_IDS.filter((id) => ORDERS[id].sig).length, 6);
+  assert.equal(ORDER_IDS.length - LEARNABLE.length, 6 + 36, 'and the six path books of docs/18');
+  for (const sc of COMMON_SCHOOLS) assert.ok(LEARNABLE.filter((id) => ORDERS[id].school === sc).length >= 4, sc);
+  assert.equal(SCHOOLS.length, 6);
   assert.deepEqual([...new Set(LEARNABLE.map((id) => ORDERS[id].level))].sort(), [1, 2, 3, 4, 5]);
   for (const id of ['grenades', 'mark_target', 'double_shot', 'war_cry', 'brine_mend'] as const) assert.equal(ORDERS[id].level <= 2, true, `${id} among the first`);
   assert.ok(LEARNABLE.filter((id) => ORDERS[id].use === 'sea').length >= 5, 'sea orders');

@@ -148,7 +148,7 @@ export interface ArtTotals {
 /** Everything the worn artifacts and their full sets give the hero: primaries, the battle's lines, the sea's. */
 export function artTotals(worn: readonly Item[]): ArtTotals {
   const prim: Prims = { atk: 0, def: 0, pow: 0, will: 0 };
-  const battle = { melee: 0, shot: 0, taken: 0, morale: 0, luck: 0, orders: 0, cost: 0, raise: 0, school: { fire: 0, wind: 0, water: 0, steel: 0 } as Record<School, number> };
+  const battle = { melee: 0, shot: 0, taken: 0, morale: 0, luck: 0, orders: 0, cost: 0, raise: 0, school: { fire: 0, wind: 0, water: 0, steel: 0, board: 0, fog: 0 } as Record<School, number> };
   let seaCost = 0, willDay = 0;
   const addB = (b?: ArtBattle) => {
     if (!b) return;

@@ -11,6 +11,8 @@ import { EN, RU } from '../lang/ui/talents.ts';
 import { serverText } from '../lang/server.ts';
 import { ask } from './confirm.ts';
 import { esc, fmt, icon } from './dom.ts';
+import { TALENT_BOOK } from '../../../shared/src/data/paths.ts';
+import { EN as PB_EN, RU as PB_RU } from '../lang/ui/pathbook.ts';
 
 const L = dict(EN, RU);
 const points = (n: number) => `${n} ${plural(n, L('point.one'), L('point.few'), L('point.many'))}`;
@@ -110,6 +112,15 @@ export class TalentScreen {
   }
 }
 
+/** docs/18 item 6: what a talent also lifts in the path book in a boarding (its sea side as it was). */
+function bookLine(id: string): string {
+  const t = TALENT_BOOK[id];
+  if (!t) return '';
+  const P = dict(PB_EN, PB_RU);
+  const parts = [t.mul ? P('lift.mul', { n: Math.round(t.mul * 100) }) : '', t.cost ? P('lift.cost', { n: Math.round(t.cost * 100) }) : '', t.stam ? P('lift.stam', { n: t.stam }) : '', t.will ? P('lift.will', { n: t.will }) : '', t.innate ? P('lift.innate', { n: Math.round(t.innate * 100) }) : ''].filter(Boolean);
+  return `<small class="tal-book">${icon('bt_captain', '', 'ico-xs')}${esc(P('tab'))}: ${esc(parts.join(', '))}</small>`;
+}
+
 function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level: number; abyssOpen: boolean }, docked: boolean): string {
   const rank = self.talents[x.id] ?? 0;
   const why = canLearn(self.talents, x.id, self.talentPoints, ctx);
@@ -119,7 +130,7 @@ function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level
   const pips = `<span class="pips">${Array.from({ length: x.maxRank }, (_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}" title="${esc(why ? serverText(why) : L('learn'))}">
     ${icon(`talent_${x.id}`, '', 'talent-ico') || icon(art, '✦', 'talent-ico')}<div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
-    <small>${esc(x.description)}</small>${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
+    <small>${esc(x.description)}</small>${bookLine(x.id)}${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
 }
 
 function deeds(have: string[]): string {

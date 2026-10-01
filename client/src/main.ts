@@ -207,7 +207,7 @@ const talentScreen = new TalentScreen((m) => net.send(m));
 // The captain as a hero (docs/17 H2): primaries, skills, the order book, a port's guild and artifact merchant.
 const heroWindow = new HeroWindow((m) => net.send(m));
 heroWindow.onClose = () => closeModal();
-function openHero(tab?: 'hero' | 'book' | 'port'): void {
+function openHero(tab?: 'hero' | 'path' | 'book' | 'port'): void {
   heroWindow.open(tab);
   openModal('hero');
 }
@@ -2042,4 +2042,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : openModal(m)), hero: (tab?: 'hero' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : openModal(m)), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand };

@@ -605,7 +605,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     forwards: p.forwards.map((f) => ({ ...f, fromName: f.fromPort, toName: f.toPort })),
     bank: p.bank,
     loan: p.loan,
-    hero: heroView(p),
+    hero: heroView(p, ship?.army),
   };
 }
 

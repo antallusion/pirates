@@ -18,12 +18,16 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/hero.ts';
 import type { ClientState } from '../state.ts';
 import { esc, icon, money } from './dom.ts';
+import { pathTab } from './pathbook.ts';
+import { EN as PB_EN, RU as PB_RU } from '../lang/ui/pathbook.ts';
+
+const PB = dict(PB_EN, PB_RU);
 
 const L = dict(EN, RU);
 const k = () => (lang() === 'ru' ? 1 : 0);
 const T = (x: [string, string]) => x[k()];
 
-type Tab = 'hero' | 'book' | 'port';
+type Tab = 'hero' | 'path' | 'book' | 'port';
 
 /** A primary's tile: its mark, its name, her value and what artifacts add. */
 function primTile(h: HeroView, p: (typeof PRIMS)[number]): string {
@@ -65,10 +69,11 @@ export class HeroWindow {
     if (this.tab === 'port' && !docked) this.tab = 'hero';
     const cap = CAPTAINS[self.captain];
     const url = assetUrl(cap.portrait);
-    const tabs: [Tab, string][] = [['hero', L('tab.hero')], ['book', L('tab.book')]];
+    const tabs: [Tab, string][] = [['hero', L('tab.hero')], ['path', PB('tab')], ['book', L('tab.book')]];
     if (docked) tabs.push(['port', L('tab.port')]);
     let body = '';
     if (this.tab === 'hero') body = this.heroTab(h, self.level, url);
+    else if (this.tab === 'path') body = pathTab(h, self.captain, self.level, self.talents ?? {}); // docs/18 item 9
     else if (this.tab === 'book') body = this.bookTab(h, docked, state.estServerTime());
     else body = this.portTab(h, self.gold);
     root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, path: cap.archetype }))}</div></div><button class="btn btn-small" data-hclose>${esc(L('close'))}</button></div>
@@ -122,7 +127,8 @@ export class HeroWindow {
 
   private bookTab(h: HeroView, docked: boolean, now: number): string {
     const sc = this.school;
-    const list = ORDER_IDS.filter((id) => ORDERS[id].school === sc && (!ORDERS[id].sig || h.orders.includes(id))).sort((a, b) => ORDERS[a].level - ORDERS[b].level || Number(!!ORDERS[a].sig) - Number(!!ORDERS[b].sig));
+    // The path books' pages are in the Path book (docs/18); here only those of another path she has learnt.
+    const list = ORDER_IDS.filter((id) => ORDERS[id].school === sc && (!ORDERS[id].sig || h.orders.includes(id)) && (!ORDERS[id].path || h.orders.includes(id))).sort((a, b) => ORDERS[a].level - ORDERS[b].level || Number(!!ORDERS[a].sig) - Number(!!ORDERS[b].sig));
     const skill = SKILLS[SCHOOL_SKILL[sc]];
     const rows = list.map((id) => {
       const d = ORDERS[id];
@@ -158,7 +164,16 @@ export class HeroWindow {
         return `<div class="hx-ware" style="border-color:${RARITY_COLOR[ART_RARITY[a.cls]]}">${icon(a.icon, '◆', 'ico-lg')}<span class="hx-ot"><b style="color:${RARITY_COLOR[ART_RARITY[a.cls]]}">${esc(T(a.name))}</b><span class="muted">${esc(T(ART_CLASS_NAMES[a.cls]))} · ${esc(T(SLOT_NAMES[a.slot]))}${a.set ? ` · ${esc(T(ART_SETS[a.set].name))}` : ''}</span><small>${esc(prim)}</small><small class="muted">${esc(T(a.text))}</small></span>${w.price < 0 ? `<span class="muted">${esc(L('sold'))}</span>` : `<button class="btn btn-small btn-primary" data-hbuy="${i}" ${gold < w.price ? 'disabled' : ''}>${esc(L('buy'))}${money(w.price)}</button>`}</div>`;
       }).join('')}</div>`
       : `<p class="muted">${esc(L('noMerchant'))}</p>`;
-    return `<div class="gi-h">${icon('bt_captain', '', 'ico-sm')}${esc(L('guild'))}</div>${guild}<div class="gi-h">${icon('item_signet', '', 'ico-sm')}${esc(L('merchant'))}</div>${wares}`;
+    // docs/18 item 10: other paths' pages at the guild, twice the price.
+    const foreign = v.foreign?.length
+      ? `<div class="gi-h">${icon('tree_abyssal', '', 'ico-sm')}${esc(PB('foreign'))}</div><p class="muted hx-note">${esc(PB('foreignNote'))}</p><div class="hx-orders">${v.foreign.map((g) => {
+        const d = ORDERS[g.id];
+        const known = h.orders.includes(g.id);
+        const high = d.level > h.cap;
+        return `<div class="hx-order${known ? ' known' : ''}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(d.path ? CAPTAINS[d.path].archetype : '')}</span><span class="tag">${esc(T(SCHOOL_NAMES[d.school]))}</span><span class="tag">${esc(L('lv', { n: d.level }))}</span></span><small>${esc(T(d.text))}</small></span>${known ? `<span class="muted">${esc(L('learnt'))}</span>` : `<button class="btn btn-small btn-primary" data-hlearn="${g.id}" ${high || gold < g.price ? 'disabled' : ''}>${esc(high ? L('tooHigh') : L('learn'))}${high ? '' : money(g.price)}</button>`}</div>`;
+      }).join('')}</div>`
+      : '';
+    return `<div class="gi-h">${icon('bt_captain', '', 'ico-sm')}${esc(L('guild'))}</div>${guild}${foreign}<div class="gi-h">${icon('item_signet', '', 'ico-sm')}${esc(L('merchant'))}</div>${wares}`;
   }
 }
 

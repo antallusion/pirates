@@ -43,6 +43,7 @@ import { hunterLicence } from './pvp.ts';
 import type { ShipEntity } from './ship.ts';
 import { sagaNote } from './saga.ts';
 import { maybeArtifact } from './hero.ts';
+import { maybeScroll } from './pathbook.ts';
 
 const HOUR = 3600_000;
 const WEEK = 7 * 24 * HOUR;
@@ -324,6 +325,7 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   game.sendTo(s, { t: 'lairchest', view: { island: lair.name, captain: np.name[0], silver: chest, prisoners, item: kept ? { name: itemName(it), rarity: it.rarity, base: it.base } : null, map: mapped ? m.name : null } });
   game.grantXp(s, 300 + 60 * np.level, `The lair of ${np.name[0]}`);
   maybeArtifact(game, s, 'guard', 0.5); // docs/17 H2: the garrison guarded an artifact
+  maybeScroll(game, s, 'lair'); // docs/18 item 10: a scroll of a page in the lair
   sendWanted(game, s, true);
   return true;
 }

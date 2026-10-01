@@ -1321,7 +1321,10 @@ export type TacAction =
   | { a: 'quick' }
   | { a: 'surrender' }
   /** Pay the other side off (docs/17 H1, HoMM3's surrender): the fight ends, your ship and her men are your own. */
-  | { a: 'ransom' };
+  | { a: 'ransom' }
+  /** Her path's innate move, and her ultimate (docs/18 items 1, 5): once a battle each, pointed at a stack or not. */
+  | { a: 'innate'; target?: number }
+  | { a: 'ult'; target?: number };
 
 /** A stack on the field. `hex` its place; `count` men with `hp` left on the foremost; `ret` may still strike back
  *  this round. */
@@ -1351,6 +1354,11 @@ export interface TacStackView {
   waited: boolean;
   /** The officer who leads the party: his post and name, his face, his order and whether it is still to give. */
   officer?: { role: OfficerRole; name: string; unique?: string; order: TacOrderId; ready: boolean };
+  /** docs/18: her shooters blinded; she acts again this round; her blows draw no answer; braced. */
+  blind?: boolean;
+  again?: boolean;
+  noRet?: boolean;
+  braced?: boolean;
 }
 
 /** A captain on the side panel. */
@@ -1361,11 +1369,20 @@ export interface TacHeroView {
   morale: number;
   luck: number;
   /** Each order and the round it is ready; its will (docs/17 H2) when her captain is a hero. */
-  spells: { id: TacSpellId; ready: number; cost?: number }[];
+  spells: { id: TacSpellId; ready: number; cost?: number; res?: 'stam' | 'will'; scroll?: number }[];
   /** The hero's primaries and will (docs/17 H2). */
   prim?: { atk: number; def: number; pow: number; will: number };
   mana?: number;
   manaMax?: number;
+  /** docs/18: her path, her level, her stamina, her innate move and ultimate ('ready', 'used', 'locked' below level
+   *  20), the face she shows (a named captain's own), and her spells' resource and scrolls. */
+  path?: CaptainId | null;
+  level?: number;
+  stam?: number;
+  stamMax?: number;
+  innate?: 'ready' | 'used';
+  ult?: 'ready' | 'used' | 'locked';
+  face?: string;
   /** Has given an order this round. */
   cast: boolean;
   auto: boolean;
@@ -1378,7 +1395,9 @@ export interface TacHeroView {
 export interface TacEvent {
   /** Its number in the battle (the client marks each once). */
   i: number;
-  k: 'move' | 'hit' | 'shot' | 'ret' | 'die' | 'wait' | 'defend' | 'morale' | 'fear' | 'luck' | 'spell' | 'order' | 'round' | 'timeout' | 'burn';
+  k: 'move' | 'hit' | 'shot' | 'ret' | 'die' | 'wait' | 'defend' | 'morale' | 'fear' | 'luck' | 'spell' | 'order' | 'round' | 'timeout' | 'burn'
+    /** docs/18: a path's innate move and ultimate (id: the path), a stack acting again. */
+    | 'innate' | 'ult' | 'again';
   side: 0 | 1;
   s?: number;
   t?: number;
@@ -1387,6 +1406,9 @@ export interface TacEvent {
   hex?: number;
   id?: string;
   n?: number;
+  /** docs/18: the page was read from a scroll; the stacks a move laid itself on (for the marks over them). */
+  via?: 'scroll';
+  on?: number[];
 }
 
 /** The whole battle as one captain sees it. Side 0 is the boarder, on the left deck. */

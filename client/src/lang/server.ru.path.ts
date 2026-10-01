@@ -1,0 +1,28 @@
+// Russian for the hero's path in the boarding battle (docs/18 I: server/src/game/pathbook.ts, tacbattle.ts): scrolls,
+// another path's page at a guild, the battle's refusals, and the tester's console (/path, /stam, /scroll, /pathfoe).
+
+export const SERVER_RU_PATH: Record<string, string> = {
+  'A scroll: {0}!': 'Свиток: «{0}»!',
+  'That page is in your own book: it opens with your level': 'Эта страница — в книге вашего пути: она откроется с уровнем',
+  'Not enough stamina': 'Не хватает выносливости',
+  'Point at one of your stacks': 'Укажите свой отряд',
+  'Your captain walks no path': 'Ваш капитан не идёт ни по какому пути',
+  'The ultimate opens at level 20': 'Высший приём открывается на 20-м уровне',
+  "Your path's move is spent this battle": 'Сила пути в этом бою уже потрачена',
+  'Your ultimate is spent this battle': 'Высший приём в этом бою уже потрачен',
+  'The ultimate waits for the third round': 'Высший приём — с третьего раунда',
+  'One path move a round': 'Один приём пути за раунд',
+  'That scroll is read': 'Этот свиток уже прочитан',
+  'Usage: /path learn page · {0}': 'Как вызывать: /path learn страница · {0}',
+  'Foreign pages forgotten.': 'Страницы чужих путей забыты.',
+  'Usage: /path [learn page | forget]': 'Как вызывать: /path [learn страница | forget]',
+  'Path: {0} · ultimate {1} ({2}) · pages: {3}{4}.': 'Путь: {0} · высший приём {1} ({2}) · страницы: {3}{4}.',
+  'open': 'открыт',
+  'level {0}': 'уровень {0}',
+  ' · later: {0}': ' · позже: {0}',
+  'Stamina {0}/{1}.': 'Выносливость {0}/{1}.',
+  'Scrolls: none.': 'Свитков нет.',
+  'Usage: /scroll [page|random|clear] [n] · {0}': 'Как вызывать: /scroll [страница|random|clear] [n] · {0}',
+  'Scrolls: {0}.': 'Свитки: {0}.',
+  '{0} lies off your beam: her captain walks the path of {1}. /board to grapple her.': '{0} у вас на траверзе: её капитан идёт путём «{1}». /board — на абордаж.',
+};
