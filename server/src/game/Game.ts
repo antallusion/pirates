@@ -210,6 +210,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
+import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
 
@@ -357,6 +358,7 @@ export class Game {
   private patrolsSpawnedAt = -1;
 
   constructor(opts: GameOptions) {
+    installHeroHooks(); // docs/17 H5: the adventure map's hooks handed to the hero
     this.db = opts.db;
     this.auth = opts.auth;
     this.log = opts.log ?? ((m) => console.log(m));

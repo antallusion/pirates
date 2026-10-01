@@ -6,6 +6,7 @@ import type { GoodId } from './data/goods.ts';
 import type { MineKind } from './data/mines.ts';
 import type { TownId } from './data/town.ts';
 import type { WeekKind } from './data/week.ts';
+import type { OrderId } from './data/hero.ts';
 
 /** The sea's calendar: week `n` (from 1), day 1–7 of it, what the week is named for, world seconds to the next. */
 export interface WeekView {
@@ -103,6 +104,8 @@ export interface TownThingView {
   /** A dwelling's men to recruit now and a week's growth. */
   pool?: number;
   growth?: number;
+  /** The guild of orders (docs/17 H5): each floor's orders, whether she knows each, and why she may not learn it. */
+  orders?: { id: OrderId; floor: number; known: boolean; why: string | null }[];
 }
 
 export interface TownView {
@@ -128,6 +131,7 @@ export type H3ClientMsg =
   | { t: 'h3'; action: 'dwell'; src: 'port' | 'isle' }
   | { t: 'h3'; action: 'recruit' | 'train'; src: 'port' | 'isle'; u: UnitId; n: number }
   | { t: 'h3'; action: 'build'; id: TownId }
+  | { t: 'h3'; action: 'learn'; id: OrderId }
   | { t: 'h3'; action: 'market'; give: GoodId | 'silver'; get: GoodId | 'silver'; n: number }
   | { t: 'h3'; action: 'mines' };
 

@@ -62,6 +62,8 @@ export interface GuardCard {
   alongside: boolean;
   pay: { silver: number; xp: number };
   e?: number;
+  /** She emptied its chest this week already (docs/17 H5): beaten again, it is only the lesson. */
+  looted?: boolean;
 }
 
 export interface ObjCard {
@@ -80,7 +82,7 @@ export interface ObjCard {
   /** What it gives: a chest's two choices, a load of a resource, an altar's point or its experience, a piece. */
   chest?: { silver: number; xp: number; extra?: { id: string; label: [string, string] } };
   load?: { good: GoodId; n: number };
-  altar?: { point: boolean; xp: number };
+  altar?: { point: boolean; xp: number; prim?: 'atk' | 'def' | 'pow' | 'will' };
   prison?: { role: OfficerRole | null; level: number };
   pieces?: { n: number; of: number };
 }

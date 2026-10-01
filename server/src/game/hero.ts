@@ -28,6 +28,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { takeItem } from './gear.ts';
+import { grailWill } from './grail.ts';
 
 /** What the profile keeps of the hero. */
 export interface HeroRec {
@@ -46,6 +47,8 @@ export interface HeroRec {
   cd: Partial<Record<OrderId, number>>;
   /** Artifact merchants' pieces she has bought: `day:port:index`. */
   bought: string[];
+  /** The will the Grail in her town adds to her store (docs/17 H4–H5: grailWill), as last reckoned. */
+  gw?: number;
 }
 
 /** The hero's own dice (like the auction house's: server/src/game/auction.ts). */
@@ -90,9 +93,16 @@ export function heroPrims(p: Profile, h = heroOf(p)): Prims {
   return { atk: h.prim.atk + a.atk, def: h.prim.def + a.def, pow: h.prim.pow + a.pow, will: h.prim.will + a.will };
 }
 
-function willMax(p: Profile, h: HeroRec): number {
+/** Her store of will: her Will and her artifacts', and the Grail's in her town. */
+export function willMax(p: Profile, h: HeroRec): number {
   const a = artTotals(wornOf(p)).prim;
-  return manaMaxOf(h.prim.will + a.will);
+  return manaMaxOf(h.prim.will + a.will) + Math.max(0, h.gw ?? 0);
+}
+
+/** Her store of will whole again (a well on the map, docs/17 H5). */
+export function fillWill(p: Profile): void {
+  const h = heroOf(p);
+  h.mana = willMax(p, h);
 }
 
 /** What her skills and artifact sets do at sea, for her ship's stats (the talents' vocabulary and caps). */
@@ -214,6 +224,9 @@ export function heroSecond(game: Game, s: PlayerSession): void {
   const ship = s.ship;
   if (!p || !ship) return;
   const h = heroOf(p);
+  // The Grail in her town deepens her will (docs/17 H4's grailWill).
+  const gw = grailWill(game, s.accountId);
+  if ((h.gw ?? 0) !== gw) h.gw = gw;
   const max = willMax(p, h);
   const day = Math.floor(game.now / DAY_LENGTH_SEC);
   if (h.day !== day) {

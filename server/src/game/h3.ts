@@ -10,7 +10,7 @@ import { dwellView, recruit, saveDwellings, train } from './dwell.ts';
 import type { Game } from './Game.ts';
 import { minesView } from './mines.ts';
 import type { PlayerSession } from './player.ts';
-import { buildTown, marketTrade } from './town.ts';
+import { buildTown, learnAtIsle, marketTrade } from './town.ts';
 
 export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void {
   const err = (e: string | null) => {
@@ -34,6 +34,9 @@ export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void 
       return refresh(src(msg.src));
     case 'build':
       err(buildTown(game, s, String(msg.id) as TownId));
+      return refresh(null);
+    case 'learn':
+      err(learnAtIsle(game, s, String(msg.id)));
       return refresh(null);
     case 'market':
       err(marketTrade(game, s, String(msg.give) as GoodId | 'silver', String(msg.get) as GoodId | 'silver', Math.trunc(Number(msg.n))));

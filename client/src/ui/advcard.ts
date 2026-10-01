@@ -7,6 +7,7 @@
 import { GUARDS, OBJS, WELL_MORALE, WELL_SANITY, TOWER_R } from '../../../shared/src/data/advmap.ts';
 import type { GuardKind } from '../../../shared/src/data/advmap.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
+import { PRIM_NAMES } from '../../../shared/src/data/hero.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { AdvCardView, GuardCard, ObjCard } from '../../../shared/src/h4proto.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -43,7 +44,7 @@ function guardBlock(g: GuardCard, own: boolean): string {
   return `<div class="ac-guard${own ? ' own' : ''}">
     <div class="ac-gw"><b class="ac-word">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span>${own ? ` · ${esc(guardName(g.kind))}` : ''}<span class="tg-army-faces">${faces}</span></div>
     <div class="muted ac-gl">${own ? '' : `${esc(what)} · `}${esc(L('guard.vs', { r: ratio }))}</div>
-    <div class="muted ac-gl ac-pay">${esc(L('guard.pay', { s: fmt(g.pay.silver), x: fmt(g.pay.xp) }))}</div>
+    <div class="muted ac-gl ac-pay">${esc(g.looted ? L('guard.looted') : L('guard.pay', { s: fmt(g.pay.silver), x: fmt(g.pay.xp) }))}</div>
     ${offer ? `<div class="ac-offer">${esc(offer)}</div>` : ''}
     ${!g.alongside ? `<div class="muted ac-gl ac-come">${esc(L('guard.come'))}</div>` : ''}
     <div class="ac-acts">
@@ -70,7 +71,7 @@ function objBody(o: ObjCard): string {
       return `<div class="ac-line muted">${esc(L('chest.pick'))}</div><div class="ac-acts">${btn(`${esc(L('chest.silver'))} ${money(c.silver)}`, 'silver')}${btn(`${esc(L('chest.xp'))} ${xpBadge(c.xp)}`, 'xp', false)}${extra}</div>`;
     }
     case 'altar':
-      return `<div class="ac-line">${icon('xp', '✦', 'ico-sm')}${esc(o.altar!.point ? L('altar.point') : L('altar.xp', { n: fmt(o.altar!.xp) }))}</div><div class="ac-acts">${btn(esc(L('altar.btn')))}</div>`;
+      return `<div class="ac-line">${icon('xp', '✦', 'ico-sm')}${esc(o.altar!.prim ? L('altar.prim', { p: PRIM_NAMES[o.altar!.prim][ru()] }) : o.altar!.point ? L('altar.point') : L('altar.xp', { n: fmt(o.altar!.xp) }))}</div><div class="ac-acts">${btn(esc(L('altar.btn')))}</div>`;
     case 'well':
       return `<div class="ac-line">${esc(L('well.text', { m: WELL_MORALE, s: WELL_SANITY }))}</div><div class="ac-acts">${btn(esc(L('well.btn')))}</div>`;
     case 'tower':

@@ -378,6 +378,27 @@ export function guildOf(portId: string, size: number): OrderId[] | null {
 }
 
 /** Silver a guild asks for teaching an order. */
+/** The orders each floor of her island's guild of orders teaches (docs/17 H5), as HoMM3's mage guild: a fixed list
+ *  of the floor's own level, drawn once for the island — three on the first and second floors, two on the third, one
+ *  on the fourth and the fifth. Taught free, as far as her level and Deep Mysticism let her learn them. */
+export const ISLE_GUILD_COUNT = [0, 3, 3, 2, 1, 1];
+export const ISLE_GUILD_MAX = 5;
+
+export function isleGuildOrders(islandId: number, floors: number): OrderId[][] {
+  const rng = new Rng((Math.imul(islandId + 7, 0x1b873593) ^ 0x6a11d) >>> 0);
+  const out: OrderId[][] = [];
+  for (let lv = 1; lv <= Math.min(ISLE_GUILD_MAX, Math.max(0, floors)); lv++) {
+    const pool = LEARNABLE.filter((id) => ORDERS[id].level === lv);
+    const pick: OrderId[] = [];
+    while (pick.length < Math.min(ISLE_GUILD_COUNT[lv], pool.length)) {
+      const id = rng.pick(pool);
+      if (!pick.includes(id)) pick.push(id);
+    }
+    out.push(pick);
+  }
+  return out;
+}
+
 export function guildPrice(id: OrderId): number {
   const l = ORDERS[id].level;
   return 150 * l * l;

@@ -209,7 +209,12 @@ export const TOWN: Record<TownId, TownDef> = {
   dw6: dw(6, ['Admiralty', 'Адмиралтейство'], ['Admiralty Court', 'Адмиралтейский двор'], ['The officers’ guard; upgraded, the life guard. Paid in pearls as well.', 'Офицерская гвардия; улучшенное — лейб-гвардия. Платят и жемчугом.'], 'chart_house'),
   dw7: dw(7, ['Drowned Shrine', 'Святилище утопленников'], ['Abyssal Altar', 'Алтарь бездны'], ['The drowned rise for the Choir and the cursed; upgraded, the deep’s spawn. Pearls for the sea.', 'Утопленники встают для Хора и проклятых; улучшенное — порождения бездны. Жемчуг — морю.'], 'chapel'),
   market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Exchange', 'Биржа'], ['Merchants’ Guild', 'Гильдия купцов']], text: ['Trades the island’s resources for silver and for each other — at poor rates, better with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по плохому курсу, с каждым уровнем чуть лучше.'], art: 'caravan_office', max: 3 },
-  guild: { id: 'guild', names: [['Guild of Orders', 'Гильдия приказов']], text: ['Where a captain will learn her orders when the orders come to the sea. For now its doors are shut.', 'Здесь капитан будет изучать приказы, когда они придут на море. Пока двери закрыты.'], art: 'lighthouse', max: 1 },
+  // docs/17 H5: HoMM3's mage guild — five floors, each teaching a fixed list of its level's orders free.
+  guild: {
+    id: 'guild', names: [['Guild of Orders', 'Гильдия приказов'], ['Hall of Orders', 'Зал приказов'], ['School of Orders', 'Школа приказов'], ['College of Orders', 'Коллегия приказов'], ['Tower of Orders', 'Башня приказов']],
+    text: ['Teaches the captain its orders free, as far as her level allows: each floor a fixed list of its level’s orders (three, three, two, one, one). Lie off the island to learn.', 'Учит капитана своим приказам даром, насколько позволяет её уровень: на каждом ярусе свой список приказов его уровня (три, три, два, один, один). Чтобы учиться, встаньте у острова.'],
+    art: 'lighthouse', max: 5,
+  },
   // docs/17 H4 item 16: the legendary treasure the obelisks' chart leads to, raised over the town.
   grail: { id: 'grail', names: [['The Grail', 'Грааль']], text: ['The legendary treasure raised over the town: every dwelling grows half as many men again, 500 silver a day into the treasury, and the captain’s will runs deeper.', 'Легендарное сокровище над городом: все жилища дают в полтора раза больше бойцов, 500 серебра в день в казну, а воля капитана глубже.'], art: 'signal_tower', max: 1 },
 };
@@ -267,7 +272,13 @@ export function townCost(id: TownId, level: number): BaseCost {
         { silver: 20_000, goods: { timber: 80, coal: 60, iron: 30, pearls: 4 }, secs: 2400 },
       ][Math.min(2, L - 1)];
     case 'guild':
-      return { silver: 6_000, goods: { timber: 40, coal: 30, tar: 20, pearls: 3 }, secs: 1200 };
+      return [
+        { silver: 6_000, goods: { timber: 40, coal: 30, tar: 20, pearls: 3 }, secs: 1200 },
+        { silver: 10_000, goods: { timber: 50, coal: 40, tar: 30, pearls: 5 }, secs: 1800 },
+        { silver: 16_000, goods: { timber: 60, coal: 50, tar: 40, pearls: 8, rum: 10 }, secs: 2400 },
+        { silver: 25_000, goods: { timber: 80, coal: 60, tar: 50, pearls: 12, rum: 20 }, secs: 3000 },
+        { silver: 40_000, goods: { timber: 100, coal: 80, tar: 60, pearls: 18, rum: 30 }, secs: 3600 },
+      ][Math.min(4, L - 1)];
     case 'grail':
       return { silver: 5_000, goods: { timber: 40, coal: 40, pearls: 6 }, secs: 1800 };
     default: {
@@ -303,7 +314,7 @@ export function townGate(id: TownId, level: number): TownGate {
     case 'market':
       return { isle: [1, 3, 5][Math.min(2, L - 1)] };
     case 'guild':
-      return { isle: 2 };
+      return { isle: [2, 3, 5, 7, 9][Math.min(4, L - 1)] };
     case 'grail':
       return { isle: 1 };
     default: {

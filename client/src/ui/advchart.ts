@@ -4,6 +4,8 @@
 // for a thing to visit.
 
 import { GUARDS, OBJS } from '../../../shared/src/data/advmap.ts';
+import { artMerchantAt } from '../../../shared/src/data/artifacts.ts';
+import { guildOf } from '../../../shared/src/data/hero.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h4.ts';
 import type { ClientState } from '../state.ts';
@@ -94,5 +96,42 @@ export function drawAdvMini(g: CanvasRenderingContext2D, state: ClientState, tx:
     g.strokeStyle = 'rgba(0,0,0,0.8)';
     g.lineWidth = 1;
     g.stroke();
+  }
+}
+
+/** docs/17 H5: the hero's places on the chart — a port's guild of orders and its artifact merchant (small marks beside
+ *  the port), and the drowned shrines on the islands she has charted (each teaches an order and fills her will). */
+export function drawHeroSites(
+  g: CanvasRenderingContext2D, state: ClientState, tx: (x: number) => number, ty: (y: number) => number, zoom: number, ms: number,
+  mark: (id: string, x: number, y: number, size?: number) => boolean, label: (text: string, x: number, y: number, color?: string) => void,
+): void {
+  if (zoom < 1.8) return;
+  const size = ms * 0.55;
+  const dot = (x: number, y: number, color: string) => {
+    g.beginPath();
+    g.arc(x, y, size * 0.32, 0, Math.PI * 2);
+    g.fillStyle = color;
+    g.fill();
+  };
+  const charted = new Set([...state.discovered].map((id) => state.islands.get(id)?.portId).filter(Boolean));
+  for (const p of state.ports) {
+    if (p.id.includes('_v') && !charted.has(p.id)) continue;
+    const x = tx(p.x), y = ty(p.y);
+    let dx = ms * 0.62;
+    if (guildOf(p.id, p.size)) {
+      if (!mark('icon.build_lighthouse', x + dx, y, size)) dot(x + dx, y, '#7fb8e8');
+      dx += size * 0.95;
+    }
+    if (artMerchantAt(p.id, p.size) && !mark('icon.item_skull_ring', x + dx, y, size)) dot(x + dx, y, '#e8c46a');
+  }
+  for (const id of state.discovered) {
+    const is = state.islands.get(id);
+    if (!is || !is.features.includes('shrine')) continue;
+    const x = tx(is.x), y = ty(is.y);
+    if (!mark('icon.build_chapel', x, y, size)) dot(x, y, '#2ee6c8');
+    if (zoom >= 3.5) {
+      g.font = '600 10px Inter, system-ui, sans-serif';
+      label(L('map.shrine'), x, y + size * 0.9, '#8fe8d8');
+    }
   }
 }

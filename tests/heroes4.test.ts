@@ -17,7 +17,7 @@ import { isLand } from '../shared/src/world/worldgen.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { talentPointsAvailable } from '../server/src/game/player.ts';
-import { advMap, advOf, cardView, downGuard, guardChoice, guardOffer, guardShip, guardUp, parkNear, quietAdv, stepAdv, visit } from '../server/src/game/advmap.ts';
+import { advHooks, advMap, advOf, cardView, downGuard, guardChoice, guardOffer, guardShip, guardUp, parkNear, quietAdv, stepAdv, visit } from '../server/src/game/advmap.ts';
 import { grailSpot, puzzleOf, puzzleView, startDig, stepGrail } from '../server/src/game/grail.ts';
 import { applyDamage } from '../server/src/game/combat.ts';
 import { npcHostileTo } from '../server/src/game/npc.ts';
@@ -267,9 +267,15 @@ test('a chest: silver or experience, once a week of the calendar, more behind a 
   assert.ok(chestPay(5, true).silver > chestPay(5, false).silver);
 });
 
-test('an altar teaches a talent point once (four from the altars in all, then experience); a well each day; a tower charts the sea', () => {
+test('an altar teaches a talent point once (four from the altars in all, then experience); a well each day; a tower charts the sea', (ctx) => {
   const game = world();
   const s = captain(game);
+  // (docs/17 H5 hands the altars to the hero's primary skills: tests/heroes5.test.ts. Without the hero, the talents.)
+  const hook = advHooks.altar;
+  advHooks.altar = null;
+  ctx.after(() => {
+    advHooks.altar = hook;
+  });
   const id = go(game, s, 'altar');
   const pts = talentPointsAvailable(s.profile!);
   assert.equal(visit(game, s, id), null);

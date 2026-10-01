@@ -5,6 +5,8 @@
 // under them the captain's mines and the market's poor rates.
 
 import { GOODS } from '../../../shared/src/data/goods.ts';
+import { ORDERS } from '../../../shared/src/data/hero.ts';
+import type { OrderId } from '../../../shared/src/data/hero.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { MINES } from '../../../shared/src/data/mines.ts';
 import { MARKET_GOODS, TOWN } from '../../../shared/src/data/town.ts';
@@ -48,7 +50,10 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
   const pic = art(t.id, t.level, !!t.job);
   const lvl = t.level > 0 ? L('town.lvl', { n: t.level, max: t.max }) : L('town.not');
   const pool = d.tier && t.level > 0 ? `<p class="tw-pool">${esc(L('town.pool', { n: t.pool ?? 0, g: dec1(t.growth ?? 0).replace(/[.,]0$/, '') }))}</p>` : '';
-  const extra = '';
+  // The guild of orders (docs/17 H5): each floor's orders, learnt free while she lies off the island.
+  const extra = t.orders?.length
+    ? `<div class="tw-orders">${t.orders.map((o) => `<div class="tw-order${o.known ? ' known' : ''}" title="${esc(ORDERS[o.id].text[ru()])}">${icon(ORDERS[o.id].icon, '', 'ico-sm')}<span><b>${esc(ORDERS[o.id].name[ru()])}</b> <span class="muted">${esc(L('guild.floor', { n: o.floor }))}</span>${!o.known && o.why ? `<br><span class="muted tw-why">${esc(serverText(o.why))}</span>` : ''}</span>${o.known ? `<span class="good">${esc(L('guild.known'))}</span>` : `<button class="btn btn-small" data-tlearn="${o.id}"${o.why ? ' disabled' : ''}>${esc(L('guild.learn'))}</button>`}</div>`).join('')}</div>`
+    : '';
   const j = t.job;
   const job = j ? `<div class="tw-job"><span class="muted">${esc(L('town.building'))}</span> <span class="btime" data-end="${j.end}">${esc(timeText((j.end - now) / 1000))}</span>
       <span class="bprog"><i data-start="${j.start}" data-stop="${j.end}" style="width:0%"></i></span>
@@ -114,6 +119,7 @@ function rateLine(m: Market, mk: { give: string; get: string }): string {
 
 export function bindTown(root: HTMLElement, send: (m: ClientMsg) => void, mk: { give: string; get: string; n: number }, recruit: () => void, redraw: () => void): void {
   root.querySelectorAll<HTMLElement>('[data-tbuild]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'build', id: el.dataset.tbuild as TownId })));
+  root.querySelectorAll<HTMLElement>('[data-tlearn]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'learn', id: el.dataset.tlearn as OrderId })));
   root.querySelector<HTMLElement>('[data-trecruit]')?.addEventListener('click', () => recruit());
   const give = root.querySelector<HTMLSelectElement>('[data-mkgive]');
   const get = root.querySelector<HTMLSelectElement>('[data-mkget]');

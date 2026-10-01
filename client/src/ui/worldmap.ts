@@ -27,7 +27,7 @@ import { mapCard, placeName } from './maps.ts';
 import { esc } from './dom.ts';
 import { serverText } from '../lang/server.ts';
 import { drawMines } from './minemap.ts';
-import { drawAdvChart } from './advchart.ts'; // docs/17 H4
+import { drawAdvChart, drawHeroSites } from './advchart.ts'; // docs/17 H4–H5
 import { EN as H4_EN, RU as H4_RU } from '../lang/ui/h4.ts';
 import { taskName } from '../../../shared/src/data/worldtasks.ts';
 
@@ -881,6 +881,7 @@ export class WorldMap {
       label(placeName(h.name), tx(h.x), ty(h.y) + 12, '#e0b862');
     }
     drawMines(g, state, tx, ty, this.zoom, ms, mark, label); // the mines and their flags (docs/17 H3)
+    drawHeroSites(g, state, tx, ty, this.zoom, ms, mark, label); // guilds, artifact merchants, drowned shrines (docs/17 H5)
     drawAdvChart(g, state, tx, ty, this.zoom, ms, mark, label); // the guards and the things on the map (docs/17 H4)
     // Your group.
     g.font = '12px serif';

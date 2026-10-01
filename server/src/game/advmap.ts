@@ -8,14 +8,14 @@
 // Beaten, fled or signed on, it stands again two days of the sea later; what it guarded lies open meanwhile.
 //
 // A thing on the map is visited from the boats when the ship lies within reach of it: a chest (silver or experience,
-// once a week of the calendar), an altar of skill (once: a talent point — docs/17 H2's primary skills will hook in),
-// a well (once a day: the crew's heart and nerve, and the captain's will when H2 gives her one), a watchtower (once:
+// once a week of the calendar; an artifact now and then, docs/17 H5), an altar of skill (once: a primary skill of the
+// hero's, H5), a well (once a day: the crew's heart and nerve, and the captain's will), a watchtower (once:
 // the sea charted for seven kilometres), a windmill and a warehouse (a load of a resource each week), a prison (once:
 // an officer freed), an obelisk (once a season: a piece of the Grail's chart, server/src/game/grail.ts).
 //
 // Nothing here draws on the sea's rng: what varies is hashed from the thing and the week.
 
-import { ALTAR_POINTS, GUARDS, openWater, GUARD_RESPAWN_SEC, JOIN_RATIO, JOIN_SHARE, MILL_DAYS, MILL_GOODS, OBJS, STORE_DAYS, TOWER_R, WELL_MORALE, WELL_SANITY, altarXp, buildAdv, chestPay, guardArmy, guardPay, millLoad } from '../../../shared/src/data/advmap.ts';
+import { ALTAR_POINTS, altarPrim, GUARDS, openWater, GUARD_RESPAWN_SEC, JOIN_RATIO, JOIN_SHARE, MILL_DAYS, MILL_GOODS, OBJS, STORE_DAYS, TOWER_R, WELL_MORALE, WELL_SANITY, altarXp, buildAdv, chestPay, guardArmy, guardPay, millLoad } from '../../../shared/src/data/advmap.ts';
 import type { AdvGuard, AdvMap, AdvObj, ObjKind } from '../../../shared/src/data/advmap.ts';
 import { UNITS, armyMen, armyPower } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
@@ -72,11 +72,13 @@ export function advOf(p: Profile): AdvProfile {
 export const advHooks: {
   /** A chest's third choice (an artifact): its label and what taking it gives (an English line for the toast). */
   chestReward: ((game: Game, s: PlayerSession, o: AdvObj) => { id: string; label: [string, string]; take: () => string } | null) | null;
-  /** An altar: H2 teaches a primary skill instead of a talent point (true: it did). */
-  altar: ((game: Game, s: PlayerSession, o: AdvObj) => boolean) | null;
+  /** An altar: H2 teaches a primary skill instead of a talent point (its line for the toast; null: it did not). */
+  altar: ((game: Game, s: PlayerSession, o: AdvObj) => string | null) | null;
   /** A well: H2 fills the captain's will (true: it did). */
   well: ((game: Game, s: PlayerSession) => boolean) | null;
-} = { chestReward: null, altar: null, well: null };
+  /** A beaten guard's chest (docs/17 H5): what more it holds for her (an artifact's line), once a week. */
+  guardChest: ((game: Game, s: PlayerSession, g: AdvGuard) => string | null) | null;
+} = { chestReward: null, altar: null, well: null, guardChest: null };
 
 /** The captain's will, filled where a field of it stands on her profile (until docs/17 H2 hooks in). */
 export function restoreWill(p: Profile): boolean {
@@ -303,7 +305,7 @@ function guardCard(game: Game, s: PlayerSession, g: AdvGuard): GuardCard {
   return {
     id: g.id, kind: g.kind, size: g.size, level: g.level, men: armyMen(men), units: men.map((x) => x.u), at: guardWhat(game, g),
     ratio: Math.round(guardRatio(game, s, g) * 10) / 10, offer, joinN: offer === 'join' ? armyMen(joinersOf(game, s, g)) : 0,
-    alongside: !!gs && !canBoard(game, ship, gs), pay: guardPay(g.level, g.size), ...(gs ? { e: gs.id } : {}),
+    alongside: !!gs && !canBoard(game, ship, gs), pay: guardPay(g.level, g.size), ...(gs ? { e: gs.id } : {}), ...(guardLooted(game, s.profile!, g) ? { looted: true } : {}),
   };
 }
 
@@ -342,15 +344,29 @@ export function guardBeaten(game: Game, winner: ShipEntity, loser: ShipEntity): 
   const s = game.sessionOf(winner);
   winner.morale = Math.min(100, winner.morale + 10);
   if (!s?.profile) return true;
-  const pay = guardPay(g.level, g.size);
-  s.profile.gold += pay.silver;
-  game.db.ledger(s.accountId, 'guard', pay.silver, g.id);
-  game.grantXp(s, pay.xp, `Beat the ${guardName(g)}`, true);
-  game.toastShip(winner, `The ${guardName(g)} is beaten: ${pay.silver} silver in its chest.${openLine(game, g)}`, 'gold');
+  // The guard stands for every captain and rises again two days later; its chest is each captain's once a week of the
+  // calendar (docs/17 H5), so a guard beaten over and over by one crew is a lesson, not a mint.
+  if (guardLooted(game, s.profile, g)) {
+    game.toastShip(winner, `The ${guardName(g)} is beaten. You emptied its chest this week already.${openLine(game, g)}`, 'good');
+  } else {
+    const pay = guardPay(g.level, g.size);
+    advOf(s.profile).v[`g:${g.id}`] = thisWeek(game) + 1;
+    s.profile.gold += pay.silver;
+    game.db.ledger(s.accountId, 'guard', pay.silver, g.id);
+    game.grantXp(s, pay.xp, `Beat the ${guardName(g)}`, true);
+    game.toastShip(winner, `The ${guardName(g)} is beaten: ${pay.silver} silver in its chest.${openLine(game, g)}`, 'gold');
+    advHooks.guardChest?.(game, s, g);
+  }
   sendAdv(game, s, true);
   sendCard(game, s, true);
   game.pushSelf(s, true);
   return true;
+}
+
+/** She has emptied this guard's chest this week of the calendar (docs/17 H5). */
+export function guardLooted(game: Game, p: Profile, g: AdvGuard): boolean {
+  const v = advOf(p).v[`g:${g.id}`];
+  return v !== undefined && v >= thisWeek(game) + 1;
 }
 
 /** The guard's card answered: fight (board it at once), take the men who would sign on, or let them go. */
@@ -525,7 +541,7 @@ function objCard(game: Game, s: PlayerSession, o: AdvObj): ObjCard {
       break;
     }
     case 'altar':
-      card.altar = { point: (advOf(p).pts ?? 0) < ALTAR_POINTS, xp: altarXp(xpLevel(s, o)) };
+      card.altar = { point: (advOf(p).pts ?? 0) < ALTAR_POINTS, xp: altarXp(xpLevel(s, o)), ...(advHooks.altar ? { prim: altarPrim(o.id) } : {}) };
       break;
     case 'prison': {
       const who = prisoner(o);
@@ -576,8 +592,9 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
     }
     case 'altar': {
       const a = advOf(p);
-      if (advHooks.altar?.(game, s, o)) line = 'The bell’s note stays with you.';
-      // TODO(docs/17 H2): a primary skill (Attack, Defence, Power, Will) once the hero's skills stand.
+      // docs/17 H5: the hero's primary skill of the altar (HoMM3's); without the hero, a talent point.
+      const taught = advHooks.altar?.(game, s, o) ?? null;
+      if (taught) line = taught;
       else if ((a.pts ?? 0) < ALTAR_POINTS) {
         a.pts = (a.pts ?? 0) + 1;
         line = 'The bell’s note stays with you: a talent point to spend.';

@@ -1,6 +1,6 @@
 // The captain's own island as a town of the Heroes (docs/17 H3 item 13), over the isometric base (docs/15): the town
 // hall's silver each dawn into the island's treasury, the keep → citadel → castle for +50% / +100% growth, a dwelling
-// of each tier and its upgrade, the market's poor rates, the guild of orders (docs/17 H2 fills it). The town's
+// of each tier and its upgrade, the market's poor rates, the guild of orders (five floors of orders, docs/17 H5). The town's
 // buildings stand apart from the plots — HoMM3's own town screen — and are raised by the same builders' crews, on the
 // same timers and speed-ups (their work is a job of the yard with no plot). Paid from the purse and the yard (then the
 // island's store, then the hold of a ship lying off the island).
@@ -11,7 +11,9 @@ import { speedupGoods, speedupSilver } from '../../../shared/src/data/base.ts';
 import { weekBuy, weekGrowth, weekHall, weekSell } from '../../../shared/src/data/week.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import type { TownView } from '../../../shared/src/h3proto.ts';
+import type { TownThingView, TownView } from '../../../shared/src/h3proto.ts';
+import { ORDERS, isOrder, isleGuildOrders, orderLevelCap, rankOf } from '../../../shared/src/data/hero.ts';
+import { heroOf, learnOrder } from './hero.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import { crewFree, lacking, lyingOff, mine as ownBase, reckonBase, takeGoods } from './base.ts';
 import type { BaseJob, Yard } from './base.ts';
@@ -227,6 +229,35 @@ export function marketTrade(game: Game, s: PlayerSession, give: Side, get: Side,
   return null;
 }
 
+// ------------------------------------------------------------------------------------------------ the guild of orders
+
+/** Each floor's orders of her island's guild (docs/17 H5), whether she knows them, and why she may not learn one. */
+function guildRows(game: Game, s: PlayerSession, h: Holding, y: Yard): NonNullable<TownThingView['orders']> {
+  const p = s.profile!;
+  const hero = heroOf(p);
+  const near = lyingOff(game, s, h);
+  const cap = orderLevelCap(p.level, rankOf(hero.skills, 'mysticism'));
+  return isleGuildOrders(h.island, townLevel(y, 'guild')).flatMap((list, i) => list.map((id) => {
+    const known = hero.orders.includes(id);
+    const why = known ? null : ORDERS[id].level > cap ? `Orders of level ${ORDERS[id].level} are beyond you yet (Deep Mysticism or more levels open them)` : !near ? LIE_OFF : null;
+    return { id, floor: i + 1, known, why };
+  }));
+}
+
+const LIE_OFF = 'Lie off your island to learn at its guild.';
+
+/** An order learnt at her island's guild of orders: free, as HoMM3's mage guild teaches its hero. */
+export function learnAtIsle(game: Game, s: PlayerSession, id: string): string | null {
+  const m = ownBase(game, s);
+  if (typeof m === 'string') return m;
+  const { h, y } = m;
+  const floors = townLevel(y, 'guild');
+  if (floors <= 0) return 'Your island has no guild of orders.';
+  if (!isOrder(id) || !isleGuildOrders(h.island, floors).some((l) => l.includes(id))) return 'Your guild does not teach that order';
+  if (!lyingOff(game, s, h)) return LIE_OFF;
+  return learnOrder(game, s, id);
+}
+
 // ------------------------------------------------------------------------------------------------ what she sees
 
 /** The resources to hand for the town: the yard with the store (and the hold lying off the island). */
@@ -250,6 +281,7 @@ export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): Tow
     return {
       id, level, max: TOWN[id].max, job: j ? { id: j.id, level: j.level, start: j.start, end: j.end, silver: speedupSilver(left), goods: speedupGoods(left) } : null, next,
       ...(tier ? { pool: Math.floor(pools[tier] ?? 0), growth: Math.round(isleWeekGrowth(game, y, tier) * 10) / 10 } : {}),
+      ...(id === 'guild' && level > 0 ? { orders: guildRows(game, s, h, y) } : {}),
     };
   });
   const have = townHave(game, s, h, y);

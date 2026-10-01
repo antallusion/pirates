@@ -234,6 +234,19 @@ export function altarXp(level: number): number {
   return round10(advLevelXp(level) * 0.25);
 }
 
+// ------------------------------------------------------------------------------------------------ docs/17 H5
+
+/** The primary skill an altar teaches (HoMM3's Marletto Tower, Star Axis, Garden of Revelation, the learning stone…):
+ *  each its own, by its id. */
+export function altarPrim(id: string): 'atk' | 'def' | 'pow' | 'will' {
+  return (['atk', 'def', 'pow', 'will'] as const)[hashString(`altar:${id}`) % 4];
+}
+
+/** The chance a chest on the map holds an artifact for a captain this week (guarded, open), and a beaten guard's chest
+ *  by its size. Rolled on the chest's own dice for the captain and the week, so the card shows what the boats find. */
+export const CHEST_ART = { guarded: 0.3, open: 0.12 };
+export const GUARD_ART: Record<GuardSize, number> = { weak: 0.08, avg: 0.18, strong: 0.35 };
+
 /** A windmill's or a warehouse's load of a resource at a level's waters. */
 export function millLoad(good: GoodId, region: RegionId, days: number): number {
   const kind = (Object.keys(MINES) as (keyof typeof MINES)[]).find((k) => k === good);
