@@ -11,6 +11,7 @@
 
 import { GRAIL_DIG_SECS, GRAIL_MISS_SECS, GRAIL_R, GRAIL_TREASURE_HOURS, GRAIL_WILL, PUZZLE_GRID, PUZZLE_W, advHour, advLevelXp } from '../../../shared/src/data/advmap.ts';
 import type { AdvObj } from '../../../shared/src/data/advmap.ts';
+import { xpForLevel } from '../../../shared/src/constants.ts';
 import type { PuzzleView } from '../../../shared/src/h4proto.ts';
 import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
 import { hashString } from '../../../shared/src/rng.ts';
@@ -123,7 +124,7 @@ export function sendPuzzle(game: Game, s: PlayerSession): void {
 export function readObelisk(game: Game, s: PlayerSession, _o: AdvObj): string {
   const n = Math.min(PUZZLE_GRID * PUZZLE_GRID, piecesOf(game, s.profile!).length);
   sendPuzzle(game, s);
-  return n >= PUZZLE_GRID * PUZZLE_GRID ? 'the last piece of the Grail’s chart: the spot is marked.' : `a piece of the Grail’s chart (${n} of ${PUZZLE_GRID * PUZZLE_GRID}).`;
+  return n >= PUZZLE_GRID * PUZZLE_GRID ? 'The obelisk’s carving is the last piece of the Grail’s chart: the spot is marked.' : `The obelisk’s carving is a piece of the Grail’s chart (${n} of ${PUZZLE_GRID * PUZZLE_GRID}).`;
 }
 
 /** The island whose shore lies within reach of her boats (none: no sand to dig). */
@@ -195,7 +196,7 @@ export function grailFound(game: Game, s: PlayerSession, island: Island): void {
   const first = !book || book.season !== season;
   game.db.setKv('h4:grails', { season, n: first ? 1 : book!.n + 1 });
   chronicle(game, first ? `${s.name} has found the first Grail of the season on ${island.name}.` : `${s.name} has found a Grail on ${island.name}.`);
-  game.grantXp(s, Math.round(advLevelXp(level) * 0.5), 'Found the Grail');
+  game.grantXp(s, Math.round(xpForLevel(p.level) * 0.5), 'Found the Grail');
   if (a.built) {
     const silver = Math.round(advHour(level) * GRAIL_TREASURE_HOURS);
     p.gold += silver;

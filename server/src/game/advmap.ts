@@ -473,6 +473,15 @@ export function prisoner(o: AdvObj): { role: OfficerRole; level: number; traits:
   return { role, level: Math.max(2, Math.min(20, Math.round(1 + o.level * 1.6))), traits, name: `${FIRST_NAMES[(h >>> 13) % FIRST_NAMES.length]} ${LAST_NAMES[(h >>> 17) % LAST_NAMES.length]}` };
 }
 
+/** The level a thing's experience is reckoned at: its waters', but never above her own ship's (a junior captain who
+ *  slips into deep waters takes their silver, not a dozen levels at once). */
+const xpLevel = (s: PlayerSession, o: AdvObj): number => Math.max(1, Math.min(o.level, s.ship?.shipLevel ?? 1));
+
+/** A chest's two choices for her: its waters' silver, or experience at her level. */
+function chestOf(s: PlayerSession, o: AdvObj): { silver: number; xp: number } {
+  return { silver: chestPay(o.level, !!o.guard).silver, xp: chestPay(xpLevel(s, o), !!o.guard).xp };
+}
+
 /** Why a visit would not go through now (null: it would). */
 function visitWhy(game: Game, s: PlayerSession, o: AdvObj): string | null {
   const ship = s.ship;
@@ -499,7 +508,7 @@ function objCard(game: Game, s: PlayerSession, o: AdvObj): ObjCard {
   switch (o.kind) {
     case 'chest': {
       const extra = advHooks.chestReward?.(game, s, o) ?? null;
-      card.chest = { ...chestPay(o.level, !!o.guard), ...(extra ? { extra: { id: extra.id, label: extra.label } } : {}) };
+      card.chest = { ...chestOf(s, o), ...(extra ? { extra: { id: extra.id, label: extra.label } } : {}) };
       break;
     }
     case 'mill':
@@ -509,7 +518,7 @@ function objCard(game: Game, s: PlayerSession, o: AdvObj): ObjCard {
       break;
     }
     case 'altar':
-      card.altar = { point: (advOf(p).pts ?? 0) < ALTAR_POINTS, xp: altarXp(o.level) };
+      card.altar = { point: (advOf(p).pts ?? 0) < ALTAR_POINTS, xp: altarXp(xpLevel(s, o)) };
       break;
     case 'prison': {
       const who = prisoner(o);
@@ -545,16 +554,16 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
   let line = '';
   switch (o.kind) {
     case 'chest': {
-      const pay = chestPay(o.level, !!o.guard);
+      const pay = chestOf(s, o);
       const extra = advHooks.chestReward?.(game, s, o) ?? null;
       if (extra && choice === extra.id) line = extra.take();
       else if (choice === 'xp') {
-        game.grantXp(s, pay.xp, `The ${name}`);
-        line = `Its owner’s logbook teaches you ${pay.xp} experience.`;
+        game.grantXp(s, pay.xp, null);
+        line = `The chest’s logbook teaches you ${pay.xp} experience.`;
       } else if (choice === 'silver') {
         p.gold += pay.silver;
         game.db.ledger(s.accountId, 'adv_chest', pay.silver, o.id);
-        line = `${pay.silver} silver from the chest.`;
+        line = `From the chest: ${pay.silver} silver.`;
       } else return 'Silver or experience?';
       break;
     }
@@ -566,8 +575,8 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
         a.pts = (a.pts ?? 0) + 1;
         line = 'The bell’s note stays with you: a talent point to spend.';
       } else {
-        const xp = altarXp(o.level);
-        game.grantXp(s, xp, `The ${name}`);
+        const xp = altarXp(xpLevel(s, o));
+        game.grantXp(s, xp, null);
         line = `The bell’s note teaches you ${xp} experience.`;
       }
       break;
@@ -576,7 +585,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
       ship.morale = Math.max(ship.morale, WELL_MORALE);
       ship.sanity = Math.min(100, ship.sanity + WELL_SANITY);
       const will = advHooks.well?.(game, s) || restoreWill(p);
-      line = will ? 'The crew drinks and rests: their heart and nerve restored, and your will.' : 'The crew drinks and rests: their heart and nerve restored.';
+      line = will ? 'The crew drinks at the well and rests: their heart and nerve restored, and your will.' : 'The crew drinks at the well and rests: their heart and nerve restored.';
       break;
     }
     case 'tower': {
@@ -591,7 +600,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
       const want = millLoad(good, o.region, o.kind === 'mill' ? MILL_DAYS : STORE_DAYS);
       const k = giveGoods(ship, good, want);
       if (k <= 0) return 'No room in the hold.';
-      line = `${k} ${GOODS[good].name.toLowerCase()} into the hold.`;
+      line = o.kind === 'mill' ? `From the windmill into the hold: ${k} ${GOODS[good].name.toLowerCase()}.` : `From the warehouse into the hold: ${k} ${GOODS[good].name.toLowerCase()}.`;
       break;
     }
     case 'prison': {
@@ -610,7 +619,7 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
     }
   }
   advOf(p).v[o.id] = stampOf(game, o.kind);
-  game.toastShip(ship, `The ${name}: ${line}`, 'good');
+  game.toastShip(ship, line, 'good');
   sendAdv(game, s, true);
   sendCard(game, s, true);
   game.pushSelf(s, true);
