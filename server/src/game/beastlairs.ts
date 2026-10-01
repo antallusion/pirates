@@ -13,8 +13,8 @@
 
 import { UNITS, armyMen, armyPower, armyWeight } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
-import { BEASTS, BEAST_IDS, BEAST_PLURAL, LAND_RES, isBeast } from '../../../shared/src/data/bestiary.ts';
-import type { BeastId, LandRes } from '../../../shared/src/data/bestiary.ts';
+import { BEASTS, BEAST_IDS, BEAST_PLURAL, CREATURE_IDS, LAND_RES, isBeast, isCreature } from '../../../shared/src/data/bestiary.ts';
+import type { BeastId, CreatureId, LandRes } from '../../../shared/src/data/bestiary.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { DWELL_MAX, DWELL_WEEKS, EGG_MAX, LAIRS, LAIR_ART, LAIR_KINDS, LAIR_RESPAWN, PEN_NESTS, buildLairs, chainChest, dwellGrowth, lairArmy, lairPay, landParty, penStage } from '../../../shared/src/data/lairs.ts';
 import type { Lair, LairKind } from '../../../shared/src/data/lairs.ts';
@@ -45,6 +45,8 @@ import { TAC_XP_PER_HP, sideOf } from './tactical.ts';
 import { act, killedHp, lossesOf, newBattle, quickFinish, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 import { keepsDeep, townHooks, townLevel, townState } from './town.ts';
+import { captureOffer, captureTake, creaturesWon } from './tame.ts';
+import type { CaptureOffer } from '../../../shared/src/driftproto.ts';
 import type { Yard } from './base.ts';
 
 /** What a captain keeps of the lairs (docs/18 II). */
@@ -112,6 +114,21 @@ interface LandFight {
   retreat: boolean;
   loot?: LairLoot;
   xp: number;
+  /** docs/18 IV: a fight that is not a lair's — a drift's at sea (its field, its name, its end). */
+  ext?: ExtFight;
+  /** docs/18 #36: the beaten who would follow her, until she chooses. */
+  capture?: CaptureOffer;
+}
+
+/** A creature fight of another system on the same battle ashore (docs/18 IV: a drift's at sea). */
+export interface ExtFight {
+  /** The field's kind of ground, the creature's id for the screen, the place's name, its level. */
+  type: string;
+  kind: string;
+  place: string;
+  level: number;
+  /** The fight is over (won or not): what it left her, if anything. */
+  onEnd: (game: Game, s: PlayerSession, won: boolean, bt: TacBattle) => LairLoot | undefined;
 }
 
 interface L18 {
@@ -487,11 +504,49 @@ export const landFighting = (game: Game, s: PlayerSession): boolean => all.get(g
 function sendFight(game: Game, s: PlayerSession): void {
   const f = L(game).fights.get(s.accountId);
   if (!f) return;
-  const l = L(game).byId.get(f.lair)!;
   const bt = f.bt;
-  const result = bt.over ? { lost: lossesOf(bt, 0), killed: lossesOf(bt, 1), xp: f.xp, ...(f.loot ? { loot: f.loot } : {}) } : undefined;
+  const loot = f.loot ? { ...f.loot, ...(f.capture ? { capture: { ...f.capture } } : {}) } : undefined;
+  const result = bt.over ? { lost: lossesOf(bt, 0), killed: lossesOf(bt, 1), xp: f.xp, ...(loot ? { loot } : {}) } : undefined;
   f.seq = bt.seq;
-  game.sendTo(s, { t: 'board_tac', view: viewOf(bt, 0, game.now, !bt.over, { ransom: null, ...(result ? { result } : {}), land: { type: l.type, lair: l.kind, island: islandName(game, l), level: l.level } }) });
+  const land = f.ext ? { type: f.ext.type, lair: f.ext.kind, island: f.ext.place, level: f.ext.level } : (() => {
+    const l = L(game).byId.get(f.lair)!;
+    return { type: l.type, lair: l.kind, island: islandName(game, l), level: l.level };
+  })();
+  game.sendTo(s, { t: 'board_tac', view: viewOf(bt, 0, game.now, !bt.over, { ransom: null, ...(result ? { result } : {}), land }) });
+}
+
+/** docs/18 IV: a creature fight of another system laid on the battle ashore (its own end), her party against `men`. */
+export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, name: string, men: ArmyStack[], face: string, level: number): string | null {
+  const S = L(game);
+  if (S.fights.has(s.accountId)) return 'Your party is ashore already.';
+  const ship = s.ship!;
+  const base = sideOf(game, ship, ship, true);
+  const party = landParty(base.army ?? []);
+  if (!party.length) return 'Too few hands to spare a landing party';
+  const a: TacSideInput = { ...base, army: party, holes: 0, gunsOut: 0, fire: false, castle: false, struck: false, dealt: ladder(ship.shipLevel, level, false).dealt || 0.1 };
+  const b: TacSideInput = {
+    name, ship: ext.place, captain: null, hands: 0, marines: 0, gunners: 0, army: men.map((x) => ({ u: x.u, n: x.n, src: x.u })), officers: [], skill: 3,
+    morale: 50, dealt: ladder(level, ship.shipLevel, false).dealt || 0.1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false,
+    human: false, noBook: true, face,
+  };
+  const seed = S.rng.int(1, 1e9);
+  const rng = new Rng((seed ^ 0xd71f) >>> 0);
+  const bt = newBattle(a, b, seed, game.now, rng, { land: ext.type });
+  S.fights.set(s.accountId, { lair: '', bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0, ext });
+  ship.input = { rudder: 0, sailTarget: 0 };
+  ship.state.speed = 0;
+  sendLairCard(game, s, true);
+  sendFight(game, s);
+  return null;
+}
+
+/** docs/18 #36: her choice on the beaten who would follow her, while the battle's reckoning is on her screen. */
+export function fightCapture(game: Game, s: PlayerSession, choice: 'take' | 'pen' | 'free'): string | null {
+  const f = L(game).fights.get(s.accountId);
+  if (!f?.capture) return 'Nobody waits to follow you.';
+  const why = captureTake(game, s, f.capture, choice);
+  sendFight(game, s);
+  return why;
 }
 
 /** A captain's order in the battle ashore ('cut': back to the boats). */
@@ -578,6 +633,25 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   const p = lairsOf(s.profile!);
   for (const x of lossesOf(bt, 1)) if (isBeast(x.u)) p.kills[x.u] = (p.kills[x.u] ?? 0) + x.n;
   const won = bt.over!.winner === 0 && !f.retreat;
+  // docs/18 #39: her creatures that fought and won, fed, have a win more.
+  if (won) creaturesWon(game, ship, bt.stacks.filter((x) => x.side === 0).map((x) => x.src));
+  if (f.ext) {
+    // docs/18 IV: another system's fight — its own end.
+    if (won) {
+      const xp = Math.round(killedHp(bt, 0) * TAC_XP_PER_HP);
+      f.xp = xp;
+      if (xp > 0) game.grantXp(s, xp, `Won the fight with the ${f.ext.place}`, true);
+      ship.morale = Math.min(100, ship.morale + 5);
+    }
+    f.loot = f.ext.onEnd(game, s, won, bt);
+    if (f.loot?.capture) {
+      f.capture = f.loot.capture;
+      delete f.loot.capture;
+    }
+    ship.companyKey = '';
+    game.pushSelf(s, true);
+    return;
+  }
   if (!won) {
     // The creatures keep what is left of them until the lair is whole again.
     const left = bt.stacks.filter((x) => x.side === 1 && x.count > 0).map((x) => ({ u: x.unit, n: x.count }));
@@ -593,6 +667,8 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   f.xp = xp;
   if (xp > 0) game.grantXp(s, xp, `Won the fight ashore with the ${lairName(l)}`, true);
   f.loot = lootLair(game, s, l);
+  // docs/18 #36: some of the beaten may follow her (a grotto's and a guardian's never; the Choir's only their own).
+  f.capture = captureOffer(game, s, lossesOf(bt, 1), lairRatio(game, s, l), LAIRS[l.kind].join);
   questEvent(game, s, { k: 'lair', island: l.island, kind: l.kind });
   ship.morale = Math.min(100, ship.morale + 8);
   ship.companyKey = '';
@@ -1105,8 +1181,8 @@ export function adminLair(game: Game, s: PlayerSession, args: string[]): string 
 
 /** `/beast [kind] [n]`: creatures of a kind into her army (the list of kinds without one). */
 export function adminBeast(game: Game, s: PlayerSession, args: string[]): string {
-  const u = args[0] as BeastId;
-  if (!isBeast(u)) return `Kinds: ${BEAST_IDS.join(', ')}.`;
+  const u = args[0] as CreatureId;
+  if (!isCreature(u)) return `Kinds: ${CREATURE_IDS.join(', ')}.`;
   const ship = s.ship!;
   const n = Math.max(1, Math.min(500, Math.round(Number(args[1] ?? 10)) || 10));
   if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'No free slot in the army for a new kind of man.';
@@ -1116,7 +1192,7 @@ export function adminBeast(game: Game, s: PlayerSession, args: string[]): string
   s.profile!.company.pools.sailor += k;
   ship.companyKey = '';
   game.pushSelf(s, true);
-  return `${k} ${beastsName(u)} in your army.`;
+  return `${k} ${BEAST_PLURAL[u][0]} in your army.`;
 }
 
 /** `/egg [kind|hatch|grow]`: an egg of a kind in hand; the pen's eggs hatched, or its young grown, at once. */

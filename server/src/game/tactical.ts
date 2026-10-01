@@ -5,6 +5,7 @@
 // which goes back through the boarding's own finish (the plunder, the prize, the losses) with the experience the
 // victor's captain learnt from it.
 
+import { creaturesWon, mixedOf, rankArmy } from './tame.ts'; // docs/18 IV
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
 import type { OfficerRole } from '../../../shared/src/data/crew.ts';
 import { armyCost, hasSpecial, UNITS } from '../../../shared/src/data/army.ts';
@@ -84,8 +85,9 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
       officers.push({ id: `npc-${ship.id}`, role: mix.officer, name, level: Math.max(1, Math.min(20, Math.round(ship.level / 4))), lucky: false });
     }
   }
-  // Every stack of her army goes on deck (a ship without men still sends her last hand).
-  const army: TacArmyEntry[] = ship.army.map((x) => ({ u: x.u, n: x.n, src: x.u }));
+  // Every stack of her army goes on deck (a ship without men still sends her last hand); a tamed kind with its rank
+  // (docs/18 #39).
+  const army: TacArmyEntry[] = rankArmy(s?.profile, ship.army.map((x) => ({ u: x.u, n: x.n, src: x.u })));
   if (!army.length) army.push({ u: 'deckhand', n: 1, src: 'deckhand' });
   // The Marines talent: a tenth of the hands a rank are drilled to fight as marines (for the fight; they stay hands).
   const men = army.reduce((n, x) => n + x.n, 0);
@@ -115,6 +117,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
     gunsOut: deck.gunsOut,
     fire: deck.fire,
     hero: heroInput(game, ship), // docs/17 H2
+    mixed: mixedOf(s?.profile, ship.army), // docs/18 #38: the peoples of a mixed army
     ...(heroFace(game, ship) ? { face: heroFace(game, ship) } : {}), // docs/18 item 8: a named captain's own face
   };
 }
@@ -230,6 +233,7 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
     }
     // The victor's captain learns from the men his side cut down (HoMM3: the experience of a battle won).
     const wSide = bt.over.winner;
+    creaturesWon(game, winner, bt.stacks.filter((x) => x.side === wSide).map((x) => x.src)); // docs/18 #39
     const ws = game.sessionOf(winner);
     const xp = Math.round(killedHp(bt, wSide) * TAC_XP_PER_HP);
     fight.tacXp = [wSide === 0 ? xp : 0, wSide === 1 ? xp : 0];

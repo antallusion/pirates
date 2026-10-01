@@ -6,6 +6,7 @@ import type { UnitId } from './data/army.ts';
 import type { BeastId, LandRes } from './data/bestiary.ts';
 import type { GoodId } from './data/goods.ts';
 import type { LairKind, LairRole, LairSize } from './data/lairs.ts';
+import type { CaptureOffer } from './driftproto.ts';
 
 /** A lair as the charts show it once seen. */
 export interface LairMark {
@@ -75,6 +76,10 @@ export interface LairLoot {
   dwell?: boolean;
   /** The island is clear of its lairs: hers for a supply route. */
   claimed?: string;
+  /** docs/18 #36: some of the beaten would follow her (a drift's fight at sea, or a lair's ashore). */
+  capture?: CaptureOffer;
+  /** docs/18 IV: a drift's fight — its silver and lesson (no lair's spoils). */
+  drift?: { silver: number; xp: number; legend?: boolean };
 }
 
 export interface LairsView {

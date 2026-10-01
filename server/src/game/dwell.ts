@@ -7,8 +7,8 @@
 // the limit. An upgraded dwelling trains a stack of its tier's plain kind up for the difference in price.
 
 import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
-import { BEAST_IDS, BEAST_PLURAL } from '../../../shared/src/data/bestiary.ts';
-import type { BeastId } from '../../../shared/src/data/bestiary.ts';
+import { BEAST_PLURAL, CREATURE_IDS } from '../../../shared/src/data/bestiary.ts';
+import type { CreatureId } from '../../../shared/src/data/bestiary.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { PICKED_TIER, mightCap, mightRoom, POOL_WEEKS, TIER_SHIP_LEVEL, TIER_UNIT, pickedShare, UNIT_GOODS, dwellingOf, portDwellings, portGrowth, recruitPrice, upgradePrice, PORT_MARKUP } from '../../../shared/src/data/town.ts';
 import type { Price } from '../../../shared/src/data/town.ts';
@@ -248,7 +248,7 @@ const NAMES: Record<UnitId, string> = {
   deckhand: 'deckhands', sailor: 'seasoned sailors', marine: 'marines', sea_guard: 'sea guards', musketeer: 'musketeers', sharpshooter: 'sharpshooters',
   gunner: 'gunners', bombardier: 'bombardiers', boarder: 'boarders', cutthroat: 'cutthroats', guard: 'officers’ guards', life_guard: 'life guards',
   drowned: 'drowned', deep_spawn: 'spawn of the deep',
-  ...(Object.fromEntries(BEAST_IDS.map((b) => [b, BEAST_PLURAL[b][0]])) as Record<BeastId, string>), // docs/18 II
+  ...(Object.fromEntries(CREATURE_IDS.map((b) => [b, BEAST_PLURAL[b][0]])) as Record<CreatureId, string>), // docs/18 II, IV
 };
 const plural = (u: UnitId, _n: number) => NAMES[u];
 

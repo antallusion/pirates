@@ -212,6 +212,8 @@ import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
+import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
@@ -826,6 +828,8 @@ export class Game {
     if (Math.floor(this.now) % 5 === 0) stepH3(this); // the Heroes' calendar: dawns, weeks, mines, halls (docs/17 H3)
     stepH4(this); // the adventure map: guards, things to visit, the Grail's diggers (docs/17 H4)
     stepLairs(this); // the lairs of the land's creatures: what each captain sees, her card (docs/18 II)
+    stepDrifts(this); // drifting creatures, the season's legend (docs/18 IV)
+    stepTame(this); // the creatures of the army: the starving and the unhappy slip away (docs/18 #39)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
     settleCrimes(this);
@@ -1049,7 +1053,10 @@ export class Game {
     // ship's own tick of each second, so `tick % 200` alone matched only ships whose id is a multiple of 20.)
     if (ship.isPlayer && Math.floor(this.tick / 20) % 10 === 0) {
       const frontier = REGIONS[ship.region].safety === 'lawless' ? Math.max(0.5, 1 - 1.25 * tval(st, 'frontier')) : 1;
-      const eat = (provisionsPerMinute(ship.crew, st.provisionUse) / 6) * frontier; // ten seconds of it (shared/src/data/voyage.ts)
+      // docs/18 #37: the creatures aboard eat their own (fish, rum, bone), not the crew's provisions.
+      const beasts = creaturesAboard(ship);
+      if (beasts > 0) feedCreatures(this, ship, 10);
+      const eat = (provisionsPerMinute(ship.crew - beasts, st.provisionUse) / 6) * frontier; // ten seconds of it (shared/src/data/voyage.ts)
       const have = ship.cargo.provisions ?? 0;
       if (have > 0) {
         const left = Math.max(0, have - eat);
@@ -2622,6 +2629,7 @@ export class Game {
     if (msg.t === 'h4') return h4Message(this, s, msg); // docs/17 H4
     if (msg.t === 'isle18') return isle18Message(this, s, msg); // docs/18 #32
     if (msg.t === 'lair') return lairMessage(this, s, msg); // docs/18 II
+    if (msg.t === 'drift') return driftMessage(this, s, msg); // docs/18 IV
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);
@@ -3303,7 +3311,7 @@ export class Game {
           case 'propose':
             return err(barterPropose(this, s, msg.name));
           case 'offer':
-            return err(barterOffer(this, s, msg.gold, msg.cargo, msg.items));
+            return err(barterOffer(this, s, msg.gold, msg.cargo, msg.items, msg.beasts));
           case 'lock':
           case 'unlock':
             return err(barterLock(this, s, msg.action === 'lock'));

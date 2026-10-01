@@ -50,6 +50,7 @@ import type { H3ClientMsg, H3ServerMsg, TownView } from './h3proto.ts';
 import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
 import type { IsleClientMsg, IsleServerMsg } from './isleproto.ts';
 import type { LairClientMsg, LairServerMsg } from './lairproto.ts';
+import type { DriftClientMsg, DriftServerMsg } from './driftproto.ts';
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
@@ -284,7 +285,7 @@ export type ClientMsg =
   | { t: 'group'; action: 'ask'; name: string }
   | { t: 'barter'; action: 'propose'; name: string }
   /** docs/16 #33: goods, silver and gear from the locker (by uid) on the table. */
-  | { t: 'barter'; action: 'offer'; gold: number; cargo: Cargo; items?: number[] }
+  | { t: 'barter'; action: 'offer'; gold: number; cargo: Cargo; items?: number[]; /** docs/18 #42 */ beasts?: { u: UnitId; n: number }[] }
   /** Lock one's own offer; confirm (`rev`: the table as the captain saw it) once both are locked. */
   | { t: 'barter'; action: 'lock' | 'unlock' | 'cancel' }
   | { t: 'barter'; action: 'ready'; rev?: number }
@@ -303,6 +304,7 @@ export type ClientMsg =
   /** docs/18 #32: the supply routes. */
   | IsleClientMsg
   | LairClientMsg
+  | DriftClientMsg
   | { t: 'mail'; action: 'list' }
   | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
   | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
@@ -1568,6 +1570,7 @@ export type ServerMsg =
   /** docs/18 III: the zones of one level, the turtle islands, the supply routes. */
   | IsleServerMsg
   | LairServerMsg
+  | DriftServerMsg
   | { t: 'pong'; c: number; s: number };
 
 // ------------------------------------------------------------------ groups, barter, letters, the market
@@ -2546,6 +2549,8 @@ export interface BarterSide {
   /** docs/16 #33: gear on the table, and the offer locked. */
   items?: Item[];
   locked?: boolean;
+  /** docs/18 #42: tamed creatures on the table. */
+  beasts?: { u: UnitId; n: number }[];
 }
 
 export interface BarterView {

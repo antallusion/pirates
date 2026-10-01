@@ -42,19 +42,46 @@ export const BEASTS: Record<BeastId, UnitDef> = {
 
 export const isBeast = (u: string): u is BeastId => (BEAST_IDS as string[]).includes(u);
 
+// ------------------------------------------------------------------------------------------------ docs/18 IV: the sea's kinds
+
+/** The sea's own creatures that drift into a captain's army (docs/18 IV item 37) beside the land's fourteen: the
+ *  mermaid of the nets, the sea turtle of the weed, and the two legends of a season (the white whale, the young kraken).
+ *  The seals, the sharks, the young serpent, the drowned of the surf and the tentacles are the land's kinds already. */
+export type SeaBeastId = 'mermaid' | 'sea_turtle' | 'white_whale' | 'young_kraken';
+export const SEA_BEAST_IDS: SeaBeastId[] = ['mermaid', 'sea_turtle', 'white_whale', 'young_kraken'];
+/** Every creature kind: the land's and the sea's. */
+export type CreatureId = BeastId | SeaBeastId;
+export const CREATURE_IDS: CreatureId[] = [...BEAST_IDS, ...SEA_BEAST_IDS];
+
+const S = (id: SeaBeastId, tier: number, s: BeastStats & { legend?: boolean }): UnitDef => ({ id, tier, up: false, base: id, upgrade: null, beast: true, ...s });
+
+export const SEA_BEASTS: Record<SeaBeastId, UnitDef> = {
+  mermaid: S('mermaid', 4, { atk: 9, def: 7, dmin: 3, dmax: 6, hp: 16, speed: 6, init: 9, shots: 3, specials: ['shooter', 'diving'], art: 'portrait.giver_pearl_diver_f', cost: 150 }),
+  sea_turtle: S('sea_turtle', 3, { atk: 5, def: 11, dmin: 2, dmax: 4, hp: 24, speed: 3, init: 4, shots: 0, specials: ['shell', 'diving'], art: 'creature.turtle', cost: 95 }),
+  white_whale: S('white_whale', 7, { atk: 22, def: 20, dmin: 14, dmax: 22, hp: 160, speed: 4, init: 6, shots: 0, specials: ['sweep', 'regen', 'diving', 'retaliate_all'], art: 'monster.sperm_whale', cost: 2400, legend: true }),
+  young_kraken: S('young_kraken', 7, { atk: 24, def: 16, dmin: 12, dmax: 20, hp: 140, speed: 5, init: 8, shots: 0, specials: ['terror', 'sweep', 'retaliate_all'], art: 'monster.kraken', cost: 2400, legend: true }),
+};
+
+export const isSeaBeast = (u: string): u is SeaBeastId => (SEA_BEAST_IDS as string[]).includes(u);
+/** Any creature, the land's or the sea's (not a man). */
+export const isCreature = (u: string): u is CreatureId => isBeast(u) || isSeaBeast(u);
+
 /** The creatures with no picture of their own: a token of an existing one, tinted (a CSS/canvas filter) and framed
  *  (docs/18's rule; listed in its journal). The rest show their own art. */
-export const BEAST_TINT: Partial<Record<BeastId, string>> = {
+export const BEAST_TINT: Partial<Record<CreatureId, string>> = {
   rock_turtle: 'grayscale(0.7) sepia(0.35) brightness(0.8) contrast(1.15)',
   marsh_serpent: 'hue-rotate(70deg) saturate(1.4) brightness(0.85)',
   hermit: 'sepia(0.55) saturate(0.8) brightness(0.9)',
   cultist: 'hue-rotate(160deg) saturate(0.7) brightness(0.85)',
   surf_drowned: 'hue-rotate(110deg) saturate(0.6) brightness(0.8)',
   reef_shark: 'hue-rotate(-15deg) saturate(1.2)',
+  // docs/18 IV: the mermaid is a pearl diver's portrait gone sea-green; the white whale a sperm whale bleached pale.
+  mermaid: 'hue-rotate(115deg) saturate(1.3) brightness(0.95)',
+  white_whale: 'grayscale(1) brightness(1.55) contrast(0.9)',
 };
 
 /** English plurals the server's lines name them by (the client words them in Russian). */
-export const BEAST_PLURAL: Record<BeastId, Tr> = {
+export const BEAST_PLURAL: Record<CreatureId, Tr> = {
   crab: ['shore crabs', 'береговые крабы'],
   gull: ['carrion gulls', 'чайки-падальщики'],
   seal: ['seals', 'тюлени'],
@@ -69,6 +96,10 @@ export const BEAST_PLURAL: Record<BeastId, Tr> = {
   lantern_maw: ['lantern maws', 'светочи-пасти'],
   ancient_turtle: ['ancient turtles', 'древние черепахи'],
   shoal_leviathan: ['leviathans of the shoal', 'левиафаны на мели'],
+  mermaid: ['mermaids', 'русалки'],
+  sea_turtle: ['sea turtles', 'морские черепахи'],
+  white_whale: ['the white whale', 'белый кит'],
+  young_kraken: ['the young kraken', 'молодой кракен'],
 };
 
 // ------------------------------------------------------------------------------------------------ the land's resources

@@ -28,6 +28,8 @@ export interface TacArmyEntry {
   u: UnitId;
   n: number;
   src?: UnitId;
+  /** docs/18 #39: a creature kind's rank (1–3): a tenth more attack, defence and hit points a rank. */
+  rank?: number;
 }
 
 /** What one side brings to the fight, as the ship and her crew make it. */
@@ -76,6 +78,8 @@ export interface TacSideInput {
   face?: string;
   /** docs/18 II: a lair's creatures have no captain's book (no orders, not even grenades). */
   noBook?: boolean;
+  /** docs/18 #38: the morale of a mixed army (HoMM3's peoples): 0 for an army of men, down to −3. */
+  mixed?: number;
 }
 
 export interface TacStack {
@@ -297,11 +301,13 @@ export function buildStacks(input: TacSideInput, side: 0 | 1, cells: TacCell[], 
       const d = UNITS[e.u];
       // Dismounted guns: the swivel crews have fewer charges and lighter ones.
       const blast = d.specials.includes('blast');
+      // docs/18 #39: a tamed kind's rank.
+      const rk = 1 + 0.1 * Math.max(0, Math.min(3, Math.floor(e.rank ?? 0)));
       let shots = d.shots ? d.shots + input.extraShots : 0;
       if (blast && gunsOut > 0) shots = Math.max(1, Math.round(shots * (1 - gunsOut)));
       out.push({
-        id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, count: Math.floor(e.n), start: Math.floor(e.n), hpTop: d.hp, hpMax: d.hp, hex: -1,
-        atk: r1(d.atk), def: r1(d.def), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: blast ? 1 - 0.5 * gunsOut : 1,
+        id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, count: Math.floor(e.n), start: Math.floor(e.n), hpTop: Math.round(d.hp * rk), hpMax: Math.round(d.hp * rk), hex: -1,
+        atk: r1(d.atk * rk), def: r1(d.def * rk), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: blast ? 1 - 0.5 * gunsOut : 1,
         ret: true, defending: false, waited: false, surged: false, again: 0,
       });
     }
@@ -474,6 +480,8 @@ export function moralePoints(bt: TacBattle, side: 0 | 1): number {
   if (has(e, 'maelstrom', bt.round)) m--;
   // The paths' moves (docs/18): the Line, the howl, false colours.
   m += modsOf(bt, side).morale;
+  // docs/18 #38: the peoples of a mixed army.
+  m += h.input.mixed ?? 0;
   return Math.max(-3, Math.min(3, m));
 }
 

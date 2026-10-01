@@ -25,6 +25,11 @@ import { ignores } from './friends.ts';
 import { hasPennant, tie } from './pvp.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
+import type { UnitId } from '../../../shared/src/data/army.ts';
+import { BEAST_PLURAL } from '../../../shared/src/data/bestiary.ts';
+import { joinCreatures, tameOf } from './tame.ts';
+import { reconcile } from './crew.ts';
 
 export const CONVOY_RANGE = 1500;
 /** docs/16 #33: two ships trade at sea within 300 m of each other (no heaving to). */
@@ -53,6 +58,8 @@ interface Offer {
   cargo: Cargo;
   /** docs/16 #33: gear from the locker, by uid. */
   items: number[];
+  /** docs/18 #42: tamed creatures from her army, by kind (they go across on the boats with the goods). */
+  beasts: { u: UnitId; n: number }[];
   /** The offer is locked: it stands as it is until unlocked. */
   locked: boolean;
   ready: boolean;
@@ -459,7 +466,7 @@ function alongside(game: Game, a: PlayerSession, b: PlayerSession): { ok: boolea
   return { ok: true, atSea: true, port: null };
 }
 
-const emptyOffer = (): Offer => ({ gold: 0, cargo: {}, items: [], locked: false, ready: false });
+const emptyOffer = (): Offer => ({ gold: 0, cargo: {}, items: [], beasts: [], locked: false, ready: false });
 
 export function barterPropose(game: Game, s: PlayerSession, name: string): string | null {
   const t = game.sessionByName(String(name ?? ''));
@@ -532,7 +539,28 @@ function tradeItems(s: PlayerSession, uids: unknown): number[] | string {
   return out;
 }
 
-export function barterOffer(game: Game, s: PlayerSession, gold: number, cargo: Cargo, items?: unknown): string | null {
+/** docs/18 #42: creatures she may put on the table — tamed kinds of her army (no legend), at most what she has, and a
+ *  stack of something left aboard. */
+function tradeBeasts(s: PlayerSession, raw: unknown): { u: UnitId; n: number }[] | string {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) return 'Bad offer';
+  const ship = s.ship!;
+  const out: { u: UnitId; n: number }[] = [];
+  for (const v of raw) {
+    const u = String((v as { u?: unknown })?.u ?? '') as UnitId;
+    const n = Math.floor(Number((v as { n?: unknown })?.n));
+    if (!UNITS[u]?.beast || !Number.isFinite(n) || n <= 0 || out.some((x) => x.u === u)) continue;
+    if (UNITS[u].legend) return 'A legend does not change hands';
+    const have = ship.army.find((x) => x.u === u)?.n ?? 0;
+    if (n > have) return `You have only ${have} ${BEAST_PLURAL[u as keyof typeof BEAST_PLURAL][0]}`;
+    out.push({ u, n });
+  }
+  const left = ship.army.reduce((a, x) => a + x.n, 0) - out.reduce((a, x) => a + x.n, 0);
+  if (out.length && left <= 0) return 'Keep at least one stack aboard';
+  return out;
+}
+
+export function barterOffer(game: Game, s: PlayerSession, gold: number, cargo: Cargo, items?: unknown, beasts?: unknown): string | null {
   const b = game.social.barters.get(s.accountId);
   if (!b || !b.open) return 'No trade is open';
   const mine = b.offers.get(s.accountId)!;
@@ -552,7 +580,9 @@ export function barterOffer(game: Game, s: PlayerSession, gold: number, cargo: C
   }
   const gear = tradeItems(s, items);
   if (typeof gear === 'string') return gear;
-  b.offers.set(s.accountId, { gold: g, cargo: clean, items: gear, locked: false, ready: false });
+  const kin = tradeBeasts(s, beasts);
+  if (typeof kin === 'string') return kin;
+  b.offers.set(s.accountId, { gold: g, cargo: clean, items: gear, beasts: kin, locked: false, ready: false });
   // Any change calls both captains back to the table.
   changed(b);
   pushBarter(game, b);
@@ -621,6 +651,7 @@ function offerWhy(s: PlayerSession, o: Offer): string | null {
     if (!it) return `${s.name} no longer has that gear`;
     if (it.bound) return 'Bound gear does not change hands';
   }
+  for (const x of o.beasts ?? []) if ((s.ship!.army.find((y) => y.u === x.u)?.n ?? 0) < x.n) return `${s.name} no longer has those creatures`;
   return null;
 }
 
@@ -646,18 +677,23 @@ function settleBarter(game: Game, b: Barter): string | null {
     // A hold already over its room (a storm's salvage) is no bar to a trade that does not add to it.
     const noRoom = vol(after) > st.holdVolume + 1e-6 && vol(after) > vol(s.ship!.cargo) + 1e-6 ? `${s.name}'s hold has no room for it`
       : s.profile!.stash.length - give.items.length + take.items.length > STASH_SIZE ? `${s.name}'s locker has no room for the gear` : null;
-    if (noRoom) {
+    // docs/18 #42: the creatures she takes need their slots and hammocks, after her own go across.
+    const beastRoom = beastsFit(s, give, take);
+    const blocked = noRoom ?? beastRoom;
+    if (blocked) {
       for (const o of b.offers.values()) o.ready = false;
       b.transferAt = 0;
       b.rev++;
       pushBarter(game, b);
-      return noRoom;
+      return blocked;
     }
   }
   // All at once.
   const gearA = take(A, oa.items), gearB = take(B, ob.items);
   move(A, B, oa);
   move(B, A, ob);
+  moveBeasts(game, A, B, oa);
+  moveBeasts(game, B, A, ob);
   for (const it of gearA) B.profile.stash.push({ ...it, uid: B.profile.itemSeq++ });
   for (const it of gearB) A.profile.stash.push({ ...it, uid: A.profile.itemSeq++ });
   if (oa.gold) game.db.ledger(A.accountId, 'barter', -oa.gold, B.name);
@@ -667,7 +703,7 @@ function settleBarter(game: Game, b: Barter): string | null {
   tie(game, A, B);
   A.ship.recompute(game.now);
   B.ship.recompute(game.now);
-  const line = (o: Offer, gear: Item[]) => [o.gold ? `${o.gold} silver` : '', ...Object.entries(o.cargo).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`)].filter(Boolean).join(', ') || (gear.length ? 'gear' : 'nothing');
+  const line = (o: Offer, gear: Item[]) => [o.gold ? `${o.gold} silver` : '', ...Object.entries(o.cargo).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`), ...(o.beasts ?? []).map((x) => `${x.n} ${BEAST_PLURAL[x.u as keyof typeof BEAST_PLURAL][0]}`)].filter(Boolean).join(', ') || (gear.length ? 'gear' : 'nothing');
   game.sendTo(A, { t: 'toast', msg: `Trade done with ${B.name}: gave ${line(oa, gearA)}, got ${line(ob, gearB)}.`, kind: 'good' });
   game.sendTo(B, { t: 'toast', msg: `Trade done with ${A.name}: gave ${line(ob, gearB)}, got ${line(oa, gearA)}.`, kind: 'good' });
   for (const it of gearB) game.sendTo(A, { t: 'toast', msg: `Into your locker: ${itemName(it)}.`, kind: 'good' });
@@ -676,6 +712,33 @@ function settleBarter(game: Game, b: Barter): string | null {
   game.pushSelf(A, true);
   game.pushSelf(B, true);
   return null;
+}
+
+/** docs/18 #42: whether the creatures she takes have their hammocks and slots, after hers go across (null: they do). */
+function beastsFit(s: PlayerSession, give: Offer, take: Offer): string | null {
+  const comes = (take.beasts ?? []).reduce((a, x) => a + x.n, 0);
+  if (!comes) return null;
+  const gone = (give.beasts ?? []).reduce((a, x) => a + x.n, 0);
+  const ship = s.ship!;
+  if (ship.crew - gone + comes > ship.stats.crewMax) return `${s.name} has no hammocks for the creatures`;
+  const kinds = new Set(ship.army.filter((x) => x.n - ((give.beasts ?? []).find((y) => y.u === x.u)?.n ?? 0) > 0).map((x) => x.u));
+  for (const x of take.beasts ?? []) kinds.add(x.u);
+  return kinds.size > ship.armySlots ? `${s.name} has no free slot for the creatures` : null;
+}
+
+/** docs/18 #42: the creatures across, their wins with them into an empty slot (a rank is the stack's). */
+function moveBeasts(game: Game, from: PlayerSession, to: PlayerSession, o: Offer): void {
+  for (const x of o.beasts ?? []) {
+    const fs = from.ship!;
+    const rec = tameOf(from.profile!).k[x.u];
+    const k = fs.loseFrom(x.u, x.n);
+    if (!fs.army.some((y) => y.u === x.u)) delete tameOf(from.profile!).k[x.u];
+    reconcile(game, from.profile!.company, fs.crew);
+    fs.companyKey = '';
+    const had = to.ship!.army.find((y) => y.u === x.u)?.n ?? 0;
+    const got = joinCreatures(game, to, x.u, k);
+    if (rec && got > 0 && had === 0) tameOf(to.profile!).k[x.u] = { w: rec.w, h: 0 };
+  }
 }
 
 /** The pieces out of a captain's locker (checked to be there just before). */
@@ -714,7 +777,7 @@ function move(from: PlayerSession, to: PlayerSession, o: Offer): void {
 function side(game: Game, id: number, o: Offer): BarterSide {
   const s = game.sessionByAccount(id);
   const items = o.items.map((uid) => s?.profile?.stash.find((x) => x.uid === uid)).filter((x): x is Item => !!x);
-  return { name: s?.name ?? '?', gold: o.gold, cargo: o.cargo, ready: o.ready, items, locked: o.locked };
+  return { name: s?.name ?? '?', gold: o.gold, cargo: o.cargo, ready: o.ready, items, locked: o.locked, ...(o.beasts?.length ? { beasts: o.beasts.map((x) => ({ ...x })) } : {}) };
 }
 
 function pushBarter(game: Game, b: Barter): void {

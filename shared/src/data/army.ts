@@ -4,12 +4,12 @@
 // kills men out of the stacks, the weaker and the less armoured first; the hull is the wall they stand behind.
 // The boarding battle (server/src/game/tacbattle.ts) lays these stacks out on the hexes as they are.
 
-import { BEASTS } from './bestiary.ts';
-import type { BeastId } from './bestiary.ts';
+import { BEASTS, SEA_BEASTS } from './bestiary.ts';
+import type { BeastId, SeaBeastId } from './bestiary.ts';
 
 /** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
  *  them (docs/18 II, shared/src/data/bestiary.ts). */
-export type UnitId = MenId | BeastId;
+export type UnitId = MenId | BeastId | SeaBeastId;
 export type MenId =
   | 'deckhand' | 'sailor'
   | 'marine' | 'sea_guard'
@@ -91,6 +91,8 @@ export interface UnitDef {
   deep?: boolean;
   /** One of the land's creatures (docs/18 II), not a man. */
   beast?: boolean;
+  /** A legend of the sea (docs/18 #40): the white whale, the young kraken — one a captain, never sold. */
+  legend?: boolean;
 }
 
 const U = (id: UnitId, tier: number, up: boolean, base: UnitId, upgrade: UnitId | null, s: Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>): UnitDef => ({ id, tier, up, base, upgrade, ...s });
@@ -98,6 +100,7 @@ const U = (id: UnitId, tier: number, up: boolean, base: UnitId, upgrade: UnitId 
 /** One man of each kind (the HoMM3 scale: a pikeman 4/5 1–3 10 hp, a black dragon 25/25 40–50 300 hp). */
 export const UNITS: Record<UnitId, UnitDef> = {
   ...BEASTS,
+  ...SEA_BEASTS,
   deckhand: U('deckhand', 1, false, 'deckhand', 'sailor', { atk: 3, def: 2, dmin: 1, dmax: 2, hp: 5, speed: 4, init: 5, shots: 0, specials: [], art: 'portrait.pirate_15', cost: 20 }),
   sailor: U('sailor', 1, true, 'deckhand', null, { atk: 4, def: 3, dmin: 1, dmax: 3, hp: 6, speed: 4, init: 6, shots: 0, specials: [], art: 'portrait.giver_old_salt_m', cost: 30 }),
   marine: U('marine', 2, false, 'marine', 'sea_guard', { atk: 7, def: 6, dmin: 2, dmax: 4, hp: 9, speed: 4, init: 7, shots: 0, specials: [], art: 'portrait.pirate_06', cost: 60 }),

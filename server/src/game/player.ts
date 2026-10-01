@@ -75,6 +75,8 @@ import { heroOf, heroView } from './hero.ts';
 import type { HeroRec } from './hero.ts';
 import type { AdvProfile } from './advmap.ts';
 import type { LairProfile } from './beastlairs.ts';
+import type { TameProfile } from './tame.ts';
+import type { DriftProfile } from './drifts.ts';
 
 export interface Profile {
   version: 1;
@@ -276,6 +278,9 @@ export interface Profile {
   /** docs/18 II: the lairs of the land's creatures — her spoils by week, what she has seen, the land's resources,
    *  the eggs she carries, the chains she has cleared. */
   lairs?: LairProfile;
+  /** docs/18 IV: her creatures — their wins and hunger kind by kind; the drifts she has saved. */
+  tame?: TameProfile;
+  drift?: DriftProfile;
 }
 
 export interface Dealings {
