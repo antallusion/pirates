@@ -43,7 +43,7 @@ function guardBlock(g: GuardCard, own: boolean): string {
   return `<div class="ac-guard${own ? ' own' : ''}">
     <div class="ac-gw"><b class="ac-word">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span>${own ? ` · ${esc(guardName(g.kind))}` : ''}<span class="tg-army-faces">${faces}</span></div>
     <div class="muted ac-gl">${own ? '' : `${esc(what)} · `}${esc(L('guard.vs', { r: ratio }))}</div>
-    <div class="muted ac-gl">${esc(L('guard.pay', { s: fmt(g.pay.silver), x: fmt(g.pay.xp) }))}</div>
+    <div class="muted ac-gl ac-pay">${esc(L('guard.pay', { s: fmt(g.pay.silver), x: fmt(g.pay.xp) }))}</div>
     ${offer ? `<div class="ac-offer">${esc(offer)}</div>` : ''}
     ${!g.alongside ? `<div class="muted ac-gl ac-come">${esc(L('guard.come'))}</div>` : ''}
     <div class="ac-acts">
