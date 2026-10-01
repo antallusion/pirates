@@ -897,8 +897,9 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
   return targetError(bt, side, (kind === 'innate' ? INNATE : ULTIMATE)[path].fx.target, target);
 }
 
-/** The point-blank volley's blow, a share of the captain's blast (H2's corsair signature; docs/18 #47 weighs it). */
-export const TAC_POINT_BLANK = { k: 1.6 };
+/** The point-blank volley's blow, a share of the captain's blast: H2's corsair signature in the sea's book (`k`), and
+ *  in a corsair's own hands (`path`: docs/18 #47 — her path book carries her now, the volley a little less). */
+export const TAC_POINT_BLANK = { k: 1.6, path: 1.6 };
 
 /** The balance tools' count of what each captain gives (tools/balance-paths-casts.ts); off in the game. */
 export const tacStats: { on: boolean; casts: Map<string, number> } = { on: false, casts: new Map() };
@@ -972,7 +973,7 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
       }
       break;
     case 'point_blank':
-      if (t) kills += hurt(bt, t, Math.round(P * TAC_POINT_BLANK.k), side);
+      if (t) kills += hurt(bt, t, Math.round(P * (h.input.hero?.path === 'corsair' ? TAC_POINT_BLANK.path : TAC_POINT_BLANK.k)), side);
       break;
     case 'call_of_the_deep':
       for (const o of alive(bt)) if (o.side !== side && o.count > 1) kills += hurt(bt, o, Math.max(1, Math.round(o.count * Math.min(0.25, 0.08 * k))) * o.hpMax, side);
