@@ -80,7 +80,8 @@ const PERSON: Record<string, string> = {
 /** The sea's named officers, whole (their nicknames and double names are not parts of the table). */
 const UNIQUE_RU: Record<string, string> = {
   'Jory "Old Bones" Pike': 'Джори «Старые Кости» Пайк', 'Sister Anwen Coil': 'Сестра Анвен Койл', 'Ruy Salazar-Ketch': 'Руй Саласар-Кетч',
-  'Nell "Tallow" Marsh': 'Нелл «Сальная» Марш', 'Ezekiel Thorne': 'Иезекииль Торн', 'Magda "Iron-Jaw" Rusk': 'Магда «Железная Челюсть» Раск',
+  'Nell "Tallow" Marsh': 'Нелл «Сальная» Марш', 'Ezekiel Thorne': 'Иезекииль Торн', 'Magda "Iron-Jaw" Rusk': 'Магда «Железная Челюсть» Раск',  // The adventure map's guards (docs/17 H4): who leads them in the boarding battle.
+  'The Hold-out’s Chief': 'Вожак заставы', 'The Castaways': 'Отверженные', 'The Drowned Crew': 'Утонувшая команда', 'The Deep': 'Глубина',
 };
 
 export function personNameRu(en: string): string | null {

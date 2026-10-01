@@ -42,6 +42,7 @@ import type { ClientState, RemoteShip } from '../state.ts';
 import { Fx } from './fx.ts';
 import type { CritPart } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
+import { drawAdvWorld, drawGuardShip, guardTag } from './advmap.ts'; // docs/17 H4
 import { GlSea, GlSky, glWanted } from './gl.ts';
 import { CELL, SpriteAtlas } from './atlas.ts';
 import type { SailKey } from './atlas.ts';
@@ -407,6 +408,7 @@ export class Renderer {
     for (const is of islands) this.drawIsland(is, state);
     this.drawPorts(state);
     drawLookouts(g, state, ictx, state.wind[0]); // lookouts on the headlands (docs/16 #24)
+    drawAdvWorld(g, state, this.advCtx()); // the adventure map's things on their skerries (docs/17 H4)
     // The pirate lairs near her (docs/16 #7): the fort, its guns on the shore, the camp.
     if (this.zoom >= 0.12) {
       const ctx = { sx: (x: number) => this.sx(x), sy: (y: number) => this.sy(y), zoom: this.zoom, time: opt0.reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, fx: this.fx, label: (l: LairView) => lairLabel(l) };
@@ -677,6 +679,11 @@ export class Renderer {
   }
 
   /** The frame's context for batch E's drawing (docs/16 #23–25). */
+  /** Where the adventure map draws (docs/17 H4). */
+  private advCtx(): { sx: (x: number) => number; sy: (y: number) => number; zoom: number; time: number; w: number; h: number } {
+    return { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: settings().reduceMotion ? 0 : this.time, w: this.w, h: this.h };
+  }
+
   private islesCtx(state: ClientState, night: number): IslesCtx {
     const now = state.estServerTime();
     const ru = lang() === 'ru' ? 1 : 0;
@@ -1859,6 +1866,7 @@ export class Renderer {
     const len = cls.length * this.zoom, beam = cls.beam * this.zoom;
     const x = this.sx(s.x), y = this.sy(s.y);
     if (x < -len * 2 || y < -len * 2 || x > this.w + len * 2 || y > this.h + len * 2) return;
+    if (!s.own && drawGuardShip(g, state, s, len, this.advCtx())) return; // a guard of the adventure map (docs/17 H4)
     if (cls.monster) {
       drawMonster(g, { id: s.id, x, y, h: s.h, classId: s.classId, flags: s.flags, hull: s.hull, sinkT: s.sinkT, art: bossArt(s.id, state) }, this.zoom, this.time);
       if (s.classId === 'lantern_maw' && !(s.flags & SF.SUBMERGED)) {
@@ -3659,7 +3667,7 @@ export class Renderer {
     const label = info.isPlayer ? `${info.captainName} · ${info.name}` : named ? `☠ ${named.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${placeName(info.name)}`;
     const cb = settings().colorblind;
     const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
-    const tag = named ? named.tag : info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' ');
+    const tag = guardTag(state, s.id) ?? (named ? named.tag : info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' '));
     // Her level (canon D12) leads the name as WoW's does: the number in a frame coloured by how far she stands above
     // your own ship, a gold frame for an elite built for a company, a skull when no shot of yours would tell.
     // Her own ships from the island's shipyard (docs/15) sail on her side: their level, never a threat's skull.

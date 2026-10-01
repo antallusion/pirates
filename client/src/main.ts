@@ -74,13 +74,15 @@ import { renderDescent } from './ui/descent.ts';
 import { renderSaga } from './ui/saga.ts';
 import { renderAway } from './ui/renown.ts';
 import { RecruitWindow } from './ui/recruit.ts';
+import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
+import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -218,6 +220,15 @@ function openRecruit(src: 'port' | 'isle'): void {
   openModal('recruit');
 }
 portScreen.openDwell = () => openRecruit('port');
+// The adventure map (docs/17 H4): the visit card over the sea, and the Grail's chart.
+const advCard = new AdvCard((m) => net.send(m));
+const puzzleWindow = new PuzzleWindow((m) => net.send(m));
+function openPuzzle(): void {
+  puzzleWindow.open();
+  openModal('puzzle');
+}
+advCard.onPuzzle = openPuzzle;
+worldMap.onPuzzle = openPuzzle;
 baseWindow.onRecruit = () => openRecruit('isle');
 companyScreen.onBase = () => openBase();
 baseWindow.onSail = () => closeModal();
@@ -665,6 +676,15 @@ function onMessage(m: ServerMsg): void {
     case 'dwell':
       if (modal === 'recruit') refreshModal();
       break;
+    case 'adv_card':
+      advCard.show(m.view);
+      break;
+    case 'adv':
+      if (modal === 'map') worldMap.draw(state);
+      break;
+    case 'puzzle':
+      if (modal === 'puzzle') refreshModal();
+      break;
     case 'descent': {
       // The choice between tiers opens its window for the leader; the window follows the descent.
       const run = m.view?.run;
@@ -755,6 +775,7 @@ function onMessage(m: ServerMsg): void {
 setInterval(() => {
   if (modal === 'dice') tickDice($('modal-panel'), state);
   if (modal === 'base') baseWindow.tick($('modal-panel'), state);
+  if (modal === 'puzzle' && (state.puzzle?.digging || state.puzzle?.wait)) refreshModal(); // the dig's seconds (docs/17 H4)
 }, 1000);
 
 function openModal(m: Modal): void {
@@ -918,6 +939,9 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'recruit':
       recruitWindow.render(root, state);
+      break;
+    case 'puzzle':
+      puzzleWindow.render(root, state);
       break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);

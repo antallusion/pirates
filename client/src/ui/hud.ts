@@ -50,6 +50,9 @@ import type { ChatChannel, ChatLine } from './chat.ts';
 import { NAME_RU } from '../lang/data.ts';
 import { serverText } from '../lang/server.ts';
 import { weekChip } from './town.ts'; // docs/17 H3
+import { drawAdvMini } from './advchart.ts'; // docs/17 H4
+import { GUARDS } from '../../../shared/src/data/advmap.ts';
+import { guardOfEntity } from '../render/advmap.ts';
 import { armyGlance } from './army.ts';
 
 const L = dict(EN, RU);
@@ -617,6 +620,7 @@ export class Hud {
       g.closePath();
       g.fill();
     }
+    drawAdvMini(g, state, tx, ty, own, range); // the adventure map's guards and things (docs/17 H4)
     // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold.
     for (const m of state.seaMarks.values()) {
       if (Math.abs(m.x - own.x) > range || Math.abs(m.y - own.y) > range) continue;
@@ -1260,7 +1264,8 @@ export class Hud {
     const beast = beastOfClass(info.classId);
     const named = info.named ? namedLabel(info.named) : null;
     const name = beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : named ? named.name : info.isPlayer ? `${info.captainName} · ${placeName(info.name)}` : placeName(info.name);
-    const role = info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
+    const guard = id !== null ? guardOfEntity(state, id) : null; // a guard of the adventure map (docs/17 H4): what it is, not its hull
+    const role = guard ? GUARDS[guard.kind].name[lang() === 'ru' ? 1 : 0] : info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
     const bar = (k: string, v: number) => `<span class="tg-bar tg-${k}"><i style="width:${pct(clamp(v, 0, 1))}"></i></span>`;
     if (beast) {
       // A beast of the sea (docs/12 P4): its nature instead of a class and a role, and only its hide for a bar.
@@ -1276,7 +1281,7 @@ export class Hud {
     }
     el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
     el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
-      <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
+      <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([guard ? '' : cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
       ${info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
       ${ap ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}

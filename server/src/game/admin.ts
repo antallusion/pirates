@@ -109,6 +109,8 @@ import { adminWeek } from './calendar.ts';
 import { adminDwell } from './dwell.ts';
 import { adminMine, offIsland } from './mines.ts';
 import { adminTown } from './town.ts';
+import { adminGuard, adminObj } from './advmap.ts';
+import { adminGrail, adminObelisk } from './grail.ts';
 import { RES_GOODS } from '../../../shared/src/data/mines.ts';
 import { OMEN_IDS } from '../../../shared/src/data/omens.ts';
 
@@ -118,7 +120,7 @@ export function adminEnabled(): boolean {
 
 const WEATHERS: WeatherKind[] = ['calm', 'breeze', 'wind', 'fog', 'rain', 'storm', 'black_storm'];
 
-const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /away Htide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] · /board (alongside: grapple her) · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full]';
+const HELP = '/speed N · /xp N · /level N · /silver N · /tp port|region|x y · /boss id · /saga · /holiday id|off · /descent · /captive [n] · /rep faction n · /storm [hearts N] · /weather kind [region] · /time hour · /god · /ship class · /heal · /ammo · /give good n · /reveal · /sink · /spawn role class faction · /board [role] [class] [crew] · /fireship · /mast · /strike [role] [class] · /war [patrol] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /hurt N · /auction end|room · /say event [role|unique] · /morale N · /wounded N · /practice trade|all N · /logconvoy [region|know] · /lair [close|wake|silence|sink|rebuild] · /pod [dolphins|humpback|orcas] · /front [black] · /streak N · /heading deg|wind · /isle [level] · /yard [n] · /oship role [level] · /raid [land|tax|calm] · /convoy [region|know] · /log · /career crown|league|confederacy N · /feats · /album · /week [close|next|now|kind] · /away H · /tide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] · /board (alongside: grapple her) · /dwell [fill] · /mine [take|lose|free|pay|go] · /res [n] · /town [level|go] · /away Htide [up|down|off|here] · /light [dark] · /lookout · /trek · /lfg goal [lo hi] · /near name · /wgoal [n|near|done] · /gyard [found|fill|done] · /signal kind · /army [unit n|level L|clear] · /foe [role] [class] [m] · /board (alongside: grapple her) · /prim [atk|def|pow|will N|reset] · /skill id [0-3]|offer [n]|clear · /order id|all|clear · /art [id|set regalia|hook|storm|list] · /will [N|full] · /guard [go|beat|weak|board|reset] [kind] [level] · /obj [kind] [go|reset] · /obelisk [n|all|go] · /grail [go|found|reset]';
 
 /** Run one admin line; the answer is a short line for the captain (or null when it is not a command). */
 export function runAdmin(game: Game, s: PlayerSession, line: string): string | null {
@@ -1122,6 +1124,18 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         return `Off ${game.world.islands[h.island].name}.`;
       }
       return adminTown(game, s, args[0] !== undefined && Number.isFinite(num(0)) ? Math.max(0, Math.min(3, Math.floor(num(0)))) : undefined);
+    case 'guard':
+      // The adventure map's guards (docs/17 H4): the nearest (of a kind); `go` to it, `beat` it, `weak` thins it, `reset` all.
+      return adminGuard(game, s, args);
+    case 'obj':
+      // The things on the map (docs/17 H4): the nearest (of a kind); `go` to it; `reset` her visits.
+      return adminObj(game, s, args);
+    case 'obelisk':
+      // The Grail's chart (docs/17 H4): n pieces more, `all` of them, `go` to the nearest obelisk not read.
+      return adminObelisk(game, s, args);
+    case 'grail':
+      // The Grail (docs/17 H4): `go` off its spot, `found` at once, `reset` this season's hunt.
+      return adminGrail(game, s, args);
     case 'res': {
       // The seven resources (docs/17 H3): n of each of the six goods into the hold, and into her island's yard.
       const n = Math.max(0, Math.round(num(0, 50)));

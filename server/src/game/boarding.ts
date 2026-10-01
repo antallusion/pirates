@@ -22,6 +22,7 @@ import { onCrewKilled, onGrapple } from './mind.ts';
 import { moraleLossMul } from './crew.ts';
 import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx.ts';
 import { closeTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
+import { guardBeaten } from './advmap.ts';
 
 const AGG = {
   careful: { tempo: 0.75, cargo: 0.55, ownLoss: 0.9 },
@@ -647,6 +648,7 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
     a.state.speed = 0;
     return;
   }
+  if (guardBeaten(game, a, b)) return; // a guard of the adventure map: no prize, its chest and it is gone (docs/17 H4)
   const agg = AGG[bs.aggression];
   // Cargo destroyed during the fight (10–25% typical at "standard"); grenades set fires below. Careful Hands can
   // take it to nothing.

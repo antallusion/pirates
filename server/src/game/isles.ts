@@ -33,6 +33,7 @@ import { lighthouseIslands } from './havens.ts';
 import { strength } from './holdings.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { revealAdv } from './advmap.ts';
 
 interface IslesState {
   rng: Rng;
@@ -169,6 +170,7 @@ export function climbLookout(game: Game, s: PlayerSession, is: Island, share: nu
     isl++;
   }
   const { reefs, marks } = sendSea(game, s, is.x, is.y, r);
+  revealAdv(game, s, is.x, is.y, r); // the guards and the things on the map in its sight (docs/17 H4)
   const wrecks = marks.filter((m) => m.kind === 'wreck').length;
   game.grantXp(s, Math.round(60 * share), null);
   game.toastShip(ship, `From the lookout on ${is.name} the sea lies open for ${Math.round(r / 1000)} km: ${isl} islands, ${reefs.length} reefs and ${wrecks} wrecks newly on your chart.`, 'good');
