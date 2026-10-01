@@ -241,7 +241,7 @@ export function sendDrifts(game: Game, s: PlayerSession, force: boolean): void {
     const last = S.toldAt.get(s.accountId) ?? -Infinity;
     if (!m.legend && game.now - last < 240) continue;
     S.toldAt.set(s.accountId, game.now);
-    game.toastShip(ship, `Lookout: ${driftName(m.kind)} adrift ${bearing(ship.state.x, ship.state.y, ship.state.heading, m.x, m.y)}, ${(dist(m.x, m.y, ship.state.x, ship.state.y) / 1000).toFixed(1)} km.`, m.legend ? 'gold' : 'info');
+    game.toastShip(ship, `Lookout: ${driftName(m.kind)} adrift ${bearing(ship.state.x, ship.state.y, ship.state.heading, m.x, m.y)}, ${Math.max(50, Math.round(dist(m.x, m.y, ship.state.x, ship.state.y) / 50) * 50)} m.`, m.legend ? 'gold' : 'info');
   }
 }
 
@@ -647,7 +647,7 @@ export function adminDrift(game: Game, s: PlayerSession, args: string[]): string
     let at: [number, number] | null = null;
     for (let t = 0; t < 24 && !at; t++) {
       const v = headingVec(ship.state.heading + (t % 2 ? 1 : -1) * Math.floor(t / 2) * 0.5);
-      const x = ship.state.x + v.x * 240, y = ship.state.y + v.y * 240;
+      const x = ship.state.x + v.x * 160, y = ship.state.y + v.y * 160;
       if (openWater(game, x, y) || (!isLand(game.world, x, y) && game.inZone(x, y))) at = [x, y];
     }
     if (!at) {

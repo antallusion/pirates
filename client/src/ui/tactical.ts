@@ -40,7 +40,7 @@ const DL = dict(DEN, DRU);
 
 /** docs/18 #36: the beaten who would follow her — how many, and her choice: aboard, home to the pen, let go. */
 function captureBlock(c: CaptureOffer): string {
-  const head = `<small>${esc(DL('cap.title'))}</small><div class="tb-lline">${unitIcon(c.u, 'ico-sm')} ${esc(unitName(c.u))} ×${c.n} — ${esc(DL('cap.text', { n: c.n, p: Math.round(c.share * 100) }))}</div>`;
+  const head = `<small>${esc(DL('cap.title'))}</small><div class="tb-lline">${unitIcon(c.u, 'ico-sm')} ${esc(unitName(c.u))} — ${esc(DL('cap.text', { n: c.n, p: Math.round(c.share * 100) }))}</div>`;
   if (c.done) return `<div class="tb-loot tb-cap">${head}<div class="tb-lline good">${esc(DL(`cap.done.${c.done}` as 'cap.done.take'))}</div></div>`;
   const take = c.room > 0 ? `<button class="btn btn-small btn-primary" data-cap="take">${esc(DL('cap.take', { n: Math.min(c.n, c.room) }))}</button>` : '';
   const pen = c.pen > 0 ? `<button class="btn btn-small" data-cap="pen">${esc(DL('cap.pen', { n: Math.min(c.n, c.pen) }))}</button>` : '';

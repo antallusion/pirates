@@ -13,8 +13,7 @@
 import type { CaptainId } from './captains.ts';
 import { UNITS } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
-import { advHour, advLevelXp, guardBaseMight } from './advmap.ts';
-import { armyPower } from './army.ts';
+import { advHour, advLevelXp } from './advmap.ts';
 import { CREATURE_IDS, isCreature } from './bestiary.ts';
 import type { CreatureId } from './bestiary.ts';
 import type { Tr } from './estate.ts';
@@ -149,7 +148,7 @@ export interface DriftDef {
   kind: DriftKind;
   name: Tr;
   text: Tr;
-  /** The creature, and the share of the guards' might its group is reckoned at (docs/17 H4's guardBaseMight). */
+  /** The creature, and its group's weight against the worth of a drift (driftCount: its share × 4 × DRIFT_WORTH of an hour at sea). */
   u: CreatureId;
   share: number;
   lv: [number, number];
@@ -191,12 +190,14 @@ export function driftKindsFor(level: number, region: RegionId): [DriftKind, numb
   }).map((k) => [k, DRIFTS[k].weight]);
 }
 
-/** Its creatures, by the sector's level: the share of the guards' might at its level (a legend: one, two at ⚓9+). */
+/** Its creatures, by the sector's level: worth this share of an hour at sea at its level (a little more than the
+ *  gift they would give instead), so a drift saved is a stack worth having at every level (a legend: one, two at ⚓9+). */
+export const DRIFT_WORTH = 0.15;
 export function driftCount(kind: DriftKind, level: number): number {
   const d = DRIFTS[kind];
   const L = Math.max(1, Math.min(10, Math.round(level)));
   if (d.legend) return L >= 9 ? 2 : 1;
-  return Math.max(1, Math.round((guardBaseMight(L) * d.share) / armyPower([{ u: d.u, n: 1 }])));
+  return Math.max(1, Math.round((advHour(L) * DRIFT_WORTH * d.share * 4) / UNITS[d.u].cost));
 }
 
 /** Seconds a drift lasts before it sinks, drifts off or the sharks finish it; a legend lasts three hours. */

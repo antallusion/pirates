@@ -194,7 +194,12 @@ export class AdvCard {
    *  wounded, the nerve: docs/17 H5's QA), and no lower than the screen allows. */
   place(): void {
     // Where the card ends (a phone held sideways keeps its newest toast just under it: styles.css).
-    requestAnimationFrame(() => document.body.style.setProperty('--ac-bottom', `${Math.round(this.el.getBoundingClientRect().bottom)}px`));
+    requestAnimationFrame(() => {
+      // docs/18 IV: several cards at once (a lair's and a drift's) scroll within the screen rather than run off it.
+      const top = this.el.getBoundingClientRect().top;
+      this.el.style.maxHeight = `${Math.max(140, Math.round(innerHeight - top - 8))}px`;
+      document.body.style.setProperty('--ac-bottom', `${Math.round(this.el.getBoundingClientRect().bottom)}px`);
+    });
     if (innerWidth < 1100 || innerHeight <= 520) {
       this.el.style.top = '';
       return;

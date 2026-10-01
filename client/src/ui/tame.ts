@@ -52,7 +52,7 @@ export class TameWindow {
         <span class="muted">${esc(PEOPLE_NAME[x.people][ru()])}${people?.native ? ` · <span class="good">${esc(L('native'))}</span>` : ''} · ${esc(L('per', { n: String(x.perMin).replace('.', ru() ? ',' : '.'), food: L(`food.${x.food}` as 'food.fish') }))} · ${status}</span>
         <span class="muted">${stars(x.rank)} ${esc(rank)} · ${esc(x.next ? L('rank.next', { n: x.next }) : L('rank.top'))}</span></div><div class="tm-acts">${acts}</div></div>`;
     }).join('');
-    const morale = v.morale < 0 ? `<b class="bad">${esc(L('morale', { m: v.morale }))}</b>` : `<span class="good">${esc(L('morale.ok'))}</span>`;
+    const morale = v.morale < 0 ? `<b class="bad">${esc(L('morale', { m: `−${Math.abs(v.morale)}` }))}</b>` : `<span class="good">${esc(L('morale.ok'))}</span>`;
     const peoples = v.peoples.map((p) => `<span class="ph-chip${p.native ? ' good' : ''}">${esc(PEOPLE_NAME[p.p][ru()])} ${p.n}</span>`).join('');
     const food = v.stacks.length ? `<div class="card tm-card"><p>${esc(L('store', { fish: fmt(v.food.fish), rum: fmt(v.food.rum), bone: fmt(v.food.bone) }))}</p><p class="muted">${esc(L('upkeep', { fish: String(v.perHour.fish).replace('.', ru() ? ',' : '.'), rum: String(v.perHour.rum).replace('.', ru() ? ',' : '.'), s: fmt(v.silverHour) }))}</p>
       <p>${morale}</p><div class="tm-peoples"><span class="muted">${esc(L('peoples'))}:</span> ${peoples}</div></div>` : '';

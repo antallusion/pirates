@@ -16,7 +16,7 @@ export const SERVER_RU_DRIFTS: Record<string, string> = {
   'to starboard': 'по правому борту',
   'to larboard': 'по левому борту',
   // the lookout and the card
-  'Lookout: {0} adrift {1}, {2} km.': 'Впередсмотрящий: «{0}» в дрейфе {1}, {2} км.',
+  'Lookout: {0} adrift {1}, {2} m.': 'Впередсмотрящий: «{0}» в дрейфе {1}, {2} м.',
   'Another captain is at it already.': 'Этим уже занят другой капитан.',
   'Come alongside: within the boats’ reach.': 'Подойдите борт о борт: на расстояние шлюпок.',
   'No medicine aboard for it.': 'Для этого нет лекарств на борту.',
@@ -53,8 +53,9 @@ export const SERVER_RU_DRIFTS: Record<string, string> = {
   '{0} {1} are sent home to the pen of your island.': 'Домой, в загон вашего острова, отправлены {1} ({0}).',
   'Your pen has no room for them.': 'В вашем загоне для них нет места.',
   // the legend
-  '{0} has risen in {1}.': 'В водах {1} показалась легенда — «{0}».',
-  'WORLD: {0} has risen in {1}. One captain may save it or take it.': 'Вести: в водах {1} показалась легенда — «{0}». Спасти её или одолеть сможет лишь один капитан.',
+  '{0} has risen in {1}.': 'Показалась легенда — «{0}»: {1}.',
+  'WORLD: {0} has risen in {1}. One captain may save it or take it.': 'Вести: показалась легенда — «{0}»: {1}. Спасти её или одолеть сможет лишь один капитан.',
+  '{0} has risen in {1}. One captain may save it or take it.': 'Показалась легенда — «{0}»: {1}. Спасти её или одолеть сможет лишь один капитан.',
   '{0} has saved {1}.': '{0} спасает легенду — «{1}».',
   '{0} has slain {1}.': '{0} одолевает легенду — «{1}».',
   'WORLD: {0} has saved {1}.': 'Вести: {0} спасает легенду — «{1}».',
