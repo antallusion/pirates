@@ -12,9 +12,11 @@ import type { ClientMsg, TacAction, TacEvent, TacStackView, TacView } from '../.
 import { assetUrl, sprite } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
+import { INNATE, ULTIMATE } from '../../../shared/src/data/paths.ts';
+import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
-import { $, esc, icon } from './dom.ts';
+import { $, esc, icon, portraitUrl } from './dom.ts';
 import { placeName } from './maps.ts';
 import { specialName, specialNote, unitArt, unitName, unitNote } from './army.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
@@ -45,6 +47,24 @@ interface Burst {
   t0: number;
   size: number;
 }
+/** A path's move drawn over the field (docs/18 items 1, 5): the innate small, the ultimate over the whole board. */
+interface PathFx {
+  path: CaptainId;
+  ult: boolean;
+  /** Your side's or hers (where it falls). */
+  mine: boolean;
+  t0: number;
+  /** The stacks it fell on (screen centres at the time). */
+  at: { x: number; y: number }[];
+}
+/** Each path's colour for its moves' light. */
+const PATH_RGB: Record<CaptainId, [number, number, number]> = {
+  corsair: [255, 150, 60], smuggler: [170, 190, 180], reaver: [220, 40, 40], navigator: [120, 200, 255], drowned: [60, 220, 190], admiral: [240, 200, 100],
+};
+const PATH_FX_MS = { innate: 1200, ult: 2200 };
+/** A move's name (a path's innate or ultimate). */
+const moveName = (path: string, ult: boolean) => ((ult ? ULTIMATE : INNATE)[path as CaptainId]?.name ?? [path, path])[lang() === 'ru' ? 1 : 0];
+const moveText = (path: string, ult: boolean) => ((ult ? ULTIMATE : INNATE)[path as CaptainId]?.text ?? [path, path])[lang() === 'ru' ? 1 : 0];
 
 /** The stack's painted face (docs/17 H1): its kind of man's portrait; an officer's own party his face or post. */
 function stackArt(s: TacStackView): string {
@@ -112,7 +132,9 @@ export class TacticalPanel {
   private size = { w: 0, cw: 0, ch: 0, ox: 0, oy: 0, dpr: 1, rot: 0 as 0 | 1 | -1, bw: 0, bh: 0 };
   private key = '';
   private preview: number | null = null;
-  private targeting: TacSpellId | null = null;
+  private targeting: TacSpellId | 'innate' | 'ult' | null = null;
+  /** The paths' moves being drawn over the field (docs/18). */
+  private pathFx: PathFx[] = [];
   /** The order book open over the field (docs/17 H2: more pages than the panel holds). */
   private bookOpen = false;
   private info: number | null = null;
@@ -152,6 +174,7 @@ export class TacticalPanel {
         this.pos.clear();
         this.floats = [];
         this.bursts = [];
+        this.pathFx = [];
         this.seen = 0;
         this.preview = this.targeting = this.info = null;
       }
@@ -257,9 +280,32 @@ export class TacticalPanel {
         }
       }
       this.floats.push({ text: spName(e.id as TacSpellId), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+      // docs/18: a path page's name over every stack it fell on.
+      for (const id of (e.on ?? []).slice(0, 7)) {
+        const cc = at(hexOf(id));
+        if (cc) this.floats.push({ text: spName(e.id as TacSpellId), x: cc.x, y: cc.y - w * 0.62, t0: t + 100, color: '#e0b862' });
+      }
+    } else if (e.k === 'innate' || e.k === 'ult') {
+      // docs/18: the path's move — its light over the stacks it fell on, its name over the field and each of them.
+      const ult = e.k === 'ult';
+      const on = (e.on ?? []).map((id) => at(hexOf(id))).filter((c): c is { x: number; y: number } => !!c);
+      this.pathFx.push({ path: e.id as CaptainId, ult, mine: e.side === v.you, t0: t, at: on });
+      this.floats.push({ text: moveName(e.id ?? '', ult), x: this.size.cw / 2, y: this.size.ch * (ult ? 0.3 : 0.18), t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+      for (const c of on.slice(0, 7)) this.floats.push({ text: moveName(e.id ?? '', ult), x: c.x, y: c.y - w * 0.62, t0: t + 120, color: ult ? '#ffd27a' : '#e0b862' });
+    } else if (e.k === 'again') {
+      const c = at(hexOf(e.s));
+      if (c) this.floats.push({ text: L('float.again'), x: c.x, y: c.y - w * 0.6, t0: t, color: '#9fe0ff' });
     } else if (e.k === 'order') {
       const c = at(hexOf(e.s));
       if (c) this.floats.push({ text: L(`o.${e.id}` as K), x: c.x, y: c.y - w * 0.6, t0: t, color: '#e0b862' });
+      // The harpooner's iron lands on her stack.
+      if (e.t !== undefined) {
+        const tc = at(e.hex ?? hexOf(e.t));
+        if (tc) {
+          this.floats.push({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: tc.x, y: tc.y - w * 0.2, t0: t, color: '#f3d7a0' });
+          this.bursts.push({ id: 'part.splinters', x: tc.x, y: tc.y, t0: t, size: w * 0.9 });
+        }
+      }
     } else if (e.k === 'burn') {
       const c = at(e.hex ?? hexOf(e.s));
       if (c) {
@@ -286,9 +332,12 @@ export class TacticalPanel {
       const pips = (n: number, cls: string) => `<span class="tb-pip ${cls}${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(cls === 'm' ? 'morale' : 'luck'))}">${cls === 'm' ? '⚑' : '✦'}${n > 0 ? `+${n}` : n}</span>`;
       const mine = x === v.you;
       // The hero beside the field (docs/17 H2): her four primaries and her will.
-      const prim = h.prim ? `<span class="tb-prims">${PRIMS.map((p) => `<span class="tb-prim" title="${esc(PRIM_NAMES[p][lang() === 'ru' ? 1 : 0])}">${icon(PRIM_ICON[p], '', 'ico-xs')}${p === 'will' ? `${h.mana ?? 0}/${h.manaMax ?? 0}` : h.prim![p]}</span>`).join('')}</span>` : '';
-      return `<div class="tb-face" style="background-image:${url ? `url('${url}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small>${prim}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+      const prim = h.prim ? `<span class="tb-prims">${PRIMS.map((p) => `<span class="tb-prim" title="${esc(PRIM_NAMES[p][lang() === 'ru' ? 1 : 0])}">${icon(PRIM_ICON[p], '', 'ico-xs')}${p === 'will' ? `${h.mana ?? 0}/${h.manaMax ?? 0}` : h.prim![p]}</span>`).join('')}${h.stam !== undefined ? `<span class="tb-prim tb-stamv" title="${esc(L('stam'))}">${icon('tree_survival', '', 'ico-xs')}${h.stam}/${h.stamMax ?? 0}</span>` : ''}</span>` : '';
+      // docs/18: her path, and her innate move and ultimate (spent or not) — on her side of the field too.
+      const moves = h.path && h.innate ? `<span class="tb-moves">${icon(INNATE[h.path].icon, '', `ico-xs tb-mv${h.innate === 'used' ? ' off' : ''}`)}${h.ult !== 'locked' ? icon(ULTIMATE[h.path].icon, '', `ico-xs tb-mv ult${h.ult === 'used' ? ' off' : ''}`) : ''}<i>${esc(CAPTAINS[h.path].archetype)}</i></span>` : '';
+      const face = h.face ? portraitUrl(h.face) ?? url : url;
+      return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
+        <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
@@ -308,16 +357,32 @@ export class TacticalPanel {
     // The captain's orders.
     const me = v.heroes[v.you];
     // The book's pages (docs/17 H2): each order's will beside it; the will left on the book's spine.
-    const will = me.mana !== undefined ? `<div class="tb-will" title="${esc(L('will'))}">${icon('icon.ab_brine_mend', '', 'ico-sm')}<b>${me.mana}</b><small>/${me.manaMax ?? 0}</small></div>` : '';
+    // docs/18: her two stores side by side — Will for the magical pages and the common orders, Stamina for the
+    // physical moves (it comes back a share every round).
+    const bar = (cls: string, ico: string, k: K, n: number, m: number) => `<div class="tb-res ${cls}" title="${esc(L(k))}">${icon(ico, '', 'ico-xs')}<span class="tb-rbar"><i style="width:${m ? Math.round(Math.max(0, Math.min(1, n / m)) * 100) : 0}%"></i></span><b>${n}</b><small>/${m}</small></div>`;
+    const will = me.mana !== undefined
+      ? `<div class="tb-will">${bar('will', 'icon.ab_brine_mend', 'will', me.mana, me.manaMax ?? 0)}${me.stam !== undefined ? bar('stam', 'icon.tree_survival', 'stam', me.stam, me.stamMax ?? 0) : ''}</div>`
+      : '';
     const page = (sp: (typeof me.spells)[number]) => {
       const wait = Math.max(0, sp.ready - v.round);
-      const poor = sp.cost !== undefined && me.mana !== undefined && me.mana < sp.cost;
+      const pool = sp.res === 'stam' ? me.stam : me.mana;
+      const poor = sp.cost !== undefined && pool !== undefined && pool < sp.cost;
       const off = !v.mine || me.cast || wait > 0 || poor;
-      return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(spText(sp.id))}">${icon(TAC_SPELLS[sp.id].icon, '', 'ico')}<span><b>${esc(spName(sp.id))}${sp.cost !== undefined ? ` <em class="tb-cost">${sp.cost}</em>` : ''}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L('noWill')) : esc(spText(sp.id))}</small></span></button>`;
+      const cost = sp.scroll ? ` <em class="tb-cost scroll">${esc(L('scroll', { n: sp.scroll }))}</em>` : sp.cost !== undefined ? ` <em class="tb-cost${sp.res === 'stam' ? ' stam' : ''}">${sp.cost}</em>` : '';
+      return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}${sp.scroll ? ' scroll' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(spText(sp.id))}">${icon(TAC_SPELLS[sp.id].icon, '', 'ico')}<span><b>${esc(spName(sp.id))}${cost}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : esc(spText(sp.id))}</small></span></button>`;
+    };
+    // docs/18: her path's innate move and ultimate, each once a battle and free, beside the round's order.
+    const move = (kind: 'innate' | 'ult') => {
+      const st = kind === 'innate' ? me.innate : me.ult;
+      if (!me.path || !st) return '';
+      const mv = (kind === 'innate' ? INNATE : ULTIMATE)[me.path];
+      const off = !v.mine || st !== 'ready';
+      const note = st === 'locked' ? L('ultLocked') : st === 'used' ? L('used') : L('free');
+      return `<button class="btn tb-spell tb-move ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}" data-move="${kind}" ${off ? 'disabled' : ''} title="${esc(moveText(me.path, kind === 'ult'))}">${icon(`icon.${mv.icon}`, '', 'ico')}<span><b>${esc(L(kind))}: ${esc(moveName(me.path, kind === 'ult'))}</b><small>${esc(note)}</small></span></button>`;
     };
     // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3.
     const more = me.spells.length > 4;
-    el.querySelector('.tb-spells')!.innerHTML = will + me.spells.slice(0, 4).map(page).join('') + (more ? `<button class="btn tb-bookbtn${this.bookOpen ? ' on' : ''}" data-book>${icon('icon.bt_captain', '', 'ico')}<span><b>${esc(L('book'))}</b><small>${esc(L('book.n', { n: me.spells.length }))}</small></span></button>` : '');
+    el.querySelector('.tb-spells')!.innerHTML = will + move('innate') + move('ult') + me.spells.slice(0, 4).map(page).join('') + (more ? `<button class="btn tb-bookbtn${this.bookOpen ? ' on' : ''}" data-book>${icon('icon.bt_captain', '', 'ico')}<span><b>${esc(L('book'))}</b><small>${esc(L('book.n', { n: me.spells.length }))}</small></span></button>` : '');
     const book = el.querySelector<HTMLElement>('.tb-book')!;
     book.classList.toggle('hidden', !(more && this.bookOpen));
     book.innerHTML = more && this.bookOpen ? `<div class="tb-book-head"><b>${esc(L('book'))}</b><button class="btn btn-small" data-bookclose>${esc(L('close'))}</button></div><div class="tb-book-grid">${[...me.spells].sort((a, b) => (ORDERS[a.id]?.school ?? '').localeCompare(ORDERS[b.id]?.school ?? '') || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0)).map(page).join('')}</div>` : '';
@@ -325,6 +390,7 @@ export class TacticalPanel {
       this.bookOpen = false;
       this.spell(b.dataset.spell as TacSpellId);
     }));
+    el.querySelectorAll<HTMLElement>('[data-move]').forEach((b) => (b.onclick = () => this.move2(b.dataset.move as 'innate' | 'ult')));
     el.querySelector<HTMLElement>('[data-book]')?.addEventListener('click', () => {
       this.bookOpen = !this.bookOpen;
       this.key = '';
@@ -371,13 +437,18 @@ export class TacticalPanel {
       case 'hit':
       case 'shot':
       case 'ret':
-        return L(`log.${e.k}`, { a: name(e.s), b: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
+        return L(e.id === 'volley' ? 'log.volley' : `log.${e.k}`, { a: name(e.s), b: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'die':
         return L('log.die', { a: name(e.s) });
       case 'spell':
-        return L('log.spell', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: spName(e.id as TacSpellId), kills: e.kills ?? 0 });
+        return L(e.via === 'scroll' ? 'log.scroll' : 'log.spell', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: spName(e.id as TacSpellId), kills: e.kills ?? 0 });
+      case 'innate':
+      case 'ult':
+        return L(e.k === 'ult' ? 'log.ult' : 'log.innate', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: moveName(e.id ?? '', e.k === 'ult'), kills: e.kills ?? 0 });
+      case 'again':
+        return L('log.again', { a: name(e.s) });
       case 'order':
-        return L('log.order', { a: name(e.s), name: L(`o.${e.id}` as K) });
+        return e.id === 'harpoon' && e.t !== undefined ? L('log.harpoon', { a: name(e.s), b: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 }) : L('log.order', { a: name(e.s), name: L(`o.${e.id}` as K) });
       case 'round':
         return L('log.round', { n: e.n ?? 0 });
       case 'burn':
@@ -398,7 +469,8 @@ export class TacticalPanel {
   private hint(v: TacView): void {
     const h = this.el!.querySelector('.tb-hint')!;
     const act = v.stacks.find((s) => s.id === v.active);
-    const text = v.over ? '' : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : '') : this.targeting ? L('hint.target') : this.preview !== null ? L('hint.again') : v.shoot.length ? L('hint.shoot') : L('hint.move');
+    const own = this.targetKind() === 'own';
+    const text = v.over ? '' : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : '') : this.targeting ? L(own ? 'hint.own' : 'hint.target') : this.preview !== null ? L('hint.again') : v.shoot.length ? L('hint.shoot') : L('hint.move');
     h.textContent = text;
     h.classList.toggle('hidden', !text);
   }
@@ -461,6 +533,31 @@ export class TacticalPanel {
     this.preview = null;
   }
 
+  /** Whom the order or move being aimed is for. */
+  private targetKind(): 'enemy' | 'own' | 'none' {
+    const t = this.targeting;
+    const me = this.view?.heroes[this.view.you];
+    if (!t) return 'none';
+    if (t === 'innate' || t === 'ult') return me?.path ? (t === 'innate' ? INNATE : ULTIMATE)[me.path].fx.target : 'none';
+    return TAC_SPELLS[t].target;
+  }
+
+  /** Her path's innate move or ultimate (docs/18): at once, or aimed at a stack. */
+  private move2(kind: 'innate' | 'ult'): void {
+    const v = this.view;
+    const me = v?.heroes[v.you];
+    if (!v?.mine || !me?.path) return;
+    const target = (kind === 'innate' ? INNATE : ULTIMATE)[me.path].fx.target;
+    if (target === 'none') {
+      this.targeting = null;
+      this.order({ a: kind });
+      return;
+    }
+    this.targeting = this.targeting === kind ? null : kind;
+    this.key = '';
+    this.dom(v);
+  }
+
   private spell(id: TacSpellId): void {
     const v = this.view;
     if (!v?.mine) return;
@@ -491,6 +588,8 @@ export class TacticalPanel {
     else if (code === 'KeyD') this.order({ a: 'defend' });
     else if (code === 'KeyO') this.order({ a: 'order' });
     else if (code === 'KeyA') this.order({ a: 'auto', on: !v.heroes[v.you].auto });
+    else if (code === 'KeyI') this.move2('innate');
+    else if (code === 'KeyU') this.move2('ult');
     else if (/^Digit[1-4]$/.test(code)) {
       const sp = v.heroes[v.you].spells[Number(code.slice(5)) - 1];
       if (sp) this.spell(sp.id);
@@ -564,9 +663,17 @@ export class TacticalPanel {
       if (s) this.showInfo(s.id);
       return;
     }
+    // An order or a move aimed at one of her own stacks (docs/18).
+    if (s && s.side === v.you && this.targeting && this.targetKind() === 'own') {
+      const t = this.targeting;
+      this.order(t === 'innate' || t === 'ult' ? { a: t, target: s.id } : { a: 'spell', id: t, target: s.id });
+      this.targeting = null;
+      return this.refresh();
+    }
     if (s && s.side !== v.you) {
       if (this.targeting) {
-        this.order({ a: 'spell', id: this.targeting, target: s.id });
+        const t = this.targeting;
+        this.order(t === 'innate' || t === 'ult' ? { a: t, target: s.id } : { a: 'spell', id: t, target: s.id });
         this.targeting = null;
       } else if (v.shoot.includes(s.id)) this.order({ a: 'shoot', target: s.id });
       else if (v.melee.includes(s.id)) {
@@ -1055,7 +1162,8 @@ export class TacticalPanel {
     if (v.mine) {
       for (const s of v.stacks) {
         const shoot = v.shoot.includes(s.id), melee = v.melee.includes(s.id);
-        if (!shoot && !melee && !(this.targeting && s.side !== v.you)) continue;
+        const aimOwn = this.targetKind() === 'own';
+        if (!shoot && !melee && !(this.targeting && (aimOwn ? s.side === v.you : s.side !== v.you))) continue;
         const p = this.lc(s.hex);
         g.strokeStyle = this.targeting ? `rgba(240,160,60,${0.6 + 0.4 * pulse})` : `rgba(230,80,60,${0.55 + 0.45 * pulse})`;
         g.lineWidth = 2.5;
@@ -1089,6 +1197,9 @@ export class TacticalPanel {
         g.globalAlpha = 1;
       }
     }
+    // The paths' moves (docs/18): their light over the field.
+    this.pathFx = this.pathFx.filter((f) => t - f.t0 < (f.ult ? PATH_FX_MS.ult : PATH_FX_MS.innate));
+    for (const f of this.pathFx) this.drawPathFx(g, f, t, w);
     // Bursts of powder, splinters and smoke.
     this.bursts = this.bursts.filter((b) => t - b.t0 < 700);
     for (const b of this.bursts) {
@@ -1124,6 +1235,136 @@ export class TacticalPanel {
     }
     void cw;
     void ch;
+  }
+
+  /** A path's move drawn over the field (docs/18 items 1 and 5), procedurally: its colour washing over the decks, and
+   *  each path its own figure — the corsair's powder flashes, the smuggler's fog banks, the Reaver's red slashes, the
+   *  navigator's wind spirals, the Drowned's rising bubbles, the Admiral's golden line. The ultimate fills the board. */
+  private drawPathFx(g: CanvasRenderingContext2D, f: PathFx, t: number, w: number): void {
+    const dur = f.ult ? PATH_FX_MS.ult : PATH_FX_MS.innate;
+    const k = Math.max(0, Math.min(1, (t - f.t0) / dur));
+    const fade = k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85;
+    const [r, gg, b] = PATH_RGB[f.path];
+    const rgba = (a: number) => `rgba(${r},${gg},${b},${Math.max(0, a).toFixed(3)})`;
+    const { cw, ch } = this.size;
+    const cx = cw / 2, cy = ch / 2;
+    g.save();
+    if (f.ult) {
+      // The whole board: a wash of the path's colour, a ring rolling outward, a second after it.
+      const R = Math.hypot(cw, ch) / 2;
+      const wash = g.createRadialGradient(cx, cy, 0, cx, cy, R);
+      wash.addColorStop(0, rgba(0.28 * fade));
+      wash.addColorStop(1, rgba(0.05 * fade));
+      g.fillStyle = wash;
+      g.fillRect(0, 0, cw, ch);
+      for (const d of [0, 0.25]) {
+        const kk = Math.max(0, k - d);
+        g.strokeStyle = rgba(0.7 * fade * (1 - kk));
+        g.lineWidth = Math.max(2, w * 0.18 * (1 - kk));
+        g.beginPath();
+        g.arc(cx, cy, R * kk, 0, Math.PI * 2);
+        g.stroke();
+      }
+    }
+    const spots = f.at.length ? f.at : [{ x: cx, y: cy }];
+    const size = w * (f.ult ? 1.5 : 1.1);
+    spots.forEach((p, i) => {
+      const ph = k * Math.PI * 2 + i * 1.7;
+      if (f.path === 'corsair') {
+        // Powder flashes: a star of light at each stack, flickering.
+        const fl = 0.5 + 0.5 * Math.sin(ph * 6);
+        const gl = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * (0.6 + 0.3 * fl));
+        gl.addColorStop(0, `rgba(255,240,200,${(0.9 * fade).toFixed(3)})`);
+        gl.addColorStop(0.4, rgba(0.6 * fade));
+        gl.addColorStop(1, rgba(0));
+        g.fillStyle = gl;
+        g.beginPath();
+        g.arc(p.x, p.y, size, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = `rgba(255,230,170,${(0.8 * fade).toFixed(3)})`;
+        g.lineWidth = 1.5;
+        for (let a = 0; a < 8; a++) {
+          const an = a * (Math.PI / 4) + ph;
+          g.beginPath();
+          g.moveTo(p.x + Math.cos(an) * size * 0.25, p.y + Math.sin(an) * size * 0.25);
+          g.lineTo(p.x + Math.cos(an) * size * (0.7 + 0.3 * fl), p.y + Math.sin(an) * size * (0.7 + 0.3 * fl));
+          g.stroke();
+        }
+      } else if (f.path === 'smuggler') {
+        // Fog banks drifting over them.
+        for (let j = 0; j < 4; j++) {
+          const dx = Math.sin(ph + j) * size * 0.5 + (k - 0.5) * size * 0.8;
+          const fg = g.createRadialGradient(p.x + dx, p.y + (j - 1.5) * size * 0.2, 0, p.x + dx, p.y, size * 0.9);
+          fg.addColorStop(0, rgba(0.5 * fade));
+          fg.addColorStop(1, rgba(0));
+          g.fillStyle = fg;
+          g.beginPath();
+          g.arc(p.x + dx, p.y + (j - 1.5) * size * 0.2, size * 0.9, 0, Math.PI * 2);
+          g.fill();
+        }
+      } else if (f.path === 'reaver') {
+        // Red slashes crossing each stack.
+        g.strokeStyle = rgba(0.9 * fade);
+        g.lineCap = 'round';
+        for (let j = 0; j < 3; j++) {
+          const kk = Math.min(1, k * 3 - j * 0.3);
+          if (kk <= 0) continue;
+          const an = -0.8 + j * 0.8;
+          g.lineWidth = Math.max(2, w * 0.1);
+          g.beginPath();
+          g.moveTo(p.x - Math.cos(an) * size * 0.7, p.y - Math.sin(an) * size * 0.7);
+          g.lineTo(p.x - Math.cos(an) * size * 0.7 + Math.cos(an) * size * 1.4 * kk, p.y - Math.sin(an) * size * 0.7 + Math.sin(an) * size * 1.4 * kk);
+          g.stroke();
+        }
+      } else if (f.path === 'navigator') {
+        // Wind spirals turning round them.
+        g.strokeStyle = rgba(0.8 * fade);
+        g.lineWidth = 1.6;
+        for (let j = 0; j < 3; j++) {
+          g.beginPath();
+          for (let q = 0; q <= 24; q++) {
+            const a = ph * 2 + j * 2.1 + q * 0.26;
+            const rr = size * (0.2 + q / 30);
+            const xx = p.x + Math.cos(a) * rr, yy = p.y + Math.sin(a) * rr * 0.7;
+            if (q) g.lineTo(xx, yy);
+            else g.moveTo(xx, yy);
+          }
+          g.stroke();
+        }
+      } else if (f.path === 'drowned') {
+        // The deep rising: bubbles and a cold glow.
+        const gl = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+        gl.addColorStop(0, rgba(0.45 * fade));
+        gl.addColorStop(1, rgba(0));
+        g.fillStyle = gl;
+        g.beginPath();
+        g.arc(p.x, p.y, size, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = `rgba(200,255,240,${(0.8 * fade).toFixed(3)})`;
+        g.lineWidth = 1.2;
+        for (let j = 0; j < 6; j++) {
+          const bx = p.x + Math.sin(j * 2.3 + i) * size * 0.6;
+          const by = p.y + size * 0.6 - ((k * 1.6 + j * 0.17) % 1) * size * 1.4;
+          g.beginPath();
+          g.arc(bx, by, Math.max(1.5, w * 0.05 * (1 + (j % 3))), 0, Math.PI * 2);
+          g.stroke();
+        }
+      } else {
+        // The Admiral's line: a golden bar drawn through them, and a flare where it passes.
+        const gl = g.createLinearGradient(p.x - size, p.y, p.x + size, p.y);
+        gl.addColorStop(0, rgba(0));
+        gl.addColorStop(Math.max(0.01, Math.min(0.99, k)), rgba(0.95 * fade));
+        gl.addColorStop(1, rgba(0));
+        g.fillStyle = gl;
+        g.fillRect(p.x - size, p.y - w * 0.08, size * 2, w * 0.16);
+        g.strokeStyle = rgba(0.6 * fade);
+        g.lineWidth = 2;
+        g.beginPath();
+        g.arc(p.x, p.y, w * 0.48 + 3 * Math.sin(ph * 3), 0, Math.PI * 2);
+        g.stroke();
+      }
+    });
+    g.restore();
   }
 
   private token(g: CanvasRenderingContext2D, s: TacStackView, x: number, y: number, w: number, on: boolean, pulse: number, v: TacView): void {
@@ -1182,6 +1423,41 @@ export class TacticalPanel {
         g.arc(x + (k - (d.tier - 1) / 2) * Math.max(2.6, w * 0.075), y - R - (s.shotsMax ? 8 : 3), Math.max(0.9, w * 0.024), 0, Math.PI * 2);
         g.fill();
       }
+    }
+    // docs/18: what the paths' moves lay on her — blinded shooters (a grey veil), another turn (a blue ring), blows
+    // unanswered (red notches), a braced stack (a brass rim).
+    if (s.blind) {
+      g.fillStyle = 'rgba(160,170,165,0.55)';
+      g.beginPath();
+      g.arc(x, y, R, Math.PI * 1.05, Math.PI * 1.95);
+      g.lineTo(x, y - R * 0.15);
+      g.fill();
+    }
+    if (s.again) {
+      g.strokeStyle = `rgba(120,200,255,${0.6 + 0.4 * pulse})`;
+      g.lineWidth = 2;
+      g.setLineDash([4, 3]);
+      g.beginPath();
+      g.arc(x, y, R + 4.5, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
+    if (s.noRet) {
+      g.strokeStyle = 'rgba(230,60,50,0.9)';
+      g.lineWidth = 2;
+      for (const a of [-2.4, -0.7]) {
+        g.beginPath();
+        g.moveTo(x + Math.cos(a) * (R - 3), y + Math.sin(a) * (R - 3));
+        g.lineTo(x + Math.cos(a) * (R + 5), y + Math.sin(a) * (R + 5));
+        g.stroke();
+      }
+    }
+    if (s.braced) {
+      g.strokeStyle = '#c9a45a';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(x, y, R + 1.5, Math.PI * 0.15, Math.PI * 0.85);
+      g.stroke();
     }
     if (s.marked) {
       g.strokeStyle = `rgba(240,120,60,${0.6 + 0.4 * pulse})`;

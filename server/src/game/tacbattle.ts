@@ -809,9 +809,18 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
   return targetError(bt, side, (kind === 'innate' ? INNATE : ULTIMATE)[path].fx.target, target);
 }
 
+/** The balance tools' count of what each captain gives (tools/balance-paths-casts.ts); off in the game. */
+export const tacStats: { on: boolean; casts: Map<string, number> } = { on: false, casts: new Map() };
+const tally = (bt: TacBattle, side: 0 | 1, id: string) => {
+  if (!tacStats.on) return;
+  const k = `${bt.heroes[side].input.hero?.path ?? 'sea'}:${id}`;
+  tacStats.casts.set(k, (tacStats.casts.get(k) ?? 0) + 1);
+};
+
 export function castMove(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', target: number | undefined, rng: Rng): string | null {
   const why = moveError(bt, side, kind, target);
   if (why) return why;
+  tally(bt, side, kind);
   const h = bt.heroes[side];
   const hb = h.input.hero!;
   const path = hb.path!;
@@ -841,6 +850,7 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
   const sp0 = h.spells.find((x) => x.id === id)!;
   sp0.ready = bt.round + TAC_SPELLS[id].cd;
   h.cast = bt.round;
+  tally(bt, side, id);
   const scroll = !!h.input.hero?.scroll?.[id];
   const res = spellRes(bt, side, id);
   if (scroll) h.scrollsUsed.push(id);

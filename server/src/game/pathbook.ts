@@ -163,7 +163,9 @@ export function pathAdmin(game: Game, s: PlayerSession, cmd: string, args: strin
       if (args.length) return 'Usage: /path [learn page | forget]';
       const open = pathPagesAt(p.captain, p.level).map((id) => PATH_PAGES[id].name[0]).join(', ');
       const shut = PATH_PAGE_IDS.filter((id) => PATH_PAGES[id].path === p.captain && !pathPagesAt(p.captain, p.level).includes(id)).map((id) => `${PATH_PAGES[id].name[0]} (${PAGE_UNLOCK[PATH_PAGES[id].level]})`).join(', ');
-      return `Path: ${INNATE[p.captain].name[0]} · ultimate ${ULTIMATE[p.captain].name[0]} (${p.level >= ULT_LEVEL ? 'open' : `level ${ULT_LEVEL}`}) · pages: ${open}${shut ? ` · later: ${shut}` : ''}.`;
+      const state = p.level >= ULT_LEVEL ? 'open' : `level ${ULT_LEVEL}`;
+      const later = shut ? ` · later: ${shut}` : '';
+      return `Path: ${INNATE[p.captain].name[0]} · ultimate ${ULTIMATE[p.captain].name[0]} (${state}) · pages: ${open}${later}.`;
     }
     case 'stam': {
       const max = stamMax(p, h);

@@ -553,7 +553,7 @@ export function npcBook(shipLevel: number): OrderId[] {
   return SEA_BOOK.filter(([lv]) => shipLevel >= lv).map(([, id]) => id);
 }
 /** The sea's book by her waters (docs/18: weighed against the paths' starting books, tools/balance-paths.ts). */
-export const SEA_BOOK: [number, OrderId][] = [[1, 'grenades'], [2, 'mark_target'], [2, 'point_blank'], [2, 'double_shot'], [4, 'war_cry'], [4, 'brine_mend'], [7, 'shield_wall'], [9, 'fury']];
+export const SEA_BOOK: [number, OrderId][] = [[1, 'grenades'], [2, 'mark_target'], [2, 'point_blank'], [2, 'double_shot'], [4, 'war_cry'], [4, 'brine_mend'], [7, 'shield_wall'], [9, 'fury'], [10, 'dread']];
 
 // ------------------------------------------------------------------ what the captain sees
 
