@@ -207,7 +207,7 @@ export const OBJS: Record<ObjKind, ObjDef> = {
 export const OBELISKS = 16;
 export const PUZZLE_GRID = 4;
 /** The puzzle's chart is this many metres on a side (the Grail somewhere in its middle half). */
-export const PUZZLE_W = 6400;
+export const PUZZLE_W = 3600;
 
 /** A captain who drinks at a well: her crew's heart up to this, their nerve by this much. */
 export const WELL_MORALE = 95;

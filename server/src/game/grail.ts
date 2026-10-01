@@ -44,11 +44,11 @@ function st(game: Game): GrailState {
   return s;
 }
 
-/** The islands a Grail may lie on: the wild ones of every region but the Abyss, big enough for a puzzle's coasts. */
+/** The islands a Grail may lie on: the wild ones of every region but the Abyss, big enough to know by their coasts. */
 const candidates = new WeakMap<Game['world'], Island[]>();
 function grailIslands(game: Game): Island[] {
   let c = candidates.get(game.world);
-  if (!c) candidates.set(game.world, (c = game.world.islands.filter((is) => !is.portId && !is.minor && !is.raft && is.region !== 'the_abyss' && is.radius >= 160)));
+  if (!c) candidates.set(game.world, (c = game.world.islands.filter((is) => !is.portId && !is.minor && !is.raft && is.region !== 'the_abyss' && is.radius >= 260)));
   return c;
 }
 
@@ -144,6 +144,7 @@ export function startDig(game: Game, s: PlayerSession): string | null {
   if (foundThis(game, p)) return 'You have found this season’s Grail already.';
   if (ship.boarding || ship.landing) return 'Not now';
   if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
+  if (ship.input.sailTarget > 0) return 'Furl the sails first: the diggers row ashore from a ship at rest.';
   const G = st(game);
   if (G.digs.has(s.accountId)) return 'The boats are digging already.';
   if ((G.wait.get(s.accountId) ?? 0) > game.now) return 'The diggers are still resting from the last hole.';

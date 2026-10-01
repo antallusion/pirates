@@ -39,7 +39,7 @@ function guardBlock(g: GuardCard, own: boolean): string {
   const faces = g.units.slice(0, 7).map((u) => `<span class="army-mini" title="${esc(unitName(u))}">${icon(unitArt(u), '', 'army-face-xs')}</span>`).join('');
   const what = g.at === 'mine' ? L('guard.mine') : g.at ? L('guard.of', { what: OBJS[g.at].name[ru()].toLowerCase() }) : L('guard.strait');
   const offer = g.offer === 'join' ? L('guard.joinText', { n: g.joinN }) : g.offer === 'flee' ? L('guard.fleeText') : '';
-  const ratio = g.ratio >= 10 ? Math.round(g.ratio) : g.ratio.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
+  const ratio = g.ratio >= 10 ? String(Math.round(g.ratio)) : g.ratio < 0.1 ? (lang() === 'ru' ? '<0,1' : '<0.1') : g.ratio.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
   return `<div class="ac-guard${own ? ' own' : ''}">
     <div class="ac-gw"><b class="ac-word">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span>${own ? ` · ${esc(guardName(g.kind))}` : ''}<span class="tg-army-faces">${faces}</span></div>
     <div class="muted ac-gl">${own ? '' : `${esc(what)} · `}${esc(L('guard.vs', { r: ratio }))}</div>

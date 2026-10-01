@@ -27,7 +27,7 @@ function noise(seed: number): () => number {
 }
 
 /** One jigsaw edge between two corners, with a tab bulging out (`out` 1) or in (−1). */
-function edge(g: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, out: number): void {
+function edge(g: Path2D, x0: number, y0: number, x1: number, y1: number, out: number): void {
   const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
   const nx = (-dy / len) * out, ny = (dx / len) * out;
   const p = (t: number, o: number) => [x0 + dx * t + nx * o * len, y0 + dy * t + ny * o * len] as const;
@@ -111,41 +111,43 @@ export function drawPuzzle(c: HTMLCanvasElement, v: PuzzleView): void {
     if (open.has(i)) continue;
     const cx = (i % v.grid) * cell, cy = Math.floor(i / v.grid) * cell;
     const r = noise(i * 7919 + v.season * 131 + 17);
-    g.save();
-    g.beginPath();
-    g.moveTo(cx, cy);
+    const piece = new Path2D();
+    piece.moveTo(cx, cy);
     const tab = (a: number, b: number) => ((a * 31 + b * 17) % 2 ? 1 : -1);
     const col = i % v.grid, row = Math.floor(i / v.grid);
-    if (row > 0) edge(g, cx, cy, cx + cell, cy, -tab(col, row));
-    else g.lineTo(cx + cell, cy);
-    if (col < v.grid - 1) edge(g, cx + cell, cy, cx + cell, cy + cell, -tab(col + 1, row + 7));
-    else g.lineTo(cx + cell, cy + cell);
-    if (row < v.grid - 1) edge(g, cx + cell, cy + cell, cx, cy + cell, -tab(col, row + 1));
-    else g.lineTo(cx, cy + cell);
-    if (col > 0) edge(g, cx, cy + cell, cx, cy, -tab(col, row + 7));
-    else g.lineTo(cx, cy);
-    g.closePath();
-    const paper = g.createLinearGradient(cx, cy, cx + cell, cy + cell);
-    paper.addColorStop(0, '#e2d3a8');
-    paper.addColorStop(1, '#cdb986');
-    g.fillStyle = paper;
-    g.fill();
+    if (row > 0) edge(piece, cx, cy, cx + cell, cy, -tab(col, row));
+    else piece.lineTo(cx + cell, cy);
+    if (col < v.grid - 1) edge(piece, cx + cell, cy, cx + cell, cy + cell, -tab(col + 1, row + 7));
+    else piece.lineTo(cx + cell, cy + cell);
+    if (row < v.grid - 1) edge(piece, cx + cell, cy + cell, cx, cy + cell, -tab(col, row + 1));
+    else piece.lineTo(cx, cy + cell);
+    if (col > 0) edge(piece, cx, cy + cell, cx, cy, -tab(col, row + 7));
+    else piece.lineTo(cx, cy);
+    piece.closePath();
     g.save();
-    g.clip();
+    g.shadowColor = 'rgba(0,0,0,0.45)';
+    g.shadowBlur = 6;
+    const paper = g.createLinearGradient(cx, cy, cx + cell, cy + cell);
+    paper.addColorStop(0, '#d9c596');
+    paper.addColorStop(1, '#bea36c');
+    g.fillStyle = paper;
+    g.fill(piece);
+    g.restore();
+    g.save();
+    g.clip(piece);
     // The blur: soft blots of ink where coasts might be.
-    g.filter = 'blur(6px)';
-    for (let b = 0; b < 5; b++) {
-      g.fillStyle = `rgba(110,90,55,${0.18 + r() * 0.2})`;
+    g.filter = 'blur(7px)';
+    for (let b = 0; b < 6; b++) {
+      g.fillStyle = `rgba(96,76,44,${0.22 + r() * 0.22})`;
       g.beginPath();
-      g.ellipse(cx + r() * cell, cy + r() * cell, cell * (0.1 + r() * 0.22), cell * (0.08 + r() * 0.18), r() * 3, 0, Math.PI * 2);
+      g.ellipse(cx + r() * cell, cy + r() * cell, cell * (0.08 + r() * 0.2), cell * (0.06 + r() * 0.16), r() * 3, 0, Math.PI * 2);
       g.fill();
     }
     g.filter = 'none';
     g.restore();
-    g.strokeStyle = 'rgba(60,45,25,0.75)';
+    g.strokeStyle = 'rgba(60,45,25,0.8)';
     g.lineWidth = 1.5;
-    g.stroke();
-    g.restore();
+    g.stroke(piece);
   }
   // The frame.
   g.strokeStyle = '#3b2e1a';

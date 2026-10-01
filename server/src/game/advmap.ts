@@ -775,10 +775,10 @@ function nearestOf<T extends { x: number; y: number }>(list: T[], x: number, y: 
 }
 
 /** Set her down `d` metres off a point, on the side toward where she came from (in open water), hove to. */
-export function parkNear(game: Game, s: PlayerSession, x: number, y: number, d: number): void {
+export function parkNear(game: Game, s: PlayerSession, x: number, y: number, d: number, prefer?: number): void {
   const ship = s.ship!;
   if (ship.docked) game.undock(s);
-  let a = Math.atan2(ship.state.x - x, -(ship.state.y - y));
+  let a = prefer ?? Math.atan2(ship.state.x - x, -(ship.state.y - y));
   let px = x, py = y, wet: [number, number, number] | null = null, found = false;
   for (let k = 0; k < 16 && !found; k++) {
     const qx = x + Math.sin(a + (k * Math.PI) / 8) * d, qy = y - Math.cos(a + (k * Math.PI) / 8) * d;
@@ -792,13 +792,14 @@ export function parkNear(game: Game, s: PlayerSession, x: number, y: number, d: 
   game.grid.upsert(ship.id, px, py);
 }
 
-/** `/guard [go|beat|reset|weak]`: the nearest guard: sail to it, beat it, all of them back; `weak`: a guard you would
- *  win against at once (its men thinned to a tenth), for the offer `join` with `/army level`. */
+/** `/guard [go|beat|weak|board|reset] [kind]`: the nearest guard (of a kind): sail to it, beat it, thin its men to a
+ *  tenth (for the offer), grapple it at once, or every guard back. */
 export function adminGuard(game: Game, s: PlayerSession, args: string[]): string {
   const a = adv(game);
   const ship = s.ship!;
   const kind = args.find((x) => (Object.keys(GUARDS) as string[]).includes(x));
-  const list = a.map.guards.filter((g) => (!kind || g.kind === kind) && (args[0] === 'reset' || guardUp(game, g) || args[0] === 'beat'));
+  const minLevel = Number(args.find((x) => /^\d+$/.test(x)) ?? 0);
+  const list = a.map.guards.filter((g) => (!kind || g.kind === kind) && g.level >= minLevel && (args[0] === 'reset' || guardUp(game, g) || args[0] === 'beat'));
   const g = nearestOf(list.filter((x) => guardUp(game, x)).length ? list.filter((x) => guardUp(game, x)) : list, ship.state.x, ship.state.y);
   if (args[0] === 'reset') {
     for (const id of Object.keys(a.st)) delete a.st[id];
@@ -813,7 +814,8 @@ export function adminGuard(game: Game, s: PlayerSession, args: string[]): string
   if (!g) return 'No guards.';
   const name = guardName(g);
   if (args[0] === 'go') {
-    parkNear(game, s, g.x, g.y, 220);
+    parkNear(game, s, g.x, g.y, 130, -Math.PI / 2);
+    ship.state.heading = 0;
     seenOf(game, s).add(g.id);
     advOf(s.profile!).seen = [...seenOf(game, s)];
     if (!guardShip(game, g.id) && guardUp(game, g)) raise(game, g);
@@ -824,6 +826,14 @@ export function adminGuard(game: Game, s: PlayerSession, args: string[]): string
   if (args[0] === 'beat') {
     guardGone(game, g);
     return `The ${name} is beaten (⚓${g.level}).`;
+  }
+  if (args[0] === 'board') {
+    // Alongside it and grappled at once (the boarding battle opens).
+    const gs = guardShip(game, g.id) ?? raise(game, g);
+    const bx = Math.cos(gs.state.heading), by = Math.sin(gs.state.heading);
+    parkNear(game, s, gs.state.x + bx * 22, gs.state.y + by * 22, 1);
+    ship.state.heading = gs.state.heading;
+    return guardChoice(game, s, g.id, 'fight') ?? `Grappled: the ${name}.`;
   }
   if (args[0] === 'weak') {
     const gs = guardShip(game, g.id) ?? raise(game, g);
@@ -853,7 +863,8 @@ export function adminObj(game: Game, s: PlayerSession, args: string[]): string {
   if (!o) return 'Nothing on the map.';
   const name = OBJS[o.kind].name[0];
   if (args.includes('go')) {
-    parkNear(game, s, o.x, o.y, o.guard && guardUp(game, a.guardById.get(o.guard)!) ? 120 : 150);
+    parkNear(game, s, o.x, o.y, 120, -Math.PI / 2);
+    ship.state.heading = 0;
     seenOf(game, s).add(o.id);
     advOf(s.profile!).seen = [...seenOf(game, s)];
     sendAdv(game, s, true);

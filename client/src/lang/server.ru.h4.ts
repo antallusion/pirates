@@ -62,6 +62,7 @@ export const SERVER_RU_H4: Record<string, string> = {
   'The obelisk’s carving is the last piece of the Grail’s chart: the spot is marked.': 'Резьба обелиска — последний кусок карты Грааля: место отмечено.',
   'You have found this season’s Grail already.': 'Грааль этого сезона уже найден.',
   'The boats are digging already.': 'Шлюпки уже копают.',
+  'Furl the sails first: the diggers row ashore from a ship at rest.': 'Сначала уберите паруса: копатели гребут к берегу со стоящего корабля.',
   'The diggers are still resting from the last hole.': 'Копатели ещё отдыхают после прошлой ямы.',
   'No shore within reach of the boats to dig.': 'Нет берега в досягаемости шлюпок, чтобы копать.',
   'The boats go ashore with spades for the Grail ({0}s).': 'Шлюпки с лопатами уходят на берег за Граалем ({0} с).',
@@ -77,6 +78,7 @@ export const SERVER_RU_H4: Record<string, string> = {
   // The admin.
   'All {0} guards stand again.': 'Все стражи снова на месте: {0}.',
   'No guards.': 'Стражей нет.',
+  'Grappled: the {0}.': 'На абордаж: «{0}».',
   'Off the {0} (⚓{1}, {2} men).': 'У стражей «{0}» (⚓{1}, людей: {2}).',
   'The {0} is beaten (⚓{1}).': '«{0}» разбиты (⚓{1}).',
   'The {0} is thinned to {1} men.': '«{0}» ослаблены до {1} человек.',

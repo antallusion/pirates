@@ -194,7 +194,8 @@ export function drawGuardShip(g: G, state: ClientState, s: { id: number; x: numb
   switch (m.kind) {
     case 'holdout': {
       // The camp on a rock beside her: tents, a stockade, the black flag.
-      const ox = x + Math.cos(s.h) * L0 * 0.95, oy = y + Math.sin(s.h) * L0 * 0.95;
+      // Below her and astern on the screen: clear of her name and strength over her.
+      const ox = x - L0 * 1.05, oy = y + L0 * 0.7;
       skerry(g, ox, oy, L0 * 0.55, m.id, c.time);
       const tent = sprite('prop.life_pirate_tent');
       if (tent) {
