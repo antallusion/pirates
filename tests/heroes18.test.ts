@@ -99,9 +99,8 @@ test('2. six schools, three physical and three magical; each path a home school,
   const book = ['grenades', 'brine_mend', 'dr_brine_kiss', 'cs_grape', 'point_blank'] as const;
   const plain = heroBattle(prim, [], null, [...book], 50, { path: null, level: 40 });
   const corsair = heroBattle(prim, [], null, [...book], 50, { path: 'corsair', level: 40 });
-  // Her home school's own moves (the path pages and her captain's page in it) stronger and cheaper; the common orders as they were.
+  // Her home school's own moves (the path pages in it) stronger and cheaper; the common orders as they were.
   assert.equal(homeMul('corsair', 'cs_grape'), HOME_MUL);
-  assert.equal(homeMul('corsair', 'point_blank'), HOME_MUL);
   assert.equal(homeMul('corsair', 'grenades'), 1);
   assert.ok(isHome('drowned', 'dr_brine_kiss') && !isHome('corsair', 'dr_brine_kiss'));
   assert.ok(corsair.cost.cs_grape! < plain.cost.cs_grape!, 'cheaper');

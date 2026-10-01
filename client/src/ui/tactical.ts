@@ -1229,9 +1229,12 @@ export class TacticalPanel {
       g.lineWidth = 3;
       g.strokeStyle = 'rgba(0,0,0,0.85)';
       const y = f.y - k * w * 0.6;
-      g.strokeText(f.text, f.x, y);
+      // Kept on the board: a name over a stack at the rail does not run off it (docs/18).
+      const half = g.measureText(f.text).width / 2 + 4;
+      const x = Math.max(half, Math.min(cw - half, f.x));
+      g.strokeText(f.text, x, y);
       g.fillStyle = f.color;
-      g.fillText(f.text, f.x, y);
+      g.fillText(f.text, x, y);
       g.globalAlpha = 1;
     }
     void cw;

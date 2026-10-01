@@ -3745,3 +3745,4 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 .pb-lift { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .pb-lift .chip { font-size: 11px; }
 .tal-book { display: block; color: var(--gold); font-size: 11px; }
+.pb-tags .tag .ico-xs { width: 12px; height: 12px; margin: 0 3px 0 0; vertical-align: -2px; }

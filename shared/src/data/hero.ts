@@ -480,8 +480,9 @@ export interface HeroBattle {
   scroll?: Partial<Record<TacSpellId, number>>;
 }
 
-/** Her home school's own moves (docs/18 item 2): the path pages and the captains' own pages of her path's school —
- *  cheaper and stronger for her. The common orders of docs/17 stay as they are for every path. */
+/** Her home school's own moves (docs/18 item 2): the path pages of her path's school (another path's too, learnt) —
+ *  cheaper and stronger for her, as HoMM3's native magic; her innate move and ultimate land with the same lift. The
+ *  common orders of docs/17 and the captains' own pages stay as they are for every path (the balance of H2 holds). */
 export function isHome(path: CaptainId | null | undefined, id: OrderId): boolean {
   const d = ORDERS[id];
   return !!path && !!d && PATH_SCHOOL[path] === d.school && !!d.path;

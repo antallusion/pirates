@@ -410,7 +410,7 @@ export function buyArtifact(game: Game, s: PlayerSession, port: Port, index: num
 
 // ------------------------------------------------------------------ what she sees
 
-export function heroView(p: Profile): HeroView {
+export function heroView(p: Profile, army: readonly { u: string; n: number }[] | undefined = p.army): HeroView {
   const h = heroOf(p);
   const a = artTotals(wornOf(p));
   const costs: Partial<Record<OrderId, number>> = {};
@@ -427,7 +427,7 @@ export function heroView(p: Profile): HeroView {
     cd: { ...h.cd }, costs, sets: a.sets,
     stam: Math.floor(stamOf(p, h)), stamMax: stamMax(p, h), scrolls: { ...(h.scrolls ?? {}) }, pages: pathPagesAt(p.captain, p.level),
     lift: { ...lift, nodes: Object.keys(p.talents ?? {}).filter((id) => TALENT_BOOK[id] && (p.talents[id] ?? 0) > 0) },
-    blast: Math.round((p.army ?? []).reduce((n, x) => n + (UNITS[x.u]?.hp ?? 0) * x.n, 0) * 0.07),
+    blast: Math.round((army ?? []).reduce((n, x) => n + (UNITS[x.u as keyof typeof UNITS]?.hp ?? 0) * x.n, 0) * 0.07),
     mul: pb.mul, pageMul: pb.pageMul ?? 1, innateMul: pb.innateMul ?? 1,
   };
 }

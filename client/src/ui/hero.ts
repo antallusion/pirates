@@ -127,7 +127,8 @@ export class HeroWindow {
 
   private bookTab(h: HeroView, docked: boolean, now: number): string {
     const sc = this.school;
-    const list = ORDER_IDS.filter((id) => ORDERS[id].school === sc && (!ORDERS[id].sig || h.orders.includes(id))).sort((a, b) => ORDERS[a].level - ORDERS[b].level || Number(!!ORDERS[a].sig) - Number(!!ORDERS[b].sig));
+    // The path books' pages are in the Path book (docs/18); here only those of another path she has learnt.
+    const list = ORDER_IDS.filter((id) => ORDERS[id].school === sc && (!ORDERS[id].sig || h.orders.includes(id)) && (!ORDERS[id].path || h.orders.includes(id))).sort((a, b) => ORDERS[a].level - ORDERS[b].level || Number(!!ORDERS[a].sig) - Number(!!ORDERS[b].sig));
     const skill = SKILLS[SCHOOL_SKILL[sc]];
     const rows = list.map((id) => {
       const d = ORDERS[id];
