@@ -899,7 +899,7 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
 
 /** The point-blank volley's blow, a share of the captain's blast: H2's corsair signature in the sea's book (`k`), and
  *  in a corsair's own hands (`path`: docs/18 #47 — her path book carries her now, the volley a little less). */
-export const TAC_POINT_BLANK = { k: 1.6, path: 1.6 };
+export const TAC_POINT_BLANK = { k: 1.6, path: 1.1 };
 
 /** The balance tools' count of what each captain gives (tools/balance-paths-casts.ts); off in the game. */
 export const tacStats: { on: boolean; casts: Map<string, number> } = { on: false, casts: new Map() };

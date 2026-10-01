@@ -27,7 +27,7 @@ export const SERVER_RU_V18: Record<string, string> = {
   // the creature dwellings
   'Raise your flag over it first.': 'Сначала поднимите над ним свой флаг.',
   'It is settled already.': 'Оно уже обустроено.',
-  'The dwelling of the {0} on {1} is settled: half as many again each week, for {2} bone a week.': 'Жилище — {0} — на острове {1} обустроено: в полтора раза больше прироста каждую неделю за {2} кости в неделю.',
+  'The dwelling of the {0} on {1} is settled: half as many again each week, for {2} bone a week.': 'Жилище — {0} — на острове {1} обустроено: в полтора раза больше прироста каждую неделю; кость — {2} в неделю.',
   // the bestiary
   'A new page of the bestiary: {0}.': 'Новая страница бестиария: {0}.',
   // the admin

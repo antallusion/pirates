@@ -96,7 +96,7 @@ function lairBlock(c: LairCard, x: boolean): string {
   let dwell = '';
   if (d) {
     const body = d.own
-      ? `<span>${unitIcon(d.u, 'army-face-xs')} ${esc(LL('dwell.own', { n: d.pool, g: d.growth }))}</span><button class="btn btn-small btn-primary" data-ahire>${esc(LL('dwell.hire'))}</button>${settleBlock(c.id, d)}`
+      ? `<span>${unitIcon(d.u, 'army-face-xs')} ${esc(LL('dwell.own', { n: d.pool, g: ru() ? String(d.growth).replace('.', ',') : d.growth }))}</span><button class="btn btn-small btn-primary" data-ahire>${esc(LL('dwell.hire'))}</button>${settleBlock(c.id, d)}`
       : `${d.owner ? `<span class="muted">${esc(LL('dwell.other', { name: personName(d.owner) }))}</span>` : `<span class="muted">${esc(LL('dwell.can'))}</span>`}${d.can ? `<button class="btn btn-small" data-al="flag" data-id="${c.id}">${esc(LL('dwell.flag'))}</button>` : d.why ? `<span class="muted">${esc(serverText(d.why))}</span>` : ''}`;
     dwell = `<div class="ac-dwell">${body}</div>`;
   }
@@ -133,7 +133,7 @@ function driftBlock(c: DriftCard, x: boolean): string {
   const tint = BEAST_TINT[c.u];
   const pct = (p: number) => `${Math.round(p * 100)}%`;
   const giftText = DL('gift', { n: c.gift.n, good: GOODS[c.gift.good].name.toLowerCase(), s: fmt(c.gift.silver) });
-  const out = !c.joins ? DL('joins.deep', { gift: giftText }) : c.room >= c.n ? DL('joins', { n: c.n }) : c.room + c.pen > 0 ? DL('joins.pen', { n: c.room, m: Math.min(c.pen, c.n - c.room) }) : DL('joins.none', { gift: giftText });
+  const out = !c.joins ? DL('joins.deep', { gift: giftText }) : c.room >= c.n ? DL('joins', { n: c.n }) : c.room > 0 && Math.min(c.pen, c.n - c.room) <= 0 ? DL('joins.part', { n: c.room }) : c.room + c.pen > 0 ? DL('joins.pen', { n: c.room, m: Math.min(c.pen, c.n - c.room) }) : DL('joins.none', { gift: giftText });
   let body = '';
   if (c.mini) {
     const m = c.mini;
@@ -207,6 +207,7 @@ export class AdvCard {
    *  wounded, the nerve: docs/17 H5's QA), and no lower than the screen allows. */
   place(): void {
     // Where the card ends (a phone held sideways keeps its newest toast just under it: styles.css).
+    this.baseTop = null;
     requestAnimationFrame(() => this.fit());
     if (innerWidth < 1100 || innerHeight <= 520) {
       this.el.style.top = '';
@@ -219,28 +220,41 @@ export class AdvCard {
   }
   /** docs/18 #50: on a phone or a tablet the card never lies over what it is about (the lair's, the drift's, the
    *  thing's token on the sea): it ends above the token, or stands below it when the token is high on the screen. */
+  /** The card's own top on a small screen (its stylesheet's), measured once a layout. */
+  private baseTop: number | null = null;
   private fit(): void {
     if (this.el.classList.contains('hidden')) return;
     const narrow = innerWidth < 1100 || innerHeight <= 520;
-    if (narrow) this.el.style.top = '';
-    this.el.style.maxHeight = '';
-    let r = this.el.getBoundingClientRect();
+    if (narrow && this.baseTop === null) {
+      this.el.style.top = '';
+      this.baseTop = this.el.getBoundingClientRect().top;
+    }
+    const r = this.el.getBoundingClientRect();
+    const base = narrow ? this.baseTop! : r.top;
+    let top = base;
     // docs/18 IV: several cards at once (a lair's and a drift's) scroll within the screen rather than run off it.
-    let max = Math.max(140, Math.round(innerHeight - r.top - 8));
+    let max = Math.max(140, Math.round(innerHeight - top - 8));
     if (narrow && innerHeight > 520) {
+      const h = Math.min(this.el.scrollHeight, max);
       for (const p of this.subjects()) {
-        if (p.x < r.left - 24 || p.x > r.right + 24 || p.y < r.top - 30 || p.y > Math.min(r.bottom, r.top + max) + 30) continue;
-        if (p.y - r.top >= 170) max = Math.round(p.y - 40 - r.top);
+        if (p.x < r.left - 24 || p.x > r.right + 24 || p.y < top - 30 || p.y > top + h + 30) continue;
+        if (p.y - top >= 170) max = Math.round(p.y - 40 - top);
         else {
           // The token high on the screen: the card goes under it.
-          this.el.style.top = `${Math.round(p.y + 44)}px`;
-          r = this.el.getBoundingClientRect();
-          max = Math.max(140, Math.round(innerHeight - r.top - 8));
+          top = Math.round(p.y + 44);
+          max = Math.max(140, Math.round(innerHeight - top - 8));
         }
       }
     }
-    this.el.style.maxHeight = `${max}px`;
-    document.body.style.setProperty('--ac-bottom', `${Math.round(this.el.getBoundingClientRect().bottom)}px`);
+    // Written only when they change (the card is looked at again every few tenths of a second).
+    if (narrow) {
+      const t = top !== base ? `${top}px` : '';
+      if (this.el.style.top !== t) this.el.style.top = t;
+    }
+    const m = `${max}px`;
+    if (this.el.style.maxHeight !== m) this.el.style.maxHeight = m;
+    const b = `${Math.round(Math.min(top + Math.min(this.el.scrollHeight, max), innerHeight))}px`;
+    if (document.body.style.getPropertyValue('--ac-bottom') !== b) document.body.style.setProperty('--ac-bottom', b);
   }
   private fitTimer = 0;
   /** While the card shows on a small screen, its place is looked at again as the sea moves under it. */
@@ -275,6 +289,7 @@ export class AdvCard {
       document.body.appendChild(el);
     }
     this.el = el;
+    addEventListener('resize', () => (this.baseTop = null));
   }
 
   private adv: AdvCardView | null = null;

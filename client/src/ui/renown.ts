@@ -147,8 +147,7 @@ function setCard(s: SetView): string {
     const got = have.has(id);
     // The bestiary's unknown pages show the bare art, untinted and dark (the tint would light it up).
     const ico = book && !got ? icon(UNITS[id as CreatureId]?.art ?? 'creature.crab', '', 'rn-ico') : p.ico;
-    const tag = book && got ? 'button' : 'span';
-    return `<${tag} class="rn-piece${got ? ' got' : ''}${book && got && bestOpen === id ? ' open' : ''}" title="${esc(got ? p.name : '?')}"${book && got ? ` data-bst="${id}"` : ''}>${ico}${got ? `<i>${esc(p.name)}</i>` : '<i>?</i>'}</${tag}>`;
+    return `<span class="rn-piece${got ? ' got' : ''}${book && got ? ' rn-book' : ''}${book && got && bestOpen === id ? ' open' : ''}" title="${esc(got ? p.name : '?')}"${book && got ? ` data-bst="${id}" role="button" tabindex="0"` : ''}>${ico}${got ? `<i>${esc(p.name)}</i>` : '<i>?</i>'}</span>`;
   }).join('');
   const page = book && bestOpen && have.has(bestOpen) ? bestiaryPage(bestOpen as CreatureId) : '';
   return `<div class="card rn-set${s.done ? ' done' : ''}"><h4 class="card-h">${icon(SET_ICON[s.id], '', 'ico-md')}<span>${esc(def.name[ru()])} <span class="muted">${esc(L('setCount', { n: s.have.length, max: s.items.length }))}</span></span></h4>
@@ -166,11 +165,19 @@ export function renderAlbum(body: HTMLElement, state: ClientState, send: (m: Cli
   }
   body.innerHTML = `<p class="muted rn-sub">${esc(L('albumSub'))}</p><div class="rn-sets">${v.sets.map(setCard).join('')}</div>`;
   // docs/18 #46: a bestiary page opens under its set's grid.
-  body.querySelectorAll<HTMLElement>('[data-bst]').forEach((el) => (el.onclick = () => {
-    bestOpen = bestOpen === el.dataset.bst ? null : el.dataset.bst!;
-    renderAlbum(body, state, send);
-    body.querySelector('.rn-page')?.scrollIntoView({ block: 'nearest' });
-  }));
+  body.querySelectorAll<HTMLElement>('[data-bst]').forEach((el) => {
+    el.onclick = () => {
+      bestOpen = bestOpen === el.dataset.bst ? null : el.dataset.bst!;
+      renderAlbum(body, state, send);
+      body.querySelector('.rn-page')?.scrollIntoView({ block: 'nearest' });
+    };
+    el.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        el.click();
+      }
+    };
+  });
   body.querySelector<HTMLElement>('[data-bst-close]')?.addEventListener('click', () => {
     bestOpen = null;
     renderAlbum(body, state, send);

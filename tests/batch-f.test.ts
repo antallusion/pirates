@@ -223,12 +223,12 @@ test('a pirate sunk in the week’s sea counts on its table, and a prize by boar
 
 // ------------------------------------------------------------------ 28. the album
 
-test('the album: six sets from what she has gathered; a whole set pays once, with a title', () => {
+test('the album: seven sets from what she has gathered (docs/18 #46: the bestiary); a whole set pays once, with a title', () => {
   const { game } = makeGame();
   const { s } = captain(game, 'Rose Carrow');
   const p = s.profile!;
   const defs = setDefs(SEA_LETTERS.length);
-  assert.deepEqual(SET_IDS, ['fish', 'wonders', 'omens', 'trophies', 'beasts', 'letters']);
+  assert.deepEqual(SET_IDS, ['fish', 'wonders', 'omens', 'trophies', 'beasts', 'letters', 'bestiary']);
   for (const id of SET_IDS) {
     assert.ok(defs[id].items.length >= 7, id);
     assert.ok(defs[id].silver > 0);
