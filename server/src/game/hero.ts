@@ -7,6 +7,7 @@
 // ports' merchants. Every roll here is on the hero's own dice (the sea's stream stays as the tests replay it).
 
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
 import { DAY_LENGTH_SEC } from '../../../shared/src/constants.ts';
 import { dayOf } from '../../../shared/src/data/dailies.ts';
 import { STASH_SIZE } from '../../../shared/src/data/items.ts';
@@ -426,6 +427,8 @@ export function heroView(p: Profile): HeroView {
     cd: { ...h.cd }, costs, sets: a.sets,
     stam: Math.floor(stamOf(p, h)), stamMax: stamMax(p, h), scrolls: { ...(h.scrolls ?? {}) }, pages: pathPagesAt(p.captain, p.level),
     lift: { ...lift, nodes: Object.keys(p.talents ?? {}).filter((id) => TALENT_BOOK[id] && (p.talents[id] ?? 0) > 0) },
+    blast: Math.round((p.army ?? []).reduce((n, x) => n + (UNITS[x.u]?.hp ?? 0) * x.n, 0) * 0.07),
+    mul: pb.mul, pageMul: pb.pageMul ?? 1, innateMul: pb.innateMul ?? 1,
   };
 }
 

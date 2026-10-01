@@ -22,6 +22,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { heroOf, heroPrims } from './hero.ts';
+import { startBoarding } from './boarding.ts';
 import type { HeroRec } from './hero.ts';
 
 /** The path book's own dice (like the auction house's: server/src/game/auction.ts). */
@@ -198,6 +199,14 @@ export function pathAdmin(game: Game, s: PlayerSession, cmd: string, args: strin
       o.state.speed = ship.state.speed = 0;
       game.grid.upsert(o.id, o.state.x, o.state.y);
       forced.set(o, path);
+      // `grapple`: lashed alongside at once.
+      if (args.includes('grapple')) {
+        o.state.x = ship.state.x + v.x * 18;
+        o.state.y = ship.state.y + v.y * 18;
+        game.grid.upsert(o.id, o.state.x, o.state.y);
+        startBoarding(game, ship, o, 'standard');
+        return `Grappled: ${o.name}.`;
+      }
       return `${o.name} lies off your beam: her captain walks the path of ${CAPTAINS[path].archetype}. /board to grapple her.`;
     }
   }

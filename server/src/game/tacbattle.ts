@@ -16,9 +16,9 @@ import {
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { TacAction, TacEvent, TacHeroView, TacStackView, TacView } from '../../../shared/src/protocol.ts';
-import { ORDERS, TACTICS_DEPLOY, orderRes } from '../../../shared/src/data/hero.ts';
+import { ORDERS, TACTICS_DEPLOY, homeMul, orderRes } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, OrderRes } from '../../../shared/src/data/hero.ts';
-import { INNATE, PATH_PAGES, PATH_SCHOOL, ULTIMATE, isPathPage, powered } from '../../../shared/src/data/paths.ts';
+import { HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, ULTIMATE, ULT_ROUND, isPathPage, powered } from '../../../shared/src/data/paths.ts';
 import type { BtMods, PageFx } from '../../../shared/src/data/paths.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 
@@ -697,7 +697,7 @@ function spellMul(bt: TacBattle, side: 0 | 1, id: TacSpellId): number {
   const hb = bt.heroes[side].input.hero;
   if (!hb) return 1;
   const d = ORDERS[id];
-  return (hb.mul[d?.school ?? 'fire'] ?? 1) * (d?.path && d.path === hb.path ? hb.pageMul ?? 1 : 1);
+  return (hb.mul[d?.school ?? 'fire'] ?? 1) * homeMul(hb.path, id) * (d?.path && d.path === hb.path ? hb.pageMul ?? 1 : 1);
 }
 /** The pool an order is paid from now. */
 function poolOf(h: TacHero, res: OrderRes): number {
@@ -804,6 +804,7 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
   const path = h.input.hero?.path;
   if (!path) return 'Your captain walks no path';
   if (kind === 'ult' && !h.input.hero?.ult) return 'The ultimate opens at level 20';
+  if (kind === 'ult' && bt.round < ULT_ROUND) return 'The ultimate waits for the third round';
   if ((kind === 'innate' ? h.innate : h.ult) !== 1) return kind === 'innate' ? "Your path's move is spent this battle" : 'Your ultimate is spent this battle';
   if (h.moved >= bt.round) return 'One path move a round';
   return targetError(bt, side, (kind === 'innate' ? INNATE : ULTIMATE)[path].fx.target, target);
@@ -830,7 +831,7 @@ export function castMove(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', tar
   h.moved = bt.round;
   const t = target !== undefined ? stackById(bt, target) : undefined;
   const hex = t?.hex;
-  const { kills, on } = applyFx(bt, side, `${kind}:${path}`, powered(mv.fx, path, hb.level ?? 1), moveMul(bt, side), target, rng);
+  const { kills, on } = applyFx(bt, side, `${kind}:${path}`, powered(mv.fx, path, hb.level ?? 1, 'move'), moveMul(bt, side), target, rng);
   push(bt, { k: kind, side, id: path, ...(t ? { t: t.id, hex } : {}), kills, on });
   checkOver(bt);
   return null;
@@ -840,7 +841,7 @@ export function castMove(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', tar
 function moveMul(bt: TacBattle, side: 0 | 1): number {
   const hb = bt.heroes[side].input.hero;
   if (!hb?.path) return 1;
-  return (hb.mul[PATH_SCHOOL[hb.path]] ?? 1) * (hb.innateMul ?? 1);
+  return (hb.mul[PATH_SCHOOL[hb.path]] ?? 1) * HOME_MUL * (hb.innateMul ?? 1);
 }
 
 export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: number | undefined, rng: Rng): string | null {
@@ -1362,9 +1363,9 @@ function aiMove(bt: TacBattle, side: 0 | 1, rng: Rng): { kind: 'innate' | 'ult';
   let best: { kind: 'innate' | 'ult'; target?: number } | null = null, bv = 0;
   const total = alive(bt).filter((o) => o.side === side).reduce((n, x) => n + threat(bt, x), 0);
   for (const kind of ['ult', 'innate'] as const) {
-    if ((kind === 'innate' ? h.innate : h.ult) !== 1 || (kind === 'ult' && bt.round < 2)) continue;
+    if ((kind === 'innate' ? h.innate : h.ult) !== 1 || (kind === 'ult' && bt.round < ULT_ROUND)) continue;
     const mv = (kind === 'innate' ? INNATE : ULTIMATE)[hb.path];
-    const b = bestFx(bt, side, powered(mv.fx, hb.path, hb.level ?? 1), moveMul(bt, side));
+    const b = bestFx(bt, side, powered(mv.fx, hb.path, hb.level ?? 1, 'move'), moveMul(bt, side));
     if (b.v > total * 0.03 && b.v > bv) {
       bv = b.v;
       best = { kind, ...(b.target !== undefined ? { target: b.target } : {}) };
@@ -1516,7 +1517,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
       ...(hb ? { prim: { atk: hb.atk, def: hb.def, pow: hb.pow, will: hb.will }, mana: Math.round(h.mana), manaMax: hb.manaMax } : {}),
       // docs/18: her path, stamina, innate move and ultimate, her spells' stores and scrolls, her face.
       ...(hb?.level !== undefined ? { path: hb.path ?? null, level: hb.level } : {}),
-      ...(h.stam >= 0 ? { stam: Math.round(h.stam), stamMax: hb?.stamMax ?? 0 } : {}),
+      ...(h.stam >= 0 && hb?.path ? { stam: Math.round(h.stam), stamMax: hb.stamMax ?? 0 } : {}),
       ...(hb?.path ? { innate: h.innate === 1 ? 'ready' as const : 'used' as const, ult: !hb.ult ? 'locked' as const : h.ult === 1 ? 'ready' as const : 'used' as const } : {}),
       ...(h.input.face ? { face: h.input.face } : {}),
     };

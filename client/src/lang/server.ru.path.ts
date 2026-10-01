@@ -10,6 +10,7 @@ export const SERVER_RU_PATH: Record<string, string> = {
   'The ultimate opens at level 20': 'Высший приём открывается на 20-м уровне',
   "Your path's move is spent this battle": 'Сила пути в этом бою уже потрачена',
   'Your ultimate is spent this battle': 'Высший приём в этом бою уже потрачен',
+  'The ultimate waits for the third round': 'Высший приём — с третьего раунда',
   'One path move a round': 'Один приём пути за раунд',
   'That scroll is read': 'Этот свиток уже прочитан',
   'Usage: /path learn page · {0}': 'Как вызывать: /path learn страница · {0}',

@@ -101,11 +101,13 @@ export function primsAtLevel(captain: CaptainId, seed: number, level: number): P
   return growPrims(PRIM_BASE[captain], captain, seed, 1, level);
 }
 
+/** The Power a sea captain gains a level (docs/18: a share more than H2's 0.24, against the paths' books). */
+export const SEA_POW = 0.3;
 /** A sea captain's (an NPC's) primaries for her ship's level: an even hand of the points a player of that band has. */
 export function npcPrims(shipLevel: number): Prims {
   const lv = npcHeroLevel(shipLevel);
   const n = lv - 1;
-  return { atk: 2 + Math.round(n * 0.28), def: 2 + Math.round(n * 0.28), pow: 1 + Math.round(n * 0.24), will: 1 + Math.round(n * 0.2) };
+  return { atk: 2 + Math.round(n * 0.28), def: 2 + Math.round(n * 0.28), pow: 1 + Math.round(n * SEA_POW), will: 1 + Math.round(n * 0.2) };
 }
 /** The captain's level a ship of this level answers to (captain gear runs a level band of six a ship level). */
 export function npcHeroLevel(shipLevel: number): number {
@@ -478,6 +480,17 @@ export interface HeroBattle {
   scroll?: Partial<Record<TacSpellId, number>>;
 }
 
+/** Her home school's own moves (docs/18 item 2): the path pages and the captains' own pages of her path's school —
+ *  cheaper and stronger for her. The common orders of docs/17 stay as they are for every path. */
+export function isHome(path: CaptainId | null | undefined, id: OrderId): boolean {
+  const d = ORDERS[id];
+  return !!path && !!d && PATH_SCHOOL[path] === d.school && !!d.path;
+}
+/** How much stronger an order lands for her: her school's lift, her home school's. */
+export function homeMul(path: CaptainId | null | undefined, id: OrderId): number {
+  return isHome(path, id) ? HOME_MUL : 1;
+}
+
 /** What the paths add to her battle self (docs/18): her path and level, her talents, her stamina now, her scrolls. */
 export interface HeroPathInput {
   path: CaptainId | null;
@@ -495,7 +508,7 @@ export function heroBattle(prim: Prims, skills: readonly SkillSlot[], art: ArtTo
   const path = ext?.path ?? null;
   const lift = talentBook(ext?.talents);
   const mul = {} as Record<School, number>;
-  for (const sc of SCHOOLS) mul[sc] = orderMul(prim.pow, rankOf(skills, SCHOOL_SKILL[sc]), sb.mystic, (ab?.orders ?? 0) + (ab?.school[sc] ?? 0)) * (path && PATH_SCHOOL[path] === sc ? HOME_MUL : 1);
+  for (const sc of SCHOOLS) mul[sc] = orderMul(prim.pow, rankOf(skills, SCHOOL_SKILL[sc]), sb.mystic, (ab?.orders ?? 0) + (ab?.school[sc] ?? 0));
   // Her path's pages open at her level; scrolls add pages for a cast each.
   const all: OrderId[] = [...book];
   if (ext && path) for (const id of pathPagesAt(path, ext.level)) if (!all.includes(id)) all.push(id);
@@ -511,7 +524,7 @@ export function heroBattle(prim: Prims, skills: readonly SkillSlot[], art: ArtTo
   for (const id of battleBook) {
     const d = ORDERS[id];
     let k = 1 - (ab?.cost ?? 0);
-    if (path && PATH_SCHOOL[path] === d.school) k *= HOME_COST;
+    if (path && isHome(path, id)) k *= HOME_COST;
     if (d.path && d.path !== path) k *= FOREIGN_COST;
     if (d.path && d.path === path) k *= 1 - lift.cost;
     cost[id] = orderCost(id, rankOf(skills, SCHOOL_SKILL[d.school]), k);
@@ -550,10 +563,11 @@ export function npcHeroBattle(shipLevel: number, path: CaptainId | null): HeroBa
 
 /** A sea captain's book without a path of her own: the grenades, and the common pages as her waters grow harder. */
 export function npcBook(shipLevel: number): OrderId[] {
-  return SEA_BOOK.filter(([lv]) => shipLevel >= lv).map(([, id]) => id);
+  return SEA_BOOK.filter(([lv, , top]) => shipLevel >= lv && shipLevel <= (top ?? 99)).map(([, id]) => id);
 }
-/** The sea's book by her waters (docs/18: weighed against the paths' starting books, tools/balance-paths.ts). */
-export const SEA_BOOK: [number, OrderId][] = [[1, 'grenades'], [2, 'mark_target'], [2, 'point_blank'], [2, 'double_shot'], [4, 'war_cry'], [4, 'brine_mend'], [7, 'shield_wall'], [9, 'fury'], [10, 'dread']];
+/** The sea's book by her waters (docs/18: weighed against the paths' books, tools/balance-paths.ts): from a level,
+ *  and some pages only up to one. */
+export const SEA_BOOK: [number, OrderId, number?][] = [[1, 'grenades'], [2, 'mark_target'], [2, 'point_blank'], [2, 'double_shot'], [4, 'war_cry'], [4, 'brine_mend'], [5, 'shield_wall'], [5, 'fury'], [5, 'dread']];
 
 // ------------------------------------------------------------------ what the captain sees
 
@@ -583,6 +597,12 @@ export interface HeroView {
   scrolls?: Partial<Record<OrderId, number>>;
   pages?: OrderId[];
   lift?: { mul: number; cost: number; stam: number; will: number; innate: number; nodes: string[] };
+  /** Her captain's blast with her army as it is (a twentieth-odd of its strength), and how much her schools, her
+   *  path's pages and her moves lift it: the Path book shows each move's blow in hit points. */
+  blast?: number;
+  mul?: Record<School, number>;
+  pageMul?: number;
+  innateMul?: number;
 }
 
 /** What a port offers the hero: its guild's list and prices, and its artifact merchant's pieces today. */

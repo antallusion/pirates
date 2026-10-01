@@ -12,7 +12,7 @@ import type { ClientMsg, TacAction, TacEvent, TacStackView, TacView } from '../.
 import { assetUrl, sprite } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
-import { INNATE, ULTIMATE } from '../../../shared/src/data/paths.ts';
+import { INNATE, ULTIMATE, ULT_ROUND } from '../../../shared/src/data/paths.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
@@ -359,7 +359,7 @@ export class TacticalPanel {
     // The book's pages (docs/17 H2): each order's will beside it; the will left on the book's spine.
     // docs/18: her two stores side by side — Will for the magical pages and the common orders, Stamina for the
     // physical moves (it comes back a share every round).
-    const bar = (cls: string, ico: string, k: K, n: number, m: number) => `<div class="tb-res ${cls}" title="${esc(L(k))}">${icon(ico, '', 'ico-xs')}<span class="tb-rbar"><i style="width:${m ? Math.round(Math.max(0, Math.min(1, n / m)) * 100) : 0}%"></i></span><b>${n}</b><small>/${m}</small></div>`;
+    const bar = (cls: string, ico: string, k: K, n: number, m: number) => `<div class="tb-store ${cls}" title="${esc(L(k))}">${icon(ico, '', 'ico-xs')}<span class="tb-rbar"><i style="width:${m ? Math.round(Math.max(0, Math.min(1, n / m)) * 100) : 0}%"></i></span><b>${n}</b><small>/${m}</small></div>`;
     const will = me.mana !== undefined
       ? `<div class="tb-will">${bar('will', 'icon.ab_brine_mend', 'will', me.mana, me.manaMax ?? 0)}${me.stam !== undefined ? bar('stam', 'icon.tree_survival', 'stam', me.stam, me.stamMax ?? 0) : ''}</div>`
       : '';
@@ -376,8 +376,9 @@ export class TacticalPanel {
       const st = kind === 'innate' ? me.innate : me.ult;
       if (!me.path || !st) return '';
       const mv = (kind === 'innate' ? INNATE : ULTIMATE)[me.path];
-      const off = !v.mine || st !== 'ready';
-      const note = st === 'locked' ? L('ultLocked') : st === 'used' ? L('used') : L('free');
+      const early = kind === 'ult' && v.round < ULT_ROUND;
+      const off = !v.mine || st !== 'ready' || early;
+      const note = st === 'locked' ? L('ultLocked') : st === 'used' ? L('used') : early ? L('ultRound') : L('free');
       return `<button class="btn tb-spell tb-move ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}" data-move="${kind}" ${off ? 'disabled' : ''} title="${esc(moveText(me.path, kind === 'ult'))}">${icon(`icon.${mv.icon}`, '', 'ico')}<span><b>${esc(L(kind))}: ${esc(moveName(me.path, kind === 'ult'))}</b><small>${esc(note)}</small></span></button>`;
     };
     // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3.

@@ -11,7 +11,7 @@ import { CAPTAIN_IDS } from '../shared/src/data/captains.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
 import { heroBattle, npcHeroBattle, primsAtLevel, startingOrders } from '../shared/src/data/hero.ts';
 import type { HeroBattle } from '../shared/src/data/hero.ts';
-import { PATH_POWER, PATH_POWER_AT, clearPowered } from '../shared/src/data/paths.ts';
+import { MOVE_POWER, PATH_POWER, PATH_POWER_AT, clearPowered } from '../shared/src/data/paths.ts';
 import { newBattle, quickFinish } from '../server/src/game/tacbattle.ts';
 import type { TacSideInput } from '../server/src/game/tacbattle.ts';
 
@@ -132,23 +132,24 @@ if (import.meta.main ?? process.argv[1]?.endsWith('balance-paths.ts')) {
       if (!LEVELS.includes(level)) return;
       let best = cost(table(level, N));
       for (let sw = 0; sw < sweeps; sw++) {
-        for (const c of CAPTAIN_IDS) {
-          const k0 = PATH_POWER[c][li];
+        for (const tab of level >= 20 || process.argv.includes('--moves') ? [PATH_POWER, MOVE_POWER] : [PATH_POWER, MOVE_POWER]) for (const c of CAPTAIN_IDS) {
+          const k0 = tab[c][li];
           for (const f of [STEP, 1 / STEP]) {
-            PATH_POWER[c][li] = k0 * f;
+            tab[c][li] = k0 * f;
             clearPowered();
             const j = cost(table(level, N));
             if (j < best - 1e-9) {
               best = j;
               break;
             }
-            PATH_POWER[c][li] = k0;
+            tab[c][li] = k0;
             clearPowered();
           }
         }
-        console.log(`level ${level} sweep ${sw}: cost ${best.toFixed(4)} ${JSON.stringify(Object.fromEntries(CAPTAIN_IDS.map((c) => [c, Math.round(PATH_POWER[c][li] * 100) / 100])))}`);
+        console.log(`level ${level} sweep ${sw}: cost ${best.toFixed(4)} pages ${JSON.stringify(Object.fromEntries(CAPTAIN_IDS.map((c) => [c, Math.round(PATH_POWER[c][li] * 100) / 100])))} moves ${JSON.stringify(Object.fromEntries(CAPTAIN_IDS.map((c) => [c, Math.round(MOVE_POWER[c][li] * 100) / 100])))}`);
       }
     });
-    console.log(JSON.stringify(Object.fromEntries(CAPTAIN_IDS.map((c) => [c, PATH_POWER[c].map((x) => Math.round(x * 100) / 100)]))));
+    console.log('PATH_POWER', JSON.stringify(Object.fromEntries(CAPTAIN_IDS.map((c) => [c, PATH_POWER[c].map((x) => Math.round(x * 100) / 100)]))));
+    console.log('MOVE_POWER', JSON.stringify(Object.fromEntries(CAPTAIN_IDS.map((c) => [c, MOVE_POWER[c].map((x) => Math.round(x * 100) / 100)]))));
   } else for (const l of LEVELS) print(table(l, N));
 }

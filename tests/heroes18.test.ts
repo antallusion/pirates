@@ -9,10 +9,10 @@ import { Rng } from '../shared/src/rng.ts';
 import { armyForLevel } from '../shared/src/data/army.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
 import type { CaptainId } from '../shared/src/data/captains.ts';
-import { ORDERS, SCHOOLS, guildPrice, heroBattle, npcHeroBattle, orderRes, primsAtLevel, startingOrders, zeroPrims } from '../shared/src/data/hero.ts';
+import { ORDERS, SCHOOLS, guildPrice, heroBattle, homeMul, isHome, npcHeroBattle, orderRes, primsAtLevel, startingOrders, zeroPrims } from '../shared/src/data/hero.ts';
 import type { HeroBattle } from '../shared/src/data/hero.ts';
 import {
-  FOREIGN_COST, HOME_MUL, INNATE, PAGE_UNLOCK, PATH_IDS, PATH_KIND, PATH_PAGES, PATH_PAGE_IDS, PATH_SCHOOL, SCHOOL_KIND, TALENT_BOOK, ULTIMATE, ULT_LEVEL, pathBook, pathPagesAt, pathPower,
+  FOREIGN_COST, HOME_MUL, INNATE, PAGE_UNLOCK, PATH_IDS, PATH_KIND, PATH_PAGES, PATH_PAGE_IDS, PATH_SCHOOL, SCHOOL_KIND, TALENT_BOOK, ULTIMATE, ULT_LEVEL, ULT_ROUND, pathBook, pathPagesAt, pathPower,
   stamMaxOf, talentBook,
 } from '../shared/src/data/paths.ts';
 import { TALENTS_BY_ID } from '../shared/src/data/talents.ts';
@@ -96,12 +96,25 @@ test('2. six schools, three physical and three magical; each path a home school,
   for (const c of ['navigator', 'drowned', 'smuggler'] as const) assert.equal(PATH_KIND[c], 'magic', c);
   assert.equal(new Set(PATH_IDS.map((c) => PATH_SCHOOL[c])).size, 6, 'six home schools');
   const prim = { ...zeroPrims(), atk: 5, def: 5, pow: 5, will: 5 };
-  const book = ['grenades', 'brine_mend', 'dr_brine_kiss'] as const;
-  const plain = heroBattle(prim, [], null, [...book], 50, { path: null, level: 30 });
-  const corsair = heroBattle(prim, [], null, [...book], 50, { path: 'corsair', level: 30 });
-  assert.ok(corsair.mul.fire > plain.mul.fire && Math.abs(corsair.mul.fire / plain.mul.fire - HOME_MUL) < 1e-9, 'the home school stronger');
-  assert.ok(corsair.cost.grenades! < plain.cost.grenades! || plain.cost.grenades! <= 2, 'and cheaper');
-  assert.ok(corsair.cost.dr_brine_kiss! > ORDERS.dr_brine_kiss.cost * (FOREIGN_COST - 0.2), 'another path\'s page dearer');
+  const book = ['grenades', 'brine_mend', 'dr_brine_kiss', 'cs_grape', 'point_blank'] as const;
+  const plain = heroBattle(prim, [], null, [...book], 50, { path: null, level: 40 });
+  const corsair = heroBattle(prim, [], null, [...book], 50, { path: 'corsair', level: 40 });
+  // Her home school's own moves (the path pages and her captain's page in it) stronger and cheaper; the common orders as they were.
+  assert.equal(homeMul('corsair', 'cs_grape'), HOME_MUL);
+  assert.equal(homeMul('corsair', 'point_blank'), HOME_MUL);
+  assert.equal(homeMul('corsair', 'grenades'), 1);
+  assert.ok(isHome('drowned', 'dr_brine_kiss') && !isHome('corsair', 'dr_brine_kiss'));
+  assert.ok(corsair.cost.cs_grape! < plain.cost.cs_grape!, 'cheaper');
+  assert.equal(corsair.cost.grenades, plain.cost.grenades);
+  assert.ok(corsair.cost.dr_brine_kiss! > ORDERS.dr_brine_kiss.cost * (FOREIGN_COST - 0.2), "another path's page dearer");
+  const bt = battle(corsair);
+  const t = bt.stacks.find((x) => x.side === 1)!;
+  const n0 = bt.stacks.filter((x) => x.side === 1).reduce((n, x) => n + x.count, 0);
+  castSpell(bt, 0, 'cs_grape', t.id, new Rng(5));
+  const homeHit = n0 - men(bt, 1);
+  const bt2 = battle(heroBattle(prim, [], null, [...book], 50, { path: 'navigator', level: 40 }));
+  castSpell(bt2, 0, 'cs_grape', bt2.stacks.find((x) => x.side === 1)!.id, new Rng(5));
+  assert.ok(homeHit >= n0 - men(bt2, 1), 'and stronger at home');
   // H2's common pages keep their schools and their will; the paths' physical pages spend stamina.
   assert.equal(orderRes('grenades'), 'will');
   assert.equal(orderRes('cs_chain_shot'), 'stam');
@@ -179,6 +192,8 @@ test('5. the ultimate opens at level 20: once a battle, beside the round\'s orde
   assert.equal(viewOf(low, 0, 0, true).heroes[0].ult, 'locked');
   for (const c of PATH_IDS) {
     const bt = battle(pathHb(c, 40));
+    assert.equal(castMove(bt, 0, 'ult', undefined, new Rng(2)), 'The ultimate waits for the third round');
+    bt.round = ULT_ROUND;
     const foe0 = men(bt, 1);
     const t = ULTIMATE[c].fx.target === 'none' ? undefined : bt.stacks.find((x) => x.side === (ULTIMATE[c].fx.target === 'own' ? 0 : 1))!.id;
     assert.equal(castSpell(bt, 0, startingOrders(c)[1] as never, bt.stacks.find((x) => x.side === 1)!.id, new Rng(2)), null, `${c}: the round's order`);

@@ -6,7 +6,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { ORDERS, SCHOOL_NAMES, SCHOOL_ICON, orderRes } from '../../../shared/src/data/hero.ts';
 import type { HeroView, OrderId } from '../../../shared/src/data/hero.ts';
-import { INNATE, PAGE_UNLOCK, PATH_PAGES, PATH_SCHOOL, SCHOOL_KIND, ULTIMATE, ULT_LEVEL, isPathPage, pathBook, powered } from '../../../shared/src/data/paths.ts';
+import { HOME_MUL, INNATE, PAGE_UNLOCK, PATH_PAGES, PATH_SCHOOL, SCHOOL_KIND, ULTIMATE, ULT_LEVEL, isPathPage, pathBook, powered } from '../../../shared/src/data/paths.ts';
 import type { BtMods, PageFx, PathMove } from '../../../shared/src/data/paths.ts';
 import { TALENTS_BY_ID } from '../../../shared/src/data/talents.ts';
 import { dict, lang } from '../i18n.ts';
@@ -29,16 +29,18 @@ function modsLine(m: BtMods): string[] {
   return out;
 }
 
-/** What a move strikes with, in figures (her path's power at her level on it). */
-export function fxLine(fx: PageFx): string {
+/** What a move strikes with, in figures (her path's power at her level on it): a blow in hit points with her army
+ *  and her captain as they are (`blast` the blast of a grenade, `k` her school's lift), shares in per cent. */
+export function fxLine(fx: PageFx, blast = 0, k = 1): string {
   const out: string[] = [];
-  if (fx.dmg) out.push(L('f.dmg', { n: mul(fx.dmg) }));
-  if (fx.ring) out.push(L('f.ring', { n: mul(fx.ring) }));
-  if (fx.all) out.push(L('f.all', { n: mul(fx.all) }));
-  if (fx.shooters) out.push(L('f.shooters', { n: mul(fx.shooters) }));
-  if (fx.drain) out.push(L('f.drain', { n: Math.round(fx.drain * 100) }));
-  if (fx.heal) out.push(L('f.heal', { n: Math.round(fx.heal * 100) }));
-  if (fx.raise) out.push(L('f.raise', { n: Math.round(fx.raise * 100) }));
+  const hp = (x: number) => (blast > 0 ? `≈${Math.max(1, Math.round(blast * x * k))}` : `×${mul(x)}`);
+  if (fx.dmg) out.push(L('f.dmg', { n: hp(fx.dmg) }));
+  if (fx.ring) out.push(L('f.ring', { n: hp(fx.ring) }));
+  if (fx.all) out.push(L('f.all', { n: hp(fx.all) }));
+  if (fx.shooters) out.push(L('f.shooters', { n: hp(fx.shooters) }));
+  if (fx.drain) out.push(L('f.drain', { n: Math.round(Math.min(0.12, fx.drain * k) * 100) }));
+  if (fx.heal) out.push(L('f.heal', { n: Math.round(Math.min(0.35, fx.heal * k) * 100) }));
+  if (fx.raise) out.push(L('f.raise', { n: Math.round(Math.min(0.35, fx.raise * k) * 100) }));
   if (fx.self && modsLine(fx.self).length) out.push(L('f.yours', { list: modsLine(fx.self).join(', ') }));
   if (fx.foe && modsLine(fx.foe).length) out.push(L('f.hers', { list: modsLine(fx.foe).join(', ') }));
   if (fx.one && modsLine(fx.one).length) out.push(L('f.one', { list: modsLine(fx.one).join(', ') }));
@@ -49,9 +51,9 @@ export function fxLine(fx: PageFx): string {
   return out.join(' · ');
 }
 
-function moveCard(path: CaptainId, mv: PathMove, ult: boolean, level: number): string {
+function moveCard(h: HeroView, path: CaptainId, mv: PathMove, ult: boolean, level: number): string {
   const locked = ult && level < ULT_LEVEL;
-  return `<div class="pb-move${ult ? ' ult' : ''}${locked ? ' locked' : ''}">${icon(mv.icon, '✦', 'ico-lg')}<span><b>${esc(L(ult ? 'ult' : 'innate'))}: ${esc(T(mv.name))}</b><small>${esc(T(mv.text))}</small><small class="pb-num">${esc(fxLine(powered(mv.fx, path, level)))}</small><small class="muted">${esc(locked ? L('ultAt', { n: ULT_LEVEL }) : L('free'))}</small></span></div>`;
+  return `<div class="pb-move${ult ? ' ult' : ''}${locked ? ' locked' : ''}">${icon(mv.icon, '✦', 'ico-lg')}<span><b>${esc(L(ult ? 'ult' : 'innate'))}: ${esc(T(mv.name))}</b><small>${esc(T(mv.text))}</small><small class="pb-num">${esc(fxLine(powered(mv.fx, path, level, 'move'), h.blast ?? 0, (h.mul?.[PATH_SCHOOL[path]] ?? 1) * HOME_MUL * (h.innateMul ?? 1)))}</small><small class="muted">${esc(locked ? L('ultAt', { n: ULT_LEVEL }) : L(ult ? 'freeUlt' : 'free'))}</small></span></div>`;
 }
 
 function pageRow(id: OrderId, h: HeroView, path: CaptainId, level: number): string {
@@ -64,11 +66,11 @@ function pageRow(id: OrderId, h: HeroView, path: CaptainId, level: number): stri
   const home = PATH_SCHOOL[path] === pg.school;
   return `<div class="pb-page${open ? '' : ' locked'}">${icon(pg.icon, '✦', 'ico-md')}<span><b>${esc(T(pg.name))}</b>
     <span class="pb-tags"><span class="tag">${icon(SCHOOL_ICON[pg.school], '', 'ico-xs')}${esc(T(SCHOOL_NAMES[pg.school]))}</span>${home ? `<span class="tag home">${esc(L('homeTag'))}</span>` : ''}<span class="tag">${esc(L('lv', { n: pg.level }))}</span><span class="tag ${res}">${esc(L(res === 'stam' ? 'costStam' : 'costWill', { n: cost }))}</span><span class="tag">${esc(L('cd', { n: pg.cd }))}</span>${open ? '' : `<span class="tag">${esc(L('opensAt', { n: PAGE_UNLOCK[pg.level] }))}</span>`}</span>
-    <small>${esc(T(pg.text))}</small><small class="pb-num">${esc(fxLine(powered(pg.fx, pg.path, level)))}</small></span></div>`;
+    <small>${esc(T(pg.text))}</small><small class="pb-num">${esc(fxLine(powered(pg.fx, pg.path, level), h.blast ?? 0, (h.mul?.[pg.school] ?? 1) * (PATH_SCHOOL[path] === pg.school ? HOME_MUL : 1) * (pg.path === path ? h.pageMul ?? 1 : 1)))}</small></span></div>`;
 }
 
 const bar = (cls: string, ico: string, k: K, n: number, m: number) =>
-  `<div class="tb-res ${cls}" title="${esc(L(k))}">${icon(ico, '', 'ico-xs')}<span>${esc(L(k))}</span><span class="tb-rbar"><i style="width:${m ? Math.round(Math.max(0, Math.min(1, n / m)) * 100) : 0}%"></i></span><b>${n}</b><small>/${m}</small></div>`;
+  `<div class="tb-store ${cls}" title="${esc(L(k))}">${icon(ico, '', 'ico-xs')}<span>${esc(L(k))}</span><span class="tb-rbar"><i style="width:${m ? Math.round(Math.max(0, Math.min(1, n / m)) * 100) : 0}%"></i></span><b>${n}</b><small>/${m}</small></div>`;
 
 /** The Path book tab. */
 export function pathTab(h: HeroView, path: CaptainId, level: number, talents: Record<string, number>): string {
@@ -87,7 +89,7 @@ export function pathTab(h: HeroView, path: CaptainId, level: number, talents: Re
     <div class="pb-stores">${bar('will', 'icon.ab_brine_mend', 'will', h.will, h.willMax)}${bar('stam', 'icon.tree_survival', 'stam', h.stam ?? 0, h.stamMax ?? 0)}</div>
     <p class="muted hx-note">${esc(L('willNote'))} ${esc(L('stamNote'))}</p>
     <div class="gi-h">${esc(L('moves'))}</div>
-    <div class="pb-moves">${moveCard(path, INNATE[path], false, level)}${moveCard(path, ULTIMATE[path], true, level)}</div>
+    <div class="pb-moves">${moveCard(h, path, INNATE[path], false, level)}${moveCard(h, path, ULTIMATE[path], true, level)}</div>
     <div class="gi-h">${esc(L('pages'))}</div>
     <p class="muted hx-note">${esc(L('pagesNote'))} ${esc(L('f.note'))}</p>
     <div class="pb-pages">${own.map((id) => pageRow(id, h, path, level)).join('')}</div>

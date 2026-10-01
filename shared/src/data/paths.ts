@@ -125,16 +125,21 @@ export type PathPageId =
   | 'dr_drowning_grip' | 'dr_brine_kiss' | 'dr_anchor_chain' | 'dr_undertow' | 'dr_barnacles' | 'dr_abyss'
   | 'ad_volley_order' | 'ad_signal_flags' | 'ad_square' | 'ad_fog_of_war' | 'ad_bayonets' | 'ad_admiralty';
 
-/** How hard each path's moves land (docs/18 item 11, `node tools/balance-paths.ts --tune`): every share a page, the
- *  innate move and the ultimate deal, heal, drag down or lay on stacks is multiplied by its path's figure here (the
- *  points of speed, initiative, morale and luck, and the yes-or-no holds, stay as written). */
+/** How hard each path's pages land (docs/18 item 11, `node tools/balance-paths.ts --search`): every share a page
+ *  deals, heals, drags down or lays on stacks is multiplied by its path's figure here at the caster's hero level (the
+ *  points of speed, initiative, morale and luck go as far as whole points go; the yes-or-no holds stay). The battle is
+ *  steep — a tenth fewer men loses seven fights in ten (docs/17 H5) — so the book's lift is kept to an edge. */
 export const PATH_POWER: Record<CaptainId, [number, number, number]> = {
-  corsair: [0.39, 0.14, 0.27], smuggler: [1.34, 0.26, 0.22], reaver: [0.59, 0.19, 0.17], navigator: [0.85, 0.26, 0.15], drowned: [0.89, 0.37, 0.37], admiral: [1.84, 0.27, 0.21],
+  corsair: [0.34, 0.08, 0.22], smuggler: [1.47, 0.26, 0.28], reaver: [0.59, 0.21, 0.14], navigator: [0.85, 0.3, 0.17], drowned: [0.98, 0.46, 0.37], admiral: [1.84, 0.33, 0.21],
 };
-/** The hero levels PATH_POWER's three figures stand at (between them, the line between; beyond, the last). */
+/** The same for the innate move and the ultimate. */
+export const MOVE_POWER: Record<CaptainId, [number, number, number]> = {
+  corsair: [0.4, 0.63, 0.4], smuggler: [0.5, 0.63, 0.5], reaver: [0.5, 0.32, 0.63], navigator: [0.63, 0.78, 0.43], drowned: [0.5, 0.55, 0.63], admiral: [0.63, 0.46, 0.5],
+};
+/** The hero levels the figures stand at (between them, the line between; beyond, the last). */
 export const PATH_POWER_AT = [10, 30, 55] as const;
-export function pathPower(path: CaptainId, level: number): number {
-  const k = PATH_POWER[path] ?? [1, 1, 1];
+export function pathPower(path: CaptainId, level: number, kind: 'page' | 'move' = 'page'): number {
+  const k = (kind === 'move' ? MOVE_POWER : PATH_POWER)[path] ?? [1, 1, 1];
   const [a, b, c] = PATH_POWER_AT;
   if (level <= a) return k[0];
   if (level <= b) return k[0] + ((k[1] - k[0]) * (level - a)) / (b - a);
@@ -147,8 +152,8 @@ const POINT_KEYS = ['speed', 'init', 'morale', 'luck'] as const;
 const FX_KEYS = ['dmg', 'ring', 'all', 'shooters', 'drain', 'heal', 'raise'] as const;
 const scaled = new Map<PageFx, Map<number, PageFx>>();
 /** A move's fx with its path's power at the caster's hero level on it. */
-export function powered(fx: PageFx, path: CaptainId, level: number): PageFx {
-  const k = Math.round(pathPower(path, level) * 1000) / 1000;
+export function powered(fx: PageFx, path: CaptainId, level: number, kind: 'page' | 'move' = 'page'): PageFx {
+  const k = Math.round(pathPower(path, level, kind) * 1000) / 1000;
   let byK = scaled.get(fx);
   if (!byK) scaled.set(fx, (byK = new Map()));
   const c = byK.get(k);
@@ -178,8 +183,9 @@ export function clearPowered(): void {
 
 /** The hero level each page level opens at. */
 export const PAGE_UNLOCK: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 1, 2: 8, 3: 15, 4: 25, 5: 35 };
-/** The ultimate opens at this hero level. */
+/** The ultimate opens at this hero level, and is given from this round of a battle (once the decks have closed). */
 export const ULT_LEVEL = 20;
+export const ULT_ROUND = 3;
 
 const P = (id: PathPageId, path: CaptainId, school: School, level: PathPage['level'], cost: number, cd: number, icon: string, name: [string, string], text: [string, string], fx: PageFx): PathPage =>
   ({ id, path, school, level, cost, cd, icon, name, text, fx });

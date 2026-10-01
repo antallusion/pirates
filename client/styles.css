@@ -3689,12 +3689,12 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 /* docs/18: the hero's path in the boarding battle — her two stores (Will, Stamina), her path's innate move and
    ultimate beside the round's pages, and the Path book window. */
 .tb-will { flex-wrap: wrap; justify-content: stretch; gap: 6px; padding: 2px 4px; }
-.tb-res { flex: 1 1 90px; display: flex; align-items: center; gap: 3px; min-width: 0; font-size: 12px; color: #9cc6f0; }
-.tb-res.stam { color: #f2b56b; }
-.tb-res .ico-xs { width: 14px; height: 14px; flex: none; margin: 0; border-radius: 2px; }
+.tb-store { flex: 1 1 90px; display: flex; align-items: center; gap: 3px; min-width: 0; font-size: 12px; color: #9cc6f0; }
+.tb-store.stam { color: #f2b56b; }
+.tb-store .ico-xs { width: 14px; height: 14px; flex: none; margin: 0; border-radius: 2px; }
 .tb-rbar { flex: 1 1 auto; min-width: 24px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .tb-rbar > i { display: block; height: 100%; background: linear-gradient(90deg, #3d6fa8, #9cc6f0); }
-.tb-res.stam .tb-rbar > i { background: linear-gradient(90deg, #a8602a, #f2b56b); }
+.tb-store.stam .tb-rbar > i { background: linear-gradient(90deg, #a8602a, #f2b56b); }
 .tb-cost.stam { color: #f2b56b; }
 .tb-cost.scroll { color: #e0b862; }
 .tb-spell.scroll { border-style: dashed; }
@@ -3710,7 +3710,7 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 .tb-mv.off { opacity: 0.35; filter: grayscale(1); }
 .tb-stamv { color: #f2b56b; }
 @media (max-height: 520px) and (orientation: landscape) {
-  .tb-res { font-size: 10px; flex-basis: 70px; }
+  .tb-store { font-size: 10px; flex-basis: 70px; }
   .tb-moves i { display: none; }
 }
 @media (max-width: 480px) and (orientation: portrait) {
