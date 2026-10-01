@@ -182,8 +182,8 @@ export function portGrowth(tier: number, size: number): number {
 
 // ------------------------------------------------------------------------------------------------ the island's town
 
-export type TownId = 'hall' | 'keep' | 'dw1' | 'dw2' | 'dw3' | 'dw4' | 'dw5' | 'dw6' | 'dw7' | 'market' | 'guild' | 'grail';
-export const TOWN_IDS: TownId[] = ['hall', 'keep', 'dw1', 'dw2', 'dw3', 'dw4', 'dw5', 'dw6', 'dw7', 'market', 'guild', 'grail'];
+export type TownId = 'hall' | 'keep' | 'dw1' | 'dw2' | 'dw3' | 'dw4' | 'dw5' | 'dw6' | 'dw7' | 'market' | 'guild' | 'grail' | 'pen';
+export const TOWN_IDS: TownId[] = ['hall', 'keep', 'dw1', 'dw2', 'dw3', 'dw4', 'dw5', 'dw6', 'dw7', 'market', 'guild', 'grail', 'pen'];
 
 export interface TownDef {
   id: TownId;
@@ -217,6 +217,12 @@ export const TOWN: Record<TownId, TownDef> = {
     art: 'lighthouse', max: 5,
   },
   // docs/17 H4 item 16: the legendary treasure the obelisks' chart leads to, raised over the town.
+  // docs/18 #20: the pen where the eggs and the young of the land's creatures hatch and grow into a kind to hire.
+  pen: {
+    id: 'pen', names: [['Beast Pen', 'Загон'], ['Great Pen', 'Большой загон']],
+    text: ['Eggs and young brought back from the lairs hatch here in two days of the sea and grow in a week more; a grown kind breeds a dwelling’s week and may be hired. One nest, then three.', 'Яйца и детёныши из логов вылупляются здесь за два дня и растут ещё неделю; выросший вид даёт недельный прирост, как жилище, и его можно нанимать. Одно гнездо, потом три.'],
+    art: 'kennel', max: 2,
+  },
   grail: { id: 'grail', names: [['The Grail', 'Грааль']], text: ['The legendary treasure raised over the town: every dwelling grows half as many men again, 500 silver a day into the treasury, and the captain’s will runs deeper.', 'Легендарное сокровище над городом: все жилища дают в полтора раза больше бойцов, 500 серебра в день в казну, а воля капитана глубже.'], art: 'signal_tower', max: 1 },
 };
 
@@ -282,6 +288,8 @@ export function townCost(id: TownId, level: number): BaseCost {
       ][Math.min(4, L - 1)];
     case 'grail':
       return { silver: 5_000, goods: { timber: 40, coal: 40, pearls: 6 }, secs: 1800 };
+    case 'pen':
+      return L <= 1 ? { silver: 3_000, goods: { timber: 40, coal: 20 }, secs: secs(900) } : { silver: 9_000, goods: { timber: 70, coal: 40, iron: 20, tar: 10 }, secs: secs(1800) };
     default: {
       const t = TOWN[id].tier ?? 1;
       const goods: Partial<Record<GoodId, number>> = { timber: 20 + 10 * t, coal: 10 + 8 * t };
@@ -318,6 +326,8 @@ export function townGate(id: TownId, level: number): TownGate {
       return { isle: [2, 3, 5, 7, 9][Math.min(4, L - 1)] };
     case 'grail':
       return { isle: 1 };
+    case 'pen':
+      return { isle: L >= 2 ? 4 : 2 };
     default: {
       const t = TOWN[id].tier ?? 1;
       return { isle: Math.min(10, L >= 2 ? t + 1 : t), keep: 1 };

@@ -31,12 +31,14 @@ export function townName(id: TownId, level: number): string {
 }
 
 /** A dwelling row's name: the port's tavern, or the dwelling (its upgraded name where it trains the upgrade). */
-export function dwellName(r: Pick<DwellRow, 'name' | 'up'>): string {
-  return r.name === 'tavern' ? L('tavern') : townName(r.name, r.up ? 2 : 1);
+export function dwellName(r: Pick<DwellRow, 'name' | 'up' | 'label'>): string {
+  if (r.label) return r.label[ru()];
+  return r.name === 'tavern' ? L('tavern') : r.name === 'lair' ? '' : townName(r.name, r.up ? 2 : 1);
 }
 
-export function dwellArt(r: Pick<DwellRow, 'name' | 'tier'>): string {
-  return r.name === 'tavern' ? 'build_tavern' : `build_${TOWN[r.name].art}`;
+export function dwellArt(r: Pick<DwellRow, 'name' | 'tier' | 'art'>): string {
+  if (r.art) return r.art;
+  return r.name === 'tavern' ? 'build_tavern' : r.name === 'lair' ? 'build_kennel' : `build_${TOWN[r.name].art}`;
 }
 
 /** The week line: its number and day, its name. */

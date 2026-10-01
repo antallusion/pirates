@@ -210,6 +210,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
+import { landFighting, landTac, lairMessage, lairPrompt, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
@@ -546,6 +547,7 @@ export class Game {
     stepProjectiles(this, dt);
     prof.lap('projectiles');
     stepBoarding(this);
+    stepLandFights(this); // the battles ashore at the lairs of the land's creatures (docs/18 II)
     stepStrikes(this);
     prof.lap('boarding');
     stepBosses(this, dt);
@@ -821,6 +823,7 @@ export class Game {
     if (Math.floor(this.now) % 5 === 0) stepTattoos(this); // Old Needle, the deeds that earn tattoos, hidden quests (docs/12 P9)
     if (Math.floor(this.now) % 5 === 0) stepH3(this); // the Heroes' calendar: dawns, weeks, mines, halls (docs/17 H3)
     stepH4(this); // the adventure map: guards, things to visit, the Grail's diggers (docs/17 H4)
+    stepLairs(this); // the lairs of the land's creatures: what each captain sees, her card (docs/18 II)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
     settleCrimes(this);
@@ -989,6 +992,8 @@ export class Game {
       // docs/18 #28, #31: an island's level against hers on the prompt; a turtle island's back when nothing else calls.
       if (land && s.landable && s.landable.island === land.island.name && !s.landable.action) s.landable = { ...s.landable, ...landDanger(this, s, land.island) };
       if (!s.landable && !s.ship.docked && !s.ship.landing) s.landable = turtlePrompt(this, s);
+      // docs/18 II: a lair of the land's creatures within the boats' reach — the land key lands against it.
+      if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !s.ship.docked && !s.ship.landing) s.landable = lairPrompt(this, s) ?? s.landable;
       const wNow = this.weatherOf(s.ship);
       const wPrev = this.lastWeather.get(s);
       if (wPrev && wPrev !== wNow) this.sendTo(s, { t: 'toast', msg: WEATHER_TOAST[wNow], kind: wNow === 'storm' || wNow === 'black_storm' ? 'bad' : 'info' });
@@ -2614,6 +2619,7 @@ export class Game {
     if (msg.t === 'h3') return h3Message(this, s, msg); // docs/17 H3
     if (msg.t === 'h4') return h4Message(this, s, msg); // docs/17 H4
     if (msg.t === 'isle18') return isle18Message(this, s, msg); // docs/18 #32
+    if (msg.t === 'lair') return lairMessage(this, s, msg); // docs/18 II
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);
@@ -2729,12 +2735,14 @@ export class Game {
         return;
       }
       case 'board_cut':
+        if (landFighting(this, s)) return err(landTac(this, s, 'cut')); // back to the boats from a lair (docs/18 II)
         return err(cutGrapples(this, ship));
       case 'board_tactic':
         return err(setTactic(this, ship, msg.tactic));
       case 'board_duel':
         return err(duelAction(this, ship, msg.action, typeof msg.at === 'number' ? msg.at : undefined));
       case 'tac':
+        if (landFighting(this, s)) return err(landTac(this, s, msg.act)); // the battle ashore (docs/18 II)
         return err(tacAction(this, ship, msg.act));
       case 'board_pref':
         s.classicBoarding = msg.classic === true;

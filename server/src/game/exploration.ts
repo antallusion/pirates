@@ -28,6 +28,7 @@ import { bankHere, bankName, bankUp, climbLookout, combBank, lookoutReady } from
 import { tidalIsles } from '../../../shared/src/world/tidal.ts';
 import { turtles } from '../../../shared/src/world/drift.ts';
 import { combTurtle, hiddenCache, turtleHere, turtleName, turtleUpNow, warnLanding } from './isles18.ts';
+import { lairLanding as beastLanding } from './beastlairs.ts';
 import { hearsayCacheBonus } from './hearsay.ts';
 import { onShrine, onSpring } from './hero.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
@@ -191,6 +192,9 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   // A mine ashore (docs/17 H3): the flag first.
   const flag = startFlag(game, s);
   if (flag !== undefined) return flag;
+  // A lair of the land's creatures in reach (docs/18 II): the boats go ashore against it.
+  const lair = beastLanding(game, s);
+  if (lair !== undefined) return lair;
   const target = findLandable(game, s);
   if (!target) return 'Nothing worth landing for within reach of the boats';
   const party = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));

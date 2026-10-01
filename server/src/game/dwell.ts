@@ -314,6 +314,9 @@ export function train(game: Game, s: PlayerSession, src: Src, u: UnitId, want: n
 
 // ------------------------------------------------------------------------------------------------ the window
 
+/** docs/18 #20: the island's recruit window takes the grown kinds of her town's pen too (set by beastlairs.ts). */
+export const dwellHooks: { isleRows: ((game: Game, s: PlayerSession) => DwellRow[]) | null } = { isleRows: null };
+
 export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | null {
   const at = here(game, s, src);
   if (typeof at === 'string') return null;
@@ -330,6 +333,7 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
       why: UNITS[base].deep && !deep ? 'Only a captain of the Choir or of a cursed ship keeps the drowned.' : ship.shipLevel < TIER_SHIP_LEVEL[tier] ? tierWhy(tier) : null,
     });
   }
+  if (src === 'isle' && dwellHooks.isleRows) rows.push(...dwellHooks.isleRows(game, s));
   const ups: DwellUp[] = [];
   for (const x of ship.army) {
     const d = UNITS[x.u];

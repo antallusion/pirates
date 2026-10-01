@@ -123,6 +123,9 @@ const all = new WeakMap<Game, Adv>();
 /** Tests of other systems keep the adventure map out of the water (tests/helpers.ts). */
 const quiet = new WeakSet<Game>();
 
+/** The adventure map (and the lairs of docs/18 II with it) kept still for this game. */
+export const advQuiet = (game: Game): boolean => quiet.has(game);
+
 export function quietAdv(game: Game, on = true): void {
   if (on) quiet.add(game);
   else quiet.delete(game);

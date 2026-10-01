@@ -268,6 +268,9 @@ export function townHave(game: Game, s: PlayerSession, h: Holding, y: Yard): Par
   return out;
 }
 
+/** docs/18 #20: the pen's view on its card (set by beastlairs.ts). */
+export const townHooks: { pen: ((game: Game, s: PlayerSession, y: Yard) => NonNullable<TownThingView['pen']>) | null } = { pen: null };
+
 export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): TownView {
   const now = game.wallNow();
   const pools = islePools(game, y);
@@ -282,6 +285,7 @@ export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): Tow
       id, level, max: TOWN[id].max, job: j ? { id: j.id, level: j.level, start: j.start, end: j.end, silver: speedupSilver(left), goods: speedupGoods(left) } : null, next,
       ...(tier ? { pool: Math.floor(pools[tier] ?? 0), growth: Math.round(isleWeekGrowth(game, y, tier) * 10) / 10 } : {}),
       ...(id === 'guild' && level > 0 ? { orders: guildRows(game, s, h, y) } : {}),
+      ...(id === 'pen' && level > 0 && townHooks.pen ? { pen: townHooks.pen(game, s, y) } : {}),
     };
   });
   const have = townHave(game, s, h, y);

@@ -74,6 +74,7 @@ import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { heroOf, heroView } from './hero.ts';
 import type { HeroRec } from './hero.ts';
 import type { AdvProfile } from './advmap.ts';
+import type { LairProfile } from './beastlairs.ts';
 
 export interface Profile {
   version: 1;
@@ -272,6 +273,9 @@ export interface Profile {
   hero?: HeroRec;
   /** docs/17 H4: the adventure map — her visits, what she has seen, the altars' points, the Grail's hunt. */
   adv?: AdvProfile;
+  /** docs/18 II: the lairs of the land's creatures — her spoils by week, what she has seen, the land's resources,
+   *  the eggs she carries, the chains she has cleared. */
+  lairs?: LairProfile;
 }
 
 export interface Dealings {
@@ -376,7 +380,7 @@ export class PlayerSession {
   disconnectedAt: number | null = null;
   lingerUntil = 0;
   lastRegion = '';
-  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper'; blocked?: string; /** docs/18 #28 */ lv?: number; danger?: 'warn' | 'deadly' } | null = null;
+  landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper' | 'lair'; blocked?: string; /** docs/18 #28 */ lv?: number; danger?: 'warn' | 'deadly' } | null = null;
   siteViews: ResourceSiteView[] = [];
 
   constructor(conn: GameConn) {

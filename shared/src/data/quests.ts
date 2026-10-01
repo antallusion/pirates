@@ -36,7 +36,11 @@ export type QuestStep =
   | { type: 'tribute'; count: number; text: string }
   | { type: 'letters'; count: number; text: string }
   | { type: 'race'; port: string; seconds: number; text: string }
-  | { type: 'rescue'; count: number; text: string };
+  | { type: 'rescue'; count: number; text: string }
+  /** docs/18 #23: lairs of the land's creatures beaten (on an island, of a kind, or any), and the land's resources
+   *  brought to a port. */
+  | { type: 'lair'; count: number; island?: number; kind?: string; text: string }
+  | { type: 'landres'; port: string; res: 'shell' | 'bone' | 'venom'; qty: number; text: string };
 
 export interface QuestDef {
   id: string;

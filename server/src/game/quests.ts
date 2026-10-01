@@ -189,7 +189,9 @@ export type QuestEvent =
   | { k: 'letter' }
   | { k: 'rescue'; n: number }
   | { k: 'dock'; port: Port }
-  | { k: 'land'; island: number; feature: string };
+  | { k: 'land'; island: number; feature: string }
+  /** docs/18 #23: a lair of the land's creatures beaten. */
+  | { k: 'lair'; island: number; kind: string };
 
 export function newQuestLog(): QuestLog {
   return { active: [], done: [] };
@@ -380,6 +382,7 @@ function stepCount(st: QuestStep): number {
     case 'tribute':
     case 'letters':
     case 'rescue':
+    case 'lair':
       return st.count;
     case 'sell_contraband':
       return st.qty;
@@ -525,6 +528,18 @@ function stepGain(game: Game, s: PlayerSession, st: QuestStep, ev: QuestEvent): 
       return ev.units;
     case 'die_in':
       return ev.k === 'die' && ev.region === st.region ? 1 : 0;
+    case 'lair':
+      return ev.k === 'lair' && (st.island === undefined || st.island === ev.island) && (!st.kind || st.kind === ev.kind) ? 1 : 0;
+    case 'landres': {
+      if (ev.k !== 'dock' || ev.port.id !== st.port) return 0;
+      const store = s.profile!.lairs?.res;
+      if (!store || (store[st.res] ?? 0) < st.qty) {
+        game.toastShip(ship, `They are waiting for ${st.qty} ${st.res} here.`, 'info');
+        return 0;
+      }
+      store[st.res] -= st.qty;
+      return 1;
+    }
     case 'reach':
       return ev.k === 'tick' && !ship.docked && ship.region === st.region && (st.north === undefined || ship.state.y < st.north) ? 1 : 0;
     case 'time_in':
