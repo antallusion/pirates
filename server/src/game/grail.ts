@@ -9,6 +9,7 @@
 // shared by all would be on every tavern's lips by the second evening. Her own spot keeps the puzzle hers; the
 // obelisks are the same stones for all. Every find goes into the sea's chronicle, the season's first by name.
 
+import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { GRAIL_DIG_SECS, GRAIL_MISS_SECS, GRAIL_R, GRAIL_TREASURE_HOURS, GRAIL_WILL, PUZZLE_GRID, PUZZLE_W, advHour, advLevelXp } from '../../../shared/src/data/advmap.ts';
 import type { AdvObj } from '../../../shared/src/data/advmap.ts';
 import { xpForLevel } from '../../../shared/src/constants.ts';
@@ -48,7 +49,7 @@ function st(game: Game): GrailState {
 const candidates = new WeakMap<Game['world'], Island[]>();
 function grailIslands(game: Game): Island[] {
   let c = candidates.get(game.world);
-  if (!c) candidates.set(game.world, (c = game.world.islands.filter((is) => !is.portId && !is.minor && !is.raft && is.region !== 'the_abyss' && is.radius >= 260)));
+  if (!c) candidates.set(game.world, (c = legacyIslands(game.world).filter((is) => !is.portId && !is.minor && !is.raft && is.region !== 'the_abyss' && is.radius >= 260)));
   return c;
 }
 

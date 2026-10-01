@@ -16,6 +16,7 @@
 //  - Islands: up to six guild islands (leased from the treasury by vice-admirals); a base on one raises it through
 //    five levels (+2 slots a level, weekly upkeep from the island's treasury).
 
+import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { gyardView } from './guildyard.ts';
 import { upkeepMul } from './empires.ts';
 import { guildGoalView } from './guildgoal.ts';
@@ -145,7 +146,7 @@ export class GuildHub {
       for (const region of Object.keys(REGIONS) as (keyof typeof REGIONS)[]) {
         if (REGIONS[region].safety !== 'lawless') continue;
         const have = Object.values(this.data.nodes).filter((n) => game.world.islands[n.island]?.region === region).length;
-        const extra = game.world.islands.filter((i) => i.region === region && !i.portId && !this.data!.nodes[i.id] && i.radius > 250).sort((a, b) => b.radius - a.radius || a.id - b.id).slice(0, Math.max(0, 5 - have));
+        const extra = legacyIslands(game.world).filter((i) => i.region === region && !i.portId && !this.data!.nodes[i.id] && i.radius > 250).sort((a, b) => b.radius - a.radius || a.id - b.id).slice(0, Math.max(0, 5 - have));
         for (const isl of extra) this.data.nodes[isl.id] = { island: isl.id, holder: null, toll: 2, progress: {}, tollToday: { day: 0, paid: 0 }, seen: {} };
       }
     }

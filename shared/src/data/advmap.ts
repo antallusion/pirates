@@ -23,7 +23,7 @@ import { REGIONS } from '../world/regions.ts';
 import type { RegionId } from '../world/regions.ts';
 import { WORLD_EDGE_MARGIN } from '../world/regions.ts';
 import { sectorAt } from '../world/sectors.ts';
-import { DEEP_WATER, depthAt, isLand } from '../world/worldgen.ts';
+import { DEEP_WATER, depthAt, isLand, legacyWorld } from '../world/worldgen.ts';
 import type { Island, World } from '../world/worldgen.ts';
 
 // ------------------------------------------------------------------------------------------------ the sea's hour
@@ -342,6 +342,13 @@ const cache = new WeakMap<World, AdvMap>();
 export function buildAdv(world: World): AdvMap {
   const hit = cache.get(world);
   if (hit) return hit;
+  // docs/18 III: placed on the world as it stood before her new islands (which keep off all of it).
+  const base = legacyWorld(world);
+  if (base !== world) {
+    const out = buildAdv(base);
+    cache.set(world, out);
+    return out;
+  }
   const objs: AdvObj[] = [];
   const guards: AdvGuard[] = [];
   const taken: [number, number][] = [];

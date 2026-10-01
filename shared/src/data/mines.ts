@@ -10,6 +10,7 @@ import type { Tr } from './estate.ts';
 import type { GoodId } from './goods.ts';
 import { hashString } from '../rng.ts';
 import type { Island, World } from '../world/worldgen.ts';
+import { legacyIslands } from '../world/worldgen.ts';
 import { REGIONS } from '../world/regions.ts';
 import type { IslandBiome, RegionId } from '../world/regions.ts';
 
@@ -99,7 +100,7 @@ export interface MineSite {
 export function buildMines(world: World): MineSite[] {
   const out: MineSite[] = [];
   const by = new Map<RegionId, Island[]>();
-  for (const is of world.islands) {
+  for (const is of legacyIslands(world)) { // docs/18 III: the islands before step 6 (the mines stand where they stood)
     if (is.portId || is.minor || is.raft || is.region === 'the_abyss' || is.radius < 140) continue;
     const list = by.get(is.region) ?? [];
     list.push(is);

@@ -9,6 +9,7 @@ import type { GoodId } from '../data/goods.ts';
 import { GOOD_IDS } from '../data/goods.ts';
 import { KEY_PORTS, REGIONS, REGION_IDS, WORLD_EDGE_MARGIN, biomeFromMix } from './regions.ts';
 import type { IslandBiome, PortProfile, RegionId } from './regions.ts';
+import { appendIsles } from './moreisles.ts';
 
 export type IslandFeature = 'port' | 'ruins' | 'wreck' | 'lighthouse' | 'grove' | 'mine' | 'pearl_bank' | 'shrine' | 'cache'
   | 'fort' | 'volcano' | 'bones' | 'bell' | 'hermit' | 'spring';
@@ -28,6 +29,10 @@ export interface Island {
   minor?: boolean;
   /** A floating town's hulks lashed together (docs/16 P3): its "land" is the moored hulls. */
   raft?: boolean;
+  /** docs/18 III (step 6 of the generation): a small island, an atoll's ring or a rock of a ridge. */
+  isle?: 'small' | 'atoll' | 'ridge';
+  /** docs/18 #30: a hidden island — charted only from a lookout, by a map or an obelisk. */
+  hidden?: boolean;
 }
 
 export interface Port {
@@ -121,6 +126,8 @@ export interface World {
   /** The dense sea's marks (docs/16 P3) and their chunk index. */
   marks: SeaMark[];
   markChunks: Map<number, number[]>;
+  /** The first island of step 6 (docs/18 III: small islands, atolls, ridges); every island before her is as she was. */
+  isleFrom: number;
 }
 
 const REGION_CELL = 1000;
@@ -179,7 +186,7 @@ const SYLLABLES: Record<IslandBiome, [string[], string[]]> = {
   crystal: [['Glass', 'Prism', 'Shard', 'Quartz', 'Gleam', 'Facet', 'Spar', 'Hollow', 'Singing', 'Star'], ['spire', 'stack', 'crag', 'cliff', 'teeth', 'rock', 'point', 'fang', 'crown', 'isle']],
 };
 
-function islandName(rng: Rng, biome: IslandBiome, used: Set<string>): string {
+export function islandName(rng: Rng, biome: IslandBiome, used: Set<string>): string {
   const [a, b] = SYLLABLES[biome];
   for (let i = 0; i < 12; i++) {
     const n = rng.pick(a) + rng.pick(b);
@@ -194,7 +201,7 @@ function islandName(rng: Rng, biome: IslandBiome, used: Set<string>): string {
   return n;
 }
 
-function islandPoly(rng: Rng, x: number, y: number, radius: number, seed: number): number[] {
+export function islandPoly(rng: Rng, x: number, y: number, radius: number, seed: number): number[] {
   const verts = Math.max(14, Math.min(48, Math.round(radius / 28)));
   const poly: number[] = [];
   const phase = rng.range(0, 100);
@@ -249,7 +256,26 @@ const CURRENTS: Current[] = [
   { id: 'ashen_return', name: 'Ashen Return', points: [[88000, 84000], [72000, 88000], [56000, 90000], [40000, 88000], [24000, 92000]], width: 1600, strength: 3.0 },
 ];
 
+/** docs/18 III: each world and the world as she stood before step 6 (shared/src/world/moreisles.ts). */
+export const legacyOf = new WeakMap<World, World>();
+
+/** The world as it stood before step 6: what the mines, the adventure map, the quests and the other placements made
+ *  from the world alone are made on (the same object for every call, so their caches hold). */
+export function legacyWorld(world: World): World {
+  return legacyOf.get(world) ?? world;
+}
+
+/** The islands of steps 1–5 only (every island a saved game knew before docs/18 III). */
+export function legacyIslands(world: World): Island[] {
+  return world.islands.length > world.isleFrom ? world.islands.slice(0, world.isleFrom) : world.islands;
+}
+
 export function generateWorld(seed: number): World {
+  return appendIsles(legacyWorldOf(seed));
+}
+
+/** The world as it stood before docs/18 III (steps 1–5): what every placement made from the world alone is made on. */
+function legacyWorldOf(seed: number): World {
   const rng = new Rng(seed);
   const islands: Island[] = [];
   const ports: Port[] = [];
@@ -694,7 +720,7 @@ export function generateWorld(seed: number): World {
   const navSize = WORLD_SIZE / NAV_CELL;
   const navGrid = buildNavGrid({ islands, chunks, reefs, ports }, true, minorFrom, reefsFrom);
 
-  return { seed, whirlpools: WHIRLPOOLS, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize, outerFrom, minorFrom, reefsFrom, marks, markChunks };
+  return { seed, whirlpools: WHIRLPOOLS, islands, reefs, reefChunks, ports, currents: CURRENTS, chunks, regionGrid, navGrid, navSize, outerFrom, minorFrom, reefsFrom, marks, markChunks, isleFrom: islands.length };
 }
 
 /** Navigation grid: blocked if the cell center is on land or within 160 m of a coast, or outside the Maelstrom Wall;
@@ -829,14 +855,14 @@ export function portLanes(ports: { x: number; y: number }[]): [number, number, n
   return out;
 }
 
-function segDist(x: number, y: number, ax: number, ay: number, bx: number, by: number): number {
+export function segDist(x: number, y: number, ax: number, ay: number, bx: number, by: number): number {
   const abx = bx - ax, aby = by - ay;
   const l2 = abx * abx + aby * aby;
   const t = l2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * abx + (y - ay) * aby) / l2)) : 0;
   return Math.hypot(ax + abx * t - x, ay + aby * t - y);
 }
 
-function distanceToCurrents(x: number, y: number): number {
+export function distanceToCurrents(x: number, y: number): number {
   let best = Infinity;
   for (const c of CURRENTS) {
     for (let i = 1; i < c.points.length; i++) {

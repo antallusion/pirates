@@ -3,6 +3,7 @@
 // a pennant colour; the first ten, the Compass Rose tattoo. The wonders near her ship are sent to be drawn.
 
 import { unlockDeed } from './looks.ts';
+import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { WONDER_NAME_RE, WONDER_PENNANTS, WONDER_R, placeWonders } from '../../../shared/src/data/wonders.ts';
 import type { WonderDef } from '../../../shared/src/data/wonders.ts';
 import type { WondersView } from '../../../shared/src/protocol.ts';
@@ -23,7 +24,7 @@ const cache = new WeakMap<Game, WonderDef[]>();
 
 export function wondersOf(game: Game): WonderDef[] {
   let w = cache.get(game);
-  if (!w) cache.set(game, (w = placeWonders(game.world.seed, game.world.islands)));
+  if (!w) cache.set(game, (w = placeWonders(game.world.seed, legacyIslands(game.world))));
   return w;
 }
 

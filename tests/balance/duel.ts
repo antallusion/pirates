@@ -43,8 +43,9 @@ export const FIGHT_SEC = Math.round((900 * 6) / SPEED_SCALE);
 export function duelSea(): Game {
   const { game } = makeGame();
   // The sims weigh ship against ship on the open sea they were tuned on: the dense sea's stacks and reefs (docs/16 P3)
-  // are taken off their chart.
+  // are taken off their chart (and the islands of docs/18 III).
   const w = game.world;
+  w.islands.length = w.isleFrom; // nor the small islands, atolls and ridges of docs/18 III
   for (const [k, list] of w.chunks) w.chunks.set(k, list.filter((id) => id < w.minorFrom));
   for (const [k, list] of w.reefChunks) w.reefChunks.set(k, list.filter((id) => id < w.reefsFrom));
   w.navGrid = buildNavGrid(w, false, w.minorFrom, w.reefsFrom);

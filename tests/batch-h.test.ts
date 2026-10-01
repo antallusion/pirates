@@ -130,6 +130,7 @@ test('dead to windward he beats on sensible tacks and still makes the mark', () 
   const sides = new Set<number>();
   const r = sail(game, ship, 1500, () => {
     ticks++;
+    fair(game); // no storm front blown in by the sea's dice while he beats up to the mark
     const w = game.windFor(ship);
     if (relWindDeg(ship.state.heading, w) < ship.stats.noGoDeg * 0.5 && ship.state.speed < 0.5) inIrons++;
     const off = angleDiff(w.dir + Math.PI, ship.state.heading);

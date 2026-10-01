@@ -320,6 +320,8 @@ test('landing parties: anchor, explore a feature, bring back loot; it restocks o
   const s = [...game.sessions][0];
   const ship = s.ship!;
   const is = parkNear(game, ship, 'wreck');
+  // The sea's own ships keep off (a rover that happens by would make her slip her anchor, whatever the islands).
+  for (const o of [...game.ships.values()]) if (o.accountId === null && Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 5000) game.removeShip(o.id);
   steps(game, 25);
   assert.ok(s.landable, 'feature within reach');
   c.push({ t: 'land' });

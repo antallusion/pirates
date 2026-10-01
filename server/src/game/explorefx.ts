@@ -85,7 +85,7 @@ export function makeMap(game: Game, tier: number, opts: { island?: Island; legen
   let is = opts.island;
   if (!is) {
     const regions = kind === 'cursed' ? (['drowned_crown', 'the_abyss'] as RegionId[]) : TIER_REGIONS[Math.max(1, Math.min(3, tier))];
-    const pool = game.world.islands.filter((i) => !i.portId && regions.includes(i.region) && i.radius > 150 && (kind !== 'landmark' || i.features.some((f) => LANDMARKS[f])));
+    const pool = game.world.islands.filter((i) => !i.portId && !i.minor && regions.includes(i.region) && i.radius > 150 && (kind !== 'landmark' || i.features.some((f) => LANDMARKS[f])));
     is = pool[Math.floor(rng.float() * pool.length)] ?? game.world.islands.find((i) => !i.portId && i.radius > 150)!;
   }
   const k = rng.int(0, 999);

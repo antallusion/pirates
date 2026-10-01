@@ -7,6 +7,7 @@ import { Rng, hashString } from '../rng.ts';
 import { REGIONS, REGION_IDS } from '../world/regions.ts';
 import type { RegionId } from '../world/regions.ts';
 import type { Island, Port, World } from '../world/worldgen.ts';
+import { legacyWorld } from '../world/worldgen.ts';
 import { islandLife } from '../world/islandlife.ts';
 import type { GoodId } from './goods.ts';
 import { GOODS } from './goods.ts';
@@ -246,6 +247,7 @@ export const ARCS: Arc[] = [
 
 /** The arcs on a world: each chapter a quest offered at the region's port, opening when the one before is done. */
 export function generateArcs(world: World, seed: number): QuestDef[] {
+  world = legacyWorld(world); // docs/18 III: the arcs a saved game knows keep their islands
   const out: QuestDef[] = [];
   for (const arc of ARCS) {
     const rng = new Rng((hashString(arc.id) ^ (seed * 40503)) >>> 0);

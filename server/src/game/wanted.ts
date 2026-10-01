@@ -4,6 +4,7 @@
 // captains; the lairs on the islands — a battery to silence from the sea, then a landing for the chest and the
 // prisoners; and the trail of a wanted captain for a licensed hunter.
 
+import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
 import { nemesisBonus, nemesisEscaped, nemesisRevenge, nemesisViews, stepNemesis } from './nemesis.ts';
 import { questEvent } from './quests.ts';
@@ -171,7 +172,7 @@ function placeLairs(game: Game, S: WantedState): void {
   // makes its own camp there).
   const camps = new Map<RegionId, { is: Island; x: number; y: number }[]>();
   const islets = new Map<RegionId, { is: Island; x: number; y: number }[]>();
-  for (const is of game.world.islands) {
+  for (const is of legacyIslands(game.world)) { // docs/18 III: the lairs stand where they stood
     if (is.portId || is.minor) continue;
     const camp = islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: is.radius, poly: is.poly, features: is.features }).find((l) => l.kind === 'pirate_camp');
     if (camp) {

@@ -10,6 +10,7 @@ import { GOODS } from './goods.ts';
 import { REGIONS } from '../world/regions.ts';
 import type { RegionId } from '../world/regions.ts';
 import type { Island, Port, World } from '../world/worldgen.ts';
+import { legacyWorld } from '../world/worldgen.ts';
 import { islandLife } from '../world/islandlife.ts';
 import type { QuestDef, QuestStep } from './quests.ts';
 import { SPEED_SCALE } from '../constants.ts';
@@ -604,6 +605,7 @@ const REGION_LEVEL: Record<string, number> = { safe: 0, contested: 6, lawless: 1
 
 /** Every generated quest on a world: about seventy per port, the same for every server on this seed. */
 export function generateQuests(world: World, seed: number): QuestDef[] {
+  world = legacyWorld(world); // docs/18 III: the jobs a saved game knows keep their islands
   const out: QuestDef[] = [];
   const ports = world.ports;
   const lifeCache = new Map<number, string[]>();
@@ -792,7 +794,7 @@ const ISLAND_PLOTS = ['supply', 'letters', 'pirate_hunt', 'chart_waters', 'lost_
 export function generateIslandJobs(world: World, seed: number): QuestDef[] {
   const out: QuestDef[] = [];
   for (const is of world.islands) {
-    if (is.portId) continue;
+    if (is.portId || is.hidden) continue; // docs/18 #30: a hidden island's people are not on any board
     const people = islandLife({ id: is.id, region: is.region, biome: is.biome, x: is.x, y: is.y, r: Math.round(is.radius), poly: is.poly, features: is.features, portId: is.portId })
       .find((s) => s.kind === 'fishers' || s.kind === 'smugglers');
     if (!people) continue;
