@@ -211,7 +211,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
-import { landFighting, landTac, lairMessage, lairPrompt, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
@@ -388,6 +388,7 @@ export class Game {
     applyIslandNames(this); // names the Pantheon gave
     // Some three thousand jobs for the ports' people (docs/11 P4), the same on every server of this seed.
     registerJobs([...generateQuests(this.world, seed), ...generateLairJobs(this.world, seed)]); // and the creature jobs (docs/18 #23)
+    installLairHooks(); // the pen in the town and its recruit window (docs/18 #20)
     registerArcs(generateArcs(this.world, seed)); // five written arcs a region, three chapters each
     registerIslandJobs(generateIslandJobs(this.world, seed)); // the islands' people
     registerElitePorts(this.world.ports); // the ports' group contracts, one a day each

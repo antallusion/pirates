@@ -100,8 +100,8 @@ export const LAIR_CAL: Record<LairKind, [number, number, number][]> = {
   tentacle_lagoon: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.87, 1.37, 2.13], [0.85, 1.21, 1.65], [0.7, 1.3, 1.7], [0.61, 1.17, 1.54], [0.53, 1.04, 1.5], [0, 0, 0], [0, 0, 0]],
   choir_circle: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.9, 1.5, 2.17], [0.93, 1.37, 2.13], [0.79, 1.25, 1.78], [0.65, 1.25, 1.7], [0.92, 1.19, 1.5], [0.9, 1.22, 1.55]],
   drowned_surf: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.09, 1.58, 2.25], [0.9, 1.5, 1.9], [0.81, 1.43, 1.9], [0.79, 1.32, 1.77], [0.9, 1.23, 1.5], [0.95, 1.24, 1.52]],
-  serpent_grotto: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.75, 1.43, 2.25], [0.75, 1.62, 2.25], [0.69, 1.45, 1.88], [0.64, 1.33, 1.75], [0.73, 1.25, 1.67], [0.61, 1.15, 1.58]],
-  maw_pit: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.5, 1.83, 2.17], [1.39, 1.9, 2.3], [1.36, 1.93, 2.35], [1.21, 1.64, 1.93], [1.17, 1.59, 1.96]],
+  serpent_grotto: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.58, 1.12, 1.66], [0.84, 1.34, 1.98], [0.49, 0.91, 1.23], [0.54, 1.04, 1.35], [0.51, 0.84, 1.1], [0.55, 0.81, 1.14]],
+  maw_pit: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.39, 2.28, 3.06], [1.33, 2.09, 2.91], [1.28, 1.72, 2.42], [1.03, 1.58, 2.14], [1.05, 1.53, 2.12]],
   turtle_guardian: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2.83, 4.18, 5.16], [3.13, 4.62, 5.37], [1.28, 1.78, 2.15], [1.9, 2.57, 3.04], [1.04, 1.22, 1.33], [1.04, 1.23, 1.36]],
   leviathan_shoal: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.5, 2.5, 4.83], [0.81, 2.19, 3.55], [1.07, 3.36, 5.77], [1.04, 1.13, 1.93], [0.99, 1.12, 1.94]],
 };
@@ -122,10 +122,11 @@ export function lairBaseArmy(kind: LairKind, level: number): ArmyStack[] {
   const L = Math.max(1, Math.min(10, level));
   let might = guardBaseMight(L);
   const out: ArmyStack[] = [];
-  // The island's guardian is one great beast (two, three in the deepest waters); its brood makes up the rest.
-  if (LAIRS[kind].role === 'guardian') {
+  // The island's guardian is one great beast (two, three in the deepest waters), a grotto's its few; its brood makes
+  // up the rest.
+  if (LAIRS[kind].role !== 'shore') {
     const [u] = LAIRS[kind].mix[0];
-    const n = guardianCount(L);
+    const n = LAIRS[kind].role === 'guardian' ? guardianCount(L) : grottoCount(L);
     out.push({ u, n });
     might = Math.max(might * 0.25, might - armyPower([{ u, n }]));
     const [c] = LAIRS[kind].mix[1];
@@ -146,13 +147,18 @@ export function lairArmy(kind: LairKind, level: number, size: LairSize): ArmySta
   const L = Math.max(1, Math.min(10, level));
   const row = LAIR_CAL[kind][L];
   const k = row[LAIR_SIZES.indexOf(size)] || LAIR_CAL[kind][nearestCal(kind, L)][LAIR_SIZES.indexOf(size)] || 1;
-  const fixed = LAIRS[kind].role === 'guardian';
+  const fixed = LAIRS[kind].role !== 'shore';
   return lairBaseArmy(kind, L).map((s, i) => ({ u: s.u, n: fixed && i === 0 ? s.n : Math.max(1, Math.round(s.n * k)) }));
 }
 
 /** The guardian itself: one great beast, two at ⚓8–9, three at ⚓10 (its brood is what the calibration scales). */
 export function guardianCount(level: number): number {
   return level <= 7 ? 1 : level <= 9 ? 2 : 3;
+}
+
+/** A grotto's own: one young serpent or lantern maw at ⚓5–6, two at ⚓7–8, three at ⚓9, four at ⚓10. */
+export function grottoCount(level: number): number {
+  return level <= 6 ? 1 : level <= 8 ? 2 : level <= 9 ? 3 : 4;
 }
 
 function nearestCal(kind: LairKind, L: number): number {

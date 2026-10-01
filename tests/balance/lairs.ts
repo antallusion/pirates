@@ -74,7 +74,7 @@ export function calibrate(kinds: LairKind[] = LAIR_KINDS, log?: (s: string) => v
         continue;
       }
       const me = refParty(L), base = lairBaseArmy(kind, L);
-      const fixed = LAIRS[kind].role === 'guardian';
+      const fixed = LAIRS[kind].role !== 'shore';
       const row = LAIR_SIZES.map((size) => {
         let lo = Math.log(0.05), hi = Math.log(15);
         for (let i = 0; i < 10; i++) {

@@ -930,8 +930,12 @@ export function penRecruit(game: Game, s: PlayerSession, u: UnitId, want: number
   });
 }
 
-dwellHooks.isleRows = penRows;
-townHooks.pen = penView;
+/** The pen's rows in the island's recruit window and its card in the town (called as the game starts: the modules
+ *  import one another in a ring). */
+export function installLairHooks(): void {
+  dwellHooks.isleRows = penRows;
+  townHooks.pen = penView;
+}
 
 // ------------------------------------------------------------------------------------------------ the wire
 
