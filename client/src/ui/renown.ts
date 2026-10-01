@@ -21,6 +21,16 @@ import { serverText } from '../lang/server.ts';
 import { EN, RU } from '../lang/ui/renown.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fishIcon, fmt, icon } from './dom.ts';
+import { BEAST_RES, LAND_RES_DEF, isBeast } from '../../../shared/src/data/bestiary.ts';
+import type { CreatureId, LandRes } from '../../../shared/src/data/bestiary.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
+import { LAIRS, LAIR_KINDS } from '../../../shared/src/data/lairs.ts';
+import { DRIFTS, DRIFT_KINDS, PEOPLE_NAME, isFavourite, peopleOf } from '../../../shared/src/data/drifts.ts';
+import { CAPTAINS, CAPTAIN_IDS } from '../../../shared/src/data/captains.ts';
+import { ISLE_TYPE_DEFS } from '../../../shared/src/world/archipelago.ts';
+import { GOODS } from '../../../shared/src/data/goods.ts';
+import { EN as V_EN, RU as V_RU } from '../lang/ui/heroes18v.ts';
+import { specialName, specialNote, unitIcon, unitName } from './army.ts';
 
 const L = dict(EN, RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
@@ -88,7 +98,33 @@ const TROPHY_ICON: Record<string, string> = {
   'Leviathan Skull': 'deed_leviathan_slain', 'Kraken Eye': 'tattoo_kraken', 'Bell of the Whale': 'tattoo_bell', 'Lure of the Maw': 'boon_lantern', 'Serpent Fang': 'mod_serpent_scale',
   "Drey's Lantern": 'tattoo_lantern', 'Crown of Wrecks': 'map_wreck', 'Veil of the Widow': 'fh_weeping_widow', 'Skull of an Ancient': 'tattoo_skull', 'A Shard of the Eye': 'tattoo_eye',
 };
-const SET_ICON: Record<SetId, string> = { fish: 'fish_tuna', wonders: 'wonder_coral', omens: 'omen_albatross', trophies: 'map_monster', beasts: 'good_whalebone', letters: 'tattoo_bottle' };
+const SET_ICON: Record<SetId, string> = { fish: 'fish_tuna', wonders: 'wonder_coral', omens: 'omen_albatross', trophies: 'map_monster', beasts: 'good_whalebone', letters: 'tattoo_bottle', bestiary: 'creature.crab' };
+const V = dict(V_EN, V_RU);
+/** The bestiary's page open in the album (docs/18 #46). */
+let bestOpen: string | null = null;
+
+/** docs/18 #46: a creature's page — its strength, its specials, what it leaves, where it lives, whose favourite. */
+function bestiaryPage(u: CreatureId): string {
+  const d = UNITS[u];
+  const stats = V('bst.stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, speed: d.speed, init: d.init }) + (d.shots ? ` · ${V('bst.shots', { n: d.shots })}` : '');
+  const sp = d.specials.length ? d.specials.map((x) => `<li><b>${esc(specialName(x))}</b> — <span class="muted">${esc(specialNote(x))}</span></li>`).join('') : `<li class="muted">${esc(V('bst.none'))}</li>`;
+  const res = isBeast(u) ? (Object.entries(BEAST_RES[u]) as [LandRes | 'pearls', number][]) : [];
+  const drifts = DRIFT_KINDS.filter((k) => DRIFTS[k].u === u);
+  const loot = res.length
+    ? res.map(([r, n]) => `<span class="bcost" title="${esc(r === 'pearls' ? GOODS.pearls.name : LAND_RES_DEF[r].name[ru()])}">${icon(r === 'pearls' ? 'good_pearls' : LAND_RES_DEF[r].icon, '', 'ico-sm')}${esc(String(n).replace('.', ru() ? ',' : '.'))}</span>`).join('') + ` <span class="muted">${esc(V('bst.per'))}</span>`
+    : drifts.length ? esc(V('bst.lootSea', { good: drifts.map((k) => GOODS[DRIFTS[k].gift.good].name).join(', ') })) : esc(V('bst.lootNone'));
+  const where = [
+    ...LAIR_KINDS.filter((k) => LAIRS[k].mix.some(([x]) => x === u)).map((k) => V('bst.lair', { lair: LAIRS[k].name[ru()], types: LAIRS[k].types.map((t) => ISLE_TYPE_DEFS[t].adj[ru()]).join(', '), a: LAIRS[k].lv[0], b: LAIRS[k].lv[1] })),
+    ...drifts.map((k) => (DRIFTS[k].legend ? V('bst.legend', { a: DRIFTS[k].lv[0] }) : V('bst.drift', { drift: DRIFTS[k].name[ru()], a: DRIFTS[k].lv[0], b: DRIFTS[k].lv[1] }))),
+  ];
+  const favs = CAPTAIN_IDS.filter((c) => isFavourite(c, u)).map((c) => CAPTAINS[c].archetype);
+  return `<div class="rn-page" data-bst-page="${u}"><div class="rn-page-h">${unitIcon(u, 'ico-lg')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(V('bst.tier', { n: d.tier }))} · ${esc(PEOPLE_NAME[peopleOf(u)][ru()])}</span></div><button class="btn btn-small btn-ghost" data-bst-close aria-label="${esc(V('bst.close'))}">×</button></div>
+    <p class="rn-page-stats">${esc(stats)}</p>
+    <div class="giver-h">${esc(V('bst.specials'))}</div><ul class="rn-page-list">${sp}</ul>
+    <div class="giver-h">${esc(V('bst.loot'))}</div><p class="rn-page-loot">${loot}</p>
+    <div class="giver-h">${esc(V('bst.where'))}</div><ul class="rn-page-list">${where.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
+    ${favs.length ? `<p class="muted">${esc(V('bst.fav', { paths: favs.join(', ') }))}</p>` : ''}</div>`;
+}
 
 function piece(set: SetId, id: string): { ico: string; name: string } {
   switch (set) {
@@ -98,20 +134,26 @@ function piece(set: SetId, id: string): { ico: string; name: string } {
     case 'trophies': return { ico: icon(TROPHY_ICON[id] ?? 'map_monster', '✦', 'rn-ico'), name: sv(id) };
     case 'beasts': return { ico: icon(BEAST_ICON[id as BeastId], '✦', 'rn-ico'), name: BEASTS[id as BeastId].name[ru()] };
     case 'letters': return { ico: `${icon('tattoo_bottle', '✉', 'rn-ico')}<b class="rn-n">${Number(id) + 1}</b>`, name: L('letter', { n: Number(id) + 1 }) };
+    case 'bestiary': return { ico: unitIcon(id as CreatureId, 'rn-ico'), name: unitName(id as CreatureId) };
   }
 }
 
 function setCard(s: SetView): string {
   const def = setDefs(s.items.length)[s.id];
   const have = new Set(s.have);
+  const book = s.id === 'bestiary';
   const grid = s.items.map((id) => {
     const p = piece(s.id, id);
     const got = have.has(id);
-    return `<span class="rn-piece${got ? ' got' : ''}" title="${esc(got ? p.name : '?')}">${p.ico}${got ? `<i>${esc(p.name)}</i>` : '<i>?</i>'}</span>`;
+    // The bestiary's unknown pages show the bare art, untinted and dark (the tint would light it up).
+    const ico = book && !got ? icon(UNITS[id as CreatureId]?.art ?? 'creature.crab', '', 'rn-ico') : p.ico;
+    const tag = book && got ? 'button' : 'span';
+    return `<${tag} class="rn-piece${got ? ' got' : ''}${book && got && bestOpen === id ? ' open' : ''}" title="${esc(got ? p.name : '?')}"${book && got ? ` data-bst="${id}"` : ''}>${ico}${got ? `<i>${esc(p.name)}</i>` : '<i>?</i>'}</${tag}>`;
   }).join('');
+  const page = book && bestOpen && have.has(bestOpen) ? bestiaryPage(bestOpen as CreatureId) : '';
   return `<div class="card rn-set${s.done ? ' done' : ''}"><h4 class="card-h">${icon(SET_ICON[s.id], '', 'ico-md')}<span>${esc(def.name[ru()])} <span class="muted">${esc(L('setCount', { n: s.have.length, max: s.items.length }))}</span></span></h4>
     ${barHtml(s.have.length / Math.max(1, s.items.length))}<p class="muted">${esc(def.text[ru()])}</p>
-    <div class="rn-grid">${grid}</div>
+    ${book ? `<p class="muted">${esc(V('bst.hint'))}</p>` : ''}<div class="rn-grid">${grid}</div>${page}
     <p class="rn-reward">${s.done ? `<span class="good">✓ ${esc(L('setDone'))}</span> · ` : ''}${esc(L('setReward', { silver: fmt(s.silver), title: def.title[ru()] }))}</p></div>`;
 }
 
@@ -123,6 +165,16 @@ export function renderAlbum(body: HTMLElement, state: ClientState, send: (m: Cli
     return;
   }
   body.innerHTML = `<p class="muted rn-sub">${esc(L('albumSub'))}</p><div class="rn-sets">${v.sets.map(setCard).join('')}</div>`;
+  // docs/18 #46: a bestiary page opens under its set's grid.
+  body.querySelectorAll<HTMLElement>('[data-bst]').forEach((el) => (el.onclick = () => {
+    bestOpen = bestOpen === el.dataset.bst ? null : el.dataset.bst!;
+    renderAlbum(body, state, send);
+    body.querySelector('.rn-page')?.scrollIntoView({ block: 'nearest' });
+  }));
+  body.querySelector<HTMLElement>('[data-bst-close]')?.addEventListener('click', () => {
+    bestOpen = null;
+    renderAlbum(body, state, send);
+  });
 }
 
 // ------------------------------------------------------------------ 27. the week's challenges (the journal)

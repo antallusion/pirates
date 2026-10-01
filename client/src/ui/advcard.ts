@@ -16,7 +16,9 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h4.ts';
 import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
-import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import { BEAST_TINT, LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
+import type { LandRes } from '../../../shared/src/data/bestiary.ts';
+import { EN as VEN, RU as VRU } from '../lang/ui/heroes18v.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { LairCard } from '../../../shared/src/lairproto.ts';
 import type { DriftCard } from '../../../shared/src/driftproto.ts';
@@ -31,6 +33,7 @@ import { placeName } from './maps.ts';
 const L = dict(EN, RU);
 const LL = dict(LEN, LRU);
 const DL = dict(DEN, DRU);
+const VL = dict(VEN, VRU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
 
 /** A guard's painted picture: the hold-out's camp, the hulk, the wreck, the serpent of the pack. */
@@ -65,6 +68,15 @@ function guardBlock(g: GuardCard, own: boolean): string {
     </div></div>`;
 }
 
+/** docs/18 #43: her creature dwelling settled (or what settling it asks). */
+function settleBlock(id: string, d: NonNullable<LairCard['dwell']>): string {
+  if ((d.lv ?? 1) >= 2) return `<span class="muted ac-settled">${esc(VL('dw.settled', { n: d.upkeep ?? 1 }))}</span>`;
+  if (!d.up) return '';
+  const land = (Object.entries(d.up.land) as [LandRes, number][]).map(([r, n]) => `<span class="bcost" title="${esc(LAND_RES_DEF[r].name[ru()])}">${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${n}</span>`).join('');
+  return `<div class="ac-settle"><span class="bcosts"><span class="bcost">${money(d.up.silver)}</span>${land}</span>
+    <button class="btn btn-small" data-al="settle" data-id="${id}"${d.upWhy ? ' disabled' : ''} title="${esc(VL('dw.settleTip', { n: d.upkeep ?? 1 }))}">${esc(VL('dw.settle'))}</button>${d.upWhy ? `<span class="muted">${esc(serverText(d.upWhy))}</span>` : ''}</div>`;
+}
+
 /** docs/18 II: the lair's card — HoMM3's word for its creatures, their faces and numbers, her landing party against
  *  them, the spoils (or that she had them this week), the island's chain, the offer, "Land and fight", the dwelling. */
 function lairBlock(c: LairCard, x: boolean): string {
@@ -84,7 +96,7 @@ function lairBlock(c: LairCard, x: boolean): string {
   let dwell = '';
   if (d) {
     const body = d.own
-      ? `<span>${unitIcon(d.u, 'army-face-xs')} ${esc(LL('dwell.own', { n: d.pool, g: d.growth }))}</span><button class="btn btn-small btn-primary" data-ahire>${esc(LL('dwell.hire'))}</button>`
+      ? `<span>${unitIcon(d.u, 'army-face-xs')} ${esc(LL('dwell.own', { n: d.pool, g: d.growth }))}</span><button class="btn btn-small btn-primary" data-ahire>${esc(LL('dwell.hire'))}</button>${settleBlock(c.id, d)}`
       : `${d.owner ? `<span class="muted">${esc(LL('dwell.other', { name: personName(d.owner) }))}</span>` : `<span class="muted">${esc(LL('dwell.can'))}</span>`}${d.can ? `<button class="btn btn-small" data-al="flag" data-id="${c.id}">${esc(LL('dwell.flag'))}</button>` : d.why ? `<span class="muted">${esc(serverText(d.why))}</span>` : ''}`;
     dwell = `<div class="ac-dwell">${body}</div>`;
   }
@@ -93,6 +105,7 @@ function lairBlock(c: LairCard, x: boolean): string {
       <div class="ac-gw"><b class="ac-word">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span><span class="tg-army-faces">${faces}</span></div>
       <div class="muted ac-gl">${esc(LL('vs', { n: c.party, r: ratio }))}</div>
       <div class="muted ac-gl ac-pay">${esc(c.looted ? LL('looted') : LL('pay', { s: fmt(c.pay.silver), x: fmt(c.pay.xp) }))}</div>
+      ${c.week ? `<div class="ac-gl ac-week good">${esc(VL('lair.week'))}</div>` : ''}
       ${offer ? `<div class="ac-offer">${esc(offer)}</div>` : ''}
       ${!c.reach ? `<div class="muted ac-gl ac-come">${esc(LL('come'))}</div>` : c.why ? `<div class="muted ac-gl ac-come">${esc(serverText(c.why))}</div>` : ''}
       <div class="ac-acts">
@@ -257,7 +270,7 @@ export class AdvCard {
     if (key === this.key) return;
     this.key = key;
     // Closed by hand: it stays closed until the thing or its state changes.
-    const what = v || lc || dc ? JSON.stringify([v?.obj?.id, v?.obj?.ready, v?.obj?.why, v?.obj?.guard?.id, v?.guard?.id, v?.guard?.offer, v?.obj?.guard?.offer, lc?.id, lc?.offer, lc?.why, lc?.down !== undefined, lc?.dwell?.can, lc?.dwell?.own, dc?.id, dc?.reach, !!dc?.mini]) : '';
+    const what = v || lc || dc ? JSON.stringify([v?.obj?.id, v?.obj?.ready, v?.obj?.why, v?.obj?.guard?.id, v?.guard?.id, v?.guard?.offer, v?.obj?.guard?.offer, lc?.id, lc?.offer, lc?.why, lc?.down !== undefined, lc?.dwell?.can, lc?.dwell?.own, lc?.dwell?.lv, dc?.id, dc?.reach, !!dc?.mini]) : '';
     if ((!v && !lc && !dc) || what === this.closed) {
       this.el.classList.add('hidden');
       this.el.innerHTML = '';

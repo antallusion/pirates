@@ -7,6 +7,7 @@
 
 import { DAY_LENGTH_SEC } from '../constants.ts';
 import { Rng } from '../rng.ts';
+import type { CreatureId } from './bestiary.ts';
 import type { Tr } from './estate.ts';
 
 export const WEEK_DAYS = 7;
@@ -25,7 +26,9 @@ export function secsToDawn(worldSec: number): number {
 
 export const weekOfDay = (day: number): number => Math.floor(day / WEEK_DAYS);
 
-export type WeekKind = 'deckhand' | 'marine' | 'musketeer' | 'gunner' | 'boarder' | 'guard' | 'drowned' | 'plenty' | 'fair' | 'silver' | 'fever';
+export type WeekKind = 'deckhand' | 'marine' | 'musketeer' | 'gunner' | 'boarder' | 'guard' | 'drowned' | 'plenty' | 'fair' | 'silver' | 'fever'
+  // docs/18 #45: the weeks of the creatures
+  | 'crab' | 'gull' | 'seal' | 'shark' | 'turtle' | 'serpent' | 'mermaid' | 'tentacle';
 
 export interface WeekDef {
   id: WeekKind;
@@ -44,6 +47,9 @@ export interface WeekDef {
   buy?: number;
   /** The town hall's daily silver. */
   hall?: number;
+  /** docs/18 #45: the creatures the week is named for — their lairs stand with more of them (and leave more), their
+   *  dwellings and pens grow half as many again, and the lookouts find them adrift oftener. */
+  beasts?: CreatureId[];
 }
 
 /** A week of a kind of man raises that tier's growth by half (HoMM3's week of a creature). */
@@ -61,7 +67,27 @@ export const WEEKS: Record<WeekKind, WeekDef> = {
   fair: { id: 'fair', name: ['Week of the Fair', 'Ярмарочная неделя'], text: ['The island markets pay a quarter more and ask less.', 'Рынки островов платят на четверть больше и просят меньше.'], weight: 6, sell: 1.25, buy: 0.85 },
   silver: { id: 'silver', name: ['Week of Silver', 'Серебряная неделя'], text: ['The town halls take in half as much silver again.', 'Ратуши собирают в полтора раза больше серебра.'], weight: 6, hall: 1.5 },
   fever: { id: 'fever', name: ['Week of the Fever', 'Неделя лихорадки'], text: ['Fever in the ports: every dwelling grows half as many.', 'Лихорадка в портах: во всех жилищах прибывает вдвое меньше.'], weight: 3, growth: 0.5 },
+  // docs/18 #45: HoMM3's weeks of a creature, for the land's and the sea's kinds.
+  crab: { id: 'crab', name: ['Week of the Crab', 'Неделя краба'], text: ['The shore crabs swarm: a quarter more in their lairs and in their loot, and their dwellings and pens grow half as many again.', 'Береговые крабы кишат: в их логовах и в добыче на четверть больше, а их жилища и загоны растут в полтора раза.'], weight: 3, beasts: ['crab'] },
+  gull: { id: 'gull', name: ['Week of the Gull', 'Неделя чайки'], text: ['The carrion gulls flock: a quarter more in their lairs and in their loot, their dwellings and pens grow half as many again, and they are found adrift oftener.', 'Чайки-падальщики сбиваются в стаи: в их логовах и в добыче на четверть больше, их жилища и загоны растут в полтора раза, и их чаще находят в дрейфе.'], weight: 3, beasts: ['gull'] },
+  seal: { id: 'seal', name: ['Week of the Seal', 'Неделя тюленя'], text: ['The rookeries are full: a quarter more seals in their lairs and in their loot, their dwellings and pens grow half as many again, and they are found adrift oftener.', 'Лежбища полны: тюленей в логовах и в добыче на четверть больше, их жилища и загоны растут в полтора раза, и их чаще находят в дрейфе.'], weight: 3, beasts: ['seal'] },
+  shark: { id: 'shark', name: ['Week of the Shark', 'Неделя акулы'], text: ['The sharks come into the shallows: a quarter more in their lairs and in their loot, and their dwellings and pens grow half as many again.', 'Акулы заходят на мелководье: в их логовах и в добыче на четверть больше, а их жилища и загоны растут в полтора раза.'], weight: 3, beasts: ['reef_shark'] },
+  turtle: { id: 'turtle', name: ['Week of the Turtle', 'Неделя черепахи'], text: ['The turtles come ashore to lay: a quarter more in their lairs and in their loot, their dwellings and pens grow half as many again, and they are found adrift oftener.', 'Черепахи выходят на берег откладывать яйца: в их логовах и в добыче на четверть больше, их жилища и загоны растут в полтора раза, и их чаще находят в дрейфе.'], weight: 3, beasts: ['rock_turtle', 'sea_turtle', 'ancient_turtle'] },
+  serpent: { id: 'serpent', name: ['Week of the Serpent', 'Неделя змея'], text: ['The serpents shed their skins: a quarter more in their lairs, grottoes and loot, their dwellings and pens grow half as many again, and they are found adrift oftener.', 'Змеи сбрасывают кожу: в их логовах, гротах и в добыче на четверть больше, их жилища и загоны растут в полтора раза, и их чаще находят в дрейфе.'], weight: 3, beasts: ['marsh_serpent', 'young_serpent'] },
+  mermaid: { id: 'mermaid', name: ['Week of the Mermaid', 'Неделя русалки'], text: ['Songs on the water at night: mermaids are found in the nets oftener, and their pens grow half as many again.', 'По ночам над водой песни: русалок чаще находят в сетях, а их загоны растут в полтора раза.'], weight: 3, beasts: ['mermaid'] },
+  tentacle: { id: 'tentacle', name: ['Week of the Tentacle', 'Неделя щупальца'], text: ['Something stirs in the lagoons: a quarter more tentacles in their lairs and in their loot, their dwellings and pens grow half as many again, and they are found adrift oftener.', 'В лагунах что-то шевелится: щупалец в логовах и в добыче на четверть больше, их жилища и загоны растут в полтора раза, и их чаще находят в дрейфе.'], weight: 3, beasts: ['lagoon_tentacle'] },
 };
+
+/** docs/18 #45: a creature week's lairs of its kind stand with this many more creatures (and leave as much more), its
+ *  dwellings and pens grow this much, and its drifts are this many times as likely. */
+export const WEEK_BEAST_LAIR = 1.25;
+export const WEEK_BEAST_GROWTH = 1.5;
+export const WEEK_BEAST_DRIFT = 4;
+
+/** Whether the week is named for a creature kind. */
+export const weekOfBeast = (kind: WeekKind, u: string): boolean => !!WEEKS[kind]?.beasts?.includes(u as CreatureId);
+/** A creature kind's dwelling and pen growth this week. */
+export const weekBeastGrowth = (kind: WeekKind, u: string): number => (weekOfBeast(kind, u) ? WEEK_BEAST_GROWTH : 1);
 
 export const WEEK_KINDS = Object.keys(WEEKS) as WeekKind[];
 

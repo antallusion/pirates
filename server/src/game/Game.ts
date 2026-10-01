@@ -212,6 +212,7 @@ import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
@@ -391,6 +392,7 @@ export class Game {
     // Some three thousand jobs for the ports' people (docs/11 P4), the same on every server of this seed.
     registerJobs([...generateQuests(this.world, seed), ...generateLairJobs(this.world, seed)]); // and the creature jobs (docs/18 #23)
     installLairHooks(); // the pen in the town and its recruit window (docs/18 #20)
+    installLandHooks(); // the land's resources in the town (docs/18 #43)
     registerArcs(generateArcs(this.world, seed)); // five written arcs a region, three chapters each
     registerIslandJobs(generateIslandJobs(this.world, seed)); // the islands' people
     registerElitePorts(this.world.ports); // the ports' group contracts, one a day each

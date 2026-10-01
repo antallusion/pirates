@@ -7,6 +7,7 @@ import type { BeastId, LandRes } from './data/bestiary.ts';
 import type { GoodId } from './data/goods.ts';
 import type { LairKind, LairRole, LairSize } from './data/lairs.ts';
 import type { CaptureOffer } from './driftproto.ts';
+import type { LandCost } from './data/landecon.ts';
 
 /** A lair as the charts show it once seen. */
 export interface LairMark {
@@ -57,7 +58,13 @@ export interface LairCard {
   /** The island's chain: the steps she has beaten this week. */
   chain?: { step: number; done: boolean[] };
   /** A creature dwelling here (docs/18 #19): its kind, who flies her flag, what waits, and whether she may raise hers. */
-  dwell?: { u: BeastId; owner: string | null; own: boolean; pool: number; growth: number; can: boolean; why: string | null };
+  dwell?: {
+    u: BeastId; owner: string | null; own: boolean; pool: number; growth: number; can: boolean; why: string | null;
+    /** docs/18 #43: settled (level 2) for shell and bone — what settling asks, why not, its bone a week. */
+    lv?: number; up?: { silver: number; land: LandCost } | null; upWhy?: string | null; upkeep?: number;
+  };
+  /** docs/18 #45: this week is named for its kind (a quarter more of them, and of its loot). */
+  week?: boolean;
 }
 
 /** What a lair left her (the battle's reckoning ashore). */
@@ -89,7 +96,7 @@ export interface LairsView {
 }
 
 export type LairClientMsg =
-  | { t: 'lair'; action: 'fight' | 'join' | 'flee' | 'flag'; id: string }
+  | { t: 'lair'; action: 'fight' | 'join' | 'flee' | 'flag' | 'settle'; id: string }
   | { t: 'lair'; action: 'close' }
   | { t: 'lair'; action: 'nest'; egg: number };
 

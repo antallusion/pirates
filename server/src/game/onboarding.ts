@@ -23,6 +23,8 @@ import type { Game } from './Game.ts';
 import { addXp } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { lairsOf, revealNearestLair } from './beastlairs.ts';
+import { driftOf, tutorialDrift } from './drifts.ts';
 
 export interface Tutorial {
   on: boolean; // walking the First Watch
@@ -141,6 +143,34 @@ export const STAGES: Stage[] = [
     begin: (game, s, ship) => {
       const o = nearestObj(game, ship);
       if (o) revealAdv(game, s, o.x, o.y, 300);
+    },
+  },
+  // docs/18 #49: the islands' creatures and the drifting ones.
+  {
+    // Land at a lair: the nearest she can take is put on her chart; the battle ashore fought to its end.
+    id: 'lair',
+    reveal: [],
+    mark: (p) => lairsOf(p).landed ?? 0,
+    done: (_g, _s, _ship, p) => (lairsOf(p).landed ?? 0) > p.tutorial.base,
+    begin: (game, s) => {
+      revealNearestLair(game, s);
+    },
+  },
+  {
+    // A drifting creature off her bow: saved (or, failing that, fought) — they join her army or give a gift.
+    id: 'rescue',
+    reveal: [],
+    mark: (p) => driftOf(p).saved + driftOf(p).beaten,
+    done: (_g, _s, _ship, p) => driftOf(p).saved + driftOf(p).beaten > p.tutorial.base,
+    begin: (game, s) => {
+      tutorialDrift(game, s);
+    },
+    keep: (game, s, ship) => {
+      // Lost to the sea or sunk out of reach: another, a while later.
+      const w = watchOf(s);
+      if (ship.docked || ship.boarding || game.now < w.raiderAt) return;
+      w.raiderAt = game.now + 30;
+      tutorialDrift(game, s);
     },
   },
 ];

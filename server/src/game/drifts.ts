@@ -42,6 +42,12 @@ import type { TacBattle } from './tacbattle.ts';
 import { captureOffer, creatureRoom, fromPen, joinCreatures, penRoom, release, sendTame, sendToPen, tamerBuy, tamerSell, toPen } from './tame.ts';
 import { keepsDeep } from './town.ts';
 import { landParty } from '../../../shared/src/data/lairs.ts';
+import { WEEK_BEAST_DRIFT, weekOfBeast } from '../../../shared/src/data/week.ts';
+import { weekNow } from './calendar.ts';
+
+/** docs/18 #45: a creature's week — its drifts this many times as likely, and the lookouts find something oftener. */
+const WEEK_FIND = 0.9;
+const weekDrifts = (game: Game): boolean => DRIFT_KINDS.some((k) => !DRIFTS[k].legend && weekOfBeast(weekNow(game), DRIFTS[k].u));
 
 /** What a captain keeps of the drifts: how many she has saved and beaten, the legends that are hers. */
 export interface DriftProfile {
@@ -157,7 +163,8 @@ function sight(game: Game, s: PlayerSession): Drift | null {
   const sec = sectorAt(game.world, ship.state.x, ship.state.y);
   const region = regionAt(game.world, ship.state.x, ship.state.y);
   if (region === 'the_abyss') return null;
-  const kinds = driftKindsFor(sec.level, region);
+  const wk = weekNow(game);
+  const kinds = driftKindsFor(sec.level, region).map(([k, w]) => [k, weekOfBeast(wk, DRIFTS[k].u) ? w * WEEK_BEAST_DRIFT : w] as [DriftKind, number]);
   if (!kinds.length) return null;
   const tot = kinds.reduce((a, [, w]) => a + w, 0);
   let r = S.rng.float() * tot, kind = kinds[0][0];
@@ -202,7 +209,7 @@ export function stepDrifts(game: Game): void {
         else {
           S.next.set(s.accountId, game.now + S.rng.range(DRIFT_EVERY[0], DRIFT_EVERY[1]));
           const mine = [...S.list.values()].some((d) => d.owner === s.accountId);
-          if (!mine && S.list.size < 6 + game.sessions.size * 2 && S.rng.chance(DRIFT_FIND)) sight(game, s);
+          if (!mine && S.list.size < 6 + game.sessions.size * 2 && S.rng.chance(weekDrifts(game) ? WEEK_FIND : DRIFT_FIND)) sight(game, s);
         }
       }
     }
@@ -685,6 +692,33 @@ export function adminDrift(game: Game, s: PlayerSession, args: string[]): string
   return `Drifts at sea: ${S.list.size}. Nearest: the ${driftName(d.kind)} (⚓${d.level}, ${d.n} ${beasts(DRIFTS[d.kind].u)}), ${Math.round(dist(d.x, d.y, ship.state.x, ship.state.y))} m away, ${Math.round(d.until - game.now)} s left. Legend of the season (${driftName(L?.kind ?? 'white_whale')}): ${legend}.`;
 }
 
+
+/** docs/18 #49: the First Watch's drift — an easy one of her waters (gulls on a mast, seals on a floe), a few cable
+ *  lengths off her bow, hers alone; null when one of hers is on the water already. */
+export function tutorialDrift(game: Game, s: PlayerSession): Drift | null {
+  const S = D(game);
+  const ship = s.ship;
+  if (!ship || ship.docked) return null;
+  if ([...S.list.values()].some((d) => d.owner === s.accountId && !DRIFTS[d.kind].legend)) return null;
+  const level = sectorAt(game.world, ship.state.x, ship.state.y).level;
+  const kind: DriftKind = level <= 4 ? 'gull_mast' : 'turtle_weed';
+  for (let t = 0; t < 24; t++) {
+    const v = headingVec(ship.state.heading + (t % 2 ? 1 : -1) * Math.floor(t / 2) * 0.4);
+    const far = 420 - (t % 4) * 60;
+    const x = ship.state.x + v.x * far, y = ship.state.y + v.y * far;
+    if (!openWater(game, x, y) && !(!isLand(game.world, x, y) && game.inZone(x, y))) continue;
+    const d = putDrift(game, kind, x, y, s.accountId, 900);
+    sendDrifts(game, s, true);
+    return d;
+  }
+  return null;
+}
+
+/** The drifts within `R` of her ship (the tests'). */
+export function driftsNear(game: Game, s: PlayerSession, R: number): Drift[] {
+  const ship = s.ship!;
+  return [...D(game).list.values()].filter((d) => dist(d.x, d.y, ship.state.x, ship.state.y) <= R);
+}
 
 /** The lookout's look for one captain at once (the tests'). */
 export const sightNow = (game: Game, s: PlayerSession): Drift | null => sight(game, s);

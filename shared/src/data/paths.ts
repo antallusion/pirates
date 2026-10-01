@@ -130,11 +130,11 @@ export type PathPageId =
  *  points of speed, initiative, morale and luck go as far as whole points go; the yes-or-no holds stay). The battle is
  *  steep — a tenth fewer men loses seven fights in ten (docs/17 H5) — so the book's lift is kept to an edge. */
 export const PATH_POWER: Record<CaptainId, [number, number, number]> = {
-  corsair: [0.39, 0.07, 0.25], smuggler: [1.47, 0.3, 0.28], reaver: [0.59, 0.24, 0.16], navigator: [0.85, 0.3, 0.2], drowned: [0.98, 0.53, 0.37], admiral: [1.84, 0.38, 0.24],
+  corsair: [0.61, 0.06, 0.28], smuggler: [1.47, 0.3, 0.25], reaver: [0.59, 0.24, 0.1], navigator: [0.85, 0.34, 0.22], drowned: [0.98, 0.53, 0.37], admiral: [1.84, 0.38, 0.21],
 };
 /** The same for the innate move and the ultimate. */
 export const MOVE_POWER: Record<CaptainId, [number, number, number]> = {
-  corsair: [0.4, 0.63, 0.46], smuggler: [0.5, 0.63, 0.5], reaver: [0.5, 0.32, 0.63], navigator: [0.55, 0.9, 0.43], drowned: [0.43, 0.55, 0.72], admiral: [0.63, 0.53, 0.57],
+  corsair: [0.4, 0.5, 0.58], smuggler: [0.63, 0.63, 0.63], reaver: [0.56, 0.36, 0.88], navigator: [0.62, 0.8, 0.43], drowned: [0.48, 0.55, 1.01], admiral: [0.63, 0.66, 0.71],
 };
 /** The hero levels the figures stand at (between them, the line between; beyond, the last). */
 export const PATH_POWER_AT = [10, 30, 55] as const;

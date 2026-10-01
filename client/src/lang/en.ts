@@ -27,6 +27,11 @@ export const EN = {
   'stage.visit': 'A thing on the map',
   'stage.visit.body': 'Chests, wells, altars wait at sea — one is marked on your chart (M). Sail within reach of your boats and visit it from its card.',
   'stage.visit.touch': 'Chests, wells, altars wait at sea — one is marked on your chart. Sail within reach of your boats and visit it from its card.',
+  'stage.lair': 'Land at a lair',
+  'stage.lair.body': 'Creatures live on the islands — the nearest lair is on your chart (M). Heave to off its shore and land your party from its card: the battle is fought ashore.',
+  'stage.lair.touch': 'Creatures live on the islands — the nearest lair is on your chart. Heave to off its shore and land your party from its card: the battle is fought ashore.',
+  'stage.rescue': 'Rescue the drifting creatures',
+  'stage.rescue.body': 'Creatures adrift off your bow, marked with a ring on the minimap. Come alongside and save them from their card: saved, they join your army.',
   'stage.first_trade.tip': 'A note from the tavern: “{good} fetches a fine price in {port}” — {hours} h ago.',
   // Contextual hints
   'hint.irons': 'In irons: her bow is in the wind and the sails are aback. Put the helm over (A/D) until the wind comes onto her beam.',

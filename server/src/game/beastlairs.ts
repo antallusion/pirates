@@ -30,7 +30,11 @@ import { turtlePos, turtles } from '../../../shared/src/world/drift.ts';
 import { tidalIsles } from '../../../shared/src/world/tidal.ts';
 import { advQuiet, parkNear } from './advmap.ts';
 import { baseView, lyingOff, mine as ownBase } from './base.ts';
-import { thisWeek, today, weekView } from './calendar.ts';
+import { kindOfWeek, thisWeek, today, weekNow, weekView } from './calendar.ts';
+import { WEEK_BEAST_LAIR, weekBeastGrowth, weekOfBeast } from '../../../shared/src/data/week.ts';
+import { DWELL_UP } from '../../../shared/src/data/landecon.ts';
+import { addLand, landLack, takeLand } from './landecon.ts';
+import { meetCreatures } from './renown.ts';
 import { reconcile } from './crew.ts';
 import { giveGoods } from './director.ts';
 import { dwellHooks, pickedMax, pickedRoom } from './dwell.ts';
@@ -47,6 +51,7 @@ import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 import { keepsDeep, townHooks, townLevel, townState } from './town.ts';
 import { captureOffer, captureTake, creaturesWon } from './tame.ts';
 import type { CaptureOffer } from '../../../shared/src/driftproto.ts';
+import type { FittingId } from '../../../shared/src/data/landecon.ts';
 import type { Yard } from './base.ts';
 
 /** What a captain keeps of the lairs (docs/18 II). */
@@ -64,6 +69,10 @@ export interface LairProfile {
   chest: Record<string, number>;
   /** The creatures she has cut down, by kind (the bestiary's count, docs/18 #46). */
   kills: Partial<Record<BeastId, number>>;
+  /** docs/18 #43: the ship's fittings of the land's resources she has had made (a rank each). */
+  fit?: Partial<Record<FittingId, number>>;
+  /** docs/18 #49: the lairs' battles ashore she has fought to their end (the First Watch's step). */
+  landed?: number;
 }
 
 export function lairsOf(p: Profile): LairProfile {
@@ -96,6 +105,8 @@ interface DwellState {
   name: string;
   pool: number;
   w: number;
+  /** docs/18 #43: settled for shell and bone (2): half as many again a week, three weeks kept, bone a week. */
+  lv?: number;
 }
 
 interface Store {
@@ -212,8 +223,14 @@ function lairThere(game: Game, l: Lair): boolean {
 export function lairMen(game: Game, l: Lair): ArmyStack[] {
   const st = L(game).store.st[l.id];
   if (st?.army && st.at !== undefined && game.now < st.at + LAIR_RESPAWN[l.role]) return st.army.map((x) => ({ ...x }));
-  return lairArmy(l.kind, l.level, l.size);
+  const men = lairArmy(l.kind, l.level, l.size);
+  // docs/18 #45: the week of its kind — a quarter more of them (a grotto's and a guardian's own stay as they are).
+  if (lairWeek(game, l)) men.forEach((x, i) => (x.n = l.role !== 'shore' && i === 0 ? x.n : Math.max(1, Math.round(x.n * WEEK_BEAST_LAIR))));
+  return men;
 }
+
+/** docs/18 #45: this week is named for the lair's own kind. */
+export const lairWeek = (game: Game, l: Lair): boolean => weekOfBeast(weekNow(game), LAIRS[l.kind].mix[0][0]);
 
 /** The lair is gone (beaten, fled or signed on): it stands again a respawn later. */
 function lairGone(game: Game, l: Lair): void {
@@ -329,7 +346,12 @@ function dwellOf(game: Game, s: PlayerSession, l: Lair): LairCard['dwell'] | und
   const own = d?.owner === s.accountId;
   if (!d && lairsOf(s.profile!).v[l.id] !== week1(game)) return undefined;
   const why = own ? null : flagWhy(game, s, l);
-  return { u, owner: d?.name ?? null, own, pool: d ? Math.floor(dwellPool(game, d, u)) : 0, growth: dwellGrowth(u), can: !own && !why, why };
+  const lv = d?.lv ?? 1;
+  const tier = UNITS[u].tier;
+  return {
+    u, owner: d?.name ?? null, own, pool: d ? Math.floor(dwellPool(game, d, u)) : 0, growth: Math.round(dwellWeek(game, d, u) * 10) / 10, can: !own && !why, why,
+    ...(own ? { lv, up: lv < 2 ? DWELL_UP.cost(tier) : null, upWhy: lv < 2 ? settleWhy(game, s, l) : null, upkeep: DWELL_UP.upkeep(tier) } : {}),
+  };
 }
 
 function card(game: Game, s: PlayerSession, l: Lair): LairCard {
@@ -337,14 +359,14 @@ function card(game: Game, s: PlayerSession, l: Lair): LairCard {
   const up = lairUp(game, l);
   const offer = up ? lairOffer(game, s, l) : null;
   const p = lairsOf(s.profile!);
-  const pay = lairPay(l.kind, l.level, l.size, l.type, l.mul);
+  const pay = lairPay(l.kind, l.level, l.size, l.type, l.mul * (lairWeek(game, l) ? WEEK_BEAST_LAIR : 1));
   const st = L(game).store.st[l.id];
   const chainSteps = l.chain !== undefined ? [`l${l.island}s`, `l${l.island}g`, `l${l.island}G`].map((id) => p.v[id] === week1(game)) : undefined;
   const dw = dwellOf(game, s, l);
   return {
     id: l.id, kind: l.kind, role: l.role, size: l.size, level: l.level, island: islandName(game, l), men: armyMen(men), stacks: men.map((x) => ({ u: x.u, n: x.n })),
     ratio: Math.round(lairRatio(game, s, l) * 10) / 10, party: armyMen(partyOf(game, s)), offer, joinN: offer === 'join' ? armyMen(lairJoiners(game, s, l)) : 0,
-    reach: inReach(game, s, l), why: up ? fightWhy(game, s, l) : null, pay: { silver: pay.silver, xp: pay.xp },
+    reach: inReach(game, s, l), why: up ? fightWhy(game, s, l) : null, pay: { silver: pay.silver, xp: pay.xp }, ...(lairWeek(game, l) ? { week: true } : {}),
     ...(p.v[l.id] === week1(game) ? { looted: true } : {}),
     ...(!up && st?.down !== undefined ? { down: Math.max(0, Math.round(st.down + LAIR_RESPAWN[l.role] - game.now)) } : {}),
     ...(chainSteps ? { chain: { step: l.chain!, done: chainSteps } } : {}),
@@ -489,6 +511,7 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   const rng = new Rng((seed ^ 0x1a7d) >>> 0);
   const bt = newBattle(a, b, seed, game.now, rng, { land: l.type });
   S.fights.set(s.accountId, { lair: l.id, bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0 });
+  meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46: the bestiary's first pages
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.state.speed = 0;
   const n = armyMen(party);
@@ -533,6 +556,7 @@ export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, 
   const rng = new Rng((seed ^ 0xd71f) >>> 0);
   const bt = newBattle(a, b, seed, game.now, rng, { land: ext.type });
   S.fights.set(s.accountId, { lair: '', bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0, ext });
+  meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.state.speed = 0;
   sendLairCard(game, s, true);
@@ -632,6 +656,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   afterBattle(game, ship, h.mana, lossesOf(bt, 0), h.input.hero?.raise ?? 0, h.stam, h.scrollsUsed);
   const p = lairsOf(s.profile!);
   for (const x of lossesOf(bt, 1)) if (isBeast(x.u)) p.kills[x.u] = (p.kills[x.u] ?? 0) + x.n;
+  if (!f.ext) p.landed = (p.landed ?? 0) + 1;
   const won = bt.over!.winner === 0 && !f.retreat;
   // docs/18 #39: her creatures that fought and won, fed, have a win more.
   if (won) creaturesWon(game, ship, bt.stacks.filter((x) => x.side === 0).map((x) => x.src));
@@ -688,7 +713,7 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
     game.toastShip(ship, `The ${lairName(l)} is beaten. You had its spoils this week already.`, 'good');
   } else {
     lp.v[l.id] = w;
-    const pay = lairPay(l.kind, l.level, l.size, l.type, l.mul);
+    const pay = lairPay(l.kind, l.level, l.size, l.type, l.mul * (lairWeek(game, l) ? WEEK_BEAST_LAIR : 1));
     p.gold += pay.silver;
     game.db.ledger(s.accountId, 'lair', pay.silver, l.id);
     loot.silver = pay.silver;
@@ -699,8 +724,9 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
         const q = giveGoods(ship, 'pearls', n);
         if (q > 0) loot.res.pearls = q;
       } else {
-        lp.res[r] += n;
-        loot.res[r] = n;
+        // docs/18 #43: the store keeps so many at most; the rest rots on the beach.
+        const got = addLand(game, s, r, n).given;
+        if (got > 0) loot.res[r] = got;
       }
     }
     loot.xp = pay.xp;
@@ -782,14 +808,64 @@ export function lairChoice(game: Game, s: PlayerSession, id: string, choice: 'jo
 
 // ------------------------------------------------------------------------------------------------ 19. the dwellings
 
+/** A creature dwelling's pool grown to this week: its kind's week half as many again (docs/18 #45), settled half as
+ *  many again for the bone it eats from its owner's store (docs/18 #43; a week without the bone, or her not at sea
+ *  to pay it, it grows as a plain one), two weeks kept (three settled). */
 function dwellPool(game: Game, d: DwellState, u: BeastId): number {
   const w = thisWeek(game);
   if (d.w < w) {
+    const up = (d.lv ?? 1) >= 2;
     const g = dwellGrowth(u);
-    d.pool = Math.min(DWELL_WEEKS * g, d.pool + g * (w - d.w));
+    const cap = (up ? DWELL_UP.weeks * DWELL_UP.growth : DWELL_WEEKS) * g;
+    const owner = game.sessionByAccount(d.owner)?.profile;
+    const need = DWELL_UP.upkeep(UNITS[u].tier);
+    for (let k = Math.max(d.w + 1, w - DWELL_UP.weeks + 1); k <= w; k++) {
+      let n = g * weekBeastGrowth(kindOfWeek(game, k), u);
+      if (up && owner && lairsOf(owner).res.bone >= need) {
+        lairsOf(owner).res.bone -= need;
+        n *= DWELL_UP.growth;
+      }
+      d.pool = Math.min(cap, d.pool + n);
+    }
     d.w = w;
   }
   return d.pool;
+}
+
+/** A creature dwelling's growth this week as its card shows it. */
+function dwellWeek(game: Game, d: DwellState | undefined, u: BeastId): number {
+  return dwellGrowth(u) * weekBeastGrowth(weekNow(game), u) * ((d?.lv ?? 1) >= 2 ? DWELL_UP.growth : 1);
+}
+
+function settleWhy(game: Game, s: PlayerSession, l: Lair): string | null {
+  const d = L(game).store.dw[l.id];
+  if (!d || d.owner !== s.accountId) return 'Raise your flag over it first.';
+  if ((d.lv ?? 1) >= 2) return 'It is settled already.';
+  const c = DWELL_UP.cost(UNITS[LAIRS[l.kind].mix[0][0]].tier);
+  if (s.profile!.gold < c.silver) return `Needs ${c.silver} silver`;
+  return landLack(s.profile!, c.land);
+}
+
+/** docs/18 #43: her creature dwelling settled — pens of shell and bone: half as many again a week, three weeks kept. */
+export function settleDwelling(game: Game, s: PlayerSession, id: string): string | null {
+  const S = L(game);
+  const l = S.byId.get(id);
+  if (!l || !s.ship) return 'Nothing here';
+  const why = settleWhy(game, s, l);
+  if (why) return why;
+  if (dist(l.x, l.y, s.ship.state.x, s.ship.state.y) > LAIR_CARD_R + 200) return 'Come in to the shore: within the boats’ reach.';
+  const d = S.store.dw[l.id];
+  const u = LAIRS[l.kind].mix[0][0];
+  dwellPool(game, d, u);
+  const c = DWELL_UP.cost(UNITS[u].tier);
+  s.profile!.gold -= c.silver;
+  takeLand(s.profile!, c.land);
+  d.lv = 2;
+  save(game);
+  game.db.ledger(s.accountId, 'lair_settle', -c.silver, l.id);
+  game.toastShip(s.ship, `The dwelling of the ${beastsName(u)} on ${islandName(game, l)} is settled: half as many again each week, for ${DWELL_UP.upkeep(UNITS[u].tier)} bone a week.`, 'good');
+  sendLairCard(game, s, true);
+  return null;
 }
 
 function flagWhy(game: Game, s: PlayerSession, l: Lair): string | null {
@@ -856,7 +932,7 @@ export function lairDwellView(game: Game, s: PlayerSession): DwellView | null {
   const ship = s.ship;
   if (!here || !ship) return null;
   const def = LAIRS[here.l.kind];
-  const row = beastRow(game, s, here.u, dwellPool(game, here.d, here.u), dwellGrowth(here.u), 'lair', def.name, null);
+  const row = beastRow(game, s, here.u, dwellPool(game, here.d, here.u), Math.round(dwellWeek(game, here.d, here.u) * 10) / 10, 'lair', def.name, null);
   const out: Partial<Record<GoodId, number>> = {};
   for (const [g, n] of Object.entries(ship.cargo) as [GoodId, number][]) out[g] = Math.floor(n ?? 0);
   return {
@@ -945,7 +1021,8 @@ function penPools(game: Game, y: Yard): Partial<Record<BeastId, number>> {
     for (const n of pen.nests) {
       if (penStage(d - n.at) !== 'grown') continue;
       const g = dwellGrowth(n.k);
-      pen.pool[n.k] = Math.min(DWELL_WEEKS * g, (pen.pool[n.k] ?? 0) + g * (w - pen.w));
+      // docs/18 #45: its kind's week, half as many again.
+      for (let k = Math.max(pen.w + 1, w - DWELL_WEEKS + 1); k <= w; k++) pen.pool[n.k] = Math.min(DWELL_WEEKS * g * 1.5, (pen.pool[n.k] ?? 0) + g * weekBeastGrowth(kindOfWeek(game, k), n.k));
     }
     t.penW = w;
     game.holdings.touch();
@@ -1037,6 +1114,8 @@ export function lairMessage(game: Game, s: PlayerSession, msg: LairClientMsg): v
       return err(lairChoice(game, s, String(msg.id), msg.action));
     case 'flag':
       return err(flagDwelling(game, s, String(msg.id)));
+    case 'settle':
+      return err(settleDwelling(game, s, String(msg.id)));
     case 'close':
       return closeFight(game, s);
     case 'nest':
@@ -1047,6 +1126,31 @@ export function lairMessage(game: Game, s: PlayerSession, msg: LairClientMsg): v
   }
 }
 
+
+// ------------------------------------------------------------------------------------------------ the First Watch
+
+/** docs/18 #49: the nearest shore lair a novice can take (no higher than her ship, standing, not on a hidden island),
+ *  put on her chart; null when there is none within reach of an evening's sailing. */
+export function revealNearestLair(game: Game, s: PlayerSession, R = 20_000): Lair | null {
+  const ship = s.ship;
+  if (!ship || !s.profile) return null;
+  let best: Lair | null = null, bd = R;
+  for (const l of L(game).lairs) {
+    if (l.role !== 'shore' || l.level > Math.max(1, ship.shipLevel) || l.turtle !== undefined || l.bank !== undefined) continue;
+    if (l.island >= 0 && game.world.islands[l.island]?.hidden) continue;
+    if (Math.abs(l.x - ship.state.x) > bd || Math.abs(l.y - ship.state.y) > bd) continue;
+    const d = dist(l.x, l.y, ship.state.x, ship.state.y);
+    if (d < bd && lairUp(game, l)) [best, bd] = [l, d];
+  }
+  if (!best) return null;
+  const seen = seenOf(game, s);
+  if (!seen.has(best.id)) {
+    seen.add(best.id);
+    lairsOf(s.profile).seen = [...seen];
+  }
+  sendLairs(game, s, true);
+  return best;
+}
 
 // ------------------------------------------------------------------------------------------------ the tester's console
 
@@ -1061,6 +1165,9 @@ function nearestOf(game: Game, list: Lair[], x: number, y: number): Lair | undef
 }
 
 /** Set her down off the lair's shore, within the boats' reach. */
+/** Her ship off a lair's shore, within the boats' reach (the admin's and the tests'). */
+export const lairGoTo = (game: Game, s: PlayerSession, l: Lair): void => goTo(game, s, l);
+
 function goTo(game: Game, s: PlayerSession, l: Lair): void {
   const ship = s.ship!;
   if (l.island >= 0) {

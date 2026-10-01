@@ -11,7 +11,8 @@ import { speedupGoods, speedupSilver } from '../../../shared/src/data/base.ts';
 import { weekBuy, weekGrowth, weekHall, weekSell } from '../../../shared/src/data/week.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import type { TownThingView, TownView } from '../../../shared/src/h3proto.ts';
+import type { LandTownView, TownThingView, TownView } from '../../../shared/src/h3proto.ts';
+import type { LandCost } from '../../../shared/src/data/landecon.ts';
 import { ORDERS, isOrder, isleGuildOrders, orderLevelCap, rankOf } from '../../../shared/src/data/hero.ts';
 import { heroOf, learnOrder } from './hero.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
@@ -118,8 +119,13 @@ export function buildTown(game: Game, s: PlayerSession, id: TownId): string | nu
   const lack = lacking(h, y, s, near, cost.goods);
   if (lack) return lack;
   if (p.gold < cost.silver) return `Needs ${cost.silver} silver`;
+  // docs/18 #43: the land's resources some levels ask besides.
+  const land = townHooks.land?.(id, level) ?? {};
+  const lackLand = townHooks.landLack?.(s, land) ?? null;
+  if (lackLand) return lackLand;
   p.gold -= cost.silver;
   takeGoods(h, y, s, near, cost.goods);
+  townHooks.landTake?.(s, land);
   game.db.ledger(s.accountId, 'isle_town', -cost.silver, `${h.island}:${id}:${level}`);
   const now = game.wallNow();
   y.jobs.push({ id: y.seq++, plot: -1, what: `t:${id}`, level, start: now, end: now + cost.secs * 1000 });
@@ -269,7 +275,14 @@ export function townHave(game: Game, s: PlayerSession, h: Holding, y: Yard): Par
 }
 
 /** docs/18 #20: the pen's view on its card (set by beastlairs.ts). */
-export const townHooks: { pen: ((game: Game, s: PlayerSession, y: Yard) => NonNullable<TownThingView['pen']>) | null } = { pen: null };
+export const townHooks: {
+  pen: ((game: Game, s: PlayerSession, y: Yard) => NonNullable<TownThingView['pen']>) | null;
+  /** docs/18 #43: the land's resources a level asks, why her store does not hold them, taking them; the town's card of them (set by landecon.ts). */
+  land?: (id: TownId, level: number) => LandCost;
+  landLack?: (s: PlayerSession, c: LandCost) => string | null;
+  landTake?: (s: PlayerSession, c: LandCost) => void;
+  landView?: (game: Game, s: PlayerSession, h: Holding, y: Yard) => LandTownView;
+} = { pen: null };
 
 export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): TownView {
   const now = game.wallNow();
@@ -279,7 +292,8 @@ export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): Tow
     const level = townLevel(y, id);
     const j = y.jobs.find((x) => x.what === `t:${id}`);
     const left = j ? Math.max(0, (j.end - now) / 1000) : 0;
-    const next = level < TOWN[id].max ? { level: level + 1, ...townCost(id, level + 1), why: townWhy(game, s, h, y, id) } : null;
+    const land = level < TOWN[id].max ? townHooks.land?.(id, level + 1) ?? {} : {};
+    const next = level < TOWN[id].max ? { level: level + 1, ...townCost(id, level + 1), why: townWhy(game, s, h, y, id) ?? townHooks.landLack?.(s, land) ?? null, ...(Object.keys(land).length ? { land } : {}) } : null;
     const tier = TOWN[id].tier;
     return {
       id, level, max: TOWN[id].max, job: j ? { id: j.id, level: j.level, start: j.start, end: j.end, silver: speedupSilver(left), goods: speedupGoods(left) } : null, next,
@@ -294,6 +308,7 @@ export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): Tow
     things, keep, growthMul: KEEP_GROWTH[keep], hall: hallDaily(game, y), mines, minesDaily: minesDailyOf(game, s.accountId),
     treasury: Math.floor(h.treasury), res: MARKET_GOODS.map((g) => ({ good: g, n: have[g] ?? 0 })), market: marketRates(game, y),
     deep: keepsDeep(s), near: lyingOff(game, s, h), week: weekView(game),
+    ...(townHooks.landView ? { land: townHooks.landView(game, s, h, y) } : {}),
   };
 }
 

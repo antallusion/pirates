@@ -12,6 +12,8 @@ import { advMap, advOf, parkNear, quietAdv, visit } from '../server/src/game/adv
 import { startBoarding } from '../server/src/game/boarding.ts';
 import { tacAction } from '../server/src/game/tactical.ts';
 import { pendingChoices, pickSkill } from '../server/src/game/hero.ts';
+import { closeFight, lairById, lairGoTo, lairsOf, landTac, startFight } from '../server/src/game/beastlairs.ts';
+import { adminDrift, driftOf, driftsNear } from '../server/src/game/drifts.ts';
 
 function recruit(game: Game, name: string, captain: 'corsair' | 'reaver' = 'corsair'): { c: FakeConn; s: PlayerSession } {
   const c = new FakeConn();
@@ -29,7 +31,7 @@ function dockAt(game: Game, s: PlayerSession, port: Port): void {
 
 const stage = (c: FakeConn) => c.last('onboarding')!.view.stage;
 
-test('the First Watch (docs/17 H5): seven steps of the Heroes’ loop, each by doing; the HUD comes in a block at a time; the goals follow', () => {
+test('the First Watch (docs/17 H5, docs/18 #49): nine steps of the Heroes’ loop, each by doing; the HUD comes in a block at a time; the goals follow', () => {
   const { game } = makeGame();
   game.tacticalBoarding = true;
   quietAdv(game, false);
@@ -102,6 +104,29 @@ test('the First Watch (docs/17 H5): seven steps of the Heroes’ loop, each by d
   parkNear(game, s, o.x, o.y, 120);
   assert.equal(visit(game, s, o.id, o.kind === 'chest' ? 'silver' : undefined), null);
   steps(game, 21);
+  assert.equal(stage(c), 'lair');
+  // 8. docs/18 #49: the nearest lair she can take is on her chart; she lands against it and fights it out.
+  const seen = lairsOf(p).seen;
+  const l = lairById(game, seen[seen.length - 1])!;
+  assert.ok(l && l.role === 'shore' && l.level <= Math.max(1, ship.shipLevel), 'a shore lair of her level on her chart');
+  assert.ok(c.last('lairs')!.view.list.some((m) => m.id === l.id), 'and on her minimap');
+  lairGoTo(game, s, l);
+  assert.equal(startFight(game, s, l.id, true), null);
+  assert.equal(landTac(game, s, { a: 'quick' }), null);
+  steps(game, 21);
+  assert.equal(stage(c), 'rescue');
+  closeFight(game, s); // the battle's reckoning closed: back to the sea
+  // 9. A drift off her bow, hers alone (the lookout keeps quiet in the First Watch otherwise); saved.
+  const d = driftsNear(game, s, 3000);
+  assert.equal(d.length, 1, 'one drift of hers');
+  assert.ok(['gull_mast', 'turtle_weed'].includes(d[0].kind));
+  const saved = driftOf(p).saved;
+  ship.lastCombat = -1e9; // the practice raider's broadsides long behind her
+  parkNear(game, s, d[0].x, d[0].y, 90); // alongside
+  assert.match(adminDrift(game, s, ['save']), /saved/);
+  assert.equal(driftOf(p).saved, saved + 1);
+  steps(game, 21);
+  assert.ok(c.all('onb').some((m) => m.kind === 'stage' && m.id === 'rescue'));
   const done = c.last('onboarding')!.view;
   assert.equal(done.stage, null);
   assert.equal(done.hud, null, 'the whole HUD');
@@ -111,7 +136,7 @@ test('the First Watch (docs/17 H5): seven steps of the Heroes’ loop, each by d
   assert.equal(r.started, 1);
   assert.equal(r.finished, 1);
   assert.equal(r.funnel.length, STAGES.length);
-  assert.deepEqual(STAGES.map((x) => x.id), ['cast_off', 'gunnery', 'board', 'battle', 'recruit', 'skill', 'visit']);
+  assert.deepEqual(STAGES.map((x) => x.id), ['cast_off', 'gunnery', 'board', 'battle', 'recruit', 'skill', 'visit', 'lair', 'rescue']);
   assert.equal(r.hints[0].id, 'lead');
   // Skippable: every step (a second novice).
   const n2 = recruit(game, 'Skip Step');

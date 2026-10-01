@@ -12,6 +12,19 @@ import { TALENTS_BY_ID } from '../../../shared/src/data/talents.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/pathbook.ts';
 import { esc, icon } from './dom.ts';
+import { PATH_FAV, favouriteKinds } from '../../../shared/src/data/drifts.ts';
+import { EN as V_EN, RU as V_RU } from '../lang/ui/heroes18v.ts';
+import { unitIcon, unitName } from './army.ts';
+
+const V = dict(V_EN, V_RU);
+
+/** docs/18 #44: her path's favourite creatures and what they get with her. */
+function favBlock(path: CaptainId): string {
+  const kinds = favouriteKinds(path);
+  return `<div class="gi-h">${esc(V('fav.title'))}</div>
+    <p class="muted hx-note">${esc(T(PATH_FAV[path].text))} ${esc(V('fav.text'))}</p>
+    <div class="pb-fav">${kinds.map((u) => `<span class="pb-fav-k" title="${esc(unitName(u))}">${unitIcon(u, 'ico-md')}<i>${esc(unitName(u))}</i></span>`).join('')}</div>`;
+}
 
 const L = dict(EN, RU);
 const T = (x: [string, string]) => x[lang() === 'ru' ? 1 : 0];
@@ -90,6 +103,7 @@ export function pathTab(h: HeroView, path: CaptainId, level: number, talents: Re
     <p class="muted hx-note">${esc(L('willNote'))} ${esc(L('stamNote'))}</p>
     <div class="gi-h">${esc(L('moves'))}</div>
     <div class="pb-moves">${moveCard(h, path, INNATE[path], false, level)}${moveCard(h, path, ULTIMATE[path], true, level)}</div>
+    ${favBlock(path)}
     <div class="gi-h">${esc(L('pages'))}</div>
     <p class="muted hx-note">${esc(L('pagesNote'))} ${esc(L('f.note'))}</p>
     <div class="pb-pages">${own.map((id) => pageRow(id, h, path, level)).join('')}</div>

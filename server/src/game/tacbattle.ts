@@ -21,6 +21,7 @@ import type { HeroBattle, OrderRes } from '../../../shared/src/data/hero.ts';
 import { HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, ULTIMATE, ULT_ROUND, isPathPage, powered } from '../../../shared/src/data/paths.ts';
 import type { BtMods, PageFx } from '../../../shared/src/data/paths.ts';
 import { Rng } from '../../../shared/src/rng.ts';
+import { FAV_BONUS } from '../../../shared/src/data/drifts.ts';
 
 /** One stack of a ship's army as it comes to the battle; `src` the ship's own stack its men are drawn from (the
  *  Marines talent drills hands into marines for the fight only). */
@@ -30,6 +31,8 @@ export interface TacArmyEntry {
   src?: UnitId;
   /** docs/18 #39: a creature kind's rank (1–3): a tenth more attack, defence and hit points a rank. */
   rank?: number;
+  /** docs/18 #44: a favourite kind of her path — attack and defence FAV_BONUS more. */
+  fav?: boolean;
 }
 
 /** What one side brings to the fight, as the ship and her crew make it. */
@@ -303,11 +306,13 @@ export function buildStacks(input: TacSideInput, side: 0 | 1, cells: TacCell[], 
       const blast = d.specials.includes('blast');
       // docs/18 #39: a tamed kind's rank.
       const rk = 1 + 0.1 * Math.max(0, Math.min(3, Math.floor(e.rank ?? 0)));
+      // docs/18 #44: her path's favourite kind.
+      const fk = e.fav ? 1 + FAV_BONUS : 1;
       let shots = d.shots ? d.shots + input.extraShots : 0;
       if (blast && gunsOut > 0) shots = Math.max(1, Math.round(shots * (1 - gunsOut)));
       out.push({
         id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, count: Math.floor(e.n), start: Math.floor(e.n), hpTop: Math.round(d.hp * rk), hpMax: Math.round(d.hp * rk), hex: -1,
-        atk: r1(d.atk * rk), def: r1(d.def * rk), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: blast ? 1 - 0.5 * gunsOut : 1,
+        atk: r1(d.atk * rk * fk), def: r1(d.def * rk * fk), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: blast ? 1 - 0.5 * gunsOut : 1,
         ret: true, defending: false, waited: false, surged: false, again: 0,
       });
     }
@@ -892,6 +897,9 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
   return targetError(bt, side, (kind === 'innate' ? INNATE : ULTIMATE)[path].fx.target, target);
 }
 
+/** The point-blank volley's blow, a share of the captain's blast (H2's corsair signature; docs/18 #47 weighs it). */
+export const TAC_POINT_BLANK = { k: 1.6 };
+
 /** The balance tools' count of what each captain gives (tools/balance-paths-casts.ts); off in the game. */
 export const tacStats: { on: boolean; casts: Map<string, number> } = { on: false, casts: new Map() };
 const tally = (bt: TacBattle, side: 0 | 1, id: string) => {
@@ -964,7 +972,7 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
       }
       break;
     case 'point_blank':
-      if (t) kills += hurt(bt, t, Math.round(P * 1.6), side);
+      if (t) kills += hurt(bt, t, Math.round(P * TAC_POINT_BLANK.k), side);
       break;
     case 'call_of_the_deep':
       for (const o of alive(bt)) if (o.side !== side && o.count > 1) kills += hurt(bt, o, Math.max(1, Math.round(o.count * Math.min(0.25, 0.08 * k))) * o.hpMax, side);

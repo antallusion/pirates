@@ -94,7 +94,7 @@ export class OnboardingUi {
     if (kind === 'stage') {
       const k = `stage.${id}` as Key;
       toast(t('watch.done', { name: has(k) ? t(k) : id }), 'good');
-      if (id === 'visit') toast(t('watch.over'), 'xp'); // the last step of the First Watch (docs/17 H5)
+      if (id === 'rescue') toast(t('watch.over'), 'xp'); // the last step of the First Watch (docs/18 #49)
     } else if (kind === 'hint') this.hint(id);
     else if (kind === 'goal') {
       const k = `goal.${id}` as Key;

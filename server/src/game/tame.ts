@@ -9,6 +9,7 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEAST_PLURAL, isCreature } from '../../../shared/src/data/bestiary.ts';
 import type { CreatureId } from '../../../shared/src/data/bestiary.ts';
+import { isFavourite } from '../../../shared/src/data/drifts.ts';
 import { FOOD_GOODS, HUNGRY_AFTER, LOW_MORALE, LOW_SLIP_CHANCE, LOW_SLIP_SHARE, NATIVE, PEN_STOCK, RANK_MAX, RANK_WINS, SLIP_AFTER, SLIP_CHANCE, SLIP_SHARE, armyPeoples, captureCount, captureShare, foodOf, foodPerMin, hasTamer, mixMorale, peopleOf, penLoad, rankFor, tamerAsks, tamerPays, tamerStock, upkeepHour } from '../../../shared/src/data/drifts.ts';
 import type { Food } from '../../../shared/src/data/drifts.ts';
 import { rankOf } from '../../../shared/src/data/hero.ts';
@@ -173,6 +174,7 @@ export function rankArmy(p: Profile | null | undefined, army: TacArmyEntry[]): T
   for (const e of army) {
     const r = rankOfKind(p, e.u);
     if (r > 0) e.rank = r;
+    if (isFavourite(p.captain, e.u)) e.fav = true; // docs/18 #44: her path's favourites
   }
   return army;
 }
@@ -348,7 +350,7 @@ export function captureOffer(game: Game, s: PlayerSession, beaten: readonly Army
   const best = kinds[0];
   if (!best) return undefined;
   const leadership = rankOf(heroOf(p).skills, 'leadership');
-  const native = !!p.captain && NATIVE[p.captain] === peopleOf(best.u);
+  const native = isFavourite(p.captain, best.u); // her path's people and favourites (docs/18 #38, #44)
   const share = captureShare({ ratio, leadership, native, morale: ship.morale });
   const n = captureCount(best.n, share);
   if (n <= 0) return undefined;

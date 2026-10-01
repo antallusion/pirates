@@ -13,6 +13,7 @@ import type { PlayerSession } from './player.ts';
 import { buildTown, learnAtIsle, marketTrade } from './town.ts';
 import { lairDwellView, lairRecruit, penRecruit } from './beastlairs.ts';
 import { isBeast } from '../../../shared/src/data/bestiary.ts';
+import { buyFitting, craftArtifact, sellLand } from './landecon.ts';
 
 export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void {
   const err = (e: string | null) => {
@@ -52,6 +53,16 @@ export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void 
       return refresh(null);
     case 'mines':
       return void game.sendTo(s, { t: 'mines', list: minesView(game, s) });
+    // docs/18 #43: the land's resources at the island's workshop, the carpenters and the market.
+    case 'craft':
+      err(craftArtifact(game, s, Math.trunc(Number(msg.i))));
+      return refresh(null);
+    case 'fit':
+      err(buyFitting(game, s, String(msg.id)));
+      return refresh(null);
+    case 'sellres':
+      err(sellLand(game, s, String(msg.r), Math.trunc(Number(msg.n))));
+      return refresh(null);
   }
 }
 

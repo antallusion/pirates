@@ -34,6 +34,8 @@ import { todaysOmen } from './omens.ts';
 import { wondersOf } from './wonders.ts';
 import { grantSpeedups } from './base.ts';
 import { giveGoods } from './director.ts';
+import { BEAST_PLURAL, isCreature } from '../../../shared/src/data/bestiary.ts';
+import type { CreatureId } from '../../../shared/src/data/bestiary.ts';
 
 export interface RenownProfile {
   /** Ships sunk or taken by kind: 'crown', 'league', 'confederacy', 'brokers', 'pirate', 'ghost'. */
@@ -51,6 +53,8 @@ export interface RenownProfile {
   /** When she went ashore, and her island then (docs/16 #30); the gift waiting. */
   away?: { at: number; goods: number; treasury: number } | null;
   gift?: { silver: number; speedups: number; provisions: number } | null;
+  /** docs/18 #46: the creature kinds she has fought (the bestiary's pages, in the order they were written). */
+  met?: string[];
 }
 
 export function rn(p: Profile): RenownProfile {
@@ -345,6 +349,7 @@ export function setHave(game: Game, p: Profile, id: SetId): string[] {
     case 'trophies': return p.trophies;
     case 'beasts': return Object.entries(p.beasts ?? {}).filter(([, n]) => (n ?? 0) > 0).map(([b]) => b);
     case 'letters': return (p.seaLetters ?? []).map(String);
+    case 'bestiary': return rn(p).met ?? [];
   }
 }
 
@@ -373,6 +378,22 @@ export function checkSets(game: Game, s: PlayerSession): void {
     if (!p.titles.includes(d.title[0])) p.titles.push(d.title[0]);
     toast(game, s, `The album: ${d.name[0]} is complete! ${d.silver} silver and the title “${d.title[0]}”.`);
   }
+}
+
+/** docs/18 #46: a fight with creatures — the first with each kind writes its page of the bestiary. */
+export function meetCreatures(game: Game, s: PlayerSession, units: readonly string[]): string[] {
+  if (!s.profile) return [];
+  const r = rn(s.profile);
+  r.met ??= [];
+  const fresh: string[] = [];
+  for (const u of new Set(units)) {
+    if (!isCreature(u) || r.met.includes(u)) continue;
+    r.met.push(u);
+    fresh.push(u);
+  }
+  for (const u of fresh) toast(game, s, `A new page of the bestiary: ${BEAST_PLURAL[u as CreatureId][0]}.`, 'info');
+  if (fresh.length) sendRenown(game, s, true);
+  return fresh;
 }
 
 /** At sea under the day's omen: into the album. */

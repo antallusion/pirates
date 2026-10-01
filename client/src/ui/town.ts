@@ -25,10 +25,45 @@ import { placeName } from './maps.ts';
 import { costLine, townName } from './recruit.ts';
 import { unitIcon, unitName } from './army.ts';
 import { EN as LP_EN, RU as LP_RU } from '../lang/ui/lairs.ts';
+import { EN as V_EN, RU as V_RU } from '../lang/ui/heroes18v.ts';
+import { LAND_RES, LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
+import type { LandRes } from '../../../shared/src/data/bestiary.ts';
+import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
+import { FITTINGS } from '../../../shared/src/data/landecon.ts';
+import type { FittingId, LandCost } from '../../../shared/src/data/landecon.ts';
+import type { LandTownView } from '../../../shared/src/h3proto.ts';
 
 const L = dict(EN, RU);
 const B = dict(B_EN, B_RU);
 const LP = dict(LP_EN, LP_RU);
+const V = dict(V_EN, V_RU);
+
+/** docs/18 #43: a cost of the land's resources, each piece short marked. */
+function landLine(c: LandCost | undefined, have: Partial<Record<LandRes, number>> | undefined): string {
+  return (Object.entries(c ?? {}) as [LandRes, number][]).filter(([, n]) => n > 0).map(([r, n]) => `<span class="bcost${(have?.[r] ?? 0) < n ? ' lack' : ''}" title="${esc(LAND_RES_DEF[r].name[ru()])}">${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(n)}</span>`).join('');
+}
+
+/** docs/18 #43: the land's resources — the store and the market's price, the workshop, the ship's fittings. */
+function landBlock(l: LandTownView, gold: number, have: Partial<Record<GoodId, number>>): string {
+  const store = LAND_RES.map((r) => `<span class="tw-lres"><span class="bcost" title="${esc(LAND_RES_DEF[r].name[ru()])}">${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(l.res[r])}<span class="muted">/${l.cap}</span></span>
+      ${l.sell ? `<button class="btn btn-small" data-lsell="${r}"${l.res[r] > 0 ? '' : ' disabled'} title="${esc(V('land.sellTip', { p: dec1(l.sell[r]) }))}">${esc(V('land.sell'))} · ${money(Math.floor(Math.min(10, l.res[r]) * l.sell[r]))}</button>` : ''}</span>`).join('');
+  const crafts = l.crafts.map((c, i) => {
+    const a = ARTIFACTS[c.art];
+    return `<div class="tw-craft">${icon(a.icon, '', 'ico-md')}<div class="tw-craft-t"><b>${esc(a.name[ru()])}</b><span class="muted">${esc(a.text[ru()])}</span>
+        <span class="bcosts">${costLine({ silver: c.silver, goods: c.goods }, gold, have)}${landLine(c.land, l.res)}</span>${c.why ? `<span class="muted tw-why">${esc(serverText(c.why))}</span>` : ''}</div>
+        <button class="btn btn-small btn-primary" data-lcraft="${i}"${c.why ? ' disabled' : ''}>${esc(V('craft.make'))}</button></div>`;
+  }).join('');
+  const fits = l.fits.map((f) => {
+    const d = FITTINGS[f.id];
+    return `<div class="tw-craft">${icon(d.icon, '', 'ico-md')}<div class="tw-craft-t"><b>${esc(d.name[ru()])} <span class="muted">${esc(V('fit.rank', { n: f.rank, max: f.max }))}</span></b><span class="muted">${esc(d.text[ru()])}</span>
+        ${f.next ? `<span class="bcosts"><span class="bcost${gold < f.next.silver ? ' lack' : ''}">${money(f.next.silver)}</span>${landLine(f.next.land, l.res)}</span>` : ''}${f.why && f.next ? `<span class="muted tw-why">${esc(serverText(f.why))}</span>` : ''}</div>
+        ${f.next ? `<button class="btn btn-small btn-primary" data-lfit="${f.id}"${f.why ? ' disabled' : ''}>${esc(V('fit.buy', { n: f.rank + 1 }))}</button>` : `<span class="muted">${esc(V('fit.max'))}</span>`}</div>`;
+  }).join('');
+  return `<div class="card tw-land"><h4 class="card-h">${icon('tattoo_turtle', '', 'ico-md')}${esc(V('land.title'))}</h4><p class="muted">${esc(V('land.sub', { cap: l.cap }))} ${esc(V('land.uses'))}</p>
+      <div class="tw-lstore">${store}</div>${l.sell ? '' : `<p class="muted">${esc(V('land.noMarket'))}</p>`}</div>
+    <div class="card tw-land"><h4 class="card-h">${icon('build_forge', '', 'ico-md')}${esc(V('craft.title'))}</h4><p class="muted">${esc(V('craft.sub'))}</p>${crafts}</div>
+    <div class="card tw-land"><h4 class="card-h">${icon('build_shipyard', '', 'ico-md')}${esc(V('fit.title'))}</h4><p class="muted">${esc(V('fit.sub'))}</p>${fits}</div>`;
+}
 const ru = () => (lang() === 'ru' ? 1 : 0);
 
 /** A timer's words, as the island's window writes them (its own copy: the base window reads the screen's shape). */
@@ -46,7 +81,7 @@ function art(id: TownId, level: number, working: boolean): string {
   return (stage ? assetUrl(`icon.${a}_${stage}`) : null) ?? assetUrl(`icon.${a}`) ?? '';
 }
 
-function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<GoodId, number>>): string {
+function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<GoodId, number>>, land?: Partial<Record<LandRes, number>>): string {
   const now = v.now;
   const d = TOWN[t.id];
   const name = townName(t.id, Math.max(1, t.level));
@@ -62,7 +97,7 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
       <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${j.id}">${esc(B('finish'))} <span data-price="${j.end}">${money(j.silver)}</span></button>
       <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>⌛ ${esc(B('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>` : '';
   const n = t.next;
-  const next = !j && n ? `<div class="tw-next"><b class="tw-nn">${esc(t.level > 0 ? `${L('town.up')}: ${townName(t.id, n.level)}` : townName(t.id, 1))}</b>${costLine({ silver: n.silver, goods: n.goods }, gold, have)}<span class="bcost btimec">⏱ ${esc(timeText(n.secs))}</span>
+  const next = !j && n ? `<div class="tw-next"><b class="tw-nn">${esc(t.level > 0 ? `${L('town.up')}: ${townName(t.id, n.level)}` : townName(t.id, 1))}</b>${costLine({ silver: n.silver, goods: n.goods }, gold, have)}${landLine(n.land, land)}<span class="bcost btimec">⏱ ${esc(timeText(n.secs))}</span>
       ${n.why ? `<p class="muted tw-why">${esc(serverText(n.why))}</p>` : ''}<button class="btn btn-small${t.level ? '' : ' btn-primary'}" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level > 0 ? L('town.up') : L('town.build'))}</button></div>`
     : !j ? `<p class="muted tw-max">${esc(L('town.max'))}</p>` : '';
   return `<div class="tw-card${t.level > 0 ? ' built' : ''}${d.tier ? ' dw' : ''}" data-town="${t.id}"><div class="tw-top">${pic ? `<img class="tw-art" src="${pic}" alt="" draggable="false">` : ''}<div class="tw-id"><b>${esc(name)}</b><span class="muted">${esc(lvl)}</span></div></div>
@@ -108,7 +143,7 @@ export function townTab(v: BaseView, state: ClientState, mk: { give: string; get
       <button class="btn btn-small btn-primary" data-trecruit${dwellings.length ? '' : ' disabled'} title="${esc(t.near ? L('town.recruit') : L('town.far'))}">${icon('prof_marine', '', 'ico-sm')}${esc(L('town.recruit'))}</button></div>
       <div class="tw-res"><span class="muted">${esc(L('town.res'))}:</span> ${res}</div></div>`;
   // The Grail's card once it is dug up (docs/17 H4).
-  const cards = t.things.filter((x) => x.id !== 'dw7' || t.deep || x.level > 0).filter((x) => x.id !== 'grail' || x.level > 0 || !!x.job || state.adv?.grail === 'held').map((x) => card(v, x, gold, have)).join('');
+  const cards = t.things.filter((x) => x.id !== 'dw7' || t.deep || x.level > 0).filter((x) => x.id !== 'grail' || x.level > 0 || !!x.job || state.adv?.grail === 'held').map((x) => card(v, x, gold, have, t.land?.res)).join('');
   // The captain's mines and what they pay a day.
   const mines = t.mines.length
     ? t.mines.map((m) => `<div class="tw-mine">${icon(MINES[m.kind].art, '', 'ico-md')}<span><b>${esc(L('town.mine', { kind: MINES[m.kind].name[ru()], island: placeName(m.island) }))}</b><br><span class="muted">${esc(L('town.day', { n: dec1(m.daily).replace(/[.,]0$/, '') }))} ${m.kind === 'silver' ? icon('coin', '', 'ico-sm') : icon(`good_${m.kind}`, '', 'ico-sm')}</span></span></div>`).join('')
@@ -124,7 +159,8 @@ export function townTab(v: BaseView, state: ClientState, mk: { give: string; get
     : `<p class="muted">${esc(L('market.none'))}</p>`;
   return `<div class="town">${head}<div class="tw-grid">${cards}</div>
     <div class="tw-cols"><div class="card"><h4 class="card-h">${icon('outpost_mine', '', 'ico-md')}${esc(L('town.mines'))}</h4>${mines}</div>
-    <div class="card"><h4 class="card-h">${icon('build_caravan_office', '', 'ico-md')}${esc(L('market.title'))}</h4>${market}</div></div></div>`;
+    <div class="card"><h4 class="card-h">${icon('build_caravan_office', '', 'ico-md')}${esc(L('market.title'))}</h4>${market}</div></div>
+    ${t.land ? `<div class="tw-cols tw-lands">${landBlock(t.land, gold, have)}</div>` : ''}</div>`;
 }
 
 type Market = NonNullable<NonNullable<BaseView['town']>['market']>;
@@ -148,6 +184,9 @@ export function bindTown(root: HTMLElement, send: (m: ClientMsg) => void, mk: { 
   root.querySelectorAll<HTMLElement>('[data-tbuild]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'build', id: el.dataset.tbuild as TownId })));
   root.querySelectorAll<HTMLElement>('[data-tlearn]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'learn', id: el.dataset.tlearn as OrderId })));
   root.querySelector<HTMLElement>('[data-trecruit]')?.addEventListener('click', () => recruit());
+  root.querySelectorAll<HTMLElement>('[data-lcraft]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'craft', i: Number(el.dataset.lcraft) })));
+  root.querySelectorAll<HTMLElement>('[data-lfit]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'fit', id: el.dataset.lfit as FittingId })));
+  root.querySelectorAll<HTMLElement>('[data-lsell]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'sellres', r: el.dataset.lsell as LandRes, n: 10 })));
   root.querySelectorAll<HTMLElement>('[data-pnest]').forEach((el) => (el.onclick = () => send({ t: 'lair', action: 'nest', egg: Number(el.dataset.pnest) })));
   const give = root.querySelector<HTMLSelectElement>('[data-mkgive]');
   const get = root.querySelector<HTMLSelectElement>('[data-mkget]');

@@ -7,7 +7,8 @@ import type { MineKind } from './data/mines.ts';
 import type { TownId } from './data/town.ts';
 import type { WeekKind } from './data/week.ts';
 import type { OrderId } from './data/hero.ts';
-import type { BeastId } from './data/bestiary.ts';
+import type { BeastId, LandRes } from './data/bestiary.ts';
+import type { FittingId, LandCost } from './data/landecon.ts';
 
 /** The sea's calendar: week `n` (from 1), day 1–7 of it, what the week is named for, world seconds to the next. */
 export interface WeekView {
@@ -104,7 +105,7 @@ export interface TownThingView {
   level: number;
   max: number;
   job: TownJobView | null;
-  next: { level: number; silver: number; goods: Partial<Record<GoodId, number>>; secs: number; why: string | null } | null;
+  next: { level: number; silver: number; goods: Partial<Record<GoodId, number>>; secs: number; why: string | null; /** docs/18 #43: the land's resources it asks too. */ land?: LandCost } | null;
   /** A dwelling's men to recruit now and a week's growth. */
   pool?: number;
   growth?: number;
@@ -131,6 +132,18 @@ export interface TownView {
   deep: boolean;
   near: boolean;
   week: WeekView;
+  /** docs/18 #43: the land's resources — her store, the market's price, the workshop, the ship's fittings. */
+  land?: LandTownView;
+}
+
+/** docs/18 #43: the land's resources on the town's screen. */
+export interface LandTownView {
+  res: Record<LandRes, number>;
+  cap: number;
+  /** What the island's market pays a piece (none without a market). */
+  sell: Record<LandRes, number> | null;
+  crafts: { art: string; land: LandCost; goods: Partial<Record<GoodId, number>>; silver: number; why: string | null }[];
+  fits: { id: FittingId; rank: number; max: number; next: { silver: number; land: LandCost } | null; why: string | null }[];
 }
 
 export type H3ClientMsg =
@@ -139,7 +152,11 @@ export type H3ClientMsg =
   | { t: 'h3'; action: 'build'; id: TownId }
   | { t: 'h3'; action: 'learn'; id: OrderId }
   | { t: 'h3'; action: 'market'; give: GoodId | 'silver'; get: GoodId | 'silver'; n: number }
-  | { t: 'h3'; action: 'mines' };
+  | { t: 'h3'; action: 'mines' }
+  // docs/18 #43: the workshop, the fittings, the market for the land's resources.
+  | { t: 'h3'; action: 'craft'; i: number }
+  | { t: 'h3'; action: 'fit'; id: FittingId }
+  | { t: 'h3'; action: 'sellres'; r: LandRes; n: number };
 
 export type H3ServerMsg =
   | { t: 'dwell'; view: DwellView | null }

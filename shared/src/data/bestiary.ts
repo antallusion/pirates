@@ -25,7 +25,9 @@ const B = (id: BeastId, tier: number, s: BeastStats): UnitDef => ({ id, tier, up
 /** One creature of each kind (HoMM3's scale beside the men: a crab is a deckhand's match, the leviathan two drowned). */
 export const BEASTS: Record<BeastId, UnitDef> = {
   crab: B('crab', 1, { atk: 2, def: 5, dmin: 1, dmax: 2, hp: 5, speed: 3, init: 4, shots: 0, specials: ['shell', 'swarm'], art: 'creature.crab', cost: 16 }),
-  gull: B('gull', 1, { atk: 3, def: 1, dmin: 1, dmax: 2, hp: 3, speed: 7, init: 9, shots: 0, specials: ['flying', 'swarm'], art: 'creature.gull', cost: 14 }),
+  // docs/18 #47: a gull of the flock a seasoned sailor's match (it was two thirds of a deckhand: a flock aboard in
+  // place of hands lost every fight).
+  gull: B('gull', 1, { atk: 4, def: 2, dmin: 1, dmax: 3, hp: 6, speed: 7, init: 9, shots: 0, specials: ['flying', 'swarm'], art: 'creature.gull', cost: 24 }),
   seal: B('seal', 2, { atk: 5, def: 5, dmin: 2, dmax: 3, hp: 12, speed: 4, init: 6, shots: 0, specials: ['diving'], art: 'creature.seal', cost: 50 }),
   reef_shark: B('reef_shark', 2, { atk: 7, def: 3, dmin: 2, dmax: 5, hp: 8, speed: 5, init: 8, shots: 0, specials: ['diving'], art: 'monster.shark', cost: 60 }),
   rock_turtle: B('rock_turtle', 3, { atk: 4, def: 12, dmin: 2, dmax: 4, hp: 22, speed: 2, init: 3, shots: 0, specials: ['shell', 'regen'], art: 'creature.turtle', cost: 90 }),

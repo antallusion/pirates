@@ -32,6 +32,7 @@ import { takeItem } from './gear.ts';
 import { grailWill } from './grail.ts';
 import { foreignAt, learnForeign, npcFaceOf, npcPathOf, spendScrolls, stamMax, stamOf } from './pathbook.ts';
 import { STAM_REST_SEC, TALENT_BOOK, isPathPage, pathPagesAt, talentBook } from '../../../shared/src/data/paths.ts';
+import { fittingMods } from '../../../shared/src/data/landecon.ts';
 
 /** What the profile keeps of the hero. */
 export interface HeroRec {
@@ -115,7 +116,10 @@ export function fillWill(p: Profile): void {
 
 /** What her skills and artifact sets do at sea, for her ship's stats (the talents' vocabulary and caps). */
 export function heroSource(p: Profile): ModifierSource {
-  return { mods: skillSeaMods(heroOf(p).skills) };
+  // docs/18 #43: and her fittings of the land's resources (shell plating, bone knees, venomed grape).
+  const mods = { ...skillSeaMods(heroOf(p).skills) };
+  for (const [k, v] of Object.entries(fittingMods(p.lairs?.fit)) as [keyof typeof mods, number][]) mods[k] = (mods[k] ?? 0) + v;
+  return { mods };
 }
 
 /** Her ship's stats again after the hero changed. */

@@ -46,17 +46,47 @@ export function peopleOf(u: UnitId): People {
  *  the Reaver with the land's beasts. */
 export const NATIVE: Partial<Record<CaptainId, People>> = { drowned: 'deep', navigator: 'sea', reaver: 'land' };
 
+// ------------------------------------------------------------------------------------------------ 44. the paths' favourites
+
+/** Each path's favourite creatures (docs/18 #44): the three paths of a people (#38) love all of it — the Drowned the
+ *  deep's own, the Navigator the sea's, the Reaver the land's beasts — and the other three a few kinds of their own:
+ *  the Corsair the sharks and the gulls that follow the guns, the Smuggler the hermits of the dunes and the mermaids
+ *  of the hidden coves, the Black Admiral the turtles that stand in a line like a wall. */
+export const PATH_FAV: Record<CaptainId, { people?: Exclude<People, 'men'>; kinds: CreatureId[]; text: Tr }> = {
+  drowned: { people: 'deep', kinds: [], text: ['The deep’s own: the drowned, the cultists, the lantern maws, the young kraken.', 'Глубинные: утопленники, культисты, светочи-пасти, молодой кракен.'] },
+  navigator: { people: 'sea', kinds: [], text: ['The sea’s creatures: seals, sharks, mermaids, tentacles, young serpents, sea turtles, leviathans, the white whale.', 'Морские твари: тюлени, акулы, русалки, щупальца, молодые змеи, морские черепахи, левиафаны, белый кит.'] },
+  reaver: { people: 'land', kinds: [], text: ['The land’s beasts: crabs, gulls, rock turtles, marsh serpents, hermits, the ancient turtle.', 'Звери суши: крабы, чайки, черепахи-скалы, болотные змеи, отшельники, древняя черепаха.'] },
+  corsair: { kinds: ['reef_shark', 'gull'], text: ['The sharks and the gulls that follow the guns.', 'Акулы и чайки, что идут за пушками.'] },
+  smuggler: { kinds: ['hermit', 'mermaid'], text: ['The hermits of the dunes and the mermaids of the hidden coves.', 'Отшельники дюн и русалки тайных бухт.'] },
+  admiral: { kinds: ['rock_turtle', 'sea_turtle', 'ancient_turtle'], text: ['The turtles that stand in a line like a wall.', 'Черепахи, что стоят в строю, как стена.'] },
+};
+
+/** What a favourite stack gets in a battle: attack and defence a tenth more; and it never splits the army's morale
+ *  (it counts as the crew), and rescues and captures of it come easier (the native path's +10% / +6%). */
+export const FAV_BONUS = 0.1;
+
+/** Whether a creature kind is a favourite of a path. */
+export function isFavourite(path: CaptainId | null | undefined, u: UnitId): boolean {
+  if (!path || !isCreature(u)) return false;
+  const f = PATH_FAV[path];
+  return !!f && (f.kinds.includes(u) || (!!f.people && peopleOf(u) === f.people));
+}
+
+/** A path's favourite kinds, all of them (the Path book lists them). */
+export function favouriteKinds(path: CaptainId): CreatureId[] {
+  return CREATURE_IDS.filter((u) => isFavourite(path, u));
+}
+
 /** The morale a mixed army fights with (HoMM3's): a point less for every people beyond the first, the crew and the
  *  path's own counted as one. An army of men alone — as every ship of the sea and every ladder's crew — is as it was
  *  (the docs/17 targets do not move); only creatures aboard can split it. −3 at the worst. */
 export function mixMorale(army: readonly { u: UnitId; n: number }[], path: CaptainId | null | undefined): number {
   if (!army.some((s) => s.n > 0 && UNITS[s.u]?.beast)) return 0;
-  const native = path ? NATIVE[path] : undefined;
   const set = new Set<People>();
   for (const s of army) {
     if (!(s.n > 0)) continue;
-    const p = peopleOf(s.u);
-    set.add(p === native ? 'men' : p);
+    // The path's own people — and its favourite kinds (docs/18 #44) — fight as the crew.
+    set.add(isFavourite(path, s.u) ? 'men' : peopleOf(s.u));
   }
   return Math.max(-3, Math.min(0, 1 - set.size));
 }
@@ -66,7 +96,9 @@ export function armyPeoples(army: readonly { u: UnitId; n: number }[], path: Cap
   const by = new Map<People, number>();
   for (const s of army) if (s.n > 0) by.set(peopleOf(s.u), (by.get(peopleOf(s.u)) ?? 0) + s.n);
   const native = path ? NATIVE[path] : undefined;
-  return PEOPLES.filter((p) => by.has(p)).map((p) => ({ p, n: by.get(p)!, native: p === native }));
+  // A people is hers when it is her path's, or every creature of it aboard is a favourite of hers (docs/18 #44).
+  const fav = (p: People) => p !== 'men' && army.filter((s) => s.n > 0 && peopleOf(s.u) === p).every((s) => isFavourite(path, s.u));
+  return PEOPLES.filter((p) => by.has(p)).map((p) => ({ p, n: by.get(p)!, native: p === native || fav(p) }));
 }
 
 export const PEOPLE_NAME: Record<People, Tr> = { men: ['the crew', 'команда'], deep: ['the deep’s own', 'глубинные'], sea: ['sea creatures', 'морские твари'], land: ['land beasts', 'звери суши'] };
@@ -172,9 +204,9 @@ export const DRIFTS: Record<DriftKind, DriftDef> = {
   serpent_wreck: D('serpent_wreck', ['Serpent on the Wreckage', 'Змей на обломках'], ['A young serpent, torn by a harpoon, lies coiled over a raft of broken spars. It watches the ship with one eye.', 'Молодой змей, разорванный гарпуном, лежит, обвившись вокруг плота из сломанных рей, и следит за кораблём одним глазом.'], 'young_serpent', 0.32, [5, 10], 2, ['heal', 'feed', 'haul'], { good: 'serpent_scale', share: 0.4 }, 'graveyard'),
   seal_floe: D('seal_floe', ['Seals on a Floe', 'Тюлени на льдине'], ['A rotten floe drifts south with a rookery on it; the ice cracks under the bulls with every swell.', 'Гнилая льдина дрейфует на юг с целым лежбищем; под самцами лёд трещит на каждой волне.'], 'seal', 0.25, [1, 6], 3, ['haul', 'feed', 'shoot'], { good: 'fish', share: 0.3 }, 'rocky', { regions: ['leviathan_reach', 'whispering', 'gravewater', 'black_coast', 'ashen_isles'], sharks: true }),
   drowned_boat: D('drowned_boat', ['The Drowned in a Boat', 'Утопленники в шлюпке'], ['A ship’s boat full of the drowned, rowing nowhere. They lift their oars as she comes up, waiting for a word.', 'Шлюпка, полная утопленников, гребёт в никуда. Завидев корабль, они поднимают вёсла и ждут слова.'], 'surf_drowned', 0.28, [4, 10], 2, ['rite', 'feed', 'haul'], { good: 'pearls', share: 0.5 }, 'dead', { regions: ['gravewater', 'dead_mans_expanse', 'drowned_crown', 'whispering', 'leviathan_reach', 'ashen_isles'] }),
-  mermaid_net: D('mermaid_net', ['A Mermaid in the Nets', 'Русалка в сетях'], ['A drift net torn off some fishing boat, and in it something that sings. Sharks circle it.', 'Дрейфующая сеть, сорванная с рыбацкой лодки, а в ней кто-то поёт. Вокруг кружат акулы.'], 'mermaid', 0.26, [3, 9], 2, ['cut', 'shoot', 'feed'], { good: 'pearls', share: 0.6 }, 'tropical', { sharks: true }),
+  mermaid_net: D('mermaid_net', ['A Mermaid in the Nets', 'Русалка в сетях'], ['A drift net torn off some fishing boat, and in it something that sings. Sharks circle it.', 'Дрейфующая сеть, сорванная с рыбацкой лодки, а в ней кто-то поёт. Вокруг кружат акулы.'], 'mermaid', 0.26, [4, 9], 2, ['cut', 'shoot', 'feed'], { good: 'pearls', share: 0.6 }, 'tropical', { sharks: true }),
   turtle_weed: D('turtle_weed', ['Turtles in the Weed', 'Черепахи в водорослях'], ['A raft of weed as big as a field, and sea turtles caught in it, too weak to dive.', 'Плот водорослей величиной с поле, и в нём запутались морские черепахи — слишком слабые, чтобы нырнуть.'], 'sea_turtle', 0.26, [2, 7], 3, ['cut', 'haul', 'feed'], { good: 'tar', share: 0.3 }, 'swamp'),
-  gull_mast: D('gull_mast', ['Gulls on a Mast', 'Чайки на мачте'], ['A broken mast afloat, white with gulls too tired to fly on. They scream at the ship.', 'Обломок мачты на воде, белый от чаек, которым уже не долететь. Они кричат на корабль.'], 'gull', 0.25, [1, 4], 3, ['haul', 'feed', 'cut'], { good: 'fish', share: 0.3 }, 'rocky'),
+  gull_mast: D('gull_mast', ['Gulls on a Mast', 'Чайки на мачте'], ['A broken mast afloat, white with gulls too tired to fly on. They scream at the ship.', 'Обломок мачты на воде, белый от чаек, которым уже не долететь. Они кричат на корабль.'], 'gull', 0.25, [2, 3], 3, ['haul', 'feed', 'cut'], { good: 'fish', share: 0.3 }, 'rocky'),
   tentacle_chain: D('tentacle_chain', ['A Tentacle in the Chain', 'Щупальце в цепи'], ['A lost anchor chain with a buoy, and round it the arms of something from the lagoons, fouled and bleeding ink.', 'Потерянная якорная цепь с буем, а на ней — щупальца кого-то из лагун, запутавшиеся и истекающие чернилами.'], 'lagoon_tentacle', 0.28, [4, 9], 2, ['cut', 'haul', 'heal'], { good: 'kraken_ink', share: 0.4 }, 'volcanic'),
   white_whale: D('white_whale', ['The White Whale', 'Белый кит'], ['The legend of the season: the white whale, an old harpoon line trailing from its flank and the sea red behind it.', 'Легенда сезона: белый кит, за его боком тянется старый гарпунный линь, а море позади красное.'], 'white_whale', 0, [6, 10], 0, ['cut', 'heal', 'haul'], { good: 'ambergris', share: 0.6 }, 'rocky', { legend: true }),
   young_kraken: D('young_kraken', ['The Young Kraken', 'Молодой кракен'], ['The legend of the season: a young kraken thrown up from the deep, its arms in a wreck’s rigging, too young to know the sea’s surface.', 'Легенда сезона: молодой кракен, выброшенный из бездны; его щупальца в такелаже затонувшего корабля, он ещё не знает поверхности моря.'], 'young_kraken', 0, [6, 10], 0, ['rite', 'cut', 'feed'], { good: 'kraken_ink', share: 0.6 }, 'dead', { legend: true }),
@@ -197,8 +229,22 @@ export function driftCount(kind: DriftKind, level: number): number {
   const d = DRIFTS[kind];
   const L = Math.max(1, Math.min(10, Math.round(level)));
   if (d.legend) return L >= 9 ? 2 : 1;
-  return Math.max(1, Math.round((advHour(L) * DRIFT_WORTH * d.share * 4) / UNITS[d.u].cost));
+  return Math.max(1, Math.round(((advHour(L) * DRIFT_WORTH * d.share * 4) / UNITS[d.u].cost) * (DRIFT_CAL[kind]?.[L] ?? 1)));
 }
+
+/** docs/18 #47: each kind's group, weighed by the boarding battle itself (`node tools/balance-h7.ts --calibrate-drifts`,
+ *  tests/balance/creatures.ts): the multiple of its worth's head count that, joined to the ladder's crew of the level in
+ *  place of as many hands, wins half its boardings against the pirates of that level (with a mixed army's −1 morale;
+ *  averaged over the hammocks ±15%, the battle being steep in the make-up of small stacks). Index: the level. */
+export const DRIFT_CAL: Partial<Record<DriftKind, number[]>> = {
+  drowned_boat: [1, 1, 1, 1, 1, 0.8, 0.33, 0.25, 0.82, 1.57, 1.28],
+  gull_mast: [1, 1, 0.38, 0.6, 1, 1, 1, 1, 1, 1, 1],
+  mermaid_net: [1, 1, 1, 1, 0.25, 0.33, 0.14, 0.2, 0.23, 0.81, 1],
+  seal_floe: [1, 0.67, 1, 1, 1.62, 1.25, 0.62, 1, 1, 1, 1],
+  serpent_wreck: [1, 1, 1, 1, 1, 0.67, 0.5, 1, 1.33, 1.25, 1],
+  tentacle_chain: [1, 1, 1, 1, 1, 1, 0.11, 0.36, 1, 0.79, 1],
+  turtle_weed: [1, 1, 1.25, 0.2, 1.57, 1.56, 0.58, 1, 1, 1, 1],
+};
 
 /** Seconds a drift lasts before it sinks, drifts off or the sharks finish it; a legend lasts three hours. */
 export const DRIFT_TTL: [number, number] = [420, 600];
@@ -264,8 +310,7 @@ export function wayChance(kind: DriftKind, way: RescueWay, c: RescueCtx): number
   }
   if (p <= 0) return 0;
   p += 0.03 * c.leadership;
-  const native = c.path ? NATIVE[c.path] : undefined;
-  if (native && native === peopleOf(d.u)) p += 0.1;
+  if (isFavourite(c.path, d.u)) p += 0.1; // the path's own people and favourites (docs/18 #38, #44)
   if (d.legend) p -= 0.2;
   return Math.max(0.05, Math.min(0.95, p));
 }

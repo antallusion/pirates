@@ -4,6 +4,7 @@
 
 import { BOSSES } from './bosses.ts';
 import { BEAST_IDS } from './beasts.ts';
+import { CREATURE_IDS } from './bestiary.ts';
 import { FISH_IDS } from './fishing.ts';
 import { OMEN_IDS } from './omens.ts';
 import { WONDER_KIND_IDS } from './wonders.ts';
@@ -133,8 +134,8 @@ export function weeklyChallenges(week: number): WeeklyChallenge[] {
 
 // ================================================================== 28. the album
 
-export type SetId = 'fish' | 'wonders' | 'omens' | 'trophies' | 'beasts' | 'letters';
-export const SET_IDS: SetId[] = ['fish', 'wonders', 'omens', 'trophies', 'beasts', 'letters'];
+export type SetId = 'fish' | 'wonders' | 'omens' | 'trophies' | 'beasts' | 'letters' | 'bestiary';
+export const SET_IDS: SetId[] = ['fish', 'wonders', 'omens', 'trophies', 'beasts', 'letters', 'bestiary'];
 
 export interface SetDef {
   name: Tr;
@@ -161,6 +162,8 @@ export function setDefs(letters: number): Record<SetId, SetDef> {
     trophies: { name: ['Trophies of the Deep', 'Трофеи глубин'], text: ['Take the trophy of every great beast of the sea.', 'Добудьте трофей каждого великого чудища моря.'], items: TROPHY_IDS, silver: 12000, title: ['Lord of Trophies', 'Владыка трофеев'] },
     beasts: { name: ['The Hunt', 'Охота'], text: ['Take a beast of every kind.', 'Добудьте зверя каждого вида.'], items: [...BEAST_IDS], silver: 4000, title: ['Master of the Hunt', 'Мастер охоты'] },
     letters: { name: ['Letters of the Sea', 'Письма моря'], text: ['Gather every letter found in a bottle.', 'Соберите все письма из бутылок.'], items: Array.from({ length: letters }, (_, i) => String(i)), silver: 1500, title: ['Keeper of Letters', 'Хранитель писем'] },
+    // docs/18 #46: a page for each kind of creature, written at the first fight with it.
+    bestiary: { name: ['The Bestiary', 'Бестиарий'], text: ['Fight every kind of creature of the islands and the sea at least once: each first fight writes its page.', 'Сразитесь с каждым видом существ островов и моря хотя бы раз: первый бой с видом вписывает его страницу.'], items: [...CREATURE_IDS], silver: 6000, title: ['Keeper of the Bestiary', 'Хранитель бестиария'] },
   };
 }
 
