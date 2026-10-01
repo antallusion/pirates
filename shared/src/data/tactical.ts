@@ -29,8 +29,13 @@ export const TAC_CHANCE_PER_POINT = 0.04;
 /** Terrain of a hex: deck, water between the hulls, a plank across it, and what stands on the deck — and what the
  *  guns left of her deck before the grapples bit (docs/17 H1): a hole shot through it ('H', no footing) and a fire
  *  ('F', burning whoever stands in it as his turn comes). */
-export type TacCell = '.' | '~' | '=' | 'M' | 'C' | 'B' | 'K' | '#' | 'H' | 'F';
-export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#', 'H']);
+export type TacCell = '.' | '~' | '=' | 'M' | 'C' | 'B' | 'K' | '#' | 'H' | 'F'
+  /** docs/18 II, the battlefield ashore: a rock, a palm (both give cover from shots to a stack beside them), the surf
+   *  (no footing but for the creatures that dive). The sand is '.'. */
+  | 'R' | 'P' | 'W';
+export const TAC_BLOCKING: ReadonlySet<TacCell> = new Set(['~', 'M', 'C', 'B', 'K', '#', 'H', 'R', 'P', 'W']);
+/** Cover ashore: a shot at a stack beside a rock or a palm does this share of its harm. */
+export const TAC_COVER = 0.75;
 /** A stack on a burning hex loses this share of its strength (at least a man's hit points) as its turn comes. */
 export const TAC_BURN = 0.1;
 /** The deep's own freeze a living stack of the other side one turn in ten. */

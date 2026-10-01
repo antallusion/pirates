@@ -34,6 +34,7 @@ import type { BuildingId, IslandSize } from './data/holdings.ts';
 import type { CaptainId } from './data/captains.ts';
 import type { BoardTactic } from './data/boarding.ts';
 import type { TacKind, TacOrderId, TacSpellId } from './data/tactical.ts';
+import type { LairLoot } from './lairproto.ts';
 import type { ArmyStack, ArmyWord, UnitId, UnitSpecial } from './data/army.ts';
 import type { FactionId } from './data/factions.ts';
 import type { GoodId } from './data/goods.ts';
@@ -48,6 +49,7 @@ import type { DailyKind } from './data/dailies.ts';
 import type { H3ClientMsg, H3ServerMsg, TownView } from './h3proto.ts';
 import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
 import type { IsleClientMsg, IsleServerMsg } from './isleproto.ts';
+import type { LairClientMsg, LairServerMsg } from './lairproto.ts';
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
@@ -300,6 +302,7 @@ export type ClientMsg =
   | H4ClientMsg
   /** docs/18 #32: the supply routes. */
   | IsleClientMsg
+  | LairClientMsg
   | { t: 'mail'; action: 'list' }
   | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
   | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
@@ -1359,6 +1362,9 @@ export interface TacStackView {
   again?: boolean;
   noRet?: boolean;
   braced?: boolean;
+  /** docs/18 II: poisoned (its bites to come); in the surf (a diver under the waves). */
+  poisoned?: boolean;
+  wet?: boolean;
 }
 
 /** A captain on the side panel. */
@@ -1397,7 +1403,9 @@ export interface TacEvent {
   i: number;
   k: 'move' | 'hit' | 'shot' | 'ret' | 'die' | 'wait' | 'defend' | 'morale' | 'fear' | 'luck' | 'spell' | 'order' | 'round' | 'timeout' | 'burn'
     /** docs/18: a path's innate move and ultimate (id: the path), a stack acting again. */
-    | 'innate' | 'ult' | 'again';
+    | 'innate' | 'ult' | 'again'
+    /** docs/18 II: the poison in a stack bites again; a creature grows back. */
+    | 'poison' | 'regen';
   side: 0 | 1;
   s?: number;
   t?: number;
@@ -1437,8 +1445,11 @@ export interface TacView {
   canStrike: boolean;
   /** Silver it would cost this captain to pay the other side off (null: not offered). */
   ransom?: number | null;
-  /** The reckoning once it is over: the men each side lost by kind, what the captain learnt, the silver paid. */
-  result?: { lost: { u: UnitId; n: number }[]; killed: { u: UnitId; n: number }[]; xp: number; paid?: number };
+  /** The reckoning once it is over: the men each side lost by kind, what the captain learnt, the silver paid; ashore
+   *  (docs/18 II), what the lair left. */
+  result?: { lost: { u: UnitId; n: number }[]; killed: { u: UnitId; n: number }[]; xp: number; paid?: number; loot?: LairLoot };
+  /** docs/18 II: the battle is fought ashore at a lair of the land's creatures (the kind of island it is drawn as). */
+  land?: { type: string; lair: string; island: string; level: number };
 }
 
 export type ServerMsg =
@@ -1556,6 +1567,7 @@ export type ServerMsg =
   | H4ServerMsg
   /** docs/18 III: the zones of one level, the turtle islands, the supply routes. */
   | IsleServerMsg
+  | LairServerMsg
   | { t: 'pong'; c: number; s: number };
 
 // ------------------------------------------------------------------ groups, barter, letters, the market

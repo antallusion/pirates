@@ -11,7 +11,7 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
-  TAC_AI_DELAY, TAC_BLOCKING, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_FEAR, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
+  TAC_AI_DELAY, TAC_BLOCKING, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
   captainSpells, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, kindOfUnit,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
@@ -74,6 +74,8 @@ export interface TacSideInput {
   hero?: HeroBattle;
   /** The face her captain shows on the side panel (a named captain of the sea's own portrait, docs/18 item 8). */
   face?: string;
+  /** docs/18 II: a lair's creatures have no captain's book (no orders, not even grenades). */
+  noBook?: boolean;
 }
 
 export interface TacStack {
@@ -105,6 +107,8 @@ export interface TacStack {
   surged: boolean;
   /** Turns more she acts this round (docs/18: the Following Squall, the Eye of the Storm). */
   again: number;
+  /** docs/18 II: a creature's poison in her — the harm it does as her next turns come, how many more, and whose. */
+  poison?: { dmg: number; left: number; by: 0 | 1 };
   officer?: { id: string; role: OfficerRole; name: string; unique?: string; order: TacOrderId; used: boolean };
 }
 
@@ -163,6 +167,8 @@ export interface TacBattle {
   /** Officers whose party was broken (dead) or badly cut (hurt). */
   hurt: { id: string; side: 0 | 1; heavy: boolean }[];
   broken: [number, number];
+  /** docs/18 II: fought ashore — the kind of island the field is (sand, rocks, palms and the surf; no guns). */
+  land?: string;
 }
 
 const sp = (s: TacStack, x: UnitSpecial): boolean => s.sp.includes(x);
@@ -196,6 +202,41 @@ export function makeField(seed: number): TacCell[] {
     if (cells[i] !== '.' || hexNeighbors(i).some((j) => cells[j] === '=')) continue;
     set(i, rng.chance(0.5) ? 'B' : 'K');
     n--;
+  }
+  return cells;
+}
+
+/** The battlefield ashore (docs/18 II item 15): the same hexes, sand where the decks were — the surf along the shore
+ *  (the bottom rows), rocks and palms in the middle ground (cover from shots for a stack beside them) by the kind of
+ *  island, a tidal pool or two on the marshy and the dead ones; the same seen from either side, as the decks are. */
+export function makeLandField(seed: number, type: string): TacCell[] {
+  const rng = new Rng((seed ^ 0x1a2d) >>> 0);
+  const cells: TacCell[] = Array.from({ length: TAC_W * TAC_H }, () => '.');
+  for (let y = 1; y < TAC_H; y += 2) cells[hexIndex(TAC_W - 1, y)] = '#';
+  const set = (i: number, c: TacCell) => {
+    cells[i] = c;
+    cells[hexMirror(i)] = c;
+  };
+  // The surf: the last row whole, and a tongue of it in the row above where the beach dips.
+  for (let x = 0; x < TAC_W; x++) cells[hexIndex(x, TAC_H - 1)] = 'W';
+  for (const x of [3, 4]) if (rng.chance(0.6)) set(hexIndex(x, TAC_H - 2), 'W');
+  // The middle ground: what stands there by the kind of island (rocks 'R', palms 'P', pools of the surf 'W').
+  const kinds: Record<string, TacCell[]> = {
+    tropical: ['P', 'P', 'P', 'R'], rocky: ['R', 'R', 'R', 'P'], volcanic: ['R', 'R', 'R'], swamp: ['P', 'P', 'W', 'R'], graveyard: ['K', 'B', 'R', 'R'], dead: ['R', 'W', 'R'],
+  };
+  const pool = kinds[type] ?? kinds.rocky;
+  let n = 3 + rng.int(0, 1);
+  for (let tries = 0; n > 0 && tries < 40; tries++) {
+    const x = rng.int(2, 4), y = rng.int(0, TAC_H - 3);
+    const i = hexIndex(x, y);
+    if (cells[i] !== '.' || hexNeighbors(i).some((j) => cells[j] !== '.' && cells[j] !== '#')) continue;
+    set(i, pool[rng.int(0, pool.length - 1)]);
+    n--;
+  }
+  // A rock or a palm amidst the field, now and then.
+  if (rng.chance(0.5)) {
+    const i = hexIndex(5, rng.pick([2, 4]));
+    if (cells[i] === '.') cells[i] = pool[0] === 'W' ? 'R' : pool[0];
   }
   return cells;
 }
@@ -328,13 +369,17 @@ export function buildStacks(input: TacSideInput, side: 0 | 1, cells: TacCell[], 
 }
 
 const hpOf = (s: TacStack) => (s.count > 0 ? (s.count - 1) * s.hpMax + s.hpTop : 0);
+/** docs/18 II: a creature that grows back takes this share of its strength as its turn comes; a creature of terror
+ *  freezes the living beside it this often. */
+export const REGEN_SHARE = 0.1;
+export const TAC_TERROR = 0.2;
 
 function newHero(input: TacSideInput, stacks: TacStack[]): TacHero {
   const lucky = input.officers.filter((o) => o.lucky).length;
   return {
     input, morale: Math.max(0, Math.min(100, input.morale)), luck: Math.max(-3, Math.min(3, 1 + lucky + (input.hero?.luck ?? 0))),
     mana: input.hero ? input.hero.mana : -1,
-    spells: (input.hero ? input.hero.book : captainSpells(input.captain)).map((id) => ({ id, ready: 1 })), cast: 0, auto: !input.human, fx: [], kills: 0,
+    spells: (input.noBook ? [] : input.hero ? input.hero.book : captainSpells(input.captain)).map((id) => ({ id, ready: 1 })), cast: 0, auto: !input.human, fx: [], kills: 0,
     startHp: stacks.reduce((n, s) => n + hpOf(s), 0), startMen: stacks.reduce((n, s) => n + s.count, 0), cutTried: 0,
     stam: input.hero?.stamMax !== undefined ? input.hero.stam ?? input.hero.stamMax : -1,
     innate: input.hero?.path ? 1 : 0, ult: input.hero?.path && input.hero.ult ? 1 : 0, scrollsUsed: [], moved: 0, free: 0,
@@ -342,16 +387,21 @@ function newHero(input: TacSideInput, stacks: TacStack[]): TacHero {
 }
 
 /** A battle laid out: the field, what the guns left of each deck, both sides' stacks, round one about to open. */
-export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng): TacBattle {
-  const cells = makeField(seed);
-  for (const [x, side] of [[a, 0], [b, 1]] as const) if ((x.holes ?? 0) > 0 || x.fire) scarDeck(cells, side, x.holes ?? 0, !!x.fire, seed);
+export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: number, rng: Rng, opts: { land?: string } = {}): TacBattle {
+  const cells = opts.land ? makeLandField(seed, opts.land) : makeField(seed);
+  // Ashore (docs/18 II) the ship's guns are not there: no holes, no fire, no swivels.
+  if (!opts.land) for (const [x, side] of [[a, 0], [b, 1]] as const) if ((x.holes ?? 0) > 0 || x.fire) scarDeck(cells, side, x.holes ?? 0, !!x.fire, seed);
   // Tactics (docs/17 H2): the higher hand has the field, the lower none.
   const ta = a.hero?.tactics ?? 0, tb = b.hero?.tactics ?? 0;
   const sa = buildStacks(a, 0, cells, 1, ta > tb ? TACTICS_DEPLOY[ta] : 0);
   const sb = buildStacks(b, 1, cells, sa.length + 1, tb > ta ? TACTICS_DEPLOY[tb] : 0);
+  if (opts.land) for (const s of [...sa, ...sb]) {
+    s.sp = s.sp.filter((x) => x !== 'blast');
+    s.dmgMul = 1;
+  }
   const bt: TacBattle = {
     cells, stacks: [...sa, ...sb], heroes: [newHero(a, sa), newHero(b, sb)], round: 0, queue: [], active: null, turnEnds: now, aiAt: now,
-    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0],
+    log: [], events: 0, seq: 0, over: null, dead: [0, 0], hurt: [], broken: [0, 0], ...(opts.land ? { land: opts.land } : {}),
   };
   checkOver(bt);
   if (!bt.over) newRound(bt, now, rng);
@@ -446,22 +496,38 @@ function initOf(bt: TacBattle, s: TacStack): number {
     - (has(e, 'head_wind', bt.round) ? 2 : 0) + (bt.round <= 1 ? h.input.hero?.init1 ?? 0 : 0) + smods(bt, s).init;
 }
 
-const passable = (bt: TacBattle, i: number, self: TacStack | null) => !TAC_BLOCKING.has(bt.cells[i]) && !bt.stacks.some((s) => s.count > 0 && s !== self && s.hex === i);
+/** A hex a stack may stand on: no obstacle (the surf only for a creature that dives, docs/18 II) and nobody there. */
+const passable = (bt: TacBattle, i: number, self: TacStack | null) => (!TAC_BLOCKING.has(bt.cells[i]) || (bt.cells[i] === 'W' && !!self && sp(self, 'diving'))) && !bt.stacks.some((s) => s.count > 0 && s !== self && s.hex === i);
 
-/** Steps to every hex the stack can reach this turn (by the path around obstacles and stacks). */
+/** Steps to every hex the stack can reach this turn (by the path around obstacles and stacks). A creature that flies
+ *  goes over them (docs/18 II), landing where it may; one that dives goes into the surf and comes out of it anywhere
+ *  along the shore (the surf is one water). */
 export function reachOf(bt: TacBattle, s: TacStack): Map<number, number> {
   const out = new Map<number, number>();
   const spd = speedOf(bt, s);
   const seen = new Map<number, number>([[s.hex, 0]]);
+  const fly = sp(s, 'flying'), dive = sp(s, 'diving') && !!bt.land;
+  let surfed = false;
   let frontier = [s.hex];
   for (let d = 1; d <= spd && frontier.length; d++) {
     const next: number[] = [];
     for (const i of frontier) {
       for (const j of hexNeighbors(i)) {
-        if (seen.has(j) || !passable(bt, j, s)) continue;
+        if (seen.has(j)) continue;
+        const ok = passable(bt, j, s);
+        if (!ok && !(fly && bt.cells[j] !== '#')) continue;
         seen.set(j, d);
-        out.set(j, d);
+        if (ok) out.set(j, d);
         next.push(j);
+        if (dive && !surfed && ok && bt.cells[j] === 'W') {
+          surfed = true;
+          for (let k = 0; k < bt.cells.length; k++) {
+            if (bt.cells[k] !== 'W' || seen.has(k) || !passable(bt, k, s)) continue;
+            seen.set(k, d);
+            out.set(k, d);
+            next.push(k);
+          }
+        }
       }
     }
     frontier = next;
@@ -555,10 +621,16 @@ export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'sh
     if (has(h, 'lay_true', r)) mul *= 1.25;
     if (has(h, 'double_shot', r)) mul *= 1.3;
     if (sp(t, 'shield_wall')) mul *= 0.5;
+    // docs/18 II: a shell, a diver under the surf, cover beside a rock or a palm.
+    if (sp(t, 'shell')) mul *= 0.38;
+    if (bt.cells[t.hex] === 'W') mul *= 0.5;
+    if (bt.land && hexNeighbors(t.hex).some((j) => bt.cells[j] === 'R' || bt.cells[j] === 'P')) mul *= TAC_COVER;
   } else if (isShooter(s) && !sp(s, 'no_penalty')) mul *= 0.5; // a musket is a poor club
+  // docs/18 II: a swarm's foes answer it half as hard.
+  if (how === 'ret' && sp(t, 'swarm')) mul *= 0.5;
   // Flanking: a foe already engaged by another of ours on her other side.
   // Turn the Flank: the navigator reads the deck, every blow of his men lands as from the flank.
-  if (how === 'melee' && (has(h, 'turn_the_flank', r) || alive(bt).some((o) => o.side === s.side && o !== s && hexNeighbors(t.hex).includes(o.hex)))) mul *= 1.2;
+  if (how === 'melee' && (has(h, 'turn_the_flank', r) || sp(t, 'swarm') || alive(bt).some((o) => o.side === s.side && o !== s && hexNeighbors(t.hex).includes(o.hex)))) mul *= 1.2;
   // Backs to the rail (docs/17 H5): the side with less of her strength left on deck strikes harder by the shortfall —
   // a tenth fewer men is a hard fight, not a lost one.
   mul *= desperation(bt, s.side);
@@ -605,6 +677,8 @@ function oneBlow(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, k: 'hit' | '
   if (lucky) push(bt, { k: 'luck', side: s.side, s: s.id });
   const kills = hurt(bt, t, dmg, s.side);
   push(bt, { k, side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex });
+  // docs/18 II: a poisonous bite stays in the living — a third of it again as each of her next two turns comes.
+  if (sp(s, 'poison') && t.count > 0 && !sp(t, 'undead')) t.poison = { dmg: Math.max(1, Math.round(dmg * 0.3)), left: 2, by: s.side };
 }
 
 /** Her answer: once a round (every blow for a guard that answers all), by what is left of her. */
@@ -1027,6 +1101,26 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
     const s = stackById(bt, id);
     if (!s) continue;
     s.defending = false;
+    // docs/18 II: the poison in her bites again; a creature that grows back does.
+    if (s.poison && s.poison.left > 0) {
+      const p = s.poison;
+      p.left--;
+      const kills = hurt(bt, s, p.dmg, p.by);
+      push(bt, { k: 'poison', side: s.side, s: s.id, dmg: p.dmg, kills, hex: s.hex });
+      if (p.left <= 0) delete s.poison;
+      checkOver(bt);
+      if (bt.over) {
+        bt.active = null;
+        return;
+      }
+      if (s.count <= 0) continue;
+    }
+    if (sp(s, 'regen') && hpOf(s) < s.start * s.hpMax) {
+      const was = hpOf(s);
+      heal(bt, s.side, REGEN_SHARE, false, s);
+      const n = hpOf(s) - was;
+      if (n > 0) push(bt, { k: 'regen', side: s.side, s: s.id, dmg: n, hex: s.hex });
+    }
     // A fire on deck: whoever stands in it burns as his turn comes.
     if (bt.cells[s.hex] === 'F') {
       const dmg = Math.max(s.hpMax, Math.round(hpOf(s) * TAC_BURN));
@@ -1054,6 +1148,11 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
     }
     // The deep's own on the other deck: the living may freeze in terror.
     if (!sp(s, 'undead') && !sp(s, 'steady') && !braced && sideHas(bt, (1 - s.side) as 0 | 1, 'fear') && rng.chance(TAC_FEAR)) {
+      push(bt, { k: 'fear', side: s.side, s: s.id, id: 'terror' });
+      continue;
+    }
+    // docs/18 II: a creature of terror beside her — the living freeze one turn in five.
+    if (!sp(s, 'undead') && !sp(s, 'steady') && !braced && enemiesAdjacent(bt, s).some((o) => sp(o, 'terror')) && rng.chance(TAC_TERROR)) {
       push(bt, { k: 'fear', side: s.side, s: s.id, id: 'terror' });
       continue;
     }
@@ -1495,10 +1594,12 @@ function flagsOf(bt: TacBattle, s: TacStack): Partial<TacStackView> {
   if (s.again > 0 || (bt.queue.filter((id) => id === s.id).length > 1)) out.again = true;
   if (m.noRet) out.noRet = true;
   if (m.steady && m.taken < 0) out.braced = true;
+  if (s.poison) out.poisoned = true;
+  if (bt.cells[s.hex] === 'W') out.wet = true;
   return out;
 }
 
-export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean, extra: Partial<Pick<TacView, 'ransom' | 'result'>> = {}): TacView {
+export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean, extra: Partial<Pick<TacView, 'ransom' | 'result' | 'land'>> = {}): TacView {
   const act0 = bt.active !== null ? stackById(bt, bt.active) : undefined;
   const mine = !!act0 && act0.side === side && !bt.over && !bt.heroes[side].auto;
   const reach = mine && act0 ? reachOf(bt, act0) : new Map<number, number>();
