@@ -1,0 +1,98 @@
+// The creature jobs of the ports' boards (docs/18 II item 23): «clear the island of crabs», «bring the shell of the rock
+// turtles», «break the lairs of these waters» — generated beside the quest generator's own (docs/11 P4) with their own
+// dice, from the lairs within a short sail of each port, so the generator's jobs a saved game knows keep their ids.
+// Each template carries its Russian twin (the client makes translation patterns of them, as of questgen's).
+
+import { advHour } from './advmap.ts';
+import { BEAST_PLURAL, LAND_RES_DEF } from './bestiary.ts';
+import type { LandRes } from './bestiary.ts';
+import { LAIRS, buildLairs } from './lairs.ts';
+import type { Lair } from './lairs.ts';
+import { GIVER_MEN, GIVER_WOMEN, GIVER_LAST, PROFESSIONS, fill, giverPortrait, numberedPattern } from './questgen.ts';
+import type { Profession } from './questgen.ts';
+import type { QuestDef } from './quests.ts';
+import { captainLevelFor } from './shiplevel.ts';
+import { Rng, hashString } from '../rng.ts';
+import { REGIONS } from '../world/regions.ts';
+import type { World } from '../world/worldgen.ts';
+
+interface Plot {
+  id: 'clear' | 'bring' | 'cull';
+  giver: Profession[];
+  name: [string, string];
+  summary: [string, string];
+  steps: [string, string][];
+}
+
+export const LAIR_PLOTS: Plot[] = [
+  {
+    id: 'clear', giver: ['fishwife', 'old_salt', 'pearl_diver', 'hermit'],
+    name: ['Clear {island} of the {beasts}', 'Очистить остров {island}: {beasts}'],
+    summary: ['{giver} cannot put a boat ashore on {island} for the {beasts} of its {lair}. Land a party and clear them out.', '{giver} не может высадиться на острове {island}: там «{lair}» — {beasts}. Высадите отряд и очистите остров.'],
+    steps: [['Beat the {lair} on {island}.', 'Разбейте логово «{lair}» на острове {island}.'], ['Return to {port}: {giver} is waiting.', 'Вернитесь в порт {port}: вас ждёт {giver}.']],
+  },
+  {
+    id: 'bring', giver: ['apothecary', 'shipwright', 'merchant', 'priest'],
+    name: ['{res} for {giver}', '{res} для заказчика: {giver}'],
+    summary: ['{giver} pays well for {res} from the lairs of the land\'s creatures: {n} pieces, brought to {port}.', '{giver} хорошо платит за {res} из логов существ суши: {n} шт., доставить в порт {port}.'],
+    steps: [['Bring {res} × {n} to {port}.', 'Доставьте в порт {port}: {res} × {n}.']],
+  },
+  {
+    id: 'cull', giver: ['garrison_captain', 'harbour_master', 'whaler', 'bosun'],
+    name: ['The Lairs of {region}', 'Логова вод «{region}»'],
+    summary: ['{giver} wants the islands of {region} safe for the boats again: break {n} lairs of the land\'s creatures there.', '{giver} хочет, чтобы на острова вод «{region}» снова можно было высаживаться: разбейте там логова существ суши — {n}.'],
+    steps: [['Beat lairs of the land\'s creatures: {n}.', 'Разбейте логова существ суши: {n}.'], ['Return to {port}: {giver} is waiting.', 'Вернитесь в порт {port}: вас ждёт {giver}.']],
+  },
+];
+
+/** What each land resource is called in a job's line (the client words it). */
+const RES_NAME: Record<LandRes, string> = { shell: 'Shell', bone: 'Bone', venom: 'Venom' };
+
+/** Three creature jobs a port (clear an island, bring a resource, break the lairs of its waters), the same on every
+ *  server of this seed; none when no lair lies within a short sail of it. */
+export function generateLairJobs(world: World, seed: number): QuestDef[] {
+  const out: QuestDef[] = [];
+  const lairs = buildLairs(world).filter((l) => l.island >= 0 && l.role === 'shore' && !world.islands[l.island]?.hidden);
+  for (const port of world.ports) {
+    if (port.raft) continue;
+    const near = lairs.filter((l) => Math.hypot(l.x - port.x, l.y - port.y) < 24000).sort((a, b) => Math.hypot(a.x - port.x, a.y - port.y) - Math.hypot(b.x - port.x, b.y - port.y));
+    if (!near.length) continue;
+    const rng = new Rng((hashString(`lairjobs:${port.id}`) ^ (seed * 2246822519)) >>> 0);
+    const pick: Lair = near[rng.int(0, Math.min(near.length, 6) - 1)];
+    const level = pick.level;
+    const hour = advHour(level);
+    for (const plot of LAIR_PLOTS) {
+      const profession = plot.giver[rng.int(0, plot.giver.length - 1)];
+      const giver = `${rng.pick(rng.chance(0.5) ? GIVER_MEN : GIVER_WOMEN)} ${rng.pick(GIVER_LAST)}`;
+      const def = LAIRS[pick.kind];
+      const res = (Object.keys(LAND_RES_DEF) as LandRes[])[rng.int(0, 2)];
+      const n = plot.id === 'bring' ? rng.int(4, 10) : plot.id === 'cull' ? rng.int(2, 3) : 1;
+      const v: Record<string, string> = {
+        giver, port: port.name, island: world.islands[pick.island].name, lair: def.name[0], beasts: BEAST_PLURAL[def.mix[0][0]][0], res: RES_NAME[res], n: String(n), region: REGIONS[port.region].name,
+      };
+      const steps: QuestDef['steps'] = plot.id === 'clear'
+        ? [{ type: 'lair', count: 1, island: pick.island, kind: pick.kind, text: fill(plot.steps[0][0], v) }, { type: 'visit', port: port.id, text: fill(plot.steps[1][0], v) }]
+        : plot.id === 'bring'
+        ? [{ type: 'landres', port: port.id, res, qty: n, text: fill(plot.steps[0][0], v) }]
+        : [{ type: 'lair', count: n, text: fill(plot.steps[0][0], v) }, { type: 'visit', port: port.id, text: fill(plot.steps[1][0], v) }];
+      const worth = plot.id === 'bring' ? n * LAND_RES_DEF[res].value * 1.6 : plot.id === 'cull' ? hour * 0.25 * n : hour * 0.3;
+      out.push({
+        id: `lj_${port.id}_${plot.id}`, kind: 'job', name: fill(plot.name[0], v), mentor: `${giver}, ${PROFESSIONS[profession][0]}`, port: port.id, summary: fill(plot.summary[0], v),
+        requires: { level: Math.max(1, captainLevelFor(Math.max(1, level - 1))) }, steps, reward: { xp: Math.round(hour * 0.12), silver: Math.round(worth / 10) * 10 },
+        category: 'hunt', template: `lair.${plot.id}`, portrait: giverPortrait(profession, giver),
+      });
+    }
+  }
+  return out;
+}
+
+/** Every creature job's template, English and Russian (placeholders numbered by first use), for the client. */
+export function lairQuestPatterns(): [string, string][] {
+  const out: [string, string][] = [];
+  for (const p of LAIR_PLOTS) {
+    out.push(numberedPattern(p.name[0], p.name[1]), numberedPattern(p.summary[0], p.summary[1]));
+    for (const [en, ru] of p.steps) out.push(numberedPattern(en, ru));
+  }
+  for (const [k, en] of Object.entries(RES_NAME)) out.push([en, LAND_RES_DEF[k as LandRes].name[1].replace(/^./, (c) => c.toUpperCase())]);
+  return out;
+}

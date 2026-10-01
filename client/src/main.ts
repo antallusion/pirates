@@ -17,6 +17,7 @@ import { LairChestCard } from './ui/lairchest.ts';
 import { MinigameWindow } from './ui/minigame.ts';
 import { TrekWindow } from './ui/trek.ts';
 import { EN as ISLES_EN, RU as ISLES_RU } from './lang/ui/isles.ts';
+import { EN as LAIRS_EN, RU as LAIRS_RU } from './lang/ui/lairs.ts'; // docs/18 II
 import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
 import { giverDialog } from './ui/giver.ts';
@@ -216,8 +217,8 @@ const companyScreen = new CompanyScreen((m) => net.send(m));
 const baseWindow = new BaseWindow((m) => net.send(m));
 // The recruit window of the Heroes (docs/17 H3): from a port's tavern and from the island's town.
 const recruitWindow = new RecruitWindow((m) => net.send(m));
-let recruitFrom: 'port' | 'isle' = 'port';
-function openRecruit(src: 'port' | 'isle'): void {
+let recruitFrom: 'port' | 'isle' | 'lair' = 'port';
+function openRecruit(src: 'port' | 'isle' | 'lair'): void {
   recruitFrom = src;
   recruitWindow.open(src);
   openModal('recruit');
@@ -231,6 +232,7 @@ function openPuzzle(): void {
   openModal('puzzle');
 }
 advCard.onPuzzle = openPuzzle;
+advCard.onHire = () => openRecruit('lair'); // a creature dwelling of hers (docs/18 #19)
 worldMap.onPuzzle = openPuzzle;
 baseWindow.onRecruit = () => openRecruit('isle');
 companyScreen.onBase = () => openBase();
@@ -295,6 +297,7 @@ const minigameWindow = new MinigameWindow((m) => net.send(m));
 // The walk across an island (docs/16 #21): its card waits behind an island game's window.
 const trekWindow = new TrekWindow((m) => net.send(m), () => minigameWindow.isOpen);
 const LI = dict(ISLES_EN, ISLES_RU);
+const LLAIR = dict(LAIRS_EN, LAIRS_RU); // docs/18 II
 const L18 = dict(I18_EN, I18_RU); // docs/18 III
 
 /** docs/18 #28: the land key on an island two levels or more above her ship asks first (once an island). */
@@ -709,6 +712,13 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'adv_card':
       advCard.show(m.view);
+      break;
+    case 'lair_card': // docs/18 II
+      advCard.lair(m.card);
+      break;
+    case 'lairs':
+      if (modal === 'map') worldMap.draw(state);
+      if (modal === 'base') refreshModal();
       break;
     case 'adv':
       if (modal === 'map') worldMap.draw(state);
@@ -1501,6 +1511,7 @@ function computePrompt(): string {
   else if (self.landable?.action === 'keeper') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(LI('keeper.prompt', { island: sv(self.landable.island), price: self.landable.feature }))}`);
   else if (self.landable?.action === 'escort') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('escortSign', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
+  else if (self.landable?.action === 'lair') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(LLAIR('prompt', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}${landTag(self.landable)}`);
   else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}${landTag(self.landable)}`);
   if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
   const cast = !self.landable && !mastWreck() ? castable() : null;

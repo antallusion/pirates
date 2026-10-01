@@ -39,6 +39,7 @@ import { orderRefit, refitHolds, stepRefit } from './refit.ts';
 import { ELITE_MODS, clampLevel, levelRange, npcSkill, xpForGap } from '../../../shared/src/data/shiplevel.ts';
 import { generateIslandJobs, generateQuests } from '../../../shared/src/data/questgen.ts';
 import { QUESTS_BY_ID, registerArcs, registerIslandJobs, registerJobs } from '../../../shared/src/data/quests.ts';
+import { generateLairJobs } from '../../../shared/src/data/lairquests.ts';
 import { generateArcs } from '../../../shared/src/data/questarcs.ts';
 import { registerElitePorts } from '../../../shared/src/data/elite.ts';
 import { restAfter } from '../../../shared/src/data/rested.ts';
@@ -386,7 +387,7 @@ export class Game {
     for (const r of this.db.getKv<RaisedIsland[]>('raised_islands') ?? []) raiseIsland(this.world, r);
     applyIslandNames(this); // names the Pantheon gave
     // Some three thousand jobs for the ports' people (docs/11 P4), the same on every server of this seed.
-    registerJobs(generateQuests(this.world, seed));
+    registerJobs([...generateQuests(this.world, seed), ...generateLairJobs(this.world, seed)]); // and the creature jobs (docs/18 #23)
     registerArcs(generateArcs(this.world, seed)); // five written arcs a region, three chapters each
     registerIslandJobs(generateIslandJobs(this.world, seed)); // the islands' people
     registerElitePorts(this.world.ports); // the ports' group contracts, one a day each

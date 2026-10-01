@@ -17,7 +17,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h3.ts';
 import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
-import { armyRow, unitArt, unitName, unitNote } from './army.ts';
+import { armyRow, unitArt, unitIcon, unitName, unitNote } from './army.ts';
 import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 
@@ -81,7 +81,7 @@ export class RecruitWindow {
     this.send = send;
   }
 
-  open(src: 'port' | 'isle'): void {
+  open(src: 'port' | 'isle' | 'lair'): void {
     this.sel = null;
     this.n = 0;
     this.send({ t: 'h3', action: 'dwell', src });
@@ -112,13 +112,13 @@ export class RecruitWindow {
       this.n = 0;
     }
     const men = v.army.reduce((a, s) => a + s.n, 0);
-    const head = `<div class="modal-head rc-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L(v.src === 'port' ? 'sub.port' : 'sub.isle', { place: placeName(v.place) }))} · ${esc(weekLine(v.week))}</div></div>
+    const head = `<div class="modal-head rc-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L(v.src === 'port' ? 'sub.port' : v.src === 'lair' ? 'sub.lair' : 'sub.isle', { place: placeName(v.place) }))} · ${esc(weekLine(v.week))}</div></div>
       <div class="rc-chips"><span class="ph-chip gold">${money(v.gold)}</span><span class="ph-chip">${icon('stat_crew', '', 'ico-sm')}${esc(L('room', { n: men, max: v.crewMax }))}</span><span class="ph-chip">${esc(L('slots', { n: v.army.length, max: v.slots }))}</span><span class="ph-chip" title="${esc(L('picked.tip'))}">${esc(L('picked', { n: v.pickedMax - v.picked, max: v.pickedMax }))}</span>${v.mightMax ? `<span class="ph-chip${(v.might ?? 0) >= v.mightMax ? ' warn' : ''}" title="${esc(L('might.tip'))}">${esc(L('might', { n: v.might ?? 0, max: v.mightMax }))}</span>` : ''}</div></div>`;
     const cards = v.rows.map((r) => {
       const units = r.units.map((x) => {
         const d = UNITS[x.u];
         const most = this.most(v, r, x.u);
-        return `<button class="rc-unit${this.sel === x.u ? ' sel' : ''}${d.up ? ' up' : ''}${most <= 0 ? ' off' : ''}" data-rcu="${x.u}" title="${esc(unitNote(x.u))}">${icon(unitArt(x.u), '', 'rc-face')}<b>${esc(unitName(x.u))}</b><span class="rc-per">${perLine(x.per, x.goods)}</span></button>`;
+        return `<button class="rc-unit${this.sel === x.u ? ' sel' : ''}${d.up ? ' up' : ''}${most <= 0 ? ' off' : ''}" data-rcu="${x.u}" title="${esc(unitNote(x.u))}">${unitIcon(x.u, 'rc-face')}<b>${esc(unitName(x.u))}</b><span class="rc-per">${perLine(x.per, x.goods)}</span></button>`;
       }).join('');
       return `<div class="rc-dwell${r.why ? ' off' : ''}"><div class="rc-dh">${icon(dwellArt(r), '', 'rc-art')}<div class="rc-dt"><b>${esc(dwellName(r))}</b><span class="muted">${esc(L('avail', { n: r.pool }))}${r.growth ? ` · ${esc(L('growth', { n: dec1(r.growth).replace(/[.,]0$/, '') }))}` : ''}</span>${r.why ? `<span class="bad">${esc(serverText(r.why))}</span>` : ''}</div></div><div class="rc-units">${units}</div></div>`;
     }).join('') || `<p class="muted">${esc(L('none'))}</p>`;
@@ -132,7 +132,7 @@ export class RecruitWindow {
       this.n = Math.max(0, Math.min(most, this.n || (most > 0 ? 1 : 0)));
       const price = priceOf(unit.per, unit.goods, this.n);
       const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : unit.room === 0 ? L('might.full') : most <= 0 ? L('lack') : '';
-      pick = `<div class="rc-pick"><div class="rc-ph">${icon(unitArt(u), '', 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted">${esc(L('avail', { n: r.pool }))}</span></div></div>
+      pick = `<div class="rc-pick"><div class="rc-ph">${unitIcon(u, 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted">${esc(L('avail', { n: r.pool }))}</span></div></div>
         <div class="rc-slide"><input type="range" min="0" max="${most}" value="${this.n}" data-rcn aria-label="${esc(unitName(u))}"${most <= 0 ? ' disabled' : ''}><b class="rc-count" data-rccount>${this.n}</b><button class="btn btn-small" data-rcmax${most <= 0 ? ' disabled' : ''}>${esc(L('max'))} ${most}</button></div>
         <div class="rc-cost"><span class="muted">${esc(L('cost'))}</span><span data-rccost>${costLine(price, v.gold, v.have)}</span></div>
         ${why ? `<p class="bad rc-why">${esc(why)}</p>` : ''}
@@ -145,7 +145,7 @@ export class RecruitWindow {
         const n = Math.max(0, Math.min(x.n, x.room ?? x.n));
         const p = priceOf(x.per, x.goods, n);
         const ok = n > 0 && !v.why && p.silver <= v.gold && (Object.entries(p.goods) as [GoodId, number][]).every(([g, k]) => (v.have[g] ?? 0) >= k);
-        return `<div class="rc-up">${icon(unitArt(x.u), '', 'rc-face')}<span class="rc-arrow">→</span>${icon(unitArt(x.to), '', 'rc-face up')}<div class="rc-ut"><b>${esc(unitName(x.u))} → ${esc(unitName(x.to))}</b>${n > 0 ? costLine(p, v.gold, v.have) : `<span class="muted">${esc(L('might.full'))}</span>`}</div><button class="btn btn-small" data-rctrain="${x.u}" data-n="${n}"${ok ? '' : ' disabled'}>${esc(L('train.btn', { n }))}</button></div>`;
+        return `<div class="rc-up">${unitIcon(x.u, 'rc-face')}<span class="rc-arrow">→</span>${unitIcon(x.to, 'rc-face up')}<div class="rc-ut"><b>${esc(unitName(x.u))} → ${esc(unitName(x.to))}</b>${n > 0 ? costLine(p, v.gold, v.have) : `<span class="muted">${esc(L('might.full'))}</span>`}</div><button class="btn btn-small" data-rctrain="${x.u}" data-n="${n}"${ok ? '' : ' disabled'}>${esc(L('train.btn', { n }))}</button></div>`;
       }).join('')
       : `<p class="muted">${esc(L('train.none'))}</p>`;
     const hasUp = v.rows.some((x) => x.up);

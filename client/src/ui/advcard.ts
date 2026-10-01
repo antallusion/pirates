@@ -14,12 +14,19 @@ import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h4.ts';
+import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
+import { LAIRS } from '../../../shared/src/data/lairs.ts';
+import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
+import type { LairCard } from '../../../shared/src/lairproto.ts';
+import { personName } from '../lang/names.ts';
 import { serverText } from '../lang/server.ts';
-import { strengthWord, unitArt, unitName } from './army.ts';
-import { esc, fmt, icon, money, xpBadge } from './dom.ts';
+import { strengthWord, unitArt, unitIcon, unitName } from './army.ts';
+import { esc, fmt, icon, money, portraitUrl, xpBadge } from './dom.ts';
 import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
+const LL = dict(LEN, LRU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
 
 /** A guard's painted picture: the hold-out's camp, the hulk, the wreck, the serpent of the pack. */
@@ -37,7 +44,7 @@ export function timeWords(secs: number): string {
 
 function guardBlock(g: GuardCard, own: boolean): string {
   const w = strengthWord(g.men);
-  const faces = g.units.slice(0, 7).map((u) => `<span class="army-mini" title="${esc(unitName(u))}">${icon(unitArt(u), '', 'army-face-xs')}</span>`).join('');
+  const faces = g.units.slice(0, 7).map((u) => `<span class="army-mini" title="${esc(unitName(u))}">${unitIcon(u, 'army-face-xs')}</span>`).join('');
   const what = g.at === 'mine' ? L('guard.mine') : g.at ? L('guard.of', { what: OBJS[g.at].name[ru()].toLowerCase() }) : L('guard.strait');
   const offer = g.offer === 'join' ? (g.joinN > 0 ? L('guard.joinText', { n: g.joinN }) : L('guard.joinNoRoom')) : g.offer === 'flee' ? L('guard.fleeText') : '';
   const ratio = g.ratio >= 10 ? String(Math.round(g.ratio)) : g.ratio < 0.1 ? (lang() === 'ru' ? '<0,1' : '<0.1') : g.ratio.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
@@ -52,6 +59,52 @@ function guardBlock(g: GuardCard, own: boolean): string {
       ${g.offer === 'join' && g.joinN > 0 ? `<button class="btn btn-small btn-primary" data-ag="join" data-id="${g.id}">${esc(L('guard.join', { n: g.joinN }))}</button>` : ''}
       ${g.offer ? `<button class="btn btn-small${g.offer === 'flee' || !g.joinN ? ' btn-primary' : ''}" data-ag="flee" data-id="${g.id}">${esc(L('guard.let'))}</button>` : ''}
     </div></div>`;
+}
+
+/** docs/18 II: the lair's card — HoMM3's word for its creatures, their faces and numbers, her landing party against
+ *  them, the spoils (or that she had them this week), the island's chain, the offer, "Land and fight", the dwelling. */
+function lairBlock(c: LairCard, x: boolean): string {
+  const def = LAIRS[c.kind];
+  const main = def.mix[0][0];
+  const w = strengthWord(c.men);
+  const id = UNITS[main].art;
+  const art = id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id);
+  const tint = BEAST_TINT[main];
+  const faces = c.stacks.slice(0, 7).map((s) => `<span class="army-mini" title="${esc(unitName(s.u))}">${unitIcon(s.u, 'army-face-xs')}<i class="ac-n">${s.n}</i></span>`).join('');
+  const ratio = c.ratio >= 10 ? String(Math.round(c.ratio)) : c.ratio < 0.1 ? (lang() === 'ru' ? '<0,1' : '<0.1') : c.ratio.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
+  const offer = c.offer === 'join' ? (c.joinN > 0 ? LL('joinText', { n: c.joinN }) : LL('joinNoRoom')) : c.offer === 'flee' ? LL('fleeText') : '';
+  const step = (k: number) => `<span class="ac-step${c.chain!.done[k] ? ' done' : ''}${k === c.chain!.step ? ' on' : ''}">${c.chain!.done[k] ? '✓ ' : ''}${esc(LL(`chain.${k}` as 'chain.0'))}</span>`;
+  const chain = c.chain ? `<div class="ac-chain">${esc(LL('chain'))}: ${[0, 1, 2].map(step).join('<i>→</i>')}<i>→</i><span class="ac-step${c.chain.done.every(Boolean) ? ' done' : ''}">${esc(LL('chain.chest'))}</span></div>` : '';
+  const up = c.down === undefined;
+  const d = c.dwell;
+  let dwell = '';
+  if (d) {
+    const body = d.own
+      ? `<span>${unitIcon(d.u, 'army-face-xs')} ${esc(LL('dwell.own', { n: d.pool, g: d.growth }))}</span><button class="btn btn-small btn-primary" data-ahire>${esc(LL('dwell.hire'))}</button>`
+      : `${d.owner ? `<span class="muted">${esc(LL('dwell.other', { name: personName(d.owner) }))}</span>` : `<span class="muted">${esc(LL('dwell.can'))}</span>`}${d.can ? `<button class="btn btn-small" data-al="flag" data-id="${c.id}">${esc(LL('dwell.flag'))}</button>` : d.why ? `<span class="muted">${esc(serverText(d.why))}</span>` : ''}`;
+    dwell = `<div class="ac-dwell">${body}</div>`;
+  }
+  const fight = up
+    ? `<div class="ac-guard">
+      <div class="ac-gw"><b class="ac-word">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span><span class="tg-army-faces">${faces}</span></div>
+      <div class="muted ac-gl">${esc(LL('vs', { n: c.party, r: ratio }))}</div>
+      <div class="muted ac-gl ac-pay">${esc(c.looted ? LL('looted') : LL('pay', { s: fmt(c.pay.silver), x: fmt(c.pay.xp) }))}</div>
+      ${offer ? `<div class="ac-offer">${esc(offer)}</div>` : ''}
+      ${!c.reach ? `<div class="muted ac-gl ac-come">${esc(LL('come'))}</div>` : c.why ? `<div class="muted ac-gl ac-come">${esc(serverText(c.why))}</div>` : ''}
+      <div class="ac-acts">
+        <button class="btn btn-small${c.offer ? '' : ' btn-primary'}" data-al="fight" data-id="${c.id}"${c.reach && !c.why ? '' : ' disabled'}>${icon('prof_marine', '', 'ico-sm')}${esc(LL('fight'))}</button>
+        ${c.offer === 'join' && c.joinN > 0 ? `<button class="btn btn-small btn-primary" data-al="join" data-id="${c.id}">${esc(LL('join', { n: c.joinN }))}</button>` : ''}
+        ${c.offer ? `<button class="btn btn-small${c.offer === 'flee' || !c.joinN ? ' btn-primary' : ''}" data-al="flee" data-id="${c.id}">${esc(LL('let'))}</button>` : ''}
+      </div></div>`
+    : `<div class="ac-line muted">${esc(LL('down', { t: timeWords(c.down ?? 0) }))}</div>`;
+  return `<div class="enc-card ac-card ac-gcard ac-lcard" data-lair="${c.kind}">
+    <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(w.word)} · ${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
+    <div class="ac-sub muted">${esc(LL(`role.${c.role}` as 'role.shore'))} · ${esc(placeName(c.island))}</div></div>${x ? `<button class="ac-x" data-ax title="${esc(L('close'))}">×</button>` : ''}</div>
+    <p class="ac-text muted">${esc(def.text[ru()])}</p>
+    ${chain}
+    ${fight}
+    ${dwell}
+  </div>`;
 }
 
 function statusLine(o: ObjCard): string {
@@ -122,20 +175,36 @@ export class AdvCard {
     this.el = el;
   }
 
+  private adv: AdvCardView | null = null;
+  private lc: LairCard | null = null;
+  onHire: () => void = () => {};
+
   /** Draw the card for what the server says is within reach (null: nothing). */
   show(v: AdvCardView | null): void {
-    const key = v ? JSON.stringify([lang(), v]) : '';
+    this.adv = v;
+    this.draw();
+  }
+
+  /** docs/18 II: the lair of the land's creatures within reach, on the same card (null: none). */
+  lair(c: LairCard | null): void {
+    this.lc = c;
+    this.draw();
+  }
+
+  private draw(): void {
+    const v = this.adv, lc = this.lc;
+    const key = v || lc ? JSON.stringify([lang(), v, lc]) : '';
     if (key === this.key) return;
     this.key = key;
     // Closed by hand: it stays closed until the thing or its state changes.
-    const what = v ? JSON.stringify([v.obj?.id, v.obj?.ready, v.obj?.why, v.obj?.guard?.id, v.guard?.id, v.guard?.offer, v.obj?.guard?.offer]) : '';
-    if (!v || what === this.closed) {
+    const what = v || lc ? JSON.stringify([v?.obj?.id, v?.obj?.ready, v?.obj?.why, v?.obj?.guard?.id, v?.guard?.id, v?.guard?.offer, v?.obj?.guard?.offer, lc?.id, lc?.offer, lc?.why, lc?.down !== undefined, lc?.dwell?.can, lc?.dwell?.own]) : '';
+    if ((!v && !lc) || what === this.closed) {
       this.el.classList.add('hidden');
       this.el.innerHTML = '';
-      if (!v) this.closed = '';
+      if (!v && !lc) this.closed = '';
       return;
     }
-    const o = v.obj;
+    const o = v?.obj ?? null;
     let html = '';
     if (o) {
       const def = OBJS[o.kind];
@@ -148,7 +217,7 @@ export class AdvCard {
         ${o.why && !o.guard && o.ready ? `<div class="ac-line muted ac-why">${esc(serverText(o.why))}</div>` : ''}
       </div>`;
     }
-    const gg = v.guard;
+    const gg = v?.guard ?? null;
     if (gg) {
       const art = assetUrl(GUARD_ART[gg.kind]);
       const w = strengthWord(gg.men);
@@ -158,12 +227,15 @@ export class AdvCard {
         ${guardBlock(gg, false)}
       </div>`;
     }
+    if (lc) html += lairBlock(lc, !o && !gg);
     this.el.innerHTML = html;
     this.el.classList.remove('hidden');
     this.place();
     this.el.querySelectorAll<HTMLButtonElement>('[data-av]').forEach((b) => (b.onclick = () => this.send({ t: 'h4', action: 'visit', id: b.dataset.av!, ...(b.dataset.choice ? { choice: b.dataset.choice } : {}) })));
     this.el.querySelectorAll<HTMLButtonElement>('[data-ag]').forEach((b) => (b.onclick = () => this.send({ t: 'h4', action: 'guard', id: b.dataset.id!, choice: b.dataset.ag as 'fight' })));
     this.el.querySelectorAll<HTMLButtonElement>('[data-apz]').forEach((b) => (b.onclick = () => this.onPuzzle()));
+    this.el.querySelectorAll<HTMLButtonElement>('[data-al]').forEach((b) => (b.onclick = () => this.send({ t: 'lair', action: b.dataset.al as 'fight', id: b.dataset.id! })));
+    this.el.querySelectorAll<HTMLButtonElement>('[data-ahire]').forEach((b) => (b.onclick = () => this.onHire()));
     this.el.querySelectorAll<HTMLButtonElement>('[data-ax]').forEach((b) => (b.onclick = () => {
       this.closed = what;
       this.el.classList.add('hidden');

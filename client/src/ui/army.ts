@@ -6,6 +6,8 @@ import { ARMY_WORD_MIN, UNITS, armyWord } from '../../../shared/src/data/army.ts
 import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/army.ts';
+import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import type { BeastId } from '../../../shared/src/data/bestiary.ts';
 import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -16,6 +18,14 @@ export const unitNote = (u: UnitId): string => L(`ud.${u}` as K);
 export const specialName = (s: UnitSpecial): string => L(`sp.${s}` as K);
 export const specialNote = (s: UnitSpecial): string => L(`spd.${s}` as K);
 export const unitArt = (u: UnitId): string => UNITS[u]?.art ?? 'icon.prof_sailor';
+
+/** A kind's face as an image: a creature with no picture of its own is a token of one that is, tinted and framed
+ *  (docs/18 II, BEAST_TINT). */
+export function unitIcon(u: UnitId, cls: string): string {
+  const tint = BEAST_TINT[u as BeastId];
+  const html = unitIcon(u, `${cls}${UNITS[u]?.beast ? ' beast-face' : ''}${tint ? ' beast-tok' : ''}`);
+  return tint ? html.replace('<img ', `<img style="filter:${tint}" `) : html;
+}
 
 /** HoMM3's word for an army of `men`, and the head counts it stands for. */
 export function strengthWord(men: number): { word: string; range: string } {
@@ -30,7 +40,7 @@ export function armySlot(s: ArmyStack | null, cls = ''): string {
   if (!s) return `<div class="army-slot empty ${cls}" title="${esc(L('empty'))}"></div>`;
   const d = UNITS[s.u];
   const tip = `${unitName(s.u)} ×${s.n} — ${L('tier', { n: d.tier })}${d.up ? `, ${L('up')}` : ''}. ${unitNote(s.u)}${d.specials.length ? ` ${L('specials')}: ${d.specials.map(specialName).join(', ')}.` : ''}`;
-  return `<div class="army-slot t${d.tier}${d.up ? ' up' : ''} ${cls}" title="${esc(tip)}">${icon(unitArt(s.u), '', 'army-face')}<b class="army-n">${s.n}</b><i class="army-tier">${'•'.repeat(d.tier)}</i></div>`;
+  return `<div class="army-slot t${d.tier}${d.up ? ' up' : ''} ${cls}" title="${esc(tip)}">${unitIcon(s.u, 'army-face')}<b class="army-n">${s.n}</b><i class="army-tier">${'•'.repeat(d.tier)}</i></div>`;
 }
 
 /** The row of her class's slots, filled from the strongest. */
@@ -45,7 +55,7 @@ export function armyPanel(army: readonly ArmyStack[], slots: number): string {
   const men = army.reduce((n, s) => n + s.n, 0);
   const list = army.map((s) => {
     const d = UNITS[s.u];
-    return `<div class="army-line">${icon(unitArt(s.u), '', 'army-face-sm')}<div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.up ? ` · ${esc(L('up'))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
+    return `<div class="army-line">${unitIcon(s.u, 'army-face-sm')}<div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.up ? ` · ${esc(L('up'))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
   }).join('');
   return `<div class="card army-card"><h4 class="card-h">${icon('prof_marine', '', 'ico-md')}${esc(L('title'))} <span class="muted army-sum">${esc(L('men', { n: men }))} · ${esc(L('slots', { n: army.length, slots }))}</span></h4>
     ${armyRow(army, slots)}
@@ -57,6 +67,6 @@ export function armyPanel(army: readonly ArmyStack[], slots: number): string {
 export function armyGlance(men: number, units: readonly UnitId[]): string {
   if (men <= 0) return '';
   const w = strengthWord(men);
-  const faces = units.slice(0, 7).map((u) => `<span class="army-mini${UNITS[u]?.up ? ' up' : ''}" title="${esc(unitName(u))}">${icon(unitArt(u), '', 'army-face-xs')}</span>`).join('');
+  const faces = units.slice(0, 7).map((u) => `<span class="army-mini${UNITS[u]?.up ? ' up' : ''}" title="${esc(unitName(u))}">${unitIcon(u, 'army-face-xs')}</span>`).join('');
   return `<div class="tg-army" title="${esc(L('strength'))}"><b class="tg-army-w">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span><span class="tg-army-faces">${faces}</span></div>`;
 }

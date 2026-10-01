@@ -3,6 +3,7 @@
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
 import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleproto.ts';
+import type { LairCard, LairsView } from '../../shared/src/lairproto.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
@@ -140,6 +141,9 @@ export class ClientState {
   turtles: TurtleView[] = [];
   supply: SupplyView | null = null;
   advCard: AdvCardView | null = null;
+  /** docs/18 II: the lairs of the land's creatures she has seen, her land's spoils and eggs; the lair's card. */
+  lairs: LairsView | null = null;
+  lairCard: LairCard | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
   /** One's own caravans (docs/12 P8). */
@@ -408,6 +412,12 @@ export class ClientState {
         break;
       case 'adv_card':
         this.advCard = m.view;
+        break;
+      case 'lairs':
+        this.lairs = m.view;
+        break;
+      case 'lair_card':
+        this.lairCard = m.card;
         break;
       case 'puzzle':
         this.puzzle = m.view;

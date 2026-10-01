@@ -16,13 +16,43 @@ import { INNATE, ULTIMATE, ULT_ROUND } from '../../../shared/src/data/paths.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
+import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
+import type { LairLoot } from '../../../shared/src/lairproto.ts';
+import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
+import type { LandRes } from '../../../shared/src/data/bestiary.ts';
+import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import { GOODS } from '../../../shared/src/data/goods.ts';
+import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
 import { $, esc, icon, portraitUrl } from './dom.ts';
 import { placeName } from './maps.ts';
-import { specialName, specialNote, unitArt, unitName, unitNote } from './army.ts';
+import { specialName, specialNote, unitArt, unitIcon, unitName, unitNote } from './army.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 
 const L = dict(EN, RU);
+const LL = dict(LEN, LRU);
+
+/** docs/18 II: what a lair left her, on the battle's reckoning — silver, experience, the island's resource, the land's
+ *  spoils, an artifact, a young one for the pen, the island's chest, the island cleared, the dwelling. */
+function lootBlock(l: LairLoot): string {
+  if (l.looted) return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="muted">${esc(LL('loot.looted'))}</div></div>`;
+  const ru = lang() === 'ru' ? 1 : 0;
+  const chips: string[] = [];
+  if (l.silver) chips.push(`<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.silver}</span>`);
+  if (l.xp) chips.push(`<span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.xp }))}</span>`);
+  for (const g of l.goods) chips.push(`<span class="tb-lc" title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`);
+  for (const [r, n] of Object.entries(l.res) as [LandRes | 'pearls', number][]) {
+    const name = r === 'pearls' ? GOODS.pearls.name : LAND_RES_DEF[r].name[ru];
+    chips.push(`<span class="tb-lc" title="${esc(name)}">${icon(r === 'pearls' ? 'icon.good_pearls' : `icon.${LAND_RES_DEF[r].icon}`, '', 'ico-sm')}${esc(name)} ${n}</span>`);
+  }
+  const lines: string[] = [];
+  if (l.artifact) lines.push(esc(LL('loot.art', { a: ARTIFACTS[l.artifact]?.name[ru] ?? l.artifact })));
+  if (l.egg) lines.push(`${unitIcon(l.egg, 'ico-sm')} ${esc(LL('loot.egg', { u: unitName(l.egg) }))}`);
+  if (l.chest) lines.push(esc(LL('loot.chest', { s: l.chest.silver, x: l.chest.xp })) + (l.chest.artifact ? ` · ${esc(ARTIFACTS[l.chest.artifact]?.name[ru] ?? '')}` : ''));
+  if (l.claimed) lines.push(esc(LL('loot.claimed', { island: placeName(l.claimed) })));
+  if (l.dwell) lines.push(esc(LL('loot.dwell')));
+  return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
+}
 /** An order's name and words, from the order book (docs/17 H2) — every page of it, old and new. */
 const spName = (id: TacSpellId) => (ORDERS[id]?.name ?? [id, id])[lang() === 'ru' ? 1 : 0];
 const spText = (id: TacSpellId) => (ORDERS[id]?.text ?? [id, id])[lang() === 'ru' ? 1 : 0];
@@ -39,6 +69,8 @@ interface Float {
   t0: number;
   color: string;
   big?: boolean;
+  /** Where it was meant to stand before it was lifted clear of the others over the same spot. */
+  base?: number;
 }
 interface Burst {
   id: string;
@@ -246,6 +278,18 @@ export class TacticalPanel {
     this.dom(v);
   }
 
+  /** A number or a name over a spot: lifted a line clear of those still floating over the same spot, so two moves on
+   *  one stack («Гранаты» and «Зов глубин») read one over the other, not on top of each other. */
+  private addFloat(f: Float): void {
+    const w = this.size.w || 30;
+    const line = f.big ? Math.max(18, w * 0.62) : Math.max(13, w * 0.42);
+    const base = f.y;
+    const busy = this.floats.filter((o) => !!o.big === !!f.big && Math.abs(o.x - f.x) < w * 1.1 && Math.abs((o.base ?? o.y) - base) < line * 0.8 && Math.abs(o.t0 - f.t0) < (f.big ? 1500 : 1000));
+    let k = 0;
+    while (busy.some((o) => Math.abs(o.y - (base - k * line)) < line * 0.8)) k++;
+    this.floats.push({ ...f, base, y: base - k * line });
+  }
+
   private mark(e: TacEvent, v: TacView, was: TacView): void {
     const t = performance.now();
     const hexOf = (id?: number) => (id === undefined ? undefined : (v.stacks.find((s) => s.id === id) ?? was.stacks.find((s) => s.id === id))?.hex);
@@ -253,7 +297,7 @@ export class TacticalPanel {
     const w = this.size.w || 30;
     if (e.k === 'hit' || e.k === 'shot' || e.k === 'ret') {
       const c = at(e.hex ?? hexOf(e.t));
-      if (c) this.floats.push({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#f3d7a0' });
+      if (c) this.addFloat({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#f3d7a0' });
       if (e.k === 'shot' && e.id === 'blast') {
         if (c) this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 1.4 });
       } else if (e.k === 'shot') {
@@ -263,7 +307,14 @@ export class TacticalPanel {
       } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: t, size: w * 0.8 });
     } else if (e.k === 'luck' || e.k === 'morale' || e.k === 'fear') {
       const c = at(hexOf(e.s));
-      if (c) this.floats.push({ text: e.k === 'fear' ? (e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
+      if (c) this.addFloat({ text: e.k === 'fear' ? (e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
+    } else if (e.k === 'poison' || e.k === 'regen') {
+      // docs/18 II: the poison in a stack, a creature growing back.
+      const c = at(e.hex ?? hexOf(e.s));
+      if (c) {
+        this.addFloat({ text: e.k === 'poison' ? `${L('float.poison')} −${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${L('float.regen')} +${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
+        this.bursts.push({ id: e.k === 'poison' ? 'part.smoke' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.8 });
+      }
     } else if (e.k === 'spell') {
       const c = at(e.hex ?? hexOf(e.t));
       if (e.id === 'grenades' && c) {
@@ -279,37 +330,37 @@ export class TacticalPanel {
           this.bursts.push({ id: e.id === 'call_of_the_deep' ? 'part.splash' : 'part.smoke', x: cc.x, y: cc.y, t0: t + Math.random() * 200, size: w * 1.3 });
         }
       }
-      this.floats.push({ text: spName(e.id as TacSpellId), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+      this.addFloat({ text: spName(e.id as TacSpellId), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
       // docs/18: a path page's name over every stack it fell on.
       for (const id of (e.on ?? []).slice(0, 7)) {
         const cc = at(hexOf(id));
-        if (cc) this.floats.push({ text: spName(e.id as TacSpellId), x: cc.x, y: cc.y - w * 0.62, t0: t + 100, color: '#e0b862' });
+        if (cc) this.addFloat({ text: spName(e.id as TacSpellId), x: cc.x, y: cc.y - w * 0.62, t0: t + 100, color: '#e0b862' });
       }
     } else if (e.k === 'innate' || e.k === 'ult') {
       // docs/18: the path's move — its light over the stacks it fell on, its name over the field and each of them.
       const ult = e.k === 'ult';
       const on = (e.on ?? []).map((id) => at(hexOf(id))).filter((c): c is { x: number; y: number } => !!c);
       this.pathFx.push({ path: e.id as CaptainId, ult, mine: e.side === v.you, t0: t, at: on });
-      this.floats.push({ text: moveName(e.id ?? '', ult), x: this.size.cw / 2, y: this.size.ch * (ult ? 0.3 : 0.18), t0: t, color: e.side === v.you ? YOU : FOE, big: true });
-      for (const c of on.slice(0, 7)) this.floats.push({ text: moveName(e.id ?? '', ult), x: c.x, y: c.y - w * 0.62, t0: t + 120, color: ult ? '#ffd27a' : '#e0b862' });
+      this.addFloat({ text: moveName(e.id ?? '', ult), x: this.size.cw / 2, y: this.size.ch * (ult ? 0.3 : 0.18), t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+      for (const c of on.slice(0, 7)) this.addFloat({ text: moveName(e.id ?? '', ult), x: c.x, y: c.y - w * 0.62, t0: t + 120, color: ult ? '#ffd27a' : '#e0b862' });
     } else if (e.k === 'again') {
       const c = at(hexOf(e.s));
-      if (c) this.floats.push({ text: L('float.again'), x: c.x, y: c.y - w * 0.6, t0: t, color: '#9fe0ff' });
+      if (c) this.addFloat({ text: L('float.again'), x: c.x, y: c.y - w * 0.6, t0: t, color: '#9fe0ff' });
     } else if (e.k === 'order') {
       const c = at(hexOf(e.s));
-      if (c) this.floats.push({ text: L(`o.${e.id}` as K), x: c.x, y: c.y - w * 0.6, t0: t, color: '#e0b862' });
+      if (c) this.addFloat({ text: L(`o.${e.id}` as K), x: c.x, y: c.y - w * 0.6, t0: t, color: '#e0b862' });
       // The harpooner's iron lands on her stack.
       if (e.t !== undefined) {
         const tc = at(e.hex ?? hexOf(e.t));
         if (tc) {
-          this.floats.push({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: tc.x, y: tc.y - w * 0.2, t0: t, color: '#f3d7a0' });
+          this.addFloat({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: tc.x, y: tc.y - w * 0.2, t0: t, color: '#f3d7a0' });
           this.bursts.push({ id: 'part.splinters', x: tc.x, y: tc.y, t0: t, size: w * 0.9 });
         }
       }
     } else if (e.k === 'burn') {
       const c = at(e.hex ?? hexOf(e.s));
       if (c) {
-        this.floats.push({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#ff9a4a' });
+        this.addFloat({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#ff9a4a' });
         this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'die') {
@@ -335,7 +386,8 @@ export class TacticalPanel {
       const prim = h.prim ? `<span class="tb-prims">${PRIMS.map((p) => `<span class="tb-prim" title="${esc(PRIM_NAMES[p][lang() === 'ru' ? 1 : 0])}">${icon(PRIM_ICON[p], '', 'ico-xs')}${p === 'will' ? `${h.mana ?? 0}/${h.manaMax ?? 0}` : h.prim![p]}</span>`).join('')}${h.stam !== undefined ? `<span class="tb-prim tb-stamv" title="${esc(L('stam'))}">${icon('tree_survival', '', 'ico-xs')}${h.stam}/${h.stamMax ?? 0}</span>` : ''}</span>` : '';
       // docs/18: her path, and her innate move and ultimate (spent or not) — on her side of the field too.
       const moves = h.path && h.innate ? `<span class="tb-moves">${icon(INNATE[h.path].icon, '', `ico-xs tb-mv${h.innate === 'used' ? ' off' : ''}`)}${h.ult !== 'locked' ? icon(ULTIMATE[h.path].icon, '', `ico-xs tb-mv ult${h.ult === 'used' ? ' off' : ''}`) : ''}<i>${esc(CAPTAINS[h.path].archetype)}</i></span>` : '';
-      const face = h.face ? portraitUrl(h.face) ?? url : url;
+      // A face of the art (docs/18 II: a lair's creature) or a named captain's portrait.
+      const face = h.face ? (h.face.includes('.') && !h.face.startsWith('portrait.') ? assetUrl(h.face) : portraitUrl(h.face.replace(/^portrait\./, ''))) ?? url : url;
       return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
         <div class="tb-who"><b>${esc(personName(h.name))}</b><small>${esc(placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
@@ -422,11 +474,14 @@ export class TacticalPanel {
     if (v.over) {
       const won = v.over.winner === v.you;
       const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : 'why.rounds';
+      // docs/18 II: ashore, the lair is broken, or the party thrown back or fallen back to the boats.
+      const whyText = v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
       banner.className = `tb-banner ${won ? 'won' : 'lost'}${v.result ? ' tb-result' : ''}`;
       // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
       const r = v.result;
-      const faces = (xs: { u: UnitId; n: number }[]) => xs.length ? xs.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${icon(unitArt(x.u), '', 'tb-rs-ico')}<i>−${x.n}</i></span>`).join('') : `<em class="muted">${esc(L('res.none'))}</em>`;
-      banner.innerHTML = `<b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(L(why as K))}</span>${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}`;
+      const faces = (xs: { u: UnitId; n: number }[]) => xs.length ? xs.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i>−${x.n}</i></span>`).join('') : `<em class="muted">${esc(L('res.none'))}</em>`;
+      banner.innerHTML = `<b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(whyText)}</span>${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}${r?.loot ? lootBlock(r.loot) : ''}${v.land ? `<button class="btn btn-primary tb-landclose" data-landclose>${esc(LL('close'))}</button>` : ''}`;
+      banner.querySelector<HTMLElement>('[data-landclose]')?.addEventListener('click', () => this.send({ t: 'lair', action: 'close' }));
     }
     this.hint(v);
     if (this.info !== null) this.showInfo(this.info);
@@ -456,6 +511,9 @@ export class TacticalPanel {
         return L('log.burn', { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'fear':
         return L(e.id === 'terror' ? 'log.terror' : e.id === 'dread' ? 'log.dread' : 'log.fear', { a: name(e.s) });
+      case 'poison':
+      case 'regen':
+        return L(`log.${e.k}`, { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'wait':
       case 'defend':
       case 'morale':
@@ -797,7 +855,7 @@ export class TacticalPanel {
   }
 
   private background(v: TacView): HTMLCanvasElement {
-    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}`;
+    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? ''}`;
     if (this.bg && key === this.bgKey) return this.bg;
     this.bgKey = key;
     const { cw, ch, dpr, w } = this.size;
@@ -808,6 +866,10 @@ export class TacticalPanel {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, c.width, c.height);
     this.turned(g);
+    if (v.land) {
+      this.landField(g, v);
+      return c;
+    }
     this.planks ??= [plankTexture(false), plankTexture(true)];
     const r = w / SQ3; // the hex's corner radius
     const cells = v.cells;
@@ -917,6 +979,157 @@ export class TacticalPanel {
       else if (c0 === 'H') this.hole(g, p.x, p.y, w, i);
     }
     return c;
+  }
+
+  /** docs/18 II: the battlefield ashore, drawn by hand — the island's ground (warm sand, grey shingle, black volcanic
+   *  sand, marsh mud, the wrack of a ship graveyard, the pale ash of the Choir's dead isles) speckled and rippled, the
+   *  surf along the shore with its foam, the wet sand behind it, the rocks and the palms from above. */
+  private landField(g: CanvasRenderingContext2D, v: TacView): void {
+    const { w } = this.size;
+    const r = w / SQ3;
+    const cells = v.cells;
+    const type = v.land!.type;
+    const GROUND: Record<string, [string, string, string]> = {
+      tropical: ['#d2b37a', '#c4a46a', '#e3c88f'], rocky: ['#8e877a', '#7d776b', '#a39c8d'], volcanic: ['#3e3532', '#332b29', '#54463f'],
+      swamp: ['#5f5b3c', '#4f4c31', '#6f6a47'], graveyard: ['#86735a', '#76644d', '#9a8566'], dead: ['#59616a', '#4c535b', '#6e767e'],
+    };
+    const [base, dark, light] = GROUND[type] ?? GROUND.rocky;
+    const b0 = this.lc(0), b1 = this.lc(TAC_W * TAC_H - 1);
+    const X0 = b0.x - w * 0.6, Y0 = b0.y - r * 1.1, X1 = b1.x + w * 0.6, Y1 = b1.y + r * 1.1;
+    g.fillStyle = base;
+    g.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+    // Ripples of the wind in the sand and a speckle of shell and grit (seeded by the field, the same each draw).
+    let seed = 0;
+    for (let i = 0; i < cells.length; i++) seed = (seed * 31 + cells.charCodeAt(i)) >>> 0;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+    g.strokeStyle = `${dark}`;
+    g.globalAlpha = 0.35;
+    g.lineWidth = 1;
+    for (let k = 0; k < 26; k++) {
+      const yy = Y0 + (Y1 - Y0) * rnd(), xx = X0 + (X1 - X0) * rnd(), L0 = w * (0.8 + rnd() * 1.6);
+      g.beginPath();
+      g.moveTo(xx, yy);
+      g.quadraticCurveTo(xx + L0 / 2, yy - w * 0.08, xx + L0, yy);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+    for (let k = 0; k < 220; k++) {
+      g.fillStyle = rnd() < 0.5 ? light : dark;
+      g.globalAlpha = 0.5;
+      g.fillRect(X0 + (X1 - X0) * rnd(), Y0 + (Y1 - Y0) * rnd(), 1.5, 1.5);
+    }
+    g.globalAlpha = 1;
+    // The wet sand behind the surf, the surf itself, its foam.
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i] !== 'W') continue;
+      const p = this.lc(i);
+      g.fillStyle = 'rgba(40,30,20,0.18)';
+      g.beginPath();
+      g.arc(p.x, p.y, r * 1.55, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i] !== 'W') continue;
+      const p = this.lc(i);
+      const sea = g.createRadialGradient(p.x, p.y, r * 0.2, p.x, p.y, r * 1.2);
+      sea.addColorStop(0, type === 'dead' ? '#2c4650' : type === 'swamp' ? '#33463a' : '#2e7a86');
+      sea.addColorStop(1, type === 'dead' ? '#22363e' : type === 'swamp' ? '#2a3a2f' : '#1f5a66');
+      g.fillStyle = sea;
+      this.hexPath(g, p.x, p.y, r + 0.8);
+      g.fill();
+    }
+    g.strokeStyle = 'rgba(240,248,245,0.6)';
+    g.lineWidth = Math.max(1, w * 0.04);
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i] !== 'W') continue;
+      const p = this.lc(i);
+      for (let k = 0; k < 6; k++) {
+        const n = this.across(i, k);
+        if (n !== null && cells[n] === 'W') continue;
+        if (n === null) continue;
+        const a0 = ((60 * k - 30) * Math.PI) / 180, a1 = ((60 * (k + 1) - 30) * Math.PI) / 180;
+        g.beginPath();
+        g.moveTo(p.x + r * Math.cos(a0), p.y + r * Math.sin(a0));
+        g.quadraticCurveTo(p.x + r * 1.08 * Math.cos((a0 + a1) / 2), p.y + r * 1.08 * Math.sin((a0 + a1) / 2), p.x + r * Math.cos(a1), p.y + r * Math.sin(a1));
+        g.stroke();
+      }
+    }
+    // The hex grid, faint on the sand.
+    g.strokeStyle = 'rgba(30,20,10,0.16)';
+    g.lineWidth = 1;
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i] === '#' || cells[i] === 'W') continue;
+      const p = this.lc(i);
+      this.hexPath(g, p.x, p.y, r);
+      g.stroke();
+    }
+    // What stands on it.
+    for (let i = 0; i < cells.length; i++) {
+      const p = this.lc(i);
+      if (cells[i] === 'R') this.rock(g, p.x, p.y, w, i, type);
+      else if (cells[i] === 'P') this.palm(g, p.x, p.y, w, i, type);
+      else if (cells[i] === 'K') this.crates(g, p.x, p.y, w);
+      else if (cells[i] === 'B') this.barrel(g, p.x, p.y, w);
+    }
+  }
+
+  /** A boulder from above: a ragged grey (or black) mass, lit from the north-west, its shadow to the south-east. */
+  private rock(g: CanvasRenderingContext2D, x: number, y: number, w: number, seed: number, type: string): void {
+    const n = 8;
+    const pts: [number, number][] = [];
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const rr = w * (0.3 + 0.1 * (((seed * 13 + k * 7) % 5) / 4));
+      pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.85]);
+    }
+    this.shadow(g, x, y, w * 0.38, w * 0.3);
+    const dark = type === 'volcanic' ? ['#4a403c', '#1c1715'] : type === 'dead' ? ['#7d858c', '#3a4046'] : ['#9a958a', '#4d4a43'];
+    const rg = g.createRadialGradient(x - w * 0.12, y - w * 0.12, w * 0.04, x, y, w * 0.42);
+    rg.addColorStop(0, dark[0]);
+    rg.addColorStop(1, dark[1]);
+    g.fillStyle = rg;
+    g.beginPath();
+    pts.forEach(([px, py], k) => (k ? g.lineTo(px, py) : g.moveTo(px, py)));
+    g.closePath();
+    g.fill();
+    g.strokeStyle = 'rgba(0,0,0,0.5)';
+    g.lineWidth = 1;
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.18)';
+    g.beginPath();
+    g.moveTo(pts[5][0], pts[5][1]);
+    g.lineTo(pts[6][0], pts[6][1]);
+    g.lineTo(pts[7][0], pts[7][1]);
+    g.stroke();
+  }
+
+  /** A palm from above: the trunk's foot, and its fronds radiating, each a feathered blade (a mangrove's darker). */
+  private palm(g: CanvasRenderingContext2D, x: number, y: number, w: number, seed: number, type: string): void {
+    this.shadow(g, x + w * 0.08, y + w * 0.06, w * 0.45, w * 0.32);
+    const green = type === 'swamp' ? ['#3c5a2c', '#26391b'] : ['#4f8a38', '#2f5a22'];
+    const n = 7;
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + (seed % 7) * 0.3;
+      const L0 = w * (0.48 + 0.08 * ((seed + k) % 3));
+      const ex = x + Math.cos(a) * L0, ey = y + Math.sin(a) * L0;
+      const nx = -Math.sin(a) * w * 0.09, ny = Math.cos(a) * w * 0.09;
+      g.fillStyle = k % 2 ? green[0] : green[1];
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + Math.cos(a) * L0 * 0.5 + nx, y + Math.sin(a) * L0 * 0.5 + ny, ex, ey);
+      g.quadraticCurveTo(x + Math.cos(a) * L0 * 0.5 - nx, y + Math.sin(a) * L0 * 0.5 - ny, x, y);
+      g.fill();
+      g.strokeStyle = 'rgba(20,35,12,0.6)';
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(ex, ey);
+      g.stroke();
+    }
+    g.fillStyle = '#6b4a2a';
+    g.beginPath();
+    g.arc(x, y, w * 0.08, 0, Math.PI * 2);
+    g.fill();
   }
 
   private shadow(g: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number): void {
@@ -1397,8 +1610,24 @@ export class TacticalPanel {
       g.clip();
       const iw = sp.img.naturalWidth, ih = sp.img.naturalHeight;
       const k = (R * 2.1) / Math.min(iw, ih);
+      // docs/18 II: a creature with no picture of its own is a tinted token of one that is.
+      const tint = s.unit ? BEAST_TINT[s.unit as keyof typeof BEAST_TINT] : undefined;
+      if (tint) g.filter = tint;
       g.drawImage(sp.img, x - (iw * k) / 2, y - (ih * k) / 2, iw * k, ih * k);
+      g.filter = 'none';
+      if (s.wet) {
+        // Under the surf: a veil of water over it.
+        g.fillStyle = 'rgba(40,120,140,0.38)';
+        g.fillRect(x - R, y - R * 0.1, R * 2, R * 1.2);
+      }
       g.restore();
+      if (tint) {
+        g.strokeStyle = '#a8894e';
+        g.lineWidth = Math.max(1.2, w * 0.035);
+        g.beginPath();
+        g.arc(x, y, R - Math.max(2, w * 0.05), 0, Math.PI * 2);
+        g.stroke();
+      }
     } else {
       g.fillStyle = col;
       g.font = `700 ${Math.round(R)}px Inter, system-ui, sans-serif`;
@@ -1454,6 +1683,15 @@ export class TacticalPanel {
         g.moveTo(x + Math.cos(a) * (R - 3), y + Math.sin(a) * (R - 3));
         g.lineTo(x + Math.cos(a) * (R + 5), y + Math.sin(a) * (R + 5));
         g.stroke();
+      }
+    }
+    if (s.poisoned) {
+      // Poisoned: green drops at her side.
+      g.fillStyle = 'rgba(140,220,90,0.9)';
+      for (const a of [0.4, 0.75, 1.1]) {
+        g.beginPath();
+        g.arc(x + Math.cos(a) * (R + 3), y + Math.sin(a) * (R + 3), Math.max(1.5, w * 0.045), 0, Math.PI * 2);
+        g.fill();
       }
     }
     if (s.braced) {

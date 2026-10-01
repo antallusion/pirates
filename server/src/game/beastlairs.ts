@@ -15,7 +15,6 @@ import { UNITS, armyMen, armyPower, armyWeight } from '../../../shared/src/data/
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEASTS, BEAST_IDS, BEAST_PLURAL, LAND_RES, isBeast } from '../../../shared/src/data/bestiary.ts';
 import type { BeastId, LandRes } from '../../../shared/src/data/bestiary.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { DWELL_MAX, DWELL_WEEKS, EGG_MAX, LAIRS, LAIR_ART, LAIR_KINDS, LAIR_RESPAWN, PEN_NESTS, buildLairs, chainChest, dwellGrowth, lairArmy, lairPay, landParty, penStage } from '../../../shared/src/data/lairs.ts';
 import type { Lair, LairKind } from '../../../shared/src/data/lairs.ts';
@@ -632,8 +631,7 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
       loot.egg = u;
       game.toastShip(ship, `The party brings back a young one of the ${beastsName(u)}: lay it in the pen of your island's town.`, 'gold');
     }
-    const parts = [`${pay.silver} silver`, ...loot.goods.map((x) => `${x.n} ${GOODS[x.g].name.toLowerCase()}`)];
-    game.toastShip(ship, `The ${lairName(l)} is beaten: ${parts.join(', ')} and the land's spoils.`, 'gold');
+    game.toastShip(ship, `The ${lairName(l)} is beaten: ${pay.silver} silver and the land's spoils.`, 'gold');
     // The island's chain (docs/18 #22): the shore lair, the grotto and the guardian this week — the island's chest.
     if (l.chain === 2 && lp.v[`l${l.island}s`] === w && lp.v[`l${l.island}g`] === w && lp.chest[l.island] !== w) {
       lp.chest[l.island] = w;

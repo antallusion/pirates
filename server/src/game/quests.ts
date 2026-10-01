@@ -262,7 +262,11 @@ export function boardJobs(p: Profile, port: Port, now: number, favor: BoardFavor
     }
   }
   scored.sort((a, b) => a.k - b.k);
-  return scored.slice(0, JOBS_ON_BOARD).map((x) => x.q);
+  // docs/18 #23: the port's creature jobs keep a place on the board (one of them, by the window), when she may take it.
+  const beast = scored.find((x) => x.q.id.startsWith('lj_') && (x.q.requires.level ?? 1) <= p.level + 5);
+  const rest = scored.filter((x) => !x.q.id.startsWith('lj_'));
+  if (!beast) return rest.slice(0, JOBS_ON_BOARD).map((x) => x.q);
+  return [...rest.slice(0, JOBS_ON_BOARD - 1), beast].map((x) => x.q);
 }
 
 export function acceptQuest(game: Game, s: PlayerSession, port: Port, id: string, pay?: QuestPay): string | null {

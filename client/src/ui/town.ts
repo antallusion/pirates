@@ -23,9 +23,12 @@ import type { ClientState } from '../state.ts';
 import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 import { costLine, townName } from './recruit.ts';
+import { unitIcon, unitName } from './army.ts';
+import { EN as LP_EN, RU as LP_RU } from '../lang/ui/lairs.ts';
 
 const L = dict(EN, RU);
 const B = dict(B_EN, B_RU);
+const LP = dict(LP_EN, LP_RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
 
 /** A timer's words, as the island's window writes them (its own copy: the base window reads the screen's shape). */
@@ -52,7 +55,7 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
   const pool = d.tier && t.level > 0 ? `<p class="tw-pool">${esc(L('town.pool', { n: t.pool ?? 0, g: dec1(t.growth ?? 0).replace(/[.,]0$/, '') }))}</p>` : '';
   // The guild of orders (docs/17 H5): each floor's orders as chips, learnt free while she lies off the island; why
   // she may not learn there said once, an order beyond her level on its own chip.
-  const extra = t.orders?.length ? guildBlock(t.orders) : '';
+  const extra = t.orders?.length ? guildBlock(t.orders) : t.pen ? penBlock(t.pen) : '';
   const j = t.job;
   const job = j ? `<div class="tw-job"><span class="muted">${esc(L('town.building'))}</span> <span class="btime" data-end="${j.end}">${esc(timeText((j.end - now) / 1000))}</span>
       <span class="bprog"><i data-start="${j.start}" data-stop="${j.end}" style="width:0%"></i></span>
@@ -64,6 +67,19 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
     : !j ? `<p class="muted tw-max">${esc(L('town.max'))}</p>` : '';
   return `<div class="tw-card${t.level > 0 ? ' built' : ''}${d.tier ? ' dw' : ''}" data-town="${t.id}"><div class="tw-top">${pic ? `<img class="tw-art" src="${pic}" alt="" draggable="false">` : ''}<div class="tw-id"><b>${esc(name)}</b><span class="muted">${esc(lvl)}</span></div></div>
     <p class="muted tw-text">${esc(d.text[ru()])}</p>${pool}${extra}${job}${next}</div>`;
+}
+
+/** docs/18 #20: the pen — its nests (an egg hatching, a young one growing, a grown kind breeding), and the eggs and
+ *  the young she carries, each to lay in while she lies off the island. */
+function penBlock(p: NonNullable<TownThingView['pen']>): string {
+  const nests = p.nests.length
+    ? p.nests.map((n) => `<div class="tw-nest ${n.stage}">${unitIcon(n.k, 'ico-md')}<span><b>${esc(unitName(n.k))}</b><br><span class="muted">${esc(LP(n.stage === 'egg' ? 'pen.egg' : n.stage === 'young' ? 'pen.young' : 'pen.grown', { n: n.stage === 'grown' ? n.pool : n.left }))}</span></span></div>`).join('')
+    : `<p class="muted">${esc(LP('pen.none'))}</p>`;
+  const full = p.nests.length >= p.max;
+  const eggs = p.eggs.length
+    ? `<div class="tw-eggs"><span class="muted">${esc(LP('pen.carried'))}:</span> ${p.eggs.map((k, i) => `<button class="tw-egg" data-pnest="${i}"${full ? ' disabled' : ''} title="${esc(unitName(k))}">${unitIcon(k, 'ico-sm')}${esc(LP('pen.lay'))}</button>`).join('')}${full ? `<p class="muted tw-why">${esc(LP('pen.full', { n: p.max }))}</p>` : ''}</div>`
+    : '';
+  return `<div class="tw-pen">${nests}${eggs}</div>`;
 }
 
 function guildBlock(orders: NonNullable<TownThingView['orders']>): string {
@@ -85,7 +101,7 @@ export function townTab(v: BaseView, state: ClientState, mk: { give: string; get
   const w = t.week;
   const week = `<span class="bmeta tw-week" title="${esc(WEEKS[w.kind].text[ru()])}">${esc(L('week', { n: w.n, d: w.day }))} · <b>${esc(WEEKS[w.kind].name[ru()])}</b></span>`;
   const res = t.res.map((r) => `<span class="bcost" title="${esc(GOODS[r.good].name)}">${icon(`good_${r.good}`, '', 'ico-sm')}${fmt(r.n)}</span>`).join('');
-  const dwellings = t.things.filter((x) => TOWN[x.id].tier && x.level > 0);
+  const dwellings = t.things.filter((x) => (TOWN[x.id].tier && x.level > 0) || x.pen?.nests.some((n) => n.stage === 'grown'));
   const head = `<div class="tw-head"><p class="muted">${esc(L('town.head'))}</p><div class="tw-meta">${week}
       <span class="bmeta" title="${esc(L('town.hall', { n: t.hall }))}">${icon('coin', '', 'ico-sm')}${esc(L('town.treasury', { n: fmt(t.treasury) }))}${t.hall ? ` <span class="good">${esc(L('town.hall', { n: fmt(t.hall) }))}</span>` : ''}</span>
       <span class="bmeta">${icon('build_fort', '', 'ico-sm')}${esc(L('town.growth', { n: dec1(t.growthMul).replace(/[.,]0$/, '') }))}</span>
@@ -132,6 +148,7 @@ export function bindTown(root: HTMLElement, send: (m: ClientMsg) => void, mk: { 
   root.querySelectorAll<HTMLElement>('[data-tbuild]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'build', id: el.dataset.tbuild as TownId })));
   root.querySelectorAll<HTMLElement>('[data-tlearn]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'learn', id: el.dataset.tlearn as OrderId })));
   root.querySelector<HTMLElement>('[data-trecruit]')?.addEventListener('click', () => recruit());
+  root.querySelectorAll<HTMLElement>('[data-pnest]').forEach((el) => (el.onclick = () => send({ t: 'lair', action: 'nest', egg: Number(el.dataset.pnest) })));
   const give = root.querySelector<HTMLSelectElement>('[data-mkgive]');
   const get = root.querySelector<HTMLSelectElement>('[data-mkget]');
   const n = root.querySelector<HTMLInputElement>('[data-mkn]');

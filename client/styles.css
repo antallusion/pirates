@@ -3773,3 +3773,35 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 .pb-lift .chip { font-size: 11px; }
 .tal-book { display: block; color: var(--gold); font-size: 11px; }
 .pb-tags .tag .ico-xs { width: 12px; height: 12px; margin: 0 3px 0 0; vertical-align: -2px; }
+
+/* docs/18 II — the lairs of the land's creatures: a tinted token's brass frame, the lair's card (its chain, the faces
+   with their numbers, the dwelling), the battle's spoils, the town's pen. */
+.beast-tok { box-shadow: inset 0 0 0 2px #a8894e; border-radius: 50%; }
+img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
+.army-mini { position: relative; }
+.army-mini .ac-n { position: absolute; right: -1px; bottom: -3px; font: 700 9px/1 var(--sans); color: #f4efe2; text-shadow: 0 0 2px #000, 0 0 2px #000; font-style: normal; }
+#advcard .ac-lcard .tg-army-faces { gap: 4px; }
+#advcard .ac-lcard .army-mini { width: 22px; height: 22px; overflow: visible; }
+#advcard .ac-lcard .army-mini .army-face-xs { border-radius: 50%; }
+#advcard .ac-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: var(--fog, #9aa); margin: 4px 0; }
+#advcard .ac-chain i { font-style: normal; opacity: 0.6; }
+#advcard .ac-step { padding: 1px 6px; border-radius: 10px; border: 1px solid rgba(232, 196, 106, 0.3); }
+#advcard .ac-step.on { border-color: var(--gold); color: var(--gold); }
+#advcard .ac-step.done { border-color: rgba(127, 208, 138, 0.6); color: var(--good, #7fd08a); }
+#advcard .ac-dwell { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(232, 196, 106, 0.3); font-size: 12.5px; color: var(--bone, #ddd); }
+#advcard .ac-dwell .army-face-xs { width: 18px; height: 18px; vertical-align: middle; border-radius: 50%; }
+.tb-loot { margin-top: 8px; text-align: left; display: flex; flex-direction: column; gap: 4px; }
+.tb-loot small { color: var(--fog); font-size: 11px; }
+.tb-lchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tb-lc { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px 2px 4px; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 10px; color: #f0e2bd; font-size: 12px; background: rgba(30, 24, 14, 0.6); }
+.tb-lline { color: var(--gold); font-size: 12.5px; display: flex; align-items: center; gap: 5px; }
+.tb-lline .ico-sm { border-radius: 50%; }
+.tb-landclose { margin-top: 10px; pointer-events: auto; }
+.tw-pen { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.tw-nest { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.tw-nest .ico-md { border-radius: 50%; }
+.tw-nest.grown b { color: var(--good, #7fd08a); }
+.tw-eggs { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 12px; }
+.tw-egg { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 3px; border: 1px solid rgba(232, 196, 106, 0.45); border-radius: 12px; background: rgba(20, 16, 10, 0.6); color: var(--text, #e8dcc0); font: inherit; font-size: 11.5px; cursor: pointer; }
+.tw-egg[disabled] { opacity: 0.5; cursor: default; }
+.tw-egg .ico-sm { border-radius: 50%; }
