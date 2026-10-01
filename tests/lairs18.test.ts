@@ -80,7 +80,7 @@ test('the bestiary: fourteen kinds over the seven tiers, two a tier, every speci
     assert.ok(ARMY_EN[`u.${b}` as keyof typeof ARMY_EN] && ARMY_RU[`u.${b}` as keyof typeof ARMY_RU], `${b} named`);
   }
   // The stand-ins are tinted tokens (the journal lists them).
-  assert.deepEqual(Object.keys(BEAST_TINT).sort(), ['cultist', 'hermit', 'marsh_serpent', 'reef_shark', 'rock_turtle', 'surf_drowned']);
+  assert.deepEqual(Object.keys(BEAST_TINT).sort(), ['cultist', 'hermit', 'marsh_serpent', 'mermaid', 'reef_shark', 'rock_turtle', 'surf_drowned', 'white_whale']); // docs/18 IV: the mermaid, the white whale
   // The might climbs with the tier.
   const might = (t: number) => BEAST_IDS.filter((b) => BEASTS[b].tier === t).reduce((a, b) => a + armyPower([{ u: b, n: 1 }]), 0) / 2;
   for (let t = 2; t <= 7; t++) assert.ok(might(t) > might(t - 1), `tier ${t}: ${might(t)} over ${might(t - 1)}`);

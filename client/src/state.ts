@@ -4,6 +4,7 @@
 
 import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleproto.ts';
 import type { LairCard, LairsView } from '../../shared/src/lairproto.ts';
+import type { DriftCard, DriftMark, TameView } from '../../shared/src/driftproto.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
@@ -144,6 +145,11 @@ export class ClientState {
   /** docs/18 II: the lairs of the land's creatures she has seen, her land's spoils and eggs; the lair's card. */
   lairs: LairsView | null = null;
   lairCard: LairCard | null = null;
+  /** docs/18 IV: the drifts in sight (and when they came: their clocks run from it), the drift's card, the creatures' window. */
+  drifts: DriftMark[] = [];
+  driftsAt = 0;
+  driftCard: DriftCard | null = null;
+  tame: TameView | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
   /** One's own caravans (docs/12 P8). */
@@ -418,6 +424,16 @@ export class ClientState {
         break;
       case 'lair_card':
         this.lairCard = m.card;
+        break;
+      case 'drifts':
+        this.drifts = m.list;
+        this.driftsAt = this.estServerTime();
+        break;
+      case 'drift_card':
+        this.driftCard = m.card;
+        break;
+      case 'tame':
+        this.tame = m.view;
         break;
       case 'puzzle':
         this.puzzle = m.view;

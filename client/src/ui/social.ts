@@ -2,6 +2,10 @@
 // the week in the HUD, the journal and the chart (#32), the trade window alongside (#33), the guild's shipyard card
 // (#34) and the signal flags (#35).
 
+import { UNITS } from '../../../shared/src/data/army.ts';
+import type { UnitId } from '../../../shared/src/data/army.ts';
+import { unitIcon, unitName } from './army.ts';
+import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { GUILD_PROJECTS, GUILD_PROJECT_DEFS, LFG_GOALS, LFG_GOAL_DEFS, SIGNALS, SIGNAL_DEFS, SIGNAL_TTL, TRADE_ITEMS_MAX, WORLD_GOAL_DEFS, parseLfgTag } from '../../../shared/src/data/social.ts';
 import type { LfgGoal, SignalKind } from '../../../shared/src/data/social.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -21,6 +25,7 @@ import { coloured, itemCardHtml, itemIcon } from './gear.ts';
 import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
+const DL = dict(DEN, DRU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
 const goodName = (g: GoodId) => serverText(GOODS[g]?.name ?? g);
 
@@ -171,6 +176,9 @@ export function worldGoalPlate(state: ClientState): { key: string; html: string 
 
 const listCargo = (c: Cargo) => Object.entries(c).filter(([, n]) => (n ?? 0) > 0).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(goodName(g as GoodId))}</span><b>×${n}</b></div>`).join('');
 
+/** docs/18 #42: the creatures on the table, by kind. */
+const listBeasts = (b: { u: UnitId; n: number }[] | undefined) => (b ?? []).map((x) => `<div class="barter-row">${unitIcon(x.u, 'item-ico')}<span>${esc(unitName(x.u))}</span><b>×${x.n}</b></div>`).join('');
+
 function gearChip(it: Item, pick: boolean, on: boolean): string {
   const inner = `${itemIcon(it, itemSlot(it), 'ico-sm')}${coloured(it)}<span class="muted">${it.ilvl}</span>${it.bound ? `<span class="tr-bound">${esc(L('tr_bound'))}</span>` : ''}`;
   return pick ? `<button type="button" class="tr-gear${on ? ' on' : ''}" data-tr-item="${it.uid}" aria-pressed="${on}"${it.bound ? ' disabled' : ''}>${inner}</button>` : `<details class="tr-gear-in"><summary class="tr-gear on">${inner}</summary>${itemCardHtml(it)}</details>`;
@@ -201,14 +209,17 @@ export function renderTrade(root: HTMLElement, state: ClientState, send: (m: Cli
   root.dataset.trKey = key;
   // The pieces picked but not yet put on the table survive a fresh table.
   const picked = new Set([...root.querySelectorAll<HTMLElement>('[data-tr-item].on')].map((el) => Number(el.dataset.trItem)));
+  const beasts = (state.self?.company.army ?? []).filter((x) => UNITS[x.u]?.beast && !UNITS[x.u].legend);
+  const beastRows = beasts.length ? `<div class="tr-sub">${esc(DL('barter'))}</div>${beasts.map((x) => `<div class="barter-row">${unitIcon(x.u, 'item-ico')}<span>${esc(unitName(x.u))} <span class="muted">(${x.n})</span></span><input class="field" type="number" min="0" max="${x.n}" value="${(me.beasts ?? []).find((y) => y.u === x.u)?.n ?? 0}" data-give-beast="${x.u}"></div>`).join('')}` : '';
   const mineBody = me.locked
-    ? `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><b>${money(me.gold)}</b></div>${listCargo(me.cargo)}${(me.items ?? []).map((it) => gearChip(it, false, true)).join('')}${!me.gold && !Object.keys(me.cargo).length && !(me.items ?? []).length ? `<p class="muted">${esc(L('tr_nothing'))}</p>` : ''}`
+    ? `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><b>${money(me.gold)}</b></div>${listCargo(me.cargo)}${listBeasts(me.beasts)}${(me.items ?? []).map((it) => gearChip(it, false, true)).join('')}${!me.gold && !Object.keys(me.cargo).length && !(me.items ?? []).length ? `<p class="muted">${esc(L('tr_nothing'))}</p>` : ''}`
     : `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><input id="b-gold" class="field" type="number" min="0" value="${me.gold}"></div>
       ${Object.entries(hold).filter(([, n]) => (n ?? 0) >= 1).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(goodName(g as GoodId))} <span class="muted">(${fmt(Math.floor(n ?? 0))})</span></span><input class="field" type="number" min="0" max="${Math.floor(n ?? 0)}" value="${me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
+      ${beastRows}
       <div class="tr-sub">${esc(L('tr_gear', { n: TRADE_ITEMS_MAX }))}</div>
       <div class="tr-gears">${stash.length ? stash.map((it) => gearChip(it, true, offered.has(it.uid) || picked.has(it.uid))).join('') : `<p class="muted">${esc(L('tr_no_gear'))}</p>`}</div>
       <button class="btn btn-block" id="b-offer">${esc(L('tr_set'))}</button>`;
-  const theirs = `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><b>${money(them.gold)}</b></div>${listCargo(them.cargo)}${(them.items ?? []).map((it) => gearChip(it, false, true)).join('')}${!them.gold && !Object.keys(them.cargo).length && !(them.items ?? []).length ? `<p class="muted">${esc(L('tr_nothing'))}</p>` : ''}`;
+  const theirs = `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><b>${money(them.gold)}</b></div>${listCargo(them.cargo)}${listBeasts(them.beasts)}${(them.items ?? []).map((it) => gearChip(it, false, true)).join('')}${!them.gold && !Object.keys(them.cargo).length && !(them.items ?? []).length && !(them.beasts ?? []).length ? `<p class="muted">${esc(L('tr_nothing'))}</p>` : ''}`;
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('tr_title', { name: them.name }))}</h2><div class="sub tr-where${far ? ' tr-far' : ''}">${esc(subText)}</div></div></div>
     <div class="modal-body tr-body"><div class="cols tr-cols"><div>
       <h3 class="title-sm tr-h">${esc(L('tr_you'))} ${state2(me)}</h3>
@@ -227,7 +238,12 @@ export function renderTrade(root: HTMLElement, state: ClientState, send: (m: Cli
       if (n > 0) cargo[el.dataset.give as GoodId] = n;
     });
     const items = [...root.querySelectorAll<HTMLElement>('[data-tr-item].on')].map((el) => Number(el.dataset.trItem));
-    send({ t: 'barter', action: 'offer', gold: Math.floor(Number(root.querySelector<HTMLInputElement>('#b-gold')?.value) || 0), cargo, items });
+    const kin: { u: UnitId; n: number }[] = [];
+    root.querySelectorAll<HTMLInputElement>('[data-give-beast]').forEach((el) => {
+      const n = Math.floor(Number(el.value));
+      if (n > 0) kin.push({ u: el.dataset.giveBeast as UnitId, n });
+    });
+    send({ t: 'barter', action: 'offer', gold: Math.floor(Number(root.querySelector<HTMLInputElement>('#b-gold')?.value) || 0), cargo, items, ...(kin.length ? { beasts: kin } : {}) });
   };
   root.querySelectorAll<HTMLElement>('[data-tr-item]').forEach((el) => (el.onclick = () => {
     const on = !el.classList.contains('on');

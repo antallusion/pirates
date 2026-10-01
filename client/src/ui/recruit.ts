@@ -3,6 +3,8 @@
 // the store, the hammocks and the stacks allow, "Max", the cost line, "Recruit". Under it the stacks aboard that the
 // upgraded dwellings here train up for the difference in price. The army's row of slots on top, as it will stand.
 
+import { hasTamer } from '../../../shared/src/data/drifts.ts';
+import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -22,6 +24,7 @@ import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
+const DL = dict(DEN, DRU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
 
 /** A town building's name at a level (its first before it stands). */
@@ -64,6 +67,12 @@ export function costLine(p: Price, gold: number, have: Partial<Record<GoodId, nu
 export function perLine(per: number, goods: Partial<Record<GoodId, number>>): string {
   const g = (Object.entries(goods) as [GoodId, number][]).filter(([, n]) => n > 0).map(([k, n]) => `<span class="bcost" title="${esc(GOODS[k].name)}">${icon(`good_${k}`, '', 'ico-sm')}${esc(String(Math.round(n * 100) / 100).replace('.', lang() === 'ru' ? ',' : '.'))}</span>`).join('');
   return `<span class="bcosts"><span class="bcost">${money(per)}</span>${g}</span>`;
+}
+
+/** docs/18 #42: a port's tamer on the tavern's page — she buys tamed creatures and sells her own. */
+export function tamerCard(port: PortPublic): string {
+  if (!hasTamer(port)) return '';
+  return `<div class="card rc-card"><h4 class="card-h">${icon('build_kennel', '', 'ico-md')}${esc(DL('tamer.title', { port: placeName(port.name) }))}</h4><p class="muted">${esc(DL('tamer.card'))}</p><button class="btn btn-small btn-primary" data-tame>${esc(DL('tamer.btn'))}</button></div>`;
 }
 
 /** The port's dwellings on the tavern's page (docs/17 H3): what grows here, and the recruit window. */

@@ -2,6 +2,7 @@
 // corner, the upgraded kinds in a gold frame, the empty slots of her class left open — the names and specials of the
 // kinds of men, and the word for an army seen from afar («Горстка… Тьма»).
 
+import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { ARMY_WORD_MIN, UNITS, armyWord } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import { dict } from '../i18n.ts';
@@ -11,6 +12,7 @@ import type { BeastId } from '../../../shared/src/data/bestiary.ts';
 import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
+const DL = dict(DEN, DRU);
 type K = keyof typeof EN;
 
 export const unitName = (u: UnitId): string => L(`u.${u}` as K);
@@ -57,7 +59,9 @@ export function armyPanel(army: readonly ArmyStack[], slots: number): string {
     const d = UNITS[s.u];
     return `<div class="army-line">${unitIcon(s.u, 'army-face-sm')}<div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.up ? ` · ${esc(L('up'))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
   }).join('');
-  return `<div class="card army-card"><h4 class="card-h">${icon('prof_marine', '', 'ico-md')}${esc(L('title'))} <span class="muted army-sum">${esc(L('men', { n: men }))} · ${esc(L('slots', { n: army.length, slots }))}</span></h4>
+  // docs/18 IV: the creatures aboard — their own window (food, ranks, the pen, the tamer).
+  const beasts = army.some((x) => UNITS[x.u]?.beast) ? `<button class="btn btn-small army-tame" data-tame>${icon('build_kennel', '', 'ico-sm')}${esc(DL('open'))}</button>` : '';
+  return `<div class="card army-card"><h4 class="card-h">${icon('prof_marine', '', 'ico-md')}${esc(L('title'))} <span class="muted army-sum">${esc(L('men', { n: men }))} · ${esc(L('slots', { n: army.length, slots }))}</span>${beasts}</h4>
     ${armyRow(army, slots)}
     <div class="army-list">${list}</div>
     <p class="muted army-hint">${esc(L('hint'))}</p></div>`;

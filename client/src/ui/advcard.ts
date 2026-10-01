@@ -19,6 +19,9 @@ import { LAIRS } from '../../../shared/src/data/lairs.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { LairCard } from '../../../shared/src/lairproto.ts';
+import type { DriftCard } from '../../../shared/src/driftproto.ts';
+import { DRIFTS, MINI_BAND, MINI_HIT, MINI_MISS, MINI_TAPS, needleAt } from '../../../shared/src/data/drifts.ts';
+import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { personName } from '../lang/names.ts';
 import { serverText } from '../lang/server.ts';
 import { strengthWord, unitArt, unitIcon, unitName } from './army.ts';
@@ -27,6 +30,7 @@ import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
 const LL = dict(LEN, LRU);
+const DL = dict(DEN, DRU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
 
 /** A guard's painted picture: the hold-out's camp, the hulk, the wreck, the serpent of the pack. */
@@ -107,6 +111,47 @@ function lairBlock(c: LairCard, x: boolean): string {
   </div>`;
 }
 
+/** docs/18 IV: a drift's card — the creatures and their number, its clock, the ways to save them without a fight
+ *  (each with its chance and its cost), the mini-game once a way is chosen, what saving them gives, "Fight them". */
+function driftBlock(c: DriftCard, x: boolean): string {
+  const def = DRIFTS[c.kind];
+  const id = UNITS[c.u].art;
+  const art = id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id);
+  const tint = BEAST_TINT[c.u];
+  const pct = (p: number) => `${Math.round(p * 100)}%`;
+  const giftText = DL('gift', { n: c.gift.n, good: GOODS[c.gift.good].name.toLowerCase(), s: fmt(c.gift.silver) });
+  const out = !c.joins ? DL('joins.deep', { gift: giftText }) : c.room >= c.n ? DL('joins', { n: c.n }) : c.room + c.pen > 0 ? DL('joins.pen', { n: c.room, m: Math.min(c.pen, c.n - c.room) }) : DL('joins.none', { gift: giftText });
+  let body = '';
+  if (c.mini) {
+    const m = c.mini;
+    const hits = m.taps.filter(Boolean).length, misses = m.taps.length - hits;
+    const now = Math.max(0.03, Math.min(0.97, m.chance + hits * MINI_HIT - misses * MINI_MISS));
+    const taps = Array.from({ length: MINI_TAPS }, (_, i) => `<i class="dm-tap${i < m.taps.length ? (m.taps[i] ? ' hit' : ' miss') : ''}" title="${esc(i < m.taps.length ? DL(m.taps[i] ? 'mini.hit' : 'mini.miss') : '')}"></i>`).join('');
+    body = `<div class="dm-mini" data-t0="${m.t0}" data-ph="${m.phase}">
+      <div class="dm-h">${esc(DL(`way.${m.way}` as 'way.cut'))} · ${esc(DL('mini.title', { k: Math.min(MINI_TAPS, m.taps.length + 1), n: MINI_TAPS }))}</div>
+      <div class="dm-bar"><span class="dm-band" style="left:${(50 - MINI_BAND * 50).toFixed(1)}%;width:${(MINI_BAND * 100).toFixed(1)}%"></span><span class="dm-needle"></span></div>
+      <div class="dm-row"><span class="dm-taps">${taps}</span><span class="muted">${esc(DL('mini.chance', { p: Math.round(now * 100) }))}</span></div>
+      <div class="ac-acts"><button class="btn btn-primary dm-go" data-dtap="${c.id}">${esc(DL('mini.tap'))}</button><button class="btn btn-small" data-droll="${c.id}">${esc(DL('mini.roll'))}</button></div></div>`;
+  } else {
+    const ways = c.ways.map((w) => {
+      const cost = w.cost ? ` <span class="bcost">${icon(`good_${w.cost.good}`, '', 'ico-sm')}${w.cost.n}</span>` : '';
+      const dis = !c.reach || !!c.why || !!w.why || w.chance <= 0;
+      return `<button class="btn btn-small dw-way${dis ? '' : ' btn-primary'}" data-dway="${w.way}" data-id="${c.id}"${dis ? ' disabled' : ''} title="${esc(w.why ? serverText(w.why) : '')}"><b>${esc(DL(`way.${w.way}` as 'way.cut'))}</b> <span class="dw-p">${pct(w.chance)}</span>${cost}</button>`;
+    }).join('');
+    body = `<div class="ac-line muted">${esc(DL('ways'))}</div><div class="ac-acts dw-ways">${ways}</div>`;
+  }
+  const why = !c.reach ? DL('come') : c.why ? serverText(c.why) : '';
+  return `<div class="enc-card ac-card ac-gcard ac-dcard${c.legend ? ' legend' : ''}" data-drift="${c.kind}">
+    <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
+    <div class="ac-sub muted">${c.legend ? `<b class="dw-leg">${esc(DL('legend'))}</b> · ` : ''}<span class="army-mini">${unitIcon(c.u, 'army-face-xs')}<i class="ac-n">${c.n}</i></span> ${esc(unitName(c.u))} · ${esc(DL('left', { t: timeWords(c.left) }))}</div></div>${x ? `<button class="ac-x" data-ax title="${esc(L('close'))}">×</button>` : ''}</div>
+    <p class="ac-text muted">${esc(def.text[ru()])}</p>
+    ${why ? `<div class="muted ac-gl ac-come">${esc(why)}</div>` : ''}
+    ${body}
+    <div class="ac-line dw-out">${esc(out)}</div>
+    ${c.mini ? '' : `<div class="ac-acts"><button class="btn btn-small" data-dfight="${c.id}"${c.fightWhy ? ' disabled' : ''}>${icon('prof_marine', '', 'ico-sm')}${esc(DL('fight'))}</button></div>`}
+  </div>`;
+}
+
 function statusLine(o: ObjCard): string {
   const rule = L(`rule.${o.rule}` as 'rule.once');
   if (o.ready) return rule;
@@ -177,6 +222,10 @@ export class AdvCard {
 
   private adv: AdvCardView | null = null;
   private lc: LairCard | null = null;
+  private dc: DriftCard | null = null;
+  private raf = 0;
+  /** The server's world time as the client reckons it (the mini-game's needle). */
+  now: () => number = () => 0;
   onHire: () => void = () => {};
 
   /** Draw the card for what the server says is within reach (null: nothing). */
@@ -191,17 +240,24 @@ export class AdvCard {
     this.draw();
   }
 
+  /** docs/18 IV: the drift within reach, on the same card (null: none). */
+  drift(c: DriftCard | null): void {
+    this.dc = c;
+    this.draw();
+  }
+
   private draw(): void {
-    const v = this.adv, lc = this.lc;
-    const key = v || lc ? JSON.stringify([lang(), v, lc]) : '';
+    const v = this.adv, lc = this.lc, dc = this.dc;
+    const key = v || lc || dc ? JSON.stringify([lang(), v, lc, dc ? { ...dc, left: Math.round(dc.left / 30) } : null]) : '';
     if (key === this.key) return;
     this.key = key;
     // Closed by hand: it stays closed until the thing or its state changes.
-    const what = v || lc ? JSON.stringify([v?.obj?.id, v?.obj?.ready, v?.obj?.why, v?.obj?.guard?.id, v?.guard?.id, v?.guard?.offer, v?.obj?.guard?.offer, lc?.id, lc?.offer, lc?.why, lc?.down !== undefined, lc?.dwell?.can, lc?.dwell?.own]) : '';
-    if ((!v && !lc) || what === this.closed) {
+    const what = v || lc || dc ? JSON.stringify([v?.obj?.id, v?.obj?.ready, v?.obj?.why, v?.obj?.guard?.id, v?.guard?.id, v?.guard?.offer, v?.obj?.guard?.offer, lc?.id, lc?.offer, lc?.why, lc?.down !== undefined, lc?.dwell?.can, lc?.dwell?.own, dc?.id, dc?.reach, !!dc?.mini]) : '';
+    if ((!v && !lc && !dc) || what === this.closed) {
       this.el.classList.add('hidden');
       this.el.innerHTML = '';
-      if (!v && !lc) this.closed = '';
+      if (!v && !lc && !dc) this.closed = '';
+      cancelAnimationFrame(this.raf);
       return;
     }
     const o = v?.obj ?? null;
@@ -228,6 +284,7 @@ export class AdvCard {
       </div>`;
     }
     if (lc) html += lairBlock(lc, !o && !gg);
+    if (dc) html += driftBlock(dc, !o && !gg && !lc);
     this.el.innerHTML = html;
     this.el.classList.remove('hidden');
     this.place();
@@ -236,9 +293,34 @@ export class AdvCard {
     this.el.querySelectorAll<HTMLButtonElement>('[data-apz]').forEach((b) => (b.onclick = () => this.onPuzzle()));
     this.el.querySelectorAll<HTMLButtonElement>('[data-al]').forEach((b) => (b.onclick = () => this.send({ t: 'lair', action: b.dataset.al as 'fight', id: b.dataset.id! })));
     this.el.querySelectorAll<HTMLButtonElement>('[data-ahire]').forEach((b) => (b.onclick = () => this.onHire()));
+    // docs/18 IV: the drift's ways, the mini-game's taps, the fight.
+    this.el.querySelectorAll<HTMLButtonElement>('[data-dway]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'way', id: Number(b.dataset.id), way: b.dataset.dway as 'cut' })));
+    this.el.querySelectorAll<HTMLButtonElement>('[data-dtap]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'tap', id: Number(b.dataset.dtap), at: this.now() })));
+    this.el.querySelectorAll<HTMLButtonElement>('[data-droll]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'roll', id: Number(b.dataset.droll) })));
+    this.el.querySelectorAll<HTMLButtonElement>('[data-dfight]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'fight', id: Number(b.dataset.dfight) })));
+    this.swing();
     this.el.querySelectorAll<HTMLButtonElement>('[data-ax]').forEach((b) => (b.onclick = () => {
+      cancelAnimationFrame(this.raf);
       this.closed = what;
       this.el.classList.add('hidden');
     }));
+  }
+
+  /** The mini-game's needle swinging across its bar (as the server reckons it, from its start and phase). */
+  private swing(): void {
+    cancelAnimationFrame(this.raf);
+    const box = this.el.querySelector<HTMLElement>('.dm-mini');
+    const needle = box?.querySelector<HTMLElement>('.dm-needle');
+    if (!box || !needle) return;
+    const t0 = Number(box.dataset.t0), ph = Number(box.dataset.ph);
+    const tick = () => {
+      if (!needle.isConnected) return;
+      const t = this.now() - t0;
+      const at = t < 0 ? 0 : needleAt(t, ph);
+      needle.style.left = `${at * 100}%`;
+      needle.classList.toggle('in', t >= 0 && Math.abs(at - 0.5) <= MINI_BAND / 2);
+      this.raf = requestAnimationFrame(tick);
+    };
+    tick();
   }
 }

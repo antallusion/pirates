@@ -12,6 +12,7 @@ import { TURTLE_DOWN, TURTLE_NAMES, TURTLE_UP, turtlePos } from '../../../shared
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/isles18.ts';
 import { turtleDef } from '../render/isletype.ts';
+import { driftTip } from '../render/drifts.ts';
 import type { ClientState } from '../state.ts';
 import { esc } from './dom.ts';
 import { placeName } from './maps.ts';
@@ -107,6 +108,8 @@ export function wireMiniTip(canvas: HTMLCanvasElement, view: () => MiniView | nu
 export function tipAt(state: ClientState, x: number, y: number, slack: number): string | null {
   const now = state.estServerTime();
   const mine = state.self ? shipLevelOf(state.self.loadout) : 1;
+  const drift = driftTip(state, x, y, slack); // docs/18 #34
+  if (drift) return drift;
   for (const t of state.turtles) {
     const p = turtlePos(turtleDef(t), now);
     if (Math.hypot(p.x - x, p.y - y) > t.r + slack) continue;

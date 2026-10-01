@@ -20,6 +20,9 @@ import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
 import type { LairLoot } from '../../../shared/src/lairproto.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
 import type { LairKind } from '../../../shared/src/data/lairs.ts';
+import { DRIFTS, isDriftKind } from '../../../shared/src/data/drifts.ts';
+import type { CaptureOffer } from '../../../shared/src/driftproto.ts';
+import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
@@ -33,10 +36,22 @@ import type { UnitId } from '../../../shared/src/data/army.ts';
 
 const L = dict(EN, RU);
 const LL = dict(LEN, LRU);
+const DL = dict(DEN, DRU);
+
+/** docs/18 #36: the beaten who would follow her — how many, and her choice: aboard, home to the pen, let go. */
+function captureBlock(c: CaptureOffer): string {
+  const head = `<small>${esc(DL('cap.title'))}</small><div class="tb-lline">${unitIcon(c.u, 'ico-sm')} ${esc(unitName(c.u))} ×${c.n} — ${esc(DL('cap.text', { n: c.n, p: Math.round(c.share * 100) }))}</div>`;
+  if (c.done) return `<div class="tb-loot tb-cap">${head}<div class="tb-lline good">${esc(DL(`cap.done.${c.done}` as 'cap.done.take'))}</div></div>`;
+  const take = c.room > 0 ? `<button class="btn btn-small btn-primary" data-cap="take">${esc(DL('cap.take', { n: Math.min(c.n, c.room) }))}</button>` : '';
+  const pen = c.pen > 0 ? `<button class="btn btn-small" data-cap="pen">${esc(DL('cap.pen', { n: Math.min(c.n, c.pen) }))}</button>` : '';
+  return `<div class="tb-loot tb-cap">${head}${!take && !pen ? `<div class="tb-lline muted">${esc(DL('cap.noroom'))}</div>` : ''}<div class="tb-capacts">${take}${pen}<button class="btn btn-small" data-cap="free">${esc(DL('cap.free'))}</button></div></div>`;
+}
 
 /** docs/18 II: what a lair left her, on the battle's reckoning — silver, experience, the island's resource, the land's
  *  spoils, an artifact, a young one for the pen, the island's chest, the island cleared, the dwelling. */
 function lootBlock(l: LairLoot): string {
+  // docs/18 IV: a drift beaten at sea — its silver and lesson, and the beaten who would follow.
+  if (l.drift) return `<div class="tb-loot"><small>${esc(DL('loot.drift', { s: l.drift.silver, x: l.drift.xp }))}</small><div class="tb-lchips"><span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.drift.silver}</span><span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.drift.xp }))}</span></div></div>${l.capture ? captureBlock(l.capture) : ''}`;
   if (l.looted) return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="muted">${esc(LL('loot.looted'))}</div></div>`;
   const ru = lang() === 'ru' ? 1 : 0;
   const chips: string[] = [];
@@ -53,7 +68,7 @@ function lootBlock(l: LairLoot): string {
   if (l.chest) lines.push(esc(LL('loot.chest', { s: l.chest.silver, x: l.chest.xp })) + (l.chest.artifact ? ` · ${esc(ARTIFACTS[l.chest.artifact]?.name[ru] ?? '')}` : ''));
   if (l.claimed) lines.push(esc(LL('loot.claimed', { island: placeName(l.claimed) })));
   if (l.dwell) lines.push(esc(LL('loot.dwell')));
-  return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
+  return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>${l.capture ? captureBlock(l.capture) : ''}`;
 }
 /** An order's name and words, from the order book (docs/17 H2) — every page of it, old and new. */
 const spName = (id: TacSpellId) => (ORDERS[id]?.name ?? [id, id])[lang() === 'ru' ? 1 : 0];
@@ -391,7 +406,7 @@ export class TacticalPanel {
       // A face of the art (docs/18 II: a lair's creature) or a named captain's portrait.
       const face = h.face ? (h.face.includes('.') && !h.face.startsWith('portrait.') ? assetUrl(h.face) : portraitUrl(h.face.replace(/^portrait\./, ''))) ?? url : url;
       return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? h.name) : personName(h.name))}</b><small>${esc(placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? (isDriftKind(v.land.lair) ? DRIFTS[v.land.lair].name[lang() === 'ru' ? 1 : 0] : h.name)) : personName(h.name))}</b><small>${esc(v.land && !mine && isDriftKind(v.land.lair) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
@@ -477,13 +492,14 @@ export class TacticalPanel {
       const won = v.over.winner === v.you;
       const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : 'why.rounds';
       // docs/18 II: ashore, the lair is broken, or the party thrown back or fallen back to the boats.
-      const whyText = v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
+      const whyText = v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
       banner.className = `tb-banner ${won ? 'won' : 'lost'}${v.result ? ' tb-result' : ''}`;
       // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
       const r = v.result;
       const faces = (xs: { u: UnitId; n: number }[]) => xs.length ? xs.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i>−${x.n}</i></span>`).join('') : `<em class="muted">${esc(L('res.none'))}</em>`;
       banner.innerHTML = `<b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(whyText)}</span>${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}${r?.loot ? lootBlock(r.loot) : ''}${v.land ? `<button class="btn btn-primary tb-landclose" data-landclose>${esc(LL('close'))}</button>` : ''}`;
       banner.querySelector<HTMLElement>('[data-landclose]')?.addEventListener('click', () => this.send({ t: 'lair', action: 'close' }));
+      banner.querySelectorAll<HTMLElement>('[data-cap]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'capture', choice: b.dataset.cap as 'take' })));
     }
     this.hint(v);
     if (this.info !== null) this.showInfo(this.info);

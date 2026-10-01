@@ -78,6 +78,7 @@ import { renderDescent } from './ui/descent.ts';
 import { renderSaga } from './ui/saga.ts';
 import { renderAway } from './ui/renown.ts';
 import { RecruitWindow } from './ui/recruit.ts';
+import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
@@ -86,7 +87,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -226,6 +227,13 @@ function openRecruit(src: 'port' | 'isle' | 'lair'): void {
 portScreen.openDwell = () => openRecruit('port');
 // The adventure map (docs/17 H4): the visit card over the sea, and the Grail's chart.
 const advCard = new AdvCard((m) => net.send(m));
+advCard.now = () => state.estServerTime(); // the drift's mini-game needle (docs/18 #35)
+// The creatures' window (docs/18 IV): from the crew's army card, a port's tamer, the battle's reckoning.
+const tameWindow = new TameWindow((m) => net.send(m));
+function openTame(): void {
+  tameWindow.open();
+  openModal('tame');
+}
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
   puzzleWindow.open();
@@ -716,6 +724,12 @@ function onMessage(m: ServerMsg): void {
     case 'lair_card': // docs/18 II
       advCard.lair(m.card);
       break;
+    case 'drift_card': // docs/18 IV
+      advCard.drift(m.card);
+      break;
+    case 'tame':
+      if (modal === 'tame') refreshModal();
+      break;
     case 'lairs':
       if (modal === 'map') worldMap.draw(state);
       if (modal === 'base') refreshModal();
@@ -984,11 +998,15 @@ function renderModal(root: HTMLElement): void {
     case 'puzzle':
       puzzleWindow.render(root, state);
       break;
+    case 'tame':
+      tameWindow.render(root, state);
+      break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
       break;
   }
   if (touch.enabled) stripKeyHints(root);
+  root.querySelectorAll<HTMLElement>('[data-tame]').forEach((b) => (b.onclick = () => openTame())); // docs/18 IV
   ensureCloseButton(root);
 }
 
