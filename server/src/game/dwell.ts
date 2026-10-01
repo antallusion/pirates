@@ -263,6 +263,7 @@ function signOn(game: Game, s: PlayerSession, u: UnitId, n: number): void {
   if (n > ship.crew * 0.2) c.fights = 0;
   ship.addMen(u, n);
   c.pools[POOL_OF[d.tier]] += n;
+  s.profile!.stats.recruited = (s.profile!.stats.recruited ?? 0) + n;
   ship.companyKey = '';
 }
 

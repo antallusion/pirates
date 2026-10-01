@@ -1,4 +1,6 @@
-// Onboarding (docs/07 §13): the First Watch — seven steps through The Black Coast that teach by doing, the HUD
+// Onboarding (docs/07 §13, rewritten for docs/17 H5): the First Watch — seven steps that teach by doing the Heroes'
+// loop (cast off; the guns thin her men; board; the turn-by-turn battle; recruit at a tavern; a level's skill; a
+// thing on the map), the HUD
 // revealed a block at a time, a ship that cannot be lost in chapter one (the Crown tows her home), contextual
 // hints that come back on mistakes, the Captain's Goals afterwards, and the funnel metrics of §13.3.
 // Every text lives on the client under the ids sent from here, so the words can be localized.
@@ -7,13 +9,16 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { isNight } from '../../../shared/src/constants.ts';
+import { xpForLevel } from '../../../shared/src/constants.ts';
 import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
 import type { HudBlock, OnboardingView } from '../../../shared/src/protocol.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { midPrice } from './economy.ts';
+import { armyForLevel } from '../../../shared/src/data/army.ts';
+import { advMap, advOf, revealAdv } from './advmap.ts';
+import { heroOf, pendingChoices } from './hero.ts';
 import type { Game } from './Game.ts';
 import { addXp } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -73,94 +78,112 @@ export const STAGES: Stage[] = [
     reveal: [],
     done: (_g, _s, ship) => !ship.docked && ship.state.speed > 2.5 && ship.state.sail > 0.2,
   },
+  // docs/17 H5: the core loop of the Heroes on the sea — the guns thin her men, you board, the battle is HoMM3's, the
+  // tavern refills the stacks, a level brings a skill to choose, the sea is full of things to visit.
   {
-    // The market, a note from the tavern with an aged price.
-    id: 'first_trade',
-    reveal: ['cargo', 'captain'],
-    mark: (p) => p.stats.sold,
-    done: (_g, _s, _ship, p) => p.stats.sold > p.tutorial.base,
-    begin: (game, s) => {
-      s.profile!.tutorial.tip = tradeTip(game, s);
-    },
-  },
-  {
-    // Lantern halos in the fog: a League convoy's paired amber, a lone red raider.
-    id: 'lights',
-    reveal: ['feed', 'target', 'minimap'],
-    done: (game, _s, ship) => {
-      let seen = false;
-      game.forShipsNear(ship.state.x, ship.state.y, 700, (o) => {
-        if (o !== ship && !o.isPlayer && !o.cls.monster && !o.bossOf && (o.faction === 'league' || o.faction === 'confederacy' || o.faction === 'crown')) seen = true;
-      });
-      return seen && !ship.docked;
-    },
-  },
-  {
-    // Broadside, reload arcs, lead, ammunition — against a raider under the eye of a Crown patrol.
-    id: 'first_fight',
-    reveal: ['guns', 'abilities'],
+    // Broadside, range, lead: every ball that lands kills men of hers («−N men» over her).
+    id: 'gunnery',
+    reveal: ['feed', 'target', 'guns', 'abilities', 'minimap'],
     mark: (p) => p.tutorial.hits,
-    done: (_g, _s, _ship, p) => p.tutorial.hits > p.tutorial.base,
+    done: (_g, _s, _ship, p) => p.tutorial.hits > p.tutorial.base + 1,
     begin: (game, s, ship) => practiceRaider(game, s, ship),
-    keep: (game, s, ship) => {
-      // The practice raider is gone (sunk by another hand, lost in a restart, left far behind): another comes.
-      if (ship.docked) return;
-      const id = raiders.get(s);
-      const r = id !== undefined ? game.ships.get(id) : undefined;
-      if (r && r.alive && Math.hypot(r.state.x - ship.state.x, r.state.y - ship.state.y) < 3500) {
-        // She keeps coming for as long as the lesson lasts.
-        const b = game.npcs.get(r.id);
-        if (b) {
-          b.practice = ship.id;
-          b.chase = { id: ship.id, until: game.now + 300 };
-        }
-        return;
-      }
-      // One already about (a raider that outlived a restart): she is the one.
-      for (const x of game.ships.values()) {
-        if (x.alive && x.name === 'Red Novice' && Math.hypot(x.state.x - ship.state.x, x.state.y - ship.state.y) < 3500) {
-          raiders.set(s, x.id);
-          return;
-        }
-      }
-      const w = watchOf(s);
-      if (game.now < w.raiderAt) return;
-      w.raiderAt = game.now + 45;
-      practiceRaider(game, s, ship);
-    },
+    keep: (game, s, ship) => keepRaider(game, s, ship),
   },
   {
-    // The capital: the yard, the licence exchange, the first talents, the contract board.
-    id: 'gravesend',
-    reveal: ['map', 'talents'],
-    done: (_g, _s, ship) => ship.docked === 'gravesend',
-  },
-  {
-    // A hidden cove at night: plankton light, a wreck in the coral, a whisper. No fight, no explanation.
-    id: 'strange',
+    // Alongside her and the grapples: the boarding battle opens at once.
+    id: 'board',
     reveal: [],
-    done: (game, s, ship) => {
-      if (ship.docked || ship.region !== 'black_coast' || ship.state.speed > 1.5 || !isNight(game.now)) return false;
-      if (coastDistance(game, ship) > 350) return false;
-      game.sendTo(s, { t: 'ev', list: [{ k: 'fx', fx: 'plankton', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 220 }] });
-      return true;
+    done: (_g, _s, ship) => !!ship.boarding,
+    keep: (game, s, ship) => keepRaider(game, s, ship),
+  },
+  {
+    // The battle, turn by turn: move, attack, wait or defend, one captain's order a round.
+    id: 'battle',
+    reveal: [],
+    done: (_g, s, ship) => {
+      const w = watchOf(s);
+      if (ship.boarding) w.fought = true;
+      return !!w.fought && !ship.boarding;
+    },
+    begin: (_g, s, ship) => {
+      watchOf(s).fought = !!ship.boarding;
+    },
+    keep: (game, s, ship) => {
+      if (!ship.boarding && !watchOf(s).fought) keepRaider(game, s, ship);
     },
   },
   {
-    // The edge of safe waters: the Gravewater line.
-    id: 'edge',
+    // Into port: the tavern's Recruit refills the stacks she lost.
+    id: 'recruit',
+    reveal: ['cargo', 'captain', 'map'],
+    mark: (p) => p.stats.recruited ?? 0,
+    done: (_g, _s, _ship, p) => (p.stats.recruited ?? 0) > p.tutorial.base,
+  },
+  {
+    // A level: one of two skills to choose in the captain's window.
+    id: 'skill',
+    reveal: ['talents'],
+    mark: (p) => heroOf(p).picked,
+    done: (_g, _s, _ship, p) => heroOf(p).picked > p.tutorial.base,
+    begin: (game, s) => {
+      // The lesson needs a choice waiting: the next level, if none is.
+      const p = s.profile!;
+      if (pendingChoices(p) <= 0) game.grantXp(s, Math.ceil(Math.max(1, xpForLevel(p.level) - p.xp) * 1.05), null);
+      p.tutorial.base = heroOf(p).picked;
+    },
+  },
+  {
+    // A thing on the map: a chest, a well, an altar… one is put on her chart.
+    id: 'visit',
     reveal: ['wanted'],
-    done: (_g, _s, ship) => REGIONS[ship.region].safety !== 'safe',
+    mark: (p) => visitsOf(p),
+    done: (_g, _s, _ship, p) => visitsOf(p) > p.tutorial.base,
+    begin: (game, s, ship) => {
+      const o = nearestObj(game, ship);
+      if (o) revealAdv(game, s, o.x, o.y, 300);
+    },
   },
 ];
 
-function coastDistance(game: Game, ship: ShipEntity): number {
-  let best = Infinity;
-  for (const id of islandsNear(game.world, ship.state.x, ship.state.y)) {
-    const is = game.world.islands[id];
-    best = Math.min(best, Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2));
+/** The things on the map she has visited (a beaten guard's chest apart). */
+const visitsOf = (p: Profile) => Object.keys(advOf(p).v).filter((k) => !k.startsWith('g:')).length;
+
+/** The nearest thing on the map in reach of a novice: no guard before it, no obelisk. */
+function nearestObj(game: Game, ship: ShipEntity) {
+  let best: ReturnType<typeof advMap>['objs'][number] | null = null, bd = Infinity;
+  for (const o of advMap(game).objs) {
+    if (o.guard || o.kind === 'obelisk' || o.kind === 'prison') continue;
+    const d = dist(o.x, o.y, ship.state.x, ship.state.y);
+    if (d < bd) [best, bd] = [o, d];
   }
   return best;
+}
+
+/** The practice raider is gone (sunk by another hand, lost in a restart, left far behind): another comes. */
+function keepRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
+  if (ship.docked || ship.boarding) return;
+  const id = raiders.get(s);
+  const r = id !== undefined ? game.ships.get(id) : undefined;
+  if (r && r.alive && Math.hypot(r.state.x - ship.state.x, r.state.y - ship.state.y) < 3500) {
+    // She keeps coming for as long as the lesson lasts.
+    const b = game.npcs.get(r.id);
+    if (b) {
+      b.practice = ship.id;
+      b.chase = { id: ship.id, until: game.now + 300 };
+    }
+    return;
+  }
+  // One already about (a raider that outlived a restart): she is the one.
+  for (const x of game.ships.values()) {
+    if (x.alive && x.name === 'Red Novice' && Math.hypot(x.state.x - ship.state.x, x.state.y - ship.state.y) < 3500) {
+      raiders.set(s, x.id);
+      return;
+    }
+  }
+  const w = watchOf(s);
+  if (game.now < w.raiderAt) return;
+  w.raiderAt = game.now + 45;
+  practiceRaider(game, s, ship);
 }
 
 /** The tavern note: the dearest safe-water port for something in the hold (or the port's cheapest staple). */
@@ -202,6 +225,8 @@ function practiceRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
     r.cargo = { rum: 4 };
     // A lesson, not a massacre: round shot only (no grape to cut down a novice's crew), and she never boards.
     for (const a of Object.keys(r.ammo) as (keyof typeof r.ammo)[]) r.ammo[a] = a === 'round' ? 400 : 0;
+    // A crew thin enough for a novice's first boarding (docs/17 H5): two thirds of her level's.
+    r.setArmy(armyForLevel(1, Math.max(6, Math.round(r.crew * 0.65)), r.armySlots, 'pirate'));
     const brain = game.npcs.get(r.id)!;
     brain.area = { x: ship.state.x, y: ship.state.y, r: 3000 };
     brain.chase = { id: ship.id, until: game.now + 300 };
@@ -293,7 +318,7 @@ function stepGoals(game: Game, s: PlayerSession, p: Profile): boolean {
 // ------------------------------------------------------------------ the step, once a second
 
 /** Seconds in irons, missed volleys in a row, seconds of neglected damage — per session, never saved. */
-const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number }>();
+const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean }>();
 
 export function onboardingSecond(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
@@ -384,7 +409,7 @@ export function onboardingView(p: Profile): OnboardingView {
     index: Math.min(t.stage, STAGES.length),
     of: STAGES.length,
     hud: on ? [...blocks] : null,
-    tip: on && STAGES[t.stage].id === 'first_trade' && t.tip ? { good: GOODS[t.tip.good].name, port: t.tip.port, hours: t.tip.hours } : null,
+    tip: null,
     goals: !on && !t.goals.hidden ? t.goals.active : null,
     goalsDone: t.goals.done.length,
     hints: Object.keys(t.hints),

@@ -915,6 +915,7 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   // or as seasoned sailors from a tavern of veterans.
   ship.addMen(prof === 'marine' ? 'marine' : prof === 'gunner' ? 'musketeer' : tav.stars >= 3.5 ? 'sailor' : 'deckhand', n);
   c.pools[prof] += n;
+  p.stats.recruited = (p.stats.recruited ?? 0) + n;
   if (prof === 'sailor') game.tavernCrew.set(port.id, avail - n);
   else tav.stock[prof] = avail - n;
   return null;

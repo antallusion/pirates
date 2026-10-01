@@ -129,7 +129,7 @@ export interface Profile {
   contracts: Contract[];
   discovered: number[];
   regionsSeen: string[];
-  stats: { sunk: number; boarded: number; tradeProfit: number; distance: number; sold: number; fogContraband: number; harpoonContracts: number; /** captains guided through quests (docs/11 P6) */ mentored?: number };
+  stats: { sunk: number; boarded: number; tradeProfit: number; distance: number; sold: number; fogContraband: number; harpoonContracts: number; /** captains guided through quests (docs/11 P6) */ mentored?: number; /** men signed on at a tavern or a dwelling (docs/17 H5: the First Watch) */ recruited?: number };
   cooldowns: Record<string, number>;
   insured: boolean;
   priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>>; dear?: GoodId[]; cheap?: GoodId[]; heard?: boolean }>;
