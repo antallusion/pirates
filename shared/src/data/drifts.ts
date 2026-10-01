@@ -59,7 +59,7 @@ export function mixMorale(army: readonly { u: UnitId; n: number }[], path: Capta
     const p = peopleOf(s.u);
     set.add(p === native ? 'men' : p);
   }
-  return -Math.min(3, Math.max(0, set.size - 1));
+  return Math.max(-3, Math.min(0, 1 - set.size));
 }
 
 /** The peoples of an army as the screens list them (the path's own marked). */

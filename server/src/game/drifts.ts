@@ -685,3 +685,6 @@ export function adminDrift(game: Game, s: PlayerSession, args: string[]): string
   return `Drifts at sea: ${S.list.size}. Nearest: the ${driftName(d.kind)} (⚓${d.level}, ${d.n} ${beasts(DRIFTS[d.kind].u)}), ${Math.round(dist(d.x, d.y, ship.state.x, ship.state.y))} m away, ${Math.round(d.until - game.now)} s left. Legend of the season (${driftName(L?.kind ?? 'white_whale')}): ${legend}.`;
 }
 
+
+/** The lookout's look for one captain at once (the tests'). */
+export const sightNow = (game: Game, s: PlayerSession): Drift | null => sight(game, s);
