@@ -10,6 +10,9 @@ export const SERVER_RU_H5: Record<string, string> = {
   'In the chest: {0}.': 'В сундуке: {0}.',
   'Your locker is full.': 'Ваш рундук полон.',
   'The bell’s note stays with you: {0} +1.': 'Звук колокола остаётся с вами: {0} +1.',
+  // Found in the QA pass: a deed's toast.
+  'LEGEND DEED — {0}. {1}': 'ДЕЯНИЕ ЛЕГЕНДЫ — {0}. {1}',
+  'MUTINY': 'БУНТ',
   // The island's guild of orders.
   'Lie off your island to learn at its guild.': 'Чтобы учиться в гильдии, встаньте у своего острова.',
   'Your island has no guild of orders.': 'На вашем острове нет гильдии приказов.',

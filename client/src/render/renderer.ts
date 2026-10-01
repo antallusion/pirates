@@ -2583,7 +2583,7 @@ export class Renderer {
 
   /** A place on the screen's edge for a mark pointing at angle a: where the ray leaves the screen, or the nearest place
    *  along the edge clear of the HUD's blocks and of the marks already there. */
-  private rimSpot(a: number): [number, number] {
+  private rimSpot(a: number, labelW = 0, off = 27): [number, number] {
     const menuCol = !document.body.classList.contains('touch') && this.w < 1100 ? 56 : 0;
     const L = 30, R = this.w - 30 - menuCol, T = 30, B = this.h - 30;
     const cx = this.w / 2, cy = this.h / 2;
@@ -2594,7 +2594,15 @@ export class Renderer {
       const k = Math.min(kx, ky);
       return [cx + dx * k, cy + dy * k];
     };
-    const free = (q: [number, number]) => this.clearOfHud(q[0], q[1]) && !this.rimTaken.some(([x, y]) => Math.hypot(x - q[0], y - q[1]) < 46);
+    // The mark's range is written inward of it (docs/17 H5's QA: on a narrow phone «3,1 км» lay half under the right
+    // column's plates): its box must be clear of the HUD too.
+    const labelFree = (q: [number, number]) => {
+      if (labelW <= 0) return true;
+      const lx = q[0] - Math.cos(a) * off, ly = q[1] - Math.sin(a) * off, hw = labelW / 2 + 2;
+      if (lx - hw < 2 || lx + hw > this.w - 2) return false;
+      return !this.hudRects.some((r) => lx + hw > r.left && lx - hw < r.right && ly + 8 > r.top && ly - 8 < r.bottom);
+    };
+    const free = (q: [number, number]) => this.clearOfHud(q[0], q[1]) && labelFree(q) && !this.rimTaken.some(([x, y]) => Math.hypot(x - q[0], y - q[1]) < 46);
     for (let i = 0; i <= 90; i++) {
       for (const b of i ? [a + i * 0.035, a - i * 0.035] : [a]) {
         const q = edge(b);
@@ -2644,7 +2652,8 @@ export class Renderer {
       // One mark for a crowd (a kraken's eight arms): the nearest speaks for them.
       if (drawn.some((b) => Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a))) < 0.12)) continue;
       drawn.push(a);
-      const [x, y] = this.rimSpot(a);
+      const text = d >= 1000 ? L('dist.km', { n: dec1(d / 1000) }) : L('dist.m', { n: Math.round(d / 10) * 10 });
+      const [x, y] = this.rimSpot(a, g.measureText(text).width, 26);
       const boss = s.info?.npcRole === 'boss';
       const col = boss ? '#2ee6c8' : '#e0503c';
       g.translate(x, y);
@@ -2666,7 +2675,7 @@ export class Renderer {
       g.fill();
       g.rotate(-a);
       g.fillStyle = 'rgba(240,230,200,0.95)';
-      g.fillText(d >= 1000 ? L('dist.km', { n: dec1(d / 1000) }) : L('dist.m', { n: Math.round(d / 10) * 10 }), 0 - Math.cos(a) * 26, 0 - Math.sin(a) * 26);
+      g.fillText(text, 0 - Math.cos(a) * 26, 0 - Math.sin(a) * 26);
       g.translate(-x, -y);
     }
     g.restore();
@@ -2709,7 +2718,7 @@ export class Renderer {
     // Out of sight: on the screen's edge like the threat marks, clear of the HUD and of them.
     this.hudBand();
     const a = Math.atan2(py - this.h / 2, px - this.w / 2);
-    const [x, y] = this.rimSpot(a);
+    const [x, y] = this.rimSpot(a, g.measureText(label).width, 27);
     g.translate(x, y);
     g.fillStyle = 'rgba(8,10,14,0.8)';
     g.beginPath();

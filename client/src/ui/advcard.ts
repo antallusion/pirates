@@ -92,6 +92,17 @@ function objBody(o: ObjCard): string {
 
 export class AdvCard {
   private el: HTMLElement;
+  /** On a wide screen the card stands in the left column, under the ship's panel however tall it has grown (the
+   *  wounded, the nerve: docs/17 H5's QA), and no lower than the screen allows. */
+  place(): void {
+    if (innerWidth < 1100 || innerHeight <= 520) {
+      this.el.style.top = '';
+      return;
+    }
+    const ship = document.getElementById('hud-ship')?.getBoundingClientRect();
+    const top = ship && ship.height > 0 ? Math.round(ship.bottom + 8) : 384;
+    this.el.style.top = `${Math.max(120, Math.min(top, innerHeight - 260))}px`;
+  }
   private key = '';
   private closed = '';
   onPuzzle: () => void = () => {};
@@ -147,6 +158,7 @@ export class AdvCard {
     }
     this.el.innerHTML = html;
     this.el.classList.remove('hidden');
+    this.place();
     this.el.querySelectorAll<HTMLButtonElement>('[data-av]').forEach((b) => (b.onclick = () => this.send({ t: 'h4', action: 'visit', id: b.dataset.av!, ...(b.dataset.choice ? { choice: b.dataset.choice } : {}) })));
     this.el.querySelectorAll<HTMLButtonElement>('[data-ag]').forEach((b) => (b.onclick = () => this.send({ t: 'h4', action: 'guard', id: b.dataset.id!, choice: b.dataset.ag as 'fight' })));
     this.el.querySelectorAll<HTMLButtonElement>('[data-apz]').forEach((b) => (b.onclick = () => this.onPuzzle()));

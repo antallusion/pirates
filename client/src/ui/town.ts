@@ -50,10 +50,9 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
   const pic = art(t.id, t.level, !!t.job);
   const lvl = t.level > 0 ? L('town.lvl', { n: t.level, max: t.max }) : L('town.not');
   const pool = d.tier && t.level > 0 ? `<p class="tw-pool">${esc(L('town.pool', { n: t.pool ?? 0, g: dec1(t.growth ?? 0).replace(/[.,]0$/, '') }))}</p>` : '';
-  // The guild of orders (docs/17 H5): each floor's orders, learnt free while she lies off the island.
-  const extra = t.orders?.length
-    ? `<div class="tw-orders">${t.orders.map((o) => `<div class="tw-order${o.known ? ' known' : ''}" title="${esc(ORDERS[o.id].text[ru()])}">${icon(ORDERS[o.id].icon, '', 'ico-sm')}<span><b>${esc(ORDERS[o.id].name[ru()])}</b> <span class="muted">${esc(L('guild.floor', { n: o.floor }))}</span>${!o.known && o.why ? `<br><span class="muted tw-why">${esc(serverText(o.why))}</span>` : ''}</span>${o.known ? `<span class="good">${esc(L('guild.known'))}</span>` : `<button class="btn btn-small" data-tlearn="${o.id}"${o.why ? ' disabled' : ''}>${esc(L('guild.learn'))}</button>`}</div>`).join('')}</div>`
-    : '';
+  // The guild of orders (docs/17 H5): each floor's orders as chips, learnt free while she lies off the island; why
+  // she may not learn there said once, an order beyond her level on its own chip.
+  const extra = t.orders?.length ? guildBlock(t.orders) : '';
   const j = t.job;
   const job = j ? `<div class="tw-job"><span class="muted">${esc(L('town.building'))}</span> <span class="btime" data-end="${j.end}">${esc(timeText((j.end - now) / 1000))}</span>
       <span class="bprog"><i data-start="${j.start}" data-stop="${j.end}" style="width:0%"></i></span>
@@ -65,6 +64,18 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
     : !j ? `<p class="muted tw-max">${esc(L('town.max'))}</p>` : '';
   return `<div class="tw-card${t.level > 0 ? ' built' : ''}${d.tier ? ' dw' : ''}" data-town="${t.id}"><div class="tw-top">${pic ? `<img class="tw-art" src="${pic}" alt="" draggable="false">` : ''}<div class="tw-id"><b>${esc(name)}</b><span class="muted">${esc(lvl)}</span></div></div>
     <p class="muted tw-text">${esc(d.text[ru()])}</p>${pool}${extra}${job}${next}</div>`;
+}
+
+function guildBlock(orders: NonNullable<TownThingView['orders']>): string {
+  const away = orders.find((o) => !o.known && o.why && !/^Orders of level/.test(o.why))?.why;
+  const floors = [...new Set(orders.map((o) => o.floor))].sort((a, b) => a - b);
+  const chip = (o: (typeof orders)[number]) => {
+    const name = ORDERS[o.id].name[ru()];
+    const tip = `${name}: ${ORDERS[o.id].text[ru()]}${o.why && !o.known ? ` (${serverText(o.why)})` : ''}`;
+    if (o.known) return `<span class="tw-ord known" title="${esc(tip)}">${icon(ORDERS[o.id].icon, '', 'ico-sm')}${esc(name)} ✓</span>`;
+    return `<button class="tw-ord" data-tlearn="${o.id}" title="${esc(tip)}"${o.why ? ' disabled' : ''}>${icon(ORDERS[o.id].icon, '', 'ico-sm')}${esc(name)}</button>`;
+  };
+  return `<div class="tw-orders">${away ? `<p class="muted tw-why">${esc(serverText(away))}</p>` : `<p class="muted tw-why">${esc(L('guild.free'))}</p>`}${floors.map((f) => `<div class="tw-floor"><span class="muted tw-fl">${esc(L('guild.floor', { n: f }))}</span>${orders.filter((o) => o.floor === f).map(chip).join('')}</div>`).join('')}</div>`;
 }
 
 export function townTab(v: BaseView, state: ClientState, mk: { give: string; get: string; n: number }): string {

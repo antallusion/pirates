@@ -10,6 +10,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h4.ts';
 import type { ClientState } from '../state.ts';
 import { strengthWord } from './army.ts';
+import { assetUrl } from '../assets.ts';
 
 const L = dict(EN, RU);
 
@@ -134,4 +135,13 @@ export function drawHeroSites(
       label(L('map.shrine'), x, y + size * 0.9, '#8fe8d8');
     }
   }
+}
+
+/** The chart's legend for the hero's places (docs/17 H5). */
+export function heroLegend(): string {
+  const ico = (id: string) => {
+    const u = assetUrl(`icon.${id}`);
+    return u ? `<img class="ico" src="${u}" alt="" draggable="false">` : '';
+  };
+  return `<span>${ico('build_lighthouse')}${L('lg.guild')}</span><span>${ico('item_skull_ring')}${L('lg.merchant')}</span><span>${ico('build_chapel')}${L('lg.shrine')}</span>`;
 }

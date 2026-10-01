@@ -3469,11 +3469,13 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .tw-text { margin: 0; font-size: 11.5px; line-height: 1.3; }
 .tw-pool { margin: 0; color: var(--good); font-size: 12px; }
 .tw-note, .tw-why, .tw-max { margin: 0; font-size: 11.5px; }
-.tw-orders { display: flex; flex-direction: column; gap: 4px; margin: 2px 0; }
-.tw-order { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.25; }
-.tw-order > span:first-of-type { flex: 1; min-width: 0; }
-.tw-order.known { opacity: 0.75; }
-.tw-order .btn { flex: none; }
+.tw-orders { display: flex; flex-direction: column; gap: 5px; margin: 2px 0; }
+.tw-floor { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.tw-fl { font-size: 11px; flex-basis: 100%; }
+.tw-ord { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px 2px 3px; border: 1px solid rgba(232, 196, 106, 0.45); border-radius: 12px; background: rgba(20, 16, 10, 0.6); color: var(--text, #e8dcc0); font: inherit; font-size: 11.5px; line-height: 1.3; cursor: pointer; }
+.tw-ord:hover:not([disabled]) { border-color: var(--gold, #e8c46a); background: rgba(232, 196, 106, 0.14); }
+.tw-ord[disabled] { opacity: 0.5; cursor: default; }
+.tw-ord.known { border-color: rgba(127, 208, 138, 0.5); color: var(--good, #7fd08a); cursor: default; }
 .tw-next { display: flex; flex-direction: column; gap: 3px; margin-top: auto; padding-top: 4px; border-top: 1px solid rgba(111, 90, 56, 0.22); }
 .tw-nn { font-size: 12px; color: var(--bone); }
 .tw-next .btn { align-self: flex-start; }
@@ -3652,3 +3654,27 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 .tw-card[data-town="grail"] { border-color: rgba(232, 196, 106, 0.55); }
 .tw-card[data-town="grail"].built { box-shadow: 0 0 18px rgba(232, 196, 106, 0.35), inset 0 0 22px rgba(232, 196, 106, 0.12); }
 .tw-card[data-town="grail"] .tw-art { filter: drop-shadow(0 0 8px rgba(255, 210, 120, 0.7)); }
+/* docs/17 H5 (QA): the chart's lines under the minimap grew a line each with H3 and H4 (the week, the waters' levels);
+   the touch micro menu and, on a phone, the top stack stand under them however many there are (--rg-bottom: hud.ts). */
+@media (max-width: 699px) and (min-height: 521px) {
+  .tc-menu { top: max(calc(var(--sa-t) + var(--top-h)), calc(var(--rg-bottom, 0px) + 6px)); }
+  #hud-stack, body.touch #hud-stack { top: max(calc(var(--sa-t) + var(--top-h)), calc(var(--rg-bottom, 0px) + 6px)); }
+}
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
+  .tc-menu { top: max(calc(var(--sa-t) + var(--mm) + 64px), calc(var(--rg-bottom, 0px) + 6px)); }
+}
+/* docs/17 H5 (QA): a phone held sideways — the toasts and the adventure map's card keep to the middle column, between
+   the captain's plate and the right column's buttons (the card stood over the plate, the toasts climbed over both);
+   two toasts at most, so the column stays under the card. */
+@media (max-height: 520px) {
+  #advcard { left: calc(var(--sa-l) + 360px); width: min(410px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); }
+  #toasts { left: calc(var(--sa-l) + 360px); transform: none; width: min(360px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); }
+  #toasts .toast:nth-child(n+3) { display: none !important; }
+}
+/* docs/17 H5 (QA): on a desktop narrower than 1600 px the micro menu's one row (ten buttons, 454 px) met the bottom
+   block (the action bar grew a slot and the ship's level): two rows of five, the compass raised over them. */
+@media (min-width: 1100px) and (max-width: 1599px) and (min-height: 600px) {
+  body:not(.touch) .micro-menu { display: grid; grid-template-columns: repeat(5, 40px); gap: 6px; }
+  body:not(.touch) #hud-nav { bottom: 108px; }
+  #toasts .toast:nth-child(n+6) { display: none !important; }
+}

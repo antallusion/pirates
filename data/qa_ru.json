@@ -1,0 +1,566 @@
+{
+ "ru_375x812": {
+  "steps": [
+   {
+    "n": "01_watch_cast_off",
+    "file": "assets/raw/audit/h5/ru_375x812_01_watch_cast_off.png",
+    "overlap": [
+     "#hud-region × #hud-tip",
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "02_watch_gunnery",
+    "file": "assets/raw/audit/h5/ru_375x812_02_watch_gunnery.png",
+    "overlap": [
+     "#hud-region × #hud-tip",
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "03_watch_battle",
+    "file": "assets/raw/audit/h5/ru_375x812_03_watch_battle.png",
+    "overlap": [
+     "#hud-region × #hud-tip",
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "04_watch_visit",
+    "file": "assets/raw/audit/h5/ru_375x812_04_watch_visit.png",
+    "overlap": [
+     "#hud-region × #hud-tip",
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "05_sea",
+    "file": "assets/raw/audit/h5/ru_375x812_05_sea.png",
+    "overlap": [
+     "#hud-region × #hud-tip",
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "06_battle",
+    "file": "assets/raw/audit/h5/ru_375x812_06_battle.png",
+    "overlap": [
+     "#hud-region × #hud-tip"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "07_battle_over",
+    "file": "assets/raw/audit/h5/ru_375x812_07_battle_over.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "08_recruit",
+    "file": "assets/raw/audit/h5/ru_375x812_08_recruit.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "09_town_guild",
+    "file": "assets/raw/audit/h5/ru_375x812_09_town_guild.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "10_town_learnt",
+    "file": "assets/raw/audit/h5/ru_375x812_10_town_learnt.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "11_captain",
+    "file": "assets/raw/audit/h5/ru_375x812_11_captain.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "12_altar_card",
+    "file": "assets/raw/audit/h5/ru_375x812_12_altar_card.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "13_altar_toast",
+    "file": "assets/raw/audit/h5/ru_375x812_13_altar_toast.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "14_guard_card",
+    "file": "assets/raw/audit/h5/ru_375x812_14_guard_card.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "15_world_map",
+    "file": "assets/raw/audit/h5/ru_375x812_15_world_map.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "16_grail_puzzle",
+    "file": "assets/raw/audit/h5/ru_375x812_16_grail_puzzle.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   }
+  ],
+  "errors": []
+ },
+ "ru_812x375": {
+  "steps": [
+   {
+    "n": "01_watch_cast_off",
+    "file": "assets/raw/audit/h5/ru_812x375_01_watch_cast_off.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "02_watch_gunnery",
+    "file": "assets/raw/audit/h5/ru_812x375_02_watch_gunnery.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "03_watch_battle",
+    "file": "assets/raw/audit/h5/ru_812x375_03_watch_battle.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "04_watch_visit",
+    "file": "assets/raw/audit/h5/ru_812x375_04_watch_visit.png",
+    "overlap": [
+     "#hud-captain × #toasts > .toast"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ],
+    "toastOver": [
+     "captain"
+    ]
+   },
+   {
+    "n": "05_sea",
+    "file": "assets/raw/audit/h5/ru_812x375_05_sea.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "06_battle",
+    "file": "assets/raw/audit/h5/ru_812x375_06_battle.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY",
+     "Rook",
+     "Farrow"
+    ]
+   },
+   {
+    "n": "07_battle_over",
+    "file": "assets/raw/audit/h5/ru_812x375_07_battle_over.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "08_recruit",
+    "file": "assets/raw/audit/h5/ru_812x375_08_recruit.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "09_town_guild",
+    "file": "assets/raw/audit/h5/ru_812x375_09_town_guild.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "10_town_learnt",
+    "file": "assets/raw/audit/h5/ru_812x375_10_town_learnt.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "11_captain",
+    "file": "assets/raw/audit/h5/ru_812x375_11_captain.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "12_altar_card",
+    "file": "assets/raw/audit/h5/ru_812x375_12_altar_card.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "13_altar_toast",
+    "file": "assets/raw/audit/h5/ru_812x375_13_altar_toast.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "14_guard_card",
+    "file": "assets/raw/audit/h5/ru_812x375_14_guard_card.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "15_world_map",
+    "file": "assets/raw/audit/h5/ru_812x375_15_world_map.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   },
+   {
+    "n": "16_grail_puzzle",
+    "file": "assets/raw/audit/h5/ru_812x375_16_grail_puzzle.png",
+    "latin": [
+     "Iron",
+     "Verdict",
+     "MUTINY"
+    ]
+   }
+  ],
+  "errors": []
+ },
+ "ru_820x1180": {
+  "steps": [
+   {
+    "n": "01_watch_cast_off",
+    "file": "assets/raw/audit/h5/ru_820x1180_01_watch_cast_off.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "02_watch_gunnery",
+    "file": "assets/raw/audit/h5/ru_820x1180_02_watch_gunnery.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "03_watch_battle",
+    "file": "assets/raw/audit/h5/ru_820x1180_03_watch_battle.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "04_watch_visit",
+    "file": "assets/raw/audit/h5/ru_820x1180_04_watch_visit.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "05_sea",
+    "file": "assets/raw/audit/h5/ru_820x1180_05_sea.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "06_battle",
+    "file": "assets/raw/audit/h5/ru_820x1180_06_battle.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "07_battle_over",
+    "file": "assets/raw/audit/h5/ru_820x1180_07_battle_over.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "08_recruit",
+    "file": "assets/raw/audit/h5/ru_820x1180_08_recruit.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "09_town_guild",
+    "file": "assets/raw/audit/h5/ru_820x1180_09_town_guild.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "10_town_learnt",
+    "file": "assets/raw/audit/h5/ru_820x1180_10_town_learnt.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "11_captain",
+    "file": "assets/raw/audit/h5/ru_820x1180_11_captain.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "12_altar_card",
+    "file": "assets/raw/audit/h5/ru_820x1180_12_altar_card.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "13_altar_toast",
+    "file": "assets/raw/audit/h5/ru_820x1180_13_altar_toast.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "14_guard_card",
+    "file": "assets/raw/audit/h5/ru_820x1180_14_guard_card.png",
+    "overlap": [
+     "#hud-region × #tc-menu"
+    ],
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "15_world_map",
+    "file": "assets/raw/audit/h5/ru_820x1180_15_world_map.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   },
+   {
+    "n": "16_grail_puzzle",
+    "file": "assets/raw/audit/h5/ru_820x1180_16_grail_puzzle.png",
+    "latin": [
+     "Iron",
+     "Verdict"
+    ]
+   }
+  ],
+  "errors": []
+ },
+ "ru_1440x900": {
+  "steps": [
+   {
+    "n": "01_watch_cast_off",
+    "file": "assets/raw/audit/h5/ru_1440x900_01_watch_cast_off.png"
+   },
+   {
+    "n": "02_watch_gunnery",
+    "file": "assets/raw/audit/h5/ru_1440x900_02_watch_gunnery.png",
+    "overlap": [
+     "#hud-menu × #hud-bottom"
+    ]
+   },
+   {
+    "n": "03_watch_battle",
+    "file": "assets/raw/audit/h5/ru_1440x900_03_watch_battle.png",
+    "overlap": [
+     "#hud-menu × #hud-bottom"
+    ]
+   },
+   {
+    "n": "04_watch_visit",
+    "file": "assets/raw/audit/h5/ru_1440x900_04_watch_visit.png",
+    "overlap": [
+     "#hud-menu × #hud-bottom"
+    ]
+   },
+   {
+    "n": "05_sea",
+    "file": "assets/raw/audit/h5/ru_1440x900_05_sea.png",
+    "overlap": [
+     "#hud-menu × #hud-bottom"
+    ]
+   },
+   {
+    "n": "06_battle",
+    "file": "assets/raw/audit/h5/ru_1440x900_06_battle.png"
+   },
+   {
+    "n": "07_battle_over",
+    "file": "assets/raw/audit/h5/ru_1440x900_07_battle_over.png",
+    "overlap": [
+     "#hud-menu × #hud-bottom"
+    ]
+   },
+   {
+    "n": "08_recruit",
+    "file": "assets/raw/audit/h5/ru_1440x900_08_recruit.png"
+   },
+   {
+    "n": "09_town_guild",
+    "file": "assets/raw/audit/h5/ru_1440x900_09_town_guild.png"
+   },
+   {
+    "n": "10_town_learnt",
+    "file": "assets/raw/audit/h5/ru_1440x900_10_town_learnt.png"
+   },
+   {
+    "n": "11_captain",
+    "file": "assets/raw/audit/h5/ru_1440x900_11_captain.png"
+   },
+   {
+    "n": "12_altar_card",
+    "file": "assets/raw/audit/h5/ru_1440x900_12_altar_card.png",
+    "overlap": [
+     "#hud-menu × #hud-bottom"
+    ]
+   },
+   {
+    "n": "13_altar_toast",
+    "file": "assets/raw/audit/h5/ru_1440x900_13_altar_toast.png",
+    "overlap": [
+     "#hud-menu × #hud-bottom"
+    ]
+   },
+   {
+    "n": "14_guard_card",
+    "file": "assets/raw/audit/h5/ru_1440x900_14_guard_card.png",
+    "overlap": [
+     "#hud-menu × #hud-bottom"
+    ]
+   },
+   {
+    "n": "15_world_map",
+    "file": "assets/raw/audit/h5/ru_1440x900_15_world_map.png"
+   },
+   {
+    "n": "16_grail_puzzle",
+    "file": "assets/raw/audit/h5/ru_1440x900_16_grail_puzzle.png"
+   }
+  ],
+  "errors": []
+ }
+}
