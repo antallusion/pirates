@@ -3482,3 +3482,41 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .tw-mkout { margin: 4px 0 0; color: var(--gold); font-size: 13px; }
 .tw-rates { margin: 0 0 4px; font-size: 11.5px; }
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) { .tw-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); } .tw-art { width: 48px; height: 40px; } }
+/* docs/17 H4: the adventure map's visit card over the sea (placed like the lair's chest), and the Grail's chart. */
+#advcard { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 150px); transform: translateX(-50%); width: min(380px, calc(100vw - 24px)); z-index: 40; pointer-events: auto; display: grid; gap: 6px; }
+#advcard.hidden { display: none; }
+body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advcard, body:has(#lairchest:not(.hidden)) #advcard { visibility: hidden; }
+#advcard .enc-card { background: rgba(10, 12, 16, 0.94); border: 1px solid rgba(232, 196, 106, 0.6); border-radius: 6px; padding: 8px 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+#advcard .ac-gcard { border-color: rgba(208, 80, 60, 0.7); }
+#advcard .enc-h { font-family: var(--serif); font-size: 17px; color: #f4efe2; line-height: 1.2; overflow-wrap: anywhere; }
+#advcard .ac-lvl { font: 700 11px/1 var(--sans); color: var(--gold); vertical-align: middle; }
+#advcard .ac-head { display: flex; align-items: center; gap: 10px; }
+#advcard .ac-id { flex: 1; min-width: 0; }
+#advcard .ac-art { width: 54px; height: 54px; object-fit: contain; flex: none; filter: drop-shadow(0 2px 4px #000); }
+#advcard .ac-obelisk { filter: grayscale(1) brightness(0.55) drop-shadow(0 2px 4px #000); }
+#advcard .ac-x { flex: none; align-self: flex-start; min-width: 32px; min-height: 32px; background: none; border: 0; color: var(--muted, #9aa); font-size: 20px; line-height: 1; cursor: pointer; }
+#advcard .ac-sub { font-size: 12px; margin-top: 2px; }
+#advcard .ac-text { margin: 6px 0; font-size: 12.5px; line-height: 1.4; }
+#advcard .ac-line { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.35; color: var(--bone, #ddd); margin: 4px 0; }
+#advcard .ac-warn { color: #f09a8a; }
+#advcard .ac-why { font-size: 12px; }
+#advcard .ac-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+#advcard .ac-acts .btn { min-height: 34px; display: inline-flex; align-items: center; gap: 4px; }
+#advcard .ac-guard { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(208, 80, 60, 0.35); }
+#advcard .ac-gw { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 13px; color: var(--bone, #ddd); }
+#advcard .ac-word { color: #f09a8a; font-family: var(--serif); font-size: 16px; }
+#advcard .ac-gl { font-size: 12px; margin-top: 2px; }
+#advcard .ac-offer { margin-top: 4px; font-size: 13px; color: var(--gold); }
+#advcard .tg-army-faces { display: inline-flex; gap: 2px; margin-left: 4px; }
+@media (max-height: 520px) { #advcard { top: calc(var(--sa-t, 0px) + 8px); left: calc(var(--sa-l, 0px) + 360px); transform: none; width: min(380px, calc(100vw - 360px - 160px - var(--sa-l, 0px) - var(--sa-r, 0px))); min-width: 250px; } #advcard .ac-art { width: 36px; height: 36px; } #advcard .enc-h { font-size: 14px; } #advcard .ac-text { display: none; } #advcard .ac-acts .btn { min-height: 30px; padding: 2px 8px; } }
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) { #advcard { top: calc(var(--sa-t, 0px) + var(--mm) + 56px); } }
+@media (max-width: 699px) and (min-height: 521px) { #advcard { top: auto; bottom: calc(var(--sa-b, 0px) + 190px); } }
+.pz-body { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; padding: 4px 2px 8px; }
+.pz-wrap { flex: 1 1 320px; max-width: 560px; min-width: 0; }
+.pz-canvas { display: block; width: 100%; border-radius: 4px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); }
+.pz-side { flex: 1 1 200px; min-width: 0; display: grid; gap: 8px; align-content: start; }
+.pz-side p { margin: 0; font-size: 13px; line-height: 1.45; }
+.pz-region { color: var(--gold); font-family: var(--serif); font-size: 16px; }
+.pz-status { font-size: 14px; }
+#modal-panel[data-modal="puzzle"] { max-width: 900px; }
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) { .pz-wrap { flex: 0 0 auto; width: min(300px, calc(100vh - 120px)); } }

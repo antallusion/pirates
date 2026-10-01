@@ -7,6 +7,7 @@ import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { setNemeses } from './ui/nemesis.ts';
 import type { IslesView } from '../../shared/src/protocol.ts';
 import type { DwellView, MineView, WeekView } from '../../shared/src/h3proto.ts';
+import type { AdvCardView, AdvView, PuzzleView } from '../../shared/src/h4proto.ts';
 import type { AppraisalView, CaravanView, CarcassView, BaseView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
@@ -130,6 +131,11 @@ export class ClientState {
   week: WeekView | null = null;
   weekAt = 0;
   mines: MineView[] = [];
+  /** docs/17 H4: the guards and the things on the map she has seen, the card over the sea, the Grail's chart. */
+  adv: AdvView | null = null;
+  advCard: AdvCardView | null = null;
+  puzzle: PuzzleView | null = null;
+  puzzleAt = 0;
   /** One's own caravans (docs/12 P8). */
   caravans: CaravanView[] = [];
   caravanSlots = 0;
@@ -381,6 +387,16 @@ export class ClientState {
         break;
       case 'mines':
         this.mines = m.list;
+        break;
+      case 'adv':
+        this.adv = m.view;
+        break;
+      case 'adv_card':
+        this.advCard = m.view;
+        break;
+      case 'puzzle':
+        this.puzzle = m.view;
+        this.puzzleAt = Date.now();
         break;
       case 'caravans':
         this.caravans = m.list;
