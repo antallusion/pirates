@@ -1168,7 +1168,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     case 'reveal': {
       let n = 0;
       for (const is of game.world.islands) {
-        if (s.discovered.has(is.id) || is.minor) continue;
+        if (s.discovered.has(is.id) || is.minor || is.hidden) continue; // the hidden ones: /isle hidden reveal (docs/18 #30)
         game.chartIsland(s, is);
         n++;
       }

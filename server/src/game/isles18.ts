@@ -170,8 +170,8 @@ export function turtleCollide(game: Game, ship: ShipEntity, probes: [number, num
     if (Math.abs(p.x - ship.state.x) > d.r + 120 || Math.abs(p.y - ship.state.y) > d.r + 120) continue;
     for (const [px, py] of probes) {
       const dx = px - p.x, dy = py - p.y, l = Math.hypot(dx, dy);
-      if (l >= d.r * 0.92) continue;
-      const k = (d.r * 0.92 - l + 3) / (l || 1);
+      if (l >= d.r) continue;
+      const k = (d.r - l + 3) / (l || 1);
       ship.state.x += dx * k;
       ship.state.y += dy * k;
       ship.state.speed *= 0.25;
@@ -487,7 +487,7 @@ export function isle18Admin(game: Game, s: PlayerSession, cmd: string, args: str
       if (how === 'go') {
         st(game).forced.set(t.d.id, true);
         delete combed(s.profile!)[t.d.id];
-        parkOff(game, s, t.x, t.y, null, TURTLE_R, 110);
+        parkOff(game, s, t.x, t.y, null, TURTLE_R, 150);
         game.pushSelf(s, true);
       }
       sendTurtles(game, s, true);

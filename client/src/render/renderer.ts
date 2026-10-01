@@ -43,6 +43,10 @@ import { Fx } from './fx.ts';
 import type { CritPart } from './fx.ts';
 import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 import { drawAdvWorld, drawGuardShip, guardTag } from './advmap.ts'; // docs/17 H4
+import { drawIsleHalo, drawIsleLevel, drawIsleOver, drawMist, drawTurtles } from './isletype.ts'; // docs/18 III
+import type { IsleTypeCtx } from './isletype.ts';
+import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
+import { TURTLE_NAMES } from '../../../shared/src/world/drift.ts';
 import { GlSea, GlSky, glWanted } from './gl.ts';
 import { CELL, SpriteAtlas } from './atlas.ts';
 import type { SailKey } from './atlas.ts';
@@ -405,9 +409,12 @@ export class Renderer {
     this.drawSeaMarks(state);
     drawBanks(g, state, ictx); // banks the tide or a season has bared (docs/16 #25)
     for (const is of islands) this.drawShallows(is);
+    const tctx = (this.tctx = this.isleTypeCtx(night)); // docs/18 III: each kind's water, the mist, the levels, the turtle islands
+    for (const is of islands) drawIsleHalo(g, is, tctx);
     for (const is of islands) this.drawIsland(is, state);
     this.drawPorts(state);
     drawLookouts(g, state, ictx, state.wind[0]); // lookouts on the headlands (docs/16 #24)
+    this.drawIsles18(state, own, islands, tctx);
     drawAdvWorld(g, state, this.advCtx()); // the adventure map's things on their skerries (docs/17 H4)
     // The pirate lairs near her (docs/16 #7): the fort, its guns on the shore, the camp.
     if (this.zoom >= 0.12) {
@@ -1006,7 +1013,37 @@ export class Renderer {
     }
   }
 
+  private tctx: IsleTypeCtx | null = null;
+  /** docs/18 III: where the kinds and levels of the islands and the turtle islands draw. */
+  private isleTypeCtx(night: number): IsleTypeCtx {
+    return { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: settings().reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, path: (p, k, cx, cy) => this.path(p, k, cx, cy) };
+  }
+
+  /** docs/18 III: the turtle islands, and each island's level by her when she is close. */
+  private drawIsles18(state: ClientState, own: SailState | null, islands: IslandData[], c: IsleTypeCtx): void {
+    const L18 = lang() === 'ru' ? I18_RU : I18_EN;
+    const ru = lang() === 'ru' ? 1 : 0;
+    const now = state.estServerTime();
+    if (state.turtles.length) {
+      drawTurtles(this.g, state.turtles, now, c, (t) => {
+        const n = Math.max(1, Math.round((t.turn - now) / 60));
+        const name = TURTLE_NAMES[t.name]?.[ru] ?? '';
+        return (t.up ? L18['turtle.up'] : L18['turtle.down']).replace('{name}', name).replace('{lv}', String(t.level)).replace('{n}', String(n));
+      });
+    }
+    if (!own || !state.self || this.zoom < 0.3) return;
+    const mine = shipLevelOf(state.self.loadout);
+    for (const is of islands) {
+      if (is.mist || Math.hypot(is.x - own.x, is.y - own.y) - is.r > 2600) continue;
+      drawIsleLevel(this.g, is, c, mine, L18.deadly);
+    }
+  }
+
   private drawIsland(is: IslandData, state: ClientState): void {
+    if (is.mist) {
+      drawMist(this.g, is, this.tctx ?? this.isleTypeCtx(this.nightNow)); // a hidden island not yet found (docs/18 #30)
+      return;
+    }
     if (is.raft) {
       this.drawRaftTown(is);
       return;
@@ -1059,6 +1096,7 @@ export class Renderer {
       }
     }
     this.drawBiomeLand(is);
+    drawIsleOver(g, is, this.tctx ?? this.isleTypeCtx(this.nightNow)); // her kind on her land (docs/18 #27)
     // What grows and lies on the island.
     const decorId = decorArt(is.biome);
     const decor = sprite(decorId);
@@ -1408,7 +1446,8 @@ export class Renderer {
     // Decor by area: a rock has a clump or two, a great island is wooded and strewn.
     const dense = is.biome === 'jungle' || is.biome === 'mangrove' ? 1.6 : is.biome === 'saltflat' ? 0.4 : 1;
     const want = Math.max(3, Math.min(56, Math.round(((is.r * is.r) / 26000) * dense)));
-    const lagoon = is.biome === 'atoll' ? is.poly.map((v, i) => (i % 2 === 0 ? is.x + (v - is.x) * 0.6 : is.y + (v - is.y) * 0.6)) : null;
+    const lk = is.isle === 'atoll' ? 0.72 : 0.6; // an atoll of docs/18 #25 keeps a wider lagoon
+    const lagoon = is.biome === 'atoll' || is.isle === 'atoll' ? is.poly.map((v, i) => (i % 2 === 0 ? is.x + (v - is.x) * lk : is.y + (v - is.y) * lk)) : null;
     const out: Decor[] = [];
     for (let k = 0; k < want * 6 && out.length < want; k++) {
       const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * is.r;

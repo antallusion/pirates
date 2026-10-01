@@ -36,9 +36,11 @@ export const TURTLE_UP = 1800;
 export const TURTLE_DOWN = 900;
 export const TURTLE_CYCLE = TURTLE_UP + TURTLE_DOWN;
 export const TURTLE_R = 160;
+/** The turtles' names, English and Russian (the client's table), by id. */
+export const TURTLE_NAMES: [string, string][] = [['Old Shellback', 'Старый Панцирь'], ['The Wandering Isle', 'Бродячий Остров']];
 const WANT: { region: RegionId; name: [string, string] }[] = [
-  { region: 'gravewater', name: ['Old Shellback', 'Старый Панцирь'] },
-  { region: 'dead_mans_expanse', name: ['The Wandering Isle', 'Бродячий Остров'] },
+  { region: 'gravewater', name: TURTLE_NAMES[0] },
+  { region: 'dead_mans_expanse', name: TURTLE_NAMES[1] },
 ];
 
 const cache = new WeakMap<object, TurtleDef[]>();

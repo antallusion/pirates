@@ -1,6 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { drawIslesMini, isleFill, wireMiniTip } from './islemap.ts'; // docs/18 III
 import { drawLfgFlag, drawSignalFlag, liveSignals, signalBar, worldGoalPlate } from './social.ts';
 import type { SignalKind } from '../../../shared/src/data/social.ts';
 import { regattaPanel } from './regatta.ts';
@@ -106,6 +107,9 @@ export class Hud {
   private toastsEl = $('toasts');
   private bannerTimer = 0;
   private minimap = $('minimap') as HTMLCanvasElement;
+  /** docs/18 III: what the minimap shows, for its tooltip. */
+  private miniView: { x: number; y: number; range: number } | null = null;
+  private miniState: ClientState | null = null;
   onAbility: (id: string) => void = () => {};
   onAmmo: (id: string) => void = () => {};
   onTalent: (id: string) => void = () => {};
@@ -121,6 +125,7 @@ export class Hud {
   artEpoch = 0;
 
   constructor() {
+    wireMiniTip(this.minimap, () => this.miniView, () => this.miniState); // docs/18 #26: name · ⚓level · kind
     // Her own mark reached: a word, and the «Now:» line moves on.
     waypointHooks.onArrive = () => this.toast(L('wpArrived'), 'good');
     // The unit frame opens the ship's full condition on screens too small to keep it out.
@@ -551,8 +556,19 @@ export class Hud {
     const ty = (y: number) => (y - own.y) * k + H / 2;
     g.fillStyle = '#3a3d36';
     g.strokeStyle = '#6a624f';
+    this.miniView = { x: own.x, y: own.y, range };
+    this.miniState = state;
     for (const is of state.islands.values()) {
       if (Math.abs(is.x - own.x) > range + is.r || Math.abs(is.y - own.y) > range + is.r) continue;
+      // docs/18 III: her kind's colour; a hidden island not yet found, a pale smudge of mist.
+      if (is.mist) {
+        g.fillStyle = 'rgba(190,198,202,0.18)';
+        g.beginPath();
+        g.arc(tx(is.x), ty(is.y), Math.max(2, is.r * k), 0, Math.PI * 2);
+        g.fill();
+        continue;
+      }
+      g.fillStyle = isleFill(is, false);
       g.beginPath();
       for (let i = 0; i < is.poly.length; i += 4) {
         if (i === 0) g.moveTo(tx(is.poly[i]), ty(is.poly[i + 1]));
@@ -609,6 +625,7 @@ export class Hud {
         g.strokeStyle = 'rgba(90,160,150,0.7)';
       }
     }
+    drawIslesMini(g, state, tx, ty, own, range, k); // the turtle islands, a bared bank's time left (docs/18 #31)
     // Lookouts on the headlands (docs/16 #24): a small red pennant, grey once climbed.
     for (const l of state.isles?.lookouts ?? []) {
       if (Math.abs(l.x - own.x) > range || Math.abs(l.y - own.y) > range) continue;

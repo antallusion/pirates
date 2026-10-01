@@ -1,5 +1,6 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
+import { drawIslesChart, drawSupplyRoutes, isleFill, isleLegend, zoneHint } from './islemap.ts'; // docs/18 III
 import { socialLegend, drawLfgFlag, drawSignalFlag, lfgLabel, lfgLog, liveSignals, signalName, wireLfgRows, worldGoalsLog } from './social.ts';
 import { icon } from './dom.ts';
 import { WORLD_SIZE } from '../../../shared/src/constants.ts';
@@ -228,9 +229,21 @@ export class WorldMap {
     const inGroup = (state.party?.members.length ?? 0) > 1;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><div class="map-wp-acts">${this.onAutosail ? `<button class="btn btn-small btn-primary map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" title="${esc(EL('as_goTitle'))}">⛵ ${esc(EL('as_go'))}</button>` : ''}<button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button class="btn btn-small map-pz">${icon('map_treasure', '', 'ico-sm')}${esc(H4L('puzzle.btn'))}</button>` : ''}</div>
-      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span>${socialLegend()}${heroLegend()}</div></details></div>
-      <div class="map-logs">${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
+      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
+      <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
+    // «Where is my level» (docs/18 #29): the chart turns to the zone, and her mark is set on it.
+    root.querySelectorAll<HTMLElement>('[data-zone]').forEach((b) => (b.onclick = () => {
+      const z = state.zones.find((x) => x.id === Number(b.dataset.zone));
+      if (!z) return;
+      this.cx = z.x;
+      this.cy = z.y;
+      this.zoom = Math.max(this.zoom, 3);
+      setWaypoint({ x: z.x, y: z.y });
+      root.querySelector('.map-wp-clear')?.classList.remove('hidden');
+      root.querySelector('.map-wp-sail')?.classList.toggle('hidden', !!state.self?.dockedAt);
+      this.draw(state);
+    }));
     // A task of the sea in the log: the chart turns to its nest.
     root.querySelectorAll<HTMLElement>('[data-task]').forEach((b) => (b.onclick = () => {
       const t = state.tasks.find((x) => x.id === Number(b.dataset.task));
@@ -569,7 +582,7 @@ export class WorldMap {
         else g.lineTo(tx(is.poly[i]), ty(is.poly[i + 1]));
       }
       g.closePath();
-      g.fillStyle = REGIONS[is.region].strangeness > 0.4 ? '#3a4744' : '#4a4637';
+      g.fillStyle = isleFill(is, REGIONS[is.region].strangeness > 0.4); // her kind's colour (docs/18 #27)
       g.fill();
       g.strokeStyle = 'rgba(216,210,196,0.5)';
       g.lineWidth = 0.8;
@@ -583,6 +596,9 @@ export class WorldMap {
     // Batch E of docs/16: the shoals she knows (streamed, or charted from a lookout), the lit lights and their reach,
     // the lookouts, the banks standing above the sea now, and her own buried chests.
     this.drawIsles(g, state, tx, ty, k, ms, label, mark);
+    // docs/18 III: the zones of one level, the islands' levels, the hidden found, the turtles, the banks under water.
+    drawSupplyRoutes(g, state, tx, ty);
+    drawIslesChart(g, state, tx, ty, k, this.zoom, ms, label);
     // Ports: key ports are on every chart; villages only once found.
     for (const p of state.ports) {
       const known = !p.id.includes('_v') || [...state.discovered].some((id) => state.islands.get(id)?.portId === p.id);

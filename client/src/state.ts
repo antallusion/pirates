@@ -2,6 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleproto.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
@@ -134,6 +135,10 @@ export class ClientState {
   mines: MineView[] = [];
   /** docs/17 H4: the guards and the things on the map she has seen, the card over the sea, the Grail's chart. */
   adv: AdvView | null = null;
+  /** docs/18 III: the zones of one level, the turtle islands, the supply routes. */
+  zones: ZoneView[] = [];
+  turtles: TurtleView[] = [];
+  supply: SupplyView | null = null;
   advCard: AdvCardView | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
@@ -391,6 +396,15 @@ export class ClientState {
         break;
       case 'adv':
         this.adv = m.view;
+        break;
+      case 'zones':
+        this.zones = m.list;
+        break;
+      case 'turtles':
+        this.turtles = m.list;
+        break;
+      case 'supply':
+        this.supply = m.view;
         break;
       case 'adv_card':
         this.advCard = m.view;

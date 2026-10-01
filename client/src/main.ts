@@ -1,5 +1,7 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { EN as I18_EN, RU as I18_RU } from './lang/ui/isles18.ts';
+import { THREAT_COLOR, shipLevelOf, threatOf } from '../../shared/src/data/shiplevel.ts';
 import { liveSignals, signalToast } from './ui/social.ts';
 import { noteHearsay, repairPrompt } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
@@ -293,6 +295,31 @@ const minigameWindow = new MinigameWindow((m) => net.send(m));
 // The walk across an island (docs/16 #21): its card waits behind an island game's window.
 const trekWindow = new TrekWindow((m) => net.send(m), () => minigameWindow.isOpen);
 const LI = dict(ISLES_EN, ISLES_RU);
+const L18 = dict(I18_EN, I18_RU); // docs/18 III
+
+/** docs/18 #28: the land key on an island two levels or more above her ship asks first (once an island). */
+let landOk = '';
+function sendLand(): void {
+  const l = state.self?.landable;
+  if (l?.danger && l.lv && landOk !== l.island) {
+    const mine = state.self ? shipLevelOf(state.self.loadout) : 1;
+    void ask(L18(l.danger === 'deadly' ? 'land.deadly' : 'land.warn', { island: placeName(sv(l.island)), lv: l.lv, mine, n: l.lv - mine }), L18('land.go')).then((ok) => {
+      if (!ok) return;
+      landOk = l.island;
+      net.send({ t: 'land' });
+    });
+    return;
+  }
+  net.send({ t: 'land' });
+}
+
+/** The island's level on the land key's prompt, in the ladder's colour, with the warning when she is far above. */
+function landTag(l: NonNullable<NonNullable<typeof state.self>['landable']>): string {
+  if (!l.lv) return '';
+  const mine = state.self ? shipLevelOf(state.self.loadout) : 1;
+  const word = l.danger === 'deadly' ? ` · ${L18('prompt.deadly')}` : l.danger === 'warn' ? ` · ${L18('prompt.warn')}` : '';
+  return ` <b class="isle-lv" style="color:${THREAT_COLOR[threatOf(mine, l.lv)]}">⚓${l.lv}${esc(word)}</b>`;
+}
 const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
@@ -673,6 +700,9 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'base':
       if (modal === 'base') refreshModal();
+      break;
+    case 'supply': // docs/18 #32
+      if (modal === 'base' && baseWindow.tab === 'supply') refreshModal();
       break;
     case 'dwell':
       if (modal === 'recruit') refreshModal();
@@ -1207,7 +1237,8 @@ addEventListener('keydown', (e) => {
     case 'land':
       // With nothing ashore to land at, the same key casts the net into a shoal (owner, 2026-09-30).
       if (!state.self?.landable && !mastWreck() && castable()) net.send({ t: 'fishing', action: 'cast' });
-      else net.send(mastWreck() && !state.self?.landable ? { t: 'cut_mast' } : { t: 'land' });
+      else if (mastWreck() && !state.self?.landable) net.send({ t: 'cut_mast' });
+      else sendLand();
       break;
     case 'orders': {
       const cur = state.you?.station ?? 'balanced';
@@ -1470,7 +1501,7 @@ function computePrompt(): string {
   else if (self.landable?.action === 'keeper') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(LI('keeper.prompt', { island: sv(self.landable.island), price: self.landable.feature }))}`);
   else if (self.landable?.action === 'escort') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('escortSign', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
   else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
-  else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
+  else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}${landTag(self.landable)}`);
   if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
   const cast = !self.landable && !mastWreck() ? castable() : null;
   if (cast) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L(cast === 'lamp' ? 'castLamp' : 'castNet'))}`);
@@ -1532,7 +1563,7 @@ function actionsRadial(): { label: string; run: () => void }[] {
     { label: t('act.repair'), run: () => net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) }) },
     { label: t('act.board'), run: () => (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(L('noCrippled'), 'bad')) },
     { label: t('act.orders'), run: () => net.send({ t: 'station', station: STATIONS[(STATIONS.indexOf(state.you?.station ?? 'balanced') + 1) % STATIONS.length] }) },
-    { label: t('act.land'), run: () => net.send({ t: 'land' }) },
+    { label: t('act.land'), run: () => sendLand() },
     { label: t('act.fireMode'), run: () => net.send({ t: 'fire_mode', rolling: !state.self?.rollingFire }) },
     { label: t('act.formation'), run: () => net.send({ t: 'formation', formation: (['line', 'wedge', 'ring'] as const)[((['line', 'wedge', 'ring'] as const).indexOf(state.self?.fleet.formation ?? 'line') + 1) % 3] }) },
     { label: t('act.crew'), run: () => toggle('crew') },
@@ -1547,7 +1578,7 @@ function padContext(): void {
   if (boardTarget !== null) return void net.send({ t: 'board', target: boardTarget, aggression: 'standard' });
   const own = state.ownDisplay;
   if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void requestDock(false);
-  if (state.self?.landable && !state.self.landable.blocked) return void net.send({ t: 'land' });
+  if (state.self?.landable && !state.self.landable.blocked) return void sendLand();
   if (mastWreck()) return void net.send({ t: 'cut_mast' });
   if (castable()) return void net.send({ t: 'fishing', action: 'cast' });
   if (nearHome()) return openBase();
@@ -2011,4 +2042,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : openModal(m)), hero: (tab?: 'hero' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : openModal(m)), hero: (tab?: 'hero' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap };

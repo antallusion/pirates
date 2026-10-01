@@ -4,6 +4,8 @@
 // opens a compact sheet: what may be built there and what it costs, the work under way and its speed-ups, the next
 // level, a move to another free plot. Phones first (portrait and landscape), then tablets and the desk.
 
+import { bindSupply, supplyTab } from './supply.ts'; // docs/18 #32
+import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
 import { guildYardCard, wireGuildYard } from './social.ts';
 import { GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate, speedupSilver } from '../../../shared/src/data/base.ts';
 import type { ProducerKind } from '../../../shared/src/data/base.ts';
@@ -34,6 +36,7 @@ import { EN as H_EN, RU as H_RU } from '../lang/ui/h3.ts';
 const L = dict(EN, RU);
 const CO = dict(CO_EN, CO_RU);
 const H = dict(H_EN, H_RU);
+const S18 = dict(I18_EN, I18_RU); // docs/18 #32
 
 /** A thing's name in the reader's tongue (buildings are swapped in place by the data overlay). */
 export function baseName(what: string): string {
@@ -113,7 +116,7 @@ const LANDSCAPE = matchMedia('(max-height: 520px) and (min-aspect-ratio: 1/1)');
 export class BaseWindow {
   sel: number | null = null;
   /** The island's plots, or its shipyard (docs/15 item 4). */
-  tab: 'plots' | 'yard' | 'town' = 'plots';
+  tab: 'plots' | 'yard' | 'town' | 'supply' = 'plots';
   moving: number | null = null;
   private send: (m: ClientMsg) => void;
   private asked = 0;
@@ -136,6 +139,7 @@ export class BaseWindow {
     this.sel = null;
     this.moving = null;
     this.send({ t: 'base', action: 'view' });
+    this.send({ t: 'isle18', action: 'supply' }); // docs/18 #32
   }
 
   /** The server's wall clock now, by the view's clock and the time since it came. */
@@ -161,13 +165,15 @@ export class BaseWindow {
       <span class="bmeta">${money(state.self?.gold ?? 0)}</span>
       <button class="btn btn-small${fresh ? ' btn-primary' : ''}" data-bcollect title="${esc(L('collect_tip'))}"${fresh ? '' : ' disabled'}>${esc(L('collect'))}${fresh ? ` +${fmt(fresh)}` : ''}</button></div></div>`;
     const sy = v.shipyard;
-    const tabs = `<div class="btabs" role="tablist"><button class="btab${this.tab === 'plots' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'plots'}" data-btab="plots">${esc(L('tab_plots'))}</button><button class="btab${this.tab === 'yard' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'yard'}" data-btab="yard">${esc(L('tab_yard'))} <i>${sy.ships.length}/${sy.max}</i></button>${v.town ? `<button class="btab${this.tab === 'town' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'town'}" data-btab="town">${esc(H('tab'))}</button>` : ''}</div>`;
+    const tabs = `<div class="btabs" role="tablist"><button class="btab${this.tab === 'plots' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'plots'}" data-btab="plots">${esc(L('tab_plots'))}</button><button class="btab${this.tab === 'yard' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'yard'}" data-btab="yard">${esc(L('tab_yard'))} <i>${sy.ships.length}/${sy.max}</i></button>${v.town ? `<button class="btab${this.tab === 'town' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'town'}" data-btab="town">${esc(H('tab'))}</button>` : ''}<button class="btab${this.tab === 'supply' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'supply'}" data-btab="supply">${esc(S18('sup.tab'))}${state.supply?.isles.some((x) => x.linked) ? ` <i>${state.supply.isles.filter((x) => x.linked).length}</i>` : ''}</button></div>`;
     // A phone on its side (docs/15 item 8): the board fills the left, and the resources, the waters and the sheet
     // scroll together on the right, so the board is not squeezed under three header rows.
     const land = LANDSCAPE.matches;
     const top = `${bar}${this.defence(v)}`;
     if (this.tab === 'town' && !v.town) this.tab = 'plots';
-    const body = this.tab === 'town'
+    const body = this.tab === 'supply'
+      ? `<div class="modal-body base-body yard-body sup-body">${land ? top : ''}${supplyTab(state)}</div>`
+      : this.tab === 'town'
       ? `<div class="modal-body base-body yard-body town-body">${land ? top : ''}${townTab(v, state, this.mk)}</div>`
       : this.tab === 'yard'
       ? `<div class="modal-body base-body yard-body">${land ? top : ''}${this.yard(v, state)}</div>`
@@ -378,7 +384,7 @@ export class BaseWindow {
       redraw();
     }));
     root.querySelectorAll<HTMLElement>('[data-btab]').forEach((el) => (el.onclick = () => {
-      this.tab = el.dataset.btab === 'yard' ? 'yard' : el.dataset.btab === 'town' ? 'town' : 'plots';
+      this.tab = el.dataset.btab === 'yard' ? 'yard' : el.dataset.btab === 'town' ? 'town' : el.dataset.btab === 'supply' ? 'supply' : 'plots';
       redraw();
     }));
     root.querySelector<HTMLElement>('[data-blevel]')?.addEventListener('click', () => {
@@ -391,6 +397,7 @@ export class BaseWindow {
     }
     root.querySelector<HTMLElement>('[data-bcollect]')?.addEventListener('click', () => this.send({ t: 'base', action: 'collect' }));
     bindTown(root, this.send, this.mk, () => this.onRecruit(), redraw);
+    bindSupply(root, this.send); // docs/18 #32
     root.querySelector<HTMLElement>('[data-bsail]')?.addEventListener('click', () => this.onSail());
     root.querySelector<HTMLElement>('[data-babandon]')?.addEventListener('click', () => void ask(L('abandon_confirm', { name: placeName(v.name), refund: fmt(v.claim.refund), h: 72 })).then((ok) => {
       if (!ok) return;

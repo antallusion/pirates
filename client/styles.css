@@ -3686,3 +3686,27 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 /* docs/17 H5 (QA): the First Watch's step heads the top stack (a phone's stack scrolls; the step fell out of sight
    under the target frame and the fishing card once the guns came in). */
 #hud-stack > #hud-watch { order: -3; }
+
+/* docs/18 III: the minimap's tooltip, an island's level on the land key's prompt, «where is my level», the supply tab. */
+.mm-tip { position: fixed; z-index: 60; pointer-events: none; max-width: 280px; padding: 5px 9px; border-radius: 6px; background: rgba(10, 12, 14, 0.92); border: 1px solid rgba(176, 141, 87, 0.55); color: #e8dcc0; font: 600 12px/1.35 Inter, sans-serif; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); }
+.mm-tip.hidden { display: none; }
+.isle-lv { font-weight: 700; white-space: nowrap; }
+.map-zone .mq-row span { white-space: normal; text-align: left; }
+.sup-body { display: block; }
+.sup-head h3 { margin: 4px 0 2px; font-size: 16px; }
+.sup-head p { margin: 0 0 8px; font-size: 13px; }
+.sup-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 10px; font-size: 13px; }
+.sup-meta .bad { color: var(--bad); }
+.sup-list { display: flex; flex-direction: column; gap: 8px; }
+.sup-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; padding: 8px 10px; border: 1px solid rgba(176, 141, 87, 0.3); border-radius: 8px; background: rgba(14, 16, 18, 0.55); }
+.sup-row.on { border-color: rgba(200, 176, 122, 0.75); background: rgba(40, 34, 22, 0.55); }
+.sup-name { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; min-width: 0; }
+.sup-name .muted { flex-basis: 100%; font-size: 12px; }
+.sup-good { display: flex; flex-direction: column; gap: 2px; font-size: 13px; min-width: 0; }
+.sup-good .good { color: var(--good); font-size: 12px; }
+.sup-good .muted { font-size: 12px; }
+.sup-none { margin-top: 6px; }
+@media (max-width: 520px) {
+  .sup-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .sup-good { grid-column: 1 / -1; grid-row: 2; }
+}
