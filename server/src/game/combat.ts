@@ -423,6 +423,9 @@ function volleyBall(game: Game, p: Projectile, target: ShipEntity | null): void 
 /** Whether `a` may damage `b` at all (protection rules). Returns a reason when blocked. */
 export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): string | null {
   if (b.docked) return 'docked';
+  // Two ships lashed in a boarding are out of the sea's fight until it is over (owner, 2026-10-01): no third ship
+  // may fire on, ram or board either of them.
+  if (b.grappled && (!a || b.boarding!.with !== a.id)) return 'She is locked in a boarding: no one may touch her until it is over.';
   if (!a) return null;
   // Duels, the Green Pennant (pvp.ts).
   const pv = pvpBlocked(game, a, b);
@@ -685,6 +688,8 @@ export function cutMastWreck(game: Game, ship: ShipEntity): string | null {
 /** Central damage entry point for cannon fire, abilities, collisions and hazards. Returns the men it killed. */
 export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, source: ShipEntity | null, at?: { x: number; y: number }): number {
   if (!target.alive || target.docked || target.god) return 0;
+  // Locked in a boarding: nothing from outside lands on her (see damageBlocked).
+  if (target.grappled && (!source || target.boarding!.with !== source.id)) return 0;
   // A ship across a zone line: the hit is hers to take in her own zone.
   if (target.ghost) {
     game.zone?.forwardHit(target, d, source);

@@ -361,3 +361,28 @@ test('her deck as the guns left it goes to the battle: holes by her hull lost an
   const d = deckState(s);
   assert.ok(d.holes >= 3 && d.holes <= 4 && Math.abs(d.gunsOut - 0.5) < 1e-9 && d.fire, JSON.stringify(d));
 });
+
+test('lashed in a boarding: no third ship may fire on, hunt or board either of them until it is over', async () => {
+  const { applyDamage, damageBlocked } = await import('../server/src/game/combat.ts');
+  const { canBoard } = await import('../server/src/game/boarding.ts');
+  const { game } = makeGame();
+  game.tacticalBoarding = true;
+  const { ship } = atSea(game, 'Lashed');
+  const npc = alongside(game, ship);
+  startBoarding(game, npc, ship, 'standard');
+  assert.ok(ship.grappled && npc.grappled);
+  const v = headingVec(ship.state.heading + Math.PI / 2);
+  const third = game.spawnNpcShip('pirate', 'brig', 'free', ship.state.x + v.x * 60, ship.state.y + v.y * 60, ship.state.heading);
+  game.setNpcLevel(third, 5);
+  game.npcs.get(third.id)!.active = true;
+  game.grid.upsert(third.id, third.state.x, third.state.y);
+  assert.ok(damageBlocked(game, third, ship), 'no firing on the captain');
+  assert.ok(damageBlocked(game, third, npc), 'nor on her foe');
+  assert.equal(damageBlocked(game, npc, ship), null, 'the two in it are still each other\'s');
+  const hull = ship.hull;
+  assert.equal(applyDamage(game, ship, { hull: 500, crew: 10 }, third), 0);
+  assert.equal(ship.hull, hull);
+  assert.ok(canBoard(game, third, ship), 'and nobody else throws grapples on her');
+  steps(game, 40);
+  assert.notEqual(game.npcs.get(third.id)?.target ?? null, ship.id, 'the pirate does not hunt a ship in a boarding');
+});

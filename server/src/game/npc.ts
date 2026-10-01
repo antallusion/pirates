@@ -479,6 +479,10 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     }
   }
 
+  // Ships lashed in a boarding are out of the fight until it is over: no one hunts them or flees from them.
+  if (prey && (prey as ShipEntity).grappled && ship.boarding?.with !== (prey as ShipEntity).id) prey = null;
+  if (threat && (threat as ShipEntity).grappled) threat = null;
+
   if (brain.fireship !== undefined) {
     fireshipThink(game, ship, brain);
     return;

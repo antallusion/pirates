@@ -77,6 +77,9 @@ test('beating to windward (docs/16 P5): a pack dead to leeward of a hove-to capt
   const b = npcAt(game, 'pirate', prey.state.x + 2400, prey.state.y - 500);
   assert.equal(rallyPack(game, first, prey), 2);
   for (const o of [a, b]) assert.ok((game.npcs.get(o.id)!.flankUntil ?? 0) <= game.now + FLANK_SEC, 'the swing round is capped');
+  // The one who called them sails off: were she to grapple the captain first, the pack would leave a ship locked in a
+  // boarding alone (combat.ts) — this test is of the beat to windward.
+  game.removeShip(first.id);
   const d0 = [a, b].map((o) => Math.hypot(o.state.x - prey.state.x, o.state.y - prey.state.y));
   const best = [...d0];
   for (let i = 0; i < 24; i++) {

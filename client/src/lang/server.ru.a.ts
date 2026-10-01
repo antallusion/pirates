@@ -451,6 +451,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "No bell buoy here": "Здесь нет буя колокола",
   "No bid reached your reserve. The lot waits for you in {0}.": "Ни одна ставка не достигла резервной цены. Лот ждёт вас в {0}.",
   "No boarding in a duel": "В дуэли абордаж запрещён",
+  "She is locked in a boarding: no one may touch her until it is over.": "Она сцеплена абордажем: пока бой не кончен, её никто не тронет.",
   "No captain": "Нет капитана",
   "No captain goes by that name": "Капитана с таким именем нет",
   "No captain of that name is at sea": "Капитана с таким именем нет в море",
