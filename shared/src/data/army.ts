@@ -4,8 +4,13 @@
 // kills men out of the stacks, the weaker and the less armoured first; the hull is the wall they stand behind.
 // The boarding battle (server/src/game/tacbattle.ts) lays these stacks out on the hexes as they are.
 
-/** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each. */
-export type UnitId =
+import { BEASTS } from './bestiary.ts';
+import type { BeastId } from './bestiary.ts';
+
+/** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
+ *  them (docs/18 II, shared/src/data/bestiary.ts). */
+export type UnitId = MenId | BeastId;
+export type MenId =
   | 'deckhand' | 'sailor'
   | 'marine' | 'sea_guard'
   | 'musketeer' | 'sharpshooter'
@@ -14,7 +19,8 @@ export type UnitId =
   | 'guard' | 'life_guard'
   | 'drowned' | 'deep_spawn';
 
-export const UNIT_IDS: UnitId[] = ['deckhand', 'sailor', 'marine', 'sea_guard', 'musketeer', 'sharpshooter', 'gunner', 'bombardier', 'boarder', 'cutthroat', 'guard', 'life_guard', 'drowned', 'deep_spawn'];
+/** The men (the creatures' kinds are BEAST_IDS). */
+export const UNIT_IDS: MenId[] = ['deckhand', 'sailor', 'marine', 'sea_guard', 'musketeer', 'sharpshooter', 'gunner', 'bombardier', 'boarder', 'cutthroat', 'guard', 'life_guard', 'drowned', 'deep_spawn'];
 
 /** What makes a kind of man more than his numbers (as the specials of HoMM3's creatures). */
 export type UnitSpecial =
@@ -41,7 +47,23 @@ export type UnitSpecial =
   /** Strikes every foe beside it at once, and none of them answers. */
   | 'sweep'
   /** Half the harm from shots (a wall of shields and hammocks). */
-  | 'shield_wall';
+  | 'shield_wall'
+  // docs/18 item 16: the land's creatures.
+  /** A shell: shots barely scratch it (a little over a third of their harm). */
+  | 'shell'
+  /** Its bite poisons: the stack it struck loses men again as its next two turns come. */
+  | 'poison'
+  /** Many small things: every blow on it lands as from the flank, and its foes' answers are half as hard. */
+  | 'swarm'
+  /** It grows back: a share of its strength at the start of each of its turns. */
+  | 'regen'
+  /** The living beside it may freeze in terror as their turn comes (one in five). */
+  | 'terror'
+  /** Flies over the rocks, the palms, the surf and the stacks. */
+  | 'flying'
+  /** Goes into the surf and comes out of it anywhere along the shore (the surf is one water); half the harm from shots
+   *  while it is in it. */
+  | 'diving';
 
 export interface UnitDef {
   id: UnitId;
@@ -67,12 +89,15 @@ export interface UnitDef {
   cost: number;
   /** Only the Choir's and the cursed ships carry them. */
   deep?: boolean;
+  /** One of the land's creatures (docs/18 II), not a man. */
+  beast?: boolean;
 }
 
 const U = (id: UnitId, tier: number, up: boolean, base: UnitId, upgrade: UnitId | null, s: Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>): UnitDef => ({ id, tier, up, base, upgrade, ...s });
 
 /** One man of each kind (the HoMM3 scale: a pikeman 4/5 1–3 10 hp, a black dragon 25/25 40–50 300 hp). */
 export const UNITS: Record<UnitId, UnitDef> = {
+  ...BEASTS,
   deckhand: U('deckhand', 1, false, 'deckhand', 'sailor', { atk: 3, def: 2, dmin: 1, dmax: 2, hp: 5, speed: 4, init: 5, shots: 0, specials: [], art: 'portrait.pirate_15', cost: 20 }),
   sailor: U('sailor', 1, true, 'deckhand', null, { atk: 4, def: 3, dmin: 1, dmax: 3, hp: 6, speed: 4, init: 6, shots: 0, specials: [], art: 'portrait.giver_old_salt_m', cost: 30 }),
   marine: U('marine', 2, false, 'marine', 'sea_guard', { atk: 7, def: 6, dmin: 2, dmax: 4, hp: 9, speed: 4, init: 7, shots: 0, specials: [], art: 'portrait.pirate_06', cost: 60 }),
