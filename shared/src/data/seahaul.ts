@@ -5,12 +5,13 @@
 // alone took in an hour before the sea was doubled (tests/balance/density.ts), so the day's income from them stays
 // between what it was and a quarter more: twice the finds at most come to 1 + ¼ of them.
 
-export type HaulSource = 'marks' | 'life' | 'finds' | 'adv' | 'lairs';
-export const HAUL_SOURCES: HaulSource[] = ['marks', 'life', 'finds', 'adv', 'lairs'];
+export type HaulSource = 'marks' | 'life' | 'finds' | 'adv' | 'lairs' | 'roam';
+export const HAUL_SOURCES: HaulSource[] = ['marks', 'life', 'finds', 'adv', 'lairs', 'roam'];
 
 /** Finds at their full worth for each hour at sea in a day, by source (the sim's gleaner before D: marks 5–7, flotsam
- *  36–44, lairs 1–2.5, the map's open chests and mills under one; D5's small things are new: a day's modest share). */
-export const HAUL: Record<HaulSource, number> = { marks: 5, life: 38, finds: 8, adv: 1, lairs: 1.2 };
+ *  36–44, lairs 1–2.5, the map's open chests and mills under one; D5's small things are new: a day's modest share; D7's
+ *  roaming stacks: about a steady hour's fights, past which their silver and spoils are half — the lesson never). */
+export const HAUL: Record<HaulSource, number> = { marks: 5, life: 38, finds: 8, adv: 1, lairs: 1.2, roam: 20 };
 /** What a find pays past the count. */
 export const HAUL_THIN = 0.5;
 /** A day of the real calendar (UTC) by the wall clock (ms). */

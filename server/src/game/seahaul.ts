@@ -42,6 +42,7 @@ const THIN_LINE: Record<HaulSource, string> = {
   finds: 'The small things of the sea are thin today: they give half now (more as your hours at sea grow).',
   adv: 'The chests and stores are picked over today: half their worth now (more as your hours at sea grow).',
   lairs: 'The lairs are hunted out today: their spoils are half now (the lesson is whole; more as your hours at sea grow).',
+  roam: 'The roaming creatures are hunted thin today: their silver and spoils are half now (the lesson is whole; more as your hours at sea grow).',
 };
 
 /** The share of its worth her next find of a source pays — had now. */

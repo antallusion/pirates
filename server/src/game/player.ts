@@ -292,6 +292,8 @@ export interface Profile {
   seaHaul?: { day: number; sec: number; n: Partial<Record<string, number>>; told?: Partial<Record<string, number>> };
   /** docs/19 D5: the small things of the sea she has had, by kind (for her log and the tests). */
   seaFinds?: Partial<Record<string, number>>;
+  /** docs/19 D7: the roaming stacks she has beaten (for her log and the tests). */
+  roamWins?: number;
 }
 
 export interface Dealings {

@@ -141,6 +141,8 @@ export interface ExtFight {
   level: number;
   /** The fight is over (won or not): what it left her, if anything. */
   onEnd: (game: Game, s: PlayerSession, won: boolean, bt: TacBattle) => LairLoot | undefined;
+  /** docs/19 D7: the share of the battle's own lesson she has (a roaming stack's: less a blow, none for a grey one). */
+  xpMul?: number;
 }
 
 interface L18 {
@@ -683,7 +685,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   if (f.ext) {
     // docs/18 IV: another system's fight — its own end.
     if (won) {
-      const xp = Math.round(killedHp(bt, 0) * TAC_XP_PER_HP);
+      const xp = Math.round(killedHp(bt, 0) * TAC_XP_PER_HP * (f.ext.xpMul ?? 1));
       f.xp = xp;
       if (xp > 0) game.grantXp(s, xp, `Won the fight with the ${f.ext.place}`, true);
       ship.morale = Math.min(100, ship.morale + 5);

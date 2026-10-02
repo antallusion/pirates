@@ -89,6 +89,9 @@ export interface LairLoot {
   drift?: { silver: number; xp: number; legend?: boolean };
   /** docs/19 D5: the chest among the sharks — what came up in it. */
   find?: { silver: number; goods: { g: GoodId; n: number }[] };
+  /** docs/19 D7: a roaming stack beaten at sea — its lesson (the battle's apart), its silver and spoils, an artifact,
+   *  the fallen hauled back from the water, the group mates who shared in it, the day's count past, a grey one. */
+  roam?: { xp: number; silver: number; res: Partial<Record<LandRes | 'pearls', number>>; artifact?: string; raised: number; mates: number; thin?: boolean; grey?: boolean };
 }
 
 export interface LairsView {
