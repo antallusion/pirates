@@ -75,7 +75,8 @@ export function groupWin(kind: DriftKind, L: number, fights = 60, n = driftCount
   const nat = nativePath(u);
   const over = (fav: boolean, mixed: number) => BAND.reduce((acc, f) => {
     const M = Math.round(CREW[L] * f);
-    return acc + wins(side(withGroup(L, M, u, n, fav), mixed, fav ? nat : 'corsair'), side(armyForLevel(L, M, 7, 'pirate'), 0), fights);
+    // The same captain's book on both sides (a path's own book is the paths' table's business, not the creatures').
+    return acc + wins(side(withGroup(L, M, u, n, fav && !!nat), mixed), side(armyForLevel(L, M, 7, 'pirate'), 0), fights);
   }, 0) / BAND.length;
   return {
     band: parts.includes('band') ? over(false, -1) : NaN,
@@ -96,22 +97,26 @@ export function ladderBand(L: number, fights = 60): number {
   }, 0) / BAND.length;
 }
 
-/** DRIFT_CAL for a kind: at each of its levels, the multiple of its uncalibrated count whose group wins nearest the
- *  target over the band (−1 morale), tried on a ladder of multiples. */
+/** DRIFT_CAL for a kind: at each of its levels, the multiple of its uncalibrated count whose group — both in a mixed
+ *  army (−1 morale) and with its path's own people (0, the favourite's edge) — wins within 45–60% over the band, the
+ *  one nearest its worth's own head count; else the one whose worse case misses the band least. */
 export function calibrateDrift(kind: DriftKind, base: (L: number) => number, fights = 60, target = 0.52, log?: (s: string) => void): number[] {
   const row = Array<number>(11).fill(1);
   for (let L = DRIFTS[kind].lv[0]; L <= DRIFTS[kind].lv[1]; L++) {
     const n0 = base(L);
-    const tried = new Map<number, number>();
+    const tried = new Map<number, [number, number]>();
     for (const m of [0.08, 0.15, 0.25, 0.4, 0.6, 0.8, 1, 1.25, 1.6, 2, 2.6, 3.4]) {
       const n = Math.max(1, Math.round(n0 * m));
-      if (!tried.has(n)) tried.set(n, groupWin(kind, L, fights, n, ['band']).band);
+      if (!tried.has(n)) {
+        const g = groupWin(kind, L, fights, n, ['band', 'native']);
+        tried.set(n, [g.band, g.native]);
+      }
     }
-    // The group nearest its worth's own head count among those within four points of the target; else the nearest win.
-    const near = [...tried].filter(([, w]) => Math.abs(w - target) <= 0.04).sort((a, b) => Math.abs(Math.log(a[0] / n0)) - Math.abs(Math.log(b[0] / n0)));
-    const [bn, bw] = near[0] ?? [...tried].sort((a, b) => Math.abs(a[1] - target) - Math.abs(b[1] - target) || a[0] - b[0])[0];
+    const miss = ([a, b]: [number, number]) => Math.max(0, 0.45 - Math.min(a, b), Math.max(a, b) - 0.6) + Math.abs((a + b) / 2 - target) * 0.1;
+    const inside = [...tried].filter(([, w]) => miss(w) < 0.01).sort((a, b) => Math.abs(Math.log(a[0] / n0)) - Math.abs(Math.log(b[0] / n0)));
+    const [bn, bw] = inside[0] ?? [...tried].sort((a, b) => miss(a[1]) - miss(b[1]) || a[0] - b[0])[0];
     row[L] = Math.round((bn / n0) * 100) / 100;
-    log?.(`${kind} ⚓${L}: ${n0} → ${bn} (${Math.round(bw * 100)}%) tried ${[...tried].map(([n, w]) => `${n}:${Math.round(w * 100)}`).join(' ')}`);
+    log?.(`${kind} ⚓${L}: ${n0} → ${bn} (${Math.round(bw[0] * 100)}/${Math.round(bw[1] * 100)}%) tried ${[...tried].map(([n, w]) => `${n}:${Math.round(w[0] * 100)}/${Math.round(w[1] * 100)}`).join(' ')}`);
   }
   return row;
 }

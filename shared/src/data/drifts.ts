@@ -63,7 +63,7 @@ export const PATH_FAV: Record<CaptainId, { people?: Exclude<People, 'men'>; kind
 
 /** What a favourite stack gets in a battle: attack and defence a tenth more; and it never splits the army's morale
  *  (it counts as the crew), and rescues and captures of it come easier (the native path's +10% / +6%). */
-export const FAV_BONUS = 0.1;
+export const FAV_BONUS = 0.05;
 
 /** Whether a creature kind is a favourite of a path. */
 export function isFavourite(path: CaptainId | null | undefined, u: UnitId): boolean {
@@ -237,13 +237,13 @@ export function driftCount(kind: DriftKind, level: number): number {
  *  place of as many hands, wins half its boardings against the pirates of that level (with a mixed army's −1 morale;
  *  averaged over the hammocks ±15%, the battle being steep in the make-up of small stacks). Index: the level. */
 export const DRIFT_CAL: Partial<Record<DriftKind, number[]>> = {
-  drowned_boat: [1, 1, 1, 1, 1, 0.8, 0.33, 0.25, 0.82, 1.57, 1.28],
+  drowned_boat: [1, 1, 1, 1, 1, 0.6, 0.17, 0.25, 1, 1, 1],
   gull_mast: [1, 1, 0.38, 0.6, 1, 1, 1, 1, 1, 1, 1],
-  mermaid_net: [1, 1, 1, 1, 0.25, 0.33, 0.14, 0.2, 0.23, 0.81, 1],
-  seal_floe: [1, 0.67, 1, 1, 1.62, 1.25, 0.62, 1, 1, 1, 1],
-  serpent_wreck: [1, 1, 1, 1, 1, 0.67, 0.5, 1, 1.33, 1.25, 1],
-  tentacle_chain: [1, 1, 1, 1, 1, 1, 0.11, 0.36, 1, 0.79, 1],
-  turtle_weed: [1, 1, 1.25, 0.2, 1.57, 1.56, 0.58, 1, 1, 1, 1],
+  mermaid_net: [1, 1, 1, 1, 0.5, 0.33, 0.43, 0.1, 0.23, 0.38, 1],
+  seal_floe: [1, 0.83, 1, 1, 1.62, 1, 0.62, 1, 1, 1, 1],
+  serpent_wreck: [1, 1, 1, 1, 1, 0.67, 0.75, 1, 1.33, 1, 1],
+  tentacle_chain: [1, 1, 1, 1, 1, 1, 0.22, 0.36, 1, 1.26, 1],
+  turtle_weed: [1, 1, 1.25, 0.4, 1.57, 1.56, 0.58, 0.8, 1, 1, 1],
 };
 
 /** Seconds a drift lasts before it sinks, drifts off or the sharks finish it; a legend lasts three hours. */

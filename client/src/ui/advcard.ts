@@ -222,18 +222,32 @@ export class AdvCard {
    *  thing's token on the sea): it ends above the token, or stands below it when the token is high on the screen. */
   /** The card's own top on a small screen (its stylesheet's), measured once a layout. */
   private baseTop: number | null = null;
+  private baseLeft: number | null = null;
   private fit(): void {
     if (this.el.classList.contains('hidden')) return;
     const narrow = innerWidth < 1100 || innerHeight <= 520;
     if (narrow && this.baseTop === null) {
       this.el.style.top = '';
+      this.el.style.left = '';
+      this.el.style.transform = '';
       this.baseTop = this.el.getBoundingClientRect().top;
+      this.baseLeft = this.el.getBoundingClientRect().left;
     }
     const r = this.el.getBoundingClientRect();
     const base = narrow ? this.baseTop! : r.top;
     let top = base;
     // docs/18 IV: several cards at once (a lair's and a drift's) scroll within the screen rather than run off it.
     let max = Math.max(140, Math.round(innerHeight - top - 8));
+    let left = narrow ? this.baseLeft! : r.left;
+    if (narrow && innerHeight <= 520) {
+      // A phone held sideways: no room above or below — the card steps aside from the token instead.
+      const w = r.width, h = Math.min(this.el.scrollHeight, max);
+      for (const p of this.subjects()) {
+        if (p.x < left - 24 || p.x > left + w + 24 || p.y < top - 24 || p.y > top + h + 24) continue;
+        const right = Math.round(p.x + 40), leftOf = Math.round(p.x - 40 - w);
+        left = right + w <= innerWidth - 8 && (p.x < left + w / 2 || leftOf < 8) ? right : Math.max(8, leftOf);
+      }
+    }
     if (narrow && innerHeight > 520) {
       const h = Math.min(this.el.scrollHeight, max);
       for (const p of this.subjects()) {
@@ -250,6 +264,12 @@ export class AdvCard {
     if (narrow) {
       const t = top !== base ? `${top}px` : '';
       if (this.el.style.top !== t) this.el.style.top = t;
+      // (a step aside: from the left, the stylesheet's centring undone)
+      const l = left !== this.baseLeft ? `${left}px` : '';
+      if (this.el.style.left !== l) {
+        this.el.style.left = l;
+        this.el.style.transform = l ? 'none' : '';
+      }
     }
     const m = `${max}px`;
     if (this.el.style.maxHeight !== m) this.el.style.maxHeight = m;

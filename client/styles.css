@@ -3888,3 +3888,8 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 .rn-page-list { margin: 2px 0 6px; padding-left: 18px; line-height: 1.4; }
 .rn-page-loot { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 2px 0 6px; }
 #minimap { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* docs/18 #50: a path page's text keeps within its card (the long school names in English wrap). */
+.pb-page > span, .pb-page > div:not(.pb-tags) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pb-tags .tag { white-space: normal; max-width: 100%; text-align: left; }
+/* A toast never wider than its column (a long word in a talk line, the density's zoom on it). */
+#toasts > .toast { box-sizing: border-box; max-width: calc(100% / var(--density, 1)); min-width: 0; overflow-wrap: anywhere; }

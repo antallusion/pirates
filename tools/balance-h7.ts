@@ -39,7 +39,7 @@ if (args.includes('--calibrate-drifts')) {
   for (const k of kinds) {
     const saved = DRIFT_CAL[k];
     delete DRIFT_CAL[k];
-    const row = calibrateDrift(k, (L) => driftCount(k, L), FAST ? 40 : 60, 0.52, (s) => console.error(s));
+    const row = calibrateDrift(k, (L) => driftCount(k, L), FAST ? 40 : 60, Number(process.env.TARGET ?? 0.49), (s) => console.error(s));
     if (saved) DRIFT_CAL[k] = saved;
     console.log(`  ${k}: [${row.join(', ')}],`);
   }

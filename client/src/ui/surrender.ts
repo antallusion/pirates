@@ -13,7 +13,11 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/colours.ts';
-import { personName } from '../lang/names.ts';
+import { personName, personNameRu } from '../lang/names.ts';
+import { serverText } from '../lang/server.ts';
+
+/** A captain's name: a person's in Russian, or a title the server gave her («Комендант Видоупойнт-Холм»). */
+const captainName = (en: string): string => (lang() === 'ru' ? personNameRu(en) ?? serverText(en) : personName(en));
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
 import { esc, fmt, icon } from './dom.ts';
@@ -119,7 +123,7 @@ export class SurrenderCard {
       `<button class="btn choice sur-choice${primary ? ' btn-primary' : ''}" data-sur="${fate}" data-off="${off ? 1 : 0}"${!near || off ? ' disabled' : ''}>${icon(ico, '', 'choice-ico')}<span><b>${esc(title)}</b><small>${esc(sub)}</small></span></button>`;
     this.el.innerHTML = `<div class="enc-card sur-card">
       <div class="sur-head">${art ? `<img class="sur-ship" src="${art}" alt="" draggable="false" />` : ''}<div><div class="enc-h">${icon('talent_brd_surrender_terms', '', 'ico-md')}${esc(L('sur.title', { name: shipName(o.name) }))}</div>
-      <div class="sur-sub muted">${esc(L('sur.sub', { cls: cls.name, faction: o.faction === 'player' ? '' : factionName(o.faction), role: roleName(o.role), captain: personName(o.captain) }))}</div></div></div>
+      <div class="sur-sub muted">${esc(L('sur.sub', { cls: cls.name, faction: o.faction === 'player' ? '' : factionName(o.faction), role: roleName(o.role), captain: captainName(o.captain) }))}</div></div></div>
       <p class="enc-text">${esc(L('sur.text'))} <span class="muted">${esc(o.cargo ? L('sur.hold', { n: o.cargo, gold: fmt(o.gold) }) : L('sur.holdEmpty', { gold: fmt(o.gold) }))}</span></p>
       <div class="sur-choices">
         ${choice('ransom', 'coin', L('sur.ransom'), L('sur.ransomSub', { sum: fmt(o.ransom) }), false, true)}
