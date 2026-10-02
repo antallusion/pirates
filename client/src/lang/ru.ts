@@ -227,6 +227,8 @@ export const RU: Record<keyof typeof EN, string> = {
   // Титульный экран, выбор капитана, рамка HUD (client/index.html)
   'doc.title': 'GRAVETIDE — пиратская готическая MMORPG',
   'login.subtitle': 'Океан — это мир. Корабль — это персонаж. Капитан — это билд.',
+  'rotate.title': 'Поверните телефон',
+  'rotate.text': 'В GRAVETIDE играют только в горизонтальном положении.',
   'login.name': 'Имя капитана',
   'login.namePh': 'напр. Анна Блэквуд',
   'login.guest': 'Отчалить гостем',

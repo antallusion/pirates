@@ -234,6 +234,8 @@ export const EN = {
   // Title screen, captain screen static markup, HUD chrome (client/index.html)
   'doc.title': 'GRAVETIDE — a Pirate Gothic MMORPG',
   'login.subtitle': 'The ocean is the world. The ship is the character. The captain is the build.',
+  'rotate.title': 'Turn your phone sideways',
+  'rotate.text': 'GRAVETIDE is played in landscape.',
   'login.name': "Captain's name",
   'login.namePh': 'e.g. Anne Blackwood',
   'login.guest': 'Set sail as a guest',

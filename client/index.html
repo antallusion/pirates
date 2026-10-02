@@ -171,6 +171,13 @@
 
   <div id="connection" class="hidden" data-i18n="conn.reconnecting">Reconnecting to the Admiralty…</div>
 
+  <!-- A phone held upright: the game is played sideways only, so the whole screen asks to turn it (styles.css). -->
+  <div id="rotate-lock" role="alertdialog" aria-modal="true" aria-labelledby="rotate-lock-title">
+    <div class="rl-phone" aria-hidden="true"><i></i></div>
+    <b id="rotate-lock-title" data-i18n="rotate.title">Turn your phone sideways</b>
+    <small data-i18n="rotate.text">GRAVETIDE is played in landscape.</small>
+  </div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

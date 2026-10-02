@@ -313,6 +313,17 @@ const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServer
 const tactical = new TacticalPanel((m) => net.send(m), () => state.estServerTime());
 const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
+// A phone plays sideways only (owner, 2026-10-02). On the first touch the game goes full screen and holds the screen
+// sideways where the browser allows it (Android); elsewhere the #rotate-lock veil asks for the phone to be turned.
+if (matchMedia('(pointer: coarse)').matches) {
+  const holdSideways = (): void => {
+    const lock = () => (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape').catch(() => {});
+    const el = document.documentElement;
+    if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).then(lock, () => {});
+    else lock();
+  };
+  addEventListener('pointerup', holdSideways, { once: true });
+}
 const touch = new TouchControls({
   sail: (d) => (state.input.sail = clamp(state.input.sail + d, 0, 4)),
   fire: (side) => releaseFire(side),
