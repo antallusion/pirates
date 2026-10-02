@@ -220,6 +220,7 @@ import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, stepL
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
 import { seamarkMessage, stepSeaMarks } from './seamarks.ts'; // the dense sea's marks at work
+import { findMessage, stepSeaFinds } from './seafinds.ts'; // docs/19 D5: the sea's small things, and the day's caps
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
@@ -672,7 +673,7 @@ export class Game {
       return;
     }
     const wind = this.windFor(ship);
-    const cur = this.currentFor(ship);
+    const cur = currentAt(this.world.currents, ship.state.x, ship.state.y, this.now, this.world.whirlpools);
     const prevX = ship.state.x, prevY = ship.state.y;
     // Madness: the crew has the wheel and steers for the call.
     let input = ship.input;
@@ -746,19 +747,6 @@ export class Game {
     }
     ship.distanceLog += Math.hypot(ship.state.x - prevX, ship.state.y - prevY);
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
-  }
-
-  /** The current under a ship of the sea's own out of a fight, worked out again when she has moved 30 m or half a
-   *  second has passed (it changes over kilometres and minutes: docs/19 D6); a captain's and a fighting ship's each tick. */
-  private curCache = new WeakMap<ShipEntity, { x: number; y: number; t: number; c: { x: number; y: number } }>();
-  private currentFor(ship: ShipEntity): { x: number; y: number } {
-    const { x, y } = ship.state;
-    if (ship.isPlayer || ship.inCombat(this.now)) return currentAt(this.world.currents, x, y, this.now, this.world.whirlpools);
-    const k = this.curCache.get(ship);
-    if (k && Math.abs(k.x - x) + Math.abs(k.y - y) < 30 && this.now - k.t < 0.5) return k.c;
-    const c = currentAt(this.world.currents, x, y, this.now, this.world.whirlpools);
-    this.curCache.set(ship, { x, y, t: this.now, c });
-    return c;
   }
 
   /** Hull to Hull: a ram is a grapple for the next 3 s. */
@@ -877,6 +865,7 @@ export class Game {
     stepLairs(this); // the lairs of the land's creatures: what each captain sees, her card (docs/18 II)
     stepDrifts(this); // drifting creatures, the season's legend (docs/18 IV)
     stepSeaMarks(this); // the boats at the dense sea's marks
+    stepSeaFinds(this); // docs/19 D5: the sea's small things; her time at sea for the day's caps
     stepTame(this); // the creatures of the army: the starving and the unhappy slip away (docs/18 #39)
     for (const s of this.sessions) settleRefugees(this, s);
     stepBoats(this);
@@ -2679,6 +2668,7 @@ export class Game {
     if (msg.t === 'lair') return lairMessage(this, s, msg); // docs/18 II
     if (msg.t === 'drift') return driftMessage(this, s, msg); // docs/18 IV
     if (msg.t === 'seamark') return seamarkMessage(this, s, msg);
+    if (msg.t === 'seafind') return findMessage(this, s, msg);
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);

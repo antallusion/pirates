@@ -283,6 +283,10 @@ export interface Profile {
   drift?: DriftProfile;
   /** The dense sea's marks she has worked, by id, and when (real milliseconds): each is hers again a day after. */
   seaMarks?: Record<string, number>;
+  /** docs/19 D1–D5: her day's finds at their full worth by source, and her seconds at sea that day (seahaul.ts). */
+  seaHaul?: { day: number; sec: number; n: Partial<Record<string, number>>; told?: Partial<Record<string, number>> };
+  /** docs/19 D5: the small things of the sea she has had, by kind (for her log and the tests). */
+  seaFinds?: Partial<Record<string, number>>;
 }
 
 export interface Dealings {

@@ -43,6 +43,10 @@ import { seasonId } from './seasons.ts';
 import type { ShipEntity } from './ship.ts';
 import { keepsDeep } from './town.ts';
 import { readObelisk } from './grail.ts';
+import { haulNote, haulPeek, haulTake } from './seahaul.ts';
+
+/** docs/19 D2: the altars that teach a primary skill (as many as stood before the map was doubled: two a region). */
+export const ALTAR_PRIMS = 14;
 
 /** What a captain keeps of the adventure map (docs/17 H4). */
 export interface AdvProfile {
@@ -52,6 +56,9 @@ export interface AdvProfile {
   seen: string[];
   /** Talent points the altars have taught her. */
   pts?: number;
+  /** docs/19 D2: primary skills the altars have taught her (as many altars as there were before teach one; the rest a
+   *  lesson of experience, so twice the altars are not twice the skill). */
+  prims?: number;
   /** The season of her Grail's pieces, and the obelisks she has read in it. */
   gs?: number;
   pieces?: string[];
@@ -535,17 +542,19 @@ function objCard(game: Game, s: PlayerSession, o: AdvObj): ObjCard {
   switch (o.kind) {
     case 'chest': {
       const extra = advHooks.chestReward?.(game, s, o) ?? null;
-      card.chest = { ...chestOf(s, o), ...(extra ? { extra: { id: extra.id, label: extra.label } } : {}) };
+      const pay = chestOf(s, o);
+      card.chest = { ...pay, silver: Math.max(1, Math.round(pay.silver * haulPeek(game, s, 'adv'))), ...(extra ? { extra: { id: extra.id, label: extra.label } } : {}) };
       break;
     }
     case 'mill':
     case 'store': {
       const good = millGood(game, o);
-      card.load = { good, n: millLoad(good, o.region, o.kind === 'mill' ? MILL_DAYS : STORE_DAYS) };
+      // (past her day's count of the map's finds, half: docs/19 D2)
+      card.load = { good, n: Math.max(1, Math.round(millLoad(good, o.region, o.kind === 'mill' ? MILL_DAYS : STORE_DAYS) * haulPeek(game, s, 'adv'))) };
       break;
     }
     case 'altar':
-      card.altar = { point: (advOf(p).pts ?? 0) < ALTAR_POINTS, xp: altarXp(xpLevel(s, o)), ...(advHooks.altar ? { prim: altarPrim(o.id) } : {}) };
+      card.altar = { point: (advOf(p).pts ?? 0) < ALTAR_POINTS, xp: altarXp(xpLevel(s, o)), ...(advHooks.altar && (advOf(p).prims ?? 0) < ALTAR_PRIMS ? { prim: altarPrim(o.id) } : {}) };
       break;
     case 'prison': {
       const who = prisoner(o);
@@ -588,17 +597,23 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
         game.grantXp(s, pay.xp, null);
         line = `The chest’s logbook teaches you ${pay.xp} experience.`;
       } else if (choice === 'silver') {
-        p.gold += pay.silver;
-        game.db.ledger(s.accountId, 'adv_chest', pay.silver, o.id);
-        line = `From the chest: ${pay.silver} silver.`;
+        // docs/19 D2: twice the chests; past her day's count (shared/src/data/seahaul.ts) half the silver.
+        const silver = Math.max(1, Math.round(pay.silver * haulTake(game, s, 'adv')));
+        p.gold += silver;
+        game.db.ledger(s.accountId, 'adv_chest', silver, o.id);
+        line = `From the chest: ${silver} silver.`;
       } else return 'Silver or experience?';
       break;
     }
     case 'altar': {
       const a = advOf(p);
       // docs/17 H5: the hero's primary skill of the altar (HoMM3's); without the hero, a talent point.
-      const taught = advHooks.altar?.(game, s, o) ?? null;
-      if (taught) line = taught;
+      const prim = (a.prims ?? 0) < ALTAR_PRIMS;
+      const taught = prim ? advHooks.altar?.(game, s, o) ?? null : null;
+      if (taught) {
+        line = taught;
+        a.prims = (a.prims ?? 0) + 1;
+      }
       else if ((a.pts ?? 0) < ALTAR_POINTS) {
         a.pts = (a.pts ?? 0) + 1;
         line = 'The bell’s note stays with you: a talent point to spend.';
@@ -625,8 +640,9 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
     case 'mill':
     case 'store': {
       const good = millGood(game, o);
-      const want = millLoad(good, o.region, o.kind === 'mill' ? MILL_DAYS : STORE_DAYS);
+      const want = Math.max(1, Math.round(millLoad(good, o.region, o.kind === 'mill' ? MILL_DAYS : STORE_DAYS) * haulPeek(game, s, 'adv')));
       const k = giveGoods(ship, good, want);
+      if (k > 0) haulNote(game, s, 'adv', haulPeek(game, s, 'adv'));
       if (k <= 0) return 'No room in the hold.';
       line = o.kind === 'mill' ? `From the windmill into the hold: ${k} ${GOODS[good].name.toLowerCase()}.` : `From the warehouse into the hold: ${k} ${GOODS[good].name.toLowerCase()}.`;
       break;

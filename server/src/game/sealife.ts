@@ -13,6 +13,7 @@ import { onboardingProtected } from './onboarding.ts';
 import { shoalNear } from './fishing.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
+import { haulTake } from './seahaul.ts';
 
 /** Seconds of quiet sailing between two small things (docs/19 D3: twice as often as the 16–26 s it was). */
 export const LIFE_EVERY: [number, number] = [8, 13];
@@ -20,7 +21,7 @@ export const LIFE_EVERY: [number, number] = [8, 13];
 const FLOTSAM_TTL = 240;
 
 /** What drifts: a good, how many, how often. */
-const FLOTSAM: [GoodId, [number, number], number][] = [
+export const FLOTSAM: [GoodId, [number, number], number][] = [
   ['provisions', [3, 8], 5], ['rum', [2, 5], 3], ['timber', [2, 6], 3], ['planks', [2, 4], 2], ['sailcloth', [1, 3], 2],
   ['tar', [2, 4], 2], ['salt', [2, 5], 2], ['cloth', [1, 3], 1], ['pearls', [1, 1], 0.3],
 ];
@@ -43,7 +44,9 @@ function flotsam(game: Game, s: PlayerSession): boolean {
     const x = ship.state.x + v.x * r, y = ship.state.y + v.y * r;
     if (isLand(game.world, x, y) || !game.inZone(x, y)) continue;
     const [good, [lo, hi]] = game.rng.weighted(FLOTSAM.map((f) => [f, f[2]] as [typeof f, number]));
-    game.dropPrivateLoot(s.accountId, x, y, { [good]: game.rng.int(lo, hi) }, FLOTSAM_TTL);
+    // docs/19 D3: twice as often; past her day's count (shared/src/data/seahaul.ts) half as much.
+    const n = game.rng.int(lo, hi);
+    game.dropPrivateLoot(s.accountId, x, y, { [good]: Math.max(1, Math.round(n * haulTake(game, s, 'life'))) }, FLOTSAM_TTL);
     return true;
   }
   return false;

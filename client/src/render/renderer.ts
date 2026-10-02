@@ -46,6 +46,7 @@ import { drawBossZones, drawMonster, drawPveSites } from './monsters.ts';
 import { drawAdvWorld, drawGuardShip, guardTag } from './advmap.ts'; // docs/17 H4
 import { drawLairsWorld } from './beastlairs.ts'; // docs/18 II
 import { drawDriftsWorld } from './drifts.ts'; // docs/18 IV
+import { drawFindsWorld } from './seafinds.ts'; // docs/19 D5
 import { drawIsleHalo, drawIsleLevel, drawIsleOver, drawMist, drawTurtles } from './isletype.ts'; // docs/18 III
 import type { IsleTypeCtx } from './isletype.ts';
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
@@ -421,6 +422,7 @@ export class Renderer {
     drawAdvWorld(g, state, this.advCtx()); // the adventure map's things on their skerries (docs/17 H4)
     drawLairsWorld(g, state, this.advCtx()); // the lairs of the land's creatures on their islands (docs/18 II)
     drawDriftsWorld(g, state, this.advCtx()); // drifting creatures and the season's legend (docs/18 IV)
+    drawFindsWorld(g, state, this.advCtx()); // the sea's small things (docs/19 D5)
     // The pirate lairs near her (docs/16 #7): the fort, its guns on the shore, the camp.
     if (this.zoom >= 0.12) {
       const ctx = { sx: (x: number) => this.sx(x), sy: (y: number) => this.sy(y), zoom: this.zoom, time: opt0.reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, fx: this.fx, label: (l: LairView) => lairLabel(l) };

@@ -46,6 +46,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { questEvent } from './quests.ts';
 import { chronicle } from './renown.ts';
 import { TAC_XP_PER_HP, sideOf } from './tactical.ts';
+import { haulTake } from './seahaul.ts';
 import { act, killedHp, lossesOf, newBattle, quickFinish, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 import { keepsDeep, townHooks, townLevel, townState } from './town.ts';
@@ -733,6 +734,14 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
   } else {
     lp.v[l.id] = w;
     const pay = lairPay(l.kind, l.level, l.size, l.type, l.mul * (lairWeek(game, l) ? WEEK_BEAST_LAIR : 1));
+    // docs/19 D2: twice the lairs; past her day's count (shared/src/data/seahaul.ts) their spoils are half (the
+    // lesson whole).
+    const thin = haulTake(game, s, 'lairs');
+    if (thin < 1) {
+      pay.silver = Math.max(10, Math.round((pay.silver * thin) / 10) * 10);
+      pay.goods = Math.max(1, Math.round(pay.goods * thin));
+      for (const r of Object.keys(pay.res) as (LandRes | 'pearls')[]) pay.res[r] = Math.max(1, Math.round((pay.res[r] ?? 0) * thin));
+    }
     p.gold += pay.silver;
     game.db.ledger(s.accountId, 'lair', pay.silver, l.id);
     loot.silver = pay.silver;

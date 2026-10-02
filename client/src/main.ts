@@ -34,7 +34,9 @@ import { REGIONS } from '../../shared/src/world/regions.ts';
 import { assetUrl, loadAssets } from './assets.ts';
 import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, tipForState } from './ui/ease.ts';
-import { ACT_SHOW, actBarHtml, buildActs, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
+import { ACT_SHOW, actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
+import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
+import type { FindView } from '../../shared/src/findproto.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
 import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
@@ -1508,6 +1510,20 @@ let curActs: Act[] = [];
 let actsMore = false;
 let actTipOffered = false;
 let pendingMark: { id: number; until: number } | null = null;
+/** docs/19 D5: the small thing her boats will go to once she has slowed. */
+let pendingFind: { id: number; until: number } | null = null;
+
+/** docs/19 D5: the sea's small thing within reach of her (the flying fish: aboard while they last). */
+function findAtHand(): FindView | null {
+  const own = state.ownDisplay;
+  if (!own || state.self?.dockedAt) return null;
+  let best: FindView | null = null, bd = Infinity;
+  for (const f of state.finds) {
+    const d = f.kind === 'flyfish' ? 0 : dist(f.x, f.y, own.x, own.y);
+    if (d <= FIND_REACH[f.kind] && d < bd) [best, bd] = [f, d];
+  }
+  return best;
+}
 
 /** The nearest of the dense sea's marks within the boats' reach of her. */
 function markAtHand(): SeaMarkData | null {
@@ -1595,6 +1611,13 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     else if (state.markDone.has(mk.id)) info.push(esc(markInfo(mk.kind, 'done')));
     else if (pendingMark?.id === mk.id) info.push(esc(slowWord()));
   }
+  const fd = findAtHand();
+  if (fd) {
+    const busy = state.findBusy?.id === fd.id ? state.findBusy : null;
+    facts.find = { id: fd.id, kind: fd.kind, busy: !!busy };
+    if (busy) info.push(esc(findInfo(fd.kind, busy.until - state.estServerTime())));
+    else if (pendingFind?.id === fd.id) info.push(esc(slowWord()));
+  }
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -1651,6 +1674,8 @@ function runAct(a: Act): void {
       return void net.send({ t: 'abyss', action: 'ritual' });
     case 'mark':
       return workMark(Number(a.arg));
+    case 'find':
+      return workFind(Number(a.arg));
     case 'look':
       return a.arg === 'struck' ? surrenderCard.reopen() : advCard.reopen();
     case 'repair':
@@ -1669,6 +1694,29 @@ function workMark(id: number): void {
   pendingMark = null;
   net.send({ t: 'seamark', action: 'work', id });
 }
+/** docs/19 D5: boats away to a small thing (the crew takes in sail first where the boats must be lowered). */
+function workFind(id: number): void {
+  const own = state.ownDisplay;
+  const f = state.finds.find((x) => x.id === id);
+  if (f && own && own.speed > FIND_SLOW[f.kind]) {
+    state.input.sail = 0;
+    pendingFind = { id, until: performance.now() + 25000 };
+    return;
+  }
+  pendingFind = null;
+  net.send({ t: 'seafind', action: 'work', id });
+}
+function stepPendingFind(): void {
+  if (!pendingFind) return;
+  const own = state.ownDisplay;
+  const f = state.finds.find((x) => x.id === pendingFind!.id);
+  if (!f || state.self?.dockedAt || performance.now() > pendingFind.until || state.input.sail > 0) {
+    pendingFind = null;
+    return;
+  }
+  if (own && own.speed <= FIND_SLOW[f.kind]) workFind(pendingFind.id);
+}
+
 function stepPendingMark(): void {
   if (!pendingMark) return;
   const own = state.ownDisplay;
@@ -2109,6 +2157,7 @@ function step(t: number): void {
     sendInput(t);
     stepPendingDock();
     stepPendingMark();
+    stepPendingFind();
     state.updateRemote();
     const own = state.updateOwn();
     // Touch has no hovering cursor: no aim arcs follow it (the broadside buttons aim themselves).

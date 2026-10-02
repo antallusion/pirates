@@ -55,6 +55,7 @@ import { drawAdvMini } from './advchart.ts'; // docs/17 H4
 import { GUARDS } from '../../../shared/src/data/advmap.ts';
 import { guardOfEntity } from '../render/advmap.ts';
 import { drawDriftsMini } from '../render/drifts.ts';
+import { drawFindsMini } from '../render/seafinds.ts';
 import { armyGlance } from './army.ts';
 
 const L = dict(EN, RU);
@@ -640,6 +641,7 @@ export class Hud {
     }
     drawAdvMini(g, state, tx, ty, own, range); // the adventure map's guards and things (docs/17 H4)
     drawDriftsMini(g, state, tx, ty, own, range); // drifting creatures and their clocks (docs/18 #34)
+    drawFindsMini(g, state, tx, ty, own, range); // the sea's small things (docs/19 D5)
     // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold.
     for (const m of state.seaMarks.values()) {
       if (Math.abs(m.x - own.x) > range || Math.abs(m.y - own.y) > range) continue;
