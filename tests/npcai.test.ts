@@ -73,6 +73,10 @@ test('beating to windward (docs/16 P5): a pack dead to leeward of a hove-to capt
   w.islands.length = w.isleFrom;
   for (const [k, list] of w.chunks) w.chunks.set(k, list.filter((id) => id < w.isleFrom));
   w.navGrid = legacyWorld(w).navGrid;
+  // Nor the sea's own merchants putting out about her (a passing prize draws a pirate off the beat: docs/19 D3 made
+  // them twice as many) — this test is of the beat.
+  (game as unknown as { quota: () => number }).quota = () => 0;
+  for (const id of [...game.npcs.keys()]) game.removeShip(id);
   const prey = captainAtSea(game, 'Hove To');
   prey.input = { rudder: 0, sailTarget: 0 };
   prey.state.sail = 0;

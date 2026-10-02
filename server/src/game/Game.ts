@@ -121,6 +121,11 @@ import { menLost, npcArmy } from './army.ts';
  *  a ship carried than from one sent down. */
 export const SINK_LOOT = 0.25;
 export const SINK_PURSE = 0.3;
+/** docs/19 D6: beyond this (the nearest captain, as the LOD reckons it: never more than 6% over the true distance) an
+ *  NPC steps every FAR_EVERY ticks — beyond SNAP_MID, where her snapshots are only every fourth (2.5 Hz) anyway; out of
+ *  every captain's snapshots (beyond INTEREST_RADIUS) every second FAR_EVERY. */
+export const FAR_LOD_R = SNAP_MID + 200;
+export const FAR_EVERY = 4;
 export const XP_SUNK = 40;
 export const XP_BOARDED = 90;
 import { stepBridges } from './bridgefx.ts';
@@ -459,6 +464,23 @@ export class Game {
     this.saveAll();
   }
 
+  /** docs/19 D6: each NPC's step this tick — 1 at the full rate, FAR_EVERY its few ticks at once, 0 not this tick. */
+  private lodStep = new Map<number, number>();
+  /** docs/19 D6: an NPC far from every captain (out of her sight: beyond the snapshots' reach, and not in a fight, a
+   *  an escort or a boarding) is thought and sailed for every FAR_EVERY ticks at once (the far ones asleep too). */
+  farLod(id: number, ship: ShipEntity): number {
+    if (ship.ownerId !== null || ship.guardOf || ship.boarding || ship.grappled) return 1;
+    const near = this.nearestPlayer.get(id);
+    // (one just put out, not yet reckoned: at the full rate until the next second's reckoning)
+    if (near === undefined || near <= FAR_LOD_R || ship.inCombat(this.now)) return 1;
+    // On a captain's track (her prey, a hunt, a pack called to her): every tick, so she closes as she always did.
+    const b = this.npcs.get(id);
+    for (const t of [b?.target, b?.chase?.id]) if (t !== undefined && t !== null && this.ships.get(t)?.isPlayer) return 1;
+    // Beyond every captain's snapshots altogether: every second FAR_EVERY.
+    const every = near > INTEREST_RADIUS * 1.1 ? FAR_EVERY * 2 : FAR_EVERY;
+    return (this.tick + id) % every === 0 ? every : 0;
+  }
+
   /** In a zone, a share of the world's NPCs by its share of the ports. */
   private quota(n: number): number {
     return this.zone ? Math.max(1, Math.round((n * this.zonePorts().length) / this.world.ports.length)) : n;
@@ -493,7 +515,8 @@ export class Game {
     }
     prof.lap('second');
     const bucket = this.tick % 20;
-    for (const ship of [...this.ships.values()]) if (ship.id % 20 === bucket && !ship.ghost) this.shipSecond(ship);
+    // (no copies of the lists a tick: a Map walks on past what is taken out of it as it goes — docs/19 D6)
+    for (const ship of this.ships.values()) if (ship.id % 20 === bucket && !ship.ghost) this.shipSecond(ship);
     for (const ses of [...this.byAccount.values()]) if (ses.accountId % 20 === bucket) this.sessionSecond(ses);
     prof.lap('buckets');
     if (now >= this.nextDirector) {
@@ -527,14 +550,19 @@ export class Game {
     }
     prof.lap('economy');
 
-    // NPC AI (LOD-aware).
+    // NPC AI (LOD-aware). docs/19 D6: a ship out of every captain's sight and out of a fight steps at a quarter of the
+    // rate (its four ticks at once), and the sea's twice as many ships cost little more than half as many did.
+    const lod = this.lodStep;
+    lod.clear();
     for (const [id, brain] of this.npcs) {
       const ship = this.ships.get(id);
       if (!ship) {
         this.npcs.delete(id);
         continue;
       }
-      updateNpc(this, ship, brain, dt, this.nearestPlayer.get(id) ?? Infinity);
+      const k = this.farLod(id, ship);
+      lod.set(id, k);
+      if (k > 0) updateNpc(this, ship, brain, dt * k, this.nearestPlayer.get(id) ?? Infinity);
     }
     stepAutosail(this); // the helmsmen at their captains' wheels (docs/16 #36)
     prof.lap('npcAi');
@@ -545,7 +573,8 @@ export class Game {
       if (ship.docked || ship.ghost || ship.cls.monster) continue;
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) continue;
-      this.physics(ship, dt, night);
+      const k = brain ? lod.get(ship.id) ?? 1 : 1;
+      if (k > 0) this.physics(ship, dt * k, night);
     }
     prof.lap('physics');
     this.collideShips();
@@ -568,6 +597,8 @@ export class Game {
 
     for (const ship of this.ships.values()) {
       if (ship.ghost) continue;
+      // (nothing to count down: most of the sea's ships, docs/19 D6)
+      if (ship.reload.port <= 0 && ship.reload.starboard <= 0 && ship.mountReload <= 0 && ship.chaserReload.bow <= 0 && ship.chaserReload.stern <= 0 && !ship.sinkingUntil) continue;
       const braced = ship.hasEffect('brace'); // the gun crews lie flat
       if (ship.reload.port > 0 && !braced) {
         ship.reload.port = Math.max(0, ship.reload.port - dt);
@@ -641,7 +672,7 @@ export class Game {
       return;
     }
     const wind = this.windFor(ship);
-    const cur = currentAt(this.world.currents, ship.state.x, ship.state.y, this.now, this.world.whirlpools);
+    const cur = this.currentFor(ship);
     const prevX = ship.state.x, prevY = ship.state.y;
     // Madness: the crew has the wheel and steers for the call.
     let input = ship.input;
@@ -717,6 +748,19 @@ export class Game {
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
   }
 
+  /** The current under a ship of the sea's own out of a fight, worked out again when she has moved 30 m or half a
+   *  second has passed (it changes over kilometres and minutes: docs/19 D6); a captain's and a fighting ship's each tick. */
+  private curCache = new WeakMap<ShipEntity, { x: number; y: number; t: number; c: { x: number; y: number } }>();
+  private currentFor(ship: ShipEntity): { x: number; y: number } {
+    const { x, y } = ship.state;
+    if (ship.isPlayer || ship.inCombat(this.now)) return currentAt(this.world.currents, x, y, this.now, this.world.whirlpools);
+    const k = this.curCache.get(ship);
+    if (k && Math.abs(k.x - x) + Math.abs(k.y - y) < 30 && this.now - k.t < 0.5) return k.c;
+    const c = currentAt(this.world.currents, x, y, this.now, this.world.whirlpools);
+    this.curCache.set(ship, { x, y, t: this.now, c });
+    return c;
+  }
+
   /** Hull to Hull: a ram is a grapple for the next 3 s. */
   private hullToHull(a: ShipEntity, b: ShipEntity): void {
     if (!a.hasFlag('hull_to_hull') || a.boarding || b.boarding) return;
@@ -729,7 +773,7 @@ export class Game {
     for (const a of this.ships.values()) {
       if (a.docked || !a.alive || a.ghost || a.npcRole === 'boss' || a.npcRole === 'beast') continue; // a beast's blows are its own (beasts.ts)
       const brainA = this.npcs.get(a.id);
-      if (brainA && !brainA.active) continue;
+      if (brainA && (!brainA.active || this.lodStep.get(a.id) !== 1)) continue; // (the far ones out of sight: docs/19 D6)
       const ra = a.stats.length * 0.32;
       this.grid.query(a.state.x, a.state.y, 80, (id) => {
         if (id <= a.id) return;
@@ -3992,8 +4036,6 @@ export class Game {
       const nearCut = cand.length > SNAP_RANK_NEAR ? kthSmallest(cand.map((c) => c.d), SNAP_RANK_NEAR) : Infinity;
       const midCut = cand.length > SNAP_RANK_MID ? kthSmallest(cand.map((c) => c.d), SNAP_RANK_MID) : Infinity;
       for (const { o, d } of cand) {
-        const base = this.snapRow(o, frame);
-        const hostile = this.isHostile(o, me);
         // Distance priority: close ships every snapshot, the middle distance every second, the far every fourth —
         // and in a crowd only the nearest few dozen at full rate.
         const byDist = d < SNAP_NEAR ? 1 : d < SNAP_MID ? 2 : 4;
@@ -4001,6 +4043,9 @@ export class Game {
         const period = Math.max(byDist, byRank);
         const last = s.sentRows.get(o.id);
         if (last && snapNo % period !== 0) continue;
+        // (her row and the hostile bit only for a ship this snapshot carries: docs/19 D6)
+        const base = this.snapRow(o, frame);
+        const hostile = this.isHostile(o, me);
         // Delta: an unchanged row is not sent again (but refreshed every 2 s to keep interpolation fed).
         const key = hostile ? base.key + 'h' : base.key;
         if (last && last.key === key && this.now - last.t < 2) continue;

@@ -33,17 +33,23 @@ const t0 = performance.now();
 for (let i = 0; i < 600; i++) game.step(); // warm: a minute of the sea, the traffic about them filled
 const warm = performance.now() - t0;
 const ms: number[] = [];
+const cpu0 = process.cpuUsage();
 for (let i = 0; i < TICKS; i++) {
   const a = performance.now();
   game.step();
   ms.push(performance.now() - a);
 }
+const cpu = process.cpuUsage(cpu0);
+const cpuMs = (cpu.user + cpu.system) / 1000 / TICKS;
 const sorted = [...ms].sort((x, y) => x - y);
 const mean = ms.reduce((x, y) => x + y, 0) / ms.length;
 const q = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
 let active = 0;
 for (const b of game.npcs.values()) if (b.active) active++;
+console.log(`loot ${game.loot.size}`);
 console.log(`captains ${game.sessions.size}, ships ${game.ships.size} (NPC ${game.npcs.size}, awake ${active}, local traffic ${localTraffic(game).size}), marks ${game.world.marks.length}, warm ${(warm / 600).toFixed(2)} ms/tick`);
 console.log(`tick: median ${q(0.5).toFixed(2)} ms, mean ${mean.toFixed(2)} ms, p95 ${q(0.95).toFixed(2)} ms, max ${sorted[sorted.length - 1].toFixed(2)} ms over ${TICKS} ticks`);
+console.log(`cpu ${cpuMs.toFixed(2)} ms a tick (the process's own time: other work on the machine counts less)`);
+if (process.env.BENCH_JSON) console.log(JSON.stringify({ median: q(0.5), mean, p95: q(0.95), cpu: cpuMs, ships: game.ships.size, awake: active }));
 const rep = game.prof.report();
 console.log(Object.entries(rep).slice(0, 8).map(([k, v]) => `${k} ${v.avgMs.toFixed(2)}`).join(' · '));

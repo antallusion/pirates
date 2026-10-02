@@ -246,6 +246,8 @@ export function stepSpirit(game: Game, ship: ShipEntity): void {
     : m >= 15 ? { reloadMul: 0.25, repairRate: -0.25, boardingPower: -0.1 }
     : { reloadMul: 0.4, repairRate: -0.4, boardingPower: -0.2 };
   const cur = ship.effects.find((e) => e.id === 'spirit');
+  // Steady (50–79) with nothing on her: nothing to change (docs/19 D6: it was her stats worked out again each second).
+  if (!cur && m >= 50 && m < 80) return;
   const key = JSON.stringify(mods);
   if (cur && JSON.stringify(cur.mods ?? {}) === key) return;
   ship.effects = ship.effects.filter((e) => e.id !== 'spirit');

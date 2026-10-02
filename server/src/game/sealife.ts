@@ -14,8 +14,8 @@ import { shoalNear } from './fishing.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 
-/** Seconds of quiet sailing between two small things. */
-export const LIFE_EVERY: [number, number] = [16, 26];
+/** Seconds of quiet sailing between two small things (docs/19 D3: twice as often as the 16–26 s it was). */
+export const LIFE_EVERY: [number, number] = [8, 13];
 /** How long flotsam floats before it sinks. */
 const FLOTSAM_TTL = 240;
 

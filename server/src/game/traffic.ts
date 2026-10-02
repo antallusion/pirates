@@ -19,7 +19,8 @@ const SPAWN_R: [number, number] = [2200, 4400];
 /** Gone when no captain is within this and she is not fighting. */
 const GONE_R = 9000;
 /** How many of the sea's ships about her, by her waters. */
-export const TRAFFIC_WANT: Record<string, number> = { safe: 16, contested: 20, lawless: 18 };
+// docs/19 D3: twice the 8/10/9 of docs/16 and again twice the 16/20/18 of 2026-09-30.
+export const TRAFFIC_WANT: Record<string, number> = { safe: 32, contested: 40, lawless: 36 };
 /** Who sails where. */
 const MIX: Record<string, [Role, number][]> = {
   safe: [['merchant', 45], ['fisher', 35], ['patrol', 20]],
@@ -27,7 +28,7 @@ const MIX: Record<string, [Role, number][]> = {
   lawless: [['merchant', 25], ['fisher', 10], ['pirate', 65], ['hunter', 7]],
 };
 /** No more local ships than this in the whole sea, whatever the crowd. */
-const CAP = 900;
+const CAP = 1800; // docs/19 D3: twice the 900
 type Role = 'merchant' | 'fisher' | 'patrol' | 'pirate' | 'hunter';
 const COUNTED = new Set(['merchant', 'fisher', 'patrol', 'pirate', 'escort', 'hunter', 'ghost']);
 
