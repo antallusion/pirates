@@ -722,3 +722,16 @@ export function driftsNear(game: Game, s: PlayerSession, R: number): Drift[] {
 
 /** The lookout's look for one captain at once (the tests'). */
 export const sightNow = (game: Game, s: PlayerSession): Drift | null => sight(game, s);
+
+/** A sea mark's ice floe with seals hauled out on it (the dense sea's marks): a drift of hers at the floe, when its
+ *  waters know seals on a floe and none of hers is on the water already (null otherwise). */
+export function sealsOnFloe(game: Game, s: PlayerSession, x: number, y: number): Drift | null {
+  const S = D(game);
+  if (quiet(game) || [...S.list.values()].some((d) => d.owner === s.accountId && !DRIFTS[d.kind].legend)) return null;
+  const level = sectorAt(game.world, x, y).level;
+  if (!driftKindsFor(level, regionAt(game.world, x, y)).some(([k]) => k === 'seal_floe')) return null;
+  const d = putDrift(game, 'seal_floe', x, y, s.accountId);
+  sendDrifts(game, s, true);
+  sendDriftCard(game, s, true);
+  return d;
+}

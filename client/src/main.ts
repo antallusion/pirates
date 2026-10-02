@@ -1,9 +1,9 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
 import { EN as I18_EN, RU as I18_RU } from './lang/ui/isles18.ts';
-import { THREAT_COLOR, shipLevelOf, threatOf } from '../../shared/src/data/shiplevel.ts';
+import { shipLevelOf } from '../../shared/src/data/shiplevel.ts';
 import { liveSignals, signalToast } from './ui/social.ts';
-import { noteHearsay, repairPrompt } from './ui/dealings.ts';
+import { noteHearsay, repairState } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
 import { ask, tell } from './ui/confirm.ts';
@@ -28,12 +28,15 @@ import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
 import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
-import type { Aggression, ServerMsg } from '../../shared/src/protocol.ts';
+import type { Aggression, SeaMarkData, ServerMsg } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
 import { assetUrl, loadAssets } from './assets.ts';
 import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, tipForState } from './ui/ease.ts';
+import { ACT_SHOW, actBarHtml, buildActs, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
+import type { Act, ActFacts } from './ui/actbar.ts';
+import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
 import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
 import { setWaypoint as setMark, waypoint as markOf } from './ui/track.ts';
 import { Net } from './net.ts';
@@ -338,13 +341,6 @@ function sendLand(): void {
   net.send({ t: 'land' });
 }
 
-/** The island's level on the land key's prompt, in the ladder's colour, with the warning when she is far above. */
-function landTag(l: NonNullable<NonNullable<typeof state.self>['landable']>): string {
-  if (!l.lv) return '';
-  const mine = state.self ? shipLevelOf(state.self.loadout) : 1;
-  const word = l.danger === 'deadly' ? ` · ${L18('prompt.deadly')}` : l.danger === 'warn' ? ` · ${L18('prompt.warn')}` : '';
-  return ` <b class="isle-lv" style="color:${THREAT_COLOR[threatOf(mine, l.lv)]}">⚓${l.lv}${esc(word)}</b>`;
-}
 const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
@@ -1120,10 +1116,20 @@ function sendChat(): void {
   whisperPrefill = '';
 }
 $('hud-map').onclick = () => toggle('map');
+// The action bar (owner, 2026-10-02): a button does what its key does; «⋯ more» opens the rest. A press never takes
+// the focus (Space and Enter stay the ship's).
+$('hud-prompt').addEventListener('mousedown', (e) => {
+  if ((e.target as HTMLElement).closest('button')) e.preventDefault();
+});
 $('hud-prompt').addEventListener('click', (e) => {
-  if ((e.target as HTMLElement).closest('[data-open-base]')) openBase();
-  if ((e.target as HTMLElement).closest('[data-open-claim]')) openClaim();
-  if ((e.target as HTMLElement).closest('[data-sea-repair]')) net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
+  const el = e.target as HTMLElement;
+  if (el.closest('[data-act-more]')) {
+    actsMore = !actsMore;
+    return;
+  }
+  const b = el.closest<HTMLElement>('[data-act]');
+  const a = b ? curActs[Number(b.dataset.act)] : undefined;
+  if (a) runAct(a);
 });
 // Screens redraw themselves (a tab click, a trade): on touch their keyboard hints come off every time.
 new MutationObserver(() => {
@@ -1276,12 +1282,14 @@ addEventListener('keydown', (e) => {
         net.send({ t: 'board', target: boardTarget, aggression });
       } else hud.toast(L('noCrippled'), 'bad');
       break;
-    case 'land':
-      // With nothing ashore to land at, the same key casts the net into a shoal (owner, 2026-09-30).
-      if (!state.self?.landable && !mastWreck() && castable()) net.send({ t: 'fishing', action: 'cast' });
-      else if (mastWreck() && !state.self?.landable) net.send({ t: 'cut_mast' });
+    case 'land': {
+      // With nothing ashore to land at, the same key cuts the mast wreckage, casts the net into a shoal (owner,
+      // 2026-09-30) or works the sea mark at hand — whichever the action bar shows first.
+      const a = state.self?.landable ? null : landKeyAct(gatherActs().acts);
+      if (a) runAct(a);
       else sendLand();
       break;
+    }
     case 'orders': {
       const cur = state.you?.station ?? 'balanced';
       net.send({ t: 'station', station: STATIONS[(STATIONS.indexOf(cur) + 1) % STATIONS.length] });
@@ -1494,12 +1502,38 @@ function keyOfAction(a: Action): string {
 /** The descent's tier whose choice window was opened (once a tier). */
 let lastDescentTier = -1;
 
-function computePrompt(): string {
+/** The action bar's buttons as last drawn (a click names one by its place), whether «⋯ more» is open, and a mark
+ *  waiting for her to shorten sail. */
+let curActs: Act[] = [];
+let actsMore = false;
+let actTipOffered = false;
+let pendingMark: { id: number; until: number } | null = null;
+
+/** The nearest of the dense sea's marks within the boats' reach of her. */
+function markAtHand(): SeaMarkData | null {
+  const own = state.ownDisplay;
+  if (!own || state.self?.dockedAt) return null;
+  let best: SeaMarkData | null = null, bd = Infinity;
+  for (const m of state.seaMarks.values()) {
+    if (Math.abs(m.x - own.x) > 600 || Math.abs(m.y - own.y) > 600 || !markInReach(m, own.x, own.y)) continue;
+    const d = dist(m.x, m.y, own.x, own.y) - m.r;
+    if (d < bd) {
+      bd = d;
+      best = m;
+    }
+  }
+  return best;
+}
+
+/** Everything to do at hand (the bar's buttons, the pad's A) and the muted line of what stops her. Picks the ship
+ *  in the grapples' reach on the way (the renderer marks her). */
+function gatherActs(): { acts: Act[]; info: string[] } {
   const own = state.ownDisplay;
   const self = state.self;
   const you = state.you;
   boardTarget = null;
-  if (!own || !self || !you || self.dockedAt) return '';
+  if (!own || !self || !you) return { acts: [], info: [] };
+  if (self.dockedAt) return { acts: buildActs({ grabbed: grabbed(), docked: true, harbourOpen: modal === 'port' }), info: [] };
   const st = state.ownStats!;
   let best: number | null = null, bd = Infinity;
   for (const s of state.ships.values()) {
@@ -1519,48 +1553,127 @@ function computePrompt(): string {
     }
   }
   boardTarget = best;
-  const parts: string[] = [];
-  if (best !== null) {
-    const name = state.ships.get(best)?.info?.name ?? L('her');
-    parts.push(`<kbd>${esc(keyOfAction('board'))}</kbd> ${esc(L('board', { name: placeName(name) }))} <span class="muted">${esc(L('boardMods'))}</span>`);
-  }
+  const info: string[] = [];
+  const facts: ActFacts = { grabbed: grabbed() };
+  if (best !== null) facts.board = { name: placeName(state.ships.get(best)?.info?.name ?? L('her')) };
+  const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
+  if (port) facts.port = { name: sv(port.name) };
   const ab = self.abyss;
-  if (ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500) parts.push(esc(L('ritual', { cmd: '\u0000' })).replace('\u0000', '<kbd>/ritual</kbd>'));
+  facts.ritual = !!ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500;
+  const l = self.landable;
   if (self.landing) {
     const now = state.estServerTime();
     const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
-    parts.push(`${esc(L('ashore', { feature: sv(self.landing.feature.replace('_', ' ')), pct: Math.round(frac * 100) }))} <span class="muted">${esc(L('recall'))}</span>`);
-  } else if (self.landable?.blocked) {
+    info.push(`${esc(L('ashore', { feature: sv(self.landing.feature.replace('_', ' ')), pct: Math.round(frac * 100) }))} ${esc(L('recall'))}`);
+  } else if (l?.blocked) {
     // What stops you, after the place it is about (with a capital: it opens the line) unless it names the place itself.
-    const why = sv(self.landable.blocked), where = sv(self.landable.feature);
-    const line = why.includes(sv(self.landable.island)) ? why : `${where.charAt(0).toUpperCase()}${where.slice(1)} — ${why}`;
-    parts.push(`<span class="muted">${esc(line)}</span>`);
+    const why = sv(l.blocked), where = sv(l.feature);
+    info.push(esc(why.includes(sv(l.island)) ? why : `${where.charAt(0).toUpperCase()}${where.slice(1)} — ${why}`));
   }
-  else if (self.landable?.action === 'dig') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dig', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
-  else if (self.landable?.action === 'raise') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('raise', { feature: sv(self.landable.feature.replace(/^wreck of the /, '')) }))}`);
-  else if (self.landable?.action === 'expedition') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('expedition', { island: sv(self.landable.island) }))}`);
-  else if (self.landable?.action === 'descent') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('descent'))}`);
-  else if (self.landable?.action === 'keeper') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(LI('keeper.prompt', { island: sv(self.landable.island), price: self.landable.feature }))}`);
-  else if (self.landable?.action === 'escort') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('escortSign', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}`);
-  else if (self.landable?.action === 'dive') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('dive', { feature: sv(self.landable.feature) }))}`);
-  else if (self.landable?.action === 'lair') parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(LLAIR('prompt', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}${landTag(self.landable)}`);
-  else if (self.landable) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('landParty', { feature: sv(self.landable.feature), island: sv(self.landable.island) }))}${landTag(self.landable)}`);
-  if (!self.landable && mastWreck()) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L('cutMast'))} <span class="muted">${esc(L('cutMastWhy'))}</span>`);
-  const cast = !self.landable && !mastWreck() ? castable() : null;
-  if (cast) parts.push(`<kbd>${esc(keyOfAction('land'))}</kbd> ${esc(L(cast === 'lamp' ? 'castLamp' : 'castNet'))}`);
+  if (l) {
+    const feature = sv(l.feature), island = sv(l.island);
+    const action = (['dig', 'raise', 'expedition', 'descent', 'keeper', 'escort', 'dive', 'lair'] as const).find((x) => x === l.action) ?? 'land';
+    const wreck = sv(l.feature.replace(/^wreck of the /, ''));
+    const title = action === 'dig' ? L('dig', { feature, island }) : action === 'raise' ? L('raise', { feature: wreck }) : action === 'expedition' ? L('expedition', { island })
+      : action === 'descent' ? L('descent') : action === 'keeper' ? LI('keeper.prompt', { island, price: l.feature }) : action === 'escort' ? L('escortSign', { feature, island })
+      : action === 'dive' ? L('dive', { feature }) : action === 'lair' ? LLAIR('prompt', { feature, island }) : L('landParty', { feature, island });
+    facts.landable = { action, feature: action === 'keeper' ? island : action === 'raise' ? wreck : feature, island, blocked: !!l.blocked || !!self.landing, title: `${title}${landTagText(l)}` };
+  }
+  facts.mastWreck = !l && mastWreck();
+  facts.cast = !l && !mastWreck() ? castable() : null;
   const home = nearHome();
-  if (home) parts.push(`${esc(L('isleHere', { name: placeName(home.name) }))} <button class="btn btn-small prompt-btn" data-open-base>${esc(L('isleOpen'))}</button>`);
-  // A wild island off the bow she may claim (docs/15 item 6): its terms on the Company's islands card.
+  if (home) facts.home = { name: placeName(home.name) };
+  facts.homeOpen = modal === 'base';
   const wild = self.claimIsle;
-  if (wild && !home) parts.push(`${esc(L('isleWild', { name: placeName(wild.name), price: fmt(wild.price) }))} <button class="btn btn-small prompt-btn" data-open-claim>${esc(L('isleClaim'))}</button>`);
-  const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
-  if (port) parts.push(`<kbd>${esc(keyOfAction('dock'))}</kbd> ${esc(L('enter', { port: sv(port.name) }))}`);
-  if (you.flags & SF.PROTECTED) parts.push(`<span class="muted">${esc(L('protected'))}</span>`);
-  // Mending at sea (docs/16 #15): the carpenters' pace and what it takes, or how they get on.
-  const mend = repairPrompt(self, you, !!(you.flags & SF.REPAIRING), keyOfAction('repair'));
-  if (mend) parts.push(mend);
-  if (you.combat && !(you.flags & SF.REPAIRING) && you.hull < you.hullMax * 0.5) parts.push(`<span class="muted">${esc(L('repairLull', { key: '\u0000' })).replace('\u0000', `<kbd>${esc(keyOfAction('repair'))}</kbd>`)}</span>`);
-  return parts.join('<br>');
+  if (wild) facts.claim = { name: placeName(wild.name), price: fmt(wild.price) };
+  facts.claimOpen = modal === 'company';
+  const mk = markAtHand();
+  if (mk) {
+    const busy = state.markBusy?.id === mk.id ? state.markBusy : null;
+    facts.mark = { id: mk.id, kind: mk.kind, done: state.markDone.has(mk.id), busy: !!busy };
+    if (busy) info.push(esc(markInfo(mk.kind, 'busy', busy.until - state.estServerTime())));
+    else if (state.markDone.has(mk.id)) info.push(esc(markInfo(mk.kind, 'done')));
+    else if (pendingMark?.id === mk.id) info.push(esc(slowWord()));
+  }
+  facts.looks = advCard.closedLooks();
+  if (you.flags & SF.PROTECTED) info.push(esc(L('protected')));
+  // Mending at sea (docs/16 #15): the carpenters' pace and what it takes, or what they lack.
+  const repairing = !!(you.flags & SF.REPAIRING);
+  const rep = repairState(self, you, repairing);
+  facts.repair = rep ? { repairing, combat: !!you.combat, hurt: rep.hurt, short: rep.short } : repairing ? { repairing, combat: !!you.combat, hurt: true } : null;
+  if (rep?.line) info.push(rep.line);
+  if (you.combat && !repairing && you.hull < you.hullMax * 0.5 && !touch.enabled) info.push(esc(L('repairLull', { key: '\u0000' })).replace('\u0000', `<kbd>${esc(keyOfAction('repair'))}</kbd>`));
+  return { acts: buildActs(facts), info };
+}
+
+/** The island's level and its warning in words (the tooltip of the land button). */
+function landTagText(l: NonNullable<NonNullable<typeof state.self>['landable']>): string {
+  if (!l.lv) return '';
+  return ` · ⚓${l.lv}${l.danger === 'deadly' ? ` · ${L18('prompt.deadly')}` : l.danger === 'warn' ? ` · ${L18('prompt.warn')}` : ''}`;
+}
+
+function computePrompt(): string {
+  const { acts, info } = gatherActs();
+  curActs = acts;
+  if (acts.length <= ACT_SHOW) actsMore = false;
+  if (acts.length && !actTipOffered) {
+    actTipOffered = true;
+    firstTips.offer('actions');
+  }
+  return actBarHtml(acts, info, touch.enabled ? null : keyOfAction, actsMore);
+}
+
+/** A button of the bar (or its key, or the pad's A) does its thing. */
+function runAct(a: Act): void {
+  switch (a.id) {
+    case 'axes':
+      return void net.send({ t: 'board', target: state.entityId ?? 0, aggression: 'standard' });
+    case 'harbour':
+      return openModal('port');
+    case 'board':
+      return void (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(L('noCrippled'), 'bad'));
+    case 'dock':
+      return requestDock(false);
+    case 'land':
+      return sendLand();
+    case 'cut_mast':
+      return void net.send({ t: 'cut_mast' });
+    case 'cast':
+      return void net.send({ t: 'fishing', action: 'cast' });
+    case 'base':
+      return openBase();
+    case 'claim':
+      return openClaim();
+    case 'ritual':
+      return void net.send({ t: 'abyss', action: 'ritual' });
+    case 'mark':
+      return workMark(Number(a.arg));
+    case 'look':
+      return advCard.reopen();
+    case 'repair':
+      return void net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
+  }
+}
+
+/** Boats away to a sea mark: at speed the crew takes in sail first and they go as soon as she has slowed. */
+function workMark(id: number): void {
+  const own = state.ownDisplay;
+  if (own && own.speed > MARK_SLOW) {
+    state.input.sail = 0;
+    pendingMark = { id, until: performance.now() + 25000 };
+    return;
+  }
+  pendingMark = null;
+  net.send({ t: 'seamark', action: 'work', id });
+}
+function stepPendingMark(): void {
+  if (!pendingMark) return;
+  const own = state.ownDisplay;
+  if (state.self?.dockedAt || performance.now() > pendingMark.until || state.input.sail > 0) {
+    pendingMark = null;
+    return;
+  }
+  if (own && own.speed <= MARK_SLOW) workMark(pendingMark.id);
 }
 
 // ------------------------------------------------------------------ gamepad (docs/07 §12)
@@ -1614,21 +1727,13 @@ function actionsRadial(): { label: string; run: () => void }[] {
   ];
 }
 
-/** The pad's context action: board, dock, land, set sail — whatever the prompt offers first. */
+/** The pad's context action (and the touch bar's gold button): the first of the action bar's — board, dock, land,
+ *  cut the mast, cast, her island, a sea mark, a card closed by hand, repair. In port: the harbour's screen on touch,
+ *  casting off otherwise (the bar itself shows nothing over the harbour's screen). */
 function padContext(): void {
-  if (grabbed()) return void net.send({ t: 'board', target: state.entityId ?? 0, aggression: 'standard' });
-  if (state.self?.dockedAt) return void (touch.enabled && modal !== 'port' ? openModal('port') : departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' })));
-  if (boardTarget !== null) return void net.send({ t: 'board', target: boardTarget, aggression: 'standard' });
-  const own = state.ownDisplay;
-  if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return void requestDock(false);
-  if (state.self?.landable && !state.self.landable.blocked) return void sendLand();
-  if (mastWreck()) return void net.send({ t: 'cut_mast' });
-  if (castable()) return void net.send({ t: 'fishing', action: 'cast' });
-  if (nearHome()) return openBase();
-  // A wild island she may claim (docs/15 item 6): its terms, as the prompt's «Claim…» opens them.
-  if (state.self?.claimIsle) return openClaim();
-  const you = state.you;
-  if (you && (you.flags & SF.REPAIRING || !you.combat)) net.send({ t: 'repair', on: !(you.flags & SF.REPAIRING) });
+  if (state.self?.dockedAt && !grabbed()) return void (touch.enabled && modal !== 'port' ? openModal('port') : departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' })));
+  const first = gatherActs().acts[0];
+  if (first) runAct(first);
 }
 
 /** Lying off one's own island (docs/15): the way into its base. */
@@ -1691,37 +1796,9 @@ function cycleAmmo(dir: number): void {
   net.send({ t: 'ammo', ammo: have[(i + dir + have.length) % have.length] });
 }
 
-/** What the touch context button would do now (the same order as the pad's A). */
+/** Held by a kraken's arm (the board key is the axes then). */
 function grabbed(): boolean {
   return !!(state.you && state.you.flags & SF.GRABBED) || !!state.bosses.some((b) => b.you.grabbed);
-}
-
-function contextLabel(): string | null {
-  if (grabbed()) return L('tc.axes');
-  // In port with the harbour screen closed: the button brings it back (market, yard, tavern, set sail).
-  if (state.self?.dockedAt) return modal === 'port' ? null : L('tc.harbour');
-  if (boardTarget !== null) return L('tc.board');
-  const own = state.ownDisplay;
-  if (own && state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) return L('tc.dock');
-  if (state.self?.landable && !state.self.landable.blocked) return state.self.landable.action === 'keeper' ? LI('tc.keeper') : L(state.self.landable.action === 'escort' ? 'tc.escort' : 'tc.land');
-  if (mastWreck()) return L('tc.cutMast');
-  const cast = castable();
-  if (cast) return L(cast === 'lamp' ? 'tc.lamp' : 'tc.cast');
-  if (nearHome() && modal !== 'base') return L('tc.base');
-  if (state.self?.claimIsle && !nearHome() && modal !== 'company') return L('tc.claim');
-  // Nothing else at hand: a damaged ship out of the fight can set the carpenters to work (R on a keyboard).
-  const you = state.you;
-  if (you && you.flags & SF.REPAIRING) return L('tc.repairStop');
-  if (you && !you.combat && (you.hull < you.hullMax * 0.98 || you.sails < you.sailsMax * 0.98)) return L('tc.repair');
-  return null;
-}
-
-/** The second touch context button (docs/15 item 8): the way into her island, or to claim a wild one, when the
- *  first button does something else there. */
-function secondContext(first: string | null): string | null {
-  if (!first) return null;
-  if (nearHome()) return first === L('tc.base') || modal === 'base' ? null : L('tc.base');
-  return state.self?.claimIsle && first !== L('tc.claim') && modal !== 'company' ? L('tc.claim') : null;
 }
 
 /** The nearest ship within reach that a touch aims at: hostile ones count double, `accept` narrows the arc. */
@@ -2028,6 +2105,7 @@ function step(t: number): void {
     pollPad(raw);
     sendInput(t);
     stepPendingDock();
+    stepPendingMark();
     state.updateRemote();
     const own = state.updateOwn();
     // Touch has no hovering cursor: no aim arcs follow it (the broadside buttons aim themselves).
@@ -2062,11 +2140,9 @@ function step(t: number): void {
     hud.drawTarget(state, targetId);
     if (touch.enabled && state.self) {
       const cls = SHIP_CLASSES[state.self.loadout.classId];
-      const ctx = contextLabel();
-      touch.setContext(ctx);
-      // Off her own island, or a wild one she may claim, while the first button lands a party (or docks, boards…):
-      // «My Island» or «Claim» beside it.
-      touch.setContext(secondContext(ctx), 'tc-context2');
+      // The action bar over the guns has every button now (owner, 2026-10-02); the old single context buttons stay hidden.
+      touch.setContext(null);
+      touch.setContext(null, 'tc-context2');
       touch.frame(own?.heading ?? null, state.input.sail, cls.bowChasers + cls.sternChasers > 0, state.self.loadout.mount ?? null);
     }
     divePanel.render(state.dive);

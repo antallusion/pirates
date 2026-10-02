@@ -40,6 +40,7 @@ export const EN = {
   'tip.dive': 'A dive: watch the air and the lamp — come up before the air runs out.',
   'tip.map': 'A treasure map: the gold ring on the chart is where to search; land a party inside it.',
   'tip.waypoint': 'Your mark is set: “Sail there” on the chart gives the wheel to the helmsman.',
+  'tip.actions': 'Something to do here: the buttons over the guns say what — the gold one is the main thing.',
   // 38. gear comparison
   cmp_this: 'This',
   cmp_worn: 'Worn',
@@ -87,6 +88,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'tip.dive': 'Погружение: следите за воздухом и лампой — поднимайтесь, пока воздух не кончился.',
   'tip.map': 'Карта сокровищ: искать внутри золотого круга на карте — высадите туда партию.',
   'tip.waypoint': 'Метка поставлена: «Плыть сюда» на карте передаёт штурвал рулевому.',
+  'tip.actions': 'Здесь есть что сделать: кнопки над пушками подскажут что — золотая из них главная.',
   cmp_this: 'Этот',
   cmp_worn: 'Надет',
   cmp_none: 'В этом месте ничего не надето — каждая строка в плюс.',

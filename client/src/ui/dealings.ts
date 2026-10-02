@@ -187,17 +187,17 @@ export function repairCompare(view: PortView): string {
     <div class="rep-way port"><div class="rep-h"><b>${icon('anchor', '', 'ico-sm')}${esc(L('rep.port'))}</b><span class="tag tag-gold">${esc(L('rep.fast'))}</span></div><p>${esc(L('rep.portText'))}</p></div></div>`;
 }
 
-/** The line at sea: what mending would take, or how the carpenters are getting on. */
-export function repairPrompt(self: PrivateState, you: { hull: number; hullMax: number; sails: number; sailsMax: number; combat?: boolean; flags: number }, repairing: boolean, key: string): string {
+/** The carpenters' state for the action bar (docs/16 #15): whether she is hurt enough to mend, whether the hold has
+ *  what it takes, and the muted line of their pace (or of what they lack). The button itself is the bar's. */
+export function repairState(self: PrivateState, you: { hull: number; hullMax: number; sails: number; sailsMax: number; combat?: boolean; flags: number }, repairing: boolean): { hurt: boolean; short: boolean; line: string } | null {
   const r = self.seaRepair;
-  if (!r || self.dockedAt || you.combat) return '';
+  if (!r || self.dockedAt) return null;
   const hurt = you.hull < you.hullMax * 0.97 || you.sails < you.sailsMax * 0.95;
-  if (!hurt) return '';
-  const btn = `<button class="btn btn-small prompt-btn" data-sea-repair>${esc(repairing ? L('rep.stop') : L('rep.start'))}</button>`;
-  if (repairing) return `${esc(L('rep.working', { rate: num1(r.hullPerMin), min: r.minutes, planks: r.havePlanks, cloth: r.haveCloth }))} ${btn}`;
-  if (r.havePlanks < Math.min(1, r.planks) && r.haveCloth < Math.min(1, r.cloth)) return `<span class="muted">${esc(L('rep.short', { planks: r.havePlanks, need: r.planks, cloth: r.haveCloth, needc: r.cloth }))}</span>`;
-  const line = esc(L('rep.prompt', { pct: Math.round((you.hull / you.hullMax) * 100), key: '\u0000', rate: num1(r.hullPerMin), planks: r.planks })).replace('\u0000', `<kbd>${esc(key)}</kbd>`);
-  return `${line} ${btn}`;
+  const short = r.havePlanks < Math.min(1, r.planks) && r.haveCloth < Math.min(1, r.cloth);
+  let line = '';
+  if (repairing) line = esc(L('rep.working', { rate: num1(r.hullPerMin), min: r.minutes, planks: r.havePlanks, cloth: r.haveCloth }));
+  else if (hurt && short && !you.combat) line = esc(L('rep.short', { planks: r.havePlanks, need: r.planks, cloth: r.haveCloth, needc: r.cloth }));
+  return { hurt, short, line };
 }
 
 // ------------------------------------------------------------------ the buttons

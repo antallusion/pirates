@@ -59,8 +59,8 @@ export class AutosailPill {
 // ------------------------------------------------------------------ 37. first-time hints
 
 export type TipId =
-  | 'fishing' | 'boarding' | 'landing' | 'trek' | 'lighthouse' | 'trade' | 'signals' | 'base' | 'port' | 'storm' | 'sight' | 'hunt' | 'dive' | 'map' | 'waypoint';
-export const TIP_IDS: readonly TipId[] = ['fishing', 'boarding', 'landing', 'trek', 'lighthouse', 'trade', 'signals', 'base', 'port', 'storm', 'sight', 'hunt', 'dive', 'map', 'waypoint'];
+  | 'fishing' | 'boarding' | 'landing' | 'trek' | 'lighthouse' | 'trade' | 'signals' | 'base' | 'port' | 'storm' | 'sight' | 'hunt' | 'dive' | 'map' | 'waypoint' | 'actions';
+export const TIP_IDS: readonly TipId[] = ['fishing', 'boarding', 'landing', 'trek', 'lighthouse', 'trade', 'signals', 'base', 'port', 'storm', 'sight', 'hunt', 'dive', 'map', 'waypoint', 'actions'];
 
 /** The mechanic a message from the server shows her for the first time, if any. */
 export function tipForMsg(m: ServerMsg): TipId | null {

@@ -149,6 +149,9 @@ export class ClientState {
   drifts: DriftMark[] = [];
   driftsAt = 0;
   driftCard: DriftCard | null = null;
+  /** The dense sea's marks she has worked today, and the one her boats are at (world seconds). */
+  markDone = new Set<number>();
+  markBusy: { id: number; until: number; total: number } | null = null;
   tame: TameView | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
@@ -431,6 +434,10 @@ export class ClientState {
         break;
       case 'drift_card':
         this.driftCard = m.card;
+        break;
+      case 'seamarks':
+        this.markDone = new Set(m.done);
+        this.markBusy = m.busy;
         break;
       case 'tame':
         this.tame = m.view;

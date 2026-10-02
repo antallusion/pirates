@@ -31,7 +31,8 @@ import { nightFactor, SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { placeName } from '../ui/maps.ts';
 import { serverText } from '../lang/server.ts';
-import type { IslandData, ShipInfo } from '../../../shared/src/protocol.ts';
+import type { IslandData, SeaMarkData, ShipInfo } from '../../../shared/src/protocol.ts';
+import { markInReach } from '../../../shared/src/data/seamarks.ts';
 import { SF, curseStageFromFlags } from '../../../shared/src/protocol.ts';
 import { fbm } from '../../../shared/src/rng.ts';
 import type { SailState } from '../../../shared/src/sim/sailing.ts';
@@ -912,7 +913,64 @@ export class Renderer {
           break;
         }
       }
+      this.drawMarkState(state, m, x, y, t);
     }
+  }
+
+  /** A sea mark's state for her: worked today (a faint ring and a tick), within reach (a gold ring that breathes),
+   *  her boats at it (the ring filling as they work). */
+  private drawMarkState(state: ClientState, m: SeaMarkData, x: number, y: number, t: number): void {
+    const g = this.g, z = this.zoom;
+    const own = state.ownDisplay;
+    const busy = state.markBusy?.id === m.id ? state.markBusy : null;
+    const done = state.markDone.has(m.id);
+    const near = own ? markInReach(m, own.x, own.y) : false;
+    if (!busy && !done && !near) return;
+    const R = Math.max(10, m.r * z + 8 * z);
+    g.save();
+    if (busy) {
+      const frac = Math.max(0, Math.min(1, 1 - (busy.until - state.estServerTime()) / busy.total));
+      g.strokeStyle = 'rgba(0,0,0,0.45)';
+      g.lineWidth = Math.max(3, 4 * z);
+      g.beginPath();
+      g.arc(x, y, R, 0, Math.PI * 2);
+      g.stroke();
+      g.strokeStyle = '#e8c36a';
+      g.lineWidth = Math.max(2, 3 * z);
+      g.beginPath();
+      g.arc(x, y, R, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+      g.stroke();
+    } else if (done) {
+      g.strokeStyle = 'rgba(200,205,200,0.35)';
+      g.lineWidth = Math.max(1, 1.2 * z);
+      g.setLineDash([3 * z, 5 * z]);
+      g.beginPath();
+      g.arc(x, y, R, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+      // The tick of a mark searched.
+      const s = Math.max(5, 6 * z), cx = x + R * 0.72, cy = y - R * 0.72;
+      g.fillStyle = 'rgba(12,16,18,0.75)';
+      g.beginPath();
+      g.arc(cx, cy, s * 1.15, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = '#b9c7a4';
+      g.lineWidth = Math.max(1.5, 1.6 * z);
+      g.beginPath();
+      g.moveTo(cx - s * 0.55, cy);
+      g.lineTo(cx - s * 0.1, cy + s * 0.45);
+      g.lineTo(cx + s * 0.6, cy - s * 0.45);
+      g.stroke();
+    } else {
+      g.strokeStyle = `rgba(232,195,106,${0.35 + 0.25 * Math.sin(t * 2.4 + m.id)})`;
+      g.lineWidth = Math.max(1.5, 2 * z);
+      g.setLineDash([6 * z, 5 * z]);
+      g.beginPath();
+      g.arc(x, y, R, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
+    g.restore();
   }
 
   /** A floating town (docs/16 P3): old hulls moored side by side in two rows, gangplanks along the middle, huts and

@@ -305,6 +305,9 @@ export type ClientMsg =
   | IsleClientMsg
   | LairClientMsg
   | DriftClientMsg
+  /** The dense sea's marks (driftwood, wrecks, buoys…): work the one within reach, or leave off. */
+  | { t: 'seamark'; action: 'work'; id: number }
+  | { t: 'seamark'; action: 'cancel' }
   | { t: 'mail'; action: 'list' }
   | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
   | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
@@ -1571,6 +1574,8 @@ export type ServerMsg =
   | IsleServerMsg
   | LairServerMsg
   | DriftServerMsg
+  /** The marks she has worked (no more today) and the one her boats are at now (world seconds). */
+  | { t: 'seamarks'; done: number[]; busy: { id: number; until: number; total: number } | null }
   | { t: 'pong'; c: number; s: number };
 
 // ------------------------------------------------------------------ groups, barter, letters, the market

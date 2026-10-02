@@ -398,6 +398,30 @@ export class AdvCard {
     }));
   }
 
+  /** docs/18's cards closed by hand while their things are still within reach: what each was about, for the action
+   *  bar's «Look…» (owner, 2026-10-02: once closed nothing on screen brought a card back). */
+  closedLooks(): { kind: 'obj' | 'guard' | 'lair' | 'drift'; name: string }[] {
+    if (!this.closed || !this.el.classList.contains('hidden')) return [];
+    const out: { kind: 'obj' | 'guard' | 'lair' | 'drift'; name: string }[] = [];
+    const v = this.adv;
+    if (v?.obj) out.push({ kind: 'obj', name: OBJS[v.obj.kind].name[ru()] });
+    if (v?.guard) out.push({ kind: 'guard', name: guardName(v.guard.kind) });
+    if (this.lc) out.push({ kind: 'lair', name: LAIRS[this.lc.kind].name[ru()] });
+    if (this.dc) out.push({ kind: 'drift', name: DRIFTS[this.dc.kind].name[ru()] });
+    return out;
+  }
+
+  /** The card shown again after a close by hand. */
+  reopen(): void {
+    this.closed = '';
+    this.key = '';
+    this.draw();
+  }
+
+  get isOpen(): boolean {
+    return !this.el.classList.contains('hidden');
+  }
+
   /** The mini-game's needle swinging across its bar (as the server reckons it, from its start and phase). */
   private swing(): void {
     cancelAnimationFrame(this.raf);

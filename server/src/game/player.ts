@@ -281,6 +281,8 @@ export interface Profile {
   /** docs/18 IV: her creatures — their wins and hunger kind by kind; the drifts she has saved. */
   tame?: TameProfile;
   drift?: DriftProfile;
+  /** The dense sea's marks she has worked, by id, and when (real milliseconds): each is hers again a day after. */
+  seaMarks?: Record<string, number>;
 }
 
 export interface Dealings {
