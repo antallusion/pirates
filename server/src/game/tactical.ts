@@ -22,6 +22,7 @@ import { onCrewKilled } from './mind.ts';
 import { bloodAndSalt, drownedTakeLosses } from './bridgefx.ts';
 import { afterBattle, heroFace, heroInput, maybeArtifact } from './hero.ts';
 import { npcPathOf } from './pathbook.ts';
+import { isTrialShip } from './throne.ts'; // docs/19 E3
 import { act, endByRansom, killedHp, lossesOf, newBattle, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 
@@ -229,7 +230,7 @@ function settle(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle, seq: nu
     {
       const w = bt.over.winner === 0 ? a : b, l = w === a ? b : a;
       const ws0 = game.sessionOf(w);
-      if (ws0?.profile && !game.sessionOf(l) && bt.over.why !== 'ransom') maybeArtifact(game, ws0, 'guard', l.elite ? 0.6 : Math.min(0.3, bt.heroes[w === a ? 1 : 0].startMen / 400));
+      if (ws0?.profile && !game.sessionOf(l) && bt.over.why !== 'ransom' && !isTrialShip(l)) maybeArtifact(game, ws0, 'guard', l.elite ? 0.6 : Math.min(0.3, bt.heroes[w === a ? 1 : 0].startMen / 400));
     }
     // The victor's captain learns from the men his side cut down (HoMM3: the experience of a battle won).
     const wSide = bt.over.winner;

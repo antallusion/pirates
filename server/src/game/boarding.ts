@@ -23,6 +23,7 @@ import { moraleLossMul } from './crew.ts';
 import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx.ts';
 import { closeTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
 import { guardBeaten } from './advmap.ts';
+import { trialOver } from './throne.ts'; // docs/19 E3
 
 const AGG = {
   careful: { tempo: 0.75, cargo: 0.55, ownLoss: 0.9 },
@@ -639,6 +640,7 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   closeFight(game, b);
   if (bs.remote) a.crew += Math.max(0, bs.party ?? 0); // survivors row back (or stay as the prize crew)
   game.emit({ k: 'board_end', a: a.id, b: b.id, winner: attackerWins ? a.id : b.id }, a.state.x, a.state.y);
+  if (trialOver(game, a, b, attackerWins)) return; // a trial of mastery: no prize, no repulse (docs/19 E3)
   if (!attackerWins) {
     a.morale = Math.max(0, a.morale - 15);
     b.morale = Math.min(100, b.morale + 15);

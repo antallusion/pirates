@@ -8,8 +8,9 @@ import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, ART_SETS } from '../../../share
 import type { ArtSetId } from '../../../shared/src/data/artifacts.ts';
 import { RARITY_COLOR, SLOT_NAMES } from '../../../shared/src/data/items.ts';
 import {
-  ORDERS, ORDER_IDS, PRIMS, PRIM_ICON, PRIM_NAMES, PRIM_TEXT, RANK_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES, SCHOOL_SKILL, SKILLS, SKILL_SLOTS,
+  GM_RANK, ORDERS, ORDER_IDS, PRIMS, PRIM_ICON, PRIM_NAMES, PRIM_TEXT, RANK_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES, SCHOOL_SKILL, SKILLS, SKILL_SLOTS, skillText,
 } from '../../../shared/src/data/hero.ts';
+import { throneLabel } from './throne.ts';
 import type { HeroPortView, HeroView, OrderId, School } from '../../../shared/src/data/hero.ts';
 import { TREES } from '../../../shared/src/data/talents.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -36,7 +37,8 @@ function primTile(h: HeroView, p: (typeof PRIMS)[number]): string {
 }
 
 function pips(r: number): string {
-  return `<span class="hx-pips">${[1, 2, 3].map((i) => `<i class="${i <= r ? 'on' : ''}"></i>`).join('')}</span>`;
+  // docs/19 E2: a grandmaster's fourth rank is a star after the three.
+  return `<span class="hx-pips">${[1, 2, 3].map((i) => `<i class="${i <= r ? 'on' : ''}"></i>`).join('')}${r >= GM_RANK ? '<b class="hx-gm">★</b>' : ''}</span>`;
 }
 
 /** The will bar. */
@@ -72,7 +74,7 @@ export class HeroWindow {
     const tabs: [Tab, string][] = [['hero', L('tab.hero')], ['path', PB('tab')], ['book', L('tab.book')]];
     if (docked) tabs.push(['port', L('tab.port')]);
     let body = '';
-    if (this.tab === 'hero') body = this.heroTab(h, self.level, url);
+    if (this.tab === 'hero') body = this.heroTab(h, self.level, url, !!self.glory?.open);
     else if (this.tab === 'path') body = pathTab(h, self.captain, self.level, self.talents ?? {}); // docs/18 item 9
     else if (this.tab === 'book') body = this.bookTab(h, docked, state.estServerTime());
     else body = this.portTab(h, self.gold);
@@ -93,11 +95,14 @@ export class HeroWindow {
     root.querySelectorAll<HTMLElement>('[data-hlearn]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'learn', id: b.dataset.hlearn })));
     root.querySelectorAll<HTMLElement>('[data-hbuy]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'buy', index: Number(b.dataset.hbuy) })));
     root.querySelector<HTMLElement>('[data-hclose]')!.onclick = () => this.onClose();
+    root.querySelectorAll<HTMLElement>('[data-hthrone]').forEach((b) => (b.onclick = () => this.onThrone()));
   }
 
   onClose: () => void = () => {};
+  /** docs/19 E18: the Throne of the Sea, past the cap. */
+  onThrone: () => void = () => {};
 
-  private heroTab(h: HeroView, level: number, portrait: string | null): string {
+  private heroTab(h: HeroView, level: number, portrait: string | null, throne = false): string {
     const offer = h.pending && h.offer.length
       ? `<div class="hx-offer card"><h4 class="card-h">${icon('xp', '', 'ico-md')}${esc(L('levelUp'))}<span class="muted hx-pend">${esc(L('pending', { n: h.pending }))}</span></h4>
         <div class="hx-picks">${h.offer.map((o, i) => {
@@ -109,7 +114,7 @@ export class HeroWindow {
       const x = h.skills[i];
       if (!x) return `<div class="hx-slot empty"><span class="hx-sico">＋</span><span class="muted">${esc(L('slotFree'))}</span></div>`;
       const d = SKILLS[x.id];
-      return `<div class="hx-slot" title="${esc(T(d.text[x.r - 1]))}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-st"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(T(RANK_NAMES[x.r - 1]))} ${pips(x.r)}</span><small>${esc(T(d.text[x.r - 1]))}</small></span></div>`;
+      return `<div class="hx-slot${x.r >= GM_RANK ? ' gm' : ''}" title="${esc(T(skillText(x.id, x.r)))}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-st"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(T(RANK_NAMES[x.r - 1]))} ${pips(x.r)}</span><small>${esc(T(skillText(x.id, x.r)))}</small></span></div>`;
     }).join('');
     const sets = (Object.keys(ART_SETS) as ArtSetId[]).map((id) => {
       const on = h.sets.includes(id);
@@ -120,7 +125,7 @@ export class HeroWindow {
         <div class="hx-side"><div class="gi-h">${esc(L('prims'))}</div><div class="hx-prims">${PRIMS.map((p) => primTile(h, p)).join('')}</div>${willBar(h)}</div>
       </div>
       ${offer}
-      <div class="gi-h">${esc(L('skills'))} <span class="muted">${h.skills.length}/${SKILL_SLOTS}</span></div>
+      <div class="gi-h">${esc(L('skills'))} <span class="muted">${h.skills.length}/${SKILL_SLOTS}</span>${throne ? `<button class="btn btn-small hx-throne" data-hthrone>${icon('tattoo_crown', '', 'ico-sm')}${esc(throneLabel())}</button>` : ''}</div>
       <div class="hx-slots">${slots}</div>
       <div class="gi-h">${esc(L('sets'))}</div><div class="hx-sets">${sets}</div>`;
   }

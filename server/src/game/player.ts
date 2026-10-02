@@ -77,6 +77,9 @@ import type { AdvProfile } from './advmap.ts';
 import type { LairProfile } from './beastlairs.ts';
 import type { TameProfile } from './tame.ts';
 import type { DriftProfile } from './drifts.ts';
+import { addGlory, gloryView } from './throne.ts';
+import { gloryXp } from '../../../shared/src/data/throne.ts';
+import type { ThroneRec } from './throne.ts';
 
 export interface Profile {
   version: 1;
@@ -283,6 +286,8 @@ export interface Profile {
   drift?: DriftProfile;
   /** The dense sea's marks she has worked, by id, and when (real milliseconds): each is hers again a day after. */
   seaMarks?: Record<string, number>;
+  /** docs/19 E1–E3: her glory past the cap, her mastery tree, her trials of mastery (throne.ts). */
+  throne?: ThroneRec;
 }
 
 export interface Dealings {
@@ -407,7 +412,10 @@ export function talentPointsAvailable(p: Profile): number {
 
 /** Adds XP, handles level-ups. Returns number of levels gained. */
 export function addXp(p: Profile, amount: number): number {
-  if (p.level >= MAX_LEVEL) return 0;
+  if (p.level >= MAX_LEVEL) {
+    addGlory(p, amount); // docs/19 E1: past the cap, experience is glory
+    return 0;
+  }
   p.xp += Math.max(0, Math.round(amount));
   let gained = 0;
   while (p.level < MAX_LEVEL && p.xp >= xpForLevel(p.level)) {
@@ -415,7 +423,10 @@ export function addXp(p: Profile, amount: number): number {
     p.level++;
     gained++;
   }
-  if (p.level >= MAX_LEVEL) p.xp = 0;
+  if (p.level >= MAX_LEVEL) {
+    addGlory(p, p.xp); // what is left past the cap goes on into glory (docs/19 E1)
+    p.xp = 0;
+  }
   return gained;
 }
 
@@ -486,8 +497,10 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     pvp: world.pvp ?? { blackFlag: p.pvp.blackFlag, pennant: false, pennantHoursLeft: 0, shameUntil: p.pvp.shameUntil, bubbleUntil: p.pvp.bubbleUntil, rating: p.pvp.rating, duels: p.pvp.duels, duelWins: p.pvp.duelWins, bounty: 0, hunter: false, sunkBy: [], challenges: [] },
     captain: p.captain,
     level: p.level,
-    xp: p.xp,
-    xpNext: xpForLevel(p.level),
+    // docs/19 E1: past the cap the bar is her glory's.
+    xp: p.level >= MAX_LEVEL ? Math.floor(p.throne?.xp ?? 0) : p.xp,
+    xpNext: p.level >= MAX_LEVEL ? gloryXp(p.throne?.rank ?? 0) : xpForLevel(p.level),
+    glory: gloryView(now, s),
     rested: Math.round(p.rested ?? 0),
     talentPoints: talentPointsAvailable(p),
     deeds: p.deeds,

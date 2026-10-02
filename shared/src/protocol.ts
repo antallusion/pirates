@@ -51,6 +51,8 @@ import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
 import type { IsleClientMsg, IsleServerMsg } from './isleproto.ts';
 import type { LairClientMsg, LairServerMsg } from './lairproto.ts';
 import type { DriftClientMsg, DriftServerMsg } from './driftproto.ts';
+import type { ThroneClientMsg } from './throneproto.ts'; // docs/19 E1–E3
+import type { GloryView } from './data/throne.ts';
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
@@ -305,6 +307,7 @@ export type ClientMsg =
   | IsleClientMsg
   | LairClientMsg
   | DriftClientMsg
+  | ThroneClientMsg
   /** The dense sea's marks (driftwood, wrecks, buoys…): work the one within reach, or leave off. */
   | { t: 'seamark'; action: 'work'; id: number }
   | { t: 'seamark'; action: 'cancel' }
@@ -557,6 +560,8 @@ export interface Contract {
 export interface PrivateState {
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
+  /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */
+  glory?: GloryView;
   accountId: number;
   name: string;
   /** The title she flies with the ship's name (docs/16 #29). */

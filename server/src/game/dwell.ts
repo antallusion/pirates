@@ -7,6 +7,7 @@
 // the limit. An upgraded dwelling trains a stack of its tier's plain kind up for the difference in price.
 
 import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
+import { recruitLift } from './throne.ts';
 import { BEAST_PLURAL, CREATURE_IDS } from '../../../shared/src/data/bestiary.ts';
 import type { CreatureId } from '../../../shared/src/data/bestiary.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
@@ -140,6 +141,8 @@ function perMan(game: Game, s: PlayerSession, at: Here, u: UnitId): number {
 function priceOf(game: Game, s: PlayerSession, at: Here, u: UnitId, n: number): Price {
   const p = recruitPrice(u, n, !!at.port);
   if (at.port && UNITS[u].tier === 1) p.silver = Math.round(n * perMan(game, s, at, u));
+  const off = recruitLift(s.profile); // docs/19 E2: the Merchant's recruiter's purse
+  if (off > 0) p.silver = Math.round(p.silver * (1 - off));
   return p;
 }
 

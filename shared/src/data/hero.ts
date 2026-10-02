@@ -130,13 +130,15 @@ export type SkillId = 'navigation' | 'artillery' | 'boarding' | 'armor' | 'tacti
 export const SKILL_IDS: SkillId[] = ['navigation', 'artillery', 'boarding', 'armor', 'tactics', 'leadership', 'luck', 'logistics', 'scouting', 'trading', 'first_aid', 'mysticism'];
 export const SKILL_SLOTS = 8;
 export const SKILL_MAX = 3;
-export type SkillRank = 1 | 2 | 3;
+/** docs/19 E2: the fourth rank above expert (HoMM3 HotA's grandmaster), won only in a trial (E3), never at a level. */
+export const GM_RANK = 4;
+export type SkillRank = 1 | 2 | 3 | 4;
 export interface SkillSlot {
   id: SkillId;
   r: SkillRank;
 }
 
-export const RANK_NAMES: [string, string][] = [['Basic', 'Базовый'], ['Advanced', 'Продвинутый'], ['Expert', 'Эксперт']];
+export const RANK_NAMES: [string, string][] = [['Basic', 'Базовый'], ['Advanced', 'Продвинутый'], ['Expert', 'Эксперт'], ['Grandmaster', 'Грандмастер']];
 
 export interface SkillDef {
   id: SkillId;
@@ -201,12 +203,33 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     T('Every order +30%; will fills 30% faster a day; any order can be learnt.', 'Каждый приказ +30%; воля за день пополняется на 30% больше; можно учить любой приказ.')] },
 };
 
+/** What a grandmaster of each skill does (docs/19 E2): the fourth rank, won in a trial of mastery. */
+export const GM_TEXT: Record<SkillId, [string, string]> = {
+  navigation: T('Turning +18%, closer to the wind by 7°; Wind orders +60%.', 'Поворот +18%, круче к ветру на 7°; приказы Ветра +60%.'),
+  artillery: T('Guns +14%, reload −10%; shooters in a boarding +32%; Fire orders +60%.', 'Орудия +14%, перезарядка −10%; стрелки в абордаже +32%; приказы Огня +60%.'),
+  boarding: T('Melee blows in a boarding +32%; boarding power +17%.', 'Удары в рукопашной +32%; сила абордажа +17%.'),
+  armor: T('Your stacks take 16% less in a boarding; the ship 10% less at sea.', 'Ваши отряды получают на 16% меньше урона в абордаже; корабль на 10% меньше в море.'),
+  tactics: T('Even against an expert’s Tactics your line stands two hexes nearer the planks; the first round +3 initiative.', 'Даже против Тактики эксперта ваш строй стоит на два гекса ближе к сходням; в первом раунде инициатива +3.'),
+  leadership: T('Morale +3 in a boarding; the crew mends its heart 40% faster; Steel orders +60%.', 'Боевой дух +3 в абордаже; команда быстрее приходит в себя (+40%); приказы Стали +60%.'),
+  luck: T('Luck +3 in a boarding; treasure finds +40%.', 'Удача +3 в абордаже; находки кладов +40%.'),
+  logistics: T('Speed at sea +11%.', 'Ход в море +11%.'),
+  scouting: T('Sight +18%.', 'Обзор +18%.'),
+  trading: T('Buy 7% cheaper, sell 7% dearer.', 'Покупка на 7% дешевле, продажа на 7% дороже.'),
+  first_aid: T('After a boarding 35 in a hundred of your fallen are patched up; Water orders +60%.', 'После абордажа 35 из сотни ваших павших ставят на ноги; приказы Воды +60%.'),
+  mysticism: T('Every order +40%; will fills 40% faster a day; any order can be learnt.', 'Каждый приказ +40%; воля за день пополняется на 40% больше; можно учить любой приказ.'),
+};
+/** What a skill does at a rank (1–4). */
+export function skillText(id: SkillId, r: number): [string, string] {
+  return r >= GM_RANK ? GM_TEXT[id] : SKILLS[id].text[Math.max(1, Math.min(SKILL_MAX, r)) - 1];
+}
+
 /** A skill's rank among her slots (0: not had). */
 export function rankOf(skills: readonly SkillSlot[], id: SkillId): number {
   return skills.find((x) => x.id === id)?.r ?? 0;
 }
 
-const at = (r: number, v: [number, number, number]) => (r > 0 ? v[Math.min(3, r) - 1] : 0);
+/** A rank's figure: basic, advanced, expert and (docs/19 E2) grandmaster — a fourth figure, or the expert's. */
+const at = (r: number, v: readonly number[]) => (r > 0 ? v[Math.min(v.length, r) - 1] : 0);
 
 /** What her skills do at sea, in the talents' own stat vocabulary (so they share the talents' caps). */
 export function skillSeaMods(skills: readonly SkillSlot[]): StatMods {
@@ -215,33 +238,37 @@ export function skillSeaMods(skills: readonly SkillSlot[]): StatMods {
   const add = (k: keyof StatMods, v: number) => {
     if (v) m[k] = (m[k] ?? 0) + v;
   };
-  add('turnRate', at(r('navigation'), [0.05, 0.1, 0.15]));
-  add('noGoDeg', at(r('navigation'), [-2, -4, -6]));
-  add('gunDamageMul', at(r('artillery'), [0.04, 0.08, 0.12]));
-  add('reloadMul', at(r('artillery'), [-0.03, -0.06, -0.09]));
-  add('boardingPower', at(r('boarding'), [0.05, 0.1, 0.15]));
-  add('incomingDamageMul', at(r('armor'), [-0.03, -0.06, -0.09]));
-  add('moraleRegen', at(r('leadership'), [0.04, 0.08, 0.12]));
-  add('treasureHunter', at(r('luck'), [0.1, 0.2, 0.3]));
-  add('maxSpeed', at(r('logistics'), [0.03, 0.06, 0.09]));
-  add('detection', at(r('scouting'), [0.05, 0.1, 0.15]));
-  add('buyMul', at(r('trading'), [-0.02, -0.04, -0.06]));
-  add('sellMul', at(r('trading'), [0.02, 0.04, 0.06]));
+  add('turnRate', at(r('navigation'), [0.05, 0.1, 0.15, 0.18]));
+  add('noGoDeg', at(r('navigation'), [-2, -4, -6, -7]));
+  add('gunDamageMul', at(r('artillery'), [0.04, 0.08, 0.12, 0.14]));
+  add('reloadMul', at(r('artillery'), [-0.03, -0.06, -0.09, -0.1]));
+  add('boardingPower', at(r('boarding'), [0.05, 0.1, 0.15, 0.17]));
+  add('incomingDamageMul', at(r('armor'), [-0.03, -0.06, -0.09, -0.1]));
+  add('moraleRegen', at(r('leadership'), [0.04, 0.08, 0.12, 0.16]));
+  add('treasureHunter', at(r('luck'), [0.1, 0.2, 0.3, 0.4]));
+  add('maxSpeed', at(r('logistics'), [0.03, 0.06, 0.09, 0.11]));
+  add('detection', at(r('scouting'), [0.05, 0.1, 0.15, 0.18]));
+  add('buyMul', at(r('trading'), [-0.02, -0.04, -0.06, -0.07]));
+  add('sellMul', at(r('trading'), [0.02, 0.04, 0.06, 0.07]));
   return m;
 }
+
+/** A grandmaster's figures in the boarding (docs/19 E2), modest over the expert's 30/30/15%: weighed by
+ *  tools/balance-glory.ts so that a captain far past the cap stays within 15 points of a fresh one. */
+export const GM_BATTLE = { melee: 0.32, shot: 0.32, taken: 0.16 };
 
 /** What her skills do in a boarding battle. */
 export function skillBattle(skills: readonly SkillSlot[]): { melee: number; shot: number; taken: number; morale: number; luck: number; tactics: number; init1: number; raise: number; mystic: number } {
   const r = (id: SkillId) => rankOf(skills, id);
   return {
-    melee: at(r('boarding'), [0.1, 0.2, 0.3]),
-    shot: at(r('artillery'), [0.1, 0.2, 0.3]),
-    taken: at(r('armor'), [0.05, 0.1, 0.15]),
-    morale: r('leadership'),
-    luck: r('luck'),
+    melee: at(r('boarding'), [0.1, 0.2, 0.3, GM_BATTLE.melee]),
+    shot: at(r('artillery'), [0.1, 0.2, 0.3, GM_BATTLE.shot]),
+    taken: at(r('armor'), [0.05, 0.1, 0.15, GM_BATTLE.taken]),
+    morale: Math.min(SKILL_MAX, r('leadership')), // a grandmaster's heart is an expert's: HoMM3's morale stops at +3
+    luck: Math.min(SKILL_MAX, r('luck')),
     tactics: r('tactics'),
-    init1: r('tactics'),
-    raise: at(r('first_aid'), [0.1, 0.2, 0.3]),
+    init1: Math.min(SKILL_MAX, r('tactics')),
+    raise: at(r('first_aid'), [0.1, 0.2, 0.3, 0.35]),
     mystic: r('mysticism'),
   };
 }
@@ -371,13 +398,13 @@ export function orderLevelCap(level: number, mystic: number): number {
 /** How much stronger her orders are: her Power (+4% a point, to double at most), her school's kin skill and Deep
  *  Mysticism, and what artifacts add. */
 export function orderMul(pow: number, schoolRank: number, mystic: number, extra = 0): number {
-  return Math.min(3, 1 + 0.07 * Math.max(0, pow)) * (1 + [0, 0.15, 0.3, 0.5][Math.max(0, Math.min(3, schoolRank))] + 0.1 * Math.max(0, mystic) + extra);
+  return Math.min(3, 1 + 0.07 * Math.max(0, pow)) * (1 + [0, 0.15, 0.3, 0.5, 0.6][Math.max(0, Math.min(GM_RANK, schoolRank))] + 0.1 * Math.max(0, mystic) + extra);
 }
 
 /** The will an order costs her: the school's kin skill eases it (−15/−25/−35%), and some artifacts. */
 export function orderCost(id: OrderId, schoolRank: number, costMul = 1): number {
   const def = ORDERS[id];
-  return Math.max(1, Math.round(def.cost * (1 - [0, 0.15, 0.25, 0.35][Math.max(0, Math.min(3, schoolRank))]) * costMul));
+  return Math.max(1, Math.round(def.cost * (1 - [0, 0.15, 0.25, 0.35, 0.4][Math.max(0, Math.min(GM_RANK, schoolRank))]) * costMul));
 }
 
 /** A port's guild of orders (some ports keep one) and what it teaches: its set list, by the port's size. */
@@ -436,7 +463,7 @@ export function shrineOrder(islandId: number): OrderId {
 }
 
 /** Hexes her line stands nearer the planks by her Tactics (HoMM3: the higher Tactics has the field, the lower none). */
-export const TACTICS_DEPLOY = [0, 1, 2, 2];
+export const TACTICS_DEPLOY = [0, 1, 2, 2, 2];
 
 // ------------------------------------------------------------------ the hero in the boarding battle
 

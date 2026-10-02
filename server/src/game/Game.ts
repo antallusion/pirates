@@ -214,6 +214,7 @@ import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
+import { gloryNews, stepTrials, throneMessage } from './throne.ts'; // docs/19 E1–E3
 import { seamarkMessage, stepSeaMarks } from './seamarks.ts'; // the dense sea's marks at work
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
@@ -832,6 +833,7 @@ export class Game {
     stepH4(this); // the adventure map: guards, things to visit, the Grail's diggers (docs/17 H4)
     stepLairs(this); // the lairs of the land's creatures: what each captain sees, her card (docs/18 II)
     stepDrifts(this); // drifting creatures, the season's legend (docs/18 IV)
+    if (this.tick % 20 === 0) stepTrials(this); // docs/19 E3: a trial whose captain is gone
     stepSeaMarks(this); // the boats at the dense sea's marks
     stepTame(this); // the creatures of the army: the starving and the unhappy slip away (docs/18 #39)
     for (const s of this.sessions) settleRefugees(this, s);
@@ -1689,6 +1691,7 @@ export class Game {
       amount += rest;
     }
     const gained = addXp(s.profile, amount);
+    gloryNews(this, s); // docs/19 E1: ranks of glory past the cap
     seasonXp(this, s, amount);
     if (s.ship) s.ship.level = s.profile.level;
     if (reason) this.sendTo(s, { t: 'toast', msg: rest >= 1 ? `+${Math.round(amount)} XP — ${reason} (rested +${Math.round(rest)})` : `+${Math.round(amount)} XP — ${reason}`, kind: 'xp' });
@@ -2634,6 +2637,7 @@ export class Game {
     if (msg.t === 'isle18') return isle18Message(this, s, msg); // docs/18 #32
     if (msg.t === 'lair') return lairMessage(this, s, msg); // docs/18 II
     if (msg.t === 'drift') return driftMessage(this, s, msg); // docs/18 IV
+    if (msg.t === 'throne') return throneMessage(this, s, msg); // docs/19 E1–E3
     if (msg.t === 'seamark') return seamarkMessage(this, s, msg);
     switch (msg.t) {
       case 'onboarding':

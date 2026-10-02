@@ -24,6 +24,7 @@ import type { ShipEntity } from './ship.ts';
 import { heroOf, heroPrims } from './hero.ts';
 import { startBoarding } from './boarding.ts';
 import type { HeroRec } from './hero.ts';
+import { stamLift } from './throne.ts'; // docs/19 E1–E2
 
 /** The path book's own dice (like the auction house's: server/src/game/auction.ts). */
 const rngs = new WeakMap<Game, Rng>();
@@ -66,7 +67,7 @@ export function npcFaceOf(ship: ShipEntity): string | undefined {
 /** Her stamina at most: her Attack and Defense (artifacts' too) and her talents. */
 export function stamMax(p: Profile, h = heroOf(p)): number {
   const t = heroPrims(p, h);
-  return stamMaxOf(t.atk, t.def) + talentBook(p.talents).stam;
+  return Math.round((stamMaxOf(t.atk, t.def) + talentBook(p.talents).stam) * (1 + stamLift(p)));
 }
 /** Her stamina now (whole when never spent). */
 export function stamOf(p: Profile, h = heroOf(p)): number {

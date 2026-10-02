@@ -33,6 +33,8 @@ import { grailWill } from './grail.ts';
 import { foreignAt, learnForeign, npcFaceOf, npcPathOf, spendScrolls, stamMax, stamOf } from './pathbook.ts';
 import { STAM_REST_SEC, TALENT_BOOK, isPathPage, pathPagesAt, talentBook } from '../../../shared/src/data/paths.ts';
 import { fittingMods } from '../../../shared/src/data/landecon.ts';
+import { GM_RANK } from '../../../shared/src/data/hero.ts';
+import { applyLift, liftOf, seaCostLift, throneSea, trialFace, trialHero, willDayLift, willLift } from './throne.ts'; // docs/19 E1–E3
 
 /** What the profile keeps of the hero. */
 export interface HeroRec {
@@ -70,7 +72,7 @@ function hr(game: Game): Rng {
 export function heroOf(p: Profile): HeroRec {
   const h = p.hero;
   if (h && typeof h.seed === 'number' && h.prim) {
-    h.skills = (h.skills ?? []).filter((x) => x && SKILLS[x.id] && x.r >= 1).slice(0, SKILL_SLOTS).map((x) => ({ id: x.id, r: Math.min(SKILL_MAX, x.r) as SkillSlot['r'] }));
+    h.skills = (h.skills ?? []).filter((x) => x && SKILLS[x.id] && x.r >= 1).slice(0, SKILL_SLOTS).map((x) => ({ id: x.id, r: Math.min(GM_RANK, x.r) as SkillSlot['r'] })); // docs/19 E2: a grandmaster's fourth rank
     // Her own path's pages open by her level and are not kept in the book (docs/18); another path's are.
     h.orders = [...new Set((h.orders ?? []).filter((id) => isOrder(id) && ORDERS[id].path !== p.captain))];
     if (h.scrolls) for (const id of Object.keys(h.scrolls)) if (!isPathPage(id) || !((h.scrolls[id as OrderId] ?? 0) > 0)) delete h.scrolls[id as OrderId];
@@ -105,7 +107,8 @@ export function heroPrims(p: Profile, h = heroOf(p)): Prims {
 /** Her store of will: her Will and her artifacts', and the Grail's in her town. */
 export function willMax(p: Profile, h: HeroRec): number {
   const a = artTotals(wornOf(p)).prim;
-  return manaMaxOf(h.prim.will + a.will) + Math.max(0, h.gw ?? 0);
+  // docs/19 E1–E2: glory's and the Mystic's deeper store.
+  return Math.round((manaMaxOf(h.prim.will + a.will) + Math.max(0, h.gw ?? 0)) * (1 + willLift(p)));
 }
 
 /** Her store of will whole again (a well on the map, docs/17 H5). */
@@ -119,6 +122,8 @@ export function heroSource(p: Profile): ModifierSource {
   // docs/18 #43: and her fittings of the land's resources (shell plating, bone knees, venomed grape).
   const mods = { ...skillSeaMods(heroOf(p).skills) };
   for (const [k, v] of Object.entries(fittingMods(p.lairs?.fit)) as [keyof typeof mods, number][]) mods[k] = (mods[k] ?? 0) + v;
+  // docs/19 E2: her mastery's sea side (the Admiral's broadsides, the Merchant's trade), in the same caps.
+  for (const [k, v] of Object.entries(throneSea(p)) as [keyof typeof mods, number][]) mods[k] = (mods[k] ?? 0) + v;
   return { mods };
 }
 
@@ -245,7 +250,7 @@ export function heroSecond(game: Game, s: PlayerSession): void {
   if (h.day !== day) {
     if (h.day >= 0 && h.mana < max) {
       const a = artTotals(wornOf(p));
-      h.mana = Math.min(max, h.mana + max * WILL_DAY * (1 + 0.1 * rankOf(h.skills, 'mysticism') + a.willDay));
+      h.mana = Math.min(max, h.mana + max * WILL_DAY * (1 + 0.1 * rankOf(h.skills, 'mysticism') + a.willDay + willDayLift(p)));
       game.sendTo(s, { t: 'toast', msg: `A new day: your will grows to ${Math.floor(h.mana)}.`, kind: 'info' });
     }
     h.day = day;
@@ -282,7 +287,7 @@ function seaMul(p: Profile, h: HeroRec, id: OrderId): number {
 /** The will a sea order costs her. */
 export function seaCost(p: Profile, h: HeroRec, id: OrderId): number {
   const a = artTotals(wornOf(p));
-  return orderCost(id, rankOf(h.skills, SCHOOL_SKILL[ORDERS[id].school]), Math.max(0.25, 1 - a.battle.cost - a.seaCost));
+  return orderCost(id, rankOf(h.skills, SCHOOL_SKILL[ORDERS[id].school]), Math.max(0.25, 1 - a.battle.cost - a.seaCost - seaCostLift(p)));
 }
 
 /** A sea order cast from the HUD. */
@@ -344,14 +349,18 @@ export function castSea(game: Game, s: PlayerSession, id: string): string | null
 export function heroInput(game: Game, ship: ShipEntity): HeroBattle {
   const s = game.sessionOf(ship);
   const p = s?.profile;
+  const legend = trialHero(ship); // docs/19 E3: a legend of the trials
+  if (legend) return structuredClone(legend);
   if (!p) return npcHeroBattle(ship.shipLevel, npcPathOf(ship)); // docs/18 item 8: the named captains walk paths
   const h = heroOf(p);
-  return heroBattle(heroPrims(p, h), h.skills, artTotals(wornOf(p)), h.orders, h.mana, { path: p.captain, level: p.level, talents: p.talents, stam: stamOf(p, h), scrolls: h.scrolls });
+  const hb = heroBattle(heroPrims(p, h), h.skills, artTotals(wornOf(p)), h.orders, h.mana, { path: p.captain, level: p.level, talents: p.talents, stam: stamOf(p, h), scrolls: h.scrolls });
+  // docs/19 E1–E2: glory's boons and the mastery tree on her battle self.
+  return p.throne ? applyLift(hb, liftOf(p), h.mana + talentBook(p.talents).will, stamOf(p, h)) : hb;
 }
 
 /** The face a ship's captain shows beside the field (a named captain of the sea her own). */
 export function heroFace(game: Game, ship: ShipEntity): string | undefined {
-  return game.sessionOf(ship)?.profile ? undefined : npcFaceOf(ship);
+  return game.sessionOf(ship)?.profile ? undefined : trialFace(ship) ?? npcFaceOf(ship);
 }
 
 /** After a battle: the will she spent, and the fallen her First Aid patches up. */
@@ -503,13 +512,13 @@ export function heroAdmin(game: Game, s: PlayerSession, cmd: string, args: strin
       } else if (args[0] === 'offer') {
         h.picked = Math.max(1, p.level - Math.max(1, Math.round(n(1) || 1)));
       } else if (args[0] && SKILLS[args[0] as never]) {
-        const r = Math.max(0, Math.min(3, Math.round(Number.isFinite(n(1)) ? n(1) : 1)));
+        const r = Math.max(0, Math.min(GM_RANK, Math.round(Number.isFinite(n(1)) ? n(1) : 1)));
         const had = h.skills.find((x) => x.id === args[0]);
         if (!r) h.skills = h.skills.filter((x) => x.id !== args[0]);
         else if (had) had.r = r as SkillSlot['r'];
         else if (h.skills.length < SKILL_SLOTS) h.skills.push({ id: args[0] as SkillSlot['id'], r: r as SkillSlot['r'] });
         else return 'All eight slots are taken.';
-      } else if (args.length) return `Usage: /skill id [0-3] | offer [n] | clear · ${Object.keys(SKILLS).join(' ')}`;
+      } else if (args.length) return `Usage: /skill id [0-4] | offer [n] | clear · ${Object.keys(SKILLS).join(' ')}`;
       applyHero(game, s);
       return `Skills: ${h.skills.map((x) => `${SKILLS[x.id].name[0]} ${x.r}`).join(', ') || 'none'}; choices waiting ${pendingChoices(p, h)}.`;
     }
