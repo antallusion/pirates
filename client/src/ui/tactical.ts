@@ -124,6 +124,30 @@ interface Burst {
   t0: number;
   size: number;
 }
+/** A shot or a throw in flight from the shooter to the target. */
+interface Missile {
+  id: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  t0: number;
+  arc: number;
+}
+/** The painted four-frame effects (owner, 2026-10-02), added onto the field as light, in place of the old single bursts. */
+const FX_OF: Record<string, string> = { 'part.explosion': 'fx.bt_blast', 'part.muzzle': 'fx.bt_muzzle', 'part.splash': 'fx.bt_splash' };
+/** What a kind fires or throws; muskets by default. Thrown things fly in an arc. */
+const MISSILE_OF: Record<string, string> = {
+  gunner: 'part.ms_cannonball', bombardier: 'part.ms_grenade', hermit: 'part.ms_harpoon', cultist: 'part.ms_brine', mermaid: 'part.ms_spear',
+  harpooner: 'part.ms_harpoon', master_harpooner: 'part.ms_harpoon', harpoon_gunner: 'part.ms_harpoon', crown_grenadier: 'part.ms_grenade',
+  crown_mortar: 'part.ms_cannonball', crown_rocketeer: 'part.ms_rocket', choir_chanter: 'part.ms_bell', choir_cantor: 'part.ms_bell',
+  brine_witch: 'part.ms_brine', poisoner: 'part.ms_dart', blowgun_hunter: 'part.ms_dart', alchemist: 'part.ms_flask', fog_thief: 'part.ms_smokebomb',
+  island_archer: 'part.ms_arrow', net_thrower: 'part.ms_net', net_master: 'part.ms_net', phantom_gunner: 'part.ms_cannonball',
+  storm_witch: 'part.ms_brine', tide_shaman: 'part.ms_brine', tide_caller: 'part.ms_brine',
+};
+const THROWN = new Set(['part.ms_grenade', 'part.ms_stone', 'part.ms_spear', 'part.ms_flask', 'part.ms_net', 'part.ms_smokebomb', 'part.ms_cannonball']);
+const MISSILE_MS = 300;
+
 /** A path's move drawn over the field (docs/18 items 1, 5): the innate small, the ultimate over the whole board. */
 interface PathFx {
   path: CaptainId;
@@ -166,6 +190,8 @@ const FIGURE_SIZE: Record<string, number> = {
   crab: 0.85, gull: 0.95, seal: 1.0, reef_shark: 1.15, rock_turtle: 1.05, sea_turtle: 1.05, marsh_serpent: 1.45, hermit: 1.3,
   lagoon_tentacle: 1.65, mermaid: 1.4, cultist: 1.3, surf_drowned: 1.3, young_serpent: 1.8, lantern_maw: 1.6, ancient_turtle: 1.55,
   shoal_leviathan: 1.95, white_whale: 2.2, young_kraken: 2.2, deep_spawn: 1.45, life_guard: 1.32, guard: 1.32,
+  crown_ironclad: 1.35, crown_diver: 1.5, crown_dreadnought: 1.7, deep_one_champion: 1.45, deep_abbot: 1.4, abyss_herald: 1.7,
+  leviathan_slayer: 1.45, basalt_guardian: 1.6, dutchman_mate: 1.6, lantern_wraith: 1.2,
 };
 /** Where the feet stand across a figure (a musket held out to one side does not move the man off his hex): the middle
  *  of what is painted in its lowest tenth, found once per picture. */
@@ -288,6 +314,7 @@ export class TacticalPanel {
   private seen = 0;
   private floats: Float[] = [];
   private bursts: Burst[] = [];
+  private missiles: Missile[] = [];
   private pos = new Map<number, { x: number; y: number; fx: number; fy: number; t0: number }>();
   /** A figure's blow, shot or flinch being played: since when, and toward where. */
   private act = new Map<number, { k: 'atk' | 'shot' | 'hurt'; t0: number; dx: number; dy: number }>();
@@ -321,6 +348,7 @@ export class TacticalPanel {
         this.act.clear();
         this.floats = [];
         this.bursts = [];
+        this.missiles = [];
         this.pathFx = [];
         this.seen = 0;
         this.preview = this.targeting = this.info = null;
@@ -424,8 +452,12 @@ export class TacticalPanel {
         if (c) this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 1.4 });
       } else if (e.k === 'shot') {
         const s = at(hexOf(e.s));
-        if (s) this.bursts.push({ id: 'part.muzzle', x: s.x, y: s.y, t0: t, size: w * 0.9 });
-        if (c) this.bursts.push({ id: 'part.smoke', x: c.x, y: c.y, t0: t, size: w * 0.8 });
+        const shooter = (v.stacks.find((x) => x.id === e.s) ?? was.stacks.find((x) => x.id === e.s))?.unit ?? '';
+        const ms = MISSILE_OF[shooter] ?? 'part.ms_ball';
+        const fly = s && c && sprite(ms) ? MISSILE_MS : 0;
+        if (fly) this.missiles.push({ id: ms, x0: s!.x, y0: s!.y - w * 0.55, x1: c!.x, y1: c!.y - w * 0.4, t0: t + 80, arc: THROWN.has(ms) ? Math.hypot(c!.x - s!.x, c!.y - s!.y) * 0.25 : 0 });
+        if (s) this.bursts.push({ id: 'part.muzzle', x: s.x + (c && c.x < s.x ? -w * 0.45 : w * 0.45), y: s.y - w * 0.55, t0: t, size: w * 0.9 });
+        if (c) this.bursts.push({ id: THROWN.has(ms) && fly ? 'part.explosion' : 'part.smoke', x: c.x, y: c.y - w * 0.3, t0: t + fly, size: w * (THROWN.has(ms) ? 1.1 : 0.8) });
       } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: t, size: w * 0.8 });
     } else if (e.k === 'luck' || e.k === 'morale' || e.k === 'fear') {
       const c = at(hexOf(e.s));
@@ -435,7 +467,7 @@ export class TacticalPanel {
       const c = at(e.hex ?? hexOf(e.s));
       if (c) {
         this.addFloat({ text: e.k === 'poison' ? `${L('float.poison')} −${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${L('float.regen')} +${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
-        this.bursts.push({ id: e.k === 'poison' ? 'part.smoke' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.8 });
+        this.bursts.push({ id: e.k === 'poison' ? (sprite('fx.bt_poison_0') ? 'fx.bt_poison' : 'part.smoke') : sprite('fx.bt_heal_0') ? 'fx.bt_heal' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'spell') {
       const c = at(e.hex ?? hexOf(e.t));
@@ -449,7 +481,7 @@ export class TacticalPanel {
         const mine = v.stacks.filter((s) => (s.side === v.you) !== onFoe);
         for (const s of mine) {
           const cc = this.center(s.hex);
-          this.bursts.push({ id: e.id === 'call_of_the_deep' ? 'part.splash' : 'part.smoke', x: cc.x, y: cc.y, t0: t + Math.random() * 200, size: w * 1.3 });
+          this.bursts.push({ id: e.id === 'call_of_the_deep' ? (sprite('fx.bt_deep_0') ? 'fx.bt_deep' : 'part.splash') : 'part.smoke', x: cc.x, y: cc.y, t0: t + Math.random() * 200, size: w * 1.3 });
         }
       }
       this.addFloat({ text: spName(e.id as TacSpellId), x: this.size.cw / 2, y: this.size.ch * 0.18, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
@@ -483,7 +515,7 @@ export class TacticalPanel {
       const c = at(e.hex ?? hexOf(e.s));
       if (c) {
         this.addFloat({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#ff9a4a' });
-        this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 0.9 });
+        this.bursts.push({ id: sprite('fx.bt_fire_0') ? 'fx.bt_fire' : 'part.explosion', x: c.x, y: c.y - w * 0.2, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'die') {
       const c = at(e.hex);
@@ -1610,11 +1642,38 @@ export class TacticalPanel {
     // The paths' moves (docs/18): their light over the field.
     this.pathFx = this.pathFx.filter((f) => t - f.t0 < (f.ult ? PATH_FX_MS.ult : PATH_FX_MS.innate));
     for (const f of this.pathFx) this.drawPathFx(g, f, t, w);
-    // Bursts of powder, splinters and smoke.
+    // Shots and throws in flight, turned along their path.
+    this.missiles = this.missiles.filter((m) => t - m.t0 < MISSILE_MS);
+    for (const m of this.missiles) {
+      const k = (t - m.t0) / MISSILE_MS;
+      if (k < 0) continue;
+      const img = sprite(m.id)!.img;
+      const x = m.x0 + (m.x1 - m.x0) * k, y = m.y0 + (m.y1 - m.y0) * k - m.arc * 4 * k * (1 - k);
+      const dy = m.y1 - m.y0 - m.arc * 4 * (1 - 2 * k);
+      const L = w * (m.id === 'part.ms_harpoon' || m.id === 'part.ms_spear' || m.id === 'part.ms_rocket' ? 0.9 : 0.45);
+      const H = (L * img.naturalHeight) / img.naturalWidth;
+      g.save();
+      g.translate(x, y);
+      g.rotate(Math.atan2(dy, m.x1 - m.x0));
+      g.drawImage(img, -L / 2, -H / 2, L, H);
+      g.restore();
+    }
+    // Bursts of powder, splinters and smoke: the painted four-frame effects where there are, added as light.
     this.bursts = this.bursts.filter((b) => t - b.t0 < 700);
     for (const b of this.bursts) {
       const k = (t - b.t0) / 700;
       if (k < 0) continue;
+      const fx = FX_OF[b.id] ?? (b.id.startsWith('fx.') ? b.id : null);
+      const frame = fx ? sprite(`${fx}_${Math.min(3, Math.floor(k * 4))}`) : null;
+      if (frame) {
+        const s = b.size * 1.35;
+        g.globalCompositeOperation = 'lighter';
+        g.globalAlpha = k > 0.75 ? (1 - k) * 4 : 1;
+        g.drawImage(frame.img, b.x - s / 2, b.y - s / 2, s, s);
+        g.globalCompositeOperation = 'source-over';
+        g.globalAlpha = 1;
+        continue;
+      }
       const sp = sprite(b.id);
       g.globalAlpha = Math.max(0, 1 - k);
       const s = b.size * (0.7 + k * 0.5);

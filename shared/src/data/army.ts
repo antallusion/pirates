@@ -6,10 +6,12 @@
 
 import { BEASTS, SEA_BEASTS } from './bestiary.ts';
 import type { BeastId, SeaBeastId } from './bestiary.ts';
+import { FACTION_KINDS, FACTION_KIND_IDS, rosterKind } from './factionunits.ts';
+import type { FactionKindId, Roster } from './factionunits.ts';
 
 /** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
  *  them (docs/18 II, shared/src/data/bestiary.ts). */
-export type UnitId = MenId | BeastId | SeaBeastId;
+export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId;
 export type MenId =
   | 'deckhand' | 'sailor'
   | 'marine' | 'sea_guard'
@@ -93,12 +95,15 @@ export interface UnitDef {
   beast?: boolean;
   /** A legend of the sea (docs/18 #40): the white whale, the young kraken — one a captain, never sold. */
   legend?: boolean;
+  /** One of the world's armies (shared/src/data/factionunits.ts): whose, and the pirate kind it fights as. */
+  roster?: Roster;
+  as?: MenId;
 }
 
 const U = (id: UnitId, tier: number, up: boolean, base: UnitId, upgrade: UnitId | null, s: Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>): UnitDef => ({ id, tier, up, base, upgrade, ...s });
 
 /** One man of each kind (the HoMM3 scale: a pikeman 4/5 1–3 10 hp, a black dragon 25/25 40–50 300 hp). */
-export const UNITS: Record<UnitId, UnitDef> = {
+const BASE_UNITS: Record<MenId | BeastId | SeaBeastId, UnitDef> = {
   ...BEASTS,
   ...SEA_BEASTS,
   deckhand: U('deckhand', 1, false, 'deckhand', 'sailor', { atk: 3, def: 2, dmin: 1, dmax: 2, hp: 5, speed: 4, init: 5, shots: 0, specials: [], art: 'portrait.pirate_15', cost: 20 }),
@@ -116,6 +121,20 @@ export const UNITS: Record<UnitId, UnitDef> = {
   drowned: U('drowned', 7, false, 'drowned', 'deep_spawn', { atk: 14, def: 12, dmin: 8, dmax: 12, hp: 35, speed: 4, init: 7, shots: 0, specials: ['undead', 'fear'], art: 'portrait.pirate_22', cost: 450, deep: true }),
   deep_spawn: U('deep_spawn', 7, true, 'drowned', null, { atk: 17, def: 15, dmin: 10, dmax: 15, hp: 45, speed: 5, init: 9, shots: 0, specials: ['undead', 'fear', 'sweep'], art: 'icon.ab_deep_call', cost: 600, deep: true }),
 };
+
+/** The world's armies: each faction's kind fights with the numbers of the pirate kind whose place it takes, its plain
+ *  and upgraded kinds paired as the pirates' are; its face is the pirate kind's until its own figure is painted. */
+function factionUnits(): Record<FactionKindId, UnitDef> {
+  const out = {} as Record<FactionKindId, UnitDef>;
+  for (const id of FACTION_KIND_IDS) {
+    const { roster, as } = FACTION_KINDS[id];
+    const t = BASE_UNITS[as];
+    out[id] = { ...t, id, base: rosterKind(roster, t.base as MenId), upgrade: t.upgrade ? rosterKind(roster, t.upgrade as MenId) : null, roster, as };
+  }
+  return out;
+}
+
+export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits() };
 
 export const hasSpecial = (u: UnitId, s: UnitSpecial): boolean => UNITS[u].specials.includes(s);
 

@@ -2,7 +2,9 @@
 // wall the stacks stand behind when the balls come in, the "−N" over a ship that lost men, and when the sea's own
 // captains lay alongside (they board when their men are the stronger, as a HoMM3 hero attacks a weaker army).
 
-import { armyForLevel, armyKillFactor, armyPower } from '../../../shared/src/data/army.ts';
+import { armyForLevel, armyKillFactor, armyPower, armyTidy } from '../../../shared/src/data/army.ts';
+import { rosterKind } from '../../../shared/src/data/factionunits.ts';
+import type { Roster } from '../../../shared/src/data/factionunits.ts';
 import type { ArmyMix, ArmyStack } from '../../../shared/src/data/army.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
@@ -18,9 +20,20 @@ export function npcMixOf(ship: ShipEntity): ArmyMix {
   return 'pirate';
 }
 
-/** The stacks a ship of the sea carries: her head count spread by the level of the waters she sails (canon D12). */
+/** Whose army a ship of the sea fields (owner, 2026-10-02: the world's armies): her faction's, the Dutchman's dead on
+ *  a ghost; the Confederacy's and the free pirates' are the pirate crew's own kinds. */
+export function rosterOf(ship: ShipEntity): Roster | null {
+  if (ship.npcRole === 'ghost') return 'dutchman';
+  const f = ship.faction;
+  return f === 'crown' || f === 'choir' || f === 'harpoon' || f === 'brokers' || f === 'league' || f === 'free' ? f : null;
+}
+
+/** The stacks a ship of the sea carries: her head count spread by the level of the waters she sails (canon D12), in
+ *  her faction's kinds (each fights as the pirate kind whose place it takes, so the sea's strength is as it was). */
 export function npcArmy(ship: ShipEntity): ArmyStack[] {
-  return armyForLevel(ship.shipLevel, ship.crew, ship.armySlots, npcMixOf(ship));
+  const r = rosterOf(ship);
+  const army = armyForLevel(ship.shipLevel, ship.crew, ship.armySlots, npcMixOf(ship));
+  return r ? armyTidy(army.map((s) => ({ u: rosterKind(r, s.u), n: s.n }))) : army;
 }
 
 /** The hull is the wall (docs/17 H1): a round shot through sound timbers kills fewer than one through a wreck, and

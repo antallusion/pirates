@@ -22,11 +22,11 @@ SHEETS = os.path.join(ROOT, 'tools', 'art', 'sheets.json')
 JOBS = os.path.join(ROOT, 'assets', 'raw', 'q_creatures.json')
 
 HIT = {
-    'man': 'staggering back on his heels from a blow, the free arm raised before the face, head turned away',
-    'big': 'reeling back from a heavy blow, head and shoulders jerked away, one arm thrown up',
-    'beast': 'recoiling from a blow, head pulled back and away, body hunched',
-    'fly': 'tumbling back in the air from a blow, wings thrown up and feathers or skin ruffled',
-    'water': 'jerking back from a blow, sinking a little lower into its water',
+    'man': 'flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon',
+    'big': 'reeling back from a heavy blow while still facing right: leaning back, shoulders hunched, still holding the same weapon',
+    'beast': 'recoiling from a blow while still facing right: head pulled back, body hunched low',
+    'fly': 'jolted back in the air by a blow while still facing right, wings thrown up',
+    'water': 'jerking back from a blow while still facing right, sinking a little lower into its water',
 }
 
 K = []
@@ -49,18 +49,18 @@ c('boarder', 'red_tide', 5, 'Boarder', 'Абордажник', 'man', 'a pirate 
 c('cutthroat', 'red_tide', 5, 'Cutthroat', 'Головорез', 'man', 'a lean pirate cutthroat in a black long coat with a black scarf over the lower face, a curved knife in the right hand and a flintlock pistol in the left', 'the knife turned in his fingers, the pistol lowered a little', 'darting forward with a low knife stab toward the right, the pistol raised')
 c('guard', 'red_tide', 6, 'Guardsman', 'Гвардеец', 'man', "a captain's guardsman: a tall broad man in a heavy dark navy coat with brass buttons and a black tricorne, a tall halberd held upright", 'the halberd tilted a little forward', 'bringing the halberd down in a heavy chopping blow toward the right')
 c('life_guard', 'red_tide', 6, 'Life Guard', 'Лейб-гвардеец', 'man', "a captain's life guard in a black steel cuirass and gorget over a dark burgundy coat with tarnished gold braid, a basket-hilted broadsword, a pistol in his belt", 'the broadsword raised to his shoulder', 'a powerful forward lunge with the broadsword toward the right')
-c('drowned', 'red_tide', 7, 'Drowned', 'Утопленник', 'man', 'a drowned sailor risen from the sea: grey waterlogged skin, lank hair woven with kelp, barnacles on a rotted sea coat, water dripping from him, a rusted boarding axe', 'his head lolling to one side, the axe hanging lower', 'a slow, heavy overhead chop with the rusted axe toward the right', 'jerking back from a blow, the kelp in his hair swinging, the axe arm flung wide')
+c('drowned', 'red_tide', 7, 'Drowned', 'Утопленник', 'man', 'a drowned sailor risen from the sea: grey waterlogged skin, lank hair woven with kelp, barnacles on a rotted sea coat, water dripping from him, a rusted boarding axe', 'his head lolling to one side, the axe hanging lower', 'a slow, heavy overhead chop with the rusted axe toward the right', 'flinching from a blow while still facing right, the kelp in his hair swinging, still holding the axe')
 c('deep_spawn', 'red_tide', 7, 'Deep Spawn', 'Порождение глубин', 'big', 'a hulking deep spawn brute born of the sea: thick grey-blue hide, pale coral growing out of its shoulders, webbed clawed hands, a heavy rusted anchor chain wound round its right forearm, a very faint turquoise glint in its small eyes', 'its chest heaving, the chain swinging a little', 'swinging the anchor chain in a wide sweeping arc toward the right')
 
 # ---- The land's and the sea's creatures (docs/18, in the game) -------------------------------------------------------
-c('crab', 'wild', 1, 'Giant Crab', 'Гигантский краб', 'beast', 'a giant armoured shore crab as big as a hound, a dark red-brown barnacled shell, big raised claws toward the right', 'its claws opened a little wider, eyestalks turned', 'lunging toward the right and snapping its big claw shut', 'pulling back, its claws drawn in before its shell')
+c('crab', 'wild', 1, 'Giant Crab', 'Гигантский краб', 'beast', 'a giant armoured shore crab as big as a hound, a dark red-brown barnacled shell, big raised claws toward the right', 'its claws opened a little wider, eyestalks turned', 'lunging toward the right and snapping its big claw shut', 'pulling back while still facing right, its claws drawn in before its shell')
 c('gull', 'wild', 1, 'Giant Gull', 'Гигантская чайка', 'fly', 'a giant grey sea gull with a hooked grey-yellow beak, its wings spread wide, flying toward the right', 'its wings at the bottom of their beat', 'diving toward the right beak first, talons thrust forward')
 c('seal', 'wild', 2, 'Bull Seal', 'Морской котик', 'beast', 'a big scarred grey bull seal with a thick neck and whiskers, propped up on its front flippers, head toward the right', 'its head lifted, nostrils flared', 'rearing up and slamming forward toward the right with open jaws')
 c('reef_shark', 'wild', 2, 'Reef Shark', 'Рифовая акула', 'water', 'a reef shark, its head and upper body out of the water, facing right', 'its jaws opened a little, water streaming off it', 'lunging out of the water toward the right with jaws wide open')
-c('rock_turtle', 'wild', 3, 'Rock Turtle', 'Каменная черепаха', 'beast', 'a massive land turtle whose high shell is crusted with grey stones and lichen, thick scaly legs, its head toward the right', 'its neck stretched out a little further', 'snapping forward toward the right with its hooked beak, neck at full stretch', 'pulling its head half into its shell')
-c('sea_turtle', 'wild', 3, 'Sea Turtle', 'Морская черепаха', 'beast', 'a great sea turtle with a barnacled domed shell and long front flippers, its head toward the right', 'its front flippers lifted a little', 'biting forward toward the right, flippers spread', 'pulling its head half into its shell')
+c('rock_turtle', 'wild', 3, 'Rock Turtle', 'Каменная черепаха', 'beast', 'a massive land turtle whose high shell is crusted with grey stones and lichen, thick scaly legs, its head toward the right', 'its neck stretched out a little further', 'snapping forward toward the right with its hooked beak, neck at full stretch', 'pulling its head half into its shell while still facing right')
+c('sea_turtle', 'wild', 3, 'Sea Turtle', 'Морская черепаха', 'beast', 'a great sea turtle with a barnacled domed shell and long front flippers, its head toward the right', 'its front flippers lifted a little', 'biting forward toward the right, flippers spread', 'pulling its head half into its shell while still facing right')
 c('marsh_serpent', 'wild', 3, 'Marsh Serpent', 'Болотный змей', 'beast', 'an olive-brown marsh serpent, its coils on the ground and its head reared high, facing right, a hood of scales spread', 'its head swaying a little lower', 'striking toward the right with fangs bared')
-c('hermit', 'wild', 4, 'Island Hermit', 'Островной отшельник', 'man', 'a wild island hermit in tattered rags, a long matted grey beard, a rope belt, barefoot, a leather sling in his hand', 'the sling swinging low at his side', 'whirling and releasing the sling toward the right, the stone flying')
+c('hermit', 'wild', 4, 'Island Hermit', 'Островной отшельник', 'man', 'a wild island castaway gone savage: tattered rags, a long matted grey beard, a rope belt, barefoot, a bundle of short rusted harpoons on his back and one in his hand', 'the harpoon lifted to his shoulder', 'hurling the short harpoon toward the right')
 c('lagoon_tentacle', 'wild', 4, 'Lagoon Tentacle', 'Щупальце лагуны', 'water', 'a single huge dark-mottled kraken tentacle rising tall out of the water, its pale suckers on the underside, its tip curling toward the right', 'its tip curled the other way', 'the tentacle lashing down hard toward the right')
 c('mermaid', 'wild', 4, 'Mermaid', 'Русалка', 'water', 'a sinister mermaid with pale grey skin and long wet black hair, a dark scaled tail, her upper body out of the water, a spear of pale driftwood tipped with a shark tooth', 'her hair swept back, the spear raised a little', 'hurling the spear toward the right')
 c('cultist', 'wild', 5, 'Cultist', 'Сектант', 'man', 'a hooded cultist of the drowned god in a sodden dark-green robe hung with shells, an iron lantern with a faint green flame held up in one hand, a wavy ritual knife in the other', 'the lantern lifted higher, the robe stirring', 'thrusting the lantern toward the right, a thin bolt of pale green-grey brine-light leaping from it')
@@ -210,7 +210,7 @@ def prompt(k: dict) -> str:
         f"third — attack: {k['attack']}; "
         f"fourth — hit: {k['hit']}. "
         f'Exactly the same {who} in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. '
-        f'Every pose faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, {facing}. '
+        f'Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, {facing}. '
         f'The whole {who} is visible in every pose, nothing cut off by the picture edges, {frame}. '
         'The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. '
         'Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation '
@@ -218,7 +218,7 @@ def prompt(k: dict) -> str:
         'Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, '
         'NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, '
         'NO letters, NO numbers, NO watermark. '
-        'Avoid: a different character in any pose, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat '
+        'Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat '
         'vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.'
     )
 

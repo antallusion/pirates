@@ -5,6 +5,7 @@
 import { WEEKS } from '../../../shared/src/data/week.ts';
 import { TOWN } from '../../../shared/src/data/town.ts';
 import { MINES } from '../../../shared/src/data/mines.ts';
+import { FACTION_KIND_IDS, FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 
 const names: Record<string, string> = {};
 for (const w of Object.values(WEEKS)) {
@@ -13,6 +14,8 @@ for (const w of Object.values(WEEKS)) {
 }
 for (const t of Object.values(TOWN)) for (const n of t.names) names[n[0]] = n[1];
 for (const m of Object.values(MINES)) names[m.name[0]] = m.name[1];
+// The world's armies, as a sentence counts them.
+for (const k of FACTION_KIND_IDS) names[FACTION_NAMES[k][0].toLowerCase()] = FACTION_NAMES[k][1].toLowerCase();
 
 export const SERVER_RU_H3: Record<string, string> = {
   ...names,

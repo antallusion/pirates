@@ -13,6 +13,8 @@ import { emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { armyAdd, armyFit, armyMen, armyRemove, armySlots, armyTidy } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
+import { rosterKind } from '../../../shared/src/data/factionunits.ts';
+import { rosterOf } from './army.ts';
 import type { Flag, ModifierSource, StatMods } from '../../../shared/src/data/stats.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import type { Aggression, ShipInfo, Side, Station } from '../../../shared/src/protocol.ts';
@@ -301,7 +303,8 @@ export class ShipEntity {
     const n = Math.max(0, Math.round(Number.isFinite(v) ? v : 0));
     const d = n - this._men;
     if (d < 0) armyRemove(this._army, -d);
-    else if (d > 0) armyAdd(this._army, d, this.armySlots);
+    // New hands sign on as her roster's (a Crown ship's powder monkeys, a pirate's deckhands).
+    else if (d > 0) armyAdd(this._army, d, this.armySlots, rosterKind(rosterOf(this), 'deckhand'));
     this._men = armyMen(this._army);
   }
 

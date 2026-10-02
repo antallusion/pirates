@@ -128,7 +128,8 @@ test("the head count is the stacks' sum: old code that sets `crew` keeps working
   assert.equal(armyMen(before) - ship.crew, 10);
   ship.crew += 5;
   assert.equal(ship.crew, armyMen(ship.army));
-  assert.ok(ship.army.some((s) => s.u === 'deckhand'), 'new hands sign on as deckhands');
+  // New hands sign on as her roster's deckhands (the Free Harbors' fishers on a ship of theirs).
+  assert.ok(ship.army.some((s) => (UNITS[s.u].as ?? s.u) === 'deckhand'), 'new hands sign on as deckhands');
   ship.crew = 0;
   assert.deepEqual(ship.army, []);
   ship.setArmy([{ u: 'guard', n: 5 }, { u: 'marine', n: 5 }, { u: 'deckhand', n: 5 }, { u: 'sailor', n: 5 }, { u: 'musketeer', n: 5 }, { u: 'gunner', n: 5 }, { u: 'boarder', n: 5 }, { u: 'drowned', n: 5 }]);

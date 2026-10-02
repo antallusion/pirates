@@ -5,7 +5,9 @@
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { ARMY_WORD_MIN, UNITS, armyWord } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
+import { FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
+import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
 import { EN, RU } from '../lang/ui/army.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
 import type { BeastId } from '../../../shared/src/data/bestiary.ts';
@@ -15,8 +17,10 @@ const L = dict(EN, RU);
 const DL = dict(DEN, DRU);
 type K = keyof typeof EN;
 
-export const unitName = (u: UnitId): string => L(`u.${u}` as K);
-export const unitNote = (u: UnitId): string => L(`ud.${u}` as K);
+// The world's armies carry their own names (shared/src/data/factionunits.ts).
+const own = (u: UnitId, k: 0 | 2): string | null => (UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId][k + (lang() === 'ru' ? 1 : 0)] : null);
+export const unitName = (u: UnitId): string => own(u, 0) ?? L(`u.${u}` as K);
+export const unitNote = (u: UnitId): string => own(u, 2) ?? L(`ud.${u}` as K);
 export const specialName = (s: UnitSpecial): string => L(`sp.${s}` as K);
 export const specialNote = (s: UnitSpecial): string => L(`spd.${s}` as K);
 export const unitArt = (u: UnitId): string => UNITS[u]?.art ?? 'icon.prof_sailor';
