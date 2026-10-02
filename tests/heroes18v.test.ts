@@ -235,7 +235,8 @@ test('the admin\'s commands of docs/18 V in HELP in both languages; every new se
   const ru = SERVER_RU_ADMIN[HELP];
   assert.ok(ru, 'the Russian HELP');
   assert.equal(ru.split(' · ').length, HELP.split(' · ').length, 'command for command');
-  assert.deepEqual(ru.split(' · ').slice(-2).map((p) => p.split(' ')[0]), ['/landecon', '/bestiary']);
+  // Command for command, in the same places (later batches add theirs after these).
+  assert.deepEqual(ru.split(' · ').map((p) => p.split(' ')[0]), HELP.split(' · ').map((p) => p.split(' ')[0]));
   setLang('ru');
   try {
     for (const line of ['/landecon', '/landecon cap', '/landecon fit bone_knees 2', '/bestiary all', '/bestiary clear']) {
