@@ -4043,3 +4043,47 @@ body.touch .act-btn { --h: 38px; }
   #rotate-lock .rl-phone i { position: absolute; left: 50%; bottom: 5px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--brass); }
 }
 @keyframes rl-turn { 0%, 20% { transform: rotate(0); } 50%, 75% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+
+/* The title screen on a phone on its side (the only way a phone plays, 2026-10-02): the name on the left, the form on
+   the right, so the whole panel stands inside the 360–430px of height instead of running under the screen's edge. */
+@media (max-height: 520px) and (min-width: 600px) {
+  #screen-login > .login-panel {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 26px; align-items: start;
+    grid-template-areas: "brand lang" "brand form" "brand acct" "brand reset" "hint err";
+    width: min(780px, 96vw); padding: 14px 22px 12px;
+  }
+  #screen-login .login-brand { grid-area: brand; align-self: center; text-align: center; }
+  #screen-login .lang-switch { grid-area: lang; margin-bottom: 4px; }
+  #screen-login #login-form { grid-area: form; }
+  #screen-login #login-account { grid-area: acct; margin-top: 6px; }
+  #screen-login #reset-form { grid-area: reset; }
+  #screen-login #login-error { grid-area: err; margin: 4px 0 0; }
+  #screen-login .hint { grid-area: hint; margin: 6px 0 0; align-self: end; }
+  #screen-login .login-panel .title { font-size: clamp(28px, 5.2vw, 46px); margin: 0; }
+  #screen-login .login-panel .subtitle { font-size: 14px; margin: 6px 0 0; }
+  #screen-login .login-panel label { margin-bottom: 8px; }
+  #screen-login .login-panel #login-form .btn-primary { min-height: 40px; }
+}
+@media (max-height: 520px) and (min-width: 600px) {
+  /* The account drawer opened: it takes the guest form's place, so the e-mail, the password and the buttons all stand
+     on the screen; closing it brings the guest form back. */
+  #screen-login .login-panel:has(#login-account[open]) #login-form { display: none; }
+  #screen-login .login-panel:has(#login-account[open]) { grid-template-areas: "brand lang" "brand acct" "brand reset" "hint err"; }
+  #screen-login #login-account[open] { margin-top: 0; }
+  #screen-login .login-panel:has(#login-account[open]) .lang-switch { margin-bottom: 0; }
+  #screen-login .login-account form .row .btn { white-space: nowrap; font-size: 13px; padding-left: 6px; padding-right: 6px; }
+  #screen-login #login-account label { margin-bottom: 6px; }
+  #screen-login #login-account input { padding: 7px 10px; }
+  #screen-login .login-account form .row .btn { min-height: 36px; }
+  #screen-login .login-account form .row #forgot-btn { min-height: 28px; }
+}
+@media (max-height: 400px) and (min-width: 600px) {
+  #screen-login > .login-panel { padding-top: 8px; padding-bottom: 8px; }
+  #screen-login .login-panel:has(#login-account[open]) .lang-switch .btn { min-height: 30px; padding-top: 2px; padding-bottom: 2px; }
+  #screen-login #login-account summary { min-height: 30px; }
+  #screen-login #login-account label { margin-bottom: 4px; }
+  #screen-login #login-account input { padding: 6px 10px; }
+}
+/* The name's trailing letter-space balanced by the same space before it, so it sits centred inside its block
+   without a negative margin running past the block's edge. */
+.login-panel .login-brand .title { margin-right: 0; padding-left: 0.06em; }
