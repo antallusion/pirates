@@ -325,6 +325,14 @@ export function updateNpc(game: Game, ship: ShipEntity, brain: NpcBrain, dt: num
   if (now >= brain.nextThink) {
     brain.nextThink = now + 0.25 + game.rng.float() * 0.1;
     think(game, ship, brain);
+    // docs/19 D6: a merchant or a fisher on her way with nothing to run from looks about her half as often; a fighter
+    // with no prey in sight a little less often.
+    if (!ship.inCombat(now)) {
+      // ...and out of the near water of every captain (beyond a kilometre) every one of them a little less often too.
+      if (nearestPlayerDist > 1000 && nearestPlayerDist < Infinity && ship.ownerId === null) brain.nextThink += 0.2;
+      if ((brain.role === 'merchant' || brain.role === 'fisher') && brain.fleeFrom === null) brain.nextThink += 0.3;
+      else if (brain.target === null && !brain.chase && ship.ownerId === null && brain.leader === undefined) brain.nextThink += 0.3;
+    }
   }
 }
 
@@ -416,20 +424,25 @@ function replan(game: Game, ship: ShipEntity, brain: NpcBrain): boolean {
 
 // ------------------------------------------------------------------ active AI
 
+/** How far a merchant or a fisher looks for danger (she runs from what is within 1.4 km). */
+const CALM_LOOK = 1400;
+
 function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   const now = game.now;
   const role = brain.role;
-  // Perception.
+  // Perception. docs/19 D6: a merchant or a fisher looks only for danger, and only as far as she would run from it
+  // (1.4 km) — with the sea's ships twice as many, a look over the whole of her sight cost four times as much.
+  const calm = role === 'merchant' || role === 'fisher';
   let threat: ShipEntity | null = null;
   let threatD = Infinity;
   let prey: ShipEntity | null = null;
   let preyD = Infinity;
-  game.forShipsNear(ship.state.x, ship.state.y, ship.stats.detection, (o) => {
+  game.forShipsNear(ship.state.x, ship.state.y, calm ? Math.min(ship.stats.detection, CALM_LOOK) : ship.stats.detection, (o) => {
     if (o.id === ship.id || !o.alive || o.docked) return;
     if ((brain.spared.get(o.id) ?? 0) > now) return;
     const d = dist(ship.state.x, ship.state.y, o.state.x, o.state.y);
     if (d > detectionRange(game, ship, o)) return;
-    if (npcHostileTo(game, ship, o) && d < preyD) {
+    if (!calm && npcHostileTo(game, ship, o) && d < preyD) {
       preyD = d;
       prey = o;
     }
@@ -907,7 +920,8 @@ export interface NpcQuota {
   ghosts: number;
 }
 
-export const QUOTA: NpcQuota = { merchants: 140, pirates: 68, fishers: 40, ghosts: 3 };
+// docs/19 D3: twice the 140/68/40/3 the sea kept.
+export const QUOTA: NpcQuota = { merchants: 280, pirates: 136, fishers: 80, ghosts: 6 };
 
 export function spawnMerchant(game: Game): void {
   const ports = game.zonePorts();

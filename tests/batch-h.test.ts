@@ -43,7 +43,9 @@ function atSea(game: Game, s: PlayerSession, x: number, y: number, heading = 0):
 
 /** Fair weather in these waters for the whole test. */
 function fair(game: Game): void {
-  game.fronts = [];
+  // No front may form on her course (the sea's dice are every system's: what turns up where is no business of the
+  // helmsman's tests).
+  if (!Object.getOwnPropertyDescriptor(game, 'fronts')?.get) Object.defineProperty(game, 'fronts', { get: () => [], set: () => {}, configurable: true });
   for (const w of Object.values(game.weather)) {
     w.kind = 'breeze';
     w.until = game.now + 1e6;

@@ -250,7 +250,9 @@ export const DRIFT_CAL: Partial<Record<DriftKind, number[]>> = {
 export const DRIFT_TTL: [number, number] = [420, 600];
 export const LEGEND_TTL = 3 * 3600;
 /** Seconds between the lookout's next look for a captain under way, and the share of looks that find one. */
-export const DRIFT_EVERY: [number, number] = [240, 420];
+export const DRIFT_EVERY: [number, number] = [120, 210]; // docs/19 D3: twice as often as the 240–420 s it was
+/** docs/19 D3: drifts of her own on the water at once (one before). */
+export const DRIFT_OWN = 2;
 export const DRIFT_FIND = 0.75;
 /** Metres: where it is put (off her bow), seen from (a mark on the minimap and in the world), the card's reach. */
 export const DRIFT_AT: [number, number] = [1300, 2300];

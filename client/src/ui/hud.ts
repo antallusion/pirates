@@ -55,6 +55,7 @@ import { drawAdvMini } from './advchart.ts'; // docs/17 H4
 import { GUARDS } from '../../../shared/src/data/advmap.ts';
 import { guardOfEntity } from '../render/advmap.ts';
 import { drawDriftsMini } from '../render/drifts.ts';
+import { drawFindsMini } from '../render/seafinds.ts';
 import { armyGlance } from './army.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 
@@ -647,11 +648,24 @@ export class Hud {
     }
     drawAdvMini(g, state, tx, ty, own, range); // the adventure map's guards and things (docs/17 H4)
     drawDriftsMini(g, state, tx, ty, own, range); // drifting creatures and their clocks (docs/18 #34)
-    // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold.
-    for (const m of state.seaMarks.values()) {
-      if (Math.abs(m.x - own.x) > range || Math.abs(m.y - own.y) > range) continue;
-      g.fillStyle = m.kind === 'buoy' ? 'rgba(200,70,60,0.8)' : m.kind === 'lantern' ? 'rgba(240,200,110,0.85)' : m.kind === 'floe' ? 'rgba(200,215,225,0.6)' : 'rgba(150,130,100,0.6)';
-      g.fillRect(tx(m.x) - 1, ty(m.y) - 1, 2, 2);
+    drawFindsMini(g, state, tx, ty, own, range); // the sea's small things (docs/19 D5)
+    // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold. docs/19 D6: twice
+    // as many — one speck to a few pixels (the nearest wins), fainter toward the dial's edge and once worked today.
+    {
+      const cells = new Set<number>();
+      const marks = [...state.seaMarks.values()].filter((m) => Math.abs(m.x - own.x) <= range && Math.abs(m.y - own.y) <= range)
+        .sort((a, b) => Math.abs(a.x - own.x) + Math.abs(a.y - own.y) - (Math.abs(b.x - own.x) + Math.abs(b.y - own.y)));
+      for (const m of marks) {
+        const px = tx(m.x), py = ty(m.y);
+        const cell = Math.floor(px / 5) * 4096 + Math.floor(py / 5);
+        if (cells.has(cell)) continue;
+        cells.add(cell);
+        const fade = (1 - 0.55 * Math.min(1, Math.max(Math.abs(m.x - own.x), Math.abs(m.y - own.y)) / range)) * (state.markDone.has(m.id) ? 0.45 : 1);
+        g.globalAlpha = fade;
+        g.fillStyle = m.kind === 'buoy' ? 'rgba(200,70,60,0.8)' : m.kind === 'lantern' ? 'rgba(240,200,110,0.85)' : m.kind === 'floe' ? 'rgba(200,215,225,0.6)' : 'rgba(150,130,100,0.6)';
+        g.fillRect(px - 1, py - 1, 2, 2);
+      }
+      g.globalAlpha = 1;
     }
     // Weather fronts on the horizon (docs/16 #10): the cloud, its edge, and an arrow on the edge nearest her for
     // where it drifts; one on her course ringed in red.

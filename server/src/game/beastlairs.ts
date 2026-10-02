@@ -46,6 +46,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import { questEvent } from './quests.ts';
 import { chronicle } from './renown.ts';
 import { TAC_XP_PER_HP, sideOf } from './tactical.ts';
+import { haulTake } from './seahaul.ts';
 import { act, killedHp, lossesOf, newBattle, quickFinish, stepBattle, viewOf } from './tacbattle.ts';
 import type { TacArmyEntry, TacBattle, TacSideInput } from './tacbattle.ts';
 import { keepsDeep, townHooks, townLevel, townState } from './town.ts';
@@ -145,6 +146,10 @@ export interface ExtFight {
 interface L18 {
   lairs: Lair[];
   byId: Map<string, Lair>;
+  /** docs/19 D6: the lairs that keep their place in cells of CELL metres, the turtles' apart; each lair's index. */
+  cells: Map<number, Lair[]>;
+  moving: Lair[];
+  index: Map<string, number>;
   byIsland: Map<number, Lair[]>;
   store: Store;
   fights: Map<number, LandFight>;
@@ -172,8 +177,11 @@ function L(game: Game): L18 {
     const byIsland = new Map<number, Lair[]>();
     for (const l of lairs) if (l.island >= 0) (byIsland.get(l.island) ?? byIsland.set(l.island, []).get(l.island)!).push(l);
     const saved = game.db.getKv<Store>(KEY);
+    const cells = new Map<number, Lair[]>();
+    for (const l of lairs) if (l.turtle === undefined) (cells.get(cellOf(l.x, l.y)) ?? cells.set(cellOf(l.x, l.y), []).get(cellOf(l.x, l.y))!).push(l);
     x = {
-      lairs, byId: new Map(lairs.map((l) => [l.id, l])), byIsland, store: { st: saved?.st ?? {}, dw: saved?.dw ?? {} }, fights: new Map(), rng: new Rng(0x18a11e),
+      lairs, byId: new Map(lairs.map((l) => [l.id, l])), byIsland, cells, moving: lairs.filter((l) => l.turtle !== undefined), index: new Map(lairs.map((l, i) => [l.id, i])),
+      store: { st: saved?.st ?? {}, dw: saved?.dw ?? {} }, fights: new Map(), rng: new Rng(0x18a11e),
       told: new WeakMap(), cards: new WeakMap(), seen: new WeakMap(),
     };
     all.set(game, x);
@@ -250,6 +258,16 @@ function islandName(game: Game, l: Lair): string {
 export const LAIR_CARD_R = 900;
 const LAND_REACH = 260;
 const SEE_R = 2600;
+/** docs/19 D6: the cells the lairs are kept in for the lookouts' sweep (as wide as their sight). */
+const CELL = 2600;
+const cellOf = (x: number, y: number): number => Math.floor(y / CELL) * 1000 + Math.floor(x / CELL);
+/** The lairs about a point: its cell and the eight round it, and the turtles' (they move). */
+function lairsAbout(S: L18, x: number, y: number): Lair[] {
+  const out: Lair[] = [...S.moving];
+  const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const l of S.cells.get((cy + dy) * 1000 + cx + dx) ?? []) out.push(l);
+  return out;
+}
 
 /** The boats can reach the lair's shore from where she lies. */
 function inReach(game: Game, s: PlayerSession, l: Lair): boolean {
@@ -301,7 +319,7 @@ export function lairJoiners(game: Game, s: PlayerSession, l: Lair): ArmyStack[] 
     if (room <= 0) break;
     const own = ship.army.some((y) => y.u === x.u) || out.some((y) => y.u === x.u);
     if (!own && slots <= 0) continue;
-    const n = Math.min(room, Math.floor(x.n / 2));
+    const n = Math.min(room, Math.max(1, Math.floor(x.n / 2))); // half of them, one at the least
     if (n <= 0) continue;
     if (!own) slots--;
     room -= n;
@@ -435,8 +453,10 @@ function marksOf(game: Game, s: PlayerSession): LairsView {
   const S = L(game);
   const seen = seenOf(game, s);
   const list: LairMark[] = [];
-  for (const l of S.lairs) {
-    if (!seen.has(l.id) || !lairThere(game, l)) continue;
+  // (her seen ones, in the world's order: docs/19 D6 — not a walk over every lair)
+  const mine = [...seen].map((id) => S.byId.get(id)).filter((l): l is Lair => !!l).sort((a, b) => S.index.get(a.id)! - S.index.get(b.id)!);
+  for (const l of mine) {
+    if (!lairThere(game, l)) continue;
     const p = lairPos(game, l);
     const d = S.store.dw[l.id];
     list.push({
@@ -471,7 +491,7 @@ export function stepLairs(game: Game): void {
       const seen = seenOf(game, s);
       let more = false;
       const x = ship.state.x, y = ship.state.y;
-      for (const l of S.lairs) {
+      for (const l of lairsAbout(S, x, y)) {
         if (seen.has(l.id)) continue;
         const p = l.turtle !== undefined ? lairPos(game, l) : l;
         if (Math.abs(p.x - x) > SEE_R || Math.abs(p.y - y) > SEE_R || dist(p.x, p.y, x, y) > SEE_R) continue;
@@ -714,6 +734,14 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
   } else {
     lp.v[l.id] = w;
     const pay = lairPay(l.kind, l.level, l.size, l.type, l.mul * (lairWeek(game, l) ? WEEK_BEAST_LAIR : 1));
+    // docs/19 D2: twice the lairs; past her day's count (shared/src/data/seahaul.ts) their spoils are half (the
+    // lesson whole).
+    const thin = haulTake(game, s, 'lairs');
+    if (thin < 1) {
+      pay.silver = Math.max(10, Math.round((pay.silver * thin) / 10) * 10);
+      pay.goods = Math.max(1, Math.round(pay.goods * thin));
+      for (const r of Object.keys(pay.res) as (LandRes | 'pearls')[]) pay.res[r] = Math.max(1, Math.round((pay.res[r] ?? 0) * thin));
+    }
     p.gold += pay.silver;
     game.db.ledger(s.accountId, 'lair', pay.silver, l.id);
     loot.silver = pay.silver;

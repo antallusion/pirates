@@ -7,14 +7,18 @@
 
 import type { MarkKind } from '../../../shared/src/data/seamarks.ts';
 import { MARK_ICON } from '../../../shared/src/data/seamarks.ts';
+import type { FindKind } from '../../../shared/src/data/seafinds.ts';
+import { FIND_ICON } from '../../../shared/src/data/seafinds.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/actbar.ts';
+import { EN as FEN, RU as FRU } from '../lang/ui/seafinds.ts';
 import type { Action } from '../settings.ts';
 import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
+const LF = dict(FEN, FRU);
 
-export type ActId = 'axes' | 'harbour' | 'board' | 'dock' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'look' | 'repair';
+export type ActId = 'axes' | 'harbour' | 'board' | 'dock' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'look' | 'repair';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -36,6 +40,8 @@ export interface ActFacts {
   claimOpen?: boolean;
   ritual?: boolean;
   mark?: { id: number; kind: MarkKind; done?: boolean; busy?: boolean } | null;
+  /** docs/19 D5: one of the sea's small things at hand. */
+  find?: { id: number; kind: FindKind; busy?: boolean; n?: number } | null;
   looks?: { kind: LookKind; name: string }[];
   repair?: { repairing: boolean; combat: boolean; hurt: boolean; short?: boolean } | null;
 }
@@ -84,6 +90,12 @@ export function buildActs(f: ActFacts): Act[] {
   if (f.ritual) out.push({ id: 'ritual', icon: 'good_cursed_relics', label: L('a.ritual'), title: L('a.ritualTitle') });
   const m = f.mark;
   if (m && !m.done && !m.busy) out.push({ id: 'mark', icon: MARK_ICON[m.kind], label: L(`m.${m.kind}`), sub: L(`mn.${m.kind}`), title: L(`mt.${m.kind}`), key: 'land', arg: String(m.id) });
+  const fd = f.find;
+  if (fd && !fd.busy) {
+    // (the word under it only where it tells her more: the fish on deck, a cache in the fog, how many sharks)
+    const sub = `s.${fd.kind}` in FEN ? LF(`s.${fd.kind}` as keyof typeof FEN, { n: fd.n ?? 0 }) : '';
+    out.push({ id: 'find', icon: FIND_ICON[fd.kind], label: LF(`a.${fd.kind}`), ...(sub ? { sub } : {}), title: LF(`t.${fd.kind}`), key: 'land', arg: String(fd.id) });
+  }
   for (const k of f.looks ?? []) out.push({ id: 'look', icon: LOOK_ICON[k.kind], label: L('a.look'), sub: k.name, title: L('a.lookTitle', { name: k.name }), arg: k.kind });
   const r = f.repair;
   if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) out.push({ id: 'repair', icon: 'prof_carpenter', label: L(r.repairing ? 'a.repairStop' : 'a.repair'), title: L(r.repairing ? 'a.repairStop' : 'a.repair'), key: 'repair' });
@@ -92,7 +104,7 @@ export function buildActs(f: ActFacts): Act[] {
 
 /** What the land key does at sea, with nothing to land at: the mast, the net, the mark — in the bar's order. */
 export function landKeyAct(acts: Act[]): Act | null {
-  return acts.find((a) => a.id === 'land' || a.id === 'cut_mast' || a.id === 'cast' || a.id === 'mark') ?? null;
+  return acts.find((a) => a.id === 'land' || a.id === 'cut_mast' || a.id === 'cast' || a.id === 'mark' || a.id === 'find') ?? null;
 }
 
 /** Three buttons show at most; with more, two and the «⋯ N more» that opens the rest above them. */
@@ -123,3 +135,8 @@ export function markInfo(kind: MarkKind, state: 'done' | 'busy', secs = 0): stri
 
 export const lookName = (k: LookKind): string => L(`look.${k}`);
 export const slowWord = (): string => L('mi.slow');
+
+/** docs/19 D5: the muted line while the boats are at one of the sea's small things. */
+export function findInfo(kind: FindKind, secs: number): string {
+  return LF('busy', { what: LF(`n.${kind}`), s: Math.max(0, Math.ceil(secs)) });
+}

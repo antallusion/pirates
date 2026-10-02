@@ -324,21 +324,23 @@ export function buildLairs(world: World): Lair[] {
     if (is.portId || is.raft || is.minor || is.slot || is.radius < 110 || is.region === 'the_abyss') continue;
     const rng = new Rng((hashString(`lair:${world.seed}:${is.id}`) ^ 0x18b2) >>> 0);
     const type = isleType(is);
-    const loot = isleLoot(is);
+    // (docs/19 D4: the second lot of hidden islands keeps the lairs she had before she was hidden)
+    const hidden = !!is.hidden && !is.veil;
+    const loot = isleLoot({ ...is, hidden });
     const level = Math.min(10, isleLevel(world, is) + loot.tier);
-    const chance = is.hidden ? 1 : is.radius > 600 ? 0.75 : is.radius > 250 ? 0.5 : 0.28;
+    const chance = hidden ? 1 : is.radius > 600 ? 0.75 : is.radius > 250 ? 0.5 : 0.28;
     if (!rng.chance(chance)) continue;
     const shore = lairKindsFor(type, level, 'shore');
     if (!shore.length) continue;
     const a0 = rng.float() * Math.PI * 2;
-    const n = is.hidden ? 2 : 1;
+    const n = hidden ? 2 : 1;
     for (let k = 0; k < n; k++) {
       const [x, y] = inland(is, a0 + k * 2.3, 45);
-      out.push({ id: `l${is.id}${k ? 's2' : 's'}`, kind: shore[rng.int(0, shore.length - 1)], role: 'shore', size: is.hidden && k ? 'strong' : sizeOf(rng), level, island: is.id, x, y, type, mul: loot.mul });
+      out.push({ id: `l${is.id}${k ? 's2' : 's'}`, kind: shore[rng.int(0, shore.length - 1)], role: 'shore', size: hidden && k ? 'strong' : sizeOf(rng), level, island: is.id, x, y, type, mul: loot.mul });
     }
     // The chain of a great island of the deeper waters: its grotto inland, its guardian at the heart of it.
     const grotto = lairKindsFor(type, level, 'grotto'), guard = lairKindsFor(type, Math.min(10, level + 1), 'guardian');
-    if (is.radius >= 420 && level >= 5 && grotto.length && guard.length && (is.hidden || rng.chance(0.55))) {
+    if (is.radius >= 420 && level >= 5 && grotto.length && guard.length && (hidden || rng.chance(0.55))) {
       const first = out[out.length - n];
       first.chain = 0;
       first.size = 'avg';
@@ -361,6 +363,38 @@ export function buildLairs(world: World): Lair[] {
     const rng = new Rng((hashString(`lairB:${world.seed}:${b.id}`) ^ 0xb4) >>> 0);
     if (kinds.length) out.push({ id: `lb${b.id}`, kind: kinds[rng.int(0, kinds.length - 1)], role: 'shore', size: sizeOf(rng), level, island: -1, x: Math.round(b.x), y: Math.round(b.y), type: 'tropical', mul: 1.2, bank: b.id });
   }
+  out.push(...deepLairs(world, out));
   cache.set(world, out);
   return out;
+}
+
+/** docs/19 D2 (owner, 2026-10-02: «увеличь всё ровно в 2 раза»): as many lairs again — on an island with one lair
+ *  already, a second of another depth further inland (a level deeper; one shallower at ⚓10); on an island with
+ *  none, its first. No island keeps more than two this way (the chains and the hidden islands' pairs are left as they
+ *  are). Each island's from dice of its own and in an order of the world's, after every lair before, which keep
+ *  their ids and places; the new ones' ids end in «d». */
+function deepLairs(world: World, before: Lair[]): Lair[] {
+  const per = new Map<number, Lair[]>();
+  for (const l of before) if (l.island >= 0) per.set(l.island, [...(per.get(l.island) ?? []), l]);
+  const cands: { k: number; l: Lair }[] = [];
+  for (const is of world.islands) {
+    if (is.portId || is.raft || is.minor || is.slot || is.radius < 110 || is.region === 'the_abyss') continue;
+    const has = per.get(is.id) ?? [];
+    if (has.length >= 2) continue;
+    const rng = new Rng((hashString(`lairD:${world.seed}:${is.id}`) ^ 0x19d2) >>> 0);
+    const type = isleType(is);
+    const loot = isleLoot({ ...is, hidden: !!is.hidden && !is.veil });
+    const level0 = Math.min(10, isleLevel(world, is) + loot.tier);
+    const level = has.length ? (has[0].level >= 10 ? 9 : has[0].level + 1) : level0;
+    const shore = lairKindsFor(type, level, 'shore').filter((k) => !has.some((l) => l.kind === k));
+    if (!shore.length) continue;
+    // Deeper inland than the first: the other side of the island, half way in.
+    const a = (has.length ? Math.atan2(has[0].x - is.x, -(has[0].y - is.y)) + Math.PI : rng.float() * Math.PI * 2) + rng.range(-0.5, 0.5);
+    const [x, y] = inland(is, a, has.length ? 0.45 : 45);
+    cands.push({ k: hashString(`lairD:${world.seed}:${is.id}:order`), l: { id: `l${is.id}d`, kind: shore[rng.int(0, shore.length - 1)], role: 'shore', size: sizeOf(rng), level, island: is.id, x, y, type, mul: loot.mul } });
+  }
+  // Exactly as many as before: the islands with one lair first (the second depth), then the bare ones, each lot in the
+  // world's own order.
+  cands.sort((p, q) => (per.has(q.l.island) ? 1 : 0) - (per.has(p.l.island) ? 1 : 0) || p.k - q.k || p.l.island - q.l.island);
+  return cands.slice(0, before.length).map((c) => c.l);
 }

@@ -5,6 +5,7 @@
 import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleproto.ts';
 import type { LairCard, LairsView } from '../../shared/src/lairproto.ts';
 import type { DriftCard, DriftMark, TameView } from '../../shared/src/driftproto.ts';
+import type { FindView } from '../../shared/src/findproto.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
@@ -148,6 +149,10 @@ export class ClientState {
   /** docs/18 IV: the drifts in sight (and when they came: their clocks run from it), the drift's card, the creatures' window. */
   drifts: DriftMark[] = [];
   driftsAt = 0;
+  /** docs/19 D5: the sea's small things about her (and when the list came), the one her boats are at. */
+  finds: FindView[] = [];
+  findsAt = 0;
+  findBusy: { id: number; until: number; total: number } | null = null;
   driftCard: DriftCard | null = null;
   /** The dense sea's marks she has worked today, and the one her boats are at (world seconds). */
   markDone = new Set<number>();
@@ -431,6 +436,11 @@ export class ClientState {
       case 'drifts':
         this.drifts = m.list;
         this.driftsAt = this.estServerTime();
+        break;
+      case 'seafinds':
+        this.finds = m.list;
+        this.findsAt = this.estServerTime();
+        this.findBusy = m.busy;
         break;
       case 'drift_card':
         this.driftCard = m.card;

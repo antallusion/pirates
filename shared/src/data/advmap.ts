@@ -23,7 +23,7 @@ import { REGIONS } from '../world/regions.ts';
 import type { RegionId } from '../world/regions.ts';
 import { WORLD_EDGE_MARGIN } from '../world/regions.ts';
 import { sectorAt } from '../world/sectors.ts';
-import { DEEP_WATER, depthAt, isLand, legacyWorld } from '../world/worldgen.ts';
+import { DEEP_WATER, depthAt, isLand, legacyWorld, marksNear } from '../world/worldgen.ts';
 import type { Island, World } from '../world/worldgen.ts';
 
 // ------------------------------------------------------------------------------------------------ the sea's hour
@@ -300,6 +300,8 @@ export interface AdvGuard {
 export interface AdvMap {
   objs: AdvObj[];
   guards: AdvGuard[];
+  /** docs/19 D2: how many of each stood before (the rest are appended after them). */
+  legacy?: { objs: number; guards: number };
 }
 
 const round10 = (n: number) => Math.max(10, Math.round(n / 10) * 10);
@@ -346,7 +348,10 @@ export function buildAdv(world: World, keep = true): AdvMap {
   // docs/18 III: placed on the world as it stood before her new islands (which keep off all of it).
   const base = legacyWorld(world);
   if (base !== world) {
-    const out = buildAdv(base);
+    // docs/19 D2: the old map as it was, and as many again appended on the world as she is now.
+    const old = buildAdv(base);
+    const more = buildAdvMore(world, old);
+    const out = { objs: [...old.objs, ...more.objs], guards: [...old.guards, ...more.guards], legacy: { objs: old.objs.length, guards: old.guards.length } };
     cache.set(world, out);
     return out;
   }
@@ -423,7 +428,7 @@ export function buildAdv(world: World, keep = true): AdvMap {
     }
   }
   // Half the mines stand guarded (by each mine's own hash): off the island, where the boats would land.
-  for (const m of buildMines(world)) {
+  for (const m of buildMines(world).filter((x) => !x.extra)) {
     if (h(`mguard:${m.id}`) % 2) continue;
     const is = world.islands[m.islandId];
     for (let k = 0; k < 6; k++) {
@@ -436,4 +441,108 @@ export function buildAdv(world: World, keep = true): AdvMap {
   const out = { objs, guards };
   if (keep) cache.set(world, out);
   return out;
+}
+
+// ------------------------------------------------------------------------------------------------ docs/19 D2: twice as many
+
+/** docs/19 D2 (owner, 2026-10-02: «увеличь всё ровно в 2 раза»): the adventure map's things and guards as many again,
+ *  the obelisks left at sixteen. The new ones stand on the world as she is now (step 6's islands, the dense sea's marks
+ *  of step 7 kept clear), each region's wild islands in an order of their own, off every old point; their ids follow
+ *  the old ones (o…, g…), which keep theirs and their places. Their guards: the guarded things' own, the second six
+ *  mines' (half of them, by each mine's own hash), and the straits to make up as many as there were. */
+function buildAdvMore(world: World, old: AdvMap): AdvMap {
+  const objs: AdvObj[] = [];
+  const guards: AdvGuard[] = [];
+  const taken: [number, number][] = [...old.objs.map((o) => [o.x, o.y] as [number, number]), ...old.guards.map((g) => [g.x, g.y] as [number, number])];
+  const ports = world.ports.filter((p) => !p.raft);
+  const markClear = (x: number, y: number) => marksNear(world, x, y, 400).every((m) => Math.hypot(m.x - x, m.y - y) > m.r + 160);
+  const free = (x: number, y: number, gap = 700) => taken.every(([a, b]) => Math.hypot(a - x, b - y) >= gap) && ports.every((p) => Math.hypot(p.x - x, p.y - y) >= 1600) && markClear(x, y);
+  const levelAt = (x: number, y: number) => sectorAt(world, x, y).level;
+  let gseq = old.guards.length, oseq = old.objs.length;
+  const addGuard = (x: number, y: number, region: RegionId, size: GuardSize, at: string | undefined, salt: string): AdvGuard => {
+    const level = levelAt(x, y);
+    const kinds = guardKindsAt(level, REGIONS[region].strangeness > 0.3);
+    const kind = at?.startsWith('m') ? (level >= 6 && h(`gk:${salt}`) % 3 === 0 ? 'wreck' : 'holdout') : kinds[h(`gk:${salt}`) % kinds.length];
+    const g: AdvGuard = { id: `g${gseq++}`, kind, x, y, level, size, region, ...(at ? { at } : {}), heading: ((h(`gh:${salt}`) % 628) / 100) };
+    guards.push(g);
+    taken.push([x, y]);
+    return g;
+  };
+  const by = new Map<RegionId, Island[]>();
+  for (const is of world.islands) {
+    if (is.portId || is.minor || is.raft || is.slot || is.region === 'the_abyss' || is.radius < 140) continue;
+    const list = by.get(is.region) ?? [];
+    list.push(is);
+    by.set(is.region, list);
+  }
+  const regions = [...by.keys()].sort();
+  const orders = new Map(regions.map((r) => [r, [...by.get(r)!].sort((a, b) => h(`adv2:${world.seed}:${a.id}`) - h(`adv2:${world.seed}:${b.id}`) || a.id - b.id)]));
+  for (const region of regions) {
+    const order = orders.get(region)!;
+    let cursor = 0;
+    for (const kind of OBJ_KINDS) {
+      if (kind === 'obelisk') continue; // sixteen of them, as ever
+      const def = OBJS[kind];
+      let made = 0, guardedMade = 0;
+      for (let tries = 0; made < def.per && tries < order.length * 3; tries++) {
+        const is = order[cursor++ % order.length];
+        const angle = ((h(`oa2:${kind}:${is.id}:${tries}`) % 6283) / 1000);
+        const off = 240 + (h(`oo2:${is.id}:${tries}`) % 140);
+        const p = offshore(world, is, angle, off);
+        if (!p || !free(p[0], p[1])) continue;
+        const id = `o${oseq++}`;
+        const o: AdvObj = { id, kind, x: p[0], y: p[1], level: levelAt(p[0], p[1]), region, island: is.name };
+        if (kind === 'store') o.good = MILL_GOODS[h(`og:${id}`) % MILL_GOODS.length];
+        taken.push(p);
+        if (guardedMade < def.guarded) {
+          const g = offshore(world, is, angle, off + 150);
+          if (g && taken.every(([a, b]) => (a === p[0] && b === p[1]) || Math.hypot(a - g[0], b - g[1]) >= 400) && markClear(g[0], g[1]) && ports.every((q) => Math.hypot(q.x - g[0], q.y - g[1]) >= 1600)) {
+            o.guard = addGuard(g[0], g[1], region, def.size, id, id).id;
+            guardedMade++;
+          }
+        }
+        objs.push(o);
+        made++;
+      }
+    }
+  }
+  // The second six mines: half guarded, as the first.
+  for (const m of buildMines(world).filter((x) => x.extra)) {
+    if (h(`mguard:${m.id}`) % 2) continue;
+    const is = world.islands[m.islandId];
+    for (let k = 0; k < 6; k++) {
+      const p = offshore(world, is, ((h(`ma:${m.id}`) % 628) / 100) + k * 1.05, 200);
+      if (!p || !free(p[0], p[1], 500)) continue;
+      addGuard(p[0], p[1], m.region, 'avg', m.id, m.id);
+      break;
+    }
+  }
+  // Straits to make up as many guards as there were, the regions by turns.
+  const want = old.guards.length;
+  const pairs = new Map(regions.map((r) => [r, { i: 0, j: 1 }]));
+  for (let round = 0; guards.length < want && round < 400; round++) {
+    let any = false;
+    for (const region of regions) {
+      if (guards.length >= want) break;
+      const isl = orders.get(region)!.slice(0, 80);
+      const c = pairs.get(region)!;
+      let done = false;
+      while (!done && c.i < isl.length) {
+        if (c.j >= isl.length) {
+          c.i++;
+          c.j = c.i + 1;
+          continue;
+        }
+        const a = isl[c.i], b = isl[c.j++];
+        const gap = Math.hypot(a.x - b.x, a.y - b.y) - a.radius - b.radius;
+        if (gap < 250 || gap > 900) continue;
+        const x = Math.round((a.x * b.radius + b.x * a.radius) / (a.radius + b.radius)), y = Math.round((a.y * b.radius + b.y * a.radius) / (a.radius + b.radius));
+        if (!openWater(world, x, y) || !free(x, y, 900)) continue;
+        addGuard(x, y, region, h(`gs:${a.id}:${b.id}`) % 2 ? 'avg' : 'weak', undefined, `s${a.id}:${b.id}`);
+        done = any = true;
+      }
+    }
+    if (!any) break;
+  }
+  return { objs, guards };
 }

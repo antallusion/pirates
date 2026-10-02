@@ -27,6 +27,8 @@ const CHANNEL = 650;
 const LANE_PAD = 950;
 const RIDGE_LANE_PAD = 1400;
 /** Hidden islands a sea keeps (docs/18 #30). */
+/** docs/19 D4: twice as many hidden islands as HIDDEN_WANT keeps (the second lot after the first). */
+export const HIDDEN_MUL = 2;
 export const HIDDEN_WANT: Record<RegionId, number> = { black_coast: 2, gravewater: 4, whispering: 6, ashen_isles: 4, leviathan_reach: 4, dead_mans_expanse: 5, drowned_crown: 6, the_abyss: 3 };
 
 /** What an atoll's ring is made of in each sea (one of the sea's own biomes): coral sand in the warm water, salt, ice,
@@ -229,6 +231,7 @@ export function appendIsles(old: World): World {
   // Hidden islands (docs/18 #30): in each sea a few of the new ones far from the lanes and the harbours; each keeps a
   // cache of her own (a better find ashore: shared/src/world/archipelago.ts isleLoot).
   const hrng = new Rng((seed * 283 + 0x41dd) >>> 0);
+  const vrng = new Rng((seed * 293 + 0x19d4) >>> 0);
   for (const rid of REGION_IDS) {
     const pool = islands.slice(isleFrom).filter((is) => is.region === rid && is.isle !== 'ridge' && laneDist(is.x, is.y) > 2600 && old.ports.every((p) => Math.hypot(p.x - is.x, p.y - is.y) > 6000));
     for (let i = pool.length - 1; i > 0; i--) {
@@ -237,6 +240,24 @@ export function appendIsles(old: World): World {
     }
     for (const is of pool.slice(0, HIDDEN_WANT[rid])) {
       is.hidden = true;
+      if (!is.features.includes('cache')) is.features.push('cache');
+    }
+    // docs/19 D4: as many again, the next of the same shuffled pool (the first lot is as it was); where her pool runs
+    // short, the new islands a little nearer the lanes and the harbours, in an order of their own dice.
+    const firstN = Math.min(pool.length, HIDDEN_WANT[rid]);
+    const wantN = firstN * (HIDDEN_MUL - 1);
+    const second = pool.slice(firstN, firstN + wantN);
+    if (second.length < wantN) {
+      const more = islands.slice(isleFrom).filter((is) => is.region === rid && is.isle !== 'ridge' && !is.hidden && !second.includes(is) && laneDist(is.x, is.y) > 1500 && old.ports.every((p) => Math.hypot(p.x - is.x, p.y - is.y) > 4000));
+      for (let i = more.length - 1; i > 0; i--) {
+        const j = Math.floor(vrng.float() * (i + 1));
+        [more[i], more[j]] = [more[j], more[i]];
+      }
+      second.push(...more.slice(0, wantN - second.length));
+    }
+    for (const is of second) {
+      is.hidden = true;
+      is.veil = 2;
       if (!is.features.includes('cache')) is.features.push('cache');
     }
   }

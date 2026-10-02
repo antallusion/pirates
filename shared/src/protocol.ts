@@ -53,6 +53,7 @@ import type { LairClientMsg, LairServerMsg } from './lairproto.ts';
 import type { DriftClientMsg, DriftServerMsg } from './driftproto.ts';
 import type { ThroneClientMsg } from './throneproto.ts'; // docs/19 E1–E3
 import type { GloryView } from './data/throne.ts';
+import type { FindClientMsg, FindServerMsg } from './findproto.ts';
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { QuestPay } from './data/questpay.ts';
@@ -308,6 +309,8 @@ export type ClientMsg =
   | LairClientMsg
   | DriftClientMsg
   | ThroneClientMsg
+  /** docs/19 D5: the sea's small things. */
+  | FindClientMsg
   /** The dense sea's marks (driftwood, wrecks, buoys…): work the one within reach, or leave off. */
   | { t: 'seamark'; action: 'work'; id: number }
   | { t: 'seamark'; action: 'cancel' }
@@ -1579,6 +1582,8 @@ export type ServerMsg =
   | IsleServerMsg
   | LairServerMsg
   | DriftServerMsg
+  /** docs/19 D5: the sea's small things. */
+  | FindServerMsg
   /** The marks she has worked (no more today) and the one her boats are at now (world seconds). */
   | { t: 'seamarks'; done: number[]; busy: { id: number; until: number; total: number } | null }
   | { t: 'pong'; c: number; s: number };

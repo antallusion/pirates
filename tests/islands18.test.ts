@@ -77,9 +77,12 @@ test('#25 an island the sea raises takes the id she had before step 6, in the wo
 
 test('#25 the mines, the adventure map and the quests stand where they stood; the new land keeps off all of it', () => {
   const old = legacyWorld(world);
-  assert.equal(buildAdv(world), buildAdv(old), 'the adventure map is the old world\'s');
+  // docs/19 D2, D4: the old world's map and mines stand first, as they stood; the second lot follows them.
+  const full = buildAdv(world), was = buildAdv(old);
+  assert.deepEqual(full.objs.slice(0, was.objs.length), was.objs, 'the adventure map is the old world\'s');
+  assert.deepEqual(full.guards.slice(0, was.guards.length), was.guards);
   assert.equal(h(buildMines(world)), h(buildMines(old)));
-  const adv = buildAdv(world);
+  const adv = was;
   const fresh = world.islands.slice(world.isleFrom);
   const lanes = [...portLanes(world.ports), ...portLanes(world.ports.filter((p) => !p.raft))];
   for (const is of fresh) {

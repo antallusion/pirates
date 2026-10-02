@@ -162,11 +162,19 @@ export function turtleUpNow(game: Game, d: TurtleDef): boolean {
 }
 
 /** A turtle island that is up strikes like land (her shell a circle): the ship is put back off it. */
+/** The turtle islands up now and where they are, once a tick (every ship's step asks: docs/19 D6). */
+const upNow = new WeakMap<Game, { t: number; list: { d: TurtleDef; p: { x: number; y: number } }[] }>();
+function turtlesNow(game: Game): { d: TurtleDef; p: { x: number; y: number } }[] {
+  const k = upNow.get(game);
+  if (k && k.t === game.now) return k.list;
+  const list = turtles(game.world).filter((d) => turtleUpNow(game, d)).map((d) => ({ d, p: turtlePos(d, game.now) }));
+  upNow.set(game, { t: game.now, list });
+  return list;
+}
+
 export function turtleCollide(game: Game, ship: ShipEntity, probes: [number, number][]): boolean {
   let hit = false;
-  for (const d of turtles(game.world)) {
-    if (!turtleUpNow(game, d)) continue;
-    const p = turtlePos(d, game.now);
+  for (const { d, p } of turtlesNow(game)) {
     if (Math.abs(p.x - ship.state.x) > d.r + 120 || Math.abs(p.y - ship.state.y) > d.r + 120) continue;
     for (const [px, py] of probes) {
       const dx = px - p.x, dy = py - p.y, l = Math.hypot(dx, dy);

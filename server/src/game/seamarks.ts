@@ -20,6 +20,7 @@ import { sealsOnFloe } from './drifts.ts';
 import { grantMap, makeMap } from './explorefx.ts';
 import type { Game } from './Game.ts';
 import { addLand } from './landecon.ts';
+import { haulNote, haulPeek } from './seahaul.ts';
 import type { PlayerSession, Profile } from './player.ts';
 
 /** Her boats at a mark: which, and when they are done (world seconds). */
@@ -181,7 +182,9 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
   const S = M(game);
   const ship = s.ship!, p = s.profile!;
   const rng = S.rng;
-  const worth = markWorth(ship.shipLevel, rng.float());
+  // docs/19 D1: the marks are twice as many; past her day's count (shared/src/data/seahaul.ts) one pays half.
+  const haul = m.kind === 'lantern' ? 1 : haulPeek(game, s, 'marks');
+  const worth = Math.round(markWorth(ship.shipLevel, rng.float()) * haul);
   let line = '';
   let kind: 'good' | 'gold' | 'info' | 'bad' = 'good';
   let given = true;
@@ -279,7 +282,10 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
   if (!given) {
     line = `Your hold is full: the boats leave the ${WORK_WORD[m.kind]} as it is.`;
     kind = 'bad';
-  } else marksWorked(game, p)[String(m.id)] = game.wallNow();
+  } else {
+    marksWorked(game, p)[String(m.id)] = game.wallNow();
+    if (m.kind !== 'lantern') haulNote(game, s, 'marks', haul);
+  }
   game.toastShip(ship, line, kind);
   game.pushSelf(s, true);
   return line;

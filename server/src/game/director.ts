@@ -99,8 +99,11 @@ function st(game: Game): DirectorState {
 /** The quiet sea's patience before the next thing happens, by the safety of the waters (tension: ~0.8 s of sailing
  * each at a cruising speed). Between these the small life of the sea (sealife.ts) keeps her company. */
 function newThreshold(game: Game, safety: string): number {
-  return safety === 'safe' ? game.rng.range(70, 110) : game.rng.range(50, 90);
+  // docs/19 D3: twice as often as it was (70–110 and 50–90).
+  return (safety === 'safe' ? game.rng.range(70, 110) : game.rng.range(50, 90)) / DIRECTOR_MUL;
 }
+/** docs/19 D3: the sea's events twice as often. */
+export const DIRECTOR_MUL = 2;
 
 function nearestIsland(game: Game, x: number, y: number): { is: Island | null; d: number } {
   let best: Island | null = null, bd = Infinity;
@@ -291,7 +294,8 @@ export function stepDirector(game: Game): void {
         continue;
       }
     }
-    if (pace.tension >= pace.threshold && !mine && !still) {
+    // (a chain's link waits its own time: the sea's own does not come before it, docs/19 D3)
+    if (pace.tension >= pace.threshold && !mine && !still && !pace.chain) {
       pace.tension = 0;
       pace.threshold = newThreshold(game, safety);
       // Now and then a passing boat offers one of the games of the islands (a riddle, dice, a hoist, the stars).

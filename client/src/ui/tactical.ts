@@ -4,6 +4,7 @@
 // the captains on the side panel with their orders; the feed; the end. The server decides everything: a tap sends
 // the order (a second tap on a lit hex moves there; a tap on a foe strikes or fires), a long press shows a stack.
 
+import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
 import { TAC_BLOCKING, TAC_H, TAC_SPELLS, TAC_W, hexIndex, hexNeighbors, hexX, hexY } from '../../../shared/src/data/tactical.ts';
@@ -23,6 +24,7 @@ import type { LairKind } from '../../../shared/src/data/lairs.ts';
 import { DRIFTS, isDriftKind } from '../../../shared/src/data/drifts.ts';
 import type { CaptureOffer } from '../../../shared/src/driftproto.ts';
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
+import { EN as FEN, RU as FRU } from '../lang/ui/seafinds.ts';
 import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
@@ -37,6 +39,7 @@ import type { UnitId } from '../../../shared/src/data/army.ts';
 const L = dict(EN, RU);
 const LL = dict(LEN, LRU);
 const DL = dict(DEN, DRU);
+const FL = dict(FEN, FRU);
 
 /** docs/18 #36: the beaten who would follow her — how many, and her choice: aboard, home to the pen, let go. */
 function captureBlock(c: CaptureOffer): string {
@@ -50,6 +53,8 @@ function captureBlock(c: CaptureOffer): string {
 /** docs/18 II: what a lair left her, on the battle's reckoning — silver, experience, the island's resource, the land's
  *  spoils, an artifact, a young one for the pen, the island's chest, the island cleared, the dwelling. */
 function lootBlock(l: LairLoot): string {
+  // docs/19 D5: the chest among the sharks — what came up in it.
+  if (l.find) return `<div class="tb-loot"><small>${esc(FL('loot.chest'))}</small><div class="tb-lchips"><span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.find.silver}</span>${l.find.goods.map((g) => `<span class="tb-lc" title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`).join('')}</div></div>`;
   // docs/18 IV: a drift beaten at sea — its silver and lesson, and the beaten who would follow.
   if (l.drift) return `<div class="tb-loot"><small>${esc(DL('loot.drift', { s: l.drift.silver, x: l.drift.xp }))}</small><div class="tb-lchips"><span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.drift.silver}</span><span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.drift.xp }))}</span></div></div>`;
   if (l.looted) return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="muted">${esc(LL('loot.looted'))}</div></div>`;
@@ -406,7 +411,7 @@ export class TacticalPanel {
       // A face of the art (docs/18 II: a lair's creature) or a named captain's portrait.
       const face = h.face ? (h.face.includes('.') && !h.face.startsWith('portrait.') ? assetUrl(h.face) : portraitUrl(h.face.replace(/^portrait\./, ''))) ?? url : url;
       return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? (isDriftKind(v.land.lair) ? DRIFTS[v.land.lair].name[lang() === 'ru' ? 1 : 0] : h.name)) : personName(h.name))}</b><small>${esc(v.land && !mine && isDriftKind(v.land.lair) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? (isDriftKind(v.land.lair) ? DRIFTS[v.land.lair].name[lang() === 'ru' ? 1 : 0] : v.land.lair === 'find_chest' ? findTitle('chest') : h.name)) : personName(h.name))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest') ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
@@ -492,7 +497,7 @@ export class TacticalPanel {
       const won = v.over.winner === v.you;
       const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : 'why.rounds';
       // docs/18 II: ashore, the lair is broken, or the party thrown back or fallen back to the boats.
-      const whyText = v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
+      const whyText = v.land?.lair === 'find_chest' ? FL(won ? 'why.chest' : v.over.why === 'struck' ? 'why.chestBack' : 'why.chestLost') : v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
       banner.className = `tb-banner ${won ? 'won' : 'lost'}${v.result ? ' tb-result' : ''}`;
       // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
       const r = v.result;

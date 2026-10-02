@@ -14,7 +14,7 @@
 import { UNITS, armyPower } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEAST_PLURAL } from '../../../shared/src/data/bestiary.ts';
-import { DRIFTS, DRIFT_AT, DRIFT_CARD_R, DRIFT_EVERY, DRIFT_FIND, DRIFT_KINDS, DRIFT_REACH, DRIFT_SEE, DRIFT_TTL, LEGEND_KINDS, LEGEND_TTL, MINI_BAND, MINI_HIT, MINI_MISS, MINI_TAPS, RESCUE_WAYS, driftCount, driftFightPay, driftGift, driftKindsFor, driftWorth, isDriftKind, needleAt, peopleOf, wayChance, wayCost } from '../../../shared/src/data/drifts.ts';
+import { DRIFTS, DRIFT_AT, DRIFT_CARD_R, DRIFT_EVERY, DRIFT_OWN, DRIFT_FIND, DRIFT_KINDS, DRIFT_REACH, DRIFT_SEE, DRIFT_TTL, LEGEND_KINDS, LEGEND_TTL, MINI_BAND, MINI_HIT, MINI_MISS, MINI_TAPS, RESCUE_WAYS, driftCount, driftFightPay, driftGift, driftKindsFor, driftWorth, isDriftKind, needleAt, peopleOf, wayChance, wayCost } from '../../../shared/src/data/drifts.ts';
 import type { DriftKind, RescueCtx, RescueWay } from '../../../shared/src/data/drifts.ts';
 import { rankOf } from '../../../shared/src/data/hero.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -208,8 +208,9 @@ export function stepDrifts(game: Game): void {
         if (!quietSea(game, s)) S.next.set(s.accountId, game.now + 20); // a fight or a harbour puts it off
         else {
           S.next.set(s.accountId, game.now + S.rng.range(DRIFT_EVERY[0], DRIFT_EVERY[1]));
-          const mine = [...S.list.values()].some((d) => d.owner === s.accountId);
-          if (!mine && S.list.size < 6 + game.sessions.size * 2 && S.rng.chance(weekDrifts(game) ? WEEK_FIND : DRIFT_FIND)) sight(game, s);
+          let mine = 0;
+          for (const d of S.list.values()) if (d.owner === s.accountId) mine++;
+          if (mine < DRIFT_OWN && S.list.size < 6 + game.sessions.size * 2 * DRIFT_OWN && S.rng.chance(weekDrifts(game) ? WEEK_FIND : DRIFT_FIND)) sight(game, s);
         }
       }
     }
@@ -246,7 +247,7 @@ export function sendDrifts(game: Game, s: PlayerSession, force: boolean): void {
     if (seen.has(m.id) || dist(m.x, m.y, ship.state.x, ship.state.y) > DRIFT_SEE) continue;
     seen.add(m.id);
     const last = S.toldAt.get(s.accountId) ?? -Infinity;
-    if (!m.legend && game.now - last < 240) continue;
+    if (!m.legend && game.now - last < 120) continue; // (docs/19 D3: half the four minutes, the drifts twice as many)
     S.toldAt.set(s.accountId, game.now);
     game.toastShip(ship, `Lookout: ${driftName(m.kind)} adrift ${bearing(ship.state.x, ship.state.y, ship.state.heading, m.x, m.y)}, ${Math.max(50, Math.round(dist(m.x, m.y, ship.state.x, ship.state.y) / 50) * 50)} m.`, m.legend ? 'gold' : 'info');
   }
