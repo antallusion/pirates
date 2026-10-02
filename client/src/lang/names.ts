@@ -106,5 +106,11 @@ export function personNameRu(en: string): string | null {
 
 /** A person's name as the reader should see it. */
 export function personName(en: string): string {
-  return lang() === 'ru' ? personNameRu(en) ?? en : en;
+  if (lang() !== 'ru') return en;
+  // A title the server gave a captain («Warden of Widowpoint Holm» → «Комендант Видоупойнт-Холм»).
+  return personNameRu(en) ?? (/ of /.test(en) ? titleRu(en) : en);
 }
+
+/** The server's titled names in Russian (set by server.ts: it imports this module). */
+export const nameHooks: { title: ((en: string) => string) | null } = { title: null };
+const titleRu = (en: string): string => nameHooks.title?.(en) ?? en;

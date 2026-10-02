@@ -52,7 +52,7 @@ import { gearPatterns, itemNamePatterns } from '../../../shared/src/data/items.t
 import { levelPatterns } from '../../../shared/src/data/shiplevel.ts';
 import { lang, typeset } from '../i18n.ts';
 import { COMMON_RU, NAME_RU, TEXT_RU } from './data.ts';
-import { composedNameRu, personNameRu } from './names.ts';
+import { composedNameRu, nameHooks, personNameRu } from './names.ts';
 import { SERVER_RU_A } from './server.ru.a.ts';
 import { SERVER_RU_B } from './server.ru.b.ts';
 import { SERVER_RU_ADMIN } from './server.ru.admin.ts';
@@ -209,3 +209,6 @@ export function serverText(s: string): string {
 export function serverPatterns(): number {
   return Object.keys(TABLE).length;
 }
+
+// docs/18 #50: the titled captains of the sea in Russian wherever a person's name is shown.
+nameHooks.title = (en) => serverText(en);

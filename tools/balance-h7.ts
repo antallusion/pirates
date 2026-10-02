@@ -118,7 +118,7 @@ if (ONLY.includes('lairs')) {
 
 if (ONLY.includes('armies')) {
   const F = FAST ? 30 : 60;
-  console.log(`\n4. Armies with creatures against the pirates of their level (target 45–60%): a drift's group in place of as many hands; over the hammocks ±15% (${F} battles a step), with a mixed army's −1 morale · with the path's own people (morale 0, the favourite's +10%) · at the ladder's own hammocks (−1)`);
+  console.log(`\n4. Armies with creatures against the pirates of their level (target 45–60%): a drift's group in place of as many hands; over the hammocks ±15% (${F} battles a step), with a mixed army's −1 morale · with the path's own people (morale 0, the favourite's +5%) · at the ladder's own hammocks (−1)`);
   const all: number[] = [];
   for (let L = 1; L <= 10; L++) {
     const cells = driftKindsAt(L).map((k) => {
