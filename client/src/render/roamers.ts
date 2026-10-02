@@ -44,92 +44,117 @@ function colourOf(state: ClientState, v: RoamView): string {
   return THREAT_COLOR[threatOf(mine, v.level)];
 }
 
+/** The phone's frames (docs/19 D6–D7): what does not change from frame to frame — a token's art, tint, frame and
+ *  shadow, a label's outlined words — is drawn once into a small canvas and stamped after. */
+const stamps = new Map<string, HTMLCanvasElement>();
+function stamp(key: string, w: number, h: number, draw: (g: G) => void): HTMLCanvasElement | null {
+  let c = stamps.get(key);
+  if (c) return c;
+  if (typeof document === 'undefined') return null;
+  if (stamps.size > 400) stamps.clear();
+  const dpr = Math.min(3, globalThis.devicePixelRatio || 1);
+  c = document.createElement('canvas');
+  c.width = Math.ceil(w * dpr);
+  c.height = Math.ceil(h * dpr);
+  const g = c.getContext('2d')!;
+  g.scale(dpr, dpr);
+  draw(g);
+  stamps.set(key, c);
+  return c;
+}
+
+const labelW = new Map<string, number>();
 function label(g: G, text: string, x: number, y: number, col: string, size = 11): void {
-  g.font = `700 ${size}px Inter, sans-serif`;
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.lineWidth = 3;
-  g.strokeStyle = 'rgba(0,0,0,0.78)';
-  g.strokeText(text, x, y);
-  g.fillStyle = col;
-  g.fillText(text, x, y);
+  const key = `l|${text}|${col}|${size}`;
+  const font = `700 ${size}px Inter, sans-serif`;
+  let mw = labelW.get(key);
+  if (mw === undefined) {
+    g.font = font;
+    mw = Math.ceil(g.measureText(text).width) + 8;
+    if (labelW.size > 400) labelW.clear();
+    labelW.set(key, mw);
+  }
+  const w = mw, h = size + 8;
+  const c = stamp(key, w, h, (s) => {
+    s.font = font;
+    s.textAlign = 'center';
+    s.textBaseline = 'middle';
+    s.lineWidth = 3;
+    s.strokeStyle = 'rgba(0,0,0,0.78)';
+    s.strokeText(text, w / 2, h / 2);
+    s.fillStyle = col;
+    s.fillText(text, w / 2, h / 2);
+  });
+  if (c) g.drawImage(c, x - w / 2, y - h / 2, w, h);
 }
 
 /** The water about it: a ring the swell breaks round it, the dark of the creatures under the surface, and — for a
  *  flock, a school or a pod — a few of them about the token. */
-function water(g: G, x: number, y: number, R: number, v: RoamView, t: number): void {
+function water(g: G, x: number, y: number, R: number, v: RoamView, t: number, swimmers: boolean): void {
   const sw = 0.5 + 0.5 * Math.sin(t * 1.2 + v.id);
-  const grd = g.createRadialGradient(x, y, R * 0.4, x, y, R * 2.3);
-  grd.addColorStop(0, 'rgba(8,22,30,0.5)');
-  grd.addColorStop(1, 'rgba(8,22,30,0)');
-  g.fillStyle = grd;
-  g.beginPath();
-  g.ellipse(x, y, R * 2.3, R * 1.9, 0.3, 0, Math.PI * 2);
-  g.fill();
   g.strokeStyle = `rgba(205,228,236,${0.18 + 0.14 * sw})`;
   g.lineWidth = Math.max(1, R * 0.07);
   g.beginPath();
   g.ellipse(x, y, R * (1.55 + sw * 0.2), R * (1.3 + sw * 0.16), 0.3, 0, Math.PI * 2);
   g.stroke();
-  // A few of them about it: wings over the swell for the gulls, fins for the sharks, backs for the rest.
-  const many = Math.min(5, Math.max(0, Math.round(Math.log2(Math.max(1, v.n)))));
+  // A few of them about it, all in one path: wings over the swell for the gulls, fins for the sharks, backs for the
+  // rest (no transforms: the phone's frames).
+  const many = swimmers ? Math.min(3, Math.max(0, Math.round(Math.log2(Math.max(1, v.n)) / 1.5))) : 0;
+  if (!many) return;
+  g.beginPath();
   for (let i = 0; i < many; i++) {
     const a = t * (v.kind === 'gull' ? 0.9 : 0.35) + i * ((Math.PI * 2) / many) + v.id;
     const d = R * (1.75 + 0.15 * Math.sin(t * 0.8 + i));
     const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.85;
-    g.save();
-    g.translate(px, py);
-    g.rotate(a + Math.PI / 2);
     if (v.kind === 'gull') {
-      g.strokeStyle = 'rgba(245,245,240,0.9)';
-      g.lineWidth = Math.max(1, R * 0.07);
       const fl = Math.sin(t * 7 + i) * R * 0.08;
-      g.beginPath();
-      g.moveTo(-R * 0.28, fl);
-      g.quadraticCurveTo(-R * 0.1, -R * 0.14, 0, 0);
-      g.quadraticCurveTo(R * 0.1, -R * 0.14, R * 0.28, fl);
-      g.stroke();
-    } else if (v.kind === 'reef_shark') {
-      g.fillStyle = '#39454c';
-      g.beginPath();
-      g.moveTo(0, -R * 0.3);
-      g.lineTo(R * 0.12, R * 0.16);
-      g.lineTo(-R * 0.12, R * 0.16);
-      g.closePath();
-      g.fill();
+      g.moveTo(px - R * 0.28, py + fl);
+      g.lineTo(px, py - R * 0.06);
+      g.lineTo(px + R * 0.28, py + fl);
     } else {
-      g.fillStyle = 'rgba(30,44,50,0.75)';
-      g.beginPath();
-      g.ellipse(0, 0, R * 0.12, R * 0.26, 0, 0, Math.PI * 2);
-      g.fill();
+      g.moveTo(px + R * 0.14, py);
+      g.arc(px, py, R * 0.14, 0, Math.PI * 2);
     }
-    g.restore();
+  }
+  if (v.kind === 'gull') {
+    g.strokeStyle = 'rgba(245,245,240,0.9)';
+    g.lineWidth = Math.max(1, R * 0.07);
+    g.stroke();
+  } else {
+    g.fillStyle = v.kind === 'reef_shark' ? '#39454c' : 'rgba(30,44,50,0.75)';
+    g.fill();
   }
 }
 
-/** Its token: the creature's picture in a dark disc (tinted and framed where it is a stand-in), ringed. */
-function token(g: G, x: number, y: number, R: number, v: RoamView, col: string, t: number): void {
-  const u = ROAMS[v.kind].u as UnitId;
+/** The token's still part, drawn once a kind, size and state: the dark of the creatures in the water, the shadow, the
+ *  disc, the picture (tinted where it is a stand-in, grey in battle), the brass frame, the crossed blades. */
+function tokenFace(g: G, R: number, u: UnitId, grey: boolean, cx: number, cy: number): void {
   const sp = sprite(UNITS[u].art);
-  const grey = !!v.fight;
+  const grd = g.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 1.75);
+  grd.addColorStop(0, 'rgba(8,22,30,0.5)');
+  grd.addColorStop(1, 'rgba(8,22,30,0)');
+  g.fillStyle = grd;
+  g.beginPath();
+  g.ellipse(cx, cy, R * 1.75, R * 1.5, 0, 0, Math.PI * 2);
+  g.fill();
   g.fillStyle = 'rgba(0,0,0,0.42)';
   g.beginPath();
-  g.ellipse(x + R * 0.12, y + R * 0.25, R * 1.02, R * 0.85, 0, 0, Math.PI * 2);
+  g.ellipse(cx + R * 0.12, cy + R * 0.25, R * 1.02, R * 0.85, 0, 0, Math.PI * 2);
   g.fill();
   g.fillStyle = '#10161a';
   g.beginPath();
-  g.arc(x, y, R, 0, Math.PI * 2);
+  g.arc(cx, cy, R, 0, Math.PI * 2);
   g.fill();
   if (sp) {
     g.save();
     g.beginPath();
-    g.arc(x, y, R - 1, 0, Math.PI * 2);
+    g.arc(cx, cy, R - 1, 0, Math.PI * 2);
     g.clip();
     const tint = BEAST_TINT[u as keyof typeof BEAST_TINT];
     g.filter = grey ? `${tint ?? ''} grayscale(1) brightness(0.65)`.trim() : tint ?? 'none';
     const iw = sp.img.naturalWidth, ih = sp.img.naturalHeight;
     const k = (R * 2.2) / Math.min(iw, ih);
-    g.drawImage(sp.img, x - (iw * k) / 2, y - (ih * k) / 2, iw * k, ih * k);
+    g.drawImage(sp.img, cx - (iw * k) / 2, cy - (ih * k) / 2, iw * k, ih * k);
     g.filter = 'none';
     g.restore();
   }
@@ -137,9 +162,31 @@ function token(g: G, x: number, y: number, R: number, v: RoamView, col: string, 
     g.strokeStyle = '#a8894e';
     g.lineWidth = Math.max(1.5, R * 0.12);
     g.beginPath();
-    g.arc(x, y, R - R * 0.06, 0, Math.PI * 2);
+    g.arc(cx, cy, R - R * 0.06, 0, Math.PI * 2);
     g.stroke();
   }
+  if (grey) {
+    // Crossed blades over it: a fight under way.
+    g.strokeStyle = 'rgba(235,225,200,0.95)';
+    g.lineWidth = Math.max(1.5, R * 0.1);
+    g.beginPath();
+    g.moveTo(cx - R * 0.55, cy - R * 0.55);
+    g.lineTo(cx + R * 0.55, cy + R * 0.55);
+    g.moveTo(cx + R * 0.55, cy - R * 0.55);
+    g.lineTo(cx - R * 0.55, cy + R * 0.55);
+    g.stroke();
+  }
+}
+
+function token(g: G, x: number, y: number, R: number, v: RoamView, col: string, t: number): void {
+  const u = ROAMS[v.kind].u as UnitId;
+  const grey = !!v.fight;
+  const Rr = Math.round(R);
+  const S = Math.ceil(Rr * 3.6);
+  // (stamped only once the picture is in: until then drawn as it comes)
+  const c = sprite(UNITS[u].art) ? stamp(`t|${u}|${Rr}|${grey ? 1 : 0}`, S, S, (s) => tokenFace(s, Rr, u, grey, S / 2, S / 2)) : null;
+  if (c) g.drawImage(c, x - S / 2, y - S / 2, S, S);
+  else tokenFace(g, R, u, grey, x, y);
   const pulse = 0.5 + 0.5 * Math.sin(t * 2 + v.id);
   g.globalAlpha = grey ? 0.6 : 0.7 + 0.3 * pulse;
   g.strokeStyle = grey ? 'rgba(170,170,160,0.9)' : col;
@@ -148,17 +195,6 @@ function token(g: G, x: number, y: number, R: number, v: RoamView, col: string, 
   g.arc(x, y, R, 0, Math.PI * 2);
   g.stroke();
   g.globalAlpha = 1;
-  if (grey) {
-    // Crossed blades over it: a fight under way.
-    g.strokeStyle = 'rgba(235,225,200,0.95)';
-    g.lineWidth = Math.max(1.5, R * 0.1);
-    g.beginPath();
-    g.moveTo(x - R * 0.55, y - R * 0.55);
-    g.lineTo(x + R * 0.55, y + R * 0.55);
-    g.moveTo(x + R * 0.55, y - R * 0.55);
-    g.lineTo(x - R * 0.55, y + R * 0.55);
-    g.stroke();
-  }
 }
 
 /** Every stack about her on the sea. */
@@ -186,8 +222,8 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
       g.restore();
       continue;
     }
-    if (c.zoom >= 0.2) water(g, x, y, R, v, c.time);
     token(g, x, y, R, v, col, c.time);
+    if (c.zoom >= 0.2) water(g, x, y, R, v, c.time, c.zoom >= 0.8);
     if (v.fight) {
       // «в бою» under it (her ship's own name rides over the fight), the kind beside it.
       label(g, c.zoom > 0.5 ? `${L('fight')} · ${roamName(v.kind)}` : L('fight'), x, y + R + 12, '#f0a890', c.zoom > 0.45 ? 12 : 11);

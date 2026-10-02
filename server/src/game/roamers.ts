@@ -173,7 +173,7 @@ export function roamJoiners(game: Game, s: PlayerSession, sp: RoamSpot): ArmySta
 
 // ------------------------------------------------------------------------------------------------ what she sees
 
-function viewOf(game: Game, s: PlayerSession, sp: RoamSpot, near: boolean): RoamView {
+function viewOf(game: Game, s: PlayerSession, sp: RoamSpot, party: (() => ArmyStack[]) | null): RoamView {
   const S = R(game);
   const b = roamBase(game, sp);
   const st = S.st.get(sp.id);
@@ -181,8 +181,8 @@ function viewOf(game: Game, s: PlayerSession, sp: RoamSpot, near: boolean): Roam
   if (st?.fighter !== undefined) {
     const mate = st.fighter === s.accountId || sameGroup(game, st.fighter, s.accountId);
     v.fight = mate ? 'mate' : 'other';
-  } else if (near) {
-    const ratio = roamRatio(game, s, sp);
+  } else if (party) {
+    const ratio = roamRatio(game, s, sp, party());
     v.ratio = Math.round(ratio * 10) / 10;
     const offer = roamOffer(game, s, sp, ratio);
     if (offer) {
@@ -208,7 +208,10 @@ export function roamsFor(game: Game, s: PlayerSession): RoamView[] {
     return { sp, d: Math.abs(b.x - x) + Math.abs(b.y - y) };
   });
   list.sort((a, b) => a.d - b.d);
-  return list.map(({ sp, d }, i) => viewOf(game, s, sp, i < 3 && d < 900));
+  // (her landing party reckoned once, and only when a stack is near)
+  let mine: ArmyStack[] | null = null;
+  const party = () => (mine ??= partyOf(game, s));
+  return list.map(({ sp, d }, i) => viewOf(game, s, sp, i < 3 && d < 900 ? party : null));
 }
 
 export function sendRoams(game: Game, s: PlayerSession, force: boolean): void {
