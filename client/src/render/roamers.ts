@@ -166,7 +166,7 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
   const list = state.roams;
   if (!list.length || c.zoom < 0.05) return;
   const now = state.estServerTime();
-  const R = Math.max(9, Math.min(22, 19 * c.zoom));
+  const R = Math.max(11, Math.min(22, 19 * c.zoom));
   const small = c.zoom < 0.13;
   for (const v of list) {
     const p = roamPos(v.seed, v.x, v.y, now);
@@ -188,9 +188,13 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
     }
     if (c.zoom >= 0.2) water(g, x, y, R, v, c.time);
     token(g, x, y, R, v, col, c.time);
-    const word = v.fight ? L('fight') : `${strengthWord(v.n).word} · ⚓${v.level}`;
-    label(g, word, x, y - R - 9, v.fight ? '#c9c9bd' : col, c.zoom > 0.45 ? 12 : 11);
-    if (c.zoom > 0.5) label(g, roamName(v.kind), x, y + R + 11, '#d9e6e8', 10.5);
+    if (v.fight) {
+      // «в бою» under it (her ship's own name rides over the fight), the kind beside it.
+      label(g, c.zoom > 0.5 ? `${L('fight')} · ${roamName(v.kind)}` : L('fight'), x, y + R + 12, '#f0a890', c.zoom > 0.45 ? 12 : 11);
+    } else {
+      label(g, `${strengthWord(v.n).word} · ⚓${v.level}`, x, y - R - 9, col, c.zoom > 0.45 ? 12 : 11);
+      if (c.zoom > 0.5) label(g, roamName(v.kind), x, y + R + 11, '#d9e6e8', 10.5);
+    }
     g.restore();
   }
 }
