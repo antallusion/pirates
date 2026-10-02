@@ -1074,13 +1074,34 @@ function labelLedgers(root: HTMLElement): void {
 
 /** Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons). */
 function ensureCloseButton(root: HTMLElement): void {
-  if (!modal || modal === 'boarding' || modal === 'sunk' || modal === 'mutiny' || root.querySelector('.x-btn')) return;
-  const x = document.createElement('button');
-  x.className = 'x-btn';
-  x.setAttribute('aria-label', 'Close');
-  x.onclick = () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal());
-  root.append(x);
+  if (!modal || modal === 'boarding' || modal === 'sunk' || modal === 'mutiny') return;
+  let x = root.querySelector<HTMLElement>('.x-btn');
+  if (!x) {
+    x = document.createElement('button');
+    x.className = 'x-btn';
+    x.setAttribute('aria-label', 'Close');
+    x.onclick = () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal());
+    root.append(x);
+  }
+  alignCloseButton(root, x);
 }
+
+/** The cross sits on the title plate's middle line, whatever the plate holds (an icon, a crest) — a fixed top left it
+ *  8px off in some windows. The panel is zoomed by the UI scale, so screen pixels are turned back into its own. */
+function alignCloseButton(root: HTMLElement, x: HTMLElement): void {
+  const h = root.querySelector<HTMLElement>('.modal-head h2');
+  if (!h || x.parentElement !== root || !x.offsetHeight) return;
+  const pr = root.getBoundingClientRect(), hr = h.getBoundingClientRect();
+  const k = pr.width / (root.offsetWidth || pr.width) || 1;
+  // An absolute child's top counts from inside the panel's frame (its border), not from its outer edge.
+  const top = `${Math.max(4, Math.round(((hr.top + hr.bottom) / 2 - pr.top) / k - root.clientTop - x.offsetHeight / 2))}px`;
+  if (x.style.top !== top) x.style.top = top;
+}
+addEventListener('resize', () => {
+  const root = $('modal-panel');
+  const x = root.querySelector<HTMLElement>('.x-btn');
+  if (modal && x) alignCloseButton(root, x);
+});
 
 /** Touch screens have no keys: "[F]"-style hints come off buttons and tabs. */
 function stripKeyHints(root: HTMLElement): void {

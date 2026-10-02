@@ -160,7 +160,7 @@ export class ThroneWindow {
     const self = state.self;
     const g = self?.glory;
     if (!self) return;
-    const head = `<div class="modal-head"><div><h2>${icon('tattoo_crown', '', 'ico-md')}${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, g: g?.rank ?? 0 }))}</div></div><button class="btn btn-small" data-thclose>${esc(T(['Close', 'Закрыть']))}</button></div>`;
+    const head = `<div class="modal-head"><div><h2>${icon('tattoo_crown', '', 'ico-md')}${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, g: g?.rank ?? 0 }))}</div></div></div>`;
     if (!g) {
       root.innerHTML = `${head}<div class="modal-body throne-win"><p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: self.level }))}</p></div>`;
     } else {
@@ -175,7 +175,6 @@ export class ThroneWindow {
       this.tab = b.dataset.thtab!;
       this.render(root, state);
     }));
-    root.querySelector<HTMLElement>('[data-thclose]')!.onclick = () => this.onClose();
   }
 }
 

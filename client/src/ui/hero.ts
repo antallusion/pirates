@@ -78,7 +78,7 @@ export class HeroWindow {
     else if (this.tab === 'path') body = pathTab(h, self.captain, self.level, self.talents ?? {}); // docs/18 item 9
     else if (this.tab === 'book') body = this.bookTab(h, docked, state.estServerTime());
     else body = this.portTab(h, self.gold);
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, path: cap.archetype }))}</div></div><button class="btn btn-small" data-hclose>${esc(L('close'))}</button></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, path: cap.archetype }))}</div></div></div>
       <div class="modal-body hero-win"><div class="tabs">${tabs.map(([t, n]) => `<button class="tab${this.tab === t ? ' active' : ''}" data-htab="${t}">${esc(n)}${t === 'hero' && h.pending ? ` <span class="hx-dot">${h.pending}</span>` : ''}</button>`).join('')}</div>${body}</div>`;
     const redo = () => this.render(root, state);
     root.querySelectorAll<HTMLElement>('[data-htab]').forEach((b) => (b.onclick = () => {
@@ -94,7 +94,6 @@ export class HeroWindow {
     root.querySelectorAll<HTMLElement>('[data-hcast]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'cast', id: b.dataset.hcast })));
     root.querySelectorAll<HTMLElement>('[data-hlearn]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'learn', id: b.dataset.hlearn })));
     root.querySelectorAll<HTMLElement>('[data-hbuy]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'buy', index: Number(b.dataset.hbuy) })));
-    root.querySelector<HTMLElement>('[data-hclose]')!.onclick = () => this.onClose();
     root.querySelectorAll<HTMLElement>('[data-hthrone]').forEach((b) => (b.onclick = () => this.onThrone()));
   }
 
