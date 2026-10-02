@@ -290,3 +290,18 @@ test('the tester\'s commands and the words in Russian', () => {
   assert.deepEqual(Object.keys(T_RU).sort(), Object.keys(T_EN).sort());
   for (const n of Object.values(MASTERY_BY_ID)) assert.ok(n.icon);
 });
+
+test('E18: reaching the cap, the Throne opens with a word, once', () => {
+  const { game } = makeGame();
+  const s = capCaptain(game, 'Climber');
+  const p = s.profile!;
+  p.level = MAX_LEVEL - 1;
+  p.xp = 0;
+  p.throne = undefined;
+  game.pushSelf(s, true);
+  game.grantXp(s, xpForLevel(MAX_LEVEL - 1), 'Test');
+  assert.equal(p.level, MAX_LEVEL);
+  const said = toasts(game, s).filter((m) => /Throne of the Sea opens/.test(m));
+  assert.equal(said.length, 1);
+  assert.equal(throneOf(p).hailed, true);
+});

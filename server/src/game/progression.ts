@@ -9,6 +9,7 @@ import { TALENTS_BY_ID, TREES, canUnlearn, totalPointsSpent, validateBuild } fro
 import type { LearnContext, TalentRanks } from '../../../shared/src/data/talents.ts';
 import type { Game } from './Game.ts';
 import { heroLevelUp } from './hero.ts';
+import { onCap } from './throne.ts'; // docs/19 E18
 import type { PlayerSession, Profile } from './player.ts';
 
 export const FREE_RESPEC_LEVEL = 20;
@@ -50,6 +51,7 @@ export function grantDeed(game: Game, s: PlayerSession, id: string): boolean {
 export function onLevelUp(game: Game, s: PlayerSession): void {
   const p = s.profile!;
   heroLevelUp(game, s); // docs/17 H2: a primary grows, a skill to choose
+  onCap(game, s); // docs/19: at the cap, the Throne of the Sea opens
   for (const lvl of TOKEN_LEVELS) {
     if (p.level < lvl || p.tokenLevels.includes(lvl)) continue;
     p.tokenLevels.push(lvl);

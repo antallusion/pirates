@@ -30,7 +30,8 @@ export interface ThroneTab {
   /** A count on the tab (a boon waiting, a point to spend). */
   badge?: (g: GloryView) => number;
   render: (g: GloryView, state: ClientState) => string;
-  bind?: (root: HTMLElement, send: (m: ClientMsg) => void) => void;
+  /** Its buttons: `close` shuts the window (a trial's battle opens over the sea). */
+  bind?: (root: HTMLElement, send: (m: ClientMsg) => void, close: () => void) => void;
 }
 
 function pips(r: number, max: number): string {
@@ -95,7 +96,7 @@ function masteryTab(g: GloryView, state: ClientState): string {
 
 // ------------------------------------------------------------------ trials
 
-function trialRow(v: TrialView, docked: boolean): string {
+function trialRow(v: TrialView, docked: boolean, busy: boolean): string {
   const lg = LEGENDS[v.skill];
   const d = SKILLS[v.skill];
   const face = CAPTAINS[lg.path].portrait;
@@ -103,7 +104,7 @@ function trialRow(v: TrialView, docked: boolean): string {
   if (v.state === 'won') act = `<span class="th-st won">${icon('tattoo_star', '★', 'ico-sm')}${esc(L('st.won'))}</span>`;
   else if (v.state === 'wait') act = `<span class="th-st wait">${esc(L('st.wait', { n: Math.ceil((v.wait ?? 0) / 60) }))}</span>`;
   else if (v.state === 'locked') act = `<span class="th-st muted">${esc(v.rank >= 3 ? L('st.lockedCap', { n: MAX_LEVEL }) : L('st.locked'))}</span>`;
-  else act = `<button class="btn btn-small btn-primary" data-thtrial="${v.skill}" ${docked ? 'disabled' : ''} title="${esc(docked ? L('st.sea') : '')}">${esc(docked ? L('st.sea') : L('st.ready'))}</button>`;
+  else act = `<button class="btn btn-small btn-primary" data-thtrial="${v.skill}" ${docked || busy ? 'disabled' : ''} title="${esc(docked ? L('st.sea') : '')}">${esc(docked ? L('st.sea') : L('st.ready'))}</button>`;
   return `<div class="th-trial th-${v.state}">
     <div class="th-face">${icon(face, '', 'ico-lg ico-round')}${icon(d.icon, '', 'ico-sm th-sk')}</div>
     <span class="th-tt"><b>${esc(T(d.name))}</b><span class="th-lg">${esc(L('legend', { name: T(lg.name) }))} · ${esc(L('ship', { ship: T(lg.ship) }))} · ${esc(L('army', { n: Math.round((lg.men - 1) * 100) }))}</span>
@@ -116,7 +117,7 @@ function trialsTab(g: GloryView, state: ClientState): string {
   const list = [...g.trials].sort((a, b) => order[a.state] - order[b.state] || b.rank - a.rank);
   return `${g.fighting ? `<div class="th-fight card">${icon('bt_charge', '', 'ico-md')}${esc(L('fighting', { skill: T(SKILLS[g.fighting].name) }))}</div>` : ''}
     <p class="muted hx-note">${esc(L('trialsNote'))}</p>
-    <div class="th-trials">${list.map((v) => trialRow(v, docked)).join('')}</div>`;
+    <div class="th-trials">${list.map((v) => trialRow(v, docked, !!g.fighting)).join('')}</div>`;
 }
 
 /** The tabs of the Throne, in order (later parts of docs/19 add theirs here). */
@@ -134,7 +135,10 @@ export const THRONE_TABS: ThroneTab[] = [
   },
   {
     id: 'trials', label: () => L('tab.trials'), icon: 'bt_charge', badge: (g) => g.trials.filter((v) => v.state === 'ready').length, render: trialsTab,
-    bind: (root, send) => root.querySelectorAll<HTMLElement>('[data-thtrial]').forEach((b) => (b.onclick = () => send({ t: 'throne', action: 'trial', id: b.dataset.thtrial }))),
+    bind: (root, send, close) => root.querySelectorAll<HTMLElement>('[data-thtrial]').forEach((b) => (b.onclick = () => {
+      send({ t: 'throne', action: 'trial', id: b.dataset.thtrial });
+      close();
+    })),
   },
 ];
 
@@ -165,7 +169,7 @@ export class ThroneWindow {
         const n = t.badge?.(g) ?? 0;
         return `<button class="tab${t === tab ? ' active' : ''}" data-thtab="${t.id}">${icon(t.icon, '', 'ico-sm')}${esc(t.label())}${n ? ` <span class="hx-dot">${n}</span>` : ''}</button>`;
       }).join('')}</div>${tab.render(g, state)}</div>`;
-      tab.bind?.(root, this.send);
+      tab.bind?.(root, this.send, () => this.onClose());
     }
     root.querySelectorAll<HTMLElement>('[data-thtab]').forEach((b) => (b.onclick = () => {
       this.tab = b.dataset.thtab!;

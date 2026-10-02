@@ -38,6 +38,8 @@ export interface ThroneRec {
   nodes: MasteryRanks;
   /** Each skill's trial: when first won (wall ms), when the legend fights again (world s), how many tried. */
   trials: Partial<Record<SkillId, { won?: number; next?: number; tries: number }>>;
+  /** She has been told the Throne is open (once, at the cap). */
+  hailed?: boolean;
 }
 
 /** The Throne's own dice (like the auction house's: server/src/game/auction.ts). */
@@ -76,6 +78,16 @@ export function addGlory(p: Profile, amount: number): number {
     n++;
   }
   return n;
+}
+
+/** The cap reached (progression.ts onLevelUp): the Throne's word, once. */
+export function onCap(game: Game, s: PlayerSession): void {
+  const p = s.profile;
+  if (!p || p.level < MAX_LEVEL) return;
+  const t = throneOf(p);
+  if (t.hailed) return;
+  t.hailed = true;
+  game.sendTo(s, { t: 'toast', msg: 'The Throne of the Sea opens: past the cap your experience is glory. Open it from the captain’s plate.', kind: 'gold' });
 }
 
 /** After experience (Game.grantXp): the news of ranks gained, and her choice of boon. */
@@ -436,7 +448,7 @@ export function throneAdmin(game: Game, s: PlayerSession, cmd: string, args: str
       }
       applyHero(game, s);
       game.pushSelf(s, true);
-      return `Glory ${t.rank} (${Math.floor(t.xp)}/${gloryXp(t.rank)}) · boons ${PRIMS.map((k) => `${k} ${t.picks[k] ?? 0}`).join(' ')} · to choose ${gloryPending(t.rank, t.picks)} · mastery ${masterySpent(t.nodes)}/${masteryPoints(t.rank)}.`;
+      return `Glory ${t.rank} (${Math.floor(t.xp)}/${gloryXp(t.rank)}) · boons ${PRIMS.map((k) => t.picks[k] ?? 0).join('/')} · to choose ${gloryPending(t.rank, t.picks)} · mastery ${masterySpent(t.nodes)}/${masteryPoints(t.rank)}.`;
     }
     case 'mastery': {
       if (args[0] === 'reset') t.nodes = {};

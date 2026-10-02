@@ -5,6 +5,7 @@
 // ("остров") would break the case of every sentence the name sits in ("в остров").
 
 import { lang } from '../i18n.ts';
+import { LEGENDS } from '../../../shared/src/data/throne.ts';
 import { NAME_RU } from './data.ts';
 
 const FIRST: Record<string, string> = {
@@ -91,6 +92,7 @@ const PERSON: Record<string, string> = {
 /** A person's Russian name when every part of it is known ("Morrow Ickes" → «Морроу Икс»), else null. */
 /** The sea's named officers, whole (their nicknames and double names are not parts of the table). */
 const UNIQUE_RU: Record<string, string> = {
+  ...Object.fromEntries(Object.values(LEGENDS).map((l) => l.name)), // docs/19 E3: the legends of the trials
   'Jory "Old Bones" Pike': 'Джори «Старые Кости» Пайк', 'Sister Anwen Coil': 'Сестра Анвен Койл', 'Ruy Salazar-Ketch': 'Руй Саласар-Кетч',
   'Nell "Tallow" Marsh': 'Нелл «Сальная» Марш', 'Ezekiel Thorne': 'Иезекииль Торн', 'Magda "Iron-Jaw" Rusk': 'Магда «Железная Челюсть» Раск',  // The adventure map's guards (docs/17 H4): who leads them in the boarding battle.
   'The Hold-out’s Chief': 'Вожак заставы', 'The Castaways': 'Отверженные', 'The Drowned Crew': 'Утонувшая команда', 'The Deep': 'Глубина',

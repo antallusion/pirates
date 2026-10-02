@@ -7,6 +7,7 @@ import { thronePatterns } from '../../../shared/src/data/throne.ts';
 export const SERVER_RU_THRONE: Record<string, string> = {
   ...Object.fromEntries(thronePatterns()),
   // glory
+  'The Throne of the Sea opens: past the cap your experience is glory. Open it from the captain’s plate.': 'Открывается Престол Моря: после потолка опыт идёт в славу. Откройте его с плашки капитана.',
   'Glory rank {0}!': 'Ранг славы {0}!',
   'Glory rank {0}! A point of mastery is yours.': 'Ранг славы {0}! Вам очко мастерства.',
   'A boon of glory to choose: open the Throne.': 'Выберите дар славы: откройте окно «Престол».',
