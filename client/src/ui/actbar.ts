@@ -102,7 +102,7 @@ export const ACT_SHOW = 3;
 export function actBarHtml(acts: Act[], info: string[], keyOf: ((a: Action) => string) | null, open: boolean): string {
   const btn = (a: Act, i: number) => {
     const k = keyOf && a.key ? keyOf(a.key) : '';
-    return `<button type="button" class="act-btn${i === 0 ? ' primary' : ''}" data-act="${i}" title="${esc(a.title)}" aria-label="${esc(a.sub ? `${a.label}: ${a.sub}` : a.label)}">${icon(a.icon, '•', 'act-ico')}<span class="act-l">${esc(a.label)}</span>${a.sub ? `<span class="act-s">${esc(a.sub)}</span>` : ''}${k ? `<kbd class="act-k">${esc(k)}</kbd>` : ''}</button>`;
+    return `<button type="button" class="act-btn act-${a.id}${i === 0 ? ' primary' : ''}" data-act="${i}" title="${esc(a.title)}" aria-label="${esc(a.sub ? `${a.label}: ${a.sub}` : a.label)}">${icon(a.icon, '•', 'act-ico')}<span class="act-l">${esc(a.label)}</span>${a.sub ? `<span class="act-s">${esc(a.sub)}</span>` : ''}${k ? `<kbd class="act-k">${esc(k)}</kbd>` : ''}</button>`;
   };
   const many = acts.length > ACT_SHOW;
   const shown = many ? acts.slice(0, ACT_SHOW - 1) : acts;

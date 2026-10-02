@@ -320,7 +320,7 @@ export function adminSeaMark(game: Game, s: PlayerSession, args: string[]): stri
     }
     if (!best) return 'No such mark in these waters.';
     if (ship.docked) game.undock(s);
-    ship.state = { ...ship.state, x: best.x, y: best.y + best.r + 90, speed: 0, sail: 0 };
+    ship.state = { ...ship.state, x: best.x, y: best.y + best.r + 45, speed: 0, sail: 0 };
     ship.input = { rudder: 0, sailTarget: 0 };
     ship.region = game.regionAt(ship.state.x, ship.state.y);
     game.grid.upsert(ship.id, ship.state.x, ship.state.y);

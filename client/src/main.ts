@@ -1618,7 +1618,7 @@ function computePrompt(): string {
   if (acts.length <= ACT_SHOW) actsMore = false;
   if (acts.length && !actTipOffered) {
     actTipOffered = true;
-    firstTips.offer('actions');
+    firstTips.offer('actions', true);
   }
   return actBarHtml(acts, info, touch.enabled ? null : keyOfAction, actsMore);
 }

@@ -137,10 +137,12 @@ export class FirstTips {
   /** A window over the HUD (the line waits for it to close). */
   covered: () => boolean = () => false;
 
-  offer(id: TipId | null): void {
+  /** `first`: ahead of the hints already waiting (the action bar's, as she meets it). */
+  offer(id: TipId | null, first = false): void {
     if (!id || !settings().firstHints) return;
     if (this.showing?.id === id || this.queue.includes(id) || seenTips().has(id)) return;
-    this.queue.push(id);
+    if (first) this.queue.unshift(id);
+    else this.queue.push(id);
   }
 
   frame(now: number): void {

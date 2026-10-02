@@ -136,7 +136,7 @@ test('three buttons at most, the rest behind «⋯ N more»; one height of butto
     const btns = (h: string) => (h.match(/<button /g) ?? []).length;
     assert.equal(btns(shut), ACT_SHOW, 'two and the toggle');
     assert.match(shut, /⋯ ещё 9/);
-    assert.match(shut, /act-btn primary" data-act="0"/);
+    assert.match(shut, /act-btn act-axes primary" data-act="0"/);
     assert.equal((shut.match(/ primary/g) ?? []).length, 1, 'one gold button');
     assert.match(shut, /<div class="act-info">Защищены/);
     assert.match(shut, /<kbd class="act-k">BOARD<\/kbd>/);
@@ -168,5 +168,5 @@ test('the first time the bar shows something, a hint says what it is', () => {
   assert.ok(TIP_IDS.includes('actions'));
   assert.ok(EASE_EN['tip.actions'] && EASE_RU['tip.actions']);
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
-  assert.match(main, /firstTips\.offer\('actions'\)/);
+  assert.match(main, /firstTips\.offer\('actions', true\)/);
 });
