@@ -14,6 +14,7 @@ import { EN, RU } from '../lang/ui/isles18.ts';
 import { turtleDef } from '../render/isletype.ts';
 import { driftTip } from '../render/drifts.ts';
 import { findTip } from '../render/seafinds.ts';
+import { roamTip } from '../render/roamers.ts'; // docs/19 D7
 import type { ClientState } from '../state.ts';
 import { esc } from './dom.ts';
 import { placeName } from './maps.ts';
@@ -157,6 +158,8 @@ export function tipAt(state: ClientState, x: number, y: number, slack: number): 
   if (drift) return drift;
   const find = findTip(state, x, y, slack); // docs/19 D5
   if (find) return find;
+  const roam = roamTip(state, x, y, slack); // docs/19 D7
+  if (roam) return roam;
   for (const t of state.turtles) {
     const p = turtlePos(turtleDef(t), now);
     if (Math.hypot(p.x - x, p.y - y) > t.r + slack) continue;

@@ -25,6 +25,10 @@ import { DRIFTS, isDriftKind } from '../../../shared/src/data/drifts.ts';
 import type { CaptureOffer } from '../../../shared/src/driftproto.ts';
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { EN as FEN, RU as FRU } from '../lang/ui/seafinds.ts';
+import { EN as REN, RU as RRU } from '../lang/ui/roamers.ts'; // docs/19 D7: the roaming stacks
+import { isRoamKind } from '../../../shared/src/data/roamers.ts';
+import type { RoamKind } from '../../../shared/src/data/roamers.ts';
+import { roamName } from '../render/roamers.ts';
 import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
@@ -40,6 +44,9 @@ const L = dict(EN, RU);
 const LL = dict(LEN, LRU);
 const DL = dict(DEN, DRU);
 const FL = dict(FEN, FRU);
+const RL = dict(REN, RRU);
+/** docs/19 D7: a roaming stack's fight is named 'roam_<kind>'. */
+const roamOf = (lair: string | undefined): RoamKind | null => { const k = lair?.startsWith('roam_') ? lair.slice(5) : ''; return isRoamKind(k) ? k : null; };
 
 /** docs/18 #36: the beaten who would follow her — how many, and her choice: aboard, home to the pen, let go. */
 function captureBlock(c: CaptureOffer): string {
@@ -53,6 +60,22 @@ function captureBlock(c: CaptureOffer): string {
 /** docs/18 II: what a lair left her, on the battle's reckoning — silver, experience, the island's resource, the land's
  *  spoils, an artifact, a young one for the pen, the island's chest, the island cleared, the dwelling. */
 function lootBlock(l: LairLoot): string {
+  // docs/19 D7: a roaming stack beaten — its lesson, silver and spoils, the fallen hauled back, the mates' share.
+  if (l.roam) {
+    const r = l.roam, ru = lang() === 'ru' ? 1 : 0;
+    const chips = [`<span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(RL('loot.xp', { n: r.xp }))}</span>`, `<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${r.silver}</span>`];
+    for (const [k, n] of Object.entries(r.res) as [LandRes | 'pearls', number][]) {
+      const name = k === 'pearls' ? GOODS.pearls.name : LAND_RES_DEF[k].name[ru];
+      chips.push(`<span class="tb-lc" title="${esc(name)}">${icon(k === 'pearls' ? 'icon.good_pearls' : `icon.${LAND_RES_DEF[k].icon}`, '', 'ico-sm')}${esc(name)} ${n}</span>`);
+    }
+    const lines: string[] = [];
+    if (r.grey) lines.push(esc(RL('loot.grey')));
+    if (r.raised) lines.push(esc(RL('loot.raised', { n: r.raised })));
+    if (r.mates) lines.push(esc(RL('loot.mates', { n: r.mates })));
+    if (r.thin) lines.push(esc(RL('loot.thin')));
+    if (r.artifact) lines.push(esc(RL('loot.art', { a: ARTIFACTS[r.artifact]?.name[ru] ?? r.artifact })));
+    return `<div class="tb-loot"><small>${esc(RL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
+  }
   // docs/19 D5: the chest among the sharks — what came up in it.
   if (l.find) return `<div class="tb-loot"><small>${esc(FL('loot.chest'))}</small><div class="tb-lchips"><span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.find.silver}</span>${l.find.goods.map((g) => `<span class="tb-lc" title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`).join('')}</div></div>`;
   // docs/18 IV: a drift beaten at sea — its silver and lesson, and the beaten who would follow.
@@ -411,7 +434,7 @@ export class TacticalPanel {
       // A face of the art (docs/18 II: a lair's creature) or a named captain's portrait.
       const face = h.face ? (h.face.includes('.') && !h.face.startsWith('portrait.') ? assetUrl(h.face) : portraitUrl(h.face.replace(/^portrait\./, ''))) ?? url : url;
       return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? (isDriftKind(v.land.lair) ? DRIFTS[v.land.lair].name[lang() === 'ru' ? 1 : 0] : v.land.lair === 'find_chest' ? findTitle('chest') : h.name)) : personName(h.name))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest') ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? (isDriftKind(v.land.lair) ? DRIFTS[v.land.lair].name[lang() === 'ru' ? 1 : 0] : v.land.lair === 'find_chest' ? findTitle('chest') : roamOf(v.land.lair) ? roamName(roamOf(v.land.lair)!) : h.name)) : personName(h.name))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest' || roamOf(v.land.lair)) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
@@ -497,7 +520,7 @@ export class TacticalPanel {
       const won = v.over.winner === v.you;
       const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : 'why.rounds';
       // docs/18 II: ashore, the lair is broken, or the party thrown back or fallen back to the boats.
-      const whyText = v.land?.lair === 'find_chest' ? FL(won ? 'why.chest' : v.over.why === 'struck' ? 'why.chestBack' : 'why.chestLost') : v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
+      const whyText = roamOf(v.land?.lair) ? RL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land?.lair === 'find_chest' ? FL(won ? 'why.chest' : v.over.why === 'struck' ? 'why.chestBack' : 'why.chestLost') : v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
       banner.className = `tb-banner ${won ? 'won' : 'lost'}${v.result ? ' tb-result' : ''}`;
       // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
       const r = v.result;

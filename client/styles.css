@@ -4017,3 +4017,10 @@ body.touch .act-btn { --h: 38px; }
 }
 @media (max-width: 520px) { .th-branches { grid-template-columns: minmax(0, 1fr); } }
 .hx-slot.gm .hx-rank { flex-wrap: wrap; max-width: 100%; }
+
+/* docs/19 D7: a roaming stack's card («Осмотреть»). */
+.roam-panel { max-width: min(380px, 92vw); }
+.roam-card { display: flex; flex-direction: column; gap: 6px; text-align: left; font-size: 13px; }
+.roam-card .rc-head { display: flex; gap: 10px; align-items: center; }
+.roam-card .rc-head .army-face { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex: none; }
+.roam-card .ac-offer { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

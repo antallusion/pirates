@@ -387,12 +387,12 @@ function roamEnd(game: Game, s: PlayerSession, sp: RoamSpot, won: boolean, left:
   roamGone(game, sp);
   const gap = roamGap(ship.shipLevel, sp.level);
   const xp = Math.round(pay.xp * gap);
-  if (xp > 0) game.grantXp(s, xp, `Beat the ${ROAM_NAME[sp.kind]}`, true);
+  if (xp > 0) game.grantXp(s, xp, `Roaming stack beaten: ${ROAM_NAME[sp.kind]}`, true);
   const share = 1 / (1 + mates.length);
   const mine = giveSpoils(game, s, pay.silver, res, share);
   for (const m of mates) {
     const mx = Math.round(pay.xp * ROAM_MATE_XP * roamGap(m.ship!.shipLevel, sp.level));
-    if (mx > 0) game.grantXp(m, mx, `${s.name} beat the ${ROAM_NAME[sp.kind]}`, true);
+    if (mx > 0) game.grantXp(m, mx, `${s.name} beat a roaming stack: ${ROAM_NAME[sp.kind]}`, true);
     const got = giveSpoils(game, m, pay.silver, res, share);
     game.toastShip(m.ship!, `Your share of the ${ROAM_NAME[sp.kind]}: ${got.silver} silver.`, 'gold');
     game.pushSelf(m, true);

@@ -37,6 +37,13 @@ import { AutosailPill, FirstTips, autosailRequest, autosailStopText, tipForMsg, 
 import { ACT_SHOW, actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
 import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
+import { ROAMS, ROAM_REACH } from '../../shared/src/data/roamers.ts'; // docs/19 D7
+import type { RoamView } from '../../shared/src/roamproto.ts';
+import { UNITS as ROAM_UNITS } from '../../shared/src/data/army.ts';
+import { roamName, roamNow } from './render/roamers.ts';
+import { openRoamCard } from './ui/roamcard.ts';
+import { strengthWord as roamWord } from './ui/army.ts';
+import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
 import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
@@ -336,6 +343,7 @@ const trekWindow = new TrekWindow((m) => net.send(m), () => minigameWindow.isOpe
 const LI = dict(ISLES_EN, ISLES_RU);
 const LLAIR = dict(LAIRS_EN, LAIRS_RU); // docs/18 II
 const L18 = dict(I18_EN, I18_RU); // docs/18 III
+const LROAM = dict(ROAM_EN, ROAM_RU); // docs/19 D7
 
 /** docs/18 #28: the land key on an island two levels or more above her ship asks first (once an island). */
 let landOk = '';
@@ -1541,6 +1549,20 @@ function findAtHand(): FindView | null {
   return best;
 }
 
+/** docs/19 D7: the roaming stack within a cable of her (the nearest). */
+function roamAtHand(): RoamView | null {
+  const own = state.ownDisplay;
+  if (!own || state.self?.dockedAt) return null;
+  let best: RoamView | null = null, bd = ROAM_REACH;
+  for (const v of state.roams) {
+    if (Math.abs(v.x - own.x) > ROAM_REACH + 200 || Math.abs(v.y - own.y) > ROAM_REACH + 200) continue;
+    const p = roamNow(state, v);
+    const d = dist(p.x, p.y, own.x, own.y);
+    if (d <= bd) [best, bd] = [v, d];
+  }
+  return best;
+}
+
 /** The nearest of the dense sea's marks within the boats' reach of her. */
 function markAtHand(): SeaMarkData | null {
   const own = state.ownDisplay;
@@ -1634,6 +1656,13 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     if (busy) info.push(esc(findInfo(fd.kind, busy.until - state.estServerTime())));
     else if (pendingFind?.id === fd.id) info.push(esc(slowWord()));
   }
+  const rm = roamAtHand();
+  if (rm) {
+    const name = roamName(rm.kind);
+    facts.roam = { id: rm.id, icon: ROAM_UNITS[ROAMS[rm.kind].u as keyof typeof ROAM_UNITS].art, name, word: roamWord(rm.n).word, lv: rm.level, ...(rm.fight ? { fight: rm.fight } : {}), ...(rm.offer ? { offer: rm.offer } : {}), ...(rm.joinN ? { joinN: rm.joinN } : {}) };
+    if (rm.fight) info.push(esc(LROAM(rm.fight === 'mate' ? 'i.mate' : 'i.fight', { what: name })));
+    else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
+  }
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -1692,6 +1721,15 @@ function runAct(a: Act): void {
       return workMark(Number(a.arg));
     case 'find':
       return workFind(Number(a.arg));
+    case 'roam':
+      return void net.send({ t: 'roam', action: 'attack', id: Number(a.arg) });
+    case 'roam_join':
+      return void net.send({ t: 'roam', action: 'join', id: Number(a.arg) });
+    case 'roam_look': {
+      const v = state.roams.find((x) => x.id === Number(a.arg));
+      if (v) void openRoamCard(state, v, (action, id) => net.send({ t: 'roam', action, id }));
+      return;
+    }
     case 'look':
       return a.arg === 'struck' ? surrenderCard.reopen() : advCard.reopen();
     case 'repair':

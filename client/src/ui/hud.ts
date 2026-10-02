@@ -56,6 +56,7 @@ import { GUARDS } from '../../../shared/src/data/advmap.ts';
 import { guardOfEntity } from '../render/advmap.ts';
 import { drawDriftsMini } from '../render/drifts.ts';
 import { drawFindsMini } from '../render/seafinds.ts';
+import { drawRoamsMini } from '../render/roamers.ts'; // docs/19 D7
 import { armyGlance } from './army.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 
@@ -649,6 +650,7 @@ export class Hud {
     drawAdvMini(g, state, tx, ty, own, range); // the adventure map's guards and things (docs/17 H4)
     drawDriftsMini(g, state, tx, ty, own, range); // drifting creatures and their clocks (docs/18 #34)
     drawFindsMini(g, state, tx, ty, own, range); // the sea's small things (docs/19 D5)
+    drawRoamsMini(g, state, tx, ty, own, range); // the creatures roaming the sea (docs/19 D7)
     // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold. docs/19 D6: twice
     // as many — one speck to a few pixels (the nearest wins), fainter toward the dial's edge and once worked today.
     {

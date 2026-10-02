@@ -12,13 +12,15 @@ import { FIND_ICON } from '../../../shared/src/data/seafinds.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/actbar.ts';
 import { EN as FEN, RU as FRU } from '../lang/ui/seafinds.ts';
+import { EN as REN, RU as RRU } from '../lang/ui/roamers.ts';
 import type { Action } from '../settings.ts';
 import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 const LF = dict(FEN, FRU);
+const LR = dict(REN, RRU);
 
-export type ActId = 'axes' | 'harbour' | 'board' | 'dock' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'look' | 'repair';
+export type ActId = 'axes' | 'harbour' | 'board' | 'dock' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -42,6 +44,8 @@ export interface ActFacts {
   mark?: { id: number; kind: MarkKind; done?: boolean; busy?: boolean } | null;
   /** docs/19 D5: one of the sea's small things at hand. */
   find?: { id: number; kind: FindKind; busy?: boolean; n?: number } | null;
+  /** docs/19 D7: a roaming stack within reach: its name, HoMM3's word and level, a fight on it, the offer at ×3. */
+  roam?: { id: number; icon: string; name: string; word: string; lv: number; fight?: 'other' | 'mate'; offer?: 'join' | 'flee'; joinN?: number } | null;
   looks?: { kind: LookKind; name: string }[];
   repair?: { repairing: boolean; combat: boolean; hurt: boolean; short?: boolean } | null;
 }
@@ -96,6 +100,12 @@ export function buildActs(f: ActFacts): Act[] {
     const sub = `s.${fd.kind}` in FEN ? LF(`s.${fd.kind}` as keyof typeof FEN, { n: fd.n ?? 0 }) : '';
     out.push({ id: 'find', icon: FIND_ICON[fd.kind], label: LF(`a.${fd.kind}`), ...(sub ? { sub } : {}), title: LF(`t.${fd.kind}`), key: 'land', arg: String(fd.id) });
   }
+  const rm = f.roam;
+  if (rm && !rm.fight) {
+    out.push({ id: 'roam', icon: 'prof_marine', label: LR('a.attack'), sub: `${rm.word} · ⚓${rm.lv}`, title: LR('t.attack', { what: rm.name, word: rm.word, lv: rm.lv }), key: 'land', arg: String(rm.id) });
+    if (rm.offer === 'join' && (rm.joinN ?? 0) > 0) out.push({ id: 'roam_join', icon: 'stat_crew', label: LR('a.join'), sub: `×${rm.joinN}`, title: LR('t.join', { n: rm.joinN ?? 0 }), arg: String(rm.id) });
+  }
+  if (rm) out.push({ id: 'roam_look', icon: rm.icon, label: LR('a.look'), sub: rm.name, title: LR('t.look'), arg: String(rm.id) });
   for (const k of f.looks ?? []) out.push({ id: 'look', icon: LOOK_ICON[k.kind], label: L('a.look'), sub: k.name, title: L('a.lookTitle', { name: k.name }), arg: k.kind });
   const r = f.repair;
   if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) out.push({ id: 'repair', icon: 'prof_carpenter', label: L(r.repairing ? 'a.repairStop' : 'a.repair'), title: L(r.repairing ? 'a.repairStop' : 'a.repair'), key: 'repair' });
@@ -104,7 +114,7 @@ export function buildActs(f: ActFacts): Act[] {
 
 /** What the land key does at sea, with nothing to land at: the mast, the net, the mark — in the bar's order. */
 export function landKeyAct(acts: Act[]): Act | null {
-  return acts.find((a) => a.id === 'land' || a.id === 'cut_mast' || a.id === 'cast' || a.id === 'mark' || a.id === 'find') ?? null;
+  return acts.find((a) => a.id === 'land' || a.id === 'cut_mast' || a.id === 'cast' || a.id === 'mark' || a.id === 'find' || a.id === 'roam') ?? null;
 }
 
 /** Three buttons show at most; with more, two and the «⋯ N more» that opens the rest above them. */

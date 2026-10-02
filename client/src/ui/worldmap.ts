@@ -9,6 +9,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { REGIONS, REGION_IDS } from '../../../shared/src/world/regions.ts';
 import { bandOf, SECTOR_SIZE, SECTORS_PER_SIDE } from '../../../shared/src/world/sectors.ts';
 import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
+import { drawRoamsChart } from '../render/roamers.ts'; // docs/19 D7
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -572,6 +573,9 @@ export class WorldMap {
       g.textAlign = 'center';
       if (this.zoom >= 3.5) label(LS('lair.label', { captain: serverText(l.captain), level: l.level }), tx(l.x), ty(l.y) - 9, 'rgba(232,150,130,0.95)');
     }
+    // docs/19 D7: the roaming stacks about her, close in only (a small diamond in the ladder's colour; the map stays
+    // readable from afar).
+    if (this.zoom >= 3) drawRoamsChart(g, state, tx, ty);
     // Charted islands.
     for (const id of state.discovered) {
       const is = state.islands.get(id);
