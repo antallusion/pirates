@@ -189,7 +189,7 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
     case 'drift': {
       const good: GoodId = rng.chance(0.5) ? 'planks' : 'timber';
       const n = goodsFor(ship, good, worth);
-      if (n > 0) line = `Driftwood hauled aboard: ${n} ${GOODS[good].name}.`;
+      if (n > 0) line = `Driftwood hauled aboard: ${n} ${GOODS[good].name.toLowerCase()}.`;
       else given = false;
       break;
     }
@@ -198,7 +198,7 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
       else {
         const good = rng.pick(WRECK_GOODS);
         const n = goodsFor(ship, good, worth);
-        if (n > 0) line = `The wreck field searched: ${n} ${GOODS[good].name}.`;
+        if (n > 0) line = `The wreck field searched: ${n} ${GOODS[good].name.toLowerCase()}.`;
         else line = `The wreck field searched: ${giveSilver(game, s, worth * 0.6, 'wreck')} silver, no room for the rest.`;
       }
       if (rng.chance(MARK_MAP_CHANCE * (ship.hasFlag('gold_fever') ? 2 : 1))) {
@@ -221,7 +221,7 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
       if (near) {
         game.chartIsland(s, near);
         game.grantXp(s, Math.round(worth / 4), null);
-        line = `The lane mark charts ${near.name}, ${Math.max(1, Math.round(nd / 100) / 10)} km to the ${compass(m.x, m.y, near.x, near.y)}.`;
+        line = `The lane mark charts ${near.name}, ${Math.max(100, Math.round(Math.max(0, nd) / 100) * 100)} m to the ${compass(m.x, m.y, near.x, near.y)}.`;
         kind = 'gold';
       } else {
         let port = game.world.ports[0], pd = Infinity;
@@ -270,7 +270,7 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
         kind = 'gold';
       } else {
         const n = goodsFor(ship, 'provisions', worth);
-        if (n > 0) line = `Ice cut from the floe for fresh water: ${n} ${GOODS.provisions.name}.`;
+        if (n > 0) line = `Ice cut from the floe for fresh water: ${n} ${GOODS.provisions.name.toLowerCase()}.`;
         else given = false;
       }
       break;

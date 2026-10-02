@@ -16,7 +16,7 @@ export const SERVER_RU_MARKS: Record<string, string> = {
   'The wreck field searched: {0} {1}.': 'Обломки обысканы: {1} — {0}.',
   'The wreck field searched: {0} silver, no room for the rest.': 'Обломки обысканы: {0} серебра, для остального нет места.',
   'In an oilskin in the wreckage': 'В промасленном свёртке среди обломков',
-  'The lane mark charts {0}, {1} km to the {2}.': 'Знак фарватера нанёс на карту остров {0}: {1} км на {2}.',
+  'The lane mark charts {0}, {1} m to the {2}.': 'Знак фарватера нанёс на карту остров {0}: {1} м на {2}.',
   "The lane mark reads: {0}, {1} km to the {2}. A pilot's tin on the buoy: {3} silver.": 'Знак фарватера: {0} — {1} км на {2}. В лоцманской жестянке на бакене {3} серебра.',
   'The lantern float trimmed and burning: morale +{0}, nerve +2.': 'Фонарь на поплавке подправлен и горит: боевой дух +{0}, выдержка +2.',
   'The crew reads the floating bones as a good omen: morale +4.': 'Команда видит в плавучих костях добрый знак: боевой дух +4.',
