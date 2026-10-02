@@ -2,8 +2,9 @@
 // встречаться, много. доступные для всех пользователей ради опыта»): the sea's creatures standing on the open water as
 // HoMM3's neutral stacks stand on its adventure map — gulls rafted on the swell, seals, sharks, sea turtles, serpents,
 // the tentacles of the lagoons, mermaids, the drowned of the surf, young serpents, lantern maws, leviathans, ancient
-// turtles — about one in every square of 1.2 km of open sea, the same for every captain. A stack keeps to its spot (a
-// slow wander round it, never a chase); its might is its square's level and its size; fought on the battle at sea the
+// turtles — about one in every square of 1.1 km of open sea (one every 1.3 km of a sailing track), the same for every
+// captain. A stack keeps to its spot (a slow wander round it, never a chase); its might is its square's level and its
+// size; fought on the battle at sea the
 // drifts are fought on (docs/18 IV), it is a captain's road to her levels: its lesson the most of it, a little silver,
 // the creatures' resources, now and then an artifact. Beaten, it stands again a little way off 3–6 minutes later.
 //
@@ -76,7 +77,7 @@ export const roamUnit = (kind: RoamKind): UnitId => ROAMS[kind].u as UnitId;
 // ------------------------------------------------------------------------------------------------ where they stand
 
 /** The grid's cell (metres): one stack a cell of open water at most. */
-export const ROAM_GRID = 1200;
+export const ROAM_GRID = 1100;
 export const ROAM_GN = Math.floor(WORLD_SIZE / ROAM_GRID);
 /** How far a stack wanders round its spot (metres), and how slowly (seconds a round). */
 export const ROAM_WANDER = 90;
