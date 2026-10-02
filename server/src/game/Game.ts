@@ -126,6 +126,8 @@ export const SINK_PURSE = 0.3;
  *  every captain's snapshots (beyond INTEREST_RADIUS) every second FAR_EVERY. */
 export const FAR_LOD_R = SNAP_MID + 200;
 export const FAR_EVERY = 4;
+/** docs/19 D6: within this of a captain an NPC steps every tick (her snapshots carry it every one, 10 Hz, to SNAP_NEAR). */
+export const MID_LOD_R = SNAP_NEAR + 300;
 export const XP_SUNK = 40;
 export const XP_BOARDED = 90;
 import { stepBridges } from './bridgefx.ts';
@@ -472,13 +474,15 @@ export class Game {
   farLod(id: number, ship: ShipEntity): number {
     if (ship.ownerId !== null || ship.guardOf || ship.boarding || ship.grappled) return 1;
     const near = this.nearestPlayer.get(id);
-    // (one just put out, not yet reckoned: at the full rate until the next second's reckoning)
-    if (near === undefined || near <= FAR_LOD_R || ship.inCombat(this.now)) return 1;
+    // (one just put out, not yet reckoned: at the full rate until the next second's reckoning; and with no captain at sea
+    // at all there is nothing to save, so the sea's ships keep the rate the sims were weighed at)
+    if (near === undefined || near === Infinity || near <= MID_LOD_R || ship.inCombat(this.now)) return 1;
     // On a captain's track (her prey, a hunt, a pack called to her): every tick, so she closes as she always did.
     const b = this.npcs.get(id);
     for (const t of [b?.target, b?.chase?.id]) if (t !== undefined && t !== null && this.ships.get(t)?.isPlayer) return 1;
-    // Beyond every captain's snapshots altogether: every second FAR_EVERY.
-    const every = near > INTEREST_RADIUS * 1.1 ? FAR_EVERY * 2 : FAR_EVERY;
+    // In the middle distance (her snapshots every second one, 10 Hz): every second tick; beyond SNAP_MID every FAR_EVERY;
+    // beyond every captain's snapshots altogether every second FAR_EVERY.
+    const every = near > INTEREST_RADIUS * 1.1 ? FAR_EVERY * 2 : near > FAR_LOD_R ? FAR_EVERY : 2;
     return (this.tick + id) % every === 0 ? every : 0;
   }
 

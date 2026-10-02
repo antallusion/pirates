@@ -265,7 +265,7 @@ export function drawFindsWorld(g: G, state: ClientState, c: FindCtx): void {
     // The fish are over her own deck.
     const wx = f.kind === 'flyfish' && own ? own.x : f.x, wy = f.kind === 'flyfish' && own ? own.y : f.y;
     const x = c.sx(wx), y = c.sy(wy);
-    const R = Math.max(7, Math.min(20, 16 * c.zoom));
+    const R = Math.max(11, Math.min(22, 18 * c.zoom));
     const far = f.kind === 'calm' ? FIND_REACH.calm * c.zoom : R * 4;
     if (x < -far || y < -far || x > c.w + far || y > c.h + far) continue;
     const bob = Math.sin(c.time * 1.5 + f.id) * R * 0.06;

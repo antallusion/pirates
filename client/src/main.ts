@@ -1614,7 +1614,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const fd = findAtHand();
   if (fd) {
     const busy = state.findBusy?.id === fd.id ? state.findBusy : null;
-    facts.find = { id: fd.id, kind: fd.kind, busy: !!busy };
+    facts.find = { id: fd.id, kind: fd.kind, busy: !!busy, ...(fd.n ? { n: fd.n } : {}) };
     if (busy) info.push(esc(findInfo(fd.kind, busy.until - state.estServerTime())));
     else if (pendingFind?.id === fd.id) info.push(esc(slowWord()));
   }

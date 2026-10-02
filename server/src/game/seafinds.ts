@@ -116,7 +116,8 @@ export function putFind(game: Game, s: PlayerSession, kind: FindKind, at?: { x: 
     if (openWater(game, x, y)) spot = { x, y };
   }
   if (!spot) return null;
-  const level = sectorAt(game.world, spot.x, spot.y).level;
+  // (the chest's sharks no stronger than her own ship's level: a small fight, not a toll)
+  const level = kind === 'chest' ? Math.max(1, Math.min(sectorAt(game.world, spot.x, spot.y).level, ship.shipLevel)) : sectorAt(game.world, spot.x, spot.y).level;
   const ttl = kind === 'flyfish' ? 30 : S.rng.range(FIND_TTL[0], FIND_TTL[1]);
   const f: Find = { id: S.seq++, kind, x: Math.round(spot.x), y: Math.round(spot.y), born: game.now, until: game.now + ttl, owner: s.accountId, level, ...(kind === 'chest' ? { n: chestSharks(level) } : {}) };
   S.list.set(f.id, f);
@@ -373,7 +374,7 @@ function fightChest(game: Game, s: PlayerSession, f: Find): string | null {
   f.fighting = true;
   f.until = Math.max(f.until, game.now + 60);
   const e = startCreatureFight(game, s, {
-    type: 'tropical', kind: 'reef_shark', place: 'Sharks round a Chest', level: f.level,
+    type: 'tropical', kind: 'find_chest', place: 'Sharks round a Chest', level: f.level,
     onEnd: (g, ss, won, bt) => chestEnd(g, ss, f, won, bt.stacks.filter((x) => x.side === 1 && x.count > 0).reduce((a, x) => a + x.count, 0)),
   }, 'Sharks round a Chest', men, 'monster.shark', f.level);
   if (e) {
@@ -405,7 +406,7 @@ function chestEnd(game: Game, s: PlayerSession, f: Find, won: boolean, left: num
   F(game).list.delete(f.id);
   game.toastShip(ship, k > 0 ? `The sharks are driven off and the chest hauled up: ${silver} silver and ${k} ${GOODS[good].name.toLowerCase()}.` : `The sharks are driven off and the chest hauled up: ${silver} silver.`, 'gold');
   sendFinds(game, s, true);
-  return { silver, xp: 0, goods: k > 0 ? [{ g: good, n: k }] : [], res: {} };
+  return { silver: 0, xp: 0, goods: [], res: {}, find: { silver, goods: k > 0 ? [{ g: good, n: k }] : [] } };
 }
 
 export function findMessage(game: Game, s: PlayerSession, msg: FindClientMsg): void {

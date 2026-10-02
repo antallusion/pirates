@@ -21,10 +21,16 @@ export function drawAdvChart(
   const v = state.adv;
   if (!v) return;
   const ru = lang() === 'ru' ? 1 : 0;
+  // docs/19 D6: twice the things on the chart — one that would sit on another already drawn (the ready ones first) waits
+  // for a closer look.
+  const drawn: [number, number][] = [];
+  const clear = (x: number, y: number, d: number) => drawn.every(([a, b]) => Math.abs(a - x) > d || Math.abs(b - y) > d);
   if (zoom >= 1.5) {
-    for (const o of v.objs) {
+    for (const o of [...v.objs].sort((a, b) => Number(b.ready) - Number(a.ready))) {
       const x = tx(o.x), y = ty(o.y);
       const size = ms * 0.8;
+      if (!clear(x, y, size * 0.7)) continue;
+      drawn.push([x, y]);
       g.globalAlpha = o.ready ? 1 : 0.45;
       g.beginPath();
       g.arc(x, y, size * 0.5, 0, Math.PI * 2);

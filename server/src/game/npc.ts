@@ -328,8 +328,10 @@ export function updateNpc(game: Game, ship: ShipEntity, brain: NpcBrain, dt: num
     // docs/19 D6: a merchant or a fisher on her way with nothing to run from looks about her half as often; a fighter
     // with no prey in sight a little less often.
     if (!ship.inCombat(now)) {
+      // ...and out of the near water of every captain (beyond a kilometre) every one of them a little less often too.
+      if (nearestPlayerDist > 1000 && nearestPlayerDist < Infinity && ship.ownerId === null) brain.nextThink += 0.2;
       if ((brain.role === 'merchant' || brain.role === 'fisher') && brain.fleeFrom === null) brain.nextThink += 0.3;
-      else if (brain.target === null && !brain.chase && ship.ownerId === null && brain.leader === undefined) brain.nextThink += 0.15;
+      else if (brain.target === null && !brain.chase && ship.ownerId === null && brain.leader === undefined) brain.nextThink += 0.3;
     }
   }
 }

@@ -41,7 +41,7 @@ export interface ActFacts {
   ritual?: boolean;
   mark?: { id: number; kind: MarkKind; done?: boolean; busy?: boolean } | null;
   /** docs/19 D5: one of the sea's small things at hand. */
-  find?: { id: number; kind: FindKind; busy?: boolean } | null;
+  find?: { id: number; kind: FindKind; busy?: boolean; n?: number } | null;
   looks?: { kind: LookKind; name: string }[];
   repair?: { repairing: boolean; combat: boolean; hurt: boolean; short?: boolean } | null;
 }
@@ -91,7 +91,11 @@ export function buildActs(f: ActFacts): Act[] {
   const m = f.mark;
   if (m && !m.done && !m.busy) out.push({ id: 'mark', icon: MARK_ICON[m.kind], label: L(`m.${m.kind}`), sub: L(`mn.${m.kind}`), title: L(`mt.${m.kind}`), key: 'land', arg: String(m.id) });
   const fd = f.find;
-  if (fd && !fd.busy) out.push({ id: 'find', icon: FIND_ICON[fd.kind], label: LF(`a.${fd.kind}`), sub: LF(`s.${fd.kind}`), title: LF(`t.${fd.kind}`), key: 'land', arg: String(fd.id) });
+  if (fd && !fd.busy) {
+    // (the word under it only where it tells her more: the fish on deck, a cache in the fog, how many sharks)
+    const sub = `s.${fd.kind}` in FEN ? LF(`s.${fd.kind}` as keyof typeof FEN, { n: fd.n ?? 0 }) : '';
+    out.push({ id: 'find', icon: FIND_ICON[fd.kind], label: LF(`a.${fd.kind}`), ...(sub ? { sub } : {}), title: LF(`t.${fd.kind}`), key: 'land', arg: String(fd.id) });
+  }
   for (const k of f.looks ?? []) out.push({ id: 'look', icon: LOOK_ICON[k.kind], label: L('a.look'), sub: k.name, title: L('a.lookTitle', { name: k.name }), arg: k.kind });
   const r = f.repair;
   if (r && (r.repairing || (!r.combat && r.hurt && !r.short))) out.push({ id: 'repair', icon: 'prof_carpenter', label: L(r.repairing ? 'a.repairStop' : 'a.repair'), title: L(r.repairing ? 'a.repairStop' : 'a.repair'), key: 'repair' });
