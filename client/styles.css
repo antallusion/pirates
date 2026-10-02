@@ -2964,8 +2964,9 @@ body.tac #toasts { top: 22%; }
 body.tac.tac-over #toasts { display: none; }
 /* A phone on its side: the field in the middle as tall as the screen, the captains and the orders left and right. */
 @media (max-height: 520px) and (orientation: landscape) {
-  .tb-root { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr);
-    grid-template-areas: "you stage foe" "mid stage queue" "spells stage feed" "acts stage feed"; font-size: 11px; }
+  .tb-root { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "you stage foe" "mid stage queue" "spells stage feed" "spells stage acts"; font-size: 11px; }
+  .tb-spells { align-content: start; min-height: 0; overflow: hidden; }
   .tb-stage { width: min(62vw, calc((100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 1.36)); }
   .tb-face { width: 32px; height: 32px; }
   .tb-who b { font-size: 13px; }
@@ -4087,3 +4088,14 @@ body.touch .act-btn { --h: 38px; }
 /* The name's trailing letter-space balanced by the same space before it, so it sits centred inside its block
    without a negative margin running past the block's edge. */
 .login-panel .login-brand .title { margin-right: 0; padding-left: 0.06em; }
+/* Phones on their side narrower than 700 px (640×360, 667×375): the upright phone's full-width unit frame is gone
+   with the upright phone; the frame keeps to the left, the top stack takes the room between it and the menu button. */
+@media (max-width: 699px) and (max-height: 520px) {
+  .unit-frame { width: 262px; }
+  :root { --plate-w: max(190px, calc(100vw - var(--sa-l) - var(--sa-r) - 282px - var(--mm) - 76px)); }
+  #hud #hud-stack, body.touch #hud #hud-stack { left: calc(var(--sa-l) + 282px); right: auto; }
+}
+/* A touch screen as big as a desktop (1180×820): the menu button stands under the chart's lines, however many. */
+@media (min-width: 1100px) and (min-height: 521px) {
+  body.touch .tc-menu { top: max(calc(var(--sa-t) + var(--mm) + 64px), calc(var(--rg-bottom, 0px) + 6px)); }
+}

@@ -10,7 +10,8 @@ A like family (the tattoos, the catch, the goods and pets, the beasts) is painte
            default) wide.
   keyed  — separate objects on flat magenta; the cuts are the emptiest bands near each expected cut, each cell is keyed
            (with its fringe), trimmed to what is painted in it and saved on transparency: set square on a `px` canvas
-           for icons, or at its own shape with the longest side `px` for sprites.
+           for icons, or at its own shape with the longest side `px` for sprites (or at one scale for the whole sheet,
+           `uniform`, so the figures keep their sizes beside each other).
 
 A null id in the sheet is a spare tile, not kept.
 """
@@ -131,7 +132,7 @@ def main(sheet_name: str, stem: str) -> None:
                 out = Image.new('RGBA', (px, px), (0, 0, 0, 0))
                 out.alpha_composite(piece, ((px - piece.width) // 2, (px - piece.height) // 2))
             else:
-                s = px / max(piece.size)
+                s = sh['uniform'] if sh.get('uniform') else px / max(piece.size)
                 out = piece.convert('RGBa').resize((max(1, round(piece.width * s)), max(1, round(piece.height * s))), Image.LANCZOS).convert('RGBA')
             fname = name_of(aid)
             out.save(os.path.join(out_dir, fname + '.webp'), 'WEBP', quality=90, method=6)
@@ -174,7 +175,9 @@ def main(sheet_name: str, stem: str) -> None:
                 out = Image.new('RGBA', (px, px), (0, 0, 0, 0))
                 out.alpha_composite(piece, ((px - piece.width) // 2, (px - piece.height) // 2))
             else:
-                s = px / max(piece.size)
+                # Figures of one sheet keep their sizes beside each other (a man kneeling is shorter than one standing):
+                # `uniform` is one scale for every cell; otherwise the longest side is `px`.
+                s = sh['uniform'] if sh.get('uniform') else px / max(piece.size)
                 out = piece.convert('RGBa').resize((max(1, round(piece.width * s)), max(1, round(piece.height * s))), Image.LANCZOS).convert('RGBA')
         fname = name_of(aid)
         path = os.path.join(out_dir, fname + '.webp')
@@ -182,6 +185,12 @@ def main(sheet_name: str, stem: str) -> None:
         m['assets'][aid] = {'local': f"{sh['dir']}/{fname}.webp", 'remote': stem + '.png', 'job': job, 'fit': f'sheet:{sheet_name}.{i}', 'rev': rev_of(stem)}
         print(aid, (x0, y0, x1, y1), out.size)
     write_manifest(m)
+    # Cut: the sheet is no longer with the painter.
+    if sh.pop('painting', None) is not None or not sh.get('cut'):
+        sh['cut'] = stem
+        with open(SHEETS, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(sheets, indent=1, ensure_ascii=False) + '
+')
 
 
 if __name__ == '__main__':

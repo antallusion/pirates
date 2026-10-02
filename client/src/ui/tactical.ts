@@ -154,6 +154,50 @@ function stackName(s: TacStackView): string {
   return s.unit ? unitName(s.unit) : L(`k.${s.kind}` as K);
 }
 
+/** The stack's figure on the field (owner, 2026-10-02: the battle as in Heroes): its kind's painted full figure in
+ *  three-quarter view, `unit.<kind>`; the parties of the old crews and the officers as the men they are. */
+const KIND_FIGURE: Record<string, string> = { hands: 'sailor', marines: 'marine', gunners: 'gunner', boarders: 'boarder', guard: 'guard', deep: 'drowned', officer: 'officer' };
+function figureArt(s: TacStackView): string | null {
+  const id = `unit.${s.kind === 'officer' || !s.unit ? KIND_FIGURE[s.kind] ?? 'sailor' : s.unit}`;
+  return sprite(id) ? id : null;
+}
+/** How tall a kind stands beside a hex's width: the men alike, the creatures by their bulk. */
+const FIGURE_SIZE: Record<string, number> = {
+  crab: 0.85, gull: 0.95, seal: 1.0, reef_shark: 1.15, rock_turtle: 1.05, sea_turtle: 1.05, marsh_serpent: 1.45, hermit: 1.3,
+  lagoon_tentacle: 1.65, mermaid: 1.4, cultist: 1.3, surf_drowned: 1.3, young_serpent: 1.8, lantern_maw: 1.6, ancient_turtle: 1.55,
+  shoal_leviathan: 1.95, white_whale: 2.2, young_kraken: 2.2, deep_spawn: 1.45, life_guard: 1.32, guard: 1.32,
+};
+/** Where the feet stand across a figure (a musket held out to one side does not move the man off his hex): the middle
+ *  of what is painted in its lowest tenth, found once per picture. */
+const footCache = new Map<string, number>();
+function footX(id: string, img: HTMLImageElement): number {
+  let f = footCache.get(id);
+  if (f !== undefined) return f;
+  f = 0.5;
+  try {
+    const w = 64, h = Math.max(8, Math.round((64 * img.naturalHeight) / img.naturalWidth));
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const g = c.getContext('2d')!;
+    g.drawImage(img, 0, 0, w, h);
+    const y0 = Math.floor(h * 0.88);
+    const d = g.getImageData(0, y0, w, h - y0).data;
+    let sx = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] > 60) {
+        sx += (i / 4) % w;
+        n++;
+      }
+    }
+    if (n) f = (sx / n + 0.5) / w;
+  } catch {
+    /* a picture from elsewhere: its middle */
+  }
+  footCache.set(id, f);
+  return f;
+}
+
 /** The wood of a deck, drawn once: planks along the ship, seams, grain and nails. */
 function plankTexture(dark: boolean): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -222,6 +266,8 @@ export class TacticalPanel {
   private floats: Float[] = [];
   private bursts: Burst[] = [];
   private pos = new Map<number, { x: number; y: number; fx: number; fy: number; t0: number }>();
+  /** A figure's blow, shot or flinch being played: since when, and toward where. */
+  private act = new Map<number, { k: 'atk' | 'shot' | 'hurt'; t0: number; dx: number; dy: number }>();
   private press: { x: number; y: number; t: number; timer: number } | null = null;
   private planks: [HTMLCanvasElement, HTMLCanvasElement] | null = null;
   /** Every stack's name as last seen (the fallen are named in the feed too). */
@@ -249,6 +295,7 @@ export class TacticalPanel {
         this.el = this.canvas = null;
         this.key = '';
         this.pos.clear();
+        this.act.clear();
         this.floats = [];
         this.bursts = [];
         this.pathFx = [];
@@ -342,6 +389,13 @@ export class TacticalPanel {
     const w = this.size.w || 30;
     if (e.k === 'hit' || e.k === 'shot' || e.k === 'ret') {
       const c = at(e.hex ?? hexOf(e.t));
+      // The figures: the striker lunges at the struck (a shooter's piece kicks back), the struck flinches.
+      const from = at(hexOf(e.s));
+      if (from && c && e.s !== undefined) {
+        const len = Math.hypot(c.x - from.x, c.y - from.y) || 1;
+        this.act.set(e.s, { k: e.k === 'shot' ? 'shot' : 'atk', t0: t, dx: (c.x - from.x) / len, dy: (c.y - from.y) / len });
+      }
+      if (e.t !== undefined) this.act.set(e.t, { k: 'hurt', t0: t + (e.k === 'shot' ? 120 : 180), dx: from && c ? Math.sign(c.x - from.x) || 1 : 1, dy: 0 });
       if (c) this.addFloat({ text: `−${e.dmg}${e.kills ? ` †${e.kills}` : ''}`, x: c.x, y: c.y - w * 0.2, t0: t, color: '#f3d7a0' });
       if (e.k === 'shot' && e.id === 'blast') {
         if (c) this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 1.4 });
@@ -1443,12 +1497,10 @@ export class TacticalPanel {
       }
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // The stacks, the active one ringed in gold.
-    for (const s of v.stacks) {
-      const pp = this.pos.get(s.id) ?? { ...this.center(s.hex), fx: 0, fy: 0, t0: 0 };
-      const p = this.at(pp, t);
-      this.token(g, s, p.x, p.y, w, s.id === v.active, pulse, v);
-    }
+    // The stacks, the active one ringed in gold; the figures back to front, so the nearer stands before the farther.
+    const placed = v.stacks.map((s) => ({ s, p: this.at(this.pos.get(s.id) ?? { ...this.center(s.hex), fx: 0, fy: 0, t0: 0 }, t) }));
+    placed.sort((a, b) => a.p.y - b.p.y || a.p.x - b.p.x);
+    for (const { s, p } of placed) this.token(g, s, p.x, p.y, w, s.id === v.active, pulse, v);
     if (v.mine) {
       // A ghost of the stack where it would step.
       if (this.preview !== null && active) {
@@ -1631,7 +1683,179 @@ export class TacticalPanel {
     g.restore();
   }
 
+  /** A stack as in Heroes: its kind's full figure standing on the hex, facing the other side, a ring of its side's
+   *  colour at its feet, its number on a plate at the hex's foot; it breathes, lunges at whom it strikes, flinches when
+   *  struck. The marks the paths' moves lay on it keep to the ring and the plate. */
+  private figure(g: CanvasRenderingContext2D, s: TacStackView, id: string, x: number, y: number, w: number, on: boolean, pulse: number, v: TacView): void {
+    const img = sprite(id)!.img;
+    const t = performance.now();
+    const col = s.side === v.you ? YOU : FOE;
+    const r = w / SQ3;
+    const fy = y + r * 0.42; // the feet
+    const rx = w * 0.4, ry = w * 0.15;
+    // The blow being played.
+    let ox = 0, oy = 0, flash = 0;
+    const a = this.act.get(s.id);
+    if (a) {
+      const dur = a.k === 'hurt' ? 320 : a.k === 'shot' ? 260 : 380;
+      const k = (t - a.t0) / dur;
+      if (k >= 1) this.act.delete(s.id);
+      else if (k > 0) {
+        const bell = Math.sin(Math.PI * k);
+        if (a.k === 'atk') {
+          ox = a.dx * w * 0.32 * bell;
+          oy = a.dy * w * 0.32 * bell;
+        } else if (a.k === 'shot') {
+          ox = -a.dx * w * 0.08 * bell;
+          oy = -a.dy * w * 0.08 * bell;
+        } else {
+          ox = a.dx * w * 0.07 * Math.sin(k * Math.PI * 5) * (1 - k);
+          flash = k < 0.35 ? 1 - k / 0.35 : 0;
+        }
+      }
+    }
+    // The ground under it: a shadow, the side's ring, the gold of the one whose turn it is.
+    g.fillStyle = 'rgba(0,0,0,0.42)';
+    g.beginPath();
+    g.ellipse(x + ox * 0.4, fy + oy * 0.4, rx, ry, 0, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = col;
+    g.globalAlpha = 0.85;
+    g.lineWidth = Math.max(1.5, w * 0.045);
+    g.beginPath();
+    g.ellipse(x, fy, rx, ry, 0, 0, Math.PI * 2);
+    g.stroke();
+    g.globalAlpha = 1;
+    if (on) {
+      g.strokeStyle = `rgba(240,200,110,${0.55 + 0.45 * pulse})`;
+      g.lineWidth = Math.max(2.5, w * 0.07);
+      g.beginPath();
+      g.ellipse(x, fy, rx + 4, ry + 2.5, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+    if (s.again) {
+      g.strokeStyle = `rgba(120,200,255,${0.6 + 0.4 * pulse})`;
+      g.lineWidth = 2;
+      g.setLineDash([4, 3]);
+      g.beginPath();
+      g.ellipse(x, fy, rx + 8, ry + 5, 0, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
+    if (s.braced) {
+      g.strokeStyle = '#c9a45a';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.ellipse(x, fy, rx + 2, ry + 1.5, 0, Math.PI * 0.1, Math.PI * 0.9);
+      g.stroke();
+    }
+    // The figure: its own size, facing the other side (the painting faces right), breathing.
+    const size = (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? 1.28) * 1.22;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const k = Math.min((size * w) / ih, (size * 1.25 * w) / iw);
+    const breathe = 1 + 0.014 * Math.sin(t / 620 + s.id * 1.7);
+    const H = ih * k * breathe, W = iw * k;
+    const flip = s.side === 1;
+    const fx = footX(id, img);
+    const lift = s.sp.includes('flying') ? w * 0.28 * (1 + 0.15 * Math.sin(t / 300 + s.id)) : 0;
+    g.save();
+    g.translate(x + ox, fy + oy - lift);
+    if (flip) g.scale(-1, 1);
+    if (s.blind) g.filter = 'grayscale(0.7) brightness(0.8)';
+    else if (flash) g.filter = `brightness(${(1 + flash * 1.2).toFixed(2)}) sepia(${(flash * 0.6).toFixed(2)}) hue-rotate(-30deg)`;
+    g.drawImage(img, -W * fx, -H, W, H);
+    g.filter = 'none';
+    if (s.wet) {
+      // Under the surf: the water over its lower half.
+      g.fillStyle = 'rgba(30,100,120,0.45)';
+      g.fillRect(-W * fx, -H * 0.45, W, H * 0.45);
+    }
+    g.restore();
+    const top = fy - lift - H;
+    if (s.marked) {
+      const cy = top + H * 0.35, R0 = Math.max(8, w * 0.22);
+      g.strokeStyle = `rgba(240,120,60,${0.6 + 0.4 * pulse})`;
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(x, cy, R0, 0, Math.PI * 2);
+      for (const an of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+        g.moveTo(x + Math.cos(an) * (R0 - 4), cy + Math.sin(an) * (R0 - 4));
+        g.lineTo(x + Math.cos(an) * (R0 + 5), cy + Math.sin(an) * (R0 + 5));
+      }
+      g.stroke();
+    }
+    if (s.noRet) {
+      g.strokeStyle = 'rgba(230,60,50,0.9)';
+      g.lineWidth = 2;
+      for (const sx of [-1, 1]) {
+        g.beginPath();
+        g.moveTo(x + sx * (rx - 2), fy - 2);
+        g.lineTo(x + sx * (rx + 7), fy - 6);
+        g.stroke();
+      }
+    }
+    if (s.poisoned) {
+      g.fillStyle = 'rgba(140,220,90,0.9)';
+      for (let j = 0; j < 3; j++) {
+        g.beginPath();
+        g.arc(x - rx * 0.9 + j * Math.max(4, w * 0.1), top + H * 0.15 + ((t / 9 + j * 13) % 14), Math.max(1.5, w * 0.04), 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    // Its number on a plate at the hex's foot, on the side it faces, and what is left of it beneath.
+    const txt = String(s.count);
+    g.font = `700 ${Math.round(Math.max(10, w * 0.28))}px Inter, system-ui, sans-serif`;
+    const tw = Math.max(g.measureText(txt).width + 8, w * 0.36);
+    const th = Math.max(12, w * 0.3);
+    const px = flip ? x - w * 0.47 : x + w * 0.47 - tw, py = fy + ry * 0.2;
+    g.fillStyle = s.side === v.you ? 'rgba(14,40,52,0.95)' : 'rgba(52,16,14,0.95)';
+    g.strokeStyle = '#c9a45a';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.roundRect(px, py, tw, th, 2);
+    g.fill();
+    g.stroke();
+    g.fillStyle = '#f2ead8';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(txt, px + tw / 2, py + th / 2 + 0.5);
+    const frac = Math.max(0, Math.min(1, ((s.count - 1) * s.hpMax + s.hp) / Math.max(1, s.start * s.hpMax)));
+    const bh = Math.max(2.5, w * 0.06);
+    g.fillStyle = 'rgba(0,0,0,0.75)';
+    g.fillRect(px - 1, py + th + 1, tw + 2, bh + 2);
+    g.fillStyle = frac > 0.5 ? '#6fb46a' : frac > 0.25 ? '#d8a640' : '#d0503e';
+    g.fillRect(px, py + th + 2, tw * frac, bh);
+    // Defending: a small shield beside the plate; muskets: the shots left over it.
+    if (s.defending) {
+      const ss = Math.max(7, w * 0.2), sx = flip ? px + tw + 3 : px - ss - 3, sy = py - 1;
+      g.fillStyle = '#b08d57';
+      g.strokeStyle = '#1b1208';
+      g.beginPath();
+      g.moveTo(sx, sy);
+      g.lineTo(sx + ss, sy);
+      g.lineTo(sx + ss, sy + ss * 0.6);
+      g.quadraticCurveTo(sx + ss / 2, sy + ss * 1.25, sx, sy + ss * 0.6);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    }
+    if (s.shotsMax) {
+      g.fillStyle = '#e0b862';
+      const d = Math.max(3, w * 0.09);
+      for (let j = 0; j < s.shots; j++) {
+        g.beginPath();
+        g.arc(px + 3 + j * d, py - Math.max(3, w * 0.06), Math.max(1.2, w * 0.03), 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
+
   private token(g: CanvasRenderingContext2D, s: TacStackView, x: number, y: number, w: number, on: boolean, pulse: number, v: TacView): void {
+    const fig = figureArt(s);
+    if (fig) {
+      this.figure(g, s, fig, x, y, w, on, pulse, v);
+      return;
+    }
     const R = w * 0.4;
     const col = s.side === v.you ? YOU : FOE;
     g.fillStyle = 'rgba(0,0,0,0.45)';

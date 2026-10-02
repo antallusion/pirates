@@ -19,7 +19,7 @@ import { BUILDING_IDS } from '../shared/src/data/holdings.ts';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'manifest.json'), 'utf8')) as { assets: Record<string, { local: string; fit?: string }> };
-const sheets = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'art', 'sheets.json'), 'utf8')) as Record<string, { ids: (string | null)[]; px: number; ratio?: number; square: boolean; mode: string; painting?: boolean }>;
+const sheets = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'art', 'sheets.json'), 'utf8')) as Record<string, { ids: (string | null)[]; px: number; ratio?: number; square: boolean; mode: string; painting?: boolean; uniform?: number }>;
 const onSheets = new Set(Object.values(sheets).flatMap((s) => s.ids.filter((x): x is string => !!x)));
 /** Ids on sheets already painted and cut (a sheet still in the painter's queue is flagged `painting`). */
 const painted = new Set(Object.values(sheets).filter((s) => !s.painting).flatMap((s) => s.ids.filter((x): x is string => !!x)));
@@ -46,6 +46,8 @@ test('what the sheets have given is baked, at its family\'s size', () => {
       const [w, h] = webpSize(file);
       if (sh.mode === 'tiles') assert.deepEqual([w, h], [Math.round(sh.px * (sh.ratio ?? 1)), sh.px], `${id}: ${w}×${h}`);
       else if (sh.square) assert.deepEqual([w, h], [sh.px, sh.px], `${id}: ${w}×${h}`);
+      // Figures cut at one scale for the sheet keep their own sizes, within the sheet's cell.
+      else if (sh.uniform) assert.ok(Math.max(w, h) <= 1024 && Math.min(w, h) >= 64, `${id}: ${w}×${h}`);
       else assert.equal(Math.max(w, h), sh.px, `${id}: ${w}×${h}`);
     }
   }
