@@ -198,6 +198,29 @@ function footX(id: string, img: HTMLImageElement): number {
   return f;
 }
 
+/** A painting laid over a box as a cover (cut, never stretched). */
+function cover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number): void {
+  const k = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * k, dh = img.naturalHeight * k;
+  g.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+/** What stands on a hex as a painted three-quarter prop (owner, 2026-10-02: the battle as in Heroes), by the ground. */
+const PROP_OF: Record<string, (land: string) => string> = {
+  M: () => 'prop.bt_mast', C: () => 'prop.bt_cannon', B: () => 'prop.bt_barrels', K: () => 'prop.bt_crates',
+  R: (l) => (l === 'volcanic' ? 'prop.bt_lava' : l === 'graveyard' ? 'prop.bt_graves' : 'prop.bt_boulder'),
+  P: (l) => (l === 'swamp' ? 'prop.bt_mangrove' : l === 'volcanic' || l === 'graveyard' || l === 'dead' ? 'prop.bt_deadtree' : 'prop.bt_palm'),
+};
+/** A prop's greatest width and height in hex widths. */
+const PROP_BOX: Record<string, [number, number]> = {
+  'prop.bt_mast': [0.95, 2.3], 'prop.bt_cannon': [1.25, 1.0], 'prop.bt_barrels': [1.0, 1.05], 'prop.bt_crates': [1.05, 1.05],
+  'prop.bt_boulder': [1.15, 1.0], 'prop.bt_lava': [1.15, 1.0], 'prop.bt_graves': [1.1, 1.25], 'prop.bt_palm': [1.5, 2.5],
+  'prop.bt_mangrove': [1.4, 1.7], 'prop.bt_deadtree': [1.4, 2.2],
+};
+function propArt(cell: string, land: string): string | null {
+  const id = PROP_OF[cell]?.(land);
+  return id && sprite(id) ? id : null;
+}
+
 /** The wood of a deck, drawn once: planks along the ship, seams, grain and nails. */
 function plankTexture(dark: boolean): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -956,7 +979,7 @@ export class TacticalPanel {
   }
 
   private background(v: TacView): HTMLCanvasElement {
-    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? ''}`;
+    const key = `${v.cells}|${this.size.cw}|${this.size.ch}|${this.size.dpr}|${v.you}|${this.size.rot}|${v.land?.type ?? ''}|${v.heroes[0].hull}|${v.heroes[1].hull}|${sprite('bg.battle_sea') ? 1 : 0}`;
     if (this.bg && key === this.bgKey) return this.bg;
     this.bgKey = key;
     const { cw, ch, dpr, w } = this.size;
@@ -975,6 +998,55 @@ export class TacticalPanel {
     const r = w / SQ3; // the hex's corner radius
     const cells = v.cells;
     const deck = (i: number | null) => i !== null && cells[i] !== '~' && cells[i] !== '#' && cells[i] !== '=';
+    // Painted decks (owner, 2026-10-02): each side's own hull's deck — the boarders' on the left, the other's mirrored on
+    // the right — over the painted night sea; the brig's stands in for a hull not painted yet.
+    const deckOf = (x: 0 | 1) => sprite(`bg.deck_${v.heroes[x].hull ?? 'brig'}`) ?? sprite('bg.deck_brig');
+    const decks = [deckOf(0), deckOf(1)];
+    const seaArt = sprite('bg.battle_sea');
+    if (decks[0] && decks[1] && seaArt) {
+      g.save();
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cover(g, seaArt.img, 0, 0, this.size.cw, this.size.ch);
+      g.restore();
+      for (const x of [0, 1] as const) {
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        for (let i = 0; i < cells.length; i++) {
+          if (!deck(i) || (x === 0 ? hexX(i) >= 5 : hexX(i) <= 5)) continue;
+          const p = this.lc(i);
+          x0 = Math.min(x0, p.x - w / 2);
+          x1 = Math.max(x1, p.x + w / 2);
+          y0 = Math.min(y0, p.y - r);
+          y1 = Math.max(y1, p.y + r);
+        }
+        if (x0 > x1) continue;
+        g.save();
+        g.beginPath();
+        g.rect(x0, y0, x1 - x0, y1 - y0);
+        g.clip();
+        g.shadowColor = 'rgba(0,0,0,0.6)';
+        if (x === 1) {
+          g.translate(x0 + x1, 0);
+          g.scale(-1, 1);
+        }
+        cover(g, decks[x]!.img, x0, y0, x1 - x0, y1 - y0);
+        g.restore();
+        // The hull's shadow on the water along its inner side.
+        g.fillStyle = 'rgba(0,0,0,0.35)';
+        if (x === 0) g.fillRect(x1, y0, w * 0.18, y1 - y0);
+        else g.fillRect(x0 - w * 0.18, y0, w * 0.18, y1 - y0);
+      }
+      g.strokeStyle = 'rgba(0,0,0,0.28)';
+      g.lineWidth = 1;
+      for (let i = 0; i < cells.length; i++) {
+        if (!deck(i)) continue;
+        const p = this.lc(i);
+        this.hexPath(g, p.x, p.y, r);
+        g.stroke();
+      }
+      this.boardingPlanks(g, cells, w, r);
+      this.deckThings(g, cells, w, true);
+      return c;
+    }
     // The sea between and around the hulls.
     const sea = g.createLinearGradient(0, 0, 0, this.size.bh);
     sea.addColorStop(0, '#0b1d22');
@@ -1037,7 +1109,13 @@ export class TacticalPanel {
         g.stroke();
       }
     }
-    // The planks across the water, lashed with the grapple lines.
+    this.boardingPlanks(g, cells, w, r);
+    this.deckThings(g, cells, w, false);
+    return c;
+  }
+
+  /** The planks across the water, lashed with the grapple lines. */
+  private boardingPlanks(g: CanvasRenderingContext2D, cells: string, w: number, r: number): void {
     for (let i = 0; i < cells.length; i++) {
       if (cells[i] !== '=') continue;
       const p = this.lc(i);
@@ -1068,10 +1146,14 @@ export class TacticalPanel {
       }
       g.restore();
     }
-    // What stands on deck.
+  }
+
+  /** What stands on deck: drawn from above, unless it is painted as a prop (then it stands among the figures). */
+  private deckThings(g: CanvasRenderingContext2D, cells: string, w: number, painted: boolean): void {
     for (let i = 0; i < cells.length; i++) {
       const c0 = cells[i];
       if (!TAC_BLOCKING.has(c0 as TacCell) || c0 === '~' || c0 === '#') continue;
+      if (painted && c0 !== 'H' && propArt(c0, '')) continue;
       const p = this.lc(i);
       if (c0 === 'M') this.mast(g, p.x, p.y, w);
       else if (c0 === 'C') this.cannon(g, p.x, p.y, w, hexY(i) === 0 ? -1 : 1);
@@ -1079,7 +1161,6 @@ export class TacticalPanel {
       else if (c0 === 'K') this.crates(g, p.x, p.y, w);
       else if (c0 === 'H') this.hole(g, p.x, p.y, w, i);
     }
-    return c;
   }
 
   /** docs/18 II: the battlefield ashore, drawn by hand — the island's ground (warm sand, grey shingle, black volcanic
@@ -1097,14 +1178,22 @@ export class TacticalPanel {
     const [base, dark, light] = GROUND[type] ?? GROUND.rocky;
     const b0 = this.lc(0), b1 = this.lc(TAC_W * TAC_H - 1);
     const X0 = b0.x - w * 0.6, Y0 = b0.y - r * 1.1, X1 = b1.x + w * 0.6, Y1 = b1.y + r * 1.1;
+    // The island's ground painted as in Heroes (owner, 2026-10-02): the painting over the whole stage, the hexes on it.
+    const art = sprite(`bg.field_${type}`);
+    if (art) {
+      g.save();
+      g.setTransform(this.size.dpr, 0, 0, this.size.dpr, 0, 0);
+      cover(g, art.img, 0, 0, this.size.cw, this.size.ch);
+      g.restore();
+    }
     g.fillStyle = base;
-    g.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+    if (!art) g.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
     // Ripples of the wind in the sand and a speckle of shell and grit (seeded by the field, the same each draw).
     let seed = 0;
     for (let i = 0; i < cells.length; i++) seed = (seed * 31 + cells.charCodeAt(i)) >>> 0;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
     g.strokeStyle = `${dark}`;
-    g.globalAlpha = 0.35;
+    g.globalAlpha = art ? 0 : 0.35;
     g.lineWidth = 1;
     for (let k = 0; k < 26; k++) {
       const yy = Y0 + (Y1 - Y0) * rnd(), xx = X0 + (X1 - X0) * rnd(), L0 = w * (0.8 + rnd() * 1.6);
@@ -1114,7 +1203,7 @@ export class TacticalPanel {
       g.stroke();
     }
     g.globalAlpha = 1;
-    for (let k = 0; k < 220; k++) {
+    for (let k = 0; k < (art ? 0 : 220); k++) {
       g.fillStyle = rnd() < 0.5 ? light : dark;
       g.globalAlpha = 0.5;
       g.fillRect(X0 + (X1 - X0) * rnd(), Y0 + (Y1 - Y0) * rnd(), 1.5, 1.5);
@@ -1156,7 +1245,7 @@ export class TacticalPanel {
       }
     }
     // The hex grid, faint on the sand.
-    g.strokeStyle = 'rgba(30,20,10,0.16)';
+    g.strokeStyle = art ? 'rgba(10,8,6,0.3)' : 'rgba(30,20,10,0.16)';
     g.lineWidth = 1;
     for (let i = 0; i < cells.length; i++) {
       if (cells[i] === '#' || cells[i] === 'W') continue;
@@ -1166,6 +1255,7 @@ export class TacticalPanel {
     }
     // What stands on it.
     for (let i = 0; i < cells.length; i++) {
+      if (propArt(cells[i], type)) continue;
       const p = this.lc(i);
       if (cells[i] === 'R') this.rock(g, p.x, p.y, w, i, type);
       else if (cells[i] === 'P') this.palm(g, p.x, p.y, w, i, type);
@@ -1498,9 +1588,16 @@ export class TacticalPanel {
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     // The stacks, the active one ringed in gold; the figures back to front, so the nearer stands before the farther.
-    const placed = v.stacks.map((s) => ({ s, p: this.at(this.pos.get(s.id) ?? { ...this.center(s.hex), fx: 0, fy: 0, t0: 0 }, t) }));
+    const placed: { s?: TacStackView; prop?: string; i?: number; p: { x: number; y: number } }[] = v.stacks.map((s) => ({ s, p: this.at(this.pos.get(s.id) ?? { ...this.center(s.hex), fx: 0, fy: 0, t0: 0 }, t) }));
+    for (let i = 0; i < v.cells.length; i++) {
+      const prop = propArt(v.cells[i], v.land?.type ?? '');
+      if (prop) placed.push({ prop, i, p: this.center(i) });
+    }
     placed.sort((a, b) => a.p.y - b.p.y || a.p.x - b.p.x);
-    for (const { s, p } of placed) this.token(g, s, p.x, p.y, w, s.id === v.active, pulse, v);
+    for (const x of placed) {
+      if (x.s) this.token(g, x.s, x.p.x, x.p.y, w, x.s.id === v.active, pulse, v);
+      else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5);
+    }
     if (v.mine) {
       // A ghost of the stack where it would step.
       if (this.preview !== null && active) {
@@ -1683,11 +1780,29 @@ export class TacticalPanel {
     g.restore();
   }
 
+  /** A painted prop standing on its hex: its foot at the hex's foot, a shadow under it; the right deck's mirrored. */
+  private prop(g: CanvasRenderingContext2D, id: string, x: number, y: number, w: number, flip: boolean): void {
+    const img = sprite(id)!.img;
+    const [bw, bh] = PROP_BOX[id] ?? [1.1, 1.2];
+    const k = Math.min((bw * w) / img.naturalWidth, (bh * w) / img.naturalHeight);
+    const W = img.naturalWidth * k, H = img.naturalHeight * k;
+    const fy = y + (w / SQ3) * 0.45;
+    g.fillStyle = 'rgba(0,0,0,0.38)';
+    g.beginPath();
+    g.ellipse(x, fy, Math.min(W * 0.5, w * 0.45), w * 0.14, 0, 0, Math.PI * 2);
+    g.fill();
+    g.save();
+    g.translate(x, fy);
+    if (flip) g.scale(-1, 1);
+    g.drawImage(img, -W * footX(id, img), -H, W, H);
+    g.restore();
+  }
+
   /** A stack as in Heroes: its kind's full figure standing on the hex, facing the other side, a ring of its side's
    *  colour at its feet, its number on a plate at the hex's foot; it breathes, lunges at whom it strikes, flinches when
    *  struck. The marks the paths' moves lay on it keep to the ring and the plate. */
   private figure(g: CanvasRenderingContext2D, s: TacStackView, id: string, x: number, y: number, w: number, on: boolean, pulse: number, v: TacView): void {
-    const img = sprite(id)!.img;
+    const base = sprite(id)!.img;
     const t = performance.now();
     const col = s.side === v.you ? YOU : FOE;
     const r = w / SQ3;
@@ -1695,12 +1810,18 @@ export class TacticalPanel {
     const rx = w * 0.4, ry = w * 0.15;
     // The blow being played.
     let ox = 0, oy = 0, flash = 0;
+    // Its painted frames where it has them (four poses: idle, a breath, the blow, the flinch): the blow and the flinch
+    // while they play, otherwise the idle pose with a breath now and then.
+    let frame = id;
+    const breath = (t + s.id * 977) % 3200;
+    if (breath > 2500 && sprite(`${id}_b`)) frame = `${id}_b`;
     const a = this.act.get(s.id);
     if (a) {
-      const dur = a.k === 'hurt' ? 320 : a.k === 'shot' ? 260 : 380;
+      const dur = a.k === 'hurt' ? 360 : a.k === 'shot' ? 420 : 420;
       const k = (t - a.t0) / dur;
       if (k >= 1) this.act.delete(s.id);
       else if (k > 0) {
+        if (a.k === 'hurt' ? sprite(`${id}_hit`) : sprite(`${id}_atk`)) frame = `${id}${a.k === 'hurt' ? '_hit' : '_atk'}`;
         const bell = Math.sin(Math.PI * k);
         if (a.k === 'atk') {
           ox = a.dx * w * 0.32 * bell;
@@ -1751,12 +1872,13 @@ export class TacticalPanel {
     }
     // The figure: its own size, facing the other side (the painting faces right), breathing.
     const size = (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? 1.28) * 1.22;
-    const iw = img.naturalWidth, ih = img.naturalHeight;
-    const k = Math.min((size * w) / ih, (size * 1.25 * w) / iw);
-    const breathe = 1 + 0.014 * Math.sin(t / 620 + s.id * 1.7);
-    const H = ih * k * breathe, W = iw * k;
+    // One scale for all its frames, from the idle pose; each frame stands on its own feet.
+    const k = Math.min((size * w) / base.naturalHeight, (size * 1.25 * w) / base.naturalWidth);
+    const img = sprite(frame)?.img ?? base;
+    const breathe = frame === id ? 1 + 0.012 * Math.sin(t / 620 + s.id * 1.7) : 1;
+    const H = img.naturalHeight * k * breathe, W = img.naturalWidth * k;
     const flip = s.side === 1;
-    const fx = footX(id, img);
+    const fx = footX(frame, img);
     const lift = s.sp.includes('flying') ? w * 0.28 * (1 + 0.15 * Math.sin(t / 300 + s.id)) : 0;
     g.save();
     g.translate(x + ox, fy + oy - lift);

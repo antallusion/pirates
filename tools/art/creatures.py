@@ -185,11 +185,11 @@ c('hero_drowned', 'hero', 0, 'Drowned Captain', 'Утопший капитан',
 c('hero_admiral', 'hero', 0, 'Admiral', 'Адмирал', 'man', 'an admiral in a navy-blue coat with heavy gold epaulettes and a black cocked hat, medals on the chest, a gold-hilted sword', 'his hand on the sword hilt', 'pointing the drawn sword toward the right, commanding the line')
 
 BASE = {
-    'man': ('each figure about 72% of the picture height, its feet on the shared ground line', 'standing ready in a combat stance'),
-    'big': ('each figure about 80% of the picture height, its feet on the shared ground line', 'standing ready, looming'),
-    'beast': ('each creature about 22% of the picture width, its feet or belly on the shared ground line', 'poised and alert'),
-    'fly': ('each creature hovering at the same height, its lowest point a little above the shared ground line, its spread wings about 22% of the picture width', 'hovering with its wings spread'),
-    'water': ('each rising out of its own small flat oval patch of dark sea water ringed with white foam — the same patch in every pose, the patches on the shared ground line — the creature about 72% of the picture height', 'risen out of the water, watchful'),
+    'man': ('each figure about 72% of the picture height', 'standing ready in a combat stance'),
+    'big': ('each figure about 80% of the picture height', 'standing ready, looming'),
+    'beast': ('each creature about 22% of the picture width', 'poised and alert'),
+    'fly': ('each creature hovering at the same height in the air, its spread wings about 22% of the picture width', 'hovering with its wings spread'),
+    'water': ('each rising out of its own small flat oval patch of dark sea water ringed with white foam — the same patch in every pose, all four patches at the same height — the creature about 72% of the picture height', 'risen out of the water, watchful'),
 }
 
 
@@ -203,8 +203,8 @@ def prompt(k: dict) -> str:
         'Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. '
         f"The {who}: {k['look']}. "
         f'The picture shows exactly FOUR poses of this same {who} side by side in ONE horizontal row, evenly spaced across the whole width, '
-        'with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, all standing on one shared '
-        'invisible ground line near the bottom of the picture. From left to right: '
+        'with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all '
+        'four at the same height near the bottom of the picture. From left to right: '
         f'first — idle: {idle}; '
         f"second — idle a breath later: the same pose with a tiny change only, {k['idle2']}, like the next frame of an idle animation; "
         f"third — attack: {k['attack']}; "
@@ -216,7 +216,7 @@ def prompt(k: dict) -> str:
         'Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation '
         'with small warm highlights. '
         'Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, '
-        'NO cast shadows, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, '
+        'NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, '
         'NO letters, NO numbers, NO watermark. '
         'Avoid: a different character in any pose, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat '
         'vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.'

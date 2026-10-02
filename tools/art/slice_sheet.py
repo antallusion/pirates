@@ -78,6 +78,20 @@ def main(sheet_name: str, stem: str) -> None:
                     keyed[:, max(0, k - 2):k + 3, 3] = 0
                 else:
                     keyed[max(0, k - 2):k + 3, :, 3] = 0
+        # A ground line ruled under a row of figures (asked not to, now and then does): a run of solid pixels along a row
+        # longer than a third of the picture can be no figure (the figures stand apart) — it goes.
+        if sh.get('split') == 'blobs':
+            a = keyed[:, :, 3] > 128
+            W = a.shape[1]
+            for y in range(a.shape[0]):
+                row = a[y]
+                if row.mean() < 0.3:
+                    continue
+                d = np.diff(np.concatenate(([0], row.astype(np.int8), [0])))
+                starts, ends = np.nonzero(d == 1)[0], np.nonzero(d == -1)[0]
+                for x0_, x1_ in zip(starts, ends):
+                    if x1_ - x0_ > W / 3:
+                        keyed[max(0, y - 1):y + 2, x0_:x1_, 3] = 0
         im = Image.fromarray(keyed)
         solid = keyed[:, :, 3].astype(np.float32) / 255
         xs, ys = cuts(solid.sum(axis=0), cols), cuts(solid.sum(axis=1), rows)
@@ -189,8 +203,7 @@ def main(sheet_name: str, stem: str) -> None:
     if sh.pop('painting', None) is not None or not sh.get('cut'):
         sh['cut'] = stem
         with open(SHEETS, 'w', encoding='utf-8') as f:
-            f.write(json.dumps(sheets, indent=1, ensure_ascii=False) + '
-')
+            f.write(json.dumps(sheets, indent=1, ensure_ascii=False) + chr(10))
 
 
 if __name__ == '__main__':

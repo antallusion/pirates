@@ -1387,6 +1387,8 @@ export interface TacStackView {
 export interface TacHeroView {
   name: string;
   ship: string;
+  /** Her hull's class (the deck painted for it); none ashore. */
+  hull?: string;
   captain: CaptainId | null;
   morale: number;
   luck: number;

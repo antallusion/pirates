@@ -101,7 +101,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
   const count = (f: (x: TacArmyEntry) => boolean) => army.filter(f).reduce((n, x) => n + x.n, 0);
   const deck = deckState(ship);
   return {
-    name: s?.name ?? ship.captainName, ship: ship.name, captain: (s ? null : npcPathOf(ship)) ?? ship.captain ?? null,
+    name: s?.name ?? ship.captainName, ship: ship.name, hull: ship.loadout.classId, captain: (s ? null : npcPathOf(ship)) ?? ship.captain ?? null,
     hands: count((x) => UNITS[x.u].tier === 1), marines: count((x) => kindOfUnit(x.u) === 'marines'), gunners: count((x) => hasSpecial(x.u, 'shooter')),
     army, officers, skill, morale: ship.morale,
     dealt: ladderBetween(game, ship, enemy).dealt || 0.1,
