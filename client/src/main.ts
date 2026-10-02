@@ -1596,6 +1596,9 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     else if (pendingMark?.id === mk.id) info.push(esc(slowWord()));
   }
   facts.looks = advCard.closedLooks();
+  // A struck ship's terms put off by «Later»: her card back with «Look…».
+  const struck = surrenderCard.laterName();
+  if (struck) facts.looks.unshift({ kind: 'struck', name: struck });
   if (you.flags & SF.PROTECTED) info.push(esc(L('protected')));
   // Mending at sea (docs/16 #15): the carpenters' pace and what it takes, or what they lack.
   const repairing = !!(you.flags & SF.REPAIRING);
@@ -1649,7 +1652,7 @@ function runAct(a: Act): void {
     case 'mark':
       return workMark(Number(a.arg));
     case 'look':
-      return advCard.reopen();
+      return a.arg === 'struck' ? surrenderCard.reopen() : advCard.reopen();
     case 'repair':
       return void net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
   }

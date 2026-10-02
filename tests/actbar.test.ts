@@ -83,6 +83,9 @@ test('every thing at hand is a button, each with its icon, word, title and key',
   // Each card closed by hand its «Look».
   const looks = buildActs({ looks: [{ kind: 'obj', name: 'Altar' }, { kind: 'guard', name: 'Hulk' }, { kind: 'lair', name: 'Den' }, { kind: 'drift', name: 'Seals' }] });
   assert.deepEqual(looks.map((a) => [a.id, a.arg]), [['look', 'obj'], ['look', 'guard'], ['look', 'lair'], ['look', 'drift']]);
+  // A struck ship's terms put off by «Later»: her «Look…» too (main.ts asks the surrender card).
+  assert.equal(buildActs({ looks: [{ kind: 'struck', name: 'Red Shrike' }] })[0].icon, 'talent_brd_surrender_terms');
+  assert.match(readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8'), /surrenderCard\.laterName\(\)/);
 });
 
 test('the gold button is the one the pad\'s A always took, and padContext runs the bar\'s first', () => {
@@ -151,7 +154,7 @@ test('three buttons at most, the rest behind «⋯ N more»; one height of butto
     assert.equal(btns(three), 3);
     assert.ok(!/data-act-more/.test(three));
     assert.equal(actBarHtml([], [], null, false), '');
-    assert.match(markInfo('wreck', 'done'), /^Поле обломков: уже обыскано сегодня$/);
+    assert.match(markInfo('wreck', 'done'), /^Поле обломков: на сегодня всё$/);
     assert.match(markInfo('drift', 'busy', 2.2), /Плавник: шлюпки за работой… 3[\s ]с/);
     // Every word in Russian.
     for (const a of acts) assert.ok(/[А-Яа-я]/.test(a.label) && !/[A-Za-z]{2,}/.test(a.label), a.label);

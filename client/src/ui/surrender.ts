@@ -86,6 +86,16 @@ export class SurrenderCard {
     return !!this.offer && !this.hidden;
   }
 
+  /** The struck ship's name while her terms are put off by «Later» (the action bar's «Look…» brings them back). */
+  laterName(): string | null {
+    return this.offer && this.hidden ? shipName(this.offer.name) : null;
+  }
+
+  reopen(): void {
+    this.hidden = false;
+    this.lastKey = '';
+  }
+
   /** Every frame: the distance and the time left; gone when she is. */
   frame(state: ClientState): void {
     const o = this.offer;

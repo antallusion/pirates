@@ -16,7 +16,7 @@ const L = dict(EN, RU);
 
 export type ActId = 'axes' | 'harbour' | 'board' | 'dock' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'look' | 'repair';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
-export type LookKind = 'obj' | 'guard' | 'lair' | 'drift';
+export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
 /** What is at hand, as main.ts reads the state (names already in the reader's language). */
 export interface ActFacts {
@@ -59,7 +59,7 @@ const LAND_WORD: Record<LandAction, keyof typeof EN> = {
 const LAND_ICON: Record<LandAction, string> = {
   land: 'map_cove', dig: 'map_treasure', raise: 'map_wreck', expedition: 'item_drowned_admiral_bell', descent: 'map_whirlpool', keeper: 'build_lighthouse', escort: 'tab_contracts', dive: 'prof_sailor', lair: 'prof_marine',
 };
-const LOOK_ICON: Record<LookKind, string> = { obj: 'map_event', guard: 'wanted', lair: 'map_monster', drift: 'map_ship' };
+const LOOK_ICON: Record<LookKind, string> = { obj: 'map_event', guard: 'wanted', lair: 'map_monster', drift: 'map_ship', struck: 'talent_brd_surrender_terms' };
 
 /** Everything to do at hand, the first the one the pad's A does (padContext's order, kept here for both). */
 export function buildActs(f: ActFacts): Act[] {
