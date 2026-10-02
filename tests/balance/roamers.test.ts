@@ -18,14 +18,14 @@ test('a stack costs a captain of its level what its size says (4 / 8 / 16% of th
   }
 });
 
-test('the stacks grow with their waters; the hour by quick combat and played out stays near the target', () => {
-  for (const kind of ROAM_KINDS) {
-    const lv = roamLevels(kind);
-    assert.ok(roamCount(kind, lv[lv.length - 1], 'avg') >= roamCount(kind, lv[0], 'avg'), `${kind} grows`);
-  }
+test('the hour by quick combat and played out stays near the target; a fight teaches more in deeper waters', () => {
+  let last = 0;
   for (let L = 1; L <= 10; L++) {
     const q = xpHour(L, undefined, 12, 'quick'), p = xpHour(L, undefined, 12, 'played');
     assert.ok(q.share >= 0.6 && q.share <= 0.9, `⚓${L} quick: ${Math.round(q.share * 100)}%`);
     assert.ok(p.share >= 0.55 && p.share <= 0.8, `⚓${L} played: ${Math.round(p.share * 100)}%`);
+    const per = xpHour(L).xp / xpHour(L).fights;
+    assert.ok(per >= last * 0.9, `⚓${L}: ${per.toFixed(0)} XP a fight`);
+    last = per;
   }
 });
