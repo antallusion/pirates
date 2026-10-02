@@ -301,7 +301,7 @@ export function lairJoiners(game: Game, s: PlayerSession, l: Lair): ArmyStack[] 
     if (room <= 0) break;
     const own = ship.army.some((y) => y.u === x.u) || out.some((y) => y.u === x.u);
     if (!own && slots <= 0) continue;
-    const n = Math.min(room, Math.floor(x.n / 2));
+    const n = Math.min(room, Math.max(1, Math.floor(x.n / 2))); // half of them, one at the least
     if (n <= 0) continue;
     if (!own) slots--;
     room -= n;

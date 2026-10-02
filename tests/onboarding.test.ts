@@ -12,7 +12,7 @@ import { advMap, advOf, parkNear, quietAdv, visit } from '../server/src/game/adv
 import { startBoarding } from '../server/src/game/boarding.ts';
 import { tacAction } from '../server/src/game/tactical.ts';
 import { pendingChoices, pickSkill } from '../server/src/game/hero.ts';
-import { closeFight, lairById, lairGoTo, lairsOf, landTac, startFight } from '../server/src/game/beastlairs.ts';
+import { closeFight, lairById, lairGoTo, lairsOf, landTac, revealNearestLair, startFight } from '../server/src/game/beastlairs.ts';
 import { adminDrift, driftOf, driftsNear } from '../server/src/game/drifts.ts';
 
 function recruit(game: Game, name: string, captain: 'corsair' | 'reaver' = 'corsair'): { c: FakeConn; s: PlayerSession } {
@@ -106,9 +106,11 @@ test('the First Watch (docs/17 H5, docs/18 #49): nine steps of the Heroes’ loo
   steps(game, 21);
   assert.equal(stage(c), 'lair');
   // 8. docs/18 #49: the nearest lair she can take is on her chart; she lands against it and fights it out.
+  // (the one the step put on her chart: with docs/19 D2 she sights more lairs on her way, so not always the last seen)
   const seen = lairsOf(p).seen;
-  const l = lairById(game, seen[seen.length - 1])!;
-  assert.ok(l && l.role === 'shore' && l.level <= Math.max(1, ship.shipLevel), 'a shore lair of her level on her chart');
+  const l = revealNearestLair(game, s)!;
+  assert.ok(l && seen.includes(l.id) && lairById(game, l.id) === l, 'the nearest lair she can take on her chart');
+  assert.ok(l.role === 'shore' && l.level <= Math.max(1, ship.shipLevel), 'a shore lair of her level on her chart');
   assert.ok(c.last('lairs')!.view.list.some((m) => m.id === l.id), 'and on her minimap');
   lairGoTo(game, s, l);
   assert.equal(startFight(game, s, l.id, true), null);

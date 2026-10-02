@@ -92,7 +92,7 @@ test('the lairs: the same world, the same lairs; on their islands by kind and le
   const w = generateWorld(1);
   const a = buildLairs(w), b = buildLairs(generateWorld(1));
   assert.deepEqual(a.map((l) => [l.id, l.kind, l.x, l.y, l.size]), b.map((l) => [l.id, l.kind, l.x, l.y, l.size]));
-  assert.ok(a.length >= 350 && a.length <= 900, `${a.length} lairs`);
+  assert.ok(a.length >= 700 && a.length <= 1800, `${a.length} lairs`); // docs/19 D2: twice the 350–900 of docs/18 II
   assert.equal(new Set(a.map((l) => l.id)).size, a.length, 'ids unique');
   for (const l of a) {
     const d = LAIRS[l.kind];
@@ -101,8 +101,12 @@ test('the lairs: the same world, the same lairs; on their islands by kind and le
     assert.ok(!is.portId && !is.raft && !is.minor, `${l.id} on a wild island`);
     assert.ok(pointInPolygon(l.x, l.y, is.poly), `${l.id} ashore`);
     assert.equal(l.type, isleType(is));
-    const lv = Math.min(10, isleLevel(w, is) + isleLoot(is).tier) + (l.role === 'guardian' ? 1 : 0);
-    assert.equal(l.level, Math.min(10, lv), `${l.id} level`);
+    // (docs/19 D4: the second lot of hidden islands keeps the lairs she had before she was hidden)
+    const lv = Math.min(10, isleLevel(w, is) + isleLoot(is.veil ? { ...is, hidden: false } : is).tier) + (l.role === 'guardian' ? 1 : 0);
+    // docs/19 D2: a second lair of another depth on an island with one already — a level deeper (shallower at ⚓10).
+    const first = a.find((o) => o.island === l.island && o !== l && !o.id.endsWith('d'));
+    if (l.id.endsWith('d') && first) assert.equal(l.level, first.level >= 10 ? 9 : first.level + 1, `${l.id}: the second depth`);
+    else assert.equal(l.level, Math.min(10, lv), `${l.id} level`);
     assert.ok(d.types.includes(l.type) && l.level >= d.lv[0] && l.level <= d.lv[1], `${l.id}: ${l.kind} on a ${l.type} island of ⚓${l.level}`);
   }
   const chains = a.filter((l) => l.role === 'guardian');
@@ -241,9 +245,12 @@ test('a lair: seen from the sea with its word, fought through a landing; the spo
 test('HoMM3\'s offer: at three times her might they flee or come aboard; the guardians never come', () => {
   const game = world();
   const s = captain(game, 'Strong One', 9, 'frigate');
+  // Room aboard for those who would come (a slot and a fifth of her hammocks).
+  s.ship!.setArmy(armyForLevel(9, Math.round(s.ship!.stats.crewMax * 0.8), s.ship!.armySlots - 1, 'player'));
   runAdmin(game, s, '/lair crab_beach go');
   runAdmin(game, s, '/lair crab_beach weak');
-  const l = lairList(game).find((x) => x.kind === 'crab_beach' && lairUp(game, x) && game.world.islands[x.island] && Math.hypot(x.x - s.ship!.state.x, x.y - s.ship!.state.y) < 1500)!;
+  // (the nearest: with docs/19 D2 a neighbour's lair may stand within the mile too)
+  const l = lairList(game).filter((x) => x.kind === 'crab_beach' && lairUp(game, x) && game.world.islands[x.island] && Math.hypot(x.x - s.ship!.state.x, x.y - s.ship!.state.y) < 1500).sort((a, b) => Math.hypot(a.x - s.ship!.state.x, a.y - s.ship!.state.y) - Math.hypot(b.x - s.ship!.state.x, b.y - s.ship!.state.y))[0]!;
   const offer = lairOffer(game, s, l);
   assert.ok(offer === 'join' || offer === 'flee', `offer ${offer}`);
   const before = s.ship!.crew;

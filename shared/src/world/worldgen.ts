@@ -10,6 +10,7 @@ import { GOOD_IDS } from '../data/goods.ts';
 import { KEY_PORTS, REGIONS, REGION_IDS, WORLD_EDGE_MARGIN, biomeFromMix } from './regions.ts';
 import type { IslandBiome, PortProfile, RegionId } from './regions.ts';
 import { appendIsles } from './moreisles.ts';
+import { appendMarks } from './moremarks.ts';
 
 export type IslandFeature = 'port' | 'ruins' | 'wreck' | 'lighthouse' | 'grove' | 'mine' | 'pearl_bank' | 'shrine' | 'cache'
   | 'fort' | 'volcano' | 'bones' | 'bell' | 'hermit' | 'spring';
@@ -33,6 +34,9 @@ export interface Island {
   isle?: 'small' | 'atoll' | 'ridge';
   /** docs/18 #30: a hidden island — charted only from a lookout, by a map or an obelisk. */
   hidden?: boolean;
+  /** docs/19 D4: one of the second lot of hidden islands (hidden as the first; the lairs and zones placed before keep
+   *  to the island as she was). */
+  veil?: 2;
   /** docs/18 III: an empty place kept for an island the sea may raise (far off the chart, never drawn or sailed). */
   slot?: boolean;
 }
@@ -130,6 +134,8 @@ export interface World {
   markChunks: Map<number, number[]>;
   /** The first island of step 6 (docs/18 III: small islands, atolls, ridges); every island before her is as she was. */
   isleFrom: number;
+  /** docs/19 D1: the first mark of step 7 (every mark before her is as she was). */
+  marksFrom?: number;
   /** The next empty place for a raised island (before isleFrom; once they are all taken, raised islands go on the end). */
   raisedNext?: number;
 }
@@ -275,7 +281,7 @@ export function legacyIslands(world: World): Island[] {
 }
 
 export function generateWorld(seed: number): World {
-  return appendIsles(legacyWorldOf(seed));
+  return appendMarks(appendIsles(legacyWorldOf(seed))); // step 7: the marks twice as many (docs/19 D1)
 }
 
 /** The world as it stood before docs/18 III (steps 1–5): what every placement made from the world alone is made on. */
@@ -805,7 +811,7 @@ const DENSE_MIX: Record<RegionId, [SeaMarkKind | 'stack' | 'reef', number][]> = 
   drowned_crown: [['stack', 30], ['reef', 20], ['wreck', 20], ['lantern', 20], ['drift', 10]],
   the_abyss: [['stack', 35], ['bones', 35], ['lantern', 15], ['wreck', 15]],
 };
-const MARK_SIZE: Record<SeaMarkKind, [number, number]> = { wreck: [55, 110], buoy: [6, 8], lantern: [7, 9], drift: [25, 55], bones: [35, 75], floe: [30, 70] };
+export const MARK_SIZE: Record<SeaMarkKind, [number, number]> = { wreck: [55, 110], buoy: [6, 8], lantern: [7, 9], drift: [25, 55], bones: [35, 75], floe: [30, 70] };
 
 /** The floating towns' names and description, English → Russian (the client's table of server text). */
 export function raftPatterns(): [string, string][] {

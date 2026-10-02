@@ -73,7 +73,7 @@ test('the map: the same world puts the same things in the same places; sixteen o
   const regions = new Set(a.objs.map((o) => o.region));
   assert.ok(regions.size >= 7 && !regions.has('the_abyss'));
   for (const r of regions) for (const k of OBJ_KINDS) assert.ok(a.objs.some((o) => o.region === r && o.kind === k), `${r}: ${k}`);
-  assert.ok(a.guards.length >= 60 && a.guards.length <= 110, `${a.guards.length} guards`);
+  assert.ok(a.guards.length >= 120 && a.guards.length <= 220, `${a.guards.length} guards`); // docs/19 D2: twice the 60–110 of H4
   assert.ok(a.guards.some((g) => g.at?.startsWith('m')) && a.guards.some((g) => !g.at) && a.guards.some((g) => g.at?.startsWith('o')), 'at mines, at things, in straits');
 });
 

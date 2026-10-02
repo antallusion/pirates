@@ -51,8 +51,10 @@ export function mineDaily(kind: MineKind, region: RegionId, weekMul = 1): number
   return MINES[kind].daily * MINE_WATERS[REGIONS[region].safety] * weekMul;
 }
 
-/** Mines a region keeps (the Abyss none). */
-export const MINES_PER_REGION = 6;
+/** Mines a region keeps (the Abyss none): six of docs/17 H3, and six more of docs/19 D4 (twice as many). */
+export const MINES_PER_REGION = 12;
+/** The first six of a region's mines (where they always stood); the rest are docs/19 D4's. */
+export const MINES_LEGACY = 6;
 /** A captain holds this many at most. */
 export const MINES_MAX = 7;
 /** Days of yield that pile up at a mine whose holder has no island. */
@@ -93,6 +95,8 @@ export interface MineSite {
   x: number;
   y: number;
   name: string;
+  /** docs/19 D4: one of the second six of its region (placed after the first, which stand where they stood). */
+  extra?: boolean;
 }
 
 /** The world's mines: fixed by the world alone. Each region's wild islands in an order of their own, the kinds not
@@ -109,18 +113,22 @@ export function buildMines(world: World): MineSite[] {
   for (const [region, list] of by) {
     const order = [...list].sort((a, b) => hashString(`mine:${a.id}`) - hashString(`mine:${b.id}`) || a.id - b.id);
     const taken: Island[] = [];
-    const kinds = new Set<MineKind>();
-    for (const is of order) {
-      if (taken.length >= MINES_PER_REGION) break;
-      if (kinds.has(mineKindOf(is))) continue;
-      kinds.add(mineKindOf(is));
-      taken.push(is);
+    // The first six as they always were, then (docs/19 D4) six more the same way from the islands left: the kinds
+    // not yet among them first, so the second six are a spread of their own.
+    for (const [from, upto] of [[0, MINES_LEGACY], [MINES_LEGACY, MINES_PER_REGION]] as const) {
+      const kinds = new Set<MineKind>();
+      for (const is of order) {
+        if (taken.length >= upto) break;
+        if (taken.includes(is) || kinds.has(mineKindOf(is))) continue;
+        kinds.add(mineKindOf(is));
+        taken.push(is);
+      }
+      for (const is of order) {
+        if (taken.length >= upto) break;
+        if (!taken.includes(is)) taken.push(is);
+      }
+      for (const is of taken.slice(from, upto)) out.push({ id: `m${is.id}`, islandId: is.id, kind: mineKindOf(is), region, x: Math.round(is.x), y: Math.round(is.y), name: is.name, ...(from ? { extra: true } : {}) });
     }
-    for (const is of order) {
-      if (taken.length >= MINES_PER_REGION) break;
-      if (!taken.includes(is)) taken.push(is);
-    }
-    for (const is of taken) out.push({ id: `m${is.id}`, islandId: is.id, kind: mineKindOf(is), region, x: Math.round(is.x), y: Math.round(is.y), name: is.name });
   }
   return out.sort((a, b) => a.islandId - b.islandId);
 }
