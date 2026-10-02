@@ -3893,3 +3893,11 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 .pb-tags .tag { white-space: normal; max-width: 100%; text-align: left; }
 /* A toast never wider than its column (a long word in a talk line, the density's zoom on it). */
 #toasts > .toast { box-sizing: border-box; max-width: calc(100% / var(--density, 1)); min-width: 0; overflow-wrap: anywhere; }
+/* The chat's button stands one button (44 + 8 px) under the touch micro menu wherever H5 pushed the menu down
+   (under the minimap's lines, --rg-bottom): it used to keep its old place and overlap the menu by a few pixels. */
+@media (max-width: 699px) and (min-height: 521px) {
+  #hud-chat .chat-toggle { top: calc(max(calc(var(--sa-t) + var(--top-h)), calc(var(--rg-bottom, 0px) + 6px)) + 52px); }
+}
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
+  #hud-chat .chat-toggle { top: calc(max(calc(var(--sa-t) + var(--mm) + 64px), calc(var(--rg-bottom, 0px) + 6px)) + 52px); }
+}
