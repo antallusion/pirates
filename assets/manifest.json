@@ -1399,6 +1399,7 @@
     "bg.field_tropical":                       { "local": "art/field_tropical.webp", "remote": "hf_20261003_093826_gpt-bg-field_tropical.png", "job": "gpt-bg-field_tropical", "fit": "opaque:1920", "rev": 20261003093826},
     "bg.field_rocky":                          { "local": "art/field_rocky.webp", "remote": "hf_20261003_093940_gpt-bg-field_rocky.png", "job": "gpt-bg-field_rocky", "fit": "opaque:1920", "rev": 20261003093940},
     "bg.field_volcanic":                       { "local": "art/field_volcanic.webp", "remote": "hf_20261003_094419_gpt-bg-field_volcanic.png", "job": "gpt-bg-field_volcanic", "fit": "opaque:1920", "rev": 20261003094419},
-    "bg.field_swamp":                          { "local": "art/field_swamp.webp", "remote": "hf_20261003_094922_gpt-bg-field_swamp.png", "job": "gpt-bg-field_swamp", "fit": "opaque:1920", "rev": 20261003094922}
+    "bg.field_swamp":                          { "local": "art/field_swamp.webp", "remote": "hf_20261003_094922_gpt-bg-field_swamp.png", "job": "gpt-bg-field_swamp", "fit": "opaque:1920", "rev": 20261003094922},
+    "bg.field_graveyard":                      { "local": "art/field_graveyard.webp", "remote": "hf_20261003_095351_gpt-bg-field_graveyard.png", "job": "gpt-bg-field_graveyard", "fit": "opaque:1920", "rev": 20261003095351}
   }
 }
