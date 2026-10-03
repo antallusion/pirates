@@ -12,7 +12,8 @@ import type { TacCell, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { ClientMsg, TacAction, TacEvent, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
-import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
+import { ORDERS, PRIMS, PRIM_ICON, PRIM_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES } from '../../../shared/src/data/hero.ts';
+import type { School } from '../../../shared/src/data/hero.ts';
 import { INNATE, ULTIMATE, ULT_ROUND } from '../../../shared/src/data/paths.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { personName } from '../lang/names.ts';
@@ -109,6 +110,8 @@ const STATUS: [keyof TacStackView, string, K][] = [
   ['waited', 'bt_wait', 'sts.waited'], ['again', 'st_again', 'sts.again'], ['noRet', 'st_no_ret', 'sts.noRet'],
   ['blind', 'st_blind', 'sts.blind'], ['poisoned', 'st_poison', 'sts.poisoned'], ['wet', 'st_diving', 'sts.wet'],
 ];
+/** The book's bookmarks: each school by the painted mark of the path whose school it is (shared/src/data/paths.ts). */
+const BOOK_TAB: Record<School, string> = { fire: 'school_corsair', board: 'school_reaver', steel: 'school_admiral', wind: 'school_navigator', water: 'school_drowned', fog: 'school_smuggler' };
 const spName = (id: TacSpellId) => (ORDERS[id]?.name ?? [id, id])[lang() === 'ru' ? 1 : 0];
 const spText = (id: TacSpellId) => (ORDERS[id]?.text ?? [id, id])[lang() === 'ru' ? 1 : 0];
 type K = keyof typeof EN;
@@ -322,6 +325,8 @@ export class TacticalPanel {
   private pathFx: PathFx[] = [];
   /** The order book open over the field (docs/17 H2: more pages than the panel holds). */
   private bookOpen = false;
+  private bookTab: School | 'all' = 'all';
+  private bookPage = 0;
   private info: number | null = null;
   private hover: number | null = null;
   private strikeArmed = 0;
@@ -543,7 +548,7 @@ export class TacticalPanel {
   private dom(v: TacView): void {
     const el = this.el!;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
@@ -605,9 +610,54 @@ export class TacticalPanel {
     // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3.
     const more = me.spells.length > 4;
     el.querySelector('.tb-spells')!.innerHTML = will + move('innate') + move('ult') + me.spells.slice(0, 4).map(page).join('') + (more ? `<button class="btn tb-bookbtn${this.bookOpen ? ' on' : ''}" data-book>${btIcon('bt_book', 'icon.bt_captain', 'ico')}<span><b>${esc(L('book'))}</b><small>${esc(L('book.n', { n: me.spells.length }))}</small></span></button>` : '');
+    // The book over the field, as HoMM3's: two facing pages, a bookmark for each school she has pages of, the corners
+    // to turn; painted when its picture is (bg.spellbook), parchment until then.
     const book = el.querySelector<HTMLElement>('.tb-book')!;
     book.classList.toggle('hidden', !(more && this.bookOpen));
-    book.innerHTML = more && this.bookOpen ? `<div class="tb-book-head"><b>${esc(L('book'))}</b><button class="btn btn-small" data-bookclose>${esc(L('close'))}</button></div><div class="tb-book-grid">${[...me.spells].sort((a, b) => (ORDERS[a.id]?.school ?? '').localeCompare(ORDERS[b.id]?.school ?? '') || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0)).map(page).join('')}</div>` : '';
+    book.innerHTML = '';
+    if (more && this.bookOpen) {
+      const ru = lang() === 'ru' ? 1 : 0;
+      // Over the whole battle, as large as the screen lets a 16:9 book be (a phone's field alone is too small for it).
+      const w = Math.max(240, Math.min(1100, innerWidth * 0.96, innerHeight * 0.94 * 16 / 9));
+      const per = w < 560 ? 4 : 6;
+      const all = [...me.spells].sort((a, b) => SCHOOLS.indexOf(ORDERS[a.id]?.school as School) - SCHOOLS.indexOf(ORDERS[b.id]?.school as School) || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0));
+      const schools = SCHOOLS.filter((sc) => all.some((sp) => ORDERS[sp.id]?.school === sc));
+      const tab = this.bookTab !== 'all' && schools.includes(this.bookTab) ? this.bookTab : 'all';
+      const list = tab === 'all' ? all : all.filter((sp) => ORDERS[sp.id]?.school === tab);
+      const spreads = Math.max(1, Math.ceil(list.length / (per * 2)));
+      const at = Math.min(this.bookPage, spreads - 1);
+      const side = (k: 0 | 1) => list.slice((at * 2 + k) * per, (at * 2 + k + 1) * per);
+      const entry = (sp: (typeof me.spells)[number]) => {
+        const wait = Math.max(0, sp.ready - v.round);
+        const pool = sp.res === 'stam' ? me.stam : me.mana;
+        const poor = sp.cost !== undefined && pool !== undefined && pool < sp.cost;
+        const off = !v.mine || me.cast || wait > 0 || poor;
+        const note = wait > 0 ? esc(L('ready.in', { n: wait })) : sp.scroll ? esc(L('scroll', { n: sp.scroll })) : sp.cost !== undefined ? `${icon(sp.res === 'stam' ? 'icon.tree_survival' : 'icon.ab_brine_mend', '', 'ico-xs')}${sp.cost}` : '';
+        return `<button class="bk-sp${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(`${spName(sp.id)} — ${spText(sp.id)}`)}">${spIcon(sp.id, 'bk-ico')}<b>${esc(spName(sp.id))}</b><small>${note}</small></button>`;
+      };
+      const tabBtn = (id: School | 'all', ico: string, name: string) => `<button class="bk-tab${tab === id ? ' on' : ''}" data-booktab="${id}" title="${esc(name)}" aria-label="${esc(name)}">${ico}</button>`;
+      const art = assetUrl('bg.spellbook');
+      book.className = `tb-book bk${art ? ' painted' : ''}`;
+      book.style.setProperty('--bk-w', `${Math.round(w)}px`);
+      book.style.setProperty('--bk-rows', String(per / 2));
+      book.style.backgroundImage = art ? `url('${art}')` : '';
+      book.innerHTML = `<div class="bk-page l"><h4>${esc(tab === 'all' ? L('book') : SCHOOL_NAMES[tab][ru])}</h4><div class="bk-grid">${side(0).map(entry).join('')}</div><i class="bk-no">${at * 2 + 1}</i></div>
+        <div class="bk-page r"><div class="bk-will">${will}</div><div class="bk-grid">${side(1).map(entry).join('')}</div><i class="bk-no">${at * 2 + 2}</i></div>
+        <div class="bk-tabs">${tabBtn('all', btIcon('bt_book', 'icon.bt_captain', 'ico'), L('book'))}${schools.map((sc) => tabBtn(sc, btIcon(BOOK_TAB[sc], `icon.${SCHOOL_ICON[sc]}`, 'ico'), SCHOOL_NAMES[sc][ru])).join('')}</div>
+        <button class="bk-turn prev" data-bookpg="-1" ${at === 0 ? 'disabled' : ''} aria-label="‹">‹</button><button class="bk-turn next" data-bookpg="1" ${at >= spreads - 1 ? 'disabled' : ''} aria-label="›">›</button>
+        <button class="bk-close" data-bookclose title="${esc(L('close'))}" aria-label="${esc(L('close'))}">✕</button>`;
+      book.querySelectorAll<HTMLElement>('[data-booktab]').forEach((b) => (b.onclick = () => {
+        this.bookTab = b.dataset.booktab as School | 'all';
+        this.bookPage = 0;
+        this.key = '';
+        this.dom(v);
+      }));
+      book.querySelectorAll<HTMLElement>('[data-bookpg]').forEach((b) => (b.onclick = () => {
+        this.bookPage = Math.max(0, Math.min(spreads - 1, at + Number(b.dataset.bookpg)));
+        this.key = '';
+        this.dom(v);
+      }));
+    }
     el.querySelectorAll<HTMLElement>('[data-spell]').forEach((b) => (b.onclick = () => {
       this.bookOpen = false;
       this.spell(b.dataset.spell as TacSpellId);

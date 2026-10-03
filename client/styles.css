@@ -3611,6 +3611,55 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
   .tb-book .tb-spell small { display: none; }
   .tb-book-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; }
 }
+/* The order book as HoMM3's (2026-10-03): an open book over the field, two facing pages of orders, a bookmark for
+   each school down its right edge, the corners to turn; painted (bg.spellbook) or parchment until then. Its size is
+   set from the field's (--bk-w), everything in it scales with it. */
+.tb-book.bk { position: fixed; z-index: 30; inset: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--bk-w); height: calc(var(--bk-w) * 9 / 16); max-height: none;
+  display: block; padding: 0; gap: 0; overflow: visible; border-radius: 6px; color: #2e1f0e;
+  --bk-t: 7%; --bk-b: 9%; --bk-o: 9%; --bk-i: 2.5%;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0) 48%, rgba(60, 38, 16, 0.35) 49.6%, rgba(20, 12, 4, 0.55) 50%, rgba(60, 38, 16, 0.35) 50.4%, rgba(0, 0, 0, 0) 52%),
+    radial-gradient(ellipse at 50% 50%, #eadcb8 0%, #dcc79a 70%, #c4a974 100%) padding-box,
+    linear-gradient(#2b1a0d, #1a0f07) border-box;
+  border: max(4px, calc(var(--bk-w) * 0.012)) solid transparent; box-shadow: 0 10px 40px #000, inset 0 0 calc(var(--bk-w) * 0.04) rgba(80, 50, 20, 0.45); }
+.tb-book.bk.painted { background: center / 100% 100% no-repeat; border: none; box-shadow: none; filter: drop-shadow(0 10px 24px #000);
+  --bk-t: 15%; --bk-b: 17%; --bk-o: 14%; --bk-i: 3.5%; }
+/* While the book is open the sea's news waits (a toast would lie over its pages). */
+body:has(.tb-book.bk:not(.hidden)) #toasts { display: none; }
+.bk-page { position: absolute; top: var(--bk-t); bottom: var(--bk-b); display: flex; flex-direction: column; gap: 2%; min-width: 0; }
+.bk-page.l { left: var(--bk-o); right: calc(50% + var(--bk-i)); }
+.bk-page.r { left: calc(50% + var(--bk-i)); right: var(--bk-o); }
+.bk-page h4 { margin: 0; text-align: center; font-family: var(--display); font-weight: 400; font-size: max(12px, calc(var(--bk-w) * 0.022)); line-height: 1.2; color: #3d230c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bk-will { min-height: calc(var(--bk-w) * 0.027); display: flex; align-items: center; }
+.bk-will .tb-will { flex: 1; min-height: 0; display: flex; gap: 4%; }
+.bk-will .tb-store { flex: 1; font-size: max(10px, calc(var(--bk-w) * 0.014)); color: #23517c; }
+.bk-will .tb-store.stam { color: #8a4a12; }
+.bk-will .tb-rbar { background: rgba(60, 38, 16, 0.25); border-color: rgba(90, 60, 20, 0.5); }
+.bk-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(var(--bk-rows, 3), minmax(0, 1fr)); gap: 3% 5%; }
+.bk-sp { appearance: none; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 2%;
+  background: none; border: 1px solid transparent; border-radius: 4px; color: inherit; font: inherit; cursor: pointer; }
+.bk-sp:hover:not(:disabled) { background: rgba(120, 80, 30, 0.14); border-color: rgba(90, 60, 20, 0.45); }
+.bk-sp.on { border-color: #8a5a1a; background: rgba(176, 120, 40, 0.2); }
+.bk-sp:disabled { cursor: default; opacity: 0.5; filter: grayscale(0.85); }
+.bk-sp .bk-ico { width: max(28px, calc(var(--bk-w) * 0.058)); height: max(28px, calc(var(--bk-w) * 0.058)); flex: none; border-radius: 4px; box-shadow: 0 1px 4px rgba(30, 15, 0, 0.6); }
+.bk-sp b { max-width: 100%; font-family: var(--serif); font-size: max(10px, calc(var(--bk-w) * 0.0145)); font-weight: 600; line-height: 1.1; text-align: center; color: #2e1f0e;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bk-sp small { display: flex; align-items: center; gap: 2px; font-size: max(9px, calc(var(--bk-w) * 0.0125)); color: #6a4519; line-height: 1; }
+.bk-sp small .ico-xs { width: max(10px, calc(var(--bk-w) * 0.015)); height: max(10px, calc(var(--bk-w) * 0.015)); }
+.bk-no { position: absolute; bottom: calc(var(--bk-w) * -0.03); font-style: normal; font-family: var(--serif); font-size: max(9px, calc(var(--bk-w) * 0.012)); color: #6a4519; }
+.bk-page.l .bk-no { left: 0; }
+.bk-page.r .bk-no { right: 0; }
+.bk-tabs { position: absolute; right: 1.6%; top: calc(var(--bk-t) + 6%); display: flex; flex-direction: column; gap: calc(var(--bk-w) * 0.006); }
+.bk-tab { appearance: none; width: max(26px, calc(var(--bk-w) * 0.046)); height: max(26px, calc(var(--bk-w) * 0.046)); padding: 2px; border: 1px solid var(--brass-dim); border-radius: 4px;
+  background: #1b130b; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+.bk-tab .ico { width: 100%; height: 100%; margin: 0; border-radius: 3px; display: block; }
+.bk-tab.on { border-color: var(--gold); box-shadow: 0 0 8px rgba(232, 196, 106, 0.6); }
+.bk-turn, .bk-close { appearance: none; position: absolute; display: grid; place-items: center; width: calc(var(--bk-w) * 0.04); height: calc(var(--bk-w) * 0.04);
+  min-width: 26px; min-height: 26px; padding: 0; border: 1px solid var(--brass-dim); border-radius: 50%; background: #1b130b; color: var(--gold);
+  font-size: calc(var(--bk-w) * 0.024); line-height: 1; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+.bk-turn:disabled { opacity: 0.35; cursor: default; }
+.bk-turn.prev { left: 1.6%; bottom: 3%; }
+.bk-turn.next { right: 1.6%; bottom: 3%; }
+.bk-close { right: 1.6%; top: 3%; }
 /* docs/17 H4: the adventure map's visit card over the sea (placed like the lair's chest), and the Grail's chart. */
 #advcard { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 150px); transform: translateX(-50%); width: min(380px, calc(100vw - 24px)); z-index: 40; pointer-events: auto; display: grid; gap: 6px; }
 #advcard.hidden { display: none; }
