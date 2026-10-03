@@ -1983,6 +1983,10 @@
     "prop.port_gallowsmouth":                  { "local": "props/port_gallowsmouth.webp", "remote": "hf_20261003_221517_gpt-port_gallowsmouth.png", "job": "gpt-port_gallowsmouth", "fit": "sheet:port_gallowsmouth.0", "rev": 20261003221517},
     "ship.kraken_hunter":                      { "local": "ships/kraken_hunter.webp", "remote": "hf_20261003_221912_gpt-ships_4.png", "job": "gpt-ships_4", "fit": "sheet:ships_4.0", "rev": 20261003221912},
     "ship.crimson_tide":                       { "local": "ships/crimson_tide.webp", "remote": "hf_20261003_221912_gpt-ships_4.png", "job": "gpt-ships_4", "fit": "sheet:ships_4.1", "rev": 20261003221912},
-    "ship.sun_galleon":                        { "local": "ships/sun_galleon.webp", "remote": "hf_20261003_221912_gpt-ships_4.png", "job": "gpt-ships_4", "fit": "sheet:ships_4.2", "rev": 20261003221912}
+    "ship.sun_galleon":                        { "local": "ships/sun_galleon.webp", "remote": "hf_20261003_221912_gpt-ships_4.png", "job": "gpt-ships_4", "fit": "sheet:ships_4.2", "rev": 20261003221912},
+    "unit.iron_marine":                        { "local": "units/iron_marine.webp", "remote": "hf_20261003_222716_gpt-anim_iron_marine.png", "job": "gpt-anim_iron_marine", "fit": "sheet:anim_iron_marine.0", "rev": 20261003222716},
+    "unit.iron_marine_b":                      { "local": "units/iron_marine_b.webp", "remote": "hf_20261003_222716_gpt-anim_iron_marine.png", "job": "gpt-anim_iron_marine", "fit": "sheet:anim_iron_marine.1", "rev": 20261003222716},
+    "unit.iron_marine_atk":                    { "local": "units/iron_marine_atk.webp", "remote": "hf_20261003_222716_gpt-anim_iron_marine.png", "job": "gpt-anim_iron_marine", "fit": "sheet:anim_iron_marine.2", "rev": 20261003222716},
+    "unit.iron_marine_hit":                    { "local": "units/iron_marine_hit.webp", "remote": "hf_20261003_222716_gpt-anim_iron_marine.png", "job": "gpt-anim_iron_marine", "fit": "sheet:anim_iron_marine.3", "rev": 20261003222716}
   }
 }
