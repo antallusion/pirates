@@ -12,6 +12,7 @@ import type { MinigameId } from '../../../shared/src/data/minigames.ts';
 //   /xp N · /level N · /silver N
 //   /tp <port> | <region> | <x> <y>
 //   /boss <id>                 raise a boss 600 m off the bow
+//   /shoreboss <kind> [fight]  a great one ashore on the nearest island of its kind (fight: land against it at once)
 //   /weather <kind> [region]   calm · breeze · wind · fog · rain · storm · black_storm
 //   /time <hour>               wind the world clock forward to that hour
 //   /god                       no damage, hull and crew kept whole
@@ -124,6 +125,7 @@ import { adminHaul } from './seahaul.ts';
 import { adminFeed, adminTame, adminTamer } from './tame.ts';
 import { musterInPort } from './shipgifts.ts'; // a premium hull's own creatures (docs/02 §1.A.9)
 import { adminDoubloons } from './premium.ts'; // the premium shop (owner, 2026-10-03)
+import { adminShoreBoss } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { LAIR_KINDS } from '../../../shared/src/data/lairs.ts';
 import type { LairKind } from '../../../shared/src/data/lairs.ts';
 import { adminGrail, adminObelisk } from './grail.ts';
@@ -235,6 +237,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const f = summon(game, kind, x, y);
       return `${BOSSES[kind].name} rises (fight ${f.id}).`;
     }
+    case 'shoreboss':
+      // The great ones ashore (shorebosses.ts, 2026-10-03): raised near her, gone to, landed against, beaten, cleared.
+      return adminShoreBoss(game, s, args);
     case 'weather': {
       const kind = args[0] as WeatherKind;
       if (!WEATHERS.includes(kind)) return `Weather: ${WEATHERS.join(', ')}`;

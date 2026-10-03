@@ -1142,7 +1142,9 @@ export interface DiveView {
 /** A world event (events.ts): the Armada, a blockade, the Storm of the Century, a new island, a fever. */
 export interface WorldEventView {
   id: number;
-  kind: 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | 'glory' | HappeningKind;
+  kind: 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | 'glory' | HappeningKind
+    /** A great one come ashore on an island for a while (shorebosses.ts): any captain may land against it. */
+    | 'boss_ashore';
   title: string;
   region: RegionId;
   port?: string;
@@ -1156,7 +1158,11 @@ export interface WorldEventView {
 
 /** A world boss fight as its neighbours see it (sent once a second within range; bosses.ts). */
 export interface BossZone {
-  k: 'whirl' | 'ring' | 'eye' | 'ink' | 'lure' | 'telegraph' | 'maze' | 'song' | 'bile';
+  k: 'whirl' | 'ring' | 'eye' | 'ink' | 'lure' | 'telegraph' | 'maze' | 'song' | 'bile'
+    /** The six of 2026-10-03 (bosses10.ts): ash that fires guns' own powder, burning water, a tolling bell spire and
+     *  the sanctuary of a silenced one, the true Changeling's wake (shown only to those near enough to see it), the
+     *  reach of its dazzling colours. */
+    | 'ash' | 'burn' | 'spire' | 'sanctuary' | 'wake' | 'gaze';
   x: number;
   y: number;
   r: number;
@@ -1430,7 +1436,9 @@ export interface TacEvent {
     /** docs/18: a path's innate move and ultimate (id: the path), a stack acting again. */
     | 'innate' | 'ult' | 'again'
     /** docs/18 II: the poison in a stack bites again; a creature grows back. */
-    | 'poison' | 'regen';
+    | 'poison' | 'regen'
+    /** A great one ashore does its own (shorebosses.ts, 2026-10-03): `id` the move, `s` the great one, `on` whom it fell on. */
+    | 'boss';
   side: 0 | 1;
   s?: number;
   t?: number;
@@ -1475,6 +1483,8 @@ export interface TacView {
   result?: { lost: { u: UnitId; n: number }[]; killed: { u: UnitId; n: number }[]; xp: number; paid?: number; loot?: LairLoot };
   /** docs/18 II: the battle is fought ashore at a lair of the land's creatures (the kind of island it is drawn as). */
   land?: { type: string; lair: string; island: string; level: number };
+  /** The hexes a great one ashore will fall on as the next round opens (shorebosses.ts): step off them. */
+  warn?: number[];
 }
 
 export type ServerMsg =

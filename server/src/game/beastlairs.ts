@@ -143,6 +143,10 @@ export interface ExtFight {
   onEnd: (game: Game, s: PlayerSession, won: boolean, bt: TacBattle) => LairLoot | undefined;
   /** docs/19 D7: the share of the battle's own lesson she has (a roaming stack's: less a blow, none for a grey one). */
   xpMul?: number;
+  /** A great one ashore (shorebosses.ts, 2026-10-03): its own moves, played as the fight opens and after every turn;
+   *  and the fight played out at once with them (quick combat, a captain gone from the sea). */
+  onStep?: (game: Game, s: PlayerSession, bt: TacBattle, rng: Rng) => void;
+  quick?: (bt: TacBattle, rng: Rng) => void;
 }
 
 interface L18 {
@@ -578,6 +582,7 @@ export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, 
   const rng = new Rng((seed ^ 0xd71f) >>> 0);
   const bt = newBattle(a, b, seed, game.now, rng, { land: ext.type });
   S.fights.set(s.accountId, { lair: '', bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0, ext });
+  ext.onStep?.(game, s, bt, rng);
   meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46
   ship.input = { rudder: 0, sailTarget: 0 };
   ship.state.speed = 0;
@@ -612,7 +617,8 @@ export function landTac(game: Game, s: PlayerSession, action: TacAction | 'cut')
   }
   if (!action || typeof action !== 'object') return 'No such order';
   if (action.a === 'surrender' || action.a === 'ransom') return 'Fall back to the boats instead';
-  const why = act(bt, 0, action, game.now, f.rng);
+  const why = action.a === 'quick' && f.ext?.quick ? (f.ext.quick(bt, f.rng), null) : act(bt, 0, action, game.now, f.rng);
+  if (!bt.over) f.ext?.onStep?.(game, s, bt, f.rng);
   if (bt.over && !f.done) settle(game, s, f);
   sendFight(game, s);
   return why;
@@ -627,7 +633,8 @@ export function stepLandFights(game: Game): void {
     if (!s?.ship || !s.profile || !s.ship.alive) {
       // Gone from the sea: the party fights it out by itself.
       if (!f.done && s?.ship && s.profile) {
-        quickFinish(f.bt, game.now, f.rng);
+        if (f.ext?.quick) f.ext.quick(f.bt, f.rng);
+        else quickFinish(f.bt, game.now, f.rng);
         settle(game, s, f);
       }
       S.fights.delete(acc);
@@ -638,6 +645,7 @@ export function stepLandFights(game: Game): void {
       const h = f.bt.heroes[0];
       if (!h.auto && s.disconnectedAt !== null) h.auto = true;
       stepBattle(f.bt, game.now, f.rng);
+      if (!f.bt.over) f.ext?.onStep?.(game, s, f.bt, f.rng);
       if (f.bt.over) settle(game, s, f);
       if (f.bt.seq !== f.seq) sendFight(game, s);
     } else if (game.now >= f.closeAt) closeFight(game, s);

@@ -11,11 +11,12 @@ import type { FactionKindId, Roster } from './factionunits.ts';
 import { PREMIUM_BEASTS } from './premiumbeasts.ts';
 import type { PremiumBeastId } from './premiumbeasts.ts';
 import { SHIP_BEASTS, type ShipBeastId } from './shipbeasts.ts'; // the premium hulls' own kinds (owner, 2026-10-03)
+import { BOSS_UNITS, type BossUnitId } from './bossunits.ts'; // the great ones ashore (2026-10-03), never hired
 
 /** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
- *  them (docs/18 II, shared/src/data/bestiary.ts), the world's armies, the shop's creatures (premiumbeasts.ts) and the
- *  premium hulls' own kinds (shipbeasts.ts). */
-export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId | PremiumBeastId | ShipBeastId;
+ *  them (docs/18 II, shared/src/data/bestiary.ts), the world's armies, the shop's creatures (premiumbeasts.ts), the
+ *  premium hulls' own kinds (shipbeasts.ts) and the great ones ashore (bossunits.ts). */
+export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId | PremiumBeastId | ShipBeastId | BossUnitId;
 export type MenId =
   | 'deckhand' | 'sailor'
   | 'marine' | 'sea_guard'
@@ -167,7 +168,7 @@ function factionUnits(): Record<FactionKindId, UnitDef> {
   return out;
 }
 
-export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits(), ...PREMIUM_BEASTS, ...SHIP_BEASTS };
+export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits(), ...PREMIUM_BEASTS, ...SHIP_BEASTS, ...BOSS_UNITS };
 
 export const hasSpecial = (u: UnitId, s: UnitSpecial): boolean => UNITS[u].specials.includes(s);
 

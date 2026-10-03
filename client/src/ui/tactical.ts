@@ -43,12 +43,19 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { SHIP_BEAST_DEFS, isShipBeast } from '../../../shared/src/data/shipbeasts.ts'; // the premium hulls' own (docs/02 §1.A.9)
 import { deckArt } from '../../../shared/src/data/fleet.ts';
+import { BOSS_UNIT_STAND_IN, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
+import { SHORE_BOSSES, SHORE_MOVES, isShoreBoss } from '../../../shared/src/data/shorebosses.ts';
+import type { ShoreMove } from '../../../shared/src/data/shorebosses.ts';
+import { EN as BEN, RU as BRU } from '../lang/ui/bosses.ts';
 
 const L = dict(EN, RU);
 const LL = dict(LEN, LRU);
 const DL = dict(DEN, DRU);
 const FL = dict(FEN, FRU);
 const RL = dict(REN, RRU);
+const BL = dict(BEN, BRU);
+/** A great one's move, in the player's language. */
+const shoreMove = (id: string | undefined): string => SHORE_MOVES[id as ShoreMove]?.[lang() === 'ru' ? 1 : 0] ?? '';
 /** docs/19 D7: a roaming stack's fight is named 'roam_<kind>'. */
 const roamOf = (lair: string | undefined): RoamKind | null => { const k = lair?.startsWith('roam_') ? lair.slice(5) : ''; return isRoamKind(k) ? k : null; };
 
@@ -100,7 +107,10 @@ function lootBlock(l: LairLoot): string {
   if (l.chest) lines.push(esc(LL('loot.chest', { s: l.chest.silver, x: l.chest.xp })) + (l.chest.artifact ? ` · ${esc(ARTIFACTS[l.chest.artifact]?.name[ru] ?? '')}` : ''));
   if (l.claimed) lines.push(esc(LL('loot.claimed', { island: placeName(l.claimed) })));
   if (l.dwell) lines.push(esc(LL('loot.dwell')));
-  return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
+  // A great one ashore beaten (2026-10-03): its trophy, and the first on the seas.
+  if (l.shore?.trophy && isShoreBoss(l.shore.kind)) lines.push(esc(BL('loot.trophy', { t: SHORE_BOSSES[l.shore.kind].trophy[ru] })));
+  if (l.shore?.first) lines.push(esc(BL('loot.first')));
+  return `<div class="tb-loot"><small>${esc(l.shore ? BL('loot.title') : LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
 }
 /** An order's name and words, from the order book (docs/17 H2) — every page of it, old and new. */
 /** The battle's own painted icons (tools/art/battle_more.py, battle_sheets.py) where they are painted; the older
@@ -202,8 +212,13 @@ function stackName(s: TacStackView): string {
 const KIND_FIGURE: Record<string, string> = { hands: 'sailor', marines: 'marine', gunners: 'gunner', boarders: 'boarder', guard: 'guard', deep: 'drowned', officer: 'officer' };
 function figureArt(s: TacStackView): string | null {
   const id = `unit.${s.kind === 'officer' || !s.unit ? KIND_FIGURE[s.kind] ?? 'sailor' : s.unit}`;
-  return sprite(id) ? id : null;
+  if (sprite(id)) return id;
+  // A great one ashore (2026-10-03) whose own figure is not painted yet: a kind of like shape stands in, tinted.
+  const stand = s.unit && isBossUnit(s.unit) ? `unit.${BOSS_UNIT_STAND_IN[s.unit].u}` : null;
+  return stand && sprite(stand) ? stand : null;
 }
+/** The tint over a great one's stand-in figure (none over its own). */
+const standTint = (s: TacStackView, id: string): string | undefined => (s.unit && isBossUnit(s.unit) && !id.startsWith(`unit.${s.unit}`) ? BOSS_UNIT_STAND_IN[s.unit].tint : undefined);
 /** How tall a kind stands beside a hex's width: the men alike, the creatures by their bulk. */
 const FIGURE_SIZE: Record<string, number> = {
   crab: 0.85, gull: 0.95, seal: 1.0, reef_shark: 1.15, rock_turtle: 1.05, sea_turtle: 1.05, marsh_serpent: 1.45, hermit: 1.3,
@@ -218,8 +233,8 @@ const FIGURE_SIZE: Record<string, number> = {
   crab_queen: 1.4, cave_wyrm: 1.5, mangrove_hydra: 1.6, ape_king: 1.75, storm_roc: 1.65,
 };
 // docs/18 VII: the kinds still in the painter's queue keep their height in shared/src/data/unitart.ts; the premium
-// hulls' own kinds theirs in shipbeasts.ts.
-const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? FIGURES[s.unit]?.size ?? (s.kind !== 'officer' && s.unit && isShipBeast(s.unit) ? SHIP_BEAST_DEFS[s.unit].fig : undefined) ?? 1.28) * 1.22;
+// hulls' own kinds theirs in shipbeasts.ts, the great ones ashore theirs in bossunits.ts.
+const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? FIGURES[s.unit]?.size ?? (s.kind !== 'officer' && s.unit && isShipBeast(s.unit) ? SHIP_BEAST_DEFS[s.unit].fig : undefined) ?? (s.unit && isBossUnit(s.unit) ? BOSS_UNIT_STAND_IN[s.unit].size : undefined) ?? 1.28) * 1.22;
 /** Where the feet stand across a figure (a musket held out to one side does not move the man off his hex): the middle
  *  of what is painted in its lowest tenth, found once per picture. */
 const footCache = new Map<string, number>();
@@ -539,6 +554,19 @@ export class TacticalPanel {
       this.pathFx.push({ path: e.id as CaptainId, ult, mine: e.side === v.you, t0: t, at: on });
       this.addFloat({ text: moveName(e.id ?? '', ult), x: this.size.cw / 2, y: this.size.ch * (ult ? 0.3 : 0.18), t0: t, color: e.side === v.you ? YOU : FOE, big: true });
       for (const c of on.slice(0, 7)) this.addFloat({ text: moveName(e.id ?? '', ult), x: c.x, y: c.y - w * 0.62, t0: t + 120, color: ult ? '#ffd27a' : '#e0b862' });
+    } else if (e.k === 'boss') {
+      // A great one ashore does its own (2026-10-03): its move's name over the field and over each stack it fell on.
+      const name = shoreMove(e.id);
+      const c0 = at(hexOf(e.s));
+      const fx = e.id === 'breath' ? 'part.explosion' : e.id === 'toll' || e.id === 'choir' ? (sprite('fx.bt_deep_0') ? 'fx.bt_deep' : 'part.splash') : 'part.smoke';
+      if (c0) this.bursts.push({ id: fx, x: c0.x, y: c0.y, t0: t, size: w * 1.6 });
+      if (name) this.addFloat({ text: name, x: this.size.cw / 2, y: this.size.ch * 0.24, t0: t, color: e.side === v.you ? YOU : FOE, big: true });
+      for (const id of (e.on ?? []).slice(0, 7)) {
+        const cc = at(hexOf(id));
+        if (!cc) continue;
+        if (name) this.addFloat({ text: name, x: cc.x, y: cc.y - w * 0.62, t0: t + 100, color: '#e07a5e' });
+        this.bursts.push({ id: 'part.splinters', x: cc.x, y: cc.y, t0: t + 80, size: w * 0.8 });
+      }
     } else if (e.k === 'again') {
       const c = at(hexOf(e.s));
       if (c) this.addFloat({ text: L('float.again'), x: c.x, y: c.y - w * 0.6, t0: t, color: '#9fe0ff' });
@@ -583,9 +611,11 @@ export class TacticalPanel {
       // docs/18: her path, and her innate move and ultimate (spent or not) — on her side of the field too.
       const moves = h.path && h.innate ? `<span class="tb-moves">${icon(INNATE[h.path].icon, '', `ico-xs tb-mv${h.innate === 'used' ? ' off' : ''}`)}${h.ult !== 'locked' ? icon(ULTIMATE[h.path].icon, '', `ico-xs tb-mv ult${h.ult === 'used' ? ' off' : ''}`) : ''}<i>${esc(CAPTAINS[h.path].archetype)}</i></span>` : '';
       // A face of the art (docs/18 II: a lair's creature) or a named captain's portrait.
-      const face = h.face ? (h.face.includes('.') && !h.face.startsWith('portrait.') ? assetUrl(h.face) : portraitUrl(h.face.replace(/^portrait\./, ''))) ?? url : url;
+      // A great one ashore whose own figure is not painted yet shows the figure that stands in for it (2026-10-03).
+      const fid = h.face?.startsWith('unit.') && isBossUnit(h.face.slice(5)) && !assetUrl(h.face) ? UNITS[h.face.slice(5) as UnitId].art : h.face;
+      const face = fid ? (fid.includes('.') && !fid.startsWith('portrait.') ? assetUrl(fid) : portraitUrl(fid.replace(/^portrait\./, ''))) ?? url : url;
       return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? (isDriftKind(v.land.lair) ? DRIFTS[v.land.lair].name[lang() === 'ru' ? 1 : 0] : v.land.lair === 'find_chest' ? findTitle('chest') : roamOf(v.land.lair) ? roamName(roamOf(v.land.lair)!) : h.name)) : personName(h.name))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest' || roamOf(v.land.lair)) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? (isDriftKind(v.land.lair) ? DRIFTS[v.land.lair].name[lang() === 'ru' ? 1 : 0] : v.land.lair === 'find_chest' ? findTitle('chest') : roamOf(v.land.lair) ? roamName(roamOf(v.land.lair)!) : isShoreBoss(v.land.lair) ? SHORE_BOSSES[v.land.lair].name[lang() === 'ru' ? 1 : 0] : h.name)) : personName(h.name))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest' || roamOf(v.land.lair)) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
@@ -725,7 +755,7 @@ export class TacticalPanel {
       const won = v.over.winner === v.you;
       const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : 'why.rounds';
       // docs/18 II: ashore, the lair is broken, or the party thrown back or fallen back to the boats.
-      const whyText = roamOf(v.land?.lair) ? RL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land?.lair === 'find_chest' ? FL(won ? 'why.chest' : v.over.why === 'struck' ? 'why.chestBack' : 'why.chestLost') : v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
+      const whyText = v.land && isShoreBoss(v.land.lair) ? BL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : roamOf(v.land?.lair) ? RL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land?.lair === 'find_chest' ? FL(won ? 'why.chest' : v.over.why === 'struck' ? 'why.chestBack' : 'why.chestLost') : v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
       banner.className = `tb-banner ${won ? 'won' : 'lost'}${v.result ? ' tb-result' : ''}`;
       // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
       const r = v.result;
@@ -755,6 +785,10 @@ export class TacticalPanel {
         return L(e.k === 'ult' ? 'log.ult' : 'log.innate', { side: L(e.side === v.you ? 'side.you' : 'side.foe'), name: moveName(e.id ?? '', e.k === 'ult'), kills: e.kills ?? 0 });
       case 'again':
         return L('log.again', { a: name(e.s) });
+      case 'boss': {
+        const who = (e.on ?? []).map((id) => name(id)).join(', ');
+        return who ? BL('log.boss', { move: shoreMove(e.id), who }) : BL('log.bossAlone', { move: shoreMove(e.id) });
+      }
       case 'order':
         return e.id === 'harpoon' && e.t !== undefined ? L('log.harpoon', { a: name(e.s), b: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 }) : L('log.order', { a: name(e.s), name: L(`o.${e.id}` as K) });
       case 'round':
@@ -781,7 +815,7 @@ export class TacticalPanel {
     const h = this.el!.querySelector('.tb-hint')!;
     const act = v.stacks.find((s) => s.id === v.active);
     const own = this.targetKind() === 'own';
-    const text = v.over ? '' : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : '') : this.targeting ? L(own ? 'hint.own' : 'hint.target') : this.preview !== null ? L('hint.again') : v.shoot.length ? L('hint.shoot') : L('hint.move');
+    const text = v.over ? '' : !v.mine ? (act && act.side !== v.you ? L('hint.wait') : '') : this.targeting ? L(own ? 'hint.own' : 'hint.target') : this.preview !== null ? L('hint.again') : v.warn?.length ? BL('hint.warn') : v.shoot.length ? L('hint.shoot') : L('hint.move');
     h.textContent = text;
     h.classList.toggle('hidden', !text);
   }
@@ -1677,6 +1711,16 @@ export class TacticalPanel {
       const p = this.lc(i);
       this.flames(g, p.x, p.y, w, t, i);
     }
+    // The ground a great one ashore will fall on as the next round opens (shorebosses.ts): glowing, to be stepped off.
+    for (const i of v.warn ?? []) {
+      const p = this.lc(i);
+      this.hexPath(g, p.x, p.y, r - 2);
+      g.fillStyle = `rgba(230,110,60,${0.12 + 0.14 * pulse})`;
+      g.fill();
+      g.strokeStyle = `rgba(245,150,90,${0.45 + 0.45 * pulse})`;
+      g.lineWidth = 2;
+      g.stroke();
+    }
     // The reach of the stack whose turn it is.
     if (v.mine) {
       for (const h of v.reach) {
@@ -2091,8 +2135,10 @@ export class TacticalPanel {
     g.save();
     g.translate(x + ox, fy + oy - lift);
     if (flip) g.scale(-1, 1);
+    const tint = standTint(s, id);
     if (s.blind) g.filter = 'grayscale(0.7) brightness(0.8)';
-    else if (flash) g.filter = `brightness(${(1 + flash * 1.2).toFixed(2)}) sepia(${(flash * 0.6).toFixed(2)}) hue-rotate(-30deg)`;
+    else if (flash) g.filter = `${tint ?? ''} brightness(${(1 + flash * 1.2).toFixed(2)}) sepia(${(flash * 0.6).toFixed(2)}) hue-rotate(-30deg)`.trim();
+    else if (tint) g.filter = tint;
     g.drawImage(img, -W * fx, -H, W, H);
     g.filter = 'none';
     if (s.wet) {
@@ -2217,7 +2263,7 @@ export class TacticalPanel {
       const iw = sp.img.naturalWidth, ih = sp.img.naturalHeight;
       const k = (R * 2.1) / Math.min(iw, ih);
       // docs/18 II: a creature with no picture of its own is a tinted token of one that is.
-      const tint = s.unit ? BEAST_TINT[s.unit as keyof typeof BEAST_TINT] : undefined;
+      const tint = s.unit ? BEAST_TINT[s.unit as keyof typeof BEAST_TINT] ?? (isBossUnit(s.unit) ? BOSS_UNIT_STAND_IN[s.unit].tint : undefined) : undefined;
       if (tint) g.filter = tint;
       g.drawImage(sp.img, x - (iw * k) / 2, y - (ih * k) / 2, iw * k, ih * k);
       g.filter = 'none';

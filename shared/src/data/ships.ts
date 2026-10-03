@@ -3,6 +3,8 @@
 // so a fast ship crosses the 96 km ocean in roughly 100 minutes).
 
 import type { UnitId } from './army.ts';
+import { BOSS_MONSTERS } from './bossmonsters.ts';
+import type { BossClassId } from './bossmonsters.ts';
 import type { Flag, StatMods } from './stats.ts';
 
 export type ShipClassId =
@@ -18,7 +20,9 @@ export type ShipClassId =
   // PvE locations (expeditions.ts): the rotten hulks of a ship graveyard.
   | 'hulk'
   // The Abyss: the Eye at its heart.
-  | 'abyss_eye';
+  | 'abyss_eye'
+  // The six new world bosses at sea and their parts (owner, 2026-10-03; shared/src/data/bossmonsters.ts).
+  | BossClassId;
 
 /** The sixty-six new hulls of the fleet of eighty (tools/art/ships.py paints them): the warships, the traders, the
  *  runners and the haulers, the premium ten of each list among them. The Hulk sails as `holk`: `hulk` is the rotten
@@ -761,6 +765,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
   shark: monster('shark', 'Shark', 'Comes to blood. Takes men from the water.', 5, 1.2, 250, 0.05, 12, 'Blood in the water brings more.'),
   young_serpent: monster('young_serpent', 'Young Sea Serpent', 'Not yet the size of its mother. Big enough to coil round a brig.', 30, 3, 2400, 0.2, 13, 'Its coils crush a hull caught in them.'),
   storm_widow: monster('storm_widow', 'The Storm Widow', 'A widow of wind and lightning walking on the waves.', 60, 60, 40000, 0.2, 6, 'She can only be hurt from inside the moving eye.'),
+  ...BOSS_MONSTERS,
 };
 
 export const SHIP_CLASS_IDS = Object.keys(SHIP_CLASSES) as ShipClassId[];

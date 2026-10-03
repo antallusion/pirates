@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { UNITS, armyForLevel, armyWeight, armyPower, isPremiumUnit } from '../shared/src/data/army.ts';
 import type { ArmyMix, ArmyStack, UnitId, UnitSpecial } from '../shared/src/data/army.ts';
+import { isBossUnit } from '../shared/src/data/bossunits.ts';
 import { REF_MEN } from '../shared/src/data/advmap.ts';
 import { DRIFTS, SLIP_AFTER, driftKindsFor, tamerStock } from '../shared/src/data/drifts.ts';
 import { FACTION_ELITES, FACTION_KINDS, FACTION_NAMES, rosterArmy, rosterKind } from '../shared/src/data/factionunits.ts';
@@ -109,7 +110,7 @@ test('the shop\'s twenty: battle units of the art queue\'s premium faction, each
 });
 
 test('their numbers by tier: above the best of the sea\'s own, below the next tier\'s; priced by might, dearer a point the higher the tier', () => {
-  const own = (t: number) => (Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].tier === t && !UNITS[u].premium && !UNITS[u].legend && !UNITS[u].roster);
+  const own = (t: number) => (Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].tier === t && !UNITS[u].premium && !UNITS[u].legend && !UNITS[u].roster && !isBossUnit(u)); // the great ones ashore are never hired
   const best = (t: number) => Math.max(...own(t).map(w1));
   const legends = Math.min(...(Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].legend).map(w1));
   for (const id of PREMIUM_BEAST_IDS) {

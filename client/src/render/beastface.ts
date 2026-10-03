@@ -7,6 +7,7 @@ import type { UnitId } from '../../../shared/src/data/army.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
 import { isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
 import { assetUrl } from '../assets.ts';
+import { BOSS_UNIT_STAND_IN, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
 
 export interface BeastFace {
   id: string;
@@ -21,7 +22,7 @@ export interface BeastFace {
 export function beastFace(u: string): BeastFace {
   const def = UNITS[u as UnitId];
   if ((def?.beast || isShipBeast(u)) && assetUrl(`unit.${u}`)) return { id: `unit.${u}`, fig: true };
-  return { id: def?.art ?? 'icon.prof_sailor', tint: BEAST_TINT[u as keyof typeof BEAST_TINT], fig: false };
+  return { id: def?.art ?? 'icon.prof_sailor', tint: BEAST_TINT[u as keyof typeof BEAST_TINT] ?? (isBossUnit(u) ? BOSS_UNIT_STAND_IN[u].tint : undefined), fig: false };
 }
 
 /** Draws a face over a circle of radius R at (x, y) (the caller clips it): a figure's top square (its head and

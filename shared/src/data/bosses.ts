@@ -8,7 +8,10 @@ import type { RegionId } from '../world/regions.ts';
 
 export type BossId = 'leviathan' | 'kraken' | 'drowned_whale' | 'lantern_maw' | 'black_serpent' | 'hollow_admiral' | 'mother_of_wrecks' | 'storm_widow'
   // The Abyss (docs/02 §14.A.1): its ancient leviathans and the season's raid on the Eye.
-  | 'ancient_leviathan' | 'abyss_eye';
+  | 'ancient_leviathan' | 'abyss_eye'
+  // Six more (owner, 2026-10-03: «еще больше всяких там боссов»; docs/02 §11.A.4, the second table): one for each sea
+  // that had none of its own or only one — their fights in server/src/game/bosses10.ts.
+  | 'old_moorings' | 'old_tithe' | 'fog_changeling' | 'cinder_ray' | 'drowned_prelate' | 'rime_twins';
 
 export type BossWindow = 'any' | 'night' | 'storm';
 
@@ -128,6 +131,56 @@ export const BOSSES: Record<BossId, BossDef> = {
     rare: [{ kind: 'module', id: 'storm_glass', chance: 0.5 }, { kind: 'module', id: 'ghost_timbers', chance: 0.5 }, { kind: 'module', id: 'eye_lantern', chance: 0.5 }],
     trophy: 'A Shard of the Eye', xp: 25000,
     lore: 'Once a season the Eye at the heart of the Abyss opens. First the black storm, then a wind that is not there, then the fall. Only the whole sea together can close it again.',
+  },
+  // ---- The six of 2026-10-03 (server/src/game/bosses10.ts). The Black Coast's is the sea's first boss, for a handful of
+  // young captains; the Prelate is a night's work for a whole guild.
+  old_moorings: {
+    id: 'old_moorings', name: 'Old Moorings', classId: 'old_moorings', regions: ['black_coast'], ships: [3, 6], every: 8 * 3600, window: 'any', chance: 1, lifetime: 1800,
+    phases: ['The Silt', 'The Moorings'],
+    goods: { fish: [10, 30], whale_oil: [3, 10], pearls: [1, 4] },
+    rare: [{ kind: 'module', id: 'tiller_chains', chance: 0.2 }, { kind: 'figurehead', id: 'fh_wrecker', chance: 0.12 }],
+    trophy: 'Jaw of Old Moorings', xp: 1800,
+    lore: 'A conger as thick as a mainmast, out of the silt under the Crown’s breakwaters. It rears where a ship lies still — keep way on, and fire when it lies sprawled after a miss.',
+  },
+  old_tithe: {
+    id: 'old_tithe', name: 'The Tithe-Taker', classId: 'old_tithe', regions: ['gravewater'], ships: [4, 8], every: 12 * 3600, window: 'any', chance: 1, lifetime: 2400,
+    phases: ['The Tithe', 'The Disgorging'],
+    goods: { shark_skin: [4, 12], spices: [3, 10], cloth: [4, 12], pearls: [1, 5] },
+    rare: [{ kind: 'module', id: 'wreck_bulwarks', chance: 0.2 }, { kind: 'module', id: 'maw_grapnels', chance: 0.15 }, { kind: 'figurehead', id: 'fh_fishwife', chance: 0.1 }],
+    trophy: 'Tithe-Tooth', xp: 2800,
+    lore: 'A barnacled shark that has followed the Gravewater convoys for a century. It hunts the fullest hold and heals on what it takes — come with empty holds, or bring one laden ship to bait it.',
+  },
+  fog_changeling: {
+    id: 'fog_changeling', name: 'The Fog Changeling', classId: 'fog_changeling', regions: ['whispering'], ships: [4, 8], every: 12 * 3600, window: 'any', chance: 1, lifetime: 2400,
+    phases: ['Many Faces', 'The Colours'],
+    goods: { kraken_ink: [4, 12], pearls: [2, 6], dreamleaf: [1, 4] },
+    rare: [{ kind: 'module', id: 'ink_sacs', chance: 0.25 }, { kind: 'module', id: 'lantern_gland', chance: 0.15 }, { kind: 'figurehead', id: 'fh_veiled_lady', chance: 0.12 }],
+    trophy: 'Mirror-Skin of the Changeling', xp: 3000,
+    lore: 'A cuttlefish the size of a brig that throws four shapes of itself onto the fog. Only the true one casts a wake: close in to see it, or set a harpoon — a false shape bursts into ink.',
+  },
+  cinder_ray: {
+    id: 'cinder_ray', name: 'The Cinder Ray', classId: 'cinder_ray', regions: ['ashen_isles'], ships: [6, 10], every: 16 * 3600, window: 'any', chance: 1, lifetime: 2400,
+    phases: ['Ashfall', 'The Kindling'],
+    goods: { sulfur_iron: [4, 12], gunpowder: [3, 10], abyssal_ore: [1, 4] },
+    rare: [{ kind: 'module', id: 'serpent_scale', chance: 0.2 }, { kind: 'module', id: 'bone_culverin', chance: 0.1 }, { kind: 'figurehead', id: 'fh_salamander', chance: 0.12 }],
+    trophy: 'Ember Barb of the Ray', xp: 3900,
+    lore: 'A manta of black glass and ember-light under the ash-falls of the powder isles. Guns fired inside its ash set their own powder alight; when it glides down onto a ship it lies grounded — fire then.',
+  },
+  drowned_prelate: {
+    id: 'drowned_prelate', name: 'The Drowned Prelate', classId: 'drowned_prelate', regions: ['drowned_crown'], ships: [8, 14], every: 24 * 3600, window: 'night', chance: 1, lifetime: 3000,
+    phases: ['The Three Bells', 'The Last Rite'],
+    goods: { drowned_silk: [4, 12], cursed_relics: [3, 8], pearls: [2, 8] },
+    rare: [{ kind: 'module', id: 'crown_old_pattern', chance: 0.25 }, { kind: 'module', id: 'ghost_timbers', chance: 0.12 }, { kind: 'figurehead', id: 'fh_seraph', chance: 0.12 }],
+    trophy: 'The Prelate’s Mitre', xp: 5000,
+    lore: 'The Crown’s last high priest, drowned in his cathedral, rises in weed and coral with the bells of three spires. Hold a ship beside a spire to silence its bell: each silent bell opens him to shot and shelters you from his sermon.',
+  },
+  rime_twins: {
+    id: 'rime_twins', name: 'The Rime Twins', classId: 'rime_narwhal', regions: ['leviathan_reach'], ships: [6, 12], every: 18 * 3600, window: 'any', chance: 1, lifetime: 2700,
+    phases: ['The Hunt of Two', 'The Freeze'],
+    goods: { narwhal_tusk: [2, 6], whale_oil: [6, 16], leviathan_bone: [3, 10] },
+    rare: [{ kind: 'module', id: 'kraken_beak', chance: 0.2 }, { kind: 'module', id: 'leviathan_ribs', chance: 0.15 }, { kind: 'figurehead', id: 'fh_narwhal', chance: 0.15 }],
+    trophy: 'The Twin Tusks', xp: 4600,
+    lore: 'Two white narwhals born of one ice, hunting as one. The one that falls is sung back from the sea while its twin stands strong — bring both down together.',
   },
 };
 

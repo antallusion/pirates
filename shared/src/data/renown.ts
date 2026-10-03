@@ -152,6 +152,9 @@ export const TROPHY_RU: Record<string, string> = {
   'Leviathan Skull': 'Череп левиафана', 'Kraken Eye': 'Глаз кракена', 'Bell of the Whale': 'Колокол кита', 'Lure of the Maw': 'Приманка Пасти',
   'Serpent Fang': 'Клык змея', "Drey's Lantern": 'Фонарь Дрея', 'Crown of Wrecks': 'Корона обломков', 'Veil of the Widow': 'Вуаль вдовы',
   'Skull of an Ancient': 'Череп древнего', 'A Shard of the Eye': 'Осколок Ока',
+  // The six of 2026-10-03 (owner: «еще больше всяких там боссов»).
+  'Jaw of Old Moorings': 'Челюсть Старого Швартова', 'Tithe-Tooth': 'Зуб Десятины', 'Mirror-Skin of the Changeling': 'Зеркальная кожа Подменыша',
+  'Ember Barb of the Ray': 'Тлеющий шип Ската', 'The Prelate’s Mitre': 'Митра Прелата', 'The Twin Tusks': 'Бивни близнецов',
 };
 
 export function setDefs(letters: number): Record<SetId, SetDef> {

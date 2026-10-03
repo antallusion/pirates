@@ -92,6 +92,8 @@ export interface LairLoot {
   /** docs/19 D7: a roaming stack beaten at sea — its lesson (the battle's apart), its silver and spoils, an artifact,
    *  the fallen hauled back from the water, the group mates who shared in it, the day's count past, a grey one. */
   roam?: { xp: number; silver: number; res: Partial<Record<LandRes | 'pearls', number>>; artifact?: string; raised: number; mates: number; thin?: boolean; grey?: boolean };
+  /** A great one ashore beaten (shorebosses.ts, 2026-10-03): which, its trophy taken now, the first on the seas. */
+  shore?: { kind: string; trophy?: boolean; first?: boolean };
 }
 
 export interface LairsView {

@@ -2,6 +2,7 @@
 // corner, the upgraded kinds in a gold frame, the empty slots of her class left open — the names and specials of the
 // kinds of men, and the word for an army seen from afar («Горстка… Тьма»).
 
+import { BOSS_UNIT_NAMES, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { ARMY_WORD_MIN, UNITS, armyWord } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
@@ -18,10 +19,11 @@ const L = dict(EN, RU);
 const DL = dict(DEN, DRU);
 type K = keyof typeof EN;
 
-// The world's armies, the shop's creatures and the premium hulls' own kinds carry their own names
-// (shared/src/data/factionunits.ts, premiumbeasts.ts, shipbeasts.ts).
+// The world's armies, the shop's creatures, the premium hulls' own kinds and the great ones ashore carry their own
+// names (shared/src/data/factionunits.ts, premiumbeasts.ts, shipbeasts.ts, bossunits.ts).
 const own = (u: UnitId, k: 0 | 2): string | null => {
   const r = k + (lang() === 'ru' ? 1 : 0);
+  if (isBossUnit(u)) return BOSS_UNIT_NAMES[u][k ? 'note' : 'name'][lang() === 'ru' ? 1 : 0];
   const n = UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId] : isPremiumBeast(u) ? PREMIUM_NAMES[u] : isShipBeast(u) ? SHIP_BEAST_NAMES[u] : null;
   return n ? n[r] : null;
 };

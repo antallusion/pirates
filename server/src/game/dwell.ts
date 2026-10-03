@@ -6,6 +6,8 @@
 // ship's stacks: a kind already aboard joins its stack, a new kind takes a free slot, and the hammocks (crewMax) are
 // the limit. An upgraded dwelling trains a stack of its tier's plain kind up for the difference in price.
 
+import { BOSS_UNIT_IDS, BOSS_UNIT_NAMES } from '../../../shared/src/data/bossunits.ts';
+import type { BossUnitId } from '../../../shared/src/data/bossunits.ts';
 import { FACTION_KIND_IDS, FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
 import { PREMIUM_BEAST_IDS, PREMIUM_PLURAL } from '../../../shared/src/data/premiumbeasts.ts';
@@ -261,6 +263,7 @@ const NAMES: Record<UnitId, string> = {
   ...(Object.fromEntries(FACTION_KIND_IDS.map((k) => [k, FACTION_NAMES[k][0].toLowerCase()])) as Record<FactionKindId, string>), // the world's armies
   ...(Object.fromEntries(PREMIUM_BEAST_IDS.map((k) => [k, PREMIUM_PLURAL[k][0]])) as Record<PremiumBeastId, string>), // the shop's creatures
   ...(Object.fromEntries(SHIP_BEAST_IDS.map((u) => [u, SHIP_BEAST_PLURAL[u][0]])) as Record<ShipBeastId, string>), // the premium hulls' own (docs/02 §1.A.9)
+  ...(Object.fromEntries(BOSS_UNIT_IDS.map((k) => [k, BOSS_UNIT_NAMES[k].name[0]])) as Record<BossUnitId, string>), // the great ones ashore (never hired)
 };
 const plural = (u: UnitId, _n: number) => NAMES[u];
 
