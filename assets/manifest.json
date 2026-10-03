@@ -2004,6 +2004,10 @@
     "prop.port_copperhook":                    { "local": "props/port_copperhook.webp", "remote": "hf_20261003_230913_gpt-port_copperhook.png", "job": "gpt-port_copperhook", "fit": "sheet:port_copperhook.0", "rev": 20261003230913},
     "monster.cinder_ray":                      { "local": "monsters/cinder_ray.webp", "remote": "hf_20261003_231425_gpt-bosses_sea_2.png", "job": "gpt-bosses_sea_2", "fit": "sheet:bosses_sea_2.0", "rev": 20261003231425},
     "monster.drowned_prelate":                 { "local": "monsters/drowned_prelate.webp", "remote": "hf_20261003_231425_gpt-bosses_sea_2.png", "job": "gpt-bosses_sea_2", "fit": "sheet:bosses_sea_2.1", "rev": 20261003231425},
-    "monster.bell_spire":                      { "local": "monsters/bell_spire.webp", "remote": "hf_20261003_231425_gpt-bosses_sea_2.png", "job": "gpt-bosses_sea_2", "fit": "sheet:bosses_sea_2.2", "rev": 20261003231425}
+    "monster.bell_spire":                      { "local": "monsters/bell_spire.webp", "remote": "hf_20261003_231425_gpt-bosses_sea_2.png", "job": "gpt-bosses_sea_2", "fit": "sheet:bosses_sea_2.2", "rev": 20261003231425},
+    "ship.barque":                             { "local": "ships/barque.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.0", "rev": 20261003231706},
+    "ship.spice_dhow":                         { "local": "ships/spice_dhow.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.1", "rev": 20261003231706},
+    "ship.smugglers_lugger":                   { "local": "ships/smugglers_lugger.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.2", "rev": 20261003231706},
+    "ship.rum_runner":                         { "local": "ships/rum_runner.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.3", "rev": 20261003231706}
   }
 }
