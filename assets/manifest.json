@@ -2029,6 +2029,10 @@
     "unit.war_orca_b":                         { "local": "units/war_orca_b.webp", "remote": "hf_20261003_234403_gpt-anim_war_orca.png", "job": "gpt-anim_war_orca", "fit": "sheet:anim_war_orca.1", "rev": 20261003234403},
     "unit.war_orca_atk":                       { "local": "units/war_orca_atk.webp", "remote": "hf_20261003_234403_gpt-anim_war_orca.png", "job": "gpt-anim_war_orca", "fit": "sheet:anim_war_orca.2", "rev": 20261003234403},
     "unit.war_orca_hit":                       { "local": "units/war_orca_hit.webp", "remote": "hf_20261003_234403_gpt-anim_war_orca.png", "job": "gpt-anim_war_orca", "fit": "sheet:anim_war_orca.3", "rev": 20261003234403},
-    "prop.port_rotgut_landing":                { "local": "props/port_rotgut_landing.webp", "remote": "hf_20261003_234625_gpt-port_rotgut_landing.png", "job": "gpt-port_rotgut_landing", "fit": "sheet:port_rotgut_landing.0", "rev": 20261003234625}
+    "prop.port_rotgut_landing":                { "local": "props/port_rotgut_landing.webp", "remote": "hf_20261003_234625_gpt-port_rotgut_landing.png", "job": "gpt-port_rotgut_landing", "fit": "sheet:port_rotgut_landing.0", "rev": 20261003234625},
+    "unit.drowned_abbess":                     { "local": "units/drowned_abbess.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.0", "rev": 20261003234847},
+    "unit.drowned_abbess_b":                   { "local": "units/drowned_abbess_b.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.1", "rev": 20261003234847},
+    "unit.drowned_abbess_atk":                 { "local": "units/drowned_abbess_atk.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.2", "rev": 20261003234847},
+    "unit.drowned_abbess_hit":                 { "local": "units/drowned_abbess_hit.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.3", "rev": 20261003234847}
   }
 }
