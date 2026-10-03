@@ -1264,6 +1264,10 @@
     "unit.storm_witch":                        { "local": "units/storm_witch.webp", "remote": "hf_20261003_052855_gpt-anim_storm_witch.png", "job": "gpt-anim_storm_witch", "fit": "sheet:anim_storm_witch.0", "rev": 20261003052855},
     "unit.storm_witch_b":                      { "local": "units/storm_witch_b.webp", "remote": "hf_20261003_052855_gpt-anim_storm_witch.png", "job": "gpt-anim_storm_witch", "fit": "sheet:anim_storm_witch.1", "rev": 20261003052855},
     "unit.storm_witch_atk":                    { "local": "units/storm_witch_atk.webp", "remote": "hf_20261003_052855_gpt-anim_storm_witch.png", "job": "gpt-anim_storm_witch", "fit": "sheet:anim_storm_witch.2", "rev": 20261003052855},
-    "unit.storm_witch_hit":                    { "local": "units/storm_witch_hit.webp", "remote": "hf_20261003_052855_gpt-anim_storm_witch.png", "job": "gpt-anim_storm_witch", "fit": "sheet:anim_storm_witch.3", "rev": 20261003052855}
+    "unit.storm_witch_hit":                    { "local": "units/storm_witch_hit.webp", "remote": "hf_20261003_052855_gpt-anim_storm_witch.png", "job": "gpt-anim_storm_witch", "fit": "sheet:anim_storm_witch.3", "rev": 20261003052855},
+    "unit.brine_witch":                        { "local": "units/brine_witch.webp", "remote": "hf_20261003_053344_gpt-anim_brine_witch.png", "job": "gpt-anim_brine_witch", "fit": "sheet:anim_brine_witch.0", "rev": 20261003053344},
+    "unit.brine_witch_b":                      { "local": "units/brine_witch_b.webp", "remote": "hf_20261003_053344_gpt-anim_brine_witch.png", "job": "gpt-anim_brine_witch", "fit": "sheet:anim_brine_witch.1", "rev": 20261003053344},
+    "unit.brine_witch_atk":                    { "local": "units/brine_witch_atk.webp", "remote": "hf_20261003_053344_gpt-anim_brine_witch.png", "job": "gpt-anim_brine_witch", "fit": "sheet:anim_brine_witch.2", "rev": 20261003053344},
+    "unit.brine_witch_hit":                    { "local": "units/brine_witch_hit.webp", "remote": "hf_20261003_053344_gpt-anim_brine_witch.png", "job": "gpt-anim_brine_witch", "fit": "sheet:anim_brine_witch.3", "rev": 20261003053344}
   }
 }
