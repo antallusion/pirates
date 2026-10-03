@@ -1174,6 +1174,10 @@
     "unit.crown_ironclad_hit":                 { "local": "units/crown_ironclad_hit.webp", "remote": "hf_20261003_035821_gpt-anim_crown_ironclad.png", "job": "gpt-anim_crown_ironclad", "fit": "sheet:anim_crown_ironclad.3", "rev": 20261003035821},
     "unit.gunner_b":                           { "local": "units/gunner_b.webp", "remote": "hf_20261003_035808_dcadf214-7e97-4284-a1d3-097081f8e846.png", "job": "dcadf214-7e97-4284-a1d3-097081f8e846", "fit": "sheet:anim_gunner.1", "rev": 20261003035808},
     "unit.gunner_atk":                         { "local": "units/gunner_atk.webp", "remote": "hf_20261003_035808_dcadf214-7e97-4284-a1d3-097081f8e846.png", "job": "dcadf214-7e97-4284-a1d3-097081f8e846", "fit": "sheet:anim_gunner.2", "rev": 20261003035808},
-    "unit.gunner_hit":                         { "local": "units/gunner_hit.webp", "remote": "hf_20261003_035808_dcadf214-7e97-4284-a1d3-097081f8e846.png", "job": "dcadf214-7e97-4284-a1d3-097081f8e846", "fit": "sheet:anim_gunner.3", "rev": 20261003035808}
+    "unit.gunner_hit":                         { "local": "units/gunner_hit.webp", "remote": "hf_20261003_035808_dcadf214-7e97-4284-a1d3-097081f8e846.png", "job": "dcadf214-7e97-4284-a1d3-097081f8e846", "fit": "sheet:anim_gunner.3", "rev": 20261003035808},
+    "unit.crown_cuirassier":                   { "local": "units/crown_cuirassier.webp", "remote": "hf_20261003_040301_gpt-anim_crown_cuirassier.png", "job": "gpt-anim_crown_cuirassier", "fit": "sheet:anim_crown_cuirassier.0", "rev": 20261003040301},
+    "unit.crown_cuirassier_b":                 { "local": "units/crown_cuirassier_b.webp", "remote": "hf_20261003_040301_gpt-anim_crown_cuirassier.png", "job": "gpt-anim_crown_cuirassier", "fit": "sheet:anim_crown_cuirassier.1", "rev": 20261003040301},
+    "unit.crown_cuirassier_atk":               { "local": "units/crown_cuirassier_atk.webp", "remote": "hf_20261003_040301_gpt-anim_crown_cuirassier.png", "job": "gpt-anim_crown_cuirassier", "fit": "sheet:anim_crown_cuirassier.2", "rev": 20261003040301},
+    "unit.crown_cuirassier_hit":               { "local": "units/crown_cuirassier_hit.webp", "remote": "hf_20261003_040301_gpt-anim_crown_cuirassier.png", "job": "gpt-anim_crown_cuirassier", "fit": "sheet:anim_crown_cuirassier.3", "rev": 20261003040301}
   }
 }
