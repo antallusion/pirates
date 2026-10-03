@@ -1615,6 +1615,10 @@
     "unit.arquebusier":                        { "local": "units/arquebusier.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.0", "rev": 20261003123843},
     "unit.arquebusier_b":                      { "local": "units/arquebusier_b.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.1", "rev": 20261003123843},
     "unit.arquebusier_atk":                    { "local": "units/arquebusier_atk.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.2", "rev": 20261003123843},
-    "unit.arquebusier_hit":                    { "local": "units/arquebusier_hit.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.3", "rev": 20261003123843}
+    "unit.arquebusier_hit":                    { "local": "units/arquebusier_hit.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.3", "rev": 20261003123843},
+    "unit.ledger_halberdier":                  { "local": "units/ledger_halberdier.webp", "remote": "hf_20261003_124322_gpt-anim_ledger_halberdier.png", "job": "gpt-anim_ledger_halberdier", "fit": "sheet:anim_ledger_halberdier.0", "rev": 20261003124322},
+    "unit.ledger_halberdier_b":                { "local": "units/ledger_halberdier_b.webp", "remote": "hf_20261003_124322_gpt-anim_ledger_halberdier.png", "job": "gpt-anim_ledger_halberdier", "fit": "sheet:anim_ledger_halberdier.1", "rev": 20261003124322},
+    "unit.ledger_halberdier_atk":              { "local": "units/ledger_halberdier_atk.webp", "remote": "hf_20261003_124322_gpt-anim_ledger_halberdier.png", "job": "gpt-anim_ledger_halberdier", "fit": "sheet:anim_ledger_halberdier.2", "rev": 20261003124322},
+    "unit.ledger_halberdier_hit":              { "local": "units/ledger_halberdier_hit.webp", "remote": "hf_20261003_124322_gpt-anim_ledger_halberdier.png", "job": "gpt-anim_ledger_halberdier", "fit": "sheet:anim_ledger_halberdier.3", "rev": 20261003124322}
   }
 }
