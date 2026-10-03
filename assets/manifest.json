@@ -1212,6 +1212,10 @@
     "unit.crown_line":                         { "local": "units/crown_line.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.0", "rev": 20261003043135},
     "unit.crown_line_b":                       { "local": "units/crown_line_b.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.1", "rev": 20261003043135},
     "unit.crown_line_atk":                     { "local": "units/crown_line_atk.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.2", "rev": 20261003043135},
-    "unit.crown_line_hit":                     { "local": "units/crown_line_hit.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.3", "rev": 20261003043135}
+    "unit.crown_line_hit":                     { "local": "units/crown_line_hit.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.3", "rev": 20261003043135},
+    "unit.crown_grenadier":                    { "local": "units/crown_grenadier.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.0", "rev": 20261003043624},
+    "unit.crown_grenadier_b":                  { "local": "units/crown_grenadier_b.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.1", "rev": 20261003043624},
+    "unit.crown_grenadier_atk":                { "local": "units/crown_grenadier_atk.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.2", "rev": 20261003043624},
+    "unit.crown_grenadier_hit":                { "local": "units/crown_grenadier_hit.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.3", "rev": 20261003043624}
   }
 }
