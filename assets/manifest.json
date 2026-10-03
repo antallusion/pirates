@@ -1935,6 +1935,8 @@
     "icon.item_timber_racks":                  { "local": "icons/item_timber_racks.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.12", "rev": 20261003213611},
     "icon.item_smugglers_nook":                { "local": "icons/item_smugglers_nook.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.13", "rev": 20261003213611},
     "icon.item_sick_bay":                      { "local": "icons/item_sick_bay.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.14", "rev": 20261003213611},
-    "icon.item_armoury":                       { "local": "icons/item_armoury.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.15", "rev": 20261003213611}
+    "icon.item_armoury":                       { "local": "icons/item_armoury.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.15", "rev": 20261003213611},
+    "icon.fh_wrecker":                         { "local": "icons/fh_wrecker.webp", "remote": "hf_20261003_213842_gpt-arms_4b.png", "job": "gpt-arms_4b", "fit": "sheet:arms_4b.0", "rev": 20261003213842},
+    "icon.fh_hollow_admiral":                  { "local": "icons/fh_hollow_admiral.webp", "remote": "hf_20261003_213842_gpt-arms_4b.png", "job": "gpt-arms_4b", "fit": "sheet:arms_4b.1", "rev": 20261003213842}
   }
 }
