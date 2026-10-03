@@ -1353,6 +1353,10 @@
     "unit.mermaid":                            { "local": "units/mermaid.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.0", "rev": 20261003072425},
     "unit.mermaid_b":                          { "local": "units/mermaid_b.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.1", "rev": 20261003072425},
     "unit.mermaid_atk":                        { "local": "units/mermaid_atk.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.2", "rev": 20261003072425},
-    "unit.mermaid_hit":                        { "local": "units/mermaid_hit.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.3", "rev": 20261003072425}
+    "unit.mermaid_hit":                        { "local": "units/mermaid_hit.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.3", "rev": 20261003072425},
+    "unit.cultist":                            { "local": "units/cultist.webp", "remote": "hf_20261003_072912_gpt-anim_cultist.png", "job": "gpt-anim_cultist", "fit": "sheet:anim_cultist.0", "rev": 20261003072912},
+    "unit.cultist_b":                          { "local": "units/cultist_b.webp", "remote": "hf_20261003_072912_gpt-anim_cultist.png", "job": "gpt-anim_cultist", "fit": "sheet:anim_cultist.1", "rev": 20261003072912},
+    "unit.cultist_atk":                        { "local": "units/cultist_atk.webp", "remote": "hf_20261003_072912_gpt-anim_cultist.png", "job": "gpt-anim_cultist", "fit": "sheet:anim_cultist.2", "rev": 20261003072912},
+    "unit.cultist_hit":                        { "local": "units/cultist_hit.webp", "remote": "hf_20261003_072912_gpt-anim_cultist.png", "job": "gpt-anim_cultist", "fit": "sheet:anim_cultist.3", "rev": 20261003072912}
   }
 }
