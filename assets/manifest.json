@@ -1683,6 +1683,10 @@
     "unit.tide_caller":                        { "local": "units/tide_caller.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.0", "rev": 20261003140439},
     "unit.tide_caller_b":                      { "local": "units/tide_caller_b.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.1", "rev": 20261003140439},
     "unit.tide_caller_atk":                    { "local": "units/tide_caller_atk.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.2", "rev": 20261003140439},
-    "unit.tide_caller_hit":                    { "local": "units/tide_caller_hit.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.3", "rev": 20261003140439}
+    "unit.tide_caller_hit":                    { "local": "units/tide_caller_hit.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.3", "rev": 20261003140439},
+    "unit.tide_shaman":                        { "local": "units/tide_shaman.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.0", "rev": 20261003140924},
+    "unit.tide_shaman_b":                      { "local": "units/tide_shaman_b.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.1", "rev": 20261003140924},
+    "unit.tide_shaman_atk":                    { "local": "units/tide_shaman_atk.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.2", "rev": 20261003140924},
+    "unit.tide_shaman_hit":                    { "local": "units/tide_shaman_hit.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.3", "rev": 20261003140924}
   }
 }
