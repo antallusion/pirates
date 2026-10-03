@@ -1723,6 +1723,10 @@
     "unit.dutchman_boarder":                   { "local": "units/dutchman_boarder.webp", "remote": "hf_20261003_150512_gpt-anim_dutchman_boarder.png", "job": "gpt-anim_dutchman_boarder", "fit": "sheet:anim_dutchman_boarder.0", "rev": 20261003150512},
     "unit.dutchman_boarder_b":                 { "local": "units/dutchman_boarder_b.webp", "remote": "hf_20261003_150512_gpt-anim_dutchman_boarder.png", "job": "gpt-anim_dutchman_boarder", "fit": "sheet:anim_dutchman_boarder.1", "rev": 20261003150512},
     "unit.dutchman_boarder_atk":               { "local": "units/dutchman_boarder_atk.webp", "remote": "hf_20261003_150512_gpt-anim_dutchman_boarder.png", "job": "gpt-anim_dutchman_boarder", "fit": "sheet:anim_dutchman_boarder.2", "rev": 20261003150512},
-    "unit.dutchman_boarder_hit":               { "local": "units/dutchman_boarder_hit.webp", "remote": "hf_20261003_150512_gpt-anim_dutchman_boarder.png", "job": "gpt-anim_dutchman_boarder", "fit": "sheet:anim_dutchman_boarder.3", "rev": 20261003150512}
+    "unit.dutchman_boarder_hit":               { "local": "units/dutchman_boarder_hit.webp", "remote": "hf_20261003_150512_gpt-anim_dutchman_boarder.png", "job": "gpt-anim_dutchman_boarder", "fit": "sheet:anim_dutchman_boarder.3", "rev": 20261003150512},
+    "unit.phantom_gunner":                     { "local": "units/phantom_gunner.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.0", "rev": 20261003150955},
+    "unit.phantom_gunner_b":                   { "local": "units/phantom_gunner_b.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.1", "rev": 20261003150955},
+    "unit.phantom_gunner_atk":                 { "local": "units/phantom_gunner_atk.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.2", "rev": 20261003150955},
+    "unit.phantom_gunner_hit":                 { "local": "units/phantom_gunner_hit.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.3", "rev": 20261003150955}
   }
 }
