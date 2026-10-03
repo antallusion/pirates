@@ -1239,6 +1239,11 @@
     "unit.abyss_herald":                       { "local": "units/abyss_herald.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.0", "rev": 20261003050009},
     "unit.abyss_herald_b":                     { "local": "units/abyss_herald_b.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.1", "rev": 20261003050009},
     "unit.abyss_herald_atk":                   { "local": "units/abyss_herald_atk.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.2", "rev": 20261003050009},
-    "unit.abyss_herald_hit":                   { "local": "units/abyss_herald_hit.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.3", "rev": 20261003050009}
+    "unit.abyss_herald_hit":                   { "local": "units/abyss_herald_hit.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.3", "rev": 20261003050009},
+    "bg.deck_brigantine":                      { "local": "art/deck_brigantine.webp", "remote": "hf_20261003_050446_b639f9e5-0a08-43fc-a75e-f30454d529fe.png", "job": "b639f9e5-0a08-43fc-a75e-f30454d529fe", "fit": "opaque:1536", "rev": 20261003050446},
+    "unit.deep_one_champion":                  { "local": "units/deep_one_champion.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.0", "rev": 20261003050458},
+    "unit.deep_one_champion_b":                { "local": "units/deep_one_champion_b.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.1", "rev": 20261003050458},
+    "unit.deep_one_champion_atk":              { "local": "units/deep_one_champion_atk.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.2", "rev": 20261003050458},
+    "unit.deep_one_champion_hit":              { "local": "units/deep_one_champion_hit.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.3", "rev": 20261003050458}
   }
 }
