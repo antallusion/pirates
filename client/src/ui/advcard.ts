@@ -16,7 +16,8 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h4.ts';
 import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
-import { BEAST_TINT, LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
+import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
+import { beastFace } from '../render/beastface.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { EN as VEN, RU as VRU } from '../lang/ui/heroes18v.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
@@ -83,9 +84,10 @@ function lairBlock(c: LairCard, x: boolean): string {
   const def = LAIRS[c.kind];
   const main = def.mix[0][0];
   const w = strengthWord(c.men);
-  const id = UNITS[main].art;
+  const face = beastFace(main);
+  const id = face.id;
   const art = id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id);
-  const tint = BEAST_TINT[main];
+  const tint = face.tint;
   const faces = c.stacks.slice(0, 7).map((s) => `<span class="army-mini" title="${esc(unitName(s.u))}">${unitIcon(s.u, 'army-face-xs')}<i class="ac-n">${s.n}</i></span>`).join('');
   const ratio = c.ratio >= 10 ? String(Math.round(c.ratio)) : c.ratio < 0.1 ? (lang() === 'ru' ? '<0,1' : '<0.1') : c.ratio.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
   const offer = c.offer === 'join' ? (c.joinN > 0 ? LL('joinText', { n: c.joinN }) : LL('joinNoRoom')) : c.offer === 'flee' ? LL('fleeText') : '';
@@ -115,7 +117,7 @@ function lairBlock(c: LairCard, x: boolean): string {
       </div></div>`
     : `<div class="ac-line muted">${esc(LL('down', { t: timeWords(c.down ?? 0) }))}</div>`;
   return `<div class="enc-card ac-card ac-gcard ac-lcard" data-lair="${c.kind}">
-    <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(w.word)} · ${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
+    <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}${face.fig ? ' fig' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(w.word)} · ${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
     <div class="ac-sub muted">${esc(LL(`role.${c.role}` as 'role.shore'))} · ${esc(placeName(c.island))}</div></div>${x ? `<button class="ac-x" data-ax title="${esc(L('close'))}">×</button>` : ''}</div>
     <p class="ac-text muted">${esc(def.text[ru()])}</p>
     ${chain}
@@ -128,9 +130,10 @@ function lairBlock(c: LairCard, x: boolean): string {
  *  (each with its chance and its cost), the mini-game once a way is chosen, what saving them gives, "Fight them". */
 function driftBlock(c: DriftCard, x: boolean): string {
   const def = DRIFTS[c.kind];
-  const id = UNITS[c.u].art;
+  const face = beastFace(c.u);
+  const id = face.id;
   const art = id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id);
-  const tint = BEAST_TINT[c.u];
+  const tint = face.tint;
   const pct = (p: number) => `${Math.round(p * 100)}%`;
   const giftText = DL('gift', { n: c.gift.n, good: GOODS[c.gift.good].name.toLowerCase(), s: fmt(c.gift.silver) });
   const out = !c.joins ? DL('joins.deep', { gift: giftText }) : c.room >= c.n ? DL('joins', { n: c.n }) : c.room > 0 && Math.min(c.pen, c.n - c.room) <= 0 ? DL('joins.part', { n: c.room }) : c.room + c.pen > 0 ? DL('joins.pen', { n: c.room, m: Math.min(c.pen, c.n - c.room) }) : DL('joins.none', { gift: giftText });
@@ -155,7 +158,7 @@ function driftBlock(c: DriftCard, x: boolean): string {
   }
   const why = !c.reach ? DL('come') : c.why ? serverText(c.why) : '';
   return `<div class="enc-card ac-card ac-gcard ac-dcard${c.legend ? ' legend' : ''}" data-drift="${c.kind}">
-    <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
+    <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}${face.fig ? ' fig' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
     <div class="ac-sub muted">${c.legend ? `<b class="dw-leg">${esc(DL('legend'))}</b> · ` : ''}<span class="army-mini">${unitIcon(c.u, 'army-face-xs')}<i class="ac-n">${c.n}</i></span> ${esc(unitName(c.u))} · ${esc(DL('left', { t: timeWords(c.left) }))}</div></div>${x ? `<button class="ac-x" data-ax title="${esc(L('close'))}">×</button>` : ''}</div>
     <p class="ac-text muted">${esc(def.text[ru()])}</p>
     ${why ? `<div class="muted ac-gl ac-come">${esc(why)}</div>` : ''}

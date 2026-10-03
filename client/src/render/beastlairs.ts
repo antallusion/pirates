@@ -4,8 +4,7 @@
 // it (gold hers, red another's); the chain's step; and over it HoMM3's word for their number and the lair's level,
 // read from the sea («Стая · ⚓4»).
 
-import { UNITS } from '../../../shared/src/data/army.ts';
-import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import { beastFace, drawFace } from './beastface.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
 import type { LairMark } from '../../../shared/src/lairproto.ts';
 import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
@@ -77,8 +76,8 @@ function ground(g: G, x: number, y: number, r: number, m: LairMark): void {
 /** A creature's token from above: its picture in a dark disc, tinted where it is a stand-in, ringed. */
 function token(g: G, x: number, y: number, R: number, m: LairMark, t: number): void {
   const u = LAIRS[m.kind].mix[0][0];
-  const art = UNITS[u].art;
-  const sp = sprite(art);
+  const face = beastFace(u);
+  const sp = sprite(face.id);
   g.fillStyle = 'rgba(0,0,0,0.4)';
   g.beginPath();
   g.ellipse(x + R * 0.12, y + R * 0.25, R * 1.02, R * 0.85, 0, 0, Math.PI * 2);
@@ -92,17 +91,15 @@ function token(g: G, x: number, y: number, R: number, m: LairMark, t: number): v
     g.beginPath();
     g.arc(x, y, R - 1, 0, Math.PI * 2);
     g.clip();
-    const tint = BEAST_TINT[u];
+    const tint = face.tint;
     if (tint) g.filter = tint;
     if (m.down) g.filter = `${tint ?? ''} grayscale(1) brightness(0.6)`.trim();
-    const iw = sp.img.naturalWidth, ih = sp.img.naturalHeight;
-    const k = (R * 2.2) / Math.min(iw, ih);
-    g.drawImage(sp.img, x - (iw * k) / 2, y - (ih * k) / 2, iw * k, ih * k);
+    drawFace(g, sp.img, x, y, R, face.fig);
     g.filter = 'none';
     g.restore();
   }
   // A stand-in's frame (a brass rim), the lair's ring (red while it stands, pulsing; grey once beaten).
-  if (BEAST_TINT[u]) {
+  if (face.tint) {
     g.strokeStyle = '#a8894e';
     g.lineWidth = Math.max(1.5, R * 0.12);
     g.beginPath();

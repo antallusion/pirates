@@ -9,8 +9,7 @@ import { dict, lang } from '../i18n.ts';
 import { FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
 import { EN, RU } from '../lang/ui/army.ts';
-import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
-import type { BeastId } from '../../../shared/src/data/bestiary.ts';
+import { beastFace } from '../render/beastface.ts';
 import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -28,8 +27,9 @@ export const unitArt = (u: UnitId): string => UNITS[u]?.art ?? 'icon.prof_sailor
 /** A kind's face as an image: a creature with no picture of its own is a token of one that is, tinted and framed
  *  (docs/18 II, BEAST_TINT). */
 export function unitIcon(u: UnitId, cls: string): string {
-  const tint = BEAST_TINT[u as BeastId];
-  const html = icon(unitArt(u), '', `${cls}${UNITS[u]?.beast ? ' beast-face' : ''}${tint ? ' beast-tok' : ''}`);
+  const face = UNITS[u]?.beast ? beastFace(u) : null;
+  const tint = face?.tint;
+  const html = icon(face?.id ?? unitArt(u), '', `${cls}${face ? ' beast-face' : ''}${tint ? ' beast-tok' : ''}${face?.fig ? ' fig' : ''}`);
   return tint ? html.replace('<img ', `<img style="filter:${tint}" `) : html;
 }
 

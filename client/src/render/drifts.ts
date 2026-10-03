@@ -5,8 +5,7 @@
 // its clock; and over it its name and the square's level. A legend wears gold rings and leaves a trail (blood for
 // the whale, ink for the kraken). On the minimap: a mark with its clock; the tooltip names it.
 
-import { UNITS } from '../../../shared/src/data/army.ts';
-import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import { beastFace, drawFace } from './beastface.ts';
 import { DRIFTS } from '../../../shared/src/data/drifts.ts';
 import type { DriftKind } from '../../../shared/src/data/drifts.ts';
 import type { DriftMark } from '../../../shared/src/driftproto.ts';
@@ -303,7 +302,8 @@ function gulls(g: G, x: number, y: number, R: number, t: number): void {
 /** The creature's token: its picture in a dark disc, tinted and brass-rimmed where it stands in for one. */
 function token(g: G, x: number, y: number, R: number, m: DriftMark): void {
   const u = DRIFTS[m.kind].u;
-  const sp = sprite(UNITS[u].art);
+  const face = beastFace(u);
+  const sp = sprite(face.id);
   g.fillStyle = 'rgba(0,0,0,0.35)';
   g.beginPath();
   g.ellipse(x + R * 0.12, y + R * 0.22, R * 1.02, R * 0.86, 0, 0, Math.PI * 2);
@@ -317,15 +317,12 @@ function token(g: G, x: number, y: number, R: number, m: DriftMark): void {
     g.beginPath();
     g.arc(x, y, R - 1, 0, Math.PI * 2);
     g.clip();
-    const tint = BEAST_TINT[u];
-    if (tint) g.filter = tint;
-    const iw = sp.img.naturalWidth, ih = sp.img.naturalHeight;
-    const k = (R * 2.2) / Math.min(iw, ih);
-    g.drawImage(sp.img, x - (iw * k) / 2, y - (ih * k) / 2, iw * k, ih * k);
+    if (face.tint) g.filter = face.tint;
+    drawFace(g, sp.img, x, y, R, face.fig);
     g.filter = 'none';
     g.restore();
   }
-  if (BEAST_TINT[u]) {
+  if (face.tint) {
     g.strokeStyle = '#a8894e';
     g.lineWidth = Math.max(1.5, R * 0.12);
     g.beginPath();

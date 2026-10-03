@@ -5,9 +5,8 @@
 // its spot by the world's clock (the server reckons the same). On the minimap a small mark in the ladder's colour,
 // one to a few pixels, fainter the further it is; the tooltip names it.
 
-import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
-import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import { beastFace, drawFace } from './beastface.ts';
 import { ROAMS, ROAM_MINI, roamPos } from '../../../shared/src/data/roamers.ts';
 import type { RoamKind } from '../../../shared/src/data/roamers.ts';
 import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
@@ -129,7 +128,8 @@ function water(g: G, x: number, y: number, R: number, v: RoamView, t: number, sw
 /** The token's still part, drawn once a kind, size and state: the dark of the creatures in the water, the shadow, the
  *  disc, the picture (tinted where it is a stand-in, grey in battle), the brass frame, the crossed blades. */
 function tokenFace(g: G, R: number, u: UnitId, grey: boolean, cx: number, cy: number): void {
-  const sp = sprite(UNITS[u].art);
+  const face = beastFace(u);
+  const sp = sprite(face.id);
   const grd = g.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 1.75);
   grd.addColorStop(0, 'rgba(8,22,30,0.5)');
   grd.addColorStop(1, 'rgba(8,22,30,0)');
@@ -150,15 +150,13 @@ function tokenFace(g: G, R: number, u: UnitId, grey: boolean, cx: number, cy: nu
     g.beginPath();
     g.arc(cx, cy, R - 1, 0, Math.PI * 2);
     g.clip();
-    const tint = BEAST_TINT[u as keyof typeof BEAST_TINT];
+    const tint = face.tint;
     g.filter = grey ? `${tint ?? ''} grayscale(1) brightness(0.65)`.trim() : tint ?? 'none';
-    const iw = sp.img.naturalWidth, ih = sp.img.naturalHeight;
-    const k = (R * 2.2) / Math.min(iw, ih);
-    g.drawImage(sp.img, cx - (iw * k) / 2, cy - (ih * k) / 2, iw * k, ih * k);
+    drawFace(g, sp.img, cx, cy, R, face.fig);
     g.filter = 'none';
     g.restore();
   }
-  if (BEAST_TINT[u as keyof typeof BEAST_TINT]) {
+  if (face.tint) {
     g.strokeStyle = '#a8894e';
     g.lineWidth = Math.max(1.5, R * 0.12);
     g.beginPath();
@@ -184,7 +182,7 @@ function token(g: G, x: number, y: number, R: number, v: RoamView, col: string, 
   const Rr = Math.round(R);
   const S = Math.ceil(Rr * 3.6);
   // (stamped only once the picture is in: until then drawn as it comes)
-  const c = sprite(UNITS[u].art) ? stamp(`t|${u}|${Rr}|${grey ? 1 : 0}`, S, S, (s) => tokenFace(s, Rr, u, grey, S / 2, S / 2)) : null;
+  const c = sprite(beastFace(u).id) ? stamp(`t|${u}|${Rr}|${grey ? 1 : 0}`, S, S, (s) => tokenFace(s, Rr, u, grey, S / 2, S / 2)) : null;
   if (c) g.drawImage(c, x - S / 2, y - S / 2, S, S);
   else tokenFace(g, R, u, grey, x, y);
   const pulse = 0.5 + 0.5 * Math.sin(t * 2 + v.id);
