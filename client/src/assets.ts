@@ -1,6 +1,8 @@
 // Asset loading: local file → Higgsfield CDN → procedural fallback (renderer draws it).
 // Images are optional; the game must always render even when every download fails.
 
+import { ICON_STAND_IN } from '../../shared/src/data/armsart.ts';
+
 interface ManifestEntry {
   local: string;
   remote: string;
@@ -106,12 +108,13 @@ export function assetMeta(id: string): ManifestEntry | null {
   return manifest?.assets[id] ?? null;
 }
 
+/** An asset, or — while its sheet is being painted — the painted kindred that stands in for it (shared/src/data/armsart.ts). */
 export function sprite(id: string): Sprite | null {
-  return images.get(id) ?? null;
+  return images.get(id) ?? (ICON_STAND_IN[id] ? images.get(ICON_STAND_IN[id]) ?? null : null);
 }
 
 export function assetUrl(id: string): string | null {
-  const s = images.get(id);
+  const s = sprite(id);
   return s ? s.img.src : null;
 }
 

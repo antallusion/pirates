@@ -66,6 +66,13 @@ export function stepTalents(game: Game, ship: ShipEntity): void {
     ship.addEffect({ id: 'second_wind', until: now + 8, mods: { maxSpeed: 0.25, accel: 0.25 } }, now);
     game.toastShip(ship, 'Second wind! Every hand to the sheets.', 'good');
   }
+  // The Kraken's ink sacs (a boss's plan): low in the water, she vanishes in a black cloud.
+  if (st.flags.has('kraken_ink') && ship.hull < st.hullMax * 0.3 && (ship.talentReady.kraken_ink ?? 0) <= now) {
+    ship.talentReady.kraken_ink = now + 120;
+    ship.addEffect({ id: 'ink_cloud', until: now + 6, flags: ['hidden', 'evasive'] }, now);
+    game.emit({ k: 'fx', fx: 'ink', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 120 }, ship.state.x, ship.state.y);
+    game.toastShip(ship, 'The ink sacs burst: she is gone in a black cloud.', 'good');
+  }
   stepHeat(game, ship);
   stepSwivels(game, ship);
 }

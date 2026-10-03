@@ -8,6 +8,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { FLAGS, flagAsset } from '../shared/src/data/looks.ts';
 import { ITEM_ART } from '../shared/src/data/itemart.ts';
+import { ICON_STAND_IN } from '../shared/src/data/armsart.ts';
+import { ITEM_BASES, LEGENDARY_ITEMS } from '../shared/src/data/items.ts';
 import { namedPirates } from '../shared/src/data/pirates.ts';
 import { PROFESSIONS } from '../shared/src/data/estate.ts';
 import { TATTOOS } from '../shared/src/data/sidequests.ts';
@@ -68,8 +70,10 @@ test('every family the game asks for is on a sheet', () => {
   ];
   const off = [...new Set(want)].filter((id) => !onSheets.has(id));
   assert.deepEqual(off, []);
-  // The items: every base and legendary, four sheets of sixteen.
-  assert.equal(ITEM_ART.length, 64);
+  // The items: every base and legendary, sixteen to a sheet — the four painted sheets, and the wider chandlery's three
+  // still to be painted (owner, 2026-10-03).
+  assert.deepEqual(ITEM_ART.map((r) => r[0]).sort(), [...Object.keys(ITEM_BASES), ...Object.keys(LEGENDARY_ITEMS)].sort());
+  assert.equal(ITEM_ART.length, 64 + 40);
 });
 
 test('the sixty-four flags are painted, one set, all the same size', () => {
@@ -84,8 +88,14 @@ test('the sixty-four flags are painted, one set, all the same size', () => {
 test('the living sea is painted: every id on every sheet is in the manifest and baked', () => {
   const missing = [...painted].filter((id) => !manifest.assets[id] || !fs.existsSync(path.join(ROOT, 'assets', manifest.assets[id].local)));
   assert.deepEqual(missing, []);
-  // The singles of P11: Old Needle, the two hulls, the poster's paper; and every item icon.
-  for (const id of ['portrait.giver_old_needle', 'ship.fishing_ketch', 'ship.harpoon_whaler', 'ui.poster', ...ITEM_ART.map((r) => `icon.item_${r[0]}`)]) {
-    assert.ok(manifest.assets[id] && fs.existsSync(path.join(ROOT, 'assets', manifest.assets[id].local)), id);
+  // The singles of P11: Old Needle, the two hulls, the poster's paper; and every item icon of the four painted sheets.
+  const baked = (id: string) => !!manifest.assets[id] && fs.existsSync(path.join(ROOT, 'assets', manifest.assets[id].local));
+  for (const id of ['portrait.giver_old_needle', 'ship.fishing_ketch', 'ship.harpoon_whaler', 'ui.poster', ...ITEM_ART.slice(0, 64).map((r) => `icon.item_${r[0]}`)]) {
+    assert.ok(baked(id), id);
+  }
+  // The sheets still in the painter's queue: each icon baked, or a painted kindred standing in for it till it is.
+  for (const [base] of ITEM_ART.slice(64)) {
+    const id = `icon.item_${base}`;
+    assert.ok(baked(id) || (ICON_STAND_IN[id] && baked(ICON_STAND_IN[id])), `${id}: neither painted nor stood in for`);
   }
 });

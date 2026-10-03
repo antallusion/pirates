@@ -26,7 +26,7 @@ import { drawRelation, relationOf, RELATION_COLOR } from '../render/relation.ts'
 import { cbColor, keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
-import { AMMO, AMMO_IDS, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, KEYED_AMMO, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { isNight, nightFactor, timeOfDay } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { SF } from '../../../shared/src/protocol.ts';
@@ -264,7 +264,9 @@ export class Hud {
     // Cursed shot shows only when you carry it (key U).
     // The action bar is rebuilt only when its make-up changes (shots and counts, abilities and their locks, talents,
     // gauges, fire mode); reloads and cooldowns move in place every frame without touching the markup.
-    const shots = AMMO_IDS.filter((a) => a !== 'cursed' || you.ammo.cursed > 0 || you.ammoSel === 'cursed');
+    // The rarer shot (bar, star, salt…) shows as cursed shot does, only when carried, and has no key: a tap or the
+    // shot wheel picks it.
+    const shots = AMMO_IDS.filter((a, i) => i < KEYED_AMMO || you.ammo[a] > 0 || you.ammoSel === a);
     const shipCls = cls;
     const gauges: { id: string; label: string; key?: Action; art: string; v: number; ready: boolean }[] = [
       { id: 'port', label: L('port'), key: 'firePort', art: 'fire', v: you.reload.port, ready: you.reload.port >= 1 },
@@ -298,9 +300,9 @@ export class Hud {
       abil.map((x) => `${x.a.id}${x.dim ? 1 : 0}${x.locked ? 1 : 0}`).join(','), tals.map((x) => x.t.id).join(','), heat, mode, this.artEpoch].join('|');
     if (key !== this.lastCombatKey) {
       this.lastCombatKey = key;
-      const ammo = shots.map((a, i) => slot({
+      const ammo = shots.map((a) => slot({
         data: `data-ammo="${a}"`, cls: you.ammoSel === a ? 'sel' : '', art: `ammo_${a}`, glyph: AMMO[a].name.slice(0, 1), name: AMMO[a].name,
-        key: a === 'cursed' ? 'U' : String(i + 1), qty: String(you.ammo[a]), title: AMMO[a].name,
+        key: a === 'cursed' ? 'U' : AMMO_IDS.indexOf(a) < KEYED_AMMO ? String(AMMO_IDS.indexOf(a) + 1) : '', qty: String(you.ammo[a]), title: `${AMMO[a].name} — ${AMMO[a].description}`,
       })).join('');
       const reload = gauges.map((g) => `<div class="rl ${g.id === 'port' ? 'flip' : ''}" data-g="${g.id}">${icon(g.art, '', 'ico-rl')}<span>${g.key ? keyChip(g.key) : ''}${esc(g.label)}</span><div class="fbar"><i></i></div></div>`).join('');
       const abilities = abil.map((x) => slot({

@@ -77,7 +77,7 @@ export type Flag =
   // shipbuilding
   | 'drowned_silk' | 'cursed_wood' | 'fh_crown_lion' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_saint_of_wrecks' | 'fh_white_orca' | 'fh_dutchman' | 'false_bulwark'
   // world bosses (fittings)
-  | 'choir_bell' | 'lightning_rod' | 'lantern_gland'
+  | 'choir_bell' | 'lightning_rod' | 'lantern_gland' | 'kraken_ink'
   // the regatta's equal handling (docs/12 P10 #5)
   | 'regatta_equal'
   // tattoos (docs/12 P9)

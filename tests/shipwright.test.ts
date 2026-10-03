@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MODULES } from '../shared/src/data/ships.ts';
+import { MODULES, emptyAmmo } from '../shared/src/data/ships.ts';
 import { TALENTS } from '../shared/src/data/talents.ts';
 import type { TalentRanks } from '../shared/src/data/talents.ts';
 import { computeShipStats, loadFactor } from '../shared/src/sim/shipstats.ts';
@@ -47,7 +47,7 @@ test('stats: Sound Timbers, Trim the Ballast, Perfect Balance, Legendary Keel, O
   const tuned = computeShipStats(lo, 'admiral', { shp_sound_timbers: 3, shp_trim_ballast: 2, shp_master_fitter: 1, shp_perfect_balance: 2 });
   assert.ok(tuned.armor > base.armor, 'armour');
   assert.ok(tuned.maxSpeed > base.maxSpeed, 'ballast trimmed and fittings balanced');
-  assert.ok(loadFactor(lo, tuned, {}, { round: 0, chain: 0, grape: 0, incendiary: 0, heavy: 0, cursed: 0 }) >= loadFactor(lo, base, {}, { round: 0, chain: 0, grape: 0, incendiary: 0, heavy: 0, cursed: 0 }));
+  assert.ok(loadFactor(lo, tuned, {}, emptyAmmo()) >= loadFactor(lo, base, {}, emptyAmmo()));
   const keel = computeShipStats({ ...lo, keel: true }, 'admiral', {});
   assert.ok(keel.hullMax > base.hullMax && keel.holdVolume > base.holdVolume);
   const og = computeShipStats(lo, 'admiral', { shp_overgunned: 1 });

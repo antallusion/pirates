@@ -9,7 +9,10 @@ import type { Flag, StatMods } from './stats.ts';
 
 export type WoodId = 'pine' | 'oak' | 'teak' | 'black_oak' | 'ironwood' | 'cursed_wood';
 export type RareSlot = 'keel' | 'belt' | 'sails' | 'guns' | 'paint';
-export type FigureheadId = 'fh_crown_lion' | 'fh_red_devil' | 'fh_weeping_widow' | 'fh_fog_owl' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_serpent' | 'fh_saint_of_wrecks' | 'fh_white_orca' | 'fh_dutchman';
+export type FigureheadId = 'fh_crown_lion' | 'fh_red_devil' | 'fh_weeping_widow' | 'fh_fog_owl' | 'fh_harpooneer' | 'fh_gilded_scale' | 'fh_drowned_man' | 'fh_serpent' | 'fh_saint_of_wrecks' | 'fh_white_orca' | 'fh_dutchman'
+  // A second carver in every port, and four more taken from the bosses (owner, 2026-10-03).
+  | 'fh_fishwife' | 'fh_doge' | 'fh_admiral' | 'fh_mermaid' | 'fh_jolly_jack' | 'fh_veiled_lady' | 'fh_salamander' | 'fh_narwhal' | 'fh_wrecker' | 'fh_seraph'
+  | 'fh_leviathan' | 'fh_storm_widow' | 'fh_hermit_crab' | 'fh_hollow_admiral';
 export type PlanQuality = 'common' | 'good' | 'masterwork' | 'legendary';
 export type VariantId = 'roomy_hold' | 'stiff_frame' | 'light_rig' | 'gun_deck' | 'fast_lines' | 'thick_skin' | 'wide_beam' | 'sharp_helm';
 
@@ -79,7 +82,28 @@ export const FIGUREHEADS: Record<FigureheadId, FigureheadDef> = {
   fh_dutchman: { id: 'fh_dutchman', name: 'Flying Dutchman', port: null, price: 0, mods: { nightSpeed: 0.06, fogSight: 0.1 }, flags: ['fh_dutchman'], description: '+6% speed at night; +10% sight in fog; ghost ships never fire first. Taken from the Flying Dutchman.' },
   fh_white_orca: { id: 'fh_white_orca', name: 'White Orca', port: null, price: 0, mods: { maxSpeed: 0.04 }, flags: ['fh_white_orca'], description: '+4% speed; orcas never strike first; +10% damage against the beasts of the sea. Taken from the White Orca.' },
   fh_saint_of_wrecks: { id: 'fh_saint_of_wrecks', name: 'Saint of Wrecks', port: 'wrecktide', price: 900, mods: {}, flags: ['fh_saint_of_wrecks'], description: '+5 s before she goes down.' },
+  // Carved in port: every yard has a figure of its own.
+  fh_fishwife: { id: 'fh_fishwife', name: 'Fishwife', port: 'saltmarrow', price: 600, mods: { spoilage: -0.25, provisionUse: -0.05 }, description: 'The catch spoils 25% slower; provisions last 5% longer.' },
+  fh_doge: { id: 'fh_doge', name: 'The Doge', port: 'blackwater', price: 1000, mods: { buyMul: -0.03 }, description: 'Everything you buy in port costs 3% less.' },
+  fh_admiral: { id: 'fh_admiral', name: 'Old Admiral', port: 'gravesend', price: 1200, mods: { reloadMul: -0.03 }, description: 'Broadsides reload 3% faster.' },
+  fh_mermaid: { id: 'fh_mermaid', name: 'Mermaid', port: 'hollowmere', price: 900, mods: { sanityLoss: -0.2, moraleRegen: 0.05 }, description: 'Sanity drains 20% slower; the crew sings at its work, and morale mends a little faster.' },
+  fh_jolly_jack: { id: 'fh_jolly_jack', name: 'Jolly Jack', port: 'tidewrack', price: 900, mods: { grapeMorale: 0.4, moraleOnBoard: 5 }, description: 'Grape shakes their nerve harder; a boarding won lifts your crew 5 morale more.' },
+  fh_veiled_lady: { id: 'fh_veiled_lady', name: 'Veiled Lady', port: 'fogmouth', price: 1000, mods: { signature: -0.08 }, description: '−8% signature: she is harder to see.' },
+  fh_salamander: { id: 'fh_salamander', name: 'Salamander', port: 'cinderhold', price: 900, mods: { fireRisk: -0.3 }, description: 'Fires catch and burn 30% less.' },
+  fh_narwhal: { id: 'fh_narwhal', name: 'Narwhal', port: 'harpoon_rest', price: 1000, mods: { ramDealt: 0.15, ramTaken: -0.1 }, description: 'The tusk: rams +15%, ramming damage taken −10%.' },
+  fh_wrecker: { id: 'fh_wrecker', name: 'The Wrecker', port: 'wrecktide', price: 800, mods: { salvage: 0.25 }, description: '+25% planks, sailcloth, iron and powder salvaged from wrecks.' },
+  fh_seraph: { id: 'fh_seraph', name: 'Choir Seraph', port: 'saint_maw', price: 1000, mods: { saltWard: 1 }, description: 'Whatever fear and madness cost the crew comes 20% softer.' },
+  // Taken from the bosses.
+  fh_leviathan: { id: 'fh_leviathan', name: 'Leviathan Head', port: null, price: 0, mods: { hullMax: 0.06, ramDealt: 0.15 }, description: '+6% hull, rams +15%. Taken from a Leviathan.' },
+  fh_storm_widow: { id: 'fh_storm_widow', name: 'Storm Widow', port: null, price: 0, mods: { stormHull: -0.3, stormSailDamage: -0.3 }, flags: ['lightning_rod'], description: 'Storms bite 30% less into hull and canvas; lightning finds no mast. Taken from the Storm Widow.' },
+  fh_hermit_crab: { id: 'fh_hermit_crab', name: 'Hermit Crab', port: null, price: 0, mods: { armorPct: 0.08, reefDamage: -0.5 }, description: '+8% armour; reefs and shoals tear her half as much. Taken from the Mother of Wrecks.' },
+  fh_hollow_admiral: { id: 'fh_hollow_admiral', name: 'Hollow Admiral', port: null, price: 0, mods: { moraleLoss: -0.15, gunDamageMul: 0.03 }, description: 'The dead admiral still commands: morale losses −15%, gun damage +3%. Taken from the Hollow Admiral.' },
 };
+
+/** The figures a port's carver sells (one or two a port). */
+export function carvedAt(port: string): FigureheadId[] {
+  return (Object.values(FIGUREHEADS) as FigureheadDef[]).filter((f) => f.port === port).map((f) => f.id);
+}
 
 export interface VariantDef {
   id: VariantId;

@@ -8,7 +8,8 @@ import type { Item } from '../../../shared/src/data/items.ts';
 import type { StatKey } from '../../../shared/src/data/stats.ts';
 
 /** Stats where less is better (a green minus). */
-export const LOWER_BETTER = new Set<StatKey>(['reloadMul', 'spreadMul', 'fireRisk', 'leakInflow', 'signature', 'moraleLoss', 'sanityLoss', 'spoilage', 'stormSailDamage', 'stormHull', 'dutyMul', 'buyMul', 'provisionUse', 'incomingDamageMul']);
+export const LOWER_BETTER = new Set<StatKey>(['reloadMul', 'spreadMul', 'fireRisk', 'leakInflow', 'signature', 'moraleLoss', 'sanityLoss', 'spoilage', 'stormSailDamage', 'stormHull', 'dutyMul', 'buyMul', 'provisionUse', 'incomingDamageMul',
+  'hiddenSearch', 'openSearch', 'noGoDeg', 'ramTaken', 'turnDrag', 'draftMul', 'reefDamage', 'storesVolume', 'materialVolume', 'materialUse', 'contrabandVolumeMul', 'hardenedCrew', 'cooldownMul']);
 
 export interface CmpRow {
   /** A ship stat, a captain's characteristic (`cap`), or a hero's primary (`prim`, an artifact's: docs/17 H2). */

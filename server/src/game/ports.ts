@@ -45,8 +45,8 @@ import { ESCORT_OFFERS } from './fleet.ts';
 import { eventFavor, payOptions, questOffers, shipLevelOfQuest } from './quests.ts';
 import { todaysElite } from './elite.ts';
 import { woodAvailable } from './shipbuilding.ts';
-import { FIGUREHEADS, PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS } from '../../../shared/src/data/shipbuild.ts';
-import type { FigureheadId, WoodId } from '../../../shared/src/data/shipbuild.ts';
+import { PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS, carvedAt } from '../../../shared/src/data/shipbuild.ts';
+import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { CAPTAINS_HOUSES } from '../../../shared/src/data/quests.ts';
 import { exoticBonus, noteExoticPurchase } from './bridgefx.ts';
 import { poiRumor } from './exploration.ts';
@@ -118,6 +118,9 @@ function basePriceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0): Pric
 export function ammoPrice(game: Game, port: Port, ammo: AmmoId): number {
   // Cursed shot is cast only where the Crown does not look: black markets and the Choir.
   if (ammo === 'cursed' && !port.blackMarket && port.faction !== 'choir') return 0;
+  // The rarer shot is cast where its trade is: a faction's ports, the bigger yards, the black markets.
+  const sold = AMMO[ammo].sold;
+  if (sold && !(sold.factions?.includes(port.faction) || (sold.yard !== undefined && port.shipyardTier >= sold.yard) || (sold.black && port.blackMarket))) return 0;
   const m = game.markets.get(port.id);
   const powder = m?.goods.gunpowder;
   const iron = m?.goods.iron;
@@ -175,7 +178,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     seaRepair: seaRepairView(ship),
     yard: {
       woods: (Object.keys(WOODS) as WoodId[]).filter((w) => woodAvailable(port, w)),
-      figurehead: (Object.values(FIGUREHEADS).find((f) => f.port === port.id)?.id ?? null) as FigureheadId | null,
+      figureheads: carvedAt(port.id),
       plans: YARD_FACTIONS_WITH_PLANS.includes(port.faction as never) && (p.reputation[port.faction as never] ?? 0) >= PLAN_REP,
       master: port.shipyardTier >= 3,
     },
@@ -189,13 +192,13 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       ships: SHIP_CLASS_IDS.filter((id) => SHIP_CLASSES[id].purchasable && SHIP_CLASSES[id].tier <= tier + careerYardBonus(p, port.faction) && (!SHIP_CLASSES[id].factions || SHIP_CLASSES[id].factions!.includes(port.faction))).map((id) => ({
         classId: id, price: SHIP_CLASSES[id].price, tradeIn: Math.round(shipValue(ship) * 0.6),
       })),
-      modules: MODULE_IDS.filter((m) => !(m === 'figurehead_kraken' && tier < 2 && !ship.hasFlag('modular_refit')) && (!MODULES[m].blueprint || p.blueprints.includes(m))).map((m) => {
+      modules: MODULE_IDS.filter((m) => !(m === 'figurehead_kraken' && tier < 2 && !ship.hasFlag('modular_refit')) && fitsHere(ship, port, m) && (!MODULES[m].blueprint || p.blueprints.includes(m))).map((m) => {
         const level = ship.loadout.modules[m] ?? 0;
         const max = moduleLimit(ship, m);
         return { module: m, level, cost: level >= max ? 0 : Math.round(moduleCost(m, level + 1, ship.cls.tier) * yardMul(ship)), max, excellent: (ship.loadout.excellent ?? []).includes(m) };
       }),
       mounts: mountOffers(ship, port),
-      guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
+      guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier && castHere(port, g)).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
       refit: refitView(game, s, port),
       wares: chandlerWares(game, port),
       mendCost: wornItems(p).reduce((a, it) => a + mendCost(it), 0),
@@ -383,6 +386,18 @@ export function yardMul(ship: ShipEntity): number {
   return Math.max(0.5, 1 + tx(ship.stats, 'yardCost'));
 }
 
+/** A fitting that wants a bigger yard is fitted only there (Modular Refit: anywhere). */
+export function fitsHere(ship: ShipEntity, port: Port, module: ModuleId): boolean {
+  const yard = MODULES[module].yard;
+  return !yard || port.shipyardTier >= yard || ship.hasFlag('modular_refit');
+}
+
+/** A faction's gun is cast only in its yards. */
+export function castHere(port: Port, gun: GunId): boolean {
+  const f = GUNS[gun].factions;
+  return !f || f.includes(port.faction);
+}
+
 /** Highest level this ship may fit (Master Fitter: one fitting one level past its limit). */
 export function moduleLimit(ship: ShipEntity, module: ModuleId): number {
   const def = MODULES[module];
@@ -396,6 +411,7 @@ export function shipyardModule(game: Game, s: PlayerSession, port: Port, module:
   if (!def) return 'Unknown module';
   if (def.blueprint && !s.profile!.blueprints.includes(module)) return 'No yard can build that without the plans';
   if (module === 'figurehead_kraken' && port.shipyardTier < 2 && !ship.hasFlag('modular_refit')) return 'This yard has no carver for that';
+  if (!fitsHere(ship, port, module)) return `Only a yard of rank ${def.yard} or better can fit the ${def.name}`;
   const level = ship.loadout.modules[module] ?? 0;
   if (level >= moduleLimit(ship, module)) return 'Already fully fitted';
   const full = Math.round(moduleCost(module, level + 1, ship.cls.tier) * yardMul(ship));
@@ -470,6 +486,7 @@ export function shipyardGuns(game: Game, s: PlayerSession, port: Port, side: Sid
   if (!def || (side !== 'port' && side !== 'starboard')) return 'Unknown gun';
   if (def.minTier > ship.cls.tier) return `${ship.cls.name} decks cannot carry ${def.name}s`;
   if (def.minTier > Math.max(1, port.shipyardTier)) return 'This yard cannot supply that gun';
+  if (!castHere(port, gun)) return `${port.name} does not cast the ${def.name}`;
   const old = GUNS[ship.loadout.guns[side]];
   if (old.id === gun) return 'Already mounted';
   const n = ship.stats.gunsPerSide;

@@ -4,7 +4,7 @@
 import { lairImpact } from './wanted.ts';
 import { findAbility } from '../../../shared/src/data/captains.ts';
 import { dist, headingOf } from '../../../shared/src/math.ts';
-import { applyDamage, mastWreck } from './combat.ts';
+import { applyDamage, igniteShip, mastWreck } from './combat.ts';
 import { RESOLVE_MAX, callPower, spendDread, witnessMiracle } from './mind.ts';
 import { siegeImpact } from './siege.ts';
 import type { Game } from './Game.ts';
@@ -21,6 +21,8 @@ export interface DelayedStrike {
   slow: number; // seconds of slow applied
   shells: number; // >1 = barrage split into shells
   fx: 'deep_call' | 'maw' | 'barrage' | 'mortar';
+  /** Chance a ship struck catches fire (war rockets). */
+  fire?: number;
 }
 
 export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?: number, ty?: number): string | null {
@@ -162,7 +164,9 @@ export function stepStrikes(game: Game): void {
         lairImpact(game, sx, sy, s.hull, s.owner);
         game.forShipsNear(sx, sy, 60, (o) => {
           if (o.id === s.owner || !o.alive) return;
-          if (dist(o.state.x, o.state.y, sx, sy) < o.stats.length / 2 + 12) applyDamage(game, o, { hull: s.hull, crew: 1, morale: 2 }, owner);
+          if (dist(o.state.x, o.state.y, sx, sy) >= o.stats.length / 2 + 12) return;
+          applyDamage(game, o, { hull: s.hull, crew: 1, morale: 2 }, owner);
+          if (s.fire && game.rng.chance(s.fire)) igniteShip(game, o, 10, owner);
         });
       }
     } else if (s.fx === 'maw') {

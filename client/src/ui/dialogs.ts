@@ -5,7 +5,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { ask } from './confirm.ts';
 import { placeName } from './maps.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { AMMO_IDS, AMMO, SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
+import { AMMO_IDS, AMMO, KEYED_AMMO, SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
 import type { BoardingResult, ClientMsg, OnboardingView } from '../../../shared/src/protocol.ts';
 import { TALENTS_BY_ID } from '../../../shared/src/data/talents.ts';
 import { KEY_PORTS, REGIONS } from '../../../shared/src/world/regions.ts';
@@ -158,7 +158,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
           ${hasSale ? `<span class="cargo-sale">${a ? money(a.price * Math.floor(n ?? 0)) : ''}</span>` : ''}
           ${self.dockedAt ? '' : `<button class="btn btn-small btn-danger" data-dump="${g}" title="${esc(L('ship.overboard'))}">⤓</button>`}</div>`;
       }).join('') || `<p class="muted">${esc(L('ship.emptyHold'))}</p>`}</div>
-      <div class="ammo-chips">${AMMO_IDS.map((a) => `<span class="ammo-chip" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-md')}<b>${self.ammo[a]}</b></span>`).join('')}</div>
+      <div class="ammo-chips">${AMMO_IDS.filter((a, i) => i < KEYED_AMMO || self.ammo[a] > 0).map((a) => `<span class="ammo-chip" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-md')}<b>${self.ammo[a]}</b></span>`).join('')}</div>
       ${self.talents.shp_field_forge && !self.dockedAt ? `<div class="card"><h4>${esc(talentName('shp_field_forge'))}</h4><p class="muted">${esc(L('ship.forgeText'))}</p>
         <div class="forge-grid"><button class="btn btn-small" data-craft="round">${icon('ammo_round', '', 'ico-sm')}${esc(L('ship.forgeRound'))}</button><button class="btn btn-small" data-craft="chain">${icon('ammo_chain', '', 'ico-sm')}${esc(L('ship.forgeChain'))}</button><button class="btn btn-small" data-craft="grape">${icon('ammo_grape', '', 'ico-sm')}${esc(L('ship.forgeGrape'))}</button><button class="btn btn-small" data-craft="planks">${icon('good_planks', '', 'ico-sm')}${esc(L('ship.forgePlanks'))}</button></div></div>` : ''}
     </div><div>

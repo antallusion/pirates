@@ -126,7 +126,7 @@ export type ClientMsg =
   | { t: 'build_launch'; id: string }
   | { t: 'berth'; action: 'swap' | 'sell'; index: number }
   | { t: 'plan_buy'; classId: ShipClassId }
-  | { t: 'figurehead_buy' }
+  | { t: 'figurehead_buy'; id?: FigureheadId }
   | { t: 'shipyard'; action: 'repair' }
   | { t: 'shipyard'; action: 'module'; module: ModuleId }
   | { t: 'shipyard'; action: 'unfit'; module: ModuleId }
@@ -824,7 +824,7 @@ export interface PortView {
   service?: ServicePortView;
   /** The Floating Bazaar here (docs/12 P10 #19): the others' stalls, hers, and where hers stands if elsewhere. */
   bazaar?: { stalls: BazaarStallView[]; mine: BazaarStallView | null; elsewhere: { port: string; sold: number } | null };
-  yard: { woods: WoodId[]; figurehead: FigureheadId | null; plans: boolean; master: boolean };
+  yard: { woods: WoodId[]; /** What the port's carvers sell (one or two). */ figureheads: FigureheadId[]; plans: boolean; master: boolean };
   shipyard: {
     tier: number;
     repairCost: number;
