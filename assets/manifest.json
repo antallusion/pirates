@@ -1907,6 +1907,18 @@
     "icon.mount_net_thrower":                  { "local": "icons/mount_net_thrower.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.12", "rev": 20261003213101},
     "icon.mount_smoke_pots":                   { "local": "icons/mount_smoke_pots.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.13", "rev": 20261003213101},
     "icon.mount_powder_kegs":                  { "local": "icons/mount_powder_kegs.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.14", "rev": 20261003213101},
-    "icon.mount_war_drums":                    { "local": "icons/mount_war_drums.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.15", "rev": 20261003213101}
+    "icon.mount_war_drums":                    { "local": "icons/mount_war_drums.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.15", "rev": 20261003213101},
+    "icon.fh_fishwife":                        { "local": "icons/fh_fishwife.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.0", "rev": 20261003213339},
+    "icon.fh_doge":                            { "local": "icons/fh_doge.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.1", "rev": 20261003213339},
+    "icon.fh_admiral":                         { "local": "icons/fh_admiral.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.2", "rev": 20261003213339},
+    "icon.fh_mermaid":                         { "local": "icons/fh_mermaid.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.3", "rev": 20261003213339},
+    "icon.fh_jolly_jack":                      { "local": "icons/fh_jolly_jack.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.4", "rev": 20261003213339},
+    "icon.fh_veiled_lady":                     { "local": "icons/fh_veiled_lady.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.5", "rev": 20261003213339},
+    "icon.fh_salamander":                      { "local": "icons/fh_salamander.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.6", "rev": 20261003213339},
+    "icon.fh_narwhal":                         { "local": "icons/fh_narwhal.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.7", "rev": 20261003213339},
+    "icon.fh_seraph":                          { "local": "icons/fh_seraph.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.9", "rev": 20261003213339},
+    "icon.fh_leviathan":                       { "local": "icons/fh_leviathan.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.10", "rev": 20261003213339},
+    "icon.fh_storm_widow":                     { "local": "icons/fh_storm_widow.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.11", "rev": 20261003213339},
+    "icon.fh_hermit_crab":                     { "local": "icons/fh_hermit_crab.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.12", "rev": 20261003213339}
   }
 }

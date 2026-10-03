@@ -5216,7 +5216,7 @@
    null
   ],
   "prompt": "Draw a square image: a game icon sheet of 14 square item icons in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a carved figurehead of a stout fishwife with a basket of fish on her hip; 2. a carved figurehead of a doge in a horned ducal cap, the gilt flaking; 3. a carved figurehead of an old admiral in a cocked hat, pointing ahead with a telescope; 4. a carved figurehead of a mermaid with long hair, her scaled tail curling under the bowsprit; 5. a carved figurehead of a grinning sailor with a cutlass between his teeth; 6. a carved figurehead of a lady whose face is hidden under a carved veil; 7. a carved figurehead of a red-and-black salamander wreathed in carved flames; 8. a carved figurehead of a narwhal, its long spiral ivory tusk thrust forward; 9. a carved figurehead of a hooded wrecker swinging a lantern on a pole; 10. a carved figurehead of a six-winged seraph with closed eyes, wings folded along the bow; 11. a figurehead carved as a leviathan’s head with a gaping jaw of ivory teeth; 12. a carved figurehead of a widow in a streaming black veil, lightning carved in her hair; 13. a figurehead of a giant hermit crab’s claws and shell grown over with wreck timbers; 14. a carved figurehead of a hollow-eyed drowned admiral in a barnacled bicorne; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
-  "painting": true
+  "cut": "hf_20261003_213339_gpt-arms_4"
  },
  "items_5": {
   "grid": [
@@ -7316,6 +7316,25 @@
    "prop.port_marrowdeep"
   ],
   "prompt": "Draw a square image: a game map sprite of one port town — a dark enclave built on a reef of huge pale fossil whale bones: chapels of black stone and bone arches, faint pale green glowing pools, hanging bronze bells, a narrow bone jetty. Seen from high above at a steep angle, the whole town compact on its own patch of shore filling most of the picture, its piers and jetties reaching straight down toward the bottom edge. Smooth painterly digital painting like the town sprites on the adventure map of Heroes of Might and Magic III, grim and weathered; night, warm lantern light in the windows and cold moonlight on the wet roofs; muted colours: charcoal, slate, tarred black wood, rust, old brass, cold blue-grey, with small warm highlights. The town alone on a solid flat magenta #FF00FF background: no sea around it, no shadows on the background, no frame, no text, no letters, no labels.",
+  "painting": true
+ },
+ "arms_4b": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.fh_wrecker",
+   "icon.fh_hollow_admiral",
+   null,
+   null
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 4 square item icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a carved wooden figurehead of a hooded wrecker, a weathered living bearded man's face under the hood, swinging a lantern on a pole; 2. a carved wooden figurehead of a drowned admiral: a stern old bearded man's carved face with closed eyes, a barnacled bicorne hat and kelp hanging from his gold-braided coat; 3. a carved wooden figurehead of a hooded wrecker with a grim weathered face, a lantern held high on a pole, rain on the carving; 4. a carved wooden figurehead of an old drowned admiral, a living stern face with a white beard, a bicorne crusted with barnacles, green weed on his epaulettes; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles. No skulls, no skeletons, no bare bones: every face is a living human face carved in wood.",
   "painting": true
  }
 }
