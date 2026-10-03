@@ -238,6 +238,7 @@ def gpt_prompt(k: dict) -> str:
         'the whole body is visible; the figures are large, about three quarters of the image height, with wide empty gaps between them. '
         'Smooth painterly digital painting with soft edges and no ink outlines, like the hand-painted unit sprites of 1990s fantasy '
         'strategy games, grim and weathered; muted colours: charcoal, tarred leather, wool, rust, old brass, faded red, cold blue-grey. '
+        'No blood, no wounds and no red stains anywhere; each weapon stays in his hands in every pose. '
         'Solid flat magenta #FF00FF background, no floor, no shadows, no lines, no frames, no text.'
     )
 
