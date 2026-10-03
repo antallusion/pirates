@@ -1937,6 +1937,22 @@
     "icon.item_sick_bay":                      { "local": "icons/item_sick_bay.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.14", "rev": 20261003213611},
     "icon.item_armoury":                       { "local": "icons/item_armoury.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.15", "rev": 20261003213611},
     "icon.fh_wrecker":                         { "local": "icons/fh_wrecker.webp", "remote": "hf_20261003_213842_gpt-arms_4b.png", "job": "gpt-arms_4b", "fit": "sheet:arms_4b.0", "rev": 20261003213842},
-    "icon.fh_hollow_admiral":                  { "local": "icons/fh_hollow_admiral.webp", "remote": "hf_20261003_213842_gpt-arms_4b.png", "job": "gpt-arms_4b", "fit": "sheet:arms_4b.1", "rev": 20261003213842}
+    "icon.fh_hollow_admiral":                  { "local": "icons/fh_hollow_admiral.webp", "remote": "hf_20261003_213842_gpt-arms_4b.png", "job": "gpt-arms_4b", "fit": "sheet:arms_4b.1", "rev": 20261003213842},
+    "icon.item_splinter_screens":              { "local": "icons/item_splinter_screens.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.0", "rev": 20261003214256},
+    "icon.item_gun_tackle":                    { "local": "icons/item_gun_tackle.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.1", "rev": 20261003214256},
+    "icon.item_grape_bags":                    { "local": "icons/item_grape_bags.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.2", "rev": 20261003214256},
+    "icon.item_chain_lockers":                 { "local": "icons/item_chain_lockers.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.3", "rev": 20261003214256},
+    "icon.item_gunlocks":                      { "local": "icons/item_gunlocks.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.4", "rev": 20261003214256},
+    "icon.item_signal_hoist":                  { "local": "icons/item_signal_hoist.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.5", "rev": 20261003214256},
+    "icon.item_grey_pennant":                  { "local": "icons/item_grey_pennant.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.6", "rev": 20261003214256},
+    "icon.item_hand_of_glory":                 { "local": "icons/item_hand_of_glory.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.7", "rev": 20261003214256},
+    "icon.item_bottled_wind":                  { "local": "icons/item_bottled_wind.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.8", "rev": 20261003214256},
+    "icon.item_coffin_nail":                   { "local": "icons/item_coffin_nail.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.9", "rev": 20261003214256},
+    "icon.item_merchant_hat":                  { "local": "icons/item_merchant_hat.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.10", "rev": 20261003214256},
+    "icon.item_gunner_cap":                    { "local": "icons/item_gunner_cap.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.11", "rev": 20261003214256},
+    "icon.item_buff_coat":                     { "local": "icons/item_buff_coat.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.12", "rev": 20261003214256},
+    "icon.item_smugglers_cloak":               { "local": "icons/item_smugglers_cloak.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.13", "rev": 20261003214256},
+    "icon.item_powder_horn":                   { "local": "icons/item_powder_horn.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.14", "rev": 20261003214256},
+    "icon.item_buccaneer_boots":               { "local": "icons/item_buccaneer_boots.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.15", "rev": 20261003214256}
   }
 }
