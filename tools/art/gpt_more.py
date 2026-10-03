@@ -40,7 +40,8 @@ def field(desc):
 
 def icons(rows):
     return ('Draw a square image: a 4 by 4 grid of sixteen square game icons separated by thin black lines; each icon is one small '
-            f'dramatic painted scene filling its square, readable at a small size. The icons, row by row: {listing(rows)} {LOOK} '
+            'dramatic painted scene filling its square, readable at a small size. No blood, no wounds, no gore, no corpses, no skulls, no zombies '
+            f'anywhere. The icons, row by row: {listing(rows)} {LOOK} '
             'No text, no letters, no numbers, no frames inside the squares.')
 
 
