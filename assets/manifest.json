@@ -1607,6 +1607,10 @@
     "unit.debt_collector":                     { "local": "units/debt_collector.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.0", "rev": 20261003122934},
     "unit.debt_collector_b":                   { "local": "units/debt_collector_b.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.1", "rev": 20261003122934},
     "unit.debt_collector_atk":                 { "local": "units/debt_collector_atk.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.2", "rev": 20261003122934},
-    "unit.debt_collector_hit":                 { "local": "units/debt_collector_hit.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.3", "rev": 20261003122934}
+    "unit.debt_collector_hit":                 { "local": "units/debt_collector_hit.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.3", "rev": 20261003122934},
+    "unit.company_musketeer":                  { "local": "units/company_musketeer.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.0", "rev": 20261003123414},
+    "unit.company_musketeer_b":                { "local": "units/company_musketeer_b.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.1", "rev": 20261003123414},
+    "unit.company_musketeer_atk":              { "local": "units/company_musketeer_atk.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.2", "rev": 20261003123414},
+    "unit.company_musketeer_hit":              { "local": "units/company_musketeer_hit.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.3", "rev": 20261003123414}
   }
 }
