@@ -1992,6 +1992,10 @@
     "ship.tartane":                            { "local": "ships/tartane.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.0", "rev": 20261003230019},
     "ship.hoy":                                { "local": "ships/hoy.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.1", "rev": 20261003230019},
     "ship.pinnace":                            { "local": "ships/pinnace.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.2", "rev": 20261003230019},
-    "ship.snow":                               { "local": "ships/snow.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.3", "rev": 20261003230019}
+    "ship.snow":                               { "local": "ships/snow.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.3", "rev": 20261003230019},
+    "monster.old_moorings":                    { "local": "monsters/old_moorings.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.0", "rev": 20261003230443},
+    "monster.old_tithe":                       { "local": "monsters/old_tithe.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.1", "rev": 20261003230443},
+    "monster.fog_changeling":                  { "local": "monsters/fog_changeling.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.2", "rev": 20261003230443},
+    "monster.rime_narwhal":                    { "local": "monsters/rime_narwhal.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.3", "rev": 20261003230443}
   }
 }
