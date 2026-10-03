@@ -514,7 +514,11 @@ function filmMoments(): void {
   filmWas.tac = !!tac;
   filmWas.over = !!tac?.over;
   const docked = !!state.self?.dockedAt;
-  if (docked && !filmWas.docked && state.self) playFilm('cut_port');
+  // The first harbour; then the first of each power's (shared/src/data/factions.ts).
+  if (docked && !filmWas.docked && state.self) {
+    const faction = state.ports.find((p) => p.id === state.self!.dockedAt)?.faction;
+    playFilm(filmDue('cut_port') || !faction ? 'cut_port' : `cut_port_${faction}`);
+  }
   filmWas.docked = docked || !state.self;
   if (state.storm && !filmWas.storm) playFilm('cut_storm');
   filmWas.storm = !!state.storm;
@@ -534,7 +538,13 @@ function filmMoments(): void {
   filmWas.abyss = abyss || !state.self;
   // A black storm's own film; a new ship off the slipway; the orca calf; a Grail dug up; her own harbour; the sea's
   // holidays, each the first time it comes round.
-  if (turned('weather', state.weather) && state.weather === 'black_storm') playFilm('cut_black_storm');
+  // The first black storm and the first fog; the first night watch at sea.
+  if (turned('weather', state.weather)) {
+    if (state.weather === 'black_storm') playFilm('cut_black_storm');
+    else if (state.weather === 'fog') playFilm('cut_fog');
+  }
+  const watch = !!state.self && !state.self.dockedAt && isNight(state.estServerTime());
+  if (turned('night', watch) && watch) playFilm('cut_night_watch');
   const cls = state.self?.loadout.classId ?? null;
   if (turned('cls', cls) && cls && state.self?.dockedAt && performance.now() - sunkAt > 60_000) playFilm('cut_launch');
   if (turned('pet', !!state.companion) && state.companion) playFilm('cut_orca');

@@ -348,6 +348,49 @@ v('cut_hunt', 'hunt', 'Зверь на лине',
   'second harpoon gun. The camera flies low ahead of the bow, looking back at the straining ship.')
 
 
+# ---- The fourth reel: the first harbour of each power of the sea (client/src/main.ts, PORT_FILM), the first fog,
+# the first night watch ------------------------------------------------------------------------------------------------
+v('cut_port_crown', 'port_crown', 'Гавань Короны',
+  'Morning in a fortified Crown harbour: a grey stone citadel with a great white ensign stands over a crescent of quays where '
+  'warships of the line lie at anchor in perfect rows; red-coated marines drill on the parade ground by the customs house, a '
+  'drum beats, and a harbour boat with a uniformed officer rows out to meet the arriving pirate brig flying false colours. The '
+  'camera glides in low over the water past the anchored warships toward the citadel.')
+v('cut_port_league', 'port_league', 'Гавань Гроссбуха',
+  'A rich merchant harbour of the Gilded Ledger at golden evening: tall ochre warehouses with timber cranes line the quays, bales '
+  'and casks swing ashore from fat merchantmen, clerks with ledgers count crates under hanging lanterns, and the gilded dome of the '
+  'company counting house glows above the roofs. The camera drifts slowly along the busy quay toward the counting house.')
+v('cut_port_confederacy', 'port_confederacy', 'Гавань Красного Прилива',
+  'A pirate haven of the Red Tide Confederacy at night: a crooked town of rope bridges and shacks built over the hulks of '
+  'captured ships in a hidden cove, red lanterns everywhere, blood-red flags on every mast, a bonfire on the beach where captains '
+  'argue over a chart, fiddles and shouting from the taverns. The camera sweeps in from the cove\'s mouth over the anchored '
+  'raiders toward the bonfire.')
+v('cut_port_harpoon', 'port_harpoon', 'Гавань Ордена Гарпуна',
+  'A cold northern whaling harbour of the Order of the Harpoon under grey skies and drifting snow: stout whaleboats hauled up '
+  'on a stony beach, harpoon racks and try-works smoking along the quay, the vast jawbone arch of a sea monster over the harbour '
+  'gate, and grim hunters in oilskins sharpening irons. The camera moves slowly in through the jawbone arch.')
+v('cut_port_brokers', 'port_brokers', 'Гавань Туманных Маклеров',
+  'A smugglers\' harbour of the Fog Brokers hidden in a sea cave, its mouth veiled in thick fog: inside, lantern-lit wooden '
+  'jetties and stairs climb the cave walls, cloaked figures trade sealed letters and small chests in whispers, and a slim black '
+  'sloop slips silently in through the fog curtain. The camera follows the sloop through the fog into the glowing cave.')
+v('cut_port_choir', 'port_choir', 'Гавань Хора Глубин',
+  'A strange harbour of the Choir of the Deep on a black volcanic island: a drowned stone town half sunk into the sea, its '
+  'towers leaning, pale-green lanterns on long poles over the water, hooded figures in sea-green robes walking slowly down stone '
+  'steps that lead straight into the waves, and a low chant drifting over the still water. The camera glides in over the '
+  'submerged streets toward the steps.')
+v('cut_port_free', 'port_free', 'Вольная Гавань',
+  'A ramshackle free harbour on a tropical island at noon: a jumble of patched sails and flags of every colour, a market of '
+  'stalls along a long timber pier, islanders, sailors and traders of every kind haggling, a monkey running along the ropes, '
+  'and outrigger canoes weaving between the anchored ships. The camera floats slowly along the pier through the noisy crowd.')
+v('cut_fog', 'fog', 'Туман',
+  'A pirate brig sails slowly into a wall of thick grey fog: the bowsprit vanishes first, then the foremast, the lanterns become '
+  'faint blurred halos; a lookout in the bow leans forward, listening, as a ship\'s bell tolls somewhere unseen ahead and a dark '
+  'shape of another hull glides past close by and is gone. The camera stays at the bow beside the lookout.')
+v('cut_night_watch', 'night', 'Ночная вахта',
+  'Deep night on a calm sea under a sky full of stars and a thin moon: on the quarterdeck of a pirate brig a lone helmsman '
+  'holds the wheel by the light of the binnacle lamp, an old sailor smokes a pipe on watch at the rail, the sails breathe softly '
+  'and the wake glows faintly with phosphorescence. The camera rises slowly from the binnacle up the mast to the stars.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
