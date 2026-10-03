@@ -1253,6 +1253,10 @@
     "unit.deep_abbot":                         { "local": "units/deep_abbot.webp", "remote": "hf_20261003_051912_gpt-anim_deep_abbot.png", "job": "gpt-anim_deep_abbot", "fit": "sheet:anim_deep_abbot.0", "rev": 20261003051912},
     "unit.deep_abbot_b":                       { "local": "units/deep_abbot_b.webp", "remote": "hf_20261003_051912_gpt-anim_deep_abbot.png", "job": "gpt-anim_deep_abbot", "fit": "sheet:anim_deep_abbot.1", "rev": 20261003051912},
     "unit.deep_abbot_atk":                     { "local": "units/deep_abbot_atk.webp", "remote": "hf_20261003_051912_gpt-anim_deep_abbot.png", "job": "gpt-anim_deep_abbot", "fit": "sheet:anim_deep_abbot.2", "rev": 20261003051912},
-    "unit.deep_abbot_hit":                     { "local": "units/deep_abbot_hit.webp", "remote": "hf_20261003_051912_gpt-anim_deep_abbot.png", "job": "gpt-anim_deep_abbot", "fit": "sheet:anim_deep_abbot.3", "rev": 20261003051912}
+    "unit.deep_abbot_hit":                     { "local": "units/deep_abbot_hit.webp", "remote": "hf_20261003_051912_gpt-anim_deep_abbot.png", "job": "gpt-anim_deep_abbot", "fit": "sheet:anim_deep_abbot.3", "rev": 20261003051912},
+    "unit.drowned_priest":                     { "local": "units/drowned_priest.webp", "remote": "hf_20261003_052401_gpt-anim_drowned_priest.png", "job": "gpt-anim_drowned_priest", "fit": "sheet:anim_drowned_priest.0", "rev": 20261003052401},
+    "unit.drowned_priest_b":                   { "local": "units/drowned_priest_b.webp", "remote": "hf_20261003_052401_gpt-anim_drowned_priest.png", "job": "gpt-anim_drowned_priest", "fit": "sheet:anim_drowned_priest.1", "rev": 20261003052401},
+    "unit.drowned_priest_atk":                 { "local": "units/drowned_priest_atk.webp", "remote": "hf_20261003_052401_gpt-anim_drowned_priest.png", "job": "gpt-anim_drowned_priest", "fit": "sheet:anim_drowned_priest.2", "rev": 20261003052401},
+    "unit.drowned_priest_hit":                 { "local": "units/drowned_priest_hit.webp", "remote": "hf_20261003_052401_gpt-anim_drowned_priest.png", "job": "gpt-anim_drowned_priest", "fit": "sheet:anim_drowned_priest.3", "rev": 20261003052401}
   }
 }
