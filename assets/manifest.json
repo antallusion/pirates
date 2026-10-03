@@ -1313,6 +1313,10 @@
     "unit.fog_master":                         { "local": "units/fog_master.webp", "remote": "hf_20261003_061132_gpt-anim_fog_master.png", "job": "gpt-anim_fog_master", "fit": "sheet:anim_fog_master.0", "rev": 20261003061132},
     "unit.fog_master_b":                       { "local": "units/fog_master_b.webp", "remote": "hf_20261003_061132_gpt-anim_fog_master.png", "job": "gpt-anim_fog_master", "fit": "sheet:anim_fog_master.1", "rev": 20261003061132},
     "unit.fog_master_atk":                     { "local": "units/fog_master_atk.webp", "remote": "hf_20261003_061132_gpt-anim_fog_master.png", "job": "gpt-anim_fog_master", "fit": "sheet:anim_fog_master.2", "rev": 20261003061132},
-    "unit.fog_master_hit":                     { "local": "units/fog_master_hit.webp", "remote": "hf_20261003_061132_gpt-anim_fog_master.png", "job": "gpt-anim_fog_master", "fit": "sheet:anim_fog_master.3", "rev": 20261003061132}
+    "unit.fog_master_hit":                     { "local": "units/fog_master_hit.webp", "remote": "hf_20261003_061132_gpt-anim_fog_master.png", "job": "gpt-anim_fog_master", "fit": "sheet:anim_fog_master.3", "rev": 20261003061132},
+    "unit.assassin":                           { "local": "units/assassin.webp", "remote": "hf_20261003_061623_gpt-anim_assassin.png", "job": "gpt-anim_assassin", "fit": "sheet:anim_assassin.0", "rev": 20261003061623},
+    "unit.assassin_b":                         { "local": "units/assassin_b.webp", "remote": "hf_20261003_061623_gpt-anim_assassin.png", "job": "gpt-anim_assassin", "fit": "sheet:anim_assassin.1", "rev": 20261003061623},
+    "unit.assassin_atk":                       { "local": "units/assassin_atk.webp", "remote": "hf_20261003_061623_gpt-anim_assassin.png", "job": "gpt-anim_assassin", "fit": "sheet:anim_assassin.2", "rev": 20261003061623},
+    "unit.assassin_hit":                       { "local": "units/assassin_hit.webp", "remote": "hf_20261003_061623_gpt-anim_assassin.png", "job": "gpt-anim_assassin", "fit": "sheet:anim_assassin.3", "rev": 20261003061623}
   }
 }
