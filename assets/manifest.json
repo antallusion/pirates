@@ -1530,6 +1530,7 @@
     "part.ms_spear":                           { "local": "fx/ms_spear.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.12", "rev": 20261003104626},
     "part.ms_brine":                           { "local": "fx/ms_brine.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.13", "rev": 20261003104626},
     "part.ms_smokebomb":                       { "local": "fx/ms_smokebomb.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.14", "rev": 20261003104626},
-    "part.ms_bell":                            { "local": "fx/ms_bell.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.15", "rev": 20261003104626}
+    "part.ms_bell":                            { "local": "fx/ms_bell.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.15", "rev": 20261003104626},
+    "bg.spellbook":                            { "local": "art/spellbook.webp", "remote": "hf_20261003_105053_gpt-bg-spellbook.png", "job": "gpt-bg-spellbook", "fit": "opaque:1920", "rev": 20261003105053}
   }
 }

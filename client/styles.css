@@ -3638,7 +3638,12 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
     linear-gradient(#2b1a0d, #1a0f07) border-box;
   border: max(4px, calc(var(--bk-w) * 0.012)) solid transparent; box-shadow: 0 10px 40px #000, inset 0 0 calc(var(--bk-w) * 0.04) rgba(80, 50, 20, 0.45); }
 .tb-book.bk.painted { background: center / 100% 100% no-repeat; border: none; box-shadow: none; filter: drop-shadow(0 10px 24px #000);
-  --bk-t: 15%; --bk-b: 17%; --bk-o: 14%; --bk-i: 3.5%; }
+  --bk-t: 12%; --bk-b: 25%; --bk-o: 17.5%; --bk-i: 2.8%; }
+/* On the painting the corners to turn sit at the pages' lower corners, the bookmarks and the close on the table. */
+.tb-book.bk.painted .bk-turn.prev { left: 11%; bottom: 21%; }
+.tb-book.bk.painted .bk-turn.next { right: 11%; bottom: 21%; }
+.tb-book.bk.painted .bk-tabs { right: 2.5%; top: 24%; }
+.tb-book.bk.painted .bk-close { right: 2.5%; top: 11%; }
 /* While the book is open the sea's news waits (a toast would lie over its pages). */
 body:has(.tb-book.bk:not(.hidden)) #toasts { display: none; }
 .bk-page { position: absolute; top: var(--bk-t); bottom: var(--bk-b); display: flex; flex-direction: column; gap: 2%; min-width: 0; }
@@ -3655,7 +3660,7 @@ body:has(.tb-book.bk:not(.hidden)) #toasts { display: none; }
   background: none; border: 1px solid transparent; border-radius: 4px; color: inherit; font: inherit; cursor: pointer; }
 .bk-sp:hover:not(:disabled) { background: rgba(120, 80, 30, 0.14); border-color: rgba(90, 60, 20, 0.45); }
 .bk-sp.on { border-color: #8a5a1a; background: rgba(176, 120, 40, 0.2); }
-.bk-sp:disabled { cursor: default; opacity: 0.5; filter: grayscale(0.85); }
+.bk-sp:disabled { cursor: default; opacity: 0.75; filter: grayscale(0.7); }
 .bk-sp .bk-ico { width: max(28px, calc(var(--bk-w) * 0.058)); height: max(28px, calc(var(--bk-w) * 0.058)); flex: none; border-radius: 4px; box-shadow: 0 1px 4px rgba(30, 15, 0, 0.6); }
 .bk-sp b { max-width: 100%; font-family: var(--serif); font-size: max(10px, calc(var(--bk-w) * 0.0145)); font-weight: 600; line-height: 1.1; text-align: center; color: #2e1f0e;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
