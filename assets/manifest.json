@@ -1727,6 +1727,10 @@
     "unit.phantom_gunner":                     { "local": "units/phantom_gunner.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.0", "rev": 20261003150955},
     "unit.phantom_gunner_b":                   { "local": "units/phantom_gunner_b.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.1", "rev": 20261003150955},
     "unit.phantom_gunner_atk":                 { "local": "units/phantom_gunner_atk.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.2", "rev": 20261003150955},
-    "unit.phantom_gunner_hit":                 { "local": "units/phantom_gunner_hit.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.3", "rev": 20261003150955}
+    "unit.phantom_gunner_hit":                 { "local": "units/phantom_gunner_hit.webp", "remote": "hf_20261003_150955_gpt-anim_phantom_gunner.png", "job": "gpt-anim_phantom_gunner", "fit": "sheet:anim_phantom_gunner.3", "rev": 20261003150955},
+    "unit.ghost_musketeer":                    { "local": "units/ghost_musketeer.webp", "remote": "hf_20261003_151445_gpt-anim_ghost_musketeer.png", "job": "gpt-anim_ghost_musketeer", "fit": "sheet:anim_ghost_musketeer.0", "rev": 20261003151445},
+    "unit.ghost_musketeer_b":                  { "local": "units/ghost_musketeer_b.webp", "remote": "hf_20261003_151445_gpt-anim_ghost_musketeer.png", "job": "gpt-anim_ghost_musketeer", "fit": "sheet:anim_ghost_musketeer.1", "rev": 20261003151445},
+    "unit.ghost_musketeer_atk":                { "local": "units/ghost_musketeer_atk.webp", "remote": "hf_20261003_151445_gpt-anim_ghost_musketeer.png", "job": "gpt-anim_ghost_musketeer", "fit": "sheet:anim_ghost_musketeer.2", "rev": 20261003151445},
+    "unit.ghost_musketeer_hit":                { "local": "units/ghost_musketeer_hit.webp", "remote": "hf_20261003_151445_gpt-anim_ghost_musketeer.png", "job": "gpt-anim_ghost_musketeer", "fit": "sheet:anim_ghost_musketeer.3", "rev": 20261003151445}
   }
 }
