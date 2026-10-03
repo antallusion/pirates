@@ -1779,6 +1779,10 @@
     "unit.crocodile":                          { "local": "units/crocodile.webp", "remote": "hf_20261003_162310_gpt-anim_crocodile.png", "job": "gpt-anim_crocodile", "fit": "sheet:anim_crocodile.0", "rev": 20261003162310},
     "unit.crocodile_b":                        { "local": "units/crocodile_b.webp", "remote": "hf_20261003_162310_gpt-anim_crocodile.png", "job": "gpt-anim_crocodile", "fit": "sheet:anim_crocodile.1", "rev": 20261003162310},
     "unit.crocodile_atk":                      { "local": "units/crocodile_atk.webp", "remote": "hf_20261003_162310_gpt-anim_crocodile.png", "job": "gpt-anim_crocodile", "fit": "sheet:anim_crocodile.2", "rev": 20261003162310},
-    "unit.crocodile_hit":                      { "local": "units/crocodile_hit.webp", "remote": "hf_20261003_162310_gpt-anim_crocodile.png", "job": "gpt-anim_crocodile", "fit": "sheet:anim_crocodile.3", "rev": 20261003162310}
+    "unit.crocodile_hit":                      { "local": "units/crocodile_hit.webp", "remote": "hf_20261003_162310_gpt-anim_crocodile.png", "job": "gpt-anim_crocodile", "fit": "sheet:anim_crocodile.3", "rev": 20261003162310},
+    "unit.jaguar":                             { "local": "units/jaguar.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.0", "rev": 20261003162742},
+    "unit.jaguar_b":                           { "local": "units/jaguar_b.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.1", "rev": 20261003162742},
+    "unit.jaguar_atk":                         { "local": "units/jaguar_atk.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.2", "rev": 20261003162742},
+    "unit.jaguar_hit":                         { "local": "units/jaguar_hit.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.3", "rev": 20261003162742}
   }
 }
