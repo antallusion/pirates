@@ -1275,6 +1275,10 @@
     "unit.choir_cantor":                       { "local": "units/choir_cantor.webp", "remote": "hf_20261003_053813_gpt-anim_choir_cantor.png", "job": "gpt-anim_choir_cantor", "fit": "sheet:anim_choir_cantor.0", "rev": 20261003053813},
     "unit.choir_cantor_b":                     { "local": "units/choir_cantor_b.webp", "remote": "hf_20261003_053813_gpt-anim_choir_cantor.png", "job": "gpt-anim_choir_cantor", "fit": "sheet:anim_choir_cantor.1", "rev": 20261003053813},
     "unit.choir_cantor_atk":                   { "local": "units/choir_cantor_atk.webp", "remote": "hf_20261003_053813_gpt-anim_choir_cantor.png", "job": "gpt-anim_choir_cantor", "fit": "sheet:anim_choir_cantor.2", "rev": 20261003053813},
-    "unit.choir_cantor_hit":                   { "local": "units/choir_cantor_hit.webp", "remote": "hf_20261003_053813_gpt-anim_choir_cantor.png", "job": "gpt-anim_choir_cantor", "fit": "sheet:anim_choir_cantor.3", "rev": 20261003053813}
+    "unit.choir_cantor_hit":                   { "local": "units/choir_cantor_hit.webp", "remote": "hf_20261003_053813_gpt-anim_choir_cantor.png", "job": "gpt-anim_choir_cantor", "fit": "sheet:anim_choir_cantor.3", "rev": 20261003053813},
+    "unit.choir_chanter":                      { "local": "units/choir_chanter.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.0", "rev": 20261003054312},
+    "unit.choir_chanter_b":                    { "local": "units/choir_chanter_b.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.1", "rev": 20261003054312},
+    "unit.choir_chanter_atk":                  { "local": "units/choir_chanter_atk.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.2", "rev": 20261003054312},
+    "unit.choir_chanter_hit":                  { "local": "units/choir_chanter_hit.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.3", "rev": 20261003054312}
   }
 }
