@@ -337,6 +337,9 @@ export class TacticalPanel {
   private ransomArmed = 0;
   private seen = 0;
   private floats: Float[] = [];
+  /** The captains stepping in at their corners of the field (HoMM3's heroes): as the fight opens, and as each gives
+   *  an order or her path's move. */
+  private heroFx: { side: number; t0: number; dur: number }[] = [];
   private bursts: Burst[] = [];
   private missiles: Missile[] = [];
   private pos = new Map<number, { x: number; y: number; fx: number; fy: number; t0: number }>();
@@ -424,6 +427,7 @@ export class TacticalPanel {
   private onView(v: TacView, was: TacView | null): void {
     // What happened since the last view: numbers over the stacks, bursts of powder and smoke.
     const fresh = v.log.filter((e) => e.i > this.seen);
+    if (!was) this.heroFx = [0, 1].map((side) => ({ side, t0: performance.now() + 400 + side * 250, dur: 1900 }));
     if (!was) this.seen = v.log.length ? v.log[v.log.length - 1].i : 0;
     else for (const e of fresh) this.mark(e, v, was);
     if (fresh.length) this.seen = Math.max(this.seen, ...fresh.map((e) => e.i));
@@ -496,6 +500,7 @@ export class TacticalPanel {
         this.bursts.push({ id: e.k === 'poison' ? (sprite('fx.bt_poison_0') ? 'fx.bt_poison' : 'part.smoke') : sprite('fx.bt_heal_0') ? 'fx.bt_heal' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'spell') {
+      this.heroStep(e.side, t);
       const c = at(e.hex ?? hexOf(e.t));
       if (e.id === 'grenades' && c) {
         this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 2.4 });
@@ -519,6 +524,7 @@ export class TacticalPanel {
     } else if (e.k === 'innate' || e.k === 'ult') {
       // docs/18: the path's move — its light over the stacks it fell on, its name over the field and each of them.
       const ult = e.k === 'ult';
+      this.heroStep(e.side, t);
       const on = (e.on ?? []).map((id) => at(hexOf(id))).filter((c): c is { x: number; y: number } => !!c);
       this.pathFx.push({ path: e.id as CaptainId, ult, mine: e.side === v.you, t0: t, at: on });
       this.addFloat({ text: moveName(e.id ?? '', ult), x: this.size.cw / 2, y: this.size.ch * (ult ? 0.3 : 0.18), t0: t, color: e.side === v.you ? YOU : FOE, big: true });
@@ -1778,6 +1784,9 @@ export class TacticalPanel {
       }
       g.globalAlpha = 1;
     }
+    // The captains at their corners, under the names of what they did.
+    this.heroFx = this.heroFx.filter((h) => t - h.t0 < h.dur);
+    for (const h of this.heroFx) this.drawHero(g, v, h, t, w, cw, ch);
     // The numbers over the stacks.
     this.floats = this.floats.filter((f) => t - f.t0 < (f.big ? 1600 : 1200));
     g.textAlign = 'center';
@@ -1928,6 +1937,44 @@ export class TacticalPanel {
         g.stroke();
       }
     });
+    g.restore();
+  }
+
+  /** A captain steps in at her corner as she gives an order (one at a time a side: a second order restarts her). */
+  private heroStep(side: number | undefined, t: number): void {
+    if (side === undefined) return;
+    this.heroFx = this.heroFx.filter((h) => h.side !== side);
+    this.heroFx.push({ side, t0: t, dur: 1400 });
+  }
+
+  /** Her captain's figure (unit.hero_<path>, four poses like the stacks'): slid in from her edge of the field at its
+   *  foot, the order given in the blow's pose, then gone; the right side's mirrored to face the left. */
+  private drawHero(g: CanvasRenderingContext2D, v: TacView, h: { side: number; t0: number; dur: number }, t: number, w: number, cw: number, ch: number): void {
+    const hv = v.heroes[h.side];
+    const id = `unit.hero_${hv?.captain ?? hv?.path ?? ''}`;
+    const base = sprite(id)?.img;
+    if (!base || t < h.t0) return;
+    const k = (t - h.t0) / h.dur;
+    const frame = k > 0.2 && k < 0.72 && sprite(`${id}_atk`) ? `${id}_atk` : k >= 0.72 && sprite(`${id}_b`) ? `${id}_b` : id;
+    const img = sprite(frame)!.img;
+    const sc = Math.min(ch * 0.4, w * 2.7) / base.naturalHeight;
+    const W = img.naturalWidth * sc, H = img.naturalHeight * sc;
+    const fade = Math.max(0, Math.min(1, k / 0.14, (1 - k) / 0.2));
+    const left = h.side === 0;
+    const x = left ? w * 0.15 - (1 - Math.min(1, k / 0.14)) * w : cw - w * 0.15 + (1 - Math.min(1, k / 0.14)) * w;
+    const y = ch - w * 0.12;
+    g.save();
+    g.globalAlpha = fade;
+    // A shade behind her, so she reads against the deck.
+    const cx = x + (left ? 1 : -1) * base.naturalWidth * sc * 0.5;
+    const glow = g.createRadialGradient(cx, y - H * 0.45, 0, cx, y - H * 0.45, H * 0.7);
+    glow.addColorStop(0, 'rgba(0,0,0,0.5)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = glow;
+    g.fillRect(cx - H * 0.7, y - H * 1.15, H * 1.4, H * 1.4);
+    g.translate(x, y);
+    if (!left) g.scale(-1, 1);
+    g.drawImage(img, 0, -H, W, H);
     g.restore();
   }
 
