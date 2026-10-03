@@ -1367,6 +1367,7 @@
     "unit.young_serpent_atk":                  { "local": "units/young_serpent_atk.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.2", "rev": 20261003073859},
     "unit.young_serpent_hit":                  { "local": "units/young_serpent_hit.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.3", "rev": 20261003073859},
     "bg.deck_ghost_ship":                      { "local": "art/deck_ghost_ship.webp", "remote": "hf_20261003_074329_gpt-bg-deck_ghost_ship.png", "job": "gpt-bg-deck_ghost_ship", "fit": "opaque:1536", "rev": 20261003074329},
-    "bg.deck_xebec":                           { "local": "art/deck_xebec.webp", "remote": "hf_20261003_075017_gpt-bg-deck_xebec.png", "job": "gpt-bg-deck_xebec", "fit": "opaque:1536", "rev": 20261003075017}
+    "bg.deck_xebec":                           { "local": "art/deck_xebec.webp", "remote": "hf_20261003_075017_gpt-bg-deck_xebec.png", "job": "gpt-bg-deck_xebec", "fit": "opaque:1536", "rev": 20261003075017},
+    "bg.deck_bomb_ketch":                      { "local": "art/deck_bomb_ketch.webp", "remote": "hf_20261003_075848_gpt-bg-deck_bomb_ketch.png", "job": "gpt-bg-deck_bomb_ketch", "fit": "opaque:1536", "rev": 20261003075848}
   }
 }
