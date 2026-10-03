@@ -1230,6 +1230,10 @@
     "unit.crown_boy":                          { "local": "units/crown_boy.webp", "remote": "hf_20261003_045038_gpt-anim_crown_boy.png", "job": "gpt-anim_crown_boy", "fit": "sheet:anim_crown_boy.0", "rev": 20261003045038},
     "unit.crown_boy_b":                        { "local": "units/crown_boy_b.webp", "remote": "hf_20261003_045038_gpt-anim_crown_boy.png", "job": "gpt-anim_crown_boy", "fit": "sheet:anim_crown_boy.1", "rev": 20261003045038},
     "unit.crown_boy_atk":                      { "local": "units/crown_boy_atk.webp", "remote": "hf_20261003_045038_gpt-anim_crown_boy.png", "job": "gpt-anim_crown_boy", "fit": "sheet:anim_crown_boy.2", "rev": 20261003045038},
-    "unit.crown_boy_hit":                      { "local": "units/crown_boy_hit.webp", "remote": "hf_20261003_045038_gpt-anim_crown_boy.png", "job": "gpt-anim_crown_boy", "fit": "sheet:anim_crown_boy.3", "rev": 20261003045038}
+    "unit.crown_boy_hit":                      { "local": "units/crown_boy_hit.webp", "remote": "hf_20261003_045038_gpt-anim_crown_boy.png", "job": "gpt-anim_crown_boy", "fit": "sheet:anim_crown_boy.3", "rev": 20261003045038},
+    "unit.abyss_ascendant":                    { "local": "units/abyss_ascendant.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.0", "rev": 20261003045538},
+    "unit.abyss_ascendant_b":                  { "local": "units/abyss_ascendant_b.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.1", "rev": 20261003045538},
+    "unit.abyss_ascendant_atk":                { "local": "units/abyss_ascendant_atk.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.2", "rev": 20261003045538},
+    "unit.abyss_ascendant_hit":                { "local": "units/abyss_ascendant_hit.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.3", "rev": 20261003045538}
   }
 }
