@@ -16,6 +16,7 @@ import type { ArmyStack, UnitId } from './army.ts';
 import { advHour, advLevelXp } from './advmap.ts';
 import { CREATURE_IDS, isCreature } from './bestiary.ts';
 import type { CreatureId } from './bestiary.ts';
+import { PREMIUM_PEOPLE, isPremiumBeast } from './premiumbeasts.ts';
 import type { Tr } from './estate.ts';
 import type { GoodId } from './goods.ts';
 import { GOODS } from './goods.ts';
@@ -46,6 +47,7 @@ const CREATURE_PEOPLE: Record<CreatureId, Exclude<People, 'men'>> = {
 
 export function peopleOf(u: UnitId): People {
   if (isCreature(u)) return CREATURE_PEOPLE[u];
+  if (isPremiumBeast(u)) return PREMIUM_PEOPLE[u]; // the shop's creatures (premiumbeasts.ts)
   return u === 'drowned' || u === 'deep_spawn' ? 'deep' : 'men';
 }
 

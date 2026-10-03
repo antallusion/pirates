@@ -5,8 +5,19 @@
 // marines, the shooters, the guns, the boarders, the guard, the dead) and fights with exactly its numbers and
 // specials, so a crew of the Crown is as strong as a pirate crew of the same make — only its face and its name are
 // its own. Their painted figures are tools/art/creatures.py's.
+//
+// Owner, 2026-10-03 («около 100 существ разной фракции»): three more kinds for each of the seven (docs/18 VII), each
+// where her ships really carry men — a merchant's hands and shooters, a patrol's hands, marines, shields, shooters and
+// guns and from ⚓9 her life guard, the deep's all that and its dead (a ship's seven slots fold the rest away). Where a
+// roster had a hole there — the Harpoon's life guard, the Ledger's guns, the Dutchman's shields, marksmen and knives —
+// the new kind fills it as its siblings do, with the pirate kind's numbers. Elsewhere the new kind is an elite
+// (FACTION_ELITES): from a level of the waters up her ships carry it in the place of one of her kinds, with that kind's
+// health, defence and pace (the guns kill it as they kill the kind it replaces, so the sea's gunnery does not move) and
+// its own blows and craft — a healer, a binder, a drinker of strength, a scald, a luck-bringer, a leader, a swimmer —
+// never worth more in a boarding than the place it takes. Two painted figures the game had not used (the Choir's
+// ascended herald, the Free Harbors' volcano guardian) serve so too.
 
-import type { MenId } from './army.ts';
+import type { MenId, UnitSpecial } from './army.ts';
 
 /** Who fields them: the sea's factions, and the Dutchman's dead. */
 export type Roster = 'crown' | 'choir' | 'harpoon' | 'brokers' | 'league' | 'free' | 'dutchman';
@@ -28,6 +39,10 @@ export const FACTION_KINDS = {
   crown_cuirassier: { roster: 'crown', as: 'life_guard' },
   crown_diver: { roster: 'crown', as: 'drowned' },
   crown_dreadnought: { roster: 'crown', as: 'deep_spawn' },
+  // Its elites (2026-10-04): the surgeon's mates, the signal midshipmen, the provosts.
+  crown_surgeon: { roster: 'crown', as: 'sailor' },
+  crown_midshipman: { roster: 'crown', as: 'deckhand' },
+  crown_provost: { roster: 'crown', as: 'marine' },
   // The Choir of the Deep (its drowned are the drowned).
   choir_acolyte: { roster: 'choir', as: 'deckhand' },
   choir_bellringer: { roster: 'choir', as: 'sailor' },
@@ -42,6 +57,11 @@ export const FACTION_KINDS = {
   drowned_priest: { roster: 'choir', as: 'guard' },
   deep_abbot: { roster: 'choir', as: 'life_guard' },
   abyss_herald: { roster: 'choir', as: 'deep_spawn' },
+  // Its elites (2026-10-04): the sisters of the brine, the tollers, the lamprey zealots, the ascended heralds.
+  brine_sister: { roster: 'choir', as: 'sailor' },
+  choir_toller: { roster: 'choir', as: 'sharpshooter' },
+  lamprey_zealot: { roster: 'choir', as: 'marine' },
+  abyss_ascendant: { roster: 'choir', as: 'deep_spawn' },
   // The Order of the Harpoon.
   flenser: { roster: 'harpoon', as: 'deckhand' },
   boat_steerer: { roster: 'harpoon', as: 'sailor' },
@@ -53,6 +73,10 @@ export const FACTION_KINDS = {
   harpoon_gunner: { roster: 'harpoon', as: 'bombardier' },
   leviathan_slayer: { roster: 'harpoon', as: 'boarder' },
   net_master: { roster: 'harpoon', as: 'cutthroat' },
+  // Its life guard, filled (2026-10-04), the try-pot men and the preceptors.
+  harpoon_commander: { roster: 'harpoon', as: 'life_guard' },
+  try_pot: { roster: 'harpoon', as: 'gunner' },
+  harpoon_preceptor: { roster: 'harpoon', as: 'sea_guard' },
   // The Fog Brokers.
   smuggler: { roster: 'brokers', as: 'deckhand' },
   fog_runner: { roster: 'brokers', as: 'sailor' },
@@ -64,6 +88,10 @@ export const FACTION_KINDS = {
   assassin: { roster: 'brokers', as: 'cutthroat' },
   fog_master: { roster: 'brokers', as: 'guard' },
   bravo: { roster: 'brokers', as: 'life_guard' },
+  // Its elites (2026-10-04): the cutpurses, the cardsharps, the vipers.
+  fog_cutpurse: { roster: 'brokers', as: 'deckhand' },
+  fog_cardsharp: { roster: 'brokers', as: 'sailor' },
+  fog_viper: { roster: 'brokers', as: 'musketeer' },
   // The Gilded Ledger.
   porter: { roster: 'league', as: 'deckhand' },
   dock_bruiser: { roster: 'league', as: 'sailor' },
@@ -75,6 +103,10 @@ export const FACTION_KINDS = {
   debt_collector: { roster: 'league', as: 'cutthroat' },
   paymaster: { roster: 'league', as: 'guard' },
   gilded_cuirassier: { roster: 'league', as: 'life_guard' },
+  // Its guns, filled (2026-10-04), and the factors.
+  company_cannoneer: { roster: 'league', as: 'gunner' },
+  petardier: { roster: 'league', as: 'bombardier' },
+  ledger_factor: { roster: 'league', as: 'musketeer' },
   // The Free Harbors.
   fisher: { roster: 'free', as: 'deckhand' },
   spear_fisher: { roster: 'free', as: 'sailor' },
@@ -85,6 +117,11 @@ export const FACTION_KINDS = {
   tide_shaman: { roster: 'free', as: 'gunner' },
   tide_caller: { roster: 'free', as: 'bombardier' },
   basalt_guardian: { roster: 'free', as: 'life_guard' },
+  // Its elites (2026-10-04): the elders, the shark dancers, the reef raiders, the volcano guardians.
+  island_elder: { roster: 'free', as: 'sailor' },
+  shark_dancer: { roster: 'free', as: 'deckhand' },
+  reef_raider: { roster: 'free', as: 'marine' },
+  volcano_guardian: { roster: 'free', as: 'life_guard' },
   // The Dutchman's dead (the ghost ships; their drowned are the drowned).
   ghost_sailor: { roster: 'dutchman', as: 'deckhand' },
   ghost_bosun: { roster: 'dutchman', as: 'sailor' },
@@ -94,16 +131,72 @@ export const FACTION_KINDS = {
   lantern_wraith: { roster: 'dutchman', as: 'boarder' },
   drowned_officer: { roster: 'dutchman', as: 'guard' },
   dutchman_mate: { roster: 'dutchman', as: 'deep_spawn' },
+  // Its shields, marksmen and knives, filled (2026-10-04).
+  dutchman_bulwark: { roster: 'dutchman', as: 'sea_guard' },
+  ghost_marksman: { roster: 'dutchman', as: 'sharpshooter' },
+  ghost_cutthroat: { roster: 'dutchman', as: 'cutthroat' },
 } as const satisfies Record<string, { roster: Roster; as: MenId }>;
 
 export type FactionKindId = keyof typeof FACTION_KINDS;
 export const FACTION_KIND_IDS = Object.keys(FACTION_KINDS) as FactionKindId[];
 
-/** A roster's kind in a pirate kind's place (none: the pirate kind itself serves). */
+/** An elite's own (2026-10-04): the ship level from which her ships carry it in its place, and its blows and craft —
+ *  its health, defence, pace and worth are the place's. */
+export interface FactionElite {
+  from: number;
+  own: { atk: number; dmin: number; dmax: number; shots?: number; specials: UnitSpecial[] };
+}
+
+/** The elites (docs/18 VII). Each is worth no more in a boarding than the kind it replaces and not much less
+ *  (tests/beasts100): what it gives up in blows its craft makes good. */
+export const FACTION_ELITES: Partial<Record<FactionKindId, FactionElite>> = {
+  // The Crown: the surgeon's mates in the drummer boys' place, the signal midshipmen in the powder monkeys', the
+  // provosts with their irons in the marines'.
+  crown_surgeon: { from: 5, own: { atk: 2, dmin: 1, dmax: 2, specials: ['mend'] } },
+  crown_midshipman: { from: 7, own: { atk: 3, dmin: 1, dmax: 2, specials: ['fortune'] } },
+  crown_provost: { from: 7, own: { atk: 6, dmin: 2, dmax: 3, specials: ['bind'] } },
+  // The Choir: the sisters of the brine in the bellringers' place, the tollers in the cantors', the lamprey zealots
+  // in the tide zealots', the ascended heralds over the heralds in the strangest waters.
+  brine_sister: { from: 5, own: { atk: 2, dmin: 1, dmax: 2, specials: ['mend'] } },
+  choir_toller: { from: 7, own: { atk: 8, dmin: 2, dmax: 4, shots: 6, specials: ['shooter', 'bind'] } },
+  lamprey_zealot: { from: 6, own: { atk: 6, dmin: 2, dmax: 3, specials: ['drain'] } },
+  abyss_ascendant: { from: 9, own: { atk: 17, dmin: 9, dmax: 13, specials: ['undead', 'fear', 'sweep', 'chill'] } },
+  // The Harpoon: the try-pot men in the net throwers' place, the preceptors among the baleen knights.
+  try_pot: { from: 4, own: { atk: 8, dmin: 3, dmax: 6, shots: 0, specials: ['breath'] } },
+  harpoon_preceptor: { from: 8, own: { atk: 7, dmin: 2, dmax: 4, specials: ['leader', 'steady'] } },
+  // The Brokers (their smugglers carry hands and shooters only): the cutpurses in the smugglers' place, the
+  // cardsharps in the fog runners', the vipers in the poisoners'.
+  fog_cutpurse: { from: 7, own: { atk: 3, dmin: 1, dmax: 2, specials: ['no_retaliation'] } },
+  fog_cardsharp: { from: 5, own: { atk: 3, dmin: 1, dmax: 2, specials: ['fortune'] } },
+  fog_viper: { from: 6, own: { atk: 6, dmin: 1, dmax: 3, shots: 4, specials: ['shooter', 'poison'] } },
+  // The Ledger: the factors in the arquebusiers' place.
+  ledger_factor: { from: 7, own: { atk: 5, dmin: 2, dmax: 3, shots: 4, specials: ['shooter', 'leader'] } },
+  // The Free Harbors: the elders in the spear fishers' place, the shark dancers in the fishers', the reef raiders
+  // among the sharktooth warriors, the volcano guardians in the basalt guardians' place.
+  island_elder: { from: 5, own: { atk: 2, dmin: 1, dmax: 2, specials: ['mend'] } },
+  shark_dancer: { from: 7, own: { atk: 3, dmin: 1, dmax: 1, specials: ['double_strike', 'no_retaliation'] } },
+  reef_raider: { from: 7, own: { atk: 7, dmin: 2, dmax: 4, specials: ['diving'] } },
+  volcano_guardian: { from: 9, own: { atk: 15, dmin: 7, dmax: 10, specials: ['steady', 'breath'] } },
+};
+
+/** A roster's kind in a pirate kind's place (none: the pirate kind itself serves); from its level, an elite. */
 const SWAP = new Map<string, FactionKindId>();
-for (const id of FACTION_KIND_IDS) SWAP.set(`${FACTION_KINDS[id].roster}:${FACTION_KINDS[id].as}`, id);
-export function rosterKind<T extends string>(roster: Roster | null, u: T): T | FactionKindId {
-  return (roster && SWAP.get(`${roster}:${u}`)) || u;
+const ELITE_SWAP = new Map<string, { id: FactionKindId; from: number }>();
+for (const id of FACTION_KIND_IDS) {
+  const key = `${FACTION_KINDS[id].roster}:${FACTION_KINDS[id].as}`;
+  const e = FACTION_ELITES[id];
+  if (e) ELITE_SWAP.set(key, { id, from: e.from });
+  else SWAP.set(key, id);
+}
+export function rosterKind<T extends string>(roster: Roster | null, u: T, level = 0): T | FactionKindId {
+  if (!roster) return u;
+  const e = ELITE_SWAP.get(`${roster}:${u}`);
+  return e && level >= e.from ? e.id : SWAP.get(`${roster}:${u}`) || u;
+}
+
+/** A roster's army out of the pirate kinds (her ships' stacks by their level and mix): each kind in its place. */
+export function rosterArmy<S extends { u: string; n: number }>(roster: Roster | null, army: readonly S[], level: number): (S & { u: S['u'] | FactionKindId })[] {
+  return army.map((s) => ({ ...s, u: rosterKind(roster, s.u, level) }));
 }
 
 /** Their names (as a stack: plural) and a line on each — English, Russian. */
@@ -122,6 +215,9 @@ export const FACTION_NAMES: Record<FactionKindId, [string, string, string, strin
   crown_cuirassier: ['Cuirassiers', 'Кирасиры', 'Officers in black steel: they answer every blow.', 'Офицеры в чёрной стали: отвечают на каждый удар.'],
   crown_diver: ['Brass divers', 'Латунные водолазы', 'Men in brass diving suits walking up out of the deep: no fear in them, and terror in the living.', 'Люди в латунных скафандрах выходят из глубины: им не страшно, а живым страшно.'],
   crown_dreadnought: ['Dreadnought divers', 'Водолазы-дредноуты', 'Iron giants of the Admiralty: they sweep the deck about them.', 'Железные великаны Адмиралтейства: сметают всех вокруг.'],
+  crown_surgeon: ["Surgeon's mates", 'Лекарские помощники', "Saws, splints and a bottle of rum: the Crown's men near them take back their strength as each turn comes.", 'Пилы, лубки и бутыль рома: люди Короны рядом с ними в начале каждого хода возвращают себе силы.'],
+  crown_midshipman: ['Signal midshipmen', 'Сигнальные мичманы', "Flags for the flagship, a dirk for the rest: the Crown's luck runs with them.", 'Флажки для флагмана, кортик для прочих: с ними Короне везёт.'],
+  crown_provost: ['Provost marshals', 'Профосы', "The Admiralty's law in irons: one blow in four shackles a stack, and it loses its next turn.", 'Закон Адмиралтейства в кандалах: раз в четыре удара заковывают отряд, и тот теряет следующий ход.'],
   choir_acolyte: ['Acolytes', 'Послушники', 'Novices of the drowned god: a curved knife and a bell.', 'Послушники утонувшего бога: кривой нож и колокольчик.'],
   choir_bellringer: ['Bellringers', 'Звонари', "They carry the Choir's bells into the fight.", 'Несут в бой колокола Хора.'],
   tide_zealot: ['Tide zealots', 'Фанатики прилива', 'Masked zealots with hooked spears.', 'Фанатики в масках с крючковатыми копьями.'],
@@ -135,6 +231,10 @@ export const FACTION_NAMES: Record<FactionKindId, [string, string, string, strin
   drowned_priest: ['Drowned priests', 'Утопшие жрецы', 'The Choir fights harder under their crozier.', 'Под их посохом Хор бьётся злее.'],
   deep_abbot: ['Abbots of the deep', 'Аббаты глубин', 'Towering in sodden vestments: they answer every blow.', 'Высятся в мокрых облачениях: отвечают на каждый удар.'],
   abyss_herald: ['Heralds of the abyss', 'Вестники бездны', 'Coral and black stone in a hood: they sweep the deck about them.', 'Коралл и чёрный камень под капюшоном: сметают всех вокруг.'],
+  brine_sister: ['Sisters of the brine', 'Сёстры рассола', 'They bind wounds with kelp and salt water: the Choir near them takes back its strength as each turn comes.', 'Перевязывают раны водорослями и солёной водой: Хор рядом с ними в начале каждого хода возвращает себе силы.'],
+  choir_toller: ['Tollers of the drowned bell', 'Звонари утопшего колокола', "A drowned bell's toll across the deck: one stroke in four holds a stack spellbound through its next turn.", 'Звон утопшего колокола через палубу: раз в четыре удара отряд замирает и теряет следующий ход.'],
+  lamprey_zealot: ['Lamprey zealots', 'Фанатики-миноги', "Masks with a lamprey's ring of teeth: half the harm they do the living comes back to them.", 'Маски с кольцом зубов миноги: половина урона, нанесённого живым, возвращается к ним.'],
+  abyss_ascendant: ['Ascended heralds', 'Вознесённые вестники', "Crowned with coral spires: they sweep the deck about them, and the abyss's cold slows all they strike.", 'Венец из коралловых шпилей: сметают всех вокруг, и холод бездны замедляет каждого, кого коснутся.'],
   flenser: ['Flensers', 'Разделочники', 'Whalers with flensing spades.', 'Китобои с разделочными лопатами.'],
   boat_steerer: ['Boat steerers', 'Рулевые вельботов', 'The steering oar makes a fine quarterstaff.', 'Рулевое весло — отличный шест.'],
   lancer: ['Whaling lancers', 'Китобои-копейщики', "Lances for the whale's heart, turned on men.", 'Копья для сердца кита, обращённые против людей.'],
@@ -145,6 +245,9 @@ export const FACTION_NAMES: Record<FactionKindId, [string, string, string, strin
   harpoon_gunner: ['Harpoon gunners', 'Гарпунные стрелки', 'The harpoon gun: its line tears through a stack and those beside it.', 'Гарпунная пушка: линь рвёт отряд и соседей.'],
   leviathan_slayer: ['Leviathan slayers', 'Убийцы левиафанов', 'Giants with harpoon-axes: two blows for every one of yours.', 'Великаны с гарпунными топорами: два удара на каждый ваш.'],
   net_master: ['Net masters', 'Мастера сетей', 'A netted foe cannot answer: they strike twice, unanswered.', 'Опутанный не ответит: бьют дважды, без ответа.'],
+  harpoon_preceptor: ['Preceptors of the Order', 'Прецепторы Ордена', "The Order fights harder under its preceptors' banner, and they never break.", 'Под знаменем прецепторов Орден бьётся злее, а сами они не дрогнут.'],
+  harpoon_commander: ['Knight-commanders', 'Рыцари-командоры', "The Order's commanders in whalebone plate: they answer every blow.", 'Командоры Ордена в латах из китового уса: отвечают на каждый удар.'],
+  try_pot: ['Try-pot men', 'Котловые', 'Boiling whale oil flung from the try-works ladle: it scalds a stack and the one behind it.', 'Кипящая ворвань с черпака салотопки: обжигает отряд и того, кто стоит за ним.'],
   smuggler: ['Smugglers', 'Контрабандисты', 'A sack, a knife and no questions.', 'Мешок, нож и никаких вопросов.'],
   fog_runner: ['Fog runners', 'Туманные бегуны', 'Two short knives and light feet.', 'Два коротких ножа и лёгкие ноги.'],
   fog_thief: ['Fog thieves', 'Туманные воры', 'Masked thieves with smoke bombs and short swords.', 'Воры в масках с дымовыми бомбами и короткими мечами.'],
@@ -155,6 +258,9 @@ export const FACTION_NAMES: Record<FactionKindId, [string, string, string, strin
   assassin: ['Assassins', 'Убийцы', 'Twin stilettos: they strike twice and are never answered.', 'Два стилета: бьют дважды, им не отвечают.'],
   fog_master: ['Fog masters', 'Мастера тумана', 'The Brokers fight harder with their master watching.', 'Под взглядом мастера Маклеры бьются злее.'],
   bravo: ['Bravos', 'Бретёры', 'Swaggering blades: they answer every blow.', 'Задиристые клинки: отвечают на каждый удар.'],
+  fog_cutpurse: ['Cutpurses', 'Карманники', 'A cut, and gone into the fog before the answer: their blows are never answered.', 'Удар — и в туман прежде ответа: на их удары не отвечают.'],
+  fog_cardsharp: ['Cardsharps', 'Шулеры', "Marked cards and loaded dice: the Brokers' luck runs with them.", 'Краплёные карты и шулерские кости: с ними Маклерам везёт.'],
+  fog_viper: ['Fog vipers', 'Туманные гадюки', 'Blowpipe darts dipped in venom: the stack they strike loses men again on its next two turns.', 'Дротики из трубки, смоченные ядом: отряд-цель снова теряет бойцов в два следующих хода.'],
   porter: ['Dock porters', 'Портовые грузчики', 'Broad backs and iron-bound cudgels.', 'Широкие спины и окованные дубинки.'],
   dock_bruiser: ['Dock bruisers', 'Портовые громилы', 'Brass knuckles on both fists.', 'Кастеты на обоих кулаках.'],
   company_guard: ['Company guards', 'Стражники Компании', "The Ledger's guards in black and gold, with pikes.", 'Стража Книги в чёрном с золотом, с пиками.'],
@@ -165,6 +271,9 @@ export const FACTION_NAMES: Record<FactionKindId, [string, string, string, strin
   debt_collector: ['Debt collectors', 'Сборщики долгов', 'The flail comes twice and is never answered.', 'Цеп приходит дважды, ему не отвечают.'],
   paymaster: ['Paymasters', 'Казначеи', "The Ledger's men fight harder while the strongbox is open.", 'Пока сундук открыт, люди Книги бьются злее.'],
   gilded_cuirassier: ['Gilded cuirassiers', 'Золочёные кирасиры', 'Mercenaries in gold-chased plate: they answer every blow.', 'Наёмники в чеканных латах: отвечают на каждый удар.'],
+  company_cannoneer: ['Company cannoneers', 'Канониры Компании', 'A gilded swivel gun: its burst on a stack and those beside it.', 'Золочёный фальконет: залп по отряду и соседям.'],
+  petardier: ['Petardiers', 'Петардисты', 'Petards in brass cases: a burst on a stack and those beside it.', 'Петарды в латунных футлярах: разрыв на отряде и соседях.'],
+  ledger_factor: ['Company factors', 'Факторы Компании', "Gilded pistols and a ledger: the Ledger's men fight harder under a factor's eye.", 'Золочёные пистолеты и гроссбух: под взглядом фактора люди Книги бьются злее.'],
   fisher: ['Fishers', 'Рыбаки', 'Islanders with gaff hooks.', 'Островитяне с багорами.'],
   spear_fisher: ['Spear fishers', 'Острогеры', 'The fishing spear is quick in a fight.', 'Острога быстра и в драке.'],
   sharktooth: ['Sharktooth warriors', 'Воины акульего зуба', 'Clubs edged with shark teeth.', 'Дубины с рядами акульих зубов.'],
@@ -174,6 +283,10 @@ export const FACTION_NAMES: Record<FactionKindId, [string, string, string, strin
   tide_shaman: ['Tide shamans', 'Шаманы прилива', 'A spray of the sea over a stack and those beside it.', 'Брызги моря на отряд и соседей.'],
   tide_caller: ['Tide callers', 'Зовущие прилив', 'The conch calls a wave over a stack and those beside it.', 'Раковина зовёт волну на отряд и соседей.'],
   basalt_guardian: ['Basalt guardians', 'Базальтовые стражи', 'Stone bound with roots: they answer every blow.', 'Камень, скреплённый корнями: отвечают на каждый удар.'],
+  island_elder: ['Island elders', 'Старейшины островов', 'Herbs, chants and old hands: the islanders near them take back their strength as each turn comes.', 'Травы, напевы и старые руки: островитяне рядом с ними в начале каждого хода возвращают себе силы.'],
+  shark_dancer: ['Shark dancers', 'Танцующие с акулами', "Shark-tooth knives and a dancer's feet: they strike twice and are never answered.", 'Ножи из акульих зубов и ноги танцора: бьют дважды, им не отвечают.'],
+  reef_raider: ['Reef raiders', 'Рифовые налётчики', 'Swimmers of the reefs with coral clubs: into the surf and out of it anywhere along the shore.', 'Пловцы рифов с коралловыми дубинами: уходят в прибой и выходят где угодно вдоль берега.'],
+  volcano_guardian: ['Volcano guardians', 'Вулканические стражи', 'Lava rock with the fire still in it: their blows splash a stack and the one behind it.', 'Лава, в которой ещё жив огонь: удар обжигает отряд и того, кто стоит за ним.'],
   ghost_sailor: ['Ghost sailors', 'Призрачные матросы', "The Dutchman's crew, pale and cold.", 'Команда «Голландца», бледная и холодная.'],
   ghost_bosun: ['Ghost bosuns', 'Призрачные боцманы', "The rope's end still stings.", 'Линёк и после смерти жалит.'],
   dutchman_boarder: ['Dutchman boarders', 'Абордажники «Голландца»', 'Barnacled axes and broken shields.', 'Топоры в ракушках и разбитые щиты.'],
@@ -182,4 +295,7 @@ export const FACTION_NAMES: Record<FactionKindId, [string, string, string, strin
   lantern_wraith: ['Lantern wraiths', 'Фонарные призраки', 'Cold green fire: two blows for every one of yours.', 'Холодный зелёный огонь: два удара на каждый ваш.'],
   drowned_officer: ['Drowned officers', 'Утопшие офицеры', 'The dead fight harder under their old officers.', 'Под старыми офицерами мёртвые бьются злее.'],
   dutchman_mate: ["Dutchman's mates", 'Старпомы «Голландца»', 'A towering ghost with an anchor hook: he sweeps the deck about him.', 'Призрак-великан с якорным крюком: сметает всех вокруг.'],
+  dutchman_bulwark: ['Barnacled bulwarks', 'Ракушечные заслоны', 'Dead men behind hatch covers grown with barnacles: shot does them half the harm.', 'Мертвецы за крышками люков в ракушках: пули вредят вдвое меньше.'],
+  ghost_marksman: ['Ghost marksmen', 'Призрачные меткие стрелки', 'Rifles that still remember their aim: no range too long, no foe too close.', 'Ружья, что ещё помнят прицел: им не далеко и не близко.'],
+  ghost_cutthroat: ['Ghost cutthroats', 'Призрачные головорезы', 'Knives that pass like a cold draught: they strike twice and are never answered.', 'Ножи, что проходят холодным сквозняком: бьют дважды, им не отвечают.'],
 };

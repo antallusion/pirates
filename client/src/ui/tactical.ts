@@ -33,6 +33,7 @@ import { roamName } from '../render/roamers.ts';
 import { LAND_RES_DEF } from '../../../shared/src/data/bestiary.ts';
 import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import { FIGURES } from '../../../shared/src/data/unitart.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
 import { $, esc, icon, portraitUrl } from './dom.ts';
@@ -158,6 +159,8 @@ const MISSILE_OF: Record<string, string> = {
   brine_witch: 'part.ms_brine', poisoner: 'part.ms_dart', blowgun_hunter: 'part.ms_dart', alchemist: 'part.ms_flask', fog_thief: 'part.ms_smokebomb',
   island_archer: 'part.ms_arrow', net_thrower: 'part.ms_net', net_master: 'part.ms_net', phantom_gunner: 'part.ms_cannonball',
   storm_witch: 'part.ms_brine', tide_shaman: 'part.ms_brine', tide_caller: 'part.ms_brine',
+  // docs/18 VII: the new kinds' shots.
+  company_cannoneer: 'part.ms_cannonball', petardier: 'part.ms_grenade', fog_viper: 'part.ms_dart', choir_toller: 'part.ms_bell', thunderbird: 'part.ms_brine',
 };
 const THROWN = new Set(['part.ms_grenade', 'part.ms_stone', 'part.ms_spear', 'part.ms_flask', 'part.ms_net', 'part.ms_smokebomb', 'part.ms_cannonball']);
 const MISSILE_MS = 300;
@@ -212,7 +215,8 @@ const FIGURE_SIZE: Record<string, number> = {
   // The great beasts (owner, 2026-10-03).
   crab_queen: 1.4, cave_wyrm: 1.5, mangrove_hydra: 1.6, ape_king: 1.75, storm_roc: 1.65,
 };
-const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? 1.28) * 1.22;
+// docs/18 VII: the kinds still in the painter's queue keep their height in shared/src/data/unitart.ts.
+const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? FIGURES[s.unit]?.size ?? 1.28) * 1.22;
 /** Where the feet stand across a figure (a musket held out to one side does not move the man off his hex): the middle
  *  of what is painted in its lowest tenth, found once per picture. */
 const footCache = new Map<string, number>();
@@ -499,7 +503,7 @@ export class TacticalPanel {
       // docs/18 II: the poison in a stack, a creature growing back.
       const c = at(e.hex ?? hexOf(e.s));
       if (c) {
-        this.addFloat({ text: e.k === 'poison' ? `${L(e.id === 'sick' ? 'float.sick' : 'float.poison')} −${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${L('float.regen')} +${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
+        this.addFloat({ text: e.k === 'poison' ? `${L(e.id === 'sick' ? 'float.sick' : 'float.poison')} −${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${L(e.id === 'mend' ? 'float.mend' : e.id === 'drain' ? 'float.drain' : 'float.regen')} +${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
         this.bursts.push({ id: e.k === 'poison' ? (sprite('fx.bt_poison_0') ? 'fx.bt_poison' : 'part.smoke') : sprite('fx.bt_heal_0') ? 'fx.bt_heal' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'spell') {
@@ -758,7 +762,7 @@ export class TacticalPanel {
         return L(e.id === 'terror' ? 'log.terror' : e.id === 'dread' ? 'log.dread' : e.id === 'still' ? 'log.still' : e.id === 'mad' ? 'log.lost' : 'log.fear', { a: name(e.s) });
       case 'poison':
       case 'regen':
-        return L(e.k === 'poison' && e.id === 'sick' ? 'log.sick' : `log.${e.k}`, { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
+        return L(e.k === 'poison' && e.id === 'sick' ? 'log.sick' : e.k === 'regen' && (e.id === 'mend' || e.id === 'drain') ? `log.${e.id}` : `log.${e.k}`, { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'wait':
       case 'defend':
       case 'morale':

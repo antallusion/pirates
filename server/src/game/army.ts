@@ -3,7 +3,7 @@
 // captains lay alongside (they board when their men are the stronger, as a HoMM3 hero attacks a weaker army).
 
 import { armyForLevel, armyKillFactor, armyPower, armyTidy } from '../../../shared/src/data/army.ts';
-import { rosterKind } from '../../../shared/src/data/factionunits.ts';
+import { rosterArmy } from '../../../shared/src/data/factionunits.ts';
 import type { Roster } from '../../../shared/src/data/factionunits.ts';
 import type { ArmyMix, ArmyStack } from '../../../shared/src/data/army.ts';
 import type { Game } from './Game.ts';
@@ -29,11 +29,12 @@ export function rosterOf(ship: ShipEntity): Roster | null {
 }
 
 /** The stacks a ship of the sea carries: her head count spread by the level of the waters she sails (canon D12), in
- *  her faction's kinds (each fights as the pirate kind whose place it takes, so the sea's strength is as it was). */
+ *  her faction's kinds (each fights as the pirate kind whose place it takes, so the sea's strength is as it was; from
+ *  their levels, her faction's elites in their places — docs/18 VII). */
 export function npcArmy(ship: ShipEntity): ArmyStack[] {
   const r = rosterOf(ship);
   const army = armyForLevel(ship.shipLevel, ship.crew, ship.armySlots, npcMixOf(ship));
-  return r ? armyTidy(army.map((s) => ({ u: rosterKind(r, s.u), n: s.n }))) : army;
+  return r ? armyTidy(rosterArmy(r, army, ship.shipLevel)) : army;
 }
 
 /** The hull is the wall (docs/17 H1): a round shot through sound timbers kills fewer than one through a wreck, and

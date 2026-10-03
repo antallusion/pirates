@@ -2,6 +2,7 @@
 // Images are optional; the game must always render even when every download fails.
 
 import { ICON_STAND_IN } from '../../shared/src/data/armsart.ts';
+import { figureStandIn as unitStandIn } from '../../shared/src/data/unitart.ts';
 
 interface ManifestEntry {
   local: string;
@@ -110,7 +111,16 @@ export function assetMeta(id: string): ManifestEntry | null {
 
 /** An asset, or — while its sheet is being painted — the painted kindred that stands in for it (shared/src/data/armsart.ts). */
 export function sprite(id: string): Sprite | null {
-  return images.get(id) ?? (ICON_STAND_IN[id] ? images.get(ICON_STAND_IN[id]) ?? null : null);
+  return images.get(id) ?? (ICON_STAND_IN[id] ? images.get(ICON_STAND_IN[id]) ?? null : null) ?? figureStandIn(id);
+}
+
+/** A battle figure in the painter's queue (`unit.<kind>` and its poses `_b`, `_atk`, `_hit`): the same pose of the
+ *  painted kind of its body that stands in for it (shared/src/data/unitart.ts) — its own once its sheet is cut. */
+function figureStandIn(id: string): Sprite | null {
+  const m = /^unit\.(.+?)(_b|_atk|_hit)?$/.exec(id);
+  if (!m) return null;
+  const stand = unitStandIn(m[1], (k) => images.has(`unit.${k}`));
+  return stand ? images.get(`unit.${stand}${m[2] ?? ''}`) ?? images.get(`unit.${stand}`) ?? null : null;
 }
 
 export function assetUrl(id: string): string | null {
