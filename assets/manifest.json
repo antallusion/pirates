@@ -1647,6 +1647,10 @@
     "unit.lancer":                             { "local": "units/lancer.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.0", "rev": 20261003131650},
     "unit.lancer_b":                           { "local": "units/lancer_b.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.1", "rev": 20261003131650},
     "unit.lancer_atk":                         { "local": "units/lancer_atk.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.2", "rev": 20261003131650},
-    "unit.lancer_hit":                         { "local": "units/lancer_hit.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.3", "rev": 20261003131650}
+    "unit.lancer_hit":                         { "local": "units/lancer_hit.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.3", "rev": 20261003131650},
+    "unit.net_master":                         { "local": "units/net_master.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.0", "rev": 20261003132129},
+    "unit.net_master_b":                       { "local": "units/net_master_b.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.1", "rev": 20261003132129},
+    "unit.net_master_atk":                     { "local": "units/net_master_atk.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.2", "rev": 20261003132129},
+    "unit.net_master_hit":                     { "local": "units/net_master_hit.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.3", "rev": 20261003132129}
   }
 }
