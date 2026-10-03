@@ -296,6 +296,7 @@ export const ROAM_NAME: Record<RoamKind, string> = {
   gull: 'Gulls on the Swell', seal: 'Seals at Sea', reef_shark: 'Sharks of the Open Water', sea_turtle: 'Sea Turtles', marsh_serpent: 'Sea Snakes',
   lagoon_tentacle: 'Tentacles from the Deep', mermaid: 'Mermaids', surf_drowned: 'The Drowned Adrift', young_serpent: 'Young Serpents', lantern_maw: 'Lantern Maws',
   shoal_leviathan: 'A Leviathan', ancient_turtle: 'Ancient Turtles',
+  barracuda: 'Barracudas in a Shoal', albatross: 'Albatrosses in the Wake', moray: 'Morays of the Reef', giant_octopus: 'Giant Octopuses',
 };
 
 /** «Атаковать»: her party against the stack, on its kind's field of the battle at sea. */

@@ -41,13 +41,18 @@ export interface RoamDef {
   field: IsleType;
 }
 
-export type RoamKind = 'gull' | 'seal' | 'reef_shark' | 'sea_turtle' | 'marsh_serpent' | 'lagoon_tentacle' | 'mermaid' | 'surf_drowned' | 'young_serpent' | 'lantern_maw' | 'shoal_leviathan' | 'ancient_turtle';
-export const ROAM_KINDS: RoamKind[] = ['gull', 'seal', 'reef_shark', 'sea_turtle', 'marsh_serpent', 'lagoon_tentacle', 'mermaid', 'surf_drowned', 'young_serpent', 'lantern_maw', 'shoal_leviathan', 'ancient_turtle'];
+export type RoamKind = 'gull' | 'seal' | 'reef_shark' | 'sea_turtle' | 'marsh_serpent' | 'lagoon_tentacle' | 'mermaid' | 'surf_drowned' | 'young_serpent' | 'lantern_maw' | 'shoal_leviathan' | 'ancient_turtle'
+  // The wild beasts of the sea (owner, 2026-10-03).
+  | 'barracuda' | 'albatross' | 'moray' | 'giant_octopus';
+export const ROAM_KINDS: RoamKind[] = ['gull', 'seal', 'reef_shark', 'sea_turtle', 'marsh_serpent', 'lagoon_tentacle', 'mermaid', 'surf_drowned', 'young_serpent', 'lantern_maw', 'shoal_leviathan', 'ancient_turtle',
+  'barracuda', 'albatross', 'moray', 'giant_octopus'];
 export const isRoamKind = (k: unknown): k is RoamKind => typeof k === 'string' && (ROAM_KINDS as string[]).includes(k);
 
 /** The cold waters (the seals' rookeries) and the strange ones (the drowned and the lantern maws). */
 const COLD: RegionId[] = ['black_coast', 'leviathan_reach', 'whispering', 'gravewater', 'ashen_isles'];
 const STRANGE: RegionId[] = ['gravewater', 'dead_mans_expanse', 'drowned_crown', 'whispering', 'leviathan_reach', 'ashen_isles', 'the_abyss'];
+/** The reef waters (the morays' holes): the islets' fog, the atolls, the drowned spires. */
+const REEF: RegionId[] = ['whispering', 'gravewater', 'dead_mans_expanse', 'drowned_crown'];
 
 export const ROAMS: Record<RoamKind, RoamDef> = {
   gull: { u: 'gull', lv: [1, 3], weight: 3, field: 'rocky' },
@@ -62,6 +67,12 @@ export const ROAMS: Record<RoamKind, RoamDef> = {
   lantern_maw: { u: 'lantern_maw', lv: [7, 10], regions: STRANGE, weight: 2, field: 'dead' },
   shoal_leviathan: { u: 'shoal_leviathan', lv: [8, 10], weight: 1.5, field: 'rocky' },
   ancient_turtle: { u: 'ancient_turtle', lv: [9, 10], weight: 1, field: 'swamp' },
+  // The wild beasts of the sea (owner, 2026-10-03): a shoal of barracudas, a flock of albatrosses after the ships, the
+  // morays of the reef waters, now and then a giant octopus off its wreck in the deep.
+  barracuda: { u: 'barracuda', lv: [2, 6], weight: 2.5, field: 'tropical' },
+  albatross: { u: 'albatross', lv: [3, 7], weight: 2, field: 'rocky' },
+  moray: { u: 'moray', lv: [3, 7], regions: REEF, weight: 2, field: 'rocky' },
+  giant_octopus: { u: 'giant_octopus', lv: [6, 10], weight: 1, field: 'graveyard' },
 };
 
 /** The kinds a square of ⚓L in a sea keeps, with their weights. */
@@ -327,6 +338,10 @@ export const ROAM_CAL: Record<RoamKind, [number, number, number][]> = {
   lantern_maw: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.97, 2.65, 3.12], [1.79, 2.41, 3.19], [1.48, 1.95, 2.83], [1.48, 2.1, 2.71]],
   shoal_leviathan: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.05, 1.09, 2.56], [2.79, 3.18, 4.28], [3.03, 3.51, 4.49]],
   ancient_turtle: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [3.39, 4.04, 4.36], [3.68, 4.08, 4.73]],
+  barracuda: [[0, 0, 0], [0, 0, 0], [0.38, 0.38, 0.9], [0.24, 0.74, 1.22], [0.23, 0.69, 0.96], [0.18, 0.33, 0.63], [0.12, 0.26, 0.55], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  albatross: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.43, 1, 2.13], [0.4, 1.04, 1.53], [0.4, 0.75, 1.19], [0.46, 0.71, 1.02], [0.29, 0.52, 1.06], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  moray: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.6, 1.01, 1.81], [0.57, 1.02, 1.92], [0.56, 0.81, 1.68], [0.48, 0.83, 1.53], [0.45, 0.84, 1.41], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  giant_octopus: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.67, 1.04, 1.81], [0.57, 0.99, 1.41], [0.46, 0.81, 1.23], [0.99, 1.09, 1.56], [0.69, 1.11, 1.53]],
 };
 
 /** A stack's creatures at its first reckoning: ROAM_BASE of the reference captain's might, in creatures (fractional). */

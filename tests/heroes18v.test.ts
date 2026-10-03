@@ -175,7 +175,7 @@ test('the paths\' favourite creatures: the three peoples\' paths love all of the
 
 test('the creature weeks: drawn on the week\'s own dice, a quarter more in their lairs and loot, half again in their dwellings', () => {
   const kinds = WEEK_KINDS.filter((k) => WEEKS[k].beasts);
-  assert.ok(kinds.length >= 6, 'weeks of the crab, the serpent and the rest');
+  assert.ok(kinds.length >= 12, 'weeks of the crab, the serpent, the jaguar, the octopus and the rest');
   const seen = new Set<string>();
   for (let w = 0; w < 600; w++) seen.add(weekKind(w));
   for (const k of kinds) assert.ok(seen.has(k), `${k} comes`);

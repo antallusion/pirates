@@ -28,7 +28,9 @@ export const weekOfDay = (day: number): number => Math.floor(day / WEEK_DAYS);
 
 export type WeekKind = 'deckhand' | 'marine' | 'musketeer' | 'gunner' | 'boarder' | 'guard' | 'drowned' | 'plenty' | 'fair' | 'silver' | 'fever'
   // docs/18 #45: the weeks of the creatures
-  | 'crab' | 'gull' | 'seal' | 'shark' | 'turtle' | 'serpent' | 'mermaid' | 'tentacle';
+  | 'crab' | 'gull' | 'seal' | 'shark' | 'turtle' | 'serpent' | 'mermaid' | 'tentacle'
+  // the wild beasts' (owner, 2026-10-03)
+  | 'jaguar' | 'crocodile' | 'bat' | 'octopus';
 
 export interface WeekDef {
   id: WeekKind;
@@ -76,6 +78,11 @@ export const WEEKS: Record<WeekKind, WeekDef> = {
   serpent: { id: 'serpent', name: ['Week of the Serpent', 'Неделя змея'], text: ['The serpents shed their skins: a quarter more in their lairs, grottoes and loot, their dwellings and pens grow half as many again, and they are found adrift oftener.', 'Змеи сбрасывают кожу: в их логовах, гротах и в добыче на четверть больше, их жилища и загоны растут в полтора раза, и их чаще находят в дрейфе.'], weight: 3, beasts: ['marsh_serpent', 'young_serpent'] },
   mermaid: { id: 'mermaid', name: ['Week of the Mermaid', 'Неделя русалки'], text: ['Songs on the water at night: mermaids are found in the nets oftener, and their pens grow half as many again.', 'По ночам над водой песни: русалок чаще находят в сетях, а их загоны растут в полтора раза.'], weight: 3, beasts: ['mermaid'] },
   tentacle: { id: 'tentacle', name: ['Week of the Tentacle', 'Неделя щупальца'], text: ['Something stirs in the lagoons: a quarter more tentacles in their lairs and in their loot, their dwellings and pens grow half as many again, and they are found adrift oftener.', 'В лагунах что-то шевелится: щупалец в логовах и в добыче на четверть больше, их жилища и загоны растут в полтора раза, и их чаще находят в дрейфе.'], weight: 3, beasts: ['lagoon_tentacle'] },
+  // The wild beasts' weeks (owner, 2026-10-03): their lairs ashore, none of them found adrift.
+  jaguar: { id: 'jaguar', name: ['Week of the Jaguar', 'Неделя ягуара'], text: ['The jaguars hunt by day: a quarter more in their lairs and in their loot, and their dwellings and pens grow half as many again.', 'Ягуары охотятся и днём: в их логовах и в добыче на четверть больше, а их жилища и загоны растут в полтора раза.'], weight: 3, beasts: ['jaguar'] },
+  crocodile: { id: 'crocodile', name: ['Week of the Crocodile', 'Неделя крокодила'], text: ['The rains flood the mangroves: a quarter more crocodiles in their lairs and in their loot, and their dwellings and pens grow half as many again.', 'Дожди заливают мангры: крокодилов в логовах и в добыче на четверть больше, а их жилища и загоны растут в полтора раза.'], weight: 3, beasts: ['crocodile'] },
+  bat: { id: 'bat', name: ['Week of the Bat', 'Неделя летучей мыши'], text: ['The caves breathe out bats at noon: a quarter more in their lairs and in their loot, and their dwellings and pens grow half as many again.', 'Пещеры выдыхают летучих мышей и в полдень: в их логовах и в добыче на четверть больше, а их жилища и загоны растут в полтора раза.'], weight: 3, beasts: ['cave_bat'] },
+  octopus: { id: 'octopus', name: ['Week of the Octopus', 'Неделя осьминога'], text: ['The octopuses climb out of the wrecks: a quarter more in their lairs and in their loot, and their dwellings and pens grow half as many again.', 'Осьминоги выбираются из разбитых кораблей: в их логовах и в добыче на четверть больше, а их жилища и загоны растут в полтора раза.'], weight: 3, beasts: ['giant_octopus'] },
 };
 
 /** docs/18 #45: a creature week's lairs of its kind stand with this many more creatures (and leave as much more), its
