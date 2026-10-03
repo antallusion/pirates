@@ -1639,6 +1639,10 @@
     "unit.harpoon_gunner":                     { "local": "units/harpoon_gunner.webp", "remote": "hf_20261003_130714_gpt-anim_harpoon_gunner.png", "job": "gpt-anim_harpoon_gunner", "fit": "sheet:anim_harpoon_gunner.0", "rev": 20261003130714},
     "unit.harpoon_gunner_b":                   { "local": "units/harpoon_gunner_b.webp", "remote": "hf_20261003_130714_gpt-anim_harpoon_gunner.png", "job": "gpt-anim_harpoon_gunner", "fit": "sheet:anim_harpoon_gunner.1", "rev": 20261003130714},
     "unit.harpoon_gunner_atk":                 { "local": "units/harpoon_gunner_atk.webp", "remote": "hf_20261003_130714_gpt-anim_harpoon_gunner.png", "job": "gpt-anim_harpoon_gunner", "fit": "sheet:anim_harpoon_gunner.2", "rev": 20261003130714},
-    "unit.harpoon_gunner_hit":                 { "local": "units/harpoon_gunner_hit.webp", "remote": "hf_20261003_130714_gpt-anim_harpoon_gunner.png", "job": "gpt-anim_harpoon_gunner", "fit": "sheet:anim_harpoon_gunner.3", "rev": 20261003130714}
+    "unit.harpoon_gunner_hit":                 { "local": "units/harpoon_gunner_hit.webp", "remote": "hf_20261003_130714_gpt-anim_harpoon_gunner.png", "job": "gpt-anim_harpoon_gunner", "fit": "sheet:anim_harpoon_gunner.3", "rev": 20261003130714},
+    "unit.baleen_knight":                      { "local": "units/baleen_knight.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.0", "rev": 20261003131158},
+    "unit.baleen_knight_b":                    { "local": "units/baleen_knight_b.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.1", "rev": 20261003131158},
+    "unit.baleen_knight_atk":                  { "local": "units/baleen_knight_atk.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.2", "rev": 20261003131158},
+    "unit.baleen_knight_hit":                  { "local": "units/baleen_knight_hit.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.3", "rev": 20261003131158}
   }
 }
