@@ -206,6 +206,7 @@ const FIGURE_SIZE: Record<string, number> = {
   crown_ironclad: 1.35, crown_diver: 1.5, crown_dreadnought: 1.7, deep_one_champion: 1.45, deep_abbot: 1.4, abyss_herald: 1.7,
   leviathan_slayer: 1.45, basalt_guardian: 1.6, dutchman_mate: 1.6, lantern_wraith: 1.2,
 };
+const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? 1.28) * 1.22;
 /** Where the feet stand across a figure (a musket held out to one side does not move the man off his hex): the middle
  *  of what is painted in its lowest tenth, found once per picture. */
 const footCache = new Map<string, number>();
@@ -337,6 +338,8 @@ export class TacticalPanel {
   private missiles: Missile[] = [];
   private pos = new Map<number, { x: number; y: number; fx: number; fy: number; t0: number }>();
   /** A figure's blow, shot or flinch being played: since when, and toward where. */
+  /** The plates of the figures being drawn, laid over them all at the end of the frame. */
+  private plates: (() => void)[] | null = null;
   private act = new Map<number, { k: 'atk' | 'shot' | 'hurt'; t0: number; dx: number; dy: number }>();
   private press: { x: number; y: number; t: number; timer: number } | null = null;
   private planks: [HTMLCanvasElement, HTMLCanvasElement] | null = null;
@@ -1697,11 +1700,16 @@ export class TacticalPanel {
       const prop = propArt(v.cells[i], v.land?.type ?? '');
       if (prop) placed.push({ prop, i, p: this.center(i) });
     }
-    placed.sort((a, b) => a.p.y - b.p.y || a.p.x - b.p.x);
+    // In one row the bigger first: a giant stands no nearer than the man beside it, so it must not cover him.
+    const bulk = (x: (typeof placed)[number]): number => (x.s ? figureSize(x.s) : 1);
+    placed.sort((a, b) => a.p.y - b.p.y || bulk(b) - bulk(a) || a.p.x - b.p.x);
+    this.plates = [];
     for (const x of placed) {
       if (x.s) this.token(g, x.s, x.p.x, x.p.y, w, x.s.id === v.active, pulse, v);
       else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5);
     }
+    for (const f of this.plates) f();
+    this.plates = null;
     if (v.mine) {
       // A ghost of the stack where it would step.
       if (this.preview !== null && active) {
@@ -2002,9 +2010,9 @@ export class TacticalPanel {
       g.stroke();
     }
     // The figure: its own size, facing the other side (the painting faces right), breathing.
-    const size = (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? 1.28) * 1.22;
-    // One scale for all its frames, from the idle pose; each frame stands on its own feet.
-    const k = Math.min((size * w) / base.naturalHeight, (size * 1.25 * w) / base.naturalWidth);
+    const size = figureSize(s);
+    // One scale for all its frames, from the idle pose; each frame stands on its own feet; no wider than two hexes.
+    const k = Math.min((size * w) / base.naturalHeight, (Math.min(size * 1.25, 2) * w) / base.naturalWidth);
     const img = sprite(frame)?.img ?? base;
     const breathe = frame === id ? 1 + 0.012 * Math.sin(t / 620 + s.id * 1.7) : 1;
     const H = img.naturalHeight * k * breathe, W = img.naturalWidth * k;
@@ -2056,51 +2064,56 @@ export class TacticalPanel {
       }
     }
     // Its number on a plate at the hex's foot, on the side it faces, and what is left of it beneath.
-    const txt = String(s.count);
-    g.font = `700 ${Math.round(Math.max(10, w * 0.28))}px Inter, system-ui, sans-serif`;
-    const tw = Math.max(g.measureText(txt).width + 8, w * 0.36);
-    const th = Math.max(12, w * 0.3);
-    const px = flip ? x - w * 0.47 : x + w * 0.47 - tw, py = fy + ry * 0.2;
-    g.fillStyle = s.side === v.you ? 'rgba(14,40,52,0.95)' : 'rgba(52,16,14,0.95)';
-    g.strokeStyle = '#c9a45a';
-    g.lineWidth = 1;
-    g.beginPath();
-    g.roundRect(px, py, tw, th, 2);
-    g.fill();
-    g.stroke();
-    g.fillStyle = '#f2ead8';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(txt, px + tw / 2, py + th / 2 + 0.5);
-    const frac = Math.max(0, Math.min(1, ((s.count - 1) * s.hpMax + s.hp) / Math.max(1, s.start * s.hpMax)));
-    const bh = Math.max(2.5, w * 0.06);
-    g.fillStyle = 'rgba(0,0,0,0.75)';
-    g.fillRect(px - 1, py + th + 1, tw + 2, bh + 2);
-    g.fillStyle = frac > 0.5 ? '#6fb46a' : frac > 0.25 ? '#d8a640' : '#d0503e';
-    g.fillRect(px, py + th + 2, tw * frac, bh);
-    // Defending: a small shield beside the plate; muskets: the shots left over it.
-    if (s.defending) {
-      const ss = Math.max(7, w * 0.2), sx = flip ? px + tw + 3 : px - ss - 3, sy = py - 1;
-      g.fillStyle = '#b08d57';
-      g.strokeStyle = '#1b1208';
+    // Drawn after every figure (a giant beside it must not hide its number).
+    const plate = (): void => {
+      const txt = String(s.count);
+      g.font = `700 ${Math.round(Math.max(10, w * 0.28))}px Inter, system-ui, sans-serif`;
+      const tw = Math.max(g.measureText(txt).width + 8, w * 0.36);
+      const th = Math.max(12, w * 0.3);
+      const px = flip ? x - w * 0.47 : x + w * 0.47 - tw, py = fy + ry * 0.2;
+      g.fillStyle = s.side === v.you ? 'rgba(14,40,52,0.95)' : 'rgba(52,16,14,0.95)';
+      g.strokeStyle = '#c9a45a';
+      g.lineWidth = 1;
       g.beginPath();
-      g.moveTo(sx, sy);
-      g.lineTo(sx + ss, sy);
-      g.lineTo(sx + ss, sy + ss * 0.6);
-      g.quadraticCurveTo(sx + ss / 2, sy + ss * 1.25, sx, sy + ss * 0.6);
-      g.closePath();
+      g.roundRect(px, py, tw, th, 2);
       g.fill();
       g.stroke();
-    }
-    if (s.shotsMax) {
-      g.fillStyle = '#e0b862';
-      const d = Math.max(3, w * 0.09);
-      for (let j = 0; j < s.shots; j++) {
+      g.fillStyle = '#f2ead8';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(txt, px + tw / 2, py + th / 2 + 0.5);
+      const frac = Math.max(0, Math.min(1, ((s.count - 1) * s.hpMax + s.hp) / Math.max(1, s.start * s.hpMax)));
+      const bh = Math.max(2.5, w * 0.06);
+      g.fillStyle = 'rgba(0,0,0,0.75)';
+      g.fillRect(px - 1, py + th + 1, tw + 2, bh + 2);
+      g.fillStyle = frac > 0.5 ? '#6fb46a' : frac > 0.25 ? '#d8a640' : '#d0503e';
+      g.fillRect(px, py + th + 2, tw * frac, bh);
+      // Defending: a small shield beside the plate; muskets: the shots left over it.
+      if (s.defending) {
+        const ss = Math.max(7, w * 0.2), sx = flip ? px + tw + 3 : px - ss - 3, sy = py - 1;
+        g.fillStyle = '#b08d57';
+        g.strokeStyle = '#1b1208';
         g.beginPath();
-        g.arc(px + 3 + j * d, py - Math.max(3, w * 0.06), Math.max(1.2, w * 0.03), 0, Math.PI * 2);
+        g.moveTo(sx, sy);
+        g.lineTo(sx + ss, sy);
+        g.lineTo(sx + ss, sy + ss * 0.6);
+        g.quadraticCurveTo(sx + ss / 2, sy + ss * 1.25, sx, sy + ss * 0.6);
+        g.closePath();
         g.fill();
+        g.stroke();
       }
-    }
+      if (s.shotsMax) {
+        g.fillStyle = '#e0b862';
+        const d = Math.max(3, w * 0.09);
+        for (let j = 0; j < s.shots; j++) {
+          g.beginPath();
+          g.arc(px + 3 + j * d, py - Math.max(3, w * 0.06), Math.max(1.2, w * 0.03), 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+    };
+    if (this.plates) this.plates.push(plate);
+    else plate();
   }
 
   private token(g: CanvasRenderingContext2D, s: TacStackView, x: number, y: number, w: number, on: boolean, pulse: number, v: TacView): void {

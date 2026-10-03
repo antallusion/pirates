@@ -1691,6 +1691,10 @@
     "unit.island_archer":                      { "local": "units/island_archer.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.0", "rev": 20261003141412},
     "unit.island_archer_b":                    { "local": "units/island_archer_b.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.1", "rev": 20261003141412},
     "unit.island_archer_atk":                  { "local": "units/island_archer_atk.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.2", "rev": 20261003141412},
-    "unit.island_archer_hit":                  { "local": "units/island_archer_hit.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.3", "rev": 20261003141412}
+    "unit.island_archer_hit":                  { "local": "units/island_archer_hit.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.3", "rev": 20261003141412},
+    "unit.blowgun_hunter":                     { "local": "units/blowgun_hunter.webp", "remote": "hf_20261003_141803_gpt-anim_blowgun_hunter.png", "job": "gpt-anim_blowgun_hunter", "fit": "sheet:anim_blowgun_hunter.0", "rev": 20261003141803},
+    "unit.blowgun_hunter_b":                   { "local": "units/blowgun_hunter_b.webp", "remote": "hf_20261003_141803_gpt-anim_blowgun_hunter.png", "job": "gpt-anim_blowgun_hunter", "fit": "sheet:anim_blowgun_hunter.1", "rev": 20261003141803},
+    "unit.blowgun_hunter_atk":                 { "local": "units/blowgun_hunter_atk.webp", "remote": "hf_20261003_141803_gpt-anim_blowgun_hunter.png", "job": "gpt-anim_blowgun_hunter", "fit": "sheet:anim_blowgun_hunter.2", "rev": 20261003141803},
+    "unit.blowgun_hunter_hit":                 { "local": "units/blowgun_hunter_hit.webp", "remote": "hf_20261003_141803_gpt-anim_blowgun_hunter.png", "job": "gpt-anim_blowgun_hunter", "fit": "sheet:anim_blowgun_hunter.3", "rev": 20261003141803}
   }
 }
