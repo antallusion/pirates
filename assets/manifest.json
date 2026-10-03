@@ -1599,6 +1599,10 @@
     "unit.enforcer":                           { "local": "units/enforcer.webp", "remote": "hf_20261003_121944_gpt-anim_enforcer.png", "job": "gpt-anim_enforcer", "fit": "sheet:anim_enforcer.0", "rev": 20261003121944},
     "unit.enforcer_b":                         { "local": "units/enforcer_b.webp", "remote": "hf_20261003_121944_gpt-anim_enforcer.png", "job": "gpt-anim_enforcer", "fit": "sheet:anim_enforcer.1", "rev": 20261003121944},
     "unit.enforcer_atk":                       { "local": "units/enforcer_atk.webp", "remote": "hf_20261003_121944_gpt-anim_enforcer.png", "job": "gpt-anim_enforcer", "fit": "sheet:anim_enforcer.2", "rev": 20261003121944},
-    "unit.enforcer_hit":                       { "local": "units/enforcer_hit.webp", "remote": "hf_20261003_121944_gpt-anim_enforcer.png", "job": "gpt-anim_enforcer", "fit": "sheet:anim_enforcer.3", "rev": 20261003121944}
+    "unit.enforcer_hit":                       { "local": "units/enforcer_hit.webp", "remote": "hf_20261003_121944_gpt-anim_enforcer.png", "job": "gpt-anim_enforcer", "fit": "sheet:anim_enforcer.3", "rev": 20261003121944},
+    "unit.gilded_cuirassier":                  { "local": "units/gilded_cuirassier.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.0", "rev": 20261003122424},
+    "unit.gilded_cuirassier_b":                { "local": "units/gilded_cuirassier_b.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.1", "rev": 20261003122424},
+    "unit.gilded_cuirassier_atk":              { "local": "units/gilded_cuirassier_atk.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.2", "rev": 20261003122424},
+    "unit.gilded_cuirassier_hit":              { "local": "units/gilded_cuirassier_hit.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.3", "rev": 20261003122424}
   }
 }
