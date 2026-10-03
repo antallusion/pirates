@@ -1,4 +1,4 @@
-// docs/18 II — the lairs of the land's creatures: the bestiary (twenty-six kinds over the seven tiers, their specials,
+// docs/18 II — the lairs of the land's creatures: the bestiary (thirty-one kinds over the seven tiers, their specials,
 // their faces from the art), where the lairs stand (on the islands, by their kind and level, the chains of the
 // great islands, the turtles' backs and the sandbars), the battlefield ashore (sand, rocks, palms, the surf; no guns),
 // the creatures' specials in the battle, the battle fought through a landing, the spoils once a week, the lair standing
@@ -68,10 +68,11 @@ const side = (army: ArmyStack[], beasts = false): TacSideInput => ({
 
 // ------------------------------------------------------------------------------------------------ 14. the bestiary
 
-test('the bestiary: twenty-six kinds over the seven tiers, every special of the land among them, faces from the art', () => {
-  // docs/18's fourteen, two a tier, and the twelve wild beasts (owner, 2026-10-03) among the middle tiers.
-  assert.equal(BEAST_IDS.length, 26);
-  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((t) => BEAST_IDS.filter((b) => BEASTS[b].tier === t).length), [2, 6, 7, 4, 3, 2, 2]);
+test('the bestiary: thirty-one kinds over the seven tiers, every special of the land among them, faces from the art', () => {
+  // docs/18's fourteen, two a tier, the twelve wild beasts (owner, 2026-10-03) among the middle tiers, and the five
+  // great beasts of the grottos and the guardians' seats at the top.
+  assert.equal(BEAST_IDS.length, 31);
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((t) => BEAST_IDS.filter((b) => BEASTS[b].tier === t).length), [2, 6, 7, 4, 4, 4, 4]);
   const sp = new Set(BEAST_IDS.flatMap((b) => BEASTS[b].specials));
   for (const s of ['shell', 'poison', 'swarm', 'regen', 'terror', 'flying', 'diving'] as const) assert.ok(sp.has(s), s);
   // A wild beast's face is its own battle figure: in the art, or on a sheet still in the painter's queue.
@@ -264,8 +265,8 @@ test('HoMM3\'s offer: at three times her might they flee or come aboard; the gua
   assert.equal(lairChoice(game, s, l.id, offer!), null);
   if (offer === 'join') assert.ok(s.ship!.army.some((x) => x.u === 'crab' || x.u === 'gull') && s.ship!.crew > before, 'the creatures in her army');
   assert.ok(!lairUp(game, l));
-  assert.equal(LAIRS.turtle_guardian.join, 'never');
-  assert.equal(LAIRS.leviathan_shoal.join, 'never');
+  // (nor do the grottos' great beasts)
+  for (const k of LAIR_KINDS.filter((x) => LAIRS[x].role !== 'shore')) assert.equal(LAIRS[k].join, 'never', k);
 });
 
 // ------------------------------------------------------------------------------------------------ 22. the chain

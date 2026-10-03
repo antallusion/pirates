@@ -209,7 +209,7 @@ test('the bestiary: the first fight with a kind writes its page; the whole of it
   const v = setViews(game, s.profile!).find((x) => x.id === 'bestiary')!;
   assert.ok(v.have.includes('crab') && !v.done);
   assert.ok(lairById(game, l.id));
-  assert.match(runAdmin(game, s, '/bestiary all') ?? '', new RegExp(`${CREATURE_IDS.length} of ${CREATURE_IDS.length}`)); // 30 with the wild beasts
+  assert.match(runAdmin(game, s, '/bestiary all') ?? '', new RegExp(`${CREATURE_IDS.length} of ${CREATURE_IDS.length}`)); // 35 with the wild and the great beasts
   assert.equal(setViews(game, s.profile!).find((x) => x.id === 'bestiary')!.have.length, CREATURE_IDS.length);
 });
 

@@ -1,6 +1,7 @@
 // The land's creatures (docs/18 II item 14): a family of fighting kinds beside H1's men — fourteen kinds over the seven
-// tiers, from the crabs of a beach to the island's ancient guardian, and the twelve wild beasts of the jungles, the
-// marshes, the caves and the reefs after them (owner, 2026-10-03: the battle's creatures, tools/art/creatures.py).
+// tiers, from the crabs of a beach to the island's ancient guardian, the twelve wild beasts of the jungles, the
+// marshes, the caves and the reefs after them, and the five great beasts of the grottos and the guardians' seats
+// (owner, 2026-10-03: the battle's creatures, tools/art/creatures.py).
 // They are units as the men are (UNITS takes them in, so the boarding battle, the army's slots and the recruit window
 // read them the same way), each with its stats on the HoMM3 scale, its specials (docs/18 item 16) and its face from
 // the art in assets/: the creatures/* and monsters/* pictures, the portraits of the hermits, the Choir's cultists and
@@ -22,10 +23,13 @@ export type BeastId =
   | 'wild_boar' | 'giant_toad' | 'cave_bat' | 'barracuda'
   | 'jaguar' | 'monitor' | 'albatross' | 'moray' | 'bell_hermit'
   | 'island_ape' | 'crocodile'
-  | 'giant_octopus';
+  | 'giant_octopus'
+  // The great beasts (owner, 2026-10-03).
+  | 'crab_queen' | 'cave_wyrm' | 'mangrove_hydra' | 'ape_king' | 'storm_roc';
 
 export const BEAST_IDS: BeastId[] = ['crab', 'gull', 'seal', 'reef_shark', 'rock_turtle', 'marsh_serpent', 'hermit', 'lagoon_tentacle', 'cultist', 'surf_drowned', 'young_serpent', 'lantern_maw', 'ancient_turtle', 'shoal_leviathan',
-  'wild_boar', 'giant_toad', 'cave_bat', 'barracuda', 'jaguar', 'monitor', 'albatross', 'moray', 'bell_hermit', 'island_ape', 'crocodile', 'giant_octopus'];
+  'wild_boar', 'giant_toad', 'cave_bat', 'barracuda', 'jaguar', 'monitor', 'albatross', 'moray', 'bell_hermit', 'island_ape', 'crocodile', 'giant_octopus',
+  'crab_queen', 'cave_wyrm', 'mangrove_hydra', 'ape_king', 'storm_roc'];
 
 type BeastStats = Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>;
 const B = (id: BeastId, tier: number, s: BeastStats): UnitDef => ({ id, tier, up: false, base: id, upgrade: null, beast: true, ...s });
@@ -61,6 +65,14 @@ export const BEASTS: Record<BeastId, UnitDef> = {
   island_ape: B('island_ape', 4, { atk: 11, def: 7, dmin: 3, dmax: 6, hp: 18, speed: 5, init: 7, shots: 0, specials: [], art: 'unit.island_ape', cost: 130 }),
   crocodile: B('crocodile', 4, { atk: 10, def: 10, dmin: 3, dmax: 6, hp: 20, speed: 3, init: 5, shots: 0, specials: ['diving'], art: 'unit.crocodile', cost: 145 }),
   giant_octopus: B('giant_octopus', 5, { atk: 12, def: 8, dmin: 4, dmax: 6, hp: 22, speed: 5, init: 8, shots: 0, specials: ['diving', 'retaliate_all'], art: 'unit.giant_octopus', cost: 210 }),
+  // The great beasts (owner, 2026-10-03): a grotto's own or an island's guardian, each its own painted figure too — the
+  // crab queen a heavy fifth tier, the wyrm and the hydra the serpent's and the maw's match, the ape king and the roc
+  // the turtle's and the leviathan's.
+  crab_queen: B('crab_queen', 5, { atk: 10, def: 14, dmin: 4, dmax: 7, hp: 32, speed: 3, init: 5, shots: 0, specials: ['shell', 'retaliate_all'], art: 'unit.crab_queen', cost: 270 }),
+  cave_wyrm: B('cave_wyrm', 6, { atk: 14, def: 12, dmin: 6, dmax: 10, hp: 32, speed: 5, init: 8, shots: 0, specials: ['terror', 'poison'], art: 'unit.cave_wyrm', cost: 360 }),
+  mangrove_hydra: B('mangrove_hydra', 6, { atk: 13, def: 11, dmin: 5, dmax: 9, hp: 38, speed: 4, init: 7, shots: 0, specials: ['retaliate_all', 'regen'], art: 'unit.mangrove_hydra', cost: 380 }),
+  ape_king: B('ape_king', 7, { atk: 19, def: 15, dmin: 11, dmax: 17, hp: 64, speed: 6, init: 9, shots: 0, specials: ['sweep', 'terror'], art: 'unit.ape_king', cost: 780 }),
+  storm_roc: B('storm_roc', 7, { atk: 20, def: 12, dmin: 10, dmax: 18, hp: 52, speed: 9, init: 11, shots: 0, specials: ['flying', 'sweep'], art: 'unit.storm_roc', cost: 760 }),
 };
 
 export const isBeast = (u: string): u is BeastId => (BEAST_IDS as string[]).includes(u);
@@ -131,6 +143,11 @@ export const BEAST_PLURAL: Record<CreatureId, Tr> = {
   island_ape: ['island apes', 'островные обезьяны'],
   crocodile: ['swamp crocodiles', 'болотные крокодилы'],
   giant_octopus: ['giant octopuses', 'гигантские осьминоги'],
+  crab_queen: ['coconut crab queens', 'королевы пальмовых крабов'],
+  cave_wyrm: ['cave wyrms', 'пещерные змеи'],
+  mangrove_hydra: ['mangrove hydras', 'мангровые гидры'],
+  ape_king: ['ape kings', 'короли обезьян'],
+  storm_roc: ['storm rocs', 'грозовые рухи'],
   mermaid: ['mermaids', 'русалки'],
   sea_turtle: ['sea turtles', 'морские черепахи'],
   white_whale: ['the white whale', 'белый кит'],
@@ -177,4 +194,9 @@ export const BEAST_RES: Record<BeastId, Partial<Record<LandRes | 'pearls', numbe
   island_ape: { bone: 0.4 },
   crocodile: { shell: 0.2, bone: 0.3 },
   giant_octopus: { venom: 0.3, pearls: 0.1 },
+  crab_queen: { shell: 1.5, pearls: 0.3 },
+  cave_wyrm: { venom: 0.8, bone: 0.5 },
+  mangrove_hydra: { venom: 0.9, bone: 0.3 },
+  ape_king: { bone: 3, pearls: 0.4 },
+  storm_roc: { bone: 2.5, pearls: 0.4 },
 };

@@ -208,6 +208,8 @@ const FIGURE_SIZE: Record<string, number> = {
   // The wild beasts (owner, 2026-10-03).
   wild_boar: 1.05, giant_toad: 1.05, cave_bat: 1.05, barracuda: 1.1, jaguar: 1.2, monitor: 1.2, albatross: 1.15, moray: 1.35,
   bell_hermit: 1.1, island_ape: 1.5, crocodile: 1.35, giant_octopus: 1.55,
+  // The great beasts (owner, 2026-10-03).
+  crab_queen: 1.4, cave_wyrm: 1.5, mangrove_hydra: 1.6, ape_king: 1.75, storm_roc: 1.65,
 };
 const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? 1.28) * 1.22;
 /** Where the feet stand across a figure (a musket held out to one side does not move the man off his hex): the middle

@@ -35,9 +35,12 @@ export type LairKind =
   | 'serpent_grotto' | 'maw_pit'
   | 'turtle_guardian' | 'leviathan_shoal'
   // The wild beasts' (owner, 2026-10-03).
-  | 'bat_cave' | 'jaguar_den' | 'moray_reef' | 'albatross_rock' | 'ape_ridge' | 'croc_mangroves' | 'octopus_wreck';
+  | 'bat_cave' | 'jaguar_den' | 'moray_reef' | 'albatross_rock' | 'ape_ridge' | 'croc_mangroves' | 'octopus_wreck'
+  // The great beasts' grottos and guardians' seats (owner, 2026-10-03).
+  | 'crab_hollow' | 'wyrm_gallery' | 'hydra_pool' | 'ape_throne' | 'roc_eyrie';
 export const LAIR_KINDS: LairKind[] = ['crab_beach', 'gull_cliffs', 'seal_rookery', 'shark_shallows', 'turtle_rocks', 'serpent_marsh', 'hermit_camp', 'tentacle_lagoon', 'choir_circle', 'drowned_surf', 'serpent_grotto', 'maw_pit', 'turtle_guardian', 'leviathan_shoal',
-  'bat_cave', 'jaguar_den', 'moray_reef', 'albatross_rock', 'ape_ridge', 'croc_mangroves', 'octopus_wreck'];
+  'bat_cave', 'jaguar_den', 'moray_reef', 'albatross_rock', 'ape_ridge', 'croc_mangroves', 'octopus_wreck',
+  'crab_hollow', 'wyrm_gallery', 'hydra_pool', 'ape_throne', 'roc_eyrie'];
 
 /** A shore lair (the first a landing party meets), a grotto inland, the island's guardian at her heart. */
 export type LairRole = 'shore' | 'grotto' | 'guardian';
@@ -88,6 +91,13 @@ export const LAIRS: Record<LairKind, LairDef> = {
   ape_ridge: D('ape_ridge', 'shore', ['Ape Ridge', 'Обезьяний хребет'], ['Grey-backed apes hold the ridge over the beach and beat their chests at anything that lands; the boars root below.', 'Седоспинные обезьяны держат хребет над пляжем и бьют себя в грудь при виде всякого, кто высадится; внизу роются кабаны.'], [['island_ape', 0.7], ['wild_boar', 0.3]], [4, 8], ['tropical', 'volcanic'], { dwell: true }),
   croc_mangroves: D('croc_mangroves', 'shore', ['Crocodile Mangroves', 'Крокодильи мангры'], ['Logs in the brown water of the mangroves open their eyes; the toads sing on the roots above them.', 'Брёвна в бурой воде мангровых зарослей открывают глаза; на корнях над ними поют жабы.'], [['crocodile', 0.7], ['giant_toad', 0.3]], [4, 8], ['swamp', 'tropical'], { dwell: true, egg: 0.12 }),
   octopus_wreck: D('octopus_wreck', 'shore', ['Octopus Wreck', 'Осьминожий остов'], ['A wreck high on the beach with an octopus living in her hold; the crabs that wear her bells keep its door.', 'Разбитый корабль высоко на пляже: в его трюме живёт осьминог, а крабы, что носят его колокола, стерегут вход.'], [['giant_octopus', 0.8], ['bell_hermit', 0.2]], [5, 10], ['graveyard', 'rocky'], { dwell: true, egg: 0.08 }),
+  // The great beasts' (owner, 2026-10-03): three grottos and two guardians' seats beside the serpent's and the turtle's,
+  // on the great islands of their kinds — a chain there now draws from more than one.
+  crab_hollow: D('crab_hollow', 'grotto', ['Crab Queen’s Hollow', 'Лощина королевы крабов'], ['A hollow under the palms heaped with split coconuts and old shells, where a coconut crab as big as a longboat keeps her court of bell hermits.', 'Лощина под пальмами, заваленная расколотыми кокосами и старыми панцирями: там пальмовый краб величиной со шлюпку держит двор из крабов-колоколов.'], [['crab_queen', 0.6], ['bell_hermit', 0.4]], [5, 9], ['tropical', 'rocky'], { join: 'never', egg: 0.2 }),
+  wyrm_gallery: D('wyrm_gallery', 'grotto', ['Wyrm’s Gallery', 'Галерея пещерного змея'], ['Galleries deep in the rock where a blind white wyrm crawls in the dark, and the bats hang thick from the roof over it.', 'Галереи глубоко в скале: во тьме ползает слепой белый змей, а над ним гроздьями свисают со свода летучие мыши.'], [['cave_wyrm', 0.6], ['cave_bat', 0.4]], [5, 10], ['rocky', 'volcanic'], { join: 'never', egg: 0.15 }),
+  hydra_pool: D('hydra_pool', 'grotto', ['Hydra Pool', 'Омут гидры'], ['A black pool among the mangrove roots where three heads rise out of the weed at once; the crocodiles keep its banks.', 'Чёрный омут среди мангровых корней: из тины разом поднимаются три головы, а берега стерегут крокодилы.'], [['mangrove_hydra', 0.6], ['crocodile', 0.4]], [5, 10], ['swamp', 'tropical'], { join: 'never', egg: 0.15 }),
+  ape_throne: D('ape_throne', 'guardian', ['The Ape King’s Throne', 'Трон короля обезьян'], ['The island’s guardian: an old silverback crowned with coral and stone on a throne of fallen rock, and his apes about him.', 'Страж острова: старый седоспинный самец в короне из коралла и камня на троне из обрушенных скал, а вокруг — его обезьяны.'], [['ape_king', 0.6], ['island_ape', 0.4]], [6, 10], ['tropical', 'volcanic'], { join: 'never', egg: 0.3 }),
+  roc_eyrie: D('roc_eyrie', 'guardian', ['Storm Roc’s Eyrie', 'Гнездо грозового руха'], ['The island’s guardian: a roc that nests on the highest crag and comes down out of the storm, and the albatrosses that wheel with it.', 'Страж острова: рух, что гнездится на самой высокой скале и падает из грозы, и альбатросы, что кружат вместе с ним.'], [['storm_roc', 0.6], ['albatross', 0.4]], [6, 10], ['rocky'], { join: 'never', egg: 0.35 }),
 };
 
 // ------------------------------------------------------------------------------------------------ 24. the calibration
@@ -122,6 +132,11 @@ export const LAIR_CAL: Record<LairKind, [number, number, number][]> = {
   ape_ridge: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.87, 1.3, 1.7], [0.93, 1.31, 1.64], [0.87, 1.29, 1.5], [0.79, 1.17, 1.39], [0.73, 1.12, 1.5], [0, 0, 0], [0, 0, 0]],
   croc_mangroves: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.92, 1.42, 1.92], [0.79, 1.21, 1.54], [0.85, 1.15, 1.62], [0.69, 1.07, 1.39], [0.63, 0.97, 1.32], [0, 0, 0], [0, 0, 0]],
   octopus_wreck: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.09, 1.42, 1.83], [0.87, 1.37, 1.87], [0.79, 1.36, 1.78], [0.75, 1.25, 1.77], [0.79, 1.12, 1.4], [0.8, 1.08, 1.45]],
+  crab_hollow: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.75, 1.05, 1.45], [0.59, 0.91, 1.09], [0.57, 0.81, 1.02], [0.49, 0.68, 0.86], [0.51, 0.71, 1.03], [0, 0, 0]],
+  wyrm_gallery: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.43, 1.19, 1.57], [0.34, 0.79, 1.07], [0.35, 0.75, 0.85], [0.33, 0.56, 0.7], [0.27, 0.41, 0.85], [0.26, 0.44, 0.79]],
+  hydra_pool: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.9, 1.9, 2.89], [0.94, 1.61, 2.39], [0.84, 1.47, 2.34], [0.9, 1.48, 1.98], [0.73, 1.21, 1.64], [0.73, 1.04, 1.57]],
+  ape_throne: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [3.16, 4.83, 6.82], [1.5, 2.59, 3.04], [2.28, 4.18, 5.61], [1.01, 1.39, 1.76], [0.97, 1.35, 1.72]],
+  roc_eyrie: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.31, 2.19, 5.05], [0.31, 1.21, 2.34], [0.11, 0.95, 2.92], [0.31, 0.68, 1.23], [0.32, 0.63, 1.2]],
 };
 
 /** Silver the men an average lair costs the captain of ⚓L to refill when she wins (measured in the battle ashore:
@@ -174,7 +189,8 @@ export function guardianCount(level: number): number {
   return level <= 7 ? 1 : level <= 9 ? 2 : 3;
 }
 
-/** A grotto's own: one young serpent or lantern maw at ⚓5–6, two at ⚓7–8, three at ⚓9, four at ⚓10. */
+/** A grotto's own: one young serpent, lantern maw, crab queen, wyrm or hydra at ⚓5–6, two at ⚓7–8, three at ⚓9, four
+ *  at ⚓10. */
 export function grottoCount(level: number): number {
   return level <= 6 ? 1 : level <= 8 ? 2 : level <= 9 ? 3 : 4;
 }
