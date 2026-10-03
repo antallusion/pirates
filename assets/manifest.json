@@ -1965,6 +1965,10 @@
     "ship.phantom_brig":                       { "local": "ships/phantom_brig.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.0", "rev": 20261003215422},
     "ship.razee":                              { "local": "ships/razee.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.1", "rev": 20261003215422},
     "ship.black_corsair":                      { "local": "ships/black_corsair.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.2", "rev": 20261003215422},
-    "ship.iron_ram":                           { "local": "ships/iron_ram.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.3", "rev": 20261003215422}
+    "ship.iron_ram":                           { "local": "ships/iron_ram.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.3", "rev": 20261003215422},
+    "unit.corsair_phantom":                    { "local": "units/corsair_phantom.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.0", "rev": 20261003215711},
+    "unit.corsair_phantom_b":                  { "local": "units/corsair_phantom_b.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.1", "rev": 20261003215711},
+    "unit.corsair_phantom_atk":                { "local": "units/corsair_phantom_atk.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.2", "rev": 20261003215711},
+    "unit.corsair_phantom_hit":                { "local": "units/corsair_phantom_hit.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.3", "rev": 20261003215711}
   }
 }
