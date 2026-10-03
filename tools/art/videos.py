@@ -638,7 +638,7 @@ v('cut_port_slagport', 'port_slagport', 'Шлаковый Порт',
 v('cut_port_frostgate', 'port_frostgate', 'Ледяные Ворота',
   'A snowy fjord between dark mountains at twilight: a walled whaling town with steep timber longhouses, its gate two crossed '
   'whale jawbones, the try-works smoking over the harbour and floes of ice knocking against the piers as a whaler comes in '
-  'with a great carcass lashed alongside. The camera moves in under the jawbone gate.')
+  'with her boats towing behind her. The camera moves in under the jawbone gate.')
 v('cut_port_steeplewater', 'port_steeplewater', 'Шпилевая Вода',
   'Night in a half-drowned gothic cathedral town: the upper storeys and spires of grey stone churches rise from the black '
   'sea, wooden walkways run between their windows, a pale green light glows in a great rose window, and at low tide the '
