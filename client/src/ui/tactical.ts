@@ -36,11 +36,11 @@ import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
 import { FIGURES } from '../../../shared/src/data/unitart.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { ARTIFACTS } from '../../../shared/src/data/artifacts.ts';
-import { $, esc, icon, portraitUrl } from './dom.ts';
+import { $, dec1, esc, icon, portraitUrl } from './dom.ts';
 import { placeName } from './maps.ts';
 import { specialName, specialNote, unitArt, unitIcon, unitName, unitNote } from './army.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
-import type { UnitId } from '../../../shared/src/data/army.ts';
+import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import { SHIP_BEAST_DEFS, isShipBeast } from '../../../shared/src/data/shipbeasts.ts'; // the premium hulls' own (docs/02 §1.A.9)
 import { deckArt } from '../../../shared/src/data/fleet.ts';
 import { BOSS_UNIT_STAND_IN, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
@@ -376,10 +376,31 @@ export class TacticalPanel {
   private planks: [HTMLCanvasElement, HTMLCanvasElement] | null = null;
   /** Every stack's name as last seen (the fallen are named in the feed too). */
   private names = new Map<number, string>();
+  /** A phone (owner, 2026-10-03: «на телефоне в бою не должно быть ничего кроме игрового поля с существами»): a touch
+   *  screen whose short side is a phone's, upright or on its side. The field alone fills it; round painted buttons
+   *  stand at its edges (see padDom). */
+  private phone = false;
+  /** …held upright (its book one tall page). */
+  private tall = false;
+  private phoneMq: MediaQueryList | null = typeof matchMedia === 'function' ? matchMedia('(max-width: 520px), (max-height: 520px)') : null;
+  /** On a phone: the «…» of the fight's own orders opened, and the round (its order, the captains, the feed) opened
+   *  behind the face of the stack whose turn it is. */
+  private moreOpen = false;
+  private sheetOpen = false;
+  /** On a phone: the room the buttons keep along the field's edges, so no hex lies under a thumb's button (CSS px). */
+  private band = { l: 0, r: 0, t: 0, b: 0 };
+  /** The special whose words are open on the stack's card (a phone has no hover for its title). */
+  private spNote: string | null = null;
 
   constructor(send: (m: ClientMsg) => void, now: () => number) {
     this.send = send;
     this.now = now;
+  }
+
+  /** A touch screen with a phone's short side (375×812 upright, 812×375 or 932×430 on its side); a tablet and a desk
+   *  keep the captains' panels beside the field. */
+  private isPhone(): boolean {
+    return document.body.classList.contains('touch') && !!this.phoneMq?.matches;
   }
 
   get open(): boolean {
@@ -392,6 +413,16 @@ export class TacticalPanel {
     this.view = v;
     document.body.classList.toggle('tac', !!v);
     document.body.classList.toggle('tac-over', !!v?.over);
+    // A phone turned, or a window narrowed under a finger: the field and its buttons laid out afresh.
+    const phone = !!v && this.isPhone();
+    const tall = phone && innerHeight > innerWidth;
+    if (phone !== this.phone || tall !== this.tall) {
+      if (phone !== this.phone) this.moreOpen = this.sheetOpen = false;
+      this.phone = phone;
+      this.tall = tall;
+      document.body.classList.toggle('tac-ph', phone);
+      this.key = '';
+    }
     if (!v) {
       if (this.el) {
         root.classList.add('hidden');
@@ -406,11 +437,15 @@ export class TacticalPanel {
         this.pathFx = [];
         this.seen = 0;
         this.preview = this.targeting = this.info = null;
+        this.moreOpen = this.sheetOpen = this.bookOpen = false;
+        this.spNote = null;
       }
       return;
     }
     if (!this.el) this.build(root);
     if (v !== was) this.onView(v, was);
+    // The panels laid out afresh for a phone come and gone, or turned, between two views.
+    else if (!this.key) this.dom(v);
     this.tick();
     this.draw();
   }
@@ -424,6 +459,7 @@ export class TacticalPanel {
       <div class="tb-feed"><div class="tb-hint"></div><div class="tb-lines"></div></div>
       <div class="tb-spells"></div>
       <div class="tb-acts"></div>
+      <div class="tb-pad"></div>
     </div>`;
     this.el = root.querySelector('.tb-root');
     this.canvas = root.querySelector('canvas');
@@ -438,13 +474,27 @@ export class TacticalPanel {
       this.cancelPress();
     });
     c.addEventListener('pointermove', (e) => this.move(e));
+    // The field answers a finger by its pointer events alone: the mouse's click the browser makes up after a touch
+    // would land on the card the tap (or the long press) has just opened under the finger, and close it at once.
+    c.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
     c.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const h = this.hexAt(e);
       const s = h !== null ? this.stackAt(h) : undefined;
-      this.showInfo(s?.id ?? null);
+      // A finger's long press opens the card by its own clock (down): the menu the browser asks for after it must not
+      // close it again.
+      if (s || !this.phone) this.showInfo(s?.id ?? null);
     });
-    root.querySelector('.tb-card')!.addEventListener('click', () => this.showInfo(null));
+    root.querySelector('.tb-card')!.addEventListener('click', (e) => {
+      // A special's name on the card opens its words there (a finger has no hover for its title); the rest closes it.
+      const sp = (e.target as HTMLElement).closest<HTMLElement>('[data-spnote]');
+      if (sp) {
+        this.spNote = this.spNote === sp.dataset.spnote ? null : sp.dataset.spnote!;
+        this.showInfo(this.info);
+        return;
+      }
+      this.showInfo(null);
+    });
   }
 
   // ------------------------------------------------------------------ a new view from the server
@@ -595,39 +645,151 @@ export class TacticalPanel {
 
   // ------------------------------------------------------------------ the panels
 
+  /** A side's captain as the field names her: a lair, a drift, a roaming stack or the sea's chest by what it is (docs/18
+   *  II, IV; docs/19), a captain by her name. */
+  private heroName(v: TacView, x: 0 | 1): string {
+    const h = v.heroes[x];
+    if (!v.land || x === v.you) return personName(h.name);
+    const ru = lang() === 'ru' ? 1 : 0;
+    const lair = v.land.lair;
+    return LAIRS[lair as LairKind]?.name[ru] ?? (isDriftKind(lair) ? DRIFTS[lair].name[ru] : lair === 'find_chest' ? findTitle('chest') : roamOf(lair) ? roamName(roamOf(lair)!) : isShoreBoss(lair) ? SHORE_BOSSES[lair].name[ru] : h.name);
+  }
+
+  /** Her face: a picture of the art (docs/18 II: a lair's creature) or a named captain's portrait. */
+  private heroFace(v: TacView, x: 0 | 1): string | null {
+    const h = v.heroes[x];
+    const url = h.captain ? assetUrl(CAPTAINS[h.captain].portrait) : null;
+    // A great one ashore whose own figure is not painted yet shows the figure that stands in for it (2026-10-03).
+    const fid = h.face?.startsWith('unit.') && isBossUnit(h.face.slice(5)) && !assetUrl(h.face) ? UNITS[h.face.slice(5) as UnitId].art : h.face;
+    return fid ? (fid.includes('.') && !fid.startsWith('portrait.') ? assetUrl(fid) : portraitUrl(fid.replace(/^portrait\./, ''))) ?? url : url;
+  }
+
+  /** The order of the round as a row of faces (each opens its stack's card), then the next round's first few. */
+  private queue(v: TacView): string {
+    const chip = (id: number, next: boolean) => {
+      const s = v.stacks.find((x) => x.id === id);
+      if (!s) return '';
+      return `<button class="tb-q ${s.side === v.you ? 'you' : 'foe'}${id === v.active && !next ? ' on' : ''}${next ? ' next' : ''}" data-info="${s.id}" title="${esc(stackName(s))}" aria-label="${esc(stackName(s))}">${figureArt(s) ? icon(figureArt(s)!, '', 'ico fig') : icon(stackArt(s), '', 'ico')}<b>${s.count}</b></button>`;
+    };
+    return `${v.order.map((id) => chip(id, false)).join('')}<span class="tb-qsep"></span>${v.next.map((id) => chip(id, true)).join('')}`;
+  }
+
+  /** The phone's battle (owner, 2026-10-03: «на телефоне в бою не должно быть ничего кроме игрового поля с существами.
+   *  внизу справа книжка кружочек, а слева … удерживать позицию, удар, хотьба, защита»): the field over the whole screen
+   *  and round painted buttons at its edges with no word on them (each says itself in its title, for a reader). Under the
+   *  left thumb the stack's orders — wait, defend, the officer's word — and «…» for the fight's own (auto, quick, cut
+   *  or fall back, the ransom, the colours, the last two a second tap to be sure); a step and a blow need no button, they
+   *  are a tap on the field itself, a lit hex or a foe ringed red, as on a desk. Under the right thumb the captain's: her
+   *  book (every page of it; while an order or a move is aimed, its picture with a cross that lets it go) and her path's
+   *  two moves. In the top corner the face of the stack whose turn it is, ringed in its side's colour with the turn's
+   *  clock running round it; a tap there opens the round — its order, the two captains, the last of the feed. */
+  private padDom(v: TacView): void {
+    const pad = this.el!.querySelector<HTMLElement>('.tb-pad')!;
+    if (!this.phone) {
+      if (pad.childElementCount) pad.innerHTML = '';
+      return;
+    }
+    const me = v.heroes[v.you];
+    const act = v.stacks.find((s) => s.id === v.active);
+    const rb = (data: string, label: string, art: string, cls = '', off = false): string =>
+      `<button class="tb-rb${cls}" ${data} title="${esc(label)}" aria-label="${esc(label)}"${off ? ' disabled' : ''}>${art}</button>`;
+    // The fight's own orders, behind «…»; the ransom's silver shown on its button once it asks to be sure.
+    const ransomOn = this.ransomArmed > performance.now();
+    const strikeOn = this.strikeArmed > performance.now();
+    const more = [
+      rb('data-a="auto"', me.auto ? L('autoOff') : L('auto'), btIcon('bt_auto', 'icon.bt_captain', 'ico'), me.auto ? ' on' : ''),
+      rb('data-a="quick"', L('quick'), btIcon('bt_quick', 'icon.bt_charge', 'ico'), '', !!v.over),
+      v.canCut && !v.over ? rb('data-a="cut"', v.you === 0 ? L('fallBack') : L('cut'), btIcon('bt_retreat', 'icon.bt_colours', 'ico'), ' danger') : '',
+      v.ransom && !v.over ? rb('data-a="ransom"', ransomOn ? L('ransomSure', { n: v.ransom }) : `${L('ransom', { n: v.ransom })}. ${L('ransomTip')}`, `${btIcon('bt_ransom', 'icon.coin', 'ico')}${ransomOn ? `<i class="tb-rbn">${icon('icon.coin', '', 'ico-xs')}${v.ransom}</i>` : ''}`, ransomOn ? ' armed' : '') : '',
+      v.canStrike && !v.over ? rb('data-a="surrender"', strikeOn ? L('strikeSure') : L('strike'), btIcon('bt_strike', 'icon.bt_colours', 'ico'), ` danger${strikeOn ? ' armed' : ''}`) : '',
+    ].join('');
+    const officer = v.mine && act?.officer?.ready ? act.officer : null;
+    // From the corner outward: wait under the thumb, then defend, the officer's word, «…».
+    const left = [
+      rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited),
+      rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', !v.mine),
+      officer ? rb('data-a="order"', `${L(`o.${officer.order}` as K)}: ${L(`od.${officer.order}` as K)}`, icon(`icon.role_${officer.role}`, '', 'ico'), ' officer') : '',
+      `<div class="tb-mwrap">${rb('data-more', L('more'), '<i class="tb-dots"><b></b><b></b><b></b></i>', this.moreOpen ? ' on' : '')}${this.moreOpen && more ? `<div class="tb-more">${more}</div>` : ''}</div>`,
+    ].join('');
+    // Her path's two moves (the ultimate shown once it is hers, from level 20), and the book in the corner.
+    const mv = (kind: 'innate' | 'ult'): string => {
+      const st = kind === 'innate' ? me.innate : me.ult;
+      if (!me.path || !st || st === 'locked') return '';
+      const early = kind === 'ult' && v.round < ULT_ROUND;
+      const note = st === 'used' ? L('used') : early ? L('ultRound') : L('free');
+      return rb(`data-move="${kind}"`, `${L(kind)}: ${moveName(me.path, kind === 'ult')} (${note})`, icon(`icon.${(kind === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico'), ` mv ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}`, !v.mine || st !== 'ready' || early);
+    };
+    const t = this.targeting;
+    const aimed = !t ? '' : t === 'innate' || t === 'ult' ? (me.path ? icon(`icon.${(t === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico') : '') : spIcon(t);
+    const book = t
+      ? rb('data-cancel', `${L('cancel')}: ${t === 'innate' || t === 'ult' ? (me.path ? moveName(me.path, t === 'ult') : '') : spName(t)}`, `${aimed}<i class="tb-x"></i>`, ' book aim')
+      : me.spells.length ? rb('data-book', L('book'), btIcon('bt_book', 'icon.bt_captain', 'ico'), ` book${this.bookOpen ? ' on' : ''}`) : '';
+    // The turn's face, and the round behind it.
+    const whose = v.over ? '' : v.mine ? L('yourTurn') : act && act.side === v.you ? L('autoTurn') : L('theirTurn');
+    const face = act ? (figureArt(act) ? icon(figureArt(act)!, '', 'ico fig') : icon(stackArt(act), '', 'ico')) : '';
+    const turn = `<button class="tb-turnb${act ? (act.side === v.you ? ' you' : ' foe') : ''}${v.mine ? ' mine' : ''}${this.sheetOpen ? ' on' : ''}" data-sheet title="${esc(`${L('round', { n: v.round })} · ${whose}`)}" aria-label="${esc(L('order.label'))}" aria-expanded="${this.sheetOpen}">${face}</button>`;
+    const pip = (n: number, up: string, down: string, k: K) => `<span class="tb-shp${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(k))}">${btIcon(n < 0 ? down : up, '', 'ico-xs')}${n > 0 ? `+${n}` : n}</span>`;
+    const captain = (x: 0 | 1) => {
+      const h = v.heroes[x], f = this.heroFace(v, x);
+      return `<div class="tb-shh ${x === v.you ? 'you' : 'foe'}"><i class="tb-shf" style="background-image:${f ? `url('${f}')` : 'none'}"></i><b>${esc(this.heroName(v, x))}</b><span class="tb-shp" title="${esc(L('men', { n: h.men, m: h.menStart }))}">${icon('icon.stat_crew', '', 'ico-xs')}${h.men}/${h.menStart}</span>${pip(h.morale, 'st_morale_up', 'st_morale_down', 'morale')}${pip(h.luck, 'st_luck_up', 'st_luck_down', 'luck')}</div>`;
+    };
+    const words = v.log.filter((e) => e.k !== 'move').slice(-3).map((e) => this.words(e, v)).filter(Boolean);
+    const sheet = this.sheetOpen && !v.over
+      ? `<div class="tb-sheet" role="dialog" aria-label="${esc(L('order.label'))}"><div class="tb-sh-r"><b>${esc(L('round', { n: v.round }))}</b><em>${esc(whose)}</em></div>${captain(v.you)}${captain((1 - v.you) as 0 | 1)}<div class="tb-sh-q">${this.queue(v)}</div>${words.length ? `<div class="tb-sh-feed">${words.map((w) => `<div>${esc(w)}</div>`).join('')}</div>` : ''}</div>`
+      : '';
+    pad.className = `tb-pad${this.bookOpen ? ' bk-open' : ''}${v.over ? ' over' : ''}`;
+    pad.innerHTML = `${turn}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}${mv('innate')}${mv('ult')}</div>`;
+    const again = () => {
+      this.key = '';
+      if (this.view) this.dom(this.view);
+    };
+    pad.querySelector<HTMLElement>('[data-sheet]')!.onclick = () => {
+      this.sheetOpen = !this.sheetOpen;
+      this.moreOpen = false;
+      if (this.sheetOpen) this.showInfo(null);
+      again();
+    };
+    pad.querySelector<HTMLElement>('[data-more]')!.onclick = () => {
+      this.moreOpen = !this.moreOpen;
+      this.sheetOpen = false;
+      again();
+    };
+    const cancel = pad.querySelector<HTMLElement>('[data-cancel]');
+    if (cancel) cancel.onclick = () => {
+      this.targeting = this.preview = null;
+      again();
+    };
+    pad.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => {
+      this.sheetOpen = false;
+      again();
+      this.showInfo(Number(b.dataset.info));
+    }));
+  }
+
   private dom(v: TacView): void {
     const el = this.el!;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, this.phone, this.tall, this.moreOpen, this.sheetOpen]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
       const h = v.heroes[x];
-      const url = h.captain ? assetUrl(CAPTAINS[h.captain].portrait) : null;
       const pips = (n: number, cls: string) => `<span class="tb-pip ${cls}${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(cls === 'm' ? 'morale' : 'luck'))}">${cls === 'm' ? '⚑' : '✦'}${n > 0 ? `+${n}` : n}</span>`;
       const mine = x === v.you;
       // The hero beside the field (docs/17 H2): her four primaries and her will.
       const prim = h.prim ? `<span class="tb-prims">${PRIMS.map((p) => `<span class="tb-prim" title="${esc(PRIM_NAMES[p][lang() === 'ru' ? 1 : 0])}">${icon(PRIM_ICON[p], '', 'ico-xs')}${p === 'will' ? `${h.mana ?? 0}/${h.manaMax ?? 0}` : h.prim![p]}</span>`).join('')}${h.stam !== undefined ? `<span class="tb-prim tb-stamv" title="${esc(L('stam'))}">${icon('tree_survival', '', 'ico-xs')}${h.stam}/${h.stamMax ?? 0}</span>` : ''}</span>` : '';
       // docs/18: her path, and her innate move and ultimate (spent or not) — on her side of the field too.
       const moves = h.path && h.innate ? `<span class="tb-moves">${icon(INNATE[h.path].icon, '', `ico-xs tb-mv${h.innate === 'used' ? ' off' : ''}`)}${h.ult !== 'locked' ? icon(ULTIMATE[h.path].icon, '', `ico-xs tb-mv ult${h.ult === 'used' ? ' off' : ''}`) : ''}<i>${esc(CAPTAINS[h.path].archetype)}</i></span>` : '';
-      // A face of the art (docs/18 II: a lair's creature) or a named captain's portrait.
-      // A great one ashore whose own figure is not painted yet shows the figure that stands in for it (2026-10-03).
-      const fid = h.face?.startsWith('unit.') && isBossUnit(h.face.slice(5)) && !assetUrl(h.face) ? UNITS[h.face.slice(5) as UnitId].art : h.face;
-      const face = fid ? (fid.includes('.') && !fid.startsWith('portrait.') ? assetUrl(fid) : portraitUrl(fid.replace(/^portrait\./, ''))) ?? url : url;
+      const face = this.heroFace(v, x);
       return `<div class="tb-face" style="background-image:${face ? `url('${face}')` : 'none'}"></div>
-        <div class="tb-who"><b>${esc(v.land && !mine ? (LAIRS[v.land.lair as LairKind]?.name[lang() === 'ru' ? 1 : 0] ?? (isDriftKind(v.land.lair) ? DRIFTS[v.land.lair].name[lang() === 'ru' ? 1 : 0] : v.land.lair === 'find_chest' ? findTitle('chest') : roamOf(v.land.lair) ? roamName(roamOf(v.land.lair)!) : isShoreBoss(v.land.lair) ? SHORE_BOSSES[v.land.lair].name[lang() === 'ru' ? 1 : 0] : h.name)) : personName(h.name))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest' || roamOf(v.land.lair)) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
+        <div class="tb-who"><b>${esc(this.heroName(v, x))}</b><small>${esc(v.land && !mine && (isDriftKind(v.land.lair) || v.land.lair === 'find_chest' || roamOf(v.land.lair)) ? '' : placeName(h.ship))}</small>${prim}${moves}<span class="tb-pips"><span class="tb-pip tb-men">${esc(L('men', { n: h.men ?? 0, m: h.menStart ?? 0 }))}</span>${pips(h.morale, 'm')}${pips(h.luck, 'l')}${h.auto && mine ? `<span class="tb-auto">${esc(L('autoTurn'))}</span>` : ''}</span></div>`;
     };
     el.querySelector('.tb-hero.you')!.innerHTML = hero(v.you);
     el.querySelector('.tb-hero.foe')!.innerHTML = hero((1 - v.you) as 0 | 1);
     const turn = v.over ? '' : v.mine ? L('yourTurn') : act && act.side === v.you ? L('autoTurn') : L('theirTurn');
     el.querySelector('.tb-mid')!.innerHTML = `<div class="tb-round">${esc(L('round', { n: v.round }))}</div><div class="tb-turn${v.mine ? ' mine' : ''}">${act ? `<span class="tb-dot ${act.side === v.you ? 'you' : 'foe'}"></span>` : ''}${esc(turn)} <em class="tb-secs"></em></div><div class="tb-timer"><i></i></div>`;
     // The order of the round, then the next round's first few.
-    const chip = (id: number, next: boolean) => {
-      const s = v.stacks.find((x) => x.id === id);
-      if (!s) return '';
-      return `<button class="tb-q ${s.side === v.you ? 'you' : 'foe'}${id === v.active && !next ? ' on' : ''}${next ? ' next' : ''}" data-info="${s.id}" title="${esc(stackName(s))}">${figureArt(s) ? icon(figureArt(s)!, '', 'ico fig') : icon(stackArt(s), '', 'ico')}<b>${s.count}</b></button>`;
-    };
-    el.querySelector('.tb-queue')!.innerHTML = `${v.order.map((id) => chip(id, false)).join('')}<span class="tb-qsep"></span>${v.next.map((id) => chip(id, true)).join('')}`;
+    el.querySelector('.tb-queue')!.innerHTML = this.queue(v);
     el.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => this.showInfo(Number(b.dataset.info))));
     // The feed: the last three things, in words.
     const words = v.log.filter((e) => e.k !== 'move').slice(-3).map((e) => this.words(e, v)).filter(Boolean);
@@ -659,8 +821,9 @@ export class TacticalPanel {
       const note = st === 'locked' ? L('ultLocked') : st === 'used' ? L('used') : early ? L('ultRound') : L('free');
       return `<button class="btn tb-spell tb-move ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}" data-move="${kind}" ${off ? 'disabled' : ''} title="${esc(moveText(me.path, kind === 'ult'))}">${icon(`icon.${mv.icon}`, '', 'ico')}<span><b>${esc(L(kind))}: ${esc(moveName(me.path, kind === 'ult'))}</b><small>${esc(note)}</small></span></button>`;
     };
-    // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3.
-    const more = me.spells.length > 4;
+    // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3. A phone has no panel:
+    // every page is in the book, opened by its round button.
+    const more = me.spells.length > 4 || (this.phone && me.spells.length > 0);
     el.querySelector('.tb-spells')!.innerHTML = will + move('innate') + move('ult') + me.spells.slice(0, 4).map(page).join('') + (more ? `<button class="btn tb-bookbtn${this.bookOpen ? ' on' : ''}" data-book>${btIcon('bt_book', 'icon.bt_captain', 'ico')}<span><b>${esc(L('book'))}</b><small>${esc(L('book.n', { n: me.spells.length }))}</small></span></button>` : '');
     // The book over the field, as HoMM3's: two facing pages, a bookmark for each school she has pages of, the corners
     // to turn; painted when its picture is (bg.spellbook), parchment until then.
@@ -669,16 +832,20 @@ export class TacticalPanel {
     book.innerHTML = '';
     if (more && this.bookOpen) {
       const ru = lang() === 'ru' ? 1 : 0;
-      // Over the whole battle, as large as the screen lets a 16:9 book be (a phone's field alone is too small for it).
-      const w = Math.max(240, Math.min(1100, innerWidth * 0.96, innerHeight * 0.94 * 16 / 9));
-      const per = w < 560 ? 4 : 6;
+      // Over the whole battle, as large as the screen lets a 16:9 book be (a phone's field alone is too small for it). A
+      // phone held upright has no room for the spread: one tall page of parchment, eight orders to it, its words as
+      // large as on a phone on its side (--bk-w sets the book's type as well as its size).
+      const tall = this.tall;
+      const w = tall ? 720 : Math.max(240, Math.min(1100, innerWidth * 0.96, innerHeight * 0.94 * 16 / 9));
+      const per = tall ? 8 : w < 560 ? 4 : 6;
+      const leaves = tall ? 1 : 2;
       const all = [...me.spells].sort((a, b) => SCHOOLS.indexOf(ORDERS[a.id]?.school as School) - SCHOOLS.indexOf(ORDERS[b.id]?.school as School) || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0));
       const schools = SCHOOLS.filter((sc) => all.some((sp) => ORDERS[sp.id]?.school === sc));
       const tab = this.bookTab !== 'all' && schools.includes(this.bookTab) ? this.bookTab : 'all';
       const list = tab === 'all' ? all : all.filter((sp) => ORDERS[sp.id]?.school === tab);
-      const spreads = Math.max(1, Math.ceil(list.length / (per * 2)));
+      const spreads = Math.max(1, Math.ceil(list.length / (per * leaves)));
       const at = Math.min(this.bookPage, spreads - 1);
-      const side = (k: 0 | 1) => list.slice((at * 2 + k) * per, (at * 2 + k + 1) * per);
+      const side = (k: 0 | 1) => list.slice((at * leaves + k) * per, (at * leaves + k + 1) * per);
       const entry = (sp: (typeof me.spells)[number]) => {
         const wait = Math.max(0, sp.ready - v.round);
         const pool = sp.res === 'stam' ? me.stam : me.mana;
@@ -688,13 +855,16 @@ export class TacticalPanel {
         return `<button class="bk-sp${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(`${spName(sp.id)} — ${spText(sp.id)}`)}">${spIcon(sp.id, 'bk-ico')}<b>${esc(spName(sp.id))}</b><small>${note}</small></button>`;
       };
       const tabBtn = (id: School | 'all', ico: string, name: string) => `<button class="bk-tab${tab === id ? ' on' : ''}" data-booktab="${id}" title="${esc(name)}" aria-label="${esc(name)}">${ico}</button>`;
-      const art = assetUrl('bg.spellbook');
-      book.className = `tb-book bk${art ? ' painted' : ''}`;
+      const art = tall ? null : assetUrl('bg.spellbook');
+      book.className = `tb-book bk${art ? ' painted' : ''}${tall ? ' tall' : ''}`;
       book.style.setProperty('--bk-w', `${Math.round(w)}px`);
       book.style.setProperty('--bk-rows', String(per / 2));
       book.style.backgroundImage = art ? `url('${art}')` : '';
-      book.innerHTML = `<div class="bk-page l"><h4>${esc(tab === 'all' ? L('book') : SCHOOL_NAMES[tab][ru])}</h4><div class="bk-grid">${side(0).map(entry).join('')}</div><i class="bk-no">${at * 2 + 1}</i></div>
-        <div class="bk-page r"><div class="bk-will">${will}</div><div class="bk-grid">${side(1).map(entry).join('')}</div><i class="bk-no">${at * 2 + 2}</i></div>
+      const head = `<h4>${esc(tab === 'all' ? L('book') : SCHOOL_NAMES[tab][ru])}</h4>`;
+      book.innerHTML = (tall
+        ? `<div class="bk-page l">${head}<div class="bk-will">${will}</div><div class="bk-grid">${side(0).map(entry).join('')}</div><i class="bk-no">${at + 1}</i></div>`
+        : `<div class="bk-page l">${head}<div class="bk-grid">${side(0).map(entry).join('')}</div><i class="bk-no">${at * 2 + 1}</i></div>
+        <div class="bk-page r"><div class="bk-will">${will}</div><div class="bk-grid">${side(1).map(entry).join('')}</div><i class="bk-no">${at * 2 + 2}</i></div>`) + `
         <div class="bk-tabs">${tabBtn('all', btIcon('bt_book', 'icon.bt_captain', 'ico'), L('book'))}${schools.map((sc) => tabBtn(sc, btIcon(BOOK_TAB[sc], `icon.${SCHOOL_ICON[sc]}`, 'ico'), SCHOOL_NAMES[sc][ru])).join('')}</div>
         <button class="bk-turn prev" data-bookpg="-1" ${at === 0 ? 'disabled' : ''} aria-label="‹">‹</button><button class="bk-turn next" data-bookpg="1" ${at >= spreads - 1 ? 'disabled' : ''} aria-label="›">›</button>
         <button class="bk-close" data-bookclose title="${esc(L('close'))}" aria-label="${esc(L('close'))}">✕</button>`;
@@ -710,21 +880,25 @@ export class TacticalPanel {
         this.dom(v);
       }));
     }
+    // The phone's round buttons (before the bindings below, which are theirs too).
+    this.padDom(v);
     el.querySelectorAll<HTMLElement>('[data-spell]').forEach((b) => (b.onclick = () => {
       this.bookOpen = false;
       this.spell(b.dataset.spell as TacSpellId);
     }));
     el.querySelectorAll<HTMLElement>('[data-move]').forEach((b) => (b.onclick = () => this.move2(b.dataset.move as 'innate' | 'ult')));
-    el.querySelector<HTMLElement>('[data-book]')?.addEventListener('click', () => {
+    el.querySelectorAll<HTMLElement>('[data-book]').forEach((b) => (b.onclick = () => {
       this.bookOpen = !this.bookOpen;
+      this.moreOpen = this.sheetOpen = false;
+      if (this.bookOpen) this.showInfo(null);
       this.key = '';
       this.dom(v);
-    });
-    el.querySelector<HTMLElement>('[data-bookclose]')?.addEventListener('click', () => {
+    }));
+    el.querySelectorAll<HTMLElement>('[data-bookclose]').forEach((b) => (b.onclick = () => {
       this.bookOpen = false;
       this.key = '';
       this.dom(v);
-    });
+    }));
     // The stack's own orders and the fight's.
     const officer = v.mine && act?.officer?.ready ? act.officer : null;
     const armed = this.strikeArmed > performance.now();
@@ -747,7 +921,17 @@ export class TacticalPanel {
       v.ransom && !v.over ? `<button class="btn${ransomOn ? ' on armed' : ''}" data-a="ransom" ${lab(ransom, L('ransomTip'))}>${btIcon('bt_ransom', 'icon.coin')}${word(ransom)}</button>` : '',
       v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on armed' : ''}" data-a="surrender" ${lab(strike)}>${btIcon('bt_strike', '')}${word(strike)}</button>` : '',
     ].join('');
-    el.querySelectorAll<HTMLElement>('[data-a]').forEach((b) => (b.onclick = () => this.button(b.dataset.a!)));
+    el.querySelectorAll<HTMLElement>('[data-a]').forEach((b) => (b.onclick = () => {
+      const a = b.dataset.a!;
+      // On a phone the «…» closes once its order is given; the ransom and the colours stay open for the second tap.
+      const asks = (a === 'ransom' && this.ransomArmed <= performance.now()) || (a === 'surrender' && this.strikeArmed <= performance.now());
+      if (this.moreOpen && !asks) {
+        this.moreOpen = false;
+        this.key = '';
+      }
+      this.button(a);
+      if (!this.key && this.view) this.dom(this.view);
+    }));
     // The end.
     const banner = el.querySelector<HTMLElement>('.tb-banner')!;
     banner.classList.toggle('hidden', !v.over);
@@ -760,8 +944,9 @@ export class TacticalPanel {
       // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
       const r = v.result;
       const faces = (xs: { u: UnitId; n: number }[]) => xs.length ? xs.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i>−${x.n}</i></span>`).join('') : `<em class="muted">${esc(L('res.none'))}</em>`;
-      // docs/18 #36: the beaten who would follow her come first (on a phone the reckoning scrolls under them).
-      banner.innerHTML = `<b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(whyText)}</span>${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}${r?.loot ? lootBlock(r.loot) : ''}${v.land ? `<button class="btn btn-primary tb-landclose" data-landclose>${esc(LL('close'))}</button>` : ''}`;
+      // docs/18 #36: the beaten who would follow her come first (on a phone the reckoning scrolls under them, the close
+      // staying in sight below it).
+      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(whyText)}</span>${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}${r?.loot ? lootBlock(r.loot) : ''}</div>${v.land ? `<button class="btn btn-primary tb-landclose" data-landclose>${esc(LL('close'))}</button>` : ''}`;
       banner.querySelector<HTMLElement>('[data-landclose]')?.addEventListener('click', () => this.send({ t: 'lair', action: 'close' }));
       banner.querySelectorAll<HTMLElement>('[data-cap]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'capture', choice: b.dataset.cap as 'take' })));
     }
@@ -822,6 +1007,7 @@ export class TacticalPanel {
 
   /** The stack's card: what it is, its numbers, its officer. */
   private showInfo(id: number | null): void {
+    if (id !== this.info) this.spNote = null;
     this.info = id;
     const card = this.el?.querySelector<HTMLElement>('.tb-card');
     const v = this.view;
@@ -832,14 +1018,18 @@ export class TacticalPanel {
       this.info = null;
       return;
     }
-    const row = (k: K, val: string) => `<div><span>${esc(L(k))}</span><b>${esc(val)}</b></div>`;
+    // Each number by its painted mark and its word (the word cut short in a narrow column, whole in the title).
+    // A hero's bonus leaves a tenth on her attack and defence: 20,5 in Russian.
+    const num = (n: number) => (Number.isInteger(n) ? String(n) : dec1(n));
+    const row = (ic: string, k: K, val: string) => `<div title="${esc(L(k))}">${icon(ic, '', 'ico-xs')}<span>${esc(L(k))}</span><b>${esc(val)}</b></div>`;
     const o = s.officer;
     const d = s.unit ? UNITS[s.unit] : null;
+    const note = this.spNote && s.sp?.includes(this.spNote as UnitSpecial) ? (this.spNote as UnitSpecial) : null;
     card.className = `tb-card ${s.side === v.you ? 'you' : 'foe'}`;
-    card.innerHTML = `<div class="tb-card-h">${figureArt(s) ? icon(figureArt(s)!, '', 'ico-md fig') : icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b><small>${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}</small></div></div>
-      <div class="tb-stats">${row('st.count', `${s.count} / ${s.start}`)}${row('st.atk', String(s.atk))}${row('st.def', String(s.def))}${row('st.dmg', `${s.dmg[0]}–${s.dmg[1]}`)}${row('st.hp', `${s.hp} / ${s.hpMax}`)}${row('st.speed', String(s.speed))}${row('st.init', String(s.init))}${s.shotsMax ? row('st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
+    card.innerHTML = `<div class="tb-card-h">${figureArt(s) ? icon(figureArt(s)!, '', 'ico-md fig') : icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b><small>${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}</small></div><button class="tb-cardx" title="${esc(L('close'))}" aria-label="${esc(L('close'))}"></button></div>
+      <div class="tb-stats">${row('icon.stat_crew', 'st.count', `${s.count} / ${s.start}`)}${row('icon.item_cutlass', 'st.atk', num(s.atk))}${row('icon.mod_hull_plating', 'st.def', num(s.def))}${row('icon.tree_boarding', 'st.dmg', `${s.dmg[0]}–${s.dmg[1]}`)}${row('icon.tattoo_heart', 'st.hp', `${s.hp} / ${s.hpMax}`)}${row('icon.item_seaboots', 'st.speed', String(s.speed))}${row('icon.mount_war_drums', 'st.init', String(s.init))}${s.shotsMax ? row('icon.item_powder_horn', 'st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('icon.st_no_ret', 'st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
       ${STATUS.some(([f]) => s[f]) ? `<div class="tb-sts">${STATUS.filter(([f]) => s[f]).map(([, ic, k]) => `<span class="chip tb-st${k === 'sts.defending' || k === 'sts.braced' || k === 'sts.again' ? ' good' : k === 'sts.waited' ? '' : ' bad'}">${btIcon(ic, '', 'ico-xs')}${esc(L(k))}</span>`).join('')}</div>` : ''}
-      ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<span class="chip" title="${esc(specialNote(x))}">${esc(specialName(x))}</span>`).join('')}</div>` : ''}
+      ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<button class="chip tb-spc${note === x ? ' on' : ''}" data-spnote="${esc(x)}" title="${esc(specialNote(x))}">${esc(specialName(x))}</button>`).join('')}</div>${note ? `<p class="tb-spn">${esc(specialNote(note))}</p>` : ''}` : ''}
       <p class="muted">${esc(s.kind === 'officer' || !s.unit ? L(`kd.${s.kind}` as K) : unitNote(s.unit))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
   }
 
@@ -969,10 +1159,17 @@ export class TacticalPanel {
     this.cancelPress();
     const x = e.clientX, y = e.clientY;
     const timer = window.setTimeout(() => {
-      // A long press: the stack's card.
+      // A long press: the stack's card, whatever a tap on it would do (a foe in reach is struck by a tap).
       const h = this.hexAt({ clientX: x, clientY: y });
       const s = h !== null ? this.stackAt(h) : undefined;
-      if (s) this.showInfo(s.id);
+      if (s) {
+        if (this.phone && (this.moreOpen || this.sheetOpen || this.bookOpen)) {
+          this.moreOpen = this.sheetOpen = this.bookOpen = false;
+          this.key = '';
+          if (this.view) this.dom(this.view);
+        }
+        this.showInfo(s.id);
+      }
       this.press = null;
     }, 450);
     this.press = { x, y, t: performance.now(), timer };
@@ -998,6 +1195,15 @@ export class TacticalPanel {
   private tap(h: number | null): void {
     const v = this.view;
     if (!v) return;
+    // On a phone a tap beside an open card, the round, the «…» or the book only closes it: the finger reaching to put
+    // it away must not also march a stack or strike.
+    if (this.phone && (this.info !== null || this.moreOpen || this.sheetOpen || this.bookOpen)) {
+      this.showInfo(null);
+      this.moreOpen = this.sheetOpen = this.bookOpen = false;
+      this.key = '';
+      this.dom(v);
+      return;
+    }
     if (this.info !== null) this.showInfo(null);
     if (h === null) {
       this.preview = null;
@@ -1084,22 +1290,50 @@ export class TacticalPanel {
     return { x: p.fx + (p.x - p.fx) * e, y: p.fy + (p.y - p.fy) * e };
   }
 
-  /** The canvas fits its stage: hexes as large as the room allows, the board centred. */
+  /** On a phone, the room its buttons take at the field's edges: a band down either side when the phone lies on its
+   *  side (the same both sides, so the board stays in the middle), along the bottom and the top when it stands upright.
+   *  Measured off the buttons themselves, so a third row of them, or a notch's inset, moves the board too. */
+  private bands(stage: HTMLElement): { l: number; r: number; t: number; b: number } {
+    const out = { l: 0, r: 0, t: 0, b: 0 };
+    if (!this.phone || !this.el) return out;
+    const s = stage.getBoundingClientRect();
+    const side = s.width > s.height;
+    for (const e of this.el.querySelectorAll<HTMLElement>('.tb-pad > .tb-pl, .tb-pad > .tb-pr, .tb-pad > .tb-turnb')) {
+      const r = e.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) continue;
+      if (side) {
+        if (r.left + r.right < s.left + s.right) out.l = Math.max(out.l, r.right - s.left + 6);
+        else out.r = Math.max(out.r, s.right - r.left + 6);
+      } else if (r.top + r.bottom < s.top + s.bottom) out.t = Math.max(out.t, r.bottom - s.top + 6);
+      else out.b = Math.max(out.b, s.bottom - r.top + 6);
+    }
+    if (side) out.l = out.r = Math.max(out.l, out.r);
+    return { l: Math.round(out.l), r: Math.round(out.r), t: Math.round(out.t), b: Math.round(out.b) };
+  }
+
+  /** The canvas fits its stage: hexes as large as the room allows, the board centred (on a phone, in the room its
+   *  buttons leave; the painted sea or ground still runs under them to the screen's edge). */
   private fit(): boolean {
     const c = this.canvas!;
     const stage = c.parentElement!;
     const cw = stage.clientWidth, ch = stage.clientHeight;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    if (cw === this.size.cw && ch === this.size.ch && dpr === this.size.dpr) return false;
+    const band = this.bands(stage);
+    const same = band.l === this.band.l && band.r === this.band.r && band.t === this.band.t && band.b === this.band.b;
+    if (cw === this.size.cw && ch === this.size.ch && dpr === this.size.dpr && same) return false;
+    this.band = band;
+    // The cards and the end over the field keep to the same room (styles.css: body.tac-ph).
+    for (const k of ['l', 'r', 't', 'b'] as const) this.el?.style.setProperty(`--tb-${k}`, `${band[k]}px`);
+    const aw = Math.max(1, cw - band.l - band.r), ah = Math.max(1, ch - band.t - band.b);
     // Side by side, or upright when that gives the bigger hexes (a phone held upright).
     const depth = ((TAC_H - 1) * 0.75 + 1) * (2 / SQ3);
-    const flat = Math.min(cw / TAC_W, ch / depth), up = Math.min(cw / depth, ch / TAC_W);
+    const flat = Math.min(aw / TAC_W, ah / depth), up = Math.min(aw / depth, ah / TAC_W);
     const rot: 0 | 1 | -1 = up > flat * 1.08 ? (this.view?.you === 1 ? -1 : 1) : 0;
     const w = Math.max(12, rot ? up : flat);
     const bw = w * TAC_W, bh = depth * w;
     const old = this.size;
     const sw = rot ? bh : bw, sh = rot ? bw : bh;
-    this.size = { w, cw, ch, ox: (cw - sw) / 2, oy: (ch - sh) / 2, dpr, rot, bw, bh };
+    this.size = { w, cw, ch, ox: band.l + (aw - sw) / 2, oy: band.t + (ah - sh) / 2, dpr, rot, bw, bh };
     c.width = Math.round(cw * dpr);
     c.height = Math.round(ch * dpr);
     c.style.width = `${cw}px`;
@@ -1682,6 +1916,12 @@ export class TacticalPanel {
     if (bar) bar.style.width = `${v.over ? 0 : Math.min(1, left / 30) * 100}%`;
     const secs = el.querySelector<HTMLElement>('.tb-secs');
     if (secs) secs.textContent = v.mine && !v.over ? L('secs', { n: Math.ceil(left) }) : '';
+    // A phone's clock: the ring round the turn's face, running down (no number on it).
+    const face = el.querySelector<HTMLElement>('.tb-turnb');
+    if (face) {
+      const k = (v.over ? 0 : Math.min(1, left / 30)).toFixed(3);
+      if (face.style.getPropertyValue('--tl') !== k) face.style.setProperty('--tl', k);
+    }
     if ((this.strikeArmed && this.strikeArmed < performance.now()) || (this.ransomArmed && this.ransomArmed < performance.now())) {
       this.strikeArmed = 0;
       this.ransomArmed = 0;
