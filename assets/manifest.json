@@ -1679,6 +1679,10 @@
     "unit.basalt_guardian":                    { "local": "units/basalt_guardian.webp", "remote": "hf_20261003_140007_gpt-anim_basalt_guardian.png", "job": "gpt-anim_basalt_guardian", "fit": "sheet:anim_basalt_guardian.0", "rev": 20261003140007},
     "unit.basalt_guardian_b":                  { "local": "units/basalt_guardian_b.webp", "remote": "hf_20261003_140007_gpt-anim_basalt_guardian.png", "job": "gpt-anim_basalt_guardian", "fit": "sheet:anim_basalt_guardian.1", "rev": 20261003140007},
     "unit.basalt_guardian_atk":                { "local": "units/basalt_guardian_atk.webp", "remote": "hf_20261003_140007_gpt-anim_basalt_guardian.png", "job": "gpt-anim_basalt_guardian", "fit": "sheet:anim_basalt_guardian.2", "rev": 20261003140007},
-    "unit.basalt_guardian_hit":                { "local": "units/basalt_guardian_hit.webp", "remote": "hf_20261003_140007_gpt-anim_basalt_guardian.png", "job": "gpt-anim_basalt_guardian", "fit": "sheet:anim_basalt_guardian.3", "rev": 20261003140007}
+    "unit.basalt_guardian_hit":                { "local": "units/basalt_guardian_hit.webp", "remote": "hf_20261003_140007_gpt-anim_basalt_guardian.png", "job": "gpt-anim_basalt_guardian", "fit": "sheet:anim_basalt_guardian.3", "rev": 20261003140007},
+    "unit.tide_caller":                        { "local": "units/tide_caller.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.0", "rev": 20261003140439},
+    "unit.tide_caller_b":                      { "local": "units/tide_caller_b.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.1", "rev": 20261003140439},
+    "unit.tide_caller_atk":                    { "local": "units/tide_caller_atk.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.2", "rev": 20261003140439},
+    "unit.tide_caller_hit":                    { "local": "units/tide_caller_hit.webp", "remote": "hf_20261003_140439_gpt-anim_tide_caller.png", "job": "gpt-anim_tide_caller", "fit": "sheet:anim_tide_caller.3", "rev": 20261003140439}
   }
 }
