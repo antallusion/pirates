@@ -4099,3 +4099,5 @@ body.touch .act-btn { --h: 38px; }
 @media (min-width: 1100px) and (min-height: 521px) {
   body.touch .tc-menu { top: max(calc(var(--sa-t) + var(--mm) + 64px), calc(var(--rg-bottom, 0px) + 6px)); }
 }
+/* The battle's queue and card show a painted figure's head and shoulders (owner, 2026-10-02: the battle as in Heroes). */
+.tb-q .ico.fig, .tb-card-h .ico-md.fig { object-fit: cover; object-position: 50% 6%; background: radial-gradient(circle at 50% 35%, #2a2620, #110e0b); }

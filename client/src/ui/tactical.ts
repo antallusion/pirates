@@ -553,7 +553,7 @@ export class TacticalPanel {
     const chip = (id: number, next: boolean) => {
       const s = v.stacks.find((x) => x.id === id);
       if (!s) return '';
-      return `<button class="tb-q ${s.side === v.you ? 'you' : 'foe'}${id === v.active && !next ? ' on' : ''}${next ? ' next' : ''}" data-info="${s.id}" title="${esc(stackName(s))}">${icon(stackArt(s), '', 'ico')}<b>${s.count}</b></button>`;
+      return `<button class="tb-q ${s.side === v.you ? 'you' : 'foe'}${id === v.active && !next ? ' on' : ''}${next ? ' next' : ''}" data-info="${s.id}" title="${esc(stackName(s))}">${figureArt(s) ? icon(figureArt(s)!, '', 'ico fig') : icon(stackArt(s), '', 'ico')}<b>${s.count}</b></button>`;
     };
     el.querySelector('.tb-queue')!.innerHTML = `${v.order.map((id) => chip(id, false)).join('')}<span class="tb-qsep"></span>${v.next.map((id) => chip(id, true)).join('')}`;
     el.querySelectorAll<HTMLElement>('.tb-q').forEach((b) => (b.onclick = () => this.showInfo(Number(b.dataset.info))));
@@ -706,7 +706,7 @@ export class TacticalPanel {
     const o = s.officer;
     const d = s.unit ? UNITS[s.unit] : null;
     card.className = `tb-card ${s.side === v.you ? 'you' : 'foe'}`;
-    card.innerHTML = `<div class="tb-card-h">${icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b><small>${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}${s.marked ? ` · <span class="bad">${esc(L('marked'))}</span>` : ''}</small></div></div>
+    card.innerHTML = `<div class="tb-card-h">${figureArt(s) ? icon(figureArt(s)!, '', 'ico-md fig') : icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b><small>${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}${s.marked ? ` · <span class="bad">${esc(L('marked'))}</span>` : ''}</small></div></div>
       <div class="tb-stats">${row('st.count', `${s.count} / ${s.start}`)}${row('st.atk', String(s.atk))}${row('st.def', String(s.def))}${row('st.dmg', `${s.dmg[0]}–${s.dmg[1]}`)}${row('st.hp', `${s.hp} / ${s.hpMax}`)}${row('st.speed', String(s.speed))}${row('st.init', String(s.init))}${s.shotsMax ? row('st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
       ${s.defending ? `<p class="tb-def">${esc(L('st.def.on'))}</p>` : ''}
       ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<span class="chip" title="${esc(specialNote(x))}">${esc(specialName(x))}</span>`).join('')}</div>` : ''}
