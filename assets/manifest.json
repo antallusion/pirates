@@ -1643,6 +1643,10 @@
     "unit.baleen_knight":                      { "local": "units/baleen_knight.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.0", "rev": 20261003131158},
     "unit.baleen_knight_b":                    { "local": "units/baleen_knight_b.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.1", "rev": 20261003131158},
     "unit.baleen_knight_atk":                  { "local": "units/baleen_knight_atk.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.2", "rev": 20261003131158},
-    "unit.baleen_knight_hit":                  { "local": "units/baleen_knight_hit.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.3", "rev": 20261003131158}
+    "unit.baleen_knight_hit":                  { "local": "units/baleen_knight_hit.webp", "remote": "hf_20261003_131158_gpt-anim_baleen_knight.png", "job": "gpt-anim_baleen_knight", "fit": "sheet:anim_baleen_knight.3", "rev": 20261003131158},
+    "unit.lancer":                             { "local": "units/lancer.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.0", "rev": 20261003131650},
+    "unit.lancer_b":                           { "local": "units/lancer_b.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.1", "rev": 20261003131650},
+    "unit.lancer_atk":                         { "local": "units/lancer_atk.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.2", "rev": 20261003131650},
+    "unit.lancer_hit":                         { "local": "units/lancer_hit.webp", "remote": "hf_20261003_131650_gpt-anim_lancer.png", "job": "gpt-anim_lancer", "fit": "sheet:anim_lancer.3", "rev": 20261003131650}
   }
 }
