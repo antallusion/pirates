@@ -1819,6 +1819,10 @@
     "unit.crab_queen":                         { "local": "units/crab_queen.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.0", "rev": 20261003173102},
     "unit.crab_queen_b":                       { "local": "units/crab_queen_b.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.1", "rev": 20261003173102},
     "unit.crab_queen_atk":                     { "local": "units/crab_queen_atk.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.2", "rev": 20261003173102},
-    "unit.crab_queen_hit":                     { "local": "units/crab_queen_hit.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.3", "rev": 20261003173102}
+    "unit.crab_queen_hit":                     { "local": "units/crab_queen_hit.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.3", "rev": 20261003173102},
+    "unit.cave_wyrm":                          { "local": "units/cave_wyrm.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.0", "rev": 20261003174321},
+    "unit.cave_wyrm_b":                        { "local": "units/cave_wyrm_b.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.1", "rev": 20261003174321},
+    "unit.cave_wyrm_atk":                      { "local": "units/cave_wyrm_atk.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.2", "rev": 20261003174321},
+    "unit.cave_wyrm_hit":                      { "local": "units/cave_wyrm_hit.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.3", "rev": 20261003174321}
   }
 }
