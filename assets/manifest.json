@@ -1815,6 +1815,10 @@
     "unit.hero_corsair":                       { "local": "units/hero_corsair.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.0", "rev": 20261003170626},
     "unit.hero_corsair_b":                     { "local": "units/hero_corsair_b.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.1", "rev": 20261003170626},
     "unit.hero_corsair_atk":                   { "local": "units/hero_corsair_atk.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.2", "rev": 20261003170626},
-    "unit.hero_corsair_hit":                   { "local": "units/hero_corsair_hit.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.3", "rev": 20261003170626}
+    "unit.hero_corsair_hit":                   { "local": "units/hero_corsair_hit.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.3", "rev": 20261003170626},
+    "unit.crab_queen":                         { "local": "units/crab_queen.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.0", "rev": 20261003173102},
+    "unit.crab_queen_b":                       { "local": "units/crab_queen_b.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.1", "rev": 20261003173102},
+    "unit.crab_queen_atk":                     { "local": "units/crab_queen_atk.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.2", "rev": 20261003173102},
+    "unit.crab_queen_hit":                     { "local": "units/crab_queen_hit.webp", "remote": "hf_20261003_173102_gpt-anim_crab_queen.png", "job": "gpt-anim_crab_queen", "fit": "sheet:anim_crab_queen.3", "rev": 20261003173102}
   }
 }
