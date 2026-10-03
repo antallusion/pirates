@@ -1747,6 +1747,10 @@
     "unit.bell_hermit":                        { "local": "units/bell_hermit.webp", "remote": "hf_20261003_153340_gpt-anim_bell_hermit.png", "job": "gpt-anim_bell_hermit", "fit": "sheet:anim_bell_hermit.0", "rev": 20261003153340},
     "unit.bell_hermit_b":                      { "local": "units/bell_hermit_b.webp", "remote": "hf_20261003_153340_gpt-anim_bell_hermit.png", "job": "gpt-anim_bell_hermit", "fit": "sheet:anim_bell_hermit.1", "rev": 20261003153340},
     "unit.bell_hermit_atk":                    { "local": "units/bell_hermit_atk.webp", "remote": "hf_20261003_153340_gpt-anim_bell_hermit.png", "job": "gpt-anim_bell_hermit", "fit": "sheet:anim_bell_hermit.2", "rev": 20261003153340},
-    "unit.bell_hermit_hit":                    { "local": "units/bell_hermit_hit.webp", "remote": "hf_20261003_153340_gpt-anim_bell_hermit.png", "job": "gpt-anim_bell_hermit", "fit": "sheet:anim_bell_hermit.3", "rev": 20261003153340}
+    "unit.bell_hermit_hit":                    { "local": "units/bell_hermit_hit.webp", "remote": "hf_20261003_153340_gpt-anim_bell_hermit.png", "job": "gpt-anim_bell_hermit", "fit": "sheet:anim_bell_hermit.3", "rev": 20261003153340},
+    "unit.giant_octopus":                      { "local": "units/giant_octopus.webp", "remote": "hf_20261003_155316_gpt-anim_giant_octopus.png", "job": "gpt-anim_giant_octopus", "fit": "sheet:anim_giant_octopus.0", "rev": 20261003155316},
+    "unit.giant_octopus_b":                    { "local": "units/giant_octopus_b.webp", "remote": "hf_20261003_155316_gpt-anim_giant_octopus.png", "job": "gpt-anim_giant_octopus", "fit": "sheet:anim_giant_octopus.1", "rev": 20261003155316},
+    "unit.giant_octopus_atk":                  { "local": "units/giant_octopus_atk.webp", "remote": "hf_20261003_155316_gpt-anim_giant_octopus.png", "job": "gpt-anim_giant_octopus", "fit": "sheet:anim_giant_octopus.2", "rev": 20261003155316},
+    "unit.giant_octopus_hit":                  { "local": "units/giant_octopus_hit.webp", "remote": "hf_20261003_155316_gpt-anim_giant_octopus.png", "job": "gpt-anim_giant_octopus", "fit": "sheet:anim_giant_octopus.3", "rev": 20261003155316}
   }
 }
