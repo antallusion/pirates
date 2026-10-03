@@ -1827,6 +1827,10 @@
     "unit.mangrove_hydra":                     { "local": "units/mangrove_hydra.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.0", "rev": 20261003174547},
     "unit.mangrove_hydra_b":                   { "local": "units/mangrove_hydra_b.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.1", "rev": 20261003174547},
     "unit.mangrove_hydra_atk":                 { "local": "units/mangrove_hydra_atk.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.2", "rev": 20261003174547},
-    "unit.mangrove_hydra_hit":                 { "local": "units/mangrove_hydra_hit.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.3", "rev": 20261003174547}
+    "unit.mangrove_hydra_hit":                 { "local": "units/mangrove_hydra_hit.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.3", "rev": 20261003174547},
+    "unit.ape_king":                           { "local": "units/ape_king.webp", "remote": "hf_20261003_174919_gpt-anim_ape_king.png", "job": "gpt-anim_ape_king", "fit": "sheet:anim_ape_king.0", "rev": 20261003174919},
+    "unit.ape_king_b":                         { "local": "units/ape_king_b.webp", "remote": "hf_20261003_174919_gpt-anim_ape_king.png", "job": "gpt-anim_ape_king", "fit": "sheet:anim_ape_king.1", "rev": 20261003174919},
+    "unit.ape_king_atk":                       { "local": "units/ape_king_atk.webp", "remote": "hf_20261003_174919_gpt-anim_ape_king.png", "job": "gpt-anim_ape_king", "fit": "sheet:anim_ape_king.2", "rev": 20261003174919},
+    "unit.ape_king_hit":                       { "local": "units/ape_king_hit.webp", "remote": "hf_20261003_174919_gpt-anim_ape_king.png", "job": "gpt-anim_ape_king", "fit": "sheet:anim_ape_king.3", "rev": 20261003174919}
   }
 }
