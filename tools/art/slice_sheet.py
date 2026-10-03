@@ -68,9 +68,10 @@ def main(sheet_name: str, stem: str) -> None:
     else:
         keyed = key_magenta(np.array(Image.open(src).convert('RGBA')))
         # Hairlines the painter rules between the cells (asked not to, now and then does): a column or row that is
-        # solid nearly end to end is no part of anything — it goes.
+        # solid nearly end to end is no part of anything — it goes. Not on a sheet of one thing that fills the picture
+        # edge to edge (a town on the chart: `whole`), where such a row is the town itself.
         solid0 = keyed[:, :, 3] > 128
-        for axis in (0, 1):
+        for axis in (() if sh.get('whole') else (0, 1)):
             full = solid0.mean(axis=axis) > 0.97
             idx = np.nonzero(full)[0]
             for k in idx:

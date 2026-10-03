@@ -183,7 +183,7 @@ def main() -> None:
         key = f'port_{x["id"]}'
         p_ = town_prompt(x)
         old = sheets.get(key, {})
-        sheets[key] = {'grid': [1, 1], 'mode': 'keyed', 'px': 1024, 'square': False, 'dir': 'props', 'aspect': '1:1', 'ids': [f'prop.port_{x["id"]}'], 'prompt': p_}
+        sheets[key] = {'grid': [1, 1], 'mode': 'keyed', 'whole': True, 'px': 1024, 'square': False, 'dir': 'props', 'aspect': '1:1', 'ids': [f'prop.port_{x["id"]}'], 'prompt': p_}
         if old.get('cut'):
             sheets[key]['cut'] = old['cut']
         else:

@@ -1979,6 +1979,7 @@
     "unit.dragon_lancer":                      { "local": "units/dragon_lancer.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.0", "rev": 20261003220936},
     "unit.dragon_lancer_b":                    { "local": "units/dragon_lancer_b.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.1", "rev": 20261003220936},
     "unit.dragon_lancer_atk":                  { "local": "units/dragon_lancer_atk.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.2", "rev": 20261003220936},
-    "unit.dragon_lancer_hit":                  { "local": "units/dragon_lancer_hit.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.3", "rev": 20261003220936}
+    "unit.dragon_lancer_hit":                  { "local": "units/dragon_lancer_hit.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.3", "rev": 20261003220936},
+    "prop.port_gallowsmouth":                  { "local": "props/port_gallowsmouth.webp", "remote": "hf_20261003_221517_gpt-port_gallowsmouth.png", "job": "gpt-port_gallowsmouth", "fit": "sheet:port_gallowsmouth.0", "rev": 20261003221517}
   }
 }
