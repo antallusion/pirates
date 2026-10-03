@@ -1755,6 +1755,10 @@
     "unit.barracuda":                          { "local": "units/barracuda.webp", "remote": "hf_20261003_155505_gpt-anim_barracuda.png", "job": "gpt-anim_barracuda", "fit": "sheet:anim_barracuda.0", "rev": 20261003155505},
     "unit.barracuda_b":                        { "local": "units/barracuda_b.webp", "remote": "hf_20261003_155505_gpt-anim_barracuda.png", "job": "gpt-anim_barracuda", "fit": "sheet:anim_barracuda.1", "rev": 20261003155505},
     "unit.barracuda_atk":                      { "local": "units/barracuda_atk.webp", "remote": "hf_20261003_155505_gpt-anim_barracuda.png", "job": "gpt-anim_barracuda", "fit": "sheet:anim_barracuda.2", "rev": 20261003155505},
-    "unit.barracuda_hit":                      { "local": "units/barracuda_hit.webp", "remote": "hf_20261003_155505_gpt-anim_barracuda.png", "job": "gpt-anim_barracuda", "fit": "sheet:anim_barracuda.3", "rev": 20261003155505}
+    "unit.barracuda_hit":                      { "local": "units/barracuda_hit.webp", "remote": "hf_20261003_155505_gpt-anim_barracuda.png", "job": "gpt-anim_barracuda", "fit": "sheet:anim_barracuda.3", "rev": 20261003155505},
+    "unit.moray":                              { "local": "units/moray.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.0", "rev": 20261003155910},
+    "unit.moray_b":                            { "local": "units/moray_b.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.1", "rev": 20261003155910},
+    "unit.moray_atk":                          { "local": "units/moray_atk.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.2", "rev": 20261003155910},
+    "unit.moray_hit":                          { "local": "units/moray_hit.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.3", "rev": 20261003155910}
   }
 }
