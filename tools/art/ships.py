@@ -156,7 +156,7 @@ def main() -> None:
         ids = [f"ship.{x['id']}" for x in g]
         p = sprite_prompt(g)
         old = sheets.get(key, {})
-        sheets[key] = {'grid': [len(g), 1], 'mode': 'keyed', 'px': 768, 'square': False, 'dir': 'ships', 'aspect': '3:2', 'ids': ids, 'prompt': p}
+        sheets[key] = {'grid': [len(g), 1], 'mode': 'keyed', 'whole': True, 'px': 768, 'square': False, 'dir': 'ships', 'aspect': '3:2', 'ids': ids, 'prompt': p}
         if old.get('cut'):
             sheets[key]['cut'] = old['cut']
         else:
