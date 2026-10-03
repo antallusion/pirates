@@ -1711,6 +1711,10 @@
     "unit.fisher":                             { "local": "units/fisher.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.0", "rev": 20261003145257},
     "unit.fisher_b":                           { "local": "units/fisher_b.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.1", "rev": 20261003145257},
     "unit.fisher_atk":                         { "local": "units/fisher_atk.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.2", "rev": 20261003145257},
-    "unit.fisher_hit":                         { "local": "units/fisher_hit.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.3", "rev": 20261003145257}
+    "unit.fisher_hit":                         { "local": "units/fisher_hit.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.3", "rev": 20261003145257},
+    "unit.dutchman_mate":                      { "local": "units/dutchman_mate.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.0", "rev": 20261003145550},
+    "unit.dutchman_mate_b":                    { "local": "units/dutchman_mate_b.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.1", "rev": 20261003145550},
+    "unit.dutchman_mate_atk":                  { "local": "units/dutchman_mate_atk.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.2", "rev": 20261003145550},
+    "unit.dutchman_mate_hit":                  { "local": "units/dutchman_mate_hit.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.3", "rev": 20261003145550}
   }
 }
