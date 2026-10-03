@@ -1891,6 +1891,22 @@
     "icon.mod_sail_locker":                    { "local": "icons/mod_sail_locker.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.12", "rev": 20261003212909},
     "icon.mod_bilge_keels":                    { "local": "icons/mod_bilge_keels.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.13", "rev": 20261003212909},
     "icon.mod_galley":                         { "local": "icons/mod_galley.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.14", "rev": 20261003212909},
-    "icon.mod_leviathan_ribs":                 { "local": "icons/mod_leviathan_ribs.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.15", "rev": 20261003212909}
+    "icon.mod_leviathan_ribs":                 { "local": "icons/mod_leviathan_ribs.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.15", "rev": 20261003212909},
+    "icon.mod_ink_sacs":                       { "local": "icons/mod_ink_sacs.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.0", "rev": 20261003213101},
+    "icon.mod_serpent_spine":                  { "local": "icons/mod_serpent_spine.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.1", "rev": 20261003213101},
+    "icon.mod_drowned_gunlocks":               { "local": "icons/mod_drowned_gunlocks.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.2", "rev": 20261003213101},
+    "icon.mod_wreck_bulwarks":                 { "local": "icons/mod_wreck_bulwarks.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.3", "rev": 20261003213101},
+    "icon.mod_tiller_chains":                  { "local": "icons/mod_tiller_chains.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.4", "rev": 20261003213101},
+    "icon.mod_eye_lantern":                    { "local": "icons/mod_eye_lantern.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.5", "rev": 20261003213101},
+    "icon.mod_maw_grapnels":                   { "local": "icons/mod_maw_grapnels.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.6", "rev": 20261003213101},
+    "icon.mod_widow_ribbons":                  { "local": "icons/mod_widow_ribbons.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.7", "rev": 20261003213101},
+    "icon.mount_swivel_gun":                   { "local": "icons/mount_swivel_gun.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.8", "rev": 20261003213101},
+    "icon.mount_long_tom":                     { "local": "icons/mount_long_tom.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.9", "rev": 20261003213101},
+    "icon.mount_rocket_frame":                 { "local": "icons/mount_rocket_frame.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.10", "rev": 20261003213101},
+    "icon.mount_fire_siphon":                  { "local": "icons/mount_fire_siphon.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.11", "rev": 20261003213101},
+    "icon.mount_net_thrower":                  { "local": "icons/mount_net_thrower.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.12", "rev": 20261003213101},
+    "icon.mount_smoke_pots":                   { "local": "icons/mount_smoke_pots.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.13", "rev": 20261003213101},
+    "icon.mount_powder_kegs":                  { "local": "icons/mount_powder_kegs.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.14", "rev": 20261003213101},
+    "icon.mount_war_drums":                    { "local": "icons/mount_war_drums.webp", "remote": "hf_20261003_213101_gpt-arms_3.png", "job": "gpt-arms_3", "fit": "sheet:arms_3.15", "rev": 20261003213101}
   }
 }
