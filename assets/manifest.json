@@ -1466,6 +1466,22 @@
     "icon.sp_mend_hull":                       { "local": "icons/sp_mend_hull.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.13", "rev": 20261003102219},
     "icon.sp_bt_wait":                         { "local": "icons/sp_bt_wait.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.14", "rev": 20261003102219},
     "icon.sp_bt_defend":                       { "local": "icons/sp_bt_defend.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.15", "rev": 20261003102219},
-    "icon.sp_point_blank":                     { "local": "icons/sp_point_blank.webp", "remote": "hf_20261003_102700_gpt-spells_fix.png", "job": "gpt-spells_fix", "fit": "sheet:spells_fix.0", "rev": 20261003102700}
+    "icon.sp_point_blank":                     { "local": "icons/sp_point_blank.webp", "remote": "hf_20261003_102700_gpt-spells_fix.png", "job": "gpt-spells_fix", "fit": "sheet:spells_fix.0", "rev": 20261003102700},
+    "prop.bt_mast":                            { "local": "props/bt_mast.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.0", "rev": 20261003103150},
+    "prop.bt_cannon":                          { "local": "props/bt_cannon.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.1", "rev": 20261003103150},
+    "prop.bt_barrels":                         { "local": "props/bt_barrels.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.2", "rev": 20261003103150},
+    "prop.bt_crates":                          { "local": "props/bt_crates.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.3", "rev": 20261003103150},
+    "prop.bt_boulder":                         { "local": "props/bt_boulder.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.4", "rev": 20261003103150},
+    "prop.bt_palm":                            { "local": "props/bt_palm.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.5", "rev": 20261003103150},
+    "prop.bt_lava":                            { "local": "props/bt_lava.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.6", "rev": 20261003103150},
+    "prop.bt_mangrove":                        { "local": "props/bt_mangrove.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.7", "rev": 20261003103150},
+    "prop.bt_graves":                          { "local": "props/bt_graves.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.8", "rev": 20261003103150},
+    "prop.bt_deadtree":                        { "local": "props/bt_deadtree.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.9", "rev": 20261003103150},
+    "prop.bt_coral":                           { "local": "props/bt_coral.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.10", "rev": 20261003103150},
+    "prop.bt_surfrock":                        { "local": "props/bt_surfrock.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.11", "rev": 20261003103150},
+    "prop.bt_anchor":                          { "local": "props/bt_anchor.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.12", "rev": 20261003103150},
+    "prop.bt_wreck":                           { "local": "props/bt_wreck.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.13", "rev": 20261003103150},
+    "prop.bt_campfire":                        { "local": "props/bt_campfire.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.14", "rev": 20261003103150},
+    "prop.bt_statue":                          { "local": "props/bt_statue.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.15", "rev": 20261003103150}
   }
 }
