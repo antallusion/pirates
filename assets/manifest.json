@@ -1551,6 +1551,10 @@
     "fx.bt_heal_0":                            { "local": "fx/bt_heal_0.webp", "remote": "hf_20261003_111440_gpt-fx-bt_heal.png", "job": "gpt-fx-bt_heal", "fit": "fxrow:0", "rev": 20261003111440},
     "fx.bt_heal_1":                            { "local": "fx/bt_heal_1.webp", "remote": "hf_20261003_111440_gpt-fx-bt_heal.png", "job": "gpt-fx-bt_heal", "fit": "fxrow:1", "rev": 20261003111440},
     "fx.bt_heal_2":                            { "local": "fx/bt_heal_2.webp", "remote": "hf_20261003_111440_gpt-fx-bt_heal.png", "job": "gpt-fx-bt_heal", "fit": "fxrow:2", "rev": 20261003111440},
-    "fx.bt_heal_3":                            { "local": "fx/bt_heal_3.webp", "remote": "hf_20261003_111440_gpt-fx-bt_heal.png", "job": "gpt-fx-bt_heal", "fit": "fxrow:3", "rev": 20261003111440}
+    "fx.bt_heal_3":                            { "local": "fx/bt_heal_3.webp", "remote": "hf_20261003_111440_gpt-fx-bt_heal.png", "job": "gpt-fx-bt_heal", "fit": "fxrow:3", "rev": 20261003111440},
+    "fx.bt_deep_0":                            { "local": "fx/bt_deep_0.webp", "remote": "hf_20261003_111925_gpt-fx-bt_deep.png", "job": "gpt-fx-bt_deep", "fit": "fxrow:0", "rev": 20261003111925},
+    "fx.bt_deep_1":                            { "local": "fx/bt_deep_1.webp", "remote": "hf_20261003_111925_gpt-fx-bt_deep.png", "job": "gpt-fx-bt_deep", "fit": "fxrow:1", "rev": 20261003111925},
+    "fx.bt_deep_2":                            { "local": "fx/bt_deep_2.webp", "remote": "hf_20261003_111925_gpt-fx-bt_deep.png", "job": "gpt-fx-bt_deep", "fit": "fxrow:2", "rev": 20261003111925},
+    "fx.bt_deep_3":                            { "local": "fx/bt_deep_3.webp", "remote": "hf_20261003_111925_gpt-fx-bt_deep.png", "job": "gpt-fx-bt_deep", "fit": "fxrow:3", "rev": 20261003111925}
   }
 }
