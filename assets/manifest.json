@@ -1575,6 +1575,10 @@
     "unit.duelist":                            { "local": "units/duelist.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.0", "rev": 20261003114313},
     "unit.duelist_b":                          { "local": "units/duelist_b.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.1", "rev": 20261003114313},
     "unit.duelist_atk":                        { "local": "units/duelist_atk.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.2", "rev": 20261003114313},
-    "unit.duelist_hit":                        { "local": "units/duelist_hit.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.3", "rev": 20261003114313}
+    "unit.duelist_hit":                        { "local": "units/duelist_hit.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.3", "rev": 20261003114313},
+    "unit.fog_shadow":                         { "local": "units/fog_shadow.webp", "remote": "hf_20261003_114840_gpt-anim_fog_shadow.png", "job": "gpt-anim_fog_shadow", "fit": "sheet:anim_fog_shadow.0", "rev": 20261003114840},
+    "unit.fog_shadow_b":                       { "local": "units/fog_shadow_b.webp", "remote": "hf_20261003_114840_gpt-anim_fog_shadow.png", "job": "gpt-anim_fog_shadow", "fit": "sheet:anim_fog_shadow.1", "rev": 20261003114840},
+    "unit.fog_shadow_atk":                     { "local": "units/fog_shadow_atk.webp", "remote": "hf_20261003_114840_gpt-anim_fog_shadow.png", "job": "gpt-anim_fog_shadow", "fit": "sheet:anim_fog_shadow.2", "rev": 20261003114840},
+    "unit.fog_shadow_hit":                     { "local": "units/fog_shadow_hit.webp", "remote": "hf_20261003_114840_gpt-anim_fog_shadow.png", "job": "gpt-anim_fog_shadow", "fit": "sheet:anim_fog_shadow.3", "rev": 20261003114840}
   }
 }
