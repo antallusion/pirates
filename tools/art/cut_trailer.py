@@ -35,6 +35,14 @@ def encode(src, vid):
     cmd += ['-c:a', 'aac', '-b:a', '96k'] if audio else ['-an']
     subprocess.run(cmd + [dst], check=True)
     print(dst, os.path.getsize(dst) // 1024, 'KB')
+    index()
+
+
+def index():
+    """assets/video/index.json: the films there are (the game shows only those, ui/cutscene.ts)."""
+    ids = sorted(f[:-4] for f in os.listdir(OUT) if f.endswith('.mp4'))
+    with open(os.path.join(OUT, 'index.json'), 'w', encoding='utf-8') as f:
+        json.dump(ids, f)
 
 
 def trailer():
@@ -67,6 +75,7 @@ def trailer():
     cmd += amap if audio else ['-an']
     subprocess.run(cmd + [dst], check=True)
     print(dst, f'{t:.1f} s', os.path.getsize(dst) // 1024, 'KB')
+    index()
 
 
 if __name__ == '__main__':

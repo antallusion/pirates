@@ -71,6 +71,7 @@ import { Journal } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
+import { loadFilms, playFilm } from './ui/cutscene.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
@@ -451,6 +452,23 @@ loadAssets(null).then(() => {
   if (ka) titleFilm(ka, url);
 });
 
+/** The game's films at their moments (ui/cutscene.ts): the first boarding (a lair's fight ashore), the first win and
+ *  loss, the first harbour, the first storm — each shown once. */
+const filmWas = { tac: false, over: false, docked: true, storm: false };
+function filmMoments(): void {
+  const tac = state.boardTac;
+  if (tac && !filmWas.tac) playFilm(tac.land ? 'cut_lair' : 'cut_boarding');
+  if (tac?.over && !filmWas.over) playFilm(tac.over.winner === tac.you ? 'cut_victory' : 'cut_defeat');
+  filmWas.tac = !!tac;
+  filmWas.over = !!tac?.over;
+  const docked = !!state.self?.dockedAt;
+  if (docked && !filmWas.docked && state.self) playFilm('cut_port');
+  filmWas.docked = docked || !state.self;
+  if (state.storm && !filmWas.storm) playFilm('cut_storm');
+  filmWas.storm = !!state.storm;
+}
+void loadFilms();
+
 /** The title screen: the trailer, silent and looping, over the key art (owner, 2026-10-03) — not for one who asks for
  *  less motion or saves data; it rests while the title screen is hidden. */
 function titleFilm(ka: HTMLElement, poster: string | null): void {
@@ -602,7 +620,7 @@ function onMessage(m: ServerMsg): void {
         prologuePending = false;
         localStorage.setItem('gravetide.helpSeen', '1');
         closeModal();
-        playPrologue(() => undefined);
+        playFilm('cut_prologue', () => playPrologue(() => undefined));
       } else if (!localStorage.getItem('gravetide.helpSeen')) {
         localStorage.setItem('gravetide.helpSeen', '1');
         openModal('help');
@@ -2312,6 +2330,7 @@ function step(t: number): void {
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
+    filmMoments();
     encounterCard.frame();
     surrenderCard.frame(state);
     fishFight.frame();
