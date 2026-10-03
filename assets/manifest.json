@@ -1735,6 +1735,10 @@
     "unit.lantern_wraith":                     { "local": "units/lantern_wraith.webp", "remote": "hf_20261003_151923_gpt-anim_lantern_wraith.png", "job": "gpt-anim_lantern_wraith", "fit": "sheet:anim_lantern_wraith.0", "rev": 20261003151923},
     "unit.lantern_wraith_b":                   { "local": "units/lantern_wraith_b.webp", "remote": "hf_20261003_151923_gpt-anim_lantern_wraith.png", "job": "gpt-anim_lantern_wraith", "fit": "sheet:anim_lantern_wraith.1", "rev": 20261003151923},
     "unit.lantern_wraith_atk":                 { "local": "units/lantern_wraith_atk.webp", "remote": "hf_20261003_151923_gpt-anim_lantern_wraith.png", "job": "gpt-anim_lantern_wraith", "fit": "sheet:anim_lantern_wraith.2", "rev": 20261003151923},
-    "unit.lantern_wraith_hit":                 { "local": "units/lantern_wraith_hit.webp", "remote": "hf_20261003_151923_gpt-anim_lantern_wraith.png", "job": "gpt-anim_lantern_wraith", "fit": "sheet:anim_lantern_wraith.3", "rev": 20261003151923}
+    "unit.lantern_wraith_hit":                 { "local": "units/lantern_wraith_hit.webp", "remote": "hf_20261003_151923_gpt-anim_lantern_wraith.png", "job": "gpt-anim_lantern_wraith", "fit": "sheet:anim_lantern_wraith.3", "rev": 20261003151923},
+    "unit.ghost_bosun":                        { "local": "units/ghost_bosun.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.0", "rev": 20261003152444},
+    "unit.ghost_bosun_b":                      { "local": "units/ghost_bosun_b.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.1", "rev": 20261003152444},
+    "unit.ghost_bosun_atk":                    { "local": "units/ghost_bosun_atk.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.2", "rev": 20261003152444},
+    "unit.ghost_bosun_hit":                    { "local": "units/ghost_bosun_hit.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.3", "rev": 20261003152444}
   }
 }
