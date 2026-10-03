@@ -154,7 +154,8 @@ export class FirstTips {
     if (this.showing && now > this.showing.until) this.dismiss(now);
     const stackVisible = (() => {
       const st = document.getElementById('hud-stack');
-      return !!st && st.offsetParent !== null && getComputedStyle(st).visibility !== 'hidden';
+      // Folded away (ui/hud.ts), a hint waits for the captain to open the stack.
+      return !!st && st.offsetParent !== null && getComputedStyle(st).visibility !== 'hidden' && !document.body.classList.contains('hud-folded');
     })();
     if (!this.showing && this.queue.length && now > this.restAt && !this.covered() && stackVisible) {
       const id = this.queue.shift()!;

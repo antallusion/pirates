@@ -244,6 +244,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'login.hint': 'Пиратское готическое море на многих капитанов · ранняя сборка',
   'captain.choose': 'Выберите капитана',
   'hud.unread': 'Ждут письма — [Y]',
+  'hud.fold': 'Цели, новости и подсказки',
   'hud.chatPh': 'Сказать слово…',
   'hud.chatPhTouch': 'Сказать слово… (/g — отряду, /ш Имя — шёпотом)',
   'conn.reconnecting': 'Восстанавливаем связь с Адмиралтейством…',

@@ -83,6 +83,9 @@ function toastLife(kind: string): number {
   return kind === 'xp' ? (phone ? 2500 : 3500) : kind === 'bad' ? (phone ? 5000 : 7000) : phone ? 3800 : 6000;
 }
 
+/** The top stack's blocks that fold behind its button (the rest is what is happening now). */
+const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-watch', 'hud-world', 'hud-goals', 'hud-feed'];
+
 export class Hud {
   private lastCaptainKey = '';
   /** The glory chip on the plate opens the Throne (docs/19 E1). */
@@ -156,6 +159,33 @@ export class Hud {
     const under = () => document.body.style.setProperty('--rg-bottom', `${Math.round(region.getBoundingClientRect().bottom / zoom())}px`);
     new ResizeObserver(under).observe(region);
     addEventListener('resize', under);
+    this.wireFold();
+  }
+
+  /** The goals, the sea's news, the holiday, the hints (owner, 2026-10-03: «столько текста… его нужно прятать… иконку
+   *  слева, нажимая на которую было бы показано то, что сейчас»): folded behind one round button at the head of the
+   *  top stack, its count of what is behind it on the button; what is happening now (a target, a boss, a storm, a race,
+   *  a dive) stays out. Folded at first; the captain's choice is kept. */
+  private wireFold(): void {
+    const btn = $('hud-fold');
+    const FOLD = 'gravetide.hudFold';
+    const set = (folded: boolean) => {
+      document.body.classList.toggle('hud-folded', folded);
+      btn.setAttribute('aria-expanded', String(!folded));
+      try { localStorage.setItem(FOLD, folded ? '1' : '0'); } catch { /* private mode */ }
+    };
+    set(localStorage.getItem(FOLD) !== '0');
+    btn.onclick = () => set(!document.body.classList.contains('hud-folded'));
+    const count = () => {
+      // Its picture once the art is in (the HUD is built before the manifest).
+      const art = btn.querySelector('img') ? null : assetUrl('icon.tab_letters') ?? assetUrl('icon.tab_board');
+      if (art) btn.insertAdjacentHTML('afterbegin', `<img src="${art}" alt="" draggable="false" />`);
+      const n = FOLDED.filter((id) => !document.getElementById(id)?.classList.contains('hidden')).length;
+      btn.querySelector('b')!.textContent = n ? String(n) : '';
+      btn.classList.toggle('hidden', n === 0 && document.body.classList.contains('hud-folded'));
+    };
+    new MutationObserver(count).observe($('hud-stack'), { subtree: true, attributes: true, attributeFilter: ['class'] });
+    count();
   }
 
   show(on: boolean): void {
