@@ -1739,6 +1739,10 @@
     "unit.ghost_bosun":                        { "local": "units/ghost_bosun.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.0", "rev": 20261003152444},
     "unit.ghost_bosun_b":                      { "local": "units/ghost_bosun_b.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.1", "rev": 20261003152444},
     "unit.ghost_bosun_atk":                    { "local": "units/ghost_bosun_atk.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.2", "rev": 20261003152444},
-    "unit.ghost_bosun_hit":                    { "local": "units/ghost_bosun_hit.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.3", "rev": 20261003152444}
+    "unit.ghost_bosun_hit":                    { "local": "units/ghost_bosun_hit.webp", "remote": "hf_20261003_152444_gpt-anim_ghost_bosun.png", "job": "gpt-anim_ghost_bosun", "fit": "sheet:anim_ghost_bosun.3", "rev": 20261003152444},
+    "unit.ghost_sailor":                       { "local": "units/ghost_sailor.webp", "remote": "hf_20261003_152855_gpt-anim_ghost_sailor.png", "job": "gpt-anim_ghost_sailor", "fit": "sheet:anim_ghost_sailor.0", "rev": 20261003152855},
+    "unit.ghost_sailor_b":                     { "local": "units/ghost_sailor_b.webp", "remote": "hf_20261003_152855_gpt-anim_ghost_sailor.png", "job": "gpt-anim_ghost_sailor", "fit": "sheet:anim_ghost_sailor.1", "rev": 20261003152855},
+    "unit.ghost_sailor_atk":                   { "local": "units/ghost_sailor_atk.webp", "remote": "hf_20261003_152855_gpt-anim_ghost_sailor.png", "job": "gpt-anim_ghost_sailor", "fit": "sheet:anim_ghost_sailor.2", "rev": 20261003152855},
+    "unit.ghost_sailor_hit":                   { "local": "units/ghost_sailor_hit.webp", "remote": "hf_20261003_152855_gpt-anim_ghost_sailor.png", "job": "gpt-anim_ghost_sailor", "fit": "sheet:anim_ghost_sailor.3", "rev": 20261003152855}
   }
 }
