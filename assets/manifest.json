@@ -1953,6 +1953,14 @@
     "icon.item_buff_coat":                     { "local": "icons/item_buff_coat.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.12", "rev": 20261003214256},
     "icon.item_smugglers_cloak":               { "local": "icons/item_smugglers_cloak.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.13", "rev": 20261003214256},
     "icon.item_powder_horn":                   { "local": "icons/item_powder_horn.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.14", "rev": 20261003214256},
-    "icon.item_buccaneer_boots":               { "local": "icons/item_buccaneer_boots.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.15", "rev": 20261003214256}
+    "icon.item_buccaneer_boots":               { "local": "icons/item_buccaneer_boots.webp", "remote": "hf_20261003_214256_gpt-items_6.png", "job": "gpt-items_6", "fit": "sheet:items_6.15", "rev": 20261003214256},
+    "icon.item_boarding_pike":                 { "local": "icons/item_boarding_pike.webp", "remote": "hf_20261003_214528_gpt-items_7.png", "job": "gpt-items_7", "fit": "sheet:items_7.0", "rev": 20261003214528},
+    "icon.item_officer_sabre":                 { "local": "icons/item_officer_sabre.webp", "remote": "hf_20261003_214528_gpt-items_7.png", "job": "gpt-items_7", "fit": "sheet:items_7.1", "rev": 20261003214528},
+    "icon.item_pepperbox":                     { "local": "icons/item_pepperbox.webp", "remote": "hf_20261003_214528_gpt-items_7.png", "job": "gpt-items_7", "fit": "sheet:items_7.2", "rev": 20261003214528},
+    "icon.item_ranging_glass":                 { "local": "icons/item_ranging_glass.webp", "remote": "hf_20261003_214528_gpt-items_7.png", "job": "gpt-items_7", "fit": "sheet:items_7.3", "rev": 20261003214528},
+    "icon.item_sun_stone":                     { "local": "icons/item_sun_stone.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.0", "rev": 20261003214730},
+    "icon.item_lucky_doubloon":                { "local": "icons/item_lucky_doubloon.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.1", "rev": 20261003214730},
+    "icon.item_witch_bottle":                  { "local": "icons/item_witch_bottle.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.2", "rev": 20261003214730},
+    "icon.item_gold_hoop":                     { "local": "icons/item_gold_hoop.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.3", "rev": 20261003214730}
   }
 }

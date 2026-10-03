@@ -5297,7 +5297,7 @@
    "icon.item_ranging_glass"
   ],
   "prompt": "Draw a square image: a game icon sheet of 4 square item icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a short boarding pike with a leaf-shaped iron head and a tarred ash shaft; 2. a straight-backed officer’s sabre with a gilt stirrup hilt and a knot of braid; 3. a pepperbox pistol with a cluster of six turning barrels; 4. a long brass ranging glass with a scale engraved along its draw tube; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
-  "painting": true
+  "cut": "hf_20261003_214528_gpt-items_7"
  },
  "items_8": {
   "grid": [
@@ -5316,7 +5316,7 @@
    "icon.item_gold_hoop"
   ],
   "prompt": "Draw a square image: a game icon sheet of 4 square item icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a cloudy crystal sunstone in a brass bezel on a chain, a faint light inside; 2. a worn gold doubloon with a hole bored through it, on a red thread; 3. a small stoppered stoneware bottle full of bent pins and twine, sealed with red wax; 4. a single heavy gold earring hoop resting on a scrap of sailcloth; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
-  "painting": true
+  "cut": "hf_20261003_214730_gpt-items_8"
  },
  "anim_corsair_phantom": {
   "grid": [
