@@ -148,12 +148,12 @@ def main(sheet_name: str, stem: str) -> None:
                 lab[lab == k] = min(big, key=lambda t: (cm[t][0] - ky) ** 2 + (cm[t][1] - kx) ** 2)
             top = [order[j] for j in picks] if picks else order
             blobs = (lab, top)
-            # Two poses touching (a bayonet reaching the next figure) make one shape and leave a part of another as a
-            # shape of its own: then the row is cut at its emptiest columns instead.
+            # A figure broken into pieces (one far shorter than the rest): then the row is cut at its emptiest columns
+            # instead. (A lunge is wide; that is no fault.)
             boxes = [ndimage.find_objects((lab == k).astype(int))[0] for k in top]
             ws = [b[1].stop - b[1].start for b in boxes]
             hs = [b[0].stop - b[0].start for b in boxes]
-            if not picks and (max(ws) > 1.6 * float(np.median(ws)) or min(hs) < 0.6 * float(np.median(hs))):
+            if not picks and min(hs) < 0.6 * float(np.median(hs)):
                 print(f'{sheet_name}: shapes run together — cut by columns')
                 blobs = None
     for i, aid in enumerate(sh['ids']):
