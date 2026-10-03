@@ -1988,6 +1988,10 @@
     "unit.iron_marine_b":                      { "local": "units/iron_marine_b.webp", "remote": "hf_20261003_222716_gpt-anim_iron_marine.png", "job": "gpt-anim_iron_marine", "fit": "sheet:anim_iron_marine.1", "rev": 20261003222716},
     "unit.iron_marine_atk":                    { "local": "units/iron_marine_atk.webp", "remote": "hf_20261003_222716_gpt-anim_iron_marine.png", "job": "gpt-anim_iron_marine", "fit": "sheet:anim_iron_marine.2", "rev": 20261003222716},
     "unit.iron_marine_hit":                    { "local": "units/iron_marine_hit.webp", "remote": "hf_20261003_222716_gpt-anim_iron_marine.png", "job": "gpt-anim_iron_marine", "fit": "sheet:anim_iron_marine.3", "rev": 20261003222716},
-    "bg.port_gallowsmouth":                    { "local": "art/port_gallowsmouth.webp", "remote": "hf_20261003_223133_gpt-bg.port_gallowsmouth.png", "job": "gpt-bg.port_gallowsmouth", "fit": "opaque:1920", "rev": 20261003223133}
+    "bg.port_gallowsmouth":                    { "local": "art/port_gallowsmouth.webp", "remote": "hf_20261003_223133_gpt-bg.port_gallowsmouth.png", "job": "gpt-bg.port_gallowsmouth", "fit": "opaque:1920", "rev": 20261003223133},
+    "ship.tartane":                            { "local": "ships/tartane.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.0", "rev": 20261003230019},
+    "ship.hoy":                                { "local": "ships/hoy.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.1", "rev": 20261003230019},
+    "ship.pinnace":                            { "local": "ships/pinnace.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.2", "rev": 20261003230019},
+    "ship.snow":                               { "local": "ships/snow.webp", "remote": "hf_20261003_230019_gpt-ships_5.png", "job": "gpt-ships_5", "fit": "sheet:ships_5.3", "rev": 20261003230019}
   }
 }
