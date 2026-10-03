@@ -157,7 +157,7 @@ STYLE = ('Smooth painterly digital painting like the town sprites on the adventu
          'weathered; night, warm lantern light in the windows and cold moonlight on the wet roofs; muted colours: charcoal, slate, '
          'tarred black wood, rust, old brass, cold blue-grey, with small warm highlights.')
 BG = ('Dark Pirate Gothic, oil-painting texture over photographic realism, deep chiaroscuro: cold blue moonlight behind thin clouds '
-      'and warm amber lantern light reflected in the black water, low fog. Muted palette: charcoal, graphite, cold blue-grey, old '
+      'and a few scattered warm lanterns reflected in the black water, most windows dark, low fog; the town mostly in shadow. Muted palette: charcoal, graphite, cold blue-grey, old '
       'brass, very dark burgundy.')
 
 
