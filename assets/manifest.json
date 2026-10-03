@@ -1395,6 +1395,7 @@
     "unit.seal":                               { "local": "units/seal.webp", "remote": "hf_20261003_091359_gpt-anim_seal.png", "job": "gpt-anim_seal", "fit": "sheet:anim_seal.0", "rev": 20261003091359},
     "unit.seal_b":                             { "local": "units/seal_b.webp", "remote": "hf_20261003_091359_gpt-anim_seal.png", "job": "gpt-anim_seal", "fit": "sheet:anim_seal.1", "rev": 20261003091359},
     "unit.seal_atk":                           { "local": "units/seal_atk.webp", "remote": "hf_20261003_091359_gpt-anim_seal.png", "job": "gpt-anim_seal", "fit": "sheet:anim_seal.2", "rev": 20261003091359},
-    "unit.seal_hit":                           { "local": "units/seal_hit.webp", "remote": "hf_20261003_091359_gpt-anim_seal.png", "job": "gpt-anim_seal", "fit": "sheet:anim_seal.3", "rev": 20261003091359}
+    "unit.seal_hit":                           { "local": "units/seal_hit.webp", "remote": "hf_20261003_091359_gpt-anim_seal.png", "job": "gpt-anim_seal", "fit": "sheet:anim_seal.3", "rev": 20261003091359},
+    "bg.field_tropical":                       { "local": "art/field_tropical.webp", "remote": "hf_20261003_093826_gpt-bg-field_tropical.png", "job": "gpt-bg-field_tropical", "fit": "opaque:1920", "rev": 20261003093826}
   }
 }
