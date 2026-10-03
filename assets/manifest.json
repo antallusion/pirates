@@ -1631,6 +1631,10 @@
     "unit.porter":                             { "local": "units/porter.webp", "remote": "hf_20261003_125750_gpt-anim_porter.png", "job": "gpt-anim_porter", "fit": "sheet:anim_porter.0", "rev": 20261003125750},
     "unit.porter_b":                           { "local": "units/porter_b.webp", "remote": "hf_20261003_125750_gpt-anim_porter.png", "job": "gpt-anim_porter", "fit": "sheet:anim_porter.1", "rev": 20261003125750},
     "unit.porter_atk":                         { "local": "units/porter_atk.webp", "remote": "hf_20261003_125750_gpt-anim_porter.png", "job": "gpt-anim_porter", "fit": "sheet:anim_porter.2", "rev": 20261003125750},
-    "unit.porter_hit":                         { "local": "units/porter_hit.webp", "remote": "hf_20261003_125750_gpt-anim_porter.png", "job": "gpt-anim_porter", "fit": "sheet:anim_porter.3", "rev": 20261003125750}
+    "unit.porter_hit":                         { "local": "units/porter_hit.webp", "remote": "hf_20261003_125750_gpt-anim_porter.png", "job": "gpt-anim_porter", "fit": "sheet:anim_porter.3", "rev": 20261003125750},
+    "unit.leviathan_slayer":                   { "local": "units/leviathan_slayer.webp", "remote": "hf_20261003_130239_gpt-anim_leviathan_slayer.png", "job": "gpt-anim_leviathan_slayer", "fit": "sheet:anim_leviathan_slayer.0", "rev": 20261003130239},
+    "unit.leviathan_slayer_b":                 { "local": "units/leviathan_slayer_b.webp", "remote": "hf_20261003_130239_gpt-anim_leviathan_slayer.png", "job": "gpt-anim_leviathan_slayer", "fit": "sheet:anim_leviathan_slayer.1", "rev": 20261003130239},
+    "unit.leviathan_slayer_atk":               { "local": "units/leviathan_slayer_atk.webp", "remote": "hf_20261003_130239_gpt-anim_leviathan_slayer.png", "job": "gpt-anim_leviathan_slayer", "fit": "sheet:anim_leviathan_slayer.2", "rev": 20261003130239},
+    "unit.leviathan_slayer_hit":               { "local": "units/leviathan_slayer_hit.webp", "remote": "hf_20261003_130239_gpt-anim_leviathan_slayer.png", "job": "gpt-anim_leviathan_slayer", "fit": "sheet:anim_leviathan_slayer.3", "rev": 20261003130239}
   }
 }
