@@ -1244,6 +1244,10 @@
     "unit.deep_one_champion":                  { "local": "units/deep_one_champion.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.0", "rev": 20261003050458},
     "unit.deep_one_champion_b":                { "local": "units/deep_one_champion_b.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.1", "rev": 20261003050458},
     "unit.deep_one_champion_atk":              { "local": "units/deep_one_champion_atk.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.2", "rev": 20261003050458},
-    "unit.deep_one_champion_hit":              { "local": "units/deep_one_champion_hit.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.3", "rev": 20261003050458}
+    "unit.deep_one_champion_hit":              { "local": "units/deep_one_champion_hit.webp", "remote": "hf_20261003_050458_gpt-anim_deep_one_champion.png", "job": "gpt-anim_deep_one_champion", "fit": "sheet:anim_deep_one_champion.3", "rev": 20261003050458},
+    "unit.deep_one":                           { "local": "units/deep_one.webp", "remote": "hf_20261003_051442_gpt-anim_deep_one.png", "job": "gpt-anim_deep_one", "fit": "sheet:anim_deep_one.0", "rev": 20261003051442},
+    "unit.deep_one_b":                         { "local": "units/deep_one_b.webp", "remote": "hf_20261003_051442_gpt-anim_deep_one.png", "job": "gpt-anim_deep_one", "fit": "sheet:anim_deep_one.1", "rev": 20261003051442},
+    "unit.deep_one_atk":                       { "local": "units/deep_one_atk.webp", "remote": "hf_20261003_051442_gpt-anim_deep_one.png", "job": "gpt-anim_deep_one", "fit": "sheet:anim_deep_one.2", "rev": 20261003051442},
+    "unit.deep_one_hit":                       { "local": "units/deep_one_hit.webp", "remote": "hf_20261003_051442_gpt-anim_deep_one.png", "job": "gpt-anim_deep_one", "fit": "sheet:anim_deep_one.3", "rev": 20261003051442}
   }
 }
