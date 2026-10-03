@@ -225,8 +225,8 @@ def main() -> None:
             sheets[name]['painting'] = True
         jobs.append({'name': f'sheet.{name}', 'aspect': aspect, 'prompt': prompt})
 
-    sheet('units_men', [4, 4], 'keyed', 320, False, 'units', '1:1', [i for i, _ in MEN], uniform=1.0,
-          UNIT_HEAD.format(n='sixteen', grid='4 columns and 4 rows', scale='every man at the same height and scale') + listing([d for _, d in MEN]) + UNIT_TAIL)
+    sheet('units_men', [4, 4], 'keyed', 320, False, 'units', '1:1', [i for i, _ in MEN],
+          UNIT_HEAD.format(n='sixteen', grid='4 columns and 4 rows', scale='every man at the same height and scale') + listing([d for _, d in MEN]) + UNIT_TAIL, uniform=1.0)
     sheet('units_beasts', [4, 4], 'keyed', 320, False, 'units', '1:1', [i for i, _ in BEASTS],
           UNIT_HEAD.format(n='sixteen', grid='4 columns and 4 rows', scale='each creature filling its cell big or small, creatures that live in water rising from a small round splash that stays inside the cell') + listing([d for _, d in BEASTS]) + UNIT_TAIL)
     sheet('units_legends', [2, 1], 'keyed', 512, False, 'units', '16:9', [i for i, _ in LEGENDS],
