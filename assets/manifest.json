@@ -1337,6 +1337,10 @@
     "unit.marsh_serpent":                      { "local": "units/marsh_serpent.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.0", "rev": 20261003065045},
     "unit.marsh_serpent_b":                    { "local": "units/marsh_serpent_b.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.1", "rev": 20261003065045},
     "unit.marsh_serpent_atk":                  { "local": "units/marsh_serpent_atk.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.2", "rev": 20261003065045},
-    "unit.marsh_serpent_hit":                  { "local": "units/marsh_serpent_hit.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.3", "rev": 20261003065045}
+    "unit.marsh_serpent_hit":                  { "local": "units/marsh_serpent_hit.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.3", "rev": 20261003065045},
+    "unit.hermit":                             { "local": "units/hermit.webp", "remote": "hf_20261003_065537_gpt-anim_hermit.png", "job": "gpt-anim_hermit", "fit": "sheet:anim_hermit.0", "rev": 20261003065537},
+    "unit.hermit_b":                           { "local": "units/hermit_b.webp", "remote": "hf_20261003_065537_gpt-anim_hermit.png", "job": "gpt-anim_hermit", "fit": "sheet:anim_hermit.1", "rev": 20261003065537},
+    "unit.hermit_atk":                         { "local": "units/hermit_atk.webp", "remote": "hf_20261003_065537_gpt-anim_hermit.png", "job": "gpt-anim_hermit", "fit": "sheet:anim_hermit.2", "rev": 20261003065537},
+    "unit.hermit_hit":                         { "local": "units/hermit_hit.webp", "remote": "hf_20261003_065537_gpt-anim_hermit.png", "job": "gpt-anim_hermit", "fit": "sheet:anim_hermit.3", "rev": 20261003065537}
   }
 }
