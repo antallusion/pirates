@@ -90,7 +90,9 @@ def main(sheet_name: str, stem: str) -> None:
                 d = np.diff(np.concatenate(([0], row.astype(np.int8), [0])))
                 starts, ends = np.nonzero(d == 1)[0], np.nonzero(d == -1)[0]
                 for x0_, x1_ in zip(starts, ends):
-                    if x1_ - x0_ > W / 3:
+                    # Only a thin line: a few pixels above and below it the run is mostly empty (a musket held
+                    # across two touching figures is no line).
+                    if x1_ - x0_ > W / 3 and a[max(0, y - 6), x0_:x1_].mean() < 0.3 and a[min(a.shape[0] - 1, y + 6), x0_:x1_].mean() < 0.3:
                         keyed[max(0, y - 1):y + 2, x0_:x1_, 3] = 0
         im = Image.fromarray(keyed)
         solid = keyed[:, :, 3].astype(np.float32) / 255
@@ -105,6 +107,24 @@ def main(sheet_name: str, stem: str) -> None:
             # which shape in reading order each id takes.
             picks = sh.get('picks', {}).get(stem)
             want = (max(picks) + 1) if picks else len(sh['ids'])
+            # Poses that touch (a bayonet reaching the next figure) make one wide shape: it is split at its emptiest
+            # column in its middle, as often as it takes to have as many large shapes as poses.
+            for _ in range(want):
+                bigs = [int(k) + 1 for k in np.argsort(sizes)[::-1] if sizes[k] >= 0.3 * sizes.max()]
+                if len(bigs) >= want or picks:
+                    break
+                boxes = {k: ndimage.find_objects((lab == k).astype(int))[0] for k in bigs}
+                k = max(bigs, key=lambda q: boxes[q][1].stop - boxes[q][1].start)
+                x0_, x1_ = boxes[k][1].start, boxes[k][1].stop
+                cols_ = (lab[:, x0_:x1_] == k).sum(axis=0)
+                lo_, hi_ = int((x1_ - x0_) * 0.3), int((x1_ - x0_) * 0.7)
+                cut_ = x0_ + lo_ + int(np.argmin(cols_[lo_:hi_]))
+                n += 1
+                right = lab == k
+                right[:, :cut_] = False
+                lab[right] = n
+                print(f'{sheet_name}: two poses touched — split at x {cut_}')
+                sizes = ndimage.sum(np.ones_like(lab), lab, range(1, n + 1))
             big = [int(k) + 1 for k in np.argsort(sizes)[::-1][:want]]
             cm = {k: ndimage.center_of_mass(lab == k) for k in big}
             # Reading order: rows by height (a new row where the gap is more than half a shape's height), then left
@@ -128,6 +148,14 @@ def main(sheet_name: str, stem: str) -> None:
                 lab[lab == k] = min(big, key=lambda t: (cm[t][0] - ky) ** 2 + (cm[t][1] - kx) ** 2)
             top = [order[j] for j in picks] if picks else order
             blobs = (lab, top)
+            # Two poses touching (a bayonet reaching the next figure) make one shape and leave a part of another as a
+            # shape of its own: then the row is cut at its emptiest columns instead.
+            boxes = [ndimage.find_objects((lab == k).astype(int))[0] for k in top]
+            ws = [b[1].stop - b[1].start for b in boxes]
+            hs = [b[0].stop - b[0].start for b in boxes]
+            if not picks and (max(ws) > 1.6 * float(np.median(ws)) or min(hs) < 0.6 * float(np.median(hs))):
+                print(f'{sheet_name}: shapes run together — cut by columns')
+                blobs = None
     for i, aid in enumerate(sh['ids']):
         if not aid:
             continue
@@ -138,6 +166,11 @@ def main(sheet_name: str, stem: str) -> None:
             y0, y1, x0, x1 = sl[0].start, sl[0].stop, sl[1].start, sl[1].stop
             only = np.array(im.crop((x0, y0, x1, y1)))
             only[lab[y0:y1, x0:x1] != top[i], 3] = 0
+            # A sliver left over from a split (the tip of the next pose's bayonet) is no part of this one.
+            sub, sn = ndimage.label(only[:, :, 3] > 24)
+            if sn > 1:
+                ss = ndimage.sum(np.ones_like(sub), sub, range(1, sn + 1))
+                only[np.isin(sub, [q + 1 for q in range(sn) if ss[q] < 0.04 * ss.max()]), 3] = 0
             ys_, xs_ = np.nonzero(only[:, :, 3] > 8)
             piece = Image.fromarray(only).crop((xs_.min(), ys_.min(), xs_.max() + 1, ys_.max() + 1))
             if sh['square']:
