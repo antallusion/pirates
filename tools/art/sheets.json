@@ -5093,5 +5093,229 @@
   ],
   "prompt": "Draw a square image: a game icon sheet of 4 square battle-spell icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the spell icons of Heroes of Might and Magic III and the ability icons of World of Warcraft but grim and realistic. Each tile is its own icon: one dramatic scene filling the whole tile edge to edge, a strong focal point readable at a small size, the same lighting and finish across all of them. No blood, no wounds, no gore, no corpses, no skulls anywhere. The icons, left to right and top to bottom: 1. a lone hooded sailor apart at the rail in fog, shadowy shipmates glancing at him; 2. rag-wrapped oars dipping silently into black water under a thin crescent moon in fog; 3. signal flags hanging limp in thick grey fog, a brass speaking trumpet lying on the deck; 4. a sailor in thick fog swinging a cutlass at blurred, distorted silhouettes of his own shipmates; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
   "painting": true
+ },
+ "arms_1": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.gun_minion_4",
+   "icon.gun_perrier",
+   "icon.gun_culverin_8",
+   "icon.gun_whaling_gun",
+   "icon.gun_gunbreaker_14",
+   "icon.gun_shell_gun",
+   "icon.gun_drowned_bronze",
+   "icon.gun_demi_cannon_32",
+   "icon.ammo_bar",
+   "icon.ammo_long_shot",
+   "icon.ammo_star",
+   "icon.ammo_salt",
+   "icon.ammo_stinkpot",
+   "icon.ammo_drag",
+   "icon.set_master_gunner",
+   "icon.set_smuggler"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 16 square item icons in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a small short iron cannon with a bronze muzzle ring on a light two-wheeled carriage; 2. a squat wide-mouthed perrier on a low carriage beside a heap of round grey stone shot; 3. a very long slender iron culverin with dolphin-shaped lifting handles, on a narrow carriage; 4. a stout whaling gun with a barbed iron bomb-lance jutting from its muzzle; 5. a short thick-walled iron gun with a heavy breech ring, laid low on a squat carriage; 6. a smooth black shell gun beside a hollow iron shell with a burning wooden fuse; 7. a verdigris-green bronze cannon crusted with barnacles, seawater dripping from its muzzle; 8. a massive long black iron cannon on a heavy four-wheeled carriage with thick breeching rope; 9. two iron half-balls joined by a solid iron bar; 10. a smaller polished iron ball seated in a thick wad of tarred rope; 11. an iron ball with a fierce white star-flare burning out of its fuse hole; 12. a pale iron ball crusted with glittering white salt, tied with a twist of black ribbon; 13. a round clay pot with a rag fuse, yellow sulphur smoke curling out of it; 14. an iron ball trailing a short chain that ends in a barbed hook; 15. a gunner’s linstock crossed over a brass quadrant and a cannonball; 16. a dark lantern with its shutter half closed over a corded bale; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
+ },
+ "arms_2": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.mod_gun_carriages",
+   "icon.mod_powder_hoists",
+   "icon.mod_shot_furnace",
+   "icon.mod_mortar_bed",
+   "icon.mod_chain_pumps",
+   "icon.mod_fire_engine",
+   "icon.mod_carpenters_walk",
+   "icon.mod_magazine_lining",
+   "icon.mod_davits",
+   "icon.mod_boarding_nets",
+   "icon.mod_lookout_top",
+   "icon.mod_iron_masts",
+   "icon.mod_sail_locker",
+   "icon.mod_bilge_keels",
+   "icon.mod_galley",
+   "icon.mod_leviathan_ribs"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 16 square item icons in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a cannon carriage on iron-shod trucks with side tackles coiled beside it; 2. a rope-and-pulley hoist lifting a leather powder bucket through a deck hatch; 3. a small brick shot furnace with red-hot cannonballs glowing on an iron grate; 4. a squat sea mortar sunk in a timbered well on heavy oak bedding; 5. a ship’s chain pump with a crank wheel and an iron chain running down into a wooden well; 6. a brass hand-pumped fire engine on a small wooden cart with a leather hose; 7. a narrow lantern-lit passage along the inside of a hull, a mallet and wooden plugs on a ledge; 8. a powder room lined with copper sheet, kegs behind a wet felt curtain; 9. a longboat hanging from two curved iron davits at a ship’s stern; 10. a heavy rope net triced up above a ship’s rail on short spars; 11. a railed lookout’s top high on a mast, a spyglass resting on its rail; 12. a thick mast bound with riveted iron hoops; 13. an open locker of folded spare canvas, coiled cordage and a sailmaker’s palm; 14. the round of a hull’s bilge seen from below, a long timber keel fixed along it; 15. a copper galley stove with a steaming pot and a ladle on a hook; 16. great curved pale leviathan ribs set as frames inside a dark hull; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
+ },
+ "arms_3": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.mod_ink_sacs",
+   "icon.mod_serpent_spine",
+   "icon.mod_drowned_gunlocks",
+   "icon.mod_wreck_bulwarks",
+   "icon.mod_tiller_chains",
+   "icon.mod_eye_lantern",
+   "icon.mod_maw_grapnels",
+   "icon.mod_widow_ribbons",
+   "icon.mount_swivel_gun",
+   "icon.mount_long_tom",
+   "icon.mount_rocket_frame",
+   "icon.mount_fire_siphon",
+   "icon.mount_net_thrower",
+   "icon.mount_smoke_pots",
+   "icon.mount_powder_kegs",
+   "icon.mount_war_drums"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 16 square item icons in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a glass-and-iron tank of black kraken ink with a valve, ink seeping at its seam; 2. a long knotted serpent spine bolted along a ship’s keel timber; 3. a corroded green-bronze cannon lock with a dripping flint and a faint teal glow; 4. a ship’s side patched with mismatched riveted iron plates taken from many wrecks; 5. a tiller bar hung on heavy iron chains running to a rudder head; 6. a masthead lantern holding a jagged black shard that glows cold blue; 7. a grappling hook whose flukes are long pale curved teeth, on an iron chain; 8. black silk ribbons tied in a ship’s shrouds, streaming out in a gale; 9. three short brass musketoons on swivel forks along a ship’s rail; 10. a long heavy cannon on a pivoting slide carriage over a circular iron track; 11. a wooden frame of six war rockets on long sticks, one fuse sparking; 12. a bronze siphon nozzle shaped like a beast’s head, spitting a jet of burning oil; 13. a pivot gun throwing a weighted rope net that spreads open in the air; 14. clay smoke pots on a ship’s rail pouring out thick grey smoke; 15. two small powder kegs with burning fuses rolling off a ship’s stern rail; 16. a pair of battered war drums with crossed sticks on a ship’s deck; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
+ },
+ "arms_4": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.fh_fishwife",
+   "icon.fh_doge",
+   "icon.fh_admiral",
+   "icon.fh_mermaid",
+   "icon.fh_jolly_jack",
+   "icon.fh_veiled_lady",
+   "icon.fh_salamander",
+   "icon.fh_narwhal",
+   "icon.fh_wrecker",
+   "icon.fh_seraph",
+   "icon.fh_leviathan",
+   "icon.fh_storm_widow",
+   "icon.fh_hermit_crab",
+   "icon.fh_hollow_admiral",
+   null,
+   null
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 14 square item icons in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a carved figurehead of a stout fishwife with a basket of fish on her hip; 2. a carved figurehead of a doge in a horned ducal cap, the gilt flaking; 3. a carved figurehead of an old admiral in a cocked hat, pointing ahead with a telescope; 4. a carved figurehead of a mermaid with long hair, her scaled tail curling under the bowsprit; 5. a carved figurehead of a grinning sailor with a cutlass between his teeth; 6. a carved figurehead of a lady whose face is hidden under a carved veil; 7. a carved figurehead of a red-and-black salamander wreathed in carved flames; 8. a carved figurehead of a narwhal, its long spiral ivory tusk thrust forward; 9. a carved figurehead of a hooded wrecker swinging a lantern on a pole; 10. a carved figurehead of a six-winged seraph with closed eyes, wings folded along the bow; 11. a figurehead carved as a leviathan’s head with a gaping jaw of ivory teeth; 12. a carved figurehead of a widow in a streaming black veil, lightning carved in her hair; 13. a figurehead of a giant hermit crab’s claws and shell grown over with wreck timbers; 14. a carved figurehead of a hollow-eyed drowned admiral in a barnacled bicorne; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
+ },
+ "items_5": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.item_lateen_sails",
+   "icon.item_black_sails",
+   "icon.item_studding_sails",
+   "icon.item_quick_braces",
+   "icon.item_spare_spars",
+   "icon.item_fighting_tops",
+   "icon.item_double_planking",
+   "icon.item_felt_lining",
+   "icon.item_iron_stem",
+   "icon.item_ship_wheel",
+   "icon.item_shoal_rudder",
+   "icon.item_bread_room",
+   "icon.item_timber_racks",
+   "icon.item_smugglers_nook",
+   "icon.item_sick_bay",
+   "icon.item_armoury"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 16 square item icons in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a long triangular lateen sail furled on a slanting yard, patched brown canvas; 2. a folded bolt of tar-black sailcloth with dull iron grommets, a ragged corner; 3. a light studding sail on a thin boom run out from a yardarm; 4. two well-greased wooden blocks with running braces through them, rope blurred as if hauled fast; 5. a lashed bundle of spare spars and a coiled rope, a carpenter’s adze tucked in; 6. a round railed fighting top on a mast with two muskets leaning against its rail; 7. two layers of oak planks fastened crosswise with treenails, one edge showing both; 8. a roll of tarred black felt and a tar brush on a strip of hull planking; 9. a ship’s stem post sheathed in a riveted iron cutwater, scraped bright at the edge; 10. a ship’s steering wheel of dark oak with brass-capped spokes; 11. a narrow rudder blade drawn up on chains through a trunk, wet weed on its foot; 12. shelves of ship’s biscuit in tin-lined bins and a sack of flour; 13. neat racks of planks and rolled sailcloth lashed against a hold’s frames; 14. a narrow locker behind a sliding panel, bottles and a bale of tobacco inside; 15. a surgeon’s chest open on a cot: bone saw, bandage rolls and brown bottles; 16. a rack of cutlasses and boarding pistols with a padlocked chain; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
+ },
+ "items_6": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.item_splinter_screens",
+   "icon.item_gun_tackle",
+   "icon.item_grape_bags",
+   "icon.item_chain_lockers",
+   "icon.item_gunlocks",
+   "icon.item_signal_hoist",
+   "icon.item_grey_pennant",
+   "icon.item_hand_of_glory",
+   "icon.item_bottled_wind",
+   "icon.item_coffin_nail",
+   "icon.item_merchant_hat",
+   "icon.item_gunner_cap",
+   "icon.item_buff_coat",
+   "icon.item_smugglers_cloak",
+   "icon.item_powder_horn",
+   "icon.item_buccaneer_boots"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 16 square item icons in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. rolled hammocks stuffed into a rope netting along a ship’s rail, a splinter stuck in one; 2. a set of gun tackle blocks and a handspike hooked to a cannon’s ring bolt; 3. a canvas bag of grapeshot bound with cord around a wooden stand, balls showing through; 4. an open wooden locker heaped with chain shot, links spilling over its edge; 5. a brass flintlock gunlock for a cannon, its hammer cocked over the vent; 6. a hoist of three bright signal flags on a halyard with a brass toggle; 7. a long plain grey pennant with a faint grey eye stitched on it, on a short staff; 8. a hand carved of black bog oak holding up a burning candle stub, a pale steady flame; 9. a corked green bottle with a tiny swirling gale inside it, a knotted cord round its neck; 10. a long black square nail on a leather thong, flecks of rotten wood on it; 11. a tall black beaver-felt hat with a silver buckle on its band; 12. a scorched leather gunner’s cap with a powder-blackened brim; 13. a thick yellowish buff leather coat with brass hooks and a sword cut across it; 14. a hooded dark grey cloak with deep inner pockets, damp with fog; 15. a carved cow-horn powder flask with a brass spout and a leather strap; 16. a pair of wide-cuffed buccaneer’s boots folded down at the knee; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
+ },
+ "items_7": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.item_boarding_pike",
+   "icon.item_officer_sabre",
+   "icon.item_pepperbox",
+   "icon.item_ranging_glass"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 4 square item icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a short boarding pike with a leaf-shaped iron head and a tarred ash shaft; 2. a straight-backed officer’s sabre with a gilt stirrup hilt and a knot of braid; 3. a pepperbox pistol with a cluster of six turning barrels; 4. a long brass ranging glass with a scale engraved along its draw tube; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
+ },
+ "items_8": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.item_sun_stone",
+   "icon.item_lucky_doubloon",
+   "icon.item_witch_bottle",
+   "icon.item_gold_hoop"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 4 square item icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a cloudy crystal sunstone in a brass bezel on a chain, a faint light inside; 2. a worn gold doubloon with a hole bored through it, on a red thread; 3. a small stoppered stoneware bottle full of bent pins and twine, sealed with red wax; 4. a single heavy gold earring hoop resting on a scrap of sailcloth; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
  }
 }

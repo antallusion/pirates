@@ -6,6 +6,7 @@
 
 import json
 import os
+import re
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -39,6 +40,12 @@ SPELLS = [
     ('sp_fog_madness', 'a sailor in thick fog swinging a cutlass at blurred, distorted silhouettes of his own shipmates'),
 ]
 
+ARMS_HEAD = ('Draw a square image: a game icon sheet of {n} square item icons in a strict {g} by {g} grid of equal square tiles '
+             'separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of '
+             'Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) '
+             'painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across '
+             'all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: ')
+
 HEAD = ('Draw a square image: a game icon sheet of {n} square battle-spell icons in a strict {g} by {g} grid of equal square tiles '
         'separated by thin pure black gutters, in the painterly style of the spell icons of Heroes of Might and Magic III and the '
         'ability icons of World of Warcraft but grim and realistic. Each tile is its own icon: one dramatic scene filling the whole '
@@ -46,15 +53,38 @@ HEAD = ('Draw a square image: a game icon sheet of {n} square battle-spell icons
         'blood, no wounds, no gore, no corpses, no skulls anywhere. The icons, left to right and top to bottom: ')
 
 
-def sheet_jobs(key_base, items, start, sheets, jobs):
-    """Sixteen to a 4×4 sheet; a short last set on a 2×2 (four) sheet."""
+def arms():
+    """The yard's new things (shared/src/data/armsart.ts ARMS_ART, in sheet order): (icon id without «icon.», look)."""
+    src = open(os.path.join(ROOT, 'shared', 'src', 'data', 'armsart.ts'), encoding='utf-8').read()
+    return [(i[len('icon.'):], look) for i, look in re.findall(r"\['(icon\.[a-z0-9_]+)', '[^']*', '((?:[^'\\]|\\.)*)'\]", src)]
+
+
+def new_items():
+    """The gear's new bases (shared/src/data/itemart.ts ITEM_ART from the 65th): (icon id without «icon.», look)."""
+    src = open(os.path.join(ROOT, 'shared', 'src', 'data', 'itemart.ts'), encoding='utf-8').read()
+    rows = re.findall(r"\['([a-z0-9_]+)', '((?:[^'\\]|\\.)*)'\]", src)
+    return [(f'item_{i}', look) for i, look in rows[64:]]
+
+
+def chunks(items):
+    """Sixteen to a 4×4 sheet; what is left over in fours on 2×2 sheets (a short sixteen as it is)."""
+    out, i = [], 0
+    while i < len(items):
+        rest = len(items) - i
+        n = 16 if rest >= 12 else 4
+        out.append(items[i:i + n])
+        i += n
+    return out
+
+
+def sheet_jobs(key_base, items, start, sheets, jobs, head=None):
+    """Each chunk on its sheet: a 4×4 for more than four, else a 2×2."""
     k = start
-    for i in range(0, len(items), 16):
-        chunk = items[i:i + 16]
+    for chunk in chunks(items):
         g = 4 if len(chunk) > 4 else 2
         ids = [f'icon.{iid}' for iid, _ in chunk] + [None] * (g * g - len(chunk))
         rows = ' '.join(f'{j + 1}. {desc};' for j, (_, desc) in enumerate(chunk))
-        p = HEAD.format(n=len(chunk), g=g) + rows + f' {LOOK} No text, no letters, no numbers, no frames inside the tiles.'
+        p = (head or HEAD).format(n=len(chunk), g=g) + rows + f' {LOOK} No text, no letters, no numbers, no frames inside the tiles.'
         key = f'{key_base}_{k}'
         old = sheets.get(key, {})
         sheets[key] = {'grid': [g, g], 'mode': 'tiles', 'px': 192, 'square': True, 'dir': 'icons', 'aspect': '1:1', 'ids': ids, 'prompt': p}
@@ -70,6 +100,8 @@ def main() -> None:
     sheets = json.load(open(SHEETS, encoding='utf-8'))
     jobs = []
     sheet_jobs('spells', SPELLS, 5, sheets, jobs)
+    sheet_jobs('arms', arms(), 1, sheets, jobs, ARMS_HEAD)
+    sheet_jobs('items', new_items(), 5, sheets, jobs, ARMS_HEAD)
     with open(SHEETS, 'w', encoding='utf-8') as f:
         f.write(json.dumps(sheets, indent=1, ensure_ascii=False) + '\n')
     with open(JOBS, 'w', encoding='utf-8') as f:
