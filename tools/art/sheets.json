@@ -7338,5 +7338,593 @@
   ],
   "prompt": "Draw a square image: a game icon sheet of 4 square item icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic. Each tile is its own icon: one object (or a small group of objects) painted large and centred on a dark, softly lit background, readable at a small size, the same lighting and finish across all of them. No blood, no gore, no skulls anywhere. The icons, left to right and top to bottom: 1. a carved wooden figurehead of a hooded wrecker, a weathered living bearded man's face under the hood, swinging a lantern on a pole; 2. a carved wooden figurehead of a drowned admiral: a stern old bearded man's carved face with closed eyes, a barnacled bicorne hat and kelp hanging from his gold-braided coat; 3. a carved wooden figurehead of a hooded wrecker with a grim weathered face, a lantern held high on a pole, rain on the carving; 4. a carved wooden figurehead of an old drowned admiral, a living stern face with a white beard, a bicorne crusted with barnacles, green weed on his epaulettes; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles. No skulls, no skeletons, no bare bones: every face is a living human face carved in wood.",
   "cut": "hf_20261003_213842_gpt-arms_4b"
+ },
+ "anim_crown_surgeon": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.crown_surgeon",
+   "unit.crown_surgeon_b",
+   "unit.crown_surgeon_atk",
+   "unit.crown_surgeon_hit"
+  ],
+  "creature": {
+   "faction": "crown",
+   "tier": 1,
+   "en": "Surgeon's Mate",
+   "ru": "Лекарский помощник",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a Crown naval surgeon's mate in a navy-blue coat with white facings and rolled sleeves under a stained canvas apron, a leather satchel of rolled bandages and wooden splints at his hip with a corked rum bottle in it, a short curved hanger in his right hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the satchel hitched higher, the hanger lowered, like the next frame of an idle animation; third — attack: a quick cut with the hanger toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_crown_midshipman": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.crown_midshipman",
+   "unit.crown_midshipman_b",
+   "unit.crown_midshipman_atk",
+   "unit.crown_midshipman_hit"
+  ],
+  "creature": {
+   "faction": "crown",
+   "tier": 1,
+   "en": "Signal Midshipman",
+   "ru": "Сигнальный мичман",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a young Crown signal midshipman in a short navy-blue jacket with white collar patches and a small black cocked hat, a bundle of rolled bright signal flags under his left arm, a slim midshipman's dirk with a brass hilt in his right hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the flags tucked tighter under his arm, the dirk lifted a little, like the next frame of an idle animation; third — attack: a quick dirk thrust toward the right, the signal flags still under his arm; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_crown_provost": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.crown_provost",
+   "unit.crown_provost_b",
+   "unit.crown_provost_atk",
+   "unit.crown_provost_hit"
+  ],
+  "creature": {
+   "faction": "crown",
+   "tier": 2,
+   "en": "Provost Marshal",
+   "ru": "Профос",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a stern Crown provost marshal in a navy-blue greatcoat with a white crossbelt and a black tricorne, a ring of iron manacles on a short chain at his belt, a heavy brass-bound baton in his right hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the baton tapped against his left palm, like the next frame of an idle animation; third — attack: a heavy overhead blow of the brass-bound baton toward the right, the manacles swinging at his belt; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_brine_sister": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.brine_sister",
+   "unit.brine_sister_b",
+   "unit.brine_sister_atk",
+   "unit.brine_sister_hit"
+  ],
+  "creature": {
+   "faction": "choir",
+   "tier": 1,
+   "en": "Sister of the Brine",
+   "ru": "Сестра рассола",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a sister of the brine: a barefoot woman of the Choir in a sodden grey-green habit and a wimple of fishing net hung with small shells, a bundle of dried kelp bandages at her rope girdle, a short hooked knife of pale shell in her right hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the kelp bundle lifted in her free hand, like the next frame of an idle animation; third — attack: a quick slash with the hooked shell knife toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_choir_toller": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.choir_toller",
+   "unit.choir_toller_b",
+   "unit.choir_toller_atk",
+   "unit.choir_toller_hit"
+  ],
+  "creature": {
+   "faction": "choir",
+   "tier": 3,
+   "en": "Toller of the Drowned Bell",
+   "ru": "Звонарь утопшего колокола",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a hooded toller of the drowned god: a broad man in a sodden black robe, a small barnacled green-bronze bell hung from a short pole on his back so it rises over his shoulder (part of the figure in every frame), a long iron hammer in both hands. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the hammer drawn back, the bell swaying a little, like the next frame of an idle animation; third — attack: swinging the hammer up to strike the bell, a faint ring of rippling air rolling out of it toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_lamprey_zealot": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.lamprey_zealot",
+   "unit.lamprey_zealot_b",
+   "unit.lamprey_zealot_atk",
+   "unit.lamprey_zealot_hit"
+  ],
+  "creature": {
+   "faction": "choir",
+   "tier": 2,
+   "en": "Lamprey Zealot",
+   "ru": "Фанатик-минога",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a zealot of the drowned god in a sodden dark robe, the face hidden behind a round grey leather mask with a lamprey's ring of small hooked teeth around its mouth hole, a short barbed spear. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the masked head tilted, the spear point lowered, like the next frame of an idle animation; third — attack: a hard thrust of the barbed spear toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_harpoon_preceptor": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.harpoon_preceptor",
+   "unit.harpoon_preceptor_b",
+   "unit.harpoon_preceptor_atk",
+   "unit.harpoon_preceptor_hit"
+  ],
+  "creature": {
+   "faction": "harpoon",
+   "tier": 2,
+   "en": "Preceptor of the Order",
+   "ru": "Прецептор Ордена",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a preceptor of the Order of the Harpoon: a grey-bearded knight in dark riveted leather and polished baleen plates, a long white cloak with a black harpoon sigil, a tall standard pole tipped with a barbed harpoon head and hung with a small white pennant. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the pennant stirring, the standard planted upright, like the next frame of an idle animation; third — attack: thrusting the harpoon head of the standard toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_harpoon_commander": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.harpoon_commander",
+   "unit.harpoon_commander_b",
+   "unit.harpoon_commander_atk",
+   "unit.harpoon_commander_hit"
+  ],
+  "creature": {
+   "faction": "harpoon",
+   "tier": 6,
+   "en": "Knight-Commander",
+   "ru": "Рыцарь-командор",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a knight-commander of the Order of the Harpoon in heavy plate of bleached whalebone over dark leather, a helm crested with a short narwhal tusk, a long two-handed harpoon-glaive with a barbed blade. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the harpoon-glaive lifted onto his shoulder, like the next frame of an idle animation; third — attack: a sweeping cut of the harpoon-glaive toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_try_pot": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.try_pot",
+   "unit.try_pot_b",
+   "unit.try_pot_atk",
+   "unit.try_pot_hit"
+  ],
+  "creature": {
+   "faction": "harpoon",
+   "tier": 4,
+   "en": "Try-Pot Man",
+   "ru": "Котловой",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a try-pot man of the whalers: a soot-stained brute in a scorched leather apron and heavy gloves, a small iron try-pot of steaming whale oil hung on a chain at his side (part of the figure in every frame), a long iron ladle in his right hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the ladle dipped toward the pot, steam rising from it, like the next frame of an idle animation; third — attack: flinging a ladle of hot oil toward the right in a short arc of steaming amber droplets; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_fog_cutpurse": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.fog_cutpurse",
+   "unit.fog_cutpurse_b",
+   "unit.fog_cutpurse_atk",
+   "unit.fog_cutpurse_hit"
+  ],
+  "creature": {
+   "faction": "brokers",
+   "tier": 1,
+   "en": "Cutpurse",
+   "ru": "Карманник",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a wiry Fog Broker cutpurse in a patched dark grey coat with deep pockets and a low grey cap pulled down over the eyes, a small hooked purse-knife in his right hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, crouched a little lower, the knife hidden along his wrist, like the next frame of an idle animation; third — attack: a quick darting slash with the hooked knife toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_fog_cardsharp": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.fog_cardsharp",
+   "unit.fog_cardsharp_b",
+   "unit.fog_cardsharp_atk",
+   "unit.fog_cardsharp_hit"
+  ],
+  "creature": {
+   "faction": "brokers",
+   "tier": 1,
+   "en": "Cardsharp",
+   "ru": "Шулер",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a smiling Fog Broker cardsharp in a faded wine-dark waistcoat with a loose cravat and a battered grey top hat, a fan of playing cards in his left hand, a short thin stiletto in his right. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the cards fanned wider, a die rolling across his knuckles, like the next frame of an idle animation; third — attack: a quick stiletto thrust toward the right, the cards still fanned in his other hand; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_fog_viper": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.fog_viper",
+   "unit.fog_viper_b",
+   "unit.fog_viper_atk",
+   "unit.fog_viper_hit"
+  ],
+  "creature": {
+   "faction": "brokers",
+   "tier": 3,
+   "en": "Fog Viper",
+   "ru": "Туманная гадюка",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a lithe Fog Broker viper in a close charcoal hood and a scarf of grey-green scale pattern over the lower face, a belt of small stoppered green vials, a long slim blowpipe banded with green. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the blowpipe lowered, the hooded head turned, like the next frame of an idle animation; third — attack: blowing a dart through the blowpipe toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_company_cannoneer": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.company_cannoneer",
+   "unit.company_cannoneer_b",
+   "unit.company_cannoneer_atk",
+   "unit.company_cannoneer_hit"
+  ],
+  "creature": {
+   "faction": "league",
+   "tier": 4,
+   "en": "Company Cannoneer",
+   "ru": "Канонир Компании",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a cannoneer of the Gilded Ledger in a black coat with gold buttons and a gold-banded hat, standing beside a small swivel gun with a gilded barrel on a short black post (the gun is part of the figure and stands beside him in every frame), a brass linstock in his hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the linstock lifted, smoke curling from its match, like the next frame of an idle animation; third — attack: touching the linstock to the gilded swivel gun, which fires toward the right with a small bright flash and a puff of grey smoke, the cannoneer leaning away; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_petardier": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.petardier",
+   "unit.petardier_b",
+   "unit.petardier_atk",
+   "unit.petardier_hit"
+  ],
+  "creature": {
+   "faction": "league",
+   "tier": 4,
+   "en": "Petardier",
+   "ru": "Петардист",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a Ledger petardier in a black leather jerkin with gold piping and a plain steel cap, a satchel of small brass-cased petards at his hip, one lit petard in his right hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the petard hand drawn back a little, the fuse sparking, like the next frame of an idle animation; third — attack: hurling the lit brass petard overarm toward the right, the fuse sparking; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_ledger_factor": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.ledger_factor",
+   "unit.ledger_factor_b",
+   "unit.ledger_factor_atk",
+   "unit.ledger_factor_hit"
+  ],
+  "creature": {
+   "faction": "league",
+   "tier": 3,
+   "en": "Company Factor",
+   "ru": "Фактор Компании",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a factor of the Gilded Ledger: a lean clerkly man in a long black coat with gold frogging and a high collar, small round spectacles, a heavy ledger held under his left arm, a long gilded pistol in his right hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, glancing down at the ledger under his arm, the pistol lowered, like the next frame of an idle animation; third — attack: firing the gilded pistol toward the right, a small bright muzzle flash and a puff of grey smoke, the ledger still under his arm; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_reef_raider": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.reef_raider",
+   "unit.reef_raider_b",
+   "unit.reef_raider_atk",
+   "unit.reef_raider_hit"
+  ],
+  "creature": {
+   "faction": "free",
+   "tier": 2,
+   "en": "Reef Raider",
+   "ru": "Рифовый налётчик",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a lean island reef raider tattooed with dark wave patterns, a woven fibre kilt and a collar of white shells, a short wooden club edged with sharp grey coral in each hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, both coral clubs lifted a little, his chest risen, like the next frame of an idle animation; third — attack: leaping forward to the right with both coral clubs swinging in a cross; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_shark_dancer": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.shark_dancer",
+   "unit.shark_dancer_b",
+   "unit.shark_dancer_atk",
+   "unit.shark_dancer_hit"
+  ],
+  "creature": {
+   "faction": "free",
+   "tier": 1,
+   "en": "Shark Dancer",
+   "ru": "Танцующий с акулами",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: an island shark dancer: a lithe warrior with rows of shark-tooth tattoos down his arms, a band of grey sharkskin round his brow and a short woven skirt, a curved knife of shark teeth set in dark wood in each hand. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, his weight shifted onto one foot as in a dance, both knives crossed low, like the next frame of an idle animation; third — attack: a spinning slash with both shark-tooth knives toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_island_elder": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.island_elder",
+   "unit.island_elder_b",
+   "unit.island_elder_atk",
+   "unit.island_elder_hit"
+  ],
+  "creature": {
+   "faction": "free",
+   "tier": 1,
+   "en": "Island Elder",
+   "ru": "Старейшина острова",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: an island elder and healer: a white-haired old man with deep tattoos on his face and arms, a cloak of woven palm fibre and dark feathers, a pouch of dried herbs at his belt, a tall staff of dark carved wood topped with a carved sea turtle. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, leaning on the staff, the feathers of his cloak stirring, like the next frame of an idle animation; third — attack: striking the carved staff down toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_dutchman_bulwark": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.dutchman_bulwark",
+   "unit.dutchman_bulwark_b",
+   "unit.dutchman_bulwark_atk",
+   "unit.dutchman_bulwark_hit"
+  ],
+  "creature": {
+   "faction": "dutchman",
+   "tier": 2,
+   "en": "Barnacled Bulwark",
+   "ru": "Ракушечный заслон",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a spectral bulwark of the Dutchman: pale grey-green spectral skin, a rotted sea coat, a heavy round hatch cover crusted with barnacles carried as a shield on the left arm, a short rusted cutlass, a faint green glow about him. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the hatch-cover shield raised a little, like the next frame of an idle animation; third — attack: thrusting the rusted cutlass toward the right from behind the hatch-cover shield; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_ghost_marksman": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.ghost_marksman",
+   "unit.ghost_marksman_b",
+   "unit.ghost_marksman_atk",
+   "unit.ghost_marksman_hit"
+  ],
+  "creature": {
+   "faction": "dutchman",
+   "tier": 3,
+   "en": "Ghost Marksman",
+   "ru": "Призрачный меткий стрелок",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a ghost marksman of the Dutchman: a gaunt pale spectral rifleman in a rotted green-black coat and a drooping hat, a long rusted rifle with a cracked brass-bound stock, a faint green glow. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the rifle lowered, his hollow eyes lifted to look, like the next frame of an idle animation; third — attack: kneeling on one knee and firing the long rifle toward the right, a pale green muzzle flash and a puff of grey-green smoke; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim_ghost_cutthroat": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.45,
+  "dir": "units",
+  "aspect": "16:9",
+  "ids": [
+   "unit.ghost_cutthroat",
+   "unit.ghost_cutthroat_b",
+   "unit.ghost_cutthroat_atk",
+   "unit.ghost_cutthroat_hit"
+  ],
+  "creature": {
+   "faction": "dutchman",
+   "tier": 5,
+   "en": "Ghost Cutthroat",
+   "ru": "Призрачный головорез",
+   "body": "man"
+  },
+  "prompt": "Animation pose sheet of ONE character for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, a bold readable silhouette. The character: a ghost cutthroat of the Dutchman: a lean pale spectral man in a rotted black long coat with a tattered scarf over the lower face, a long thin rusted knife, the edges of his coat fraying into faint green mist, a faint green glow. The picture shows exactly FOUR poses of this same character side by side in ONE horizontal row, evenly spaced across the whole width, with wide empty gaps between them so that no two touch, all four at exactly the same size and scale, the lowest points of all four at the same height near the bottom of the picture. From left to right: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the knife turned in his fingers, his head lowered, like the next frame of an idle animation; third — attack: darting forward with a low knife stab toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Exactly the same character in all four poses — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground, nose, chest and toes pointing right, so we see its left side and a little of its front. The whole character is visible in every pose, nothing cut off by the picture edges, each figure about 72% of the picture height. The same warm lantern light from the upper left and a cool moonlight rim from behind on all four. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different character in any pose, a pose seen from the back, more or fewer than four poses, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
  }
 }
