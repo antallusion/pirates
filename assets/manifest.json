@@ -1370,6 +1370,7 @@
     "bg.deck_xebec":                           { "local": "art/deck_xebec.webp", "remote": "hf_20261003_075017_gpt-bg-deck_xebec.png", "job": "gpt-bg-deck_xebec", "fit": "opaque:1536", "rev": 20261003075017},
     "bg.deck_bomb_ketch":                      { "local": "art/deck_bomb_ketch.webp", "remote": "hf_20261003_075848_gpt-bg-deck_bomb_ketch.png", "job": "gpt-bg-deck_bomb_ketch", "fit": "opaque:1536", "rev": 20261003075848},
     "bg.deck_fireship":                        { "local": "art/deck_fireship.webp", "remote": "hf_20261003_082741_gpt-bg-deck_fireship.png", "job": "gpt-bg-deck_fireship", "fit": "opaque:1536", "rev": 20261003082741},
-    "bg.deck_fishing_ketch":                   { "local": "art/deck_fishing_ketch.webp", "remote": "hf_20261003_083706_gpt-bg-deck_fishing_ketch.png", "job": "gpt-bg-deck_fishing_ketch", "fit": "opaque:1536", "rev": 20261003083706}
+    "bg.deck_fishing_ketch":                   { "local": "art/deck_fishing_ketch.webp", "remote": "hf_20261003_083706_gpt-bg-deck_fishing_ketch.png", "job": "gpt-bg-deck_fishing_ketch", "fit": "opaque:1536", "rev": 20261003083706},
+    "bg.deck_harpoon_whaler":                  { "local": "art/deck_harpoon_whaler.webp", "remote": "hf_20261003_083902_gpt-bg-deck_harpoon_whaler.png", "job": "gpt-bg-deck_harpoon_whaler", "fit": "opaque:1536", "rev": 20261003083902}
   }
 }
