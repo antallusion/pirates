@@ -1759,6 +1759,10 @@
     "unit.moray":                              { "local": "units/moray.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.0", "rev": 20261003155910},
     "unit.moray_b":                            { "local": "units/moray_b.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.1", "rev": 20261003155910},
     "unit.moray_atk":                          { "local": "units/moray_atk.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.2", "rev": 20261003155910},
-    "unit.moray_hit":                          { "local": "units/moray_hit.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.3", "rev": 20261003155910}
+    "unit.moray_hit":                          { "local": "units/moray_hit.webp", "remote": "hf_20261003_155910_gpt-anim_moray.png", "job": "gpt-anim_moray", "fit": "sheet:anim_moray.3", "rev": 20261003155910},
+    "unit.albatross":                          { "local": "units/albatross.webp", "remote": "hf_20261003_160401_gpt-anim_albatross.png", "job": "gpt-anim_albatross", "fit": "sheet:anim_albatross.0", "rev": 20261003160401},
+    "unit.albatross_b":                        { "local": "units/albatross_b.webp", "remote": "hf_20261003_160401_gpt-anim_albatross.png", "job": "gpt-anim_albatross", "fit": "sheet:anim_albatross.1", "rev": 20261003160401},
+    "unit.albatross_atk":                      { "local": "units/albatross_atk.webp", "remote": "hf_20261003_160401_gpt-anim_albatross.png", "job": "gpt-anim_albatross", "fit": "sheet:anim_albatross.2", "rev": 20261003160401},
+    "unit.albatross_hit":                      { "local": "units/albatross_hit.webp", "remote": "hf_20261003_160401_gpt-anim_albatross.png", "job": "gpt-anim_albatross", "fit": "sheet:anim_albatross.3", "rev": 20261003160401}
   }
 }
