@@ -1823,6 +1823,10 @@
     "unit.cave_wyrm":                          { "local": "units/cave_wyrm.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.0", "rev": 20261003174321},
     "unit.cave_wyrm_b":                        { "local": "units/cave_wyrm_b.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.1", "rev": 20261003174321},
     "unit.cave_wyrm_atk":                      { "local": "units/cave_wyrm_atk.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.2", "rev": 20261003174321},
-    "unit.cave_wyrm_hit":                      { "local": "units/cave_wyrm_hit.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.3", "rev": 20261003174321}
+    "unit.cave_wyrm_hit":                      { "local": "units/cave_wyrm_hit.webp", "remote": "hf_20261003_174321_gpt-anim_cave_wyrm.png", "job": "gpt-anim_cave_wyrm", "fit": "sheet:anim_cave_wyrm.3", "rev": 20261003174321},
+    "unit.mangrove_hydra":                     { "local": "units/mangrove_hydra.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.0", "rev": 20261003174547},
+    "unit.mangrove_hydra_b":                   { "local": "units/mangrove_hydra_b.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.1", "rev": 20261003174547},
+    "unit.mangrove_hydra_atk":                 { "local": "units/mangrove_hydra_atk.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.2", "rev": 20261003174547},
+    "unit.mangrove_hydra_hit":                 { "local": "units/mangrove_hydra_hit.webp", "remote": "hf_20261003_174547_gpt-anim_mangrove_hydra.png", "job": "gpt-anim_mangrove_hydra", "fit": "sheet:anim_mangrove_hydra.3", "rev": 20261003174547}
   }
 }
