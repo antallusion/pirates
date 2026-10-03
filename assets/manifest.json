@@ -1192,6 +1192,10 @@
     "unit.crown_chaplain":                     { "local": "units/crown_chaplain.webp", "remote": "hf_20261003_041237_gpt-anim_crown_chaplain.png", "job": "gpt-anim_crown_chaplain", "fit": "sheet:anim_crown_chaplain.0", "rev": 20261003041237},
     "unit.crown_chaplain_b":                   { "local": "units/crown_chaplain_b.webp", "remote": "hf_20261003_041237_gpt-anim_crown_chaplain.png", "job": "gpt-anim_crown_chaplain", "fit": "sheet:anim_crown_chaplain.1", "rev": 20261003041237},
     "unit.crown_chaplain_atk":                 { "local": "units/crown_chaplain_atk.webp", "remote": "hf_20261003_041237_gpt-anim_crown_chaplain.png", "job": "gpt-anim_crown_chaplain", "fit": "sheet:anim_crown_chaplain.2", "rev": 20261003041237},
-    "unit.crown_chaplain_hit":                 { "local": "units/crown_chaplain_hit.webp", "remote": "hf_20261003_041237_gpt-anim_crown_chaplain.png", "job": "gpt-anim_crown_chaplain", "fit": "sheet:anim_crown_chaplain.3", "rev": 20261003041237}
+    "unit.crown_chaplain_hit":                 { "local": "units/crown_chaplain_hit.webp", "remote": "hf_20261003_041237_gpt-anim_crown_chaplain.png", "job": "gpt-anim_crown_chaplain", "fit": "sheet:anim_crown_chaplain.3", "rev": 20261003041237},
+    "unit.crown_rocketeer":                    { "local": "units/crown_rocketeer.webp", "remote": "hf_20261003_041740_gpt-anim_crown_rocketeer.png", "job": "gpt-anim_crown_rocketeer", "fit": "sheet:anim_crown_rocketeer.0", "rev": 20261003041740},
+    "unit.crown_rocketeer_b":                  { "local": "units/crown_rocketeer_b.webp", "remote": "hf_20261003_041740_gpt-anim_crown_rocketeer.png", "job": "gpt-anim_crown_rocketeer", "fit": "sheet:anim_crown_rocketeer.1", "rev": 20261003041740},
+    "unit.crown_rocketeer_atk":                { "local": "units/crown_rocketeer_atk.webp", "remote": "hf_20261003_041740_gpt-anim_crown_rocketeer.png", "job": "gpt-anim_crown_rocketeer", "fit": "sheet:anim_crown_rocketeer.2", "rev": 20261003041740},
+    "unit.crown_rocketeer_hit":                { "local": "units/crown_rocketeer_hit.webp", "remote": "hf_20261003_041740_gpt-anim_crown_rocketeer.png", "job": "gpt-anim_crown_rocketeer", "fit": "sheet:anim_crown_rocketeer.3", "rev": 20261003041740}
   }
 }
