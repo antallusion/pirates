@@ -1715,6 +1715,10 @@
     "unit.dutchman_mate":                      { "local": "units/dutchman_mate.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.0", "rev": 20261003145550},
     "unit.dutchman_mate_b":                    { "local": "units/dutchman_mate_b.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.1", "rev": 20261003145550},
     "unit.dutchman_mate_atk":                  { "local": "units/dutchman_mate_atk.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.2", "rev": 20261003145550},
-    "unit.dutchman_mate_hit":                  { "local": "units/dutchman_mate_hit.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.3", "rev": 20261003145550}
+    "unit.dutchman_mate_hit":                  { "local": "units/dutchman_mate_hit.webp", "remote": "hf_20261003_145550_gpt-anim_dutchman_mate.png", "job": "gpt-anim_dutchman_mate", "fit": "sheet:anim_dutchman_mate.3", "rev": 20261003145550},
+    "unit.drowned_officer":                    { "local": "units/drowned_officer.webp", "remote": "hf_20261003_150131_gpt-anim_drowned_officer.png", "job": "gpt-anim_drowned_officer", "fit": "sheet:anim_drowned_officer.0", "rev": 20261003150131},
+    "unit.drowned_officer_b":                  { "local": "units/drowned_officer_b.webp", "remote": "hf_20261003_150131_gpt-anim_drowned_officer.png", "job": "gpt-anim_drowned_officer", "fit": "sheet:anim_drowned_officer.1", "rev": 20261003150131},
+    "unit.drowned_officer_atk":                { "local": "units/drowned_officer_atk.webp", "remote": "hf_20261003_150131_gpt-anim_drowned_officer.png", "job": "gpt-anim_drowned_officer", "fit": "sheet:anim_drowned_officer.2", "rev": 20261003150131},
+    "unit.drowned_officer_hit":                { "local": "units/drowned_officer_hit.webp", "remote": "hf_20261003_150131_gpt-anim_drowned_officer.png", "job": "gpt-anim_drowned_officer", "fit": "sheet:anim_drowned_officer.3", "rev": 20261003150131}
   }
 }
