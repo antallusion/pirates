@@ -475,6 +475,17 @@ function turned(key: string, now: unknown): boolean {
   filmLast.set(key, now);
   return had && before !== now && filmSince > 0 && performance.now() - filmSince > 10_000;
 }
+/** A test battle from a link (owner, 2026-10-03: «дай мне ссылку где можно потестить бой на палубе с существами»):
+ *  /?battle — her frigate's marines and creatures (mermaids, lantern maws, the ancient turtle, a young kraken, the White
+ *  Whale) board a Crown frigate. The orders are the admin server's (localhost:58530); any other server refuses them. */
+let testBattle = new URLSearchParams(location.search).has('battle');
+function runTestBattle(): void {
+  if (!testBattle || !state.self) return;
+  testBattle = false;
+  const orders = ['/level 30', '/tp gravewater', '/ship frigate', '/heal', '/army clear', '/army marine 30', '/army mermaid 14', '/army lantern_maw 6',
+    '/army ancient_turtle 3', '/army young_kraken 1', '/army white_whale 1', '/foe patrol frigate', '/board'];
+  orders.forEach((text, i) => setTimeout(() => net.send({ t: 'chat', text }), 800 + i * 700));
+}
 function filmMoments(): void {
   if (state.self && !filmSince) filmSince = performance.now();
   const tac = state.boardTac;
@@ -696,6 +707,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'self':
     case 'self_patch':
+      runTestBattle();
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();

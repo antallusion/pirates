@@ -201,8 +201,8 @@ function figureArt(s: TacStackView): string | null {
 /** How tall a kind stands beside a hex's width: the men alike, the creatures by their bulk. */
 const FIGURE_SIZE: Record<string, number> = {
   crab: 0.85, gull: 0.95, seal: 1.0, reef_shark: 1.15, rock_turtle: 1.05, sea_turtle: 1.05, marsh_serpent: 1.45, hermit: 1.3,
-  lagoon_tentacle: 1.65, mermaid: 1.4, cultist: 1.3, surf_drowned: 1.3, young_serpent: 1.8, lantern_maw: 1.6, ancient_turtle: 1.55,
-  shoal_leviathan: 1.95, white_whale: 2.2, young_kraken: 2.2, deep_spawn: 1.45, life_guard: 1.32, guard: 1.32,
+  lagoon_tentacle: 1.65, mermaid: 1.4, cultist: 1.3, surf_drowned: 1.3, young_serpent: 1.6, lantern_maw: 1.45, ancient_turtle: 1.45,
+  shoal_leviathan: 1.6, white_whale: 1.75, young_kraken: 1.75, deep_spawn: 1.45, life_guard: 1.32, guard: 1.32,
   crown_ironclad: 1.35, crown_diver: 1.5, crown_dreadnought: 1.7, deep_one_champion: 1.45, deep_abbot: 1.4, abyss_herald: 1.7,
   leviathan_slayer: 1.45, basalt_guardian: 1.6, dutchman_mate: 1.6, lantern_wraith: 1.2,
 };

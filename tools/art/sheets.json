@@ -4528,7 +4528,7 @@
    "icon.pet_monkey",
    "icon.pet_dog"
   ],
-  "painting": true,
-  "prompt": "Draw a square image: four separate ship's pets laid out in a 2 by 2 grid, each centred in its own cell and filling about three quarters of it, with wide empty gaps between them, all in the same slight three-quarter view and warm lantern light from the upper left, bold readable silhouettes at a small size: 1) a scruffy grey-striped ship's cat with a torn ear, sitting; 2) a green and red parrot perched on a short piece of rope, wings half open; 3) a small brown capuchin monkey in a tiny faded red waistcoat, crouching; 4) a shaggy black-and-white ship's dog with a rope collar, sitting. Smooth painterly digital painting like the hand-painted item icons of fantasy games, grim and weathered; muted colours with small warm highlights. Solid flat magenta #FF00FF background, no floor, no shadows, no lines, no frames, no text."
+  "prompt": "Draw a square image: four separate ship's pets laid out in a 2 by 2 grid, each centred in its own cell and filling about three quarters of it, with wide empty gaps between them, all in the same slight three-quarter view and warm lantern light from the upper left, bold readable silhouettes at a small size: 1) a scruffy grey-striped ship's cat with a torn ear, sitting; 2) a green and red parrot perched on a short piece of rope, wings half open; 3) a small brown capuchin monkey in a tiny faded red waistcoat, crouching; 4) a shaggy black-and-white ship's dog with a rope collar, sitting. Smooth painterly digital painting like the hand-painted item icons of fantasy games, grim and weathered; muted colours with small warm highlights. Solid flat magenta #FF00FF background, no floor, no shadows, no lines, no frames, no text.",
+  "cut": "hf_20261003_091649_gpt-pets_1"
  }
 }
