@@ -1482,6 +1482,22 @@
     "prop.bt_anchor":                          { "local": "props/bt_anchor.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.12", "rev": 20261003103150},
     "prop.bt_wreck":                           { "local": "props/bt_wreck.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.13", "rev": 20261003103150},
     "prop.bt_campfire":                        { "local": "props/bt_campfire.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.14", "rev": 20261003103150},
-    "prop.bt_statue":                          { "local": "props/bt_statue.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.15", "rev": 20261003103150}
+    "prop.bt_statue":                          { "local": "props/bt_statue.webp", "remote": "hf_20261003_103150_gpt-battle_props.png", "job": "gpt-battle_props", "fit": "sheet:battle_props.15", "rev": 20261003103150},
+    "icon.bt_book":                            { "local": "icons/bt_book.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.0", "rev": 20261003103648},
+    "icon.bt_wait":                            { "local": "icons/bt_wait.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.1", "rev": 20261003103648},
+    "icon.bt_defend":                          { "local": "icons/bt_defend.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.2", "rev": 20261003103648},
+    "icon.bt_auto":                            { "local": "icons/bt_auto.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.3", "rev": 20261003103648},
+    "icon.bt_quick":                           { "local": "icons/bt_quick.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.4", "rev": 20261003103648},
+    "icon.bt_retreat":                         { "local": "icons/bt_retreat.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.5", "rev": 20261003103648},
+    "icon.bt_strike":                          { "local": "icons/bt_strike.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.6", "rev": 20261003103648},
+    "icon.bt_ransom":                          { "local": "icons/bt_ransom.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.7", "rev": 20261003103648},
+    "icon.bt_order":                           { "local": "icons/bt_order.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.8", "rev": 20261003103648},
+    "icon.school_corsair":                     { "local": "icons/school_corsair.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.9", "rev": 20261003103648},
+    "icon.school_smuggler":                    { "local": "icons/school_smuggler.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.10", "rev": 20261003103648},
+    "icon.school_reaver":                      { "local": "icons/school_reaver.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.11", "rev": 20261003103648},
+    "icon.school_navigator":                   { "local": "icons/school_navigator.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.12", "rev": 20261003103648},
+    "icon.school_drowned":                     { "local": "icons/school_drowned.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.13", "rev": 20261003103648},
+    "icon.school_admiral":                     { "local": "icons/school_admiral.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.14", "rev": 20261003103648},
+    "icon.school_common":                      { "local": "icons/school_common.webp", "remote": "hf_20261003_103648_gpt-bt_commands.png", "job": "gpt-bt_commands", "fit": "sheet:bt_commands.15", "rev": 20261003103648}
   }
 }
