@@ -3004,7 +3004,7 @@ body.tac.tac-over #toasts { display: none; }
   .tb-acts .btn.armed { grid-column: 1 / -1; }
   .tb-acts .btn.armed .tb-al { display: inline; }
   .tb-feed { justify-content: flex-start; min-height: 0; font-size: 10.5px; }
-  .tb-hint { font-size: 10.5px; }
+  .tb-hint { font-size: 10.5px; line-height: 1.2; }
   .tb-banner b { font-size: 26px; }
 }
 /* A desk (and a tablet on its side, a desk window at 125–150%): the captains' columns either side of a large field,
