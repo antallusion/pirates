@@ -1651,6 +1651,10 @@
     "unit.net_master":                         { "local": "units/net_master.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.0", "rev": 20261003132129},
     "unit.net_master_b":                       { "local": "units/net_master_b.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.1", "rev": 20261003132129},
     "unit.net_master_atk":                     { "local": "units/net_master_atk.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.2", "rev": 20261003132129},
-    "unit.net_master_hit":                     { "local": "units/net_master_hit.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.3", "rev": 20261003132129}
+    "unit.net_master_hit":                     { "local": "units/net_master_hit.webp", "remote": "hf_20261003_132129_gpt-anim_net_master.png", "job": "gpt-anim_net_master", "fit": "sheet:anim_net_master.3", "rev": 20261003132129},
+    "unit.net_thrower":                        { "local": "units/net_thrower.webp", "remote": "hf_20261003_132631_gpt-anim_net_thrower.png", "job": "gpt-anim_net_thrower", "fit": "sheet:anim_net_thrower.0", "rev": 20261003132631},
+    "unit.net_thrower_b":                      { "local": "units/net_thrower_b.webp", "remote": "hf_20261003_132631_gpt-anim_net_thrower.png", "job": "gpt-anim_net_thrower", "fit": "sheet:anim_net_thrower.1", "rev": 20261003132631},
+    "unit.net_thrower_atk":                    { "local": "units/net_thrower_atk.webp", "remote": "hf_20261003_132631_gpt-anim_net_thrower.png", "job": "gpt-anim_net_thrower", "fit": "sheet:anim_net_thrower.2", "rev": 20261003132631},
+    "unit.net_thrower_hit":                    { "local": "units/net_thrower_hit.webp", "remote": "hf_20261003_132631_gpt-anim_net_thrower.png", "job": "gpt-anim_net_thrower", "fit": "sheet:anim_net_thrower.3", "rev": 20261003132631}
   }
 }
