@@ -2000,6 +2000,7 @@
     "unit.storm_caller":                       { "local": "units/storm_caller.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.0", "rev": 20261003230702},
     "unit.storm_caller_b":                     { "local": "units/storm_caller_b.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.1", "rev": 20261003230702},
     "unit.storm_caller_atk":                   { "local": "units/storm_caller_atk.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.2", "rev": 20261003230702},
-    "unit.storm_caller_hit":                   { "local": "units/storm_caller_hit.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.3", "rev": 20261003230702}
+    "unit.storm_caller_hit":                   { "local": "units/storm_caller_hit.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.3", "rev": 20261003230702},
+    "prop.port_copperhook":                    { "local": "props/port_copperhook.webp", "remote": "hf_20261003_230913_gpt-port_copperhook.png", "job": "gpt-port_copperhook", "fit": "sheet:port_copperhook.0", "rev": 20261003230913}
   }
 }
