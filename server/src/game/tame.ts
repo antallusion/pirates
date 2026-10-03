@@ -9,6 +9,7 @@ import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEAST_PLURAL, isCreature } from '../../../shared/src/data/bestiary.ts';
 import type { CreatureId } from '../../../shared/src/data/bestiary.ts';
+import { PREMIUM_PLURAL, isPremiumBeast } from '../../../shared/src/data/premiumbeasts.ts';
 import { isFavourite } from '../../../shared/src/data/drifts.ts';
 import { FOOD_GOODS, HUNGRY_AFTER, LOW_MORALE, LOW_SLIP_CHANCE, LOW_SLIP_SHARE, NATIVE, PEN_STOCK, RANK_MAX, RANK_WINS, SLIP_AFTER, SLIP_CHANCE, SLIP_SHARE, armyPeoples, captureCount, captureShare, foodOf, foodPerMin, hasTamer, mixMorale, peopleOf, penLoad, rankFor, tamerAsks, tamerPays, tamerStock, upkeepHour } from '../../../shared/src/data/drifts.ts';
 import type { Food } from '../../../shared/src/data/drifts.ts';
@@ -48,7 +49,7 @@ export function tameOf(p: Profile): TameProfile {
   if (!Number.isFinite(t.bone)) t.bone = 0;
   if (!Number.isFinite(t.next)) t.next = 0;
   for (const [u, r] of Object.entries(t.k) as [UnitId, TameRec][]) {
-    if (!isCreature(u) || !r) delete t.k[u];
+    if (!kept(u) || !r) delete t.k[u];
     else {
       r.w = Math.max(0, Math.floor(r.w ?? 0));
       r.h = Math.max(0, r.h ?? 0);
@@ -66,7 +67,13 @@ export function creaturesAboard(ship: ShipEntity): number {
   return n;
 }
 
-export const beastsName = (u: UnitId): string => (isCreature(u) ? BEAST_PLURAL[u][0] : u);
+export const beastsName = (u: UnitId): string => (isCreature(u) ? BEAST_PLURAL[u][0] : isPremiumBeast(u) ? PREMIUM_PLURAL[u][0] : u);
+
+/** A kind she keeps as a creature — its hunger, its wins, a place in her pen: the sea's and the land's, and the shop's
+ *  (docs/18 VII), which differ in two things only: they never slip away, and no tamer buys them back. */
+function kept(u: string): boolean {
+  return isCreature(u) || (isPremiumUnit(u as UnitId) && !!UNITS[u as UnitId].beast);
+}
 
 const all = new WeakMap<Game, Rng>();
 /** This system's own dice. */
@@ -130,7 +137,7 @@ export function feedCreatures(game: Game, ship: ShipEntity, secs = 10): void {
       r.h += secs;
       if (r.h >= HUNGRY_AFTER && !r.t) {
         r.t = true;
-        game.toastShip(ship, foodOf(x.u) === 'rum' ? `The ${beastsName(x.u)} want rum: there is none aboard, nor bone in your store.` : `The ${beastsName(x.u)} are hungry: fish for them in the hold, or they will slip away.`, 'bad');
+        game.toastShip(ship, foodOf(x.u) === 'rum' ? `The ${beastsName(x.u)} want rum: there is none aboard, nor bone in your store.` : isPremiumUnit(x.u) ? `The ${beastsName(x.u)} are hungry: fish for them in the hold, or they win no ranks.` : `The ${beastsName(x.u)} are hungry: fish for them in the hold, or they will slip away.`, 'bad');
       }
     }
   }
@@ -148,7 +155,8 @@ export function stepTame(game: Game): void {
     if (game.now < t.next) continue;
     t.next = game.now + 60;
     for (const x of [...ship.army]) {
-      if (!UNITS[x.u]?.beast) continue;
+      // The shop's creatures were bought, not tamed: hungry or unhappy, they stay (docs/18 VII).
+      if (!UNITS[x.u]?.beast || isPremiumUnit(x.u)) continue;
       const r = recOf(p, x.u);
       let share = 0;
       if (r.h >= SLIP_AFTER && rng.chance(SLIP_CHANCE)) share = SLIP_SHARE;
@@ -237,18 +245,18 @@ export function joinCreatures(game: Game, s: PlayerSession, u: UnitId, n: number
 
 // ------------------------------------------------------------------------------------------------ 41. the pen
 
-type PenTown = ReturnType<typeof townState> & { penStock?: Partial<Record<CreatureId, number>> };
+type PenTown = ReturnType<typeof townState> & { penStock?: Partial<Record<UnitId, number>> };
 
-function stockOf(y: Yard): Partial<Record<CreatureId, number>> {
+function stockOf(y: Yard): Partial<Record<UnitId, number>> {
   const t = townState(y) as PenTown;
   t.penStock ??= {};
-  for (const [u, n] of Object.entries(t.penStock) as [CreatureId, number][]) if (!isCreature(u) || !(n > 0)) delete t.penStock[u];
+  for (const [u, n] of Object.entries(t.penStock) as [UnitId, number][]) if (!kept(u) || !(n > 0)) delete t.penStock[u];
   return t.penStock;
 }
 
 /** Her pen's room (heads by tier) for a kind, wherever she is: 0 with no pen or none to spare. */
 export function penRoom(game: Game, s: PlayerSession, u: UnitId): number {
-  if (!isCreature(u) || UNITS[u].legend) return UNITS[u]?.legend ? penRoomLegend(game, s) : 0;
+  if (!kept(u) || UNITS[u].legend) return UNITS[u]?.legend ? penRoomLegend(game, s) : 0;
   const m = ownBase(game, s);
   if (typeof m === 'string') return 0;
   const lv = townLevel(m.y, 'pen');
@@ -265,7 +273,7 @@ function penRoomLegend(game: Game, s: PlayerSession): number {
 
 /** Creatures sent home to her pen (from a rescue, a capture, or her army lying off the island); how many went. */
 export function sendToPen(game: Game, s: PlayerSession, u: UnitId, n: number): number {
-  if (!isCreature(u)) return 0;
+  if (!kept(u)) return 0;
   const k = Math.max(0, Math.min(Math.floor(n), penRoom(game, s, u)));
   if (k <= 0) return 0;
   const m = ownBase(game, s);
@@ -279,7 +287,7 @@ export function sendToPen(game: Game, s: PlayerSession, u: UnitId, n: number): n
 /** Her army's creatures of a kind into the pen (lying off her island). */
 export function toPen(game: Game, s: PlayerSession, u: UnitId, n: number): string | null {
   const ship = s.ship;
-  if (!ship || !isCreature(u)) return 'No such creatures aboard';
+  if (!ship || !kept(u)) return 'No such creatures aboard';
   const m = ownBase(game, s);
   if (typeof m === 'string') return m;
   if (townLevel(m.y, 'pen') <= 0) return 'Build a pen in your town first.';
@@ -302,7 +310,7 @@ export function toPen(game: Game, s: PlayerSession, u: UnitId, n: number): strin
 /** Creatures of a kind out of the pen into her army (lying off her island). */
 export function fromPen(game: Game, s: PlayerSession, u: UnitId, n: number): string | null {
   const ship = s.ship;
-  if (!ship || !isCreature(u)) return 'None of them in the pen.';
+  if (!ship || !kept(u)) return 'None of them in the pen.';
   const m = ownBase(game, s);
   if (typeof m === 'string') return m;
   if (!lyingOff(game, s, m.h)) return 'Bring your ship to the island to take the men aboard.';
@@ -418,6 +426,7 @@ export function tamerSell(game: Game, s: PlayerSession, u: UnitId, n: number): s
   if (!port) return 'No tamer in this port.';
   const ship = s.ship!;
   if (!UNITS[u]?.beast) return 'The tamer buys creatures, not men.';
+  if (isPremiumUnit(u)) return 'The tamer will not buy the shop’s creatures: doubloons never turn into silver.';
   if (UNITS[u].legend) return 'Not even a tamer would put a price on a legend.';
   const have = ship.army.find((x) => x.u === u)?.n ?? 0;
   const k = Math.min(have, Math.floor(Number(n)) || have);
@@ -474,14 +483,14 @@ export function tameView(game: Game, s: PlayerSession): TameView {
   if (typeof m !== 'string' && townLevel(m.y, 'pen') > 0) {
     const lv = townLevel(m.y, 'pen');
     const st = stockOf(m.y);
-    pen = { here: lyingOff(game, s, m.h), level: lv, load: penLoad(st), cap: PEN_STOCK[Math.min(PEN_STOCK.length - 1, lv)], stock: (Object.entries(st) as [CreatureId, number][]).map(([u, n]) => ({ u, n })) };
+    pen = { here: lyingOff(game, s, m.h), level: lv, load: penLoad(st), cap: PEN_STOCK[Math.min(PEN_STOCK.length - 1, lv)], stock: (Object.entries(st) as [UnitId, number][]).map(([u, n]) => ({ u, n })) };
   }
   let tamer: TameView['tamer'] = null;
   const port = tamerPort(game, s);
   if (port) {
     tamer = {
       port: port.name,
-      buys: ship.army.filter((x) => UNITS[x.u]?.beast && !UNITS[x.u].legend).map((x) => ({ u: x.u, n: x.n, price: tamerPays(x.u, rankOfKind(p, x.u)) })),
+      buys: ship.army.filter((x) => UNITS[x.u]?.beast && !UNITS[x.u].legend && !isPremiumUnit(x.u)).map((x) => ({ u: x.u, n: x.n, price: tamerPays(x.u, rankOfKind(p, x.u)) })),
       sells: tamerPens(game, s, port.id).map((x) => ({ u: x.u, n: x.n, price: tamerAsks(x.u) })),
     };
   }

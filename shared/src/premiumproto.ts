@@ -7,8 +7,8 @@ import type { ShipClassId } from './data/ships.ts';
 /** Why a card's Buy is shut (the window says it in her language): too few doubloons; a hull is delivered only in port;
  *  she sails one already; the yard has her on the ways; her level is short of the hull's; every berth taken; no free
  *  slot in the army for a new kind; no hammocks for them; in a fight; the deep's own serve only a captain who keeps
- *  the deep. */
-export type PremiumWhy = 'poor' | 'port' | 'yours' | 'refit' | 'level' | 'berths' | 'slot' | 'room' | 'fight' | 'deep';
+ *  the deep; her ship's level is short of the creature's tier (docs/18 VII). */
+export type PremiumWhy = 'poor' | 'port' | 'yours' | 'refit' | 'level' | 'berths' | 'slot' | 'room' | 'fight' | 'deep' | 'tier';
 
 export interface PremiumShipCard {
   id: ShipClassId;
@@ -28,6 +28,8 @@ export interface PremiumUnitCard {
   /** How many come in one purchase. */
   n: number;
   note: [string, string];
+  /** The ship level its tier is sold from. */
+  lv: number;
   why: PremiumWhy | null;
 }
 

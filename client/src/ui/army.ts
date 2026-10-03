@@ -8,6 +8,7 @@ import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/ar
 import { dict, lang } from '../i18n.ts';
 import { FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
+import { PREMIUM_NAMES, isPremiumBeast } from '../../../shared/src/data/premiumbeasts.ts';
 import { EN, RU } from '../lang/ui/army.ts';
 import { beastFace } from '../render/beastface.ts';
 import { esc, icon } from './dom.ts';
@@ -16,8 +17,11 @@ const L = dict(EN, RU);
 const DL = dict(DEN, DRU);
 type K = keyof typeof EN;
 
-// The world's armies carry their own names (shared/src/data/factionunits.ts).
-const own = (u: UnitId, k: 0 | 2): string | null => (UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId][k + (lang() === 'ru' ? 1 : 0)] : null);
+// The world's armies and the shop's creatures carry their own names (shared/src/data/factionunits.ts, premiumbeasts.ts).
+const own = (u: UnitId, k: 0 | 2): string | null => {
+  const n = UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId] : isPremiumBeast(u) ? PREMIUM_NAMES[u] : null;
+  return n ? n[k + (lang() === 'ru' ? 1 : 0)] : null;
+};
 export const unitName = (u: UnitId): string => own(u, 0) ?? L(`u.${u}` as K);
 export const unitNote = (u: UnitId): string => own(u, 2) ?? L(`ud.${u}` as K);
 export const specialName = (s: UnitSpecial): string => L(`sp.${s}` as K);

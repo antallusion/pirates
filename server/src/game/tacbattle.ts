@@ -389,6 +389,15 @@ const hpOf = (s: TacStack) => (s.count > 0 ? (s.count - 1) * s.hpMax + s.hpTop :
  *  freezes the living beside it this often. */
 export const REGEN_SHARE = 0.1;
 export const TAC_TERROR = 0.2;
+/** Owner, 2026-10-03 (docs/18 VII): the shop's creatures' and the factions' elites' crafts — a healer gives each of its
+ *  side within two hexes this share of its strength; one blow in four binds; a chill takes two hexes and three of
+ *  initiative; a drinker takes back half the harm it does; a breath or a chain lays half the blow on one more. */
+export const MEND_SHARE = 0.05;
+export const MEND_REACH = 2;
+export const BIND_CHANCE = 0.25;
+export const CHILL = { speed: -2, init: -3 };
+export const DRAIN_SHARE = 0.5;
+export const SPILL_SHARE = 0.5;
 
 function newHero(input: TacSideInput, stacks: TacStack[]): TacHero {
   const lucky = input.officers.filter((o) => o.lucky).length;
@@ -497,6 +506,11 @@ export function moralePoints(bt: TacBattle, side: 0 | 1): number {
   // docs/18 #38: the peoples of a mixed army.
   m += h.input.mixed ?? 0;
   return Math.max(-3, Math.min(3, m));
+}
+
+/** A side's luck: her officers' and her captain's, and a point more while a luck-bringer of hers stands (docs/18 VII). */
+export function luckOf(bt: TacBattle, side: 0 | 1): number {
+  return Math.max(-3, Math.min(3, bt.heroes[side].luck + (sideHas(bt, side, 'fortune') ? 1 : 0)));
 }
 
 /** The morale one stack fights with: the dead feel none, the steady never break. */
@@ -656,7 +670,7 @@ export function blow(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'sh
   // Backs to the rail (docs/17 H5): the side with less of her strength left on deck strikes harder by the shortfall —
   // a tenth fewer men is a hard fight, not a lost one.
   mul *= desperation(bt, s.side);
-  const lucky = !!rng && rng.chance(Math.max(-3, Math.min(3, h.luck + ma.luck)) * TAC_CHANCE_PER_POINT);
+  const lucky = !!rng && rng.chance(Math.max(-3, Math.min(3, luckOf(bt, s.side) + ma.luck)) * TAC_CHANCE_PER_POINT);
   if (lucky) mul *= 2;
   return { dmg: Math.max(1, Math.round(rollBase(s, rng) * mod * mul)), lucky };
 }
@@ -708,11 +722,58 @@ function push(bt: TacBattle, e: Omit<TacEvent, 'i'>): void {
 function oneBlow(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, k: 'hit' | 'ret'): void {
   const { dmg, lucky } = blow(bt, s, t, k === 'ret' ? 'ret' : 'melee', rng);
   if (lucky) push(bt, { k: 'luck', side: s.side, s: s.id });
+  const had = hpOf(t);
   const kills = hurt(bt, t, dmg, s.side);
   if (wake(bt, t) && k === 'hit') t.ret = false; // caught asleep: no answer to the blow that wakes her
   push(bt, { k, side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex });
   // docs/18 II: a poisonous bite stays in the living — a third of it again as each of her next two turns comes.
   if (sp(s, 'poison') && t.count > 0 && !sp(t, 'undead')) t.poison = { dmg: Math.max(1, Math.round(dmg * 0.3)), left: 2, by: s.side };
+  afterHit(bt, s, t, had - hpOf(t), rng);
+}
+
+/** Strength back into one stack, up to what came aboard — its fallen stand again; how much. */
+function restore(bt: TacBattle, x: TacStack, amount: number): number {
+  const a = Math.min(x.start * x.hpMax - hpOf(x), Math.round(amount));
+  if (a <= 0 || x.count <= 0) return 0;
+  const tot = hpOf(x) + a;
+  const was = x.count;
+  x.count = Math.ceil(tot / x.hpMax);
+  x.hpTop = tot - (x.count - 1) * x.hpMax;
+  bt.dead[x.side] = Math.max(0, bt.dead[x.side] - (x.count - was));
+  return a;
+}
+
+/** What a blow or a shot (an answer too) leaves beyond its harm (docs/18 VII): the drinker takes back half of what it
+ *  did the living; the struck may be bound through its next turn (Siren Song's spell: a blow wakes it) or chilled. */
+function afterHit(bt: TacBattle, s: TacStack, t: TacStack, dealt: number, rng: Rng): void {
+  if (sp(s, 'drain') && !sp(t, 'undead') && s.count > 0) {
+    const n = restore(bt, s, dealt * DRAIN_SHARE);
+    if (n > 0) push(bt, { k: 'regen', side: s.side, s: s.id, dmg: n, hex: s.hex, id: 'drain' });
+  }
+  if (t.count <= 0) return;
+  const h = bt.heroes[s.side];
+  if (sp(s, 'bind') && !h.fx.some((f) => f.id === 'bind' && f.on === t.id) && rng.chance(BIND_CHANCE)) h.fx.push({ id: 'bind', until: bt.round + 1, on: t.id, foe: true, mods: { still: true } });
+  if (sp(s, 'chill')) {
+    h.fx = h.fx.filter((f) => !(f.id === 'chill' && f.on === t.id));
+    h.fx.push({ id: 'chill', until: bt.round + 1, on: t.id, foe: true, mods: { ...CHILL } });
+  }
+}
+
+/** Half a blow on one more foe, unanswered (docs/18 VII): a breath on the one behind the struck stack, a chain on the
+ *  most dangerous beside it. */
+function spill(bt: TacBattle, s: TacStack, t: TacStack, how: 'melee' | 'shot'): void {
+  const near = alive(bt).filter((o) => o.side !== s.side && o !== t && hexNeighbors(t.hex).includes(o.hex));
+  const most = (xs: TacStack[]) => xs.sort((a, b) => threat(bt, b) - threat(bt, a) || a.id - b.id)[0];
+  const hits: [TacStack | undefined, string][] = [];
+  if (sp(s, 'breath') && how === 'melee') hits.push([most(near.filter((o) => hexDist(s.hex, o.hex) >= 2)), 'breath']);
+  if (sp(s, 'chain')) hits.push([most(near.filter((o) => !hits.some(([x]) => x === o))), 'chain']);
+  for (const [o, id] of hits) {
+    if (!o || o.count <= 0) continue;
+    const b = Math.max(1, Math.round(blow(bt, s, o, how, null).dmg * SPILL_SHARE));
+    const k2 = hurt(bt, o, b, s.side);
+    wake(bt, o);
+    push(bt, { k: how === 'shot' ? 'shot' : 'hit', side: s.side, s: s.id, t: o.id, dmg: b, kills: k2, hex: o.hex, id });
+  }
 }
 
 /** Her answer: once a round (every blow for a guard that answers all), by what is left of her. */
@@ -735,6 +796,7 @@ function strike(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
     return;
   }
   oneBlow(bt, s, t, rng, 'hit');
+  spill(bt, s, t, 'melee');
   retaliate(bt, s, t, rng);
   // Double strike: the second blow after her answer, if both still stand.
   if (sp(s, 'double_strike') && s.count > 0 && t.count > 0) oneBlow(bt, s, t, rng, 'hit');
@@ -745,6 +807,7 @@ function shoot(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
   s.shots--;
   if (lucky) push(bt, { k: 'luck', side: s.side, s: s.id });
   const ring = sp(s, 'blast') ? alive(bt).filter((o) => o.side !== s.side && o !== t && hexNeighbors(t.hex).includes(o.hex)) : [];
+  const had = hpOf(t);
   const kills = hurt(bt, t, dmg, s.side);
   wake(bt, t);
   push(bt, { k: 'shot', side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex });
@@ -755,6 +818,10 @@ function shoot(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
     wake(bt, o);
     push(bt, { k: 'shot', side: s.side, s: s.id, t: o.id, dmg: b, kills: k2, hex: o.hex, id: 'blast' });
   }
+  // docs/18 VII: a venomed dart stays in the living as a bite does; the bolt that leaps on, the toll that binds.
+  if (sp(s, 'poison') && t.count > 0 && !sp(t, 'undead')) t.poison = { dmg: Math.max(1, Math.round(dmg * 0.3)), left: 2, by: s.side };
+  spill(bt, s, t, 'shot');
+  afterHit(bt, s, t, had - hpOf(t), rng);
 }
 
 // ------------------------------------------------------------------ the captains' orders
@@ -770,14 +837,7 @@ function spellPower(bt: TacBattle, side: 0 | 1): number {
 function heal(bt: TacBattle, side: 0 | 1, share: number, dead = false, only?: TacStack): void {
   for (const x of bt.stacks) {
     if (x.side !== side || x.count <= 0 || (sp(x, 'undead') && !dead) || (only && x !== only)) continue;
-    const room = x.start * x.hpMax - hpOf(x);
-    const amount = Math.min(room, Math.round(x.start * x.hpMax * share));
-    if (amount <= 0) continue;
-    const tot = hpOf(x) + amount;
-    const was = x.count;
-    x.count = Math.ceil(tot / x.hpMax);
-    x.hpTop = tot - (x.count - 1) * x.hpMax;
-    bt.dead[side] = Math.max(0, bt.dead[side] - (x.count - was));
+    restore(bt, x, x.start * x.hpMax * share);
   }
 }
 
@@ -1212,6 +1272,13 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
       const n = hpOf(s) - was;
       if (n > 0) push(bt, { k: 'regen', side: s.side, s: s.id, dmg: n, hex: s.hex });
     }
+    // docs/18 VII: a healer — the living of her side within two hexes of her (the next stack of the line) take back a
+    // share of their strength.
+    if (sp(s, 'mend')) for (const o of alive(bt)) {
+      if (o.side !== s.side || o === s || sp(o, 'undead') || hexDist(s.hex, o.hex) > MEND_REACH) continue;
+      const n = restore(bt, o, o.start * o.hpMax * MEND_SHARE);
+      if (n > 0) push(bt, { k: 'regen', side: o.side, s: o.id, dmg: n, hex: o.hex, id: 'mend' });
+    }
     // A fire on deck: whoever stands in it burns as his turn comes.
     if (bt.cells[s.hex] === 'F') {
       const dmg = Math.max(s.hpMax, Math.round(hpOf(s) * TAC_BURN));
@@ -1228,6 +1295,7 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
     const held = smods(bt, s);
     if (held.still) {
       push(bt, { k: 'fear', side: s.side, s: s.id, id: 'still' });
+      for (const h of bt.heroes) h.fx = h.fx.filter((f) => !(f.id === 'bind' && f.on === s.id)); // a bind holds one turn
       continue;
     }
     if (held.mad) {
@@ -1793,7 +1861,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     const h = bt.heroes[x];
     const hb = h.input.hero;
     return {
-      name: h.input.name, ship: h.input.ship, ...(h.input.hull ? { hull: h.input.hull } : {}), captain: h.input.captain, morale: moralePoints(bt, x), luck: h.luck, spells: h.spells.filter((s0) => !hb?.scroll?.[s0.id] || onScroll(bt, x, s0.id)).map((s0) => ({ id: s0.id, ready: s0.ready, ...(hb ? { cost: spellCost(bt, x, s0.id), res: spellRes(bt, x, s0.id) } : {}), ...(hb?.scroll?.[s0.id] ? { scroll: hb.scroll[s0.id]! - h.scrollsUsed.filter((y) => y === s0.id).length } : {}) })), cast: h.cast >= bt.round || (h.hush ?? 0) >= bt.round, auto: h.auto, men: alive(bt).filter((s) => s.side === x).reduce((n, s) => n + s.count, 0), menStart: h.startMen,
+      name: h.input.name, ship: h.input.ship, ...(h.input.hull ? { hull: h.input.hull } : {}), captain: h.input.captain, morale: moralePoints(bt, x), luck: luckOf(bt, x), spells: h.spells.filter((s0) => !hb?.scroll?.[s0.id] || onScroll(bt, x, s0.id)).map((s0) => ({ id: s0.id, ready: s0.ready, ...(hb ? { cost: spellCost(bt, x, s0.id), res: spellRes(bt, x, s0.id) } : {}), ...(hb?.scroll?.[s0.id] ? { scroll: hb.scroll[s0.id]! - h.scrollsUsed.filter((y) => y === s0.id).length } : {}) })), cast: h.cast >= bt.round || (h.hush ?? 0) >= bt.round, auto: h.auto, men: alive(bt).filter((s) => s.side === x).reduce((n, s) => n + s.count, 0), menStart: h.startMen,
       ...(hb ? { prim: { atk: hb.atk, def: hb.def, pow: hb.pow, will: hb.will }, mana: Math.round(h.mana), manaMax: hb.manaMax } : {}),
       // docs/18: her path, stamina, innate move and ultimate, her spells' stores and scrolls, her face.
       ...(hb?.level !== undefined ? { path: hb.path ?? null, level: hb.level } : {}),

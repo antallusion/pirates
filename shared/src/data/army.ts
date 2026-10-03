@@ -6,12 +6,14 @@
 
 import { BEASTS, SEA_BEASTS } from './bestiary.ts';
 import type { BeastId, SeaBeastId } from './bestiary.ts';
-import { FACTION_KINDS, FACTION_KIND_IDS, rosterKind } from './factionunits.ts';
+import { FACTION_ELITES, FACTION_KINDS, FACTION_KIND_IDS, rosterKind } from './factionunits.ts';
 import type { FactionKindId, Roster } from './factionunits.ts';
+import { PREMIUM_BEASTS } from './premiumbeasts.ts';
+import type { PremiumBeastId } from './premiumbeasts.ts';
 
 /** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
- *  them (docs/18 II, shared/src/data/bestiary.ts). */
-export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId;
+ *  them (docs/18 II, shared/src/data/bestiary.ts), the world's armies, and the shop's creatures (premiumbeasts.ts). */
+export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId | PremiumBeastId;
 export type MenId =
   | 'deckhand' | 'sailor'
   | 'marine' | 'sea_guard'
@@ -65,7 +67,22 @@ export type UnitSpecial =
   | 'flying'
   /** Goes into the surf and comes out of it anywhere along the shore (the surf is one water); half the harm from shots
    *  while it is in it. */
-  | 'diving';
+  | 'diving'
+  // Owner, 2026-10-03 («около 100 существ»): the shop's creatures and the factions' healers and elites (docs/18 VII).
+  /** A healer: as its turn comes, every living stack of its side within two hexes takes back a share of its strength. */
+  | 'mend'
+  /** One blow or shot in four binds the struck stack: it loses its next turn unless something strikes it first. */
+  | 'bind'
+  /** Its blow chills: the struck stack walks two hexes less and acts later to the end of the next round. */
+  | 'chill'
+  /** Half the harm it does the living comes back to it as strength (its fallen rise). */
+  | 'drain'
+  /** Its blow scalds the foe behind the struck one too, half as hard, and that one does not answer. */
+  | 'breath'
+  /** Its blow or shot leaps to one more foe beside the struck one, half as hard. */
+  | 'chain'
+  /** Its side fights with a point more luck. */
+  | 'fortune';
 
 export interface UnitDef {
   id: UnitId;
@@ -136,18 +153,19 @@ const BASE_UNITS: Record<MenId | BeastId | SeaBeastId, UnitDef> = {
 };
 
 /** The world's armies: each faction's kind fights with the numbers of the pirate kind whose place it takes, its plain
- *  and upgraded kinds paired as the pirates' are; its face is the pirate kind's until its own figure is painted. */
+ *  and upgraded kinds paired as the pirates' are; its face is the pirate kind's until its own figure is painted. An
+ *  elite (FACTION_ELITES) keeps the place's health, defence and pace and brings its own blows and craft. */
 function factionUnits(): Record<FactionKindId, UnitDef> {
   const out = {} as Record<FactionKindId, UnitDef>;
   for (const id of FACTION_KIND_IDS) {
     const { roster, as } = FACTION_KINDS[id];
     const t = BASE_UNITS[as];
-    out[id] = { ...t, id, base: rosterKind(roster, t.base as MenId), upgrade: t.upgrade ? rosterKind(roster, t.upgrade as MenId) : null, roster, as };
+    out[id] = { ...t, ...FACTION_ELITES[id]?.own, id, base: rosterKind(roster, t.base as MenId), upgrade: t.upgrade ? rosterKind(roster, t.upgrade as MenId) : null, roster, as };
   }
   return out;
 }
 
-export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits() };
+export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits(), ...PREMIUM_BEASTS };
 
 export const hasSpecial = (u: UnitId, s: UnitSpecial): boolean => UNITS[u].specials.includes(s);
 

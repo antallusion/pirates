@@ -9,6 +9,7 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { PremiumUnit, UnitId } from '../../../shared/src/data/army.ts';
 import { peopleOf } from '../../../shared/src/data/drifts.ts';
 import { CREDIT_MAX, PAYMENTS_OPEN, PREMIUM_SAMPLE, premiumShips, premiumUnits } from '../../../shared/src/data/premium.ts';
+import { premiumFrom } from '../../../shared/src/data/premiumbeasts.ts';
 import { SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { PremiumShip, ShipClassId } from '../../../shared/src/data/ships.ts';
 import { captainLevelFor, levelRange } from '../../../shared/src/data/shiplevel.ts';
@@ -107,11 +108,13 @@ function shipWhy(game: Game, s: PlayerSession, c: ShipClassId, price: number, ba
 }
 
 /** Why a stack of a kind cannot come aboard now (null: it can): as a tamer's, a slot of its own (or its stack aboard)
- *  and hammocks for every one of them; never in a fight; the deep's own only for a captain who keeps the deep. */
+ *  and hammocks for every one of them; never in a fight; the deep's own only for a captain who keeps the deep; and a
+ *  tier only from the ship level that signs it on (docs/18 VII: worth the money, not an auto-win). */
 function unitWhy(game: Game, s: PlayerSession, u: UnitId, o: PremiumUnit, balance: number): PremiumWhy | null {
   const ship = s.ship!;
   if (!ship.alive || ship.boarding || ship.inCombat(game.now) || landFighting(game, s)) return 'fight';
   if (peopleOf(u) === 'deep' && !keepsDeep(s) && s.profile!.captain !== 'drowned') return 'deep';
+  if (ship.shipLevel < premiumFrom(UNITS[u].tier)) return 'tier';
   if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'slot';
   if (creatureRoom(ship, u) < o.n) return 'room';
   return balance < o.price ? 'poor' : null;
@@ -130,6 +133,7 @@ function whyText(game: Game, s: PlayerSession, why: PremiumWhy, c?: ShipClassId,
     case 'room': return `No hammocks aboard for ${n} more.`;
     case 'fight': return 'Not in the middle of a fight.';
     case 'deep': return 'The deep’s own serve only a captain who keeps the deep: the Choir’s favour, a cursed hull or a drowned crew.';
+    case 'tier': return `Creatures of tier ${n} serve a ship of level ${premiumFrom(n)} and up.`;
   }
 }
 
@@ -191,7 +195,7 @@ export function buyUnit(game: Game, s: PlayerSession, u: UnitId): string | null 
   const o = unitOffer(game, u);
   if (!o) return 'Not for sale';
   const why = unitWhy(game, s, u, o, game.db.doubloons(s.accountId));
-  if (why) return whyText(game, s, why, undefined, o.n);
+  if (why) return whyText(game, s, why, undefined, why === 'tier' ? UNITS[u].tier : o.n);
   const bal = move(game, s.accountId, -o.price, 'doubloons_buy', `unit:${u}:${o.n}`, () => {
     joinCreatures(game, s, u, o.n);
     game.saveSession(s);
@@ -216,7 +220,7 @@ export function premiumView(game: Game, s: PlayerSession): PremiumView {
     }),
     units: unitList(game).map((u) => {
       const o = unitOffer(game, u)!;
-      return { id: u, price: o.price, n: o.n, note: o.note, why: unitWhy(game, s, u, o, balance) };
+      return { id: u, price: o.price, n: o.n, note: o.note, lv: premiumFrom(UNITS[u].tier), why: unitWhy(game, s, u, o, balance) };
     }),
     port: ship.docked ? game.portById(ship.docked)?.name ?? null : null,
     pay: PAYMENTS_OPEN,

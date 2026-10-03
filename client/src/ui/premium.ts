@@ -74,8 +74,8 @@ function unitCard(c: PremiumUnitCard): string {
   return `<div class="card pm-card${c.why ? ' shut' : ''}">${unitArt(c.id)}
     <div class="pm-text"><b class="pm-name">${esc(unitName(c.id))} <span class="pm-n">×${c.n}</span></b><span class="pm-note">${esc(T(c.note))}</span>
       <span class="muted pm-meta">${esc(AL('tier', { n: d.tier }))} · ${esc(AL('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${esc(sp)}</span>
-      <span class="muted pm-meta">${esc(L('stack', { n: c.n }))}</span></div>
-    ${buyBox(c.price, c.why, 0, `data-pmunit="${c.id}"`)}</div>`;
+      <span class="muted pm-meta">${esc(L('stack', { n: c.n }))} · ${esc(L('ulv', { n: c.lv }))}</span></div>
+    ${buyBox(c.price, c.why, c.lv, `data-pmunit="${c.id}"`)}</div>`;
 }
 
 function emptyCard(tab: 'ships' | 'units'): string {

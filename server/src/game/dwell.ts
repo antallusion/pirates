@@ -8,6 +8,8 @@
 
 import { FACTION_KIND_IDS, FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
+import { PREMIUM_BEAST_IDS, PREMIUM_PLURAL } from '../../../shared/src/data/premiumbeasts.ts';
+import type { PremiumBeastId } from '../../../shared/src/data/premiumbeasts.ts';
 import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
 import { recruitLift } from './throne.ts';
 import { BEAST_PLURAL, CREATURE_IDS } from '../../../shared/src/data/bestiary.ts';
@@ -255,6 +257,7 @@ const NAMES: Record<UnitId, string> = {
   drowned: 'drowned', deep_spawn: 'spawn of the deep',
   ...(Object.fromEntries(CREATURE_IDS.map((b) => [b, BEAST_PLURAL[b][0]])) as Record<CreatureId, string>), // docs/18 II, IV
   ...(Object.fromEntries(FACTION_KIND_IDS.map((k) => [k, FACTION_NAMES[k][0].toLowerCase()])) as Record<FactionKindId, string>), // the world's armies
+  ...(Object.fromEntries(PREMIUM_BEAST_IDS.map((k) => [k, PREMIUM_PLURAL[k][0]])) as Record<PremiumBeastId, string>), // the shop's creatures
 };
 const plural = (u: UnitId, _n: number) => NAMES[u];
 

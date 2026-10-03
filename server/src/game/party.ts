@@ -539,8 +539,9 @@ function tradeItems(s: PlayerSession, uids: unknown): number[] | string {
   return out;
 }
 
-/** docs/18 #42: creatures she may put on the table — tamed kinds of her army (no legend), at most what she has, and a
- *  stack of something left aboard. */
+/** docs/18 #42: creatures she may put on the table — tamed kinds of her army (no legend, and nothing of the premium
+ *  shop's: bought with an account's money, they stay with it), at most what she has, and a stack of something left
+ *  aboard. */
 function tradeBeasts(s: PlayerSession, raw: unknown): { u: UnitId; n: number }[] | string {
   if (raw === undefined || raw === null) return [];
   if (!Array.isArray(raw)) return 'Bad offer';
@@ -551,6 +552,7 @@ function tradeBeasts(s: PlayerSession, raw: unknown): { u: UnitId; n: number }[]
     const n = Math.floor(Number((v as { n?: unknown })?.n));
     if (!UNITS[u]?.beast || !Number.isFinite(n) || n <= 0 || out.some((x) => x.u === u)) continue;
     if (UNITS[u].legend) return 'A legend does not change hands';
+    if (UNITS[u].premium) return 'The shop’s creatures do not change hands';
     const have = ship.army.find((x) => x.u === u)?.n ?? 0;
     if (n > have) return `You have only ${have} ${BEAST_PLURAL[u as keyof typeof BEAST_PLURAL][0]}`;
     out.push({ u, n });

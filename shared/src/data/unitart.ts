@@ -1,0 +1,94 @@
+// The battle figures of the kinds still in the painter's queue (owner, 2026-10-03; tools/art/creatures.py, docs/18
+// VII): the body each is painted in — a man on his feet, a big one, a beast, a flyer, a thing rising out of the water —
+// how tall it stands beside a hex, and, until its four-pose sheet is cut into the manifest, the painted kind that stands
+// in for it on the field, on a card and in an army slot: the nearest it names, else one of its own people and body,
+// else any of its body. The client asks here whenever a `unit.<kind>` picture is missing (client/src/assets.ts); once
+// the kind's own sheet is cut it is drawn, with no change to the code. Nothing here is a kind's numbers: the battle
+// never reads it.
+
+import type { UnitId } from './army.ts';
+
+/** How a kind is painted (tools/art/creatures.py's `body`). */
+export type Body = 'man' | 'big' | 'beast' | 'fly' | 'water';
+
+export interface Figure {
+  body: Body;
+  /** Its height beside a hex's width (client/src/ui/tactical.ts; a man is 1.28). */
+  size: number;
+  /** Whose it is: a roster of the world's armies, or the premium shop's. */
+  of: string;
+  /** The painted kinds that look most like it, the nearest first. */
+  like?: UnitId[];
+}
+
+const F = (body: Body, size: number, of: string, ...like: UnitId[]): Figure => ({ body, size, of, like });
+
+/** The figures of the kinds added by docs/18 VII (the shop's twenty and the factions' new kinds). */
+export const FIGURES: Partial<Record<UnitId, Figure>> = {
+  // The shop's creatures.
+  golden_crab: F('beast', 1.05, 'premium', 'crab_queen', 'bell_hermit', 'crab'),
+  giant_manta: F('fly', 1.3, 'premium', 'cave_bat', 'albatross'),
+  ember_salamander: F('beast', 1.15, 'premium', 'monitor', 'giant_toad'),
+  sea_wolf: F('beast', 1.15, 'premium', 'jaguar', 'wild_boar'),
+  hippocampus: F('water', 1.45, 'premium', 'barracuda', 'moray'),
+  coral_basilisk: F('beast', 1.35, 'premium', 'monitor', 'cave_wyrm'),
+  kraken_spawn: F('water', 1.65, 'premium', 'young_kraken', 'lagoon_tentacle'),
+  storm_eagle: F('fly', 1.5, 'premium', 'albatross', 'storm_roc'),
+  abyssal_angler: F('water', 1.5, 'premium', 'moray', 'young_serpent'),
+  frost_serpent: F('water', 1.6, 'premium', 'young_serpent'),
+  nautilus_knight: F('man', 1.38, 'premium', 'deep_zealot', 'crown_ironclad'),
+  siren_queen: F('fly', 1.45, 'premium', 'mermaid', 'lantern_wraith'),
+  tidal_elemental: F('big', 1.6, 'premium', 'basalt_guardian', 'volcano_guardian'),
+  obsidian_golem: F('big', 1.6, 'premium', 'volcano_guardian', 'basalt_guardian'),
+  lava_drake: F('fly', 1.55, 'premium', 'storm_roc', 'cave_bat'),
+  sea_griffin: F('fly', 1.55, 'premium', 'albatross', 'storm_roc'),
+  sea_dragon: F('fly', 1.8, 'premium', 'storm_roc'),
+  dragon_turtle: F('beast', 1.75, 'premium', 'ancient_turtle', 'sea_turtle'),
+  thunderbird: F('fly', 1.75, 'premium', 'storm_roc', 'albatross'),
+  abyss_knight: F('man', 1.5, 'premium', 'crown_cuirassier', 'drowned_officer'),
+  // The world's armies' new kinds.
+  crown_surgeon: F('man', 1.28, 'crown', 'crown_chaplain'),
+  crown_midshipman: F('man', 1.2, 'crown', 'crown_drummer', 'crown_boy'),
+  crown_provost: F('man', 1.3, 'crown', 'crown_inquisitor', 'crown_marine'),
+  brine_sister: F('man', 1.28, 'choir', 'brine_witch', 'choir_acolyte'),
+  choir_toller: F('man', 1.3, 'choir', 'choir_bellringer'),
+  lamprey_zealot: F('man', 1.3, 'choir', 'tide_zealot'),
+  abyss_ascendant: F('big', 1.78, 'choir', 'abyss_herald'),
+  harpoon_commander: F('man', 1.36, 'harpoon', 'baleen_knight', 'leviathan_slayer'),
+  try_pot: F('man', 1.28, 'harpoon', 'net_thrower', 'flenser'),
+  harpoon_preceptor: F('man', 1.32, 'harpoon', 'baleen_knight'),
+  fog_cutpurse: F('man', 1.24, 'brokers', 'smuggler', 'fog_runner'),
+  fog_cardsharp: F('man', 1.26, 'brokers', 'fog_runner', 'duelist'),
+  fog_viper: F('man', 1.28, 'brokers', 'poisoner'),
+  company_cannoneer: F('man', 1.28, 'league', 'gunner'),
+  petardier: F('man', 1.28, 'league', 'bombardier'),
+  ledger_factor: F('man', 1.3, 'league', 'paymaster', 'company_musketeer'),
+  island_elder: F('man', 1.28, 'free', 'tide_shaman'),
+  shark_dancer: F('man', 1.26, 'free', 'spear_fisher', 'sharktooth'),
+  reef_raider: F('man', 1.3, 'free', 'sharktooth'),
+  volcano_guardian: F('big', 1.6, 'free', 'basalt_guardian'),
+  dutchman_bulwark: F('man', 1.32, 'dutchman', 'dutchman_boarder'),
+  ghost_marksman: F('man', 1.28, 'dutchman', 'ghost_musketeer'),
+  ghost_cutthroat: F('man', 1.28, 'dutchman', 'ghost_sailor'),
+};
+
+/** Painted kinds by body and whose: the stand-ins when none a kind names is there. */
+const POOL: Record<Body, Record<string, UnitId[]>> = {
+  man: {
+    crown: ['crown_marine'], choir: ['tide_zealot', 'choir_acolyte'], harpoon: ['lancer', 'flenser'], brokers: ['fog_thief', 'smuggler'], league: ['company_guard', 'porter'],
+    free: ['island_warrior', 'fisher'], dutchman: ['ghost_sailor'], premium: ['life_guard'], any: ['marine', 'sailor', 'deckhand'],
+  },
+  big: { choir: ['abyss_herald'], free: ['basalt_guardian'], any: ['deep_spawn', 'basalt_guardian'] },
+  beast: { any: ['monitor', 'jaguar', 'crab'] },
+  fly: { dutchman: ['lantern_wraith'], any: ['albatross', 'storm_roc', 'gull'] },
+  water: { any: ['young_serpent', 'moray', 'reef_shark'] },
+};
+
+/** The painted kind that stands in for one not painted yet (`has`: whether a kind's own figure is there); null for a
+ *  kind painted already, one not in the queue, or when nothing of its body is painted either. */
+export function figureStandIn(u: string, has: (kind: string) => boolean): string | null {
+  const f = FIGURES[u as UnitId];
+  if (!f || has(u)) return null;
+  for (const k of [...(f.like ?? []), ...(POOL[f.body][f.of] ?? []), ...POOL[f.body].any]) if (k !== u && has(k)) return k;
+  return null;
+}

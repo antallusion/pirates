@@ -109,7 +109,7 @@ export interface TameView {
   crew: number;
   crewMax: number;
   /** Her island's pen: lying off it (to send and take), its level, load and room, what waits in it. */
-  pen: { here: boolean; level: number; load: number; cap: number; stock: { u: CreatureId; n: number }[] } | null;
+  pen: { here: boolean; level: number; load: number; cap: number; stock: { u: UnitId; n: number }[] } | null;
   /** A tamer in the port she lies in: what she pays for each kind aboard, and her pens this week. */
   tamer: { port: string; buys: { u: UnitId; n: number; price: number }[]; sells: { u: CreatureId; n: number; price: number }[] } | null;
   gold: number;
