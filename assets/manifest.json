@@ -1980,6 +1980,9 @@
     "unit.dragon_lancer_b":                    { "local": "units/dragon_lancer_b.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.1", "rev": 20261003220936},
     "unit.dragon_lancer_atk":                  { "local": "units/dragon_lancer_atk.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.2", "rev": 20261003220936},
     "unit.dragon_lancer_hit":                  { "local": "units/dragon_lancer_hit.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.3", "rev": 20261003220936},
-    "prop.port_gallowsmouth":                  { "local": "props/port_gallowsmouth.webp", "remote": "hf_20261003_221517_gpt-port_gallowsmouth.png", "job": "gpt-port_gallowsmouth", "fit": "sheet:port_gallowsmouth.0", "rev": 20261003221517}
+    "prop.port_gallowsmouth":                  { "local": "props/port_gallowsmouth.webp", "remote": "hf_20261003_221517_gpt-port_gallowsmouth.png", "job": "gpt-port_gallowsmouth", "fit": "sheet:port_gallowsmouth.0", "rev": 20261003221517},
+    "ship.kraken_hunter":                      { "local": "ships/kraken_hunter.webp", "remote": "hf_20261003_221912_gpt-ships_4.png", "job": "gpt-ships_4", "fit": "sheet:ships_4.0", "rev": 20261003221912},
+    "ship.crimson_tide":                       { "local": "ships/crimson_tide.webp", "remote": "hf_20261003_221912_gpt-ships_4.png", "job": "gpt-ships_4", "fit": "sheet:ships_4.1", "rev": 20261003221912},
+    "ship.sun_galleon":                        { "local": "ships/sun_galleon.webp", "remote": "hf_20261003_221912_gpt-ships_4.png", "job": "gpt-ships_4", "fit": "sheet:ships_4.2", "rev": 20261003221912}
   }
 }
