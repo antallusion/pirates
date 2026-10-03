@@ -21,6 +21,7 @@ import type { ShipBuild } from '../data/shipbuild.ts';
 import type { SailTalents } from './sailing.ts';
 import { DEG } from '../math.ts';
 import { levelScale, shipLevelOf } from '../data/shiplevel.ts';
+import { giftSource } from '../data/shipgifts.ts';
 
 export interface ShipLoadout {
   classId: ShipClassId;
@@ -152,8 +153,10 @@ export function computeShipStats(
   const lvl = shipLevelOf(loadout);
   const shipGear = SHIP_SLOTS.filter((sl) => loadout.gear?.[sl] && lvl >= SLOT_OPENS[sl]).map((sl) => loadout.gear![sl]!);
   const gear = gearSource([...shipGear, ...worn]);
-  // Permanent sources (captain passive, talents, gear) are capped per 03 §3.3; temporary effects stack on top.
-  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, ...talentModifiers(talents), { mods: gear.mods, flags: gear.flags }, ...(hero ? [hero] : [])]);
+  // Permanent sources (captain passive, talents, gear) are capped per 03 §3.3; temporary effects stack on top. The
+  // hull's own trait and a premium hull's gift (docs/02 §1.A.9) are permanent as the captain's passive is.
+  const gift = giftSource(cls.id);
+  const { mods, flags } = sumMods([{ mods: cap.passive.mods, flags: cap.passive.flags }, { mods: cls.passive.mods, flags: cls.passive.flags }, ...(gift ? [gift] : []), ...talentModifiers(talents), { mods: gear.mods, flags: gear.flags }, ...(hero ? [hero] : [])]);
   // An item in a slot takes the place of the yard's old fitting there.
   const replaced = new Set<string>(shipGear.map((it) => MODULE_OF_SLOT[ITEM_BASES[it.base].slot as ShipSlot]).filter((m): m is ModuleId => !!m));
   const m0 = (x: Record<StatKey, number>, k: StatKey) => mod(x, k);

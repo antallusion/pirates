@@ -85,6 +85,9 @@ export interface TacSideInput {
   noBook?: boolean;
   /** docs/18 #38: the morale of a mixed army (HoMM3's peoples): 0 for an army of men, down to −3. */
   mixed?: number;
+  /** A premium hull's deck gift (docs/02 §1.A.9): laid on her side's stacks (`mine`) and the other side's (`theirs`) for
+   *  the first `rounds` rounds, as an order is — a clearing page lifts it as it lifts any. */
+  gift?: { rounds: number; mine?: BtMods; theirs?: BtMods };
 }
 
 export interface TacStack {
@@ -390,12 +393,22 @@ const hpOf = (s: TacStack) => (s.count > 0 ? (s.count - 1) * s.hpMax + s.hpTop :
 export const REGEN_SHARE = 0.1;
 export const TAC_TERROR = 0.2;
 
+/** A premium hull's deck gift as the moves of the battle hold (docs/02 §1.A.9): on her side, and on the other. */
+function giftFx(input: TacSideInput): Fx[] {
+  const g = input.gift;
+  if (!g) return [];
+  const out: Fx[] = [];
+  if (g.mine) out.push({ id: 'ship_gift', until: g.rounds, mods: g.mine });
+  if (g.theirs) out.push({ id: 'ship_gift_foe', until: g.rounds, mods: g.theirs, foe: true });
+  return out;
+}
+
 function newHero(input: TacSideInput, stacks: TacStack[]): TacHero {
   const lucky = input.officers.filter((o) => o.lucky).length;
   return {
     input, morale: Math.max(0, Math.min(100, input.morale)), luck: Math.max(-3, Math.min(3, 1 + lucky + (input.hero?.luck ?? 0))),
     mana: input.hero ? input.hero.mana : -1,
-    spells: (input.noBook ? [] : input.hero ? input.hero.book : captainSpells(input.captain)).map((id) => ({ id, ready: 1 })), cast: 0, auto: !input.human, fx: [], kills: 0,
+    spells: (input.noBook ? [] : input.hero ? input.hero.book : captainSpells(input.captain)).map((id) => ({ id, ready: 1 })), cast: 0, auto: !input.human, fx: giftFx(input), kills: 0,
     startHp: stacks.reduce((n, s) => n + hpOf(s), 0), startMen: stacks.reduce((n, s) => n + s.count, 0), cutTried: 0,
     stam: input.hero?.stamMax !== undefined ? input.hero.stam ?? input.hero.stamMax : -1,
     innate: input.hero?.path ? 1 : 0, ult: input.hero?.path && input.hero.ult ? 1 : 0, scrollsUsed: [], moved: 0, free: 0,

@@ -319,12 +319,13 @@ test('the admin\'s console grants doubloons (only with GRAVETIDE_ADMIN=1), takes
     // The sample catalogue: the shop's cards before the real ones, and gone again.
     assert.match(runAdmin(game, s, '/doubloons sample')!, /sample catalogue is in the shop/);
     const v = conn.last('premium')!.view;
-    assert.deepEqual(v.ships.map((x) => x.id).sort(), Object.keys(PREMIUM_SAMPLE.ships).sort());
-    assert.deepEqual(v.units.map((x) => x.id).sort(), Object.keys(PREMIUM_SAMPLE.units).sort());
+    // The sample's cards beside the real catalogue (the fleet of eighty's forty hulls, docs/02 §1.A.9).
+    assert.deepEqual(v.ships.map((x) => x.id).sort(), [...premiumShips(), ...Object.keys(PREMIUM_SAMPLE.ships)].sort());
+    assert.deepEqual(v.units.map((x) => x.id).sort(), [...premiumUnits(), ...Object.keys(PREMIUM_SAMPLE.units)].sort());
     assert.ok(v.ships.find((x) => x.id === 'bomb_ketch')!.beasts.length > 0);
     assert.equal(UNITS.mermaid.premium, undefined, 'the tables stay unmarked');
     runAdmin(game, s, '/doubloons sample');
-    assert.equal(conn.last('premium')!.view.ships.length, 0);
+    assert.equal(conn.last('premium')!.view.ships.length, premiumShips().length);
   } finally {
     if (was === undefined) delete process.env.GRAVETIDE_ADMIN;
     else process.env.GRAVETIDE_ADMIN = was;
@@ -338,16 +339,18 @@ test('the shop\'s window on the wire: an empty shop says so, the catalogue lists
   s.ship!.setArmy([{ u: 'deckhand', n: 6 }]);
   conn.push({ t: 'premium', action: 'view' });
   const v = conn.last('premium')!.view;
-  assert.deepEqual([v.ships, v.units, v.balance, v.pay], [[], [], 0, PAYMENTS_OPEN]);
+  // The fleet of eighty's forty premium hulls are on the shelves (docs/02 §1.A.9); the creatures' shelf is the shop's own.
+  assert.deepEqual([v.ships.map((x) => x.id), v.units.map((x) => x.id), v.balance, v.pay], [premiumShips(), premiumUnits(), 0, PAYMENTS_OPEN]);
+  assert.equal(premiumShips().length, 40);
   assert.equal(PAYMENTS_OPEN, false, 'no payment provider yet');
   assert.ok(v.port, 'docked: the port she lies in');
-  assert.deepEqual(premiumShips(), []);
-  assert.deepEqual(premiumUnits(), []);
+  for (let i = 1; i < premiumShips().length; i++) assert.ok(SHIP_CLASSES[premiumShips()[i]].premium!.price >= SHIP_CLASSES[premiumShips()[i - 1]].premium!.price, 'the cheapest first');
+  const shelf = premiumUnits();
   withPremium({ units: { mermaid: { price: 250, n: 6, note }, seal: { price: 90, n: 10, note } }, ships: { xebec: { price: 900, note } } }, () => {
-    assert.deepEqual(premiumUnits(), ['seal', 'mermaid'], 'the cheapest first');
+    assert.deepEqual(premiumUnits().filter((u) => !shelf.includes(u)), ['seal', 'mermaid'], 'the cheapest first');
     const w = premiumView(game, s);
-    assert.deepEqual(w.units.map((x) => [x.id, x.price, x.n, x.why]), [['seal', 90, 10, 'poor'], ['mermaid', 250, 6, 'poor']]);
-    assert.deepEqual(w.ships.map((x) => [x.id, x.lv, x.why]), [['xebec', captainLevelFor(levelRange('xebec')[0]), 'level']]);
+    assert.deepEqual(w.units.filter((x) => x.id === 'seal' || x.id === 'mermaid').map((x) => [x.id, x.price, x.n, x.why]), [['seal', 90, 10, 'poor'], ['mermaid', 250, 6, 'poor']]);
+    assert.deepEqual(w.ships.filter((x) => x.id === 'xebec').map((x) => [x.id, x.lv, x.why]), [['xebec', captainLevelFor(levelRange('xebec')[0]), 'level']]);
   });
   // A bad id is no sale (and no throw).
   conn.push({ t: 'premium', action: 'buy_unit', id: '__proto__' as UnitId });

@@ -419,6 +419,8 @@ export function tamerSell(game: Game, s: PlayerSession, u: UnitId, n: number): s
   const ship = s.ship!;
   if (!UNITS[u]?.beast) return 'The tamer buys creatures, not men.';
   if (UNITS[u].legend) return 'Not even a tamer would put a price on a legend.';
+  // Doubloons are never turned into silver (docs/01 P7): what came for them is not sold for coin.
+  if (isPremiumUnit(u)) return 'The tamer buys no creature that came for doubloons.';
   const have = ship.army.find((x) => x.u === u)?.n ?? 0;
   const k = Math.min(have, Math.floor(Number(n)) || have);
   if (!(k > 0)) return 'No such creatures aboard';
@@ -481,7 +483,7 @@ export function tameView(game: Game, s: PlayerSession): TameView {
   if (port) {
     tamer = {
       port: port.name,
-      buys: ship.army.filter((x) => UNITS[x.u]?.beast && !UNITS[x.u].legend).map((x) => ({ u: x.u, n: x.n, price: tamerPays(x.u, rankOfKind(p, x.u)) })),
+      buys: ship.army.filter((x) => UNITS[x.u]?.beast && !UNITS[x.u].legend && !isPremiumUnit(x.u)).map((x) => ({ u: x.u, n: x.n, price: tamerPays(x.u, rankOfKind(p, x.u)) })),
       sells: tamerPens(game, s, port.id).map((x) => ({ u: x.u, n: x.n, price: tamerAsks(x.u) })),
     };
   }

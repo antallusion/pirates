@@ -122,6 +122,7 @@ import { adminFind } from './seafinds.ts';
 import { adminStack } from './roamers.ts'; // docs/19 D7
 import { adminHaul } from './seahaul.ts';
 import { adminFeed, adminTame, adminTamer } from './tame.ts';
+import { musterInPort } from './shipgifts.ts'; // a premium hull's own creatures (docs/02 §1.A.9)
 import { adminDoubloons } from './premium.ts'; // the premium shop (owner, 2026-10-03)
 import { LAIR_KINDS } from '../../../shared/src/data/lairs.ts';
 import type { LairKind } from '../../../shared/src/data/lairs.ts';
@@ -264,6 +265,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       ship.hull = ship.stats.hullMax;
       ship.sails = ship.stats.sailHpMax;
       ship.crew = Math.max(ship.crew, ship.stats.crewMin);
+      musterInPort(game, s); // a premium hull comes with her own creatures, as bought (docs/02 §1.A.9)
       game.pushSelf(s, true);
       return `She is a ${SHIP_CLASSES[cls].name} now, level ${ship.shipLevel} (crew ${ship.crew}).`;
     }
@@ -681,7 +683,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const brain = game.npcs.get(o.id);
       if (brain) brain.active = true;
       game.grid.upsert(o.id, o.state.x, o.state.y);
-      return `${o.name} (${SHIP_CLASSES[cls].name} ⚓${o.shipLevel}, ${faction}) lies off your beam.`;
+      return `${o.name} (${o.cls.name} ⚓${o.shipLevel}, ${faction}) lies off your beam.`; // the sea sails no premium hull: her silver kin
     }
     case 'war': {
       // The sea's own wars in sight (docs/16 P1): /war — a rover falls on a merchant off your bow; /war patrol — and

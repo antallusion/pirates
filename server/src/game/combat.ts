@@ -41,6 +41,7 @@ import { bossIncoming, innerVolley, swallowedShield } from './bosses.ts';
 import { kegImpact } from './holidays.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { killFactor, menLost, wallsOf } from './army.ts';
+import { giftOnHit } from './shipgifts.ts';
 
 export interface Projectile {
   owner: number;
@@ -591,6 +592,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   if (p.ammo === 'cursed') onCursedHit(game, shooter, target);
   if (p.ammo === 'star' || p.ammo === 'stinkpot' || p.ammo === 'drag') shotEffects(game, p.ammo, shooter, target);
+  if (shooter) giftOnHit(game, shooter, target); // a premium hull's strike (docs/02 §1.A.9)
 
   // Cargo destroyed by hull hits; powder may go up.
   if (p.ammo !== 'grape' && hullDmg > 10) {

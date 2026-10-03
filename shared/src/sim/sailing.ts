@@ -2,7 +2,8 @@
 // Pure functions over plain data: no allocation in the hot path beyond the returned state.
 
 import { angleDiff, approach, clamp, DEG, headingVec, wrapAngle } from '../math.ts';
-import type { Rig } from '../data/ships.ts';
+import { SHIP_CLASSES } from '../data/ships.ts';
+import type { Rig, ShipClassId } from '../data/ships.ts';
 import type { WindSample } from './wind.ts';
 import { SPEED_SCALE, TURN_SCALE, WIND_PUSH } from '../constants.ts';
 
@@ -51,10 +52,11 @@ export interface SailTalents {
   silentRunning: number; // ranks: +5% speed per rank under half sail
 }
 
-/** Oars: the xebec rows by design; Sweeps teach schooners and brigantines to row, and the xebec to row harder. */
+/** Oars: the xebec and every hull with sweeps (the galleys, the galiot, the oared runners of the fleet of eighty) row
+ *  by design; Sweeps teach schooners and brigantines to row, and the oared hulls to row harder. */
 export function rowSpeed(classId: string, sweepsDrill: boolean, stormRider: boolean): number {
   if (stormRider) return 0;
-  if (classId === 'xebec') return sweepsDrill ? 3.6 : 3;
+  if (SHIP_CLASSES[classId as ShipClassId]?.passive.id === 'sweeps') return sweepsDrill ? 3.6 : 3;
   if (sweepsDrill && (classId === 'schooner' || classId === 'brigantine')) return 2.2;
   return 0;
 }

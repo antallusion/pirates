@@ -8,6 +8,7 @@ import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/ar
 import { dict, lang } from '../i18n.ts';
 import { FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
+import { SHIP_BEAST_NAMES, isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
 import { EN, RU } from '../lang/ui/army.ts';
 import { beastFace } from '../render/beastface.ts';
 import { esc, icon } from './dom.ts';
@@ -16,8 +17,12 @@ const L = dict(EN, RU);
 const DL = dict(DEN, DRU);
 type K = keyof typeof EN;
 
-// The world's armies carry their own names (shared/src/data/factionunits.ts).
-const own = (u: UnitId, k: 0 | 2): string | null => (UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId][k + (lang() === 'ru' ? 1 : 0)] : null);
+// The world's armies carry their own names (shared/src/data/factionunits.ts), and so do the premium hulls' own kinds
+// (shared/src/data/shipbeasts.ts).
+const own = (u: UnitId, k: 0 | 2): string | null => {
+  const r = k + (lang() === 'ru' ? 1 : 0);
+  return UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId][r] : isShipBeast(u) ? SHIP_BEAST_NAMES[u][r] : null;
+};
 export const unitName = (u: UnitId): string => own(u, 0) ?? L(`u.${u}` as K);
 export const unitNote = (u: UnitId): string => own(u, 2) ?? L(`ud.${u}` as K);
 export const specialName = (s: UnitSpecial): string => L(`sp.${s}` as K);
@@ -27,7 +32,7 @@ export const unitArt = (u: UnitId): string => UNITS[u]?.art ?? 'icon.prof_sailor
 /** A kind's face as an image: a creature with no picture of its own is a token of one that is, tinted and framed
  *  (docs/18 II, BEAST_TINT). */
 export function unitIcon(u: UnitId, cls: string): string {
-  const face = UNITS[u]?.beast ? beastFace(u) : null;
+  const face = UNITS[u]?.beast || isShipBeast(u) ? beastFace(u) : null;
   const tint = face?.tint;
   const html = icon(face?.id ?? unitArt(u), '', `${cls}${face ? ' beast-face' : ''}${tint ? ' beast-tok' : ''}${face?.fig ? ' fig' : ''}`);
   return tint ? html.replace('<img ', `<img style="filter:${tint}" `) : html;

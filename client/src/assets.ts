@@ -2,6 +2,11 @@
 // Images are optional; the game must always render even when every download fails.
 
 import { ICON_STAND_IN } from '../../shared/src/data/armsart.ts';
+import { FLEET_STAND_IN } from '../../shared/src/data/fleet.ts';
+
+/** Art id → the painted kindred drawn while it is not painted: the yard's new icons (armsart.ts), the fleet of eighty's
+ *  new hulls and decks and the premium hulls' creatures (fleet.ts). Painted art always wins. */
+const STAND_IN: Record<string, string> = { ...ICON_STAND_IN, ...FLEET_STAND_IN };
 
 interface ManifestEntry {
   local: string;
@@ -108,9 +113,10 @@ export function assetMeta(id: string): ManifestEntry | null {
   return manifest?.assets[id] ?? null;
 }
 
-/** An asset, or — while its sheet is being painted — the painted kindred that stands in for it (shared/src/data/armsart.ts). */
+/** An asset, or — while its sheet is being painted — the painted kindred that stands in for it (shared/src/data/armsart.ts,
+ *  shared/src/data/fleet.ts). */
 export function sprite(id: string): Sprite | null {
-  return images.get(id) ?? (ICON_STAND_IN[id] ? images.get(ICON_STAND_IN[id]) ?? null : null);
+  return images.get(id) ?? (STAND_IN[id] ? images.get(STAND_IN[id]) ?? null : null);
 }
 
 export function assetUrl(id: string): string | null {

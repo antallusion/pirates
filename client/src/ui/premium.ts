@@ -5,7 +5,9 @@
 
 import { DOUBLOON_PACKS } from '../../../shared/src/data/premium.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
-import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { FLEET_LISTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { giftOf } from '../../../shared/src/data/shipgifts.ts';
+import { isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
 import type { PremiumShipCard, PremiumUnitCard, PremiumView, PremiumWhy } from '../../../shared/src/premiumproto.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -14,6 +16,7 @@ import { assetUrl } from '../assets.ts';
 import { dict, lang, plural } from '../i18n.ts';
 import { EN as AEN, RU as ARU } from '../lang/ui/army.ts';
 import { EN, RU } from '../lang/ui/premium.ts';
+import { EN as FEN, RU as FRU } from '../lang/ui/fleet.ts';
 import type { ClientState } from '../state.ts';
 import { specialName, unitIcon, unitName } from './army.ts';
 import { ask } from './confirm.ts';
@@ -22,6 +25,7 @@ import { placeName } from './maps.ts';
 
 const L = dict(EN, RU);
 const AL = dict(AEN, ARU);
+const FL = dict(FEN, FRU);
 const T = (x: [string, string]) => x[lang() === 'ru' ? 1 : 0];
 
 /** The doubloon: its own picture once painted, the silver coins gilded meanwhile. */
@@ -48,7 +52,7 @@ function hullArt(c: ShipClassId): string {
 
 /** A creature's own figure, whole (or its face standing in until it is painted). */
 function unitArt(u: UnitId): string {
-  const fig = UNITS[u]?.beast ? assetUrl(`unit.${u}`) : null;
+  const fig = UNITS[u]?.beast || isShipBeast(u) ? assetUrl(`unit.${u}`) : null;
   return `<div class="pm-art pm-fig">${fig ? `<img src="${fig}" alt="" draggable="false" />` : unitIcon(u, 'pm-face')}</div>`;
 }
 
@@ -58,11 +62,18 @@ function buyBox(price: number, why: PremiumWhy | null, lv: number, attr: string)
     ${why ? `<small class="pm-why">${esc(whyText(why, lv))}</small>` : ''}</div>`;
 }
 
+/** A premium hull's gift (docs/02 §1.A.9): its name, when it works and what it does — on her card and her ship's screen. */
+export function giftLine(c: ShipClassId): string {
+  const g = giftOf(c);
+  if (!g) return '';
+  return `<span class="pm-gift" title="${esc(FL('gift'))}"><b>${esc(T(g.name))}</b> <span class="muted">· ${esc(FL(`kind.${g.kind}` as keyof typeof FEN))}</span><br>${esc(T(g.text))}</span>`;
+}
+
 function shipCard(c: PremiumShipCard): string {
   const d = SHIP_CLASSES[c.id];
   const beasts = c.beasts.length ? `<span class="pm-with"><span class="muted">${esc(L('comes'))}</span> ${c.beasts.map((b) => `<span class="pm-beast">${unitIcon(b.u, 'pm-face-xs')}${esc(unitName(b.u))} ×${b.n}</span>`).join(' ')}</span>` : '';
   return `<div class="card pm-card pm-ship${c.why ? ' shut' : ''}">${hullArt(c.id)}
-    <div class="pm-text"><b class="pm-name">${esc(d.name)}</b><span class="pm-note">${esc(T(c.note))}</span>
+    <div class="pm-text"><b class="pm-name">${esc(d.name)}</b><span class="pm-note">${esc(T(c.note))}</span>${giftLine(c.id)}
       <div class="hull-stats"><span>${icon('stat_hull', '', 'ico-sm')}${d.hull}</span><span>${icon('stat_sails', '', 'ico-sm')}${d.maxSpeed}</span><span>${icon('fire', '', 'ico-sm')}${d.gunPortsPerSide}×2</span><span>${icon('tab_market', '', 'ico-sm')}${d.holdVolume}</span><span>${icon('stat_crew', '', 'ico-sm')}${d.crewMin}–${d.crewMax}</span></div>
       <span class="muted pm-meta">${esc(L('lv', { n: c.lv }))}</span>${beasts}</div>
     ${buyBox(c.price, c.why, c.lv, `data-pmship="${c.id}"`)}</div>`;
@@ -125,10 +136,14 @@ export class PremiumWindow {
         const n = t === 'ships' ? v.ships.length : v.units.length;
         return `<button class="tab${t === this.tab ? ' active' : ''}" data-pmtab="${t}">${icon(t === 'ships' ? 'menu_ship' : 'build_kennel', '', 'ico-sm')}${esc(L(t === 'ships' ? 'tab.ships' : 'tab.units'))}${n ? ` <span class="pm-count">${n}</span>` : ''}</button>`;
       }).join('');
-      const cards = this.tab === 'ships' ? v.ships.map(shipCard).join('') : v.units.map(unitCard).join('');
+      // The hulls on their four shelves (docs/02 §1.A.9): the warships, the traders, the runners and the haulers.
+      const shelf = (l: string) => v.ships.filter((x) => (SHIP_CLASSES[x.id].list ?? 'combat') === l);
+      const cards = this.tab === 'ships'
+        ? FLEET_LISTS.map((l) => (shelf(l).length ? `<h4 class="pm-list">${esc(FL(`list.${l}` as keyof typeof FEN))}</h4><div class="pm-grid">${shelf(l).map(shipCard).join('')}</div>` : '')).join('')
+        : v.units.length ? `<div class="pm-grid">${v.units.map(unitCard).join('')}</div>` : '';
       const rule = this.tab === 'ships' ? (v.port ? L('deliver', { port: placeName(v.port) }) : L('deliverSea')) : L('unitsRule');
       root.innerHTML = `${head}<div class="modal-body pm-body"><div class="tabs">${tabs}</div>
-        ${cards ? `<div class="pm-grid">${cards}</div>` : emptyCard(this.tab)}
+        ${cards || emptyCard(this.tab)}
         <p class="muted pm-rule">${esc(rule)}</p></div>`;
     }
     root.querySelector<HTMLElement>('[data-pmtop]')!.onclick = () => {

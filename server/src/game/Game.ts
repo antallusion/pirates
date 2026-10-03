@@ -227,6 +227,8 @@ import { findMessage, stepSeaFinds } from './seafinds.ts'; // docs/19 D5: the se
 import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the creatures roaming the sea
 import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
+import { musterInPort, stepGifts } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
+import { silverKin } from '../../../shared/src/data/fleet.ts';
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
@@ -926,6 +928,7 @@ export class Game {
       stepSurvival(this, ship);
       if (ship.isPlayer) {
         stepTalents(this, ship);
+        stepGifts(this, ship); // a premium hull's gift at sea (docs/02 §1.A.9)
         surrenderTerms(this, ship);
       }
       // Scuttle Charges: the fuse has burned down.
@@ -1366,6 +1369,8 @@ export class Game {
   }
 
   spawnNpcShip(role: NpcRole, classId: ShipClassId, faction: FactionId, x: number, y: number, heading: number, names?: { ship: string; captain: string }, id?: number): ShipEntity {
+    // No captain of the sea sails a hull sold for doubloons (docs/01 P7), so none is ever a prize: her silver kin sails.
+    classId = silverKin(classId);
     const n = names ?? npcName(this);
     const gun = defaultGunFor(SHIP_CLASSES[classId]);
     const ship = new ShipEntity({
@@ -3849,6 +3854,7 @@ export class Game {
     onArrival(this, p, port);
     this.tavernWhispers(s);
     onDockEvents(this, s, port);
+    musterInPort(this, s); // a premium hull's own creatures come back to her (docs/02 §1.A.9)
     ship.docked = port.id;
     ship.state.speed = 0;
     ship.state.sail = 0;

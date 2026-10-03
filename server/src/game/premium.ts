@@ -5,7 +5,8 @@
 // in port and the ship she sailed is berthed there, as a hull built to order is; creatures join the army as a tamer's
 // do (a slot, the hammocks). The pay, the goods and her save go in one transaction.
 
-import { UNITS } from '../../../shared/src/data/army.ts';
+import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
+import { isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
 import type { PremiumUnit, UnitId } from '../../../shared/src/data/army.ts';
 import { peopleOf } from '../../../shared/src/data/drifts.ts';
 import { CREDIT_MAX, PAYMENTS_OPEN, PREMIUM_SAMPLE, premiumShips, premiumUnits } from '../../../shared/src/data/premium.ts';
@@ -76,7 +77,8 @@ function shipOffer(game: Game, c: ShipClassId): PremiumShip | undefined {
 }
 
 function unitOffer(game: Game, u: UnitId): PremiumUnit | undefined {
-  if (!Object.hasOwn(UNITS, u)) return undefined;
+  // A premium hull's own kind comes only aboard her (shared/src/data/shipbeasts.ts): never off the shelf.
+  if (!Object.hasOwn(UNITS, u) || isShipBeast(u)) return undefined;
   return UNITS[u].premium ?? (samples.has(game) ? PREMIUM_SAMPLE.units[u] : undefined);
 }
 
@@ -141,6 +143,22 @@ function roomFor(ship: ShipEntity, beasts: readonly { u: UnitId; n: number }[]):
   return ship.army.length + fresh <= ship.armySlots && ship.crew + men <= ship.stats.crewMax;
 }
 
+/** Hammocks for the creatures that come with her (docs/02 §1.A.9): a captain with a full crew is not refused her hull —
+ *  as many of her lowest hands as they need are paid off at the quay, the plain before the upgraded and never a
+ *  premium kind, as a yard pays off the men a smaller hull has no room for. How many went ashore. */
+function payOff(ship: ShipEntity, beasts: readonly { u: UnitId; n: number }[]): number {
+  let short = ship.crew + beasts.reduce((a, b) => a + b.n, 0) - ship.stats.crewMax;
+  let gone = 0;
+  const order = ship.army.filter((x) => !isPremiumUnit(x.u)).sort((a, b) => UNITS[a.u].tier - UNITS[b.u].tier || Number(UNITS[a.u].up) - Number(UNITS[b.u].up));
+  for (const x of order) {
+    if (short <= 0) break;
+    const k = ship.loseFrom(x.u, Math.min(x.n, short));
+    short -= k;
+    gone += k;
+  }
+  return gone;
+}
+
 // ------------------------------------------------------------------------------------------------ buying
 
 /** A hull for doubloons, in port: she comes alongside before a coin moves — the ship she sailed to a berth here, her
@@ -167,6 +185,7 @@ export function buyShip(game: Game, s: PlayerSession, c: ShipClassId): string | 
   const gun = defaultGunFor(cls);
   setShip(game, s, { classId: c, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {}, mount: cls.fixedMount }, 1);
   const beasts = o.beasts ?? [];
+  const paid = payOff(ship, beasts);
   if (!roomFor(ship, beasts)) {
     undo();
     return 'No room aboard her for the creatures that come with her.';
@@ -181,6 +200,7 @@ export function buyShip(game: Game, s: PlayerSession, c: ShipClassId): string | 
   }
   sendBalance(game, s);
   game.toastShip(ship, `The ${cls.name} is yours for ${o.price} doubloons. Your old ship is berthed here.`, 'gold');
+  if (paid > 0) game.toastShip(ship, `${paid} hands are paid off at the quay to make room for her own.`, 'info');
   game.pushSelf(s, true);
   game.pushPort(s);
   return null;

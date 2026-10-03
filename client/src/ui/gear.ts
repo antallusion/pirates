@@ -181,7 +181,7 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
     </div>`;
   };
   const doll = dollOf(CAPTAIN_SLOTS, assetUrl(CAPTAINS[self.captain].portrait), self.name, L('capLv', { n: self.level }), 'captain');
-  const shipDoll = dollOf(SHIP_SLOTS, assetUrl(`ship.${self.loadout.classId}`), placeName(self.loadout.name), `${cls.name} · ⚓${lvl}`, 'ship');
+  const shipDoll = dollOf(SHIP_SLOTS, assetUrl(cls.sprite), placeName(self.loadout.name), `${cls.name} · ⚓${lvl}`, 'ship');
 
   const sets = setBonuses(worn).active;
   const total = gearSource(worn);

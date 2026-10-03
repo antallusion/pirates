@@ -8,6 +8,8 @@
 
 import { FACTION_KIND_IDS, FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
+import { SHIP_BEAST_IDS, SHIP_BEAST_PLURAL } from '../../../shared/src/data/shipbeasts.ts';
+import type { ShipBeastId } from '../../../shared/src/data/shipbeasts.ts';
 import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
 import { recruitLift } from './throne.ts';
 import { BEAST_PLURAL, CREATURE_IDS } from '../../../shared/src/data/bestiary.ts';
@@ -255,6 +257,7 @@ const NAMES: Record<UnitId, string> = {
   drowned: 'drowned', deep_spawn: 'spawn of the deep',
   ...(Object.fromEntries(CREATURE_IDS.map((b) => [b, BEAST_PLURAL[b][0]])) as Record<CreatureId, string>), // docs/18 II, IV
   ...(Object.fromEntries(FACTION_KIND_IDS.map((k) => [k, FACTION_NAMES[k][0].toLowerCase()])) as Record<FactionKindId, string>), // the world's armies
+  ...(Object.fromEntries(SHIP_BEAST_IDS.map((u) => [u, SHIP_BEAST_PLURAL[u][0]])) as Record<ShipBeastId, string>), // the premium hulls' own (docs/02 §1.A.9)
 };
 const plural = (u: UnitId, _n: number) => NAMES[u];
 

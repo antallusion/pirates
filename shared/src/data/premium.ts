@@ -8,6 +8,7 @@ import type { PremiumUnit, UnitId } from './army.ts';
 import { DRIFTS, DRIFT_KINDS } from './drifts.ts';
 import { LAIRS, LAIR_KINDS } from './lairs.ts';
 import { ROAMS, ROAM_KINDS } from './roamers.ts';
+import { isShipBeast } from './shipbeasts.ts';
 import { SHIP_CLASSES, SHIP_CLASS_IDS } from './ships.ts';
 import type { PremiumShip, ShipClassId } from './ships.ts';
 
@@ -43,9 +44,10 @@ export function premiumShips(): ShipClassId[] {
   return SHIP_CLASS_IDS.filter((c) => SHIP_CLASSES[c].premium).sort(byPrice((c) => SHIP_CLASSES[c].premium!.price));
 }
 
-/** Every kind the shop sells, the cheapest first. */
+/** Every kind the shop sells, the cheapest first. A premium hull's own kind (shared/src/data/shipbeasts.ts) is premium
+ *  too — no free source hands it out — but it is had only aboard its hull, never off the shelf. */
 export function premiumUnits(): UnitId[] {
-  return (Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].premium).sort(byPrice((u) => UNITS[u].premium!.price));
+  return (Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].premium && !isShipBeast(u)).sort(byPrice((u) => UNITS[u].premium!.price));
 }
 
 /** The free tables that would hand out a premium kind (a lair's brood, a drift, a roaming stack) or a premium hull a

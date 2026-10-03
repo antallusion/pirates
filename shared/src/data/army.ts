@@ -8,10 +8,11 @@ import { BEASTS, SEA_BEASTS } from './bestiary.ts';
 import type { BeastId, SeaBeastId } from './bestiary.ts';
 import { FACTION_KINDS, FACTION_KIND_IDS, rosterKind } from './factionunits.ts';
 import type { FactionKindId, Roster } from './factionunits.ts';
+import { SHIP_BEASTS, type ShipBeastId } from './shipbeasts.ts'; // the premium hulls' own kinds (owner, 2026-10-03)
 
 /** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
  *  them (docs/18 II, shared/src/data/bestiary.ts). */
-export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId;
+export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId | ShipBeastId;
 export type MenId =
   | 'deckhand' | 'sailor'
   | 'marine' | 'sea_guard'
@@ -147,7 +148,7 @@ function factionUnits(): Record<FactionKindId, UnitDef> {
   return out;
 }
 
-export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits() };
+export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits(), ...SHIP_BEASTS };
 
 export const hasSpecial = (u: UnitId, s: UnitSpecial): boolean => UNITS[u].specials.includes(s);
 

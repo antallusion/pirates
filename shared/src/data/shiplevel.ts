@@ -6,6 +6,7 @@
 // crew. Against the sea's own ships the ladder is softer: a perfect captain beats one a level above now and then.
 // A merchant fights two levels below her own, a fisher one — but carries far more.
 
+import { SHIP_CLASSES } from './ships.ts';
 import type { ShipClassId } from './ships.ts';
 
 export const SHIP_LEVEL_MIN = 1;
@@ -30,6 +31,20 @@ export const LEVEL_RANGE: Partial<Record<ShipClassId, [number, number]>> = {
   galleon: [7, 9],
   ghost_ship: [7, 10],
   man_o_war: [9, 10],
+  // The fleet of eighty (owner, 2026-10-03; docs/02 §1.A.9): a new hull has the levels of the old hulls of her tier —
+  // the first tier ⚓1–3, the second ⚓3–5 (the war galley a brigantine's ⚓4–6), the third ⚓5–7, the fourth a
+  // galleon's ⚓7–9, the fifth a man-o'-war's ⚓9–10. A premium hull's are her tier's, as is the captain she asks.
+  gunboat: [1, 3], tartane: [1, 3], hoy: [1, 3], pinnace: [1, 3], felucca: [1, 3], lugger: [1, 3], flying_fish: [1, 3], cog: [1, 3], buss: [1, 3],
+  snow: [3, 5], barque: [3, 5], spice_dhow: [3, 5], smugglers_lugger: [3, 5], rum_runner: [3, 5], galiot: [3, 5], topsail_schooner: [3, 5],
+  wind_dancer: [3, 5], shark_cutter: [3, 5], mermaid_grace: [3, 5], pink: [3, 5], holk: [3, 5], collier: [3, 5], war_galley: [4, 6],
+  corvette: [5, 7], dragon_junk: [5, 7], phantom_brig: [5, 7], carrack: [5, 7], silk_junk: [5, 7], pearl_schooner: [5, 7], tea_clipper: [5, 7],
+  treasure_fluyt: [5, 7], baltimore_clipper: [5, 7], sea_hawk: [5, 7], albatross_xebec: [5, 7], storm_petrel: [5, 7], viper: [5, 7],
+  storeship: [5, 7], cargo_frigate: [5, 7],
+  razee: [7, 9], black_corsair: [7, 9], iron_ram: [7, 9], thunderer: [7, 9], storm_reaver: [7, 9], east_indiaman: [7, 9], golden_carrack: [7, 9],
+  floating_bazaar: [7, 9], ledger_galleon: [7, 9], ghost_clipper: [7, 9], silver_arrow: [7, 9], plate_galleon: [7, 9], turtle_barge: [7, 9],
+  menagerie: [7, 9], coral_hulk: [7, 9], treasure_junk: [7, 9],
+  ship_of_the_line: [9, 10], wyvern_galleass: [9, 10], kraken_hunter: [9, 10], crimson_tide: [9, 10], sun_galleon: [9, 10], great_galleon: [9, 10],
+  leviathan_ark: [9, 10], floating_fortress: [9, 10], whale_mother: [9, 10], drowned_cathedral: [9, 10], pirate_haven: [9, 10], iron_whale: [9, 10],
   // The beasts (docs/12 P4): levels like ships', the ladder between them and a captain as between ships.
   shark: [2, 6],
   orca: [3, 8],
@@ -63,6 +78,18 @@ export const HULL_ROLE: Partial<Record<ShipClassId, HullRole>> = {
   young_serpent: 'beast',
   fireship: 'special',
   ghost_ship: 'special',
+  // The fleet of eighty (docs/02 §1.A.9), by list: the warships fight at their level, the runners as all-rounders; the
+  // traders and the haulers are merchants — two levels below theirs, with two and a half times a warship's hold.
+  gunboat: 'war', war_galley: 'war', corvette: 'war', razee: 'war', ship_of_the_line: 'war', black_corsair: 'war', dragon_junk: 'war', iron_ram: 'war',
+  thunderer: 'war', wyvern_galleass: 'war', kraken_hunter: 'war', crimson_tide: 'war', phantom_brig: 'war', storm_reaver: 'war', sun_galleon: 'war',
+  tartane: 'trade', hoy: 'trade', pinnace: 'trade', snow: 'trade', barque: 'trade', carrack: 'trade', east_indiaman: 'trade', golden_carrack: 'trade',
+  spice_dhow: 'trade', silk_junk: 'trade', smugglers_lugger: 'trade', pearl_schooner: 'trade', floating_bazaar: 'trade', rum_runner: 'trade',
+  ledger_galleon: 'trade', tea_clipper: 'trade', treasure_fluyt: 'trade',
+  felucca: 'all', lugger: 'all', galiot: 'all', topsail_schooner: 'all', baltimore_clipper: 'all', sea_hawk: 'all', wind_dancer: 'all', shark_cutter: 'all',
+  ghost_clipper: 'all', flying_fish: 'all', albatross_xebec: 'all', silver_arrow: 'all', storm_petrel: 'all', mermaid_grace: 'all', viper: 'all',
+  cog: 'trade', buss: 'trade', pink: 'trade', holk: 'trade', collier: 'trade', storeship: 'trade', cargo_frigate: 'trade', plate_galleon: 'trade',
+  great_galleon: 'trade', leviathan_ark: 'trade', turtle_barge: 'trade', floating_fortress: 'trade', menagerie: 'trade', whale_mother: 'trade',
+  coral_hulk: 'trade', drowned_cathedral: 'trade', treasure_junk: 'trade', pirate_haven: 'trade', iron_whale: 'trade',
 };
 
 /** How many levels below her own a hull of this role fights. */
@@ -246,9 +273,10 @@ const ROLE_HULLS: Record<string, ShipClassId[]> = {
   ghost: ['sloop', 'brig', 'ghost_ship'],
 };
 
-/** The hulls of a role that can sail at this level (nearest levels if none). */
+/** The hulls of a role that can sail at this level (nearest levels if none). A hull sold for doubloons is never the
+ *  sea's (docs/01 P7): no captain of the sea sails one, so none is ever taken as a prize. */
 export function hullsFor(role: string, level: number): ShipClassId[] {
-  const pool = ROLE_HULLS[role] ?? ROLE_HULLS.pirate;
+  const pool = (ROLE_HULLS[role] ?? ROLE_HULLS.pirate).filter((c) => !SHIP_CLASSES[c].premium);
   const fit = pool.filter((c) => { const [lo, hi] = levelRange(c); return level >= lo && level <= hi; });
   if (fit.length) return fit;
   const gap = (c: ShipClassId) => { const [lo, hi] = levelRange(c); return level < lo ? lo - level : level - hi; };
