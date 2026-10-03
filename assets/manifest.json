@@ -1811,6 +1811,10 @@
     "unit.hero_smuggler":                      { "local": "units/hero_smuggler.webp", "remote": "hf_20261003_170144_gpt-anim_hero_smuggler.png", "job": "gpt-anim_hero_smuggler", "fit": "sheet:anim_hero_smuggler.0", "rev": 20261003170144},
     "unit.hero_smuggler_b":                    { "local": "units/hero_smuggler_b.webp", "remote": "hf_20261003_170144_gpt-anim_hero_smuggler.png", "job": "gpt-anim_hero_smuggler", "fit": "sheet:anim_hero_smuggler.1", "rev": 20261003170144},
     "unit.hero_smuggler_atk":                  { "local": "units/hero_smuggler_atk.webp", "remote": "hf_20261003_170144_gpt-anim_hero_smuggler.png", "job": "gpt-anim_hero_smuggler", "fit": "sheet:anim_hero_smuggler.2", "rev": 20261003170144},
-    "unit.hero_smuggler_hit":                  { "local": "units/hero_smuggler_hit.webp", "remote": "hf_20261003_170144_gpt-anim_hero_smuggler.png", "job": "gpt-anim_hero_smuggler", "fit": "sheet:anim_hero_smuggler.3", "rev": 20261003170144}
+    "unit.hero_smuggler_hit":                  { "local": "units/hero_smuggler_hit.webp", "remote": "hf_20261003_170144_gpt-anim_hero_smuggler.png", "job": "gpt-anim_hero_smuggler", "fit": "sheet:anim_hero_smuggler.3", "rev": 20261003170144},
+    "unit.hero_corsair":                       { "local": "units/hero_corsair.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.0", "rev": 20261003170626},
+    "unit.hero_corsair_b":                     { "local": "units/hero_corsair_b.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.1", "rev": 20261003170626},
+    "unit.hero_corsair_atk":                   { "local": "units/hero_corsair_atk.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.2", "rev": 20261003170626},
+    "unit.hero_corsair_hit":                   { "local": "units/hero_corsair_hit.webp", "remote": "hf_20261003_170626_gpt-anim_hero_corsair.png", "job": "gpt-anim_hero_corsair", "fit": "sheet:anim_hero_corsair.3", "rev": 20261003170626}
   }
 }
