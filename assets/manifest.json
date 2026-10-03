@@ -1687,6 +1687,10 @@
     "unit.tide_shaman":                        { "local": "units/tide_shaman.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.0", "rev": 20261003140924},
     "unit.tide_shaman_b":                      { "local": "units/tide_shaman_b.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.1", "rev": 20261003140924},
     "unit.tide_shaman_atk":                    { "local": "units/tide_shaman_atk.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.2", "rev": 20261003140924},
-    "unit.tide_shaman_hit":                    { "local": "units/tide_shaman_hit.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.3", "rev": 20261003140924}
+    "unit.tide_shaman_hit":                    { "local": "units/tide_shaman_hit.webp", "remote": "hf_20261003_140924_gpt-anim_tide_shaman.png", "job": "gpt-anim_tide_shaman", "fit": "sheet:anim_tide_shaman.3", "rev": 20261003140924},
+    "unit.island_archer":                      { "local": "units/island_archer.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.0", "rev": 20261003141412},
+    "unit.island_archer_b":                    { "local": "units/island_archer_b.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.1", "rev": 20261003141412},
+    "unit.island_archer_atk":                  { "local": "units/island_archer_atk.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.2", "rev": 20261003141412},
+    "unit.island_archer_hit":                  { "local": "units/island_archer_hit.webp", "remote": "hf_20261003_141412_gpt-anim_island_archer.png", "job": "gpt-anim_island_archer", "fit": "sheet:anim_island_archer.3", "rev": 20261003141412}
   }
 }
