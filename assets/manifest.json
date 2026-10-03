@@ -1699,6 +1699,10 @@
     "unit.sharktooth":                         { "local": "units/sharktooth.webp", "remote": "hf_20261003_142543_gpt-anim_sharktooth.png", "job": "gpt-anim_sharktooth", "fit": "sheet:anim_sharktooth.0", "rev": 20261003142543},
     "unit.sharktooth_b":                       { "local": "units/sharktooth_b.webp", "remote": "hf_20261003_142543_gpt-anim_sharktooth.png", "job": "gpt-anim_sharktooth", "fit": "sheet:anim_sharktooth.1", "rev": 20261003142543},
     "unit.sharktooth_atk":                     { "local": "units/sharktooth_atk.webp", "remote": "hf_20261003_142543_gpt-anim_sharktooth.png", "job": "gpt-anim_sharktooth", "fit": "sheet:anim_sharktooth.2", "rev": 20261003142543},
-    "unit.sharktooth_hit":                     { "local": "units/sharktooth_hit.webp", "remote": "hf_20261003_142543_gpt-anim_sharktooth.png", "job": "gpt-anim_sharktooth", "fit": "sheet:anim_sharktooth.3", "rev": 20261003142543}
+    "unit.sharktooth_hit":                     { "local": "units/sharktooth_hit.webp", "remote": "hf_20261003_142543_gpt-anim_sharktooth.png", "job": "gpt-anim_sharktooth", "fit": "sheet:anim_sharktooth.3", "rev": 20261003142543},
+    "unit.island_warrior":                     { "local": "units/island_warrior.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.0", "rev": 20261003143107},
+    "unit.island_warrior_b":                   { "local": "units/island_warrior_b.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.1", "rev": 20261003143107},
+    "unit.island_warrior_atk":                 { "local": "units/island_warrior_atk.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.2", "rev": 20261003143107},
+    "unit.island_warrior_hit":                 { "local": "units/island_warrior_hit.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.3", "rev": 20261003143107}
   }
 }
