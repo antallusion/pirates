@@ -1799,6 +1799,10 @@
     "unit.hero_drowned":                       { "local": "units/hero_drowned.webp", "remote": "hf_20261003_164643_gpt-anim_hero_drowned.png", "job": "gpt-anim_hero_drowned", "fit": "sheet:anim_hero_drowned.0", "rev": 20261003164643},
     "unit.hero_drowned_b":                     { "local": "units/hero_drowned_b.webp", "remote": "hf_20261003_164643_gpt-anim_hero_drowned.png", "job": "gpt-anim_hero_drowned", "fit": "sheet:anim_hero_drowned.1", "rev": 20261003164643},
     "unit.hero_drowned_atk":                   { "local": "units/hero_drowned_atk.webp", "remote": "hf_20261003_164643_gpt-anim_hero_drowned.png", "job": "gpt-anim_hero_drowned", "fit": "sheet:anim_hero_drowned.2", "rev": 20261003164643},
-    "unit.hero_drowned_hit":                   { "local": "units/hero_drowned_hit.webp", "remote": "hf_20261003_164643_gpt-anim_hero_drowned.png", "job": "gpt-anim_hero_drowned", "fit": "sheet:anim_hero_drowned.3", "rev": 20261003164643}
+    "unit.hero_drowned_hit":                   { "local": "units/hero_drowned_hit.webp", "remote": "hf_20261003_164643_gpt-anim_hero_drowned.png", "job": "gpt-anim_hero_drowned", "fit": "sheet:anim_hero_drowned.3", "rev": 20261003164643},
+    "unit.hero_navigator":                     { "local": "units/hero_navigator.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.0", "rev": 20261003165208},
+    "unit.hero_navigator_b":                   { "local": "units/hero_navigator_b.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.1", "rev": 20261003165208},
+    "unit.hero_navigator_atk":                 { "local": "units/hero_navigator_atk.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.2", "rev": 20261003165208},
+    "unit.hero_navigator_hit":                 { "local": "units/hero_navigator_hit.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.3", "rev": 20261003165208}
   }
 }
