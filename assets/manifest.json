@@ -1361,6 +1361,10 @@
     "unit.surf_drowned":                       { "local": "units/surf_drowned.webp", "remote": "hf_20261003_073417_gpt-anim_surf_drowned.png", "job": "gpt-anim_surf_drowned", "fit": "sheet:anim_surf_drowned.0", "rev": 20261003073417},
     "unit.surf_drowned_b":                     { "local": "units/surf_drowned_b.webp", "remote": "hf_20261003_073417_gpt-anim_surf_drowned.png", "job": "gpt-anim_surf_drowned", "fit": "sheet:anim_surf_drowned.1", "rev": 20261003073417},
     "unit.surf_drowned_atk":                   { "local": "units/surf_drowned_atk.webp", "remote": "hf_20261003_073417_gpt-anim_surf_drowned.png", "job": "gpt-anim_surf_drowned", "fit": "sheet:anim_surf_drowned.2", "rev": 20261003073417},
-    "unit.surf_drowned_hit":                   { "local": "units/surf_drowned_hit.webp", "remote": "hf_20261003_073417_gpt-anim_surf_drowned.png", "job": "gpt-anim_surf_drowned", "fit": "sheet:anim_surf_drowned.3", "rev": 20261003073417}
+    "unit.surf_drowned_hit":                   { "local": "units/surf_drowned_hit.webp", "remote": "hf_20261003_073417_gpt-anim_surf_drowned.png", "job": "gpt-anim_surf_drowned", "fit": "sheet:anim_surf_drowned.3", "rev": 20261003073417},
+    "unit.young_serpent":                      { "local": "units/young_serpent.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.0", "rev": 20261003073859},
+    "unit.young_serpent_b":                    { "local": "units/young_serpent_b.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.1", "rev": 20261003073859},
+    "unit.young_serpent_atk":                  { "local": "units/young_serpent_atk.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.2", "rev": 20261003073859},
+    "unit.young_serpent_hit":                  { "local": "units/young_serpent_hit.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.3", "rev": 20261003073859}
   }
 }

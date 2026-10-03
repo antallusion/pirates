@@ -71,7 +71,7 @@ import { Journal } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
-import { loadFilms, playFilm } from './ui/cutscene.ts';
+import { filmDue, loadFilms, playFilm } from './ui/cutscene.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
@@ -454,10 +454,18 @@ loadAssets(null).then(() => {
 
 /** The game's films at their moments (ui/cutscene.ts): the first boarding (a lair's fight ashore), the first win and
  *  loss, the first harbour, the first storm — each shown once. */
-const filmWas = { tac: false, over: false, docked: true, storm: false };
+const filmWas = { tac: false, over: false, docked: true, storm: false, bosses: '' };
+/** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
+const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell' };
 function filmMoments(): void {
   const tac = state.boardTac;
-  if (tac && !filmWas.tac) playFilm(tac.land ? 'cut_lair' : 'cut_boarding');
+  if (tac && !filmWas.tac) {
+    // A legend's film first, then the foe's army's, then the boarding's (or the lair's ashore) — one at the start.
+    const units = tac.stacks.map((x) => x.unit as string);
+    const roster = tac.stacks.filter((x) => x.side !== tac.you).map((x) => ROAM_UNITS[x.unit]?.roster).find(Boolean);
+    const pick = units.includes('white_whale') ? 'cut_white_whale' : units.includes('young_kraken') ? 'cut_kraken_boss' : roster ? ROSTER_FILM[roster] : undefined;
+    if (!(pick && filmDue(pick) && playFilm(pick))) playFilm(tac.land ? 'cut_lair' : 'cut_boarding');
+  }
   if (tac?.over && !filmWas.over) playFilm(tac.over.winner === tac.you ? 'cut_victory' : 'cut_defeat');
   filmWas.tac = !!tac;
   filmWas.over = !!tac?.over;
@@ -466,6 +474,10 @@ function filmMoments(): void {
   filmWas.docked = docked || !state.self;
   if (state.storm && !filmWas.storm) playFilm('cut_storm');
   filmWas.storm = !!state.storm;
+  // A world boss rising: the kraken's film the first time one is near.
+  const bosses = state.bosses.map((b) => b.kind).join();
+  if (bosses !== filmWas.bosses && state.bosses.some((b) => b.kind === 'kraken')) playFilm('cut_kraken_boss');
+  filmWas.bosses = bosses;
 }
 void loadFilms();
 
