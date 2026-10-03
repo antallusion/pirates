@@ -17,7 +17,9 @@
 //     Artillery, Wind — Navigation, Water — First Aid, Steel — Leadership) makes its orders stronger and cheaper, and
 //     Deep Mysticism makes all of them stronger, fills Will faster and opens the higher levels (HoMM3's Wisdom and
 //     Mysticism in one). Learnt at the guilds of orders in some ports (each with its set list) and at the drowned
-//     shrines on the islands (each teaches one).
+//     shrines on the islands (each teaches one). Twenty more common pages after docs/18 (owner, 2026-10-03) over all
+//     six schools, taught the same ways (shared/src/data/paths.ts, BOOK_PAGES): theirs in the physical schools spend
+//     Stamina.
 //
 // Artifacts (item 9) are in shared/src/data/artifacts.ts.
 
@@ -29,7 +31,8 @@ import { TAC_BOOK } from './tactical.ts';
 import type { TacSpellId } from './tactical.ts';
 import { Rng } from '../rng.ts';
 import {
-  FOREIGN_COST, HOME_COST, HOME_MUL, PATH_PAGES, PATH_PAGE_IDS, PATH_SCHOOL, SCHOOL_KIND, STAM_ROUND, ULT_LEVEL, isPathPage, pathPagesAt, pathPatterns, stamMaxOf, talentBook,
+  BOOK_PAGES, BOOK_PAGE_IDS, FOREIGN_COST, HOME_COST, HOME_MUL, PATH_PAGES, PATH_PAGE_IDS, PATH_SCHOOL, SCHOOL_KIND, STAM_ROUND, ULT_LEVEL, isBookPage, isPathPage, pathPagesAt, pathPatterns,
+  stamMaxOf, talentBook,
 } from './paths.ts';
 import type { PathPageId, School } from './paths.ts';
 export type { School } from './paths.ts';
@@ -299,7 +302,7 @@ export function skillOffer(skills: readonly SkillSlot[], favoured: readonly Tree
 /** The six schools (docs/18 item 2): H2's four, and the hook and the boarding, fog and shadow, which the paths
  *  bring. Fire, steel and the hook are physical (Stamina); wind, water and fog magical (Will). */
 export const SCHOOLS: School[] = ['fire', 'steel', 'board', 'wind', 'water', 'fog'];
-/** H2's four, which the guilds' common orders are in. */
+/** H2's four, which docs/17's common orders are in (the pages after docs/18 are in all six). */
 export const COMMON_SCHOOLS: School[] = ['fire', 'wind', 'water', 'steel'];
 export const SCHOOL_NAMES: Record<School, [string, string]> = {
   fire: ['Fire and powder', 'Огонь и порох'], wind: ['Wind', 'Ветер'], water: ['Water and the deep', 'Вода и глубина'], steel: ['Steel and men', 'Сталь и люди'],
@@ -309,11 +312,11 @@ export const SCHOOL_ICON: Record<School, string> = { fire: 'bt_grenades', wind: 
 /** Each school's kin skill: it raises the school's orders and eases their cost. */
 export const SCHOOL_SKILL: Record<School, SkillId> = { fire: 'artillery', wind: 'navigation', water: 'first_aid', steel: 'leadership', board: 'boarding', fog: 'scouting' };
 /** What an order spends (docs/18 item 4): the path books' physical moves Stamina, their magical ones and every
- *  common order of docs/17 Will (as before). */
+ *  common order of docs/17 Will (as before); the common pages after docs/18 by their school, as the path books'. */
 export type OrderRes = 'stam' | 'will';
 export function orderRes(id: string): OrderRes {
   const d = ORDERS[id as OrderId];
-  return d?.path && SCHOOL_KIND[d.school] === 'phys' ? 'stam' : 'will';
+  return d && (d.path || isBookPage(id)) && SCHOOL_KIND[d.school] === 'phys' ? 'stam' : 'will';
 }
 
 export type SeaOrderId = 'fair_wind' | 'fog_bank' | 'becalm' | 'gale' | 'mend_hull' | 'deep_sight';
@@ -377,6 +380,11 @@ export const ORDERS: Record<OrderId, OrderDef> = Object.fromEntries([
     const pg = PATH_PAGES[id];
     return O(id, pg.school, pg.level, 'battle', pg.cost, pg.icon, pg.name, pg.text, { path: pg.path });
   }),
+  // The common pages after docs/18 (owner, 2026-10-03): twenty more over the six schools, taught as docs/17's.
+  ...BOOK_PAGE_IDS.map((id) => {
+    const pg = BOOK_PAGES[id];
+    return O(id, pg.school, pg.level, 'battle', pg.cost, pg.icon, pg.name, pg.text);
+  }),
 ].map((o) => [o.id, o])) as Record<OrderId, OrderDef>;
 
 export const ORDER_IDS = Object.keys(ORDERS) as OrderId[];
@@ -416,8 +424,9 @@ export function guildOf(portId: string, size: number): OrderId[] | null {
   const top = Math.min(5, 2 + Math.max(0, size));
   const pool = LEARNABLE.filter((id) => ORDERS[id].level <= top);
   const out: OrderId[] = [];
-  // One of each school first, then the rest.
-  for (const sc of COMMON_SCHOOLS) {
+  // One of each school first (the hook and the boarding, fog and shadow too, since they have common pages), then the
+  // rest.
+  for (const sc of SCHOOLS) {
     const list = pool.filter((id) => ORDERS[id].school === sc && !out.includes(id));
     if (list.length) out.push(rng.pick(list));
   }

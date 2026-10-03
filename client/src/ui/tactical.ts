@@ -109,6 +109,7 @@ const STATUS: [keyof TacStackView, string, K][] = [
   ['marked', 'st_marked', 'sts.marked'], ['defending', 'bt_defend', 'sts.defending'], ['braced', 'st_braced', 'sts.braced'],
   ['waited', 'bt_wait', 'sts.waited'], ['again', 'st_again', 'sts.again'], ['noRet', 'st_no_ret', 'sts.noRet'],
   ['blind', 'st_blind', 'sts.blind'], ['poisoned', 'st_poison', 'sts.poisoned'], ['wet', 'st_diving', 'sts.wet'],
+  ['still', 'st_fear', 'sts.still'], ['mad', 'st_terror', 'sts.mad'],
 ];
 /** The book's bookmarks: each school by the painted mark of the path whose school it is (shared/src/data/paths.ts). */
 const BOOK_TAB: Record<School, string> = { fire: 'school_corsair', board: 'school_reaver', steel: 'school_admiral', wind: 'school_navigator', water: 'school_drowned', fog: 'school_smuggler' };
@@ -493,12 +494,12 @@ export class TacticalPanel {
       } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: t, size: w * 0.8 });
     } else if (e.k === 'luck' || e.k === 'morale' || e.k === 'fear') {
       const c = at(hexOf(e.s));
-      if (c) this.addFloat({ text: e.k === 'fear' ? (e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
+      if (c) this.addFloat({ text: e.k === 'fear' ? (e.id === 'still' || e.id === 'mad' ? L(`float.${e.id}`) : e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
     } else if (e.k === 'poison' || e.k === 'regen') {
       // docs/18 II: the poison in a stack, a creature growing back.
       const c = at(e.hex ?? hexOf(e.s));
       if (c) {
-        this.addFloat({ text: e.k === 'poison' ? `${L('float.poison')} −${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${L('float.regen')} +${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
+        this.addFloat({ text: e.k === 'poison' ? `${L(e.id === 'sick' ? 'float.sick' : 'float.poison')} −${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${L('float.regen')} +${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
         this.bursts.push({ id: e.k === 'poison' ? (sprite('fx.bt_poison_0') ? 'fx.bt_poison' : 'part.smoke') : sprite('fx.bt_heal_0') ? 'fx.bt_heal' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'spell') {
@@ -508,10 +509,10 @@ export class TacticalPanel {
         this.bursts.push({ id: 'part.explosion', x: c.x, y: c.y, t0: t, size: w * 2.4 });
       } else if (c) this.bursts.push({ id: 'part.muzzle', x: c.x, y: c.y, t0: t, size: w * 1.6 });
       else {
-        // A whole-deck order: smoke over her deck, or a ring over one's own.
+        // A whole-deck order: smoke over her deck, or a ring over one's own (a page over the stacks it fell on).
         const foe = e.side !== v.you;
         const onFoe = e.id === 'smoke_and_knives' || e.id === 'call_of_the_deep' ? !foe : foe;
-        const mine = v.stacks.filter((s) => (s.side === v.you) !== onFoe);
+        const mine = e.on?.length ? v.stacks.filter((s) => e.on!.includes(s.id)) : v.stacks.filter((s) => (s.side === v.you) !== onFoe);
         for (const s of mine) {
           const cc = this.center(s.hex);
           this.bursts.push({ id: e.id === 'call_of_the_deep' ? (sprite('fx.bt_deep_0') ? 'fx.bt_deep' : 'part.splash') : 'part.smoke', x: cc.x, y: cc.y, t0: t + Math.random() * 200, size: w * 1.3 });
@@ -737,7 +738,7 @@ export class TacticalPanel {
       case 'hit':
       case 'shot':
       case 'ret':
-        return L(e.id === 'volley' ? 'log.volley' : `log.${e.k}`, { a: name(e.s), b: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
+        return L(e.id === 'volley' ? 'log.volley' : e.id === 'mad' ? 'log.mad' : `log.${e.k}`, { a: name(e.s), b: name(e.t), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'die':
         return L('log.die', { a: name(e.s) });
       case 'spell':
@@ -754,10 +755,10 @@ export class TacticalPanel {
       case 'burn':
         return L('log.burn', { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'fear':
-        return L(e.id === 'terror' ? 'log.terror' : e.id === 'dread' ? 'log.dread' : 'log.fear', { a: name(e.s) });
+        return L(e.id === 'terror' ? 'log.terror' : e.id === 'dread' ? 'log.dread' : e.id === 'still' ? 'log.still' : e.id === 'mad' ? 'log.lost' : 'log.fear', { a: name(e.s) });
       case 'poison':
       case 'regen':
-        return L(`log.${e.k}`, { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
+        return L(e.k === 'poison' && e.id === 'sick' ? 'log.sick' : `log.${e.k}`, { a: name(e.s), dmg: e.dmg ?? 0, kills: e.kills ?? 0 });
       case 'wait':
       case 'defend':
       case 'morale':

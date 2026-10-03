@@ -7,8 +7,8 @@ import type { CaptainId } from './captains.ts';
 import type { OfficerRole } from './crew.ts';
 import { UNITS } from './army.ts';
 import type { UnitId } from './army.ts';
-import { PATH_PAGES, PATH_PAGE_IDS } from './paths.ts';
-import type { PathPageId } from './paths.ts';
+import { BOOK_PAGES, BOOK_PAGE_IDS, PATH_PAGES, PATH_PAGE_IDS } from './paths.ts';
+import type { BookPageId, PathPageId } from './paths.ts';
 
 /** The field: 11 columns by 9 rows of hexes, odd rows pushed half a hex to the right and one hex shorter ('#'). */
 export const TAC_W = 11;
@@ -81,8 +81,8 @@ export type TacSpellId = 'grenades' | 'point_blank' | 'smoke_and_knives' | 'red_
   | 'mark_target' | 'double_shot' | 'war_cry' | 'brine_mend'
   /** The order book's further pages (docs/17 H2, shared/src/data/hero.ts): learnt at guilds and shrines. */
   | 'musket_storm' | 'powder_keg' | 'following_wind' | 'head_wind' | 'tide_returns' | 'maelstrom' | 'shield_wall' | 'fury' | 'dread'
-  /** The path books (docs/18 item 3, shared/src/data/paths.ts). */
-  | PathPageId;
+  /** The path books (docs/18 item 3, shared/src/data/paths.ts), and the common pages after them (BOOK_PAGES). */
+  | PathPageId | BookPageId;
 export interface TacSpellDef {
   id: TacSpellId;
   /** Rounds before it may be given again. */
@@ -113,6 +113,7 @@ export const TAC_SPELLS: Record<TacSpellId, TacSpellDef> = {
   fury: { id: 'fury', cd: 4, target: 'none', icon: 'icon.ab_red_hook_boarding' },
   dread: { id: 'dread', cd: 5, target: 'none', icon: 'icon.ab_deep_call' },
   ...(Object.fromEntries(PATH_PAGE_IDS.map((id) => [id, { id, cd: PATH_PAGES[id].cd, target: PATH_PAGES[id].fx.target, icon: `icon.${PATH_PAGES[id].icon}` }])) as Record<PathPageId, TacSpellDef>),
+  ...(Object.fromEntries(BOOK_PAGE_IDS.map((id) => [id, { id, cd: BOOK_PAGES[id].cd, target: BOOK_PAGES[id].fx.target, icon: `icon.${BOOK_PAGES[id].icon}` }])) as Record<BookPageId, TacSpellDef>),
 };
 /** Each captain's own order (the Boarding 2.0 captain's move, docs/11 P1) beside the grenades everyone has. */
 export const TAC_SIGNATURE: Record<CaptainId, TacSpellId> = {

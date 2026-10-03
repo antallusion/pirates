@@ -174,6 +174,15 @@ export const EN = {
   'od.harpoon': 'An iron into her most dangerous stack: a blow, and two rounds it is a hex slower.',
   'pathOf': 'Path: {path}',
   'k.key': 'I path move · U ultimate',
+  // The common pages after docs/18: the siren's spell, the fog's madness, the foul water.
+  'sts.still': 'Spellbound', 'sts.mad': 'Maddened',
+  'float.still': 'Spellbound',
+  'float.mad': 'Lost in the fog',
+  'float.sick': 'Sickness',
+  'log.still': '{a} stand spellbound and lose the turn.',
+  'log.lost': '{a} stand lost in the fog and lose the turn.',
+  'log.mad': '{a}, mad in the fog, strike their own {b}: {dmg} damage, {kills} fall.',
+  'log.sick': '{a}: the foul water — {dmg} damage, {kills} fall.',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -343,4 +352,12 @@ export const RU: Record<keyof typeof EN, string> = {
   'od.harpoon': 'Гарпун в её самый опасный отряд: удар, и два раунда он на гекс медленнее.',
   'pathOf': 'Путь: {path}',
   'k.key': 'I — сила пути · U — высший приём',
+  'sts.still': 'Зачарованы', 'sts.mad': 'Морок',
+  'float.still': 'Зачарованы',
+  'float.mad': 'Блуждают в тумане',
+  'float.sick': 'Хворь',
+  'log.still': '{a} стоят зачарованные и пропускают ход.',
+  'log.lost': '{a} блуждают в тумане и пропускают ход.',
+  'log.mad': '{a} в мороке бьют своих же — {b}: урон {dmg}, пало {kills}.',
+  'log.sick': '{a}: тухлая вода — урон {dmg}, пало {kills}.',
 };

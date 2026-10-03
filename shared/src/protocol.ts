@@ -1381,6 +1381,10 @@ export interface TacStackView {
   /** docs/18 II: poisoned (its bites to come); in the surf (a diver under the waves). */
   poisoned?: boolean;
   wet?: boolean;
+  /** The common pages after docs/18: spellbound by the Siren Song (her turns lost till a blow wakes her); maddened by
+   *  the Fog Madness (she strikes her own). */
+  still?: boolean;
+  mad?: boolean;
 }
 
 /** A captain on the side panel. */

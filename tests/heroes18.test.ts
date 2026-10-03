@@ -118,6 +118,9 @@ test('2. six schools, three physical and three magical; each path a home school,
   assert.equal(orderRes('grenades'), 'will');
   assert.equal(orderRes('cs_chain_shot'), 'stam');
   assert.equal(orderRes('cs_spotter'), 'will');
+  // The common pages after docs/18 by their schools, as the path books' (tests/bookpages.test.ts).
+  assert.equal(orderRes('stinkpot'), 'stam');
+  assert.equal(orderRes('siren_song'), 'will');
 });
 
 // ------------------------------------------------------------------ 3. the path books

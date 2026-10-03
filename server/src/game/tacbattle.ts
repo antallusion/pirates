@@ -12,13 +12,13 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
   TAC_AI_DELAY, TAC_BLOCKING, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
-  captainSpells, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, kindOfUnit,
+  captainSpells, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
 import type { TacAction, TacEvent, TacHeroView, TacStackView, TacView } from '../../../shared/src/protocol.ts';
 import { ORDERS, TACTICS_DEPLOY, homeMul, orderRes } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, OrderRes } from '../../../shared/src/data/hero.ts';
-import { HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, ULTIMATE, ULT_ROUND, isPathPage, powered } from '../../../shared/src/data/paths.ts';
+import { BOOK_PAGES, CHAIN_FALL, HOME_MUL, INNATE, PATH_PAGES, PATH_SCHOOL, SICK_TURNS, ULTIMATE, ULT_ROUND, isBookPage, isPathPage, powered } from '../../../shared/src/data/paths.ts';
 import type { BtMods, PageFx } from '../../../shared/src/data/paths.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { FAV_BONUS } from '../../../shared/src/data/drifts.ts';
@@ -116,8 +116,9 @@ export interface TacStack {
   surged: boolean;
   /** Turns more she acts this round (docs/18: the Following Squall, the Eye of the Storm). */
   again: number;
-  /** docs/18 II: a creature's poison in her — the harm it does as her next turns come, how many more, and whose. */
-  poison?: { dmg: number; left: number; by: 0 | 1 };
+  /** docs/18 II: a creature's poison in her — the harm it does as her next turns come, how many more, and whose (`sick`:
+   *  the Foul Water's sickness, a common page after docs/18). */
+  poison?: { dmg: number; left: number; by: 0 | 1; sick?: boolean };
   officer?: { id: string; role: OfficerRole; name: string; unique?: string; order: TacOrderId; used: boolean };
 }
 
@@ -156,6 +157,8 @@ export interface TacHero {
   /** Her side's next blows that draw no answer (docs/18: Blood Harvest, the Red Tide). */
   free: number;
   scrollsUsed: TacSpellId[];
+  /** The last round her signals are lost in the other's fog (the Silent Fog): no order nor path move till it ends. */
+  hush?: number;
 }
 
 export interface TacBattle {
@@ -443,9 +446,11 @@ export interface StackMods {
   noRet: boolean;
   noAnswer: boolean;
   steady: boolean;
+  still: boolean;
+  mad: boolean;
 }
 export function modsOf(bt: TacBattle, side: 0 | 1, id?: number): StackMods {
-  const out: StackMods = { melee: 0, shot: 0, taken: 0, shotTaken: 0, speed: 0, init: 0, morale: 0, luck: 0, blind: false, noRet: false, noAnswer: false, steady: false };
+  const out: StackMods = { melee: 0, shot: 0, taken: 0, shotTaken: 0, speed: 0, init: 0, morale: 0, luck: 0, blind: false, noRet: false, noAnswer: false, steady: false, still: false, mad: false };
   const r = bt.round;
   const add = (m: BtMods) => {
     out.melee += m.melee ?? 0;
@@ -460,6 +465,8 @@ export function modsOf(bt: TacBattle, side: 0 | 1, id?: number): StackMods {
     if (m.noRet) out.noRet = true;
     if (m.noAnswer) out.noAnswer = true;
     if (m.steady) out.steady = true;
+    if (m.still) out.still = true;
+    if (m.mad) out.mad = true;
   };
   for (const k of [0, 1] as const) {
     const foe = k !== side;
@@ -681,6 +688,17 @@ function hurt(bt: TacBattle, t: TacStack, dmg: number, by: 0 | 1): number {
   return kills;
 }
 
+/** A blow or a shot wakes a stack the Siren Song holds spellbound (true: it slept). */
+function wake(bt: TacBattle, t: TacStack): boolean {
+  let slept = false;
+  for (const h of bt.heroes) {
+    if (!h.fx.some((f) => f.on === t.id && f.mods?.still)) continue;
+    h.fx = h.fx.filter((f) => !(f.on === t.id && f.mods?.still));
+    slept = true;
+  }
+  return slept;
+}
+
 function push(bt: TacBattle, e: Omit<TacEvent, 'i'>): void {
   bt.log.push({ i: ++bt.events, ...e });
   if (bt.log.length > 40) bt.log.splice(0, bt.log.length - 40);
@@ -691,6 +709,7 @@ function oneBlow(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng, k: 'hit' | '
   const { dmg, lucky } = blow(bt, s, t, k === 'ret' ? 'ret' : 'melee', rng);
   if (lucky) push(bt, { k: 'luck', side: s.side, s: s.id });
   const kills = hurt(bt, t, dmg, s.side);
+  if (wake(bt, t) && k === 'hit') t.ret = false; // caught asleep: no answer to the blow that wakes her
   push(bt, { k, side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex });
   // docs/18 II: a poisonous bite stays in the living — a third of it again as each of her next two turns comes.
   if (sp(s, 'poison') && t.count > 0 && !sp(t, 'undead')) t.poison = { dmg: Math.max(1, Math.round(dmg * 0.3)), left: 2, by: s.side };
@@ -727,11 +746,13 @@ function shoot(bt: TacBattle, s: TacStack, t: TacStack, rng: Rng): void {
   if (lucky) push(bt, { k: 'luck', side: s.side, s: s.id });
   const ring = sp(s, 'blast') ? alive(bt).filter((o) => o.side !== s.side && o !== t && hexNeighbors(t.hex).includes(o.hex)) : [];
   const kills = hurt(bt, t, dmg, s.side);
+  wake(bt, t);
   push(bt, { k: 'shot', side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex });
   // A swivel gun's burst: the stacks beside the target take half as much.
   for (const o of ring) {
     const b = Math.max(1, Math.round(blow(bt, s, o, 'shot', null).dmg * 0.5));
     const k2 = hurt(bt, o, b, s.side);
+    wake(bt, o);
     push(bt, { k: 'shot', side: s.side, s: s.id, t: o.id, dmg: b, kills: k2, hex: o.hex, id: 'blast' });
   }
 }
@@ -803,6 +824,7 @@ export function spellError(bt: TacBattle, side: 0 | 1, id: TacSpellId, target?: 
   const h = bt.heroes[side];
   const sp0 = h.spells.find((x) => x.id === id);
   if (!sp0) return 'Your captain has no such order';
+  if ((h.hush ?? 0) >= bt.round) return 'Your signals are lost in her fog';
   if (h.cast >= bt.round) return 'One captain\'s order a round';
   if (sp0.ready > bt.round) return 'That order is not ready yet';
   if (h.input.hero?.scroll?.[id] && !onScroll(bt, side, id)) return 'That scroll is read';
@@ -833,12 +855,30 @@ function applyFx(bt: TacBattle, side: 0 | 1, id: string, fx: PageFx, k: number, 
   if (t && fx.target !== 'none') on.add(t.id);
   if (t && t.side !== side) {
     const ring = fx.ring ? foes().filter((o) => o !== t && hexNeighbors(t.hex).includes(o.hex)) : [];
+    const row = fx.row ? foes().filter((o) => hexY(o.hex) === hexY(t.hex)) : [];
     if (fx.dmg) kills += hurt(bt, t, Math.max(1, Math.round(P * fx.dmg)), side);
     for (const o of ring) {
       kills += hurt(bt, o, Math.max(1, Math.round(P * (fx.ring ?? 0))), side);
       on.add(o.id);
     }
+    // The common pages after docs/18: the forked blow, the raking line, a sickness, a fire under her.
+    const hit = [t];
+    for (let share = fx.dmg ?? 0; fx.chain && hit.length <= fx.chain; ) {
+      const next = leapFrom(bt, side, hit[hit.length - 1], hit);
+      if (!next) break;
+      share *= CHAIN_FALL;
+      kills += hurt(bt, next, Math.max(1, Math.round(P * share)), side);
+      on.add(next.id);
+      hit.push(next);
+    }
+    for (const o of row) {
+      kills += hurt(bt, o, Math.max(1, Math.round(P * (fx.row ?? 0))), side);
+      on.add(o.id);
+    }
+    if (fx.sicken && t.count > 0 && !sp(t, 'undead')) t.poison = { dmg: Math.max(1, Math.round(P * fx.sicken)), left: SICK_TURNS, by: side, sick: true };
+    if (fx.fire && bt.cells[t.hex] === '.') bt.cells[t.hex] = 'F';
   }
+  if (fx.mend && t && t.side === side) heal(bt, side, Math.min(0.5, fx.mend * k), false, t);
   if (fx.all) for (const o of foes()) {
     kills += hurt(bt, o, Math.max(1, Math.round(P * fx.all)), side);
     on.add(o.id);
@@ -856,7 +896,14 @@ function applyFx(bt: TacBattle, side: 0 | 1, id: string, fx: PageFx, k: number, 
     for (const x of own()) on.add(x.id);
   }
   const rounds = fx.rounds ?? 0;
-  const until = r + rounds + (rounds > 0 ? holdOf(bt, side) : 0);
+  // A strong Power holds a move longer — but a spell on her very turns (spellbound, maddened) holds as written.
+  const until = r + rounds + (rounds > 0 && !fx.one?.still && !fx.one?.mad ? holdOf(bt, side) : 0);
+  // The clearing wind: all she laid on both decks ends before anything new is laid.
+  if (fx.clear && (e.fx.length || e.free)) {
+    for (const f of e.fx) for (const x of f.on !== undefined ? [stackById(bt, f.on)] : f.foe ? own() : foes()) if (x) on.add(x.id);
+    e.fx = [];
+    e.free = 0;
+  }
   if (fx.self) {
     h.fx.push({ id, until, mods: fx.self });
     for (const x of own()) on.add(x.id);
@@ -883,7 +930,23 @@ function applyFx(bt: TacBattle, side: 0 | 1, id: string, fx: PageFx, k: number, 
   }
   if (fx.heart) h.morale = Math.min(100, h.morale + fx.heart);
   if (fx.dread) e.morale = Math.max(0, e.morale - fx.dread);
+  if (fx.douse) for (let i = 0; i < bt.cells.length; i++) if (bt.cells[i] === 'F') bt.cells[i] = '.';
+  if (fx.hush) e.hush = Math.max(e.hush ?? 0, r + fx.hush - 1);
   return { kills, on: [...on] };
+}
+
+/** Where the forked blow leaps from `last`: the nearest stack of hers it has not struck (the stronger on a tie). */
+function leapFrom(bt: TacBattle, side: 0 | 1, last: TacStack, hit: readonly TacStack[]): TacStack | undefined {
+  let best: TacStack | undefined, bd = Infinity;
+  for (const o of alive(bt)) {
+    if (o.side === side || hit.includes(o)) continue;
+    const d = hexDist(last.hex, o.hex) - threat(bt, o) * 1e-6;
+    if (d < bd) {
+      bd = d;
+      best = o;
+    }
+  }
+  return best;
 }
 
 /** Her path's innate move (once a battle, free) or her ultimate (from level 20, once a battle): given beside the
@@ -895,6 +958,7 @@ export function moveError(bt: TacBattle, side: 0 | 1, kind: 'innate' | 'ult', ta
   if (kind === 'ult' && !h.input.hero?.ult) return 'The ultimate opens at level 20';
   if (kind === 'ult' && bt.round < ULT_ROUND) return 'The ultimate waits for the third round';
   if ((kind === 'innate' ? h.innate : h.ult) !== 1) return kind === 'innate' ? "Your path's move is spent this battle" : 'Your ultimate is spent this battle';
+  if ((h.hush ?? 0) >= bt.round) return 'Your signals are lost in her fog';
   if (h.moved >= bt.round) return 'One path move a round';
   return targetError(bt, side, (kind === 'innate' ? INNATE : ULTIMATE)[path].fx.target, target);
 }
@@ -937,6 +1001,13 @@ function moveMul(bt: TacBattle, side: 0 | 1): number {
   return (hb.mul[PATH_SCHOOL[hb.path]] ?? 1) * HOME_MUL * (hb.innateMul ?? 1);
 }
 
+/** A page's fx as it lands for her: a path book's with its path's power at her level on it, a common page's after
+ *  docs/18 as it stands (it is no path's); null for the orders the battle gives by hand below. */
+function pageFx(bt: TacBattle, side: 0 | 1, id: TacSpellId): PageFx | null {
+  if (isPathPage(id)) return powered(PATH_PAGES[id].fx, PATH_PAGES[id].path, bt.heroes[side].input.hero?.level ?? 1);
+  return isBookPage(id) ? BOOK_PAGES[id].fx : null;
+}
+
 export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: number | undefined, rng: Rng): string | null {
   const why = spellError(bt, side, id, target);
   if (why) return why;
@@ -951,11 +1022,12 @@ export function castSpell(bt: TacBattle, side: 0 | 1, id: TacSpellId, target: nu
   else if (res === 'stam' && h.stam >= 0) h.stam = Math.max(0, h.stam - spellCost(bt, side, id));
   else if (h.mana >= 0) h.mana = Math.max(0, h.mana - spellCost(bt, side, id));
   const r = bt.round;
-  // The path books' pages (docs/18 item 3): what each page's fx says.
-  if (isPathPage(id)) {
+  // The path books' pages (docs/18 item 3) and the common pages after them: what each page's fx says.
+  const pfx = pageFx(bt, side, id);
+  if (pfx) {
     const t0 = target !== undefined ? stackById(bt, target) : undefined;
     const hex = t0?.hex;
-    const { kills, on } = applyFx(bt, side, id, powered(PATH_PAGES[id].fx, PATH_PAGES[id].path, bt.heroes[side].input.hero?.level ?? 1), spellMul(bt, side, id), target, rng);
+    const { kills, on } = applyFx(bt, side, id, pfx, spellMul(bt, side, id), target, rng);
     push(bt, { k: 'spell', side, id, ...(t0 ? { t: t0.id, hex } : {}), kills, on, ...(scroll ? { via: 'scroll' as const } : {}) });
     checkOver(bt);
     return null;
@@ -1125,7 +1197,7 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
       const p = s.poison;
       p.left--;
       const kills = hurt(bt, s, p.dmg, p.by);
-      push(bt, { k: 'poison', side: s.side, s: s.id, dmg: p.dmg, kills, hex: s.hex });
+      push(bt, { k: 'poison', side: s.side, s: s.id, dmg: p.dmg, kills, hex: s.hex, ...(p.sick ? { id: 'sick' } : {}) });
       if (p.left <= 0) delete s.poison;
       checkOver(bt);
       if (bt.over) {
@@ -1151,6 +1223,20 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
         return;
       }
       if (s.count <= 0) continue;
+    }
+    // The common pages after docs/18: the Siren Song holds her spellbound; Fog Madness turns her on her own.
+    const held = smods(bt, s);
+    if (held.still) {
+      push(bt, { k: 'fear', side: s.side, s: s.id, id: 'still' });
+      continue;
+    }
+    if (held.mad) {
+      madBlow(bt, s, rng);
+      if (bt.over) {
+        bt.active = null;
+        return;
+      }
+      continue;
     }
     // Bad morale (HoMM3): the stack freezes in fear and loses its turn, 1/25 a point below nought — a crew's 0..100
     // heart is −3 at under 10, −2 at 10–25, −1 at 26–41 (moralePoints), so a crew all but broken loses one turn in eight.
@@ -1181,6 +1267,41 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
     bt.seq++;
     return;
   }
+}
+
+/** Fog Madness (a common page after docs/18): as her turn comes she falls on the nearest of her own — a shot if she
+ *  has one left, else a blow from beside the nearest she can reach — or stands lost; the fallen are the other
+ *  captain's, and her turn is gone either way. */
+function madBlow(bt: TacBattle, s: TacStack, rng: Rng): void {
+  const by = (1 - s.side) as 0 | 1;
+  const mine = alive(bt).filter((o) => o.side === s.side && o !== s).sort((a, b) => hexDist(s.hex, a.hex) - hexDist(s.hex, b.hex) || threat(bt, b) - threat(bt, a));
+  let t: TacStack | undefined, from = s.hex;
+  if (isShooter(s) && s.shots > 0) t = mine[0];
+  else {
+    const reach = reachOf(bt, s);
+    let bd = Infinity;
+    for (const o of mine) {
+      const at = strikeFrom(bt, s, o, reach);
+      const d = at === null ? Infinity : at === s.hex ? 0 : reach.get(at) ?? Infinity;
+      if (at !== null && d < bd) {
+        bd = d;
+        t = o;
+        from = at;
+      }
+    }
+  }
+  if (!t) return void push(bt, { k: 'fear', side: s.side, s: s.id, id: 'mad' });
+  const how = isShooter(s) && s.shots > 0 ? 'shot' : 'melee';
+  if (how === 'shot') s.shots--;
+  else if (from !== s.hex) {
+    s.hex = from;
+    push(bt, { k: 'move', side: s.side, s: s.id, hex: from });
+  }
+  const { dmg } = blow(bt, s, t, how, rng, from);
+  const kills = hurt(bt, t, dmg, by);
+  wake(bt, t);
+  push(bt, { k: how === 'shot' ? 'shot' : 'hit', side: s.side, s: s.id, t: t.id, dmg, kills, hex: t.hex, id: 'mad' });
+  checkOver(bt);
 }
 
 /** The turn is done: high morale may give the stack another at once; else the next in the order. */
@@ -1314,6 +1435,7 @@ const valueOf = (bt: TacBattle, t: TacStack, dmg: number) => (Math.min(dmg, hpOf
 /** What a path's move is worth to the sea's mind now (docs/18): its blows as the stacks' worth, its holds as a share
  *  of the strength they lift or blunt for the rounds they hold, another turn as the stack's own. */
 export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: TacStack): number {
+  const e = bt.heroes[1 - side];
   const foes = alive(bt).filter((o) => o.side !== side);
   const own = alive(bt).filter((o) => o.side === side);
   const P = spellPower(bt, side) * k;
@@ -1323,33 +1445,66 @@ export function fxValue(bt: TacBattle, side: 0 | 1, fx: PageFx, k: number, t?: T
   if (t && t.side !== side) {
     if (fx.dmg) v += valueOf(bt, t, P * fx.dmg);
     if (fx.ring) for (const o of foes) if (o !== t && hexNeighbors(t.hex).includes(o.hex)) v += valueOf(bt, o, P * fx.ring);
+    // The common pages after docs/18: the forked blow, the raking line, a sickness (its bites to come), a fire under
+    // her (a burn or two before she moves off it).
+    const hit = [t];
+    for (let share = fx.dmg ?? 0; fx.chain && hit.length <= fx.chain; ) {
+      const next = leapFrom(bt, side, hit[hit.length - 1], hit);
+      if (!next) break;
+      share *= CHAIN_FALL;
+      v += valueOf(bt, next, P * share);
+      hit.push(next);
+    }
+    if (fx.row) for (const o of foes) if (hexY(o.hex) === hexY(t.hex)) v += valueOf(bt, o, P * fx.row);
+    if (fx.sicken && !sp(t, 'undead')) v += valueOf(bt, t, P * fx.sicken * SICK_TURNS) * (t.poison ? 0.5 : 0.85);
+    if (fx.fire && bt.cells[t.hex] === '.') v += valueOf(bt, t, Math.max(t.hpMax, hpOf(t) * TAC_BURN)) * 1.5;
   }
+  if (fx.mend && t && t.side === side) v += (Math.min(t.start * t.hpMax - hpOf(t), t.start * t.hpMax * Math.min(0.5, fx.mend * k)) / Math.max(1, hpOf(t))) * threat(bt, t);
   if (fx.all) for (const o of foes) v += valueOf(bt, o, P * fx.all);
   if (fx.shooters) for (const o of foes) if (isShooter(o)) v += valueOf(bt, o, P * fx.shooters);
   if (fx.drain) for (const o of foes) if (o.count > 1) v += valueOf(bt, o, o.count * Math.min(0.12, fx.drain * k) * o.hpMax);
   const sh = fx.heal ?? fx.raise;
   if (sh) for (const x of own) if (!sp(x, 'undead') || fx.raise) v += (Math.min(x.start * x.hpMax - hpOf(x), x.start * x.hpMax * Math.min(0.35, sh * k)) / Math.max(1, hpOf(x))) * threat(bt, x);
   const R = (fx.rounds ?? 0) + 1;
-  const lay = (m: BtMods | undefined, mine: TacStack[], theirs: TacStack[], sign: 1 | -1) => {
+  // `cover`: the share of her fire one stack's own cover from her shots is worth (the whole of it for a whole side).
+  const lay = (m: BtMods | undefined, mine: TacStack[], theirs: TacStack[], sign: 1 | -1, cover = 1) => {
     if (!m) return 0;
     let w = 0;
     w += sign * (m.melee ?? 0) * sum(mine, (x) => !shoots(x)) * 0.23;
     w += sign * (m.shot ?? 0) * sum(mine, shoots) * 0.23;
     w -= sign * (m.taken ?? 0) * sum(theirs) * 0.2;
-    w -= sign * (m.shotTaken ?? 0) * sum(theirs, shoots) * 0.2;
+    w -= sign * (m.shotTaken ?? 0) * sum(theirs, shoots) * 0.2 * cover;
     w += sign * ((m.speed ?? 0) * 0.02 + (m.init ?? 0) * 0.008 + (m.morale ?? 0) * 0.015 + (m.luck ?? 0) * 0.02) * sum(mine);
     if (m.blind) w -= sign * sum(mine, (x) => shoots(x) && enemiesAdjacent(bt, x).length === 0) * 0.8;
     if (m.noRet) w += sign * sum(mine, (x) => !shoots(x)) * 0.1;
     if (m.noAnswer) w += sign * sum(mine) * 0.08;
+    // Spellbound or maddened: her turns lost (a blow of ours may wake the one), the mad one's blows on her own.
+    if (m.still) w -= sign * sum(mine) * 0.2;
+    if (m.mad) w -= sign * sum(mine) * 0.45;
     return w * R;
   };
   v += lay(fx.self, own, foes, 1);
   v += lay(fx.foe, foes, own, -1);
-  if (fx.one && t) v += t.side === side ? lay(fx.one, [t], foes, 1) : lay(fx.one, [t], own, -1);
+  if (fx.one && t) v += t.side === side ? lay(fx.one, [t], foes, 1, threat(bt, t) / Math.max(1, sum(own))) : lay(fx.one, [t], own, -1);
   if (fx.again && t && t.side === side) v += threat(bt, t) * 0.9;
   if (fx.allAgain) v += sum(own) * 0.6 * (fx.allShare ?? 1);
   if (fx.free) v += Math.min(fx.free, own.length) / Math.max(1, own.length) * sum(own, (x) => !shoots(x)) * 0.15;
   v += ((fx.heart ?? 0) + (fx.dread ?? 0)) * 0.003 * sum(own);
+  // The clearing wind: what she has laid on both decks undone for the rounds it had left (her orders given by hand
+  // a share of the strength of both); the fires put out under hers and ours; her signals lost while she has an order
+  // ready to give.
+  if (fx.clear) {
+    for (const f of e.fx) {
+      if (f.until < bt.round) continue;
+      const on = f.on !== undefined ? alive(bt).filter((x) => x.id === f.on) : null;
+      const n = Math.min(2, f.until - bt.round + 1);
+      v += f.mods ? -(f.foe ? lay(f.mods, on ?? own, foes, 1) : lay(f.mods, on ?? foes, own, -1)) / R * n : 0.025 * (sum(own) + sum(foes)) * n;
+    }
+    v += Math.min(4, e.free) * 0.02 * sum(own, (x) => !shoots(x));
+  }
+  if (fx.douse) for (const x of [...own, ...foes]) if (bt.cells[x.hex] === 'F') v += (x.side === side ? 2 : -2) * threat(bt, x) * TAC_BURN;
+  const hush = fx.hush ?? 0;
+  if (hush && e.spells.some((x) => x.ready <= bt.round + hush - 1)) v += Math.max(0, bt.round + hush - 1 - Math.max(e.hush ?? 0, e.cast >= bt.round ? bt.round : bt.round - 1)) * 0.06 * sum(own);
   return Math.max(0, v);
 }
 
@@ -1374,7 +1529,7 @@ type AiOrder = { id: TacSpellId; target?: number };
  *  keeps an eye on what is left of each store: the scarcer one, the dearer it seems (docs/18 item 8). */
 function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
   const h = bt.heroes[side];
-  if (h.cast >= bt.round) return null;
+  if (h.cast >= bt.round || (h.hush ?? 0) >= bt.round) return null;
   const foes = alive(bt).filter((o) => o.side !== side);
   const own = alive(bt).filter((o) => o.side === side);
   let best: AiOrder | null = null, bv = 0;
@@ -1390,8 +1545,9 @@ function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
     const max = res === 'stam' ? h.input.hero?.stamMax ?? 0 : h.input.hero?.manaMax ?? 0;
     const thrift = pool >= 0 && h.input.hero ? (1 - Math.min(0.5, cost / Math.max(1, max)) * 0.5) * (res === 'stam' && h.stam >= 0 ? 0.8 + 0.2 * Math.min(1, pool / Math.max(1, max)) : 1) : 1;
     const km = spellMul(bt, side, s0.id);
-    if (isPathPage(s0.id)) {
-      const b = bestFx(bt, side, powered(PATH_PAGES[s0.id].fx, PATH_PAGES[s0.id].path, h.input.hero?.level ?? 1), km);
+    const pfx = pageFx(bt, side, s0.id);
+    if (pfx) {
+      const b = bestFx(bt, side, pfx, km);
       const v = b.v * thrift;
       if (v > bv) {
         bv = v;
@@ -1477,7 +1633,7 @@ function aiSpell(bt: TacBattle, side: 0 | 1, rng: Rng): AiOrder | null {
 function aiMove(bt: TacBattle, side: 0 | 1, rng: Rng): { kind: 'innate' | 'ult'; target?: number } | null {
   const h = bt.heroes[side];
   const hb = h.input.hero;
-  if (!hb?.path || h.moved >= bt.round) return null;
+  if (!hb?.path || h.moved >= bt.round || (h.hush ?? 0) >= bt.round) return null;
   let best: { kind: 'innate' | 'ult'; target?: number } | null = null, bv = 0;
   const total = alive(bt).filter((o) => o.side === side).reduce((n, x) => n + threat(bt, x), 0);
   for (const kind of ['ult', 'innate'] as const) {
@@ -1507,10 +1663,12 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
       || (o === 'canvas' && foeShoots) || o === 'harpoon') return { a: 'order' };
   }
   const foes = alive(bt).filter((o) => o.side !== s.side);
+  // A stack of hers held spellbound is left asleep while another is worth the blow.
+  const nap = (t: TacStack) => (smods(bt, t).still ? 0.4 : 1);
   if (canShoot(bt, s)) {
     let best = foes[0], bv = -1;
     for (const t of foes) {
-      const v = valueOf(bt, t, blow(bt, s, t, 'shot', null).dmg);
+      const v = valueOf(bt, t, blow(bt, s, t, 'shot', null).dmg) * nap(t);
       if (v > bv) {
         bv = v;
         best = t;
@@ -1525,7 +1683,7 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
       if (h !== s.hex && !reach.has(h)) continue;
       const dmg = blow(bt, s, t, 'melee', null, h).dmg * (sp(s, 'double_strike') ? 2 : 1);
       const answered = t.ret && !sp(s, 'no_retaliation') && !sp(s, 'sweep') && dmg < hpOf(t);
-      const v = valueOf(bt, t, dmg) - (answered ? 0.5 * valueOf(bt, s, blow(bt, t, s, 'ret', null).dmg) : 0) - (h === s.hex ? 0 : 0.01 * (reach.get(h) ?? 0)) - (bt.cells[h] === 'F' ? threat(bt, s) * 0.1 : 0);
+      const v = valueOf(bt, t, dmg) * nap(t) - (answered ? 0.5 * valueOf(bt, s, blow(bt, t, s, 'ret', null).dmg) : 0) - (h === s.hex ? 0 : 0.01 * (reach.get(h) ?? 0)) - (bt.cells[h] === 'F' ? threat(bt, s) * 0.1 : 0);
       if (v > pv) {
         pv = v;
         pick = { t, from: h };
@@ -1615,6 +1773,8 @@ function flagsOf(bt: TacBattle, s: TacStack): Partial<TacStackView> {
   if (m.steady && m.taken < 0) out.braced = true;
   if (s.poison) out.poisoned = true;
   if (bt.cells[s.hex] === 'W') out.wet = true;
+  if (m.still) out.still = true;
+  if (m.mad) out.mad = true;
   return out;
 }
 
@@ -1633,7 +1793,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     const h = bt.heroes[x];
     const hb = h.input.hero;
     return {
-      name: h.input.name, ship: h.input.ship, ...(h.input.hull ? { hull: h.input.hull } : {}), captain: h.input.captain, morale: moralePoints(bt, x), luck: h.luck, spells: h.spells.filter((s0) => !hb?.scroll?.[s0.id] || onScroll(bt, x, s0.id)).map((s0) => ({ id: s0.id, ready: s0.ready, ...(hb ? { cost: spellCost(bt, x, s0.id), res: spellRes(bt, x, s0.id) } : {}), ...(hb?.scroll?.[s0.id] ? { scroll: hb.scroll[s0.id]! - h.scrollsUsed.filter((y) => y === s0.id).length } : {}) })), cast: h.cast >= bt.round, auto: h.auto, men: alive(bt).filter((s) => s.side === x).reduce((n, s) => n + s.count, 0), menStart: h.startMen,
+      name: h.input.name, ship: h.input.ship, ...(h.input.hull ? { hull: h.input.hull } : {}), captain: h.input.captain, morale: moralePoints(bt, x), luck: h.luck, spells: h.spells.filter((s0) => !hb?.scroll?.[s0.id] || onScroll(bt, x, s0.id)).map((s0) => ({ id: s0.id, ready: s0.ready, ...(hb ? { cost: spellCost(bt, x, s0.id), res: spellRes(bt, x, s0.id) } : {}), ...(hb?.scroll?.[s0.id] ? { scroll: hb.scroll[s0.id]! - h.scrollsUsed.filter((y) => y === s0.id).length } : {}) })), cast: h.cast >= bt.round || (h.hush ?? 0) >= bt.round, auto: h.auto, men: alive(bt).filter((s) => s.side === x).reduce((n, s) => n + s.count, 0), menStart: h.startMen,
       ...(hb ? { prim: { atk: hb.atk, def: hb.def, pow: hb.pow, will: hb.will }, mana: Math.round(h.mana), manaMax: hb.manaMax } : {}),
       // docs/18: her path, stamina, innate move and ultimate, her spells' stores and scrolls, her face.
       ...(hb?.level !== undefined ? { path: hb.path ?? null, level: hb.level } : {}),
