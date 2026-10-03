@@ -1707,6 +1707,10 @@
     "unit.spear_fisher":                       { "local": "units/spear_fisher.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.0", "rev": 20261003144941},
     "unit.spear_fisher_b":                     { "local": "units/spear_fisher_b.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.1", "rev": 20261003144941},
     "unit.spear_fisher_atk":                   { "local": "units/spear_fisher_atk.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.2", "rev": 20261003144941},
-    "unit.spear_fisher_hit":                   { "local": "units/spear_fisher_hit.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.3", "rev": 20261003144941}
+    "unit.spear_fisher_hit":                   { "local": "units/spear_fisher_hit.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.3", "rev": 20261003144941},
+    "unit.fisher":                             { "local": "units/fisher.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.0", "rev": 20261003145257},
+    "unit.fisher_b":                           { "local": "units/fisher_b.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.1", "rev": 20261003145257},
+    "unit.fisher_atk":                         { "local": "units/fisher_atk.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.2", "rev": 20261003145257},
+    "unit.fisher_hit":                         { "local": "units/fisher_hit.webp", "remote": "hf_20261003_145257_gpt-anim_fisher.png", "job": "gpt-anim_fisher", "fit": "sheet:anim_fisher.3", "rev": 20261003145257}
   }
 }
