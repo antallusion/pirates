@@ -1371,6 +1371,10 @@
     "bg.deck_bomb_ketch":                      { "local": "art/deck_bomb_ketch.webp", "remote": "hf_20261003_075848_gpt-bg-deck_bomb_ketch.png", "job": "gpt-bg-deck_bomb_ketch", "fit": "opaque:1536", "rev": 20261003075848},
     "bg.deck_fireship":                        { "local": "art/deck_fireship.webp", "remote": "hf_20261003_082741_gpt-bg-deck_fireship.png", "job": "gpt-bg-deck_fireship", "fit": "opaque:1536", "rev": 20261003082741},
     "bg.deck_fishing_ketch":                   { "local": "art/deck_fishing_ketch.webp", "remote": "hf_20261003_083706_gpt-bg-deck_fishing_ketch.png", "job": "gpt-bg-deck_fishing_ketch", "fit": "opaque:1536", "rev": 20261003083706},
-    "bg.deck_harpoon_whaler":                  { "local": "art/deck_harpoon_whaler.webp", "remote": "hf_20261003_083902_gpt-bg-deck_harpoon_whaler.png", "job": "gpt-bg-deck_harpoon_whaler", "fit": "opaque:1536", "rev": 20261003083902}
+    "bg.deck_harpoon_whaler":                  { "local": "art/deck_harpoon_whaler.webp", "remote": "hf_20261003_083902_gpt-bg-deck_harpoon_whaler.png", "job": "gpt-bg-deck_harpoon_whaler", "fit": "opaque:1536", "rev": 20261003083902},
+    "unit.lantern_maw":                        { "local": "units/lantern_maw.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.0", "rev": 20261003084930},
+    "unit.lantern_maw_b":                      { "local": "units/lantern_maw_b.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.1", "rev": 20261003084930},
+    "unit.lantern_maw_atk":                    { "local": "units/lantern_maw_atk.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.2", "rev": 20261003084930},
+    "unit.lantern_maw_hit":                    { "local": "units/lantern_maw_hit.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.3", "rev": 20261003084930}
   }
 }
