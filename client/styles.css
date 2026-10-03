@@ -2986,17 +2986,23 @@ body.tac.tac-over #toasts { display: none; }
   .tb-stage { width: min(62vw, calc((100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 1.36)); }
   .tb-face { width: 32px; height: 32px; }
   .tb-who b { font-size: 13px; }
-  .tb-queue { flex-wrap: wrap; overflow: visible; align-content: flex-start; min-height: 0; }
+  /* The turns in one row that scrolls (the next ones first), so the hint below keeps its lines. */
+  .tb-queue { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; min-height: 0; padding: 3px 0 5px 2px;
+    mask-image: linear-gradient(90deg, #000 85%, transparent); -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); }
   .tb-q { width: 26px; height: 26px; }
   .tb-qsep { height: 20px; }
   .tb-spells { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .tb-spell { min-height: 36px; padding: 2px 6px; }
   .tb-spell .ico { width: 24px; height: 24px; }
   .tb-spell small { display: none; }
-  .tb-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; align-content: start; }
-  .tb-acts .btn { min-height: 32px; padding: 2px 2px; font-size: 10px; letter-spacing: 0; line-height: 1.05; white-space: normal; }
-  .tb-acts .btn-danger { grid-column: span 2; }
-  .tb-acts .btn .ico-sm { display: none; }
+  /* The orders as their painted icons alone, three to a row (the word is in each one's title); one armed for a second
+     tap says so across the row. */
+  .tb-acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; align-content: start; }
+  .tb-acts .btn { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 34px; padding: 2px; font-size: 10px; letter-spacing: 0; line-height: 1.05; white-space: normal; }
+  .tb-acts .btn .ico-sm { display: block; flex: none; width: 24px; height: 24px; margin: 0; }
+  .tb-acts .btn:has(.ico-sm) .tb-al { display: none; }
+  .tb-acts .btn.armed { grid-column: 1 / -1; }
+  .tb-acts .btn.armed .tb-al { display: inline; }
   .tb-feed { justify-content: flex-start; min-height: 0; font-size: 10.5px; }
   .tb-hint { font-size: 10.5px; }
   .tb-banner b { font-size: 26px; }

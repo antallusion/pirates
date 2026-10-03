@@ -679,15 +679,24 @@ export class TacticalPanel {
     // The stack's own orders and the fight's.
     const officer = v.mine && act?.officer?.ready ? act.officer : null;
     const armed = this.strikeArmed > performance.now();
+    // Each its painted icon and its word; a phone on its side shows the icons alone (the word in its title), and the
+    // word again on one armed for a second tap.
+    const lab = (t: string, tip?: string): string => `title="${esc(tip ?? t)}" aria-label="${esc(t)}"`;
+    const word = (t: string): string => `<span class="tb-al">${esc(t)}</span>`;
+    const auto = me.auto ? L('autoOff') : L('auto');
+    const cut = v.you === 0 ? L('fallBack') : L('cut');
+    const ransomOn = this.ransomArmed > performance.now();
+    const ransom = v.ransom ? (ransomOn ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom })) : '';
+    const strike = armed ? L('strikeSure') : L('strike');
     el.querySelector('.tb-acts')!.innerHTML = [
-      `<button class="btn" data-a="wait" ${!v.mine || act?.waited ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${esc(L('wait'))}</button>`,
-      `<button class="btn" data-a="defend" ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${esc(L('defend'))}</button>`,
-      officer ? `<button class="btn btn-primary" data-a="order" title="${esc(L(`od.${officer.order}` as K))}">${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${esc(L(`o.${officer.order}` as K))}</button>` : '',
-      `<button class="btn${me.auto ? ' on' : ''}" data-a="auto">${btIcon('bt_auto', '')}${esc(me.auto ? L('autoOff') : L('auto'))}</button>`,
-      `<button class="btn" data-a="quick" ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${esc(L('quick'))}</button>`,
-      v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut">${btIcon('bt_retreat', '')}${esc(v.you === 0 ? L('fallBack') : L('cut'))}</button>` : '',
-      v.ransom && !v.over ? `<button class="btn${this.ransomArmed > performance.now() ? ' on' : ''}" data-a="ransom" title="${esc(L('ransomTip'))}">${btIcon('bt_ransom', 'icon.coin')}${esc(this.ransomArmed > performance.now() ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom }))}</button>` : '',
-      v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on' : ''}" data-a="surrender">${btIcon('bt_strike', '')}${esc(armed ? L('strikeSure') : L('strike'))}</button>` : '',
+      `<button class="btn" data-a="wait" ${lab(L('wait'))} ${!v.mine || act?.waited ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
+      `<button class="btn" data-a="defend" ${lab(L('defend'))} ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${word(L('defend'))}</button>`,
+      officer ? `<button class="btn btn-primary" data-a="order" ${lab(L(`o.${officer.order}` as K), L(`od.${officer.order}` as K))}>${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${word(L(`o.${officer.order}` as K))}</button>` : '',
+      `<button class="btn${me.auto ? ' on' : ''}" data-a="auto" ${lab(auto)}>${btIcon('bt_auto', '')}${word(auto)}</button>`,
+      `<button class="btn" data-a="quick" ${lab(L('quick'))} ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${word(L('quick'))}</button>`,
+      v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut" ${lab(cut)}>${btIcon('bt_retreat', '')}${word(cut)}</button>` : '',
+      v.ransom && !v.over ? `<button class="btn${ransomOn ? ' on armed' : ''}" data-a="ransom" ${lab(ransom, L('ransomTip'))}>${btIcon('bt_ransom', 'icon.coin')}${word(ransom)}</button>` : '',
+      v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on armed' : ''}" data-a="surrender" ${lab(strike)}>${btIcon('bt_strike', '')}${word(strike)}</button>` : '',
     ].join('');
     el.querySelectorAll<HTMLElement>('[data-a]').forEach((b) => (b.onclick = () => this.button(b.dataset.a!)));
     // The end.
