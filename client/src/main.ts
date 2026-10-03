@@ -112,8 +112,15 @@ renderer.onLightning = () => audio.thunder();
 for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });
 const worldMap = new WorldMap();
 const journal = new Journal((m) => net.send(m));
-journal.openTattoos = () => openModal('tattoos');
-journal.openSaga = () => openModal('saga');
+// The tattooist's and the ship's log each have a film the first time they open.
+journal.openTattoos = () => {
+  openModal('tattoos');
+  playFilm('cut_tattoo');
+};
+journal.openSaga = () => {
+  openModal('saga');
+  playFilm('cut_saga');
+};
 journal.openLog = () => openModal('log');
 worldMap.send = (m) => net.send(m);
 worldMap.onAutosail = (wp) => {
@@ -218,7 +225,7 @@ function resolveTarget(): number | null {
 }
 
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
-portScreen.openTattoos = () => openModal('tattoos');
+portScreen.openTattoos = journal.openTattoos;
 const talentScreen = new TalentScreen((m) => net.send(m));
 // The captain as a hero (docs/17 H2): primaries, skills, the order book, a port's guild and artifact merchant.
 const heroWindow = new HeroWindow((m) => net.send(m));
@@ -542,9 +549,15 @@ function filmMoments(): void {
   if (turned('weather', state.weather)) {
     if (state.weather === 'black_storm') playFilm('cut_black_storm');
     else if (state.weather === 'fog') playFilm('cut_fog');
+    else if (state.weather === 'calm') playFilm('cut_calm');
+    else if (state.weather === 'rain') playFilm('cut_rain');
   }
+  // The night watch; the dawn that ends it, still at sea.
   const watch = !!state.self && !state.self.dockedAt && isNight(state.estServerTime());
-  if (turned('night', watch) && watch) playFilm('cut_night_watch');
+  if (turned('night', watch)) {
+    if (watch) playFilm('cut_night_watch');
+    else if (state.self && !state.self.dockedAt) playFilm('cut_dawn');
+  }
   const cls = state.self?.loadout.classId ?? null;
   if (turned('cls', cls) && cls && state.self?.dockedAt && performance.now() - sunkAt > 60_000) playFilm('cut_launch');
   if (turned('pet', !!state.companion) && state.companion) playFilm('cut_orca');
@@ -554,6 +567,18 @@ function filmMoments(): void {
   const racing = state.regatta?.phase === 'running' && !!state.regatta.signedUp;
   if (turned('regatta', racing) && racing) playFilm('cut_regatta');
   if (turned('line', !!state.hunt?.line) && state.hunt?.line) playFilm('cut_hunt');
+  // Each pet the first time she has one; sailing in company; the first hunters on her wake; the first careening; her
+  // name known (the tenth level).
+  // (her pets are known only once the ship's window has asked for them: a pet is new beside a list already known)
+  const hadPets = filmLast.get('pets');
+  const pets = state.petsOwn?.owned ?? null;
+  if (turned('pets', pets?.join() ?? null) && pets && typeof hadPets === 'string') for (const p of pets) if (!hadPets.split(',').includes(p)) playFilm(`cut_pet_${p}`);
+  if (turned('party', (state.party?.members.length ?? 0) > 1) && (state.party?.members.length ?? 0) > 1) playFilm('cut_party');
+  if (turned('wanted', (state.self?.wanted ?? 0) > 0) && (state.self?.wanted ?? 0) > 0) playFilm('cut_wanted');
+  const repairing = !!(state.you && state.you.flags & SF.REPAIRING);
+  if (turned('repair', repairing) && repairing) playFilm('cut_repair');
+  const famed = (state.self?.level ?? 0) >= 10;
+  if (turned('rank', famed) && famed) playFilm('cut_rank');
   const hol = state.holiday?.id ?? null;
   if (hol && filmLast.get('hol') !== hol) playFilm(`cut_${hol}`);
   filmLast.set('hol', hol);
@@ -800,9 +825,12 @@ function onMessage(m: ServerMsg): void {
       if (m.extra) parts.push(L(m.extra === 'map' ? 'questMap' : 'questSupplies'));
       if (m.stores) parts.push(L('questStores', { h: m.stores.heavy, f: m.stores.incendiary }));
       if (m.mentor) parts.push(L('questMentor', { name: m.mentor }));
-      hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
-      audio.bell();
-      audio.coins();
+      // The first job paid has its film; the herald after it.
+      playFilm('cut_quest', () => {
+        hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
+        audio.bell();
+        audio.coins();
+      });
       break;
     }
     case 'crew_say': {
@@ -885,7 +913,10 @@ function onMessage(m: ServerMsg): void {
       // The table opens its window; the window follows the table; it closes when she is up.
       if (m.view) {
         if (modal === 'dice') refreshModal();
-        else openModal('dice');
+        else {
+          openModal('dice');
+          playFilm('cut_dice');
+        }
       } else if (modal === 'dice') closeModal();
       break;
     case 'away':
@@ -956,9 +987,11 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'nethaul':
       netHaul.open(m.view, m.got);
+      // The first full net: its film once she has seen what came up.
+      if (m.got && m.got.n > 0 && filmDue('cut_nethaul')) setTimeout(() => playFilm('cut_nethaul'), 1800);
       break;
     case 'trophy_hall':
-      void tell(L('trophyHall', { owner: m.view.owner, flag: m.view.flag, skull: m.view.skull, fish: m.view.fish }));
+      playFilm('cut_trophy_hall', () => void tell(L('trophyHall', { owner: m.view.owner, flag: m.view.flag, skull: m.view.skull, fish: m.view.fish })));
       break;
     case 'encounter_result':
       encounterCard.result(m);

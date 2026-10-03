@@ -424,6 +424,95 @@ v('raid_7_swivel', 'trailer2', 'Картечь с борта',
   'boarders crouch ready with hooks and cutlasses. The camera holds tight beside the gunner\'s shoulder.')
 
 
+# ---- The sixth reel: the sea's weather and hours, the ship's pets, and the moments of a captain's life (client/src/main.ts
+# filmMoments and the windows that open them) ----------------------------------------------------------------------------
+v('cut_calm', 'calm', 'Штиль',
+  'A dead calm at noon in the tropics: the sea lies flat as polished glass to the horizon, mirroring a pale white sky; a pirate '
+  'brig sits motionless, her patched sails hanging limp from the yards and her flag drooping against the mast. On deck the '
+  'sweating crew lounge in the scraps of shade — one fans himself with his tricorne, one lowers a bucket on a rope for '
+  'seawater, the cook squints up at the sun. The camera drifts very slowly down from the masthead, past the limp canvas, to '
+  'the still water barely lapping the hull.')
+v('cut_rain', 'rain', 'Шквал',
+  'A squall line marches across a grey sea: a curtain of driving rain sweeps over a pirate brig; her deck turns dark and '
+  'streaming, sailors in tarred coats haul on the halyards and clamber up the shrouds to reef the topsails as they snap and '
+  'thunder, and the helmsman leans into the wheel with rain pouring off his hat brim. The camera stands on the quarterdeck '
+  'behind the helmsman looking forward as the rain hits.')
+v('cut_dawn', 'dawn', 'Рассвет',
+  'Dawn at sea after a long night: the first sliver of sun rises out of a calm grey-gold sea, its light running along the '
+  'water to the bow of a pirate brig; the night lanterns are blown out one by one, the watch below climbs up yawning and '
+  'stretching, a sailor washes his face in a bucket, the galley chimney begins to smoke and gulls wheel round the mastheads. '
+  'The camera moves slowly along the deck from stern to bow into the sunrise.')
+v('cut_pet_parrot', 'pet_parrot', 'Попугай',
+  'The warm lamplight of a captain\'s cabin, its stern windows open on a blue evening sea: a bright green and scarlet parrot '
+  'flutters in through the window, lands on the back of a carved chair, cocks its head, then hops onto the shoulder of the '
+  'weathered pirate captain bent over a chart, who smiles and offers it a seed. The camera pushes in slowly on the bird and '
+  'the captain.')
+v('cut_pet_cat', 'pet_cat', 'Корабельный кот',
+  'Below decks in a ship\'s hold lit by a single hanging lantern among barrels, sacks and coiled ropes: a lean grey-striped '
+  'ship\'s cat stalks along a beam, freezes, then springs down into the shadows between the casks; a moment later it trots '
+  'out into the light, tail high and nothing in its mouth, and rubs against the boots of an old sailor who chuckles and '
+  'scratches its ears. The camera follows the cat low along the beam.')
+v('cut_pet_monkey', 'pet_monkey', 'Обезьянка',
+  'On the sunny deck of a pirate brig a small brown capuchin monkey in a tiny red sash scampers up the rigging, swings from '
+  'a ratline, snatches a sailor\'s bandana and races out along the yardarm with it while the crew below laugh and point; it '
+  'perches on the end of the yard against the blue sky and puts the bandana on its own head. The camera tilts up following '
+  'the monkey into the rigging.')
+v('cut_pet_dog', 'pet_dog', 'Корабельный пёс',
+  'At the bow of a pirate brig cutting through a bright, choppy sea, a big shaggy black dog stands with its front paws on the '
+  'rail, ears flying in the wind and spray, barking happily at a pod of dolphins leaping beside the bow wave, while a young '
+  'sailor holds its rope collar and laughs. The camera is low on the deck beside the dog, looking out over the bow.')
+v('cut_party', 'party', 'Эскадра',
+  'Morning on a wide, glittering sea: three pirate ships of different sizes — a lean sloop, a brig and a heavy frigate under '
+  'black and red pennants — sail in line abreast with the wind on their quarter, close enough that their crews wave and shout '
+  'across the water; signal flags run up and down the lead ship\'s halyards and all three set more sail together. The camera '
+  'flies low and slowly ahead of the squadron, turning to take in all three.')
+v('cut_wanted', 'wanted', 'Охотники',
+  'Late afternoon on a hazy sea: at the stern of a pirate brig the captain raises a brass spyglass; far off on the horizon two '
+  'sleek Crown sloops of war with white sails and long red pennants turn together onto her wake, their bow waves rising as they '
+  'crowd on sail to give chase. The camera starts close behind the captain\'s shoulder, then pushes out along the line of the '
+  'spyglass toward the distant hunters.')
+v('cut_repair', 'repair', 'Кренгование',
+  'A pirate brig careened on a quiet white-sand beach at low tide, heeled over on her side with tackles run to the palm trees: '
+  'carpenters on rope cradles hammer new oak planks over a shattered patch of her hull, others drive oakum into the seams and '
+  'smear hot black tar from a smoking iron pot, and a sailmaker sitting on the sand stitches a torn sail across his knees. The '
+  'camera tracks slowly along the exposed hull from stern to bow.')
+v('cut_rank', 'rank', 'Слава капитана',
+  'Night on the main deck of a pirate brig lit by lanterns and a fire in an iron brazier: the whole crew crowds round, raising '
+  'tankards and cheering as their captain, in a fine new dark long coat with brass buttons, climbs up onto a cannon; a grizzled '
+  'bosun hangs a silver-buckled sword belt across the captain\'s shoulder and a fiddler strikes up a tune. The camera rises '
+  'slowly over the cheering crowd toward the captain.')
+v('cut_nethaul', 'nethaul', 'Улов',
+  'On the deck of a pirate sloop in a grey dawn swell, six sailors heave together on a capstan as a huge bulging net rises '
+  'dripping over the rail, crammed with flashing silver fish, a tangle of kelp, a big lobster and a round barnacled jar; the '
+  'net swings inboard and spills its glittering catch across the wet planks. The camera is low on the deck as the catch pours '
+  'toward it.')
+v('cut_quest', 'quest', 'Расчёт',
+  'Inside a harbour master\'s office in a stone customs house, warm lamplight through dusty windows: a stout harbour master in '
+  'a powdered wig counts heavy silver coins from an iron strongbox into a leather purse, ties it and slides it across the '
+  'scarred oak table to a weathered pirate captain, who weighs it in one hand and gives a slow nod. The camera starts on the '
+  'coins and rises to the captain\'s face.')
+v('cut_saga', 'saga', 'Судовой журнал',
+  'Deep night in a captain\'s cabin: by a single guttering candle a weathered captain writes slowly in a thick leather-bound '
+  'ship\'s log with a quill — only blurred lines of ink, nothing legible — then pauses to look out of the stern windows at the '
+  'moonlit wake; around the desk lie a brass astrolabe, a sheathed sword, a pistol and a small carved figurehead. The camera '
+  'moves slowly from the candle flame across the pages to the window.')
+v('cut_trophy_hall', 'trophy_hall', 'Зал трофеев',
+  'A long timber hall above a pirate harbour, lit by lanterns and a roaring hearth: its walls hung with trophies — a great '
+  'stuffed shark hanging from the beams, the mounted head of a giant swordfish, a colossal crab claw, captured flags in faded '
+  'colours, a ship\'s bell and crossed boarding axes — while a few captains stand admiring them with tankards in hand. The '
+  'camera glides slowly along the wall of trophies.')
+v('cut_tattoo', 'tattoo', 'Татуировщик',
+  'In the dim back room of a harbour tavern, lit by an oil lamp, an old tattoo artist with ringed fingers carefully paints a '
+  'dark blue compass rose onto the forearm of a seated sailor with a fine brush, a tray of small ink pots beside him; on the '
+  'walls hang sheets of sketched designs — anchors, swallows, mermaids and sea serpents. The camera pushes in slowly from the '
+  'lamp to the finished design.')
+v('cut_dice', 'dice', 'Кости',
+  'A smoky harbour tavern at night: around an upturned barrel lit by a candle in a bottle, four rough pirates lean in as one '
+  'shakes a leather cup and slams it down; a dozen silver coins lie in the middle, faces glow in the candlelight, one grins, '
+  'another scowls and pushes back his tricorne, and the cup lifts to reveal the bone dice. The camera circles slowly at '
+  'table height.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
