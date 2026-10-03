@@ -1803,6 +1803,10 @@
     "unit.hero_navigator":                     { "local": "units/hero_navigator.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.0", "rev": 20261003165208},
     "unit.hero_navigator_b":                   { "local": "units/hero_navigator_b.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.1", "rev": 20261003165208},
     "unit.hero_navigator_atk":                 { "local": "units/hero_navigator_atk.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.2", "rev": 20261003165208},
-    "unit.hero_navigator_hit":                 { "local": "units/hero_navigator_hit.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.3", "rev": 20261003165208}
+    "unit.hero_navigator_hit":                 { "local": "units/hero_navigator_hit.webp", "remote": "hf_20261003_165208_gpt-anim_hero_navigator.png", "job": "gpt-anim_hero_navigator", "fit": "sheet:anim_hero_navigator.3", "rev": 20261003165208},
+    "unit.hero_reaver":                        { "local": "units/hero_reaver.webp", "remote": "hf_20261003_165712_gpt-anim_hero_reaver.png", "job": "gpt-anim_hero_reaver", "fit": "sheet:anim_hero_reaver.0", "rev": 20261003165712},
+    "unit.hero_reaver_b":                      { "local": "units/hero_reaver_b.webp", "remote": "hf_20261003_165712_gpt-anim_hero_reaver.png", "job": "gpt-anim_hero_reaver", "fit": "sheet:anim_hero_reaver.1", "rev": 20261003165712},
+    "unit.hero_reaver_atk":                    { "local": "units/hero_reaver_atk.webp", "remote": "hf_20261003_165712_gpt-anim_hero_reaver.png", "job": "gpt-anim_hero_reaver", "fit": "sheet:anim_hero_reaver.2", "rev": 20261003165712},
+    "unit.hero_reaver_hit":                    { "local": "units/hero_reaver_hit.webp", "remote": "hf_20261003_165712_gpt-anim_hero_reaver.png", "job": "gpt-anim_hero_reaver", "fit": "sheet:anim_hero_reaver.3", "rev": 20261003165712}
   }
 }
