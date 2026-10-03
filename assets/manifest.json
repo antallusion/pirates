@@ -1138,7 +1138,7 @@
     "unit.cutthroat":                          { "local": "units/cutthroat.webp", "remote": "hf_20261003_041711_30ad5704-1012-42e8-acaf-6c727872e5f1.png", "job": "30ad5704-1012-42e8-acaf-6c727872e5f1", "fit": "sheet:anim_cutthroat.0", "rev": 20261003041711},
     "unit.guard":                              { "local": "units/guard.webp", "remote": "hf_20261003_052350_ef97e332-be1e-4b5e-a9bf-ce539acdde75.png", "job": "ef97e332-be1e-4b5e-a9bf-ce539acdde75", "fit": "sheet:anim_guard.0", "rev": 20261003052350},
     "unit.life_guard":                         { "local": "units/life_guard.webp", "remote": "hf_20261003_053319_41a7fb79-8347-4487-bbf1-578b58cd7efe.png", "job": "41a7fb79-8347-4487-bbf1-578b58cd7efe", "fit": "sheet:anim_life_guard.0", "rev": 20261003053319},
-    "unit.drowned":                            { "local": "units/drowned.webp", "remote": "hf_20261002_210840_c8daf1e4-f965-4e24-8052-71e1503534c2.png", "job": "c8daf1e4-f965-4e24-8052-71e1503534c2", "fit": "sheet:units_men.12", "rev": 20261002210840},
+    "unit.drowned":                            { "local": "units/drowned.webp", "remote": "hf_20261003_054805_gpt-anim_drowned.png", "job": "gpt-anim_drowned", "fit": "sheet:anim_drowned.0", "rev": 20261003054805},
     "unit.deep_spawn":                         { "local": "units/deep_spawn.webp", "remote": "hf_20261002_210840_c8daf1e4-f965-4e24-8052-71e1503534c2.png", "job": "c8daf1e4-f965-4e24-8052-71e1503534c2", "fit": "sheet:units_men.13", "rev": 20261002210840},
     "unit.captain":                            { "local": "units/captain.webp", "remote": "hf_20261002_210840_c8daf1e4-f965-4e24-8052-71e1503534c2.png", "job": "c8daf1e4-f965-4e24-8052-71e1503534c2", "fit": "sheet:units_men.14", "rev": 20261002210840},
     "unit.officer":                            { "local": "units/officer.webp", "remote": "hf_20261002_210840_c8daf1e4-f965-4e24-8052-71e1503534c2.png", "job": "c8daf1e4-f965-4e24-8052-71e1503534c2", "fit": "sheet:units_men.15", "rev": 20261002210840},
@@ -1279,6 +1279,9 @@
     "unit.choir_chanter":                      { "local": "units/choir_chanter.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.0", "rev": 20261003054312},
     "unit.choir_chanter_b":                    { "local": "units/choir_chanter_b.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.1", "rev": 20261003054312},
     "unit.choir_chanter_atk":                  { "local": "units/choir_chanter_atk.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.2", "rev": 20261003054312},
-    "unit.choir_chanter_hit":                  { "local": "units/choir_chanter_hit.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.3", "rev": 20261003054312}
+    "unit.choir_chanter_hit":                  { "local": "units/choir_chanter_hit.webp", "remote": "hf_20261003_054312_gpt-anim_choir_chanter.png", "job": "gpt-anim_choir_chanter", "fit": "sheet:anim_choir_chanter.3", "rev": 20261003054312},
+    "unit.drowned_b":                          { "local": "units/drowned_b.webp", "remote": "hf_20261003_054805_gpt-anim_drowned.png", "job": "gpt-anim_drowned", "fit": "sheet:anim_drowned.1", "rev": 20261003054805},
+    "unit.drowned_atk":                        { "local": "units/drowned_atk.webp", "remote": "hf_20261003_054805_gpt-anim_drowned.png", "job": "gpt-anim_drowned", "fit": "sheet:anim_drowned.2", "rev": 20261003054805},
+    "unit.drowned_hit":                        { "local": "units/drowned_hit.webp", "remote": "hf_20261003_054805_gpt-anim_drowned.png", "job": "gpt-anim_drowned", "fit": "sheet:anim_drowned.3", "rev": 20261003054805}
   }
 }
