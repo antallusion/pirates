@@ -267,6 +267,87 @@ v('cut_raid', 'raid', 'Ночной налёт',
   'toward the looming hull.')
 
 
+# ---- The third reel: the world bosses' first rising, the first fight at each lair of the land's creatures, and the
+# landing party's moments (client/src/main.ts: BOSS_FILM, LAIR_FILM, LANDING_FILM) -------------------------------------
+v('cut_drowned_whale', 'boss', 'Утопленный Кит',
+  'Night over a black, still sea in the Drowned Crown: a colossal pale whale surfaces slowly beside a small ship, its back crusted '
+  'with barnacles, kelp and the broken timbers of old wrecks, an ancient bronze ship\'s bell grown into the flesh of its back and '
+  'glowing a faint sea-green; each slow toll of the bell sends a ring of green light across the water as the whale rolls one huge '
+  'clouded eye toward the ship. The camera rises slowly from the water up along its flank to the bell.')
+v('cut_hollow_admiral', 'boss', 'Пустой Адмирал',
+  'Dead calm at midnight in the Dead Man\'s Expanse, yet a wind of its own fills the sails of three ships of the line coming out '
+  'of a wall of green fog in battle order: their sails are pale and torn, their gunports glow a cold green, and their crews are only '
+  'faint silhouettes of light; on the flagship\'s high stern a single great lantern burns with a pale green flame. The ghost line '
+  'turns broadside on, every port opening at once. The camera holds low on the water as they glide past.')
+v('cut_mother_of_wrecks', 'boss', 'Мать Обломков',
+  'Grey morning over a sea littered with flotsam: a vast floating mound built of hundreds of broken ships — masts, hulls, figureheads, '
+  'anchors and chains knotted together into a living shell — heaves slowly on the swell; deep inside its maze of timber a pulsing '
+  'amber glow beats like a heart, and with each beat loose planks creak and crawl back into place. A pirate sloop edges toward a '
+  'narrow channel into it. The camera circles slowly around the mound at wave height.')
+v('cut_storm_widow', 'boss', 'Вдова Бурь',
+  'A towering storm over Leviathan Reach: in the middle of a ring of black cloud a vast pale shape like a veiled woman made of '
+  'rain and cloud bends over the sea, her veil streaming in the gale; lightning forks from her outstretched hands down to the tallest '
+  'mast of a battered frigate below, and the wind whips round in a circle as the eye of the storm moves across the water. The camera '
+  'looks up from the frigate\'s deck into the turning eye.')
+v('cut_ancient_leviathan', 'boss', 'Древний Левиафан',
+  'Deep in the Abyss beyond the Wall, black water lit only by ships\' lanterns far above: an unimaginably huge leviathan, armoured '
+  'with plates of old bone and coral, its back a ridge of jagged spines, rises out of the dark beneath three small ships, its single '
+  'pale eye opening as large as a sail; the sea bulges and the ships tilt on the swell it pushes up. The camera falls slowly '
+  'away down past its eye into the dark.')
+v('cut_crab_beach', 'lair', 'Крабовый пляж',
+  'Dawn on a black volcanic beach: the sand begins to move as dozens of huge armoured crabs, their shells barnacled and red-brown, '
+  'dig themselves out and scuttle sideways toward a landing party of pirates wading ashore from their boat, claws raised and '
+  'clacking. Steam drifts from the warm sand. The camera skims low along the beach just ahead of the advancing crabs.')
+v('cut_gull_cliffs', 'lair', 'Скалы чаек',
+  'A windswept sea cliff white with nesting gulls: a pirate party climbing a narrow path along the cliff face is struck by a '
+  'screaming storm of huge grey-backed gulls that burst off the ledges, wheeling and diving at them; the men duck and swing their '
+  'hats and cutlasses as feathers whirl in the gale. The camera hangs in the air beside the cliff among the diving birds.')
+v('cut_seal_rookery', 'lair', 'Лежбище тюленей',
+  'A grey rocky shore under drizzle crowded with big grey seals: the great scarred bull of the rookery rears up on his flippers, '
+  'roaring, as a landing party steps onto the rocks, and the whole rookery lifts its heads and begins to bellow and heave toward '
+  'them across the wet stones. The camera holds low among the rocks behind the bull.')
+v('cut_shark_shallows', 'lair', 'Акулья отмель',
+  'A turquoise shallow over white sand at noon: a pirate longboat rows across the reef while a dozen dark shark fins circle it, '
+  'closing in; one great reef shark surges past just under the clear water beside the oars, its shadow sliding over the sand, '
+  'and the oarsmen pull harder. The camera looks down from above through the clear water at the boat and the circling sharks.')
+v('cut_turtle_rocks', 'lair', 'Черепашьи камни',
+  'A cove of smooth grey boulders at low tide: as a pirate party picks its way across them, several of the boulders lift on thick '
+  'scaly legs — they are giant rock turtles with stone-grey shells crusted with limpets — and turn their beaked heads toward the '
+  'men, slowly closing the way back to the boat. The camera tracks slowly between the rising turtles.')
+v('cut_serpent_marsh', 'lair', 'Змеиное болото',
+  'A misty mangrove marsh at dusk, still brown water and twisted roots: a pirate party wades knee-deep with torches when a long '
+  'green-bronze serpent glides silently past their legs beneath the surface, its ripple running ahead, and then rises in the reeds '
+  'before them with its hood flared, hissing. The camera follows the ripple through the water.')
+v('cut_hermit_camp', 'lair', 'Лагерь отшельника',
+  'A ruined fishing camp on a lonely beach: an enormous hermit crab has made its home in the overturned hull of a wrecked boat and '
+  'carries it on its back; it heaves up out of the sand, pincers as big as a man, and turns toward the pirates who were picking '
+  'over the camp. Broken nets and barrels tumble off the hull. The camera pulls back as the hull rises.')
+v('cut_tentacle_lagoon', 'lair', 'Лагуна щупалец',
+  'A still, glassy turquoise lagoon ringed by palms under a hot sky: a pirate rowing boat crosses it when long dark tentacles, '
+  'mottled and ringed with suckers, rise silently out of the water all around it in a wide circle, swaying, and begin to close in. '
+  'The camera rises slowly above the boat to reveal the ring of tentacles.')
+v('cut_drowned_surf', 'lair', 'Прибой утопленников',
+  'A grey beach at night under a low moon: out of the breaking surf walk tall pale figures made of seawater and foam in the shape '
+  'of drowned sailors, their outlines glowing faintly blue-green, water streaming from them; they come up the beach toward a '
+  'line of pirates with lanterns who back away. The camera holds at the waterline behind the advancing figures.')
+v('cut_lighthouse', 'lookout', 'Маяк',
+  'A storm-lashed headland at dusk: a lone old lighthouse of black stone stands on the cliff edge; a pirate climbs the last steps '
+  'of its spiral stair and pushes open the lantern room, and the great lamp swings round, its beam sweeping out across a sea full '
+  'of distant sails and islands far below. The camera rises past the lantern and out along the beam.')
+v('cut_wreck_dive', 'dive', 'Погружение к затонувшему',
+  'Under clear green water on a bright day: a pirate diver in a leather helmet with a glass window and a weighted belt sinks slowly '
+  'past shafts of sunlight toward a sunken merchantman lying on white sand among coral, fish scattering; he reaches the broken '
+  'stern and pulls open a small sea-chest that spills silver coins into the sand. The camera sinks beside him.')
+v('cut_regatta', 'regatta', 'Регата',
+  'A bright windy afternoon off a harbour: a dozen small racing sloops and cutters under full sail heel hard as they round a red '
+  'buoy close together, bows smashing through the chop, spray flying over the crews hanging out on the windward rails; a cannon '
+  'on the harbour wall fires a puff of smoke. The camera races alongside the leading sloop at deck height.')
+v('cut_hunt', 'hunt', 'Зверь на лине',
+  'A rough grey sea: a pirate brig is being towed at speed by a harpoon line running taut from her bow into the water, where a huge '
+  'dark sea beast plunges and surfaces ahead of her in bursts of spray; the crew on the bow pay out the smoking line and brace a '
+  'second harpoon gun. The camera flies low ahead of the bow, looking back at the straining ship.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

@@ -459,7 +459,14 @@ loadAssets(null).then(() => {
 const filmWas = { tac: false, over: false, docked: true, storm: false, bosses: '', landing: true, abyss: true };
 /** A landing's film by what the party goes ashore for: a buried chest, a named pirate's lair, an island; none for a
  *  haul, a dive or the shallows. */
-const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', dive: null, haul: null, tidal: null, turtle: null };
+const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', lookout: 'cut_lighthouse', dive: 'cut_wreck_dive', haul: null, tidal: null, turtle: null };
+/** The sea's world bosses, each the first time one rises near her. */
+const BOSS_FILM: Record<string, string> = { kraken: 'cut_kraken_boss', leviathan: 'cut_leviathan', lantern_maw: 'cut_lantern_maw', black_serpent: 'cut_serpent', abyss_eye: 'cut_abyss',
+  drowned_whale: 'cut_drowned_whale', hollow_admiral: 'cut_hollow_admiral', mother_of_wrecks: 'cut_mother_of_wrecks', storm_widow: 'cut_storm_widow', ancient_leviathan: 'cut_ancient_leviathan' };
+/** The land's creatures, each lair's kind the first time she fights at one (a legend's lair takes the legend's film). */
+const LAIR_FILM: Record<string, string> = { crab_beach: 'cut_crab_beach', gull_cliffs: 'cut_gull_cliffs', seal_rookery: 'cut_seal_rookery', shark_shallows: 'cut_shark_shallows',
+  turtle_rocks: 'cut_turtle_rocks', serpent_marsh: 'cut_serpent_marsh', hermit_camp: 'cut_hermit_camp', tentacle_lagoon: 'cut_tentacle_lagoon', drowned_surf: 'cut_drowned_surf',
+  choir_circle: 'cut_choir', serpent_grotto: 'cut_serpent', maw_pit: 'cut_lantern_maw', turtle_guardian: 'cut_ancient_turtle', leviathan_shoal: 'cut_leviathan' };
 /** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
 const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell', league: 'cut_league', free: 'cut_free' };
 /** The sea's legends each rise in their own film the first time she fights one. */
@@ -498,7 +505,8 @@ function filmMoments(): void {
     // A legend's film first, then the foe's army's, then the boarding's (or the lair's ashore) — one at the start.
     const units = tac.stacks.map((x) => x.unit as string);
     const roster = tac.stacks.filter((x) => x.side !== tac.you).map((x) => ROAM_UNITS[x.unit]?.roster).find(Boolean);
-    const pick = LEGEND_FILM.find(([u, f]) => units.includes(u) && filmDue(f))?.[1] ?? (roster ? ROSTER_FILM[roster] : undefined);
+    const lair = tac.land ? LAIR_FILM[tac.land.lair] : undefined;
+    const pick = LEGEND_FILM.find(([u, f]) => units.includes(u) && filmDue(f))?.[1] ?? (lair && filmDue(lair) ? lair : undefined) ?? (roster ? ROSTER_FILM[roster] : undefined);
     // The first boarding has its film; the next, the night raid's.
     if (!(pick && filmDue(pick) && playFilm(pick))) playFilm(tac.land ? 'cut_lair' : filmDue('cut_boarding') ? 'cut_boarding' : 'cut_raid');
   }
@@ -512,7 +520,7 @@ function filmMoments(): void {
   filmWas.storm = !!state.storm;
   // A world boss rising: the kraken's film the first time one is near.
   const bosses = state.bosses.map((b) => b.kind).join();
-  if (bosses !== filmWas.bosses && state.bosses.some((b) => b.kind === 'kraken')) playFilm('cut_kraken_boss');
+  if (bosses !== filmWas.bosses) for (const b of state.bosses) if (BOSS_FILM[b.kind] && !filmWas.bosses.split(',').includes(b.kind)) playFilm(BOSS_FILM[b.kind]);
   filmWas.bosses = bosses;
   // The boats going ashore; the first time down into the Abyss.
   const landing = state.self?.landing;
@@ -532,6 +540,10 @@ function filmMoments(): void {
   if (turned('pet', !!state.companion) && state.companion) playFilm('cut_orca');
   if (turned('grail', state.adv?.grail ?? null) && state.adv?.grail === 'held') playFilm('cut_grail');
   if (turned('base', !!state.base) && state.base) playFilm('cut_base');
+  // A race begun with her in it; a beast on her harpoon line.
+  const racing = state.regatta?.phase === 'running' && !!state.regatta.signedUp;
+  if (turned('regatta', racing) && racing) playFilm('cut_regatta');
+  if (turned('line', !!state.hunt?.line) && state.hunt?.line) playFilm('cut_hunt');
   const hol = state.holiday?.id ?? null;
   if (hol && filmLast.get('hol') !== hol) playFilm(`cut_${hol}`);
   filmLast.set('hol', hol);
