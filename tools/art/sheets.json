@@ -4708,7 +4708,7 @@
    "ship.dragon_junk"
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a small single-masted gunboat, a short broad hull with one heavy long gun on a slide at the bow and a gaff sail; 2) a long narrow war galley with two lateen sails, rows of long oars along both sides and a bronze ram at the bow; 3) a sleek three-masted corvette, ten guns a side on a single flush deck, square sails; 4) an eastern battle junk with ribbed batten sails of dark red, a high stern and a carved dragon-head prow, fire-lance tubes along its rails; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
-  "painting": true
+  "cut": "hf_20261003_201320_gpt-ships_1"
  },
  "ships_2": {
   "grid": [

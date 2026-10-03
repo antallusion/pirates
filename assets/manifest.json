@@ -1835,6 +1835,10 @@
     "unit.storm_roc":                          { "local": "units/storm_roc.webp", "remote": "hf_20261003_175412_gpt-anim_storm_roc.png", "job": "gpt-anim_storm_roc", "fit": "sheet:anim_storm_roc.0", "rev": 20261003175412},
     "unit.storm_roc_b":                        { "local": "units/storm_roc_b.webp", "remote": "hf_20261003_175412_gpt-anim_storm_roc.png", "job": "gpt-anim_storm_roc", "fit": "sheet:anim_storm_roc.1", "rev": 20261003175412},
     "unit.storm_roc_atk":                      { "local": "units/storm_roc_atk.webp", "remote": "hf_20261003_175412_gpt-anim_storm_roc.png", "job": "gpt-anim_storm_roc", "fit": "sheet:anim_storm_roc.2", "rev": 20261003175412},
-    "unit.storm_roc_hit":                      { "local": "units/storm_roc_hit.webp", "remote": "hf_20261003_175412_gpt-anim_storm_roc.png", "job": "gpt-anim_storm_roc", "fit": "sheet:anim_storm_roc.3", "rev": 20261003175412}
+    "unit.storm_roc_hit":                      { "local": "units/storm_roc_hit.webp", "remote": "hf_20261003_175412_gpt-anim_storm_roc.png", "job": "gpt-anim_storm_roc", "fit": "sheet:anim_storm_roc.3", "rev": 20261003175412},
+    "ship.gunboat":                            { "local": "ships/gunboat.webp", "remote": "hf_20261003_201320_gpt-ships_1.png", "job": "gpt-ships_1", "fit": "sheet:ships_1.0", "rev": 20261003201320},
+    "ship.war_galley":                         { "local": "ships/war_galley.webp", "remote": "hf_20261003_201320_gpt-ships_1.png", "job": "gpt-ships_1", "fit": "sheet:ships_1.1", "rev": 20261003201320},
+    "ship.corvette":                           { "local": "ships/corvette.webp", "remote": "hf_20261003_201320_gpt-ships_1.png", "job": "gpt-ships_1", "fit": "sheet:ships_1.2", "rev": 20261003201320},
+    "ship.dragon_junk":                        { "local": "ships/dragon_junk.webp", "remote": "hf_20261003_201320_gpt-ships_1.png", "job": "gpt-ships_1", "fit": "sheet:ships_1.3", "rev": 20261003201320}
   }
 }
