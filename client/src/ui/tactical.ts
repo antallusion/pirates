@@ -300,6 +300,8 @@ export class TacticalPanel {
   private canvas: HTMLCanvasElement | null = null;
   private bg: HTMLCanvasElement | null = null;
   private bgKey = '';
+  /** The field under the hexes is a painting (a deck or a ground): the marks on it are drawn lighter. */
+  private painted = false;
   /** The hex's width, the stage, the board's corner, and its turn: 0 as the decks lie side by side, 1 upright with
    *  the boarders' deck below, −1 upright with the defenders' below (a phone held upright: your deck at the thumb). */
   private size = { w: 0, cw: 0, ch: 0, ox: 0, oy: 0, dpr: 1, rot: 0 as 0 | 1 | -1, bw: 0, bh: 0 };
@@ -1038,6 +1040,7 @@ export class TacticalPanel {
     const deckOf = (x: 0 | 1) => sprite(`bg.deck_${v.heroes[x].hull ?? 'brig'}`) ?? sprite('bg.deck_brig') ?? DECK_HULLS.map((h) => sprite(`bg.deck_${h}`)).find(Boolean) ?? null;
     const decks = [deckOf(0), deckOf(1)];
     const seaArt = sprite('bg.battle_sea');
+    this.painted = !!(decks[0] && decks[1] && seaArt);
     if (decks[0] && decks[1] && seaArt) {
       g.save();
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1215,6 +1218,7 @@ export class TacticalPanel {
     const X0 = b0.x - w * 0.6, Y0 = b0.y - r * 1.1, X1 = b1.x + w * 0.6, Y1 = b1.y + r * 1.1;
     // The island's ground painted as in Heroes (owner, 2026-10-02): the painting over the whole stage, the hexes on it.
     const art = sprite(`bg.field_${type}`);
+    this.painted = !!art;
     if (art) {
       g.save();
       g.setTransform(this.size.dpr, 0, 0, this.size.dpr, 0, 0);
@@ -1584,9 +1588,11 @@ export class TacticalPanel {
       for (const h of v.reach) {
         const p = this.lc(h);
         this.hexPath(g, p.x, p.y, r - 1.5);
-        g.fillStyle = h === this.preview ? 'rgba(46,230,200,0.42)' : h === this.hover ? 'rgba(46,230,200,0.3)' : 'rgba(46,230,200,0.16)';
+        // On a painting the reach is a light veil and a thin rim, so the planks show through (as in Heroes).
+        const p0 = this.painted ? 0.45 : 1;
+        g.fillStyle = h === this.preview ? `rgba(46,230,200,${0.42 * p0})` : h === this.hover ? `rgba(46,230,200,${0.3 * p0})` : `rgba(46,230,200,${0.16 * p0})`;
         g.fill();
-        g.strokeStyle = 'rgba(46,230,200,0.55)';
+        g.strokeStyle = this.painted ? 'rgba(200,255,235,0.45)' : 'rgba(46,230,200,0.55)';
         g.lineWidth = 1;
         g.stroke();
       }

@@ -1216,6 +1216,11 @@
     "unit.crown_grenadier":                    { "local": "units/crown_grenadier.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.0", "rev": 20261003043624},
     "unit.crown_grenadier_b":                  { "local": "units/crown_grenadier_b.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.1", "rev": 20261003043624},
     "unit.crown_grenadier_atk":                { "local": "units/crown_grenadier_atk.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.2", "rev": 20261003043624},
-    "unit.crown_grenadier_hit":                { "local": "units/crown_grenadier_hit.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.3", "rev": 20261003043624}
+    "unit.crown_grenadier_hit":                { "local": "units/crown_grenadier_hit.webp", "remote": "hf_20261003_043624_gpt-anim_crown_grenadier.png", "job": "gpt-anim_crown_grenadier", "fit": "sheet:anim_crown_grenadier.3", "rev": 20261003043624},
+    "bg.deck_sloop":                           { "local": "art/deck_sloop.webp", "remote": "hf_20261003_043613_01d3b638-0d01-45a4-84d5-98e3bb12d079.png", "job": "01d3b638-0d01-45a4-84d5-98e3bb12d079", "fit": "opaque:1536", "rev": 20261003043613},
+    "unit.crown_marine":                       { "local": "units/crown_marine.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.0", "rev": 20261003044106},
+    "unit.crown_marine_b":                     { "local": "units/crown_marine_b.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.1", "rev": 20261003044106},
+    "unit.crown_marine_atk":                   { "local": "units/crown_marine_atk.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.2", "rev": 20261003044106},
+    "unit.crown_marine_hit":                   { "local": "units/crown_marine_hit.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.3", "rev": 20261003044106}
   }
 }
