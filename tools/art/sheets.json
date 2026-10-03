@@ -724,7 +724,7 @@
   "aspect": "1:1",
   "ids": [
    "icon.sp_grenades",
-   "icon.sp_point_blank",
+   null,
    "icon.sp_smoke_and_knives",
    "icon.sp_red_harvest",
    "icon.sp_turn_the_flank",
@@ -741,7 +741,7 @@
    "icon.sp_tide_returns"
   ],
   "prompt": "Sheet of sixteen square battle-spell icons for a dark Pirate Gothic turn-based battle game, in the painterly style of the spell icons of Heroes of Might and Magic III and the ability icons of World of Warcraft but grim and realistic, laid out in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters. Each tile is its own icon: one dramatic scene filling the whole tile edge to edge, a strong focal point readable at small size, rich painted detail, the same lighting and finish across all sixteen. The icons, left to right and top to bottom: 1. a hand hurling a black iron grenade with a sputtering fuse over a ship's rail into a crowd of enemies. 2. a flintlock pistol fired at arm's length, a bright muzzle flash and a burst of smoke. 3. a bank of grey smoke on a deck with daggers flashing out of it. 4. a crew of pirates surging forward with raised cutlasses in a crimson haze. 5. pirates sweeping round the end of an enemy line on a deck. 6. pale drowned hands rising from black water and dragging sailors over the side. 7. a line of sailors standing shoulder to shoulder behind an officer's raised sword. 8. the barrels of many muskets converging on one enemy sailor marked with a chalk cross. 9. two musket balls leaving one long barrel in a double burst of flame. 10. a scarred pirate captain roaring with a raised cutlass, his crew shouting behind him. 11. seawater washing over a wounded sailor's arm and closing the cut, a faint silver light. 12. a whole crew firing pistols and muskets at once, a wall of flashes and smoke. 13. a powder keg with a burning fuse rolling across a deck into the enemy. 14. a strong wind at the backs of sailors running forward, sails billowing behind them. 15. a fierce wind blowing into the faces of enemy sailors, hats and spray flying back. 16. fallen sailors rising to their feet again as a wave washes across the deck. Muted palette: charcoal, graphite, cold blue-grey, dirty silver, old brass, very dark burgundy; fiery orange only for fire and gunpowder, a very faint turquoise only for the deep. NO frames, NO borders inside the tiles, NO text, NO letters, NO numbers, NO watermark. Avoid: cartoon, flat vector, emoji, cel shading, thick outlines, bright saturated colours, blood, gore, skeletons.",
-  "painting": true
+  "cut": "hf_20261003_100834_gpt-spells_1"
  },
  "spells_2": {
   "grid": [
@@ -4530,5 +4530,24 @@
   ],
   "prompt": "Draw a square image: four separate ship's pets laid out in a 2 by 2 grid, each centred in its own cell and filling about three quarters of it, with wide empty gaps between them, all in the same slight three-quarter view and warm lantern light from the upper left, bold readable silhouettes at a small size: 1) a scruffy grey-striped ship's cat with a torn ear, sitting; 2) a green and red parrot perched on a short piece of rope, wings half open; 3) a small brown capuchin monkey in a tiny faded red waistcoat, crouching; 4) a shaggy black-and-white ship's dog with a rope collar, sitting. Smooth painterly digital painting like the hand-painted item icons of fantasy games, grim and weathered; muted colours with small warm highlights. Solid flat magenta #FF00FF background, no floor, no shadows, no lines, no frames, no text.",
   "cut": "hf_20261003_091649_gpt-pets_1"
+ },
+ "spells_fix": {
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "grid": [
+   2,
+   2
+  ],
+  "ids": [
+   "icon.sp_point_blank",
+   "icon.sp_tide_returns",
+   "icon.sp_call_of_the_deep",
+   null
+  ],
+  "prompt": "Draw a square image: a 2 by 2 grid of four square game icons separated by thin black lines; each icon is one small dramatic painted scene filling its square, readable at a small size. No blood, no wounds, no gore, no corpses, no skulls, no zombies anywhere. The icons, row by row: 1) a flintlock pistol fired at arm's length over a ship's rail, a bright muzzle flash and a burst of white smoke, the target out of the picture; 2) a great wave washing across a ship's deck while weary sailors push themselves back up onto their feet, alive and determined; 3) pale hands made of glowing seawater rising out of black water and gripping a ship's wooden rail; 4) a brass ship's bell swinging on a dark deck, ringing out a faint green glow. Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the squares.",
+  "painting": true
  }
 }
