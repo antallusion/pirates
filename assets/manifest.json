@@ -1387,6 +1387,10 @@
     "unit.white_whale":                        { "local": "units/white_whale.webp", "remote": "hf_20261003_090040_gpt-anim_white_whale.png", "job": "gpt-anim_white_whale", "fit": "sheet:anim_white_whale.0", "rev": 20261003090040},
     "unit.white_whale_b":                      { "local": "units/white_whale_b.webp", "remote": "hf_20261003_090040_gpt-anim_white_whale.png", "job": "gpt-anim_white_whale", "fit": "sheet:anim_white_whale.1", "rev": 20261003090040},
     "unit.white_whale_atk":                    { "local": "units/white_whale_atk.webp", "remote": "hf_20261003_090040_gpt-anim_white_whale.png", "job": "gpt-anim_white_whale", "fit": "sheet:anim_white_whale.2", "rev": 20261003090040},
-    "unit.white_whale_hit":                    { "local": "units/white_whale_hit.webp", "remote": "hf_20261003_090040_gpt-anim_white_whale.png", "job": "gpt-anim_white_whale", "fit": "sheet:anim_white_whale.3", "rev": 20261003090040}
+    "unit.white_whale_hit":                    { "local": "units/white_whale_hit.webp", "remote": "hf_20261003_090040_gpt-anim_white_whale.png", "job": "gpt-anim_white_whale", "fit": "sheet:anim_white_whale.3", "rev": 20261003090040},
+    "unit.young_kraken":                       { "local": "units/young_kraken.webp", "remote": "hf_20261003_090502_gpt-anim_young_kraken.png", "job": "gpt-anim_young_kraken", "fit": "sheet:anim_young_kraken.0", "rev": 20261003090502},
+    "unit.young_kraken_b":                     { "local": "units/young_kraken_b.webp", "remote": "hf_20261003_090502_gpt-anim_young_kraken.png", "job": "gpt-anim_young_kraken", "fit": "sheet:anim_young_kraken.1", "rev": 20261003090502},
+    "unit.young_kraken_atk":                   { "local": "units/young_kraken_atk.webp", "remote": "hf_20261003_090502_gpt-anim_young_kraken.png", "job": "gpt-anim_young_kraken", "fit": "sheet:anim_young_kraken.2", "rev": 20261003090502},
+    "unit.young_kraken_hit":                   { "local": "units/young_kraken_hit.webp", "remote": "hf_20261003_090502_gpt-anim_young_kraken.png", "job": "gpt-anim_young_kraken", "fit": "sheet:anim_young_kraken.3", "rev": 20261003090502}
   }
 }
