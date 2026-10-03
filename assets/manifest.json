@@ -1667,6 +1667,10 @@
     "unit.boat_steerer":                       { "local": "units/boat_steerer.webp", "remote": "hf_20261003_134051_gpt-anim_boat_steerer.png", "job": "gpt-anim_boat_steerer", "fit": "sheet:anim_boat_steerer.0", "rev": 20261003134051},
     "unit.boat_steerer_b":                     { "local": "units/boat_steerer_b.webp", "remote": "hf_20261003_134051_gpt-anim_boat_steerer.png", "job": "gpt-anim_boat_steerer", "fit": "sheet:anim_boat_steerer.1", "rev": 20261003134051},
     "unit.boat_steerer_atk":                   { "local": "units/boat_steerer_atk.webp", "remote": "hf_20261003_134051_gpt-anim_boat_steerer.png", "job": "gpt-anim_boat_steerer", "fit": "sheet:anim_boat_steerer.2", "rev": 20261003134051},
-    "unit.boat_steerer_hit":                   { "local": "units/boat_steerer_hit.webp", "remote": "hf_20261003_134051_gpt-anim_boat_steerer.png", "job": "gpt-anim_boat_steerer", "fit": "sheet:anim_boat_steerer.3", "rev": 20261003134051}
+    "unit.boat_steerer_hit":                   { "local": "units/boat_steerer_hit.webp", "remote": "hf_20261003_134051_gpt-anim_boat_steerer.png", "job": "gpt-anim_boat_steerer", "fit": "sheet:anim_boat_steerer.3", "rev": 20261003134051},
+    "unit.volcano_guardian":                   { "local": "units/volcano_guardian.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.0", "rev": 20261003135250},
+    "unit.volcano_guardian_b":                 { "local": "units/volcano_guardian_b.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.1", "rev": 20261003135250},
+    "unit.volcano_guardian_atk":               { "local": "units/volcano_guardian_atk.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.2", "rev": 20261003135250},
+    "unit.volcano_guardian_hit":               { "local": "units/volcano_guardian_hit.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.3", "rev": 20261003135250}
   }
 }
