@@ -1611,6 +1611,10 @@
     "unit.company_musketeer":                  { "local": "units/company_musketeer.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.0", "rev": 20261003123414},
     "unit.company_musketeer_b":                { "local": "units/company_musketeer_b.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.1", "rev": 20261003123414},
     "unit.company_musketeer_atk":              { "local": "units/company_musketeer_atk.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.2", "rev": 20261003123414},
-    "unit.company_musketeer_hit":              { "local": "units/company_musketeer_hit.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.3", "rev": 20261003123414}
+    "unit.company_musketeer_hit":              { "local": "units/company_musketeer_hit.webp", "remote": "hf_20261003_123414_gpt-anim_company_musketeer.png", "job": "gpt-anim_company_musketeer", "fit": "sheet:anim_company_musketeer.3", "rev": 20261003123414},
+    "unit.arquebusier":                        { "local": "units/arquebusier.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.0", "rev": 20261003123843},
+    "unit.arquebusier_b":                      { "local": "units/arquebusier_b.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.1", "rev": 20261003123843},
+    "unit.arquebusier_atk":                    { "local": "units/arquebusier_atk.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.2", "rev": 20261003123843},
+    "unit.arquebusier_hit":                    { "local": "units/arquebusier_hit.webp", "remote": "hf_20261003_123843_gpt-anim_arquebusier.png", "job": "gpt-anim_arquebusier", "fit": "sheet:anim_arquebusier.3", "rev": 20261003123843}
   }
 }
