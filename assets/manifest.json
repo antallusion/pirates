@@ -1859,6 +1859,22 @@
     "icon.sp_jonah":                           { "local": "icons/sp_jonah.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.0", "rev": 20261003212344},
     "icon.sp_muffled_oars":                    { "local": "icons/sp_muffled_oars.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.1", "rev": 20261003212344},
     "icon.sp_silent_fog":                      { "local": "icons/sp_silent_fog.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.2", "rev": 20261003212344},
-    "icon.sp_fog_madness":                     { "local": "icons/sp_fog_madness.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.3", "rev": 20261003212344}
+    "icon.sp_fog_madness":                     { "local": "icons/sp_fog_madness.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.3", "rev": 20261003212344},
+    "icon.gun_minion_4":                       { "local": "icons/gun_minion_4.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.0", "rev": 20261003212605},
+    "icon.gun_perrier":                        { "local": "icons/gun_perrier.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.1", "rev": 20261003212605},
+    "icon.gun_culverin_8":                     { "local": "icons/gun_culverin_8.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.2", "rev": 20261003212605},
+    "icon.gun_whaling_gun":                    { "local": "icons/gun_whaling_gun.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.3", "rev": 20261003212605},
+    "icon.gun_gunbreaker_14":                  { "local": "icons/gun_gunbreaker_14.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.4", "rev": 20261003212605},
+    "icon.gun_shell_gun":                      { "local": "icons/gun_shell_gun.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.5", "rev": 20261003212605},
+    "icon.gun_drowned_bronze":                 { "local": "icons/gun_drowned_bronze.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.6", "rev": 20261003212605},
+    "icon.gun_demi_cannon_32":                 { "local": "icons/gun_demi_cannon_32.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.7", "rev": 20261003212605},
+    "icon.ammo_bar":                           { "local": "icons/ammo_bar.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.8", "rev": 20261003212605},
+    "icon.ammo_long_shot":                     { "local": "icons/ammo_long_shot.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.9", "rev": 20261003212605},
+    "icon.ammo_star":                          { "local": "icons/ammo_star.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.10", "rev": 20261003212605},
+    "icon.ammo_salt":                          { "local": "icons/ammo_salt.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.11", "rev": 20261003212605},
+    "icon.ammo_stinkpot":                      { "local": "icons/ammo_stinkpot.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.12", "rev": 20261003212605},
+    "icon.ammo_drag":                          { "local": "icons/ammo_drag.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.13", "rev": 20261003212605},
+    "icon.set_master_gunner":                  { "local": "icons/set_master_gunner.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.14", "rev": 20261003212605},
+    "icon.set_smuggler":                       { "local": "icons/set_smuggler.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.15", "rev": 20261003212605}
   }
 }
