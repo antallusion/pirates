@@ -59,6 +59,23 @@ test('write-behind store: accounts, captains, world state and ledger survive a r
   await again.close();
 });
 
+test('the premium shop\'s doubloons on the write-behind store: the balance, never below nought, and a payment\'s reference survive a restart', { skip }, async () => {
+  await fresh();
+  const db = await PgDatabase.open(URL_!);
+  const id = db.createAccount('Gold Purse', 'hash-g');
+  assert.equal(db.doubloons(id), 0);
+  assert.equal(db.addDoubloons(id, 550), 550);
+  assert.equal(db.addDoubloons(id, -600), null, 'never below nought');
+  assert.equal(db.addDoubloons(id, -50), 500);
+  db.ledger(id, 'doubloons_pay', 550, 'pay_9');
+  await db.close();
+  const again = await PgDatabase.open(URL_!);
+  assert.equal(again.doubloons(id), 500);
+  assert.equal(again.doubloonRef(id, 'doubloons_pay', 'pay_9'), true, 'a payment is credited once, across a restart too');
+  assert.equal(again.doubloonRef(id, 'doubloons_pay', 'pay_10'), false);
+  await again.close();
+});
+
 test('the game runs on PostgreSQL: a captain is created, saved and restored', { skip }, async () => {
   await fresh();
   const db = await PgDatabase.open(URL_!);

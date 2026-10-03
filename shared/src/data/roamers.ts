@@ -12,7 +12,7 @@
 // what and where it is whatever the sea grows later (a new island over a cell only takes that one stack away; nothing
 // else moves). Balance: tests/balance/roamers.ts, node tools/balance-roamers.ts.
 
-import { UNITS, armyPower } from './army.ts';
+import { UNITS, armyPower, isPremiumUnit } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
 import { advHour, advLevelXp, buildAdv, guardBaseMight } from './advmap.ts';
 import { BEAST_RES, LAND_RES_DEF } from './bestiary.ts';
@@ -75,11 +75,11 @@ export const ROAMS: Record<RoamKind, RoamDef> = {
   giant_octopus: { u: 'giant_octopus', lv: [6, 10], weight: 1, field: 'graveyard' },
 };
 
-/** The kinds a square of ⚓L in a sea keeps, with their weights. */
+/** The kinds a square of ⚓L in a sea keeps, with their weights (never a premium kind: the shop's alone). */
 export function roamKindsFor(level: number, region: RegionId): [RoamKind, number][] {
   return ROAM_KINDS.filter((k) => {
     const d = ROAMS[k];
-    return level >= d.lv[0] && level <= d.lv[1] && (!d.regions || d.regions.includes(region));
+    return !isPremiumUnit(roamUnit(k)) && level >= d.lv[0] && level <= d.lv[1] && (!d.regions || d.regions.includes(region));
   }).map((k) => [k, ROAMS[k].weight]);
 }
 

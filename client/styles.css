@@ -3759,9 +3759,12 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
   #toasts .toast:nth-child(n+3) { display: none !important; }
 }
 /* docs/17 H5 (QA): on a desktop narrower than 1600 px the micro menu's one row (ten buttons, 454 px) met the bottom
-   block (the action bar grew a slot and the ship's level): two rows of five, the compass raised over them. */
-@media (min-width: 1100px) and (max-width: 1599px) and (min-height: 600px) {
-  body:not(.touch) .micro-menu { display: grid; grid-template-columns: repeat(5, 40px); gap: 6px; }
+   block (the action bar grew a slot and the ship's level): two rows, the compass raised over them. The premium shop's
+   coin made the buttons eleven (owner, 2026-10-03): five a row ran to a third row, into the compass, and one row of
+   eleven (520 px) meets the bottom block below 1680 px — six a row of 38 px, clear of it from 1100 px. */
+@media (min-width: 1100px) and (max-width: 1679px) and (min-height: 600px) {
+  body:not(.touch) .micro-menu { display: grid; grid-template-columns: repeat(6, 38px); gap: 6px; }
+  body:not(.touch) .micro-menu button { width: 38px; height: 38px; }
   body:not(.touch) #hud-nav { bottom: 108px; }
   #toasts .toast:nth-child(n+6) { display: none !important; }
 }
@@ -4193,3 +4196,72 @@ img.beast-face.fig { object-fit: cover; object-position: 50% 8%; background: rad
 .film.on { opacity: 1; }
 .film video { width: 100%; height: 100%; object-fit: contain; }
 .film-skip { position: absolute; right: calc(env(safe-area-inset-right, 0px) + 16px); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); font: 500 12px var(--sans); color: rgba(230, 220, 200, 0.55); letter-spacing: 0.04em; pointer-events: none; }
+
+/* ---------- The premium shop (owner, 2026-10-03; ui/premium.ts): doubloons in gold, the shelves of hulls and creatures
+   as cards (the painted figure, the name and what sets it apart, the price and Buy), the top-up's packs. */
+/* The doubloon's stand-in: the silver coins gilded until its own picture is painted. */
+.dbl-gild, .micro-menu [data-menu="shop"] img[src*="/icons/coin."], .menu-tile[data-menu="shop"] img[src*="/icons/coin."] { filter: sepia(1) saturate(3.4) hue-rotate(-12deg) brightness(1.1) contrast(1.05); }
+.dbl { display: inline-flex; align-items: center; gap: 3px; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pm-body { display: flex; flex-direction: column; gap: 10px; }
+.pm-purse { align-items: center; flex-wrap: nowrap; }
+.pm-purse .ph-chip .dbl { gap: 5px; font-size: 14px; }
+.pm-purse .ph-chip .dbl .ico-sm { width: 18px; height: 18px; }
+.pm-purse .btn { white-space: nowrap; }
+.pm-count { margin-left: 2px; color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); gap: 8px; }
+.pm-card { display: grid; grid-template-columns: 96px minmax(0, 1fr) 112px; gap: 12px; align-items: center; margin: 0; border-color: rgba(176, 141, 87, 0.45); }
+.skinned .pm-card { border-color: rgba(176, 141, 87, 0.45); }
+.pm-art { width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 6px; background: radial-gradient(circle at 50% 40%, #2a2418, #0c0b09 72%); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.35); }
+/* A hull lies on her side, bow to the right, on a patch of sea (a dark sprite on the dark card would vanish). */
+.pm-card.pm-ship { grid-template-columns: 150px minmax(0, 1fr) 112px; }
+.pm-hull { width: 150px; height: 84px; background: radial-gradient(ellipse at 50% 50%, #234152, #0c1820 78%); }
+.pm-hull img { height: 150px; width: auto; flex: none; transform: rotate(90deg); filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.8)); }
+.pm-fig img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 3px 4px #000); }
+.pm-art .pm-face { width: 84px; height: 84px; object-fit: cover; border-radius: 50%; margin: 0; }
+.pm-art .ico-lg { width: 56px; height: 56px; object-fit: contain; }
+.pm-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pm-name { font-family: var(--serif); font-size: 18px; line-height: 1.15; color: var(--bone); overflow-wrap: anywhere; }
+.pm-n { font: 600 12px var(--sans); color: var(--fog); }
+.pm-note { font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.3; color: #d6c39a; }
+.pm-meta { font-size: 11px; line-height: 1.3; }
+.pm-card .hull-stats { margin-top: 2px; }
+.pm-with { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; }
+.pm-beast { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.pm-beast .pm-face-xs { width: 24px; height: 24px; flex: none; margin: 0; border-radius: 50%; object-fit: cover; object-position: 50% 8%; border: 1px solid var(--brass-dim); }
+.pm-buy { display: flex; flex-direction: column; align-items: stretch; gap: 5px; text-align: center; min-width: 0; }
+.pm-buy .btn { min-height: 30px; font-size: 12px; }
+.pm-price .dbl { font: 700 17px var(--sans); justify-content: center; }
+.pm-price .dbl .ico-sm { width: 20px; height: 20px; }
+.pm-why { font-size: 11px; line-height: 1.25; color: var(--bad); overflow-wrap: anywhere; }
+.pm-empty { display: flex; gap: 14px; align-items: center; margin: 0; padding: 18px 16px; }
+.pm-empty .ico-lg { width: 64px; height: 64px; flex: none; object-fit: contain; }
+.pm-empty p { margin: 4px 0 0; }
+.pm-rule { font-size: 12px; margin: 0; }
+.pm-top-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pm-top-h .title-sm { font-size: 24px; margin: 0 0 2px; }
+.pm-top-h p { margin: 0; }
+.pm-top-h .btn { flex: none; white-space: nowrap; }
+.pm-packs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; }
+.pm-pack { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0; padding: 12px 8px 10px; text-align: center; border-color: rgba(176, 141, 87, 0.5); }
+.pm-pack .ico-lg { width: 56px; height: 56px; object-fit: contain; }
+.pm-pack-n { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+.pm-pack-w { font-size: 12px; color: var(--fog); }
+.pm-bonus { font: 600 12px var(--sans); color: var(--good); }
+.pm-bonus.none { visibility: hidden; }
+.pm-pack .btn { width: 100%; margin-top: 4px; }
+.pm-soon { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; padding: 8px 10px; border: 1px dashed rgba(176, 141, 87, 0.5); border-radius: 6px; color: var(--bone); font-size: 13px; }
+/* A narrow window (a phone on its side, the panel zoomed): the buy box goes under the figure and the words. */
+@media (max-width: 700px) {
+  .pm-card { grid-template-columns: 76px minmax(0, 1fr); gap: 8px 10px; }
+  .pm-card.pm-ship { grid-template-columns: 112px minmax(0, 1fr); }
+  .pm-art { width: 76px; height: 76px; }
+  .pm-hull { width: 112px; height: 64px; }
+  .pm-hull img { height: 112px; }
+  .pm-art .pm-face { width: 66px; height: 66px; }
+  .pm-buy { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; text-align: right; }
+  .pm-buy .pm-why { order: -1; margin-right: auto; text-align: left; }
+  .pm-buy .btn { min-width: 96px; }
+  .pm-packs { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+  .pm-pack-n { font-size: 24px; }
+  .pm-top-h { flex-wrap: wrap; }
+}

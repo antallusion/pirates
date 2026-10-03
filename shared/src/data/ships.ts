@@ -2,6 +2,7 @@
 // Speeds are in game meters/second (the world is compressed ~6x relative to real nautical scale
 // so a fast ship crosses the 96 km ocean in roughly 100 minutes).
 
+import type { UnitId } from './army.ts';
 import type { Flag, StatMods } from './stats.ts';
 
 export type ShipClassId =
@@ -53,6 +54,21 @@ export interface ShipClassDef {
   monster?: boolean;
   sprite: string; // asset id in assets/manifest.json
   passive: { id: string; name: string; description: string };
+  /** Sold for doubloons in the premium shop (shared/src/data/premium.ts, docs/01 P7): such a hull is never
+   *  `purchasable` for silver at a yard (tests/premium.test.ts holds it). */
+  premium?: PremiumShip;
+}
+
+/** A hull sold for doubloons (owner, 2026-10-03): bought in port, she is delivered to its quay and the ship the
+ *  captain sailed in is berthed there, as a hull built to order is (server/src/game/premium.ts). */
+export interface PremiumShip {
+  /** Doubloons. */
+  price: number;
+  /** What sets her apart, the line on her card: English, Russian. */
+  note: [string, string];
+  /** Creatures that come aboard with her (the one way besides the shop a premium kind is had); with no room for
+   *  them in her she is not sold. */
+  beasts?: { u: UnitId; n: number }[];
 }
 
 const ship = (d: ShipClassDef): ShipClassDef => d;

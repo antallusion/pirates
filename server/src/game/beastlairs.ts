@@ -11,7 +11,7 @@
 // A lair is not a ship: it stands where it is, never moves off its island (docs/18 #21), and its state is the world's
 // (down until it stands again, its creatures as the last fight left them). Every roll here is on this system's own Rng.
 
-import { UNITS, armyMen, armyPower, armyWeight } from '../../../shared/src/data/army.ts';
+import { UNITS, armyMen, armyPower, armyWeight, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEASTS, BEAST_IDS, BEAST_PLURAL, CREATURE_IDS, LAND_RES, isBeast, isCreature } from '../../../shared/src/data/bestiary.ts';
 import type { BeastId, CreatureId, LandRes } from '../../../shared/src/data/bestiary.ts';
@@ -766,7 +766,8 @@ function lootLair(game: Game, s: PlayerSession, l: Lair): LairLoot {
       const it = artifactFind(game, s, 'guard');
       if (it?.art) loot.artifact = it.art;
     }
-    if (def.egg > 0 && lp.eggs.length < EGG_MAX && S.rng.chance(def.egg)) {
+    // Never a premium kind's egg: it is had only from the shop.
+    if (def.egg > 0 && lp.eggs.length < EGG_MAX && !isPremiumUnit(def.mix[0][0]) && S.rng.chance(def.egg)) {
       const u = def.mix[0][0];
       lp.eggs.push(u);
       loot.egg = u;

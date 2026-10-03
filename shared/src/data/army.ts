@@ -98,6 +98,19 @@ export interface UnitDef {
   /** One of the world's armies (shared/src/data/factionunits.ts): whose, and the pirate kind it fights as. */
   roster?: Roster;
   as?: MenId;
+  /** Sold for doubloons in the premium shop (shared/src/data/premium.ts, docs/01 P7) and found nowhere at sea. */
+  premium?: PremiumUnit;
+}
+
+/** A kind sold for doubloons (owner, 2026-10-03): no tamer, lair, drift, roaming stack, capture nor egg ever hands it
+ *  out — it comes only from the shop, or aboard the premium hull it is sold with (ShipClassDef.premium.beasts). */
+export interface PremiumUnit {
+  /** Doubloons for one purchase. */
+  price: number;
+  /** How many come in one purchase: one great beast, or a stack of small ones. */
+  n: number;
+  /** What sets it apart, the line on its card: English, Russian. */
+  note: [string, string];
 }
 
 const U = (id: UnitId, tier: number, up: boolean, base: UnitId, upgrade: UnitId | null, s: Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>): UnitDef => ({ id, tier, up, base, upgrade, ...s });
@@ -137,6 +150,9 @@ function factionUnits(): Record<FactionKindId, UnitDef> {
 export const UNITS: Record<UnitId, UnitDef> = { ...BASE_UNITS, ...factionUnits() };
 
 export const hasSpecial = (u: UnitId, s: UnitSpecial): boolean => UNITS[u].specials.includes(s);
+
+/** A kind only the premium shop sells: every free source passes it over. */
+export const isPremiumUnit = (u: UnitId): boolean => !!UNITS[u]?.premium;
 
 /** One slot of the army: a kind of man and how many of him. */
 export interface ArmyStack {

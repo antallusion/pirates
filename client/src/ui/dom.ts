@@ -76,6 +76,7 @@ const STAND_IN: Record<string, string> = {
   good_tar: 'good_timber', good_scrimshaw: 'good_leviathan_bone', good_baleen: 'good_whale_oil', good_ambergris: 'good_spices',
   good_orca_tooth: 'good_leviathan_bone', good_whalebone: 'good_leviathan_bone', good_narwhal_tusk: 'good_leviathan_bone', good_shark_skin: 'good_cloth',
   good_serpent_scale: 'mod_serpent_scale', tattoo_needle: 'role_sailmaker', storm_heart: 'weather_storm',
+  doubloon: 'coin', // the premium shop's coin: the silver coins, gilded by the stylesheet, until it is painted
 };
 
 /** A building as it stands (docs/12 P11): whole from 70% of its condition, worn below, a ruin under 35%; each
