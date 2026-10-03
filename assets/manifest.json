@@ -2033,6 +2033,9 @@
     "unit.drowned_abbess":                     { "local": "units/drowned_abbess.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.0", "rev": 20261003234847},
     "unit.drowned_abbess_b":                   { "local": "units/drowned_abbess_b.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.1", "rev": 20261003234847},
     "unit.drowned_abbess_atk":                 { "local": "units/drowned_abbess_atk.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.2", "rev": 20261003234847},
-    "unit.drowned_abbess_hit":                 { "local": "units/drowned_abbess_hit.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.3", "rev": 20261003234847}
+    "unit.drowned_abbess_hit":                 { "local": "units/drowned_abbess_hit.webp", "remote": "hf_20261003_234847_gpt-anim_drowned_abbess.png", "job": "gpt-anim_drowned_abbess", "fit": "sheet:anim_drowned_abbess.3", "rev": 20261003234847},
+    "ship.tea_clipper":                        { "local": "ships/tea_clipper.webp", "remote": "hf_20261003_235106_gpt-ships_8.png", "job": "gpt-ships_8", "fit": "sheet:ships_8.0", "rev": 20261003235106},
+    "ship.treasure_fluyt":                     { "local": "ships/treasure_fluyt.webp", "remote": "hf_20261003_235106_gpt-ships_8.png", "job": "gpt-ships_8", "fit": "sheet:ships_8.1", "rev": 20261003235106},
+    "ship.east_indiaman":                      { "local": "ships/east_indiaman.webp", "remote": "hf_20261003_235106_gpt-ships_8.png", "job": "gpt-ships_8", "fit": "sheet:ships_8.2", "rev": 20261003235106}
   }
 }
