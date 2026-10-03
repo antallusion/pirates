@@ -1375,6 +1375,10 @@
     "unit.lantern_maw":                        { "local": "units/lantern_maw.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.0", "rev": 20261003084930},
     "unit.lantern_maw_b":                      { "local": "units/lantern_maw_b.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.1", "rev": 20261003084930},
     "unit.lantern_maw_atk":                    { "local": "units/lantern_maw_atk.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.2", "rev": 20261003084930},
-    "unit.lantern_maw_hit":                    { "local": "units/lantern_maw_hit.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.3", "rev": 20261003084930}
+    "unit.lantern_maw_hit":                    { "local": "units/lantern_maw_hit.webp", "remote": "hf_20261003_084930_gpt-anim_lantern_maw.png", "job": "gpt-anim_lantern_maw", "fit": "sheet:anim_lantern_maw.3", "rev": 20261003084930},
+    "unit.ancient_turtle":                     { "local": "units/ancient_turtle.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.0", "rev": 20261003085248},
+    "unit.ancient_turtle_b":                   { "local": "units/ancient_turtle_b.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.1", "rev": 20261003085248},
+    "unit.ancient_turtle_atk":                 { "local": "units/ancient_turtle_atk.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.2", "rev": 20261003085248},
+    "unit.ancient_turtle_hit":                 { "local": "units/ancient_turtle_hit.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.3", "rev": 20261003085248}
   }
 }
