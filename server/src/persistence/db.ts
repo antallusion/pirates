@@ -49,11 +49,13 @@ const MIGRATIONS: string[] = [
    )`,
 ];
 
-/** Columns added to `accounts` after the first release (e-mail sign-in). */
+/** Columns added to `accounts` after the first release (e-mail sign-in; the doubloons of the premium shop, which the
+ *  database itself keeps from going below nought). */
 const ACCOUNT_COLUMNS: [string, string][] = [
   ['email', 'TEXT'],
   ['pass_hash', 'TEXT'],
   ['email_verified', 'INTEGER NOT NULL DEFAULT 0'],
+  ['doubloons', 'INTEGER NOT NULL DEFAULT 0 CHECK (doubloons >= 0)'],
 ];
 
 export interface AccountRow {
@@ -86,6 +88,13 @@ export interface Db {
   setKv(key: string, value: unknown): void;
   ledger(accountId: number, kind: string, amount: number, detail: string): void;
   ledgerFlows(sinceMs: number): { kind: string; inflow: number; outflow: number; n: number }[];
+  // the premium shop's doubloons (docs/01 P7): the account's, not a captain's; every change also a ledger row
+  doubloons(accountId: number): number;
+  /** Moves the balance by `delta` unless it would go below nought (checked in the one statement that writes it): the
+   *  new balance, or null when refused (too few, or no such account). */
+  addDoubloons(accountId: number, delta: number): number | null;
+  /** Whether the account's ledger holds a doubloons row of this kind and reference (a payment is credited once). */
+  doubloonRef(accountId: number, kind: string, ref: string): boolean;
   silverHoldings(): { account_id: number; gold: number; bank: number }[];
   transaction(fn: () => void): void;
   // e-mail and OAuth sign-in
@@ -217,6 +226,22 @@ export class Database implements Db {
   // ---------------------------------------------------------------- economy audit trail
   ledger(accountId: number, kind: string, amount: number, detail: string): void {
     this.db.prepare('INSERT INTO ledger (account_id, kind, amount, detail, at) VALUES (?, ?, ?, ?, ?)').run(accountId, kind, Math.round(amount), detail, Date.now());
+  }
+
+  // ---------------------------------------------------------------- doubloons
+  doubloons(accountId: number): number {
+    const r = this.db.prepare('SELECT doubloons FROM accounts WHERE id = ?').get(accountId) as { doubloons: number } | undefined;
+    return Number(r?.doubloons ?? 0);
+  }
+
+  addDoubloons(accountId: number, delta: number): number | null {
+    const d = Math.trunc(delta);
+    const r = this.db.prepare('UPDATE accounts SET doubloons = doubloons + ? WHERE id = ? AND doubloons + ? >= 0').run(d, accountId, d);
+    return Number(r.changes) > 0 ? this.doubloons(accountId) : null;
+  }
+
+  doubloonRef(accountId: number, kind: string, ref: string): boolean {
+    return !!this.db.prepare('SELECT 1 FROM ledger WHERE account_id = ? AND kind = ? AND detail = ? LIMIT 1').get(accountId, kind, ref);
   }
 
   /** Inflow and outflow per ledger kind since `sinceMs` (epoch ms). */

@@ -93,6 +93,7 @@ import { renderAway } from './ui/renown.ts';
 import { RecruitWindow } from './ui/recruit.ts';
 import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { ThroneWindow } from './ui/throne.ts'; // docs/19 E1–E3, E18
+import { PremiumWindow } from './ui/premium.ts'; // the premium shop (owner, 2026-10-03)
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
@@ -101,7 +102,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -268,6 +269,12 @@ function openThrone(tab?: string): void {
 }
 heroWindow.onThrone = () => openThrone();
 hud.onThrone = () => openThrone();
+// The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
+const premiumWindow = new PremiumWindow((m) => net.send(m));
+function openShop(topup = false): void {
+  premiumWindow.open(topup);
+  openModal('shop');
+}
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
   puzzleWindow.open();
@@ -962,6 +969,10 @@ function onMessage(m: ServerMsg): void {
     case 'tame':
       if (modal === 'tame') refreshModal();
       break;
+    case 'premium':
+    case 'doubloons':
+      if (modal === 'shop') refreshModal();
+      break;
     case 'lairs':
       if (modal === 'map') worldMap.draw(state);
       if (modal === 'base') refreshModal();
@@ -1240,6 +1251,9 @@ function renderModal(root: HTMLElement): void {
     case 'throne':
       throneWindow.render(root, state);
       break;
+    case 'shop':
+      premiumWindow.render(root, state);
+      break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
       break;
@@ -1320,6 +1334,7 @@ function openMenuItem(m: MenuItem): void {
   } else if (m === 'base') openBase();
   else if (m === 'hero') openHero();
   else if (m === 'throne') openThrone();
+  else if (m === 'shop') openShop();
   else openModal(m);
 }
 
@@ -2495,4 +2510,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : openModal(m)), throne: (tab?: string) => openThrone(tab), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand };

@@ -195,7 +195,9 @@ export function sellBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   return null;
 }
 
-function setShip(game: Game, s: PlayerSession, loadout: ShipLoadout, hullFrac: number): void {
+/** Her ship becomes this hull (a launch, a berth swapped, a premium hull bought): sound sails and rudder, the crew she
+ *  has hammocks for. */
+export function setShip(game: Game, s: PlayerSession, loadout: ShipLoadout, hullFrac: number): void {
   const ship = s.ship!;
   const p = s.profile!;
   ship.loadout = loadout;

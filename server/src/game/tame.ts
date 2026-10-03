@@ -5,7 +5,7 @@
 // on the stacks she brings to a battle; the beaten who follow her after a fight won; the pen of her island that keeps
 // those beyond her slots; the tamers of some ports who buy and sell them. Every roll here is on this system's own Rng.
 
-import { UNITS } from '../../../shared/src/data/army.ts';
+import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEAST_PLURAL, isCreature } from '../../../shared/src/data/bestiary.ts';
 import type { CreatureId } from '../../../shared/src/data/bestiary.ts';
@@ -341,12 +341,13 @@ export function release(game: Game, s: PlayerSession, u: UnitId, n: number): str
 
 /** The offer of the beaten after a fight won (docs/18 #36): of their largest kind that may serve her, the share by
  *  her might over theirs, her Leadership, her path and her crew's morale, as her room goes (and her pen's). `rule`:
- *  'never' (a grotto's, a guardian's, a legend), 'deep' (the drowned and the Choir only with their own). */
+ *  'never' (a grotto's, a guardian's, a legend), 'deep' (the drowned and the Choir only with their own). A premium kind
+ *  never follows her: it is had only from the shop. */
 export function captureOffer(game: Game, s: PlayerSession, beaten: readonly ArmyStack[], ratio: number, rule: 'yes' | 'deep' | 'never'): CaptureOffer | undefined {
   if (rule === 'never') return undefined;
   const ship = s.ship!, p = s.profile!;
   const deepOk = keepsDeep(s) || p.captain === 'drowned';
-  const kinds = beaten.filter((x) => x.n > 0 && UNITS[x.u]?.beast && !UNITS[x.u].legend && (peopleOf(x.u) !== 'deep' || deepOk) && !(rule === 'deep' && !deepOk)).sort((a, b) => b.n * UNITS[b.u].cost - a.n * UNITS[a.u].cost);
+  const kinds = beaten.filter((x) => x.n > 0 && UNITS[x.u]?.beast && !UNITS[x.u].legend && !isPremiumUnit(x.u) && (peopleOf(x.u) !== 'deep' || deepOk) && !(rule === 'deep' && !deepOk)).sort((a, b) => b.n * UNITS[b.u].cost - a.n * UNITS[a.u].cost);
   const best = kinds[0];
   if (!best) return undefined;
   const leadership = rankOf(heroOf(p).skills, 'leadership');

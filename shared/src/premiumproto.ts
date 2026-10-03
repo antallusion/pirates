@@ -1,0 +1,54 @@
+// The wire of the premium shop (owner, 2026-10-03; docs/01 P7): her account's doubloons — bought with money only —
+// and the hulls and creatures they buy. Kept apart from protocol.ts, which only takes these unions in.
+
+import type { UnitId } from './data/army.ts';
+import type { ShipClassId } from './data/ships.ts';
+
+/** Why a card's Buy is shut (the window says it in her language): too few doubloons; a hull is delivered only in port;
+ *  she sails one already; the yard has her on the ways; her level is short of the hull's; every berth taken; no free
+ *  slot in the army for a new kind; no hammocks for them; in a fight; the deep's own serve only a captain who keeps
+ *  the deep. */
+export type PremiumWhy = 'poor' | 'port' | 'yours' | 'refit' | 'level' | 'berths' | 'slot' | 'room' | 'fight' | 'deep';
+
+export interface PremiumShipCard {
+  id: ShipClassId;
+  price: number;
+  /** The line on her card: English, Russian. */
+  note: [string, string];
+  /** The creatures that come aboard with her. */
+  beasts: { u: UnitId; n: number }[];
+  /** The captain's level her class asks (canon D12). */
+  lv: number;
+  why: PremiumWhy | null;
+}
+
+export interface PremiumUnitCard {
+  id: UnitId;
+  price: number;
+  /** How many come in one purchase. */
+  n: number;
+  note: [string, string];
+  why: PremiumWhy | null;
+}
+
+export interface PremiumView {
+  /** Her account's doubloons. */
+  balance: number;
+  ships: PremiumShipCard[];
+  units: PremiumUnitCard[];
+  /** The port she lies in (a hull is delivered to its quay), or null at sea. */
+  port: string | null;
+  /** Whether the top-up takes payments yet (not before a payment provider is wired in). */
+  pay: boolean;
+}
+
+export type PremiumClientMsg =
+  | { t: 'premium'; action: 'view' }
+  | { t: 'premium'; action: 'buy_ship'; id: ShipClassId }
+  | { t: 'premium'; action: 'buy_unit'; id: UnitId };
+
+export type PremiumServerMsg =
+  /** The shop as she sees it now. */
+  | { t: 'premium'; view: PremiumView }
+  /** Her account's doubloons: on coming aboard and after every change. */
+  | { t: 'doubloons'; n: number };

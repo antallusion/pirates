@@ -54,6 +54,9 @@ const MIGRATIONS = [
      kind TEXT NOT NULL,
      expires BIGINT NOT NULL
    )`,
+  // The premium shop's doubloons (docs/01 P7): the account's, never below nought.
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS doubloons BIGINT NOT NULL DEFAULT 0 CHECK (doubloons >= 0)`,
+  `CREATE INDEX IF NOT EXISTS ledger_doubloons ON ledger (account_id) WHERE kind LIKE 'doubloons%'`,
 ];
 
 const BUCKET_MS = 60_000;
@@ -72,6 +75,9 @@ export class PgDatabase implements Db {
   private byEmail = new Map<string, AccountRow>();
   private oauth = new Map<string, number>();
   private authTokens = new Map<string, { account: number; kind: string; expires: number }>();
+  /** Each account's doubloons, and the references of its doubloons ledger rows (`account:kind:ref`). */
+  private balances = new Map<number, number>();
+  private doubloonRefs = new Set<string>();
   private captains = new Map<number, CaptainRow & { gold: number; bank: number }>();
   private kv = new Map<string, string>();
   private buckets = new Map<number, Map<string, { inflow: number; outflow: number; n: number }>>();
@@ -99,8 +105,12 @@ export class PgDatabase implements Db {
   }
 
   private async preload(): Promise<void> {
-    const acc = await this.client.query('SELECT id, name, token_hash, email, pass_hash, email_verified FROM accounts');
-    for (const r of acc.rows) this.indexAccount({ id: Number(r.id), name: String(r.name), token_hash: String(r.token_hash), email: (r.email as string | null) ?? null, pass_hash: (r.pass_hash as string | null) ?? null, email_verified: !!r.email_verified });
+    const acc = await this.client.query('SELECT id, name, token_hash, email, pass_hash, email_verified, doubloons FROM accounts');
+    for (const r of acc.rows) {
+      this.indexAccount({ id: Number(r.id), name: String(r.name), token_hash: String(r.token_hash), email: (r.email as string | null) ?? null, pass_hash: (r.pass_hash as string | null) ?? null, email_verified: !!r.email_verified });
+      this.balances.set(Number(r.id), Number(r.doubloons ?? 0));
+    }
+    for (const r of (await this.client.query(`SELECT account_id, kind, detail FROM ledger WHERE kind LIKE 'doubloons%'`)).rows) this.doubloonRefs.add(`${r.account_id}:${r.kind}:${r.detail}`);
     for (const r of (await this.client.query('SELECT provider, subject, account_id FROM oauth_links')).rows) this.oauth.set(`${r.provider}:${r.subject}`, Number(r.account_id));
     for (const r of (await this.client.query('SELECT token_hash, account_id, kind, expires FROM auth_tokens WHERE expires > $1', [Date.now()])).rows) {
       this.authTokens.set(String(r.token_hash), { account: Number(r.account_id), kind: String(r.kind), expires: Number(r.expires) });
@@ -257,6 +267,7 @@ export class PgDatabase implements Db {
     const id = this.nextId++;
     const now = Date.now();
     this.indexAccount({ id, name, token_hash: tokenHash });
+    this.balances.set(id, 0);
     this.write('INSERT INTO accounts (id, name, token_hash, created_at, last_seen) VALUES ($1, $2, $3, $4, $5)', [id, name, tokenHash, now, now]);
     return id;
   }
@@ -307,7 +318,29 @@ export class PgDatabase implements Db {
     const at = Date.now();
     const a = Math.round(amount);
     this.bucket(Math.floor(at / BUCKET_MS), kind, a > 0 ? a : 0, a < 0 ? -a : 0, 1);
+    if (kind.startsWith('doubloons')) this.doubloonRefs.add(`${accountId}:${kind}:${detail}`);
     this.write('INSERT INTO ledger (account_id, kind, amount, detail, at) VALUES ($1, $2, $3, $4, $5)', [accountId, kind, a, detail, at]);
+  }
+
+  // ---------------------------------------------------------------- doubloons
+  doubloons(accountId: number): number {
+    return this.balances.get(accountId) ?? 0;
+  }
+
+  /** Checked against the balance held here (one process owns an account at a time); the row moves by the delta, so a
+   *  write that lands late never overwrites another's. */
+  addDoubloons(accountId: number, delta: number): number | null {
+    if (!this.accounts.has(accountId)) return null;
+    const d = Math.trunc(delta);
+    const next = (this.balances.get(accountId) ?? 0) + d;
+    if (next < 0) return null;
+    this.balances.set(accountId, next);
+    this.write('UPDATE accounts SET doubloons = doubloons + $1 WHERE id = $2', [d, accountId]);
+    return next;
+  }
+
+  doubloonRef(accountId: number, kind: string, ref: string): boolean {
+    return this.doubloonRefs.has(`${accountId}:${kind}:${ref}`);
   }
 
   ledgerFlows(sinceMs: number): { kind: string; inflow: number; outflow: number; n: number }[] {

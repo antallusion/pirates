@@ -7,7 +7,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export type MenuItem = 'map' | 'journal' | 'ship' | 'crew' | 'talents' | 'company' | 'help' | 'options' | 'chat' | 'base' | 'hero' | 'throne';
+export type MenuItem = 'map' | 'journal' | 'ship' | 'crew' | 'talents' | 'company' | 'shop' | 'help' | 'options' | 'chat' | 'base' | 'hero' | 'throne';
 export const MENU_ITEMS: { id: MenuItem; glyph: string; art?: string }[] = [
   { id: 'map', glyph: '🗺' },
   { id: 'journal', glyph: '📜', art: 'tab_letters' },
@@ -16,6 +16,8 @@ export const MENU_ITEMS: { id: MenuItem; glyph: string; art?: string }[] = [
   { id: 'hero', glyph: '⚔', art: 'bt_captain' },
   { id: 'talents', glyph: '✦' },
   { id: 'company', glyph: '⚑' },
+  // The premium shop (owner, 2026-10-03): the doubloon's coin.
+  { id: 'shop', glyph: '◉', art: 'doubloon' },
   { id: 'chat', glyph: '✉' },
   { id: 'help', glyph: '?' },
   { id: 'options', glyph: '⚙' },

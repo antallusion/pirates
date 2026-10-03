@@ -31,6 +31,7 @@ import type { ShipStats } from '../../shared/src/sim/shipstats.ts';
 import { currentAt } from '../../shared/src/world/worldgen.ts';
 import { placeName } from './ui/maps.ts';
 import type { RegionId } from '../../shared/src/world/regions.ts';
+import type { PremiumView } from '../../shared/src/premiumproto.ts';
 
 export interface ShipSample {
   t: number;
@@ -161,6 +162,9 @@ export class ClientState {
   markDone = new Set<number>();
   markBusy: { id: number; until: number; total: number } | null = null;
   tame: TameView | null = null;
+  /** The premium shop (owner, 2026-10-03): her account's doubloons, and the shop as she last saw it. */
+  doubloons = 0;
+  premium: PremiumView | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
   /** One's own caravans (docs/12 P8). */
@@ -457,6 +461,14 @@ export class ClientState {
         break;
       case 'tame':
         this.tame = m.view;
+        break;
+      case 'doubloons':
+        this.doubloons = m.n;
+        if (this.premium) this.premium.balance = m.n;
+        break;
+      case 'premium':
+        this.premium = m.view;
+        this.doubloons = m.view.balance;
         break;
       case 'puzzle':
         this.puzzle = m.view;

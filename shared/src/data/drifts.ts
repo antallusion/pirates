@@ -11,7 +11,7 @@
 // dice on its own Rng, and the client, the tests and the balance tools read the same numbers.
 
 import type { CaptainId } from './captains.ts';
-import { UNITS } from './army.ts';
+import { UNITS, isPremiumUnit } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
 import { advHour, advLevelXp } from './advmap.ts';
 import { CREATURE_IDS, isCreature } from './bestiary.ts';
@@ -225,7 +225,8 @@ export const isDriftKind = (k: string): k is DriftKind => (DRIFT_KINDS as string
 export function driftKindsFor(level: number, region: RegionId): [DriftKind, number][] {
   return DRIFT_KINDS.filter((k) => {
     const d = DRIFTS[k];
-    return !d.legend && level >= d.lv[0] && level <= d.lv[1] && (!d.regions || d.regions.includes(region));
+    // A premium kind is had only from the shop (shared/src/data/premium.ts): no drift of it is ever met.
+    return !d.legend && !isPremiumUnit(d.u) && level >= d.lv[0] && level <= d.lv[1] && (!d.regions || d.regions.includes(region));
   }).map((k) => [k, DRIFTS[k].weight]);
 }
 
@@ -411,11 +412,12 @@ export function tamerAsks(u: UnitId): number {
 }
 
 /** The tamer's pens this week: three kinds of the creatures of the waters about her port (tiers by its level), each with
- *  half a creature dwelling's week waiting — on her own dice of the port and the week. */
+ *  half a creature dwelling's week waiting — on her own dice of the port and the week. Never a premium kind (the shop's
+ *  alone). */
 export function tamerStock(portId: string, level: number, week: number, deep: boolean): { u: CreatureId; n: number }[] {
   const L = Math.max(1, Math.min(10, level));
   const top = Math.max(2, Math.min(7, Math.ceil(L * 0.7)));
-  const pool = CREATURE_IDS.filter((u) => !UNITS[u].legend && UNITS[u].tier <= top && (deep || peopleOf(u) !== 'deep'));
+  const pool = CREATURE_IDS.filter((u) => !UNITS[u].legend && !isPremiumUnit(u) && UNITS[u].tier <= top && (deep || peopleOf(u) !== 'deep'));
   const rng = new Rng((hashString(`tamer:${portId}:${week}`) ^ 0x7a3e) >>> 0);
   const out: { u: CreatureId; n: number }[] = [];
   for (let k = 0; k < 3 && pool.length; k++) {

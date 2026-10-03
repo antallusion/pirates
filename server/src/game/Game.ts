@@ -225,6 +225,7 @@ import { gloryNews, stepTrials, throneMessage } from './throne.ts'; // docs/19 E
 import { seamarkMessage, stepSeaMarks } from './seamarks.ts'; // the dense sea's marks at work
 import { findMessage, stepSeaFinds } from './seafinds.ts'; // docs/19 D5: the sea's small things, and the day's caps
 import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the creatures roaming the sea
+import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtleCollide, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
@@ -2680,6 +2681,7 @@ export class Game {
     if (msg.t === 'seamark') return seamarkMessage(this, s, msg);
     if (msg.t === 'seafind') return findMessage(this, s, msg);
     if (msg.t === 'roam') return roamMessage(this, s, msg); // docs/19 D7
+    if (msg.t === 'premium') return premiumMessage(this, s, msg); // the premium shop (owner, 2026-10-03)
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);
@@ -3754,6 +3756,7 @@ export class Game {
     this.sendTo(s, { t: 'holdings', ...holdingsFor(this, s) });
     sendRenown(this, s, true);
     sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
+    sendBalance(this, s); // her account's doubloons (the premium shop)
     if (away) this.sendTo(s, { t: 'away', view: away });
   }
 

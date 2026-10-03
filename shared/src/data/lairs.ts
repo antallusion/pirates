@@ -11,7 +11,7 @@
 import { DAY_LENGTH_SEC } from '../constants.ts';
 import { advHour, advLevelXp, GUARD_LOSS, GUARD_SIZE, GUARD_SIZES, guardBaseMight } from './advmap.ts';
 import type { GuardSize } from './advmap.ts';
-import { UNITS, armyPower } from './army.ts';
+import { UNITS, armyPower, isPremiumUnit } from './army.ts';
 import type { ArmyStack } from './army.ts';
 import { BEAST_RES, LAND_RES_DEF } from './bestiary.ts';
 import type { BeastId, LandRes } from './bestiary.ts';
@@ -201,11 +201,12 @@ function nearestCal(kind: LairKind, L: number): number {
   return best;
 }
 
-/** The kinds of lair an island of a kind and a level keeps, for each role. */
+/** The kinds of lair an island of a kind and a level keeps, for each role (none that would breed a premium kind: its
+ *  brood, its dwelling and its eggs would hand out what only the shop sells). */
 export function lairKindsFor(type: IsleType, level: number, role: LairRole): LairKind[] {
   return LAIR_KINDS.filter((k) => {
     const d = LAIRS[k];
-    return d.role === role && d.types.includes(type) && level >= d.lv[0] && level <= d.lv[1];
+    return d.role === role && !d.mix.some(([u]) => isPremiumUnit(u)) && d.types.includes(type) && level >= d.lv[0] && level <= d.lv[1];
   });
 }
 
