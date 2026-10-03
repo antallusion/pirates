@@ -1571,6 +1571,10 @@
     "unit.bravo":                              { "local": "units/bravo.webp", "remote": "hf_20261003_113827_gpt-anim_bravo.png", "job": "gpt-anim_bravo", "fit": "sheet:anim_bravo.0", "rev": 20261003113827},
     "unit.bravo_b":                            { "local": "units/bravo_b.webp", "remote": "hf_20261003_113827_gpt-anim_bravo.png", "job": "gpt-anim_bravo", "fit": "sheet:anim_bravo.1", "rev": 20261003113827},
     "unit.bravo_atk":                          { "local": "units/bravo_atk.webp", "remote": "hf_20261003_113827_gpt-anim_bravo.png", "job": "gpt-anim_bravo", "fit": "sheet:anim_bravo.2", "rev": 20261003113827},
-    "unit.bravo_hit":                          { "local": "units/bravo_hit.webp", "remote": "hf_20261003_113827_gpt-anim_bravo.png", "job": "gpt-anim_bravo", "fit": "sheet:anim_bravo.3", "rev": 20261003113827}
+    "unit.bravo_hit":                          { "local": "units/bravo_hit.webp", "remote": "hf_20261003_113827_gpt-anim_bravo.png", "job": "gpt-anim_bravo", "fit": "sheet:anim_bravo.3", "rev": 20261003113827},
+    "unit.duelist":                            { "local": "units/duelist.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.0", "rev": 20261003114313},
+    "unit.duelist_b":                          { "local": "units/duelist_b.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.1", "rev": 20261003114313},
+    "unit.duelist_atk":                        { "local": "units/duelist_atk.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.2", "rev": 20261003114313},
+    "unit.duelist_hit":                        { "local": "units/duelist_hit.webp", "remote": "hf_20261003_114313_gpt-anim_duelist.png", "job": "gpt-anim_duelist", "fit": "sheet:anim_duelist.3", "rev": 20261003114313}
   }
 }
