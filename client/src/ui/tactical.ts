@@ -41,6 +41,8 @@ import { placeName } from './maps.ts';
 import { specialName, specialNote, unitArt, unitIcon, unitName, unitNote } from './army.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
+import { SHIP_BEAST_DEFS, isShipBeast } from '../../../shared/src/data/shipbeasts.ts'; // the premium hulls' own (docs/02 §1.A.9)
+import { deckArt } from '../../../shared/src/data/fleet.ts';
 
 const L = dict(EN, RU);
 const LL = dict(LEN, LRU);
@@ -215,8 +217,9 @@ const FIGURE_SIZE: Record<string, number> = {
   // The great beasts (owner, 2026-10-03).
   crab_queen: 1.4, cave_wyrm: 1.5, mangrove_hydra: 1.6, ape_king: 1.75, storm_roc: 1.65,
 };
-// docs/18 VII: the kinds still in the painter's queue keep their height in shared/src/data/unitart.ts.
-const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? FIGURES[s.unit]?.size ?? 1.28) * 1.22;
+// docs/18 VII: the kinds still in the painter's queue keep their height in shared/src/data/unitart.ts; the premium
+// hulls' own kinds theirs in shipbeasts.ts.
+const figureSize = (s: TacStackView): number => (FIGURE_SIZE[s.kind === 'officer' ? 'officer' : s.unit] ?? FIGURES[s.unit]?.size ?? (s.kind !== 'officer' && s.unit && isShipBeast(s.unit) ? SHIP_BEAST_DEFS[s.unit].fig : undefined) ?? 1.28) * 1.22;
 /** Where the feet stand across a figure (a musket held out to one side does not move the man off his hex): the middle
  *  of what is painted in its lowest tenth, found once per picture. */
 const footCache = new Map<string, number>();
@@ -490,7 +493,7 @@ export class TacticalPanel {
       } else if (e.k === 'shot') {
         const s = at(hexOf(e.s));
         const shooter = (v.stacks.find((x) => x.id === e.s) ?? was.stacks.find((x) => x.id === e.s))?.unit ?? '';
-        const ms = MISSILE_OF[shooter] ?? 'part.ms_ball';
+        const ms = MISSILE_OF[shooter] ?? (isShipBeast(shooter) ? SHIP_BEAST_DEFS[shooter].missile : undefined) ?? 'part.ms_ball';
         const fly = s && c && sprite(ms) ? MISSILE_MS : 0;
         if (fly) this.missiles.push({ id: ms, x0: s!.x, y0: s!.y - w * 0.55, x1: c!.x, y1: c!.y - w * 0.4, t0: t + 80, arc: THROWN.has(ms) ? Math.hypot(c!.x - s!.x, c!.y - s!.y) * 0.25 : 0 });
         if (s) this.bursts.push({ id: 'part.muzzle', x: s.x + (c && c.x < s.x ? -w * 0.45 : w * 0.45), y: s.y - w * 0.55, t0: t, size: w * 0.9 });
@@ -1125,7 +1128,7 @@ export class TacticalPanel {
     const deck = (i: number | null) => i !== null && cells[i] !== '~' && cells[i] !== '#' && cells[i] !== '=';
     // Painted decks (owner, 2026-10-02): each side's own hull's deck — the boarders' on the left, the other's mirrored on
     // the right — over the painted night sea; the brig's stands in for a hull not painted yet.
-    const deckOf = (x: 0 | 1) => sprite(`bg.deck_${v.heroes[x].hull ?? 'brig'}`) ?? sprite('bg.deck_brig') ?? DECK_HULLS.map((h) => sprite(`bg.deck_${h}`)).find(Boolean) ?? null;
+    const deckOf = (x: 0 | 1) => sprite(deckArt(v.heroes[x].hull ?? 'brig')) ?? sprite('bg.deck_brig') ?? DECK_HULLS.map((h) => sprite(`bg.deck_${h}`)).find(Boolean) ?? null;
     const decks = [deckOf(0), deckOf(1)];
     const seaArt = sprite('bg.battle_sea');
     this.painted = !!(decks[0] && decks[1] && seaArt);

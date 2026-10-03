@@ -10,6 +10,7 @@ import type { RoamView } from '../../shared/src/roamproto.ts';
 import { skillSeaMods } from '../../shared/src/data/hero.ts';
 import type { OmenId } from '../../shared/src/data/omens.ts';
 import { regattaSail } from '../../shared/src/data/regatta.ts';
+import { SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { setNemeses } from './ui/nemesis.ts';
 import type { IslesView } from '../../shared/src/protocol.ts';
 import type { DwellView, MineView, WeekView } from '../../shared/src/h3proto.ts';
@@ -668,7 +669,7 @@ export class ClientState {
       rig: st.rig, maxSpeed: st.maxSpeed, accel: st.accel, turnRate: st.turnRate, noGoDeg: st.noGoDeg, sailChangeRate: st.sailChangeRate,
       currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
       loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: this.night() ? 1 + st.nightSpeed : 1,
-      personalWind: false, weatherly: this.self.loadout.classId === 'schooner', sweeps: this.self.loadout.classId === 'xebec',
+      personalWind: false, weatherly: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'weatherly', sweeps: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'sweeps',
       talent: sailTalents(st),
     };
     // A racer sails as the regatta lends (docs/12 P10 #5), as the server does.

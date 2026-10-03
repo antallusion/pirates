@@ -21,6 +21,7 @@ import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
 import { dec1, dec2, esc, fmt, icon, money, xpBadge } from './dom.ts';
 import { trophyCard } from './surrender.ts';
+import { giftLine } from './premium.ts'; // a premium hull's gift (docs/02 §1.A.9)
 import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
 
 const LC = dict(CEN, CRU);
@@ -129,7 +130,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
     `<div class="stat-tile">${icon(pic, '', flip ? 'stat-ico flip' : 'stat-ico')}<span class="stat-l">${esc(label)}</span><b class="stat-v">${value}</b></div>`;
   const hasSale = cargo.some(([g]) => self.appraisal?.[g as GoodId]);
   const used = cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
-  root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.trophy ? placeName(self.loadout.name) : self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div></div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}${openLook ? `<button class="btn btn-small" data-open-look>${icon('faction_free', '', 'ico-sm')}${esc(L('ship.look'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
+  root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.trophy ? placeName(self.loadout.name) : self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div>${giftLine(cls.id)}</div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}${openLook ? `<button class="btn btn-small" data-open-look>${icon('faction_free', '', 'ico-sm')}${esc(L('ship.look'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
     <div class="modal-body"><div class="stat-grid">
       ${tile('stat_sails', L('ship.speed'), esc(L('ship.speedVal', { v: dec1(st.maxSpeed) })))}
       ${tile('menu_ship', L('ship.turn'), esc(L('ship.turnVal', { v: dec1((st.turnRate * 180) / Math.PI) })))}

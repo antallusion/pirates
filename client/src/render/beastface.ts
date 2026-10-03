@@ -5,6 +5,7 @@
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { BEAST_TINT } from '../../../shared/src/data/bestiary.ts';
+import { isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
 import { assetUrl } from '../assets.ts';
 
 export interface BeastFace {
@@ -15,10 +16,11 @@ export interface BeastFace {
   fig: boolean;
 }
 
-/** The face a kind shows: a creature's own figure once painted; anything else its own art. */
+/** The face a kind shows: a creature's own figure once painted (a premium hull's own kind's, or the figure that stands
+ *  in for it, shared/src/data/fleet.ts); anything else its own art. */
 export function beastFace(u: string): BeastFace {
   const def = UNITS[u as UnitId];
-  if (def?.beast && assetUrl(`unit.${u}`)) return { id: `unit.${u}`, fig: true };
+  if ((def?.beast || isShipBeast(u)) && assetUrl(`unit.${u}`)) return { id: `unit.${u}`, fig: true };
   return { id: def?.art ?? 'icon.prof_sailor', tint: BEAST_TINT[u as keyof typeof BEAST_TINT], fig: false };
 }
 

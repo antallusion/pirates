@@ -39,7 +39,15 @@ export const LANDING_SEC = 600;
 export const POINT_LIMIT = 60;
 const LANDING_R = 400;
 
-export const FLEET_POINTS: Partial<Record<ShipClassId, number>> = { sloop: 1, cutter: 1, schooner: 2, brigantine: 2, fluyt: 2, brig: 3, frigate: 5, galleon: 6, ghost_ship: 7, man_o_war: 10, xebec: 2, bomb_ketch: 3 };
+export const FLEET_POINTS: Partial<Record<ShipClassId, number>> = {
+  sloop: 1, cutter: 1, schooner: 2, brigantine: 2, fluyt: 2, brig: 3, frigate: 5, galleon: 6, ghost_ship: 7, man_o_war: 10, xebec: 2, bomb_ketch: 3,
+  // The fleet of eighty (docs/02 §1.A.9): the warships by their weight of guns, the great haulers by their bulk; the rest
+  // count their tier, as any hull not named here does.
+  gunboat: 1, war_galley: 2, corvette: 4, razee: 7, ship_of_the_line: 10, dragon_junk: 4, phantom_brig: 3, black_corsair: 6, iron_ram: 7, thunderer: 7,
+  storm_reaver: 6, wyvern_galleass: 10, kraken_hunter: 10, crimson_tide: 11, sun_galleon: 10,
+  east_indiaman: 5, golden_carrack: 5, ledger_galleon: 5, plate_galleon: 6, turtle_barge: 6, menagerie: 6, coral_hulk: 6, treasure_junk: 6,
+  great_galleon: 7, leviathan_ark: 7, whale_mother: 7, drowned_cathedral: 8, pirate_haven: 8, iron_whale: 8, floating_fortress: 9,
+};
 
 export interface Siege {
   attacker: Owner;

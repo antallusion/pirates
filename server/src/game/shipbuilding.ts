@@ -185,6 +185,8 @@ export function sellBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   const b = p.berths[index];
   if (!b || b.port !== port.id) return 'No such ship berthed here';
   if (b.loadout.legendary) return 'No yard would buy her, and no captain should sell her';
+  // Doubloons are never turned into silver (docs/01 P7): no yard buys a hull bought with them.
+  if (SHIP_CLASSES[b.loadout.classId]?.premium) return 'No yard buys a hull bought with doubloons';
   const back = takeGearBack(p, b.loadout); // her gear comes ashore first
   if (back) return back;
   const v = Math.round(SHIP_CLASSES[b.loadout.classId].price * 0.4 * Math.max(0.3, b.hull));

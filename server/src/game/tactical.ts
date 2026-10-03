@@ -6,6 +6,7 @@
 // victor's captain learnt from it.
 
 import { creaturesWon, mixedOf, rankArmy } from './tame.ts'; // docs/18 IV
+import { deckGift } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
 import type { OfficerRole } from '../../../shared/src/data/crew.ts';
 import { armyCost, hasSpecial, UNITS } from '../../../shared/src/data/army.ts';
@@ -119,6 +120,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
     fire: deck.fire,
     hero: heroInput(game, ship), // docs/17 H2
     mixed: mixedOf(s?.profile, ship.army), // docs/18 #38: the peoples of a mixed army
+    ...(deckGift(ship) ? { gift: deckGift(ship) } : {}), // a premium hull's deck gift (docs/02 §1.A.9)
     ...(heroFace(game, ship) ? { face: heroFace(game, ship) } : {}), // docs/18 item 8: a named captain's own face
   };
 }

@@ -44,7 +44,7 @@ import { hireTrade, recruitCost, tavernOf } from './crew.ts';
 import { ESCORT_OFFERS } from './fleet.ts';
 import { eventFavor, payOptions, questOffers, shipLevelOfQuest } from './quests.ts';
 import { todaysElite } from './elite.ts';
-import { woodAvailable } from './shipbuilding.ts';
+import { MAX_BERTHS, woodAvailable } from './shipbuilding.ts';
 import { PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS, carvedAt } from '../../../shared/src/data/shipbuild.ts';
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { CAPTAINS_HOUSES } from '../../../shared/src/data/quests.ts';
@@ -68,6 +68,7 @@ import { runBoard } from './traderuns.ts';
 import { auctionView } from './auction.ts';
 import { hearsayView } from './hearsay.ts';
 import { seaRepairView } from './searepair.ts';
+import { giftPriceMods } from './shipgifts.ts';
 
 export function hasLicence(p: Profile, faction: string, now: number): boolean {
   // A licence is void for anyone the law is hunting.
@@ -77,6 +78,8 @@ export function hasLicence(p: Profile, faction: string, now: number): boolean {
 export function priceMods(ship: ShipEntity, port: Port, p?: Profile, now = 0, game?: Game): PriceMods {
   const base = basePriceMods(ship, port, p, now);
   let mods = game && p ? talentPriceMods(game, ship, port, p, base) : base;
+  // A premium hull's trade (docs/02 §1.A.9): her goods dearer, cheaper or free of duty.
+  mods = giftPriceMods(ship, mods);
   // The Order's whaling licence (docs/12 P4): the catch of the hunt pays three tenths less duty in any port.
   if (p && mods.duty > 0 && hasLicence(p, 'harpoon', now)) {
     const goodSell = { ...(mods.goodSell ?? {}) };
@@ -513,17 +516,22 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   const needLv = captainLevelFor(levelRange(classId)[0]);
   if (s.profile!.level < needLv) return `Captain level ${needLv} is needed to command a ${def.name}`;
   if (ship.loadout.legendary) return 'Berth your legendary ship before you buy another hull';
-  const tradeIn = Math.round(shipValue(ship) * 0.6);
-  const cost = Math.max(0, def.price - tradeIn);
   const p = s.profile!;
+  // A hull bought for doubloons is never traded in for silver (docs/02 §1.A.9): she goes to a berth at this quay, her
+  // gear and her mount with her, and the yard's hull is paid in full.
+  const keep = !!ship.cls.premium;
+  if (keep && p.berths.length >= MAX_BERTHS) return `You already berth ${MAX_BERTHS} ships — sell or take one out first`;
+  const tradeIn = keep ? 0 : Math.round(shipValue(ship) * 0.6);
+  const cost = Math.max(0, def.price - tradeIn);
   if (p.gold < cost) return `Needs ${cost} silver after trade-in`;
-  const back = takeGearBack(p, ship.loadout); // the old hull's gear comes ashore into the locker
+  const back = keep ? null : takeGearBack(p, ship.loadout); // the old hull's gear comes ashore into the locker
   if (back) return back;
   const gun = defaultGunFor(def);
   const newLoadout: ShipLoadout = { classId, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {}, mount: def.fixedMount };
   p.gold -= cost;
+  if (keep) p.berths.push({ port: port.id, loadout: ship.loadout, hull: ship.hull / Math.max(1, ship.stats.hullMax) });
   // The old deck mount is sold back to the yard.
-  if (ship.loadout.mount) {
+  else if (ship.loadout.mount) {
     const back = Math.round(MOUNTS[ship.loadout.mount].price * 0.4);
     p.gold += back;
     game.db.ledger(s.accountId, 'mount_sold', back, ship.loadout.mount);

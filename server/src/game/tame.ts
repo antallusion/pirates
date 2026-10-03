@@ -426,6 +426,8 @@ export function tamerSell(game: Game, s: PlayerSession, u: UnitId, n: number): s
   if (!port) return 'No tamer in this port.';
   const ship = s.ship!;
   if (!UNITS[u]?.beast) return 'The tamer buys creatures, not men.';
+  // Doubloons are never turned into silver (docs/01 P7): what came for them (the shop's creatures, a premium hull's own
+  // kind) is not sold for coin.
   if (isPremiumUnit(u)) return 'The tamer will not buy the shop’s creatures: doubloons never turn into silver.';
   if (UNITS[u].legend) return 'Not even a tamer would put a price on a legend.';
   const have = ship.army.find((x) => x.u === u)?.n ?? 0;
