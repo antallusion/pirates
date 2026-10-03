@@ -1659,6 +1659,10 @@
     "unit.master_harpooner":                   { "local": "units/master_harpooner.webp", "remote": "hf_20261003_133116_gpt-anim_master_harpooner.png", "job": "gpt-anim_master_harpooner", "fit": "sheet:anim_master_harpooner.0", "rev": 20261003133116},
     "unit.master_harpooner_b":                 { "local": "units/master_harpooner_b.webp", "remote": "hf_20261003_133116_gpt-anim_master_harpooner.png", "job": "gpt-anim_master_harpooner", "fit": "sheet:anim_master_harpooner.1", "rev": 20261003133116},
     "unit.master_harpooner_atk":               { "local": "units/master_harpooner_atk.webp", "remote": "hf_20261003_133116_gpt-anim_master_harpooner.png", "job": "gpt-anim_master_harpooner", "fit": "sheet:anim_master_harpooner.2", "rev": 20261003133116},
-    "unit.master_harpooner_hit":               { "local": "units/master_harpooner_hit.webp", "remote": "hf_20261003_133116_gpt-anim_master_harpooner.png", "job": "gpt-anim_master_harpooner", "fit": "sheet:anim_master_harpooner.3", "rev": 20261003133116}
+    "unit.master_harpooner_hit":               { "local": "units/master_harpooner_hit.webp", "remote": "hf_20261003_133116_gpt-anim_master_harpooner.png", "job": "gpt-anim_master_harpooner", "fit": "sheet:anim_master_harpooner.3", "rev": 20261003133116},
+    "unit.harpooner":                          { "local": "units/harpooner.webp", "remote": "hf_20261003_133549_gpt-anim_harpooner.png", "job": "gpt-anim_harpooner", "fit": "sheet:anim_harpooner.0", "rev": 20261003133549},
+    "unit.harpooner_b":                        { "local": "units/harpooner_b.webp", "remote": "hf_20261003_133549_gpt-anim_harpooner.png", "job": "gpt-anim_harpooner", "fit": "sheet:anim_harpooner.1", "rev": 20261003133549},
+    "unit.harpooner_atk":                      { "local": "units/harpooner_atk.webp", "remote": "hf_20261003_133549_gpt-anim_harpooner.png", "job": "gpt-anim_harpooner", "fit": "sheet:anim_harpooner.2", "rev": 20261003133549},
+    "unit.harpooner_hit":                      { "local": "units/harpooner_hit.webp", "remote": "hf_20261003_133549_gpt-anim_harpooner.png", "job": "gpt-anim_harpooner", "fit": "sheet:anim_harpooner.3", "rev": 20261003133549}
   }
 }
