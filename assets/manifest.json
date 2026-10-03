@@ -2020,6 +2020,10 @@
     "bg.port_copperhook":                      { "local": "art/port_copperhook.webp", "remote": "hf_20261003_233330_gpt-bg.port_copperhook.png", "job": "gpt-bg.port_copperhook", "fit": "opaque:1920", "rev": 20261003233330},
     "ship.carrack":                            { "local": "ships/carrack.webp", "remote": "hf_20261003_233747_gpt-ships_7.png", "job": "gpt-ships_7", "fit": "sheet:ships_7.0", "rev": 20261003233747},
     "ship.silk_junk":                          { "local": "ships/silk_junk.webp", "remote": "hf_20261003_233747_gpt-ships_7.png", "job": "gpt-ships_7", "fit": "sheet:ships_7.1", "rev": 20261003233747},
-    "ship.pearl_schooner":                     { "local": "ships/pearl_schooner.webp", "remote": "hf_20261003_233747_gpt-ships_7.png", "job": "gpt-ships_7", "fit": "sheet:ships_7.2", "rev": 20261003233747}
+    "ship.pearl_schooner":                     { "local": "ships/pearl_schooner.webp", "remote": "hf_20261003_233747_gpt-ships_7.png", "job": "gpt-ships_7", "fit": "sheet:ships_7.2", "rev": 20261003233747},
+    "unit.cinder_salamander":                  { "local": "units/cinder_salamander.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.0", "rev": 20261003234105},
+    "unit.cinder_salamander_b":                { "local": "units/cinder_salamander_b.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.1", "rev": 20261003234105},
+    "unit.cinder_salamander_atk":              { "local": "units/cinder_salamander_atk.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.2", "rev": 20261003234105},
+    "unit.cinder_salamander_hit":              { "local": "units/cinder_salamander_hit.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.3", "rev": 20261003234105}
   }
 }
