@@ -1563,6 +1563,10 @@
     "fx.bt_lightning_0":                       { "local": "fx/bt_lightning_0.webp", "remote": "hf_20261003_112902_gpt-fx-bt_lightning.png", "job": "gpt-fx-bt_lightning", "fit": "fxrow:0", "rev": 20261003112902},
     "fx.bt_lightning_1":                       { "local": "fx/bt_lightning_1.webp", "remote": "hf_20261003_112902_gpt-fx-bt_lightning.png", "job": "gpt-fx-bt_lightning", "fit": "fxrow:1", "rev": 20261003112902},
     "fx.bt_lightning_2":                       { "local": "fx/bt_lightning_2.webp", "remote": "hf_20261003_112902_gpt-fx-bt_lightning.png", "job": "gpt-fx-bt_lightning", "fit": "fxrow:2", "rev": 20261003112902},
-    "fx.bt_lightning_3":                       { "local": "fx/bt_lightning_3.webp", "remote": "hf_20261003_112902_gpt-fx-bt_lightning.png", "job": "gpt-fx-bt_lightning", "fit": "fxrow:3", "rev": 20261003112902}
+    "fx.bt_lightning_3":                       { "local": "fx/bt_lightning_3.webp", "remote": "hf_20261003_112902_gpt-fx-bt_lightning.png", "job": "gpt-fx-bt_lightning", "fit": "fxrow:3", "rev": 20261003112902},
+    "unit.poisoner":                           { "local": "units/poisoner.webp", "remote": "hf_20261003_113350_gpt-anim_poisoner.png", "job": "gpt-anim_poisoner", "fit": "sheet:anim_poisoner.0", "rev": 20261003113350},
+    "unit.poisoner_b":                         { "local": "units/poisoner_b.webp", "remote": "hf_20261003_113350_gpt-anim_poisoner.png", "job": "gpt-anim_poisoner", "fit": "sheet:anim_poisoner.1", "rev": 20261003113350},
+    "unit.poisoner_atk":                       { "local": "units/poisoner_atk.webp", "remote": "hf_20261003_113350_gpt-anim_poisoner.png", "job": "gpt-anim_poisoner", "fit": "sheet:anim_poisoner.2", "rev": 20261003113350},
+    "unit.poisoner_hit":                       { "local": "units/poisoner_hit.webp", "remote": "hf_20261003_113350_gpt-anim_poisoner.png", "job": "gpt-anim_poisoner", "fit": "sheet:anim_poisoner.3", "rev": 20261003113350}
   }
 }
