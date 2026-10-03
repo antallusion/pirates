@@ -481,14 +481,16 @@ const filmWas = { tac: false, over: false, docked: true, storm: false, bosses: '
 const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', lookout: 'cut_lighthouse', dive: 'cut_wreck_dive', haul: null, tidal: null, turtle: null };
 /** The sea's world bosses, each the first time one rises near her. */
 const BOSS_FILM: Record<string, string> = { kraken: 'cut_kraken_boss', leviathan: 'cut_leviathan', lantern_maw: 'cut_lantern_maw', black_serpent: 'cut_serpent', abyss_eye: 'cut_abyss',
-  drowned_whale: 'cut_drowned_whale', hollow_admiral: 'cut_hollow_admiral', mother_of_wrecks: 'cut_mother_of_wrecks', storm_widow: 'cut_storm_widow', ancient_leviathan: 'cut_ancient_leviathan' };
+  drowned_whale: 'cut_drowned_whale', hollow_admiral: 'cut_hollow_admiral', mother_of_wrecks: 'cut_mother_of_wrecks', storm_widow: 'cut_storm_widow', ancient_leviathan: 'cut_ancient_leviathan',
+  old_moorings: 'cut_old_moorings', old_tithe: 'cut_old_tithe', fog_changeling: 'cut_fog_changeling', cinder_ray: 'cut_cinder_ray', drowned_prelate: 'cut_drowned_prelate', rime_twins: 'cut_rime_twins' };
 /** The land's creatures, each lair's kind the first time she fights at one (a legend's lair takes the legend's film). */
 const LAIR_FILM: Record<string, string> = { crab_beach: 'cut_crab_beach', gull_cliffs: 'cut_gull_cliffs', seal_rookery: 'cut_seal_rookery', shark_shallows: 'cut_shark_shallows',
   turtle_rocks: 'cut_turtle_rocks', serpent_marsh: 'cut_serpent_marsh', hermit_camp: 'cut_hermit_camp', tentacle_lagoon: 'cut_tentacle_lagoon', drowned_surf: 'cut_drowned_surf',
   choir_circle: 'cut_choir', serpent_grotto: 'cut_serpent', maw_pit: 'cut_lantern_maw', turtle_guardian: 'cut_ancient_turtle', leviathan_shoal: 'cut_leviathan',
   jaguar_den: 'cut_jaguar_den', ape_ridge: 'cut_ape_ridge', croc_mangroves: 'cut_croc_mangroves', bat_cave: 'cut_bat_cave', moray_reef: 'cut_moray_reef',
   albatross_rock: 'cut_albatross_rock', octopus_wreck: 'cut_octopus_wreck', crab_hollow: 'cut_crab_hollow', wyrm_gallery: 'cut_wyrm_gallery', hydra_pool: 'cut_hydra_pool',
-  ape_throne: 'cut_ape_throne', roc_eyrie: 'cut_roc_eyrie' };
+  ape_throne: 'cut_ape_throne', roc_eyrie: 'cut_roc_eyrie',
+  mire_mother: 'cut_mire_mother', cinder_salamander: 'cut_cinder_salamander', drowned_abbess: 'cut_drowned_abbess', walrus_tyrant: 'cut_walrus_tyrant' };
 /** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
 const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell', league: 'cut_league', free: 'cut_free' };
 /** The sea's legends each rise in their own film the first time she fights one. */
@@ -549,10 +551,13 @@ function filmMoments(): void {
   filmWas.tac = !!tac;
   filmWas.over = !!tac?.over;
   const docked = !!state.self?.dockedAt;
-  // The first harbour; then the first of each power's (shared/src/data/factions.ts).
+  // The first harbour; then a town of the twenty that has its own film (tools/art/videos.py, the ninth reel), or the
+  // first of each power's (shared/src/data/factions.ts).
   if (docked && !filmWas.docked && state.self) {
-    const faction = state.ports.find((p) => p.id === state.self!.dockedAt)?.faction;
-    playFilm(filmDue('cut_port') || !faction ? 'cut_port' : `cut_port_${faction}`);
+    const at = state.self.dockedAt!;
+    const faction = state.ports.find((p) => p.id === at)?.faction;
+    const own = `cut_port_${at}`;
+    playFilm(filmDue('cut_port') || !faction ? 'cut_port' : filmDue(own) ? own : `cut_port_${faction}`);
   }
   filmWas.docked = docked || !state.self;
   if (state.storm && !filmWas.storm) playFilm('cut_storm');

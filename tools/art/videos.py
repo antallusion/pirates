@@ -577,6 +577,82 @@ v('cut_roc_eyrie', 'lair_roc_eyrie', 'Гнездо руха',
   'camera circles the summit.')
 
 
+# ---- The ninth reel: the ten new bosses (shared/src/data/bosses.ts, shorebosses.ts) and six of the twenty new ports
+# (tools/art/ports.py), each the first time she meets it -----------------------------------------------------------------
+v('cut_old_moorings', 'boss_old_moorings', 'Старый Швартов',
+  'A grey dawn over a silted harbour mouth on a black coast, old breakwaters of stone and rotten piles: a small brig drifts '
+  'slowly past, and the grey silt beside her heaves as a colossal conger eel as thick as a mainmast rears up out of the mud, '
+  'rusted mooring chains and frayed hawsers wound round its body, weed streaming from it, its blunt head with small pale eyes '
+  'swinging toward the ship. The camera stays low on the water beside the brig.')
+v('cut_old_tithe', 'boss_old_tithe', 'Сборщица Десятины',
+  'A convoy of three laden merchant ships on a hazy grey-green sea: behind the last one a tall scarred dorsal fin cuts the '
+  'water, and a huge old grey shark as long as a frigate rises alongside, its hide crusted with barnacles and broken harpoon '
+  'heads, rolls one pale eye up at the cargo nets and takes a crate from the rail in its jaws. The camera follows the fin '
+  'along the hull.')
+v('cut_fog_changeling', 'boss_fog_changeling', 'Подменыш туманов',
+  'Thick white fog on a still sea at dusk, a lone frigate creeping through it with her lanterns lit: around her four dim '
+  'shapes of a giant cuttlefish appear in the fog at once, their skins rippling with pale bands of pearl and violet light, '
+  'and only one of them leaves a wake on the water as it glides closer. The camera slowly turns round the frigate\'s bow.')
+v('cut_cinder_ray', 'boss_cinder_ray', 'Пепельный скат',
+  'Night among volcanic islands, the sky red with a distant eruption and ash falling like snow: out of a drifting cloud of '
+  'ash a colossal manta ray glides low over the black water, its glassy black wings seamed with glowing orange cracks, and '
+  'where its wingtips touch the sea the water hisses and steams as two warships turn their broadsides toward it. The camera '
+  'looks up from the water as the ray passes over.')
+v('cut_drowned_prelate', 'boss_drowned_prelate', 'Утонувший Прелат',
+  'Midnight over the drowned ruins of a sunken capital, three broken church spires standing out of the black sea with green '
+  'bronze bells swinging in their belfries: between them a vast hunched shape rises from the water, a tall mitre of pale '
+  'coral and a cope of dark kelp, long pale hands lifting a crozier of driftwood as every bell begins to toll and the ships '
+  'nearby turn away. The camera rises slowly between the spires.')
+v('cut_rime_twins', 'boss_rime_twins', 'Инеевые близнецы',
+  'A grey arctic sea among floating ice under a low sun: two white narwhals with long spiral tusks burst together out of '
+  'white water ahead of a whaling ship, frost glittering on their backs, and dive again side by side as the whalers at the '
+  'bow raise their harpoons and the ice cracks around the hull. The camera skims the water behind the twins.')
+v('cut_mire_mother', 'lair_mire_mother', 'Мать Трясины',
+  'A steaming swamp at dusk under hanging moss, frogs croaking among the reeds: pirates with torches wade knee-deep toward a '
+  'mound of mud, and the mound opens two huge golden eyes, a colossal toad-queen with mottled olive hide and pale glistening '
+  'spawn heaped on her back swells her throat and flicks out a long tongue at the nearest torch. The camera floats low over '
+  'the black water behind the pirates.')
+v('cut_cinder_salamander', 'lair_cinder_salamander', 'Пепельная саламандра',
+  'A black lava field on a volcanic island at night, cracks glowing orange in the ground: a landing party with muskets '
+  'crosses it carefully, and from a fissure ahead a great black salamander as long as a pinnace crawls out, its hide cracked '
+  'with glowing embers, sparks rising off its back, and breathes a gout of fire across the rocks. The camera looks along the '
+  'muskets toward the beast.')
+v('cut_drowned_abbess', 'lair_drowned_abbess', 'Аббатиса Утонувшего Колокола',
+  'Night in a graveyard of wrecked ships on a grey beach, fog drifting between the broken hulls and lanterns burning on poles: '
+  'robed bell-ringers toll small bronze bells in a circle, and out of the shallows walks a tall drowned abbess in a habit of '
+  'dark weed and pale coral, an old bronze church bell swinging on a rusted chain in her hands, water streaming from her. '
+  'The camera moves slowly toward her through the fog.')
+v('cut_walrus_tyrant', 'lair_walrus_tyrant', 'Морж-тиран',
+  'A rocky northern shore under a cold grey sky, a herd of walruses hauled out on the stones: the herd parts as a colossal '
+  'old walrus bull with a scarred brown hide and long yellowed tusks heaves himself up, bellows a cloud of steam and lunges '
+  'down the rocks toward a landing party with lowered pikes. The camera stays low among the rocks before the pirates.')
+v('cut_port_bellhaven', 'port_bellhaven', 'Колокольная Гавань',
+  'Morning fog over the Crown\'s great dockyard: two half-built warships stand on their stocks in long stone dry docks, '
+  'carpenters swarming over their bare ribs, a ropewalk shed stretches along the quay, and from a tall grey bell tower the '
+  'Admiralty bell rings as a frigate is towed slowly out past the star bastion. The camera glides in over the water toward '
+  'the dry docks.')
+v('cut_port_slagport', 'port_slagport', 'Шлаковый Порт',
+  'Night at a soot-black foundry town on black volcanic sand under a smoking cone: brick furnaces glow along the shore, '
+  'molten iron pours into cannon moulds in showers of sparks, rows of new cannon barrels lie on the quay, and a pirate brig '
+  'is loading them by lantern light. The camera drifts in toward the glowing furnaces.')
+v('cut_port_frostgate', 'port_frostgate', 'Ледяные Ворота',
+  'A snowy fjord between dark mountains at twilight: a walled whaling town with steep timber longhouses, its gate two crossed '
+  'whale jawbones, the try-works smoking over the harbour and floes of ice knocking against the piers as a whaler comes in '
+  'with a great carcass lashed alongside. The camera moves in under the jawbone gate.')
+v('cut_port_steeplewater', 'port_steeplewater', 'Шпилевая Вода',
+  'Night in a half-drowned gothic cathedral town: the upper storeys and spires of grey stone churches rise from the black '
+  'sea, wooden walkways run between their windows, a pale green light glows in a great rose window, and at low tide the '
+  'drowned bells below the water toll as a boat rows in between the spires. The camera glides along the walkways.')
+v('cut_port_lotus_anchorage', 'port_lotus_anchorage', 'Лотосовая Стоянка',
+  'Evening at an eastern trading enclave: curved tiled roofs, a tall five-storey pagoda and red lacquered gates over a stone '
+  'quay, two great junks with ribbed batten sails moored alongside, paper lanterns glowing and merchants unrolling bolts of '
+  'silk under awnings as a pagoda bell rings the tide. The camera moves slowly in past the junks\' sterns.')
+v('cut_port_wreckhold', 'port_wreckhold', 'Обломная Крепь',
+  'Dusk on a coral reef where a whole town has been built from shipwrecks: upturned hulls serve as roofs, ship sterns with '
+  'their gallery windows are houses, broken masts carry rope bridges, and a beached galleon has become a tavern with lamps in '
+  'every gun port, pirates drinking on her slanted deck. The camera rises slowly over the wrecks.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
