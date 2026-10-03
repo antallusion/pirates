@@ -1167,6 +1167,10 @@
     "unit.crown_diver":                        { "local": "units/crown_diver.webp", "remote": "hf_20261003_035352_gpt-anim_crown_diver.png", "job": "gpt-anim_crown_diver", "fit": "sheet:anim_crown_diver.0", "rev": 20261003035352},
     "unit.crown_diver_b":                      { "local": "units/crown_diver_b.webp", "remote": "hf_20261003_035352_gpt-anim_crown_diver.png", "job": "gpt-anim_crown_diver", "fit": "sheet:anim_crown_diver.1", "rev": 20261003035352},
     "unit.crown_diver_atk":                    { "local": "units/crown_diver_atk.webp", "remote": "hf_20261003_035352_gpt-anim_crown_diver.png", "job": "gpt-anim_crown_diver", "fit": "sheet:anim_crown_diver.2", "rev": 20261003035352},
-    "unit.crown_diver_hit":                    { "local": "units/crown_diver_hit.webp", "remote": "hf_20261003_035352_gpt-anim_crown_diver.png", "job": "gpt-anim_crown_diver", "fit": "sheet:anim_crown_diver.3", "rev": 20261003035352}
+    "unit.crown_diver_hit":                    { "local": "units/crown_diver_hit.webp", "remote": "hf_20261003_035352_gpt-anim_crown_diver.png", "job": "gpt-anim_crown_diver", "fit": "sheet:anim_crown_diver.3", "rev": 20261003035352},
+    "unit.crown_ironclad":                     { "local": "units/crown_ironclad.webp", "remote": "hf_20261003_035821_gpt-anim_crown_ironclad.png", "job": "gpt-anim_crown_ironclad", "fit": "sheet:anim_crown_ironclad.0", "rev": 20261003035821},
+    "unit.crown_ironclad_b":                   { "local": "units/crown_ironclad_b.webp", "remote": "hf_20261003_035821_gpt-anim_crown_ironclad.png", "job": "gpt-anim_crown_ironclad", "fit": "sheet:anim_crown_ironclad.1", "rev": 20261003035821},
+    "unit.crown_ironclad_atk":                 { "local": "units/crown_ironclad_atk.webp", "remote": "hf_20261003_035821_gpt-anim_crown_ironclad.png", "job": "gpt-anim_crown_ironclad", "fit": "sheet:anim_crown_ironclad.2", "rev": 20261003035821},
+    "unit.crown_ironclad_hit":                 { "local": "units/crown_ironclad_hit.webp", "remote": "hf_20261003_035821_gpt-anim_crown_ironclad.png", "job": "gpt-anim_crown_ironclad", "fit": "sheet:anim_crown_ironclad.3", "rev": 20261003035821}
   }
 }
