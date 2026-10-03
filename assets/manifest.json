@@ -1783,6 +1783,10 @@
     "unit.jaguar":                             { "local": "units/jaguar.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.0", "rev": 20261003162742},
     "unit.jaguar_b":                           { "local": "units/jaguar_b.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.1", "rev": 20261003162742},
     "unit.jaguar_atk":                         { "local": "units/jaguar_atk.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.2", "rev": 20261003162742},
-    "unit.jaguar_hit":                         { "local": "units/jaguar_hit.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.3", "rev": 20261003162742}
+    "unit.jaguar_hit":                         { "local": "units/jaguar_hit.webp", "remote": "hf_20261003_162742_gpt-anim_jaguar.png", "job": "gpt-anim_jaguar", "fit": "sheet:anim_jaguar.3", "rev": 20261003162742},
+    "unit.island_ape":                         { "local": "units/island_ape.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.0", "rev": 20261003163234},
+    "unit.island_ape_b":                       { "local": "units/island_ape_b.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.1", "rev": 20261003163234},
+    "unit.island_ape_atk":                     { "local": "units/island_ape_atk.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.2", "rev": 20261003163234},
+    "unit.island_ape_hit":                     { "local": "units/island_ape_hit.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.3", "rev": 20261003163234}
   }
 }
