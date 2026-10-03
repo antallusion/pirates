@@ -179,7 +179,8 @@ v('cut_mutiny', 'mutiny', 'Бунт',
   'Night on the deck of a pirate brig, a single lantern swaying from the boom. A grim crowd of sailors closes in around the '
   'mainmast, cutlasses and belaying pins in hand; the scarred ringleader steps forward into the lantern light and flings a black '
   'spot — a small round paper — onto the planks at the captain\'s boots; the captain, back to the mast, slowly draws his pistol. '
-  'Rain begins to fall. The camera moves slowly around the circle of angry faces.')
+  'Rain begins to fall. The masts, yards and rigging above are empty — no one hangs, climbs or sits anywhere above the deck; '
+  'everyone stands on the planks. The camera moves slowly around the circle of angry faces.')
 v('cut_sunk', 'sunk', 'Кораблекрушение',
   'Grey dawn after a lost battle: a calm, oily sea strewn with floating wreckage — broken spars, a torn sail, barrels, a drifting '
   'hatch cover. A lone captain in a torn coat clings to a broken mast, exhausted, his tricorne floating beside him; he lifts his '
