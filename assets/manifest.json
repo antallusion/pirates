@@ -1407,7 +1407,7 @@
     "icon.sp_smoke_and_knives":                { "local": "icons/sp_smoke_and_knives.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.2", "rev": 20261003100834},
     "icon.sp_red_harvest":                     { "local": "icons/sp_red_harvest.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.3", "rev": 20261003100834},
     "icon.sp_turn_the_flank":                  { "local": "icons/sp_turn_the_flank.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.4", "rev": 20261003100834},
-    "icon.sp_call_of_the_deep":                { "local": "icons/sp_call_of_the_deep.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.5", "rev": 20261003100834},
+    "icon.sp_call_of_the_deep":                { "local": "icons/sp_call_of_the_deep.webp", "remote": "hf_20261003_102700_gpt-spells_fix.png", "job": "gpt-spells_fix", "fit": "sheet:spells_fix.2", "rev": 20261003102700},
     "icon.sp_iron_discipline":                 { "local": "icons/sp_iron_discipline.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.6", "rev": 20261003100834},
     "icon.sp_mark_target":                     { "local": "icons/sp_mark_target.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.7", "rev": 20261003100834},
     "icon.sp_double_shot":                     { "local": "icons/sp_double_shot.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.8", "rev": 20261003100834},
@@ -1417,7 +1417,7 @@
     "icon.sp_powder_keg":                      { "local": "icons/sp_powder_keg.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.12", "rev": 20261003100834},
     "icon.sp_following_wind":                  { "local": "icons/sp_following_wind.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.13", "rev": 20261003100834},
     "icon.sp_head_wind":                       { "local": "icons/sp_head_wind.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.14", "rev": 20261003100834},
-    "icon.sp_tide_returns":                    { "local": "icons/sp_tide_returns.webp", "remote": "hf_20261003_100834_gpt-spells_1.png", "job": "gpt-spells_1", "fit": "sheet:spells_1.15", "rev": 20261003100834},
+    "icon.sp_tide_returns":                    { "local": "icons/sp_tide_returns.webp", "remote": "hf_20261003_102700_gpt-spells_fix.png", "job": "gpt-spells_fix", "fit": "sheet:spells_fix.1", "rev": 20261003102700},
     "icon.sp_maelstrom":                       { "local": "icons/sp_maelstrom.webp", "remote": "hf_20261003_101300_gpt-spells_2.png", "job": "gpt-spells_2", "fit": "sheet:spells_2.0", "rev": 20261003101300},
     "icon.sp_shield_wall":                     { "local": "icons/sp_shield_wall.webp", "remote": "hf_20261003_101300_gpt-spells_2.png", "job": "gpt-spells_2", "fit": "sheet:spells_2.1", "rev": 20261003101300},
     "icon.sp_fury":                            { "local": "icons/sp_fury.webp", "remote": "hf_20261003_101300_gpt-spells_2.png", "job": "gpt-spells_2", "fit": "sheet:spells_2.2", "rev": 20261003101300},
@@ -1465,6 +1465,7 @@
     "icon.sp_gale":                            { "local": "icons/sp_gale.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.12", "rev": 20261003102219},
     "icon.sp_mend_hull":                       { "local": "icons/sp_mend_hull.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.13", "rev": 20261003102219},
     "icon.sp_bt_wait":                         { "local": "icons/sp_bt_wait.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.14", "rev": 20261003102219},
-    "icon.sp_bt_defend":                       { "local": "icons/sp_bt_defend.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.15", "rev": 20261003102219}
+    "icon.sp_bt_defend":                       { "local": "icons/sp_bt_defend.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.15", "rev": 20261003102219},
+    "icon.sp_point_blank":                     { "local": "icons/sp_point_blank.webp", "remote": "hf_20261003_102700_gpt-spells_fix.png", "job": "gpt-spells_fix", "fit": "sheet:spells_fix.0", "rev": 20261003102700}
   }
 }
