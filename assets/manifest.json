@@ -1531,6 +1531,10 @@
     "part.ms_brine":                           { "local": "fx/ms_brine.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.13", "rev": 20261003104626},
     "part.ms_smokebomb":                       { "local": "fx/ms_smokebomb.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.14", "rev": 20261003104626},
     "part.ms_bell":                            { "local": "fx/ms_bell.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.15", "rev": 20261003104626},
-    "bg.spellbook":                            { "local": "art/spellbook.webp", "remote": "hf_20261003_105053_gpt-bg-spellbook.png", "job": "gpt-bg-spellbook", "fit": "opaque:1920", "rev": 20261003105053}
+    "bg.spellbook":                            { "local": "art/spellbook.webp", "remote": "hf_20261003_105053_gpt-bg-spellbook.png", "job": "gpt-bg-spellbook", "fit": "opaque:1920", "rev": 20261003105053},
+    "fx.bt_blast_0":                           { "local": "fx/bt_blast_0.webp", "remote": "hf_20261003_105539_gpt-fx-bt_blast.png", "job": "gpt-fx-bt_blast", "fit": "fxrow:0", "rev": 20261003105539},
+    "fx.bt_blast_1":                           { "local": "fx/bt_blast_1.webp", "remote": "hf_20261003_105539_gpt-fx-bt_blast.png", "job": "gpt-fx-bt_blast", "fit": "fxrow:1", "rev": 20261003105539},
+    "fx.bt_blast_2":                           { "local": "fx/bt_blast_2.webp", "remote": "hf_20261003_105539_gpt-fx-bt_blast.png", "job": "gpt-fx-bt_blast", "fit": "fxrow:2", "rev": 20261003105539},
+    "fx.bt_blast_3":                           { "local": "fx/bt_blast_3.webp", "remote": "hf_20261003_105539_gpt-fx-bt_blast.png", "job": "gpt-fx-bt_blast", "fit": "fxrow:3", "rev": 20261003105539}
   }
 }
