@@ -95,8 +95,9 @@ export class PortScreen {
     const faction = FACTIONS[port.faction];
     const tabs: [Tab, string][] = [['market', L('tab.market')], ['shipyard', L('tab.shipyard')], ['tavern', L('tab.tavern')], ['contracts', L('tab.contracts')], ['harbour', L('tab.harbour')], ['holdings', L('tab.holdings')], ['exchange', L('tab.exchange')]];
     const vol = cargoVolume(self.cargo, state.ownStats?.contrabandVolumeMul ?? 1, state.ownStats?.materialVolumeMul ?? 1, state.ownStats?.provisionVolumeMul ?? 1, state.ownStats?.cursedVolumeMul ?? 1);
-    // The harbour's own painting behind the header, and the faction's crest before its name.
-    const bg = assetUrl(`bg.port_${port.faction}`);
+    // The harbour's own painting behind the header (a town's own where the manifest has it — the twenty of step 8,
+    // bg.port_<id> — else her flag's), and the faction's crest before its name.
+    const bg = assetUrl(`bg.port_${port.id}`) ?? assetUrl(`bg.port_${port.faction}`);
     root.style.setProperty('--bg-port', bg ? `url('${bg}')` : 'none');
     const html = `
       <div class="modal-head port-head">

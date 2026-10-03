@@ -71,6 +71,7 @@ test('beating to windward (docs/16 P5): a pack dead to leeward of a hove-to capt
   // off her, and what lives on it draws the pack's eye).
   const w = game.world;
   w.islands.length = w.isleFrom;
+  w.ports.length = w.portsFrom ?? w.ports.length; // (and step 8's towns, whose islands went with them)
   for (const [k, list] of w.chunks) w.chunks.set(k, list.filter((id) => id < w.isleFrom));
   w.navGrid = legacyWorld(w).navGrid;
   // Nor the sea's own merchants putting out about her (a passing prize draws a pirate off the beat: docs/19 D3 made

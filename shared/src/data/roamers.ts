@@ -176,7 +176,14 @@ function keepsOf(world: World): Keeps {
   const adv = buildAdv(world);
   for (const o of adv.objs) add(o.x, o.y, KEEP_ADV);
   for (const g of adv.guards) add(g.x, g.y, KEEP_ADV);
-  const lanes = portLanes(world.ports);
+  // The lanes of the harbours before step 8's twenty towns and the lanes as they run now: a new town's lanes take the
+  // stacks off them, and no stack comes onto a lane the old harbours sailed (nothing appears; shared/src/world/newports.ts).
+  const old = world.ports.slice(0, world.portsFrom ?? world.ports.length);
+  const lanes = portLanes(old);
+  if (old.length < world.ports.length) {
+    const seen = new Set(lanes.map((l) => l.join(',')));
+    for (const l of portLanes(world.ports)) if (!seen.has(l.join(','))) lanes.push(l);
+  }
   const laneBuckets = new Map<number, number[]>();
   lanes.forEach(([ax, ay, bx, by], i) => {
     const pad = ROAM_LANE + 10;

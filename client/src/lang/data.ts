@@ -17,15 +17,17 @@ import * as shipbuild from '../../../shared/src/data/shipbuild.ts';
 import * as ships from '../../../shared/src/data/ships.ts';
 import * as talents from '../../../shared/src/data/talents.ts';
 import * as regions from '../../../shared/src/world/regions.ts';
+import * as newports from '../../../shared/src/world/newports.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import { typeset } from '../i18n.ts';
 import type { Lang } from '../i18n.ts';
 import { DATA_RU_CORE } from './data.ru.ts';
 import { DATA_RU_TALENTS } from './data.talents.ru.ts';
 import { DATA_RU_ARMS } from './data.arms.ru.ts';
+import { DATA_RU_PORTS } from './data.ports.ru.ts';
 
-const MODULES: Record<string, Record<string, unknown>> = { bosses, captains, crew, deeds, factions, goods, holdings, legendary, quests, seasons, shipbuild, ships, talents, regions };
-export const DATA_RU: Record<string, string> = { ...DATA_RU_CORE, ...DATA_RU_TALENTS, ...DATA_RU_ARMS };
+const MODULES: Record<string, Record<string, unknown>> = { bosses, captains, crew, deeds, factions, goods, holdings, legendary, quests, seasons, shipbuild, ships, talents, regions, newports };
+export const DATA_RU: Record<string, string> = { ...DATA_RU_CORE, ...DATA_RU_TALENTS, ...DATA_RU_ARMS, ...DATA_RU_PORTS };
 
 const originals = new Map<string, string>();
 /** English display name → Russian, for names that arrive inside server sentences. */

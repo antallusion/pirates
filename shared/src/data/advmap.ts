@@ -23,7 +23,7 @@ import { REGIONS } from '../world/regions.ts';
 import type { RegionId } from '../world/regions.ts';
 import { WORLD_EDGE_MARGIN } from '../world/regions.ts';
 import { sectorAt } from '../world/sectors.ts';
-import { DEEP_WATER, depthAt, isLand, legacyWorld, marksNear } from '../world/worldgen.ts';
+import { DEEP_WATER, beforePorts, depthAt, isLand, legacyWorld, marksNear } from '../world/worldgen.ts';
 import type { Island, World } from '../world/worldgen.ts';
 
 // ------------------------------------------------------------------------------------------------ the sea's hour
@@ -345,6 +345,14 @@ const cache = new WeakMap<World, AdvMap>();
 export function buildAdv(world: World, keep = true): AdvMap {
   const hit = cache.get(world);
   if (hit) return hit;
+  // Step 8 (shared/src/world/newports.ts): the map of the world as she stood before her twenty new towns, whose islands
+  // keep off all of it — every thing and guard where and what it was, its id with it.
+  const pre = beforePorts(world);
+  if (pre !== world) {
+    const out = buildAdv(pre, keep);
+    if (keep) cache.set(world, out);
+    return out;
+  }
   // docs/18 III: placed on the world as it stood before her new islands (which keep off all of it).
   const base = legacyWorld(world);
   if (base !== world) {
@@ -352,7 +360,7 @@ export function buildAdv(world: World, keep = true): AdvMap {
     const old = buildAdv(base);
     const more = buildAdvMore(world, old);
     const out = { objs: [...old.objs, ...more.objs], guards: [...old.guards, ...more.guards], legacy: { objs: old.objs.length, guards: old.guards.length } };
-    cache.set(world, out);
+    if (keep) cache.set(world, out);
     return out;
   }
   const objs: AdvObj[] = [];

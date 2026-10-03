@@ -415,8 +415,13 @@ test('bow chasers hit a ship dead ahead; broadsides cannot', () => {
   const hull0 = npc.hull;
   c.push({ t: 'chase', end: 'stern', x: npc.state.x, y: npc.state.y });
   assert.ok(c.all('toast').some((t) => /No stern chasers/.test(t.msg)), 'sloops have no stern chasers');
-  c.push({ t: 'chase', end: 'bow', x: npc.state.x, y: npc.state.y });
-  steps(game, 30);
+  // (A ball may fly wide — the fall of shot is the game's dice, which every port and ship of the sea draws on before
+  // her — so up to three balls, reloaded at once; one of them strikes a ship dead ahead at 200 m.)
+  for (let k = 0; k < 3 && npc.hull >= hull0; k++) {
+    ship.chaserReload.bow = 0;
+    c.push({ t: 'chase', end: 'bow', x: npc.state.x, y: npc.state.y });
+    steps(game, 30);
+  }
   assert.ok(npc.hull < hull0, 'chaser ball struck');
   assert.ok(ship.chaserReload.bow > 0);
 });

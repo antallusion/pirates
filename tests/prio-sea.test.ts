@@ -259,11 +259,14 @@ test('the dense sea: on almost every two-kilometre stretch of open water somethi
 });
 
 test('the dense sea keeps the lanes, harbours and currents clear, and ships still find their way', () => {
-  const lanes = portLanes(world.ports.filter((p) => !p.raft));
+  // The harbours and lanes of the ports it was laid round (step 8's twenty towns came after it, each on clear water of
+  // her own: tests/ports20.test.ts).
+  const old = world.ports.slice(0, world.portsFrom);
+  const lanes = portLanes(old.filter((p) => !p.raft));
   const dense = world.islands.slice(world.minorFrom).filter((i) => i.minor);
   const reefs = world.reefs.slice(world.reefsFrom);
   for (const o of [...dense.map((i) => ({ x: i.x, y: i.y, r: i.radius })), ...reefs.map((q) => ({ x: q.x, y: q.y, r: q.radius }))]) {
-    for (const p of world.ports) assert.ok(Math.hypot(p.x - o.x, p.y - o.y) > 2000, 'clear of a harbour');
+    for (const p of old) assert.ok(Math.hypot(p.x - o.x, p.y - o.y) > 2000, 'clear of a harbour');
     for (const [ax, ay, bx, by] of lanes) {
       const abx = bx - ax, aby = by - ay, t = Math.max(0, Math.min(1, ((o.x - ax) * abx + (o.y - ay) * aby) / (abx * abx + aby * aby)));
       assert.ok(Math.hypot(ax + abx * t - o.x, ay + aby * t - o.y) > o.r + 500, 'clear of a lane');

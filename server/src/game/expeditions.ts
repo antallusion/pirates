@@ -14,7 +14,7 @@ import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
+import { beforePorts, isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import type { World } from '../../../shared/src/world/worldgen.ts';
 import { diveDepth } from './explorefx.ts';
 import type { Game } from './Game.ts';
@@ -132,6 +132,7 @@ export class ExpeditionHub {
 
 /** Where the sunken cities and the graveyards lie (fixed by the world seed). */
 export function buildSites(world: World): PveSite[] {
+  world = beforePorts(world); // where they always lay (the twenty new towns keep off them: shared/src/world/newports.ts)
   const rng = new Rng(world.seed ^ 0xc17e);
   const out: PveSite[] = [];
   const place = (region: RegionId, kind: PveSite['kind'], name: string, r: number) => {

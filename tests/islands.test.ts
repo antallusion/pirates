@@ -23,8 +23,9 @@ test('every region is a mix of biomes, and all seven new ones are on the chart',
     for (const b of biomes) seen.add(b);
   }
   for (const b of ['jungle', 'mangrove', 'atoll', 'saltflat', 'blacksand', 'fungal', 'crystal'] as const) assert.ok(seen.has(b), `${b} on the chart`);
-  // A key port's island keeps her region's own biome.
-  for (const is of world.islands.filter((i) => i.portId && !i.portId.includes('_v'))) assert.equal(is.biome, REGIONS[is.region].biome, is.name);
+  // A key port's island keeps her region's own biome. (Step 8's twenty towns, after them, stand on ground of their own
+  // of their sea: tests/ports20.test.ts.)
+  for (const is of world.islands.slice(0, world.portIslesFrom).filter((i) => i.portId && !i.portId.includes('_v'))) assert.equal(is.biome, REGIONS[is.region].biome, is.name);
 });
 
 test('the same seed lays the same biomes (and the islands stay where they were)', () => {

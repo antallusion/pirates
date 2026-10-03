@@ -120,6 +120,12 @@ const BIOME_OWN: Partial<Record<IslandBiome, { land: string; decor: string; shor
   blacksand: { land: 'tex.land_blacksand', decor: 'prop.decor_blacksand' }, fungal: { land: 'tex.land_fungal', decor: 'prop.decor_fungal' },
   crystal: { land: 'tex.land_crystal', decor: 'prop.decor_crystal' },
 };
+/** A town's painting on the chart: her own where the manifest has one (the twenty towns of step 8, prop.port_<id>:
+ *  shared/src/world/newports.ts), else her flag's town, else any town — so a painting that arrives is drawn at once. */
+const townArt = (p: { id: string; faction: string }): string | null => {
+  for (const id of [`prop.port_${p.id}`, `prop.port_${p.faction}`, 'prop.port_town']) if (sprite(id)) return id;
+  return null;
+};
 const landArt = (b: IslandBiome): string => {
   const own = BIOME_OWN[b]?.land;
   return own && sprite(own) ? own : BIOME_LAND[b];
@@ -1695,7 +1701,8 @@ export class Renderer {
     const g = this.g;
     for (const p of state.ports) {
       if (Math.abs(p.x - this.camX) * this.zoom > this.w + 600 * this.zoom || Math.abs(p.y - this.camY) * this.zoom > this.h + 600 * this.zoom) continue;
-      const spr = p.raft ? undefined : sprite(`prop.port_${p.faction}`) ?? sprite('prop.port_town');
+      const art = p.raft ? null : townArt(p);
+      const spr = art ? sprite(art) : undefined;
       const island = [...state.islands.values()].find((is) => is.portId === p.id);
       if (!island) continue;
       let lay = this.portLayout.get(p.id);
@@ -1797,7 +1804,8 @@ export class Renderer {
       const p = state.ports.find((q) => q.id === id);
       if (!lay || !p) continue;
       const ax = Math.cos(lay.ang), ay = Math.sin(lay.ang), sx = -Math.sin(lay.ang), sy = Math.cos(lay.ang);
-      const slips = (sprite(`prop.port_${p.faction}`) ? assetMeta(`prop.port_${p.faction}`)?.slips : null) ?? [];
+      const art = townArt(p);
+      const slips = (art && art !== 'prop.port_town' ? assetMeta(art)?.slips : null) ?? [];
       let free = 0;
       list.forEach((sh, i) => {
         const cls = SHIP_CLASSES[sh.classId];
