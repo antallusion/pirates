@@ -1919,6 +1919,22 @@
     "icon.fh_seraph":                          { "local": "icons/fh_seraph.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.9", "rev": 20261003213339},
     "icon.fh_leviathan":                       { "local": "icons/fh_leviathan.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.10", "rev": 20261003213339},
     "icon.fh_storm_widow":                     { "local": "icons/fh_storm_widow.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.11", "rev": 20261003213339},
-    "icon.fh_hermit_crab":                     { "local": "icons/fh_hermit_crab.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.12", "rev": 20261003213339}
+    "icon.fh_hermit_crab":                     { "local": "icons/fh_hermit_crab.webp", "remote": "hf_20261003_213339_gpt-arms_4.png", "job": "gpt-arms_4", "fit": "sheet:arms_4.12", "rev": 20261003213339},
+    "icon.item_lateen_sails":                  { "local": "icons/item_lateen_sails.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.0", "rev": 20261003213611},
+    "icon.item_black_sails":                   { "local": "icons/item_black_sails.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.1", "rev": 20261003213611},
+    "icon.item_studding_sails":                { "local": "icons/item_studding_sails.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.2", "rev": 20261003213611},
+    "icon.item_quick_braces":                  { "local": "icons/item_quick_braces.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.3", "rev": 20261003213611},
+    "icon.item_spare_spars":                   { "local": "icons/item_spare_spars.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.4", "rev": 20261003213611},
+    "icon.item_fighting_tops":                 { "local": "icons/item_fighting_tops.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.5", "rev": 20261003213611},
+    "icon.item_double_planking":               { "local": "icons/item_double_planking.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.6", "rev": 20261003213611},
+    "icon.item_felt_lining":                   { "local": "icons/item_felt_lining.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.7", "rev": 20261003213611},
+    "icon.item_iron_stem":                     { "local": "icons/item_iron_stem.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.8", "rev": 20261003213611},
+    "icon.item_ship_wheel":                    { "local": "icons/item_ship_wheel.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.9", "rev": 20261003213611},
+    "icon.item_shoal_rudder":                  { "local": "icons/item_shoal_rudder.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.10", "rev": 20261003213611},
+    "icon.item_bread_room":                    { "local": "icons/item_bread_room.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.11", "rev": 20261003213611},
+    "icon.item_timber_racks":                  { "local": "icons/item_timber_racks.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.12", "rev": 20261003213611},
+    "icon.item_smugglers_nook":                { "local": "icons/item_smugglers_nook.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.13", "rev": 20261003213611},
+    "icon.item_sick_bay":                      { "local": "icons/item_sick_bay.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.14", "rev": 20261003213611},
+    "icon.item_armoury":                       { "local": "icons/item_armoury.webp", "remote": "hf_20261003_213611_gpt-items_5.png", "job": "gpt-items_5", "fit": "sheet:items_5.15", "rev": 20261003213611}
   }
 }
