@@ -1301,6 +1301,10 @@
     "unit.choir_bellringer":                   { "local": "units/choir_bellringer.webp", "remote": "hf_20261003_060212_gpt-anim_choir_bellringer.png", "job": "gpt-anim_choir_bellringer", "fit": "sheet:anim_choir_bellringer.0", "rev": 20261003060212},
     "unit.choir_bellringer_b":                 { "local": "units/choir_bellringer_b.webp", "remote": "hf_20261003_060212_gpt-anim_choir_bellringer.png", "job": "gpt-anim_choir_bellringer", "fit": "sheet:anim_choir_bellringer.1", "rev": 20261003060212},
     "unit.choir_bellringer_atk":               { "local": "units/choir_bellringer_atk.webp", "remote": "hf_20261003_060212_gpt-anim_choir_bellringer.png", "job": "gpt-anim_choir_bellringer", "fit": "sheet:anim_choir_bellringer.2", "rev": 20261003060212},
-    "unit.choir_bellringer_hit":               { "local": "units/choir_bellringer_hit.webp", "remote": "hf_20261003_060212_gpt-anim_choir_bellringer.png", "job": "gpt-anim_choir_bellringer", "fit": "sheet:anim_choir_bellringer.3", "rev": 20261003060212}
+    "unit.choir_bellringer_hit":               { "local": "units/choir_bellringer_hit.webp", "remote": "hf_20261003_060212_gpt-anim_choir_bellringer.png", "job": "gpt-anim_choir_bellringer", "fit": "sheet:anim_choir_bellringer.3", "rev": 20261003060212},
+    "unit.choir_acolyte":                      { "local": "units/choir_acolyte.webp", "remote": "hf_20261003_060649_gpt-anim_choir_acolyte.png", "job": "gpt-anim_choir_acolyte", "fit": "sheet:anim_choir_acolyte.0", "rev": 20261003060649},
+    "unit.choir_acolyte_b":                    { "local": "units/choir_acolyte_b.webp", "remote": "hf_20261003_060649_gpt-anim_choir_acolyte.png", "job": "gpt-anim_choir_acolyte", "fit": "sheet:anim_choir_acolyte.1", "rev": 20261003060649},
+    "unit.choir_acolyte_atk":                  { "local": "units/choir_acolyte_atk.webp", "remote": "hf_20261003_060649_gpt-anim_choir_acolyte.png", "job": "gpt-anim_choir_acolyte", "fit": "sheet:anim_choir_acolyte.2", "rev": 20261003060649},
+    "unit.choir_acolyte_hit":                  { "local": "units/choir_acolyte_hit.webp", "remote": "hf_20261003_060649_gpt-anim_choir_acolyte.png", "job": "gpt-anim_choir_acolyte", "fit": "sheet:anim_choir_acolyte.3", "rev": 20261003060649}
   }
 }
