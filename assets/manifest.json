@@ -1671,6 +1671,10 @@
     "unit.volcano_guardian":                   { "local": "units/volcano_guardian.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.0", "rev": 20261003135250},
     "unit.volcano_guardian_b":                 { "local": "units/volcano_guardian_b.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.1", "rev": 20261003135250},
     "unit.volcano_guardian_atk":               { "local": "units/volcano_guardian_atk.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.2", "rev": 20261003135250},
-    "unit.volcano_guardian_hit":               { "local": "units/volcano_guardian_hit.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.3", "rev": 20261003135250}
+    "unit.volcano_guardian_hit":               { "local": "units/volcano_guardian_hit.webp", "remote": "hf_20261003_135250_gpt-anim_volcano_guardian.png", "job": "gpt-anim_volcano_guardian", "fit": "sheet:anim_volcano_guardian.3", "rev": 20261003135250},
+    "unit.flenser":                            { "local": "units/flenser.webp", "remote": "hf_20261003_135521_gpt-anim_flenser.png", "job": "gpt-anim_flenser", "fit": "sheet:anim_flenser.0", "rev": 20261003135521},
+    "unit.flenser_b":                          { "local": "units/flenser_b.webp", "remote": "hf_20261003_135521_gpt-anim_flenser.png", "job": "gpt-anim_flenser", "fit": "sheet:anim_flenser.1", "rev": 20261003135521},
+    "unit.flenser_atk":                        { "local": "units/flenser_atk.webp", "remote": "hf_20261003_135521_gpt-anim_flenser.png", "job": "gpt-anim_flenser", "fit": "sheet:anim_flenser.2", "rev": 20261003135521},
+    "unit.flenser_hit":                        { "local": "units/flenser_hit.webp", "remote": "hf_20261003_135521_gpt-anim_flenser.png", "job": "gpt-anim_flenser", "fit": "sheet:anim_flenser.3", "rev": 20261003135521}
   }
 }
