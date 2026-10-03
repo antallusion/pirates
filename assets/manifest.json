@@ -1365,6 +1365,7 @@
     "unit.young_serpent":                      { "local": "units/young_serpent.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.0", "rev": 20261003073859},
     "unit.young_serpent_b":                    { "local": "units/young_serpent_b.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.1", "rev": 20261003073859},
     "unit.young_serpent_atk":                  { "local": "units/young_serpent_atk.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.2", "rev": 20261003073859},
-    "unit.young_serpent_hit":                  { "local": "units/young_serpent_hit.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.3", "rev": 20261003073859}
+    "unit.young_serpent_hit":                  { "local": "units/young_serpent_hit.webp", "remote": "hf_20261003_073859_gpt-anim_young_serpent.png", "job": "gpt-anim_young_serpent", "fit": "sheet:anim_young_serpent.3", "rev": 20261003073859},
+    "bg.deck_ghost_ship":                      { "local": "art/deck_ghost_ship.webp", "remote": "hf_20261003_074329_gpt-bg-deck_ghost_ship.png", "job": "gpt-bg-deck_ghost_ship", "fit": "opaque:1536", "rev": 20261003074329}
   }
 }
