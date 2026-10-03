@@ -1603,6 +1603,10 @@
     "unit.gilded_cuirassier":                  { "local": "units/gilded_cuirassier.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.0", "rev": 20261003122424},
     "unit.gilded_cuirassier_b":                { "local": "units/gilded_cuirassier_b.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.1", "rev": 20261003122424},
     "unit.gilded_cuirassier_atk":              { "local": "units/gilded_cuirassier_atk.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.2", "rev": 20261003122424},
-    "unit.gilded_cuirassier_hit":              { "local": "units/gilded_cuirassier_hit.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.3", "rev": 20261003122424}
+    "unit.gilded_cuirassier_hit":              { "local": "units/gilded_cuirassier_hit.webp", "remote": "hf_20261003_122424_gpt-anim_gilded_cuirassier.png", "job": "gpt-anim_gilded_cuirassier", "fit": "sheet:anim_gilded_cuirassier.3", "rev": 20261003122424},
+    "unit.debt_collector":                     { "local": "units/debt_collector.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.0", "rev": 20261003122934},
+    "unit.debt_collector_b":                   { "local": "units/debt_collector_b.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.1", "rev": 20261003122934},
+    "unit.debt_collector_atk":                 { "local": "units/debt_collector_atk.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.2", "rev": 20261003122934},
+    "unit.debt_collector_hit":                 { "local": "units/debt_collector_hit.webp", "remote": "hf_20261003_122934_gpt-anim_debt_collector.png", "job": "gpt-anim_debt_collector", "fit": "sheet:anim_debt_collector.3", "rev": 20261003122934}
   }
 }
