@@ -224,6 +224,9 @@ function footX(id: string, img: HTMLImageElement): number {
   return f;
 }
 
+/** The hulls whose decks are painted (tools/art/battle_more.py): one stands in for a hull not painted yet. */
+const DECK_HULLS = ['brig', 'brigantine', 'frigate', 'sloop', 'schooner', 'cutter', 'galleon', 'man_o_war', 'fluyt', 'xebec', 'ghost_ship', 'bomb_ketch', 'fireship', 'fishing_ketch', 'harpoon_whaler'];
+
 /** A painting laid over a box as a cover (cut, never stretched). */
 function cover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number): void {
   const k = Math.max(w / img.naturalWidth, h / img.naturalHeight);
@@ -1032,7 +1035,7 @@ export class TacticalPanel {
     const deck = (i: number | null) => i !== null && cells[i] !== '~' && cells[i] !== '#' && cells[i] !== '=';
     // Painted decks (owner, 2026-10-02): each side's own hull's deck — the boarders' on the left, the other's mirrored on
     // the right — over the painted night sea; the brig's stands in for a hull not painted yet.
-    const deckOf = (x: 0 | 1) => sprite(`bg.deck_${v.heroes[x].hull ?? 'brig'}`) ?? sprite('bg.deck_brig');
+    const deckOf = (x: 0 | 1) => sprite(`bg.deck_${v.heroes[x].hull ?? 'brig'}`) ?? sprite('bg.deck_brig') ?? DECK_HULLS.map((h) => sprite(`bg.deck_${h}`)).find(Boolean) ?? null;
     const decks = [deckOf(0), deckOf(1)];
     const seaArt = sprite('bg.battle_sea');
     if (decks[0] && decks[1] && seaArt) {

@@ -1207,6 +1207,11 @@
     "unit.crown_rifleman":                     { "local": "units/crown_rifleman.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.0", "rev": 20261003042654},
     "unit.crown_rifleman_b":                   { "local": "units/crown_rifleman_b.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.1", "rev": 20261003042654},
     "unit.crown_rifleman_atk":                 { "local": "units/crown_rifleman_atk.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.2", "rev": 20261003042654},
-    "unit.crown_rifleman_hit":                 { "local": "units/crown_rifleman_hit.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.3", "rev": 20261003042654}
+    "unit.crown_rifleman_hit":                 { "local": "units/crown_rifleman_hit.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.3", "rev": 20261003042654},
+    "bg.battle_sea":                           { "local": "art/battle_sea.webp", "remote": "hf_20261003_042643_a6cbb763-2e9d-48c9-a955-34dc4775a9c5.png", "job": "a6cbb763-2e9d-48c9-a955-34dc4775a9c5", "fit": "opaque:1920", "rev": 20261003042643},
+    "unit.crown_line":                         { "local": "units/crown_line.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.0", "rev": 20261003043135},
+    "unit.crown_line_b":                       { "local": "units/crown_line_b.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.1", "rev": 20261003043135},
+    "unit.crown_line_atk":                     { "local": "units/crown_line_atk.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.2", "rev": 20261003043135},
+    "unit.crown_line_hit":                     { "local": "units/crown_line_hit.webp", "remote": "hf_20261003_043135_gpt-anim_crown_line.png", "job": "gpt-anim_crown_line", "fit": "sheet:anim_crown_line.3", "rev": 20261003043135}
   }
 }
