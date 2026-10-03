@@ -1345,6 +1345,10 @@
     "bg.deck_brig":                            { "local": "art/deck_brig.webp", "remote": "hf_20261003_070020_gpt-bg-deck_brig.png", "job": "gpt-bg-deck_brig", "fit": "opaque:1536", "rev": 20261003070020},
     "bg.deck_frigate":                         { "local": "art/deck_frigate.webp", "remote": "hf_20261003_070521_gpt-bg-deck_frigate.png", "job": "gpt-bg-deck_frigate", "fit": "opaque:1536", "rev": 20261003070521},
     "bg.deck_galleon":                         { "local": "art/deck_galleon.webp", "remote": "hf_20261003_071023_gpt-bg-deck_galleon.png", "job": "gpt-bg-deck_galleon", "fit": "opaque:1536", "rev": 20261003071023},
-    "bg.deck_man_o_war":                       { "local": "art/deck_man_o_war.webp", "remote": "hf_20261003_071453_gpt-bg-deck_man_o_war.png", "job": "gpt-bg-deck_man_o_war", "fit": "opaque:1536", "rev": 20261003071453}
+    "bg.deck_man_o_war":                       { "local": "art/deck_man_o_war.webp", "remote": "hf_20261003_071453_gpt-bg-deck_man_o_war.png", "job": "gpt-bg-deck_man_o_war", "fit": "opaque:1536", "rev": 20261003071453},
+    "unit.lagoon_tentacle":                    { "local": "units/lagoon_tentacle.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.0", "rev": 20261003071940},
+    "unit.lagoon_tentacle_b":                  { "local": "units/lagoon_tentacle_b.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.1", "rev": 20261003071940},
+    "unit.lagoon_tentacle_atk":                { "local": "units/lagoon_tentacle_atk.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.2", "rev": 20261003071940},
+    "unit.lagoon_tentacle_hit":                { "local": "units/lagoon_tentacle_hit.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.3", "rev": 20261003071940}
   }
 }
