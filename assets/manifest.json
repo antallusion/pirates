@@ -1397,6 +1397,7 @@
     "unit.seal_atk":                           { "local": "units/seal_atk.webp", "remote": "hf_20261003_091359_gpt-anim_seal.png", "job": "gpt-anim_seal", "fit": "sheet:anim_seal.2", "rev": 20261003091359},
     "unit.seal_hit":                           { "local": "units/seal_hit.webp", "remote": "hf_20261003_091359_gpt-anim_seal.png", "job": "gpt-anim_seal", "fit": "sheet:anim_seal.3", "rev": 20261003091359},
     "bg.field_tropical":                       { "local": "art/field_tropical.webp", "remote": "hf_20261003_093826_gpt-bg-field_tropical.png", "job": "gpt-bg-field_tropical", "fit": "opaque:1920", "rev": 20261003093826},
-    "bg.field_rocky":                          { "local": "art/field_rocky.webp", "remote": "hf_20261003_093940_gpt-bg-field_rocky.png", "job": "gpt-bg-field_rocky", "fit": "opaque:1920", "rev": 20261003093940}
+    "bg.field_rocky":                          { "local": "art/field_rocky.webp", "remote": "hf_20261003_093940_gpt-bg-field_rocky.png", "job": "gpt-bg-field_rocky", "fit": "opaque:1920", "rev": 20261003093940},
+    "bg.field_volcanic":                       { "local": "art/field_volcanic.webp", "remote": "hf_20261003_094419_gpt-bg-field_volcanic.png", "job": "gpt-bg-field_volcanic", "fit": "opaque:1920", "rev": 20261003094419}
   }
 }

@@ -1308,9 +1308,10 @@ export class TacticalPanel {
       g.fillRect(X0 + (X1 - X0) * rnd(), Y0 + (Y1 - Y0) * rnd(), 1.5, 1.5);
     }
     g.globalAlpha = 1;
-    // The wet sand behind the surf, the surf itself, its foam.
+    // The wet sand behind the surf, the surf itself, its foam — on a painted field a tide over its ground, not a band of
+    // flat teal tiles across it.
     for (let i = 0; i < cells.length; i++) {
-      if (cells[i] !== 'W') continue;
+      if (cells[i] !== 'W' || art) continue;
       const p = this.lc(i);
       g.fillStyle = 'rgba(40,30,20,0.18)';
       g.beginPath();
@@ -1324,10 +1325,12 @@ export class TacticalPanel {
       sea.addColorStop(0, type === 'dead' ? '#2c4650' : type === 'swamp' ? '#33463a' : '#2e7a86');
       sea.addColorStop(1, type === 'dead' ? '#22363e' : type === 'swamp' ? '#2a3a2f' : '#1f5a66');
       g.fillStyle = sea;
+      g.globalAlpha = art ? 0.42 : 1;
       this.hexPath(g, p.x, p.y, r + 0.8);
       g.fill();
+      g.globalAlpha = 1;
     }
-    g.strokeStyle = 'rgba(240,248,245,0.6)';
+    g.strokeStyle = art ? 'rgba(240,248,245,0.4)' : 'rgba(240,248,245,0.6)';
     g.lineWidth = Math.max(1, w * 0.04);
     for (let i = 0; i < cells.length; i++) {
       if (cells[i] !== 'W') continue;
