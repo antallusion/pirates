@@ -1791,6 +1791,10 @@
     "unit.wild_boar":                          { "local": "units/wild_boar.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.0", "rev": 20261003163712},
     "unit.wild_boar_b":                        { "local": "units/wild_boar_b.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.1", "rev": 20261003163712},
     "unit.wild_boar_atk":                      { "local": "units/wild_boar_atk.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.2", "rev": 20261003163712},
-    "unit.wild_boar_hit":                      { "local": "units/wild_boar_hit.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.3", "rev": 20261003163712}
+    "unit.wild_boar_hit":                      { "local": "units/wild_boar_hit.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.3", "rev": 20261003163712},
+    "unit.hero_admiral":                       { "local": "units/hero_admiral.webp", "remote": "hf_20261003_164200_gpt-anim_hero_admiral.png", "job": "gpt-anim_hero_admiral", "fit": "sheet:anim_hero_admiral.0", "rev": 20261003164200},
+    "unit.hero_admiral_b":                     { "local": "units/hero_admiral_b.webp", "remote": "hf_20261003_164200_gpt-anim_hero_admiral.png", "job": "gpt-anim_hero_admiral", "fit": "sheet:anim_hero_admiral.1", "rev": 20261003164200},
+    "unit.hero_admiral_atk":                   { "local": "units/hero_admiral_atk.webp", "remote": "hf_20261003_164200_gpt-anim_hero_admiral.png", "job": "gpt-anim_hero_admiral", "fit": "sheet:anim_hero_admiral.2", "rev": 20261003164200},
+    "unit.hero_admiral_hit":                   { "local": "units/hero_admiral_hit.webp", "remote": "hf_20261003_164200_gpt-anim_hero_admiral.png", "job": "gpt-anim_hero_admiral", "fit": "sheet:anim_hero_admiral.3", "rev": 20261003164200}
   }
 }
