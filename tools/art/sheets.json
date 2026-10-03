@@ -5043,5 +5043,55 @@
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of three different sailing ships side by side in one row, left to right, each alone in its own third of the image with wide empty gaps between them: 1) a vast ship of the Choir built like a drowned cathedral, gothic spires on its castles, stained-glass stern windows and bells in its rigging; 2) a floating pirate town built on a huge old hull — shacks, a tavern with a crooked chimney, rope bridges and three masts; 3) a colossal iron-plated whale-shaped hull with riveted plates, small square sails on four masts and a gaping whale-mouth bow; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own third, filling most of the image height, its bowsprit and yard tips inside its third. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
   "painting": true
+ },
+ "spells_5": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.sp_stinkpot",
+   "icon.sp_heated_shot",
+   "icon.sp_raking_fire",
+   "icon.sp_hammock_nettings",
+   "icon.sp_nail_colours",
+   "icon.sp_belaying_pin",
+   "icon.sp_double_grog",
+   "icon.sp_swing_aboard",
+   "icon.sp_no_quarter",
+   "icon.sp_st_elmos_fire",
+   "icon.sp_clearing_wind",
+   "icon.sp_rain_squall",
+   "icon.sp_forked_lightning",
+   "icon.sp_foul_water",
+   "icon.sp_kelp_poultice",
+   "icon.sp_siren_song"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 16 square battle-spell icons in a strict 4 by 4 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the spell icons of Heroes of Might and Magic III and the ability icons of World of Warcraft but grim and realistic. Each tile is its own icon: one dramatic scene filling the whole tile edge to edge, a strong focal point readable at a small size, the same lighting and finish across all of them. No blood, no wounds, no gore, no corpses, no skulls anywhere. The icons, left to right and top to bottom: 1. a cracked clay pot spewing thick yellow sulphur smoke, a smouldering rag fuse in its neck; 2. a glowing red-hot cannonball held in iron tongs over a brazier of coals; 3. a row of musket barrels and a swivel gun firing in one straight line down a ship's deck; 4. rolled canvas hammocks packed in rope netting along a ship's rail, a musket ball lodged in one; 5. a hammer driving iron nails through a tattered red ensign into a mast; 6. a heavy wooden belaying pin with a coil of rope looped over it, in a pin rail; 7. two dented pewter tankards of steaming grog beside a small rum keg with a brass tap; 8. a pirate silhouette swinging on a rope across the gap between two hulls, cutlass raised; 9. a plain black flag snapping above two crossed cutlasses driven into a deck; 10. pale blue St Elmo's fire glowing on the mast tips and yardarms against a storm sky; 11. a strong gust sweeping grey smoke and fog off a deck, blue sky breaking through; 12. slanting rain over a deck, a soaked powder horn and a hissing doused lantern in front; 13. a jagged three-branched lightning bolt over a dark sea striking a mast; 14. a split water cask leaking murky green water, flies over it; 15. dark green kelp wound as a bandage round a sailor's forearm, a brine bucket beside it; 16. a seaweed-wrapped siren silhouette singing on a wet rock under the moon, faint rings of song drifting to a distant ship; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
+ },
+ "spells_6": {
+  "grid": [
+   2,
+   2
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.sp_jonah",
+   "icon.sp_muffled_oars",
+   "icon.sp_silent_fog",
+   "icon.sp_fog_madness"
+  ],
+  "prompt": "Draw a square image: a game icon sheet of 4 square battle-spell icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the spell icons of Heroes of Might and Magic III and the ability icons of World of Warcraft but grim and realistic. Each tile is its own icon: one dramatic scene filling the whole tile edge to edge, a strong focal point readable at a small size, the same lighting and finish across all of them. No blood, no wounds, no gore, no corpses, no skulls anywhere. The icons, left to right and top to bottom: 1. a lone hooded sailor apart at the rail in fog, shadowy shipmates glancing at him; 2. rag-wrapped oars dipping silently into black water under a thin crescent moon in fog; 3. signal flags hanging limp in thick grey fog, a brass speaking trumpet lying on the deck; 4. a sailor in thick fog swinging a cutlass at blurred, distorted silhouettes of his own shipmates; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
+  "painting": true
  }
 }
