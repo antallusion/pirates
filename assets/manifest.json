@@ -1325,6 +1325,10 @@
     "unit.reef_shark":                         { "local": "units/reef_shark.webp", "remote": "hf_20261003_063731_gpt-anim_reef_shark.png", "job": "gpt-anim_reef_shark", "fit": "sheet:anim_reef_shark.0", "rev": 20261003063731},
     "unit.reef_shark_b":                       { "local": "units/reef_shark_b.webp", "remote": "hf_20261003_063731_gpt-anim_reef_shark.png", "job": "gpt-anim_reef_shark", "fit": "sheet:anim_reef_shark.1", "rev": 20261003063731},
     "unit.reef_shark_atk":                     { "local": "units/reef_shark_atk.webp", "remote": "hf_20261003_063731_gpt-anim_reef_shark.png", "job": "gpt-anim_reef_shark", "fit": "sheet:anim_reef_shark.2", "rev": 20261003063731},
-    "unit.reef_shark_hit":                     { "local": "units/reef_shark_hit.webp", "remote": "hf_20261003_063731_gpt-anim_reef_shark.png", "job": "gpt-anim_reef_shark", "fit": "sheet:anim_reef_shark.3", "rev": 20261003063731}
+    "unit.reef_shark_hit":                     { "local": "units/reef_shark_hit.webp", "remote": "hf_20261003_063731_gpt-anim_reef_shark.png", "job": "gpt-anim_reef_shark", "fit": "sheet:anim_reef_shark.3", "rev": 20261003063731},
+    "unit.rock_turtle":                        { "local": "units/rock_turtle.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.0", "rev": 20261003064147},
+    "unit.rock_turtle_b":                      { "local": "units/rock_turtle_b.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.1", "rev": 20261003064147},
+    "unit.rock_turtle_atk":                    { "local": "units/rock_turtle_atk.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.2", "rev": 20261003064147},
+    "unit.rock_turtle_hit":                    { "local": "units/rock_turtle_hit.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.3", "rev": 20261003064147}
   }
 }
