@@ -162,9 +162,11 @@ BG = ('Dark Pirate Gothic, oil-painting texture over photographic realism, deep 
 
 
 def town_prompt(x):
-    return (f'Draw a square image: a game map sprite of one port town — {x["town"]}. Seen from high above at a steep angle, the '
-            'whole town compact on its own patch of shore filling most of the picture, its piers and jetties reaching straight down '
-            f'toward the bottom edge. {STYLE} The town alone on a solid flat magenta #FF00FF background: no sea around it, no '
+    return (f'Draw a square image: a game map sprite of one port town — {x["town"]}. Seen from almost straight above like a map '
+            'plan, with only a slight tilt so the walls and roofs show a little of their front faces; the streets, walls and quays run '
+            'square to the edges of the picture (not rotated, not isometric); the whole town compact on its own patch of shore filling '
+            'most of the picture, three or four piers and jetties reaching straight down toward the bottom edge. '
+            f'{STYLE} The town alone on a solid flat magenta #FF00FF background: no sea around it, no '
             'shadows on the background, no frame, no text, no letters, no labels.')
 
 
