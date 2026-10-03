@@ -10,7 +10,7 @@ import { catAboard, givePet, petAction, petsOnDock, petsOnLand, sanitizePets, st
 import { questEvent } from '../server/src/game/quests.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
-import { join, makeGame } from './helpers.ts';
+import { join, makeGame, onWeekday } from './helpers.ts';
 
 test('the old ship’s cat comes aboard as a pet on deck; one pet on deck at a time', () => {
   const { game } = makeGame();
@@ -32,6 +32,7 @@ test('the old ship’s cat comes aboard as a pet on deck; one pet on deck at a t
 
 test('a tavern’s pet seller has two a day; she buys one', () => {
   const { game } = makeGame();
+  onWeekday(game); // on a holiday the fair has all four
   join(game, 'Buyer Bea');
   const s = game.sessionByName('Buyer Bea')!;
   const port = game.world.ports[0];

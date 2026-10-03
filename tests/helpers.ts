@@ -8,6 +8,7 @@ import { Game } from '../server/src/game/Game.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import { Database } from '../server/src/persistence/db.ts';
 import { quietAdv } from '../server/src/game/advmap.ts';
+import { holidayAt } from '../shared/src/data/holidays.ts';
 
 export class FakeConn {
   onMessage: (text: string) => void = () => {};
@@ -59,6 +60,15 @@ export function makeGame(): { game: Game; db: Database } {
   // The adventure map's guards stay out of the water in tests of other systems (tests/heroes4.test.ts wakes them).
   quietAdv(game);
   return { game, db };
+}
+
+/** The game's wall clock moved off the weekend: every Saturday and Sunday is one of the sea's holidays (pet fairs,
+ *  holiday chapters, the tournaments), so a test of the weekday's rules keeps to a weekday whatever day it runs on —
+ *  the coming Monday, the clock still running. */
+export function onWeekday(game: Game): void {
+  const h = holidayAt(Date.now());
+  const shift = h ? h.end - Date.now() + 3_600_000 : 0;
+  game.wallNow = () => Date.now() + shift;
 }
 
 export function join(game: Game, name: string, captain: 'corsair' | 'reaver' | 'smuggler' | 'navigator' | 'drowned' | 'admiral' = 'corsair'): FakeConn {

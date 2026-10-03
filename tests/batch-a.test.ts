@@ -292,7 +292,8 @@ test('ships in a row without making port: from the third a growing bonus to plun
   const xp: number[] = [];
   const grant = game.grantXp.bind(game);
   game.grantXp = (ses, amount, reason, battle) => {
-    if (ses === s) xp.push(amount);
+    // The kills' own experience: a daily order done by one of them (whichever the day rolls) pays apart.
+    if (ses === s && reason?.startsWith('Sank ')) xp.push(amount);
     grant(ses, amount, reason, battle);
   };
   const credit = (v: ShipEntity) => (game as unknown as { creditKill: (a: ShipEntity, b: ShipEntity, how: 'sunk' | 'boarded') => void }).creditKill(ship, v, 'sunk');

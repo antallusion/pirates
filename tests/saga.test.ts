@@ -11,10 +11,11 @@ import { buyIsland } from '../server/src/game/estate.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { tellSaga } from '../client/src/ui/saga.ts';
-import { join, makeGame } from './helpers.ts';
+import { join, makeGame, onWeekday } from './helpers.ts';
 
 test('a chapter for a deed: the day of her voyages; on a holiday, the holiday’s day', () => {
   const { game } = makeGame();
+  onWeekday(game); // the first chapter is a weekday's
   const c = join(game, 'Chronicle Cara');
   const s = game.sessionByName('Chronicle Cara')!;
   sagaNote(game, s, 'storm_heart', ['Gravewater Sea']);
