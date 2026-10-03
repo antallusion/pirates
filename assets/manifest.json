@@ -1875,6 +1875,22 @@
     "icon.ammo_stinkpot":                      { "local": "icons/ammo_stinkpot.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.12", "rev": 20261003212605},
     "icon.ammo_drag":                          { "local": "icons/ammo_drag.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.13", "rev": 20261003212605},
     "icon.set_master_gunner":                  { "local": "icons/set_master_gunner.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.14", "rev": 20261003212605},
-    "icon.set_smuggler":                       { "local": "icons/set_smuggler.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.15", "rev": 20261003212605}
+    "icon.set_smuggler":                       { "local": "icons/set_smuggler.webp", "remote": "hf_20261003_212605_gpt-arms_1.png", "job": "gpt-arms_1", "fit": "sheet:arms_1.15", "rev": 20261003212605},
+    "icon.mod_gun_carriages":                  { "local": "icons/mod_gun_carriages.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.0", "rev": 20261003212909},
+    "icon.mod_powder_hoists":                  { "local": "icons/mod_powder_hoists.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.1", "rev": 20261003212909},
+    "icon.mod_shot_furnace":                   { "local": "icons/mod_shot_furnace.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.2", "rev": 20261003212909},
+    "icon.mod_mortar_bed":                     { "local": "icons/mod_mortar_bed.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.3", "rev": 20261003212909},
+    "icon.mod_chain_pumps":                    { "local": "icons/mod_chain_pumps.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.4", "rev": 20261003212909},
+    "icon.mod_fire_engine":                    { "local": "icons/mod_fire_engine.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.5", "rev": 20261003212909},
+    "icon.mod_carpenters_walk":                { "local": "icons/mod_carpenters_walk.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.6", "rev": 20261003212909},
+    "icon.mod_magazine_lining":                { "local": "icons/mod_magazine_lining.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.7", "rev": 20261003212909},
+    "icon.mod_davits":                         { "local": "icons/mod_davits.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.8", "rev": 20261003212909},
+    "icon.mod_boarding_nets":                  { "local": "icons/mod_boarding_nets.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.9", "rev": 20261003212909},
+    "icon.mod_lookout_top":                    { "local": "icons/mod_lookout_top.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.10", "rev": 20261003212909},
+    "icon.mod_iron_masts":                     { "local": "icons/mod_iron_masts.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.11", "rev": 20261003212909},
+    "icon.mod_sail_locker":                    { "local": "icons/mod_sail_locker.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.12", "rev": 20261003212909},
+    "icon.mod_bilge_keels":                    { "local": "icons/mod_bilge_keels.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.13", "rev": 20261003212909},
+    "icon.mod_galley":                         { "local": "icons/mod_galley.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.14", "rev": 20261003212909},
+    "icon.mod_leviathan_ribs":                 { "local": "icons/mod_leviathan_ribs.webp", "remote": "hf_20261003_212909_gpt-arms_2.png", "job": "gpt-arms_2", "fit": "sheet:arms_2.15", "rev": 20261003212909}
   }
 }
