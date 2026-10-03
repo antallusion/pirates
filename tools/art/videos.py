@@ -513,6 +513,43 @@ v('cut_dice', 'dice', 'Кости',
   'table height.')
 
 
+# ---- The seventh reel: the seven new lairs of the islands' wild beasts (shared/src/data/lairs.ts), each the first
+# time she lands against one (client/src/main.ts LAIR_FILM) -----------------------------------------------------------
+v('cut_jaguar_den', 'lair_jaguar_den', 'Логово ягуаров',
+  'A landing party with cutlasses and muskets pushes into a dark green tropical jungle from a white beach, hacking at vines '
+  'in the dripping heat; shafts of light fall through the canopy, parrots scream and fly up, and on a mossy fallen trunk above '
+  'the path a rosetted jaguar lies flat, its gold eyes following them, its tail twitching, then it bares its teeth. The camera '
+  'creeps forward low along the path behind the sailors.')
+v('cut_ape_ridge', 'lair_ape_ridge', 'Обезьяний хребет',
+  'A rocky ridge of grey stone and stunted palms over a beach at dusk: on its crest a huge grey-backed ape rises onto its legs '
+  'and beats its chest, its roar echoing over the bay, while more apes appear among the rocks and wild boars root in the scrub '
+  'below; the pirates\' longboat grinds onto the sand beneath them. The camera tilts slowly up from the boat to the roaring ape.')
+v('cut_croc_mangroves', 'lair_croc_mangroves', 'Крокодильи мангры',
+  'A longboat glides slowly through a maze of mangrove roots in brown, still water under a hazy sky, sailors poling it '
+  'carefully and peering into the gloom; giant warty toads croak on the roots, and what looked like a floating log opens a '
+  'yellow eye beside the boat as a great crocodile slides silently under the hull. The camera floats low on the water just '
+  'ahead of the bow.')
+v('cut_bat_cave', 'lair_bat_cave', 'Пещера летучих мышей',
+  'Dusk at the black mouth of a cave in a sea cliff: pirates with torches and drawn cutlasses step in over wet rocks, and a '
+  'vast cloud of giant bats bursts out over their heads with a roar of wings, the torchlight flickering on leathery wings and '
+  'small fangs, while a huge grey monitor lizard watches from a ledge with its tongue flicking. The camera stands just inside '
+  'the cave looking out at the sailors.')
+v('cut_moray_reef', 'lair_moray_reef', 'Риф мурен',
+  'A shallow coral reef close to a tropical shore, the surf washing over it in turquoise sheets: a sailor wades waist-deep with '
+  'a boat hook, and from a dark hole in the coral a giant mottled moray rises with its jaws gaping, while silver barracudas '
+  'flash through the channel beside him; his mates shout from the longboat. The camera hangs half under the clear water at '
+  'the reef\'s edge.')
+v('cut_albatross_rock', 'lair_albatross_rock', 'Скала альбатросов',
+  'A bare wind-scoured rock far out at sea under racing grey clouds, white with nesting seabirds: giant albatrosses with long '
+  'narrow wings wheel and hang on the gale above it, gulls scream and dive, and a longboat of pirates rows in through the '
+  'heavy swell toward its foot. The camera soars with the albatrosses along the face of the rock.')
+v('cut_octopus_wreck', 'lair_octopus_wreck', 'Осьминожий остов',
+  'Low tide on a desolate beach of black sand and grey mist where the broken hull of an old ship lies on her side, ribs and '
+  'planks covered in weed: from her shattered hold a giant dark-red octopus heaves itself out, its arms curling over the '
+  'timbers, and beside it a giant hermit crab in an old green-bronze ship\'s bell clatters down the planks toward the pirates '
+  'wading ashore. The camera moves slowly toward the wreck.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

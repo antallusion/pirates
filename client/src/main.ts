@@ -473,7 +473,9 @@ const BOSS_FILM: Record<string, string> = { kraken: 'cut_kraken_boss', leviathan
 /** The land's creatures, each lair's kind the first time she fights at one (a legend's lair takes the legend's film). */
 const LAIR_FILM: Record<string, string> = { crab_beach: 'cut_crab_beach', gull_cliffs: 'cut_gull_cliffs', seal_rookery: 'cut_seal_rookery', shark_shallows: 'cut_shark_shallows',
   turtle_rocks: 'cut_turtle_rocks', serpent_marsh: 'cut_serpent_marsh', hermit_camp: 'cut_hermit_camp', tentacle_lagoon: 'cut_tentacle_lagoon', drowned_surf: 'cut_drowned_surf',
-  choir_circle: 'cut_choir', serpent_grotto: 'cut_serpent', maw_pit: 'cut_lantern_maw', turtle_guardian: 'cut_ancient_turtle', leviathan_shoal: 'cut_leviathan' };
+  choir_circle: 'cut_choir', serpent_grotto: 'cut_serpent', maw_pit: 'cut_lantern_maw', turtle_guardian: 'cut_ancient_turtle', leviathan_shoal: 'cut_leviathan',
+  jaguar_den: 'cut_jaguar_den', ape_ridge: 'cut_ape_ridge', croc_mangroves: 'cut_croc_mangroves', bat_cave: 'cut_bat_cave', moray_reef: 'cut_moray_reef',
+  albatross_rock: 'cut_albatross_rock', octopus_wreck: 'cut_octopus_wreck' };
 /** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
 const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell', league: 'cut_league', free: 'cut_free' };
 /** The sea's legends each rise in their own film the first time she fights one. */
