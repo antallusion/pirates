@@ -526,9 +526,10 @@ v('cut_ape_ridge', 'lair_ape_ridge', 'Обезьяний хребет',
   'below; the pirates\' longboat grinds onto the sand beneath them. The camera tilts slowly up from the boat to the roaring ape.')
 v('cut_croc_mangroves', 'lair_croc_mangroves', 'Крокодильи мангры',
   'A longboat glides slowly through a maze of mangrove roots in brown, still water under a hazy sky, sailors poling it '
-  'carefully and peering into the gloom; giant warty toads croak on the roots, and what looked like a floating log opens a '
-  'yellow eye beside the boat as a great crocodile slides silently under the hull. The camera floats low on the water just '
-  'ahead of the bow.')
+  'carefully and peering into the gloom. Close beside the boat in the foreground lies a huge saltwater crocodile, longer than '
+  'the boat, its ridged armoured grey-green back and long narrow toothed snout just above the water like a floating log; it '
+  'opens a yellow eye and slides silently under the hull. No frogs or toads. The camera floats low on the water just ahead '
+  'of the bow.')
 v('cut_bat_cave', 'lair_bat_cave', 'Пещера летучих мышей',
   'Dusk at the black mouth of a cave in a sea cliff: pirates with torches and drawn cutlasses step in over wet rocks, and a '
   'vast cloud of giant bats bursts out over their heads with a roar of wings, the torchlight flickering on leathery wings and '
