@@ -1975,6 +1975,10 @@
     "ship.thunderer":                          { "local": "ships/thunderer.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.0", "rev": 20261003220717},
     "ship.storm_reaver":                       { "local": "ships/storm_reaver.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.1", "rev": 20261003220717},
     "ship.ship_of_the_line":                   { "local": "ships/ship_of_the_line.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.2", "rev": 20261003220717},
-    "ship.wyvern_galleass":                    { "local": "ships/wyvern_galleass.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.3", "rev": 20261003220717}
+    "ship.wyvern_galleass":                    { "local": "ships/wyvern_galleass.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.3", "rev": 20261003220717},
+    "unit.dragon_lancer":                      { "local": "units/dragon_lancer.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.0", "rev": 20261003220936},
+    "unit.dragon_lancer_b":                    { "local": "units/dragon_lancer_b.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.1", "rev": 20261003220936},
+    "unit.dragon_lancer_atk":                  { "local": "units/dragon_lancer_atk.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.2", "rev": 20261003220936},
+    "unit.dragon_lancer_hit":                  { "local": "units/dragon_lancer_hit.webp", "remote": "hf_20261003_220936_gpt-anim_dragon_lancer.png", "job": "gpt-anim_dragon_lancer", "fit": "sheet:anim_dragon_lancer.3", "rev": 20261003220936}
   }
 }
