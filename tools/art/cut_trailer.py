@@ -1,6 +1,7 @@
 """Cut GRAVETIDE's trailer from its seven shots (tools/art/videos.py, trailer_1..7), each faded into the next.
 
     python tools/art/cut_trailer.py      # assets/video/trailer.mp4 (720p H.264, a fade in and out)
+    python tools/art/cut_trailer.py raids  # assets/video/trailer_raids.mp4, the seven attacks
 
 Also: python tools/art/cut_trailer.py encode <raw.mp4> <id>  — one clip from Higgsfield into assets/video/<id>.mp4.
 """
@@ -16,6 +17,8 @@ OUT = os.path.join(ROOT, 'assets', 'video')
 FF = shutil.which('ffmpeg') or 'ffmpeg'
 FP = shutil.which('ffprobe') or 'ffprobe'
 SHOTS = ['trailer_1_fog', 'trailer_2_broadside', 'trailer_3_grapples', 'trailer_4_melee', 'trailer_5_kraken', 'trailer_6_dutchman', 'trailer_7_black_flag']
+# The second trailer, «Набеги» (raids): seven attacks (tools/art/videos.py, the fifth reel).
+RAIDS = ['raid_1_broadside', 'raid_2_chain', 'raid_3_fireship', 'raid_4_mortar', 'raid_5_ram', 'raid_6_town', 'raid_7_swivel']
 FADE = 0.6
 
 
@@ -45,8 +48,8 @@ def index():
         json.dump(ids, f)
 
 
-def trailer():
-    paths = [os.path.join(OUT, s + '.mp4') for s in SHOTS]
+def trailer(shots=SHOTS, name='trailer'):
+    paths = [os.path.join(OUT, s + '.mp4') for s in shots]
     missing = [p for p in paths if not os.path.exists(p)]
     if missing:
         raise SystemExit('missing: ' + ', '.join(os.path.basename(p) for p in missing))
@@ -70,7 +73,7 @@ def trailer():
             chain.append(f'{alast}[{i}:a]acrossfade=d={FADE}{aout}')
             alast = aout
         amap = ['-map', alast, '-c:a', 'aac', '-b:a', '128k']
-    dst = os.path.join(OUT, 'trailer.mp4')
+    dst = os.path.join(OUT, name + '.mp4')
     cmd += ['-filter_complex', ';'.join(chain), '-map', '[vout]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart']
     cmd += amap if audio else ['-an']
     subprocess.run(cmd + [dst], check=True)
@@ -81,5 +84,7 @@ def trailer():
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'encode':
         encode(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) > 1 and sys.argv[1] == 'raids':
+        trailer(RAIDS, 'trailer_raids')
     else:
         trailer()

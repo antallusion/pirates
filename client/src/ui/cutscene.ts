@@ -26,6 +26,11 @@ function seen(): Set<string> {
   }
 }
 
+/** Is this film made (in assets/video/index.json)? */
+export function filmExists(id: string): boolean {
+  return !!films?.has(id);
+}
+
 /** Has this film been shown already (or is there none to show)? */
 export function filmDue(id: string): boolean {
   return !!films?.has(id) && !seen().has(id);

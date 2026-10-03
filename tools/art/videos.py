@@ -391,6 +391,39 @@ v('cut_night_watch', 'night', 'Ночная вахта',
   'and the wake glows faintly with phosphorescence. The camera rises slowly from the binnacle up the mast to the stars.')
 
 
+# ---- The fifth reel: «Набеги» — seven attacks cut into the second trailer (tools/art/cut_trailer.py raids), which the
+# title screen plays in turn with the first --------------------------------------------------------------------------
+v('raid_1_broadside', 'trailer2', 'Ночной бортовой',
+  'Night on a heaving black sea: two ships of war run side by side a cable apart, and the nearer one fires a full broadside — a '
+  'rippling line of orange muzzle flashes runs down her hull from bow to stern, lighting her sails, her rigging and the white '
+  'smoke that rolls out across the water; the cannon jump back on their carriages. The camera tracks along her side at deck '
+  'height through the smoke.')
+v('raid_2_chain', 'trailer2', 'Книппели',
+  'A Crown frigate under full sail in a grey morning: a whirling chain shot tears into her rigging, sails rip from head to foot, '
+  'ropes whip loose, and her main topmast cracks and topples slowly forward in a tangle of canvas and line while her crew scatter '
+  'from beneath it on the deck. The camera looks up from her quarterdeck as the mast falls.')
+v('raid_3_fireship', 'trailer2', 'Брандер',
+  'Night in a crowded anchorage: a small ship wrapped in roaring flames drifts on the tide straight toward a line of anchored '
+  'merchantmen, its burning sails throwing sparks high into the dark; on the merchant decks sailors frantically cut their anchor '
+  'cables and push off with long poles as the glow lights their faces. The camera glides ahead of the fireship toward the line.')
+v('raid_4_mortar', 'trailer2', 'Мортира',
+  'Dusk off a rocky coast: on the deck of a squat bomb ketch a huge mortar fires upward with a deep thump and a gout of smoke; the '
+  'camera follows the black shell climbing in a high arc trailing a sputtering fuse against the purple sky, then looks down as it '
+  'bursts in a flash of fire over the stone walls of a harbour fort far below.')
+v('raid_5_ram', 'trailer2', 'Таран',
+  'A heavy sea under a storm sky: a pirate brigantine charges bow first through the waves and rams the side of a merchant ship '
+  'amidships; timbers crack and splinter, both hulls shudder and heel, spray bursts high, and grappling lines fly across as the '
+  'pirates brace on the bow. The camera rides on the brigantine\'s bowsprit into the impact.')
+v('raid_6_town', 'trailer2', 'Набег на город',
+  'Night raid on a small colonial harbour town: pirates with torches run up from the boats along a cobbled street between white '
+  'houses with shuttered windows, a church bell clangs, townsfolk flee into the alleys, and two pirates heave an iron-bound chest '
+  'out of the customs house doors toward the waiting boats. The camera runs with the pirates up the street.')
+v('raid_7_swivel', 'trailer2', 'Картечь с борта',
+  'Close on the rail of a pirate ship in a boarding fight at dusk: a grizzled gunner swings a brass swivel gun on its post and '
+  'fires it across the narrow gap at the enemy\'s rail in a blast of smoke and sparks, the recoil jolting the post; behind him '
+  'boarders crouch ready with hooks and cutlasses. The camera holds tight beside the gunner\'s shoulder.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

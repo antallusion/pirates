@@ -71,7 +71,7 @@ import { Journal } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
-import { filmDue, loadFilms, playFilm } from './ui/cutscene.ts';
+import { filmDue, filmExists, loadFilms, playFilm } from './ui/cutscene.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
@@ -568,13 +568,20 @@ function titleFilm(ka: HTMLElement, poster: string | null): void {
   const v = document.createElement('video');
   v.className = 'keyart-film';
   v.muted = true;
-  v.loop = true;
   v.playsInline = true;
   v.autoplay = true;
   v.preload = 'auto';
   v.setAttribute('aria-hidden', 'true');
   if (poster) v.poster = poster;
+  // The trailer and, once it is cut, the raids' trailer in turn (tools/art/cut_trailer.py).
+  let reel = 0;
   v.src = '/assets/video/trailer.mp4';
+  v.addEventListener('ended', () => {
+    const reels = ['trailer', ...(filmExists('trailer_raids') ? ['trailer_raids'] : [])];
+    reel = (reel + 1) % reels.length;
+    v.src = `/assets/video/${reels[reel]}.mp4`;
+    void v.play().catch(() => {});
+  });
   v.addEventListener('playing', () => v.classList.add('on'));
   ka.appendChild(v);
   // Autoplay is a request, not a promise: ask again once it can play, on the title screen only.
