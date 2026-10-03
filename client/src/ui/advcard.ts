@@ -243,12 +243,16 @@ export class AdvCard {
     let max = Math.max(140, Math.round(innerHeight - top - 8));
     let left = narrow ? this.baseLeft! : r.left;
     if (narrow && innerHeight <= 520) {
-      // A phone held sideways: no room above or below — the card steps aside from the token instead.
-      const w = r.width, h = Math.min(this.el.scrollHeight, max);
+      // A phone held sideways: no room above or below — the card steps aside from the token instead; never left of
+      // where its stylesheet puts it (the captain's plate is there), so with no room either side it stays over the
+      // token it is about.
+      const w = r.width, h = Math.min(this.el.scrollHeight, max), minLeft = Math.max(8, this.baseLeft!);
       for (const p of this.subjects()) {
         if (p.x < left - 24 || p.x > left + w + 24 || p.y < top - 24 || p.y > top + h + 24) continue;
         const right = Math.round(p.x + 40), leftOf = Math.round(p.x - 40 - w);
-        left = right + w <= innerWidth - 8 && (p.x < left + w / 2 || leftOf < 8) ? right : Math.max(8, leftOf);
+        const fitsRight = right + w <= innerWidth - 8, fitsLeft = leftOf >= minLeft;
+        if (fitsRight && (p.x < left + w / 2 || !fitsLeft)) left = right;
+        else if (fitsLeft) left = leftOf;
       }
     }
     if (narrow && innerHeight > 520) {
