@@ -2024,6 +2024,10 @@
     "unit.cinder_salamander":                  { "local": "units/cinder_salamander.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.0", "rev": 20261003234105},
     "unit.cinder_salamander_b":                { "local": "units/cinder_salamander_b.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.1", "rev": 20261003234105},
     "unit.cinder_salamander_atk":              { "local": "units/cinder_salamander_atk.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.2", "rev": 20261003234105},
-    "unit.cinder_salamander_hit":              { "local": "units/cinder_salamander_hit.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.3", "rev": 20261003234105}
+    "unit.cinder_salamander_hit":              { "local": "units/cinder_salamander_hit.webp", "remote": "hf_20261003_234105_gpt-anim_cinder_salamander.png", "job": "gpt-anim_cinder_salamander", "fit": "sheet:anim_cinder_salamander.3", "rev": 20261003234105},
+    "unit.war_orca":                           { "local": "units/war_orca.webp", "remote": "hf_20261003_234403_gpt-anim_war_orca.png", "job": "gpt-anim_war_orca", "fit": "sheet:anim_war_orca.0", "rev": 20261003234403},
+    "unit.war_orca_b":                         { "local": "units/war_orca_b.webp", "remote": "hf_20261003_234403_gpt-anim_war_orca.png", "job": "gpt-anim_war_orca", "fit": "sheet:anim_war_orca.1", "rev": 20261003234403},
+    "unit.war_orca_atk":                       { "local": "units/war_orca_atk.webp", "remote": "hf_20261003_234403_gpt-anim_war_orca.png", "job": "gpt-anim_war_orca", "fit": "sheet:anim_war_orca.2", "rev": 20261003234403},
+    "unit.war_orca_hit":                       { "local": "units/war_orca_hit.webp", "remote": "hf_20261003_234403_gpt-anim_war_orca.png", "job": "gpt-anim_war_orca", "fit": "sheet:anim_war_orca.3", "rev": 20261003234403}
   }
 }
