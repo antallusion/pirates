@@ -1767,6 +1767,10 @@
     "unit.cave_bat":                           { "local": "units/cave_bat.webp", "remote": "hf_20261003_160839_gpt-anim_cave_bat.png", "job": "gpt-anim_cave_bat", "fit": "sheet:anim_cave_bat.0", "rev": 20261003160839},
     "unit.cave_bat_b":                         { "local": "units/cave_bat_b.webp", "remote": "hf_20261003_160839_gpt-anim_cave_bat.png", "job": "gpt-anim_cave_bat", "fit": "sheet:anim_cave_bat.1", "rev": 20261003160839},
     "unit.cave_bat_atk":                       { "local": "units/cave_bat_atk.webp", "remote": "hf_20261003_160839_gpt-anim_cave_bat.png", "job": "gpt-anim_cave_bat", "fit": "sheet:anim_cave_bat.2", "rev": 20261003160839},
-    "unit.cave_bat_hit":                       { "local": "units/cave_bat_hit.webp", "remote": "hf_20261003_160839_gpt-anim_cave_bat.png", "job": "gpt-anim_cave_bat", "fit": "sheet:anim_cave_bat.3", "rev": 20261003160839}
+    "unit.cave_bat_hit":                       { "local": "units/cave_bat_hit.webp", "remote": "hf_20261003_160839_gpt-anim_cave_bat.png", "job": "gpt-anim_cave_bat", "fit": "sheet:anim_cave_bat.3", "rev": 20261003160839},
+    "unit.giant_toad":                         { "local": "units/giant_toad.webp", "remote": "hf_20261003_161327_gpt-anim_giant_toad.png", "job": "gpt-anim_giant_toad", "fit": "sheet:anim_giant_toad.0", "rev": 20261003161327},
+    "unit.giant_toad_b":                       { "local": "units/giant_toad_b.webp", "remote": "hf_20261003_161327_gpt-anim_giant_toad.png", "job": "gpt-anim_giant_toad", "fit": "sheet:anim_giant_toad.1", "rev": 20261003161327},
+    "unit.giant_toad_atk":                     { "local": "units/giant_toad_atk.webp", "remote": "hf_20261003_161327_gpt-anim_giant_toad.png", "job": "gpt-anim_giant_toad", "fit": "sheet:anim_giant_toad.2", "rev": 20261003161327},
+    "unit.giant_toad_hit":                     { "local": "units/giant_toad_hit.webp", "remote": "hf_20261003_161327_gpt-anim_giant_toad.png", "job": "gpt-anim_giant_toad", "fit": "sheet:anim_giant_toad.3", "rev": 20261003161327}
   }
 }
