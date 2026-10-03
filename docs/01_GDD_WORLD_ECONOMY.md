@@ -209,6 +209,59 @@ x→ 0 км          22           60              95           120
 
 Объекты суши включают скалы и шхеры. «Полноценных» островов с высадкой около 500.
 
+### 3.2a Двадцать новых портов (владелец, 2026-10-03: «около 20 городов (портов)»)
+
+Восьмой шаг генерации (`shared/src/world/newports.ts`, `appendPorts`). Двадцать городов встают после всего, что было: после островов, портов, рифов и знаков моря шагов 1–7. Каждый город стоит на собственном новом острове, и у острова новый id в конце списка. Поэтому каждый прежний порт, остров, риф и знак сохраняет свой id и место. Сохранения, аренды, логова, квесты и карты, где они названы, остаются верными.
+
+- **Место.** Остров ищется в чистой воде своего моря как можно ближе к задуманному месту (`near`):
+  - вдали от прежних островов и рифов на ширину пролива;
+  - вдали от знаков моря, вещей и стражей карты приключений, петель черепах-островов, течений и водоворотов;
+  - вдали от трасс между прежними портами и в 4 км от любой гавани.
+
+  Где моря не хватает, остров чуть меньше, но не меньше 62 % своего размера. Если место рядом есть только для острова поменьше, лучше поставить его, чем остров полного размера далеко в море.
+- **Гавань.** Она стоит на той стороне острова, где воды больше всего. Навигационная сетка знает и сушу, и якорную стоянку.
+- **Что осталось прежним.** Всё, что мир расставляет сам, считается от мира до восьмого шага (`beforePorts`) и стоит на прежнем месте:
+  - карта приключений;
+  - черепахи-острова, затонувшие города и обломки;
+  - уровни квадратов моря (у новых гаваней нет своей «тихой воды»);
+  - работы жителей островов.
+- **Рынок.** Рынок собирается из того, что город делает и что ему нужно (`newPortProfile`), в масштабе ключевых портов. Дешёвое возят трюмами, дорогое ящиками, редкие материалы считаными ящиками. Город размера 1 торгует на 0,8 от среднего, город размера 3 — на 1,3.
+- **Что получает каждый город.** У каждого есть:
+  - свои ~85 работ на доске (их id идут после всех прежних);
+  - работы у логов, групповые контракты и таверна;
+  - рынок, который на живом сервере с прежней базой заводится при первом старте (`createMarket`; `restoreMarkets` пропускает незнакомые id).
+- **Чем новые порты отличаются от ключевых.** Все двадцать — `key: false`. Ключевыми остаются десять: только у них патрули, улучшенные жилища существ и мировые события рынка.
+- **Бездна.** Портов в Бездне нет. Это море эндшпиля за Стеной Водоворота, и рынков там нет (§3.10). Поэтому два города, которых очередь художников отдала Бездне, стоят у её края в Утонувшей Короне, единственном соседнем море:
+  - `last_light` — маяк-крепость Ордена;
+  - `marrowdeep` — костяной риф Хора.
+- **Рисунки.** У каждого города два рисунка (`tools/art/ports.py`): город на карте `prop.port_<id>` и гавань с воды `bg.port_<id>`. Пока их нет в манифесте, клиент рисует город и гавань его флага (`prop.port_<faction>`, `bg.port_<faction>`). Нарисованный рисунок встаёт сам, без правки кода.
+- **Русские названия и строки** лежат в `client/src/lang/data.ports.ru.ts`.
+
+Координаты ниже — якорные стоянки на нынешней карте мира (96 × 96 км, x на восток, y на юг, сид мира `WORLD_SEED`). Это не масштаб наброска в §3.1. Производство и потребление указаны в единицах в час при полной мощности.
+
+| id | Город | Море | Флаг | Размер | Верфь | Чёрный рынок | Гавань, км | Делает | Нужно |
+|---|---|---|---|---|---|---|---|---|---|
+| `bellhaven` | Bellhaven / Колокольная Гавань | `black_coast` | `crown` | 3 | 4 | — | (24,8; 71,7) | planks 28, sailcloth 22, weapons 9 | timber 31, iron 18, provisions 22, rum 13 |
+| `gallowsmouth` | Gallowsmouth / Висельная Губа | `black_coast` | `crown` | 2 | 2 | — | (19,2; 89,5) | salt 24, provisions 20 | weapons 10, gunpowder 12, medicine 7, cloth 10 |
+| `copperhook` | Copperhook / Медный Крюк | `gravewater` | `league` | 2 | 3 | — | (53,0; 76,3) | cloth 18, spices 9, medicine 7 | sugar 21, iron 14, timber 17, provisions 13 |
+| `rotgut_landing` | Rotgut Landing / Сивушная Пристань | `gravewater` | `free` | 1 | 1 | да | (63,5; 84,4) | rum 14, sugar 14 | provisions 19, weapons 7, cloth 10, iron 7 |
+| `sugarloaf` | Sugarloaf / Сахарная Голова | `gravewater` | `league` | 2 | 2 | — | (42,4; 65,3) | sugar 21, rum 15, tobacco 11 | provisions 24, iron 14, cloth 13, medicine 5 |
+| `hushwater` | Hushwater / Тихая Вода | `whispering` | `brokers` | 2 | 2 | да | (14,4; 60,7) | dreamleaf 8, pearls 5 | rum 18, weapons 8, medicine 7, tobacco 9 |
+| `mirrorfen` | Mirrorfen / Зеркальная Топь | `whispering` | `brokers` | 1 | 1 | да | (22,8; 35,9) | dreamleaf 6, provisions 16 | cloth 14, rum 12, iron 9, medicine 4 |
+| `widows_wick` | Widow's Wick / Вдовий Фитиль | `whispering` | `free` | 1 | 1 | — | (12,6; 27,7) | provisions 19, whale_oil 10 | timber 19, rum 12, cloth 10, medicine 4 |
+| `slagport` | Slagport / Шлаковый Порт | `ashen_isles` | `confederacy` | 3 | 3 | да | (84,5; 80,7) | iron 22, weapons 11, gunpowder 13, coal 17 | provisions 31, rum 20, timber 22, cloth 13 |
+| `brimstone_bay` | Brimstone Bay / Серная Бухта | `ashen_isles` | `confederacy` | 2 | 2 | да | (78,5; 56,3) | gunpowder 14, sulfur_iron 2 | provisions 24, medicine 8, rum 13, timber 13 |
+| `frostgate` | Frostgate / Ледяные Ворота | `leviathan_reach` | `harpoon` | 3 | 3 | — | (21,3; 8,1) | whale_oil 20, leviathan_bone 3, provisions 22 | salt 31, rum 20, weapons 9, timber 17 |
+| `sealhold` | Sealhold / Тюленья Крепь | `leviathan_reach` | `free` | 1 | 1 | — | (49,7; 12,3) | provisions 19, whale_oil 10 | salt 19, rum 12, timber 13, weapons 4 |
+| `saltglass` | Saltglass / Соляное Стекло | `dead_mans_expanse` | `league` | 2 | 2 | — | (57,7; 49,6) | salt 24, cloth 15 | provisions 24, timber 20, rum 13, coal 13 |
+| `wreckhold` | Wreckhold / Обломная Крепь | `dead_mans_expanse` | `free` | 2 | 2 | да | (46,4; 58,4) | timber 24, planks 18, weapons 7 | provisions 24, rum 15, medicine 7, cloth 10 |
+| `lotus_anchorage` | Lotus Anchorage / Лотосовая Стоянка | `dead_mans_expanse` | `free` | 2 | 3 | — | (67,8; 46,5) | spices 11, cloth 15, medicine 7 | iron 17, sugar 17, rum 13, pearls 3 |
+| `steeplewater` | Steeplewater / Шпилевая Вода | `drowned_crown` | `choir` | 2 | 2 | — | (78,2; 42,1) | pearls 5, kraken_ink 2 | provisions 24, timber 20, rum 13, cloth 10 |
+| `tidehallow` | Tidehallow / Приливная Обитель | `drowned_crown` | `choir` | 1 | 1 | — | (68,1; 26,7) | medicine 7, provisions 16 | cloth 14, timber 16, rum 10, iron 7 |
+| `crownfall` | Crownfall / Павшая Корона | `drowned_crown` | `free` | 2 | 2 | да | (61,5; 12,5) | pearls 5, weapons 8, cloth 13 | provisions 24, rum 15, timber 17, medicine 5 |
+| `last_light` | Last Light / Последний Огонь | `drowned_crown` (у края Бездны) | `harpoon` | 2 | 3 | — | (71,1; 6,4) | whale_oil 15, leviathan_bone 2 | provisions 24, weapons 8, gunpowder 10, medicine 5 |
+| `marrowdeep` | Marrowdeep / Костный Омут | `drowned_crown` (у края Бездны) | `choir` | 1 | 1 | да | (76,0; 11,8) | kraken_ink 1, pearls 4 | provisions 19, rum 12, timber 13, cloth 8 |
+
 ### 3.3 The Black Coast (`black_coast`) — safe
 
 | Параметр | Описание |

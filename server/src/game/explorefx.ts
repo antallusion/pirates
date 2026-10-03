@@ -9,7 +9,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
-import { depthAt } from '../../../shared/src/world/worldgen.ts';
+import { beforePorts, depthAt } from '../../../shared/src/world/worldgen.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
@@ -314,9 +314,12 @@ export function buildWrecks(game: Game): SunkenWreck[] {
   const names = ['Saint Brendan', 'Gloria Regis', 'Merciful Anne', 'Black Tithe', 'Silver Hind', 'Grey Widow', 'Constance', 'Lamentation', 'Ninth Hour', 'Iron Psalm', 'Tidecaller', 'Wandering Jew'];
   let seed = game.world.seed >>> 0;
   const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  // On the sea floor as it lay before the twenty new towns' islands (shared/src/world/newports.ts): every wreck where
+  // and what she was.
+  const floor = beforePorts(game.world);
   for (let tries = 0; out.length < 24 && tries < 2000; tries++) {
     const x = 6000 + rnd() * 84000, y = 6000 + rnd() * 84000;
-    const depth = depthAt(game.world, x, y);
+    const depth = depthAt(floor, x, y);
     if (depth < 4 || depth > 45) continue;
     const region = REGIONS[game.regionAt(x, y)];
     out.push({ id: out.length, name: `wreck of the ${names[out.length % names.length]}`, x, y, depth: Math.round(depth), tier: region.safety === 'lawless' ? 3 : region.safety === 'contested' ? 2 : 1 });

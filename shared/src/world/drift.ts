@@ -7,7 +7,7 @@
 
 import { TAU } from '../math.ts';
 import { Rng } from '../rng.ts';
-import { DEEP_WATER, WHIRLPOOLS, depthAt, isLand } from './worldgen.ts';
+import { DEEP_WATER, WHIRLPOOLS, beforePorts, depthAt, isLand } from './worldgen.ts';
 import type { World } from './worldgen.ts';
 import type { RegionId } from './regions.ts';
 import { regionAt } from './worldgen.ts';
@@ -85,8 +85,10 @@ function open(world: World, x: number, y: number, r: number): boolean {
   return !WHIRLPOOLS.some((w) => Math.hypot(w.x - x, w.y - y) < w.radius * 2.2 + r);
 }
 
-/** The world's turtle islands. */
-export function turtles(world: World): TurtleDef[] {
+/** The world's turtle islands (on the world as she stood before her twenty new towns, whose islands keep off their
+ *  loops: shared/src/world/newports.ts). `keep` false: worked out and not kept. */
+export function turtles(world: World, keep = true): TurtleDef[] {
+  world = beforePorts(world);
   const hit = cache.get(world.islands);
   if (hit) return hit;
   const rng = new Rng((world.seed * 307 + 0x7e47) >>> 0);
@@ -108,6 +110,6 @@ export function turtles(world: World): TurtleDef[] {
       break;
     }
   }
-  cache.set(world.islands, out);
+  if (keep) cache.set(world.islands, out);
   return out;
 }

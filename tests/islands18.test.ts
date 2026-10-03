@@ -47,9 +47,10 @@ function captain(game: Game, name: string): PlayerSession {
 test('#25 half as many islands again — small islands, atolls and ridges — appended after every island before', () => {
   for (const w of [world, generateWorld(1)]) {
     const before = legacyWorld(w).islands.length;
-    const added = w.islands.length - w.isleFrom;
+    // (step 8's twenty towns' islands come after them: tests/ports20.test.ts)
+    const added = (w.portIslesFrom ?? w.islands.length) - w.isleFrom;
     assert.ok(added >= before * 0.4 && added <= before * 0.6, `${added} new to ${before}`);
-    const fresh = w.islands.slice(w.isleFrom);
+    const fresh = w.islands.slice(w.isleFrom, w.portIslesFrom);
     for (const k of ['small', 'atoll', 'ridge'] as const) assert.ok(fresh.filter((i) => i.isle === k).length >= 10, `${k}s`);
     assert.ok(fresh.every((i, n) => i.id === w.isleFrom + n && !i.portId && !i.raft), 'appended, with ids of their own');
     // The islands before are the very islands of the world before step 6, then the room kept for raised islands.
@@ -83,10 +84,13 @@ test('#25 the mines, the adventure map and the quests stand where they stood; th
   assert.deepEqual(full.guards.slice(0, was.guards.length), was.guards);
   assert.equal(h(buildMines(world)), h(buildMines(old)));
   const adv = was;
-  const fresh = world.islands.slice(world.isleFrom);
-  const lanes = [...portLanes(world.ports), ...portLanes(world.ports.filter((p) => !p.raft))];
+  // The harbours and lanes step 6 kept off are those before step 8's twenty towns, which came after and keep a channel
+  // of their own from her islands (tests/ports20.test.ts).
+  const fresh = world.islands.slice(world.isleFrom, world.portIslesFrom);
+  const ports = world.ports.slice(0, world.portsFrom);
+  const lanes = [...portLanes(ports), ...portLanes(ports.filter((p) => !p.raft))];
   for (const is of fresh) {
-    for (const p of world.ports) assert.ok(dist(p.x, p.y, is.x, is.y) > 2400, `${is.name} off the harbour of ${p.name}`);
+    for (const p of ports) assert.ok(dist(p.x, p.y, is.x, is.y) > 2400, `${is.name} off the harbour of ${p.name}`);
     for (const [ax, ay, bx, by] of lanes) assert.ok(segDist(is.x, is.y, ax, ay, bx, by) > is.radius + 500, `${is.name} off a lane`);
     for (const o of [...adv.objs, ...adv.guards]) assert.ok(dist(o.x, o.y, is.x, is.y) > is.radius + 300, `${is.name} off ${o.id}`);
     for (const q of world.reefs) assert.ok(dist(q.x, q.y, is.x, is.y) > q.radius + is.radius + 200, `${is.name} off reef ${q.id}`);

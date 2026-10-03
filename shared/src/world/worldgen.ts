@@ -11,6 +11,7 @@ import { KEY_PORTS, REGIONS, REGION_IDS, WORLD_EDGE_MARGIN, biomeFromMix } from 
 import type { IslandBiome, PortProfile, RegionId } from './regions.ts';
 import { appendIsles } from './moreisles.ts';
 import { appendMarks } from './moremarks.ts';
+import { appendPorts } from './newports.ts';
 
 export type IslandFeature = 'port' | 'ruins' | 'wreck' | 'lighthouse' | 'grove' | 'mine' | 'pearl_bank' | 'shrine' | 'cache'
   | 'fort' | 'volcano' | 'bones' | 'bell' | 'hermit' | 'spring';
@@ -138,6 +139,10 @@ export interface World {
   marksFrom?: number;
   /** The next empty place for a raised island (before isleFrom; once they are all taken, raised islands go on the end). */
   raisedNext?: number;
+  /** Step 8 (shared/src/world/newports.ts): the first of the twenty new ports, and the first of their islands; every
+   *  port and island before them is as she was. */
+  portsFrom?: number;
+  portIslesFrom?: number;
 }
 
 const REGION_CELL = 1000;
@@ -280,8 +285,19 @@ export function legacyIslands(world: World): Island[] {
   return world.islands.length > world.isleFrom ? world.islands.slice(0, world.isleFrom) : world.islands;
 }
 
+/** Step 8: each world and the world as she stood before her twenty new ports (shared/src/world/newports.ts). */
+export const beforePortsOf = new WeakMap<World, World>();
+
+/** The world as it stood before step 8 (every island, reef and mark she has, but not the twenty new towns nor their
+ *  islands): what the adventure map, the turtles, the sunken cities and the wrecks — placed from the world alone after
+ *  step 6 — are placed on, so they stand where they always stood. */
+export function beforePorts(world: World): World {
+  return beforePortsOf.get(world) ?? world;
+}
+
 export function generateWorld(seed: number): World {
-  return appendMarks(appendIsles(legacyWorldOf(seed))); // step 7: the marks twice as many (docs/19 D1)
+  // step 7: the marks twice as many (docs/19 D1); step 8: twenty new ports (owner, 2026-10-03)
+  return appendPorts(appendMarks(appendIsles(legacyWorldOf(seed))));
 }
 
 /** The world as it stood before docs/18 III (steps 1–5): what every placement made from the world alone is made on. */
@@ -833,7 +849,7 @@ export function marksNear(world: World, x: number, y: number, r = 0): SeaMark[] 
 }
 
 /** Anchor point `offset` meters beyond the outermost coastline crossing along `heading` from the island centre. */
-function coastAnchor(poly: number[], cx: number, cy: number, heading: number, offset: number): [number, number] {
+export function coastAnchor(poly: number[], cx: number, cy: number, heading: number, offset: number): [number, number] {
   const dir = headingVec(heading);
   let lastInside = 0;
   for (let d = 0; d < 4000; d += 10) {
@@ -1011,6 +1027,10 @@ export function raiseIsland(world: World, r: RaisedIsland): Island {
     world.raisedNext = slot + 1;
     const old = legacyOf.get(world);
     if (old && old.islands.length === slot) raiseIsland(old, r);
+    // Step 8: and into the world before the twenty new ports (where the adventure map and the turtles are placed), in
+    // the same room. (Once the room is spent she goes on the end, after the new ports' islands: an id that world has not.)
+    const pre = beforePortsOf.get(world);
+    if (pre && pre !== world && pre.islands[slot]?.slot) raiseIsland(pre, r);
   } else world.islands.push(is);
   const [x0, y0] = chunkOf(is.x - is.radius, is.y - is.radius);
   const [x1, y1] = chunkOf(is.x + is.radius, is.y + is.radius);

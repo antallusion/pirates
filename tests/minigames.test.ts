@@ -236,11 +236,14 @@ test('more islands: some 45% more, appended; clear of ports, lanes and each othe
     const outer = w.islands.slice(w.outerFrom, w.minorFrom); // the dense sea's stacks and floating towns come after (docs/16 P3)
     assert.ok(outer.length >= w.outerFrom * 0.4, `${outer.length} outer islands to ${w.outerFrom}`);
     assert.ok(outer.length <= REGION_IDS.reduce((a, r) => a + outerIslandCount(r), 0));
-    const lanes = portLanes(w.ports.filter((p) => !p.raft)); // the lanes as the outer islands were laid (before the floating towns)
+    // The lanes as the outer islands were laid (before the floating towns, and before step 8's twenty towns, which keep a
+    // channel of their own from every island: tests/ports20.test.ts).
+    const old = w.ports.slice(0, w.portsFrom);
+    const lanes = portLanes(old.filter((p) => !p.raft));
     for (const is of outer) {
       assert.ok(!is.portId);
       assert.ok(BIOME_MIX[is.region].some(([b]) => b === is.biome), `${is.name}: her region's biome`);
-      for (const p of w.ports.filter((q) => !q.raft)) assert.ok(Math.hypot(p.x - is.x, p.y - is.y) > is.radius + 2000, `${is.name} off ${p.name}`);
+      for (const p of old.filter((q) => !q.raft)) assert.ok(Math.hypot(p.x - is.x, p.y - is.y) > is.radius + 2000, `${is.name} off ${p.name}`);
       for (const o of w.islands) if (o !== is) assert.ok(Math.hypot(o.x - is.x, o.y - is.y) > o.radius + is.radius, `${is.name} clear of ${o.name}`);
       for (const [ax, ay, bx, by] of lanes) {
         const abx = bx - ax, aby = by - ay, t = Math.max(0, Math.min(1, ((is.x - ax) * abx + (is.y - ay) * aby) / (abx * abx + aby * aby)));

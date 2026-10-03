@@ -605,6 +605,7 @@ const REGION_LEVEL: Record<string, number> = { safe: 0, contested: 6, lawless: 1
 
 /** Every generated quest on a world: about seventy per port, the same for every server on this seed. */
 export function generateQuests(world: World, seed: number): QuestDef[] {
+  const full = world;
   world = legacyWorld(world); // docs/18 III: the jobs a saved game knows keep their islands
   const out: QuestDef[] = [];
   const ports = world.ports;
@@ -617,12 +618,9 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
     }
     return hit;
   };
-  for (const port of ports) {
+  /** A port's jobs, from her own dice: sent to the `near` harbours (the nearest first), rowed to the islands about her. */
+  const jobsOf = (port: Port, near: Port[], home: Island | undefined) => {
     const rng = new Rng((hashString(port.id) ^ (seed * 2654435761)) >>> 0);
-    const home = world.islands[port.islandId];
-    // The floating towns and the sea stacks of the dense sea (docs/16 P3) are not sent to or rowed for, so every
-    // port's jobs read as they did before them.
-    const near = ports.filter((p) => p.id !== port.id && !p.raft).map((p) => ({ p, d: Math.hypot(p.x - port.x, p.y - port.y) })).sort((a, b) => a.d - b.d).map((x) => x.p);
     const islandsNear = world.islands.filter((is) => !is.portId && !is.minor && is.id !== home?.id && Math.hypot(is.x - port.x, is.y - port.y) < 26000);
     const plots = PLOTS.filter((pl) => safetyOk(pl, port));
     const levelBase = REGION_LEVEL[REGIONS[port.region].safety] ?? 0;
@@ -640,7 +638,14 @@ export function generateQuests(world: World, seed: number): QuestDef[] {
         made++;
       }
     }
-  }
+  };
+  const byDistance = (port: Port, list: Port[]) => list.filter((p) => p.id !== port.id && !p.raft).map((p) => ({ p, d: Math.hypot(p.x - port.x, p.y - port.y) })).sort((a, b) => a.d - b.d).map((x) => x.p);
+  // The floating towns and the sea stacks of the dense sea (docs/16 P3) are not sent to or rowed for, so every
+  // port's jobs read as they did before them.
+  for (const port of ports) jobsOf(port, byDistance(port, ports), world.islands[port.islandId]);
+  // Step 8's twenty towns (shared/src/world/newports.ts): as many jobs each, on the same islands, sent to the old
+  // harbours and to one another — after every job before, each of which keeps her id and her course.
+  for (const port of full.ports.slice(full.portsFrom ?? full.ports.length)) jobsOf(port, byDistance(port, full.ports), full.islands[port.islandId]);
   return out;
 }
 
@@ -799,7 +804,8 @@ export function generateIslandJobs(world: World, seed: number): QuestDef[] {
       .find((s) => s.kind === 'fishers' || s.kind === 'smugglers');
     if (!people) continue;
     const rng = new Rng((is.id * 7919 + seed * 31 + 3) >>> 0);
-    const near = world.ports.filter((p) => !p.raft).sort((a, b) => Math.hypot(a.x - is.x, a.y - is.y) - Math.hypot(b.x - is.x, b.y - is.y));
+    // (the harbours before step 8's twenty towns: every island's people send where they always sent)
+    const near = world.ports.slice(0, world.portsFrom ?? world.ports.length).filter((p) => !p.raft).sort((a, b) => Math.hypot(a.x - is.x, a.y - is.y) - Math.hypot(b.x - is.x, b.y - is.y));
     const port = near[0];
     const plots = PLOTS.filter((pl) => ISLAND_PLOTS.includes(pl.id) && (people.kind === 'smugglers' || pl.id !== 'run_contraband'));
     const plot = rng.pick(plots);

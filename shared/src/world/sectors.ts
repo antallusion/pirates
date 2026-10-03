@@ -39,6 +39,8 @@ export interface SectorSource {
   seed: number;
   regionGrid: Uint8Array;
   ports: { x: number; y: number; faction: string; key: boolean; raft?: boolean }[];
+  /** Step 8's first port (shared/src/world/newports.ts): the squares are the sea's as she stood before her new towns. */
+  portsFrom?: number;
 }
 
 /** How dangerous a region's waters are, 1 (the Crown's own) to about 10 (the Abyss). */
@@ -97,7 +99,9 @@ export function sectorGrid(src: SectorSource): Sector[] {
       let level = Math.max(1, Math.min(SHIP_LEVEL_MAX, Math.round(raw)));
       let pocket: SectorPocket = null;
       const x0 = sx * SECTOR_SIZE, y0 = sy * SECTOR_SIZE;
-      const ports = src.ports.filter((p) => !p.raft && p.x >= x0 && p.x < x0 + SECTOR_SIZE && p.y >= y0 && p.y < y0 + SECTOR_SIZE);
+      // (The twenty towns of step 8 make no calm of their own: every square keeps the level the lairs, the map's guards and
+      // the quests were set by.)
+      const ports = src.ports.slice(0, src.portsFrom ?? src.ports.length).filter((p) => !p.raft && p.x >= x0 && p.x < x0 + SECTOR_SIZE && p.y >= y0 && p.y < y0 + SECTOR_SIZE);
       const home = Math.hypot(cx - HOME_WATERS[0], cy - HOME_WATERS[1]) < 22000;
       if (level >= 6 && ports.some((p) => friendly(p.faction))) {
         // A friendly harbour in wild waters: the water under her guns is quiet.

@@ -46,6 +46,7 @@ export function duelSea(): Game {
   // are taken off their chart (and the islands of docs/18 III).
   const w = game.world;
   w.islands.length = w.isleFrom; // nor the small islands, atolls and ridges of docs/18 III
+  w.ports.length = w.portsFrom ?? w.ports.length; // nor the twenty towns of step 8 (their islands went with the line above)
   for (const [k, list] of w.chunks) w.chunks.set(k, list.filter((id) => id < w.minorFrom));
   for (const [k, list] of w.reefChunks) w.reefChunks.set(k, list.filter((id) => id < w.reefsFrom));
   w.navGrid = buildNavGrid(w, false, w.minorFrom, w.reefsFrom);

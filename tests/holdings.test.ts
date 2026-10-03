@@ -186,6 +186,13 @@ test('moorings mend and steady; the cove hides; the guns fire on pirates', () =>
   assert.ok(ship.hull > hull + ship.stats.hullMax * 0.004, 'the pier mends');
   assert.ok(ship.sanity > 40 + 2, 'the chapel steadies');
   assert.ok(ship.hasFlag('hidden'), 'the cove hides her');
+  // The sea's own ships about the island sail off first: the battery takes the nearest hostile, and the world's dice
+  // may have put one of the sea's pirates nearer than ours.
+  const about: number[] = [];
+  game.forShipsNear(isl.x, isl.y, isl.radius + 2000, (o) => {
+    if (o.npcRole) about.push(o.id);
+  });
+  for (const id of about) game.removeShip(id);
   // A pirate comes in range.
   const pirate = game.spawnNpcShip('pirate', 'sloop', 'confederacy', isl.x + isl.radius + 700, isl.y + 300, 0, { ship: 'Sea Wolf', captain: 'Rook' });
   // An anchored pirate hull (no brain to sail her off): the guns go by her colours alone.
