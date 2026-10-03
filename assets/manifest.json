@@ -2016,6 +2016,7 @@
     "unit.mire_mother":                        { "local": "units/mire_mother.webp", "remote": "hf_20261003_232631_gpt-anim_mire_mother.png", "job": "gpt-anim_mire_mother", "fit": "sheet:anim_mire_mother.0", "rev": 20261003232631},
     "unit.mire_mother_b":                      { "local": "units/mire_mother_b.webp", "remote": "hf_20261003_232631_gpt-anim_mire_mother.png", "job": "gpt-anim_mire_mother", "fit": "sheet:anim_mire_mother.1", "rev": 20261003232631},
     "unit.mire_mother_atk":                    { "local": "units/mire_mother_atk.webp", "remote": "hf_20261003_232631_gpt-anim_mire_mother.png", "job": "gpt-anim_mire_mother", "fit": "sheet:anim_mire_mother.2", "rev": 20261003232631},
-    "unit.mire_mother_hit":                    { "local": "units/mire_mother_hit.webp", "remote": "hf_20261003_232631_gpt-anim_mire_mother.png", "job": "gpt-anim_mire_mother", "fit": "sheet:anim_mire_mother.3", "rev": 20261003232631}
+    "unit.mire_mother_hit":                    { "local": "units/mire_mother_hit.webp", "remote": "hf_20261003_232631_gpt-anim_mire_mother.png", "job": "gpt-anim_mire_mother", "fit": "sheet:anim_mire_mother.3", "rev": 20261003232631},
+    "bg.port_copperhook":                      { "local": "art/port_copperhook.webp", "remote": "hf_20261003_233330_gpt-bg.port_copperhook.png", "job": "gpt-bg.port_copperhook", "fit": "opaque:1920", "rev": 20261003233330}
   }
 }
