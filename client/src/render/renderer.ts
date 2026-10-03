@@ -2895,7 +2895,7 @@ export class Renderer {
       const dw = clamp(aim.dist, 40, range);
       const d = dw * this.zoom;
       const tone: [number, number, number] = !ready ? [150, 130, 105] : perfect ? [255, 226, 140] : waver ? [214, 112, 96] : [224, 184, 98];
-      this.drawFall(x, y, a, spread, hull, range * this.zoom, d, tone, !ready ? 0.45 : perfect ? 1.35 : 1, this.driftOf(state, h, dw, you.ammoSel));
+      this.drawFall(x, y, a, spread, hull, range * this.zoom, d, tone, !ready ? 0.45 : perfect ? 1.35 : 1, this.driftOf(state, h, dw, you.ammoSel, 1 + (gun.shotSpeed ?? 0)));
       if (held > 0) this.drawCharge(x, y, c, perfect, waver);
       this.drawRakes(state, own, ships, side, range, h, spread);
     }
@@ -2930,8 +2930,8 @@ export class Renderer {
 
   /** The cross wind's drift of a ball laid `dist` metres along world heading `h` (docs/16 #1), in metres (+ to the
    *  right of her line) — the same reckoning as the server's (shared/src/data/gunnery.ts). */
-  private driftOf(state: ClientState, h: number, dist: number, ammo: keyof typeof AMMO): number {
-    const speed = AMMO[ammo].speed * (1 + (state.ownStats ? tval(state.ownStats, 'shotSpeed') : 0));
+  private driftOf(state: ClientState, h: number, dist: number, ammo: keyof typeof AMMO, gunSpeed = 1): number {
+    const speed = AMMO[ammo].speed * (1 + (state.ownStats ? tval(state.ownStats, 'shotSpeed') : 0)) * gunSpeed;
     return windDrift(state.wind[0], state.wind[1], h, dist, speed);
   }
 

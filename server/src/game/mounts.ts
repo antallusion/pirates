@@ -3,14 +3,23 @@
 //  harpoon     — cable tether: the target cannot run, the pair is pulled together
 //  chain_gun   — swivel firing three chain balls in any direction
 //  abyssal_lance — a cold beam that needs (and feeds) the curse
+// And the pivot's wider trade (owner, 2026-10-03):
+//  swivel_gun   — three musketoons of grape in any direction (grape from the hold)
+//  long_tom     — one heavy ball on any bearing, far out (round shot from the hold)
+//  rocket_frame — six rockets scattered over a point: light blows, fires
+//  fire_siphon  — a cone of burning oil close aboard (whale oil from the hold)
+//  net_thrower  — a net in her rigging: slower and stiffer for a while, no damage
+//  smoke_pots   — her own screen: hidden, and half the shot at her flies wide at first
+//  powder_kegs  — two kegs over the stern for whoever follows (gunpowder from the hold)
+//  war_drums    — her crew's heart up, the enemy's down
 
 import { harpoonBeast } from './beasts.ts';
 import { AMMO, MOUNTS } from '../../../shared/src/data/ships.ts';
 import type { MountId } from '../../../shared/src/data/ships.ts';
-import { DEG, dist, headingVec, segmentHitsHull } from '../../../shared/src/math.ts';
+import { DEG, angleDiff, dist, headingVec, segmentHitsHull } from '../../../shared/src/math.ts';
 import { curseStage } from '../../../shared/src/protocol.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
-import { applyDamage, damageBlocked } from './combat.ts';
+import { applyDamage, damageBlocked, igniteShip } from './combat.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -124,11 +133,100 @@ export function fireMount(game: Game, ship: ShipEntity, tx: number, ty: number):
       game.emit({ k: 'lance', x: Math.round(ship.state.x), y: Math.round(ship.state.y), x2: Math.round(hx), y2: Math.round(hy) }, ship.state.x, ship.state.y);
       break;
     }
+    case 'swivel_gun': {
+      if (ship.ammo.grape < 2) return 'The musketoons need grapeshot';
+      ship.ammo.grape -= 2;
+      pivotShot(game, ship, h, reach, def.range, 'grape', 3, 20, 5);
+      break;
+    }
+    case 'long_tom': {
+      if (ship.ammo.round < 1) return 'The Long Tom needs round shot';
+      ship.ammo.round -= 1;
+      pivotShot(game, ship, h, reach, def.range, 'round', 1, 130, 1.2);
+      break;
+    }
+    case 'rocket_frame': {
+      // Six rockets over the point, each its own blow and a chance of fire.
+      const x = ship.state.x + Math.sin(h) * reach, y = ship.state.y - Math.cos(h) * reach;
+      game.strikes.push({ at: now + 2, x, y, radius: 90 * game.seaSpread(ship), hull: 55, rudder: 0, owner: ship.id, slow: 0, shells: 6, fx: 'barrage', fire: 1 / 3 });
+      game.emit({ k: 'fx', fx: 'rocket', x: Math.round(ship.state.x), y: Math.round(ship.state.y) }, ship.state.x, ship.state.y);
+      break;
+    }
+    case 'fire_siphon': {
+      if ((ship.cargo.whale_oil ?? 0) < 2) return 'The siphon needs 2 whale oil in the hold';
+      ship.cargo.whale_oil = (ship.cargo.whale_oil ?? 0) - 2;
+      if (!ship.cargo.whale_oil) delete ship.cargo.whale_oil;
+      // A 30° cone of burning oil out to its reach.
+      game.forShipsNear(ship.state.x, ship.state.y, def.range + 60, (o) => {
+        if (o.id === ship.id || !o.alive || o.docked || damageBlocked(game, ship, o)) return;
+        const d = dist(o.state.x, o.state.y, ship.state.x, ship.state.y) - o.stats.length / 3;
+        if (d > def.range || Math.abs(angleDiff(Math.atan2(o.state.x - ship.state.x, -(o.state.y - ship.state.y)), h)) > 15 * DEG) return;
+        applyDamage(game, o, { hull: 60, crew: 2, morale: 6 }, ship);
+        igniteShip(game, o, 12, ship);
+      });
+      const mid = Math.min(reach, def.range) * 0.6;
+      game.emit({ k: 'fx', fx: 'explosion', x: Math.round(ship.state.x + Math.sin(h) * mid), y: Math.round(ship.state.y - Math.cos(h) * mid), r: 30 }, ship.state.x, ship.state.y);
+      break;
+    }
+    case 'net_thrower': {
+      const target = firstHit(game, ship, h, reach);
+      const at = target ?? { state: { x: ship.state.x + Math.sin(h) * reach, y: ship.state.y - Math.cos(h) * reach } };
+      game.emit({ k: 'fx', fx: 'harpoon_miss', x: Math.round(at.state.x), y: Math.round(at.state.y) }, ship.state.x, ship.state.y);
+      if (!target) break;
+      const blocked = damageBlocked(game, ship, target);
+      if (blocked && blocked !== 'friendly') return blocked;
+      if (blocked) break;
+      target.addEffect({ id: 'netted', until: now + 8, mods: { maxSpeed: -0.3, turnRate: -0.4 }, source: ship.id }, now);
+      target.lastCombat = now;
+      game.toastShip(target, `A net from ${ship.name} fouls your rigging!`, 'bad');
+      break;
+    }
+    case 'smoke_pots': {
+      ship.addEffect({ id: 'smoke_screen', until: now + 8, flags: ['hidden'] }, now);
+      ship.addEffect({ id: 'smoke_evasive', until: now + 4, flags: ['evasive'] }, now);
+      game.emit({ k: 'fx', fx: 'smoke', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 90 }, ship.state.x, ship.state.y);
+      game.toastShip(ship, 'Smoke pots lit: she is lost in the smoke!', 'good');
+      break;
+    }
+    case 'powder_kegs': {
+      if ((ship.cargo.gunpowder ?? 0) < 2) return 'The kegs need 2 gunpowder in the hold';
+      ship.cargo.gunpowder = (ship.cargo.gunpowder ?? 0) - 2;
+      if (!ship.cargo.gunpowder) delete ship.cargo.gunpowder;
+      // Over the stern, where a chaser will be in a few seconds.
+      const back = headingVec(ship.state.heading + Math.PI);
+      for (let i = 0; i < 2; i++) {
+        const off = ship.stats.length / 2 + 20 + i * 35;
+        game.strikes.push({ at: now + 5 + i, x: ship.state.x + back.x * off, y: ship.state.y + back.y * off, radius: 45, hull: 220, rudder: 0.1, owner: ship.id, slow: 0, shells: 1, fx: 'mortar' });
+      }
+      game.toastShip(ship, 'Kegs over the stern!', 'info');
+      break;
+    }
+    case 'war_drums': {
+      ship.morale = Math.min(100, ship.morale + 10);
+      ship.addEffect({ id: 'war_drums', until: now + 15, mods: { boardingPower: 0.15, meleeDamage: 0.1 } }, now);
+      game.forShipsNear(ship.state.x, ship.state.y, 300, (o) => {
+        if (o.id === ship.id || !o.alive || o.docked || !game.isHostile(o, ship)) return;
+        if (dist(o.state.x, o.state.y, ship.state.x, ship.state.y) <= 300) o.morale = Math.max(0, o.morale - 6);
+      });
+      game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(ship.state.x), y: Math.round(ship.state.y) }, ship.state.x, ship.state.y);
+      break;
+    }
   }
   ship.mountReload = mountReloadTime(ship);
   ship.lastCombat = now;
   ship.protectedUntil = 0;
   return null;
+}
+
+/** A pivot gun's shot (the musketoons, the Long Tom): `n` balls of `ammo` on bearing `h`, `spread` degrees apart. */
+function pivotShot(game: Game, ship: ShipEntity, h: number, reach: number, range: number, ammo: 'grape' | 'round', n: number, damage: number, spread: number): void {
+  const balls: [number, number, number, number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    const bh = h + game.rng.gauss() * spread * DEG * ship.stats.spreadMul;
+    game.projectiles.push({ owner: ship.id, x: ship.state.x, y: ship.state.y, heading: bh, speed: AMMO[ammo].speed * SPEED_SCALE, dist: reach, traveled: 0, ammo, damage: damage * ship.stats.gunDamageMul, maxRange: range, delay: i * 0.12 });
+    balls.push([Math.round(ship.state.x), Math.round(ship.state.y), Math.round(bh * 1000) / 1000, Math.round(reach), i * 120]);
+  }
+  game.emit({ k: 'volley', ship: ship.id, side: 'bow', ammo, balls }, ship.state.x, ship.state.y);
 }
 
 function firstHit(game: Game, ship: ShipEntity, h: number, reach: number): ShipEntity | null {

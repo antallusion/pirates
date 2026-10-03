@@ -2776,7 +2776,7 @@ export class Game {
       case 'plan_buy':
         return portAction((pt) => buyPlan(this, s, pt, msg.classId));
       case 'figurehead_buy':
-        return portAction((pt) => buyFigurehead(this, s, pt));
+        return portAction((pt) => buyFigurehead(this, s, pt, typeof msg.id === 'string' ? msg.id : undefined));
       case 'formation':
         err(setFormation(this, s, msg.formation));
         this.pushSelf(s, true);

@@ -314,7 +314,9 @@ test('gear beside what is worn: both values, the difference, green for a gain (s
   for (const r of rows) {
     assert.ok(Math.abs(r.d - (r.a - r.b)) < 1e-9);
     if (r.good !== null && r.kind === 'stat') {
-      const lower = ['reloadMul', 'spreadMul', 'fireRisk', 'leakInflow', 'signature', 'moraleLoss', 'sanityLoss', 'spoilage', 'stormSailDamage', 'stormHull', 'dutyMul', 'buyMul', 'provisionUse', 'incomingDamageMul'].includes(r.key);
+      const lower = ['reloadMul', 'spreadMul', 'fireRisk', 'leakInflow', 'signature', 'moraleLoss', 'sanityLoss', 'spoilage', 'stormSailDamage', 'stormHull', 'dutyMul', 'buyMul', 'provisionUse', 'incomingDamageMul',
+        // the wider chandlery's (2026-10-03): searches, the wind's dead angle, the ram, draught and reefs, room in the hold, losses, cooldowns
+        'hiddenSearch', 'openSearch', 'noGoDeg', 'ramTaken', 'turnDrag', 'draftMul', 'reefDamage', 'storesVolume', 'materialVolume', 'materialUse', 'contrabandVolumeMul', 'hardenedCrew', 'cooldownMul'].includes(r.key);
       assert.equal(r.good, lower ? r.d < 0 : r.d > 0, r.key);
     }
   }

@@ -64,6 +64,7 @@ function statValue(k: StatKey, v: number): string {
   const a = Math.abs(v);
   const num = (x: number, d: number) => x.toLocaleString(ru() ? 'ru-RU' : 'en-GB', { maximumFractionDigits: d });
   if (k === 'moraleRegen' || k === 'grapeMorale') return `${sign}${num(a, 2)}`;
+  if (k === 'noGoDeg' || k === 'gunTrain') return `${sign}${num(a, 1)}°`; // degrees, not shares
   const pct = a * 100;
   return `${sign}${num(pct, pct >= 10 ? 0 : 1)}%`;
 }

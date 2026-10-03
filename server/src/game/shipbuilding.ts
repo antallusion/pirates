@@ -11,7 +11,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import {
-  BUILD_TIME, FIGUREHEADS, buildMaterials, PLAN_LINES, PLAN_REP, PLAN_USES, RARES, VARIANTS, WOODS, YARD_FACTIONS_WITH_PLANS,
+  BUILD_TIME, FIGUREHEADS, buildMaterials, carvedAt, PLAN_LINES, PLAN_REP, PLAN_USES, RARES, VARIANTS, WOODS, YARD_FACTIONS_WITH_PLANS,
 } from '../../../shared/src/data/shipbuild.ts';
 import type { FigureheadId, Plan, PlanQuality, RareSlot, ShipBuild, VariantId, WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { isNight } from '../../../shared/src/constants.ts';
@@ -245,12 +245,14 @@ export function grantPlan(game: Game, s: PlayerSession, quality: PlanQuality): v
   game.toastShip(s.ship!, `Among the papers: a ${quality} ship plan (${plan.variants.map((v) => VARIANTS[v].name).join(', ')}).`, 'gold');
 }
 
-/** Buy the port's figurehead for the ship you sail. */
-export function buyFigurehead(game: Game, s: PlayerSession, port: Port): string | null {
+/** Buy one of the port's figureheads (the first, unless named) for the ship you sail. */
+export function buyFigurehead(game: Game, s: PlayerSession, port: Port, id?: FigureheadId): string | null {
   const p = s.profile!;
   const ship = s.ship!;
-  const fh = Object.values(FIGUREHEADS).find((f) => f.port === port.id);
-  if (!fh) return 'No carver works here';
+  const here = carvedAt(port.id);
+  if (!here.length) return 'No carver works here';
+  if (id !== undefined && !here.includes(id)) return 'That figurehead is carved elsewhere';
+  const fh = FIGUREHEADS[id ?? here[0]];
   if (ship.loadout.build?.figurehead === fh.id) return 'She already carries it';
   if (p.gold < fh.price) return `The carver wants ${fh.price} silver`;
   p.gold -= fh.price;

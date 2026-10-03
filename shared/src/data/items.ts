@@ -156,7 +156,7 @@ export const ITEM_BASES: Record<ItemBaseId, ItemBase> = Object.fromEntries([
   B('iron_rudder', 'rudder', 'Iron-Shod Rudder', 'Окованный руль', { main: { turnRate: 0.04, damageControl: 0.1 } }),
   B('deep_hold', 'hold', 'Deep Hold', 'Глубокий трюм', { main: { holdVolume: 0.12 }, cost: { maxSpeed: -0.01 }, sold: true }),
   B('ice_hold', 'hold', 'Ice Hold', 'Ледник', { main: { holdVolume: 0.06, spoilage: -0.4 } }),
-  B('false_hold', 'hold', 'False Bottom', 'Двойное дно', { main: { holdVolume: 0.05, hiddenSearch: 0.15 } }),
+  B('false_hold', 'hold', 'False Bottom', 'Двойное дно', { main: { holdVolume: 0.05, hiddenSearch: -0.15 } }),
   B('hammocks', 'quarters', 'Hammock Deck', 'Гамаки в два яруса', { main: { crewMax: 0.12 }, sold: true }),
   B('drill_deck', 'quarters', 'Drill Deck', 'Учебная палуба', { main: { crewMax: 0.06, moraleRegen: 0.1 } }),
   B('marines_berth', 'quarters', 'Marines’ Berth', 'Кубрик морской пехоты', { main: { crewMax: 0.06, boardingPower: 0.06 } }),
@@ -174,6 +174,33 @@ export const ITEM_BASES: Record<ItemBaseId, ItemBase> = Object.fromEntries([
   B('trolling_rods', 'tackle', 'Trolling Rods', 'Троллинговые удилища', { cap: { craft: 3 } }),
   B('crab_traps', 'tackle', 'Crab Pots', 'Ловушки для крабов', { cap: { craft: 3 } }),
   B('squid_lamp', 'tackle', 'Squid Lamp', 'Фонарь для кальмаров', { cap: { craft: 3 } }),
+  // Ship, the wider chandlery (owner, 2026-10-03): each piece does one thing no other piece of its slot does.
+  B('lateen_sails', 'sails', 'Lateen Canvas', 'Латинские паруса', { main: { noGoDeg: -2 }, cost: { maxSpeed: -0.01 } }),
+  B('black_sails', 'sails', 'Black Sails', 'Чёрные паруса', { main: { signature: -0.04, nightSpeed: 0.03 }, cost: { sailHpMax: -0.04 } }),
+  B('studding_sails', 'sails', 'Studding Sails', 'Лисели', { main: { polarBoost: 0.08 }, sold: true }),
+  B('quick_braces', 'rigging', 'Running Braces', 'Ходовые брасы', { main: { evasion: 0.03 } }),
+  B('spare_spars', 'rigging', 'Spare Spars', 'Запасной рангоут', { main: { repairRate: 0.12 }, sold: true }),
+  B('fighting_tops', 'rigging', 'Fighting Tops', 'Боевые марсы', { main: { crewKillMul: 0.06 } }),
+  B('double_planking', 'plating', 'Doubled Planking', 'Двойная обшивка', { main: { planking: 0.02 }, cost: { maxSpeed: -0.01 } }),
+  B('felt_lining', 'plating', 'Tarred Felt Lining', 'Просмолённый войлок', { main: { fireRisk: -0.15, leakInflow: -0.05 }, sold: true }),
+  B('iron_stem', 'plating', 'Iron-Shod Stem', 'Окованный форштевень', { main: { ramDealt: 0.12, ramTaken: -0.08 } }),
+  B('ship_wheel', 'rudder', 'Ship’s Wheel', 'Штурвал', { main: { turnDrag: -0.15, turnRate: 0.02 }, sold: true }),
+  B('shoal_rudder', 'rudder', 'Lifting Rudder', 'Подъёмный руль', { main: { draftMul: -0.06, reefDamage: -0.2 } }),
+  B('bread_room', 'hold', 'Bread Room', 'Хлебная кладовая', { main: { storesVolume: -0.15, provisionUse: -0.03 }, sold: true }),
+  B('timber_racks', 'hold', 'Timber Racks', 'Стеллажи для леса', { main: { materialVolume: -0.15, materialUse: -0.05 } }),
+  B('smugglers_nook', 'hold', 'Smuggler’s Lockers', 'Рундуки контрабандиста', { main: { contrabandVolumeMul: -0.12 } }),
+  B('sick_bay', 'quarters', 'Sick Berth', 'Лазарет', { main: { surgeon: 0.05 }, sold: true }),
+  B('armoury', 'quarters', 'Arms Room', 'Оружейная', { main: { meleeDamage: 0.06 } }),
+  B('splinter_screens', 'quarters', 'Splinter Screens', 'Противоосколочные щиты', { main: { hardenedCrew: -0.06 } }),
+  B('gun_tackle', 'battery', 'Train Tackles', 'Тали наводки', { main: { gunTrain: 2 }, sold: true }),
+  B('grape_bags', 'battery', 'Canister Bags', 'Картечные мешки', { main: { grapeCrew: 0.1 } }),
+  B('chain_lockers', 'battery', 'Chain-Shot Lockers', 'Рундуки книппелей', { main: { chainSail: 0.08, chainRange: 0.05 } }),
+  B('gunlocks', 'battery', 'Flintlock Gunlocks', 'Кремнёвые замки', { main: { shotSpeed: 0.06 } }),
+  B('signal_hoist', 'banner', 'Signal Hoist', 'Сигнальный фал', { main: { cooldownMul: -0.05 } }),
+  B('grey_pennant', 'banner', 'Brokers’ Grey Pennant', 'Серый вымпел Брокеров', { main: { openSearch: -0.08, hiddenSearch: -0.2 } }),
+  B('hand_of_glory', 'relic', 'Hand of Glory', 'Рука славы', { main: { treasureHunter: 0.15 } }),
+  B('bottled_wind', 'relic', 'Wind in a Bottle', 'Ветер в бутылке', { main: { runningFreeAccel: 0.12 } }),
+  B('coffin_nail', 'relic', 'Coffin Nail', 'Гвоздь из гроба', { main: { salvage: 0.15 } }),
   // Captain.
   B('tricorne', 'hat', 'Tricorne', 'Треуголка', { cap: { leadership: 4 }, sold: true }),
   B('admiral_hat', 'hat', 'Admiral’s Bicorne', 'Адмиральская двууголка', { cap: { leadership: 3, nerve: 2 } }),
@@ -200,13 +227,28 @@ export const ITEM_BASES: Record<ItemBaseId, ItemBase> = Object.fromEntries([
   B('league_ring', 'ring', 'League Signet', 'Перстень Лиги', { cap: { trade: 4 }, sold: true }),
   B('signet', 'ring', 'Captain’s Signet', 'Капитанская печатка', { cap: { leadership: 4 } }),
   B('skull_ring', 'ring', 'Skull Ring', 'Кольцо с черепом', { cap: { fencing: 2, nerve: 2 } }),
+  // Captain, the wider chandlery: pairings of the characteristics no piece had yet, or a small line of the ship's.
+  B('merchant_hat', 'hat', 'Beaver Hat', 'Бобровая шляпа', { cap: { trade: 3, leadership: 2 }, sold: true }),
+  B('gunner_cap', 'hat', 'Gunner’s Leather Cap', 'Кожаная шапка канонира', { cap: { marksmanship: 3, nerve: 2 } }),
+  B('buff_coat', 'coat', 'Buff Coat', 'Колет из буйволовой кожи', { cap: { fencing: 3, marksmanship: 2 }, sold: true }),
+  B('smugglers_cloak', 'coat', 'Smuggler’s Cloak', 'Плащ контрабандиста', { cap: { luck: 2 }, main: { signature: -0.03 } }),
+  B('powder_horn', 'sash', 'Powder Horn', 'Пороховой рог', { cap: { marksmanship: 3 }, main: { reloadMul: -0.02 }, sold: true }),
+  B('buccaneer_boots', 'boots', 'Buccaneer’s Boots', 'Сапоги буканьера', { cap: { fencing: 2, navigation: 2 }, sold: true }),
+  B('boarding_pike', 'blade', 'Boarding Pike', 'Абордажная пика', { cap: { fencing: 2 }, main: { boardingRange: 0.05 } }),
+  B('officer_sabre', 'blade', 'Officer’s Sabre', 'Офицерская сабля', { cap: { fencing: 3, leadership: 2 }, sold: true }),
+  B('pepperbox', 'pistols', 'Pepperbox', 'Перечница', { cap: { marksmanship: 3 }, main: { meleeDamage: 0.03 } }),
+  B('ranging_glass', 'spyglass', 'Ranging Glass', 'Дальномерная труба', { cap: { marksmanship: 1 }, main: { rangeMul: 0.03 } }),
+  B('sun_stone', 'compass', 'Sunstone', 'Солнечный камень', { cap: { navigation: 2 }, main: { fogSight: 0.1 } }),
+  B('lucky_doubloon', 'charm', 'Lucky Doubloon', 'Счастливый дублон', { cap: { luck: 3, trade: 2 }, sold: true }),
+  B('witch_bottle', 'charm', 'Witch Bottle', 'Ведьмина бутыль', { cap: { nerve: 2 }, main: { sanityLoss: -0.08 } }),
+  B('gold_hoop', 'ring', 'Gold Earring', 'Золотая серьга', { cap: { luck: 2, marksmanship: 2 } }),
 ].map((b) => [b.id, b]));
 
 export const BASES_BY_SLOT: Record<Slot, ItemBase[]> = Object.fromEntries([...SHIP_SLOTS, ...CAPTAIN_SLOTS].map((s) => [s, Object.values(ITEM_BASES).filter((b) => b.slot === s)])) as Record<Slot, ItemBase[]>;
 
 // ------------------------------------------------------------------------------------------------ sets
 
-export type SetId = 'bounty_hunter' | 'whaler' | 'fisher' | 'league' | 'sea_terror' | 'admiralty' | 'drowned' | 'storm';
+export type SetId = 'bounty_hunter' | 'whaler' | 'fisher' | 'league' | 'sea_terror' | 'admiralty' | 'drowned' | 'storm' | 'master_gunner' | 'smuggler';
 
 export interface SetDef {
   id: SetId;
@@ -288,6 +330,24 @@ export const SETS: Record<SetId, SetDef> = {
       { n: 2, mods: { stormSailDamage: -0.25 }, text: ['Storms tear 25% less canvas', 'Шторм рвёт на 25% меньше парусов'] },
       { n: 4, mods: { maxSpeed: 0.03 }, flags: ['storm_rider'], text: ['+3% speed; rides the storm', '+3% к ходу; оседлавшая шторм'] },
       { n: 6, mods: { stormHull: -0.3 }, flags: ['lightning_rod'], text: ['Storms bite far less; lightning finds no mast', 'Шторм почти не бьёт; молния не находит мачты'] },
+    ],
+  },
+  master_gunner: {
+    id: 'master_gunner', name: ['The Master Gunner', 'Мастер-канонир'],
+    pieces: { hat: ['Master Gunner’s Cap', 'Шапка мастер-канонира'], sash: ['Linstock Sash', 'Перевязь с пальником'], pistols: ['Priming Pistols', 'Затравочные пистоли'], spyglass: ['Fall-of-Shot Glass', 'Труба для пристрелки'], battery: ['Master Gunner’s Quoins', 'Клинья мастер-канонира'], plating: ['Gun-Deck Lining', 'Обшивка батарейной палубы'] },
+    bonus: [
+      { n: 2, mods: { spreadMul: -0.04 }, text: ['Spread −4%', 'Разброс −4%'] },
+      { n: 4, mods: { reloadMul: -0.03, shotSpeed: 0.05 }, text: ['Reload −3%; the balls fly 5% faster', 'Перезарядка −3%; ядра летят на 5% быстрее'] },
+      { n: 6, mods: { gunDamageMul: 0.03 }, flags: ['skipping_shot'], text: ['+3% gun damage; a ball that falls short skips on into her', '+3% к урону орудий; недолёт рикошетит в борт'] },
+    ],
+  },
+  smuggler: {
+    id: 'smuggler', name: ['The Smuggler', 'Контрабандист'],
+    pieces: { coat: ['Smuggler’s Greatcoat', 'Шинель контрабандиста'], boots: ['Soft-Soled Boots', 'Сапоги на мягкой подошве'], compass: ['Cove Compass', 'Компас тайных бухт'], hold: ['Hidden Hold', 'Потайной трюм'], sails: ['Moonless Sails', 'Безлунные паруса'], banner: ['False Colours', 'Чужой флаг'] },
+    bonus: [
+      { n: 2, mods: { hiddenSearch: -0.25 }, text: ['Hidden cargo is found 25% less often', 'Тайник находят на 25% реже'] },
+      { n: 4, mods: { signature: -0.06, nightSpeed: 0.03 }, text: ['−6% signature, +3% speed at night', '−6% к заметности, +3% к ходу ночью'] },
+      { n: 6, mods: { contrabandVolumeMul: -0.15 }, flags: ['dark_lanterns'], text: ['Contraband packs 15% tighter; at night none sees her past 250 m', 'Контрабанда плотнее на 15%; ночью её не видно дальше 250 м'] },
     ],
   },
 };

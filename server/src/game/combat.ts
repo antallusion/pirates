@@ -8,7 +8,7 @@ import { ladderBetween } from './ladder.ts';
 import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
 import { onboardingVolley } from './onboarding.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
-import type { ChaserEnd } from '../../../shared/src/data/ships.ts';
+import type { ChaserEnd, GunId } from '../../../shared/src/data/ships.ts';
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import { FACTIONS, WANTED_THRESHOLDS, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -57,6 +57,7 @@ export interface Projectile {
   volley?: number; // broadside this ball belongs to (Thunderous Broadside, Spotter, Splinter Storm)
   ignore?: number; // ship this ball has already missed (Serpentine)
   skipped?: boolean; // Skipping Shot: already bounced once
+  gun?: GunId; // the broadside gun that threw it (its own trade: pierce, shatter, shells…)
 }
 
 /** Bookkeeping for one broadside until its last ball lands. */
@@ -129,9 +130,9 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
 
 /** How far the cross wind turns a ball's line (docs/16 #1), less what her gunners allow for it (`allow` 0..1: a
  *  captain aims off herself — 0; the sea's gunners allow by their craft). */
-export function shotDrift(game: Game, ship: ShipEntity, heading: number, dist: number, ammo: AmmoId, allow = 0): number {
+export function shotDrift(game: Game, ship: ShipEntity, heading: number, dist: number, ammo: AmmoId, allow = 0, gunSpeed = 1): number {
   const w = game.windFor(ship);
-  const speed = AMMO[ammo].speed * (1 + tval(ship.stats, 'shotSpeed'));
+  const speed = AMMO[ammo].speed * (1 + tval(ship.stats, 'shotSpeed')) * gunSpeed;
   return windDriftAngle(w.dir, w.strength, heading, dist, speed) * (1 - clamp(allow, 0, 1));
 }
 
@@ -194,7 +195,9 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   }
   const volley = game.allocId();
   const rec: VolleyRec = { owner: ship.id, total: 0, left: 0, hits: new Map(), counts: !rolling || ship.hasFlag('rolling_broadside'), demoralised: new Set(), dealt: new Map(), t: game.now };
-  const shotSpeed = 1 + tval(ship.stats, 'shotSpeed');
+  // A culverin's ball flies faster than her other guns' (and drifts the less for it).
+  const gunSpeed = 1 + (gun.shotSpeed ?? 0);
+  const shotSpeed = (1 + tval(ship.stats, 'shotSpeed')) * gunSpeed;
   const balls: [number, number, number, number, number][] = [];
   const rng = game.rng;
   for (let i = 0; i < shots; i++) {
@@ -205,11 +208,11 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     for (let k = 0; k < n; k++) {
       const h0 = baseHeading + rng.gauss() * spreadRad * 0.5;
       const d = dist * (1 + rng.gauss() * 0.045);
-      const h = h0 + shotDrift(game, ship, h0, d, ammo, windAllow); // the cross wind carries her downwind
+      const h = h0 + shotDrift(game, ship, h0, d, ammo, windAllow, gunSpeed); // the cross wind carries her downwind
       const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
         owner: ship.id, x: bx, y: by, heading: h, speed: AMMO[ammo].speed * shotSpeed * SPEED_SCALE, dist: d, traveled: 0, ammo,
-        damage: gun.damage * ship.stats.gunDamageMul * shadow * focus.damage * (ammo === 'cursed' ? cursedDamageMul(ship) : 1), maxRange: range, delay: delay / 1000, volley,
+        damage: gun.damage * ship.stats.gunDamageMul * shadow * focus.damage * (ammo === 'cursed' ? cursedDamageMul(ship) : 1), maxRange: range, delay: delay / 1000, volley, gun: gun.id,
       });
       rec.total++;
       balls.push([Math.round(bx), Math.round(by), Math.round(h * 1000) / 1000, Math.round(d), delay]);
@@ -470,6 +473,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     return;
   }
   const ammo = AMMO[p.ammo];
+  const gd = p.gun ? GUNS[p.gun] : undefined; // the gun's own trade (ships.ts), on a broadside's balls
   if (target.named && shooter?.isPlayer) target.scar = p.ammo === 'incendiary' ? 'fire' : 'cannon'; // the scar he will carry (docs/12 P10 #1)
   const falloff = 1 - 0.3 * clamp(p.traveled / Math.max(1, p.maxRange), 0, 1);
   // Angle of impact: how closely the ball travels along the target's keel line.
@@ -489,8 +493,9 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
 
   // Iron Strapping: extra armour against armour-piercing shot.
   const strap = p.ammo === 'heavy' ? 1 + tval(target.stats, 'strapping') : 1;
-  const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)));
-  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_white_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('tattoo_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1); // Leviathan Lore, the Harpooneer, Saint Maw's Bell
+  const armor = Math.min(0.85, target.stats.armor * strap * (1 - (ARMOR_PIERCE[p.ammo] ?? 0)) * (1 - (gd?.pierce ?? 0)));
+  const lore = (shooter?.hasFlag('leviathan_lore') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_harpooneer') && isMonster(target) ? 1.1 : 1) * (shooter?.hasFlag('fh_white_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('tattoo_orca') && target.npcRole === 'beast' ? 1.1 : 1) * (shooter?.hasFlag('saint_maws_bell') && isMonster(target) ? 1.2 : 1) // Leviathan Lore, the Harpooneer, Saint Maw's Bell
+    * (isMonster(target) ? (gd?.monster ?? 1) * (p.ammo === 'salt' ? 2.5 : 1) : 1); // the bomb-lance gun; blessed salt for the deep and the dead
   // The ladder (canon D12): the gap of levels cuts or swells the shot, and a junior makes fewer criticals, or none.
   const lad = ladderBetween(game, shooter, target);
   const cx = lad.crits;
@@ -506,23 +511,26 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     }
   }
   const chain = p.ammo === 'chain' ? 1 + (sst ? tval(sst, 'chainSail') : 0) : 1;
-  const sailDmg = p.damage * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt;
+  const sailDmg = p.damage * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1);
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
   // Splinter Storm: every ball into the hull sends splinters through the gun deck.
   const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && hullDmg > 5 ? 1 : 0;
   // The hull is the wall the stacks stand behind (docs/17 H1): grape sweeps the open deck, a ball kills more through a
   // shattered side than through a sound one; and the men fall out of her stacks, the tougher and the better covered
   // her army the fewer.
-  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
+  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (gd?.crewMul ?? 1) * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
 
   let crit: string | undefined;
   let rudderDmg = 0;
-  const rudderChance = 0.14 + (raking && !fromBow && sst ? tval(sst, 'rakingFire') : 0);
+  // Bar shot spins as it flies: a hit astern fouls the rudder twice as often.
+  const rudderChance = (0.14 + (raking && !fromBow && sst ? tval(sst, 'rakingFire') : 0)) * (p.ammo === 'bar' ? 2 : 1);
   if (p.ammo !== 'grape' && local.y < -target.stats.length * 0.33 && !target.hasFlag('iron_tiller') && game.rng.chance(rudderChance * cx)) {
     rudderDmg = 0.2 + game.rng.float() * 0.15;
     crit = 'rudder';
   }
-  if (p.ammo === 'round' && game.rng.chance(0.06 * cx)) {
+  // A gunbreaker's ball, laid low across the gun deck, dismounts a gun the oftener (heavy shot: by the gun alone).
+  const dismount = p.ammo === 'round' ? 0.06 + (gd?.dismount ?? 0) : p.ammo === 'heavy' ? gd?.dismount ?? 0 : 0;
+  if (dismount > 0 && game.rng.chance(dismount * cx)) {
     const side: Side = local.x < 0 ? 'port' : 'starboard';
     if (target.gunsDisabled[side] < target.stats.gunsPerSide) {
       target.gunsDisabled[side]++;
@@ -561,7 +569,9 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
       if (rec) (rec.battery ??= new Set()).add(target.id);
     }
   }
-  const men = applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery) * lad.dealt, laddered: true }, shooter, { x: hx, y: hy });
+  // Drowned bronze shakes a crew; a stinkpot chokes it.
+  const dread = (gd?.morale ?? 0) + (p.ammo === 'stinkpot' ? 2 : 0);
+  const men = applyDamage(game, target, { hull: hullDmg, sails: sailDmg, crew: crewKill, rudder: rudderDmg, morale: (0.35 + grapeMorale + battery + dread) * lad.dealt, laddered: true }, shooter, { x: hx, y: hy });
   if (men > 0) {
     const rec = p.volley !== undefined ? game.volleys.get(p.volley) : undefined;
     if (rec) (rec.men ??= new Map()).set(target.id, (rec.men.get(target.id) ?? 0) + men);
@@ -580,6 +590,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     mastByTalent = true; // Mast Breaker counts its own critical
   }
   if (p.ammo === 'cursed') onCursedHit(game, shooter, target);
+  if (p.ammo === 'star' || p.ammo === 'stinkpot' || p.ammo === 'drag') shotEffects(game, p.ammo, shooter, target);
 
   // Cargo destroyed by hull hits; powder may go up.
   if (p.ammo !== 'grape' && hullDmg > 10) {
@@ -603,7 +614,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     }
   }
   const fireRisk = Math.max(0, 1 + tval(target.stats, 'fireRisk'));
-  const ignite = (p.ammo === 'incendiary' ? 0.25 * (shooter?.hasFlag('alchemist') ? 1.2 : 1) : p.ammo === 'round' && sst ? tval(sst, 'heatedShot') : 0) * fireRisk;
+  const shell = gd?.fire && p.ammo !== 'grape' && p.ammo !== 'chain' ? gd.fire : 0; // a shell gun's hollow shot
+  const ignite = ((p.ammo === 'incendiary' ? 0.25 * (shooter?.hasFlag('alchemist') ? 1.2 : 1) : p.ammo === 'round' && sst ? tval(sst, 'heatedShot') : 0) + shell) * fireRisk;
   if (ignite > 0 && hullDmg > 5 && game.rng.chance(ignite * cx)) {
     igniteShip(game, target, 10 + game.rng.float() * 6, shooter);
     crit = 'fire';
@@ -613,6 +625,19 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   if (crit === 'rudder' || crit === 'gun' || crit === 'powder' || crit === 'fire' || (crit === 'mast' && !mastByTalent)) onCrit(shooter);
   game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: Math.round(hullDmg), ammo: p.ammo, crit }, hx, hy);
+}
+
+/** The rarer shot at work on the ship it strikes: a star lights her up, a stinkpot chokes her gun crews, a drag hook
+ *  slows her. Each a short status effect, so the stat pipeline (and the client's prediction) carries it. */
+function shotEffects(game: Game, ammo: AmmoId, shooter: ShipEntity | null, target: ShipEntity): void {
+  const now = game.now, source = shooter?.id;
+  if (ammo === 'star') {
+    // Lit: smoke and the dark no longer hide her, she is seen from afar, and every gunner lays tighter on her.
+    if (target.effects.some((e) => e.flags?.includes('hidden'))) target.effects = target.effects.filter((e) => !e.flags?.includes('hidden'));
+    target.addEffect({ id: 'starlit', until: now + 20, mods: { signature: 0.5 }, source }, now);
+    target.addEffect({ id: 'ranged_in', until: now + 10, source }, now);
+  } else if (ammo === 'stinkpot') target.addEffect({ id: 'stinkpot', until: now + 6, mods: { reloadMul: 0.3 }, source }, now);
+  else if (ammo === 'drag') target.addEffect({ id: 'dragged', until: now + 8, mods: { maxSpeed: -0.15 }, source }, now);
 }
 
 /** Sets a ship on fire; Powder Discipline shortens the blaze. */

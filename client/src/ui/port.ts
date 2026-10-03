@@ -223,7 +223,7 @@ export class PortScreen {
       case 'plan_buy':
         return this.send({ t: 'plan_buy', classId: this.build.classId });
       case 'figurehead_buy':
-        return this.send({ t: 'figurehead_buy' });
+        return this.send({ t: 'figurehead_buy', id: d.fh as FigureheadId });
       case 'claim': {
         const email = (root.querySelector('#claim-email') as HTMLInputElement).value.trim();
         const password = (root.querySelector('#claim-password') as HTMLInputElement).value;
@@ -363,7 +363,8 @@ export class PortScreen {
     const intel = view.priceIntel?.length
       ? `<h3 class="title-sm" style="font-size:20px;margin-top:16px">${esc(L('market.intelTitle'))}</h3><table class="grid"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.port'))}</th><th>${esc(L('th.sellsFor'))}</th><th>${esc(L('th.age'))}</th></tr>${view.priceIntel.slice(0, 12).map((i) => `<tr><td>${icon(`good_${i.good}`)}${esc(GOODS[i.good].name)}</td><td>${esc(placeName(i.name))}</td><td>${money(i.sell)}</td><td class="muted">${esc(L('unit.min', { n: Math.round(i.ageSec / 60) }))}</td></tr>`).join('')}</table>`
       : '';
-    const ammo = AMMO_IDS.map((a) => `<div class="card shop-row">${icon(`ammo_${a}`, '', 'shop-ico')}
+    // A rarer shot neither sold here nor in the hold is not listed (the common kinds always are).
+    const ammo = AMMO_IDS.filter((a, i) => i <= AMMO_IDS.indexOf('cursed') || view.ammoPrices[a] > 0 || self.ammo[a] > 0).map((a) => `<div class="card shop-row">${icon(`ammo_${a}`, '', 'shop-ico')}
       <div class="shop-text"><b>${esc(AMMO[a].name)}</b><span class="muted">${esc(AMMO[a].description)}</span><span class="shop-have">${esc(view.ammoPrices[a] > 0 ? L('market.inHold', { n: self.ammo[a], price: view.ammoPrices[a] }) : L('market.inHoldOnly', { n: self.ammo[a] }))}</span></div>
       ${view.ammoPrices[a] > 0 ? `<div class="shop-buy">${[20, 50].map((n) => `<button class="btn btn-small" data-act="ammo" data-ammo="${a}" data-n="${n}"><b>+${n}</b>${money(Math.ceil(view.ammoPrices[a] * n))}</button>`).join('')}</div>` : ''}</div>`).join('');
     const portDef = state.ports.find((p) => p.id === view.portId)!;
@@ -395,7 +396,7 @@ ${ammo}${auctionCard(view, state)}${bazaarCard(state, view)}${intel}`;
       ${sy.guns.map((gdef) => {
         const g = GUNS[gdef.gun];
         const mounted = self.loadout.guns[side] === gdef.gun;
-        return `<div class="item-row">${icon(`gun_${gdef.gun}`, '', 'item-ico')}<div class="item-text"><b>${esc(g.name)}</b><span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span></div><button class="btn btn-small item-btn" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : money(gdef.cost)}</button></div>`;
+        return `<div class="item-row" title="${esc(g.description)}">${icon(`gun_${gdef.gun}`, '', 'item-ico')}<div class="item-text"><b>${esc(g.name)}</b><span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span><span class="muted">${esc(g.description)}</span></div><button class="btn btn-small item-btn" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : money(gdef.cost)}</button></div>`;
       }).join('')}</div>`).join('');
     const ships = sy.ships.map((s) => {
       const c = SHIP_CLASSES[s.classId];
@@ -456,7 +457,7 @@ ${ammo}${auctionCard(view, state)}${bazaarCard(state, view)}${intel}`;
       return `<span class="mat ${got >= (n ?? 0) ? '' : 'short'}" title="${esc(L('build.matTitle'))}">${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)} <b>${got}/${n}</b></span>`;
     }).join('');
     const pct = (a: number, z: number) => { const d = Math.round((a / z - 1) * 100); return `${d >= 0 ? '+' : '−'}${Math.abs(d)}%`; };
-    const figs = [yard.figurehead, ...self.figureheads].filter((f, i, a) => f && a.indexOf(f) === i) as FigureheadId[];
+    const figs = [...yard.figureheads, ...self.figureheads].filter((f, i, a) => a.indexOf(f) === i);
     const orders = self.builds.map((o) => {
       const left = Math.max(0, o.done - state.estServerTime());
       const here = o.port === view.portId;
@@ -483,7 +484,7 @@ ${ammo}${auctionCard(view, state)}${bazaarCard(state, view)}${intel}`;
         <p>${esc(L('build.costTime', { cost: fmt(cost), min: Math.ceil(time / 60) }))}</p><div class="mats">${matText}</div>
         <button class="btn btn-primary btn-block" data-act="build_order" ${self.builds.length ? 'disabled' : ''}>${esc(self.builds.length ? L('build.busy') : L('build.lay'))}</button>
         ${yard.plans ? `<p style="margin-top:8px"><button class="btn btn-small btn-block" data-act="plan_buy">${esc(L('build.planBuy', { ship: cls.name, cost: fmt(Math.round(cls.price * 0.3)) }))}</button></p>` : ''}
-        ${yard.figurehead ? `<p><button class="btn btn-small btn-block" data-act="figurehead_buy">${esc(L('build.figureheadBuy', { fig: FIGUREHEADS[yard.figurehead].name, cost: fmt(FIGUREHEADS[yard.figurehead].price) }))}</button></p>` : ''}
+        ${yard.figureheads.map((f) => `<p><button class="btn btn-small btn-block" data-act="figurehead_buy" data-fh="${f}" title="${esc(FIGUREHEADS[f].description)}">${icon(f, '', 'ico-sm')}${esc(L('build.figureheadBuy', { fig: FIGUREHEADS[f].name, cost: fmt(FIGUREHEADS[f].price) }))}</button></p>`).join('')}
       </div></div>
       ${orders || berths ? `<div class="card"><h4 class="card-h">${icon('build_shipyard', '', 'ico-md')}${esc(L('build.orders'))}</h4>
 ${orders}${berths}</div>` : ''}`;
