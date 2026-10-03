@@ -140,12 +140,19 @@ def main(sheet_name: str, stem: str) -> None:
                     cur.append(k)
             rows_.append(cur)
             order = [k for row in rows_ for k in sorted(row, key=lambda k: cm[k][1])]
-            # A part come loose (a tusk, a fin tip) joins the shape nearest it.
+            # A part come loose (a tusk, a fin tip) joins the shape nearest it — if it lies within that shape's box (it
+            # overlaps it); a thing thrown and in flight (a spear, a flask) is no part of any pose and goes.
+            boxes_ = {t: ndimage.find_objects((lab == t).astype(int))[0] for t in big}
+            grow = 0
             for k in range(1, n + 1):
                 if k in cm or sizes[k - 1] < 400:
                     continue
                 ky, kx = ndimage.center_of_mass(lab == k)
-                lab[lab == k] = min(big, key=lambda t: (cm[t][0] - ky) ** 2 + (cm[t][1] - kx) ** 2)
+                near = min(big, key=lambda t: (cm[t][0] - ky) ** 2 + (cm[t][1] - kx) ** 2)
+                sl = ndimage.find_objects((lab == k).astype(int))[0]
+                b = boxes_[near]
+                inside = sl[0].start < b[0].stop + grow and sl[0].stop > b[0].start - grow and sl[1].start < b[1].stop + grow and sl[1].stop > b[1].start - grow
+                lab[lab == k] = near if inside else 0
             top = [order[j] for j in picks] if picks else order
             blobs = (lab, top)
             # A figure broken into pieces (one far shorter than the rest): then the row is cut at its emptiest columns

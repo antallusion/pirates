@@ -1349,6 +1349,10 @@
     "unit.lagoon_tentacle":                    { "local": "units/lagoon_tentacle.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.0", "rev": 20261003071940},
     "unit.lagoon_tentacle_b":                  { "local": "units/lagoon_tentacle_b.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.1", "rev": 20261003071940},
     "unit.lagoon_tentacle_atk":                { "local": "units/lagoon_tentacle_atk.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.2", "rev": 20261003071940},
-    "unit.lagoon_tentacle_hit":                { "local": "units/lagoon_tentacle_hit.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.3", "rev": 20261003071940}
+    "unit.lagoon_tentacle_hit":                { "local": "units/lagoon_tentacle_hit.webp", "remote": "hf_20261003_071940_gpt-anim_lagoon_tentacle.png", "job": "gpt-anim_lagoon_tentacle", "fit": "sheet:anim_lagoon_tentacle.3", "rev": 20261003071940},
+    "unit.mermaid":                            { "local": "units/mermaid.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.0", "rev": 20261003072425},
+    "unit.mermaid_b":                          { "local": "units/mermaid_b.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.1", "rev": 20261003072425},
+    "unit.mermaid_atk":                        { "local": "units/mermaid_atk.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.2", "rev": 20261003072425},
+    "unit.mermaid_hit":                        { "local": "units/mermaid_hit.webp", "remote": "hf_20261003_072425_gpt-anim_mermaid.png", "job": "gpt-anim_mermaid", "fit": "sheet:anim_mermaid.3", "rev": 20261003072425}
   }
 }
