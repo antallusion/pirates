@@ -20,6 +20,7 @@
 //  8. Named captains of the sea — pirates, barons, hunters — fight with paths and books (npcPathOf).
 // 10. Scrolls of pages from lairs and bosses (each a page for one battle cast), and another path's page taught at a
 //     guild for twice the price.
+// And after them (owner, 2026-10-03): twenty more common pages of the order book over the six schools (BOOK_PAGES).
 //
 // Pure data and reckoning; the battle applies it in server/src/game/tacbattle.ts, the hero keeps it in
 // server/src/game/hero.ts and server/src/game/pathbook.ts.
@@ -65,6 +66,10 @@ export interface BtMods {
   noAnswer?: boolean;
   /** She never freezes in fear. */
   steady?: boolean;
+  /** The common pages after docs/18 (BOOK_PAGES): spellbound, she loses her turns (a blow or a shot wakes her);
+   *  maddened, as her turn comes she falls on the nearest of her own she can reach (or stands lost). */
+  still?: boolean;
+  mad?: boolean;
 }
 export type BtModKey = keyof BtMods;
 
@@ -99,7 +104,26 @@ export interface PageFx {
   /** The crew's heart (0..100) up, hers down. */
   heart?: number;
   dread?: number;
+  /** The common pages after docs/18 (BOOK_PAGES). The blow leaps on to this many more stacks of hers, each the
+   *  nearest to the last and CHAIN_FALL of the blow before; a blow on every stack of hers in the row of the one
+   *  pointed at. */
+  chain?: number;
+  row?: number;
+  /** The stack of hers pointed at sickens: this share of the blast as each of her next SICK_TURNS turns comes. */
+  sicken?: number;
+  /** The deck under the stack of hers pointed at catches fire; every fire aboard goes out. */
+  fire?: boolean;
+  douse?: boolean;
+  /** Her own stack pointed at heals this share. */
+  mend?: number;
+  /** All the other captain laid on both decks (orders, path moves, officers' words) ends at once; she can give no
+   *  order nor path move this round and `hush` − 1 more. */
+  clear?: boolean;
+  hush?: number;
 }
+/** Each leap of the forked blow is this share of the one before; a sickness bites as this many of her turns come. */
+export const CHAIN_FALL = 0.6;
+export const SICK_TURNS = 3;
 
 /** A page of a path book (an order of the book, shared/src/data/hero.ts makes it one). */
 export interface PathPage {
@@ -149,7 +173,7 @@ export function pathPower(path: CaptainId, level: number, kind: 'page' | 'move' 
 
 const SHARE_KEYS = ['melee', 'shot', 'taken', 'shotTaken'] as const;
 const POINT_KEYS = ['speed', 'init', 'morale', 'luck'] as const;
-const FX_KEYS = ['dmg', 'ring', 'all', 'shooters', 'drain', 'heal', 'raise'] as const;
+const FX_KEYS = ['dmg', 'ring', 'all', 'shooters', 'drain', 'heal', 'raise', 'row', 'sicken', 'mend'] as const;
 const scaled = new Map<PageFx, Map<number, PageFx>>();
 /** A move's fx with its path's power at the caster's hero level on it. */
 export function powered(fx: PageFx, path: CaptainId, level: number, kind: 'page' | 'move' = 'page'): PageFx {
@@ -282,6 +306,77 @@ export function pathBook(path: CaptainId): PathPageId[] {
 export function pathPagesAt(path: CaptainId, level: number): PathPageId[] {
   return pathBook(path).filter((id) => level >= PAGE_UNLOCK[PATH_PAGES[id].level]);
 }
+
+// ------------------------------------------------------------------ the common pages after docs/18
+
+/** Twenty more common pages of the order book (owner, 2026-10-03: «около 20 новых заклинаний»), over all six schools
+ *  and levels 1–5: taught as docs/17's are (the ports' guilds, the drowned shrines, the floors of her island's guild),
+ *  given in the battle as the path pages are — what each `fx` says, at the strength of her school, with no path's
+ *  power on it (they are no path's). The physical schools' spend Stamina, the magical ones' Will. Weighed against
+ *  docs/17's of their level (tools/balance-orders.ts). */
+export type BookPageId =
+  | 'stinkpot' | 'heated_shot' | 'raking_fire'
+  | 'hammock_nettings' | 'nail_colours'
+  | 'belaying_pin' | 'double_grog' | 'swing_aboard' | 'no_quarter'
+  | 'st_elmos_fire' | 'clearing_wind' | 'rain_squall' | 'forked_lightning'
+  | 'foul_water' | 'kelp_poultice' | 'siren_song'
+  | 'jonah' | 'muffled_oars' | 'silent_fog' | 'fog_madness';
+export type BookPage = Omit<PathPage, 'id' | 'path'> & { id: BookPageId };
+
+const B = (id: BookPageId, school: School, level: BookPage['level'], cost: number, cd: number, icon: string, name: [string, string], text: [string, string], fx: PageFx): BookPage =>
+  ({ id, school, level, cost, cd, icon, name, text, fx });
+
+export const BOOK_PAGES: Record<BookPageId, BookPage> = Object.fromEntries([
+  // Fire and powder: sulphur, a red-hot ball, a line of muskets down her deck.
+  B('stinkpot', 'fire', 2, 5, 3, 'ab_smoke_pots', ['Stinkpot', 'Зловонный горшок'], ['A clay pot of burning sulphur into one stack of hers: a blow on it and on those beside it, and two rounds it strikes and shoots a third lighter.', 'Глиняный горшок с горящей серой в её отряд: удар по нему и по соседним, и два раунда он бьёт и стреляет на треть слабее.'],
+    { target: 'enemy', dmg: 0.6, ring: 0.3, one: { melee: -0.33, shot: -0.33 }, rounds: 1 }),
+  B('heated_shot', 'fire', 3, 8, 4, 'mod_lantern_cannon', ['Heated shot', 'Калёное ядро'], ['A red-hot ball into one stack of hers: a heavy blow, and the deck under it catches fire.', 'Раскалённое ядро в её отряд: тяжёлый удар, и палуба под ним загорается.'],
+    { target: 'enemy', dmg: 1.1, fire: true }),
+  B('raking_fire', 'fire', 4, 12, 4, 'item_long_barrels', ['Raking fire', 'Продольный огонь'], ['Fire raked along her deck: a heavy blow on every stack of hers in the row of the one pointed at.', 'Огонь вдоль её палубы: тяжёлый удар по каждому её отряду в ряду того, на который вы указали.'],
+    { target: 'enemy', row: 1.1 }),
+  // Steel and men: the drill of a man-of-war.
+  B('hammock_nettings', 'steel', 1, 3, 3, 'item_hammocks', ['Hammock nettings', 'Коечные сетки'], ['Hammocks packed in the nettings before one stack of yours: two rounds it takes half from her shots.', 'Койки, уложенные в сетки перед вашим отрядом: два раунда он получает вдвое меньше от её выстрелов.'],
+    { target: 'own', one: { shotTaken: -0.5 }, rounds: 1 }),
+  B('nail_colours', 'steel', 5, 15, 5, 'item_crown_ensign', ['Colours nailed to the mast', 'Флаг прибит к мачте'], ['The colours nailed to the mast: two rounds none of your men freezes in fear, your morale +2, your blows a quarter harder and the harm you take a quarter less.', 'Флаг прибит к мачте: два раунда никто из ваших людей не цепенеет от страха, ваш дух +2, удары на четверть сильнее, а урона на четверть меньше.'],
+    { target: 'none', self: { steady: true, morale: 2, melee: 0.25, taken: -0.25 }, rounds: 1, heart: 10 }),
+  // The hook and the boarding: a pin, a tot, the ropes, the black flag.
+  B('belaying_pin', 'board', 1, 4, 3, 'item_hemp_rigging', ['Belaying pin', 'Кофель-нагель'], ['A belaying pin about the heads of one stack of hers: a blow, and two rounds it is slower and later to act.', 'Кофель-нагель по головам её отряда: удар, и два раунда он медленнее и позже в очереди.'],
+    { target: 'enemy', dmg: 0.8, one: { speed: -1, init: -2 }, rounds: 1 }),
+  B('double_grog', 'board', 2, 5, 4, 'prof_cook', ['Double grog', 'Двойной грог'], ['A double tot of grog all round: two rounds your morale +1 and your blows harder, but your men a little later to act.', 'Двойная порция грога на всех: два раунда ваш дух +1 и удары сильнее, но люди чуть позже в очереди.'],
+    { target: 'none', self: { morale: 1, melee: 0.15, init: -1 }, rounds: 1 }),
+  B('swing_aboard', 'board', 3, 8, 4, 'item_swift_rigging', ['Swing aboard', 'По канатам!'], ['One stack of yours swings across on the ropes: this round it goes two hexes further, acts once more, and its blows land half again as hard and draw no answer.', 'Один ваш отряд перелетает по канатам: в этом раунде он идёт на два гекса дальше, ходит ещё раз, бьёт в полтора раза сильнее и без ответа.'],
+    { target: 'own', again: true, one: { speed: 2, noRet: true, melee: 0.5 }, rounds: 0 }),
+  B('no_quarter', 'board', 5, 15, 5, 'item_black_flag', ['No quarter', 'Пощады не будет'], ['The black flag run up: the next four blows of your men draw no answer; two rounds your blows harder and her morale −1.', 'Поднят чёрный флаг: четыре следующих удара ваших людей остаются без ответа; два раунда ваши удары сильнее, а её дух −1.'],
+    { target: 'none', free: 4, self: { melee: 0.2 }, foe: { morale: -1 }, rounds: 1, dread: 8 }),
+  // Wind: an omen on the yards, a clearing wind, the rain, the lightning.
+  B('st_elmos_fire', 'wind', 1, 4, 3, 'item_saint_medal', ["St Elmo's fire", 'Огни святого Эльма'], ['Blue fire on the yards, a good omen: two rounds your luck +2.', 'Голубой огонь на реях — добрый знак: два раунда ваша удача +2.'],
+    { target: 'none', self: { luck: 2 }, rounds: 1, heart: 4 }),
+  B('clearing_wind', 'wind', 2, 5, 3, 'item_storm_sails', ['Clearing wind', 'Свежий ветер'], ['A clearing wind blows her smoke and her spells away: whatever she laid on your men and on hers ends now.', 'Свежий ветер уносит её дым и чары: всё, что она наложила на ваших людей и на своих, кончается.'],
+    { target: 'none', clear: true }),
+  B('rain_squall', 'wind', 3, 8, 4, 'item_oilskin', ['Rain squall', 'Ливень'], ['A squall of rain over the decks: her powder soaked, her shooters cannot fire this round, and every fire aboard goes out.', 'Шквал с ливнем над палубами: её порох отсырел — её стрелки не стреляют в этом раунде, — и гаснет всякий огонь на борту.'],
+    { target: 'none', foe: { blind: true }, rounds: 0, douse: true }),
+  B('forked_lightning', 'wind', 4, 12, 4, 'mod_lightning_rod', ['Forked lightning', 'Ветвистая молния'], ['Lightning out of the storm strikes one stack of hers and forks on to the nearest, and the next, and the next, each time weaker.', 'Молния из грозы бьёт в её отряд и перескакивает на ближайший, и дальше, и ещё дальше, всякий раз слабее.'],
+    { target: 'enemy', dmg: 1.0, chain: 3 }),
+  // Water and the deep: foul casks, kelp on the wounds, a song out of the deep.
+  B('foul_water', 'water', 1, 4, 3, 'item_deep_hold', ['Foul water', 'Тухлая вода'], ['Her water casks fouled: one stack of hers sickens and loses men as each of its next three turns comes.', 'Её бочки с водой испорчены: её отряд болеет и теряет людей в начале каждого из трёх следующих ходов.'],
+    { target: 'enemy', sicken: 0.4 }),
+  B('kelp_poultice', 'water', 2, 5, 3, 'role_alchemist', ['Kelp poultice', 'Припарка из водорослей'], ['Kelp and brine bound on the wounds of one stack of yours: it heals a fifth of its strength.', 'Водоросли и рассол на раны вашего отряда: он лечится на пятую часть.'],
+    { target: 'own', mend: 0.2 }),
+  B('siren_song', 'water', 4, 12, 5, 'mod_choir_bell', ['Siren song', 'Песнь сирены'], ['A song out of the deep: one stack of hers stands spellbound and loses its turns this round and the next two — until a blow or a shot wakes it, and the blow that wakes it goes unanswered.', 'Песнь из глубины: её отряд замирает зачарованный и пропускает ходы в этом раунде и двух следующих — пока его не разбудит удар или выстрел, и на разбудивший удар он не отвечает.'],
+    { target: 'enemy', one: { still: true }, rounds: 2 }),
+  // Fog and shadow: a whisper, muffled oars, a fog that swallows words, shapes in the murk.
+  B('jonah', 'fog', 1, 4, 3, 'st_luck_down', ['A Jonah aboard', 'Иона на борту'], ['Whispers in the fog that she carries a Jonah: two rounds her luck −2 and her morale −1.', 'Шёпот в тумане: у неё на борту Иона. Два раунда её удача −2, дух −1.'],
+    { target: 'none', foe: { luck: -2, morale: -1 }, rounds: 1, dread: 4 }),
+  B('muffled_oars', 'fog', 2, 6, 4, 'ab_dark_running', ['Muffled oars', 'Обмотанные вёсла'], ['Muffled oars in the murk: the next two blows of your men draw no answer.', 'Обмотанные вёсла во мгле: два следующих удара ваших людей остаются без ответа.'],
+    { target: 'none', free: 2 }),
+  B('silent_fog', 'fog', 3, 8, 5, 'ab_bribe_signal', ['Silent fog', 'Немой туман'], ["A fog that swallows every word: her captain can give no order nor her path's move this round or the next.", 'Туман глотает каждое слово: её капитан не может отдать ни приказа, ни приёма пути — ни в этом раунде, ни в следующем.'],
+    { target: 'none', hush: 2 }),
+  B('fog_madness', 'fog', 5, 15, 5, 'st_terror', ['Fog madness', 'Морок'], ['Shapes in the fog: one stack of hers takes her own for foes — as its turns come this round and the next two, it falls on the nearest of her stacks it can reach, or stands lost.', 'Морок в тумане: её отряд принимает своих за врагов — в свои ходы в этом раунде и двух следующих он бросается на ближайший её отряд, до какого дотянется, или стоит растерянный.'],
+    { target: 'enemy', one: { mad: true }, rounds: 2 }),
+].map((p) => [p.id, p])) as Record<BookPageId, BookPage>;
+
+export const BOOK_PAGE_IDS = Object.keys(BOOK_PAGES) as BookPageId[];
+export const isBookPage = (id: string): id is BookPageId => id in BOOK_PAGES;
 
 // ------------------------------------------------------------------ 1. innate moves, 5. ultimates
 

@@ -12,6 +12,7 @@ export const SERVER_RU_PATH: Record<string, string> = {
   'Your ultimate is spent this battle': 'Высший приём в этом бою уже потрачен',
   'The ultimate waits for the third round': 'Высший приём — с третьего раунда',
   'One path move a round': 'Один приём пути за раунд',
+  'Your signals are lost in her fog': 'Ваши сигналы тонут в её тумане',
   'That scroll is read': 'Этот свиток уже прочитан',
   'Usage: /path learn page · {0}': 'Как вызывать: /path learn страница · {0}',
   'Foreign pages forgotten.': 'Страницы чужих путей забыты.',

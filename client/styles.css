@@ -3573,6 +3573,7 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .hx-otag .tag.sea { background: rgba(60, 130, 190, 0.3); }
 .hx-otag .tag.battle { background: rgba(180, 70, 50, 0.3); }
 .hx-otag .tag.will { background: rgba(80, 120, 200, 0.25); color: #9cc6f0; }
+.hx-otag .tag.stam { background: rgba(200, 140, 60, 0.25); color: #f2b56b; }
 .hx-order .btn, .hx-ware .btn { flex: none; }
 .hx-wares { display: flex; flex-direction: column; gap: 6px; }
 @media (max-width: 620px) {

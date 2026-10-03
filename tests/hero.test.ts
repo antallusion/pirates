@@ -211,8 +211,8 @@ test('First Aid: after the battle a share of her fallen stand again; the will sh
 
 // ------------------------------------------------------------------ 8. the order book
 
-test('the book: 4 schools, levels 1–5, 20 orders to learn (the H1 book among them) and the six paths\' own', () => {
-  assert.equal(LEARNABLE.length, 20);
+test('the book: levels 1–5, 20 orders to learn in 4 schools (the H1 book among them), 20 pages after docs/18 in all six, and the six paths\' own', () => {
+  assert.equal(LEARNABLE.length, 20 + 20, 'docs/17\'s and the pages after docs/18 (tests/bookpages.test.ts)');
   assert.equal(ORDER_IDS.filter((id) => ORDERS[id].sig).length, 6);
   assert.equal(ORDER_IDS.length - LEARNABLE.length, 6 + 36, 'and the six path books of docs/18');
   for (const sc of COMMON_SCHOOLS) assert.ok(LEARNABLE.filter((id) => ORDERS[id].school === sc).length >= 4, sc);
@@ -269,7 +269,7 @@ test('guilds teach their set list for silver; shrines each one order and the wil
   const { s, p } = captain(game, 'Scholar');
   const port = game.world.ports.find((x) => guildOf(x.id, x.size))!;
   const list = guildOf(port.id, port.size)!;
-  assert.ok(list.length >= 4 && new Set(list.map((id) => ORDERS[id].school)).size === 4, 'every school at a guild');
+  assert.ok(list.length >= 4 && new Set(list.map((id) => ORDERS[id].school)).size === SCHOOLS.length, 'every school at a guild');
   const id = list.find((x) => ORDERS[x].level <= 2 && !heroOf(p).orders.includes(x))!;
   p.gold = 1e6;
   assert.equal(learnAtGuild(game, s, port, id), null);
@@ -400,7 +400,7 @@ test('the tester\'s console: /prim /skill /order /art /will, and the Russian hel
   try {
     assert.match(runAdmin(game, s, '/prim atk 9')!, /Attack 9/);
     assert.match(runAdmin(game, s, '/skill armor 2')!, /Armor 2/);
-    assert.match(runAdmin(game, s, '/order all')!, /Orders: 21/);
+    assert.match(runAdmin(game, s, '/order all')!, /Orders: 41/); // the forty to learn and her own
     runAdmin(game, s, '/art set storm');
     assert.equal(p.stash.filter((x) => x.art).length, 3);
     assert.match(runAdmin(game, s, '/will 3')!, /Will 3\//);

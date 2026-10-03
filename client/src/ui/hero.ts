@@ -8,7 +8,7 @@ import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, ART_SETS } from '../../../share
 import type { ArtSetId } from '../../../shared/src/data/artifacts.ts';
 import { RARITY_COLOR, SLOT_NAMES } from '../../../shared/src/data/items.ts';
 import {
-  GM_RANK, ORDERS, ORDER_IDS, PRIMS, PRIM_ICON, PRIM_NAMES, PRIM_TEXT, RANK_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES, SCHOOL_SKILL, SKILLS, SKILL_SLOTS, skillText,
+  GM_RANK, ORDERS, ORDER_IDS, PRIMS, PRIM_ICON, PRIM_NAMES, PRIM_TEXT, RANK_NAMES, SCHOOLS, SCHOOL_ICON, SCHOOL_NAMES, SCHOOL_SKILL, SKILLS, SKILL_SLOTS, orderRes, skillText,
 } from '../../../shared/src/data/hero.ts';
 import { throneLabel } from './throne.ts';
 import type { HeroPortView, HeroView, OrderId, School } from '../../../shared/src/data/hero.ts';
@@ -138,11 +138,13 @@ export class HeroWindow {
       const d = ORDERS[id];
       const known = h.orders.includes(id);
       const cost = h.costs[id] ?? d.cost;
+      // The common pages after docs/18 in the physical schools spend stamina in the battle.
+      const res = orderRes(id);
       const wait = Math.max(0, Math.ceil((h.cd[id] ?? 0) - now));
       const cast = known && d.use === 'sea'
         ? `<button class="btn btn-small btn-primary" data-hcast="${id}" ${docked || wait > 0 || h.will < cost ? 'disabled' : ''} title="${esc(docked ? L('inPort') : '')}">${esc(wait > 0 ? L('ready', { n: wait }) : L('cast'))}</button>`
         : '';
-      return `<div class="hx-order${known ? ' known' : ''}${d.level > h.cap && !known ? ' high' : ''}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(L('lv', { n: d.level }))}</span><span class="tag ${d.use}">${esc(L(d.use))}</span><span class="tag will">${esc(L('cost', { n: cost }))}</span>${known ? '' : `<span class="muted">${esc(L('unknown'))}</span>`}</span><small>${esc(T(d.text))}</small></span>${cast}</div>`;
+      return `<div class="hx-order${known ? ' known' : ''}${d.level > h.cap && !known ? ' high' : ''}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(L('lv', { n: d.level }))}</span><span class="tag ${d.use}">${esc(L(d.use))}</span><span class="tag ${res}">${esc(L(res === 'stam' ? 'costStam' : 'cost', { n: cost }))}</span>${known ? '' : `<span class="muted">${esc(L('unknown'))}</span>`}</span><small>${esc(T(d.text))}</small></span>${cast}</div>`;
     }).join('');
     return `<div class="tabs hx-schools">${SCHOOLS.map((s) => `<button class="tab${s === sc ? ' active' : ''}" data-hschool="${s}">${icon(SCHOOL_ICON[s], '', 'ico-sm')}${esc(T(SCHOOL_NAMES[s]))} <span class="muted">${h.orders.filter((id) => ORDERS[id].school === s).length}</span></button>`).join('')}</div>
       ${willBar(h)}
