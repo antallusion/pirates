@@ -1333,6 +1333,10 @@
     "unit.sea_turtle":                         { "local": "units/sea_turtle.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.0", "rev": 20261003064612},
     "unit.sea_turtle_b":                       { "local": "units/sea_turtle_b.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.1", "rev": 20261003064612},
     "unit.sea_turtle_atk":                     { "local": "units/sea_turtle_atk.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.2", "rev": 20261003064612},
-    "unit.sea_turtle_hit":                     { "local": "units/sea_turtle_hit.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.3", "rev": 20261003064612}
+    "unit.sea_turtle_hit":                     { "local": "units/sea_turtle_hit.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.3", "rev": 20261003064612},
+    "unit.marsh_serpent":                      { "local": "units/marsh_serpent.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.0", "rev": 20261003065045},
+    "unit.marsh_serpent_b":                    { "local": "units/marsh_serpent_b.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.1", "rev": 20261003065045},
+    "unit.marsh_serpent_atk":                  { "local": "units/marsh_serpent_atk.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.2", "rev": 20261003065045},
+    "unit.marsh_serpent_hit":                  { "local": "units/marsh_serpent_hit.webp", "remote": "hf_20261003_065045_gpt-anim_marsh_serpent.png", "job": "gpt-anim_marsh_serpent", "fit": "sheet:anim_marsh_serpent.3", "rev": 20261003065045}
   }
 }
