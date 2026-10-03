@@ -2040,6 +2040,10 @@
     "unit.crimson_guard":                      { "local": "units/crimson_guard.webp", "remote": "hf_20261003_235406_gpt-anim_crimson_guard.png", "job": "gpt-anim_crimson_guard", "fit": "sheet:anim_crimson_guard.0", "rev": 20261003235406},
     "unit.crimson_guard_b":                    { "local": "units/crimson_guard_b.webp", "remote": "hf_20261003_235406_gpt-anim_crimson_guard.png", "job": "gpt-anim_crimson_guard", "fit": "sheet:anim_crimson_guard.1", "rev": 20261003235406},
     "unit.crimson_guard_atk":                  { "local": "units/crimson_guard_atk.webp", "remote": "hf_20261003_235406_gpt-anim_crimson_guard.png", "job": "gpt-anim_crimson_guard", "fit": "sheet:anim_crimson_guard.2", "rev": 20261003235406},
-    "unit.crimson_guard_hit":                  { "local": "units/crimson_guard_hit.webp", "remote": "hf_20261003_235406_gpt-anim_crimson_guard.png", "job": "gpt-anim_crimson_guard", "fit": "sheet:anim_crimson_guard.3", "rev": 20261003235406}
+    "unit.crimson_guard_hit":                  { "local": "units/crimson_guard_hit.webp", "remote": "hf_20261003_235406_gpt-anim_crimson_guard.png", "job": "gpt-anim_crimson_guard", "fit": "sheet:anim_crimson_guard.3", "rev": 20261003235406},
+    "unit.walrus_tyrant":                      { "local": "units/walrus_tyrant.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.0", "rev": 20261003235652},
+    "unit.walrus_tyrant_b":                    { "local": "units/walrus_tyrant_b.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.1", "rev": 20261003235652},
+    "unit.walrus_tyrant_atk":                  { "local": "units/walrus_tyrant_atk.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.2", "rev": 20261003235652},
+    "unit.walrus_tyrant_hit":                  { "local": "units/walrus_tyrant_hit.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.3", "rev": 20261003235652}
   }
 }
