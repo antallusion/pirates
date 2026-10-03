@@ -1703,6 +1703,10 @@
     "unit.island_warrior":                     { "local": "units/island_warrior.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.0", "rev": 20261003143107},
     "unit.island_warrior_b":                   { "local": "units/island_warrior_b.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.1", "rev": 20261003143107},
     "unit.island_warrior_atk":                 { "local": "units/island_warrior_atk.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.2", "rev": 20261003143107},
-    "unit.island_warrior_hit":                 { "local": "units/island_warrior_hit.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.3", "rev": 20261003143107}
+    "unit.island_warrior_hit":                 { "local": "units/island_warrior_hit.webp", "remote": "hf_20261003_143107_gpt-anim_island_warrior.png", "job": "gpt-anim_island_warrior", "fit": "sheet:anim_island_warrior.3", "rev": 20261003143107},
+    "unit.spear_fisher":                       { "local": "units/spear_fisher.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.0", "rev": 20261003144941},
+    "unit.spear_fisher_b":                     { "local": "units/spear_fisher_b.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.1", "rev": 20261003144941},
+    "unit.spear_fisher_atk":                   { "local": "units/spear_fisher_atk.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.2", "rev": 20261003144941},
+    "unit.spear_fisher_hit":                   { "local": "units/spear_fisher_hit.webp", "remote": "hf_20261003_144941_gpt-anim_spear_fisher.png", "job": "gpt-anim_spear_fisher", "fit": "sheet:anim_spear_fisher.3", "rev": 20261003144941}
   }
 }
