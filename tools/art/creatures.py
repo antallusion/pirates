@@ -223,6 +223,25 @@ def prompt(k: dict) -> str:
     )
 
 
+def gpt_prompt(k: dict) -> str:
+    """The same sheet asked of ChatGPT (2026-10-03): it refuses long technical prompts and names of games (it takes them
+    for an edit of a picture it does not have), so the same content in plain words, shorter."""
+    _, idle = BASE[k['body']]
+    who = 'character' if k['body'] in ('man', 'big') else 'creature'
+    water = (' Each pose rises out of the same small oval patch of dark sea water ringed with white foam.' if k['body'] == 'water' else
+             ' It hovers in the air in every pose.' if k['body'] == 'fly' else '')
+    return (
+        f'Draw a wide 3:2 image: a game sprite sheet with four poses of the same {who} side by side in one row, left to right: '
+        f"1) idle, {idle}; 2) the same pose a breath later, {k['idle2']}; 3) attack, {k['attack']}; 4) hit, {k['hit']}. "
+        f"The {who}: {k['look']}.{water} "
+        'All four poses show exactly the same face, clothes, colours and size; all face right in three-quarter view from slightly above; '
+        'the whole body is visible; the figures are large, about three quarters of the image height, with wide empty gaps between them. '
+        'Smooth painterly digital painting with soft edges and no ink outlines, like the hand-painted unit sprites of 1990s fantasy '
+        'strategy games, grim and weathered; muted colours: charcoal, tarred leather, wool, rust, old brass, faded red, cold blue-grey. '
+        'Solid flat magenta #FF00FF background, no floor, no shadows, no lines, no frames, no text.'
+    )
+
+
 FRAMES = ('', '_b', '_atk', '_hit')
 
 
@@ -244,6 +263,9 @@ def main() -> None:
         f.write(json.dumps(sheets, indent=1, ensure_ascii=False) + '\n')
     with open(JOBS, 'w', encoding='utf-8') as f:
         json.dump(jobs, f, ensure_ascii=False)
+    # ChatGPT's wording of the same sheets (assets/raw/q_gpt.json, by job name).
+    with open(os.path.join(ROOT, 'assets', 'raw', 'q_gpt.json'), 'w', encoding='utf-8') as f:
+        json.dump({f"sheet.anim_{k['id']}": gpt_prompt(k) for k in K}, f, ensure_ascii=False)
     by = {}
     for k in K:
         by[k['faction']] = by.get(k['faction'], 0) + 1

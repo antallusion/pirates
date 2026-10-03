@@ -146,7 +146,8 @@ def main(sheet_name: str, stem: str) -> None:
                 out = Image.new('RGBA', (px, px), (0, 0, 0, 0))
                 out.alpha_composite(piece, ((px - piece.width) // 2, (px - piece.height) // 2))
             else:
-                s = sh['uniform'] if sh.get('uniform') else px / max(piece.size)
+                # One scale for the sheet, reckoned for Higgsfield's 1536-high paintings (ChatGPT's are 1024 high).
+                s = sh['uniform'] * 1536 / im.height if sh.get('uniform') else px / max(piece.size)
                 out = piece.convert('RGBa').resize((max(1, round(piece.width * s)), max(1, round(piece.height * s))), Image.LANCZOS).convert('RGBA')
             fname = name_of(aid)
             out.save(os.path.join(out_dir, fname + '.webp'), 'WEBP', quality=90, method=6)
