@@ -4486,7 +4486,7 @@
    "part.ms_bell"
   ],
   "prompt": "Game sprite sheet of sixteen small separate battle missiles for a dark Pirate Gothic turn-based battle game, painted in the style of Heroes of Might and Magic III, laid out in a strict grid of 4 columns and 4 rows, each one centred in its own equal cell, every missile flying toward the RIGHT, seen from the side, with wide even gaps between the cells so that no two touch. Left to right, top to bottom: 1. a lead musket ball with a short grey smoke trail. 2. a black iron cannonball with a short smoke trail. 3. chain shot: two iron balls joined by a chain. 4. a round black grenade with a sparking fuse. 5. a barbed iron harpoon trailing a rope line. 6. a thrown knife. 7. a corked glass flask of dark liquid tumbling. 8. an arrow with grey fletching. 9. a small blowgun dart with a tuft. 10. a sling stone. 11. an iron war rocket on a stick with a burst of sparks behind. 12. a weighted fishing net flying open. 13. a wooden spear with a shark-tooth tip. 14. a bolt of pale green-grey brine light. 15. a round clay smoke bomb trailing grey smoke. 16. a small ring of rippling air from a conch, seen edge-on. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) everywhere, uniform, no gradient, NO cast shadows. NO text, NO letters, NO numbers, NO symbols, NO frames, NO borders, NO watermark. Avoid: cartoon, flat vector, thick outlines, bright saturated colours.",
-  "painting": true
+  "cut": "hf_20261003_104626_gpt-bt_missiles"
  },
  "residents_2": {
   "grid": [

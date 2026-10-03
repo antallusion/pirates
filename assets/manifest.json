@@ -1514,6 +1514,22 @@
     "icon.st_again":                           { "local": "icons/st_again.webp", "remote": "hf_20261003_104138_gpt-bt_statuses.png", "job": "gpt-bt_statuses", "fit": "sheet:bt_statuses.12", "rev": 20261003104138},
     "icon.st_no_ret":                          { "local": "icons/st_no_ret.webp", "remote": "hf_20261003_104138_gpt-bt_statuses.png", "job": "gpt-bt_statuses", "fit": "sheet:bt_statuses.13", "rev": 20261003104138},
     "icon.st_braced":                          { "local": "icons/st_braced.webp", "remote": "hf_20261003_104138_gpt-bt_statuses.png", "job": "gpt-bt_statuses", "fit": "sheet:bt_statuses.14", "rev": 20261003104138},
-    "icon.st_diving":                          { "local": "icons/st_diving.webp", "remote": "hf_20261003_104138_gpt-bt_statuses.png", "job": "gpt-bt_statuses", "fit": "sheet:bt_statuses.15", "rev": 20261003104138}
+    "icon.st_diving":                          { "local": "icons/st_diving.webp", "remote": "hf_20261003_104138_gpt-bt_statuses.png", "job": "gpt-bt_statuses", "fit": "sheet:bt_statuses.15", "rev": 20261003104138},
+    "part.ms_ball":                            { "local": "fx/ms_ball.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.0", "rev": 20261003104626},
+    "part.ms_cannonball":                      { "local": "fx/ms_cannonball.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.1", "rev": 20261003104626},
+    "part.ms_chain":                           { "local": "fx/ms_chain.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.2", "rev": 20261003104626},
+    "part.ms_grenade":                         { "local": "fx/ms_grenade.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.3", "rev": 20261003104626},
+    "part.ms_harpoon":                         { "local": "fx/ms_harpoon.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.4", "rev": 20261003104626},
+    "part.ms_knife":                           { "local": "fx/ms_knife.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.5", "rev": 20261003104626},
+    "part.ms_flask":                           { "local": "fx/ms_flask.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.6", "rev": 20261003104626},
+    "part.ms_arrow":                           { "local": "fx/ms_arrow.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.7", "rev": 20261003104626},
+    "part.ms_dart":                            { "local": "fx/ms_dart.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.8", "rev": 20261003104626},
+    "part.ms_stone":                           { "local": "fx/ms_stone.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.9", "rev": 20261003104626},
+    "part.ms_rocket":                          { "local": "fx/ms_rocket.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.10", "rev": 20261003104626},
+    "part.ms_net":                             { "local": "fx/ms_net.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.11", "rev": 20261003104626},
+    "part.ms_spear":                           { "local": "fx/ms_spear.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.12", "rev": 20261003104626},
+    "part.ms_brine":                           { "local": "fx/ms_brine.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.13", "rev": 20261003104626},
+    "part.ms_smokebomb":                       { "local": "fx/ms_smokebomb.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.14", "rev": 20261003104626},
+    "part.ms_bell":                            { "local": "fx/ms_bell.webp", "remote": "hf_20261003_104626_gpt-bt_missiles.png", "job": "gpt-bt_missiles", "fit": "sheet:bt_missiles.15", "rev": 20261003104626}
   }
 }
