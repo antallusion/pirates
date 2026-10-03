@@ -183,6 +183,9 @@ export const EN = {
   'log.lost': '{a} stand lost in the fog and lose the turn.',
   'log.mad': '{a}, mad in the fog, strike their own {b}: {dmg} damage, {kills} fall.',
   'log.sick': '{a}: the foul water — {dmg} damage, {kills} fall.',
+  // The battle on a phone (owner, 2026-10-03): round buttons, their words only in their titles.
+  'more': 'More orders',
+  'cancel': 'Cancel',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -360,4 +363,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'log.lost': '{a} блуждают в тумане и пропускают ход.',
   'log.mad': '{a} в мороке бьют своих же — {b}: урон {dmg}, пало {kills}.',
   'log.sick': '{a}: тухлая вода — урон {dmg}, пало {kills}.',
+  'more': 'Ещё приказы',
+  'cancel': 'Отменить',
 };

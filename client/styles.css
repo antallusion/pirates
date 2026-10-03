@@ -4266,3 +4266,133 @@ img.beast-face.fig { object-fit: cover; object-position: 50% 8%; background: rad
   .pm-pack-n { font-size: 24px; }
   .pm-top-h { flex-wrap: wrap; }
 }
+
+/* ---------- The battle on a phone (owner, 2026-10-03: «на телефоне в бою не должно быть ничего кроме игрового поля с
+   существами»): the field alone over the whole screen — the captains' panels, the order of the round, the feed and the
+   long buttons put away — and round painted buttons at its edges with no word on them: the stack's orders in the
+   bottom left corner (wait, defend, the officer's word, «…» for the fight's own), the book in the bottom right with
+   the path's two moves beside it, the turn's face and its clock in the top left (a tap opens the round). The board
+   keeps clear of them (client/src/ui/tactical.ts measures them and sets --tb-l/r/t/b); a card, the round and the end
+   lie over the field in the room between. A phone is body.tac-ph: a touch screen whose short side is under 520px. */
+.tb-pad { display: none; }
+#board-tac { -webkit-touch-callout: none; }
+body.tac-ph .tb-root { display: block; padding: 0; }
+body.tac-ph .tb-hero, body.tac-ph .tb-mid, body.tac-ph .tb-queue, body.tac-ph .tb-feed, body.tac-ph .tb-spells, body.tac-ph .tb-acts { display: none; }
+body.tac-ph .tb-stage { position: absolute; inset: 0; width: auto; height: auto; }
+body.tac-ph .tb-pad { display: block; position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+/* Put away (but keeping their room, so the board does not jump) while the book is open and once the fight is over. */
+.tb-pad.bk-open > *, .tb-pad.over > * { visibility: hidden; }
+/* A round button: its painted icon in the brass ring, a thumb wide (48px; the book 56px). */
+.tb-rb { position: relative; flex: none; display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border-radius: 50%; border: 2px solid var(--brass-dim);
+  background: radial-gradient(circle, #2a2118 0 52%, #120e0a 74%); color: var(--gold); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75); pointer-events: auto; cursor: pointer;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.skinned .tb-rb { border: 0; }
+.skinned .tb-rb::after { content: ''; position: absolute; inset: -3px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
+.tb-rb > .ico { position: absolute; inset: 13%; width: 74%; height: 74%; margin: 0; border-radius: 50%; object-fit: cover; }
+.tb-rb:active:not(:disabled) { transform: scale(0.93); filter: brightness(1.3); }
+.tb-rb:disabled { cursor: default; filter: grayscale(0.8) brightness(0.55); }
+.tb-rb.spent { filter: grayscale(1) brightness(0.45); }
+.tb-rb.on { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224, 184, 98, 0.8); }
+.tb-rb.danger { background: radial-gradient(circle, #3a1714 0 52%, #140c0a 74%); }
+.tb-rb.armed { animation: tb-armed 0.9s ease-in-out infinite; }
+@keyframes tb-armed { 0%, 100% { box-shadow: 0 0 0 2px #d0503e, 0 0 8px rgba(208, 80, 62, 0.6); } 50% { box-shadow: 0 0 0 4px #d0503e, 0 0 20px rgba(208, 80, 62, 0.95); } }
+.tb-rb.book { width: 56px; height: 56px; }
+.tb-rb.mv.ult:not(:disabled):not(.spent) { box-shadow: 0 0 0 1px #e0b862, 0 0 10px rgba(224, 184, 98, 0.45); }
+.tb-rb.mv.on, .tb-rb.mv.ult.on { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224, 184, 98, 0.8); }
+/* «…»: three gold beads. */
+.tb-dots { display: flex; gap: 4px; }
+.tb-dots b { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 3px #000; }
+/* An order aimed: the book's button shows it, with the painted cross that lets it go. */
+.tb-rb.aim { box-shadow: 0 0 0 2px #f0a03c, 0 0 14px rgba(240, 160, 60, 0.8); }
+.tb-x { position: absolute; right: -4px; top: -4px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--brass-dim); background: #16110d; color: var(--bone);
+  display: grid; place-items: center; font: 700 14px/1 var(--sans); font-style: normal; z-index: 1; }
+.tb-x::before { content: '×'; }
+.skinned .tb-x { border: 0; background: var(--ui-close) center / contain no-repeat; filter: drop-shadow(0 1px 2px #000); }
+.skinned .tb-x::before { content: ''; }
+/* The ransom's silver, once it asks to be sure: a pill of its own under the button. */
+.tb-rbn { position: absolute; left: 50%; top: calc(100% + 4px); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px 1px 3px;
+  border: 1px solid rgba(208, 80, 62, 0.8); border-radius: 9px; background: rgba(20, 10, 8, 0.92); color: #f3d7a0; font: 700 11px/1.3 var(--sans); font-style: normal; white-space: nowrap; }
+.tb-rbn .ico-xs { width: 13px; height: 13px; margin: 0; }
+/* The two thumbs' corners: on a phone on its side a column up from each bottom corner, upright a row along the bottom. */
+.tb-pl, .tb-pr { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); display: flex; flex-direction: column-reverse; align-items: center; gap: 8px; }
+.tb-pl { left: calc(env(safe-area-inset-left, 0px) + 8px); }
+.tb-pr { right: calc(env(safe-area-inset-right, 0px) + 8px); }
+.tb-mwrap { position: relative; display: grid; place-items: center; }
+.tb-more { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); display: flex; gap: 8px; padding: 6px; border-radius: 30px;
+  background: rgba(10, 9, 8, 0.86); border: 1px solid var(--brass-dim); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7); }
+/* The turn's face, its side's colour round it (gold while the move is hers) running down with the turn's clock. */
+.tb-turnb { position: absolute; left: calc(env(safe-area-inset-left, 0px) + 8px); top: calc(env(safe-area-inset-top, 0px) + 8px); width: 48px; height: 48px; padding: 0; border: 0;
+  border-radius: 50%; pointer-events: auto; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; --tl: 1; --ring: #7fb0d0;
+  background: conic-gradient(var(--ring) calc(var(--tl) * 360deg), rgba(255, 255, 255, 0.14) 0); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75); }
+.tb-turnb.foe { --ring: #d2473a; }
+.tb-turnb.mine { --ring: #e8c46a; }
+.tb-turnb.on { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224, 184, 98, 0.8); }
+.tb-turnb > .ico { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); margin: 0; border-radius: 50%; object-fit: cover;
+  background: radial-gradient(circle at 50% 35%, #2a2620, #110e0b); }
+.tb-turnb > .ico.fig { object-position: 50% 6%; }
+/* The round behind the face: its number and whose move, the two captains (men, morale, luck), the order (each face
+   opens its card), the last of the feed. */
+.tb-sheet { position: absolute; left: calc(env(safe-area-inset-left, 0px) + 64px); top: calc(env(safe-area-inset-top, 0px) + 8px); width: min(340px, calc(100% - 140px));
+  max-height: calc(100% - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; background: rgba(12, 10, 8, 0.95); border: 1px solid var(--brass-dim); border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7); pointer-events: auto; color: var(--bone); font-size: 12px; }
+.tb-sh-r { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.tb-sh-r b { flex: none; font-family: var(--display); font-weight: 400; font-size: 17px; color: var(--gold); white-space: nowrap; }
+.tb-sh-r em { min-width: 0; font-style: normal; font-size: 12px; color: var(--fog); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-shh { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.tb-shf { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #1b1f25 center / cover; border: 2px solid #7fb0d0; box-sizing: border-box; }
+.tb-shh.foe .tb-shf { border-color: #d2473a; }
+.tb-shh b { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-shp { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 1px 5px 1px 3px; border-radius: 8px; background: rgba(255, 255, 255, 0.07); color: var(--bone); font-size: 11px; line-height: 16px; white-space: nowrap; }
+.tb-shp.up { color: #a8dca2; }
+.tb-shp.down { color: #e3998a; }
+.tb-shp .ico-xs { width: 14px; height: 14px; margin: 0; border-radius: 2px; }
+.tb-sh-q { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 7px; padding: 2px 4px 4px 0; }
+.tb-sh-q .tb-q { width: 34px; height: 34px; }
+.tb-sh-q .tb-qsep { height: 26px; }
+.tb-sh-feed { display: flex; flex-direction: column; gap: 2px; padding-top: 5px; border-top: 1px solid rgba(232, 196, 106, 0.2); font-size: 11px; line-height: 1.3; color: var(--fog); }
+.tb-sh-feed > :last-child { color: var(--bone); }
+@media (orientation: portrait) {
+  .tb-pl { flex-direction: row; flex-wrap: wrap-reverse; max-width: 52%; }
+  .tb-pr { flex-direction: row-reverse; flex-wrap: wrap-reverse; max-width: 46%; }
+  .tb-more { left: 50%; top: auto; bottom: calc(100% + 10px); transform: translateX(-50%); flex-direction: column-reverse; }
+  .tb-rbn { left: calc(100% + 6px); top: 50%; transform: translateY(-50%); }
+  .tb-sheet { left: calc(env(safe-area-inset-left, 0px) + 8px); right: calc(env(safe-area-inset-right, 0px) + 8px); width: auto; top: calc(env(safe-area-inset-top, 0px) + 64px);
+    max-height: calc(100% - 72px - var(--tb-b, 0px) - env(safe-area-inset-top, 0px)); }
+}
+/* The stack's card, the end and the book over the field, in the room the buttons leave. */
+body.tac-ph .tb-card { left: calc(var(--tb-l, 0px) + (100% - var(--tb-l, 0px) - var(--tb-r, 0px)) / 2); top: calc(var(--tb-t, 0px) + (100% - var(--tb-t, 0px) - var(--tb-b, 0px)) / 2);
+  bottom: auto; transform: translate(-50%, -50%); width: min(360px, calc(100% - var(--tb-l, 0px) - var(--tb-r, 0px) - 12px));
+  max-height: calc(100% - var(--tb-t, 0px) - var(--tb-b, 0px) - 12px); overflow-y: auto; overscroll-behavior: contain; z-index: 5; }
+body.tac-ph .tb-card-h .ico-md { width: 52px; height: 52px; }
+/* The book on a phone held upright: one tall page of parchment, eight orders to it, the bookmarks down its edge (the
+   painted spread is for a desk and a phone on its side); --bk-w (720px) sets its type, not its size. */
+.tb-book.bk.tall { width: min(440px, calc(100vw - 16px)); height: min(600px, calc(100dvh - 24px)); --bk-t: 4%; --bk-b: 8%; --bk-o: 5%;
+  background: radial-gradient(ellipse at 50% 40%, #eadcb8 0%, #dcc79a 70%, #c4a974 100%) padding-box, linear-gradient(#2b1a0d, #1a0f07) border-box; }
+.tb-book.bk.tall .bk-page.l { right: calc(var(--bk-o) + 46px); }
+.tb-book.bk.tall .bk-tabs { top: calc(var(--bk-t) + 44px); }
+body.tac-ph .tb-banner { max-height: calc(100% - 16px); background: rgba(10, 9, 8, 0.96); }
+/* The end's reckoning scrolls inside the banner (a lair's spoils run past a phone's height), its close below it always
+   in sight. */
+.tb-banner.tb-result { display: flex; flex-direction: column; }
+.tb-bsc { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.tb-banner.tb-result > .tb-landclose { flex: none; align-self: center; }
+/* The sea waits while the decks fight on a phone: no chat, no sea's card over the field; the battle's own word (a
+   refusal) in a line at the top, clear of the corners' buttons. */
+body.tac-ph #hud-chat, body.tac-ph #encounter, body.tac-ph #surrender, body.tac-ph #trek, body.tac-ph #fishfight, body.tac-ph #nethaul { visibility: hidden; }
+body.tac-ph #toasts { top: calc(var(--sa-t) + 8px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%); width: min(56vw, 340px); flex-direction: column; align-items: stretch; }
+/* The card's numbers by their painted marks (a desk's card too): the mark beside the word and the number. */
+.tb-stats > div { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 4px; min-width: 0; }
+.tb-stats > div > .ico-xs { grid-row: span 2; width: 18px; height: 18px; margin: 0; border-radius: 3px; }
+.tb-stats b { overflow-wrap: anywhere; line-height: 1.15; }
+.tb-stats span { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.1; }
+.tb-cardx { flex: none; position: relative; width: 30px; height: 30px; margin-left: auto; align-self: flex-start; padding: 0; border: 1px solid var(--brass-dim); border-radius: 50%;
+  background: #16110d; color: var(--bone); font: 700 16px/1 var(--sans); cursor: pointer; }
+.tb-cardx::before { content: '×'; }
+.skinned .tb-cardx { border: 0; background: var(--ui-close) center / contain no-repeat; filter: drop-shadow(0 1px 3px #000); }
+.skinned .tb-cardx::before { content: ''; }
+.tb-card-h > div { min-width: 0; }
+.tb-card-h > div b { overflow-wrap: anywhere; }
+.tb-sps .tb-spc { font: inherit; font-size: 10.5px; color: var(--bone); background: rgba(255, 255, 255, 0.05); cursor: pointer; }
+.tb-sps .tb-spc.on { border-color: var(--gold); color: var(--gold); }
+.tb-spn { margin: 4px 0 0; padding: 4px 6px; border-left: 2px solid var(--brass-dim); font-size: 11.5px; line-height: 1.3; color: var(--bone); }
