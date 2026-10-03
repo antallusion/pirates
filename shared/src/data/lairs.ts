@@ -33,8 +33,11 @@ export const LAIR_SIZES = GUARD_SIZES;
 export type LairKind =
   | 'crab_beach' | 'gull_cliffs' | 'seal_rookery' | 'shark_shallows' | 'turtle_rocks' | 'serpent_marsh' | 'hermit_camp' | 'tentacle_lagoon' | 'choir_circle' | 'drowned_surf'
   | 'serpent_grotto' | 'maw_pit'
-  | 'turtle_guardian' | 'leviathan_shoal';
-export const LAIR_KINDS: LairKind[] = ['crab_beach', 'gull_cliffs', 'seal_rookery', 'shark_shallows', 'turtle_rocks', 'serpent_marsh', 'hermit_camp', 'tentacle_lagoon', 'choir_circle', 'drowned_surf', 'serpent_grotto', 'maw_pit', 'turtle_guardian', 'leviathan_shoal'];
+  | 'turtle_guardian' | 'leviathan_shoal'
+  // The wild beasts' (owner, 2026-10-03).
+  | 'bat_cave' | 'jaguar_den' | 'moray_reef' | 'albatross_rock' | 'ape_ridge' | 'croc_mangroves' | 'octopus_wreck';
+export const LAIR_KINDS: LairKind[] = ['crab_beach', 'gull_cliffs', 'seal_rookery', 'shark_shallows', 'turtle_rocks', 'serpent_marsh', 'hermit_camp', 'tentacle_lagoon', 'choir_circle', 'drowned_surf', 'serpent_grotto', 'maw_pit', 'turtle_guardian', 'leviathan_shoal',
+  'bat_cave', 'jaguar_den', 'moray_reef', 'albatross_rock', 'ape_ridge', 'croc_mangroves', 'octopus_wreck'];
 
 /** A shore lair (the first a landing party meets), a grotto inland, the island's guardian at her heart. */
 export type LairRole = 'shore' | 'grotto' | 'guardian';
@@ -77,6 +80,14 @@ export const LAIRS: Record<LairKind, LairDef> = {
   maw_pit: D('maw_pit', 'grotto', ['Pit of the Lantern', 'Яма светоча'], ['A drowned pit where a lantern maw hangs its light, and the cultists come to look into it.', 'Затопленная яма: светоч-пасть подвешивает свой огонь, а культисты приходят смотреть в него.'], [['lantern_maw', 0.6], ['cultist', 0.4]], [6, 10], ['dead', 'graveyard'], { join: 'never', egg: 0.1 }),
   turtle_guardian: D('turtle_guardian', 'guardian', ['The Ancient Turtle', 'Древняя черепаха'], ['The island’s guardian: a turtle older than the island’s name, with the rock turtles of her brood.', 'Страж острова: черепаха старше самого имени острова, с черепахами-скалами своего выводка.'], [['ancient_turtle', 0.6], ['rock_turtle', 0.4]], [5, 10], ['tropical', 'rocky', 'swamp', 'volcanic'], { join: 'never', egg: 0.35 }),
   leviathan_shoal: D('leviathan_shoal', 'guardian', ['Leviathan on the Shoal', 'Левиафан на мели'], ['The island’s guardian: a leviathan beached on her shoal for a hundred years, and the drowned that serve it.', 'Страж острова: левиафан, сто лет лежащий на её мели, и утопленники, что служат ему.'], [['shoal_leviathan', 0.6], ['surf_drowned', 0.4]], [6, 10], ['dead', 'graveyard', 'rocky'], { join: 'never', egg: 0.3 }),
+  // The wild beasts' shore lairs (owner, 2026-10-03), each where its kind would live and at the levels of its tier.
+  bat_cave: D('bat_cave', 'shore', ['Bat Cave', 'Пещера летучих мышей'], ['A cave in the cliff that breathes out bats at dusk; the monitors live on what falls from its roof.', 'Пещера в скале выдыхает в сумерках летучих мышей; вараны живут тем, что падает с её свода.'], [['cave_bat', 0.7], ['monitor', 0.3]], [2, 6], ['rocky', 'volcanic', 'graveyard'], { dwell: true }),
+  jaguar_den: D('jaguar_den', 'shore', ['Jaguar Den', 'Логово ягуаров'], ['The jaguars lie up in the green dark of the jungle, over the boars they hunt.', 'Ягуары лежат в зелёном сумраке джунглей, над кабанами, на которых охотятся.'], [['jaguar', 0.7], ['wild_boar', 0.3]], [3, 7], ['tropical'], { dwell: true, egg: 0.1 }),
+  moray_reef: D('moray_reef', 'shore', ['Moray Reef', 'Риф мурен'], ['A reef so close in that the surf runs over it: morays in every hole, barracudas in the channels.', 'Риф у самого берега, прибой перекатывается через него: мурены в каждой норе, барракуды в протоках.'], [['moray', 0.7], ['barracuda', 0.3]], [3, 7], ['tropical', 'rocky'], { dwell: true }),
+  albatross_rock: D('albatross_rock', 'shore', ['Albatross Rock', 'Скала альбатросов'], ['A bare rock where the albatrosses of the open sea come to nest, and the gulls rob the nests.', 'Голая скала, куда альбатросы открытого моря прилетают гнездиться, а чайки грабят их гнёзда.'], [['albatross', 0.7], ['gull', 0.3]], [3, 7], ['rocky', 'volcanic'], { dwell: true, egg: 0.1 }),
+  ape_ridge: D('ape_ridge', 'shore', ['Ape Ridge', 'Обезьяний хребет'], ['Grey-backed apes hold the ridge over the beach and beat their chests at anything that lands; the boars root below.', 'Седоспинные обезьяны держат хребет над пляжем и бьют себя в грудь при виде всякого, кто высадится; внизу роются кабаны.'], [['island_ape', 0.7], ['wild_boar', 0.3]], [4, 8], ['tropical', 'volcanic'], { dwell: true }),
+  croc_mangroves: D('croc_mangroves', 'shore', ['Crocodile Mangroves', 'Крокодильи мангры'], ['Logs in the brown water of the mangroves open their eyes; the toads sing on the roots above them.', 'Брёвна в бурой воде мангровых зарослей открывают глаза; на корнях над ними поют жабы.'], [['crocodile', 0.7], ['giant_toad', 0.3]], [4, 8], ['swamp', 'tropical'], { dwell: true, egg: 0.12 }),
+  octopus_wreck: D('octopus_wreck', 'shore', ['Octopus Wreck', 'Осьминожий остов'], ['A wreck high on the beach with an octopus living in her hold; the crabs that wear her bells keep its door.', 'Разбитый корабль высоко на пляже: в его трюме живёт осьминог, а крабы, что носят его колокола, стерегут вход.'], [['giant_octopus', 0.8], ['bell_hermit', 0.2]], [5, 10], ['graveyard', 'rocky'], { dwell: true, egg: 0.08 }),
 };
 
 // ------------------------------------------------------------------------------------------------ 24. the calibration
@@ -104,6 +115,13 @@ export const LAIR_CAL: Record<LairKind, [number, number, number][]> = {
   maw_pit: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.39, 2.28, 3.06], [1.33, 2.09, 2.91], [1.28, 1.72, 2.42], [1.03, 1.58, 2.14], [1.05, 1.53, 2.12]],
   turtle_guardian: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2.83, 4.18, 5.16], [3.13, 4.62, 5.37], [1.28, 1.78, 2.15], [1.9, 2.57, 3.04], [1.04, 1.22, 1.33], [1.04, 1.23, 1.36]],
   leviathan_shoal: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.5, 2.5, 4.83], [0.81, 2.19, 3.55], [1.07, 3.36, 5.77], [1.04, 1.13, 1.93], [0.99, 1.12, 1.94]],
+  bat_cave: [[0, 0, 0], [0, 0, 0], [1.09, 1.5, 2.25], [0.7, 1.3, 2.3], [0.61, 1.06, 1.5], [0.5, 0.91, 1.3], [0.41, 0.85, 1.21], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  jaguar_den: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1.12, 1.5, 2.5], [0.9, 1.36, 2.11], [0.75, 1.09, 1.64], [0.61, 1.05, 1.35], [0.56, 0.98, 1.26], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  moray_reef: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.84, 1.5, 3.5], [0.58, 1.25, 1.75], [0.5, 1.13, 1.5], [0.47, 1.09, 1.53], [0.36, 0.82, 1.43], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  albatross_rock: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.56, 1.1, 1.5], [0.39, 0.82, 1.18], [0.38, 0.66, 1.06], [0.36, 0.64, 0.93], [0.33, 0.55, 0.78], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  ape_ridge: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.87, 1.3, 1.7], [0.93, 1.31, 1.64], [0.87, 1.29, 1.5], [0.79, 1.17, 1.39], [0.73, 1.12, 1.5], [0, 0, 0], [0, 0, 0]],
+  croc_mangroves: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.92, 1.42, 1.92], [0.79, 1.21, 1.54], [0.85, 1.15, 1.62], [0.69, 1.07, 1.39], [0.63, 0.97, 1.32], [0, 0, 0], [0, 0, 0]],
+  octopus_wreck: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.09, 1.42, 1.83], [0.87, 1.37, 1.87], [0.79, 1.36, 1.78], [0.75, 1.25, 1.77], [0.79, 1.12, 1.4], [0.8, 1.08, 1.45]],
 };
 
 /** Silver the men an average lair costs the captain of ⚓L to refill when she wins (measured in the battle ashore:

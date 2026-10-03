@@ -1,5 +1,5 @@
-// docs/18 II — the lairs of the land's creatures: the bestiary (fourteen kinds over the seven tiers, their specials, their
-// faces from the art already there), where the lairs stand (on the islands, by their kind and level, the chains of the
+// docs/18 II — the lairs of the land's creatures: the bestiary (twenty-six kinds over the seven tiers, their specials,
+// their faces from the art), where the lairs stand (on the islands, by their kind and level, the chains of the
 // great islands, the turtles' backs and the sandbars), the battlefield ashore (sand, rocks, palms, the surf; no guns),
 // the creatures' specials in the battle, the battle fought through a landing, the spoils once a week, the lair standing
 // again, HoMM3's offer at three times the might, the island's chain and its chest, the creature dwellings and the
@@ -42,6 +42,7 @@ import { armyForLevel } from '../shared/src/data/army.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
 
 const manifest = JSON.parse(readFileSync(new URL('../assets/manifest.json', import.meta.url), 'utf8')) as { assets: Record<string, unknown> };
+const sheets = JSON.parse(readFileSync(new URL('../tools/art/sheets.json', import.meta.url), 'utf8')) as Record<string, { ids: string[]; painting?: boolean }>;
 
 function world(): Game {
   const { game } = makeGame();
@@ -67,22 +68,28 @@ const side = (army: ArmyStack[], beasts = false): TacSideInput => ({
 
 // ------------------------------------------------------------------------------------------------ 14. the bestiary
 
-test('the bestiary: fourteen kinds over the seven tiers, two a tier, every special of the land among them, faces from the art', () => {
-  assert.equal(BEAST_IDS.length, 14);
-  for (let t = 1; t <= 7; t++) assert.equal(BEAST_IDS.filter((b) => BEASTS[b].tier === t).length, 2, `tier ${t}`);
+test('the bestiary: twenty-six kinds over the seven tiers, every special of the land among them, faces from the art', () => {
+  // docs/18's fourteen, two a tier, and the twelve wild beasts (owner, 2026-10-03) among the middle tiers.
+  assert.equal(BEAST_IDS.length, 26);
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((t) => BEAST_IDS.filter((b) => BEASTS[b].tier === t).length), [2, 6, 7, 4, 3, 2, 2]);
   const sp = new Set(BEAST_IDS.flatMap((b) => BEASTS[b].specials));
   for (const s of ['shell', 'poison', 'swarm', 'regen', 'terror', 'flying', 'diving'] as const) assert.ok(sp.has(s), s);
+  // A wild beast's face is its own battle figure: in the art, or on a sheet still in the painter's queue.
+  const queued = new Set(Object.values(sheets).filter((s) => s.painting).flatMap((s) => s.ids));
   for (const b of BEAST_IDS) {
     assert.ok(UNITS[b] && UNITS[b].beast, `${b} is a unit`);
     const art = BEASTS[b].art;
     if (art.startsWith('portrait.')) assert.ok(readFileSync(new URL(`../assets/portraits/${art.slice(9)}.webp`, import.meta.url)).length > 0, art);
-    else assert.ok(manifest.assets[art], `${b}: ${art} in the art`);
-    assert.ok(ARMY_EN[`u.${b}` as keyof typeof ARMY_EN] && ARMY_RU[`u.${b}` as keyof typeof ARMY_RU], `${b} named`);
+    else assert.ok(manifest.assets[art] || (art === `unit.${b}` && queued.has(art)), `${b}: ${art} in the art`);
+    assert.ok(ARMY_EN[`u.${b}` as keyof typeof ARMY_EN] && ARMY_RU[`u.${b}` as keyof typeof ARMY_RU] && ARMY_EN[`ud.${b}` as keyof typeof ARMY_EN] && ARMY_RU[`ud.${b}` as keyof typeof ARMY_RU], `${b} named`);
   }
   // The stand-ins are tinted tokens (the journal lists them).
   assert.deepEqual(Object.keys(BEAST_TINT).sort(), ['cultist', 'hermit', 'marsh_serpent', 'mermaid', 'reef_shark', 'rock_turtle', 'surf_drowned', 'white_whale']); // docs/18 IV: the mermaid, the white whale
-  // The might climbs with the tier.
-  const might = (t: number) => BEAST_IDS.filter((b) => BEASTS[b].tier === t).reduce((a, b) => a + armyPower([{ u: b, n: 1 }]), 0) / 2;
+  // The might climbs with the tier (a tier's kinds on average).
+  const might = (t: number) => {
+    const ks = BEAST_IDS.filter((b) => BEASTS[b].tier === t);
+    return ks.reduce((a, b) => a + armyPower([{ u: b, n: 1 }]), 0) / ks.length;
+  };
   for (let t = 2; t <= 7; t++) assert.ok(might(t) > might(t - 1), `tier ${t}: ${might(t)} over ${might(t - 1)}`);
 });
 

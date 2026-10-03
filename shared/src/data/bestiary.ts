@@ -1,9 +1,11 @@
 // The land's creatures (docs/18 II item 14): a family of fighting kinds beside H1's men — fourteen kinds over the seven
-// tiers, from the crabs of a beach to the island's ancient guardian. They are units as the men are (UNITS takes them
-// in, so the boarding battle, the army's slots and the recruit window read them the same way), each with its stats on
-// the HoMM3 scale, its specials (docs/18 item 16) and its face from the art already in assets/: the creatures/* and
-// monsters/* pictures, the portraits of the hermits, the Choir's cultists and the drowned. A kind with no picture of
-// its own is a token of one that is, tinted and framed (BEAST_TINT; the list is in the journal of docs/18).
+// tiers, from the crabs of a beach to the island's ancient guardian, and the twelve wild beasts of the jungles, the
+// marshes, the caves and the reefs after them (owner, 2026-10-03: the battle's creatures, tools/art/creatures.py).
+// They are units as the men are (UNITS takes them in, so the boarding battle, the army's slots and the recruit window
+// read them the same way), each with its stats on the HoMM3 scale, its specials (docs/18 item 16) and its face from
+// the art in assets/: the creatures/* and monsters/* pictures, the portraits of the hermits, the Choir's cultists and
+// the drowned, and the wild beasts' own battle figures (unit.<kind>). A kind with no picture of its own is a token of
+// one that is, tinted and framed (BEAST_TINT; the list is in the journal of docs/18).
 
 import type { UnitDef } from './army.ts';
 import type { Tr } from './estate.ts';
@@ -15,9 +17,15 @@ export type BeastId =
   | 'hermit' | 'lagoon_tentacle'
   | 'cultist' | 'surf_drowned'
   | 'young_serpent' | 'lantern_maw'
-  | 'ancient_turtle' | 'shoal_leviathan';
+  | 'ancient_turtle' | 'shoal_leviathan'
+  // The wild beasts (owner, 2026-10-03).
+  | 'wild_boar' | 'giant_toad' | 'cave_bat' | 'barracuda'
+  | 'jaguar' | 'monitor' | 'albatross' | 'moray' | 'bell_hermit'
+  | 'island_ape' | 'crocodile'
+  | 'giant_octopus';
 
-export const BEAST_IDS: BeastId[] = ['crab', 'gull', 'seal', 'reef_shark', 'rock_turtle', 'marsh_serpent', 'hermit', 'lagoon_tentacle', 'cultist', 'surf_drowned', 'young_serpent', 'lantern_maw', 'ancient_turtle', 'shoal_leviathan'];
+export const BEAST_IDS: BeastId[] = ['crab', 'gull', 'seal', 'reef_shark', 'rock_turtle', 'marsh_serpent', 'hermit', 'lagoon_tentacle', 'cultist', 'surf_drowned', 'young_serpent', 'lantern_maw', 'ancient_turtle', 'shoal_leviathan',
+  'wild_boar', 'giant_toad', 'cave_bat', 'barracuda', 'jaguar', 'monitor', 'albatross', 'moray', 'bell_hermit', 'island_ape', 'crocodile', 'giant_octopus'];
 
 type BeastStats = Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>;
 const B = (id: BeastId, tier: number, s: BeastStats): UnitDef => ({ id, tier, up: false, base: id, upgrade: null, beast: true, ...s });
@@ -40,13 +48,26 @@ export const BEASTS: Record<BeastId, UnitDef> = {
   lantern_maw: B('lantern_maw', 6, { atk: 13, def: 12, dmin: 6, dmax: 9, hp: 30, speed: 5, init: 8, shots: 0, specials: ['terror', 'regen'], art: 'monster.lantern_maw', cost: 350 }),
   ancient_turtle: B('ancient_turtle', 7, { atk: 15, def: 22, dmin: 8, dmax: 14, hp: 70, speed: 2, init: 4, shots: 0, specials: ['shell', 'regen', 'retaliate_all'], art: 'sight.giant_turtle', cost: 700 }),
   shoal_leviathan: B('shoal_leviathan', 7, { atk: 20, def: 16, dmin: 12, dmax: 18, hp: 60, speed: 5, init: 8, shots: 0, specials: ['terror', 'diving', 'sweep'], art: 'creature.leviathan', cost: 800 }),
+  // The wild beasts (owner, 2026-10-03): each its own painted figure, the first of its four poses its face.
+  wild_boar: B('wild_boar', 2, { atk: 6, def: 4, dmin: 2, dmax: 4, hp: 11, speed: 5, init: 6, shots: 0, specials: [], art: 'unit.wild_boar', cost: 55 }),
+  giant_toad: B('giant_toad', 2, { atk: 4, def: 5, dmin: 1, dmax: 3, hp: 12, speed: 3, init: 5, shots: 0, specials: ['poison'], art: 'unit.giant_toad', cost: 50 }),
+  cave_bat: B('cave_bat', 2, { atk: 6, def: 3, dmin: 2, dmax: 3, hp: 8, speed: 8, init: 10, shots: 0, specials: ['flying', 'swarm'], art: 'unit.cave_bat', cost: 45 }),
+  barracuda: B('barracuda', 2, { atk: 8, def: 2, dmin: 2, dmax: 5, hp: 7, speed: 6, init: 9, shots: 0, specials: ['diving'], art: 'unit.barracuda', cost: 55 }),
+  jaguar: B('jaguar', 3, { atk: 9, def: 5, dmin: 2, dmax: 5, hp: 13, speed: 7, init: 10, shots: 0, specials: ['no_retaliation'], art: 'unit.jaguar', cost: 95 }),
+  monitor: B('monitor', 3, { atk: 7, def: 7, dmin: 2, dmax: 4, hp: 18, speed: 4, init: 5, shots: 0, specials: ['poison'], art: 'unit.monitor', cost: 90 }),
+  albatross: B('albatross', 3, { atk: 7, def: 4, dmin: 2, dmax: 5, hp: 12, speed: 9, init: 9, shots: 0, specials: ['flying'], art: 'unit.albatross', cost: 85 }),
+  moray: B('moray', 3, { atk: 9, def: 5, dmin: 3, dmax: 5, hp: 14, speed: 4, init: 8, shots: 0, specials: ['diving'], art: 'unit.moray', cost: 95 }),
+  bell_hermit: B('bell_hermit', 3, { atk: 5, def: 11, dmin: 2, dmax: 4, hp: 20, speed: 3, init: 4, shots: 0, specials: ['shell', 'retaliate_all'], art: 'unit.bell_hermit', cost: 95 }),
+  island_ape: B('island_ape', 4, { atk: 11, def: 7, dmin: 3, dmax: 6, hp: 18, speed: 5, init: 7, shots: 0, specials: [], art: 'unit.island_ape', cost: 130 }),
+  crocodile: B('crocodile', 4, { atk: 10, def: 10, dmin: 3, dmax: 6, hp: 20, speed: 3, init: 5, shots: 0, specials: ['diving'], art: 'unit.crocodile', cost: 145 }),
+  giant_octopus: B('giant_octopus', 5, { atk: 12, def: 8, dmin: 4, dmax: 6, hp: 22, speed: 5, init: 8, shots: 0, specials: ['diving', 'retaliate_all'], art: 'unit.giant_octopus', cost: 210 }),
 };
 
 export const isBeast = (u: string): u is BeastId => (BEAST_IDS as string[]).includes(u);
 
 // ------------------------------------------------------------------------------------------------ docs/18 IV: the sea's kinds
 
-/** The sea's own creatures that drift into a captain's army (docs/18 IV item 37) beside the land's fourteen: the
+/** The sea's own creatures that drift into a captain's army (docs/18 IV item 37) beside the land's kinds: the
  *  mermaid of the nets, the sea turtle of the weed, and the two legends of a season (the white whale, the young kraken).
  *  The seals, the sharks, the young serpent, the drowned of the surf and the tentacles are the land's kinds already. */
 export type SeaBeastId = 'mermaid' | 'sea_turtle' | 'white_whale' | 'young_kraken';
@@ -98,6 +119,18 @@ export const BEAST_PLURAL: Record<CreatureId, Tr> = {
   lantern_maw: ['lantern maws', 'светочи-пасти'],
   ancient_turtle: ['ancient turtles', 'древние черепахи'],
   shoal_leviathan: ['leviathans of the shoal', 'левиафаны на мели'],
+  wild_boar: ['wild boars', 'дикие кабаны'],
+  giant_toad: ['giant toads', 'гигантские жабы'],
+  cave_bat: ['cave bats', 'пещерные летучие мыши'],
+  barracuda: ['barracudas', 'барракуды'],
+  jaguar: ['jaguars', 'ягуары'],
+  monitor: ['giant monitors', 'гигантские вараны'],
+  albatross: ['albatrosses', 'альбатросы'],
+  moray: ['giant morays', 'гигантские мурены'],
+  bell_hermit: ['bell hermits', 'крабы-колокола'],
+  island_ape: ['island apes', 'островные обезьяны'],
+  crocodile: ['swamp crocodiles', 'болотные крокодилы'],
+  giant_octopus: ['giant octopuses', 'гигантские осьминоги'],
   mermaid: ['mermaids', 'русалки'],
   sea_turtle: ['sea turtles', 'морские черепахи'],
   white_whale: ['the white whale', 'белый кит'],
@@ -132,4 +165,16 @@ export const BEAST_RES: Record<BeastId, Partial<Record<LandRes | 'pearls', numbe
   lantern_maw: { venom: 0.6, pearls: 0.2 },
   ancient_turtle: { shell: 3, pearls: 0.5 },
   shoal_leviathan: { bone: 3, pearls: 0.6 },
+  wild_boar: { bone: 0.15 },
+  giant_toad: { venom: 0.15 },
+  cave_bat: { bone: 0.06 },
+  barracuda: { bone: 0.12 },
+  jaguar: { bone: 0.25 },
+  monitor: { venom: 0.2, bone: 0.1 },
+  albatross: { bone: 0.15 },
+  moray: { bone: 0.2 },
+  bell_hermit: { shell: 0.3, pearls: 0.05 },
+  island_ape: { bone: 0.4 },
+  crocodile: { shell: 0.2, bone: 0.3 },
+  giant_octopus: { venom: 0.3, pearls: 0.1 },
 };

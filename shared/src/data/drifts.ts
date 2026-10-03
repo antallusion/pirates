@@ -35,6 +35,10 @@ const CREATURE_PEOPLE: Record<CreatureId, Exclude<People, 'men'>> = {
   crab: 'land', gull: 'land', seal: 'sea', reef_shark: 'sea', rock_turtle: 'land', marsh_serpent: 'land', hermit: 'land', lagoon_tentacle: 'sea',
   cultist: 'deep', surf_drowned: 'deep', young_serpent: 'sea', lantern_maw: 'deep', ancient_turtle: 'land', shoal_leviathan: 'sea',
   mermaid: 'sea', sea_turtle: 'sea', white_whale: 'sea', young_kraken: 'deep',
+  // The wild beasts (owner, 2026-10-03): the jungle's, the marsh's and the caves' the land's; the reef's, the open
+  // sea's bird and the wreck's octopus the sea's (the bell hermit is a crab of the beach).
+  wild_boar: 'land', giant_toad: 'land', cave_bat: 'land', barracuda: 'sea', jaguar: 'land', monitor: 'land', albatross: 'sea', moray: 'sea',
+  bell_hermit: 'land', island_ape: 'land', crocodile: 'land', giant_octopus: 'sea',
 };
 
 export function peopleOf(u: UnitId): People {
@@ -54,8 +58,8 @@ export const NATIVE: Partial<Record<CaptainId, People>> = { drowned: 'deep', nav
  *  of the hidden coves, the Black Admiral the turtles that stand in a line like a wall. */
 export const PATH_FAV: Record<CaptainId, { people?: Exclude<People, 'men'>; kinds: CreatureId[]; text: Tr }> = {
   drowned: { people: 'deep', kinds: [], text: ['The deep’s own: the drowned, the cultists, the lantern maws, the young kraken.', 'Глубинные: утопленники, культисты, светочи-пасти, молодой кракен.'] },
-  navigator: { people: 'sea', kinds: [], text: ['The sea’s creatures: seals, sharks, mermaids, tentacles, young serpents, sea turtles, leviathans, the white whale.', 'Морские твари: тюлени, акулы, русалки, щупальца, молодые змеи, морские черепахи, левиафаны, белый кит.'] },
-  reaver: { people: 'land', kinds: [], text: ['The land’s beasts: crabs, gulls, rock turtles, marsh serpents, hermits, the ancient turtle.', 'Звери суши: крабы, чайки, черепахи-скалы, болотные змеи, отшельники, древняя черепаха.'] },
+  navigator: { people: 'sea', kinds: [], text: ['The sea’s creatures: seals, sharks, barracudas, morays, albatrosses, mermaids, tentacles, giant octopuses, young serpents, sea turtles, leviathans, the white whale.', 'Морские твари: тюлени, акулы, барракуды, мурены, альбатросы, русалки, щупальца, гигантские осьминоги, молодые змеи, морские черепахи, левиафаны, белый кит.'] },
+  reaver: { people: 'land', kinds: [], text: ['The land’s beasts: crabs, gulls, boars, toads, bats, jaguars, monitors, bell hermits, rock turtles, marsh serpents, hermits, apes, crocodiles, the ancient turtle.', 'Звери суши: крабы, чайки, кабаны, жабы, летучие мыши, ягуары, вараны, крабы-колокола, черепахи-скалы, болотные змеи, отшельники, обезьяны, крокодилы, древняя черепаха.'] },
   corsair: { kinds: ['reef_shark', 'gull'], text: ['The sharks and the gulls that follow the guns.', 'Акулы и чайки, что идут за пушками.'] },
   smuggler: { kinds: ['hermit', 'mermaid'], text: ['The hermits of the dunes and the mermaids of the hidden coves.', 'Отшельники дюн и русалки тайных бухт.'] },
   admiral: { kinds: ['rock_turtle', 'sea_turtle', 'ancient_turtle'], text: ['The turtles that stand in a line like a wall.', 'Черепахи, что стоят в строю, как стена.'] },
