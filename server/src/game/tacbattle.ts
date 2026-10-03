@@ -181,6 +181,8 @@ export interface TacBattle {
   broken: [number, number];
   /** docs/18 II: fought ashore — the kind of island the field is (sand, rocks, palms and the surf; no guns). */
   land?: string;
+  /** The hexes a great one ashore will fall on as the next round opens (shorebosses.ts), shown to the captain. */
+  warn?: number[];
 }
 
 const sp = (s: TacStack, x: UnitSpecial): boolean => s.sp.includes(x);
@@ -1807,6 +1809,15 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     you: side, round: bt.round, maxRounds: TAC_MAX_ROUNDS, cells: bt.cells.join(''), stacks,
     order: [...(bt.active !== null ? [bt.active] : []), ...bt.queue.filter((id) => stackById(bt, id))], next, active: bt.active, mine, ends: bt.turnEnds,
     reach: [...reach.keys()], melee: mine && act0 ? meleeTargets(bt, act0, reach).map((t) => t.id) : [], shoot: mine && act0 && canShoot(bt, act0) ? alive(bt).filter((t) => t.side !== side).map((t) => t.id) : [],
-    heroes: [hero(0), hero(1)], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...extra,
+    heroes: [hero(0), hero(1)], log: bt.log.slice(-12), seq: bt.seq, over: bt.over, canCut, canStrike: side === 1, ...(bt.warn?.length && !bt.over ? { warn: [...bt.warn] } : {}), ...extra,
   };
 }
+
+// ------------------------------------------------------------------ the great ones ashore
+
+/** The battle's own hand for a system that plays a great one's moves between the turns (server/src/game/
+ *  shorebosses.ts, owner 2026-10-03): harm laid on a stack and its fallen counted as a blow's are, an event told to the
+ *  captain, a stack's strength in hit points. */
+export const tacHurt = hurt;
+export const tacPush = push;
+export const tacHp = hpOf;

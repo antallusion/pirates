@@ -21,6 +21,7 @@ import { glories } from './legendary.ts';
 import { sitesOfIsland } from './resources.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { shoreEvents } from './shorebosses.ts';
 
 export type EventKind = 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | HappeningKind;
 
@@ -649,6 +650,8 @@ export function eventViews(game: Game): WorldEventView[] {
   }));
   // Sunken Glory: a legendary wreck is marked for the whole sea for 48 hours.
   for (const w of glories(game)) list.push({ id: -1 - list.length, kind: 'glory', title: `Sunken Glory: the ${w.name}`, region: regionAt(game.world, w.x, w.y), x: w.x, y: w.y, endsIn: w.endsIn });
+  // The great ones ashore, each on its island while it stands (shorebosses.ts, 2026-10-03).
+  list.push(...shoreEvents(game));
   return list;
 }
 
@@ -659,6 +662,11 @@ function broadcast(game: Game): void {
   if (key === hub.lastSent) return;
   hub.lastSent = key;
   for (const s of game.sessions) game.sendTo(s, { t: 'events', list });
+}
+
+/** Another system's entries in the list have changed (a great one come ashore or gone, shorebosses.ts): tell the sea. */
+export function eventsChanged(game: Game): void {
+  broadcast(game);
 }
 
 export function sendEvents(game: Game, s: PlayerSession): void {

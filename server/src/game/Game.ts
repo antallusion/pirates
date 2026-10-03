@@ -219,6 +219,7 @@ import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
 import { gloryNews, stepTrials, throneMessage } from './throne.ts'; // docs/19 E1–E3
@@ -812,6 +813,7 @@ export class Game {
   private everySecond(): void {
     const now = this.now;
     this.bosses.second(this);
+    stepShoreBosses(this); // the great ones ashore: their calendar (2026-10-03)
     stepEvents(this);
     expeditionsSecond(this);
     digNoise(this);
@@ -1044,6 +1046,8 @@ export class Game {
       // docs/18 #28, #31: an island's level against hers on the prompt; a turtle island's back when nothing else calls.
       if (land && s.landable && s.landable.island === land.island.name && !s.landable.action) s.landable = { ...s.landable, ...landDanger(this, s, land.island) };
       if (!s.landable && !s.ship.docked && !s.ship.landing) s.landable = turtlePrompt(this, s);
+      // A great one ashore within the boats' reach of its shore (shorebosses.ts): the land key lands against it first.
+      if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !s.ship.docked && !s.ship.landing) s.landable = shoreBossPrompt(this, s) ?? s.landable;
       // docs/18 II: a lair of the land's creatures within the boats' reach — the land key lands against it.
       if ((!s.landable || (land && s.landable.island === land.island.name && !s.landable.action)) && !s.ship.docked && !s.ship.landing) s.landable = lairPrompt(this, s) ?? s.landable;
       const wNow = this.weatherOf(s.ship);

@@ -6,6 +6,8 @@
 // ship's stacks: a kind already aboard joins its stack, a new kind takes a free slot, and the hammocks (crewMax) are
 // the limit. An upgraded dwelling trains a stack of its tier's plain kind up for the difference in price.
 
+import { BOSS_UNIT_IDS, BOSS_UNIT_NAMES } from '../../../shared/src/data/bossunits.ts';
+import type { BossUnitId } from '../../../shared/src/data/bossunits.ts';
 import { FACTION_KIND_IDS, FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
 import type { FactionKindId } from '../../../shared/src/data/factionunits.ts';
 import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
@@ -255,6 +257,7 @@ const NAMES: Record<UnitId, string> = {
   drowned: 'drowned', deep_spawn: 'spawn of the deep',
   ...(Object.fromEntries(CREATURE_IDS.map((b) => [b, BEAST_PLURAL[b][0]])) as Record<CreatureId, string>), // docs/18 II, IV
   ...(Object.fromEntries(FACTION_KIND_IDS.map((k) => [k, FACTION_NAMES[k][0].toLowerCase()])) as Record<FactionKindId, string>), // the world's armies
+  ...(Object.fromEntries(BOSS_UNIT_IDS.map((k) => [k, BOSS_UNIT_NAMES[k].name[0]])) as Record<BossUnitId, string>), // the great ones ashore (never hired)
 };
 const plural = (u: UnitId, _n: number) => NAMES[u];
 

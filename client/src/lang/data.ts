@@ -23,9 +23,10 @@ import type { Lang } from '../i18n.ts';
 import { DATA_RU_CORE } from './data.ru.ts';
 import { DATA_RU_TALENTS } from './data.talents.ru.ts';
 import { DATA_RU_ARMS } from './data.arms.ru.ts';
+import { DATA_RU_BOSSES } from './server.ru.bosses.ts'; // the ten bosses (owner, 2026-10-03)
 
 const MODULES: Record<string, Record<string, unknown>> = { bosses, captains, crew, deeds, factions, goods, holdings, legendary, quests, seasons, shipbuild, ships, talents, regions };
-export const DATA_RU: Record<string, string> = { ...DATA_RU_CORE, ...DATA_RU_TALENTS, ...DATA_RU_ARMS };
+export const DATA_RU: Record<string, string> = { ...DATA_RU_CORE, ...DATA_RU_TALENTS, ...DATA_RU_ARMS, ...DATA_RU_BOSSES };
 
 const originals = new Map<string, string>();
 /** English display name → Russian, for names that arrive inside server sentences. */

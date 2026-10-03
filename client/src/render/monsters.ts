@@ -9,6 +9,7 @@ import { SF } from '../../../shared/src/protocol.ts';
 import { sprite } from '../assets.ts';
 import { drawBeast } from './beasts.ts';
 import { beastOfClass } from '../../../shared/src/data/beasts.ts';
+import { BOSS_STAND_IN, isBossClass } from '../../../shared/src/data/bossmonsters.ts';
 
 export interface MonsterDraw {
   id: number;
@@ -38,7 +39,12 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
   g.translate(m.x, m.y);
   g.rotate(m.h);
   g.globalAlpha = (submerged ? 0.28 : 1) * (1 - sinkF * 0.85);
-  const spr = sprite(m.art ?? cls.sprite);
+  const own = sprite(m.art ?? cls.sprite);
+  // The six of 2026-10-03 (bossmonsters.ts): until its own painting is registered, a monster of a like shape stands in,
+  // tinted, at its own length; `monster.<id>` in the manifest takes over by itself.
+  const stand = !own && isBossClass(m.classId) ? BOSS_STAND_IN[m.classId] : null;
+  const spr = own ?? (stand ? sprite(SHIP_CLASSES[stand.cls].sprite) : null);
+  const shape = stand?.cls ?? m.classId;
   const beast = beastOfClass(m.classId);
   if (beast) {
     // A beast under the surface: its dark shadow. Painted or drawn, drawBeast chooses.
@@ -48,13 +54,15 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
   } else if (spr) {
     const imgH = len / spr.extentY;
     const imgW = imgH * (spr.img.naturalWidth / spr.img.naturalHeight);
-    animate(g, m.classId, t, m.id, imgW, imgH, spr.cy);
+    animate(g, shape, t, m.id, imgW, imgH, spr.cy);
     // Under the surface: its own dark, blurred shadow instead of the painted hide.
     if (submerged) g.filter = 'brightness(0.22) blur(3px)';
+    else if (stand) g.filter = stand.tint;
     g.drawImage(spr.img, -imgW * spr.cx, -imgH * spr.cy, imgW, imgH);
     g.filter = 'none';
   } else {
-    switch (m.classId) {
+    if (stand) g.filter = stand.tint;
+    switch (shape) {
       case 'leviathan': leviathan(g, len, beam, t, submerged); break;
       case 'kraken': kraken(g, len, beam, t); break;
       case 'kraken_tentacle': tentacle(g, len, beam, t, m.id); break;
@@ -67,8 +75,10 @@ export function drawMonster(g: CanvasRenderingContext2D, m: MonsterDraw, zoom: n
       case 'storm_widow': widow(g, len, t); break;
       case 'hulk': hulk(g, len, beam, m.id); break;
       case 'abyss_eye': eye(g, len, t); break;
+      case 'narwhal': case 'shark': leviathan(g, len, beam, t, submerged); break;
       default: orb(g, beam, t, '120,120,120', 1);
     }
+    g.filter = 'none';
   }
   g.restore();
 }
@@ -584,7 +594,7 @@ export function drawBossZones(g: CanvasRenderingContext2D, bosses: BossView[], s
   for (const b of bosses) {
     for (const z of b.zones) {
       const x = sx(z.x), y = sy(z.y), r = z.r * zoom;
-      const glow = z.k === 'lure' || z.k === 'eye';
+      const glow = z.k === 'lure' || z.k === 'eye' || z.k === 'burn';
       if (glow !== lights) continue;
       g.save();
       switch (z.k) {
@@ -691,6 +701,91 @@ export function drawBossZones(g: CanvasRenderingContext2D, bosses: BossView[], s
           g.arc(x, y, r, 0, Math.PI * 2);
           g.fill();
           break;
+        // The six of 2026-10-03 (bosses10.ts).
+        case 'ash':
+          // The Cinder Ray's ash: grey-brown blooms drifting, a few embers in them — not a flat disc.
+          for (let k = 0; k < 6; k++) {
+            const bx = x + Math.sin(k * 2.3 + t * 0.12) * r * 0.42, by = y + Math.cos(k * 1.9 - t * 0.1) * r * 0.42;
+            const br = r * (0.5 + 0.18 * Math.sin(k * 2.7 + t * 0.3));
+            const ash = g.createRadialGradient(bx, by, 0, bx, by, br);
+            ash.addColorStop(0, 'rgba(70,62,58,0.42)');
+            ash.addColorStop(0.6, 'rgba(60,54,50,0.22)');
+            ash.addColorStop(1, 'rgba(60,54,50,0)');
+            g.fillStyle = ash;
+            g.beginPath();
+            g.arc(bx, by, br, 0, Math.PI * 2);
+            g.fill();
+          }
+          g.fillStyle = 'rgba(255,140,60,0.75)';
+          for (let k = 0; k < 10; k++) {
+            const a = k * 0.63 + t * 0.07, d = r * (0.2 + ((k * 37) % 70) / 100);
+            if (Math.sin(t * 3 + k * 1.7) < 0.2) continue;
+            g.beginPath();
+            g.arc(x + Math.sin(a) * d, y - Math.cos(a) * d, Math.max(1, 1.6 * zoom), 0, Math.PI * 2);
+            g.fill();
+          }
+          break;
+        case 'burn': {
+          const flick = 0.75 + 0.25 * Math.sin(t * 9 + z.x);
+          const grad = g.createRadialGradient(x, y, 0, x, y, r * 1.3);
+          grad.addColorStop(0, `rgba(255,170,70,${0.55 * flick})`);
+          grad.addColorStop(0.5, `rgba(230,90,30,${0.3 * flick})`);
+          grad.addColorStop(1, 'rgba(200,60,20,0)');
+          g.fillStyle = grad;
+          g.beginPath();
+          g.arc(x, y, r * 1.3, 0, Math.PI * 2);
+          g.fill();
+          break;
+        }
+        case 'spire': {
+          // A tolling bell: a bronze ring on the water and the toll going out from it.
+          g.strokeStyle = 'rgba(176,141,87,0.6)';
+          g.lineWidth = Math.max(1.5, 3 * zoom);
+          g.beginPath();
+          g.arc(x, y, r, 0, Math.PI * 2);
+          g.stroke();
+          const p = (t * 0.5) % 1;
+          g.strokeStyle = `rgba(176,141,87,${0.4 * (1 - p)})`;
+          g.lineWidth = 1.5;
+          g.beginPath();
+          g.arc(x, y, r * (1 + p * 1.5), 0, Math.PI * 2);
+          g.stroke();
+          break;
+        }
+        case 'sanctuary': {
+          const grad = g.createRadialGradient(x, y, 0, x, y, r);
+          grad.addColorStop(0, 'rgba(200,230,220,0.10)');
+          grad.addColorStop(1, 'rgba(200,230,220,0.02)');
+          g.fillStyle = grad;
+          g.beginPath();
+          g.arc(x, y, r, 0, Math.PI * 2);
+          g.fill();
+          g.strokeStyle = 'rgba(200,230,220,0.45)';
+          g.lineWidth = 1.5;
+          g.stroke();
+          break;
+        }
+        case 'wake':
+          // The true Changeling's wake: a pale churn about it that the false shapes never leave.
+          for (let k = 0; k < 3; k++) {
+            const p = ((t * 0.8 + k / 3) % 1);
+            g.strokeStyle = `rgba(235,240,245,${0.5 * (1 - p)})`;
+            g.lineWidth = 1.5;
+            g.beginPath();
+            g.arc(x, y, r * (0.8 + p), 0, Math.PI * 2);
+            g.stroke();
+          }
+          break;
+        case 'gaze': {
+          // Its colours: a slow ring that shifts hue at the edge of its reach.
+          const hue = Math.round((t * 40) % 360);
+          g.strokeStyle = `hsla(${hue},70%,65%,0.35)`;
+          g.lineWidth = Math.max(2, 6 * zoom);
+          g.beginPath();
+          g.arc(x, y, r, 0, Math.PI * 2);
+          g.stroke();
+          break;
+        }
       }
       g.restore();
     }

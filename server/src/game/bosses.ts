@@ -37,8 +37,13 @@ import { governorsOfRegion } from './empires.ts';
 import { logNote } from './captainlog.ts';
 import { artifactFind } from './hero.ts';
 import { maybeScroll } from './pathbook.ts';
+import { riseTen, tenEnd, tenHint, tenIncoming, tenPart, tenSecond, tenSinking, tenTick, tenWhere, tenZones } from './bosses10.ts';
+import type { TenState } from './bosses10.ts';
 
-type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add';
+/** A fight's entities: the body; the Kraken's arms, the Whale's heart, the Mother's cores, the Admiral's line, the
+ *  adds; and the six of 2026-10-03's (bosses10.ts): the Changeling's false shapes, the Prelate's bell spires, the
+ *  second of the Rime Twins. */
+export type Part = 'body' | 'arm' | 'heart' | 'core' | 'ghost' | 'add' | 'phantom' | 'spire' | 'twin';
 
 export interface Contribution {
   name: string;
@@ -88,6 +93,8 @@ export interface Fight {
   aloneSince: number; // the Serpent: nobody within reach since
   inRing: Set<number>; // ships caught inside the Serpent's coil
   songActive: boolean;
+  /** The six of 2026-10-03: their own state (bosses10.ts). */
+  ten?: TenState;
 }
 
 interface Schedule {
@@ -261,7 +268,7 @@ function announce(game: Game, def: BossDef, x: number, y: number, mins: number):
 
 // ================================================================== rising
 
-function spawnPart(game: Game, f: Fight | null, classId: ShipClassId, x: number, y: number, heading: number, name: string, part: Part): ShipEntity {
+export function spawnPart(game: Game, f: Fight | null, classId: ShipClassId, x: number, y: number, heading: number, name: string, part: Part): ShipEntity {
   const ship = game.spawnNpcShip('ghost', classId, 'choir', x, y, heading, { ship: name, captain: 'the Deep' });
   game.npcs.delete(ship.id); // moved here, not by the NPC brains
   ship.npcRole = 'boss';
@@ -333,6 +340,8 @@ export function summon(game: Game, kind: BossId, x: number, y: number): Fight {
       f.eye = { x: x + 450, y, a: 0, r: 260 };
       f.wind = { dir: game.rng.range(0, Math.PI * 2), strength: 1.25, at: now };
       break;
+    default:
+      riseTen(game, f, body); // the six of 2026-10-03
   }
   game.emit({ k: 'fx', fx: 'boss_roar', x: Math.round(x), y: Math.round(y), r: 400 }, x, y);
   const region = REGIONS[f.region].name;
@@ -383,7 +392,7 @@ function placeLures(game: Game, f: Fight, body: ShipEntity): void {
 
 // ================================================================== helpers
 
-function fighters(game: Game, f: Fight, r = BOSS_RANGE): ShipEntity[] {
+export function fighters(game: Game, f: Fight, r = BOSS_RANGE): ShipEntity[] {
   const body = game.ships.get(f.id);
   if (!body) return [];
   const out: ShipEntity[] = [];
@@ -393,7 +402,7 @@ function fighters(game: Game, f: Fight, r = BOSS_RANGE): ShipEntity[] {
   return out;
 }
 
-function nearest(ships: ShipEntity[], x: number, y: number, skip?: (s: ShipEntity) => boolean): ShipEntity | null {
+export function nearest(ships: ShipEntity[], x: number, y: number, skip?: (s: ShipEntity) => boolean): ShipEntity | null {
   let best: ShipEntity | null = null, bd = Infinity;
   for (const s of ships) {
     if (skip?.(s)) continue;
@@ -406,13 +415,13 @@ function nearest(ships: ShipEntity[], x: number, y: number, skip?: (s: ShipEntit
   return best;
 }
 
-function head(body: ShipEntity, k = 0.42): { x: number; y: number } {
+export function head(body: ShipEntity, k = 0.42): { x: number; y: number } {
   const v = headingVec(body.state.heading);
   return { x: body.state.x + v.x * body.stats.length * k, y: body.state.y + v.y * body.stats.length * k };
 }
 
 /** Steer and swim toward a point: monsters turn like beasts, not ships. */
-function swim(game: Game, s: ShipEntity, tx: number, ty: number, speed: number, dt: number, turn = 1.2): void {
+export function swim(game: Game, s: ShipEntity, tx: number, ty: number, speed: number, dt: number, turn = 1.2): void {
   const want = Math.atan2(tx - s.state.x, -(ty - s.state.y));
   const d = dist(s.state.x, s.state.y, tx, ty);
   s.state.heading = wrapAngle(s.state.heading + clamp(wrapAngle(want - s.state.heading), -turn * dt, turn * dt));
@@ -424,7 +433,7 @@ function swim(game: Game, s: ShipEntity, tx: number, ty: number, speed: number, 
   game.grid.upsert(s.id, s.state.x, s.state.y);
 }
 
-function place(game: Game, s: ShipEntity, x: number, y: number, heading?: number): void {
+export function place(game: Game, s: ShipEntity, x: number, y: number, heading?: number): void {
   s.state.x = x;
   s.state.y = y;
   if (heading !== undefined) s.state.heading = heading;
@@ -467,16 +476,16 @@ export function scoreOf(f: Fight, c: Contribution): number {
   return (c.dmg / Math.max(1, f.pool)) * 1000 + c.control + c.support;
 }
 
-function hurt(game: Game, f: Fight, target: ShipEntity, frac: number, extra: Partial<DamagePacket> = {}): void {
+export function hurt(game: Game, f: Fight, target: ShipEntity, frac: number, extra: Partial<DamagePacket> = {}): void {
   const body = game.ships.get(f.id) ?? null;
   applyDamage(game, target, { hull: target.stats.hullMax * frac, ...extra }, body);
 }
 
-function sayTo(game: Game, ships: ShipEntity[], msg: string, kind: 'info' | 'good' | 'bad' = 'bad'): void {
+export function sayTo(game: Game, ships: ShipEntity[], msg: string, kind: 'info' | 'good' | 'bad' = 'bad'): void {
   for (const s of ships) if (s.isPlayer) game.toastShip(s, msg, kind);
 }
 
-function setPhase(game: Game, f: Fight, phase: number): void {
+export function setPhase(game: Game, f: Fight, phase: number): void {
   if (f.phase === phase) return;
   f.phase = phase;
   const body = game.ships.get(f.id);
@@ -485,13 +494,13 @@ function setPhase(game: Game, f: Fight, phase: number): void {
   game.emit({ k: 'fx', fx: 'boss_roar', x: Math.round(body.state.x), y: Math.round(body.state.y), r: 500 }, body.state.x, body.state.y);
 }
 
-function every(f: Fight, key: string, now: number, period: number): boolean {
+export function every(f: Fight, key: string, now: number, period: number): boolean {
   if ((f.ready[key] ?? 0) > now) return false;
   f.ready[key] = now + period;
   return true;
 }
 
-function submerge(game: Game, s: ShipEntity, secs: number): void {
+export function submerge(game: Game, s: ShipEntity, secs: number): void {
   s.addEffect({ id: 'submerged', until: game.now + secs }, game.now);
 }
 
@@ -512,11 +521,12 @@ export function stepBosses(game: Game, dt: number): void {
       case 'mother_of_wrecks': motherTick(game, f, body, dt); break;
       case 'storm_widow': widowTick(game, f, body, dt); break;
       case 'hollow_admiral': break; // the ghosts sail under their own brains
+      default: tenTick(game, f, body, dt); // the six of 2026-10-03
     }
   }
 }
 
-function wander(game: Game, f: Fight, body: ShipEntity, speed: number, dt: number): void {
+export function wander(game: Game, f: Fight, body: ShipEntity, speed: number, dt: number): void {
   const t = game.now * 0.02 + f.id;
   swim(game, body, f.anchor.x + Math.sin(t) * 900, f.anchor.y - Math.cos(t * 0.7) * 900, speed, dt, 0.5);
 }
@@ -827,6 +837,7 @@ function fightSecond(game: Game, f: Fight): void {
     case 'black_serpent': serpentSecond(game, f, body, ships, hp); break;
     case 'mother_of_wrecks': motherSecond(game, f, body, ships, hp); break;
     case 'storm_widow': widowSecond(game, f, body, ships, hp); break;
+    default: tenSecond(game, f, body, ships, hp); // the six of 2026-10-03
   }
   f.inks = f.inks.filter((k) => k.until > now);
 }
@@ -1261,6 +1272,12 @@ export function bossIncoming(game: Game, target: ShipEntity, d: DamagePacket, so
       break;
     case 'hollow_admiral':
       break;
+    default: {
+      // The six of 2026-10-03: their shells, wards and false shapes (null: it cannot land at all).
+      const m = tenIncoming(game, f, target, part, source);
+      if (m === null) return null;
+      mul = m;
+    }
   }
   const out: DamagePacket = mul === 1 ? d : { ...d, hull: (d.hull ?? 0) * mul };
   credit(game, f, source, 'dmg', Math.min(target.hull, out.hull ?? 0));
@@ -1273,6 +1290,9 @@ export function bossSinking(game: Game, ship: ShipEntity): boolean {
   if (!f) return false;
   const part = f.parts.get(ship.id);
   const now = game.now;
+  // The Rime Twins: the one that falls while its twin stands strong is sung back from the sea (bosses10.ts).
+  const ten = tenSinking(game, f, ship, part);
+  if (ten !== undefined) return ten;
   if (part === 'ghost') {
     // A lit soul-lantern raises the ghost again.
     if (f.lanterns.get(ship.id)) {
@@ -1380,9 +1400,10 @@ export function swallowedShield(target: ShipEntity, source: ShipEntity | null): 
 
 // ================================================================== the end
 
-function end(game: Game, f: Fight, how: 'slain' | 'escaped' | 'gone'): void {
+export function end(game: Game, f: Fight, how: 'slain' | 'escaped' | 'gone'): void {
   if (!game.bosses.fights.has(f.id)) return;
   game.bosses.fights.delete(f.id);
+  tenEnd(game, f); // the six of 2026-10-03: what they hold let go
   const body = game.ships.get(f.id);
   const x = body?.state.x ?? f.anchor.x, y = body?.state.y ?? f.anchor.y;
   for (const sid of [...f.grabs.keys()]) release(game, f, sid);
@@ -1506,11 +1527,17 @@ function view(game: Game, f: Fight, body: ShipEntity, s: PlayerSession): BossVie
   if (f.kind === 'storm_widow') rz('eye', f.eye.x, f.eye.y, f.eye.r);
   if (f.kind === 'mother_of_wrecks') rz('maze', body.state.x, body.state.y, 100);
   if (f.songActive) rz('song', body.state.x, body.state.y, 1600);
+  tenZones(game, f, body, s, rz); // the six of 2026-10-03
   const parts: BossView['parts'] = [];
   for (const [id, p] of f.parts) {
-    if (id === f.id || p === 'add') continue;
+    if (id === f.id || p === 'add' || p === 'phantom') continue;
     const o = game.ships.get(id);
     if (!o) continue;
+    const own = tenPart(game, f, id, p, o);
+    if (own) {
+      parts.push(own);
+      continue;
+    }
     const label = p === 'ghost' ? `${o.name}${f.lanterns.get(id) ? ' (lantern lit)' : ' (lantern out)'}` : o.name;
     parts.push({ id, label, hp: Math.max(0, Math.round(o.alive ? o.hull : 0)), hpMax: Math.round(o.stats.hullMax) });
   }
@@ -1518,9 +1545,11 @@ function view(game: Game, f: Fight, body: ShipEntity, s: PlayerSession): BossVie
   for (const c of f.contrib.values()) total += scoreOf(f, c);
   const mine = f.contrib.get(s.accountId);
   const sw = s.ship ? f.swallowed.get(s.ship.id) : undefined;
+  // Where it is as she sees it (the Changeling's true shape is not shown to those too far to see its wake).
+  const at = tenWhere(game, f, body, s) ?? body.state;
   return {
     id: f.id, kind: f.kind, name: f.def.name, phase: f.phase, phaseName: f.def.phases[f.phase] ?? '',
-    hp: Math.max(0, Math.round(body.hull)), hpMax: Math.round(body.stats.hullMax), x: Math.round(body.state.x), y: Math.round(body.state.y),
+    hp: Math.max(0, Math.round(body.hull)), hpMax: Math.round(body.stats.hullMax), x: Math.round(at.x), y: Math.round(at.y),
     hint: hintFor(game, f, body), endsIn: Math.max(0, Math.round(f.endsAt - now)), parts, zones,
     you: { share: mine && total > 0 ? Math.round((scoreOf(f, mine) / total) * 1000) / 1000 : 0, grabbed: !!s.ship && f.grabs.has(s.ship.id), swallowed: sw ? Math.max(0, Math.round(SWALLOW_TIME - (now - sw.since))) : 0 },
   };
@@ -1548,8 +1577,9 @@ function hintFor(game: Game, f: Fight, body: ShipEntity): string {
       return 'Heavy guns on the shell; ships drawing ≤ 2.5 m into the maze to kill the cores (within 115 m).';
     case 'storm_widow':
       return 'Only hits from inside the moving eye land. Lightning seeks the tallest mast.';
+    default:
+      return tenHint(game, f, body); // the six of 2026-10-03
   }
-  return '';
 }
 
 /** Eyes of the Choir and friends: where the bosses are. */

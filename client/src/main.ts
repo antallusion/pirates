@@ -38,6 +38,9 @@ import { ACT_SHOW, actBarHtml, buildActs, findInfo, landKeyAct, markInfo, slowWo
 import { FIND_REACH, FIND_SLOW } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
 import { ROAMS, ROAM_REACH } from '../../shared/src/data/roamers.ts'; // docs/19 D7
+import { BOSSES } from '../../shared/src/data/bosses.ts';
+import type { BossId } from '../../shared/src/data/bosses.ts';
+import { isShoreBoss } from '../../shared/src/data/shorebosses.ts'; // the great ones ashore (2026-10-03)
 import type { RoamView } from '../../shared/src/roamproto.ts';
 import { UNITS as ROAM_UNITS } from '../../shared/src/data/army.ts';
 import { roamName, roamNow } from './render/roamers.ts';
@@ -507,13 +510,23 @@ function turned(key: string, now: unknown): boolean {
  *  field); /?battle=<lair kind> — at that lair. The orders are the admin server's (localhost:58530); any other server
  *  refuses them. */
 let testBattle: string | null = new URLSearchParams(location.search).get('battle');
+/** A world boss at sea from a link (owner, 2026-10-03): /?boss=<id> — a captain of level 30 in a whole frigate, in the
+ *  boss's waters, the boss raised 600 m off her bow (the admin server's /boss). */
+let testBoss: string | null = new URLSearchParams(location.search).get('boss');
 function runTestBattle(): void {
+  if (testBoss && state.self) {
+    const id = testBoss as BossId;
+    testBoss = null;
+    const orders = ['/level 30', '/ship frigate', '/heal', ...(BOSSES[id] ? [`/tp ${BOSSES[id].regions[0]}`] : []), `/boss ${id}`];
+    orders.forEach((text, i) => setTimeout(() => net.send({ t: 'chat', text }), 800 + i * 700));
+  }
   if (testBattle === null || !state.self) return;
   const kind = testBattle === 'land' ? 'crab_beach' : testBattle;
   testBattle = null;
   const army = ['/level 30', '/heal', '/army clear', '/army marine 30', '/army mermaid 14', '/army lantern_maw 6'];
+  // A great one ashore (/?battle=walrus_tyrant …) comes ashore on the nearest island of its kind and is fought at once.
   const orders = kind && kind !== 'deck'
-    ? [...army, `/lair ${kind} fight`]
+    ? [...army, isShoreBoss(kind) ? `/shoreboss ${kind} fight` : `/lair ${kind} fight`]
     : ['/level 30', '/tp gravewater', '/ship frigate', ...army.slice(1), '/army ancient_turtle 3', '/army young_kraken 1', '/army white_whale 1', '/foe patrol frigate', '/board'];
   orders.forEach((text, i) => setTimeout(() => net.send({ t: 'chat', text }), 800 + i * 700));
 }

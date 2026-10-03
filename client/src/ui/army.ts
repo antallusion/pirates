@@ -2,6 +2,7 @@
 // corner, the upgraded kinds in a gold frame, the empty slots of her class left open — the names and specials of the
 // kinds of men, and the word for an army seen from afar («Горстка… Тьма»).
 
+import { BOSS_UNIT_NAMES, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { ARMY_WORD_MIN, UNITS, armyWord } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
@@ -17,7 +18,7 @@ const DL = dict(DEN, DRU);
 type K = keyof typeof EN;
 
 // The world's armies carry their own names (shared/src/data/factionunits.ts).
-const own = (u: UnitId, k: 0 | 2): string | null => (UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId][k + (lang() === 'ru' ? 1 : 0)] : null);
+const own = (u: UnitId, k: 0 | 2): string | null => (UNITS[u]?.roster ? FACTION_NAMES[u as FactionKindId][k + (lang() === 'ru' ? 1 : 0)] : isBossUnit(u) ? BOSS_UNIT_NAMES[u][k ? 'note' : 'name'][lang() === 'ru' ? 1 : 0] : null);
 export const unitName = (u: UnitId): string => own(u, 0) ?? L(`u.${u}` as K);
 export const unitNote = (u: UnitId): string => own(u, 2) ?? L(`ud.${u}` as K);
 export const specialName = (s: UnitSpecial): string => L(`sp.${s}` as K);
