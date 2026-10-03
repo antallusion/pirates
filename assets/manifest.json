@@ -1787,6 +1787,10 @@
     "unit.island_ape":                         { "local": "units/island_ape.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.0", "rev": 20261003163234},
     "unit.island_ape_b":                       { "local": "units/island_ape_b.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.1", "rev": 20261003163234},
     "unit.island_ape_atk":                     { "local": "units/island_ape_atk.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.2", "rev": 20261003163234},
-    "unit.island_ape_hit":                     { "local": "units/island_ape_hit.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.3", "rev": 20261003163234}
+    "unit.island_ape_hit":                     { "local": "units/island_ape_hit.webp", "remote": "hf_20261003_163234_gpt-anim_island_ape.png", "job": "gpt-anim_island_ape", "fit": "sheet:anim_island_ape.3", "rev": 20261003163234},
+    "unit.wild_boar":                          { "local": "units/wild_boar.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.0", "rev": 20261003163712},
+    "unit.wild_boar_b":                        { "local": "units/wild_boar_b.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.1", "rev": 20261003163712},
+    "unit.wild_boar_atk":                      { "local": "units/wild_boar_atk.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.2", "rev": 20261003163712},
+    "unit.wild_boar_hit":                      { "local": "units/wild_boar_hit.webp", "remote": "hf_20261003_163712_gpt-anim_wild_boar.png", "job": "gpt-anim_wild_boar", "fit": "sheet:anim_wild_boar.3", "rev": 20261003163712}
   }
 }
