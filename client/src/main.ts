@@ -188,6 +188,8 @@ function cycleTarget(): void {
 
 /** The glass on the frame's ship (docs/12 P6): her hold weighed, asked again every few seconds. */
 let glassId: number | null = null, glassAt = 0;
+/** What the glass answers when it cannot see (server/src/game/raiding.ts appraise): kept off the toasts. */
+const GLASS_QUIET = new Set(['Too far for the glass.', 'Nothing to appraise there.']);
 function askGlass(id: number | null): void {
   const now = performance.now();
   if (id === null) {
@@ -508,8 +510,11 @@ function runTestBattle(): void {
     : ['/level 30', '/tp gravewater', '/ship frigate', ...army.slice(1), '/army ancient_turtle 3', '/army young_kraken 1', '/army white_whale 1', '/foe patrol frigate', '/board'];
   orders.forEach((text, i) => setTimeout(() => net.send({ t: 'chat', text }), 800 + i * 700));
 }
+/** The sea's news held through a boarding battle (case 'toast'), told once the deck is clear. */
+const heldToasts: { msg: string; kind: string }[] = [];
 function filmMoments(): void {
   if (state.self && !filmSince) filmSince = performance.now();
+  if (heldToasts.length && !state.boardTac) for (const x of heldToasts.splice(0)) hud.toast(x.msg, x.kind);
   const tac = state.boardTac;
   if (tac && !filmWas.tac) {
     // A legend's film first, then the foe's army's, then the boarding's (or the lair's ashore) — one at the start.
@@ -724,7 +729,8 @@ function onMessage(m: ServerMsg): void {
         net.forget();
         $('screen-login').classList.remove('hidden');
       } else if (!inGame) $('login-error').textContent = serverText(m.msg);
-      else hud.toast(serverText(m.msg), 'bad');
+      // The glass asks by itself every few seconds (askGlass): its «too far» is no refusal of hers to tell.
+      else if (!GLASS_QUIET.has(m.msg)) hud.toast(serverText(m.msg), 'bad');
       break;
     case 'welcome':
       $('screen-login').classList.add('hidden');
@@ -861,6 +867,9 @@ function onMessage(m: ServerMsg): void {
       }
       // World news goes to the feed (owner, 2026-09-29: the sea's news in a corner), the rest to the toasts.
       if (m.msg.startsWith('WORLD: ')) hud.feed(serverText(m.msg));
+      // While her men fight on a deck the sea's news (a fever, a tip) waits for the deck to clear; what the battle
+      // refuses comes as 'err'.
+      else if (state.boardTac) heldToasts.push({ msg: serverText(m.msg), kind: m.kind });
       else hud.toast(serverText(m.msg), m.kind);
       if (m.kind === 'gold') audio.coins();
       if (/a pirate is coming for you/.test(m.msg)) audio.bell(); // the lookout's alarm
@@ -2459,7 +2468,8 @@ function step(t: number): void {
     easeSecond(t, own);
     firstTips.frame(t);
     targetId = resolveTarget();
-    askGlass(targetId);
+    // The glass is turned on her mark at sea, not while her men fight on a deck.
+    askGlass(state.boardTac ? null : targetId);
     hud.drawTarget(state, targetId);
     if (touch.enabled && state.self) {
       const cls = SHIP_CLASSES[state.self.loadout.classId];
