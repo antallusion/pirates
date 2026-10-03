@@ -448,7 +448,33 @@ loadAssets(null).then(() => {
   const url = assetUrl('art.keyart');
   const ka = document.querySelector<HTMLElement>('.keyart');
   if (ka && url) ka.style.backgroundImage = `url('${url}')`;
+  if (ka) titleFilm(ka, url);
 });
+
+/** The title screen: the trailer, silent and looping, over the key art (owner, 2026-10-03) — not for one who asks for
+ *  less motion or saves data; it rests while the title screen is hidden. */
+function titleFilm(ka: HTMLElement, poster: string | null): void {
+  const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || saveData) return;
+  const v = document.createElement('video');
+  v.className = 'keyart-film';
+  v.muted = true;
+  v.loop = true;
+  v.playsInline = true;
+  v.autoplay = true;
+  v.preload = 'auto';
+  v.setAttribute('aria-hidden', 'true');
+  if (poster) v.poster = poster;
+  v.src = '/assets/video/trailer.mp4';
+  v.addEventListener('playing', () => v.classList.add('on'));
+  ka.appendChild(v);
+  // Autoplay is a request, not a promise: ask again once it can play, on the title screen only.
+  const go = () => { if (!$('screen-login').classList.contains('hidden')) void v.play().catch(() => {}); };
+  v.addEventListener('canplay', go, { once: true });
+  go();
+  const login = $('screen-login');
+  new MutationObserver(() => (login.classList.contains('hidden') ? v.pause() : void v.play().catch(() => {}))).observe(login, { attributes: true, attributeFilter: ['class'] });
+}
 
 // Links back from letters and OAuth: #token=… (signed in), #reset=… (new password), #verified, #auth-error=….
 {

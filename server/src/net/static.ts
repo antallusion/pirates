@@ -19,6 +19,7 @@ const MIME: Record<string, string> = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.mp4': 'video/mp4',
 };
 
 interface Mount {
@@ -61,10 +62,26 @@ export function createStaticHandler(root: string) {
         entry = { mtime: st.mtimeMs, body };
         cache.set(file, entry);
       }
+      // Films are served in ranges (a browser seeks in them, and iOS will not play one served whole).
+      const range = ext === '.mp4' ? /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '') : null;
+      if (range) {
+        const size = entry.body.length;
+        const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+        const end = range[1] && range[2] ? Math.min(size - 1, Number(range[2])) : size - 1;
+        if (start >= size || start > end) {
+          res.writeHead(416, { 'Content-Range': `bytes */${size}` }).end();
+          return true;
+        }
+        res.writeHead(206, { 'Content-Type': 'video/mp4', 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400' });
+        if (req.method === 'HEAD') res.end();
+        else res.end(entry.body.subarray(start, end + 1));
+        return true;
+      }
       res.writeHead(200, {
+        ...(ext === '.mp4' ? { 'Accept-Ranges': 'bytes' } : {}),
         'Content-Type': MIME[ext] ?? 'application/octet-stream',
         'Content-Length': entry.body.length,
-        'Cache-Control': ext === '.png' || ext === '.webp' ? 'public, max-age=86400' : 'no-cache',
+        'Cache-Control': ext === '.png' || ext === '.webp' || ext === '.mp4' ? 'public, max-age=86400' : 'no-cache',
       });
       if (req.method === 'HEAD') res.end();
       else res.end(entry.body);

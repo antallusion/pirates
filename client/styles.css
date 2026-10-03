@@ -4101,3 +4101,6 @@ body.touch .act-btn { --h: 38px; }
 }
 /* The battle's queue and card show a painted figure's head and shoulders (owner, 2026-10-02: the battle as in Heroes). */
 .tb-q .ico.fig, .tb-card-h .ico-md.fig { object-fit: cover; object-position: 50% 6%; background: radial-gradient(circle at 50% 35%, #2a2620, #110e0b); }
+/* The title screen's film: the trailer, silent, fading in over the key art once it plays (main.ts titleFilm). */
+.keyart-film { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.4s ease; pointer-events: none; }
+.keyart-film.on { opacity: 1; }
