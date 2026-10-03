@@ -1234,6 +1234,11 @@
     "unit.abyss_ascendant":                    { "local": "units/abyss_ascendant.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.0", "rev": 20261003045538},
     "unit.abyss_ascendant_b":                  { "local": "units/abyss_ascendant_b.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.1", "rev": 20261003045538},
     "unit.abyss_ascendant_atk":                { "local": "units/abyss_ascendant_atk.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.2", "rev": 20261003045538},
-    "unit.abyss_ascendant_hit":                { "local": "units/abyss_ascendant_hit.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.3", "rev": 20261003045538}
+    "unit.abyss_ascendant_hit":                { "local": "units/abyss_ascendant_hit.webp", "remote": "hf_20261003_045538_gpt-anim_abyss_ascendant.png", "job": "gpt-anim_abyss_ascendant", "fit": "sheet:anim_abyss_ascendant.3", "rev": 20261003045538},
+    "bg.deck_schooner":                        { "local": "art/deck_schooner.webp", "remote": "hf_20261003_045515_3d934b26-ff32-4d81-9899-938e8cba67e3.png", "job": "3d934b26-ff32-4d81-9899-938e8cba67e3", "fit": "opaque:1536", "rev": 20261003045515},
+    "unit.abyss_herald":                       { "local": "units/abyss_herald.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.0", "rev": 20261003050009},
+    "unit.abyss_herald_b":                     { "local": "units/abyss_herald_b.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.1", "rev": 20261003050009},
+    "unit.abyss_herald_atk":                   { "local": "units/abyss_herald_atk.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.2", "rev": 20261003050009},
+    "unit.abyss_herald_hit":                   { "local": "units/abyss_herald_hit.webp", "remote": "hf_20261003_050009_gpt-anim_abyss_herald.png", "job": "gpt-anim_abyss_herald", "fit": "sheet:anim_abyss_herald.3", "rev": 20261003050009}
   }
 }
