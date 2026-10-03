@@ -550,6 +550,32 @@ v('cut_octopus_wreck', 'lair_octopus_wreck', 'Осьминожий остов',
   'wading ashore. The camera moves slowly toward the wreck.')
 
 
+# ---- The eighth reel: the great beasts' grottos and the guardians' seats (shared/src/data/lairs.ts) -------------------
+v('cut_crab_hollow', 'lair_crab_hollow', 'Полость краб-королевы',
+  'Inside a hollow of black rock and palm roots behind a tropical beach, lit by shafts of green light: the ground is littered '
+  'with split coconuts and old ship\'s bells, and out of the shadows a colossal coconut crab queen with a blue and orange '
+  'coral-crusted shell rises on her jointed legs and opens her huge uneven claws at the pirates\' torches. The camera pushes '
+  'slowly in from the entrance.')
+v('cut_wyrm_gallery', 'lair_wyrm_gallery', 'Галерея змея',
+  'Deep in a cave gallery of grey stone, water dripping from the roof: pirates with lanterns creep along a ledge as clouds of '
+  'bats stir overhead, and below them a long pale blind wyrm with milky scales slides out of a black pool, lifts its narrow '
+  'head and tastes the air toward the lantern light. The camera looks down from the ledge past the lanterns.')
+v('cut_hydra_pool', 'lair_hydra_pool', 'Омут гидры',
+  'A still black pool in the heart of a mangrove swamp under hanging moss and grey mist: the water bulges, and a three-headed '
+  'hydra with mossy olive scales rises from it, its three heads swaying apart on long necks and hissing at a longboat of '
+  'pirates frozen among the roots, a crocodile sliding away beside them. The camera floats low on the water toward the pool.')
+v('cut_ape_throne', 'lair_ape_throne', 'Трон короля обезьян',
+  'The summit of a jungle island at sunset, a ring of mossy carved stones round a great flat rock: apes gather on the stones, '
+  'and on the rock a colossal scarred silverback with a crown of coral and carved stone rises to his full height, beats his '
+  'chest and roars over the treetops as pirates climb into the clearing below. The camera rises slowly from the pirates to '
+  'the ape king.')
+v('cut_roc_eyrie', 'lair_roc_eyrie', 'Гнездо руха',
+  'A needle of bare rock rising from a storm-tossed sea, lightning flickering in the clouds behind it: on its summit, in a '
+  'nest of driftwood and broken masts, a colossal storm roc spreads its slate-grey wings with sparks running along the '
+  'feathers and screams into the wind, albatrosses wheeling round it, while far below a longboat fights the swell. The '
+  'camera circles the summit.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
