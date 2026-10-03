@@ -6994,7 +6994,7 @@
    "prop.port_bellhaven"
   ],
   "prompt": "Draw a square image: a game map sprite of one port town — a grey stone naval dockyard town: two long stone dry docks each holding a half-built hull on its stocks, a very long narrow ropewalk shed, slate-roofed storehouses, a tall bell tower and a small star-shaped bastion at one corner. Seen from almost straight above like a map plan, with only a slight tilt so the walls and roofs show a little of their front faces; the streets, walls and quays run square to the edges of the picture (not rotated, not isometric); the whole town compact on its own patch of shore filling most of the picture, three or four piers and jetties reaching straight down toward the bottom edge. Smooth painterly digital painting like the town sprites on the adventure map of Heroes of Might and Magic III, grim and weathered; night, warm lantern light in the windows and cold moonlight on the wet roofs; muted colours: charcoal, slate, tarred black wood, rust, old brass, cold blue-grey, with small warm highlights. The town alone on a solid flat magenta #FF00FF background: no sea around it, no shadows on the background, no frame, no text, no letters, no labels.",
-  "painting": true
+  "cut": "hf_20261003_215955_gpt-port_bellhaven"
  },
  "port_gallowsmouth": {
   "grid": [

@@ -1969,6 +1969,7 @@
     "unit.corsair_phantom":                    { "local": "units/corsair_phantom.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.0", "rev": 20261003215711},
     "unit.corsair_phantom_b":                  { "local": "units/corsair_phantom_b.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.1", "rev": 20261003215711},
     "unit.corsair_phantom_atk":                { "local": "units/corsair_phantom_atk.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.2", "rev": 20261003215711},
-    "unit.corsair_phantom_hit":                { "local": "units/corsair_phantom_hit.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.3", "rev": 20261003215711}
+    "unit.corsair_phantom_hit":                { "local": "units/corsair_phantom_hit.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.3", "rev": 20261003215711},
+    "prop.port_bellhaven":                     { "local": "props/port_bellhaven.webp", "remote": "hf_20261003_215955_gpt-port_bellhaven.png", "job": "gpt-port_bellhaven", "fit": "sheet:port_bellhaven.0", "rev": 20261003215955}
   }
 }
