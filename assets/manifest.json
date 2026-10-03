@@ -1343,6 +1343,7 @@
     "unit.hermit_atk":                         { "local": "units/hermit_atk.webp", "remote": "hf_20261003_065537_gpt-anim_hermit.png", "job": "gpt-anim_hermit", "fit": "sheet:anim_hermit.2", "rev": 20261003065537},
     "unit.hermit_hit":                         { "local": "units/hermit_hit.webp", "remote": "hf_20261003_065537_gpt-anim_hermit.png", "job": "gpt-anim_hermit", "fit": "sheet:anim_hermit.3", "rev": 20261003065537},
     "bg.deck_brig":                            { "local": "art/deck_brig.webp", "remote": "hf_20261003_070020_gpt-bg-deck_brig.png", "job": "gpt-bg-deck_brig", "fit": "opaque:1536", "rev": 20261003070020},
-    "bg.deck_frigate":                         { "local": "art/deck_frigate.webp", "remote": "hf_20261003_070521_gpt-bg-deck_frigate.png", "job": "gpt-bg-deck_frigate", "fit": "opaque:1536", "rev": 20261003070521}
+    "bg.deck_frigate":                         { "local": "art/deck_frigate.webp", "remote": "hf_20261003_070521_gpt-bg-deck_frigate.png", "job": "gpt-bg-deck_frigate", "fit": "opaque:1536", "rev": 20261003070521},
+    "bg.deck_galleon":                         { "local": "art/deck_galleon.webp", "remote": "hf_20261003_071023_gpt-bg-deck_galleon.png", "job": "gpt-bg-deck_galleon", "fit": "opaque:1536", "rev": 20261003071023}
   }
 }
