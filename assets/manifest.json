@@ -1203,6 +1203,10 @@
     "unit.crown_mortar":                       { "local": "units/crown_mortar.webp", "remote": "hf_20261003_042216_gpt-anim_crown_mortar.png", "job": "gpt-anim_crown_mortar", "fit": "sheet:anim_crown_mortar.0", "rev": 20261003042216},
     "unit.crown_mortar_b":                     { "local": "units/crown_mortar_b.webp", "remote": "hf_20261003_042216_gpt-anim_crown_mortar.png", "job": "gpt-anim_crown_mortar", "fit": "sheet:anim_crown_mortar.1", "rev": 20261003042216},
     "unit.crown_mortar_atk":                   { "local": "units/crown_mortar_atk.webp", "remote": "hf_20261003_042216_gpt-anim_crown_mortar.png", "job": "gpt-anim_crown_mortar", "fit": "sheet:anim_crown_mortar.2", "rev": 20261003042216},
-    "unit.crown_mortar_hit":                   { "local": "units/crown_mortar_hit.webp", "remote": "hf_20261003_042216_gpt-anim_crown_mortar.png", "job": "gpt-anim_crown_mortar", "fit": "sheet:anim_crown_mortar.3", "rev": 20261003042216}
+    "unit.crown_mortar_hit":                   { "local": "units/crown_mortar_hit.webp", "remote": "hf_20261003_042216_gpt-anim_crown_mortar.png", "job": "gpt-anim_crown_mortar", "fit": "sheet:anim_crown_mortar.3", "rev": 20261003042216},
+    "unit.crown_rifleman":                     { "local": "units/crown_rifleman.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.0", "rev": 20261003042654},
+    "unit.crown_rifleman_b":                   { "local": "units/crown_rifleman_b.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.1", "rev": 20261003042654},
+    "unit.crown_rifleman_atk":                 { "local": "units/crown_rifleman_atk.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.2", "rev": 20261003042654},
+    "unit.crown_rifleman_hit":                 { "local": "units/crown_rifleman_hit.webp", "remote": "hf_20261003_042654_gpt-anim_crown_rifleman.png", "job": "gpt-anim_crown_rifleman", "fit": "sheet:anim_crown_rifleman.3", "rev": 20261003042654}
   }
 }
