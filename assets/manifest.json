@@ -1449,6 +1449,22 @@
     "icon.sp_dr_drowning_grip":                { "local": "icons/sp_dr_drowning_grip.webp", "remote": "hf_20261003_101734_gpt-spells_3.png", "job": "gpt-spells_3", "fit": "sheet:spells_3.12", "rev": 20261003101734},
     "icon.sp_dr_brine_kiss":                   { "local": "icons/sp_dr_brine_kiss.webp", "remote": "hf_20261003_101734_gpt-spells_3.png", "job": "gpt-spells_3", "fit": "sheet:spells_3.13", "rev": 20261003101734},
     "icon.sp_dr_anchor_chain":                 { "local": "icons/sp_dr_anchor_chain.webp", "remote": "hf_20261003_101734_gpt-spells_3.png", "job": "gpt-spells_3", "fit": "sheet:spells_3.14", "rev": 20261003101734},
-    "icon.sp_dr_undertow":                     { "local": "icons/sp_dr_undertow.webp", "remote": "hf_20261003_101734_gpt-spells_3.png", "job": "gpt-spells_3", "fit": "sheet:spells_3.15", "rev": 20261003101734}
+    "icon.sp_dr_undertow":                     { "local": "icons/sp_dr_undertow.webp", "remote": "hf_20261003_101734_gpt-spells_3.png", "job": "gpt-spells_3", "fit": "sheet:spells_3.15", "rev": 20261003101734},
+    "icon.sp_dr_barnacles":                    { "local": "icons/sp_dr_barnacles.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.0", "rev": 20261003102219},
+    "icon.sp_dr_abyss":                        { "local": "icons/sp_dr_abyss.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.1", "rev": 20261003102219},
+    "icon.sp_ad_volley_order":                 { "local": "icons/sp_ad_volley_order.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.2", "rev": 20261003102219},
+    "icon.sp_ad_signal_flags":                 { "local": "icons/sp_ad_signal_flags.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.3", "rev": 20261003102219},
+    "icon.sp_ad_square":                       { "local": "icons/sp_ad_square.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.4", "rev": 20261003102219},
+    "icon.sp_ad_fog_of_war":                   { "local": "icons/sp_ad_fog_of_war.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.5", "rev": 20261003102219},
+    "icon.sp_ad_bayonets":                     { "local": "icons/sp_ad_bayonets.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.6", "rev": 20261003102219},
+    "icon.sp_ad_admiralty":                    { "local": "icons/sp_ad_admiralty.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.7", "rev": 20261003102219},
+    "icon.sp_becalm":                          { "local": "icons/sp_becalm.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.8", "rev": 20261003102219},
+    "icon.sp_deep_sight":                      { "local": "icons/sp_deep_sight.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.9", "rev": 20261003102219},
+    "icon.sp_fair_wind":                       { "local": "icons/sp_fair_wind.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.10", "rev": 20261003102219},
+    "icon.sp_fog_bank":                        { "local": "icons/sp_fog_bank.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.11", "rev": 20261003102219},
+    "icon.sp_gale":                            { "local": "icons/sp_gale.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.12", "rev": 20261003102219},
+    "icon.sp_mend_hull":                       { "local": "icons/sp_mend_hull.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.13", "rev": 20261003102219},
+    "icon.sp_bt_wait":                         { "local": "icons/sp_bt_wait.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.14", "rev": 20261003102219},
+    "icon.sp_bt_defend":                       { "local": "icons/sp_bt_defend.webp", "remote": "hf_20261003_102219_gpt-spells_4.png", "job": "gpt-spells_4", "fit": "sheet:spells_4.15", "rev": 20261003102219}
   }
 }
