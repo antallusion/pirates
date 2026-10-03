@@ -1996,6 +1996,10 @@
     "monster.old_moorings":                    { "local": "monsters/old_moorings.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.0", "rev": 20261003230443},
     "monster.old_tithe":                       { "local": "monsters/old_tithe.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.1", "rev": 20261003230443},
     "monster.fog_changeling":                  { "local": "monsters/fog_changeling.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.2", "rev": 20261003230443},
-    "monster.rime_narwhal":                    { "local": "monsters/rime_narwhal.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.3", "rev": 20261003230443}
+    "monster.rime_narwhal":                    { "local": "monsters/rime_narwhal.webp", "remote": "hf_20261003_230443_gpt-bosses_sea_1.png", "job": "gpt-bosses_sea_1", "fit": "sheet:bosses_sea_1.3", "rev": 20261003230443},
+    "unit.storm_caller":                       { "local": "units/storm_caller.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.0", "rev": 20261003230702},
+    "unit.storm_caller_b":                     { "local": "units/storm_caller_b.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.1", "rev": 20261003230702},
+    "unit.storm_caller_atk":                   { "local": "units/storm_caller_atk.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.2", "rev": 20261003230702},
+    "unit.storm_caller_hit":                   { "local": "units/storm_caller_hit.webp", "remote": "hf_20261003_230702_gpt-anim_storm_caller.png", "job": "gpt-anim_storm_caller", "fit": "sheet:anim_storm_caller.3", "rev": 20261003230702}
   }
 }
