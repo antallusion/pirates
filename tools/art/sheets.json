@@ -4745,7 +4745,7 @@
    "ship.wyvern_galleass"
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a dark frigate with tall copper lightning rods on every masthead, copper-sheathed rails and storm-grey sails; 2) a brutal raider brig with spiked iron bulwarks, a beak-shaped boarding bridge at the bow and dark sails painted with a jagged white stripe; 3) a 74-gun two-decker ship of the line, a long massive hull with two rows of guns and three tall masts of square sails; 4) a great galleass with three lateen-rigged masts, banks of oars along both sides, a heavy gun platform at the bow and a carved winged wyvern figurehead; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
-  "painting": true
+  "cut": "hf_20261003_220717_gpt-ships_3"
  },
  "ships_4": {
   "grid": [

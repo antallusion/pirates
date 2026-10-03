@@ -1971,6 +1971,10 @@
     "unit.corsair_phantom_atk":                { "local": "units/corsair_phantom_atk.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.2", "rev": 20261003215711},
     "unit.corsair_phantom_hit":                { "local": "units/corsair_phantom_hit.webp", "remote": "hf_20261003_215711_gpt-anim_corsair_phantom.png", "job": "gpt-anim_corsair_phantom", "fit": "sheet:anim_corsair_phantom.3", "rev": 20261003215711},
     "prop.port_bellhaven":                     { "local": "props/port_bellhaven.webp", "remote": "hf_20261003_215955_gpt-port_bellhaven.png", "job": "gpt-port_bellhaven", "fit": "sheet:port_bellhaven.0", "rev": 20261003215955},
-    "bg.port_bellhaven":                       { "local": "art/port_bellhaven.webp", "remote": "hf_20261003_220235_gpt-bg.port_bellhaven.png", "job": "gpt-bg.port_bellhaven", "fit": "opaque:1920", "rev": 20261003220235}
+    "bg.port_bellhaven":                       { "local": "art/port_bellhaven.webp", "remote": "hf_20261003_220235_gpt-bg.port_bellhaven.png", "job": "gpt-bg.port_bellhaven", "fit": "opaque:1920", "rev": 20261003220235},
+    "ship.thunderer":                          { "local": "ships/thunderer.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.0", "rev": 20261003220717},
+    "ship.storm_reaver":                       { "local": "ships/storm_reaver.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.1", "rev": 20261003220717},
+    "ship.ship_of_the_line":                   { "local": "ships/ship_of_the_line.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.2", "rev": 20261003220717},
+    "ship.wyvern_galleass":                    { "local": "ships/wyvern_galleass.webp", "remote": "hf_20261003_220717_gpt-ships_3.png", "job": "gpt-ships_3", "fit": "sheet:ships_3.3", "rev": 20261003220717}
   }
 }
