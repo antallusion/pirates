@@ -247,6 +247,7 @@ const tameWindow = new TameWindow((m) => net.send(m));
 function openTame(): void {
   tameWindow.open();
   openModal('tame');
+  playFilm('cut_tame');
 }
 // The Throne of the Sea (docs/19 E18): from the captain's plate, the cabin, the captain's window.
 const throneWindow = new ThroneWindow((m) => net.send(m));
@@ -254,6 +255,7 @@ throneWindow.onClose = () => closeModal();
 function openThrone(tab?: string): void {
   throneWindow.open(tab);
   openModal('throne');
+  playFilm('cut_throne');
 }
 heroWindow.onThrone = () => openThrone();
 hud.onThrone = () => openThrone();
@@ -459,15 +461,30 @@ const filmWas = { tac: false, over: false, docked: true, storm: false, bosses: '
  *  haul, a dive or the shallows. */
 const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', dive: null, haul: null, tidal: null, turtle: null };
 /** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
-const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell' };
+const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell', league: 'cut_league', free: 'cut_free' };
+/** The sea's legends each rise in their own film the first time she fights one. */
+const LEGEND_FILM: [string, string][] = [['white_whale', 'cut_white_whale'], ['young_kraken', 'cut_kraken_boss'], ['ancient_turtle', 'cut_ancient_turtle'], ['shoal_leviathan', 'cut_leviathan'], ['lantern_maw', 'cut_lantern_maw'], ['young_serpent', 'cut_serpent'], ['marsh_serpent', 'cut_serpent']];
+/** The things whose change is a moment, as last seen; nothing plays for what she already had when she came in (the
+ *  first ten seconds after her ship arrives only take note). */
+const filmLast = new Map<string, unknown>();
+let filmSince = 0;
+let sunkAt = -Infinity;
+function turned(key: string, now: unknown): boolean {
+  const had = filmLast.has(key);
+  const before = filmLast.get(key);
+  filmLast.set(key, now);
+  return had && before !== now && filmSince > 0 && performance.now() - filmSince > 10_000;
+}
 function filmMoments(): void {
+  if (state.self && !filmSince) filmSince = performance.now();
   const tac = state.boardTac;
   if (tac && !filmWas.tac) {
     // A legend's film first, then the foe's army's, then the boarding's (or the lair's ashore) — one at the start.
     const units = tac.stacks.map((x) => x.unit as string);
     const roster = tac.stacks.filter((x) => x.side !== tac.you).map((x) => ROAM_UNITS[x.unit]?.roster).find(Boolean);
-    const pick = units.includes('white_whale') ? 'cut_white_whale' : units.includes('young_kraken') ? 'cut_kraken_boss' : roster ? ROSTER_FILM[roster] : undefined;
-    if (!(pick && filmDue(pick) && playFilm(pick))) playFilm(tac.land ? 'cut_lair' : 'cut_boarding');
+    const pick = LEGEND_FILM.find(([u, f]) => units.includes(u) && filmDue(f))?.[1] ?? (roster ? ROSTER_FILM[roster] : undefined);
+    // The first boarding has its film; the next, the night raid's.
+    if (!(pick && filmDue(pick) && playFilm(pick))) playFilm(tac.land ? 'cut_lair' : filmDue('cut_boarding') ? 'cut_boarding' : 'cut_raid');
   }
   if (tac?.over && !filmWas.over) playFilm(tac.over.winner === tac.you ? 'cut_victory' : 'cut_defeat');
   filmWas.tac = !!tac;
@@ -491,6 +508,17 @@ function filmMoments(): void {
   const abyss = !!state.self?.abyss?.inside;
   if (abyss && !filmWas.abyss) playFilm('cut_abyss');
   filmWas.abyss = abyss || !state.self;
+  // A black storm's own film; a new ship off the slipway; the orca calf; a Grail dug up; her own harbour; the sea's
+  // holidays, each the first time it comes round.
+  if (turned('weather', state.weather) && state.weather === 'black_storm') playFilm('cut_black_storm');
+  const cls = state.self?.loadout.classId ?? null;
+  if (turned('cls', cls) && cls && state.self?.dockedAt && performance.now() - sunkAt > 60_000) playFilm('cut_launch');
+  if (turned('pet', !!state.companion) && state.companion) playFilm('cut_orca');
+  if (turned('grail', state.adv?.grail ?? null) && state.adv?.grail === 'held') playFilm('cut_grail');
+  if (turned('base', !!state.base) && state.base) playFilm('cut_base');
+  const hol = state.holiday?.id ?? null;
+  if (hol && filmLast.get('hol') !== hol) playFilm(`cut_${hol}`);
+  filmLast.set('hol', hol);
 }
 void loadFilms();
 
@@ -684,6 +712,7 @@ function onMessage(m: ServerMsg): void {
     case 'mutiny':
       if (m.mutineers > 0) {
         audio.bell();
+        playFilm('cut_mutiny');
         hud.banner(L('mutiny'), L('mutinySub', { name: personName(m.ringleader), n: m.mutineers, men: plural(m.mutineers, L('men.one'), L('men.few'), L('men.many')) }));
       }
       break;
@@ -699,6 +728,7 @@ function onMessage(m: ServerMsg): void {
     case 'surrender_offer':
       // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.
       surrenderCard.open(m.offer);
+      playFilm('cut_strike_colours');
       break;
     case 'boarding':
       if (m.result) openModal('boarding');
@@ -707,6 +737,8 @@ function onMessage(m: ServerMsg): void {
     case 'sunk_self':
       lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed };
       openModal('sunk');
+      sunkAt = performance.now();
+      playFilm('cut_sunk');
       break;
     case 'quest_offer':
       // An island's people offer their job on the beach, or a groupmate shares theirs: the giver's window, then the
@@ -791,6 +823,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'trek':
       trekWindow.open(m.view);
+      if (m.view) playFilm('cut_trek');
       break;
     case 'mapoffer':
       // A captain alongside offers a map (docs/16 #22): yes or no.
@@ -853,6 +886,7 @@ function onMessage(m: ServerMsg): void {
     case 'descent': {
       // The choice between tiers opens its window for the leader; the window follows the descent.
       const run = m.view?.run;
+      if (run) playFilm('cut_descent');
       if (run?.phase === 'choice' && run.leader && modal !== 'descent' && lastDescentTier !== run.tier) {
         lastDescentTier = run.tier;
         openModal('descent');
