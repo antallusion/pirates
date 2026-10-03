@@ -365,13 +365,13 @@ export const BOOK_PAGES: Record<BookPageId, BookPage> = Object.fromEntries([
   B('siren_song', 'water', 4, 12, 5, 'sp_siren_song', ['Siren song', 'Песнь сирены'], ['A song out of the deep: one stack of hers stands spellbound and loses its turns this round and the next two — until a blow or a shot wakes it, and the blow that wakes it goes unanswered.', 'Песнь из глубины: её отряд замирает зачарованный и пропускает ходы в этом раунде и двух следующих — пока его не разбудит удар или выстрел, и на разбудивший удар он не отвечает.'],
     { target: 'enemy', one: { still: true }, rounds: 2 }),
   // Fog and shadow: a whisper, muffled oars, a fog that swallows words, shapes in the murk.
-  B('jonah', 'fog', 1, 4, 3, 'st_luck_down', ['A Jonah aboard', 'Иона на борту'], ['Whispers in the fog that she carries a Jonah: two rounds her luck −2 and her morale −1.', 'Шёпот в тумане: у неё на борту Иона. Два раунда её удача −2, дух −1.'],
+  B('jonah', 'fog', 1, 4, 3, 'sp_jonah', ['A Jonah aboard', 'Иона на борту'], ['Whispers in the fog that she carries a Jonah: two rounds her luck −2 and her morale −1.', 'Шёпот в тумане: у неё на борту Иона. Два раунда её удача −2, дух −1.'],
     { target: 'none', foe: { luck: -2, morale: -1 }, rounds: 1, dread: 4 }),
-  B('muffled_oars', 'fog', 2, 6, 4, 'ab_dark_running', ['Muffled oars', 'Обмотанные вёсла'], ['Muffled oars in the murk: the next two blows of your men draw no answer.', 'Обмотанные вёсла во мгле: два следующих удара ваших людей остаются без ответа.'],
+  B('muffled_oars', 'fog', 2, 6, 4, 'sp_muffled_oars', ['Muffled oars', 'Обмотанные вёсла'], ['Muffled oars in the murk: the next two blows of your men draw no answer.', 'Обмотанные вёсла во мгле: два следующих удара ваших людей остаются без ответа.'],
     { target: 'none', free: 2 }),
-  B('silent_fog', 'fog', 3, 8, 5, 'ab_bribe_signal', ['Silent fog', 'Немой туман'], ["A fog that swallows every word: her captain can give no order nor her path's move this round or the next.", 'Туман глотает каждое слово: её капитан не может отдать ни приказа, ни приёма пути — ни в этом раунде, ни в следующем.'],
+  B('silent_fog', 'fog', 3, 8, 5, 'sp_silent_fog', ['Silent fog', 'Немой туман'], ["A fog that swallows every word: her captain can give no order nor her path's move this round or the next.", 'Туман глотает каждое слово: её капитан не может отдать ни приказа, ни приёма пути — ни в этом раунде, ни в следующем.'],
     { target: 'none', hush: 2 }),
-  B('fog_madness', 'fog', 5, 15, 5, 'st_terror', ['Fog madness', 'Морок'], ['Shapes in the fog: one stack of hers takes her own for foes — as its turns come this round and the next two, it falls on the nearest of her stacks it can reach, or stands lost.', 'Морок в тумане: её отряд принимает своих за врагов — в свои ходы в этом раунде и двух следующих он бросается на ближайший её отряд, до какого дотянется, или стоит растерянный.'],
+  B('fog_madness', 'fog', 5, 15, 5, 'sp_fog_madness', ['Fog madness', 'Морок'], ['Shapes in the fog: one stack of hers takes her own for foes — as its turns come this round and the next two, it falls on the nearest of her stacks it can reach, or stands lost.', 'Морок в тумане: её отряд принимает своих за врагов — в свои ходы в этом раунде и двух следующих он бросается на ближайший её отряд, до какого дотянется, или стоит растерянный.'],
     { target: 'enemy', one: { mad: true }, rounds: 2 }),
 ].map((p) => [p.id, p])) as Record<BookPageId, BookPage>;
 

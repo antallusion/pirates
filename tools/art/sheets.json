@@ -5092,7 +5092,7 @@
    "icon.sp_fog_madness"
   ],
   "prompt": "Draw a square image: a game icon sheet of 4 square battle-spell icons in a strict 2 by 2 grid of equal square tiles separated by thin pure black gutters, in the painterly style of the spell icons of Heroes of Might and Magic III and the ability icons of World of Warcraft but grim and realistic. Each tile is its own icon: one dramatic scene filling the whole tile edge to edge, a strong focal point readable at a small size, the same lighting and finish across all of them. No blood, no wounds, no gore, no corpses, no skulls anywhere. The icons, left to right and top to bottom: 1. a lone hooded sailor apart at the rail in fog, shadowy shipmates glancing at him; 2. rag-wrapped oars dipping silently into black water under a thin crescent moon in fog; 3. signal flags hanging limp in thick grey fog, a brass speaking trumpet lying on the deck; 4. a sailor in thick fog swinging a cutlass at blurred, distorted silhouettes of his own shipmates; Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, weathered oak, tar black, rust, old brass, cold blue-grey, with small warm lantern highlights. No text, no letters, no numbers, no frames inside the tiles.",
-  "painting": true
+  "cut": "hf_20261003_212344_gpt-spells_6"
  },
  "arms_1": {
   "grid": [

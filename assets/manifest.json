@@ -1855,6 +1855,10 @@
     "icon.sp_forked_lightning":                { "local": "icons/sp_forked_lightning.webp", "remote": "hf_20261003_211119_gpt-spells_5.png", "job": "gpt-spells_5", "fit": "sheet:spells_5.12", "rev": 20261003211119},
     "icon.sp_foul_water":                      { "local": "icons/sp_foul_water.webp", "remote": "hf_20261003_211119_gpt-spells_5.png", "job": "gpt-spells_5", "fit": "sheet:spells_5.13", "rev": 20261003211119},
     "icon.sp_kelp_poultice":                   { "local": "icons/sp_kelp_poultice.webp", "remote": "hf_20261003_211119_gpt-spells_5.png", "job": "gpt-spells_5", "fit": "sheet:spells_5.14", "rev": 20261003211119},
-    "icon.sp_siren_song":                      { "local": "icons/sp_siren_song.webp", "remote": "hf_20261003_211119_gpt-spells_5.png", "job": "gpt-spells_5", "fit": "sheet:spells_5.15", "rev": 20261003211119}
+    "icon.sp_siren_song":                      { "local": "icons/sp_siren_song.webp", "remote": "hf_20261003_211119_gpt-spells_5.png", "job": "gpt-spells_5", "fit": "sheet:spells_5.15", "rev": 20261003211119},
+    "icon.sp_jonah":                           { "local": "icons/sp_jonah.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.0", "rev": 20261003212344},
+    "icon.sp_muffled_oars":                    { "local": "icons/sp_muffled_oars.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.1", "rev": 20261003212344},
+    "icon.sp_silent_fog":                      { "local": "icons/sp_silent_fog.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.2", "rev": 20261003212344},
+    "icon.sp_fog_madness":                     { "local": "icons/sp_fog_madness.webp", "remote": "hf_20261003_212344_gpt-spells_6.png", "job": "gpt-spells_6", "fit": "sheet:spells_6.3", "rev": 20261003212344}
   }
 }
