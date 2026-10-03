@@ -1379,6 +1379,10 @@
     "unit.ancient_turtle":                     { "local": "units/ancient_turtle.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.0", "rev": 20261003085248},
     "unit.ancient_turtle_b":                   { "local": "units/ancient_turtle_b.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.1", "rev": 20261003085248},
     "unit.ancient_turtle_atk":                 { "local": "units/ancient_turtle_atk.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.2", "rev": 20261003085248},
-    "unit.ancient_turtle_hit":                 { "local": "units/ancient_turtle_hit.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.3", "rev": 20261003085248}
+    "unit.ancient_turtle_hit":                 { "local": "units/ancient_turtle_hit.webp", "remote": "hf_20261003_085248_gpt-anim_ancient_turtle.png", "job": "gpt-anim_ancient_turtle", "fit": "sheet:anim_ancient_turtle.3", "rev": 20261003085248},
+    "unit.shoal_leviathan":                    { "local": "units/shoal_leviathan.webp", "remote": "hf_20261003_085545_gpt-anim_shoal_leviathan.png", "job": "gpt-anim_shoal_leviathan", "fit": "sheet:anim_shoal_leviathan.0", "rev": 20261003085545},
+    "unit.shoal_leviathan_b":                  { "local": "units/shoal_leviathan_b.webp", "remote": "hf_20261003_085545_gpt-anim_shoal_leviathan.png", "job": "gpt-anim_shoal_leviathan", "fit": "sheet:anim_shoal_leviathan.1", "rev": 20261003085545},
+    "unit.shoal_leviathan_atk":                { "local": "units/shoal_leviathan_atk.webp", "remote": "hf_20261003_085545_gpt-anim_shoal_leviathan.png", "job": "gpt-anim_shoal_leviathan", "fit": "sheet:anim_shoal_leviathan.2", "rev": 20261003085545},
+    "unit.shoal_leviathan_hit":                { "local": "units/shoal_leviathan_hit.webp", "remote": "hf_20261003_085545_gpt-anim_shoal_leviathan.png", "job": "gpt-anim_shoal_leviathan", "fit": "sheet:anim_shoal_leviathan.3", "rev": 20261003085545}
   }
 }
