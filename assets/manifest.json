@@ -1289,6 +1289,10 @@
     "unit.deep_zealot":                        { "local": "units/deep_zealot.webp", "remote": "hf_20261003_055229_gpt-anim_deep_zealot.png", "job": "gpt-anim_deep_zealot", "fit": "sheet:anim_deep_zealot.0", "rev": 20261003055229},
     "unit.deep_zealot_b":                      { "local": "units/deep_zealot_b.webp", "remote": "hf_20261003_055229_gpt-anim_deep_zealot.png", "job": "gpt-anim_deep_zealot", "fit": "sheet:anim_deep_zealot.1", "rev": 20261003055229},
     "unit.deep_zealot_atk":                    { "local": "units/deep_zealot_atk.webp", "remote": "hf_20261003_055229_gpt-anim_deep_zealot.png", "job": "gpt-anim_deep_zealot", "fit": "sheet:anim_deep_zealot.2", "rev": 20261003055229},
-    "unit.deep_zealot_hit":                    { "local": "units/deep_zealot_hit.webp", "remote": "hf_20261003_055229_gpt-anim_deep_zealot.png", "job": "gpt-anim_deep_zealot", "fit": "sheet:anim_deep_zealot.3", "rev": 20261003055229}
+    "unit.deep_zealot_hit":                    { "local": "units/deep_zealot_hit.webp", "remote": "hf_20261003_055229_gpt-anim_deep_zealot.png", "job": "gpt-anim_deep_zealot", "fit": "sheet:anim_deep_zealot.3", "rev": 20261003055229},
+    "unit.tide_zealot":                        { "local": "units/tide_zealot.webp", "remote": "hf_20261003_055720_gpt-anim_tide_zealot.png", "job": "gpt-anim_tide_zealot", "fit": "sheet:anim_tide_zealot.0", "rev": 20261003055720},
+    "unit.tide_zealot_b":                      { "local": "units/tide_zealot_b.webp", "remote": "hf_20261003_055720_gpt-anim_tide_zealot.png", "job": "gpt-anim_tide_zealot", "fit": "sheet:anim_tide_zealot.1", "rev": 20261003055720},
+    "unit.tide_zealot_atk":                    { "local": "units/tide_zealot_atk.webp", "remote": "hf_20261003_055720_gpt-anim_tide_zealot.png", "job": "gpt-anim_tide_zealot", "fit": "sheet:anim_tide_zealot.2", "rev": 20261003055720},
+    "unit.tide_zealot_hit":                    { "local": "units/tide_zealot_hit.webp", "remote": "hf_20261003_055720_gpt-anim_tide_zealot.png", "job": "gpt-anim_tide_zealot", "fit": "sheet:anim_tide_zealot.3", "rev": 20261003055720}
   }
 }
