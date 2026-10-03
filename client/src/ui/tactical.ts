@@ -99,6 +99,16 @@ function lootBlock(l: LairLoot): string {
   return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
 }
 /** An order's name and words, from the order book (docs/17 H2) — every page of it, old and new. */
+/** The battle's own painted icons (tools/art/battle_more.py, battle_sheets.py) where they are painted; the older
+ *  stand-ins until then. */
+const btIcon = (id: string, fb: string, cls = 'ico-sm') => icon(assetUrl(`icon.${id}`) ? `icon.${id}` : fb, '', cls);
+const spIcon = (id: TacSpellId, cls = 'ico') => btIcon(`sp_${id}`, TAC_SPELLS[id].icon, cls);
+/** What lies on a stack, as the card shows it: its painted mark and its word. */
+const STATUS: [keyof TacStackView, string, K][] = [
+  ['marked', 'st_marked', 'sts.marked'], ['defending', 'bt_defend', 'sts.defending'], ['braced', 'st_braced', 'sts.braced'],
+  ['waited', 'bt_wait', 'sts.waited'], ['again', 'st_again', 'sts.again'], ['noRet', 'st_no_ret', 'sts.noRet'],
+  ['blind', 'st_blind', 'sts.blind'], ['poisoned', 'st_poison', 'sts.poisoned'], ['wet', 'st_diving', 'sts.wet'],
+];
 const spName = (id: TacSpellId) => (ORDERS[id]?.name ?? [id, id])[lang() === 'ru' ? 1 : 0];
 const spText = (id: TacSpellId) => (ORDERS[id]?.text ?? [id, id])[lang() === 'ru' ? 1 : 0];
 type K = keyof typeof EN;
@@ -580,7 +590,7 @@ export class TacticalPanel {
       const poor = sp.cost !== undefined && pool !== undefined && pool < sp.cost;
       const off = !v.mine || me.cast || wait > 0 || poor;
       const cost = sp.scroll ? ` <em class="tb-cost scroll">${esc(L('scroll', { n: sp.scroll }))}</em>` : sp.cost !== undefined ? ` <em class="tb-cost${sp.res === 'stam' ? ' stam' : ''}">${sp.cost}</em>` : '';
-      return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}${sp.scroll ? ' scroll' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(spText(sp.id))}">${icon(TAC_SPELLS[sp.id].icon, '', 'ico')}<span><b>${esc(spName(sp.id))}${cost}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : esc(spText(sp.id))}</small></span></button>`;
+      return `<button class="btn tb-spell${this.targeting === sp.id ? ' on' : ''}${poor ? ' poor' : ''}${sp.scroll ? ' scroll' : ''}" data-spell="${sp.id}" ${off ? 'disabled' : ''} title="${esc(spText(sp.id))}">${spIcon(sp.id)}<span><b>${esc(spName(sp.id))}${cost}</b><small>${wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : esc(spText(sp.id))}</small></span></button>`;
     };
     // docs/18: her path's innate move and ultimate, each once a battle and free, beside the round's order.
     const move = (kind: 'innate' | 'ult') => {
@@ -594,7 +604,7 @@ export class TacticalPanel {
     };
     // Four pages on the panel (keys 1–4); the rest in the book, opened over the field as in HoMM3.
     const more = me.spells.length > 4;
-    el.querySelector('.tb-spells')!.innerHTML = will + move('innate') + move('ult') + me.spells.slice(0, 4).map(page).join('') + (more ? `<button class="btn tb-bookbtn${this.bookOpen ? ' on' : ''}" data-book>${icon('icon.bt_captain', '', 'ico')}<span><b>${esc(L('book'))}</b><small>${esc(L('book.n', { n: me.spells.length }))}</small></span></button>` : '');
+    el.querySelector('.tb-spells')!.innerHTML = will + move('innate') + move('ult') + me.spells.slice(0, 4).map(page).join('') + (more ? `<button class="btn tb-bookbtn${this.bookOpen ? ' on' : ''}" data-book>${btIcon('bt_book', 'icon.bt_captain', 'ico')}<span><b>${esc(L('book'))}</b><small>${esc(L('book.n', { n: me.spells.length }))}</small></span></button>` : '');
     const book = el.querySelector<HTMLElement>('.tb-book')!;
     book.classList.toggle('hidden', !(more && this.bookOpen));
     book.innerHTML = more && this.bookOpen ? `<div class="tb-book-head"><b>${esc(L('book'))}</b><button class="btn btn-small" data-bookclose>${esc(L('close'))}</button></div><div class="tb-book-grid">${[...me.spells].sort((a, b) => (ORDERS[a.id]?.school ?? '').localeCompare(ORDERS[b.id]?.school ?? '') || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0)).map(page).join('')}</div>` : '';
@@ -617,14 +627,14 @@ export class TacticalPanel {
     const officer = v.mine && act?.officer?.ready ? act.officer : null;
     const armed = this.strikeArmed > performance.now();
     el.querySelector('.tb-acts')!.innerHTML = [
-      `<button class="btn" data-a="wait" ${!v.mine || act?.waited ? 'disabled' : ''}>${icon('icon.bt_hold', '', 'ico-sm')}${esc(L('wait'))}</button>`,
-      `<button class="btn" data-a="defend" ${!v.mine ? 'disabled' : ''}>${icon('icon.mod_hull_plating', '', 'ico-sm')}${esc(L('defend'))}</button>`,
+      `<button class="btn" data-a="wait" ${!v.mine || act?.waited ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${esc(L('wait'))}</button>`,
+      `<button class="btn" data-a="defend" ${!v.mine ? 'disabled' : ''}>${btIcon('bt_defend', 'icon.mod_hull_plating')}${esc(L('defend'))}</button>`,
       officer ? `<button class="btn btn-primary" data-a="order" title="${esc(L(`od.${officer.order}` as K))}">${icon(`icon.role_${officer.role}`, '', 'ico-sm')}${esc(L(`o.${officer.order}` as K))}</button>` : '',
-      `<button class="btn${me.auto ? ' on' : ''}" data-a="auto">${esc(me.auto ? L('autoOff') : L('auto'))}</button>`,
-      `<button class="btn" data-a="quick" ${v.over ? 'disabled' : ''}>${esc(L('quick'))}</button>`,
-      v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut">${esc(v.you === 0 ? L('fallBack') : L('cut'))}</button>` : '',
-      v.ransom && !v.over ? `<button class="btn${this.ransomArmed > performance.now() ? ' on' : ''}" data-a="ransom" title="${esc(L('ransomTip'))}">${esc(this.ransomArmed > performance.now() ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom }))}</button>` : '',
-      v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on' : ''}" data-a="surrender">${esc(armed ? L('strikeSure') : L('strike'))}</button>` : '',
+      `<button class="btn${me.auto ? ' on' : ''}" data-a="auto">${btIcon('bt_auto', '')}${esc(me.auto ? L('autoOff') : L('auto'))}</button>`,
+      `<button class="btn" data-a="quick" ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${esc(L('quick'))}</button>`,
+      v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut">${btIcon('bt_retreat', '')}${esc(v.you === 0 ? L('fallBack') : L('cut'))}</button>` : '',
+      v.ransom && !v.over ? `<button class="btn${this.ransomArmed > performance.now() ? ' on' : ''}" data-a="ransom" title="${esc(L('ransomTip'))}">${btIcon('bt_ransom', 'icon.coin')}${esc(this.ransomArmed > performance.now() ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom }))}</button>` : '',
+      v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on' : ''}" data-a="surrender">${btIcon('bt_strike', '')}${esc(armed ? L('strikeSure') : L('strike'))}</button>` : '',
     ].join('');
     el.querySelectorAll<HTMLElement>('[data-a]').forEach((b) => (b.onclick = () => this.button(b.dataset.a!)));
     // The end.
@@ -711,9 +721,9 @@ export class TacticalPanel {
     const o = s.officer;
     const d = s.unit ? UNITS[s.unit] : null;
     card.className = `tb-card ${s.side === v.you ? 'you' : 'foe'}`;
-    card.innerHTML = `<div class="tb-card-h">${figureArt(s) ? icon(figureArt(s)!, '', 'ico-md fig') : icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b><small>${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}${s.marked ? ` · <span class="bad">${esc(L('marked'))}</span>` : ''}</small></div></div>
+    card.innerHTML = `<div class="tb-card-h">${figureArt(s) ? icon(figureArt(s)!, '', 'ico-md fig') : icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b><small>${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}</small></div></div>
       <div class="tb-stats">${row('st.count', `${s.count} / ${s.start}`)}${row('st.atk', String(s.atk))}${row('st.def', String(s.def))}${row('st.dmg', `${s.dmg[0]}–${s.dmg[1]}`)}${row('st.hp', `${s.hp} / ${s.hpMax}`)}${row('st.speed', String(s.speed))}${row('st.init', String(s.init))}${s.shotsMax ? row('st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
-      ${s.defending ? `<p class="tb-def">${esc(L('st.def.on'))}</p>` : ''}
+      ${STATUS.some(([f]) => s[f]) ? `<div class="tb-sts">${STATUS.filter(([f]) => s[f]).map(([, ic, k]) => `<span class="chip tb-st${k === 'sts.defending' || k === 'sts.braced' || k === 'sts.again' ? ' good' : k === 'sts.waited' ? '' : ' bad'}">${btIcon(ic, '', 'ico-xs')}${esc(L(k))}</span>`).join('')}</div>` : ''}
       ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<span class="chip" title="${esc(specialNote(x))}">${esc(specialName(x))}</span>`).join('')}</div>` : ''}
       <p class="muted">${esc(s.kind === 'officer' || !s.unit ? L(`kd.${s.kind}` as K) : unitNote(s.unit))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
   }

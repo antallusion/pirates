@@ -454,7 +454,10 @@ loadAssets(null).then(() => {
 
 /** The game's films at their moments (ui/cutscene.ts): the first boarding (a lair's fight ashore), the first win and
  *  loss, the first harbour, the first storm — each shown once. */
-const filmWas = { tac: false, over: false, docked: true, storm: false, bosses: '' };
+const filmWas = { tac: false, over: false, docked: true, storm: false, bosses: '', landing: true, abyss: true };
+/** A landing's film by what the party goes ashore for: a buried chest, a named pirate's lair, an island; none for a
+ *  haul, a dive or the shallows. */
+const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', dive: null, haul: null, tidal: null, turtle: null };
 /** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
 const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell' };
 function filmMoments(): void {
@@ -478,6 +481,16 @@ function filmMoments(): void {
   const bosses = state.bosses.map((b) => b.kind).join();
   if (bosses !== filmWas.bosses && state.bosses.some((b) => b.kind === 'kraken')) playFilm('cut_kraken_boss');
   filmWas.bosses = bosses;
+  // The boats going ashore; the first time down into the Abyss.
+  const landing = state.self?.landing;
+  if (landing && !filmWas.landing) {
+    const film = landing.feature in LANDING_FILM ? LANDING_FILM[landing.feature] : 'cut_landing';
+    if (film) playFilm(film);
+  }
+  filmWas.landing = !!landing || !state.self;
+  const abyss = !!state.self?.abyss?.inside;
+  if (abyss && !filmWas.abyss) playFilm('cut_abyss');
+  filmWas.abyss = abyss || !state.self;
 }
 void loadFilms();
 
@@ -681,7 +694,7 @@ function onMessage(m: ServerMsg): void {
     case 'lairchest':
       // A stormed lair's chest (docs/16 #7).
       audio.bell();
-      lairChest.open(m.view);
+      playFilm('cut_treasure', () => lairChest.open(m.view));
       break;
     case 'surrender_offer':
       // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.

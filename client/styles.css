@@ -3343,7 +3343,10 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .tb-rs-ico { width: 30px; height: 30px; margin: 0; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
 .tb-rs i { position: absolute; right: -4px; bottom: -3px; font-style: normal; font-size: 10px; line-height: 13px; padding: 0 2px; border-radius: 3px; background: #2a0f0c; color: #f3d7a0; border: 1px solid #7a3a2a; }
 .tb-xp { color: var(--gold); font-size: 12.5px; }
-.tb-sps { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.tb-sps, .tb-sts { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.tb-sts .tb-st { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; }
+.tb-sts .tb-st.good { color: var(--gold); }
+.tb-sts .tb-st.bad { color: var(--bad); }
 .tb-sps .chip { font-size: 10.5px; }
 @media (max-height: 520px) and (orientation: landscape) {
   .tb-spells { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
