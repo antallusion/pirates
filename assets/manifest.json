@@ -1329,6 +1329,10 @@
     "unit.rock_turtle":                        { "local": "units/rock_turtle.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.0", "rev": 20261003064147},
     "unit.rock_turtle_b":                      { "local": "units/rock_turtle_b.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.1", "rev": 20261003064147},
     "unit.rock_turtle_atk":                    { "local": "units/rock_turtle_atk.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.2", "rev": 20261003064147},
-    "unit.rock_turtle_hit":                    { "local": "units/rock_turtle_hit.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.3", "rev": 20261003064147}
+    "unit.rock_turtle_hit":                    { "local": "units/rock_turtle_hit.webp", "remote": "hf_20261003_064147_gpt-anim_rock_turtle.png", "job": "gpt-anim_rock_turtle", "fit": "sheet:anim_rock_turtle.3", "rev": 20261003064147},
+    "unit.sea_turtle":                         { "local": "units/sea_turtle.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.0", "rev": 20261003064612},
+    "unit.sea_turtle_b":                       { "local": "units/sea_turtle_b.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.1", "rev": 20261003064612},
+    "unit.sea_turtle_atk":                     { "local": "units/sea_turtle_atk.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.2", "rev": 20261003064612},
+    "unit.sea_turtle_hit":                     { "local": "units/sea_turtle_hit.webp", "remote": "hf_20261003_064612_gpt-anim_sea_turtle.png", "job": "gpt-anim_sea_turtle", "fit": "sheet:anim_sea_turtle.3", "rev": 20261003064612}
   }
 }
