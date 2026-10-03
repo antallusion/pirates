@@ -1221,6 +1221,10 @@
     "unit.crown_marine":                       { "local": "units/crown_marine.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.0", "rev": 20261003044106},
     "unit.crown_marine_b":                     { "local": "units/crown_marine_b.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.1", "rev": 20261003044106},
     "unit.crown_marine_atk":                   { "local": "units/crown_marine_atk.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.2", "rev": 20261003044106},
-    "unit.crown_marine_hit":                   { "local": "units/crown_marine_hit.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.3", "rev": 20261003044106}
+    "unit.crown_marine_hit":                   { "local": "units/crown_marine_hit.webp", "remote": "hf_20261003_044106_gpt-anim_crown_marine.png", "job": "gpt-anim_crown_marine", "fit": "sheet:anim_crown_marine.3", "rev": 20261003044106},
+    "unit.crown_drummer":                      { "local": "units/crown_drummer.webp", "remote": "hf_20261003_044556_gpt-anim_crown_drummer.png", "job": "gpt-anim_crown_drummer", "fit": "sheet:anim_crown_drummer.0", "rev": 20261003044556},
+    "unit.crown_drummer_b":                    { "local": "units/crown_drummer_b.webp", "remote": "hf_20261003_044556_gpt-anim_crown_drummer.png", "job": "gpt-anim_crown_drummer", "fit": "sheet:anim_crown_drummer.1", "rev": 20261003044556},
+    "unit.crown_drummer_atk":                  { "local": "units/crown_drummer_atk.webp", "remote": "hf_20261003_044556_gpt-anim_crown_drummer.png", "job": "gpt-anim_crown_drummer", "fit": "sheet:anim_crown_drummer.2", "rev": 20261003044556},
+    "unit.crown_drummer_hit":                  { "local": "units/crown_drummer_hit.webp", "remote": "hf_20261003_044556_gpt-anim_crown_drummer.png", "job": "gpt-anim_crown_drummer", "fit": "sheet:anim_crown_drummer.3", "rev": 20261003044556}
   }
 }
