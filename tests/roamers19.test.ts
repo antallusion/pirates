@@ -297,7 +297,7 @@ test('D7: /stack in both HELPs, every new server line and every word of the clie
   const cmds = (s: string) => s.split(' · ').map((c) => c.split(' ')[0]);
   assert.deepEqual(cmds(SERVER_RU_ADMIN[helpEn]), cmds(helpEn), 'the Russian HELP command for command');
   const table = serverTable();
-  const lines = extract().filter((p) => /roaming|Roaming|stack \{1\}|No stack|falls on the \{0\} \(|throw your party back into the sea|follow your ship|see your strength and scatter|fighting them|at them already|within a cable of them|hauled back from the water|Your share of the \{0\}|Gulls on the Swell|Seals at Sea|Sharks of the Open|Tentacles from|Drowned Adrift|Lantern Maws|A Leviathan|Ancient Turtles/.test(p));
+  const lines = extract().filter((p) => /roaming|Roaming|stack \{1\}|No stack|falls on the \{0\} \(|throw your party back into the sea|follow your ship|see your strength and scatter|fighting them|at them already|within a cable of them|hauled back from the water|Your share of the \{0\}|Gulls on the Swell|Seals at Sea|Sharks of the Open|Tentacles from|Drowned Adrift|Lantern Maws|A Leviathan|Ancient Turtles|Barracudas in a Shoal|Albatrosses in the Wake|Morays of the Reef|Giant Octopuses/.test(p));
   assert.ok(lines.length >= 20, `${lines.length} lines`);
   assert.deepEqual(lines.filter((p) => table[p] === undefined), []);
   for (const k of Object.keys(REN) as (keyof typeof REN)[]) assert.ok(RRU[k] && !/[a-z]{3,}/i.test(RRU[k].replace(/\{\w+\}/g, '')), `RU ${k}: ${RRU[k]}`);
