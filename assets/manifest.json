@@ -1961,6 +1961,10 @@
     "icon.item_sun_stone":                     { "local": "icons/item_sun_stone.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.0", "rev": 20261003214730},
     "icon.item_lucky_doubloon":                { "local": "icons/item_lucky_doubloon.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.1", "rev": 20261003214730},
     "icon.item_witch_bottle":                  { "local": "icons/item_witch_bottle.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.2", "rev": 20261003214730},
-    "icon.item_gold_hoop":                     { "local": "icons/item_gold_hoop.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.3", "rev": 20261003214730}
+    "icon.item_gold_hoop":                     { "local": "icons/item_gold_hoop.webp", "remote": "hf_20261003_214730_gpt-items_8.png", "job": "gpt-items_8", "fit": "sheet:items_8.3", "rev": 20261003214730},
+    "ship.phantom_brig":                       { "local": "ships/phantom_brig.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.0", "rev": 20261003215422},
+    "ship.razee":                              { "local": "ships/razee.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.1", "rev": 20261003215422},
+    "ship.black_corsair":                      { "local": "ships/black_corsair.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.2", "rev": 20261003215422},
+    "ship.iron_ram":                           { "local": "ships/iron_ram.webp", "remote": "hf_20261003_215422_gpt-ships_2.png", "job": "gpt-ships_2", "fit": "sheet:ships_2.3", "rev": 20261003215422}
   }
 }

@@ -4716,7 +4716,6 @@
    1
   ],
   "mode": "keyed",
-  "split": "blobs",
   "px": 768,
   "square": false,
   "dir": "ships",
@@ -4728,7 +4727,7 @@
    "ship.iron_ram"
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a pale ghostly brig with torn translucent grey sails and weathered silver-grey timbers, wisps of mist clinging to its rigging; 2) a razee — a cut-down ship of the line with a flush upper deck, very heavy guns along both sides and three tall masts; 3) a lean black-hulled corsair frigate with deep crimson sails, gilded black stern carving and a fanged black figurehead; 4) a heavy ram ship whose bow is sheathed in riveted black iron ending in a huge iron ram, two masts, iron plates along the waterline; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
-  "painting": true
+  "cut": "hf_20261003_215422_gpt-ships_2"
  },
  "ships_3": {
   "grid": [
