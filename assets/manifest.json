@@ -2008,6 +2008,10 @@
     "ship.barque":                             { "local": "ships/barque.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.0", "rev": 20261003231706},
     "ship.spice_dhow":                         { "local": "ships/spice_dhow.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.1", "rev": 20261003231706},
     "ship.smugglers_lugger":                   { "local": "ships/smugglers_lugger.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.2", "rev": 20261003231706},
-    "ship.rum_runner":                         { "local": "ships/rum_runner.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.3", "rev": 20261003231706}
+    "ship.rum_runner":                         { "local": "ships/rum_runner.webp", "remote": "hf_20261003_231706_gpt-ships_6.png", "job": "gpt-ships_6", "fit": "sheet:ships_6.3", "rev": 20261003231706},
+    "unit.sea_wyvern":                         { "local": "units/sea_wyvern.webp", "remote": "hf_20261003_232337_gpt-anim_sea_wyvern.png", "job": "gpt-anim_sea_wyvern", "fit": "sheet:anim_sea_wyvern.0", "rev": 20261003232337},
+    "unit.sea_wyvern_b":                       { "local": "units/sea_wyvern_b.webp", "remote": "hf_20261003_232337_gpt-anim_sea_wyvern.png", "job": "gpt-anim_sea_wyvern", "fit": "sheet:anim_sea_wyvern.1", "rev": 20261003232337},
+    "unit.sea_wyvern_atk":                     { "local": "units/sea_wyvern_atk.webp", "remote": "hf_20261003_232337_gpt-anim_sea_wyvern.png", "job": "gpt-anim_sea_wyvern", "fit": "sheet:anim_sea_wyvern.2", "rev": 20261003232337},
+    "unit.sea_wyvern_hit":                     { "local": "units/sea_wyvern_hit.webp", "remote": "hf_20261003_232337_gpt-anim_sea_wyvern.png", "job": "gpt-anim_sea_wyvern", "fit": "sheet:anim_sea_wyvern.3", "rev": 20261003232337}
   }
 }
