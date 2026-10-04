@@ -735,6 +735,32 @@ v('cut_premium_beast', 'premium_beast', 'Существа из лавки',
   'with the dragon past the side of the ship.')
 
 
+# ---- The twelfth reel: windows that are places of their own, each the first time she opens it -------------------------
+v('cut_shop', 'shop', 'Лавка дублонов',
+  'A narrow lamp-lit shop under the arches of a harbour, its shelves crowded with gilded ship models, carved figureheads and '
+  'small cages, a grey-bearded merchant in a velvet coat weighing heavy gold doubloons on brass scales and sliding one '
+  'across the counter as the candlelight glints on the coins. The camera moves slowly in over the counter.')
+v('cut_barter', 'barter', 'Торг на палубе',
+  'Two pirate captains facing each other across a barrel head on the deck of a ship at dusk, one setting down a small chest of '
+  'silver and the other a bolt of fine cloth, their crews watching from the rails as the two ships lie lashed side by side '
+  'and the captains shake hands over the deal. The camera circles slowly round the barrel.')
+v('cut_company', 'company', 'Зал компании',
+  'A long timbered hall above a harbour tavern at night: captains of one company gather round a great table spread with '
+  'charts and a carved company flag, tankards raised as their chosen admiral pins a new mark on the chart and the fire '
+  'roars in the hearth behind. The camera moves slowly down the length of the table.')
+v('cut_crew', 'crew', 'Сбор команды',
+  'Morning on the main deck of a pirate frigate: the whole crew mustered in ragged lines, the bosun walking along them with '
+  'a lantern and a list, gunners, topmen, cooks and boys answering to their names as the captain watches from the '
+  'quarterdeck rail. The camera tracks slowly along the lines of faces.')
+v('cut_gear', 'gear', 'Оружейная',
+  'Inside the armoury of a ship lit by a single lantern: racks of cutlasses, boarding pikes and pistols along the walls, a '
+  'captain buckling on a worn leather baldric and a steel gorget, the gunner handing her a pair of polished pistols as the '
+  'ship creaks around them. The camera moves slowly along the racks to the captain.')
+v('cut_recruit', 'recruit', 'Вербовка на причале',
+  'A crowded quay in the rain: rough sailors, deserters and young dockhands line up before a recruiting table with a '
+  'ledger and a jug of rum, a one-eyed quartermaster signing them on one by one as the longboat waits at the steps. '
+  'The camera moves slowly along the line toward the table.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

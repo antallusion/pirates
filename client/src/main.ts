@@ -491,6 +491,8 @@ const LAIR_FILM: Record<string, string> = { crab_beach: 'cut_crab_beach', gull_c
   albatross_rock: 'cut_albatross_rock', octopus_wreck: 'cut_octopus_wreck', crab_hollow: 'cut_crab_hollow', wyrm_gallery: 'cut_wyrm_gallery', hydra_pool: 'cut_hydra_pool',
   ape_throne: 'cut_ape_throne', roc_eyrie: 'cut_roc_eyrie',
   mire_mother: 'cut_mire_mother', cinder_salamander: 'cut_cinder_salamander', drowned_abbess: 'cut_drowned_abbess', walrus_tyrant: 'cut_walrus_tyrant' };
+/** Windows that are places of their own, each the first time she opens it. */
+const MODAL_FILM: Partial<Record<NonNullable<Modal>, string>> = { shop: 'cut_shop', barter: 'cut_barter', company: 'cut_company', crew: 'cut_crew', gear: 'cut_gear', recruit: 'cut_recruit' };
 /** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
 const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell', league: 'cut_league', free: 'cut_free' };
 /** The sea's legends each rise in their own film the first time she fights one. */
@@ -599,6 +601,9 @@ function filmMoments(): void {
     const own = def?.premium && def.list ? `cut_premium_${def.list}` : null;
     playFilm(own && filmDue(own) ? own : 'cut_launch');
   }
+  // The first time she opens a window that is a place of its own (the twelfth reel): the shop, the barter table, the
+  // company's hall, the crew's muster, the armoury, the recruiting quay.
+  if (turned('modal', modal) && modal && MODAL_FILM[modal]) playFilm(MODAL_FILM[modal]!);
   // Doubloons spent and no new hull: the shop's creatures come aboard (docs/18 VII), the first time in their own film.
   const coin = filmLast.get('doubloons');
   if (turned('doubloons', state.doubloons) && !newHull && typeof coin === 'number' && state.doubloons < coin) playFilm('cut_premium_beast');
