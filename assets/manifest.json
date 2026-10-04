@@ -2282,6 +2282,10 @@
     "unit.golden_crab":                        { "local": "units/golden_crab.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.0", "rev": 20261004035434},
     "unit.golden_crab_b":                      { "local": "units/golden_crab_b.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.1", "rev": 20261004035434},
     "unit.golden_crab_atk":                    { "local": "units/golden_crab_atk.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.2", "rev": 20261004035434},
-    "unit.golden_crab_hit":                    { "local": "units/golden_crab_hit.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.3", "rev": 20261004035434}
+    "unit.golden_crab_hit":                    { "local": "units/golden_crab_hit.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.3", "rev": 20261004035434},
+    "unit.thunderbird":                        { "local": "units/thunderbird.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.0", "rev": 20261004035658},
+    "unit.thunderbird_b":                      { "local": "units/thunderbird_b.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.1", "rev": 20261004035658},
+    "unit.thunderbird_atk":                    { "local": "units/thunderbird_atk.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.2", "rev": 20261004035658},
+    "unit.thunderbird_hit":                    { "local": "units/thunderbird_hit.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.3", "rev": 20261004035658}
   }
 }
