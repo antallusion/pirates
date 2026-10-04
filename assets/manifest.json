@@ -2979,6 +2979,8 @@
     "unit.marine_iguana":                      { "local": "units/marine_iguana.webp", "remote": "hf_20261004_163357_gpt-anim5_1.png", "job": "gpt-anim5_1", "fit": "sheet:anim5_1.12", "rev": 20261004163357},
     "unit.marine_iguana_b":                    { "local": "units/marine_iguana_b.webp", "remote": "hf_20261004_163357_gpt-anim5_1.png", "job": "gpt-anim5_1", "fit": "sheet:anim5_1.13", "rev": 20261004163357},
     "unit.marine_iguana_atk":                  { "local": "units/marine_iguana_atk.webp", "remote": "hf_20261004_163357_gpt-anim5_1.png", "job": "gpt-anim5_1", "fit": "sheet:anim5_1.14", "rev": 20261004163357},
-    "unit.marine_iguana_hit":                  { "local": "units/marine_iguana_hit.webp", "remote": "hf_20261004_163357_gpt-anim5_1.png", "job": "gpt-anim5_1", "fit": "sheet:anim5_1.15", "rev": 20261004163357}
+    "unit.marine_iguana_hit":                  { "local": "units/marine_iguana_hit.webp", "remote": "hf_20261004_163357_gpt-anim5_1.png", "job": "gpt-anim5_1", "fit": "sheet:anim5_1.15", "rev": 20261004163357},
+    "bg.deck_mimic_barge":                     { "local": "art/deck_mimic_barge.webp", "remote": "hf_20261004_163647_gpt-bg-deck_mimic_barge.png", "job": "gpt-bg-deck_mimic_barge", "fit": "opaque:1536", "rev": 20261004163647},
+    "bg.deck_sailfish":                        { "local": "art/deck_sailfish.webp", "remote": "hf_20261004_163657_gpt-bg-deck_sailfish.png", "job": "gpt-bg-deck_sailfish", "fit": "opaque:1536", "rev": 20261004163657}
   }
 }
