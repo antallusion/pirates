@@ -2096,6 +2096,7 @@
     "unit.silk_blade":                         { "local": "units/silk_blade.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.0", "rev": 20261004004433},
     "unit.silk_blade_b":                       { "local": "units/silk_blade_b.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.1", "rev": 20261004004433},
     "unit.silk_blade_atk":                     { "local": "units/silk_blade_atk.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.2", "rev": 20261004004433},
-    "unit.silk_blade_hit":                     { "local": "units/silk_blade_hit.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.3", "rev": 20261004004433}
+    "unit.silk_blade_hit":                     { "local": "units/silk_blade_hit.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.3", "rev": 20261004004433},
+    "bg.port_mirrorfen":                       { "local": "art/port_mirrorfen.webp", "remote": "hf_20261004_004709_gpt-bg.port_mirrorfen.png", "job": "gpt-bg.port_mirrorfen", "fit": "opaque:1920", "rev": 20261004004709}
   }
 }
