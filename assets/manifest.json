@@ -2448,6 +2448,7 @@
     "bg.deck_galiot":                          { "local": "art/deck_galiot.webp", "remote": "hf_20261004_064301_gpt-bg.deck_galiot.png", "job": "gpt-bg.deck_galiot", "fit": "opaque:1536", "rev": 20261004064301},
     "bg.deck_topsail_schooner":                { "local": "art/deck_topsail_schooner.webp", "remote": "hf_20261004_064607_gpt-bg.deck_topsail_schooner.png", "job": "gpt-bg.deck_topsail_schooner", "fit": "opaque:1536", "rev": 20261004064607},
     "bg.deck_baltimore_clipper":               { "local": "art/deck_baltimore_clipper.webp", "remote": "hf_20261004_064914_gpt-bg.deck_baltimore_clipper.png", "job": "gpt-bg.deck_baltimore_clipper", "fit": "opaque:1536", "rev": 20261004064914},
-    "bg.deck_sea_hawk":                        { "local": "art/deck_sea_hawk.webp", "remote": "hf_20261004_065202_gpt-bg.deck_sea_hawk.png", "job": "gpt-bg.deck_sea_hawk", "fit": "opaque:1536", "rev": 20261004065202}
+    "bg.deck_sea_hawk":                        { "local": "art/deck_sea_hawk.webp", "remote": "hf_20261004_065202_gpt-bg.deck_sea_hawk.png", "job": "gpt-bg.deck_sea_hawk", "fit": "opaque:1536", "rev": 20261004065202},
+    "bg.deck_wind_dancer":                     { "local": "art/deck_wind_dancer.webp", "remote": "hf_20261004_065431_gpt-bg.deck_wind_dancer.png", "job": "gpt-bg.deck_wind_dancer", "fit": "opaque:1536", "rev": 20261004065431}
   }
 }
