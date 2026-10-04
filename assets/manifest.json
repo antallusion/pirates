@@ -2262,6 +2262,10 @@
     "unit.dragon_turtle":                      { "local": "units/dragon_turtle.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.0", "rev": 20261004034109},
     "unit.dragon_turtle_b":                    { "local": "units/dragon_turtle_b.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.1", "rev": 20261004034109},
     "unit.dragon_turtle_atk":                  { "local": "units/dragon_turtle_atk.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.2", "rev": 20261004034109},
-    "unit.dragon_turtle_hit":                  { "local": "units/dragon_turtle_hit.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.3", "rev": 20261004034109}
+    "unit.dragon_turtle_hit":                  { "local": "units/dragon_turtle_hit.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.3", "rev": 20261004034109},
+    "unit.storm_eagle":                        { "local": "units/storm_eagle.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.0", "rev": 20261004034353},
+    "unit.storm_eagle_b":                      { "local": "units/storm_eagle_b.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.1", "rev": 20261004034353},
+    "unit.storm_eagle_atk":                    { "local": "units/storm_eagle_atk.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.2", "rev": 20261004034353},
+    "unit.storm_eagle_hit":                    { "local": "units/storm_eagle_hit.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.3", "rev": 20261004034353}
   }
 }
