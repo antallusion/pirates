@@ -787,6 +787,24 @@ v('cut_sea_drowned_crown', 'sea_drowned_crown', 'Утонувшая Корона
   'stand out of the water, green light glowing faintly beneath the waves, and a ship picks her way between the spires as '
   'a bell tolls somewhere below. The camera glides slowly through the drowned towers.')
 
+# ---- The fourteenth reel: the great ones ashore brought down, each the first time (shared/src/data/shorebosses.ts) -------
+v('cut_mire_mother_down', 'down_mire_mother', 'Мать Трясины повержена',
+  'Dawn mist over a swamp: the colossal toad-queen sinks slowly back into the black water among the reeds, her golden eyes '
+  'closing, as the landing party lowers their torches and muskets on the bank and a pale sun breaks through the hanging '
+  'moss. The camera pulls slowly back across the still water.')
+v('cut_cinder_salamander_down', 'down_cinder_salamander', 'Пепельная саламандра повержена',
+  'On a black lava field at night the great salamander collapses in a shower of sparks, the ember cracks along its back '
+  'fading to dull grey one by one, as the musketeers stand in the smoke and a cool rain begins to hiss on the glowing '
+  'rocks. The camera circles slowly round the fallen beast.')
+v('cut_drowned_abbess_down', 'down_drowned_abbess', 'Аббатиса повержена',
+  'In the fog of a ship graveyard the drowned abbess lets the great bronze bell fall from her hands into the shallows, its '
+  'last toll rolling out over the wrecks as she sinks back beneath the grey water, and the bell-ringers drop their bells '
+  'and flee into the mist. The camera moves slowly toward the fallen bell.')
+v('cut_walrus_tyrant_down', 'down_walrus_tyrant', 'Морж-тиран повержен',
+  'On a cold rocky shore the old walrus bull heaves himself back into the grey sea with a last bellow, the herd following '
+  'him into the surf, as the landing party leans on their pikes on the stones and snow begins to fall. The camera rises '
+  'slowly over the empty rocks.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
