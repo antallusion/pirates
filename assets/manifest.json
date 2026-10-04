@@ -2083,6 +2083,10 @@
     "bg.port_hushwater":                       { "local": "art/port_hushwater.webp", "remote": "hf_20261004_003143_gpt-bg.port_hushwater.png", "job": "gpt-bg.port_hushwater", "fit": "opaque:1920", "rev": 20261004003143},
     "ship.viper":                              { "local": "ships/viper.webp", "remote": "hf_20261004_003424_gpt-ships_13.png", "job": "gpt-ships_13", "fit": "sheet:ships_13.0", "rev": 20261004003424},
     "ship.ghost_clipper":                      { "local": "ships/ghost_clipper.webp", "remote": "hf_20261004_003424_gpt-ships_13.png", "job": "gpt-ships_13", "fit": "sheet:ships_13.1", "rev": 20261004003424},
-    "ship.silver_arrow":                       { "local": "ships/silver_arrow.webp", "remote": "hf_20261004_003424_gpt-ships_13.png", "job": "gpt-ships_13", "fit": "sheet:ships_13.2", "rev": 20261004003424}
+    "ship.silver_arrow":                       { "local": "ships/silver_arrow.webp", "remote": "hf_20261004_003424_gpt-ships_13.png", "job": "gpt-ships_13", "fit": "sheet:ships_13.2", "rev": 20261004003424},
+    "unit.spice_djinn":                        { "local": "units/spice_djinn.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.0", "rev": 20261004003657},
+    "unit.spice_djinn_b":                      { "local": "units/spice_djinn_b.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.1", "rev": 20261004003657},
+    "unit.spice_djinn_atk":                    { "local": "units/spice_djinn_atk.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.2", "rev": 20261004003657},
+    "unit.spice_djinn_hit":                    { "local": "units/spice_djinn_hit.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.3", "rev": 20261004003657}
   }
 }
