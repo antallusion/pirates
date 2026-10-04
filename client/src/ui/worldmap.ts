@@ -11,6 +11,8 @@ import { bandOf, SECTOR_SIZE, SECTORS_PER_SIDE } from '../../../shared/src/world
 import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import { drawRoamsChart } from '../render/roamers.ts'; // docs/19 D7
 import { EN as ROAM_EN, RU as ROAM_RU } from '../lang/ui/roamers.ts';
+/** The chart's key open or folded, as the captain left it. */
+const LEGEND_KEY = 'gravetide.mapLegend';
 const LROAM = dict(ROAM_EN, ROAM_RU);
 import { sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
@@ -232,9 +234,11 @@ export class WorldMap {
     const inGroup = (state.party?.members.length ?? 0) > 1;
     root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2><div class="sub">${L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` })}</div></div><div class="muted map-close">${L('close', { key: keyLabel(settings().keys.map[0] || settings().keys.map[1]) })}</div></div>
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><div class="map-wp-acts">${this.onAutosail ? `<button class="btn btn-small btn-primary map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" title="${esc(EL('as_goTitle'))}">⛵ ${esc(EL('as_go'))}</button>` : ''}<button class="btn btn-small map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'ico-sm')}${esc(L('wp.clear'))}</button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button class="btn btn-small map-pz">${icon('map_treasure', '', 'ico-sm')}${esc(H4L('puzzle.btn'))}</button>` : ''}</div>
-      <details class="map-legend"${innerHeight > 520 && innerWidth >= 700 ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
+      <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
       <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
+    // The key stays as she left it (folded at first: open, it covered a third of the chart — QA, 2026-10-04).
+    root.querySelector<HTMLDetailsElement>('.map-legend')?.addEventListener('toggle', (e) => localStorage.setItem(LEGEND_KEY, (e.currentTarget as HTMLDetailsElement).open ? '1' : '0'));
     // «Where is my level» (docs/18 #29): the chart turns to the zone, and her mark is set on it.
     root.querySelectorAll<HTMLElement>('[data-zone]').forEach((b) => (b.onclick = () => {
       const z = state.zones.find((x) => x.id === Number(b.dataset.zone));
@@ -415,27 +419,35 @@ export class WorldMap {
       g.restore();
       return true;
     };
-    // Labels never pile on each other: the first placed (ports, then sites, then events) keeps its place, a later one
-    // that would cover it waits for a closer zoom.
-    const placed: [number, number, number, number][] = [];
-    const label = (text: string, x: number, y: number, color = 'rgba(240,230,200,0.85)') => {
-      const w = g.measureText(text).width;
-      const a = g.textAlign;
-      // A label by the chart's edge slides inward rather than being cut by it; one whose mark is off the chart is
-      // not drawn at all (it would stand at the edge with nothing under it).
+    // Labels never pile on each other: the ports and her own mark first, then the rest as they come; a later one that
+    // would cover an earlier waits for a closer zoom. They are gathered and laid down over all the marks at the end —
+    // the tides' and lookouts' long lines were drawn before the ports and took their names' places (QA, 2026-10-04).
+    const queued: { text: string; x: number; y: number; color: string; font: string; align: CanvasTextAlign; prio: number }[] = [];
+    const label = (text: string, x: number, y: number, color = 'rgba(240,230,200,0.85)', prio = 1) => {
+      // One whose mark is off the chart is not drawn at all (it would stand at the edge with nothing under it).
       if (x < -4 || x > W + 4) return;
-      const want = a === 'center' ? x - w / 2 : a === 'right' ? x - w : x;
-      const x0 = w + 8 < W ? Math.max(4, Math.min(W - w - 4, want)) : want;
-      const box: [number, number, number, number] = [x0 - 2, y - 12, x0 + w + 2, y + 4];
-      if (placed.some((b) => box[0] < b[2] && b[0] < box[2] && box[1] < b[3] && b[1] < box[3])) return;
-      placed.push(box);
-      g.save();
-      g.textAlign = 'left';
-      g.fillStyle = 'rgba(0,0,0,0.55)';
-      g.fillText(text, x0 + 1, y + 1);
-      g.fillStyle = color;
-      g.fillText(text, x0, y);
-      g.restore();
+      queued.push({ text, x, y, color, font: g.font, align: g.textAlign, prio });
+    };
+    const layLabels = () => {
+      const placed: [number, number, number, number][] = [];
+      for (const q of queued.map((q, i) => ({ q, i })).sort((a, b) => a.q.prio - b.q.prio || a.i - b.i).map((e) => e.q)) {
+        g.save();
+        g.font = q.font;
+        const w = g.measureText(q.text).width;
+        // A label by the chart's edge slides inward rather than being cut by it.
+        const want = q.align === 'center' ? q.x - w / 2 : q.align === 'right' ? q.x - w : q.x;
+        const x0 = w + 8 < W ? Math.max(4, Math.min(W - w - 4, want)) : want;
+        const box: [number, number, number, number] = [x0 - 2, q.y - 12, x0 + w + 2, q.y + 4];
+        if (!placed.some((b) => box[0] < b[2] && b[0] < box[2] && box[1] < b[3] && b[1] < box[3])) {
+          placed.push(box);
+          g.textAlign = 'left';
+          g.fillStyle = 'rgba(0,0,0,0.55)';
+          g.fillText(q.text, x0 + 1, q.y + 1);
+          g.fillStyle = q.color;
+          g.fillText(q.text, x0, q.y);
+        }
+        g.restore();
+      }
     };
     const chart = sprite('tex.chart');
     g.fillStyle = '#070a0e';
@@ -614,7 +626,7 @@ export class WorldMap {
         g.fillRect(tx(p.x) - 4, ty(p.y) - 4, 8, 8);
       }
       g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
-      label(placeName(p.name), tx(p.x), ty(p.y) - ms * 0.55);
+      label(placeName(p.name), tx(p.x), ty(p.y) - ms * 0.55, undefined, 0);
     }
     // The Flying Dutchman's lanterns not yet visited, and his island once she has all five pages (docs/12 P10 #10).
     for (const pg of state.dutchman?.pages ?? []) {
@@ -968,8 +980,9 @@ export class WorldMap {
       const d = own ? Math.hypot(wp.x - own.x, wp.y - own.y) : 0;
       g.font = '600 12px Inter, system-ui, sans-serif';
       g.textAlign = 'center';
-      label(L('wp.label', { d: d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 }) }), x, y + ms * 0.95, '#f0d48e');
+      label(L('wp.label', { d: d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 }) }), x, y + ms * 0.95, '#f0d48e', 0);
     }
+    layLabels();
     // You.
     if (own) {
       // What your lookouts can see: a soft pool of light around you.
