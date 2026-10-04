@@ -2338,6 +2338,10 @@
     "unit.crown_provost":                      { "local": "units/crown_provost.webp", "remote": "hf_20261004_043327_gpt-anim_crown_provost.png", "job": "gpt-anim_crown_provost", "fit": "sheet:anim_crown_provost.0", "rev": 20261004043327},
     "unit.crown_provost_b":                    { "local": "units/crown_provost_b.webp", "remote": "hf_20261004_043327_gpt-anim_crown_provost.png", "job": "gpt-anim_crown_provost", "fit": "sheet:anim_crown_provost.1", "rev": 20261004043327},
     "unit.crown_provost_atk":                  { "local": "units/crown_provost_atk.webp", "remote": "hf_20261004_043327_gpt-anim_crown_provost.png", "job": "gpt-anim_crown_provost", "fit": "sheet:anim_crown_provost.2", "rev": 20261004043327},
-    "unit.crown_provost_hit":                  { "local": "units/crown_provost_hit.webp", "remote": "hf_20261004_043327_gpt-anim_crown_provost.png", "job": "gpt-anim_crown_provost", "fit": "sheet:anim_crown_provost.3", "rev": 20261004043327}
+    "unit.crown_provost_hit":                  { "local": "units/crown_provost_hit.webp", "remote": "hf_20261004_043327_gpt-anim_crown_provost.png", "job": "gpt-anim_crown_provost", "fit": "sheet:anim_crown_provost.3", "rev": 20261004043327},
+    "unit.brine_sister":                       { "local": "units/brine_sister.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.0", "rev": 20261004043647},
+    "unit.brine_sister_b":                     { "local": "units/brine_sister_b.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.1", "rev": 20261004043647},
+    "unit.brine_sister_atk":                   { "local": "units/brine_sister_atk.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.2", "rev": 20261004043647},
+    "unit.brine_sister_hit":                   { "local": "units/brine_sister_hit.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.3", "rev": 20261004043647}
   }
 }
