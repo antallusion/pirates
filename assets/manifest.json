@@ -2290,6 +2290,10 @@
     "unit.nautilus_knight":                    { "local": "units/nautilus_knight.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.0", "rev": 20261004035936},
     "unit.nautilus_knight_b":                  { "local": "units/nautilus_knight_b.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.1", "rev": 20261004035936},
     "unit.nautilus_knight_atk":                { "local": "units/nautilus_knight_atk.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.2", "rev": 20261004035936},
-    "unit.nautilus_knight_hit":                { "local": "units/nautilus_knight_hit.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.3", "rev": 20261004035936}
+    "unit.nautilus_knight_hit":                { "local": "units/nautilus_knight_hit.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.3", "rev": 20261004035936},
+    "unit.siren_queen":                        { "local": "units/siren_queen.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.0", "rev": 20261004040225},
+    "unit.siren_queen_b":                      { "local": "units/siren_queen_b.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.1", "rev": 20261004040225},
+    "unit.siren_queen_atk":                    { "local": "units/siren_queen_atk.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.2", "rev": 20261004040225},
+    "unit.siren_queen_hit":                    { "local": "units/siren_queen_hit.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.3", "rev": 20261004040225}
   }
 }
