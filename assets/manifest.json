@@ -2254,6 +2254,10 @@
     "unit.hippocampus":                        { "local": "units/hippocampus.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.0", "rev": 20261004033548},
     "unit.hippocampus_b":                      { "local": "units/hippocampus_b.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.1", "rev": 20261004033548},
     "unit.hippocampus_atk":                    { "local": "units/hippocampus_atk.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.2", "rev": 20261004033548},
-    "unit.hippocampus_hit":                    { "local": "units/hippocampus_hit.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.3", "rev": 20261004033548}
+    "unit.hippocampus_hit":                    { "local": "units/hippocampus_hit.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.3", "rev": 20261004033548},
+    "unit.kraken_spawn":                       { "local": "units/kraken_spawn.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.0", "rev": 20261004033836},
+    "unit.kraken_spawn_b":                     { "local": "units/kraken_spawn_b.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.1", "rev": 20261004033836},
+    "unit.kraken_spawn_atk":                   { "local": "units/kraken_spawn_atk.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.2", "rev": 20261004033836},
+    "unit.kraken_spawn_hit":                   { "local": "units/kraken_spawn_hit.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.3", "rev": 20261004033836}
   }
 }
