@@ -2057,6 +2057,10 @@
     "ship.felucca":                            { "local": "ships/felucca.webp", "remote": "hf_20261004_001135_gpt-ships_10.png", "job": "gpt-ships_10", "fit": "sheet:ships_10.0", "rev": 20261004001135},
     "ship.lugger":                             { "local": "ships/lugger.webp", "remote": "hf_20261004_001135_gpt-ships_10.png", "job": "gpt-ships_10", "fit": "sheet:ships_10.1", "rev": 20261004001135},
     "ship.flying_fish":                        { "local": "ships/flying_fish.webp", "remote": "hf_20261004_001135_gpt-ships_10.png", "job": "gpt-ships_10", "fit": "sheet:ships_10.2", "rev": 20261004001135},
-    "ship.galiot":                             { "local": "ships/galiot.webp", "remote": "hf_20261004_001135_gpt-ships_10.png", "job": "gpt-ships_10", "fit": "sheet:ships_10.3", "rev": 20261004001135}
+    "ship.galiot":                             { "local": "ships/galiot.webp", "remote": "hf_20261004_001135_gpt-ships_10.png", "job": "gpt-ships_10", "fit": "sheet:ships_10.3", "rev": 20261004001135},
+    "unit.storm_berserker":                    { "local": "units/storm_berserker.webp", "remote": "hf_20261004_001405_gpt-anim_storm_berserker.png", "job": "gpt-anim_storm_berserker", "fit": "sheet:anim_storm_berserker.0", "rev": 20261004001405},
+    "unit.storm_berserker_b":                  { "local": "units/storm_berserker_b.webp", "remote": "hf_20261004_001405_gpt-anim_storm_berserker.png", "job": "gpt-anim_storm_berserker", "fit": "sheet:anim_storm_berserker.1", "rev": 20261004001405},
+    "unit.storm_berserker_atk":                { "local": "units/storm_berserker_atk.webp", "remote": "hf_20261004_001405_gpt-anim_storm_berserker.png", "job": "gpt-anim_storm_berserker", "fit": "sheet:anim_storm_berserker.2", "rev": 20261004001405},
+    "unit.storm_berserker_hit":                { "local": "units/storm_berserker_hit.webp", "remote": "hf_20261004_001405_gpt-anim_storm_berserker.png", "job": "gpt-anim_storm_berserker", "fit": "sheet:anim_storm_berserker.3", "rev": 20261004001405}
   }
 }
