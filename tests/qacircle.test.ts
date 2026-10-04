@@ -63,7 +63,9 @@ test('not a word of Latin in a Russian line a player reads (QA circle: NPC, PvP,
   for (const f of readdirSync(new URL('ui/', dir))) { const m = await import(new URL(`ui/${f}`, dir).href) as { RU?: Record<string, unknown> }; if (m.RU) tables.push([f, m.RU]); }
   const bad: string[] = [];
   for (const [f, t] of tables) for (const [k, v] of Object.entries(t)) {
-    if (typeof v !== 'string' || !/[А-Яа-яЁё]/.test(v)) continue;
+    // (a screen's own line is Russian through and through — «e-mail» stood alone as a placeholder; server and data lines
+    // without a Russian letter are names)
+    if (typeof v !== 'string' || (!/[А-Яа-яЁё]/.test(v) && !(f === 'ru.ts' || !/^(server|data)/.test(f)))) continue;
     // The admin's usage lines and the server's own setup notes are for the tester, not the player.
     if (/^Usage|Usage:|LINK_SECRET|\/auth\/|\/reset|#reset=|(^|[\s(«])\/[a-z]{2,}\b/.test(k + ' ' + v)) continue;
     const words = (v.replace(/\{\w+\}|<[^>]+>|&\w+;/g, ' ').match(/[A-Za-z][A-Za-z'’-]*/g) ?? []).filter((w) => !OK.test(w));
@@ -84,4 +86,8 @@ test('every deed\'s condition and every legendary ship\'s gift and price have Ru
 
 test('the chart\'s folded legend lays out nothing (QA: «you» 6px past a 38px-wide hidden column in English)', () => {
   assert.ok(css.includes('.map-legend:not([open]) .lg-items { display: none; }'));
+});
+
+test('a shipyard hull\'s «Research her first» wraps inside its 104px column (it ran 7px out in English, 16px in Russian)', () => {
+  assert.ok(css.includes('.hull-card .item-btn { white-space: normal; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }'));
 });

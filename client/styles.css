@@ -775,6 +775,9 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .item-btn { width: 100%; display: flex; justify-content: center; align-items: center; white-space: nowrap; }
 .hull-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: 8px; }
 .hull-card { display: grid; grid-template-columns: 76px minmax(0, 1fr) 104px; gap: 10px; align-items: center; margin: 0; }
+/* «Research her first» / «Сначала исследуйте» with its icon is wider than the column: the words wrap (they ran 7–16px out). */
+.hull-card .item-btn { white-space: normal; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }
+.hull-card .item-btn .ico-sm { flex: none; }
 .hull-art { width: 76px; height: 50px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .hull-art img { height: 76px; width: auto; transform: rotate(90deg); filter: drop-shadow(0 3px 4px #000); }
 .hull-text b { font-family: var(--serif); font-size: 16px; }
