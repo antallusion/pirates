@@ -54,6 +54,11 @@ export interface RemoteShip {
   cur: ShipSample;
   wake: { x: number; y: number; t: number; w: number }[];
   sinkStart: number;
+  /** Seconds between her own samples (smoothed): the server sends a near ship 10 times a second, one in the middle
+   *  distance 5, a far one 2.5 — and she is drawn far enough in the past to always lie between two of them. */
+  gap?: number;
+  /** How far in the past she is drawn now (eased toward her gap, so a ship crossing a distance band does not jump). */
+  delay?: number;
 }
 
 // Remote ships are drawn this far in the past; it grows when snapshots come slower (a crowded harbour).
@@ -63,6 +68,8 @@ export class ClientState {
   self: PrivateState | null = null;
   you: SelfRow | null = null;
   youServerTime = 0;
+  /** When her shown place was last moved on (seconds, the page's clock). */
+  ownAt = 0;
   youArrival = 0;
   entityId = 0;
   ownDisplay: SailState | null = null;
@@ -96,6 +103,8 @@ export class ClientState {
   fog = 0.1;
   serverTime = 0;
   serverTimeArrival = 0;
+  /** The newest snapshot's own time (the gap between them is reckoned from it; the clock above is eased). */
+  lastSnapTime = 0;
 
   portView: PortView | null = null;
   boarding: BoardingResult | null = null;
@@ -318,10 +327,9 @@ export class ClientState {
         }
         break;
       case 'snap': {
-        if (this.serverTime > 0 && m.time > this.serverTime) this.snapGap += (Math.min(1, m.time - this.serverTime) - this.snapGap) * 0.1;
-        this.serverTime = m.time;
-        this.serverTimeArrival = now;
-        this.timeScale = m.k ?? 1;
+        if (this.lastSnapTime > 0 && m.time > this.lastSnapTime) this.snapGap += (Math.min(1, m.time - this.lastSnapTime) - this.snapGap) * 0.1;
+        this.lastSnapTime = m.time;
+        this.syncClock(m.time, now, m.k ?? 1);
         this.wind = m.wind;
         this.weather = m.weather;
         this.region = m.region;
@@ -344,6 +352,10 @@ export class ClientState {
             s = { id, info: info && info.kind === 'ship' ? info : null, buf: [], cur: sample, wake: [], sinkStart: 0 };
             this.ships.set(id, s);
           }
+          const last = s.buf[s.buf.length - 1];
+          const g = last ? sample.t - last.t : 0;
+          // (an unchanged row is sent only every 2 s: such a pause is a ship at rest, not her rate)
+          if (g > 0 && g < 1) s.gap = s.gap === undefined ? g : s.gap + (g - s.gap) * 0.3;
           s.buf.push(sample);
           if (s.buf.length > 12) s.buf.shift();
         }
@@ -612,6 +624,18 @@ export class ClientState {
     noteOwnShip(this.self.loadout);
   }
 
+  /** The server's clock as the snapshots tell it — eased, not reset by each one: set to every snapshot's time on its
+   *  arrival, it jerked back and forth with each packet's lateness, and every ship drawn by it with it (owner,
+   *  2026-10-04: «рядом корабли… прям дергаются»). A packet ahead of the reckoning pulls it on at once (the clock was
+   *  behind); a late one only nudges it back, as lateness is the network's, not the sea's. */
+  private syncClock(t: number, now: number, k: number): void {
+    const est = this.serverTime > 0 ? this.serverTime + (now - this.serverTimeArrival) * this.timeScale : t;
+    const err = t - est;
+    this.serverTime = this.serverTime <= 0 || k !== this.timeScale || Math.abs(err) > 0.5 * k ? t : est + err * (err > 0 ? 0.25 : 0.03);
+    this.serverTimeArrival = now;
+    this.timeScale = k;
+  }
+
   estServerTime(): number {
     return this.serverTime + (performance.now() / 1000 - this.serverTimeArrival) * this.timeScale;
   }
@@ -622,10 +646,16 @@ export class ClientState {
 
   /** Interpolate remote ships at render time. */
   updateRemote(): void {
-    const rt = this.estServerTime() - Math.min(INTERP_MAX * this.timeScale, Math.max(INTERP_MIN * this.timeScale, this.snapGap * 1.3));
+    const est = this.estServerTime();
+    const base = Math.min(INTERP_MAX * this.timeScale, Math.max(INTERP_MIN * this.timeScale, this.snapGap * 1.3));
     for (const s of this.ships.values()) {
       const b = s.buf;
       if (!b.length) continue;
+      // Each drawn as far back as her own samples need: a middle-distance ship at 5 Hz and a far one at 2.5 Hz were
+      // drawn past their newest sample, guessed ahead, then pulled back as the next one came.
+      const want = Math.min(0.75 * this.timeScale, Math.max(base, (s.gap ?? 0) * 1.25 + 0.03 * this.timeScale));
+      s.delay = s.delay === undefined ? want : s.delay + (want - s.delay) * 0.05;
+      const rt = est - s.delay;
       let a = b[0], c = b[b.length - 1];
       for (let i = 0; i < b.length - 1; i++) {
         if (b[i].t <= rt && b[i + 1].t >= rt) {
@@ -662,7 +692,9 @@ export class ClientState {
     const you = this.you;
     if (!you || !this.ownStats || !this.self) return null;
     const st = this.ownStats;
-    const elapsed = Math.min(0.2, performance.now() / 1000 - this.youArrival) * this.timeScale;
+    // Reckoned on the eased clock, not from this packet's arrival: a late packet no longer shakes her (and the camera
+    // on her, and the whole sea under it).
+    const elapsed = Math.min(0.2 * this.timeScale, Math.max(0, this.estServerTime() - this.youServerTime));
     let s: SailState = { x: you.x, y: you.y, heading: you.h, speed: you.spd, sail: you.sail, rudder: you.rud };
     const sailSteps = [0, 0.25, 0.5, 0.75, 1];
     const params = {
@@ -683,10 +715,21 @@ export class ClientState {
       s = stepSailing(s, input, sail, wind, cur, dt);
       t -= dt;
     }
-    // Smooth toward the predicted state to hide snapshot corrections.
+    // Shown where she is going, the snapshots' small corrections eased out over a fifth of a second. A third of the way
+    // toward the reckoning every frame left her trailing it by a distance that changed with each frame's length — at
+    // an uneven frame rate she, and the camera on her, and the whole sea, jerked (owner, 2026-10-04).
     const d = this.ownDisplay;
+    const nowS = performance.now() / 1000;
+    const dt = Math.min(0.25, Math.max(0, nowS - this.ownAt));
+    this.ownAt = nowS;
     if (!d || Math.hypot(d.x - s.x, d.y - s.y) > 40 * SPEED_SCALE / 2) this.ownDisplay = s;
-    else this.ownDisplay = { ...s, x: lerp(d.x, s.x, 0.3), y: lerp(d.y, s.y, 0.3), heading: lerpAngle(d.heading, s.heading, 0.3) };
+    else {
+      const k = this.timeScale * dt;
+      const ax = d.x + (Math.sin(s.heading) * s.speed * SPEED_SCALE + cur.x * (1 + sail.currentMul)) * k;
+      const ay = d.y + (-Math.cos(s.heading) * s.speed * SPEED_SCALE + cur.y * (1 + sail.currentMul)) * k;
+      const ease = 1 - Math.exp(-dt / 0.2);
+      this.ownDisplay = { ...s, x: lerp(ax, s.x, ease), y: lerp(ay, s.y, ease), heading: lerpAngle(d.heading, s.heading, 1 - Math.exp(-dt / 0.1)) };
+    }
     return this.ownDisplay;
   }
 }
