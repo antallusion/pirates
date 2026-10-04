@@ -2151,6 +2151,7 @@
     "unit.giant_hawk":                         { "local": "units/giant_hawk.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.0", "rev": 20261004014621},
     "unit.giant_hawk_b":                       { "local": "units/giant_hawk_b.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.1", "rev": 20261004014621},
     "unit.giant_hawk_atk":                     { "local": "units/giant_hawk_atk.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.2", "rev": 20261004014621},
-    "unit.giant_hawk_hit":                     { "local": "units/giant_hawk_hit.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.3", "rev": 20261004014621}
+    "unit.giant_hawk_hit":                     { "local": "units/giant_hawk_hit.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.3", "rev": 20261004014621},
+    "bg.port_frostgate":                       { "local": "art/port_frostgate.webp", "remote": "hf_20261004_014836_gpt-bg.port_frostgate.png", "job": "gpt-bg.port_frostgate", "fit": "opaque:1920", "rev": 20261004014836}
   }
 }
