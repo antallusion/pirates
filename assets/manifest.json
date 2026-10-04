@@ -2201,6 +2201,7 @@
     "unit.leviathan_calf":                     { "local": "units/leviathan_calf.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.0", "rev": 20261004023932},
     "unit.leviathan_calf_b":                   { "local": "units/leviathan_calf_b.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.1", "rev": 20261004023932},
     "unit.leviathan_calf_atk":                 { "local": "units/leviathan_calf_atk.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.2", "rev": 20261004023932},
-    "unit.leviathan_calf_hit":                 { "local": "units/leviathan_calf_hit.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.3", "rev": 20261004023932}
+    "unit.leviathan_calf_hit":                 { "local": "units/leviathan_calf_hit.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.3", "rev": 20261004023932},
+    "bg.port_steeplewater":                    { "local": "art/port_steeplewater.webp", "remote": "hf_20261004_024146_gpt-bg.port_steeplewater.png", "job": "gpt-bg.port_steeplewater", "fit": "opaque:1920", "rev": 20261004024146}
   }
 }
