@@ -2087,6 +2087,7 @@
     "unit.spice_djinn":                        { "local": "units/spice_djinn.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.0", "rev": 20261004003657},
     "unit.spice_djinn_b":                      { "local": "units/spice_djinn_b.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.1", "rev": 20261004003657},
     "unit.spice_djinn_atk":                    { "local": "units/spice_djinn_atk.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.2", "rev": 20261004003657},
-    "unit.spice_djinn_hit":                    { "local": "units/spice_djinn_hit.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.3", "rev": 20261004003657}
+    "unit.spice_djinn_hit":                    { "local": "units/spice_djinn_hit.webp", "remote": "hf_20261004_003657_gpt-anim_spice_djinn.png", "job": "gpt-anim_spice_djinn", "fit": "sheet:anim_spice_djinn.3", "rev": 20261004003657},
+    "prop.port_mirrorfen":                     { "local": "props/port_mirrorfen.webp", "remote": "hf_20261004_003938_gpt-port_mirrorfen.png", "job": "gpt-port_mirrorfen", "fit": "sheet:port_mirrorfen.0", "rev": 20261004003938}
   }
 }
