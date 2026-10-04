@@ -3103,6 +3103,7 @@ body.tac.tac-over #toasts { display: none; }
 .toast.talk .talk-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .toast.talk .talk-who { font: 700 11px/1.2 var(--sans); color: var(--gold); letter-spacing: 0.02em; }
 .toast.talk .talk-line { font: italic 13px/1.3 var(--serif); color: #eadfc6; overflow-wrap: anywhere; }
+#modal-toasts .toast.talk { align-items: center; } /* one line beside the face: centred on it (it rode 3.5 px high — QA, 2026-10-04) */
 #modal-toasts .toast.talk .talk-face { width: 26px; height: 26px; }
 .uf-mood { position: absolute; left: -10%; bottom: -8%; z-index: 3; width: 36%; height: 36%; min-width: 16px; min-height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font: 700 12px/1 var(--sans); pointer-events: auto; box-shadow: 0 1px 4px #000; }
 .uf-mood.shanty { color: #ffe39a; background: radial-gradient(circle at 40% 35%, #3a2c14, #120d06 70%); border: 1.5px solid #e8b44a; animation: uf-sing 1.1s ease-in-out infinite alternate; }
