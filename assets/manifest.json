@@ -2070,6 +2070,7 @@
     "unit.sun_guard":                          { "local": "units/sun_guard.webp", "remote": "hf_20261004_002136_gpt-anim_sun_guard.png", "job": "gpt-anim_sun_guard", "fit": "sheet:anim_sun_guard.0", "rev": 20261004002136},
     "unit.sun_guard_b":                        { "local": "units/sun_guard_b.webp", "remote": "hf_20261004_002136_gpt-anim_sun_guard.png", "job": "gpt-anim_sun_guard", "fit": "sheet:anim_sun_guard.1", "rev": 20261004002136},
     "unit.sun_guard_atk":                      { "local": "units/sun_guard_atk.webp", "remote": "hf_20261004_002136_gpt-anim_sun_guard.png", "job": "gpt-anim_sun_guard", "fit": "sheet:anim_sun_guard.2", "rev": 20261004002136},
-    "unit.sun_guard_hit":                      { "local": "units/sun_guard_hit.webp", "remote": "hf_20261004_002136_gpt-anim_sun_guard.png", "job": "gpt-anim_sun_guard", "fit": "sheet:anim_sun_guard.3", "rev": 20261004002136}
+    "unit.sun_guard_hit":                      { "local": "units/sun_guard_hit.webp", "remote": "hf_20261004_002136_gpt-anim_sun_guard.png", "job": "gpt-anim_sun_guard", "fit": "sheet:anim_sun_guard.3", "rev": 20261004002136},
+    "prop.port_hushwater":                     { "local": "props/port_hushwater.webp", "remote": "hf_20261004_002354_gpt-port_hushwater.png", "job": "gpt-port_hushwater", "fit": "sheet:port_hushwater.0", "rev": 20261004002354}
   }
 }
