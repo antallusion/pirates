@@ -187,3 +187,17 @@ test('toasts that cannot stand under the middle go to a side band, as compact as
   assert.match(hud, /private placeDeskStrip\(z: number\): void/);
   assert.match(css, /\.act-btn \{ --h: 34px; box-sizing: border-box; height: var\(--h\); display: inline-flex; align-items: center; gap: 5px; padding: 0 8px;/);
 });
+
+test('a salvage with silver in it reads in Russian («1 Provisions, 6 Planks & Pitch, …, 296 silver» stayed English)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    assert.equal(serverText('Salvaged: 1 Provisions, 6 Planks & Pitch, 1 Sailcloth, 296 silver.'), 'Поднято со дна: провизия — 1, доски и смола — 6, парусина — 1, серебро — 296.');
+  } finally {
+    applyDataLocale('en');
+    setLang('en');
+  }
+});
