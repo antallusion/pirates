@@ -2446,6 +2446,7 @@
     "bg.deck_felucca":                         { "local": "art/deck_felucca.webp", "remote": "hf_20261004_063926_gpt-bg.deck_felucca.png", "job": "gpt-bg.deck_felucca", "fit": "opaque:1536", "rev": 20261004063926},
     "bg.deck_lugger":                          { "local": "art/deck_lugger.webp", "remote": "hf_20261004_064124_gpt-bg.deck_lugger.png", "job": "gpt-bg.deck_lugger", "fit": "opaque:1536", "rev": 20261004064124},
     "bg.deck_galiot":                          { "local": "art/deck_galiot.webp", "remote": "hf_20261004_064301_gpt-bg.deck_galiot.png", "job": "gpt-bg.deck_galiot", "fit": "opaque:1536", "rev": 20261004064301},
-    "bg.deck_topsail_schooner":                { "local": "art/deck_topsail_schooner.webp", "remote": "hf_20261004_064607_gpt-bg.deck_topsail_schooner.png", "job": "gpt-bg.deck_topsail_schooner", "fit": "opaque:1536", "rev": 20261004064607}
+    "bg.deck_topsail_schooner":                { "local": "art/deck_topsail_schooner.webp", "remote": "hf_20261004_064607_gpt-bg.deck_topsail_schooner.png", "job": "gpt-bg.deck_topsail_schooner", "fit": "opaque:1536", "rev": 20261004064607},
+    "bg.deck_baltimore_clipper":               { "local": "art/deck_baltimore_clipper.webp", "remote": "hf_20261004_064914_gpt-bg.deck_baltimore_clipper.png", "job": "gpt-bg.deck_baltimore_clipper", "fit": "opaque:1536", "rev": 20261004064914}
   }
 }
