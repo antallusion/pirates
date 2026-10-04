@@ -387,9 +387,13 @@ export class Hud {
     // Each part a cell of one grid: its name, what is left of it, and a thread of its strength under both.
     const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => {
       const left = Math.max(0, Math.round((p.hp / p.hpMax) * 100));
-      return `<span class="bpart ${p.hp <= 0 ? 'dead' : ''}" style="--hp:${left}%"><b>${esc(sv(p.label))}</b><em>${p.hp > 0 ? left + '%' : '✕'}</em></span>`;
+      // The number that tells eight arms apart stays whole; only the words before it give way (QA, 2026-10-04: eight
+      // «Щупальце краке…» alike).
+      const m = /^(.*\S)\s+(\d+)$/.exec(sv(p.label));
+      const label = m ? `<span>${esc(m[1])}</span>&nbsp;${m[2]}` : `<span>${esc(sv(p.label))}</span>`;
+      return `<span class="bpart ${p.hp <= 0 ? 'dead' : ''}" style="--hp:${left}%"><b>${label}</b><em>${p.hp > 0 ? left + '%' : '✕'}</em></span>`;
     }).join('')}</div>` : '';
-    const alert = b.you.swallowed > 0 ? `<div class="balert">${esc(L('swallowed', { n: b.you.swallowed }))}</div>` : b.you.grabbed ? `<div class="balert">${esc(keyless(L('grabbed')))}</div>` : '';
+    const alert = b.you.swallowed > 0 ? `<div class="balert">${esc(L('swallowed', { n: b.you.swallowed }))}</div>` : b.you.grabbed ? `<div class="balert">${esc(keyless(L('grabbed', { key: keyLabel(settings().keys.board[0] || settings().keys.board[1]) })))}</div>` : '';
     el.innerHTML = `<div class="bname">${esc(sv(b.name))}</div><div class="bphase">${esc(sv(b.phaseName))} · ${esc(L('bossLeaves', { n: Math.ceil(b.endsIn / 60) }))}</div>
       <div class="bbar"><i style="width:${pct.toFixed(1)}%"></i></div>${parts}
       <div class="bhint">${esc(sv(b.hint))}</div><div class="byou">${esc(L('bossShare', { n: Math.round(b.you.share * 100) }))}</div>${alert}`;
