@@ -2136,6 +2136,7 @@
     "unit.ledger_enforcer":                    { "local": "units/ledger_enforcer.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.0", "rev": 20261004012943},
     "unit.ledger_enforcer_b":                  { "local": "units/ledger_enforcer_b.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.1", "rev": 20261004012943},
     "unit.ledger_enforcer_atk":                { "local": "units/ledger_enforcer_atk.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.2", "rev": 20261004012943},
-    "unit.ledger_enforcer_hit":                { "local": "units/ledger_enforcer_hit.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.3", "rev": 20261004012943}
+    "unit.ledger_enforcer_hit":                { "local": "units/ledger_enforcer_hit.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.3", "rev": 20261004012943},
+    "prop.port_brimstone_bay":                 { "local": "props/port_brimstone_bay.webp", "remote": "hf_20261004_013317_gpt-port_brimstone_bay.png", "job": "gpt-port_brimstone_bay", "fit": "sheet:port_brimstone_bay.0", "rev": 20261004013317}
   }
 }

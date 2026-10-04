@@ -7217,7 +7217,7 @@
    "prop.port_brimstone_bay"
   ],
   "prompt": "Draw a square image: a game map sprite of one port town — a mining town on terraced slopes of bright yellow sulphur crusted rock, steaming vents, wooden ore chutes running down to the quay, low stone huts, carts of yellow lumps on rails. Seen from almost straight above like a map plan, with only a slight tilt so the walls and roofs show a little of their front faces; the streets, walls and quays run square to the edges of the picture (not rotated, not isometric); the whole town compact on its own patch of shore filling most of the picture, three or four piers and jetties reaching straight down toward the bottom edge. Smooth painterly digital painting like the town sprites on the adventure map of Heroes of Might and Magic III, grim and weathered; night, warm lantern light in the windows and cold moonlight on the wet roofs; muted colours: charcoal, slate, tarred black wood, rust, old brass, cold blue-grey, with small warm highlights. The town alone on a solid flat magenta #FF00FF background: no sea around it, no shadows on the background, no frame, no text, no letters, no labels.",
-  "painting": true
+  "cut": "hf_20261004_013317_gpt-port_brimstone_bay"
  },
  "port_frostgate": {
   "grid": [
