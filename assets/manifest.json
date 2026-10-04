@@ -2142,6 +2142,10 @@
     "unit.jade_guard_b":                       { "local": "units/jade_guard_b.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.1", "rev": 20261004013532},
     "unit.jade_guard_atk":                     { "local": "units/jade_guard_atk.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.2", "rev": 20261004013532},
     "unit.jade_guard_hit":                     { "local": "units/jade_guard_hit.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.3", "rev": 20261004013532},
-    "bg.port_brimstone_bay":                   { "local": "art/port_brimstone_bay.webp", "remote": "hf_20261004_013803_gpt-bg.port_brimstone_bay.png", "job": "gpt-bg.port_brimstone_bay", "fit": "opaque:1920", "rev": 20261004013803}
+    "bg.port_brimstone_bay":                   { "local": "art/port_brimstone_bay.webp", "remote": "hf_20261004_013803_gpt-bg.port_brimstone_bay.png", "job": "gpt-bg.port_brimstone_bay", "fit": "opaque:1920", "rev": 20261004013803},
+    "unit.vault_crab":                         { "local": "units/vault_crab.webp", "remote": "hf_20261004_014129_gpt-anim_vault_crab.png", "job": "gpt-anim_vault_crab", "fit": "sheet:anim_vault_crab.0", "rev": 20261004014129},
+    "unit.vault_crab_b":                       { "local": "units/vault_crab_b.webp", "remote": "hf_20261004_014129_gpt-anim_vault_crab.png", "job": "gpt-anim_vault_crab", "fit": "sheet:anim_vault_crab.1", "rev": 20261004014129},
+    "unit.vault_crab_atk":                     { "local": "units/vault_crab_atk.webp", "remote": "hf_20261004_014129_gpt-anim_vault_crab.png", "job": "gpt-anim_vault_crab", "fit": "sheet:anim_vault_crab.2", "rev": 20261004014129},
+    "unit.vault_crab_hit":                     { "local": "units/vault_crab_hit.webp", "remote": "hf_20261004_014129_gpt-anim_vault_crab.png", "job": "gpt-anim_vault_crab", "fit": "sheet:anim_vault_crab.3", "rev": 20261004014129}
   }
 }
