@@ -2406,6 +2406,10 @@
     "unit.ghost_marksman":                     { "local": "units/ghost_marksman.webp", "remote": "hf_20261004_052035_gpt-anim_ghost_marksman.png", "job": "gpt-anim_ghost_marksman", "fit": "sheet:anim_ghost_marksman.0", "rev": 20261004052035},
     "unit.ghost_marksman_b":                   { "local": "units/ghost_marksman_b.webp", "remote": "hf_20261004_052035_gpt-anim_ghost_marksman.png", "job": "gpt-anim_ghost_marksman", "fit": "sheet:anim_ghost_marksman.1", "rev": 20261004052035},
     "unit.ghost_marksman_atk":                 { "local": "units/ghost_marksman_atk.webp", "remote": "hf_20261004_052035_gpt-anim_ghost_marksman.png", "job": "gpt-anim_ghost_marksman", "fit": "sheet:anim_ghost_marksman.2", "rev": 20261004052035},
-    "unit.ghost_marksman_hit":                 { "local": "units/ghost_marksman_hit.webp", "remote": "hf_20261004_052035_gpt-anim_ghost_marksman.png", "job": "gpt-anim_ghost_marksman", "fit": "sheet:anim_ghost_marksman.3", "rev": 20261004052035}
+    "unit.ghost_marksman_hit":                 { "local": "units/ghost_marksman_hit.webp", "remote": "hf_20261004_052035_gpt-anim_ghost_marksman.png", "job": "gpt-anim_ghost_marksman", "fit": "sheet:anim_ghost_marksman.3", "rev": 20261004052035},
+    "unit.ghost_cutthroat":                    { "local": "units/ghost_cutthroat.webp", "remote": "hf_20261004_052450_gpt-anim_ghost_cutthroat.png", "job": "gpt-anim_ghost_cutthroat", "fit": "sheet:anim_ghost_cutthroat.0", "rev": 20261004052450},
+    "unit.ghost_cutthroat_b":                  { "local": "units/ghost_cutthroat_b.webp", "remote": "hf_20261004_052450_gpt-anim_ghost_cutthroat.png", "job": "gpt-anim_ghost_cutthroat", "fit": "sheet:anim_ghost_cutthroat.1", "rev": 20261004052450},
+    "unit.ghost_cutthroat_atk":                { "local": "units/ghost_cutthroat_atk.webp", "remote": "hf_20261004_052450_gpt-anim_ghost_cutthroat.png", "job": "gpt-anim_ghost_cutthroat", "fit": "sheet:anim_ghost_cutthroat.2", "rev": 20261004052450},
+    "unit.ghost_cutthroat_hit":                { "local": "units/ghost_cutthroat_hit.webp", "remote": "hf_20261004_052450_gpt-anim_ghost_cutthroat.png", "job": "gpt-anim_ghost_cutthroat", "fit": "sheet:anim_ghost_cutthroat.3", "rev": 20261004052450}
   }
 }
