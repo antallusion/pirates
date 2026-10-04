@@ -25,6 +25,28 @@ test('every silver hull above the first tier has a way in: a parent in her line,
   for (const id of SHIP_CLASS_IDS) if (SHIP_CLASSES[id].premium || SHIP_CLASSES[id].monster) assert.equal(needsResearch(id), false, id);
 });
 
+test('every line runs whole on its own silver hulls (2026-10-04): no list hands over to another', () => {
+  // The runners went on from the Baltimore clipper to the razee and the traders from the East Indiaman to the great
+  // galleon, till the eight that make the lines whole gave each list a silver hull at every tier (docs/20 §6).
+  assert.deepEqual(CROSS_LINES, {});
+  for (const list of FLEET_LISTS) {
+    for (let t = 2; t <= 5; t++) {
+      const silver = TREE[list].filter((id) => SHIP_CLASSES[id].tier === t && needsResearch(id));
+      assert.ok(silver.length > 0, `${list}: a hull to research at tier ${t}`);
+      for (const id of silver) {
+        const parents = researchParents(id);
+        assert.ok(parents.length && parents.every((p) => SHIP_CLASSES[p].list === list && SHIP_CLASSES[p].tier === t - 1), `${id} ← ${parents.join(', ')}: her own list, the tier below`);
+        // A silver parent among them: the line is walked without a hull bought for doubloons.
+        assert.ok(parents.some((p) => !SHIP_CLASSES[p].premium), `${id}: a silver parent`);
+      }
+    }
+  }
+  assert.ok(researchParents('polacre').includes('baltimore_clipper') && researchParents('great_xebec').includes('polacre'));
+  assert.ok(researchParents('great_indiaman').includes('east_indiaman') && researchParents('armed_fluyt').includes('holk'));
+  assert.ok(!researchParents('razee').includes('baltimore_clipper') && !researchParents('great_galleon').includes('east_indiaman'));
+  assert.deepEqual(researchParents('sloop_of_war').sort(), ['fireship', 'gunboat']);
+});
+
 test('a tier costs about two fifths of what a captain earns between the levels that open it and the tier below', () => {
   const cum = (l: number) => { let s = 0; for (let i = 1; i < l; i++) s += xpForLevel(i); return s; };
   const gates = [1, 8, 19, 33, 49];

@@ -45,6 +45,9 @@ export const LEVEL_RANGE: Partial<Record<ShipClassId, [number, number]>> = {
   menagerie: [7, 9], coral_hulk: [7, 9], treasure_junk: [7, 9],
   ship_of_the_line: [9, 10], wyvern_galleass: [9, 10], kraken_hunter: [9, 10], crimson_tide: [9, 10], sun_galleon: [9, 10], great_galleon: [9, 10],
   leviathan_ark: [9, 10], floating_fortress: [9, 10], whale_mother: [9, 10], drowned_cathedral: [9, 10], pirate_haven: [9, 10], iron_whale: [9, 10],
+  // The eight that make the lines whole (2026-10-04): the levels of their tiers, as every new hull's.
+  sloop_of_war: [3, 5], armed_fluyt: [5, 7], polacre: [7, 9], dunkirk_frigate: [7, 9],
+  great_indiaman: [9, 10], manila_galleon: [9, 10], great_xebec: [9, 10], race_galleon: [9, 10],
   // The beasts (docs/12 P4): levels like ships', the ladder between them and a captain as between ships.
   shark: [2, 6],
   orca: [3, 8],
@@ -90,6 +93,9 @@ export const HULL_ROLE: Partial<Record<ShipClassId, HullRole>> = {
   cog: 'trade', buss: 'trade', pink: 'trade', holk: 'trade', collier: 'trade', storeship: 'trade', cargo_frigate: 'trade', plate_galleon: 'trade',
   great_galleon: 'trade', leviathan_ark: 'trade', turtle_barge: 'trade', floating_fortress: 'trade', menagerie: 'trade', whale_mother: 'trade',
   coral_hulk: 'trade', drowned_cathedral: 'trade', treasure_junk: 'trade', pirate_haven: 'trade', iron_whale: 'trade',
+  // The eight that make the lines whole (2026-10-04), by their lists.
+  sloop_of_war: 'war', great_indiaman: 'trade', manila_galleon: 'trade', polacre: 'all', dunkirk_frigate: 'all', great_xebec: 'all', race_galleon: 'all',
+  armed_fluyt: 'trade',
 };
 
 /** How many levels below her own a hull of this role fights. */

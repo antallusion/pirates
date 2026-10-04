@@ -102,6 +102,25 @@ s('treasure_junk', 'hauler', 4, True, 'Treasure Junk', 'Сокровищница
 s('pirate_haven', 'hauler', 5, True, 'Pirate Haven', 'Пиратская гавань', 'a floating pirate town built on a huge old hull — shacks, a tavern with a crooked chimney, rope bridges and three masts', 'a floating pirate town', 'ramshackle shacks and a tavern door along both rails, rope bridges, barrels and bunting')
 s('iron_whale', 'hauler', 5, True, 'Iron Whale', 'Железный кит', 'a colossal iron-plated whale-shaped hull with riveted plates, small square sails on four masts and a gaping whale-mouth bow', 'an iron-plated whale ship', 'riveted iron plates along both rails, heavy chain and huge iron hatches')
 
+# ---- The lines made whole (owner, 2026-10-04: «еще больше … кораблей»; docs/20 §6): eight silver hulls ------------
+# where a list had none of its own. Kept apart from S, so the sixty-six's sheets keep their numbers: tools/art/fleet_next.py
+# paints them on sheets of their own (ships_19, ships_20) and their decks, in the words of sprite_prompt and deck_prompt.
+NEXT = []
+
+
+def s_next(sid, cat, tier, en, ru, look, deck_ship, deck_details):
+    NEXT.append({'id': sid, 'cat': cat, 'tier': tier, 'premium': False, 'en': en, 'ru': ru, 'look': look, 'deck_ship': deck_ship, 'deck': deck_details})
+
+
+s_next('polacre', 'fast', 4, 'Polacre', 'Полакр', 'a Mediterranean polacre with three single-spar pole masts — square sails on the main, big lateen sails on the fore and mizzen — and a slim low hull', 'a Mediterranean polacre', 'coiled halyards at the foot of the pole masts along the rails, light guns and water jars')
+s_next('dunkirk_frigate', 'fast', 4, 'Dunkirk Frigate', 'Дюнкеркский фрегат', 'a long, low, lightly built privateer frigate with three raked masts of square sails, a single row of light guns along its open deck and a sharp narrow bow', 'a privateer frigate', 'a long row of light guns behind closed ports along both rails, grapnels and boarding pikes in racks')
+s_next('great_xebec', 'fast', 5, 'Great Xebec', 'Большая шебека', 'a large three-masted war xebec with three huge lateen sails, a long overhanging bow and stern, rows of long oars along both sides and many guns', 'a great war xebec', 'long oars stowed along both rails between light guns, a raised gun platform at the bow just inside the top edge')
+s_next('race_galleon', 'fast', 5, 'Race-built Galleon', 'Низкобортный галеон', 'a long race-built galleon with low cut-down castles fore and aft, four masts with square sails and lateen mizzens, and a long slim hull', 'a race-built galleon', 'a low carved bulwark with closed gun ports, coiled sheets and lanterns (unlit) along both rails')
+s_next('sloop_of_war', 'combat', 2, 'Sloop-of-War', 'Военный шлюп', 'a small ship-rigged sloop-of-war with three short masts of square sails, seven light guns along each side of its single deck and a plain black-and-ochre hull', 'a naval sloop-of-war', 'small guns behind closed ports along both rails, rammers and sponges in racks, a ship\'s bell just inside the top edge')
+s_next('armed_fluyt', 'hauler', 3, 'Armed Fluyt', 'Вооружённый флейт', 'a pear-shaped fluyt with a narrow upper deck pierced for a few guns, three masts of square sails, a round stern and a deep broad hull', 'an armed fluyt', 'a few small guns behind closed ports along the rails, cargo nets of casks and bales between them, a big hatch near the top edge')
+s_next('great_indiaman', 'trade', 5, 'Great Indiaman', 'Большой ост-индиец', 'a great three-masted East Indiaman of a thousand tons, a broad deep hull, a gilded stern gallery, a row of guns and cargo lashed on deck', 'a great East Indiaman', 'tea chests, bolts of cloth and spice sacks lashed along both rails between closed gun ports, polished brass fittings')
+s_next('manila_galleon', 'trade', 5, 'Manila Galleon', 'Манильский галеон', 'a huge Manila galleon with a towering stern castle, four masts of square sails and a deep wide hull, bales of silk and crates of porcelain on deck', 'a Manila galleon', 'bales of silk, crates of porcelain and iron-bound silver chests along both rails, a carved high bulwark')
+
 # The style every ship sprite shares (docs/06 §17.4, the sprite template, for ChatGPT on magenta).
 SPRITE_STYLE = ('Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, '
                 'no tilt, no visible hull sides; each ship\'s bow points straight UP to the top edge and its stern down, perfectly vertical '

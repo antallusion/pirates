@@ -10,10 +10,11 @@ import { SHIP_BEAST_DEFS, SHIP_BEAST_IDS } from './shipbeasts.ts';
 import { FLEET_LISTS, SHIP_CLASSES, SHIP_CLASS_IDS } from './ships.ts';
 import type { FleetClassId, FleetList, ShipClassId } from './ships.ts';
 
-/** Every hull a captain sails, by list: twenty a list, the fourteen old hulls among them. */
+/** Every hull a captain sails, by list: twenty a list, the fourteen old hulls among them, and the eight that make the
+ *  lines whole (2026-10-04). */
 export const FLEET: Record<FleetList, ShipClassId[]> = Object.fromEntries(FLEET_LISTS.map((l) => [l, SHIP_CLASS_IDS.filter((c) => SHIP_CLASSES[c].list === l)])) as Record<FleetList, ShipClassId[]>;
 
-/** The eighty. */
+/** The eighty, and the eight. */
 export const FLEET_HULLS: ShipClassId[] = FLEET_LISTS.flatMap((l) => FLEET[l]);
 
 /** The fourteen hulls that sailed before the fleet of eighty: always painted, they stand in for the new. */
@@ -47,6 +48,11 @@ export const HULL_STAND_IN: Record<FleetClassId, ShipClassId> = {
   cog: 'galleon', buss: 'galleon', pink: 'galleon', holk: 'galleon', collier: 'galleon', storeship: 'galleon', cargo_frigate: 'galleon',
   plate_galleon: 'galleon', great_galleon: 'galleon', leviathan_ark: 'galleon', turtle_barge: 'galleon', floating_fortress: 'galleon', menagerie: 'galleon',
   whale_mother: 'galleon', coral_hulk: 'galleon', drowned_cathedral: 'galleon', treasure_junk: 'galleon', pirate_haven: 'galleon', iron_whale: 'galleon',
+  // The eight that make the lines whole (2026-10-04): the polacre and the great xebec as the xebec, the frigate-built
+  // runners as the brigantine, the great traders as the whaler (the traders' highest old hull), the armed fluyt as the
+  // galleon, the sloop-of-war as the brig.
+  sloop_of_war: 'brig', great_indiaman: 'harpoon_whaler', manila_galleon: 'harpoon_whaler', polacre: 'xebec', dunkirk_frigate: 'brigantine',
+  great_xebec: 'xebec', race_galleon: 'brigantine', armed_fluyt: 'galleon',
 };
 
 /** The art id of a hull's painting as it is named (`ship.<x>`): her deck is `bg.deck_<x>` (the Hulk sails as `holk`

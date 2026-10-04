@@ -1,5 +1,6 @@
 // The shop's creatures (owner, 2026-10-03: «нужно еще премиум существ за премиум валюту много»; docs/01 P7, docs/18
-// VII): twenty kinds sold for doubloons and found nowhere at sea — no tamer, lair, drift, roaming stack, capture nor egg
+// VII; a second dozen 2026-10-04, «еще больше … существ», painted four to a sheet by tools/art/fleet_next.py): thirty-two
+// kinds sold for doubloons and found nowhere at sea — no tamer, lair, drift, roaming stack, capture nor egg
 // ever hands one out (premium.ts, tests/premium and tests/beasts100 keep it so). Their figures are painted by
 // tools/art/creatures.py (faction 'premium'); till a sheet is cut a painted kind of the same body stands in for it
 // (unitart.ts).
@@ -25,13 +26,23 @@ export type PremiumBeastId =
   | 'golden_crab' | 'giant_manta' | 'ember_salamander' | 'sea_wolf'
   | 'hippocampus' | 'coral_basilisk'
   | 'kraken_spawn' | 'storm_eagle' | 'abyssal_angler' | 'frost_serpent' | 'nautilus_knight' | 'siren_queen' | 'tidal_elemental' | 'obsidian_golem' | 'lava_drake' | 'sea_griffin'
-  | 'sea_dragon' | 'dragon_turtle' | 'thunderbird' | 'abyss_knight';
+  | 'sea_dragon' | 'dragon_turtle' | 'thunderbird' | 'abyss_knight'
+  // The second dozen (owner, 2026-10-04: «еще больше … существ»): the thin tiers filled — three of the fourth, four of
+  // the fifth, two of the sixth, three of the seventh.
+  | 'lantern_jelly' | 'mantis_shrimp' | 'hammerhead'
+  | 'walrus_bull' | 'merrow_warden' | 'sea_naga' | 'brass_automaton'
+  | 'storm_giant' | 'ember_phoenix'
+  | 'megalodon' | 'marid' | 'ice_wyvern';
 
 export const PREMIUM_BEAST_IDS: PremiumBeastId[] = [
   'golden_crab', 'giant_manta', 'ember_salamander', 'sea_wolf',
   'hippocampus', 'coral_basilisk',
   'kraken_spawn', 'storm_eagle', 'abyssal_angler', 'frost_serpent', 'nautilus_knight', 'siren_queen', 'tidal_elemental', 'obsidian_golem', 'lava_drake', 'sea_griffin',
   'sea_dragon', 'dragon_turtle', 'thunderbird', 'abyss_knight',
+  'lantern_jelly', 'mantis_shrimp', 'hammerhead',
+  'walrus_bull', 'merrow_warden', 'sea_naga', 'brass_automaton',
+  'storm_giant', 'ember_phoenix',
+  'megalodon', 'marid', 'ice_wyvern',
 ];
 
 type Stats = Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade' | 'beast' | 'art' | 'premium'>;
@@ -83,6 +94,37 @@ export const PREMIUM_BEASTS: Record<PremiumBeastId, UnitDef> = {
     { price: 950, n: 1, note: ['It hurls the storm from afar: each bolt leaps on to a second foe beside the one it strikes.', 'Мечет бурю издалека: каждая молния перескакивает на второго врага рядом с целью.'] }),
   abyss_knight: P('abyss_knight', 7, { atk: 25, def: 22, dmin: 14, dmax: 20, hp: 70, speed: 6, init: 10, shots: 0, specials: ['drain', 'steady'], cost: 1250 },
     { price: 960, n: 1, note: ['He walked up out of the abyss: half the harm he does the living comes back to him, and he knows no fear.', 'Он вышел из бездны: половина урона, нанесённого живым, возвращается к нему, и страха он не знает.'] }),
+
+  // The second dozen (owner, 2026-10-04: «еще больше … существ»), on the same rules: a head a tenth to a half over the
+  // sea's best of its tier and under the next tier's, a craft of its own, priced by the might of a purchase.
+  // Tier 4, from ⚓3: a pair.
+  lantern_jelly: P('lantern_jelly', 4, { atk: 11, def: 8, dmin: 3, dmax: 7, hp: 24, speed: 6, init: 9, shots: 0, specials: ['diving', 'bind'], cost: 190 },
+    { price: 100, n: 2, note: ['Pale jellyfish out of the surf: one sting in four holds a stack spellbound through its next turn.', 'Бледные медузы из прибоя: раз в четыре ожога отряд замирает и теряет следующий ход.'] }),
+  mantis_shrimp: P('mantis_shrimp', 4, { atk: 12, def: 11, dmin: 3, dmax: 5, hp: 20, speed: 5, init: 10, shots: 0, specials: ['shell', 'double_strike'], cost: 195 },
+    { price: 100, n: 2, note: ['Club-fisted shrimps in armour: shot barely scratches them, and they punch twice for every blow of yours.', 'Раки-богомолы с булавами вместо лап: пули их едва царапают, и бьют они дважды на каждый ваш удар.'] }),
+  hammerhead: P('hammerhead', 4, { atk: 12, def: 7, dmin: 4, dmax: 7, hp: 22, speed: 7, init: 9, shots: 0, specials: ['diving', 'terror'], cost: 190 },
+    { price: 100, n: 2, note: ['Hammer-headed sharks out of the surf: the living beside them may freeze in terror.', 'Акулы-молоты из прибоя: живые рядом с ними могут оцепенеть от ужаса.'] }),
+  // Tier 5, from ⚓4: a pair.
+  walrus_bull: P('walrus_bull', 5, { atk: 12, def: 14, dmin: 4, dmax: 8, hp: 40, speed: 3, init: 5, shots: 0, specials: ['shell', 'retaliate_all'], cost: 390 },
+    { price: 250, n: 2, note: ['Bulls of the ice floes: shot barely scratches their hide, and their tusks answer every blow of the round.', 'Вожаки ледяных полей: пули едва царапают их шкуру, а бивни отвечают на каждый удар раунда.'] }),
+  merrow_warden: P('merrow_warden', 5, { atk: 13, def: 13, dmin: 5, dmax: 7, hp: 34, speed: 5, init: 9, shots: 0, specials: ['diving', 'leader'], cost: 380 },
+    { price: 230, n: 2, note: ['Sea-folk wardens in shell armour: out of the surf anywhere, and the whole side fights with morale +1 beside them.', 'Стражи морского народа в доспехах из раковин: выходят из прибоя где угодно, и вся сторона бьётся рядом с ними с духом +1.'] }),
+  sea_naga: P('sea_naga', 5, { atk: 14, def: 10, dmin: 5, dmax: 8, hp: 32, speed: 6, init: 10, shots: 0, specials: ['diving', 'poison'], cost: 380 },
+    { price: 230, n: 2, note: ['Serpent-tailed swordswomen: their bronze blades poison, and the stack they cut loses men again on its next two turns.', 'Мечницы со змеиным хвостом: их бронзовые клинки отравлены, и задетый отряд снова теряет бойцов в два следующих хода.'] }),
+  brass_automaton: P('brass_automaton', 5, { atk: 12, def: 16, dmin: 5, dmax: 7, hp: 38, speed: 3, init: 5, shots: 0, specials: ['steady', 'shield_wall'], cost: 390 },
+    { price: 250, n: 2, note: ['Marines of riveted brass with a furnace in the chest: shot does them half the harm, and nothing frightens them.', 'Морпехи из клёпаной латуни с топкой в груди: пули вредят им вдвое меньше, и ничто их не пугает.'] }),
+  // Tier 6, from ⚓5: a pair.
+  storm_giant: P('storm_giant', 6, { atk: 17, def: 15, dmin: 8, dmax: 12, hp: 46, speed: 5, init: 8, shots: 0, specials: ['chain', 'steady'], cost: 560 },
+    { price: 580, n: 2, note: ['Giants of the gale: every blow of the anchor-hook leaps on to a second foe as lightning, and nothing frightens them.', 'Великаны бури: каждый удар якорного крюка молнией перескакивает на второго врага, и ничто их не пугает.'] }),
+  ember_phoenix: P('ember_phoenix', 6, { atk: 17, def: 12, dmin: 8, dmax: 12, hp: 40, speed: 9, init: 12, shots: 0, specials: ['flying', 'regen'], cost: 540 },
+    { price: 530, n: 2, note: ['Birds of smouldering embers over the field: what is burnt out of them kindles again as each of their turns comes.', 'Птицы тлеющих углей над полем: выгоревшее в них разгорается вновь в начале каждого их хода.'] }),
+  // Tier 7, from ⚓6: one great beast.
+  megalodon: P('megalodon', 7, { atk: 24, def: 18, dmin: 14, dmax: 22, hp: 76, speed: 7, init: 11, shots: 0, specials: ['diving', 'terror', 'retaliate_all'], cost: 1300 },
+    { price: 990, n: 1, note: ['The ancient shark of the open sea: the living beside it freeze in terror, and its jaws answer every blow of the round.', 'Древняя акула открытого моря: живые рядом с ней цепенеют от ужаса, а её пасть отвечает на каждый удар раунда.'] }),
+  marid: P('marid', 7, { atk: 22, def: 20, dmin: 12, dmax: 18, hp: 70, speed: 8, init: 12, shots: 0, specials: ['diving', 'mend', 'steady'], cost: 1250 },
+    { price: 920, n: 1, note: ['The djinn of the sea out of the surf: every stack of yours near it takes back its strength as its turn comes, and it knows no fear.', 'Джинн моря из прибоя: каждый ваш отряд рядом с ним в начале его хода возвращает себе силы, и страха он не знает.'] }),
+  ice_wyvern: P('ice_wyvern', 7, { atk: 23, def: 19, dmin: 13, dmax: 20, hp: 68, speed: 10, init: 12, shots: 0, specials: ['flying', 'chill'], cost: 1250 },
+    { price: 930, n: 1, note: ['A wyvern of the frozen north: its freezing breath slows the stack it strikes to the end of the next round.', 'Виверна ледяного севера: её морозное дыхание замедляет отряд-цель до конца следующего раунда.'] }),
 };
 
 /** Their names as a stack and a line on each — English, Russian (as the world's armies are named, FACTION_NAMES). */
@@ -107,15 +149,29 @@ export const PREMIUM_NAMES: Record<PremiumBeastId, [string, string, string, stri
   dragon_turtle: ['Dragon turtles', 'Драконьи черепахи', 'A coral-crusted shell with a dragon’s head: shot barely scratches it, and its steam scalds every foe about it unanswered.', 'Панцирь в кораллах и голова дракона: пули его едва царапают, а пар обжигает всех врагов вокруг без ответа.'],
   thunderbird: ['Thunderbirds', 'Громовые птицы', 'The storm’s own bird: it hurls lightning from afar, and every bolt leaps on to a second foe.', 'Птица самой бури: мечет молнии издалека, и каждая перескакивает на второго врага.'],
   abyss_knight: ['Abyss knights', 'Рыцари бездны', 'A knight in barnacled plate with turquoise light in the visor: he drinks the strength of the living he strikes, and knows no fear.', 'Рыцарь в латах в ракушках с бирюзовым светом в забрале: пьёт силы живых, кого разит, и не знает страха.'],
+  lantern_jelly: ['Lantern jellies', 'Фонарные медузы', 'Great pale jellyfish with a light inside them, out of the surf anywhere along the shore: one sting in four holds a stack spellbound through its next turn.', 'Огромные бледные медузы со светом внутри, что выходят из прибоя где угодно вдоль берега: раз в четыре ожога отряд замирает и теряет следующий ход.'],
+  mantis_shrimp: ['Giant mantis shrimps', 'Гигантские раки-богомолы', 'Armoured shrimps as big as hounds with club-like forelimbs: shot barely scratches them, and they strike twice faster than the eye can follow.', 'Закованные раки величиной с собаку с булавами передних лап: пули их едва царапают, и бьют они дважды быстрее, чем видит глаз.'],
+  hammerhead: ['Hammerhead sharks', 'Акулы-молоты', 'Hammer-headed sharks that come up out of the surf: the living beside them may freeze in terror.', 'Акулы с головой-молотом, что выходят из прибоя: живые рядом с ними могут оцепенеть от ужаса.'],
+  walrus_bull: ['Walrus bulls', 'Моржи-вожаки', 'Scarred bulls of the ice floes with tusks like spears: shot barely scratches their hide, and they answer every blow of the round.', 'Израненные вожаки ледяных полей с бивнями, как копья: пули едва царапают их шкуру, и они отвечают на каждый удар раунда.'],
+  merrow_warden: ['Merrow wardens', 'Стражи мерроу', 'Sea-folk warriors in shell armour with coral tridents: out of the surf anywhere along the shore, and their side fights with morale +1.', 'Воины морского народа в доспехах из раковин с коралловыми трезубцами: выходят из прибоя где угодно вдоль берега, а их сторона бьётся с духом +1.'],
+  sea_naga: ['Sea nagas', 'Морские наги', 'Serpent-tailed swordswomen of the deep: the stack their bronze blades cut loses men again on its next two turns.', 'Мечницы глубин со змеиным хвостом: отряд, задетый их бронзовыми клинками, снова теряет бойцов в два следующих хода.'],
+  brass_automaton: ['Brass automatons', 'Латунные автоматы', 'Riveted marines of brass with a furnace glowing in the chest: shot does them half the harm, and nothing frightens them.', 'Клёпаные морпехи из латуни с топкой, что светится в груди: пули вредят им вдвое меньше, и ничто их не пугает.'],
+  storm_giant: ['Storm giants', 'Штормовые великаны', 'Giants of the gale with an anchor-hook for a weapon: each blow leaps on to a second foe beside the struck one as lightning, and nothing frightens them.', 'Великаны бури с якорным крюком вместо оружия: каждый удар молнией перескакивает на второго врага рядом с целью, и ничто их не пугает.'],
+  ember_phoenix: ['Ember phoenixes', 'Угольные фениксы', 'Birds of smouldering embers over the field: what is burnt out of them kindles again as each of their turns comes.', 'Птицы тлеющих углей над полем: выгоревшее в них разгорается вновь в начале каждого их хода.'],
+  megalodon: ['Megalodons', 'Мегалодоны', 'The ancient shark of the open sea: out of the surf anywhere along the shore, the living beside it freeze in terror, and its jaws answer every blow of the round.', 'Древняя акула открытого моря: выходит из прибоя где угодно вдоль берега, живые рядом с ней цепенеют от ужаса, а её пасть отвечает на каждый удар раунда.'],
+  marid: ['Marids', 'Мариды', 'The djinn of the sea risen out of the surf: every stack of its side near it takes back its strength as its turn comes, and nothing frightens it.', 'Джинн моря, поднявшийся из прибоя: каждый свой отряд рядом с ним в начале его хода возвращает себе силы, и ничто его не пугает.'],
+  ice_wyvern: ['Ice wyverns', 'Ледяные виверны', 'A wyvern of the frozen north over the field: its freezing breath slows the stack it strikes to the end of the next round.', 'Виверна ледяного севера над полем: её морозное дыхание замедляет отряд-цель до конца следующего раунда.'],
 };
 
-/** Their people (docs/18 #38): the sea's, but for the beach's crab, the volcanoes' salamander, golem and drake. None is
- *  the deep's own — the shop sells to every captain. */
+/** Their people (docs/18 #38): the sea's, but for the beach's crab, the volcanoes' salamander, golem, drake and
+ *  phoenix, and the brass automaton of the land's workshops. None is the deep's own — the shop sells to every captain. */
 export const PREMIUM_PEOPLE: Record<PremiumBeastId, 'sea' | 'land'> = {
   golden_crab: 'land', giant_manta: 'sea', ember_salamander: 'land', sea_wolf: 'sea', hippocampus: 'sea', coral_basilisk: 'sea',
   kraken_spawn: 'sea', storm_eagle: 'sea', abyssal_angler: 'sea', frost_serpent: 'sea', nautilus_knight: 'sea', siren_queen: 'sea',
   tidal_elemental: 'sea', obsidian_golem: 'land', lava_drake: 'land', sea_griffin: 'sea',
   sea_dragon: 'sea', dragon_turtle: 'sea', thunderbird: 'sea', abyss_knight: 'sea',
+  lantern_jelly: 'sea', mantis_shrimp: 'sea', hammerhead: 'sea', walrus_bull: 'sea', merrow_warden: 'sea', sea_naga: 'sea', brass_automaton: 'land',
+  storm_giant: 'sea', ember_phoenix: 'land', megalodon: 'sea', marid: 'sea', ice_wyvern: 'sea',
 };
 
 export const isPremiumBeast = (u: string): u is PremiumBeastId => Object.hasOwn(PREMIUM_BEASTS, u);

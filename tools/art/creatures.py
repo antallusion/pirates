@@ -91,6 +91,8 @@ c('crown_dreadnought', 'crown', 7, 'Dreadnought Diver', 'Водолаз-дред
 c('crown_surgeon', 'crown', 1, "Surgeon's Mate", 'Лекарский помощник', 'man', "a Crown naval surgeon's mate in a navy-blue coat with white facings and rolled sleeves under a stained canvas apron, a leather satchel of rolled bandages and wooden splints at his hip with a corked rum bottle in it, a short curved hanger in his right hand", 'the satchel hitched higher, the hanger lowered', 'a quick cut with the hanger toward the right')
 c('crown_midshipman', 'crown', 1, 'Signal Midshipman', 'Сигнальный мичман', 'man', "a young Crown signal midshipman in a short navy-blue jacket with white collar patches and a small black cocked hat, a bundle of rolled bright signal flags under his left arm, a slim midshipman's dirk with a brass hilt in his right hand", 'the flags tucked tighter under his arm, the dirk lifted a little', 'a quick dirk thrust toward the right, the signal flags still under his arm')
 c('crown_provost', 'crown', 2, 'Provost Marshal', 'Профос', 'man', 'a stern Crown provost marshal in a navy-blue greatcoat with a white crossbelt and a black tricorne, a ring of iron manacles on a short chain at his belt, a heavy brass-bound baton in his right hand', 'the baton tapped against his left palm', 'a heavy overhead blow of the brass-bound baton toward the right, the manacles swinging at his belt')
+# The second dozen (owner, 2026-10-04: «еще больше … существ»), four to a sheet (QUADS below): the boarding pikemen.
+c('crown_pikeman', 'crown', 2, 'Boarding Pikeman', 'Абордажный пикинёр', 'man', 'a Crown boarding pikeman in a navy-blue coat with white crossbelts and a round black-lacquered steel helmet, a long boarding pike with a narrow steel head held low in both hands', 'the pike point lifted a little', 'a long two-handed pike thrust toward the right')
 
 # ---- The Choir of the Deep: sodden robes, shells, coral, kelp, faint turquoise ---------------------------------------
 c('choir_acolyte', 'choir', 1, 'Acolyte', 'Послушник', 'man', 'a young barefoot acolyte of the drowned god in a sodden grey-green hooded robe hung with small shells, a small iron hand bell and a curved knife', 'the bell lifted, the hood turned', 'a quick slash with the curved knife toward the right')
@@ -111,6 +113,8 @@ c('abyss_ascendant', 'choir', 7, 'Ascended Herald', 'Вознесённый ве
 c('brine_sister', 'choir', 1, 'Sister of the Brine', 'Сестра рассола', 'man', 'a sister of the brine: a barefoot woman of the Choir in a sodden grey-green habit and a wimple of fishing net hung with small shells, a bundle of dried kelp bandages at her rope girdle, a short hooked knife of pale shell in her right hand', 'the kelp bundle lifted in her free hand', 'a quick slash with the hooked shell knife toward the right')
 c('choir_toller', 'choir', 3, 'Toller of the Drowned Bell', 'Звонарь утопшего колокола', 'man', 'a hooded toller of the drowned god: a broad man in a sodden black robe, a small barnacled green-bronze bell hung from a short pole on his back so it rises over his shoulder (part of the figure in every frame), a long iron hammer in both hands', 'the hammer drawn back, the bell swaying a little', 'swinging the hammer up to strike the bell, a faint ring of rippling air rolling out of it toward the right')
 c('lamprey_zealot', 'choir', 2, 'Lamprey Zealot', 'Фанатик-минога', 'man', "a zealot of the drowned god in a sodden dark robe, the face hidden behind a round grey leather mask with a lamprey's ring of small hooked teeth around its mouth hole, a short barbed spear", 'the masked head tilted, the spear point lowered', 'a hard thrust of the barbed spear toward the right')
+# The second dozen (2026-10-04): the rime witches.
+c('rime_witch', 'choir', 3, 'Rime Witch', 'Ведьма инея', 'man', 'a rime witch of the Choir: a gaunt pale woman in a sodden grey-blue shawl of fishing net furred with white frost, long white hair stiff with ice, a staff of pale driftwood tipped with a cluster of ice crystals', 'the frost on her shawl glinting, the staff tilted', 'thrusting the staff toward the right, a spray of freezing brine and white frost bursting from its tip')
 
 # ---- The Order of the Harpoon: whalers and hunters of the deep's great beasts ----------------------------------------
 c('flenser', 'harpoon', 1, 'Flenser', 'Разделочник', 'man', 'a whaler flenser in a greasy grey oilskin coat and a sou\'wester hat, a long-handled flensing spade', 'the spade lifted a little', 'a heavy stabbing thrust of the flensing spade toward the right')
@@ -127,6 +131,9 @@ c('leviathan_slayer', 'harpoon', 5, 'Leviathan Slayer', 'Убийца левиа
 c('harpoon_preceptor', 'harpoon', 2, 'Preceptor of the Order', 'Прецептор Ордена', 'man', 'a preceptor of the Order of the Harpoon: a grey-bearded knight in dark riveted leather and polished baleen plates, a long white cloak with a black harpoon sigil, a tall standard pole tipped with a barbed harpoon head and hung with a small white pennant', 'the pennant stirring, the standard planted upright', 'thrusting the harpoon head of the standard toward the right')
 c('harpoon_commander', 'harpoon', 6, 'Knight-Commander', 'Рыцарь-командор', 'man', 'a knight-commander of the Order of the Harpoon in heavy plate of bleached whalebone over dark leather, a helm crested with a short narwhal tusk, a long two-handed harpoon-glaive with a barbed blade', 'the harpoon-glaive lifted onto his shoulder', 'a sweeping cut of the harpoon-glaive toward the right')
 c('try_pot', 'harpoon', 4, 'Try-Pot Man', 'Котловой', 'man', 'a try-pot man of the whalers: a soot-stained brute in a scorched leather apron and heavy gloves, a small iron try-pot of steaming whale oil hung on a chain at his side (part of the figure in every frame), a long iron ladle in his right hand', 'the ladle dipped toward the pot, steam rising from it', 'flinging a ladle of hot oil toward the right in a short arc of steaming amber droplets')
+# The second dozen (2026-10-04): the line harpooners and the masters of the hunt.
+c('line_harpooner', 'harpoon', 3, 'Line Harpooner', 'Гарпунёр с линём', 'man', 'a line harpooner of the Order: a lean whaler in a short tarred jacket and a knitted cap, a small tub of coiled whale line at his hip (part of the figure in every frame), a light barbed harpoon made fast to the line in his right hand', 'the line paid out a little between his fingers', 'hurling the harpoon toward the right, the line snaking out behind it')
+c('hunt_master', 'harpoon', 3, 'Master of the Hunt', 'Мастер охоты', 'man', 'a master of the hunt of the Order of the Harpoon: a broad grey-bearded whaler in a long oilskin coat over plates of polished baleen, a great curved horn of whale ivory slung at his side, a heavy barbed harpoon in his right hand', 'raising the ivory horn toward his lips', 'hurling the heavy harpoon toward the right, its line trailing')
 
 # ---- The Fog Brokers: smugglers, spies and knives ---------------------------------------------------------------------
 c('smuggler', 'brokers', 1, 'Smuggler', 'Контрабандист', 'man', 'a smuggler in a dark knitted cap and a worn pea coat, a sack over one shoulder and a short knife', 'the knife turned in his hand', 'a quick knife slash toward the right')
@@ -143,6 +150,8 @@ c('fog_master', 'brokers', 5, 'Fog Master', 'Мастер тумана', 'man', 
 c('fog_cutpurse', 'brokers', 1, 'Cutpurse', 'Карманник', 'man', 'a wiry Fog Broker cutpurse in a patched dark grey coat with deep pockets and a low grey cap pulled down over the eyes, a small hooked purse-knife in his right hand', 'crouched a little lower, the knife hidden along his wrist', 'a quick darting slash with the hooked knife toward the right')
 c('fog_cardsharp', 'brokers', 1, 'Cardsharp', 'Шулер', 'man', 'a smiling Fog Broker cardsharp in a faded wine-dark waistcoat with a loose cravat and a battered grey top hat, a fan of playing cards in his left hand, a short thin stiletto in his right', 'the cards fanned wider, a die rolling across his knuckles', 'a quick stiletto thrust toward the right, the cards still fanned in his other hand')
 c('fog_viper', 'brokers', 3, 'Fog Viper', 'Туманная гадюка', 'man', 'a lithe Fog Broker viper in a close charcoal hood and a scarf of grey-green scale pattern over the lower face, a belt of small stoppered green vials, a long slim blowpipe banded with green', 'the blowpipe lowered, the hooded head turned', 'blowing a dart through the blowpipe toward the right')
+# The second dozen (2026-10-04): the fog chemists.
+c('fog_chemist', 'brokers', 3, 'Fog Chemist', 'Туманный химик', 'man', 'a Fog Broker chemist in a long grey leather coat and a hood, a cloth mask over the mouth and round smoked-glass goggles, a bandolier of round glass flasks swirling with pale fog, one flask in his raised hand', 'the flask swirled, a wisp of grey fog curling from its stopper', 'hurling the fog flask toward the right, a trail of grey vapour behind it')
 
 # ---- The Gilded Ledger: the merchant company's hired arms, black and gold -------------------------------------------
 c('porter', 'league', 1, 'Dock Porter', 'Портовый грузчик', 'man', 'a burly dock porter in a sweat-stained shirt and a leather back harness, a short iron-bound cudgel', 'the cudgel tapped against his palm', 'swinging the cudgel in a heavy blow toward the right')
@@ -159,6 +168,8 @@ c('paymaster', 'league', 5, 'Paymaster', 'Казначей', 'man', "the Ledger'
 c('company_cannoneer', 'league', 4, 'Company Cannoneer', 'Канонир Компании', 'man', 'a cannoneer of the Gilded Ledger in a black coat with gold buttons and a gold-banded hat, standing beside a small swivel gun with a gilded barrel on a short black post (the gun is part of the figure and stands beside him in every frame), a brass linstock in his hand', 'the linstock lifted, smoke curling from its match', 'touching the linstock to the gilded swivel gun, which fires toward the right with a small bright flash and a puff of grey smoke, the cannoneer leaning away')
 c('petardier', 'league', 4, 'Petardier', 'Петардист', 'man', 'a Ledger petardier in a black leather jerkin with gold piping and a plain steel cap, a satchel of small brass-cased petards at his hip, one lit petard in his right hand', 'the petard hand drawn back a little, the fuse sparking', 'hurling the lit brass petard overarm toward the right, the fuse sparking')
 c('ledger_factor', 'league', 3, 'Company Factor', 'Фактор Компании', 'man', 'a factor of the Gilded Ledger: a lean clerkly man in a long black coat with gold frogging and a high collar, small round spectacles, a heavy ledger held under his left arm, a long gilded pistol in his right hand', 'glancing down at the ledger under his arm, the pistol lowered', 'firing the gilded pistol toward the right, a small bright muzzle flash and a puff of grey smoke, the ledger still under his arm')
+# The second dozen (2026-10-04): the bounty hunters.
+c('bounty_hunter', 'league', 2, 'Bounty Hunter', 'Охотник за наградой', 'man', 'a Ledger bounty hunter in a black leather coat with gold buttons and a wide black hat, a weighted net gathered over his left shoulder, a heavy iron-bound cudgel in his right hand', 'the net gathered in his left hand, the cudgel tapping his boot', 'flinging the weighted net open toward the right, the cudgel raised behind it')
 
 # ---- The Free Harbors: the islands' fishers and warriors -------------------------------------------------------------
 c('fisher', 'free', 1, 'Fisher', 'Рыбак', 'man', 'an island fisherman in a straw hat and rolled trousers, barefoot, a long gaff hook', 'the gaff lifted a little', 'swinging the gaff hook toward the right')
@@ -175,6 +186,10 @@ c('volcano_guardian', 'free', 5, 'Volcano Guardian', 'Вулканический
 c('reef_raider', 'free', 2, 'Reef Raider', 'Рифовый налётчик', 'man', 'a lean island reef raider tattooed with dark wave patterns, a woven fibre kilt and a collar of white shells, a short wooden club edged with sharp grey coral in each hand', 'both coral clubs lifted a little, his chest risen', 'leaping forward to the right with both coral clubs swinging in a cross')
 c('shark_dancer', 'free', 1, 'Shark Dancer', 'Танцующий с акулами', 'man', 'an island shark dancer: a lithe warrior with rows of shark-tooth tattoos down his arms, a band of grey sharkskin round his brow and a short woven skirt, a curved knife of shark teeth set in dark wood in each hand', 'his weight shifted onto one foot as in a dance, both knives crossed low', 'a spinning slash with both shark-tooth knives toward the right')
 c('island_elder', 'free', 1, 'Island Elder', 'Старейшина острова', 'man', 'an island elder and healer: a white-haired old man with deep tattoos on his face and arms, a cloak of woven palm fibre and dark feathers, a pouch of dried herbs at his belt, a tall staff of dark carved wood topped with a carved sea turtle', 'leaning on the staff, the feathers of his cloak stirring', 'striking the carved staff down toward the right')
+# The second dozen (2026-10-04): the stone-axe warriors, the masked archers, the island chiefs.
+c('stone_axeman', 'free', 2, 'Stone-Axe Warrior', 'Воин с каменными топорами', 'man', 'an island stone-axe warrior: a broad tattooed man in a woven fibre cuirass and a collar of white shells, a hafted axe of polished black stone in each hand', 'both axes lifted a little, his chest risen', 'two crossing chops of the stone axes toward the right')
+c('mask_archer', 'free', 3, 'Masked Archer', 'Лучник в маске', 'man', 'an island archer in a tall carved wooden spirit mask painted with dark wave spirals and fringed with dried palm fibre, a woven fibre cuirass, a tall bow of dark wood', 'an arrow nocked, the masked head tilted', 'loosing an arrow toward the right, the bow at full draw')
+c('island_chief', 'free', 4, 'Island Chief', 'Вождь острова', 'man', 'an island chief: a tall powerful man with a face of deep tattoos, a long cloak of dark feathers over his shoulders, a broad collar of white shells, a great war club of dark carved wood inlaid with mother-of-pearl', 'the war club lifted onto his shoulder, his chin raised', 'a sweeping blow of the great war club toward the right')
 
 # ---- New wild beasts: the islands' and the shallows' ----------------------------------------------------------------
 c('wild_boar', 'wild', 2, 'Wild Boar', 'Дикий кабан', 'beast', 'a big bristly island wild boar with long curved tusks, its head toward the right', 'its head lowered, snout twitching', 'charging toward the right, tusks first')
@@ -258,6 +273,19 @@ c('obsidian_golem', 'premium', 6, 'Obsidian Golem', 'Обсидиановый г
 c('lava_drake', 'premium', 6, 'Lava Drake', 'Лавовый дракон', 'fly', 'a lava drake with dark basalt scales, glowing ember-orange wing membranes and a smouldering tail, flying toward the right', 'its wings at the top of their beat, embers falling', 'diving toward the right breathing a short gout of fire')
 c('sea_wolf', 'premium', 4, 'Sea Wolf', 'Морской волк', 'beast', 'a big grey wolf with a finned ridge down its back, webbed paws and kelp tangled in its wet fur, crouched to spring, facing right', 'its hackles raised, snarling', 'leaping toward the right with its jaws open')
 c('abyss_knight', 'premium', 7, 'Abyss Knight', 'Рыцарь бездны', 'man', 'a towering knight in dark barnacle-crusted plate armour with a faint turquoise glow in the visor slit, a long cloak of kelp and a great sword', 'the great sword planted point-down before him', 'cutting toward the right with the great sword')
+# The shop's second dozen (owner, 2026-10-04: «еще больше … существ»), four to a sheet (QUADS below).
+c('lantern_jelly', 'premium', 4, 'Lantern Jelly', 'Фонарная медуза', 'water', 'a giant pale jellyfish rising out of the water, a tall translucent bell glowing with a soft blue-green light from within and long trailing stinging tendrils, facing right', 'its bell pulsing a little smaller, the tendrils drifting the other way', 'lashing its long tendrils out toward the right in a crackle of pale light')
+c('mantis_shrimp', 'premium', 4, 'Giant Mantis Shrimp', 'Гигантский рак-богомол', 'beast', 'a giant mantis shrimp as big as a hound, an armoured segmented body in deep green, orange and blue, stalked eyes, two folded club-like forelimbs held ready, its head toward the right', 'its stalked eyes swivelling, its clubs folded tighter', 'punching both club-like forelimbs out toward the right in a blur')
+c('hammerhead', 'premium', 4, 'Hammerhead Shark', 'Акула-молот', 'water', 'a big grey hammerhead shark rising out of the water, its wide hammer-shaped head with dark eyes at the tips, a tall dorsal fin, facing right', 'its head swinging the other way', 'snapping its jaws forward toward the right')
+c('walrus_bull', 'premium', 5, 'Walrus Bull', 'Морж-вожак', 'beast', 'a huge scarred walrus bull with long ivory tusks, thick folded brown hide and bristling whiskers, rearing on its front flippers, its head toward the right', 'its head lifted, whiskers twitching', 'driving its long tusks down toward the right')
+c('merrow_warden', 'premium', 5, 'Merrow Warden', 'Страж мерроу', 'man', 'a merrow warden: a tall sea-folk warrior with blue-grey scaled skin, a finned crest, webbed hands and wide dark eyes, armour of overlapping shells and a long coral-tipped trident', 'the trident lifted upright, his crest raised', 'a hard thrust of the trident toward the right')
+c('sea_naga', 'premium', 5, 'Sea Naga', 'Морская нага', 'water', 'a sea naga rising out of the water: the upper body of a woman with dark green scales, long black hair and gold armbands above a long serpent tail coiled in the sea, a curved bronze sword in each hand, facing right', 'her tail coiling a little higher, the swords crossed', 'two crossing cuts of the curved swords toward the right')
+c('brass_automaton', 'premium', 5, 'Brass Automaton', 'Латунный автомат', 'big', 'a tall brass automaton marine: a riveted body of tarnished brass and iron plates with a small glowing furnace grate in its chest, a round shield on its left arm and a heavy brass mace in its right', 'a puff of steam from its shoulder vents, the shield raised a little', 'a heavy blow of the brass mace toward the right from behind the shield')
+c('storm_giant', 'premium', 6, 'Storm Giant', 'Штормовой великан', 'big', 'a storm giant: a towering bearded giant with grey skin, long wild hair streaming as in a gale, a kilt of old sailcloth and a great iron anchor-hook for a weapon, small sparks of lightning crawling over his arms', 'his hair streaming the other way, sparks at his fingertips', 'swinging the anchor-hook toward the right, a crackle of lightning running down it')
+c('ember_phoenix', 'premium', 6, 'Ember Phoenix', 'Угольный феникс', 'fly', 'an ember phoenix: a great bird of prey with smouldering dark red and charcoal feathers, glowing ember-orange edges on its wings and a long trailing tail of embers, flying toward the right', 'its wings at the top of their beat, embers drifting', 'diving toward the right, talons forward and a burst of embers from its wings')
+c('megalodon', 'premium', 7, 'Megalodon', 'Мегалодон', 'water', 'a colossal ancient shark rising out of the sea, a scarred slate-grey back, a pale belly and a vast jaw of serrated teeth, facing right', 'its jaws closing, water streaming from its snout', 'lunging toward the right with its vast jaws wide open')
+c('marid', 'premium', 7, 'Marid', 'Марид', 'water', 'a marid, a djinn of the sea: a towering bearded torso of deep blue-green skin with gold armbands and a turban, rising out of the water on a swirling column of sea water and foam, facing right', 'its arms folded, the water of its column swirling', 'thrusting both hands toward the right, a wave of foaming sea water surging from its palms', 'jerking back from a blow while still facing right, its arms thrown up, sinking a little lower into its water')
+c('ice_wyvern', 'premium', 7, 'Ice Wyvern', 'Ледяная виверна', 'fly', 'a great ice wyvern with pale blue-white scales and frosted membranous wings, a long tail ending in a spike of ice, a horned head, flying toward the right', 'its wings tilted the other way, frost drifting from them', 'breathing a jet of freezing white mist toward the right')
 c('sea_griffin', 'premium', 6, 'Sea Griffin', 'Морской грифон', 'fly', "a sea griffin with an eagle's white head and grey wings and the body of a sleek grey sea lion with webbed paws, flying toward the right", 'its wings tilted the other way', 'diving toward the right with its beak open and talons forward')
 
 # ---- The Dutchman's ghosts: pale, solid, tattered, a faint green glow ------------------------------------------------
@@ -273,6 +301,10 @@ c('dutchman_mate', 'dutchman', 7, "Dutchman's Mate", 'Старпом «Голл�
 c('dutchman_bulwark', 'dutchman', 2, 'Barnacled Bulwark', 'Ракушечный заслон', 'man', 'a spectral bulwark of the Dutchman: pale grey-green spectral skin, a rotted sea coat, a heavy round wooden hatch cover studded with plain round grey barnacles and limpets (nothing on it shaped like a skull or a face) carried as a shield on the left arm, a short rusted cutlass, a faint green glow about him', 'the hatch-cover shield raised a little', 'thrusting the rusted cutlass toward the right from behind the hatch-cover shield')
 c('ghost_marksman', 'dutchman', 3, 'Ghost Marksman', 'Призрачный меткий стрелок', 'man', 'a ghost marksman of the Dutchman: a gaunt pale spectral rifleman in a rotted green-black coat and a drooping hat, a long rusted rifle with a cracked brass-bound stock, a faint green glow', 'the rifle lowered, his hollow eyes lifted to look', 'kneeling on one knee and firing the long rifle toward the right, a pale green muzzle flash and a puff of grey-green smoke')
 c('ghost_cutthroat', 'dutchman', 5, 'Ghost Cutthroat', 'Призрачный головорез', 'man', 'a ghost cutthroat of the Dutchman: a lean pale spectral man in a rotted black long coat with a tattered scarf over the lower face, a long thin rusted knife, the edges of his coat fraying into faint green mist, a faint green glow', 'the knife turned in his fingers, his head lowered', 'darting forward with a low knife stab toward the right')
+# The second dozen (2026-10-04): the frostbound, the ghost bombers, the ghost commodores.
+c('frostbound', 'dutchman', 2, 'Frostbound', 'Обледеневший', 'man', 'a frostbound sailor of the Dutchman, lost with a ship in the ice: pale grey-green spectral skin, a faded sea coat crusted with white frost and small icicles, a faint cold blue light in his hollow eyes, a short boarding axe rimed with ice', 'frost drifting off his shoulders, the axe lowered', 'a chopping blow of the frosted axe toward the right, a puff of cold white mist')
+c('ghost_bomber', 'dutchman', 3, 'Ghost Bomber', 'Призрачный бомбометатель', 'man', 'a ghost bomber of the Dutchman: pale grey-green spectral skin, a rotted grey coat and a tarred hat, a satchel of round iron bombs at his hip, one bomb with a sputtering cold green fuse in his right hand, a faint green glow', 'the bomb hand drawn back a little, the green fuse sputtering', 'hurling the bomb overarm toward the right, its fuse trailing a thread of cold green sparks')
+c('ghost_commodore', 'dutchman', 7, 'Ghost Commodore', 'Призрачный коммодор', 'man', "a ghost commodore of the Dutchman's lost fleet: a tall gaunt spectral officer with pale grey-green skin in a long rotted coat with tarnished gold braid and a cocked hat, a long heavy sword, a faint green glow about him", 'the sword lifted to his shoulder, his coat stirring as in a wind', 'a powerful downward cut of the long sword toward the right')
 
 # ---- The captains at the field's corners (the six paths) ------------------------------------------------------------
 c('hero_corsair', 'hero', 0, 'Corsair', 'Корсар', 'man', 'a corsair captain: a weathered older man with a short grey beard, a black tricorne, a long black coat with brass buttons, a cutlass and a brace of pistols', 'his free hand on his belt, chin raised', 'raising the cutlass high and pointing it toward the right, shouting an order')
@@ -343,11 +375,86 @@ def gpt_prompt(k: dict) -> str:
 
 FRAMES = ('', '_b', '_atk', '_hit')
 
+# The second dozen of the shop and of the world's armies (owner, 2026-10-04: «еще больше … существ»), painted four to a
+# sheet: each row one kind in its four poses, a 4×4 grid that slice_sheet.py cuts by its shapes in reading order (`split:
+# blobs`), row by row. tools/art/fleet_next.py puts them on the sheets anim4_1–anim4_6 and in the painter's queue;
+# main() leaves them out of the one-kind sheets. The like with the like, so a sheet is painted at one scale.
+QUADS = [
+    ['crown_pikeman', 'rime_witch', 'line_harpooner', 'hunt_master'],
+    ['fog_chemist', 'bounty_hunter', 'stone_axeman', 'mask_archer'],
+    ['island_chief', 'frostbound', 'ghost_bomber', 'ghost_commodore'],
+    ['lantern_jelly', 'mantis_shrimp', 'hammerhead', 'walrus_bull'],
+    ['merrow_warden', 'sea_naga', 'brass_automaton', 'storm_giant'],
+    ['ember_phoenix', 'megalodon', 'marid', 'ice_wyvern'],
+]
+IN_QUADS = {cid for q in QUADS for cid in q}
+
+
+def kind(cid: str) -> dict:
+    return next(k for k in K if k['id'] == cid)
+
+
+def _place(k: dict, long: bool) -> str:
+    if k['body'] == 'water':
+        return (' It rises out of its own small flat oval patch of dark sea water ringed with white foam, the same patch in every pose.' if long else
+                ' It rises out of the same small oval patch of dark sea water ringed with white foam in every pose.')
+    return ' It hovers in the air in every pose.' if k['body'] == 'fly' else ''
+
+
+def quad_prompt(group: list) -> str:
+    """Four kinds on one sheet, a row each, in the words of prompt()."""
+    rows = []
+    for i, k in enumerate(group):
+        _, idle = BASE[k['body']]
+        rows.append(f"Row {i + 1} — {k['look']}.{_place(k, True)} Its poses: first — idle: {idle}; second — idle a breath later: the same pose "
+                    f"with a tiny change only, {k['idle2']}; third — attack: {k['attack']}; fourth — hit: {k['hit']}.")
+    return (
+        'Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of '
+        'Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, bold readable silhouettes. '
+        'The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, '
+        'left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, '
+        'all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. '
+        + ' '.join(rows) + ' '
+        'In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. '
+        'Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. '
+        "The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. "
+        'The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. '
+        'Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation '
+        'with small warm highlights. '
+        'Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, '
+        'NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, '
+        'NO captions, NO text, NO letters, NO numbers, NO watermark. '
+        'Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, '
+        'thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.'
+    )
+
+
+def quad_gpt_prompt(group: list) -> str:
+    """The same sheet asked of ChatGPT, in gpt_prompt()'s plain and shorter words."""
+    rows = []
+    for i, k in enumerate(group):
+        _, idle = BASE[k['body']]
+        rows.append(f"Row {i + 1}: {k['look']}.{_place(k, False)} Its poses: 1) idle, {idle}; 2) the same pose a breath later, {k['idle2']}; "
+                    f"3) attack, {k['attack']}; 4) hit, {k['hit']}.")
+    return (
+        'Draw a square image: a game sprite sheet of four different figures, one to a row, each in four poses side by side — sixteen figures '
+        'in a 4 by 4 grid, each centred in its own cell with wide empty gaps between them so that no two touch. '
+        + ' '.join(rows) + ' '
+        'In each row all four poses show exactly the same figure — the same face, clothes, colours and size; every pose faces right in '
+        "three-quarter view from slightly above; the whole body is visible; each figure is about three quarters of its cell's height. "
+        'Smooth painterly digital painting with soft edges and no ink outlines, like the hand-painted unit sprites of 1990s fantasy '
+        'strategy games, grim and weathered; muted colours: charcoal, tarred leather, wool, rust, old brass, faded red, cold blue-grey. '
+        'No blood, no wounds and no red stains anywhere; each weapon stays in its hands in every pose. '
+        'Solid flat magenta #FF00FF background, no floor, no shadows, no lines, no frames, no text.'
+    )
+
 
 def main() -> None:
     sheets = json.load(open(SHEETS, encoding='utf-8'))
     jobs = []
     for k in K:
+        if k['id'] in IN_QUADS:
+            continue  # painted four to a sheet (tools/art/fleet_next.py)
         ids = [f"unit.{k['id']}{f}" for f in FRAMES]
         p = prompt(k)
         old = sheets.get(f"anim_{k['id']}", {})
@@ -364,7 +471,7 @@ def main() -> None:
         json.dump(jobs, f, ensure_ascii=False)
     # ChatGPT's wording of the same sheets (assets/raw/q_gpt.json, by job name).
     with open(os.path.join(ROOT, 'assets', 'raw', 'q_gpt.json'), 'w', encoding='utf-8') as f:
-        json.dump({f"sheet.anim_{k['id']}": gpt_prompt(k) for k in K}, f, ensure_ascii=False)
+        json.dump({f"sheet.anim_{k['id']}": gpt_prompt(k) for k in K if k['id'] not in IN_QUADS}, f, ensure_ascii=False)
     by = {}
     for k in K:
         by[k['faction']] = by.get(k['faction'], 0) + 1

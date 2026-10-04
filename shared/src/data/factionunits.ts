@@ -135,6 +135,28 @@ export const FACTION_KINDS = {
   dutchman_bulwark: { roster: 'dutchman', as: 'sea_guard' },
   ghost_marksman: { roster: 'dutchman', as: 'sharpshooter' },
   ghost_cutthroat: { roster: 'dutchman', as: 'cutthroat' },
+  // The second dozen (owner, 2026-10-04: «еще больше … существ»): twelve elites more. The rosters have no hole left
+  // where their ships carry men (a navy's hands, marines, shields, shooters and guns, from ⚓9 its life guard; a
+  // merchant's hands and shooters; the deep's all that, its knives and its dead — the seven slots fold the boarders and
+  // the guards away), so each new kind takes, from a level of the waters, a place no elite of its faction held: the
+  // Crown's boarding pikemen among the ironclads; the Choir's rime witches among the chanters; the Harpoon's line
+  // harpooners among the harpooners and its masters of the hunt among the master harpooners; the Brokers' fog chemists
+  // among the alchemists; the Ledger's bounty hunters among the company guards; the Free Harbors' stone-axe warriors
+  // among the island warriors, its masked archers among the archers and its island chiefs among the tide shamans; the
+  // Dutchman's frostbound among its boarders, its ghost bombers among its musketeers and its ghost commodores over its
+  // mates.
+  crown_pikeman: { roster: 'crown', as: 'sea_guard' },
+  rime_witch: { roster: 'choir', as: 'musketeer' },
+  line_harpooner: { roster: 'harpoon', as: 'musketeer' },
+  hunt_master: { roster: 'harpoon', as: 'sharpshooter' },
+  fog_chemist: { roster: 'brokers', as: 'sharpshooter' },
+  bounty_hunter: { roster: 'league', as: 'marine' },
+  stone_axeman: { roster: 'free', as: 'sea_guard' },
+  mask_archer: { roster: 'free', as: 'sharpshooter' },
+  island_chief: { roster: 'free', as: 'gunner' },
+  frostbound: { roster: 'dutchman', as: 'marine' },
+  ghost_bomber: { roster: 'dutchman', as: 'musketeer' },
+  ghost_commodore: { roster: 'dutchman', as: 'deep_spawn' },
 } as const satisfies Record<string, { roster: Roster; as: MenId }>;
 
 export type FactionKindId = keyof typeof FACTION_KINDS;
@@ -177,6 +199,27 @@ export const FACTION_ELITES: Partial<Record<FactionKindId, FactionElite>> = {
   shark_dancer: { from: 7, own: { atk: 3, dmin: 1, dmax: 1, specials: ['double_strike', 'no_retaliation'] } },
   reef_raider: { from: 7, own: { atk: 7, dmin: 2, dmax: 4, specials: ['diving'] } },
   volcano_guardian: { from: 9, own: { atk: 15, dmin: 7, dmax: 10, specials: ['steady', 'breath'] } },
+  // The second dozen (2026-10-04). The Crown's pikemen give up the ironclads' shields for a reach no blow answers.
+  crown_pikeman: { from: 6, own: { atk: 7, dmin: 2, dmax: 4, specials: ['no_retaliation'] } },
+  // The Choir's rime witches spray a brine that chills.
+  rime_witch: { from: 5, own: { atk: 5, dmin: 2, dmax: 3, shots: 4, specials: ['shooter', 'chill'] } },
+  // The Harpoon's line harpooners pin a stack one throw in four; its masters of the hunt sound the whale-tooth horn.
+  line_harpooner: { from: 6, own: { atk: 5, dmin: 2, dmax: 3, shots: 4, specials: ['shooter', 'bind'] } },
+  hunt_master: { from: 7, own: { atk: 7, dmin: 2, dmax: 4, shots: 5, specials: ['shooter', 'leader'] } },
+  // The Brokers' fog chemists: a flask's burst leaps on to the next stack.
+  fog_chemist: { from: 7, own: { atk: 7, dmin: 2, dmax: 4, shots: 5, specials: ['shooter', 'chain'] } },
+  // The Ledger's bounty hunters net a stack one blow in four.
+  bounty_hunter: { from: 6, own: { atk: 6, dmin: 2, dmax: 3, specials: ['bind'] } },
+  // The Free Harbors: the stone-axe warriors strike twice where the island warriors stood behind shields; the masked
+  // archers bring the spirits' luck; the island chiefs come with the tide shamans' canoes, a war club for a conch.
+  stone_axeman: { from: 6, own: { atk: 8, dmin: 2, dmax: 3, specials: ['double_strike'] } },
+  mask_archer: { from: 7, own: { atk: 7, dmin: 2, dmax: 4, shots: 5, specials: ['shooter', 'fortune'] } },
+  island_chief: { from: 5, own: { atk: 9, dmin: 3, dmax: 6, shots: 0, specials: ['leader', 'steady'] } },
+  // The Dutchman: the frostbound chill what they strike; the ghost bombers' bombs burst on a stack and those beside it;
+  // the ghost commodores lead the dead where the mates swept the deck.
+  frostbound: { from: 6, own: { atk: 6, dmin: 2, dmax: 3, specials: ['chill'] } },
+  ghost_bomber: { from: 5, own: { atk: 6, dmin: 2, dmax: 3, shots: 2, specials: ['shooter', 'blast'] } },
+  ghost_commodore: { from: 8, own: { atk: 16, dmin: 9, dmax: 14, specials: ['undead', 'fear', 'leader'] } },
 };
 
 /** A roster's kind in a pirate kind's place (none: the pirate kind itself serves); from its level, an elite. */
@@ -298,4 +341,16 @@ export const FACTION_NAMES: Record<FactionKindId, [string, string, string, strin
   dutchman_bulwark: ['Barnacled bulwarks', 'Ракушечные заслоны', 'Dead men behind hatch covers grown with barnacles: shot does them half the harm.', 'Мертвецы за крышками люков в ракушках: пули вредят вдвое меньше.'],
   ghost_marksman: ['Ghost marksmen', 'Призрачные меткие стрелки', 'Rifles that still remember their aim: no range too long, no foe too close.', 'Ружья, что ещё помнят прицел: им не далеко и не близко.'],
   ghost_cutthroat: ['Ghost cutthroats', 'Призрачные головорезы', 'Knives that pass like a cold draught: they strike twice and are never answered.', 'Ножи, что проходят холодным сквозняком: бьют дважды, им не отвечают.'],
+  hunt_master: ['Masters of the hunt', 'Мастера охоты', "The Order's old hunters with a whale-tooth horn and the heaviest irons: the Order fights harder when the horn sounds.", 'Старые охотники Ордена с рогом из китового зуба и самыми тяжёлыми гарпунами: когда трубит рог, Орден бьётся злее.'],
+  stone_axeman: ['Stone-axe warriors', 'Воины с каменными топорами', 'Two axes of polished black stone: two blows for every one of yours.', 'Два топора из полированного чёрного камня: два удара на каждый ваш.'],
+  mask_archer: ['Masked archers', 'Лучники в масках', 'Archers in tall carved spirit masks: the spirits of the isles bring their side luck.', 'Лучники в высоких резных масках духов: духи островов приносят их стороне удачу.'],
+  island_chief: ['Island chiefs', 'Вожди островов', 'A cloak of dark feathers and a great war club: the islanders fight harder beside them, and they never break.', 'Плащ из тёмных перьев и великая боевая дубина: рядом с ними островитяне бьются злее, а сами они не дрогнут.'],
+  ghost_bomber: ['Ghost bombers', 'Призрачные бомбометатели', 'Iron bombs on cold green fuses: a burst on a stack and those beside it.', 'Чугунные бомбы на холодных зелёных фитилях: разрыв на отряде и соседях.'],
+  ghost_commodore: ['Ghost commodores', 'Призрачные коммодоры', "Officers of the Dutchman's lost fleet in tarnished braid: the dead fight harder under them, and the living beside them may freeze with fear.", 'Офицеры пропавшего флота «Голландца» в потускневшем галуне: под ними мёртвые бьются злее, а живые рядом с ними могут оцепенеть от страха.'],
+  crown_pikeman: ['Boarding pikemen', 'Абордажные пикинёры', 'Long boarding pikes over the rail: their thrust outreaches the answer, and none is answered.', 'Длинные абордажные пики через фальшборт: их удар длиннее ответа, и на него не отвечают.'],
+  rime_witch: ['Rime witches', 'Ведьмы инея', 'A spray of freezing brine across the deck: the stack it strikes walks shorter and acts later to the end of the next round.', 'Струя ледяного рассола через палубу: до конца следующего раунда отряд-цель ходит короче и позже.'],
+  line_harpooner: ['Line harpooners', 'Гарпунёры с линём', 'A light harpoon made fast to a line: one throw in four pins a stack, and it loses its next turn.', 'Лёгкий гарпун на лине: раз в четыре броска пригвождает отряд, и тот теряет следующий ход.'],
+  fog_chemist: ['Fog chemists', 'Туманные химики', 'Flasks of fog-fire: each burst leaps on to the stack beside the struck one, half as hard.', 'Колбы туманного огня: каждый разрыв перескакивает на соседний отряд — вполсилы.'],
+  bounty_hunter: ['Bounty hunters', 'Охотники за наградой', 'A weighted net and a cudgel: one blow in four nets a stack, and it loses its next turn.', 'Утяжелённая сеть и дубинка: раз в четыре удара отряд запутан и теряет следующий ход.'],
+  frostbound: ['Frostbound', 'Обледеневшие', 'Dead men of a ship lost in the ice: the stack they strike walks shorter and acts later to the end of the next round.', 'Мертвецы корабля, пропавшего во льдах: до конца следующего раунда отряд, по которому они ударят, ходит короче и позже.'],
 };

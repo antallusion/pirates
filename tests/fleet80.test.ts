@@ -2,7 +2,8 @@
 // warships, the traders, the runners and the haulers — ten of each sold for doubloons with a gift of her own and a
 // creature kind of her own; the lists keeping their trades and growing with their tiers; the premium hulls never sold
 // for silver nor sailed by the sea; the purchase delivering the hull and her creatures; every gift's mechanic at work;
-// the art that stands in while their own is painted; and every word in both languages.
+// the art that stands in while their own is painted; and every word in both languages. And the eight silver hulls that
+// make the lines of the yard's tree whole (owner, 2026-10-04: «еще больше … кораблей»; docs/20 §6).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -49,20 +50,23 @@ const sheets = JSON.parse(readFileSync(new URL('../tools/art/sheets.json', impor
 
 const PREMIUM = SHIP_CLASS_IDS.filter((c) => SHIP_CLASSES[c].premium);
 const NEW = FLEET_HULLS.filter((c) => !OLD_HULLS.includes(c)) as FleetClassId[];
+/** The eight silver hulls that make the lines whole (owner, 2026-10-04; docs/20 §6), beside the fleet of eighty. */
+const LINES: FleetClassId[] = ['sloop_of_war', 'armed_fluyt', 'polacre', 'dunkirk_frigate', 'great_xebec', 'race_galleon', 'great_indiaman', 'manila_galleon'];
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
 const digits = (s: string) => (s.match(/\d+(?:[.,]\d+)?/g) ?? []).sort().join(' ');
 const cyr = (s: string) => /[а-яё]/i.test(s);
 
 // ------------------------------------------------------------------------------------------------ the lists
 
-test('eighty hulls a captain sails, in four lists of twenty, ten of each sold for doubloons', () => {
-  assert.equal(FLEET_HULLS.length, 80);
-  assert.equal(new Set(FLEET_HULLS).size, 80);
-  assert.equal(NEW.length, 66);
+test('eighty hulls a captain sails, in four lists of twenty, ten of each sold for doubloons — and the eight that make the lines whole', () => {
+  assert.equal(FLEET_HULLS.length, 80 + LINES.length);
+  assert.equal(new Set(FLEET_HULLS).size, 88);
+  assert.equal(NEW.length, 66 + LINES.length);
   for (const l of FLEET_LISTS) {
-    assert.equal(FLEET[l].length, 20, `${l}: twenty`);
+    assert.equal(FLEET[l].filter((c) => !LINES.includes(c as FleetClassId)).length, 20, `${l}: twenty`);
     assert.equal(FLEET[l].filter((c) => SHIP_CLASSES[c].premium).length, 10, `${l}: ten premium`);
   }
+  assert.deepEqual(FLEET_LISTS.map((l) => FLEET[l].length), [21, 22, 24, 21], 'the warships, the traders, the runners, the haulers');
   assert.equal(PREMIUM.length, 40);
   assert.deepEqual([...premiumShips()].sort(), [...PREMIUM].sort(), 'the shop sells every one of them');
   // The fourteen old hulls stand in the lists; the Dutchman's ship and the deep's monsters in none.
@@ -140,6 +144,31 @@ test('each list keeps its trade, and within a list the hulls grow with their tie
   assert.ok(st('turtle_barge').hullMax > SHIP_CLASSES.turtle_barge.hull, 'the living shell');
   // The oared hulls row as the xebec does.
   for (const c of FLEET_HULLS) if (d(c).passive.id === 'sweeps') assert.equal(rowSpeed(c, false, false), 3, `${c} rows`);
+});
+
+test('the eight that make the lines whole: silver hulls at any yard of their rank, priced between the tiers about them, on the painter\'s sheets', () => {
+  const d = (c: ShipClassId) => SHIP_CLASSES[c];
+  assert.deepEqual(LINES.map((c) => `${d(c).list}${d(c).tier}`), ['combat2', 'hauler3', 'fast4', 'fast4', 'fast5', 'fast5', 'trade5', 'trade5']);
+  for (const c of LINES) {
+    assert.ok(d(c).purchasable && !d(c).premium && !d(c).factions && !d(c).fixedMount, `${c}: silver, at any yard of her rank`);
+    assert.ok(d(c).passive.mods || d(c).passive.id === 'sweeps', `${c}: her trait is a real line on her stats`);
+    const at = (t: number) => FLEET[d(c).list!].filter((x) => d(x).tier === t && !LINES.includes(x as FleetClassId));
+    const below = at(d(c).tier - 1), above = at(d(c).tier + 1);
+    if (below.length) assert.ok(d(c).price > Math.max(...below.map((x) => d(x).price)), `${c}: dearer than her list's tier below`);
+    if (above.length) assert.ok(d(c).price < Math.min(...above.map((x) => d(x).price)), `${c}: cheaper than her list's tier above`);
+  }
+  // Every list has a silver hull of its own at every tier now, sold at any yard of the rank: the tree's lines run whole.
+  for (const l of FLEET_LISTS) for (const t of [1, 2, 3, 4, 5]) assert.ok(FLEET[l].some((c) => d(c).tier === t && d(c).purchasable && !d(c).factions), `${l}: a silver hull of tier ${t}`);
+  // Her trait at work: the sloop's drill, the polacre's pole masts, the great traders' thrift.
+  const st = (c: ShipClassId) => computeShipStats({ classId: c, name: 'x', guns: { port: 'light_6', starboard: 'light_6' }, modules: {} }, 'corsair', {});
+  assert.ok(st('sloop_of_war').reloadMul < st('war_galley').reloadMul && st('sloop_of_war').spreadMul < 1);
+  assert.ok(st('polacre').sailChangeRate > st('baltimore_clipper').sailChangeRate);
+  assert.ok(st('great_indiaman').x.wages < 0 && st('manila_galleon').provisionUse < st('east_indiaman').provisionUse);
+  // Their sprites on two sheets of their own, in the painter's queue (tools/art/fleet_next.py); their decks are single
+  // paintings in the same queue, and both stand in as old hulls of their lists till then.
+  const art = sheets as unknown as Record<string, { ids: string[]; painting?: boolean }>;
+  assert.deepEqual([...art.ships_19.ids, ...art.ships_20.ids].sort(), LINES.map((c) => d(c).sprite).sort());
+  assert.ok(art.ships_19.painting && art.ships_20.painting);
 });
 
 // ------------------------------------------------------------------------------------------------ the premium forty
