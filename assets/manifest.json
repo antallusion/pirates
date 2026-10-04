@@ -2398,6 +2398,10 @@
     "unit.island_elder":                       { "local": "units/island_elder.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.0", "rev": 20261004051403},
     "unit.island_elder_b":                     { "local": "units/island_elder_b.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.1", "rev": 20261004051403},
     "unit.island_elder_atk":                   { "local": "units/island_elder_atk.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.2", "rev": 20261004051403},
-    "unit.island_elder_hit":                   { "local": "units/island_elder_hit.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.3", "rev": 20261004051403}
+    "unit.island_elder_hit":                   { "local": "units/island_elder_hit.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.3", "rev": 20261004051403},
+    "unit.dutchman_bulwark":                   { "local": "units/dutchman_bulwark.webp", "remote": "hf_20261004_051727_gpt-anim_dutchman_bulwark.png", "job": "gpt-anim_dutchman_bulwark", "fit": "sheet:anim_dutchman_bulwark.0", "rev": 20261004051727},
+    "unit.dutchman_bulwark_b":                 { "local": "units/dutchman_bulwark_b.webp", "remote": "hf_20261004_051727_gpt-anim_dutchman_bulwark.png", "job": "gpt-anim_dutchman_bulwark", "fit": "sheet:anim_dutchman_bulwark.1", "rev": 20261004051727},
+    "unit.dutchman_bulwark_atk":               { "local": "units/dutchman_bulwark_atk.webp", "remote": "hf_20261004_051727_gpt-anim_dutchman_bulwark.png", "job": "gpt-anim_dutchman_bulwark", "fit": "sheet:anim_dutchman_bulwark.2", "rev": 20261004051727},
+    "unit.dutchman_bulwark_hit":               { "local": "units/dutchman_bulwark_hit.webp", "remote": "hf_20261004_051727_gpt-anim_dutchman_bulwark.png", "job": "gpt-anim_dutchman_bulwark", "fit": "sheet:anim_dutchman_bulwark.3", "rev": 20261004051727}
   }
 }
