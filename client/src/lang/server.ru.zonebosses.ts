@@ -15,8 +15,7 @@ export const SERVER_RU_ZONEBOSSES: Record<string, string> = {
   // The boarding ban.
   'Her decks cannot be taken — guns only': 'Её не взять на абордаж — только пушками',
   // The spoils.
-  'The sinking of {0}': 'Потопление корабля «{0}»',
-  '{0} is sunk! Your part: {1}%. Pieces of ship gear: {2}; the prize money comes by letter.': 'Корабль «{0}» потоплен! Ваша доля: {1}%. Корабельное снаряжение: {2} шт.; призовые придут письмом.',
+  '{0} is sunk! Your part {1}%, +{2} XP, ship gear ×{3}, prize money by letter.': '«{0}» потоплен! Доля {1}%, +{2} опыта, снаряжение ×{3}, призовые — письмом.',
   'The Admiralty Prize Court': 'Призовой суд Адмиралтейства',
   'The spoils of {0}': 'Добыча с корабля «{0}»',
   'Your part of her: {0}%. Pieces of ship gear taken from her: {1}. Your share of her prize money is enclosed.': 'Ваша доля в её гибели: {0}%. Корабельного снаряжения снято: {1} шт. Ваша доля призовых — во вложении.',

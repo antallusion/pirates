@@ -442,11 +442,11 @@ function spoils(game: Game, live: ZbLive, ship: ShipEntity): void {
       const id = game.allocId();
       game.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo: {}, gold: 0, expires: game.now + 900, ownerOnly: sh.account, items: [it] });
     }
-    game.grantXp(s, sh.xp, `The sinking of ${ship.name}`);
+    game.grantXp(s, sh.xp, null); // (told in the one line below: the toasts of a sinking are many already)
     const pct = Math.max(1, Math.round(sh.share * 100));
     // The silver comes by letter, a draft on the League (any port pays it).
     deliver(game, sh.account, { from: 'The Admiralty Prize Court', subject: `The spoils of ${ship.name}`, body: `Your part of her: ${pct}%. Pieces of ship gear taken from her: ${items.length}. Your share of her prize money is enclosed.`, gold: sh.silver, goods: null });
-    game.sendTo(s, { t: 'toast', msg: `${ship.name} is sunk! Your part: ${pct}%. Pieces of ship gear: ${items.length}; the prize money comes by letter.`, kind: 'gold' });
+    game.sendTo(s, { t: 'toast', msg: `${ship.name} is sunk! Your part ${pct}%, +${sh.xp} XP, ship gear ×${items.length}, prize money by letter.`, kind: 'gold' });
     logNote(game, s, 'boss', [ship.name]);
     tattooCount(game, s, 'boss');
     game.saveSession(s);

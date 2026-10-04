@@ -260,7 +260,7 @@ test('the spoils: 2% earns a share of ship gear (the best part a second piece), 
   const letters = lettersSince(game, cs[0].s.accountId, wall0);
   const l = letters.find((x) => x.subject === 'The spoils of The Gilded Leviathan')!;
   assert.ok(l && l.gold > 0, 'the prize money by letter');
-  assert.ok(cs[0].c.all('toast').some((t) => /^The Gilded Leviathan is sunk! Your part: \d+%\. Pieces of ship gear: 2; the prize money comes by letter\.$/.test(t.msg)));
+  assert.ok(cs[0].c.all('toast').some((t) => /^The Gilded Leviathan is sunk! Your part \d+%, \+\d+ XP, ship gear ×2, prize money by letter\.$/.test(t.msg)));
   assert.ok(world(cs[0].c).some((m) => m.startsWith('WORLD: The Gilded Leviathan is sunk in Gravewater Sea by ')));
 });
 
@@ -356,8 +356,8 @@ test('her lines read in Russian', () => {
       'WORLD: The Abyssal Ark has gone into the fog of The Abyss, unbeaten.',
       'WORLD: The White Harrow is sunk in Leviathan Reach by Anna, Bram +3.',
       'Her decks cannot be taken — guns only',
-      'The Cinder Throne is sunk! Your part: 12%. Pieces of ship gear: 2; the prize money comes by letter.',
-      '+1234 XP — The sinking of The Stitched Hulk',
+      'The Cinder Throne is sunk! Your part 12%, +4100 XP, ship gear ×2, prize money by letter.',
+      'A letter from The Admiralty Prize Court: “The spoils of The Iron Lion” — 8450 silver enclosed. [Y]',
       'The spoils of The Drowned Regent',
       'Your part of her: 12%. Pieces of ship gear taken from her: 1. Your share of her prize money is enclosed.',
       'The Admiralty Prize Court',
@@ -377,7 +377,7 @@ test('her lines read in Russian', () => {
       'Usage: /zboss [region] [rise|here|leave|kill|announce|reset]',
     ].map((l) => serverText(l));
     // (the names of captains stay as they are)
-    assert.deepEqual(lines.filter((l) => /[A-Za-z]{3,}/.test(l.replace(/Anna|Bram|\/zboss|rise\|here\|leave\|kill\|announce\|reset/g, ''))), []);
+    assert.deepEqual(lines.filter((l) => /[A-Za-z]{3,}/.test(l.replace(/Anna|Bram|\/zboss|rise\|here\|leave\|kill\|announce\|reset|\[Y\]/g, ''))), []);
     assert.equal(serverText('Her decks cannot be taken — guns only').replace(/ /g, ' '), 'Её не взять на абордаж — только пушками');
     for (const r of REGION_IDS) assert.doesNotMatch(serverText(SHIP_CLASSES[ZONE_BOSSES[r].classId].name), /[A-Za-z]/, r);
   } finally {

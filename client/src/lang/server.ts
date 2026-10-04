@@ -163,7 +163,9 @@ function translate(s: string, depth: number): string {
   }
   // A giver's words as a job is taken ("Name, trade: “words” — the first step"): each part on its own, for a
   // job's own templates would swallow the whole line.
-  if (depth === 0 && !exact.has(s)) {
+  // (A letter's word — «A letter from …: “subject” — N silver enclosed» — is read whole by its own template: QA,
+  // 2026-10-04, the zone bosses' prize money came half in English.)
+  if (depth === 0 && !exact.has(s) && !s.startsWith('A letter from ')) {
     const a = s.indexOf(': “'), b = s.lastIndexOf('” — ');
     if (a > 0 && b > a + 3) return `${translate(s.slice(0, a), 0)}: «${translate(s.slice(a + 3, b), 0)}» — ${translate(s.slice(b + 4), 0)}`;
   }
