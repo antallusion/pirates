@@ -91,3 +91,30 @@ test('the chart\'s folded legend lays out nothing (QA: «you» 6px past a 38px-w
 test('a shipyard hull\'s «Research her first» wraps inside its 104px column (it ran 7px out in English, 16px in Russian)', () => {
   assert.ok(css.includes('.hull-card .item-btn { white-space: normal; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }'));
 });
+
+test('other ships are drawn smoothly: a ship whose word of her speed is three times her way never steps back (QA circle)', async () => {
+  const { ClientState } = await import('../client/src/state.ts');
+  const st = new ClientState();
+  // A great one swims 11 m/s and says «11» (a ship saying 11 would make 33): ten samples a second, along x.
+  let now = 100;
+  const realNow = performance.now.bind(performance);
+  performance.now = () => now * 1000;
+  try {
+    st.serverTime = 50;
+    st.serverTimeArrival = now;
+    const buf = Array.from({ length: 40 }, (_, i) => ({ t: 47 + i * 0.1, x: 1000 + 11 * i * 0.1, y: 500, h: Math.PI / 2, spd: 11, sail: 1, hull: 1, sails: 1, flags: 0, crew: 1 }));
+    st.ships.set(7, { id: 7, info: null, buf, cur: buf[0], wake: [], sinkStart: 0, gap: 0.1 } as never);
+    const xs: number[] = [];
+    for (let f = 0; f < 60; f++) {
+      now += 1 / 60;
+      st.updateRemote();
+      xs.push(st.ships.get(7)!.cur.x);
+    }
+    const steps = xs.slice(1).map((x, i) => x - xs[i]);
+    assert.ok(steps.every((d) => d > 0), `no step back: ${steps.map((d) => d.toFixed(2)).join(' ')}`);
+    // Every frame's way within a third of her true 11/60 m.
+    for (const d of steps) assert.ok(Math.abs(d - 11 / 60) < (11 / 60) / 3, `a frame's way ${d.toFixed(3)}`);
+  } finally {
+    performance.now = realNow;
+  }
+});

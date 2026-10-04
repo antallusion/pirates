@@ -667,7 +667,10 @@ export class ClientState {
       if (rt >= c.t) {
         // Extrapolate briefly past the newest sample.
         const dt = Math.min(0.5, rt - c.t); // far ships arrive at 2.5 Hz
-        s.cur = { ...c, x: c.x + Math.sin(c.h) * c.spd * SPEED_SCALE * dt, y: c.y - Math.cos(c.h) * c.spd * SPEED_SCALE * dt };
+        // Guessed on at her way between her last two samples when her word of her speed says more (see below).
+        const p = b.length > 1 ? b[b.length - 2] : null;
+        const way = p && c.t > p.t ? Math.min(c.spd * SPEED_SCALE, (Math.hypot(c.x - p.x, c.y - p.y) / (c.t - p.t)) * 1.05) : c.spd * SPEED_SCALE;
+        s.cur = { ...c, x: c.x + Math.sin(c.h) * way * dt, y: c.y - Math.cos(c.h) * way * dt };
       } else if (rt <= a.t) {
         s.cur = a;
       } else {
@@ -677,7 +680,11 @@ export class ClientState {
         // Hermite), so a turn is an arc and she never pivots on a corner between two snapshots.
         const t2 = t * t, t3 = t2 * t;
         const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
-        const va = a.spd * SPEED_SCALE * span, vc = c.spd * SPEED_SCALE * span;
+        // Each tangent no longer than the chord between the two samples (a twentieth over, for the arc of a turn): a ship whose word of her speed
+        // is not her way (a great one swims on her own scale, 3× below what she says) overshot each sample and came
+        // back to it — ten small steps back a second (QA circle, 2026-10-05: «другие корабли дёргаются»).
+        const chord = Math.hypot(c.x - a.x, c.y - a.y) * 1.05;
+        const va = Math.min(a.spd * SPEED_SCALE * span, chord), vc = Math.min(c.spd * SPEED_SCALE * span, chord);
         const x = h00 * a.x + h10 * Math.sin(a.h) * va + h01 * c.x + h11 * Math.sin(c.h) * vc;
         const y = h00 * a.y - h10 * Math.cos(a.h) * va + h01 * c.y - h11 * Math.cos(c.h) * vc;
         // A jump (a teleport, a respawn) is no curve: straight between the two.
