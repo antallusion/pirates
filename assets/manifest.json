@@ -2310,6 +2310,10 @@
     "unit.obsidian_golem":                     { "local": "units/obsidian_golem.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.0", "rev": 20261004041458},
     "unit.obsidian_golem_b":                   { "local": "units/obsidian_golem_b.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.1", "rev": 20261004041458},
     "unit.obsidian_golem_atk":                 { "local": "units/obsidian_golem_atk.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.2", "rev": 20261004041458},
-    "unit.obsidian_golem_hit":                 { "local": "units/obsidian_golem_hit.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.3", "rev": 20261004041458}
+    "unit.obsidian_golem_hit":                 { "local": "units/obsidian_golem_hit.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.3", "rev": 20261004041458},
+    "unit.lava_drake":                         { "local": "units/lava_drake.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.0", "rev": 20261004041725},
+    "unit.lava_drake_b":                       { "local": "units/lava_drake_b.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.1", "rev": 20261004041725},
+    "unit.lava_drake_atk":                     { "local": "units/lava_drake_atk.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.2", "rev": 20261004041725},
+    "unit.lava_drake_hit":                     { "local": "units/lava_drake_hit.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.3", "rev": 20261004041725}
   }
 }
