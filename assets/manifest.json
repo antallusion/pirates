@@ -2274,6 +2274,10 @@
     "unit.abyssal_angler":                     { "local": "units/abyssal_angler.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.0", "rev": 20261004034915},
     "unit.abyssal_angler_b":                   { "local": "units/abyssal_angler_b.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.1", "rev": 20261004034915},
     "unit.abyssal_angler_atk":                 { "local": "units/abyssal_angler_atk.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.2", "rev": 20261004034915},
-    "unit.abyssal_angler_hit":                 { "local": "units/abyssal_angler_hit.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.3", "rev": 20261004034915}
+    "unit.abyssal_angler_hit":                 { "local": "units/abyssal_angler_hit.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.3", "rev": 20261004034915},
+    "unit.frost_serpent":                      { "local": "units/frost_serpent.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.0", "rev": 20261004035141},
+    "unit.frost_serpent_b":                    { "local": "units/frost_serpent_b.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.1", "rev": 20261004035141},
+    "unit.frost_serpent_atk":                  { "local": "units/frost_serpent_atk.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.2", "rev": 20261004035141},
+    "unit.frost_serpent_hit":                  { "local": "units/frost_serpent_hit.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.3", "rev": 20261004035141}
   }
 }
