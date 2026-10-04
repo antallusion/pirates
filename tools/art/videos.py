@@ -846,9 +846,10 @@ v('cut_drowned_whale_down', 'down_drowned_whale', 'Утонувший кит п�
   'its flukes and sinks back between the sunken towers, a pale green light fading beneath it, and the sea falls still. '
   'The camera follows the flukes down into the dark.')
 v('cut_lantern_maw_down', 'down_lantern_maw', 'Фонарная Пасть повержена',
-  'A black night on a flat sea: the glowing lure of the huge lantern maw flickers and goes out, and its dark shape sinks '
-  'away beneath a ring of ships, leaving only the lanterns of the ships reflected on the still water. The camera holds on the '
-  'lure as its light dies.')
+  'A black night on a flat sea, three-masted pirate ships with lit lanterns standing round in a ring: in their midst a '
+  'gigantic anglerfish sea monster, its huge dark head and needle-toothed jaws above the water, hangs a greenish glowing '
+  'lure on a long fleshy stalk; the lure flickers and goes out, and the monster sinks slowly away beneath the black water, '
+  'leaving only the lanterns of the ships reflected on the still sea. The camera holds on the lure as its light dies.')
 v('cut_black_serpent_down', 'down_black_serpent', 'Чёрный змей повержен',
   'Among smoking volcanic islands the great black serpent sinks in coils back into the steaming sea, its spines sliding '
   'under one by one, as the warships round it come about and the ash clouds drift away on the wind. The camera circles '
@@ -896,7 +897,7 @@ v('cut_serpent_grotto_down', 'down_serpent_grotto', 'Молодой змей п�
   'eggs and slides away down a flooded channel toward the open sea, its scales flashing, as the pirates stand in the '
   'shallows and watch it go. The camera follows the serpent out to the sea.')
 v('cut_maw_pit_down', 'down_maw_pit', 'Светоч в яме погас',
-  'A drowned pit at night, hooded cultists fled from its rim: the lantern maw hanging its lure over the black water dims, '
+  'A drowned pit at night, hooded cultists fled from its rim: the gigantic anglerfish monster hanging its glowing lure over the black water dims it, '
   'its pale light flickering and going out, and the huge shape sinks slowly out of sight into the deep, as the pirates '
   'raise their own lanterns over the edge. The camera looks down into the darkening pit.')
 v('cut_octopus_wreck_down', 'down_octopus_wreck', 'Осьминог оставил обломки',

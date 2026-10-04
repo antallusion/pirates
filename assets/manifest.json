@@ -2414,6 +2414,7 @@
     "bg.deck_gunboat":                         { "local": "art/deck_gunboat.webp", "remote": "hf_20261004_053143_gpt-bg.deck_gunboat.png", "job": "gpt-bg.deck_gunboat", "fit": "opaque:1536", "rev": 20261004053143},
     "bg.deck_war_galley":                      { "local": "art/deck_war_galley.webp", "remote": "hf_20261004_053353_gpt-bg.deck_war_galley.png", "job": "gpt-bg.deck_war_galley", "fit": "opaque:1536", "rev": 20261004053353},
     "bg.deck_corvette":                        { "local": "art/deck_corvette.webp", "remote": "hf_20261004_053609_gpt-bg.deck_corvette.png", "job": "gpt-bg.deck_corvette", "fit": "opaque:1536", "rev": 20261004053609},
-    "bg.deck_razee":                           { "local": "art/deck_razee.webp", "remote": "hf_20261004_053827_gpt-bg.deck_razee.png", "job": "gpt-bg.deck_razee", "fit": "opaque:1536", "rev": 20261004053827}
+    "bg.deck_razee":                           { "local": "art/deck_razee.webp", "remote": "hf_20261004_053827_gpt-bg.deck_razee.png", "job": "gpt-bg.deck_razee", "fit": "opaque:1536", "rev": 20261004053827},
+    "bg.deck_ship_of_the_line":                { "local": "art/deck_ship_of_the_line.webp", "remote": "hf_20261004_054012_gpt-bg.deck_ship_of_the_line.png", "job": "gpt-bg.deck_ship_of_the_line", "fit": "opaque:1536", "rev": 20261004054012}
   }
 }
