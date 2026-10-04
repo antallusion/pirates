@@ -15,6 +15,7 @@ function page(W: number, H: number, rects: (cls: Set<string>) => Record<string, 
   g.innerHeight = H;
   g.document = {
     body,
+    querySelectorAll: () => [],
     getElementById: (id: string) => {
       const r = rects(cls)[id];
       if (r === undefined) return null;
@@ -171,4 +172,10 @@ test('a short screen: the adventure card in the top row, the toasts in a side co
   assert.ok(css.includes('body.pb-3 #hud-stack > #hud-tip { display: none !important; }'));
   const card = readFileSync(new URL('../client/src/ui/advcard.ts', import.meta.url), 'utf8');
   assert.match(card, /if \(innerHeight <= 520\) max = Math\.max\(60, Math\.floor\(innerHeight \* 0\.27 - top\)\);/);
+});
+
+test('the island\'s defence line wraps in a narrow column; a hovered piece\'s card goes with the gear window', () => {
+  assert.ok(css.includes('.base-def .bmeta { white-space: normal; max-width: 100%; min-width: 0; }'));
+  const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
+  assert.ok(main.includes("if (modal !== 'gear') document.querySelectorAll('.gear-tip').forEach((e) => e.remove());"));
 });

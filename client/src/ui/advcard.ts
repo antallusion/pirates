@@ -246,6 +246,9 @@ export class AdvCard {
     // A wide screen's left column: the card ends above the chat's button in the corner (it ran over it).
     const chat = document.getElementById('chat-toggle')?.getBoundingClientRect();
     if (!narrow && chat && chat.height && chat.left < r.right) max = Math.max(140, Math.round(chat.top - 8 - top));
+    // …and within a twelfth of the screen, scrolling: with a boss's card and the toasts it stayed over the popup
+    // budget's 15% (16.3% at 1280×720 — QA circle, 2026-10-05).
+    if (!narrow && r.width > 0) max = Math.min(max, Math.max(140, Math.floor((innerWidth * innerHeight) / 12 / r.width)));
     // A phone held sideways: the card keeps to the top band (the popup budget, owner 2026-10-04) and scrolls.
     // (its centre begins at 30% of the height: the card ends a little above, leaving the toasts their share of the 15% —
     // QA circle, 2026-10-05)

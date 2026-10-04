@@ -2582,6 +2582,8 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
 /* ---------- My Island: its waters, tax and defence; a raid under way (docs/15 items 6–7). */
 .base-def { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; padding: 3px 14px; font-size: 12px; color: var(--fog); border-bottom: 1px solid rgba(111, 90, 56, 0.25); }
 .base-def .bmeta.bad { color: var(--bad); }
+/* «Налётов нет: эти воды стерегут патрули Короны» wraps in a narrow column (it ran 16px out at 640×360). */
+.base-def .bmeta { white-space: normal; max-width: 100%; min-width: 0; }
 .bdef-w { display: inline-block; padding: 0 6px; border-radius: 3px; font: 600 11px/18px var(--sans); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; border: 1px solid currentColor; }
 .bdef-w.w-safe, .ct-w.w-safe { color: var(--good); }
 .bdef-w.w-contested, .ct-w.w-contested { color: var(--gold); }
@@ -4623,3 +4625,7 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
   .tb-banner:not(:has(.tb-landclose)) .tb-rs, .tb-banner:not(:has(.tb-landclose)) .tb-rs-ico { width: 22px; height: 22px; }
   .tb-banner:not(:has(.tb-landclose)) .tb-res small { display: none; }
 }
+
+/* A taller screen whose bottom block leaves the toasts' band no room under the middle, the desk's corner taken (the
+   adventure map's card, the chat): the band in a clear side column (hud.ts placeDeskStrip). */
+body.tq-side #toasts { top: var(--tq-top) !important; left: var(--tq-left) !important; width: var(--tq-w) !important; bottom: auto !important; transform: none !important; height: 46px !important; flex-flow: column wrap !important; }

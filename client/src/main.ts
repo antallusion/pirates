@@ -1183,6 +1183,7 @@ function closeModal(): void {
   }
   modal = null;
   $('modal').classList.add('hidden');
+  document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
   releaseModalToasts();
   // The recruit window opened from the island's town goes back to it (docs/17 H3).
   if (was === 'recruit' && recruitFrom === 'isle') return openBase();
@@ -1242,6 +1243,9 @@ function refreshModal(): void {
 }
 
 function renderModal(root: HTMLElement): void {
+  // The gear window's card beside a hovered piece goes with its window (QA circle: it stayed over the next window,
+  // opened by a key, until the mouse moved).
+  if (modal !== 'gear') document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
   switch (modal) {
     case 'port':
       if (state.portView) portScreen.render(root, state);

@@ -109,7 +109,8 @@ export function fitTransient(): void {
       if (r.height < 2 || r.width < 2) continue;
       if (r.left < W * CENTRE.to && r.right > W * CENTRE.from && r.top < H * CENTRE.to && r.bottom > H * CENTRE.from) return true;
     }
-    return false;
+    // …or all the passing words together over the budget's 15% of the screen (with a margin).
+    return popupShare() > 0.14;
   };
   body.classList.remove('pb-1', 'pb-2', 'pb-3');
   if (!over()) return;
@@ -120,6 +121,20 @@ export function fitTransient(): void {
   body.classList.add('pb-3'); // a short screen: the hint waits too (its card stays where it was)
 }
 
+/** What share of the screen the passing words cover now: the stack's hint, news and boss's card, the toasts in their
+ *  band, the adventure map's and the encounter's cards (each box once; overlaps are rare and counted twice). */
+export function popupShare(): number {
+  let area = 0;
+  const band = document.getElementById('toasts')?.getBoundingClientRect();
+  for (const e of document.querySelectorAll<HTMLElement>('#hud-tip, #hud-boss, #hud-feed, #advcard, #encounter, #toasts > .toast')) {
+    if (e.classList.contains('hidden') || getComputedStyle(e).display === 'none' || getComputedStyle(e).visibility === 'hidden') continue;
+    let r = e.getBoundingClientRect();
+    if (band && e.parentElement?.id === 'toasts') r = new DOMRect(Math.max(r.left, band.left), Math.max(r.top, band.top), Math.max(0, Math.min(r.right, band.right) - Math.max(r.left, band.left)), Math.max(0, Math.min(r.bottom, band.bottom) - Math.max(r.top, band.top)));
+    area += r.width * r.height;
+  }
+  return area / Math.max(1, innerWidth * innerHeight);
+}
+
 /** A place for the toasts' strip (h tall) in a side column, out of the screen's middle columns (the popup budget's
  *  centre is 30–70% of the width), clear of every HUD block there: the left column under the captain's plate, or the
  *  right one under the chart and its buttons — whichever has room higher up. Null when neither has. */
@@ -127,7 +142,7 @@ function sideSpot(h: number, z: number): { top: number; left: number; w: number 
   const W = innerWidth, H = innerHeight;
   const rects: DOMRect[] = [];
   const seen = (e: Element) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden'; };
-  for (const e of document.querySelectorAll('#hud-captain *, #hud-map, #hud-region, #unread, #chat-toggle, .tc-menu, #touch .tc-btn, #touch .tc-fire, #tc-stick, #tc-sail, #hud-menu, #hud-bottom, #advcard, #hud-nav')) {
+  for (const e of document.querySelectorAll('#hud-captain *, #hud-ship, #hud-map, #hud-region, #unread, #chat-toggle, #chat, .tc-menu, #touch .tc-btn, #touch .tc-fire, #tc-stick, #tc-sail, #hud-menu, #hud-bottom, #advcard, #hud-nav, #hud-stack > :not(.hidden)')) {
     if (!seen(e)) continue;
     const r = e.getBoundingClientRect();
     if (r.width > 1 && r.height > 1) rects.push(r);
@@ -224,6 +239,7 @@ export class Hud {
       const low = matchMedia(SHORT).matches && !!mr && mr.height > 0;
       document.body.classList.toggle('ai-low', low);
       if (low) document.body.style.setProperty('--abm-b', `${Math.round((r.bottom - mr!.bottom) / zoom())}px`);
+      this.placeStrip(); // the toasts' band follows the block's height
     };
     new ResizeObserver(place).observe(bottom);
     addEventListener('resize', place);
@@ -236,7 +252,8 @@ export class Hud {
     // first thing on its right (the chart, the menu button), as tall as the button (the popup budget, styles.css).
     const fold = $('hud-fold'), stack = $('hud-stack');
     this.placeStrip = () => {
-      if (!matchMedia(SHORT).matches) return;
+      if (!matchMedia(SHORT).matches) return this.placeDeskStrip(zoom());
+      document.body.classList.remove('tq-side');
       const z = zoom(), f = fold.getBoundingClientRect(), st = stack.getBoundingClientRect();
       if (!st.width) return;
       const top = st.top, h = Math.max(40 * z, f.height) + 4 * z, left = (f.width ? f.right : st.left) + 8 * z;
@@ -272,8 +289,33 @@ export class Hud {
     };
     new MutationObserver(fit).observe(stack, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
     new ResizeObserver(fit).observe(stack);
+    // (the budget's sum: the adventure map's card and the toasts count too)
+    new MutationObserver(fit).observe($('advcard'), { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(fit).observe(this.toastsEl, { childList: true });
     addEventListener('resize', fit);
     this.wireFold();
+  }
+
+  /** A taller screen: the toasts' band stands over the bottom block, under 30% of the height — unless the block is too
+   *  tall to leave it room below the screen's middle (an act's hint and its buttons over the bar, at 1280×720: the band
+   *  began at 68%) while the desk's own corner is taken (the adventure map's card, the chat): then a clear side
+   *  column (QA circle, 2026-10-05). */
+  private placeDeskStrip(z: number): void {
+    const body = document.body;
+    const card = document.getElementById('advcard');
+    const desk = matchMedia('(min-width: 1100px) and (min-height: 600px)').matches && !body.classList.contains('touch') && !body.classList.contains('chat-open') && !body.classList.contains('tac') && !!card?.classList.contains('hidden');
+    const b = $('hud-bottom').getBoundingClientRect();
+    const hb = b.height > 0 ? innerHeight - b.top : 0;
+    const h = Math.min(150 * z, Math.max(46 * z, innerHeight * 0.3 - hb - 6 * z));
+    const roomy = innerHeight - hb - 6 * z - h >= innerHeight * CENTRE.to - 1;
+    const spot = desk || roomy || body.classList.contains('tac') ? null : sideSpot(46 * z, z);
+    body.classList.toggle('tq-side', !!spot);
+    const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
+    if (spot) {
+      set('--tq-top', spot.top);
+      set('--tq-left', spot.left);
+      set('--tq-w', Math.min(spot.w, 440 * z));
+    }
   }
 
   /** The goals, the sea's news, the holiday, the hints (owner, 2026-10-03: «столько текста… его нужно прятать… иконку
