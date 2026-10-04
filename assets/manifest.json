@@ -2181,6 +2181,7 @@
     "unit.silver_archer":                      { "local": "units/silver_archer.webp", "remote": "hf_20261004_021738_gpt-anim_silver_archer.png", "job": "gpt-anim_silver_archer", "fit": "sheet:anim_silver_archer.0", "rev": 20261004021738},
     "unit.silver_archer_b":                    { "local": "units/silver_archer_b.webp", "remote": "hf_20261004_021738_gpt-anim_silver_archer.png", "job": "gpt-anim_silver_archer", "fit": "sheet:anim_silver_archer.1", "rev": 20261004021738},
     "unit.silver_archer_atk":                  { "local": "units/silver_archer_atk.webp", "remote": "hf_20261004_021738_gpt-anim_silver_archer.png", "job": "gpt-anim_silver_archer", "fit": "sheet:anim_silver_archer.2", "rev": 20261004021738},
-    "unit.silver_archer_hit":                  { "local": "units/silver_archer_hit.webp", "remote": "hf_20261004_021738_gpt-anim_silver_archer.png", "job": "gpt-anim_silver_archer", "fit": "sheet:anim_silver_archer.3", "rev": 20261004021738}
+    "unit.silver_archer_hit":                  { "local": "units/silver_archer_hit.webp", "remote": "hf_20261004_021738_gpt-anim_silver_archer.png", "job": "gpt-anim_silver_archer", "fit": "sheet:anim_silver_archer.3", "rev": 20261004021738},
+    "bg.port_wreckhold":                       { "local": "art/port_wreckhold.webp", "remote": "hf_20261004_022023_gpt-bg.port_wreckhold.png", "job": "gpt-bg.port_wreckhold", "fit": "opaque:1920", "rev": 20261004022023}
   }
 }
