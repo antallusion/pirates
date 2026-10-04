@@ -2227,6 +2227,10 @@
     "unit.coral_elemental_b":                  { "local": "units/coral_elemental_b.webp", "remote": "hf_20261004_030518_gpt-anim_coral_elemental.png", "job": "gpt-anim_coral_elemental", "fit": "sheet:anim_coral_elemental.1", "rev": 20261004030518},
     "unit.coral_elemental_atk":                { "local": "units/coral_elemental_atk.webp", "remote": "hf_20261004_030518_gpt-anim_coral_elemental.png", "job": "gpt-anim_coral_elemental", "fit": "sheet:anim_coral_elemental.2", "rev": 20261004030518},
     "unit.coral_elemental_hit":                { "local": "units/coral_elemental_hit.webp", "remote": "hf_20261004_030518_gpt-anim_coral_elemental.png", "job": "gpt-anim_coral_elemental", "fit": "sheet:anim_coral_elemental.3", "rev": 20261004030518},
-    "prop.port_last_light":                    { "local": "props/port_last_light.webp", "remote": "hf_20261004_030814_gpt-port_last_light.png", "job": "gpt-port_last_light", "fit": "sheet:port_last_light.0", "rev": 20261004030814}
+    "prop.port_last_light":                    { "local": "props/port_last_light.webp", "remote": "hf_20261004_030814_gpt-port_last_light.png", "job": "gpt-port_last_light", "fit": "sheet:port_last_light.0", "rev": 20261004030814},
+    "unit.bell_priest":                        { "local": "units/bell_priest.webp", "remote": "hf_20261004_031038_gpt-anim_bell_priest.png", "job": "gpt-anim_bell_priest", "fit": "sheet:anim_bell_priest.0", "rev": 20261004031038},
+    "unit.bell_priest_b":                      { "local": "units/bell_priest_b.webp", "remote": "hf_20261004_031038_gpt-anim_bell_priest.png", "job": "gpt-anim_bell_priest", "fit": "sheet:anim_bell_priest.1", "rev": 20261004031038},
+    "unit.bell_priest_atk":                    { "local": "units/bell_priest_atk.webp", "remote": "hf_20261004_031038_gpt-anim_bell_priest.png", "job": "gpt-anim_bell_priest", "fit": "sheet:anim_bell_priest.2", "rev": 20261004031038},
+    "unit.bell_priest_hit":                    { "local": "units/bell_priest_hit.webp", "remote": "hf_20261004_031038_gpt-anim_bell_priest.png", "job": "gpt-anim_bell_priest", "fit": "sheet:anim_bell_priest.3", "rev": 20261004031038}
   }
 }
