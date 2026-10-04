@@ -2118,6 +2118,7 @@
     "unit.bazaar_monkeys":                     { "local": "units/bazaar_monkeys.webp", "remote": "hf_20261004_010832_gpt-anim_bazaar_monkeys.png", "job": "gpt-anim_bazaar_monkeys", "fit": "sheet:anim_bazaar_monkeys.0", "rev": 20261004010832},
     "unit.bazaar_monkeys_b":                   { "local": "units/bazaar_monkeys_b.webp", "remote": "hf_20261004_010832_gpt-anim_bazaar_monkeys.png", "job": "gpt-anim_bazaar_monkeys", "fit": "sheet:anim_bazaar_monkeys.1", "rev": 20261004010832},
     "unit.bazaar_monkeys_atk":                 { "local": "units/bazaar_monkeys_atk.webp", "remote": "hf_20261004_010832_gpt-anim_bazaar_monkeys.png", "job": "gpt-anim_bazaar_monkeys", "fit": "sheet:anim_bazaar_monkeys.2", "rev": 20261004010832},
-    "unit.bazaar_monkeys_hit":                 { "local": "units/bazaar_monkeys_hit.webp", "remote": "hf_20261004_010832_gpt-anim_bazaar_monkeys.png", "job": "gpt-anim_bazaar_monkeys", "fit": "sheet:anim_bazaar_monkeys.3", "rev": 20261004010832}
+    "unit.bazaar_monkeys_hit":                 { "local": "units/bazaar_monkeys_hit.webp", "remote": "hf_20261004_010832_gpt-anim_bazaar_monkeys.png", "job": "gpt-anim_bazaar_monkeys", "fit": "sheet:anim_bazaar_monkeys.3", "rev": 20261004010832},
+    "prop.port_slagport":                      { "local": "props/port_slagport.webp", "remote": "hf_20261004_011102_gpt-port_slagport.png", "job": "gpt-port_slagport", "fit": "sheet:port_slagport.0", "rev": 20261004011102}
   }
 }
