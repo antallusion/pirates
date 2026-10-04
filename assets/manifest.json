@@ -2079,6 +2079,7 @@
     "unit.gilded_golem":                       { "local": "units/gilded_golem.webp", "remote": "hf_20261004_002905_gpt-anim_gilded_golem.png", "job": "gpt-anim_gilded_golem", "fit": "sheet:anim_gilded_golem.0", "rev": 20261004002905},
     "unit.gilded_golem_b":                     { "local": "units/gilded_golem_b.webp", "remote": "hf_20261004_002905_gpt-anim_gilded_golem.png", "job": "gpt-anim_gilded_golem", "fit": "sheet:anim_gilded_golem.1", "rev": 20261004002905},
     "unit.gilded_golem_atk":                   { "local": "units/gilded_golem_atk.webp", "remote": "hf_20261004_002905_gpt-anim_gilded_golem.png", "job": "gpt-anim_gilded_golem", "fit": "sheet:anim_gilded_golem.2", "rev": 20261004002905},
-    "unit.gilded_golem_hit":                   { "local": "units/gilded_golem_hit.webp", "remote": "hf_20261004_002905_gpt-anim_gilded_golem.png", "job": "gpt-anim_gilded_golem", "fit": "sheet:anim_gilded_golem.3", "rev": 20261004002905}
+    "unit.gilded_golem_hit":                   { "local": "units/gilded_golem_hit.webp", "remote": "hf_20261004_002905_gpt-anim_gilded_golem.png", "job": "gpt-anim_gilded_golem", "fit": "sheet:anim_gilded_golem.3", "rev": 20261004002905},
+    "bg.port_hushwater":                       { "local": "art/port_hushwater.webp", "remote": "hf_20261004_003143_gpt-bg.port_hushwater.png", "job": "gpt-bg.port_hushwater", "fit": "opaque:1920", "rev": 20261004003143}
   }
 }
