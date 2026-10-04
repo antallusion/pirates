@@ -5005,9 +5005,9 @@
    "ship.treasure_junk"
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a broad barge built on the back of a colossal ancient sea turtle's shell, timber decks and a mast set into the shell; 2) a big galleon with iron-barred cages for strange creatures along its deck and canvas awnings over them; 3) a massive old hulk overgrown with living coral and sea anemones in pink and orange, kelp hanging from its yards; 4) a gigantic treasure junk with nine batten-sailed masts, a towering stern and painted red and gold hull; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
-  "painting": true,
   "whole": true,
-  "despill": true
+  "despill": true,
+  "cut": "hf_20261004_005740_gpt-ships_16"
  },
  "ships_17": {
   "grid": [

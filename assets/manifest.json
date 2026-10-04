@@ -2106,6 +2106,10 @@
     "unit.night_smuggler_b":                   { "local": "units/night_smuggler_b.webp", "remote": "hf_20261004_005301_gpt-anim_night_smuggler.png", "job": "gpt-anim_night_smuggler", "fit": "sheet:anim_night_smuggler.1", "rev": 20261004005301},
     "unit.night_smuggler_atk":                 { "local": "units/night_smuggler_atk.webp", "remote": "hf_20261004_005301_gpt-anim_night_smuggler.png", "job": "gpt-anim_night_smuggler", "fit": "sheet:anim_night_smuggler.2", "rev": 20261004005301},
     "unit.night_smuggler_hit":                 { "local": "units/night_smuggler_hit.webp", "remote": "hf_20261004_005301_gpt-anim_night_smuggler.png", "job": "gpt-anim_night_smuggler", "fit": "sheet:anim_night_smuggler.3", "rev": 20261004005301},
-    "prop.port_widows_wick":                   { "local": "props/port_widows_wick.webp", "remote": "hf_20261004_005509_gpt-port_widows_wick.png", "job": "gpt-port_widows_wick", "fit": "sheet:port_widows_wick.0", "rev": 20261004005509}
+    "prop.port_widows_wick":                   { "local": "props/port_widows_wick.webp", "remote": "hf_20261004_005509_gpt-port_widows_wick.png", "job": "gpt-port_widows_wick", "fit": "sheet:port_widows_wick.0", "rev": 20261004005509},
+    "ship.turtle_barge":                       { "local": "ships/turtle_barge.webp", "remote": "hf_20261004_005740_gpt-ships_16.png", "job": "gpt-ships_16", "fit": "sheet:ships_16.0", "rev": 20261004005740},
+    "ship.menagerie":                          { "local": "ships/menagerie.webp", "remote": "hf_20261004_005740_gpt-ships_16.png", "job": "gpt-ships_16", "fit": "sheet:ships_16.1", "rev": 20261004005740},
+    "ship.coral_hulk":                         { "local": "ships/coral_hulk.webp", "remote": "hf_20261004_005740_gpt-ships_16.png", "job": "gpt-ships_16", "fit": "sheet:ships_16.2", "rev": 20261004005740},
+    "ship.treasure_junk":                      { "local": "ships/treasure_junk.webp", "remote": "hf_20261004_005740_gpt-ships_16.png", "job": "gpt-ships_16", "fit": "sheet:ships_16.3", "rev": 20261004005740}
   }
 }
