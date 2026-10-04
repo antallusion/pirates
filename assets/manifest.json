@@ -2813,6 +2813,22 @@
     "unit.storm_giant":                        { "local": "units/storm_giant.webp", "remote": "hf_20261004_151057_gpt-anim4_5.png", "job": "gpt-anim4_5", "fit": "sheet:anim4_5.12", "rev": 20261004151057},
     "unit.storm_giant_b":                      { "local": "units/storm_giant_b.webp", "remote": "hf_20261004_151057_gpt-anim4_5.png", "job": "gpt-anim4_5", "fit": "sheet:anim4_5.13", "rev": 20261004151057},
     "unit.storm_giant_atk":                    { "local": "units/storm_giant_atk.webp", "remote": "hf_20261004_151057_gpt-anim4_5.png", "job": "gpt-anim4_5", "fit": "sheet:anim4_5.14", "rev": 20261004151057},
-    "unit.storm_giant_hit":                    { "local": "units/storm_giant_hit.webp", "remote": "hf_20261004_151057_gpt-anim4_5.png", "job": "gpt-anim4_5", "fit": "sheet:anim4_5.15", "rev": 20261004151057}
+    "unit.storm_giant_hit":                    { "local": "units/storm_giant_hit.webp", "remote": "hf_20261004_151057_gpt-anim4_5.png", "job": "gpt-anim4_5", "fit": "sheet:anim4_5.15", "rev": 20261004151057},
+    "unit.ember_phoenix":                      { "local": "units/ember_phoenix.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.0", "rev": 20261004151257},
+    "unit.ember_phoenix_b":                    { "local": "units/ember_phoenix_b.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.1", "rev": 20261004151257},
+    "unit.ember_phoenix_atk":                  { "local": "units/ember_phoenix_atk.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.2", "rev": 20261004151257},
+    "unit.ember_phoenix_hit":                  { "local": "units/ember_phoenix_hit.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.3", "rev": 20261004151257},
+    "unit.megalodon":                          { "local": "units/megalodon.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.4", "rev": 20261004151257},
+    "unit.megalodon_b":                        { "local": "units/megalodon_b.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.5", "rev": 20261004151257},
+    "unit.megalodon_atk":                      { "local": "units/megalodon_atk.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.6", "rev": 20261004151257},
+    "unit.megalodon_hit":                      { "local": "units/megalodon_hit.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.7", "rev": 20261004151257},
+    "unit.marid":                              { "local": "units/marid.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.8", "rev": 20261004151257},
+    "unit.marid_b":                            { "local": "units/marid_b.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.9", "rev": 20261004151257},
+    "unit.marid_atk":                          { "local": "units/marid_atk.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.10", "rev": 20261004151257},
+    "unit.marid_hit":                          { "local": "units/marid_hit.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.11", "rev": 20261004151257},
+    "unit.ice_wyvern":                         { "local": "units/ice_wyvern.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.12", "rev": 20261004151257},
+    "unit.ice_wyvern_b":                       { "local": "units/ice_wyvern_b.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.13", "rev": 20261004151257},
+    "unit.ice_wyvern_atk":                     { "local": "units/ice_wyvern_atk.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.14", "rev": 20261004151257},
+    "unit.ice_wyvern_hit":                     { "local": "units/ice_wyvern_hit.webp", "remote": "hf_20261004_151257_gpt-anim4_6.png", "job": "gpt-anim4_6", "fit": "sheet:anim4_6.15", "rev": 20261004151257}
   }
 }
