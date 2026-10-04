@@ -2765,6 +2765,22 @@
     "unit.mask_archer":                        { "local": "units/mask_archer.webp", "remote": "hf_20261004_150657_gpt-anim4_2.png", "job": "gpt-anim4_2", "fit": "sheet:anim4_2.12", "rev": 20261004150657},
     "unit.mask_archer_b":                      { "local": "units/mask_archer_b.webp", "remote": "hf_20261004_150657_gpt-anim4_2.png", "job": "gpt-anim4_2", "fit": "sheet:anim4_2.13", "rev": 20261004150657},
     "unit.mask_archer_atk":                    { "local": "units/mask_archer_atk.webp", "remote": "hf_20261004_150657_gpt-anim4_2.png", "job": "gpt-anim4_2", "fit": "sheet:anim4_2.14", "rev": 20261004150657},
-    "unit.mask_archer_hit":                    { "local": "units/mask_archer_hit.webp", "remote": "hf_20261004_150657_gpt-anim4_2.png", "job": "gpt-anim4_2", "fit": "sheet:anim4_2.15", "rev": 20261004150657}
+    "unit.mask_archer_hit":                    { "local": "units/mask_archer_hit.webp", "remote": "hf_20261004_150657_gpt-anim4_2.png", "job": "gpt-anim4_2", "fit": "sheet:anim4_2.15", "rev": 20261004150657},
+    "unit.island_chief":                       { "local": "units/island_chief.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.0", "rev": 20261004150757},
+    "unit.island_chief_b":                     { "local": "units/island_chief_b.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.1", "rev": 20261004150757},
+    "unit.island_chief_atk":                   { "local": "units/island_chief_atk.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.2", "rev": 20261004150757},
+    "unit.island_chief_hit":                   { "local": "units/island_chief_hit.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.3", "rev": 20261004150757},
+    "unit.frostbound":                         { "local": "units/frostbound.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.4", "rev": 20261004150757},
+    "unit.frostbound_b":                       { "local": "units/frostbound_b.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.5", "rev": 20261004150757},
+    "unit.frostbound_atk":                     { "local": "units/frostbound_atk.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.6", "rev": 20261004150757},
+    "unit.frostbound_hit":                     { "local": "units/frostbound_hit.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.7", "rev": 20261004150757},
+    "unit.ghost_bomber":                       { "local": "units/ghost_bomber.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.8", "rev": 20261004150757},
+    "unit.ghost_bomber_b":                     { "local": "units/ghost_bomber_b.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.9", "rev": 20261004150757},
+    "unit.ghost_bomber_atk":                   { "local": "units/ghost_bomber_atk.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.10", "rev": 20261004150757},
+    "unit.ghost_bomber_hit":                   { "local": "units/ghost_bomber_hit.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.11", "rev": 20261004150757},
+    "unit.ghost_commodore":                    { "local": "units/ghost_commodore.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.12", "rev": 20261004150757},
+    "unit.ghost_commodore_b":                  { "local": "units/ghost_commodore_b.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.13", "rev": 20261004150757},
+    "unit.ghost_commodore_atk":                { "local": "units/ghost_commodore_atk.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.14", "rev": 20261004150757},
+    "unit.ghost_commodore_hit":                { "local": "units/ghost_commodore_hit.webp", "remote": "hf_20261004_150757_gpt-anim4_3.png", "job": "gpt-anim4_3", "fit": "sheet:anim4_3.15", "rev": 20261004150757}
   }
 }
