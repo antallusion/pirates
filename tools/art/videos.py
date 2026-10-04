@@ -797,9 +797,10 @@ v('cut_cinder_salamander_down', 'down_cinder_salamander', 'Пепельная с
   'fading to dull grey one by one, as the musketeers stand in the smoke and a cool rain begins to hiss on the glowing '
   'rocks. The camera circles slowly round the fallen beast.')
 v('cut_drowned_abbess_down', 'down_drowned_abbess', 'Аббатиса повержена',
-  'In the fog of a ship graveyard the drowned abbess lets the great bronze bell fall from her hands into the shallows, its '
-  'last toll rolling out over the wrecks as she sinks back beneath the grey water, and the bell-ringers drop their bells '
-  'and flee into the mist. The camera moves slowly toward the fallen bell.')
+  'In the fog of a ship graveyard the drowned abbess, robed in dark green weed and pale coral, lets the great bronze bell '
+  'fall from her hands into the shallows, its last toll rolling out over the wrecks as she sinks back beneath the grey '
+  'water and only floating green kelp is left, and the bell-ringers drop their bells and flee into the mist. Nothing red '
+  'anywhere in the water. The camera moves slowly toward the fallen bell.')
 v('cut_walrus_tyrant_down', 'down_walrus_tyrant', 'Морж-тиран повержен',
   'On a cold rocky shore the old walrus bull heaves himself back into the grey sea with a last bellow, the herd following '
   'him into the surf, as the landing party leans on their pikes on the stones and snow begins to fall. The camera rises '
