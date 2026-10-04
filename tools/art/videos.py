@@ -832,6 +832,48 @@ v('cut_rime_twins_down', 'down_rime_twins', 'Инеевые близнецы п�
   'the last to vanish, as the frost on the water melts away around the whaling ships and the crews lower their harpoons in '
   'silence. The camera skims slowly over the place where they went down.')
 
+# ---- The sixteenth reel: the old world bosses brought down, each the first time she has a share in it ------------------
+v('cut_leviathan_down', 'down_leviathan', 'Левиафан повержен',
+  'A cold grey northern sea after a long fight: the vast leviathan rolls slowly over among the ice floes, its plated back '
+  'sinking beneath the surface in a great swirl of white water, as the battered warships around it lower their guns and '
+  'a pale sun breaks through the clouds. The camera rises slowly over the swirling water.')
+v('cut_kraken_down', 'down_kraken', 'Кракен повержен',
+  'A storm-tossed sea at dusk: the colossal kraken releases the ships it was gripping, its great arms slipping back one by '
+  'one into the dark water, its huge golden eye closing as it sinks into the deep, and the crews pull their shattered '
+  'masts upright. The camera looks down as the last arm vanishes.')
+v('cut_drowned_whale_down', 'down_drowned_whale', 'Утонувший кит повержен',
+  'Midnight over the drowned ruins: the vast grey whale crusted with barnacles and old chains gives a last slow beat of '
+  'its flukes and sinks back between the sunken towers, a pale green light fading beneath it, and the sea falls still. '
+  'The camera follows the flukes down into the dark.')
+v('cut_lantern_maw_down', 'down_lantern_maw', 'Фонарная Пасть повержена',
+  'A black night on a flat sea: the glowing lure of the huge lantern maw flickers and goes out, and its dark shape sinks '
+  'away beneath a ring of ships, leaving only the lanterns of the ships reflected on the still water. The camera holds on the '
+  'lure as its light dies.')
+v('cut_black_serpent_down', 'down_black_serpent', 'Чёрный змей повержен',
+  'Among smoking volcanic islands the great black serpent sinks in coils back into the steaming sea, its spines sliding '
+  'under one by one, as the warships round it come about and the ash clouds drift away on the wind. The camera circles '
+  'the last coils as they go under.')
+v('cut_hollow_admiral_down', 'down_hollow_admiral', 'Пустой Адмирал повержен',
+  'On a moonlit sea the ghostly flagship of the Hollow Admiral breaks apart into pale mist, its torn grey sails and '
+  'lantern-lit gunports fading like smoke, until only drifting fog and floating spars remain around the victorious ships. '
+  'The camera moves slowly through the dissolving ship.')
+v('cut_mother_of_wrecks_down', 'down_mother_of_wrecks', 'Мать Обломков повержена',
+  'At dawn off a reef the huge shape built of a hundred wrecks groans and collapses into the sea, masts, hulls and spars '
+  'tumbling apart and sinking in a great churn of water, as the ships around it cheer and the gulls return. The camera '
+  'pulls back slowly from the falling timbers.')
+v('cut_storm_widow_down', 'down_storm_widow', 'Вдова Бури повержена',
+  'In the heart of a storm over leviathan waters the ship of the Storm Widow is struck by her own lightning and goes dark, the '
+  'black clouds tearing open above her to show stars, the rain stopping and the sea calming around the battered ships. '
+  'The camera rises slowly into the clearing sky.')
+v('cut_ancient_leviathan_down', 'down_ancient_leviathan', 'Древний Левиафан повержен',
+  'At the edge of the abyss the ancient leviathan, vast as an island and grown over with coral and weed, sinks slowly '
+  'back into the black depths, the sea pouring off its back in waterfalls, as a great swell lifts the tiny ships around '
+  'it. The camera holds high above as the shadow fades below.')
+v('cut_abyss_eye_down', 'down_abyss_eye', 'Око Бездны повержено',
+  'Above the black abyss the colossal glowing eye in the water dims and closes, the pale light around it fading away, '
+  'and the whirlpool around it slows and stills until the sea is flat and dark beneath the stars and the ships float '
+  'free. The camera looks straight down as the light goes out.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
