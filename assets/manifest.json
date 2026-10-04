@@ -2152,6 +2152,10 @@
     "unit.giant_hawk_b":                       { "local": "units/giant_hawk_b.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.1", "rev": 20261004014621},
     "unit.giant_hawk_atk":                     { "local": "units/giant_hawk_atk.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.2", "rev": 20261004014621},
     "unit.giant_hawk_hit":                     { "local": "units/giant_hawk_hit.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.3", "rev": 20261004014621},
-    "bg.port_frostgate":                       { "local": "art/port_frostgate.webp", "remote": "hf_20261004_014836_gpt-bg.port_frostgate.png", "job": "gpt-bg.port_frostgate", "fit": "opaque:1920", "rev": 20261004014836}
+    "bg.port_frostgate":                       { "local": "art/port_frostgate.webp", "remote": "hf_20261004_014836_gpt-bg.port_frostgate.png", "job": "gpt-bg.port_frostgate", "fit": "opaque:1920", "rev": 20261004014836},
+    "unit.wind_sprite":                        { "local": "units/wind_sprite.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.0", "rev": 20261004015101},
+    "unit.wind_sprite_b":                      { "local": "units/wind_sprite_b.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.1", "rev": 20261004015101},
+    "unit.wind_sprite_atk":                    { "local": "units/wind_sprite_atk.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.2", "rev": 20261004015101},
+    "unit.wind_sprite_hit":                    { "local": "units/wind_sprite_hit.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.3", "rev": 20261004015101}
   }
 }
