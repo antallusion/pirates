@@ -2132,6 +2132,10 @@
     "unit.rum_brawler_b":                      { "local": "units/rum_brawler_b.webp", "remote": "hf_20261004_012405_gpt-anim_rum_brawler.png", "job": "gpt-anim_rum_brawler", "fit": "sheet:anim_rum_brawler.1", "rev": 20261004012405},
     "unit.rum_brawler_atk":                    { "local": "units/rum_brawler_atk.webp", "remote": "hf_20261004_012405_gpt-anim_rum_brawler.png", "job": "gpt-anim_rum_brawler", "fit": "sheet:anim_rum_brawler.2", "rev": 20261004012405},
     "unit.rum_brawler_hit":                    { "local": "units/rum_brawler_hit.webp", "remote": "hf_20261004_012405_gpt-anim_rum_brawler.png", "job": "gpt-anim_rum_brawler", "fit": "sheet:anim_rum_brawler.3", "rev": 20261004012405},
-    "bg.port_slagport":                        { "local": "art/port_slagport.webp", "remote": "hf_20261004_012733_gpt-bg.port_slagport.png", "job": "gpt-bg.port_slagport", "fit": "opaque:1920", "rev": 20261004012733}
+    "bg.port_slagport":                        { "local": "art/port_slagport.webp", "remote": "hf_20261004_012733_gpt-bg.port_slagport.png", "job": "gpt-bg.port_slagport", "fit": "opaque:1920", "rev": 20261004012733},
+    "unit.ledger_enforcer":                    { "local": "units/ledger_enforcer.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.0", "rev": 20261004012943},
+    "unit.ledger_enforcer_b":                  { "local": "units/ledger_enforcer_b.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.1", "rev": 20261004012943},
+    "unit.ledger_enforcer_atk":                { "local": "units/ledger_enforcer_atk.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.2", "rev": 20261004012943},
+    "unit.ledger_enforcer_hit":                { "local": "units/ledger_enforcer_hit.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.3", "rev": 20261004012943}
   }
 }
