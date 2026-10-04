@@ -2111,6 +2111,9 @@
     "ship.menagerie":                          { "local": "ships/menagerie.webp", "remote": "hf_20261004_005740_gpt-ships_16.png", "job": "gpt-ships_16", "fit": "sheet:ships_16.1", "rev": 20261004005740},
     "ship.coral_hulk":                         { "local": "ships/coral_hulk.webp", "remote": "hf_20261004_005740_gpt-ships_16.png", "job": "gpt-ships_16", "fit": "sheet:ships_16.2", "rev": 20261004005740},
     "ship.treasure_junk":                      { "local": "ships/treasure_junk.webp", "remote": "hf_20261004_005740_gpt-ships_16.png", "job": "gpt-ships_16", "fit": "sheet:ships_16.3", "rev": 20261004005740},
-    "bg.port_widows_wick":                     { "local": "art/port_widows_wick.webp", "remote": "hf_20261004_010317_gpt-bg.port_widows_wick.png", "job": "gpt-bg.port_widows_wick", "fit": "opaque:1920", "rev": 20261004010317}
+    "bg.port_widows_wick":                     { "local": "art/port_widows_wick.webp", "remote": "hf_20261004_010317_gpt-bg.port_widows_wick.png", "job": "gpt-bg.port_widows_wick", "fit": "opaque:1920", "rev": 20261004010317},
+    "ship.great_galleon":                      { "local": "ships/great_galleon.webp", "remote": "hf_20261004_010545_gpt-ships_17.png", "job": "gpt-ships_17", "fit": "sheet:ships_17.0", "rev": 20261004010545},
+    "ship.leviathan_ark":                      { "local": "ships/leviathan_ark.webp", "remote": "hf_20261004_010545_gpt-ships_17.png", "job": "gpt-ships_17", "fit": "sheet:ships_17.1", "rev": 20261004010545},
+    "ship.floating_fortress":                  { "local": "ships/floating_fortress.webp", "remote": "hf_20261004_010545_gpt-ships_17.png", "job": "gpt-ships_17", "fit": "sheet:ships_17.2", "rev": 20261004010545}
   }
 }
