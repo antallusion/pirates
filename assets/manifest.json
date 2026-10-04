@@ -2048,6 +2048,10 @@
     "bg.port_rotgut_landing":                  { "local": "art/port_rotgut_landing.webp", "remote": "hf_20261004_000047_gpt-bg.port_rotgut_landing.png", "job": "gpt-bg.port_rotgut_landing", "fit": "opaque:1920", "rev": 20261004000047},
     "ship.golden_carrack":                     { "local": "ships/golden_carrack.webp", "remote": "hf_20261004_000347_gpt-ships_9.png", "job": "gpt-ships_9", "fit": "sheet:ships_9.0", "rev": 20261004000347},
     "ship.floating_bazaar":                    { "local": "ships/floating_bazaar.webp", "remote": "hf_20261004_000347_gpt-ships_9.png", "job": "gpt-ships_9", "fit": "sheet:ships_9.1", "rev": 20261004000347},
-    "ship.ledger_galleon":                     { "local": "ships/ledger_galleon.webp", "remote": "hf_20261004_000347_gpt-ships_9.png", "job": "gpt-ships_9", "fit": "sheet:ships_9.2", "rev": 20261004000347}
+    "ship.ledger_galleon":                     { "local": "ships/ledger_galleon.webp", "remote": "hf_20261004_000347_gpt-ships_9.png", "job": "gpt-ships_9", "fit": "sheet:ships_9.2", "rev": 20261004000347},
+    "unit.mist_wraith":                        { "local": "units/mist_wraith.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.0", "rev": 20261004000601},
+    "unit.mist_wraith_b":                      { "local": "units/mist_wraith_b.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.1", "rev": 20261004000601},
+    "unit.mist_wraith_atk":                    { "local": "units/mist_wraith_atk.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.2", "rev": 20261004000601},
+    "unit.mist_wraith_hit":                    { "local": "units/mist_wraith_hit.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.3", "rev": 20261004000601}
   }
 }
