@@ -95,8 +95,8 @@ export const EN = {
   'log.move': '{a} move.',
   'side.you': 'Your captain',
   'side.foe': 'Her captain',
-  'ours': 'your',
-  'theirs': 'her',
+  'ours': 'yours',
+  'theirs': 'foe',
   // The end.
   'won': 'Victory!',
   'lost': 'Defeat',
