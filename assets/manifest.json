@@ -2123,6 +2123,10 @@
     "ship.whale_mother":                       { "local": "ships/whale_mother.webp", "remote": "hf_20261004_011401_gpt-ships_17b.png", "job": "gpt-ships_17b", "fit": "sheet:ships_17b.0", "rev": 20261004011401},
     "ship.drowned_cathedral":                  { "local": "ships/drowned_cathedral.webp", "remote": "hf_20261004_011751_gpt-ships_18.png", "job": "gpt-ships_18", "fit": "sheet:ships_18.0", "rev": 20261004011751},
     "ship.pirate_haven":                       { "local": "ships/pirate_haven.webp", "remote": "hf_20261004_011751_gpt-ships_18.png", "job": "gpt-ships_18", "fit": "sheet:ships_18.1", "rev": 20261004011751},
-    "ship.iron_whale":                         { "local": "ships/iron_whale.webp", "remote": "hf_20261004_011751_gpt-ships_18.png", "job": "gpt-ships_18", "fit": "sheet:ships_18.2", "rev": 20261004011751}
+    "ship.iron_whale":                         { "local": "ships/iron_whale.webp", "remote": "hf_20261004_011751_gpt-ships_18.png", "job": "gpt-ships_18", "fit": "sheet:ships_18.2", "rev": 20261004011751},
+    "unit.pearl_siren":                        { "local": "units/pearl_siren.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.0", "rev": 20261004012150},
+    "unit.pearl_siren_b":                      { "local": "units/pearl_siren_b.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.1", "rev": 20261004012150},
+    "unit.pearl_siren_atk":                    { "local": "units/pearl_siren_atk.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.2", "rev": 20261004012150},
+    "unit.pearl_siren_hit":                    { "local": "units/pearl_siren_hit.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.3", "rev": 20261004012150}
   }
 }
