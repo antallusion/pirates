@@ -89,6 +89,34 @@ const SHORT = '(max-width: 699px), (max-height: 520px)';
 /** The top stack's blocks that fold behind its button (the rest is what is happening now). */
 const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-watch', 'hud-world', 'hud-goals', 'hud-feed'];
 
+/** The transient blocks of the top stack (a hint, the sea's news, a boss's card), styles.css puts them at its head. */
+const TRANSIENT = ['hud-tip', 'hud-boss', 'hud-feed'];
+/** The screen's centre that transient text must keep out of (the owner's popup budget, 2026-10-04): 30–70 % both ways. */
+export const CENTRE = { from: 0.3, to: 0.7 };
+/** The popup budget (owner, 2026-10-04: «every transient text lives in a top or bottom band, never over the centre»).
+ *  An unfolded stack under a boss's card can run the news down to half the screen: then the hint, the card and the news
+ *  grow terser (`pb-1`: one line of news, the card without its parts and words), and if that is not enough, the news
+ *  steps out — it is in the chat's log — and the hint keeps one line (`pb-2`). */
+export function fitTransient(): void {
+  const body = document.body;
+  const over = (): boolean => {
+    const W = innerWidth, H = innerHeight;
+    for (const id of TRANSIENT) {
+      const e = document.getElementById(id);
+      if (!e || e.classList.contains('hidden')) continue;
+      const r = e.getBoundingClientRect();
+      if (r.height < 2 || r.width < 2) continue;
+      if (r.left < W * CENTRE.to && r.right > W * CENTRE.from && r.top < H * CENTRE.to && r.bottom > H * CENTRE.from) return true;
+    }
+    return false;
+  };
+  body.classList.remove('pb-1', 'pb-2');
+  if (!over()) return;
+  body.classList.add('pb-1');
+  if (!over()) return;
+  body.classList.add('pb-2');
+}
+
 /** Two names that say the same (a great one's hull is named as it is: «Сборщица Десятины · Сборщица Десятины»). */
 const sameWords = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
 
@@ -188,6 +216,16 @@ export class Hud {
     };
     new ResizeObserver(this.placeStrip).observe(stack);
     addEventListener('resize', this.placeStrip);
+    // The popup budget: the hint, the news and a boss's card keep out of the screen's centre, terser step by step.
+    let fitting = false;
+    const fit = () => {
+      if (fitting) return;
+      fitting = true;
+      requestAnimationFrame(() => { fitting = false; fitTransient(); });
+    };
+    new MutationObserver(fit).observe(stack, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+    new ResizeObserver(fit).observe(stack);
+    addEventListener('resize', fit);
     this.wireFold();
   }
 
