@@ -2318,6 +2318,10 @@
     "unit.sea_wolf":                           { "local": "units/sea_wolf.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.0", "rev": 20261004042012},
     "unit.sea_wolf_b":                         { "local": "units/sea_wolf_b.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.1", "rev": 20261004042012},
     "unit.sea_wolf_atk":                       { "local": "units/sea_wolf_atk.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.2", "rev": 20261004042012},
-    "unit.sea_wolf_hit":                       { "local": "units/sea_wolf_hit.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.3", "rev": 20261004042012}
+    "unit.sea_wolf_hit":                       { "local": "units/sea_wolf_hit.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.3", "rev": 20261004042012},
+    "unit.abyss_knight":                       { "local": "units/abyss_knight.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.0", "rev": 20261004042249},
+    "unit.abyss_knight_b":                     { "local": "units/abyss_knight_b.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.1", "rev": 20261004042249},
+    "unit.abyss_knight_atk":                   { "local": "units/abyss_knight_atk.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.2", "rev": 20261004042249},
+    "unit.abyss_knight_hit":                   { "local": "units/abyss_knight_hit.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.3", "rev": 20261004042249}
   }
 }
