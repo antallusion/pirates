@@ -2294,6 +2294,10 @@
     "unit.siren_queen":                        { "local": "units/siren_queen.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.0", "rev": 20261004040225},
     "unit.siren_queen_b":                      { "local": "units/siren_queen_b.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.1", "rev": 20261004040225},
     "unit.siren_queen_atk":                    { "local": "units/siren_queen_atk.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.2", "rev": 20261004040225},
-    "unit.siren_queen_hit":                    { "local": "units/siren_queen_hit.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.3", "rev": 20261004040225}
+    "unit.siren_queen_hit":                    { "local": "units/siren_queen_hit.webp", "remote": "hf_20261004_040225_gpt-anim_siren_queen.png", "job": "gpt-anim_siren_queen", "fit": "sheet:anim_siren_queen.3", "rev": 20261004040225},
+    "unit.giant_manta":                        { "local": "units/giant_manta.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.0", "rev": 20261004040554},
+    "unit.giant_manta_b":                      { "local": "units/giant_manta_b.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.1", "rev": 20261004040554},
+    "unit.giant_manta_atk":                    { "local": "units/giant_manta_atk.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.2", "rev": 20261004040554},
+    "unit.giant_manta_hit":                    { "local": "units/giant_manta_hit.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.3", "rev": 20261004040554}
   }
 }
