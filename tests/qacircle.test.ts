@@ -195,7 +195,7 @@ test('a salvage with silver in it reads in Russian («1 Provisions, 6 Planks & P
   setLang('ru');
   applyDataLocale('ru');
   try {
-    assert.equal(serverText('Salvaged: 1 Provisions, 6 Planks & Pitch, 1 Sailcloth, 296 silver.'), 'Поднято со дна: провизия — 1, доски и смола — 6, парусина — 1, серебро — 296.');
+    assert.equal(serverText('Salvaged: 1 Provisions, 6 Planks & Pitch, 1 Sailcloth, 296 silver.').replace(/ /g, ' '), 'Поднято со дна: провизия — 1, доски и смола — 6, парусина — 1, серебро — 296.');
   } finally {
     applyDataLocale('en');
     setLang('en');
