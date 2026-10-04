@@ -82,7 +82,7 @@ export function serverTable(): Record<string, string> {
   return TABLE;
 }
 const exact = new Map<string, string>();
-let templates: { re: RegExp; ru: string; order: number[]; adjacent: number[] }[] | null = null;
+let templates: { re: RegExp; ru: string; order: number[]; adjacent: number[]; world: boolean }[] | null = null;
 
 function compile(): void {
   templates = [];
@@ -107,7 +107,7 @@ function compile(): void {
       if (m[1]) adjacent.push(seen);
       seen++;
     }
-    templates.push({ re: new RegExp(`^${src}$`, 's'), ru, order, adjacent });
+    templates.push({ re: new RegExp(`^${src}$`, 's'), ru, order, adjacent, world: en.startsWith('WORLD: ') });
   }
   // The most literal text first: "Sold {0} sugar" before "{0} {1}".
   const lit = (t: { re: RegExp }) => t.re.source.replace(/\(\.\*\?\)/g, '').length;
@@ -154,7 +154,10 @@ function translate(s: string, depth: number): string {
   if (depth === 0 && s.startsWith('WORLD: ') && !exact.has(s)) {
     const rest = s.slice(7);
     const inner = translate(rest, 0);
-    if (inner !== rest || !templates!.some((t) => t.re.test(s))) return `${exact.get('WORLD:') ?? 'Вести:'} ${inner}`;
+    // News with a line of its own ("WORLD: {0} is first ashore…") is read whole when the line stripped of its
+    // «WORLD:» was only half read by a looser template (QA, 2026-10-04: «Вести: Anna: добыча — the White Orca!»).
+    const half = inner !== rest && latin(inner) > 0 && templates!.some((t) => t.world && t.re.test(s));
+    if (!half && (inner !== rest || !templates!.some((t) => t.re.test(s)))) return `${exact.get('WORLD:') ?? 'Вести:'} ${inner}`;
   }
   // A giver's words as a job is taken ("Name, trade: “words” — the first step"): each part on its own, for a
   // job's own templates would swallow the whole line.

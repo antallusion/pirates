@@ -436,6 +436,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "Needs {0} in the store": "На складе нужно: {0}",
   "Needs {0} per batch": "Нужно {0} на партию",
   "Needs {0} silver": "Нужно {0} серебра",
+  "A NEW SEASON: {0}. {1}": "НОВЫЙ СЕЗОН: {0}. {1}",
   "Needs {0} silver (escrow and a {1}% listing fee)": "Нужно {0} серебра (залог и сбор за выставление {1}%)",
   "Needs {0} silver after trade-in": "Нужно {0} серебра с учётом зачёта старого корпуса",
   "Needs {0} {1} in your hold or the island's store": "Нужно {1} × {0} в вашем трюме или на складе острова",
