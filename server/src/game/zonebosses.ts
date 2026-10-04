@@ -9,7 +9,7 @@
 import { ZB_GRUDGE, ZB_LIFE, ZB_MIN_SHARE, ZB_REACH, ZB_ROAM, ZB_WARN, ZONE_BOSSES, zbSlot, zbSlotStart } from '../../../shared/src/data/zonebosses.ts';
 import type { ZoneBossDef } from '../../../shared/src/data/zonebosses.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
-import { SHIP_SLOTS, itemName, makeItem } from '../../../shared/src/data/items.ts';
+import { SHIP_SLOTS, makeItem } from '../../../shared/src/data/items.ts';
 import type { Item, Slot } from '../../../shared/src/data/items.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { clamp, dist, headingVec, wrapAngle } from '../../../shared/src/math.ts';
@@ -27,6 +27,7 @@ import { tattooCount } from './tattoos.ts';
 import { chronicle } from './renown.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
+import type { PlayerSession } from './player.ts';
 
 /** What a ship that is a zone boss carries (ShipEntity.zoneBoss). */
 export interface ZoneBossTag {
@@ -74,6 +75,8 @@ export class ZoneBossHub {
   live = new Map<RegionId, ZbLive>();
   /** The slot each region was last warned of (so the warning is said once). */
   private warned = new Map<RegionId, number>();
+  /** The slot each region's boss last left in (sent away early by an admin: not raised again in it). */
+  left = new Map<RegionId, number>();
 
   /** The regions this server raises: its own zone's (all of them with no zones). */
   regions(game: Game): RegionId[] {
@@ -121,7 +124,7 @@ export class ZoneBossHub {
         announce(game, region, Math.max(1, Math.round((next - wall) / 60000)));
       }
       // Her hour: up, unless she was slain in it already.
-      if (wall >= start && wall < start + ZB_LIFE && this.killedSlot(game, region) < slot) rise(game, region, slot, start + ZB_LIFE);
+      if (wall >= start && wall < start + ZB_LIFE && this.killedSlot(game, region) < slot && this.left.get(region) !== slot) rise(game, region, slot, start + ZB_LIFE);
     }
   }
 }
@@ -200,6 +203,7 @@ export function rise(game: Game, region: RegionId, slot: number, endsAt: number,
 export function leave(game: Game, live: ZbLive, ship: ShipEntity | null): void {
   const hub = game.zoneBosses;
   hub.live.delete(live.region);
+  hub.left.set(live.region, live.slot);
   const name = ship?.name ?? SHIP_CLASSES[ZONE_BOSSES[live.region].classId].name;
   if (ship) game.removeShip(ship.id);
   for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${name} has gone into the fog of ${REGIONS[live.region].name}, unbeaten.`, kind: 'info' });
@@ -431,27 +435,24 @@ function spoils(game: Game, live: ZbLive, ship: ShipEntity): void {
     if (!s || !p) continue;
     const items: Item[] = [];
     for (let i = 0; i < sh.items; i++) items.push(makeItem(rng, 0, { ilvl: def.level, source: 'boss', slots: ZB_SLOTS }));
-    const got: string[] = [];
     for (const it of items) {
-      if (takeItem(game, s, it)) got.push(itemName(it));
-      // A full locker: the piece floats where she sank, for this captain alone.
-      else {
-        const id = game.allocId();
-        game.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo: {}, gold: 0, expires: game.now + 900, ownerOnly: sh.account, items: [it] });
-        got.push(itemName(it));
-      }
+      // Into the locker (its own toast names the piece); a full locker leaves it floating where she sank, for this
+      // captain alone.
+      if (takeItem(game, s, it)) continue;
+      const id = game.allocId();
+      game.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo: {}, gold: 0, expires: game.now + 900, ownerOnly: sh.account, items: [it] });
     }
-    game.grantXp(s, sh.xp, `${ship.name} sunk`);
+    game.grantXp(s, sh.xp, `The sinking of ${ship.name}`);
     const pct = Math.max(1, Math.round(sh.share * 100));
     // The silver comes by letter, a draft on the League (any port pays it).
-    deliver(game, sh.account, { from: 'The Admiralty Prize Court', subject: `The spoils of ${ship.name}`, body: `Your part of her: ${pct}%. Ship gear taken from her: ${got.join(', ')}. Your share of her prize money is enclosed.`, gold: sh.silver, goods: null });
-    game.sendTo(s, { t: 'toast', msg: `${ship.name} is sunk! Your part: ${pct}%. Ship gear: ${got.join(', ')}; prize money by letter.`, kind: 'gold' });
+    deliver(game, sh.account, { from: 'The Admiralty Prize Court', subject: `The spoils of ${ship.name}`, body: `Your part of her: ${pct}%. Pieces of ship gear taken from her: ${items.length}. Your share of her prize money is enclosed.`, gold: sh.silver, goods: null });
+    game.sendTo(s, { t: 'toast', msg: `${ship.name} is sunk! Your part: ${pct}%. Pieces of ship gear: ${items.length}; the prize money comes by letter.`, kind: 'gold' });
     logNote(game, s, 'boss', [ship.name]);
     tattooCount(game, s, 'boss');
     game.saveSession(s);
     game.pushSelf(s, true);
   }
-  const who = names.slice(0, 4).join(', ') + (names.length > 4 ? ` and ${names.length - 4} more` : '');
+  const who = names.slice(0, 4).join(', ') + (names.length > 4 ? ` +${names.length - 4}` : ''); // (names and a count read in any tongue)
   const sea = REGIONS[live.region].name;
   for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${ship.name} is sunk in ${sea} by ${who || 'captains unknown'}.`, kind: 'gold' });
   if (names.length) chronicle(game, `${ship.name} was sunk in ${sea} by ${who}.`);
@@ -478,9 +479,85 @@ export function zbBoardBlocked(b: ShipEntity): string | null {
   return b.zoneBoss ? ZB_NO_BOARD : null;
 }
 
-/** The wall-clock bounds of a slot's hour (for the admin and the tests). */
-export function slotHour(region: RegionId, slot: number): { start: number; end: number } {
+// ================================================================== the admin's hand (QA)
+
+/** `/zboss [region] [rise|here|leave|kill|announce|reset]`: the calendar at a glance, or one sea's boss raised now
+ *  (out in her sea, or `here` beside the admin), sent away, sunk by the admin's guns alone, announced, or her slain
+ *  slot forgotten. */
+export function adminZoneBoss(game: Game, s: PlayerSession, args: string[]): string {
+  const ship = s.ship!;
+  const hub = game.zoneBosses;
+  const wall = game.wallNow();
+  let region = ship.region;
+  let i = 0;
+  if (args[0] && (REGION_IDS as string[]).includes(args[0])) {
+    region = args[0] as RegionId;
+    i = 1;
+  }
+  const act = (args[i] ?? '').toLowerCase();
+  const def = ZONE_BOSSES[region];
+  const name = SHIP_CLASSES[def.classId].name;
+  const sea = REGIONS[region].name;
+  const live = hub.live.get(region);
+  switch (act) {
+    case '': {
+      // A line a sea (each its own toast: each reads in the captain's tongue), and the count.
+      const rows = hub.regions(game).map((r) => {
+        const l = hub.live.get(r);
+        const nm = SHIP_CLASSES[ZONE_BOSSES[r].classId].name;
+        if (l) {
+          const b = game.ships.get(l.id);
+          return `${nm}: at sea, ${Math.round(((b?.hull ?? 0) / Math.max(1, b?.stats.hullMax ?? 1)) * 100)}% hull, ${Math.max(0, Math.ceil((l.endsAt - wall) / 60000))} min left`;
+        }
+        return `${nm}: rises in ${Math.max(0, Math.ceil((zbNextRiseAfter(game, r, wall) - wall) / 60000))} min`;
+      });
+      for (const row of rows) game.sendTo(s, { t: 'toast', msg: row, kind: 'info' });
+      return `Zone bosses: ${hub.live.size} at sea of ${rows.length}.`;
+    }
+    case 'rise':
+    case 'here': {
+      if (live) return `${name} is already at sea.`;
+      if (game.zone && !game.zone.regions.has(region)) return `${sea} is not in this zone.`;
+      let at: { x: number; y: number } | undefined;
+      if (act === 'here') {
+        const h = headingVec(ship.state.heading + Math.PI / 2);
+        at = { x: ship.state.x + h.x * 1400, y: ship.state.y + h.y * 1400 };
+        if (depthAt(game.world, at.x, at.y) < 12) at = { x: ship.state.x - h.x * 1400, y: ship.state.y - h.y * 1400 };
+        if (depthAt(game.world, at.x, at.y) < 12) return 'No deep water beside you for her.';
+      }
+      const b = rise(game, region, zbSlot(wall, region), wall + ZB_LIFE, at);
+      return b ? `${name} rises in ${sea}: an hour at sea.` : `No open water for ${name} in ${sea}.`;
+    }
+    case 'leave':
+      if (!live) return `${name} is not at sea.`;
+      leave(game, live, game.ships.get(live.id) ?? null);
+      return `${name} goes into the fog.`;
+    case 'kill': {
+      const b = live ? game.ships.get(live.id) : undefined;
+      if (!live || !b) return `${name} is not at sea.`;
+      zbCredit(game, b, ship, b.hull);
+      b.hull = 0;
+      b.attackers.set(ship.id, game.now);
+      game.beginSinking(b);
+      return `${name} is sunk by your guns alone.`;
+    }
+    case 'announce':
+      announce(game, region, 15);
+      return `${name}: announced.`;
+    case 'reset':
+      game.db.setKv(kvKey(region), { slot: -1, at: 0 });
+      hub.left.delete(region);
+      return `${name}: her slain slot is forgotten.`;
+    default:
+      return 'Usage: /zboss [region] [rise|here|leave|kill|announce|reset]';
+  }
+}
+
+/** When she next rises after `wall` (the calendar's next slot, past one she was slain or sent away in). */
+function zbNextRiseAfter(game: Game, region: RegionId, wall: number): number {
+  const slot = zbSlot(wall, region);
   const start = zbSlotStart(slot, region);
-  return { start, end: start + ZB_LIFE };
+  const done = game.zoneBosses.killedSlot(game, region) >= slot || game.zoneBosses.left.get(region) === slot;
+  return wall < start + ZB_LIFE && !done ? start : zbSlotStart(slot + 1, region);
 }
 

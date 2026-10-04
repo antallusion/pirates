@@ -25,7 +25,7 @@ import { inspectDialog } from './ui/inspect.ts';
 import { BoardFightPanel } from './ui/boardfight.ts';
 import { TacticalPanel } from './ui/tactical.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
-import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES } from '../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES, isZoneBossClass } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
 import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, SeaMarkData, ServerMsg } from '../../shared/src/protocol.ts';
@@ -1926,6 +1926,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED)) continue;
     const cls = SHIP_CLASSES[s.info.classId];
     if (beastOfClass(s.info.classId)) continue; // no decks on a beast of the sea
+    if (isZoneBossClass(s.info.classId)) continue; // nor on a zone boss: guns only (docs/21)
     // Nor on a great one's body or limbs (the server refuses them); held by one, she has «Axes!» on the same key and
     // no second button for it (QA, 2026-10-04).
     if (held || state.bosses.some((b) => b.noBoard?.includes(s.id))) continue;
