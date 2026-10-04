@@ -75,7 +75,7 @@ export function plural(n: number, one: string, few: string, many: string): strin
   return many;
 }
 
-/** Applies translations to static markup: `data-i18n="key"` sets the text, `data-i18n-ph` the placeholder. */
+/** Applies translations to static markup: `data-i18n="key"` sets the text, `data-i18n-ph` the placeholder, `-title` the title, `-aria` the aria-label. */
 export function translateDom(root: ParentNode = document): void {
   // The page's English stays hidden until this first pass (index.html) — now it can be shown.
   if (globalThis.document) queueMicrotask(() => document.documentElement.classList.remove('i18n-pending'));
@@ -90,6 +90,11 @@ export function translateDom(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((el) => {
     const k = el.dataset.i18nTitle!;
     if (has(k)) el.title = t(k);
+  });
+  // The names a screen reader says for the buttons drawn as signs (▲, ☰, ×): they spoke English on a Russian screen.
+  root.querySelectorAll<HTMLElement>('[data-i18n-aria]').forEach((el) => {
+    const k = el.dataset.i18nAria!;
+    if (has(k)) el.setAttribute('aria-label', t(k));
   });
 }
 

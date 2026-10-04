@@ -123,16 +123,16 @@
     <div id="touch">
       <div id="tc-stick"><i id="tc-course" class="hidden"></i><i id="tc-knob"></i></div>
       <div id="tc-sail" data-sail="0">
-        <button id="tc-sail-up" class="tc-btn" aria-label="Sail up"><b>▲</b></button>
+        <button id="tc-sail-up" class="tc-btn" aria-label="Sail up" data-i18n-aria="a11y.sailUp"><b>▲</b></button>
         <div class="tc-steps"><i></i><i></i><i></i><i></i></div>
-        <button id="tc-sail-down" class="tc-btn" aria-label="Sail down"><b>▼</b></button>
+        <button id="tc-sail-down" class="tc-btn" aria-label="Sail down" data-i18n-aria="a11y.sailDown"><b>▼</b></button>
       </div>
-      <button id="tc-chasers" class="tc-btn tc-small hidden" aria-label="Chasers"><b>⇡</b></button>
-      <button id="tc-dash" class="tc-btn tc-small" aria-label="Dash"><b>»</b><i class="tc-cd"></i></button>
-      <button id="tc-mount" class="tc-btn tc-small hidden" aria-label="Deck mount"><b>✺</b></button>
-      <button id="tc-port" class="tc-fire" aria-label="Port broadside"><b>◀</b></button>
-      <button id="tc-starboard" class="tc-fire" aria-label="Starboard broadside"><b>▶</b></button>
-      <button id="tc-menu" class="tc-btn tc-menu" aria-label="Menu"><b>☰</b></button>
+      <button id="tc-chasers" class="tc-btn tc-small hidden" aria-label="Chasers" data-i18n-aria="a11y.chasers"><b>⇡</b></button>
+      <button id="tc-dash" class="tc-btn tc-small" aria-label="Dash" data-i18n-aria="a11y.dash"><b>»</b><i class="tc-cd"></i></button>
+      <button id="tc-mount" class="tc-btn tc-small hidden" aria-label="Deck mount" data-i18n-aria="a11y.mount"><b>✺</b></button>
+      <button id="tc-port" class="tc-fire" aria-label="Port broadside" data-i18n-aria="a11y.port"><b>◀</b></button>
+      <button id="tc-starboard" class="tc-fire" aria-label="Starboard broadside" data-i18n-aria="a11y.starboard"><b>▶</b></button>
+      <button id="tc-menu" class="tc-btn tc-menu" aria-label="Menu" data-i18n-aria="a11y.menu"><b>☰</b></button>
     </div>
   </section>
 
@@ -154,9 +154,9 @@
   <div id="nethaul" class="hidden"></div>
   <div id="hud-chat" class="hud-layer hidden">
     <!-- The players' chat: a button with the count of unread lines opens the panel (tabs, the log, the emblems, the field). -->
-    <button id="chat-toggle" class="chat-toggle" type="button" aria-label="Chat"><span class="chat-tg-ico"></span><i id="chat-unread" class="chat-unread hidden"></i></button>
+    <button id="chat-toggle" class="chat-toggle" type="button" aria-label="Chat" data-i18n-aria="a11y.chat"><span class="chat-tg-ico"></span><i id="chat-unread" class="chat-unread hidden"></i></button>
     <div id="chat" data-filter="all">
-      <div class="chat-head"><div id="chat-tabs"></div><button id="chat-close" class="chat-x" type="button" aria-label="Close">×</button></div>
+      <div class="chat-head"><div id="chat-tabs"></div><button id="chat-close" class="chat-x" type="button" aria-label="Close" data-i18n-aria="a11y.close">×</button></div>
       <div id="chat-log"></div>
       <div id="chat-emotes" class="hidden"></div>
       <div class="chat-row"><button id="chat-emote-btn" class="chat-emo-btn" type="button" aria-label=":)"></button><input id="chat-input" maxlength="200" placeholder="Say a word…" data-i18n-ph="hud.chatPh" autocomplete="off" enterkeyhint="send" /><button id="chat-send" class="btn btn-small chat-send" type="button"></button></div>

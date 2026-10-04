@@ -1346,7 +1346,7 @@ function ensureCloseButton(root: HTMLElement): void {
   if (!x) {
     x = document.createElement('button');
     x.className = 'x-btn';
-    x.setAttribute('aria-label', 'Close');
+    x.setAttribute('aria-label', t('a11y.close'));
     x.onclick = () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal());
     root.append(x);
   }
