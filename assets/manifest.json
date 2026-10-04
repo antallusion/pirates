@@ -2298,6 +2298,10 @@
     "unit.giant_manta":                        { "local": "units/giant_manta.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.0", "rev": 20261004040554},
     "unit.giant_manta_b":                      { "local": "units/giant_manta_b.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.1", "rev": 20261004040554},
     "unit.giant_manta_atk":                    { "local": "units/giant_manta_atk.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.2", "rev": 20261004040554},
-    "unit.giant_manta_hit":                    { "local": "units/giant_manta_hit.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.3", "rev": 20261004040554}
+    "unit.giant_manta_hit":                    { "local": "units/giant_manta_hit.webp", "remote": "hf_20261004_040554_gpt-anim_giant_manta.png", "job": "gpt-anim_giant_manta", "fit": "sheet:anim_giant_manta.3", "rev": 20261004040554},
+    "unit.tidal_elemental":                    { "local": "units/tidal_elemental.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.0", "rev": 20261004040903},
+    "unit.tidal_elemental_b":                  { "local": "units/tidal_elemental_b.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.1", "rev": 20261004040903},
+    "unit.tidal_elemental_atk":                { "local": "units/tidal_elemental_atk.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.2", "rev": 20261004040903},
+    "unit.tidal_elemental_hit":                { "local": "units/tidal_elemental_hit.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.3", "rev": 20261004040903}
   }
 }
