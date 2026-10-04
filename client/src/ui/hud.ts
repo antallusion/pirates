@@ -83,6 +83,9 @@ function toastLife(kind: string): number {
   return kind === 'xp' ? (phone ? 2500 : 3500) : kind === 'bad' ? (phone ? 5000 : 7000) : phone ? 3800 : 6000;
 }
 
+/** A short screen (a phone, a small window): the action bar fills its bottom, the toasts keep to the top row. */
+const SHORT = '(max-width: 699px), (max-height: 520px)';
+
 /** The top stack's blocks that fold behind its button (the rest is what is happening now). */
 const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-watch', 'hud-world', 'hud-goals', 'hud-feed'];
 
@@ -117,7 +120,8 @@ export class Hud {
   private lastFishKey = '';
   private lastTargetKey = '';
   private toastsEl = $('toasts');
-  private bannerTimer = 0;
+  /** The toasts' strip on a short screen, measured again as a toast comes (the chart's lines may have grown). */
+  private placeStrip: () => void = () => {};
   private minimap = $('minimap') as HTMLCanvasElement;
   /** docs/18 III: what the minimap shows, for its tooltip. */
   private miniView: { x: number; y: number; range: number } | null = null;
@@ -154,6 +158,7 @@ export class Hud {
     const place = () => {
       const r = bottom.getBoundingClientRect();
       document.body.style.setProperty('--hb-top', `${r.height > 0 ? Math.max(0, innerHeight - r.top) / zoom() : 0}px`);
+      if (r.width > 0) document.body.style.setProperty('--hb-left', `${Math.round(r.left / zoom())}px`); // the desk's toasts keep left of it
     };
     new ResizeObserver(place).observe(bottom);
     addEventListener('resize', place);
@@ -162,6 +167,27 @@ export class Hud {
     const under = () => document.body.style.setProperty('--rg-bottom', `${Math.round(region.getBoundingClientRect().bottom / zoom())}px`);
     new ResizeObserver(under).observe(region);
     addEventListener('resize', under);
+    // A short screen's bottom is the action bar's: there the toasts keep to the top row, from the fold button to the
+    // first thing on its right (the chart, the menu button), as tall as the button (the popup budget, styles.css).
+    const fold = $('hud-fold'), stack = $('hud-stack');
+    this.placeStrip = () => {
+      if (!matchMedia(SHORT).matches) return;
+      const z = zoom(), f = fold.getBoundingClientRect(), st = stack.getBoundingClientRect();
+      if (!st.width) return;
+      const top = st.top, h = Math.max(40 * z, f.height) + 4 * z, left = (f.width ? f.right : st.left) + 8 * z;
+      let right = innerWidth - 8 * z;
+      for (const el of document.querySelectorAll('#hud-map, .tc-menu, #chat-toggle, #unread, #hud-region')) {
+        const r = el.getBoundingClientRect();
+        if (r.width && r.left > left && r.top < top + h && r.bottom > top) right = Math.min(right, r.left - 8 * z);
+      }
+      const set = (k: string, v: number) => document.body.style.setProperty(k, `${Math.round(v / z)}px`);
+      set('--ts-top', top);
+      set('--ts-left', left);
+      set('--ts-w', Math.max(120 * z, right - left));
+      set('--ts-h', h);
+    };
+    new ResizeObserver(this.placeStrip).observe(stack);
+    addEventListener('resize', this.placeStrip);
     this.wireFold();
   }
 
@@ -1231,6 +1257,7 @@ export class Hud {
     el.dataset.msg = line;
     el.innerHTML = `${face}<span class="talk-body"><b class="talk-who">${esc(who)}</b><span class="talk-line">${esc(line)}</span></span>`;
     el.title = `${who}: ${line}`;
+    if (box === this.toastsEl) this.placeStrip();
     box.prepend(el);
     while (box.children.length > (box === this.toastsEl ? 7 : 2)) box.lastChild!.remove();
     el.dataset.timer = String(setTimeout(() => el.remove(), toastLife('bad') + 1500));
@@ -1270,6 +1297,7 @@ export class Hud {
     el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(keyless(msg)).replace(/ — /g, ' — ')}</span>`;
     decorateSums(el);
     el.title = keyless(msg);
+    if (box === this.toastsEl) this.placeStrip();
     box.prepend(el);
     while (box.children.length > (box === this.toastsEl ? 7 : 2)) box.lastChild!.remove();
     el.dataset.timer = String(setTimeout(() => el.remove(), toastLife(kind)));
@@ -1295,22 +1323,16 @@ export class Hud {
   banner(title: string, sub: string): void {
     // A heading starts with a capital even when the name reads lower-case inside a sentence ("море Грейвуотер").
     title = title.charAt(0).toUpperCase() + title.slice(1);
-    // A phone has no free middle of the screen: the herald joins the toast column, where nothing covers it.
-    if (matchMedia('(max-width: 699px), (max-height: 520px)').matches) {
-      const el = document.createElement('div');
-      el.className = 'toast herald';
-      el.innerHTML = `<b>${esc(title)}</b><small>${esc(sub)}</small>`;
-      if (modalOpen()) return; // a window open: the herald's words are for the sea, not over the window
-      this.toastsEl.prepend(el);
-      while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
-      setTimeout(() => el.remove(), 5000);
-      return;
-    }
-    const b = $('banner');
-    b.innerHTML = `${esc(title)}<small>${esc(sub)}</small>`;
-    b.classList.add('show');
-    clearTimeout(this.bannerTimer);
-    this.bannerTimer = window.setTimeout(() => b.classList.remove('show'), 3500);
+    // The herald joins the toasts' band (owner, 2026-10-04: nothing over the middle of the screen; the region's name
+    // printed large at a quarter of the height stood over the sea before the ship).
+    if (modalOpen()) return; // a window open: the herald's words are for the sea, not over the window
+    const el = document.createElement('div');
+    el.className = 'toast herald';
+    el.innerHTML = `<b>${esc(title)}</b><small>${esc(sub)}</small>`;
+    this.placeStrip();
+    this.toastsEl.prepend(el);
+    while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
+    setTimeout(() => el.remove(), 5000);
   }
 
   /** Party frames (docs/11 P6), as WoW's: each groupmate's name, level and hull, and where they are — a bearing

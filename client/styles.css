@@ -342,10 +342,6 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
 #hud-dive .dctl { text-align: center; }
 #hud-dive .dctl button { min-width: 30px; margin: 1px; }
 .map-maps { max-height: 150px; overflow-y: auto; font-size: 12px; padding: 6px 10px; border-top: 1px solid rgba(111,90,56,0.4); }
-#banner small { display: block; font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--fog); letter-spacing: 0.02em; }
-#banner.show { opacity: 1; }
-/* A window open over the sea: the region's name does not print across it. */
-body:has(#modal:not(.hidden)) #banner { visibility: hidden; }
 .toast { background: rgba(10, 11, 13, 0.85); border-left: 3px solid var(--steel); padding: 6px 10px; font-size: 12px; animation: fadein 0.2s; }
 .toast.good { border-color: var(--good); }
 .toast.bad { border-color: var(--bad); }
@@ -357,15 +353,11 @@ body:has(#modal:not(.hidden)) #banner { visibility: hidden; }
 #chat.open #chat-input { display: block; }
 #hud-boss { text-align: center; }
 #hud-dive { font-size: 12px; }
-#banner { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); width: max-content; max-width: 92vw; text-align: center; font-family: var(--display); font-size: clamp(24px, 6vw, 38px); color: var(--bone); text-shadow: 0 0 20px #000; opacity: 0; transition: opacity 1.2s; letter-spacing: 0.06em; pointer-events: none; }
-#toasts { position: absolute; left: 50%; transform: translateX(-50%); top: 40%; width: min(92vw, 360px); display: flex; flex-direction: column; gap: 5px; align-items: center; pointer-events: none; }
-#toasts .toast:nth-child(n+4) { display: none; }
+#toasts { position: absolute; pointer-events: none; } /* its place: the popup budget at the end of this file */
 #chat { position: absolute; left: calc(var(--sa-l) + 8px); right: calc(var(--sa-r) + 8px); top: calc(var(--sa-t) + var(--top-h) + 40px); pointer-events: auto; display: none; }
 #chat.open { display: block; }
 #chat-input { display: none; font-size: 15px; padding: 8px 10px; }
 @media (min-width: 1100px) and (min-height: 600px) {
-  #toasts { left: auto; right: 12px; transform: none; top: max(calc(var(--mm) + 110px), calc(var(--rg-bottom, 0px) + 10px)); width: 320px; align-items: stretch; }
-  #toasts .toast:nth-child(n+4) { display: block; }
   #chat { display: block; top: auto; right: auto; bottom: 12px; left: 12px; width: 340px; }
 }
 /* ---------- modal panels */
@@ -669,9 +661,7 @@ body:not(.touch) #hud-stack { right: calc(var(--sa-r) + 60px); }
 @media (max-width: 699px), (max-height: 520px) {
   #hud-boss .bparts, #hud-boss .bhint, #hud-boss .byou { display: none; }
   #hud-boss .bname { font-size: 17px; }
-  #toasts { top: auto; bottom: calc(max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h) + 150px) + 8px); flex-direction: column-reverse; }
 }
-@media (max-width: 699px) { #banner { top: calc(50% + 34px); font-size: 22px; max-width: 86vw; } #banner small { font-size: 13px; } }
 @media (max-width: 699px) { .captain-wrap .title-sm { font-size: 22px; } }
 
 /* ---- Round 2 (owner's notes) ---- */
@@ -1025,7 +1015,6 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
    menu column on the right. */
 @media (max-width: 699px) {
   body:not(.touch) { --slot: min(42px, calc((100vw - 64px) / 10)); }
-  body:not(.touch) #toasts { width: min(calc(100vw - 120px), 340px); left: calc(50% - 26px); }
 }
 /* A long action bar on a narrow screen (a level-60 captain: six shot, four abilities, five talents) breaks into
    rows between its groups instead of scrolling its last slots out of sight. */
@@ -1361,14 +1350,6 @@ html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { v
   body:not(.touch) .micro-menu { display: grid; grid-template-columns: repeat(2, 40px); gap: 6px; }
   body:not(.touch) #hud-stack { right: calc(var(--sa-r) + var(--mm) + 64px); } /* clear of the minimap */
 }
-/* Tablets: toasts rise from above the bottom block as on phones (at 40% of the height they met the goals under a
-   boss's full card). */
-@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
-  #toasts { top: auto; bottom: calc(max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h) + 150px) + 8px); flex-direction: column-reverse; }
-}
-/* Toasts in a column share its width, so their left edges (and icons) stand on one line instead of each centred
-   at its own width. */
-@media (max-width: 1099px), (max-height: 599px) { #toasts { align-items: stretch; } }
 
 /* Talent points under the portrait: the key, the mark and the number (the sentence was cut off beside the law's
    word on a desktop). */
@@ -1447,8 +1428,6 @@ body.touch #hud-region .rg-extra { display: none; }
   #hud-dive .dhaul { grid-area: haul; }
   #hud-dive .dlog { grid-area: log; max-height: 14px; margin: 0; }
   #hud-dive .dhint { display: none; }
-  body:has(#hud-dive:not(.hidden)) #toasts { left: calc(var(--sa-l) + 8px); transform: none; width: 330px; }
-  body:has(#hud-dive:not(.hidden)) #toasts .toast:nth-child(n+3) { display: none; }
 }
 /* A room's mark sits in the middle of its cell at every cell size (a fixed 22px line dropped it 4.5px in 17px). */
 #hud-dive .dcell { display: flex; align-items: center; justify-content: center; line-height: 1; }
@@ -2980,7 +2959,6 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 body.tac #hud-bottom, body.tac #touch, body.tac #board-fight { visibility: hidden; }
 /* While the decks fight, the sea's news waits; what the battle itself says (a refusal, a win) still shows. */
 body.tac #toasts .toast:not(.bad):not(.good):not(.xp) { display: none; }
-body.tac #toasts { top: 22%; }
 /* The battle decided: its banner says it all (the experience too); the sea's news waits for the deck to clear. */
 body.tac.tac-over #toasts { display: none; }
 /* A phone on its side: the field in the middle as tall as the screen, the captains and the orders left and right. */
@@ -3391,10 +3369,6 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
   .tb-rs, .tb-rs-ico { width: 24px; height: 24px; }
 }
 .tb-pip.tb-men { color: var(--bone); }
-/* A desk: the battle's own toasts in the right column's open middle, clear of the order of the round. */
-@media (min-width: 900px) and (min-height: 521px) and (min-aspect-ratio: 7/5) {
-  body.tac #toasts { top: 46%; }
-}
 /* ---------- docs/16 Batch H: ease and polish ---------- */
 /* #36 the auto-sail pill: one line at the top of the stack, the stop a finger wide. */
 #hud-stack > #hud-autosail { order: -3; }
@@ -3757,18 +3731,12 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 @media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
   .tc-menu { top: max(calc(var(--sa-t) + var(--mm) + 64px), calc(var(--rg-bottom, 0px) + 6px)); }
 }
-/* docs/17 H5 (QA): a phone held sideways — the toasts and the adventure map's card keep to the middle column, between
-   the captain's plate and the right column's buttons (the card stood over the plate, the toasts climbed over both);
-   two toasts at most, so the column stays under the card. */
+/* docs/17 H5 (QA): a phone held sideways — the adventure map's card keeps to the middle column, between the captain's
+   plate and the right column's buttons (the card stood over the plate). */
 @media (max-height: 520px) {
   #advcard { left: calc(var(--sa-l) + 360px); width: min(410px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); min-width: 0; }
   #advcard .ac-acts .btn { padding: 2px 6px; font-size: 11px; }
   #advcard .ac-sub, #advcard .ac-warn { display: none; }
-  /* While the card is up, the newest toast alone, just under it (a hint above the action bar leaves no room below). */
-  body:has(#advcard:not(.hidden)) #toasts .toast:nth-child(n+2) { display: none !important; }
-  body:has(#advcard:not(.hidden)) #toasts { top: calc(var(--ac-bottom, 110px) + 4px); bottom: auto; }
-  #toasts { left: calc(var(--sa-l) + 360px); transform: none; width: min(360px, calc(100vw - 360px - var(--mm) - 70px - var(--sa-l) - var(--sa-r))); }
-  #toasts .toast:nth-child(n+3) { display: none !important; }
 }
 /* docs/17 H5 (QA): on a desktop narrower than 1600 px the micro menu's one row (ten buttons, 454 px) met the bottom
    block (the action bar grew a slot and the ship's level): two rows, the compass raised over them. The premium shop's
@@ -4397,7 +4365,6 @@ body.tac-ph .tb-banner { max-height: calc(100% - 16px); background: rgba(10, 9, 
 /* The sea waits while the decks fight on a phone: no chat, no sea's card over the field; the battle's own word (a
    refusal) in a line at the top, clear of the corners' buttons. */
 body.tac-ph #hud-chat, body.tac-ph #encounter, body.tac-ph #surrender, body.tac-ph #trek, body.tac-ph #fishfight, body.tac-ph #nethaul { visibility: hidden; }
-body.tac-ph #toasts { top: calc(var(--sa-t) + 8px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%); width: min(56vw, 340px); flex-direction: column; align-items: stretch; }
 /* The card's numbers by their painted marks (a desk's card too): the mark beside the word and the number. */
 .tb-stats > div { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 4px; min-width: 0; }
 .tb-stats > div > .ico-xs { grid-row: span 2; width: 18px; height: 18px; margin: 0; border-radius: 3px; }
@@ -4413,3 +4380,69 @@ body.tac-ph #toasts { top: calc(var(--sa-t) + 8px); bottom: auto; left: 50%; rig
 .tb-sps .tb-spc { font: inherit; font-size: 10.5px; color: var(--bone); background: rgba(255, 255, 255, 0.05); cursor: pointer; }
 .tb-sps .tb-spc.on { border-color: var(--gold); color: var(--gold); }
 .tb-spn { margin: 4px 0 0; padding: 4px 6px; border-left: 2px solid var(--brass-dim); font-size: 11.5px; line-height: 1.3; color: var(--bone); }
+/* ---------- The popup budget (owner, 2026-10-04: «текстовая часть должна занимать не более 15 процентов экрана любого
+   монитора и быть где-то внизу-вверху, чтобы центр не закрывать… это касается всех всплывающих плашек»). What the sea
+   says in passing — a toast, a line said aboard, the region's herald — keeps to one band of a fixed size: on a desk in
+   the bottom-left corner over the chat's button, where WoW keeps its log (over the action bar, in the bottom 30% of
+   the height, while the chat is open there or on a narrower screen); on a short screen (a phone on its side, a small
+   window), whose bottom the action bar fills, in the top row beside the fold button (its bounds measured in hud.ts).
+   What does not fit wraps into a column beyond the band's edge, out of sight, so the band never grows into the
+   middle; each toast is the band's full width, so nothing shows beside it. */
+#toasts { top: auto; left: 50%; right: auto; transform: translateX(-50%); bottom: calc(var(--hb-top, 0px) + 6px);
+  width: min(440px, 44vw / var(--ui-scale, 1)); height: clamp(46px, calc(30vh / var(--ui-scale, 1) - var(--hb-top, 0px) - 6px), 150px);
+  display: flex; flex-flow: column-reverse wrap; align-content: flex-start; align-items: stretch; gap: 4px; overflow: hidden; }
+body.touch #toasts { bottom: calc(max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h) + 150px) + 6px); }
+#toasts > .toast { flex: none; width: calc(100% / var(--density, 1)); }
+#toasts > .toast.bad { order: -1; } /* a refusal keeps its place nearest the edge: a coin coming after it does not push it out */
+#toasts .toast.herald { padding: 3px 10px 4px; }
+#toasts .toast.herald b { font-size: 16px; line-height: 19px; }
+#toasts .toast.herald small { font-size: 12px; line-height: 14px; }
+@media (min-width: 1100px) and (min-height: 600px) {
+  body:not(.touch):not(.chat-open) #toasts { left: calc(var(--sa-l) + 12px); transform: none; bottom: calc(var(--sa-b) + 68px);
+    width: min(380px, calc(var(--hb-left, 400px) - var(--sa-l) - 24px)); height: clamp(50px, calc(34vh / var(--ui-scale, 1) - 68px), 180px); }
+}
+@media (max-width: 699px), (max-height: 520px) {
+  #toasts { top: var(--ts-top, calc(var(--sa-t) + 8px)); bottom: auto; left: var(--ts-left, 30vw); transform: none;
+    width: var(--ts-w, 40vw); height: var(--ts-h, 44px); flex-flow: column wrap; gap: 2px; }
+  #toasts > .toast { padding: 2px 8px; font-size: 11.5px; line-height: 15px; }
+  #toasts .toast .ico-toast { width: 15px; height: 15px; }
+  /* A line said aboard: a small face, the speaker and the words running on, two lines at most. */
+  #toasts .toast.talk { align-items: center; gap: 6px; padding: 2px 8px 2px 3px; }
+  #toasts .toast.talk .talk-face { width: 22px; height: 22px; }
+  #toasts .toast.talk .talk-body { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #toasts .toast.talk .talk-who { display: inline; font-size: 11px; line-height: 15px; }
+  #toasts .toast.talk .talk-who::after { content: ' · '; color: var(--fog); }
+  #toasts .toast.talk .talk-line { display: inline; font-size: 12px; line-height: 15px; }
+  #toasts .toast.herald { padding: 1px 8px 2px; }
+  #toasts .toast.herald b { font-size: 15px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #toasts .toast.herald small { font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+/* The decks fighting on a phone: the battle's word in a line at the top, clear of the corners' buttons. */
+body.tac-ph #toasts { top: calc(var(--sa-t) + 8px); left: 50%; transform: translateX(-50%); width: min(56vw, 340px); height: 44px; }
+/* An encounter's card in the top band, its picture beside its words, so it ends above the ship (it stood from 150 px
+   down past the middle, the ship under it). A short screen keeps it in the top-left corner, over the captain's plate,
+   to its title and its choices: the title opens the scene's words. */
+#encounter { top: calc(var(--sa-t, 0px) + 12px); width: min(460px, calc(100vw - 24px)); }
+#encounter .enc-card { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; padding: 8px 10px 10px; }
+#encounter .enc-card:has(> .enc-art) { grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; }
+#encounter .enc-card:has(> .enc-art) > :not(.enc-art):not(.enc-choices) { grid-column: 2; }
+#encounter .enc-card > .enc-art { grid-row: 1 / span 3; width: 96px; height: auto; aspect-ratio: 1; margin: 0; }
+#encounter .enc-h { display: block; width: 100%; margin: 0 0 2px; padding: 0; border: 0; background: none; text-align: left; font-size: 17px; line-height: 1.25; cursor: default; }
+#encounter .enc-text, #encounter .enc-out { margin: 0 0 6px; font-size: 13px; line-height: 1.4; }
+#encounter .enc-choices { grid-column: 1 / -1; margin-top: 6px; }
+@media (max-width: 699px), (max-height: 520px) {
+  #encounter { top: calc(var(--sa-t, 0px) + 6px); left: calc(var(--sa-l, 0px) + 8px); transform: none; width: min(420px, calc(var(--ts-left, 360px) - var(--sa-l, 0px) - 16px)); min-width: 0; }
+  body:has(#encounter:not(.hidden)) #hud-captain { visibility: hidden; }
+  #encounter .enc-card { padding: 6px 8px 8px; }
+  #encounter .enc-card:has(> .enc-art) { grid-template-columns: 30px minmax(0, 1fr); column-gap: 8px; }
+  #encounter .enc-card > .enc-art { grid-row: 1; width: 30px; border-radius: 50%; }
+  #encounter .enc-h { display: flex; align-items: center; gap: 6px; min-height: 30px; font-size: 15px; cursor: pointer; }
+  #encounter .enc-fold::after { content: ''; flex: none; width: 7px; height: 7px; margin: 0 4px 3px auto; border: solid var(--gold); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 0.15s; }
+  #encounter .enc-card.open .enc-fold::after { transform: rotate(-135deg); margin-bottom: -3px; }
+  #encounter .enc-text { display: none; font-size: 12px; line-height: 1.35; margin: 2px 0 0; grid-column: 1 / -1 !important; }
+  #encounter .enc-card.open .enc-text { display: block; }
+  #encounter .enc-out { grid-column: 1 / -1 !important; font-size: 12px; line-height: 1.35; margin: 4px 0 0; }
+  /* The choices in one row, a long one in two lines of its own button (in rows they took half the card). */
+  #encounter .enc-choices { margin-top: 6px; gap: 4px; flex-wrap: nowrap; }
+  #encounter .enc-choices .btn { flex: 1 1 0; min-width: 0; min-height: 30px; padding: 2px 6px; font-size: 11.5px; line-height: 1.15; white-space: normal; }
+}

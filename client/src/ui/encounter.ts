@@ -70,8 +70,12 @@ export class EncounterCard {
     const d = ENCOUNTERS[view.def];
     this.shown = view.id;
     this.hideAt = 0;
-    this.el.innerHTML = `<div class="enc-card">${this.art(view.def)}<div class="enc-h">${esc(d.title[ru()])}</div><p class="enc-text">${esc(d.text[ru()])}</p>
+    // A short screen keeps the card to its title and choices (the popup budget, owner 2026-10-04); the title opens the
+    // scene's words.
+    this.el.innerHTML = `<div class="enc-card">${this.art(view.def)}<button type="button" class="enc-h enc-fold" aria-expanded="false">${esc(d.title[ru()])}</button><p class="enc-text">${esc(d.text[ru()])}</p>
       <div class="enc-choices">${d.choices.map((c) => `<button class="btn btn-small" data-enc="${esc(c.id)}">${esc(c.label[ru()])}</button>`).join('')}</div></div>`;
+    const fold = this.el.querySelector<HTMLElement>('.enc-fold')!;
+    fold.onclick = () => fold.setAttribute('aria-expanded', String(this.el.querySelector('.enc-card')!.classList.toggle('open')));
     this.el.classList.remove('hidden');
     this.el.querySelectorAll<HTMLElement>('[data-enc]').forEach((b) => (b.onclick = () => {
       this.el.querySelectorAll<HTMLButtonElement>('[data-enc]').forEach((x) => (x.disabled = true));
