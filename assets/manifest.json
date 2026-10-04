@@ -2378,6 +2378,10 @@
     "unit.company_cannoneer":                  { "local": "units/company_cannoneer.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.0", "rev": 20261004050038},
     "unit.company_cannoneer_b":                { "local": "units/company_cannoneer_b.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.1", "rev": 20261004050038},
     "unit.company_cannoneer_atk":              { "local": "units/company_cannoneer_atk.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.2", "rev": 20261004050038},
-    "unit.company_cannoneer_hit":              { "local": "units/company_cannoneer_hit.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.3", "rev": 20261004050038}
+    "unit.company_cannoneer_hit":              { "local": "units/company_cannoneer_hit.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.3", "rev": 20261004050038},
+    "unit.petardier":                          { "local": "units/petardier.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.0", "rev": 20261004050318},
+    "unit.petardier_b":                        { "local": "units/petardier_b.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.1", "rev": 20261004050318},
+    "unit.petardier_atk":                      { "local": "units/petardier_atk.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.2", "rev": 20261004050318},
+    "unit.petardier_hit":                      { "local": "units/petardier_hit.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.3", "rev": 20261004050318}
   }
 }
