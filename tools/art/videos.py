@@ -911,6 +911,56 @@ v('cut_turtle_guardian_down', 'down_turtle_guardian', 'Древняя череп
   'slowly and wades out into the surf, sinking beneath the waves as the tide washes over the rocks where it lay, and the '
   'pirates on the shore take off their hats. The camera holds on the sea as it disappears.')
 
+# ---- The sixteenth reel: the other lairs ashore won, each the first time (shared/src/data/lairs.ts) -------------------
+v('cut_leviathan_shoal_down', 'down_leviathan_shoal', 'Левиафан ушёл с отмели',
+  'A spring tide at dusk over a grey shoal: the old leviathan that lay beached there for a hundred years, its back grown '
+  'with weed and barnacles, heaves itself free as the high water lifts it and slides slowly out into the deep channel, '
+  'the pale drowned men on the sand turning to watch it go. The camera rises slowly over the empty shoal.')
+v('cut_crab_hollow_down', 'down_crab_hollow', 'Королева крабов отступила',
+  'Late light under the palms in a hollow heaped with split coconuts and old shells: the coconut crab queen, as big as a '
+  'longboat, lowers her great blue claws and backs slowly into a cleft in the rock, her court of little hermit crabs '
+  'scuttling after her, as the pirates step into the hollow with lanterns. The camera moves slowly in among the shells.')
+v('cut_tentacle_lagoon_down', 'down_tentacle_lagoon', 'Щупальца ушли в лагуну',
+  'Moonlight on a still lagoon at low tide: the long grey arms that lay across the sand curl back one by one and slide '
+  'into the dark water, the last tip vanishing with a ripple, as the landing party stands on the beach with their '
+  'boat hooks lowered. The camera holds low over the calm lagoon.')
+v('cut_choir_circle_down', 'down_choir_circle', 'Круг Хора умолк',
+  'Night in a ring of tall standing stones on a grey headland: the hooded cultists flee down the slope with their '
+  'lanterns, the pale drowned figures among the stones walk slowly back into the sea, and the green glow on the stones '
+  'fades as the pirates step into the silent circle. The camera circles the stones.')
+v('cut_drowned_surf_down', 'down_drowned_surf', 'Утопленники вернулись в море',
+  'A grey dawn on a long beach: the pale drowned sailors in rotted coats who walked up from the surf turn and wade slowly '
+  'back into the waves until the sea closes over them, and the tide smooths their footprints from the sand as the '
+  'pirates lower their cutlasses. The camera pulls slowly back along the beach.')
+v('cut_croc_mangroves_down', 'down_croc_mangroves', 'Крокодилы ушли в мангры',
+  'Morning haze in the mangroves: the great crocodiles slide one after another off the roots into the brown water and '
+  'sink until only their eyes show, then vanish, as the pirates wade forward with muskets held high and the toads fall '
+  'silent. The camera skims low over the water between the roots.')
+v('cut_jaguar_den_down', 'down_jaguar_den', 'Ягуары покинули логово',
+  'Green jungle light: the spotted jaguars on the fallen trunk rise, look back once with golden eyes and melt away '
+  'into the leaves one by one, as the landing party pushes through the ferns with cutlasses lowered. The camera moves '
+  'slowly up the empty trunk.')
+v('cut_ape_ridge_down', 'down_ape_ridge', 'Обезьяны отступили с гребня',
+  'Evening on a rocky jungle ridge over a beach: the grey-backed apes stop beating their chests, gather their young and '
+  'climb away over the crest into the trees, as the pirates come up the slope from the boats. The camera rises over '
+  'the ridge to the sunset sea.')
+v('cut_serpent_marsh_down', 'down_serpent_marsh', 'Змеи уползли в тростник',
+  'A steaming black marsh at dusk: the long marsh serpents uncoil from the reeds and glide away through the dark water, '
+  'their wakes fanning out and fading, as the landing party wades in with torches. The camera follows a wake into the '
+  'reeds.')
+v('cut_shark_shallows_down', 'down_shark_shallows', 'Акулы ушли с мелководья',
+  'Bright warm shallows over white sand: the reef sharks turn away from the surf one after another and glide out into '
+  'the deep blue beyond the reef, their fins sinking from sight, as the pirates wade ashore from the boat. The camera '
+  'looks down through the clear water as the last shadow goes.')
+v('cut_moray_reef_down', 'down_moray_reef', 'Мурены спрятались в риф',
+  'Clear water over a coral reef at low tide: the great morays draw back slowly into their holes in the coral and the '
+  'silver barracudas wheel away into the channel, as the pirates step carefully across the reef with poles. The camera '
+  'glides low over the coral.')
+v('cut_bat_cave_down', 'down_bat_cave', 'Летучие мыши покинули пещеру',
+  'Dusk at a cave mouth in a sea cliff: a great cloud of bats pours out of the dark and streams away over the sea '
+  'against the red-gold sky, and a big monitor lizard slips off the rocks below, as the pirates light their torches at '
+  'the cave mouth. The camera turns to follow the bats out to sea.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
