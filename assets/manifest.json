@@ -2382,6 +2382,10 @@
     "unit.petardier":                          { "local": "units/petardier.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.0", "rev": 20261004050318},
     "unit.petardier_b":                        { "local": "units/petardier_b.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.1", "rev": 20261004050318},
     "unit.petardier_atk":                      { "local": "units/petardier_atk.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.2", "rev": 20261004050318},
-    "unit.petardier_hit":                      { "local": "units/petardier_hit.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.3", "rev": 20261004050318}
+    "unit.petardier_hit":                      { "local": "units/petardier_hit.webp", "remote": "hf_20261004_050318_gpt-anim_petardier.png", "job": "gpt-anim_petardier", "fit": "sheet:anim_petardier.3", "rev": 20261004050318},
+    "unit.ledger_factor":                      { "local": "units/ledger_factor.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.0", "rev": 20261004050608},
+    "unit.ledger_factor_b":                    { "local": "units/ledger_factor_b.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.1", "rev": 20261004050608},
+    "unit.ledger_factor_atk":                  { "local": "units/ledger_factor_atk.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.2", "rev": 20261004050608},
+    "unit.ledger_factor_hit":                  { "local": "units/ledger_factor_hit.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.3", "rev": 20261004050608}
   }
 }
