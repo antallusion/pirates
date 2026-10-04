@@ -2187,6 +2187,10 @@
     "unit.storm_petrels_b":                    { "local": "units/storm_petrels_b.webp", "remote": "hf_20261004_022250_gpt-anim_storm_petrels.png", "job": "gpt-anim_storm_petrels", "fit": "sheet:anim_storm_petrels.1", "rev": 20261004022250},
     "unit.storm_petrels_atk":                  { "local": "units/storm_petrels_atk.webp", "remote": "hf_20261004_022250_gpt-anim_storm_petrels.png", "job": "gpt-anim_storm_petrels", "fit": "sheet:anim_storm_petrels.2", "rev": 20261004022250},
     "unit.storm_petrels_hit":                  { "local": "units/storm_petrels_hit.webp", "remote": "hf_20261004_022250_gpt-anim_storm_petrels.png", "job": "gpt-anim_storm_petrels", "fit": "sheet:anim_storm_petrels.3", "rev": 20261004022250},
-    "prop.port_lotus_anchorage":               { "local": "props/port_lotus_anchorage.webp", "remote": "hf_20261004_022623_gpt-port_lotus_anchorage.png", "job": "gpt-port_lotus_anchorage", "fit": "sheet:port_lotus_anchorage.0", "rev": 20261004022623}
+    "prop.port_lotus_anchorage":               { "local": "props/port_lotus_anchorage.webp", "remote": "hf_20261004_022623_gpt-port_lotus_anchorage.png", "job": "gpt-port_lotus_anchorage", "fit": "sheet:port_lotus_anchorage.0", "rev": 20261004022623},
+    "unit.mermaid_queen":                      { "local": "units/mermaid_queen.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.0", "rev": 20261004022840},
+    "unit.mermaid_queen_b":                    { "local": "units/mermaid_queen_b.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.1", "rev": 20261004022840},
+    "unit.mermaid_queen_atk":                  { "local": "units/mermaid_queen_atk.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.2", "rev": 20261004022840},
+    "unit.mermaid_queen_hit":                  { "local": "units/mermaid_queen_hit.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.3", "rev": 20261004022840}
   }
 }
