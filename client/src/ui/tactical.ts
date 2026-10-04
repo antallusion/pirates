@@ -566,12 +566,14 @@ export class TacticalPanel {
       } else if (c) this.bursts.push({ id: 'part.splinters', x: c.x, y: c.y, t0: t, size: w * 0.8 });
     } else if (e.k === 'luck' || e.k === 'morale' || e.k === 'fear') {
       const c = at(hexOf(e.s));
-      if (c) this.addFloat({ text: e.k === 'fear' ? (e.id === 'still' || e.id === 'mad' ? L(`float.${e.id}`) : e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
+      // On a phone the field carries no words but the spells' (owner, 2026-10-03): a morale or luck roll shows by its light.
+      if (c && !this.phone) this.addFloat({ text: e.k === 'fear' ? (e.id === 'still' || e.id === 'mad' ? L(`float.${e.id}`) : e.id ? L('morale') + ' −' : L('fear.float')) : L(e.k === 'luck' ? 'luck' : 'morale') + ' +', x: c.x, y: c.y - w * 0.55, t0: t, color: e.k === 'fear' ? '#d06a5e' : '#e0b862' });
     } else if (e.k === 'poison' || e.k === 'regen') {
       // docs/18 II: the poison in a stack, a creature growing back.
       const c = at(e.hex ?? hexOf(e.s));
       if (c) {
-        this.addFloat({ text: e.k === 'poison' ? `${L(e.id === 'sick' ? 'float.sick' : 'float.poison')} −${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${L(e.id === 'mend' ? 'float.mend' : e.id === 'drain' ? 'float.drain' : 'float.regen')} +${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
+        const word = this.phone ? '' : `${L(e.k === 'poison' ? (e.id === 'sick' ? 'float.sick' : 'float.poison') : e.id === 'mend' ? 'float.mend' : e.id === 'drain' ? 'float.drain' : 'float.regen')} `;
+        this.addFloat({ text: e.k === 'poison' ? `${word}−${e.dmg}${e.kills ? ` †${e.kills}` : ''}` : `${word}+${e.dmg}`, x: c.x, y: c.y - w * 0.2, t0: t, color: e.k === 'poison' ? '#9be36a' : '#7fe0b0' });
         this.bursts.push({ id: e.k === 'poison' ? (sprite('fx.bt_poison_0') ? 'fx.bt_poison' : 'part.smoke') : sprite('fx.bt_heal_0') ? 'fx.bt_heal' : 'part.splash', x: c.x, y: c.y, t0: t, size: w * 0.9 });
       }
     } else if (e.k === 'spell') {
@@ -619,10 +621,10 @@ export class TacticalPanel {
       }
     } else if (e.k === 'again') {
       const c = at(hexOf(e.s));
-      if (c) this.addFloat({ text: L('float.again'), x: c.x, y: c.y - w * 0.6, t0: t, color: '#9fe0ff' });
+      if (c && !this.phone) this.addFloat({ text: L('float.again'), x: c.x, y: c.y - w * 0.6, t0: t, color: '#9fe0ff' });
     } else if (e.k === 'order') {
       const c = at(hexOf(e.s));
-      if (c) this.addFloat({ text: L(`o.${e.id}` as K), x: c.x, y: c.y - w * 0.6, t0: t, color: '#e0b862' });
+      if (c && !this.phone) this.addFloat({ text: L(`o.${e.id}` as K), x: c.x, y: c.y - w * 0.6, t0: t, color: '#e0b862' });
       // The harpooner's iron lands on her stack.
       if (e.t !== undefined) {
         const tc = at(e.hex ?? hexOf(e.t));

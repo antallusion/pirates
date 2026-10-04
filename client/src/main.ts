@@ -665,7 +665,8 @@ function titleFilm(ka: HTMLElement, poster: string | null): void {
   v.className = 'keyart-film';
   v.muted = true;
   v.playsInline = true;
-  v.autoplay = true;
+  // No autoplay attribute: a page opened already signed in hides the title screen from the start, and the film would
+  // run unseen under the game (QA, 2026-10-04) — it plays only by go(), on the title screen.
   v.preload = 'auto';
   v.setAttribute('aria-hidden', 'true');
   if (poster) v.poster = poster;
@@ -676,7 +677,7 @@ function titleFilm(ka: HTMLElement, poster: string | null): void {
     const reels = ['trailer', ...(filmExists('trailer_raids') ? ['trailer_raids'] : [])];
     reel = (reel + 1) % reels.length;
     v.src = `/assets/video/${reels[reel]}.mp4`;
-    void v.play().catch(() => {});
+    go();
   });
   v.addEventListener('playing', () => v.classList.add('on'));
   ka.appendChild(v);
