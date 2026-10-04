@@ -2236,6 +2236,7 @@
     "unit.jade_dragon":                        { "local": "units/jade_dragon.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.0", "rev": 20261004031523},
     "unit.jade_dragon_b":                      { "local": "units/jade_dragon_b.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.1", "rev": 20261004031523},
     "unit.jade_dragon_atk":                    { "local": "units/jade_dragon_atk.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.2", "rev": 20261004031523},
-    "unit.jade_dragon_hit":                    { "local": "units/jade_dragon_hit.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.3", "rev": 20261004031523}
+    "unit.jade_dragon_hit":                    { "local": "units/jade_dragon_hit.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.3", "rev": 20261004031523},
+    "prop.port_marrowdeep":                    { "local": "props/port_marrowdeep.webp", "remote": "hf_20261004_031755_gpt-port_marrowdeep.png", "job": "gpt-port_marrowdeep", "fit": "sheet:port_marrowdeep.0", "rev": 20261004031755}
   }
 }
