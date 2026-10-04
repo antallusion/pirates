@@ -2242,6 +2242,10 @@
     "unit.bell_diver":                         { "local": "units/bell_diver.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.0", "rev": 20261004032634},
     "unit.bell_diver_b":                       { "local": "units/bell_diver_b.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.1", "rev": 20261004032634},
     "unit.bell_diver_atk":                     { "local": "units/bell_diver_atk.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.2", "rev": 20261004032634},
-    "unit.bell_diver_hit":                     { "local": "units/bell_diver_hit.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.3", "rev": 20261004032634}
+    "unit.bell_diver_hit":                     { "local": "units/bell_diver_hit.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.3", "rev": 20261004032634},
+    "unit.sea_dragon":                         { "local": "units/sea_dragon.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.0", "rev": 20261004032904},
+    "unit.sea_dragon_b":                       { "local": "units/sea_dragon_b.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.1", "rev": 20261004032904},
+    "unit.sea_dragon_atk":                     { "local": "units/sea_dragon_atk.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.2", "rev": 20261004032904},
+    "unit.sea_dragon_hit":                     { "local": "units/sea_dragon_hit.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.3", "rev": 20261004032904}
   }
 }
