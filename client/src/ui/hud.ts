@@ -26,7 +26,7 @@ import { drawRelation, relationOf, RELATION_COLOR } from '../render/relation.ts'
 import { cbColor, keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
-import { AMMO, AMMO_IDS, KEYED_AMMO, MOUNTS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, KEYED_AMMO, MOUNTS, SHIP_CLASSES, isZoneBossClass } from '../../../shared/src/data/ships.ts';
 import { isNight, nightFactor, timeOfDay } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { SF } from '../../../shared/src/protocol.ts';
@@ -1395,8 +1395,8 @@ export class Hud {
     el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
       <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([guard || sameWords(cls?.name ?? info.classId, name) ? '' : cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
-      ${info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
-      ${ap ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}
+      ${isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L('tg.zboss'))}</div>` : info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
+      ${ap && !isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}
       <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}${struck ? `<button class="btn btn-small tg-tribute" data-tribute="${id}">${esc(L('tg.tribute'))}</button>` : ''}</div>`;
     el.querySelector<HTMLElement>('[data-tribute]')?.addEventListener('click', (e) => {
       e.stopPropagation();
