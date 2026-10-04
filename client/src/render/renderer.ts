@@ -25,7 +25,7 @@ import { drawShoalBirds, drawShoals, drawSights } from './sights.ts';
 import { THREAT_COLOR, combatLevelOf, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import type { Threat } from '../../../shared/src/data/shiplevel.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { GUNS, SHIP_CLASSES, AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
+import { GUNS, SHIP_CLASSES, AMMO, CHASER_CONE, isZoneBossClass } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { nightFactor, SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
@@ -3850,7 +3850,7 @@ export class Renderer {
     const label = info.isPlayer ? `${info.captainName} · ${info.name}` : named ? `☠ ${named.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${placeName(info.name)}`;
     const cb = settings().colorblind;
     const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
-    const tag = guardTag(state, s.id) ?? (named ? named.tag : info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L('boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' '));
+    const tag = guardTag(state, s.id) ?? (named ? named.tag : info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L(isZoneBossClass(info.classId) ? 'zboss' : 'boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' '));
     // Her level (canon D12) leads the name as WoW's does: the number in a frame coloured by how far she stands above
     // your own ship, a gold frame for an elite built for a company, a skull when no shot of yours would tell.
     // Her own ships from the island's shipyard (docs/15) sail on her side: their level, never a threat's skull.

@@ -22,6 +22,7 @@ import { sitesOfIsland } from './resources.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { shoreEvents } from './shorebosses.ts';
+import { zoneBossEvents } from './zonebosses.ts';
 
 export type EventKind = 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | HappeningKind;
 
@@ -652,6 +653,8 @@ export function eventViews(game: Game): WorldEventView[] {
   for (const w of glories(game)) list.push({ id: -1 - list.length, kind: 'glory', title: `Sunken Glory: the ${w.name}`, region: regionAt(game.world, w.x, w.y), x: w.x, y: w.y, endsIn: w.endsIn });
   // The great ones ashore, each on its island while it stands (shorebosses.ts, 2026-10-03).
   list.push(...shoreEvents(game));
+  // The zone bosses at sea, each where she sails while her hour lasts (zonebosses.ts, docs/21).
+  list.push(...zoneBossEvents(game));
   return list;
 }
 

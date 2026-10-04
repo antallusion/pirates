@@ -2,6 +2,7 @@
 
 export const EN = {
   'title': 'Chart of the Known Sea',
+  'zb.left': '{name} · leaves in {n} min',
   'heatLabel': 'hot lanes {n}%',
   'sub': '{islands} charted · click the sea to set your mark · drag to pan, wheel to zoom',
   'subTouch': '{islands} charted · tap the sea to set your mark · drag to pan, pinch to zoom',
@@ -52,6 +53,7 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   'title': 'Карта известного моря',
+  'zb.left': '{name} · уйдёт через {n} мин',
   'heatLabel': 'жаркие трассы {n}%',
   'sub': 'Нанесено на карту: {islands} · щелчок по морю ставит отметку · тащите — сдвиг, колесо — масштаб',
   'subTouch': 'Нанесено на карту: {islands} · тап по морю ставит отметку · тащите — сдвиг, двумя пальцами — масштаб',

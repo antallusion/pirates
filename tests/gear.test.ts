@@ -5,13 +5,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  AFFIXES, ITEM_BASES, LEGENDARY_ITEMS, RARITY_AFFIXES, SETS, STASH_SIZE, gearPatterns, gearSource, itemEffect, itemName, itemNamePatterns, makeItem,
-  setBonuses,
+  AFFIXES, CAPTAIN_SLOTS, ITEM_BASES, LEGENDARY_ITEMS, RARITY_AFFIXES, SETS, STASH_SIZE, gearPatterns, gearSource, itemEffect, itemName, itemNamePatterns, makeItem,
+  isShipSlot, setBonuses,
 } from '../shared/src/data/items.ts';
 import type { Item } from '../shared/src/data/items.ts';
 import { Rng } from '../shared/src/rng.ts';
 import { computeShipStats } from '../shared/src/sim/shipstats.ts';
-import { chandlerWares, rollDrop } from '../server/src/game/gear.ts';
+import { BOARDED_SLOTS, SUNK_SLOTS, chandlerWares, rollDrop } from '../server/src/game/gear.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame, onHull } from './helpers.ts';
@@ -110,6 +110,16 @@ test('what the sea leaves: sunk ships drop gear now and then, an elite always; p
     game.removeShip(npc.id);
   }
   assert.ok(drops > 8 && drops < 40, `${drops}/60 pirates left gear`);
+  // Sunk by the guns: ship gear (every slot but the tackle); taken by boarding: the captain's own (docs/21 §5).
+  for (let i = 0; i < 40; i++) {
+    const npc = game.spawnNpcShip(i % 2 ? 'merchant' : 'pirate', 'brig', 'confederacy', 30_000, 30_000, 0);
+    npc.elite = true;
+    const sunk = rollDrop(game, npc, 'sunk')!, taken = rollDrop(game, npc, 'boarded')!;
+    assert.ok(isShipSlot(ITEM_BASES[sunk.base].slot) && ITEM_BASES[sunk.base].slot !== 'tackle', `sunk: ${sunk.base}`);
+    assert.ok((CAPTAIN_SLOTS as string[]).includes(ITEM_BASES[taken.base].slot), `boarded: ${taken.base}`);
+    game.removeShip(npc.id);
+  }
+  assert.ok(!SUNK_SLOTS.includes('tackle') && SUNK_SLOTS.every(isShipSlot) && BOARDED_SLOTS.every((x) => !isShipSlot(x)));
   const el = game.spawnNpcShip('pirate', 'brig', 'confederacy', 30_000, 30_000, 0);
   el.elite = true;
   const it = rollDrop(game, el)!;

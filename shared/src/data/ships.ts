@@ -22,7 +22,19 @@ export type ShipClassId =
   // The Abyss: the Eye at its heart.
   | 'abyss_eye'
   // The six new world bosses at sea and their parts (owner, 2026-10-03; shared/src/data/bossmonsters.ts).
-  | BossClassId;
+  | BossClassId
+  // The zone bosses (owner, 2026-10-04; docs/21): one great warship for each sea, sailed by nobody but the sea.
+  | ZoneBossClassId;
+
+/** The eight great ships of the seas (docs/21), one for each region: `zb_<region>`. */
+export type ZoneBossClassId =
+  | 'zb_black_coast' | 'zb_gravewater' | 'zb_whispering' | 'zb_ashen_isles'
+  | 'zb_leviathan_reach' | 'zb_dead_mans_expanse' | 'zb_drowned_crown' | 'zb_the_abyss';
+
+/** Is this hull one of the zone bosses (docs/21)? Never sold, never boarded, in no list and no tree. */
+export function isZoneBossClass(id: string): id is ZoneBossClassId {
+  return id.startsWith('zb_');
+}
 
 /** The sixty-six new hulls of the fleet of eighty (tools/art/ships.py paints them): the warships, the traders, the
  *  runners and the haulers, the premium ten of each list among them — and the eight silver hulls that make the lines
@@ -117,6 +129,25 @@ export interface PremiumShip {
 }
 
 const ship = (d: ShipClassDef): ShipClassDef => d;
+
+/** The zone bosses' hulls (docs/21 §4): weighed by the squad sim (tests/zonebosses.test.ts) so ten captains of her
+ *  level on ships of her level sink her in 15–20 minutes and five in 35–45. */
+export const ZB_HULL: Record<ZoneBossClassId, number> = {
+  zb_black_coast: 23000, zb_gravewater: 51000, zb_whispering: 53000, zb_leviathan_reach: 51500,
+  zb_ashen_isles: 80000, zb_dead_mans_expanse: 96500, zb_drowned_crown: 125000, zb_the_abyss: 177500,
+};
+
+/** A zone boss (docs/21): a great warship of her sea at one level, in no fleet list and no tree, never sold. Her hull
+ *  is what the squad sim (tests/zonebosses.test.ts) weighed; her guns are drawn as a ship's, but her broadsides are
+ *  her own (server/src/game/zonebosses.ts: the damage of each spread over every captain who fires on her). */
+function zoneBoss(id: ZoneBossClassId, name: string, tier: number, role: string, hull: number, armor: number, ports: number, passive: string, text: string): ShipClassDef {
+  return {
+    id, name, tier, rig: 'square', role, length: 74, beam: 24, hull, armor, maxSpeed: 9, accel: 0.6, turnRate: 7, draft: 6.5,
+    holdVolume: 400, holdWeight: 500, crewMin: 200, crewMax: 900, gunPortsPerSide: ports, bowChasers: 4, sternChasers: 4,
+    sailHp: 900, repairRate: 0, detection: 2600, price: 0, purchasable: false, sprite: `ship.${id}`,
+    passive: { id: 'zone_boss', name: passive, description: text },
+  };
+}
 
 function monster(id: ShipClassId, name: string, role: string, length: number, beam: number, hull: number, armor: number, maxSpeed: number, passive: string): ShipClassDef {
   return {
@@ -887,6 +918,18 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     passive: { id: 'ice_hold', name: 'Ice in the Hold', description: 'Her hold is packed with ice that never melts: perishables spoil 40% slower, and her iced bow takes 20% less from a ram.', mods: { spoilage: -0.4, ramTaken: -0.2 } },
     premium: { price: 1100, note: ['A hulk of the frozen north: frost falls on every ship that fights her.', 'Халк ледяного севера: на каждый корабль, что бьётся с ней, ложится изморозь.'], beasts: [{ u: 'ice_bear', n: 4 }] },
   }),
+
+  // The zone bosses (owner, 2026-10-04; docs/21): one great warship for each sea, rising every twelve hours by the
+  // server's clock and sailing her sea for an hour. Guns only: her decks cannot be taken. Hull and armour from the
+  // squad sim (tests/zonebosses.test.ts).
+  zb_black_coast: zoneBoss('zb_black_coast', 'The Iron Lion', 2, 'A rogue privateer man-of-war of three gun decks, her black hull banded with rusted iron, a crowned lion on her bow.', ZB_HULL.zb_black_coast, 0.2, 24, 'Lion of the Coast', 'Her decks cannot be taken: only her guns answer, at every ship that fires on her.'),
+  zb_gravewater: zoneBoss('zb_gravewater', 'The Gilded Leviathan', 3, 'A monstrous armed treasure galleon of the trade routes: a gilded stern gallery, four masts of dark sails, brass swivels crowding her rails.', ZB_HULL.zb_gravewater, 0.22, 26, 'Gilded Gallery', 'Her decks cannot be taken: only her guns answer, at every ship that fires on her.'),
+  zb_whispering: zoneBoss('zb_whispering', 'The Fog Mother', 3, "A huge black smugglers' ship of the line under charcoal sails, dozens of dim green lanterns along her rails.", ZB_HULL.zb_whispering, 0.22, 26, 'Mother of Fogs', 'Her decks cannot be taken: only her guns answer, at every ship that fires on her.'),
+  zb_leviathan_reach: zoneBoss('zb_leviathan_reach', 'The White Harrow', 3, 'An ice-armoured whaling dreadnought: plates of white ice along her hull, rows of harpoon guns and a great ram at her bow.', ZB_HULL.zb_leviathan_reach, 0.24, 28, 'Ice Plating', 'Her decks cannot be taken: only her guns answer, at every ship that fires on her.'),
+  zb_ashen_isles: zoneBoss('zb_ashen_isles', 'The Cinder Throne', 4, 'A colossal fire-galleon of the volcanic isles: forges glowing on her deck, squat mortars in iron rings, smoke-blackened sails.', ZB_HULL.zb_ashen_isles, 0.25, 30, 'Forge Deck', 'Her decks cannot be taken: only her guns answer, at every ship that fires on her.'),
+  zb_dead_mans_expanse: zoneBoss('zb_dead_mans_expanse', 'The Stitched Hulk', 4, 'A vast patchwork hulk stitched together from wrecks lashed side by side: crooked masts and mismatched sails.', ZB_HULL.zb_dead_mans_expanse, 0.26, 32, 'Many Hulls', 'Her decks cannot be taken: only her guns answer, at every ship that fires on her.'),
+  zb_drowned_crown: zoneBoss('zb_drowned_crown', 'The Drowned Regent', 5, 'An ancient royal galleon risen from the sea, her hull crusted with grey coral, water pouring from her gun ports, torn purple and gold banners.', ZB_HULL.zb_drowned_crown, 0.28, 34, 'Coral Crust', 'Her decks cannot be taken: only her guns answer, at every ship that fires on her.'),
+  zb_the_abyss: zoneBoss('zb_the_abyss', 'The Abyssal Ark', 5, 'A colossal black three-masted ark with pale green lights in her gun ports and sails like grey smoke.', ZB_HULL.zb_the_abyss, 0.3, 36, 'Ark of the Deep', 'Her decks cannot be taken: only her guns answer, at every ship that fires on her.'),
 
   leviathan: monster('leviathan', 'Leviathan', 'The oldest hunger in the Reach.', 118, 26, 60000, 0.25, 16, 'Gills that open only while the harpoons hold it.'),
   kraken: monster('kraken', 'Kraken', 'A mantle the size of a harbour; the arms do the killing.', 46, 34, 30000, 0.2, 5, 'The body opens once four arms are cut away.'),

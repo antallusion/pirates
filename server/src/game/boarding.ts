@@ -4,6 +4,7 @@
 // orders and the captain's own move bought with momentum); a captain who waits holds the line. Either captain
 // may call the other out: a duel of three timed exchanges decides the fight.
 
+import { ZB_NO_BOARD, zbBoardBlocked } from './zonebosses.ts';
 import { ladderBetween } from './ladder.ts';
 import { inDuel } from './pvp.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -54,6 +55,8 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (inDuel(game, a) || inDuel(game, b)) return 'No boarding in a duel';
   if (a.ghost || b.ghost) return 'She is across the line of these waters — close in first';
   if (a.npcRole === 'beast' || b.npcRole === 'beast') return 'There are no decks to board on a creature of the deep';
+  const zb = zbBoardBlocked(b) ?? zbBoardBlocked(a); // a zone boss: guns only (docs/21)
+  if (zb) return zb;
   if (b.lootLockedFor !== null) return b.lootLockedFor === a.id ? 'She is already yours' : 'She has struck to another captain';
   if (b.prize) return 'She sails under a prize crew';
   const blocked = damageBlocked(game, a, b);
@@ -90,6 +93,11 @@ function sideState(fight: BoardFight, s: Omit<BoardingState, 'fight' | 'pick' | 
 }
 
 export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggression: Aggression): void {
+  // A zone boss is never boarded, whatever path the grapples came by (docs/21): her decks cannot be taken.
+  if (b.zoneBoss || a.zoneBoss) {
+    game.toastShip(a, ZB_NO_BOARD, 'bad');
+    return;
+  }
   const now = game.now;
   const fight = newFight(now);
   a.boarding = sideState(fight, { with: b.id, attacker: true, aggression, startedAt: now, nextRound: fight.deadline, rounds: 0, startCrew: a.crew, enemyStartCrew: b.crew, killed: 0, lost: 0 });

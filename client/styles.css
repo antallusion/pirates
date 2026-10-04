@@ -2412,6 +2412,14 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
 }
 .hud-block { background: rgba(10, 11, 13, calc(var(--hud-a) * 0.9)); }
 #hud-feed .feed-line + .feed-line { display: none; } /* the newest one only; the rest are in the chat's log */
+@media (max-height: 430px) {
+  /* A phone on its side (QA, 2026-10-04: a zone boss's news took 15% of an 812×375 screen): the news one line, as on
+     a narrow phone. */
+  #hud-feed { padding: 1px 6px 2px !important; }
+  #hud-feed .feed-h { display: none; }
+  #hud-feed .feed-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+  #hud-feed .feed-line::before { content: '⚑ '; color: var(--brass); }
+}
 @media (max-width: 699px) {
   /* A phone: three toasts at most, one line each; the news and the goals are single lines too. */
   #toasts .toast:nth-child(n+3) { display: none !important; }

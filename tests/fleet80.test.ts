@@ -21,7 +21,7 @@ import { SHIP_BEAST_DEFS, SHIP_BEAST_IDS, isShipBeast, ownCount } from '../share
 import { GIFT_KINDS, SHIP_GIFTS, giftOf } from '../shared/src/data/shipgifts.ts';
 import type { ShipGift } from '../shared/src/data/shipgifts.ts';
 import { HULL_ROLE, LEVEL_RANGE, captainLevelFor, hullsFor, levelRange } from '../shared/src/data/shiplevel.ts';
-import { FLEET_LISTS, SHIP_CLASSES, SHIP_CLASS_IDS } from '../shared/src/data/ships.ts';
+import { FLEET_LISTS, SHIP_CLASSES, SHIP_CLASS_IDS, isZoneBossClass } from '../shared/src/data/ships.ts';
 import type { FleetClassId, FleetList, ShipClassId } from '../shared/src/data/ships.ts';
 import { isNight } from '../shared/src/constants.ts';
 import { Rng } from '../shared/src/rng.ts';
@@ -77,9 +77,11 @@ test('eighty hulls a captain sails, in four lists of twenty, ten of each sold fo
   assert.deepEqual(FLEET_LISTS.map((l) => FLEET[l].length), [23, 24, 26, 23], 'the warships, the traders, the runners, the haulers');
   assert.equal(PREMIUM.length, 40 + B3.length);
   assert.deepEqual([...premiumShips()].sort(), [...PREMIUM].sort(), 'the shop sells every one of them');
-  // The fourteen old hulls stand in the lists; the Dutchman's ship and the deep's monsters in none.
+  // The fourteen old hulls stand in the lists; the Dutchman's ship, the deep's monsters and the zone bosses (docs/21:
+  // never sold, not premium) in none.
   for (const c of OLD_HULLS) assert.ok(SHIP_CLASSES[c].list && !SHIP_CLASSES[c].premium, c);
-  for (const c of SHIP_CLASS_IDS) if (!FLEET_HULLS.includes(c)) assert.ok(c === 'ghost_ship' || SHIP_CLASSES[c].monster, `${c} sails in no list`);
+  for (const c of SHIP_CLASS_IDS) if (!FLEET_HULLS.includes(c)) assert.ok(c === 'ghost_ship' || SHIP_CLASSES[c].monster || isZoneBossClass(c), `${c} sails in no list`);
+  for (const c of SHIP_CLASS_IDS.filter(isZoneBossClass)) assert.ok(!SHIP_CLASSES[c].purchasable && !SHIP_CLASSES[c].premium && !SHIP_CLASSES[c].list, `${c}: no list, never sold`);
   for (const c of FLEET_HULLS) {
     const d = SHIP_CLASSES[c];
     // Sold for silver at a yard, or for doubloons in the shop: never both, never neither.

@@ -60,6 +60,9 @@ export function makeGame(): { game: Game; db: Database } {
   game.tacticalBoarding = false;
   // The adventure map's guards stay out of the water in tests of other systems (tests/heroes4.test.ts wakes them).
   quietAdv(game);
+  // The zone bosses' calendar (docs/21) keeps still too: by the wall clock one of the eight is up two hours in three
+  // (tests/zonebosses.test.ts turns it on).
+  game.zoneBosses.on = false;
   return { game, db };
 }
 

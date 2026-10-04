@@ -674,6 +674,20 @@ export class WorldMap {
     // World events: a flag on the place, and its title.
     for (const e of state.events) {
       const x = tx(e.x), y = ty(e.y);
+      // A zone boss at sea (docs/21): her own mark, her name and the minutes till she leaves into the fog.
+      if (e.kind === 'zone_boss') {
+        if (!mark('icon.map_monster', x, y, ms * 1.3)) {
+          g.strokeStyle = '#d06a5e';
+          g.lineWidth = 2.5;
+          g.beginPath();
+          g.arc(x, y, 12, 0, Math.PI * 2);
+          g.stroke();
+        }
+        const left = Math.max(1, Math.ceil((e.endsIn - (performance.now() - state.eventsAt) / 1000) / 60));
+        g.font = `italic 12px "Cormorant Garamond", serif`;
+        label(L('zb.left', { name: placeName(e.title), n: left }), x, y + ms * 0.9, 'rgba(255,170,150,0.98)', 0);
+        continue;
+      }
       if (!mark(e.kind === 'storm_century' ? 'icon.map_storm' : 'icon.map_event', x, y, ms * 1.1)) {
         g.strokeStyle = e.kind === 'epidemic' ? '#d8c94a' : e.kind === 'storm_century' ? '#8fb3d9' : e.kind === 'new_island' ? '#e0874a' : '#d06a5e';
         g.lineWidth = 2;

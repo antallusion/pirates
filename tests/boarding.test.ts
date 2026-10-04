@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { headingVec } from '../shared/src/math.ts';
 import { TALENTS } from '../shared/src/data/talents.ts';
+import { CAPTAIN_SLOTS, ITEM_BASES } from '../shared/src/data/items.ts';
 import type { TalentRanks } from '../shared/src/data/talents.ts';
 import { fireBroadside } from '../server/src/game/combat.ts';
 import type { Game } from '../server/src/game/Game.ts';
@@ -178,4 +179,19 @@ test('Hull to Hull: a ram grapples; Warlord stacks Glory; Blood Tide heals', () 
   assert.ok(ship.hull > ship.stats.hullMax * 0.55, 'Blood Tide');
   void c;
   void npc;
+});
+
+test('taken by boarding: her captain\'s gear, never the ship\'s (docs/21 §5)', () => {
+  const { game } = makeGame();
+  const { c, ship } = atSea(game, 'Gear Taker');
+  const npc = crippled(game, ship, 18);
+  npc.elite = true; // an elite always leaves a piece
+  c.push({ t: 'board', target: npc.id, aggression: 'standard' });
+  steps(game, 20 * 30);
+  assert.ok(c.last('boarding')?.result, 'the deck is ours');
+  const before = new Set(game.loot.keys());
+  c.push({ t: 'loot_take', take: {}, fate: 'sink' });
+  const items = [...game.loot.values()].filter((l) => !before.has(l.id)).flatMap((l) => l.items ?? []);
+  assert.ok(items.length >= 1, 'a piece in the water');
+  for (const it of items) assert.ok((CAPTAIN_SLOTS as string[]).includes(ITEM_BASES[it.base].slot), `${it.base}: the captain's gear`);
 });
