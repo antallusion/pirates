@@ -388,6 +388,7 @@ table.grid tr:hover td { background: #15171a; }
 .chip.bad { border-color: rgba(208, 106, 94, 0.5); color: #e0958a; }
 .card h4 { margin: 0 0 4px; font-family: var(--serif); font-size: 18px; font-weight: 600; }
 .card p { margin: 0 0 6px; color: #bdb6a8; font-family: var(--serif); font-size: 15px; }
+.card > p:last-child { margin-bottom: 0; }
 .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .muted { color: var(--steel); }
 
@@ -3163,7 +3164,7 @@ body.tac.tac-over #toasts { display: none; }
 .rn-set.done { border-color: var(--gold); }
 .rn-set p { font-size: 12px; margin: 4px 0; }
 .rn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 4px; margin: 6px 0; }
-.rn-piece { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border: 1px solid rgba(140, 107, 58, 0.25); background: #0b0c0e; min-width: 0; }
+.rn-piece { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; border: 1px solid rgba(140, 107, 58, 0.25); background: #0b0c0e; min-width: 0; }
 .rn-piece .rn-ico { width: 38px; height: 38px; object-fit: contain; filter: grayscale(1) brightness(0.28); }
 .rn-piece.got .rn-ico { filter: none; }
 .rn-piece.got { border-color: rgba(224, 184, 98, 0.55); }
