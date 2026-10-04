@@ -491,8 +491,10 @@ const LAIR_FILM: Record<string, string> = { crab_beach: 'cut_crab_beach', gull_c
   albatross_rock: 'cut_albatross_rock', octopus_wreck: 'cut_octopus_wreck', crab_hollow: 'cut_crab_hollow', wyrm_gallery: 'cut_wyrm_gallery', hydra_pool: 'cut_hydra_pool',
   ape_throne: 'cut_ape_throne', roc_eyrie: 'cut_roc_eyrie',
   mire_mother: 'cut_mire_mother', cinder_salamander: 'cut_cinder_salamander', drowned_abbess: 'cut_drowned_abbess', walrus_tyrant: 'cut_walrus_tyrant' };
-/** The great ones ashore (shared/src/data/shorebosses.ts), each the first time she brings one down. */
-const SHORE_DOWN: Record<string, string> = { mire_mother: 'cut_mire_mother_down', cinder_salamander: 'cut_cinder_salamander_down', drowned_abbess: 'cut_drowned_abbess_down', walrus_tyrant: 'cut_walrus_tyrant_down' };
+/** The great ones ashore (shared/src/data/shorebosses.ts) and the great old lairs, each the first time she wins there. */
+const SHORE_DOWN: Record<string, string> = { mire_mother: 'cut_mire_mother_down', cinder_salamander: 'cut_cinder_salamander_down', drowned_abbess: 'cut_drowned_abbess_down', walrus_tyrant: 'cut_walrus_tyrant_down',
+  ape_throne: 'cut_ape_throne_down', roc_eyrie: 'cut_roc_eyrie_down', hydra_pool: 'cut_hydra_pool_down', wyrm_gallery: 'cut_wyrm_gallery_down',
+  serpent_grotto: 'cut_serpent_grotto_down', maw_pit: 'cut_maw_pit_down', octopus_wreck: 'cut_octopus_wreck_down', turtle_guardian: 'cut_turtle_guardian_down' };
 /** Windows that are places of their own, each the first time she opens it. */
 const MODAL_FILM: Partial<Record<NonNullable<Modal>, string>> = { shop: 'cut_shop', barter: 'cut_barter', company: 'cut_company', crew: 'cut_crew', gear: 'cut_gear', recruit: 'cut_recruit' };
 /** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */

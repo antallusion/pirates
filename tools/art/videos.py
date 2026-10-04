@@ -874,6 +874,40 @@ v('cut_abyss_eye_down', 'down_abyss_eye', 'Око Бездны повержен�
   'and the whirlpool around it slows and stills until the sea is flat and dark beneath the stars and the ships float '
   'free. The camera looks straight down as the light goes out.')
 
+# ---- The fifteenth reel: the great old lairs ashore won, each the first time (shared/src/data/lairs.ts) ---------------
+v('cut_ape_throne_down', 'down_ape_throne', 'Король обезьян уступил трон',
+  'Late afternoon light through jungle haze on a throne of fallen rock: the old silverback ape king, crowned with coral and '
+  'stone, slowly lowers his great head, steps down from his throne and walks away into the green with his apes, as the '
+  'landing party lowers their pikes in the clearing. The camera rises slowly over the empty throne.')
+v('cut_roc_eyrie_down', 'down_roc_eyrie', 'Грозовой рух покинул гнездо',
+  'A storm breaking over the highest crag of a rocky island: the colossal storm roc spreads its grey wings over its nest '
+  'of driftwood, gives one last cry and beats away into the clouds with the albatrosses wheeling after it, as the sky '
+  'clears and the climbers stand on the crag. The camera follows the roc into the light.')
+v('cut_hydra_pool_down', 'down_hydra_pool', 'Гидра ушла в омут',
+  'Dawn mist over a black pool among mangrove roots: the three heads of the great hydra sway, droop and slide slowly back '
+  'beneath the weed one after another, the water closing smooth over them, as the pirates on the roots lower their '
+  'torches and the crocodiles slip away. The camera drifts low over the still pool.')
+v('cut_wyrm_gallery_down', 'down_wyrm_gallery', 'Пещерный змей уполз во тьму',
+  'Deep galleries in the rock lit by torches: the blind white cave wyrm coils back from the light, its pale body sliding '
+  'away into a black crevice, as a cloud of bats pours out over the heads of the landing party and daylight shows at the '
+  'end of the tunnel. The camera follows the bats toward the light.')
+v('cut_serpent_grotto_down', 'down_serpent_grotto', 'Молодой змей покинул грот',
+  'A sea cave inland, green light rippling on the wet rock: the young sea serpent uncoils from its brood of pale speckled '
+  'eggs and slides away down a flooded channel toward the open sea, its scales flashing, as the pirates stand in the '
+  'shallows and watch it go. The camera follows the serpent out to the sea.')
+v('cut_maw_pit_down', 'down_maw_pit', 'Светоч в яме погас',
+  'A drowned pit at night, hooded cultists fled from its rim: the lantern maw hanging its lure over the black water dims, '
+  'its pale light flickering and going out, and the huge shape sinks slowly out of sight into the deep, as the pirates '
+  'raise their own lanterns over the edge. The camera looks down into the darkening pit.')
+v('cut_octopus_wreck_down', 'down_octopus_wreck', 'Осьминог оставил обломки',
+  'A rotting wreck on a reef at low tide: the great octopus slowly unwinds its arms from the broken hull, pales to a mottled '
+  'grey and slips away into a dark pool, as the pirates climb onto the wreck and pry open the hatch to the hold. '
+  'The camera rises slowly over the wreck.')
+v('cut_turtle_guardian_down', 'down_turtle_guardian', 'Древняя черепаха уплыла',
+  'Golden evening on a beach of black rock: the ancient turtle guardian, its great shell grown with coral and moss, turns '
+  'slowly and wades out into the surf, sinking beneath the waves as the tide washes over the rocks where it lay, and the '
+  'pirates on the shore take off their hats. The camera holds on the sea as it disappears.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
