@@ -2258,6 +2258,10 @@
     "unit.kraken_spawn":                       { "local": "units/kraken_spawn.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.0", "rev": 20261004033836},
     "unit.kraken_spawn_b":                     { "local": "units/kraken_spawn_b.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.1", "rev": 20261004033836},
     "unit.kraken_spawn_atk":                   { "local": "units/kraken_spawn_atk.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.2", "rev": 20261004033836},
-    "unit.kraken_spawn_hit":                   { "local": "units/kraken_spawn_hit.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.3", "rev": 20261004033836}
+    "unit.kraken_spawn_hit":                   { "local": "units/kraken_spawn_hit.webp", "remote": "hf_20261004_033836_gpt-anim_kraken_spawn.png", "job": "gpt-anim_kraken_spawn", "fit": "sheet:anim_kraken_spawn.3", "rev": 20261004033836},
+    "unit.dragon_turtle":                      { "local": "units/dragon_turtle.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.0", "rev": 20261004034109},
+    "unit.dragon_turtle_b":                    { "local": "units/dragon_turtle_b.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.1", "rev": 20261004034109},
+    "unit.dragon_turtle_atk":                  { "local": "units/dragon_turtle_atk.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.2", "rev": 20261004034109},
+    "unit.dragon_turtle_hit":                  { "local": "units/dragon_turtle_hit.webp", "remote": "hf_20261004_034109_gpt-anim_dragon_turtle.png", "job": "gpt-anim_dragon_turtle", "fit": "sheet:anim_dragon_turtle.3", "rev": 20261004034109}
   }
 }
