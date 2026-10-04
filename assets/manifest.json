@@ -2362,6 +2362,10 @@
     "unit.try_pot":                            { "local": "units/try_pot.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.0", "rev": 20261004044957},
     "unit.try_pot_b":                          { "local": "units/try_pot_b.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.1", "rev": 20261004044957},
     "unit.try_pot_atk":                        { "local": "units/try_pot_atk.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.2", "rev": 20261004044957},
-    "unit.try_pot_hit":                        { "local": "units/try_pot_hit.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.3", "rev": 20261004044957}
+    "unit.try_pot_hit":                        { "local": "units/try_pot_hit.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.3", "rev": 20261004044957},
+    "unit.fog_cutpurse":                       { "local": "units/fog_cutpurse.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.0", "rev": 20261004045227},
+    "unit.fog_cutpurse_b":                     { "local": "units/fog_cutpurse_b.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.1", "rev": 20261004045227},
+    "unit.fog_cutpurse_atk":                   { "local": "units/fog_cutpurse_atk.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.2", "rev": 20261004045227},
+    "unit.fog_cutpurse_hit":                   { "local": "units/fog_cutpurse_hit.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.3", "rev": 20261004045227}
   }
 }
