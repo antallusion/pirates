@@ -2476,6 +2476,7 @@
     "bg.deck_drowned_cathedral":               { "local": "art/deck_drowned_cathedral.webp", "remote": "hf_20261004_074958_gpt-bg.deck_drowned_cathedral.png", "job": "gpt-bg.deck_drowned_cathedral", "fit": "opaque:1536", "rev": 20261004074958},
     "bg.deck_treasure_junk":                   { "local": "art/deck_treasure_junk.webp", "remote": "hf_20261004_075315_gpt-bg.deck_treasure_junk.png", "job": "gpt-bg.deck_treasure_junk", "fit": "opaque:1536", "rev": 20261004075315},
     "bg.deck_pirate_haven":                    { "local": "art/deck_pirate_haven.webp", "remote": "hf_20261004_075515_gpt-bg.deck_pirate_haven.png", "job": "gpt-bg.deck_pirate_haven", "fit": "opaque:1536", "rev": 20261004075515},
-    "bg.deck_iron_whale":                      { "local": "art/deck_iron_whale.webp", "remote": "hf_20261004_075740_gpt-bg.deck_iron_whale.png", "job": "gpt-bg.deck_iron_whale", "fit": "opaque:1536", "rev": 20261004075740}
+    "bg.deck_iron_whale":                      { "local": "art/deck_iron_whale.webp", "remote": "hf_20261004_075740_gpt-bg.deck_iron_whale.png", "job": "gpt-bg.deck_iron_whale", "fit": "opaque:1536", "rev": 20261004075740},
+    "icon.doubloon":                           { "local": "icons/doubloon.webp", "remote": "hf_20261004_080006_gpt-currency_1.png", "job": "gpt-currency_1", "fit": "sheet:currency_1.0", "rev": 20261004080006}
   }
 }
