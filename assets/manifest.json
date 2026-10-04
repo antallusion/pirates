@@ -2127,6 +2127,10 @@
     "unit.pearl_siren":                        { "local": "units/pearl_siren.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.0", "rev": 20261004012150},
     "unit.pearl_siren_b":                      { "local": "units/pearl_siren_b.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.1", "rev": 20261004012150},
     "unit.pearl_siren_atk":                    { "local": "units/pearl_siren_atk.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.2", "rev": 20261004012150},
-    "unit.pearl_siren_hit":                    { "local": "units/pearl_siren_hit.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.3", "rev": 20261004012150}
+    "unit.pearl_siren_hit":                    { "local": "units/pearl_siren_hit.webp", "remote": "hf_20261004_012150_gpt-anim_pearl_siren.png", "job": "gpt-anim_pearl_siren", "fit": "sheet:anim_pearl_siren.3", "rev": 20261004012150},
+    "unit.rum_brawler":                        { "local": "units/rum_brawler.webp", "remote": "hf_20261004_012405_gpt-anim_rum_brawler.png", "job": "gpt-anim_rum_brawler", "fit": "sheet:anim_rum_brawler.0", "rev": 20261004012405},
+    "unit.rum_brawler_b":                      { "local": "units/rum_brawler_b.webp", "remote": "hf_20261004_012405_gpt-anim_rum_brawler.png", "job": "gpt-anim_rum_brawler", "fit": "sheet:anim_rum_brawler.1", "rev": 20261004012405},
+    "unit.rum_brawler_atk":                    { "local": "units/rum_brawler_atk.webp", "remote": "hf_20261004_012405_gpt-anim_rum_brawler.png", "job": "gpt-anim_rum_brawler", "fit": "sheet:anim_rum_brawler.2", "rev": 20261004012405},
+    "unit.rum_brawler_hit":                    { "local": "units/rum_brawler_hit.webp", "remote": "hf_20261004_012405_gpt-anim_rum_brawler.png", "job": "gpt-anim_rum_brawler", "fit": "sheet:anim_rum_brawler.3", "rev": 20261004012405}
   }
 }
