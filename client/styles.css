@@ -1463,6 +1463,8 @@ body.touch #hud-region .rg-extra { display: none; }
 .map-legend[open] > summary { margin-bottom: 6px; }
 .map-legend[open] > summary::before { content: '▾ '; }
 .map-legend .lg-items { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+/* Folded, the legend's items are not laid out at all (they were, 38px wide behind the summary, «you» 6px past it). */
+.map-legend:not([open]) .lg-items { display: none; }
 @media (max-width: 699px) { .map-legend .lg-items { gap: 2px 10px; } }
 /* The chart closes with the X like every window (its own «[M] закрыть» line wrapped beside it); the menu shows
    the key. */

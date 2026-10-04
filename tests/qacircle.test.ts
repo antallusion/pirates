@@ -81,3 +81,7 @@ test('every deed\'s condition and every legendary ship\'s gift and price have Ru
   assert.ok(ours.length >= 34);
   assert.deepEqual(ours.filter((k) => !DATA_RU[k]), []);
 });
+
+test('the chart\'s folded legend lays out nothing (QA: «you» 6px past a 38px-wide hidden column in English)', () => {
+  assert.ok(css.includes('.map-legend:not([open]) .lg-items { display: none; }'));
+});
