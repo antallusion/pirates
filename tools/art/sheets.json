@@ -4984,8 +4984,9 @@
    "ship.plate_galleon"
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a blunt, flat-bottomed collier with three masts, a black sooty hull and heaps of coal sacks; 2) a deep naval storeship with three masts and few guns, its deck crowded with stores; 3) a frigate converted to carry cargo, its gun deck turned into hold, three masts and a broad hull; 4) a huge plate galleon with a towering stern castle, four masts and a deep hull for silver; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
-  "painting": true,
-  "whole": true
+  "whole": true,
+  "cut": "hf_20261004_005036_gpt-ships_15",
+  "despill": true
  },
  "ships_16": {
   "grid": [
@@ -5005,7 +5006,8 @@
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a broad barge built on the back of a colossal ancient sea turtle's shell, timber decks and a mast set into the shell; 2) a big galleon with iron-barred cages for strange creatures along its deck and canvas awnings over them; 3) a massive old hulk overgrown with living coral and sea anemones in pink and orange, kelp hanging from its yards; 4) a gigantic treasure junk with nine batten-sailed masts, a towering stern and painted red and gold hull; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
   "painting": true,
-  "whole": true
+  "whole": true,
+  "despill": true
  },
  "ships_17": {
   "grid": [
@@ -5025,7 +5027,8 @@
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) an enormous four-masted great galleon with three decks of hold, towering castles fore and aft; 2) a colossal ark-ship with a vast broad hull, great sea-water pens in its open deck where young sea creatures swim, four masts; 3) a huge square-ish floating fortress-ship with stone-grey battlements, corner towers with guns and two stubby masts; 4) a colossal whaling mothership with try-works furnaces, whale boats hung on davits all around and five masts; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
   "painting": true,
-  "whole": true
+  "whole": true,
+  "despill": true
  },
  "ships_18": {
   "grid": [
@@ -5044,7 +5047,8 @@
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of three different sailing ships side by side in one row, left to right, each alone in its own third of the image with wide empty gaps between them: 1) a vast ship of the Choir built like a drowned cathedral, gothic spires on its castles, stained-glass stern windows and bells in its rigging; 2) a floating pirate town built on a huge old hull — shacks, a tavern with a crooked chimney, rope bridges and three masts; 3) a colossal iron-plated whale-shaped hull with riveted plates, small square sails on four masts and a gaping whale-mouth bow; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own third, filling most of the image height, its bowsprit and yard tips inside its third. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
   "painting": true,
-  "whole": true
+  "whole": true,
+  "despill": true
  },
  "spells_5": {
   "grid": [
