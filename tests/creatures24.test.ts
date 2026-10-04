@@ -84,7 +84,9 @@ test('twelve more for the shop: its thin tiers filled, sold from the shelf, hand
   }
   // Three of the fourth tier, four of the fifth (it had two), two of the sixth, three of the seventh.
   assert.deepEqual([4, 5, 6, 7].map((t) => SHOP_NEW.filter((u) => UNITS[u].tier === t).length), [3, 4, 2, 3]);
-  assert.deepEqual([4, 5, 6, 7].map((t) => PREMIUM_BEAST_IDS.filter((u) => UNITS[u].tier === t).length), [7, 6, 12, 7]);
+  // (with the third dozen of the same day: 3 of the third tier, 9 of the fourth, 9 of the fifth, 13 of the sixth, 10 of
+  // the seventh — tests/batch3)
+  assert.deepEqual([3, 4, 5, 6, 7].map((t) => PREMIUM_BEAST_IDS.filter((u) => UNITS[u].tier === t).length), [3, 9, 9, 13, 10]);
   // Each new kind brings something of its own: no other kind of the shop has its body and its crafts both.
   const look = (u: PremiumBeastId) => `${FIGURES[u]?.body}:${[...UNITS[u].specials].sort().join('+')}`;
   for (const u of SHOP_NEW) assert.deepEqual(PREMIUM_BEAST_IDS.filter((x) => look(x) === look(u)), [u], `${u}: ${look(u)}`);

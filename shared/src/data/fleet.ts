@@ -10,11 +10,11 @@ import { SHIP_BEAST_DEFS, SHIP_BEAST_IDS } from './shipbeasts.ts';
 import { FLEET_LISTS, SHIP_CLASSES, SHIP_CLASS_IDS } from './ships.ts';
 import type { FleetClassId, FleetList, ShipClassId } from './ships.ts';
 
-/** Every hull a captain sails, by list: twenty a list, the fourteen old hulls among them, and the eight that make the
- *  lines whole (2026-10-04). */
+/** Every hull a captain sails, by list: twenty a list, the fourteen old hulls among them, the eight that make the
+ *  lines whole (2026-10-04) and the third batch's eight premium hulls, two a list (2026-10-04). */
 export const FLEET: Record<FleetList, ShipClassId[]> = Object.fromEntries(FLEET_LISTS.map((l) => [l, SHIP_CLASS_IDS.filter((c) => SHIP_CLASSES[c].list === l)])) as Record<FleetList, ShipClassId[]>;
 
-/** The eighty, and the eight. */
+/** The eighty, and the eight, and the eight. */
 export const FLEET_HULLS: ShipClassId[] = FLEET_LISTS.flatMap((l) => FLEET[l]);
 
 /** The fourteen hulls that sailed before the fleet of eighty: always painted, they stand in for the new. */
@@ -53,6 +53,11 @@ export const HULL_STAND_IN: Record<FleetClassId, ShipClassId> = {
   // galleon, the sloop-of-war as the brig.
   sloop_of_war: 'brig', great_indiaman: 'harpoon_whaler', manila_galleon: 'harpoon_whaler', polacre: 'xebec', dunkirk_frigate: 'brigantine',
   great_xebec: 'xebec', race_galleon: 'brigantine', armed_fluyt: 'galleon',
+  // The third batch's premium hulls (2026-10-04): the little gun-sloop as the gunboat's kin the fireship, the brig-sloop
+  // as the brig, the sampan as the fishing ketch, the great galleass as the whaler, the felucca as the sloop, the great
+  // runner as the brigantine, the barge and the hulk as the galleon.
+  bulldog: 'fireship', saint_elmo: 'brig', lantern_sampan: 'fishing_ketch', golden_lion: 'harpoon_whaler', dolphin: 'sloop', sailfish: 'brigantine',
+  mimic_barge: 'galleon', icebound_hulk: 'galleon',
 };
 
 /** The art id of a hull's painting as it is named (`ship.<x>`): her deck is `bg.deck_<x>` (the Hulk sails as `holk`

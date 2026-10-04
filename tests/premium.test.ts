@@ -341,7 +341,7 @@ test('the shop\'s window on the wire: an empty shop says so, the catalogue lists
   const v = conn.last('premium')!.view;
   // The fleet of eighty's forty premium hulls (docs/02 §1.A.9) and the shop's own creatures (docs/18 VII), the cheapest first.
   assert.deepEqual([v.ships.map((x) => x.id), v.units.map((x) => x.id), v.balance, v.pay], [premiumShips(), premiumUnits(), 0, PAYMENTS_OPEN]);
-  assert.equal(premiumShips().length, 40);
+  assert.equal(premiumShips().length, 48); // the forty, and the third batch's eight (tests/batch3)
   assert.equal(PAYMENTS_OPEN, false, 'no payment provider yet');
   assert.ok(v.port, 'docked: the port she lies in');
   for (let i = 1; i < premiumShips().length; i++) assert.ok(SHIP_CLASSES[premiumShips()[i]].premium!.price >= SHIP_CLASSES[premiumShips()[i - 1]].premium!.price, 'the cheapest first');

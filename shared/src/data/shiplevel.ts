@@ -48,6 +48,9 @@ export const LEVEL_RANGE: Partial<Record<ShipClassId, [number, number]>> = {
   // The eight that make the lines whole (2026-10-04): the levels of their tiers, as every new hull's.
   sloop_of_war: [3, 5], armed_fluyt: [5, 7], polacre: [7, 9], dunkirk_frigate: [7, 9],
   great_indiaman: [9, 10], manila_galleon: [9, 10], great_xebec: [9, 10], race_galleon: [9, 10],
+  // The third batch's premium hulls (2026-10-04): the levels of their tiers, as every new hull's.
+  bulldog: [1, 3], lantern_sampan: [1, 3], dolphin: [1, 3], saint_elmo: [3, 5], mimic_barge: [3, 5], icebound_hulk: [5, 7],
+  golden_lion: [9, 10], sailfish: [9, 10],
   // The beasts (docs/12 P4): levels like ships', the ladder between them and a captain as between ships.
   shark: [2, 6],
   orca: [3, 8],
@@ -96,6 +99,9 @@ export const HULL_ROLE: Partial<Record<ShipClassId, HullRole>> = {
   // The eight that make the lines whole (2026-10-04), by their lists.
   sloop_of_war: 'war', great_indiaman: 'trade', manila_galleon: 'trade', polacre: 'all', dunkirk_frigate: 'all', great_xebec: 'all', race_galleon: 'all',
   armed_fluyt: 'trade',
+  // The third batch's premium hulls (2026-10-04), by their lists.
+  bulldog: 'war', saint_elmo: 'war', lantern_sampan: 'trade', golden_lion: 'trade', dolphin: 'all', sailfish: 'all', mimic_barge: 'trade',
+  icebound_hulk: 'trade',
 };
 
 /** How many levels below her own a hull of this role fights. */

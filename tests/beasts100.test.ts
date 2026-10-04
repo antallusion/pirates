@@ -90,7 +90,7 @@ const conn = (s: PlayerSession) => (s as unknown as { conn: { last: (t: string) 
 // ------------------------------------------------------------------------------------------------ the shop's twenty
 
 test('the shop\'s twenty: battle units of the art queue\'s premium faction, each with its offer and a craft of its own', () => {
-  assert.equal(PREMIUM_BEAST_IDS.length, 20 + 12, 'the twenty, and the second dozen of 2026-10-04 (tests/creatures24)');
+  assert.equal(PREMIUM_BEAST_IDS.length, 20 + 12 + 12, 'the twenty, the second dozen and the third of 2026-10-04 (tests/creatures24, tests/batch3)');
   const art = [...ART].filter(([, a]) => a.faction === 'premium').map(([id]) => id).sort();
   assert.deepEqual([...PREMIUM_BEAST_IDS].sort(), art, 'the shop\'s kinds of tools/art/creatures.py');
   const body = new Set<UnitSpecial>(['flying', 'diving', 'shooter']);
@@ -98,7 +98,7 @@ test('the shop\'s twenty: battle units of the art queue\'s premium faction, each
     const d = UNITS[id];
     assert.ok(d && d.beast && isPremiumUnit(id), id);
     assert.equal(d.tier, ART.get(id)!.tier, `${id}: the art's tier`);
-    assert.ok(d.tier >= 4 && d.tier <= 7 && d.cost > 0 && d.art === `unit.${id}`, id);
+    assert.ok(d.tier >= 3 && d.tier <= 7 && d.cost > 0 && d.art === `unit.${id}`, id); // the third tier opened by the third dozen
     const o = d.premium!;
     assert.ok(o.price > 0 && o.n >= 1 && Number.isInteger(o.price) && Number.isInteger(o.n), id);
     assert.ok(o.note[0].length > 20 && ru(o.note[1]), `${id}: the card's line in both languages`);
@@ -122,8 +122,8 @@ test('their numbers by tier: above the best of the sea\'s own, below the next ti
   const buy = (id: PremiumBeastId) => armyWeight([{ u: id, n: PREMIUM_BEASTS[id].premium!.n }]);
   const of = (t: number) => PREMIUM_BEAST_IDS.filter((id) => UNITS[id].tier === t);
   let rate = 0;
-  for (const t of [4, 5, 6, 7]) {
-    if (t > 4) assert.ok(Math.min(...of(t).map((id) => UNITS[id].premium!.price)) > Math.max(...of(t - 1).map((id) => UNITS[id].premium!.price)), `tier ${t} dearer`);
+  for (const t of [3, 4, 5, 6, 7]) {
+    if (t > 3) assert.ok(Math.min(...of(t).map((id) => UNITS[id].premium!.price)) > Math.max(...of(t - 1).map((id) => UNITS[id].premium!.price)), `tier ${t} dearer`);
     const r = of(t).reduce((a, id) => a + UNITS[id].premium!.price / buy(id), 0) / of(t).length;
     assert.ok(r > rate, `tier ${t}: ${r.toFixed(1)} doubloons a deckhand's worth`);
     rate = r;
@@ -134,7 +134,7 @@ test('their numbers by tier: above the best of the sea\'s own, below the next ti
     const share = buy(id) / armyWeight(armyForLevel(L, REF_MEN[L], 7, 'player'));
     assert.ok(share >= 0.1 && share <= 0.3, `${id}: ${(share * 100).toFixed(0)}% of a ⚓${L} army`);
   }
-  assert.deepEqual([4, 5, 6, 7].map(premiumFrom), [3, 4, 5, 6]);
+  assert.deepEqual([3, 4, 5, 6, 7].map(premiumFrom), [2, 3, 4, 5, 6]);
 });
 
 test('bought in the shop\'s Creatures tab from their tier\'s ship level — and nothing at sea hands one out', () => {

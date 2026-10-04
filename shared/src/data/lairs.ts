@@ -37,10 +37,15 @@ export type LairKind =
   // The wild beasts' (owner, 2026-10-03).
   | 'bat_cave' | 'jaguar_den' | 'moray_reef' | 'albatross_rock' | 'ape_ridge' | 'croc_mangroves' | 'octopus_wreck'
   // The great beasts' grottos and guardians' seats (owner, 2026-10-03).
-  | 'crab_hollow' | 'wyrm_gallery' | 'hydra_pool' | 'ape_throne' | 'roc_eyrie';
+  | 'crab_hollow' | 'wyrm_gallery' | 'hydra_pool' | 'ape_throne' | 'roc_eyrie'
+  // The islands' third dozen (owner, 2026-10-04; docs/18 IX): where an island's kind and level had the fewest lairs.
+  | 'frog_pools' | 'rat_wreck' | 'iguana_rocks' | 'ghost_strand' | 'centipede_ravine' | 'spider_grove' | 'bull_savanna' | 'cinder_slopes'
+  | 'harpy_crags' | 'banshee_hollow' | 'titan_wreck' | 'serpent_temple';
 export const LAIR_KINDS: LairKind[] = ['crab_beach', 'gull_cliffs', 'seal_rookery', 'shark_shallows', 'turtle_rocks', 'serpent_marsh', 'hermit_camp', 'tentacle_lagoon', 'choir_circle', 'drowned_surf', 'serpent_grotto', 'maw_pit', 'turtle_guardian', 'leviathan_shoal',
   'bat_cave', 'jaguar_den', 'moray_reef', 'albatross_rock', 'ape_ridge', 'croc_mangroves', 'octopus_wreck',
-  'crab_hollow', 'wyrm_gallery', 'hydra_pool', 'ape_throne', 'roc_eyrie'];
+  'crab_hollow', 'wyrm_gallery', 'hydra_pool', 'ape_throne', 'roc_eyrie',
+  'frog_pools', 'rat_wreck', 'iguana_rocks', 'ghost_strand', 'centipede_ravine', 'spider_grove', 'bull_savanna', 'cinder_slopes', 'harpy_crags',
+  'banshee_hollow', 'titan_wreck', 'serpent_temple'];
 
 /** A shore lair (the first a landing party meets), a grotto inland, the island's guardian at her heart. */
 export type LairRole = 'shore' | 'grotto' | 'guardian';
@@ -98,6 +103,22 @@ export const LAIRS: Record<LairKind, LairDef> = {
   hydra_pool: D('hydra_pool', 'grotto', ['Hydra Pool', 'Омут гидры'], ['A black pool among the mangrove roots where three heads rise out of the weed at once; the crocodiles keep its banks.', 'Чёрный омут среди мангровых корней: из тины разом поднимаются три головы, а берега стерегут крокодилы.'], [['mangrove_hydra', 0.6], ['crocodile', 0.4]], [5, 10], ['swamp', 'tropical'], { join: 'never', egg: 0.15 }),
   ape_throne: D('ape_throne', 'guardian', ['The Ape King’s Throne', 'Трон короля обезьян'], ['The island’s guardian: an old silverback crowned with coral and stone on a throne of fallen rock, and his apes about him.', 'Страж острова: старый седоспинный самец в короне из коралла и камня на троне из обрушенных скал, а вокруг — его обезьяны.'], [['ape_king', 0.6], ['island_ape', 0.4]], [6, 10], ['tropical', 'volcanic'], { join: 'never', egg: 0.3 }),
   roc_eyrie: D('roc_eyrie', 'guardian', ['Storm Roc’s Eyrie', 'Гнездо грозового руха'], ['The island’s guardian: a roc that nests on the highest crag and comes down out of the storm, and the albatrosses that wheel with it.', 'Страж острова: рух, что гнездится на самой высокой скале и падает из грозы, и альбатросы, что кружат вместе с ним.'], [['storm_roc', 0.6], ['albatross', 0.4]], [6, 10], ['rocky'], { join: 'never', egg: 0.35 }),
+  // The islands' third dozen (owner, 2026-10-04: «еще больше … существ»; docs/18 IX): nine shore lairs where an island's
+  // kind and level had the fewest to choose from — the swamps' and the beaches' first levels (one kind of lair there),
+  // the volcanic shores, the dead isles (two) and the deepest waters' shores (none to two) — a grotto and two guardians'
+  // seats for the dead isles and the graveyards (one each) and the swamps (one).
+  frog_pools: D('frog_pools', 'shore', ['Frog Pools', 'Лягушачьи заводи'], ['Warm green pools in the swamp, loud with frogs as bright as jewels and the giant toads that sing over them.', 'Тёплые зелёные заводи в болоте, где квакают лягушки, яркие, как самоцветы, и поют над ними гигантские жабы.'], [['poison_frog', 0.75], ['giant_toad', 0.25]], [1, 4], ['swamp', 'tropical'], { dwell: true }),
+  rat_wreck: D('rat_wreck', 'shore', ['Rat Wreck', 'Крысиный остов'], ['A wreck run aground long ago, her hold alive with bilge rats; the shore crabs pick over what they leave.', 'Давно выброшенный на берег корабль, его трюм кишит трюмными крысами; береговые крабы подбирают то, что они оставят.'], [['bilge_rat', 0.75], ['crab', 0.25]], [1, 4], ['graveyard', 'swamp', 'rocky'], { dwell: true }),
+  iguana_rocks: D('iguana_rocks', 'shore', ['Iguana Rocks', 'Игуановые камни'], ['Black lava rocks where the marine iguanas lie in heaps in the sun, and the gulls wheel over them.', 'Чёрные лавовые камни, где морские игуаны грудами греются на солнце, а над ними кружат чайки.'], [['marine_iguana', 0.75], ['gull', 0.25]], [1, 5], ['volcanic', 'rocky'], { dwell: true, egg: 0.1 }),
+  ghost_strand: D('ghost_strand', 'shore', ['Strand of the Ghost Crabs', 'Берег крабов-призраков'], ['A pale beach where nothing seems to move till the ghost crabs run, a thousand at once, and the rats come out of the wreck behind them.', 'Бледный пляж, где ничто не шевелится, пока не побегут крабы-призраки, тысяча разом, а за ними из крушения не вылезут крысы.'], [['ghost_crab', 0.75], ['bilge_rat', 0.25]], [2, 7], ['graveyard', 'dead'], { dwell: true }),
+  centipede_ravine: D('centipede_ravine', 'shore', ['Centipede Ravine', 'Овраг сколопендр'], ['A steep ravine of rotting leaves under the jungle roof, where the centipedes hunt and the frogs hide from them.', 'Крутой овраг гниющей листвы под пологом джунглей: там охотятся сколопендры, а лягушки прячутся от них.'], [['giant_centipede', 0.7], ['poison_frog', 0.3]], [3, 7], ['tropical', 'swamp', 'volcanic'], { dwell: true }),
+  spider_grove: D('spider_grove', 'shore', ['Spider Grove', 'Паучья роща'], ['A grove grey with webs from root to crown: the spiders wait in the middle of them, and the centipedes keep the ground below.', 'Роща, седая от паутины от корней до крон: в её середине ждут пауки, а землю под ней стерегут сколопендры.'], [['jungle_spider', 0.7], ['giant_centipede', 0.3]], [5, 10], ['tropical', 'swamp'], { dwell: true, egg: 0.1 }),
+  bull_savanna: D('bull_savanna', 'shore', ['Wild Cattle Savanna', 'Саванна диких быков'], ['Tall grass where the cattle left by old ships have run wild for a hundred years; the boars root among the herd.', 'Высокая трава, где скот, оставленный старыми кораблями, сто лет живёт на воле; среди стада роются кабаны.'], [['feral_bull', 0.7], ['wild_boar', 0.3]], [4, 8], ['tropical', 'rocky'], { dwell: true }),
+  cinder_slopes: D('cinder_slopes', 'shore', ['Cinder Slopes', 'Пепельные склоны'], ['Black slopes of ash and cinders under a smoking cone, where hounds with smouldering coats run, and the centipedes hide in the warm cracks.', 'Чёрные склоны пепла и шлака под дымящим конусом: там рыщут гончие в тлеющей шерсти, а в тёплых трещинах прячутся сколопендры.'], [['cinder_hound', 0.7], ['giant_centipede', 0.3]], [6, 10], ['volcanic'], { dwell: true }),
+  harpy_crags: D('harpy_crags', 'shore', ['Harpy Crags', 'Утёсы гарпий'], ['Sheer crags over the sea, loud with the shrieks of the harpies that nest on them; the albatrosses keep their distance.', 'Отвесные утёсы над морем, где визжат гарпии, гнездящиеся на них; альбатросы держатся поодаль.'], [['cliff_harpy', 0.7], ['albatross', 0.3]], [6, 10], ['rocky', 'volcanic'], { dwell: true, egg: 0.08 }),
+  banshee_hollow: D('banshee_hollow', 'grotto', ['Banshee Hollow', 'Лощина банши'], ['A hollow of dead trees in the heart of the island, where the banshees wail at night and the ghost crabs run among the roots.', 'Лощина мёртвых деревьев в сердце острова: ночью там воют банши, а меж корней бегают крабы-призраки.'], [['banshee', 0.6], ['ghost_crab', 0.4]], [5, 10], ['dead', 'graveyard'], { join: 'never' }),
+  titan_wreck: D('titan_wreck', 'guardian', ['The Wreck Titan', 'Титан обломков'], ['The island’s guardian: a colossus risen out of a hundred wrecks on her reef, and the hermits who keep it.', 'Страж острова: колосс, поднявшийся из сотни крушений на её рифе, и отшельники, что ему служат.'], [['wreck_titan', 0.6], ['hermit', 0.4]], [6, 10], ['graveyard', 'dead'], { join: 'never' }),
+  serpent_temple: D('serpent_temple', 'guardian', ['Temple of the Plumed Serpent', 'Храм пернатого змея'], ['The island’s guardian: a feathered serpent coiled on a temple the jungle swallowed long ago, and the jaguars that guard its steps.', 'Страж острова: пернатый змей, свернувшийся на храме, что давно поглотили джунгли, и ягуары, что стерегут его ступени.'], [['plumed_serpent', 0.6], ['jaguar', 0.4]], [6, 10], ['tropical', 'swamp'], { join: 'never', egg: 0.3 }),
 };
 
 // ------------------------------------------------------------------------------------------------ 24. the calibration
@@ -137,6 +158,19 @@ export const LAIR_CAL: Record<LairKind, [number, number, number][]> = {
   hydra_pool: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.9, 1.9, 2.89], [0.94, 1.61, 2.39], [0.84, 1.47, 2.34], [0.9, 1.48, 1.98], [0.73, 1.21, 1.64], [0.73, 1.04, 1.57]],
   ape_throne: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [3.16, 4.83, 6.82], [1.5, 2.59, 3.04], [2.28, 4.18, 5.61], [1.01, 1.39, 1.76], [0.97, 1.35, 1.72]],
   roc_eyrie: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.31, 2.19, 5.05], [0.31, 1.21, 2.34], [0.11, 0.95, 2.92], [0.31, 0.68, 1.23], [0.32, 0.63, 1.2]],
+  // The islands' third dozen (2026-10-04): node tools/balance-lairs.ts --calibrate <kind…>.
+  frog_pools: [[0, 0, 0], [0.64, 1.06, 1.36], [0.61, 0.84, 1.25], [0.47, 0.7, 0.97], [0.43, 0.61, 0.76], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  rat_wreck: [[0, 0, 0], [0.94, 1.21, 1.81], [0.94, 1.45, 1.72], [0.53, 0.85, 1.25], [0.46, 0.79, 1.09], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  iguana_rocks: [[0, 0, 0], [1.17, 1.5, 2.17], [0.87, 1.12, 1.62], [0.5, 1.09, 1.25], [0.58, 0.92, 1.42], [0.5, 0.79, 1.13], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  ghost_strand: [[0, 0, 0], [0, 0, 0], [0.75, 1.25, 1.42], [0.63, 0.95, 1.35], [0.56, 0.81, 1.19], [0.43, 0.7, 1.03], [0.4, 0.64, 0.89], [0.37, 0.58, 0.81], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  centipede_ravine: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.63, 1.12, 1.46], [0.63, 0.87, 1.16], [0.56, 0.79, 1.07], [0.55, 0.75, 1.04], [0.47, 0.64, 0.98], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+  spider_grove: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.92, 1.42, 1.87], [0.92, 1.28, 1.72], [0.86, 1.22, 1.47], [0.73, 1.15, 1.5], [0.65, 0.81, 1.06], [0.64, 0.84, 1.05]],
+  bull_savanna: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1.17, 1.5, 1.83], [1.09, 1.42, 1.69], [0.96, 1.3, 1.62], [0.81, 1.25, 1.61], [0.79, 1.12, 1.54], [0, 0, 0], [0, 0, 0]],
+  cinder_slopes: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.79, 1.36, 1.78], [0.79, 1.22, 1.78], [0.75, 1.15, 1.54], [0.81, 1.09, 1.64], [0.77, 1.16, 1.64]],
+  harpy_crags: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.61, 1.06, 1.5], [0.44, 0.97, 1.21], [0.38, 0.87, 1.29], [0.41, 0.95, 1.41], [0.39, 0.91, 1.43]],
+  banshee_hollow: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.3, 0.66, 0.98], [0.26, 0.52, 0.92], [0.21, 0.44, 0.78], [0.16, 0.36, 0.61], [0.33, 0.47, 0.61], [0.33, 0.46, 0.63]],
+  titan_wreck: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2.71, 4.49, 6.71], [1.8, 2.59, 3.63], [2.28, 3.97, 4.78], [1.02, 1.64, 2.86], [1, 1.58, 2.69]],
+  serpent_temple: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0.93, 2.21, 3.63], [0.44, 1.02, 1.64], [0.54, 1.28, 1.98], [0.39, 0.79, 1.45], [0.42, 0.78, 1.29]],
 };
 
 /** Silver the men an average lair costs the captain of ⚓L to refill when she wins (measured in the battle ashore:

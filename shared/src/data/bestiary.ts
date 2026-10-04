@@ -1,7 +1,8 @@
 // The land's creatures (docs/18 II item 14): a family of fighting kinds beside H1's men — fourteen kinds over the seven
 // tiers, from the crabs of a beach to the island's ancient guardian, the twelve wild beasts of the jungles, the
-// marshes, the caves and the reefs after them, and the five great beasts of the grottos and the guardians' seats
-// (owner, 2026-10-03: the battle's creatures, tools/art/creatures.py).
+// marshes, the caves and the reefs after them, the five great beasts of the grottos and the guardians' seats
+// (owner, 2026-10-03: the battle's creatures, tools/art/creatures.py), and the islands' third dozen (owner, 2026-10-04:
+// «еще больше … существ»; docs/18 IX) for the lairs where an island's kind and level had the fewest to choose from.
 // They are units as the men are (UNITS takes them in, so the boarding battle, the army's slots and the recruit window
 // read them the same way), each with its stats on the HoMM3 scale, its specials (docs/18 item 16) and its face from
 // the art in assets/: the creatures/* and monsters/* pictures, the portraits of the hermits, the Choir's cultists and
@@ -25,11 +26,16 @@ export type BeastId =
   | 'island_ape' | 'crocodile'
   | 'giant_octopus'
   // The great beasts (owner, 2026-10-03).
-  | 'crab_queen' | 'cave_wyrm' | 'mangrove_hydra' | 'ape_king' | 'storm_roc';
+  | 'crab_queen' | 'cave_wyrm' | 'mangrove_hydra' | 'ape_king' | 'storm_roc'
+  // The islands' third dozen (owner, 2026-10-04).
+  | 'poison_frog' | 'bilge_rat' | 'marine_iguana' | 'ghost_crab' | 'giant_centipede' | 'jungle_spider' | 'feral_bull'
+  | 'cinder_hound' | 'cliff_harpy' | 'banshee' | 'plumed_serpent' | 'wreck_titan';
 
 export const BEAST_IDS: BeastId[] = ['crab', 'gull', 'seal', 'reef_shark', 'rock_turtle', 'marsh_serpent', 'hermit', 'lagoon_tentacle', 'cultist', 'surf_drowned', 'young_serpent', 'lantern_maw', 'ancient_turtle', 'shoal_leviathan',
   'wild_boar', 'giant_toad', 'cave_bat', 'barracuda', 'jaguar', 'monitor', 'albatross', 'moray', 'bell_hermit', 'island_ape', 'crocodile', 'giant_octopus',
-  'crab_queen', 'cave_wyrm', 'mangrove_hydra', 'ape_king', 'storm_roc'];
+  'crab_queen', 'cave_wyrm', 'mangrove_hydra', 'ape_king', 'storm_roc',
+  'poison_frog', 'bilge_rat', 'marine_iguana', 'ghost_crab', 'giant_centipede', 'jungle_spider', 'feral_bull', 'cinder_hound', 'cliff_harpy', 'banshee',
+  'plumed_serpent', 'wreck_titan'];
 
 type BeastStats = Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>;
 const B = (id: BeastId, tier: number, s: BeastStats): UnitDef => ({ id, tier, up: false, base: id, upgrade: null, beast: true, ...s });
@@ -73,6 +79,23 @@ export const BEASTS: Record<BeastId, UnitDef> = {
   mangrove_hydra: B('mangrove_hydra', 6, { atk: 13, def: 11, dmin: 5, dmax: 9, hp: 38, speed: 4, init: 7, shots: 0, specials: ['retaliate_all', 'regen'], art: 'unit.mangrove_hydra', cost: 380 }),
   ape_king: B('ape_king', 7, { atk: 19, def: 15, dmin: 11, dmax: 17, hp: 64, speed: 6, init: 9, shots: 0, specials: ['sweep', 'terror'], art: 'unit.ape_king', cost: 780 }),
   storm_roc: B('storm_roc', 7, { atk: 20, def: 12, dmin: 10, dmax: 18, hp: 52, speed: 9, init: 11, shots: 0, specials: ['flying', 'sweep'], art: 'unit.storm_roc', cost: 760 }),
+  // The islands' third dozen (owner, 2026-10-04: «еще больше … существ»; docs/18 IX): the kinds of the new lairs, where
+  // an island's kind and level had the fewest to choose from — the swamps' and the beaches' first tiers, the volcanic
+  // shores, the dead isles and the ship graveyards, the deepest waters' shores, grottos and guardians' seats. Each
+  // calibrated by its tier's peers (none over the heaviest of its tier, so the shop's rule stands as it was); each its
+  // own painted figure, a painted kindred of its body standing in till its sheet is cut (unitart.ts).
+  poison_frog: B('poison_frog', 1, { atk: 3, def: 3, dmin: 1, dmax: 2, hp: 5, speed: 4, init: 7, shots: 0, specials: ['poison', 'swarm'], art: 'unit.poison_frog', cost: 18 }),
+  bilge_rat: B('bilge_rat', 1, { atk: 4, def: 2, dmin: 1, dmax: 2, hp: 5, speed: 6, init: 8, shots: 0, specials: ['swarm', 'no_retaliation'], art: 'unit.bilge_rat', cost: 16 }),
+  marine_iguana: B('marine_iguana', 2, { atk: 5, def: 6, dmin: 2, dmax: 3, hp: 12, speed: 3, init: 5, shots: 0, specials: ['diving', 'regen'], art: 'unit.marine_iguana', cost: 50 }),
+  ghost_crab: B('ghost_crab', 2, { atk: 6, def: 5, dmin: 2, dmax: 3, hp: 9, speed: 7, init: 9, shots: 0, specials: ['shell', 'no_retaliation'], art: 'unit.ghost_crab', cost: 50 }),
+  giant_centipede: B('giant_centipede', 3, { atk: 8, def: 6, dmin: 2, dmax: 4, hp: 14, speed: 5, init: 8, shots: 0, specials: ['poison', 'double_strike'], art: 'unit.giant_centipede', cost: 90 }),
+  jungle_spider: B('jungle_spider', 4, { atk: 10, def: 7, dmin: 3, dmax: 5, hp: 16, speed: 5, init: 8, shots: 0, specials: ['poison', 'bind'], art: 'unit.jungle_spider', cost: 130 }),
+  feral_bull: B('feral_bull', 4, { atk: 11, def: 8, dmin: 3, dmax: 6, hp: 19, speed: 5, init: 6, shots: 0, specials: ['retaliate_all'], art: 'unit.feral_bull', cost: 135 }),
+  cinder_hound: B('cinder_hound', 5, { atk: 12, def: 8, dmin: 4, dmax: 7, hp: 20, speed: 7, init: 10, shots: 0, specials: ['breath'], art: 'unit.cinder_hound', cost: 210 }),
+  cliff_harpy: B('cliff_harpy', 5, { atk: 11, def: 7, dmin: 4, dmax: 6, hp: 18, speed: 8, init: 11, shots: 0, specials: ['flying', 'terror'], art: 'unit.cliff_harpy', cost: 200 }),
+  banshee: B('banshee', 6, { atk: 13, def: 11, dmin: 5, dmax: 9, hp: 30, speed: 7, init: 10, shots: 0, specials: ['flying', 'undead', 'chill'], art: 'unit.banshee', cost: 350 }),
+  plumed_serpent: B('plumed_serpent', 7, { atk: 20, def: 15, dmin: 10, dmax: 16, hp: 56, speed: 9, init: 11, shots: 0, specials: ['flying', 'bind', 'regen'], art: 'unit.plumed_serpent', cost: 760 }),
+  wreck_titan: B('wreck_titan', 7, { atk: 17, def: 20, dmin: 10, dmax: 15, hp: 66, speed: 3, init: 5, shots: 0, specials: ['shell', 'sweep', 'steady'], art: 'unit.wreck_titan', cost: 760 }),
 };
 
 export const isBeast = (u: string): u is BeastId => (BEAST_IDS as string[]).includes(u);
@@ -148,6 +171,18 @@ export const BEAST_PLURAL: Record<CreatureId, Tr> = {
   mangrove_hydra: ['mangrove hydras', 'мангровые гидры'],
   ape_king: ['ape kings', 'короли обезьян'],
   storm_roc: ['storm rocs', 'грозовые рухи'],
+  poison_frog: ['poison frogs', 'ядовитые лягушки'],
+  bilge_rat: ['bilge rats', 'трюмные крысы'],
+  marine_iguana: ['marine iguanas', 'морские игуаны'],
+  ghost_crab: ['ghost crabs', 'крабы-призраки'],
+  giant_centipede: ['giant centipedes', 'гигантские сколопендры'],
+  jungle_spider: ['jungle spiders', 'пауки джунглей'],
+  feral_bull: ['feral bulls', 'одичавшие быки'],
+  cinder_hound: ['cinder hounds', 'пепельные гончие'],
+  cliff_harpy: ['cliff harpies', 'скальные гарпии'],
+  banshee: ['banshees', 'банши'],
+  plumed_serpent: ['plumed serpents', 'пернатые змеи'],
+  wreck_titan: ['wreck titans', 'титаны обломков'],
   mermaid: ['mermaids', 'русалки'],
   sea_turtle: ['sea turtles', 'морские черепахи'],
   white_whale: ['the white whale', 'белый кит'],
@@ -199,4 +234,16 @@ export const BEAST_RES: Record<BeastId, Partial<Record<LandRes | 'pearls', numbe
   mangrove_hydra: { venom: 0.9, bone: 0.3 },
   ape_king: { bone: 3, pearls: 0.4 },
   storm_roc: { bone: 2.5, pearls: 0.4 },
+  poison_frog: { venom: 0.08 },
+  bilge_rat: { pearls: 0.02 },
+  marine_iguana: { shell: 0.12 },
+  ghost_crab: { shell: 0.12, pearls: 0.02 },
+  giant_centipede: { venom: 0.25, shell: 0.05 },
+  jungle_spider: { venom: 0.35 },
+  feral_bull: { shell: 0.1, pearls: 0.03 },
+  cinder_hound: { venom: 0.3 },
+  cliff_harpy: { pearls: 0.1 },
+  banshee: { pearls: 0.3 },
+  plumed_serpent: { venom: 1, pearls: 0.5 },
+  wreck_titan: { shell: 2, pearls: 0.6 },
 };

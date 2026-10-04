@@ -23,7 +23,8 @@ export interface Figure {
 
 const F = (body: Body, size: number, of: string, ...like: UnitId[]): Figure => ({ body, size, of, like });
 
-/** The figures of the kinds added by docs/18 VII (the shop's twenty and the factions' new kinds). */
+/** The figures of the kinds added by docs/18 VII (the shop's twenty and the factions' new kinds), VIII (the second
+ *  dozen) and IX (the third: the shop's and the islands' new creatures). */
 export const FIGURES: Partial<Record<UnitId, Figure>> = {
   // The shop's creatures.
   golden_crab: F('beast', 1.05, 'premium', 'crab_queen', 'bell_hermit', 'crab'),
@@ -96,6 +97,33 @@ export const FIGURES: Partial<Record<UnitId, Figure>> = {
   fog_chemist: F('man', 1.28, 'brokers', 'alchemist'),
   bounty_hunter: F('man', 1.3, 'league', 'debt_collector', 'enforcer'),
   frostbound: F('man', 1.28, 'dutchman', 'dutchman_boarder', 'ghost_sailor'),
+  // The third dozen of the shop (2026-10-04), painted four to a sheet (tools/art/fleet_b3.py).
+  war_parrot: F('fly', 1.1, 'premium', 'albatross', 'gull'),
+  electric_eel: F('water', 1.35, 'premium', 'moray', 'sea_viper'),
+  sea_otter: F('beast', 1.1, 'premium', 'sea_wolf', 'seal'),
+  flying_squid: F('fly', 1.3, 'premium', 'giant_manta', 'lantern_wraith'),
+  selkie: F('man', 1.3, 'premium', 'nautilus_knight', 'deep_one'),
+  kelp_golem: F('big', 1.55, 'premium', 'coral_elemental', 'tidal_elemental'),
+  giant_lobster: F('beast', 1.3, 'premium', 'golden_crab', 'crab_queen'),
+  manticore: F('beast', 1.4, 'premium', 'sea_wolf', 'jaguar'),
+  sea_cyclops: F('big', 1.72, 'premium', 'island_ape', 'basalt_guardian'),
+  sea_hydra: F('water', 1.78, 'premium', 'frost_serpent', 'young_serpent'),
+  coral_colossus: F('big', 1.8, 'premium', 'coral_elemental', 'tidal_elemental'),
+  cloud_whale: F('fly', 1.8, 'premium', 'giant_manta', 'sea_dragon'),
+  // The islands' third dozen (2026-10-04): the land's and the shore's creatures of the new lairs, painted four to a
+  // sheet with the shop's (tools/art/fleet_b3.py).
+  poison_frog: F('beast', 0.85, 'wild', 'giant_toad'),
+  bilge_rat: F('beast', 0.85, 'wild', 'wild_boar', 'crab'),
+  marine_iguana: F('beast', 1.05, 'wild', 'monitor'),
+  ghost_crab: F('beast', 0.9, 'wild', 'crab', 'bell_hermit'),
+  giant_centipede: F('beast', 1.2, 'wild', 'monitor', 'cave_wyrm'),
+  jungle_spider: F('beast', 1.25, 'wild', 'giant_toad', 'crab_queen'),
+  feral_bull: F('beast', 1.3, 'wild', 'wild_boar'),
+  cinder_hound: F('beast', 1.25, 'wild', 'sea_wolf', 'jaguar'),
+  cliff_harpy: F('fly', 1.3, 'wild', 'albatross', 'cave_bat'),
+  banshee: F('fly', 1.35, 'wild', 'lantern_wraith'),
+  plumed_serpent: F('fly', 1.75, 'wild', 'sea_dragon', 'storm_roc'),
+  wreck_titan: F('big', 1.8, 'wild', 'basalt_guardian', 'abyss_herald'),
 };
 
 /** Painted kinds by body and whose: the stand-ins when none a kind names is there. */

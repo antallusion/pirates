@@ -9140,5 +9140,585 @@
   ],
   "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — an ember phoenix: a great bird of prey with smouldering dark red and charcoal feathers, glowing ember-orange edges on its wings and a long trailing tail of embers, flying toward the right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, its wings at the top of their beat, embers drifting; third — attack: diving toward the right, talons forward and a burst of embers from its wings; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. Row 2 — a colossal ancient shark rising out of the sea, a scarred slate-grey back, a pale belly and a vast jaw of serrated teeth, facing right. It rises out of its own small flat oval patch of dark sea water ringed with white foam, the same patch in every pose. Its poses: first — idle: risen out of the water, watchful; second — idle a breath later: the same pose with a tiny change only, its jaws closing, water streaming from its snout; third — attack: lunging toward the right with its vast jaws wide open; fourth — hit: jerking back from a blow while still facing right, sinking a little lower into its water. Row 3 — a marid, a djinn of the sea: a towering bearded torso of deep blue-green skin with gold armbands and a turban, rising out of the water on a swirling column of sea water and foam, facing right. It rises out of its own small flat oval patch of dark sea water ringed with white foam, the same patch in every pose. Its poses: first — idle: risen out of the water, watchful; second — idle a breath later: the same pose with a tiny change only, its arms folded, the water of its column swirling; third — attack: thrusting both hands toward the right, a wave of foaming sea water surging from its palms; fourth — hit: jerking back from a blow while still facing right, its arms thrown up, sinking a little lower into its water. Row 4 — a great ice wyvern with pale blue-white scales and frosted membranous wings, a long tail ending in a spike of ice, a horned head, flying toward the right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, its wings tilted the other way, frost drifting from them; third — attack: breathing a jet of freezing white mist toward the right; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
   "painting": true
+ },
+ "ships_21": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "whole": true,
+  "px": 768,
+  "square": false,
+  "dir": "ships",
+  "aspect": "3:2",
+  "ids": [
+   "ship.bulldog",
+   "ship.lantern_sampan",
+   "ship.dolphin",
+   "ship.saint_elmo"
+  ],
+  "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a stubby, broad little gun-sloop with a single gaff-rigged mast, a heavy long gun on a slide at the bow, three small guns a side and iron-bound bulwarks bristling with short spikes; 2) a small eastern river sampan with a single batten-ribbed sail, a curved woven bamboo cabin roof in the middle hung with red paper lanterns (unlit) and a long steering oar at the stern; 3) a slim little felucca with two raked lateen sails, a narrow pale hull and a carved dolphin at the bow; 4) a navy brig-sloop with two masts of square sails, copper-sheathed masts gleaming, seven guns a side, a black-and-ochre hull and a small carved figure of a saint at the bow; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
+  "painting": true
+ },
+ "ships_22": {
+  "grid": [
+   4,
+   1
+  ],
+  "mode": "keyed",
+  "whole": true,
+  "px": 768,
+  "square": false,
+  "dir": "ships",
+  "aspect": "3:2",
+  "ids": [
+   "ship.mimic_barge",
+   "ship.icebound_hulk",
+   "ship.sailfish",
+   "ship.golden_lion"
+  ],
+  "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a broad, crooked old cargo barge with one stubby mast of square sail, an open hold heaped with oak barrels bound in iron hoops and a lopsided deckhouse at the stern; 2) a broad northern hulk sheathed in pale blue ice, three masts of frost-white square sails, icicles hanging from her yards and rails and frost on her deck; 3) a long, razor-bowed war frigate with a sharp narrow spur at the bow, a huge fan-shaped mainsail spread high like a sailfish's fin, square sails on the foremast, fifteen guns a side and a dark blue hull; 4) a great gilded merchant galleass with three tall lateen sails, a long hull with banks of long oars along both sides, a gilded winged-lion figurehead at the bow and a red-and-gold stern pavilion; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
+  "painting": true
+ },
+ "anim5_1": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.8,
+  "dir": "units",
+  "aspect": "1:1",
+  "ids": [
+   "unit.poison_frog",
+   "unit.poison_frog_b",
+   "unit.poison_frog_atk",
+   "unit.poison_frog_hit",
+   "unit.bilge_rat",
+   "unit.bilge_rat_b",
+   "unit.bilge_rat_atk",
+   "unit.bilge_rat_hit",
+   "unit.ghost_crab",
+   "unit.ghost_crab_b",
+   "unit.ghost_crab_atk",
+   "unit.ghost_crab_hit",
+   "unit.marine_iguana",
+   "unit.marine_iguana_b",
+   "unit.marine_iguana_atk",
+   "unit.marine_iguana_hit"
+  ],
+  "creatures": [
+   {
+    "id": "poison_frog",
+    "faction": "wild",
+    "tier": 1,
+    "en": "Poison Frogs",
+    "ru": "Ядовитые лягушки",
+    "body": "beast"
+   },
+   {
+    "id": "bilge_rat",
+    "faction": "wild",
+    "tier": 1,
+    "en": "Bilge Rats",
+    "ru": "Трюмные крысы",
+    "body": "beast"
+   },
+   {
+    "id": "ghost_crab",
+    "faction": "wild",
+    "tier": 2,
+    "en": "Ghost Crabs",
+    "ru": "Крабы-призраки",
+    "body": "beast"
+   },
+   {
+    "id": "marine_iguana",
+    "faction": "wild",
+    "tier": 2,
+    "en": "Marine Iguana",
+    "ru": "Морская игуана",
+    "body": "beast"
+   }
+  ],
+  "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — a cluster of three giant poison frogs as big as cats sitting together, glossy skin in bright warning colours — scarlet, cobalt blue and yellow with black spots — facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, their throats puffed out, one of them blinking; third — attack: all three leaping toward the right together, their sticky tongues lashing out; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 2 — a pack of four big grey ship rats with long naked tails, beady black eyes and twitching whiskers, huddled together, facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, the rats sniffing the air, whiskers twitching; third — attack: the pack scurrying forward toward the right, teeth bared; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 3 — a pair of pale, almost white ghost crabs as big as hounds, tall stalked eyes and long thin legs, raised high on their legs, claws toward the right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, their eyestalks swivelling, one claw raised; third — attack: darting sideways toward the right and snapping their claws; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 4 — a big black marine iguana with a crest of short spines along its back, rough salt-crusted scales and a blunt face, crouched low, its head toward the right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, snorting a little puff of salt spray from its nostrils; third — attack: lunging forward toward the right with its jaws open; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "despill": true,
+  "painting": true
+ },
+ "anim5_2": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.8,
+  "dir": "units",
+  "aspect": "1:1",
+  "ids": [
+   "unit.giant_centipede",
+   "unit.giant_centipede_b",
+   "unit.giant_centipede_atk",
+   "unit.giant_centipede_hit",
+   "unit.jungle_spider",
+   "unit.jungle_spider_b",
+   "unit.jungle_spider_atk",
+   "unit.jungle_spider_hit",
+   "unit.feral_bull",
+   "unit.feral_bull_b",
+   "unit.feral_bull_atk",
+   "unit.feral_bull_hit",
+   "unit.cinder_hound",
+   "unit.cinder_hound_b",
+   "unit.cinder_hound_atk",
+   "unit.cinder_hound_hit"
+  ],
+  "creatures": [
+   {
+    "id": "giant_centipede",
+    "faction": "wild",
+    "tier": 3,
+    "en": "Giant Centipede",
+    "ru": "Гигантская сколопендра",
+    "body": "beast"
+   },
+   {
+    "id": "jungle_spider",
+    "faction": "wild",
+    "tier": 4,
+    "en": "Jungle Spider",
+    "ru": "Паук джунглей",
+    "body": "beast"
+   },
+   {
+    "id": "feral_bull",
+    "faction": "wild",
+    "tier": 4,
+    "en": "Feral Bull",
+    "ru": "Одичавший бык",
+    "body": "beast"
+   },
+   {
+    "id": "cinder_hound",
+    "faction": "wild",
+    "tier": 5,
+    "en": "Cinder Hound",
+    "ru": "Пепельная гончая",
+    "body": "beast"
+   }
+  ],
+  "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — a giant jungle centipede as long as a boat, glossy dark red segments and yellow legs, its front half reared up, its head with two curved fangs toward the right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, its antennae swaying, its legs rippling; third — attack: striking forward toward the right twice with its curved fangs; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 2 — a giant hairy jungle spider as big as a hound, dark brown with orange bands on its legs and a cluster of glossy black eyes, crouched on its legs, facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, its two front legs raised a little; third — attack: rearing up and lunging toward the right with its fangs, a strand of web flying; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 3 — a big shaggy feral bull run wild on an island, dark brown with long curved horns and a heavy hump, its head lowered toward the right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, pawing the ground with one hoof, snorting; third — attack: charging toward the right with its horns lowered; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 4 — a lean volcanic hound with a coat of smouldering charcoal-grey fur glowing ember-orange at the edges, glowing cracks along its flanks and bright ember eyes, crouched to spring, facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, wisps of smoke curling off its back; third — attack: lunging toward the right with its jaws open, breathing a short gout of embers and hot ash; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim5_3": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.8,
+  "dir": "units",
+  "aspect": "1:1",
+  "ids": [
+   "unit.cliff_harpy",
+   "unit.cliff_harpy_b",
+   "unit.cliff_harpy_atk",
+   "unit.cliff_harpy_hit",
+   "unit.banshee",
+   "unit.banshee_b",
+   "unit.banshee_atk",
+   "unit.banshee_hit",
+   "unit.war_parrot",
+   "unit.war_parrot_b",
+   "unit.war_parrot_atk",
+   "unit.war_parrot_hit",
+   "unit.flying_squid",
+   "unit.flying_squid_b",
+   "unit.flying_squid_atk",
+   "unit.flying_squid_hit"
+  ],
+  "creatures": [
+   {
+    "id": "cliff_harpy",
+    "faction": "wild",
+    "tier": 5,
+    "en": "Cliff Harpy",
+    "ru": "Скальная гарпия",
+    "body": "fly"
+   },
+   {
+    "id": "banshee",
+    "faction": "wild",
+    "tier": 6,
+    "en": "Banshee",
+    "ru": "Банши",
+    "body": "fly"
+   },
+   {
+    "id": "war_parrot",
+    "faction": "premium",
+    "tier": 3,
+    "en": "War Parrot",
+    "ru": "Боевой попугай",
+    "body": "fly"
+   },
+   {
+    "id": "flying_squid",
+    "faction": "premium",
+    "tier": 4,
+    "en": "Flying Squid",
+    "ru": "Летучий кальмар",
+    "body": "fly"
+   }
+  ],
+  "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — a cliff harpy: a winged creature with the head and shoulders of a wild-haired woman, great grey-brown feathered wings for arms and an eagle's taloned legs, hovering, facing right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, her wings at the top of their beat, her mouth open in a shriek; third — attack: swooping toward the right with her talons forward, shrieking; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. Row 2 — a banshee: a pale spectral woman in a long tattered grey shroud, her long white hair streaming upward, her lower body fading into pale mist, a faint cold blue glow about her, hovering, facing right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, her hair and shroud drifting the other way; third — attack: wailing toward the right with her arms flung forward, a ring of cold blue mist rolling out from her mouth; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. Row 3 — a giant pirate macaw with brilliant scarlet, gold and blue feathers, a heavy hooked beak and a small brass ring on one leg, flying toward the right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, its wings at the top of their beat, its head cocked; third — attack: diving toward the right with its hooked beak open and talons forward; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. Row 4 — a giant flying squid gliding through the air on wide fin-wings at the tip of its mantle, its tentacles trailing behind, translucent reddish-purple skin with dark spots, facing right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, its fins rippling, its tentacles curling; third — attack: lashing its tentacles toward the right in a spray of black ink; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "despill": true,
+  "painting": true
+ },
+ "anim5_4": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.8,
+  "dir": "units",
+  "aspect": "1:1",
+  "ids": [
+   "unit.electric_eel",
+   "unit.electric_eel_b",
+   "unit.electric_eel_atk",
+   "unit.electric_eel_hit",
+   "unit.sea_otter",
+   "unit.sea_otter_b",
+   "unit.sea_otter_atk",
+   "unit.sea_otter_hit",
+   "unit.selkie",
+   "unit.selkie_b",
+   "unit.selkie_atk",
+   "unit.selkie_hit",
+   "unit.giant_lobster",
+   "unit.giant_lobster_b",
+   "unit.giant_lobster_atk",
+   "unit.giant_lobster_hit"
+  ],
+  "creatures": [
+   {
+    "id": "electric_eel",
+    "faction": "premium",
+    "tier": 3,
+    "en": "Electric Eel",
+    "ru": "Электрический угорь",
+    "body": "water"
+   },
+   {
+    "id": "sea_otter",
+    "faction": "premium",
+    "tier": 3,
+    "en": "Giant Sea Otter",
+    "ru": "Гигантская калания",
+    "body": "beast"
+   },
+   {
+    "id": "selkie",
+    "faction": "premium",
+    "tier": 4,
+    "en": "Selkie",
+    "ru": "Селки",
+    "body": "man"
+   },
+   {
+    "id": "giant_lobster",
+    "faction": "premium",
+    "tier": 5,
+    "en": "Giant Lobster",
+    "ru": "Гигантский омар",
+    "body": "beast"
+   }
+  ],
+  "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — a huge thick dark olive electric eel rising out of the water in an S-curve, a pale blue glow along its flanks, facing right. It rises out of its own small flat oval patch of dark sea water ringed with white foam, the same patch in every pose. Its poses: first — idle: risen out of the water, watchful; second — idle a breath later: the same pose with a tiny change only, small blue sparks flickering along its body; third — attack: lunging toward the right as a crackle of pale blue lightning leaps from its head; fourth — hit: jerking back from a blow while still facing right, sinking a little lower into its water. Row 2 — a giant sea otter as big as a man, sleek dark brown wet fur, long whiskers and a pale face, webbed paws, hunched on its hind legs, facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, grooming its whiskers with one paw; third — attack: lunging toward the right and biting; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 3 — a selkie: a lithe sea-folk woman with dark wet hair and large dark eyes in a grey spotted sealskin cloak with the seal's head for a hood, a spear of pale driftwood tipped with a shell blade. Its poses: first — idle: standing ready in a combat stance; second — idle a breath later: the same pose with a tiny change only, the sealskin cloak drawn closer, the spear lifted; third — attack: a quick spear thrust toward the right; fourth — hit: flinching from a blow while still facing right: leaning back onto the rear foot, shoulders hunched, eyes squeezed shut, still holding the same weapon. Row 4 — a giant dark blue lobster as big as a longboat, a heavy armoured shell, long antennae and two huge uneven claws raised toward the right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, its antennae sweeping, one claw opening; third — attack: clamping its great claw shut toward the right; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim5_5": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.8,
+  "dir": "units",
+  "aspect": "1:1",
+  "ids": [
+   "unit.manticore",
+   "unit.manticore_b",
+   "unit.manticore_atk",
+   "unit.manticore_hit",
+   "unit.kelp_golem",
+   "unit.kelp_golem_b",
+   "unit.kelp_golem_atk",
+   "unit.kelp_golem_hit",
+   "unit.sea_cyclops",
+   "unit.sea_cyclops_b",
+   "unit.sea_cyclops_atk",
+   "unit.sea_cyclops_hit",
+   "unit.plumed_serpent",
+   "unit.plumed_serpent_b",
+   "unit.plumed_serpent_atk",
+   "unit.plumed_serpent_hit"
+  ],
+  "creatures": [
+   {
+    "id": "manticore",
+    "faction": "premium",
+    "tier": 5,
+    "en": "Manticore",
+    "ru": "Мантикора",
+    "body": "beast"
+   },
+   {
+    "id": "kelp_golem",
+    "faction": "premium",
+    "tier": 5,
+    "en": "Kelp Golem",
+    "ru": "Келповый голем",
+    "body": "big"
+   },
+   {
+    "id": "sea_cyclops",
+    "faction": "premium",
+    "tier": 6,
+    "en": "Sea Cyclops",
+    "ru": "Морской циклоп",
+    "body": "big"
+   },
+   {
+    "id": "plumed_serpent",
+    "faction": "wild",
+    "tier": 7,
+    "en": "Plumed Serpent",
+    "ru": "Пернатый змей",
+    "body": "fly"
+   }
+  ],
+  "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — a manticore: a great lion with a dark red mane and tawny hide, leathery wings folded on its back and a segmented scorpion tail with a black sting curled over its back, facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, its scorpion tail swaying, its lips curled back; third — attack: striking toward the right with its scorpion sting over its shoulder; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 2 — a kelp golem: a hulking giant of wet tangled kelp and dark seaweed twisted over a core of grey driftwood, small shells and starfish caught in it, heavy arms of rope-like kelp, facing right. Its poses: first — idle: standing ready, looming; second — idle a breath later: the same pose with a tiny change only, seaweed dripping, its body swelling a little; third — attack: swinging a heavy kelp arm down toward the right; fourth — hit: reeling back from a heavy blow while still facing right, strands of kelp flying. Row 3 — a sea cyclops: a hulking one-eyed giant with grey-green skin, a wild beard woven with seaweed, a kilt of old sailcloth and a broken ship's mast for a club, facing right. Its poses: first — idle: standing ready, looming; second — idle a breath later: the same pose with a tiny change only, his single eye narrowing, the mast lifted onto his shoulder; third — attack: swinging the mast in a wide sweep toward the right; fourth — hit: reeling back from a heavy blow while still facing right: leaning back, shoulders hunched, still holding the same weapon. Row 4 — a great plumed serpent of the old jungle temples: a long serpent body covered in shimmering emerald and turquoise feathers, a crest of long jade-green plumes and a pair of feathered wings, coiling in the air, facing right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, its coils shifting, its crest raised; third — attack: striking down toward the right with its jaws open, its wings flared; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim5_6": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.8,
+  "dir": "units",
+  "aspect": "1:1",
+  "ids": [
+   "unit.sea_hydra",
+   "unit.sea_hydra_b",
+   "unit.sea_hydra_atk",
+   "unit.sea_hydra_hit",
+   "unit.coral_colossus",
+   "unit.coral_colossus_b",
+   "unit.coral_colossus_atk",
+   "unit.coral_colossus_hit",
+   "unit.cloud_whale",
+   "unit.cloud_whale_b",
+   "unit.cloud_whale_atk",
+   "unit.cloud_whale_hit",
+   "unit.wreck_titan",
+   "unit.wreck_titan_b",
+   "unit.wreck_titan_atk",
+   "unit.wreck_titan_hit"
+  ],
+  "creatures": [
+   {
+    "id": "sea_hydra",
+    "faction": "premium",
+    "tier": 7,
+    "en": "Sea Hydra",
+    "ru": "Морская гидра",
+    "body": "water"
+   },
+   {
+    "id": "coral_colossus",
+    "faction": "premium",
+    "tier": 7,
+    "en": "Coral Colossus",
+    "ru": "Коралловый колосс",
+    "body": "big"
+   },
+   {
+    "id": "cloud_whale",
+    "faction": "premium",
+    "tier": 7,
+    "en": "Cloud Whale",
+    "ru": "Облачный кит",
+    "body": "fly"
+   },
+   {
+    "id": "wreck_titan",
+    "faction": "wild",
+    "tier": 7,
+    "en": "Wreck Titan",
+    "ru": "Титан обломков",
+    "body": "big"
+   }
+  ],
+  "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — a sea hydra rising out of the water: five long green-black scaled necks with fanged serpent heads rising from one heavy body, fins along the necks, all five heads toward the right. It rises out of its own small flat oval patch of dark sea water ringed with white foam, the same patch in every pose. Its poses: first — idle: risen out of the water, watchful; second — idle a breath later: the same pose with a tiny change only, its five heads swaying apart; third — attack: all five heads striking toward the right with their jaws open; fourth — hit: jerking back from a blow while still facing right, sinking a little lower into its water. Row 2 — a coral colossus: a towering giant made of a living reef — branching pink, orange and white coral, sea fans and anemones, small bright fish darting about it, facing right. Its poses: first — idle: standing ready, looming; second — idle a breath later: the same pose with a tiny change only, its sea fans swaying, its anemones opening; third — attack: slamming a massive coral fist down toward the right; fourth — hit: reeling back from a heavy blow while still facing right, coral chips flying. Row 3 — a cloud whale: a huge pale grey-blue whale swimming through the air wrapped in wisps of storm cloud, its long pectoral fins spread like wings, faint lightning in the clouds about it, facing right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, its fins tilted the other way, cloud trailing behind it; third — attack: sweeping its great tail fluke down toward the right in a gust of storm wind; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. Row 4 — a wreck titan: a towering colossus built of dark wet shipwreck timbers, broken hull planks, rusted anchors and heavy chains, barnacles and seaweed hanging from it, a faint green glow in the gaps between its timbers, a great rusted anchor for its right hand, facing right. Its poses: first — idle: standing ready, looming; second — idle a breath later: the same pose with a tiny change only, its chains swaying, seaweed dripping; third — attack: swinging its anchor hand in a wide sweep toward the right; fourth — hit: reeling back from a heavy blow while still facing right, splinters flying. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "despill": true,
+  "painting": true
+ },
+ "anim5_7": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.8,
+  "dir": "units",
+  "aspect": "1:1",
+  "ids": [
+   "unit.war_mastiff",
+   "unit.war_mastiff_b",
+   "unit.war_mastiff_atk",
+   "unit.war_mastiff_hit",
+   "unit.cask_mimic",
+   "unit.cask_mimic_b",
+   "unit.cask_mimic_atk",
+   "unit.cask_mimic_hit",
+   "unit.ice_bear",
+   "unit.ice_bear_b",
+   "unit.ice_bear_atk",
+   "unit.ice_bear_hit",
+   "unit.dolphin_pod",
+   "unit.dolphin_pod_b",
+   "unit.dolphin_pod_atk",
+   "unit.dolphin_pod_hit"
+  ],
+  "creatures": [
+   {
+    "id": "war_mastiff",
+    "faction": "premium_ship",
+    "tier": 2,
+    "en": "War Mastiffs",
+    "ru": "Боевые мастифы",
+    "body": "beast"
+   },
+   {
+    "id": "cask_mimic",
+    "faction": "premium_ship",
+    "tier": 3,
+    "en": "Cask Mimic",
+    "ru": "Бочка-мимик",
+    "body": "beast"
+   },
+   {
+    "id": "ice_bear",
+    "faction": "premium_ship",
+    "tier": 4,
+    "en": "Ice Bear",
+    "ru": "Ледяной медведь",
+    "body": "beast"
+   },
+   {
+    "id": "dolphin_pod",
+    "faction": "premium_ship",
+    "tier": 2,
+    "en": "Dolphins",
+    "ru": "Дельфины",
+    "body": "water"
+   }
+  ],
+  "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — a huge broad-chested war mastiff with a short brindle coat, a heavy jowled head and a spiked iron collar, crouched to spring, facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, its ears pricked, growling low; third — attack: leaping toward the right with its jaws open; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 2 — a cask mimic: a big oak barrel bound with rusted iron hoops whose lid opens into a wide mouth of jagged wooden teeth, a long purple tongue and small dark eyes between the staves, on short stubby legs, facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, its lid lifted a crack, one eye opening; third — attack: lunging toward the right with its lid gaping wide; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 3 — a huge white ice bear with frost in its thick fur and small icicles hanging from its belly, a black nose and small dark eyes, on all fours, facing right. Its poses: first — idle: poised and alert; second — idle a breath later: the same pose with a tiny change only, its head swinging low, its breath steaming; third — attack: rearing up and swiping a great paw down toward the right; fourth — hit: recoiling from a blow while still facing right: head pulled back, body hunched low. Row 4 — a pair of sleek grey dolphins leaping together out of the water, pale bellies and curved beaks, facing right. It rises out of its own small flat oval patch of dark sea water ringed with white foam, the same patch in every pose. Its poses: first — idle: risen out of the water, watchful; second — idle a breath later: the same pose with a tiny change only, one dolphin dipping lower, the other rising; third — attack: leaping toward the right and ramming with their beaks; fourth — hit: jerking back from a blow while still facing right, sinking a little lower into its water. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "painting": true
+ },
+ "anim5_8": {
+  "grid": [
+   4,
+   4
+  ],
+  "mode": "keyed",
+  "split": "blobs",
+  "px": 512,
+  "square": false,
+  "uniform": 0.8,
+  "dir": "units",
+  "aspect": "1:1",
+  "ids": [
+   "unit.corposant",
+   "unit.corposant_b",
+   "unit.corposant_atk",
+   "unit.corposant_hit",
+   "unit.cormorant",
+   "unit.cormorant_b",
+   "unit.cormorant_atk",
+   "unit.cormorant_hit",
+   "unit.winged_lion",
+   "unit.winged_lion_b",
+   "unit.winged_lion_atk",
+   "unit.winged_lion_hit",
+   "unit.marlin",
+   "unit.marlin_b",
+   "unit.marlin_atk",
+   "unit.marlin_hit"
+  ],
+  "creatures": [
+   {
+    "id": "corposant",
+    "faction": "premium_ship",
+    "tier": 3,
+    "en": "Corposants",
+    "ru": "Огни святого Эльма",
+    "body": "fly"
+   },
+   {
+    "id": "cormorant",
+    "faction": "premium_ship",
+    "tier": 2,
+    "en": "Fishing Cormorants",
+    "ru": "Ручные бакланы",
+    "body": "fly"
+   },
+   {
+    "id": "winged_lion",
+    "faction": "premium_ship",
+    "tier": 6,
+    "en": "Winged Lion",
+    "ru": "Крылатый лев",
+    "body": "fly"
+   },
+   {
+    "id": "marlin",
+    "faction": "premium_ship",
+    "tier": 6,
+    "en": "Blue Marlin",
+    "ru": "Синий марлин",
+    "body": "water"
+   }
+  ],
+  "prompt": "Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. Row 1 — a corposant: a hovering ball of flickering blue-white Saint Elmo's fire with small crackling tendrils of light and the faint shape of a calm face in its glow, hovering. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, its fire flaring a little brighter; third — attack: a crackling tongue of blue fire leaping out toward the right; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. Row 2 — a pair of big black fishing cormorants with glossy green-black feathers, hooked beaks and small brass rings at their throats, flying toward the right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, their wings at the bottom of their beat; third — attack: diving toward the right beaks first; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. Row 3 — a winged lion of the lagoon republic: a great gilded lion with a golden mane and wide golden-brown eagle wings, flying toward the right. It hovers in the air in every pose. Its poses: first — idle: hovering with its wings spread; second — idle a breath later: the same pose with a tiny change only, its wings at the top of their beat, its mane stirring; third — attack: pouncing down toward the right with its claws forward and its jaws open; fourth — hit: jolted back in the air by a blow while still facing right, wings thrown up. Row 4 — a huge blue marlin leaping out of the water, a deep cobalt back and a silver belly, a tall sail-like dorsal fin and a long spear-like bill, facing right. It rises out of its own small flat oval patch of dark sea water ringed with white foam, the same patch in every pose. Its poses: first — idle: risen out of the water, watchful; second — idle a breath later: the same pose with a tiny change only, its dorsal fin raised higher, water streaming off it; third — attack: lunging toward the right with its long bill thrust forward; fourth — hit: jerking back from a blow while still facing right, sinking a little lower into its water. In every row the four poses are exactly the same figure — the same face, build, clothes, colours and equipment — like four frames of one animation. Every pose, the hit included, faces the RIGHT side of the picture in three-quarter view from a high camera about 30 degrees above the ground. The whole figure is visible in every pose, each about 75% of its cell's height, nothing cut off by the cell or the picture edges. The same warm lantern light from the upper left and a cool moonlight rim from behind on all sixteen. Muted palette: charcoal, tarred black leather, weathered wool and canvas, rust, old brass, faded red and cold blue-grey; low saturation with small warm highlights. Background: flat, fully saturated pure magenta #FF00FF (RGB 255, 0, 255) behind everything, uniform, no gradient. NO ground, NO floor, NO cast shadows, NO ground line, NO horizon, NO dust, NO motion blur, NO speed lines. NO dividing lines, NO panels, NO frames, NO borders, NO captions, NO text, NO letters, NO numbers, NO watermark. Avoid: a different figure within a row, a pose seen from the back, more or fewer than four poses in a row, cartoon, chibi, anime, cel shading, thick outlines, flat vector, pixel art, bright saturated colours, front view, back view, blood, gore, skeletons.",
+  "despill": true,
+  "painting": true
  }
 }

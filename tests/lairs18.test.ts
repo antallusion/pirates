@@ -1,4 +1,4 @@
-// docs/18 II — the lairs of the land's creatures: the bestiary (thirty-one kinds over the seven tiers, their specials,
+// docs/18 II — the lairs of the land's creatures: the bestiary (forty-three kinds over the seven tiers, their specials,
 // their faces from the art), where the lairs stand (on the islands, by their kind and level, the chains of the
 // great islands, the turtles' backs and the sandbars), the battlefield ashore (sand, rocks, palms, the surf; no guns),
 // the creatures' specials in the battle, the battle fought through a landing, the spoils once a week, the lair standing
@@ -68,11 +68,11 @@ const side = (army: ArmyStack[], beasts = false): TacSideInput => ({
 
 // ------------------------------------------------------------------------------------------------ 14. the bestiary
 
-test('the bestiary: thirty-one kinds over the seven tiers, every special of the land among them, faces from the art', () => {
-  // docs/18's fourteen, two a tier, the twelve wild beasts (owner, 2026-10-03) among the middle tiers, and the five
-  // great beasts of the grottos and the guardians' seats at the top.
-  assert.equal(BEAST_IDS.length, 31);
-  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((t) => BEAST_IDS.filter((b) => BEASTS[b].tier === t).length), [2, 6, 7, 4, 4, 4, 4]);
+test('the bestiary: forty-three kinds over the seven tiers, every special of the land among them, faces from the art', () => {
+  // docs/18's fourteen, two a tier, the twelve wild beasts (owner, 2026-10-03) among the middle tiers, the five great
+  // beasts of the grottos and the guardians' seats at the top, and the islands' third dozen (2026-10-04, docs/18 IX).
+  assert.equal(BEAST_IDS.length, 43);
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((t) => BEAST_IDS.filter((b) => BEASTS[b].tier === t).length), [4, 8, 8, 6, 6, 5, 6]);
   const sp = new Set(BEAST_IDS.flatMap((b) => BEASTS[b].specials));
   for (const s of ['shell', 'poison', 'swarm', 'regen', 'terror', 'flying', 'diving'] as const) assert.ok(sp.has(s), s);
   // A wild beast's face is its own battle figure: in the art, or on a sheet still in the painter's queue.

@@ -1,6 +1,7 @@
 // The premium hulls' own creatures (owner, 2026-10-03: «уникальные существа для этого корабля»): one kind for each of
-// the forty premium hulls of the fleet of eighty (shared/src/data/ships.ts), painted with the battle's creatures
-// (tools/art/creatures.py, faction `premium_ship`). A kind comes aboard with its hull when she is bought for doubloons
+// the forty premium hulls of the fleet of eighty (shared/src/data/ships.ts) and of the third batch's eight
+// (2026-10-04), painted with the battle's creatures (tools/art/creatures.py, faction `premium_ship`; the eight four
+// to a sheet, tools/art/fleet_b3.py). A kind comes aboard with its hull when she is bought for doubloons
 // and is had nowhere else: no tamer, lair, drift, roaming stack, capture nor egg hands it out, and the shop does not
 // sell it apart from her (shared/src/data/premium.ts). Lost in a fight, it comes back to her — in port, and at sea
 // aboard the hulls whose gift is to muster their own (shared/src/data/shipgifts.ts) — up to the number she came with.
@@ -23,7 +24,10 @@ export type ShipBeastId =
   // The runners'.
   | 'giant_hawk' | 'wind_sprite' | 'great_white' | 'ghost_navigator' | 'flying_fish' | 'white_albatross' | 'silver_archer' | 'storm_petrels' | 'mermaid_queen' | 'sea_viper'
   // The haulers'.
-  | 'leviathan_calf' | 'turtle_knight' | 'bastion_gunner' | 'sea_chimera' | 'whale_calf' | 'coral_elemental' | 'bell_priest' | 'jade_dragon' | 'pirate_lord' | 'bell_diver';
+  | 'leviathan_calf' | 'turtle_knight' | 'bastion_gunner' | 'sea_chimera' | 'whale_calf' | 'coral_elemental' | 'bell_priest' | 'jade_dragon' | 'pirate_lord' | 'bell_diver'
+  // The third batch's premium hulls (owner, 2026-10-04), two a list: the warships', the traders', the runners', the
+  // haulers'.
+  | 'war_mastiff' | 'corposant' | 'cormorant' | 'winged_lion' | 'dolphin_pod' | 'marlin' | 'cask_mimic' | 'ice_bear';
 
 /** How a figure stands in its four poses (tools/art/creatures.py): on its feet, a large one on its feet, a beast on its
  *  feet or belly, in the air, rising out of a patch of sea. */
@@ -146,6 +150,23 @@ export const SHIP_BEAST_DEFS: Record<ShipBeastId, ShipBeastDef> = {
     ['Pirate Lords', 'Пиратские лорды', 'Lords of the floating town: the crew fights harder with them, and they strike twice.', 'Лорды плавучего города: с ними команда бьётся злее, а бьют они дважды.'], 1.4, 'unit.hero_corsair'),
   bell_diver: B('iron_whale', 5, 'man', [12, 14, 5, 8, 24, 4, 7, 2], ['shooter', 'diving'], 280,
     ['Bell Divers', 'Водолазы', 'Divers in brass helmets with harpoon guns: they shoot, and the surf is their road.', 'Водолазы в латунных шлемах с гарпунными ружьями: стреляют, и прибой — их дорога.'], 1.3, 'unit.harpoon_gunner', 'part.ms_harpoon'),
+  // The third batch (owner, 2026-10-04: «еще больше … кораблей»), painted four to a sheet (tools/art/fleet_b3.py).
+  war_mastiff: B('bulldog', 2, 'beast', [8, 5, 2, 4, 12, 7, 9, 0], ['no_retaliation', 'steady'], 70,
+    ['War Mastiffs', 'Боевые мастифы', 'Broad-chested ship\'s dogs in spiked iron collars: they bite and are back before the answer, and nothing frightens them.', 'Широкогрудые корабельные псы в шипастых железных ошейниках: кусают и отскакивают прежде ответа, и ничто их не пугает.'], 1.1, 'unit.sea_wolf'),
+  corposant: B('saint_elmo', 3, 'fly', [8, 6, 2, 4, 11, 9, 11, 0], ['flying', 'chain'], 105,
+    ['Corposants', 'Огни святого Эльма', 'Balls of blue fire that run down the masts in a storm: they fly over every rank, and each touch leaps on to a second foe.', 'Шары голубого огня, что сбегают по мачтам в грозу: летят над любым строем, и каждое касание перескакивает на второго врага.'], 1.05, 'unit.lantern_wraith'),
+  cormorant: B('lantern_sampan', 2, 'fly', [6, 4, 2, 3, 10, 8, 10, 0], ['flying', 'fortune'], 55,
+    ['Fishing Cormorants', 'Ручные бакланы', 'Black cormorants with rings at their throats, the river fishermen\'s birds: they fly over every rank, and luck sails with the side that keeps them.', 'Чёрные бакланы с кольцами на шее, птицы речных рыбаков: летят над любым строем, и стороне, что их держит, везёт.'], 1.0, 'unit.albatross'),
+  winged_lion: B('golden_lion', 6, 'fly', [17, 14, 7, 11, 38, 9, 11, 0], ['flying', 'steady'], 430,
+    ['Winged Lions', 'Крылатые львы', 'Gilded lions of the lagoon on eagle\'s wings: they fly over every rank, and nothing frightens them.', 'Золочёные львы лагуны на орлиных крыльях: летят над любым строем, и ничто их не пугает.'], 1.55, 'unit.sea_griffin'),
+  dolphin_pod: B('dolphin', 2, 'water', [7, 4, 2, 4, 10, 7, 10, 0], ['diving', 'leader'], 60,
+    ['Dolphins', 'Дельфины', 'Grey dolphins that ride her bow wave: out of the surf anywhere, and the crew fights with a lighter heart beside them.', 'Серые дельфины, что идут на её носовой волне: выходят из прибоя где угодно, и команда рядом с ними бьётся веселее.'], 1.2, 'unit.whale_calf'),
+  marlin: B('sailfish', 6, 'water', [18, 12, 7, 11, 36, 8, 12, 0], ['diving', 'no_retaliation'], 430,
+    ['Blue Marlins', 'Синие марлины', 'Great blue billfish out of the surf: their spears strike and they are gone before the answer.', 'Огромные синие копьеносы из прибоя: их клювы-копья разят, и они уходят прежде ответа.'], 1.5, 'unit.barracuda'),
+  cask_mimic: B('mimic_barge', 3, 'beast', [9, 9, 2, 5, 16, 3, 6, 0], ['shell', 'no_retaliation'], 110,
+    ['Cask Mimics', 'Бочки-мимики', 'Barrels in the hold that are not barrels: oak staves the shot barely scratches, and a lid that bites before anyone can answer.', 'Бочки в трюме, что вовсе не бочки: дубовые клёпки, которые пули едва царапают, и крышка, что кусает прежде ответа.'], 1.0, 'unit.bell_hermit'),
+  ice_bear: B('icebound_hulk', 4, 'beast', [11, 9, 3, 6, 22, 5, 7, 0], ['steady', 'terror'], 160,
+    ['Ice Bears', 'Ледяные медведи', 'Great white bears of the ice that sail with the hulk: the living beside them may freeze in terror, and nothing frightens them.', 'Огромные белые медведи льдов, что ходят с халком: живые рядом с ними могут оцепенеть от ужаса, а их самих ничто не пугает.'], 1.35, 'unit.wild_boar'),
 };
 
 export const SHIP_BEAST_IDS = Object.keys(SHIP_BEAST_DEFS) as ShipBeastId[];
