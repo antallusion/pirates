@@ -2172,6 +2172,10 @@
     "unit.flying_fish_b":                      { "local": "units/flying_fish_b.webp", "remote": "hf_20261004_020658_gpt-anim_flying_fish.png", "job": "gpt-anim_flying_fish", "fit": "sheet:anim_flying_fish.1", "rev": 20261004020658},
     "unit.flying_fish_atk":                    { "local": "units/flying_fish_atk.webp", "remote": "hf_20261004_020658_gpt-anim_flying_fish.png", "job": "gpt-anim_flying_fish", "fit": "sheet:anim_flying_fish.2", "rev": 20261004020658},
     "unit.flying_fish_hit":                    { "local": "units/flying_fish_hit.webp", "remote": "hf_20261004_020658_gpt-anim_flying_fish.png", "job": "gpt-anim_flying_fish", "fit": "sheet:anim_flying_fish.3", "rev": 20261004020658},
-    "bg.port_saltglass":                       { "local": "art/port_saltglass.webp", "remote": "hf_20261004_020929_gpt-bg.port_saltglass.png", "job": "gpt-bg.port_saltglass", "fit": "opaque:1920", "rev": 20261004020929}
+    "bg.port_saltglass":                       { "local": "art/port_saltglass.webp", "remote": "hf_20261004_020929_gpt-bg.port_saltglass.png", "job": "gpt-bg.port_saltglass", "fit": "opaque:1920", "rev": 20261004020929},
+    "unit.white_albatross":                    { "local": "units/white_albatross.webp", "remote": "hf_20261004_021141_gpt-anim_white_albatross.png", "job": "gpt-anim_white_albatross", "fit": "sheet:anim_white_albatross.0", "rev": 20261004021141},
+    "unit.white_albatross_b":                  { "local": "units/white_albatross_b.webp", "remote": "hf_20261004_021141_gpt-anim_white_albatross.png", "job": "gpt-anim_white_albatross", "fit": "sheet:anim_white_albatross.1", "rev": 20261004021141},
+    "unit.white_albatross_atk":                { "local": "units/white_albatross_atk.webp", "remote": "hf_20261004_021141_gpt-anim_white_albatross.png", "job": "gpt-anim_white_albatross", "fit": "sheet:anim_white_albatross.2", "rev": 20261004021141},
+    "unit.white_albatross_hit":                { "local": "units/white_albatross_hit.webp", "remote": "hf_20261004_021141_gpt-anim_white_albatross.png", "job": "gpt-anim_white_albatross", "fit": "sheet:anim_white_albatross.3", "rev": 20261004021141}
   }
 }
