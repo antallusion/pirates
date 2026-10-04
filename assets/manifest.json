@@ -2386,6 +2386,10 @@
     "unit.ledger_factor":                      { "local": "units/ledger_factor.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.0", "rev": 20261004050608},
     "unit.ledger_factor_b":                    { "local": "units/ledger_factor_b.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.1", "rev": 20261004050608},
     "unit.ledger_factor_atk":                  { "local": "units/ledger_factor_atk.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.2", "rev": 20261004050608},
-    "unit.ledger_factor_hit":                  { "local": "units/ledger_factor_hit.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.3", "rev": 20261004050608}
+    "unit.ledger_factor_hit":                  { "local": "units/ledger_factor_hit.webp", "remote": "hf_20261004_050608_gpt-anim_ledger_factor.png", "job": "gpt-anim_ledger_factor", "fit": "sheet:anim_ledger_factor.3", "rev": 20261004050608},
+    "unit.reef_raider":                        { "local": "units/reef_raider.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.0", "rev": 20261004050828},
+    "unit.reef_raider_b":                      { "local": "units/reef_raider_b.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.1", "rev": 20261004050828},
+    "unit.reef_raider_atk":                    { "local": "units/reef_raider_atk.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.2", "rev": 20261004050828},
+    "unit.reef_raider_hit":                    { "local": "units/reef_raider_hit.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.3", "rev": 20261004050828}
   }
 }
