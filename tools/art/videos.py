@@ -805,6 +805,32 @@ v('cut_walrus_tyrant_down', 'down_walrus_tyrant', 'Морж-тиран пове�
   'him into the surf, as the landing party leans on their pikes on the stones and snow begins to fall. The camera rises '
   'slowly over the empty rocks.')
 
+# ---- The fifteenth reel: the six new sea bosses brought down, each the first time she has a share in it ----------------
+v('cut_old_moorings_down', 'down_old_moorings', 'Старый Швартов повержен',
+  'Grey dawn at a harbour mouth: the great conger thrashes once among the old breakwaters, its rusted chains snapping, and '
+  'sinks slowly back into the silt in a swirl of brown water as the brigs around it cease fire and their crews cheer from '
+  'the rigging. The camera stays low on the water as the silt settles.')
+v('cut_old_tithe_down', 'down_old_tithe', 'Сборщица Десятины повержена',
+  'A grey-green sea after a fight, crates and casks floating everywhere: the huge old shark rolls slowly onto her side '
+  'beside a battered merchantman, the broken harpoon heads in her barnacled hide catching the light, and sinks away into '
+  'the deep as sailors haul the floating cargo aboard. The camera looks down through the water as she sinks.')
+v('cut_fog_changeling_down', 'down_fog_changeling', 'Подменыш туманов повержен',
+  'In thick white fog the false shapes of the giant cuttlefish dissolve one by one like smoke, and the last true one sinks '
+  'beside a frigate in a cloud of dark ink, its pale banded skin fading to grey, as the fog itself begins to thin and the '
+  'first stars appear. The camera turns slowly as the fog lifts.')
+v('cut_cinder_ray_down', 'down_cinder_ray', 'Пепельный скат повержен',
+  'Among the volcanic islands the great manta crashes into the sea between two warships in a burst of steam, its ember '
+  'cracks hissing out one by one, and the ash cloud around it drifts away on the wind to show a clear red dawn. The camera '
+  'rises slowly through the steam.')
+v('cut_drowned_prelate_down', 'down_drowned_prelate', 'Утонувший Прелат повержен',
+  'At midnight among the drowned spires the vast mitred shape sinks slowly back into the black water, its crozier falling '
+  'from its pale hands, and one by one the bronze bells in the spires stop swinging and fall silent as the ships close in. '
+  'The camera moves slowly between the silent spires.')
+v('cut_rime_twins_down', 'down_rime_twins', 'Инеевые близнецы повержены',
+  'On a grey arctic sea the two white narwhals sink together side by side beneath the ice floes, their long spiral tusks '
+  'the last to vanish, as the frost on the water melts away around the whaling ships and the crews lower their harpoons in '
+  'silence. The camera skims slowly over the place where they went down.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

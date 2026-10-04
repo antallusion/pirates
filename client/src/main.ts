@@ -502,6 +502,8 @@ const LEGEND_FILM: [string, string][] = [['white_whale', 'cut_white_whale'], ['y
 /** The things whose change is a moment, as last seen; nothing plays for what she already had when she came in (the
  *  first ten seconds after her ship arrives only take note). */
 const filmLast = new Map<string, unknown>();
+/** The world bosses as last seen: their kind, whether in their last tenth, her share. */
+const bossSeen = new Map<number, { kind: string; low: boolean; share: number }>();
 let filmSince = 0;
 let sunkAt = -Infinity;
 function turned(key: string, now: unknown): boolean {
@@ -575,6 +577,11 @@ function filmMoments(): void {
   const bosses = state.bosses.map((b) => b.kind).join();
   if (bosses !== filmWas.bosses) for (const b of state.bosses) if (BOSS_FILM[b.kind] && !filmWas.bosses.split(',').includes(b.kind)) playFilm(BOSS_FILM[b.kind]);
   filmWas.bosses = bosses;
+  // A world boss she fought brought down (gone from the list in its last tenth, with her share in it): its own ending
+  // the first time (the fifteenth reel).
+  for (const [id, b] of bossSeen) if (!state.bosses.some((x) => x.id === id) && b.low && b.share > 0) playFilm(`cut_${b.kind}_down`);
+  bossSeen.clear();
+  for (const b of state.bosses) bossSeen.set(b.id, { kind: b.kind, low: b.hp <= b.hpMax * 0.1, share: b.you?.share ?? 0 });
   // The boats going ashore; the first time down into the Abyss.
   const landing = state.self?.landing;
   if (landing && !filmWas.landing) {
