@@ -2266,6 +2266,10 @@
     "unit.storm_eagle":                        { "local": "units/storm_eagle.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.0", "rev": 20261004034353},
     "unit.storm_eagle_b":                      { "local": "units/storm_eagle_b.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.1", "rev": 20261004034353},
     "unit.storm_eagle_atk":                    { "local": "units/storm_eagle_atk.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.2", "rev": 20261004034353},
-    "unit.storm_eagle_hit":                    { "local": "units/storm_eagle_hit.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.3", "rev": 20261004034353}
+    "unit.storm_eagle_hit":                    { "local": "units/storm_eagle_hit.webp", "remote": "hf_20261004_034353_gpt-anim_storm_eagle.png", "job": "gpt-anim_storm_eagle", "fit": "sheet:anim_storm_eagle.3", "rev": 20261004034353},
+    "unit.coral_basilisk":                     { "local": "units/coral_basilisk.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.0", "rev": 20261004034629},
+    "unit.coral_basilisk_b":                   { "local": "units/coral_basilisk_b.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.1", "rev": 20261004034629},
+    "unit.coral_basilisk_atk":                 { "local": "units/coral_basilisk_atk.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.2", "rev": 20261004034629},
+    "unit.coral_basilisk_hit":                 { "local": "units/coral_basilisk_hit.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.3", "rev": 20261004034629}
   }
 }
