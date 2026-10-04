@@ -2358,6 +2358,10 @@
     "unit.harpoon_commander":                  { "local": "units/harpoon_commander.webp", "remote": "hf_20261004_044708_gpt-anim_harpoon_commander.png", "job": "gpt-anim_harpoon_commander", "fit": "sheet:anim_harpoon_commander.0", "rev": 20261004044708},
     "unit.harpoon_commander_b":                { "local": "units/harpoon_commander_b.webp", "remote": "hf_20261004_044708_gpt-anim_harpoon_commander.png", "job": "gpt-anim_harpoon_commander", "fit": "sheet:anim_harpoon_commander.1", "rev": 20261004044708},
     "unit.harpoon_commander_atk":              { "local": "units/harpoon_commander_atk.webp", "remote": "hf_20261004_044708_gpt-anim_harpoon_commander.png", "job": "gpt-anim_harpoon_commander", "fit": "sheet:anim_harpoon_commander.2", "rev": 20261004044708},
-    "unit.harpoon_commander_hit":              { "local": "units/harpoon_commander_hit.webp", "remote": "hf_20261004_044708_gpt-anim_harpoon_commander.png", "job": "gpt-anim_harpoon_commander", "fit": "sheet:anim_harpoon_commander.3", "rev": 20261004044708}
+    "unit.harpoon_commander_hit":              { "local": "units/harpoon_commander_hit.webp", "remote": "hf_20261004_044708_gpt-anim_harpoon_commander.png", "job": "gpt-anim_harpoon_commander", "fit": "sheet:anim_harpoon_commander.3", "rev": 20261004044708},
+    "unit.try_pot":                            { "local": "units/try_pot.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.0", "rev": 20261004044957},
+    "unit.try_pot_b":                          { "local": "units/try_pot_b.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.1", "rev": 20261004044957},
+    "unit.try_pot_atk":                        { "local": "units/try_pot_atk.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.2", "rev": 20261004044957},
+    "unit.try_pot_hit":                        { "local": "units/try_pot_hit.webp", "remote": "hf_20261004_044957_gpt-anim_try_pot.png", "job": "gpt-anim_try_pot", "fit": "sheet:anim_try_pot.3", "rev": 20261004044957}
   }
 }
