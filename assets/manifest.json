@@ -2837,6 +2837,10 @@
     "ship.zb_leviathan_reach":                 { "local": "ships/zb_leviathan_reach.webp", "remote": "hf_20261004_151757_gpt-zboss_2.png", "job": "gpt-zboss_2", "fit": "sheet:zboss_2.0", "rev": 20261004151757},
     "ship.zb_dead_mans_expanse":               { "local": "ships/zb_dead_mans_expanse.webp", "remote": "hf_20261004_151757_gpt-zboss_2.png", "job": "gpt-zboss_2", "fit": "sheet:zboss_2.1", "rev": 20261004151757},
     "ship.zb_drowned_crown":                   { "local": "ships/zb_drowned_crown.webp", "remote": "hf_20261004_151757_gpt-zboss_2.png", "job": "gpt-zboss_2", "fit": "sheet:zboss_2.2", "rev": 20261004151757},
-    "ship.zb_the_abyss":                       { "local": "ships/zb_the_abyss.webp", "remote": "hf_20261004_151757_gpt-zboss_2.png", "job": "gpt-zboss_2", "fit": "sheet:zboss_2.3", "rev": 20261004151757}
+    "ship.zb_the_abyss":                       { "local": "ships/zb_the_abyss.webp", "remote": "hf_20261004_151757_gpt-zboss_2.png", "job": "gpt-zboss_2", "fit": "sheet:zboss_2.3", "rev": 20261004151757},
+    "ship.mimic_barge":                        { "local": "ships/mimic_barge.webp", "remote": "hf_20261004_160114_gpt-ships_22.png", "job": "gpt-ships_22", "fit": "sheet:ships_22.0", "rev": 20261004160114},
+    "ship.icebound_hulk":                      { "local": "ships/icebound_hulk.webp", "remote": "hf_20261004_160114_gpt-ships_22.png", "job": "gpt-ships_22", "fit": "sheet:ships_22.1", "rev": 20261004160114},
+    "ship.sailfish":                           { "local": "ships/sailfish.webp", "remote": "hf_20261004_160114_gpt-ships_22.png", "job": "gpt-ships_22", "fit": "sheet:ships_22.2", "rev": 20261004160114},
+    "ship.golden_lion":                        { "local": "ships/golden_lion.webp", "remote": "hf_20261004_160114_gpt-ships_22.png", "job": "gpt-ships_22", "fit": "sheet:ships_22.3", "rev": 20261004160114}
   }
 }
