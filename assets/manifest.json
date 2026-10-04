@@ -2468,6 +2468,7 @@
     "bg.deck_plate_galleon":                   { "local": "art/deck_plate_galleon.webp", "remote": "hf_20261004_073041_gpt-bg.deck_plate_galleon.png", "job": "gpt-bg.deck_plate_galleon", "fit": "opaque:1536", "rev": 20261004073041},
     "bg.deck_great_galleon":                   { "local": "art/deck_great_galleon.webp", "remote": "hf_20261004_073303_gpt-bg.deck_great_galleon.png", "job": "gpt-bg.deck_great_galleon", "fit": "opaque:1536", "rev": 20261004073303},
     "bg.deck_leviathan_ark":                   { "local": "art/deck_leviathan_ark.webp", "remote": "hf_20261004_073526_gpt-bg.deck_leviathan_ark.png", "job": "gpt-bg.deck_leviathan_ark", "fit": "opaque:1536", "rev": 20261004073526},
-    "bg.deck_turtle_barge":                    { "local": "art/deck_turtle_barge.webp", "remote": "hf_20261004_073733_gpt-bg.deck_turtle_barge.png", "job": "gpt-bg.deck_turtle_barge", "fit": "opaque:1536", "rev": 20261004073733}
+    "bg.deck_turtle_barge":                    { "local": "art/deck_turtle_barge.webp", "remote": "hf_20261004_073733_gpt-bg.deck_turtle_barge.png", "job": "gpt-bg.deck_turtle_barge", "fit": "opaque:1536", "rev": 20261004073733},
+    "bg.deck_floating_fortress":               { "local": "art/deck_floating_fortress.webp", "remote": "hf_20261004_074030_gpt-bg.deck_floating_fortress.png", "job": "gpt-bg.deck_floating_fortress", "fit": "opaque:1536", "rev": 20261004074030}
   }
 }
