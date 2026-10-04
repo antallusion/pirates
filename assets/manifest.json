@@ -2045,6 +2045,9 @@
     "unit.walrus_tyrant_b":                    { "local": "units/walrus_tyrant_b.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.1", "rev": 20261003235652},
     "unit.walrus_tyrant_atk":                  { "local": "units/walrus_tyrant_atk.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.2", "rev": 20261003235652},
     "unit.walrus_tyrant_hit":                  { "local": "units/walrus_tyrant_hit.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.3", "rev": 20261003235652},
-    "bg.port_rotgut_landing":                  { "local": "art/port_rotgut_landing.webp", "remote": "hf_20261004_000047_gpt-bg.port_rotgut_landing.png", "job": "gpt-bg.port_rotgut_landing", "fit": "opaque:1920", "rev": 20261004000047}
+    "bg.port_rotgut_landing":                  { "local": "art/port_rotgut_landing.webp", "remote": "hf_20261004_000047_gpt-bg.port_rotgut_landing.png", "job": "gpt-bg.port_rotgut_landing", "fit": "opaque:1920", "rev": 20261004000047},
+    "ship.golden_carrack":                     { "local": "ships/golden_carrack.webp", "remote": "hf_20261004_000347_gpt-ships_9.png", "job": "gpt-ships_9", "fit": "sheet:ships_9.0", "rev": 20261004000347},
+    "ship.floating_bazaar":                    { "local": "ships/floating_bazaar.webp", "remote": "hf_20261004_000347_gpt-ships_9.png", "job": "gpt-ships_9", "fit": "sheet:ships_9.1", "rev": 20261004000347},
+    "ship.ledger_galleon":                     { "local": "ships/ledger_galleon.webp", "remote": "hf_20261004_000347_gpt-ships_9.png", "job": "gpt-ships_9", "fit": "sheet:ships_9.2", "rev": 20261004000347}
   }
 }
