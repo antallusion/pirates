@@ -2346,6 +2346,10 @@
     "unit.choir_toller":                       { "local": "units/choir_toller.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.0", "rev": 20261004043915},
     "unit.choir_toller_b":                     { "local": "units/choir_toller_b.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.1", "rev": 20261004043915},
     "unit.choir_toller_atk":                   { "local": "units/choir_toller_atk.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.2", "rev": 20261004043915},
-    "unit.choir_toller_hit":                   { "local": "units/choir_toller_hit.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.3", "rev": 20261004043915}
+    "unit.choir_toller_hit":                   { "local": "units/choir_toller_hit.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.3", "rev": 20261004043915},
+    "unit.lamprey_zealot":                     { "local": "units/lamprey_zealot.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.0", "rev": 20261004044211},
+    "unit.lamprey_zealot_b":                   { "local": "units/lamprey_zealot_b.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.1", "rev": 20261004044211},
+    "unit.lamprey_zealot_atk":                 { "local": "units/lamprey_zealot_atk.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.2", "rev": 20261004044211},
+    "unit.lamprey_zealot_hit":                 { "local": "units/lamprey_zealot_hit.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.3", "rev": 20261004044211}
   }
 }
