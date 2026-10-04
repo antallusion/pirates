@@ -1253,7 +1253,8 @@ export class Hud {
     el.dataset.msg = msg;
     el.className = `toast ${kind}`;
     const art = kind === 'gold' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'bad' ? 'danger' : kind === 'good' ? 'anchor' : '';
-    el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(keyless(msg))}</span>`;
+    // A dash goes down with the words after it: «+68 опыта —» left hanging at a narrow toast's line end (QA, 2026-10-04).
+    el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(keyless(msg)).replace(/ — /g, ' — ')}</span>`;
     decorateSums(el);
     el.title = keyless(msg);
     box.prepend(el);
@@ -1339,7 +1340,9 @@ export class Hud {
     const named = info.named ? namedLabel(info.named) : null;
     const name = beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : named ? named.name : info.isPlayer ? `${info.captainName} · ${placeName(info.name)}` : placeName(info.name);
     const guard = id !== null ? guardOfEntity(state, id) : null; // a guard of the adventure map (docs/17 H4): what it is, not its hull
-    const role = guard ? GUARDS[guard.kind].name[lang() === 'ru' ? 1 : 0] : info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
+    // A guard named as its ship (the Rotting Hulk, the Wreck of the Drowned): not its name twice (QA, 2026-10-04).
+    const guardName = guard ? GUARDS[guard.kind].name[lang() === 'ru' ? 1 : 0] : '';
+    const role = guard ? (guardName.toLowerCase() === name.toLowerCase() ? L('tg.guard') : guardName) : info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
     const bar = (k: string, v: number) => `<span class="tg-bar tg-${k}"><i style="width:${pct(clamp(v, 0, 1))}"></i></span>`;
     if (beast) {
       // A beast of the sea (docs/12 P4): its nature instead of a class and a role, and only its hide for a bar.
