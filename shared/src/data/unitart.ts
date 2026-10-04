@@ -70,6 +70,32 @@ export const FIGURES: Partial<Record<UnitId, Figure>> = {
   dutchman_bulwark: F('man', 1.32, 'dutchman', 'dutchman_boarder'),
   ghost_marksman: F('man', 1.28, 'dutchman', 'ghost_musketeer'),
   ghost_cutthroat: F('man', 1.28, 'dutchman', 'ghost_sailor'),
+  // The second dozen of the shop (2026-10-04), painted four to a sheet (tools/art/fleet_next.py).
+  lantern_jelly: F('water', 1.3, 'premium', 'kraken_spawn', 'moray'),
+  mantis_shrimp: F('beast', 1.1, 'premium', 'golden_crab', 'bell_hermit'),
+  hammerhead: F('water', 1.4, 'premium', 'great_white', 'barracuda'),
+  walrus_bull: F('beast', 1.4, 'premium', 'crocodile', 'monitor'),
+  merrow_warden: F('man', 1.38, 'premium', 'deep_one', 'nautilus_knight'),
+  sea_naga: F('water', 1.5, 'premium', 'pearl_siren', 'mermaid_queen', 'moray'),
+  brass_automaton: F('big', 1.5, 'premium', 'gilded_golem', 'obsidian_golem'),
+  storm_giant: F('big', 1.72, 'premium', 'leviathan_slayer', 'tidal_elemental'),
+  ember_phoenix: F('fly', 1.55, 'premium', 'lava_drake', 'storm_eagle'),
+  megalodon: F('water', 1.78, 'premium', 'great_white', 'kraken_spawn'),
+  marid: F('water', 1.72, 'premium', 'mermaid_queen', 'pearl_siren'),
+  ice_wyvern: F('fly', 1.78, 'premium', 'sea_wyvern', 'sea_dragon'),
+  // The world's armies' second dozen (2026-10-04).
+  hunt_master: F('man', 1.34, 'harpoon', 'harpoon_preceptor', 'master_harpooner'),
+  stone_axeman: F('man', 1.3, 'free', 'sharktooth', 'reef_raider'),
+  mask_archer: F('man', 1.3, 'free', 'island_archer', 'shark_dancer'),
+  island_chief: F('man', 1.36, 'free', 'island_elder', 'island_warrior'),
+  ghost_bomber: F('man', 1.28, 'dutchman', 'phantom_gunner', 'ghost_sailor'),
+  ghost_commodore: F('man', 1.36, 'dutchman', 'drowned_officer'),
+  crown_pikeman: F('man', 1.3, 'crown', 'crown_marine'),
+  rime_witch: F('man', 1.28, 'choir', 'brine_witch', 'storm_witch'),
+  line_harpooner: F('man', 1.28, 'harpoon', 'harpooner'),
+  fog_chemist: F('man', 1.28, 'brokers', 'alchemist'),
+  bounty_hunter: F('man', 1.3, 'league', 'debt_collector', 'enforcer'),
+  frostbound: F('man', 1.28, 'dutchman', 'dutchman_boarder', 'ghost_sailor'),
 };
 
 /** Painted kinds by body and whose: the stand-ins when none a kind names is there. */

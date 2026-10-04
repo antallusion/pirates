@@ -173,6 +173,9 @@ const MISSILE_OF: Record<string, string> = {
   storm_witch: 'part.ms_brine', tide_shaman: 'part.ms_brine', tide_caller: 'part.ms_brine',
   // docs/18 VII: the new kinds' shots.
   company_cannoneer: 'part.ms_cannonball', petardier: 'part.ms_grenade', fog_viper: 'part.ms_dart', choir_toller: 'part.ms_bell', thunderbird: 'part.ms_brine',
+  // The second dozen (2026-10-04).
+  rime_witch: 'part.ms_brine', line_harpooner: 'part.ms_harpoon', hunt_master: 'part.ms_harpoon', fog_chemist: 'part.ms_flask', mask_archer: 'part.ms_arrow',
+  ghost_bomber: 'part.ms_grenade',
 };
 const THROWN = new Set(['part.ms_grenade', 'part.ms_stone', 'part.ms_spear', 'part.ms_flask', 'part.ms_net', 'part.ms_smokebomb', 'part.ms_cannonball']);
 const MISSILE_MS = 300;

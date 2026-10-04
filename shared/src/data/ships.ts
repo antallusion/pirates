@@ -25,8 +25,9 @@ export type ShipClassId =
   | BossClassId;
 
 /** The sixty-six new hulls of the fleet of eighty (tools/art/ships.py paints them): the warships, the traders, the
- *  runners and the haulers, the premium ten of each list among them. The Hulk sails as `holk`: `hulk` is the rotten
- *  wreck of the ship graveyards (her art is `ship.hulk` all the same). */
+ *  runners and the haulers, the premium ten of each list among them — and the eight silver hulls that make the lines
+ *  whole (2026-10-04, tools/art/fleet_next.py). The Hulk sails as `holk`: `hulk` is the rotten wreck of the ship
+ *  graveyards (her art is `ship.hulk` all the same). */
 export type FleetClassId =
   | 'gunboat' | 'war_galley' | 'corvette' | 'razee' | 'ship_of_the_line'
   | 'black_corsair' | 'dragon_junk' | 'iron_ram' | 'thunderer' | 'wyvern_galleass' | 'kraken_hunter' | 'crimson_tide' | 'phantom_brig' | 'storm_reaver' | 'sun_galleon'
@@ -35,7 +36,9 @@ export type FleetClassId =
   | 'felucca' | 'lugger' | 'galiot' | 'topsail_schooner' | 'baltimore_clipper'
   | 'sea_hawk' | 'wind_dancer' | 'shark_cutter' | 'ghost_clipper' | 'flying_fish' | 'albatross_xebec' | 'silver_arrow' | 'storm_petrel' | 'mermaid_grace' | 'viper'
   | 'cog' | 'buss' | 'pink' | 'holk' | 'collier' | 'storeship' | 'cargo_frigate' | 'plate_galleon' | 'great_galleon'
-  | 'leviathan_ark' | 'turtle_barge' | 'floating_fortress' | 'menagerie' | 'whale_mother' | 'coral_hulk' | 'drowned_cathedral' | 'treasure_junk' | 'pirate_haven' | 'iron_whale';
+  | 'leviathan_ark' | 'turtle_barge' | 'floating_fortress' | 'menagerie' | 'whale_mother' | 'coral_hulk' | 'drowned_cathedral' | 'treasure_junk' | 'pirate_haven' | 'iron_whale'
+  // The eight that make the lines whole (owner, 2026-10-04; docs/20): silver hulls where a list had none of its own.
+  | 'sloop_of_war' | 'great_indiaman' | 'manila_galleon' | 'polacre' | 'dunkirk_frigate' | 'great_xebec' | 'race_galleon' | 'armed_fluyt';
 
 export type Rig = 'square' | 'fore_aft' | 'mixed';
 
@@ -744,6 +747,70 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     sailHp: 280, repairRate: 0.7, detection: 1350, price: 100000, purchasable: false, sprite: 'ship.iron_whale', list: 'hauler',
     passive: { id: 'iron_plates', name: 'Riveted Plates', description: 'Iron plates over her timbers: a ram does her half the harm, and her own strikes 50% harder.', mods: { ramTaken: -0.5, ramDealt: 0.5 } },
     premium: { price: 4300, note: ['A whale of riveted iron: she closes her plates and shrugs off the fire.', 'Кит из клёпаного железа: смыкает плиты и не замечает огня.'], beasts: [{ u: 'bell_diver', n: 16 }] },
+  }),
+
+  // ------------------------------------------------------------------ the lines made whole (owner, 2026-10-04)
+  // «Еще больше … кораблей» (owner, 2026-10-04), and the yard's tree of hulls (docs/20): the runners had no silver hull
+  // of their own above the third tier and the traders none above the fourth, so their lines handed over to the
+  // warships' and the haulers' (research.ts CROSS_LINES). Eight silver hulls of the 1720s fill the gaps and the thin
+  // tiers — a sloop-of-war among the warships, a thousand-ton Indiaman and a Manila galleon among the traders, a polacre,
+  // a Dunkirk frigate, a great xebec and a race-built galleon among the runners, an armed fluyt among the haulers — each
+  // of her list's trade and priced among the hulls of her tier; no faction's yard alone builds her.
+  sloop_of_war: ship({
+    id: 'sloop_of_war', name: 'Sloop-of-War', tier: 2, rig: 'square', role: 'A small ship-rigged man-of-war of the station: fourteen guns and a navy\'s drilled crew.',
+    length: 28, beam: 8, hull: 1900, armor: 0.12, maxSpeed: 15.5, accel: 1.9, turnRate: 19, draft: 3.0,
+    holdVolume: 40, holdWeight: 55, crewMin: 30, crewMax: 90, gunPortsPerSide: 7, bowChasers: 2, sternChasers: 1,
+    sailHp: 140, repairRate: 1.0, detection: 1500, price: 7200, purchasable: true, sprite: 'ship.sloop_of_war', list: 'combat',
+    passive: { id: 'navy_drill', name: 'Navy Gun Drill', description: 'A navy\'s drilled gun crews: her broadsides reload 5% faster and fly 5% tighter.', mods: { reloadMul: -0.05, spreadMul: -0.05 } },
+  }),
+  great_indiaman: ship({
+    id: 'great_indiaman', name: 'Great Indiaman', tier: 5, rig: 'square', role: 'A company ship of a thousand tons: two decks of cargo over a gun deck, built for the longest runs.',
+    length: 54, beam: 14, hull: 5600, armor: 0.22, maxSpeed: 11.5, accel: 0.85, turnRate: 9.5, draft: 5.6,
+    holdVolume: 460, holdWeight: 540, crewMin: 80, crewMax: 260, gunPortsPerSide: 13, bowChasers: 2, sternChasers: 2,
+    sailHp: 260, repairRate: 0.85, detection: 1400, price: 72000, purchasable: true, sprite: 'ship.great_indiaman', list: 'trade',
+    passive: { id: 'company_ship', name: 'Company Ship', description: 'A company\'s hull and a company\'s men: wages a tenth less, and perishables spoil a fifth slower.', mods: { wages: -0.1, spoilage: -0.2 } },
+  }),
+  manila_galleon: ship({
+    id: 'manila_galleon', name: 'Manila Galleon', tier: 5, rig: 'square', role: 'The great galleon of the long ocean run, laden with silk, porcelain and silver.',
+    length: 56, beam: 15, hull: 6000, armor: 0.24, maxSpeed: 10.5, accel: 0.8, turnRate: 9, draft: 5.8,
+    holdVolume: 500, holdWeight: 600, crewMin: 90, crewMax: 300, gunPortsPerSide: 14, bowChasers: 2, sternChasers: 2,
+    sailHp: 270, repairRate: 0.85, detection: 1400, price: 78000, purchasable: true, sprite: 'ship.manila_galleon', list: 'trade',
+    passive: { id: 'long_run', name: 'Long Run', description: 'A thrifty purser for a half-year passage: provisions last a fifth longer and wages are a tenth less.', mods: { provisionUse: -0.2, wages: -0.1 } },
+  }),
+  polacre: ship({
+    id: 'polacre', name: 'Polacre', tier: 4, rig: 'mixed', role: 'A Mediterranean three-master on pole masts: her sails are set and struck from the deck in a moment.',
+    length: 38, beam: 9, hull: 3200, armor: 0.1, maxSpeed: 17.5, accel: 1.9, turnRate: 18, draft: 3.4,
+    holdVolume: 100, holdWeight: 110, crewMin: 50, crewMax: 160, gunPortsPerSide: 9, bowChasers: 2, sternChasers: 1,
+    sailHp: 210, repairRate: 1.1, detection: 1650, price: 36000, purchasable: true, sprite: 'ship.polacre', list: 'fast',
+    passive: { id: 'pole_masts', name: 'Pole Masts', description: 'Masts of a single spar and no tops: sails are set and struck 30% faster, and +10% acceleration.', mods: { sailChangeRate: 0.3, accel: 0.1 } },
+  }),
+  dunkirk_frigate: ship({
+    id: 'dunkirk_frigate', name: 'Dunkirk Frigate', tier: 4, rig: 'square', role: 'A long, low privateer frigate of the Flemish banks, built light to run prizes down and outrun cruisers.',
+    length: 42, beam: 10, hull: 3600, armor: 0.12, maxSpeed: 17, accel: 1.7, turnRate: 16, draft: 3.8,
+    holdVolume: 110, holdWeight: 130, crewMin: 70, crewMax: 220, gunPortsPerSide: 12, bowChasers: 2, sternChasers: 2,
+    sailHp: 230, repairRate: 1.05, detection: 1700, price: 38000, purchasable: true, sprite: 'ship.dunkirk_frigate', list: 'fast',
+    passive: { id: 'light_scantlings', name: 'Light Scantlings', description: 'Light frames and fine lines: she bleeds a fifth less way in a hard turn, and a heavy sea slows her a fifth less.', mods: { turnDrag: -0.2, seaPenalty: -0.2 } },
+  }),
+  great_xebec: ship({
+    id: 'great_xebec', name: 'Great Xebec', tier: 5, rig: 'fore_aft', role: 'A three-masted war xebec of the corsair coasts: thirty-odd guns, three great lateens and a bank of sweeps.',
+    length: 46, beam: 10, hull: 4800, armor: 0.14, maxSpeed: 16.5, accel: 1.9, turnRate: 16, draft: 3.6,
+    holdVolume: 120, holdWeight: 140, crewMin: 120, crewMax: 340, gunPortsPerSide: 14, bowChasers: 3, sternChasers: 1,
+    sailHp: 250, repairRate: 1.05, detection: 1700, price: 64000, purchasable: true, sprite: 'ship.great_xebec', list: 'fast',
+    passive: { id: 'sweeps', name: 'Great Sweeps', description: '+25% speed in winds under half strength; oars give at least 3 m/s on any heading, even head to wind.' },
+  }),
+  race_galleon: ship({
+    id: 'race_galleon', name: 'Race-built Galleon', tier: 5, rig: 'square', role: 'A galleon razed low fore and aft and long for her beam: a great ship on a runner\'s lines.',
+    length: 52, beam: 12, hull: 5400, armor: 0.18, maxSpeed: 16, accel: 1.4, turnRate: 13.5, draft: 4.6,
+    holdVolume: 150, holdWeight: 180, crewMin: 140, crewMax: 380, gunPortsPerSide: 16, bowChasers: 2, sternChasers: 2,
+    sailHp: 280, repairRate: 0.95, detection: 1700, price: 70000, purchasable: true, sprite: 'ship.race_galleon', list: 'fast',
+    passive: { id: 'low_castles', name: 'Low Castles', description: 'Her castles razed: her signature is a tenth smaller, and a heavy sea slows her a quarter less.', mods: { signature: -0.1, seaPenalty: -0.25 } },
+  }),
+  armed_fluyt: ship({
+    id: 'armed_fluyt', name: 'Armed Fluyt', tier: 3, rig: 'square', role: 'A fluyt pierced for guns on her upper deck: a navy\'s transport, armed en flûte.',
+    length: 40, beam: 12, hull: 3100, armor: 0.15, maxSpeed: 10.5, accel: 0.85, turnRate: 10, draft: 4.2,
+    holdVolume: 400, holdWeight: 470, crewMin: 30, crewMax: 110, gunPortsPerSide: 6, bowChasers: 1, sternChasers: 2,
+    sailHp: 170, repairRate: 0.85, detection: 1250, price: 17500, purchasable: true, sprite: 'ship.armed_fluyt', list: 'hauler',
+    passive: { id: 'pierced_for_guns', name: 'Pierced for Guns', description: 'A transport that can fight back: her chasers hit 25% harder and train 15° wider.', mods: { chaserDamage: 0.25, chaserArc: 15 } },
   }),
 
   leviathan: monster('leviathan', 'Leviathan', 'The oldest hunger in the Reach.', 118, 26, 60000, 0.25, 16, 'Gills that open only while the harpoons hold it.'),

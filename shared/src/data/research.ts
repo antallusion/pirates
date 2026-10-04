@@ -20,9 +20,12 @@ export const RESEARCH_COST: Record<number, number> = { 1: 0, 2: 3000, 3: 28000, 
 /** The share of a hull's experience that also goes into the free pool. */
 export const FREE_XP_SHARE = 0.05;
 
-/** Where a list's own silver hulls end, the line goes on in another's: the runners' last (a clipper) leads to the
- *  razee, the traders' last (the East Indiaman) to the great galleon. */
-export const CROSS_LINES: Partial<Record<ShipClassId, ShipClassId[]>> = { razee: ['baltimore_clipper'], great_galleon: ['east_indiaman'] };
+/** Where a list's own silver hulls end, the line goes on in another's. None now: the runners' line ran out at the
+ *  Baltimore clipper and led on to the razee, the traders' at the East Indiaman and led on to the great galleon, until
+ *  the eight that make the lines whole (2026-10-04: the polacre and the Dunkirk frigate, the great xebec and the
+ *  race-built galleon, the great Indiaman and the Manila galleon) gave each list its own silver hulls from the first
+ *  tier to the fifth (tests/research.test.ts holds it). Kept for a line that may end short again. */
+export const CROSS_LINES: Partial<Record<ShipClassId, ShipClassId[]>> = {};
 
 /** What a captain has researched and the experience she holds: per hull, and free. */
 export interface ResearchView {

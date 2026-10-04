@@ -90,9 +90,9 @@ const conn = (s: PlayerSession) => (s as unknown as { conn: { last: (t: string) 
 // ------------------------------------------------------------------------------------------------ the shop's twenty
 
 test('the shop\'s twenty: battle units of the art queue\'s premium faction, each with its offer and a craft of its own', () => {
-  assert.equal(PREMIUM_BEAST_IDS.length, 20);
+  assert.equal(PREMIUM_BEAST_IDS.length, 20 + 12, 'the twenty, and the second dozen of 2026-10-04 (tests/creatures24)');
   const art = [...ART].filter(([, a]) => a.faction === 'premium').map(([id]) => id).sort();
-  assert.deepEqual([...PREMIUM_BEAST_IDS].sort(), art, 'the twenty of tools/art/creatures.py');
+  assert.deepEqual([...PREMIUM_BEAST_IDS].sort(), art, 'the shop\'s kinds of tools/art/creatures.py');
   const body = new Set<UnitSpecial>(['flying', 'diving', 'shooter']);
   for (const id of PREMIUM_BEAST_IDS) {
     const d = UNITS[id];
