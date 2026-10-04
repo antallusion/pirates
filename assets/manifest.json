@@ -2717,6 +2717,14 @@
     "prop.landmark_13":                        { "local": "props/landmark_13.webp", "remote": "hf_20261004_140237_gpt-isle_landmarks.png", "job": "gpt-isle_landmarks", "fit": "sheet:isle_landmarks.12", "rev": 20261004140237},
     "prop.landmark_14":                        { "local": "props/landmark_14.webp", "remote": "hf_20261004_140237_gpt-isle_landmarks.png", "job": "gpt-isle_landmarks", "fit": "sheet:isle_landmarks.13", "rev": 20261004140237},
     "prop.landmark_15":                        { "local": "props/landmark_15.webp", "remote": "hf_20261004_140237_gpt-isle_landmarks.png", "job": "gpt-isle_landmarks", "fit": "sheet:isle_landmarks.14", "rev": 20261004140237},
-    "prop.landmark_16":                        { "local": "props/landmark_16.webp", "remote": "hf_20261004_140237_gpt-isle_landmarks.png", "job": "gpt-isle_landmarks", "fit": "sheet:isle_landmarks.15", "rev": 20261004140237}
+    "prop.landmark_16":                        { "local": "props/landmark_16.webp", "remote": "hf_20261004_140237_gpt-isle_landmarks.png", "job": "gpt-isle_landmarks", "fit": "sheet:isle_landmarks.15", "rev": 20261004140237},
+    "ship.polacre":                            { "local": "ships/polacre.webp", "remote": "hf_20261004_144113_gpt-ships_19.png", "job": "gpt-ships_19", "fit": "sheet:ships_19.0", "rev": 20261004144113},
+    "ship.dunkirk_frigate":                    { "local": "ships/dunkirk_frigate.webp", "remote": "hf_20261004_144113_gpt-ships_19.png", "job": "gpt-ships_19", "fit": "sheet:ships_19.1", "rev": 20261004144113},
+    "ship.great_xebec":                        { "local": "ships/great_xebec.webp", "remote": "hf_20261004_144113_gpt-ships_19.png", "job": "gpt-ships_19", "fit": "sheet:ships_19.2", "rev": 20261004144113},
+    "ship.race_galleon":                       { "local": "ships/race_galleon.webp", "remote": "hf_20261004_144113_gpt-ships_19.png", "job": "gpt-ships_19", "fit": "sheet:ships_19.3", "rev": 20261004144113},
+    "ship.sloop_of_war":                       { "local": "ships/sloop_of_war.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.0", "rev": 20261004144118},
+    "ship.armed_fluyt":                        { "local": "ships/armed_fluyt.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.1", "rev": 20261004144118},
+    "ship.great_indiaman":                     { "local": "ships/great_indiaman.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.2", "rev": 20261004144118},
+    "ship.manila_galleon":                     { "local": "ships/manila_galleon.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.3", "rev": 20261004144118}
   }
 }
