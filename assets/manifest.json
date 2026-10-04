@@ -2729,6 +2729,10 @@
     "bg.deck_polacre":                         { "local": "art/deck_polacre.webp", "remote": "hf_20261004_144532_gpt-bg-deck_polacre.png", "job": "gpt-bg-deck_polacre", "fit": "opaque:1536", "rev": 20261004144532},
     "bg.deck_dunkirk_frigate":                 { "local": "art/deck_dunkirk_frigate.webp", "remote": "hf_20261004_144537_gpt-bg-deck_dunkirk_frigate.png", "job": "gpt-bg-deck_dunkirk_frigate", "fit": "opaque:1536", "rev": 20261004144537},
     "bg.deck_great_xebec":                     { "local": "art/deck_great_xebec.webp", "remote": "hf_20261004_145005_gpt-bg-deck_great_xebec.png", "job": "gpt-bg-deck_great_xebec", "fit": "opaque:1536", "rev": 20261004145005},
-    "bg.deck_race_galleon":                    { "local": "art/deck_race_galleon.webp", "remote": "hf_20261004_145016_gpt-bg-deck_race_galleon.png", "job": "gpt-bg-deck_race_galleon", "fit": "opaque:1536", "rev": 20261004145016}
+    "bg.deck_race_galleon":                    { "local": "art/deck_race_galleon.webp", "remote": "hf_20261004_145016_gpt-bg-deck_race_galleon.png", "job": "gpt-bg-deck_race_galleon", "fit": "opaque:1536", "rev": 20261004145016},
+    "bg.deck_sloop_of_war":                    { "local": "art/deck_sloop_of_war.webp", "remote": "hf_20261004_150251_gpt-bg-deck_sloop_of_war.png", "job": "gpt-bg-deck_sloop_of_war", "fit": "opaque:1536", "rev": 20261004150251},
+    "bg.deck_armed_fluyt":                     { "local": "art/deck_armed_fluyt.webp", "remote": "hf_20261004_150252_gpt-bg-deck_armed_fluyt.png", "job": "gpt-bg-deck_armed_fluyt", "fit": "opaque:1536", "rev": 20261004150252},
+    "bg.deck_great_indiaman":                  { "local": "art/deck_great_indiaman.webp", "remote": "hf_20261004_150411_gpt-bg-deck_great_indiaman.png", "job": "gpt-bg-deck_great_indiaman", "fit": "opaque:1536", "rev": 20261004150411},
+    "bg.deck_manila_galleon":                  { "local": "art/deck_manila_galleon.webp", "remote": "hf_20261004_150432_gpt-bg-deck_manila_galleon.png", "job": "gpt-bg-deck_manila_galleon", "fit": "opaque:1536", "rev": 20261004150432}
   }
 }
