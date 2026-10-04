@@ -72,7 +72,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "A keystone cannot be forgotten — only a Clean Slate removes it": "Краеугольный талант нельзя забыть — его снимает только «Чистый лист»",
   "A lantern burns on a shore nearby: someone is digging.": "Неподалёку на берегу горит фонарь: кто-то копает.",
   "A lease runs 7, 14 or 30 days": "Аренда — на 7, 14 или 30 дней",
-  "A letter from {0}: “{1}”{2}{3}. [Y]": "Письмо от {0}: «{1}»{2}{3}. [Y]",
+  "A letter from {0}: “{1}”{2}{3}. [Y]": "Письмо: {0}. «{1}»{2}{3}. [Y]",
   "A letter of marque: Confederacy ships and pirates are fair game, and the Crown pays for every one.": "Каперская грамота: корабли Конфедерации и пираты — законная добыча, и Корона платит за каждого.",
   "A licence costs {0} silver": "Лицензия стоит {0} серебра",
   "A light breeze fills the canvas.": "Лёгкий бриз наполняет паруса.",

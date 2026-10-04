@@ -380,6 +380,13 @@ test('her lines read in Russian', () => {
     assert.deepEqual(lines.filter((l) => /[A-Za-z]{3,}/.test(l.replace(/Anna|Bram|\/zboss|rise\|here\|leave\|kill\|announce\|reset|\[Y\]/g, ''))), []);
     assert.equal(serverText('Her decks cannot be taken — guns only').replace(/ /g, ' '), 'Её не взять на абордаж — только пушками');
     for (const r of REGION_IDS) assert.doesNotMatch(serverText(SHIP_CLASSES[ZONE_BOSSES[r].classId].name), /[A-Za-z]/, r);
+    // QA, 2026-10-04: «Письмо от Призовой суд Адмиралтейства» — the sender after «от» stays in the nominative; the
+    // sender's name stands after a colon, for every sender.
+    for (const from of ['The Admiralty Prize Court', 'The Auction House', 'The Harbour Master', 'The League Bounty Office', 'The sea', 'Your supply routes']) {
+      const ru = serverText(`A letter from ${from}: “The spoils of The Iron Lion” — 8450 silver enclosed. [Y]`);
+      assert.match(ru, /^Письмо: [^:]+\. «/, ru);
+      assert.doesNotMatch(ru, /Письмо от/, ru);
+    }
   } finally {
     applyDataLocale('en');
     setLang('en');
