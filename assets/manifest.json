@@ -2394,6 +2394,10 @@
     "unit.shark_dancer":                       { "local": "units/shark_dancer.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.0", "rev": 20261004051143},
     "unit.shark_dancer_b":                     { "local": "units/shark_dancer_b.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.1", "rev": 20261004051143},
     "unit.shark_dancer_atk":                   { "local": "units/shark_dancer_atk.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.2", "rev": 20261004051143},
-    "unit.shark_dancer_hit":                   { "local": "units/shark_dancer_hit.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.3", "rev": 20261004051143}
+    "unit.shark_dancer_hit":                   { "local": "units/shark_dancer_hit.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.3", "rev": 20261004051143},
+    "unit.island_elder":                       { "local": "units/island_elder.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.0", "rev": 20261004051403},
+    "unit.island_elder_b":                     { "local": "units/island_elder_b.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.1", "rev": 20261004051403},
+    "unit.island_elder_atk":                   { "local": "units/island_elder_atk.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.2", "rev": 20261004051403},
+    "unit.island_elder_hit":                   { "local": "units/island_elder_hit.webp", "remote": "hf_20261004_051403_gpt-anim_island_elder.png", "job": "gpt-anim_island_elder", "fit": "sheet:anim_island_elder.3", "rev": 20261004051403}
   }
 }
