@@ -963,6 +963,47 @@ v('cut_bat_cave_down', 'down_bat_cave', 'Летучие мыши покинул�
   'against the red-gold sky, and a big monitor lizard slips off the rocks below, as the pirates light their torches at '
   'the cave mouth. The camera turns to follow the bats out to sea.')
 
+# ---- The seventeenth reel: a hull of each list launched (shared/src/data/ships.ts), and the small lairs ashore won ------
+v('cut_launch_combat', 'launch_combat', 'Боевой корабль спущен на воду',
+  'Grey morning in a naval dockyard: a new black-hulled warship with two rows of closed gun ports slides stern first down '
+  'the greased slipway into the harbour in a great wave of spray, the shipwrights cheering from the scaffolds as her '
+  'gun crews on deck run out the first cannon. The camera follows her down the ways into the water.')
+v('cut_launch_trade', 'launch_trade', 'Торговый корабль спущен на воду',
+  'A bright harbour morning on a busy merchant quay: a new broad-bellied trading ship is warped out from the fitting '
+  'berth, her hold hatches open as cranes swing the first bales and casks aboard, clerks with ledgers checking each '
+  'load and gulls wheeling over her yards. The camera moves slowly along her side from the quay.')
+v('cut_launch_fast', 'launch_fast', 'Быстрый корабль спущен на воду',
+  'A fresh wind at the harbour mouth: a new lean schooner with raked masts shakes out all her canvas at once and heels '
+  'over, racing out past the breakwater and the lighthouse, spray flying from her sharp bow as her crew haul the '
+  'sheets. The camera chases low beside her as she gathers speed.')
+v('cut_launch_hauler', 'launch_hauler', 'Грузовой корабль спущен на воду',
+  'Evening at a deepwater wharf: a huge new hauler, wide and high-sided like a floating warehouse, sits low in the water '
+  'as teams of men and oxen load the last great crates up broad ramps into her side ports, her deck stacked with cargo '
+  'under tarpaulins and her lanterns being lit one by one. The camera rises slowly along her towering side.')
+v('cut_albatross_rock_down', 'down_albatross_rock', 'Альбатросы покинули скалу',
+  'A bare grey rock in the open sea under a windy sky: the great albatrosses lift off their nests one after another on '
+  'long white wings and glide away low over the waves, the gulls scattering, as the pirates climb up onto the empty '
+  'ledges. The camera rises with the last bird.')
+v('cut_crab_beach_down', 'down_crab_beach', 'Крабы ушли с пляжа',
+  'A wide sandy beach at low sun: hundreds of small shore crabs scuttle sideways into the surf and down their holes '
+  'all at once, the moving sand going still, as the pirates walk up from the boats and the gulls lift away. The camera '
+  'skims low over the sand.')
+v('cut_gull_cliffs_down', 'down_gull_cliffs', 'Чайки покинули утёс',
+  'A tall white cliff over a grey sea: a great cloud of gulls bursts from the ledges screaming and wheels away along the '
+  'coast, and the cliff falls quiet as the pirates climb the path up its face. The camera pans up the empty cliff.')
+v('cut_seal_rookery_down', 'down_seal_rookery', 'Тюлени ушли в море',
+  'A rocky shore under a cold grey sky: the big seal bulls bark once more and then slide off the rocks into the sea with '
+  'their cows and pups, their round heads bobbing out among the waves, as the landing party steps onto the rocks. '
+  'The camera holds low over the water as the heads go under.')
+v('cut_turtle_rocks_down', 'down_turtle_rocks', 'Черепахи ушли в прибой',
+  'Warm evening on a beach of round boulders: some of the boulders slowly lift their heads and turn out to be huge old '
+  'turtles, which crawl down the sand into the surf one by one and swim away, as the pirates stand among their nests. '
+  'The camera follows the last turtle into the waves.')
+v('cut_hermit_camp_down', 'down_hermit_camp', 'Отшельники сдались',
+  'A camp of driftwood huts in the dunes at dusk: the wild-haired castaways in sun-bleached rags throw down their '
+  'harpoons on the sand and sit by their fire, and the pirates walk in and sit down with them, passing them a bottle. '
+  'The camera moves slowly in toward the fire.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

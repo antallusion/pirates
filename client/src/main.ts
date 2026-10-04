@@ -497,7 +497,9 @@ const SHORE_DOWN: Record<string, string> = { mire_mother: 'cut_mire_mother_down'
   serpent_grotto: 'cut_serpent_grotto_down', maw_pit: 'cut_maw_pit_down', octopus_wreck: 'cut_octopus_wreck_down', turtle_guardian: 'cut_turtle_guardian_down',
   leviathan_shoal: 'cut_leviathan_shoal_down', crab_hollow: 'cut_crab_hollow_down', tentacle_lagoon: 'cut_tentacle_lagoon_down', choir_circle: 'cut_choir_circle_down',
   drowned_surf: 'cut_drowned_surf_down', croc_mangroves: 'cut_croc_mangroves_down', jaguar_den: 'cut_jaguar_den_down', ape_ridge: 'cut_ape_ridge_down',
-  serpent_marsh: 'cut_serpent_marsh_down', shark_shallows: 'cut_shark_shallows_down', moray_reef: 'cut_moray_reef_down', bat_cave: 'cut_bat_cave_down' };
+  serpent_marsh: 'cut_serpent_marsh_down', shark_shallows: 'cut_shark_shallows_down', moray_reef: 'cut_moray_reef_down', bat_cave: 'cut_bat_cave_down',
+  albatross_rock: 'cut_albatross_rock_down', crab_beach: 'cut_crab_beach_down', gull_cliffs: 'cut_gull_cliffs_down', seal_rookery: 'cut_seal_rookery_down',
+  turtle_rocks: 'cut_turtle_rocks_down', hermit_camp: 'cut_hermit_camp_down' };
 /** Windows that are places of their own, each the first time she opens it. */
 const MODAL_FILM: Partial<Record<NonNullable<Modal>, string>> = { shop: 'cut_shop', barter: 'cut_barter', company: 'cut_company', crew: 'cut_crew', gear: 'cut_gear', recruit: 'cut_recruit' };
 /** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
@@ -615,11 +617,12 @@ function filmMoments(): void {
     else if (state.self && !state.self.dockedAt) playFilm('cut_dawn');
   }
   const cls = state.self?.loadout.classId ?? null;
-  // A new hull launched; a premium one (docs/02 §1.A.9) the first time of her list in its own film (the tenth reel).
+  // A new hull launched; the first of her list in its own film — a premium one's (docs/02 §1.A.9, the tenth reel) or
+  // an ordinary one's (the seventeenth).
   const newHull = turned('cls', cls) && !!cls;
   if (newHull && state.self?.dockedAt && performance.now() - sunkAt > 60_000) {
     const def = SHIP_CLASSES[cls!];
-    const own = def?.premium && def.list ? `cut_premium_${def.list}` : null;
+    const own = def?.list ? `cut_${def.premium ? 'premium' : 'launch'}_${def.list}` : null;
     playFilm(own && filmDue(own) ? own : 'cut_launch');
   }
   // The first time she opens a window that is a place of its own (the twelfth reel): the shop, the barter table, the
