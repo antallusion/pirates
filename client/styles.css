@@ -4560,3 +4560,7 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
   .rs-art { width: 46px; height: 32px; }
   .rs-art img { height: 46px; }
 }
+/* The ship screen's card of the tree (docs/20): the hulls her hull leads to, each with how near it is. */
+.rs-ship .rs-next { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: baseline; margin: 4px 0; font-size: 12.5px; }
+.rs-ship .rs-next .rs-bar { grid-column: 1 / -1; }
+.rs-ship .btn { margin-top: 6px; }

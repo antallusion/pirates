@@ -5,7 +5,7 @@ import { GOODS } from '../../../shared/src/data/goods.ts';
 import { ask } from './confirm.ts';
 import { placeName } from './maps.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { AMMO_IDS, AMMO, KEYED_AMMO, SHIP_CLASSES, GUNS } from '../../../shared/src/data/ships.ts';
+import { AMMO_IDS, AMMO, KEYED_AMMO, SHIP_CLASSES, GUNS, FLEET_LISTS } from '../../../shared/src/data/ships.ts';
 import type { BoardingResult, ClientMsg, OnboardingView } from '../../../shared/src/protocol.ts';
 import { TALENTS_BY_ID } from '../../../shared/src/data/talents.ts';
 import { KEY_PORTS, REGIONS } from '../../../shared/src/world/regions.ts';
@@ -22,11 +22,33 @@ import { assetUrl } from '../assets.ts';
 import { dec1, dec2, esc, fmt, icon, money, xpBadge } from './dom.ts';
 import { trophyCard } from './surrender.ts';
 import { giftLine } from './premium.ts'; // a premium hull's gift (docs/02 §1.A.9)
+import { TREE, isResearched, researchParents, researchQuote } from '../../../shared/src/data/research.ts';
+import { EN as REN, RU as RRU } from '../lang/ui/research.ts';
 import { EN as CEN, RU as CRU } from '../lang/ui/colours.ts';
 
 const LC = dict(CEN, CRU);
 
 const L = dict(EN, RU);
+const RL = dict(REN, RRU); // the yard's tree of hulls (docs/20)
+
+/** The ship screen's word on the tree of hulls (docs/20): her hull's experience, the free pool, and the hulls it leads
+ *  to with how near each is; the whole tree one click away. */
+function researchCard(state: ClientState): string {
+  const self = state.self!;
+  const r = self.research ?? { xp: {}, free: 0, done: [] };
+  const cur = self.loadout.classId;
+  const owned = [cur, ...self.berths.map((b) => b.classId)];
+  const next = FLEET_LISTS.flatMap((l) => TREE[l]).filter((c) => researchParents(c).includes(cur) && !SHIP_CLASSES[c].premium);
+  const rows = next.map((c) => {
+    if (isResearched(r, c, owned)) return `<div class="rs-next"><b>${esc(SHIP_CLASSES[c].name)}</b><span class="good">${esc(RL('st.known'))}</span></div>`;
+    const q = researchQuote(r, c, owned);
+    const have = Math.min(q.cost, q.pool), pct = q.cost ? Math.round((have / q.cost) * 100) : 0;
+    return `<div class="rs-next"><b>${esc(SHIP_CLASSES[c].name)}</b><span class="muted">${esc(RL('cost', { have: fmt(have), cost: fmt(q.cost) }))}</span><div class="rs-bar"><i style="width:${pct}%"></i></div></div>`;
+  }).join('');
+  return `<div class="card rs-ship"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(RL('title'))}</h4>
+    <p class="muted">${esc(RL('xp', { n: fmt(Math.floor(r.xp[cur] ?? 0)) }))} · ${esc(RL('free', { n: fmt(Math.floor(r.free)) }))}</p>
+    ${rows}<button class="btn btn-small" data-research-open>${icon('tab_board', '', 'ico-sm')}${esc(RL('open'))}</button></div>`;
+}
 
 /** The key bound to an action, as it reads on screen. */
 function kb(a: Action): string {
@@ -164,7 +186,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
         <div class="forge-grid"><button class="btn btn-small" data-craft="round">${icon('ammo_round', '', 'ico-sm')}${esc(L('ship.forgeRound'))}</button><button class="btn btn-small" data-craft="chain">${icon('ammo_chain', '', 'ico-sm')}${esc(L('ship.forgeChain'))}</button><button class="btn btn-small" data-craft="grape">${icon('ammo_grape', '', 'ico-sm')}${esc(L('ship.forgeGrape'))}</button><button class="btn btn-small" data-craft="planks">${icon('good_planks', '', 'ico-sm')}${esc(L('ship.forgePlanks'))}</button></div></div>` : ''}
     </div><div>
       <h3 class="title-sm" style="font-size:20px">${esc(L('ship.contracts'))}</h3>${self.contracts.map((c) => `<div class="card quest-card small">${icon(c.kind === 'bounty' ? 'wanted' : c.kind === 'delivery' && c.good ? `good_${c.good}` : 'map_contract', '', 'quest-ico')}<div class="quest-body"><b>${esc(serverText(c.title))}</b><div class="reward">${money(c.reward)}${xpBadge(c.xp)}</div></div></div>`).join('') || `<p class="muted">${esc(L('ship.noContracts'))}</p>`}
-      ${self.loadout.trophy ? trophyCard(self.loadout.trophy) : ''}${companionCard(state)}${petsCard(state)}${chestCard(state)}${bottleCard(!self.dockedAt)}
+      ${researchCard(state)}${self.loadout.trophy ? trophyCard(self.loadout.trophy) : ''}${companionCard(state)}${petsCard(state)}${chestCard(state)}${bottleCard(!self.dockedAt)}
     </div></div></div>`;
   root.querySelector<HTMLElement>('[data-open-gear]')?.addEventListener('click', () => openGear?.());
   root.querySelector<HTMLElement>('[data-open-look]')?.addEventListener('click', () => openLook?.());

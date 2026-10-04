@@ -2727,6 +2727,8 @@
     "ship.great_indiaman":                     { "local": "ships/great_indiaman.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.2", "rev": 20261004144118},
     "ship.manila_galleon":                     { "local": "ships/manila_galleon.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.3", "rev": 20261004144118},
     "bg.deck_polacre":                         { "local": "art/deck_polacre.webp", "remote": "hf_20261004_144532_gpt-bg-deck_polacre.png", "job": "gpt-bg-deck_polacre", "fit": "opaque:1536", "rev": 20261004144532},
-    "bg.deck_dunkirk_frigate":                 { "local": "art/deck_dunkirk_frigate.webp", "remote": "hf_20261004_144537_gpt-bg-deck_dunkirk_frigate.png", "job": "gpt-bg-deck_dunkirk_frigate", "fit": "opaque:1536", "rev": 20261004144537}
+    "bg.deck_dunkirk_frigate":                 { "local": "art/deck_dunkirk_frigate.webp", "remote": "hf_20261004_144537_gpt-bg-deck_dunkirk_frigate.png", "job": "gpt-bg-deck_dunkirk_frigate", "fit": "opaque:1536", "rev": 20261004144537},
+    "bg.deck_great_xebec":                     { "local": "art/deck_great_xebec.webp", "remote": "hf_20261004_145005_gpt-bg-deck_great_xebec.png", "job": "gpt-bg-deck_great_xebec", "fit": "opaque:1536", "rev": 20261004145005},
+    "bg.deck_race_galleon":                    { "local": "art/deck_race_galleon.webp", "remote": "hf_20261004_145016_gpt-bg-deck_race_galleon.png", "job": "gpt-bg-deck_race_galleon", "fit": "opaque:1536", "rev": 20261004145016}
   }
 }

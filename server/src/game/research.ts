@@ -2,7 +2,7 @@
 // дальше качаешься»; docs/20; shared/src/data/research.ts). Every experience the captain earns is earned by the hull she
 // sails too; that experience researches the next tier of the hull's list, and a yard sells only what is researched.
 
-import { FREE_XP_SHARE, initialResearch, isResearched, needsResearch, researchQuote, spendResearch } from '../../../shared/src/data/research.ts';
+import { CHILDREN, FREE_XP_SHARE, initialResearch, isResearched, needsResearch, researchQuote, spendResearch } from '../../../shared/src/data/research.ts';
 import type { ResearchView } from '../../../shared/src/data/research.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -62,4 +62,19 @@ export function research(game: Game, s: PlayerSession, id: ShipClassId): string 
   game.sendTo(s, { t: 'toast', msg: `Researched: the ${def.name}. Any yard that builds her sells her now.`, kind: 'good' });
   game.pushSelf(s, true);
   return null;
+}
+
+/** The hulls her sailing hull leads to that her experience can research now. */
+export function readyChildren(p: Profile): ShipClassId[] {
+  const r = researchOf(p), owned = ownedHulls(p);
+  return (CHILDREN[p.loadout.classId] ?? []).filter((c) => researchQuote(r, c, owned).ready);
+}
+
+/** Experience granted: a hull that has just come within reach is named once (docs/20). */
+export function researchNews(game: Game, s: PlayerSession, before: ShipClassId[]): void {
+  if (!s.profile) return;
+  for (const c of readyChildren(s.profile)) {
+    if (before.includes(c)) continue;
+    game.sendTo(s, { t: 'toast', msg: `The ${SHIP_CLASSES[c].name} can be researched now: the tree of hulls.`, kind: 'good' });
+  }
 }

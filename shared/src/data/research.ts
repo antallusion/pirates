@@ -107,3 +107,7 @@ export function spendResearch(r: ResearchView, id: ShipClassId, owned: ShipClass
 
 /** Every list's tree, for the yard's window. */
 export const TREE: Record<FleetList, ShipClassId[]> = Object.fromEntries(FLEET_LISTS.map((l) => [l, treeOf(l)])) as Record<FleetList, ShipClassId[]>;
+
+/** The hulls each hull's experience researches (her children in the tree), for the word that one is ready. */
+export const CHILDREN: Partial<Record<ShipClassId, ShipClassId[]>> = {};
+for (const id of SHIP_CLASS_IDS) for (const p of researchParents(id)) if (needsResearch(id)) (CHILDREN[p] ??= []).push(id);

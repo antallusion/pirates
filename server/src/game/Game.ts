@@ -195,7 +195,7 @@ import {
 } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
-import { research } from './research.ts';
+import { readyChildren, research, researchNews } from './research.ts';
 import type { Profile, WorldView } from './player.ts';
 import {
   buildPortView, priceMods, buyAmmo, buyChart, buyLicence, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, shipyardUnfit, layKeel, syncKeel, trade,
@@ -1740,7 +1740,9 @@ export class Game {
       s.profile.rested = (s.profile.rested ?? 0) - rest;
       amount += rest;
     }
+    const ready = readyChildren(s.profile); // the tree of hulls (docs/20): what her hull could research before
     const gained = addXp(s.profile, amount);
+    researchNews(this, s, ready);
     gloryNews(this, s); // docs/19 E1: ranks of glory past the cap
     seasonXp(this, s, amount);
     if (s.ship) s.ship.level = s.profile.level;

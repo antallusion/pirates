@@ -9,4 +9,5 @@ export const SERVER_RU_RESEARCH: Record<string, string> = {
   'Needs {0} experience on the hulls below and the free pool — {1} so far': 'Нужно {0} опыта на кораблях ранга ниже и в свободном опыте — пока {1}',
   "Research the {0} first: the yard's tree of hulls": 'Сначала исследуйте «{0}»: дерево кораблей верфи',
   'Researched: the {0}. Any yard that builds her sells her now.': 'Исследован «{0}». Теперь его продаёт любая верфь, что его строит.',
+  'The {0} can be researched now: the tree of hulls.': 'Можно исследовать «{0}»: дерево кораблей.',
 };

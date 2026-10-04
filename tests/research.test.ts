@@ -108,7 +108,7 @@ test('the tree\'s lines read in Russian', () => {
   applyDataLocale('ru');
   try {
     const lines = ['No such hull', 'A hull sold for doubloons is not researched', 'That hull needs no research', 'Already researched', 'Research a hull of the tier below first: the tree of hulls shows which',
-      'Needs 3000 experience on the hulls below and the free pool — 2100 so far', "Research the Schooner first: the yard's tree of hulls", 'Researched: the Schooner. Any yard that builds her sells her now.'].map((l) => serverText(l));
+      'Needs 3000 experience on the hulls below and the free pool — 2100 so far', "Research the Schooner first: the yard's tree of hulls", 'Researched: the Schooner. Any yard that builds her sells her now.', 'The Schooner can be researched now: the tree of hulls.'].map((l) => serverText(l));
     assert.deepEqual(lines.filter((l) => /[A-Za-z]{3,}/.test(l)), []);
   } finally {
     applyDataLocale('en');
