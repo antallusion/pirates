@@ -20,7 +20,7 @@ import * as regions from '../shared/src/world/regions.ts';
 import * as newports from '../shared/src/world/newports.ts';
 
 /** Text fields a player reads. */
-export const TEXT_FIELDS = new Set(['name', 'description', 'bio', 'playstyle', 'epithet', 'archetype', 'role', 'title', 'text', 'flavor', 'mood', 'short', 'lore', 'hint', 'label', 'summary', 'blurb', 'effect', 'tagline', 'motto', 'note', 'story', 'riddle', 'announce', 'warning', 'goal', 'desc']);
+export const TEXT_FIELDS = new Set(['name', 'condition', 'gift', 'price', 'description', 'bio', 'playstyle', 'epithet', 'archetype', 'role', 'title', 'text', 'flavor', 'mood', 'short', 'lore', 'hint', 'label', 'summary', 'blurb', 'effect', 'tagline', 'motto', 'note', 'story', 'riddle', 'announce', 'warning', 'goal', 'desc']);
 
 export const MODULES: Record<string, Record<string, unknown>> = { bosses, captains, crew, deeds, factions, goods, holdings, legendary, quests, seasons, shipbuild, ships, talents, regions, newports };
 

@@ -52,3 +52,32 @@ test('popup budget: the sea\'s news, a hint and a boss\'s card keep out of the s
   assert.ok(css.includes('body.pb-2 #hud-stack > #hud-feed { display: none !important; }'));
   assert.ok(css.includes('body.pb-1 #hud-feed .feed-h'));
 });
+
+test('not a word of Latin in a Russian line a player reads (QA circle: NPC, PvP, HUD, WebGL, e-mail, UTC, MMORPG)', async () => {
+  const { readdirSync } = await import('node:fs');
+  // Key names, roman numerals, the game's name, ship names (HMS …), the gamepad's own button names, chat commands.
+  const OK = /^(Tab|Shift|Ctrl|Alt|Esc|Enter|Space|Backspace|Del|Ins|Home|End|PgUp|PgDn|Caps|LMB|RMB|MMB|WASD|F\d{1,2}|[A-Za-z]|[IVX]+|GRAVETIDE|HMS|Menu|View|gc|nbsp|px)$/;
+  const dir = new URL('../client/src/lang/', import.meta.url);
+  const tables: [string, Record<string, unknown>][] = [];
+  for (const f of readdirSync(dir)) if (f.endsWith('.ts') && /ru/.test(f) && !/admin/.test(f)) for (const v of Object.values(await import(new URL(f, dir).href) as Record<string, unknown>)) if (v && typeof v === 'object') tables.push([f, v as Record<string, unknown>]);
+  for (const f of readdirSync(new URL('ui/', dir))) { const m = await import(new URL(`ui/${f}`, dir).href) as { RU?: Record<string, unknown> }; if (m.RU) tables.push([f, m.RU]); }
+  const bad: string[] = [];
+  for (const [f, t] of tables) for (const [k, v] of Object.entries(t)) {
+    if (typeof v !== 'string' || !/[А-Яа-яЁё]/.test(v)) continue;
+    // The admin's usage lines and the server's own setup notes are for the tester, not the player.
+    if (/^Usage|Usage:|LINK_SECRET|\/auth\/|\/reset|#reset=|(^|[\s(«])\/[a-z]{2,}\b/.test(k + ' ' + v)) continue;
+    const words = (v.replace(/\{\w+\}|<[^>]+>|&\w+;/g, ' ').match(/[A-Za-z][A-Za-z'’-]*/g) ?? []).filter((w) => !OK.test(w));
+    if (words.length) bad.push(`${f} ${k.slice(0, 40)}: ${words.join(' ')}`);
+  }
+  assert.deepEqual(bad, []);
+});
+
+test('every deed\'s condition and every legendary ship\'s gift and price have Russian (they reached the screen in English)', async () => {
+  const { TEXT_FIELDS, textPaths } = await import('../tools/i18n-data.ts');
+  const { DATA_RU } = await import('../client/src/lang/data.ts');
+  for (const f of ['condition', 'gift', 'price']) assert.ok(TEXT_FIELDS.has(f), f);
+  const p = textPaths();
+  const ours = Object.keys(p).filter((k) => /\.(condition|gift|price)$/.test(k));
+  assert.ok(ours.length >= 34);
+  assert.deepEqual(ours.filter((k) => !DATA_RU[k]), []);
+});

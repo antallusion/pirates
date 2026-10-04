@@ -9,6 +9,8 @@ import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts
 import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS, residentIsWoman, residentName, OUTPOST_MAX_LEVEL, outpostUpgrade } from '../../../shared/src/data/estate.ts';
 import type { Guard, OutpostKind, Profession } from '../../../shared/src/data/estate.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
+import { BOSSES } from '../../../shared/src/data/bosses.ts';
+import type { BossId } from '../../../shared/src/data/bosses.ts';
 import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { BUILDINGS, BUILDING_IDS } from '../../../shared/src/data/holdings.ts';
@@ -183,7 +185,7 @@ export class CompanyScreen {
       <h4 style="margin-top:8px">${L('leg_your_season')}</h4>${se.mine.map((m) => `<div class="row"><span>${esc(sv(m.stat))}</span><span>${m.value}</span></div>`).join('') || `<p class="muted">${L('leg_nothing_season')}</p>`}</div>
       <div class="card"><h4 class="card-h">${icon('goal', '', 'ico-md')}${L('leg_tables')}</h4>${se.tables.filter((t) => t.rows.length).map((t) => `<div style="margin-bottom:4px"><b>${esc(sv(t.stat))}</b>: ${t.rows.map((r, i) => `${i + 1}. ${esc(r.name)} (${r.value})`).join(' · ')}</div>`).join('') || `<p class="muted">${L('leg_tables_empty')}</p>`}</div>
       <div class="card"><h4 class="card-h">${icon('tab_legends', '', 'ico-md')}${L('leg_pantheon')}</h4>${se.halls.map((h) => `<div><b>${esc(sv(h.hall))}</b>: ${h.members.map((m) => `${esc(m.name)} <span class="muted">${L('leg_member_season', { n: m.season })}</span>`).join(', ') || `<span class="muted">${L('leg_empty_halls')}</span>`}</div>`).join('')}</div>`;
-    const legendary = `<div class="card"><h4 class="card-h">${icon('tab_legends', '', 'ico-md')}${L('leg_legendary')}</h4>${v.legendary.map((l) => `<div class="leg-ship" style="margin-bottom:8px">${cardArt(`card.leg_${l.id}`)}<b>${esc(sv(l.name))}</b> <span class="muted">${L('leg_ship_meta', { base: esc(sv(l.base)), boss: esc(sv(l.boss.replace('_', ' '))), port: esc(sv(l.port)) })}</span>
+    const legendary = `<div class="card"><h4 class="card-h">${icon('tab_legends', '', 'ico-md')}${L('leg_legendary')}</h4>${v.legendary.map((l) => `<div class="leg-ship" style="margin-bottom:8px">${cardArt(`card.leg_${l.id}`)}<b>${esc(sv(l.name))}</b> <span class="muted">${L('leg_ship_meta', { base: esc(sv(l.base)), boss: esc(BOSSES[l.boss as BossId]?.name ?? sv(l.boss.replace(/_/g, ' '))), port: esc(sv(l.port)) })}</span>
         <div style="font-size:12px"><span style="color:var(--good)">${esc(sv(l.gift))}</span> <span style="color:var(--bad)">${esc(sv(l.price))}</span></div>
         ${l.status === 'locked' ? `<div class="muted">${L('leg_locked')}</div>`
         : l.status === 'commission' ? `<div>${L('leg_commission', { need: l.need.map((n) => `${esc(sv(n.good))} ${n.have}/${n.need}`).join(' · ') })}${l.leaders.length ? L('leg_leading', { list: l.leaders.map((x) => `${esc(x.name)} (${x.value})`).join(', ') }) : ''}${l.mine ? L('leg_yours', { n: l.mine }) : ''}</div>${l.canDeliver ? `<button class="btn btn-small btn-primary" data-deliver="${l.id}">${L('leg_deliver')}</button>` : ''}`
