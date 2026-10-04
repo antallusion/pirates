@@ -2246,6 +2246,10 @@
     "unit.sea_dragon":                         { "local": "units/sea_dragon.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.0", "rev": 20261004032904},
     "unit.sea_dragon_b":                       { "local": "units/sea_dragon_b.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.1", "rev": 20261004032904},
     "unit.sea_dragon_atk":                     { "local": "units/sea_dragon_atk.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.2", "rev": 20261004032904},
-    "unit.sea_dragon_hit":                     { "local": "units/sea_dragon_hit.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.3", "rev": 20261004032904}
+    "unit.sea_dragon_hit":                     { "local": "units/sea_dragon_hit.webp", "remote": "hf_20261004_032904_gpt-anim_sea_dragon.png", "job": "gpt-anim_sea_dragon", "fit": "sheet:anim_sea_dragon.3", "rev": 20261004032904},
+    "unit.pirate_lord":                        { "local": "units/pirate_lord.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.0", "rev": 20261004033314},
+    "unit.pirate_lord_b":                      { "local": "units/pirate_lord_b.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.1", "rev": 20261004033314},
+    "unit.pirate_lord_atk":                    { "local": "units/pirate_lord_atk.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.2", "rev": 20261004033314},
+    "unit.pirate_lord_hit":                    { "local": "units/pirate_lord_hit.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.3", "rev": 20261004033314}
   }
 }
