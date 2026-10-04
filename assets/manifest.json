@@ -2366,6 +2366,10 @@
     "unit.fog_cutpurse":                       { "local": "units/fog_cutpurse.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.0", "rev": 20261004045227},
     "unit.fog_cutpurse_b":                     { "local": "units/fog_cutpurse_b.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.1", "rev": 20261004045227},
     "unit.fog_cutpurse_atk":                   { "local": "units/fog_cutpurse_atk.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.2", "rev": 20261004045227},
-    "unit.fog_cutpurse_hit":                   { "local": "units/fog_cutpurse_hit.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.3", "rev": 20261004045227}
+    "unit.fog_cutpurse_hit":                   { "local": "units/fog_cutpurse_hit.webp", "remote": "hf_20261004_045227_gpt-anim_fog_cutpurse.png", "job": "gpt-anim_fog_cutpurse", "fit": "sheet:anim_fog_cutpurse.3", "rev": 20261004045227},
+    "unit.fog_cardsharp":                      { "local": "units/fog_cardsharp.webp", "remote": "hf_20261004_045529_gpt-anim_fog_cardsharp.png", "job": "gpt-anim_fog_cardsharp", "fit": "sheet:anim_fog_cardsharp.0", "rev": 20261004045529},
+    "unit.fog_cardsharp_b":                    { "local": "units/fog_cardsharp_b.webp", "remote": "hf_20261004_045529_gpt-anim_fog_cardsharp.png", "job": "gpt-anim_fog_cardsharp", "fit": "sheet:anim_fog_cardsharp.1", "rev": 20261004045529},
+    "unit.fog_cardsharp_atk":                  { "local": "units/fog_cardsharp_atk.webp", "remote": "hf_20261004_045529_gpt-anim_fog_cardsharp.png", "job": "gpt-anim_fog_cardsharp", "fit": "sheet:anim_fog_cardsharp.2", "rev": 20261004045529},
+    "unit.fog_cardsharp_hit":                  { "local": "units/fog_cardsharp_hit.webp", "remote": "hf_20261004_045529_gpt-anim_fog_cardsharp.png", "job": "gpt-anim_fog_cardsharp", "fit": "sheet:anim_fog_cardsharp.3", "rev": 20261004045529}
   }
 }
