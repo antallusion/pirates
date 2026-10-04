@@ -2725,6 +2725,8 @@
     "ship.sloop_of_war":                       { "local": "ships/sloop_of_war.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.0", "rev": 20261004144118},
     "ship.armed_fluyt":                        { "local": "ships/armed_fluyt.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.1", "rev": 20261004144118},
     "ship.great_indiaman":                     { "local": "ships/great_indiaman.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.2", "rev": 20261004144118},
-    "ship.manila_galleon":                     { "local": "ships/manila_galleon.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.3", "rev": 20261004144118}
+    "ship.manila_galleon":                     { "local": "ships/manila_galleon.webp", "remote": "hf_20261004_144118_gpt-ships_20.png", "job": "gpt-ships_20", "fit": "sheet:ships_20.3", "rev": 20261004144118},
+    "bg.deck_polacre":                         { "local": "art/deck_polacre.webp", "remote": "hf_20261004_144532_gpt-bg-deck_polacre.png", "job": "gpt-bg-deck_polacre", "fit": "opaque:1536", "rev": 20261004144532},
+    "bg.deck_dunkirk_frigate":                 { "local": "art/deck_dunkirk_frigate.webp", "remote": "hf_20261004_144537_gpt-bg-deck_dunkirk_frigate.png", "job": "gpt-bg-deck_dunkirk_frigate", "fit": "opaque:1536", "rev": 20261004144537}
   }
 }
