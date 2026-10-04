@@ -171,7 +171,7 @@ test('a short screen: the adventure card in the top row, the toasts in a side co
   assert.ok(css.includes('body.ai-low #hud-prompt .act-info { position: fixed;'));
   assert.ok(css.includes('body.pb-3 #hud-stack > #hud-tip { display: none !important; }'));
   const card = readFileSync(new URL('../client/src/ui/advcard.ts', import.meta.url), 'utf8');
-  assert.match(card, /if \(innerHeight <= 520\) max = Math\.max\(60, Math\.floor\(innerHeight \* 0\.27 - top\)\);/);
+  assert.match(card, /if \(innerHeight <= 520\) max = Math\.max\(60, Math\.floor\(innerHeight \* 0\.25 - top\)\);/);
 });
 
 test('the island\'s defence line wraps in a narrow column; a hovered piece\'s card goes with the gear window', () => {

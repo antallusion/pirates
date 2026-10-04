@@ -4014,7 +4014,7 @@ body.ai-low:has(#hud-prompt .act-info) #hud-combat .ab-mode { visibility: hidden
    the bar's hint keeps to the bar's width — the card, the toasts and the hint stay within 15% of a 640×360 screen. */
 @media (max-height: 520px) {
   #advcard .ac-card:not(.open) .enc-h { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  body.ai-low #hud-prompt .act-info { max-width: min(62vw, 420px); }
+  body.ai-low #hud-prompt .act-info { max-width: min(50vw, 360px); }
 }
 .act-row { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: nowrap; max-width: 100%; pointer-events: none; }
 .act-more-row { flex-wrap: wrap; }
