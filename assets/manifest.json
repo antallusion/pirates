@@ -2431,6 +2431,7 @@
     "bg.deck_pinnace":                         { "local": "art/deck_pinnace.webp", "remote": "hf_20261004_060949_gpt-bg.deck_pinnace.png", "job": "gpt-bg.deck_pinnace", "fit": "opaque:1536", "rev": 20261004060949},
     "bg.deck_snow":                            { "local": "art/deck_snow.webp", "remote": "hf_20261004_061146_gpt-bg.deck_snow.png", "job": "gpt-bg.deck_snow", "fit": "opaque:1536", "rev": 20261004061146},
     "bg.deck_barque":                          { "local": "art/deck_barque.webp", "remote": "hf_20261004_061349_gpt-bg.deck_barque.png", "job": "gpt-bg.deck_barque", "fit": "opaque:1536", "rev": 20261004061349},
-    "bg.deck_carrack":                         { "local": "art/deck_carrack.webp", "remote": "hf_20261004_061530_gpt-bg.deck_carrack.png", "job": "gpt-bg.deck_carrack", "fit": "opaque:1536", "rev": 20261004061530}
+    "bg.deck_carrack":                         { "local": "art/deck_carrack.webp", "remote": "hf_20261004_061530_gpt-bg.deck_carrack.png", "job": "gpt-bg.deck_carrack", "fit": "opaque:1536", "rev": 20261004061530},
+    "bg.deck_east_indiaman":                   { "local": "art/deck_east_indiaman.webp", "remote": "hf_20261004_061755_gpt-bg.deck_east_indiaman.png", "job": "gpt-bg.deck_east_indiaman", "fit": "opaque:1536", "rev": 20261004061755}
   }
 }
