@@ -168,8 +168,10 @@ interface Decor {
   size: number;
   /** A big clump on a green island is a whole grove. */
   grove: boolean;
-  /** On fungal and crystal isles, one of their own shapes instead of the old clump. */
+  /** On fungal and crystal isles, one of their own shapes instead of the old clump; on any, one of its things. */
   odd: boolean;
+  /** Which of the island's own things (0..1). */
+  pick: number;
 }
 
 /** Fungal caps: a cluster of pale domes with dark gills. */
@@ -1175,6 +1177,7 @@ export class Renderer {
     const decor = sprite(decorId);
     const ownDecor = decorId !== BIOME_DECOR[is.biome];
     const grove = sprite('prop.grove');
+    const props = this.isleProps(is);
     if (decor && this.zoom > 0.3) {
       for (const d of this.decorOf(is, state)) {
         const size = d.size * this.zoom;
@@ -1183,8 +1186,15 @@ export class Renderer {
         g.save();
         g.translate(x, y);
         g.rotate(d.rot);
+        // The island's own things among the clumps (owner, 2026-10-04: tools/art/isles.py): a cottage, a well, a
+        // ring of stones — a few of her kind's sixteen, so no two islands of a kind are dressed alike.
+        const prop = d.odd && props.length && (d.pick * 997) % 1 < 0.45 ? sprite(props[Math.floor(d.pick * props.length)]) : null;
+        if (prop) {
+          const ps = size * 0.6, k = ps / Math.max(prop.img.width, prop.img.height);
+          g.drawImage(prop.img, (-prop.img.width * k) / 2, (-prop.img.height * k) / 2, prop.img.width * k, prop.img.height * k);
+        }
         // Fungal and crystal isles grow their own shapes among the old clumps (until their own decor loads).
-        if (d.odd && !ownDecor && is.biome === 'fungal') drawCaps(g, size);
+        else if (d.odd && !ownDecor && is.biome === 'fungal') drawCaps(g, size);
         else if (d.odd && !ownDecor && is.biome === 'crystal') drawShards(g, size);
         else g.drawImage((d.grove && grove ? grove : decor).img, -size / 2, -size / 2, size, size);
         g.restore();
@@ -1508,6 +1518,19 @@ export class Renderer {
   private nightNow = 0;
 
   private decorCache = new Map<number, Decor[]>();
+  private propCache = new Map<number, { n: number; ids: string[] }>();
+
+  /** The island's own few of her kind's sixteen things (tools/art/isles.py), chosen by her id: three to five of them. */
+  private isleProps(is: IslandData): string[] {
+    const all: string[] = [];
+    for (let n = 1; n <= 16; n++) if (sprite(`prop.isle_${is.biome}_${n}`)) all.push(`prop.isle_${is.biome}_${n}`);
+    const hit = this.propCache.get(is.id);
+    if (hit && hit.n === all.length) return hit.ids;
+    const rnd = seeded(is.id * 131 + 7);
+    const ids = all.map((id) => ({ id, k: rnd() })).sort((a, b) => a.k - b.k).slice(0, 3 + (is.id % 3)).map((x) => x.id);
+    this.propCache.set(is.id, { n: all.length, ids });
+    return ids;
+  }
 
   /** Where an island's decor stands: inside the coast, clear of its port town and of each other. */
   private decorOf(is: IslandData, state: ClientState): Decor[] {
@@ -1530,7 +1553,9 @@ export class Renderer {
       if (port && Math.hypot(x - port.x, y - port.y) < 380) continue;
       const size = 42 + rnd() * Math.min(120, 30 + is.r / 10);
       if (out.some((d) => Math.hypot(d.x - x, d.y - y) < (d.size + size) * 0.55)) continue;
-      out.push({ x, y, rot: rnd() * Math.PI * 2, size, grove: size > 95 && (is.biome === 'temperate' || is.biome === 'mossy' || is.biome === 'jungle'), odd: rnd() < 0.55 });
+      // (`pick` from a hash, not the stream: the clumps keep the places they always had)
+      const pick = Math.abs(Math.sin(is.id * 12.9898 + out.length * 78.233) * 43758.5453) % 1;
+      out.push({ x, y, rot: rnd() * Math.PI * 2, size, grove: size > 95 && (is.biome === 'temperate' || is.biome === 'mossy' || is.biome === 'jungle'), odd: rnd() < 0.55, pick });
     }
     this.decorCache.set(is.id, out);
     if (this.decorCache.size > 200) this.decorCache.delete(this.decorCache.keys().next().value!);
