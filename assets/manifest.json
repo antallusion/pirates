@@ -2052,6 +2052,7 @@
     "unit.mist_wraith":                        { "local": "units/mist_wraith.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.0", "rev": 20261004000601},
     "unit.mist_wraith_b":                      { "local": "units/mist_wraith_b.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.1", "rev": 20261004000601},
     "unit.mist_wraith_atk":                    { "local": "units/mist_wraith_atk.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.2", "rev": 20261004000601},
-    "unit.mist_wraith_hit":                    { "local": "units/mist_wraith_hit.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.3", "rev": 20261004000601}
+    "unit.mist_wraith_hit":                    { "local": "units/mist_wraith_hit.webp", "remote": "hf_20261004_000601_gpt-anim_mist_wraith.png", "job": "gpt-anim_mist_wraith", "fit": "sheet:anim_mist_wraith.3", "rev": 20261004000601},
+    "prop.port_sugarloaf":                     { "local": "props/port_sugarloaf.webp", "remote": "hf_20261004_000919_gpt-port_sugarloaf.png", "job": "gpt-port_sugarloaf", "fit": "sheet:port_sugarloaf.0", "rev": 20261004000919}
   }
 }
