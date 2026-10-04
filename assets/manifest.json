@@ -2137,6 +2137,10 @@
     "unit.ledger_enforcer_b":                  { "local": "units/ledger_enforcer_b.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.1", "rev": 20261004012943},
     "unit.ledger_enforcer_atk":                { "local": "units/ledger_enforcer_atk.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.2", "rev": 20261004012943},
     "unit.ledger_enforcer_hit":                { "local": "units/ledger_enforcer_hit.webp", "remote": "hf_20261004_012943_gpt-anim_ledger_enforcer.png", "job": "gpt-anim_ledger_enforcer", "fit": "sheet:anim_ledger_enforcer.3", "rev": 20261004012943},
-    "prop.port_brimstone_bay":                 { "local": "props/port_brimstone_bay.webp", "remote": "hf_20261004_013317_gpt-port_brimstone_bay.png", "job": "gpt-port_brimstone_bay", "fit": "sheet:port_brimstone_bay.0", "rev": 20261004013317}
+    "prop.port_brimstone_bay":                 { "local": "props/port_brimstone_bay.webp", "remote": "hf_20261004_013317_gpt-port_brimstone_bay.png", "job": "gpt-port_brimstone_bay", "fit": "sheet:port_brimstone_bay.0", "rev": 20261004013317},
+    "unit.jade_guard":                         { "local": "units/jade_guard.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.0", "rev": 20261004013532},
+    "unit.jade_guard_b":                       { "local": "units/jade_guard_b.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.1", "rev": 20261004013532},
+    "unit.jade_guard_atk":                     { "local": "units/jade_guard_atk.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.2", "rev": 20261004013532},
+    "unit.jade_guard_hit":                     { "local": "units/jade_guard_hit.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.3", "rev": 20261004013532}
   }
 }
