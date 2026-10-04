@@ -2221,6 +2221,7 @@
     "unit.whale_calf":                         { "local": "units/whale_calf.webp", "remote": "hf_20261004_030037_gpt-anim_whale_calf.png", "job": "gpt-anim_whale_calf", "fit": "sheet:anim_whale_calf.0", "rev": 20261004030037},
     "unit.whale_calf_b":                       { "local": "units/whale_calf_b.webp", "remote": "hf_20261004_030037_gpt-anim_whale_calf.png", "job": "gpt-anim_whale_calf", "fit": "sheet:anim_whale_calf.1", "rev": 20261004030037},
     "unit.whale_calf_atk":                     { "local": "units/whale_calf_atk.webp", "remote": "hf_20261004_030037_gpt-anim_whale_calf.png", "job": "gpt-anim_whale_calf", "fit": "sheet:anim_whale_calf.2", "rev": 20261004030037},
-    "unit.whale_calf_hit":                     { "local": "units/whale_calf_hit.webp", "remote": "hf_20261004_030037_gpt-anim_whale_calf.png", "job": "gpt-anim_whale_calf", "fit": "sheet:anim_whale_calf.3", "rev": 20261004030037}
+    "unit.whale_calf_hit":                     { "local": "units/whale_calf_hit.webp", "remote": "hf_20261004_030037_gpt-anim_whale_calf.png", "job": "gpt-anim_whale_calf", "fit": "sheet:anim_whale_calf.3", "rev": 20261004030037},
+    "bg.port_crownfall":                       { "local": "art/port_crownfall.webp", "remote": "hf_20261004_030307_gpt-bg.port_crownfall.png", "job": "gpt-bg.port_crownfall", "fit": "opaque:1920", "rev": 20261004030307}
   }
 }
