@@ -4903,8 +4903,8 @@
    "ship.mermaid_grace"
   ],
   "prompt": "Draw a wide 3:2 image: a game sprite sheet of four different sailing ships side by side in one row, left to right, each alone in its own quarter of the image with wide empty gaps between them: 1) a two-masted topsail schooner with a square topsail on the foremast, raked masts and a sleek hull; 2) an elegant sloop with a huge sail plan of pale grey sails, a delicate carved hull and fluttering long pennants; 3) a lean cutter whose bow is carved like a shark's jaw with rows of white teeth, grey sails with a fin-shaped stripe; 4) a graceful schooner with sea-green sails, a mermaid figurehead and shells and pearls set into its rails; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own quarter, filling most of the image height, its bowsprit and yard tips inside its quarter. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters.",
-  "painting": true,
-  "whole": true
+  "whole": true,
+  "cut": "hf_20261004_001843_gpt-ships_11"
  },
  "ships_12": {
   "grid": [

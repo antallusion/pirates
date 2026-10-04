@@ -2062,6 +2062,10 @@
     "unit.storm_berserker_b":                  { "local": "units/storm_berserker_b.webp", "remote": "hf_20261004_001405_gpt-anim_storm_berserker.png", "job": "gpt-anim_storm_berserker", "fit": "sheet:anim_storm_berserker.1", "rev": 20261004001405},
     "unit.storm_berserker_atk":                { "local": "units/storm_berserker_atk.webp", "remote": "hf_20261004_001405_gpt-anim_storm_berserker.png", "job": "gpt-anim_storm_berserker", "fit": "sheet:anim_storm_berserker.2", "rev": 20261004001405},
     "unit.storm_berserker_hit":                { "local": "units/storm_berserker_hit.webp", "remote": "hf_20261004_001405_gpt-anim_storm_berserker.png", "job": "gpt-anim_storm_berserker", "fit": "sheet:anim_storm_berserker.3", "rev": 20261004001405},
-    "bg.port_sugarloaf":                       { "local": "art/port_sugarloaf.webp", "remote": "hf_20261004_001635_gpt-bg.port_sugarloaf.png", "job": "gpt-bg.port_sugarloaf", "fit": "opaque:1920", "rev": 20261004001635}
+    "bg.port_sugarloaf":                       { "local": "art/port_sugarloaf.webp", "remote": "hf_20261004_001635_gpt-bg.port_sugarloaf.png", "job": "gpt-bg.port_sugarloaf", "fit": "opaque:1920", "rev": 20261004001635},
+    "ship.topsail_schooner":                   { "local": "ships/topsail_schooner.webp", "remote": "hf_20261004_001843_gpt-ships_11.png", "job": "gpt-ships_11", "fit": "sheet:ships_11.0", "rev": 20261004001843},
+    "ship.wind_dancer":                        { "local": "ships/wind_dancer.webp", "remote": "hf_20261004_001843_gpt-ships_11.png", "job": "gpt-ships_11", "fit": "sheet:ships_11.1", "rev": 20261004001843},
+    "ship.shark_cutter":                       { "local": "ships/shark_cutter.webp", "remote": "hf_20261004_001843_gpt-ships_11.png", "job": "gpt-ships_11", "fit": "sheet:ships_11.2", "rev": 20261004001843},
+    "ship.mermaid_grace":                      { "local": "ships/mermaid_grace.webp", "remote": "hf_20261004_001843_gpt-ships_11.png", "job": "gpt-ships_11", "fit": "sheet:ships_11.3", "rev": 20261004001843}
   }
 }
