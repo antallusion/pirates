@@ -212,6 +212,22 @@ c('mangrove_hydra', 'wild', 6, 'Mangrove Hydra', 'Мангровая гидра'
 c('ape_king', 'wild', 7, 'Ape King', 'Король обезьян', 'big', 'a colossal old silverback ape king, grey and scarred, a crown of coral and carved stone on his head and strings of shells round his neck, knuckles on the ground, facing right', 'rising up and beating his chest', 'rearing up and smashing both fists down toward the right', 'reeling back from a heavy blow while still facing right: leaning back, shoulders hunched')
 c('storm_roc', 'wild', 7, 'Storm Roc', 'Грозовой рух', 'fly', 'a colossal storm roc, a giant bird of prey with slate-grey and white feathers, a hooked dark beak and great talons, faint sparks of lightning along its wings, flying toward the right', 'its great wings tilted the other way', 'diving toward the right, talons forward and beak open')
 
+# The islands' third dozen (owner, 2026-10-04: «еще больше … существ»; docs/18 IX), four to a sheet (QUADS5 below): the
+# kinds of the new lairs — the swamps' and the wrecks' first tiers, the volcanic shores, the jungles, the high cliffs,
+# the dead isles and the ship graveyards.
+c('poison_frog', 'wild', 1, 'Poison Frogs', 'Ядовитые лягушки', 'beast', 'a cluster of three giant poison frogs as big as cats sitting together, glossy skin in bright warning colours — scarlet, cobalt blue and yellow with black spots — facing right', 'their throats puffed out, one of them blinking', 'all three leaping toward the right together, their sticky tongues lashing out')
+c('bilge_rat', 'wild', 1, 'Bilge Rats', 'Трюмные крысы', 'beast', 'a pack of four big grey ship rats with long naked tails, beady black eyes and twitching whiskers, huddled together, facing right', 'the rats sniffing the air, whiskers twitching', 'the pack scurrying forward toward the right, teeth bared')
+c('ghost_crab', 'wild', 2, 'Ghost Crabs', 'Крабы-призраки', 'beast', 'a pair of pale, almost white ghost crabs as big as hounds, tall stalked eyes and long thin legs, raised high on their legs, claws toward the right', 'their eyestalks swivelling, one claw raised', 'darting sideways toward the right and snapping their claws')
+c('marine_iguana', 'wild', 2, 'Marine Iguana', 'Морская игуана', 'beast', 'a big black marine iguana with a crest of short spines along its back, rough salt-crusted scales and a blunt face, crouched low, its head toward the right', 'snorting a little puff of salt spray from its nostrils', 'lunging forward toward the right with its jaws open')
+c('giant_centipede', 'wild', 3, 'Giant Centipede', 'Гигантская сколопендра', 'beast', 'a giant jungle centipede as long as a boat, glossy dark red segments and yellow legs, its front half reared up, its head with two curved fangs toward the right', 'its antennae swaying, its legs rippling', 'striking forward toward the right twice with its curved fangs')
+c('jungle_spider', 'wild', 4, 'Jungle Spider', 'Паук джунглей', 'beast', 'a giant hairy jungle spider as big as a hound, dark brown with orange bands on its legs and a cluster of glossy black eyes, crouched on its legs, facing right', 'its two front legs raised a little', 'rearing up and lunging toward the right with its fangs, a strand of web flying')
+c('feral_bull', 'wild', 4, 'Feral Bull', 'Одичавший бык', 'beast', 'a big shaggy feral bull run wild on an island, dark brown with long curved horns and a heavy hump, its head lowered toward the right', 'pawing the ground with one hoof, snorting', 'charging toward the right with its horns lowered')
+c('cinder_hound', 'wild', 5, 'Cinder Hound', 'Пепельная гончая', 'beast', 'a lean volcanic hound with a coat of smouldering charcoal-grey fur glowing ember-orange at the edges, glowing cracks along its flanks and bright ember eyes, crouched to spring, facing right', 'wisps of smoke curling off its back', 'lunging toward the right with its jaws open, breathing a short gout of embers and hot ash')
+c('cliff_harpy', 'wild', 5, 'Cliff Harpy', 'Скальная гарпия', 'fly', 'a cliff harpy: a winged creature with the head and shoulders of a wild-haired woman, great grey-brown feathered wings for arms and an eagle\'s taloned legs, hovering, facing right', 'her wings at the top of their beat, her mouth open in a shriek', 'swooping toward the right with her talons forward, shrieking')
+c('banshee', 'wild', 6, 'Banshee', 'Банши', 'fly', 'a banshee: a pale spectral woman in a long tattered grey shroud, her long white hair streaming upward, her lower body fading into pale mist, a faint cold blue glow about her, hovering, facing right', 'her hair and shroud drifting the other way', 'wailing toward the right with her arms flung forward, a ring of cold blue mist rolling out from her mouth')
+c('plumed_serpent', 'wild', 7, 'Plumed Serpent', 'Пернатый змей', 'fly', 'a great plumed serpent of the old jungle temples: a long serpent body covered in shimmering emerald and turquoise feathers, a crest of long jade-green plumes and a pair of feathered wings, coiling in the air, facing right', 'its coils shifting, its crest raised', 'striking down toward the right with its jaws open, its wings flared')
+c('wreck_titan', 'wild', 7, 'Wreck Titan', 'Титан обломков', 'big', 'a wreck titan: a towering colossus built of dark wet shipwreck timbers, broken hull planks, rusted anchors and heavy chains, barnacles and seaweed hanging from it, a faint green glow in the gaps between its timbers, a great rusted anchor for its right hand, facing right', 'its chains swaying, seaweed dripping', 'swinging its anchor hand in a wide sweep toward the right', 'reeling back from a heavy blow while still facing right, splinters flying')
+
 # ---- Premium (owner, 2026-10-03: «премиум существа за премиум валюту много»; «уникальные существа для этого корабля») ---------
 # Each premium ship's own kind (tools/art/ships.py), then the shop's own creatures; sold only for the premium currency.
 c('corsair_phantom', 'premium_ship', 5, 'Corsair Phantoms', 'Фантомы корсара', 'man', 'a shadowy corsair duellist in a black long coat with a deep crimson sash, a black half-mask and a thin rapier, faint dark smoke trailing from his coat-tails', 'the rapier raised in salute', 'lunging toward the right with a swift rapier thrust')
@@ -287,6 +303,28 @@ c('megalodon', 'premium', 7, 'Megalodon', 'Мегалодон', 'water', 'a colo
 c('marid', 'premium', 7, 'Marid', 'Марид', 'water', 'a marid, a djinn of the sea: a towering bearded torso of deep blue-green skin with gold armbands and a turban, rising out of the water on a swirling column of sea water and foam, facing right', 'its arms folded, the water of its column swirling', 'thrusting both hands toward the right, a wave of foaming sea water surging from its palms', 'jerking back from a blow while still facing right, its arms thrown up, sinking a little lower into its water')
 c('ice_wyvern', 'premium', 7, 'Ice Wyvern', 'Ледяная виверна', 'fly', 'a great ice wyvern with pale blue-white scales and frosted membranous wings, a long tail ending in a spike of ice, a horned head, flying toward the right', 'its wings tilted the other way, frost drifting from them', 'breathing a jet of freezing white mist toward the right')
 c('sea_griffin', 'premium', 6, 'Sea Griffin', 'Морской грифон', 'fly', "a sea griffin with an eagle's white head and grey wings and the body of a sleek grey sea lion with webbed paws, flying toward the right", 'its wings tilted the other way', 'diving toward the right with its beak open and talons forward')
+# The shop's third dozen and the third batch's hulls' own (owner, 2026-10-04: «еще больше … существ и кораблей»), four
+# to a sheet (QUADS5 below).
+c('war_parrot', 'premium', 3, 'War Parrot', 'Боевой попугай', 'fly', 'a giant pirate macaw with brilliant scarlet, gold and blue feathers, a heavy hooked beak and a small brass ring on one leg, flying toward the right', 'its wings at the top of their beat, its head cocked', 'diving toward the right with its hooked beak open and talons forward')
+c('electric_eel', 'premium', 3, 'Electric Eel', 'Электрический угорь', 'water', 'a huge thick dark olive electric eel rising out of the water in an S-curve, a pale blue glow along its flanks, facing right', 'small blue sparks flickering along its body', 'lunging toward the right as a crackle of pale blue lightning leaps from its head')
+c('sea_otter', 'premium', 3, 'Giant Sea Otter', 'Гигантская калания', 'beast', 'a giant sea otter as big as a man, sleek dark brown wet fur, long whiskers and a pale face, webbed paws, hunched on its hind legs, facing right', 'grooming its whiskers with one paw', 'lunging toward the right and biting')
+c('flying_squid', 'premium', 4, 'Flying Squid', 'Летучий кальмар', 'fly', 'a giant flying squid gliding through the air on wide fin-wings at the tip of its mantle, its tentacles trailing behind, translucent reddish-purple skin with dark spots, facing right', 'its fins rippling, its tentacles curling', 'lashing its tentacles toward the right in a spray of black ink')
+c('selkie', 'premium', 4, 'Selkie', 'Селки', 'man', 'a selkie: a lithe sea-folk woman with dark wet hair and large dark eyes in a grey spotted sealskin cloak with the seal\'s head for a hood, a spear of pale driftwood tipped with a shell blade', 'the sealskin cloak drawn closer, the spear lifted', 'a quick spear thrust toward the right')
+c('kelp_golem', 'premium', 5, 'Kelp Golem', 'Келповый голем', 'big', 'a kelp golem: a hulking giant of wet tangled kelp and dark seaweed twisted over a core of grey driftwood, small shells and starfish caught in it, heavy arms of rope-like kelp, facing right', 'seaweed dripping, its body swelling a little', 'swinging a heavy kelp arm down toward the right', 'reeling back from a heavy blow while still facing right, strands of kelp flying')
+c('giant_lobster', 'premium', 5, 'Giant Lobster', 'Гигантский омар', 'beast', 'a giant dark blue lobster as big as a longboat, a heavy armoured shell, long antennae and two huge uneven claws raised toward the right', 'its antennae sweeping, one claw opening', 'clamping its great claw shut toward the right')
+c('manticore', 'premium', 5, 'Manticore', 'Мантикора', 'beast', 'a manticore: a great lion with a dark red mane and tawny hide, leathery wings folded on its back and a segmented scorpion tail with a black sting curled over its back, facing right', 'its scorpion tail swaying, its lips curled back', 'striking toward the right with its scorpion sting over its shoulder')
+c('sea_cyclops', 'premium', 6, 'Sea Cyclops', 'Морской циклоп', 'big', 'a sea cyclops: a hulking one-eyed giant with grey-green skin, a wild beard woven with seaweed, a kilt of old sailcloth and a broken ship\'s mast for a club, facing right', 'his single eye narrowing, the mast lifted onto his shoulder', 'swinging the mast in a wide sweep toward the right')
+c('sea_hydra', 'premium', 7, 'Sea Hydra', 'Морская гидра', 'water', 'a sea hydra rising out of the water: five long green-black scaled necks with fanged serpent heads rising from one heavy body, fins along the necks, all five heads toward the right', 'its five heads swaying apart', 'all five heads striking toward the right with their jaws open')
+c('coral_colossus', 'premium', 7, 'Coral Colossus', 'Коралловый колосс', 'big', 'a coral colossus: a towering giant made of a living reef — branching pink, orange and white coral, sea fans and anemones, small bright fish darting about it, facing right', 'its sea fans swaying, its anemones opening', 'slamming a massive coral fist down toward the right', 'reeling back from a heavy blow while still facing right, coral chips flying')
+c('cloud_whale', 'premium', 7, 'Cloud Whale', 'Облачный кит', 'fly', 'a cloud whale: a huge pale grey-blue whale swimming through the air wrapped in wisps of storm cloud, its long pectoral fins spread like wings, faint lightning in the clouds about it, facing right', 'its fins tilted the other way, cloud trailing behind it', 'sweeping its great tail fluke down toward the right in a gust of storm wind')
+c('war_mastiff', 'premium_ship', 2, 'War Mastiffs', 'Боевые мастифы', 'beast', 'a huge broad-chested war mastiff with a short brindle coat, a heavy jowled head and a spiked iron collar, crouched to spring, facing right', 'its ears pricked, growling low', 'leaping toward the right with its jaws open')
+c('corposant', 'premium_ship', 3, 'Corposants', 'Огни святого Эльма', 'fly', 'a corposant: a hovering ball of flickering blue-white Saint Elmo\'s fire with small crackling tendrils of light and the faint shape of a calm face in its glow, hovering', 'its fire flaring a little brighter', 'a crackling tongue of blue fire leaping out toward the right')
+c('cormorant', 'premium_ship', 2, 'Fishing Cormorants', 'Ручные бакланы', 'fly', 'a pair of big black fishing cormorants with glossy green-black feathers, hooked beaks and small brass rings at their throats, flying toward the right', 'their wings at the bottom of their beat', 'diving toward the right beaks first')
+c('winged_lion', 'premium_ship', 6, 'Winged Lion', 'Крылатый лев', 'fly', 'a winged lion of the lagoon republic: a great gilded lion with a golden mane and wide golden-brown eagle wings, flying toward the right', 'its wings at the top of their beat, its mane stirring', 'pouncing down toward the right with its claws forward and its jaws open')
+c('dolphin_pod', 'premium_ship', 2, 'Dolphins', 'Дельфины', 'water', 'a pair of sleek grey dolphins leaping together out of the water, pale bellies and curved beaks, facing right', 'one dolphin dipping lower, the other rising', 'leaping toward the right and ramming with their beaks')
+c('marlin', 'premium_ship', 6, 'Blue Marlin', 'Синий марлин', 'water', 'a huge blue marlin leaping out of the water, a deep cobalt back and a silver belly, a tall sail-like dorsal fin and a long spear-like bill, facing right', 'its dorsal fin raised higher, water streaming off it', 'lunging toward the right with its long bill thrust forward')
+c('cask_mimic', 'premium_ship', 3, 'Cask Mimic', 'Бочка-мимик', 'beast', 'a cask mimic: a big oak barrel bound with rusted iron hoops whose lid opens into a wide mouth of jagged wooden teeth, a long purple tongue and small dark eyes between the staves, on short stubby legs, facing right', 'its lid lifted a crack, one eye opening', 'lunging toward the right with its lid gaping wide')
+c('ice_bear', 'premium_ship', 4, 'Ice Bear', 'Ледяной медведь', 'beast', 'a huge white ice bear with frost in its thick fur and small icicles hanging from its belly, a black nose and small dark eyes, on all fours, facing right', 'its head swinging low, its breath steaming', 'rearing up and swiping a great paw down toward the right')
 
 # ---- The Dutchman's ghosts: pale, solid, tattered, a faint green glow ------------------------------------------------
 c('ghost_sailor', 'dutchman', 2, 'Ghost Sailor', 'Призрачный матрос', 'man', 'a ghost sailor of the Flying Dutchman: pale grey-green solid spectral skin, hollow dark eyes, tattered sea clothes hung with chains and kelp, a rusted cutlass, a faint green glow about him', 'his head tilted, the cutlass lowered', 'a slashing cutlass blow toward the right')
@@ -387,7 +425,21 @@ QUADS = [
     ['merrow_warden', 'sea_naga', 'brass_automaton', 'storm_giant'],
     ['ember_phoenix', 'megalodon', 'marid', 'ice_wyvern'],
 ]
-IN_QUADS = {cid for q in QUADS for cid in q}
+
+# The third batch (owner, 2026-10-04: «еще больше … существ и кораблей»; docs/18 IX): the islands' third dozen, the
+# shop's third dozen and the third batch's premium hulls' own, four to a sheet the same way. tools/art/fleet_b3.py puts
+# them on the sheets anim5_1–anim5_8 and in the painter's queue.
+QUADS5 = [
+    ['poison_frog', 'bilge_rat', 'ghost_crab', 'marine_iguana'],
+    ['giant_centipede', 'jungle_spider', 'feral_bull', 'cinder_hound'],
+    ['cliff_harpy', 'banshee', 'war_parrot', 'flying_squid'],
+    ['electric_eel', 'sea_otter', 'selkie', 'giant_lobster'],
+    ['manticore', 'kelp_golem', 'sea_cyclops', 'plumed_serpent'],
+    ['sea_hydra', 'coral_colossus', 'cloud_whale', 'wreck_titan'],
+    ['war_mastiff', 'cask_mimic', 'ice_bear', 'dolphin_pod'],
+    ['corposant', 'cormorant', 'winged_lion', 'marlin'],
+]
+IN_QUADS = {cid for q in QUADS + QUADS5 for cid in q}
 
 
 def kind(cid: str) -> dict:
@@ -409,8 +461,9 @@ def quad_prompt(group: list) -> str:
         rows.append(f"Row {i + 1} — {k['look']}.{_place(k, True)} Its poses: first — idle: {idle}; second — idle a breath later: the same pose "
                     f"with a tiny change only, {k['idle2']}; third — attack: {k['attack']}; fourth — hit: {k['hit']}.")
     return (
-        'Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the battle creatures of '
-        'Heroes of Might and Magic III and Warcraft III: rich painterly realism, grim and weathered, bold readable silhouettes. '
+        # No game is named (owner, 2026-10-04): the painter takes a title for an edit of a picture it has not got.
+        'Animation pose sheet of FOUR different figures for a dark Pirate Gothic turn-based battle game, painted in the style of the hand-painted '
+        'battle creatures of 1990s fantasy strategy games: rich painterly realism, grim and weathered, bold readable silhouettes. '
         'The picture is a strict grid of FOUR rows and FOUR columns, sixteen poses in all: each row is ONE figure in four poses side by side, '
         'left to right — idle, idle a breath later, attack, hit — each pose centred in its own equal cell with wide empty gaps so that no two touch, '
         'all four poses of a row at exactly the same size and scale, the lowest points of a row at the same height near the bottom of its cell. '
@@ -454,7 +507,7 @@ def main() -> None:
     jobs = []
     for k in K:
         if k['id'] in IN_QUADS:
-            continue  # painted four to a sheet (tools/art/fleet_next.py)
+            continue  # painted four to a sheet (tools/art/fleet_next.py, tools/art/fleet_b3.py)
         ids = [f"unit.{k['id']}{f}" for f in FRAMES]
         p = prompt(k)
         old = sheets.get(f"anim_{k['id']}", {})

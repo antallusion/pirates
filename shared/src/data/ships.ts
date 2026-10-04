@@ -26,8 +26,9 @@ export type ShipClassId =
 
 /** The sixty-six new hulls of the fleet of eighty (tools/art/ships.py paints them): the warships, the traders, the
  *  runners and the haulers, the premium ten of each list among them — and the eight silver hulls that make the lines
- *  whole (2026-10-04, tools/art/fleet_next.py). The Hulk sails as `holk`: `hulk` is the rotten wreck of the ship
- *  graveyards (her art is `ship.hulk` all the same). */
+ *  whole (2026-10-04, tools/art/fleet_next.py), and the third batch's eight premium hulls (2026-10-04,
+ *  tools/art/fleet_b3.py). The Hulk sails as `holk`: `hulk` is the rotten wreck of the ship graveyards (her art is
+ *  `ship.hulk` all the same). */
 export type FleetClassId =
   | 'gunboat' | 'war_galley' | 'corvette' | 'razee' | 'ship_of_the_line'
   | 'black_corsair' | 'dragon_junk' | 'iron_ram' | 'thunderer' | 'wyvern_galleass' | 'kraken_hunter' | 'crimson_tide' | 'phantom_brig' | 'storm_reaver' | 'sun_galleon'
@@ -38,7 +39,10 @@ export type FleetClassId =
   | 'cog' | 'buss' | 'pink' | 'holk' | 'collier' | 'storeship' | 'cargo_frigate' | 'plate_galleon' | 'great_galleon'
   | 'leviathan_ark' | 'turtle_barge' | 'floating_fortress' | 'menagerie' | 'whale_mother' | 'coral_hulk' | 'drowned_cathedral' | 'treasure_junk' | 'pirate_haven' | 'iron_whale'
   // The eight that make the lines whole (owner, 2026-10-04; docs/20): silver hulls where a list had none of its own.
-  | 'sloop_of_war' | 'great_indiaman' | 'manila_galleon' | 'polacre' | 'dunkirk_frigate' | 'great_xebec' | 'race_galleon' | 'armed_fluyt';
+  | 'sloop_of_war' | 'great_indiaman' | 'manila_galleon' | 'polacre' | 'dunkirk_frigate' | 'great_xebec' | 'race_galleon' | 'armed_fluyt'
+  // The third batch (owner, 2026-10-04: «еще больше … кораблей»): eight premium hulls where a list's premium choice
+  // was thinnest — two a list.
+  | 'bulldog' | 'saint_elmo' | 'lantern_sampan' | 'golden_lion' | 'dolphin' | 'sailfish' | 'mimic_barge' | 'icebound_hulk';
 
 export type Rig = 'square' | 'fore_aft' | 'mixed';
 
@@ -811,6 +815,77 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 400, holdWeight: 470, crewMin: 30, crewMax: 110, gunPortsPerSide: 6, bowChasers: 1, sternChasers: 2,
     sailHp: 170, repairRate: 0.85, detection: 1250, price: 17500, purchasable: true, sprite: 'ship.armed_fluyt', list: 'hauler',
     passive: { id: 'pierced_for_guns', name: 'Pierced for Guns', description: 'A transport that can fight back: her chasers hit 25% harder and train 15° wider.', mods: { chaserDamage: 0.25, chaserArc: 15 } },
+  }),
+
+  // ------------------------------------------------------------------ the third batch (owner, 2026-10-04)
+  // «Еще больше … кораблей» (owner, 2026-10-04): eight more hulls for doubloons, two a list, at the tiers where her
+  // list's premium choice was thinnest — the warships had none below the third tier, the traders none at the first or
+  // the fifth, the runners one at the first and none at the fifth, the haulers none below the fourth. Each a good hull
+  // of her tier and of her list's trade, not a giant; each with a gift of one of the seven kinds (shipgifts.ts) and a
+  // creature kind of her own (shipbeasts.ts); none sold for silver (`price` is her reckoning for salvage and repairs).
+  bulldog: ship({
+    id: 'bulldog', name: 'Bulldog', tier: 1, rig: 'fore_aft', role: 'A stubby, broad little gun-sloop with a heavy bow chaser and spiked iron-bound bulwarks.',
+    length: 20, beam: 7, hull: 1100, armor: 0.1, maxSpeed: 14, accel: 1.9, turnRate: 21, draft: 2.0,
+    holdVolume: 24, holdWeight: 32, crewMin: 10, crewMax: 36, gunPortsPerSide: 3, bowChasers: 2, sternChasers: 1,
+    sailHp: 100, repairRate: 1.1, detection: 1400, price: 2000, purchasable: false, sprite: 'ship.bulldog', list: 'combat',
+    passive: { id: 'spiked_bulwarks', name: 'Spiked Bulwarks', description: 'Iron-bound bulwarks bristling with spikes: boarders find her 20% harder to take.', mods: { boardingNets: 0.2 } },
+    premium: { price: 500, note: ['The smallest warship of them: a stubby gun-sloop, and her war mastiffs go over the rail first.', 'Самый маленький из боевых: коренастый пушечный шлюп, и её боевые мастифы первыми прыгают через борт.'], beasts: [{ u: 'war_mastiff', n: 8 }] },
+  }),
+  saint_elmo: ship({
+    id: 'saint_elmo', name: 'Saint Elmo', tier: 2, rig: 'square', role: 'A navy brig-sloop with copper-sheathed masts on which the corposant burns blue in every storm.',
+    length: 28, beam: 8, hull: 1800, armor: 0.12, maxSpeed: 15.5, accel: 1.9, turnRate: 19, draft: 2.9,
+    holdVolume: 40, holdWeight: 52, crewMin: 30, crewMax: 90, gunPortsPerSide: 7, bowChasers: 2, sternChasers: 1,
+    sailHp: 150, repairRate: 1.0, detection: 1550, price: 7600, purchasable: false, sprite: 'ship.saint_elmo', list: 'combat',
+    passive: { id: 'copper_masts', name: 'Copper-sheathed Masts', description: 'Copper down her masts and a crew that takes the blue fire for a blessing: storms bite 20% less into her hull, and morale falls 10% slower.', mods: { stormHull: -0.2, moraleLoss: -0.1 } },
+    premium: { price: 800, note: ['A navy brig-sloop that the saint\'s blue fire keeps: when she bleeds, her guns run hot.', 'Флотский бриг-шлюп под защитой голубого огня святого: когда ей худо, её пушки раскаляются.'], beasts: [{ u: 'corposant', n: 8 }] },
+  }),
+  lantern_sampan: ship({
+    id: 'lantern_sampan', name: 'Lantern Sampan', tier: 1, rig: 'fore_aft', role: 'A small eastern river trader under a batten sail, a woven bamboo cabin hung with red paper lanterns.',
+    length: 18, beam: 6, hull: 850, armor: 0.03, maxSpeed: 14.5, accel: 1.9, turnRate: 20, draft: 1.3,
+    holdVolume: 105, holdWeight: 110, crewMin: 6, crewMax: 20, gunPortsPerSide: 1, bowChasers: 1, sternChasers: 0,
+    sailHp: 95, repairRate: 1.15, detection: 1350, price: 1600, purchasable: false, sprite: 'ship.lantern_sampan', list: 'trade',
+    passive: { id: 'shallow_runner', name: 'River Keel', description: 'A flat river keel: she crosses reefs and shoals that tear the keel out of bigger ships, and a bowl of rice keeps her crew — provisions last 15% longer.', mods: { provisionUse: -0.15 } },
+    premium: { price: 400, note: ['A river trader of the lanterns, her fishing cormorants on the cabin roof.', 'Речной торговец под фонарями, с ручными бакланами на крыше каюты.'], beasts: [{ u: 'cormorant', n: 6 }] },
+  }),
+  golden_lion: ship({
+    id: 'golden_lion', name: 'Golden Lion', tier: 5, rig: 'fore_aft', role: 'A gilded great merchant galleass of the lagoon republic, a winged lion at her bow, three lateens and banks of oars.',
+    length: 52, beam: 13, hull: 5800, armor: 0.22, maxSpeed: 11.5, accel: 0.95, turnRate: 10, draft: 5.0,
+    holdVolume: 480, holdWeight: 560, crewMin: 120, crewMax: 360, gunPortsPerSide: 12, bowChasers: 3, sternChasers: 2,
+    sailHp: 260, repairRate: 0.85, detection: 1450, price: 82000, purchasable: false, sprite: 'ship.golden_lion', list: 'trade',
+    passive: { id: 'sweeps', name: 'Free Rowers', description: '+25% speed in winds under half strength; oars give at least 3 m/s on any heading; her rowers are free men of the lagoon, paid 10% less.', mods: { wages: -0.1 } },
+    premium: { price: 3400, note: ['The merchant republic\'s great galleass: every port deals with her on better terms.', 'Великая галеаса торговой республики: каждый порт торгует с ней на лучших условиях.'], beasts: [{ u: 'winged_lion', n: 3 }] },
+  }),
+  dolphin: ship({
+    id: 'dolphin', name: 'Dolphin', tier: 1, rig: 'fore_aft', role: 'A slim lateen-rigged felucca with a dolphin carved at her bow and dolphins riding her bow wave.',
+    length: 18, beam: 5, hull: 820, armor: 0.03, maxSpeed: 18.5, accel: 2.8, turnRate: 27, draft: 1.5,
+    holdVolume: 28, holdWeight: 28, crewMin: 8, crewMax: 24, gunPortsPerSide: 2, bowChasers: 1, sternChasers: 1,
+    sailHp: 95, repairRate: 1.2, detection: 1500, price: 1700, purchasable: false, sprite: 'ship.dolphin', list: 'fast',
+    passive: { id: 'dolphin_lines', name: 'Dolphin Lines', description: 'A hull shaped like a dolphin\'s back: a heavy sea slows her 20% less.', mods: { seaPenalty: -0.2 } },
+    premium: { price: 420, note: ['A slim felucca the dolphins love: in open water they carry her along.', 'Стройная фелука, которую любят дельфины: в открытом море они несут её вперёд.'], beasts: [{ u: 'dolphin_pod', n: 6 }] },
+  }),
+  sailfish: ship({
+    id: 'sailfish', name: 'Sailfish', tier: 5, rig: 'mixed', role: 'A long razor-bowed war frigate under a great fan of a mainsail, built to run down anything that floats.',
+    length: 52, beam: 11, hull: 5000, armor: 0.15, maxSpeed: 17, accel: 1.6, turnRate: 14, draft: 4.4,
+    holdVolume: 140, holdWeight: 160, crewMin: 120, crewMax: 360, gunPortsPerSide: 15, bowChasers: 2, sternChasers: 2,
+    sailHp: 290, repairRate: 1.0, detection: 1750, price: 74000, purchasable: false, sprite: 'ship.sailfish', list: 'fast',
+    passive: { id: 'sail_fin', name: 'Sail-fin Rig', description: 'A great fan of a mainsail like a sailfish\'s fin: sails are set and struck 25% faster, and a heavy sea slows her 20% less.', mods: { sailChangeRate: 0.25, seaPenalty: -0.2 } },
+    premium: { price: 3400, note: ['The fastest of the great runners: her balls run a ship through, and blue marlins hunt in her wake.', 'Самый быстрый из больших бегунов: её ядра пронзают корабль, а в её кильватере охотятся синие марлины.'], beasts: [{ u: 'marlin', n: 3 }] },
+  }),
+  mimic_barge: ship({
+    id: 'mimic_barge', name: 'Mimic Barge', tier: 2, rig: 'square', role: 'A broad, crooked cargo barge whose hold is full of barrels that are not all barrels.',
+    length: 32, beam: 11, hull: 2100, armor: 0.1, maxSpeed: 10.5, accel: 0.9, turnRate: 11, draft: 3.2,
+    holdVolume: 330, holdWeight: 380, crewMin: 14, crewMax: 50, gunPortsPerSide: 3, bowChasers: 0, sternChasers: 1,
+    sailHp: 125, repairRate: 0.9, detection: 1150, price: 7400, purchasable: false, sprite: 'ship.mimic_barge', list: 'hauler',
+    passive: { id: 'deep_hold', name: 'Hold of Odd Corners', description: 'A crooked hold full of odd corners: cargo is 50% less likely to be destroyed by hull hits, and contraband takes 15% less room.', mods: { contrabandVolumeMul: -0.15 } },
+    premium: { price: 700, note: ['A barge with a living cargo: her cask mimics breed back in the hold.', 'Баржа с живым грузом: её бочки-мимики снова заводятся в трюме.'], beasts: [{ u: 'cask_mimic', n: 6 }] },
+  }),
+  icebound_hulk: ship({
+    id: 'icebound_hulk', name: 'Icebound Hulk', tier: 3, rig: 'square', role: 'A broad northern hulk sheathed in ice that never melts, frost on her rigging and white bears on her deck.',
+    length: 40, beam: 13, hull: 3400, armor: 0.18, maxSpeed: 9.5, accel: 0.8, turnRate: 9.5, draft: 4.4,
+    holdVolume: 400, holdWeight: 460, crewMin: 30, crewMax: 110, gunPortsPerSide: 5, bowChasers: 1, sternChasers: 1,
+    sailHp: 170, repairRate: 0.85, detection: 1250, price: 18500, purchasable: false, sprite: 'ship.icebound_hulk', list: 'hauler',
+    passive: { id: 'ice_hold', name: 'Ice in the Hold', description: 'Her hold is packed with ice that never melts: perishables spoil 40% slower, and her iced bow takes 20% less from a ram.', mods: { spoilage: -0.4, ramTaken: -0.2 } },
+    premium: { price: 1100, note: ['A hulk of the frozen north: frost falls on every ship that fights her.', 'Халк ледяного севера: на каждый корабль, что бьётся с ней, ложится изморозь.'], beasts: [{ u: 'ice_bear', n: 4 }] },
   }),
 
   leviathan: monster('leviathan', 'Leviathan', 'The oldest hunger in the Reach.', 118, 26, 60000, 0.25, 16, 'Gills that open only while the harpoons hold it.'),

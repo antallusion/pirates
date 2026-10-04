@@ -44,7 +44,8 @@ test('every line runs whole on its own silver hulls (2026-10-04): no list hands 
   assert.ok(researchParents('polacre').includes('baltimore_clipper') && researchParents('great_xebec').includes('polacre'));
   assert.ok(researchParents('great_indiaman').includes('east_indiaman') && researchParents('armed_fluyt').includes('holk'));
   assert.ok(!researchParents('razee').includes('baltimore_clipper') && !researchParents('great_galleon').includes('east_indiaman'));
-  assert.deepEqual(researchParents('sloop_of_war').sort(), ['fireship', 'gunboat']);
+  // (the Bulldog, a first-tier warship sold for doubloons since the third batch, stands in the tree as every premium hull)
+  assert.deepEqual(researchParents('sloop_of_war').sort(), ['bulldog', 'fireship', 'gunboat']);
 });
 
 test('a tier costs about two fifths of what a captain earns between the levels that open it and the tier below', () => {

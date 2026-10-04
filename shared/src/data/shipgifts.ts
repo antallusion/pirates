@@ -343,6 +343,49 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
     text: ['In a fight, below 45% hull she closes her iron plates: 30% less damage taken for 12 s. Once in 120 s.', 'В бою, когда корпус ниже 45%, она смыкает железные плиты: на 30% меньше урона на 12 с. Раз в 120 с.'],
     cry: ['The iron plates close over her.', 'Железные плиты смыкаются над ней.'],
   },
+  // ---- the third batch (owner, 2026-10-04: «еще больше … кораблей»), two a list
+  bulldog: {
+    kind: 'deck', rounds: 2, mine: { melee: 0.15 }, theirs: { init: -2 },
+    name: ['Loose the Dogs', 'Спустить псов'],
+    text: ['In a boarding her war mastiffs go over the rail first: for the first 2 rounds the other side is thrown into disorder, −2 initiative, and her side\'s blows strike 15% harder.', 'При абордаже первыми через борт идут её боевые мастифы: первые 2 раунда сторона врага в смятении, −2 к инициативе, а удары её стороны на 15% сильнее.'],
+  },
+  saint_elmo: {
+    kind: 'rally', below: 0.5, secs: 10, cd: 100, self: { reloadMul: -0.2, armor: 0.08 }, fx: 'war_cry',
+    name: ['Fire on the Masts', 'Огонь на мачтах'],
+    text: ['In a fight, below half her hull the saint\'s blue fire runs down her masts and the crew takes heart: for 10 s her guns reload 20% faster and her armour is 8% higher. Once in 100 s.', 'В бою, когда корпус ниже половины, голубой огонь святого сбегает по её мачтам, и команда воспряла духом: 10 с её орудия перезаряжаются на 20% быстрее, а броня на 8% выше. Раз в 100 с.'],
+    cry: ['Saint Elmo\'s fire on the masts: the saint is with us!', 'Огни святого Эльма на мачтах: святой с нами!'],
+  },
+  lantern_sampan: {
+    kind: 'trade', goods: ['provisions', 'salt', 'cloth'], sell: 1.15, buy: 0.95,
+    name: ['River Market', 'Речной рынок'],
+    text: ['Provisions, salt and cloth sell 15% dearer from her hold, and cost her 5% less.', 'Провизия, соль и ткани из её трюма продаются на 15% дороже и обходятся ей на 5% дешевле.'],
+  },
+  golden_lion: {
+    kind: 'trade', goods: 'all', sell: 1.05, buy: 0.95,
+    name: ['Charter of the Lagoon', 'Хартия лагуны'],
+    text: ['Every port pays her 5% more for every good she sells, and sells her every good 5% cheaper: the republic\'s charter.', 'Любой порт платит ей на 5% больше за любой проданный товар и продаёт ей любой товар на 5% дешевле: хартия республики.'],
+  },
+  dolphin: {
+    kind: 'sail', when: 'open', self: { maxSpeed: 0.08, turnRate: 0.1 },
+    name: ['Bow Riders', 'На носовой волне'],
+    text: ['Away from a fight, with no enemy within 1500 m, the dolphins ride her bow wave: she sails 8% faster and turns 10% quicker.', 'Вдали от боя, когда врагов нет ближе 1500 м, дельфины идут на её носовой волне: она на 8% быстрее и поворачивает на 10% живее.'],
+  },
+  sailfish: {
+    kind: 'strike', chance: 0.25, cd: 14, secs: 8, foe: { incomingDamageMul: 0.1, maxSpeed: -0.1 },
+    name: ['Marlin\'s Spear', 'Копьё марлина'],
+    text: ['A ball of hers that strikes home one time in four runs the ship through: for 8 s it takes 10% more damage and sails 10% slower; once in 14 s.', 'Её ядро, попавшее в цель, в одном случае из четырёх пронзает корабль: 8 с он получает на 10% больше урона и идёт на 10% медленнее; раз в 14 с.'],
+  },
+  mimic_barge: {
+    kind: 'muster', every: 90, who: 'own',
+    name: ['Live Cargo', 'Живой груз'],
+    text: ['Her cask mimics come back aboard her at sea too: one every 90 s out of a fight, up to the number she came with.', 'Бочки-мимики заводятся у неё и в море: по одной каждые 90 с вне боя, до числа, с которым она пришла.'],
+    cry: ['A cask in the hold opens one eye.', 'Бочка в трюме открывает один глаз.'],
+  },
+  icebound_hulk: {
+    kind: 'toll', cd: 30, r: 300, secs: 6, foe: { turnRate: -0.2, reloadMul: 0.1 }, fx: 'song',
+    name: ['Hoarfrost', 'Изморозь'],
+    text: ['In a fight, every 30 s frost falls on every enemy engaged with her within 300 m: its rigging stiffens and its gun crews numb — it turns 20% slower and reloads 10% slower for 6 s.', 'В бою каждые 30 с изморозь ложится на каждого врага, что бьётся с ней, в 300 м: снасти дубеют, руки расчётов немеют — 6 с он поворачивает на 20% медленнее и перезаряжается на 10% медленнее.'],
+  },
 };
 
 /** A hull's gift (none for a hull not sold for doubloons). */

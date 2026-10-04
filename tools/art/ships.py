@@ -121,6 +121,25 @@ s_next('armed_fluyt', 'hauler', 3, 'Armed Fluyt', 'Вооружённый фле
 s_next('great_indiaman', 'trade', 5, 'Great Indiaman', 'Большой ост-индиец', 'a great three-masted East Indiaman of a thousand tons, a broad deep hull, a gilded stern gallery, a row of guns and cargo lashed on deck', 'a great East Indiaman', 'tea chests, bolts of cloth and spice sacks lashed along both rails between closed gun ports, polished brass fittings')
 s_next('manila_galleon', 'trade', 5, 'Manila Galleon', 'Манильский галеон', 'a huge Manila galleon with a towering stern castle, four masts of square sails and a deep wide hull, bales of silk and crates of porcelain on deck', 'a Manila galleon', 'bales of silk, crates of porcelain and iron-bound silver chests along both rails, a carved high bulwark')
 
+# ---- The third batch (owner, 2026-10-04: «еще больше … кораблей»): eight premium hulls, two a list ------------------
+# where her list's premium choice was thinnest. Kept apart like NEXT: tools/art/fleet_b3.py paints them on sheets of
+# their own (ships_21, ships_22) and their decks, in the words of sprite_prompt and deck_prompt.
+B3 = []
+
+
+def s_b3(sid, cat, tier, en, ru, look, deck_ship, deck_details):
+    B3.append({'id': sid, 'cat': cat, 'tier': tier, 'premium': True, 'en': en, 'ru': ru, 'look': look, 'deck_ship': deck_ship, 'deck': deck_details})
+
+
+s_b3('bulldog', 'combat', 1, 'Bulldog', 'Бульдог', 'a stubby, broad little gun-sloop with a single gaff-rigged mast, a heavy long gun on a slide at the bow, three small guns a side and iron-bound bulwarks bristling with short spikes', 'a stubby gun-sloop', 'iron-bound bulwarks with short iron spikes along both rails, a heavy long gun on its slide just inside the top edge, a coiled chain and a spiked iron collar hung on a peg')
+s_b3('lantern_sampan', 'trade', 1, 'Lantern Sampan', 'Фонарный сампан', 'a small eastern river sampan with a single batten-ribbed sail, a curved woven bamboo cabin roof in the middle hung with red paper lanterns (unlit) and a long steering oar at the stern', 'an eastern river sampan', 'a woven bamboo cabin wall along the top edge hung with red paper lanterns (unlit), rice sacks, bundles of cloth and salt jars along both rails, two wooden bird perches')
+s_b3('dolphin', 'fast', 1, 'Dolphin', 'Дельфин', 'a slim little felucca with two raked lateen sails, a narrow pale hull and a carved dolphin at the bow', 'a slim felucca', 'coiled lines and water jars along both rails, a carved dolphin figurehead just inside the top edge')
+s_b3('saint_elmo', 'combat', 2, 'Saint Elmo', 'Святой Эльм', 'a navy brig-sloop with two masts of square sails, copper-sheathed masts gleaming, seven guns a side, a black-and-ochre hull and a small carved figure of a saint at the bow', 'a navy brig-sloop', 'closed gun ports along both rails, rammers and sponges in racks, copper sheathing at the foot of the mast just inside the top edge, a small carved shrine of a saint with unlit candles')
+s_b3('mimic_barge', 'hauler', 2, 'Mimic Barge', 'Баржа мимиков', 'a broad, crooked old cargo barge with one stubby mast of square sail, an open hold heaped with oak barrels bound in iron hoops and a lopsided deckhouse at the stern', 'a crooked cargo barge', 'oak barrels and casks bound in rusted iron hoops stacked along both rails, a few of their lids slightly ajar, cargo nets and a big open hatch near the top edge')
+s_b3('icebound_hulk', 'hauler', 3, 'Icebound Hulk', 'Ледяной халк', 'a broad northern hulk sheathed in pale blue ice, three masts of frost-white square sails, icicles hanging from her yards and rails and frost on her deck', 'an icebound northern hulk', 'rails crusted with pale blue ice and hanging icicles, frost on the planks near the rails, blocks of ice and frozen barrels along both rails')
+s_b3('sailfish', 'fast', 5, 'Sailfish', 'Рыба-парус', 'a long, razor-bowed war frigate with a sharp narrow spur at the bow, a huge fan-shaped mainsail spread high like a sailfish\'s fin, square sails on the foremast, fifteen guns a side and a dark blue hull', 'a razor-bowed war frigate', 'a long row of closed gun ports along both rails, coiled sheets and grapnels, the foot of a huge mast with fan-shaped sail spars just inside the top edge')
+s_b3('golden_lion', 'trade', 5, 'Golden Lion', 'Золотой лев', 'a great gilded merchant galleass with three tall lateen sails, a long hull with banks of long oars along both sides, a gilded winged-lion figurehead at the bow and a red-and-gold stern pavilion', 'a great merchant galleass', 'rowing benches with long oars shipped inboard along both rails, gilded carved rails, bales of silk and casks of wine, a furled red-and-gold banner just inside the top edge')
+
 # The style every ship sprite shares (docs/06 §17.4, the sprite template, for ChatGPT on magenta).
 SPRITE_STYLE = ('Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, '
                 'no tilt, no visible hull sides; each ship\'s bow points straight UP to the top edge and its stern down, perfectly vertical '
@@ -131,8 +150,9 @@ SPRITE_STYLE = ('Every ship is viewed STRICTLY TOP-DOWN: an orthographic view fr
                 'even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no '
                 'reflections, no border, no text, no letters.')
 
-LOOK = ('Painterly digital painting, grim and weathered, like the battle screens of Heroes of Might and Magic III; muted palette: '
-        'charcoal, tarred black wood, rust, old brass, faded red, cold blue-grey.')
+# No game is named in a prompt (owner, 2026-10-04): the painter takes a title for an edit of a picture it has not got.
+LOOK = ('Painterly digital painting, grim and weathered, like the hand-painted battle screens of 1990s fantasy strategy games; '
+        'muted palette: charcoal, tarred black wood, rust, old brass, faded red, cold blue-grey.')
 
 
 def sprite_prompt(group):

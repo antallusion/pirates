@@ -3,7 +3,8 @@
 // creature kind of her own; the lists keeping their trades and growing with their tiers; the premium hulls never sold
 // for silver nor sailed by the sea; the purchase delivering the hull and her creatures; every gift's mechanic at work;
 // the art that stands in while their own is painted; and every word in both languages. And the eight silver hulls that
-// make the lines of the yard's tree whole (owner, 2026-10-04: «еще больше … кораблей»; docs/20 §6).
+// make the lines of the yard's tree whole (owner, 2026-10-04: «еще больше … кораблей»; docs/20 §6), and the third
+// batch's eight premium hulls, two a list (2026-10-04; tests/batch3.test.ts), held by every rule of the premium forty.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -46,28 +47,35 @@ import { FakeConn, join, makeGame, onHull, knowHulls } from './helpers.ts';
 
 const manifest = JSON.parse(readFileSync(new URL('../assets/manifest.json', import.meta.url), 'utf8')) as { assets: Record<string, unknown> };
 const painted = (id: string) => !!manifest.assets[id];
-const sheets = JSON.parse(readFileSync(new URL('../tools/art/sheets.json', import.meta.url), 'utf8')) as Record<string, { creature?: { tier: number; body: string } }>;
+const sheets = JSON.parse(readFileSync(new URL('../tools/art/sheets.json', import.meta.url), 'utf8')) as Record<string, { creature?: { tier: number; body: string }; creatures?: { id: string; tier: number; body: string }[] }>;
+/** How the painter has a kind: its own sheet of four poses, or its row on a sheet of four kinds (anim4_*, anim5_*). */
+const painterOf = (u: string): { tier: number; body: string } | undefined =>
+  sheets[`anim_${u}`]?.creature ?? Object.values(sheets).flatMap((sh) => sh.creatures ?? []).find((c) => c.id === u);
 
 const PREMIUM = SHIP_CLASS_IDS.filter((c) => SHIP_CLASSES[c].premium);
 const NEW = FLEET_HULLS.filter((c) => !OLD_HULLS.includes(c)) as FleetClassId[];
 /** The eight silver hulls that make the lines whole (owner, 2026-10-04; docs/20 §6), beside the fleet of eighty. */
 const LINES: FleetClassId[] = ['sloop_of_war', 'armed_fluyt', 'polacre', 'dunkirk_frigate', 'great_xebec', 'race_galleon', 'great_indiaman', 'manila_galleon'];
+/** The third batch's eight premium hulls, two a list (owner, 2026-10-04; tests/batch3.test.ts). */
+const B3: FleetClassId[] = ['bulldog', 'saint_elmo', 'lantern_sampan', 'golden_lion', 'dolphin', 'sailfish', 'mimic_barge', 'icebound_hulk'];
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
 const digits = (s: string) => (s.match(/\d+(?:[.,]\d+)?/g) ?? []).sort().join(' ');
 const cyr = (s: string) => /[а-яё]/i.test(s);
 
 // ------------------------------------------------------------------------------------------------ the lists
 
-test('eighty hulls a captain sails, in four lists of twenty, ten of each sold for doubloons — and the eight that make the lines whole', () => {
-  assert.equal(FLEET_HULLS.length, 80 + LINES.length);
-  assert.equal(new Set(FLEET_HULLS).size, 88);
-  assert.equal(NEW.length, 66 + LINES.length);
+test('eighty hulls a captain sails, in four lists of twenty, ten of each sold for doubloons — and the eight that make the lines whole, and the third batch\'s eight', () => {
+  assert.equal(FLEET_HULLS.length, 80 + LINES.length + B3.length);
+  assert.equal(new Set(FLEET_HULLS).size, 96);
+  assert.equal(NEW.length, 66 + LINES.length + B3.length);
+  const later = (c: ShipClassId) => LINES.includes(c as FleetClassId) || B3.includes(c as FleetClassId);
   for (const l of FLEET_LISTS) {
-    assert.equal(FLEET[l].filter((c) => !LINES.includes(c as FleetClassId)).length, 20, `${l}: twenty`);
-    assert.equal(FLEET[l].filter((c) => SHIP_CLASSES[c].premium).length, 10, `${l}: ten premium`);
+    assert.equal(FLEET[l].filter((c) => !later(c)).length, 20, `${l}: twenty`);
+    assert.equal(FLEET[l].filter((c) => SHIP_CLASSES[c].premium && !later(c)).length, 10, `${l}: ten premium`);
+    assert.equal(FLEET[l].filter((c) => B3.includes(c as FleetClassId)).length, 2, `${l}: two of the third batch`);
   }
-  assert.deepEqual(FLEET_LISTS.map((l) => FLEET[l].length), [21, 22, 24, 21], 'the warships, the traders, the runners, the haulers');
-  assert.equal(PREMIUM.length, 40);
+  assert.deepEqual(FLEET_LISTS.map((l) => FLEET[l].length), [23, 24, 26, 23], 'the warships, the traders, the runners, the haulers');
+  assert.equal(PREMIUM.length, 40 + B3.length);
   assert.deepEqual([...premiumShips()].sort(), [...PREMIUM].sort(), 'the shop sells every one of them');
   // The fourteen old hulls stand in the lists; the Dutchman's ship and the deep's monsters in none.
   for (const c of OLD_HULLS) assert.ok(SHIP_CLASSES[c].list && !SHIP_CLASSES[c].premium, c);
@@ -227,7 +235,7 @@ test('every premium hull has her gift — one of seven kinds, its card saying wh
   }
   assert.deepEqual([...kinds].sort(), [...GIFT_KINDS].sort(), 'every kind of mechanic is somebody\'s gift');
   // The forty kinds as units: each its hull's, premium (no free source hands it out), its numbers by its tier.
-  assert.equal(SHIP_BEAST_IDS.length, 40);
+  assert.equal(SHIP_BEAST_IDS.length, 40 + B3.length);
   assert.deepEqual(SHIP_BEAST_IDS.map((u) => SHIP_BEAST_DEFS[u].hull).sort(), [...PREMIUM].sort());
   for (const u of SHIP_BEAST_IDS) {
     const d = UNITS[u], s = SHIP_BEAST_DEFS[u];
@@ -236,9 +244,10 @@ test('every premium hull has her gift — one of seven kinds, its card saying wh
     assert.ok(!d.specials.includes('shooter') || d.shots > 0, `${u}: a shooter carries shots`);
     assert.ok(d.cost >= 25 * d.tier && d.cost <= 140 * d.tier, `${u}: ${d.cost} silver at tier ${d.tier}`);
     assert.ok(cyr(s.names[1]) && cyr(s.names[3]) && s.names[2].length > 20, `${u} named in both languages`);
-    // The game and the painter agree on the creature (tools/art/creatures.py, faction premium_ship).
-    assert.equal(sheets[`anim_${u}`]?.creature?.tier, d.tier, `${u}: its painted tier`);
-    assert.equal(sheets[`anim_${u}`]?.creature?.body, s.body, `${u}: its painted body`);
+    // The game and the painter agree on the creature (tools/art/creatures.py, faction premium_ship): on its own sheet,
+    // or on its row of a sheet of four (the third batch's, tools/art/fleet_b3.py).
+    assert.equal(painterOf(u)?.tier, d.tier, `${u}: its painted tier`);
+    assert.equal(painterOf(u)?.body, s.body, `${u}: its painted body`);
   }
   // A tier's stats over the plain kinds' (a premium kind is a little better than the upgraded man of its tier).
   for (const u of SHIP_BEAST_IDS) {
