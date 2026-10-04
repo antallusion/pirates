@@ -2044,6 +2044,7 @@
     "unit.walrus_tyrant":                      { "local": "units/walrus_tyrant.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.0", "rev": 20261003235652},
     "unit.walrus_tyrant_b":                    { "local": "units/walrus_tyrant_b.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.1", "rev": 20261003235652},
     "unit.walrus_tyrant_atk":                  { "local": "units/walrus_tyrant_atk.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.2", "rev": 20261003235652},
-    "unit.walrus_tyrant_hit":                  { "local": "units/walrus_tyrant_hit.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.3", "rev": 20261003235652}
+    "unit.walrus_tyrant_hit":                  { "local": "units/walrus_tyrant_hit.webp", "remote": "hf_20261003_235652_gpt-anim_walrus_tyrant.png", "job": "gpt-anim_walrus_tyrant", "fit": "sheet:anim_walrus_tyrant.3", "rev": 20261003235652},
+    "bg.port_rotgut_landing":                  { "local": "art/port_rotgut_landing.webp", "remote": "hf_20261004_000047_gpt-bg.port_rotgut_landing.png", "job": "gpt-bg.port_rotgut_landing", "fit": "opaque:1920", "rev": 20261004000047}
   }
 }
