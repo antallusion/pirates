@@ -268,12 +268,16 @@ test('D7: forty captains at sea among the stacks cost the tick little (told ever
     list.push(s);
   }
   for (let k = 0; k < 4; k++) game.now += 1, stepRoamers(game);
-  const t0 = performance.now();
-  for (let k = 0; k < 60; k++) {
-    game.now += 1;
-    stepRoamers(game);
+  // The best of three batches: the tick's own cost, not a busy machine's (it failed under a browser's load: QA, 2026-10-04).
+  let ms = Infinity;
+  for (let rep = 0; rep < 3; rep++) {
+    const t0 = performance.now();
+    for (let k = 0; k < 20; k++) {
+      game.now += 1;
+      stepRoamers(game);
+    }
+    ms = Math.min(ms, (performance.now() - t0) / 20);
   }
-  const ms = (performance.now() - t0) / 60;
   assert.ok(ms < 1.5, `${ms.toFixed(3)} ms a second for 40 captains`);
   assert.ok(list.every((s) => roams(s).length > 0), 'every one of them told');
 });
