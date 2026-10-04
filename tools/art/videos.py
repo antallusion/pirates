@@ -871,9 +871,11 @@ v('cut_ancient_leviathan_down', 'down_ancient_leviathan', 'Древний Лев
   'back into the black depths, the sea pouring off its back in waterfalls, as a great swell lifts the tiny ships around '
   'it. The camera holds high above as the shadow fades below.')
 v('cut_abyss_eye_down', 'down_abyss_eye', 'Око Бездны повержено',
-  'Above the black abyss the colossal glowing eye in the water dims and closes, the pale light around it fading away, '
-  'and the whirlpool around it slows and stills until the sea is flat and dark beneath the stars and the ships float '
-  'free. The camera looks straight down as the light goes out.')
+  'Night mist over the black abyss, seen low from the deck of a battered three-masted ship: out in the slow whirlpool '
+  'ahead, half under the water, a vast monstrous eye as big as a ship, with a pale green iris and a narrow slit pupil '
+  'and a heavy wrinkled grey lid crusted with barnacles, glows faintly; the lid slowly closes, the green light under the '
+  'water fades, and the whirlpool slows and stills until the sea is flat and dark beneath the stars. The camera holds '
+  'past the sailors at the rail.')
 
 # ---- The fifteenth reel: the great old lairs ashore won, each the first time (shared/src/data/lairs.ts) ---------------
 v('cut_ape_throne_down', 'down_ape_throne', 'Король обезьян уступил трон',
