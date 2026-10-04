@@ -1052,6 +1052,24 @@ for kind, what in ISLE_SHOTS.items():
       'gently to reveal the whole island, with a small pirate sloop at anchor in its lee.')
 
 
+# ---- Reel 20 (owner, 2026-10-04: «еще всяких боссов… корабли плавающие по всей карте… на каждую зону свой босс»): each
+# sea's great warship coming out of the haze, played once when she first rises in the captain's waters -----------------
+ZBOSS_SHOTS = {
+    'black_coast': 'a towering rogue privateer man-of-war with three gun decks, a black hull banded with rusted iron and a crowned lion figurehead, its long red pennant streaming',
+    'gravewater': 'a monstrous armed treasure galleon of the trade routes, gilded stern gallery, four masts of dark sails, brass swivel guns crowding its rails',
+    'whispering': "a huge black smugglers' ship-of-the-line with charcoal sails and dozens of dim green lanterns along its rails, gliding through thick fog between islets",
+    'ashen_isles': 'a colossal fire-galleon of the volcanic isles, forges glowing on its deck, squat mortars in iron rings, smoke-blackened sails, a volcano smoking behind it',
+    'leviathan_reach': 'an ice-armoured whaling dreadnought with plates of white ice along its hull, rows of harpoon guns and a great bow ram, sails stiff with frost, ice floes around it',
+    'dead_mans_expanse': 'a vast patchwork hulk stitched together from several wrecked ships lashed side by side, many crooked masts and mismatched sails, on a flat grey ocean',
+    'drowned_crown': 'an ancient royal galleon rising from the sea, its hull crusted with grey coral and barnacles, water pouring from its gun ports, torn purple and gold banners',
+    'the_abyss': 'a colossal black three-masted ark with pale green lights in its gun ports and sails like grey smoke, under a black storm with no wind',
+}
+for sea, ship in ZBOSS_SHOTS.items():
+    v(f'cut_zboss_{sea}', f'zboss_{sea}', f'Босс моря: {sea}',
+      f'Out of the sea haze comes {ship}. The camera is low on the water as the huge ship looms closer and turns broadside, '
+      'its gun ports opening one by one along the whole length of the hull. A long, slow, menacing shot.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
