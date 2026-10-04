@@ -2156,6 +2156,7 @@
     "unit.wind_sprite":                        { "local": "units/wind_sprite.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.0", "rev": 20261004015101},
     "unit.wind_sprite_b":                      { "local": "units/wind_sprite_b.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.1", "rev": 20261004015101},
     "unit.wind_sprite_atk":                    { "local": "units/wind_sprite_atk.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.2", "rev": 20261004015101},
-    "unit.wind_sprite_hit":                    { "local": "units/wind_sprite_hit.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.3", "rev": 20261004015101}
+    "unit.wind_sprite_hit":                    { "local": "units/wind_sprite_hit.webp", "remote": "hf_20261004_015101_gpt-anim_wind_sprite.png", "job": "gpt-anim_wind_sprite", "fit": "sheet:anim_wind_sprite.3", "rev": 20261004015101},
+    "prop.port_sealhold":                      { "local": "props/port_sealhold.webp", "remote": "hf_20261004_015434_gpt-port_sealhold.png", "job": "gpt-port_sealhold", "fit": "sheet:port_sealhold.0", "rev": 20261004015434}
   }
 }
