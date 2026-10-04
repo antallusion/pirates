@@ -2211,6 +2211,7 @@
     "unit.bastion_gunner":                     { "local": "units/bastion_gunner.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.0", "rev": 20261004025009},
     "unit.bastion_gunner_b":                   { "local": "units/bastion_gunner_b.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.1", "rev": 20261004025009},
     "unit.bastion_gunner_atk":                 { "local": "units/bastion_gunner_atk.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.2", "rev": 20261004025009},
-    "unit.bastion_gunner_hit":                 { "local": "units/bastion_gunner_hit.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.3", "rev": 20261004025009}
+    "unit.bastion_gunner_hit":                 { "local": "units/bastion_gunner_hit.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.3", "rev": 20261004025009},
+    "bg.port_tidehallow":                      { "local": "art/port_tidehallow.webp", "remote": "hf_20261004_025223_gpt-bg.port_tidehallow.png", "job": "gpt-bg.port_tidehallow", "fit": "opaque:1920", "rev": 20261004025223}
   }
 }
