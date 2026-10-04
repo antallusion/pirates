@@ -164,11 +164,11 @@ test('the eight that make the lines whole: silver hulls at any yard of their ran
   assert.ok(st('sloop_of_war').reloadMul < st('war_galley').reloadMul && st('sloop_of_war').spreadMul < 1);
   assert.ok(st('polacre').sailChangeRate > st('baltimore_clipper').sailChangeRate);
   assert.ok(st('great_indiaman').x.wages < 0 && st('manila_galleon').provisionUse < st('east_indiaman').provisionUse);
-  // Their sprites on two sheets of their own, in the painter's queue (tools/art/fleet_next.py); their decks are single
-  // paintings in the same queue, and both stand in as old hulls of their lists till then.
-  const art = sheets as unknown as Record<string, { ids: string[]; painting?: boolean }>;
+  // Their sprites on two sheets of their own (tools/art/fleet_next.py), painted and cut (2026-10-04); their decks are
+  // single paintings in the same queue, standing in as old hulls of their lists till then.
+  const art = sheets as unknown as Record<string, { ids: string[]; painting?: boolean; cut?: string }>;
   assert.deepEqual([...art.ships_19.ids, ...art.ships_20.ids].sort(), LINES.map((c) => d(c).sprite).sort());
-  assert.ok(art.ships_19.painting && art.ships_20.painting);
+  assert.ok(art.ships_19.cut && art.ships_20.cut && !art.ships_19.painting && !art.ships_20.painting);
 });
 
 // ------------------------------------------------------------------------------------------------ the premium forty
