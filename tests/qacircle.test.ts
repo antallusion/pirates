@@ -51,6 +51,7 @@ test('popup budget: the sea\'s news, a hint and a boss\'s card keep out of the s
   // The steps exist in the stylesheet.
   assert.ok(css.includes('body.pb-2 #hud-stack > #hud-feed { display: none !important; }'));
   assert.ok(css.includes('body.pb-1 #hud-feed .feed-h'));
+  delete (globalThis as { document?: unknown }).document; // the stub page goes (the next tests set the language)
 });
 
 test('not a word of Latin in a Russian line a player reads (QA circle: NPC, PvP, HUD, WebGL, e-mail, UTC, MMORPG)', async () => {
