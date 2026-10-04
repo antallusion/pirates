@@ -3676,7 +3676,7 @@ body:has(.tb-book.bk:not(.hidden)) #toasts { display: none; }
 .bk-sp.on { border-color: #8a5a1a; background: rgba(176, 120, 40, 0.2); }
 .bk-sp:disabled { cursor: default; opacity: 0.75; filter: grayscale(0.7); }
 /* In a short row (a phone on its side) the icon gives way, never the name or the cost: they keep their lines. */
-.bk-sp .bk-ico { width: max(28px, calc(var(--bk-w) * 0.058)); height: max(28px, calc(var(--bk-w) * 0.058)); flex: 0 1 auto; min-height: 18px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 4px rgba(30, 15, 0, 0.6); }
+.bk-sp .bk-ico { width: auto; aspect-ratio: 1; height: max(28px, calc(var(--bk-w) * 0.058)); flex: 0 1 auto; min-height: 18px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 4px rgba(30, 15, 0, 0.6); }
 .bk-sp b, .bk-sp small { flex: none; }
 .bk-sp b { max-width: 100%; font-family: var(--serif); font-size: max(10px, calc(var(--bk-w) * 0.0145)); font-weight: 600; line-height: 1.1; text-align: center; color: #2e1f0e;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

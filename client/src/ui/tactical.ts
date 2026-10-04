@@ -844,7 +844,9 @@ export class TacticalPanel {
       // large as on a phone on its side (--bk-w sets the book's type as well as its size).
       const tall = this.tall;
       const w = tall ? 720 : Math.max(240, Math.min(1100, innerWidth * 0.96, innerHeight * 0.94 * 16 / 9));
-      const per = tall ? 8 : w < 560 ? 4 : 6;
+      // Six orders to a page only in a large book: in a phone's (≈600 px) three rows squeezed a two-line name's picture
+      // to a strip (QA, 2026-10-04), so four to a page there.
+      const per = tall ? 8 : w < 720 ? 4 : 6;
       const leaves = tall ? 1 : 2;
       const all = [...me.spells].sort((a, b) => SCHOOLS.indexOf(ORDERS[a.id]?.school as School) - SCHOOLS.indexOf(ORDERS[b.id]?.school as School) || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0));
       const schools = SCHOOLS.filter((sc) => all.some((sp) => ORDERS[sp.id]?.school === sc));
