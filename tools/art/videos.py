@@ -899,9 +899,11 @@ v('cut_serpent_grotto_down', 'down_serpent_grotto', 'Молодой змей п�
   'eggs and slides away down a flooded channel toward the open sea, its scales flashing, as the pirates stand in the '
   'shallows and watch it go. The camera follows the serpent out to the sea.')
 v('cut_maw_pit_down', 'down_maw_pit', 'Светоч в яме погас',
-  'A drowned pit at night, hooded cultists fled from its rim: the gigantic anglerfish monster hanging its glowing lure over the black water dims it, '
-  'its pale light flickering and going out, and the huge shape sinks slowly out of sight into the deep, as the pirates '
-  'raise their own lanterns over the edge. The camera looks down into the darkening pit.')
+  'A drowned stone pit at night, seen from its rim, hooded cultists fleeing up the steps with their lanterns: deep in the '
+  'black water below hangs a monstrous deep-sea anglerfish as big as a longboat, with black warty skin, a huge gaping '
+  'jaw of long glassy needle teeth and a glowing greenish lure on a long stalk over its head; the lure flickers and '
+  'goes out and the great dark shape sinks slowly out of sight into the deep, as the pirates raise their own lanterns '
+  'over the edge. The camera looks down into the darkening pit.')
 v('cut_octopus_wreck_down', 'down_octopus_wreck', 'Осьминог оставил обломки',
   'A rotting wreck on a reef at low tide: the great octopus slowly unwinds its arms from the broken hull, pales to a mottled '
   'grey and slips away into a dark pool, as the pirates climb onto the wreck and pry open the hatch to the hold. '
