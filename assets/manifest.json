@@ -2459,6 +2459,7 @@
     "bg.deck_mermaid_grace":                   { "local": "art/deck_mermaid_grace.webp", "remote": "hf_20261004_071018_gpt-bg.deck_mermaid_grace.png", "job": "gpt-bg.deck_mermaid_grace", "fit": "opaque:1536", "rev": 20261004071018},
     "bg.deck_viper":                           { "local": "art/deck_viper.webp", "remote": "hf_20261004_071205_gpt-bg.deck_viper.png", "job": "gpt-bg.deck_viper", "fit": "opaque:1536", "rev": 20261004071205},
     "bg.deck_cog":                             { "local": "art/deck_cog.webp", "remote": "hf_20261004_071413_gpt-bg.deck_cog.png", "job": "gpt-bg.deck_cog", "fit": "opaque:1536", "rev": 20261004071413},
-    "bg.deck_buss":                            { "local": "art/deck_buss.webp", "remote": "hf_20261004_071614_gpt-bg.deck_buss.png", "job": "gpt-bg.deck_buss", "fit": "opaque:1536", "rev": 20261004071614}
+    "bg.deck_buss":                            { "local": "art/deck_buss.webp", "remote": "hf_20261004_071614_gpt-bg.deck_buss.png", "job": "gpt-bg.deck_buss", "fit": "opaque:1536", "rev": 20261004071614},
+    "bg.deck_pink":                            { "local": "art/deck_pink.webp", "remote": "hf_20261004_071839_gpt-bg.deck_pink.png", "job": "gpt-bg.deck_pink", "fit": "opaque:1536", "rev": 20261004071839}
   }
 }
