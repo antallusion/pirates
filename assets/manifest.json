@@ -2456,6 +2456,7 @@
     "bg.deck_albatross_xebec":                 { "local": "art/deck_albatross_xebec.webp", "remote": "hf_20261004_070338_gpt-bg.deck_albatross_xebec.png", "job": "gpt-bg.deck_albatross_xebec", "fit": "opaque:1536", "rev": 20261004070338},
     "bg.deck_silver_arrow":                    { "local": "art/deck_silver_arrow.webp", "remote": "hf_20261004_070600_gpt-bg.deck_silver_arrow.png", "job": "gpt-bg.deck_silver_arrow", "fit": "opaque:1536", "rev": 20261004070600},
     "bg.deck_storm_petrel":                    { "local": "art/deck_storm_petrel.webp", "remote": "hf_20261004_070754_gpt-bg.deck_storm_petrel.png", "job": "gpt-bg.deck_storm_petrel", "fit": "opaque:1536", "rev": 20261004070754},
-    "bg.deck_mermaid_grace":                   { "local": "art/deck_mermaid_grace.webp", "remote": "hf_20261004_071018_gpt-bg.deck_mermaid_grace.png", "job": "gpt-bg.deck_mermaid_grace", "fit": "opaque:1536", "rev": 20261004071018}
+    "bg.deck_mermaid_grace":                   { "local": "art/deck_mermaid_grace.webp", "remote": "hf_20261004_071018_gpt-bg.deck_mermaid_grace.png", "job": "gpt-bg.deck_mermaid_grace", "fit": "opaque:1536", "rev": 20261004071018},
+    "bg.deck_viper":                           { "local": "art/deck_viper.webp", "remote": "hf_20261004_071205_gpt-bg.deck_viper.png", "job": "gpt-bg.deck_viper", "fit": "opaque:1536", "rev": 20261004071205}
   }
 }
