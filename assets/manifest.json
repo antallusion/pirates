@@ -2464,6 +2464,7 @@
     "bg.deck_hulk":                            { "local": "art/deck_hulk.webp", "remote": "hf_20261004_072040_gpt-bg.deck_hulk.png", "job": "gpt-bg.deck_hulk", "fit": "opaque:1536", "rev": 20261004072040},
     "bg.deck_collier":                         { "local": "art/deck_collier.webp", "remote": "hf_20261004_072311_gpt-bg.deck_collier.png", "job": "gpt-bg.deck_collier", "fit": "opaque:1536", "rev": 20261004072311},
     "bg.deck_storeship":                       { "local": "art/deck_storeship.webp", "remote": "hf_20261004_072611_gpt-bg.deck_storeship.png", "job": "gpt-bg.deck_storeship", "fit": "opaque:1536", "rev": 20261004072611},
-    "bg.deck_cargo_frigate":                   { "local": "art/deck_cargo_frigate.webp", "remote": "hf_20261004_072816_gpt-bg.deck_cargo_frigate.png", "job": "gpt-bg.deck_cargo_frigate", "fit": "opaque:1536", "rev": 20261004072816}
+    "bg.deck_cargo_frigate":                   { "local": "art/deck_cargo_frigate.webp", "remote": "hf_20261004_072816_gpt-bg.deck_cargo_frigate.png", "job": "gpt-bg.deck_cargo_frigate", "fit": "opaque:1536", "rev": 20261004072816},
+    "bg.deck_plate_galleon":                   { "local": "art/deck_plate_galleon.webp", "remote": "hf_20261004_073041_gpt-bg.deck_plate_galleon.png", "job": "gpt-bg.deck_plate_galleon", "fit": "opaque:1536", "rev": 20261004073041}
   }
 }
