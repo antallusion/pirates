@@ -2462,6 +2462,7 @@
     "bg.deck_buss":                            { "local": "art/deck_buss.webp", "remote": "hf_20261004_071614_gpt-bg.deck_buss.png", "job": "gpt-bg.deck_buss", "fit": "opaque:1536", "rev": 20261004071614},
     "bg.deck_pink":                            { "local": "art/deck_pink.webp", "remote": "hf_20261004_071839_gpt-bg.deck_pink.png", "job": "gpt-bg.deck_pink", "fit": "opaque:1536", "rev": 20261004071839},
     "bg.deck_hulk":                            { "local": "art/deck_hulk.webp", "remote": "hf_20261004_072040_gpt-bg.deck_hulk.png", "job": "gpt-bg.deck_hulk", "fit": "opaque:1536", "rev": 20261004072040},
-    "bg.deck_collier":                         { "local": "art/deck_collier.webp", "remote": "hf_20261004_072311_gpt-bg.deck_collier.png", "job": "gpt-bg.deck_collier", "fit": "opaque:1536", "rev": 20261004072311}
+    "bg.deck_collier":                         { "local": "art/deck_collier.webp", "remote": "hf_20261004_072311_gpt-bg.deck_collier.png", "job": "gpt-bg.deck_collier", "fit": "opaque:1536", "rev": 20261004072311},
+    "bg.deck_storeship":                       { "local": "art/deck_storeship.webp", "remote": "hf_20261004_072611_gpt-bg.deck_storeship.png", "job": "gpt-bg.deck_storeship", "fit": "opaque:1536", "rev": 20261004072611}
   }
 }
