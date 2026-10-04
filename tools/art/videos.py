@@ -1070,6 +1070,59 @@ for sea, ship in ZBOSS_SHOTS.items():
       'its gun ports opening one by one along the whole length of the hull. A long, slow, menacing shot.')
 
 
+# ---- Reel 21: the twelve new lairs of the islands (shared/src/data/lairs.ts), each the first time she lands against
+# one (client/src/main.ts LAIR_FILM) — no blood, no bones, no skulls ---------------------------------------------------
+v('cut_frog_pools', 'lair_frog_pools', 'Лягушачьи заводи',
+  'A warm green swamp at dawn, mist on still pools among mangrove roots and giant lily pads: dozens of tiny poison frogs as '
+  'bright as jewels — red, blue and yellow — hop across the pads, and a huge warty toad on a mossy log puffs out its throat '
+  'and croaks as a pirate longboat noses in through the reeds. The camera glides low over the water toward the toad.')
+v('cut_rat_wreck', 'lair_rat_wreck', 'Крысиный остов',
+  'An old merchant ship run aground long ago on a grey beach, listing on her side, her planks green with weed: from the open '
+  'hatches of her hold a river of brown bilge rats pours down the hull onto the sand, and red shore crabs scuttle among the '
+  'barrels as pirates with lanterns wade ashore. The camera moves slowly along the stranded hull at the waterline.')
+v('cut_iguana_rocks', 'lair_iguana_rocks', 'Игуановые камни',
+  'Black lava rocks at the edge of a bright sea, surf bursting white over them: heaps of dark marine iguanas bask in the sun, '
+  'one raises its spiny head and sneezes salt, gulls wheel and scream overhead, and a longboat of pirates rows in through the '
+  'swell. The camera sweeps slowly over the basking iguanas toward the boat.')
+v('cut_ghost_strand', 'lair_ghost_strand', 'Берег крабов-призраков',
+  'A pale empty beach under a low moon, the sand silver and still: suddenly a thousand pale ghost crabs burst from their holes '
+  'and race sideways across the sand like a wave, and brown rats run out from a half-buried wreck behind them, as pirates '
+  'with torches step back at the tide line. The camera is low on the sand as the crabs rush past.')
+v('cut_centipede_ravine', 'lair_centipede_ravine', 'Овраг сколопендр',
+  'A steep jungle ravine under a dark green canopy, the floor deep in rotting leaves and ferns, water dripping: a giant '
+  'orange-and-black centipede, longer than a man, ripples out from under a fallen log, its many legs rustling, while small '
+  'bright frogs leap away; pirates with cutlasses edge down the slope. The camera creeps forward at ground level.')
+v('cut_spider_grove', 'lair_spider_grove', 'Паучья роща',
+  'A grove of tall jungle trees grey with thick webs from root to crown, shafts of light glittering on the silk: a huge hairy '
+  'jungle spider waits at the centre of a vast web between two trunks, and a giant centipede moves through the leaves below as '
+  'pirates part the webs with their blades. The camera pushes slowly in through the hanging webs.')
+v('cut_bull_savanna', 'lair_bull_savanna', 'Саванна диких быков',
+  'Tall golden grass on a wide island savanna under a hot sky: a herd of wild long-horned cattle, left by old ships long ago, '
+  'grazes and then lifts its heads as one; a great black bull paws the ground and snorts, and wild boars root in the grass '
+  'among the herd as a line of pirates comes up from the beach. The camera rises slowly over the grass toward the bull.')
+v('cut_cinder_slopes', 'lair_cinder_slopes', 'Пепельные склоны',
+  'Black slopes of ash and cinders under a smoking volcanic cone, the air hazy and orange: lean hounds with dark smouldering '
+  'coats, faint embers glowing in their fur, run along a ridge and stop to watch, and a giant centipede slips into a warm crack '
+  'in the rock as pirates climb from the shore. The camera tracks the running hounds along the ridge.')
+v('cut_harpy_crags', 'lair_harpy_crags', 'Утёсы гарпий',
+  'Sheer grey sea cliffs above crashing surf under racing clouds: winged harpies with long dark feathered wings and fierce '
+  'faces shriek from nests on the ledges and launch into the wind, while albatrosses glide far off; a pirate longboat rows '
+  'beneath the cliffs. The camera soars up the cliff face with the harpies.')
+v('cut_banshee_hollow', 'lair_banshee_hollow', 'Лощина банши',
+  'A hollow of dead grey trees in the heart of an island at night, mist lying between the twisted roots, pale moonlight: a '
+  'translucent wailing banshee in a tattered pale gown drifts between the trunks with her long hair floating, her cry shaking '
+  'the leaves, and pale ghost crabs scatter over the roots as pirates hold up their lanterns. The camera drifts slowly '
+  'through the mist toward her.')
+v('cut_titan_wreck', 'lair_titan_wreck', 'Титан обломков',
+  'A reef at low tide covered with the broken hulls of a hundred old ships: from the wreckage a colossal figure rises, built '
+  'of timbers, planks, masts and rusted anchors, water pouring off it, glowing green lantern-eyes in its head, while hermits in '
+  'patched coats kneel on the rocks before it and a pirate longboat backs away. The camera tilts up the rising titan.')
+v('cut_serpent_temple', 'lair_serpent_temple', 'Храм пернатого змея',
+  'An ancient stepped stone temple swallowed by the jungle, vines over its carved steps, sunlight through the canopy: a huge '
+  'feathered serpent with green and gold plumes uncoils from the top of the temple and spreads a crest of bright feathers, '
+  'and two jaguars pace on the steps below as pirates step out of the trees. The camera rises slowly up the temple steps.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

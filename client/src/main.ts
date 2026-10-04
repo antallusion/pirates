@@ -493,7 +493,11 @@ const LAIR_FILM: Record<string, string> = { crab_beach: 'cut_crab_beach', gull_c
   jaguar_den: 'cut_jaguar_den', ape_ridge: 'cut_ape_ridge', croc_mangroves: 'cut_croc_mangroves', bat_cave: 'cut_bat_cave', moray_reef: 'cut_moray_reef',
   albatross_rock: 'cut_albatross_rock', octopus_wreck: 'cut_octopus_wreck', crab_hollow: 'cut_crab_hollow', wyrm_gallery: 'cut_wyrm_gallery', hydra_pool: 'cut_hydra_pool',
   ape_throne: 'cut_ape_throne', roc_eyrie: 'cut_roc_eyrie',
-  mire_mother: 'cut_mire_mother', cinder_salamander: 'cut_cinder_salamander', drowned_abbess: 'cut_drowned_abbess', walrus_tyrant: 'cut_walrus_tyrant' };
+  mire_mother: 'cut_mire_mother', cinder_salamander: 'cut_cinder_salamander', drowned_abbess: 'cut_drowned_abbess', walrus_tyrant: 'cut_walrus_tyrant',
+  // Reel 21: the twelve new lairs (tools/art/videos.py) — each plays once it is in assets/video/index.json.
+  frog_pools: 'cut_frog_pools', rat_wreck: 'cut_rat_wreck', iguana_rocks: 'cut_iguana_rocks', ghost_strand: 'cut_ghost_strand', centipede_ravine: 'cut_centipede_ravine',
+  spider_grove: 'cut_spider_grove', bull_savanna: 'cut_bull_savanna', cinder_slopes: 'cut_cinder_slopes', harpy_crags: 'cut_harpy_crags', banshee_hollow: 'cut_banshee_hollow',
+  titan_wreck: 'cut_titan_wreck', serpent_temple: 'cut_serpent_temple' };
 /** The great ones ashore (shared/src/data/shorebosses.ts) and the great old lairs, each the first time she wins there. */
 const SHORE_DOWN: Record<string, string> = { mire_mother: 'cut_mire_mother_down', cinder_salamander: 'cut_cinder_salamander_down', drowned_abbess: 'cut_drowned_abbess_down', walrus_tyrant: 'cut_walrus_tyrant_down',
   ape_throne: 'cut_ape_throne_down', roc_eyrie: 'cut_roc_eyrie_down', hydra_pool: 'cut_hydra_pool_down', wyrm_gallery: 'cut_wyrm_gallery_down',
