@@ -2418,6 +2418,7 @@
     "bg.deck_ship_of_the_line":                { "local": "art/deck_ship_of_the_line.webp", "remote": "hf_20261004_054012_gpt-bg.deck_ship_of_the_line.png", "job": "gpt-bg.deck_ship_of_the_line", "fit": "opaque:1536", "rev": 20261004054012},
     "bg.deck_black_corsair":                   { "local": "art/deck_black_corsair.webp", "remote": "hf_20261004_054256_gpt-bg.deck_black_corsair.png", "job": "gpt-bg.deck_black_corsair", "fit": "opaque:1536", "rev": 20261004054256},
     "bg.deck_dragon_junk":                     { "local": "art/deck_dragon_junk.webp", "remote": "hf_20261004_054444_gpt-bg.deck_dragon_junk.png", "job": "gpt-bg.deck_dragon_junk", "fit": "opaque:1536", "rev": 20261004054444},
-    "bg.deck_iron_ram":                        { "local": "art/deck_iron_ram.webp", "remote": "hf_20261004_054809_gpt-bg.deck_iron_ram.png", "job": "gpt-bg.deck_iron_ram", "fit": "opaque:1536", "rev": 20261004054809}
+    "bg.deck_iron_ram":                        { "local": "art/deck_iron_ram.webp", "remote": "hf_20261004_054809_gpt-bg.deck_iron_ram.png", "job": "gpt-bg.deck_iron_ram", "fit": "opaque:1536", "rev": 20261004054809},
+    "bg.deck_thunderer":                       { "local": "art/deck_thunderer.webp", "remote": "hf_20261004_055100_gpt-bg.deck_thunderer.png", "job": "gpt-bg.deck_thunderer", "fit": "opaque:1536", "rev": 20261004055100}
   }
 }
