@@ -2222,6 +2222,10 @@
     "unit.whale_calf_b":                       { "local": "units/whale_calf_b.webp", "remote": "hf_20261004_030037_gpt-anim_whale_calf.png", "job": "gpt-anim_whale_calf", "fit": "sheet:anim_whale_calf.1", "rev": 20261004030037},
     "unit.whale_calf_atk":                     { "local": "units/whale_calf_atk.webp", "remote": "hf_20261004_030037_gpt-anim_whale_calf.png", "job": "gpt-anim_whale_calf", "fit": "sheet:anim_whale_calf.2", "rev": 20261004030037},
     "unit.whale_calf_hit":                     { "local": "units/whale_calf_hit.webp", "remote": "hf_20261004_030037_gpt-anim_whale_calf.png", "job": "gpt-anim_whale_calf", "fit": "sheet:anim_whale_calf.3", "rev": 20261004030037},
-    "bg.port_crownfall":                       { "local": "art/port_crownfall.webp", "remote": "hf_20261004_030307_gpt-bg.port_crownfall.png", "job": "gpt-bg.port_crownfall", "fit": "opaque:1920", "rev": 20261004030307}
+    "bg.port_crownfall":                       { "local": "art/port_crownfall.webp", "remote": "hf_20261004_030307_gpt-bg.port_crownfall.png", "job": "gpt-bg.port_crownfall", "fit": "opaque:1920", "rev": 20261004030307},
+    "unit.coral_elemental":                    { "local": "units/coral_elemental.webp", "remote": "hf_20261004_030518_gpt-anim_coral_elemental.png", "job": "gpt-anim_coral_elemental", "fit": "sheet:anim_coral_elemental.0", "rev": 20261004030518},
+    "unit.coral_elemental_b":                  { "local": "units/coral_elemental_b.webp", "remote": "hf_20261004_030518_gpt-anim_coral_elemental.png", "job": "gpt-anim_coral_elemental", "fit": "sheet:anim_coral_elemental.1", "rev": 20261004030518},
+    "unit.coral_elemental_atk":                { "local": "units/coral_elemental_atk.webp", "remote": "hf_20261004_030518_gpt-anim_coral_elemental.png", "job": "gpt-anim_coral_elemental", "fit": "sheet:anim_coral_elemental.2", "rev": 20261004030518},
+    "unit.coral_elemental_hit":                { "local": "units/coral_elemental_hit.webp", "remote": "hf_20261004_030518_gpt-anim_coral_elemental.png", "job": "gpt-anim_coral_elemental", "fit": "sheet:anim_coral_elemental.3", "rev": 20261004030518}
   }
 }
