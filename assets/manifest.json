@@ -2092,6 +2092,10 @@
     "ship.cog":                                { "local": "ships/cog.webp", "remote": "hf_20261004_004206_gpt-ships_14.png", "job": "gpt-ships_14", "fit": "sheet:ships_14.0", "rev": 20261004004206},
     "ship.buss":                               { "local": "ships/buss.webp", "remote": "hf_20261004_004206_gpt-ships_14.png", "job": "gpt-ships_14", "fit": "sheet:ships_14.1", "rev": 20261004004206},
     "ship.pink":                               { "local": "ships/pink.webp", "remote": "hf_20261004_004206_gpt-ships_14.png", "job": "gpt-ships_14", "fit": "sheet:ships_14.2", "rev": 20261004004206},
-    "ship.hulk":                               { "local": "ships/hulk.webp", "remote": "hf_20261004_004206_gpt-ships_14.png", "job": "gpt-ships_14", "fit": "sheet:ships_14.3", "rev": 20261004004206}
+    "ship.hulk":                               { "local": "ships/hulk.webp", "remote": "hf_20261004_004206_gpt-ships_14.png", "job": "gpt-ships_14", "fit": "sheet:ships_14.3", "rev": 20261004004206},
+    "unit.silk_blade":                         { "local": "units/silk_blade.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.0", "rev": 20261004004433},
+    "unit.silk_blade_b":                       { "local": "units/silk_blade_b.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.1", "rev": 20261004004433},
+    "unit.silk_blade_atk":                     { "local": "units/silk_blade_atk.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.2", "rev": 20261004004433},
+    "unit.silk_blade_hit":                     { "local": "units/silk_blade_hit.webp", "remote": "hf_20261004_004433_gpt-anim_silk_blade.png", "job": "gpt-anim_silk_blade", "fit": "sheet:anim_silk_blade.3", "rev": 20261004004433}
   }
 }
