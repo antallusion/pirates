@@ -2374,6 +2374,10 @@
     "unit.fog_viper":                          { "local": "units/fog_viper.webp", "remote": "hf_20261004_045748_gpt-anim_fog_viper.png", "job": "gpt-anim_fog_viper", "fit": "sheet:anim_fog_viper.0", "rev": 20261004045748},
     "unit.fog_viper_b":                        { "local": "units/fog_viper_b.webp", "remote": "hf_20261004_045748_gpt-anim_fog_viper.png", "job": "gpt-anim_fog_viper", "fit": "sheet:anim_fog_viper.1", "rev": 20261004045748},
     "unit.fog_viper_atk":                      { "local": "units/fog_viper_atk.webp", "remote": "hf_20261004_045748_gpt-anim_fog_viper.png", "job": "gpt-anim_fog_viper", "fit": "sheet:anim_fog_viper.2", "rev": 20261004045748},
-    "unit.fog_viper_hit":                      { "local": "units/fog_viper_hit.webp", "remote": "hf_20261004_045748_gpt-anim_fog_viper.png", "job": "gpt-anim_fog_viper", "fit": "sheet:anim_fog_viper.3", "rev": 20261004045748}
+    "unit.fog_viper_hit":                      { "local": "units/fog_viper_hit.webp", "remote": "hf_20261004_045748_gpt-anim_fog_viper.png", "job": "gpt-anim_fog_viper", "fit": "sheet:anim_fog_viper.3", "rev": 20261004045748},
+    "unit.company_cannoneer":                  { "local": "units/company_cannoneer.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.0", "rev": 20261004050038},
+    "unit.company_cannoneer_b":                { "local": "units/company_cannoneer_b.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.1", "rev": 20261004050038},
+    "unit.company_cannoneer_atk":              { "local": "units/company_cannoneer_atk.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.2", "rev": 20261004050038},
+    "unit.company_cannoneer_hit":              { "local": "units/company_cannoneer_hit.webp", "remote": "hf_20261004_050038_gpt-anim_company_cannoneer.png", "job": "gpt-anim_company_cannoneer", "fit": "sheet:anim_company_cannoneer.3", "rev": 20261004050038}
   }
 }
