@@ -220,3 +220,8 @@ test('/board alongside grapples the /foe ship, not a great one swimming at the s
   assert.match(runAdmin(game, s, '/board') ?? '', /Grappled/);
   assert.equal(ship.boarding?.with, foe.id);
 });
+
+test('English titles sit in their plates\' middle (IM Fell English SC rode 1.9px high)', () => {
+  assert.ok(css.includes('html[lang=en] .skinned .modal-head h2 { padding: 3px 6px 0; }'));
+  assert.ok(css.includes('html[lang=en] .skinned .title-sm { padding: 2px 6px 0; }'));
+});
