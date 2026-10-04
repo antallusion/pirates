@@ -67,6 +67,14 @@ def main(sheet_name: str, stem: str) -> None:
         xs, ys = cuts(a.mean(axis=0), cols), cuts(a.mean(axis=1), rows)
     else:
         keyed = key_magenta(np.array(Image.open(src).convert('RGBA')))
+        # Pale sheer things painted against the magenta (a ghost ship's torn sails, mist) come out tinted through with
+        # it: `despill` pulls the magenta cast out of every pixel whose red and blue stand alike above its green.
+        if sh.get('despill'):
+            f = keyed[:, :, :3].astype(np.int16)
+            cast = np.clip(np.minimum(f[:, :, 0], f[:, :, 2]) - f[:, :, 1], 0, None) * (np.abs(f[:, :, 0] - f[:, :, 2]) <= 40)
+            f[:, :, 0] -= cast
+            f[:, :, 2] -= cast
+            keyed[:, :, :3] = np.clip(f, 0, 255).astype(np.uint8)
         # Hairlines the painter rules between the cells (asked not to, now and then does): a column or row that is
         # solid nearly end to end is no part of anything — it goes. Not on a sheet of one thing that fills the picture
         # edge to edge (a town on the chart: `whole`), where such a row is the town itself.
