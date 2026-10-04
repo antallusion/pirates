@@ -86,6 +86,9 @@ function toastLife(kind: string): number {
 /** The top stack's blocks that fold behind its button (the rest is what is happening now). */
 const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-watch', 'hud-world', 'hud-goals', 'hud-feed'];
 
+/** Two names that say the same (a great one's hull is named as it is: «Сборщица Десятины · Сборщица Десятины»). */
+const sameWords = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
+
 export class Hud {
   private lastCaptainKey = '';
   /** The glory chip on the plate opens the Throne (docs/19 E1). */
@@ -1342,7 +1345,7 @@ export class Hud {
     const guard = id !== null ? guardOfEntity(state, id) : null; // a guard of the adventure map (docs/17 H4): what it is, not its hull
     // A guard named as its ship (the Rotting Hulk, the Wreck of the Drowned): not its name twice (QA, 2026-10-04).
     const guardName = guard ? GUARDS[guard.kind].name[lang() === 'ru' ? 1 : 0] : '';
-    const role = guard ? (guardName.toLowerCase() === name.toLowerCase() ? L('tg.guard') : guardName) : info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
+    const role = guard ? (sameWords(guardName, name) ? L('tg.guard') : guardName) : info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
     const bar = (k: string, v: number) => `<span class="tg-bar tg-${k}"><i style="width:${pct(clamp(v, 0, 1))}"></i></span>`;
     if (beast) {
       // A beast of the sea (docs/12 P4): its nature instead of a class and a role, and only its hide for a bar.
@@ -1358,7 +1361,7 @@ export class Hud {
     }
     el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
     el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
-      <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([guard ? '' : cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
+      <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([guard || sameWords(cls?.name ?? info.classId, name) ? '' : cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
       ${info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
       ${ap ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}

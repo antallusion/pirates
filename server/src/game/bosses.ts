@@ -1547,11 +1547,14 @@ function view(game: Game, f: Fight, body: ShipEntity, s: PlayerSession): BossVie
   const sw = s.ship ? f.swallowed.get(s.ship.id) : undefined;
   // Where it is as she sees it (the Changeling's true shape is not shown to those too far to see its wake).
   const at = tenWhere(game, f, body, s) ?? body.state;
+  // As bossBoardOrder rules: only a heart, a ghost ship and an escort have decks.
+  const noBoard = [...f.parts].filter(([, p]) => p !== 'heart' && p !== 'ghost' && p !== 'add').map(([id]) => id);
   return {
     id: f.id, kind: f.kind, name: f.def.name, phase: f.phase, phaseName: f.def.phases[f.phase] ?? '',
     hp: Math.max(0, Math.round(body.hull)), hpMax: Math.round(body.stats.hullMax), x: Math.round(at.x), y: Math.round(at.y),
     hint: hintFor(game, f, body), endsIn: Math.max(0, Math.round(f.endsAt - now)), parts, zones,
     you: { share: mine && total > 0 ? Math.round((scoreOf(f, mine) / total) * 1000) / 1000 : 0, grabbed: !!s.ship && f.grabs.has(s.ship.id), swallowed: sw ? Math.max(0, Math.round(SWALLOW_TIME - (now - sw.since))) : 0 },
+    ...(noBoard.length ? { noBoard } : {}),
   };
 }
 

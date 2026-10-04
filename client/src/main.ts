@@ -1896,6 +1896,8 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED)) continue;
     const cls = SHIP_CLASSES[s.info.classId];
     if (beastOfClass(s.info.classId)) continue; // no decks on a beast of the sea
+    // Nor on a great one's body or limbs (the server refuses them) — unless it holds her: then the board is «Axes!».
+    if (state.bosses.some((b) => !b.you.grabbed && b.noBoard?.includes(s.id))) continue;
     const d = dist(own.x, own.y, c.x, c.y);
     const range = st.boardingRange + (st.beam + cls.beam) / 2;
     if (d > range) continue;

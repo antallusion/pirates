@@ -1183,6 +1183,9 @@ export interface BossView {
   parts: { id: number; label: string; hp: number; hpMax: number }[];
   zones: BossZone[];
   you: { share: number; grabbed: boolean; swallowed: number };
+  /** The fight's hulls with no decks to grapple (a creature's body and limbs, its phantoms): the client offers no
+   *  boarding at them, as the server would refuse it (QA, 2026-10-04) — save the axes of one grabbed. */
+  noBoard?: number[];
 }
 
 export interface SelfRow {
