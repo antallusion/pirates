@@ -2314,6 +2314,10 @@
     "unit.lava_drake":                         { "local": "units/lava_drake.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.0", "rev": 20261004041725},
     "unit.lava_drake_b":                       { "local": "units/lava_drake_b.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.1", "rev": 20261004041725},
     "unit.lava_drake_atk":                     { "local": "units/lava_drake_atk.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.2", "rev": 20261004041725},
-    "unit.lava_drake_hit":                     { "local": "units/lava_drake_hit.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.3", "rev": 20261004041725}
+    "unit.lava_drake_hit":                     { "local": "units/lava_drake_hit.webp", "remote": "hf_20261004_041725_gpt-anim_lava_drake.png", "job": "gpt-anim_lava_drake", "fit": "sheet:anim_lava_drake.3", "rev": 20261004041725},
+    "unit.sea_wolf":                           { "local": "units/sea_wolf.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.0", "rev": 20261004042012},
+    "unit.sea_wolf_b":                         { "local": "units/sea_wolf_b.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.1", "rev": 20261004042012},
+    "unit.sea_wolf_atk":                       { "local": "units/sea_wolf_atk.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.2", "rev": 20261004042012},
+    "unit.sea_wolf_hit":                       { "local": "units/sea_wolf_hit.webp", "remote": "hf_20261004_042012_gpt-anim_sea_wolf.png", "job": "gpt-anim_sea_wolf", "fit": "sheet:anim_sea_wolf.3", "rev": 20261004042012}
   }
 }
