@@ -2421,6 +2421,7 @@
     "bg.deck_iron_ram":                        { "local": "art/deck_iron_ram.webp", "remote": "hf_20261004_054809_gpt-bg.deck_iron_ram.png", "job": "gpt-bg.deck_iron_ram", "fit": "opaque:1536", "rev": 20261004054809},
     "bg.deck_thunderer":                       { "local": "art/deck_thunderer.webp", "remote": "hf_20261004_055100_gpt-bg.deck_thunderer.png", "job": "gpt-bg.deck_thunderer", "fit": "opaque:1536", "rev": 20261004055100},
     "bg.deck_wyvern_galleass":                 { "local": "art/deck_wyvern_galleass.webp", "remote": "hf_20261004_055234_gpt-bg.deck_wyvern_galleass.png", "job": "gpt-bg.deck_wyvern_galleass", "fit": "opaque:1536", "rev": 20261004055234},
-    "bg.deck_kraken_hunter":                   { "local": "art/deck_kraken_hunter.webp", "remote": "hf_20261004_055503_gpt-bg.deck_kraken_hunter.png", "job": "gpt-bg.deck_kraken_hunter", "fit": "opaque:1536", "rev": 20261004055503}
+    "bg.deck_kraken_hunter":                   { "local": "art/deck_kraken_hunter.webp", "remote": "hf_20261004_055503_gpt-bg.deck_kraken_hunter.png", "job": "gpt-bg.deck_kraken_hunter", "fit": "opaque:1536", "rev": 20261004055503},
+    "bg.deck_crimson_tide":                    { "local": "art/deck_crimson_tide.webp", "remote": "hf_20261004_055706_gpt-bg.deck_crimson_tide.png", "job": "gpt-bg.deck_crimson_tide", "fit": "opaque:1536", "rev": 20261004055706}
   }
 }
