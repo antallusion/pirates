@@ -118,3 +118,29 @@ test('other ships are drawn smoothly: a ship whose word of her speed is three ti
     performance.now = realNow;
   }
 });
+
+test('every master of an NPC ship reads in Russian on the deck battle\'s plate («the Deep» came through in English)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { personName } = await import('../client/src/lang/names.ts');
+  await import('../client/src/lang/server.ts');
+  const { readFileSync, readdirSync } = await import('node:fs');
+  // Every literal captain the server gives a ship of its own.
+  const dir = new URL('../server/src/game/', import.meta.url);
+  const names = new Set<string>();
+  for (const f of readdirSync(dir)) for (const m of readFileSync(new URL(f, dir), 'utf8').matchAll(/captain: '([^']{3,})'/g)) if (m[1] !== 'corsair' && !m[1].endsWith(' ')) names.add(m[1]);
+  assert.ok(names.size >= 15);
+  setLang('ru');
+  try {
+    const bad = [...names].filter((n) => /[A-Za-z]{2,}/.test(personName(n)));
+    assert.deepEqual(bad, []);
+    assert.equal(personName('Bounty Hunter Morrow Ickes'), 'Охотник за головами Морроу Икс');
+    assert.equal(personName('Qa d3ml'), 'Qa d3ml', 'a player\'s name stays');
+  } finally {
+    setLang('en');
+  }
+});
+
+test('a boarding\'s end keeps to a band, not the field\'s middle (popup budget)', () => {
+  assert.ok(css.includes('.tb-banner:not(:has(.tb-landclose)) { top: auto; bottom: 8px; transform: translateX(-50%); max-height: calc(30vh - 16px);'));
+  assert.ok(css.includes('.tb-banner:not(:has(.tb-landclose)) { top: 4px; bottom: auto;'));
+});

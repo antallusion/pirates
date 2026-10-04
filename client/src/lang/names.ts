@@ -96,6 +96,7 @@ const UNIQUE_RU: Record<string, string> = {
   'Jory "Old Bones" Pike': 'Джори «Старые Кости» Пайк', 'Sister Anwen Coil': 'Сестра Анвен Койл', 'Ruy Salazar-Ketch': 'Руй Саласар-Кетч',
   'Nell "Tallow" Marsh': 'Нелл «Сальная» Марш', 'Ezekiel Thorne': 'Иезекииль Торн', 'Magda "Iron-Jaw" Rusk': 'Магда «Железная Челюсть» Раск',  // The adventure map's guards (docs/17 H4): who leads them in the boarding battle.
   'The Hold-out’s Chief': 'Вожак заставы', 'The Castaways': 'Отверженные', 'The Drowned Crew': 'Утонувшая команда', 'The Deep': 'Глубина',
+  'the Deep': 'Глубина', 'Van der Decken': 'Ван дер Деккен',
 };
 
 export function personNameRu(en: string): string | null {
@@ -110,7 +111,12 @@ export function personNameRu(en: string): string | null {
 export function personName(en: string): string {
   if (lang() !== 'ru') return en;
   // A title the server gave a captain («Warden of Widowpoint Holm» → «Комендант Видоупойнт-Холм»).
-  return personNameRu(en) ?? (/ of /.test(en) ? titleRu(en) : en);
+  // A bounty hunter of the Crown: his trade, then his name.
+  const hunter = /^Bounty Hunter (.+)$/.exec(en.trim());
+  if (hunter) return `Охотник за головами ${personName(hunter[1])}`;
+  // The sea's other masters — «the Deep», «Sailing Master», «No One» — by the server's dictionary (they came through in
+  // English on the deck battle's plate: QA circle, 2026-10-05); a name it does not know stays as it is.
+  return personNameRu(en) ?? titleRu(en);
 }
 
 /** The server's titled names in Russian (set by server.ts: it imports this module). */

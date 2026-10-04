@@ -4594,3 +4594,16 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
 .rs-ship .rs-next { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: baseline; margin: 4px 0; font-size: 12.5px; }
 .rs-ship .rs-next .rs-bar { grid-column: 1 / -1; }
 .rs-ship .btn { margin-top: 6px; }
+/* The popup budget (QA circle, 2026-10-05): a boarding's end — «Победа» and its reckoning, two seconds and a half before
+   the prize's window — stood in the field's middle (480,314–800,516 at 1280×720). It keeps to a band now — the field's
+   foot on a tall screen (its head lies under the round's header there), its head on a short one — its reckoning in a
+   row; the result ashore, which waits for its «Close», stays where it is (a window, not a passing word). */
+.tb-banner:not(:has(.tb-landclose)) { top: auto; bottom: 8px; transform: translateX(-50%); max-height: calc(30vh - 16px); overflow: hidden; padding: 6px 16px 8px; }
+.tb-banner:not(:has(.tb-landclose)) b { font-size: 26px; line-height: 1.1; }
+.tb-banner:not(:has(.tb-landclose)) .tb-res { flex-flow: row wrap; align-items: flex-start; justify-content: center; gap: 4px 12px; margin-top: 4px; }
+@media (max-height: 520px) {
+  .tb-banner:not(:has(.tb-landclose)) { top: 4px; bottom: auto; padding: 4px 12px 6px; }
+  .tb-banner:not(:has(.tb-landclose)) b { font-size: 20px; }
+  .tb-banner:not(:has(.tb-landclose)) .tb-rs, .tb-banner:not(:has(.tb-landclose)) .tb-rs-ico { width: 22px; height: 22px; }
+  .tb-banner:not(:has(.tb-landclose)) .tb-res small { display: none; }
+}
