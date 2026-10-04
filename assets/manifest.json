@@ -2322,6 +2322,10 @@
     "unit.abyss_knight":                       { "local": "units/abyss_knight.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.0", "rev": 20261004042249},
     "unit.abyss_knight_b":                     { "local": "units/abyss_knight_b.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.1", "rev": 20261004042249},
     "unit.abyss_knight_atk":                   { "local": "units/abyss_knight_atk.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.2", "rev": 20261004042249},
-    "unit.abyss_knight_hit":                   { "local": "units/abyss_knight_hit.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.3", "rev": 20261004042249}
+    "unit.abyss_knight_hit":                   { "local": "units/abyss_knight_hit.webp", "remote": "hf_20261004_042249_gpt-anim_abyss_knight.png", "job": "gpt-anim_abyss_knight", "fit": "sheet:anim_abyss_knight.3", "rev": 20261004042249},
+    "unit.sea_griffin":                        { "local": "units/sea_griffin.webp", "remote": "hf_20261004_042544_gpt-anim_sea_griffin.png", "job": "gpt-anim_sea_griffin", "fit": "sheet:anim_sea_griffin.0", "rev": 20261004042544},
+    "unit.sea_griffin_b":                      { "local": "units/sea_griffin_b.webp", "remote": "hf_20261004_042544_gpt-anim_sea_griffin.png", "job": "gpt-anim_sea_griffin", "fit": "sheet:anim_sea_griffin.1", "rev": 20261004042544},
+    "unit.sea_griffin_atk":                    { "local": "units/sea_griffin_atk.webp", "remote": "hf_20261004_042544_gpt-anim_sea_griffin.png", "job": "gpt-anim_sea_griffin", "fit": "sheet:anim_sea_griffin.2", "rev": 20261004042544},
+    "unit.sea_griffin_hit":                    { "local": "units/sea_griffin_hit.webp", "remote": "hf_20261004_042544_gpt-anim_sea_griffin.png", "job": "gpt-anim_sea_griffin", "fit": "sheet:anim_sea_griffin.3", "rev": 20261004042544}
   }
 }
