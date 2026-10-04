@@ -949,8 +949,10 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         let near: ShipEntity | null = null, nd = Infinity;
         for (const o of game.ships.values()) {
           if (o === ship || !o.alive || o.docked || o.npcRole === 'beast') continue;
-          const dd = Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
-          if (dd < nd && dd <= boardingRangeBetween(ship, o) * 1.5) {
+          // A great one alongside comes last: the test battle's /foe frigate is the one meant (QA circle: with a boss
+          // summoned at the same spot the link's field never opened).
+          const dd = Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) + (o.npcRole === 'boss' ? 1e6 : 0);
+          if (dd < nd && dd - (o.npcRole === 'boss' ? 1e6 : 0) <= boardingRangeBetween(ship, o) * 1.5) {
             nd = dd;
             near = o;
           }

@@ -201,3 +201,22 @@ test('a salvage with silver in it reads in Russian («1 Provisions, 6 Planks & P
     setLang('en');
   }
 });
+
+test('/board alongside grapples the /foe ship, not a great one swimming at the same spot (the test battle\'s link)', async () => {
+  const { runAdmin } = await import('../server/src/game/admin.ts');
+  const { join, makeGame } = await import('./helpers.ts');
+  const { game } = makeGame();
+  const conn = join(game, 'Linker');
+  conn.push({ t: 'undock' });
+  const s = [...game.sessions].find((x) => (x.conn as unknown) === conn)!;
+  const ship = s.ship!;
+  ship.state.x = 30000;
+  ship.state.y = 80000;
+  runAdmin(game, s, '/foe pirate sloop 18');
+  const foe = [...game.ships.values()].find((o) => o !== ship && o.npcRole === 'pirate' && Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y) < 30)!;
+  // A great one right on top of her, nearer than the foe.
+  const boss = game.spawnNpcShip('ghost', 'brig', 'choir', ship.state.x + 2, ship.state.y + 2, 0);
+  boss.npcRole = 'boss';
+  assert.match(runAdmin(game, s, '/board') ?? '', /Grappled/);
+  assert.equal(ship.boarding?.with, foe.id);
+});
