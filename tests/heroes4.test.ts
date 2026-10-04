@@ -434,13 +434,14 @@ test('the tick stays light: forty captains at sea, the guards, the cards and the
   stepAdv(game);
   // The best of three batches: the tick's own cost, not a busy machine's (it failed under a browser's load: QA, 2026-10-04).
   let ms = Infinity;
-  for (let rep = 0; rep < 3; rep++) {
+  // (Ten short batches: the suite's files run side by side and a busy stretch outlasted three.)
+  for (let rep = 0; rep < 10; rep++) {
     const t0 = performance.now();
-    for (let k = 0; k < 10; k++) {
+    for (let k = 0; k < 4; k++) {
       game.now += 1;
       stepAdv(game);
     }
-    ms = Math.min(ms, (performance.now() - t0) / 10);
+    ms = Math.min(ms, (performance.now() - t0) / 4);
   }
   assert.ok(ms < 5, `${ms.toFixed(2)} ms a second`);
 });
