@@ -8498,7 +8498,7 @@
   ],
   "prompt": "Draw a square image: sixteen separate small objects for the map of a dark pirate game, each seen from straight above as a bird would see it, laid out in a 4 by 4 grid, each centred in its own cell and filling about two thirds of it, with wide even gaps of empty background between them so that no two touch. A grim, weathered, realistic painted style with muted colours — dark greens, charcoal, weathered wood, tar black, rust, old brass, cold blue-grey — soft light from the upper left, one consistent hand for all sixteen. The first two rows are things of a volcanic island, the last two of an ice island: 1) a crack in the ground glowing with lava; 2) a steaming hot spring; 3) a fallen obsidian pillar; 4) a field of grey pumice stones; 5) a hardened lava bubble split open; 6) a sulphur-yellow pool; 7) a blackened stone shrine; 8) a column of grey smoke from a vent; 9) a frozen waterfall seen from above; 10) a snowed-under wooden hut; 11) a cracked ice floe; 12) a heap of frozen barrels; 13) a snow-covered stone tower stump; 14) a ring of ice crystals; 15) a sledge half buried in snow; 16) a stand of frosted birches; No people, no animals, no skulls, no bones, no blood. Solid flat magenta #FF00FF background, no ground around the objects, no lines, no text, no letters.",
   "despill": true,
-  "painting": true
+  "cut": "hf_20261004_132706_gpt-isle_9"
  },
  "isle_10": {
   "grid": [
@@ -8531,7 +8531,7 @@
   ],
   "prompt": "Draw a square image: sixteen separate small objects for the map of a dark pirate game, each seen from straight above as a bird would see it, laid out in a 4 by 4 grid, each centred in its own cell and filling about two thirds of it, with wide even gaps of empty background between them so that no two touch. A grim, weathered, realistic painted style with muted colours — dark greens, charcoal, weathered wood, tar black, rust, old brass, cold blue-grey — soft light from the upper left, one consistent hand for all sixteen. The first two rows are things of a ruins island, the last two of a bone island: 1) a broken stone fountain; 2) a headless stone statue on a plinth; 3) a sunken stone courtyard; 4) a toppled bell in rubble; 5) a ruined chapel apse; 6) a row of broken arches; 7) a cracked stone sarcophagus lid; 8) a fallen stone lion; 9) a grey dead oak; 10) a leaning grey menhir; 11) a dry cracked pond bed; 12) a rusted iron cage, empty; 13) a ring of grey stones around ash; 14) a broken ship's wheel half buried; 15) a grey thorn hedge; 16) a leaning grey stone cross; No people, no animals, no skulls, no bones, no blood. Solid flat magenta #FF00FF background, no ground around the objects, no lines, no text, no letters.",
   "despill": true,
-  "painting": true
+  "cut": "hf_20261004_132711_gpt-isle_10"
  },
  "isle_11": {
   "grid": [

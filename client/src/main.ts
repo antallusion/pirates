@@ -873,6 +873,9 @@ function onMessage(m: ServerMsg): void {
       audio.bell();
       playFilm('cut_treasure', () => lairChest.open(m.view));
       break;
+    case 'film':
+      playFilm(m.id);
+      break;
     case 'researched': {
       // A hull researched (docs/20): the yard's film — a great hull's slipway for the last two tiers.
       playFilm(SHIP_CLASSES[m.classId].tier >= 4 ? 'cut_research_great' : 'cut_research');

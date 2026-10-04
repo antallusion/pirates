@@ -1581,6 +1581,8 @@ export type ServerMsg =
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
   /** A hull researched (docs/20): the yard's film and word. */
   | { t: 'researched'; classId: ShipClassId }
+  /** A film for a moment the server sees (docs/20: the companions' films); shown once, as every film. */
+  | { t: 'film'; id: string }
   /** The crew speaks (docs/16 #16–17): an officer's line on an event (his name, role, portrait), or the men's grumble or
    *  shanty (`who` null); `i` the line of the table, `x` the event's name (a sea, a ship, a beast). */
   | { t: 'crew_say'; who: { name: string; role: OfficerRole; unique?: string } | null; ev: TalkEvent | 'grumble' | 'shanty'; i: number; x?: string }

@@ -2,6 +2,7 @@
 // tells her where (by the compass), strikes an enemy's rudder in a fight, grows with time at sea and in battle, and
 // wears a harness made at a forge. Everyone near sees it swim beside her ship.
 
+import { ownIsland } from './estate.ts';
 import { sendPetsOwn } from './pets.ts';
 import { BEASTS } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
@@ -41,6 +42,13 @@ export function giveCalf(game: Game, s: PlayerSession, how: 'orphan' | 'ingrid')
   return true;
 }
 
+/** Is she in the waters of her own island (within half a mile of its shore)? */
+function atHome(game: Game, account: number, x: number, y: number): boolean {
+  const h = ownIsland(game, account);
+  const isl = h ? game.world.islands.find((i) => i.id === h.island) : undefined;
+  return !!isl && Math.hypot(x - isl.x, y - isl.y) < isl.radius + 900;
+}
+
 function grow(game: Game, s: PlayerSession, c: CompanionRec, xp: number): void {
   if (c.level >= CALF_MAX_LEVEL) return;
   c.xp += xp;
@@ -48,6 +56,7 @@ function grow(game: Game, s: PlayerSession, c: CompanionRec, xp: number): void {
     c.xp -= calfXpNext(c.level);
     c.level++;
     game.sendTo(s, { t: 'toast', msg: `${c.name} grows: level ${c.level}.`, kind: 'good' });
+    game.sendTo(s, { t: 'film', id: 'cut_isle_calf' }); // once: the calf's leap by the pier (reel 18)
     sendCompanion(game, s);
   }
 }
@@ -80,10 +89,18 @@ export function stepCompanions(game: Game): void {
       if (p.pets?.owned.length || p.shipCat) sendPetsOwn(game, s);
     }
     const c = p?.companion;
-    if (!c || !ship || !ship.alive || ship.docked) continue;
+    if (!c || !ship || !ship.alive) continue;
+    // In the waters of her own island the calf trains three times as fast, at anchor too (owner, 2026-10-04: «на
+    // островах личных … только спутников качаешь»; docs/20 §4).
+    const tick = Math.floor(game.now);
+    const home = tick % 3 === 0 && atHome(game, s.accountId, ship.state.x, ship.state.y);
+    if (ship.docked) {
+      if (home) grow(game, s, c, 1);
+      continue;
+    }
     const fight = ship.inCombat(game.now);
     if (fight) grow(game, s, c, 1);
-    else if (Math.floor(game.now) % 10 === 0) grow(game, s, c, 1);
+    else if (home || tick % 10 === 0) grow(game, s, c, 1);
     // A strike at a foe's rudder.
     if (fight && game.now >= c.strikeAt) {
       const foe = foeOf(game, ship);
