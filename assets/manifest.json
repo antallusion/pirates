@@ -2286,6 +2286,10 @@
     "unit.thunderbird":                        { "local": "units/thunderbird.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.0", "rev": 20261004035658},
     "unit.thunderbird_b":                      { "local": "units/thunderbird_b.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.1", "rev": 20261004035658},
     "unit.thunderbird_atk":                    { "local": "units/thunderbird_atk.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.2", "rev": 20261004035658},
-    "unit.thunderbird_hit":                    { "local": "units/thunderbird_hit.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.3", "rev": 20261004035658}
+    "unit.thunderbird_hit":                    { "local": "units/thunderbird_hit.webp", "remote": "hf_20261004_035658_gpt-anim_thunderbird.png", "job": "gpt-anim_thunderbird", "fit": "sheet:anim_thunderbird.3", "rev": 20261004035658},
+    "unit.nautilus_knight":                    { "local": "units/nautilus_knight.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.0", "rev": 20261004035936},
+    "unit.nautilus_knight_b":                  { "local": "units/nautilus_knight_b.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.1", "rev": 20261004035936},
+    "unit.nautilus_knight_atk":                { "local": "units/nautilus_knight_atk.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.2", "rev": 20261004035936},
+    "unit.nautilus_knight_hit":                { "local": "units/nautilus_knight_hit.webp", "remote": "hf_20261004_035936_gpt-anim_nautilus_knight.png", "job": "gpt-anim_nautilus_knight", "fit": "sheet:anim_nautilus_knight.3", "rev": 20261004035936}
   }
 }
