@@ -429,6 +429,11 @@ export class TacticalPanel {
         root.innerHTML = '';
         this.el = this.canvas = null;
         this.key = '';
+        // The next fight builds a new canvas: its size is measured afresh, or a second boarding in the same window kept a
+        // bare 300×150 board (QA, 2026-10-04).
+        this.size = { w: 0, cw: 0, ch: 0, ox: 0, oy: 0, dpr: 1, rot: 0, bw: 0, bh: 0 };
+        this.band = { l: 0, r: 0, t: 0, b: 0 };
+        this.bgKey = '';
         this.pos.clear();
         this.act.clear();
         this.floats = [];
