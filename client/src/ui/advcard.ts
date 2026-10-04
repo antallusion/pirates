@@ -247,7 +247,9 @@ export class AdvCard {
     const chat = document.getElementById('chat-toggle')?.getBoundingClientRect();
     if (!narrow && chat && chat.height && chat.left < r.right) max = Math.max(140, Math.round(chat.top - 8 - top));
     // A phone held sideways: the card keeps to the top band (the popup budget, owner 2026-10-04) and scrolls.
-    if (innerHeight <= 520) max = Math.max(84, Math.round(innerHeight * 0.4 - top));
+    // (its centre begins at 30% of the height: the card ends a little above, leaving the toasts their share of the 15% —
+    // QA circle, 2026-10-05)
+    if (innerHeight <= 520) max = Math.max(60, Math.floor(innerHeight * 0.27 - top));
     else if (narrow) max = Math.max(84, Math.round(innerHeight * 0.32 - top)); // a tablet: the top third too
     let left = narrow ? this.baseLeft! : r.left;
     if (narrow && innerHeight <= 520) {

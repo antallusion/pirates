@@ -1,6 +1,22 @@
 // Russian for what the server says (first half of tools/i18n-server.ts), English pattern → Russian pattern.
 
 export const SERVER_RU_A: Record<string, string> = {
+  // The Wanted levels' names and the crimes behind them, inside «Wanted {0}: {1} ({2}).» (QA circle, 2026-10-05: they
+  // came through in English).
+  "Unknown": "Неизвестен",
+  "Suspect": "Подозреваемый",
+  "Known Pirate": "Известный пират",
+  "Dangerous Criminal": "Опасный преступник",
+  "Legendary Pirate": "Легендарный пират",
+  "Enemy of the Crown": "Враг Короны",
+  "attacked {0}": "нападение на «{0}»",
+  "boarded {0}": "абордаж «{0}»",
+  "sank {0}": "потоплен «{0}»",
+  "took {0}": "захвачен «{0}»",
+  "harboured a convict": "укрывал каторжника",
+  "offered a bribe to the Crown": "предложил взятку Короне",
+  "ran from a Crown patrol": "бежал от патруля Короны",
+  "smuggling": "контрабанда",
   " (lantern lit)": " (фонарь зажжён)",
   " (lantern out)": " (фонарь погашен)",
   " (rent a warehouse here for the rest)": " (остальное — арендуйте здесь склад)",

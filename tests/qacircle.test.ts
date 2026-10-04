@@ -145,3 +145,30 @@ test('a boarding\'s end keeps to a band, not the field\'s middle (popup budget)'
   assert.ok(css.includes('.tb-banner:not(:has(.tb-landclose)) { top: auto; bottom: 8px; transform: translateX(-50%); max-height: calc(30vh - 16px);'));
   assert.ok(css.includes('.tb-banner:not(:has(.tb-landclose)) { top: 4px; bottom: auto;'));
 });
+
+test('a Wanted toast reads whole in Russian: the level\'s name and the crime («Suspect (attacked …)» came through)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { applyDataLocale } = await import('../client/src/lang/data.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  const { WANTED_TITLES } = await import('../shared/src/data/factions.ts');
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    for (const t of WANTED_TITLES) for (const why of ['attacked Iron Verdict', 'boarded Iron Verdict', 'sank Iron Verdict', 'took Iron Verdict', 'smuggling', 'ran from a Crown patrol', 'harboured a convict', 'offered a bribe to the Crown', 'gave no quarter', 'selling stolen goods']) {
+      const ru = serverText(`Wanted 1: ${t} (${why}).`);
+      assert.doesNotMatch(ru.replace('Iron Verdict', ''), /[A-Za-z]{2,}/, ru);
+    }
+  } finally {
+    applyDataLocale('en');
+    setLang('en');
+  }
+});
+
+test('a short screen: the adventure card in the top row, the toasts in a side column, the bar\'s hint in the bar (popup budget)', () => {
+  assert.ok(css.includes('#advcard { top: var(--ts-top, 8px); left: calc(var(--ts-left, 408px) - 48px);'));
+  assert.ok(css.includes('body:has(#advcard:not(.hidden)) #toasts { top: var(--tq-top, var(--ts-top)); left: var(--tq-left, var(--ts-left)); width: var(--tq-w, var(--ts-w)); }'));
+  assert.ok(css.includes('body.ai-low #hud-prompt .act-info { position: fixed;'));
+  assert.ok(css.includes('body.pb-3 #hud-stack > #hud-tip { display: none !important; }'));
+  const card = readFileSync(new URL('../client/src/ui/advcard.ts', import.meta.url), 'utf8');
+  assert.match(card, /if \(innerHeight <= 520\) max = Math\.max\(60, Math\.floor\(innerHeight \* 0\.27 - top\)\);/);
+});

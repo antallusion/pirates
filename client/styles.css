@@ -2027,13 +2027,14 @@ body:has(#lairchest:not(.hidden)) #hud-stack { visibility: hidden; }
    so an unfolded stack never pushes them down into the middle of the screen. */
 #hud-stack > #hud-tip, #hud-stack > #hud-feed, #hud-stack > #hud-boss { order: -2; }
 /* …and when they still reach the centre (fitTransient in hud.ts): terser, then the news out (it is in the chat's log). */
-body.pb-1 #hud-feed .feed-h, body.pb-1 #hud-boss .bparts, body.pb-1 #hud-boss .bhint, body.pb-2 #hud-boss .byou { display: none; }
+body.pb-1 #hud-feed .feed-h, body.pb-1 #hud-boss .bparts, body.pb-1 #hud-boss .bhint, body.pb-2 #hud-boss .byou, body.pb-2 #hud-boss .bphase { display: none; }
 body.pb-1 #hud-feed { padding-top: 1px !important; padding-bottom: 2px !important; }
 body.pb-1 #hud-feed .feed-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.pb-1 #hud-feed .feed-line::before { content: '⚑ '; color: var(--brass); }
 body.pb-1 #hud-tip .tp-t { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 body.pb-2 #hud-tip .tp-t { -webkit-line-clamp: 1; line-clamp: 1; }
 body.pb-2 #hud-stack > #hud-feed { display: none !important; }
+body.pb-3 #hud-stack > #hud-tip { display: none !important; }
 /* The unfolded stack ends above the bottom block (its goals ran into the prompt's line at 1280×720): it scrolls. */
 @media (min-width: 700px) and (min-height: 521px) {
   #hud #hud-stack { max-height: calc(100vh - var(--hb-top, 150px) - 24px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
@@ -4002,6 +4003,17 @@ body.touch #hud-prompt { display: flex; }
 #hud-prompt:empty, body.touch #hud-prompt:empty { display: none; }
 .act-info { font: 11.5px/1.3 var(--sans); color: var(--fog); text-shadow: 0 1px 2px #000, 0 0 6px #000; text-align: center; max-width: min(92vw, 560px); text-wrap: balance; }
 .act-info kbd { border: 1px solid var(--brass); color: var(--gold); padding: 0 4px; font: 600 10.5px var(--sans); margin: 0 2px; }
+/* A short screen (hud.ts sets «ai-low» and --abm-b): the hint line takes the fire mode's place inside the bar (fixed: against
+   #hud-bottom, whose transform holds it — #hud-prompt is positioned itself), in the
+   bottom band (the popup budget); the fire mode's own line steps aside while it is there. */
+body.ai-low #hud-prompt .act-info { position: fixed; left: 50%; transform: translateX(-50%); bottom: var(--abm-b, 58px); width: max-content; max-width: min(92vw, 520px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 1; }
+body.ai-low:has(#hud-prompt .act-info) #hud-combat .ab-mode { visibility: hidden; }
+/* A short screen: the adventure map's folded card names its thing in one line (a tap on the head opens the rest), and
+   the bar's hint keeps to the bar's width — the card, the toasts and the hint stay within 15% of a 640×360 screen. */
+@media (max-height: 520px) {
+  #advcard .ac-card:not(.open) .enc-h { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.ai-low #hud-prompt .act-info { max-width: min(62vw, 420px); }
+}
 .act-row { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: nowrap; max-width: 100%; pointer-events: none; }
 .act-more-row { flex-wrap: wrap; }
 .act-btn { --h: 34px; box-sizing: border-box; height: var(--h); display: inline-flex; align-items: center; gap: 5px; padding: 0 9px 0 6px; min-width: 0; max-width: 270px; flex: 0 0 auto;
@@ -4544,8 +4556,12 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
   #advcard { grid-template-columns: minmax(0, 1fr); overflow-x: hidden; }
 }
 @media (max-width: 699px), (max-height: 520px) {
-  #advcard { top: calc(var(--ts-top, 8px) + var(--ts-h, 44px) + 4px); left: calc(var(--ts-left, 408px) - 48px); transform: none; width: calc(var(--ts-w, 250px) + 48px); min-width: 0; gap: 4px; grid-template-columns: minmax(0, 1fr); overflow-x: hidden; }
-  body:has(#advcard:not(.hidden)) #hud-stack > :not(.hud-fold) { visibility: hidden; }
+  /* In the top row itself, where the fold button and the toasts' strip stand (it stood under them, 56–144 px of a
+     360 px screen: into the middle — QA circle, 2026-10-05); the fold steps aside and the toasts go under the captain's
+     plate at the left (--tq-*, hud.ts), out of the middle's columns. */
+  #advcard { top: var(--ts-top, 8px); left: calc(var(--ts-left, 408px) - 48px); transform: none; width: calc(var(--ts-w, 250px) + 48px); min-width: 0; gap: 4px; grid-template-columns: minmax(0, 1fr); overflow-x: hidden; }
+  body:has(#advcard:not(.hidden)) #hud-stack { visibility: hidden; }
+  body:has(#advcard:not(.hidden)) #toasts { top: var(--tq-top, var(--ts-top)); left: var(--tq-left, var(--ts-left)); width: var(--tq-w, var(--ts-w)); }
   #advcard .ac-card { padding: 5px 8px 6px; }
   #advcard .ac-head { cursor: pointer; }
   #advcard .ac-head .ac-art { width: 28px; height: 28px; }

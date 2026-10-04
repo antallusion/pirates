@@ -96,7 +96,8 @@ export const CENTRE = { from: 0.3, to: 0.7 };
 /** The popup budget (owner, 2026-10-04: «every transient text lives in a top or bottom band, never over the centre»).
  *  An unfolded stack under a boss's card can run the news down to half the screen: then the hint, the card and the news
  *  grow terser (`pb-1`: one line of news, the card without its parts and words), and if that is not enough, the news
- *  steps out — it is in the chat's log — and the hint keeps one line (`pb-2`). */
+ *  steps out — it is in the chat's log — and the hint keeps one line (`pb-2`); on a short screen the hint waits
+ *  too (`pb-3`). */
 export function fitTransient(): void {
   const body = document.body;
   const over = (): boolean => {
@@ -110,11 +111,40 @@ export function fitTransient(): void {
     }
     return false;
   };
-  body.classList.remove('pb-1', 'pb-2');
+  body.classList.remove('pb-1', 'pb-2', 'pb-3');
   if (!over()) return;
   body.classList.add('pb-1');
   if (!over()) return;
   body.classList.add('pb-2');
+  if (!over()) return;
+  body.classList.add('pb-3'); // a short screen: the hint waits too (its card stays where it was)
+}
+
+/** A place for the toasts' strip (h tall) in a side column, out of the screen's middle columns (the popup budget's
+ *  centre is 30–70% of the width), clear of every HUD block there: the left column under the captain's plate, or the
+ *  right one under the chart and its buttons — whichever has room higher up. Null when neither has. */
+function sideSpot(h: number, z: number): { top: number; left: number; w: number } | null {
+  const W = innerWidth, H = innerHeight;
+  const rects: DOMRect[] = [];
+  const seen = (e: Element) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden'; };
+  for (const e of document.querySelectorAll('#hud-captain *, #hud-map, #hud-region, #unread, #chat-toggle, .tc-menu, #touch .tc-btn, #touch .tc-fire, #tc-stick, #tc-sail, #hud-menu, #hud-bottom, #advcard, #hud-nav')) {
+    if (!seen(e)) continue;
+    const r = e.getBoundingClientRect();
+    if (r.width > 1 && r.height > 1) rects.push(r);
+  }
+  const col = (x0: number, x1: number): { top: number; left: number; w: number } | null => {
+    if (x1 - x0 < 120 * z) return null;
+    let t = 8 * z;
+    for (let i = 0; i < 40; i++) {
+      const hit = rects.filter((r) => r.left < x1 && r.right > x0 && r.top < t + h && r.bottom > t);
+      if (!hit.length) return { top: t, left: x0, w: x1 - x0 };
+      t = Math.max(...hit.map((r) => r.bottom)) + 6 * z;
+      if (t + h > H - 8 * z) return null;
+    }
+    return null;
+  };
+  const a = col(8 * z, W * CENTRE.from - 8 * z), b = col(W * CENTRE.to + 8 * z, W - 8 * z);
+  return a && b ? (b.top < a.top ? b : a) : a ?? b;
 }
 
 /** Two names that say the same (a great one's hull is named as it is: «Сборщица Десятины · Сборщица Десятины»). */
@@ -187,6 +217,13 @@ export class Hud {
       const r = bottom.getBoundingClientRect();
       document.body.style.setProperty('--hb-top', `${r.height > 0 ? Math.max(0, innerHeight - r.top) / zoom() : 0}px`);
       if (r.width > 0) document.body.style.setProperty('--hb-left', `${Math.round(r.left / zoom())}px`); // the desk's toasts keep left of it
+      // A short screen: the action bar's hint line takes the fire mode's line inside the bar (styles.css «ai-low»),
+      // in the bottom band — over the buttons it stood in the screen's middle (QA circle: 64–68% of 640×360).
+      const mode = bottom.querySelector<HTMLElement>('.ab-mode');
+      const mr = mode?.getBoundingClientRect();
+      const low = matchMedia(SHORT).matches && !!mr && mr.height > 0;
+      document.body.classList.toggle('ai-low', low);
+      if (low) document.body.style.setProperty('--abm-b', `${Math.round((r.bottom - mr!.bottom) / zoom())}px`);
     };
     new ResizeObserver(place).observe(bottom);
     addEventListener('resize', place);
@@ -213,7 +250,17 @@ export class Hud {
       set('--ts-left', left);
       set('--ts-w', Math.max(120 * z, right - left));
       set('--ts-h', h);
+      // The adventure map's card takes this row (styles.css): the toasts go under the captain's plate, at the left,
+      // in the width left of the screen's middle columns (the popup budget's centre begins at 30%).
+      const card = document.getElementById('advcard');
+      const spot = card && !card.classList.contains('hidden') ? sideSpot(h, z) : null;
+      if (spot) {
+        set('--tq-top', spot.top);
+        set('--tq-left', spot.left);
+        set('--tq-w', spot.w);
+      } else for (const k of ['--tq-top', '--tq-left', '--tq-w']) document.body.style.removeProperty(k);
     };
+    new MutationObserver(() => this.placeStrip()).observe($('advcard'), { attributes: true, attributeFilter: ['class'] });
     new ResizeObserver(this.placeStrip).observe(stack);
     addEventListener('resize', this.placeStrip);
     // The popup budget: the hint, the news and a boss's card keep out of the screen's centre, terser step by step.
