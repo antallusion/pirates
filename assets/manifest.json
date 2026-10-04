@@ -2474,6 +2474,7 @@
     "bg.deck_whale_mother":                    { "local": "art/deck_whale_mother.webp", "remote": "hf_20261004_074500_gpt-bg.deck_whale_mother.png", "job": "gpt-bg.deck_whale_mother", "fit": "opaque:1536", "rev": 20261004074500},
     "bg.deck_coral_hulk":                      { "local": "art/deck_coral_hulk.webp", "remote": "hf_20261004_074720_gpt-bg.deck_coral_hulk.png", "job": "gpt-bg.deck_coral_hulk", "fit": "opaque:1536", "rev": 20261004074720},
     "bg.deck_drowned_cathedral":               { "local": "art/deck_drowned_cathedral.webp", "remote": "hf_20261004_074958_gpt-bg.deck_drowned_cathedral.png", "job": "gpt-bg.deck_drowned_cathedral", "fit": "opaque:1536", "rev": 20261004074958},
-    "bg.deck_treasure_junk":                   { "local": "art/deck_treasure_junk.webp", "remote": "hf_20261004_075315_gpt-bg.deck_treasure_junk.png", "job": "gpt-bg.deck_treasure_junk", "fit": "opaque:1536", "rev": 20261004075315}
+    "bg.deck_treasure_junk":                   { "local": "art/deck_treasure_junk.webp", "remote": "hf_20261004_075315_gpt-bg.deck_treasure_junk.png", "job": "gpt-bg.deck_treasure_junk", "fit": "opaque:1536", "rev": 20261004075315},
+    "bg.deck_pirate_haven":                    { "local": "art/deck_pirate_haven.webp", "remote": "hf_20261004_075515_gpt-bg.deck_pirate_haven.png", "job": "gpt-bg.deck_pirate_haven", "fit": "opaque:1536", "rev": 20261004075515}
   }
 }
