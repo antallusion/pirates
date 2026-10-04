@@ -2141,6 +2141,7 @@
     "unit.jade_guard":                         { "local": "units/jade_guard.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.0", "rev": 20261004013532},
     "unit.jade_guard_b":                       { "local": "units/jade_guard_b.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.1", "rev": 20261004013532},
     "unit.jade_guard_atk":                     { "local": "units/jade_guard_atk.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.2", "rev": 20261004013532},
-    "unit.jade_guard_hit":                     { "local": "units/jade_guard_hit.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.3", "rev": 20261004013532}
+    "unit.jade_guard_hit":                     { "local": "units/jade_guard_hit.webp", "remote": "hf_20261004_013532_gpt-anim_jade_guard.png", "job": "gpt-anim_jade_guard", "fit": "sheet:anim_jade_guard.3", "rev": 20261004013532},
+    "bg.port_brimstone_bay":                   { "local": "art/port_brimstone_bay.webp", "remote": "hf_20261004_013803_gpt-bg.port_brimstone_bay.png", "job": "gpt-bg.port_brimstone_bay", "fit": "opaque:1920", "rev": 20261004013803}
   }
 }
