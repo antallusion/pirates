@@ -558,7 +558,9 @@ function filmMoments(): void {
     const lair = tac.land ? LAIR_FILM[tac.land.lair] : undefined;
     const pick = LEGEND_FILM.find(([u, f]) => units.includes(u) && filmDue(f))?.[1] ?? (lair && filmDue(lair) ? lair : undefined) ?? (roster ? ROSTER_FILM[roster] : undefined);
     // The first boarding has its film; the next, the night raid's.
-    if (!(pick && filmDue(pick) && playFilm(pick))) playFilm(tac.land ? 'cut_lair' : filmDue('cut_boarding') ? 'cut_boarding' : 'cut_raid');
+    const shown = (pick && filmDue(pick) && playFilm(pick)) || playFilm(tac.land ? 'cut_lair' : filmDue('cut_boarding') ? 'cut_boarding' : 'cut_raid');
+    // A film over the field must not cost her the turn (QA, 2026-10-04): the battle's clock waits for it.
+    if (shown && !tac.over) net.send({ t: 'tac', act: { a: 'film', ms: 6500 } });
   }
   // The end of a fight; a great one ashore brought down has its own (the fourteenth reel), the first time.
   if (tac?.over && !filmWas.over) {

@@ -172,6 +172,8 @@ export interface TacBattle {
   queue: number[];
   active: number | null;
   turnEnds: number;
+  /** A side whose screen opened the fight with a film has had the clock held for it (once a battle). */
+  filmHeld?: [boolean, boolean];
   aiAt: number;
   log: TacEvent[];
   events: number;
@@ -1455,6 +1457,17 @@ export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: 
     return null;
   }
   if (a.a === 'ransom') return 'The ransom is paid in silver aboard';
+  if (a.a === 'film') {
+    // The film over her field: the turn that runs and the sea's next move wait as long (once a side, capped).
+    const held = (bt.filmHeld ??= [false, false]);
+    if (held[side]) return null;
+    held[side] = true;
+    const ms = Math.max(0, Math.min(TAC_FILM_HOLD, Math.round(Number(a.ms) || 0)));
+    bt.turnEnds = Math.max(bt.turnEnds, now) + ms;
+    bt.aiAt = Math.max(bt.aiAt, now) + ms;
+    bt.seq++;
+    return null;
+  }
   const s = bt.active !== null ? stackById(bt, bt.active) : undefined;
   if (!s || s.side !== side) return 'Not your turn';
   if (a.a === 'spell') return castSpell(bt, side, a.id, a.target, rng);
@@ -1801,6 +1814,9 @@ export function aiAct(bt: TacBattle, now: number, rng: Rng): void {
   const choice = aiChoice(bt, rng);
   if (act(bt, s.side, choice, now, rng) !== null) act(bt, s.side, { a: 'defend' }, now, rng);
 }
+
+/** The longest a film at a fight's start holds the clock (the reels are 5 s clips; with their fades). */
+export const TAC_FILM_HOLD = 8000;
 
 /** The clock: the sea's side (and auto-battle) acts after a breath; a captain's turn runs out into a defence. */
 export function stepBattle(bt: TacBattle, now: number, rng: Rng): void {

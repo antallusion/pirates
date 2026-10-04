@@ -1352,7 +1352,10 @@ export type TacAction =
   | { a: 'ransom' }
   /** Her path's innate move, and her ultimate (docs/18 items 1, 5): once a battle each, pointed at a stack or not. */
   | { a: 'innate'; target?: number }
-  | { a: 'ult'; target?: number };
+  | { a: 'ult'; target?: number }
+  /** A film opened the fight on her screen (QA, 2026-10-04: films must not cost her the turn): the clock waits as long,
+   *  once a battle for each side, at most TAC_FILM_HOLD. */
+  | { a: 'film'; ms: number };
 
 /** A stack on the field. `hex` its place; `count` men with `hp` left on the foremost; `ret` may still strike back
  *  this round. */
