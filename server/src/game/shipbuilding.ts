@@ -3,6 +3,7 @@
 // yard; the old ship is berthed there and can be taken out again. Plus the living materials at sea
 // (cursed wood, drowned silk) and what the figureheads do.
 
+import { researchWhy } from './research.ts';
 import { takeGearBack } from './gear.ts';
 import { refitHolds } from './refit.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
@@ -100,6 +101,8 @@ export function quoteBuild(game: Game, s: PlayerSession, port: Port, r: BuildReq
   if (cls.tier > port.shipyardTier) return { ...out, error: `${port.name} cannot build a ${cls.name}` };
   if (cls.factions && !cls.factions.includes(port.faction)) return { ...out, error: `Only ${cls.factions.join(', ')} yards build the ${cls.name}` };
   if (p.level < LEVEL_FOR_TIER[cls.tier]) return { ...out, error: `A ${cls.name} needs captain level ${LEVEL_FOR_TIER[cls.tier]}` };
+  const unknown = researchWhy(p, r.classId); // the yard's tree of hulls (docs/20)
+  if (unknown) return { ...out, error: unknown };
   if (!woodAvailable(port, r.frame)) return { ...out, error: `No ${frame.name.toLowerCase()} in this yard` };
   if (!woodAvailable(port, r.plank)) return { ...out, error: `No ${plank.name.toLowerCase()} in this yard` };
   if (r.figurehead && FIGUREHEADS[r.figurehead].port !== port.id && !p.figureheads.includes(r.figurehead)) return { ...out, error: 'That figurehead is carved elsewhere' };

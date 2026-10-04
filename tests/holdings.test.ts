@@ -5,7 +5,7 @@ import type { Island } from '../shared/src/world/worldgen.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import { GRACE_MS, shoreWitness } from '../server/src/game/holdings.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { join, makeGame, steps, knowHulls } from './helpers.ts';
 import type { FakeConn } from './helpers.ts';
 
 const DAY = 86_400_000;
@@ -257,6 +257,7 @@ test('the island yard lays down a hull and launches her where she was built; the
   a.push({ t: 'isle', action: 'build', island: isl.id, building: 'shipyard' });
   const p = A.profile!;
   p.level = 12;
+  knowHulls(p); // the schooner researched (docs/20)
   A.ship!.cargo = { timber: 50, planks: 20, sailcloth: 12, iron: 8 };
   a.push({ t: 'isle', action: 'yard_order', island: isl.id, req: { classId: 'schooner', name: 'Island Born', frame: 'pine', plank: 'pine', rares: {} } });
   assert.equal(p.builds.length, 1, a.last('toast')?.msg);

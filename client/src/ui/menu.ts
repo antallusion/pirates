@@ -7,7 +7,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export type MenuItem = 'map' | 'journal' | 'ship' | 'crew' | 'talents' | 'company' | 'shop' | 'help' | 'options' | 'chat' | 'base' | 'hero' | 'throne';
+export type MenuItem = 'map' | 'journal' | 'ship' | 'crew' | 'talents' | 'company' | 'shop' | 'help' | 'options' | 'chat' | 'base' | 'hero' | 'throne' | 'research';
 export const MENU_ITEMS: { id: MenuItem; glyph: string; art?: string }[] = [
   { id: 'map', glyph: '🗺' },
   { id: 'journal', glyph: '📜', art: 'tab_letters' },
@@ -28,7 +28,7 @@ export function menuLabel(id: MenuItem): string {
 }
 
 /** Screens that are there only for some captains (her own island's base, docs/15). */
-const EXTRA_ART: Partial<Record<MenuItem, { glyph: string; art: string }>> = { base: { glyph: '⌂', art: 'build_residents_house' }, throne: { glyph: '★', art: 'tattoo_crown' } }; // docs/19 E18: the Throne past the cap
+const EXTRA_ART: Partial<Record<MenuItem, { glyph: string; art: string }>> = { base: { glyph: '⌂', art: 'build_residents_house' }, throne: { glyph: '★', art: 'tattoo_crown' }, research: { glyph: '⚒', art: 'tab_board' } }; // docs/19 E18: the Throne past the cap
 
 export function renderMenu(root: HTMLElement, open: (m: MenuItem) => void, extra: MenuItem[] = []): void {
   const items = [...MENU_ITEMS.slice(0, 7), ...extra.map((id) => ({ id, ...EXTRA_ART[id]! })), ...MENU_ITEMS.slice(7)];

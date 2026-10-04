@@ -23,7 +23,7 @@ import { buildPortView, priceMods, shipyardBuy } from '../server/src/game/ports.
 import { deliver, lettersSince } from '../server/src/game/post.ts';
 import type { ShipEntity } from '../server/src/game/ship.ts';
 import type { FakeConn } from './helpers.ts';
-import { join, makeGame } from './helpers.ts';
+import { join, makeGame, knowHulls } from './helpers.ts';
 
 const T0 = Date.UTC(2026, 8, 30, 12);
 
@@ -75,6 +75,7 @@ test('a career rises from standing and deeds: titles, a price off in the flag’
   const { game } = makeGame();
   const { s } = captain(game, 'Rose Carrow');
   const p = s.profile!;
+  knowHulls(p); // the yard's next class is tried, not the tree of hulls (docs/20)
   // Pirates sunk count for the Crown (and a little for the League).
   for (let i = 0; i < 10; i++) renownKill(game, s, victim('confederacy', 'pirate'), 'sunk');
   assert.equal(rn(p).deeds.crown, 120);

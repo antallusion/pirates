@@ -8,7 +8,7 @@ import { quoteBuild, stepBuiltShip, woodAvailable } from '../server/src/game/shi
 import type { BuildRequest } from '../server/src/game/shipbuilding.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
-import { join, makeGame } from './helpers.ts';
+import { join, makeGame, knowHulls } from './helpers.ts';
 
 const base = (build?: ShipBuild): ShipLoadout => ({ classId: 'brig', name: 'x', guns: { port: 'long_9', starboard: 'long_9' }, modules: {}, build });
 const b = (over: Partial<ShipBuild> = {}): ShipBuild => ({ frame: 'oak', plank: 'oak', rares: [], quality: 'common', variants: [], builder: 'gravesend', ...over });
@@ -58,6 +58,7 @@ test('timber grows where it grows', () => {
 test('lay down a keel, wait for the yard, launch her; the old ship waits in her berth', () => {
   const { game } = makeGame();
   const { c, s, ship, p } = captain(game, 'Builder');
+  knowHulls(p); // the brig researched (docs/20)
   const port = dock(s, game, 'gravesend');
   const req: BuildRequest = { classId: 'brig', name: 'Iron Verdict II', frame: 'oak', plank: 'oak', rares: {}, master: true };
   assert.match(quoteBuild(game, s, port, req).error!, /Needs/);

@@ -248,6 +248,7 @@ export class AdvCard {
     if (!narrow && chat && chat.height && chat.left < r.right) max = Math.max(140, Math.round(chat.top - 8 - top));
     // A phone held sideways: the card keeps to the top band (the popup budget, owner 2026-10-04) and scrolls.
     if (innerHeight <= 520) max = Math.max(84, Math.round(innerHeight * 0.4 - top));
+    else if (narrow) max = Math.max(84, Math.round(innerHeight * 0.32 - top)); // a tablet: the top third too
     let left = narrow ? this.baseLeft! : r.left;
     if (narrow && innerHeight <= 520) {
       // A phone held sideways: no room above or below — the card steps aside from the token instead; never left of

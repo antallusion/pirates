@@ -30,6 +30,7 @@ import type { LogEntry } from './data/captainlog.ts';
 import type { TalkEvent } from './data/crewtalk.ts';
 import type { OfficerRole, Profession, TraitId } from './data/crew.ts';
 import type { FigureheadId, PlanQuality, RareSlot, VariantId, WoodId } from './data/shipbuild.ts';
+import type { ResearchView } from './data/research.ts';
 import type { BuildingId, IslandSize } from './data/holdings.ts';
 import type { CaptainId } from './data/captains.ts';
 import type { BoardTactic } from './data/boarding.ts';
@@ -126,6 +127,8 @@ export type ClientMsg =
   | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }
   | { t: 'build_launch'; id: string }
   | { t: 'berth'; action: 'swap' | 'sell'; index: number }
+  /** The yard's tree of hulls (docs/20): learn a hull with her parents' experience and the free pool. */
+  | { t: 'research'; classId: ShipClassId }
   | { t: 'plan_buy'; classId: ShipClassId }
   | { t: 'figurehead_buy'; id?: FigureheadId }
   | { t: 'shipyard'; action: 'repair' }
@@ -645,6 +648,8 @@ export interface PrivateState {
   builds: { id: string; port: string; classId: ShipClassId; name: string; done: number; start: number; frame: WoodId; plank: WoodId; quality: PlanQuality }[];
   plans: { id: string; classId: ShipClassId | null; quality: PlanQuality; variants: VariantId[]; uses: number }[];
   berths: { port: string; name: string; classId: ShipClassId; hull: number; trophy?: TrophyHistory }[];
+  /** The yard's tree of hulls (docs/20): each hull's experience, the free pool, the hulls researched. */
+  research?: ResearchView;
   /** Ships sunk or taken in a row since she last made port (docs/16 #4), and what it adds to plunder and experience. */
   streak?: { n: number; mul: number } | null;
   figureheads: FigureheadId[];
@@ -1574,6 +1579,8 @@ export type ServerMsg =
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
+  /** A hull researched (docs/20): the yard's film and word. */
+  | { t: 'researched'; classId: ShipClassId }
   /** The crew speaks (docs/16 #16–17): an officer's line on an event (his name, role, portrait), or the men's grumble or
    *  shanty (`who` null); `i` the line of the table, `x` the event's name (a sea, a ship, a beast). */
   | { t: 'crew_say'; who: { name: string; role: OfficerRole; unique?: string } | null; ev: TalkEvent | 'grumble' | 'shanty'; i: number; x?: string }

@@ -8,7 +8,7 @@ import { levelPatterns, refitCost } from '../shared/src/data/shiplevel.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { refitView } from '../server/src/game/refit.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { join, makeGame, steps, knowHulls } from './helpers.ts';
 
 const bad = (c: ReturnType<typeof join>) => c.all('toast').filter((t) => t.kind === 'bad').map((t) => t.msg);
 
@@ -76,6 +76,7 @@ test('the height of her class stops a refit; a hull above the captain’s level 
   s.ship!.docked = yard.id;
   p.docked = yard.id;
   p.gold = 100_000;
+  knowHulls(p); // the brig researched (docs/20): the level is what is tried here
   c.push({ t: 'shipyard', action: 'buy_ship', classId: 'brig' });
   assert.equal(bad(c).at(-1), 'Captain level 19 is needed to command a Brig');
   p.level = 19;

@@ -12,6 +12,8 @@ import { namedPirates } from '../../../shared/src/data/pirates.ts';
 import type { WantedPoster } from '../../../shared/src/protocol.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
 import { levelRange } from '../../../shared/src/data/shiplevel.ts';
+import { isResearched, researchQuote } from '../../../shared/src/data/research.ts';
+import { EN as REN, RU as RRU } from '../lang/ui/research.ts';
 import { ask, tell } from './confirm.ts';
 import { playFilm } from './cutscene.ts';
 import { mapCard, placeName } from './maps.ts';
@@ -56,6 +58,7 @@ const JOB_ICON: Record<string, string> = {
   diplomacy: 'map_contract', revenge: 'danger', investigation: 'ab_spotters_eye', elite: 'danger',
 };
 const L = dict(EN, RU);
+const RL = dict(REN, RRU); // the yard's tree of hulls (docs/20)
 const LI = dict(ISLES_EN, ISLES_RU);
 
 function licenceLeft(n: number): string {
@@ -258,6 +261,8 @@ export class PortScreen {
         return this.send({ t: 'shipyard', action: 'guns', side: d.side as never, gun: d.gun as never });
       case 'mount':
         return this.send({ t: 'shipyard', action: 'mount', mount: d.mount as MountId });
+      case 'research':
+        return this.send({ t: 'research', classId: d.cls as ShipClassId });
       case 'ship':
         void ask(L('confirm.shipTrade', { ship: SHIP_CLASSES[d.cls as ShipClassId].name })).then((ok) => ok && this.send({ t: 'shipyard', action: 'buy_ship', classId: d.cls as ShipClassId }));
         return;
@@ -399,14 +404,25 @@ ${ammo}${auctionCard(view, state)}${bazaarCard(state, view)}${intel}`;
         const mounted = self.loadout.guns[side] === gdef.gun;
         return `<div class="item-row" title="${esc(g.description)}">${icon(`gun_${gdef.gun}`, '', 'item-ico')}<div class="item-text"><b>${esc(g.name)}</b><span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span><span class="muted">${esc(g.description)}</span></div><button class="btn btn-small item-btn" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : money(gdef.cost)}</button></div>`;
       }).join('')}</div>`).join('');
+    // The yard's tree of hulls (docs/20): a hull not yet researched shows what it waits for, and its research.
+    const research = self.research ?? { xp: {}, free: 0, done: [] };
+    const owned = [self.loadout.classId, ...self.berths.map((b) => b.classId)];
     const ships = sy.ships.map((s) => {
       const c = SHIP_CLASSES[s.classId];
       const net = Math.max(0, s.price - s.tradeIn);
       const art = assetUrl(c.sprite);
+      const known = isResearched(research, s.classId, owned);
+      const q = known ? null : researchQuote(research, s.classId, owned);
+      const buy = s.classId === self.loadout.classId
+        ? `<button class="btn btn-small item-btn" disabled>${esc(L('yard.yours'))}</button>`
+        : known ? `<button class="btn btn-small item-btn" data-act="ship" data-cls="${s.classId}">${money(net)}</button>`
+        : q?.ready ? `<button class="btn btn-small btn-primary item-btn" data-act="research" data-cls="${s.classId}">${esc(RL('research', { n: fmt(q.cost) }))}</button>`
+        : `<button class="btn btn-small item-btn" data-research-open title="${esc(RL('openTip'))}">${icon('tab_board', '', 'ico-sm')}${esc(RL('yardLocked'))}</button>`;
+      const lock = q ? `<span class="hull-lock muted">${esc(q.known.length ? RL('cost', { have: fmt(Math.min(q.cost, q.pool)), cost: fmt(q.cost) }) : RL('st.lockedBy', { names: q.parents.map((p) => SHIP_CLASSES[p].name).join(', ') }))}</span>` : '';
       return `<div class="card hull-card"><div class="hull-art">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div>
         <div class="hull-text"><b>${esc(c.name)}</b> <span class="muted">${esc(levelSpan(c.id))} · ${esc(c.role)}</span>
-          <div class="hull-stats"><span>${icon('stat_hull', '', 'ico-sm')}${c.hull}</span><span>${icon('stat_sails', '', 'ico-sm')}${c.maxSpeed}</span><span>${icon('fire', '', 'ico-sm')}${c.gunPortsPerSide}×2</span><span>${icon('tab_market', '', 'ico-sm')}${c.holdVolume}</span><span>${icon('stat_crew', '', 'ico-sm')}${c.crewMin}–${c.crewMax}</span></div></div>
-        <button class="btn btn-small item-btn" data-act="ship" data-cls="${s.classId}" ${s.classId === self.loadout.classId ? 'disabled' : ''}>${s.classId === self.loadout.classId ? esc(L('yard.yours')) : money(net)}</button></div>`;
+          <div class="hull-stats"><span>${icon('stat_hull', '', 'ico-sm')}${c.hull}</span><span>${icon('stat_sails', '', 'ico-sm')}${c.maxSpeed}</span><span>${icon('fire', '', 'ico-sm')}${c.gunPortsPerSide}×2</span><span>${icon('tab_market', '', 'ico-sm')}${c.holdVolume}</span><span>${icon('stat_crew', '', 'ico-sm')}${c.crewMin}–${c.crewMax}</span></div>${lock}</div>
+        ${buy}</div>`;
     }).join('');
     return `<div class="cols"><div>
         ${self.talents.shp_legendary_keel ? `<div class="card"><h4 class="card-h">${icon('good_timber', '', 'ico-md')}${esc(L('keel.title'))}</h4><p class="muted">${esc(L('keel.text'))}</p><button class="btn btn-small" data-act="keel" ${self.loadout.keel ? 'disabled' : ''}>${esc(self.loadout.keel ? L('keel.has') : L('keel.lay'))}</button></div>` : ''}
@@ -420,7 +436,7 @@ ${ammo}${auctionCard(view, state)}${bazaarCard(state, view)}${intel}`;
           return `<div class="item-row">${icon(`mount_${m.mount}`, '', 'item-ico')}<div class="item-text"><b>${esc(def.name)}</b><span class="muted">${esc(def.description)}</span></div><button class="btn btn-small item-btn" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : money(m.cost)}</button></div>`;
         }).join('') || `<p class="muted">${esc(L('mount.none'))}</p>`}</div>
         ${modules}</div></div>
-      <h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('hulls.title'))}</h3><p class="muted" style="margin:0 0 8px">${esc(L('hulls.note'))}</p>
+      <div class="hulls-head"><h3 class="title-sm" style="font-size:20px;margin-top:10px">${esc(L('hulls.title'))}</h3><button class="btn btn-small" data-research-open title="${esc(RL('openTip'))}">${icon('tab_board', '', 'ico-sm')}${esc(RL('open'))}</button></div><p class="muted" style="margin:0 0 8px">${esc(L('hulls.note'))}</p>
       <div class="hull-list">${ships}</div>
       <p class="muted">${esc(L('yard.note', { tier: sy.tier }))}</p>
 

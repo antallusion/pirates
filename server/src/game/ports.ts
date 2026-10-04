@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { researchWhy } from './research.ts';
 import { worldGoalSale } from './worldgoals.ts';
 import { careerBuyMul, careerYardBonus, renownTrade } from './renown.ts';
 import { veteranPay } from '../../../shared/src/data/questpay.ts';
@@ -510,6 +511,8 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   if (def.tier > port.shipyardTier + careerYardBonus(s.profile!, port.faction)) return `${port.name} cannot build a ${def.name}`;
   if (def.factions && !def.factions.includes(port.faction)) return `Only ${def.factions.join(', ')} yards build the ${def.name}`;
   if (classId === ship.loadout.classId) return 'You already sail one';
+  const unknown = researchWhy(s.profile!, classId); // the yard's tree of hulls (docs/20)
+  if (unknown) return unknown;
   const refitting = refitHolds(game, s.profile!);
   if (refitting) return refitting; // the yard has her on the ways
   // Canon D12: a hull comes at her class's first level, and the captain must be up to it.

@@ -41,7 +41,7 @@ import { extract } from '../tools/i18n-server.ts';
 import { serverTable } from '../client/src/lang/server.ts';
 import { DATA_RU } from '../client/src/lang/data.ts';
 import { EN as F_EN, RU as F_RU } from '../client/src/lang/ui/fleet.ts';
-import { FakeConn, join, makeGame, onHull } from './helpers.ts';
+import { FakeConn, join, makeGame, onHull, knowHulls } from './helpers.ts';
 
 const manifest = JSON.parse(readFileSync(new URL('../assets/manifest.json', import.meta.url), 'utf8')) as { assets: Record<string, unknown> };
 const painted = (id: string) => !!manifest.assets[id];
@@ -228,6 +228,7 @@ test('a premium hull is never sold for silver: no yard lists her, builds her, bu
   const p = s.profile!, ship = s.ship!;
   p.level = 60;
   p.gold = 10_000_000;
+  knowHulls(p); // the tree of hulls known whole (docs/20): here only the doubloon rule is tried
   const port = game.portById('gravesend')!;
   for (const c of PREMIUM) assert.equal(SHIP_CLASSES[c].purchasable, false, c);
   // The yard's list: her silver hulls by its rank, none of the premium.

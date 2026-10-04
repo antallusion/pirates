@@ -1,5 +1,6 @@
 // Test helpers: an in-memory game with fake connections that speak the real protocol.
 
+import { SHIP_CLASS_IDS } from '../shared/src/data/ships.ts';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
 import { decodeSnap } from '../shared/src/codec.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
@@ -93,4 +94,9 @@ export function onHull(game: Game, ship: { loadout: { classId: string; level?: n
   ship.recompute(game.now);
   ship.hull = ship.stats.hullMax;
   ship.sails = ship.stats.sailHpMax;
+}
+
+/** The yard's tree of hulls (docs/20) known whole: for the tests of the yard's other gates. */
+export function knowHulls(p: { research?: { xp: Record<string, number>; free: number; done: string[] } }): void {
+  p.research = { xp: {}, free: 0, done: [...SHIP_CLASS_IDS] };
 }

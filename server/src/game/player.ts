@@ -80,6 +80,8 @@ import type { DriftProfile } from './drifts.ts';
 import { addGlory, gloryView } from './throne.ts';
 import { gloryXp } from '../../../shared/src/data/throne.ts';
 import type { ThroneRec } from './throne.ts';
+import { hullXp, researchView } from './research.ts';
+import type { ResearchView } from '../../../shared/src/data/research.ts';
 
 export interface Profile {
   version: 1;
@@ -216,6 +218,9 @@ export interface Profile {
   speedups?: number;
   /** When she last gave up an island of her own (docs/15 item 6: another is claimed after a wait), wall ms. */
   isleLeftAt?: number;
+  /** The yard's tree of hulls (docs/20): the experience each hull has earned, the free pool, the hulls researched.
+   *  Absent in a save from before it (research.ts fills it from what her level already let her buy). */
+  research?: ResearchView;
   /** The White Orca's calf in her wake (docs/12 P10 #2) and the ship's pets (#3). */
   companion?: CompanionRec | null;
   pets?: { owned: PetId[]; deck: PetId | null };
@@ -418,6 +423,7 @@ export function talentPointsAvailable(p: Profile): number {
 
 /** Adds XP, handles level-ups. Returns number of levels gained. */
 export function addXp(p: Profile, amount: number): number {
+  hullXp(p, amount); // the hull she sails learns what the captain does (docs/20)
   if (p.level >= MAX_LEVEL) {
     addGlory(p, amount); // docs/19 E1: past the cap, experience is glory
     return 0;
@@ -562,6 +568,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     builds: p.builds.map((b) => ({ id: b.id, port: b.port, classId: b.classId, name: b.name, done: b.done, start: b.start, frame: b.build.frame, plank: b.build.plank, quality: b.build.quality })),
     plans: p.plans.map((x) => ({ id: x.id, classId: x.classId, quality: x.quality, variants: x.variants, uses: x.uses })),
     berths: p.berths.map((b) => ({ port: b.port, name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100), ...(b.loadout.trophy ? { trophy: b.loadout.trophy } : {}) })),
+    research: researchView(p),
     streak: streakView(p),
     figureheads: p.figureheads,
     fleet: world.fleet ?? { escorts: [], slots: 0, formation: p.fleet.formation, upkeep: 0 },

@@ -1004,6 +1004,30 @@ v('cut_hermit_camp_down', 'down_hermit_camp', 'Отшельники сдалис
   'harpoons on the sand and sit by their fire, and the pirates walk in and sit down with them, passing them a bottle. '
   'The camera moves slowly in toward the fire.')
 
+# ---- Reel 18 (owner, 2026-10-04: «прокачку кораблей можно сделать как в игре world of tanks»; docs/20): the yard's
+# tree of hulls and the island's companions ------------------------------------------------------------------------------
+v('cut_research', 'research', 'Новый корпус изучен',
+  "A shipwright's loft high under the roof of an old harbour yard at night. On a long scarred oak table lit by two brass "
+  "lanterns lies a great plan of a ship's hull drawn in faded brown lines on yellowed paper, with no writing anywhere on it; "
+  'the weathered hands of an old master shipwright smooth it flat and set a pair of brass dividers on it, then lift a half-model '
+  'of the same hull, carved in pale wood, into the lantern light beside the plan. Through a small round window behind, the masts '
+  'of the yard stand black against a moonlit sky. The camera moves slowly down from above the table toward the half-model.')
+v('cut_research_great', 'research_great', 'Изучен великий корпус',
+  'Grey dawn at a great stone slipway in a royal harbour yard: the curved oak frames of an enormous new warship rise on the ways, '
+  'taller than the warehouses around them, scaffolding and ladders on every side, shipwrights with mallets and adzes swarming over '
+  'them, steam rising from a long steaming box where planks are bent, a crane of timber lifting a heavy oak beam into place. The '
+  'camera rises slowly along the stern frames until the whole hull and the waking harbour lie below.')
+v('cut_isle_escorts', 'isle_escort', 'Спутники на учениях',
+  'A clear cold morning at a small fortified island harbour of your own: two small escort ships, a cutter and a brigantine, sail '
+  'out side by side past a stone pier and a squat watchtower, their crews hauling on the lines as both ships come about together '
+  'in a tight turn, spray at their bows; at the end of the pier a captain in a long dark coat watches them through a brass spyglass '
+  'while the sea fog lifts off the water. The camera tracks low alongside the two ships as they turn.')
+v('cut_isle_calf', 'isle_calf', 'Касатка подросла',
+  'Late afternoon at a quiet island cove with a wooden pier: a young black-and-white orca, sleek and playful, circles close to the '
+  'pier and then leaps clear of the green water in a long arc beside a moored sloop, its tall young fin cutting the surface as it '
+  'lands; sailors on the pier lean on the rail and watch. Warm low sun, glittering water. The camera follows the leap in slow motion.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

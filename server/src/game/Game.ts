@@ -195,6 +195,7 @@ import {
 } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
+import { research } from './research.ts';
 import type { Profile, WorldView } from './player.ts';
 import {
   buildPortView, priceMods, buyAmmo, buyChart, buyLicence, sellCharts, generateContracts, hireCrew, pardon, recordIntel, shipyardBuy, shipyardGuns, shipyardModule, shipyardRepair, shipyardUnfit, layKeel, syncKeel, trade,
@@ -2782,6 +2783,12 @@ export class Game {
         return portAction((pt) => orderBuild(this, s, pt, msg.req));
       case 'build_launch':
         return portAction((pt) => launchBuild(this, s, pt, String(msg.id)));
+      case 'research': {
+        // The yard's tree of hulls (docs/20): learned anywhere, with the experience her hulls have earned.
+        const why = research(this, s, msg.classId);
+        if (why) this.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });
+        return;
+      }
       case 'berth':
         return portAction((pt) => (msg.action === 'sell' ? sellBerth(this, s, pt, Math.trunc(Number(msg.index))) : swapBerth(this, s, pt, Math.trunc(Number(msg.index)))));
       case 'plan_buy':

@@ -97,6 +97,7 @@ import { RecruitWindow } from './ui/recruit.ts';
 import { TameWindow } from './ui/tame.ts'; // docs/18 IV
 import { ThroneWindow } from './ui/throne.ts'; // docs/19 E1–E3, E18
 import { PremiumWindow } from './ui/premium.ts'; // the premium shop (owner, 2026-10-03)
+import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (owner, 2026-10-04; docs/20)
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
@@ -105,7 +106,7 @@ const L = dict(MAIN_EN, MAIN_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | null;
+type Modal = 'port' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | 'research' | null;
 
 const net = new Net();
 const state = new ClientState();
@@ -274,6 +275,7 @@ heroWindow.onThrone = () => openThrone();
 hud.onThrone = () => openThrone();
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
+const researchWindow = new ResearchWindow((m) => net.send(m));
 function openShop(topup = false): void {
   premiumWindow.open(topup);
   openModal('shop');
@@ -845,7 +847,7 @@ function onMessage(m: ServerMsg): void {
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       if (state.self?.company.mutiny && modal !== 'mutiny') openModal('mutiny');
       else if (!state.self?.company.mutiny && modal === 'mutiny') closeModal();
-      else if (modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero' || modal === 'throne') {
+      else if (modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero' || modal === 'throne' || modal === 'research') {
         // The Company and island windows redraw only when what they show of her changed (a redraw every second on
         // the private state's beat lost taps).
         const key = selfKeyFor(modal);
@@ -871,6 +873,11 @@ function onMessage(m: ServerMsg): void {
       audio.bell();
       playFilm('cut_treasure', () => lairChest.open(m.view));
       break;
+    case 'researched': {
+      // A hull researched (docs/20): the yard's film — a great hull's slipway for the last two tiers.
+      playFilm(SHIP_CLASSES[m.classId].tier >= 4 ? 'cut_research_great' : 'cut_research');
+      break;
+    }
     case 'surrender_offer':
       // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.
       surrenderCard.open(m.offer);
@@ -1198,12 +1205,13 @@ function selfKeyFor(m: Modal): string {
   if (!s) return '';
   if (m === 'gear') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.stash, s.loadout, s.captainGear, s.cargo]);
   if (m === 'hero') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.hero, s.captainGear, s.glory?.open]);
+  if (m === 'research') return JSON.stringify([m, lang(), s.loadout.classId, s.berths.map((b) => b.classId), s.research && { done: s.research.done, free: Math.floor(s.research.free / 50), xp: Object.values(s.research.xp).map((x) => Math.floor((x ?? 0) / 50)) }]);
   if (m === 'throne') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.glory && { ...s.glory, xp: Math.floor(s.glory.xp / Math.max(1, s.glory.need) * 200), trials: s.glory.trials.map((v) => ({ ...v, wait: Math.ceil((v.wait ?? 0) / 60) })) }]);
   return m === 'company' ? JSON.stringify([m, lang(), s.name, s.dockedAt, s.berths, s.pvp, s.maps, s.company, s.cargo, s.builds, s.gold]) : JSON.stringify([m, lang(), s.gold, s.cargo, s.dockedAt, s.homeIsle]);
 }
 
 function refreshModal(): void {
-  lastSelfKey = modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero' || modal === 'throne' ? selfKeyFor(modal) : '';
+  lastSelfKey = modal === 'company' || modal === 'base' || modal === 'gear' || modal === 'hero' || modal === 'throne' || modal === 'research' ? selfKeyFor(modal) : '';
   const root = $('modal-panel');
   const marks = root.dataset.modal === (modal ?? '') ? scrollMarks(root) : null;
   // Screens dress by name in the stylesheet (header art, backgrounds).
@@ -1261,7 +1269,7 @@ function renderModal(root: HTMLElement): void {
       if (state.barter) keepInputs(root, () => renderBarter(root, state, (m) => net.send(m)));
       break;
     case 'menu':
-      renderMenu(root, openMenuItem, [...(state.self?.homeIsle !== null && state.self?.homeIsle !== undefined ? ['base' as const] : []), ...(state.self?.glory?.open ? ['throne' as const] : [])]);
+      renderMenu(root, openMenuItem, [...(state.self?.homeIsle !== null && state.self?.homeIsle !== undefined ? ['base' as const] : []), ...(state.self?.glory?.open ? ['throne' as const] : []), 'research' as const]);
       break;
     case 'tattoos':
       renderTattoos(root, state, (m) => net.send(m));
@@ -1313,6 +1321,9 @@ function renderModal(root: HTMLElement): void {
     case 'shop':
       premiumWindow.render(root, state);
       break;
+    case 'research':
+      researchWindow.render(root, state);
+      break;
     case 'sunk':
       if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
       break;
@@ -1320,6 +1331,7 @@ function renderModal(root: HTMLElement): void {
   if (touch.enabled) stripKeyHints(root);
   root.querySelectorAll<HTMLElement>('[data-tame]').forEach((b) => (b.onclick = () => openTame())); // docs/18 IV
   root.querySelectorAll<HTMLElement>('[data-throne]').forEach((b) => (b.onclick = () => openThrone())); // docs/19 E18
+  root.querySelectorAll<HTMLElement>('[data-research-open]').forEach((b) => (b.onclick = () => openModal('research'))); // docs/20
   ensureCloseButton(root);
 }
 
