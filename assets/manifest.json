@@ -2105,6 +2105,7 @@
     "unit.night_smuggler":                     { "local": "units/night_smuggler.webp", "remote": "hf_20261004_005301_gpt-anim_night_smuggler.png", "job": "gpt-anim_night_smuggler", "fit": "sheet:anim_night_smuggler.0", "rev": 20261004005301},
     "unit.night_smuggler_b":                   { "local": "units/night_smuggler_b.webp", "remote": "hf_20261004_005301_gpt-anim_night_smuggler.png", "job": "gpt-anim_night_smuggler", "fit": "sheet:anim_night_smuggler.1", "rev": 20261004005301},
     "unit.night_smuggler_atk":                 { "local": "units/night_smuggler_atk.webp", "remote": "hf_20261004_005301_gpt-anim_night_smuggler.png", "job": "gpt-anim_night_smuggler", "fit": "sheet:anim_night_smuggler.2", "rev": 20261004005301},
-    "unit.night_smuggler_hit":                 { "local": "units/night_smuggler_hit.webp", "remote": "hf_20261004_005301_gpt-anim_night_smuggler.png", "job": "gpt-anim_night_smuggler", "fit": "sheet:anim_night_smuggler.3", "rev": 20261004005301}
+    "unit.night_smuggler_hit":                 { "local": "units/night_smuggler_hit.webp", "remote": "hf_20261004_005301_gpt-anim_night_smuggler.png", "job": "gpt-anim_night_smuggler", "fit": "sheet:anim_night_smuggler.3", "rev": 20261004005301},
+    "prop.port_widows_wick":                   { "local": "props/port_widows_wick.webp", "remote": "hf_20261004_005509_gpt-port_widows_wick.png", "job": "gpt-port_widows_wick", "fit": "sheet:port_widows_wick.0", "rev": 20261004005509}
   }
 }
