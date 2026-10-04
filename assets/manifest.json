@@ -2182,6 +2182,10 @@
     "unit.silver_archer_b":                    { "local": "units/silver_archer_b.webp", "remote": "hf_20261004_021738_gpt-anim_silver_archer.png", "job": "gpt-anim_silver_archer", "fit": "sheet:anim_silver_archer.1", "rev": 20261004021738},
     "unit.silver_archer_atk":                  { "local": "units/silver_archer_atk.webp", "remote": "hf_20261004_021738_gpt-anim_silver_archer.png", "job": "gpt-anim_silver_archer", "fit": "sheet:anim_silver_archer.2", "rev": 20261004021738},
     "unit.silver_archer_hit":                  { "local": "units/silver_archer_hit.webp", "remote": "hf_20261004_021738_gpt-anim_silver_archer.png", "job": "gpt-anim_silver_archer", "fit": "sheet:anim_silver_archer.3", "rev": 20261004021738},
-    "bg.port_wreckhold":                       { "local": "art/port_wreckhold.webp", "remote": "hf_20261004_022023_gpt-bg.port_wreckhold.png", "job": "gpt-bg.port_wreckhold", "fit": "opaque:1920", "rev": 20261004022023}
+    "bg.port_wreckhold":                       { "local": "art/port_wreckhold.webp", "remote": "hf_20261004_022023_gpt-bg.port_wreckhold.png", "job": "gpt-bg.port_wreckhold", "fit": "opaque:1920", "rev": 20261004022023},
+    "unit.storm_petrels":                      { "local": "units/storm_petrels.webp", "remote": "hf_20261004_022250_gpt-anim_storm_petrels.png", "job": "gpt-anim_storm_petrels", "fit": "sheet:anim_storm_petrels.0", "rev": 20261004022250},
+    "unit.storm_petrels_b":                    { "local": "units/storm_petrels_b.webp", "remote": "hf_20261004_022250_gpt-anim_storm_petrels.png", "job": "gpt-anim_storm_petrels", "fit": "sheet:anim_storm_petrels.1", "rev": 20261004022250},
+    "unit.storm_petrels_atk":                  { "local": "units/storm_petrels_atk.webp", "remote": "hf_20261004_022250_gpt-anim_storm_petrels.png", "job": "gpt-anim_storm_petrels", "fit": "sheet:anim_storm_petrels.2", "rev": 20261004022250},
+    "unit.storm_petrels_hit":                  { "local": "units/storm_petrels_hit.webp", "remote": "hf_20261004_022250_gpt-anim_storm_petrels.png", "job": "gpt-anim_storm_petrels", "fit": "sheet:anim_storm_petrels.3", "rev": 20261004022250}
   }
 }
