@@ -2147,6 +2147,10 @@
     "unit.vault_crab_b":                       { "local": "units/vault_crab_b.webp", "remote": "hf_20261004_014129_gpt-anim_vault_crab.png", "job": "gpt-anim_vault_crab", "fit": "sheet:anim_vault_crab.1", "rev": 20261004014129},
     "unit.vault_crab_atk":                     { "local": "units/vault_crab_atk.webp", "remote": "hf_20261004_014129_gpt-anim_vault_crab.png", "job": "gpt-anim_vault_crab", "fit": "sheet:anim_vault_crab.2", "rev": 20261004014129},
     "unit.vault_crab_hit":                     { "local": "units/vault_crab_hit.webp", "remote": "hf_20261004_014129_gpt-anim_vault_crab.png", "job": "gpt-anim_vault_crab", "fit": "sheet:anim_vault_crab.3", "rev": 20261004014129},
-    "prop.port_frostgate":                     { "local": "props/port_frostgate.webp", "remote": "hf_20261004_014353_gpt-port_frostgate.png", "job": "gpt-port_frostgate", "fit": "sheet:port_frostgate.0", "rev": 20261004014353}
+    "prop.port_frostgate":                     { "local": "props/port_frostgate.webp", "remote": "hf_20261004_014353_gpt-port_frostgate.png", "job": "gpt-port_frostgate", "fit": "sheet:port_frostgate.0", "rev": 20261004014353},
+    "unit.giant_hawk":                         { "local": "units/giant_hawk.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.0", "rev": 20261004014621},
+    "unit.giant_hawk_b":                       { "local": "units/giant_hawk_b.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.1", "rev": 20261004014621},
+    "unit.giant_hawk_atk":                     { "local": "units/giant_hawk_atk.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.2", "rev": 20261004014621},
+    "unit.giant_hawk_hit":                     { "local": "units/giant_hawk_hit.webp", "remote": "hf_20261004_014621_gpt-anim_giant_hawk.png", "job": "gpt-anim_giant_hawk", "fit": "sheet:anim_giant_hawk.3", "rev": 20261004014621}
   }
 }
