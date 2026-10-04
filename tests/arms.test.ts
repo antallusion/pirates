@@ -13,6 +13,7 @@ import type { AmmoId, GunId, ModuleId, MountId } from '../shared/src/data/ships.
 import { FIGUREHEADS, carvedAt } from '../shared/src/data/shipbuild.ts';
 import type { FigureheadId } from '../shared/src/data/shipbuild.ts';
 import { CAPTAIN_SLOTS, ITEM_BASES, SETS, SET_IDS, SHIP_SLOTS, gearSource, setBonuses } from '../shared/src/data/items.ts';
+import { BOARDED_SLOTS, SUNK_SLOTS } from '../server/src/game/gear.ts';
 import type { Item, Slot } from '../shared/src/data/items.ts';
 import { ITEM_ART } from '../shared/src/data/itemart.ts';
 import { ARMS_ART, ICON_STAND_IN } from '../shared/src/data/armsart.ts';
@@ -145,10 +146,12 @@ test('each is to be had: a yard by its rank and flag, the chandler, the sea, a b
   }
   // Every port has a carver, and most two.
   for (const p of ports) assert.ok(carvedAt(p.id).length >= 1, p.id);
-  // Gear: the chandler sells some of each kind; everything but tackle is found in the wrecks (gear.ts rollDrop).
+  // Gear: the chandler sells some of each kind; everything but tackle is found at sea (gear.ts rollDrop): the ship's
+  // in the wrecks the guns leave, the captain's aboard a ship taken by boarding (docs/21 §5).
   const sold = NEW_BASES.filter((b) => ITEM_BASES[b].sold);
   assert.ok(sold.some((b) => (SHIP_SLOTS as string[]).includes(ITEM_BASES[b].slot)) && sold.some((b) => (CAPTAIN_SLOTS as string[]).includes(ITEM_BASES[b].slot)));
-  const found = new Set<Slot>([...SHIP_SLOTS.filter((x) => x !== 'tackle'), ...CAPTAIN_SLOTS]);
+  const found = new Set<Slot>([...SUNK_SLOTS, ...BOARDED_SLOTS]);
+  assert.deepEqual([...found].sort(), [...SHIP_SLOTS.filter((x) => x !== 'tackle'), ...CAPTAIN_SLOTS].sort());
   for (const b of NEW_BASES) assert.ok(found.has(ITEM_BASES[b].slot), b);
 });
 

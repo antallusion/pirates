@@ -252,8 +252,15 @@ const DROP: Partial<Record<string, number>> = { pirate: 0.35, merchant: 0.25, pa
  * rolled on the wreck's own dice, so the sea's stream of chance (and the balance sims that replay it) is unchanged. */
 const DROP_MORE: Partial<Record<string, number>> = { pirate: 0.1, merchant: 0.1, patrol: 0.05, hunter: 0.05, ghost: 0.05, escort: 0.05, fisher: 0.12 };
 
-/** What a sunk ship of the sea leaves in the water besides her cargo: an item now and then (an elite's always). */
-export function rollDrop(game: Game, victim: ShipEntity): Item | null {
+/** Sunk by the guns, a ship gives up her own fittings — ship gear, every slot but the tackle; taken by boarding, her
+ *  captain's — the gear a captain wears (owner, 2026-10-04: «при абордаже кораблей ты получаешь улучшатели именно
+ *  для героя»; docs/21 §5). */
+export const SUNK_SLOTS: Slot[] = SHIP_SLOTS.filter((x) => x !== 'tackle');
+export const BOARDED_SLOTS: Slot[] = [...CAPTAIN_SLOTS];
+
+/** What a ship of the sea leaves besides her cargo: an item now and then (an elite's always) — ship gear when the guns
+ *  sank her, the captain's gear when she was boarded. */
+export function rollDrop(game: Game, victim: ShipEntity, how: 'sunk' | 'boarded' = 'sunk'): Item | null {
   if (victim.isPlayer || !victim.onLadder || !victim.npcRole) return null;
   const elite = victim.elite;
   let rng = game.rng;
@@ -263,9 +270,7 @@ export function rollDrop(game: Game, victim: ShipEntity): Item | null {
     if (!own.chance(more / Math.max(0.01, 1 - (DROP[victim.npcRole] ?? 0)))) return null;
     rng = own;
   }
-  // Merchants carry trade gear, warships the gun deck's, pirates the captain's own.
-  const slots: Slot[] = victim.npcRole === 'merchant' ? ['hold', 'ring', 'banner', 'compass', 'coat'] : victim.npcRole === 'pirate' ? [...CAPTAIN_SLOTS, 'battery', 'banner', 'quarters'] : [...SHIP_SLOTS.filter((x) => x !== 'tackle'), 'spyglass', 'hat', 'pistols'];
-  return makeItem(rng, 0, { ilvl: victim.shipLevel, source: elite ? 'elite' : 'common', slots });
+  return makeItem(rng, 0, { ilvl: victim.shipLevel, source: elite ? 'elite' : 'common', slots: how === 'boarded' ? BOARDED_SLOTS : SUNK_SLOTS });
 }
 
 /** An item fished out of the water into the locker; a full locker leaves it floating. */
