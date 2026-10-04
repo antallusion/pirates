@@ -2302,6 +2302,10 @@
     "unit.tidal_elemental":                    { "local": "units/tidal_elemental.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.0", "rev": 20261004040903},
     "unit.tidal_elemental_b":                  { "local": "units/tidal_elemental_b.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.1", "rev": 20261004040903},
     "unit.tidal_elemental_atk":                { "local": "units/tidal_elemental_atk.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.2", "rev": 20261004040903},
-    "unit.tidal_elemental_hit":                { "local": "units/tidal_elemental_hit.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.3", "rev": 20261004040903}
+    "unit.tidal_elemental_hit":                { "local": "units/tidal_elemental_hit.webp", "remote": "hf_20261004_040903_gpt-anim_tidal_elemental.png", "job": "gpt-anim_tidal_elemental", "fit": "sheet:anim_tidal_elemental.3", "rev": 20261004040903},
+    "unit.ember_salamander":                   { "local": "units/ember_salamander.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.0", "rev": 20261004041142},
+    "unit.ember_salamander_b":                 { "local": "units/ember_salamander_b.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.1", "rev": 20261004041142},
+    "unit.ember_salamander_atk":               { "local": "units/ember_salamander_atk.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.2", "rev": 20261004041142},
+    "unit.ember_salamander_hit":               { "local": "units/ember_salamander_hit.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.3", "rev": 20261004041142}
   }
 }
