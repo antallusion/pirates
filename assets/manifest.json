@@ -2207,6 +2207,10 @@
     "unit.turtle_knight_b":                    { "local": "units/turtle_knight_b.webp", "remote": "hf_20261004_024452_gpt-anim_turtle_knight.png", "job": "gpt-anim_turtle_knight", "fit": "sheet:anim_turtle_knight.1", "rev": 20261004024452},
     "unit.turtle_knight_atk":                  { "local": "units/turtle_knight_atk.webp", "remote": "hf_20261004_024452_gpt-anim_turtle_knight.png", "job": "gpt-anim_turtle_knight", "fit": "sheet:anim_turtle_knight.2", "rev": 20261004024452},
     "unit.turtle_knight_hit":                  { "local": "units/turtle_knight_hit.webp", "remote": "hf_20261004_024452_gpt-anim_turtle_knight.png", "job": "gpt-anim_turtle_knight", "fit": "sheet:anim_turtle_knight.3", "rev": 20261004024452},
-    "prop.port_tidehallow":                    { "local": "props/port_tidehallow.webp", "remote": "hf_20261004_024717_gpt-port_tidehallow.png", "job": "gpt-port_tidehallow", "fit": "sheet:port_tidehallow.0", "rev": 20261004024717}
+    "prop.port_tidehallow":                    { "local": "props/port_tidehallow.webp", "remote": "hf_20261004_024717_gpt-port_tidehallow.png", "job": "gpt-port_tidehallow", "fit": "sheet:port_tidehallow.0", "rev": 20261004024717},
+    "unit.bastion_gunner":                     { "local": "units/bastion_gunner.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.0", "rev": 20261004025009},
+    "unit.bastion_gunner_b":                   { "local": "units/bastion_gunner_b.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.1", "rev": 20261004025009},
+    "unit.bastion_gunner_atk":                 { "local": "units/bastion_gunner_atk.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.2", "rev": 20261004025009},
+    "unit.bastion_gunner_hit":                 { "local": "units/bastion_gunner_hit.webp", "remote": "hf_20261004_025009_gpt-anim_bastion_gunner.png", "job": "gpt-anim_bastion_gunner", "fit": "sheet:anim_bastion_gunner.3", "rev": 20261004025009}
   }
 }
