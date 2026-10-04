@@ -2238,6 +2238,10 @@
     "unit.jade_dragon_atk":                    { "local": "units/jade_dragon_atk.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.2", "rev": 20261004031523},
     "unit.jade_dragon_hit":                    { "local": "units/jade_dragon_hit.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.3", "rev": 20261004031523},
     "prop.port_marrowdeep":                    { "local": "props/port_marrowdeep.webp", "remote": "hf_20261004_031755_gpt-port_marrowdeep.png", "job": "gpt-port_marrowdeep", "fit": "sheet:port_marrowdeep.0", "rev": 20261004031755},
-    "bg.port_marrowdeep":                      { "local": "art/port_marrowdeep.webp", "remote": "hf_20261004_032423_gpt-bg.port_marrowdeep.png", "job": "gpt-bg.port_marrowdeep", "fit": "opaque:1920", "rev": 20261004032423}
+    "bg.port_marrowdeep":                      { "local": "art/port_marrowdeep.webp", "remote": "hf_20261004_032423_gpt-bg.port_marrowdeep.png", "job": "gpt-bg.port_marrowdeep", "fit": "opaque:1920", "rev": 20261004032423},
+    "unit.bell_diver":                         { "local": "units/bell_diver.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.0", "rev": 20261004032634},
+    "unit.bell_diver_b":                       { "local": "units/bell_diver_b.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.1", "rev": 20261004032634},
+    "unit.bell_diver_atk":                     { "local": "units/bell_diver_atk.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.2", "rev": 20261004032634},
+    "unit.bell_diver_hit":                     { "local": "units/bell_diver_hit.webp", "remote": "hf_20261004_032634_gpt-anim_bell_diver.png", "job": "gpt-anim_bell_diver", "fit": "sheet:anim_bell_diver.3", "rev": 20261004032634}
   }
 }
