@@ -2350,6 +2350,10 @@
     "unit.lamprey_zealot":                     { "local": "units/lamprey_zealot.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.0", "rev": 20261004044211},
     "unit.lamprey_zealot_b":                   { "local": "units/lamprey_zealot_b.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.1", "rev": 20261004044211},
     "unit.lamprey_zealot_atk":                 { "local": "units/lamprey_zealot_atk.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.2", "rev": 20261004044211},
-    "unit.lamprey_zealot_hit":                 { "local": "units/lamprey_zealot_hit.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.3", "rev": 20261004044211}
+    "unit.lamprey_zealot_hit":                 { "local": "units/lamprey_zealot_hit.webp", "remote": "hf_20261004_044211_gpt-anim_lamprey_zealot.png", "job": "gpt-anim_lamprey_zealot", "fit": "sheet:anim_lamprey_zealot.3", "rev": 20261004044211},
+    "unit.harpoon_preceptor":                  { "local": "units/harpoon_preceptor.webp", "remote": "hf_20261004_044450_gpt-anim_harpoon_preceptor.png", "job": "gpt-anim_harpoon_preceptor", "fit": "sheet:anim_harpoon_preceptor.0", "rev": 20261004044450},
+    "unit.harpoon_preceptor_b":                { "local": "units/harpoon_preceptor_b.webp", "remote": "hf_20261004_044450_gpt-anim_harpoon_preceptor.png", "job": "gpt-anim_harpoon_preceptor", "fit": "sheet:anim_harpoon_preceptor.1", "rev": 20261004044450},
+    "unit.harpoon_preceptor_atk":              { "local": "units/harpoon_preceptor_atk.webp", "remote": "hf_20261004_044450_gpt-anim_harpoon_preceptor.png", "job": "gpt-anim_harpoon_preceptor", "fit": "sheet:anim_harpoon_preceptor.2", "rev": 20261004044450},
+    "unit.harpoon_preceptor_hit":              { "local": "units/harpoon_preceptor_hit.webp", "remote": "hf_20261004_044450_gpt-anim_harpoon_preceptor.png", "job": "gpt-anim_harpoon_preceptor", "fit": "sheet:anim_harpoon_preceptor.3", "rev": 20261004044450}
   }
 }
