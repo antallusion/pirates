@@ -2342,6 +2342,10 @@
     "unit.brine_sister":                       { "local": "units/brine_sister.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.0", "rev": 20261004043647},
     "unit.brine_sister_b":                     { "local": "units/brine_sister_b.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.1", "rev": 20261004043647},
     "unit.brine_sister_atk":                   { "local": "units/brine_sister_atk.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.2", "rev": 20261004043647},
-    "unit.brine_sister_hit":                   { "local": "units/brine_sister_hit.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.3", "rev": 20261004043647}
+    "unit.brine_sister_hit":                   { "local": "units/brine_sister_hit.webp", "remote": "hf_20261004_043647_gpt-anim_brine_sister.png", "job": "gpt-anim_brine_sister", "fit": "sheet:anim_brine_sister.3", "rev": 20261004043647},
+    "unit.choir_toller":                       { "local": "units/choir_toller.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.0", "rev": 20261004043915},
+    "unit.choir_toller_b":                     { "local": "units/choir_toller_b.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.1", "rev": 20261004043915},
+    "unit.choir_toller_atk":                   { "local": "units/choir_toller_atk.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.2", "rev": 20261004043915},
+    "unit.choir_toller_hit":                   { "local": "units/choir_toller_hit.webp", "remote": "hf_20261004_043915_gpt-anim_choir_toller.png", "job": "gpt-anim_choir_toller", "fit": "sheet:anim_choir_toller.3", "rev": 20261004043915}
   }
 }
