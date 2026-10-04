@@ -2191,6 +2191,7 @@
     "unit.mermaid_queen":                      { "local": "units/mermaid_queen.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.0", "rev": 20261004022840},
     "unit.mermaid_queen_b":                    { "local": "units/mermaid_queen_b.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.1", "rev": 20261004022840},
     "unit.mermaid_queen_atk":                  { "local": "units/mermaid_queen_atk.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.2", "rev": 20261004022840},
-    "unit.mermaid_queen_hit":                  { "local": "units/mermaid_queen_hit.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.3", "rev": 20261004022840}
+    "unit.mermaid_queen_hit":                  { "local": "units/mermaid_queen_hit.webp", "remote": "hf_20261004_022840_gpt-anim_mermaid_queen.png", "job": "gpt-anim_mermaid_queen", "fit": "sheet:anim_mermaid_queen.3", "rev": 20261004022840},
+    "bg.port_lotus_anchorage":                 { "local": "art/port_lotus_anchorage.webp", "remote": "hf_20261004_023116_gpt-bg.port_lotus_anchorage.png", "job": "gpt-bg.port_lotus_anchorage", "fit": "opaque:1920", "rev": 20261004023116}
   }
 }
