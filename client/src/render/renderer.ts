@@ -161,6 +161,17 @@ const FEATURE_ART: Record<string, { id: string; size: number; salt: number; inse
   spring: { id: 'prop.spring', size: 60, salt: 14, inset: 0.4 },
 };
 
+/** The kinds of island each landmark of tools/art/isles.py suits (null: any): the lighthouse, the hilltop temple, the
+ *  toppled statue, the ring fort, the step pyramid, the hollow tree, the wreck ashore, the stone face, the sunken
+ *  spire, the menhirs, the windmill farm, the crater's observatory, the frozen wreck, the crystal tower, the mushroom
+ *  chapel, the pirate fort. */
+const LANDMARK_KINDS: (IslandBiome[] | null)[] = [
+  null, ['temperate', 'mossy', 'ruins', 'barren', 'bone'], null, ['temperate', 'mossy', 'barren', 'bone', 'ruins'],
+  ['jungle', 'ruins', 'mangrove'], ['temperate', 'mossy', 'jungle', 'mangrove'], null, ['barren', 'ruins', 'jungle', 'blacksand', 'volcanic'],
+  ['mossy', 'ruins', 'mangrove', 'bone'], ['temperate', 'mossy', 'bone', 'barren'], ['temperate'], ['volcanic', 'blacksand'],
+  ['ice'], ['crystal'], ['fungal'], ['jungle', 'blacksand', 'saltflat', 'barren', 'temperate'],
+];
+
 interface Decor {
   x: number;
   y: number;
@@ -1178,8 +1189,10 @@ export class Renderer {
     const ownDecor = decorId !== BIOME_DECOR[is.biome];
     const grove = sprite('prop.grove');
     const props = this.isleProps(is);
+    const lm = this.landmarkOf(is);
     if (decor && this.zoom > 0.3) {
       for (const d of this.decorOf(is, state)) {
+        if (lm && Math.hypot(d.x - is.x, d.y - is.y) < lm.size * 0.55) continue; // clear ground round her landmark
         const size = d.size * this.zoom;
         const x = this.sx(d.x), y = this.sy(d.y);
         if (x < -size || y < -size || x > this.w + size || y > this.h + size) continue;
@@ -1197,6 +1210,18 @@ export class Renderer {
         else if (d.odd && !ownDecor && is.biome === 'fungal') drawCaps(g, size);
         else if (d.odd && !ownDecor && is.biome === 'crystal') drawShards(g, size);
         else g.drawImage((d.grove && grove ? grove : decor).img, -size / 2, -size / 2, size, size);
+        g.restore();
+      }
+    }
+    // A great island's landmark at her heart (tools/art/isles.py): a ruined temple, a stone circle, a wreck ashore.
+    if (lm && this.zoom > 0.12) {
+      const art = sprite(lm.id);
+      if (art) {
+        const size = lm.size * this.zoom, k = size / Math.max(art.img.width, art.img.height);
+        g.save();
+        g.translate(this.sx(is.x), this.sy(is.y));
+        g.rotate(lm.rot);
+        g.drawImage(art.img, (-art.img.width * k) / 2, (-art.img.height * k) / 2, art.img.width * k, art.img.height * k);
         g.restore();
       }
     }
@@ -1519,6 +1544,16 @@ export class Renderer {
 
   private decorCache = new Map<number, Decor[]>();
   private propCache = new Map<number, { n: number; ids: string[] }>();
+
+  /** A great island's landmark (no port, no lagoon, a bounding radius of 420 m or more): one of the sixteen that suit
+   *  her kind, by her id; null while none is painted. */
+  private landmarkOf(is: IslandData): { id: string; size: number; rot: number } | null {
+    if (is.r < 420 || is.portId || is.biome === 'atoll' || is.isle === 'atoll') return null;
+    const fit = LANDMARK_KINDS.map((kinds, i) => ({ i, ok: !kinds || kinds.includes(is.biome) })).filter((x) => x.ok && sprite(`prop.landmark_${x.i + 1}`));
+    if (!fit.length) return null;
+    const pick = fit[is.id % fit.length].i;
+    return { id: `prop.landmark_${pick + 1}`, size: Math.min(240, is.r * 0.32), rot: ((is.id * 37) % 360) * (Math.PI / 180) };
+  }
 
   /** The island's own few of her kind's sixteen things (tools/art/isles.py), chosen by her id: three to five of them. */
   private isleProps(is: IslandData): string[] {

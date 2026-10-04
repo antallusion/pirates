@@ -82,6 +82,25 @@ PROPS_B = {
                 'a fallen crystal spire', 'a crystal growing through a stone altar', 'a ring of pale crystal shards', 'a single dark smoky crystal'],
 }
 
+# One landmark for a great island (r ≥ 600 m): sixteen set pieces, bigger than the props, one each by the island's id.
+LANDMARKS = ['a great ruined stone lighthouse on a rocky knoll', 'a ruined hilltop temple with a broken dome', 'a colossal toppled stone statue of a sea king lying in the grass',
+             'a ring fort of grey stone with a ruined keep', 'a stepped stone pyramid overgrown with vines', 'a huge hollow ancient tree with a hut built in it',
+             'a wrecked galleon lying on its side on dry land, overgrown', 'a cliff carved into a giant weathered stone face', 'a sunken cathedral spire rising from a pond',
+             'a stone circle of tall menhirs around an altar stone', 'a ruined windmill and granary farm', 'a smoking crater with a ruined observatory on its rim',
+             'a frozen shipwreck locked in a glacier', 'a giant crystal pillar wrapped around a ruined tower', 'a giant mushroom grove around a ruined chapel',
+             'a ruined pirate fort with a broken palisade and a rusted cannon']
+
+
+def landmark_prompt() -> str:
+    listing = ' '.join(f'{i + 1}) {r};' for i, r in enumerate(LANDMARKS))
+    return ('Draw a square image: sixteen separate large landmarks for the map of a dark pirate game, each a whole set piece seen from straight '
+            'above as a bird would see it, laid out in a 4 by 4 grid, each centred in its own cell and filling about four fifths of it, with wide '
+            'even gaps of empty background between them so that no two touch. A grim, weathered, realistic painted style with muted colours — '
+            'dark greens, charcoal, weathered wood, tar black, rust, old brass, cold blue-grey — soft light from the upper left, one consistent hand '
+            f'for all sixteen: {listing} No people, no animals, no skulls, no bones, no blood. Solid flat magenta #FF00FF background, no ground '
+            'around the landmarks, no lines, no text, no letters.')
+
+
 PAIRS = [('temperate', 'mossy'), ('volcanic', 'ice'), ('ruins', 'bone'), ('barren', 'jungle'), ('mangrove', 'atoll'), ('saltflat', 'blacksand'), ('fungal', 'crystal')]
 
 
@@ -120,6 +139,12 @@ def main() -> None:
         if not sheets[name].get('cut'):
             sheets[name]['painting'] = True  # still in the painter's queue: slice_sheet.py takes this off when it cuts it
         jobs.append({'name': f'sheet.{name}', 'prompt': prompt(a, b, PROPS_B if second else PROPS)})
+    lm = 'isle_landmarks'
+    sheets[lm] = {**sheets.get(lm, {}), 'grid': [4, 4], 'mode': 'keyed', 'px': 384, 'square': False, 'dir': 'props', 'aspect': '1:1',
+                  'uniform': 1.0, 'despill': True, 'ids': [f'prop.landmark_{i + 1}' for i in range(16)], 'prompt': landmark_prompt()}
+    if not sheets[lm].get('cut'):
+        sheets[lm]['painting'] = True
+    jobs.append({'name': f'sheet.{lm}', 'prompt': landmark_prompt()})
     with open(path, 'w', encoding='utf-8') as f:
         f.write(json.dumps(sheets, indent=1, ensure_ascii=False) + '\n')
     with open(os.path.join(ROOT, 'assets', 'raw', 'q_gpt_isles.json'), 'w', encoding='utf-8') as f:
