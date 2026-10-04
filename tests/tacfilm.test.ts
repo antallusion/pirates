@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { Rng } from '../shared/src/rng.ts';
 import type { ArmyStack } from '../shared/src/data/army.ts';
 import { TAC_FILM_HOLD, act, newBattle } from '../server/src/game/tacbattle.ts';
+import { TAC_TURN } from '../shared/src/data/tactical.ts';
 import type { TacSideInput } from '../server/src/game/tacbattle.ts';
 
 const side = (army: ArmyStack[], o: Partial<TacSideInput> = {}): TacSideInput => ({
@@ -17,15 +18,17 @@ test('a film over the field holds the clock once a side, capped', () => {
   const bt = newBattle(side([{ u: 'marine', n: 20 }], { human: true }), side([{ u: 'marine', n: 20 }]), 7, 1000, rng);
   const ends = bt.turnEnds, ai = bt.aiAt;
   assert.equal(act(bt, 0, { a: 'film', ms: 6500 }, 1000, rng), null);
-  assert.equal(bt.turnEnds, Math.max(ends, 1000) + 6500);
-  assert.equal(bt.aiAt, Math.max(ai, 1000) + 6500);
+  // (the clock is in seconds, the film's length in ms: 6.5 s more, not 6500 — QA circle, 2026-10-05)
+  assert.equal(bt.turnEnds, Math.max(ends, 1000) + 6.5);
+  assert.equal(bt.aiAt, Math.max(ai, 1000) + 6.5);
+  assert.ok(bt.turnEnds - 1000 < TAC_TURN + 8, `a turn of ${bt.turnEnds - 1000} s`);
   // Once a battle for her side: a second asks for nothing.
   act(bt, 0, { a: 'film', ms: 6500 }, 1000, rng);
-  assert.equal(bt.turnEnds, Math.max(ends, 1000) + 6500);
+  assert.equal(bt.turnEnds, Math.max(ends, 1000) + 6.5);
   // The other side's own film is held too, but never longer than the cap; a wild number is no help.
   const before = bt.turnEnds;
   act(bt, 1, { a: 'film', ms: 1e9 }, 1000, rng);
-  assert.equal(bt.turnEnds, before + TAC_FILM_HOLD);
+  assert.equal(bt.turnEnds, before + TAC_FILM_HOLD / 1000);
   const bt2 = newBattle(side([{ u: 'marine', n: 20 }], { human: true }), side([{ u: 'marine', n: 20 }]), 8, 1000, new Rng(8));
   const e2 = bt2.turnEnds;
   act(bt2, 0, { a: 'film', ms: Number.NaN }, 1000, new Rng(8));

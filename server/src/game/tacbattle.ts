@@ -1462,9 +1462,11 @@ export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: 
     const held = (bt.filmHeld ??= [false, false]);
     if (held[side]) return null;
     held[side] = true;
-    const ms = Math.max(0, Math.min(TAC_FILM_HOLD, Math.round(Number(a.ms) || 0)));
-    bt.turnEnds = Math.max(bt.turnEnds, now) + ms;
-    bt.aiAt = Math.max(bt.aiAt, now) + ms;
+    // The film's length comes in milliseconds; the battle's clock runs in seconds (QA circle, 2026-10-05: 6500 was
+    // added as seconds — «Ваш ход 6519 с», and a foe moving first stood still for 108 minutes).
+    const secs = Math.max(0, Math.min(TAC_FILM_HOLD, Math.round(Number(a.ms) || 0))) / 1000;
+    bt.turnEnds = Math.max(bt.turnEnds, now) + secs;
+    bt.aiAt = Math.max(bt.aiAt, now) + secs;
     bt.seq++;
     return null;
   }
@@ -1815,7 +1817,8 @@ export function aiAct(bt: TacBattle, now: number, rng: Rng): void {
   if (act(bt, s.side, choice, now, rng) !== null) act(bt, s.side, { a: 'defend' }, now, rng);
 }
 
-/** The longest a film at a fight's start holds the clock (the reels are 5 s clips; with their fades). */
+/** The longest a film at a fight's start holds the clock, in ms as the client sends it (the reels are 5 s clips; with
+ *  their fades). */
 export const TAC_FILM_HOLD = 8000;
 
 /** The clock: the sea's side (and auto-battle) acts after a breath; a captain's turn runs out into a defence. */
