@@ -2232,6 +2232,10 @@
     "unit.bell_priest_b":                      { "local": "units/bell_priest_b.webp", "remote": "hf_20261004_031038_gpt-anim_bell_priest.png", "job": "gpt-anim_bell_priest", "fit": "sheet:anim_bell_priest.1", "rev": 20261004031038},
     "unit.bell_priest_atk":                    { "local": "units/bell_priest_atk.webp", "remote": "hf_20261004_031038_gpt-anim_bell_priest.png", "job": "gpt-anim_bell_priest", "fit": "sheet:anim_bell_priest.2", "rev": 20261004031038},
     "unit.bell_priest_hit":                    { "local": "units/bell_priest_hit.webp", "remote": "hf_20261004_031038_gpt-anim_bell_priest.png", "job": "gpt-anim_bell_priest", "fit": "sheet:anim_bell_priest.3", "rev": 20261004031038},
-    "bg.port_last_light":                      { "local": "art/port_last_light.webp", "remote": "hf_20261004_031311_gpt-bg.port_last_light.png", "job": "gpt-bg.port_last_light", "fit": "opaque:1920", "rev": 20261004031311}
+    "bg.port_last_light":                      { "local": "art/port_last_light.webp", "remote": "hf_20261004_031311_gpt-bg.port_last_light.png", "job": "gpt-bg.port_last_light", "fit": "opaque:1920", "rev": 20261004031311},
+    "unit.jade_dragon":                        { "local": "units/jade_dragon.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.0", "rev": 20261004031523},
+    "unit.jade_dragon_b":                      { "local": "units/jade_dragon_b.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.1", "rev": 20261004031523},
+    "unit.jade_dragon_atk":                    { "local": "units/jade_dragon_atk.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.2", "rev": 20261004031523},
+    "unit.jade_dragon_hit":                    { "local": "units/jade_dragon_hit.webp", "remote": "hf_20261004_031523_gpt-anim_jade_dragon.png", "job": "gpt-anim_jade_dragon", "fit": "sheet:anim_jade_dragon.3", "rev": 20261004031523}
   }
 }
