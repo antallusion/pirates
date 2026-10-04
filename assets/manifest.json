@@ -2161,6 +2161,7 @@
     "unit.great_white":                        { "local": "units/great_white.webp", "remote": "hf_20261004_015656_gpt-anim_great_white.png", "job": "gpt-anim_great_white", "fit": "sheet:anim_great_white.0", "rev": 20261004015656},
     "unit.great_white_b":                      { "local": "units/great_white_b.webp", "remote": "hf_20261004_015656_gpt-anim_great_white.png", "job": "gpt-anim_great_white", "fit": "sheet:anim_great_white.1", "rev": 20261004015656},
     "unit.great_white_atk":                    { "local": "units/great_white_atk.webp", "remote": "hf_20261004_015656_gpt-anim_great_white.png", "job": "gpt-anim_great_white", "fit": "sheet:anim_great_white.2", "rev": 20261004015656},
-    "unit.great_white_hit":                    { "local": "units/great_white_hit.webp", "remote": "hf_20261004_015656_gpt-anim_great_white.png", "job": "gpt-anim_great_white", "fit": "sheet:anim_great_white.3", "rev": 20261004015656}
+    "unit.great_white_hit":                    { "local": "units/great_white_hit.webp", "remote": "hf_20261004_015656_gpt-anim_great_white.png", "job": "gpt-anim_great_white", "fit": "sheet:anim_great_white.3", "rev": 20261004015656},
+    "bg.port_sealhold":                        { "local": "art/port_sealhold.webp", "remote": "hf_20261004_015943_gpt-bg.port_sealhold.png", "job": "gpt-bg.port_sealhold", "fit": "opaque:1920", "rev": 20261004015943}
   }
 }
