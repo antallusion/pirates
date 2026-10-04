@@ -3014,7 +3014,9 @@ body.tac.tac-over #toasts { display: none; }
     grid-template-areas: "you mid foe" "spells stage queue" "acts stage feed"; gap: 10px; padding: 12px 16px; font-size: 13px; }
   .tb-face { width: 58px; height: 58px; }
   .tb-who b { font-size: 19px; }
-  .tb-spells { grid-template-columns: minmax(0, 1fr); align-content: start; }
+  /* The pages and the book stay in their own row: a short desk window (1280×720) once let the book's button spill onto
+     «Ждать» and «Защита» (QA, 2026-10-04) — the pages grow a little shorter there, and never run out of their row. */
+  .tb-spells { grid-template-columns: minmax(0, 1fr); align-content: start; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .tb-spell { min-height: 54px; }
   .tb-spell b { font-size: 14px; }
   .tb-spell small { font-size: 11px; white-space: normal; }
@@ -3028,6 +3030,9 @@ body.tac.tac-over #toasts { display: none; }
   .tb-round { font-size: 22px; }
   .tb-turn { font-size: 13px; }
   .tb-timer { width: 260px; }
+}
+@media (min-width: 900px) and (min-height: 521px) and (max-height: 800px) and (min-aspect-ratio: 7/5) {
+  .tb-spell { min-height: 48px; }
 }
 /* The square of the sea (docs/16 P2): on a phone the level alone, the captains it is for from a tablet up. */
 @media (max-width: 699px) { #hud-region .rg-cap { display: none; } }
