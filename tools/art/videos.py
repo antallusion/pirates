@@ -728,6 +728,12 @@ v('cut_premium_hauler', 'premium_hauler', 'Ковчег левиафана',
   'Grey morning on a wide bay: a colossal five-masted ark heavier than any ship afloat is towed out by a line of longboats, '
   'great timber pens of sea water along her deck, a young leviathan calf surfacing in one of them and blowing a spout of '
   'spray as gulls wheel over her masts. The camera pulls slowly back to show her whole length.')
+v('cut_premium_beast', 'premium_beast', 'Существа из лавки',
+  'Night alongside a pirate ship at anchor in a quiet bay lit by her stern lanterns: the black water bulges and a great sea '
+  'dragon with dark blue-green scales and finned wings rises slowly beside the hull, water streaming off it, and lowers its '
+  'crested head to the rail where the captain stands holding up a lantern while the crew step back in awe. The camera rises '
+  'with the dragon past the side of the ship.')
+
 
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
