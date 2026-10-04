@@ -2166,6 +2166,7 @@
     "unit.ghost_navigator":                    { "local": "units/ghost_navigator.webp", "remote": "hf_20261004_020154_gpt-anim_ghost_navigator.png", "job": "gpt-anim_ghost_navigator", "fit": "sheet:anim_ghost_navigator.0", "rev": 20261004020154},
     "unit.ghost_navigator_b":                  { "local": "units/ghost_navigator_b.webp", "remote": "hf_20261004_020154_gpt-anim_ghost_navigator.png", "job": "gpt-anim_ghost_navigator", "fit": "sheet:anim_ghost_navigator.1", "rev": 20261004020154},
     "unit.ghost_navigator_atk":                { "local": "units/ghost_navigator_atk.webp", "remote": "hf_20261004_020154_gpt-anim_ghost_navigator.png", "job": "gpt-anim_ghost_navigator", "fit": "sheet:anim_ghost_navigator.2", "rev": 20261004020154},
-    "unit.ghost_navigator_hit":                { "local": "units/ghost_navigator_hit.webp", "remote": "hf_20261004_020154_gpt-anim_ghost_navigator.png", "job": "gpt-anim_ghost_navigator", "fit": "sheet:anim_ghost_navigator.3", "rev": 20261004020154}
+    "unit.ghost_navigator_hit":                { "local": "units/ghost_navigator_hit.webp", "remote": "hf_20261004_020154_gpt-anim_ghost_navigator.png", "job": "gpt-anim_ghost_navigator", "fit": "sheet:anim_ghost_navigator.3", "rev": 20261004020154},
+    "prop.port_saltglass":                     { "local": "props/port_saltglass.webp", "remote": "hf_20261004_020435_gpt-port_saltglass.png", "job": "gpt-port_saltglass", "fit": "sheet:port_saltglass.0", "rev": 20261004020435}
   }
 }
