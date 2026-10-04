@@ -2390,6 +2390,10 @@
     "unit.reef_raider":                        { "local": "units/reef_raider.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.0", "rev": 20261004050828},
     "unit.reef_raider_b":                      { "local": "units/reef_raider_b.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.1", "rev": 20261004050828},
     "unit.reef_raider_atk":                    { "local": "units/reef_raider_atk.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.2", "rev": 20261004050828},
-    "unit.reef_raider_hit":                    { "local": "units/reef_raider_hit.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.3", "rev": 20261004050828}
+    "unit.reef_raider_hit":                    { "local": "units/reef_raider_hit.webp", "remote": "hf_20261004_050828_gpt-anim_reef_raider.png", "job": "gpt-anim_reef_raider", "fit": "sheet:anim_reef_raider.3", "rev": 20261004050828},
+    "unit.shark_dancer":                       { "local": "units/shark_dancer.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.0", "rev": 20261004051143},
+    "unit.shark_dancer_b":                     { "local": "units/shark_dancer_b.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.1", "rev": 20261004051143},
+    "unit.shark_dancer_atk":                   { "local": "units/shark_dancer_atk.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.2", "rev": 20261004051143},
+    "unit.shark_dancer_hit":                   { "local": "units/shark_dancer_hit.webp", "remote": "hf_20261004_051143_gpt-anim_shark_dancer.png", "job": "gpt-anim_shark_dancer", "fit": "sheet:anim_shark_dancer.3", "rev": 20261004051143}
   }
 }
