@@ -147,14 +147,18 @@ function sideSpot(h: number, z: number): { top: number; left: number; w: number 
     const r = e.getBoundingClientRect();
     if (r.width > 1 && r.height > 1) rects.push(r);
   }
+  // Down a side, row by row: the widest gap in the side's span clear of everything at that height (at 1280×720 with
+  // the adventure card up, the left side is full; the right has room between the stack and the chart).
   const col = (x0: number, x1: number): { top: number; left: number; w: number } | null => {
-    if (x1 - x0 < 120 * z) return null;
-    let t = 8 * z;
-    for (let i = 0; i < 40; i++) {
-      const hit = rects.filter((r) => r.left < x1 && r.right > x0 && r.top < t + h && r.bottom > t);
-      if (!hit.length) return { top: t, left: x0, w: x1 - x0 };
-      t = Math.max(...hit.map((r) => r.bottom)) + 6 * z;
-      if (t + h > H - 8 * z) return null;
+    for (let t = 8 * z; t + h <= H - 8 * z; t += 4 * z) {
+      const block = rects.filter((r) => r.top < t + h && r.bottom > t && r.left < x1 && r.right > x0).sort((p, q) => p.left - q.left);
+      let at = x0, best: { left: number; w: number } | null = null;
+      for (const r of [...block, { left: x1, right: x1 } as DOMRect]) {
+        const gap = Math.min(r.left, x1) - 6 * z - at;
+        if (gap >= 160 * z && (!best || gap > best.w)) best = { left: at, w: gap };
+        at = Math.max(at, r.right + 6 * z);
+      }
+      if (best) return { top: t, left: best.left, w: best.w };
     }
     return null;
   };

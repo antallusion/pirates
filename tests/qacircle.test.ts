@@ -179,3 +179,11 @@ test('the island\'s defence line wraps in a narrow column; a hovered piece\'s ca
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
   assert.ok(main.includes("if (modal !== 'gear') document.querySelectorAll('.gear-tip').forEach((e) => e.remove());"));
 });
+
+test('toasts that cannot stand under the middle go to a side band, as compact as on a phone; the action buttons are centred', () => {
+  assert.ok(css.includes('body.tq-side #toasts { top: var(--tq-top) !important;'));
+  assert.ok(css.includes('body.tq-side #toasts .toast.herald b { font-size: 15px; line-height: 18px; white-space: nowrap;'));
+  const hud = readFileSync(new URL('../client/src/ui/hud.ts', import.meta.url), 'utf8');
+  assert.match(hud, /private placeDeskStrip\(z: number\): void/);
+  assert.match(css, /\.act-btn \{ --h: 34px; box-sizing: border-box; height: var\(--h\); display: inline-flex; align-items: center; gap: 5px; padding: 0 8px;/);
+});

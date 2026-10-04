@@ -4018,7 +4018,7 @@ body.ai-low:has(#hud-prompt .act-info) #hud-combat .ab-mode { visibility: hidden
 }
 .act-row { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: nowrap; max-width: 100%; pointer-events: none; }
 .act-more-row { flex-wrap: wrap; }
-.act-btn { --h: 34px; box-sizing: border-box; height: var(--h); display: inline-flex; align-items: center; gap: 5px; padding: 0 9px 0 6px; min-width: 0; max-width: 270px; flex: 0 0 auto;
+.act-btn { --h: 34px; box-sizing: border-box; height: var(--h); display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; min-width: 0; max-width: 270px; flex: 0 0 auto;
   background: rgba(10, 11, 13, calc(var(--hud-a) * 0.95 + 0.1)); border: 1px solid rgba(140, 107, 58, 0.8); border-radius: 3px; color: var(--bone); font: 600 12.5px/1 var(--serif); letter-spacing: 0.02em;
   cursor: pointer; pointer-events: auto; touch-action: manipulation; white-space: nowrap; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45); -webkit-tap-highlight-color: transparent; }
 .act-btn:hover { border-color: var(--brass); filter: brightness(1.15); }
@@ -4039,7 +4039,7 @@ body.touch .act-btn { --h: 38px; }
   .act-btn:not(.primary):not(.act-look) .act-s { display: none; }
   .act-btn.primary .act-s { max-width: 150px; }
   .act-btn.act-look .act-s { max-width: 84px; }
-  .act-btn { padding: 0 8px 0 5px; font-size: 12px; }
+  .act-btn { padding: 0 7px; font-size: 12px; }
 }
 /* A phone on its side: the bar between the helm and the guns, a little lower. */
 @media (max-height: 520px) {
@@ -4629,3 +4629,15 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
 /* A taller screen whose bottom block leaves the toasts' band no room under the middle, the desk's corner taken (the
    adventure map's card, the chat): the band in a clear side column (hud.ts placeDeskStrip). */
 body.tq-side #toasts { top: var(--tq-top) !important; left: var(--tq-left) !important; width: var(--tq-w) !important; bottom: auto !important; transform: none !important; height: 46px !important; flex-flow: column wrap !important; }
+/* …each toast as compact as on a short screen: three lines at most, the herald's two on one line each. */
+body.tq-side #toasts { gap: 2px !important; }
+body.tq-side #toasts > .toast { padding: 2px 8px; font-size: 11px; line-height: 13px; }
+body.tq-side #toasts .toast > span { -webkit-line-clamp: 3; line-clamp: 3; }
+body.tq-side #toasts .toast.talk .talk-face { width: 22px; height: 22px; }
+body.tq-side #toasts .toast.talk .talk-body { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+body.tq-side #toasts .toast.talk .talk-who { display: inline; font-size: 11px; line-height: 13px; }
+body.tq-side #toasts .toast.talk .talk-who::after { content: ' · '; color: var(--fog); }
+body.tq-side #toasts .toast.talk .talk-line { display: inline; font-size: 11.5px; line-height: 13px; }
+body.tq-side #toasts .toast.herald { padding: 1px 8px 2px; }
+body.tq-side #toasts .toast.herald b { font-size: 15px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
