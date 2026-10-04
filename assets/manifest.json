@@ -2306,6 +2306,10 @@
     "unit.ember_salamander":                   { "local": "units/ember_salamander.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.0", "rev": 20261004041142},
     "unit.ember_salamander_b":                 { "local": "units/ember_salamander_b.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.1", "rev": 20261004041142},
     "unit.ember_salamander_atk":               { "local": "units/ember_salamander_atk.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.2", "rev": 20261004041142},
-    "unit.ember_salamander_hit":               { "local": "units/ember_salamander_hit.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.3", "rev": 20261004041142}
+    "unit.ember_salamander_hit":               { "local": "units/ember_salamander_hit.webp", "remote": "hf_20261004_041142_gpt-anim_ember_salamander.png", "job": "gpt-anim_ember_salamander", "fit": "sheet:anim_ember_salamander.3", "rev": 20261004041142},
+    "unit.obsidian_golem":                     { "local": "units/obsidian_golem.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.0", "rev": 20261004041458},
+    "unit.obsidian_golem_b":                   { "local": "units/obsidian_golem_b.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.1", "rev": 20261004041458},
+    "unit.obsidian_golem_atk":                 { "local": "units/obsidian_golem_atk.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.2", "rev": 20261004041458},
+    "unit.obsidian_golem_hit":                 { "local": "units/obsidian_golem_hit.webp", "remote": "hf_20261004_041458_gpt-anim_obsidian_golem.png", "job": "gpt-anim_obsidian_golem", "fit": "sheet:anim_obsidian_golem.3", "rev": 20261004041458}
   }
 }
