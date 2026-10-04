@@ -21,7 +21,7 @@ import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { onCrewKilled, onGrapple } from './mind.ts';
 import { moraleLossMul } from './crew.ts';
 import { bloodAndSalt, drownedBoardersRise, drownedTakeLosses } from './bridgefx.ts';
-import { closeTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
+import { closeTac, sendTac, startTactical, stepTactical, wantsTactical } from './tactical.ts';
 import { guardBeaten } from './advmap.ts';
 import { trialOver } from './throne.ts'; // docs/19 E3
 
@@ -622,6 +622,14 @@ function sendFight(game: Game, a: ShipEntity, b: ShipEntity | null): void {
     const ses = game.sessionOf(s);
     if (ses) game.sendTo(ses, { t: 'board_fight', view: fightView(game, s) });
   }
+}
+
+/** A captain back at the helm (a reload, a dropped line) in the middle of a boarding: her fight as it stands — the
+ *  login sent none, and the fight went on unseen, every turn of hers run out (QA, 2026-10-04). */
+export function resendBoarding(game: Game, ship: ShipEntity): void {
+  if (!ship.boarding) return;
+  if (ship.boarding.fight.tac) sendTac(game, ship, null);
+  else sendFight(game, ship, null);
 }
 
 function closeFight(game: Game, s: ShipEntity): void {

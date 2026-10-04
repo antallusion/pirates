@@ -550,6 +550,11 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
 
 export const landFighting = (game: Game, s: PlayerSession): boolean => all.get(game)?.fights.has(s.accountId) ?? false;
 
+/** Her fight ashore as it stands, for a captain back at the helm mid-fight (the login sent none: QA, 2026-10-04). */
+export function resendLandFight(game: Game, s: PlayerSession): void {
+  if (landFighting(game, s)) sendFight(game, s);
+}
+
 function sendFight(game: Game, s: PlayerSession): void {
   const f = L(game).fights.get(s.accountId);
   if (!f) return;

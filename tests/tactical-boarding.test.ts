@@ -356,3 +356,23 @@ test('the old deck fight stays: the setting off, or a captain who asked for it',
   o.c.push({ t: 'board', target: n2.id, aggression: 'standard' });
   assert.ok(o.ship.boarding && !o.ship.boarding.fight.tac, 'his choice: round by round');
 });
+
+test('a captain back at the helm mid-boarding (a reload) sees her fight at once (QA, 2026-10-04)', async () => {
+  const { PROTOCOL_VERSION } = await import('../shared/src/constants.ts');
+  const { FakeConn: Conn } = await import('./helpers.ts');
+  const { game } = makeGame();
+  game.tacticalBoarding = true;
+  const { c, ship } = atSea(game, 'Reloader');
+  const npc = foeAlongside(game, ship, 30);
+  c.push({ t: 'board', target: npc.id, aggression: 'standard' });
+  assert.ok(ship.boarding?.fight.tac, 'the battle is laid out');
+  const token = c.last('welcome')!.token;
+  // The page reloads: a new line with her token, the fight still running on the server.
+  const c2 = new Conn();
+  game.attach(c2 as unknown as import('../server/src/net/websocket.ts').WsConnection);
+  c2.push({ t: 'hello', v: PROTOCOL_VERSION, token });
+  const v = c2.last('board_tac')?.view;
+  assert.ok(v && v.stacks.length >= 4, 'the field is sent with the login');
+  const iInit = c2.inbox.findIndex((m) => m.t === 'init'), iTac = c2.inbox.findIndex((m) => m.t === 'board_tac');
+  assert.ok(iInit >= 0 && iTac > iInit, 'after the init, which would clear it');
+});

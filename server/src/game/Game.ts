@@ -147,7 +147,7 @@ import { playMinigame, stepMinigames } from './minigames.ts';
 import { playTrek, stepTreks } from './trek.ts';
 import { bankCollide, islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
 import type { DelayedStrike } from './abilities.ts';
-import { canBoard, claimPrize, cutGrapples, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
+import { canBoard, claimPrize, cutGrapples, resendBoarding, startBoarding, stepBoarding, duelAction, setTactic } from './boarding.ts';
 import { tacAction } from './tactical.ts';
 import { surrenderBlocked, surrenderClosed } from './struck.ts';
 import { endStreak, onStreakKill, streakAhead } from './streak.ts';
@@ -218,7 +218,7 @@ import { sagaNote, shareSaga } from './saga.ts';
 import { logNote } from './captainlog.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
-import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
+import { installLairHooks, landFighting, landTac, lairMessage, lairPrompt, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -3767,6 +3767,9 @@ export class Game {
     sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
     sendBalance(this, s); // her account's doubloons (the premium shop)
     if (away) this.sendTo(s, { t: 'away', view: away });
+    // Back at the helm in the middle of a fight (a reload, a dropped line): the fight as it stands, or it went on unseen.
+    if (s.ship) resendBoarding(this, s.ship);
+    resendLandFight(this, s);
   }
 
   private onDisconnect(s: PlayerSession): void {
