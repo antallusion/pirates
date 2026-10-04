@@ -2197,6 +2197,10 @@
     "unit.sea_viper_b":                        { "local": "units/sea_viper_b.webp", "remote": "hf_20261004_023334_gpt-anim_sea_viper.png", "job": "gpt-anim_sea_viper", "fit": "sheet:anim_sea_viper.1", "rev": 20261004023334},
     "unit.sea_viper_atk":                      { "local": "units/sea_viper_atk.webp", "remote": "hf_20261004_023334_gpt-anim_sea_viper.png", "job": "gpt-anim_sea_viper", "fit": "sheet:anim_sea_viper.2", "rev": 20261004023334},
     "unit.sea_viper_hit":                      { "local": "units/sea_viper_hit.webp", "remote": "hf_20261004_023334_gpt-anim_sea_viper.png", "job": "gpt-anim_sea_viper", "fit": "sheet:anim_sea_viper.3", "rev": 20261004023334},
-    "prop.port_steeplewater":                  { "local": "props/port_steeplewater.webp", "remote": "hf_20261004_023603_gpt-port_steeplewater.png", "job": "gpt-port_steeplewater", "fit": "sheet:port_steeplewater.0", "rev": 20261004023603}
+    "prop.port_steeplewater":                  { "local": "props/port_steeplewater.webp", "remote": "hf_20261004_023603_gpt-port_steeplewater.png", "job": "gpt-port_steeplewater", "fit": "sheet:port_steeplewater.0", "rev": 20261004023603},
+    "unit.leviathan_calf":                     { "local": "units/leviathan_calf.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.0", "rev": 20261004023932},
+    "unit.leviathan_calf_b":                   { "local": "units/leviathan_calf_b.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.1", "rev": 20261004023932},
+    "unit.leviathan_calf_atk":                 { "local": "units/leviathan_calf_atk.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.2", "rev": 20261004023932},
+    "unit.leviathan_calf_hit":                 { "local": "units/leviathan_calf_hit.webp", "remote": "hf_20261004_023932_gpt-anim_leviathan_calf.png", "job": "gpt-anim_leviathan_calf", "fit": "sheet:anim_leviathan_calf.3", "rev": 20261004023932}
   }
 }
