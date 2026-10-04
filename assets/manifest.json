@@ -2437,6 +2437,7 @@
     "bg.deck_spice_dhow":                      { "local": "art/deck_spice_dhow.webp", "remote": "hf_20261004_062147_gpt-bg.deck_spice_dhow.png", "job": "gpt-bg.deck_spice_dhow", "fit": "opaque:1536", "rev": 20261004062147},
     "bg.deck_silk_junk":                       { "local": "art/deck_silk_junk.webp", "remote": "hf_20261004_062326_gpt-bg.deck_silk_junk.png", "job": "gpt-bg.deck_silk_junk", "fit": "opaque:1536", "rev": 20261004062326},
     "bg.deck_smugglers_lugger":                { "local": "art/deck_smugglers_lugger.webp", "remote": "hf_20261004_062544_gpt-bg.deck_smugglers_lugger.png", "job": "gpt-bg.deck_smugglers_lugger", "fit": "opaque:1536", "rev": 20261004062544},
-    "bg.deck_pearl_schooner":                  { "local": "art/deck_pearl_schooner.webp", "remote": "hf_20261004_062808_gpt-bg.deck_pearl_schooner.png", "job": "gpt-bg.deck_pearl_schooner", "fit": "opaque:1536", "rev": 20261004062808}
+    "bg.deck_pearl_schooner":                  { "local": "art/deck_pearl_schooner.webp", "remote": "hf_20261004_062808_gpt-bg.deck_pearl_schooner.png", "job": "gpt-bg.deck_pearl_schooner", "fit": "opaque:1536", "rev": 20261004062808},
+    "bg.deck_floating_bazaar":                 { "local": "art/deck_floating_bazaar.webp", "remote": "hf_20261004_063040_gpt-bg.deck_floating_bazaar.png", "job": "gpt-bg.deck_floating_bazaar", "fit": "opaque:1536", "rev": 20261004063040}
   }
 }
