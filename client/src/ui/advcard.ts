@@ -212,14 +212,8 @@ export class AdvCard {
     // Where the card ends (a phone held sideways keeps its newest toast just under it: styles.css).
     this.baseTop = null;
     requestAnimationFrame(() => this.fit());
-    if (innerWidth < 1100 || innerHeight <= 520) {
-      this.el.style.top = '';
-      this.watch();
-      return;
-    }
-    const ship = document.getElementById('hud-ship')?.getBoundingClientRect();
-    const top = ship && ship.height > 0 ? Math.round(ship.bottom + 8) : 384;
-    this.el.style.top = `${Math.max(120, Math.min(top, innerHeight - 260))}px`;
+    if (innerWidth < 1100 || innerHeight <= 520) this.el.style.top = '';
+    this.watch();
   }
   /** docs/18 #50: on a phone or a tablet the card never lies over what it is about (the lair's, the drift's, the
    *  thing's token on the sea): it ends above the token, or stands below it when the token is high on the screen. */
@@ -236,11 +230,24 @@ export class AdvCard {
       this.baseTop = this.el.getBoundingClientRect().top;
       this.baseLeft = this.el.getBoundingClientRect().left;
     }
+    if (!narrow) {
+      // Under the ship's panel however tall it is now (measured once as the card came, the panel was still short and
+      // the card stood over it), and no lower than the screen allows.
+      const ship = document.getElementById('hud-ship')?.getBoundingClientRect();
+      const t = `${Math.max(120, Math.min(ship && ship.height > 0 ? Math.round(ship.bottom + 8) : 384, innerHeight - 260))}px`;
+      if (this.el.style.top !== t) this.el.style.top = t;
+      if (this.el.style.left || this.el.style.transform) this.el.style.left = this.el.style.transform = '';
+    }
     const r = this.el.getBoundingClientRect();
     const base = narrow ? this.baseTop! : r.top;
     let top = base;
     // docs/18 IV: several cards at once (a lair's and a drift's) scroll within the screen rather than run off it.
     let max = Math.max(140, Math.round(innerHeight - top - 8));
+    // A wide screen's left column: the card ends above the chat's button in the corner (it ran over it).
+    const chat = document.getElementById('chat-toggle')?.getBoundingClientRect();
+    if (!narrow && chat && chat.height && chat.left < r.right) max = Math.max(140, Math.round(chat.top - 8 - top));
+    // A phone held sideways: the card keeps to the top band (the popup budget, owner 2026-10-04) and scrolls.
+    if (innerHeight <= 520) max = Math.max(84, Math.round(innerHeight * 0.4 - top));
     let left = narrow ? this.baseLeft! : r.left;
     if (narrow && innerHeight <= 520) {
       // A phone held sideways: no room above or below — the card steps aside from the token instead; never left of
@@ -284,11 +291,12 @@ export class AdvCard {
     if (document.body.style.getPropertyValue('--ac-bottom') !== b) document.body.style.setProperty('--ac-bottom', b);
   }
   private fitTimer = 0;
-  /** While the card shows on a small screen, its place is looked at again as the sea moves under it. */
+  /** While the card shows, its place is looked at again as the sea moves under it (on a wide screen: as the ship's
+   *  panel above it grows or shrinks). */
   private watch(): void {
     if (this.fitTimer) return;
     this.fitTimer = window.setInterval(() => {
-      if (this.el.classList.contains('hidden') || !(innerWidth < 1100 || innerHeight <= 520)) {
+      if (this.el.classList.contains('hidden')) {
         clearInterval(this.fitTimer);
         this.fitTimer = 0;
         return;
@@ -303,6 +311,8 @@ export class AdvCard {
   }
   private key = '';
   private closed = '';
+  /** The cards opened by a tap on a short screen. */
+  private opened = new Set<string>();
   onPuzzle: () => void = () => {};
   private send: (m: ClientMsg) => void;
 
@@ -386,6 +396,17 @@ export class AdvCard {
     if (dc) html += driftBlock(dc, !o && !gg && !lc);
     this.el.innerHTML = html;
     this.el.classList.remove('hidden');
+    // A short screen shows each card's head and its buttons; a tap on the head opens the rest (kept across redraws).
+    this.el.querySelectorAll<HTMLElement>('.ac-card').forEach((c, i) => {
+      const k = `${i}|${c.dataset.kind ?? c.dataset.guard ?? c.dataset.drift ?? c.className}`;
+      c.classList.toggle('open', this.opened.has(k));
+      c.querySelector<HTMLElement>('.ac-head')!.onclick = (e) => {
+        if ((e.target as HTMLElement).closest('[data-ax]')) return;
+        if (c.classList.toggle('open')) this.opened.add(k);
+        else this.opened.delete(k);
+        this.fit();
+      };
+    });
     this.place();
     this.el.querySelectorAll<HTMLButtonElement>('[data-av]').forEach((b) => (b.onclick = () => this.send({ t: 'h4', action: 'visit', id: b.dataset.av!, ...(b.dataset.choice ? { choice: b.dataset.choice } : {}) })));
     this.el.querySelectorAll<HTMLButtonElement>('[data-ag]').forEach((b) => (b.onclick = () => this.send({ t: 'h4', action: 'guard', id: b.dataset.id!, choice: b.dataset.ag as 'fight' })));

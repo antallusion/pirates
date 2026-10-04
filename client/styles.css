@@ -460,9 +460,6 @@ kbd { font-family: var(--sans); border: 1px solid var(--brass-dim); padding: 0 5
 #hud-goals { position: absolute; right: 12px; top: 292px; max-width: 260px; font-family: var(--sans); font-size: 12px; color: var(--bone); background: rgba(10, 11, 13, 0.86); padding: 5px 8px 6px; border-left: 2px solid var(--brass); pointer-events: auto; }
 #hud-goals .g-lbl { color: var(--brass); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; margin-right: 4px; }
 #hud-goals .g-x { background: none; border: 0; color: var(--fog); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }
-#hud-hint { position: absolute; left: 50%; bottom: 190px; transform: translateX(-50%); max-width: 520px; font-family: var(--sans); font-size: 14px; line-height: 1.4; color: var(--bone); background: rgba(10, 11, 13, 0.82); border: 1px solid var(--brass); padding: 8px 12px; opacity: 0; transition: opacity 0.6s; pointer-events: none; }
-#hud-hint.show { opacity: 1; }
-#hud-hint b { color: var(--gold); margin-right: 6px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; }
 #prologue { position: fixed; inset: 0; z-index: 50; background: radial-gradient(ellipse at 50% 60%, rgba(10, 16, 22, 0.9), rgba(3, 5, 8, 0.99)); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; cursor: pointer; transition: opacity 0.6s; }
 #prologue.fade { opacity: 0; }
 #prologue p { font-family: var(--serif); font-size: 24px; color: var(--bone); max-width: 720px; text-align: center; opacity: 0; animation: prologue-line 1.6s ease-out forwards; }
@@ -483,8 +480,8 @@ body.dens-compact { --density: 0.86; }
 body.dens-large { --density: 1.14; }
 #hud-stack > *, #hud-ship > *, #toasts > .toast { zoom: var(--density); }
 #modal-panel { zoom: calc(var(--ui-scale) * var(--text-scale)); }
-#toasts, #chat, #hud-hint, #hud-watch { font-size: calc(1em * var(--text-scale)); }
-body.hi-contrast .hud-block, body.hi-contrast #hud-goals, body.hi-contrast .toast, body.hi-contrast #hud-hint { background: rgba(4, 5, 7, 0.92) !important; border-width: 2px; border-color: var(--bone); backdrop-filter: none; }
+#toasts, #chat, #hud-watch { font-size: calc(1em * var(--text-scale)); }
+body.hi-contrast .hud-block, body.hi-contrast #hud-goals, body.hi-contrast .toast { background: rgba(4, 5, 7, 0.92) !important; border-width: 2px; border-color: var(--bone); backdrop-filter: none; }
 body.hi-contrast .panel { background: #07080a; border-width: 2px; }
 body.hi-contrast { --fog: #c9d1d9; --steel: #9aa6b2; }
 body.plain-font { --display: 'Inter', system-ui, sans-serif; --serif: 'Inter', system-ui, sans-serif; }
@@ -520,8 +517,6 @@ dl.glossary dd { margin: 0 0 4px 0; color: var(--fog); font-size: 13px; }
 #pad-cursor { position: fixed; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid var(--gold); border-radius: 50%; box-shadow: 0 0 6px #000; z-index: 60; pointer-events: none; }
 
 /* Phase 11 fixes for the stacks: a hidden hint takes no room; sound captions keep to the screen edges on phones. */
-#hud-hint:not(.show) { display: none; }
-#hud-hint { max-width: min(520px, 92vw); }
 @media (max-width: 1099px) {
   #captions .cap-port { left: 8px; }
   #captions .cap-starboard { right: 8px; }
@@ -4384,7 +4379,7 @@ body.tac-ph #hud-chat, body.tac-ph #encounter, body.tac-ph #surrender, body.tac-
    монитора и быть где-то внизу-вверху, чтобы центр не закрывать… это касается всех всплывающих плашек»). What the sea
    says in passing — a toast, a line said aboard, the region's herald — keeps to one band of a fixed size: on a desk in
    the bottom-left corner over the chat's button, where WoW keeps its log (over the action bar, in the bottom 30% of
-   the height, while the chat is open there or on a narrower screen); on a short screen (a phone on its side, a small
+   the height, while the chat or the adventure map's card is open there, or on a narrower screen); on a short screen (a phone on its side, a small
    window), whose bottom the action bar fills, in the top row beside the fold button (its bounds measured in hud.ts).
    What does not fit wraps into a column beyond the band's edge, out of sight, so the band never grows into the
    middle; each toast is the band's full width, so nothing shows beside it. */
@@ -4393,30 +4388,36 @@ body.tac-ph #hud-chat, body.tac-ph #encounter, body.tac-ph #surrender, body.tac-
   display: flex; flex-flow: column-reverse wrap; align-content: flex-start; align-items: stretch; gap: 4px; overflow: hidden; }
 body.touch #toasts { bottom: calc(max(var(--hb-top, 0px), var(--sa-b) + var(--touch-h) + 150px) + 6px); }
 #toasts > .toast { flex: none; width: calc(100% / var(--density, 1)); }
-#toasts > .toast.bad { order: -1; } /* a refusal keeps its place nearest the edge: a coin coming after it does not push it out */
+#toasts > .toast.advice { border-left-color: var(--gold); color: #efe3c4; } /* the First Watch's hints (onboarding.ts) */
+#toasts > .toast.bad:not(.talk) { order: -1; } /* a refusal keeps its place nearest the edge: a coin coming after it does not push it out */
 #toasts .toast.herald { padding: 3px 10px 4px; }
 #toasts .toast.herald b { font-size: 16px; line-height: 19px; }
 #toasts .toast.herald small { font-size: 12px; line-height: 14px; }
 @media (min-width: 1100px) and (min-height: 600px) {
-  body:not(.touch):not(.chat-open) #toasts { left: calc(var(--sa-l) + 12px); transform: none; bottom: calc(var(--sa-b) + 68px);
+  body:not(.touch):not(.chat-open):not(.tac):not(:has(#advcard:not(.hidden))) #toasts { left: calc(var(--sa-l) + 12px); transform: none; bottom: calc(var(--sa-b) + 68px);
     width: min(380px, calc(var(--hb-left, 400px) - var(--sa-l) - 24px)); height: clamp(50px, calc(34vh / var(--ui-scale, 1) - 68px), 180px); }
 }
 @media (max-width: 699px), (max-height: 520px) {
   #toasts { top: var(--ts-top, calc(var(--sa-t) + 8px)); bottom: auto; left: var(--ts-left, 30vw); transform: none;
     width: var(--ts-w, 40vw); height: var(--ts-h, 44px); flex-flow: column wrap; gap: 2px; }
-  #toasts > .toast { padding: 2px 8px; font-size: 11.5px; line-height: 15px; }
+  /* Three lines at most in the strip as tall as the fold button (a hint, a long refusal), or two toasts of a line. */
+  #toasts > .toast { padding: 2px 8px; font-size: 11px; line-height: 13px; }
+  #toasts .toast > span { -webkit-line-clamp: 3; line-clamp: 3; }
   #toasts .toast .ico-toast { width: 15px; height: 15px; }
   /* A line said aboard: a small face, the speaker and the words running on, two lines at most. */
   #toasts .toast.talk { align-items: center; gap: 6px; padding: 2px 8px 2px 3px; }
   #toasts .toast.talk .talk-face { width: 22px; height: 22px; }
-  #toasts .toast.talk .talk-body { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  #toasts .toast.talk .talk-who { display: inline; font-size: 11px; line-height: 15px; }
+  #toasts .toast.talk .talk-body { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  #toasts .toast.talk .talk-who { display: inline; font-size: 11px; line-height: 13px; }
   #toasts .toast.talk .talk-who::after { content: ' · '; color: var(--fog); }
-  #toasts .toast.talk .talk-line { display: inline; font-size: 12px; line-height: 15px; }
+  #toasts .toast.talk .talk-line { display: inline; font-size: 11.5px; line-height: 13px; }
   #toasts .toast.herald { padding: 1px 8px 2px; }
   #toasts .toast.herald b { font-size: 15px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #toasts .toast.herald small { font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+/* The decks fighting on a desk: the battle's word in the header beside the round and its clock, clear of the
+   captains' plates (it stood in the right column's middle, over the order of the round). */
+body.tac #toasts { top: calc(var(--sa-t) + 12px); bottom: auto; left: calc(50% + 136px); transform: none; width: min(360px, calc(50% - 136px - 262px)); height: 100px; flex-flow: column wrap; }
 /* The decks fighting on a phone: the battle's word in a line at the top, clear of the corners' buttons. */
 body.tac-ph #toasts { top: calc(var(--sa-t) + 8px); left: 50%; transform: translateX(-50%); width: min(56vw, 340px); height: 44px; }
 /* An encounter's card in the top band, its picture beside its words, so it ends above the ship (it stood from 150 px
@@ -4445,4 +4446,66 @@ body.tac-ph #toasts { top: calc(var(--sa-t) + 8px); left: 50%; transform: transl
   /* The choices in one row, a long one in two lines of its own button (in rows they took half the card). */
   #encounter .enc-choices { margin-top: 6px; gap: 4px; flex-wrap: nowrap; }
   #encounter .enc-choices .btn { flex: 1 1 0; min-width: 0; min-height: 30px; padding: 2px 6px; font-size: 11.5px; line-height: 1.15; white-space: normal; }
+}
+/* The terms of a struck ship and a stormed lair's chest, placed as an encounter's card: in the top band on a desk (the
+   top stack steps aside while they are up), in the top-left corner over the captain's plate on a short screen. The
+   terms keep to their head, a line of words and the four choices in one row (what each gives in its tooltip); «Later»
+   beside the title and how near she must come under it, not a line of their own below the choices. */
+#surrender, #lairchest { top: calc(var(--sa-t, 0px) + 12px); }
+#surrender .enc-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: center; padding: 8px 10px 9px; }
+#surrender .sur-head { grid-column: 1; grid-row: 1; min-width: 0; }
+#surrender .sur-ship { width: 40px; height: 40px; }
+#surrender .sur-foot { display: contents; }
+#surrender .sur-foot .btn { grid-column: 2; grid-row: 1; margin: 0; align-self: start; min-height: 28px; padding: 2px 12px; }
+#surrender .sur-dist, #surrender .sur-left { grid-row: 2; font-size: 12px; line-height: 1.3; margin-top: 3px; }
+#surrender .sur-dist, #surrender .sur-left { grid-column: 1 / -1; } /* one line: how near at its start, how long at its end */
+#surrender .sur-left { justify-self: end; white-space: nowrap; }
+#surrender .enc-text { grid-column: 1 / -1; margin: 3px 0 0; font-size: 12.5px; line-height: 1.35; }
+#surrender .sur-choices { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 6px; }
+#surrender .sur-choice { justify-content: center; gap: 5px; min-height: 36px; padding: 3px 6px; text-align: center; }
+#surrender .sur-choice small { display: none; }
+#surrender .sur-choice b { font-size: 12px; line-height: 1.15; }
+#surrender .sur-choice .choice-ico { width: 20px; height: 20px; }
+@media (max-width: 699px), (max-height: 520px) {
+  #surrender, #lairchest { top: calc(var(--sa-t, 0px) + 6px); left: calc(var(--sa-l, 0px) + 8px); transform: none; width: min(440px, calc(var(--ts-left, 360px) - var(--sa-l, 0px) - 16px)); min-width: 0; }
+  body:has(#surrender:not(.hidden)) #hud-captain, body:has(#lairchest:not(.hidden)) #hud-captain { visibility: hidden; }
+  #surrender .enc-card { padding: 6px 8px 7px; column-gap: 8px; }
+  #surrender .sur-sub, #surrender .sur-ship, #surrender .enc-text, #surrender .sur-left { display: none; }
+  #surrender .enc-h { font-size: 15px; }
+  #surrender .sur-dist { grid-column: 1 / -1; font-size: 11px; margin-top: 1px; }
+  #surrender .sur-foot .btn { min-height: 26px; padding: 2px 10px; }
+  #surrender .sur-choices { margin-top: 5px; gap: 4px; }
+  #surrender .sur-choice { min-height: 34px; padding: 2px 4px; }
+  #surrender .sur-choice .choice-ico { display: none; } /* a quarter of the row is the word's (the icon stood over «Отпустить») */
+  #surrender .sur-choice b { font-size: 11px; }
+}
+/* A lair's chest: its four lines two by two; on a short screen without its picture and the island's line, «Take it»
+   beside the title. */
+#lairchest .lc-art { width: 48px; height: 48px; }
+#lairchest .lc-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; margin: 6px 0; }
+@media (max-width: 699px), (max-height: 520px) {
+  #lairchest .enc-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: center; padding: 6px 8px 7px; }
+  #lairchest .lc-head { grid-column: 1; grid-row: 1; min-width: 0; }
+  #lairchest .lc-art, #lairchest .lc-sub { display: none; }
+  #lairchest .lc-foot { grid-column: 2; grid-row: 1; }
+  #lairchest .lc-foot .btn { min-height: 28px; padding: 2px 12px; }
+  #lairchest .lc-list { grid-column: 1 / -1; margin: 4px 0 0; gap: 2px 8px; }
+  #lairchest .lc-list li { font-size: 11.5px; }
+}
+/* The adventure map's card on a short screen: in the middle column under the fold button's row (the toasts' strip),
+   within the top third or so of the height (advcard.ts), scrolling; each card its head and its buttons, a tap on the
+   head opens the rest; what lies under it in the top stack steps aside. (It stood over the fold and the toasts down
+   to three quarters of the height, 29% of the screen.) */
+@media (max-width: 699px), (max-height: 520px) {
+  #advcard { top: calc(var(--ts-top, 8px) + var(--ts-h, 44px) + 4px); left: calc(var(--ts-left, 408px) - 48px); transform: none; width: calc(var(--ts-w, 250px) + 48px); min-width: 0; gap: 4px; grid-template-columns: minmax(0, 1fr); overflow-x: hidden; }
+  body:has(#advcard:not(.hidden)) #hud-stack > :not(.hud-fold) { visibility: hidden; }
+  #advcard .ac-card { padding: 5px 8px 6px; }
+  #advcard .ac-head { cursor: pointer; }
+  #advcard .ac-head .ac-art { width: 28px; height: 28px; }
+  #advcard .ac-head .enc-h::after { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 0 3px 8px; border: solid var(--gold); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #advcard .ac-card.open .ac-head .enc-h::after { transform: rotate(-135deg); margin-bottom: 0; }
+  #advcard .ac-card:not(.open) > :not(.ac-head):not(.ac-acts):not(.ac-guard), #advcard .ac-card:not(.open) .ac-guard > :not(.ac-acts), #advcard .ac-card:not(.open) .ac-sub { display: none; }
+  #advcard .ac-acts { flex-wrap: nowrap; margin-top: 4px; }
+  #advcard .ac-acts .btn { flex: 1 1 0; min-width: 0; min-height: 30px; padding: 2px 6px; font-size: 11.5px; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; }
+  #advcard .ac-acts .btn .ico-sm { display: none; } /* the row is the words' (an icon pushed «Прочитать» past its button) */
 }

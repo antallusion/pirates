@@ -24,7 +24,6 @@ const BLOCKS: Record<string, HudBlock[]> = {
 export class OnboardingUi {
   private shown = new Set<string>(Object.keys(BLOCKS));
   private view: OnboardingView | null = null;
-  private hintTimer = 0;
   private state: ClientState;
   send: (action: 'skip_stage' | 'skip_all' | 'hide_goals') => void = () => {};
   /** A screen to open (the edge of safe waters). */
@@ -95,21 +94,17 @@ export class OnboardingUi {
       const k = `stage.${id}` as Key;
       toast(t('watch.done', { name: has(k) ? t(k) : id }), 'good');
       if (id === 'rescue') toast(t('watch.over'), 'xp'); // the last step of the First Watch (docs/18 #49)
-    } else if (kind === 'hint') this.hint(id);
+    } else if (kind === 'hint') this.hint(id, toast);
     else if (kind === 'goal') {
       const k = `goal.${id}` as Key;
       toast(t('goals.met', { name: has(k) ? t(k) : id }), 'xp');
     } else if (kind === 'edge') this.onEdge();
   }
 
-  hint(id: string): void {
+  /** A hint joins the toasts' band (the popup budget, owner 2026-10-04: it stood over the sea above the action bar). */
+  hint(id: string, toast: (msg: string, kind: string) => void): void {
     const k = hintKey(id);
-    if (!has(k)) return;
-    const el = $('hud-hint');
-    el.innerHTML = `<b>${esc(t('hint.title'))}</b> ${esc(t(k))}`;
-    el.classList.add('show');
-    clearTimeout(this.hintTimer);
-    this.hintTimer = window.setTimeout(() => el.classList.remove('show'), 9000);
+    if (has(k)) toast(`${t('hint.title')}: ${t(k)}`, 'advice');
   }
 
   private portName(id: string): string {

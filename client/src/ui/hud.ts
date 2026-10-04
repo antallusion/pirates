@@ -80,7 +80,7 @@ export function releaseModalToasts(): void {
 
 function toastLife(kind: string): number {
   const phone = document.body.classList.contains('touch') && innerWidth < 700;
-  return kind === 'xp' ? (phone ? 2500 : 3500) : kind === 'bad' ? (phone ? 5000 : 7000) : phone ? 3800 : 6000;
+  return kind === 'xp' ? (phone ? 2500 : 3500) : kind === 'bad' ? (phone ? 5000 : 7000) : kind === 'advice' ? (phone ? 7000 : 9000) : phone ? 3800 : 6000;
 }
 
 /** A short screen (a phone, a small window): the action bar fills its bottom, the toasts keep to the top row. */
