@@ -761,6 +761,32 @@ v('cut_recruit', 'recruit', 'Вербовка на причале',
   'ledger and a jug of rum, a one-eyed quartermaster signing them on one by one as the longboat waits at the steps. '
   'The camera moves slowly along the line toward the table.')
 
+# ---- The thirteenth reel: each sea the first time she sails into it (shared/src/world/regions.ts) ----------------------
+v('cut_sea_gravewater', 'sea_gravewater', 'Могильные Воды',
+  'A flat grey-green sea under low cloud, the masts of old wrecks standing out of the shallows like a drowned forest, buoys '
+  'with tolling bells marking the channels and a League convoy threading between them in single file, gulls on every '
+  'spar. The camera glides low between the wreck masts.')
+v('cut_sea_whispering', 'sea_whispering', 'Шепчущее море',
+  'A ship slips into a wall of white fog so thick the bowsprit vanishes, the sea gone silent and glassy, faint lanterns of '
+  'unseen boats drifting past in the murk and a lookout in the shrouds cupping a hand to his ear as a distant voice calls '
+  'across the water. The camera moves slowly forward into the fog from the bow.')
+v('cut_sea_ashen_isles', 'sea_ashen_isles', 'Пепельные острова',
+  'A ship sails under a dark red sky into a sea of volcanic islands, black cones smoking on every side, grey ash falling '
+  'like snow on the deck, the water warm and steaming where a lava flow meets the sea in a hiss of white vapour. The camera '
+  'rises from the deck over the bow toward the burning islands.')
+v('cut_sea_leviathan_reach', 'sea_leviathan_reach', 'Предел Левиафана',
+  'A cold grey northern sea among drifting ice, a whaling ship pushing through the floes under a pale sun, and far off the '
+  'vast dark back of something enormous rising slowly from the water and sinking again as the crew fall silent at the '
+  'rail. The camera holds on the horizon past the bow.')
+v('cut_sea_dead_mans_expanse', 'sea_dead_mans_expanse', 'Простор Мертвеца',
+  'An endless flat sea under a white-hot sky, no wind, the sails hanging slack, a lonely atoll of bleached sand and dead '
+  'palms on the horizon and an empty longboat drifting past the becalmed ship, the crew watching it go by in silence. The '
+  'camera drifts slowly past the empty boat.')
+v('cut_sea_drowned_crown', 'sea_drowned_crown', 'Утонувшая Корона',
+  'Dusk over a sea strewn with the ruins of a sunken capital: the tops of marble towers, broken arches and a great dome '
+  'stand out of the water, green light glowing faintly beneath the waves, and a ship picks her way between the spires as '
+  'a bell tolls somewhere below. The camera glides slowly through the drowned towers.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:

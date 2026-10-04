@@ -575,6 +575,8 @@ function filmMoments(): void {
     if (film) playFilm(film);
   }
   filmWas.landing = !!landing || !state.self;
+  // Each sea the first time she sails into it (the thirteenth reel); the Black Coast is where she begins.
+  if (turned('region', state.region) && state.self && !state.self.dockedAt && state.region !== 'black_coast') playFilm(`cut_sea_${state.region}`);
   const abyss = !!state.self?.abyss?.inside;
   if (abyss && !filmWas.abyss) playFilm('cut_abyss');
   filmWas.abyss = abyss || !state.self;
