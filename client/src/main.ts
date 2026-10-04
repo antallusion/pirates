@@ -478,6 +478,7 @@ loadAssets(null).then(() => {
 /** The game's films at their moments (ui/cutscene.ts): the first boarding (a lair's fight ashore), the first win and
  *  loss, the first harbour, the first storm — each shown once. */
 const filmWas = { tac: false, over: false, docked: true, storm: false, bosses: '', landing: true, abyss: true };
+let isleFilmAt = 0;
 /** A landing's film by what the party goes ashore for: a buried chest, a named pirate's lair, an island; none for a
  *  haul, a dive or the shallows. */
 const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', lookout: 'cut_lighthouse', dive: 'cut_wreck_dive', haul: null, tidal: null, turtle: null };
@@ -602,6 +603,19 @@ function filmMoments(): void {
   filmWas.landing = !!landing || !state.self;
   // Each sea the first time she sails into it (the thirteenth reel); the Black Coast is where she begins.
   if (turned('region', state.region) && state.self && !state.self.dockedAt && state.region !== 'black_coast') playFilm(`cut_sea_${state.region}`);
+  // The first sight of each kind of island (reel 19), at sea and at peace: her shore a quarter mile off (looked for
+  // every two seconds; the film itself plays once).
+  if (performance.now() - isleFilmAt > 2000 && state.self && !state.self.dockedAt && state.you && !state.you.combat && !modal && !tac) {
+    isleFilmAt = performance.now();
+    const y = state.you;
+    for (const is of state.islands.values()) {
+      if (Math.abs(is.x - y.x) > 3000 || Math.abs(is.y - y.y) > 3000) continue;
+      if (Math.hypot(is.x - y.x, is.y - y.y) - is.r * 0.62 < 450 && filmDue(`cut_isle_${is.biome}`)) {
+        playFilm(`cut_isle_${is.biome}`);
+        break;
+      }
+    }
+  }
   const abyss = !!state.self?.abyss?.inside;
   if (abyss && !filmWas.abyss) playFilm('cut_abyss');
   filmWas.abyss = abyss || !state.self;

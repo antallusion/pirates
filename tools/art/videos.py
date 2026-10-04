@@ -1028,6 +1028,30 @@ v('cut_isle_calf', 'isle_calf', 'Касатка подросла',
   'lands; sailors on the pier lean on the rail and watch. Warm low sun, glittering water. The camera follows the leap in slow motion.')
 
 
+# ---- Reel 19 (owner, 2026-10-04: «еще больше роликов генерируй»; «ассетов для островов … на разные острова»): the first
+# sight of each kind of island, once, when the ship first comes near one at peace (client/src/main.ts) -----------------
+ISLE_SHOTS = {
+    'temperate': 'a green island of oak woods and pale meadows, a small stone cottage with a slate roof and a windmill on a low hill, sheep-grey stone walls running down to a pebble beach',
+    'mossy': 'a dark island furred with moss and spruce, a ring of mossy standing stones on a headland, mist lying in the hollows and a peat pond reflecting the grey sky',
+    'volcanic': 'a black volcanic island under a smoking cone, cooled lava flows running into the sea in steaming tongues, sulphur-yellow vents and a ruined watchtower half buried in ash',
+    'ice': 'an island of ice and snow, blue ice spires and a frozen waterfall, a small wooden boat locked in the ice of a cove and a snowed-under hut with a thin line of smoke',
+    'ruins': 'an island of ancient ruins, a broken colonnade and a toppled statue among wild grass, a sunken courtyard and a ruined chapel apse open to the sky',
+    'bone': 'a grey dead island of white bare trees and grey stones, a leaning menhir on the ridge and a rusted anchor half sunk in the grey sand, utterly still',
+    'barren': 'a barren island of cracked rock and dry gullies, a lone twisted juniper and a stone cairn on the summit, dust blowing off the cliffs',
+    'jungle': 'a jungle island of tall palms and giant ferns, a carved stone idol head among the vines, the thatched roofs of stilt huts and a waterfall into a green pool',
+    'mangrove': "a mangrove island of arched roots in dark water, a fisher's hut on stilts, reed beds and a narrow channel winding into the green gloom",
+    'atoll': 'a ring-shaped coral atoll around a turquoise lagoon, coconut palms on a white sand bar, a lean-to of palm leaves and bleached driftwood on the beach',
+    'saltflat': "a flat white salt island, glittering salt pans and mounds, a salt worker's plank shack and stacks of cut salt blocks under a pale sky",
+    'blacksand': 'an island of black sand and black rock, white surf breaking on a black beach, a black rock arch and the ruined base of an old lighthouse',
+    'fungal': 'a strange island overgrown with giant pale mushrooms and clusters of faintly glowing violet caps, spore haze drifting between them in the dusk',
+    'crystal': 'a strange island of pale blue-white crystal spires rising from grey rock, crystals catching the low light, a ruined pillar wrapped in crystal',
+}
+for kind, what in ISLE_SHOTS.items():
+    v(f'cut_isle_{kind}', f'isle_{kind}', f'Остров: {kind}',
+      f'A slow aerial approach from the sea toward {what}. The camera glides low over the waves toward the shore and then rises '
+      'gently to reveal the whole island, with a small pirate sloop at anchor in its lee.')
+
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
