@@ -2330,6 +2330,10 @@
     "unit.crown_surgeon":                      { "local": "units/crown_surgeon.webp", "remote": "hf_20261004_042812_gpt-anim_crown_surgeon.png", "job": "gpt-anim_crown_surgeon", "fit": "sheet:anim_crown_surgeon.0", "rev": 20261004042812},
     "unit.crown_surgeon_b":                    { "local": "units/crown_surgeon_b.webp", "remote": "hf_20261004_042812_gpt-anim_crown_surgeon.png", "job": "gpt-anim_crown_surgeon", "fit": "sheet:anim_crown_surgeon.1", "rev": 20261004042812},
     "unit.crown_surgeon_atk":                  { "local": "units/crown_surgeon_atk.webp", "remote": "hf_20261004_042812_gpt-anim_crown_surgeon.png", "job": "gpt-anim_crown_surgeon", "fit": "sheet:anim_crown_surgeon.2", "rev": 20261004042812},
-    "unit.crown_surgeon_hit":                  { "local": "units/crown_surgeon_hit.webp", "remote": "hf_20261004_042812_gpt-anim_crown_surgeon.png", "job": "gpt-anim_crown_surgeon", "fit": "sheet:anim_crown_surgeon.3", "rev": 20261004042812}
+    "unit.crown_surgeon_hit":                  { "local": "units/crown_surgeon_hit.webp", "remote": "hf_20261004_042812_gpt-anim_crown_surgeon.png", "job": "gpt-anim_crown_surgeon", "fit": "sheet:anim_crown_surgeon.3", "rev": 20261004042812},
+    "unit.crown_midshipman":                   { "local": "units/crown_midshipman.webp", "remote": "hf_20261004_043052_gpt-anim_crown_midshipman.png", "job": "gpt-anim_crown_midshipman", "fit": "sheet:anim_crown_midshipman.0", "rev": 20261004043052},
+    "unit.crown_midshipman_b":                 { "local": "units/crown_midshipman_b.webp", "remote": "hf_20261004_043052_gpt-anim_crown_midshipman.png", "job": "gpt-anim_crown_midshipman", "fit": "sheet:anim_crown_midshipman.1", "rev": 20261004043052},
+    "unit.crown_midshipman_atk":               { "local": "units/crown_midshipman_atk.webp", "remote": "hf_20261004_043052_gpt-anim_crown_midshipman.png", "job": "gpt-anim_crown_midshipman", "fit": "sheet:anim_crown_midshipman.2", "rev": 20261004043052},
+    "unit.crown_midshipman_hit":               { "local": "units/crown_midshipman_hit.webp", "remote": "hf_20261004_043052_gpt-anim_crown_midshipman.png", "job": "gpt-anim_crown_midshipman", "fit": "sheet:anim_crown_midshipman.3", "rev": 20261004043052}
   }
 }
