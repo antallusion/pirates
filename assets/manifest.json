@@ -2278,6 +2278,10 @@
     "unit.frost_serpent":                      { "local": "units/frost_serpent.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.0", "rev": 20261004035141},
     "unit.frost_serpent_b":                    { "local": "units/frost_serpent_b.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.1", "rev": 20261004035141},
     "unit.frost_serpent_atk":                  { "local": "units/frost_serpent_atk.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.2", "rev": 20261004035141},
-    "unit.frost_serpent_hit":                  { "local": "units/frost_serpent_hit.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.3", "rev": 20261004035141}
+    "unit.frost_serpent_hit":                  { "local": "units/frost_serpent_hit.webp", "remote": "hf_20261004_035141_gpt-anim_frost_serpent.png", "job": "gpt-anim_frost_serpent", "fit": "sheet:anim_frost_serpent.3", "rev": 20261004035141},
+    "unit.golden_crab":                        { "local": "units/golden_crab.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.0", "rev": 20261004035434},
+    "unit.golden_crab_b":                      { "local": "units/golden_crab_b.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.1", "rev": 20261004035434},
+    "unit.golden_crab_atk":                    { "local": "units/golden_crab_atk.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.2", "rev": 20261004035434},
+    "unit.golden_crab_hit":                    { "local": "units/golden_crab_hit.webp", "remote": "hf_20261004_035434_gpt-anim_golden_crab.png", "job": "gpt-anim_golden_crab", "fit": "sheet:anim_golden_crab.3", "rev": 20261004035434}
   }
 }
