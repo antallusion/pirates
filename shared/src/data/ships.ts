@@ -133,8 +133,8 @@ const ship = (d: ShipClassDef): ShipClassDef => d;
 /** The zone bosses' hulls (docs/21 §4): weighed by the squad sim (tests/zonebosses.test.ts) so ten captains of her
  *  level on ships of her level sink her in 15–20 minutes and five in 35–45. */
 export const ZB_HULL: Record<ZoneBossClassId, number> = {
-  zb_black_coast: 60000, zb_gravewater: 90000, zb_whispering: 90000, zb_leviathan_reach: 110000,
-  zb_ashen_isles: 130000, zb_dead_mans_expanse: 150000, zb_drowned_crown: 180000, zb_the_abyss: 210000,
+  zb_black_coast: 23000, zb_gravewater: 51000, zb_whispering: 53000, zb_leviathan_reach: 51500,
+  zb_ashen_isles: 80000, zb_dead_mans_expanse: 96500, zb_drowned_crown: 125000, zb_the_abyss: 177500,
 };
 
 /** A zone boss (docs/21): a great warship of her sea at one level, in no fleet list and no tree, never sold. Her hull

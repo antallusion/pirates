@@ -1149,7 +1149,9 @@ export interface WorldEventView {
   id: number;
   kind: 'armada' | 'blockade' | 'storm_century' | 'new_island' | 'epidemic' | 'glory' | HappeningKind
     /** A great one come ashore on an island for a while (shorebosses.ts): any captain may land against it. */
-    | 'boss_ashore';
+    | 'boss_ashore'
+    /** A zone boss at sea (zonebosses.ts, docs/21): her name, and the time till she leaves into the fog. */
+    | 'zone_boss';
   title: string;
   region: RegionId;
   port?: string;

@@ -169,6 +169,7 @@ import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditions
 import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onUndockEvents, sendEvents, stepEvents } from './events.ts';
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
+import { ZoneBossHub, stepZoneBosses, zoneBossSinking } from './zonebosses.ts';
 import { applyDamage, cutMastWreck, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
@@ -304,6 +305,8 @@ export class Game {
   projectiles: Projectile[] = [];
   strikes: DelayedStrike[] = [];
   bosses = new BossHub();
+  /** The zone bosses, one great ship for each sea (zonebosses.ts, docs/21). */
+  zoneBosses = new ZoneBossHub();
   worldEvents = new EventHub();
   empires = new EmpireHub();
   expeditions: ExpeditionHub;
@@ -582,7 +585,7 @@ export class Game {
     // Movement for every physically simulated ship.
     const night = isNight(now);
     for (const ship of this.ships.values()) {
-      if (ship.docked || ship.ghost || ship.cls.monster) continue;
+      if (ship.docked || ship.ghost || ship.cls.monster || ship.zoneBoss) continue; // (a zone boss sails by her own hand)
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) continue;
       const k = brain ? lod.get(ship.id) ?? 1 : 1;
@@ -599,6 +602,7 @@ export class Game {
     stepStrikes(this);
     prof.lap('boarding');
     stepBosses(this, dt);
+    stepZoneBosses(this, dt);
     stepBeasts(this, dt); // orcas, whales, sharks and the lines in them (docs/12 P4)
     stepExpeditions(this, dt);
     stepAbyssSea(this, dt);
@@ -816,6 +820,7 @@ export class Game {
   private everySecond(): void {
     const now = this.now;
     this.bosses.second(this);
+    this.zoneBosses.second(this); // the great ships of the seas (docs/21)
     stepShoreBosses(this); // the great ones ashore: their calendar (2026-10-03)
     stepEvents(this);
     expeditionsSecond(this);
@@ -921,7 +926,7 @@ export class Game {
     {
       if (ship.effects.length && ship.effects.some((e) => e.until <= now)) ship.recompute(now);
       ship.region = regionAt(this.world, ship.state.x, ship.state.y);
-      if (!ship.alive || ship.docked || ship.cls.monster) return;
+      if (!ship.alive || ship.docked || ship.cls.monster || ship.zoneBoss) return; // (a zone boss keeps herself: zonebosses.ts)
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) return;
       this.shipUpkeep(ship);
@@ -1789,6 +1794,7 @@ export class Game {
       return;
     }
     if (ship.bossOf && bossSinking(this, ship)) return; // the deep keeps its own dead
+    if (ship.zoneBoss && zoneBossSinking(this, ship)) return; // a zone boss: no wreck, the spoils by each one's part (docs/21)
     if (ship.npcRole === 'beast' && beastSlain(this, ship)) return; // a beast leaves a carcass to flense, not a wreck
     if (ship.caravanId) caravanShipLost(this, ship); // a captain's caravan hull and her share of the cargo (docs/12 P8)
     recordEcho(this, ship); // what the Abyss takes, it sends back

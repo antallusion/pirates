@@ -38,6 +38,7 @@ import { screenFlagship } from './fleet.ts';
 import { grandBattery, nightRaider, stormGunnerRange } from './bridgefx.ts';
 import { cursedDamageMul, onCursedHit, onCursedVolley, onOwnCrewKilled, pactDamageMul } from './abyssfx.ts';
 import { bossIncoming, innerVolley, swallowedShield } from './bosses.ts';
+import { zbCredit } from './zonebosses.ts';
 import { kegImpact } from './holidays.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { killFactor, menLost, wallsOf } from './army.ts';
@@ -755,6 +756,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
   if (d.hull) {
     let hull = screenFlagship(game, target, d.hull);
     if (lad?.floorHull) hull = Math.min(hull, Math.max(0, target.hull - lad.floorHull * target.stats.hullMax));
+    if (target.zoneBoss) zbCredit(game, target, source, Math.min(Math.max(0, target.hull), hull)); // each captain's part of her (docs/21)
     target.hull -= hull;
     onHullDamage(game, target, hull, source);
   }

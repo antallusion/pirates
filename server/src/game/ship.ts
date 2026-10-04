@@ -231,6 +231,8 @@ export class ShipEntity {
   // World bosses (bosses.ts): the fight this entity belongs to (its body's id) and what part of it she is.
   bossOf = 0;
   bossPart = '';
+  /** A zone boss (zonebosses.ts, docs/21): her sea, her slot of the calendar and when she leaves (wall ms). */
+  zoneBoss: { region: RegionId; slot: number; endsAt: number } | null = null;
   /** A squadron of a world event (events.ts): the Armada, a blockade. */
   eventOf = 0;
   /** Depth pressure in the Abyss, 0..100 (abyss.ts). */
