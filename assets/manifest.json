@@ -2250,6 +2250,10 @@
     "unit.pirate_lord":                        { "local": "units/pirate_lord.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.0", "rev": 20261004033314},
     "unit.pirate_lord_b":                      { "local": "units/pirate_lord_b.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.1", "rev": 20261004033314},
     "unit.pirate_lord_atk":                    { "local": "units/pirate_lord_atk.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.2", "rev": 20261004033314},
-    "unit.pirate_lord_hit":                    { "local": "units/pirate_lord_hit.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.3", "rev": 20261004033314}
+    "unit.pirate_lord_hit":                    { "local": "units/pirate_lord_hit.webp", "remote": "hf_20261004_033314_gpt-anim_pirate_lord.png", "job": "gpt-anim_pirate_lord", "fit": "sheet:anim_pirate_lord.3", "rev": 20261004033314},
+    "unit.hippocampus":                        { "local": "units/hippocampus.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.0", "rev": 20261004033548},
+    "unit.hippocampus_b":                      { "local": "units/hippocampus_b.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.1", "rev": 20261004033548},
+    "unit.hippocampus_atk":                    { "local": "units/hippocampus_atk.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.2", "rev": 20261004033548},
+    "unit.hippocampus_hit":                    { "local": "units/hippocampus_hit.webp", "remote": "hf_20261004_033548_gpt-anim_hippocampus.png", "job": "gpt-anim_hippocampus", "fit": "sheet:anim_hippocampus.3", "rev": 20261004033548}
   }
 }
