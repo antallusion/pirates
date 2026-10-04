@@ -376,7 +376,7 @@ export class Hud {
       }
       return;
     }
-    const key = JSON.stringify([lang(), b.id, b.phase, Math.round((b.hp / b.hpMax) * 200), b.parts.map((p) => Math.round((p.hp / p.hpMax) * 20)), b.hint, b.you, Math.floor(b.endsIn / 60)]);
+    const key = JSON.stringify([lang(), b.id, b.phase, Math.round((b.hp / b.hpMax) * 200), b.parts.map((p) => `${Math.round((p.hp / p.hpMax) * 20)}${p.label}`), b.hint, b.you, Math.floor(b.endsIn / 60)]);
     if (key === this.lastBossKey) return;
     this.lastBossKey = key;
     el.classList.remove('hidden');
@@ -389,9 +389,15 @@ export class Hud {
       const left = Math.max(0, Math.round((p.hp / p.hpMax) * 100));
       // The number that tells eight arms apart stays whole; only the words before it give way (QA, 2026-10-04: eight
       // «Щупальце краке…» alike).
-      const m = /^(.*\S)\s+(\d+)$/.exec(sv(p.label));
-      const label = m ? `<span>${esc(m[1])}</span>&nbsp;${m[2]}` : `<span>${esc(sv(p.label))}</span>`;
-      return `<span class="bpart ${p.hp <= 0 ? 'dead' : ''}" style="--hp:${left}%"><b>${label}</b><em>${p.hp > 0 ? left + '%' : '✕'}</em></span>`;
+      // The Hollow Admiral's ships come as «name (lantern lit)»: the name in her tongue, the lantern as its light — the
+      // words never fitted the cell, and the glued line was never translated (QA, 2026-10-04).
+      const lamp = /^(.*) \(lantern (lit|out)\)$/.exec(p.label);
+      const text = lamp ? placeName(lamp[1]) : sv(p.label);
+      const m = /^(.*\S)\s+(\d+)$/.exec(text);
+      const label = m ? `<span>${esc(m[1])}</span>&nbsp;${m[2]}` : `<span>${esc(text)}</span>`;
+      const light = lamp ? icon('boon_lantern', '', `ico-xs bp-lamp${lamp[2] === 'out' ? ' out' : ''}`) : '';
+      const tip = lamp ? `${text}${sv(` (lantern ${lamp[2]})`)}` : text;
+      return `<span class="bpart ${p.hp <= 0 ? 'dead' : ''}" style="--hp:${left}%" title="${esc(tip)}"><b>${label}${light}</b><em>${p.hp > 0 ? left + '%' : '✕'}</em></span>`;
     }).join('')}</div>` : '';
     const alert = b.you.swallowed > 0 ? `<div class="balert">${esc(L('swallowed', { n: b.you.swallowed }))}</div>` : b.you.grabbed ? `<div class="balert">${esc(keyless(L('grabbed', { key: keyLabel(settings().keys.board[0] || settings().keys.board[1]) })))}</div>` : '';
     el.innerHTML = `<div class="bname">${esc(sv(b.name))}</div><div class="bphase">${esc(sv(b.phaseName))} · ${esc(L('bossLeaves', { n: Math.ceil(b.endsIn / 60) }))}</div>

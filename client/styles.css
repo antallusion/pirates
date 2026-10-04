@@ -326,6 +326,8 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
 #hud-boss .bpart { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 6px; align-items: center; padding: 3px 6px; border: 1px solid rgba(111,90,56,0.5); background: linear-gradient(90deg, #6a1f24, #b23a3a) 0 100% / var(--hp, 100%) 2px no-repeat, rgba(8, 7, 6, 0.55); }
 #hud-boss .bpart b { display: flex; min-width: 0; font-weight: 500; white-space: nowrap; }
 #hud-boss .bpart b span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#hud-boss .bpart .bp-lamp { flex: none; width: 13px; height: 13px; margin-left: 4px; }
+#hud-boss .bpart .bp-lamp.out { filter: grayscale(1) brightness(0.45); }
 #hud-boss .bpart em { font-style: normal; font-weight: 700; color: var(--bone); font-variant-numeric: tabular-nums; }
 #hud-boss .bpart.dead { opacity: 0.4; }
 #hud-boss .bpart.dead b { text-decoration: line-through; }
