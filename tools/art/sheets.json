@@ -8187,5 +8187,21 @@
   ],
   "prompt": "Draw a tall 2:3 image: a game sprite of one sailing ship, alone in the middle of the image with wide empty gaps between them: 1) a colossal whaling mothership with try-works furnaces, whale boats hung on davits all around and five masts; her deck clean wet planks, no stains, no bones, no carcass; Every ship is viewed STRICTLY TOP-DOWN: an orthographic view from directly overhead at exactly 90 degrees, no perspective, no tilt, no visible hull sides; each ship's bow points straight UP to the top edge and its stern down, perfectly vertical and centred in its own half, filling most of the image height, its bowsprit and yard tips inside its half. Decks of dark wet tarred planks with hatches, coiled ropes, capstans and barrels; sails weathered and patched (dark grey-brown unless stated); near-black wet wood, rusted iron, tarnished old brass; lanterns unlit. Realistic, heavy, grounded Pirate Gothic, painterly; muted palette of charcoal, graphite, cold blue-grey, dirty silver, old brass and very dark burgundy. Neutral soft even light from overhead, no cast shadows. Solid flat magenta #FF00FF background: no water, no waves, no wake, no foam, no reflections, no border, no text, no letters. No blood, no red stains, no bones anywhere.",
   "cut": "hf_20261004_011401_gpt-ships_17b"
+ },
+ "currency_1": {
+  "grid": [
+   1,
+   1
+  ],
+  "mode": "tiles",
+  "px": 192,
+  "square": true,
+  "dir": "icons",
+  "aspect": "1:1",
+  "ids": [
+   "icon.doubloon"
+  ],
+  "prompt": "Draw a square image: one square game item icon in the painterly style of the item icons of World of Warcraft and the artifacts of Heroes of Might and Magic III but grim and realistic: a single thick, bright, freshly struck Spanish gold doubloon coin, slightly tilted toward the viewer, its face stamped with a crowned shield and a cross of arms (no letters, no numbers), its rim milled, a warm gleam of lantern light across the gold, painted large and centred on a dark, softly lit background, readable at a small size. Smooth painterly digital painting like the hand-painted battle art of 1990s fantasy strategy games, grim and weathered; muted colours: charcoal, tar black, cold blue-grey, with the gold as the only warm, rich colour. No text, no letters, no numbers, no frame.",
+  "painting": true
  }
 }
