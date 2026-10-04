@@ -1640,8 +1640,9 @@ body.touch #hud-region .rg-extra { display: none; }
 .map-logs > :first-child { border-top: 0; }
 .map-logs .map-quests, .map-logs .map-maps { max-height: none; overflow: visible; }
 .map-wrap { flex: 1 1 auto; min-height: 45%; }
-/* A low, wide window (a phone on its side) or a wide one: the logs stand in a column beside the chart, which keeps the height. */
-@media (max-height: 520px) and (min-width: 700px), (min-width: 1100px) {
+/* A low, wide window (a phone on its side, a 640×360 window too — stacked there, the chart was a 124 px strip: QA,
+   2026-10-04) or a wide one: the logs stand in a column beside the chart, which keeps the height. */
+@media (max-height: 520px) and (min-width: 600px), (min-width: 1100px) {
   #modal-panel:has(> .map-logs) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 34%); grid-template-rows: auto minmax(0, 1fr); }
   #modal-panel:has(> .map-logs) > .modal-head { grid-column: 1 / -1; }
   #modal-panel:has(> .map-logs) > .map-wrap { grid-column: 1; grid-row: 2; min-height: 0; }
@@ -3783,8 +3784,10 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 .mm-tip { position: fixed; z-index: 60; pointer-events: none; max-width: 280px; padding: 5px 9px; border-radius: 6px; background: rgba(10, 12, 14, 0.92); border: 1px solid rgba(176, 141, 87, 0.55); color: #e8dcc0; font: 600 12px/1.35 Inter, sans-serif; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); }
 .mm-tip.hidden { display: none; }
 .isle-lv { font-weight: 700; white-space: nowrap; }
-.zone-hint { display: flex; align-items: center; gap: 8px; padding: 4px 2px; font-size: 13px; }
-.zone-hint span { flex: 1; min-width: 0; }
+/* The words keep at least a line's room; in a narrow column (the chart's logs beside it) the button goes under them
+   rather than cut them to a letter a line (QA, 2026-10-04). */
+.zone-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 2px; font-size: 13px; }
+.zone-hint span { flex: 1 1 180px; min-width: 0; }
 .zone-hint .btn { flex: none; }
 .sup-body { display: block; }
 .sup-head h3 { margin: 4px 0 2px; font-size: 16px; }
