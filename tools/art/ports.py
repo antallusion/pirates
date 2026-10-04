@@ -93,8 +93,8 @@ p('frostgate', 'leviathan_reach', 'harpoon', 3, 3, False, 'Frostgate', 'Ледя
   'The Order\'s walled town in the fjord. The try-works never go out; the ice never quite lets go.',
   'Обнесённый стеной город Ордена во фьорде. Салотопни не гаснут; лёд никогда не отпускает до конца.',
   ['whale_oil', 'leviathan_bone', 'provisions'], ['salt', 'rum', 'weapons', 'timber'],
-  'a snow-covered walled whaling town in a fjord: steep dark timber longhouses with snow on the roofs, a stone wall with a gate of two crossed whale jawbones, smoking try-works with big iron pots, flensing platforms, ice along the piers',
-  'a snow-covered walled whaling town in a fjord, a gate of crossed whale jawbones, smoking try-works, ice floes along the piers, dark mountains behind')
+  'a snow-covered walled whaling town in a fjord: steep dark timber longhouses with snow on the roofs, a stone wall with a gate arch of two giant crossed ivory narwhal tusks, smoking try-works with big iron pots, flensing platforms, ice along the piers',
+  'a snow-covered walled whaling town in a fjord, a gate of crossed giant narwhal tusks, smoking try-works, ice floes along the piers, dark mountains behind')
 p('sealhold', 'leviathan_reach', 'free', 1, 1, False, 'Sealhold', 'Тюленья Крепь',
   'Turf huts on the ice shelf. Sealskins on every frame, and the smell carries a mile.',
   'Дерновые хижины на шельфовом льду. На каждой раме — тюленьи шкуры, запах слышно за милю.',
@@ -144,14 +144,14 @@ p('last_light', 'the_abyss', 'harpoon', 2, 3, False, 'Last Light', 'Послед
   'The lighthouse fortress at the edge of the deep. Beyond its beam, the Order says, there is nothing to come back from.',
   'Маяк-крепость на краю глубины. За его лучом, говорит Орден, возвращаться уже неоткуда.',
   ['whale_oil', 'leviathan_bone'], ['provisions', 'weapons', 'gunpowder', 'medicine'],
-  'a fortress lighthouse on a sheer black sea stack: a massive iron-banded stone tower with a great lantern at the top, curtain walls with heavy guns, giant pale whale ribs used as buttresses, a fortified harbour cut into the rock',
-  'a fortress lighthouse on a sheer black sea stack at the edge of a dark abyss, its great beam cutting the night, giant pale whale ribs as buttresses')
+  'a fortress lighthouse on a sheer black sea stack: a massive iron-banded stone tower with a great lantern at the top, curtain walls with heavy guns, huge pale weathered timber buttresses, a fortified harbour cut into the rock',
+  'a fortress lighthouse on a sheer black sea stack at the edge of a dark abyss, its great beam cutting the night, huge pale weathered timber buttresses')
 p('marrowdeep', 'the_abyss', 'choir', 1, 1, True, 'Marrowdeep', 'Костный Омут',
-  'A Choir enclave on a reef of old bone. The singing never stops, and the water glows where they sing.',
+  'A Choir enclave on a reef of old white coral. The singing never stops, and the water glows where they sing.',
   'Анклав Хора на рифе из старых костей. Пение не смолкает, и вода светится там, где поют.',
   ['kraken_ink', 'pearls'], ['provisions', 'rum', 'timber', 'cloth'],
-  'a dark enclave built on a reef of huge pale fossil whale bones: chapels of black stone and bone arches, faint pale green glowing pools, hanging bronze bells, a narrow bone jetty',
-  'a dark enclave on a reef of huge pale fossil whale bones, black stone chapels and bone arches, faint green glowing water')
+  'a dark enclave built on a reef of tall pale weathered coral pillars: chapels of black stone and pale coral arches, faint pale green glowing pools, hanging bronze bells, a narrow stone jetty',
+  'a dark enclave on a reef of tall pale coral pillars, black stone chapels and pale coral arches, faint green glowing water')
 
 STYLE = ('Smooth painterly digital painting like the town sprites on the adventure map of Heroes of Might and Magic III, grim and '
          'weathered; night, warm lantern light in the windows and cold moonlight on the wet roofs; muted colours: charcoal, slate, '

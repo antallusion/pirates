@@ -636,9 +636,9 @@ v('cut_port_slagport', 'port_slagport', 'Шлаковый Порт',
   'molten iron pours into cannon moulds in showers of sparks, rows of new cannon barrels lie on the quay, and a pirate brig '
   'is loading them by lantern light. The camera drifts in toward the glowing furnaces.')
 v('cut_port_frostgate', 'port_frostgate', 'Ледяные Ворота',
-  'A snowy fjord between dark mountains at twilight: a walled whaling town with steep timber longhouses, its gate two crossed '
-  'whale jawbones, the try-works smoking over the harbour and floes of ice knocking against the piers as a whaler comes in '
-  'with her boats towing behind her. The camera moves in under the jawbone gate.')
+  'A snowy fjord between dark mountains at twilight: a walled whaling town with steep timber longhouses, its gate two giant crossed '
+  'ivory narwhal tusks, the try-works smoking over the harbour and floes of ice knocking against the piers as a whaler comes in '
+  'with her boats towing behind her. The camera moves in under the tusk gate.')
 v('cut_port_steeplewater', 'port_steeplewater', 'Шпилевая Вода',
   'Night in a half-drowned gothic cathedral town: the upper storeys and spires of grey stone churches rise from the black '
   'sea, wooden walkways run between their windows, a pale green light glows in a great rose window, and at low tide the '
@@ -652,6 +652,64 @@ v('cut_port_wreckhold', 'port_wreckhold', 'Обломная Крепь',
   'their gallery windows are houses, broken masts carry rope bridges, and a beached galleon has become a tavern with lamps in '
   'every gun port, pirates drinking on her slanted deck. The camera rises slowly over the wrecks.')
 
+
+# ---- The tenth reel: the rest of the twenty new ports, each on her first call (tools/art/ports.py) ---------------------
+v('cut_port_gallowsmouth', 'port_gallowsmouth', 'Висельная Губа',
+  'A grey squall over a black rock in the sea: a dark star fort crowns it, a square stone gaol with barred windows stands over '
+  'the quay, and two old dismasted prison hulks lie moored in the harbour with lanterns in their ports as a Crown cutter rows '
+  'a boat of chained prisoners toward the steps. The camera drifts in low past the hulks.')
+v('cut_port_copperhook', 'port_copperhook', 'Медный Крюк',
+  'Dusk in a rich League town cut by canals: tall narrow brick counting houses with green copper roofs lean over the water, '
+  'wooden cranes swing bales onto the quays, clerks in black coats hurry over little arched bridges and a domed guildhall '
+  'glows at the end of the main canal. The camera glides along the canal on a barge.')
+v('cut_port_rotgut_landing', 'port_rotgut_landing', 'Сивушная Пристань',
+  'Night over grey mudflats: a ramshackle town of leaning plank shacks and taverns on stilts, copper stills smoking and '
+  'glowing, rope walkways swaying between them, drunken sailors singing on a rickety jetty and barrels rolling down a ramp '
+  'into a waiting boat. The camera weaves slowly between the stilts at the height of the walkways.')
+v('cut_port_sugarloaf', 'port_sugarloaf', 'Сахарная Голова',
+  'Morning under a conical green hill: cane fields climb the slopes, three stone windmills turn slowly, the chimneys of the '
+  'boiling house smoke over white warehouses with red tile roofs, and casks of sugar and rum are rolled down to a League '
+  'merchantman at the quay. The camera rises slowly from the quay toward the mills.')
+v('cut_port_hushwater', 'port_hushwater', 'Тихая Вода',
+  'Thick night fog on still water: dark wooden houseboats lashed together in rings around a half-sunken stone bell tower, '
+  'shuttered lanterns leaking thin lines of light, cloaked figures passing sealed letters across the gaps between the boats '
+  'in silence as a slim black boat slides in. The camera glides silently between the houseboats.')
+v('cut_port_mirrorfen', 'port_mirrorfen', 'Зеркальная Топь',
+  'Grey dawn in a vast mangrove forest: dark huts are built high in the roots of the huge trees, joined by rope bridges, and '
+  'on two thin wooden towers men tilt great round bronze mirrors that flash signals across the fog as a longboat poles in '
+  'below. The camera rises from the water up to the mirror towers.')
+v('cut_port_widows_wick', 'port_widows_wick', 'Вдовий Фитиль',
+  'Night on a grey cliff over a rough sea: a very tall striped lighthouse sweeps its beam through the fog over a village of '
+  'stone cottages, women in dark shawls stand on the cliff path watching the sea, and a single fishing boat fights its way '
+  'in toward the stone jetty at the foot of a steep stair. The camera circles the lighthouse lamp.')
+v('cut_port_brimstone_bay', 'port_brimstone_bay', 'Серная Бухта',
+  'A volcanic bay under a hazy yellow sky: terraced slopes of bright yellow sulphur rock steam from a hundred vents, miners '
+  'with cloths over their faces push carts of yellow lumps along rails to wooden chutes, and the sulphur pours down the '
+  'chutes into the hold of a moored brig. The camera moves slowly up the steaming terraces.')
+v('cut_port_sealhold', 'port_sealhold', 'Тюленья Крепь',
+  'Night on an ice shelf under green and violet aurora: a tiny settlement of low round turf huts half buried in snow, frames '
+  'of stretched sealskins, dogs and sledges, a channel cut through the ice with a short timber jetty where a small sloop is '
+  'frozen in. The camera drifts slowly over the huts toward the sky.')
+v('cut_port_saltglass', 'port_saltglass', 'Соляное Стекло',
+  'Blinding noon on a sun-bleached island: a white town of flat-roofed adobe houses beside a chequerboard of shallow white '
+  'salt pans, workers raking salt into glittering heaps, the domed brick glass kilns glowing as a glassblower lifts a molten '
+  'bottle on his pipe. The camera moves slowly across the salt pans toward the town.')
+v('cut_port_tidehallow', 'port_tidehallow', 'Приливная Обитель',
+  'Evening on wide tidal flats: a walled grey-stone monastery of the Choir stands on a rocky islet at the end of a long stone '
+  'causeway, the tide is racing in over the sands and closing the road, and hooded monks with lanterns hurry the last cart '
+  'across as the bell tolls. The camera rises slowly over the causeway.')
+v('cut_port_crownfall', 'port_crownfall', 'Павшая Корона',
+  'Morning in the drowned capital: broken marble colonnades and a cracked dome rise from flooded courtyards, salvagers on '
+  'wooden platforms work cranes that haul dripping statues and chests out of the water, and a diver in a brass helmet is '
+  'hoisted up from the green depths. The camera glides past the colonnades.')
+v('cut_port_last_light', 'port_last_light', 'Последний Огонь',
+  'Night at the edge of the deep: a fortress lighthouse on a sheer black sea stack throws its great beam over a dark, '
+  'endless sea where the water falls away into blackness, huge pale timber buttresses brace its walls, and heavy guns stand on the '
+  'curtain walls as a lone frigate comes in under the beam. The camera slowly climbs the tower toward the lamp.')
+v('cut_port_marrowdeep', 'port_marrowdeep', 'Костный Омут',
+  'Night on a reef of tall pale coral pillars rising from black water: chapels of black stone and pale coral arches, faint '
+  'green glowing pools, robed singers of the Choir chanting on the shore as small bronze bells sway in the wind and the '
+  'water glows where they sing. The camera floats slowly in across the glowing water.')
 
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
