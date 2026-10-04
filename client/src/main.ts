@@ -592,7 +592,12 @@ function filmMoments(): void {
     else if (state.self && !state.self.dockedAt) playFilm('cut_dawn');
   }
   const cls = state.self?.loadout.classId ?? null;
-  if (turned('cls', cls) && cls && state.self?.dockedAt && performance.now() - sunkAt > 60_000) playFilm('cut_launch');
+  // A new hull launched; a premium one (docs/02 §1.A.9) the first time of her list in its own film (the tenth reel).
+  if (turned('cls', cls) && cls && state.self?.dockedAt && performance.now() - sunkAt > 60_000) {
+    const def = SHIP_CLASSES[cls];
+    const own = def?.premium && def.list ? `cut_premium_${def.list}` : null;
+    playFilm(own && filmDue(own) ? own : 'cut_launch');
+  }
   if (turned('pet', !!state.companion) && state.companion) playFilm('cut_orca');
   if (turned('grail', state.adv?.grail ?? null) && state.adv?.grail === 'held') playFilm('cut_grail');
   if (turned('base', !!state.base) && state.base) playFilm('cut_base');

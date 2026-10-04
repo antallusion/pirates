@@ -711,6 +711,24 @@ v('cut_port_marrowdeep', 'port_marrowdeep', 'Костный Омут',
   'green glowing pools, robed singers of the Choir chanting on the shore as small bronze bells sway in the wind and the '
   'water glows where they sing. The camera floats slowly in across the glowing water.')
 
+# ---- The premium hulls' launches (docs/02 §1.A.9): the first premium hull of each list she sails out of the yard ----------
+v('cut_premium_combat', 'premium_combat', 'Флагман на воду',
+  'Dawn in a great stone dry dock: the shores are knocked away and a black-hulled war frigate with deep crimson sails slides '
+  'down the ways into the harbour in a wave of white spray, her gilded stern catching the first light, the yard crew '
+  'cheering and hats flying as her guns run out along both sides. The camera follows her down the slipway into the water.')
+v('cut_premium_trade', 'premium_trade', 'Золотая каррака',
+  'Morning in a busy merchant harbour: a richly gilded carrack with cream and gold sails is warped out from the quay, her '
+  'castles covered in carved gold leaf, chests and bales lashed on her deck, merchants in fine coats watching from the quay '
+  'as her sails fill and the harbour bells ring. The camera rises slowly beside her gilded stern.')
+v('cut_premium_fast', 'premium_fast', 'Призрачный клипер',
+  'Night on a calm sea under a full moon: a long pale clipper with silver-grey timbers and sheer torn grey sails glides out '
+  'of a fog bank at great speed, mist streaming off her rigging, her wake a thin silver line, leaving the fog behind as the '
+  'crew trim the sails. The camera races low along the water beside her bow.')
+v('cut_premium_hauler', 'premium_hauler', 'Ковчег левиафана',
+  'Grey morning on a wide bay: a colossal five-masted ark heavier than any ship afloat is towed out by a line of longboats, '
+  'great timber pens of sea water along her deck, a young leviathan calf surfacing in one of them and blowing a spout of '
+  'spray as gulls wheel over her masts. The camera pulls slowly back to show her whole length.')
+
 def main() -> None:
     jobs = [{'name': f"video.{x['id']}", 'aspect': '16:9', 'prompt': x['prompt']} for x in V]
     with open(OUT, 'w', encoding='utf-8') as f:
