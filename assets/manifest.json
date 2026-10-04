@@ -2270,6 +2270,10 @@
     "unit.coral_basilisk":                     { "local": "units/coral_basilisk.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.0", "rev": 20261004034629},
     "unit.coral_basilisk_b":                   { "local": "units/coral_basilisk_b.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.1", "rev": 20261004034629},
     "unit.coral_basilisk_atk":                 { "local": "units/coral_basilisk_atk.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.2", "rev": 20261004034629},
-    "unit.coral_basilisk_hit":                 { "local": "units/coral_basilisk_hit.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.3", "rev": 20261004034629}
+    "unit.coral_basilisk_hit":                 { "local": "units/coral_basilisk_hit.webp", "remote": "hf_20261004_034629_gpt-anim_coral_basilisk.png", "job": "gpt-anim_coral_basilisk", "fit": "sheet:anim_coral_basilisk.3", "rev": 20261004034629},
+    "unit.abyssal_angler":                     { "local": "units/abyssal_angler.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.0", "rev": 20261004034915},
+    "unit.abyssal_angler_b":                   { "local": "units/abyssal_angler_b.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.1", "rev": 20261004034915},
+    "unit.abyssal_angler_atk":                 { "local": "units/abyssal_angler_atk.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.2", "rev": 20261004034915},
+    "unit.abyssal_angler_hit":                 { "local": "units/abyssal_angler_hit.webp", "remote": "hf_20261004_034915_gpt-anim_abyssal_angler.png", "job": "gpt-anim_abyssal_angler", "fit": "sheet:anim_abyssal_angler.3", "rev": 20261004034915}
   }
 }
