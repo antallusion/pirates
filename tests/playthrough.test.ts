@@ -135,3 +135,50 @@ test('playthrough: a boarding\'s spoils on a phone on its side — the hold and 
   const { DIALOGS_RU } = await import('../client/src/lang/ui/dialogs.ts').then((m) => ({ DIALOGS_RU: (m as Record<string, Record<string, string>>)[Object.keys(m).find((k) => /RU/.test(k))!] }));
   assert.match(DIALOGS_RU['board.sub'], /Их потери: \{theirs\} чел\./);
 });
+
+test('playthrough: she lies to beside her prize while the spoils are open — the helm held full sail and the prize «drifted too far»', async () => {
+  const { makeGame, join, steps } = await import('./helpers.ts');
+  const { headingVec } = await import('../shared/src/math.ts');
+  const { tacAction } = await import('../server/src/game/tactical.ts');
+  const { game } = makeGame();
+  game.tacticalBoarding = true;
+  const c = join(game, 'Spoils Sal', 'reaver');
+  c.push({ t: 'undock' });
+  const s = [...game.sessions].find((x) => x.name === 'Spoils Sal')!;
+  const ship = s.ship!;
+  Object.assign(ship.state, { x: 30000, y: 80000, heading: 0, speed: 0 });
+  ship.protectedUntil = 0;
+  s.profile!.level = 30;
+  ship.recompute(game.now);
+  ship.crew = ship.stats.crewMax;
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  const v = headingVec(-Math.PI / 2);
+  const npc = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + v.x * 18, ship.state.y + v.y * 18, 0);
+  game.npcs.get(npc.id)!.active = true;
+  npc.input = { rudder: 0, sailTarget: 0 };
+  npc.state.speed = 0;
+  npc.cargo = { rum: 10 };
+  npc.hull = npc.stats.hullMax * 0.4;
+  npc.crew = 4;
+  game.grid.upsert(npc.id, npc.state.x, npc.state.y);
+  c.push({ t: 'board', target: npc.id, aggression: 'standard' });
+  for (let i = 0; i < 20 * 120 && !s.pendingBoarding; i++) {
+    if (ship.boarding) tacAction(game, ship, { a: 'quick' });
+    steps(game, 1);
+  }
+  assert.ok(s.pendingBoarding, 'won, the spoils open');
+  // The captain's helm still asks for full sail (the touch wheel's course, the keys) for a minute of reading.
+  for (let i = 0; i < 60; i++) {
+    c.push({ t: "input", seq: 100 + i, rudder: 0, sail: 3 });
+    steps(game, 20);
+  }
+  const d = Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y);
+  assert.ok(d < 400, `still by her prize: ${Math.round(d)} m`);
+  const gold = s.profile!.gold;
+  c.push({ t: 'loot_take', take: { rum: 5 }, fate: 'ransom' });
+  assert.ok(!c.all('toast').some((m) => /drifted too far|slipped away/.test(m.msg)));
+  assert.ok(s.profile!.gold > gold, 'the purse and the ransom paid');
+  // Settled: the helm is hers again.
+  c.push({ t: 'input', seq: 200, rudder: 0, sail: 3 });
+  assert.ok(ship.input.sailTarget > 0);
+});
