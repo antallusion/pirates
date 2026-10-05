@@ -266,3 +266,26 @@ test('playthrough: every delivery job fits a starter sloop\'s hold beside her st
   }
   assert.ok(n > 20, `${n} pickups`);
 });
+
+test('playthrough: a veteran\'s journal shows a job\'s pay as the board offered it (307 on the board, 286 in the journal)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { JOBS } = await import('../shared/src/data/quests.ts');
+  const { veteranPay } = await import('../shared/src/data/questpay.ts');
+  const { game } = makeGame();
+  const c = join(game, 'Vet Vance');
+  const s = game.sessionByName('Vet Vance')!;
+  s.profile!.level = 12;
+  c.push({ t: 'undock' });
+  c.push({ t: 'dock' } as never);
+  (game as unknown as { dockShip(x: unknown, p: unknown): void }).dockShip(s, game.portById(s.profile!.lastPort)!);
+  const offers = c.last('port')!.view!.questOffers.filter((o) => o.kind === 'job' && o.category !== 'elite' && !o.blocked);
+  const o = offers.map((x) => ({ x, q: JOBS.find((q) => q.id === x.id)! })).find(({ q }) => q && (q.requires.level ?? 1) < 12 && q.steps[0].type !== 'visit')!;
+  assert.ok(o, 'a job below her level');
+  const vet = veteranPay(12, o.q.requires.level ?? 1);
+  assert.ok(vet > 1);
+  assert.equal(o.x.silver, Math.round(o.q.reward.silver * vet), 'the board');
+  c.push({ t: 'quest', action: 'accept', id: o.q.id, pay: 'silver' });
+  game.pushSelf(s, true);
+  const shown = (c.last('self')?.self ?? c.last('init')!.self).quests.find((q) => q.id === o.q.id)!;
+  assert.equal(shown.silver, o.x.silver, 'the journal says what the board said');
+});
