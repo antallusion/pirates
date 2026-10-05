@@ -4648,3 +4648,7 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 /* (a Latin title on a Russian screen — a ship's name — is marked lang="en" by main.ts renderModal) */
 .skinned .modal-head h2:lang(en) { padding: 3px 6px 0; }
 .skinned .title-sm:lang(en) { padding: 2px 6px 0; }
+/* A desktop under 820 px tall: the adventure card stands under the ship panel and its flavour text pushed its buttons
+   below the fold (1280×720: 62 px to scroll for «Высадиться и биться») — the text goes, as on the short screens. */
+@media (min-width: 1100px) and (min-height: 521px) and (max-height: 820px) { #advcard .ac-text { display: none; } #advcard .enc-card { padding-top: 6px; padding-bottom: 6px; } #advcard .ac-art { width: 40px; height: 40px; } #advcard .ac-line { margin: 2px 0; } }
+@media (min-width: 1100px) and (min-height: 521px) and (max-height: 700px) { #advcard .ac-come { display: none; } #advcard .ac-sub { font-size: 11px; } #advcard .ac-acts { margin-top: 4px; } #advcard .ac-acts .btn { min-height: 30px; } }
