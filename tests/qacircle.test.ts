@@ -226,3 +226,7 @@ test('English titles sit in their plates\' middle (IM Fell English SC rode 1.9px
   assert.ok(css.includes('.skinned .title-sm:lang(en) { padding: 2px 6px 0; }'));
   assert.ok(readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8').includes("if (/[A-Za-z]/.test(t) && !/[А-Яа-яЁё]/.test(t)) h.lang = 'en';"));
 });
+
+test('a short screen\'s top stack ends above the screen\'s centre (30% of the height)', () => {
+  assert.ok(css.includes('#hud-stack { max-height: max(min(104px, calc(30vh - var(--sa-t) - 8px)), calc(100vh - var(--hb-top, 200px) - 250px));'));
+});

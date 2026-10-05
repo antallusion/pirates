@@ -1043,7 +1043,9 @@ body.touch #hud-dive .dhint { display: none; }
 /* A tall stack (the diving bell under the goals) scrolls within itself and leaves room above the bottom block
    for two toasts. */
 @media (max-width: 699px), (max-height: 520px) {
-  #hud-stack { max-height: max(104px, calc(100vh - var(--hb-top, 200px) - 250px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+  /* (its foot no lower than 30% of the height — the popup budget's centre — however short the screen: it ended at 112 px
+     of 360, the boss's card in its last 4 px; QA circle, 2026-10-05) */
+  #hud-stack { max-height: max(min(104px, calc(30vh - var(--sa-t) - 8px)), calc(100vh - var(--hb-top, 200px) - 250px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
   #hud-stack::-webkit-scrollbar { display: none; }
 }
 /* While the bell is down on a phone, the goals step aside: the maze and its helm need the room. */
