@@ -173,6 +173,8 @@ export class ShipEntity {
   doubleShotArmed = false;
   lootLockedFor: number | null = null; // boarding winner may loot
   protectedUntil = 0;
+  /** A boarding just lost (owner, 2026-10-05): no grapples bite her again until then. */
+  boardShieldUntil = 0;
   removeAt = 0; // for escorts/despawn timers
   ownerId: number | null = null; // escort owner entity id
   wantedCache = 0;

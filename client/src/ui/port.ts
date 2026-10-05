@@ -15,7 +15,6 @@ import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { isResearched, researchQuote } from '../../../shared/src/data/research.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/research.ts';
 import { ask, tell } from './confirm.ts';
-import { playFilm } from './cutscene.ts';
 import { mapCard, placeName } from './maps.ts';
 import { trophyLine, trophyTag } from './surrender.ts';
 import { personName } from '../lang/names.ts';
@@ -122,8 +121,6 @@ export class PortScreen {
     root.innerHTML = html;
     root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
       this.tab = el.dataset.tab as Tab;
-      // The first time in a harbour's tavern: its film (ui/cutscene.ts).
-      if (this.tab === 'tavern') playFilm('cut_tavern');
       this.render(root, state);
     }));
     root.querySelectorAll<HTMLElement>('[data-act]').forEach((el) => (el.onclick = () => this.act(el.dataset, root, state)));

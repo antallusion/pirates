@@ -448,7 +448,6 @@ export function finishShipJob(game: Game, h: Holding, _y: Yard, isl: Island, j: 
   const s = h.owner.kind === 'player' ? game.sessionByAccount(h.owner.id) : undefined;
   if (!s) return;
   game.sendTo(s, { t: 'toast', msg, kind: 'good' });
-  if (j.kind === 'upgrade') game.sendTo(s, { t: 'film', id: 'cut_isle_escorts' }); // once: the companions drilling (reel 18)
   game.sendTo(s, { t: 'base', view: baseView(game, s) });
 }
 

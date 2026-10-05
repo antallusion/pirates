@@ -56,7 +56,6 @@ function grow(game: Game, s: PlayerSession, c: CompanionRec, xp: number): void {
     c.xp -= calfXpNext(c.level);
     c.level++;
     game.sendTo(s, { t: 'toast', msg: `${c.name} grows: level ${c.level}.`, kind: 'good' });
-    game.sendTo(s, { t: 'film', id: 'cut_isle_calf' }); // once: the calf's leap by the pier (reel 18)
     sendCompanion(game, s);
   }
 }

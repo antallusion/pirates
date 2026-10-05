@@ -57,6 +57,8 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (a.npcRole === 'beast' || b.npcRole === 'beast') return 'There are no decks to board on a creature of the deep';
   const zb = zbBoardBlocked(b) ?? zbBoardBlocked(a); // a zone boss: guns only (docs/21)
   if (zb) return zb;
+  // A boarding just lost (owner, 2026-10-05: «бесконечный абордаж при проигрыше»): her decks are let be a while.
+  if (b.boardShieldUntil > game.now && !b.surrendered) return 'She was boarded only now: let her be a while';
   if (b.lootLockedFor !== null) return b.lootLockedFor === a.id ? 'She is already yours' : 'She has struck to another captain';
   if (b.prize) return 'She sails under a prize crew';
   const blocked = damageBlocked(game, a, b);
@@ -99,6 +101,7 @@ export function startBoarding(game: Game, a: ShipEntity, b: ShipEntity, aggressi
     return;
   }
   const now = game.now;
+  a.boardShieldUntil = 0; // she grapples another: her own respite is over
   const fight = newFight(now);
   a.boarding = sideState(fight, { with: b.id, attacker: true, aggression, startedAt: now, nextRound: fight.deadline, rounds: 0, startCrew: a.crew, enemyStartCrew: b.crew, killed: 0, lost: 0 });
   b.boarding = sideState(fight, { with: a.id, attacker: false, aggression, startedAt: now, nextRound: fight.deadline, rounds: 0, startCrew: b.crew, enemyStartCrew: a.crew, killed: 0, lost: 0 });
@@ -660,8 +663,14 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   if (!attackerWins) {
     a.morale = Math.max(0, a.morale - 15);
     b.morale = Math.min(100, b.morale + 15);
-    game.toastShip(a, 'Boarders repelled! Cut the grapples!', 'bad');
     game.toastShip(b, 'Boarders repelled!', 'good');
+    // A captain thrown back off her deck (owner, 2026-10-05): the defenders have her valuables and she limps into
+    // the nearest port, out of their reach — not left alongside to be grappled again at once.
+    if (game.sessionOf(a)?.profile) {
+      game.boardingLost(a, b, bs.lost, true);
+      return;
+    }
+    game.toastShip(a, 'Boarders repelled! Cut the grapples!', 'bad');
     // Push apart.
     a.state.speed = 0;
     return;

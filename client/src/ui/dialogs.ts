@@ -117,7 +117,22 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
   draw();
 }
 
-export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: number; repairFee: number }, portName: string, close: () => void, towed = false): void {
+export function renderSunk(root: HTMLElement, lost: { cargoValue: number; crew: number; repairFee: number }, portName: string, close: () => void, towed = false, boarded?: { by: string; silver: number; repelled?: boolean }): void {
+  if (boarded) {
+    // A boarding lost (owner, 2026-10-05): the same card — what the victors took, and the port she limped into.
+    root.innerHTML = `<div class="modal-body"><div class="center-card">
+      <h2 class="title-sm" style="font-size:40px">${esc(L(boarded.repelled ? 'boarded.repelledTitle' : 'boarded.title'))}</h2>
+      <p style="font-family:var(--serif);font-size:18px;color:var(--fog)">${esc(L(boarded.repelled ? 'boarded.repelledBody' : 'boarded.body', { by: boarded.by, port: portName }))}</p>
+      <div class="loss-list">
+        <div class="loss-row">${icon('tab_market', '', 'item-ico')}<span>${esc(L('boarded.cargo'))}</span><b class="up">${money(lost.cargoValue)}</b></div>
+        <div class="loss-row">${icon('coin', '', 'item-ico')}<span>${esc(L('boarded.silver'))}</span><b class="up">${money(boarded.silver)}</b></div>
+        <div class="loss-row">${icon('stat_crew', '', 'item-ico')}<span>${esc(L('sunk.crew'))}</span><b class="up">${lost.crew}</b></div>
+      </div>
+      <p class="muted">${esc(L('boarded.note'))}</p>
+      <button class="btn btn-primary">${esc(L('sunk.back'))}</button></div></div>`;
+    root.querySelector('button')!.onclick = close;
+    return;
+  }
   if (towed) {
     // The First Watch: the soft version, so the real one is recognised later.
     root.innerHTML = `<div class="modal-body"><div class="center-card">
