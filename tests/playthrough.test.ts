@@ -17,7 +17,9 @@ test('playthrough: an abbreviation at a sentence\'s end keeps one dot («чер�
 test('playthrough: a phone on its side gives the harbour\'s page room (head in one band, no 118 px painted head)', async () => {
   const { readFileSync } = await import('node:fs');
   const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
-  const m = css.match(/@media \(max-height: 520px\) and \(min-width: 600px\) and \(orientation: landscape\) \{\n  #modal-panel\[data-modal="port"\] \.modal-head[^{]*\{ min-height: 0; \}[\s\S]*?\n\}/);
+  assert.match(css, /@media \(max-height: 520px\) and \(min-width: 600px\) and \(orientation: landscape\) \{\n  #modal-panel\[data-modal="port"\] \.modal-head[^{]*\{ min-height: 0; \}/);
+  // (in one band only where the width allows: at 640 px the name ran out of its plate)
+  const m = css.match(/@media \(max-height: 520px\) and \(min-width: 760px\) and \(orientation: landscape\) \{[\s\S]*?\n\}/);
   assert.ok(m, 'the landscape harbour head rule');
   assert.match(m[0], /\.port-head \{ grid-template-columns: minmax\(0, 1fr\) auto;/);
   assert.match(m[0], /\.ph-sail \{ flex: 0 0 auto;/);
