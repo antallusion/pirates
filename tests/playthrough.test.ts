@@ -291,3 +291,20 @@ test('playthrough: a veteran\'s journal shows a job\'s pay as the board offered 
   const shown = (c.last('self')?.self ?? c.last('init')!.self).quests.find((q) => q.id === o.q.id)!;
   assert.equal(shown.silver, o.x.silver, 'the journal says what the board said');
 });
+
+test('playthrough: a guild\'s tag may be Russian («СП»), as its field\'s placeholder «ТЕГ» invites', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { foundGuild } = await import('../server/src/game/guilds.ts');
+  const { game } = makeGame();
+  join(game, 'Guild Gwen');
+  const s = game.sessionByName('Guild Gwen')!;
+  s.profile!.gold = 100000;
+  assert.ok(s.ship!.docked);
+  assert.equal(foundGuild(game, s, 'Солёные Псы', 'сп'), null);
+  assert.equal(game.guilds.of(game, s.accountId)?.tag, 'СП');
+  join(game, 'Guild Gil');
+  const t = game.sessionByName('Guild Gil')!;
+  t.profile!.gold = 100000;
+  assert.equal(foundGuild(game, t, 'Other Dogs', 'S!'), 'A tag is 2–4 letters or digits');
+  assert.equal(foundGuild(game, t, 'Other Dogs', 'СП'), 'That tag is taken');
+});
