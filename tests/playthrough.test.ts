@@ -226,3 +226,22 @@ test('playthrough: men desert «в порту Висельная Губа», not
   assert.match(serverText('3 frightened men desert in Gallowsmouth.'), /^В\sпорту\s/);
   setLang('en');
 });
+
+test('playthrough: a woman giver\'s verb takes her ending («Тамсин Мур продала груз»), nouns and others\' verbs keep theirs', async () => {
+  const { feminineAfter } = await import('../shared/src/data/questgen.ts');
+  assert.equal(feminineAfter('{0} продал груз заранее в порт {1}.', '{0}'), '{0} продала груз заранее в порт {1}.');
+  assert.equal(feminineAfter('{0} в молодости дошёл до края.', '{0}'), '{0} в молодости дошла до края.');
+  assert.equal(feminineAfter('{0} сорок лет рыбачил здесь.', '{0}'), '{0} сорок лет рыбачила здесь.');
+  assert.equal(feminineAfter('{0} так и не увидел его.', '{0}'), '{0} так и не увидела его.');
+  assert.equal(feminineAfter('{0} ведёт журнал.', '{0}'), '{0} ведёт журнал.');
+  assert.equal(feminineAfter('{0} хочет отогнать от него акул.', '{0}'), '{0} хочет отогнать от него акул.');
+  assert.equal(feminineAfter('Посланник ({0}) слышал о нём.', '{0}'), 'Посланник ({0}) слышала о нём.');
+  assert.equal(feminineAfter('Муж этой вдовы ({0}) утонул.', '{0}'), 'Муж этой вдовы ({0}) утонул.');
+  assert.equal(feminineAfter('Груз купца ({0}) пропал.', '{0}'), 'Груз купца ({0}) пропал.');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  const ru = serverText('Tamsin Moor has a hold of goods sold ahead to Ironreach and no ship to carry them.');
+  assert.match(ru, /продала/, ru);
+  assert.match(serverText('Oswin Tarrow has a hold of goods sold ahead to Ironreach and no ship to carry them.'), /продал\s/);
+  setLang('en');
+});

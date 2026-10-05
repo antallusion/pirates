@@ -47,6 +47,40 @@ export function feminineRu(en: string, ru: string): string {
     .replace(/, ([а-яё]+(?: маяка| жемчуга| краденого)?)$/, (m, w: string) => (FEM_BEFORE.has(w) ? `, ${FEM_BEFORE.get(w)}` : m));
 }
 
+/** The trades in the nominative that a woman giver takes (the subject of «Посланник ({giver}) слышал»). */
+const FEM_SUBJECT = new Set(['аптекарь', 'купец', 'скупщик', 'контрабандист', 'жемчуга', 'посланник', 'сектант', 'священник', 'отшельник', 'маяка']);
+
+/** A Russian template's past-tense verb after a woman giver's slot takes her ending: «{0} продал груз» → «{0} продала
+ *  груз», «Посланник ({0}) слышал» → «…слышала» (a merchant's or an envoy's trade may fall to either; the stories were
+ *  written in the man's verb — «Тамсин Мур, купчиха … продал груз»). The verb is the first within the same clause,
+ *  up to four words on; a slot in brackets after another's noun («Муж этой вдовы ({0}) утонул») is left alone. */
+export function feminineAfter(tpl: string, slot: string): string {
+  const at = tpl.indexOf(slot);
+  if (at < 0) return tpl;
+  let from = at + slot.length;
+  if (tpl[from] === ')') {
+    const before = tpl.slice(0, at).match(/([а-яё]+) \($/i);
+    if (!before || !FEM_SUBJECT.has(before[1].toLowerCase())) return tpl;
+    from++;
+  }
+  // Word by word to the clause's end: a present verb («хочет», «ведёт») means the giver's verb is not past.
+  const re = /^ ([а-яё-]+)/;
+  let pos = from;
+  for (let k = 0; k < 4; k++) {
+    const m = re.exec(tpl.slice(pos));
+    if (!m) return tpl;
+    const w = m[1], end = pos + m[0].length;
+    const next = tpl[end] ?? '';
+    const past = /(?:шёл|ёл|ал|ил|ел|ял|ул|ыл|ол)$/.test(w) && !NOT_VERBS.has(w) && (next === '' || /[\s,.;:—)!?]/.test(next));
+    if (past) return tpl.slice(0, pos) + ' ' + (w.endsWith('шёл') ? `${w.slice(0, -3)}шла` : w.endsWith('ёл') ? `${w.slice(0, -2)}ла` : `${w}а`) + tpl.slice(end);
+    if (w.length >= 5 && /(?:ет|ёт|ит|ят|ут|ют|ся)$/.test(w)) return tpl;
+    if (next !== ' ') return tpl;
+    pos = end;
+  }
+  return tpl;
+}
+const NOT_VERBS = new Set(['журнал', 'акул', 'стол', 'пол', 'сигнал', 'канал', 'адмирал', 'генерал', 'металл', 'материал', 'капитал', 'котел', 'ангел', 'узел', 'угол', 'орел', 'орёл', 'посол', 'козел', 'пепел', 'штурвал', 'вал', 'шквал', 'причал', 'футштал']);
+
 export type Profession = 'harbour_master' | 'fishwife' | 'shipwright' | 'priest' | 'widow' | 'merchant' | 'smuggler' | 'old_salt' | 'apothecary' | 'cartographer'
   | 'garrison_captain' | 'tavern_keeper' | 'pearl_diver' | 'fence' | 'envoy' | 'hermit' | 'bosun' | 'lighthouse_keeper' | 'whaler' | 'cultist';
 
