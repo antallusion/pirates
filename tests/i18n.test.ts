@@ -64,7 +64,7 @@ test('two parts side by side are told apart: a port and what follows its name', 
   const plain = (x: string) => x.replace(/ /g, ' ');
   assert.equal(plain(serverText('Fever in Saltmarrow (quarantine)')), 'Лихорадка в Солтмарроу (карантин)');
   assert.equal(plain(serverText('Fever in Saltmarrow')), 'Лихорадка в Солтмарроу');
-  assert.match(plain(serverText('Deliver 12 Salt to Saltmarrow')), /^Доставить соль × 12 в Солтмарроу$/);
+  assert.match(plain(serverText('Deliver 12 Salt to Saltmarrow')), /^Доставить соль × 12 в порт Солтмарроу$/);
   const policy = serverText('The Gilded Ledger honours your policy: salvage fee waived, 120 silver for lost cargo.');
   assert.ok(!/policy|silver/.test(policy), policy);
   applyDataLocale('en');
