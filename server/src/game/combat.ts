@@ -768,6 +768,9 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     if (game.rng.float() < d.crew - killed) killed++;
     killed = Math.min(killed, target.crew);
     if (lad?.floorCrew) killed = Math.min(killed, Math.max(0, target.crew - Math.ceil(lad.floorCrew * target.stats.crewMax)));
+    // The First Watch's raider: the lesson's guns thin her men, but leave enough for the hex battle to be a real one.
+    const floor = target.npcRole ? game.npcs.get(target.id)?.practiceFloor : undefined;
+    if (floor !== undefined) killed = Math.min(killed, Math.max(0, target.crew - floor));
     fell = killMen(game, target, killed, source);
   }
   if (d.morale) target.morale -= d.morale * moraleLossMul(target);

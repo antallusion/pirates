@@ -29,6 +29,40 @@ async function novice(stage: string) {
   return { game, c, s, ship, steps };
 }
 
+test('polish: the First Watch\'s guns never strip the raider below seven tenths, so the hex lesson is a fight of turns', async () => {
+  const { game, ship, steps } = await novice('gunnery');
+  const { fireBroadside } = await import('../server/src/game/combat.ts');
+  const { PRACTICE_FLOOR } = await import('../server/src/game/onboarding.ts');
+  const raider = [...game.ships.values()].find((x) => x.name === 'Red Novice')!;
+  const start = raider.crew;
+  assert.ok(start >= 12, `a crew to fight (${start})`);
+  ship.ammo.grape = 200; // the deadliest shot she could load
+  for (let i = 0; i < 120; i++) {
+    const h = ship.state.heading + Math.PI / 2;
+    raider.state.x = ship.state.x + Math.sin(h) * 120;
+    raider.state.y = ship.state.y - Math.cos(h) * 120;
+    ship.ammoSel = 'grape';
+    fireBroadside(game, ship, 'starboard' as never, 120);
+    steps(game, 20);
+    if (!raider.alive) break;
+  }
+  assert.ok(raider.crew >= Math.ceil(start * PRACTICE_FLOOR), `the raider keeps ${raider.crew} of ${start}`);
+  // Ten men against a pupil's 24 deckhands: three rounds or more, the pupil winning (tests/balance's own measure).
+  const { newBattle, aiAct } = await import('../server/src/game/tacbattle.ts');
+  const { Rng } = await import('../shared/src/rng.ts');
+  const side = (army: { u: string; n: number }[]) => ({ name: 'C', ship: 'W', captain: 'corsair', hands: 0, marines: 0, gunners: 0, army, officers: [], skill: 3, morale: 70, dealt: 1, power: 1, melee: 1, extraShots: 0, firstRush: 1, nets: 0, blooded: 0, castle: false, struck: false, human: false }) as never;
+  let rounds = 0, wins = 0;
+  for (let k = 0; k < 20; k++) {
+    const rng = new Rng(k * 31 + 7);
+    const bt = newBattle(side([{ u: 'deckhand', n: 24 }]), side([{ u: 'marine', n: 1 }, { u: 'deckhand', n: Math.ceil(14 * PRACTICE_FLOOR) - 1 }]), k * 31 + 7, 0, rng);
+    for (let i = 0; i < 3000 && !bt.over && bt.active !== null; i++) aiAct(bt, 0, rng);
+    rounds += bt.round;
+    if (bt.over?.winner === 0) wins++;
+  }
+  assert.ok(rounds / 20 >= 2.8, `a few rounds (${(rounds / 20).toFixed(1)})`);
+  assert.ok(wins >= 19, `the pupil wins (${wins}/20)`);
+});
+
 test('polish: a novice beaten at the First Watch\'s lair gets her men back, and is told so', async () => {
   const was = process.env.GRAVETIDE_ADMIN;
   process.env.GRAVETIDE_ADMIN = '1';

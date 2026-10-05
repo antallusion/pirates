@@ -208,6 +208,8 @@ function keepRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
   for (const x of game.ships.values()) {
     if (x.alive && x.name === 'Red Novice' && Math.hypot(x.state.x - ship.state.x, x.state.y - ship.state.y) < 3500) {
       raiders.set(s, x.id);
+      const b = game.npcs.get(x.id);
+      if (b) b.practiceFloor ??= Math.ceil(x.crew * PRACTICE_FLOOR);
       return;
     }
   }
@@ -241,6 +243,8 @@ export function tradeTip(game: Game, s: PlayerSession): Tutorial['tip'] {
 }
 
 /** A lone Confederacy sloop that comes for the novice in safe water — where the Crown's patrols are near. */
+/** The share of the practice raider's men the lesson's guns leave her. */
+export const PRACTICE_FLOOR = 0.7;
 /** Each novice's practice raider (entity id). */
 const raiders = new WeakMap<PlayerSession, number>();
 
@@ -263,6 +267,9 @@ function practiceRaider(game: Game, s: PlayerSession, ship: ShipEntity): void {
     brain.chase = { id: ship.id, until: game.now + 300 };
     brain.target = ship.id;
     brain.practice = ship.id;
+    // The guns take at most three tenths of her: ten of fourteen are left for «the battle, turn by turn» — three or
+    // four rounds a side (a pupil's 24 deckhands win it every time), not the one blow it was.
+    brain.practiceFloor = Math.ceil(r.crew * PRACTICE_FLOOR);
     raiders.set(s, r.id);
     return;
   }

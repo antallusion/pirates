@@ -73,6 +73,9 @@ export interface NpcBrain {
   stuckCheck: { x: number; y: number; t: number };
   /** The First Watch's practice raider: she comes for this one novice even in safe water. */
   practice?: number;
+  /** The practice raider's men the guns never cut below, so the turn-by-turn lesson after the boarding is a fight of a
+   *  few turns and not one blow (the 2026-10-05 playthrough: the gunnery left her one man). */
+  practiceFloor?: number;
   /** Dynamic combat (docs/11 P2): a pack member's side of approach (radians off the prey's heading), until when. */
   flank?: number;
   flankUntil?: number;
