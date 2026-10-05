@@ -117,15 +117,9 @@ renderer.onLightning = () => audio.thunder();
 for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });
 const worldMap = new WorldMap();
 const journal = new Journal((m) => net.send(m));
-// The tattooist's and the ship's log each have a film the first time they open.
-journal.openTattoos = () => {
-  openModal('tattoos');
-  playFilm('cut_tattoo');
-};
-journal.openSaga = () => {
-  openModal('saga');
-  playFilm('cut_saga');
-};
+// (No film at a window: owner, 2026-10-05 — films only at the sea's own moments, filmMoments.)
+journal.openTattoos = () => openModal('tattoos');
+journal.openSaga = () => openModal('saga');
 journal.openLog = () => openModal('log');
 worldMap.send = (m) => net.send(m);
 worldMap.onAutosail = (wp) => {
@@ -261,7 +255,6 @@ const tameWindow = new TameWindow((m) => net.send(m));
 function openTame(): void {
   tameWindow.open();
   openModal('tame');
-  playFilm('cut_tame');
 }
 // The Throne of the Sea (docs/19 E18): from the captain's plate, the cabin, the captain's window.
 const throneWindow = new ThroneWindow((m) => net.send(m));
@@ -269,7 +262,6 @@ throneWindow.onClose = () => closeModal();
 function openThrone(tab?: string): void {
   throneWindow.open(tab);
   openModal('throne');
-  playFilm('cut_throne');
 }
 heroWindow.onThrone = () => openThrone();
 hud.onThrone = () => openThrone();
@@ -477,8 +469,7 @@ loadAssets(null).then(() => {
 
 /** The game's films at their moments (ui/cutscene.ts): the first boarding (a lair's fight ashore), the first win and
  *  loss, the first harbour, the first storm — each shown once. */
-const filmWas = { tac: false, over: false, docked: true, storm: false, bosses: '', landing: true, abyss: true };
-let isleFilmAt = 0;
+const filmWas = { over: false, docked: true, atQuay: false, bosses: '', landing: true };
 /** A landing's film by what the party goes ashore for: a buried chest, a named pirate's lair, an island; none for a
  *  haul, a dive or the shallows. */
 const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirate_camp: 'cut_fort', lookout: 'cut_lighthouse', dive: 'cut_wreck_dive', haul: null, tidal: null, turtle: null };
@@ -486,18 +477,6 @@ const LANDING_FILM: Record<string, string | null> = { dig: 'cut_treasure', pirat
 const BOSS_FILM: Record<string, string> = { kraken: 'cut_kraken_boss', leviathan: 'cut_leviathan', lantern_maw: 'cut_lantern_maw', black_serpent: 'cut_serpent', abyss_eye: 'cut_abyss',
   drowned_whale: 'cut_drowned_whale', hollow_admiral: 'cut_hollow_admiral', mother_of_wrecks: 'cut_mother_of_wrecks', storm_widow: 'cut_storm_widow', ancient_leviathan: 'cut_ancient_leviathan',
   old_moorings: 'cut_old_moorings', old_tithe: 'cut_old_tithe', fog_changeling: 'cut_fog_changeling', cinder_ray: 'cut_cinder_ray', drowned_prelate: 'cut_drowned_prelate', rime_twins: 'cut_rime_twins' };
-/** The land's creatures, each lair's kind the first time she fights at one (a legend's lair takes the legend's film). */
-const LAIR_FILM: Record<string, string> = { crab_beach: 'cut_crab_beach', gull_cliffs: 'cut_gull_cliffs', seal_rookery: 'cut_seal_rookery', shark_shallows: 'cut_shark_shallows',
-  turtle_rocks: 'cut_turtle_rocks', serpent_marsh: 'cut_serpent_marsh', hermit_camp: 'cut_hermit_camp', tentacle_lagoon: 'cut_tentacle_lagoon', drowned_surf: 'cut_drowned_surf',
-  choir_circle: 'cut_choir', serpent_grotto: 'cut_serpent', maw_pit: 'cut_lantern_maw', turtle_guardian: 'cut_ancient_turtle', leviathan_shoal: 'cut_leviathan',
-  jaguar_den: 'cut_jaguar_den', ape_ridge: 'cut_ape_ridge', croc_mangroves: 'cut_croc_mangroves', bat_cave: 'cut_bat_cave', moray_reef: 'cut_moray_reef',
-  albatross_rock: 'cut_albatross_rock', octopus_wreck: 'cut_octopus_wreck', crab_hollow: 'cut_crab_hollow', wyrm_gallery: 'cut_wyrm_gallery', hydra_pool: 'cut_hydra_pool',
-  ape_throne: 'cut_ape_throne', roc_eyrie: 'cut_roc_eyrie',
-  mire_mother: 'cut_mire_mother', cinder_salamander: 'cut_cinder_salamander', drowned_abbess: 'cut_drowned_abbess', walrus_tyrant: 'cut_walrus_tyrant',
-  // Reel 21: the twelve new lairs (tools/art/videos.py) — each plays once it is in assets/video/index.json.
-  frog_pools: 'cut_frog_pools', rat_wreck: 'cut_rat_wreck', iguana_rocks: 'cut_iguana_rocks', ghost_strand: 'cut_ghost_strand', centipede_ravine: 'cut_centipede_ravine',
-  spider_grove: 'cut_spider_grove', bull_savanna: 'cut_bull_savanna', cinder_slopes: 'cut_cinder_slopes', harpy_crags: 'cut_harpy_crags', banshee_hollow: 'cut_banshee_hollow',
-  titan_wreck: 'cut_titan_wreck', serpent_temple: 'cut_serpent_temple' };
 /** The great ones ashore (shared/src/data/shorebosses.ts) and the great old lairs, each the first time she wins there. */
 const SHORE_DOWN: Record<string, string> = { mire_mother: 'cut_mire_mother_down', cinder_salamander: 'cut_cinder_salamander_down', drowned_abbess: 'cut_drowned_abbess_down', walrus_tyrant: 'cut_walrus_tyrant_down',
   ape_throne: 'cut_ape_throne_down', roc_eyrie: 'cut_roc_eyrie_down', hydra_pool: 'cut_hydra_pool_down', wyrm_gallery: 'cut_wyrm_gallery_down',
@@ -507,25 +486,11 @@ const SHORE_DOWN: Record<string, string> = { mire_mother: 'cut_mire_mother_down'
   serpent_marsh: 'cut_serpent_marsh_down', shark_shallows: 'cut_shark_shallows_down', moray_reef: 'cut_moray_reef_down', bat_cave: 'cut_bat_cave_down',
   albatross_rock: 'cut_albatross_rock_down', crab_beach: 'cut_crab_beach_down', gull_cliffs: 'cut_gull_cliffs_down', seal_rookery: 'cut_seal_rookery_down',
   turtle_rocks: 'cut_turtle_rocks_down', hermit_camp: 'cut_hermit_camp_down' };
-/** Windows that are places of their own, each the first time she opens it. */
-const MODAL_FILM: Partial<Record<NonNullable<Modal>, string>> = { shop: 'cut_shop', barter: 'cut_barter', company: 'cut_company', crew: 'cut_crew', gear: 'cut_gear', recruit: 'cut_recruit' };
-/** The first fight with each of the world's armies has its own film (shared/src/data/factionunits.ts). */
-const ROSTER_FILM: Record<string, string> = { crown: 'cut_crown_chase', choir: 'cut_choir', harpoon: 'cut_harpoon', brokers: 'cut_smugglers', dutchman: 'cut_dutchman_bell', league: 'cut_league', free: 'cut_free' };
-/** The sea's legends each rise in their own film the first time she fights one. */
-const LEGEND_FILM: [string, string][] = [['white_whale', 'cut_white_whale'], ['young_kraken', 'cut_kraken_boss'], ['ancient_turtle', 'cut_ancient_turtle'], ['shoal_leviathan', 'cut_leviathan'], ['lantern_maw', 'cut_lantern_maw'], ['young_serpent', 'cut_serpent'], ['marsh_serpent', 'cut_serpent']];
-/** The things whose change is a moment, as last seen; nothing plays for what she already had when she came in (the
- *  first ten seconds after her ship arrives only take note). */
-const filmLast = new Map<string, unknown>();
 /** The world bosses as last seen: their kind, whether in their last tenth, her share. */
 const bossSeen = new Map<number, { kind: string; low: boolean; share: number }>();
-let filmSince = 0;
 let sunkAt = -Infinity;
-function turned(key: string, now: unknown): boolean {
-  const had = filmLast.has(key);
-  const before = filmLast.get(key);
-  filmLast.set(key, now);
-  return had && before !== now && filmSince > 0 && performance.now() - filmSince > 10_000;
-}
+/** When her last fight ended: a ship let go into port after a boarding lost has had the defeat's film already. */
+let fightOverAt = -Infinity;
 /** A test battle from a link (owner, 2026-10-03: «дай мне ссылку где можно потестить бой на палубе с существами»):
  *  /?battle — her frigate's marines and creatures (mermaids, lantern maws, the ancient turtle, a young kraken, the White
  *  Whale) board a Crown frigate; /?battle=land — her marines and mermaids ashore at a crabs' beach (an island's painted
@@ -555,126 +520,60 @@ function runTestBattle(): void {
 /** The sea's news held through a boarding battle (case 'toast'), told once the deck is clear. */
 const heldToasts: { msg: string; kind: string }[] = [];
 function filmMoments(): void {
-  if (state.self && !filmSince) filmSince = performance.now();
+  // Films only at the sea's own moments (owner, 2026-10-05: «ролик можно оставить при выходе и заходе в порт или на
+  // острова, при успешном абордаже или проигрыше. внутри всяких вкладок … не нужно ниче делать»): into and out of a
+  // port, a landing ashore, a fight won or lost — and a great one rising out of the sea (a world boss here, a zone
+  // boss's first rising by the server). Nothing at a window or a tab, nothing at a battle's start, so none ever holds
+  // the battle's clock. Each plays once (ui/cutscene.ts) and any tap skips it.
   if (heldToasts.length && !state.boardTac) for (const x of heldToasts.splice(0)) hud.toast(x.msg, x.kind);
   const tac = state.boardTac;
-  if (tac && !filmWas.tac) {
-    // A legend's film first, then the foe's army's, then the boarding's (or the lair's ashore) — one at the start.
-    const units = tac.stacks.map((x) => x.unit as string);
-    const roster = tac.stacks.filter((x) => x.side !== tac.you).map((x) => ROAM_UNITS[x.unit]?.roster).find(Boolean);
-    const lair = tac.land ? LAIR_FILM[tac.land.lair] : undefined;
-    const pick = LEGEND_FILM.find(([u, f]) => units.includes(u) && filmDue(f))?.[1] ?? (lair && filmDue(lair) ? lair : undefined) ?? (roster ? ROSTER_FILM[roster] : undefined);
-    // The first boarding has its film; the next, the night raid's.
-    const shown = (pick && filmDue(pick) && playFilm(pick)) || playFilm(tac.land ? 'cut_lair' : filmDue('cut_boarding') ? 'cut_boarding' : 'cut_raid');
-    // A film over the field must not cost her the turn (QA, 2026-10-04): the battle's clock waits for it.
-    if (shown && !tac.over) net.send({ t: 'tac', act: { a: 'film', ms: 6500 } });
-  }
-  // The end of a fight; a great one ashore brought down has its own (the fourteenth reel), the first time.
+  // The end of a fight, won or lost; a great one ashore brought down has its own (the fourteenth reel), the first time.
   if (tac?.over && !filmWas.over) {
     const won = tac.over.winner === tac.you;
     const down = won && tac.land && SHORE_DOWN[tac.land.lair] && filmDue(SHORE_DOWN[tac.land.lair]!) ? SHORE_DOWN[tac.land.lair]! : null;
     playFilm(down ?? (won ? 'cut_victory' : 'cut_defeat'));
   }
-  filmWas.tac = !!tac;
+  if (tac?.over) fightOverAt = performance.now();
   filmWas.over = !!tac?.over;
   const docked = !!state.self?.dockedAt;
-  // The first harbour; then a town of the twenty that has its own film (tools/art/videos.py, the ninth reel), or the
-  // first of each power's (shared/src/data/factions.ts).
-  if (docked && !filmWas.docked && state.self) {
+  // Into port: the first harbour; then a town of the twenty that has its own film (tools/art/videos.py, the ninth
+  // reel), or the first of each power's (shared/src/data/factions.ts).
+  if (docked && !filmWas.docked && state.self && performance.now() - fightOverAt > 15_000 && performance.now() - sunkAt > 15_000) {
     const at = state.self.dockedAt!;
     const faction = state.ports.find((p) => p.id === at)?.faction;
     const own = `cut_port_${at}`;
     playFilm(filmDue('cut_port') || !faction ? 'cut_port' : filmDue(own) ? own : `cut_port_${faction}`);
   }
-  filmWas.docked = docked || !state.self;
-  if (state.storm && !filmWas.storm) playFilm('cut_storm');
-  filmWas.storm = !!state.storm;
-  // A world boss rising: the kraken's film the first time one is near.
-  const bosses = state.bosses.map((b) => b.kind).join();
-  if (bosses !== filmWas.bosses) for (const b of state.bosses) if (BOSS_FILM[b.kind] && !filmWas.bosses.split(',').includes(b.kind)) playFilm(BOSS_FILM[b.kind]);
-  filmWas.bosses = bosses;
-  // A world boss she fought brought down (gone from the list in its last tenth, with her share in it): its own ending
-  // the first time (the fifteenth reel).
-  for (const [id, b] of bossSeen) if (!state.bosses.some((x) => x.id === id) && b.low && b.share > 0) playFilm(`cut_${b.kind}_down`);
-  bossSeen.clear();
-  for (const b of state.bosses) bossSeen.set(b.id, { kind: b.kind, low: b.hp <= b.hpMax * 0.1, share: b.you?.share ?? 0 });
-  // The boats going ashore; the first time down into the Abyss.
-  const landing = state.self?.landing;
-  if (landing && !filmWas.landing) {
-    const film = landing.feature in LANDING_FILM ? LANDING_FILM[landing.feature] : 'cut_landing';
-    if (film) playFilm(film);
-  }
-  filmWas.landing = !!landing || !state.self;
-  // Each sea the first time she sails into it (the thirteenth reel); the Black Coast is where she begins.
-  if (turned('region', state.region) && state.self && !state.self.dockedAt && state.region !== 'black_coast') playFilm(`cut_sea_${state.region}`);
-  // The first sight of each kind of island (reel 19), at sea and at peace: her shore a quarter mile off (looked for
-  // every two seconds; the film itself plays once).
-  if (performance.now() - isleFilmAt > 2000 && state.self && !state.self.dockedAt && state.you && !state.you.combat && !modal && !tac) {
-    isleFilmAt = performance.now();
-    const y = state.you;
-    for (const is of state.islands.values()) {
-      if (Math.abs(is.x - y.x) > 3000 || Math.abs(is.y - y.y) > 3000) continue;
-      if (Math.hypot(is.x - y.x, is.y - y.y) - is.r * 0.62 < 450 && filmDue(`cut_isle_${is.biome}`)) {
-        playFilm(`cut_isle_${is.biome}`);
-        break;
-      }
-    }
-  }
-  const abyss = !!state.self?.abyss?.inside;
-  if (abyss && !filmWas.abyss) playFilm('cut_abyss');
-  filmWas.abyss = abyss || !state.self;
-  // A black storm's own film; a new ship off the slipway; the orca calf; a Grail dug up; her own harbour; the sea's
-  // holidays, each the first time it comes round.
-  // The first black storm and the first fog; the first night watch at sea.
-  if (turned('weather', state.weather)) {
-    if (state.weather === 'black_storm') playFilm('cut_black_storm');
-    else if (state.weather === 'fog') playFilm('cut_fog');
-    else if (state.weather === 'calm') playFilm('cut_calm');
-    else if (state.weather === 'rain') playFilm('cut_rain');
-  }
-  // The night watch; the dawn that ends it, still at sea.
-  const watch = !!state.self && !state.self.dockedAt && isNight(state.estServerTime());
-  if (turned('night', watch)) {
-    if (watch) playFilm('cut_night_watch');
-    else if (state.self && !state.self.dockedAt) playFilm('cut_dawn');
-  }
-  const cls = state.self?.loadout.classId ?? null;
-  // A new hull launched; the first of her list in its own film — a premium one's (docs/02 §1.A.9, the tenth reel) or
-  // an ordinary one's (the seventeenth).
-  const newHull = turned('cls', cls) && !!cls;
-  if (newHull && state.self?.dockedAt && performance.now() - sunkAt > 60_000) {
-    const def = SHIP_CLASSES[cls!];
+  // Out of port: her hull putting to sea — the first of her list in its own film (a premium one's, docs/02 §1.A.9, the
+  // tenth reel, or an ordinary one's, the seventeenth), else the launch (not on the way back from the bottom).
+  if (!docked && filmWas.atQuay && state.self && performance.now() - sunkAt > 60_000) {
+    const def = SHIP_CLASSES[state.self.loadout.classId];
     const own = def?.list ? `cut_${def.premium ? 'premium' : 'launch'}_${def.list}` : null;
     playFilm(own && filmDue(own) ? own : 'cut_launch');
   }
-  // The first time she opens a window that is a place of its own (the twelfth reel): the shop, the barter table, the
-  // company's hall, the crew's muster, the armoury, the recruiting quay.
-  if (turned('modal', modal) && modal && MODAL_FILM[modal]) playFilm(MODAL_FILM[modal]!);
-  // Doubloons spent and no new hull: the shop's creatures come aboard (docs/18 VII), the first time in their own film.
-  const coin = filmLast.get('doubloons');
-  if (turned('doubloons', state.doubloons) && !newHull && typeof coin === 'number' && state.doubloons < coin) playFilm('cut_premium_beast');
-  if (turned('pet', !!state.companion) && state.companion) playFilm('cut_orca');
-  if (turned('grail', state.adv?.grail ?? null) && state.adv?.grail === 'held') playFilm('cut_grail');
-  if (turned('base', !!state.base) && state.base) playFilm('cut_base');
-  // A race begun with her in it; a beast on her harpoon line.
-  const racing = state.regatta?.phase === 'running' && !!state.regatta.signedUp;
-  if (turned('regatta', racing) && racing) playFilm('cut_regatta');
-  if (turned('line', !!state.hunt?.line) && state.hunt?.line) playFilm('cut_hunt');
-  // Each pet the first time she has one; sailing in company; the first hunters on her wake; the first careening; her
-  // name known (the tenth level).
-  // (her pets are known only once the ship's window has asked for them: a pet is new beside a list already known)
-  const hadPets = filmLast.get('pets');
-  const pets = state.petsOwn?.owned ?? null;
-  if (turned('pets', pets?.join() ?? null) && pets && typeof hadPets === 'string') for (const p of pets) if (!hadPets.split(',').includes(p)) playFilm(`cut_pet_${p}`);
-  if (turned('party', (state.party?.members.length ?? 0) > 1) && (state.party?.members.length ?? 0) > 1) playFilm('cut_party');
-  if (turned('wanted', (state.self?.wanted ?? 0) > 0) && (state.self?.wanted ?? 0) > 0) playFilm('cut_wanted');
-  const repairing = !!(state.you && state.you.flags & SF.REPAIRING);
-  if (turned('repair', repairing) && repairing) playFilm('cut_repair');
-  const famed = (state.self?.level ?? 0) >= 10;
-  if (turned('rank', famed) && famed) playFilm('cut_rank');
-  const hol = state.holiday?.id ?? null;
-  if (hol && filmLast.get('hol') !== hol) playFilm(`cut_${hol}`);
-  filmLast.set('hol', hol);
+  filmWas.docked = docked || !state.self;
+  filmWas.atQuay = docked && !!state.self;
+  // A world boss rising: its film the first time one is near.
+  const bosses = state.bosses.map((b) => b.kind).join();
+  if (bosses !== filmWas.bosses) for (const b of state.bosses) if (BOSS_FILM[b.kind] && !filmWas.bosses.split(',').includes(b.kind)) playFilm(BOSS_FILM[b.kind]);
+  filmWas.bosses = bosses;
+  // A world boss she fought brought down (gone from the list in its last tenth, with her share in it) — a fight won:
+  // its own ending the first time (the fifteenth reel).
+  for (const [id, b] of bossSeen) if (!state.bosses.some((x) => x.id === id) && b.low && b.share > 0) playFilm(`cut_${b.kind}_down`);
+  bossSeen.clear();
+  for (const b of state.bosses) bossSeen.set(b.id, { kind: b.kind, low: b.hp <= b.hpMax * 0.1, share: b.you?.share ?? 0 });
+  // The boats going ashore: the landing's own film by what the party goes for, then the first landing on each kind of
+  // island (reel 19).
+  const landing = state.self?.landing;
+  if (landing && !filmWas.landing) {
+    const film = landing.feature in LANDING_FILM ? LANDING_FILM[landing.feature] : 'cut_landing';
+    const y = state.you;
+    let isle: string | null = null;
+    if (y) for (const is of state.islands.values()) if (Math.hypot(is.x - y.x, is.y - y.y) < is.r + 900 && filmDue(`cut_isle_${is.biome}`)) isle = `cut_isle_${is.biome}`;
+    if (film && filmDue(film)) playFilm(film);
+    else if (isle) playFilm(isle);
+  }
+  filmWas.landing = !!landing || !state.self;
 }
 void loadFilms();
 
@@ -878,7 +777,6 @@ function onMessage(m: ServerMsg): void {
     case 'mutiny':
       if (m.mutineers > 0) {
         audio.bell();
-        playFilm('cut_mutiny');
         hud.banner(L('mutiny'), L('mutinySub', { name: personName(m.ringleader), n: m.mutineers, men: plural(m.mutineers, L('men.one'), L('men.few'), L('men.many')) }));
       }
       break;
@@ -889,20 +787,15 @@ function onMessage(m: ServerMsg): void {
     case 'lairchest':
       // A stormed lair's chest (docs/16 #7).
       audio.bell();
-      playFilm('cut_treasure', () => lairChest.open(m.view));
+      lairChest.open(m.view);
       break;
     case 'film':
-      playFilm(m.id);
+      // The server's own moments: a zone boss's first rising in her sea (a sea event, not a window: owner, 2026-10-05).
+      if (m.id.startsWith('cut_zboss_')) playFilm(m.id);
       break;
-    case 'researched': {
-      // A hull researched (docs/20): the yard's film — a great hull's slipway for the last two tiers.
-      playFilm(SHIP_CLASSES[m.classId].tier >= 4 ? 'cut_research_great' : 'cut_research');
-      break;
-    }
     case 'surrender_offer':
       // A ship strikes her colours to you (docs/16 #3): the choice card over the sea.
       surrenderCard.open(m.offer);
-      playFilm('cut_strike_colours');
       break;
     case 'boarding':
       if (m.result) openModal('boarding');
@@ -929,12 +822,10 @@ function onMessage(m: ServerMsg): void {
       if (m.extra) parts.push(L(m.extra === 'map' ? 'questMap' : 'questSupplies'));
       if (m.stores) parts.push(L('questStores', { h: m.stores.heavy, f: m.stores.incendiary }));
       if (m.mentor) parts.push(L('questMentor', { name: m.mentor }));
-      // The first job paid has its film; the herald after it.
-      playFilm('cut_quest', () => {
-        hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
-        audio.bell();
-        audio.coins();
-      });
+      // The herald of a job paid.
+      hud.banner(L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
+      audio.bell();
+      audio.coins();
       break;
     }
     case 'crew_say': {
@@ -1004,7 +895,6 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'trek':
       trekWindow.open(m.view);
-      if (m.view) playFilm('cut_trek');
       break;
     case 'mapoffer':
       // A captain alongside offers a map (docs/16 #22): yes or no.
@@ -1022,7 +912,6 @@ function onMessage(m: ServerMsg): void {
         if (modal === 'dice') refreshModal();
         else {
           openModal('dice');
-          playFilm('cut_dice');
         }
       } else if (modal === 'dice') closeModal();
       break;
@@ -1074,7 +963,6 @@ function onMessage(m: ServerMsg): void {
     case 'descent': {
       // The choice between tiers opens its window for the leader; the window follows the descent.
       const run = m.view?.run;
-      if (run) playFilm('cut_descent');
       if (run?.phase === 'choice' && run.leader && modal !== 'descent' && lastDescentTier !== run.tier) {
         lastDescentTier = run.tier;
         openModal('descent');
@@ -1098,11 +986,9 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'nethaul':
       netHaul.open(m.view, m.got);
-      // The first full net: its film once she has seen what came up.
-      if (m.got && m.got.n > 0 && filmDue('cut_nethaul')) setTimeout(() => playFilm('cut_nethaul'), 1800);
       break;
     case 'trophy_hall':
-      playFilm('cut_trophy_hall', () => void tell(L('trophyHall', { owner: m.view.owner, flag: m.view.flag, skull: m.view.skull, fish: m.view.fish })));
+      void tell(L('trophyHall', { owner: m.view.owner, flag: m.view.flag, skull: m.view.skull, fish: m.view.fish }));
       break;
     case 'encounter_result':
       encounterCard.result(m);
