@@ -363,3 +363,44 @@ test('playthrough: the glory chip keeps to the plate\'s last line (18 px laid th
   const rule = css.match(/\n\.uf-glory \{[^}]*\}/)![0];
   assert.match(rule, /height: 15px; box-sizing: border-box;/);
 });
+
+test('playthrough: a lost trial\'s dead count for nothing — no «too many dead this voyage» mutiny after it, loyalty as it stood', async () => {
+  const { makeGame, join, onHull, steps } = await import('./helpers.ts');
+  const { MAX_LEVEL } = await import('../shared/src/constants.ts');
+  const { armyForLevel } = await import('../shared/src/data/army.ts');
+  const { heroOf } = await import('../server/src/game/hero.ts');
+  const { act } = await import('../server/src/game/tacbattle.ts');
+  const { Rng } = await import('../shared/src/rng.ts');
+  const { game } = makeGame();
+  game.tacticalBoarding = true;
+  const c = join(game, 'Trial Tess');
+  c.push({ t: 'undock' });
+  const s = game.sessionByName('Trial Tess')!;
+  const ship = s.ship!;
+  Object.assign(ship.state, { x: 30000, y: 80000, speed: 0 });
+  ship.protectedUntil = 0;
+  s.profile!.level = MAX_LEVEL;
+  ship.level = MAX_LEVEL;
+  onHull(game, ship, 'brig', 6);
+  ship.setArmy(armyForLevel(6, ship.stats.crewMax, ship.armySlots, 'player'));
+  ship.morale = 80;
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  heroOf(s.profile!).skills = [{ id: 'boarding', r: 3 }];
+  const co = s.profile!.company;
+  co.voyageStartCrew = ship.crew;
+  co.voyageLost = 0;
+  co.loyalty = 50;
+  c.push({ t: 'throne', action: 'trial', id: 'boarding' });
+  const bt = ship.boarding!.fight.tac!;
+  // Half her men fall on the blunted steel, the crew's second counting them as they go…
+  ship.crew = Math.floor(ship.crew / 2);
+  steps(game, 21);
+  assert.ok(co.voyageLost > 0, 'the dead counted as they fell');
+  // …then she yields: the trial is lost.
+  act(bt, 0, { a: 'surrender' }, game.now, new Rng(1));
+  steps(game, 20 * 30);
+  assert.equal(ship.boarding, null);
+  assert.equal(co.voyageLost, 0, 'the trial\'s dead are not the voyage\'s');
+  assert.ok(co.loyalty >= 50);
+  assert.ok(!co.mutiny, 'no mutiny');
+});
