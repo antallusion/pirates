@@ -4778,3 +4778,22 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
   #modal-panel[data-modal="sunk"] .loss-row .item-ico { width: 24px; height: 24px; }
   #modal-panel[data-modal="sunk"] .center-card .btn { min-height: 34px; margin-top: 2px; }
 }
+/* ---------- docs/22 the polish pass ---------- */
+/* A1: the result ashore (a lair won, its spoils, the beaten who would follow) fits its banner with no inner scroll at
+   every size: two columns — the reckoning on the left, the spoils on the right — under the title, the offer across. */
+.tb-banner.tb-result:has(.tb-landclose) { width: min(680px, calc(100% - 24px)); }
+.tb-banner.tb-result:has(.tb-landclose) .tb-bsc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); column-gap: 18px; align-items: start; }
+.tb-banner.tb-result:has(.tb-landclose) .tb-bsc > :is(b, span, .tb-cap) { grid-column: 1 / -1; }
+.tb-banner.tb-result:has(.tb-landclose) .tb-bsc > .tb-res { grid-column: 1; }
+.tb-banner.tb-result:has(.tb-landclose) .tb-bsc > .tb-loot { grid-column: 2; }
+.tb-banner.tb-result:has(.tb-landclose) .tb-bsc > .tb-res:last-child, .tb-banner.tb-result:has(.tb-landclose) .tb-bsc > .tb-loot:nth-child(3) { grid-column: 1 / -1; }
+.tb-banner.tb-result:has(.tb-landclose) .tb-cap { margin-top: 6px; }
+@media (max-height: 520px) {
+  .tb-banner.tb-result:has(.tb-landclose) { padding: 6px 14px 8px; }
+  .tb-banner.tb-result:has(.tb-landclose) b { font-size: 20px; line-height: 1.15; }
+  .tb-banner.tb-result:has(.tb-landclose) .tb-res { flex-flow: row wrap; gap: 2px 14px; }
+  .tb-banner.tb-result:has(.tb-landclose) .tb-xp { flex-basis: 100%; }
+  .tb-banner.tb-result:has(.tb-landclose) .tb-lline { font-size: 12px; line-height: 15px; }
+  .tb-banner.tb-result:has(.tb-landclose) .tb-cap .btn { min-height: 34px; }
+  .tb-banner.tb-result:has(.tb-landclose) .tb-landclose { margin-top: 4px; min-height: 36px; }
+}
