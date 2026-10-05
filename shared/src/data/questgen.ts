@@ -81,8 +81,8 @@ export function feminineAfter(tpl: string, slot: string): string {
 }
 const NOT_VERBS = new Set(['журнал', 'акул', 'стол', 'пол', 'сигнал', 'канал', 'адмирал', 'генерал', 'металл', 'материал', 'капитал', 'котел', 'ангел', 'узел', 'угол', 'орел', 'орёл', 'посол', 'козел', 'пепел', 'штурвал', 'вал', 'шквал', 'причал', 'футштал']);
 
-/** The hold a delivery job may fill: a starter sloop's 30 less her provisions, stores and a little trade. */
-export const QUEST_HOLD = 18;
+/** The hold a delivery job may fill: a starter sloop's 30 less her own stores (planks, sailcloth, powder: 12) and a little catch. */
+export const QUEST_HOLD = 15;
 
 export type Profession = 'harbour_master' | 'fishwife' | 'shipwright' | 'priest' | 'widow' | 'merchant' | 'smuggler' | 'old_salt' | 'apothecary' | 'cartographer'
   | 'garrison_captain' | 'tavern_keeper' | 'pearl_diver' | 'fence' | 'envoy' | 'hermit' | 'bosun' | 'lighthouse_keeper' | 'whaler' | 'cultist';

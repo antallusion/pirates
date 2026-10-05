@@ -253,7 +253,7 @@ test('playthrough: a giver\'s card on a phone on its side — her words | the st
   assert.match(css, /\.giver-panel \.pay-opt \{ grid-template-columns: auto auto minmax\(0, 1fr\);/);
 });
 
-test('playthrough: every delivery job fits a starter sloop\'s hold beside her stores (18 of her 30)', async () => {
+test('playthrough: every delivery job fits a starter sloop\'s hold beside her stores (15 of her 30)', async () => {
   const { QUESTS_BY_ID } = await import('../shared/src/data/quests.ts');
   const { GOODS } = await import('../shared/src/data/goods.ts');
   const { QUEST_HOLD } = await import('../shared/src/data/questgen.ts');
