@@ -140,7 +140,9 @@ test('forgeries: a forger at a black market; the dig finds nothing and the forge
   V.p.explore.maps.push(real);
   V.c.push({ t: 'map', action: 'seal', id: real.id });
   assert.equal(real.sealed, true);
-  // The dig.
+  // The dig. She knows these waters already: no island newly charted on the way pays a day's order into her purse
+  // meanwhile (QA circle, 2026-10-05: on a day whose order was «chart 2 islands» it paid 490 silver — the old flicker).
+  for (const is of game.world.islands) V.s.discovered.add(is.id);
   const gold = V.p.gold;
   digAt(game, V.c, V.s, fake);
   assert.equal(V.p.gold, gold);
