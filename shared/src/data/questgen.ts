@@ -81,6 +81,9 @@ export function feminineAfter(tpl: string, slot: string): string {
 }
 const NOT_VERBS = new Set(['журнал', 'акул', 'стол', 'пол', 'сигнал', 'канал', 'адмирал', 'генерал', 'металл', 'материал', 'капитал', 'котел', 'ангел', 'узел', 'угол', 'орел', 'орёл', 'посол', 'козел', 'пепел', 'штурвал', 'вал', 'шквал', 'причал', 'футштал']);
 
+/** The hold a delivery job may fill: a starter sloop's 30 less her provisions, stores and a little trade. */
+export const QUEST_HOLD = 18;
+
 export type Profession = 'harbour_master' | 'fishwife' | 'shipwright' | 'priest' | 'widow' | 'merchant' | 'smuggler' | 'old_salt' | 'apothecary' | 'cartographer'
   | 'garrison_captain' | 'tavern_keeper' | 'pearl_diver' | 'fence' | 'envoy' | 'hermit' | 'bosun' | 'lighthouse_keeper' | 'whaler' | 'cultist';
 
@@ -730,7 +733,9 @@ function rollParams(rng: Rng, plot: Plot, flavor: Flavor, port: Port, near: Port
   const n = needs('race2') ? Math.max(3, Math.ceil((Math.hypot(port2!.x - port.x, port2!.y - port.y) * 1.4) / (10 * SPEED_SCALE) / 60))
     : needs('sink_named') || needs('find_letter') ? 1
     : needs('tribute') ? rng.int(1, 2)
-    : needs('pickup') || needs('deliver2') || needs('deliver3') ? rng.int(4, 12) * (good === 'pearls' || good === 'medicine' ? 1 : 2)
+    // (no more than a starter sloop carries beside her own stores: 18 of her 30 — «20 planks & pitch» filled 30 and
+    // could never be taken on in a novice's hold)
+    : needs('pickup') || needs('deliver2') || needs('deliver3') ? Math.min(rng.int(4, 12) * (good === 'pearls' || good === 'medicine' ? 1 : 2), Math.max(4, Math.floor(QUEST_HOLD / (good ? GOODS[good].volume : 1))))
     : needs('catch_big') ? rng.pick([6, 8, 10, 15, 25])
     : needs('hunt_whale') ? rng.int(1, 2)
     : needs('hunt_orca') ? rng.int(2, 5)
