@@ -580,7 +580,8 @@ void loadFilms();
 // founding form and took her typing): it waits for her (ui/cutscene.ts). The windows of the moment itself are no bar —
 // the harbour opening as she docks, a boarding's account, the shipwreck's.
 const FILM_OVER = new Set<Modal>(['port', 'boarding', 'sunk']);
-setFilmGate(() => (modal !== null && !FILM_OVER.has(modal)) || !!document.querySelector('[role="alertdialog"][aria-modal="true"]'));
+// (a question up is one on screen: the «turn the phone» lock stays in the page, unseen, in landscape)
+setFilmGate(() => (modal !== null && !FILM_OVER.has(modal)) || [...document.querySelectorAll('[role="alertdialog"][aria-modal="true"]')].some((e) => e.getClientRects().length > 0));
 
 /** The title screen: the trailer, silent and looping, over the key art (owner, 2026-10-03) — not for one who asks for
  *  less motion or saves data; it rests while the title screen is hidden. */

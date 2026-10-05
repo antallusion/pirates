@@ -106,6 +106,9 @@ test('polish: a film is skipped by a click, a tap, a press or any key, and waits
   const main = src('client/src/main.ts');
   assert.match(main, /setFilmGate\(\(\) => \(modal !== null && !FILM_OVER\.has\(modal\)\)/);
   assert.match(main, /const FILM_OVER = new Set<Modal>\(\['port', 'boarding', 'sunk'\]\);/);
+  // Only a question on screen bars it: the rotate lock (an alertdialog always in the page) held every film back.
+  assert.match(main, /\[role="alertdialog"\]\[aria-modal="true"\]'\)\]\.some\(\(e\) => e\.getClientRects\(\)\.length > 0\)/);
+  assert.match(src('client/index.html'), /id="rotate-lock" role="alertdialog" aria-modal="true"/);
 });
 
 test('polish: the result ashore is laid in two columns with no inner scroll; a toast wrapped past its band is hidden', () => {
