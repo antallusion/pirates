@@ -215,7 +215,7 @@ test('playthrough: the harbour\'s contracts name their port in apposition («в 
   setLang('ru');
   for (const en of ['Urgent: sealed letters to Gallows Bay', 'Sealed letters to Gallows Bay', 'Deliver 20 Rum to Gallows Bay', 'Hot run: 20 Rum to Gallows Bay']) {
     const ru = serverText(en);
-    assert.match(ru, /sвsпортs/, `${en} → ${ru}`);
+    assert.match(ru, /\sв\sпорт\s/, `${en} → ${ru}`);
   }
   setLang('en');
 });
