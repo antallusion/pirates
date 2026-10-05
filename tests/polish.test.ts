@@ -128,6 +128,7 @@ test('polish: every control has a pressed, a disabled and a keyboard state; a fi
   assert.match(css, /#modal:not\(\.hidden\) > #modal-panel \{ animation: pol-win-in 140ms ease-out; \}/);
   const rm = css.match(/@media \(prefers-reduced-motion: reduce\) \{\n  \*, \*::before, \*::after \{[^}]*\}/);
   assert.ok(rm && /animation-duration: 0\.01ms !important/.test(rm[0]) && /transition-duration: 0\.01ms !important/.test(rm[0]), 'reduced motion everywhere');
+  assert.match(css, /#hud, #touch, \.tb-root \{ font-variant-numeric: tabular-nums; \}/, 'no jumps as the numbers run');
   // (the zero-specificity form: no screen's own position or look is overridden)
   assert.ok(!/^body\.touch \.btn \{ position: relative/m.test(css));
 });

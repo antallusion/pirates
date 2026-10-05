@@ -4825,3 +4825,6 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+/* No jumps as the numbers run (silver, hull, men, the round): every figure of the HUD, the helm and the battle in
+   even-width digits. */
+#hud, #touch, .tb-root { font-variant-numeric: tabular-nums; }
