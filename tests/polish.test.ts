@@ -96,3 +96,14 @@ test('polish: a novice beaten at the First Watch\'s lair gets her men back, and 
   }
 });
 
+test('polish: a film is skipped by a click, a tap, a press or any key, and waits for a window or a form to be done', () => {
+  const cut = src('client/src/ui/cutscene.ts');
+  for (const ev of ['pointerup', 'click', 'touchend']) assert.ok(cut.includes(`el.addEventListener('${ev}', tap`), ev);
+  assert.match(cut, /addEventListener\('keydown', key, true\)/);
+  assert.match(cut, /e\.stopImmediatePropagation\(\);/);
+  assert.match(cut, /if \(!opts\.over && \(typing\(\) \|\| busy\(\)\)\)/);
+  assert.ok(!/Нажмите|Click to skip/.test(cut), 'its words in client/src/lang/ui/film.ts');
+  const main = src('client/src/main.ts');
+  assert.match(main, /setFilmGate\(\(\) => \(modal !== null && !FILM_OVER\.has\(modal\)\)/);
+  assert.match(main, /const FILM_OVER = new Set<Modal>\(\['port', 'boarding', 'sunk'\]\);/);
+});
