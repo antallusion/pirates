@@ -2151,6 +2151,9 @@ export class Game {
         if (lvl < 5) this.addInfamy(a, WANTED_THRESHOLDS[lvl + 1] - sa.profile.infamy + 1, 'gave no quarter');
       }
       sa.pendingBoarding = { result, targetId: b.id };
+      // She lies to beside her prize while the spoils are shared out (the helm held her course and she sailed 3.5 km
+      // off with the window open: «The prize drifted too far», the ransom and the purse lost).
+      a.input = { rudder: 0, sailTarget: 0 };
       const loser = this.sessionOf(b);
       if (loser?.profile) stealMaps(this, sa, loser); // the captain's chest goes with the ship
       // A surrender on terms settled at once shows no card of the hold (docs/16 #3).
@@ -2780,6 +2783,11 @@ export class Game {
       case 'input': {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;
         if (s.profile?.company.mutiny) return; // the mutineers hold the wheel
+        if (s.pendingBoarding) {
+          ship.input = { rudder: 0, sailTarget: 0 }; // hove to by her prize until the spoils are settled
+          if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
+          return;
+        }
         if (autosailInput(this, s, msg.rudder, msg.sail)) {
           if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
           return; // the helmsman has the wheel (docs/16 #36)

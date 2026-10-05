@@ -170,7 +170,8 @@ button { font-family: var(--sans); }
 .hud-fold b:empty { display: none; }
 .hud-fold.hidden { display: none; }
 body:not(.hud-folded) .hud-fold { filter: drop-shadow(0 0 5px rgba(232, 196, 106, 0.7)); }
-body.hud-folded #hud-stack > :is(#hud-tip, #hud-fish, #hud-order, #hud-holiday, #hud-watch, #hud-world, #hud-goals, #hud-feed) { display: none !important; }
+/* (the First Watch's lesson is what is happening now: never folded away from a captain who has yet to learn the fold) */
+body.hud-folded #hud-stack > :is(#hud-tip, #hud-fish, #hud-order, #hud-holiday, #hud-world, #hud-goals, #hud-feed) { display: none !important; }
 /* Party frames (docs/11 P6): a groupmate a card — name, level, hull, where — in a wrapping row atop the stack. */
 #hud-party { display: flex; flex-wrap: wrap; gap: 4px; pointer-events: auto; }
 #hud-party.hidden { display: none; }
@@ -959,6 +960,28 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
   #hud-watch .w-head { flex-direction: column; align-items: flex-start; }
   #hud-watch .w-head b { margin-left: 0; text-align: left; }
 }
+/* A short screen's lesson in the top stack's 104 px: the count and the step's name on one line, the words in a smaller
+   type, the two skips in a low row; while the captain's plate is not yet in (the first four steps) the stack takes the
+   whole top band from the left edge. The step's words were cut after their first line (the stack ends above the
+   screen's middle). */
+@media (max-height: 520px) {
+  #hud-watch { padding: 5px 8px 6px; font-size: 12px; }
+  #hud-watch .w-head { flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  #hud-watch .w-head span { font-size: 10px; flex: none; }
+  #hud-watch .w-head b { margin-left: 0; min-width: 0; font-size: 14px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #hud-watch .w-body { line-height: 1.3; }
+  #hud-watch:not(.hidden) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+  #hud-watch .w-head { flex: 1 1 140px; min-width: 0; }
+  #hud-watch .w-act { flex: none; margin: 0 0 2px auto; gap: 6px; }
+  #hud-watch .w-body { flex: 1 1 100%; order: 3; }
+  #hud-watch .w-act .btn { min-height: 0; height: 24px; padding-top: 0; padding-bottom: 0; font-size: 11px; line-height: 1; }
+  /* the fold's round button beside the lesson, not a row above it */
+  #hud #hud-stack:has(> #hud-watch:not(.hidden):not(.tut-hidden)) { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 6px; row-gap: 4px; align-content: start; }
+  #hud #hud-stack:has(> #hud-watch:not(.hidden):not(.tut-hidden)) > * { grid-column: 2; }
+  #hud #hud-stack:has(> #hud-watch:not(.hidden):not(.tut-hidden)) > .hud-fold { grid-column: 1; grid-row: 1; }
+  #hud #hud-stack:has(> #hud-watch:not(.hidden):not(.tut-hidden)):has(> .hud-fold.hidden) { grid-template-columns: 0 minmax(0, 1fr); column-gap: 0; }
+  body:has(#hud-captain.tut-hidden) #hud #hud-stack { left: calc(var(--sa-l) + 8px); width: calc(100vw - var(--sa-l) - var(--sa-r) - var(--mm) - 80px); }
+}
 /* ---- P6: boarding, the sinking, the edge of safe water, barter ---- */
 .loot-grid { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(140, 107, 58, 0.18); }
 .loot-grid:first-of-type { border-top: 0; }
@@ -1077,6 +1100,52 @@ body.touch #hud-dive .dhint { display: none; }
   .ph-stats { display: flex; flex-wrap: wrap; gap: 6px; }
   .ph-chip { flex: 1 1 auto; min-width: max-content; padding: 0 8px; }
   .ph-sail { flex: 1 1 100%; min-height: 36px; width: 100%; margin: 0; }
+}
+/* A phone on its side: the head in one band (name and line | figures and the sail order), the tabs and their caption
+   tighter — the page had 117 of 375 px left under them. */
+@media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
+  #modal-panel[data-modal="port"] .modal-head, #modal-panel[data-modal="boarding"] .modal-head, #modal-panel[data-modal="menu"] .modal-head { min-height: 0; }
+}
+/* …the name and the figures in one band where the width allows (at 640 px the name had 170 px and ran out of its
+   plate); a narrower phone keeps the figures and the sail order in a row under the name. */
+@media (max-height: 520px) and (min-width: 760px) and (orientation: landscape) {
+  .port-head { grid-template-columns: minmax(0, 1fr) auto; }
+  .ph-stats { flex-wrap: nowrap; }
+  .ph-chip { flex: 0 0 auto; }
+  .ph-sail { flex: 0 0 auto; width: auto; padding: 0 14px; }
+}
+@media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
+  @media (max-width: 759px) { .ph-sail { flex: 1 1 auto; width: auto; } .ph-stats { flex-wrap: nowrap; } }
+  /* The cabin's twelve doors in two rows of six (two columns showed two and a half of them). */
+  #modal-panel[data-modal="menu"] .menu-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+  #modal-panel[data-modal="menu"] .menu-tile { gap: 4px; padding: 10px 4px 6px; font-size: 13px; }
+  #modal-panel[data-modal="menu"] .menu-tile .ico-lg { width: 48px; height: 48px; }
+  #modal-panel[data-modal="menu"] .menu-tile > span { max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }
+  .port-head { gap: 2px 12px; padding: 6px 50px 6px 10px; }
+  .port-head .sub { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ph-chip { height: 30px; }
+  .ph-sail { min-height: 32px; }
+  .icon-tabs .tab .ico { width: 26px; height: 26px; }
+  .tabs.icon-tabs .tab { padding-top: 3px; padding-bottom: 2px; }
+  .tab-caption { padding: 3px 12px 2px; font-size: 11px; }
+  /* A boarding's spoils: the hold | the coin and her fate side by side, the fates two to a row and low (they stood
+     516–916 px down a 258 px page). */
+  #modal-panel[data-modal="boarding"] .cols { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr); gap: 12px; }
+  #modal-panel[data-modal="boarding"] .cols { grid-auto-flow: row dense; align-items: start; }
+  #modal-panel[data-modal="boarding"] .cols > div:first-child, #modal-panel[data-modal="boarding"] .cols > div:last-child > .card { grid-column: 1; }
+  #modal-panel[data-modal="boarding"] .cols > div:last-child { display: contents; }
+  #modal-panel[data-modal="boarding"] .cols > div:last-child > .card:last-child { grid-column: 2; grid-row: 1 / span 4; }
+  #modal-panel[data-modal="boarding"] .modal-head .sub { font-size: 12px; margin-top: 0; }
+  #modal-panel[data-modal="boarding"] .modal-head > div { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: center; align-content: center; }
+  #modal-panel[data-modal="boarding"] .modal-head > div > h2 { grid-row: 1 / span 3; }
+  #modal-panel[data-modal="boarding"] .cols .card h4.card-h { margin: 0 0 2px; font-size: 15px; }
+  #modal-panel[data-modal="boarding"] .cols .card h4.card-h .ico-md { width: 24px; height: 24px; }
+  #modal-panel[data-modal="boarding"] .spoils .ammo-chip .ico-md { width: 24px; height: 24px; }
+  #modal-panel[data-modal="boarding"] .cols .card { margin-bottom: 8px; padding: 8px 10px; }
+  #modal-panel[data-modal="boarding"] .cols .card p { margin: 2px 0; font-size: 11.5px; line-height: 1.3; }
+  #modal-panel[data-modal="boarding"] .choice-grid.one { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+  #modal-panel[data-modal="boarding"] .btn.choice { min-height: 38px; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; padding: 3px 8px; font-size: 11.5px; line-height: 1.15; }
+  #modal-panel[data-modal="boarding"] .choice-ico { width: 22px; height: 22px; }
 }
 /* Scrollbars in the game's own hand: a thin brass rail on a dark groove, everywhere. */
 /* Firefox takes the standard properties; Chromium keeps its own (setting both would disable the brass thumb). */
@@ -1197,6 +1266,8 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
    edge, so a button's visible frame lines up with the fields, cards and chips around it and a row of buttons
    stands exactly its gap apart. */
 .skinned .btn, .skinned .tab.active, body.skinned.touch .tc-context:not(.hidden) { border-image-outset: 0.475; }
+/* An icon on the chosen tab's wood: the dark ones (the market's scales) all but vanished into it. */
+.skinned .icon-tabs .tab.active .ico { filter: brightness(1.5) drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
 
 /* Every tab keeps its chosen twin's edges (a clear border where the frame will be), so a label does not drop
    when its tab is chosen and the row reads as one line; the label sits in the middle under the frame's rim. */
@@ -1688,6 +1759,22 @@ body.touch #hud-region .rg-extra { display: none; }
 .pay-name { font-family: var(--serif); font-size: 15px; color: var(--bone); }
 .pay-what { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 13px; color: var(--fog); }
 .pay-rep, .pay-shot { color: var(--fog); }
+/* A phone on its side: the giver and her words | the steps and the pay to choose, side by side in a wider card (the
+   choice of pay lay a whole screen down its scroll, under «Взяться»). */
+@media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
+  .confirm-panel.giver-panel { width: min(780px, calc(100vw - 24px)); }
+  .giver-panel .confirm-body { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); column-gap: 16px; align-content: start; }
+  .giver-panel .confirm-body > * { grid-column: 2; }
+  .giver-panel .confirm-body > .giver { grid-column: 1; grid-row: 1 / span 6; }
+  .giver-panel .giver-steps { margin: 0 0 4px; font-size: 12.5px; }
+  .giver-panel .giver-steps li { margin: 1px 0; }
+  .giver-panel .giver-pay { margin-bottom: 4px; }
+  .giver-panel .pay-pick { gap: 4px; margin-bottom: 4px; }
+  .giver-panel .pay-opt { grid-template-columns: auto auto minmax(0, 1fr); padding: 3px 8px; gap: 0 8px; }
+  .giver-panel .pay-opt input { grid-row: auto; }
+  .giver-panel .pay-name { font-size: 13px; }
+  .giver-panel .pay-what { font-size: 12px; gap: 2px 8px; }
+}
 @media (max-width: 520px) {
   .giver { grid-template-columns: 84px minmax(0, 1fr); gap: 10px; }
   .giver-face { width: 84px; height: 105px; }
@@ -3557,6 +3644,8 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .hx-pick-t { display: flex; flex-direction: column; gap: 3px; align-items: center; min-width: 0; }
 .hx-pick-t b { font-family: var(--display); font-weight: 400; font-size: 17px; }
 .hx-pick-t small { font-size: 12px; line-height: 1.3; }
+/* The two offers' «Take» on one line, at each card's foot (a shorter text left one 16 px higher). */
+.hx-pick > .btn { margin-top: auto; }
 .hx-rank { font-size: 11px; color: var(--gold); display: inline-flex; gap: 4px; align-items: center; }
 .hx-pips { display: inline-flex; gap: 2px; }
 .hx-pips i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.5); }
@@ -3602,6 +3691,7 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
   .hx-sets { grid-template-columns: 1fr; }
   .hx-picks { grid-template-columns: 1fr; }
   .hx-pick { flex-direction: row; text-align: left; }
+  .hx-pick > .btn { margin-top: 0; align-self: center; }
   .hx-pick-t { align-items: flex-start; }
   .hx-order, .hx-ware { flex-wrap: wrap; }
 }
@@ -4054,7 +4144,8 @@ body.touch .act-btn { --h: 38px; }
 }
 
 /* docs/19 E1–E3, E18: the Throne of the Sea — glory, mastery, trials; the glory chip on the plate; a grandmaster. */
-.uf-glory { margin-left: 6px; padding: 0 6px; border: 1px solid var(--brass-dim); border-radius: 9px; background: rgba(30, 22, 12, 0.75); color: var(--gold); font: inherit; font-size: 11px; line-height: 16px; cursor: pointer; pointer-events: auto; white-space: nowrap; }
+/* (as tall as the plate's last line: 18 px made the plate 3 px taller and laid it over the ship panel at 1280×720) */
+.uf-glory { margin-left: 6px; padding: 0 6px; border: 1px solid var(--brass-dim); border-radius: 9px; background: rgba(30, 22, 12, 0.75); color: var(--gold); font: inherit; font-size: 10px; line-height: 13px; height: 15px; box-sizing: border-box; align-self: center; cursor: pointer; pointer-events: auto; white-space: nowrap; }
 .uf-glory.wait { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.55); }
 .hx-gm { margin-left: 2px; color: var(--gold); font-size: 11px; line-height: 7px; text-shadow: 0 0 6px rgba(224, 184, 98, 0.7); }
 .hx-slot.gm { border-color: var(--gold); box-shadow: inset 0 0 12px rgba(224, 184, 98, 0.18); }
@@ -4566,6 +4657,30 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
   #advcard { top: var(--ts-top, 8px); left: calc(var(--ts-left, 408px) - 48px); transform: none; width: calc(var(--ts-w, 250px) + 48px); min-width: 0; gap: 4px; grid-template-columns: minmax(0, 1fr); overflow-x: hidden; }
   body:has(#advcard:not(.hidden)) #hud-stack { visibility: hidden; }
   body:has(#advcard:not(.hidden)) #toasts { top: var(--tq-top, var(--ts-top)); left: var(--tq-left, var(--ts-left)); width: var(--tq-w, var(--ts-w)); }
+}
+@media (max-height: 520px) {
+  /* A drift's card in the top band's 85 px: its ways and «Fight» in one low row (the ways' chances were cut and «Fight»
+     lay under the card's foot). */
+  #advcard .ac-dcard:not(.open) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 4px; padding-top: 4px; padding-bottom: 4px; }
+  #advcard .ac-dcard:not(.open) > :not(.ac-head) { grid-column: 1 / -1; }
+  #advcard .ac-dcard:not(.open) > .ac-head { grid-column: 1 / -1; }
+  #advcard .ac-dcard:not(.open) .dw-ways, #advcard .ac-dcard:not(.open) > .ac-acts:last-child { display: contents; }
+  #advcard .ac-dcard:not(.open) .dw-ways .btn, #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn { grid-column: auto; min-height: 0; height: 22px; padding: 0 3px; font-size: 10px; line-height: 1; white-space: nowrap; margin: 0; height: 20px; flex-wrap: nowrap; justify-content: center; gap: 3px; }
+  #advcard .ac-dcard:not(.open) .dw-way .dw-p, #advcard .ac-dcard:not(.open) .dw-way .bcost { font-size: 10px; }
+  .skinned #advcard .ac-dcard:not(.open) .dw-ways .btn, .skinned #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn { border-width: 4px 5px; border-image-width: 4px 5px; }
+  /* …and her mini-game once a way is chosen: the needle's bar and «Now!» stay on the folded card (the fold hid the
+     whole game — a rescue could not be played on a phone on its side without first opening the card). */
+  #advcard .ac-card:not(.open) > .dm-mini { display: block !important; margin-top: 2px; padding: 3px 6px; }
+  #advcard .ac-card:not(.open) .dm-mini > .dm-h, #advcard .ac-card:not(.open) .dm-mini > .dm-row { display: none; }
+  #advcard .ac-card:not(.open) .dm-mini .dm-bar { height: 12px; }
+  #advcard .ac-card:not(.open) .dm-mini .ac-acts { margin-top: 3px; flex-wrap: nowrap; }
+  #advcard .ac-card:not(.open) .dm-mini .btn { flex: 1 1 auto; min-height: 0; height: 24px; padding: 0 6px; font-size: 11px; line-height: 1; white-space: nowrap; }
+  #advcard .ac-dcard:not(.open) .dw-way .bcost .ico-sm { width: 13px; height: 13px; }
+  #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn .ico-sm { display: none; }
+}
+@media (max-height: 520px) {
+  /* The First Watch's lesson in the top row (beside the fold's button): the toasts to a clear side column (hud.ts). */
+  body:has(#hud-stack > #hud-watch:not(.hidden):not(.tut-hidden)) #toasts { top: var(--tq-top, var(--ts-top)); left: var(--tq-left, var(--ts-left)); width: var(--tq-w, var(--ts-w)); }
   #advcard .ac-card { padding: 5px 8px 6px; }
   #advcard .ac-head { cursor: pointer; }
   #advcard .ac-head .ac-art { width: 28px; height: 28px; }

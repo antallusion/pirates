@@ -3,7 +3,7 @@
 export const EN = {
   // Boarding: the prize.
   'board.title': 'Prize: {name}',
-  'board.sub': '{cls} taken. Your losses: {ours} crew. Theirs: {theirs}.',
+  'board.sub': '{cls} taken. Your losses: {ours} crew. Theirs: {theirs} crew.',
   'board.cargo': 'Cargo that survived',
   'board.bestPrice': 'Best price you know',
   'board.perUnit': '{price}/u',
@@ -152,7 +152,7 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   'board.title': 'Приз: {name}',
-  'board.sub': 'Захвачено: {cls}. Наши потери: {ours} чел. Их потери: {theirs}.',
+  'board.sub': 'Захвачено: {cls}. Наши потери: {ours} чел. Их потери: {theirs} чел.',
   'board.cargo': 'Уцелевший груз',
   'board.bestPrice': 'Лучшая известная вам цена',
   'board.perUnit': '{price}/ед.',

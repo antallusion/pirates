@@ -2,14 +2,14 @@
 // from stock vs target. Goods only move when a ship (NPC or player) physically carries them, so a sunk
 // convoy literally creates a shortage at its destination. See docs/01_GDD_WORLD_ECONOMY.md §6.
 
-import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
+import { GOODS, GOOD_IDS, MARKET_ELASTICITY } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { MarketRow } from '../../../shared/src/protocol.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 
 export const ECON_HOUR = 900; // production/consumption rates are "per 15 real minutes"
-const ELASTICITY = 0.6;
+const ELASTICITY = MARKET_ELASTICITY;
 const SPREAD = 0.055;
 
 export interface GoodMarket {

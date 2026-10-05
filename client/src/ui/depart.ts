@@ -4,7 +4,7 @@
 // voyage wants and its price here, a button to buy it, «Buy all», «Set sail anyway» and «Stay». Buying goes by
 // the harbour's own orders (trade, hire_crew, buy_ammo, shipyard repair); the list follows the ship as it fills.
 
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, walkBuyCost } from '../../../shared/src/data/goods.ts';
 import { VOYAGE_MINUTES, foodMinutes, voyageFood, voyageNeeds } from '../../../shared/src/data/voyage.ts';
 import type { VoyageNeed, VoyageShip } from '../../../shared/src/data/voyage.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -43,7 +43,7 @@ function offerOf(need: VoyageNeed, state: ClientState): Offer {
     case 'food': {
       const row = view?.market.find((r) => r.good === 'provisions');
       const n = row ? Math.min(need.buy, row.stock) : 0;
-      return { need, n, cost: row ? Math.ceil(row.buy * n) : 0, msgs: n > 0 ? [{ t: 'trade', good: 'provisions', qty: n }] : [] };
+      return { need, n, cost: row ? walkBuyCost('provisions', row.buy, row.stock, n) : 0, msgs: n > 0 ? [{ t: 'trade', good: 'provisions', qty: n }] : [] };
     }
     case 'crew': {
       const n = Math.max(0, Math.min(need.buy, view?.crewAvailable ?? 0));
@@ -179,6 +179,6 @@ export function voyageFoodCard(state: ClientState): string {
   const short = have < want;
   const line = short ? L('market.voyageLine', { crew: s.crew, have, want }) : L('market.voyageOk', { crew: s.crew, have, n: Math.floor(foodMinutes(have, s.crew, s.provisionUse)) });
   return `<div class="card voyage-food${short ? ' short' : ''}">${icon('good_provisions', '', 'shop-ico')}<div class="shop-text"><b>${esc(L('market.voyage', { min: VOYAGE_MINUTES }))}</b><span class="muted">${esc(line)}</span></div>
-    ${n > 0 ? `<button class="btn ${short ? 'btn-primary' : 'btn-small'}" data-act="buyn" data-good="provisions" data-n="${n}">${esc(L('market.voyageBuy', { n }))} · ${money(Math.ceil(row.buy * n))}</button>` : ''}</div>`;
+    ${n > 0 ? `<button class="btn ${short ? 'btn-primary' : 'btn-small'}" data-act="buyn" data-good="provisions" data-n="${n}">${esc(L('market.voyageBuy', { n }))} · ${money(walkBuyCost('provisions', row.buy, row.stock, n))}</button>` : ''}</div>`;
 }
 

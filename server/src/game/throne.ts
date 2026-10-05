@@ -207,6 +207,10 @@ interface Trial {
   morale: number;
   sanity: number;
   deaths: number;
+  /** The voyage's dead and the crew's loyalty as they stood (the crew's second counts the trial's dead in as they
+   *  fall: blunted steel, yet «too many dead this voyage» raised a mutiny after a lost trial). */
+  lost: number;
+  loyalty: number;
   hero: HeroBattle;
 }
 const trials = new WeakMap<ShipEntity, Trial>();
@@ -287,7 +291,7 @@ export function startTrial(game: Game, s: PlayerSession, skill: string, force = 
   const brain = game.npcs.get(o.id);
   if (brain) brain.active = true;
   game.grid.upsert(o.id, o.state.x, o.state.y);
-  trials.set(o, { account: s.accountId, skill: id, army: ship.army.map((x) => ({ ...x })), morale: ship.morale, sanity: ship.sanity, deaths: ship.crewDeaths, hero: legendHero(id, heroPrims(p), heroOf(p).skills) });
+  trials.set(o, { account: s.accountId, skill: id, army: ship.army.map((x) => ({ ...x })), morale: ship.morale, sanity: ship.sanity, deaths: ship.crewDeaths, lost: p.company.voyageLost, loyalty: p.company.loyalty, hero: legendHero(id, heroPrims(p), heroOf(p).skills) });
   fightingNow.set(s.accountId, o);
   game.sendTo(s, { t: 'toast', msg: `${lg.name[0]} comes alongside: the trial of ${SKILLS[id].name[0]} begins.`, kind: 'gold' });
   startBoarding(game, ship, o, 'standard');
@@ -333,6 +337,8 @@ export function trialOver(game: Game, a: ShipEntity, b: ShipEntity, attackerWins
   }
   const s = game.sessionOf(mine);
   if (!s?.profile) return true;
+  s.profile.company.voyageLost = Math.min(s.profile.company.voyageLost, tri.lost);
+  s.profile.company.loyalty = Math.max(s.profile.company.loyalty, tri.loyalty);
   const t = throneOf(s.profile);
   const lg = LEGENDS[tri.skill];
   if (won) {

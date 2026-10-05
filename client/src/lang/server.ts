@@ -67,7 +67,7 @@ import { composedNameRu, nameHooks, personNameRu } from './names.ts';
 import { SERVER_RU_A } from './server.ru.a.ts';
 import { SERVER_RU_B } from './server.ru.b.ts';
 import { SERVER_RU_ADMIN } from './server.ru.admin.ts';
-import { feminineRu, questPatterns } from '../../../shared/src/data/questgen.ts';
+import { GIVER_WOMEN, feminineAfter, feminineRu, questPatterns } from '../../../shared/src/data/questgen.ts';
 import { lairQuestPatterns } from '../../../shared/src/data/lairquests.ts';
 import { arcPatterns } from '../../../shared/src/data/questarcs.ts';
 import { dailyPatterns } from '../../../shared/src/data/dailies.ts';
@@ -192,8 +192,13 @@ function translate(s: string, depth: number): string {
     }
     const vals: Record<number, string> = {};
     t.order.forEach((n, i) => (vals[n] = part(caps[i], depth)));
+    // A woman giver's verb takes her ending (questgen.ts feminineAfter).
+    let ru = t.ru;
+    t.order.forEach((n, i) => {
+      if (GIVER_WOMEN.some((w) => caps[i]?.startsWith(`${w} `))) ru = feminineAfter(ru, `{${n}}`);
+    });
     // A good inside the sentence is a common noun: «Доставить соль», not «Доставить Соль».
-    return t.ru.replace(/\{(\d+)\}/g, (_, n: string, at: number) => {
+    return ru.replace(/\{(\d+)\}/g, (_, n: string, at: number) => {
       const v = vals[Number(n)] ?? '';
       return at > 0 && COMMON_RU.has(v) ? v.charAt(0).toLowerCase() + v.slice(1) : v;
     });

@@ -25,7 +25,7 @@ import { newPvp } from './pvp.ts';
 import type { PvpState } from './pvp.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
-import { questPayOf } from '../../../shared/src/data/questpay.ts';
+import { questPayOf, veteranPay } from '../../../shared/src/data/questpay.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { FACTIONS, FACTION_IDS, factionRelation, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
@@ -549,11 +549,15 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
       const def = QUESTS_BY_ID[q.id];
       const st = stepProgress(q);
       const target = world.questTargets?.[q.id];
+      // A job pays a veteran more (quests.ts completeQuest): the journal shows what the board offered, not the bare sum
+      // (the board said 307 and the journal 286 for one job).
+      const vet = def.kind === 'job' ? veteranPay(p.level, def.requires.level ?? 1) : 1;
+      const paid = q.pay ? questPayOf(q.pay, def.reward.silver, def.requires.level ?? 1) : null;
       return {
         id: q.id, name: def.name, kind: def.kind, mentor: def.mentor, step: q.step + 1, steps: def.steps.length, text: st?.text ?? '', progress: st?.progress ?? 0, need: st?.need ?? 1, ...(target ? { target } : {}),
         // For the journal (docs/11 P6): the giver's words, every step, the pay and the face.
-        summary: def.summary, stepTexts: def.steps.map((x) => x.text), silver: def.reward.silver, xp: def.reward.xp, ...(q.fastUntil && q.fastUntil > now ? { fastIn: Math.round(q.fastUntil - now) } : {}), ...(def.portrait ? { portrait: def.portrait } : {}), ...(def.category ? { category: def.category } : {}),
-        ...(q.pay ? { pay: q.pay, paid: questPayOf(q.pay, def.reward.silver, def.requires.level ?? 1) } : {}),
+        summary: def.summary, stepTexts: def.steps.map((x) => x.text), silver: Math.round(def.reward.silver * vet), xp: def.reward.xp, ...(q.fastUntil && q.fastUntil > now ? { fastIn: Math.round(q.fastUntil - now) } : {}), ...(def.portrait ? { portrait: def.portrait } : {}), ...(def.category ? { category: def.category } : {}),
+        ...(q.pay && paid ? { pay: q.pay, paid: { ...paid, silver: Math.round(paid.silver * vet) } } : {}),
         ...(world.questMates?.[q.id] ? { mates: world.questMates[q.id] } : {}),
         ...((lv) => (lv ? { ship: lv } : {}))(shipLevelOfQuest(def)),
       };

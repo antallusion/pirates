@@ -263,7 +263,8 @@ export function foundGuild(game: Game, s: PlayerSession, rawName: string, rawTag
   const name = String(rawName ?? '').replace(/\s+/g, ' ').trim();
   const tag = String(rawTag ?? '').trim().toUpperCase();
   if (!/^[\p{L}\p{N} '\-]{3,24}$/u.test(name)) return 'A guild name is 3–24 letters';
-  if (!/^[A-Z0-9]{2,4}$/.test(tag)) return 'A tag is 2–4 letters or digits';
+  // (any alphabet's capitals: a Russian captain's «СП» was refused, the field's own placeholder reading «ТЕГ»)
+  if (!/^[\p{Lu}\p{N}]{2,4}$/u.test(tag)) return 'A tag is 2–4 letters or digits';
   const st = game.guilds.store(game);
   for (const g of Object.values(st.guilds)) {
     if (g.name.toLowerCase() === name.toLowerCase()) return 'That name is taken';

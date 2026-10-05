@@ -846,6 +846,9 @@ function onMessage(m: ServerMsg): void {
       if (modal === 'journal') refreshModal();
       break;
     case 'toast':
+      // The glass's own «too far» (askGlass asks by itself every few seconds; the server's refusals come as toasts, so
+      // the filter on 'err' alone let «Too far for the glass ×5» through at every broadside).
+      if (GLASS_QUIET.has(m.msg)) break;
       // The harbour turned her away for her speed: take in sail and try again when she slows.
       if (m.msg === 'Take in sail before entering harbour') {
         requestDock(pendingDock?.bribe ?? false, true);

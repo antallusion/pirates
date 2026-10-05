@@ -237,6 +237,11 @@ export function stepAutosail(game: Game): void {
       stopAutosail(game, s, 'off');
       continue;
     }
+    // A prize alongside: the helmsman waits until the spoils are settled.
+    if (s.pendingBoarding) {
+      ship.input = { rudder: 0, sailTarget: 0 };
+      continue;
+    }
     const d = Math.hypot(run.x - ship.state.x, run.y - ship.state.y);
     const end = run.path[run.path.length - 1];
     if (d <= AUTOSAIL_ARRIVE || Math.hypot(end[0] - ship.state.x, end[1] - ship.state.y) <= AUTOSAIL_ARRIVE) {
