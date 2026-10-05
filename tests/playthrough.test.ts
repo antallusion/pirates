@@ -337,3 +337,11 @@ test('playthrough: every world announcement, ship\'s toast and rumour of the ser
     setLang('en');
   }
 });
+
+test('playthrough: a touch screen strips key hints, not a guild\'s tag («…в Солёные Псы [СП]. Ответьте…»)', async () => {
+  const { keyless } = await import('../client/src/ui/hud.ts');
+  assert.equal(keyless('Гильдcv приглашает вас в Солёные Псы [СП]. Ответьте на вкладке «Гильдия» [Y].', true), 'Гильдcv приглашает вас в Солёные Псы [СП]. Ответьте на вкладке «Гильдия».');
+  assert.equal(keyless('[TAG] is chartered as a trading house.', true), '[TAG] is chartered as a trading house.');
+  assert.equal(keyless('Ход [W/S] и приказы [G], подрыв — Shift+B [Shift+B]', true), 'Ход и приказы, подрыв — Shift+B');
+  assert.equal(keyless('Esc [Esc] closes', false), 'Esc [Esc] closes');
+});

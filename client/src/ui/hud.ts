@@ -1844,9 +1844,13 @@ function keyChip(a: Action): string {
   return `<kbd class="kchip">${esc(keyLabel(k1 || k2))}</kbd>`;
 }
 
-function keyless(s: string): string {
+/** A key's hint in brackets: «[Y]», «[W/S]», «[Shift+B]», «[Esc]» — not a guild's tag («[СП]», «[TAG]»), which the
+ *  touch screen once cut out of its toasts («…приглашает вас в Солёные Псы . Ответьте…»). */
+export const KEY_HINT = /\s*\[(?:[A-Z0-9]|[A-Z]\/[A-Z]|(?:Shift|Ctrl|Alt)\+[A-Z0-9]|Esc|Enter|Space|Tab|Пробел|F\d{1,2})\]/g;
+
+export function keyless(s: string, touch = document.body.classList.contains('touch')): string {
   // "[T]", "(T)", "(Y → Company)": a touch screen has no keys to name.
-  return document.body.classList.contains('touch') ? s.replace(/\[[^\]]*\]\s*/g, '').replace(/\s*\((?:[A-Z0-9]{1,3}|[^()]*→[^()]*)\)/g, '').trim() : s;
+  return touch ? s.replace(KEY_HINT, '').replace(/\s*\((?:[A-Z0-9]{1,3}|[^()]*→[^()]*)\)/g, '').replace(/ +([.,;:!?])/g, '$1').trim() : s;
 }
 
 /** A named pirate (docs/12 P5) or one of her lieutenants ("id#n"): the name in the player's tongue and the tag. */
