@@ -93,3 +93,11 @@ test('playthrough: the cast-off check\'s «Buy N · price» is the harbour\'s ow
     }
   }
 });
+
+test('playthrough: the glass\'s own «too far» never reaches the toasts (the server refuses by toast, not err)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8').replace(/\r/g, '');
+  assert.match(main, /case 'toast':\n(\s*\/\/[^\n]*\n)*\s*if \(GLASS_QUIET\.has\(m\.msg\)\) break;/);
+  const raiding = readFileSync(new URL('../server/src/game/raiding.ts', import.meta.url), 'utf8');
+  for (const m of main.match(/const GLASS_QUIET = new Set\(\[([^\]]*)\]\)/)![1].match(/'[^']*'/g)!) assert.ok(raiding.includes(`return ${m};`), m);
+});
