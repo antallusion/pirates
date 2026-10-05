@@ -4632,6 +4632,19 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
   body:has(#advcard:not(.hidden)) #toasts { top: var(--tq-top, var(--ts-top)); left: var(--tq-left, var(--ts-left)); width: var(--tq-w, var(--ts-w)); }
 }
 @media (max-height: 520px) {
+  /* A drift's card in the top band's 85 px: its ways and «Fight» in one low row (the ways' chances were cut and «Fight»
+     lay under the card's foot). */
+  #advcard .ac-dcard:not(.open) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 4px; padding-top: 4px; padding-bottom: 4px; }
+  #advcard .ac-dcard:not(.open) > :not(.ac-head) { grid-column: 1 / -1; }
+  #advcard .ac-dcard:not(.open) > .ac-head { grid-column: 1 / -1; }
+  #advcard .ac-dcard:not(.open) .dw-ways, #advcard .ac-dcard:not(.open) > .ac-acts:last-child { display: contents; }
+  #advcard .ac-dcard:not(.open) .dw-ways .btn, #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn { grid-column: auto; min-height: 0; height: 22px; padding: 0 3px; font-size: 10px; line-height: 1; white-space: nowrap; margin: 0; height: 20px; flex-wrap: nowrap; justify-content: center; gap: 3px; }
+  #advcard .ac-dcard:not(.open) .dw-way .dw-p, #advcard .ac-dcard:not(.open) .dw-way .bcost { font-size: 10px; }
+  .skinned #advcard .ac-dcard:not(.open) .dw-ways .btn, .skinned #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn { border-width: 4px 5px; border-image-width: 4px 5px; }
+  #advcard .ac-dcard:not(.open) .dw-way .bcost .ico-sm { width: 13px; height: 13px; }
+  #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn .ico-sm { display: none; }
+}
+@media (max-height: 520px) {
   /* The First Watch's lesson in the top row (beside the fold's button): the toasts to a clear side column (hud.ts). */
   body:has(#hud-stack > #hud-watch:not(.hidden):not(.tut-hidden)) #toasts { top: var(--tq-top, var(--ts-top)); left: var(--tq-left, var(--ts-left)); width: var(--tq-w, var(--ts-w)); }
   #advcard .ac-card { padding: 5px 8px 6px; }

@@ -398,8 +398,10 @@ export class AdvCard {
         ${guardBlock(gg, false)}
       </div>`;
     }
-    if (lc) html += lairBlock(lc, !o && !gg);
-    if (dc) html += driftBlock(dc, !o && !gg && !lc);
+    // A drift before a lair: she is gone in minutes, the lair keeps (on a phone on its side the card's 85 px showed the
+    // lair just fought and hid the First Watch's drifting gulls under it).
+    if (dc) html += driftBlock(dc, !o && !gg);
+    if (lc) html += lairBlock(lc, !o && !gg && !dc);
     this.el.innerHTML = html;
     this.el.classList.remove('hidden');
     // A short screen shows each card's head and its buttons; a tap on the head opens the rest (kept across redraws).

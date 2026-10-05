@@ -194,3 +194,11 @@ test('playthrough: the cabin\'s twelve doors on a phone on its side, two rows of
   assert.match(EN['stage.recruit.touch'], /«Recruit an army»/);
   assert.match(RU['stage.cast_off.touch'], /«Поднять паруса»/);
 });
+
+test('playthrough: a drift\'s card leads a lair\'s, and on a short screen its ways and «Fight» stand two by two in the top band', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../client/src/ui/advcard.ts', import.meta.url), 'utf8');
+  assert.ok(src.indexOf('if (dc) html += driftBlock') < src.indexOf('if (lc) html += lairBlock'), 'the drift first');
+  const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
+  assert.match(css, /#advcard \.ac-dcard:not\(\.open\) \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+});
