@@ -4144,7 +4144,8 @@ body.touch .act-btn { --h: 38px; }
 }
 
 /* docs/19 E1–E3, E18: the Throne of the Sea — glory, mastery, trials; the glory chip on the plate; a grandmaster. */
-.uf-glory { margin-left: 6px; padding: 0 6px; border: 1px solid var(--brass-dim); border-radius: 9px; background: rgba(30, 22, 12, 0.75); color: var(--gold); font: inherit; font-size: 11px; line-height: 16px; cursor: pointer; pointer-events: auto; white-space: nowrap; }
+/* (as tall as the plate's last line: 18 px made the plate 3 px taller and laid it over the ship panel at 1280×720) */
+.uf-glory { margin-left: 6px; padding: 0 6px; border: 1px solid var(--brass-dim); border-radius: 9px; background: rgba(30, 22, 12, 0.75); color: var(--gold); font: inherit; font-size: 10px; line-height: 13px; height: 15px; box-sizing: border-box; align-self: center; cursor: pointer; pointer-events: auto; white-space: nowrap; }
 .uf-glory.wait { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.55); }
 .hx-gm { margin-left: 2px; color: var(--gold); font-size: 11px; line-height: 7px; text-shadow: 0 0 6px rgba(224, 184, 98, 0.7); }
 .hx-slot.gm { border-color: var(--gold); box-shadow: inset 0 0 12px rgba(224, 184, 98, 0.18); }

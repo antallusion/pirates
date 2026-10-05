@@ -356,3 +356,10 @@ test('playthrough: the admin\'s HELP names each command once («/away Htide» wa
   const { SERVER_RU_ADMIN } = await import('../client/src/lang/server.ru.admin.ts');
   assert.equal(SERVER_RU_ADMIN[help].split(' · ').length, cmds.length, 'the Russian HELP command for command');
 });
+
+test('playthrough: the glory chip keeps to the plate\'s last line (18 px laid the plate over the ship panel at 1280×720)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
+  const rule = css.match(/\n\.uf-glory \{[^}]*\}/)![0];
+  assert.match(rule, /height: 15px; box-sizing: border-box;/);
+});
