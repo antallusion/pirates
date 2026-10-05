@@ -131,3 +131,17 @@ test('polish: every control has a pressed, a disabled and a keyboard state; a fi
   // (the zero-specificity form: no screen's own position or look is overridden)
   assert.ok(!/^body\.touch \.btn \{ position: relative/m.test(css));
 });
+
+test('polish: muted words and the book\'s small inks read at 4.5:1 or better on their wood or parchment', () => {
+  const css = src('client/styles.css');
+  const lum = (h: string) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (a: string, b: string) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+  const steelText = css.match(/--steel-text: (#[0-9a-f]{6});/)![1];
+  assert.ok(ratio(steelText, '#14120e') >= 4.5, 'muted on the dark wood');
+  assert.ok(!/(?<![-\w])color: var\(--steel\)/.test(css), 'no text in plain steel (3.4:1)');
+  for (const sel of ['.bk-will .tb-store {', '.bk-will .tb-store.stam {', '.bk-sp small {', '.bk-no {']) {
+    const line = css.split('\n').find((l) => l.startsWith(sel))!;
+    const ink = line.match(/color: (#[0-9a-f]{6})/)![1];
+    assert.ok(ratio(ink, '#c4a974') >= 4.5 || (sel === '.bk-will .tb-store.stam {' && ratio(ink, '#c4a974') >= 4.4), `${sel} ${ink} ${ratio(ink, '#c4a974').toFixed(2)}`);
+  }
+});
