@@ -146,3 +146,10 @@ test('polish: muted words and the book\'s small inks read at 4.5:1 or better on 
     assert.ok(ratio(ink, '#c4a974') >= 4.5 || (sel === '.bk-will .tb-store.stam {' && ratio(ink, '#c4a974') >= 4.4), `${sel} ${ink} ${ratio(ink, '#c4a974').toFixed(2)}`);
   }
 });
+
+test('polish: a checkbox\'s label and the guild finder\'s goals are finger-sized on touch, the box itself on top', () => {
+  const css = src('client/styles.css');
+  assert.ok(css.includes(':where(body.touch) :where(label:has(> input[type="checkbox"], > input[type="radio"]))::after { content: \'\'; position: absolute; inset: -10px 0; }'));
+  assert.ok(css.includes(':where(body.touch) :where(label > input[type="checkbox"], label > input[type="radio"]) { position: relative; z-index: 1; }'), 'a test\'s or a finger\'s tap on the box reaches the box');
+  assert.ok(css.includes(':where(body.touch) :where(.lf-goal-btn)::after'));
+});

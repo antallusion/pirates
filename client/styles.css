@@ -4815,9 +4815,11 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 :where(body.touch) :where(.skinned .btn)::after { inset: -10px -12px; }
 :where(body.touch) :where(.tab)::after { inset: -9px -1px; }
 :where(body.touch) :where(.act-btn)::after { inset: -6px -2px; }
-:where(body.touch) :where(label.check) { position: relative; }
-:where(body.touch) :where(label.check)::after { content: ''; position: absolute; inset: -10px 0; }
-:where(body.touch) :where(label.check > input) { position: relative; z-index: 1; } /* the box itself stays on top of the label's wider reach */
+:where(body.touch) :where(.lf-goal-btn) { position: relative; }
+:where(body.touch) :where(.lf-goal-btn)::after { content: ''; position: absolute; inset: -6px -2px; }
+:where(body.touch) :where(label:has(> input[type="checkbox"], > input[type="radio"])) { position: relative; }
+:where(body.touch) :where(label:has(> input[type="checkbox"], > input[type="radio"]))::after { content: ''; position: absolute; inset: -10px 0; }
+:where(body.touch) :where(label > input[type="checkbox"], label > input[type="radio"]) { position: relative; z-index: 1; } /* the box itself stays on top of the label's wider reach */
 :where(body.touch) :where(#modal-panel select, #modal-panel input[type="range"]) { min-height: 40px; }
 /* A window comes up softly (140 ms, no slide); its tabs change at once. */
 @keyframes pol-win-in { from { opacity: 0; } to { opacity: 1; } }
