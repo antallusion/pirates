@@ -631,7 +631,10 @@ export class ClientState {
   private syncClock(t: number, now: number, k: number): void {
     const est = this.serverTime > 0 ? this.serverTime + (now - this.serverTimeArrival) * this.timeScale : t;
     const err = t - est;
-    this.serverTime = this.serverTime <= 0 || k !== this.timeScale || Math.abs(err) > 0.5 * k ? t : est + err * (err > 0 ? 0.25 : 0.03);
+    // Set outright only when the reckoning is behind by half a second, the clock's pace changed, or it is ahead by more
+    // than lateness can be (5 s: a new server): a packet half a second late threw every ship back half a second at once
+    // (QA circle, 2026-10-05: the clock stepped back 500 ms three times in four seconds on a busy page).
+    this.serverTime = this.serverTime <= 0 || k !== this.timeScale || err > 0.5 * k || err < -5 * k ? t : est + err * (err > 0 ? 0.25 : 0.03);
     this.serverTimeArrival = now;
     this.timeScale = k;
   }

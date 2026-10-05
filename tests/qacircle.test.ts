@@ -230,3 +230,19 @@ test('English titles sit in their plates\' middle (IM Fell English SC rode 1.9px
 test('a short screen\'s top stack ends above the screen\'s centre (30% of the height)', () => {
   assert.ok(css.includes('#hud-stack { max-height: max(min(104px, calc(30vh - var(--sa-t) - 8px)), calc(100vh - var(--hb-top, 200px) - 250px));'));
 });
+
+test('a late packet nudges the eased clock back, never throws it (and every ship) half a second back', async () => {
+  const { ClientState } = await import('../client/src/state.ts');
+  const st = new ClientState() as unknown as { syncClock(t: number, now: number, k: number): void; serverTime: number; serverTimeArrival: number; timeScale: number };
+  st.syncClock(100, 10, 1);
+  const est = (now: number) => st.serverTime + (now - st.serverTimeArrival) * st.timeScale;
+  const before = est(11);
+  st.syncClock(100.3, 11, 1); // 0.7 s late
+  assert.ok(est(11) > before - 0.05, `the clock stepped back ${(before - est(11)).toFixed(2)} s`);
+  // Behind by more than half a second: set outright (forward).
+  st.syncClock(est(12) + 0.8, 12, 1);
+  assert.ok(Math.abs(est(12) - (before + 1 + 0.8)) < 0.1);
+  // A new server, its clock far behind: set outright too.
+  st.syncClock(5, 13, 1);
+  assert.equal(st.serverTime, 5);
+});
