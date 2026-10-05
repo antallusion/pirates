@@ -142,7 +142,7 @@ const firstTips = new FirstTips();
 firstTips.covered = () => modal !== null;
 let modal: Modal = null;
 let inGame = false;
-let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; port: string; towed: boolean } | null = null;
+let lastSunk: { lost: { cargoValue: number; crew: number; repairFee: number }; port: string; towed: boolean; boarded?: { by: string; silver: number; repelled: boolean } } | null = null;
 /** The prologue plays once, for a captain who has just taken the First Watch. */
 let prologuePending = false;
 const keys = new Set<string>();
@@ -909,10 +909,11 @@ function onMessage(m: ServerMsg): void {
       else if (modal === 'boarding') closeModal();
       break;
     case 'sunk_self':
-      lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed };
+      lastSunk = { lost: m.lost, port: placeName(state.ports.find((p) => p.id === m.respawnPort)?.name ?? '') || L('port'), towed: !!m.towed, ...(m.boarded ? { boarded: { by: sv(m.boarded.by), silver: m.boarded.silver, repelled: !!m.boarded.repelled } } : {}) };
       openModal('sunk');
       sunkAt = performance.now();
-      playFilm('cut_sunk');
+      // A boarding lost has the defeat's film (the battle's end has it already, once); a ship gone down her own.
+      playFilm(m.boarded ? 'cut_defeat' : 'cut_sunk');
       break;
     case 'quest_offer':
       // An island's people offer their job on the beach, or a groupmate shares theirs: the giver's window, then the
@@ -1350,7 +1351,7 @@ function renderModal(root: HTMLElement): void {
       researchWindow.render(root, state);
       break;
     case 'sunk':
-      if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed);
+      if (lastSunk) renderSunk(root, lastSunk.lost, lastSunk.port, () => openModal(state.portView ? 'port' : null), lastSunk.towed, lastSunk.boarded);
       break;
   }
   if (touch.enabled) stripKeyHints(root);

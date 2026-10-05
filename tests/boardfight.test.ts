@@ -184,7 +184,9 @@ test('a duel lost (no blows struck) repels the boarders', () => {
   c.push({ t: 'board_duel', action: 'challenge' });
   steps(game, 20 * 12);
   assert.equal(ship.boarding, null);
-  assert.ok(c.all('toast').some((t) => /repelled/.test(t.msg)), 'the captain fell, the boarders fall back');
+  // The captain fell, the boarders fall back — and a captain thrown back is let go into port, robbed (owner,
+  // 2026-10-05: tests/boardloss.test.ts).
+  assert.ok(c.last('sunk_self')?.boarded && ship.docked, 'the captain fell, the boarders fall back');
 });
 
 test('the blade: a strike on the sweet spot lands fully, a third of the sweep off lands nothing', () => {

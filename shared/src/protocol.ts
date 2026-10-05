@@ -1579,7 +1579,7 @@ export type ServerMsg =
   | { t: 'board_fight'; view: BoardFightView | null }
   | { t: 'board_tac'; view: TacView | null }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
-  | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean }
+  | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean; /** a boarding lost (owner, 2026-10-05): who took her and the silver they had */ boarded?: { by: string; silver: number; repelled?: boolean } }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
   /** A hull researched (docs/20): the yard's film and word. */
   | { t: 'researched'; classId: ShipClassId }

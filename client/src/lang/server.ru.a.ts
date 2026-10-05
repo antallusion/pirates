@@ -194,6 +194,7 @@ export const SERVER_RU_A: Record<string, string> = {
   "Board the Heart of the Whale — cannon cannot finish it.": "Берите Сердце Кита на абордаж — пушками его не добить.",
   "Boarders repelled!": "Абордаж отбит!",
   "Boarders repelled! Cut the grapples!": "Абордаж отбит! Рубите кошки!",
+  "She was boarded only now: let her be a while": "Её только что взяли на абордаж: оставьте её ненадолго в покое",
   "Boats away to haul the {0} stockpile on {1} ({2}s).": "Шлюпки спущены — вывезти запасы ({0}) с {1} ({2} с).",
   "Boats away: {0} hands row for the {1} on {2} ({3}s). The ship lies at anchor.": "Шлюпки спущены: {0} человек гребут к {1} на {2} ({3} с). Корабль стоит на якоре.",
   "Boats on a dark shore nearby — someone digs without a light.": "Неподалёку у тёмного берега шлюпки — кто-то копает без огня.",

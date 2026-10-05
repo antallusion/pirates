@@ -130,6 +130,10 @@ export const FAR_EVERY = 4;
 export const MID_LOD_R = SNAP_NEAR + 300;
 export const XP_SUNK = 40;
 export const XP_BOARDED = 90;
+/** A captain's boarding lost (owner, 2026-10-05): the share of her chest the victors take (as a ship taken gives up,
+ *  claimPrize) and the seconds no grapples bite her again. */
+export const BOARD_LOSS_PURSE = 0.08;
+export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { abandonQuest, acceptQuest, answerOffer, questEvent, shareQuest, swearOath, switchPath } from './quests.ts';
@@ -2156,6 +2160,12 @@ export class Game {
       if (sb) this.sendTo(sb, { t: 'toast', msg: `${a.captainName} has taken your ship! Pray for mercy.`, kind: 'bad' });
       return;
     }
+    // An NPC won over a captain: her valuables are theirs and she is let go into the nearest port (owner,
+    // 2026-10-05), not left alongside them to be grappled again.
+    if (this.sessionOf(b)?.profile) {
+      this.boardingLost(b, a, result.enemyCrewLost);
+      return;
+    }
     // An NPC won: it plunders what fits and lets the victim go.
     for (const id in b.cargo) {
       const g = id as GoodId;
@@ -2182,6 +2192,64 @@ export class Game {
       a.attackers.delete(b.id);
       b.attackers.delete(a.id);
     }
+  }
+
+  /** A captain's boarding lost, as the boarder thrown back or the ship taken by the sea's crews (owner, 2026-10-05:
+   *  «при проигрыше надо в ближайший порт отправлять и забирать ценности»): the victors have what is in her hold
+   *  and a share of her chest (the share a ship taken always gives up, claimPrize), her survivors are let go and limp
+   *  into the nearest port that will have her — the screen of a ship lost tells it — and no grapples bite her again
+   *  for BOARD_LOSS_SHIELD seconds. Her hull stays as the fight left it, patched to float; there is no salvage fee. */
+  boardingLost(loser: ShipEntity, victor: ShipEntity, crewLost: number, repelled = false): void {
+    const s = this.sessionOf(loser);
+    const p = s?.profile;
+    if (!s || !p) return;
+    loser.boarding = null;
+    loser.lootLockedFor = null;
+    loser.surrendered = false;
+    // The hold to the victors (a captain's hold takes what fits; the rest goes over the side).
+    const taken = cargoValue(loser.cargo);
+    const vs = this.sessionOf(victor);
+    let free = vs ? victor.stats.holdVolume - cargoVolume(victor.cargo, victor.stats.contrabandVolumeMul, victor.stats.materialVolumeMul, victor.stats.provisionVolumeMul, victor.stats.cursedVolumeMul) : Infinity;
+    for (const id of Object.keys(loser.cargo) as GoodId[]) {
+      const n = Math.floor(loser.cargo[id] ?? 0);
+      const per = GOODS[id]?.volume ?? 1;
+      const k = Math.max(0, Math.min(n, Math.floor((free + 1e-6) / per)));
+      if (k > 0) victor.cargo[id] = (victor.cargo[id] ?? 0) + k;
+      free -= k * per;
+    }
+    loser.cargo = {};
+    // A share of her chest.
+    const silver = Math.min(Math.floor(p.gold), Math.floor(p.gold * BOARD_LOSS_PURSE));
+    if (silver > 0) {
+      p.gold -= silver;
+      this.db.ledger(s.accountId, 'robbed', -silver, victor.name);
+      if (vs?.profile) {
+        vs.profile.gold += silver;
+        this.db.ledger(vs.accountId, 'plunder', silver, loser.name);
+        this.pushSelf(vs, true);
+      } else victor.purse += silver;
+    }
+    // The sea's victors let her be: no chase, no second grapple.
+    const brain = this.npcs.get(victor.id);
+    if (brain) {
+      brain.target = null;
+      brain.chase = null;
+      brain.spared.set(loser.id, this.now + 900);
+    }
+    victor.attackers.delete(loser.id);
+    loser.attackers.delete(victor.id);
+    // Into the nearest port that will have her.
+    const port = this.nearestPort(loser.state.x, loser.state.y, (q) => canDock(p, q.faction).ok) ?? this.portById(START_PORT)!;
+    const hull = loser.hull, sails = loser.sails;
+    this.refitAndDock(s, loser, port);
+    loser.hull = Math.max(hull, loser.stats.hullMax * 0.3);
+    loser.sails = Math.max(sails, loser.stats.sailHpMax * 0.3);
+    loser.crew = Math.max(Math.round(loser.stats.crewMin * 0.6), loser.crew);
+    loser.morale = Math.max(loser.morale, 40);
+    loser.boardShieldUntil = this.now + BOARD_LOSS_SHIELD;
+    this.sendTo(s, { t: 'sunk_self', lost: { cargoValue: taken, crew: Math.max(0, Math.round(crewLost)), repairFee: 0 }, respawnPort: port.id, boarded: { by: victor.name, silver, ...(repelled ? { repelled: true } : {}) } });
+    this.pushSelf(s, true);
+    this.saveSession(s);
   }
 
   private resolveLoot(s: PlayerSession, take: Cargo, fateAsked: 'sink' | 'release' | 'ransom' | 'prize' | 'trophy', recruit = 0): string | null {
