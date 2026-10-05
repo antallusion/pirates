@@ -245,3 +245,10 @@ test('playthrough: a woman giver\'s verb takes her ending («Тамсин Мур
   assert.match(serverText('Oswin Tarrow has a hold of goods sold ahead to Ironreach and no ship to carry them.'), /продал\s/);
   setLang('en');
 });
+
+test('playthrough: a giver\'s card on a phone on its side — her words | the steps and the pay to choose, side by side', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
+  assert.match(css, /\.giver-panel \.confirm-body > \.giver \{ grid-column: 1; grid-row: 1 \/ span 6; \}/);
+  assert.match(css, /\.giver-panel \.pay-opt \{ grid-template-columns: auto auto minmax\(0, 1fr\);/);
+});

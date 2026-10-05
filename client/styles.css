@@ -1749,6 +1749,22 @@ body.touch #hud-region .rg-extra { display: none; }
 .pay-name { font-family: var(--serif); font-size: 15px; color: var(--bone); }
 .pay-what { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 13px; color: var(--fog); }
 .pay-rep, .pay-shot { color: var(--fog); }
+/* A phone on its side: the giver and her words | the steps and the pay to choose, side by side in a wider card (the
+   choice of pay lay a whole screen down its scroll, under «Взяться»). */
+@media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
+  .confirm-panel.giver-panel { width: min(780px, calc(100vw - 24px)); }
+  .giver-panel .confirm-body { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); column-gap: 16px; align-content: start; }
+  .giver-panel .confirm-body > * { grid-column: 2; }
+  .giver-panel .confirm-body > .giver { grid-column: 1; grid-row: 1 / span 6; }
+  .giver-panel .giver-steps { margin: 0 0 4px; font-size: 12.5px; }
+  .giver-panel .giver-steps li { margin: 1px 0; }
+  .giver-panel .giver-pay { margin-bottom: 4px; }
+  .giver-panel .pay-pick { gap: 4px; margin-bottom: 4px; }
+  .giver-panel .pay-opt { grid-template-columns: auto auto minmax(0, 1fr); padding: 3px 8px; gap: 0 8px; }
+  .giver-panel .pay-opt input { grid-row: auto; }
+  .giver-panel .pay-name { font-size: 13px; }
+  .giver-panel .pay-what { font-size: 12px; gap: 2px 8px; }
+}
 @media (max-width: 520px) {
   .giver { grid-template-columns: 84px minmax(0, 1fr); gap: 10px; }
   .giver-face { width: 84px; height: 105px; }
