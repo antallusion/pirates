@@ -2,6 +2,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dict, fill, setLang } from '../client/src/i18n.ts';
+import { readFileSync, readdirSync } from 'node:fs';
+import { serverText } from '../client/src/lang/server.ts';
+import { applyDataLocale } from '../client/src/lang/data.ts';
+const english = (ru: string) => (ru.match(/[A-Za-z]{3,}/g) ?? []).length >= 2;
+
 
 test('playthrough: an abbreviation at a sentence\'s end keeps one dot («через 5 дн.», not «дн..»)', () => {
   assert.equal(fill('Next: {name}, in {left}.', { name: 'X', left: '5 дн.' }), 'Next: X, in 5 дн.');
@@ -307,4 +312,28 @@ test('playthrough: a guild\'s tag may be Russian («СП»), as its field\'s pla
   t.profile!.gold = 100000;
   assert.equal(foundGuild(game, t, 'Other Dogs', 'S!'), 'A tag is 2–4 letters or digits');
   assert.equal(foundGuild(game, t, 'Other Dogs', 'СП'), 'That tag is taken');
+});
+
+test('playthrough: every world announcement, ship\'s toast and rumour of the server reads in Russian (the empires\' «[TAG] holds N% of the route nodes…» came in English)', () => {
+  const lines = new Map<string, string>();
+  for (const dir of ['server/src/game/', 'server/src/']) for (const f of readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
+    const src = readFileSync(dir + f, 'utf8');
+    const res = [/announce\(game, `([A-Z\[$][^`]{6,})`\)/g, /announce\(game, '([A-Z][^']{6,})'\)/g, /toastShip\([^,]+, `([A-Z\[$][^`]{6,})`/g, /toastShip\([^,]+, '([A-Z][^']{6,})'/g, /addRumor\([^,]+, [^,]+, `([A-Z\[$][^`]{6,})`/g, /msg: `WORLD: ([^`]{6,})`/g, /worldNews\([^,]*,? ?`([A-Z\[$][^`]{6,})`/g, /toastAll\(`([A-Z\[$][^`]{6,})`/g];
+    for (const re of res) for (const m of src.matchAll(re)) {
+      const raw = m[1];
+      if (/\$\{[^}]*\?/.test(raw) || raw.includes('=>') || raw.includes("'{") || raw.endsWith(String.fromCharCode(92))) continue;
+      const pre = /announce|WORLD|worldNews|toastAll/.test(re.source) ? 'WORLD: ' : '';
+      lines.set(pre + raw.replace(/\$\{[^}]*\}/g, (x) => (/name|tag|title/i.test(x) ? 'Gallowsmouth' : '7')), `${f}: ${raw}`);
+    }
+  }
+  assert.ok(lines.size > 250, `${lines.size} lines read`);
+  setLang('ru');
+  applyDataLocale('ru');
+  try {
+    const left = [...lines].filter(([s]) => english(serverText(s))).map(([s, where]) => `${where}  =>  ${serverText(s)}`);
+    assert.deepEqual(left, []);
+  } finally {
+    applyDataLocale('en');
+    setLang('en');
+  }
 });
