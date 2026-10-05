@@ -1078,6 +1078,19 @@ body.touch #hud-dive .dhint { display: none; }
   .ph-chip { flex: 1 1 auto; min-width: max-content; padding: 0 8px; }
   .ph-sail { flex: 1 1 100%; min-height: 36px; width: 100%; margin: 0; }
 }
+/* A phone on its side: the head in one band (name and line | figures and the sail order), the tabs and their caption
+   tighter — the page had 117 of 375 px left under them. */
+@media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
+  #modal-panel[data-modal="port"] .modal-head { min-height: 0; }
+  .port-head { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 6px 50px 6px 10px; }
+  .port-head .sub { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ph-stats { flex-wrap: nowrap; }
+  .ph-chip { flex: 0 0 auto; height: 30px; }
+  .ph-sail { flex: 0 0 auto; width: auto; min-height: 32px; padding: 0 14px; }
+  .icon-tabs .tab .ico { width: 26px; height: 26px; }
+  .tabs.icon-tabs .tab { padding-top: 3px; padding-bottom: 2px; }
+  .tab-caption { padding: 3px 12px 2px; font-size: 11px; }
+}
 /* Scrollbars in the game's own hand: a thin brass rail on a dark groove, everywhere. */
 /* Firefox takes the standard properties; Chromium keeps its own (setting both would disable the brass thumb). */
 @supports not selector(::-webkit-scrollbar) { * { scrollbar-width: thin; scrollbar-color: #8c6b3a rgba(8, 8, 10, 0.55); } }
@@ -1197,6 +1210,8 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
    edge, so a button's visible frame lines up with the fields, cards and chips around it and a row of buttons
    stands exactly its gap apart. */
 .skinned .btn, .skinned .tab.active, body.skinned.touch .tc-context:not(.hidden) { border-image-outset: 0.475; }
+/* An icon on the chosen tab's wood: the dark ones (the market's scales) all but vanished into it. */
+.skinned .icon-tabs .tab.active .ico { filter: brightness(1.5) drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
 
 /* Every tab keeps its chosen twin's edges (a clear border where the frame will be), so a label does not drop
    when its tab is chosen and the row reads as one line; the label sits in the middle under the frame's rim. */
