@@ -74,7 +74,7 @@ import { Journal } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
-import { filmDue, filmExists, loadFilms, playFilm } from './ui/cutscene.ts';
+import { filmDue, filmExists, loadFilms, playFilm, setFilmGate } from './ui/cutscene.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
@@ -576,6 +576,12 @@ function filmMoments(): void {
   filmWas.landing = !!landing || !state.self;
 }
 void loadFilms();
+// A film never opens over a window she is at or a question put to her (owner, 2026-10-05: one came up over the guild's
+// founding form and took her typing): it waits for her (ui/cutscene.ts). The windows of the moment itself are no bar —
+// the harbour opening as she docks, a boarding's account, the shipwreck's.
+const FILM_OVER = new Set<Modal>(['port', 'boarding', 'sunk']);
+// (a question up is one on screen: the «turn the phone» lock stays in the page, unseen, in landscape)
+setFilmGate(() => (modal !== null && !FILM_OVER.has(modal)) || [...document.querySelectorAll('[role="alertdialog"][aria-modal="true"]')].some((e) => e.getClientRects().length > 0));
 
 /** The title screen: the trailer, silent and looping, over the key art (owner, 2026-10-03) — not for one who asks for
  *  less motion or saves data; it rests while the title screen is hidden. */
@@ -806,7 +812,7 @@ function onMessage(m: ServerMsg): void {
       openModal('sunk');
       sunkAt = performance.now();
       // A boarding lost has the defeat's film (the battle's end has it already, once); a ship gone down her own.
-      playFilm(m.boarded ? 'cut_defeat' : 'cut_sunk');
+      playFilm(m.boarded ? 'cut_defeat' : 'cut_sunk', undefined, { over: true });
       break;
     case 'quest_offer':
       // An island's people offer their job on the beach, or a groupmate shares theirs: the giver's window, then the

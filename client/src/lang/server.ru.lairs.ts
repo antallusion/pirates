@@ -24,6 +24,7 @@ export const SERVER_RU_LAIRS: Record<string, string> = {
   'Clear the grotto first: the guardian lies at the heart of the island.': 'Сначала разбейте грот: страж — в самом сердце острова.',
   'The party falls back to the boats from the {0}.': 'Отряд отступает к шлюпкам от логова «{0}».',
   'The {0} throws your party back into the surf.': '«{0}» сбрасывает ваш отряд обратно в прибой.',
+  "The Crown's longboats bring your men off the beach: in the First Watch nobody is lost.": 'Шлюпки Короны снимают ваших людей с берега: в Первой вахте никто не гибнет.',
   'Won the fight ashore with the {0}': 'Победа на берегу: «{0}»',
   // the spoils
   'The {0} is beaten. You had its spoils this week already.': 'Логово «{0}» разбито. Его добыча уже была вашей на этой неделе.',

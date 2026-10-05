@@ -306,6 +306,26 @@ export class Hud {
     new MutationObserver(fit).observe(this.toastsEl, { childList: true });
     new MutationObserver(fit).observe($('hud-prompt'), { childList: true });
     addEventListener('resize', fit);
+    // A toast the band has no room for wraps into a column past its edge, clipped out of sight: hidden outright, so it
+    // is neither half-drawn at the edge nor taken for one lying over the chart or the menu (docs/22: hudOverlap at
+    // 640×360 and 800×450). It shows again when the ones before it are gone.
+    let clipping = false;
+    const clip = () => {
+      if (clipping) return;
+      clipping = true;
+      requestAnimationFrame(() => {
+        clipping = false;
+        const b = this.toastsEl.getBoundingClientRect();
+        for (const t of this.toastsEl.children) {
+          const r = t.getBoundingClientRect();
+          t.classList.toggle('tq-out', r.left >= b.right - 2 || r.right <= b.left + 2 || r.top >= b.bottom - 2 || r.bottom <= b.top + 2);
+        }
+      });
+    };
+    new MutationObserver(clip).observe(this.toastsEl, { childList: true, subtree: true, characterData: true });
+    new MutationObserver(clip).observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
+    new ResizeObserver(clip).observe(this.toastsEl);
+    addEventListener('resize', clip);
     this.wireFold();
   }
 
