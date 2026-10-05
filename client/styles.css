@@ -4641,6 +4641,13 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
   #advcard .ac-dcard:not(.open) .dw-ways .btn, #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn { grid-column: auto; min-height: 0; height: 22px; padding: 0 3px; font-size: 10px; line-height: 1; white-space: nowrap; margin: 0; height: 20px; flex-wrap: nowrap; justify-content: center; gap: 3px; }
   #advcard .ac-dcard:not(.open) .dw-way .dw-p, #advcard .ac-dcard:not(.open) .dw-way .bcost { font-size: 10px; }
   .skinned #advcard .ac-dcard:not(.open) .dw-ways .btn, .skinned #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn { border-width: 4px 5px; border-image-width: 4px 5px; }
+  /* …and her mini-game once a way is chosen: the needle's bar and «Now!» stay on the folded card (the fold hid the
+     whole game — a rescue could not be played on a phone on its side without first opening the card). */
+  #advcard .ac-card:not(.open) > .dm-mini { display: block !important; margin-top: 2px; padding: 3px 6px; }
+  #advcard .ac-card:not(.open) .dm-mini > .dm-h, #advcard .ac-card:not(.open) .dm-mini > .dm-row { display: none; }
+  #advcard .ac-card:not(.open) .dm-mini .dm-bar { height: 12px; }
+  #advcard .ac-card:not(.open) .dm-mini .ac-acts { margin-top: 3px; flex-wrap: nowrap; }
+  #advcard .ac-card:not(.open) .dm-mini .btn { flex: 1 1 auto; min-height: 0; height: 24px; padding: 0 6px; font-size: 11px; line-height: 1; white-space: nowrap; }
   #advcard .ac-dcard:not(.open) .dw-way .bcost .ico-sm { width: 13px; height: 13px; }
   #advcard .ac-dcard:not(.open) > .ac-acts:last-child .btn .ico-sm { display: none; }
 }

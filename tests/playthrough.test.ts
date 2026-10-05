@@ -202,3 +202,10 @@ test('playthrough: a drift\'s card leads a lair\'s, and on a short screen its wa
   const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
   assert.match(css, /#advcard \.ac-dcard:not\(\.open\) \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
 });
+
+test('playthrough: a rescue\'s needle game stays on the folded card of a short screen (the fold hid the whole game)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
+  assert.match(css, /#advcard \.ac-card:not\(\.open\) > \.dm-mini \{ display: block !important;/);
+  assert.match(css, /#advcard \.ac-card:not\(\.open\) \.dm-mini \.btn \{[^}]*white-space: nowrap;/);
+});
