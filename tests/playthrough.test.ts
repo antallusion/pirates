@@ -345,3 +345,14 @@ test('playthrough: a touch screen strips key hints, not a guild\'s tag («…в 
   assert.equal(keyless('Ход [W/S] и приказы [G], подрыв — Shift+B [Shift+B]', true), 'Ход и приказы, подрыв — Shift+B');
   assert.equal(keyless('Esc [Esc] closes', false), 'Esc [Esc] closes');
 });
+
+test('playthrough: the admin\'s HELP names each command once («/away Htide» was two glued; eleven came twice)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const help = readFileSync(new URL('../server/src/game/admin.ts', import.meta.url), 'utf8').match(/const HELP = '([^']*)';/)![1];
+  const cmds = help.split(' · ');
+  assert.equal(new Set(cmds).size, cmds.length, 'no command twice');
+  assert.ok(!help.includes('Htide'));
+  assert.ok(cmds.includes('/away H') && cmds.includes('/tide [up|down|off|here]'));
+  const { SERVER_RU_ADMIN } = await import('../client/src/lang/server.ru.admin.ts');
+  assert.equal(SERVER_RU_ADMIN[help].split(' · ').length, cmds.length, 'the Russian HELP command for command');
+});
