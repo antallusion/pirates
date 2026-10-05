@@ -18,6 +18,7 @@ import { INNATE, ULTIMATE, ULT_ROUND } from '../../../shared/src/data/paths.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { personName } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/tactical.ts';
+import { GLIDE_MS, along, easeWalk, walkMs, walkPath } from './tacwalk.ts';
 import { EN as LEN, RU as LRU } from '../lang/ui/lairs.ts';
 import type { LairLoot } from '../../../shared/src/lairproto.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
@@ -370,7 +371,16 @@ export class TacticalPanel {
   private heroFx: { side: number; t0: number; dur: number }[] = [];
   private bursts: Burst[] = [];
   private missiles: Missile[] = [];
-  private pos = new Map<number, { x: number; y: number; fx: number; fy: number; t0: number }>();
+  /** Each stack's walk (ui/tacwalk.ts): the hex it is bound for, the hexes it steps through, since when, how long, and
+   *  whether it glides over them (a flier). One figure a stack: it walks, nothing stays behind at the hex it left. */
+  private pos = new Map<number, { hex: number; path: number[]; t0: number; dur: number; fly: boolean }>();
+  /** The ghost's own layer, laid over the field at its dimness (a figure's own alphas would show through otherwise). */
+  private ghostLayer: HTMLCanvasElement | null = null;
+  /** A figure's extra height this frame (a flier's glide). */
+  private liftNow = 0;
+  /** What the last frame drew (QA: one figure a stack, the ghost apart). */
+  private drawn = { figures: new Map<number, number>(), ghosts: 0, path: 0, walking: [] as number[] };
+  private calmMq: MediaQueryList | null = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
   /** A figure's blow, shot or flinch being played: since when, and toward where. */
   /** The plates of the figures being drawn, laid over them all at the end of the frame. */
   private plates: (() => void)[] | null = null;
@@ -508,24 +518,31 @@ export class TacticalPanel {
   // ------------------------------------------------------------------ a new view from the server
 
   private onView(v: TacView, was: TacView | null): void {
+    // Stacks that moved walk to their new hex, hex by hex round what stood on the field (a flier glides straight
+    // over); a move of the deep that set one down elsewhere slides it there. Done before the blows are marked: a stack
+    // that walks up to strike strikes once it is there.
+    const t = performance.now();
+    const calm = this.calm();
+    for (const s of v.stacks) {
+      const p = this.pos.get(s.id);
+      if (!p) {
+        this.pos.set(s.id, { hex: s.hex, path: [s.hex], t0: 0, dur: 0, fly: false });
+        continue;
+      }
+      if (p.hex === s.hex) continue;
+      const fly = s.sp.includes('flying');
+      const path = fly || calm ? null : walkPath((was ?? v).cells, (was ?? v).stacks, s.id, p.hex, s.hex, s.sp.includes('diving'));
+      this.pos.set(s.id, { hex: s.hex, path: path ?? [p.hex, s.hex], t0: t, dur: calm ? 0 : path ? walkMs(path.length - 1) : GLIDE_MS, fly: fly && !calm });
+    }
+    let lag = 0;
+    for (const p of this.pos.values()) lag = Math.max(lag, p.t0 + p.dur - t);
     // What happened since the last view: numbers over the stacks, bursts of powder and smoke.
     const fresh = v.log.filter((e) => e.i > this.seen);
     if (!was) this.heroFx = [0, 1].map((side) => ({ side, t0: performance.now() + 400 + side * 250, dur: 1900 }));
     if (!was) this.seen = v.log.length ? v.log[v.log.length - 1].i : 0;
-    else for (const e of fresh) this.mark(e, v, was);
+    else for (const e of fresh) this.mark(e, v, was, lag);
     if (fresh.length) this.seen = Math.max(this.seen, ...fresh.map((e) => e.i));
     for (const s of v.stacks) this.names.set(s.id, `${stackName(s)} (${L(s.side === v.you ? 'ours' : 'theirs')})`);
-    // Stacks that moved slide to their new hex.
-    const t = performance.now();
-    for (const s of v.stacks) {
-      const c = this.center(s.hex);
-      const p = this.pos.get(s.id);
-      if (!p) this.pos.set(s.id, { x: c.x, y: c.y, fx: c.x, fy: c.y, t0: 0 });
-      else if (Math.abs(p.x - c.x) > 0.5 || Math.abs(p.y - c.y) > 0.5) {
-        const cur = this.at(p, t);
-        this.pos.set(s.id, { x: c.x, y: c.y, fx: cur.x, fy: cur.y, t0: t });
-      }
-    }
     if (!v.mine || v.active !== was?.active) {
       this.preview = null;
       if (!v.mine) this.targeting = null;
@@ -546,8 +563,8 @@ export class TacticalPanel {
     this.floats.push({ ...f, base, y: base - k * line });
   }
 
-  private mark(e: TacEvent, v: TacView, was: TacView): void {
-    const t = performance.now();
+  private mark(e: TacEvent, v: TacView, was: TacView, lag = 0): void {
+    const t = performance.now() + lag;
     const hexOf = (id?: number) => (id === undefined ? undefined : (v.stacks.find((s) => s.id === id) ?? was.stacks.find((s) => s.id === id))?.hex);
     const at = (hex?: number) => (hex === undefined ? null : this.center(hex));
     const w = this.size.w || 30;
@@ -1296,10 +1313,117 @@ export class TacticalPanel {
     g.setTransform(a * k, b * k, c * k, d * k, e * k, f * k);
   }
 
-  private at(p: { x: number; y: number; fx: number; fy: number; t0: number }, t: number): { x: number; y: number } {
-    const k = Math.min(1, (t - p.t0) / 280);
-    const e = k < 1 ? 1 - (1 - k) ** 3 : 1;
-    return { x: p.fx + (p.x - p.fx) * e, y: p.fy + (p.y - p.fy) * e };
+  /** Less motion asked for: no walks, glides or lunges, every stack where it stands. */
+  private calm(): boolean {
+    return !!this.calmMq?.matches;
+  }
+
+  /** Where a stack stands this frame: along its walk while it walks (a step's bob, a flier's rise and fall), its
+   *  hex otherwise. */
+  private standAt(s: TacStackView, t: number): { x: number; y: number; lift: number; walking: boolean } {
+    const p = this.pos.get(s.id);
+    if (!p || p.hex !== s.hex || p.dur <= 0 || t >= p.t0 + p.dur || p.path.length < 2) return { ...this.center(s.hex), lift: 0, walking: false };
+    const k = Math.max(0, (t - p.t0) / p.dur);
+    const q = along(p.path.map((h) => this.center(h)), easeWalk(k));
+    const w = this.size.w || 30;
+    const lift = p.fly ? Math.sin(Math.PI * k) * w * 0.45 : Math.abs(Math.sin(Math.PI * k * (p.path.length - 1))) * w * 0.06;
+    return { x: q.x, y: q.y, lift, walking: true };
+  }
+
+  /** The hex a walk is shown to: the one tapped once (the second tap marches), else the one under the mouse. */
+  private aim(v: TacView): number | null {
+    if (!v.mine || v.over || this.targeting) return null;
+    if (this.preview !== null && v.reach.includes(this.preview)) return this.preview;
+    return this.hover !== null && v.reach.includes(this.hover) && !this.stackAt(this.hover) ? this.hover : null;
+  }
+
+  private walkingAt(v: TacView, t: number): boolean {
+    return v.stacks.some((s) => this.standAt(s, t).walking);
+  }
+
+  /** The walk to `to` drawn on the board (its own coordinates, under the figures): a footstep on every hex it would
+   *  step through, a line joining them, the hex it ends on ringed — or a flier's arc straight over. */
+  private walkMark(g: CanvasRenderingContext2D, v: TacView, s: TacStackView, to: number, r: number, pulse: number): void {
+    const w = this.size.w;
+    const fly = s.sp.includes('flying');
+    const path = fly ? null : walkPath(v.cells, v.stacks, s.id, s.hex, to, s.sp.includes('diving'));
+    const hexes = path ?? [s.hex, to];
+    const pts = hexes.map((h) => this.lc(h));
+    const strong = this.preview !== null;
+    g.save();
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.strokeStyle = `rgba(232,250,240,${strong ? 0.85 : 0.55})`;
+    g.lineWidth = Math.max(2, w * (strong ? 0.07 : 0.05));
+    g.setLineDash(fly || !path ? [w * 0.16, w * 0.12] : []);
+    g.beginPath();
+    if (fly || !path) {
+      const a = pts[0], b = pts[pts.length - 1];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - Math.hypot(b.x - a.x, b.y - a.y) * 0.25;
+      g.moveTo(a.x, a.y);
+      g.quadraticCurveTo(mx, my, b.x, b.y);
+    } else {
+      // To the edge of the hex it ends on: the ghost stands there, not on a line.
+      const a = pts[pts.length - 2], b = pts[pts.length - 1];
+      g.moveTo(pts[0].x, pts[0].y);
+      for (const q of pts.slice(1, -1)) g.lineTo(q.x, q.y);
+      g.lineTo(a.x + (b.x - a.x) * 0.5, a.y + (b.y - a.y) * 0.5);
+    }
+    g.stroke();
+    g.setLineDash([]);
+    // A footstep on each hex it steps through.
+    if (path) {
+      g.fillStyle = `rgba(232,250,240,${strong ? 0.95 : 0.7})`;
+      for (const q of pts.slice(1, -1)) {
+        g.beginPath();
+        g.arc(q.x, q.y, Math.max(2.5, w * 0.09), 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    // The hex it ends on.
+    const z = pts[pts.length - 1];
+    this.hexPath(g, z.x, z.y, r - 2);
+    g.strokeStyle = `rgba(240,255,248,${strong ? 0.6 + 0.4 * pulse : 0.6})`;
+    g.lineWidth = strong ? 2.5 : 1.5;
+    g.stroke();
+    g.restore();
+    this.drawn.path = Math.max(0, hexes.length - 1);
+  }
+
+  /** The stack's ghost at a hex: drawn whole on a layer of its own, then laid over the field at `alpha` (a figure
+   *  sets its own alphas as it draws, so it cannot be dimmed in place), without its number or its turn's ring. */
+  private ghost(g: CanvasRenderingContext2D, s: TacStackView, hex: number, v: TacView, alpha: number): void {
+    const c = this.canvas;
+    if (!c) return;
+    const layer = (this.ghostLayer ??= document.createElement('canvas'));
+    if (layer.width !== c.width || layer.height !== c.height) {
+      layer.width = c.width;
+      layer.height = c.height;
+    }
+    const lg = layer.getContext('2d')!;
+    lg.setTransform(1, 0, 0, 1, 0, 0);
+    lg.clearRect(0, 0, layer.width, layer.height);
+    lg.setTransform(this.size.dpr, 0, 0, this.size.dpr, 0, 0);
+    const p = this.center(hex);
+    const keep = this.plates, act = this.act.get(s.id);
+    this.plates = [];
+    this.act.delete(s.id);
+    this.token(lg, s, p.x, p.y, this.size.w, false, 0, v);
+    this.plates = keep;
+    if (act) this.act.set(s.id, act);
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalAlpha = alpha;
+    g.filter = 'saturate(0.6) brightness(1.3)';
+    g.drawImage(layer, 0, 0);
+    g.restore();
+    this.drawn.ghosts++;
+  }
+
+  /** What the last frame drew, for the QA kit: figures a stack (one each), the ghost, the hexes of the path shown,
+   *  the stacks walking. */
+  frameStats(): { figures: Record<number, number>; ghosts: number; path: number; walking: number[] } {
+    return { figures: Object.fromEntries(this.drawn.figures), ghosts: this.drawn.ghosts, path: this.drawn.path, walking: [...this.drawn.walking] };
   }
 
   /** On a phone, the room its buttons take at the field's edges: a band down either side when the phone lies on its
@@ -1351,18 +1475,8 @@ export class TacticalPanel {
     c.style.width = `${cw}px`;
     c.style.height = `${ch}px`;
     this.bgKey = '';
-    // Re-seat the tokens.
-    if (old.w) for (const [id, p] of this.pos) {
-      const s = this.view?.stacks.find((x) => x.id === id);
-      if (s) {
-        const cc = this.center(s.hex);
-        this.pos.set(id, { x: cc.x, y: cc.y, fx: cc.x, fy: cc.y, t0: 0 });
-      } else void p;
-    }
-    else if (this.view) for (const s of this.view.stacks) {
-      const cc = this.center(s.hex);
-      this.pos.set(s.id, { x: cc.x, y: cc.y, fx: cc.x, fy: cc.y, t0: 0 });
-    }
+    // The walks are kept by hexes, so a field laid out afresh needs no re-seating; the first one seats them.
+    if (!old.w && this.view) for (const s of this.view.stacks) this.pos.set(s.id, { hex: s.hex, path: [s.hex], t0: 0, dur: 0, fly: false });
     return true;
   }
 
@@ -1952,6 +2066,7 @@ export class TacticalPanel {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, c.width, c.height);
     g.drawImage(this.background(v), 0, 0);
+    this.drawn = { figures: new Map(), ghosts: 0, path: 0, walking: [] };
     // The marks on the hexes lie with the board (turned upright on a phone), the tokens and numbers stand straight.
     this.turned(g);
     const t = performance.now();
@@ -2017,9 +2132,15 @@ export class TacticalPanel {
         }
       }
     }
+    // The walk it would take, hex by hex (a flier's glide, an arc over the field), on the deck under the figures.
+    {
+      const aim = this.aim(v);
+      if (aim !== null && active && !this.walkingAt(v, t)) this.walkMark(g, v, active, aim, r, pulse);
+    }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     // The stacks, the active one ringed in gold; the figures back to front, so the nearer stands before the farther.
-    const placed: { s?: TacStackView; prop?: string; i?: number; p: { x: number; y: number } }[] = v.stacks.map((s) => ({ s, p: this.at(this.pos.get(s.id) ?? { ...this.center(s.hex), fx: 0, fy: 0, t0: 0 }, t) }));
+    const placed: { s?: TacStackView; prop?: string; i?: number; p: { x: number; y: number; lift?: number; walking?: boolean } }[] = v.stacks.map((s) => ({ s, p: this.standAt(s, t) }));
+    const walking = placed.some((x) => x.p.walking);
     for (let i = 0; i < v.cells.length; i++) {
       const prop = propArt(v.cells[i], v.land?.type ?? '');
       if (prop) placed.push({ prop, i, p: this.center(i) });
@@ -2029,20 +2150,20 @@ export class TacticalPanel {
     placed.sort((a, b) => a.p.y - b.p.y || bulk(b) - bulk(a) || a.p.x - b.p.x);
     this.plates = [];
     for (const x of placed) {
-      if (x.s) this.token(g, x.s, x.p.x, x.p.y, w, x.s.id === v.active, pulse, v);
-      else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5);
+      if (x.s) {
+        this.liftNow = x.p.lift ?? 0;
+        this.token(g, x.s, x.p.x, x.p.y, w, x.s.id === v.active && !x.p.walking, pulse, v);
+        this.liftNow = 0;
+        this.drawn.figures.set(x.s.id, (this.drawn.figures.get(x.s.id) ?? 0) + 1);
+        if (x.p.walking) this.drawn.walking.push(x.s.id);
+      } else this.prop(g, x.prop!, x.p.x, x.p.y, w, hexX(x.i!) > 5);
     }
     for (const f of this.plates) f();
     this.plates = null;
-    if (v.mine) {
-      // A ghost of the stack where it would step.
-      if (this.preview !== null && active) {
-        const p = this.center(this.preview);
-        g.globalAlpha = 0.45;
-        this.token(g, active, p.x, p.y, w, false, 0, v);
-        g.globalAlpha = 1;
-      }
-    }
+    // A ghost of the stack where it would step (owner, 2026-10-05: «фигурка не имеет прозрачности … она как бы
+    // задваивается»): dim and whole, drawn on its own layer, without its number; none while a stack walks.
+    const aim = this.aim(v);
+    if (aim !== null && active && !walking) this.ghost(g, active, aim, v, this.preview !== null ? 0.55 : 0.32);
     // The paths' moves (docs/18): their light over the field.
     this.pathFx = this.pathFx.filter((f) => t - f.t0 < (f.ult ? PATH_FX_MS.ult : PATH_FX_MS.innate));
     for (const f of this.pathFx) this.drawPathFx(g, f, t, w);
@@ -2099,6 +2220,7 @@ export class TacticalPanel {
     g.textBaseline = 'middle';
     for (const f of this.floats) {
       const k = (t - f.t0) / (f.big ? 1600 : 1200);
+      if (k < 0) continue; // a blow's number waits for the walk that brings it
       g.globalAlpha = Math.max(0, 1 - k * k);
       g.font = `700 ${Math.round(f.big ? Math.max(15, w * 0.55) : Math.max(11, w * 0.36))}px ${f.big ? 'Cormorant Garamond, Georgia, serif' : 'Inter, system-ui, sans-serif'}`;
       g.lineWidth = 3;
@@ -2326,7 +2448,7 @@ export class TacticalPanel {
       if (k >= 1) this.act.delete(s.id);
       else if (k > 0) {
         if (a.k === 'hurt' ? sprite(`${id}_hit`) : sprite(`${id}_atk`)) frame = `${id}${a.k === 'hurt' ? '_hit' : '_atk'}`;
-        const bell = Math.sin(Math.PI * k);
+        const bell = this.calm() ? 0 : Math.sin(Math.PI * k);
         if (a.k === 'atk') {
           ox = a.dx * w * 0.32 * bell;
           oy = a.dy * w * 0.32 * bell;
@@ -2383,7 +2505,7 @@ export class TacticalPanel {
     const H = img.naturalHeight * k * breathe, W = img.naturalWidth * k;
     const flip = s.side === 1;
     const fx = footX(frame, img);
-    const lift = s.sp.includes('flying') ? w * 0.28 * (1 + 0.15 * Math.sin(t / 300 + s.id)) : 0;
+    const lift = (s.sp.includes('flying') ? w * 0.28 * (1 + 0.15 * Math.sin(t / 300 + s.id)) : 0) + this.liftNow;
     g.save();
     g.translate(x + ox, fy + oy - lift);
     if (flip) g.scale(-1, 1);
