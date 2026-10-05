@@ -107,3 +107,11 @@ test('polish: a film is skipped by a click, a tap, a press or any key, and waits
   assert.match(main, /setFilmGate\(\(\) => \(modal !== null && !FILM_OVER\.has\(modal\)\)/);
   assert.match(main, /const FILM_OVER = new Set<Modal>\(\['port', 'boarding', 'sunk'\]\);/);
 });
+
+test('polish: the result ashore is laid in two columns with no inner scroll; a toast wrapped past its band is hidden', () => {
+  const css = src('client/styles.css');
+  assert.match(css, /\.tb-banner\.tb-result:has\(\.tb-landclose\) \.tb-bsc \{ display: grid; grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1\.25fr\);/);
+  assert.match(css, /#toasts > \.toast\.tq-out \{ visibility: hidden; \}/);
+  const hud = src('client/src/ui/hud.ts');
+  assert.match(hud, /t\.classList\.toggle\('tq-out', r\.left >= b\.right - 2/);
+});

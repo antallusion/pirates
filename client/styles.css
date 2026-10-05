@@ -4797,3 +4797,5 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
   .tb-banner.tb-result:has(.tb-landclose) .tb-cap .btn { min-height: 34px; }
   .tb-banner.tb-result:has(.tb-landclose) .tb-landclose { margin-top: 4px; min-height: 36px; }
 }
+/* A toast wrapped past the band's edge (hud.ts clip) is out of sight. */
+#toasts > .toast.tq-out { visibility: hidden; }
