@@ -126,7 +126,7 @@ export function fitTransient(): void {
 export function popupShare(): number {
   let area = 0;
   const band = document.getElementById('toasts')?.getBoundingClientRect();
-  for (const e of document.querySelectorAll<HTMLElement>('#hud-tip, #hud-boss, #hud-feed, #advcard, #encounter, #toasts > .toast')) {
+  for (const e of document.querySelectorAll<HTMLElement>('#hud-tip, #hud-boss, #hud-feed, #advcard, #encounter, #toasts > .toast, #hud-prompt .act-info')) {
     if (e.classList.contains('hidden') || getComputedStyle(e).display === 'none' || getComputedStyle(e).visibility === 'hidden') continue;
     let r = e.getBoundingClientRect();
     if (band && e.parentElement?.id === 'toasts') r = new DOMRect(Math.max(r.left, band.left), Math.max(r.top, band.top), Math.max(0, Math.min(r.right, band.right) - Math.max(r.left, band.left)), Math.max(0, Math.min(r.bottom, band.bottom) - Math.max(r.top, band.top)));
@@ -296,6 +296,7 @@ export class Hud {
     // (the budget's sum: the adventure map's card and the toasts count too)
     new MutationObserver(fit).observe($('advcard'), { attributes: true, attributeFilter: ['class'] });
     new MutationObserver(fit).observe(this.toastsEl, { childList: true });
+    new MutationObserver(fit).observe($('hud-prompt'), { childList: true });
     addEventListener('resize', fit);
     this.wireFold();
   }
