@@ -404,3 +404,29 @@ test('playthrough: a lost trial\'s dead count for nothing — no «too many dead
   assert.ok(co.loyalty >= 50);
   assert.ok(!co.mutiny, 'no mutiny');
 });
+
+test('playthrough: the sea\'s director keeps still down the Descent (a bosun\'s quiz came up over a tier\'s fight)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { gateOf, startDescent, inDescent } = await import('../server/src/game/descent.ts');
+  const { quietSea } = await import('../server/src/game/director.ts');
+  const { game } = makeGame();
+  join(game, 'Deep Dora');
+  const s = game.sessionByName('Deep Dora')!;
+  const g = gateOf(game);
+  const ship = s.ship!;
+  ship.docked = null;
+  s.profile!.docked = null;
+  Object.assign(ship.state, { x: g.x + 200, y: g.y, speed: 4, sail: 0.6 });
+  ship.region = g.region;
+  ship.protectedUntil = 0;
+  ship.lastCombat = -999;
+  game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  for (const o of [...game.ships.values()]) if (!o.isPlayer) game.removeShip(o.id);
+  const before = quietSea(game, s);
+  assert.equal(startDescent(game, s), null);
+  assert.ok(inDescent(game, s.accountId));
+  for (const o of [...game.ships.values()]) if (!o.isPlayer) game.removeShip(o.id);
+  ship.lastCombat = -999;
+  Object.assign(ship.state, { speed: 4 });
+  assert.equal(quietSea(game, s), false, `down the Stair the sea keeps still (before: ${before})`);
+});
