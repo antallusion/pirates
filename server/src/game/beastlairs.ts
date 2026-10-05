@@ -12,6 +12,7 @@
 // (down until it stands again, its creatures as the last fight left them). Every roll here is on this system's own Rng.
 
 import { UNITS, armyMen, armyPower, armyWeight, isPremiumUnit } from '../../../shared/src/data/army.ts';
+import { onboardingProtected } from './onboarding.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEASTS, BEAST_IDS, BEAST_PLURAL, CREATURE_IDS, LAND_RES, isBeast, isCreature } from '../../../shared/src/data/bestiary.ts';
 import type { BeastId, CreatureId, LandRes } from '../../../shared/src/data/bestiary.ts';
@@ -680,6 +681,10 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   const bt = f.bt;
   const ship = s.ship!;
   const l = S.byId.get(f.lair)!;
+  // Her army as it went ashore: a novice in the First Watch beaten on the beach gets her men back (as the Crown's tow
+  // gives them back at sea) — the lesson never strands her with none (the 2026-10-05 playthrough: 0 men after a lost
+  // landing, and no way to fight or sail the next step).
+  const before = ship.army.map((x) => ({ ...x }));
   // Her landed men: the fallen off their own stacks.
   for (const st of bt.stacks) {
     if (st.side !== 0) continue;
@@ -718,6 +723,11 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
     S.store.st[l.id] = { army: left, at: game.now };
     save(game);
     game.toastShip(ship, f.retreat ? `The party falls back to the boats from the ${lairName(l)}.` : `The ${lairName(l)} throws your party back into the surf.`, 'bad');
+    if (onboardingProtected(s) && armyMen(before) > ship.crew) {
+      ship.setArmy(before);
+      ship.morale = Math.max(ship.morale, 60);
+      game.toastShip(ship, "The Crown's longboats bring your men off the beach: in the First Watch nobody is lost.", 'info');
+    }
     ship.companyKey = '';
     game.pushSelf(s, true);
     return;
