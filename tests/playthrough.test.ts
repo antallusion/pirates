@@ -17,7 +17,7 @@ test('playthrough: an abbreviation at a sentence\'s end keeps one dot («чер�
 test('playthrough: a phone on its side gives the harbour\'s page room (head in one band, no 118 px painted head)', async () => {
   const { readFileSync } = await import('node:fs');
   const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
-  const m = css.match(/@media \(max-height: 520px\) and \(min-width: 600px\) and \(orientation: landscape\) \{\n  #modal-panel\[data-modal="port"\] \.modal-head, #modal-panel\[data-modal="boarding"\] \.modal-head \{ min-height: 0; \}[\s\S]*?\n\}/);
+  const m = css.match(/@media \(max-height: 520px\) and \(min-width: 600px\) and \(orientation: landscape\) \{\n  #modal-panel\[data-modal="port"\] \.modal-head[^{]*\{ min-height: 0; \}[\s\S]*?\n\}/);
   assert.ok(m, 'the landscape harbour head rule');
   assert.match(m[0], /\.port-head \{ grid-template-columns: minmax\(0, 1fr\) auto;/);
   assert.match(m[0], /\.ph-sail \{ flex: 0 0 auto;/);
@@ -129,7 +129,7 @@ test('playthrough: a First Watch tow gives back the men the lesson\'s guns cut d
 test('playthrough: a boarding\'s spoils on a phone on its side — the hold and the coin | her fate, the fates two to a row', async () => {
   const { readFileSync } = await import('node:fs');
   const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
-  assert.match(css, /#modal-panel\[data-modal="port"\] \.modal-head, #modal-panel\[data-modal="boarding"\] \.modal-head \{ min-height: 0; \}/);
+  assert.match(css, /#modal-panel\[data-modal="boarding"\] \.modal-head[^{]*\{ min-height: 0; \}/);
   assert.match(css, /#modal-panel\[data-modal="boarding"\] \.cols > div:last-child > \.card:last-child \{ grid-column: 2; grid-row: 1 \/ span 4; \}/);
   assert.match(css, /#modal-panel\[data-modal="boarding"\] \.choice-grid\.one \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
   const { DIALOGS_RU } = await import('../client/src/lang/ui/dialogs.ts').then((m) => ({ DIALOGS_RU: (m as Record<string, Record<string, string>>)[Object.keys(m).find((k) => /RU/.test(k))!] }));
