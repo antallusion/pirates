@@ -70,3 +70,26 @@ test('playthrough: the First Watch\'s lesson is never folded away, and on a shor
   assert.ok(!rule.includes('#hud-watch'));
   assert.match(css, /#hud #hud-stack:has\(> #hud-watch:not\(\.hidden\):not\(\.tut-hidden\)\) \{ display: grid; grid-template-columns: 40px minmax\(0, 1fr\);/);
 });
+
+test('playthrough: the cast-off check\'s «Buy N · price» is the harbour\'s own walked quote (never under it, within a silver a unit)', async () => {
+  const { makeGame, join } = await import('./helpers.ts');
+  const { quoteBuy, marketRows } = await import('../server/src/game/economy.ts');
+  const { priceMods } = await import('../server/src/game/ports.ts');
+  const { walkBuyCost } = await import('../shared/src/data/goods.ts');
+  const { game } = makeGame();
+  join(game, 'Quill Quay');
+  const s = game.sessionByName('Quill Quay')!;
+  const port = game.portById('saltmarrow')!;
+  const market = game.markets.get(port.id)!;
+  const gm = market.goods.provisions!;
+  for (const stock of [354, 200, 115, 92, 40, 12]) {
+    gm.stock = stock;
+    const mods = priceMods(s.ship!, port, s.profile!, game.now, game);
+    const row = marketRows(market, mods).find((r) => r.good === 'provisions')!;
+    for (const n of [1, 5, 10]) {
+      if (n > stock) continue;
+      const real = quoteBuy('provisions', gm, n, mods), shown = walkBuyCost('provisions', row.buy, row.stock, n);
+      assert.ok(shown >= real && shown <= real + n, `stock ${stock}, ${n}: shown ${shown}, charged ${real}`);
+    }
+  }
+});

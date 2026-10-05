@@ -77,3 +77,16 @@ export const GOODS: Record<GoodId, GoodDef> = {
 };
 
 export const GOOD_IDS = Object.keys(GOODS) as GoodId[];
+
+/** How hard a port's price answers its stock: price ∝ (target / stock) ^ this (server/src/game/economy.ts). */
+export const MARKET_ELASTICITY = 0.6;
+
+/** What `n` units cost from a market row (its first unit's price and its stock): each one bought leaves one less in
+ *  stock and the next dearer, as the harbour's quote walks it (a «Buy 5 · 100» button charged 111 at a thin stock). */
+export function walkBuyCost(good: GoodId, buy: number, stock: number, n: number): number {
+  // (the price's own ceiling: 3.2 times the good's base, with the buying spread)
+  const cap = Math.max(buy, GOODS[good].basePrice * 3.2 * 1.055);
+  let total = 0;
+  for (let i = 0; i < n; i++) total += Math.min(cap, buy * Math.pow(Math.max(1, stock) / Math.max(1, stock - i), MARKET_ELASTICITY));
+  return Math.ceil(total);
+}

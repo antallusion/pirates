@@ -9,7 +9,7 @@ export const EN = {
   'watch.over': 'The First Watch is over. The sea is yours.',
   'stage.cast_off': 'Cast off',
   'stage.cast_off.body': 'F leaves the quay. W sets more sail, S takes it in; A and D put the helm over. Mind the compass: she will not sail into the wind’s wedge.',
-  'stage.cast_off.touch': 'The button above the guns casts off. The arrows by the wheel set more or less sail; drag the wheel the way you want to go. Mind the compass: she will not sail into the wind’s wedge.',
+  'stage.cast_off.touch': '«Set sail» on the harbour’s screen casts off («Harbour» brings the screen back). The arrows by the wheel set more or less sail; drag the wheel the way you want to go. Mind the compass: she will not sail into the wind’s wedge.',
   'stage.gunnery': 'The guns thin her men',
   'stage.gunnery.body': 'A raider is coming. Q and E fire port and starboard (the cursor sets the range): every ball that lands kills men of hers — watch the «−N men». Land two broadsides.',
   'stage.gunnery.touch': 'A raider is coming. The two gun buttons fire port and starboard: every ball that lands kills men of hers — watch the «−N men». Land two broadsides.',

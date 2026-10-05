@@ -966,7 +966,7 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
    screen's middle). */
 @media (max-height: 520px) {
   #hud-watch { padding: 5px 8px 6px; font-size: 12px; }
-  #hud-watch .w-head { flex-direction: row; flex-wrap: nowrap; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  #hud-watch .w-head { flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; align-items: baseline; gap: 8px; margin-bottom: 2px; }
   #hud-watch .w-head span { font-size: 10px; flex: none; }
   #hud-watch .w-head b { margin-left: 0; min-width: 0; font-size: 14px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #hud-watch .w-body { line-height: 1.3; }
