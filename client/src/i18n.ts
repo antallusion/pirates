@@ -48,8 +48,18 @@ export function onLang(f: () => void): void {
 
 export function t(key: Key, vars?: Record<string, string | number>): string {
   let s = DICTS[current][key] ?? EN[key] ?? key;
-  if (vars) s = s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+  if (vars) s = fill(s, vars);
   return current === 'ru' ? typeset(s) : s;
+}
+
+/** Fills {placeholders}; a value that ends in an abbreviation's dot takes the sentence's dot after it
+ *  («через {left}.» with «5 дн.» read «через 5 дн..»). */
+export function fill(s: string, vars: Record<string, string | number>): string {
+  return s.replace(/\{(\w+)\}(\.?)/g, (m, k: string, dot: string) => {
+    if (!(k in vars)) return m;
+    const v = String(vars[k]);
+    return v + (dot && v.endsWith('.') ? '' : dot);
+  });
 }
 
 /** Russian typesetting: a dash or a slash never opens a line, a one-letter word (в, с, к, и…) never ends one, a
@@ -105,7 +115,7 @@ export function translateDom(root: ParentNode = document): void {
 export function dict<T extends Record<string, string>>(en: T, ru: Record<keyof T, string>): (key: keyof T & string, vars?: Record<string, string | number>) => string {
   return (key, vars) => {
     let s = (current === 'ru' ? ru[key] : undefined) ?? en[key] ?? key;
-    if (vars) s = s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+    if (vars) s = fill(s, vars);
     return current === 'ru' ? typeset(s) : s;
   };
 }
