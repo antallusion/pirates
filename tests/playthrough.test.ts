@@ -219,3 +219,10 @@ test('playthrough: the harbour\'s contracts name their port in apposition («в 
   }
   setLang('en');
 });
+
+test('playthrough: men desert «в порту Висельная Губа», not «в Висельная Губа»', async () => {
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  assert.match(serverText('3 frightened men desert in Gallowsmouth.'), /^В\sпорту\s/);
+  setLang('en');
+});

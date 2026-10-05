@@ -634,7 +634,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} filled {1} of your {2} order at {3}.": "{0} исполнил {1} из вашей заявки на {2} по {3}.",
   "{0} for fevered {1}": "{0} для охваченного лихорадкой {1}",
   "{0} founds {1} [{2}].": "{0} основывает {1} [{2}].",
-  "{0} frightened men desert in {1}.": "В {1} дезертируют перепуганные люди: {0}.",
+  "{0} frightened men desert in {1}.": "В порту {1} дезертируют перепуганные люди: {0}.",
   "{0} gives the {1} to the guild fleet.": "{0} передаёт «{1}» флоту гильдии.",
   "{0} goes down with {1} units of her cargo in your hold.": "{0} идёт ко дну, а {1} ед. её груза — у вас в трюме.",
   "{0} goes under — and its soul-lantern still burns. It will rise. Board it to put the lantern out.": "{0} уходит под воду — но фонарь души ещё горит. Он поднимется. Возьмите его на абордаж, чтобы погасить фонарь.",
