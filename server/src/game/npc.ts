@@ -39,6 +39,7 @@ import { pactNeutral } from './abyssfx.ts';
 import type { Path } from './nav.ts';
 import type { NpcRole, ShipEntity } from './ship.ts';
 import { holdGuard } from './advmap.ts';
+import { onboardingProtected } from './onboarding.ts';
 
 export interface NpcBrain {
   id: number;
@@ -546,7 +547,8 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       ship.effects = ship.effects.filter((e) => e.id !== 'ambush');
       ship.addEffect({ id: 'ambush', until: now + 8, flags: ['shadow_strike'] }, now);
     }
-    if (role === 'pirate' && brain.target !== p.id && p.isPlayer) rallyPack(game, ship, p);
+    // (no wolf pack round the First Watch's lesson, nor round a captain still in it)
+    if (role === 'pirate' && brain.target !== p.id && p.isPlayer && brain.practice === undefined && !inFirstWatch(game, p)) rallyPack(game, ship, p);
     brain.target = p.id;
     engage(game, ship, brain, p, preyD);
     return;
@@ -633,7 +635,9 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   // Pirates want the cargo, so they cripple and board; everyone else fights to sink.
   const wantsBoard = brain.role === 'pirate';
   ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard);
-  if (wantsBoard && canBoard(game, ship, target) === null && npcWouldBoard(game, ship, target)) {
+  // The First Watch's raider is a lesson, not a massacre: she closes as a pirate does (the pupil's grapples must reach
+  // her) but never throws her own (she boarded, won and robbed a novice every 90 s, the lesson's gunnery never done).
+  if (wantsBoard && brain.practice === undefined && canBoard(game, ship, target) === null && npcWouldBoard(game, ship, target)) {
     startBoarding(game, ship, target, 'standard');
     return;
   }
@@ -796,6 +800,11 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   }
   const diff = angleDiff(ship.state.heading, desired);
   ship.input = { rudder: clamp(diff * 2.2, -1, 1), sailTarget: sail };
+}
+
+/** A captain still in the First Watch (docs/07 §13): the lesson's own raider only. */
+function inFirstWatch(game: Game, ship: ShipEntity): boolean {
+  return onboardingProtected(game.sessionOf(ship) ?? null);
 }
 
 /** A pack member's swing round to her quarter of the prey lasts this long at most (then she goes straight in), and
