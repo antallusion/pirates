@@ -1104,7 +1104,7 @@ body.touch #hud-dive .dhint { display: none; }
 /* A phone on its side: the head in one band (name and line | figures and the sail order), the tabs and their caption
    tighter — the page had 117 of 375 px left under them. */
 @media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
-  #modal-panel[data-modal="port"] .modal-head { min-height: 0; }
+  #modal-panel[data-modal="port"] .modal-head, #modal-panel[data-modal="boarding"] .modal-head { min-height: 0; }
   .port-head { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 6px 50px 6px 10px; }
   .port-head .sub { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ph-stats { flex-wrap: nowrap; }
@@ -1113,6 +1113,24 @@ body.touch #hud-dive .dhint { display: none; }
   .icon-tabs .tab .ico { width: 26px; height: 26px; }
   .tabs.icon-tabs .tab { padding-top: 3px; padding-bottom: 2px; }
   .tab-caption { padding: 3px 12px 2px; font-size: 11px; }
+  /* A boarding's spoils: the hold | the coin and her fate side by side, the fates two to a row and low (they stood
+     516–916 px down a 258 px page). */
+  #modal-panel[data-modal="boarding"] .cols { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr); gap: 12px; }
+  #modal-panel[data-modal="boarding"] .cols { grid-auto-flow: row dense; align-items: start; }
+  #modal-panel[data-modal="boarding"] .cols > div:first-child, #modal-panel[data-modal="boarding"] .cols > div:last-child > .card { grid-column: 1; }
+  #modal-panel[data-modal="boarding"] .cols > div:last-child { display: contents; }
+  #modal-panel[data-modal="boarding"] .cols > div:last-child > .card:last-child { grid-column: 2; grid-row: 1 / span 4; }
+  #modal-panel[data-modal="boarding"] .modal-head .sub { font-size: 12px; margin-top: 0; }
+  #modal-panel[data-modal="boarding"] .modal-head > div { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: center; align-content: center; }
+  #modal-panel[data-modal="boarding"] .modal-head > div > h2 { grid-row: 1 / span 3; }
+  #modal-panel[data-modal="boarding"] .cols .card h4.card-h { margin: 0 0 2px; font-size: 15px; }
+  #modal-panel[data-modal="boarding"] .cols .card h4.card-h .ico-md { width: 24px; height: 24px; }
+  #modal-panel[data-modal="boarding"] .spoils .ammo-chip .ico-md { width: 24px; height: 24px; }
+  #modal-panel[data-modal="boarding"] .cols .card { margin-bottom: 8px; padding: 8px 10px; }
+  #modal-panel[data-modal="boarding"] .cols .card p { margin: 2px 0; font-size: 11.5px; line-height: 1.3; }
+  #modal-panel[data-modal="boarding"] .choice-grid.one { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+  #modal-panel[data-modal="boarding"] .btn.choice { min-height: 38px; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; padding: 3px 8px; font-size: 11.5px; line-height: 1.15; }
+  #modal-panel[data-modal="boarding"] .choice-ico { width: 22px; height: 22px; }
 }
 /* Scrollbars in the game's own hand: a thin brass rail on a dark groove, everywhere. */
 /* Firefox takes the standard properties; Chromium keeps its own (setting both would disable the brass thumb). */

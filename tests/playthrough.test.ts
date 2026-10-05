@@ -125,3 +125,13 @@ test('playthrough: a First Watch tow gives back the men the lesson\'s guns cut d
   assert.ok(ship.docked);
   assert.equal(ship.crew, men, 'her men back with the tow');
 });
+
+test('playthrough: a boarding\'s spoils on a phone on its side — the hold and the coin | her fate, the fates two to a row', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
+  assert.match(css, /#modal-panel\[data-modal="port"\] \.modal-head, #modal-panel\[data-modal="boarding"\] \.modal-head \{ min-height: 0; \}/);
+  assert.match(css, /#modal-panel\[data-modal="boarding"\] \.cols > div:last-child > \.card:last-child \{ grid-column: 2; grid-row: 1 \/ span 4; \}/);
+  assert.match(css, /#modal-panel\[data-modal="boarding"\] \.choice-grid\.one \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  const { DIALOGS_RU } = await import('../client/src/lang/ui/dialogs.ts').then((m) => ({ DIALOGS_RU: (m as Record<string, Record<string, string>>)[Object.keys(m).find((k) => /RU/.test(k))!] }));
+  assert.match(DIALOGS_RU['board.sub'], /Их потери: \{theirs\} чел\./);
+});
