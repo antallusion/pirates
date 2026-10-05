@@ -1354,6 +1354,13 @@ function renderModal(root: HTMLElement): void {
       break;
   }
   if (touch.enabled) stripKeyHints(root);
+  // A title all in Latin letters (a ship's name on a Russian screen) is set as English: its display face's capitals
+  // ride high and styles.css lowers them (QA circle, 2026-10-05).
+  root.querySelectorAll<HTMLElement>('.modal-head h2, .title-sm').forEach((h) => {
+    const t = h.textContent ?? '';
+    if (/[A-Za-z]/.test(t) && !/[А-Яа-яЁё]/.test(t)) h.lang = 'en';
+    else h.removeAttribute('lang');
+  });
   root.querySelectorAll<HTMLElement>('[data-tame]').forEach((b) => (b.onclick = () => openTame())); // docs/18 IV
   root.querySelectorAll<HTMLElement>('[data-throne]').forEach((b) => (b.onclick = () => openThrone())); // docs/19 E18
   root.querySelectorAll<HTMLElement>('[data-research-open]').forEach((b) => (b.onclick = () => openModal('research'))); // docs/20

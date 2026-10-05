@@ -222,6 +222,7 @@ test('/board alongside grapples the /foe ship, not a great one swimming at the s
 });
 
 test('English titles sit in their plates\' middle (IM Fell English SC rode 1.9px high)', () => {
-  assert.ok(css.includes('html[lang=en] .skinned .modal-head h2 { padding: 3px 6px 0; }'));
-  assert.ok(css.includes('html[lang=en] .skinned .title-sm { padding: 2px 6px 0; }'));
+  assert.ok(css.includes('.skinned .modal-head h2:lang(en) { padding: 3px 6px 0; }'));
+  assert.ok(css.includes('.skinned .title-sm:lang(en) { padding: 2px 6px 0; }'));
+  assert.ok(readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8').includes("if (/[A-Za-z]/.test(t) && !/[А-Яа-яЁё]/.test(t)) h.lang = 'en';"));
 });

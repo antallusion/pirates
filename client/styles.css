@@ -4643,5 +4643,6 @@ body.tq-side #toasts .toast.herald b { font-size: 15px; line-height: 18px; white
 body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* English titles in IM Fell English SC sit 1.9px over their plate's middle (its Latin small capitals ride high; the
    Russian falls back to Cormorant, centred): measured by the centring audit (QA circle, 2026-10-05). */
-html[lang=en] .skinned .modal-head h2 { padding: 3px 6px 0; }
-html[lang=en] .skinned .title-sm { padding: 2px 6px 0; }
+/* (a Latin title on a Russian screen — a ship's name — is marked lang="en" by main.ts renderModal) */
+.skinned .modal-head h2:lang(en) { padding: 3px 6px 0; }
+.skinned .title-sm:lang(en) { padding: 2px 6px 0; }
