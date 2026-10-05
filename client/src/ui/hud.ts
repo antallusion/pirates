@@ -144,7 +144,12 @@ function sideSpot(h: number, z: number): { top: number; left: number; w: number 
   const seen = (e: Element) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden'; };
   for (const e of document.querySelectorAll('#hud-captain *, #hud-ship, #hud-map, #hud-region, #unread, #chat-toggle, #chat, .tc-menu, #touch .tc-btn, #touch .tc-fire, #tc-stick, #tc-sail, #hud-menu, #hud-bottom, #advcard, #hud-nav, #hud-stack > :not(.hidden)')) {
     if (!seen(e)) continue;
-    const r = e.getBoundingClientRect();
+    let r = e.getBoundingClientRect();
+    // What the top stack scrolls out of sight is not in the way (its target card ran 50 px under its 104 px).
+    if (e.parentElement?.id === 'hud-stack') {
+      const s = e.parentElement.getBoundingClientRect();
+      r = new DOMRect(r.left, Math.max(r.top, s.top), r.width, Math.max(0, Math.min(r.bottom, s.bottom) - Math.max(r.top, s.top)));
+    }
     if (r.width > 1 && r.height > 1) rects.push(r);
   }
   // Down a side, row by row: the widest gap in the side's span clear of everything at that height (at 1280×720 with
@@ -274,7 +279,9 @@ export class Hud {
       // The adventure map's card takes this row (styles.css): the toasts go under the captain's plate, at the left,
       // in the width left of the screen's middle columns (the popup budget's centre begins at 30%).
       const card = document.getElementById('advcard');
-      const spot = card && !card.classList.contains('hidden') ? sideSpot(h, z) : null;
+      // (the First Watch's lesson takes this row as well on a short screen: the fold's button stands beside it)
+      const lesson = matchMedia('(max-height: 520px)').matches && !!document.querySelector('#hud-stack > #hud-watch:not(.hidden):not(.tut-hidden)');
+      const spot = (card && !card.classList.contains('hidden')) || lesson ? sideSpot(h, z) : null;
       if (spot) {
         set('--tq-top', spot.top);
         set('--tq-left', spot.left);
@@ -282,6 +289,7 @@ export class Hud {
       } else for (const k of ['--tq-top', '--tq-left', '--tq-w']) document.body.style.removeProperty(k);
     };
     new MutationObserver(() => this.placeStrip()).observe($('advcard'), { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(() => this.placeStrip()).observe($('hud-watch'), { attributes: true, attributeFilter: ['class'] });
     new ResizeObserver(this.placeStrip).observe(stack);
     addEventListener('resize', this.placeStrip);
     // The popup budget: the hint, the news and a boss's card keep out of the screen's centre, terser step by step.

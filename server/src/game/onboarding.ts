@@ -16,7 +16,8 @@ import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { midPrice } from './economy.ts';
-import { armyForLevel } from '../../../shared/src/data/army.ts';
+import { armyForLevel, armyMen } from '../../../shared/src/data/army.ts';
+import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { advMap, advOf, revealAdv } from './advmap.ts';
 import { heroOf, pendingChoices } from './hero.ts';
 import type { Game } from './Game.ts';
@@ -348,7 +349,7 @@ function stepGoals(game: Game, s: PlayerSession, p: Profile): boolean {
 // ------------------------------------------------------------------ the step, once a second
 
 /** Seconds in irons, missed volleys in a row, seconds of neglected damage — per session, never saved. */
-const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean }>();
+const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean; army?: ArmyStack[] | null }>();
 
 export function onboardingSecond(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
@@ -356,6 +357,8 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
   const t = p.tutorial;
   let changed = false;
   if (t.on && t.stage < STAGES.length) {
+    // Her men as they stood in port: a tow home gives back those the lesson's guns took (see onboardingRescue).
+    if (ship.docked) watchOf(s).army = ship.army.map((x) => ({ ...x }));
     const st = STAGES[t.stage];
     if (st.done(game, s, ship, p)) {
       advance(game, s, 'done');
@@ -378,7 +381,7 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
 
 function watchOf(s: PlayerSession) {
   let w = watch.get(s);
-  if (!w) watch.set(s, (w = { irons: 0, misses: 0, hurt: 0, view: '', raiderAt: 0 }));
+  if (!w) watch.set(s, (w = { irons: 0, misses: 0, hurt: 0, view: '', raiderAt: 0, army: null }));
   return w;
 }
 
@@ -530,6 +533,10 @@ export function onboardingProtected(s: PlayerSession | null): boolean {
 /** In the First Watch a sunk ship is towed home by a Crown patrol: the soft loss screen, nothing taken. */
 export function onboardingRescue(game: Game, s: PlayerSession): boolean {
   if (!onboardingProtected(s)) return false;
+  // «Nothing taken» means her men too: the ones the lesson's guns cut down come back with the tow (a novice was
+  // towed home with 3 of her 24, and a long 9 wants four hands to fire).
+  const army = watchOf(s).army;
+  if (s.ship && army && armyMen(army) > s.ship.crew) s.ship.setArmy(army);
   const m = metrics(game);
   m.rescues++;
   saveMetrics(game, m);

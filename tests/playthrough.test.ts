@@ -101,3 +101,27 @@ test('playthrough: the glass\'s own «too far» never reaches the toasts (the se
   const raiding = readFileSync(new URL('../server/src/game/raiding.ts', import.meta.url), 'utf8');
   for (const m of main.match(/const GLASS_QUIET = new Set\(\[([^\]]*)\]\)/)![1].match(/'[^']*'/g)!) assert.ok(raiding.includes(`return ${m};`), m);
 });
+
+test('playthrough: a First Watch tow gives back the men the lesson\'s guns cut down (towed home with 3 of 24)', async () => {
+  const { makeGame, FakeConn, steps } = await import('./helpers.ts');
+  const { PROTOCOL_VERSION } = await import('../shared/src/constants.ts');
+  const { game } = makeGame();
+  const c = new FakeConn();
+  game.attach(c as never);
+  c.push({ t: 'hello', v: PROTOCOL_VERSION, name: 'Towed Tam' });
+  c.push({ t: 'create_captain', captain: 'corsair', shipName: 'First Watch', tutorial: true });
+  const s = game.sessionByName('Towed Tam')!;
+  const ship = s.ship!;
+  steps(game, 21); // a second in port: her men as they stand
+  const men = ship.crew;
+  assert.ok(men >= 20);
+  c.push({ t: 'undock' });
+  steps(game, 21);
+  ship.crew = 3; // grape and round shot
+  ship.hull = 0;
+  game.beginSinking(ship);
+  steps(game, 20 * 8);
+  assert.equal(c.last('sunk_self')!.towed, true);
+  assert.ok(ship.docked);
+  assert.equal(ship.crew, men, 'her men back with the tow');
+});

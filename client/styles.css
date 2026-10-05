@@ -4604,6 +4604,10 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
   #advcard { top: var(--ts-top, 8px); left: calc(var(--ts-left, 408px) - 48px); transform: none; width: calc(var(--ts-w, 250px) + 48px); min-width: 0; gap: 4px; grid-template-columns: minmax(0, 1fr); overflow-x: hidden; }
   body:has(#advcard:not(.hidden)) #hud-stack { visibility: hidden; }
   body:has(#advcard:not(.hidden)) #toasts { top: var(--tq-top, var(--ts-top)); left: var(--tq-left, var(--ts-left)); width: var(--tq-w, var(--ts-w)); }
+}
+@media (max-height: 520px) {
+  /* The First Watch's lesson in the top row (beside the fold's button): the toasts to a clear side column (hud.ts). */
+  body:has(#hud-stack > #hud-watch:not(.hidden):not(.tut-hidden)) #toasts { top: var(--tq-top, var(--ts-top)); left: var(--tq-left, var(--ts-left)); width: var(--tq-w, var(--ts-w)); }
   #advcard .ac-card { padding: 5px 8px 6px; }
   #advcard .ac-head { cursor: pointer; }
   #advcard .ac-head .ac-art { width: 28px; height: 28px; }
