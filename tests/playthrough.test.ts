@@ -209,3 +209,13 @@ test('playthrough: a rescue\'s needle game stays on the folded card of a short s
   assert.match(css, /#advcard \.ac-card:not\(\.open\) > \.dm-mini \{ display: block !important;/);
   assert.match(css, /#advcard \.ac-card:not\(\.open\) \.dm-mini \.btn \{[^}]*white-space: nowrap;/);
 });
+
+test('playthrough: the harbour\'s contracts name their port in apposition («в порт Висельная Губа», never «в Висельная Губа»)', async () => {
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  for (const en of ['Urgent: sealed letters to Gallows Bay', 'Sealed letters to Gallows Bay', 'Deliver 20 Rum to Gallows Bay', 'Hot run: 20 Rum to Gallows Bay']) {
+    const ru = serverText(en);
+    assert.match(ru, / в порт /, `${en} → ${ru}`);
+  }
+  setLang('en');
+});

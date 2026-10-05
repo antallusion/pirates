@@ -1030,7 +1030,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} runs out her guns: the Crown wants your head!": "{0} выкатывает пушки: Корона требует вашу голову!",
   "{0} has her glasses on you: the Crown knows your face.": "{0} не сводит с вас подзорных труб: Корона знает вас в лицо.",
   "{0} dips her ensign to you: fair winds, captain.": "{0} приспускает флаг в знак приветствия: попутного ветра, капитан.",
-  "Urgent: sealed letters to {0}": "Срочно: запечатанные письма в {0}",
+  "Urgent: sealed letters to {0}": "Срочно: запечатанные письма в порт {0}",
   "Urgent bounty: 1 pirate ship": "Срочная награда: 1 пиратский корабль",
   "Ten minutes, and the dispatch is worth nothing. The quickest captain in port is paid double.": "Через десять минут депеша ничего не стоит. Самому быстрому капитану в порту платят вдвое.",
   "A rover was sighted off the harbour mouth. Sink or take her within ten minutes.": "У входа в гавань видели пирата. Потопите или возьмите его за десять минут.",
