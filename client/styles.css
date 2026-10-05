@@ -170,7 +170,8 @@ button { font-family: var(--sans); }
 .hud-fold b:empty { display: none; }
 .hud-fold.hidden { display: none; }
 body:not(.hud-folded) .hud-fold { filter: drop-shadow(0 0 5px rgba(232, 196, 106, 0.7)); }
-body.hud-folded #hud-stack > :is(#hud-tip, #hud-fish, #hud-order, #hud-holiday, #hud-watch, #hud-world, #hud-goals, #hud-feed) { display: none !important; }
+/* (the First Watch's lesson is what is happening now: never folded away from a captain who has yet to learn the fold) */
+body.hud-folded #hud-stack > :is(#hud-tip, #hud-fish, #hud-order, #hud-holiday, #hud-world, #hud-goals, #hud-feed) { display: none !important; }
 /* Party frames (docs/11 P6): a groupmate a card — name, level, hull, where — in a wrapping row atop the stack. */
 #hud-party { display: flex; flex-wrap: wrap; gap: 4px; pointer-events: auto; }
 #hud-party.hidden { display: none; }
@@ -958,6 +959,28 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
 @media (max-width: 699px), (max-height: 520px) {
   #hud-watch .w-head { flex-direction: column; align-items: flex-start; }
   #hud-watch .w-head b { margin-left: 0; text-align: left; }
+}
+/* A short screen's lesson in the top stack's 104 px: the count and the step's name on one line, the words in a smaller
+   type, the two skips in a low row; while the captain's plate is not yet in (the first four steps) the stack takes the
+   whole top band from the left edge. The step's words were cut after their first line (the stack ends above the
+   screen's middle). */
+@media (max-height: 520px) {
+  #hud-watch { padding: 5px 8px 6px; font-size: 12px; }
+  #hud-watch .w-head { flex-direction: row; flex-wrap: nowrap; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  #hud-watch .w-head span { font-size: 10px; flex: none; }
+  #hud-watch .w-head b { margin-left: 0; min-width: 0; font-size: 14px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #hud-watch .w-body { line-height: 1.3; }
+  #hud-watch:not(.hidden) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+  #hud-watch .w-head { flex: 1 1 140px; min-width: 0; }
+  #hud-watch .w-act { flex: none; margin: 0 0 2px auto; gap: 6px; }
+  #hud-watch .w-body { flex: 1 1 100%; order: 3; }
+  #hud-watch .w-act .btn { min-height: 0; height: 24px; padding-top: 0; padding-bottom: 0; font-size: 11px; line-height: 1; }
+  /* the fold's round button beside the lesson, not a row above it */
+  #hud #hud-stack:has(> #hud-watch:not(.hidden):not(.tut-hidden)) { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 6px; row-gap: 4px; align-content: start; }
+  #hud #hud-stack:has(> #hud-watch:not(.hidden):not(.tut-hidden)) > * { grid-column: 2; }
+  #hud #hud-stack:has(> #hud-watch:not(.hidden):not(.tut-hidden)) > .hud-fold { grid-column: 1; grid-row: 1; }
+  #hud #hud-stack:has(> #hud-watch:not(.hidden):not(.tut-hidden)):has(> .hud-fold.hidden) { grid-template-columns: 0 minmax(0, 1fr); column-gap: 0; }
+  body:has(#hud-captain.tut-hidden) #hud #hud-stack { left: calc(var(--sa-l) + 8px); width: calc(100vw - var(--sa-l) - var(--sa-r) - var(--mm) - 80px); }
 }
 /* ---- P6: boarding, the sinking, the edge of safe water, barter ---- */
 .loot-grid { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(140, 107, 58, 0.18); }

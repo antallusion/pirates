@@ -87,7 +87,7 @@ function toastLife(kind: string): number {
 const SHORT = '(max-width: 699px), (max-height: 520px)';
 
 /** The top stack's blocks that fold behind its button (the rest is what is happening now). */
-const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-watch', 'hud-world', 'hud-goals', 'hud-feed'];
+const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-world', 'hud-goals', 'hud-feed'];
 
 /** The transient blocks of the top stack (a hint, the sea's news, a boss's card), styles.css puts them at its head. */
 const TRANSIENT = ['hud-tip', 'hud-boss', 'hud-feed'];
