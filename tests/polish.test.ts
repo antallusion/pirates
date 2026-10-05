@@ -115,3 +115,16 @@ test('polish: the result ashore is laid in two columns with no inner scroll; a t
   const hud = src('client/src/ui/hud.ts');
   assert.match(hud, /t\.classList\.toggle\('tq-out', r\.left >= b\.right - 2/);
 });
+
+test('polish: every control has a pressed, a disabled and a keyboard state; a finger\'s 40 px on touch; motion can be stilled', () => {
+  const css = src('client/styles.css');
+  assert.match(css, /:where\(\.btn, \.tab, \.act-btn, [^)]*\):active:not\(:disabled\)[^{]*\{ translate: 0 1px; filter: brightness\(0\.86\); \}/);
+  assert.match(css, /:where\(\.btn, \.tab, \.act-btn\):disabled[^{]*\{ cursor: not-allowed;/);
+  assert.ok(css.includes(':where(button, [role="button"], a[href], .tab, select, input, textarea, [tabindex]:not([tabindex="-1"])):focus-visible { outline: 2px solid var(--gold);'), 'a keyboard ring');
+  assert.match(css, /:where\(body\.touch\) :where\(\.btn, \.tab, \.act-btn\)::after \{ content: ''; position: absolute;/);
+  assert.match(css, /#modal:not\(\.hidden\) > #modal-panel \{ animation: pol-win-in 140ms ease-out; \}/);
+  const rm = css.match(/@media \(prefers-reduced-motion: reduce\) \{\n  \*, \*::before, \*::after \{[^}]*\}/);
+  assert.ok(rm && /animation-duration: 0\.01ms !important/.test(rm[0]) && /transition-duration: 0\.01ms !important/.test(rm[0]), 'reduced motion everywhere');
+  // (the zero-specificity form: no screen's own position or look is overridden)
+  assert.ok(!/^body\.touch \.btn \{ position: relative/m.test(css));
+});

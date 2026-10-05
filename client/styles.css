@@ -4799,3 +4799,27 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 }
 /* A toast wrapped past the band's edge (hud.ts clip) is out of sight. */
 #toasts > .toast.tq-out { visibility: hidden; }
+/* docs/22 B: the feel of every control — pressed, hovered, disabled, focused; a finger's target on touch; calm
+   window openings; the reduced-motion wish kept everywhere. Zero-specificity (:where) so no screen's own rule is
+   overridden. */
+:where(.btn, .tab, .act-btn, .tree-tab, .menu-tile, .slot, .icon-btn):active:not(:disabled):not([aria-disabled="true"]) { translate: 0 1px; filter: brightness(0.86); }
+:where(.btn, .tab, .act-btn):disabled, :where(.btn, .act-btn)[aria-disabled="true"] { cursor: not-allowed; filter: grayscale(0.55); }
+:where(.tab):not(.active):hover { color: var(--bone); }
+/* A keyboard's place: a brass ring on whatever holds the focus (never on a click's). */
+:where(button, [role="button"], a[href], .tab, select, input, textarea, [tabindex]:not([tabindex="-1"])):focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+:where(.skinned .btn):focus-visible { outline-offset: 3px; }
+/* A finger's target (≥ 40 px) on touch without moving a pixel of the layout: the hit area reaches past the frame. */
+:where(body.touch) :where(.btn, .tab, .act-btn) { position: relative; }
+:where(body.touch) :where(.btn, .tab, .act-btn)::after { content: ''; position: absolute; inset: -4px -2px; }
+:where(body.touch) :where(.skinned .btn)::after { inset: -10px -12px; }
+:where(body.touch) :where(.tab)::after { inset: -9px -1px; }
+:where(body.touch) :where(.act-btn)::after { inset: -6px -2px; }
+:where(body.touch) :where(label.check) { position: relative; }
+:where(body.touch) :where(label.check)::after { content: ''; position: absolute; inset: -10px 0; }
+:where(body.touch) :where(#modal-panel select, #modal-panel input[type="range"]) { min-height: 40px; }
+/* A window comes up softly (140 ms, no slide); its tabs change at once. */
+@keyframes pol-win-in { from { opacity: 0; } to { opacity: 1; } }
+#modal:not(.hidden) > #modal-panel { animation: pol-win-in 140ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
