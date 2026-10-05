@@ -182,3 +182,15 @@ test('playthrough: she lies to beside her prize while the spoils are open — th
   c.push({ t: 'input', seq: 200, rudder: 0, sail: 3 });
   assert.ok(ship.input.sailTarget > 0);
 });
+
+test('playthrough: the cabin\'s twelve doors on a phone on its side, two rows of six; the lessons name the real buttons', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
+  assert.match(css, /#modal-panel\[data-modal="menu"\] \.menu-grid \{ grid-template-columns: repeat\(6, minmax\(0, 1fr\)\);/);
+  const { RU } = await import('../client/src/lang/ru.ts');
+  const { EN } = await import('../client/src/lang/en.ts');
+  assert.match(RU['stage.recruit.touch'], /«В порт»/);
+  assert.match(RU['stage.recruit.touch'], /«Нанять армию»/);
+  assert.match(EN['stage.recruit.touch'], /«Recruit an army»/);
+  assert.match(RU['stage.cast_off.touch'], /«Поднять паруса»/);
+});

@@ -1104,7 +1104,12 @@ body.touch #hud-dive .dhint { display: none; }
 /* A phone on its side: the head in one band (name and line | figures and the sail order), the tabs and their caption
    tighter — the page had 117 of 375 px left under them. */
 @media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
-  #modal-panel[data-modal="port"] .modal-head, #modal-panel[data-modal="boarding"] .modal-head { min-height: 0; }
+  #modal-panel[data-modal="port"] .modal-head, #modal-panel[data-modal="boarding"] .modal-head, #modal-panel[data-modal="menu"] .modal-head { min-height: 0; }
+  /* The cabin's twelve doors in two rows of six (two columns showed two and a half of them). */
+  #modal-panel[data-modal="menu"] .menu-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+  #modal-panel[data-modal="menu"] .menu-tile { gap: 4px; padding: 10px 4px 6px; font-size: 13px; }
+  #modal-panel[data-modal="menu"] .menu-tile .ico-lg { width: 48px; height: 48px; }
+  #modal-panel[data-modal="menu"] .menu-tile > span { max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }
   .port-head { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 6px 50px 6px 10px; }
   .port-head .sub { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ph-stats { flex-wrap: nowrap; }
