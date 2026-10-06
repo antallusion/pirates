@@ -134,10 +134,12 @@ const ship = (d: ShipClassDef): ShipClassDef => d;
  *  level on ships of her level sink her in 15–20 minutes and five in 35–45. */
 // Re-weighed for the quick sea fight (docs/23 item 45): a captain's shot on her is fifteen to thirty-five times what it was (every
 // ball ×3.3, the guns loading in a third of the time, the broadsides laid on her), so her hull is too — 11 200 s of one
-// average captain's fire: ten 18.7 min, five 37.3 min, one alone sunk in about 12.5 min, as before.
+// average captain's fire: ten 18.7 min, five 37.3 min, one alone sunk in about 12.5 min, as before. Item 47 (ball ×5,
+// ×1.3 into a hull of ⚓7 and up, reload ×0.3, the fight held inside the guns' reach, the sims' locker
+// no longer run dry in the ten minutes measured): ×1.2–3, the same 11 200 s.
 export const ZB_HULL: Record<ZoneBossClassId, number> = {
-  zb_black_coast: 818500, zb_gravewater: 1567500, zb_whispering: 1495000, zb_leviathan_reach: 1586500,
-  zb_ashen_isles: 2478000, zb_dead_mans_expanse: 2706500, zb_drowned_crown: 2305500, zb_the_abyss: 2746000,
+  zb_black_coast: 1594500, zb_gravewater: 3406500, zb_whispering: 3048500, zb_leviathan_reach: 3272000,
+  zb_ashen_isles: 5227500, zb_dead_mans_expanse: 5674500, zb_drowned_crown: 6075500, zb_the_abyss: 8229000,
 };
 
 /** A zone boss (docs/21): a great warship of her sea at one level, in no fleet list and no tree, never sold. Her hull

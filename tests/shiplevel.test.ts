@@ -85,7 +85,7 @@ test('the ladder: among captains a junior is cut hard and floored; at sea he is 
   assert.equal(ladder(1, 4, true).dealt, 0, 'three levels up: the shot does nothing');
   assert.equal(ladder(1, 2, true, true).floorHull, 0, 'a company of juniors may finish her');
   const e1 = ladder(1, 2, false);
-  assert.deepEqual([e1.dealt, e1.crits, e1.board, e1.floorHull], [0.4, 0.35, true, 0]); // docs/23 item 45
+  assert.deepEqual([e1.dealt, e1.crits, e1.board, e1.floorHull], [0.33, 0.35, true, 0]); // docs/23 items 45, 47
   assert.equal(ladder(1, 2, false, true).dealt, 1, 'a company of juniors fights a bot a level up as her equals');
   assert.ok(ladder(1, 4, false, true).floorHull > 0, 'three levels up she is a skull to a company too');
   assert.equal(ladder(1, 3, false).board, false);

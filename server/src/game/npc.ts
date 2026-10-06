@@ -697,8 +697,8 @@ export const WIND_EYE_COST = 1.5;
 /** Her broadside fight is held inside her guns' reach (docs/23 item 47): the hard turn in (0.85 rad, her guns well
  *  off her mark) only beyond this share of it, the easy one (0.4 rad, still within her gun captains' arc) down to
  *  FIGHT_NEAR of it. At the very edge of it two ships used to circle just out of range, firing nothing but the chasers. */
-export const FIGHT_HOLD = Number(process.env.FH ?? 0.92);
-export const FIGHT_NEAR = Number(process.env.FN ?? 0.7);
+export const FIGHT_HOLD = 0.92;
+export const FIGHT_NEAR = 0.7;
 
 /** The fighting helm (the sea's ships, and a captain's under «Атаковать», docs/23 item 33): steers, and says where her
  *  foe will be when a ball arrives (`lead`: the share of the true lead her gunners allow). */

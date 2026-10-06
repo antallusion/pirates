@@ -44,7 +44,8 @@ test('«Атаковать» to the grapples in 10 s or less from 700 m; a green
   const game = duelSea();
   for (const L of LEVELS) {
     const t: number[] = [];
-    for (let k = 0; k < 6; k++) t.push(captainRun(game, LEVEL_HULL[L], L, 700 + k, 'board', 40).sec);
+    // Ten runs (with six the «90th percentile» was only the slowest one: a mark fleeing dead before the wind).
+    for (let k = 0; k < 10; k++) t.push(captainRun(game, LEVEL_HULL[L], L, 700 + k, 'board', 40).sec);
     assert.ok(t.every((x) => x > 0), `⚓${L}: always alongside (${t.join(' ')})`);
     const { med, p90 } = pct(t);
     assert.ok(med <= 10 && p90 <= 10, `⚓${L}: to the grapples median ${med} s, p90 ${p90} s`);

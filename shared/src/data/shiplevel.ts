@@ -211,8 +211,9 @@ const PVP_FLOOR_CREW = [0, 0.5, 0.7, 1];
 /** Against the sea's ships: softer, so a perfect captain wins now and then one level up. */
 /** Tuned by the duel sims (tests/balance): a perfect captain wins about one fight in ten a level up, an average one hardly any.
  *  Re-weighed for the quick sea fight and the laid broadsides (docs/23 item 45): 0.5/0.3/0.15 let a perfect captain win
- *  two in five a level up. */
-export const PVE_JUNIOR = [1, 0.4, 0.2, 0.1];
+ *  two in five a level up; 0.4 still one in three once the bots fired within 30° and the fight held inside the guns'
+ *  reach (item 47). */
+export const PVE_JUNIOR = [1, 0.33, 0.2, 0.1];
 export const PVE_SENIOR = [1, 1.2, 1.35, 1.6];
 export const PVE_CRITS = [1, 0.35, 0, 0];
 /** Juniors who together outweigh a ship of the sea (a company against one a level up) are cut less; three levels
@@ -323,12 +324,13 @@ export interface NpcSkill {
  */
 export function npcSkill(level: number): NpcSkill {
   // docs/23 item 36: the sea's gunners lay their broadsides on the mark now (the guns train onto her); a green crew still
-  // misjudges her range and her way more than a seasoned one.
-  if (level <= 2) return { lead: 0.6, rangeErr: 0.12, arcDeg: 36, spread: 0.3, react: 1.4, dash: false };
-  if (level <= 4) return { lead: 0.62, rangeErr: 0.12, arcDeg: 36, spread: 0.28, react: 1.3, dash: false };
-  if (level <= 6) return { lead: 0.65, rangeErr: 0.12, arcDeg: 35, spread: 0.26, react: 1.2, dash: false };
-  if (level <= 8) return { lead: 0.68, rangeErr: 0.12, arcDeg: 35, spread: 0.24, react: 1.1, dash: true };
-  return { lead: 0.7, rangeErr: 0.12, arcDeg: 34, spread: 0.2, react: 1.0, dash: true };
+  // misjudges her range and her way more than a seasoned one. Item 47: they let fly within 30° of the beam (a captain's
+  // gun captains within AUTO_ARC_DEG, 36°: her edge over a bot of her level, about seven fights in ten).
+  if (level <= 2) return { lead: 0.6, rangeErr: 0.12, arcDeg: 30, spread: 0.3, react: 1.4, dash: false };
+  if (level <= 4) return { lead: 0.62, rangeErr: 0.12, arcDeg: 30, spread: 0.28, react: 1.3, dash: false };
+  if (level <= 6) return { lead: 0.65, rangeErr: 0.12, arcDeg: 30, spread: 0.26, react: 1.2, dash: false };
+  if (level <= 8) return { lead: 0.68, rangeErr: 0.12, arcDeg: 30, spread: 0.24, react: 1.1, dash: true };
+  return { lead: 0.7, rangeErr: 0.12, arcDeg: 30, spread: 0.2, react: 1.0, dash: true };
 }
 
 /** An elite ⚔ (group contracts, barons): built for a company — hull ×2.5, guns ×1.5. */

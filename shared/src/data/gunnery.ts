@@ -58,7 +58,7 @@ export const SEA_DAMAGE = 5;
  *  ⚓7 and up grow tougher a level than their guns grow, so a ball into one strikes a little harder and her fight with
  *  an equal keeps to the same 30 s. */
 export function seaLevelPace(level: number): number {
-  return level >= 7 ? Number(process.env.P7 ?? 1.15) : level >= 5 ? Number(process.env.P5 ?? 1) : 1;
+  return level >= 7 ? 1.3 : 1;
 }
 
 /** The grapples fly this much farther than they did (docs/23 item 36: «сближение быстрое, крючья летят дальше»). */

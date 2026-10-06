@@ -96,11 +96,12 @@ export const MAGAZINE_CRIT_HEAVY = 0.01;
 /** The quick sea fight (docs/23 item 36): a ball into a ship of the ladder (or a zone boss) strikes SEA_DAMAGE times as
  *  hard. Into the deep's creatures, the world's great ones and the wreck hulks it strikes as much softer as the guns load
  *  faster: their fights keep the length they were weighed at (tests/balance hunt, bosses), only the volleys come
- *  quicker. */
-export function seaPace(target: ShipEntity): number {
+ *  quicker. Into her hull (`hull`) a ship of the ladder of ⚓7 and up takes it harder still (seaLevelPace, item 47: the
+ *  great hulls grow tougher than their guns); her men and her canvas do not. */
+export function seaPace(target: ShipEntity, hull = false): number {
   if (target.zoneBoss) return SEA_DAMAGE;
   if (isMonster(target) || target.npcRole === 'beast' || target.bossOf || target.bossPart || !target.onLadder) return SEA_RELOAD;
-  return SEA_DAMAGE * seaLevelPace(target.combatLevel);
+  return SEA_DAMAGE * (hull ? seaLevelPace(target.combatLevel) : 1);
 }
 
 export function sideHeading(ship: ShipEntity, side: Side): number {
@@ -526,7 +527,7 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const lad = ladderBetween(game, shooter, target);
   const cx = lad.crits;
   const pace = seaPace(target); // the quick sea fight (docs/23 item 36)
-  let hullDmg = p.damage * pace * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt;
+  let hullDmg = p.damage * seaPace(target, true) * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt;
   // No single broadside may take more than 30% of a hull (Iron Coffin: 20%).
   if (p.volley !== undefined) {
     const rec = game.volleys.get(p.volley);
