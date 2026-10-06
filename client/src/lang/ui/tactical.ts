@@ -191,6 +191,21 @@ export const EN = {
   // The battle on a phone (owner, 2026-10-03): round buttons, their words only in their titles.
   'more': 'More orders',
   'cancel': 'Cancel',
+  // docs/23 phase 5: the phone's battle.
+  'autoMenu': 'Auto: to the end, or a quick fight',
+  'autoEnd': 'Auto to the end',
+  'fast': 'Speed ×2',
+  'fastOff': 'Normal speed',
+  'cutQ': 'Cut the grapples and leave the fight?',
+  'fallBackQ': 'Fall back to the boats and leave the fight?',
+  'strikeQ': 'Strike your colours? The fight is lost.',
+  'ransomQ': 'Pay {n} silver and end the fight?',
+  'res.loot': 'Spoils',
+  'next': 'Continue',
+  'book.officer': 'Officer’s word',
+  'book.path': 'Your path',
+  'book.cost': 'costs {n}',
+  'retTip': 'strikes back',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -374,4 +389,18 @@ export const RU: Record<keyof typeof EN, string> = {
   'log.sick': '{a}: тухлая вода — урон {dmg}, пало {kills}.',
   'more': 'Ещё приказы',
   'cancel': 'Отменить',
+  'autoMenu': 'Авто: до конца или быстрый бой',
+  'autoEnd': 'Авто до конца',
+  'fast': 'Ускорить ×2',
+  'fastOff': 'Обычная скорость',
+  'cutQ': 'Обрубить абордажные концы и выйти из боя?',
+  'fallBackQ': 'Отступить к шлюпкам и выйти из боя?',
+  'strikeQ': 'Спустить флаг? Бой будет проигран.',
+  'ransomQ': 'Заплатить {n} серебра и закончить бой?',
+  'res.loot': 'Добыча',
+  'next': 'Дальше',
+  'book.officer': 'Слово офицера',
+  'book.path': 'Ваш путь',
+  'book.cost': 'цена {n}',
+  'retTip': 'ответит',
 };

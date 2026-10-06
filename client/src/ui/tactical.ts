@@ -48,6 +48,12 @@ import { BOSS_UNIT_STAND_IN, isBossUnit } from '../../../shared/src/data/bossuni
 import { SHORE_BOSSES, SHORE_MOVES, isShoreBoss } from '../../../shared/src/data/shorebosses.ts';
 import type { ShoreMove } from '../../../shared/src/data/shorebosses.ts';
 import { EN as BEN, RU as BRU } from '../lang/ui/bosses.ts';
+import { settings, update as updateSettings } from '../settings.ts';
+import { ask } from './confirm.ts';
+import { openSheet } from './kit/sheet.ts';
+import type { SheetHandle } from './kit/sheet.ts';
+import { attachWheel, wheel } from './kit/radial.ts';
+import type { WheelOption } from './kit/radial.ts';
 
 const L = dict(EN, RU);
 const LL = dict(LEN, LRU);
@@ -70,8 +76,9 @@ function captureBlock(c: CaptureOffer): string {
 }
 
 /** docs/18 II: what a lair left her, on the battle's reckoning — silver, experience, the island's resource, the land's
- *  spoils, an artifact, a young one for the pen, the island's chest, the island cleared, the dwelling. */
-function lootBlock(l: LairLoot): string {
+ *  spoils, an artifact, a young one for the pen, the island's chest, the island cleared, the dwelling. As chips (a
+ *  picture and a number) and short lines, for the end's one row of spoils (docs/23 item 63). */
+function lootParts(l: LairLoot): { chips: string[]; lines: string[] } {
   // docs/19 D7: a roaming stack beaten — its lesson, silver and spoils, the fallen hauled back, the mates' share.
   if (l.roam) {
     const r = l.roam, ru = lang() === 'ru' ? 1 : 0;
@@ -86,13 +93,13 @@ function lootBlock(l: LairLoot): string {
     if (r.mates) lines.push(esc(RL('loot.mates', { n: r.mates })));
     if (r.thin) lines.push(esc(RL('loot.thin')));
     if (r.artifact) lines.push(esc(RL('loot.art', { a: ARTIFACTS[r.artifact]?.name[ru] ?? r.artifact })));
-    return `<div class="tb-loot"><small>${esc(RL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
+    return { chips, lines };
   }
   // docs/19 D5: the chest among the sharks — what came up in it.
-  if (l.find) return `<div class="tb-loot"><small>${esc(FL('loot.chest'))}</small><div class="tb-lchips"><span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.find.silver}</span>${l.find.goods.map((g) => `<span class="tb-lc" title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`).join('')}</div></div>`;
-  // docs/18 IV: a drift beaten at sea — its silver and lesson, and the beaten who would follow.
-  if (l.drift) return `<div class="tb-loot"><small>${esc(DL('loot.drift', { s: l.drift.silver, x: l.drift.xp }))}</small><div class="tb-lchips"><span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.drift.silver}</span><span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.drift.xp }))}</span></div></div>`;
-  if (l.looted) return `<div class="tb-loot"><small>${esc(LL('loot.title'))}</small><div class="muted">${esc(LL('loot.looted'))}</div></div>`;
+  if (l.find) return { chips: [`<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.find.silver}</span>`, ...l.find.goods.map((g) => `<span class="tb-lc" title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`)], lines: [] };
+  // docs/18 IV: a drift beaten at sea — its silver and lesson.
+  if (l.drift) return { chips: [`<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.drift.silver}</span>`, `<span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.drift.xp }))}</span>`], lines: [] };
+  if (l.looted) return { chips: [], lines: [esc(LL('loot.looted'))] };
   const ru = lang() === 'ru' ? 1 : 0;
   const chips: string[] = [];
   if (l.silver) chips.push(`<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.silver}</span>`);
@@ -111,7 +118,7 @@ function lootBlock(l: LairLoot): string {
   // A great one ashore beaten (2026-10-03): its trophy, and the first on the seas.
   if (l.shore?.trophy && isShoreBoss(l.shore.kind)) lines.push(esc(BL('loot.trophy', { t: SHORE_BOSSES[l.shore.kind].trophy[ru] })));
   if (l.shore?.first) lines.push(esc(BL('loot.first')));
-  return `<div class="tb-loot"><small>${esc(l.shore ? BL('loot.title') : LL('loot.title'))}</small><div class="tb-lchips">${chips.join('')}</div>${lines.map((x) => `<div class="tb-lline">${x}</div>`).join('')}</div>`;
+  return { chips, lines };
 }
 /** An order's name and words, from the order book (docs/17 H2) — every page of it, old and new. */
 /** The battle's own painted icons (tools/art/battle_more.py, battle_sheets.py) where they are painted; the older
@@ -404,10 +411,22 @@ export class TacticalPanel {
   private band = { l: 0, r: 0, t: 0, b: 0 };
   /** The special whose words are open on the stack's card (a phone has no hover for its title). */
   private spNote: string | null = null;
+  /** On a phone (docs/23 items 59, 62): the stack's card or the book, as the kit's bottom sheet. */
+  private sheetH: SheetHandle | null = null;
+  private sheetKind: 'card' | 'book' | null = null;
+  /** With a second tap asked (docs/23 item 57, the option): the foe tapped once, to be struck by the next tap. */
+  private foeArmed: number | null = null;
+  /** The end put away by its button (a battle at sea closes itself a moment later). */
+  private endHidden = false;
 
   constructor(send: (m: ClientMsg) => void, now: () => number) {
     this.send = send;
     this.now = now;
+  }
+
+  /** The battle's pace on this screen: 2 under «Ускорить ×2» (docs/23 item 60). */
+  private speed(): number {
+    return settings().tacFast ? 2 : 1;
   }
 
   /** A touch screen with a phone's short side (375×812 upright, 812×375 or 932×430 on its side); a tablet and a desk
@@ -457,6 +476,9 @@ export class TacticalPanel {
         this.preview = this.targeting = this.info = null;
         this.moreOpen = this.sheetOpen = this.bookOpen = false;
         this.spNote = null;
+        this.closeSheet();
+        this.foeArmed = null;
+        this.endHidden = false;
       }
       return;
     }
@@ -532,13 +554,18 @@ export class TacticalPanel {
       if (p.hex === s.hex) continue;
       const fly = s.sp.includes('flying');
       const path = fly || calm ? null : walkPath((was ?? v).cells, (was ?? v).stacks, s.id, p.hex, s.hex, s.sp.includes('diving'));
-      this.pos.set(s.id, { hex: s.hex, path: path ?? [p.hex, s.hex], t0: t, dur: calm ? 0 : path ? walkMs(path.length - 1) : GLIDE_MS, fly: fly && !calm });
+      this.pos.set(s.id, { hex: s.hex, path: path ?? [p.hex, s.hex], t0: t, dur: calm ? 0 : path ? walkMs(path.length - 1, this.speed()) : GLIDE_MS / this.speed(), fly: fly && !calm });
     }
     let lag = 0;
     for (const p of this.pos.values()) lag = Math.max(lag, p.t0 + p.dur - t);
     // What happened since the last view: numbers over the stacks, bursts of powder and smoke.
     const fresh = v.log.filter((e) => e.i > this.seen);
-    if (!was) this.heroFx = [0, 1].map((side) => ({ side, t0: performance.now() + 400 + side * 250, dur: 1900 }));
+    if (!was) {
+      this.heroFx = [0, 1].map((side) => ({ side, t0: performance.now() + 400 + side * 250, dur: 1900 }));
+      this.endHidden = false;
+      // «Ускорить ×2» is kept from the last battle (docs/23 item 60).
+      if (settings().tacFast && !v.heroes[v.you].fast && !v.over) this.order({ a: 'pace', fast: true });
+    }
     if (!was) this.seen = v.log.length ? v.log[v.log.length - 1].i : 0;
     else for (const e of fresh) this.mark(e, v, was, lag);
     if (fresh.length) this.seen = Math.max(this.seen, ...fresh.map((e) => e.i));
@@ -702,14 +729,14 @@ export class TacticalPanel {
   }
 
   /** The phone's battle (owner, 2026-10-03: «на телефоне в бою не должно быть ничего кроме игрового поля с существами.
-   *  внизу справа книжка кружочек, а слева … удерживать позицию, удар, хотьба, защита»): the field over the whole screen
-   *  and round painted buttons at its edges with no word on them (each says itself in its title, for a reader). Under the
-   *  left thumb the stack's orders — wait, defend, the officer's word — and «…» for the fight's own (auto, quick, cut
-   *  or fall back, the ransom, the colours, the last two a second tap to be sure); a step and a blow need no button, they
-   *  are a tap on the field itself, a lit hex or a foe ringed red, as on a desk. Under the right thumb the captain's: her
-   *  book (every page of it; while an order or a move is aimed, its picture with a cross that lets it go) and her path's
-   *  two moves. In the top corner the face of the stack whose turn it is, ringed in its side's colour with the turn's
-   *  clock running round it; a tap there opens the round — its order, the two captains, the last of the feed. */
+   *  внизу справа книжка кружочек, а слева …»; docs/23 phase 5): the field over the whole screen and round painted buttons
+   *  at its edges with no word on them (each says itself in its title and aria-label). Bottom left, three: «Ждать»,
+   *  «Защита», «Авто» — a tap on «Авто» (or a long press, sliding to the choice) opens the wheel: «Авто до конца»,
+   *  «Быстрый бой», and the fight's own ways out (cut or fall back, the ransom, the colours, each asked once more); with
+   *  auto on, a tap takes the helm back. Bottom right, the book: the officer's word, the path's two moves and every page,
+   *  big cards on a bottom sheet (while one is aimed, its picture with the cross that lets it go). A step and a blow need
+   *  no button: a tap on the field. Top left the face of the stack whose turn it is, with the turn's clock (a tap opens the
+   *  round); top right «×2». */
   private padDom(v: TacView): void {
     const pad = this.el!.querySelector<HTMLElement>('.tb-pad')!;
     if (!this.phone) {
@@ -720,41 +747,28 @@ export class TacticalPanel {
     const act = v.stacks.find((s) => s.id === v.active);
     const rb = (data: string, label: string, art: string, cls = '', off = false): string =>
       `<button class="tb-rb${cls}" ${data} title="${esc(label)}" aria-label="${esc(label)}"${off ? ' disabled' : ''}>${art}</button>`;
-    // The fight's own orders, behind «…»; the ransom's silver shown on its button once it asks to be sure.
-    const ransomOn = this.ransomArmed > performance.now();
-    const strikeOn = this.strikeArmed > performance.now();
-    const more = [
-      rb('data-a="auto"', me.auto ? L('autoOff') : L('auto'), btIcon('bt_auto', 'icon.bt_captain', 'ico'), me.auto ? ' on' : ''),
-      rb('data-a="quick"', L('quick'), btIcon('bt_quick', 'icon.bt_charge', 'ico'), '', !!v.over),
-      v.canCut && !v.over ? rb('data-a="cut"', v.you === 0 ? L('fallBack') : L('cut'), btIcon('bt_retreat', 'icon.bt_colours', 'ico'), ' danger') : '',
-      v.ransom && !v.over ? rb('data-a="ransom"', ransomOn ? L('ransomSure', { n: v.ransom }) : `${L('ransom', { n: v.ransom })}. ${L('ransomTip')}`, `${btIcon('bt_ransom', 'icon.coin', 'ico')}${ransomOn ? `<i class="tb-rbn">${icon('icon.coin', '', 'ico-xs')}${v.ransom}</i>` : ''}`, ransomOn ? ' armed' : '') : '',
-      v.canStrike && !v.over ? rb('data-a="surrender"', strikeOn ? L('strikeSure') : L('strike'), btIcon('bt_strike', 'icon.bt_colours', 'ico'), ` danger${strikeOn ? ' armed' : ''}`) : '',
-    ].join('');
     const officer = v.mine && act?.officer?.ready ? act.officer : null;
-    // From the corner outward: wait under the thumb, then defend, the officer's word, «…».
+    const pathReady = v.mine && !!me.path && (me.innate === 'ready' || (me.ult === 'ready' && v.round >= ULT_ROUND));
+    // From the corner up: wait under the thumb, then defend, then auto (its wheel).
     const left = [
       rb('data-a="wait"', L('wait'), btIcon('bt_wait', 'icon.bt_hold', 'ico'), '', !v.mine || !!act?.waited),
       rb('data-a="defend"', L('defend'), btIcon('bt_defend', 'icon.mod_hull_plating', 'ico'), '', !v.mine),
-      officer ? rb('data-a="order"', `${L(`o.${officer.order}` as K)}: ${L(`od.${officer.order}` as K)}`, icon(`icon.role_${officer.role}`, '', 'ico'), ' officer') : '',
-      `<div class="tb-mwrap">${rb('data-more', L('more'), '<i class="tb-dots"><b></b><b></b><b></b></i>', this.moreOpen ? ' on' : '')}${this.moreOpen && more ? `<div class="tb-more">${more}</div>` : ''}</div>`,
+      rb('data-autow', me.auto ? L('autoOff') : L('autoMenu'), btIcon('bt_auto', 'icon.bt_captain', 'ico'), me.auto ? ' on' : '', !!v.over),
     ].join('');
-    // Her path's two moves (the ultimate shown once it is hers, from level 20), and the book in the corner.
-    const mv = (kind: 'innate' | 'ult'): string => {
-      const st = kind === 'innate' ? me.innate : me.ult;
-      if (!me.path || !st || st === 'locked') return '';
-      const early = kind === 'ult' && v.round < ULT_ROUND;
-      const note = st === 'used' ? L('used') : early ? L('ultRound') : L('free');
-      return rb(`data-move="${kind}"`, `${L(kind)}: ${moveName(me.path, kind === 'ult')} (${note})`, icon(`icon.${(kind === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico'), ` mv ${kind}${this.targeting === kind ? ' on' : ''}${st !== 'ready' ? ' spent' : ''}`, !v.mine || st !== 'ready' || early);
-    };
     const t = this.targeting;
     const aimed = !t ? '' : t === 'innate' || t === 'ult' ? (me.path ? icon(`icon.${(t === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'ico') : '') : spIcon(t);
+    const hasBook = me.spells.length > 0 || !!me.path || !!act?.officer;
+    // A gold bead on the book when the officer's word or a path move is ready to be given.
+    const bead = officer || pathReady ? '<i class="tb-bead" aria-hidden="true"></i>' : '';
     const book = t
       ? rb('data-cancel', `${L('cancel')}: ${t === 'innate' || t === 'ult' ? (me.path ? moveName(me.path, t === 'ult') : '') : spName(t)}`, `${aimed}<i class="tb-x"></i>`, ' book aim')
-      : me.spells.length ? rb('data-book', L('book'), btIcon('bt_book', 'icon.bt_captain', 'ico'), ` book${this.bookOpen ? ' on' : ''}`) : '';
+      : hasBook ? rb('data-book', L('book'), `${btIcon('bt_book', 'icon.bt_captain', 'ico')}${bead}`, ` book${this.sheetKind === 'book' ? ' on' : ''}`) : '';
     // The turn's face, and the round behind it.
     const whose = v.over ? '' : v.mine ? L('yourTurn') : act && act.side === v.you ? L('autoTurn') : L('theirTurn');
     const face = act ? (figureArt(act) ? icon(figureArt(act)!, '', 'ico fig') : icon(stackArt(act), '', 'ico')) : '';
     const turn = `<button class="tb-turnb${act ? (act.side === v.you ? ' you' : ' foe') : ''}${v.mine ? ' mine' : ''}${this.sheetOpen ? ' on' : ''}" data-sheet title="${esc(`${L('round', { n: v.round })} · ${whose}`)}" aria-label="${esc(L('order.label'))}" aria-expanded="${this.sheetOpen}">${face}</button>`;
+    const fast = settings().tacFast;
+    const x2 = `<button class="tb-rb tb-fast${fast ? ' on' : ''}" data-fast aria-pressed="${fast}" title="${esc(fast ? L('fastOff') : L('fast'))}" aria-label="${esc(L('fast'))}"><i class="tb-x2" aria-hidden="true">×2</i></button>`;
     const pip = (n: number, up: string, down: string, k: K) => `<span class="tb-shp${n > 0 ? ' up' : n < 0 ? ' down' : ''}" title="${esc(L(k))}">${btIcon(n < 0 ? down : up, '', 'ico-xs')}${n > 0 ? `+${n}` : n}</span>`;
     const captain = (x: 0 | 1) => {
       const h = v.heroes[x], f = this.heroFace(v, x);
@@ -764,23 +778,18 @@ export class TacticalPanel {
     const sheet = this.sheetOpen && !v.over
       ? `<div class="tb-sheet" role="dialog" aria-label="${esc(L('order.label'))}"><div class="tb-sh-r"><b>${esc(L('round', { n: v.round }))}</b><em>${esc(whose)}</em></div>${captain(v.you)}${captain((1 - v.you) as 0 | 1)}<div class="tb-sh-q">${this.queue(v)}</div>${words.length ? `<div class="tb-sh-feed">${words.map((w) => `<div>${esc(w)}</div>`).join('')}</div>` : ''}</div>`
       : '';
-    pad.className = `tb-pad${this.bookOpen ? ' bk-open' : ''}${v.over ? ' over' : ''}`;
-    pad.innerHTML = `${turn}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}${mv('innate')}${mv('ult')}</div>`;
+    pad.className = `tb-pad${v.over ? ' over' : ''}`;
+    pad.innerHTML = `${turn}${x2}${sheet}<div class="tb-pl">${left}</div><div class="tb-pr">${book}</div>`;
     const again = () => {
       this.key = '';
       if (this.view) this.dom(this.view);
     };
     pad.querySelector<HTMLElement>('[data-sheet]')!.onclick = () => {
       this.sheetOpen = !this.sheetOpen;
-      this.moreOpen = false;
       if (this.sheetOpen) this.showInfo(null);
       again();
     };
-    pad.querySelector<HTMLElement>('[data-more]')!.onclick = () => {
-      this.moreOpen = !this.moreOpen;
-      this.sheetOpen = false;
-      again();
-    };
+    pad.querySelector<HTMLElement>('[data-fast]')!.onclick = () => this.setFast(!settings().tacFast);
     const cancel = pad.querySelector<HTMLElement>('[data-cancel]');
     if (cancel) cancel.onclick = () => {
       this.targeting = this.preview = null;
@@ -791,12 +800,105 @@ export class TacticalPanel {
       again();
       this.showInfo(Number(b.dataset.info));
     }));
+    // «Авто»: a tap opens the wheel round the button (or takes the helm back while auto is on); a long press opens it
+    // under the finger, to slide to the choice and let go (ui/kit/radial.ts).
+    const auto = pad.querySelector<HTMLElement>('[data-autow]');
+    if (auto && !v.over) {
+      attachWheel(auto, {
+        title: L('autoMenu'),
+        options: () => this.autoOptions(),
+        onPick: (o) => this.autoPick(o.id),
+        onTap: () => {
+          const now = this.view;
+          if (!now) return;
+          if (now.heroes[now.you].auto) this.order({ a: 'auto', on: false });
+          else this.tapWheel(auto);
+        },
+      });
+    }
+  }
+
+  /** «Ускорить ×2» on or off: the server's breath over the sea's turns, and the walks here (docs/23 item 60). */
+  private setFast(on: boolean): void {
+    updateSettings({ tacFast: on });
+    if (this.view && !this.view.over) this.order({ a: 'pace', fast: on });
+    this.key = '';
+    if (this.view) this.dom(this.view);
+  }
+
+  /** The wheel of «Авто» (docs/23 item 61): to the end, a quick fight, and the fight's own ways out. */
+  private autoOptions(): WheelOption[] {
+    const v = this.view;
+    if (!v) return [];
+    const art = (id: string, fb: string) => (assetUrl(`icon.${id}`) ? `icon.${id}` : fb);
+    const out: WheelOption[] = [
+      { id: 'auto', label: L('autoEnd'), icon: art('bt_auto', 'icon.bt_captain') },
+      { id: 'quick', label: L('quick'), icon: art('bt_quick', 'icon.bt_charge') },
+    ];
+    if (v.canCut) out.push({ id: 'cut', label: v.you === 0 ? L('fallBack') : L('cut'), icon: art('bt_retreat', 'icon.bt_colours') });
+    if (v.ransom) out.push({ id: 'ransom', label: L('ransom', { n: v.ransom }), icon: art('bt_ransom', 'icon.coin') });
+    if (v.canStrike) out.push({ id: 'surrender', label: L('strike'), icon: art('bt_strike', 'icon.bt_colours') });
+    return out;
+  }
+
+  private autoPick(id: string): void {
+    const v = this.view;
+    if (!v || v.over) return;
+    if (id === 'auto') return this.order({ a: 'auto', on: true });
+    if (id === 'quick') return this.order({ a: 'quick' });
+    // The ways out are asked once more (a sheet with the verb and «Отменить»).
+    const q = id === 'cut' ? L(v.you === 0 ? 'fallBackQ' : 'cutQ') : id === 'ransom' ? L('ransomQ', { n: v.ransom ?? 0 }) : L('strikeQ');
+    const yes = id === 'cut' ? (v.you === 0 ? L('fallBack') : L('cut')) : id === 'ransom' ? L('ransom', { n: v.ransom ?? 0 }) : L('strike');
+    void ask(q, yes, L('cancel')).then((ok) => {
+      if (!ok || !this.view || this.view.over) return;
+      if (id === 'cut') this.send({ t: 'board_cut' });
+      else this.order({ a: id === 'ransom' ? 'ransom' : 'surrender' });
+    });
+  }
+
+  /** The wheel opened by a tap (no finger to slide): round the button; a tap on a choice takes it, elsewhere puts it
+   *  away (so does Esc). */
+  private tapWheel(btn: HTMLElement): void {
+    const r = btn.getBoundingClientRect();
+    // Opened toward the field, clear of the corner's own buttons (the wheel keeps itself on screen).
+    const inward = r.left + r.width / 2 < innerWidth / 2 ? 1 : -1;
+    wheel.open(r.left + r.width / 2 + inward * (r.width / 2 + 130), r.top + r.height / 2, this.autoOptions(), L('autoMenu'));
+    btn.classList.add('k-wheel-src');
+    const done = (e: PointerEvent | null) => {
+      removeEventListener('pointerdown', pick, true);
+      removeEventListener('keydown', key, true);
+      btn.classList.remove('k-wheel-src');
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        // The choice under the finger (by its circle), not merely the nearest by angle.
+        const items = [...document.querySelectorAll<HTMLElement>('.k-wheel-item')];
+        wheel.select(items.findIndex((it) => {
+          const b = it.getBoundingClientRect();
+          return Math.hypot(e.clientX - (b.left + b.width / 2), e.clientY - (b.top + b.height / 2)) <= b.width * 0.75;
+        }));
+      }
+      const o = wheel.close(!!e);
+      if (o && !o.disabled) this.autoPick(o.id);
+    };
+    const pick = (e: PointerEvent) => done(e);
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      done(null);
+    };
+    // The tap that opened it is still going up: listen from the next one.
+    setTimeout(() => {
+      addEventListener('pointerdown', pick, true);
+      addEventListener('keydown', key, true);
+    }, 0);
   }
 
   private dom(v: TacView): void {
     const el = this.el!;
     const act = v.stacks.find((s) => s.id === v.active);
-    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, this.phone, this.tall, this.moreOpen, this.sheetOpen]);
+    const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
     if (key === this.key) return;
     this.key = key;
     const hero = (x: 0 | 1) => {
@@ -917,6 +1019,8 @@ export class TacticalPanel {
     }));
     el.querySelectorAll<HTMLElement>('[data-move]').forEach((b) => (b.onclick = () => this.move2(b.dataset.move as 'innate' | 'ult')));
     el.querySelectorAll<HTMLElement>('[data-book]').forEach((b) => (b.onclick = () => {
+      // A phone's book is the kit's bottom sheet of cards (docs/23 item 62).
+      if (this.phone) return this.openBook(v);
       this.bookOpen = !this.bookOpen;
       this.moreOpen = this.sheetOpen = false;
       if (this.bookOpen) this.showInfo(null);
@@ -961,23 +1065,44 @@ export class TacticalPanel {
       this.button(a);
       if (!this.key && this.view) this.dom(this.view);
     }));
-    // The end.
+    // The end (docs/23 item 63): one screen — won or lost and why, three rows (your losses, hers, the spoils), the
+    // beaten who would follow her when they would, and one button.
     const banner = el.querySelector<HTMLElement>('.tb-banner')!;
-    banner.classList.toggle('hidden', !v.over);
+    banner.classList.toggle('hidden', !v.over || this.endHidden);
     if (v.over) {
       const won = v.over.winner === v.you;
       const why = v.over.why === 'rout' ? (won ? 'why.rout' : 'why.routLost') : v.over.why === 'struck' ? (won ? 'why.struck' : 'why.struckYou') : v.over.why === 'ransom' ? (won ? 'why.ransomThem' : 'why.ransomYou') : 'why.rounds';
       // docs/18 II: ashore, the lair is broken, or the party thrown back or fallen back to the boats.
       const whyText = v.land && isShoreBoss(v.land.lair) ? BL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : roamOf(v.land?.lair) ? RL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land?.lair === 'find_chest' ? FL(won ? 'why.chest' : v.over.why === 'struck' ? 'why.chestBack' : 'why.chestLost') : v.land && isDriftKind(v.land.lair) ? DL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : v.land ? LL(won ? 'why.won' : v.over.why === 'struck' ? 'why.retreat' : 'why.lost') : L(why as K);
-      banner.className = `tb-banner ${won ? 'won' : 'lost'}${v.result ? ' tb-result' : ''}`;
-      // The reckoning (docs/17 H1): each side's losses by kind of man, what your captain learnt, the silver paid.
       const r = v.result;
-      const faces = (xs: { u: UnitId; n: number }[]) => xs.length ? xs.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i>−${x.n}</i></span>`).join('') : `<em class="muted">${esc(L('res.none'))}</em>`;
-      // docs/18 #36: the beaten who would follow her come first (on a phone the reckoning scrolls under them, the close
-      // staying in sight below it).
-      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span>${esc(whyText)}</span>${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${r ? `<div class="tb-res"><div><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div>${r.xp ? `<div class="tb-xp">${esc(L('res.xp', { n: r.xp }))}</div>` : ''}${r.paid ? `<div class="tb-xp">${esc(L('res.paid', { n: r.paid }))}</div>` : ''}</div>` : ''}${r?.loot ? lootBlock(r.loot) : ''}</div>${v.land ? `<button class="btn btn-primary tb-landclose" data-landclose>${esc(LL('close'))}</button>` : ''}`;
-      banner.querySelector<HTMLElement>('[data-landclose]')?.addEventListener('click', () => this.send({ t: 'lair', action: 'close' }));
+      const none = `<em class="muted">${esc(L('res.none'))}</em>`;
+      const faces = (xs: { u: UnitId; n: number }[]) => xs.length ? xs.map((x) => `<span class="tb-rs" title="${esc(unitName(x.u))}">${unitIcon(x.u, 'tb-rs-ico')}<i>−${x.n}</i></span>`).join('') : none;
+      const loot = r?.loot ? lootParts(r.loot) : null;
+      const spoils = [
+        ...(r?.xp ? [`<span class="tb-lc" title="${esc(L('res.xp', { n: r.xp }))}">${icon('icon.xp', '', 'ico-sm')}+${r.xp}</span>`] : []),
+        ...(r?.paid ? [`<span class="tb-lc bad" title="${esc(L('res.paid', { n: r.paid }))}">${icon('icon.coin', '', 'ico-sm')}−${r.paid}</span>`] : []),
+        ...(loot?.chips ?? []),
+        ...(loot?.lines ?? []).map((x) => `<span class="tb-lc tb-lw">${x}</span>`),
+      ];
+      const rows = r
+        ? `<div class="tb-end-rows"><div class="tb-er"><small>${esc(L('res.lost'))}</small><div class="tb-rs-row">${faces(r.lost)}</div></div><div class="tb-er"><small>${esc(L('res.killed'))}</small><div class="tb-rs-row">${faces(r.killed)}</div></div><div class="tb-er"><small>${esc(L('res.loot'))}</small><div class="tb-lchips">${spoils.length ? spoils.join('') : none}</div></div></div>`
+        : '';
+      banner.className = `tb-banner tb-end ${won ? 'won' : 'lost'}${v.land ? ' land' : ' sea'}${r ? ' tb-result' : ''}`;
+      banner.innerHTML = `<div class="tb-bsc"><b>${esc(L(won ? 'won' : 'lost'))}</b><span class="tb-why">${esc(whyText)}</span>${r?.loot?.capture ? captureBlock(r.loot.capture) : ''}${rows}</div><button class="k-btn k-btn--primary k-btn--lg tb-endbtn" data-endbtn>${esc(v.land ? LL('close') : L('next'))}</button>`;
+      banner.querySelector<HTMLElement>('[data-endbtn]')!.addEventListener('click', () => {
+        if (v.land) this.send({ t: 'lair', action: 'close' });
+        else {
+          // A battle at sea closes itself a moment later: the button puts the reckoning away now.
+          this.endHidden = true;
+          banner.classList.add('hidden');
+        }
+      });
       banner.querySelectorAll<HTMLElement>('[data-cap]').forEach((b) => (b.onclick = () => this.send({ t: 'drift', action: 'capture', choice: b.dataset.cap as 'take' })));
+    }
+    // The phone's book follows the battle while it is open (the will spent, a page ready again).
+    if (this.sheetKind === 'book' && this.sheetH?.open) {
+      if (v.over) this.closeSheet();
+      else this.sheetH.body.innerHTML = this.bookHtml(v);
     }
     this.hint(v);
     if (this.info !== null) this.showInfo(this.info);
@@ -1034,7 +1159,8 @@ export class TacticalPanel {
     h.classList.toggle('hidden', !text);
   }
 
-  /** The stack's card: what it is, its numbers, its officer. */
+  /** The stack's card: what it is, its numbers, its officer. A desk's beside the field; a phone's a bottom sheet
+   *  (docs/23 item 59), opened by a long press and put away by a swipe, a tap beside it or its cross. */
   private showInfo(id: number | null): void {
     if (id !== this.info) this.spNote = null;
     this.info = id;
@@ -1045,8 +1171,34 @@ export class TacticalPanel {
     if (!s) {
       card.classList.add('hidden');
       this.info = null;
+      if (this.sheetKind === 'card') this.closeSheet();
       return;
     }
+    if (this.phone) {
+      card.classList.add('hidden');
+      const body = `<div class="tb-cardsh ${s.side === v.you ? 'you' : 'foe'}">${this.cardHtml(s, v, false)}</div>`;
+      if (this.sheetKind === 'card' && this.sheetH?.open && this.sheetH.root.dataset.stack === String(s.id)) this.sheetH.body.innerHTML = body;
+      else {
+        this.closeSheet();
+        this.sheetH = openSheet({ title: stackName(s), body, height: 'auto', cls: 'tb-sheetk tb-cardk', onClose: () => this.sheetGone('card') });
+        this.sheetH.root.dataset.stack = String(s.id);
+        this.sheetKind = 'card';
+        this.sheetH.body.addEventListener('click', (e) => {
+          const sp = (e.target as HTMLElement).closest<HTMLElement>('[data-spnote]');
+          if (!sp) return;
+          this.spNote = this.spNote === sp.dataset.spnote ? null : sp.dataset.spnote!;
+          this.showInfo(this.info);
+        });
+      }
+      return;
+    }
+    card.className = `tb-card ${s.side === v.you ? 'you' : 'foe'}`;
+    card.innerHTML = this.cardHtml(s, v, true);
+  }
+
+  /** The card's markup: its face and name (on a desk; a sheet has its own title), its numbers by their painted marks,
+   *  its state, its specials (a tap opens a special's words), its note. */
+  private cardHtml(s: TacStackView, v: TacView, head: boolean): string {
     // Each number by its painted mark and its word (the word cut short in a narrow column, whole in the title).
     // A hero's bonus leaves a tenth on her attack and defence: 20,5 in Russian.
     const num = (n: number) => (Number.isInteger(n) ? String(n) : dec1(n));
@@ -1054,12 +1206,85 @@ export class TacticalPanel {
     const o = s.officer;
     const d = s.unit ? UNITS[s.unit] : null;
     const note = this.spNote && s.sp?.includes(this.spNote as UnitSpecial) ? (this.spNote as UnitSpecial) : null;
-    card.className = `tb-card ${s.side === v.you ? 'you' : 'foe'}`;
-    card.innerHTML = `<div class="tb-card-h">${figureArt(s) ? icon(figureArt(s)!, '', 'ico-md fig') : icon(stackArt(s), '', 'ico-md')}<div><b>${esc(stackName(s))}</b><small>${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}</small></div><button class="tb-cardx" title="${esc(L('close'))}" aria-label="${esc(L('close'))}"></button></div>
+    const face = figureArt(s) ? icon(figureArt(s)!, '', 'ico-md fig') : icon(stackArt(s), '', 'ico-md');
+    const sub = `${d ? esc(L('tierOf', { n: d.tier })) : ''}${o ? `${d ? ' · ' : ''}${esc(personName(o.name))}` : ''}`;
+    return `${head ? `<div class="tb-card-h">${face}<div><b>${esc(stackName(s))}</b><small>${sub}</small></div><button class="tb-cardx" title="${esc(L('close'))}" aria-label="${esc(L('close'))}"></button></div>` : `<div class="tb-card-h">${face}<div><small>${sub}</small></div></div>`}
       <div class="tb-stats">${row('icon.stat_crew', 'st.count', `${s.count} / ${s.start}`)}${row('icon.item_cutlass', 'st.atk', num(s.atk))}${row('icon.mod_hull_plating', 'st.def', num(s.def))}${row('icon.tree_boarding', 'st.dmg', `${s.dmg[0]}–${s.dmg[1]}`)}${row('icon.tattoo_heart', 'st.hp', `${s.hp} / ${s.hpMax}`)}${row('icon.item_seaboots', 'st.speed', String(s.speed))}${row('icon.mount_war_drums', 'st.init', String(s.init))}${s.shotsMax ? row('icon.item_powder_horn', 'st.shots', `${s.shots} / ${s.shotsMax}`) : ''}${row('icon.st_no_ret', 'st.ret', L(s.ret ? 'st.retYes' : 'st.retNo'))}</div>
       ${STATUS.some(([f]) => s[f]) ? `<div class="tb-sts">${STATUS.filter(([f]) => s[f]).map(([, ic, k]) => `<span class="chip tb-st${k === 'sts.defending' || k === 'sts.braced' || k === 'sts.again' ? ' good' : k === 'sts.waited' ? '' : ' bad'}">${btIcon(ic, '', 'ico-xs')}${esc(L(k))}</span>`).join('')}</div>` : ''}
       ${s.sp?.length ? `<div class="tb-sps">${s.sp.map((x) => `<button class="chip tb-spc${note === x ? ' on' : ''}" data-spnote="${esc(x)}" title="${esc(specialNote(x))}">${esc(specialName(x))}</button>`).join('')}</div>${note ? `<p class="tb-spn">${esc(specialNote(note))}</p>` : ''}` : ''}
       <p class="muted">${esc(s.kind === 'officer' || !s.unit ? L(`kd.${s.kind}` as K) : unitNote(s.unit))}${o ? ` ${esc(L(`o.${o.order}` as K))}: ${esc(L(`od.${o.order}` as K))}` : ''}</p>`;
+  }
+
+  /** The phone's sheet put away (a card or the book). */
+  private closeSheet(): void {
+    const h = this.sheetH;
+    this.sheetH = null;
+    this.sheetKind = null;
+    if (h?.open) h.close('code');
+  }
+
+  /** A sheet gone by the captain's hand (a swipe, a tap beside it, its cross). */
+  private sheetGone(kind: 'card' | 'book'): void {
+    if (this.sheetKind !== kind) return;
+    this.sheetH = null;
+    this.sheetKind = null;
+    if (kind === 'card') this.info = null;
+    this.key = '';
+    if (this.view) this.dom(this.view);
+  }
+
+  /** The phone's book (docs/23 item 62): a bottom sheet of big cards — the officer's word, the path's two moves, then
+   *  every page with its picture and its price; one tap takes a card (a page aimed at a stack is then given by a tap on
+   *  it), a card that cannot be given now is dimmed with the reason. */
+  private bookHtml(v: TacView): string {
+    const me = v.heroes[v.you];
+    const act = v.stacks.find((s) => s.id === v.active);
+    const bar = (cls: string, ico: string, k: K, n: number, m: number) => `<div class="tb-store ${cls}" title="${esc(L(k))}">${icon(ico, '', 'ico-xs')}<span class="tb-rbar"><i style="width:${m ? Math.round(Math.max(0, Math.min(1, n / m)) * 100) : 0}%"></i></span><b>${n}</b><small>/${m}</small></div>`;
+    const will = me.mana !== undefined ? `<div class="tb-bk-will">${bar('will', 'icon.ab_brine_mend', 'will', me.mana, me.manaMax ?? 0)}${me.stam !== undefined ? bar('stam', 'icon.tree_survival', 'stam', me.stam, me.stamMax ?? 0) : ''}</div>` : '';
+    const card = (data: string, pic: string, name: string, note: string, off: boolean, cls = '') =>
+      `<button class="tb-bc${cls}" ${data}${off ? ' disabled' : ''} title="${esc(name)}">${pic}<b>${esc(name)}</b><small>${note}</small></button>`;
+    const cards: string[] = [];
+    const o = act?.officer;
+    if (o && act!.side === v.you) cards.push(card('data-bk="order"', icon(`icon.role_${o.role}`, '', 'tb-bc-ico'), L(`o.${o.order}` as K), esc(o.ready ? L('book.officer') : L('used')), !v.mine || !o.ready, ' officer'));
+    for (const kind of ['innate', 'ult'] as const) {
+      const st = kind === 'innate' ? me.innate : me.ult;
+      if (!me.path || !st || st === 'locked') continue;
+      const early = kind === 'ult' && v.round < ULT_ROUND;
+      const off = !v.mine || st !== 'ready' || early;
+      cards.push(card(`data-bkmove="${kind}"`, icon(`icon.${(kind === 'innate' ? INNATE : ULTIMATE)[me.path].icon}`, '', 'tb-bc-ico'), moveName(me.path, kind === 'ult'), esc(st === 'used' ? L('used') : early ? L('ultRound') : L('free')), off, ` mv ${kind}`));
+    }
+    const all = [...me.spells].sort((a, b) => SCHOOLS.indexOf(ORDERS[a.id]?.school as School) - SCHOOLS.indexOf(ORDERS[b.id]?.school as School) || (ORDERS[a.id]?.level ?? 0) - (ORDERS[b.id]?.level ?? 0));
+    for (const sp of all) {
+      const wait = Math.max(0, sp.ready - v.round);
+      const pool = sp.res === 'stam' ? me.stam : me.mana;
+      const poor = sp.cost !== undefined && pool !== undefined && pool < sp.cost;
+      const off = !v.mine || me.cast || wait > 0 || poor;
+      const price = sp.scroll ? esc(L('scroll', { n: sp.scroll })) : sp.cost !== undefined ? `<span class="tb-bc-cost${sp.res === 'stam' ? ' stam' : ''}">${icon(sp.res === 'stam' ? 'icon.tree_survival' : 'icon.ab_brine_mend', '', 'ico-xs')}${sp.cost}</span>` : '';
+      const note = wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : price;
+      cards.push(card(`data-bkspell="${sp.id}"`, spIcon(sp.id, 'tb-bc-ico'), spName(sp.id), note, off, `${poor ? ' poor' : ''}`));
+    }
+    return `${will}<div class="tb-bk-grid">${cards.join('')}</div>`;
+  }
+
+  private openBook(v: TacView): void {
+    if (this.sheetKind === 'book' && this.sheetH?.open) return this.closeSheet();
+    this.closeSheet();
+    this.info = null;
+    this.sheetOpen = false;
+    this.sheetH = openSheet({ title: L('book'), body: this.bookHtml(v), height: 0.9, cls: 'tb-sheetk tb-bookk', onClose: () => this.sheetGone('book') });
+    this.sheetKind = 'book';
+    this.sheetH.body.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.tb-bc');
+      if (!b || b.disabled) return;
+      this.closeSheet();
+      if (b.dataset.bk === 'order') this.button('order');
+      else if (b.dataset.bkmove) this.move2(b.dataset.bkmove as 'innate' | 'ult');
+      else if (b.dataset.bkspell) this.spell(b.dataset.bkspell as TacSpellId);
+      this.key = '';
+      if (this.view) this.dom(this.view);
+    });
+    this.key = '';
+    this.dom(v);
   }
 
   // ------------------------------------------------------------------ orders
@@ -1224,8 +1449,8 @@ export class TacticalPanel {
   private tap(h: number | null): void {
     const v = this.view;
     if (!v) return;
-    // On a phone a tap beside an open card, the round, the «…» or the book only closes it: the finger reaching to put
-    // it away must not also march a stack or strike.
+    // On a phone a tap beside the open round only closes it: the finger reaching to put it away must not also march a
+    // stack or strike. (A card and the book are the kit's sheets: their scrim takes that tap.)
     if (this.phone && (this.info !== null || this.moreOpen || this.sheetOpen || this.bookOpen)) {
       this.showInfo(null);
       this.moreOpen = this.sheetOpen = this.bookOpen = false;
@@ -1235,7 +1460,7 @@ export class TacticalPanel {
     }
     if (this.info !== null) this.showInfo(null);
     if (h === null) {
-      this.preview = null;
+      this.preview = this.foeArmed = null;
       return this.refresh();
     }
     const s = this.stackAt(h);
@@ -1243,6 +1468,8 @@ export class TacticalPanel {
       if (s) this.showInfo(s.id);
       return;
     }
+    // One tap is the order (docs/23 item 57); the option «a second tap to be sure» asks it twice on the same hex.
+    const sure = settings().tacConfirm;
     // An order or a move aimed at one of her own stacks (docs/18).
     if (s && s.side === v.you && this.targeting && this.targetKind() === 'own') {
       const t = this.targeting;
@@ -1255,12 +1482,20 @@ export class TacticalPanel {
         const t = this.targeting;
         this.order(t === 'innate' || t === 'ult' ? { a: t, target: s.id } : { a: 'spell', id: t, target: s.id });
         this.targeting = null;
-      } else if (v.shoot.includes(s.id)) this.order({ a: 'shoot', target: s.id });
-      else if (v.melee.includes(s.id)) {
-        const from = this.preview !== null && hexNeighbors(s.hex).includes(this.preview) ? this.preview : undefined;
-        this.order(from !== undefined ? { a: 'attack', target: s.id, from } : { a: 'attack', target: s.id });
+      } else if (v.shoot.includes(s.id) || v.melee.includes(s.id)) {
+        if (sure && this.foeArmed !== s.id) {
+          this.foeArmed = s.id;
+          this.key = '';
+          this.dom(v);
+          return this.refresh();
+        }
+        if (v.shoot.includes(s.id)) this.order({ a: 'shoot', target: s.id });
+        else {
+          const from = this.preview !== null && hexNeighbors(s.hex).includes(this.preview) ? this.preview : undefined;
+          this.order(from !== undefined ? { a: 'attack', target: s.id, from } : { a: 'attack', target: s.id });
+        }
       } else this.showInfo(s.id);
-      this.preview = null;
+      this.preview = this.foeArmed = null;
       return this.refresh();
     }
     if (s) {
@@ -1268,16 +1503,17 @@ export class TacticalPanel {
       return;
     }
     if (v.reach.includes(h)) {
-      if (this.preview === h) {
+      this.foeArmed = null;
+      if (sure && this.preview !== h) this.preview = h;
+      else {
         this.preview = null;
         this.order({ a: 'move', to: h });
-      } else this.preview = h;
+      }
       return this.refresh();
     }
-    this.preview = null;
+    this.preview = this.foeArmed = null;
     this.refresh();
   }
-
   private refresh(): void {
     if (this.view) this.hint(this.view);
   }
@@ -1420,6 +1656,31 @@ export class TacticalPanel {
     this.drawn.ghosts++;
   }
 
+  /** «Ответит» on the field (docs/23 item 58): a small orange disc with a curled arrow turning back — this foe still has
+   *  its answer this round. Drawn, not written (a phone's field carries no words). */
+  private retMark(g: CanvasRenderingContext2D, x: number, y: number, rr: number, pulse: number): void {
+    g.save();
+    g.beginPath();
+    g.arc(x, y, rr, 0, Math.PI * 2);
+    g.fillStyle = `rgba(48,22,10,${0.85 + 0.1 * pulse})`;
+    g.fill();
+    g.lineWidth = Math.max(1.5, rr * 0.22);
+    g.strokeStyle = '#f0a03c';
+    g.stroke();
+    // The curl: three quarters of a ring, its head pointing back.
+    const k = rr * 0.55;
+    g.beginPath();
+    g.arc(x, y, k, -Math.PI * 0.15, Math.PI * 1.35);
+    g.stroke();
+    const ax = x + Math.cos(-Math.PI * 0.15) * k, ay = y + Math.sin(-Math.PI * 0.15) * k;
+    g.beginPath();
+    g.moveTo(ax - rr * 0.38, ay - rr * 0.08);
+    g.lineTo(ax + rr * 0.05, ay + rr * 0.05);
+    g.lineTo(ax + rr * 0.12, ay - rr * 0.4);
+    g.stroke();
+    g.restore();
+  }
+
   /** What the last frame drew, for the QA kit: figures a stack (one each), the ghost, the hexes of the path shown,
    *  the stacks walking. */
   frameStats(): { figures: Record<number, number>; ghosts: number; path: number; walking: number[] } {
@@ -1434,7 +1695,7 @@ export class TacticalPanel {
     if (!this.phone || !this.el) return out;
     const s = stage.getBoundingClientRect();
     const side = s.width > s.height;
-    for (const e of this.el.querySelectorAll<HTMLElement>('.tb-pad > .tb-pl, .tb-pad > .tb-pr, .tb-pad > .tb-turnb')) {
+    for (const e of this.el.querySelectorAll<HTMLElement>('.tb-pad > .tb-pl, .tb-pad > .tb-pr, .tb-pad > .tb-turnb, .tb-pad > .tb-fast')) {
       const r = e.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) continue;
       if (side) {
@@ -2088,17 +2349,19 @@ export class TacticalPanel {
       g.lineWidth = 2;
       g.stroke();
     }
-    // The reach of the stack whose turn it is.
+    // The reach of the stack whose turn it is (docs/23 item 58: big and plain): a veil and a bright rim on every hex
+    // it may step to — on a phone thicker and lighter, so a thumb sees it at arm's length.
+    const big = this.phone;
     if (v.mine) {
       for (const h of v.reach) {
         const p = this.lc(h);
         this.hexPath(g, p.x, p.y, r - 1.5);
-        // On a painting the reach is a light veil and a thin rim, so the planks show through (as in Heroes).
-        const p0 = this.painted ? 0.45 : 1;
-        g.fillStyle = h === this.preview ? `rgba(46,230,200,${0.42 * p0})` : h === this.hover ? `rgba(46,230,200,${0.3 * p0})` : `rgba(46,230,200,${0.16 * p0})`;
+        // On a painting the reach is a light veil and a bright rim, so the planks show through (as in Heroes).
+        const p0 = this.painted ? 0.6 : 1;
+        g.fillStyle = h === this.preview ? `rgba(46,230,200,${0.5 * p0})` : h === this.hover ? `rgba(46,230,200,${0.36 * p0})` : `rgba(46,230,200,${(big ? 0.24 : 0.16) * p0})`;
         g.fill();
-        g.strokeStyle = this.painted ? 'rgba(200,255,235,0.45)' : 'rgba(46,230,200,0.55)';
-        g.lineWidth = 1;
+        g.strokeStyle = this.painted ? `rgba(210,255,240,${big ? 0.75 : 0.5})` : `rgba(90,245,215,${big ? 0.85 : 0.6})`;
+        g.lineWidth = big ? 2 : 1.2;
         g.stroke();
       }
     }
@@ -2109,19 +2372,27 @@ export class TacticalPanel {
       g.fillStyle = `rgba(224,184,98,${0.18 + 0.12 * pulse})`;
       g.fill();
     }
-    // Whom the active stack may strike or fire on.
+    // Whom the active stack may strike or fire on: the hex washed red and ringed, the crosshair for a shot; a foe
+    // that will strike back (it has its answer left this round) wears an orange curl at its corner; the foe tapped once
+    // (with «a second tap to be sure») a bright ring.
     if (v.mine) {
+      const aimOwn = this.targetKind() === 'own';
       for (const s of v.stacks) {
         const shoot = v.shoot.includes(s.id), melee = v.melee.includes(s.id);
-        const aimOwn = this.targetKind() === 'own';
-        if (!shoot && !melee && !(this.targeting && (aimOwn ? s.side === v.you : s.side !== v.you))) continue;
+        const aimed = !!this.targeting && (aimOwn ? s.side === v.you : s.side !== v.you);
+        if (!shoot && !melee && !aimed) continue;
         const p = this.lc(s.hex);
-        g.strokeStyle = this.targeting ? `rgba(240,160,60,${0.6 + 0.4 * pulse})` : `rgba(230,80,60,${0.55 + 0.45 * pulse})`;
-        g.lineWidth = 2.5;
         this.hexPath(g, p.x, p.y, r - 1);
+        if (!this.targeting) {
+          g.fillStyle = `rgba(215,60,40,${0.14 + 0.12 * pulse})`;
+          g.fill();
+        }
+        const armed = this.foeArmed === s.id;
+        g.strokeStyle = armed ? `rgba(255,236,190,${0.75 + 0.25 * pulse})` : this.targeting ? `rgba(240,160,60,${0.6 + 0.4 * pulse})` : `rgba(235,75,55,${0.65 + 0.35 * pulse})`;
+        g.lineWidth = armed ? 4 : big ? 3.5 : 2.5;
         g.stroke();
         if (shoot || this.targeting) {
-          g.lineWidth = 1.5;
+          g.lineWidth = big ? 2 : 1.5;
           g.beginPath();
           g.arc(p.x, p.y, w * 0.5, 0, Math.PI * 2);
           for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
@@ -2130,6 +2401,7 @@ export class TacticalPanel {
           }
           g.stroke();
         }
+        if (melee && !shoot && !this.targeting && s.ret) this.retMark(g, p.x + w * 0.36, p.y - r * 0.62, Math.max(5, w * 0.16), pulse);
       }
     }
     // The walk it would take, hex by hex (a flier's glide, an arc over the field), on the deck under the figures.

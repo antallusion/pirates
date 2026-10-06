@@ -5,15 +5,16 @@
 import { TAC_BLOCKING, hexNeighbors } from '../../../shared/src/data/tactical.ts';
 import type { TacCell } from '../../../shared/src/data/tactical.ts';
 
-/** A step's time on the field, and the walk's bounds (ms): a short step is still seen, a long march never drags. */
-export const STEP_MS = 120;
-export const WALK_MIN = 300;
-export const WALK_MAX = 600;
+/** A step's time on the field, and the walk's bounds (ms): a short step is still seen, a long march never drags
+ *  (docs/23 item 60: a stack's move in 0.25 s at most; it was 0.3–0.6 s). */
+export const STEP_MS = 50;
+export const WALK_MIN = 150;
+export const WALK_MAX = 250;
 /** A flier's glide (or a stack set down by a move of the deep: no walk to it), straight over. */
-export const GLIDE_MS = 480;
+export const GLIDE_MS = 250;
 
-/** How long a walk of `steps` hexes takes. */
-export const walkMs = (steps: number): number => Math.max(WALK_MIN, Math.min(WALK_MAX, steps * STEP_MS));
+/** How long a walk of `steps` hexes takes; `speed` 2 under «Ускорить ×2». */
+export const walkMs = (steps: number, speed = 1): number => Math.max(WALK_MIN, Math.min(WALK_MAX, steps * STEP_MS)) / speed;
 
 /** The shortest walk from `from` to `to` over the field as it stood, the hexes in order (both ends with them); null
  *  when no walk joins them (a dive through the surf, a stack set down elsewhere). */

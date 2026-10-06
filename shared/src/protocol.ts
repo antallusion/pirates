@@ -1404,7 +1404,9 @@ export type TacAction =
   | { a: 'ult'; target?: number }
   /** A film opened the fight on her screen (QA, 2026-10-04: films must not cost her the turn): the clock waits as long,
    *  once a battle for each side, at most TAC_FILM_HOLD. */
-  | { a: 'film'; ms: number };
+  | { a: 'film'; ms: number }
+  /** «Ускорить ×2» (docs/23 item 60): the sea's side and the auto-battle take half their breath over a turn. */
+  | { a: 'pace'; fast: boolean };
 
 /** A stack on the field. `hex` its place; `count` men with `hp` left on the foremost; `ret` may still strike back
  *  this round. */
@@ -1475,6 +1477,8 @@ export interface TacHeroView {
   /** Has given an order this round. */
   cast: boolean;
   auto: boolean;
+  /** «Ускорить ×2» asked (docs/23 item 60). */
+  fast?: boolean;
   /** Men on deck, and as the grapples bit. */
   men: number;
   menStart: number;

@@ -11,7 +11,7 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import {
-  TAC_AI_DELAY, TAC_BLOCKING, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
+  TAC_AI_DELAY, TAC_BLOCKING, TAC_FAST, TAC_BURN, TAC_CHANCE_PER_POINT, TAC_COVER, TAC_FEAR, TAC_GAP, TAC_H, TAC_LONG_SHOT, TAC_MAX_ROUNDS, TAC_ORDER_OF, TAC_SPELLS, TAC_TURN, TAC_UNITS, TAC_W,
   captainSpells, hexDist, hexIndex, hexMirror, hexNeighbors, hexX, hexY, kindOfUnit,
 } from '../../../shared/src/data/tactical.ts';
 import type { TacCell, TacKind, TacOrderId, TacSpellId } from '../../../shared/src/data/tactical.ts';
@@ -145,6 +145,8 @@ export interface TacHero {
   spells: { id: TacSpellId; ready: number }[];
   cast: number;
   auto: boolean;
+  /** «Ускорить ×2» (docs/23 item 60). */
+  fast?: boolean;
   fx: Fx[];
   kills: number;
   startHp: number;
@@ -1348,7 +1350,7 @@ function nextTurn(bt: TacBattle, now: number, rng: Rng): void {
     }
     bt.active = s.id;
     bt.turnEnds = now + TAC_TURN;
-    bt.aiAt = now + TAC_AI_DELAY;
+    bt.aiAt = now + aiDelay(bt);
     bt.seq++;
     return;
   }
@@ -1401,7 +1403,7 @@ function endTurn(bt: TacBattle, s: TacStack, now: number, rng: Rng, surgeOk: boo
     s.again--;
     push(bt, { k: 'again', side: s.side, s: s.id });
     bt.turnEnds = now + TAC_TURN;
-    bt.aiAt = now + TAC_AI_DELAY;
+    bt.aiAt = now + aiDelay(bt);
     return;
   }
   const m = stackMorale(bt, s);
@@ -1409,7 +1411,7 @@ function endTurn(bt: TacBattle, s: TacStack, now: number, rng: Rng, surgeOk: boo
     s.surged = true;
     push(bt, { k: 'morale', side: s.side, s: s.id });
     bt.turnEnds = now + TAC_TURN;
-    bt.aiAt = now + TAC_AI_DELAY;
+    bt.aiAt = now + aiDelay(bt);
     return;
   }
   nextTurn(bt, now, rng);
@@ -1437,12 +1439,23 @@ export function endByRansom(bt: TacBattle, payer: 0 | 1): void {
   bt.seq++;
 }
 
+/** The sea's breath over a turn (docs/23 item 60): halved while a captain on the field has asked «Ускорить ×2». */
+export function aiDelay(bt: TacBattle): number {
+  return TAC_AI_DELAY * (bt.heroes.some((h) => h.fast) ? TAC_FAST : 1);
+}
+
 /** One order from side `side`. Null when done; else why not. */
 export function act(bt: TacBattle, side: 0 | 1, a: TacAction, now: number, rng: Rng): string | null {
   if (bt.over) return 'The fight is over';
   if (a.a === 'auto') {
     bt.heroes[side].auto = a.on;
-    bt.aiAt = now + TAC_AI_DELAY;
+    bt.aiAt = now + aiDelay(bt);
+    bt.seq++;
+    return null;
+  }
+  if (a.a === 'pace') {
+    bt.heroes[side].fast = !!a.fast;
+    bt.aiAt = Math.min(bt.aiAt, now + aiDelay(bt));
     bt.seq++;
     return null;
   }
@@ -1895,7 +1908,7 @@ export function viewOf(bt: TacBattle, side: 0 | 1, now: number, canCut: boolean,
     const h = bt.heroes[x];
     const hb = h.input.hero;
     return {
-      name: h.input.name, ship: h.input.ship, ...(h.input.hull ? { hull: h.input.hull } : {}), captain: h.input.captain, morale: moralePoints(bt, x), luck: luckOf(bt, x), spells: h.spells.filter((s0) => !hb?.scroll?.[s0.id] || onScroll(bt, x, s0.id)).map((s0) => ({ id: s0.id, ready: s0.ready, ...(hb ? { cost: spellCost(bt, x, s0.id), res: spellRes(bt, x, s0.id) } : {}), ...(hb?.scroll?.[s0.id] ? { scroll: hb.scroll[s0.id]! - h.scrollsUsed.filter((y) => y === s0.id).length } : {}) })), cast: h.cast >= bt.round || (h.hush ?? 0) >= bt.round, auto: h.auto, men: alive(bt).filter((s) => s.side === x).reduce((n, s) => n + s.count, 0), menStart: h.startMen,
+      name: h.input.name, ship: h.input.ship, ...(h.input.hull ? { hull: h.input.hull } : {}), captain: h.input.captain, morale: moralePoints(bt, x), luck: luckOf(bt, x), spells: h.spells.filter((s0) => !hb?.scroll?.[s0.id] || onScroll(bt, x, s0.id)).map((s0) => ({ id: s0.id, ready: s0.ready, ...(hb ? { cost: spellCost(bt, x, s0.id), res: spellRes(bt, x, s0.id) } : {}), ...(hb?.scroll?.[s0.id] ? { scroll: hb.scroll[s0.id]! - h.scrollsUsed.filter((y) => y === s0.id).length } : {}) })), cast: h.cast >= bt.round || (h.hush ?? 0) >= bt.round, auto: h.auto, ...(h.fast ? { fast: true } : {}), men: alive(bt).filter((s) => s.side === x).reduce((n, s) => n + s.count, 0), menStart: h.startMen,
       ...(hb ? { prim: { atk: hb.atk, def: hb.def, pow: hb.pow, will: hb.will }, mana: Math.round(h.mana), manaMax: hb.manaMax } : {}),
       // docs/18: her path, stamina, innate move and ultimate, her spells' stores and scrolls, her face.
       ...(hb?.level !== undefined ? { path: hb.path ?? null, level: hb.level } : {}),
