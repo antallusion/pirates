@@ -1,6 +1,8 @@
-// The gear window (docs/12 P1): the ship's slots and the captain's, the locker, and a port chandler's wares. Tapping a
-// piece opens its card — its lines in its rarity's colour, how it weighs against what is worn in that slot, and what
-// can be done with it here.
+// The gear (docs/12 P1), the third tab of the captain's window (docs/23 items 70–71): the captain's paper doll as in
+// WoW — her portrait between square slots — and the ship's, the locker, and a port chandler's wares, as chips of the
+// window's second row; «Надеть лучшее» puts the locker's best piece in every slot in one tap. Tapping a piece opens
+// its card — its lines in its rarity's colour, how it weighs against what is worn in that slot, and what can be done
+// with it here.
 
 import {
   AFFIXES, CAPTAIN_SLOTS, CAP_STATS, CAP_STAT_NAMES, LEGENDARY_ITEMS, TEMPER_MAX, reforgeCost, temperCost, RARITY_COLOR, RARITY_NAMES, SETS, SHIP_SLOTS, SLOT_NAMES, SLOT_OPENS,
@@ -26,14 +28,69 @@ import { PRIMS, PRIM_NAMES } from '../../../shared/src/data/hero.ts';
 import { EN as HERO_EN, RU as HERO_RU } from '../lang/ui/hero.ts';
 import type { CmpRow } from './gearcmp.ts';
 import { EN as EASE_EN, RU as EASE_RU } from '../lang/ui/ease.ts';
+import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
+import { quickBar } from './kit/window.ts';
+import type { WinTab } from './kit/window.ts';
 
 const L = dict(EN, RU);
 const EL = dict(EASE_EN, EASE_RU);
 const HL = dict(HERO_EN, HERO_RU);
+const W = dict(WIN_EN, WIN_RU);
 const ru = () => lang() === 'ru';
 
-type Tab = 'ship' | 'captain' | 'locker' | 'shop';
-let tab: Tab = 'ship';
+export type GearTab = 'ship' | 'captain' | 'locker' | 'shop';
+type Tab = GearTab;
+let tab: Tab = 'captain';
+
+/** The gear's place now, and a new one (from the window's second row). */
+export function gearTab(): GearTab {
+  return tab;
+}
+export function setGearTab(t: GearTab): void {
+  tab = t;
+  pick = null;
+  only = null;
+}
+
+/** The gear's places as chips of the captain window's second row: the captain's doll first (the owner's WoW doll). */
+export function gearChips(state: ClientState): WinTab[] {
+  const self = state.self;
+  if (!self) return [];
+  const out: WinTab[] = [
+    { id: 'captain', icon: 'bt_captain', label: W('gear.captain') },
+    { id: 'ship', icon: 'menu_ship', label: W('gear.ship') },
+    { id: 'locker', icon: 'tab_holdings', label: `${W('gear.locker')} ${self.stash.length}/${STASH_SIZE}` },
+  ];
+  if (self.dockedAt) out.push({ id: 'shop', icon: 'tab_market', label: W('gear.shop') });
+  return out;
+}
+
+/** How much a piece is worth wearing: its value, nothing when it is broken (a broken piece gives no lines). */
+export function wearScore(it: Item | null | undefined): number {
+  return !it || (!it.art && it.dur <= 0) ? 0 : itemValue(it);
+}
+
+/** «Надеть лучшее» (docs/23 item 71): for every slot she may fill, the locker's best piece when it beats what is
+ *  worn — not one above her level, not a ship's slot her hull has not opened yet. */
+export function bestGear(self: NonNullable<ClientState['self']>): { uid: number; slot: Slot }[] {
+  const lvl = shipLevelOf(self.loadout);
+  const shipGear = self.loadout.gear ?? {};
+  const capGear = self.captainGear ?? {};
+  const out: { uid: number; slot: Slot }[] = [];
+  for (const slot of [...CAPTAIN_SLOTS, ...SHIP_SLOTS] as Slot[]) {
+    const ship = isShipSlot(slot);
+    if (ship && lvl < SLOT_OPENS[slot]) continue;
+    const worn = (ship ? shipGear[slot] : capGear[slot as never]) as Item | undefined;
+    let best: Item | null = null;
+    for (const it of self.stash) {
+      if (itemSlot(it) !== slot) continue;
+      if (ship ? it.ilvl > lvl : it.ilvl > captainIlvl(self.level)) continue;
+      if (wearScore(it) > wearScore(best)) best = it;
+    }
+    if (best && wearScore(best) > wearScore(worn)) out.push({ uid: best.uid, slot });
+  }
+  return out;
+}
 /** The card open: a worn slot, a locker item, or a chandler's ware. */
 let pick: { kind: 'slot'; slot: Slot } | { kind: 'item'; uid: number } | { kind: 'ware'; index: number } | null = null;
 /** The locker shown for one slot only (after tapping an empty slot). */
@@ -150,7 +207,7 @@ globalThis.addEventListener?.('pointermove', (e) => {
   if (tip && !(e.target instanceof Element && e.target.closest('[data-gitem], [data-gware]'))) tip.remove();
 }, { passive: true });
 
-export function renderGear(root: HTMLElement, state: ClientState, send: (m: ClientMsg) => void, close: () => void): void {
+export function renderGear(root: HTMLElement, state: ClientState, send: (m: ClientMsg) => void): void {
   document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
   const self = state.self;
   if (!self) return;
@@ -249,20 +306,16 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
     if (forge) body += stormForgeCard(state);
   }
 
-  const tabs: [Tab, string][] = [['ship', L('tab.ship')], ['captain', L('tab.captain')], ['locker', L('tab.locker', { n: self.stash.length, max: STASH_SIZE })]];
-  if (docked) tabs.push(['shop', L('tab.shop')]);
-  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { ship: placeName(self.loadout.name), cls: cls.name, n: self.level }))} ${ownLevelChip(lvl)}</div></div><button class="btn btn-small" data-gclose>${esc(L('close'))}</button></div>
-    <div class="modal-body gear"><div class="tabs gear-tabs">${tabs.map(([t, n]) => `<button class="tab${tab === t ? ' active' : ''}" data-tab="${t}">${esc(n)}</button>`).join('')}</div>
-    <div class="gear-main"><div class="gear-body">${body}</div>${detail ? `<div class="gear-detail sheet"><button class="gear-hide" data-ghide aria-label="${esc(L('hide'))}">×</button>${detail}</div>` : ''}</div></div>`;
+  // «Надеть лучшее»: on the dolls and the locker, how many pieces it would change.
+  const best = tab === 'shop' ? [] : bestGear(self);
+  const quick = tab === 'shop' ? '' : quickBar([{ label: W('gear.best'), sub: best.length ? `+${best.length}` : esc(W('gear.bestNone')), icon: 'tab_holdings', hint: W('gear.bestHint'), primary: best.length > 0, disabled: !best.length, data: { gbest: 1 } }], 'gear-quick');
+  root.innerHTML = `${quick}<div class="gear-main"><div class="gear-body">${body}</div>${detail ? `<div class="gear-detail sheet"><button class="gear-hide" data-ghide aria-label="${esc(L('hide'))}">×</button>${detail}</div>` : ''}</div>`;
 
-  const redo = () => renderGear(root, state, send, close);
-  root.querySelector<HTMLElement>('[data-gclose]')!.onclick = close;
-  root.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => (b.onclick = () => {
-    tab = b.dataset.tab as Tab;
+  const redo = () => renderGear(root, state, send);
+  root.querySelector<HTMLElement>('[data-gbest]')?.addEventListener('click', () => {
+    for (const x of bestGear(self)) send({ t: 'gear', action: 'equip', uid: x.uid });
     pick = null;
-    only = null;
-    redo();
-  }));
+  });
   root.querySelector<HTMLElement>('[data-gall]')?.addEventListener('click', () => {
     only = null;
     redo();

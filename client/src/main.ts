@@ -18,7 +18,6 @@ import { MinigameWindow } from './ui/minigame.ts';
 import { TrekWindow } from './ui/trek.ts';
 import { EN as ISLES_EN, RU as ISLES_RU } from './lang/ui/isles.ts';
 import { EN as LAIRS_EN, RU as LAIRS_RU } from './lang/ui/lairs.ts'; // docs/18 II
-import { renderGear } from './ui/gear.ts';
 import { DivePanel } from './ui/dive.ts';
 import { giverDialog } from './ui/giver.ts';
 import { inspectDialog } from './ui/inspect.ts';
@@ -79,7 +78,8 @@ import { applySkin } from './ui/skin.ts';
 import { rudderToward, TouchControls } from './touch.ts';
 import { PortScreen } from './ui/port.ts';
 import { TalentScreen } from './ui/talents.ts';
-import { HeroWindow, drawSeaOrders } from './ui/hero.ts';
+import { HeroWindow, closeLevelUp, drawSeaOrders, levelUpOpen, levelUpSheet } from './ui/hero.ts';
+import type { CaptainOpen } from './ui/hero.ts';
 import { activeTalents } from '../../shared/src/data/talents.ts';
 import { WorldMap } from './ui/worldmap.ts';
 import { Journal } from './ui/journal.ts';
@@ -244,7 +244,7 @@ const talentScreen = new TalentScreen((m) => net.send(m));
 // The captain as a hero (docs/17 H2): primaries, skills, the order book, a port's guild and artifact merchant.
 const heroWindow = new HeroWindow((m) => net.send(m));
 heroWindow.onClose = () => closeModal();
-function openHero(tab?: 'hero' | 'path' | 'book' | 'port'): void {
+function openHero(tab?: CaptainOpen): void {
   heroWindow.open(tab);
   openModal('hero');
 }
@@ -277,6 +277,19 @@ function openThrone(tab?: string): void {
   openModal('throne');
 }
 heroWindow.onThrone = () => openThrone();
+heroWindow.onTalents = () => openModal('talents');
+// docs/23 item 70: the level's «pick one of two» comes up by itself when a level comes — not over a window, a fight
+// or a battle (it waits for them to end); levels that waited before she came aboard stay in the Hero tab.
+let heroSeen = -1;
+setInterval(() => {
+  const h = state.self?.hero;
+  if (!h || !inGame) return;
+  if (heroSeen < 0 || h.pending < heroSeen) heroSeen = h.pending;
+  if (h.pending > heroSeen && h.offer.length && !modal && !state.boardTac && !state.boardFight && !document.body.classList.contains('sea-target') && !levelUpOpen()) {
+    heroSeen = h.pending;
+    levelUpSheet(state, (m) => net.send(m));
+  }
+}, 600);
 hud.onThrone = () => openThrone();
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
@@ -1118,18 +1131,27 @@ let portReturn = false;
 
 function openModal(m: Modal): void {
   if (m !== 'look') resetLookDraft();
+  // The gear is the captain window's third tab (docs/23 item 70).
+  if (m === 'gear') {
+    heroWindow.open('gear');
+    m = 'hero';
+  }
+  if (m === null) closeLevelUp();
   const from = modal;
   modal = m;
   $('modal').classList.toggle('hidden', m === null);
-  // A window comes up from the bottom edge as a sheet (docs/23 phase 6); a new window over an open one only swaps.
   // The harbour opened from the sea's HUD starts on its market — the one-tap bar (docs/23 item 66); a window closed
   // back into it keeps the place it was on.
   if (m === 'port' && from === null && !portReturn) portScreen.tab = 'market';
   portReturn = false;
+  // A window comes up from the bottom edge as a sheet (docs/23 phase 6); a new window over an open one only swaps.
   if (m !== null && from === null) {
     modalAt = performance.now();
+    // Start below the edge, let the style land (a forced layout, not a frame: a busy frame came a second late),
+    // then slide up.
     $('modal').classList.add('w-from');
-    requestAnimationFrame(() => requestAnimationFrame(() => $('modal').classList.remove('w-from')));
+    void $('modal-panel').offsetHeight;
+    $('modal').classList.remove('w-from');
   }
   if (m === null) releaseModalToasts();
   refreshModal();
@@ -1190,7 +1212,7 @@ function selfKeyFor(m: Modal): string {
   const s = state.self;
   if (!s) return '';
   if (m === 'gear') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.stash, s.loadout, s.captainGear, s.cargo]);
-  if (m === 'hero') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.hero, s.captainGear, s.glory?.open]);
+  if (m === 'hero') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.hero, s.captainGear, s.glory?.open, s.stash, s.loadout, s.cargo]);
   if (m === 'research') return JSON.stringify([m, lang(), s.loadout.classId, s.berths.map((b) => b.classId), s.research && { done: s.research.done, free: Math.floor(s.research.free / 50), xp: Object.values(s.research.xp).map((x) => Math.floor((x ?? 0) / 50)) }]);
   if (m === 'throne') return JSON.stringify([m, lang(), s.name, s.level, s.dockedAt, s.gold, s.glory && { ...s.glory, xp: Math.floor(s.glory.xp / Math.max(1, s.glory.need) * 200), trials: s.glory.trials.map((v) => ({ ...v, wait: Math.ceil((v.wait ?? 0) / 60) })) }]);
   return m === 'company' ? JSON.stringify([m, lang(), s.name, s.dockedAt, s.berths, s.pvp, s.maps, s.company, s.cargo, s.builds, s.gold]) : JSON.stringify([m, lang(), s.gold, s.cargo, s.dockedAt, s.homeIsle]);
@@ -1209,7 +1231,7 @@ function refreshModal(): void {
 function renderModal(root: HTMLElement): void {
   // The gear window's card beside a hovered piece goes with its window (QA circle: it stayed over the next window,
   // opened by a key, until the mouse moved).
-  if (modal !== 'gear') document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
+  if (!(modal === 'hero' && heroWindow.tab === 'gear')) document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
   switch (modal) {
     case 'port':
       if (state.portView) portScreen.render(root, state);
@@ -1229,9 +1251,6 @@ function renderModal(root: HTMLElement): void {
       break;
     case 'ship':
       renderShip(root, state, (m) => net.send(m), () => openModal('gear'), () => openModal('look'));
-      break;
-    case 'gear':
-      renderGear(root, state, (m) => net.send(m), () => openModal('ship'));
       break;
     case 'help':
       renderHelp(root, state.onboarding);
@@ -2841,4 +2860,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud };

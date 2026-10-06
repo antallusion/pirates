@@ -1,7 +1,9 @@
-// The captain as a HoMM3 hero (docs/17 H2): the Captain window — her four primaries (and what her artifacts add), her
-// will, her eight skill slots, the level-up's choice of two, her artifact sets; the order book by its four schools,
-// with the sea orders cast from it; a port's guild of orders and artifact merchant. And the HUD's compact bar of sea
-// orders: her will and a finger-wide button for each sea order she knows.
+// The captain as a HoMM3 hero (docs/17 H2): the Captain window — on a phone a bottom sheet of three big tabs (docs/23
+// item 70): «Герой» (her four primaries and what her artifacts add, her will, her eight skill slots, the level-up's
+// choice of two, her artifact sets), «Книга» (the order book by its four schools with the sea orders cast from it, the
+// path's pages, a port's guild of orders and artifact merchant — as chips of the second row) and «Снаряжение» (the
+// paper doll, gear.ts). The level-up's choice also comes up by itself as a card «выберите один из двух» (levelUpSheet).
+// And the HUD's compact bar of sea orders: her will and a finger-wide button for each sea order she knows.
 
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, ART_SETS } from '../../../shared/src/data/artifacts.ts';
@@ -21,6 +23,15 @@ import type { ClientState } from '../state.ts';
 import { esc, icon, money } from './dom.ts';
 import { pathTab } from './pathbook.ts';
 import { EN as PB_EN, RU as PB_RU } from '../lang/ui/pathbook.ts';
+import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
+import { chipRow, railTabs, winHead } from './kit/window.ts';
+import type { WinTab } from './kit/window.ts';
+import { gearChips, gearTab, renderGear, setGearTab } from './gear.ts';
+import type { GearTab } from './gear.ts';
+import { openSheet } from './kit/sheet.ts';
+import type { SheetHandle } from './kit/sheet.ts';
+
+const W = dict(WIN_EN, WIN_RU);
 
 const PB = dict(PB_EN, PB_RU);
 
@@ -28,7 +39,11 @@ const L = dict(EN, RU);
 const k = () => (lang() === 'ru' ? 1 : 0);
 const T = (x: [string, string]) => x[k()];
 
-type Tab = 'hero' | 'path' | 'book' | 'port';
+type Tab = 'hero' | 'book' | 'gear';
+/** The book's pages (the second row): the orders by school, the path's pages, a port's guild and merchant. */
+type BookPage = 'orders' | 'path' | 'guild';
+/** What the old callers ask for: a tab, or one of the book's pages by its old name. */
+export type CaptainOpen = Tab | 'path' | 'port';
 
 /** A primary's tile: its mark, its name, her value and what artifacts add. */
 function primTile(h: HeroView, p: (typeof PRIMS)[number]): string {
@@ -49,6 +64,7 @@ function willBar(h: HeroView): string {
 
 export class HeroWindow {
   tab: Tab = 'hero';
+  page: BookPage = 'orders';
   school: School = 'fire';
   port: HeroPortView | null = null;
   private send: (m: ClientMsg) => void;
@@ -58,32 +74,57 @@ export class HeroWindow {
   }
 
   /** Opened: ask the port what it offers (its guild, its merchant). */
-  open(tab?: Tab): void {
-    if (tab) this.tab = tab;
+  open(tab?: CaptainOpen): void {
+    if (tab === 'path' || tab === 'port') {
+      this.tab = 'book';
+      this.page = tab === 'path' ? 'path' : 'guild';
+    } else if (tab) this.tab = tab;
     this.send({ t: 'hero', action: 'view' });
   }
+
+  /** The talent trees (a chip of the hero's row): main.ts opens their window. */
+  onTalents: () => void = () => {};
 
   render(root: HTMLElement, state: ClientState): void {
     const self = state.self;
     const h = self?.hero;
     if (!self || !h) return;
     const docked = !!self.dockedAt;
-    if (this.tab === 'port' && !docked) this.tab = 'hero';
+    if (this.page === 'guild' && !docked) this.page = 'orders';
     const cap = CAPTAINS[self.captain];
     const url = assetUrl(cap.portrait);
-    const tabs: [Tab, string][] = [['hero', L('tab.hero')], ['path', PB('tab')], ['book', L('tab.book')]];
-    if (docked) tabs.push(['port', L('tab.port')]);
+    // docs/23 item 70: three big tabs in place of six; each one's own places in the second row.
+    const main: WinTab[] = [
+      { id: 'hero', icon: 'bt_captain', label: W('cap.hero'), hint: W('cap.heroHint'), badge: h.pending },
+      { id: 'book', icon: 'bt_book', label: W('cap.book'), hint: W('cap.bookHint') },
+      { id: 'gear', icon: 'item_tricorne', label: W('cap.gear'), hint: W('cap.gearHint') },
+    ];
+    let chips = '';
+    if (this.tab === 'hero') chips = chipRow([{ id: 'talents', icon: 'menu_talents', label: W('cap.talents'), hint: W('cap.talentsHint') }], '', 'cchip');
+    else if (this.tab === 'book') {
+      const pages: WinTab[] = [{ id: 'orders', icon: 'bt_order', label: W('cap.orders') }, { id: 'path', icon: `school_${self.captain}`, label: W('cap.path') }];
+      if (docked) pages.push({ id: 'guild', icon: 'tab_guild', label: W('cap.guild'), hint: W('cap.guildHint') });
+      chips = chipRow(pages, this.page, 'cchip');
+    } else chips = chipRow(gearChips(state), gearTab(), 'cchip');
     let body = '';
     if (this.tab === 'hero') body = this.heroTab(h, self.level, url, !!self.glory?.open);
-    else if (this.tab === 'path') body = pathTab(h, self.captain, self.level, self.talents ?? {}); // docs/18 item 9
-    else if (this.tab === 'book') body = this.bookTab(h, docked, state.estServerTime());
-    else body = this.portTab(h, self.gold);
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, path: cap.archetype }))}</div></div></div>
-      <div class="modal-body hero-win"><div class="tabs">${tabs.map(([t, n]) => `<button class="tab${this.tab === t ? ' active' : ''}" data-htab="${t}">${esc(n)}${t === 'hero' && h.pending ? ` <span class="hx-dot">${h.pending}</span>` : ''}</button>`).join('')}</div>${body}</div>`;
+    else if (this.tab === 'book') body = this.page === 'path' ? pathTab(h, self.captain, self.level, self.talents ?? {}) : this.page === 'guild' ? this.portTab(h, self.gold) : this.bookTab(h, docked, state.estServerTime());
+    root.innerHTML = `${winHead(W('cap.title'), { crest: 'bt_captain', sub: L('sub', { name: self.name, n: self.level, path: cap.archetype }), chips })}
+      <div class="w-frame">${railTabs(main, this.tab, 'ctab')}<div class="w-pane"><div class="modal-body w-body cap-body${this.tab === 'gear' ? ' gear cap-gear' : ' hero-win'}">${body}</div></div></div>`;
+    if (this.tab === 'gear') renderGear(root.querySelector<HTMLElement>('.cap-body')!, state, this.send);
     const redo = () => this.render(root, state);
-    root.querySelectorAll<HTMLElement>('[data-htab]').forEach((b) => (b.onclick = () => {
-      this.tab = b.dataset.htab as Tab;
-      if (this.tab === 'port') this.send({ t: 'hero', action: 'view' });
+    root.querySelectorAll<HTMLElement>('[data-ctab]').forEach((b) => (b.onclick = () => {
+      this.tab = b.dataset.ctab as Tab;
+      if (this.tab === 'book') this.send({ t: 'hero', action: 'view' });
+      redo();
+    }));
+    root.querySelectorAll<HTMLElement>('[data-cchip]').forEach((b) => (b.onclick = () => {
+      const id = b.dataset.cchip!;
+      if (this.tab === 'hero') return void (id === 'talents' && this.onTalents());
+      if (this.tab === 'book') {
+        this.page = id as BookPage;
+        if (this.page === 'guild') this.send({ t: 'hero', action: 'view' });
+      } else setGearTab(id as GearTab);
       redo();
     }));
     root.querySelectorAll<HTMLElement>('[data-hschool]').forEach((b) => (b.onclick = () => {
@@ -146,7 +187,7 @@ export class HeroWindow {
         : '';
       return `<div class="hx-order${known ? ' known' : ''}${d.level > h.cap && !known ? ' high' : ''}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(L('lv', { n: d.level }))}</span><span class="tag ${d.use}">${esc(L(d.use))}</span><span class="tag ${res}">${esc(L(res === 'stam' ? 'costStam' : 'cost', { n: cost }))}</span>${known ? '' : `<span class="muted">${esc(L('unknown'))}</span>`}</span><small>${esc(T(d.text))}</small></span>${cast}</div>`;
     }).join('');
-    return `<div class="tabs hx-schools">${SCHOOLS.map((s) => `<button class="tab${s === sc ? ' active' : ''}" data-hschool="${s}">${icon(SCHOOL_ICON[s], '', 'ico-sm')}${esc(T(SCHOOL_NAMES[s]))} <span class="muted">${h.orders.filter((id) => ORDERS[id].school === s).length}</span></button>`).join('')}</div>
+    return `<div class="w-chips hx-schools" role="tablist">${SCHOOLS.map((s) => `<button type="button" class="w-chip${s === sc ? ' on' : ''}" role="tab" aria-selected="${s === sc}" data-hschool="${s}"${s === sc ? ` data-hint="${esc(`${L('schoolNote', { skill: T(skill.name) })} ${L('capNote', { n: h.cap })} ${L('learnAt')}`)}"` : ''}>${icon(SCHOOL_ICON[s], '', 'w-chip-ico')}${esc(T(SCHOOL_NAMES[s]))} <span class="muted">${h.orders.filter((id) => ORDERS[id].school === s).length}</span></button>`).join('')}</div>
       ${willBar(h)}
       <p class="muted hx-note">${esc(L('schoolNote', { skill: T(skill.name) }))} ${esc(L('capNote', { n: h.cap }))} ${esc(L('learnAt'))}</p>
       <div class="hx-orders">${rows}</div>`;
@@ -181,6 +222,48 @@ export class HeroWindow {
       : '';
     return `<div class="gi-h">${icon('bt_captain', '', 'ico-sm')}${esc(L('guild'))}</div>${guild}${foreign}<div class="gi-h">${icon('item_signet', '', 'ico-sm')}${esc(L('merchant'))}</div>${wares}`;
   }
+}
+
+/** The level's choice as it comes (docs/23 item 70): a card from below — «Новый уровень», two big skills to pick one
+ *  of, «Позже». It follows the server: a pick sends it and the next choice (when several levels came at once) takes
+ *  its place; it goes when nothing waits. */
+let upSheet: SheetHandle | null = null;
+export function levelUpOpen(): boolean {
+  return !!upSheet?.open;
+}
+export function closeLevelUp(): void {
+  upSheet?.close('code');
+}
+export function levelUpSheet(state: ClientState, send: (m: ClientMsg) => void): void {
+  if (upSheet?.open) return;
+  let last = '';
+  const draw = () => {
+    const h = state.self?.hero;
+    if (!h || !h.pending || !h.offer.length) return void sheet.close('code');
+    const key = JSON.stringify([lang(), state.self!.level, h.pending, h.offer]);
+    if (key === last) return;
+    last = key;
+    sheet.body.innerHTML = `<p class="lu-sub">${esc(W('cap.pick'))}${h.pending > 1 ? ` · ${esc(L('pending', { n: h.pending }))}` : ''}</p><div class="lu-picks">${h.offer.map((o, i) => {
+      const d = SKILLS[o.id];
+      return `<button type="button" class="lu-pick" data-lupick="${i}">${icon(d.icon, '✦', 'lu-ico')}<span class="lu-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small></span></button>`;
+    }).join('')}</div>`;
+    sheet.body.querySelectorAll<HTMLElement>('[data-lupick]').forEach((b) => (b.onclick = () => {
+      b.setAttribute('aria-busy', 'true');
+      send({ t: 'hero', action: 'skill', pick: Number(b.dataset.lupick) });
+    }));
+  };
+  const sheet = openSheet({
+    title: W('cap.levelUp', { n: state.self?.level ?? 0 }), body: '', height: 'auto', cls: 'lu-sheet',
+    foot: `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-lulater>${esc(W('cap.later'))}</button>`,
+    onClose: () => {
+      clearInterval(timer);
+      if (upSheet === sheet) upSheet = null;
+    },
+  });
+  upSheet = sheet;
+  sheet.foot?.querySelector<HTMLElement>('[data-lulater]')?.addEventListener('click', () => sheet.close('button'));
+  const timer = setInterval(draw, 300);
+  draw();
 }
 
 /** The HUD's bar of sea orders (at sea, for a captain who knows one): her will, and each order a finger wide. */

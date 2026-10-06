@@ -36,6 +36,10 @@
   .w-fig { height: 28px; padding: 0 8px; }
 }
 @media (max-width: 699px) { .w-sub { display: none; } }
+/* The second row in the band (a window with few places of its own). */
+.w-head--chips .w-chips { flex: 1 1 auto; min-width: 0; padding: 2px 0; border: 0; }
+.w-head--chips .w-sub { flex: 0 1 auto; max-width: 30%; }
+@media (max-height: 520px), (max-width: 699px) { .w-head--chips .w-sub { display: none; } }
 
 /* ---------- The frame under the band: the rail of big tabs, and the pane (the chips, the page) */
 .w-frame { flex: 1 1 auto; min-height: 0; display: flex; }
@@ -43,8 +47,8 @@
 .w-pane > .modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .w-rail { flex: none; width: 104px; display: flex; flex-direction: column; gap: var(--k-sp-1); padding: var(--k-sp-2) var(--k-sp-1); box-sizing: border-box; border-right: 1px solid rgba(140, 107, 58, 0.3); overflow-y: auto; scrollbar-width: none; }
 .w-rail::-webkit-scrollbar { display: none; }
-.w-tab { position: relative; flex: 1 1 0; min-height: 52px; max-height: 84px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px 2px; border: 1px solid transparent; border-radius: var(--k-r-1); background: none; color: var(--k-haze);
-  font: 600 var(--k-fs-1)/1.1 var(--k-font-sans); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+.w-tab { position: relative; flex: 0 0 auto; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px 2px; border: 1px solid transparent; border-radius: var(--k-r-1); background: none; color: var(--k-haze);
+  font: 600 var(--k-fs-1)/1.35 var(--k-font-sans); letter-spacing: 0.01em; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: transform var(--k-dur-1) var(--k-ease-out), color var(--k-dur-2) var(--k-ease-out), background var(--k-dur-2) var(--k-ease-out); }
 .w-tab-ico { width: 30px; height: 30px; object-fit: contain; margin: 0; filter: saturate(0.6) brightness(0.85); transition: filter var(--k-dur-2) var(--k-ease-out); }
 .w-tab-ico.glyph { display: flex; align-items: center; justify-content: center; font-size: 22px; }
@@ -61,8 +65,8 @@
 .w-tab--go .w-tab-ico { filter: none; }
 .skinned .w-tab--go { border-style: solid; border-color: transparent; border-width: 6px 8px; border-image: var(--ui-button) 40 fill / 6px 8px stretch; background: none; }
 @media (max-height: 520px), (max-width: 699px) {
-  .w-rail { width: 84px; padding: var(--k-sp-1) 2px; gap: 2px; }
-  .w-tab { min-height: 48px; font-size: 10px; letter-spacing: 0.02em; }
+  .w-rail { width: 88px; padding: var(--k-sp-1) 2px; gap: 2px; }
+  .w-tab { height: 56px; font-size: 11px; letter-spacing: 0; }
   .w-tab-ico { width: 28px; height: 28px; }
 }
 /* The second row: chips, one line that scrolls sideways when it must. */
@@ -129,7 +133,7 @@
 /* ---------- Big tiles (an island's buildings): a picture over one or two words */
 .w-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--k-sp-2); }
 .w-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 92px; padding: 8px 4px 6px; border: 1px solid rgba(140, 107, 58, 0.4); border-radius: var(--k-r-1); background: rgba(8, 8, 9, 0.6); color: var(--k-bone);
-  font: 600 var(--k-fs-2)/1.15 var(--k-font-serif); text-align: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  font: 600 var(--k-fs-2)/28px var(--k-font-serif); text-align: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: transform var(--k-dur-1) var(--k-ease-out), border-color var(--k-dur-2) var(--k-ease-out); }
 .w-tile:active:not(:disabled) { transform: scale(0.97); }
 .w-tile:focus { outline: none; }
@@ -137,7 +141,7 @@
 .w-tile.on { border-color: var(--k-gold); }
 .w-tile.ready { border-color: var(--k-good); box-shadow: inset 0 0 14px rgba(127, 181, 138, 0.18); }
 .w-tile-ico { width: 48px; height: 48px; object-fit: contain; margin: 0; }
-.w-tile-l { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.w-tile-l { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; }
 .w-tile-s { font: 600 var(--k-fs-1)/1.2 var(--k-font-sans); color: var(--k-haze); font-variant-numeric: tabular-nums; }
 .w-tile .k-badge { top: 4px; right: 4px; }
 
@@ -198,3 +202,52 @@
   .w-quick > .w-qbtn { min-width: 130px; }
   .q-card { min-height: 0; }
 }
+
+/* ---------- The captain's window (hero.ts, gear.ts; docs/23 items 70–71) */
+.cap-body { padding: var(--k-sp-2) var(--k-sp-3) var(--k-sp-4); }
+/* The paper doll beside its figures: the whole doll in one screen on a phone held sideways. */
+.cap-gear .gear-quick { margin-bottom: var(--k-sp-2); }
+.cap-gear .gear-quick > .w-qbtn { flex: 0 1 260px; }
+.cap-gear .gear-body:has(> .doll) { display: flex; align-items: flex-start; gap: var(--k-sp-3); }
+.cap-gear .gear-body > .doll { flex: none; margin: 0; }
+.cap-gear .gear-body > .gear-side { flex: 1 1 auto; margin-top: 0; min-width: 0; }
+@media (max-height: 520px), (max-width: 699px) {
+  .cap-body { padding: var(--k-sp-2); }
+  .cap-body.cap-gear { padding-top: 4px; padding-bottom: 4px; }
+  .cap-gear .doll { --ds: 44px; gap: 4px 6px; width: 250px; max-width: none; grid-template-columns: var(--ds) minmax(0, 1fr) var(--ds); }
+  .cap-gear .doll-col { gap: 4px; justify-content: flex-start; }
+  .cap-gear .doll-face { min-height: 0; height: calc(var(--ds) * 5 + 16px); }
+  .cap-gear .gear-side { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .cap-gear .gear-quick { position: absolute; right: var(--k-sp-2); top: var(--k-sp-2); z-index: 2; margin: 0; }
+  .cap-gear { position: relative; }
+  .cap-gear .gear-body > .gear-side { padding-top: 60px; }
+}
+/* The order book's schools: one row of chips; the school's note is its chip's hint on a phone. */
+.cap-body .w-chips.hx-schools { flex-wrap: nowrap; padding: 0 0 var(--k-sp-2); border: 0; margin: 0 calc(-1 * var(--k-sp-1)); }
+/* The level's choice in the Hero tab: two rows, a finger-wide «Взять» (the card from below is levelUpSheet). */
+@media (max-height: 520px), (max-width: 699px) {
+  .cap-body .hx-note { display: none; }
+  .cap-body .hx-picks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .cap-body .hx-pick { flex-direction: row; align-items: center; text-align: left; padding: 6px 8px; gap: 8px; }
+  .cap-body .hx-pick .ico-lg { width: 40px; height: 40px; flex: none; }
+  .cap-body .hx-pick-t { align-items: flex-start; gap: 1px; flex: 1 1 auto; }
+  .cap-body .hx-pick-t b { font-size: 15px; }
+  .cap-body .hx-pick-t small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px; }
+  .cap-body .hx-pick-t small.muted { display: none; }
+  .cap-body .hx-pick > .btn { margin: 0; min-height: 44px; flex: none; }
+}
+/* The level's choice from below: two big cards, one tap. */
+.lu-sheet { width: min(640px, 100%); }
+.lu-sub { margin: 0 0 var(--k-sp-2); color: var(--k-haze); font-size: var(--k-fs-2); }
+.lu-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--k-sp-2); }
+.lu-pick { display: flex; gap: var(--k-sp-2); align-items: flex-start; min-height: 96px; padding: var(--k-sp-3); border: 1px solid var(--k-brass-dim); border-radius: var(--k-r-2); background: linear-gradient(180deg, #221d18, #12100d); color: var(--k-bone); text-align: left; cursor: pointer;
+  font: var(--k-fs-2)/32px var(--k-font-sans); touch-action: manipulation; transition: transform var(--k-dur-1) var(--k-ease-out), border-color var(--k-dur-2) var(--k-ease-out); }
+.lu-pick:hover { border-color: var(--k-brass); }
+.lu-pick:active { transform: scale(0.98); border-color: var(--k-gold); }
+.lu-pick:focus-visible { outline: 2px solid var(--k-gold); outline-offset: 2px; }
+.lu-pick[aria-busy='true'] { opacity: 0.6; }
+.lu-ico { width: 52px; height: 52px; object-fit: contain; flex: none; margin: 0; }
+.lu-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.35; }
+.lu-t b { font: 600 17px/1.2 var(--k-font-serif); color: var(--k-gold); }
+.lu-t small { color: var(--k-bone); font-size: var(--k-fs-1); line-height: 1.35; }
+@media (max-width: 480px) { .lu-picks { grid-template-columns: minmax(0, 1fr); } }

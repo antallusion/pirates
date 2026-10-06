@@ -49,9 +49,10 @@ export function chipRow(items: WinTab[], active: string, attr: string): string {
   }).join('')}</div>`;
 }
 
-/** The window's band: its name (with a crest), then figures (`ph-chip`-like spans). */
-export function winHead(title: string, o: { crest?: string; figures?: string; sub?: string; id?: string } = {}): string {
-  return `<header class="modal-head w-head"><h2${o.id ? ` id="${esc(o.id)}"` : ''} class="w-title">${o.crest ? icon(o.crest, '', 'w-crest') : ''}<span>${esc(title)}</span></h2>${o.sub ? `<span class="w-sub">${esc(o.sub)}</span>` : ''}${o.figures ? `<div class="w-figs">${o.figures}</div>` : ''}</header>`;
+/** The window's band: its name (with a crest), a line under it on a desk, figures; a window with few places of its
+ *  own puts its second row (chipRow's markup) in the band itself — one band less over the page on a phone. */
+export function winHead(title: string, o: { crest?: string; figures?: string; sub?: string; id?: string; chips?: string } = {}): string {
+  return `<header class="modal-head w-head${o.chips ? ' w-head--chips' : ''}"><h2${o.id ? ` id="${esc(o.id)}"` : ''} class="w-title">${o.crest ? icon(o.crest, '', 'w-crest') : ''}<span>${esc(title)}</span></h2>${o.chips ?? ''}${o.sub ? `<span class="w-sub">${esc(o.sub)}</span>` : ''}${o.figures ? `<div class="w-figs">${o.figures}</div>` : ''}</header>`;
 }
 
 /** A figure in the band: an icon and a number (the purse, the hold). */
