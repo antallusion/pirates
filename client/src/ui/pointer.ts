@@ -24,7 +24,8 @@ export function pointerTargets(f: PointerFacts): string[] {
       if (f.docked) return ['[data-act="undock"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
       return f.touch ? ['#tc-stick'] : [];
     case 'attack':
-      return ['#tc-act[data-act="attack"]', '.act-btn.act-attack'];
+      // (already alongside her, «Действие» reads «На абордаж»: that is the step's battle, sooner)
+      return ['#tc-act[data-act="attack"]', '.act-btn.act-attack', '#tc-act[data-act="board"]', '.act-btn.act-board'];
     case 'fire':
       return f.touch ? ['#tc-fire'] : [];
     case 'board':

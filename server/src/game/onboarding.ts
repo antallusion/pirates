@@ -121,9 +121,11 @@ export const STAGES: Stage[] = [
     // «Атаковать»: a raider comes; one tap and the helmsman closes on her.
     id: 'attack',
     reveal: ['target', 'feed', 'minimap'],
-    done: (game, _s, ship) => {
+    // (Boarded already — alongside before «Атаковать», the grapples thrown — the steps up to the battle are done: the
+    // newcomer's run did just that, and the watch then waited for an «Атаковать» that would never come.)
+    done: (game, s, ship) => {
       const run = pursuitOf(ship);
-      return !!run && !!game.ships.get(run.target)?.npcRole;
+      return (!!run && !!game.ships.get(run.target)?.npcRole) || !!ship.boarding || !!watchOf(s).fought;
     },
     begin: (game, s, ship) => practiceRaider(game, s, ship),
     keep: (game, s, ship) => keepRaider(game, s, ship),
@@ -134,7 +136,7 @@ export const STAGES: Stage[] = [
     id: 'fire',
     reveal: ['guns'],
     mark: (p) => p.tutorial.hits,
-    done: (_g, s, ship, p) => (watchOf(s).fired && p.tutorial.hits > p.tutorial.base) || p.tutorial.hits > p.tutorial.base + 2 || !!ship.boarding,
+    done: (_g, s, ship, p) => (watchOf(s).fired && p.tutorial.hits > p.tutorial.base) || p.tutorial.hits > p.tutorial.base + 2 || !!ship.boarding || !!watchOf(s).fought,
     begin: (_g, s) => {
       watchOf(s).fired = false;
     },
@@ -150,14 +152,20 @@ export const STAGES: Stage[] = [
       return !!w.fought && !ship.boarding;
     },
     begin: (game, s, ship) => {
-      watchOf(s).fought = !!ship.boarding;
+      const w = watchOf(s);
+      w.fought = !!w.fought || !!ship.boarding; // a battle fought in an earlier step counts
       // «Огонь» laid her broadside on (the pursuit «Бортами»): the helmsman closes in again for the grapples, so the
       // step is the one tap of «На абордаж» and not «Сблизиться» first.
       const run = pursuitOf(ship);
       if (run && run.mode === 'guns') startPursuit(game, s, run.target, 'board');
     },
     keep: (game, s, ship) => {
-      if (!ship.boarding && !watchOf(s).fought) keepRaider(game, s, ship);
+      const w = watchOf(s);
+      if (ship.boarding || w.fought) return;
+      keepRaider(game, s, ship);
+      // Nothing is lost in the First Watch: men lost to a stray boarding come back before the lesson's (the newcomer's
+      // run boarded with a third of her men and had a 0 % chance).
+      if (w.army && ship.crew < armyMen(w.army) * 0.6) ship.setArmy(w.army);
     },
   },
   {
@@ -349,6 +357,8 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
   if (t.on && t.stage < STAGES.length) {
     // Her men as they stood in port: a tow home gives back those the lesson's guns took (see onboardingRescue).
     if (ship.docked) watchOf(s).army = ship.army.map((x) => ({ ...x }));
+    // A battle on the hexes in any step before «На абордаж» is that step's battle (the grapples thrown early).
+    if (ship.boarding && STAGES[t.stage]?.id !== 'port') watchOf(s).fought = true;
     const st = STAGES[t.stage];
     if (st.done(game, s, ship, p)) {
       advance(game, s, 'done');

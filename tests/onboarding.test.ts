@@ -194,3 +194,26 @@ test('skipping the whole watch counts in the funnel; hints stop for the old hand
   for (let i = 0; i < 6; i++) onboardingVolley(game, s.ship!, 0);
   assert.ok(!c.all('onb').some((m) => m.kind === 'hint'));
 });
+
+test('the grapples thrown before «Атаковать»: the battle counts for the steps before it, the watch goes on to «В порт»', () => {
+  const { game } = makeGame();
+  game.tacticalBoarding = true;
+  const { c, s } = recruit(game, 'Early Grapple');
+  const ship = s.ship!;
+  c.push({ t: 'undock' });
+  ship.state.speed = 4;
+  ship.state.sail = 0.6;
+  steps(game, 21);
+  assert.equal(stage(c), 'attack');
+  const raider = [...game.ships.values()].find((x) => x.name === 'Red Novice')!;
+  raider.state = { ...raider.state, x: ship.state.x + 20, y: ship.state.y, speed: 0, sail: 0 };
+  game.grid.upsert(raider.id, raider.state.x, raider.state.y);
+  ship.state.speed = 0;
+  startBoarding(game, ship, raider, 'standard');
+  steps(game, 21);
+  assert.equal(tacAction(game, ship, { a: 'quick' }), null);
+  steps(game, 20 * 8);
+  assert.ok(!ship.boarding);
+  steps(game, 20 * 4);
+  assert.equal(stage(c), 'port', 'attack, fire and board done by the one battle');
+});
