@@ -4892,7 +4892,10 @@ body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: 
 #touch > #tc-target .k-target { width: 100%; }
 #touch:not(:has(> .tc-act:not(.hidden))) > #tc-target { bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); }
 /* In port: no helm, no guns. */
-body.touch.sea-docked #touch > :is(#tc-stick, .tc-big, .tc-special, #tc-target) { display: none; }
+body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display: none; }
+/* …and the big round button casts off (docs/23 phase 6): gold, no reload ring, no shot. */
+#touch > .tc-big.tc-sail .tc-ring, #touch > .tc-big.tc-sail .tc-ammo { display: none; }
+#touch > .tc-big.tc-sail { background: radial-gradient(circle, #3a2f22 0 52%, #17140f 70%); box-shadow: 0 0 0 2px var(--k-brass), 0 0 16px rgba(224, 184, 98, 0.35), 0 4px 16px rgba(0, 0, 0, 0.8); }
 
 /* The menu's sheet: eight big tiles, four to a row. */
 .k-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--k-sp-2); padding: var(--k-sp-1) 0 var(--k-sp-2); }

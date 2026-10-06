@@ -5,7 +5,8 @@
 //
 //   GPORT=58791 SIZE=phone LANG2=ru OUT=assets/raw/audit/m0 node assets/raw/audit/m0/paths.mjs [path …]
 // Paths: depart map attack fire board hire repair quest buy sell (all by default).
-// The selectors are the current interface's; phase 9 updates them for the new one and keeps the goals.
+// The selectors follow the interface (docs/23 phase 6: the port is a sheet of five places and one-tap actions); the
+// goals stay those of phase 0. A tab already open is not tapped again (a player would not).
 import * as L from './lib.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -105,12 +106,15 @@ await admin('/silver 50000');
 await quiet();
 
 const openPort = async () => { if ((await st()).modal !== 'port') await tap('#tc-act[data-act="harbour"], .act-btn.act-harbour', 'the harbour button'); };
-const portTab = (t) => tap(`#modal-panel .tab[data-tab="${t}"]`, `the «${t}» tab`);
+const portTab = async (t) => { if (!(await p.$(`#modal-panel [data-ptab="${t}"].on`))) await tap(`#modal-panel [data-ptab="${t}"]`, `the «${t}» place`); };
+/** A one-tap action where the player sees it now (the market's quick bar), else on its own place. */
+const quickOr = async (sel, place, then, what) => { if (await p.$(`#modal-panel .port-body ${sel}:not([disabled])`)) return tap(`#modal-panel .port-body ${sel}`, what); await portTab(place); return tap(`#modal-panel ${then}`, what); };
 
 for (const name of PATHS) {
   if (name === 'depart') await run('depart', toPort, async () => {
-    await openPort();
-    await tap('#modal-panel .ph-sail', '«set sail»');
+    // In port the HUD's big round button is «В море» (docs/23 phase 6); the harbour's rail has its own.
+    if (await p.$('#tc-fire.tc-sail')) await tap('#tc-fire.tc-sail', '«В море» (HUD)');
+    else { await openPort(); await tap('#modal-panel [data-ptab="sea"]', '«В море»'); }
     if (await p.$('[data-dp="sail"]')) await tap('[data-dp="sail"]', 'the departure check «sail»');
     await film();
     await L.sleep(1500);
@@ -120,19 +124,19 @@ for (const name of PATHS) {
 
   if (name === 'buy') {
     let before;
-    await run('buy', async () => { await toPort(); before = await st(); }, async () => { await openPort(); await portTab('market'); await tap('#modal-panel [data-act="buyn"][data-good="provisions"], #modal-panel [data-act="buy"][data-good="provisions"]', '«buy 5 provisions»'); await L.sleep(800); }, async () => (await st()).silver < before.silver);
+    await run('buy', async () => { await toPort(); before = await st(); }, async () => { await openPort(); await portTab('market'); await tap('#modal-panel [data-act="supplies"]:not([disabled]), #modal-panel [data-act="buy"][data-good="provisions"]', '«Припасы»'); await L.sleep(800); }, async () => (await st()).silver < before.silver);
   }
   if (name === 'sell') {
     let before;
-    await run('sell', async () => { await toPort(); await admin('/give rum 10'); before = await st(); }, async () => { await openPort(); await portTab('market'); await tap('#modal-panel [data-act="sellall"][data-good="rum"], #modal-panel [data-act="sell"][data-good="rum"]', '«sell the rum»'); await L.sleep(800); }, async () => (await st()).silver > before.silver);
+    await run('sell', async () => { await toPort(); await admin('/give rum 10'); before = await st(); }, async () => { await openPort(); await portTab('market'); await tap('#modal-panel [data-act="sell_useful"]', '«Продать всё»'); await L.sleep(800); }, async () => (await st()).silver > before.silver);
   }
   if (name === 'hire') {
     let before;
-    await run('hire', async () => { await toPort(); await admin('/wounded 0'); before = await st(); }, async () => { await openPort(); await portTab('tavern'); await tap('#modal-panel [data-act="crew"][data-n="5"]', '«+5 men»'); await L.sleep(800); }, async () => (await st()).crew > before.crew || (await st()).silver < before.silver);
+    await run('hire', async () => { await toPort(); await admin('/wounded 0'); before = await st(); }, async () => { await openPort(); await quickOr('[data-act="hire_short"]', 'tavern', '[data-act="hire_n"]', '«Нанять»'); await L.sleep(800); }, async () => (await st()).crew > before.crew || (await st()).silver < before.silver);
   }
   if (name === 'repair') {
     let before;
-    await run('repair', async () => { await toSea(); await admin('/hurt 50'); await toPort(); before = await st(); }, async () => { await openPort(); await portTab('shipyard'); await tap('#modal-panel [data-act="repair"]', '«repair»'); if (await p.$('#confirm [data-yes]')) await tap('#confirm [data-yes]', 'confirm'); await L.sleep(800); }, async () => (await st()).hull > before.hull);
+    await run('repair', async () => { await toSea(); await admin('/hurt 50'); await toPort(); before = await st(); }, async () => { await openPort(); await quickOr('[data-act="repair"]', 'shipyard', '[data-act="repair"]', '«Починить»'); if (await p.$('#confirm [data-yes]')) await tap('#confirm [data-yes]', 'confirm'); await L.sleep(800); }, async () => (await st()).hull > before.hull);
   }
   if (name === 'quest') {
     let before, to;
@@ -148,7 +152,7 @@ for (const name of PATHS) {
       }
       before = await st();
     }, async () => {
-      await openPort(); await portTab('contracts');
+      await openPort(); await portTab('quests');
       // A courier's letters (no cargo to load): the first contract whose goal is another port.
       const id = await p.evaluate(() => (globalThis.gravetide.state.portView?.contracts ?? []).find((c) => c.kind === 'courier')?.id ?? (globalThis.gravetide.state.portView?.contracts ?? []).find((c) => c.toPort)?.id);
       await tap(`#modal-panel [data-act="contract"][data-mode="accept"]${id ? `[data-id="${id}"]` : ''}`, '«accept» a courier contract');

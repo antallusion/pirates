@@ -384,6 +384,10 @@ const seaHud = new SeaHud($('touch'), {
     if (a) runAct(a);
   },
   special: () => seaSpecial(),
+  sail: () => {
+    if (!state.self?.dockedAt || modal) return;
+    departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
+  },
   menu: (id) => (id === 'more' ? openModal('menu') : openMenuItem(id)),
   target: () => seaHud.lend(['hud-target'], 'target'),
 });
@@ -1107,6 +1111,10 @@ setInterval(() => {
 
 /** Windows that must be answered: no swipe takes them away (docs/23 phase 6). */
 const ANSWER: Modal[] = ['boarding', 'sunk', 'mutiny', 'choice'];
+/** When the window came up: the tap that opened it must not land on its scrim and close it again. */
+let modalAt = 0;
+/** A window closing back into the harbour (closeModal): the harbour keeps its place. */
+let portReturn = false;
 
 function openModal(m: Modal): void {
   if (m !== 'look') resetLookDraft();
@@ -1114,7 +1122,12 @@ function openModal(m: Modal): void {
   modal = m;
   $('modal').classList.toggle('hidden', m === null);
   // A window comes up from the bottom edge as a sheet (docs/23 phase 6); a new window over an open one only swaps.
+  // The harbour opened from the sea's HUD starts on its market — the one-tap bar (docs/23 item 66); a window closed
+  // back into it keeps the place it was on.
+  if (m === 'port' && from === null && !portReturn) portScreen.tab = 'market';
+  portReturn = false;
   if (m !== null && from === null) {
+    modalAt = performance.now();
     $('modal').classList.add('w-from');
     requestAnimationFrame(() => requestAnimationFrame(() => $('modal').classList.remove('w-from')));
   }
@@ -1136,7 +1149,10 @@ function closeModal(): void {
   // The recruit window opened from the island's town goes back to it (docs/17 H3).
   if (was === 'recruit' && recruitFrom === 'isle') return openBase();
   // While docked, closing another screen returns to the harbour (Esc on the harbour itself hides it; P reopens).
-  if (was !== 'port' && state.portView) openModal('port');
+  if (was !== 'port' && state.portView) {
+    portReturn = true;
+    openModal('port');
+  }
 }
 
 /** Where every scrolled box of a window stands, so a refresh from the server does not throw the reader back
@@ -1479,7 +1495,7 @@ new MutationObserver(() => {
 wireSheetSwipe($('modal-panel'), () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal()), '.w-grip, .modal-head, .w-head', null, () => !!modal && !ANSWER.includes(modal) && matchMedia('(max-height: 520px), (max-width: 699px)').matches);
 $('modal').addEventListener('click', (e) => {
   // A tap on the scrim above a phone's sheet closes it, as the kit's sheets do.
-  if (e.target === $('modal') && modal && !ANSWER.includes(modal) && matchMedia('(max-height: 520px), (max-width: 699px)').matches) {
+  if (e.target === $('modal') && modal && !ANSWER.includes(modal) && performance.now() - modalAt > 450 && matchMedia('(max-height: 520px), (max-width: 699px)').matches) {
     if (modal === 'barter') net.send({ t: 'barter', action: 'cancel' });
     else closeModal();
   }

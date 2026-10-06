@@ -17,6 +17,8 @@ export const EN = {
   'stick': 'Helm: pull to steer, farther for more sail; hold the middle to take sail in; double-tap to dash',
   'reefed': 'Sails taken in',
   'target': 'Target',
+  'sail': 'To sea',
+  'sailAria': 'To sea: cast off (what is short for the voyage is asked first)',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -36,4 +38,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'stick': 'Штурвал: тяните, куда плыть, дальше от центра — больше парусов; удержать центр — убрать паруса; двойной тап — рывок',
   'reefed': 'Паруса убраны',
   'target': 'Цель',
+  'sail': 'В море',
+  'sailAria': 'В море: отдать швартовы (чего не хватает в плавание — спросим перед выходом)',
 };

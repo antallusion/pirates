@@ -99,7 +99,8 @@ export interface SeaView {
 /** The tap targets the sea HUD shows for a view (docs/23 item 32: seven at most). The stick counts as one. */
 export function seaTargets(v: SeaView): string[] {
   const out: string[] = [];
-  if (!v.docked) out.push('stick', 'fire');
+  // In port the big round button is «В море» (docs/23 phase 6: casting off without opening the harbour).
+  out.push(...(v.docked ? ['sail'] : ['stick', 'fire']));
   if (v.act) out.push('act');
   if (v.special && !v.docked) out.push('special');
   out.push('menu');
@@ -119,6 +120,8 @@ export interface SeaHooks {
   actOptions(): WheelOption[];
   actPick(id: string): void;
   special(): void;
+  /** In port: cast off. */
+  sail(): void;
   menu(id: MenuItem | 'more'): void;
   target(): void;
   /** The blocks that fold into the news sheet, by id (hud.ts FOLDED). */
@@ -157,7 +160,7 @@ export class SeaHud {
     this.actEl = make(`<button type="button" id="tc-act" class="k-btn k-btn--primary k-btn--lg tc-act hidden" aria-label="${esc(L('act'))}"><span class="tc-act-ico"></span><span class="k-btn-l"></span><b class="tc-act-more hidden" aria-hidden="true"></b></button>`) as HTMLButtonElement;
     this.specialEl = make(`<button type="button" id="tc-special" class="k-btn k-btn--icon k-btn--lg tc-special hidden" aria-label=""></button>`) as HTMLButtonElement;
     this.fireEl = make(`<button type="button" id="tc-fire" class="k-btn k-btn--icon tc-big" aria-label="${esc(L('fireAria'))}" title="${esc(L('fireAria'))}"><i class="tc-ring" aria-hidden="true"></i>${icon('fire', '✸', 'tc-big-ico')}<span class="tc-big-l">${esc(L('fire'))}</span><span class="tc-ammo" aria-hidden="true"></span></button>`) as HTMLButtonElement;
-    attachWheel(this.fireEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.fire(), title: L('wheelFire') });
+    attachWheel(this.fireEl, { options: () => (this.view?.docked ? [] : hooks.fireOptions()), onPick: (o) => hooks.firePick(o.id), onTap: () => (this.view?.docked ? hooks.sail() : hooks.fire()), title: L('wheelFire') });
     attachWheel(this.actEl, { options: () => hooks.actOptions(), onPick: (o) => hooks.actPick(o.id), onTap: () => hooks.act(), title: L('wheelAct') });
     this.specialEl.addEventListener('click', () => hooks.special());
     this.menuEl.addEventListener('click', () => this.openMenu());
@@ -183,6 +186,18 @@ export class SeaHud {
     const body = document.body;
     body.classList.toggle('sea-target', !!v.target && !v.docked);
     body.classList.toggle('sea-docked', v.docked);
+    // The big round button: «Огонь» at sea, «В море» in port.
+    this.once('big', `${v.docked}|${lg}`, () => {
+      const t = v.docked ? L('sailAria') : L('fireAria');
+      this.fireEl.classList.toggle('tc-sail', v.docked);
+      this.fireEl.setAttribute('aria-label', t);
+      this.fireEl.title = t;
+      this.fireEl.querySelector('.tc-big-l')!.textContent = v.docked ? L('sail') : L('fire');
+      const ico = this.fireEl.querySelector('.tc-big-ico');
+      const tpl = document.createElement('template');
+      tpl.innerHTML = v.docked ? icon('stat_sails', '⛵', 'tc-big-ico') : icon('fire', '✸', 'tc-big-ico');
+      if (ico && tpl.content.firstElementChild) ico.replaceWith(tpl.content.firstElementChild);
+    });
     const a = v.act;
     this.once('act', a ? JSON.stringify([a.id, a.icon, a.label, a.sub, a.more]) : '', () => {
       this.actEl.classList.toggle('hidden', !a);
@@ -231,7 +246,7 @@ export class SeaHud {
       const neu = t.content.firstElementChild;
       if (old && neu) old.replaceWith(neu);
     };
-    swap(this.fireEl, '.tc-big-ico', 'fire', '✸', 'tc-big-ico');
+    swap(this.fireEl, '.tc-big-ico', this.view?.docked ? 'stat_sails' : 'fire', this.view?.docked ? '⛵' : '✸', 'tc-big-ico');
     swap(this.menuEl, '.k-btn-ico', 'menu_cabin', '☰', 'k-btn-ico');
     swap(this.newsEl, '.k-btn-ico', 'goal', '!', 'k-btn-ico');
     this.keys.clear();

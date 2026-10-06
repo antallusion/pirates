@@ -129,6 +129,7 @@ export class PortScreen {
   hire: number | null = null;
   hireMax = -1;
   private holding = false;
+  private lastPort = '';
   /** The build order being drawn up at the yard. */
   build: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master: boolean } = { classId: 'sloop', name: '', frame: 'pine', plank: 'pine', rares: {}, master: false };
   private send: (m: ClientMsg) => void;
@@ -177,6 +178,11 @@ export class PortScreen {
       ...(tv.pets?.length ? [{ id: 'pets', icon: 'menu_crew', label: W('port.pets'), hint: W('port.petsHint') }] : []),
       { id: 'tattoo', icon: 'tattoo_needle', glyph: '✒', label: W('port.tattoo'), hint: W('port.tattooHint'), badge: state.tattoos?.pending.length ?? 0 },
     ];
+    // A new harbour opens on its market (the one-tap bar); the same harbour keeps the place she left it on.
+    if (view.portId !== this.lastPort) {
+      this.lastPort = view.portId;
+      this.tab = 'market';
+    }
     if (!main.some((t) => t.id === this.tab) && !second.some((t) => t.id === this.tab)) this.tab = 'market';
     // The harbour's own painting behind the band (a town's own where the manifest has it, else her flag's).
     const bg = assetUrl(`bg.port_${port.id}`) ?? assetUrl(`bg.port_${port.faction}`);

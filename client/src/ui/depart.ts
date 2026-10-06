@@ -120,6 +120,16 @@ let openSheetHandle: SheetHandle | null = null;
 export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go: () => void): void {
   const ship = voyageShip(state);
   if (!ship || !state.portView || !voyageNeeds(ship).length) return go();
+  // docs/23 phase 6: what every voyage wants — food, round shot, the hands to sail her — is simply bought on the way
+  // out when the purse holds it (the harbour's own orders, before the order to cast off); only what is left — a
+  // damaged hull, a purse too thin, a hold too full — is asked.
+  const needs = voyageNeeds(ship);
+  const stores = needs.filter((n) => n.kind !== 'repair').map((n) => offerOf(n, state));
+  const cost = stores.reduce((a, o) => a + o.cost, 0);
+  if (stores.every((o) => o.n > 0 && o.n >= (o.need.kind === 'repair' ? 1 : o.need.buy)) && cost <= state.self!.gold && needs.every((n) => n.kind !== 'repair')) {
+    for (const o of stores) for (const m of o.msgs) send(m);
+    return go();
+  }
   openSheetHandle?.close('code');
   let offers: Offer[] = [];
   let lastBody = '', lastFoot = '';
