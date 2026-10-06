@@ -317,6 +317,10 @@ export class AdvCard {
   }
   private key = '';
   private closed = '';
+  /** docs/23 phase 2: on a phone's sea the card starts folded — its «Осмотреть» waits on «Действие» — and shows when
+   *  that is tapped (reopen), until the thing goes out of reach or the card is closed again. */
+  autoFold = false;
+  private byHand = false;
   /** The cards opened by a tap on a short screen. */
   private opened = new Set<string>();
   onPuzzle: () => void = () => {};
@@ -368,6 +372,8 @@ export class AdvCard {
     this.key = key;
     // Closed by hand: it stays closed until the thing or its state changes.
     const what = v || lc || dc ? JSON.stringify([v?.obj?.id, v?.obj?.ready, v?.obj?.why, v?.obj?.guard?.id, v?.guard?.id, v?.guard?.offer, v?.obj?.guard?.offer, lc?.id, lc?.offer, lc?.why, lc?.down !== undefined, lc?.dwell?.can, lc?.dwell?.own, lc?.dwell?.lv, dc?.id, dc?.reach, !!dc?.mini]) : '';
+    if (!v && !lc && !dc) this.byHand = false;
+    else if (this.autoFold && !this.byHand) this.closed = what;
     if ((!v && !lc && !dc) || what === this.closed) {
       this.el.classList.add('hidden');
       this.el.innerHTML = '';
@@ -430,6 +436,7 @@ export class AdvCard {
     this.el.querySelectorAll<HTMLButtonElement>('[data-ax]').forEach((b) => (b.onclick = () => {
       cancelAnimationFrame(this.raf);
       this.closed = what;
+      this.byHand = false;
       this.el.classList.add('hidden');
     }));
   }
@@ -450,6 +457,7 @@ export class AdvCard {
   /** The card shown again after a close by hand. */
   reopen(): void {
     this.closed = '';
+    this.byHand = true;
     this.key = '';
     this.draw();
   }

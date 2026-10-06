@@ -180,11 +180,32 @@ for (const name of PATHS) {
     }, 150);
   });
   const fired = () => p.evaluate(() => !!globalThis.__fired);
+  /** A finger on the pirate on the sea (counted): she becomes the target. Done only when nothing is targeted yet. */
+  const tapFoe = async () => {
+    const at = await p.evaluate(() => {
+      const g = globalThis.gravetide, s = g.state, o = s.ownDisplay;
+      let best = null, bd = 1e9;
+      for (const x of s.ships.values()) {
+        if (!x.info || x.info.npcRole !== 'pirate' || !x.cur) continue;
+        const d = Math.hypot(x.cur.x - o.x, x.cur.y - o.y);
+        if (d < bd) { bd = d; best = x; }
+      }
+      if (!best) return null;
+      const sx = g.renderer.sx(best.cur.x), sy = g.renderer.sy(best.cur.y);
+      return sx > 0 && sy > 0 && sx < innerWidth && sy < innerHeight && document.elementFromPoint(sx, sy)?.id === 'world' ? { x: sx, y: sy } : null;
+    });
+    if (!at) { log.push(`${path} ✗ the pirate is not on the screen`); return false; }
+    if (touch) await p.touchscreen.tap(at.x, at.y); else await p.mouse.click(at.x, at.y);
+    await count('tap', 'the pirate on the sea (target)');
+    await L.sleep(600);
+    return true;
+  };
   // A clean scene for each fight: no pursuit left over, open water far from the last fight's sharks (not counted).
   let spot = 0;
   const openSea = async () => { await toSea(); await L.send(p, { t: 'attack', stop: true }); await admin(`/tp ${21000 + 3000 * spot} ${70000 + 2500 * (spot++ % 3)}`, 3000); await quiet(); await admin('/heal'); await admin('/ammo'); };
   if (name === 'fire') {
     await run('fire', async () => { await openSea(); await admin('/foe pirate sloop 260', 3500); await watchFire(); }, async () => {
+      if (!(await p.$('#tc-target:not(.hidden), .act-btn.act-attack'))) await tapFoe();
       await tap('#tc-fire', '«Огонь»');
       for (let i = 0; i < 10 && !(await fired()); i++) await L.sleep(300);
     }, fired);
@@ -195,14 +216,17 @@ for (const name of PATHS) {
       // «Атаковать»: then the ship does the rest — she closes, lays her guns and fires on her own (auto-fire). The
       // board path also takes «Абордаж» when it comes up (and «Рискнуть» if the risk window asks). Gives up after 90 s.
       const t0 = Date.now();
-      let attacked = false;
+      let attacked = false, foeTapped = false, fireTapped = 0, attackAt = 0;
       while (Date.now() - t0 < 90000) {
         const s = await st();
         if (s.tac) break;
         if (!boarding && (await fired())) break;
         if (await p.$('[data-risk="go"]')) { await tap('[data-risk="go"]', '«Рискнуть»'); await L.sleep(1500); continue; }
         if (boarding && (await p.$(BOARD))) { if (await tap(BOARD, '«Абордаж»')) { await L.sleep(2500); continue; } }
-        if (!attacked && (await p.$(ATTACK))) attacked = await tap(ATTACK, '«Атаковать»');
+        if (!attacked && !(await p.$(ATTACK)) && !foeTapped) foeTapped = await tapFoe();
+        if (!attacked && (await p.$(ATTACK))) { attacked = await tap(ATTACK, '«Атаковать»'); attackAt = Date.now(); }
+        // «Напасть и выстрелить»: no broadside 6 s after «Атаковать» — a finger on «Огонь» (twice at most).
+        if (!boarding && attacked && fireTapped < 2 && Date.now() - attackAt > 6000 + fireTapped * 15000 && (await p.$('#tc-fire'))) { if (await tap('#tc-fire', '«Огонь»')) fireTapped++; }
         await L.sleep(400);
       }
       log.push(`${name}: fired ${await fired()} boarded ${(await st()).tac} in ${Math.round((Date.now() - t0) / 1000)} s`);

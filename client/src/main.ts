@@ -2228,6 +2228,7 @@ function seaTarget(): TargetInfo | null {
 function seaFrame(): void {
   const self = state.self, you = state.you;
   if (!self || !you) return;
+  advCard.autoFold = true; // the adventure map's card waits on «Действие» (its «Осмотреть»)
   const a = curActs[0];
   const news = FOLDED.filter((id) => {
     const e = document.getElementById(id);
@@ -2793,4 +2794,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud };
