@@ -48,6 +48,10 @@ import { openRoamCard } from './ui/roamcard.ts';
 import { strengthWord as roamWord } from './ui/army.ts';
 import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
+import { riskConfirmOpen, showRiskConfirm } from './ui/riskconfirm.ts';
+import { suggestAmmo } from '../../shared/src/data/gunnery.ts';
+import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
+import type { BoardRisk } from '../../shared/src/protocol.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
 import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
 import { setWaypoint as setMark, waypoint as markOf } from './ui/track.ts';
@@ -130,6 +134,7 @@ worldMap.onAutosail = (wp) => {
 };
 // docs/16 #36: the helmsman takes her to her mark; the pill at the top of the stack stops him.
 const EL = dict(EASE_EN, EASE_RU);
+const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
 const autosailPill = new AutosailPill();
 autosailPill.onStop = () => net.send({ t: 'autosail', stop: true });
 // docs/16 #37: a line the first time she meets each of the sea's mechanics.
@@ -342,7 +347,11 @@ if (matchMedia('(pointer: coarse)').matches) {
   addEventListener('pointerup', holdSideways, { once: true });
 }
 const touch = new TouchControls({
-  sail: (d) => (state.input.sail = clamp(state.input.sail + d, 0, 4)),
+  sail: (d) => {
+    state.input.sail = clamp(state.input.sail + d, 0, 4);
+    helmAt = performance.now(); // her own hand on the sheets: the helmsman lets go a while (docs/23 item 33)
+  },
+  volley: () => fireVolley(),
   fire: (side) => releaseFire(side),
   hold: (side) => holdFire(side),
   dash: () => net.send({ t: 'dash' }),
@@ -413,6 +422,11 @@ function applySettings(o: Settings): void {
 applySettings(settings());
 onSettings(applySettings);
 // The boarding battle's form follows the option at once (docs/16 P4).
+onSettings(() => {
+  if (inGame) sendGunnery();
+  else document.body.classList.toggle('expert-guns', settings().expertGuns);
+});
+document.body.classList.toggle('expert-guns', settings().expertGuns);
 let classicSent = settings().classicBoarding;
 onSettings((s) => {
   if (s.classicBoarding === classicSent) return;
@@ -705,6 +719,13 @@ function onMessage(m: ServerMsg): void {
   state.apply(m);
   if (inGame) firstTips.offer(tipForMsg(m));
   switch (m.t) {
+    case 'pursuit':
+      // docs/23 item 33: the wheel back, and why when it is news (a mark lost, slipped away, sunk).
+      if (!m.on && (m.why === 'lost' || m.why === 'slipped' || m.why === 'sunk')) hud.toast(LSF(`why.${m.why}`), m.why === 'sunk' ? 'good' : 'info');
+      break;
+    case 'board_risk':
+      void askRisk(m.risk);
+      break;
     case 'autosail': {
       // docs/16 #36: the helmsman has the wheel, or has given it back and why.
       if (m.on) hud.toast(EL('as_on'), 'info');
@@ -735,6 +756,7 @@ function onMessage(m: ServerMsg): void {
       inGame = true;
       // The old round-by-round deck fight, for a captain who asked for it in the options (docs/16 P4).
       net.send({ t: 'board_pref', classic: settings().classicBoarding });
+      sendGunnery(); // docs/23 items 35, 42, 46
       audio.ownId = m.entityId;
       $('screen-captain').classList.add('hidden');
       hud.show(true);
@@ -1750,11 +1772,18 @@ function sendInput(now: number): void {
   const own = state.ownDisplay;
   const touchRudder = touch.course !== null && own ? rudderToward(touch.course, own.heading) : 0;
   state.input.rudder = typing() ? 0 : rudder || Math.round(padRudder * 100) / 100 || Math.round(touchRudder * 100) / 100;
-  const key = `${state.input.rudder}|${state.input.sail}`;
+  // Under «Атаковать» (docs/23 item 33) her own hand — the stick held, a helm key, the pad, the sheets — takes the
+  // wheel; let go, the helmsman has it back 1.5 s later (by the server's clock). The stick's course goes with her hand.
+  const steering = touch.held() || (!typing() && (rudder !== 0 || padRudder !== 0));
+  if (steering) helmAt = now;
+  const hand = steering || now - helmAt < 400;
+  if (state.pursuit && !touch.held() && touch.course !== null) touch.course = null;
+  state.helm = !!state.pursuit && hand;
+  const key = `${state.input.rudder}|${state.input.sail}|${hand ? 1 : 0}`;
   if (key !== lastInputKey || now - lastInputSent > 250) {
     lastInputKey = key;
     lastInputSent = now;
-    net.send({ t: 'input', seq: ++state.input.seq, rudder: state.input.rudder, sail: state.input.sail });
+    net.send({ t: 'input', seq: ++state.input.seq, rudder: state.input.rudder, sail: state.input.sail, ...(hand ? { helm: true } : {}) });
   }
 }
 
@@ -1909,6 +1938,11 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     if (rm.fight) info.push(esc(LROAM(rm.fight === 'mate' ? 'i.mate' : 'i.fight', { what: name })));
     else if (rm.offer === 'flee' && rm.ratio !== undefined) info.push(esc(LROAM('i.flee', { r: rm.ratio })));
   }
+  // «Атаковать» (docs/23 item 33): the target frame's ship, or the pursuit under way.
+  attackMark = attackable(targetId) ? targetId : null;
+  const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
+  if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode };
+  else if (attackMark !== null) facts.attack = { name: placeName(state.ships.get(attackMark)?.info?.name ?? L('her')), pursuing: false, mode: 'board' };
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -1980,7 +2014,92 @@ function runAct(a: Act): void {
       return a.arg === 'struck' ? surrenderCard.reopen() : advCard.reopen();
     case 'repair':
       return void net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
+    case 'attack':
+      return void (attackMark !== null && net.send({ t: 'attack', target: attackMark, mode: 'board' }));
+    case 'attack_mode':
+      return void (state.pursuit && net.send({ t: 'attack', target: state.pursuit.target, mode: state.pursuit.mode === 'board' ? 'guns' : 'board' }));
+    case 'attack_stop':
+      return void net.send({ t: 'attack', stop: true });
   }
+}
+
+// ------------------------------------------------------------------ the quick sea fight (docs/23 phases 3–4)
+
+/** The ship «Атаковать» would take for her mark: the target frame's, if she may be fought. */
+let attackMark: number | null = null;
+/** When the captain's hand was last on the helm or the sheets (her own steering under «Атаковать»). */
+let helmAt = -1e9;
+
+/** A ship that may be attacked: one of the sea's or a hostile captain's, afloat, in sight, not one of hers. */
+function attackable(id: number | null): boolean {
+  const s = id !== null ? state.ships.get(id) : undefined;
+  const own = state.ownDisplay;
+  if (!s?.info || !own || state.self?.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED)) return false;
+  if (dist(own.x, own.y, s.cur.x, s.cur.y) > 2500) return false;
+  if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE)) return false;
+  return true;
+}
+
+/** The best shot for her mark now (docs/23 item 39): grape to board a full deck, chain for one running faster, round
+ *  for the rest. Null with no mark. */
+function bestShot(): 'round' | 'chain' | 'grape' | null {
+  const id = state.pursuit?.target ?? targetId;
+  const s = id !== null ? state.ships.get(id) : undefined;
+  const own = state.ownDisplay, self = state.self;
+  if (!s?.info || !own || !self || self.dockedAt || !(s.cur.flags & SF.HOSTILE || state.pursuit)) return null;
+  const range = GUNS[self.loadout.guns.port].range * (state.ownStats?.rangeMul ?? 1);
+  return suggestAmmo({
+    board: state.pursuit?.mode !== 'guns', d: dist(own.x, own.y, s.cur.x, s.cur.y), grapeRange: range * AMMO.grape.rangeMul, chainRange: range * AMMO.chain.rangeMul,
+    crewShare: s.cur.crew, sailShare: s.cur.sails, faster: s.cur.spd > own.speed + 1,
+  });
+}
+
+/** «Огонь»: a broadside out of turn (docs/23 item 35). */
+function fireVolley(): void {
+  if (state.self?.dockedAt || modal) return;
+  net.send({ t: 'volley' });
+}
+
+/** The captain's gunnery settings to the server (auto-fire, auto-battle against the weak, the expert's hand). */
+function sendGunnery(): void {
+  const o = settings();
+  net.send({ t: 'gunnery', auto: o.autoFire, weak: o.autoWeak, expert: o.expertGuns });
+  document.body.classList.toggle('expert-guns', o.expertGuns);
+}
+
+/** The target frame's boarding chance, asked every few seconds (docs/23 item 49). */
+let oddsId: number | null = null, oddsAt = 0;
+function askOdds(id: number | null): void {
+  const now = performance.now();
+  if (id === null || !attackable(id)) return;
+  const s = state.ships.get(id)!;
+  if (s.info!.npcRole === 'beast' || SHIP_CLASSES[s.info!.classId]?.monster || isZoneBossClass(s.info!.classId)) return;
+  if (id === oddsId && now - oddsAt < 4000) return;
+  oddsId = id;
+  oddsAt = now;
+  net.send({ t: 'board_odds', id });
+}
+
+/** The window before a risky boarding (docs/23 items 49–52): «Рискнуть» throws the grapples, «Отступить» backs off. */
+async function askRisk(r: BoardRisk): Promise<void> {
+  const lose = [
+    r.cargo > 0 ? LSF('risk.cargo', { v: fmt(r.cargo) }) : LSF('risk.noCargo'),
+    ...(r.silver > 0 ? [LSF('risk.silver', { v: fmt(r.silver) })] : []),
+    ...(r.men > 0 ? [LSF('risk.men', { n: r.men })] : []),
+    LSF('risk.port'),
+  ];
+  const go = await showRiskConfirm({
+    title: LSF(r.chance < 0.5 ? 'risk.title' : 'risk.titleSenior'),
+    chance: r.chance,
+    note: `${LSF('risk.chance', { p: Math.round(r.chance * 100) })} · ${LSF('risk.levels', { a: r.myLevel, b: r.theirLevel, n: r.sims })}`,
+    loseHead: LSF('risk.lose'),
+    lose,
+    ...(r.xpMul > 1 ? { win: LSF('risk.win', { m: r.xpMul }) } : {}),
+    go: LSF('risk.go'),
+    back: LSF('risk.back'),
+  });
+  if (go) net.send({ t: 'board', target: r.target, aggression: 'standard', risk: true });
+  else if (state.pursuit?.target === r.target) net.send({ t: 'attack', stop: true });
 }
 
 /** Boats away to a sea mark: at speed the crew takes in sail first and they go as soon as she has slowed. */
@@ -2484,6 +2603,8 @@ function step(t: number): void {
     targetId = resolveTarget();
     // The glass is turned on her mark at sea, not while her men fight on a deck.
     askGlass(state.boardTac ? null : targetId);
+    if (!state.boardTac) askOdds(targetId); // the boarding chance on the target line (docs/23 item 49)
+    hud.bestAmmo = bestShot(); // docs/23 item 39
     hud.drawTarget(state, targetId);
     if (touch.enabled && state.self) {
       const cls = SHIP_CLASSES[state.self.loadout.classId];
@@ -2509,4 +2630,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: riskConfirmOpen };

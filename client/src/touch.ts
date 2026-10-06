@@ -14,6 +14,8 @@ export interface TouchHooks {
   /** A hard turn with every hand on the braces. */
   dash(): void;
   chasers(): void;
+  /** «Огонь» (docs/23 item 35): a broadside out of turn, laid by the captain. */
+  volley(): void;
   mount(): void;
   context(): void;
   /** The second context action, when the first is taken by another (a wild island to claim, docs/15 item 8). */
@@ -67,6 +69,11 @@ export class TouchControls {
     this.bindCanvas();
   }
 
+  /** The captain's thumb on the helm stick now (docs/23 item 33: it takes the wheel from the helmsman). */
+  held(): boolean {
+    return this.stickId !== null;
+  }
+
   enable(): void {
     if (this.enabled) return;
     this.enabled = true;
@@ -77,6 +84,7 @@ export class TouchControls {
   dress(): void {
     this.art('tc-port', 'icon.fire', true);
     this.art('tc-starboard', 'icon.fire');
+    this.art('tc-fire', 'icon.fire');
     this.art('tc-chasers', 'icon.chasers');
     this.art('tc-dash', assetUrl('icon.dash') ? 'icon.dash' : 'icon.ab_hard_over');
     this.art('tc-sail-up', 'icon.sail_up');
@@ -211,6 +219,7 @@ export class TouchControls {
     hold('tc-starboard', 'starboard');
     tap('tc-dash', () => this.hooks.dash());
     tap('tc-chasers', () => this.hooks.chasers());
+    tap('tc-fire', () => this.hooks.volley());
     tap('tc-mount', () => this.hooks.mount());
     tap('tc-context', () => this.hooks.context());
     tap('tc-context2', () => this.hooks.context2());

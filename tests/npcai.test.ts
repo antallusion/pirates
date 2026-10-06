@@ -63,9 +63,10 @@ test('a wolf pack: the pirate who goes for a captain calls two idle pirates, one
 });
 
 test('beating to windward (docs/16 P5): a pack dead to leeward of a hove-to captain closes on her within two minutes', () => {
-  // The best beat is well inside the no-go edge (the sea never lies dead, sailing.ts): a square-rigger pinches up.
+  // The best beat is well inside the no-go edge (the sea never lies dead, sailing.ts): a square-rigger pinches up — and
+  // with the softer head wind of docs/23 item 40 she goes nearly straight at her mark (no long tacks on a phone).
   const beat = beatAngle('square', 65, false, 0.7);
-  assert.ok(beat > 10 && beat < 65, `square rig beats at ${beat}°`);
+  assert.ok(beat >= 0 && beat < 30, `square rig beats at ${beat}°`);
   const { game } = makeGame();
   // The beat is weighed on the open water it was tuned on: the islands of docs/18 III taken off this sea (one lies 2 km
   // off her, and what lives on it draws the pack's eye).

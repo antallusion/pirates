@@ -5,7 +5,7 @@ import { regattaBlocked } from './regatta.ts';
 import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
-import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
+import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
 import { onboardingVolley } from './onboarding.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
 import type { ChaserEnd, GunId } from '../../../shared/src/data/ships.ts';
@@ -43,6 +43,12 @@ import { kegImpact } from './holidays.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { killFactor, menLost, wallsOf } from './army.ts';
 import { giftOnHit } from './shipgifts.ts';
+
+/** A broadside laid on a mark by her gun captains (auto-aim, the sea's own gunners): the balls converge on `aimAt`. */
+export interface Lay {
+  /** × her spread (the «Огонь» button's aimed volley is tighter). */
+  spread?: number;
+}
 
 export interface Projectile {
   owner: number;
@@ -87,6 +93,16 @@ export const MAST_CRIT_TIME = 20;
 export const MAST_CRIT_SLOW = 0.1;
 export const MAGAZINE_CRIT_HEAVY = 0.01;
 
+/** The quick sea fight (docs/23 item 36): a ball into a ship of the ladder (or a zone boss) strikes SEA_DAMAGE times as
+ *  hard. Into the deep's creatures, the world's great ones and the wreck hulks it strikes as much softer as the guns load
+ *  faster: their fights keep the length they were weighed at (tests/balance hunt, bosses), only the volleys come
+ *  quicker. */
+export function seaPace(target: ShipEntity): number {
+  if (target.zoneBoss) return SEA_DAMAGE;
+  if (isMonster(target) || target.npcRole === 'beast' || target.bossOf || target.bossPart || !target.onLadder) return SEA_RELOAD;
+  return SEA_DAMAGE;
+}
+
 export function sideHeading(ship: ShipEntity, side: Side): number {
   return wrapAngle(ship.state.heading + (side === 'port' ? -Math.PI / 2 : Math.PI / 2));
 }
@@ -127,7 +143,7 @@ export function reloadTime(ship: ShipEntity, side: Side, now: number): number {
   if (ship.cls.passive.id === 'gun_brig' && ship.reload.port === 0 && ship.reload.starboard === 0) t *= 0.92;
   if (ship.ammoSel === 'grape' && ship.hasEffect('grapeshot_frenzy')) t *= 0.5;
   void now;
-  return t;
+  return t * SEA_RELOAD; // the quick sea fight (docs/23 item 36)
 }
 
 /** How far the cross wind turns a ball's line (docs/16 #1), less what her gunners allow for it (`allow` 0..1: a
@@ -140,7 +156,7 @@ export function shotDrift(game: Game, ship: ShipEntity, heading: number, dist: n
 
 /** Fires a broadside. Returns null on success, or a reason string. `windAllow`: how much of the wind's drift her
  *  gunners aim off for (0 for a captain, who sees the drift on her mark and leads it herself). */
-export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number, aimAt?: { x: number; y: number }, windAllow = 0): string | null {
+export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number, aimAt?: { x: number; y: number }, windAllow = 0, lay?: Lay): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
   if (ship.hasEffect('submerged') || ship.hasEffect('ghost_return')) return 'The guns are under black water';
   if (ship.reload[side] > 0) return 'Guns are still loading';
@@ -179,7 +195,10 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
   const held = ship.aimStart[side] >= 0 ? game.now - ship.aimStart[side] : 0;
   const focus = aimFocus(held > AIM_CHARGE * 4 ? 0 : held);
   ship.aimStart[side] = -1;
-  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn * focus.spread;
+  const spreadRad = gun.spreadDeg * DEG * ship.stats.spreadMul * (doubleShot ? 1.4 : 1) * (ship.morale < 25 ? 1.3 : 1) * game.seaSpread(ship) * rollMul * rangedIn * focus.spread * (lay?.spread ?? 1);
+  // Laid on her mark (docs/23 item 34): each gun trained from its own port onto the point, within the arc of her beam.
+  const layArc = (LAY_ARC_DEG + tval(ship.stats, 'gunTrain')) * DEG;
+  const sideH = sideHeading(ship, side);
   // Shadow Strike: the first broadside from hiding, before she has seen you.
   const hiding = ship.hasFlag('hidden') || isNight(game.now) || game.weatherOf(ship) === 'fog';
   const shadowStrike = !!target && ship.hasFlag('shadow_strike') && hiding && !target.attackers.has(ship.id) && !ship.attackers.has(target.id) ? 1.3 : 1;
@@ -207,9 +226,14 @@ export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist:
     const bx = ship.state.x + fwd.x * along + outward.x * ship.stats.beam * 0.55;
     const by = ship.state.y + fwd.y * along + outward.y * ship.stats.beam * 0.55;
     const n = doubleShot || rng.chance(ship.stats.doubleShotChance) ? 2 : 1;
+    let laidH = baseHeading, laidD = dist;
+    if (lay && aimAt) {
+      laidH = wrapAngle(sideH + clamp(wrapAngle(Math.atan2(aimAt.x - bx, -(aimAt.y - by)) - sideH), -layArc, layArc));
+      laidD = clamp(Math.hypot(aimAt.x - bx, aimAt.y - by) + LAY_OVER, 40, range);
+    }
     for (let k = 0; k < n; k++) {
-      const h0 = baseHeading + rng.gauss() * spreadRad * 0.5;
-      const d = dist * (1 + rng.gauss() * 0.045);
+      const h0 = laidH + rng.gauss() * spreadRad * 0.5;
+      const d = laidD * (1 + rng.gauss() * 0.045);
       const h = h0 + shotDrift(game, ship, h0, d, ammo, windAllow, gunSpeed); // the cross wind carries her downwind
       const delay = Math.round((rolling ? (i * 2500) / Math.max(1, shots) : i * 45) + rng.float() * 60 + k * 90);
       game.projectiles.push({
@@ -294,7 +318,7 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
     balls.push([Math.round(ox), Math.round(oy), Math.round(bh * 1000) / 1000, Math.round(bd), delay]);
   }
   ship.ammo[ammo] -= shots;
-  ship.chaserReload[end] = CHASER_RELOAD * ship.stats.reloadMul;
+  ship.chaserReload[end] = CHASER_RELOAD * SEA_RELOAD * ship.stats.reloadMul;
   ship.lastCombat = game.now;
   ship.protectedUntil = 0;
   const spd = 1 + tval(ship.stats, 'shotSpeed');
@@ -501,7 +525,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // The ladder (canon D12): the gap of levels cuts or swells the shot, and a junior makes fewer criticals, or none.
   const lad = ladderBetween(game, shooter, target);
   const cx = lad.crits;
-  let hullDmg = p.damage * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt;
+  const pace = seaPace(target); // the quick sea fight (docs/23 item 36)
+  let hullDmg = p.damage * pace * ammo.hullMul * falloff * rakeMul * glance * (1 - armor) * target.stats.incomingDamageMul * lore * lad.dealt;
   // No single broadside may take more than 30% of a hull (Iron Coffin: 20%).
   if (p.volley !== undefined) {
     const rec = game.volleys.get(p.volley);
@@ -513,14 +538,14 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
     }
   }
   const chain = p.ammo === 'chain' ? 1 + (sst ? tval(sst, 'chainSail') : 0) : 1;
-  const sailDmg = p.damage * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1);
+  const sailDmg = p.damage * (p.ammo === 'chain' ? pace : 1) * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1);
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
   // Splinter Storm: every ball into the hull sends splinters through the gun deck.
   const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && hullDmg > 5 ? 1 : 0;
   // The hull is the wall the stacks stand behind (docs/17 H1): grape sweeps the open deck, a ball kills more through a
   // shattered side than through a sound one; and the men fall out of her stacks, the tougher and the better covered
   // her army the fewer.
-  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (gd?.crewMul ?? 1) * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
+  const crewKill = (ammo.crewKill * (sst?.crewKillMul ?? 1) * grape * (gd?.crewMul ?? 1) * (raking ? 1.8 : 1) * (0.5 + game.rng.float()) + splinters) * pace * lad.dealt * wallsOf(target, p.ammo === 'grape') * killFactor(target);
 
   let crit: string | undefined;
   let rudderDmg = 0;

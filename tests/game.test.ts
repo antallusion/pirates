@@ -217,7 +217,8 @@ test('NPC pirates hunt, fight at range, board once and spare the plundered victi
     steps(game, 20);
   }
   const evs = c.all('ev').flatMap((m) => m.list);
-  assert.ok(evs.filter((e) => e.k === 'volley' && e.ship === pirate.id).length >= 3, 'pirate fired broadsides');
+  // (two at least: at the quick sea fight's pace, docs/23 item 36, the grapples reach farther and she is alongside sooner)
+  assert.ok(evs.filter((e) => e.k === 'volley' && e.ship === pirate.id).length >= 2, 'pirate fired broadsides');
   assert.ok(ship.hull < ship.stats.hullMax, 'player hull damaged');
   const boards = evs.filter((e) => e.k === 'board_start').length;
   assert.ok(boards <= 1, `boarded ${boards} times`);

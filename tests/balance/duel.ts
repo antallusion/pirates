@@ -3,10 +3,10 @@
 // a held broadside in the perfect window every time, a dash out of danger), an average one, or an idle one who
 // does nothing at all. The rest of the sea is cleared and nothing new puts out while they fight.
 
+import { AUTO_ARC_DEG } from '../../shared/src/data/gunnery.ts';
 import type { NpcSkill } from '../../shared/src/data/shiplevel.ts';
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
 import { buildNavGrid, isLand } from '../../shared/src/world/worldgen.ts';
-import { SPEED_SCALE } from '../../shared/src/constants.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import { engage, newBrain } from '../../server/src/game/npc.ts';
 import type { NpcBrain } from '../../server/src/game/npc.ts';
@@ -16,9 +16,12 @@ import { makeGame } from '../helpers.ts';
 export type Craft = 'perfect' | 'average' | 'idle' | 'bot';
 
 /** A scripted captain's craft (a bot's is her level's). */
+// docs/23 item 34: a captain's broadsides are laid by her gun captains now (auto-aim): the average one lets them go
+// as the mark bears in the auto-fire arc with nearly the true lead; the perfect one waits for her beam and the charged
+// window.
 export const CRAFT: Record<'perfect' | 'average', NpcSkill> = {
-  perfect: { lead: 1, rangeErr: 0, arcDeg: 8, spread: 0, react: 0.25, dash: true },
-  average: { lead: 0.75, rangeErr: 0.1, arcDeg: 18, spread: 0.15, react: 1.0, dash: false },
+  perfect: { lead: 1, rangeErr: 0, arcDeg: AUTO_ARC_DEG, spread: 0, react: 0.25, dash: true },
+  average: { lead: 0.9, rangeErr: 0.07, arcDeg: AUTO_ARC_DEG, spread: 0.1, react: 0.8, dash: false },
 };
 
 export interface Side {
@@ -37,8 +40,9 @@ export interface DuelResult {
 }
 
 /** A sea emptied for duels: every NPC gone, nothing more to put out. */
-/** A fight's time: fifteen minutes at the old pace of six, as long again as the sea is slower (the same sea-miles). */
-export const FIGHT_SEC = Math.round((900 * 6) / SPEED_SCALE);
+/** A fight's time. It was fifteen minutes at the old pace of six (30 min at SPEED_SCALE 3); the quick sea fight of
+ *  docs/23 (item 45) sinks an equal in 30 s or less, so a sim that has not ended in three minutes is a draw. */
+export const FIGHT_SEC = 180;
 
 export function duelSea(): Game {
   const { game } = makeGame();
@@ -57,7 +61,7 @@ export function duelSea(): Game {
 }
 
 /** Open water in the Black Coast, clear of land for a mile around. */
-function openWater(game: Game, k: number): { x: number; y: number } {
+export function openWater(game: Game, k: number): { x: number; y: number } {
   for (let i = 0; i < 400; i++) {
     const x = 12_000 + ((k * 7919 + i * 104_729) % 20_000);
     const y = 60_000 + ((k * 6007 + i * 130_363) % 20_000);

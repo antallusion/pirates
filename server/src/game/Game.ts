@@ -55,6 +55,9 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
+import { SEA_RELOAD } from '../../../shared/src/data/gunnery.ts';
+import { aimedVolley, pursuitInput, startPursuit, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
+import { boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
 import { angleDiff, clamp, closestOnPolygon, dist, headingOf, headingVec, pointInPolygon } from '../../../shared/src/math.ts';
@@ -174,7 +177,7 @@ import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onU
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { ZoneBossHub, stepZoneBosses, zoneBossSinking } from './zonebosses.ts';
-import { applyDamage, cutMastWreck, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
+import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, seizeCaptain, takeCaptive, takePrize } from './prizes.ts';
@@ -586,6 +589,8 @@ export class Game {
       if (k > 0) updateNpc(this, ship, brain, dt * k, this.nearestPlayer.get(id) ?? Infinity);
     }
     stepAutosail(this); // the helmsmen at their captains' wheels (docs/16 #36)
+    stepPursuit(this); // and under «Атаковать» (docs/23 item 33)
+    stepAutoFire(this); // the captains' gun crews laying on the mark (docs/23 items 34–35)
     prof.lap('npcAi');
 
     // Movement for every physically simulated ship.
@@ -802,7 +807,13 @@ export class Game {
         b.state.y += ny * overlap * wb;
         const va = headingVec(a.state.heading), vb = headingVec(b.state.heading);
         const closing = (va.x * a.state.speed - vb.x * b.state.speed) * nx + (va.y * a.state.speed - vb.y * b.state.speed) * ny;
-        if (closing > 3) {
+        // Two of one squadron (a captain's escorts, her and hers, a group, a guild) bump and fend off: no ram between
+        // friends (the quicker sea of docs/23 had two escorts at station hole each other).
+        const friends = (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
+        if (closing > 3 && friends) {
+          a.state.speed *= 0.6;
+          b.state.speed *= 0.6;
+        } else if (closing > 3) {
           this.hullToHull(a, b);
           this.hullToHull(b, a);
           const ramA = a.hasEffect('ramming_speed') ? 3 : 1, ramB = b.hasEffect('ramming_speed') ? 3 : 1;
@@ -2788,6 +2799,10 @@ export class Game {
           if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
           return;
         }
+        if (pursuitInput(this, s, msg.rudder, msg.sail, msg.helm === true)) {
+          if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
+          return; // the helmsman pursues her mark (docs/23 item 33)
+        }
         if (autosailInput(this, s, msg.rudder, msg.sail)) {
           if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
           return; // the helmsman has the wheel (docs/16 #36)
@@ -2804,6 +2819,26 @@ export class Game {
           if (!why) lineOfBattle(this, ship, msg.side, Number.isFinite(Number(msg.dist)) ? Number(msg.dist) : 300);
           return err(why);
         }
+      case 'attack': {
+        // «Атаковать» (docs/23 item 33): the helmsman pursues the mark; `stop` gives the wheel back.
+        if (msg.stop) return stopPursuit(this, s, 'manual');
+        return err(startPursuit(this, s, Math.trunc(Number(msg.target)), msg.mode === 'guns' ? 'guns' : 'board'));
+      }
+      case 'volley':
+        return err(aimedVolley(this, s));
+      case 'gunnery':
+        if (typeof msg.auto === 'boolean') s.autoFire = msg.auto;
+        if (typeof msg.weak === 'boolean') s.autoWeak = msg.weak;
+        if (typeof msg.expert === 'boolean') s.expert = msg.expert;
+        return;
+      case 'board_odds': {
+        const target = this.ships.get(Math.trunc(Number(msg.id)));
+        if (!target || !ship.alive || ship.docked || target.npcRole === 'beast' || target.zoneBoss || target.cls.monster || target.bossOf || target.bossPart) return;
+        if (Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) > 2600) return;
+        const odds = boardOdds(this, ship, target);
+        this.sendTo(s, { t: 'board_odds', id: target.id, chance: Math.round(odds.chance * 100) / 100, risky: isRisky(ship, target, odds.chance) });
+        return;
+      }
       case 'craft':
         return err(craft(this, s, msg.recipe, Math.trunc(Number(msg.n))));
       case 'mount':
@@ -2898,6 +2933,11 @@ export class Game {
         const agg = msg.aggression === 'careful' || msg.aggression === 'brutal' ? msg.aggression : 'standard';
         const why = canBoard(this, ship, target);
         if (why) return err(why);
+        // A senior, or a slim chance (docs/23 items 49–51): the odds first, «Рискнуть» or «Отступить».
+        if (msg.risk !== true) {
+          const risk = boardRisk(this, ship, target);
+          if (risk.risky) return this.sendTo(s, { t: 'board_risk', risk });
+        }
         startBoarding(this, ship, target, agg);
         return;
       }
@@ -4201,8 +4241,8 @@ export class Game {
         reload: {
           port: me.reload.port <= 0 ? 1 : 1 - me.reload.port / Math.max(0.1, reloadEstimate(me, 'port')),
           starboard: me.reload.starboard <= 0 ? 1 : 1 - me.reload.starboard / Math.max(0.1, reloadEstimate(me, 'starboard')),
-          bow: me.cls.bowChasers ? 1 - me.chaserReload.bow / CHASER_RELOAD : 0,
-          stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / CHASER_RELOAD : 0,
+          bow: me.cls.bowChasers ? 1 - me.chaserReload.bow / (CHASER_RELOAD * SEA_RELOAD) : 0,
+          stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / (CHASER_RELOAD * SEA_RELOAD) : 0,
           mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
         ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me), combat: me.inCombat(this.now),

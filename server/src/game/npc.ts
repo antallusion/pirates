@@ -29,6 +29,7 @@ import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
 import { applyDamage, dash, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
 import { SURRENDER_WAIT, strikeColours, struck, surrenderClosed } from './struck.ts';
+import { CHASE_GIVE_UP } from '../../../shared/src/data/gunnery.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
@@ -73,6 +74,8 @@ export interface NpcBrain {
   stuckCheck: { x: number; y: number; t: number };
   /** The First Watch's practice raider: she comes for this one novice even in safe water. */
   practice?: number;
+  /** docs/23 item 44: when she took her present prey, for the chase that never lands a hit. */
+  preySince?: { id: number; t: number; best: number; closer: number };
   /** The practice raider's men the guns never cut below, so the turn-by-turn lesson after the boarding is a fight of a
    *  few turns and not one blow (the 2026-10-05 playthrough: the gunnery left her one man). */
   practiceFloor?: number;
@@ -552,6 +555,22 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     }
     // (no wolf pack round the First Watch's lesson, nor round a captain still in it)
     if (role === 'pirate' && brain.target !== p.id && p.isPlayer && brain.practice === undefined && !inFirstWatch(game, p)) rallyPack(game, ship, p);
+    // No endless chases (docs/23 item 44): forty seconds after a captain and not a hit either way, and no nearer to her
+    // for the last ten, she gives it up (a pack still beating up to her keeps coming).
+    if (brain.preySince?.id !== p.id) brain.preySince = { id: p.id, t: now, best: preyD, closer: now };
+    const ps = brain.preySince;
+    if (preyD < ps.best - 30) {
+      ps.best = preyD;
+      ps.closer = now;
+    }
+    const lastHit = Math.max(ps.t, p.attackers.get(ship.id) ?? -Infinity, ship.attackers.get(p.id) ?? -Infinity);
+    if (p.isPlayer && brain.practice === undefined && now - lastHit > CHASE_GIVE_UP && now - ps.closer > 10) {
+      brain.spared.set(p.id, now + 120);
+      brain.target = null;
+      brain.chase = null;
+      brain.preySince = undefined;
+      return;
+    }
     brain.target = p.id;
     engage(game, ship, brain, p, preyD);
     return;
@@ -644,20 +663,51 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
     startBoarding(game, ship, target, 'standard');
     return;
   }
+  // Her craft by her level (docs/12 §3.3): how much of the lead she allows, how wide she lets fly, her tricks.
+  const sk = brain.skill ?? npcSkill(ship.shipLevel);
+  const weakened = target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
+  const { px, py, leadD, leadBearing } = engageHelm(game, ship, brain, target, d, wantsBoard ? (weakened ? 'close' : 'rig') : 'guns', sk.lead);
+  const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
+  for (const side of ['port', 'starboard'] as const) {
+    if (ship.reload[side] > 0) continue;
+    const off = Math.abs(angleDiff(sideHeading(ship, side), leadBearing));
+    if (off < sk.arcDeg * DEG && leadD < rangeOf(side) * 0.98) {
+      // Laid on her lead (docs/23 item 34), as far off in range as her craft allows; the sea's own gunners know their
+      // wind and allow for it.
+      const err = 1 + (game.rng.float() * 2 - 1) * sk.rangeErr;
+      fireBroadside(game, ship, side, leadD * err, { x: ship.state.x + (px - ship.state.x) * err, y: ship.state.y + (py - ship.state.y) * err }, 1, {});
+    }
+  }
+  // A seasoned captain dashes out of a broadside held on her.
+  if (sk.dash && d < 700 && (target.aimStart.port >= 0 || target.aimStart.starboard >= 0) && game.rng.chance(0.2)) dash(game, ship);
+  // Chasers: pursuers fire from the bow, the pursued from the stern.
+  const chaseRange = effectiveRange(ship, 'port', 'round') * 1.2;
+  if (leadD < chaseRange) {
+    const offBow = Math.abs(angleDiff(ship.state.heading, leadBearing));
+    if (offBow < CHASER_CONE && ship.chaserReload.bow <= 0 && ship.cls.bowChasers) fireChaser(game, ship, 'bow', px, py, 1);
+    else if (Math.PI - offBow < CHASER_CONE && ship.chaserReload.stern <= 0 && ship.cls.sternChasers) fireChaser(game, ship, 'stern', px, py, 1);
+  }
+}
+
+/** How a fighter's helm works her foe: `guns` holds the best range for her broadsides and presents them, `rig` the
+ *  same at chain-shot range (a boarder stripping the rigging), `close` runs straight in on her lead for the grapples. */
+export type HelmMode = 'guns' | 'rig' | 'close';
+
+/** The fighting helm (the sea's ships, and a captain's under «Атаковать», docs/23 item 33): steers, and says where her
+ *  foe will be when a ball arrives (`lead`: the share of the true lead her gunners allow). */
+export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target: ShipEntity, d: number, mode: HelmMode, lead: number): { px: number; py: number; leadD: number; leadBearing: number } {
   const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
   const maxRange = Math.max(rangeOf('port'), rangeOf('starboard'));
   const bearing = headingOf(target.state.x - ship.state.x, target.state.y - ship.state.y);
-  // Her craft by her level (docs/12 §3.3): how much of the lead she allows, how wide she lets fly, her tricks.
-  const sk = brain.skill ?? npcSkill(ship.shipLevel);
   // Lead the target by the ball's flight time (a green gunner allows only part of it).
   // (The shot and the ship both go SPEED_SCALE times as fast across the world, so the lead is as it was.)
-  const flight = (d / 180) * sk.lead;
+  const flight = (d / 180) * lead;
   const tv = headingVec(target.state.heading);
   const px = target.state.x + tv.x * target.state.speed * flight;
   const py = target.state.y + tv.y * target.state.speed * flight;
   const leadD = dist(ship.state.x, ship.state.y, px, py);
   const leadBearing = headingOf(px - ship.state.x, py - ship.state.y);
-  const weakened = target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
+  const out = { px, py, leadD, leadBearing };
 
   // A pack member comes round to her own side of the prey before she opens fire.
   if (brain.flank !== undefined && (brain.flankUntil ?? 0) > game.now && d > maxRange * 0.7) {
@@ -668,12 +718,12 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
     if (relWindDeg(headingOf(fx - ship.state.x, fy - ship.state.y), game.windFor(ship)) < FLANK_UPWIND_DEG) brain.flank = undefined;
     else if (dist(ship.state.x, ship.state.y, fx, fy) > 180) {
       steer(game, ship, brain, headingOf(fx - ship.state.x, fy - ship.state.y), 1);
-      return;
+      return out;
     }
   }
   if (d > maxRange * 1.5) {
     steer(game, ship, brain, bearing, 1);
-  } else if (wantsBoard && weakened) {
+  } else if (mode === 'close') {
     steer(game, ship, brain, leadBearing, d < 250 ? 0.75 : 1); // close for the grapple
   } else {
     // Present a loaded broadside, spiralling in or out to hold the ideal distance.
@@ -685,26 +735,13 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
     let desired = side === 'port' ? hPort : hStar;
     const inward = side === 'port' ? -1 : 1; // rotation that turns the bow toward the target
     // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.
-    const range = wantsBoard ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
+    const range = mode === 'rig' ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
     if (d > range) desired = wrapAngle(desired + inward * 0.85);
     else if (d > range * 0.75) desired = wrapAngle(desired + inward * 0.4);
-    else if (d < range * 0.35 && !wantsBoard) desired = wrapAngle(desired - inward * 0.35);
+    else if (d < range * 0.35 && mode === 'guns') desired = wrapAngle(desired - inward * 0.35);
     steer(game, ship, brain, desired, 1, true);
   }
-  for (const side of ['port', 'starboard'] as const) {
-    if (ship.reload[side] > 0) continue;
-    const off = Math.abs(angleDiff(sideHeading(ship, side), leadBearing));
-    if (off < sk.arcDeg * DEG && leadD < rangeOf(side) * 0.98) fireBroadside(game, ship, side, leadD * (1 + (game.rng.float() * 2 - 1) * sk.rangeErr), undefined, 1); // the sea's own gunners know their wind and allow for it
-  }
-  // A seasoned captain dashes out of a broadside held on her.
-  if (sk.dash && d < 700 && (target.aimStart.port >= 0 || target.aimStart.starboard >= 0) && game.rng.chance(0.2)) dash(game, ship);
-  // Chasers: pursuers fire from the bow, the pursued from the stern.
-  const chaseRange = effectiveRange(ship, 'port', 'round') * 1.2;
-  if (leadD < chaseRange) {
-    const offBow = Math.abs(angleDiff(ship.state.heading, leadBearing));
-    if (offBow < CHASER_CONE && ship.chaserReload.bow <= 0 && ship.cls.bowChasers) fireChaser(game, ship, 'bow', px, py, 1);
-    else if (Math.PI - offBow < CHASER_CONE && ship.chaserReload.stern <= 0 && ship.cls.sternChasers) fireChaser(game, ship, 'stern', px, py, 1);
-  }
+  return out;
 }
 
 /** The best angle off the wind to beat at (degrees from where it blows), by rig, no-go edge and wind: the heading that

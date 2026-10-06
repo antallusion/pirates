@@ -97,7 +97,9 @@ test('the sea’s ships go for each other by the rules: raiders for trade, the l
   for (const o of [fisher, patrol, whaler, ghost, escort, safe]) game.removeShip(o.id);
   game.removeShip(beast.id);
   const hull0 = merchant.hull;
-  steps(game, 20 * 90);
+  // Until the pirate is at her (at most 90 s): at the quick sea fight's pace (docs/23 item 36) a merchant is struck or
+  // taken well inside that and her raider is free for the next, so the look is taken while the fight is on.
+  for (let t = 0; t < 90 && merchant.hull >= hull0 && !merchant.surrendered && !merchant.boarding && merchant.alive; t++) steps(game, 20);
   assert.ok(merchant.hull < hull0 || merchant.surrendered || merchant.boarding || !merchant.alive, 'the pirate is at her');
   assert.equal(game.npcs.get(pirate.id)?.target ?? merchant.id, merchant.id);
 });

@@ -10,6 +10,7 @@ import type { GoodId } from '../data/goods.ts';
 import { AMMO, GUNS, MODULES, SHIP_CLASSES } from '../data/ships.ts';
 import type { AmmoId, GunId, ModuleId, MountId, Rig, ShipClassId } from '../data/ships.ts';
 import { mod, sumMods } from '../data/stats.ts';
+import { GRAPPLE_REACH } from '../data/gunnery.ts';
 import type { Flag, ModifierSource, StatKey, StatMods } from '../data/stats.ts';
 import { talentModifiers } from '../data/talents.ts';
 import type { TalentRanks } from '../data/talents.ts';
@@ -195,7 +196,7 @@ export function computeShipStats(
   }
 
   const passive = cls.passive.id;
-  const baseRange = 34 + cls.length * 0.5;
+  const baseRange = (34 + cls.length * 0.5) * GRAPPLE_REACH; // the grapples fly farther (docs/23 item 36)
   // Her level (canon D12): hull and guns +14% a level above her class's first, a little more crew, hold and way.
   const lv = levelScale(cls.id, shipLevelOf(loadout));
   // Caps (§3.3): a keystone lifts the cap of its own characteristic.

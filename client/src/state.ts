@@ -245,6 +245,12 @@ export class ClientState {
   input = { rudder: 0, sail: 2, seq: 0 };
   /** docs/16 #36: the helmsman has the wheel for this mark (the server steers; the prediction follows its rudder). */
   autosail: { x: number; y: number } | null = null;
+  /** docs/23 item 33: «Атаковать» — the helmsman pursues this mark (the prediction follows his rudder unless the
+   *  captain's own hand is on the helm, `helm`). */
+  pursuit: { target: number; mode: 'guns' | 'board' } | null = null;
+  helm = false;
+  /** docs/23 item 49: the boarding chance of a ship, as the server last reckoned it. */
+  boardOdds = new Map<number, { chance: number; risky: boolean; at: number }>();
   snapGap = 0.1; // seconds between snapshots (smoothed)
   /** Take the sail order from the next snapshot (after init). */
   syncSail = false;
@@ -385,6 +391,12 @@ export class ClientState {
         // The helmsman has the wheel for a mark, or has given it back (docs/16 #36).
         this.autosail = m.on && m.x !== undefined && m.y !== undefined ? { x: m.x, y: m.y } : null;
         if (m.on && m.sail !== undefined) this.input.sail = m.sail;
+        break;
+      case 'pursuit':
+        this.pursuit = m.on && m.target !== undefined ? { target: m.target, mode: m.mode === 'guns' ? 'guns' : 'board' } : null;
+        break;
+      case 'board_odds':
+        this.boardOdds.set(m.id, { chance: m.chance, risky: m.risky, at: now });
         break;
       case 'wgoals':
         this.worldGoals = m.list;
@@ -711,14 +723,15 @@ export class ClientState {
       rig: st.rig, maxSpeed: st.maxSpeed, accel: st.accel, turnRate: st.turnRate, noGoDeg: st.noGoDeg, sailChangeRate: st.sailChangeRate,
       currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
       loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: this.night() ? 1 + st.nightSpeed : 1,
-      personalWind: false, weatherly: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'weatherly', sweeps: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'sweeps',
+      personalWind: st.flags.has('personal_wind'), weatherly: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'weatherly', sweeps: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'sweeps',
       talent: sailTalents(st),
     };
     // A racer sails as the regatta lends (docs/12 P10 #5), as the server does.
     const sail = st.flags.has('regatta_equal') ? regattaSail(params) : params;
     const wind = { dir: this.wind[0], strength: this.wind[1] };
     const cur = currentAt(this.currents, s.x, s.y, this.estServerTime(), this.whirlpools);
-    const input = { rudder: this.autosail ? you.rud : this.input.rudder, sailTarget: sailSteps[this.input.sail] };
+    const helmsman = !!this.autosail || (!!this.pursuit && !this.helm);
+    const input = { rudder: helmsman ? you.rud : this.input.rudder, sailTarget: this.pursuit && !this.helm ? you.sail : sailSteps[this.input.sail] };
     let t = elapsed;
     while (t > 0) {
       const dt = Math.min(0.05, t);

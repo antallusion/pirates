@@ -5,7 +5,7 @@ import { TALENTS, canLearn } from '../shared/src/data/talents.ts';
 import type { TalentRanks } from '../shared/src/data/talents.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import { bloodAndSalt, exoticBonus, ghostTraderMul, grandBattery, nightRaider, noteExoticPurchase, stepBridges } from '../server/src/game/bridgefx.ts';
-import { canBoard, startBoarding } from '../server/src/game/boarding.ts';
+import { boardingRangeBetween, canBoard, startBoarding } from '../server/src/game/boarding.ts';
 import { applyDamage } from '../server/src/game/combat.ts';
 import { escortsOf, stepFleet } from '../server/src/game/fleet.ts';
 import type { Game } from '../server/src/game/Game.ts';
@@ -49,11 +49,14 @@ test('twelve bridges; each needs points in two trees; three at most', () => {
   assert.match(canLearn({ ...ranks, brg_storm_gunner: 1, brg_ghost_trader: 1, brg_night_raider: 1 }, 'brg_chain_and_grapple', 1)!, /three bridges/);
 });
 
-test('Chain and Grapple: a tangled ship is boarded from further and at any speed', () => {
+test('Chain and Grapple: a tangled ship is boarded from further', () => {
   const { game } = makeGame();
   const { s, ship } = captain(game, 'Grapple', { brg_chain_and_grapple: 1 });
   toSea(game, s);
   const foe = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + 55, ship.state.y, 0);
+  // Past the grapples' own reach, inside half as far again (a captain's ship matches any speed herself, docs/23 item 54).
+  foe.state.x = ship.state.x + boardingRangeBetween(ship, foe) * 1.3;
+  game.grid.upsert(foe.id, foe.state.x, foe.state.y);
   foe.hull = foe.stats.hullMax * 0.4;
   foe.state.speed = 9;
   assert.ok(canBoard(game, ship, foe) !== null);

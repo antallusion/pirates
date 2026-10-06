@@ -44,3 +44,55 @@ export function windDrift(windDir: number, strength: number, heading: number, di
 export function windDriftAngle(windDir: number, strength: number, heading: number, dist: number, speed: number): number {
   return Math.atan2(windDrift(windDir, strength, heading, dist, speed), Math.max(1, dist));
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// The quick sea fight (docs/23 phase 3, owner 2026-10-06: «бой должен быть максимум секунд 30, если это корабли одного
+// уровня»). Two ships of a level sink each other with broadsides alone in 30 s or less, so the guns load faster and
+// every ball that strikes is felt; the point of the game is to close fast and board.
+
+/** Every broadside's (and chaser's) reload, × (the guns' own times in ships.ts stay their relative weights). */
+export const SEA_RELOAD = 0.34;
+/** Every ball's damage (hull, canvas and men), × — fewer balls than the old fights threw, each one seen. */
+export const SEA_DAMAGE = 3.3;
+
+/** The grapples fly this much farther than they did (docs/23 item 36: «сближение быстрое, крючья летят дальше»). */
+export const GRAPPLE_REACH = 1.8;
+/** The boarding run (docs/23 item 36): running in on her mark for the grapples, every hand on the braces — her way and
+ *  her pick-up, × over her own, until the grapples bite. */
+export const BOARD_RUN = { maxSpeed: 0.7, accel: 4, turnRate: 0.8 } as const;
+
+/** A laid broadside (auto-aim, docs/23 item 34): her gun captains train each gun on the mark within this many degrees
+ *  of her beam, and every ball flies from its own port to the mark — they converge on her instead of flying parallel. */
+export const LAY_ARC_DEG = 40;
+/** Auto-fire lets a side go once the mark's lead is within this many degrees of her beam. */
+export const AUTO_ARC_DEG = 28;
+/** A laid ball is sent this far past the mark: one a little long still strikes her on the way, one short falls in the
+ *  sea (metres). */
+export const LAY_OVER = 22;
+/** The «Огонь» button's volley (docs/23 item 35): laid by the captain herself, tighter. */
+export const AIMED_SPREAD = 0.55;
+
+/** The lead on a moving mark: where she will be when the ball arrives (two passes, the second with the first's time
+ *  of flight). `speed`: the ball's muzzle speed (AMMO × shot speed), on the sea's old scale as the ship's way. */
+export function leadPoint(from: { x: number; y: number }, to: { x: number; y: number; heading: number; speed: number }, ballSpeed: number, share = 1): { x: number; y: number; d: number } {
+  let px = to.x, py = to.y;
+  for (let i = 0; i < 2; i++) {
+    const tof = Math.hypot(px - from.x, py - from.y) / Math.max(1, ballSpeed);
+    px = to.x + Math.sin(to.heading) * to.speed * tof * share;
+    py = to.y - Math.cos(to.heading) * to.speed * tof * share;
+  }
+  return { x: px, y: py, d: Math.hypot(px - from.x, py - from.y) };
+}
+
+/** The best shot for her mark, by its role (docs/23 item 39: round for the hull, chain for the sails, grape for the
+ *  men): grape when she means to board and the mark is in grape's reach with men to spare, chain when the mark runs
+ *  from her faster, round for everything else. */
+export function suggestAmmo(o: { board: boolean; d: number; grapeRange: number; chainRange: number; crewShare: number; sailShare: number; faster: boolean }): 'round' | 'chain' | 'grape' {
+  if (o.board && o.d < o.grapeRange * 0.95 && o.crewShare > 0.4) return 'grape';
+  if (o.faster && o.d < o.chainRange * 0.95 && o.sailShare > 0.45) return 'chain';
+  return 'round';
+}
+
+/** No endless chases (docs/23 item 44): this long after her prey with no hit either way and a bot gives it up (or, the
+ *  prey of a captain's «Атаковать», strikes or slips away). */
+export const CHASE_GIVE_UP = 40;

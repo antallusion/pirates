@@ -146,17 +146,32 @@ export interface Settings {
   webgl: boolean;
   plainTerms: boolean; // "close to the wind" for "close-hauled"
   classicBoarding: boolean; // the round-by-round deck fight instead of the turn-based battle (docs/16 P4)
+  /** docs/23 item 35: the gun crews fire as the mark bears (on by default on a touch screen). */
+  autoFire: boolean;
+  /** docs/23 item 46: a fight with a mark two levels and more below settles itself in about three seconds. */
+  autoWeak: boolean;
+  /** docs/23 item 42: the expert's hand — held broadsides, the fire order and the chasers by hand. */
+  expertGuns: boolean;
   captions: boolean; // sound captions with direction
   mono: boolean;
   volume: { master: number; sea: number; combat: number; ui: number; music: number };
   keys: Keymap;
 }
 
+/** A touch screen (a phone, a tablet): auto-fire comes on by default there (docs/23 item 35). */
+function coarse(): boolean {
+  try {
+    return !!globalThis.matchMedia?.('(pointer: coarse)').matches;
+  } catch {
+    return false;
+  }
+}
+
 export function defaults(): Settings {
   return {
     uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, classicBoarding: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
+    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
 }
