@@ -126,7 +126,7 @@ export const cyr = (p, root = 'body') => p.evaluate((r) => {
   for (let n = w.nextNode(); n; n = w.nextNode()) {
     const el = n.parentElement; if (!el || !el.getClientRects().length) continue;
     let hidden = false; for (let q = el; q; q = q.parentElement) { const c = getComputedStyle(q); if (c.display === 'none' || c.visibility === 'hidden') { hidden = true; break; } } if (hidden) continue;
-    if (el.closest('script,style,#chat,.chat-log')) continue;
+    if (el.closest('script,style,#chat,.chat-log,.no-tr,[data-name]')) continue;
     const m = n.textContent.match(/[А-Яа-яЁё]{2,}[А-Яа-яЁё ]*/g); if (m) for (const x of m) out.add(x.trim() + ' @' + (el.id || el.className || el.tagName).toString().slice(0, 30));
   }
   return [...out];

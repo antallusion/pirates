@@ -30,7 +30,7 @@
 .w-fig.gold { color: var(--k-gold); }
 .w-fig-ico { width: 18px; height: 18px; object-fit: contain; margin: 0; }
 @media (max-height: 520px), (max-width: 699px) {
-  .w-head.modal-head { min-height: var(--k-h-2); padding: 0 50px 0 var(--k-sp-2); border-bottom-color: rgba(140, 107, 58, 0.35); }
+  .w-head.modal-head { min-height: var(--k-h-2); padding: 0 56px 0 var(--k-sp-2); border-bottom-color: rgba(140, 107, 58, 0.35); }
   .w-title, .skinned .w-head h2.w-title { font-size: 18px; }
   .w-crest { width: 24px; height: 24px; }
   .w-fig { height: 28px; padding: 0 8px; }
@@ -251,3 +251,53 @@
 .lu-t b { font: 600 17px/1.2 var(--k-font-serif); color: var(--k-gold); }
 .lu-t small { color: var(--k-bone); font-size: var(--k-fs-1); line-height: 1.35; }
 @media (max-width: 480px) { .lu-picks { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Settings (options.ts, docs/23 item 75): six rows in two columns, «Подробнее» under them */
+.opt-main { padding: var(--k-sp-2) var(--k-sp-3) var(--k-sp-3); }
+.opt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--k-sp-2) var(--k-sp-4); }
+.opt-row { display: flex; align-items: center; gap: var(--k-sp-2); min-height: var(--k-h-3); padding: 0 var(--k-sp-2); border: 1px solid rgba(140, 107, 58, 0.28); border-radius: var(--k-r-2); background: rgba(8, 9, 11, 0.5); min-width: 0; }
+.opt-ico { width: 26px; height: 26px; object-fit: contain; flex: none; margin: 0; }
+.opt-name { flex: 0 1 auto; min-width: 0; font: 600 var(--k-fs-2)/1.2 var(--k-font-sans); color: var(--k-bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.opt-row > input[type=range] { flex: 1 1 auto; min-width: 60px; height: var(--k-h-2); margin: 0 0 0 auto; accent-color: var(--k-gold); }
+.opt-row > output { flex: none; min-width: 3em; text-align: right; font: 600 var(--k-fs-2) var(--k-font-sans); color: var(--k-haze); font-variant-numeric: tabular-nums; }
+.opt-row > .w-seg, .opt-row > .w-switch { margin-left: auto; flex: none; }
+.w-seg { display: inline-flex; gap: 2px; }
+.w-seg .w-chip { min-width: 52px; justify-content: center; padding: 0 10px; border-radius: var(--k-r-1); }
+.w-switch { display: inline-flex; align-items: center; gap: var(--k-sp-2); min-height: var(--k-h-2); min-width: 92px; padding: 0 var(--k-sp-2); border: 1px solid var(--k-brass-dim); border-radius: 22px; background: rgba(8, 9, 11, 0.7); color: var(--k-haze);
+  font: 700 var(--k-fs-1)/1 var(--k-font-sans); text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; touch-action: manipulation; }
+.w-switch i { position: relative; width: 36px; height: 20px; border-radius: 10px; background: #2a2d31; box-shadow: inset 0 0 0 1px #050607; transition: background var(--k-dur-2) var(--k-ease-out); }
+.w-switch i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--k-haze); transition: transform var(--k-dur-2) var(--k-ease-out), background var(--k-dur-2) var(--k-ease-out); }
+.w-switch[aria-checked='true'] { color: var(--k-gold); border-color: var(--k-brass); }
+.w-switch[aria-checked='true'] i { background: rgba(224, 184, 98, 0.35); }
+.w-switch[aria-checked='true'] i::after { transform: translateX(16px); background: var(--k-gold); }
+.w-switch:focus { outline: none; }
+.w-switch:focus-visible { outline: 2px solid var(--k-gold); outline-offset: 2px; }
+.opt-more { width: 100%; margin-top: var(--k-sp-3); }
+@media (max-width: 699px) and (min-height: 521px) { .opt-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- The island (base.ts, docs/23 item 72): «Собрать всё» heads the column, the buildings as big tiles */
+.b-quick { margin: 0 0 var(--k-sp-2); }
+.b-quick > .w-qbtn { flex: 1 1 auto; }
+.b-tiles { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); margin: 0 0 var(--k-sp-3); }
+.b-tile { min-height: 96px; }
+.b-tile .w-tile-ico { width: 56px; height: 48px; object-fit: contain; }
+.b-tile.empty { border-style: dashed; color: var(--k-haze); }
+.b-tile .b-plus { font: 400 30px/1 var(--k-font-serif); color: var(--k-brass); }
+.b-tile.working { border-color: var(--k-brass); }
+.base-head.w-head .w-chips { flex: 1 1 auto; }
+/* The town's buildings: a tile each on a phone — the words in its long-press hint. */
+@media (max-height: 520px), (max-width: 699px) { .tw-card .tw-text { display: none; } }
+
+/* ---------- The world map (worldmap.ts, docs/23 item 73): the layers in the band; on a phone the chart alone, the
+   side logs folded away (the journal has them); a tap's «Плыть туда» big, under the chart's middle. */
+#modal-panel[data-modal="map"] .map-wrap { position: relative; }
+#modal-panel[data-modal="map"] .map-wp-acts { position: absolute; left: 50%; bottom: var(--k-sp-3); transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: var(--k-sp-2); top: auto; right: auto; }
+#modal-panel[data-modal="map"] .map-wp-acts > .hidden { display: none; }
+.map-wp-sail .map-wp-name { font: 600 var(--k-fs-1) var(--k-font-sans); color: var(--k-bone); text-shadow: none; }
+.map-wp-sail .map-wp-name:empty { display: none; }
+@media (max-height: 520px), (max-width: 699px) {
+  #modal-panel[data-modal="map"]:has(> .map-logs) { display: flex; flex-direction: column; }
+  #modal-panel[data-modal="map"] > .map-logs { display: none; }
+  #modal-panel[data-modal="map"] > .map-wrap { flex: 1 1 auto; min-height: 0; }
+  #modal-panel[data-modal="map"] .map-legend { position: absolute; left: var(--k-sp-2); bottom: var(--k-sp-2); border-width: 1px; max-width: 46%; }
+}

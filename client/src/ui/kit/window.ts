@@ -40,11 +40,11 @@ export function railTabs(tabs: WinTab[], active: string, attr: string, cls = '')
   }).join('')}</nav>`;
 }
 
-/** The second row: smaller chips for the rest. */
-export function chipRow(items: WinTab[], active: string, attr: string): string {
+/** The second row: smaller chips for the rest (one lit, or several — a chart's layers). */
+export function chipRow(items: WinTab[], active: string | readonly string[], attr: string): string {
   if (!items.length) return '';
   return `<div class="w-chips" role="tablist">${items.map((t) => {
-    const on = t.id === active;
+    const on = typeof active === 'string' ? t.id === active : active.includes(t.id);
     return `<button type="button" class="w-chip${on ? ' on' : ''}" role="tab" aria-selected="${on}" data-${attr}="${esc(t.id)}" data-hint="${esc(t.hint ?? t.label)}"${t.disabled ? ' disabled' : ''}>${tabInner(t, 'w-chip')}</button>`;
   }).join('')}</div>`;
 }

@@ -1,6 +1,7 @@
-// The quest journal (docs/11 P6): the day's orders and the common cause above, the quests under way in a list,
-// and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
-// «Follow», «Share» (in a group) and «Set aside».
+// The quest journal (docs/11 P6), the first tab of «Журнал» (docs/23 item 74, logbook.ts): the quests under way in a
+// list and the chosen one in full — the giver's face and words, every step (done, now, ahead), the pay — with
+// «Follow», «Share» (in a group) and «Set aside»; the day's orders and the common cause beside them; the saga, the
+// captain's log and the tattoos as chips of the second row.
 
 import type { DutchmanView } from '../../../shared/src/protocol.ts';
 import { placeName } from './maps.ts';
@@ -28,6 +29,8 @@ import type { ClientState } from '../state.ts';
 import { ask } from './confirm.ts';
 import { commonLog, dailyLog } from './daily.ts';
 import { esc, fishIcon, icon, money, portraitUrl, xpBadge } from './dom.ts';
+import { logFrame } from './logbook.ts';
+import type { LogTab } from './logbook.ts';
 import { paidHtml } from './giver.ts';
 import { tasksLog } from './worldmap.ts';
 import { setTracked, trackedQuest } from './track.ts';
@@ -150,6 +153,8 @@ export class Journal {
   openSaga: (() => void) | null = null;
   /** Opens the captain's log (docs/16 #20). */
   openLog: (() => void) | null = null;
+  /** Another tab of «Журнал»: the company's pages (main.ts). */
+  onTab: (t: Exclude<LogTab, 'quests'>) => void = () => {};
   private send: (m: ClientMsg) => void;
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
@@ -162,23 +167,29 @@ export class Journal {
     if (!this.chosen || !quests.some((q) => q.id === this.chosen)) this.chosen = tracked ?? quests[0]?.id ?? null;
     const q = quests.find((x) => x.id === this.chosen) ?? null;
     const inGroup = (state.party?.members.length ?? 0) > 1;
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub'))}</div></div><div class="jr-head-btns"><button class="btn btn-small" data-log title="${esc(LC('log'))}">${esc(LC('logButton'))}${self?.log?.length ? ` <span class="h-count">${self.log.filter((e) => e.day === self.log!.at(-1)!.day).length}</span>` : ''}</button><button class="btn btn-small" data-saga>${esc(sagaButton())}${self?.saga?.length ? ` <span class="h-count">${self.saga.length}</span>` : ''}</button><button class="btn btn-small jr-tattoos" data-tattoos>${esc(L('tattoos'))}${state.tattoos?.pending.length ? ` <span class="h-count">${state.tattoos.pending.length}</span>` : ''}</button></div></div>
-      <div class="modal-body journal">
+    // The saga, the day's log and the tattoos: chips that open their own windows.
+    const chips = [
+      { id: 'log', icon: 'tab_letters', label: LC('logButton'), hint: LC('log'), badge: self?.log?.length ? self.log.filter((e) => e.day === self.log!.at(-1)!.day).length : 0 },
+      { id: 'saga', icon: 'tab_legends', label: sagaButton(), badge: self?.saga?.length ?? 0 },
+      { id: 'tattoos', icon: 'tattoo_needle', label: L('tattoos'), badge: state.tattoos?.pending.length ?? 0 },
+    ];
+    root.innerHTML = logFrame('quests', state, chips, '', `<div class="journal">
         <div class="jr-side">
           <div class="jr-list">${quests.length ? quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked)).join('') : `<p class="muted">${esc(L('none'))}</p>`}</div>
           <div class="jr-day">${dailyLog(self?.daily)}${weeklyLog(state.renown?.weekly)}${commonLog(self?.common)}${worldGoalsLog(state)}${tasksLog(state, false)}${omenLog(state.omen)}${dutchmanLog(state.dutchman)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup) : ''}</div>
-      </div>`;
+      </div>`);
+    root.querySelectorAll<HTMLElement>('[data-jtab]').forEach((b) => (b.onclick = () => b.dataset.jtab !== 'quests' && this.onTab(b.dataset.jtab as Exclude<LogTab, 'quests'>)));
+    root.querySelector<HTMLElement>('[data-jchip="log"]')?.addEventListener('click', () => this.openLog?.());
+    root.querySelector<HTMLElement>('[data-jchip="saga"]')?.addEventListener('click', () => this.openSaga?.());
+    root.querySelector<HTMLElement>('[data-jchip="tattoos"]')?.addEventListener('click', () => this.openTattoos?.());
     root.querySelectorAll<HTMLElement>('[data-jq]').forEach((b) => (b.onclick = () => {
       this.chosen = b.dataset.jq!;
       this.render(root, state);
       root.querySelector('.jr-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }));
-    root.querySelector<HTMLElement>('[data-tattoos]')?.addEventListener('click', () => this.openTattoos?.());
-    root.querySelector<HTMLElement>('[data-saga]')?.addEventListener('click', () => this.openSaga?.());
-    root.querySelector<HTMLElement>('[data-log]')?.addEventListener('click', () => this.openLog?.());
     root.querySelectorAll<HTMLElement>('[data-wname]').forEach((b) => (b.onclick = () => {
       const id = b.dataset.wname!;
       const name = root.querySelector<HTMLInputElement>(`input[data-wfor="${id}"]`)?.value ?? '';

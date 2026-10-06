@@ -1,10 +1,19 @@
-// The options screen (docs/07 §11): interface, sight and motion, sound, controls. Every change applies at once.
+// The options screen (docs/07 §11). docs/23 item 75: it opens on the six that matter on a phone — sound, music,
+// language, auto-fire, auto-battle with the weak, the interface's size — and «Подробнее» leads to the rest
+// (interface, sight and motion, sound, controls) as chips of the band. Every change applies at once.
 
 import { lang, setLang, t } from '../i18n.ts';
 import type { Key, Lang } from '../i18n.ts';
 import { ACTIONS, DENSITIES, conflicts, keyLabel, keyOf, PRESETS, settings, update } from '../settings.ts';
 import type { Action, Colorblind, Settings } from '../settings.ts';
 import { esc, icon } from './dom.ts';
+import { dict } from '../i18n.ts';
+import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
+import { chipRow, winHead } from './kit/window.ts';
+
+const W = dict(WIN_EN, WIN_RU);
+/** The interface's sizes on the main page (uiScale). */
+export const UI_SIZES = [0.85, 1, 1.15, 1.3] as const;
 
 const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls' };
 
@@ -12,6 +21,8 @@ type Tab = 'ui' | 'vision' | 'sound' | 'controls';
 
 export class OptionsScreen {
   private tab: Tab = 'ui';
+  /** The six main settings, or the rest («Подробнее»). */
+  private more = false;
   /** The binding waiting for a key: action and slot. */
   private listening: { action: Action; slot: 0 | 1 } | null = null;
   private root: HTMLElement | null = null;
@@ -45,13 +56,30 @@ export class OptionsScreen {
     this.root = root;
     const s = settings();
     const tabs: Tab[] = ['ui', 'vision', 'sound', 'controls'];
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(t('opt.title'))}</h2>${document.body.classList.contains('touch') ? '' : `<div class="sub">${esc(t('opt.sub'))}</div>`}</div></div>
-      <div class="tabs icon-tabs four">${tabs.map((x) => `<button class="tab ${x === this.tab ? 'active' : ''}" data-tab="${x}" title="${esc(t(`opt.tab.${x}` as Key))}">${icon(TAB_ICON[x])}<span>${esc(t(`opt.tab.${x}` as Key))}</span></button>`).join('')}</div>
-      <div class="tab-caption">${esc(t(`opt.tab.${this.tab}` as Key))}</div>
-      <div class="modal-body options">${this.body(s)}</div>`;
-    root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => (b.onclick = () => {
-      this.tab = b.dataset.tab as Tab;
+    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
+    root.innerHTML = `${winHead(W('opt.title'), { crest: 'menu_options', chips, sub: this.more || document.body.classList.contains('touch') ? undefined : t('opt.sub') })}
+      <div class="modal-body w-body options${this.more ? '' : ' opt-main'}">${this.more ? this.body(s) : this.main(s)}</div>`;
+    root.querySelectorAll<HTMLButtonElement>('[data-otab]').forEach((b) => (b.onclick = () => {
+      if (b.dataset.otab === 'main') this.more = false;
+      else this.tab = b.dataset.otab as Tab;
       this.listening = null;
+      this.render(root);
+    }));
+    root.querySelector<HTMLButtonElement>('[data-omore]')?.addEventListener('click', () => {
+      this.more = true;
+      this.render(root);
+    });
+    root.querySelectorAll<HTMLButtonElement>('[data-oswitch]').forEach((b) => (b.onclick = () => {
+      const k = b.dataset.oswitch as 'autoFire' | 'autoWeak';
+      update({ [k]: !settings()[k] } as Partial<Settings>);
+      this.render(root);
+    }));
+    root.querySelectorAll<HTMLButtonElement>('[data-olang]').forEach((b) => (b.onclick = () => {
+      setLang(b.dataset.olang as Lang);
+      this.render(root);
+    }));
+    root.querySelectorAll<HTMLButtonElement>('[data-osize]').forEach((b) => (b.onclick = () => {
+      update({ uiScale: Number(b.dataset.osize) });
       this.render(root);
     }));
     root.querySelectorAll<HTMLInputElement>('input[data-bool]').forEach((el) => (el.onchange = () => update({ [el.dataset.bool!]: el.checked } as Partial<Settings>)));
@@ -90,6 +118,25 @@ export class OptionsScreen {
         this.render(root);
       };
     });
+  }
+
+  /** docs/23 item 75: the six on one page (two columns on a phone held sideways), and «Подробнее». */
+  private main(s: Settings): string {
+    const row = (ico: string, label: string, ctl: string, hint = '') => `<div class="opt-row"${hint ? ` data-hint="${esc(hint)}"` : ''}>${icon(ico, '', 'opt-ico')}<span class="opt-name">${esc(label)}</span>${ctl}</div>`;
+    const vol = (k: 'master' | 'music', label: string) => `<input type="range" data-vol="${k}" min="0" max="1" step="0.05" value="${s.volume[k]}" aria-label="${esc(label)}"/><output>${Math.round(s.volume[k] * 100)}%</output>`;
+    const sw = (k: 'autoFire' | 'autoWeak', label: string) => `<button type="button" class="w-switch" role="switch" aria-checked="${s[k]}" aria-label="${esc(label)}" data-oswitch="${k}"><i aria-hidden="true"></i><span>${esc(s[k] ? W('opt.on') : W('opt.off'))}</span></button>`;
+    // Each language by its own name (a language's name is not translated: the class keeps the checks off it).
+    const seg = (items: [string, string, boolean][], attr: string, label: string) => `<span class="w-seg" role="group" aria-label="${esc(label)}">${items.map(([v, l, on]) => `<button type="button" class="w-chip${on ? ' on' : ''}${attr === 'olang' ? ' no-tr' : ''}" aria-pressed="${on}" data-${attr}="${esc(v)}"${attr === 'olang' ? ` lang="${esc(v)}"` : ''}>${esc(l)}</button>`).join('')}</span>`;
+    const near = UI_SIZES.reduce((a, b) => (Math.abs(b - s.uiScale) < Math.abs(a - s.uiScale) ? b : a), 1 as number);
+    return `<div class="opt-grid">
+      ${row('opt_sound', W('opt.sound'), vol('master', W('opt.sound')))}
+      ${row('opt_sound', W('opt.music'), vol('music', W('opt.music')))}
+      ${row('opt_lang', W('opt.lang'), seg([['ru', 'Русский', lang() === 'ru'], ['en', 'English', lang() === 'en']], 'olang', W('opt.lang')))}
+      ${row('fire', W('opt.autofire'), sw('autoFire', W('opt.autofire')), W('opt.autofireHint'))}
+      ${row('bt_auto', W('opt.autobattle'), sw('autoWeak', W('opt.autobattle')), W('opt.autobattleHint'))}
+      ${row('menu_options', W('opt.size'), seg(UI_SIZES.map((v) => [String(v), `${Math.round(v * 100)}%`, v === near] as [string, string, boolean]), 'osize', W('opt.size')), W('opt.sizeHint'))}
+    </div>
+    <button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>`;
   }
 
   private body(s: Settings): string {

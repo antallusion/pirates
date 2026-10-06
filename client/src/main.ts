@@ -63,6 +63,8 @@ import { showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
 import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
+import type { CompanyTab } from './ui/company.ts';
+import { LOG_PAGES } from './ui/logbook.ts';
 import { BaseWindow } from './ui/base.ts';
 import { $, decorateSums, esc, fmt, icon, keepInputs } from './ui/dom.ts';
 import { FOLDED, Hud, releaseModalToasts } from './ui/hud.ts';
@@ -133,6 +135,11 @@ const journal = new Journal((m) => net.send(m));
 journal.openTattoos = () => openModal('tattoos');
 journal.openSaga = () => openModal('saga');
 journal.openLog = () => openModal('log');
+// docs/23 item 74: «Журнал» — the quests are the journal's page, the company, guild, letters and album the company's.
+journal.onTab = (t) => {
+  companyScreen.open(LOG_PAGES[t][0] as CompanyTab);
+  openModal('company');
+};
 worldMap.send = (m) => net.send(m);
 worldMap.onAutosail = (wp) => {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
@@ -322,6 +329,7 @@ advCard.where = (ids) => {
 worldMap.onPuzzle = openPuzzle;
 baseWindow.onRecruit = () => openRecruit('isle');
 companyScreen.onBase = () => openBase();
+companyScreen.onQuests = () => openModal('journal');
 baseWindow.onSail = () => closeModal();
 baseWindow.onLayout = () => { if (modal === 'base') refreshModal(); };
 function openBase(): void {

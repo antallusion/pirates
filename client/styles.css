@@ -2804,8 +2804,8 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 
 /* The chart's own mark (owner, 2026-09-30): a button to take it off, over the chart's top right. */
 .map-wrap .map-wp-acts { position: absolute; top: 10px; right: 10px; z-index: 2; display: flex; gap: 6px; align-items: center; pointer-events: none; }
-.map-wrap .map-wp-acts > .btn { pointer-events: auto; }
-.map-wrap .map-wp-clear, .map-wrap .map-wp-sail { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.map-wrap .map-wp-acts > .k-btn { pointer-events: auto; }
+.map-wrap .map-wp-clear, .map-wrap .map-wp-sail { white-space: nowrap; }
 .map-wrap .map-wp-clear.hidden, .map-wrap .map-wp-sail.hidden { display: none; }
 
 /* ---------- One width for every plate (owner, 2026-09-30: "all plates more compact and — most important — of one

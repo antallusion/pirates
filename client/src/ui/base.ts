@@ -3,6 +3,8 @@
 // ruined — or scaffolded while the builders are at work); the yard's resources and yields over it; a tap on a plot
 // opens a compact sheet: what may be built there and what it costs, the work under way and its speed-ups, the next
 // level, a move to another free plot. Phones first (portrait and landscape), then tablets and the desk.
+// docs/23 item 72: the window's places are chips in its band; beside the board the island's buildings stand as big
+// tiles (a tap is a tap on its plot), and «Собрать всё» takes what the island made in one tap.
 
 import { bindSupply, supplyTab } from './supply.ts'; // docs/18 #32
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
@@ -32,11 +34,14 @@ import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 import { bindTown, townTab } from './town.ts';
 import { EN as H_EN, RU as H_RU } from '../lang/ui/h3.ts';
+import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
+import { chipRow, quickBar, winHead } from './kit/window.ts';
 
 const L = dict(EN, RU);
 const CO = dict(CO_EN, CO_RU);
 const H = dict(H_EN, H_RU);
 const S18 = dict(I18_EN, I18_RU); // docs/18 #32
+const W = dict(WIN_EN, WIN_RU);
 
 /** A thing's name in the reader's tongue (buildings are swapped in place by the data overlay). */
 export function baseName(what: string): string {
@@ -162,14 +167,21 @@ export class BaseWindow {
       <div class="base-meta"><span class="bmeta" title="${esc(`${L('crews')}${v.crews.next ? ` · ${L('crew_next', { n: v.crews.next })}` : ''}`)}">${icon('menu_crew', '', 'ico-sm')}<span class="bm-w">${esc(L('crews'))}</span> ${v.crews.busy}/${v.crews.n}</span>
       <span class="bmeta" title="${esc(`${L('tokens')} · ${L('tokens_tip', { m: v.tokenSecs / 60 })}`)}">⌛<span class="bm-w">${esc(L('tokens'))}:</span> ${v.speedups}</span>
       <span class="bmeta bpower" title="${esc(L('power_tip', { now: v.power.now, need: v.power.need ?? '—', crew: v.power.crew }))}">${icon('tab_isles', '', 'ico-sm')}<span class="bm-w">${esc(L('power'))}</span> ${v.power.now}${v.power.need ? `/${v.power.need}` : ''}</span>
-      <span class="bmeta">${money(state.self?.gold ?? 0)}</span>
-      <button class="btn btn-small${fresh ? ' btn-primary' : ''}" data-bcollect title="${esc(L('collect_tip'))}"${fresh ? '' : ' disabled'}>${esc(L('collect'))}${fresh ? ` +${fmt(fresh)}` : ''}</button></div></div>`;
+      <span class="bmeta">${money(state.self?.gold ?? 0)}</span></div></div>`;
     const sy = v.shipyard;
-    const tabs = `<div class="btabs" role="tablist"><button class="btab${this.tab === 'plots' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'plots'}" data-btab="plots">${esc(L('tab_plots'))}</button><button class="btab${this.tab === 'yard' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'yard'}" data-btab="yard">${esc(L('tab_yard'))} <i>${sy.ships.length}/${sy.max}</i></button>${v.town ? `<button class="btab${this.tab === 'town' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'town'}" data-btab="town">${esc(H('tab'))}</button>` : ''}<button class="btab${this.tab === 'supply' ? ' sel' : ''}" role="tab" aria-selected="${this.tab === 'supply'}" data-btab="supply">${esc(S18('sup.tab'))}${state.supply?.isles.some((x) => x.linked) ? ` <i>${state.supply.isles.filter((x) => x.linked).length}</i>` : ''}</button></div>`;
+    // The island's places as chips of the band (docs/23 item 72).
+    const tabs = chipRow([
+      { id: 'plots', icon: 'tab_isles', label: L('tab_plots') },
+      { id: 'yard', icon: 'build_shipyard', label: `${L('tab_yard')} ${sy.ships.length}/${sy.max}` },
+      ...(v.town ? [{ id: 'town', icon: 'build_fort', label: H('tab') }] : []),
+      { id: 'supply', icon: 'build_caravan_office', label: S18('sup.tab'), badge: state.supply?.isles.filter((x) => x.linked).length ?? 0 },
+    ], this.tab, 'btab');
+    // «Собрать всё» (docs/23 item 72): what every producer holds, in one tap; it heads the island's column.
+    const collect = quickBar([{ label: W('isle.collect'), sub: fresh ? `+${fmt(fresh)}` : esc(W('isle.collectNone')), icon: 'tab_holdings', hint: W('isle.collectHint'), primary: fresh > 0, disabled: !fresh, data: { bcollect: 1 } }], 'b-quick');
     // A phone on its side (docs/15 item 8): the board fills the left, and the resources, the waters and the sheet
     // scroll together on the right, so the board is not squeezed under three header rows.
     const land = LANDSCAPE.matches;
-    const top = `${bar}${this.defence(v)}`;
+    const top = `${collect}${bar}${this.defence(v)}`;
     if (this.tab === 'town' && !v.town) this.tab = 'plots';
     const body = this.tab === 'supply'
       ? `<div class="modal-body base-body yard-body sup-body">${land ? top : ''}${supplyTab(state)}</div>`
@@ -178,11 +190,28 @@ export class BaseWindow {
       : this.tab === 'yard'
       ? `<div class="modal-body base-body yard-body">${land ? top : ''}${this.yard(v, state)}</div>`
       : `<div class="modal-body base-body${land ? ' base-land' : ''}"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}">${this.board(v)}</div></div><div class="base-sheet">${land ? top : ''}${this.sheet(v, state)}</div></div>`;
-    root.innerHTML = `<div class="modal-head base-head"><div><h2>${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: placeName(v.name), level: v.level, title }))} · ${esc(L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') }))}</div></div>${tabs}</div>
+    root.innerHTML = `${winHead(L('title'), { crest: 'tab_isles', chips: tabs, sub: `${L('sub', { name: placeName(v.name), level: v.level, title })} · ${L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') })}` }).replace('class="modal-head w-head', 'class="modal-head base-head w-head')}
       ${land ? '' : top}${body}`;
     this.bind(root, state);
     wireGuildYard(root, this.send); // docs/16 #34
     this.tick(root, state);
+  }
+
+  /** The island's buildings as big tiles (docs/23 item 72): its picture, its name, its level — or the work's clock,
+   *  or what it has made — and a free plot's «+»; a tap is the same as a tap on its plot on the board. */
+  private tiles(v: BaseView): string {
+    const now = v.now;
+    const tile = (c: BaseCellView) => {
+      if (!c.what) return `<button type="button" class="w-tile b-tile empty" data-plot="${c.plot}" aria-label="${esc(`${L('plot', { n: c.plot + 1 })}: ${L('empty')}`)}"><span class="w-tile-ico glyph b-plus" aria-hidden="true">+</span><span class="w-tile-l">${esc(L('empty'))}</span></button>`;
+      const raising = !!c.job && c.job.level <= 1;
+      const art = baseArt(c.what, Math.max(1, c.level), c.condition, c.unpaid, raising);
+      const kind = producerOf(c.what);
+      const s = c.job ? `<span class="btime" data-end="${c.job.end}">${esc(timeText((c.job.end - now) / 1000))}</span>`
+        : c.fresh > 0 && kind ? `${icon(`good_${PRODUCERS[kind].good}`, '', 'ico-sm')}+${fmt(c.fresh)}`
+        : c.level ? esc(L('lvl', { n: c.level })) : '';
+      return `<button type="button" class="w-tile b-tile${c.fresh > 0 && !c.job ? ' ready' : ''}${c.job ? ' working' : ''}" data-plot="${c.plot}" data-hint="${esc(`${baseName(c.what)}: ${baseText(c.what)}`)}">${art ? `<img class="w-tile-ico" src="${art}" alt="" draggable="false">` : ''}<span class="w-tile-l">${esc(baseName(c.what))}</span><span class="w-tile-s">${s}</span></button>`;
+    };
+    return `<div class="w-tiles b-tiles">${v.cells.slice(0, v.plots).map(tile).join('')}</div>`;
   }
 
   private board(v: BaseView): string {
@@ -238,7 +267,7 @@ export class BaseWindow {
     }
     if (this.sel === null) {
       const jobs = v.cells.filter((c) => c.job);
-      return `<p class="bhint">${esc(L('pick'))}</p>${this.levelCard(v)}${this.watersCard(v)}
+      return `${this.tiles(v)}${this.levelCard(v)}${this.watersCard(v)}
         <div class="bsec">${esc(L('work'))}</div>${jobs.map((c) => `<button class="bjob" data-plot="${c.plot}">${this.thumb(c)}<span><b>${esc(baseName(c.what!))}</b><br><span class="muted">${esc(c.job!.level <= 1 ? L('raising') : L('upgrading', { n: c.job!.level }))} · </span><span class="btime" data-end="${c.job!.end}">${esc(timeText((c.job!.end - v.now) / 1000))}</span></span></button>`).join('') || `<p class="muted">${esc(L('no_work'))}</p>`}${foot}`;
     }
     const c = v.cells[this.sel];

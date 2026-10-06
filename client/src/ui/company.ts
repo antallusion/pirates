@@ -1,5 +1,6 @@
-// The Company & Letters screen (Y): your group and the convoy signal, hails to trade, letters from the
-// packet boat, and — in port — the captains' market board (and Tidewrack's trophy auction).
+// The company's pages of «Журнал» (docs/23 item 74, logbook.ts): «Компания» (your group and the convoy signal, the
+// law, your islands, the empires, and — in port — the captains' market board and Tidewrack's trophy auction),
+// «Гильдия», «Письма» from the packet boat, «Альбом» (the album, the career, the legends).
 // Plus the barter table, opened when two captains agree to trade.
 
 import { personName } from '../lang/names.ts';
@@ -39,6 +40,9 @@ import { placeName } from './maps.ts';
 import { skippersCard } from './turncoats.ts';
 import { renderAlbum, renderCareer, renownTab } from './renown.ts';
 import { askCard, guildYardCard, lfgCard, renderTrade, wireGuildYard, wireLfg } from './social.ts';
+import { LOG_PAGES, logFrame, logTabOf } from './logbook.ts';
+import type { LogTab } from './logbook.ts';
+import type { WinTab } from './kit/window.ts';
 
 const L = dict(EN, RU);
 /** A name or sentence the server built, in the player's language. */
@@ -72,6 +76,8 @@ export class CompanyScreen {
   onWhisper: (name: string) => void = () => {};
   /** "My Island": one's own island's base (docs/15), opened by main.ts. */
   onBase: () => void = () => {};
+  /** The journal's «Задания» tab (main.ts opens the journal's page). */
+  onQuests: () => void = () => {};
   /** "Letter" on a friend: the letters tab opens with them as the addressee. */
   private mailTo = '';
 
@@ -83,6 +89,22 @@ export class CompanyScreen {
     if (tab) this.tab = tab;
     this.send({ t: 'mail', action: 'list' });
     this.send({ t: 'friend', action: 'list' });
+    this.ask(this.tab);
+  }
+
+  /** What a page asks the server for when it opens. */
+  private ask(t: CompanyTab): void {
+    if (t === 'legends') this.send({ t: 'legends' });
+    if (t === 'empires') this.send({ t: 'empire', action: 'view' });
+    if (t === 'career' || t === 'album') this.send({ t: 'renown' });
+    if (t === 'market') this.send({ t: 'market', action: 'list' });
+    if (t === 'letters') this.send({ t: 'mail', action: 'list' });
+    if (t === 'law') this.send({ t: 'pvp', action: 'bounties' });
+    if (t === 'isles') {
+      this.send({ t: 'isle', action: 'list' });
+      this.send({ t: 'estate', action: 'view' });
+    }
+    if (t === 'guild') this.send({ t: 'guild', action: 'view' });
   }
 
   private root: HTMLElement | null = null;
@@ -95,11 +117,11 @@ export class CompanyScreen {
     const TAB_ICON: Record<CompanyTab, string> = { group: 'tab_group', guild: 'tab_guild', law: 'tab_law', letters: 'tab_letters', isles: 'tab_isles', empires: 'tab_empire', legends: 'tab_legends', market: 'tab_board', career: 'service_crown', album: 'tattoo_compass_rose' };
     const tabName = (t: CompanyTab) => t === 'career' || t === 'album' ? renownTab(t) : t === 'group' ? L('tab_group') : t === 'law' ? L('tab_law') : t === 'isles' ? L('tab_isles') : t === 'legends' ? L('tab_legends') : t === 'empires' ? L('tab_empires') : t === 'guild' ? (state.guild ? L('tab_guild_tag', { tag: esc(state.guild.tag) }) : L('tab_guild')) : t === 'letters' ? L('tab_letters') : state.market?.auction ? L('tab_market_auction') : L('tab_market');
     const badge = (t: CompanyTab) => t === 'law' ? state.self?.pvp.challenges.length ?? 0 : t === 'guild' ? state.guildInvites.length : t === 'letters' ? state.unread : 0;
-    const shown = (['group', 'guild', 'law', 'letters', 'isles', 'empires', 'career', 'album', 'legends', 'market'] as CompanyTab[]).filter((t) => t !== 'market' || docked);
-    const tabs = shown.map((t) => `<button class="tab ${this.tab === t ? 'active' : ''}" data-tab="${t}" title="${tabName(t)}">${icon(TAB_ICON[t])}<span>${tabName(t)}</span>${badge(t) ? `<i class="tab-badge">${badge(t)}</i>` : ''}</button>`).join('');
-    root.innerHTML = `<div class="modal-head"><div><h2>${L('title')}</h2></div><div class="muted">${L('close_hint')}</div></div>
-      <div class="tabs icon-tabs company-tabs" style="--n:${shown.length}">${tabs}</div><div class="tab-caption">${tabName(this.tab)}</div>
-      <div class="modal-body" id="company-body"></div>`;
+    // docs/23 item 74: the journal's frame — the rail's five places, this one's pages as the second row's chips.
+    const rail = logTabOf(this.tab) as Exclude<LogTab, 'quests'>;
+    const pages = LOG_PAGES[rail].filter((t) => t !== 'market' || docked) as CompanyTab[];
+    const chips: WinTab[] = pages.length > 1 ? pages.map((t) => ({ id: t, icon: TAB_ICON[t], label: tabName(t).replace(/<[^>]+>/g, ''), badge: badge(t) })) : [];
+    root.innerHTML = logFrame(rail, state, chips, this.tab, '', 'id="company-body"');
     const body = root.querySelector<HTMLElement>('#company-body')!;
     if (this.tab === 'group') this.renderGroup(body, state);
     else if (this.tab === 'letters') this.renderLetters(body, state);
@@ -111,21 +133,17 @@ export class CompanyScreen {
     else if (this.tab === 'career') renderCareer(body, state, this.send);
     else if (this.tab === 'album') renderAlbum(body, state, this.send);
     else this.renderMarket(body, state);
-    root.querySelectorAll<HTMLElement>('[data-tab]').forEach((el) => (el.onclick = () => {
-      if (el.dataset.tab === 'legends') this.send({ t: 'legends' });
-      if (el.dataset.tab === 'empires') this.send({ t: 'empire', action: 'view' });
-      if (el.dataset.tab === 'career' || el.dataset.tab === 'album') this.send({ t: 'renown' });
-      this.tab = el.dataset.tab as CompanyTab;
-      if (this.tab === 'market') this.send({ t: 'market', action: 'list' });
-      if (this.tab === 'letters') this.send({ t: 'mail', action: 'list' });
-      if (this.tab === 'law') this.send({ t: 'pvp', action: 'bounties' });
-      if (this.tab === 'isles') {
-        this.send({ t: 'isle', action: 'list' });
-        this.send({ t: 'estate', action: 'view' });
-      }
-      if (this.tab === 'guild') this.send({ t: 'guild', action: 'view' });
+    const go = (t: CompanyTab) => {
+      this.tab = t;
+      this.ask(t);
       this.render(root, state);
+    };
+    root.querySelectorAll<HTMLElement>('[data-jtab]').forEach((el) => (el.onclick = () => {
+      const t = el.dataset.jtab as LogTab;
+      if (t === 'quests') return this.onQuests();
+      go(LOG_PAGES[t][0] as CompanyTab);
     }));
+    root.querySelectorAll<HTMLElement>('[data-jchip]').forEach((el) => (el.onclick = () => go(el.dataset.jchip as CompanyTab)));
   }
 
   /** Empires: who governs the lawless seas, the colonies' riots, your trading house and its convoys, the licence exchange. */

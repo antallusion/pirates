@@ -100,7 +100,7 @@ function card(v: BaseView, t: TownThingView, gold: number, have: Partial<Record<
   const next = !j && n ? `<div class="tw-next"><b class="tw-nn">${esc(t.level > 0 ? `${L('town.up')}: ${townName(t.id, n.level)}` : townName(t.id, 1))}</b>${costLine({ silver: n.silver, goods: n.goods }, gold, have)}${landLine(n.land, land)}<span class="bcost btimec">⏱ ${esc(timeText(n.secs))}</span>
       ${n.why ? `<p class="muted tw-why">${esc(serverText(n.why))}</p>` : ''}<button class="btn btn-small${t.level ? '' : ' btn-primary'}" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level > 0 ? L('town.up') : L('town.build'))}</button></div>`
     : !j ? `<p class="muted tw-max">${esc(L('town.max'))}</p>` : '';
-  return `<div class="tw-card${t.level > 0 ? ' built' : ''}${d.tier ? ' dw' : ''}" data-town="${t.id}"><div class="tw-top">${pic ? `<img class="tw-art" src="${pic}" alt="" draggable="false">` : ''}<div class="tw-id"><b>${esc(name)}</b><span class="muted">${esc(lvl)}</span></div></div>
+  return `<div class="tw-card${t.level > 0 ? ' built' : ''}${d.tier ? ' dw' : ''}" data-town="${t.id}" data-hint="${esc(`${name}: ${d.text[ru()]}`)}"><div class="tw-top">${pic ? `<img class="tw-art" src="${pic}" alt="" draggable="false">` : ''}<div class="tw-id"><b>${esc(name)}</b><span class="muted">${esc(lvl)}</span></div></div>
     <p class="muted tw-text">${esc(d.text[ru()])}</p>${pool}${extra}${job}${next}</div>`;
 }
 
