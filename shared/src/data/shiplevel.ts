@@ -324,11 +324,11 @@ export interface NpcSkill {
 export function npcSkill(level: number): NpcSkill {
   // docs/23 item 36: the sea's gunners lay their broadsides on the mark now (the guns train onto her); a green crew still
   // misjudges her range and her way more than a seasoned one.
-  if (level <= 2) return { lead: 0.6, rangeErr: 0.12, arcDeg: 26, spread: 0.3, react: 1.4, dash: false };
-  if (level <= 4) return { lead: 0.62, rangeErr: 0.12, arcDeg: 25, spread: 0.28, react: 1.3, dash: false };
-  if (level <= 6) return { lead: 0.65, rangeErr: 0.12, arcDeg: 24, spread: 0.26, react: 1.2, dash: false };
-  if (level <= 8) return { lead: 0.68, rangeErr: 0.12, arcDeg: 23, spread: 0.24, react: 1.1, dash: true };
-  return { lead: 0.7, rangeErr: 0.12, arcDeg: 22, spread: 0.2, react: 1.0, dash: true };
+  if (level <= 2) return { lead: 0.6, rangeErr: 0.12, arcDeg: 36, spread: 0.3, react: 1.4, dash: false };
+  if (level <= 4) return { lead: 0.62, rangeErr: 0.12, arcDeg: 36, spread: 0.28, react: 1.3, dash: false };
+  if (level <= 6) return { lead: 0.65, rangeErr: 0.12, arcDeg: 35, spread: 0.26, react: 1.2, dash: false };
+  if (level <= 8) return { lead: 0.68, rangeErr: 0.12, arcDeg: 35, spread: 0.24, react: 1.1, dash: true };
+  return { lead: 0.7, rangeErr: 0.12, arcDeg: 34, spread: 0.2, react: 1.0, dash: true };
 }
 
 /** An elite ⚔ (group contracts, barons): built for a company — hull ×2.5, guns ×1.5. */

@@ -13,6 +13,7 @@ import type { PlayerSession } from '../../server/src/game/player.ts';
 import { startPursuit, stopPursuit } from '../../server/src/game/pursuit.ts';
 import type { ShipEntity } from '../../server/src/game/ship.ts';
 import { join, onHull } from '../helpers.ts';
+import type { FakeConn } from '../helpers.ts';
 import { openWater, putSide } from './duel.ts';
 
 /** The hull each level's duel is fought in (the sea's own pirate hulls of that level). */
@@ -119,28 +120,51 @@ export interface CaptainRun {
   sec: number;
   balls: number;
   hits: number;
+  /** Seconds from the start to the end of the fight, either ship sunk (guns); -1 if the clock ran out. */
+  end: number;
+  /** Seconds from the start to the first broadside either way; -1 if none. */
+  first: number;
+  /** The captain won (her mark sunk, she afloat). */
+  won: boolean;
+  /** The bot's balls and the hits on the captain. */
+  ballsBot: number;
+  hitsBot: number;
+}
+
+/** How a captain's run starts: `from` metres apart (700), both under way at a cruise (`cruise`, true) or lying still,
+ *  and her «Атаковать» given `react` seconds in (a human's moment to see the mark and tap it; 0). */
+export interface RunFrom {
+  from?: number;
+  cruise?: boolean;
+  react?: number;
 }
 
 /** «Атаковать» on a bot of her own hull and level 700 m off, who fights back with the guns: `board` until the
  *  grapples would bite (canBoard says yes), `guns` until one of them is sunk. The captain's balls and hits counted. */
-export function captainRun(game: Game, cls: ShipClassId, level: number, k: number, mode: 'board' | 'guns', maxSec = 120): CaptainRun {
+export function captainRun(game: Game, cls: ShipClassId, level: number, k: number, mode: 'board' | 'guns', maxSec = 120, o: RunFrom = {}): CaptainRun {
+  const from = o.from ?? 700, react = o.react ?? 0;
   const at = openWater(game, k);
   const h = (k * 2.399) % (Math.PI * 2);
   const s = seaCaptain(game, cls, level, at.x, at.y, h);
   const me = s.ship!;
-  const B = putSide(game, { cls, level, craft: 'bot' }, at.x + Math.sin(h + 1.3) * 700, at.y - Math.cos(h + 1.3) * 700, h + Math.PI);
+  const B = putSide(game, { cls, level, craft: 'bot' }, at.x + Math.sin(h + 1.3) * from, at.y - Math.cos(h + 1.3) * from, h + Math.PI);
   B.brain.role = 'hunter';
   // Both under way at a cruise, as ships meet at sea.
-  for (const x of [me, B.ship]) {
-    x.state.speed = x.stats.maxSpeed * 0.7;
-    x.input = { rudder: 0, sailTarget: 0.75 };
+  if (o.cruise ?? true) {
+    for (const x of [me, B.ship]) {
+      x.state.speed = x.stats.maxSpeed * 0.7;
+      x.input = { rudder: 0, sailTarget: 0.75 };
+    }
   }
   const c = counter(game);
   const t0 = game.now;
-  assert(startPursuit(game, s, B.ship.id, mode) === null);
-  let next = 0, sec = -1;
+  let next = 0, sec = -1, ordered = false;
   me.lastStandUntil = Infinity; // the sims' captain is never sent home: beaten to a plank, she has lost the run
   while (game.now - t0 < maxSec && me.alive && me.hull > 1 && B.ship.alive) {
+    if (!ordered && game.now - t0 >= react) {
+      assert(startPursuit(game, s, B.ship.id, mode) === null);
+      ordered = true;
+    }
     if (game.now >= next) {
       next = game.now + (B.brain.skill?.react ?? npcSkill(level).react);
       engage(game, B.ship, B.brain, me, Math.hypot(me.state.x - B.ship.state.x, me.state.y - B.ship.state.y));
@@ -153,11 +177,26 @@ export function captainRun(game: Game, cls: ShipClassId, level: number, k: numbe
   }
   if (mode === 'guns' && !B.ship.alive) sec = game.now - t0;
   c.stop();
-  const res: CaptainRun = { sec: Math.round(sec * 10) / 10, balls: c.balls.get(me.id) ?? 0, hits: c.hits.get(B.ship.id) ?? 0 };
+  const over = !B.ship.alive || !me.alive || me.hull <= 1;
+  const res: CaptainRun = {
+    sec: Math.round(sec * 10) / 10,
+    balls: c.balls.get(me.id) ?? 0,
+    hits: c.hits.get(B.ship.id) ?? 0,
+    end: over ? Math.round((game.now - t0) * 10) / 10 : -1,
+    first: c.first >= 0 ? Math.round((c.first - t0) * 10) / 10 : -1,
+    won: !B.ship.alive && me.alive && me.hull > 1,
+    ballsBot: c.balls.get(B.ship.id) ?? 0,
+    hitsBot: c.hits.get(me.id) ?? 0,
+  };
   stopPursuit(game, s, 'off');
   if (game.ships.has(B.ship.id)) game.removeShip(B.ship.id);
   me.lastStandUntil = 0;
   me.state.x = 1000 + captains * 50; // out of the way of the next duels
   me.docked = 'saltmarrow';
+  // Done with: her line goes quiet (a run of runs would keep every snapshot of every one of them in its inbox).
+  const conn = s.conn as unknown as FakeConn;
+  conn.inbox.length = 0;
+  conn.send = () => {};
+  conn.sendBinary = () => {};
   return res;
 }

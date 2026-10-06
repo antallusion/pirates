@@ -5,7 +5,7 @@ import { regattaBlocked } from './regatta.ts';
 import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
-import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
+import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, seaLevelPace, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
 import { onboardingVolley } from './onboarding.ts';
 import { AMMO, ARMOR_PIERCE, CHASER_CONE, CHASER_GUN, CHASER_RELOAD, GUNS } from '../../../shared/src/data/ships.ts';
 import type { ChaserEnd, GunId } from '../../../shared/src/data/ships.ts';
@@ -100,7 +100,7 @@ export const MAGAZINE_CRIT_HEAVY = 0.01;
 export function seaPace(target: ShipEntity): number {
   if (target.zoneBoss) return SEA_DAMAGE;
   if (isMonster(target) || target.npcRole === 'beast' || target.bossOf || target.bossPart || !target.onLadder) return SEA_RELOAD;
-  return SEA_DAMAGE;
+  return SEA_DAMAGE * seaLevelPace(target.combatLevel);
 }
 
 export function sideHeading(ship: ShipEntity, side: Side): number {

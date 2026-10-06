@@ -692,6 +692,13 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
 /** How a fighter's helm works her foe: `guns` holds the best range for her broadsides and presents them, `rig` the
  *  same at chain-shot range (a boarder stripping the rigging), `close` runs straight in on her lead for the grapples. */
 export type HelmMode = 'guns' | 'rig' | 'close';
+/** What a broadside's course into the wind's eye costs her in the choice of side (as an angle to turn, radians). */
+export const WIND_EYE_COST = 1.5;
+/** Her broadside fight is held inside her guns' reach (docs/23 item 47): the hard turn in (0.85 rad, her guns well
+ *  off her mark) only beyond this share of it, the easy one (0.4 rad, still within her gun captains' arc) down to
+ *  FIGHT_NEAR of it. At the very edge of it two ships used to circle just out of range, firing nothing but the chasers. */
+export const FIGHT_HOLD = Number(process.env.FH ?? 0.92);
+export const FIGHT_NEAR = Number(process.env.FN ?? 0.7);
 
 /** The fighting helm (the sea's ships, and a captain's under «Атаковать», docs/23 item 33): steers, and says where her
  *  foe will be when a ball arrives (`lead`: the share of the true lead her gunners allow). */
@@ -729,17 +736,25 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
     // Present a loaded broadside, spiralling in or out to hold the ideal distance.
     const hPort = wrapAngle(bearing + Math.PI / 2); // target on our port beam
     const hStar = wrapAngle(bearing - Math.PI / 2);
+    // The course that presents a side, turned in or out to hold her distance.
+    const course = (side: 'port' | 'starboard'): number => {
+      const inward = side === 'port' ? -1 : 1; // rotation that turns the bow toward the target
+      // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.
+      const range = mode === 'rig' ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
+      const h = side === 'port' ? hPort : hStar;
+      if (d > range * FIGHT_HOLD) return wrapAngle(h + inward * 0.85);
+      if (d > range * FIGHT_NEAR) return wrapAngle(h + inward * 0.4);
+      if (d < range * 0.35 && mode === 'guns') return wrapAngle(h - inward * 0.35);
+      return h;
+    };
+    // The quick sea fight (docs/23 item 47): a side whose course lies in the wind's eye cannot be held (she would sit at
+    // the no-go edge for a whole tack, her guns 40–50° off her mark), and the other beam's course always can.
+    const eye = ship.stats.noGoDeg + 6;
     const score = (side: 'port' | 'starboard', h: number) =>
-      Math.abs(angleDiff(ship.state.heading, h)) + (ship.reload[side] > 0 ? 1.2 : 0) + (rangeOf(side) < d * 0.9 ? 0.8 : 0);
+      Math.abs(angleDiff(ship.state.heading, h)) + (ship.reload[side] > 0 ? 1.2 : 0) + (rangeOf(side) < d * 0.9 ? 0.8 : 0) +
+      (relWindDeg(course(side), game.windFor(ship)) < eye ? WIND_EYE_COST : 0);
     const side = score('port', hPort) <= score('starboard', hStar) ? 'port' : 'starboard';
-    let desired = side === 'port' ? hPort : hStar;
-    const inward = side === 'port' ? -1 : 1; // rotation that turns the bow toward the target
-    // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.
-    const range = mode === 'rig' ? Math.min(rangeOf(side), effectiveRange(ship, side, 'chain')) : rangeOf(side);
-    if (d > range) desired = wrapAngle(desired + inward * 0.85);
-    else if (d > range * 0.75) desired = wrapAngle(desired + inward * 0.4);
-    else if (d < range * 0.35 && mode === 'guns') desired = wrapAngle(desired - inward * 0.35);
-    steer(game, ship, brain, desired, 1, true);
+    steer(game, ship, brain, course(side), 1, true);
   }
   return out;
 }
