@@ -136,7 +136,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'dir.starboard': "справа",
   'dir.near': "совсем рядом",
   'opt.title': "Настройки",
-  'opt.sub': "В море Esc открывает и закрывает этот экран.",
   'opt.tab.ui': "Интерфейс",
   'opt.tab.vision': "Зрение и движение",
   'opt.tab.sound': "Звук",

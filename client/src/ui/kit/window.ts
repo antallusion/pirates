@@ -112,17 +112,31 @@ export function sec(title: string, count?: string): string {
   return `<h3 class="w-sec">${esc(title)}${count ? ` <span class="w-sec-n">${esc(count)}</span>` : ''}</h3>`;
 }
 
-/** A body that keeps more below a fold: «Подробнее» opens it (a details element: no script, keeps its state by key). */
+/** A body that keeps more below a fold: «Подробнее» opens it. What is folded is not laid out at all (hidden), so
+ *  nothing folded stands under a finger or a check. */
 export function more(label: string, inner: string, key: string, open = false): string {
   if (!inner.trim()) return '';
-  return `<details class="w-more" data-more="${esc(key)}"${open ? ' open' : ''}><summary class="k-btn k-btn--secondary k-btn--md w-more-s">${esc(label)}</summary><div class="w-more-b">${inner}</div></details>`;
+  return `<div class="w-more${open ? ' open' : ''}" data-more="${esc(key)}"><button type="button" class="k-btn k-btn--secondary k-btn--md w-more-s" aria-expanded="${open}" data-fold>${esc(label)}</button><div class="w-more-b"${open ? '' : ' hidden'}>${inner}</div></div>`;
 }
+
+function setFold(f: HTMLElement, open: boolean): void {
+  f.classList.toggle('open', open);
+  f.querySelector(':scope > .w-more-s')?.setAttribute('aria-expanded', String(open));
+  f.querySelector<HTMLElement>(':scope > .w-more-b')?.toggleAttribute('hidden', !open);
+}
+
+// One listener for every fold of every window.
+globalThis.document?.addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement | null)?.closest?.<HTMLElement>('[data-fold]');
+  const f = b?.closest<HTMLElement>('.w-more');
+  if (f) setFold(f, !f.classList.contains('open'));
+});
 
 /** Which «Подробнее» folds were open, so a redraw keeps them (the server pushes a port's view every second). */
 export function keepFolds(root: HTMLElement, render: () => void): void {
-  const open = new Set([...root.querySelectorAll<HTMLDetailsElement>('details[data-more]')].filter((d) => d.open).map((d) => d.dataset.more!));
+  const open = new Set([...root.querySelectorAll<HTMLElement>('.w-more.open[data-more]')].map((d) => d.dataset.more!));
   render();
-  root.querySelectorAll<HTMLDetailsElement>('details[data-more]').forEach((d) => {
-    if (open.has(d.dataset.more!)) d.open = true;
+  root.querySelectorAll<HTMLElement>('.w-more[data-more]').forEach((d) => {
+    if (open.has(d.dataset.more!)) setFold(d, true);
   });
 }

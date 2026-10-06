@@ -143,7 +143,6 @@ export const EN = {
   'dir.starboard': "to starboard",
   'dir.near': "close by",
   'opt.title': "Options",
-  'opt.sub': "Esc opens and closes this screen at sea.",
   'opt.tab.ui': "Interface",
   'opt.tab.vision': "Sight & motion",
   'opt.tab.sound': "Sound",

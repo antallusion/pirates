@@ -57,7 +57,7 @@ export class OptionsScreen {
     const s = settings();
     const tabs: Tab[] = ['ui', 'vision', 'sound', 'controls'];
     const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
-    root.innerHTML = `${winHead(W('opt.title'), { crest: 'menu_options', chips, sub: this.more || document.body.classList.contains('touch') ? undefined : t('opt.sub') })}
+    root.innerHTML = `${winHead(W('opt.title'), { crest: 'menu_options', chips })}
       <div class="modal-body w-body options${this.more ? '' : ' opt-main'}">${this.more ? this.body(s) : this.main(s)}</div>`;
     root.querySelectorAll<HTMLButtonElement>('[data-otab]').forEach((b) => (b.onclick = () => {
       if (b.dataset.otab === 'main') this.more = false;
