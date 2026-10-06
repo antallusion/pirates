@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
-import { FIRST_FIGHTS, fresh, FRESH_LEVEL, FRESH_REFUSAL, FRESH_SECS, onboardingReport, onboardingVolley, sanitizeTutorial, STAGES } from '../server/src/game/onboarding.ts';
+import { FIRST_FIGHTS, fresh, FRESH_REFUSAL, FRESH_SECS, onboardingReport, onboardingVolley, sanitizeTutorial, STAGES } from '../server/src/game/onboarding.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
@@ -106,7 +106,7 @@ test('the First Watch (docs/23 item 79): five steps, one action each — sail, �
   assert.deepEqual(STAGES.map((x) => x.id), ['sail', 'attack', 'fire', 'board', 'port']);
   assert.equal(r.hints[0].id, 'lead');
   // docs/23 item 83: the watch over, the first quarter of an hour still keeps the optional things shut…
-  assert.ok(p.level < FRESH_LEVEL && fresh(p), `level ${p.level} after the watch`);
+  assert.ok(fresh(p), 'the watch over, the quarter of an hour still on');
   {
     assert.equal(done.locked!.length, 4);
     c.push({ t: 'dice', action: 'open', stake: 10 });

@@ -1955,7 +1955,9 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const facts: ActFacts = { grabbed: grabbed() };
   if (best !== null) facts.board = { name: placeName(state.ships.get(best)?.info?.name ?? L('her')) };
   const port = state.ports.find((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS);
-  if (port) facts.port = { name: sv(port.name) };
+  // Just out of the harbour, «В порт» is not the gold button for half a minute (unless she is hurt): the 2026-10-06
+  // newcomer's run cast off, saw «В порт» as the one thing to press and put straight back in — 190 times in 15 minutes.
+  if (port && !(performance.now() - castOffAt < CAST_OFF_QUIET && you.hull >= you.hullMax * 0.5)) facts.port = { name: sv(port.name) };
   const ab = self.abyss;
   facts.ritual = !!ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500;
   const l = self.landable;
@@ -2482,6 +2484,9 @@ function requestDock(bribe: boolean, refused = false): void {
 /** The nearest harbour «В порт» would sail to (the First Watch's last step), and the one the helmsman is sailing to:
  *  in the harbour's reach she puts in by herself — one tap from the open sea to the quay. */
 let homeport: ClientState['ports'][number] | null = null;
+/** When she last cast off (the page's clock), and how long «В порт» keeps quiet after it (ms). */
+let castOffAt = -1e9, wasDocked = false;
+const CAST_OFF_QUIET = 30_000;
 let homeRun: string | null = null;
 function stepPendingDock(): void {
   if (homeRun) {
@@ -2798,6 +2803,9 @@ function step(t: number): void {
   if (inGame) {
     pollPad(raw);
     sendInput(t);
+    const docked = !!state.self?.dockedAt;
+    if (wasDocked && !docked) castOffAt = performance.now();
+    wasDocked = docked;
     stepPendingDock();
     stepPendingMark();
     stepPendingFind();

@@ -71,18 +71,16 @@ export function sanitizeTutorial(p: Profile): void {
 export const FIRST_FIGHTS = 3;
 /** docs/23 item 83: the first quarter of an hour aboard, kept to the loop; the optional things open after it. */
 export const FRESH_SECS = 900;
-/** …or at this level, whichever comes first. */
-export const FRESH_LEVEL = 4;
 export type Optional = 'tattoos' | 'dice' | 'auction' | 'guilds';
 export const OPTIONAL: Optional[] = ['tattoos', 'dice', 'auction', 'guilds'];
 
-/** Still in the first quarter of an hour: the optional things are shut (the First Watch, then 15 minutes aboard, or
- *  level 4). */
+/** Still in the first quarter of an hour: the optional things are shut (the First Watch, then 15 minutes aboard). A
+ *  level was no measure of it: the newcomer's run was at level 4 in a minute and forty seconds. */
 export function fresh(p: Profile | null | undefined): boolean {
   if (!p?.tutorial) return false;
   const t = p.tutorial;
   if (t.on && t.stage < STAGES.length) return true;
-  return (t.played ?? FRESH_SECS) < FRESH_SECS && p.level < FRESH_LEVEL;
+  return (t.played ?? FRESH_SECS) < FRESH_SECS;
 }
 
 /** The server's word when a fresh captain reaches for one of them anyway (a stale button, a typed command). */

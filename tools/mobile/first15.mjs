@@ -90,8 +90,10 @@ await p.waitForSelector('#login-name', { state: 'visible', timeout: 90000 });
 note('login screen');
 await shot('login');
 await p.fill('#login-name', 'New ' + Math.random().toString(36).slice(2, 6));
-await tapSel('#login-form button', 'login');
-await p.waitForSelector('#screen-captain:not(.hidden)', { timeout: 60000 });
+for (let i = 0; ; i++) {
+  await tapSel('#login-form button', 'login');
+  try { await p.waitForSelector('#screen-captain:not(.hidden)', { timeout: 20000 }); break; } catch (e) { if (i >= 3) throw e; taps.login--; } // a server still waking: the tap again (not the newcomer's)
+}
 await L.sleep(REACT);
 await tapSel('.captain-card[data-id="corsair"]', 'login');
 await L.sleep(REACT);
@@ -189,7 +191,7 @@ while (Date.now() - t0 < MIN * 60_000) {
   }
   if (!obvious) { stuck += REACT / 1000; run += REACT / 1000; }
   else if (run) { if (run >= 5) pauses.push({ at: Math.round((sec() - run) * 10) / 10, s: Math.round(run * 10) / 10, stage: v.stage }); longest = Math.max(longest, run); run = 0; }
-  if (tick % 10 === 0 || !obvious) events.push({ t: sec(), taps: total(), did, stage: v.stage });
+  if (tick % 10 === 0 || !obvious) events.push({ t: sec(), taps: total(), did, stage: v.stage, act: v.act, pursuit: v.pursuit, foe: v.hostile ? Math.round(v.hostile.d) : null, modal: v.modal });
 }
 if (run >= 5) pauses.push({ at: Math.round((sec() - run) * 10) / 10, s: Math.round(run * 10) / 10 });
 longest = Math.max(longest, run);

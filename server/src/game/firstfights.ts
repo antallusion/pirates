@@ -6,8 +6,12 @@
 // three when she is gone — sunk, struck, taken. No dice of its own: the same fight softens the same way.
 
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
+import { closestOnPolygon } from '../../../shared/src/math.ts';
+import { islandsNear } from '../../../shared/src/world/worldgen.ts';
+import { autosailOf } from './autosail.ts';
 import type { Game } from './Game.ts';
-import { FIRST_FIGHTS } from './onboarding.ts';
+import { FIRST_FIGHTS, onboardingProtected } from './onboarding.ts';
+import { pursuitOf } from './pursuit.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -65,16 +69,31 @@ export function softDealt(game: Game, source: ShipEntity | null, target: ShipEnt
   return source.softFor === target.id ? SOFT_DEALT : 1;
 }
 
+/** A first fight with no shot either way this long (s), and no boarding or pursuit of her, is over. */
+export const FIGHT_QUIET = 20;
+/** A fresh captain at sea with nothing to fight this many seconds: a pirate of her level comes for her (docs/23 item
+ *  82: after the First Watch the newcomer's run sailed about with no mark and no button to press — the game is to
+ *  close on a ship and board her, so the first fights come to her). */
+export const FOE_IDLE = 25;
+/** Seconds idle, and the pirate brought last (entity id), per session. */
+const idle = new WeakMap<PlayerSession, { secs: number; foe: number | null }>();
+
 /** Once a second for each captain: her easy foe gone (sunk, struck, taken) is one of the three behind her; lost far
- *  astern, she is let go and does not count. */
+ *  astern, she is let go and does not count. Idle with none, one is brought. */
 export function firstFightsSecond(game: Game, s: PlayerSession): void {
   const id = foes.get(s);
   const p = s.profile, ship = s.ship;
-  if (id === undefined || !p || !ship) return;
+  if (id === undefined) return void bringFoe(game, s);
+  if (!p || !ship) return;
   const foe = game.ships.get(id);
-  const over = !foe || !foe.alive || !!foe.sinkingUntil || foe.surrendered || foe.prize;
+  // Over: sunk, struck, taken — or let go (ransomed, released: she sails on, the fight done). A fight that has gone
+  // quiet for FIGHT_QUIET seconds, with no boarding and no «Атаковать» on her, is over too (the 2026-10-06 newcomer's
+  // run: the lesson's raider, ransomed, sailed on beside her and kept the next two fights from being softened).
+  const quiet = !!foe && game.now - Math.max(foe.lastCombat, ship.lastCombat) > FIGHT_QUIET && !ship.boarding && !s.pendingBoarding && pursuitOf(ship)?.target !== foe.id;
+  const over = !foe || !foe.alive || !!foe.sinkingUntil || foe.surrendered || foe.prize || quiet;
   if (over) {
     foes.delete(s);
+    if (foe) foe.softFor = undefined;
     p.tutorial.easy = Math.min(FIRST_FIGHTS, (p.tutorial.easy ?? FIRST_FIGHTS) + 1);
     return;
   }
@@ -82,4 +101,52 @@ export function firstFightsSecond(game: Game, s: PlayerSession): void {
     foes.delete(s);
     foe.softFor = undefined;
   }
+}
+
+function bringFoe(game: Game, s: PlayerSession): void {
+  const ship = s.ship;
+  if (!ship || !s.profile) return;
+  let w = idle.get(s);
+  if (!w) idle.set(s, (w = { secs: 0, foe: null }));
+  // Only for a fresh captain out at sea, free, and not in the First Watch (its raider is the lesson's).
+  if (easyLeft(s) <= 0 || onboardingProtected(s) || ship.docked || ship.boarding || ship.grappled || s.pendingBoarding || autosailOf(ship) || ship.inCombat(game.now) || !ship.alive) {
+    w.secs = 0;
+    return;
+  }
+  // The one brought before still about: she is the mark.
+  const prev = w.foe !== null ? game.ships.get(w.foe) : undefined;
+  if (prev?.alive && Math.hypot(prev.state.x - ship.state.x, prev.state.y - ship.state.y) < 3500) return;
+  let near = false;
+  game.forShipsNear(ship.state.x, ship.state.y, 2000, (o) => {
+    if (!near && o.id !== ship.id && o.alive && o.npcRole && game.isHostile(o, ship)) near = true;
+  });
+  if (near) {
+    w.secs = 0;
+    return;
+  }
+  if (++w.secs < FOE_IDLE) return;
+  w.secs = 0;
+  for (const off of [0.6, -0.6, 1.4, -1.4, 0]) {
+    const a = ship.state.heading + off;
+    const x = ship.state.x + Math.sin(a) * 1000, y = ship.state.y - Math.cos(a) * 1000;
+    if (coast(game, x, y)) continue;
+    const foe = game.spawnNpcShip('pirate', ship.loadout.classId, 'confederacy', x, y, a + Math.PI);
+    game.setNpcLevel(foe, Math.max(1, ship.shipLevel)); // her own level: an even fight, softened when it starts
+    const brain = game.npcs.get(foe.id);
+    if (brain) {
+      brain.area = { x: ship.state.x, y: ship.state.y, r: 3000 };
+      brain.chase = { id: ship.id, until: game.now + 120 };
+      brain.target = ship.id;
+    }
+    w.foe = foe.id;
+    return;
+  }
+}
+
+function coast(game: Game, x: number, y: number): boolean {
+  for (const id of islandsNear(game.world, x, y)) {
+    const is = game.world.islands[id];
+    if (Math.sqrt(closestOnPolygon(x, y, is.poly).d2) < 250) return true;
+  }
+  return false;
 }

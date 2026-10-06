@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import type { ArmyStack } from '../shared/src/data/army.ts';
 import { canBoard, startBoarding } from '../server/src/game/boarding.ts';
 import { boardOdds } from '../server/src/game/boardodds.ts';
-import { easyLeft, SOFT_DEALT, SOFT_HULL, softDealt } from '../server/src/game/firstfights.ts';
+import { easyLeft, FOE_IDLE, SOFT_DEALT, SOFT_HULL, softDealt } from '../server/src/game/firstfights.ts';
 import { npcSkill } from '../shared/src/data/shiplevel.ts';
 import { engage } from '../server/src/game/npc.ts';
 import { startPursuit } from '../server/src/game/pursuit.ts';
@@ -98,4 +98,30 @@ test('«I know the sea»: an old hand’s fights are as the sea is', () => {
   assert.equal(startPursuit(game, s, B.ship.id, 'board'), null);
   assert.equal(B.ship.softFor, undefined);
   assert.equal(B.ship.hull, hull);
+});
+
+test('a fresh captain idle at sea with nothing to fight: within half a minute a pirate of her level comes for her', () => {
+  const game = duelSea();
+  const at = openWater(game, 60);
+  const s = seaCaptain(game, LEVEL_HULL[1], 1, at.x, at.y, 0);
+  s.profile!.tutorial.easy = 0;
+  s.profile!.tutorial.on = false;
+  const me = s.ship!;
+  me.input = { rudder: 0, sailTarget: 0.5 };
+  const before = new Set(game.ships.keys());
+  steps(game, 20 * (FOE_IDLE + 3));
+  const brought = (who: number) => [...game.ships.values()].filter((x) => !before.has(x.id) && x.npcRole === 'pirate' && game.npcs.get(x.id)?.chase?.id === who);
+  const come = brought(me.id);
+  assert.equal(come.length, 1, 'one pirate');
+  const d = Math.hypot(come[0].state.x - me.state.x, come[0].state.y - me.state.y);
+  assert.ok(d < 1600, `near enough for «Атаковать» (${Math.round(d)} m)`);
+  assert.equal(come[0].loadout.classId, me.loadout.classId, 'her own hull');
+  // While she is about, no second one.
+  steps(game, 20 * (FOE_IDLE + 3));
+  assert.equal(brought(me.id).length, 1);
+  // An old hand is never brought one.
+  const s2 = seaCaptain(game, LEVEL_HULL[1], 1, at.x + 8000, at.y, 0);
+  const b2 = new Set(game.ships.keys());
+  steps(game, 20 * (FOE_IDLE + 3));
+  assert.ok(![...game.ships.values()].some((x) => !b2.has(x.id) && game.npcs.get(x.id)?.chase?.id === s2.ship!.id));
 });
