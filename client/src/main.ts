@@ -48,7 +48,7 @@ import { openRoamCard } from './ui/roamcard.ts';
 import { strengthWord as roamWord } from './ui/army.ts';
 import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
-import { riskConfirmOpen, showRiskConfirm } from './ui/riskconfirm.ts';
+import { riskConfirm } from './ui/kit/risk.ts';
 import { suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
@@ -2081,23 +2081,18 @@ function askOdds(id: number | null): void {
 }
 
 /** The window before a risky boarding (docs/23 items 49–52): «Рискнуть» throws the grapples, «Отступить» backs off. */
+let riskOpen = false;
 async function askRisk(r: BoardRisk): Promise<void> {
-  const lose = [
-    r.cargo > 0 ? LSF('risk.cargo', { v: fmt(r.cargo) }) : LSF('risk.noCargo'),
-    ...(r.silver > 0 ? [LSF('risk.silver', { v: fmt(r.silver) })] : []),
-    ...(r.men > 0 ? [LSF('risk.men', { n: r.men })] : []),
-    LSF('risk.port'),
-  ];
-  const go = await showRiskConfirm({
-    title: LSF(r.chance < 0.5 ? 'risk.title' : 'risk.titleSenior'),
+  if (riskOpen) return;
+  riskOpen = true;
+  // The UI kit's risk sheet (docs/23 items 13, 49–52): the chance, what a loss costs, what a win brings.
+  const go = await riskConfirm({
+    target: placeName(state.ships.get(r.target)?.info?.name ?? ''),
     chance: r.chance,
-    note: `${LSF('risk.chance', { p: Math.round(r.chance * 100) })} · ${LSF('risk.levels', { a: r.myLevel, b: r.theirLevel, n: r.sims })}`,
-    loseHead: LSF('risk.lose'),
-    lose,
-    ...(r.xpMul > 1 ? { win: LSF('risk.win', { m: r.xpMul }) } : {}),
-    go: LSF('risk.go'),
-    back: LSF('risk.back'),
-  });
+    levelGap: r.theirLevel - r.myLevel,
+    lose: { silver: r.silver > 0 ? r.silver : undefined, cargo: r.cargo > 0, men: r.men > 0 ? r.men : undefined, port: true },
+    gainXpMul: r.xpMul,
+  }).finally(() => (riskOpen = false));
   if (go) net.send({ t: 'board', target: r.target, aggression: 'standard', risk: true });
   else if (state.pursuit?.target === r.target) net.send({ t: 'attack', stop: true });
 }
@@ -2630,4 +2625,4 @@ requestAnimationFrame(frame);
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: riskConfirmOpen };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), hero: (tab?: 'hero' | 'path' | 'book' | 'port') => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen };
