@@ -14,9 +14,10 @@ import { prizeCrewNeeded, prizeValue } from './prizes.ts';
 import { cargoValue } from '../../../shared/src/sim/shipstats.ts';
 import type { ShipEntity } from './ship.ts';
 
-/** Below these she is battered: a quarter of her hull, a quarter of her men, or her heart all but gone. */
+/** Below these she is battered: a quarter of her hull, three tenths of her men (docs/23 item 41: sooner, so a fight is
+ *  shorter and ends oftener in a prize), or her heart all but gone. */
 export const STRIKE_HULL = 0.25;
-export const STRIKE_CREW = 0.25;
+export const STRIKE_CREW = 0.3;
 export const STRIKE_MORALE = 15;
 /** And she strikes only to a captain whose ship still has half as much fight in her again as her own. */
 export const STRIKE_OUTGUNNED = 1.5;

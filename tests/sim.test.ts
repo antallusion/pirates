@@ -5,7 +5,7 @@ import type { SailParams, SailState } from '../shared/src/sim/sailing.ts';
 import { computeShipStats, cargoVolume } from '../shared/src/sim/shipstats.ts';
 import { canLearn, TALENTS } from '../shared/src/data/talents.ts';
 import { generateWorld, isLand, navBlocked } from '../shared/src/world/worldgen.ts';
-import { NAV_CELL, SPEED_SCALE, WIND_PUSH, WORLD_SEED } from '../shared/src/constants.ts';
+import { NAV_CELL, SPEED_SCALE, WIND_HEAD, WIND_PUSH, WORLD_SEED } from '../shared/src/constants.ts';
 import { segmentHitsHull } from '../shared/src/math.ts';
 
 const params = (over: Partial<SailParams> = {}): SailParams => ({
@@ -50,7 +50,8 @@ test('the pace of the sea: her way is reckoned as before and carries her SPEED_S
 test('the wind drives her on or holds her back: a run is faster than the beam, the beam than close-hauled', () => {
   assert.equal(windPush(90, 1), 1);
   assert.ok(Math.abs(windPush(180, 1) - (1 + WIND_PUSH)) < 1e-9, 'a following breeze drives her on');
-  assert.ok(Math.abs(windPush(0, 1) - (1 - WIND_PUSH)) < 1e-9, 'a head wind holds her back');
+  assert.ok(Math.abs(windPush(0, 1) - (1 - WIND_HEAD)) < 1e-9, 'a head wind holds her back (softer than a following one drives her, docs/23 item 40)');
+  assert.ok(WIND_HEAD < WIND_PUSH);
   assert.ok(windPush(180, 0.3) < windPush(180, 1), 'the stronger the breeze, the more');
   const st = (h: number): SailState => ({ x: 0, y: 0, heading: h, speed: 0, sail: 1, rudder: 0 });
   const wind = { dir: Math.PI, strength: 1 }; // blowing south

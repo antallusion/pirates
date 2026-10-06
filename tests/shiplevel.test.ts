@@ -85,7 +85,7 @@ test('the ladder: among captains a junior is cut hard and floored; at sea he is 
   assert.equal(ladder(1, 4, true).dealt, 0, 'three levels up: the shot does nothing');
   assert.equal(ladder(1, 2, true, true).floorHull, 0, 'a company of juniors may finish her');
   const e1 = ladder(1, 2, false);
-  assert.deepEqual([e1.dealt, e1.crits, e1.board, e1.floorHull], [0.5, 0.35, true, 0]);
+  assert.deepEqual([e1.dealt, e1.crits, e1.board, e1.floorHull], [0.4, 0.35, true, 0]); // docs/23 item 45
   assert.equal(ladder(1, 2, false, true).dealt, 1, 'a company of juniors fights a bot a level up as her equals');
   assert.ok(ladder(1, 4, false, true).floorHull > 0, 'three levels up she is a skull to a company too');
   assert.equal(ladder(1, 3, false).board, false);
@@ -110,7 +110,9 @@ test('a lone junior captain never sinks a senior one, however long he fires and 
   assert.ok(B.ship!.crew >= Math.ceil(B.ship!.stats.crewMax * 0.5), 'half her crew stands');
   B.ship!.state.speed = 0;
   B.ship!.state.x = A.ship!.state.x + 20;
-  assert.equal(canBoard(game, A.ship!, B.ship!), 'She is above your level: your boarders would not reach her deck');
+  // docs/23 item 48: the ladder no longer bars the grapples — the junior may board her, warned of the odds first
+  // (tests/boardrisk.test.ts); the gap still weighs on his boarders in the battle.
+  assert.equal(canBoard(game, A.ship!, B.ship!), null);
   // The senior sinks the junior as usual, and harder.
   const a0 = A.ship!.hull;
   applyDamage(game, A.ship!, { hull: 100 }, B.ship!);

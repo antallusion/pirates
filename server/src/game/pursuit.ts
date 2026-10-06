@@ -7,7 +7,7 @@
 // (npc.ts engageHelm), the gunnery they lay by (combat.ts fireBroadside's laid volley). No dice of its own: the steering
 // and the laying are exact, the balls' scatter is fireBroadside's.
 
-import { AIMED_SPREAD, AUTO_ARC_DEG, BOARD_RUN, LAY_ARC_DEG, leadPoint } from '../../../shared/src/data/gunnery.ts';
+import { AIMED_SPREAD, AUTO_ARC_DEG, BOARD_RUN, CHASE_GIVE_UP, LAY_ARC_DEG, leadPoint } from '../../../shared/src/data/gunnery.ts';
 import { AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import type { PursuitMode, PursuitStop } from '../../../shared/src/protocol.ts';
 import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
@@ -28,8 +28,6 @@ export const PURSUIT_RESUME = 1.5;
 export const PURSUIT_SIGHT = 2600;
 /** A mark lost: the nearest ship hostile to her within this is the next (docs/23 item 43). */
 export const RETARGET_R = 1600;
-/** No endless chases (docs/23 item 44): this long with no hit either way and she strikes or slips away. */
-export const CHASE_GIVE_UP = 40;
 /** The boarding run starts this near her mark. */
 export const BOARD_RUN_FROM = 1200;
 /** Auto-battle against the weak (docs/23 item 46): a mark this many levels below her own is settled in AUTO_WEAK_SEC. */

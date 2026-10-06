@@ -209,8 +209,10 @@ const PVP_SENIOR = [1, 1.25, 1.5, 2];
 const PVP_FLOOR_HULL = [0, 0.25, 0.5, 1];
 const PVP_FLOOR_CREW = [0, 0.5, 0.7, 1];
 /** Against the sea's ships: softer, so a perfect captain wins now and then one level up. */
-/** Tuned by the duel sims (tests/balance): a perfect captain wins about one fight in ten a level up, an average one hardly any. */
-export const PVE_JUNIOR = [1, 0.5, 0.3, 0.15];
+/** Tuned by the duel sims (tests/balance): a perfect captain wins about one fight in ten a level up, an average one hardly any.
+ *  Re-weighed for the quick sea fight and the laid broadsides (docs/23 item 45): 0.5/0.3/0.15 let a perfect captain win
+ *  two in five a level up. */
+export const PVE_JUNIOR = [1, 0.4, 0.2, 0.1];
 export const PVE_SENIOR = [1, 1.2, 1.35, 1.6];
 export const PVE_CRITS = [1, 0.35, 0, 0];
 /** Juniors who together outweigh a ship of the sea (a company against one a level up) are cut less; three levels

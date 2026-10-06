@@ -3,6 +3,7 @@
 // a held broadside in the perfect window every time, a dash out of danger), an average one, or an idle one who
 // does nothing at all. The rest of the sea is cleared and nothing new puts out while they fight.
 
+import { AUTO_ARC_DEG } from '../../shared/src/data/gunnery.ts';
 import type { NpcSkill } from '../../shared/src/data/shiplevel.ts';
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
 import { buildNavGrid, isLand } from '../../shared/src/world/worldgen.ts';
@@ -16,9 +17,12 @@ import { makeGame } from '../helpers.ts';
 export type Craft = 'perfect' | 'average' | 'idle' | 'bot';
 
 /** A scripted captain's craft (a bot's is her level's). */
+// docs/23 item 34: a captain's broadsides are laid by her gun captains now (auto-aim): the average one lets them go
+// as the mark bears in the auto-fire arc with nearly the true lead; the perfect one waits for her beam and the charged
+// window.
 export const CRAFT: Record<'perfect' | 'average', NpcSkill> = {
-  perfect: { lead: 1, rangeErr: 0, arcDeg: 8, spread: 0, react: 0.25, dash: true },
-  average: { lead: 0.75, rangeErr: 0.1, arcDeg: 18, spread: 0.15, react: 1.0, dash: false },
+  perfect: { lead: 1, rangeErr: 0, arcDeg: AUTO_ARC_DEG, spread: 0, react: 0.25, dash: true },
+  average: { lead: 0.9, rangeErr: 0.07, arcDeg: AUTO_ARC_DEG, spread: 0.1, react: 0.8, dash: false },
 };
 
 export interface Side {

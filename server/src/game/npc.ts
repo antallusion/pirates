@@ -29,6 +29,7 @@ import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
 import { applyDamage, dash, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
 import { SURRENDER_WAIT, strikeColours, struck, surrenderClosed } from './struck.ts';
+import { CHASE_GIVE_UP } from '../../../shared/src/data/gunnery.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
@@ -73,6 +74,8 @@ export interface NpcBrain {
   stuckCheck: { x: number; y: number; t: number };
   /** The First Watch's practice raider: she comes for this one novice even in safe water. */
   practice?: number;
+  /** docs/23 item 44: when she took her present prey, for the chase that never lands a hit. */
+  preySince?: { id: number; t: number; best: number; closer: number };
   /** The practice raider's men the guns never cut below, so the turn-by-turn lesson after the boarding is a fight of a
    *  few turns and not one blow (the 2026-10-05 playthrough: the gunnery left her one man). */
   practiceFloor?: number;
@@ -552,6 +555,22 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     }
     // (no wolf pack round the First Watch's lesson, nor round a captain still in it)
     if (role === 'pirate' && brain.target !== p.id && p.isPlayer && brain.practice === undefined && !inFirstWatch(game, p)) rallyPack(game, ship, p);
+    // No endless chases (docs/23 item 44): forty seconds after a captain and not a hit either way, and no nearer to her
+    // for the last ten, she gives it up (a pack still beating up to her keeps coming).
+    if (brain.preySince?.id !== p.id) brain.preySince = { id: p.id, t: now, best: preyD, closer: now };
+    const ps = brain.preySince;
+    if (preyD < ps.best - 30) {
+      ps.best = preyD;
+      ps.closer = now;
+    }
+    const lastHit = Math.max(ps.t, p.attackers.get(ship.id) ?? -Infinity, ship.attackers.get(p.id) ?? -Infinity);
+    if (p.isPlayer && brain.practice === undefined && now - lastHit > CHASE_GIVE_UP && now - ps.closer > 10) {
+      brain.spared.set(p.id, now + 120);
+      brain.target = null;
+      brain.chase = null;
+      brain.preySince = undefined;
+      return;
+    }
     brain.target = p.id;
     engage(game, ship, brain, p, preyD);
     return;

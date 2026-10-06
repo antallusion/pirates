@@ -92,3 +92,7 @@ export function suggestAmmo(o: { board: boolean; d: number; grapeRange: number; 
   if (o.faster && o.d < o.chainRange * 0.95 && o.sailShare > 0.45) return 'chain';
   return 'round';
 }
+
+/** No endless chases (docs/23 item 44): this long after her prey with no hit either way and a bot gives it up (or, the
+ *  prey of a captain's «Атаковать», strikes or slips away). */
+export const CHASE_GIVE_UP = 40;

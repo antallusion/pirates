@@ -177,7 +177,7 @@ import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onU
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { ZoneBossHub, stepZoneBosses, zoneBossSinking } from './zonebosses.ts';
-import { applyDamage, cutMastWreck, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
+import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
 import { captiveAction, losePrizes, prizeCrewNeeded, prizeValue, sellPrizes, stepBoats, surrenderTerms, seizeCaptain, takeCaptive, takePrize } from './prizes.ts';
@@ -807,7 +807,13 @@ export class Game {
         b.state.y += ny * overlap * wb;
         const va = headingVec(a.state.heading), vb = headingVec(b.state.heading);
         const closing = (va.x * a.state.speed - vb.x * b.state.speed) * nx + (va.y * a.state.speed - vb.y * b.state.speed) * ny;
-        if (closing > 3) {
+        // Two of one squadron (a captain's escorts, her and hers, a group, a guild) bump and fend off: no ram between
+        // friends (the quicker sea of docs/23 had two escorts at station hole each other).
+        const friends = (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
+        if (closing > 3 && friends) {
+          a.state.speed *= 0.6;
+          b.state.speed *= 0.6;
+        } else if (closing > 3) {
           this.hullToHull(a, b);
           this.hullToHull(b, a);
           const ramA = a.hasEffect('ramming_speed') ? 3 : 1, ramB = b.hasEffect('ramming_speed') ? 3 : 1;

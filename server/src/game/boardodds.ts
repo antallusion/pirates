@@ -80,7 +80,7 @@ export function boardRisk(game: Game, a: ShipEntity, b: ShipEntity): BoardRisk {
   const gap = b.combatLevel - a.combatLevel;
   return {
     target: b.id, name: b.name, chance: odds.chance, sims: odds.sims, myLevel: a.combatLevel, theirLevel: b.combatLevel,
-    cargo: Math.round(cargoValue(a.cargo)), silver: p ? Math.floor(p.gold * BOARD_LOSS_PURSE) : 0, men: Math.min(a.crew, odds.men),
+    cargo: Math.round(cargoValue(a.cargo)), silver: p ? Math.floor(p.gold * BOARD_LOSS_PURSE) : 0, men: Math.min(Math.max(0, a.crew - Math.max(2, Math.round(a.crew * 0.1))), odds.men), // (some always live to strike, tactical.ts sync)
     xpMul: xpForGap(gap), risky: isRisky(a, b, odds.chance),
   };
 }
