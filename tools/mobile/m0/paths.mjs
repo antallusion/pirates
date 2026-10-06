@@ -164,51 +164,49 @@ for (const name of PATHS) {
       await L.sleep(1500);
     }, async () => !!to && (await st()).silver > before.silver);
   }
+  // The sea fight (docs/23 phases 2–3): «Атаковать» on the action (the bar's gold button, or the touch HUD's
+  // «Действие»), «Огонь» for a volley, «Абордаж» when she is in the grapples' reach. A hostile within a mile is the
+  // target by itself; a tap on her pins her (counted). A volley is seen by a gun deck's reload dropping.
+  const ATTACK = '#tc-act[data-act="attack"], .act-btn.act-attack';
+  const BOARD = '#tc-act[data-act="board"], .act-btn.act-board';
+  const watchFire = () => p.evaluate(() => {
+    globalThis.__fired = false;
+    clearInterval(globalThis.__fw);
+    let last = null;
+    globalThis.__fw = setInterval(() => {
+      const r = globalThis.gravetide.state.you?.reload; if (!r) return;
+      if (last && (r.port < last.port - 0.3 || r.starboard < last.starboard - 0.3)) globalThis.__fired = true;
+      last = { port: r.port, starboard: r.starboard };
+    }, 150);
+  });
+  const fired = () => p.evaluate(() => !!globalThis.__fired);
+  // A clean scene for each fight: no pursuit left over, open water far from the last fight's sharks (not counted).
+  let spot = 0;
+  const openSea = async () => { await toSea(); await L.send(p, { t: 'attack', stop: true }); await admin(`/tp ${21000 + 3000 * spot} ${70000 + 2500 * (spot++ % 3)}`, 3000); await quiet(); await admin('/heal'); await admin('/ammo'); };
   if (name === 'fire') {
-    let before;
-    await run('fire', async () => { await toSea(); await admin('/ammo'); await admin('/foe pirate sloop 260', 2500); before = await st(); }, async () => {
-      // Her on the starboard beam within range: a finger on the starboard battery.
-      await tap('#tc-starboard', 'the starboard battery');
-      await L.sleep(1500);
-    }, async () => { const s = await st(); return JSON.stringify(s.reload) !== JSON.stringify(before.reload) || (await L.toasts(p)).length > 0; });
+    await run('fire', async () => { await openSea(); await admin('/foe pirate sloop 260', 3500); await watchFire(); }, async () => {
+      await tap('#tc-fire', '«Огонь»');
+      for (let i = 0; i < 10 && !(await fired()); i++) await L.sleep(300);
+    }, fired);
   }
   if (name === 'attack' || name === 'board') {
     const boarding = name === 'board';
-    let fired = false;
-    await run(name, async () => { await toSea(); await admin('/heal'); await admin('/ammo'); await admin(`/foe pirate sloop ${boarding ? 420 : 800}`, 2500); }, async () => {
-      // A human at the helm: the stick toward her (again when she is 25° off), full sail, and at range the guns
-      // (attack) or the grapples (board). Gives up after 120 s.
+    await run(name, async () => { await openSea(); await admin(`/foe pirate sloop ${boarding ? 420 : 800}`, 3500); await watchFire(); }, async () => {
+      // «Атаковать»: then the ship does the rest — she closes, lays her guns and fires on her own (auto-fire). The
+      // board path also takes «Абордаж» when it comes up (and «Рискнуть» if the risk window asks). Gives up after 90 s.
       const t0 = Date.now();
-      let boarded = false, lastSteer = 0;
-      fired = false;
-      for (let i = 0; i < 3; i++) await tap('#tc-sail-up', 'sail up');
-      while (Date.now() - t0 < 120000) {
+      let attacked = false;
+      while (Date.now() - t0 < 90000) {
         const s = await st();
-        if (s.tac) { boarded = true; break; }
-        const o = await L.me(p);
-        const tg = (await L.ships(p, 3000)).find((x) => x.hostile && !x.sinking) ?? (await L.ships(p, 3000))[0];
-        if (!tg) break;
-        if (boarding) {
-          if (await p.$('#hud-prompt .act-board:not(.hidden), .act-btn.act-board')) { if (await tap('#hud-prompt .act-board, .act-btn.act-board', '«board»')) { await L.sleep(2500); continue; } }
-          const sail = await p.evaluate(() => globalThis.gravetide.state.input.sail);
-          if (tg.d < 140 && sail > 2) await tap('#tc-sail-down', 'sail down (match her speed)');
-          else if (tg.d >= 200 && sail < 3) await tap('#tc-sail-up', 'sail up (close in)');
-        } else if (tg.d < 420 && Math.abs(Math.abs(tg.off) - Math.PI / 2) < 0.35) {
-          const side = tg.off > 0 ? 'starboard' : 'port';
-          if ((s.reload?.[side] ?? 0) >= 1) { await tap(`#tc-${side}`, `the ${side} battery`); fired = true; break; }
-        }
-        if (Date.now() - lastSteer > 1500) {
-          const ang = Math.atan2(tg.x - o.x, -(tg.y - o.y));
-          const err = Math.abs(((ang - o.h + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          const course = boarding || tg.d > 420 ? ang : ang + (tg.off > 0 ? -Math.PI / 2 : Math.PI / 2);
-          const cerr = Math.abs(((course - o.h + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          if (cerr > (boarding ? 0.3 : 0.44) || (!boarding && tg.d <= 420 && cerr > 0.3)) { await stick(course, `helm to ${Math.round((course * 180) / Math.PI)}° (${tg.d} m)`); lastSteer = Date.now(); }
-          void err;
-        }
+        if (s.tac) break;
+        if (!boarding && (await fired())) break;
+        if (await p.$('[data-risk="go"]')) { await tap('[data-risk="go"]', '«Рискнуть»'); await L.sleep(1500); continue; }
+        if (boarding && (await p.$(BOARD))) { if (await tap(BOARD, '«Абордаж»')) { await L.sleep(2500); continue; } }
+        if (!attacked && (await p.$(ATTACK))) attacked = await tap(ATTACK, '«Атаковать»');
         await L.sleep(400);
       }
-      log.push(`${name}: fired ${fired} boarded ${boarded} in ${Math.round((Date.now() - t0) / 1000)} s`);
-    }, async () => (boarding ? (await st()).tac : fired));
+      log.push(`${name}: fired ${await fired()} boarded ${(await st()).tac} in ${Math.round((Date.now() - t0) / 1000)} s`);
+    }, async () => (boarding ? (await st()).tac : await fired()));
     await quiet();
     if ((await st()).tac) { await p.evaluate(() => document.querySelector('[data-a="quick"]')?.click()); await L.sleep(4000); await film(); await quiet(); }
   }
