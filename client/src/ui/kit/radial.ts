@@ -46,6 +46,38 @@ export function wheelLayout(n: number, x: number, y: number, vw: number, vh: num
   return { cx, cy, items };
 }
 
+/** Over eight choices (the fire wheel at the screen's corner): a compact grid over the finger instead of a circle —
+ *  a circle of twelve about a thumb in the corner had to stand far off it, over the target line and «Атаковать», and
+ *  the finger's angle no longer matched the choice under it (owner, 2026-10-06: «всё должно быть идеально на мобиле»).
+ *  Rows of up to `cols`, the lowest row just above the finger, the whole grid kept on the screen. */
+export function wheelGrid(n: number, x: number, y: number, vw: number, vh: number, item = 44, gap = 12, cols = 6, margin = 6): WheelGeometry {
+  const c = Math.max(1, Math.min(cols, n));
+  const rows = Math.ceil(n / c);
+  const step = item + gap;
+  const w = c * step - gap, h = rows * step - gap;
+  const left = Math.max(margin, Math.min(vw - margin - w, x - w / 2));
+  // Above the finger with room for its label; on a short screen as high as it fits.
+  const top = Math.max(margin, Math.min(vh - margin - h, y - item - 18 - h));
+  const items = Array.from({ length: n }, (_, i) => {
+    const r = rows - 1 - Math.floor(i / c), col = i % c; // the first choices on the row nearest the finger
+    return { x: left + col * step + item / 2, y: top + r * step + item / 2, a: 0 };
+  });
+  return { cx: left + w / 2, cy: top - 14, items };
+}
+
+/** The choice under the finger: the nearest choice within reach of it, or -1. */
+export function nearestChoice(items: readonly { x: number; y: number }[], x: number, y: number, reach: number): number {
+  let best = -1, bd = reach;
+  items.forEach((it, i) => {
+    const d = Math.hypot(it.x - x, it.y - y);
+    if (d <= bd) {
+      bd = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
 /** The choice a pull points at (dx, dy from where the wheel opened; screen axes, y down): the nearest by angle, or
  *  none (-1) inside the dead centre. Up is the first, then clockwise — the gamepad's convention (gamepad.ts). */
 export function pickSector(dx: number, dy: number, n: number, dead = 24): number {
@@ -61,6 +93,9 @@ export class RadialWheel {
   private sel = -1;
   private x0 = 0;
   private y0 = 0;
+  private geo: WheelGeometry | null = null;
+  private item = 52;
+  private many = false;
   get isOpen(): boolean {
     return !!this.el && !this.el.classList.contains('hidden');
   }
@@ -82,8 +117,11 @@ export class RadialWheel {
     // Over eight (the fire wheel): smaller choices without their words round them; the lit one's name is in the hub.
     const many = this.opts.length > 8;
     const item = many ? 44 : 52;
-    const g = wheelLayout(this.opts.length, x, y, innerWidth, innerHeight, 82, item, many ? 6 : 22);
-    const hub = Math.round(2 * Math.hypot(g.items[0]?.x - g.cx || 0, g.items[0]?.y - g.cy || 82) + item - 20);
+    const g = many ? wheelGrid(this.opts.length, x, y, innerWidth, innerHeight, item) : wheelLayout(this.opts.length, x, y, innerWidth, innerHeight, 82, item, 22);
+    this.geo = g;
+    this.item = item;
+    this.many = many;
+    const hub = many ? 0 : Math.round(2 * Math.hypot(g.items[0]?.x - g.cx || 0, g.items[0]?.y - g.cy || 82) + item - 20);
     this.el.classList.toggle('k-wheel--many', many);
     this.el.setAttribute('aria-label', title);
     this.el.innerHTML = `<div class="k-wheel-hub" style="left:${g.cx}px;top:${g.cy}px;width:${hub}px;height:${hub}px"></div><div class="k-wheel-cap" style="left:${g.cx}px;top:${g.cy}px" aria-hidden="true"></div>${this.opts.map((o, i) => `<div class="k-wheel-item${o.disabled ? ' off' : ''}${o.active ? ' on' : ''}" role="menuitem" aria-disabled="${!!o.disabled}" data-i="${i}" style="left:${g.items[i].x}px;top:${g.items[i].y}px;--k-i:${i}">
@@ -94,7 +132,14 @@ export class RadialWheel {
 
   /** The finger (or mouse) has moved: light the choice it points at. */
   move(x: number, y: number): number {
-    return this.select(pickSector(x - this.x0, y - this.y0, this.opts.length));
+    // The choice under the finger first, so the lit one is always the one the finger is on; a circle also takes a
+    // pull's direction from its own centre (moved off the finger at a screen's edge) once the finger is clear of it.
+    const g = this.geo;
+    if (!g) return this.select(-1);
+    const near = nearestChoice(g.items, x, y, this.item * 0.85);
+    if (near >= 0 || this.many) return this.select(near);
+    if (Math.hypot(x - this.x0, y - this.y0) < 24) return this.select(-1);
+    return this.select(pickSector(x - g.cx, y - g.cy, this.opts.length));
   }
 
   /** Light a choice by its index (the gamepad's stick, the keyboard's arrows); -1 lights none. */

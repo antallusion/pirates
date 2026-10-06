@@ -106,3 +106,20 @@ test('the First Watch on a phone names the new buttons, not the old ones', () =>
   for (const [k, v] of Object.entries(ru)) if (k.endsWith('.touch')) assert.ok(!/Стрелки у штурвала|Две кнопки с пушками|Бортовые кнопки|кнопки бортов/.test(v), `${k}: an old button`);
   for (const [k, v] of Object.entries(en)) if (k.endsWith('.touch')) assert.ok(!/The arrows by the wheel|two gun buttons|broadside buttons/.test(v), `${k}: an old button`);
 });
+
+test('the fire wheel of twelve at the screen corner is a grid over the finger: on the screen, a finger apart, the lit choice the one under the finger', async () => {
+  const { wheelGrid, nearestChoice } = await import('../client/src/ui/kit/radial.ts');
+  for (const [W, H] of [[812, 375], [640, 360]]) {
+    const x = W - 50, y = H - 50; // «Огонь» in the corner
+    const g = wheelGrid(12, x, y, W, H, 44);
+    for (const it of g.items) {
+      assert.ok(it.x - 22 >= 0 && it.x + 22 <= W && it.y - 22 >= 0 && it.y + 22 <= H, `${W}×${H}: ${it.x},${it.y}`);
+      assert.ok(it.y + 22 <= y - 18, 'every choice above the finger, none under the thumb');
+    }
+    for (let i = 0; i < g.items.length; i++) for (let j = i + 1; j < g.items.length; j++) {
+      assert.ok(Math.hypot(g.items[i].x - g.items[j].x, g.items[i].y - g.items[j].y) >= 50, 'a finger apart');
+    }
+    for (let i = 0; i < g.items.length; i++) assert.equal(nearestChoice(g.items, g.items[i].x + 6, g.items[i].y - 5, 44 * 0.85), i);
+    assert.equal(nearestChoice(g.items, x, y, 44 * 0.85), -1, 'still on the button: nothing taken');
+  }
+});

@@ -157,6 +157,10 @@ body.reduce-motion { --k-dur-1: 0ms; --k-dur-2: 0ms; --k-dur-3: 0ms; }
 .k-wheel--many .k-wheel-item { width: 44px; height: 44px; }
 .k-wheel--many .k-wheel-ico { width: 28px; height: 28px; }
 .k-wheel--many .k-wheel-l { display: none; }
+/* Over eight: a compact grid over the finger (wheelGrid), on a dimmed sea, its lit choice named over it. */
+.k-wheel--many::before { content: ""; position: absolute; inset: 0; background: rgba(4, 6, 8, 0.45); }
+.k-wheel--many .k-wheel-hub { display: none; }
+.k-wheel--many .k-wheel-cap { max-width: 260px; white-space: nowrap; }
 .k-wheel:not(.k-wheel--many) .k-wheel-item.sel .k-wheel-l { visibility: hidden; }
 
 /* ---------- Target line: one row, 44 px */
