@@ -10,7 +10,7 @@ import { closestOnPolygon } from '../../../shared/src/math.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { autosailOf } from './autosail.ts';
 import type { Game } from './Game.ts';
-import { FIRST_FIGHTS, onboardingProtected } from './onboarding.ts';
+import { FIRST_FIGHTS, fresh, onboardingProtected } from './onboarding.ts';
 import { pursuitOf } from './pursuit.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -71,9 +71,9 @@ export function softDealt(game: Game, source: ShipEntity | null, target: ShipEnt
 
 /** A first fight with no shot either way this long (s), and no boarding or pursuit of her, is over. */
 export const FIGHT_QUIET = 20;
-/** A fresh captain at sea with nothing to fight this many seconds: a pirate of her level comes for her (docs/23 item
- *  82: after the First Watch the newcomer's run sailed about with no mark and no button to press — the game is to
- *  close on a ship and board her, so the first fights come to her). */
+/** A captain in her first quarter of an hour, at sea with nothing to fight this many seconds: a pirate comes for her
+ *  (docs/23 item 82: after the First Watch the newcomer's run sailed about with no mark and no button to press — the
+ *  game is to close on a ship and board her, so the first fights come to her). */
 export const FOE_IDLE = 25;
 /** Seconds idle, and the pirate brought last (entity id), per session. */
 const idle = new WeakMap<PlayerSession, { secs: number; foe: number | null }>();
@@ -108,8 +108,9 @@ function bringFoe(game: Game, s: PlayerSession): void {
   if (!ship || !s.profile) return;
   let w = idle.get(s);
   if (!w) idle.set(s, (w = { secs: 0, foe: null }));
-  // Only for a fresh captain out at sea, free, and not in the First Watch (its raider is the lesson's).
-  if (easyLeft(s) <= 0 || onboardingProtected(s) || ship.docked || ship.boarding || ship.grappled || s.pendingBoarding || autosailOf(ship) || ship.inCombat(game.now) || !ship.alive) {
+  // Only in a captain's first quarter of an hour, out at sea, free, and not in the First Watch (its raider is the
+  // lesson's). The first three are softened when they begin; after them, one a level below hers.
+  if (!fresh(s.profile) || onboardingProtected(s) || ship.docked || ship.boarding || ship.grappled || s.pendingBoarding || autosailOf(ship) || ship.inCombat(game.now) || !ship.alive) {
     w.secs = 0;
     return;
   }
@@ -131,7 +132,8 @@ function bringFoe(game: Game, s: PlayerSession): void {
     const x = ship.state.x + Math.sin(a) * 1000, y = ship.state.y - Math.cos(a) * 1000;
     if (coast(game, x, y)) continue;
     const foe = game.spawnNpcShip('pirate', ship.loadout.classId, 'confederacy', x, y, a + Math.PI);
-    game.setNpcLevel(foe, Math.max(1, ship.shipLevel)); // her own level: an even fight, softened when it starts
+    // Her own level while her easy fights last (softened when it starts), then one below.
+    game.setNpcLevel(foe, Math.max(1, ship.shipLevel - (easyLeft(s) > 0 ? 0 : 1)));
     const brain = game.npcs.get(foe.id);
     if (brain) {
       brain.area = { x: ship.state.x, y: ship.state.y, r: 3000 };

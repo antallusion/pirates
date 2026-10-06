@@ -162,8 +162,9 @@ while (Date.now() - t0 < MIN * 60_000) {
       await tapAt(v.finger.x, v.finger.y, 'finger');
       did = `finger:${v.finger.id}`;
     }
-  } else if (v.sheet && (await tapSel('.k-sheet-root.k-open .k-btn--primary, .k-sheet-root.k-open [data-dp="0"], .k-sheet-root.k-open [data-dp="sail"]', 'sheet'))) {
-    // A sheet (the risk, a question, the harbour's check): its gold button, else what it offers to buy, else «sail».
+  } else if (v.sheet && (await tapSel('.k-sheet-root.k-open [data-dp="sail"], .k-sheet-root.k-open .k-btn--primary', 'sheet'))) {
+    // A sheet (the risk, a question): its gold button; the harbour's check: «sail anyway» (a buy she cannot pay for
+    // left the newcomer tapping «Купить» 195 times).
     did = 'sheet';
   } else if (v.modal) {
     // A window: its gold button (the spoils, the risk, the harbour's «Поднять паруса»), else it is closed.

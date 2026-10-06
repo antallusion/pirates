@@ -106,6 +106,7 @@ test('a fresh captain idle at sea with nothing to fight: within half a minute a 
   const s = seaCaptain(game, LEVEL_HULL[1], 1, at.x, at.y, 0);
   s.profile!.tutorial.easy = 0;
   s.profile!.tutorial.on = false;
+  s.profile!.tutorial.played = 0; // her first quarter of an hour
   const me = s.ship!;
   me.input = { rudder: 0, sailTarget: 0.5 };
   const before = new Set(game.ships.keys());
