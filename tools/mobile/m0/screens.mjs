@@ -42,14 +42,17 @@ async function fps(label, throttle = 1) {
 
 await L.login(p, { name: (lang === 'ru' ? 'Экран' : 'Screen') + Math.random().toString(36).slice(2, 5), know: true });
 await skip();
+// Layout is measured, not motion: windows stand still (a software-rendered frame slid them in late).
+await p.evaluate(() => document.body.classList.add('reduce-motion'));
 await admin('/level 12');
 await admin('/silver 20000');
 await L.closeAll(p);
 await measure('port_quay');
 await p.evaluate(() => globalThis.gravetide.open('port'));
 await L.sleep(900);
-for (const tab of ['market', 'shipyard', 'tavern', 'contracts', 'harbour', 'holdings', 'exchange']) {
-  await p.evaluate((t) => document.querySelector(`#modal-panel .tab[data-tab="${t}"]`)?.click(), tab);
+// docs/23 phase 6: the port's five places down the rail and the second row's chips.
+for (const tab of ['market', 'shipyard', 'tavern', 'quests', 'harbour', 'holdings', 'exchange']) {
+  await p.evaluate((t) => document.querySelector(`#modal-panel [data-ptab="${t}"]`)?.click(), tab);
   await L.sleep(700);
   await measure(`port_${tab}`);
 }
@@ -62,7 +65,7 @@ await fps('sea', 4);
 await admin('/foe pirate sloop 260', 2500);
 await measure('sea_combat');
 await fps('sea_combat', 4);
-for (const m of ['menu', 'hero', 'ship', 'crew', 'map', 'journal', 'talents', 'options']) {
+for (const m of ['menu', 'hero', 'gear', 'ship', 'crew', 'map', 'journal', 'company', 'talents', 'options']) {
   await p.evaluate((x) => { globalThis.gravetide.open(null); globalThis.gravetide.open(x); }, m);
   await L.sleep(900);
   await measure(`win_${m}`);
