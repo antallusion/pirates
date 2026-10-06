@@ -101,7 +101,7 @@ export function openSheet(o: SheetOpts): SheetHandle {
   const layer: Layer = { root: panel, onEscape: () => close('esc'), onEnter: o.onEnter };
   root.querySelector('.k-scrim')!.addEventListener('click', () => !o.modal && close('scrim'));
   root.querySelector('.k-sheet-x')?.addEventListener('click', () => close('button'));
-  if (!o.modal) wireSwipe(panel, () => close('swipe'));
+  if (!o.modal) wireSheetSwipe(panel, () => close('swipe'));
   document.body.append(root);
   // Up from the bottom edge on the next frame (the closed state is the stylesheet's start).
   requestAnimationFrame(() => open && root.classList.add('k-open'));
@@ -109,15 +109,17 @@ export function openSheet(o: SheetOpts): SheetHandle {
   return { root, panel, body, foot: root.querySelector<HTMLElement>('.k-sheet-foot'), close, get open() { return open; } };
 }
 
-/** The grip and the head drag the sheet; a list inside it still scrolls (a drag starts there only from its top). */
-function wireSwipe(panel: HTMLElement, done: () => void): void {
+/** The grip and the head drag the sheet; a list inside it still scrolls (a drag starts there only from its top).
+ *  The game's windows (#modal-panel, main.ts) are dragged by their grip and band only: their bodies hold maps and
+ *  sliders of their own (`body` null). `allow` says whether the sheet may go at all just now. */
+export function wireSheetSwipe(panel: HTMLElement, done: () => void, handles = '.k-sheet-grip, .k-sheet-head', bodySel: string | null = '.k-sheet-body', allow: () => boolean = () => true): void {
   let y0 = 0, dy = 0, id: number | null = null, lastY = 0, lastT = 0, vy = 0;
   panel.addEventListener('pointerdown', (e) => {
     const t = e.target as HTMLElement;
-    if (t.closest('button, a, input, select, textarea, [data-no-swipe]')) return;
-    const body = t.closest<HTMLElement>('.k-sheet-body');
+    if (!allow() || t.closest('button, a, input, select, textarea, [data-no-swipe]')) return;
+    const body = bodySel ? t.closest<HTMLElement>(bodySel) : null;
     if (body && body.scrollTop > 0) return;
-    if (!t.closest('.k-sheet-grip, .k-sheet-head') && !body) return;
+    if (!t.closest(handles) && !body) return;
     id = e.pointerId;
     y0 = lastY = e.clientY;
     lastT = performance.now();

@@ -49,6 +49,8 @@ import { strengthWord as roamWord } from './ui/army.ts';
 import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
 import { riskConfirm } from './ui/kit/risk.ts';
+import { wireSheetSwipe } from './ui/kit/sheet.ts';
+import { wireHints } from './ui/kit/hint.ts';
 import { DASH_COOLDOWN, LAY_ARC_DEG, suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
@@ -1103,10 +1105,19 @@ setInterval(() => {
   if (modal === 'puzzle' && (state.puzzle?.digging || state.puzzle?.wait)) refreshModal(); // the dig's seconds (docs/17 H4)
 }, 1000);
 
+/** Windows that must be answered: no swipe takes them away (docs/23 phase 6). */
+const ANSWER: Modal[] = ['boarding', 'sunk', 'mutiny', 'choice'];
+
 function openModal(m: Modal): void {
   if (m !== 'look') resetLookDraft();
+  const from = modal;
   modal = m;
   $('modal').classList.toggle('hidden', m === null);
+  // A window comes up from the bottom edge as a sheet (docs/23 phase 6); a new window over an open one only swaps.
+  if (m !== null && from === null) {
+    $('modal').classList.add('w-from');
+    requestAnimationFrame(() => requestAnimationFrame(() => $('modal').classList.remove('w-from')));
+  }
   if (m === null) releaseModalToasts();
   refreshModal();
 }
@@ -1320,8 +1331,17 @@ function labelLedgers(root: HTMLElement): void {
   });
 }
 
-/** Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons). */
+/** Every window can be closed by touch (a fight's result and a shipwreck wait for their own buttons). On a phone it
+ *  is a bottom sheet with a grip on top: drag it (or the window's band) down and it goes (docs/23 phase 6). */
 function ensureCloseButton(root: HTMLElement): void {
+  if (!root.querySelector(':scope > .w-grip')) {
+    const g = document.createElement('div');
+    g.className = 'w-grip';
+    g.setAttribute('aria-hidden', 'true');
+    g.innerHTML = '<i></i>';
+    root.prepend(g);
+  }
+  root.classList.toggle('w-answer', !!modal && ANSWER.includes(modal));
   if (!modal || modal === 'boarding' || modal === 'sunk' || modal === 'mutiny') return;
   let x = root.querySelector<HTMLElement>('.x-btn');
   if (!x) {
@@ -1454,6 +1474,17 @@ new MutationObserver(() => {
   ensureCloseButton($('modal-panel'));
   labelLedgers($('modal-panel'));
 }).observe($('modal-panel'), { childList: true, subtree: true });
+
+// The window's grip and band drag it down (the kit's sheet gesture); a window that must be answered stays.
+wireSheetSwipe($('modal-panel'), () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal()), '.w-grip, .modal-head, .w-head', null, () => !!modal && !ANSWER.includes(modal) && matchMedia('(max-height: 520px), (max-width: 699px)').matches);
+$('modal').addEventListener('click', (e) => {
+  // A tap on the scrim above a phone's sheet closes it, as the kit's sheets do.
+  if (e.target === $('modal') && modal && !ANSWER.includes(modal) && matchMedia('(max-height: 520px), (max-width: 699px)').matches) {
+    if (modal === 'barter') net.send({ t: 'barter', action: 'cancel' });
+    else closeModal();
+  }
+});
+wireHints();
 
 function toggle(m: Modal): void {
   if (modal === m) closeModal();

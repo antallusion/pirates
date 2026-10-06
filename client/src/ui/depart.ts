@@ -5,7 +5,7 @@
 // the harbour's own orders (trade, hire_crew, buy_ammo, shipyard repair); the list follows the ship as it fills.
 
 import { GOODS, walkBuyCost } from '../../../shared/src/data/goods.ts';
-import { VOYAGE_MINUTES, foodMinutes, voyageFood, voyageNeeds } from '../../../shared/src/data/voyage.ts';
+import { VOYAGE_MINUTES, foodMinutes, voyageNeeds } from '../../../shared/src/data/voyage.ts';
 import type { VoyageNeed, VoyageShip } from '../../../shared/src/data/voyage.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
@@ -62,6 +62,15 @@ function offerOf(need: VoyageNeed, state: ClientState): Offer {
       return { need, n: cost > 0 ? 1 : 0, cost, msgs: cost > 0 ? [{ t: 'shipyard', action: 'repair' }] : [] };
     }
   }
+}
+
+/** The harbour's one-tap orders for some of what a voyage wants (docs/23 item 66: «Припасы» buys the food and the
+ *  round shot; the market's «Починить» and «Нанять» the rest): how many, the price, the orders. */
+export function voyageOrder(state: ClientState, kinds: VoyageNeed['kind'][]): { n: number; cost: number; msgs: ClientMsg[] } {
+  const ship = voyageShip(state);
+  if (!ship || !state.portView) return { n: 0, cost: 0, msgs: [] };
+  const offers = voyageNeeds(ship).filter((x) => kinds.includes(x.kind)).map((x) => offerOf(x, state));
+  return { n: offers.reduce((a, o) => a + o.n, 0), cost: offers.reduce((a, o) => a + o.cost, 0), msgs: offers.flatMap((o) => o.msgs) };
 }
 
 function row(o: Offer, i: number, state: ClientState): string {
@@ -161,19 +170,3 @@ export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go
   draw();
   sheet.panel.querySelector<HTMLElement>('[data-dp="all"], [data-dp="0"], [data-dp="sail"]')?.focus({ preventScroll: true });
 }
-
-/** The market's quick row: provisions for a voyage, what is aboard and one button to buy the rest. */
-export function voyageFoodCard(state: ClientState): string {
-  const s = voyageShip(state);
-  const row = state.portView?.market.find((r) => r.good === 'provisions');
-  if (!s || !row) return '';
-  const want = voyageFood(s);
-  const have = Math.floor(s.provisions);
-  const room = Math.floor(Math.max(0, s.holdFree) / Math.max(0.05, s.provisionVolume));
-  const n = Math.max(0, Math.min(want - have, room, row.stock));
-  const short = have < want;
-  const line = short ? L('market.voyageLine', { crew: s.crew, have, want }) : L('market.voyageOk', { crew: s.crew, have, n: Math.floor(foodMinutes(have, s.crew, s.provisionUse)) });
-  return `<div class="card voyage-food${short ? ' short' : ''}">${icon('good_provisions', '', 'shop-ico')}<div class="shop-text"><b>${esc(L('market.voyage', { min: VOYAGE_MINUTES }))}</b><span class="muted">${esc(line)}</span></div>
-    ${n > 0 ? `<button class="btn ${short ? 'btn-primary' : 'btn-small'}" data-act="buyn" data-good="provisions" data-n="${n}">${esc(L('market.voyageBuy', { n }))} · ${money(walkBuyCost('provisions', row.buy, row.stock, n))}</button>` : ''}</div>`;
-}
-
