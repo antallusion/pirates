@@ -160,11 +160,12 @@ export class HeroWindow {
       const on = h.sets.includes(id);
       return `<div class="hx-set${on ? ' on' : ''}"><b>${esc(T(ART_SETS[id].name))}</b><span class="muted">${esc(on ? L('setOn') : ART_SETS[id].pieces.map((p) => T(ARTIFACTS[p].name)).join(' · '))}</span><small>${esc(T(ART_SETS[id].text))}</small></div>`;
     }).join('');
-    return `<div class="hx-top">
+    // A choice waiting (docs/23 item 70): it comes first, its «Взять» in sight on a phone.
+    return `${h.pending && h.offer.length ? offer : ''}<div class="hx-top">
         <div class="hx-face" style="background-image:${portrait ? `url('${portrait}')` : 'none'}"><span class="hx-lv">${level}</span></div>
         <div class="hx-side"><div class="gi-h">${esc(L('prims'))}</div><div class="hx-prims">${PRIMS.map((p) => primTile(h, p)).join('')}</div>${willBar(h)}</div>
       </div>
-      ${offer}
+      ${h.pending && h.offer.length ? '' : offer}
       <div class="gi-h">${esc(L('skills'))} <span class="muted">${h.skills.length}/${SKILL_SLOTS}</span>${throne ? `<button class="btn btn-small hx-throne" data-hthrone>${icon('tattoo_crown', '', 'ico-sm')}${esc(throneLabel())}</button>` : ''}</div>
       <div class="hx-slots">${slots}</div>
       <div class="gi-h">${esc(L('sets'))}</div><div class="hx-sets">${sets}</div>`;

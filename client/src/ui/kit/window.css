@@ -220,7 +220,8 @@
   .cap-gear .doll-col { gap: 4px; justify-content: flex-start; }
   .cap-gear .doll-face { min-height: 0; height: calc(var(--ds) * 5 + 16px); }
   .cap-gear .gear-side { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .cap-gear .gear-quick { position: absolute; right: var(--k-sp-2); top: var(--k-sp-2); z-index: 2; margin: 0; }
+  .cap-gear:has(.doll) .gear-quick { position: absolute; left: calc(250px + var(--k-sp-2) + var(--k-sp-3)); right: var(--k-sp-2); top: 4px; z-index: 2; margin: 0; }
+  .cap-gear .gear-quick > .w-qbtn { flex: 1 1 auto; min-width: 0; }
   .cap-gear { position: relative; }
   .cap-gear .gear-body > .gear-side { padding-top: 60px; }
 }
@@ -312,7 +313,7 @@
   body.touch #modal-panel .tabs .tab { min-height: var(--k-h-2); display: inline-flex; align-items: center; }
   body.touch #modal-panel .btn { min-height: var(--k-h-2); }
   body.touch #modal-panel :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select) { min-height: var(--k-h-2); box-sizing: border-box; }
-  body.touch #modal-panel .map-legend > summary { display: flex; align-items: center; min-height: var(--k-h-2); }
+  body.touch #modal-panel .map-legend > summary { display: flex; align-items: center; min-height: var(--k-h-2); min-width: var(--k-h-2); padding: 0 var(--k-sp-2); }
 }
 /* Words for a desk: on a phone they are the heading's long-press hint. */
 @media (max-height: 520px), (max-width: 699px) { .w-desk { display: none !important; } }
