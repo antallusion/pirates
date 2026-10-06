@@ -46,14 +46,15 @@ export function pointerTargets(f: PointerFacts): string[] {
   return [];
 }
 
-/** Where the finger stands for a button's box, and which way it points: a button in the right part of the screen (the
- *  column of «Огонь», «Действие», the target line) gets it from the left, pointing right — above «Огонь» it lay over
- *  «Действие» and seemed to mean it (QA 2026-10-06); elsewhere it stands above, pointing down, or below, pointing up,
- *  when there is no room above. Pure. */
+/** Where the finger stands for a button's box, and which way it points: from the left, pointing right, when there is
+ *  room (above «Огонь» it lay over «Действие» and seemed to mean it, QA 2026-10-06); a button at the left edge (the
+ *  wheel) gets it from above, pointing down, or from below, pointing up, when there is no room above. Pure. */
 export type PointerDir = 'down' | 'up' | 'right';
 export function pointerSpot(r: { left: number; top: number; width: number; height: number }, size: number, vw: number, vh: number): { x: number; y: number; dir: PointerDir } {
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  if (cx > vw * 0.6 && r.left - size - 4 >= 4) return { x: r.left - size - 4, y: Math.max(4, Math.min(vh - size - 4, cy - size / 2)), dir: 'right' };
+  // From the left, pointing right, whenever there is room: above a button in a column or a grid of choices (the
+  // prize's five) it lay over the button above and seemed to mean that one (QA 2026-10-07).
+  if (r.left - size - 4 >= 4) return { x: r.left - size - 4, y: Math.max(4, Math.min(vh - size - 4, cy - size / 2)), dir: 'right' };
   const x = Math.max(4, Math.min(vw - size - 4, cx - size / 2));
   const above = r.top - size - 4;
   if (above >= 4) return { x, y: above, dir: 'down' };

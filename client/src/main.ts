@@ -2492,12 +2492,13 @@ let homeRun: string | null = null, homeRunAt = 0;
 function stepPendingDock(): void {
   if (homeRun) {
     const own = state.ownDisplay, p = state.ports.find((x) => x.id === homeRun);
-    // The helmsman gave the wheel back (a sail in sight, a shot): the run is off, and «В порт» shows again.
-    if (state.self?.dockedAt || !p || !own || (!state.autosail && performance.now() - homeRunAt > 2500)) homeRun = null;
+    // In the harbour's reach she puts in (the helmsman's «arrived» comes at the open water off the quay); the helmsman
+    // gave the wheel back short of it (a sail in sight, a shot): the run is off, and «В порт» shows again.
+    if (state.self?.dockedAt || !p || !own) homeRun = null;
     else if (dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS) {
       homeRun = null;
       requestDock(false);
-    }
+    } else if (!state.autosail && performance.now() - homeRunAt > 2500) homeRun = null;
   }
   if (!pendingDock) return;
   const own = state.ownDisplay;

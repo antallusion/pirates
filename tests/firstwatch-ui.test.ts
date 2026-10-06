@@ -33,17 +33,19 @@ test('the finger points at the one button each step wants (docs/23 items 79–80
   assert.deepEqual(pointerTargets({ ...base, stage: null }), [], 'the watch over: no finger');
 });
 
-test('the finger stands beside a right-hand button pointing at it, above others, below one in the top band', () => {
+test('the finger stands left of a button pointing right; at the left edge above it, or below one in the top band', () => {
   const W = 812, H = 375;
   const fire = pointerSpot({ left: 718, top: 280, width: 84, height: 84 }, 44, W, H);
   assert.equal(fire.dir, 'right');
   assert.ok(fire.x + 44 <= 718 && fire.y >= 4 && fire.y + 44 <= H - 4, 'left of «Огонь», on the screen');
+  const choice = pointerSpot({ left: 330, top: 200, width: 226, height: 52 }, 44, W, H);
+  assert.equal(choice.dir, 'right', 'a choice in a grid: from its side, not over the one above');
   const stick = pointerSpot({ left: 10, top: 240, width: 126, height: 126 }, 44, W, H);
   assert.equal(stick.dir, 'down');
   assert.ok(stick.y + 44 <= 240);
-  const top = pointerSpot({ left: 300, top: 6, width: 120, height: 30 }, 44, W, H);
-  assert.equal(top.dir, 'up');
-  assert.ok(top.y >= 36);
+  const corner = pointerSpot({ left: 8, top: 6, width: 40, height: 40 }, 44, W, H);
+  assert.equal(corner.dir, 'up');
+  assert.ok(corner.y >= 46);
 });
 
 test('«В порт» far from any harbour in the First Watch: the helmsman sails her to the nearest (docs/23 item 79)', () => {
