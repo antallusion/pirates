@@ -62,7 +62,7 @@
 .w-tab .k-badge { top: 2px; right: 8px; }
 /* The rail's gold one is an order, not a place («В море»): it stands apart at the bottom. */
 .w-tab--go { height: auto; min-height: 58px; margin-top: auto; color: var(--k-gold); border-color: var(--k-brass); background: linear-gradient(180deg, #2a2521, #17140f); text-shadow: 0 0 8px rgba(224, 184, 98, 0.35); }
-.w-tab--go .w-tab-ico { filter: none; }
+.w-tab--go .w-tab-ico { filter: none; width: 26px; height: 26px; }
 .skinned .w-tab--go { border-style: solid; border-color: transparent; border-width: 4px 6px; border-image: var(--ui-button) 40 fill / 4px 6px stretch; background: none; }
 @media (max-height: 520px), (max-width: 699px) {
   .w-rail { width: 88px; padding: var(--k-sp-1) 2px; gap: 2px; }
