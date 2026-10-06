@@ -142,9 +142,9 @@ test('every master of an NPC ship reads in Russian on the deck battle\'s plate (
   }
 });
 
-test('a boarding\'s end keeps to a band, not the field\'s middle (popup budget)', () => {
-  assert.ok(css.includes('.tb-banner:not(:has(.tb-landclose)) { top: auto; bottom: 8px; transform: translateX(-50%); max-height: calc(30vh - 16px);'));
-  assert.ok(css.includes('.tb-banner:not(:has(.tb-landclose)) { top: 4px; bottom: auto;'));
+test('a boarding\'s end keeps to a band, not the field\'s middle (popup budget; docs/23 item 63: its three rows in one line)', () => {
+  assert.ok(css.includes('.tb-banner.tb-end.sea { top: auto; bottom: 8px; transform: translateX(-50%); width: min(820px, calc(100% - 24px)); max-height: calc(30vh - 16px);'));
+  assert.ok(css.includes('.tb-banner.tb-end.sea { top: 4px; bottom: auto; max-height: 64px;'));
 });
 
 test('a Wanted toast reads whole in Russian: the level\'s name and the crime («Suspect (attacked …)» came through)', async () => {
