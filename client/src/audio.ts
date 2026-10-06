@@ -317,22 +317,38 @@ export class AudioEngine {
     o.stop(at + dur + 0.05);
   }
 
+  /** A gun (docs/23 item 85: juicier, no louder). Before, nine tenths of it was a 32–70 Hz thump a phone's speaker
+   *  cannot play: now the charge cracks, the muzzle barks in the middle of the range a small speaker sounds, the boom
+   *  rolls and the water throws back a low echo; each gun a little off the next in pitch, so eight guns of a broadside
+   *  are a ragged roll and not one sound eight times. The parts are quieter than the old two, so the peak and the
+   *  loudest tenth of a second stay where they were (tools/mobile/sound.mjs, docs/23a). */
   cannon(x: number, y: number, delay: number, weight = 1): void {
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y);
     const v = this.voice(gain * 0.55 * weight, pan, delay);
     if (!v) return;
-    this.tone(v.out, v.at, 70, 0.6, 1, 'sine', 32);
-    this.noiseBurst(v.out, v.at, 0.9, 'lowpass', 900 - gain * 300, 0.7, 0.9);
-    this.noiseBurst(v.out, v.at, 0.12, 'bandpass', 2400, 0.8, 0.4);
+    const j = 0.9 + Math.random() * 0.2;
+    this.noiseBurst(v.out, v.at, 0.035, 'highpass', 1700 * j, 0.7, 0.5); // the charge's crack
+    this.tone(v.out, v.at, 78 * j, 0.45, 0.5, 'sine', 33); // the thump
+    this.noiseBurst(v.out, v.at + 0.003, 0.26, 'bandpass', 360 * j, 1.1, 2.2); // the muzzle's bark (a phone hears it)
+    this.noiseBurst(v.out, v.at + 0.006, 0.8, 'lowpass', (900 - gain * 300) * j, 0.7, 0.9); // the boom
+    this.noiseBurst(v.out, v.at + 0.09, 1.1, 'bandpass', 230 * j, 0.8, 0.16); // the echo off the water
   }
 
+  /** A ball home (docs/23 item 85): the strike's click, the timbers' crunch with splinters flying, the hull's knock — a
+   *  crushing one breaks a beam under it. Its peak no higher than before. */
   hit(x: number, y: number, crit: boolean): void {
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y);
     const v = this.voice(gain * 0.5, pan);
     if (!v) return;
-    this.noiseBurst(v.out, v.at, 0.25, 'bandpass', 1400, 2.5, 1);
-    this.tone(v.out, v.at, 180, 0.18, 0.4, 'triangle', 90);
-    if (crit) this.noiseBurst(v.out, v.at + 0.05, 0.5, 'bandpass', 700, 1.5, 0.6);
+    const j = 0.9 + Math.random() * 0.2;
+    this.noiseBurst(v.out, v.at, 0.014, 'highpass', 2600, 0.7, 0.2); // the strike
+    this.noiseBurst(v.out, v.at, 0.2, 'bandpass', 1250 * j, 2.4, 1.05); // the timbers
+    this.tone(v.out, v.at, 165 * j, 0.15, 0.2, 'triangle', 78); // the hull's knock
+    for (let i = 0; i < 3; i++) this.noiseBurst(v.out, v.at + 0.018 + i * 0.026 + Math.random() * 0.012, 0.045, 'bandpass', 1700 + Math.random() * 1700, 3, 0.45); // splinters
+    if (crit) {
+      this.noiseBurst(v.out, v.at + 0.05, 0.5, 'bandpass', 700, 1.5, 0.5);
+      this.tone(v.out, v.at + 0.04, 120 * j, 0.35, 0.18, 'sawtooth', 55); // a beam gives
+    }
   }
 
   splash(x: number, y: number, big: boolean): void {
