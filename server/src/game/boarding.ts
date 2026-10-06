@@ -64,8 +64,8 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   const blocked = damageBlocked(game, a, b);
   if (blocked && blocked !== 'friendly') return blocked;
   if (blocked === 'friendly') return 'That ship sails with you';
-  // The ladder (canon D12): a lone junior among captains cannot board a senior; nor can one far below at sea.
-  if (!ladderBetween(game, a, b).board) return 'She is above your level: your boarders would not reach her deck';
+  // The ladder (canon D12) no longer bars the grapples (docs/23 item 48): a junior may board a senior — the gap still
+  // weighs on her boarders in the battle, and a captain is shown her honest chance first (boardodds.ts).
   const anywhere = a.hasFlag('boarding_anywhere');
   const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
   // Chain and Grapple: tangled rigging is half-way to a grapple already.
@@ -75,7 +75,8 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   const held = b.effects.some((e) => e.id === 'kraken_hold' && e.source === a.id) || tangled;
   // Boarding at once (docs/17 H1): any ship within the grapples' reach, whole or wrecked — the guns only thin her
   // stacks before the battle. Only a ship tearing past faster than the lines can hold slips them.
-  if (!anywhere && !held) {
+  // A captain's ship matches the mark's way herself as the grapples fly (docs/23 item 54): no speed to judge on a phone.
+  if (!anywhere && !held && !a.isPlayer) {
     const relSpeed = Math.abs(a.state.speed - b.state.speed);
     const rammed = a.ramTarget === b.id && a.ramUntil > game.now; // Hull to Hull
     if (relSpeed > BOARD_REL_SPEED * (1 + tx(a.stats, 'matchSpeed')) && !b.surrendered && a.tether?.target !== b.id && !rammed) return 'Match her speed before boarding';

@@ -5,7 +5,7 @@ import { angleDiff, approach, clamp, DEG, headingVec, wrapAngle } from '../math.
 import { SHIP_CLASSES } from '../data/ships.ts';
 import type { Rig, ShipClassId } from '../data/ships.ts';
 import type { WindSample } from './wind.ts';
-import { SPEED_SCALE, TURN_SCALE, WIND_PUSH } from '../constants.ts';
+import { SPEED_SCALE, TURN_SCALE, WIND_HEAD, WIND_PUSH } from '../constants.ts';
 
 export interface SailState {
   x: number;
@@ -107,7 +107,9 @@ export function polarEfficiency(rig: Rig, relDeg: number, noGoDeg: number, weath
 }
 
 /** The least share of her way a ship makes head to wind; the floor rises to SAIL_BEAM on a beam reach. */
-export const SAIL_BASE = 0.5;
+// docs/23 item 40: a chase on a phone must not turn into beating to windward — head to wind she still makes 0.68 of
+// her beam-reach floor's way (was 0.5).
+export const SAIL_BASE = 0.68;
 export const SAIL_BEAM = 0.8;
 
 /** The floor under the polar: no heading is dead (owner, 2026-09-28: "without a following wind it crawls"). Abaft
@@ -120,7 +122,9 @@ export function sailFloor(relDeg: number): number {
 /** A following wind drives a ship on, a head wind holds her back (owner, 2026-09-28): 1 + WIND_PUSH at a run before a
  * full breeze, 1 − WIND_PUSH head to it, nothing on the beam. `relDeg` is from windward (0 = head to wind). */
 export function windPush(relDeg: number, strength: number): number {
-  return 1 - WIND_PUSH * Math.min(1.15, strength) * Math.cos(relDeg * DEG);
+  const c = Math.cos(relDeg * DEG);
+  // A head wind holds her back less than a following one drives her on (docs/23 item 40).
+  return 1 - (c > 0 ? WIND_HEAD : WIND_PUSH) * Math.min(1.15, strength) * c;
 }
 
 /** Angle between heading and the direction the wind comes FROM, in degrees 0..180. */

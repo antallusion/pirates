@@ -57,7 +57,7 @@ export function duelSea(): Game {
 }
 
 /** Open water in the Black Coast, clear of land for a mile around. */
-function openWater(game: Game, k: number): { x: number; y: number } {
+export function openWater(game: Game, k: number): { x: number; y: number } {
   for (let i = 0; i < 400; i++) {
     const x = 12_000 + ((k * 7919 + i * 104_729) % 20_000);
     const y = 60_000 + ((k * 6007 + i * 130_363) % 20_000);

@@ -379,6 +379,11 @@ export class PlayerSession {
   name = '';
   /** Would rather fight boardings round by round than turn by turn (docs/16 P4). */
   classicBoarding = false;
+  /** The captain's gunnery (docs/23 items 35, 42, 46): her gun captains fire as the mark bears; a mark two levels down
+   *  is settled by itself; the expert's hand keeps the held broadsides and the chasers to herself. */
+  autoFire = false;
+  autoWeak = false;
+  expert = false;
   token = '';
   profile: Profile | null = null;
   chartedCache = { region: '', size: -1, full: false };

@@ -2,7 +2,7 @@
 // simulation requires bumping PROTOCOL_VERSION so stale clients are rejected.
 
 export const GAME_NAME = 'GRAVETIDE';
-export const PROTOCOL_VERSION = 28;
+export const PROTOCOL_VERSION = 29;
 
 export const TICK_RATE = 20; // server simulation Hz
 export const TICK_DT = 1 / TICK_RATE;
@@ -23,6 +23,8 @@ export const SPEED_SCALE = 3;
 export const TURN_SCALE = 1.8;
 // A following wind drives her on, a head wind holds her back: up to this share of her way in a full breeze.
 export const WIND_PUSH = 0.45;
+// …and a head wind holds her back by up to this share (docs/23 item 40: softer, so a chase is not a beat to windward).
+export const WIND_HEAD = 0.22;
 
 export const INTEREST_RADIUS = 2_200; // dynamic entities replicated within this radius
 export const SNAP_NEAR = 700; // closer: every snapshot (10 Hz)

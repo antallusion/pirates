@@ -711,7 +711,7 @@ export class ClientState {
       rig: st.rig, maxSpeed: st.maxSpeed, accel: st.accel, turnRate: st.turnRate, noGoDeg: st.noGoDeg, sailChangeRate: st.sailChangeRate,
       currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
       loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: this.night() ? 1 + st.nightSpeed : 1,
-      personalWind: false, weatherly: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'weatherly', sweeps: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'sweeps',
+      personalWind: st.flags.has('personal_wind'), weatherly: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'weatherly', sweeps: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'sweeps',
       talent: sailTalents(st),
     };
     // A racer sails as the regatta lends (docs/12 P10 #5), as the server does.

@@ -78,8 +78,19 @@ export type ClientMsg =
   | { t: 'hello'; v: number; token?: string; name?: string }
   | { t: 'create_captain'; captain: CaptainId; shipName: string; tutorial?: boolean } // tutorial: the First Watch (docs/07 §13)
   | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' }
-  | { t: 'input'; seq: number; rudder: number; sail: number }
+  /** `helm`: the captain's own hand on the helm (the stick held, a key down) — under «Атаковать» it takes the wheel. */
+  | { t: 'input'; seq: number; rudder: number; sail: number; helm?: boolean }
   | { t: 'fire'; side: Side; dist: number; x?: number; y?: number } // x, y: aim point (Improved Carriages)
+  /** «Атаковать» (docs/23 item 33): the ship pursues `target` — `guns` holds her best range broadside-on, `board` runs in
+   *  for the grapples; `stop` gives the wheel back. */
+  | { t: 'attack'; target?: number; mode?: PursuitMode; stop?: boolean }
+  /** «Огонь» (docs/23 item 35): a broadside out of turn, laid tighter, from the side that bears best. */
+  | { t: 'volley' }
+  /** The captain's gunnery settings (docs/23 items 35, 42, 46): auto-fire, auto-battle against the weak, the expert's
+   *  hand (held broadsides, the fire order and the chasers by hand). */
+  | { t: 'gunnery'; auto?: boolean; weak?: boolean; expert?: boolean }
+  /** The chance a boarding of `id` would be won (docs/23 item 49), for the target line. */
+  | { t: 'board_odds'; id: number }
   /** The broadside's order is being held (dynamic combat): the charge runs from now until the fire. */
   | { t: 'aim'; side: Side }
   /** A hard turn with every hand on the braces: speed, a sharp helm and a moment of evasion. */
@@ -90,7 +101,8 @@ export type ClientMsg =
   | { t: 'mount'; x: number; y: number }
   | { t: 'ammo'; ammo: AmmoId }
   | { t: 'ability'; id: string; x?: number; y?: number }
-  | { t: 'board'; target: number; aggression: Aggression }
+  /** `risk`: the captain has seen the odds and boards all the same («Рискнуть», docs/23 item 49). */
+  | { t: 'board'; target: number; aggression: Aggression; risk?: boolean }
   | { t: 'loot_take'; take: Cargo; fate: 'sink' | 'release' | 'ransom' | 'prize' | 'trophy'; recruit?: number }
   /** A struck ship's surrender taken on the captain's terms (docs/16 #3): released for her ransom, her hold opened, or
    *  taken as a prize for the court — or as a trophy to keep (docs/16 #5). */
@@ -1274,6 +1286,33 @@ export interface SurrenderOffer {
   until: number;
 }
 
+/** «Атаковать» (docs/23 item 33): fight her with the guns, or run in for the grapples. */
+export type PursuitMode = 'guns' | 'board';
+/** Why the helmsman gave the wheel back. */
+export type PursuitStop = 'off' | 'manual' | 'board' | 'struck' | 'sunk' | 'lost' | 'slipped';
+
+/** The window before a risky boarding (docs/23 items 49–52): her chance by the battle engine played out `sims` times,
+ *  what a loss costs (as Game.boardingLost takes it) and what a win over a senior brings. */
+export interface BoardRisk {
+  target: number;
+  name: string;
+  /** Share of the simulated battles won, 0..1. */
+  chance: number;
+  sims: number;
+  myLevel: number;
+  theirLevel: number;
+  /** Silver worth of her hold, all of it the victors' on a loss. */
+  cargo: number;
+  /** The share of her chest a loss costs. */
+  silver: number;
+  /** Men she would lose, on average over the battles lost. */
+  men: number;
+  /** Experience for the prize, × (the ladder's xpForGap: more for a senior). */
+  xpMul: number;
+  /** The window shows (below the threshold of chance, or a mark two levels up). */
+  risky: boolean;
+}
+
 export interface BoardingResult {
   targetName: string;
   targetClass: ShipClassId;
@@ -1601,6 +1640,12 @@ export type ServerMsg =
   | { t: 'signal'; from: string; kind: SignalKind; x: number; y: number }
   /** docs/16 #36: the helmsman has the wheel for a mark, or has given it back and why. */
   | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop }
+  /** «Атаковать» (docs/23 item 33): the helmsman pursues her mark, or has given the wheel back and why. */
+  | { t: 'pursuit'; on: boolean; target?: number; mode?: PursuitMode; why?: PursuitStop }
+  /** The odds of a boarding asked before the grapples fly (docs/23 item 49): the window «Скорее всего, вы проиграете». */
+  | { t: 'board_risk'; risk: BoardRisk }
+  /** The chance for the target line (docs/23 item 49). */
+  | { t: 'board_odds'; id: number; chance: number; risky: boolean }
   /** docs/16 #32: the sea's goals of the week. */
   | { t: 'wgoals'; list: WorldGoalView[] }
   | { t: 'barter'; view: BarterView | null }
