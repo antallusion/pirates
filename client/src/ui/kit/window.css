@@ -216,7 +216,7 @@
 @media (max-height: 520px), (max-width: 699px) {
   .cap-body { padding: var(--k-sp-2); }
   .cap-body.cap-gear { padding-top: 4px; padding-bottom: 4px; }
-  .cap-gear .doll { --ds: 44px; gap: 4px 6px; width: 250px; max-width: none; grid-template-columns: var(--ds) minmax(0, 1fr) var(--ds); }
+  .cap-gear .gear-body > .doll { --ds: 44px; gap: 4px 6px; width: 250px; max-width: none; grid-template-columns: var(--ds) minmax(0, 1fr) var(--ds); }
   .cap-gear .doll-col { gap: 4px; justify-content: flex-start; }
   .cap-gear .doll-face { min-height: 0; height: calc(var(--ds) * 5 + 16px); }
   .cap-gear .gear-side { grid-template-columns: minmax(0, 1fr); gap: 6px; }
