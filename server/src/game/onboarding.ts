@@ -190,6 +190,18 @@ export const STAGES: Stage[] = [
         b.struck = true;
         b.spared.set(ship.id, game.now + 900);
       }
+      watchOf(s).raiderAt = game.now;
+    },
+    keep: (game, s, ship) => {
+      // …and once her reckoning is settled she is gone into the haze: a hostile sail beside her stopped the helmsman
+      // taking her home («В порт» by autosail, QA 2026-10-07: three minutes and not home).
+      const id = raiders.get(s);
+      const r = id !== undefined ? game.ships.get(id) : undefined;
+      if (!r || !r.alive || r.prize || s.pendingBoarding) return;
+      if (Math.hypot(r.state.x - ship.state.x, r.state.y - ship.state.y) > 400 || game.now - watchOf(s).raiderAt > 12) {
+        game.removeShip(r.id);
+        raiders.delete(s);
+      }
     },
   },
 ];

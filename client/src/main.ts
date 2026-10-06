@@ -2065,6 +2065,7 @@ function runAct(a: Act): void {
     case 'homeport':
       if (!homeport) return;
       homeRun = homeport.id;
+      homeRunAt = performance.now();
       return void net.send({ t: 'autosail', x: homeport.x, y: homeport.y });
     case 'land':
       return sendLand();
@@ -2487,11 +2488,12 @@ let homeport: ClientState['ports'][number] | null = null;
 /** When she last cast off (the page's clock), and how long «В порт» keeps quiet after it (ms). */
 let castOffAt = -1e9, wasDocked = false;
 const CAST_OFF_QUIET = 30_000;
-let homeRun: string | null = null;
+let homeRun: string | null = null, homeRunAt = 0;
 function stepPendingDock(): void {
   if (homeRun) {
     const own = state.ownDisplay, p = state.ports.find((x) => x.id === homeRun);
-    if (state.self?.dockedAt || !p || !own) homeRun = null;
+    // The helmsman gave the wheel back (a sail in sight, a shot): the run is off, and «В порт» shows again.
+    if (state.self?.dockedAt || !p || !own || (!state.autosail && performance.now() - homeRunAt > 2500)) homeRun = null;
     else if (dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS) {
       homeRun = null;
       requestDock(false);
