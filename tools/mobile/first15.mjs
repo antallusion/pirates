@@ -41,11 +41,15 @@ const spot = (sel) => p.evaluate((q) => {
   }
   return null;
 }, sel);
+/** The first selector of a list (in its order, not the page's) that has a visible, uncovered match, tapped. */
 async function tapSel(sel, kind) {
-  const s = await spot(sel);
-  if (!s) return false;
-  await tapAt(s.x, s.y, kind);
-  return true;
+  for (const one of sel.split(/,\s*(?![^[]*\])/)) {
+    const s = await spot(one);
+    if (!s) continue;
+    await tapAt(s.x, s.y, kind);
+    return true;
+  }
+  return false;
 }
 /** A drag of the helm stick toward a course (radians, north up), held `ms`: one touch. */
 async function stick(course, ms = 1600) {

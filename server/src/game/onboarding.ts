@@ -173,6 +173,20 @@ export const STAGES: Stage[] = [
     id: 'port',
     reveal: ['cargo', 'captain', 'map'],
     done: (_g, _s, ship) => !!ship.docked,
+    begin: (game, s, ship) => {
+      // The lesson's raider, ransomed or let go, sails off and leaves her be: she no longer struck her colours to the
+      // pupil on the way home (a second card of choices over the last step, QA 2026-10-07).
+      const id = raiders.get(s);
+      const b = id !== undefined ? game.npcs.get(id) : undefined;
+      if (b) {
+        b.practice = undefined;
+        b.practiceFloor = undefined;
+        b.chase = null;
+        b.target = null;
+        b.struck = true;
+        b.spared.set(ship.id, game.now + 900);
+      }
+    },
   },
 ];
 
