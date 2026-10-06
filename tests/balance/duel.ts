@@ -7,7 +7,6 @@ import { AUTO_ARC_DEG } from '../../shared/src/data/gunnery.ts';
 import type { NpcSkill } from '../../shared/src/data/shiplevel.ts';
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
 import { buildNavGrid, isLand } from '../../shared/src/world/worldgen.ts';
-import { SPEED_SCALE } from '../../shared/src/constants.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import { engage, newBrain } from '../../server/src/game/npc.ts';
 import type { NpcBrain } from '../../server/src/game/npc.ts';
@@ -41,8 +40,9 @@ export interface DuelResult {
 }
 
 /** A sea emptied for duels: every NPC gone, nothing more to put out. */
-/** A fight's time: fifteen minutes at the old pace of six, as long again as the sea is slower (the same sea-miles). */
-export const FIGHT_SEC = Math.round((900 * 6) / SPEED_SCALE);
+/** A fight's time. It was fifteen minutes at the old pace of six (30 min at SPEED_SCALE 3); the quick sea fight of
+ *  docs/23 (item 45) sinks an equal in 30 s or less, so a sim that has not ended in three minutes is a draw. */
+export const FIGHT_SEC = 180;
 
 export function duelSea(): Game {
   const { game } = makeGame();

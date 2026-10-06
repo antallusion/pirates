@@ -3,6 +3,7 @@
 
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
 import { duelSea, squad, winRate } from './duel.ts';
+import { LEVEL_HULL, captainRun, pct as pctOf, seaDuel } from './seafight.ts';
 import { OUTPOSTS, OUTPOST_KINDS, OUTPOST_MAX_LEVEL, outpostCap, outpostRate, outpostUpgrade } from '../../shared/src/data/estate.ts';
 import { GOODS } from '../../shared/src/data/goods.ts';
 import type { GoodId } from '../../shared/src/data/goods.ts';
@@ -29,6 +30,24 @@ for (const [ca, la, cb, lb, cc, lc] of rows) {
   const p1 = winRate(game, { cls: ca, level: la, craft: 'perfect' }, { cls: cb, level: lb, craft: 'bot' }, N);
   const p2 = lc - la >= 2 ? pct(winRate(game, { cls: ca, level: la, craft: 'perfect' }, { cls: cc, level: lc, craft: 'bot' }, N).wins) : '    —';
   console.log(`${`${ca} ${la}`.padEnd(10)}|      ${pct(ea.wins)} ${pct(ep.wins)} |    ${pct(a1.wins)} ${pct(p1.wins)} |    ${p2}`);
+}
+// The sea fight's clock (docs/23 item 47): broadsides only to the bottom, and «Атаковать» to the grapples.
+console.log(`
+The quick sea fight, ${Math.min(N, 30)} a cell (seconds: median / 90th percentile)`);
+for (const L of [1, 3, 5, 8]) {
+  const f: number[] = [], g: number[] = [];
+  let balls = 0, hits = 0;
+  for (let k = 0; k < Math.min(N, 30); k++) {
+    f.push(seaDuel(game, LEVEL_HULL[L], L, 500 + k).fight);
+    g.push(captainRun(game, LEVEL_HULL[L], L, 700 + k, 'board', 40).sec);
+    if (k < 6) {
+      const r = captainRun(game, LEVEL_HULL[L], L, 900 + k, 'guns', 60);
+      balls += r.balls;
+      hits += r.hits;
+    }
+  }
+  const a = pctOf(f), b = pctOf(g);
+  console.log(`⚓${L} ${LEVEL_HULL[L].padEnd(8)}: broadsides ${a.med} / ${a.p90} s · «Атаковать» → grapples ${b.med} / ${b.p90} s · the captain's balls ${Math.round((hits / Math.max(1, balls)) * 100)}%`);
 }
 const m = winRate(game, { cls: 'fluyt', level: 5, craft: 'perfect' }, { cls: 'brig', level: 5, craft: 'bot' }, N);
 console.log(`merchant fluyt 5 (perfect) against a brig 5: ${pct(m.wins)}`);

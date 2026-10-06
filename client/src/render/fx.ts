@@ -278,10 +278,12 @@ export class Fx {
         else {
           // The balls of one broadside land together: their damage reads as one rising number, not a pile.
           const near = this.particles.find((p) => p.kind === 'text' && p.sum !== undefined && p.t < 0.35 && p.color === color && Math.hypot(p.x - e.x, p.y - (e.y - 6)) < 40);
+          // docs/23 item 37: fewer balls, each one felt — the broadside's number is big, and grows as its balls land.
           if (near) {
             near.sum! += e.dmg;
             near.text = String(near.sum);
-          } else this.add({ kind: 'text', x: e.x, y: e.y - 6, vy: -9, life: 1.3, size: 13, color, text: String(e.dmg), sum: e.dmg });
+            near.size = Math.min(30, (near.size ?? 20) + 1.5);
+          } else this.add({ kind: 'text', x: e.x, y: e.y - 6, vy: -9, life: 1.6, size: 20, color, text: String(e.dmg), sum: e.dmg });
         }
         if (e.ship === ownId) this.shake = Math.max(this.shake, 0.35);
         break;

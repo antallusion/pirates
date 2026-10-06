@@ -2,6 +2,7 @@
 // minimap, prompts, toasts, banners and chat.
 
 import { drawIslesMini, isleFill, wireMiniTip } from './islemap.ts'; // docs/18 III
+import { EN as SEAF_EN, RU as SEAF_RU } from '../lang/ui/seafight.ts';
 import { drawLfgFlag, drawSignalFlag, liveSignals, signalBar, worldGoalPlate } from './social.ts';
 import type { SignalKind } from '../../../shared/src/data/social.ts';
 import { regattaPanel } from './regatta.ts';
@@ -61,6 +62,9 @@ import { armyGlance } from './army.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 
 const L = dict(EN, RU);
+const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
+/** The battles the server plays out for a chance (server/src/game/boardodds.ts ODDS_SIMS). */
+const ODDS_SIMS_SHOWN = 200;
 const RL = dict(REN, RRU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
@@ -485,13 +489,16 @@ export class Hud {
     const crest = (self.talents.brg_storm_gunner ?? 0) > 0 && state.wind[1] >= 0.9 && Math.sin((now * Math.PI * 2) / 7 + (state.entityId ?? 0)) > 0.75;
     const mode = `<div class="ab-mode">${keyChip('fireMode')}${esc(L('fireMode'))}: ${esc(L(self.rollingFire ? 'rolling' : 'broadside'))}${crest ? ` · <span style="color:var(--gold)">${esc(L('crest'))}</span>` : ''}</div>`;
     const combat = $('hud-combat');
-    const key = [lang(), document.body.classList.contains('touch'), you.ammoSel, shots.map((a) => `${a}${you.ammo[a]}`).join(','), gauges.map((g) => g.id).join(','),
+    const key = [lang(), this.bestAmmo, document.body.classList.contains('touch'), you.ammoSel, shots.map((a) => `${a}${you.ammo[a]}`).join(','), gauges.map((g) => g.id).join(','),
       abil.map((x) => `${x.a.id}${x.dim ? 1 : 0}${x.locked ? 1 : 0}`).join(','), tals.map((x) => x.t.id).join(','), heat, mode, this.artEpoch].join('|');
     if (key !== this.lastCombatKey) {
       this.lastCombatKey = key;
       const ammo = shots.map((a) => slot({
-        data: `data-ammo="${a}"`, cls: you.ammoSel === a ? 'sel' : '', art: `ammo_${a}`, glyph: AMMO[a].name.slice(0, 1), name: AMMO[a].name,
-        key: a === 'cursed' ? 'U' : AMMO_IDS.indexOf(a) < KEYED_AMMO ? String(AMMO_IDS.indexOf(a) + 1) : '', qty: String(you.ammo[a]), title: `${AMMO[a].name} — ${AMMO[a].description}`,
+        // docs/23 item 39: each shot by its role in a word (round the hull, chain the sails, grape the men), and the best
+        // one for the mark now lit.
+        data: `data-ammo="${a}"`, cls: `${you.ammoSel === a ? 'sel' : ''}${this.bestAmmo === a ? ' best' : ''}`, art: `ammo_${a}`, glyph: AMMO[a].name.slice(0, 1), name: AMMO[a].name,
+        key: a === 'cursed' ? 'U' : AMMO_IDS.indexOf(a) < KEYED_AMMO ? String(AMMO_IDS.indexOf(a) + 1) : '', qty: String(you.ammo[a]),
+        title: `${AMMO[a].name}${a === 'round' || a === 'chain' || a === 'grape' ? ` (${LSF(`ammo.${a}`)})` : ''}${this.bestAmmo === a ? ` · ${LSF('ammo.best')}` : ''} — ${AMMO[a].description}`,
       })).join('');
       const reload = gauges.map((g) => `<div class="rl ${g.id === 'port' ? 'flip' : ''}" data-g="${g.id}">${icon(g.art, '', 'ico-rl')}<span>${g.key ? keyChip(g.key) : ''}${esc(g.label)}</span><div class="fbar"><i></i></div></div>`).join('');
       const abilities = abil.map((x) => slot({
@@ -1501,6 +1508,9 @@ export class Hud {
    * The target frame (canon D12), as WoW's: her level in the colour of the danger, her name, class and role, how she
    * holds (hull, crew, sails), what ails her, how far she lies, and in a word what a fight with her would be.
    */
+  /** docs/23 item 39: the best shot for her mark now (main.ts reckons it with suggestAmmo), lit on the bar. */
+  bestAmmo: 'round' | 'chain' | 'grape' | null = null;
+
   drawTarget(state: ClientState, id: number | null): void {
     const el = $('hud-target');
     const s = id !== null ? state.ships.get(id) : undefined;
@@ -1527,7 +1537,10 @@ export class Hud {
     ].filter(Boolean);
     const ap = state.appraisal?.id === id ? state.appraisal : null;
     const struck = !info.isPlayer && info.npcRole === 'merchant' && (c.flags & SF.SURRENDERED) !== 0 && d < 400;
-    const key = `${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${info.title ?? ''}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}`;
+    // Her boarding chance (docs/23 item 49): the battle played out on the server, asked every few seconds.
+    const od = id !== null ? state.boardOdds.get(id) : undefined;
+    const odds = od && performance.now() / 1000 - od.at < 15 ? od : null;
+    const key = `${odds ? `${odds.chance}|${odds.risky}` : ''}|${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${info.title ?? ''}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}`;
     if (key === this.lastTargetKey) return;
     this.lastTargetKey = key;
     el.classList.remove('hidden');
@@ -1557,7 +1570,7 @@ export class Hud {
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}
       ${isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L('tg.zboss'))}</div>` : info.crewMax ? armyGlance(Math.round(c.crew * info.crewMax), info.units ?? []) : ''}
       ${ap && !isZoneBossClass(info.classId) ? `<div class="tg-glass">${esc(L(ap.exact ? 'tg.glassExact' : 'tg.glass', { v: ap.value.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB'), fill: Math.round(ap.fill * 100), esc: ap.escorts, crew: ap.crew }))}${ap.dest ? ` · ${esc(L('tg.glassDest', { port: placeName(ap.dest) }))}` : ''}</div>` : ''}
-      <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}${struck ? `<button class="btn btn-small tg-tribute" data-tribute="${id}">${esc(L('tg.tribute'))}</button>` : ''}</div>`;
+      <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}${odds ? `<span class="tg-odds tg-odds-${odds.risky ? 'bad' : odds.chance < 0.55 ? 'warn' : 'good'}" title="${esc(LSF('tg.oddsTip', { n: ODDS_SIMS_SHOWN }))}">${esc(LSF('tg.odds', { p: Math.round(odds.chance * 100) }))}</span>` : ''}${fx.length ? `<span class="tg-fx">${esc(fx.join(' · '))}</span>` : ''}${struck ? `<button class="btn btn-small tg-tribute" data-tribute="${id}">${esc(L('tg.tribute'))}</button>` : ''}</div>`;
     el.querySelector<HTMLElement>('[data-tribute]')?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.onTribute(id!);

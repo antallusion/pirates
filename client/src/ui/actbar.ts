@@ -13,14 +13,16 @@ import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/actbar.ts';
 import { EN as FEN, RU as FRU } from '../lang/ui/seafinds.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/roamers.ts';
+import { EN as SEN, RU as SRU } from '../lang/ui/seafight.ts';
 import type { Action } from '../settings.ts';
 import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 const LF = dict(FEN, FRU);
 const LR = dict(REN, RRU);
+const LS = dict(SEN, SRU);
 
-export type ActId = 'axes' | 'harbour' | 'board' | 'dock' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair';
+export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -48,6 +50,8 @@ export interface ActFacts {
   roam?: { id: number; icon: string; name: string; word: string; lv: number; fight?: 'other' | 'mate'; offer?: 'join' | 'flee'; joinN?: number } | null;
   looks?: { kind: LookKind; name: string }[];
   repair?: { repairing: boolean; combat: boolean; hurt: boolean; short?: boolean } | null;
+  /** docs/23 item 33: a mark to attack, or the pursuit under way (and how). */
+  attack?: { name: string; pursuing: boolean; mode: 'guns' | 'board' } | null;
 }
 
 export interface Act {
@@ -81,6 +85,16 @@ export function buildActs(f: ActFacts): Act[] {
     return out;
   }
   if (f.board) out.push({ id: 'board', icon: 'tab_board', label: L('a.board'), sub: f.board.name, title: L('a.boardTitle', { name: f.board.name }), key: 'board' });
+  // «Атаковать» (docs/23 item 33): one tap and the ship does the rest; under way, the other way to fight her and the
+  // helm back.
+  const at = f.attack;
+  if (at && !at.pursuing) out.push({ id: 'attack', icon: 'ab_mark_target', label: LS('a.attack'), sub: at.name, title: LS('a.attackTitle', { name: at.name }) });
+  if (at && at.pursuing) {
+    out.push(at.mode === 'board'
+      ? { id: 'attack_mode', icon: 'fire', label: LS('a.guns'), sub: at.name, title: LS('a.gunsTitle') }
+      : { id: 'attack_mode', icon: 'ab_red_hook_boarding', label: LS('a.close'), sub: at.name, title: LS('a.closeTitle') });
+    out.push({ id: 'attack_stop', icon: 'item_ship_wheel', label: LS('a.stop'), title: LS('a.stopTitle') });
+  }
   if (f.port) out.push({ id: 'dock', icon: 'map_port', label: L('a.dock'), sub: f.port.name, title: `${L('a.dock')}: ${f.port.name}`, key: 'dock' });
   const l = f.landable;
   if (l && !l.blocked) {

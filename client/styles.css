@@ -269,6 +269,11 @@ body.touch #touch { display: block; }
 .tc-fire b, .tc-btn b { position: relative; z-index: 2; text-shadow: 0 1px 3px #000; }
 .tc-fire.has-art b, .tc-btn.has-art b { display: none; }
 #tc-starboard { right: calc(var(--sa-r) + 10px); }
+/* docs/23 items 35, 42: one «Огонь» on a phone (the gun crews fire as the mark bears; this is the volley out of turn);
+   the two broadsides held by hand and the chasers are the expert's. */
+#tc-fire { right: calc(var(--sa-r) + 10px); }
+body:not(.expert-guns) #tc-port, body:not(.expert-guns) #tc-starboard, body:not(.expert-guns) #tc-chasers { display: none; }
+body.expert-guns #tc-fire { display: none; }
 #tc-port { right: calc(var(--sa-r) + 18px + var(--fire)); }
 #tc-chasers { position: absolute; right: calc(var(--sa-r) + 28px + var(--fire)); bottom: calc(var(--sa-b) + 22px + var(--fire)); }
 #tc-mount { position: absolute; right: calc(var(--sa-r) + 20px); bottom: calc(var(--sa-b) + 22px + var(--fire)); }
@@ -4830,3 +4835,35 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 /* No jumps as the numbers run (silver, hull, men, the round): every figure of the HUD, the helm and the battle in
    even-width digits. */
 #hud, #touch, .tb-root { font-variant-numeric: tabular-nums; }
+
+/* The window before a risky boarding (docs/23 items 49–52, client/src/ui/riskconfirm.ts): a modal decision, centred
+   like the confirms; its own frame until the UI kit's RiskConfirm takes its place. */
+#risk-confirm { position: fixed; inset: 0; z-index: 72; display: flex; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box; background: rgba(0, 0, 0, 0.55); }
+.risk-panel { width: min(440px, 100%); max-height: calc(100dvh - 24px); overflow-y: auto; scrollbar-width: none; box-sizing: border-box; padding: 14px 18px 14px; zoom: calc(var(--ui-scale) * var(--text-scale)); text-align: center; }
+.risk-title { margin: 0 0 8px; font-family: var(--serif); font-size: 20px; line-height: 1.2; color: var(--bone); text-wrap: balance; }
+.risk-chance { display: flex; align-items: center; gap: 10px; justify-content: center; margin: 0 0 4px; }
+.risk-chance b { font-family: var(--serif); font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; min-width: 2.6em; }
+.risk-bar { flex: 1 1 auto; max-width: 220px; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.risk-bar i { display: block; height: 100%; background: currentColor; }
+.risk-bad { color: #d2473a; }
+.risk-warn { color: #e0b862; }
+.risk-good { color: #7fae6a; }
+.risk-note { font-size: 13px; margin: 0 0 8px; }
+.risk-lose, .risk-win { font-size: 14px; line-height: 1.35; color: var(--bone); margin: 0 0 6px; text-wrap: pretty; }
+.risk-h { color: #d2473a; }
+.risk-win { color: #e0b862; }
+.risk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.risk-row .btn { min-height: 44px; }
+@media (max-height: 420px) {
+  .risk-panel { padding: 10px 14px; }
+  .risk-title { font-size: 18px; margin-bottom: 4px; }
+  .risk-chance b { font-size: 28px; }
+}
+
+/* The target line's boarding chance (docs/23 item 49). */
+.tg-odds { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tg-odds-bad { color: #d2473a; }
+.tg-odds-warn { color: #e0b862; }
+.tg-odds-good { color: #7fae6a; }
+/* docs/23 item 39: the best shot for the mark now. */
+.ab-ammo .best { box-shadow: 0 0 0 2px var(--gold), 0 0 8px rgba(224, 184, 98, 0.6); }
