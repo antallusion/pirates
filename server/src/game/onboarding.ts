@@ -137,8 +137,12 @@ export const STAGES: Stage[] = [
     reveal: ['guns'],
     mark: (p) => p.tutorial.hits,
     done: (_g, s, ship, p) => (watchOf(s).fired && p.tutorial.hits > p.tutorial.base) || p.tutorial.hits > p.tutorial.base + 2 || !!ship.boarding || !!watchOf(s).fought,
-    begin: (_g, s) => {
+    begin: (game, s, ship) => {
       watchOf(s).fired = false;
+      // The helmsman lays her broadside on the raider for the lesson (closing nose-on, no gun of hers bore: a desk's Q
+      // and E answered «not on your beam» and the step waited, QA 2026-10-07); «На абордаж» turns him in again.
+      const run = pursuitOf(ship);
+      if (run && run.mode === 'board') startPursuit(game, s, run.target, 'guns');
     },
     keep: (game, s, ship) => keepRaider(game, s, ship),
   },

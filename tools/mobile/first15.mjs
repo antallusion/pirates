@@ -110,6 +110,9 @@ const pauses = [];
 let last = { stage: undefined, level: undefined, locked: undefined, tac: false, docked: undefined };
 let lastShotStage = '';
 let tick = 0;
+/** Seconds into the battle on screen, and whether «Авто» was asked in it. */
+let battleAt = 0, autoAsked = false;
+const battleFor = (v) => { if (!v.tac) { battleAt = 0; autoAsked = false; return 0; } if (!battleAt) battleAt = Date.now(); return (Date.now() - battleAt) / 1000; };
 while (Date.now() - t0 < MIN * 60_000) {
   await L.sleep(REACT);
   tick++;
@@ -122,12 +125,17 @@ while (Date.now() - t0 < MIN * 60_000) {
   if (!!v.tac !== last.tac) note(v.tac ? 'hex battle' : 'hex battle over');
   if (v.docked !== last.docked && last.docked !== undefined) note(v.docked ? 'in port' : 'at sea');
   last = { stage: v.stage, level: v.level, locked: v.locked, tac: !!v.tac, docked: v.docked };
+  battleFor(v);
   if (`${v.stage}` !== lastShotStage) { lastShotStage = `${v.stage}`; await shot(`stage_${v.stage ?? 'free'}`); }
   let did = '', obvious = true;
   if (v.film || v.prologue) {
     // A film or the prologue: a newcomer waits a moment, then taps it away.
     await tapAt(406, 187, 'film');
     did = 'film';
+  } else if (v.tac && !v.tac.over && battleFor(v) > 45) {
+    // A battle that drags: the newcomer gives it to «Авто» (its button and the wheel's «Авто до конца»: two taps).
+    if (!autoAsked) { await p.evaluate(() => globalThis.gravetide.net.send({ t: 'tac', act: { a: 'auto', on: true } })); taps.battle += 2; autoAsked = true; }
+    did = 'battle-auto';
   } else if (v.tac && !v.tac.over) {
     if (v.tac.mine) {
       // Her turn: a foe she can reach is struck, else she walks toward the nearest foe.
