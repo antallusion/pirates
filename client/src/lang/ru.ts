@@ -9,6 +9,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'watch.done': 'Готово: {name}',
   'watch.over': 'Первая вахта окончена. Море ваше.',
   'watch.step': 'Шаг {n} из {of}',
+  'watch.skipShort': 'Пропустить',
+  'watch.skipAllShort': 'Без обучения',
   'unlock.title': 'В порту открылись татуировки, кости, аукцион и гильдии.',
   // docs/23 п. 79: пять шагов, в каждом одно действие; остальное показывает палец над кнопкой
   'stage.sail': 'Плывите',

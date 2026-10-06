@@ -9,6 +9,10 @@ export interface PointerFacts {
   docked: boolean;
   /** The hex battle is on the screen (its own buttons; the finger keeps out). */
   battle: boolean;
+  /** The helmsman has her (sailing her home, or «Атаковать» under way): the button was pressed, nothing to point at. */
+  helmsman?: boolean;
+  /** «Атаковать» under way, and how: closing for the grapples, or holding off at gun range. */
+  pursuit?: 'board' | 'guns' | null;
 }
 
 /** The buttons a step's finger may point at, in order of preference (the first one shown wins). */
@@ -24,21 +28,35 @@ export function pointerTargets(f: PointerFacts): string[] {
     case 'fire':
       return f.touch ? ['#tc-fire'] : [];
     case 'board':
-      return ['#tc-act[data-act="board"]', '.act-btn.act-board'];
+      // Alongside, the grapples. Still closing (the helmsman runs in): nothing yet. Held off at gun range: «Сблизиться»
+      // (the same button reads «Бортами» while he closes — pointed at then, it turned him away: QA 2026-10-06). The
+      // pursuit lost (her mark gone, another come): «Атаковать» runs in again.
+      if (f.pursuit === 'guns') return ['#tc-act[data-act="board"]', '.act-btn.act-board', '#tc-act[data-act="attack_mode"]', '.act-btn.act-attack_mode'];
+      if (f.pursuit === 'board') return ['#tc-act[data-act="board"]', '.act-btn.act-board'];
+      return ['#tc-act[data-act="board"]', '.act-btn.act-board', '#tc-act[data-act="attack"]', '.act-btn.act-attack'];
     case 'port':
+      // Pressed once, the helmsman sails her home and puts in by himself: the finger waits (the newcomer's run pressed
+      // «В порт» 29 times while it stood over the button all the way home).
       if (f.docked) return [];
-      return ['#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
+      // Her prize's reckoning first (the gold «выкуп»: silver, and she sails on), then «В порт».
+      if (f.helmsman) return ['[data-fate="ransom"]', '[data-fate="sink"]'];
+      return ['[data-fate="ransom"]', '[data-fate="sink"]', '#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
   }
   return [];
 }
 
-/** Where the finger stands for a button's box: above it pointing down, or below it pointing up when there is no room
- *  above (a button in the top band). Pure. */
-export function pointerSpot(r: { left: number; top: number; width: number; height: number }, size: number, vh: number): { x: number; y: number; up: boolean } {
-  const x = r.left + r.width / 2 - size / 2;
+/** Where the finger stands for a button's box, and which way it points: a button in the right part of the screen (the
+ *  column of «Огонь», «Действие», the target line) gets it from the left, pointing right — above «Огонь» it lay over
+ *  «Действие» and seemed to mean it (QA 2026-10-06); elsewhere it stands above, pointing down, or below, pointing up,
+ *  when there is no room above. Pure. */
+export type PointerDir = 'down' | 'up' | 'right';
+export function pointerSpot(r: { left: number; top: number; width: number; height: number }, size: number, vw: number, vh: number): { x: number; y: number; dir: PointerDir } {
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  if (cx > vw * 0.6 && r.left - size - 4 >= 4) return { x: r.left - size - 4, y: Math.max(4, Math.min(vh - size - 4, cy - size / 2)), dir: 'right' };
+  const x = Math.max(4, Math.min(vw - size - 4, cx - size / 2));
   const above = r.top - size - 4;
-  if (above >= 4) return { x, y: above, up: false };
-  return { x, y: Math.min(vh - size - 4, r.top + r.height + 4), up: true };
+  if (above >= 4) return { x, y: above, dir: 'down' };
+  return { x, y: Math.min(vh - size - 4, r.top + r.height + 4), dir: 'up' };
 }
 
 const HAND = `<svg viewBox="0 0 48 48" width="100%" height="100%" aria-hidden="true" focusable="false">
@@ -85,9 +103,10 @@ export class TutorPointer {
       return;
     }
     const r = t.getBoundingClientRect();
-    const spot = pointerSpot(r, this.size, innerHeight);
+    const spot = pointerSpot(r, this.size, innerWidth, innerHeight);
     this.el.classList.remove('hidden');
-    this.el.classList.toggle('up', spot.up);
+    this.el.classList.toggle('up', spot.dir === 'up');
+    this.el.classList.toggle('right', spot.dir === 'right');
     this.el.style.transform = `translate(${Math.round(spot.x)}px, ${Math.round(spot.y)}px)`;
   }
 

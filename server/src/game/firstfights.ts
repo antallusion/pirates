@@ -49,8 +49,11 @@ export function softenFoe(game: Game, a: ShipEntity, b: ShipEntity, opts: { army
   if (cur !== undefined && cur !== foe.id && game.ships.get(cur)?.alive) return;
   foe.softFor = me.id;
   foes.set(s, foe.id);
+  // The First Watch's raider is a lesson in boarding, kept for it (her own floor of men, round shot only): cut to half
+  // her hull, the gun crews and the bump of the run-in sank her before the grapples could bite.
+  if (game.npcs.get(foe.id)?.practice !== undefined) return;
   foe.hull = Math.min(foe.hull, foe.stats.hullMax * SOFT_HULL);
-  if (opts.army !== false && game.npcs.get(foe.id)?.practice === undefined) {
+  if (opts.army !== false) {
     const thin: ArmyStack[] = foe.army.map((x) => ({ ...x, n: Math.max(1, Math.round(x.n * SOFT_MEN)) }));
     foe.setArmy(thin);
   }

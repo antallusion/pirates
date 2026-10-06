@@ -110,7 +110,9 @@ let openSheetHandle: SheetHandle | null = null;
  *  (docs/23 phase 1): the list scrolls, the three buttons stay at its foot. */
 export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go: () => void): void {
   const ship = voyageShip(state);
-  if (!ship || !state.portView || !voyageNeeds(ship).length) return go();
+  // The First Watch sails a mile off the quay and is towed home if it goes wrong (docs/23 item 79): no list to read
+  // between «Поднять паруса» and the sea — the 2026-10-06 newcomer's run stopped on it.
+  if (!ship || !state.portView || !voyageNeeds(ship).length || state.onboarding?.stage) return go();
   openSheetHandle?.close('code');
   let offers: Offer[] = [];
   let lastBody = '', lastFoot = '';

@@ -21,7 +21,7 @@ import type { Game } from './Game.ts';
 import { addXp } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
-import { pursuitOf } from './pursuit.ts';
+import { pursuitOf, startPursuit } from './pursuit.ts';
 
 export interface Tutorial {
   on: boolean; // walking the First Watch
@@ -151,8 +151,12 @@ export const STAGES: Stage[] = [
       if (ship.boarding) w.fought = true;
       return !!w.fought && !ship.boarding;
     },
-    begin: (_g, s, ship) => {
+    begin: (game, s, ship) => {
       watchOf(s).fought = !!ship.boarding;
+      // «Огонь» laid her broadside on (the pursuit «Бортами»): the helmsman closes in again for the grapples, so the
+      // step is the one tap of «На абордаж» and not «Сблизиться» first.
+      const run = pursuitOf(ship);
+      if (run && run.mode === 'guns') startPursuit(game, s, run.target, 'board');
     },
     keep: (game, s, ship) => {
       if (!ship.boarding && !watchOf(s).fought) keepRaider(game, s, ship);
@@ -221,6 +225,8 @@ export function tradeTip(game: Game, s: PlayerSession): Tutorial['tip'] {
 /** A lone Confederacy sloop that comes for the novice in safe water — where the Crown's patrols are near. */
 /** The share of the practice raider's men the lesson's guns leave her. */
 export const PRACTICE_FLOOR = 0.7;
+/** …and the share of her hull they leave her: she is there to be boarded, not sunk (docs/23 item 79). */
+export const PRACTICE_HULL = 0.3;
 /** Each novice's practice raider (entity id). */
 const raiders = new WeakMap<PlayerSession, number>();
 

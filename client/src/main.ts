@@ -2813,7 +2813,7 @@ function step(t: number): void {
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
     filmMoments();
-    tutorPointer.set({ stage: state.onboarding?.stage ?? null, touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight });
+    tutorPointer.set({ stage: state.onboarding?.stage ?? null, touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

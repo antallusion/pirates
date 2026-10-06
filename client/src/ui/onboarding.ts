@@ -76,9 +76,11 @@ export class OnboardingUi {
     if (el.dataset.k === key && !el.classList.contains('hidden')) return;
     el.dataset.k = key;
     el.classList.remove('hidden');
-    el.innerHTML = `<div class="w-head"><span>${esc(t('watch.title'))} · ${v.index + 1}/${v.of}</span><b>${esc(has(k) ? t(k) : v.stage)}</b></div>
+    // On a short screen the row keeps to the count, the title, the line and two short skips (feel.css).
+    const btn = (a: string, cls: string, full: Key, short: Key) => `<button class="btn btn-small${cls}" data-a="${a}" title="${esc(t(full))}" aria-label="${esc(t(full))}"><span class="w-long">${esc(t(full))}</span><span class="w-short">${esc(t(short))}</span></button>`;
+    el.innerHTML = `<div class="w-head"><span><i class="w-t">${esc(t('watch.title'))} · </i>${v.index + 1}/${v.of}</span><b>${esc(has(k) ? t(k) : v.stage)}</b></div>
       ${has(line) ? `<div class="w-body">${esc(t(line))}</div>` : ''}
-      <div class="w-act"><button class="btn btn-small" data-a="skip_stage">${esc(t('watch.skip'))}</button><button class="btn btn-small btn-ghost" data-a="skip_all">${esc(t('watch.skipAll'))}</button></div>`;
+      <div class="w-act">${btn('skip_stage', '', 'watch.skip', 'watch.skipShort')}${btn('skip_all', ' btn-ghost', 'watch.skipAll', 'watch.skipAllShort')}</div>`;
     el.setAttribute('aria-label', `${t('watch.step', { n: v.index + 1, of: v.of })}: ${has(k) ? t(k) : v.stage}`);
     el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => this.send(b.dataset.a as 'skip_stage')));
   }

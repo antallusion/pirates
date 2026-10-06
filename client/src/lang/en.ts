@@ -8,6 +8,8 @@ export const EN = {
   'watch.done': 'Done: {name}',
   'watch.over': 'The First Watch is over. The sea is yours.',
   'watch.step': 'Step {n} of {of}',
+  'watch.skipShort': 'Skip',
+  'watch.skipAllShort': 'No lessons',
   'unlock.title': 'New in port: tattoos, dice, the auction and guilds.',
   // docs/23 item 79: five steps, one action each; a finger over the button says the rest
   'stage.sail': 'Set sail',
