@@ -171,8 +171,8 @@
 .port-body { padding: var(--k-sp-2) var(--k-sp-3) var(--k-sp-4); }
 .mk-head { display: flex; align-items: center; justify-content: space-between; gap: var(--k-sp-2); margin: var(--k-sp-1) 0 0; }
 .mk-head .w-sec { margin: 0; }
-.mk-by { display: flex; align-items: center; gap: var(--k-sp-1); }
-.mk-by .w-chip { min-width: 44px; justify-content: center; padding: 0 8px; }
+.mk-by { min-width: 72px; justify-content: center; gap: 4px; }
+.mk-by b { font-variant-numeric: tabular-nums; }
 .mk-note { margin: var(--k-sp-1) 0; font-size: var(--k-fs-1); }
 .mk-list { display: flex; flex-direction: column; }
 .mk-row.have .w-row-t > small { color: var(--k-gold); }
@@ -311,6 +311,8 @@
   #modal-panel > .modal-head:not(.w-head) .sub { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin: 0; }
   body.touch #modal-panel .tabs .tab { min-height: var(--k-h-2); display: inline-flex; align-items: center; }
   body.touch #modal-panel .btn { min-height: var(--k-h-2); }
+  body.touch #modal-panel :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select) { min-height: var(--k-h-2); box-sizing: border-box; }
+  body.touch #modal-panel .map-legend > summary { display: flex; align-items: center; min-height: var(--k-h-2); }
 }
 /* Words for a desk: on a phone they are the heading's long-press hint. */
 @media (max-height: 520px), (max-width: 699px) { .w-desk { display: none !important; } }

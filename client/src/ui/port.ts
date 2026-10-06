@@ -520,7 +520,9 @@ export class PortScreen {
         <span class="w-row-n" title="${esc(W('mk.priceHint', { buy: r.buy, sell: r.sell }))}">${money(r.buy)}<small>${money(r.sell)}${trend}</small></span>
         <span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="buy" data-good="${r.good}" ${r.stock > 0 ? '' : 'disabled'}>${esc(L('btn.buy'))}</button><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button></span></div>`;
     }).join('');
-    const by = `<div class="mk-by" data-hint="${esc(W('mk.byHint'))}"><span class="muted">${esc(W('mk.by'))}</span>${qtys.map((q) => `<button type="button" class="w-chip${q === this.qty ? ' on' : ''}" data-qty="${q}" aria-pressed="${q === this.qty}">${q}</button>`).join('')}</div>`;
+    // How many a «Купить» moves: one chip that steps 1 → 5 → 10 → 25 (one target, not four).
+    const next = qtys[(qtys.indexOf(this.qty) + 1) % qtys.length] ?? 1;
+    const by = `<button type="button" class="w-chip on mk-by" data-qty="${next}" data-hint="${esc(W('mk.byHint'))}" aria-label="${esc(`${W('mk.by')} ${this.qty}`)}"><span class="muted">${esc(W('mk.by'))}</span> <b>${this.qty}</b></button>`;
     // A rarer shot neither sold here nor in the hold is not listed (the common kinds always are).
     const ammo = AMMO_IDS.filter((a, i) => i <= AMMO_IDS.indexOf('cursed') || view.ammoPrices[a] > 0 || self.ammo[a] > 0).map((a) => `<div class="w-row" data-hint="${esc(`${AMMO[a].name}. ${AMMO[a].description}`)}">${icon(`ammo_${a}`, '', 'w-row-ico')}
       <span class="w-row-t"><b>${esc(AMMO[a].name)}</b><small>${esc(view.ammoPrices[a] > 0 ? L('market.inHold', { n: self.ammo[a], price: view.ammoPrices[a] }) : L('market.inHoldOnly', { n: self.ammo[a] }))}</small></span>
