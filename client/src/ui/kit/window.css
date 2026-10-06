@@ -66,8 +66,8 @@
 .skinned .w-tab--go { border-style: solid; border-color: transparent; border-width: 6px 8px; border-image: var(--ui-button) 40 fill / 6px 8px stretch; background: none; }
 @media (max-height: 520px), (max-width: 699px) {
   .w-rail { width: 88px; padding: var(--k-sp-1) 2px; gap: 2px; }
-  .w-tab { height: 56px; font-size: 11px; letter-spacing: 0; }
-  .w-tab-ico { width: 28px; height: 28px; }
+  .w-tab { height: 50px; padding: 2px; gap: 1px; font-size: 11px; letter-spacing: 0; }
+  .w-tab-ico { width: 26px; height: 26px; }
 }
 /* The second row: chips, one line that scrolls sideways when it must. */
 .w-chips { flex: none; display: flex; gap: var(--k-sp-1); padding: var(--k-sp-1) var(--k-sp-2); overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid rgba(140, 107, 58, 0.25); }
@@ -301,3 +301,18 @@
   #modal-panel[data-modal="map"] > .map-wrap { flex: 1 1 auto; min-height: 0; }
   #modal-panel[data-modal="map"] .map-legend { position: absolute; left: var(--k-sp-2); bottom: var(--k-sp-2); border-width: 1px; max-width: 46%; }
 }
+
+/* ---------- The older windows on a phone (docs/23 item 78): their head in one band, every control a finger wide */
+@media (max-height: 520px), (max-width: 699px) {
+  #modal-panel > .modal-head:not(.w-head) { min-height: var(--k-h-2); padding: 2px 56px 2px var(--k-sp-2); gap: 2px var(--k-sp-2); align-items: center; }
+  .skinned #modal-panel > .modal-head:not(.w-head) h2 { font-size: 17px; border-width: 6px 30px; border-image-width: 6px 30px; }
+  #modal-panel > .modal-head:not(.w-head) .sub { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin: 0; }
+  body.touch #modal-panel .tabs .tab { min-height: var(--k-h-2); display: inline-flex; align-items: center; }
+  body.touch #modal-panel .btn { min-height: var(--k-h-2); }
+}
+/* Words for a desk: on a phone they are the heading's long-press hint. */
+@media (max-height: 520px), (max-width: 699px) { .w-desk { display: none !important; } }
+/* The journal's forms: one row for a guild's name, its tag and «Основать»; a letter's form first once asked for. */
+.g-found { display: flex; gap: var(--k-sp-2); }
+.g-found > input:first-child { flex: 1 1 auto; min-width: 0; }
+@media (max-height: 520px), (max-width: 699px) { .let-compose { display: flex; flex-direction: column-reverse; } }

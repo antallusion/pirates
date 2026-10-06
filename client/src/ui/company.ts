@@ -80,6 +80,8 @@ export class CompanyScreen {
   onQuests: () => void = () => {};
   /** "Letter" on a friend: the letters tab opens with them as the addressee. */
   private mailTo = '';
+  /** «Написать» tapped: the letter's form stands first (docs/23 phase 6). */
+  private composing = false;
 
   constructor(send: (m: ClientMsg) => void) {
     this.send = send;
@@ -226,16 +228,16 @@ export class CompanyScreen {
     const me = state.self ? (g?.members.find((m) => m.name === state.self!.name)?.accountId ?? -1) : -1;
     const lead = g ? g.leader === me : true;
     body.innerHTML = `<div class="cols"><div>
-      <h3 class="title-sm" style="font-size:20px">${g ? L('grp_yours', { n: g.members.length, max: GROUP_MAX }) : L('grp_alone')}</h3>
+      <h3 class="title-sm" style="font-size:20px"${g ? '' : ` data-hint="${esc(L('grp_about').replace(/<[^>]+>/g, ''))}"`}>${g ? L('grp_yours', { n: g.members.length, max: GROUP_MAX }) : L('grp_alone')}</h3>
       ${g ? g.members.map((m) => `<div class="card"><h4>${m.accountId === g.leader ? '⚑ ' : ''}${m.accountId !== me && m.online ? `<span class="insp-name" data-inspect="${esc(m.name)}" role="button" tabindex="0">${esc(m.name)}</span>` : esc(m.name)} <span class="muted">${L('grp_level', { captain: esc(CAPTAINS[m.captain]?.name ?? m.captain), level: m.level })}</span></h4>
         <div class="row"><span class="muted">${!m.online ? L('grp_ashore') : m.docked ? L('grp_in', { port: esc(state.ports.find((p) => p.id === m.docked)?.name ?? m.docked) }) : L('grp_at_sea', { n: Math.round(m.hull * 100) })}${m.inConvoy ? L('grp_station') : ''}</span>
-        ${m.accountId !== me ? `<span>${state.friends.some((f) => f.name === m.name) ? '' : `<button class="btn btn-small" data-befriend="${esc(m.name)}">${L('fr_befriend')}</button> `}${lead ? `<button class="btn btn-small" data-lead="${esc(m.name)}">${L('grp_give_lead')}</button> <button class="btn btn-small btn-danger" data-kick="${esc(m.name)}">${L('grp_kick')}</button>` : ''}</span>` : ''}</div></div>`).join('') : `<p class="muted">${L('grp_about')}</p>`}
+        ${m.accountId !== me ? `<span>${state.friends.some((f) => f.name === m.name) ? '' : `<button class="btn btn-small" data-befriend="${esc(m.name)}">${L('fr_befriend')}</button> `}${lead ? `<button class="btn btn-small" data-lead="${esc(m.name)}">${L('grp_give_lead')}</button> <button class="btn btn-small btn-danger" data-kick="${esc(m.name)}">${L('grp_kick')}</button>` : ''}</span>` : ''}</div></div>`).join('') : `<p class="muted w-desk">${L('grp_about')}</p>`}
       ${g && lead ? `<div class="card"><h4 class="card-h">${icon('ab_form_line', '', 'ico-md')}${L('grp_convoy')}</h4><p class="muted">${L('grp_convoy_text')}</p>
         <button class="btn ${g.convoy ? 'btn-primary' : ''}" id="convoy">${g.convoy ? L('grp_convoy_down') : L('grp_convoy_up')}</button></div>` : g?.convoy ? `<p class="muted">${L('grp_convoy_flying')}</p>` : ''}
       ${g ? `<button class="btn btn-danger" id="leave">${L('grp_leave')}</button>` : ''}
     </div><div>
       ${state.invites.map((i) => i.ask ? askCard(i) : `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('grp_invited', { from: esc(i.from) })}</h4><button class="btn btn-primary" data-accept="${i.id}">${L('join')}</button> <button class="btn" data-decline="${i.id}">${L('decline')}</button></div>`).join('')}
-      ${lead ? `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn" id="invite">${L('invite')}</button></div></div>` : ''}
+      ${lead ? `<div class="card"><h4 class="card-h">${icon('tab_group', '', 'ico-md')}${L('grp_invite_title')}</h4><div class="row"><input id="inv-name" placeholder="${L('ph_captain')}" maxlength="20" style="flex:1"><button class="btn btn-primary" id="invite">${L('invite')}</button></div></div>` : ''}
       ${lfgCard(state, !!g, lead, lead && (g?.members.length ?? 1) < GROUP_MAX)}
       ${this.friendsCard(state, lead && (g?.members.length ?? 1) < GROUP_MAX, g?.members.map((m) => m.name) ?? [])}
       ${this.whoCard(state, lead && (g?.members.length ?? 1) < GROUP_MAX)}
@@ -545,13 +547,13 @@ export class CompanyScreen {
     const docked = state.self?.dockedAt ?? null;
     const portName = (id: string) => placeName(state.ports.find((p) => p.id === id)?.name ?? id);
     if (!g) {
+      const found = `<div class="card"><h4 class="card-h" data-hint="${esc(L('g_found_text', { cost: fmt(10000) }).replace(/<[^>]+>/g, ''))}">${icon('tab_guild', '', 'ico-md')}${L('g_found_title')}</h4><p class="muted w-desk">${L('g_found_text', { cost: fmt(10000) })}</p>
+          <div class="row g-found"><input id="g-name" placeholder="${L('g_ph_name')}" maxlength="24"><input id="g-tag" placeholder="${L('ph_tag')}" maxlength="4" style="width:80px;text-transform:uppercase"><button class="btn btn-primary" id="g-found" ${docked ? '' : `disabled title="${L('g_in_port')}"`}>${L('g_found_btn')}</button></div></div>`;
+      const invites = state.guildInvites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('g_invites', { by: esc(i.by), name: esc(i.name), tag: esc(i.tag) })}</h4><button class="btn btn-primary" data-gjoin="${i.id}">${L('join')}</button> <button class="btn" data-gno="${i.id}">${L('decline')}</button></div>`).join('');
       body.innerHTML = `<div class="cols"><div>
-        ${state.guildInvites.map((i) => `<div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('g_invites', { by: esc(i.by), name: esc(i.name), tag: esc(i.tag) })}</h4><button class="btn btn-primary" data-gjoin="${i.id}">${L('join')}</button> <button class="btn" data-gno="${i.id}">${L('decline')}</button></div>`).join('') || `<p class="muted">${L('g_no_invites')}</p>`}
-        ${this.recruitingCard(state)}
+        ${invites}${state.recruiting.length ? this.recruitingCard(state) : found}
       </div><div>
-        <div class="card"><h4 class="card-h">${icon('tab_guild', '', 'ico-md')}${L('g_found_title')}</h4><p class="muted">${L('g_found_text', { cost: fmt(10000) })}</p>
-          <input id="g-name" placeholder="${L('g_ph_name')}" maxlength="24" style="width:100%;margin-bottom:6px">
-          <div class="row"><input id="g-tag" placeholder="${L('ph_tag')}" maxlength="4" style="width:80px;text-transform:uppercase"><button class="btn btn-primary" id="g-found" ${docked ? '' : `disabled title="${L('g_in_port')}"`}>${L('g_found_btn')}</button></div></div>
+        ${state.recruiting.length ? found : this.recruitingCard(state)}${invites ? '' : `<p class="muted">${L('g_no_invites')}</p>`}
       </div></div>`;
       body.querySelector<HTMLElement>('#g-found')!.onclick = () => this.send({ t: 'guild', action: 'found', name: body.querySelector<HTMLInputElement>('#g-name')!.value, tag: body.querySelector<HTMLInputElement>('#g-tag')!.value });
       body.querySelectorAll<HTMLElement>('[data-gjoin]').forEach((el) => (el.onclick = () => this.send({ t: 'guild', action: 'answer', id: Number(el.dataset.gjoin), accept: true })));
@@ -679,27 +681,34 @@ export class CompanyScreen {
 
   private renderLetters(body: HTMLElement, state: ClientState): void {
     const docked = state.self?.dockedAt ?? null;
-    body.innerHTML = `<div class="cols"><div>
-      <h3 class="title-sm" style="font-size:20px">${L('let_title')}</h3>
+    const compose = this.composing || !!this.mailTo;
+    body.innerHTML = `${docked && !compose ? `<div class="w-quick"><button type="button" class="k-btn k-btn--primary k-btn--lg w-qbtn" data-mcompose>${icon('tab_letters', '', 'k-btn-ico')}<span class="k-btn-l">${L('let_write')}</span></button></div>` : ''}<div class="cols${compose ? ' let-compose' : ''}"><div>
+      <h3 class="title-sm w-desk" style="font-size:20px">${L('let_title')}</h3>
       ${state.letters.map((l) => `<div class="card letter ${l.read ? '' : 'unread'}"><h4>${esc(serverText(l.subject))} <span class="muted">${L('let_meta', { from: esc(serverText(l.from)), ago: ago(l.sentAt) })}</span></h4>
         ${l.body ? `<p style="white-space:pre-wrap">${esc(serverText(l.body))}</p>` : ''}
         ${!l.taken ? `<p><b>${l.gold ? L('let_silver', { n: fmt(l.gold) }) : ''}${l.goods ? L('let_goods', { qty: l.goods.qty, good: esc(GOODS[l.goods.good].name), port: esc(state.ports.find((p) => p.id === l.goods!.port)?.name ?? l.goods.port) }) : ''}</b></p>` : ''}
         <div class="row" style="gap:6px">${!l.read ? `<button class="btn btn-small" data-read="${l.id}">${L('let_mark')}</button>` : ''}
           ${!l.taken ? `<button class="btn btn-small btn-primary" data-take="${l.id}" ${docked && (!l.goods || l.goods.port === docked) ? '' : `disabled title="${L('let_collect_port')}"`}>${L('let_collect')}</button>` : `<button class="btn btn-small" data-del="${l.id}">${L('let_burn')}</button>`}</div></div>`).join('') || `<p class="muted">${L('let_none')}</p>`}
     </div><div>
-      <div class="card"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('let_write')}</h4>
-        ${docked ? `<p class="muted">${L('let_packet')}</p>
+      <div class="card${compose ? '' : ' w-desk'}"><h4 class="card-h">${icon('tab_letters', '', 'ico-md')}${L('let_write')}</h4>
+        ${docked ? `<p class="muted w-desk">${L('let_packet')}</p>
         <input id="m-to" placeholder="${L('let_ph_to')}" maxlength="20" style="width:100%;margin-bottom:6px" value="${esc(this.mailTo)}">
         <input id="m-subj" placeholder="${L('let_ph_subject')}" maxlength="60" style="width:100%;margin-bottom:6px">
-        <textarea id="m-body" rows="5" maxlength="1000" placeholder="${L('let_ph_body')}" style="width:100%;margin-bottom:6px"></textarea>
+        <textarea id="m-body" rows="3" maxlength="1000" placeholder="${L('let_ph_body')}" style="width:100%;margin-bottom:6px"></textarea>
         <div class="row"><label>${L('let_draft')} <input id="m-gold" type="number" min="0" max="100000" value="0" style="width:110px"> ${L('let_silver_word')}</label><button class="btn btn-primary" id="m-send">${L('send')}</button></div>` : `<p class="muted">${L('let_office')}</p>`}</div>
     </div></div>`;
     const v = (id: string) => body.querySelector<HTMLInputElement | HTMLTextAreaElement>(id)?.value ?? '';
     // The addressee stays in the field (the list may redraw it) until the letter goes or the tab changes.
     body.querySelector<HTMLInputElement>('#m-to')?.addEventListener('input', (e) => (this.mailTo = (e.target as HTMLInputElement).value));
+    body.querySelector<HTMLElement>('[data-mcompose]')?.addEventListener('click', () => {
+      this.composing = true;
+      this.renderLetters(body, state);
+      body.querySelector<HTMLInputElement>('#m-to')?.focus({ preventScroll: true });
+    });
     body.querySelector<HTMLElement>('#m-send')?.addEventListener('click', () => {
       if (!v('#m-to').trim()) return;
       this.mailTo = '';
+      this.composing = false;
       this.send({ t: 'mail', action: 'send', to: v('#m-to'), subject: v('#m-subj'), body: v('#m-body'), gold: Number(v('#m-gold')) || 0 });
     });
     body.querySelectorAll<HTMLElement>('[data-read]').forEach((el) => (el.onclick = () => this.send({ t: 'mail', action: 'read', id: Number(el.dataset.read) })));
@@ -725,13 +734,14 @@ export class CompanyScreen {
         <td>${l.mine ? `<button class="btn btn-small" data-cancel="${l.id}">${L('withdraw')}</button>` : `<input type="number" min="1" max="${l.qty}" value="${l.qty}" style="width:70px" data-qtyv="${l.id}"><button class="btn btn-small btn-primary" data-fill="${l.id}">${l.kind === 'sell' ? L('mk_buy') : L('mk_sell')}</button>`}</td></tr>`;
     };
     const lots = mk.listings.filter((l) => l.kind === 'auction');
-    body.innerHTML = `<div class="cols"><div>
-      <h3 class="title-sm" style="font-size:20px">${L('mk_board')}</h3>
-      <p class="muted">${L('mk_text', { fee: Math.round(mk.listFee * 100), tax: Math.round(mk.saleTax * 100) })}</p>
+    // On a phone the posting form stands first, the board's words in its heading's hint (docs/23 phase 6).
+    body.innerHTML = `<div class="cols let-compose"><div>
+      <h3 class="title-sm w-desk" style="font-size:20px">${L('mk_board')}</h3>
+      <p class="muted w-desk">${L('mk_text', { fee: Math.round(mk.listFee * 100), tax: Math.round(mk.saleTax * 100) })}</p>
       <table class="grid">${mk.listings.filter((l) => l.kind !== 'auction').map(row).join('') || `<tr><td class="muted">${L('mk_nothing')}</td></tr>`}</table>
       ${mk.auction ? `<h3 class="title-sm" style="font-size:20px;margin-top:12px">${L('mk_auction')}</h3><table class="grid">${lots.map(row).join('') || `<tr><td class="muted">${L('mk_no_lots')}</td></tr>`}</table><p class="muted">${L('mk_auction_text')}</p>` : ''}
     </div><div>
-      <div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${L('mk_post_title')}</h4>
+      <div class="card"><h4 class="card-h" data-hint="${esc(L('mk_text', { fee: Math.round(mk.listFee * 100), tax: Math.round(mk.saleTax * 100) }).replace(/<[^>]+>/g, ''))}">${icon('tab_board', '', 'ico-md')}${L('mk_post_title')}</h4>
         <div class="row"><select id="k-kind"><option value="sell">${L('mk_opt_sell')}</option><option value="sellw">${L('mk_opt_sellw')}</option><option value="buy">${L('mk_opt_buy')}</option>${mk.auction ? `<option value="auction">${L('mk_opt_auction')}</option>` : ''}</select>
           <select id="k-good">${goodOptions()}</select></div>
         <div class="row"><label>${L('mk_qty')} <input id="k-qty" type="number" min="1" value="10" style="width:80px"></label><label id="k-price-l">${L('mk_price')} <input id="k-price" type="number" min="1" value="${GOODS.sugar.basePrice}" style="width:90px"></label></div>

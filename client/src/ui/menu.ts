@@ -1,5 +1,6 @@
 // The captain's cabin: every screen as a large tile — the phone's way into the map, ship, crew and the rest,
-// and the same list the desktop micro-menu shows.
+// and the same list the desktop micro-menu shows. The company, guild, letters and album are «Журнал»'s tabs now
+// (docs/23 item 74): its tile leads to them.
 
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/menu.ts';
@@ -15,7 +16,6 @@ export const MENU_ITEMS: { id: MenuItem; glyph: string; art?: string }[] = [
   { id: 'crew', glyph: '☗' },
   { id: 'hero', glyph: '⚔', art: 'bt_captain' },
   { id: 'talents', glyph: '✦' },
-  { id: 'company', glyph: '⚑' },
   // The premium shop (owner, 2026-10-03): the doubloon's coin.
   { id: 'shop', glyph: '◉', art: 'doubloon' },
   { id: 'chat', glyph: '✉' },

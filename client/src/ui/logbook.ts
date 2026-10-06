@@ -39,9 +39,11 @@ export function logRail(active: LogTab, state: ClientState): string {
   return railTabs(tabs, active, 'jtab');
 }
 
-/** The whole frame: the band (with the second row in it when it is short), the rail, the page's body. */
+/** The whole frame: the band (with the second row in it when it is short — three chips at most), the rail, the
+ *  page's body. */
 export function logFrame(active: LogTab, state: ClientState, chips: WinTab[], chipOn: string, body: string, bodyAttrs = ''): string {
   const row = chips.length ? chipRow(chips, chipOn, 'jchip') : '';
-  return `${winHead(W('jr.title'), { crest: 'tab_letters', chips: row })}
-    <div class="w-frame">${logRail(active, state)}<div class="w-pane"><div class="modal-body w-body log-body" ${bodyAttrs}>${body}</div></div></div>`;
+  const inBand = chips.length <= 3;
+  return `${winHead(W('jr.title'), { crest: 'tab_letters', chips: inBand ? row : '' })}
+    <div class="w-frame">${logRail(active, state)}<div class="w-pane">${inBand ? '' : row}<div class="modal-body w-body log-body" ${bodyAttrs}>${body}</div></div></div>`;
 }
