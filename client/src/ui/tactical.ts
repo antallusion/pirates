@@ -897,6 +897,8 @@ export class TacticalPanel {
 
   private dom(v: TacView): void {
     const el = this.el!;
+    // The fight over, the book is put away (it stood over the reckoning on a desk).
+    if (v.over) this.bookOpen = false;
     const act = v.stacks.find((s) => s.id === v.active);
     const key = JSON.stringify([v.round, v.active, v.mine, v.heroes, v.order, v.over, v.log.slice(-3).map((e) => e.i), this.targeting, this.bookOpen, this.bookTab, this.bookPage, this.strikeArmed > performance.now(), this.ransomArmed > performance.now(), v.stacks.map((s) => [s.id, s.count, s.shots]), v.canCut, v.canStrike, v.ransom, v.result, this.phone, this.tall, this.moreOpen, this.sheetOpen, this.sheetKind, settings().tacFast, this.endHidden, this.foeArmed]);
     if (key === this.key) return;
@@ -1367,7 +1369,8 @@ export class TacticalPanel {
     const k = e.key.toLowerCase();
     const code = e.code;
     if (k === 'escape') {
-      this.targeting = this.preview = null;
+      this.targeting = this.preview = this.foeArmed = null;
+      this.bookOpen = false;
       this.showInfo(null);
       this.key = '';
       this.dom(v);
