@@ -202,7 +202,7 @@ export class BaseWindow {
   private tiles(v: BaseView): string {
     const now = v.now;
     const tile = (c: BaseCellView) => {
-      if (!c.what) return `<button type="button" class="w-tile b-tile empty" data-plot="${c.plot}" aria-label="${esc(`${L('plot', { n: c.plot + 1 })}: ${L('empty')}`)}"><span class="w-tile-ico glyph b-plus" aria-hidden="true">+</span><span class="w-tile-l">${esc(L('empty'))}</span></button>`;
+      if (!c.what) return `<button type="button" class="w-tile b-tile empty" data-plot="${c.plot}" aria-label="${esc(`${L('plot', { n: c.plot + 1 })}: ${L('empty')}`)}"><span class="w-tile-ico glyph b-plus" aria-hidden="true">+</span><span class="w-tile-l">${esc(L('build'))}</span></button>`;
       const raising = !!c.job && c.job.level <= 1;
       const art = baseArt(c.what, Math.max(1, c.level), c.condition, c.unpaid, raising);
       const kind = producerOf(c.what);

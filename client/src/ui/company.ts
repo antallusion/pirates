@@ -122,7 +122,7 @@ export class CompanyScreen {
     // docs/23 item 74: the journal's frame — the rail's five places, this one's pages as the second row's chips.
     const rail = logTabOf(this.tab) as Exclude<LogTab, 'quests'>;
     const pages = LOG_PAGES[rail].filter((t) => t !== 'market' || docked) as CompanyTab[];
-    const chips: WinTab[] = pages.length > 1 ? pages.map((t) => ({ id: t, icon: TAB_ICON[t], label: tabName(t).replace(/<[^>]+>/g, ''), badge: badge(t) })) : [];
+    const chips: WinTab[] = pages.length > 1 ? pages.map((t) => ({ id: t, icon: TAB_ICON[t], label: tabName(t).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'"), badge: badge(t) })) : [];
     root.innerHTML = logFrame(rail, state, chips, this.tab, '', 'id="company-body"');
     const body = root.querySelector<HTMLElement>('#company-body')!;
     if (this.tab === 'group') this.renderGroup(body, state);

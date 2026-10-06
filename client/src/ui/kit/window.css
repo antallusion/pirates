@@ -63,11 +63,12 @@
 /* The rail's gold one is an order, not a place («В море»): it stands apart at the bottom. */
 .w-tab--go { margin-top: auto; color: var(--k-gold); border-color: var(--k-brass); background: linear-gradient(180deg, #2a2521, #17140f); text-shadow: 0 0 8px rgba(224, 184, 98, 0.35); }
 .w-tab--go .w-tab-ico { filter: none; }
-.skinned .w-tab--go { border-style: solid; border-color: transparent; border-width: 6px 8px; border-image: var(--ui-button) 40 fill / 6px 8px stretch; background: none; }
+.skinned .w-tab--go { border-style: solid; border-color: transparent; border-width: 4px 6px; border-image: var(--ui-button) 40 fill / 4px 6px stretch; background: none; }
 @media (max-height: 520px), (max-width: 699px) {
   .w-rail { width: 88px; padding: var(--k-sp-1) 2px; gap: 2px; }
   .w-tab { height: 50px; padding: 2px; gap: 1px; font-size: 11px; letter-spacing: 0; }
   .w-tab-ico { width: 26px; height: 26px; }
+  .w-tab--go .w-tab-ico { width: 22px; height: 22px; }
 }
 /* The second row: chips, one line that scrolls sideways when it must. */
 .w-chips { flex: none; display: flex; gap: var(--k-sp-1); padding: var(--k-sp-1) var(--k-sp-2); overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid rgba(140, 107, 58, 0.25); }
@@ -316,3 +317,8 @@
 .g-found { display: flex; gap: var(--k-sp-2); }
 .g-found > input:first-child { flex: 1 1 auto; min-width: 0; }
 @media (max-height: 520px), (max-width: 699px) { .let-compose { display: flex; flex-direction: column-reverse; } }
+/* A narrow phone: a band with chips keeps the window's crest and gives its name's room to the chips (the name is
+   still the heading, for a reader). */
+@media (max-width: 700px) {
+  .w-head--chips .w-title > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
