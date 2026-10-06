@@ -6,7 +6,8 @@
 import { AUTO_ARC_DEG } from '../../shared/src/data/gunnery.ts';
 import type { NpcSkill } from '../../shared/src/data/shiplevel.ts';
 import type { ShipClassId } from '../../shared/src/data/ships.ts';
-import { buildNavGrid, isLand } from '../../shared/src/world/worldgen.ts';
+import { buildNavGrid, depthAt, isLand } from '../../shared/src/world/worldgen.ts';
+import { tidalIsles } from '../../shared/src/world/tidal.ts';
 import type { Game } from '../../server/src/game/Game.ts';
 import { engage, newBrain } from '../../server/src/game/npc.ts';
 import type { NpcBrain } from '../../server/src/game/npc.ts';
@@ -67,6 +68,10 @@ export function openWater(game: Game, k: number): { x: number; y: number } {
     const y = 60_000 + ((k * 6007 + i * 130_363) % 20_000);
     let clear = true;
     for (let a = 0; a < 16 && clear; a++) for (const r of [300, 800, 1400]) if (isLand(game.world, x + Math.cos(a) * r, y + Math.sin(a) * r)) clear = false;
+    // …and deep (docs/23 item 47: the quick fight's boarding run at full way ran onto a reef or a bank the ebb had
+    // bared, and the run was lost to the sea floor, not to the guns).
+    for (let a = 0; a < 32 && clear; a++) for (const r of [100, 250, 450, 700, 1000]) if (depthAt(game.world, x + Math.cos(a * 0.196) * r, y + Math.sin(a * 0.196) * r) < 12) clear = false;
+    if (clear && tidalIsles(game.world).some((b) => Math.hypot(b.x - x, b.y - y) < b.r + 1200)) clear = false;
     if (clear) return { x, y };
   }
   return { x: 20_000, y: 70_000 };
@@ -93,7 +98,7 @@ function put(game: Game, side: Side, role: 'patrol' | 'hunter', x: number, y: nu
   }
   ship.crew = ship.stats.crewMax;
   ship.morale = 80;
-  ship.ammo.round = 999;
+  ship.ammo.round = 9999; // never the limit (a boss fight of a quarter hour at the quick fight's rate of fire ran 999 dry)
   ship.hull = ship.stats.hullMax;
   game.grid.upsert(ship.id, x, y);
   return { ship, brain };

@@ -17,8 +17,11 @@ export const TAC_H = 9;
 export const TAC_GAP = 5;
 /** Seconds a captain has for each of his stacks' turns; then the stack defends. */
 export const TAC_TURN = 30;
-/** Seconds the sea's captains take over a stack's turn, so a player sees what they did. */
-export const TAC_AI_DELAY = 0.7;
+/** Seconds the sea's captains take over a stack's turn, so a player sees what they did (docs/23 item 60: a foe's turn
+ *  in 1.2 s at most, its walk 0.25 s; it was 0.7). */
+export const TAC_AI_DELAY = 0.45;
+/** «Ускорить ×2» (docs/23 item 60): the sea's breath over a turn, × while a captain on the field has asked for it. */
+export const TAC_FAST = 0.5;
 /** A battle not decided in this many rounds goes to the side with the more of its strength left. */
 export const TAC_MAX_ROUNDS = 20;
 /** Shots at more than this many hexes do half damage. */

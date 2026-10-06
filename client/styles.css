@@ -3929,7 +3929,6 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 .tb-lc { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px 2px 4px; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 10px; color: #f0e2bd; font-size: 12px; background: rgba(30, 24, 14, 0.6); }
 .tb-lline { color: var(--gold); font-size: 12.5px; display: flex; align-items: center; gap: 5px; }
 .tb-lline .ico-sm { border-radius: 50%; }
-.tb-landclose { margin-top: 10px; pointer-events: auto; }
 .tw-pen { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
 .tw-nest { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
 .tw-nest .ico-md { border-radius: 50%; }
@@ -3940,7 +3939,7 @@ img.beast-tok { outline: 2px solid #a8894e; outline-offset: -2px; }
 .tw-egg .ico-sm { border-radius: 50%; }
 /* docs/18 II: the reckoning with the spoils fits the stage on a phone (it scrolls rather than run off it). */
 .tb-banner.tb-result { max-height: calc(100% - 8px); overflow-y: auto; overscroll-behavior: contain; }
-@media (max-width: 699px), (max-height: 520px) { .tb-banner.tb-result b { font-size: 22px; } .tb-loot { margin-top: 4px; gap: 3px; } .tb-res { gap: 3px; margin-top: 4px; } .tb-landclose { margin-top: 6px; } }
+@media (max-width: 699px), (max-height: 520px) { .tb-banner.tb-result b { font-size: 22px; } .tb-loot { margin-top: 4px; gap: 3px; } .tb-res { gap: 3px; margin-top: 4px; } }
 
 /* docs/18 IV: the drift's card and its mini-game, the beaten who follow, the creatures' window. */
 #advcard .ac-dcard { border-color: rgba(110, 215, 205, 0.45); }
@@ -4356,11 +4355,6 @@ body.tac-ph .tb-pad { display: block; position: absolute; inset: 0; z-index: 4; 
 .tb-rb.armed { animation: tb-armed 0.9s ease-in-out infinite; }
 @keyframes tb-armed { 0%, 100% { box-shadow: 0 0 0 2px #d0503e, 0 0 8px rgba(208, 80, 62, 0.6); } 50% { box-shadow: 0 0 0 4px #d0503e, 0 0 20px rgba(208, 80, 62, 0.95); } }
 .tb-rb.book { width: 56px; height: 56px; }
-.tb-rb.mv.ult:not(:disabled):not(.spent) { box-shadow: 0 0 0 1px #e0b862, 0 0 10px rgba(224, 184, 98, 0.45); }
-.tb-rb.mv.on, .tb-rb.mv.ult.on { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224, 184, 98, 0.8); }
-/* «…»: three gold beads. */
-.tb-dots { display: flex; gap: 4px; }
-.tb-dots b { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 3px #000; }
 /* An order aimed: the book's button shows it, with the painted cross that lets it go. */
 .tb-rb.aim { box-shadow: 0 0 0 2px #f0a03c, 0 0 14px rgba(240, 160, 60, 0.8); }
 .tb-x { position: absolute; right: -4px; top: -4px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--brass-dim); background: #16110d; color: var(--bone);
@@ -4368,17 +4362,10 @@ body.tac-ph .tb-pad { display: block; position: absolute; inset: 0; z-index: 4; 
 .tb-x::before { content: '×'; }
 .skinned .tb-x { border: 0; background: var(--ui-close) center / contain no-repeat; filter: drop-shadow(0 1px 2px #000); }
 .skinned .tb-x::before { content: ''; }
-/* The ransom's silver, once it asks to be sure: a pill of its own under the button. */
-.tb-rbn { position: absolute; left: 50%; top: calc(100% + 4px); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px 1px 3px;
-  border: 1px solid rgba(208, 80, 62, 0.8); border-radius: 9px; background: rgba(20, 10, 8, 0.92); color: #f3d7a0; font: 700 11px/1.3 var(--sans); font-style: normal; white-space: nowrap; }
-.tb-rbn .ico-xs { width: 13px; height: 13px; margin: 0; }
 /* The two thumbs' corners: on a phone on its side a column up from each bottom corner, upright a row along the bottom. */
 .tb-pl, .tb-pr { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); display: flex; flex-direction: column-reverse; align-items: center; gap: 8px; }
 .tb-pl { left: calc(env(safe-area-inset-left, 0px) + 8px); }
 .tb-pr { right: calc(env(safe-area-inset-right, 0px) + 8px); }
-.tb-mwrap { position: relative; display: grid; place-items: center; }
-.tb-more { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); display: flex; gap: 8px; padding: 6px; border-radius: 30px;
-  background: rgba(10, 9, 8, 0.86); border: 1px solid var(--brass-dim); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7); }
 /* The turn's face, its side's colour round it (gold while the move is hers) running down with the turn's clock. */
 .tb-turnb { position: absolute; left: calc(env(safe-area-inset-left, 0px) + 8px); top: calc(env(safe-area-inset-top, 0px) + 8px); width: 48px; height: 48px; padding: 0; border: 0;
   border-radius: 50%; pointer-events: auto; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; --tl: 1; --ring: #7fb0d0;
@@ -4414,8 +4401,6 @@ body.tac-ph .tb-pad { display: block; position: absolute; inset: 0; z-index: 4; 
 @media (orientation: portrait) {
   .tb-pl { flex-direction: row; flex-wrap: wrap-reverse; max-width: 52%; }
   .tb-pr { flex-direction: row-reverse; flex-wrap: wrap-reverse; max-width: 46%; }
-  .tb-more { left: 50%; top: auto; bottom: calc(100% + 10px); transform: translateX(-50%); flex-direction: column-reverse; }
-  .tb-rbn { left: calc(100% + 6px); top: 50%; transform: translateY(-50%); }
   .tb-sheet { left: calc(env(safe-area-inset-left, 0px) + 8px); right: calc(env(safe-area-inset-right, 0px) + 8px); width: auto; top: calc(env(safe-area-inset-top, 0px) + 64px);
     max-height: calc(100% - 72px - var(--tb-b, 0px) - env(safe-area-inset-top, 0px)); }
 }
@@ -4435,7 +4420,90 @@ body.tac-ph .tb-banner { max-height: calc(100% - 16px); background: rgba(10, 9, 
    in sight. */
 .tb-banner.tb-result { display: flex; flex-direction: column; }
 .tb-bsc { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.tb-banner.tb-result > .tb-landclose { flex: none; align-self: center; }
+/* ---------- docs/23 phase 5: the hex battle on a phone ----------
+   Bottom left three round buttons a thumb wide (52px): «Ждать», «Защита», «Авто» (its wheel); bottom right the book
+   (56px) with a gold bead when the officer's word or a path move is ready; top left the turn's face; top right «×2». */
+body.tac-ph .tb-pl .tb-rb { width: 52px; height: 52px; }
+.tb-fast { position: absolute; right: calc(env(safe-area-inset-right, 0px) + 8px); top: calc(env(safe-area-inset-top, 0px) + 8px); width: 44px; height: 44px; }
+.tb-x2 { position: relative; z-index: 1; font: 700 15px/1 var(--k-font-sans); font-style: normal; font-variant-numeric: tabular-nums; color: var(--gold); text-shadow: 0 1px 2px #000; }
+.tb-fast.on .tb-x2 { color: #fff1c8; }
+.tb-bead { position: absolute; z-index: 2; top: 0; right: 0; width: 13px; height: 13px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe6a3, #c89434);
+  box-shadow: 0 0 0 2px #120e0a, 0 0 8px rgba(224, 184, 98, 0.8); }
+/* The stack's card as the kit's bottom sheet (long press). */
+.tb-cardk.k-sheet { width: min(560px, 100%); }
+.tb-cardsh { border-top: 3px solid #7fb0d0; padding-top: 8px; }
+.tb-cardsh.foe { border-top-color: #d2473a; }
+.tb-cardsh .tb-card-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.tb-cardsh .tb-card-h .ico-md { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; }
+.tb-cardsh .tb-card-h small { color: var(--fog); font-size: 13px; }
+.tb-cardsh .tb-stats { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px 12px; }
+.tb-cardsh .tb-stats span { font-size: 11.5px; }
+.tb-cardsh .tb-stats b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.tb-cardsh .tb-sps .chip, .tb-cardsh .tb-sts .tb-st { font-size: 12px; min-height: 30px; }
+.tb-cardsh p { margin: 8px 0 0; font-size: 13px; line-height: 1.4; }
+/* The book as the kit's bottom sheet: big cards — a picture, a name, the price or why not now. */
+.tb-bookk.k-sheet { width: min(880px, 100%); }
+.tb-bk-will { display: flex; gap: 14px; margin: 2px 0 10px; }
+.tb-bk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.tb-bc { display: grid; grid-template-columns: 48px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; align-items: center; align-content: center; min-height: 64px; padding: 7px 10px;
+  box-sizing: border-box; border: 1px solid var(--k-brass-dim); border-radius: var(--k-r-2); background: linear-gradient(180deg, #241d16, #15110c); color: var(--k-bone); text-align: left;
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform var(--k-dur-1) var(--k-ease-out), border-color var(--k-dur-2) var(--k-ease-out); }
+.tb-bc-ico { grid-row: 1 / span 2; width: 48px; height: 48px; margin: 0; border-radius: 6px; object-fit: contain; }
+.tb-bc b { min-width: 0; font: 600 14px/1.2 var(--k-font-sans); overflow-wrap: anywhere; text-wrap: balance; }
+.tb-bc small { display: inline-flex; align-items: center; gap: 3px; min-width: 0; font: 12px/1.3 var(--k-font-sans); color: var(--k-haze); }
+.tb-bc small .ico-xs { width: 14px; height: 14px; margin: 0; }
+.tb-bc-cost { display: inline-flex; align-items: center; gap: 3px; color: #9cc6f0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tb-bc-cost.stam { color: #f2b56b; }
+.tb-bc.officer, .tb-bc.mv { border-color: var(--k-brass); }
+.tb-bc.mv.ult:not(:disabled) { box-shadow: inset 0 0 0 1px rgba(224, 184, 98, 0.5), 0 0 10px rgba(224, 184, 98, 0.2); }
+.tb-bc.poor small { color: var(--k-bad); }
+.tb-bc:active:not(:disabled) { transform: scale(0.97); }
+.tb-bc:disabled { opacity: 0.45; filter: saturate(0.5); cursor: default; }
+.tb-bc:focus-visible { outline: 2px solid var(--k-gold); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .tb-bc:hover:not(:disabled) { border-color: var(--k-gold); } }
+/* The end (docs/23 item 63): won or lost, three rows — your losses, hers, the spoils — and one button. */
+.tb-banner.tb-end { pointer-events: auto; display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.tb-end .tb-bsc > b { line-height: 1.1; }
+.tb-end .tb-why { display: block; margin-top: 2px; }
+.tb-end-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; text-align: left; }
+.tb-er { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: start; column-gap: 10px; min-height: 32px; }
+.tb-er > small { padding-top: 8px; color: var(--fog); font-size: 12px; line-height: 1.2; }
+.tb-er .tb-rs-row { margin: 0; }
+.tb-er .tb-lchips { gap: 4px 6px; }
+.tb-lc.bad { color: #e3998a; }
+.tb-lc.tb-lw { color: var(--gold); white-space: normal; max-width: 100%; box-sizing: border-box; line-height: 1.3; }
+/* The beaten who would follow her: the words and the buttons on one line where they fit. */
+.tb-end .tb-cap { flex-flow: row wrap; align-items: center; column-gap: 10px; }
+.tb-end .tb-cap > small { flex-basis: 100%; }
+.tb-end .tb-cap .tb-lline { flex: 1 1 260px; }
+.tb-lc.tb-lw .ico-sm { border-radius: 50%; }
+.tb-endbtn { flex: none; align-self: center; min-width: 200px; }
+/* Ashore: a screen of its own, waiting for its button. */
+.tb-banner.tb-end.land { width: min(560px, calc(100% - 24px)); max-height: calc(100% - 16px); }
+/* At sea it passes (the fight closes itself 2.5 s later and the prize's window follows): a band — the field's foot on a
+   tall screen, its head on a short one — with the three rows in one line. */
+.tb-banner.tb-end.sea { top: auto; bottom: 8px; transform: translateX(-50%); width: min(820px, calc(100% - 24px)); max-height: calc(30vh - 16px); overflow: hidden;
+  flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 14px; padding: 6px 14px; }
+.tb-end.sea .tb-bsc { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 14px; flex: 0 1 auto; overflow: hidden; }
+.tb-end.sea .tb-bsc > b { font-size: 24px; }
+.tb-end.sea .tb-why { display: none; }
+.tb-end.sea .tb-end-rows { flex-direction: row; flex-wrap: wrap; margin: 0; gap: 4px 16px; }
+.tb-end.sea .tb-er { grid-template-columns: auto auto; column-gap: 6px; }
+.tb-end.sea .tb-endbtn { min-width: 0; }
+@media (max-height: 520px) {
+  .tb-banner.tb-end.sea { top: 4px; bottom: auto; max-height: 64px; padding: 4px 10px; }
+  .tb-end.sea .tb-bsc > b { font-size: 20px; }
+  .tb-end.sea .tb-er > small { display: none; }
+  .tb-end.sea .tb-rs, .tb-end.sea .tb-rs-ico { width: 24px; height: 24px; }
+  .tb-end.sea .tb-endbtn { min-height: 44px; padding: 0 14px; }
+  .tb-end.land { padding: 8px 16px 10px; gap: 6px; }
+  .tb-end.land .tb-bsc > b { font-size: 24px; }
+  .tb-end.land .tb-end-rows { margin-top: 6px; gap: 4px; }
+  .tb-end .tb-er { min-height: 28px; }
+  .tb-end.land .tb-rs, .tb-end.land .tb-rs-ico { width: 26px; height: 26px; }
+  .tb-end .tb-cap .btn { min-height: 36px; }
+}
+/* ---------- end of docs/23 phase 5 ---------- */
 /* The sea waits while the decks fight on a phone: no chat, no sea's card over the field; the battle's own word (a
    refusal) in a line at the top, clear of the corners' buttons. */
 body.tac-ph #hud-chat, body.tac-ph #encounter, body.tac-ph #surrender, body.tac-ph #trek, body.tac-ph #fishfight, body.tac-ph #nethaul { visibility: hidden; }
@@ -4671,19 +4739,6 @@ body:has(#modal:not(.hidden)) #encounter, body:has(#modal:not(.hidden)) #surrend
 .rs-ship .rs-next { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: baseline; margin: 4px 0; font-size: 12.5px; }
 .rs-ship .rs-next .rs-bar { grid-column: 1 / -1; }
 .rs-ship .btn { margin-top: 6px; }
-/* The popup budget (QA circle, 2026-10-05): a boarding's end — «Победа» and its reckoning, two seconds and a half before
-   the prize's window — stood in the field's middle (480,314–800,516 at 1280×720). It keeps to a band now — the field's
-   foot on a tall screen (its head lies under the round's header there), its head on a short one — its reckoning in a
-   row; the result ashore, which waits for its «Close», stays where it is (a window, not a passing word). */
-.tb-banner:not(:has(.tb-landclose)) { top: auto; bottom: 8px; transform: translateX(-50%); max-height: calc(30vh - 16px); overflow: hidden; padding: 6px 16px 8px; }
-.tb-banner:not(:has(.tb-landclose)) b { font-size: 26px; line-height: 1.1; }
-.tb-banner:not(:has(.tb-landclose)) .tb-res { flex-flow: row wrap; align-items: flex-start; justify-content: center; gap: 4px 12px; margin-top: 4px; }
-@media (max-height: 520px) {
-  .tb-banner:not(:has(.tb-landclose)) { top: 4px; bottom: auto; padding: 4px 12px 6px; }
-  .tb-banner:not(:has(.tb-landclose)) b { font-size: 20px; }
-  .tb-banner:not(:has(.tb-landclose)) .tb-rs, .tb-banner:not(:has(.tb-landclose)) .tb-rs-ico { width: 22px; height: 22px; }
-  .tb-banner:not(:has(.tb-landclose)) .tb-res small { display: none; }
-}
 
 /* A taller screen whose bottom block leaves the toasts' band no room under the middle, the desk's corner taken (the
    adventure map's card, the chat): the band in a clear side column (hud.ts placeDeskStrip). */
@@ -4721,24 +4776,6 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
   #modal-panel[data-modal="sunk"] .center-card .btn { min-height: 34px; margin-top: 2px; }
 }
 /* ---------- docs/22 the polish pass ---------- */
-/* A1: the result ashore (a lair won, its spoils, the beaten who would follow) fits its banner with no inner scroll at
-   every size: two columns — the reckoning on the left, the spoils on the right — under the title, the offer across. */
-.tb-banner.tb-result:has(.tb-landclose) { width: min(680px, calc(100% - 24px)); }
-.tb-banner.tb-result:has(.tb-landclose) .tb-bsc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); column-gap: 18px; align-items: start; }
-.tb-banner.tb-result:has(.tb-landclose) .tb-bsc > :is(b, span, .tb-cap) { grid-column: 1 / -1; }
-.tb-banner.tb-result:has(.tb-landclose) .tb-bsc > .tb-res { grid-column: 1; }
-.tb-banner.tb-result:has(.tb-landclose) .tb-bsc > .tb-loot { grid-column: 2; }
-.tb-banner.tb-result:has(.tb-landclose) .tb-bsc > .tb-res:last-child, .tb-banner.tb-result:has(.tb-landclose) .tb-bsc > .tb-loot:nth-child(3) { grid-column: 1 / -1; }
-.tb-banner.tb-result:has(.tb-landclose) .tb-cap { margin-top: 6px; }
-@media (max-height: 520px) {
-  .tb-banner.tb-result:has(.tb-landclose) { padding: 6px 14px 8px; }
-  .tb-banner.tb-result:has(.tb-landclose) b { font-size: 20px; line-height: 1.15; }
-  .tb-banner.tb-result:has(.tb-landclose) .tb-res { flex-flow: row wrap; gap: 2px 14px; }
-  .tb-banner.tb-result:has(.tb-landclose) .tb-xp { flex-basis: 100%; }
-  .tb-banner.tb-result:has(.tb-landclose) .tb-lline { font-size: 12px; line-height: 15px; }
-  .tb-banner.tb-result:has(.tb-landclose) .tb-cap .btn { min-height: 34px; }
-  .tb-banner.tb-result:has(.tb-landclose) .tb-landclose { margin-top: 4px; min-height: 36px; }
-}
 /* A toast wrapped past the band's edge (hud.ts clip) is out of sight. */
 #toasts > .toast.tq-out { visibility: hidden; }
 /* docs/22 B: the feel of every control — pressed, hovered, disabled, focused; a finger's target on touch; calm

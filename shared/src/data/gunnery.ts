@@ -51,21 +51,29 @@ export function windDriftAngle(windDir: number, strength: number, heading: numbe
 // every ball that strikes is felt; the point of the game is to close fast and board.
 
 /** Every broadside's (and chaser's) reload, × (the guns' own times in ships.ts stay their relative weights). */
-export const SEA_RELOAD = 0.34;
+export const SEA_RELOAD = 0.3;
 /** Every ball's damage (hull, canvas and men), × — fewer balls than the old fights threw, each one seen. */
-export const SEA_DAMAGE = 3.3;
+export const SEA_DAMAGE = 5;
+/** …and by the level of the ship struck (docs/23 item 47, measured by tools/mobile/fight-time.ts): the great hulls of
+ *  ⚓7 and up grow tougher a level than their guns grow, so a ball into one strikes a little harder and her fight with
+ *  an equal keeps to the same 30 s. */
+export function seaLevelPace(level: number): number {
+  return level >= 7 ? 1.3 : 1;
+}
 
 /** The grapples fly this much farther than they did (docs/23 item 36: «сближение быстрое, крючья летят дальше»). */
 export const GRAPPLE_REACH = 1.8;
 /** The boarding run (docs/23 item 36): running in on her mark for the grapples, every hand on the braces — her way and
- *  her pick-up, × over her own, until the grapples bite. */
-export const BOARD_RUN = { maxSpeed: 0.7, accel: 4, turnRate: 0.8 } as const;
+ *  her pick-up, × over her own, until the grapples bite. And her stem to the guns (item 47): bow-on she shows her mark
+ *  the narrowest target she has, so the quick fight's broadsides do not sink her on the way in (the point of the game is
+ *  to close and board). */
+export const BOARD_RUN = { maxSpeed: 0.7, accel: 4, turnRate: 0.8, incomingDamageMul: -0.4 } as const;
 
 /** A laid broadside (auto-aim, docs/23 item 34): her gun captains train each gun on the mark within this many degrees
  *  of her beam, and every ball flies from its own port to the mark — they converge on her instead of flying parallel. */
 export const LAY_ARC_DEG = 40;
 /** Auto-fire lets a side go once the mark's lead is within this many degrees of her beam. */
-export const AUTO_ARC_DEG = 28;
+export const AUTO_ARC_DEG = 36;
 /** A laid ball is sent this far past the mark: one a little long still strikes her on the way, one short falls in the
  *  sea (metres). */
 export const LAY_OVER = 22;

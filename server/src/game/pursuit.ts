@@ -33,6 +33,11 @@ export const BOARD_RUN_FROM = 1200;
 /** Auto-battle against the weak (docs/23 item 46): a mark this many levels below her own is settled in AUTO_WEAK_SEC. */
 export const AUTO_WEAK_GAP = 2;
 export const AUTO_WEAK_SEC = 3;
+/** The last of the boarding run: this much faster than her mark until the grapples reach (docs/23 item 47: at +2 she
+ *  crept the last metres on a mark running before the wind). */
+export const BOARD_CLOSE = 3.5;
+/** Run in to board, her gun captains hold their fire (all but grape) at a prize below this share of her hull. */
+export const PRIZE_HOLD = 0.4;
 /** The captains' self-defence: a ship that struck her within this many seconds is a mark for her gunners. */
 const SELF_DEFENCE = 30;
 
@@ -196,7 +201,7 @@ export function stepPursuit(game: Game): void {
       // a quick helm, and the wind no matter.
       boardRun(game, s, ship, d < BOARD_RUN_FROM && d > reach * 0.9);
       if (d < reach * 1.4) {
-        const want = t.state.speed + (d > reach ? 2 : 0.5);
+        const want = t.state.speed + (d > reach ? BOARD_CLOSE : 0.5);
         ship.input.sailTarget = ship.state.speed > want + 0.6 ? 0.25 : ship.state.speed < want - 0.6 ? 1 : 0.6;
       } else ship.input.sailTarget = 1;
     }
@@ -282,6 +287,10 @@ export function stepAutoFire(game: Game): void {
     const t = gunneryMark(game, ship);
     if (!t) continue;
     if (ship.ammo[ship.ammoSel] <= 0 && ship.ammo.round > 0) ship.ammoSel = 'round';
+    // Her prize (docs/23 item 47): run in to board, the gun captains do not sink the ship she means to take — below
+    // PRIZE_HOLD of her hull they hold all but grape (the quick fight's guns would send her down before the grapples).
+    const run = pursuitOf(ship);
+    if (run?.mode === 'board' && run.target === t.id && ship.ammoSel !== 'grape' && t.hull < t.stats.hullMax * PRIZE_HOLD) continue;
     const lead = leadOn(ship, t);
     for (const side of ['port', 'starboard'] as const) {
       if (ship.reload[side] > 0) continue;

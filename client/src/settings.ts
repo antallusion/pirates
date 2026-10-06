@@ -152,6 +152,10 @@ export interface Settings {
   autoWeak: boolean;
   /** docs/23 item 42: the expert's hand — held broadsides, the fire order and the chasers by hand. */
   expertGuns: boolean;
+  /** The hex battle (docs/23 item 57): a step or a blow asks a second tap on the same hex to be sure (off: one tap). */
+  tacConfirm: boolean;
+  /** The hex battle at twice the pace (docs/23 item 60), kept from one battle to the next. */
+  tacFast: boolean;
   captions: boolean; // sound captions with direction
   mono: boolean;
   volume: { master: number; sea: number; combat: number; ui: number; music: number };
@@ -171,7 +175,7 @@ export function defaults(): Settings {
   return {
     uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
+    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, expertGuns: false, tacConfirm: false, tacFast: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
     keys: structuredClone(CLASSIC),
   };
 }

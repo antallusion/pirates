@@ -37,10 +37,11 @@ test('the walk to every hex in reach is a chain of free neighbours, no longer th
   }
 });
 
-test('a walk takes 0.3–0.6 s, a glide about half a second; its point runs the line end to end', () => {
+test('a walk takes 0.15–0.25 s (docs/23 item 60), half that at ×2, a glide a quarter second; its point runs the line end to end', () => {
   assert.equal(walkMs(1), WALK_MIN);
   assert.equal(walkMs(20), WALK_MAX);
-  assert.ok(WALK_MIN >= 300 && WALK_MAX <= 600 && GLIDE_MS >= 300 && GLIDE_MS <= 600);
+  assert.equal(walkMs(20, 2), WALK_MAX / 2);
+  assert.ok(WALK_MIN >= 120 && WALK_MAX <= 250 && GLIDE_MS >= 120 && GLIDE_MS <= 250);
   assert.equal(easeWalk(0), 0);
   assert.equal(easeWalk(1), 1);
   assert.ok(easeWalk(0.25) < 0.25 && easeWalk(0.75) > 0.75, 'sets off and comes to rest');

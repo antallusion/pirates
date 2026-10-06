@@ -111,9 +111,10 @@ test('polish: a film is skipped by a click, a tap, a press or any key, and waits
   assert.match(src('client/index.html'), /id="rotate-lock" role="alertdialog" aria-modal="true"/);
 });
 
-test('polish: the result ashore is laid in two columns with no inner scroll; a toast wrapped past its band is hidden', () => {
+test('polish: the result ashore is one screen of three rows with no inner scroll (docs/23 item 63); a toast wrapped past its band is hidden', () => {
   const css = src('client/styles.css');
-  assert.match(css, /\.tb-banner\.tb-result:has\(\.tb-landclose\) \.tb-bsc \{ display: grid; grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1\.25fr\);/);
+  assert.match(css, /\.tb-er \{ display: grid; grid-template-columns: 104px minmax\(0, 1fr\);/);
+  assert.match(css, /\.tb-banner\.tb-end\.land \{ width: min\(560px, calc\(100% - 24px\)\); max-height: calc\(100% - 16px\); \}/);
   assert.match(css, /#toasts > \.toast\.tq-out \{ visibility: hidden; \}/);
   const hud = src('client/src/ui/hud.ts');
   assert.match(hud, /t\.classList\.toggle\('tq-out', r\.left >= b\.right - 2/);
