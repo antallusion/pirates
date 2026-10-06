@@ -12,6 +12,8 @@ import { pickSector, WHEEL_MAX, wheelLayout } from '../client/src/ui/kit/radial.
 import { EN as SEN, RU as SRU } from '../client/src/lang/ui/seahud.ts';
 import { EN } from '../client/src/lang/en.ts';
 import { RU } from '../client/src/lang/ru.ts';
+import { EN as FEN, RU as FRU } from '../client/src/lang/ui/seafight.ts';
+import { EN as AEN, RU as ARU } from '../client/src/lang/ui/actbar.ts';
 
 test('the stick: the dead middle keeps the sail, the pull sets 1–4 steps, full sail at the rim and past it', () => {
   assert.equal(stickSail(5, 48, 13), null);
@@ -91,15 +93,17 @@ test('the sea HUD speaks both languages, the Russian without Latin', () => {
   for (const [k, v] of Object.entries(SRU)) assert.ok(!/[A-Za-z]{2,}/.test(v.replace(/\{\w+\}/g, '')), `${k}: ${v}`);
 });
 
-test('the First Watch on a phone names the new buttons, not the old ones', () => {
+test('the First Watch on a phone names the new buttons, not the old ones (docs/23 item 79: the very words on them)', () => {
   const ru = RU as Record<string, string>, en = EN as Record<string, string>;
-  assert.match(ru['stage.gunnery.touch'], /«Огонь»/);
-  assert.match(en['stage.gunnery.touch'], /«Fire»/);
-  assert.match(ru['stage.board.touch'], /«Атаковать»/);
-  assert.match(ru['stage.board.touch'], /«Действие»/);
-  assert.match(en['stage.board.touch'], /«Action»/);
-  assert.match(ru['stage.cast_off.touch'], /Штурвал/);
-  for (const k of ['stage.recruit.touch', 'stage.visit.touch', 'stage.lair.touch', 'stage.rescue.touch', 'hint.repair.touch', 'hint.docking.touch']) {
+  const word = (d: Record<string, string>, k: string) => `«${d[k].replace(/\s*\[.*\]$/, '')}»`;
+  assert.ok(ru['stage.attack.touch'].includes(word(FRU, 'a.attack')) && en['stage.attack.touch'].includes(word(FEN, 'a.attack')));
+  assert.ok(ru['stage.fire.touch'].includes(word(SRU, 'fire')) && en['stage.fire.touch'].includes(word(SEN, 'fire')));
+  assert.ok(ru['stage.board.touch'].includes(word(ARU, 'a.board')) && en['stage.board.touch'].includes(word(AEN, 'a.board')));
+  assert.ok(ru['stage.port.touch'].includes(word(ARU, 'a.dock')) && en['stage.port.touch'].includes(word(AEN, 'a.dock')));
+  assert.match(ru['stage.sail.touch'], /штурвал/i);
+  // One action each, no paragraphs: a step's line is a short sentence.
+  for (const id of ['sail', 'attack', 'fire', 'board', 'port']) for (const d of [ru, en]) for (const k of [`stage.${id}`, `stage.${id}.touch`, `stage.${id}.body`]) assert.ok(d[k].length <= 48, `${k}: ${d[k]}`);
+  for (const k of ['hint.repair.touch', 'hint.docking.touch']) {
     assert.match(ru[k], /«Действие»/, k);
     assert.match(en[k], /«Action»/, k);
   }

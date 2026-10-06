@@ -84,6 +84,8 @@ import { Journal } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
+import { TutorPointer } from './ui/pointer.ts';
+import { buzz, guardVibrate } from './haptics.ts';
 import { filmDue, filmExists, loadFilms, playFilm, setFilmGate } from './ui/cutscene.ts';
 import { OptionsScreen } from './ui/options.ts';
 import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, update } from './settings.ts';
@@ -386,6 +388,9 @@ const seaHud = new SeaHud($('touch'), {
   target: () => seaHud.lend(['hud-target'], 'target'),
 });
 const onboarding = new OnboardingUi(state);
+/** The First Watch's finger over the button its step wants (docs/23 item 80). */
+const tutorPointer = new TutorPointer();
+guardVibrate(); // «Вибрация» off stills every pulse (docs/23 item 84)
 const encounterCard = new EncounterCard((m) => net.send(m));
 const surrenderCard = new SurrenderCard((m) => net.send(m));
 const lairChest = new LairChestCard();
@@ -1081,6 +1086,11 @@ function onMessage(m: ServerMsg): void {
         renderer.fx.onEvent(e, state.entityId);
         // Rumble: a hit on our hull a short knock in both motors; something under the keel a long low hum.
         if (e.k === 'hit' && e.ship === state.entityId && e.dmg > 0) rumble(activePad(), 0.5, 0.5, 120);
+        // The phone in the hand (docs/23 item 84): her broadside, a ball on her mark, one on her hull, the grapples.
+        if (e.k === 'volley' && e.ship === state.entityId) buzz('fire');
+        else if (e.k === 'hit' && e.dmg > 0 && e.ship === state.entityId) buzz('hurt');
+        else if (e.k === 'hit' && e.dmg > 0 && (e.ship === state.pursuit?.target || e.ship === targetId)) buzz('hit');
+        else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) buzz('board');
         else if (e.k === 'fx' && (e.fx === 'deep_call' || e.fx === 'rise' || e.fx === 'maw') && state.ownDisplay && dist(e.x, e.y, state.ownDisplay.x, state.ownDisplay.y) < 600) rumble(activePad(), 0.7, 0, 1200);
         audio.onEvent(e);
         if (e.k === 'region') {
@@ -1969,6 +1979,12 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const pursued = state.pursuit ? state.ships.get(state.pursuit.target) : undefined;
   if (state.pursuit) facts.attack = { name: placeName(pursued?.info?.name ?? L('her')), pursuing: true, mode: state.pursuit.mode };
   else if (attackMark !== null) facts.attack = { name: placeName(state.ships.get(attackMark)?.info?.name ?? L('her')), pursuing: false, mode: 'board' };
+  // The First Watch's last step (docs/23 item 79): «В порт» far from any harbour sails her to the nearest.
+  homeport = null;
+  if (!port && !state.pursuit && state.onboarding?.stage === 'port') {
+    homeport = state.ports.reduce<(typeof state.ports)[number] | null>((b, p) => (!b || dist(p.x, p.y, own.x, own.y) < dist(b.x, b.y, own.x, own.y) ? p : b), null);
+    if (homeport) facts.homeport = { name: sv(homeport.name) };
+  }
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
   const struck = surrenderCard.laterName();
@@ -2011,6 +2027,10 @@ function runAct(a: Act): void {
       return void (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(L('noCrippled'), 'bad'));
     case 'dock':
       return requestDock(false);
+    case 'homeport':
+      if (!homeport) return;
+      homeRun = homeport.id;
+      return void net.send({ t: 'autosail', x: homeport.x, y: homeport.y });
     case 'land':
       return sendLand();
     case 'cut_mast':
@@ -2426,7 +2446,19 @@ function requestDock(bribe: boolean, refused = false): void {
   }
   net.send({ t: 'dock', bribe });
 }
+/** The nearest harbour «В порт» would sail to (the First Watch's last step), and the one the helmsman is sailing to:
+ *  in the harbour's reach she puts in by herself — one tap from the open sea to the quay. */
+let homeport: ClientState['ports'][number] | null = null;
+let homeRun: string | null = null;
 function stepPendingDock(): void {
+  if (homeRun) {
+    const own = state.ownDisplay, p = state.ports.find((x) => x.id === homeRun);
+    if (state.self?.dockedAt || !p || !own) homeRun = null;
+    else if (dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS) {
+      homeRun = null;
+      requestDock(false);
+    }
+  }
   if (!pendingDock) return;
   const own = state.ownDisplay;
   if (state.self?.dockedAt || performance.now() > pendingDock.until || state.input.sail > 0) {
@@ -2781,6 +2813,8 @@ function step(t: number): void {
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
     filmMoments();
+    tutorPointer.set({ stage: state.onboarding?.stage ?? null, touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight });
+    tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);
     fishFight.frame();

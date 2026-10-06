@@ -108,7 +108,8 @@ import { friendAdd, friendRemove, friendsPresence, ignoreAdd, ignoreCommand, ign
 import { Social, lfgClear, lfgPost, barterLock, barterOffer, barterPropose, barterReady, cancelBarter, groupAsk, groupAnswer, groupConvoy, groupInvite, groupKick, groupLead, groupLeave, groupOfAccount, groupSay, pushParty, sameGroup, sameGroupAccounts, socialRetire, stepSocial, CONVOY_RANGE } from './party.ts';
 import { Metrics, Profiler } from './metrics.ts';
 import { havenSecond } from './havens.ts';
-import { onboardingAction, onboardingProtected, onboardingRescue, onboardingSecond, onboardingSeen, onboardingStart, onboardingView } from './onboarding.ts';
+import { firstFightsSecond } from './firstfights.ts';
+import { fresh, FRESH_REFUSAL, onboardingAction, onboardingFire, onboardingProtected, onboardingRescue, onboardingSecond, onboardingSeen, onboardingStart, onboardingView } from './onboarding.ts';
 import { PvpHub, bubbleOnLoot, bubbleOnUndock, challengeDuel, answerDuel, duelIntercept, forfeitDuel, grantBubble, lootMul, onPlayerKill, postBounty, pvpFlags, pvpView, sendBounties, setBlackFlag, stepPvp } from './pvp.ts';
 import { HoldingsHub, build, demolish, holdingsFor, islandService, islandYard, rentIsland, setAutoRenew, setWindow, stepHoldings, storeMove, treasuryMove } from './holdings.ts';
 import type { Holding } from './holdings.ts';
@@ -1023,6 +1024,7 @@ export class Game {
       checkDeeds(this, s, 1);
       heroSecond(this, s); // the hero's will by the day and in port (docs/17 H2)
       onboardingSecond(this, s);
+      firstFightsSecond(this, s); // docs/23 item 81
       abyssSecond(this, s);
       legendarySecond(this, s);
       // The governor's purple, unless a season pennant is flown.
@@ -2816,16 +2818,25 @@ export class Game {
         if (msg.side !== 'port' && msg.side !== 'starboard') return;
         {
           const why = fireBroadside(this, ship, msg.side, Number(msg.dist), Number.isFinite(msg.x) && Number.isFinite(msg.y) ? { x: Number(msg.x), y: Number(msg.y) } : undefined);
-          if (!why) lineOfBattle(this, ship, msg.side, Number.isFinite(Number(msg.dist)) ? Number(msg.dist) : 300);
+          if (!why) {
+            lineOfBattle(this, ship, msg.side, Number.isFinite(Number(msg.dist)) ? Number(msg.dist) : 300);
+            onboardingFire(s);
+          }
           return err(why);
         }
       case 'attack': {
         // «Атаковать» (docs/23 item 33): the helmsman pursues the mark; `stop` gives the wheel back.
         if (msg.stop) return stopPursuit(this, s, 'manual');
-        return err(startPursuit(this, s, Math.trunc(Number(msg.target)), msg.mode === 'guns' ? 'guns' : 'board'));
+        const why = startPursuit(this, s, Math.trunc(Number(msg.target)), msg.mode === 'guns' ? 'guns' : 'board');
+        // «Огонь» on a mark that does not bear lays the guns on her (the phone's «Бортами»): her hand on the guns.
+        if (!why && msg.mode === 'guns') onboardingFire(s);
+        return err(why);
       }
-      case 'volley':
-        return err(aimedVolley(this, s));
+      case 'volley': {
+        const why = aimedVolley(this, s);
+        if (!why) onboardingFire(s);
+        return err(why);
+      }
       case 'gunnery':
         if (typeof msg.auto === 'boolean') s.autoFire = msg.auto;
         if (typeof msg.weak === 'boolean') s.autoWeak = msg.weak;
@@ -3028,12 +3039,14 @@ export class Game {
       case 'mapdeal':
         return err(answerMapOffer(this, s, Number(msg.id), !!msg.accept));
       case 'tattoo':
-        if (msg.action === 'set') err(setTattoo(this, s, Math.trunc(Number(msg.slot)), msg.id === null ? null : String(msg.id)));
+        if (msg.action === 'set' && fresh(s.profile)) err(FRESH_REFUSAL); // docs/23 item 83
+        else if (msg.action === 'set') err(setTattoo(this, s, Math.trunc(Number(msg.slot)), msg.id === null ? null : String(msg.id)));
         return sendTattoos(this, s);
       case 'choice':
         err(takeChoice(this, s, Math.trunc(Number(msg.index))));
         return this.pushSelf(s, true);
       case 'dice': {
+        if ((msg.action === 'open' || msg.action === 'join') && fresh(s.profile)) return err(FRESH_REFUSAL); // docs/23 item 83
         const r = msg.action === 'open' ? diceOpen(this, s, Math.trunc(Number(msg.stake)), !!msg.davy)
           : msg.action === 'join' ? diceJoin(this, s, Math.trunc(Number(msg.id)))
           : msg.action === 'start' ? diceStart(this, s)
@@ -3203,7 +3216,8 @@ export class Game {
         // A merchant house's chained run (docs/16 #12).
         return portAction((pt) => (msg.action === 'abandon' ? abandonRun(this, s, String(msg.id)) : acceptRun(this, s, pt, String(msg.id))));
       case 'auction':
-        // The trophy auction of a free port (docs/16 #13).
+        // The trophy auction of a free port (docs/16 #13); shut in a captain's first quarter of an hour (docs/23 item 83).
+        if (fresh(s.profile)) return err(FRESH_REFUSAL);
         return portAction((pt) => (msg.action === 'bid' ? auctionBid(this, s, pt, String(msg.id), Number(msg.amount)) : putUp(this, s, pt, Math.trunc(Number(msg.uid)), Number(msg.reserve))));
       case 'hearsay':
         // A whisper for silver in the tavern (docs/16 #14); one may be forgotten at sea too.
@@ -3549,10 +3563,12 @@ export class Game {
           case 'buy_order':
             return portAction((pt) => marketBuyOrder(this, s, pt, msg.good, int(msg.qty), int(msg.price)));
           case 'auction':
+            if (fresh(s.profile)) return err(FRESH_REFUSAL); // docs/23 item 83
             return portAction((pt) => marketAuction(this, s, pt, msg.good, int(msg.qty), int(msg.price), int(msg.buyout), int(msg.hours), from));
           case 'fill':
             return portAction((pt) => marketFill(this, s, pt, int(msg.id), int(msg.qty)));
           case 'bid':
+            if (fresh(s.profile)) return err(FRESH_REFUSAL); // docs/23 item 83
             return portAction((pt) => marketBid(this, s, pt, int(msg.id), int(msg.price)));
           case 'cancel':
             return portAction((pt) => marketCancel(this, s, pt, int(msg.id)));
@@ -3633,6 +3649,8 @@ export class Game {
           this.pushSelf(s, true);
         };
         const tag = 'tag' in msg ? String(msg.tag ?? '') : '';
+        // A guild is not for a captain's first quarter of an hour (docs/23 item 83).
+        if ((msg.action === 'found' || msg.action === 'apply' || (msg.action === 'answer' && msg.accept)) && fresh(s.profile)) return done(FRESH_REFUSAL);
         switch (msg.action) {
           case 'view':
             return done(null);

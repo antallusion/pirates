@@ -1,5 +1,6 @@
-// The First Watch on the client (docs/07 §13): the step panel, the HUD revealed block by block, contextual
-// hints, the Captain's Goals line under the minimap, the prologue, and the edge-of-safe-waters screen.
+// The First Watch on the client (docs/07 §13; the phone's five steps, docs/23 item 79): the step's title and a line, the
+// HUD revealed block by block, contextual hints, the Captain's Goals line under the minimap, the prologue, the
+// edge-of-safe-waters screen, and the optional things kept shut in the first quarter of an hour (docs/23 item 83).
 // The server says which step and which hint; the words are here, in both languages.
 
 import type { HudBlock, OnboardingView } from '../../../shared/src/protocol.ts';
@@ -9,8 +10,6 @@ import type { ClientState } from '../state.ts';
 import { $, esc, icon } from './dom.ts';
 import { glossaryHtml } from './terms.ts';
 import { placeName } from './maps.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
-import type { GoodId } from '../../../shared/src/data/goods.ts';
 
 /** Which DOM block shows which part of the HUD. */
 const BLOCKS: Record<string, HudBlock[]> = {
@@ -40,6 +39,7 @@ export class OnboardingUi {
   apply(view: OnboardingView | null): void {
     this.view = view;
     this.applyHud(view?.hud ?? null);
+    this.applyLocks(view);
     this.renderWatch(view);
     this.renderGoals(view);
   }
@@ -67,15 +67,31 @@ export class OnboardingUi {
       el.classList.add('hidden');
       return;
     }
+    // docs/23 item 79: the step's title and one short line; the finger over the button says the rest (pointer.ts).
     const k = `stage.${v.stage}` as Key;
-    const touchBody = `stage.${v.stage}.touch` as Key;
-    const body = (document.body.classList.contains('touch') && has(touchBody) ? touchBody : `stage.${v.stage}.body`) as Key;
-    const tip = v.tip ? t('stage.first_trade.tip', { good: GOODS[v.tip.good as GoodId]?.name ?? placeName(v.tip.good), port: this.portName(v.tip.port), hours: v.tip.hours }) : '';
+    const touch = document.body.classList.contains('touch');
+    const docked = !!this.state.self?.dockedAt;
+    const line = (v.stage === 'sail' && docked ? 'stage.sail.dock' : `stage.${v.stage}.${touch ? 'touch' : 'body'}`) as Key;
+    const key = `${v.stage}|${line}|${v.index}|${v.of}`;
+    if (el.dataset.k === key && !el.classList.contains('hidden')) return;
+    el.dataset.k = key;
     el.classList.remove('hidden');
     el.innerHTML = `<div class="w-head"><span>${esc(t('watch.title'))} · ${v.index + 1}/${v.of}</span><b>${esc(has(k) ? t(k) : v.stage)}</b></div>
-      <div class="w-body">${esc(has(body) ? t(body) : '')}${tip ? `<div class="w-tip">${esc(tip)}</div>` : ''}</div>
+      ${has(line) ? `<div class="w-body">${esc(t(line))}</div>` : ''}
       <div class="w-act"><button class="btn btn-small" data-a="skip_stage">${esc(t('watch.skip'))}</button><button class="btn btn-small btn-ghost" data-a="skip_all">${esc(t('watch.skipAll'))}</button></div>`;
+    el.setAttribute('aria-label', `${t('watch.step', { n: v.index + 1, of: v.of })}: ${has(k) ? t(k) : v.stage}`);
     el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => this.send(b.dataset.a as 'skip_stage')));
+  }
+
+  /** The step under way (the finger's), or null. */
+  get stage(): string | null {
+    return this.view?.stage ?? null;
+  }
+
+  /** docs/23 item 83: the optional things still shut (body classes `lock-<thing>` hide their buttons). */
+  private applyLocks(v: OnboardingView | null): void {
+    const locked = new Set(v?.locked ?? []);
+    for (const x of ['tattoos', 'dice', 'auction', 'guilds']) document.body.classList.toggle(`lock-${x}`, locked.has(x));
   }
 
   private renderGoals(v: OnboardingView | null): void {
@@ -92,12 +108,13 @@ export class OnboardingUi {
   }
 
   /** A moment from the server: a step done, a hint, a goal met, the edge of safe waters. */
-  moment(kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge', id: string, toast: (msg: string, kind: string) => void): void {
+  moment(kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge' | 'unlock', id: string, toast: (msg: string, kind: string) => void): void {
     if (kind === 'stage') {
       const k = `stage.${id}` as Key;
-      toast(t('watch.done', { name: has(k) ? t(k) : id }), 'good');
-      if (id === 'rescue') toast(t('watch.over'), 'xp'); // the last step of the First Watch (docs/18 #49)
-    } else if (kind === 'hint') this.hint(id, toast);
+      // The last step: one line for the end of the watch, not two (docs/23 item 79).
+      toast(id === 'port' ? t('watch.over') : t('watch.done', { name: has(k) ? t(k) : id }), id === 'port' ? 'xp' : 'good');
+    } else if (kind === 'unlock') toast(t('unlock.title'), 'xp');
+    else if (kind === 'hint') this.hint(id, toast);
     else if (kind === 'goal') {
       const k = `goal.${id}` as Key;
       toast(t('goals.met', { name: has(k) ? t(k) : id }), 'xp');

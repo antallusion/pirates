@@ -30,7 +30,7 @@ async function novice(stage: string) {
 }
 
 test('polish: the First Watch\'s guns never strip the raider below seven tenths, so the hex lesson is a fight of turns', async () => {
-  const { game, ship, steps } = await novice('gunnery');
+  const { game, ship, steps } = await novice('attack');
   const { fireBroadside } = await import('../server/src/game/combat.ts');
   const { PRACTICE_FLOOR } = await import('../server/src/game/onboarding.ts');
   const raider = [...game.ships.values()].find((x) => x.name === 'Red Novice')!;
@@ -67,7 +67,7 @@ test('polish: a novice beaten at the First Watch\'s lair gets her men back, and 
   const was = process.env.GRAVETIDE_ADMIN;
   process.env.GRAVETIDE_ADMIN = '1';
   try {
-    const { game, c, s, ship, steps } = await novice('lair');
+    const { game, c, s, ship, steps } = await novice('port'); // any step of the watch: still protected
     const { runAdmin } = await import('../server/src/game/admin.ts');
     const { armyMen } = await import('../shared/src/data/army.ts');
     const { landTac } = await import('../server/src/game/beastlairs.ts');

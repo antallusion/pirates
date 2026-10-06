@@ -1,19 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
-import { onboardingReport, onboardingVolley, STAGES } from '../server/src/game/onboarding.ts';
+import { FIRST_FIGHTS, fresh, FRESH_LEVEL, FRESH_REFUSAL, FRESH_SECS, onboardingReport, onboardingVolley, sanitizeTutorial, STAGES } from '../server/src/game/onboarding.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import type { Port } from '../shared/src/world/worldgen.ts';
 import { FakeConn, join, makeGame, steps } from './helpers.ts';
-import { hireTrade, startMutiny } from '../server/src/game/crew.ts';
-import { advMap, advOf, parkNear, quietAdv, visit } from '../server/src/game/advmap.ts';
+import { startMutiny } from '../server/src/game/crew.ts';
+import { quietAdv } from '../server/src/game/advmap.ts';
 import { startBoarding } from '../server/src/game/boarding.ts';
 import { tacAction } from '../server/src/game/tactical.ts';
-import { pendingChoices, pickSkill } from '../server/src/game/hero.ts';
-import { closeFight, lairById, lairGoTo, lairsOf, landTac, revealNearestLair, startFight } from '../server/src/game/beastlairs.ts';
-import { adminDrift, driftOf, driftsNear } from '../server/src/game/drifts.ts';
 
 function recruit(game: Game, name: string, captain: 'corsair' | 'reaver' = 'corsair'): { c: FakeConn; s: PlayerSession } {
   const c = new FakeConn();
@@ -31,24 +28,25 @@ function dockAt(game: Game, s: PlayerSession, port: Port): void {
 
 const stage = (c: FakeConn) => c.last('onboarding')!.view.stage;
 
-test('the First Watch (docs/17 H5, docs/18 #49): nine steps of the Heroes’ loop, each by doing; the HUD comes in a block at a time; the goals follow', () => {
+test('the First Watch (docs/23 item 79): five steps, one action each — sail, «Атаковать», «Огонь», «На абордаж» with the hex battle, «В порт»; the HUD comes in a block at a time; the goals follow', () => {
   const { game } = makeGame();
   game.tacticalBoarding = true;
   quietAdv(game, false);
   const { c, s } = recruit(game, 'Nell Novice');
   const ship = s.ship!;
   const p = s.profile!;
-  assert.equal(stage(c), 'cast_off');
+  assert.equal(stage(c), 'sail');
   assert.deepEqual(c.last('onboarding')!.view.hud!.sort(), ['nav', 'ship']);
-  // 1. Cast off and make way.
+  assert.deepEqual(c.last('onboarding')!.view.locked, ['tattoos', 'dice', 'auction', 'guilds'], 'the optional things shut in the watch');
+  // 1. Sail: off the quay and under way (the stick).
   c.push({ t: 'undock' });
   ship.state.speed = 4;
   ship.state.sail = 0.6;
   steps(game, 21);
-  assert.equal(stage(c), 'gunnery');
-  assert.ok(c.all('onb').some((m) => m.kind === 'stage' && m.id === 'cast_off'));
+  assert.equal(stage(c), 'attack');
+  assert.ok(c.all('onb').some((m) => m.kind === 'stage' && m.id === 'sail'));
   const v = c.last('onboarding')!.view;
-  assert.ok(v.hud!.includes('guns') && v.hud!.includes('target'));
+  assert.ok(v.hud!.includes('target') && !v.hud!.includes('guns'), '«Огонь» waits for its own step');
   assert.ok([...game.ships.values()].some((x) => x.name === 'Red Novice'), 'a raider comes for the novice');
   // The raider is lost (a restart, another captain's broadside): within a minute another comes.
   for (const x of [...game.ships.values()]) if (x.name === 'Red Novice') game.removeShip(x.id);
@@ -59,91 +57,90 @@ test('the First Watch (docs/17 H5, docs/18 #49): nine steps of the Heroes’ loo
   assert.ok(Object.entries(raider.ammo).every(([k, n]) => k === 'round' || n === 0), 'round shot only: a lesson, not a massacre');
   startMutiny(game, s, 'a test');
   assert.equal(p.company.mutiny, null, 'no mutiny during the First Watch');
-  // 2. Three broadsides into the sea — the hint about the lead; then two that land.
+  // 2. «Атаковать»: the helmsman takes her for his mark.
+  raider.state = { ...raider.state, x: ship.state.x + 600, y: ship.state.y };
+  game.grid.upsert(raider.id, raider.state.x, raider.state.y);
+  c.push({ t: 'attack', target: raider.id, mode: 'board' });
+  steps(game, 21);
+  assert.equal(stage(c), 'fire');
+  assert.ok(c.last('onboarding')!.view.hud!.includes('guns'), '«Огонь» comes in');
+  assert.equal(raider.softFor, ship.id, 'the lesson’s fight is the first of the three easy ones');
+  // 3. «Огонь»: broadsides of the gun crews alone do not end it; three into the sea bring the hint on the lead.
   for (let i = 0; i < 3; i++) onboardingVolley(game, ship, 0);
   assert.ok(c.all('onb').some((m) => m.kind === 'hint' && m.id === 'lead'));
   onboardingVolley(game, ship, 2);
   steps(game, 21);
-  assert.equal(stage(c), 'gunnery', 'one is not enough');
+  assert.equal(stage(c), 'fire', 'the gun crews’ broadside is not her hand on the guns');
+  c.push({ t: 'attack', target: raider.id, mode: 'guns' }); // «Огонь» on a mark that does not bear: the guns laid on her
   onboardingVolley(game, ship, 1);
   steps(game, 21);
   assert.equal(stage(c), 'board');
-  // 3. Alongside, the grapples: the boarding battle opens.
+  // 4. «На абордаж»: alongside, the grapples, the hex battle fought out (quick battle).
   raider.state = { ...raider.state, x: ship.state.x + 20, y: ship.state.y, speed: 0, sail: 0 };
   game.grid.upsert(raider.id, raider.state.x, raider.state.y);
   ship.state.speed = 0;
   startBoarding(game, ship, raider, 'standard');
   assert.ok(ship.boarding?.fight.tac, 'the battle of H1');
   steps(game, 21);
-  assert.equal(stage(c), 'battle');
-  // 4. The battle fought out (quick battle): over, the step is done.
+  assert.equal(stage(c), 'board', 'not over until the battle is');
   assert.equal(tacAction(game, ship, { a: 'quick' }), null);
   steps(game, 20 * 8);
   assert.ok(!ship.boarding);
   steps(game, 21);
-  assert.equal(stage(c), 'recruit');
+  assert.equal(stage(c), 'port');
   assert.ok(c.last('onboarding')!.view.hud!.includes('captain'));
-  // 5. A tavern's men into the stacks.
-  const port = game.portById('saltmarrow')!;
-  dockAt(game, s, port);
-  if (ship.crew >= ship.stats.crewMax) ship.crew = ship.stats.crewMax - 5;
-  game.tavernCrew.set(port.id, 30);
-  assert.equal(hireTrade(game, s, port, 'sailor', 2), null);
+  // 5. «В порт».
+  dockAt(game, s, game.portById('saltmarrow')!);
   steps(game, 21);
-  assert.equal(stage(c), 'skill');
-  // 6. A level's skill: a choice waits (the step makes sure of it); she takes one.
-  assert.ok(pendingChoices(p) > 0, 'a choice waiting');
-  assert.equal(pickSkill(game, s, 0), null);
-  steps(game, 21);
-  assert.equal(stage(c), 'visit');
-  assert.ok(c.last('onboarding')!.view.hud!.includes('talents'));
-  // 7. A thing on the map, put on her chart.
-  c.push({ t: 'undock' });
-  const o = advMap(game).objs.filter((x) => advOf(p).seen.includes(x.id) && !x.guard && x.kind !== 'obelisk' && x.kind !== 'prison')[0];
-  assert.ok(o, 'a thing on her chart');
-  parkNear(game, s, o.x, o.y, 120);
-  assert.equal(visit(game, s, o.id, o.kind === 'chest' ? 'silver' : undefined), null);
-  steps(game, 21);
-  assert.equal(stage(c), 'lair');
-  // 8. docs/18 #49: the nearest lair she can take is on her chart; she lands against it and fights it out.
-  // (the one the step put on her chart: with docs/19 D2 she sights more lairs on her way, so not always the last seen)
-  const seen = lairsOf(p).seen;
-  const l = revealNearestLair(game, s)!;
-  assert.ok(l && seen.includes(l.id) && lairById(game, l.id) === l, 'the nearest lair she can take on her chart');
-  assert.ok(l.role === 'shore' && l.level <= Math.max(1, ship.shipLevel), 'a shore lair of her level on her chart');
-  assert.ok(c.last('lairs')!.view.list.some((m) => m.id === l.id), 'and on her minimap');
-  lairGoTo(game, s, l);
-  assert.equal(startFight(game, s, l.id, true), null);
-  assert.equal(landTac(game, s, { a: 'quick' }), null);
-  steps(game, 21);
-  assert.equal(stage(c), 'rescue');
-  closeFight(game, s); // the battle's reckoning closed: back to the sea
-  // 9. A drift off her bow, hers alone (the lookout keeps quiet in the First Watch otherwise); saved.
-  const d = driftsNear(game, s, 3000);
-  assert.equal(d.length, 1, 'one drift of hers');
-  assert.ok(['gull_mast', 'turtle_weed'].includes(d[0].kind));
-  const saved = driftOf(p).saved;
-  ship.lastCombat = -1e9; // the practice raider's broadsides long behind her
-  parkNear(game, s, d[0].x, d[0].y, 90); // alongside
-  assert.match(adminDrift(game, s, ['save']), /saved/);
-  assert.equal(driftOf(p).saved, saved + 1);
-  steps(game, 21);
-  assert.ok(c.all('onb').some((m) => m.kind === 'stage' && m.id === 'rescue'));
+  assert.ok(c.all('onb').some((m) => m.kind === 'stage' && m.id === 'port'));
   const done = c.last('onboarding')!.view;
   assert.equal(done.stage, null);
   assert.equal(done.hud, null, 'the whole HUD');
   assert.equal(done.goals!.length, 3);
   assert.equal(done.goals![0], 'g_duel', 'a corsair’s calling first');
+  assert.ok((p.tutorial.easy ?? 0) >= 1, 'the lesson’s fight counted');
   const r = onboardingReport(game);
   assert.equal(r.started, 1);
   assert.equal(r.finished, 1);
   assert.equal(r.funnel.length, STAGES.length);
-  assert.deepEqual(STAGES.map((x) => x.id), ['cast_off', 'gunnery', 'board', 'battle', 'recruit', 'skill', 'visit', 'lair', 'rescue']);
+  assert.deepEqual(STAGES.map((x) => x.id), ['sail', 'attack', 'fire', 'board', 'port']);
   assert.equal(r.hints[0].id, 'lead');
+  // docs/23 item 83: the watch over, the first quarter of an hour still keeps the optional things shut…
+  assert.ok(p.level < FRESH_LEVEL && fresh(p), `level ${p.level} after the watch`);
+  {
+    assert.equal(done.locked!.length, 4);
+    c.push({ t: 'dice', action: 'open', stake: 10 });
+    assert.ok(c.all('toast').some((m) => m.msg === FRESH_REFUSAL), 'a typed order is refused in words');
+    // …and when it is over they open, told once.
+    p.tutorial.played = FRESH_SECS - 1;
+    steps(game, 21);
+    assert.ok(c.all('onb').some((m) => m.kind === 'unlock'));
+    assert.deepEqual(c.last('onboarding')!.view.locked, []);
+  }
   // Skippable: every step (a second novice).
   const n2 = recruit(game, 'Skip Step');
   n2.c.push({ t: 'onboarding', action: 'skip_stage' });
-  assert.equal(stage(n2.c), 'gunnery');
+  assert.equal(stage(n2.c), 'attack');
+});
+
+test('a watch saved in the nine old steps goes on in the five', () => {
+  const { game } = makeGame();
+  const { s } = recruit(game, 'Old Nine');
+  const t = s.profile!.tutorial;
+  for (const [old, now] of [[0, 'sail'], [1, 'attack'], [2, 'board'], [3, 'board'], [5, 'port'], [8, 'port']] as const) {
+    t.v = 1;
+    t.on = true;
+    t.stage = old;
+    sanitizeTutorial(s.profile!);
+    assert.equal(STAGES[t.stage].id, now, `old step ${old}`);
+  }
+  // A profile from before the counts: an old hand, nothing shut, no easy fights.
+  delete t.played;
+  delete t.easy;
+  t.on = false;
+  sanitizeTutorial(s.profile!);
+  assert.equal(fresh(s.profile!), false);
+  assert.equal(t.easy, FIRST_FIGHTS);
 });
 
 test('chapter one: a sunk ship is towed home and nothing is lost; the old hand sinks as ever', () => {

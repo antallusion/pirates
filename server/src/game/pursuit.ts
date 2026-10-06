@@ -20,6 +20,7 @@ import { engageHelm, newBrain } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { softenFoe } from './firstfights.ts';
 import { canStrike, struck } from './struck.ts';
 
 /** The helmsman has the wheel back this long after the captain lets go of it. */
@@ -92,6 +93,7 @@ export function startPursuit(game: Game, s: PlayerSession, id: number, mode: Pur
   if (!run.auto && s.autoWeak && weakMark(ship, target!)) run.auto = { left: 3, next: game.now + AUTO_WEAK_SEC / 3 };
   runs.set(ship, run);
   send(game, s, run);
+  softenFoe(game, ship, target!); // one of her first three fights (docs/23 item 81)
   return null;
 }
 
