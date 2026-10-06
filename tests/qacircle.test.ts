@@ -177,7 +177,8 @@ test('a short screen: the adventure card in the top row, the toasts in a side co
 test('the island\'s defence line wraps in a narrow column; a hovered piece\'s card goes with the gear window', () => {
   assert.ok(css.includes('.base-def .bmeta { white-space: normal; max-width: 100%; min-width: 0; }'));
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
-  assert.ok(main.includes("if (modal !== 'gear') document.querySelectorAll('.gear-tip').forEach((e) => e.remove());"));
+  // docs/23 item 70: the gear is the captain window's third tab.
+  assert.ok(main.includes("if (!(modal === 'hero' && heroWindow.tab === 'gear')) document.querySelectorAll('.gear-tip').forEach((e) => e.remove());"));
 });
 
 test('toasts that cannot stand under the middle go to a side band, as compact as on a phone; the action buttons are centred', () => {

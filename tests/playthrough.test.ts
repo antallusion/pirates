@@ -19,16 +19,17 @@ test('playthrough: an abbreviation at a sentence\'s end keeps one dot («чер�
   setLang('en');
 });
 
-test('playthrough: a phone on its side gives the harbour\'s page room (head in one band, no 118 px painted head)', async () => {
+test('playthrough: a phone on its side gives the harbour\'s page room (one band, no 118 px painted head; docs/23 phase 6: a sheet of five places)', async () => {
   const { readFileSync } = await import('node:fs');
   const css = readFileSync(new URL('../client/styles.css', import.meta.url), 'utf8').replace(/\r/g, '');
-  assert.match(css, /@media \(max-height: 520px\) and \(min-width: 600px\) and \(orientation: landscape\) \{\n  #modal-panel\[data-modal="port"\] \.modal-head[^{]*\{ min-height: 0; \}/);
-  // (in one band only where the width allows: at 640 px the name ran out of its plate)
-  const m = css.match(/@media \(max-height: 520px\) and \(min-width: 760px\) and \(orientation: landscape\) \{[\s\S]*?\n\}/);
-  assert.ok(m, 'the landscape harbour head rule');
-  assert.match(m[0], /\.port-head \{ grid-template-columns: minmax\(0, 1fr\) auto;/);
-  assert.match(m[0], /\.ph-sail \{ flex: 0 0 auto;/);
-  assert.match(css, /\.skinned \.icon-tabs \.tab\.active \.ico \{ filter: brightness/);
+  const win = readFileSync(new URL('../client/src/ui/kit/window.css', import.meta.url), 'utf8').replace(/\r/g, '');
+  const port = readFileSync(new URL('../client/src/ui/port.ts', import.meta.url), 'utf8');
+  // The harbour's band is the kit's one line (its painting behind it), never the old painted head of 118 px.
+  assert.ok(!/#modal-panel\[data-modal="port"\] \.modal-head/.test(css));
+  assert.match(win, /#modal-panel\[data-modal="port"\] \.w-head \{ background:/);
+  assert.match(win, /\.w-head\.modal-head \{ min-height: var\(--k-h-2\); padding: 0 56px 0 var\(--k-sp-2\);/);
+  assert.match(port, /winHead\(placeName\(port\.name\)/);
+  assert.match(port, /railTabs\(main, this\.tab, 'ptab'\)/);
 });
 
 test('playthrough: the First Watch\'s raider never boards her pupil, even broken, and calls no pirate pack', async () => {

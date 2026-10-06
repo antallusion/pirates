@@ -585,10 +585,8 @@ table.grid td .ico { width: 1.9em; height: 1.9em; vertical-align: middle; margin
 
 /* Painted headers and screen backgrounds (Higgsfield `bg.*`), under a dark wash so text stays readable. */
 .ico-crest { width: 1.35em; height: 1.35em; object-fit: contain; vertical-align: -0.28em; margin-right: 8px; filter: drop-shadow(0 2px 3px #000); }
-#modal-panel[data-modal="port"] .modal-head,
 #modal-panel[data-modal="boarding"] .modal-head,
 #modal-panel[data-modal="menu"] .modal-head { min-height: 118px; align-items: flex-start; background-size: cover; background-position: center; border-bottom: 1px solid rgba(140, 107, 58, 0.45); }
-#modal-panel[data-modal="port"] .modal-head { background-image: linear-gradient(90deg, rgba(8, 8, 9, 0.9) 0%, rgba(8, 8, 9, 0.62) 50%, rgba(8, 8, 9, 0.25) 100%), var(--bg-port, none); }
 #modal-panel[data-modal="boarding"] .modal-head { background-image: linear-gradient(90deg, rgba(8, 8, 9, 0.9), rgba(8, 8, 9, 0.35)), var(--bg-boarding, none); }
 #modal-panel[data-modal="menu"] .modal-head { background-image: linear-gradient(90deg, rgba(8, 8, 9, 0.85), rgba(8, 8, 9, 0.3)), var(--bg-cabin, none); }
 #modal-panel[data-modal="sunk"] { background-image: linear-gradient(rgba(6, 7, 9, 0.55), rgba(6, 7, 9, 0.85)), var(--bg-sunk, none); background-size: cover; background-position: center; }
@@ -705,15 +703,13 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .head-silver { font-size: 18px; }
 .head-silver .ico-sm { width: 20px; height: 20px; }
 /* Chandlery: icon | text | buttons, every row the same columns. */
-.shop-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) 118px; gap: 10px; align-items: center; }
+
 .shop-ico { width: 48px; height: 48px; object-fit: contain; }
 .shop-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .shop-text b { font-family: var(--serif); font-size: 16px; }
 .shop-text .muted { font-size: 12px; line-height: 1.3; }
-.shop-have { font-size: 11px; color: var(--fog); }
-.shop-buy { display: grid; grid-template-rows: 1fr 1fr; gap: 6px; }
-.shop-buy .btn { display: flex; justify-content: space-between; align-items: center; width: 100%; white-space: nowrap; gap: 4px; padding-left: 4px; padding-right: 4px; }
-@media (max-width: 380px) { .shop-row { grid-template-columns: 40px minmax(0, 1fr) 118px; } .shop-ico { width: 40px; height: 40px; } }
+
+@media (max-width: 380px) { .shop-ico { width: 40px; height: 40px; } }
 /* Contracts: the kind's picture in a column, then the text; the reward row keeps its button to the right. */
 .quest-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: start; }
 .quest-ico { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 2px 3px #000); }
@@ -722,22 +718,11 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .btn .ico-sm { margin-right: 4px; }
 /* Tabs on phones: the harbour's seven as a row of equal icon cells; any other tab row wraps instead of scrolling
    its last tabs out of sight. */
-.icon-tabs .tab { display: inline-flex; align-items: center; gap: 6px; }
-.icon-tabs .tab .ico { margin: 0; }
+
 @media (max-width: 699px), (max-height: 520px) {
   .tabs { flex-wrap: wrap; overflow: visible; row-gap: 2px; }
-  .tabs.icon-tabs { display: grid; grid-template-columns: repeat(var(--n, 7), minmax(0, 1fr)); gap: 2px; padding: 4px 4px 0; }
-  .icon-tabs .tab { flex-direction: column; justify-content: center; gap: 2px; padding: 6px 1px 5px; min-width: 0; text-align: center; }
-  .skinned .icon-tabs .tab.active { border-width: 5px 4px 0; border-image-width: 5px 4px 0; padding: 3px 0; }
-  .icon-tabs .tab .ico { width: 28px; height: 28px; }
-  .icon-tabs .tab span { font-size: 8px; letter-spacing: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
-.tab-caption { display: none; }
-@media (max-width: 699px), (max-height: 520px) {
-  .icon-tabs .tab span { display: none; }
-  .icon-tabs .tab .ico { width: 32px; height: 32px; }
-  .tab-caption { display: block; padding: 6px 12px 4px; font: 600 12px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); text-align: center; border-bottom: 1px solid rgba(140, 107, 58, 0.35); }
-}
+
 /* Shipyard rows on the shop grid; hulls for sale as cards with the painted ship lying across. */
 .item-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 104px; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(140, 107, 58, 0.18); }
 .item-row:first-of-type { border-top: 0; }
@@ -759,13 +744,7 @@ body.touch { --touch-h: calc(var(--stick) + 20px); }
 .hull-stats span { display: inline-flex; align-items: center; }
 @media (max-width: 380px) { .hull-card { grid-template-columns: 60px minmax(0, 1fr) 92px; } .hull-art img { height: 60px; } }
 /* Tavern: four equal hire buttons; tradesmen on the row grid. */
-.hire-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 6px 0; }
-.hire-grid .btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 2px; }
-.trade-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 62px 96px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(140, 107, 58, 0.18); }
-.trade-row .item-ico { width: 36px; height: 36px; }
-.trade-btns { display: grid; grid-template-columns: 1fr 30px; gap: 4px; }
-.trade-btns .btn { padding-left: 2px; padding-right: 2px; }
-@media (max-width: 380px) { .trade-row { grid-template-columns: 32px minmax(0, 1fr) 56px 88px; } }
+
 /* ---- P6: the ship and her hold ---- */
 .ship-head { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .ship-hero { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%;
@@ -910,9 +889,8 @@ button.tab { background: none; font-family: var(--sans); }
 .opt-l { display: inline-flex; align-items: center; gap: 6px; }
 .options select.field { margin-top: 0; padding: 7px 10px; font-family: var(--sans); font-size: 14px; }
 input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; flex: none; }
-@media (min-width: 700px) and (min-height: 521px) { .tabs.icon-tabs.four { padding: 0 18px; } }
+
 @media (max-width: 699px), (max-height: 520px) {
-  .tabs.icon-tabs.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .options label.opt-range { grid-template-columns: minmax(0, 1fr) 48px; gap: 4px 10px; }
   .options label.opt-range .opt-l { grid-column: 1 / -1; }
   .options label.opt-range.sel { grid-template-columns: minmax(0, 1fr); }
@@ -977,11 +955,7 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
 }
 /* ---- P6: company — painted tabs, the same grid as the harbour's ---- */
 .tab { position: relative; }
-.tab-badge { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #b3372b; color: #fff; font: 700 10px/16px var(--sans); font-style: normal; text-align: center; box-shadow: 0 0 0 1px #000; }
-@media (max-width: 699px), (max-height: 520px) {
-  .tabs.icon-tabs.company-tabs { grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); }
-  .company-tabs .tab .ico { width: 30px; height: 30px; }
-}
+
 /* Every field in a window: dark, brass-edged, legible. */
 #modal-panel input[type=text], #modal-panel input[type=number], #modal-panel input:not([type]), #modal-panel select, #modal-panel textarea {
   background: #0e1013; border: 1px solid var(--slate); color: var(--bone); border-radius: 3px; padding: 7px 9px; font: 14px var(--sans); outline: none; min-width: 0; }
@@ -1055,51 +1029,33 @@ body.touch #hud-dive .dhint { display: none; }
 .modal-head h2 .ico-crest, .skinned .modal-head h2 .ico-crest { margin: 0; vertical-align: 0; width: 1.25em; height: 1.25em; flex: none; }
 .modal-head h2 > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.15; }
 /* The harbour head: title and description on the left, the ship's figures and the sail order on the right. */
-.port-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 18px; }
-.port-head .ph-title { min-width: 0; }
-.port-head .sub { margin-top: 4px; }
-.ph-stats { display: grid; grid-template-columns: repeat(3, auto); gap: 6px; align-items: center; justify-items: stretch; }
+
 .ph-chip { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 30px; padding: 0 10px; border: 1px solid rgba(140, 107, 58, 0.45); border-radius: 15px; background: rgba(8, 9, 11, 0.7); font: 600 13px var(--sans); color: var(--bone); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ph-chip.gold { color: var(--gold); font-size: 15px; }
 .ph-chip .money { gap: 5px; }
 .ph-chip .ico-sm { width: 18px; height: 18px; margin: 0; }
-.ph-sail { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; }
-.ph-sail .ico-sm { margin: 0; }
+
 @media (max-width: 699px), (max-height: 520px) {
-  .port-head { grid-template-columns: minmax(0, 1fr); padding: 8px 50px 8px 10px; }
-  .port-head .ph-title { text-align: left; }
   /* The chips take the width their numbers need (a big purse never spills past its frame) and share the rest. */
-  .ph-stats { display: flex; flex-wrap: wrap; gap: 6px; }
   .ph-chip { flex: 1 1 auto; min-width: max-content; padding: 0 8px; }
-  .ph-sail { flex: 1 1 100%; min-height: 36px; width: 100%; margin: 0; }
 }
 /* A phone on its side: the head in one band (name and line | figures and the sail order), the tabs and their caption
    tighter — the page had 117 of 375 px left under them. */
 @media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
-  #modal-panel[data-modal="port"] .modal-head, #modal-panel[data-modal="boarding"] .modal-head, #modal-panel[data-modal="menu"] .modal-head { min-height: 0; }
+  #modal-panel[data-modal="boarding"] .modal-head, #modal-panel[data-modal="menu"] .modal-head { min-height: 0; }
 }
 /* …the name and the figures in one band where the width allows (at 640 px the name had 170 px and ran out of its
    plate); a narrower phone keeps the figures and the sail order in a row under the name. */
 @media (max-height: 520px) and (min-width: 760px) and (orientation: landscape) {
-  .port-head { grid-template-columns: minmax(0, 1fr) auto; }
-  .ph-stats { flex-wrap: nowrap; }
   .ph-chip { flex: 0 0 auto; }
-  .ph-sail { flex: 0 0 auto; width: auto; padding: 0 14px; }
 }
 @media (max-height: 520px) and (min-width: 600px) and (orientation: landscape) {
-  @media (max-width: 759px) { .ph-sail { flex: 1 1 auto; width: auto; } .ph-stats { flex-wrap: nowrap; } }
   /* The cabin's twelve doors in two rows of six (two columns showed two and a half of them). */
   #modal-panel[data-modal="menu"] .menu-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
   #modal-panel[data-modal="menu"] .menu-tile { gap: 4px; padding: 10px 4px 6px; font-size: 13px; }
   #modal-panel[data-modal="menu"] .menu-tile .ico-lg { width: 48px; height: 48px; }
   #modal-panel[data-modal="menu"] .menu-tile > span { max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }
-  .port-head { gap: 2px 12px; padding: 6px 50px 6px 10px; }
-  .port-head .sub { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ph-chip { height: 30px; }
-  .ph-sail { min-height: 32px; }
-  .icon-tabs .tab .ico { width: 26px; height: 26px; }
-  .tabs.icon-tabs .tab { padding-top: 3px; padding-bottom: 2px; }
-  .tab-caption { padding: 3px 12px 2px; font-size: 11px; }
   /* A boarding's spoils: the hold | the coin and her fate side by side, the fates two to a row and low (they stood
      516–916 px down a 258 px page). */
   #modal-panel[data-modal="boarding"] .cols { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr); gap: 12px; }
@@ -1129,14 +1085,7 @@ body.touch #hud-dive .dhint { display: none; }
 ::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #6f5530, #d4ae6a 50%, #6f5530); }
 ::-webkit-scrollbar-button, ::-webkit-scrollbar-corner { display: none; background: transparent; }
 .card h4.card-h .ico-md.flip { transform: scaleX(-1); }
-.price-sell { display: inline-flex; align-items: center; gap: 4px; }
-.price-sell .money { color: var(--bone); }
-.trade-counts { display: inline-flex; gap: 10px; align-items: center; }
-.trade-counts > span { display: inline-flex; align-items: center; gap: 3px; }
-.trade-row { grid-template-columns: 36px minmax(0, 1fr) 64px 108px; }
-.trade-btns { grid-template-columns: minmax(0, 1fr) 34px; }
-.trade-btns .btn-danger { font-weight: 700; font-size: 16px; line-height: 1; }
-@media (max-width: 380px) { .trade-row { grid-template-columns: 32px minmax(0, 1fr) 60px 104px; } }
+
 /* Section plates never break onto a second line (a two-line plate tears its frame): smaller type on a phone,
    an ellipsis if even that does not fit. */
 .skinned .title-sm { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
@@ -1157,22 +1106,11 @@ input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; backgroun
 input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f3dc9c, #b8893f 60%, #6b4c22); border: 1px solid #2a1c0a; }
 /* Tablets and small desktops: the harbour's and the company's tabs share the row in equal cells, the picture
    over a small caption, so seven or eight of them never run past the window. */
-@media (min-width: 700px) and (max-width: 1279px) and (min-height: 521px) {
-  .tabs.icon-tabs { display: grid; grid-template-columns: repeat(var(--n, 7), minmax(0, 1fr)); gap: 2px; padding: 4px 12px 0; }
-  .icon-tabs .tab { flex-direction: column; justify-content: center; gap: 3px; padding: 6px 2px 5px; min-width: 0; text-align: center; }
-  .icon-tabs .tab .ico { width: 30px; height: 30px; }
-  .icon-tabs .tab span { font-size: 10px; letter-spacing: 0.04em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .skinned .icon-tabs .tab.active { border-width: 5px 4px 0; border-image-width: 5px 4px 0; padding: 3px 0; }
-}
+
 /* A plate in a half-width column takes a smaller type so it stays on one line. */
 .cols .title-sm { font-size: 18px !important; }
 /* The market's three orders stand in one row of equal buttons. */
-.mk-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; min-width: 228px; }
-.mk-btns .btn { width: 100%; text-align: center; white-space: nowrap; padding-left: 2px; padding-right: 2px; }
-@media (max-width: 699px), (max-height: 520px) {
-  table.grid.market td:last-child .mk-btns { width: 100%; min-width: 0; gap: 8px; margin-top: 4px; }
-  table.grid.market td:last-child .mk-btns .btn { min-height: 38px; }
-}
+
 /* Ledgers on a phone: every row a small card, each figure under its column's name; no sideways scrolling. */
 @media (max-width: 699px) {
   #modal-panel table.grid[data-ledger] { display: block; overflow: visible; font-size: 13px; }
@@ -1189,10 +1127,7 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 }
 /* The harbour's name: the faction's crest stands beside the plate (not squeezed inside it), the name alone in
    the plate's middle. */
-.ph-name { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.ph-crest { width: auto; max-width: 48px; height: 40px; flex: none; object-fit: contain; filter: drop-shadow(0 2px 3px #000); }
-.ph-name h2 { min-width: 0; }
-@media (max-width: 699px), (max-height: 520px) { .ph-crest { height: 34px; max-width: 40px; } }
+
 /* Every title plate: the words sit on the plate's centre line (the display face rides a little high). */
 .skinned .modal-head h2, .skinned .title-sm { line-height: 1.2; padding-top: 2px; padding-bottom: 1px; }
 /* The captain's ring sits true: the painted ring keeps its own proportions and its hole is centred on the
@@ -1216,14 +1151,11 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 .h-count { flex: none; min-width: 32px; height: 26px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid rgba(201, 162, 90, 0.55); border-radius: 13px; background: rgba(12, 9, 6, 0.8); font: 700 14px/1 var(--sans); color: var(--gold); }
 /* The tavern's other orders sit in the hiring grid, two cells wide each. */
-.hire-grid .hire-wide { grid-column: span 2; flex-direction: row; justify-content: center; min-height: 32px; }
 
 /* A tablet's market: the phone's cards, two to a row (a seven-column ledger does not fit 768px). */
 @media (min-width: 700px) and (max-width: 979px) {
   table.grid.market tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   table.grid.market tr { margin-bottom: 0; }
-  table.grid.market td:last-child .mk-btns { width: 100%; min-width: 0; gap: 8px; margin-top: 4px; }
-  table.grid.market td:last-child .mk-btns .btn { min-height: 34px; }
 }
 
 /* The button art carries a clear margin (19 of its 40px corners): its painted rim is drawn out to the box's
@@ -1231,20 +1163,11 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
    stands exactly its gap apart. */
 .skinned .btn, .skinned .tab.active { border-image-outset: 0.475; }
 /* An icon on the chosen tab's wood: the dark ones (the market's scales) all but vanished into it. */
-.skinned .icon-tabs .tab.active .ico { filter: brightness(1.5) drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
 
 /* Every tab keeps its chosen twin's edges (a clear border where the frame will be), so a label does not drop
    when its tab is chosen and the row reads as one line; the label sits in the middle under the frame's rim. */
 .skinned .tab:not(.active) { border-style: solid; border-color: transparent; border-width: 6px 10px 0; }
 .skinned .tab.active, .skinned .tab:not(.active) { padding: 3px 6px 6px; }
-@media (max-width: 699px), (max-height: 520px) {
-  .skinned .icon-tabs .tab:not(.active) { border-width: 5px 4px 0; }
-  .skinned .icon-tabs .tab.active, .skinned .icon-tabs .tab:not(.active) { padding: 1px 0 3px; }
-}
-@media (min-width: 700px) and (max-width: 1279px) and (min-height: 521px) {
-  .skinned .icon-tabs .tab:not(.active) { border-width: 5px 4px 0; }
-  .skinned .icon-tabs .tab.active, .skinned .icon-tabs .tab:not(.active) { padding: 1px 0 3px; }
-}
 
 /* The title screen on one axis: the guest order as wide as the name field; the account drawer opens on a brass
    chevron, not the browser's triangle, and its buttons share the field's width. */
@@ -1508,7 +1431,7 @@ body.touch #hud-region .rg-extra { display: none; }
 @media (max-width: 699px) { .map-legend .lg-items { gap: 2px 10px; } }
 /* The chart closes with the X like every window (its own «[M] закрыть» line wrapped beside it); the menu shows
    the key. */
-.map-close { display: none; }
+
 /* The game's own question (in place of the browser's confirm()/alert()): since docs/23 phase 1 the kit's bottom sheet
    (ui/kit/sheet.ts, kit.css) sized to its words — the text, «Отмена» and the verb as two equal kit buttons at its foot
    (one in the middle for a notice). */
@@ -1637,7 +1560,6 @@ body.touch #hud-region .rg-extra { display: none; }
 @media (max-width: 1099px) and (min-width: 700px) and (min-height: 521px) { body:not(.touch) #board-fight { width: min(760px, calc(100vw - 150px)); left: calc(50% - 30px); } }
 /* While the captains fight, the round's clock stands still. */
 .bf-panel.dueling .bf-timer { visibility: hidden; }
-
 
 /* The quest log under the chart (docs/11 P4): a row a quest, the chart turns to its target. */
 .map-quests { max-height: 160px; overflow-y: auto; padding: 6px 10px; border-top: 1px solid rgba(111, 90, 56, 0.4); display: grid; gap: 4px; }
@@ -1854,7 +1776,7 @@ body.touch #hud-region .rg-extra { display: none; }
 
 /* The gear window (docs/12 P1): slot tiles, the locker's rows, and the open piece's card beside or under them. */
 .ship-head-r { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-left: auto; }
-.modal-body.gear .gear-tabs { margin-bottom: 8px; }
+
 .gear-main { display: flex; flex-direction: column; gap: 10px; }
 @media (min-width: 900px) { .gear-main { flex-direction: row; align-items: flex-start; } .gear-main .gear-body { flex: 1 1 60%; min-width: 0; } .gear-main .gear-detail { flex: 0 0 340px; position: sticky; top: 0; } }
 .gear-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
@@ -2170,7 +2092,7 @@ body.has-poster .poster .btn { max-width: 100%; }
 .tt-gives { color: #cfe0b0; }
 .tt-how { font-size: 11px; }
 .tt-worn { font-size: 10px; color: #e8c46a; text-transform: uppercase; letter-spacing: 0.04em; }
-.jr-tattoos { margin-left: auto; align-self: center; }
+
 .choice3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .choice3 .ch-col { display: flex; flex-direction: column; gap: 6px; }
 .choice3 .ch-col .gi-card { flex: 1; }
@@ -2303,7 +2225,7 @@ table.grid td .money, table.grid td .btn { overflow-wrap: normal; }
 .saga-card .saga-pic { width: 34px; height: 34px; object-fit: cover; border-radius: 4px; flex: none; }
 .saga-card .saga-text { font-family: var(--serif); font-size: 13px; line-height: 1.3; color: #eadfc6; }
 .saga-card .saga-flag { float: right; margin: 1px 0 2px 6px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
-.jr-head-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
 /* The Floating Bazaar (docs/12 P10 #19). */
 .bz-card { margin-top: 12px; }
 .bz-card .bz-stall { border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 0 4px; }
@@ -2665,10 +2587,7 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
 
 /* ---------- My Island: the shipyard tab and her own ships (docs/15 items 4–5). */
 .base-head { gap: 10px; flex-wrap: wrap; }
-.btabs { display: flex; gap: 4px; flex: none; }
-.btab { padding: 6px 12px; min-height: 34px; cursor: pointer; color: var(--fog); background: rgba(6, 6, 7, 0.55); border: 1px solid rgba(140, 107, 58, 0.4); border-radius: 3px; font: 600 12px var(--sans); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
-.btab i { font-style: normal; color: var(--steel-text); font-weight: 500; }
-.btab.sel { color: var(--gold); border-color: var(--brass); background: #14120e; }
+
 .bpower { color: var(--bone); }
 .blevel .row b { font-family: var(--serif); font-size: 15px; }
 .blevel .bcosts { margin-top: 4px; }
@@ -2709,12 +2628,9 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
 .sy-offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 0 12px; }
 .sy-cls { font-family: var(--sans); font-size: 12px; }
 @media (max-width: 699px) {
-  .btab { padding: 4px 8px; min-height: 32px; font-size: 11px; }
   #modal-panel[data-modal="base"] .modal-body.base-body.yard-body { padding: 4px 6px 10px; }
 }
-@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
-  .btab { min-height: 28px; padding: 2px 8px; }
-}
+
 .blevel .good { color: var(--good); } .blevel .bad { color: var(--bad); }
 
 /* ---------- My Island on a phone on its side (docs/15 item 8): a thin header; the board fills the left half and
@@ -2792,11 +2708,7 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 @media (max-width: 480px) { .depart-panel .dp-row { flex-wrap: wrap; } .depart-panel .dp-buy { width: 100%; } .depart-panel .dp-none { max-width: none; width: 100%; text-align: left; } }
 @media (max-height: 520px) { .confirm-panel.depart-panel { width: min(640px, 100%); padding: 12px 14px; } .depart-panel .dp-title { font-size: 18px; } .depart-panel p.dp-lead { font-size: 14px; margin-bottom: 6px; } .depart-panel .dp-row { padding: 4px 8px; } .depart-panel .k-sheet-foot { padding-top: 8px; } }
 /* The market's quick row: provisions for a voyage. */
-.card.voyage-food { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; border-color: rgba(217, 178, 90, 0.45); }
-.card.voyage-food.short { border-color: rgba(232, 196, 106, 0.9); box-shadow: 0 0 0 1px rgba(232, 196, 106, 0.35), 0 0 14px rgba(232, 196, 106, 0.18) inset; }
-.card.voyage-food .shop-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.card.voyage-food .btn { flex: none; white-space: nowrap; }
-@media (max-width: 480px) { .card.voyage-food { flex-wrap: wrap; } .card.voyage-food .btn { width: 100%; } }
+
 /* Goods as their picture and count (the outposts' costs). */
 .gq { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .gq .ico-xs { width: 22px; height: 22px; margin: 0; }
@@ -3238,13 +3150,7 @@ body.tac.tac-over #toasts { display: none; }
 .tg .tg-title { color: var(--gold); font-style: italic; }
 /* The company window has ten tabs with the career and the album (docs/16 #26, 28): on a wide screen too they share
    the strip evenly as pictures (the name on hover), and the open tab's name stands under the strip. */
-@media (min-width: 700px) and (min-height: 521px) {
-  .tabs.icon-tabs.company-tabs { display: grid; grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); padding: 0 12px; }
-  .company-tabs .tab { justify-content: center; min-width: 0; padding-left: 2px; padding-right: 2px; }
-  .company-tabs .tab .ico { margin: 0; width: 32px; height: 32px; }
-  .company-tabs .tab span { display: none; }
-  .company-tabs + .tab-caption { display: block; padding: 6px 12px 4px; font: 600 12px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); text-align: center; border-bottom: 1px solid rgba(140, 107, 58, 0.35); }
-}
+
 /* Batch E of docs/16: the walk across an island (client/src/ui/trek.ts) — the island games' card kit, one step at a
    time: the steps as dots with the path's picture, what was met, the ways on as big buttons that wrap. */
 #trek { position: fixed; left: 50%; top: calc(var(--sa-t, 0px) + 96px); transform: translateX(-50%); width: min(420px, calc(100vw - 20px)); max-height: calc(100vh - var(--sa-t, 0px) - var(--sa-b, 0px) - 110px); overflow-y: auto; z-index: 40; pointer-events: auto; overscroll-behavior: contain; overflow-wrap: break-word; -webkit-tap-highlight-color: transparent; }
