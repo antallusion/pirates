@@ -344,12 +344,11 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
 #hud-dive .dctl { text-align: center; }
 #hud-dive .dctl button { min-width: 30px; margin: 1px; }
 .map-maps { max-height: 150px; overflow-y: auto; font-size: 12px; padding: 6px 10px; border-top: 1px solid rgba(111,90,56,0.4); }
-.toast { background: rgba(10, 11, 13, 0.85); border-left: 3px solid var(--steel); padding: 6px 10px; font-size: 12px; animation: fadein 0.2s; }
+.toast { background: rgba(10, 11, 13, 0.85); border-left: 3px solid var(--steel); padding: 6px 10px; font-size: 12px; } /* its motion: ui/kit/kit.css */
 .toast.good { border-color: var(--good); }
 .toast.bad { border-color: var(--bad); }
 .toast.gold { border-color: var(--gold); color: #f0d9a0; }
 .toast.xp { border-color: var(--xp); color: #cfe0f2; }
-@keyframes fadein { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; } }
 #chat-log { max-height: 140px; overflow: hidden; font-size: 12px; text-shadow: 0 1px 2px #000; }
 #chat-log div b { color: var(--brass); }
 #chat.open #chat-input { display: block; }
@@ -513,9 +512,6 @@ dl.glossary dt { font-weight: 600; margin-top: 6px; }
 dl.glossary dd { margin: 0 0 4px 0; color: var(--fog); font-size: 13px; }
 
 /* Gamepad (docs/07 §12) */
-#radial { position: fixed; left: 50%; top: 50%; width: 360px; height: 360px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(10, 11, 13, 0.85) 30%, rgba(10, 11, 13, 0.55) 70%, transparent 71%); z-index: 40; pointer-events: none; }
-#radial .r-item { position: absolute; transform: translate(-50%, -50%); font-family: var(--sans); font-size: 13px; color: var(--bone); padding: 4px 8px; border: 1px solid var(--brass-dim); background: rgba(10, 11, 13, 0.9); white-space: nowrap; }
-#radial .r-item.sel { border-color: var(--gold); color: var(--gold); transform: translate(-50%, -50%) scale(1.12); }
 #pad-cursor { position: fixed; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid var(--gold); border-radius: 50%; box-shadow: 0 0 6px #000; z-index: 60; pointer-events: none; }
 
 /* Phase 11 fixes for the stacks: a hidden hint takes no room; sound captions keep to the screen edges on phones. */
@@ -1546,14 +1542,13 @@ body.touch #hud-region .rg-extra { display: none; }
 /* The chart closes with the X like every window (its own «[M] закрыть» line wrapped beside it); the menu shows
    the key. */
 .map-close { display: none; }
-/* The game's own question (in place of the browser's confirm()/alert()): a small framed card over everything,
-   the text in the middle, «Отмена» and the verb as two equal buttons (one in the middle for a notice). */
-#confirm { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; background: rgba(0, 0, 0, 0.55); }
-.confirm-panel { width: min(420px, 100%); box-sizing: border-box; padding: 18px 20px 16px; zoom: calc(var(--ui-scale) * var(--text-scale)); }
-.confirm-panel p { margin: 0 0 16px; font-family: var(--serif); font-size: 18px; line-height: 1.35; color: var(--bone); text-align: center; text-wrap: pretty; }
-.confirm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.confirm-row.one { grid-template-columns: minmax(0, 220px); justify-content: center; }
-.confirm-row .btn { min-height: 40px; }
+/* The game's own question (in place of the browser's confirm()/alert()): since docs/23 phase 1 the kit's bottom sheet
+   (ui/kit/sheet.ts, kit.css) sized to its words — the text, «Отмена» and the verb as two equal kit buttons at its foot
+   (one in the middle for a notice). */
+.k-sheet.confirm-panel { width: min(460px, 100%); zoom: calc(var(--ui-scale) * var(--text-scale)); }
+.confirm-panel p { margin: 0 0 4px; font-family: var(--serif); font-size: 18px; line-height: 1.35; color: var(--bone); text-align: center; text-wrap: pretty; }
+.k-sheet-foot > .confirm-row { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.k-sheet-foot > .confirm-row.one { grid-template-columns: minmax(0, 240px); justify-content: center; }
 
 /* ==== Boarding 2.0: the deck fight (client/src/ui/boardfight.ts) ==== */
 #board-fight { position: absolute; z-index: 12; left: 50%; transform: translateX(-50%); bottom: calc(var(--hb-top, 170px) + 10px); width: min(760px, calc(100vw - 32px)); pointer-events: auto; }
@@ -2249,7 +2244,7 @@ body.has-poster .poster .btn { max-width: 100%; }
 .doll-slot:not(.full) .doll-ico { opacity: 0.32; filter: grayscale(1); object-fit: contain; padding: 8px; }
 .doll-lv { position: absolute; right: 2px; bottom: 1px; font: 700 11px var(--sans); color: #fff; text-shadow: 0 0 3px #000, 0 0 2px #000; line-height: 1; }
 /* The owner's rule: no word or number ever leaves its frame. A word too long for its box breaks inside it. */
-#modal-panel, #hud, #toasts, #encounter, #confirm { overflow-wrap: break-word; }
+#modal-panel, #hud, #toasts, #encounter { overflow-wrap: break-word; }
 .hull-text b { hyphens: auto; }
 .form-grid label.check input[type=checkbox], label.check input[type=checkbox] { width: auto; flex: none; }
 .poster { container-type: inline-size; }
@@ -2534,8 +2529,7 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
   #hud-feed .feed-line::before { content: '⚑ '; color: var(--brass); }
 }
 @media (max-width: 699px) {
-  /* A phone: three toasts at most, one line each; the news and the goals are single lines too. */
-  #toasts .toast:nth-child(n+3) { display: none !important; }
+  /* A phone: one line each for the news and the goals (two toasts at most: the kit's queue, ui/kit/toast.ts). */
   .toast { font-size: 11px; padding: 3px 7px; }
   .toast > span { -webkit-line-clamp: 2; line-clamp: 2; }
   .toast .ico-toast { width: 16px; height: 16px; }
@@ -2797,7 +2791,7 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
 #modal-panel { flex: 0 1 auto; min-height: 0; }
 #modal-toasts { flex: none; display: flex; flex-direction: column; gap: 2px; width: min(1100px, 95vw); padding: 3px 0 2px; pointer-events: none; zoom: var(--ui-scale); font-size: calc(1em * var(--text-scale)); }
 #modal-toasts:empty { display: none; }
-#modal-toasts .toast { padding: 2px 8px; font-size: 12px; line-height: 18px; background: rgba(8, 9, 11, 0.94); animation: fadein 0.2s; }
+#modal-toasts .toast { padding: 2px 8px; font-size: 12px; line-height: 18px; background: rgba(8, 9, 11, 0.94); }
 #modal-toasts .toast > span { display: block; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #modal-toasts .toast .ico-toast { width: 16px; height: 16px; flex: none; }
 #modal-toasts .t-count { flex: none; }
@@ -2837,10 +2831,10 @@ body:has(#modal:not(.hidden)) #toasts { display: none; }
 .depart-panel .dp-text .muted { font-size: 13px; line-height: 1.3; }
 .depart-panel .dp-buy { flex: none; white-space: nowrap; min-height: 36px; }
 .depart-panel .dp-none { flex: none; font-size: 12px; max-width: 110px; text-align: right; }
-.depart-panel .dp-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.depart-panel .dp-foot .btn { flex: 1 1 140px; min-height: 40px; }
+.depart-panel .k-sheet-foot { flex-wrap: wrap; }
+.depart-panel .k-sheet-foot > .k-btn { flex: 1 1 140px; max-width: none; }
 @media (max-width: 480px) { .depart-panel .dp-row { flex-wrap: wrap; } .depart-panel .dp-buy { width: 100%; } .depart-panel .dp-none { max-width: none; width: 100%; text-align: left; } }
-@media (max-height: 520px) { .confirm-panel.depart-panel { width: min(640px, 100%); padding: 12px 14px; } .depart-panel .dp-title { font-size: 18px; } .depart-panel p.dp-lead { font-size: 14px; margin-bottom: 6px; } .depart-panel .dp-row { padding: 4px 8px; } .depart-panel .dp-foot { margin-top: 8px; } .depart-panel .dp-foot .btn { min-height: 34px; } }
+@media (max-height: 520px) { .confirm-panel.depart-panel { width: min(640px, 100%); padding: 12px 14px; } .depart-panel .dp-title { font-size: 18px; } .depart-panel p.dp-lead { font-size: 14px; margin-bottom: 6px; } .depart-panel .dp-row { padding: 4px 8px; } .depart-panel .k-sheet-foot { padding-top: 8px; } }
 /* The market's quick row: provisions for a voyage. */
 .card.voyage-food { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; border-color: rgba(217, 178, 90, 0.45); }
 .card.voyage-food.short { border-color: rgba(232, 196, 106, 0.9); box-shadow: 0 0 0 1px rgba(232, 196, 106, 0.35), 0 0 14px rgba(232, 196, 106, 0.18) inset; }
@@ -3867,7 +3861,6 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
   body:not(.touch) .micro-menu { display: grid; grid-template-columns: repeat(6, 38px); gap: 6px; }
   body:not(.touch) .micro-menu button { width: 38px; height: 38px; }
   body:not(.touch) #hud-nav { bottom: 108px; }
-  #toasts .toast:nth-child(n+6) { display: none !important; }
 }
 /* docs/17 H5 (QA): the First Watch's step heads the top stack (a phone's stack scrolls; the step fell out of sight
    under the target frame and the fishing card once the guns came in). */

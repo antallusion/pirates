@@ -13,6 +13,9 @@ import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/port.ts';
 import type { ClientState } from '../state.ts';
 import { esc, fmt, icon, money } from './dom.ts';
+import { buttonHtml } from './kit/button.ts';
+import { openSheet } from './kit/sheet.ts';
+import type { SheetHandle } from './kit/sheet.ts';
 
 const L = dict(EN, RU);
 
@@ -101,70 +104,62 @@ function row(o: Offer, i: number, state: ClientState): string {
   return `<div class="dp-row">${icon(ico, '', 'ico-md')}<div class="dp-text"><b>${esc(title)}</b><span class="muted">${esc(line)}</span></div>${act}</div>`;
 }
 
-let openEl: HTMLElement | null = null;
+let openSheetHandle: SheetHandle | null = null;
 
-/** Casting off: straight away when all is aboard, else the list of what is short first. */
+/** Casting off: straight away when all is aboard, else the list of what is short first — in the kit's bottom sheet
+ *  (docs/23 phase 1): the list scrolls, the three buttons stay at its foot. */
 export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go: () => void): void {
   const ship = voyageShip(state);
   if (!ship || !state.portView || !voyageNeeds(ship).length) return go();
-  openEl?.remove();
-  const el = document.createElement('div');
-  el.id = 'confirm';
-  el.className = 'depart';
-  openEl = el;
+  openSheetHandle?.close('code');
   let offers: Offer[] = [];
-  let lastHtml = '';
-  const close = () => {
-    clearInterval(timer);
-    removeEventListener('keydown', key, true);
-    el.remove();
-    if (openEl === el) openEl = null;
-  };
-  const key = (e: KeyboardEvent) => {
-    if (e.key === 'Tab') return;
-    e.stopImmediatePropagation();
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      close();
-    }
-  };
+  let lastBody = '', lastFoot = '';
+  const sheet = openSheet({
+    id: 'confirm', cls: 'confirm-panel depart-panel', role: 'alertdialog', height: 'auto', noClose: true, labelledBy: 'dp-title', body: '', foot: '',
+    onClose: () => {
+      clearInterval(timer);
+      if (openSheetHandle === sheet) openSheetHandle = null;
+    },
+  });
+  openSheetHandle = sheet;
   const draw = () => {
-    if (!state.self?.dockedAt) return close();
+    if (!state.self?.dockedAt) return sheet.close('code');
     const s = voyageShip(state);
-    if (!s) return close();
+    if (!s) return sheet.close('code');
     offers = voyageNeeds(s).map((n) => offerOf(n, state));
     const total = offers.reduce((a, o) => a + o.cost, 0);
     const buyable = offers.filter((o) => o.n > 0);
     const gold = state.self.gold;
-    const html = `<div class="panel confirm-panel depart-panel" role="alertdialog" aria-modal="true" aria-labelledby="dp-title">
-      <h3 id="dp-title" class="dp-title">${icon('stat_sails', '', 'ico-md')}${esc(L('depart.title'))}</h3>
+    const body = `<h3 id="dp-title" class="dp-title">${icon('stat_sails', '', 'ico-md')}${esc(L('depart.title'))}</h3>
       ${offers.length ? `<p class="dp-lead">${esc(L('depart.lead', { min: VOYAGE_MINUTES }))}</p><div class="dp-list">${offers.map((o, i) => row(o, i, state)).join('')}</div>` : `<p class="dp-lead dp-ok">${esc(L('depart.ready'))}</p>`}
-      ${buyable.length && total > gold ? `<p class="dp-warn">${esc(L('depart.short', { gold: fmt(gold) }))}</p>` : ''}
-      <div class="dp-foot">${buyable.length > 1 || (buyable.length === 1 && offers.length > 1) ? `<button class="btn btn-primary" data-dp="all">${esc(L('depart.buyAll', { cost: fmt(total) }))}</button>` : ''}
-        <button class="btn${offers.length ? '' : ' btn-primary'}" data-dp="sail">${esc(offers.length ? L('depart.sailAnyway') : L('depart.sail'))}</button>
-        <button class="btn" data-dp="stay">${esc(L('depart.stay'))}</button></div></div>`;
-    if (html === lastHtml) return;
-    lastHtml = html;
-    el.innerHTML = html;
+      ${buyable.length && total > gold ? `<p class="dp-warn">${esc(L('depart.short', { gold: fmt(gold) }))}</p>` : ''}`;
+    const foot = `${buyable.length > 1 || (buyable.length === 1 && offers.length > 1) ? buttonHtml({ kind: 'primary', size: 'md', label: L('depart.buyAll', { cost: fmt(total) }), data: { dp: 'all' } }) : ''}${buttonHtml({ kind: offers.length ? 'secondary' : 'primary', size: 'md', label: offers.length ? L('depart.sailAnyway') : L('depart.sail'), data: { dp: 'sail' } })}${buttonHtml({ kind: 'secondary', label: L('depart.stay'), data: { dp: 'stay' } })}`;
+    if (body !== lastBody) {
+      lastBody = body;
+      sheet.body.innerHTML = body;
+    }
+    if (foot !== lastFoot) {
+      const had = (document.activeElement as HTMLElement | null)?.dataset?.dp;
+      lastFoot = foot;
+      sheet.foot!.innerHTML = foot;
+      if (had) sheet.foot!.querySelector<HTMLElement>(`[data-dp="${had}"]`)?.focus({ preventScroll: true });
+    }
   };
-  el.addEventListener('click', (e) => {
-    if (e.target === el) return close();
+  sheet.panel.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-dp]');
     if (!b) return;
     const what = b.dataset.dp!;
-    if (what === 'stay') return close();
+    if (what === 'stay') return sheet.close('button');
     if (what === 'sail') {
-      close();
+      sheet.close('button');
       return go();
     }
     const list = what === 'all' ? offers : [offers[Number(what)]].filter(Boolean);
     for (const o of list) for (const m of o.msgs) send(m);
   });
   const timer = setInterval(draw, 400);
-  addEventListener('keydown', key, true);
   draw();
-  document.body.append(el);
-  el.querySelector<HTMLElement>('[data-dp="all"], [data-dp="0"], [data-dp="sail"]')?.focus({ preventScroll: true });
+  sheet.panel.querySelector<HTMLElement>('[data-dp="all"], [data-dp="0"], [data-dp="sail"]')?.focus({ preventScroll: true });
 }
 
 /** The market's quick row: provisions for a voyage, what is aboard and one button to buy the rest. */

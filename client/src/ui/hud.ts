@@ -59,6 +59,7 @@ import { drawFindsMini } from '../render/seafinds.ts';
 import { drawRoamsMini } from '../render/roamers.ts'; // docs/19 D7
 import { armyGlance } from './army.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
+import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
 
 const L = dict(EN, RU);
 const RL = dict(REN, RRU);
@@ -66,7 +67,6 @@ const RL = dict(REN, RRU);
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 const wantedTitle = (n: number): string => L(`wanted.${Math.max(0, Math.min(5, n))}` as keyof typeof EN & string);
 
-/** How long a toast stays: short on a phone (the sea is small there), a little longer with a mouse. */
 /** A window is open over the sea (the toasts keep to its strip then). */
 function modalOpen(): boolean {
   return !$('modal').classList.contains('hidden');
@@ -76,11 +76,6 @@ function modalOpen(): boolean {
 export function releaseModalToasts(): void {
   const strip = $('modal-toasts'), col = $('toasts');
   for (const el of [...strip.children].reverse()) col.prepend(el);
-}
-
-function toastLife(kind: string): number {
-  const phone = document.body.classList.contains('touch') && innerWidth < 700;
-  return kind === 'xp' ? (phone ? 2500 : 3500) : kind === 'bad' ? (phone ? 5000 : 7000) : kind === 'advice' ? (phone ? 7000 : 9000) : phone ? 3800 : 6000;
 }
 
 /** A short screen (a phone, a small window): the action bar fills its bottom, the toasts keep to the top row. */
@@ -1382,7 +1377,6 @@ export class Hud {
     g.restore();
   }
 
-  private recentToasts = new Map<string, number>();
 
   /** The lookout's call for a new sign: its bearing and range. */
   lookout(dx: number, dy: number): void {
@@ -1409,58 +1403,48 @@ export class Hud {
   private feedItems: { msg: string; at: number }[] = [];
   private feedTimer: ReturnType<typeof setTimeout> | undefined;
 
-  /** A line said aboard (docs/16 #16–17): the speaker's face and name over his words, in the toasts' column. */
-  talk(face: string, who: string, line: string, kind: string): void {
-    const box = modalOpen() ? $('modal-toasts') : this.toastsEl;
-    const el = document.createElement('div');
-    el.className = `toast talk ${kind}`;
-    el.dataset.msg = line;
-    el.innerHTML = `${face}<span class="talk-body"><b class="talk-who">${esc(who)}</b><span class="talk-line">${esc(line)}</span></span>`;
-    el.title = `${who}: ${line}`;
-    if (box === this.toastsEl) this.placeStrip();
-    box.prepend(el);
-    while (box.children.length > (box === this.toastsEl ? 7 : 2)) box.lastChild!.remove();
-    el.dataset.timer = String(setTimeout(() => el.remove(), toastLife('bad') + 1500));
-  }
-
-  toast(msg: string, kind: string): void {
-    // Collapse repeats (e.g. mashing fire while reloading).
-    const now = performance.now();
-    if ((this.recentToasts.get(msg) ?? 0) > now - 2500) return;
-    this.recentToasts.set(msg, now);
-    if (this.recentToasts.size > 50) this.recentToasts.clear();
-    // A window open (docs/15 item 8): the toast goes to the window's own strip under it, one line, so nothing lies
-    // over what the captain reads; the column comes back when the window closes.
-    const box = modalOpen() ? $('modal-toasts') : this.toastsEl;
-    // The same words still on screen: that toast comes back to the top with a count, it is not stacked twice.
-    const same = [...box.children].find((c) => (c as HTMLElement).dataset.msg === msg) as HTMLElement | undefined;
-    if (same) {
-      const n = Number(same.dataset.n ?? 1) + 1;
-      same.dataset.n = String(n);
-      let badge = same.querySelector<HTMLElement>('.t-count');
+  /** The toasts (docs/23 items 14, 29): the kit's queue — two at most, 2.5 s each, the same words counted «×2» —
+   *  in the HUD's band (placed by placeStrip for the popup budget), or the open window's strip under it. */
+  private toastQ = new Toasts({
+    host: () => (modalOpen() ? $('modal-toasts') : this.toastsEl),
+    before: (host) => host === this.toastsEl && this.placeStrip(),
+    render: (t) => (t.data as () => HTMLElement)(),
+    bump: (el, t) => {
+      let badge = el.querySelector<HTMLElement>('.t-count');
       if (!badge) {
         badge = document.createElement('b');
         badge.className = 't-count';
-        same.append(badge);
+        el.append(badge);
       }
-      badge.textContent = `×${n}`;
-      box.prepend(same);
-      clearTimeout(Number(same.dataset.timer));
-      same.dataset.timer = String(setTimeout(() => same.remove(), toastLife(kind)));
-      return;
-    }
-    const el = document.createElement('div');
-    el.dataset.msg = msg;
-    el.className = `toast ${kind}`;
-    const art = kind === 'gold' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'bad' ? 'danger' : kind === 'good' ? 'anchor' : '';
-    // A dash goes down with the words after it: «+68 опыта —» left hanging at a narrow toast's line end (QA, 2026-10-04).
-    el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(keyless(msg)).replace(/ — /g, ' — ')}</span>`;
-    decorateSums(el);
-    el.title = keyless(msg);
-    if (box === this.toastsEl) this.placeStrip();
-    box.prepend(el);
-    while (box.children.length > (box === this.toastsEl ? 7 : 2)) box.lastChild!.remove();
-    el.dataset.timer = String(setTimeout(() => el.remove(), toastLife(kind)));
+      badge.textContent = `×${t.count}`;
+    },
+  });
+
+  /** A line said aboard (docs/16 #16–17): the speaker's face and name over his words, in the toasts' band. */
+  talk(face: string, who: string, line: string, kind: string): void {
+    this.toastQ.push(`talk|${who}|${line}`, 'talk', () => {
+      const el = document.createElement('div');
+      el.className = `toast talk ${kind}`;
+      el.dataset.msg = line;
+      el.innerHTML = `${face}<span class="talk-body"><b class="talk-who">${esc(who)}</b><span class="talk-line">${esc(line)}</span></span>`;
+      el.title = `${who}: ${line}`;
+      return el;
+    });
+  }
+
+  toast(msg: string, kind: string): void {
+    this.toastQ.push(msg, kind, () => {
+      const el = document.createElement('div');
+      el.dataset.msg = msg;
+      el.className = `toast ${kind}`;
+      el.setAttribute('role', kind === 'bad' ? 'alert' : 'status');
+      const art = kind === 'gold' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'bad' ? 'danger' : kind === 'good' ? 'anchor' : '';
+      // A dash goes down with the words after it: «+68 опыта —» left hanging at a narrow toast's line end (QA, 2026-10-04).
+      el.innerHTML = `${art ? icon(art, '', 'ico-toast') : ''}<span>${esc(keyless(msg)).replace(/ — /g, ' — ')}</span>`;
+      decorateSums(el);
+      el.title = keyless(msg);
+      return el;
+    });
   }
 
   /** A sound caption at the edge of the screen it came from (docs/07 §11.5). */
@@ -1486,13 +1470,12 @@ export class Hud {
     // The herald joins the toasts' band (owner, 2026-10-04: nothing over the middle of the screen; the region's name
     // printed large at a quarter of the height stood over the sea before the ship).
     if (modalOpen()) return; // a window open: the herald's words are for the sea, not over the window
-    const el = document.createElement('div');
-    el.className = 'toast herald';
-    el.innerHTML = `<b>${esc(title)}</b><small>${esc(sub)}</small>`;
-    this.placeStrip();
-    this.toastsEl.prepend(el);
-    while (this.toastsEl.children.length > 7) this.toastsEl.lastChild!.remove();
-    setTimeout(() => el.remove(), 5000);
+    this.toastQ.push(`herald|${title}`, 'herald', () => {
+      const el = document.createElement('div');
+      el.className = 'toast herald';
+      el.innerHTML = `<b>${esc(title)}</b><small>${esc(sub)}</small>`;
+      return el;
+    });
   }
 
   /** Party frames (docs/11 P6), as WoW's: each groupmate's name, level and hull, and where they are — a bearing

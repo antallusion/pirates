@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IM+Fell+English+SC&family=Inter:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/minigame.css" />
+  <link rel="stylesheet" href="/src/ui/kit/kit.css" />
 </head>
 <body>
   <canvas id="world"></canvas>
@@ -167,7 +168,6 @@
   </section>
 
   <div id="prologue" class="hidden"></div>
-  <div id="radial" class="hidden"></div>
   <div id="pad-cursor" class="hidden"></div>
 
   <div id="connection" class="hidden" data-i18n="conn.reconnecting">Reconnecting to the Admiralty…</div>
@@ -179,6 +179,10 @@
     <small data-i18n="rotate.text">GRAVETIDE is played in landscape.</small>
   </div>
 
-  <script type="module" src="/src/main.ts"></script>
+  <!-- /?kit: the interface kit's page (docs/23 phase 1: every component at 812×375 for QA) in place of the game. -->
+  <script type="module">
+    if (new URLSearchParams(location.search).has('kit')) import('/src/ui/kit/demo.ts');
+    else import('/src/main.ts');
+  </script>
 </body>
 </html>

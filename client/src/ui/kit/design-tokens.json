@@ -1,0 +1,64 @@
+{
+  "$description": "GRAVETIDE interface tokens (docs/23 item 8): the one source for kit.css's custom properties and tokens.ts. Pirate Gothic of docs/06 — dark wood, pitch water, tarnished brass; accents only where something is to be done. A test (tests/kit.test.ts) holds kit.css and tokens.ts to these values.",
+  "color": {
+    "--k-ink": "#0b0d10",
+    "--k-graphite": "#161a1f",
+    "--k-slate": "#252c33",
+    "--k-tide": "#3e4b57",
+    "--k-oak": "#2a221b",
+    "--k-haze": "#8a99a5",
+    "--k-bone": "#d8d2c4",
+    "--k-brass": "#b08d57",
+    "--k-brass-dim": "#6f5a38",
+    "--k-gold": "#e0b862",
+    "--k-good": "#7fb58a",
+    "--k-warn": "#e6a04a",
+    "--k-bad": "#d06a5e",
+    "--k-turq": "#2ee6c8",
+    "--k-burgundy": "#3b1117",
+    "--k-scrim": "rgba(5, 6, 7, 0.62)"
+  },
+  "space": {
+    "--k-sp-1": "4px",
+    "--k-sp-2": "8px",
+    "--k-sp-3": "12px",
+    "--k-sp-4": "16px"
+  },
+  "radius": {
+    "--k-r-1": "2px",
+    "--k-r-2": "6px",
+    "--k-r-round": "999px"
+  },
+  "fontSize": {
+    "--k-fs-1": "11px",
+    "--k-fs-2": "13px",
+    "--k-fs-3": "15px",
+    "--k-fs-4": "20px"
+  },
+  "fontFamily": {
+    "--k-font-display": "'IM Fell English SC', 'Cormorant Garamond', Georgia, serif",
+    "--k-font-serif": "'Cormorant Garamond', Georgia, serif",
+    "--k-font-sans": "'Inter', system-ui, sans-serif"
+  },
+  "control": {
+    "--k-h-1": "36px",
+    "--k-h-2": "44px",
+    "--k-h-3": "52px"
+  },
+  "shadow": {
+    "--k-shadow-1": "0 1px 2px rgba(5, 6, 7, 0.8)",
+    "--k-shadow-2": "0 10px 28px rgba(5, 6, 7, 0.72)"
+  },
+  "motion": {
+    "--k-dur-1": "120ms",
+    "--k-dur-2": "200ms",
+    "--k-dur-3": "320ms",
+    "--k-ease-out": "cubic-bezier(0.23, 1, 0.32, 1)",
+    "--k-ease-in-out": "cubic-bezier(0.77, 0, 0.175, 1)"
+  },
+  "layer": {
+    "--k-z-sheet": "72",
+    "--k-z-wheel": "74",
+    "--k-z-toast": "76"
+  }
+}

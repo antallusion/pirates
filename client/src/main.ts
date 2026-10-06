@@ -61,6 +61,7 @@ import { CompanyScreen, renderBarter } from './ui/company.ts';
 import { BaseWindow } from './ui/base.ts';
 import { $, decorateSums, esc, fmt, icon, keepInputs } from './ui/dom.ts';
 import { Hud, releaseModalToasts } from './ui/hud.ts';
+import { wheel } from './ui/kit/radial.ts'; // docs/23 phase 1: the pad's wheel is the kit's
 import { MENU_ITEMS, menuLabel, renderMenu } from './ui/menu.ts';
 import type { MenuItem } from './ui/menu.ts';
 import { applySkin } from './ui/skin.ts';
@@ -2035,36 +2036,34 @@ let padAim: { side: 'port' | 'starboard'; range: number; lead: number } | null =
 let padTarget: number | null = null;
 let padCursor: { x: number; y: number } | null = null;
 let padSeen = false;
-let radial: { items: { label: string; run: () => void }[]; sel: number; opener: number } | null = null;
+/** The pad's wheel (a held shoulder or the d-pad): the kit's wheel (ui/kit/radial.ts) in the screen's middle, its
+ *  choice lit by the stick and taken on release. */
+type RadialItem = { label: string; run: () => void; icon?: string; count?: number };
+let radial: { items: RadialItem[]; opener: number } | null = null;
 
 function activePad(): Gamepad | null {
   for (const g of navigator.getGamepads?.() ?? []) if (g && g.connected) return g;
   return null;
 }
 
-function openRadial(items: { label: string; run: () => void }[], opener: number): void {
-  radial = { items: items.slice(0, 8), sel: -1, opener };
-  const el = $('radial');
-  el.innerHTML = radial.items.map((it, i) => {
-    const a = (i / radial!.items.length) * Math.PI * 2;
-    return `<div class="r-item" data-i="${i}" style="left:${50 + Math.sin(a) * 38}%;top:${50 - Math.cos(a) * 38}%">${esc(it.label)}</div>`;
-  }).join('');
-  el.classList.remove('hidden');
+function openRadial(items: RadialItem[], opener: number): void {
+  radial = { items: items.slice(0, 8), opener };
+  wheel.open(innerWidth / 2, innerHeight / 2, radial.items.map((it, i) => ({ id: String(i), label: it.label, icon: it.icon, glyph: '•', count: it.count })));
 }
 
 function closeRadial(choose: boolean): void {
   if (!radial) return;
-  const it = radial.sel >= 0 ? radial.items[radial.sel] : null;
+  const items = radial.items;
   radial = null;
-  $('radial').classList.add('hidden');
-  if (choose && it) it.run();
+  const o = wheel.close(choose);
+  if (o) items[Number(o.id)].run();
 }
 
-function ammoRadial(): { label: string; run: () => void }[] {
-  return AMMO_IDS.filter((a) => (state.self?.ammo[a] ?? 0) > 0 || a === 'round').map((a) => ({ label: AMMO[a].name, run: () => net.send({ t: 'ammo', ammo: a }) }));
+function ammoRadial(): RadialItem[] {
+  return AMMO_IDS.filter((a) => (state.self?.ammo[a] ?? 0) > 0 || a === 'round').map((a) => ({ label: AMMO[a].name, icon: `ammo_${a}`, count: state.self?.ammo[a] ?? 0, run: () => net.send({ t: 'ammo', ammo: a }) }));
 }
 
-function actionsRadial(): { label: string; run: () => void }[] {
+function actionsRadial(): RadialItem[] {
   return [
     { label: t('act.repair'), run: () => net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) }) },
     { label: t('act.board'), run: () => (boardTarget !== null ? net.send({ t: 'board', target: boardTarget, aggression: 'standard' }) : hud.toast(L('noCrippled'), 'bad')) },
@@ -2241,11 +2240,7 @@ function pollPad(dt: number): void {
   } else padRudder = lx;
   if (radial) {
     const sx = rx || lx, sy = ry || ly;
-    const sel = radialSector(sx, sy, radial.items.length);
-    if (sel !== radial.sel) {
-      radial.sel = sel;
-      document.querySelectorAll<HTMLElement>('#radial .r-item').forEach((el) => el.classList.toggle('sel', Number(el.dataset.i) === sel));
-    }
+    wheel.select(radialSector(sx, sy, radial.items.length));
   }
   for (const e of evs) {
     if (e.k === 'chord') {

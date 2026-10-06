@@ -1,10 +1,13 @@
 // A question in the game's own frame: the browser's confirm() was a grey system box on a phone, and some
-// embedded browsers block it outright. The text, a button to step back and one to go ahead; Enter and Esc on a
-// keyboard, a tap beside the frame steps back. While it is open, no key reaches the game.
+// embedded browsers block it outright. Since docs/23 phase 1 it is the kit's bottom sheet (ui/kit/sheet.ts) sized to
+// its words: the text, a button to step back and one to go ahead (kit buttons, 44/52 px on a phone). Enter takes the
+// focused button, Esc, a tap beside it or a swipe down step back; while it is open no key reaches the game.
 
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/confirm.ts';
 import { esc } from './dom.ts';
+import { buttonHtml } from './kit/button.ts';
+import { openSheet } from './kit/sheet.ts';
 
 const L = dict(EN, RU);
 
@@ -15,37 +18,37 @@ export function ask(text: string, yes: string = L('yes'), no: string | null = L(
   return askHtml(`<p id="confirm-text">${esc(text)}</p>`, yes, no);
 }
 
+/** The two buttons of a question: the step back (secondary) and the verb (primary, the focus). */
+export function confirmRowHtml(yes: string, no: string | null): string {
+  return `<div class="confirm-row${no === null ? ' one' : ''}">${no === null ? '' : buttonHtml({ kind: 'secondary', label: no, data: { no: '' } })}${buttonHtml({ kind: 'primary', size: 'md', label: yes, data: { yes: '', autofocus: '' } })}</div>`;
+}
+
 /** The same frame round ready-made markup (the caller escapes it): a quest giver's words, a portrait. */
 export function askHtml(body: string, yes: string = L('yes'), no: string | null = L('no'), cls = ''): Promise<boolean> {
   open?.(false);
   return new Promise((done) => {
-    const el = document.createElement('div');
-    el.id = 'confirm';
-    el.innerHTML = `<div class="panel confirm-panel${cls ? ` ${cls}` : ''}" role="alertdialog" aria-modal="true" aria-labelledby="confirm-text">
-      <div class="confirm-body">${body}</div>
-      <div class="confirm-row${no === null ? ' one' : ''}">${no === null ? '' : `<button class="btn" data-no>${esc(no)}</button>`}<button class="btn btn-primary" data-yes>${esc(yes)}</button></div></div>`;
-    const key = (e: KeyboardEvent) => {
-      if (e.key === 'Tab') return;
-      e.stopImmediatePropagation();
-      if (e.key === 'Escape') close(false);
-      else if (e.key === 'Enter') close(true);
-      else return;
-      e.preventDefault();
-    };
+    let answer = false;
+    const sheet = openSheet({
+      id: 'confirm',
+      cls: `confirm-panel${cls ? ` ${cls}` : ''}`,
+      role: 'alertdialog',
+      height: 'auto',
+      noClose: true,
+      labelledBy: body.includes('id="confirm-text"') ? 'confirm-text' : undefined,
+      body: `<div class="confirm-body">${body}</div>`,
+      foot: confirmRowHtml(yes, no),
+      onClose: () => {
+        if (open === close) open = null;
+        done(answer);
+      },
+    });
     const close = (ok: boolean) => {
-      removeEventListener('keydown', key, true);
-      el.remove();
-      open = null;
-      done(ok);
+      answer = ok;
+      sheet.close('button');
     };
     open = close;
-    addEventListener('keydown', key, true);
-    el.addEventListener('click', (e) => e.target === el && close(false));
-    const back = el.querySelector<HTMLElement>('[data-no]');
-    if (back) back.onclick = () => close(false);
-    el.querySelector<HTMLElement>('[data-yes]')!.onclick = () => close(true);
-    document.body.append(el);
-    el.querySelector<HTMLElement>('[data-yes]')!.focus({ preventScroll: true });
+    sheet.panel.querySelector<HTMLElement>('[data-no]')?.addEventListener('click', () => close(false));
+    sheet.panel.querySelector<HTMLElement>('[data-yes]')!.addEventListener('click', () => close(true));
   });
 }
 
