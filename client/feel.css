@@ -52,3 +52,15 @@ body.lock-guilds .tab[data-tab="guild"] { display: none !important; }
   body.tac #toasts { top: calc(var(--sa-t) + 8px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);
     width: min(56vw, 340px); height: 44px; flex-flow: column wrap; }
 }
+
+/* ---- the fast start (docs/23 item 88): «Продолжить: <имя>» over the guest's form — one tap, no name to type */
+.login-panel #login-continue { display: block; width: 100%; min-height: 48px; margin: 0 0 14px; font-size: 16px; }
+.login-panel #login-continue.hidden { display: none; }
+
+/* ---- the screen's notch and gesture bar (docs/23 item 89): a window on a phone fills the safe part of the screen and
+   leaves the notch's side, the camera's side and the gesture bar to the dark behind it (its buttons stood 16–33 px into
+   the 47 px of a notch, tools/mobile/safearea.mjs). The window's own layout is untouched. */
+@media (max-width: 699px), (max-height: 520px) {
+  #modal { padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); box-sizing: border-box; }
+  #modal-panel { width: calc(100vw - var(--sa-l) - var(--sa-r)); height: calc(100dvh - var(--sa-t) - var(--sa-b)); }
+}

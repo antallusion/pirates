@@ -115,6 +115,8 @@ import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
 
 const L = dict(MAIN_EN, MAIN_RU);
+/** The captain last aboard on this device (docs/23 item 88: «Продолжить: …» on the title screen). */
+const CAPTAIN_KEY = 'gravetide.captain';
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
@@ -674,6 +676,24 @@ function titleFilm(ka: HTMLElement, poster: string | null): void {
   if (location.hash) history.replaceState(null, '', location.pathname);
 }
 
+// docs/23 item 88: a captain who has been here before goes back to sea in two taps from this screen — «Продолжить»
+// with her name (her token is kept: no name to type), then «Поднять паруса» in the harbour (or none, if she was left
+// at sea). The page connects by itself as it opens; the button is there while it does, and after the session was taken
+// over elsewhere (no reconnecting by itself then).
+{
+  const btn = $('login-continue') as HTMLButtonElement;
+  const name = localStorage.getItem(CAPTAIN_KEY);
+  if (net.token && name) {
+    btn.textContent = L('continueAs', { name });
+    btn.classList.remove('hidden');
+  }
+  btn.onclick = () => {
+    audio.unlock();
+    btn.disabled = true;
+    setTimeout(() => (btn.disabled = false), 4000);
+    net.connect();
+  };
+}
 if (net.token) net.connect();
 else $('login-name').focus();
 
@@ -760,7 +780,18 @@ function onMessage(m: ServerMsg): void {
     case 'err':
       if (m.msg === 'auth_required') {
         net.forget();
+        $('login-continue').classList.add('hidden'); // her token is gone: the name is typed again
         $('screen-login').classList.remove('hidden');
+      } else if (m.msg === 'Logged in elsewhere.') {
+        // Taken over by another tab or phone: the page does not reconnect by itself, so the title screen comes back
+        // with «Продолжить» — one tap takes the captain back here (docs/23 item 88; before, a «connection lost» band).
+        $('screen-login').classList.remove('hidden');
+        $('login-error').textContent = serverText(m.msg);
+        const btn = $('login-continue') as HTMLButtonElement;
+        if (net.token && localStorage.getItem(CAPTAIN_KEY)) {
+          btn.textContent = L('continueAs', { name: localStorage.getItem(CAPTAIN_KEY)! });
+          btn.classList.remove('hidden');
+        }
       } else if (!inGame) $('login-error').textContent = serverText(m.msg);
       // The glass asks by itself every few seconds (askGlass): its «too far» is no refusal of hers to tell.
       else if (GLASS_QUIET.has(m.msg)) break;
@@ -770,6 +801,8 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'welcome':
       $('screen-login').classList.add('hidden');
+      try { localStorage.setItem(CAPTAIN_KEY, m.name); } catch { /* no storage */ }
+      $('login-error').textContent = '';
       if (!m.hasCaptain) showCaptainSelect((captain, shipName, tutorial) => {
         prologuePending = tutorial;
         net.send({ t: 'create_captain', captain, shipName, tutorial });
