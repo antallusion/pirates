@@ -19,6 +19,9 @@ const BLOCKS: Record<string, HudBlock[]> = {
   'hud-captain': ['captain', 'wanted'],
   'hud-map': ['minimap', 'map'],
   'hud-combat': ['guns', 'abilities'],
+  // the phone's sea HUD (docs/23 phase 2): «Огонь» comes with the guns, «Особое» with the abilities
+  'tc-fire': ['guns'],
+  'tc-special': ['abilities'],
 };
 
 export class OnboardingUi {

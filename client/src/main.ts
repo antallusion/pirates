@@ -7,7 +7,7 @@ import { noteHearsay, repairState } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
 import { ask, tell } from './ui/confirm.ts';
-import { beastOfClass } from '../../shared/src/data/beasts.ts';
+import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
 import { departOrAsk } from './ui/depart.ts';
@@ -25,7 +25,7 @@ import { inspectDialog } from './ui/inspect.ts';
 import { BoardFightPanel } from './ui/boardfight.ts';
 import { TacticalPanel } from './ui/tactical.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
-import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, SHIP_CLASSES, isZoneBossClass } from '../../shared/src/data/ships.ts';
+import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, MOUNTS, SHIP_CLASSES, isZoneBossClass } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, isNight, timeOfDay } from '../../shared/src/constants.ts';
 import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, SeaMarkData, ServerMsg } from '../../shared/src/protocol.ts';
@@ -49,7 +49,7 @@ import { strengthWord as roamWord } from './ui/army.ts';
 import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
 import { riskConfirm } from './ui/kit/risk.ts';
-import { suggestAmmo } from '../../shared/src/data/gunnery.ts';
+import { DASH_COOLDOWN, LAY_ARC_DEG, suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
@@ -64,7 +64,12 @@ import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
 import { BaseWindow } from './ui/base.ts';
 import { $, decorateSums, esc, fmt, icon, keepInputs } from './ui/dom.ts';
-import { Hud, releaseModalToasts } from './ui/hud.ts';
+import { FOLDED, Hud, releaseModalToasts } from './ui/hud.ts';
+import { SeaHud, bestSpecial } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
+import type { TargetInfo } from './ui/kit/targetline.ts';
+import type { WheelOption } from './ui/kit/radial.ts';
+import { WHEEL_MAX } from './ui/kit/radial.ts';
+import { threatTo } from './ui/levels.ts';
 import { wheel } from './ui/kit/radial.ts'; // docs/23 phase 1: the pad's wheel is the kit's
 import { MENU_ITEMS, menuLabel, renderMenu } from './ui/menu.ts';
 import type { MenuItem } from './ui/menu.ts';
@@ -347,18 +352,12 @@ if (matchMedia('(pointer: coarse)').matches) {
   addEventListener('pointerup', holdSideways, { once: true });
 }
 const touch = new TouchControls({
-  sail: (d) => {
-    state.input.sail = clamp(state.input.sail + d, 0, 4);
+  // docs/23 items 22–23: the stick's pull is the sail (0 when its middle is held), its double tap the dash.
+  sail: (step) => {
+    state.input.sail = clamp(step, 0, 4);
     helmAt = performance.now(); // her own hand on the sheets: the helmsman lets go a while (docs/23 item 33)
   },
-  volley: () => fireVolley(),
-  fire: (side) => releaseFire(side),
-  hold: (side) => holdFire(side),
   dash: () => net.send({ t: 'dash' }),
-  chasers: () => touchChasers(),
-  mount: () => touchMount(),
-  context: () => padContext(),
-  context2: () => (nearHome() ? openBase() : openClaim()),
   aim: (px, py) => {
     renderer.mouseX = px;
     renderer.mouseY = py;
@@ -368,7 +367,23 @@ const touch = new TouchControls({
     renderer.userZoomed = true;
     renderer.targetZoom = clamp(renderer.targetZoom * f, 0.35, 4);
   },
-  menu: () => toggle('menu'),
+});
+// The sea HUD on a phone (docs/23 phase 2): «Огонь» and its wheel, «Действие» and its wheel, «Особое», the menu's
+// sheet, the news counter, the target line.
+const seaHud = new SeaHud($('touch'), {
+  folded: FOLDED,
+  fire: () => seaFire(),
+  fireOptions: () => fireWheel(),
+  firePick: (id) => pickFireWheel(id),
+  act: () => padContext(),
+  actOptions: () => curActs.map((a, i) => ({ id: String(i), label: a.label, icon: a.icon, glyph: '•' })),
+  actPick: (id) => {
+    const a = curActs[Number(id)];
+    if (a) runAct(a);
+  },
+  special: () => seaSpecial(),
+  menu: (id) => (id === 'more' ? openModal('menu') : openMenuItem(id)),
+  target: () => seaHud.lend(['hud-target'], 'target'),
 });
 const onboarding = new OnboardingUi(state);
 const encounterCard = new EncounterCard((m) => net.send(m));
@@ -473,7 +488,7 @@ loadAssets(null).then(() => {
   applySkin();
   buildMicroMenu();
   hud.artEpoch++;
-  touch.dress();
+  seaHud.dress();
   hud.chatPanel.art();
   hud.chatPanel.tabs();
   const url = assetUrl('art.keyart');
@@ -743,7 +758,10 @@ function onMessage(m: ServerMsg): void {
         $('screen-login').classList.remove('hidden');
       } else if (!inGame) $('login-error').textContent = serverText(m.msg);
       // The glass asks by itself every few seconds (askGlass): its «too far» is no refusal of hers to tell.
-      else if (!GLASS_QUIET.has(m.msg)) hud.toast(serverText(m.msg), 'bad');
+      else if (GLASS_QUIET.has(m.msg)) break;
+      // A phone's small refusals (reloading, not on the beam) flash the button and buzz instead (docs/23 item 29).
+      else if (touch.enabled && seaHud.petty(m.msg)) break;
+      else hud.toast(serverText(m.msg), 'bad');
       break;
     case 'welcome':
       $('screen-login').classList.add('hidden');
@@ -1405,6 +1423,14 @@ function sendChat(): void {
   whisperPrefill = '';
 }
 $('hud-map').onclick = () => toggle('map');
+// docs/23 item 30: a long press on the minimap marks the sea there and the helmsman takes her to it.
+hud.onMiniMark = (x, y) => {
+  if (!inGame || state.self?.dockedAt || !worldMap.onAutosail) return false;
+  const wp = { x: Math.round(x), y: Math.round(y) };
+  setMark(wp);
+  worldMap.onAutosail(wp);
+  return true;
+};
 // The action bar (owner, 2026-10-02): a button does what its key does; «⋯ more» opens the rest. A press never takes
 // the focus (Space and Enter stay the ship's).
 $('hud-prompt').addEventListener('mousedown', (e) => {
@@ -2060,6 +2086,167 @@ function fireVolley(): void {
   net.send({ t: 'volley' });
 }
 
+// ------------------------------------------------------------------ the sea HUD on a phone (docs/23 phase 2)
+
+/** Whether her mark lies on a beam, inside the guns' reach (the aimed volley would answer «not on your beam»). */
+function targetBears(id: number): boolean {
+  const s = state.ships.get(id), own = state.ownDisplay, self = state.self, you = state.you;
+  if (!s || !own || !self || !you) return false;
+  const range = GUNS[self.loadout.guns.port].range * (state.ownStats?.rangeMul ?? 1) * (AMMO[you.ammoSel]?.rangeMul ?? 1);
+  if (dist(own.x, own.y, s.cur.x, s.cur.y) > range) return false;
+  const bearing = Math.atan2(s.cur.x - own.x, -(s.cur.y - own.y));
+  return Math.abs(Math.abs(angleDiff(bearing, own.heading)) - Math.PI / 2) <= (LAY_ARC_DEG * Math.PI) / 180;
+}
+
+/** «Огонь» on a phone: the volley when she bears; when she does not, the helmsman lays a broadside on her (the
+ *  pursuit «Бортами») and the gun crews fire as she bears — so «Атаковать» and «Огонь» are a fight in two taps. The
+ *  expert's hand fires the side she lies on. */
+function seaFire(): void {
+  if (state.self?.dockedAt || modal) return;
+  const id = state.pursuit?.target ?? targetId;
+  if (settings().expertGuns) {
+    const s = id !== null ? state.ships.get(id) : undefined, own = state.ownDisplay, r = state.you?.reload;
+    let side: 'port' | 'starboard' = (r?.port ?? 0) >= (r?.starboard ?? 0) ? 'port' : 'starboard';
+    if (s && own) side = angleDiff(Math.atan2(s.cur.x - own.x, -(s.cur.y - own.y)), own.heading) < 0 ? 'port' : 'starboard';
+    return touchFire(side);
+  }
+  if (id !== null && attackable(id) && !targetBears(id)) {
+    if (state.pursuit?.target !== id || state.pursuit.mode !== 'guns') net.send({ t: 'attack', target: id, mode: 'guns' });
+    seaHud.flashFire(false);
+    return;
+  }
+  fireVolley();
+}
+
+/** The ship the captain's abilities and the mount aim at: her mark. */
+function aimAtMark(): void {
+  const id = state.pursuit?.target ?? targetId;
+  const s = id !== null ? state.ships.get(id) : undefined;
+  if (s) aimAt(s.cur.x, s.cur.y);
+}
+
+/** «Особое» (docs/23 item 20): the captain's best ability ready now. */
+function specialNow(): { id: string; icon: string; name: string } | null {
+  const self = state.self, you = state.you;
+  if (!self || !you || self.dockedAt) return null;
+  const now = state.estServerTime();
+  const cap = CAPTAINS[self.captain];
+  const id = bestSpecial(cap.abilities.map((a) => ({
+    id: a.id, kind: a.kind, cooldown: a.cooldown,
+    ready: !(a.kind === 'ultimate' && (self.level < 6 || you.resolve < 100)) && (a.dreadCost ?? 0) <= you.dread && (self.cooldowns[a.id] ?? 0) <= now && !(a.goldCost && self.gold < a.goldCost),
+  })));
+  const a = id ? cap.abilities.find((x) => x.id === id) : undefined;
+  return a ? { id: a.id, icon: `ab_${a.id}`, name: a.name } : null;
+}
+
+function seaSpecial(): void {
+  const sp = specialNow();
+  if (!sp) return;
+  aimAtMark();
+  sendAbility(sp.id);
+}
+
+/** The wheel under «Огонь» (docs/23 items 19–21): the shots she carries, the captain's abilities, the active
+ *  talents, the deck mount. */
+function fireWheel(): WheelOption[] {
+  const self = state.self, you = state.you;
+  if (!self || !you) return [];
+  const now = state.estServerTime();
+  const out: WheelOption[] = [];
+  const shot = (a: (typeof AMMO_IDS)[number]): WheelOption => ({ id: `a:${a}`, label: AMMO[a].name, icon: `ammo_${a}`, glyph: '•', count: you.ammo[a], active: you.ammoSel === a, disabled: you.ammo[a] <= 0 });
+  // The three shots by role first (and the one loaded), the rarer ones she carries last.
+  const main = AMMO_IDS.filter((a) => a === 'round' || a === 'chain' || a === 'grape' || a === you.ammoSel);
+  for (const a of main) out.push(shot(a));
+  for (const a of CAPTAINS[self.captain].abilities) {
+    const left = (self.cooldowns[a.id] ?? 0) - now;
+    out.push({ id: `b:${a.id}`, label: left > 0 ? `${a.name} · ${Math.ceil(left)}` : a.name, icon: `ab_${a.id}`, glyph: a.key, disabled: left > 0 || (a.kind === 'ultimate' && (self.level < 6 || you.resolve < 100)) });
+  }
+  for (const tl of activeTalents(self.talents).slice(0, 5)) out.push({ id: `t:${tl.id}`, label: tl.name, icon: `tree_${tl.tree}`, glyph: '✦', disabled: (self.talentCooldowns[tl.id] ?? 0) > now });
+  const m = self.loadout.mount;
+  if (m) out.push({ id: 'm:', label: MOUNTS[m].name, icon: `mount_${m}`, glyph: '✺', disabled: you.reload.mount < 1 });
+  for (const a of AMMO_IDS) if (!main.includes(a) && you.ammo[a] > 0) out.push(shot(a));
+  return out.slice(0, WHEEL_MAX);
+}
+
+function pickFireWheel(id: string): void {
+  const k = id.slice(0, 1), v = id.slice(2);
+  if (k === 'a') net.send({ t: 'ammo', ammo: v as 'round' });
+  else if (k === 'b') {
+    aimAtMark();
+    sendAbility(v);
+  } else if (k === 't') {
+    aimAtMark();
+    sendTalent(v);
+  } else if (k === 'm') {
+    const own = state.ownDisplay;
+    const tid = state.pursuit?.target ?? targetId;
+    const s = tid !== null ? state.ships.get(tid) : undefined;
+    const p = s ? s.cur : own ? { x: own.x + Math.sin(own.heading) * 300, y: own.y - Math.cos(own.heading) * 300 } : null;
+    if (p) net.send({ t: 'mount', x: Math.round(p.x), y: Math.round(p.y) });
+  }
+}
+
+/** docs/23 item 24: the deck mount fires by itself at her mark in a fight, in its reach, with what it needs aboard
+ *  (the mounts that lie where she is — smoke, kegs — and those that burn the hold's oil or deepen a curse stay the
+ *  wheel's). */
+const MOUNT_SHOT: Partial<Record<string, 'round' | 'chain' | 'grape'>> = { long_tom: 'round', chain_gun: 'chain', swivel_gun: 'grape' };
+const MOUNT_AUTO = new Set(['mortar', 'harpoon', 'chain_gun', 'swivel_gun', 'long_tom', 'rocket_frame', 'net_thrower']);
+let mountAt = 0;
+function autoMount(): void {
+  const self = state.self, you = state.you, own = state.ownDisplay;
+  const m = self?.loadout.mount;
+  if (!m || !self || !you || !own || self.dockedAt || !MOUNT_AUTO.has(m) || settings().expertGuns || !settings().autoFire) return;
+  if (you.reload.mount < 1 || performance.now() - mountAt < 2000 || !you.combat) return;
+  const shot = MOUNT_SHOT[m];
+  if (shot && you.ammo[shot] <= 0) return;
+  const id = state.pursuit?.target ?? targetId;
+  const s = id !== null ? state.ships.get(id) : undefined;
+  if (!s || !(s.cur.flags & SF.HOSTILE || state.pursuit) || s.cur.flags & (SF.SINKING | SF.SURRENDERED)) return;
+  const d = dist(own.x, own.y, s.cur.x, s.cur.y), def = MOUNTS[m];
+  if (d < def.minRange || d > def.range) return;
+  mountAt = performance.now();
+  net.send({ t: 'mount', x: Math.round(s.cur.x), y: Math.round(s.cur.y) });
+}
+
+/** Her mark on one line (docs/23 items 28, 31): name, level, hull and crew, the boarding chance. */
+function seaTarget(): TargetInfo | null {
+  const id = state.pursuit?.target ?? targetId;
+  const s = id !== null ? state.ships.get(id) : undefined;
+  if (!s?.info || id === null) return null;
+  const od = state.boardOdds.get(id);
+  const odds = od && performance.now() / 1000 - od.at < 15 ? od : null;
+  const beast = beastOfClass(s.info.classId);
+  const name = beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name);
+  return {
+    name, hull: s.cur.hull,
+    ...(beast ? {} : { crew: s.cur.crew }),
+    ...(s.info.shipLevel ? { level: s.info.shipLevel, threat: threatTo(s.info.shipLevel, s.info.classId) } : {}),
+    ...(odds ? { chance: odds.chance } : {}),
+  };
+}
+
+function seaFrame(): void {
+  const self = state.self, you = state.you;
+  if (!self || !you) return;
+  const a = curActs[0];
+  const news = FOLDED.filter((id) => {
+    const e = document.getElementById(id);
+    return !!e && !e.classList.contains('hidden');
+  }).length;
+  const unread = (Number($('chat-unread').textContent) || 0) + (Number(($('unread').textContent ?? '').replace(/\D/g, '')) || 0);
+  seaHud.frame({
+    docked: !!self.dockedAt,
+    act: a ? { id: a.id, icon: a.icon, label: a.label, ...(a.sub ? { sub: a.sub } : {}), more: curActs.length - 1 } : null,
+    special: specialNow(),
+    target: self.dockedAt ? null : seaTarget(),
+    ammo: you.ammoSel,
+    ammoN: you.ammo[you.ammoSel] ?? 0,
+    reload: Math.max(you.reload.port, you.reload.starboard),
+    news,
+    unread,
+  });
+}
+
 /** The captain's gunnery settings to the server (auto-fire, auto-battle against the weak, the expert's hand). */
 function sendGunnery(): void {
   const o = settings();
@@ -2297,24 +2484,6 @@ function touchAim(side: 'port' | 'starboard'): boolean {
   const p = tgt ?? padAimPoint(own.x, own.y, own.heading, side, range * 0.66, 0);
   aimAt(p.x, p.y);
   return true;
-}
-
-/** Chasers by touch: at a ship in the bow or stern arc, else dead ahead. */
-function touchChasers(): void {
-  const own = state.ownDisplay;
-  if (!own) return;
-  const tgt = touchTarget(GUNS.long_9.range, (l) => Math.abs(l.x) < Math.abs(l.y) * Math.tan(CHASER_CONE));
-  if (tgt) aimAt(tgt.x, tgt.y);
-  else aimAt(own.x + Math.sin(own.heading) * 400, own.y - Math.cos(own.heading) * 400);
-  fireChasers();
-}
-
-/** The deck mount by touch: at the nearest ship in reach, else where the sea was last touched. */
-function touchMount(): void {
-  if (state.self?.dockedAt) return;
-  const tgt = touchTarget(700, () => true);
-  const m = tgt ?? mouseWorld();
-  net.send({ t: 'mount', x: Math.round(m.x), y: Math.round(m.y) });
 }
 
 /** Aim the "cursor" at a world point: everything that aims by the mouse aims by the pad too. */
@@ -2602,11 +2771,10 @@ function step(t: number): void {
     hud.bestAmmo = bestShot(); // docs/23 item 39
     hud.drawTarget(state, targetId);
     if (touch.enabled && state.self) {
-      const cls = SHIP_CLASSES[state.self.loadout.classId];
-      // The action bar over the guns has every button now (owner, 2026-10-02); the old single context buttons stay hidden.
-      touch.setContext(null);
-      touch.setContext(null, 'tc-context2');
-      touch.frame(own?.heading ?? null, state.input.sail, cls.bowChasers + cls.sternChasers > 0, state.self.loadout.mount ?? null);
+      const dashLeft = Math.max(0, (state.self.dashReadyAt ?? 0) - state.estServerTime());
+      touch.frame(own?.heading ?? null, state.input.sail, dashLeft / DASH_COOLDOWN);
+      seaFrame();
+      autoMount();
     }
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);

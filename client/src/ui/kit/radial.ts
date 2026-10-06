@@ -20,6 +20,9 @@ export interface WheelOption {
   count?: number;
 }
 
+/** The most a wheel holds. */
+export const WHEEL_MAX = 12;
+
 export interface WheelGeometry {
   /** The wheel's centre: the finger, moved in only as far as the screen's edge needs. */
   cx: number;
@@ -30,6 +33,9 @@ export interface WheelGeometry {
 /** Where the choices stand: round the centre from straight up, clockwise, a full circle whatever their number; the
  *  centre is kept far enough from the screen's edges that every choice is on it. */
 export function wheelLayout(n: number, x: number, y: number, vw: number, vh: number, r = 82, item = 52, margin = 6): WheelGeometry {
+  // More than eight (the fire wheel's shots, abilities and talents: docs/23 items 19–21) stand on a wider circle, a
+  // finger's width apart.
+  r = Math.max(r, (n * (item + 10)) / (Math.PI * 2));
   const reach = r + item / 2 + margin;
   const cx = Math.max(Math.min(reach, vw / 2), Math.min(vw - Math.min(reach, vw / 2), x));
   const cy = Math.max(Math.min(reach, vh / 2), Math.min(vh - Math.min(reach, vh / 2), y));
@@ -69,13 +75,18 @@ export class RadialWheel {
       this.el.setAttribute('role', 'menu');
       document.body.append(this.el);
     }
-    this.opts = options.slice(0, 8);
+    this.opts = options.slice(0, WHEEL_MAX);
     this.sel = -1;
     this.x0 = x;
     this.y0 = y;
-    const g = wheelLayout(this.opts.length, x, y, innerWidth, innerHeight);
+    // Over eight (the fire wheel): smaller choices without their words round them; the lit one's name is in the hub.
+    const many = this.opts.length > 8;
+    const item = many ? 44 : 52;
+    const g = wheelLayout(this.opts.length, x, y, innerWidth, innerHeight, 82, item, many ? 6 : 22);
+    const hub = Math.round(2 * Math.hypot(g.items[0]?.x - g.cx || 0, g.items[0]?.y - g.cy || 82) + item - 20);
+    this.el.classList.toggle('k-wheel--many', many);
     this.el.setAttribute('aria-label', title);
-    this.el.innerHTML = `<div class="k-wheel-hub" style="left:${g.cx}px;top:${g.cy}px"></div>${this.opts.map((o, i) => `<div class="k-wheel-item${o.disabled ? ' off' : ''}${o.active ? ' on' : ''}" role="menuitem" aria-disabled="${!!o.disabled}" data-i="${i}" style="left:${g.items[i].x}px;top:${g.items[i].y}px;--k-i:${i}">
+    this.el.innerHTML = `<div class="k-wheel-hub" style="left:${g.cx}px;top:${g.cy}px;width:${hub}px;height:${hub}px"></div><div class="k-wheel-cap" style="left:${g.cx}px;top:${g.cy}px" aria-hidden="true"></div>${this.opts.map((o, i) => `<div class="k-wheel-item${o.disabled ? ' off' : ''}${o.active ? ' on' : ''}" role="menuitem" aria-disabled="${!!o.disabled}" data-i="${i}" style="left:${g.items[i].x}px;top:${g.items[i].y}px;--k-i:${i}">
       ${o.icon ? icon(o.icon, o.glyph ?? '', 'k-wheel-ico') : `<span class="k-wheel-ico glyph">${esc(o.glyph ?? '•')}</span>`}<span class="k-wheel-l">${esc(o.label)}</span>${o.count !== undefined ? `<b class="k-wheel-n">${o.count}</b>` : ''}</div>`).join('')}`;
     this.el.classList.remove('hidden', 'k-open');
     requestAnimationFrame(() => this.el?.classList.add('k-open'));
@@ -92,6 +103,8 @@ export class RadialWheel {
     if (i === this.sel) return i;
     this.sel = i;
     this.el?.querySelectorAll<HTMLElement>('.k-wheel-item').forEach((e) => e.classList.toggle('sel', Number(e.dataset.i) === i));
+    const cap = this.el?.querySelector<HTMLElement>('.k-wheel-cap');
+    if (cap) cap.textContent = i >= 0 ? this.opts[i].label : '';
     if (i >= 0) try { navigator.vibrate?.(8); } catch { /* not allowed */ }
     return i;
   }

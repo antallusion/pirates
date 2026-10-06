@@ -13,6 +13,8 @@ export interface TargetInfo {
   level?: number;
   /** Her hull left, 0–1. */
   hull?: number;
+  /** Her crew left, 0–1 (the sea fight's second bar, docs/23 item 31). */
+  crew?: number;
   /** The chance to win against her, 0–1 (the risk window's number). */
   chance?: number;
   /** Art id of her mark (a flag, a beast's face). */
@@ -33,6 +35,7 @@ export function targetSpeech(t: TargetInfo): string {
   const parts = [t.name];
   if (t.level !== undefined) parts.push(L('target.level', { n: t.level }));
   if (t.hull !== undefined) parts.push(L('target.hull', { n: pct100(t.hull) }));
+  if (t.crew !== undefined) parts.push(L('target.crew', { n: pct100(t.crew) }));
   if (t.chance !== undefined) parts.push(L('target.chance', { n: pct100(t.chance) }));
   return parts.join(', ');
 }
@@ -40,7 +43,7 @@ export function targetSpeech(t: TargetInfo): string {
 export function targetLineHtml(t: TargetInfo, attrs = ''): string {
   const band = t.chance === undefined ? '' : chanceBand(t.chance);
   return `<button type="button" class="k-target${t.threat ? ` k-threat-${t.threat}` : ''}" aria-label="${esc(targetSpeech(t))}" title="${esc(L('target.open'))}" ${attrs}>
-    ${t.icon ? icon(t.icon, '', 'k-target-ico') : ''}<span class="k-target-name">${esc(t.name)}</span>${t.level !== undefined ? `<span class="k-target-lv">⚓\uFE0E${t.level}</span>` : ''}${t.hull !== undefined ? `<span class="k-target-hull" aria-hidden="true"><i style="width:${pct100(t.hull)}%"></i></span>` : ''}${band ? `<span class="k-chip k-chip--${band}" aria-hidden="true">${pct100(t.chance!)}%</span>` : ''}</button>`;
+    ${t.icon ? icon(t.icon, '', 'k-target-ico') : ''}<span class="k-target-name">${esc(t.name)}</span>${t.level !== undefined ? `<span class="k-target-lv">⚓\uFE0E${t.level}</span>` : ''}${t.hull !== undefined || t.crew !== undefined ? `<span class="k-target-bars" aria-hidden="true">${t.hull !== undefined ? `<span class="k-target-hull"><i style="width:${pct100(t.hull)}%"></i></span>` : ''}${t.crew !== undefined ? `<span class="k-target-crew"><i style="width:${pct100(t.crew)}%"></i></span>` : ''}</span>` : ''}${band ? `<span class="k-chip k-chip--${band}" aria-hidden="true">${pct100(t.chance!)}%</span>` : ''}</button>`;
 }
 
 /** A line that keeps its element and is redrawn only when what it shows has changed. */
@@ -53,7 +56,7 @@ export class TargetLine {
     host.addEventListener('click', (e) => (e.target as HTMLElement).closest('.k-target') && this.onOpen());
   }
   set(t: TargetInfo | null): void {
-    const key = t ? JSON.stringify([t.name, t.level, t.hull === undefined ? null : pct100(t.hull), t.chance === undefined ? null : pct100(t.chance), t.icon, t.threat]) : '';
+    const key = t ? JSON.stringify([t.name, t.level, t.hull === undefined ? null : pct100(t.hull), t.crew === undefined ? null : pct100(t.crew), t.chance === undefined ? null : pct100(t.chance), t.icon, t.threat]) : '';
     if (key === this.key) return;
     this.key = key;
     this.el.innerHTML = t ? targetLineHtml(t) : '';

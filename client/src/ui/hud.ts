@@ -86,7 +86,7 @@ export function releaseModalToasts(): void {
 const SHORT = '(max-width: 699px), (max-height: 520px)';
 
 /** The top stack's blocks that fold behind its button (the rest is what is happening now). */
-const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-world', 'hud-goals', 'hud-feed'];
+export const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-world', 'hud-goals', 'hud-feed'];
 
 /** The transient blocks of the top stack (a hint, the sea's news, a boss's card), styles.css puts them at its head. */
 const TRANSIENT = ['hud-tip', 'hud-boss', 'hud-feed'];
@@ -141,7 +141,7 @@ function sideSpot(h: number, z: number): { top: number; left: number; w: number 
   const W = innerWidth, H = innerHeight;
   const rects: DOMRect[] = [];
   const seen = (e: Element) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden'; };
-  for (const e of document.querySelectorAll('#hud-captain *, #hud-ship, #hud-map, #hud-region, #unread, #chat-toggle, #chat, .tc-menu, #touch .tc-btn, #touch .tc-fire, #tc-stick, #tc-sail, #hud-menu, #hud-bottom, #advcard, #hud-nav, #hud-stack > :not(.hidden)')) {
+  for (const e of document.querySelectorAll('#hud-captain *, #hud-ship, #hud-map, #hud-region, #unread, #chat-toggle, #chat, #touch > :not(.hidden), #hud-menu, #hud-bottom, #advcard, #hud-nav, #hud-stack > :not(.hidden)')) {
     if (!seen(e)) continue;
     let r = e.getBoundingClientRect();
     // What the top stack scrolls out of sight is not in the way (its target card ran 50 px under its 104 px).
@@ -207,6 +207,8 @@ export class Hud {
   /** docs/18 III: what the minimap shows, for its tooltip. */
   private miniView: { x: number; y: number; range: number } | null = null;
   private miniState: ClientState | null = null;
+  /** A long press on the minimap at a point of the sea (docs/23 item 30): main.ts marks it and sails; false = no. */
+  onMiniMark: (x: number, y: number) => boolean = () => false;
   onAbility: (id: string) => void = () => {};
   onAmmo: (id: string) => void = () => {};
   onTalent: (id: string) => void = () => {};
@@ -222,7 +224,7 @@ export class Hud {
   artEpoch = 0;
 
   constructor() {
-    wireMiniTip(this.minimap, () => this.miniView, () => this.miniState); // docs/18 #26: name · ⚓level · kind
+    wireMiniTip(this.minimap, () => this.miniView, () => this.miniState, (x, y) => this.onMiniMark(x, y)); // docs/18 #26: name · ⚓level · kind; docs/23 #30: a long press marks
     // Her own mark reached: a word, and the «Now:» line moves on.
     waypointHooks.onArrive = () => this.toast(L('wpArrived'), 'good');
     // The unit frame opens the ship's full condition on screens too small to keep it out.
@@ -266,7 +268,7 @@ export class Hud {
       if (!st.width) return;
       const top = st.top, h = Math.max(40 * z, f.height) + 4 * z, left = (f.width ? f.right : st.left) + 8 * z;
       let right = innerWidth - 8 * z;
-      for (const el of document.querySelectorAll('#hud-map, .tc-menu, #chat-toggle, #unread, #hud-region')) {
+      for (const el of document.querySelectorAll('#hud-map, #tc-menu, #tc-news, #chat-toggle, #unread, #hud-region')) {
         const r = el.getBoundingClientRect();
         if (r.width && r.left > left && r.top < top + h && r.bottom > top) right = Math.min(right, r.left - 8 * z);
       }
@@ -463,11 +465,6 @@ export class Hud {
     // The dash (dynamic combat): its readiness fills like a reload.
     const dashLeft = Math.max(0, (self.dashReadyAt ?? 0) - now);
     gauges.push({ id: 'dash', label: L('dash'), key: 'dash', art: assetUrl('icon.dash') ? 'dash' : 'ab_hard_over', v: 1 - Math.min(1, dashLeft / DASH_COOLDOWN), ready: dashLeft <= 0 });
-    const tcDash = document.getElementById('tc-dash');
-    if (tcDash) {
-      tcDash.style.setProperty('--cd', (Math.min(1, dashLeft / DASH_COOLDOWN)).toFixed(3));
-      tcDash.classList.toggle('cooling', dashLeft > 0);
-    }
     if (shipCls.bowChasers + shipCls.sternChasers > 0) gauges.push({ id: 'chasers', label: L('chasers'), key: 'chasers', art: 'chasers', v: Math.max(you.reload.bow, you.reload.stern), ready: Math.min(you.reload.bow || 1, you.reload.stern || 1) >= 1 });
     if (self.loadout.mount) gauges.push({ id: 'mount', label: MOUNTS[self.loadout.mount].name, art: `mount_${self.loadout.mount}`, v: you.reload.mount, ready: you.reload.mount >= 1 });
     const abil = cap.abilities.map((a) => {

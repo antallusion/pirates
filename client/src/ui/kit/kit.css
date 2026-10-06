@@ -151,6 +151,13 @@ body.reduce-motion { --k-dur-1: 0ms; --k-dur-2: 0ms; --k-dur-3: 0ms; }
 .skinned .k-wheel-item { border-color: transparent; }
 .skinned .k-wheel-item::after { content: ''; position: absolute; inset: -4px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
 .k-wheel-src { filter: brightness(1.35); }
+/* The lit choice's name in the hub (every wheel); a wheel of more than eight (docs/23 items 19–21: the fire wheel's
+   shots, abilities and talents) has smaller choices and only that name. */
+.k-wheel-cap { position: absolute; transform: translate(-50%, -50%); max-width: 120px; text-align: center; text-wrap: balance; font: 700 var(--k-fs-2)/1.2 var(--k-font-serif); color: var(--k-gold); text-shadow: 0 1px 2px #050607, 0 0 8px #050607; pointer-events: none; }
+.k-wheel--many .k-wheel-item { width: 44px; height: 44px; }
+.k-wheel--many .k-wheel-ico { width: 28px; height: 28px; }
+.k-wheel--many .k-wheel-l { display: none; }
+.k-wheel:not(.k-wheel--many) .k-wheel-item.sel .k-wheel-l { visibility: hidden; }
 
 /* ---------- Target line: one row, 44 px */
 .k-target { display: flex; align-items: center; gap: var(--k-sp-2); height: var(--k-h-2); max-width: 100%; min-width: 0; padding: 0 var(--k-sp-2); box-sizing: border-box;
@@ -162,7 +169,10 @@ body.reduce-motion { --k-dur-1: 0ms; --k-dur-2: 0ms; --k-dur-3: 0ms; }
 .k-target-ico { width: 26px; height: 26px; object-fit: contain; flex: none; margin: 0; }
 .k-target-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 .k-target-lv { flex: none; color: var(--k-gold); font-variant-numeric: tabular-nums; font-variant-emoji: text; }
-.k-target-hull { flex: 0 1 44px; min-width: 20px; height: 6px; border-radius: var(--k-r-round); background: #1a1d21; box-shadow: inset 0 0 0 1px #050607; overflow: hidden; }
+.k-target-bars { flex: 0 1 52px; min-width: 24px; display: flex; flex-direction: column; gap: 3px; }
+.k-target-bars > span { flex: none; width: 100%; }
+.k-target-hull, .k-target-crew { display: block; flex: 0 1 44px; min-width: 20px; height: 6px; border-radius: var(--k-r-round); background: #1a1d21; box-shadow: inset 0 0 0 1px #050607; overflow: hidden; }
+.k-target-crew i { display: block; height: 100%; background: linear-gradient(90deg, #2c4a5e, #5f8fa8); transition: width var(--k-dur-2) var(--k-ease-out); }
 .k-target-hull i { display: block; height: 100%; background: linear-gradient(90deg, #6e2a24, #a4523f); transition: width var(--k-dur-2) var(--k-ease-out); }
 .k-chip { flex: none; padding: 2px 6px; border-radius: var(--k-r-2); font: 700 var(--k-fs-1)/1.3 var(--k-font-sans); font-variant-numeric: tabular-nums; }
 .k-chip--good { color: var(--k-good); background: rgba(127, 181, 138, 0.14); }

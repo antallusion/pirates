@@ -253,34 +253,6 @@ body.touch #touch { display: block; }
 .skinned #tc-knob { background: var(--ui-helm) center / contain no-repeat; filter: drop-shadow(0 3px 5px #000); }
 #tc-course { position: absolute; inset: -6px; pointer-events: none; }
 #tc-course::before { content: ''; position: absolute; left: 50%; top: 0; margin-left: -7px; border: 7px solid transparent; border-bottom: 12px solid var(--gold); border-top: 0; filter: drop-shadow(0 0 4px rgba(224, 184, 98, 0.8)); }
-#tc-sail { position: absolute; left: calc(var(--sa-l) + var(--stick) + 18px); bottom: calc(var(--sa-b) + 10px); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: auto; }
-.tc-steps { display: flex; flex-direction: column-reverse; gap: 2px; }
-.tc-steps i { width: 22px; height: 6px; border: 1px solid var(--brass-dim); background: #0d0f12; }
-#tc-sail[data-sail="1"] .tc-steps i:nth-child(-n+1), #tc-sail[data-sail="2"] .tc-steps i:nth-child(-n+2),
-#tc-sail[data-sail="3"] .tc-steps i:nth-child(-n+3), #tc-sail[data-sail="4"] .tc-steps i:nth-child(-n+4) { background: var(--silver); box-shadow: 0 0 4px rgba(185, 188, 192, 0.6); }
-.tc-btn { position: relative; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 2px solid var(--brass-dim); background: rgba(16, 14, 11, 0.9); color: var(--gold); font: 700 16px var(--sans); pointer-events: auto; touch-action: manipulation; }
-.skinned .tc-btn { border: 0; }
-.skinned .tc-btn::after { content: ''; position: absolute; inset: -3px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
-.tc-btn img, .tc-fire img { position: absolute; inset: 16%; width: 68%; height: 68%; object-fit: contain; border-radius: 50%; }
-.tc-btn.pressed, .tc-fire.pressed { transform: scale(0.92); filter: brightness(1.4); }
-.tc-fire { position: absolute; bottom: calc(var(--sa-b) + 12px); width: var(--fire); height: var(--fire); padding: 0; border-radius: 50%; border: 2px solid var(--brass); background: radial-gradient(circle, #3a1714 0 55%, #140c0a 70%); color: var(--bone); font: 700 20px var(--sans); line-height: 1.2; pointer-events: auto; touch-action: manipulation; box-shadow: 0 0 14px rgba(0, 0, 0, 0.8); }
-.skinned .tc-fire { border: 0; }
-.skinned .tc-fire::after { content: ''; position: absolute; inset: -4px; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; }
-.tc-fire b, .tc-btn b { position: relative; z-index: 2; text-shadow: 0 1px 3px #000; }
-.tc-fire.has-art b, .tc-btn.has-art b { display: none; }
-#tc-starboard { right: calc(var(--sa-r) + 10px); }
-/* docs/23 items 35, 42: one «Огонь» on a phone (the gun crews fire as the mark bears; this is the volley out of turn);
-   the two broadsides held by hand and the chasers are the expert's. */
-#tc-fire { right: calc(var(--sa-r) + 10px); }
-body:not(.expert-guns) #tc-port, body:not(.expert-guns) #tc-starboard, body:not(.expert-guns) #tc-chasers { display: none; }
-body.expert-guns #tc-fire { display: none; }
-#tc-port { right: calc(var(--sa-r) + 18px + var(--fire)); }
-#tc-chasers { position: absolute; right: calc(var(--sa-r) + 28px + var(--fire)); bottom: calc(var(--sa-b) + 22px + var(--fire)); }
-#tc-mount { position: absolute; right: calc(var(--sa-r) + 20px); bottom: calc(var(--sa-b) + 22px + var(--fire)); }
-.tc-menu { position: absolute; right: calc(var(--sa-r) + 8px); top: calc(var(--sa-t) + var(--top-h)); }
-.tc-context { display: none; }
-body.touch .tc-context:not(.hidden) { display: block; pointer-events: auto; min-width: 150px; padding: 10px 22px; font: 600 14px var(--serif); letter-spacing: 0.04em; color: var(--gold); background: linear-gradient(180deg, #2a2521, #17140f); border: 1px solid var(--brass); border-radius: 3px; animation: ctx-pulse 1.6s ease-in-out infinite; }
-body.skinned.touch .tc-context:not(.hidden) { border-style: solid; border-width: 9px 14px; border-color: transparent; border-image: var(--ui-button) 40 fill / 9px 14px stretch; background: none; padding: 2px 10px; }
 @keyframes ctx-pulse { 50% { filter: brightness(1.3); } }
 body.touch #hud-prompt { display: none; }
 
@@ -297,7 +269,6 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
   #hud-region { display: none; }
   #hud-stack { left: calc(var(--sa-l) + 360px); right: calc(var(--sa-r) + var(--mm) + 64px); top: calc(var(--sa-t) + 8px); }
   body.touch #hud-stack { right: calc(var(--sa-r) + var(--mm) + 64px); }
-  .tc-menu { top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 16px); }
 }
 /* Tablets and up. */
 @media (min-width: 700px) and (min-height: 521px) {
@@ -313,7 +284,6 @@ body.touch { --touch-h: calc(var(--stick) + 12px); }
   body.touch #hud-bottom .ab-row { max-width: calc(100vw - 2 * (var(--stick) + 68px) - 16px); }
   body.touch #hud-combat .ab-row { flex-wrap: wrap; justify-content: center; overflow: visible; row-gap: 4px; }
   body.touch #hud-combat .ab-sep { display: none; }
-  .tc-menu { top: calc(var(--sa-t) + var(--mm) + 64px); }
 }
 /* Desktops (a mouse): the ship column, compass and micro menu come out. */
 @media (min-width: 1100px) and (min-height: 600px) {
@@ -1031,7 +1001,7 @@ input[type=checkbox] { accent-color: var(--gold); width: 18px; height: 18px; fle
 .toast.herald small { display: block; font: italic 13px var(--serif); color: var(--fog); line-height: 1.25; }
 /* A game screen, not a page: no text selection on the HUD and the controls (a long press on a phone would
    otherwise paint everything blue); fields and the chat still take text. */
-#hud, .hud-layer, #touch, #world, .tc-context { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#hud, .hud-layer, #touch, #world { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 #hud input, #hud textarea, #chat, #chat * { -webkit-user-select: text; user-select: text; }
 .toast.herald { display: block; }
 /* A narrow window with a mouse (no touch controls): the whole action bar fits, and the toasts keep clear of the
@@ -1225,14 +1195,6 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 @media (max-width: 699px), (max-height: 520px) { .ph-crest { height: 34px; max-width: 40px; } }
 /* Every title plate: the words sit on the plate's centre line (the display face rides a little high). */
 .skinned .modal-head h2, .skinned .title-sm { line-height: 1.2; padding-top: 2px; padding-bottom: 1px; }
-/* Touch buttons with painted art: the picture fills the ring, nothing else inside. */
-.tc-btn.has-art img { inset: 12%; width: 76%; height: 76%; border-radius: 0; }
-.tc-btn b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; line-height: 1; }
-/* The sail steps between the arrows: four brass pips, centred under the buttons. */
-.tc-steps { align-items: center; gap: 3px; margin: 2px 0; }
-.tc-steps i { width: 26px; height: 7px; border-radius: 3px; border: 1px solid rgba(140, 107, 58, 0.8); background: #0b0d10; box-shadow: inset 0 1px 2px #000; }
-#tc-sail[data-sail="1"] .tc-steps i:nth-child(-n+1), #tc-sail[data-sail="2"] .tc-steps i:nth-child(-n+2),
-#tc-sail[data-sail="3"] .tc-steps i:nth-child(-n+3), #tc-sail[data-sail="4"] .tc-steps i:nth-child(-n+4) { background: linear-gradient(180deg, #f0d48e, #b0843e); border-color: #e8cf8a; box-shadow: 0 0 5px rgba(224, 184, 98, 0.6); }
 /* The captain's ring sits true: the painted ring keeps its own proportions and its hole is centred on the
    portrait (the old box stretched it and set the hole low, so the face looked pushed up and left). */
 .skinned .uf-portrait::after { inset: -28.6% -20.9% -19.8% -19.1%; background-size: 100% 100%; }
@@ -1267,7 +1229,7 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 /* The button art carries a clear margin (19 of its 40px corners): its painted rim is drawn out to the box's
    edge, so a button's visible frame lines up with the fields, cards and chips around it and a row of buttons
    stands exactly its gap apart. */
-.skinned .btn, .skinned .tab.active, body.skinned.touch .tc-context:not(.hidden) { border-image-outset: 0.475; }
+.skinned .btn, .skinned .tab.active { border-image-outset: 0.475; }
 /* An icon on the chosen tab's wood: the dark ones (the market's scales) all but vanished into it. */
 .skinned .icon-tabs .tab.active .ico { filter: brightness(1.5) drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
 
@@ -1676,12 +1638,6 @@ body.touch #hud-region .rg-extra { display: none; }
 /* While the captains fight, the round's clock stands still. */
 .bf-panel.dueling .bf-timer { visibility: hidden; }
 
-/* Dynamic combat: the dash button over the sails (a manoeuvre, under the left thumb; beside them on a narrow phone,
-   where the bottom row is free), its cooldown a dark sweep. */
-#tc-dash { position: absolute; left: calc(var(--sa-l) + var(--stick) + 18px); bottom: calc(var(--sa-b) + 164px); }
-@media (max-width: 699px) and (min-height: 521px) { #tc-dash { left: calc(var(--sa-l) + var(--stick) + 72px); bottom: calc(var(--sa-b) + 12px); } }
-.tc-cd { position: absolute; inset: 0; z-index: 3; border-radius: 50%; pointer-events: none; background: conic-gradient(rgba(0, 0, 0, 0.62) calc(var(--cd, 0) * 360deg), transparent 0); }
-#tc-dash.cooling { filter: saturate(0.4); }
 
 /* The quest log under the chart (docs/11 P4): a row a quest, the chart turns to its target. */
 .map-quests { max-height: 160px; overflow-y: auto; padding: 6px 10px; border-top: 1px solid rgba(111, 90, 56, 0.4); display: grid; gap: 4px; }
@@ -2809,11 +2765,6 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
   #modal-toasts { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); padding: 0; }
 }
 
-/* ---------- The touch context buttons (docs/15 item 8): a second one beside the first, «Claim» off a wild island
-   while the first lands a party or docks. */
-#tc-ctx-row { display: flex; gap: 8px; justify-content: center; align-items: center; pointer-events: none; }
-#tc-ctx-row:not(:has(.tc-context:not(.hidden))) { display: none; }
-body.touch .tc-context2:not(.hidden) { min-width: 0; animation: none; }
 /* The column's toasts wait under an open window (the strip takes the new ones); they come back when it closes. */
 body:has(#modal:not(.hidden)) #toasts { display: none; }
 #modal-toasts { overflow: hidden; }
@@ -3845,11 +3796,7 @@ body:has(#board-tac:not(.hidden)) #advcard, body:has(#modal:not(.hidden)) #advca
 /* docs/17 H5 (QA): the chart's lines under the minimap grew a line each with H3 and H4 (the week, the waters' levels);
    the touch micro menu and, on a phone, the top stack stand under them however many there are (--rg-bottom: hud.ts). */
 @media (max-width: 699px) and (min-height: 521px) {
-  .tc-menu { top: max(calc(var(--sa-t) + var(--top-h)), calc(var(--rg-bottom, 0px) + 6px)); }
   #hud-stack, body.touch #hud-stack { top: max(calc(var(--sa-t) + var(--top-h)), calc(var(--rg-bottom, 0px) + 6px)); }
-}
-@media (min-width: 700px) and (max-width: 1099px) and (min-height: 521px) {
-  .tc-menu { top: max(calc(var(--sa-t) + var(--mm) + 64px), calc(var(--rg-bottom, 0px) + 6px)); }
 }
 /* docs/17 H5 (QA): a phone held sideways — the adventure map's card keeps to the middle column, between the captain's
    plate and the right column's buttons (the card stood over the plate). */
@@ -4291,10 +4238,6 @@ body.touch .act-btn { --h: 38px; }
   .unit-frame { width: 262px; }
   :root { --plate-w: max(190px, calc(100vw - var(--sa-l) - var(--sa-r) - 282px - var(--mm) - 76px)); }
   #hud #hud-stack, body.touch #hud #hud-stack { left: calc(var(--sa-l) + 282px); right: auto; }
-}
-/* A touch screen as big as a desktop (1180×820): the menu button stands under the chart's lines, however many. */
-@media (min-width: 1100px) and (min-height: 521px) {
-  body.touch .tc-menu { top: max(calc(var(--sa-t) + var(--mm) + 64px), calc(var(--rg-bottom, 0px) + 6px)); }
 }
 /* The battle's queue and card show a painted figure's head and shoulders (owner, 2026-10-02: the battle as in Heroes). */
 .tb-q .ico.fig, .tb-card-h .ico-md.fig { object-fit: cover; object-position: 50% 6%; background: radial-gradient(circle at 50% 35%, #2a2620, #110e0b); }
@@ -4836,3 +4779,90 @@ body.tq-side #toasts .toast.herald small { font-size: 11px; line-height: 14px; w
 .tg-odds-good { color: #7fae6a; }
 /* docs/23 item 39: the best shot for the mark now. */
 .ab-ammo .best { box-shadow: 0 0 0 2px var(--gold), 0 0 8px rgba(224, 184, 98, 0.6); }
+
+/* ======================================================================================================================
+   docs/23 phase 2 — the sea HUD on a phone: the sea and five buttons (client/src/ui/seahud.ts, touch.ts).
+   Left: the helm stick (its ring is the sail, its chip the dash). Right: «Огонь», big, «Действие» over it, «Особое»
+   beside it, the target's line over them. Top left: a mini portrait with hull and crew; top: one counter of goals and
+   news; top right: the menu and the minimap. Everything else of the older touch HUD — the shot and ability bar, the
+   compass, the micro menu, the chart's lines, the fold, the chat's button — is put away on touch (it lives in the wheel,
+   the menu's sheet and the news sheet). A target (a fight) puts the counter and the minimap away too. The desktop keeps
+   its bar and keys. Sizes: 44 px at least for anything a thumb takes (accessibility), 80 px for «Огонь». */
+body.touch { --sea-pad: 10px; --sea-fire: 80px; --sea-act-h: 52px; }
+@media (min-width: 700px) and (min-height: 521px) { body.touch { --sea-pad: 16px; --sea-fire: 92px; } }
+
+/* What the phone's sea does without. */
+body.touch #hud-combat, body.touch #hud-nav, body.touch #hud-menu, body.touch #hud-region, body.touch #hud-fold,
+body.touch #hud-prompt .act-row, body.touch #hud-prompt .act-more-row, body.touch #chat-toggle,
+body.touch #hud-stack > :is(#hud-tip, #hud-fish, #hud-order, #hud-holiday, #hud-world, #hud-goals, #hud-feed, #hud-target),
+body.touch.sea-target #hud-stack > :is(#hud-signals, #hud-orders) { display: none !important; }
+body.touch #hud-ship { display: none; }
+body.touch #hud-prompt { display: block; }
+body.touch #hud-bottom { pointer-events: none; }
+
+/* The mini portrait: the captain's face, her level, two thin bars (hull, crew) — information, not a button. */
+body.touch #hud-captain { width: auto; gap: 6px; pointer-events: none; cursor: default; top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 8px); }
+body.touch #hud-captain .uf-portrait { width: 44px; height: 44px; }
+body.touch #hud-captain .uf-body { flex: none; width: 104px; padding: 0; background: none; border: 0; border-image: none; box-shadow: none; }
+body.touch #hud-captain :is(.uf-top, .uf-sub, .fbar.sails, .fbar.xp) { display: none; }
+body.touch #hud-captain .fbar { height: 7px; margin: 4px 0 0; border-radius: 4px; overflow: hidden; border: 1px solid rgba(5, 6, 7, 0.9); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+body.touch #hud-captain .fbar > span { display: none; }
+
+/* The top row: the news counter after the portrait; the menu left of the minimap. */
+body.touch #touch > .tc-news { position: absolute; top: calc(var(--sa-t) + 8px); left: calc(var(--sa-l) + 172px); pointer-events: auto; }
+body.touch #touch > #tc-menu { position: absolute; top: calc(var(--sa-t) + 8px); right: calc(var(--sa-r) + var(--mm) + 20px); pointer-events: auto; }
+body.touch.sea-target #touch > .tc-news, body.touch.sea-target #hud-map { display: none !important; }
+body.touch #hud-stack, body.touch #hud #hud-stack { left: calc(var(--sa-l) + 228px); right: calc(var(--sa-r) + var(--mm) + 76px); top: calc(var(--sa-t) + 8px); transform: none; width: auto; min-width: 0; }
+body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: calc(var(--sa-l) + 172px); right: calc(var(--sa-r) + 76px); }
+
+/* The helm stick: its ring is the sail (a gauge from bottom left round to bottom right, four steps lit in gold). */
+#tc-sailring { position: absolute; inset: -9px; border-radius: 50%; pointer-events: none; --a: 0deg;
+  background: conic-gradient(from -135deg, var(--k-gold) 0 var(--a), rgba(14, 16, 19, 0.78) var(--a) 270deg, transparent 270deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  filter: drop-shadow(0 0 3px rgba(224, 184, 98, 0.45)); }
+#tc-stick[data-sail="1"] #tc-sailring { --a: 67.5deg; }
+#tc-stick[data-sail="2"] #tc-sailring { --a: 135deg; }
+#tc-stick[data-sail="3"] #tc-sailring { --a: 202.5deg; }
+#tc-stick[data-sail="4"] #tc-sailring { --a: 270deg; }
+#tc-stick.reefed #tc-sailring { animation: k-flash 400ms var(--k-ease-out); }
+/* The dash's chip (a double tap): bright when the braces are ready, a dark sweep while they are not. */
+#tc-dashchip { position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; border-radius: 50%; pointer-events: none; background: rgba(16, 14, 11, 0.92); box-shadow: 0 0 0 1px var(--k-brass-dim); }
+#tc-dashchip::before { content: '»'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--k-gold); font: 700 15px/1 var(--k-font-sans); }
+#tc-dashchip::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(rgba(0, 0, 0, 0.7) calc(var(--cd, 0) * 360deg), transparent 0); }
+#tc-stick.cooling #tc-dashchip::before { color: var(--k-haze); }
+
+/* «Огонь»: the big round button in the right thumb's corner; its rim fills as the guns load, the shot loaded on its
+   corner. A long press opens the wheel. */
+#touch > .tc-big { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad)); width: var(--sea-fire); height: var(--sea-fire); padding: 0;
+  flex-direction: column; gap: 0; border: 0; border-radius: 50%; pointer-events: auto; color: var(--k-bone);
+  background: radial-gradient(circle, #4a1c17 0 52%, #1b0e0b 70%); box-shadow: 0 0 0 2px var(--k-brass-dim), 0 4px 16px rgba(0, 0, 0, 0.8); }
+.skinned #touch > .tc-big::after { content: none; }
+#touch > .tc-big .tc-ring { position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(var(--k-gold) calc(var(--rl, 1) * 360deg), rgba(14, 16, 19, 0.7) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
+#touch > .tc-big.loaded { box-shadow: 0 0 0 2px var(--k-brass), 0 0 18px rgba(224, 120, 70, 0.45), 0 4px 16px rgba(0, 0, 0, 0.8); }
+#touch > .tc-big .tc-big-ico { position: static; width: 46%; height: 46%; object-fit: contain; border-radius: 0; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; }
+#touch > .tc-big .tc-big-l { font: 700 12px/1 var(--k-font-serif); letter-spacing: 0.06em; text-transform: uppercase; color: var(--k-gold); text-shadow: var(--k-shadow-1); margin-top: 2px; }
+#touch > .tc-big .tc-ammo { position: absolute; left: -6px; top: -6px; display: flex; align-items: center; gap: 2px; height: 22px; padding: 0 5px 0 2px; border-radius: var(--k-r-round); background: rgba(10, 11, 13, 0.92); box-shadow: 0 0 0 1px var(--k-brass-dim); font: 700 10px/1 var(--k-font-sans); color: var(--k-bone); font-variant-numeric: tabular-nums; }
+#touch > .tc-big .tc-ammo-ico { width: 18px; height: 18px; object-fit: contain; }
+
+/* «Действие» over «Огонь», «Особое» beside it, the target's line over them. */
+#touch > .tc-act { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); max-width: 210px; pointer-events: auto; animation: ctx-pulse 1.8s ease-in-out infinite; }
+#touch > .tc-act .tc-act-ico { display: inline-flex; flex: none; }
+#touch > .tc-act .tc-act-more { position: absolute; top: -8px; left: -8px; min-width: 22px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: var(--k-r-round); background: rgba(10, 11, 13, 0.92); box-shadow: 0 0 0 1px var(--k-brass-dim); color: var(--k-bone); font: 700 10px/20px var(--k-font-sans); text-align: center; pointer-events: none; }
+#touch > .tc-special { position: absolute; right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + 14px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px); pointer-events: auto; box-shadow: 0 0 12px rgba(224, 184, 98, 0.45); }
+#touch > #tc-target { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px + var(--sea-act-h) + 8px); width: min(230px, 30vw); pointer-events: auto; }
+#touch > #tc-target .k-target { width: 100%; }
+#touch:not(:has(> .tc-act:not(.hidden))) > #tc-target { bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); }
+/* In port: no helm, no guns. */
+body.touch.sea-docked #touch > :is(#tc-stick, .tc-big, .tc-special, #tc-target) { display: none; }
+
+/* The menu's sheet: eight big tiles, four to a row. */
+.k-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--k-sp-2); padding: var(--k-sp-1) 0 var(--k-sp-2); }
+.k-tile { flex-direction: column; gap: var(--k-sp-1); min-height: 72px; padding: var(--k-sp-2) var(--k-sp-1); }
+.k-tile .k-tile-ico { width: 32px; height: 32px; object-fit: contain; }
+.k-tile .k-tile-ico.glyph { display: inline-flex; align-items: center; justify-content: center; font-size: 22px; }
+.k-tile .k-btn-l { white-space: nowrap; max-width: 100%; }
+/* A sheet that holds HUD blocks lent to it (the news, the target's card): they stand in its flow. */
+.sea-lent { display: flex; flex-direction: column; gap: var(--k-sp-2); padding-bottom: var(--k-sp-2); }
+.sea-lent > * { position: static !important; display: block !important; width: auto !important; max-width: none !important; transform: none !important; margin: 0 !important; max-height: none !important; overflow: visible !important; }

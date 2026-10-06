@@ -2726,7 +2726,7 @@ export class Renderer {
     if (this.time - this.band.at > 0.5 || this.band.at < 0) {
       let top = 0, bottom = this.h;
       this.hudRects = [];
-      for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-goals:not(.hidden)', '#hud-prompt', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-sail', '#tc-port', '#tc-starboard', '#tc-chasers', '#tc-menu', '#tc-context:not(.hidden)', '#chat-toggle', '#chat.open', '#toasts:not(:empty)', '#encounter:not(.hidden)', '#surrender:not(.hidden)', '#advcard:not(.hidden)']) {
+      for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-goals:not(.hidden)', '#hud-prompt', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-fire', '#tc-act:not(.hidden)', '#tc-special:not(.hidden)', '#tc-target:not(.hidden)', '#tc-menu', '#tc-news:not(.hidden)', '#chat-toggle', '#chat.open', '#toasts:not(:empty)', '#encounter:not(.hidden)', '#surrender:not(.hidden)', '#advcard:not(.hidden)']) {
         document.querySelectorAll<HTMLElement>(sel).forEach((e) => {
           const r = e.getBoundingClientRect();
           if (r.width > 0 && r.height > 0) this.hudRects.push(r);
@@ -2738,7 +2738,7 @@ export class Renderer {
           if (r.height > 0 && r.top < this.h * 0.45) top = Math.max(top, r.bottom);
         });
       }
-      for (const sel of ['#hud-bottom', '#tc-stick', '#tc-port']) {
+      for (const sel of ['#hud-bottom', '#tc-stick', '#tc-fire']) {
         const e = document.querySelector<HTMLElement>(sel);
         const r = e?.getBoundingClientRect();
         if (r && r.height > 0 && r.top > this.h * 0.5) bottom = Math.min(bottom, r.top);

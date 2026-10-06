@@ -114,25 +114,14 @@
     <nav id="hud-menu" class="micro-menu"></nav>
     <div id="hud-bottom">
       <div id="hud-prompt"></div>
-      <div id="tc-ctx-row"><button id="tc-context" class="tc-context hidden"><span></span></button><button id="tc-context2" class="tc-context tc-context2 hidden"><span></span></button></div>
       <div id="hud-combat" class="action-bar"></div>
     </div>
     <div id="board-fight" class="hidden"></div>
     <div id="captions"></div>
+    <!-- docs/23 phase 2: the helm stick (touch.ts); «Огонь», «Действие», «Особое», the menu and the news counter are
+         put in by ui/seahud.ts. -->
     <div id="touch">
-      <div id="tc-stick"><i id="tc-course" class="hidden"></i><i id="tc-knob"></i></div>
-      <div id="tc-sail" data-sail="0">
-        <button id="tc-sail-up" class="tc-btn" aria-label="Sail up" data-i18n-aria="a11y.sailUp"><b>▲</b></button>
-        <div class="tc-steps"><i></i><i></i><i></i><i></i></div>
-        <button id="tc-sail-down" class="tc-btn" aria-label="Sail down" data-i18n-aria="a11y.sailDown"><b>▼</b></button>
-      </div>
-      <button id="tc-chasers" class="tc-btn tc-small hidden" aria-label="Chasers" data-i18n-aria="a11y.chasers"><b>⇡</b></button>
-      <button id="tc-dash" class="tc-btn tc-small" aria-label="Dash" data-i18n-aria="a11y.dash"><b>»</b><i class="tc-cd"></i></button>
-      <button id="tc-mount" class="tc-btn tc-small hidden" aria-label="Deck mount" data-i18n-aria="a11y.mount"><b>✺</b></button>
-      <button id="tc-port" class="tc-fire" aria-label="Port broadside" data-i18n-aria="a11y.port"><b>◀</b></button>
-      <button id="tc-starboard" class="tc-fire" aria-label="Starboard broadside" data-i18n-aria="a11y.starboard"><b>▶</b></button>
-      <button id="tc-fire" class="tc-fire" aria-label="Fire" data-i18n-aria="a11y.fire"><b>✸</b></button>
-      <button id="tc-menu" class="tc-btn tc-menu" aria-label="Menu" data-i18n-aria="a11y.menu"><b>☰</b></button>
+      <div id="tc-stick"><i id="tc-sailring" aria-hidden="true"></i><i id="tc-course" class="hidden"></i><i id="tc-knob"></i><i id="tc-dashchip" aria-hidden="true"></i></div>
     </div>
   </section>
 

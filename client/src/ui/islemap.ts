@@ -81,7 +81,7 @@ interface MiniView {
 }
 
 /** The minimap's tooltip: what lies under the pointer — an island's name, level and kind; a turtle; a bank. */
-export function wireMiniTip(canvas: HTMLCanvasElement, view: () => MiniView | null, stateOf: () => ClientState | null): void {
+export function wireMiniTip(canvas: HTMLCanvasElement, view: () => MiniView | null, stateOf: () => ClientState | null, onLong?: (x: number, y: number) => boolean): void {
   const tip = document.createElement('div');
   tip.id = 'mm-tip';
   tip.className = 'mm-tip hidden';
@@ -131,6 +131,17 @@ export function wireMiniTip(canvas: HTMLCanvasElement, view: () => MiniView | nu
     const x = e.clientX, y = e.clientY;
     press = { x, y, t: window.setTimeout(() => {
       press = null;
+      // docs/23 item 30: a long press on the minimap is a mark there, and the helmsman takes her to it.
+      const v = view();
+      if (onLong && v) {
+        const r = canvas.getBoundingClientRect();
+        const k = r.width / (v.range * 2);
+        if (onLong(v.x + (x - r.left - r.width / 2) / k, v.y + (y - r.top - r.height / 2) / k)) {
+          shown = true; // the tap that ends the press does not open the chart
+          try { navigator.vibrate?.(15); } catch { /* not allowed */ }
+          return;
+        }
+      }
       shown = show(x, y, true);
       if (shown) {
         clearTimeout(hideAt);
