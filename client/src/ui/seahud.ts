@@ -186,7 +186,7 @@ export class SeaHud {
     const a = v.act;
     this.once('act', a ? JSON.stringify([a.id, a.icon, a.label, a.sub, a.more]) : '', () => {
       this.actEl.classList.toggle('hidden', !a);
-      if (!a) return;
+      if (!a) return void delete this.actEl.dataset.act;
       this.actEl.dataset.act = a.id;
       this.actEl.querySelector('.tc-act-ico')!.innerHTML = icon(a.icon, '•', 'k-btn-ico');
       this.actEl.querySelector('.k-btn-l')!.textContent = a.label;

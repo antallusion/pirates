@@ -4851,7 +4851,7 @@ body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: 
 #touch > .tc-act .tc-act-ico { display: inline-flex; flex: none; }
 #touch > .tc-act .tc-act-more { position: absolute; top: -8px; left: -8px; min-width: 22px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: var(--k-r-round); background: rgba(10, 11, 13, 0.92); box-shadow: 0 0 0 1px var(--k-brass-dim); color: var(--k-bone); font: 700 10px/20px var(--k-font-sans); text-align: center; pointer-events: none; }
 #touch > .tc-special { position: absolute; right: calc(var(--sa-r) + var(--sea-pad) + var(--sea-fire) + 14px); bottom: calc(var(--sa-b) + var(--sea-pad) + 4px); pointer-events: auto; box-shadow: 0 0 12px rgba(224, 184, 98, 0.45); }
-#touch > #tc-target { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px + var(--sea-act-h) + 8px); width: min(230px, 30vw); pointer-events: auto; }
+#touch > #tc-target { position: absolute; right: calc(var(--sa-r) + var(--sea-pad)); bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px + var(--sea-act-h) + 8px); width: min(250px, 32vw); pointer-events: auto; }
 #touch > #tc-target .k-target { width: 100%; }
 #touch:not(:has(> .tc-act:not(.hidden))) > #tc-target { bottom: calc(var(--sa-b) + var(--sea-pad) + var(--sea-fire) + 10px); }
 /* In port: no helm, no guns. */

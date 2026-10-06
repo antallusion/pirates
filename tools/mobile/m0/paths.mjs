@@ -104,7 +104,7 @@ await film();
 await admin('/silver 50000');
 await quiet();
 
-const openPort = async () => { if ((await st()).modal !== 'port') await tap('.act-btn.act-harbour, #tc-context:not(.hidden)', 'the harbour button'); };
+const openPort = async () => { if ((await st()).modal !== 'port') await tap('#tc-act[data-act="harbour"], .act-btn.act-harbour', 'the harbour button'); };
 const portTab = (t) => tap(`#modal-panel .tab[data-tab="${t}"]`, `the «${t}» tab`);
 
 for (const name of PATHS) {
@@ -159,7 +159,7 @@ for (const name of PATHS) {
       // The voyage itself is not the interface's: its films are skipped without counting.
       const skip = () => p.evaluate(() => document.querySelectorAll('.film').forEach((f) => f.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))));
       if (to) { await L.send(p, { t: 'undock' }); await L.sleep(2000); await skip(); await quiet(); await admin(`/tp ${to}`, 3000); await skip(); await quiet(); }
-      await tap('.act-btn.act-dock, #tc-context:not(.hidden)', '«to port» at the destination');
+      await tap('#tc-act[data-act="dock"], .act-btn.act-dock', '«to port» at the destination');
       await film();
       await L.sleep(1500);
     }, async () => !!to && (await st()).silver > before.silver);
@@ -167,8 +167,8 @@ for (const name of PATHS) {
   // The sea fight (docs/23 phases 2–3): «Атаковать» on the action (the bar's gold button, or the touch HUD's
   // «Действие»), «Огонь» for a volley, «Абордаж» when she is in the grapples' reach. A hostile within a mile is the
   // target by itself; a tap on her pins her (counted). A volley is seen by a gun deck's reload dropping.
-  const ATTACK = '#tc-act[data-act="attack"], .act-btn.act-attack';
-  const BOARD = '#tc-act[data-act="board"], .act-btn.act-board';
+  const ATTACK = '#tc-act[data-act="attack"]:not(.hidden), .act-btn.act-attack';
+  const BOARD = '#tc-act[data-act="board"]:not(.hidden), .act-btn.act-board';
   const watchFire = () => p.evaluate(() => {
     globalThis.__fired = false;
     clearInterval(globalThis.__fw);
@@ -202,12 +202,13 @@ for (const name of PATHS) {
   };
   // A clean scene for each fight: no pursuit left over, open water far from the last fight's sharks (not counted).
   let spot = 0;
-  const openSea = async () => { await toSea(); await L.send(p, { t: 'attack', stop: true }); await admin(`/tp ${21000 + 3000 * spot} ${70000 + 2500 * (spot++ % 3)}`, 3000); await quiet(); await admin('/heal'); await admin('/ammo'); };
+  const openSea = async () => { await toSea(); await L.send(p, { t: 'attack', stop: true }); await admin(`/tp ${21000 + 3000 * spot} ${70000 + 2500 * (spot++ % 3)}`, 3000); await quiet(); await admin('/weather clear'); await admin('/heal'); await admin('/ammo'); };
   if (name === 'fire') {
     await run('fire', async () => { await openSea(); await admin('/foe pirate sloop 260', 3500); await watchFire(); }, async () => {
       if (!(await p.$('#tc-target:not(.hidden), .act-btn.act-attack'))) await tapFoe();
       await tap('#tc-fire', '«Огонь»');
-      for (let i = 0; i < 10 && !(await fired()); i++) await L.sleep(300);
+      // «Огонь» fires now when she bears; when she does not, the helmsman lays a broadside on her first (20 s at most).
+      for (let i = 0; i < 66 && !(await fired()); i++) await L.sleep(300);
     }, fired);
   }
   if (name === 'attack' || name === 'board') {

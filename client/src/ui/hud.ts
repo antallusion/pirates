@@ -483,7 +483,8 @@ export class Hud {
     const combat = $('hud-combat');
     const key = [lang(), this.bestAmmo, document.body.classList.contains('touch'), you.ammoSel, shots.map((a) => `${a}${you.ammo[a]}`).join(','), gauges.map((g) => g.id).join(','),
       abil.map((x) => `${x.a.id}${x.dim ? 1 : 0}${x.locked ? 1 : 0}`).join(','), tals.map((x) => x.t.id).join(','), heat, mode, this.artEpoch].join('|');
-    if (key !== this.lastCombatKey) {
+    // A phone has no bar: its shots, abilities and talents are the wheel under «Огонь» (docs/23 items 19–21).
+    if (key !== this.lastCombatKey && !document.body.classList.contains('touch')) {
       this.lastCombatKey = key;
       const ammo = shots.map((a) => slot({
         // docs/23 item 39: each shot by its role in a word (round the hull, chain the sails, grape the men), and the best
