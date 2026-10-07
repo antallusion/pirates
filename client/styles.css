@@ -2454,6 +2454,9 @@ body.skinned:not(.touch) #hud-nav { width: 204px; }
 .bplot.locked .bground { pointer-events: none; }
 /* The body of a building over its diamond answers a touch too (the middle of it: the back plots stay reachable). */
 .bhit { position: absolute; left: 28%; width: 44%; bottom: 50%; height: 110%; pointer-events: auto; }
+/* On a phone the board is the island's picture and its tiles are the finger's (docs/23 items 72, 92: a big island's
+   diamonds were 80×40 px, under a finger's 44): a tap on the board does what a tap on its tile does, nothing less. */
+body.touch .base-board .bplot .bground, body.touch .base-board .bhit { pointer-events: none; }
 .bplot .bground::after { content: ''; position: absolute; inset: 3% 2.5%; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: linear-gradient(160deg, #56643a 0%, #3c4a2a 55%, #2c351f 100%); }
 .bplot.empty .bground::after { background: linear-gradient(160deg, #6b6a45 0%, #4b4a30 60%, #36341f 100%); }
 .bplot.empty:hover .bground, .bplot.target .bground { background: var(--gold); }
@@ -4737,8 +4740,7 @@ body.touch { --sea-pad: 10px; --sea-fire: 80px; --sea-act-h: 52px; }
 /* What the phone's sea does without. */
 body.touch #hud-combat, body.touch #hud-nav, body.touch #hud-menu, body.touch #hud-region, body.touch #hud-fold,
 body.touch #hud-prompt .act-row, body.touch #hud-prompt .act-more-row, body.touch #chat-toggle,
-body.touch #hud-stack > :is(#hud-tip, #hud-fish, #hud-order, #hud-holiday, #hud-world, #hud-goals, #hud-feed, #hud-target),
-body.touch.sea-target #hud-stack > :is(#hud-signals, #hud-orders) { display: none !important; }
+body.touch #hud-stack > :is(#hud-tip, #hud-fish, #hud-order, #hud-holiday, #hud-world, #hud-goals, #hud-feed, #hud-target, #hud-signals, #hud-orders) { display: none !important; }
 body.touch #hud-ship { display: none; }
 body.touch #hud-prompt { display: block; }
 body.touch #hud-bottom { pointer-events: none; }
@@ -4811,4 +4813,4 @@ body.touch.sea-docked #touch > :is(#tc-stick, .tc-special, #tc-target) { display
 .k-tile .k-btn-l { white-space: nowrap; max-width: 100%; }
 /* A sheet that holds HUD blocks lent to it (the news, the target's card): they stand in its flow. */
 .sea-lent { display: flex; flex-direction: column; gap: var(--k-sp-2); padding-bottom: var(--k-sp-2); }
-.sea-lent > * { position: static !important; display: block !important; width: auto !important; max-width: none !important; transform: none !important; margin: 0 !important; max-height: none !important; overflow: visible !important; }
+.sea-lent > :not(.hidden) { position: static !important; display: block !important; width: auto !important; max-width: none !important; transform: none !important; margin: 0 !important; max-height: none !important; overflow: visible !important; }

@@ -180,7 +180,7 @@ while (Date.now() - t0 < MIN * 60_000) {
     did = 'sheet';
   } else if (v.modal) {
     // A window: its gold button (the spoils, the risk, the harbour's «Поднять паруса»), else it is closed.
-    if (v.modal === 'port' && (await tapSel('[data-act="undock"]', 'port'))) did = 'port:undock';
+    if (v.modal === 'port' && (await tapSel('#modal-panel [data-ptab="sea"]', 'port'))) did = 'port:undock';
     else if (await tapSel('#modal-panel .btn-primary, #modal-panel .k-btn--primary', 'other')) did = `modal:${v.modal}`;
     else if (await tapSel('#modal-panel [data-close], #modal-panel .modal-x, #modal-close', 'other')) did = `close:${v.modal}`;
     else { obvious = false; did = `modal-stuck:${v.modal}`; }

@@ -1474,8 +1474,10 @@ export interface TacHeroView {
   innate?: 'ready' | 'used';
   ult?: 'ready' | 'used' | 'locked';
   face?: string;
-  /** Has given an order this round. */
+  /** Has given an order this round (or cannot: `hush`). */
   cast: boolean;
+  /** Her signals lost in the enemy's fog this round (docs/23 item 93: the book's cards said nothing of why). */
+  hush?: boolean;
   auto: boolean;
   /** «Ускорить ×2» asked (docs/23 item 60). */
   fast?: boolean;

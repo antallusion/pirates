@@ -14,7 +14,7 @@ const css = readFileSync(new URL('../client/feel.css', import.meta.url), 'utf8')
 
 test('the finger points at the one button each step wants (docs/23 items 79–80)', () => {
   const base = { touch: true, docked: false, battle: false };
-  assert.deepEqual(pointerTargets({ ...base, stage: 'sail', docked: true })[0], '[data-act="undock"]', 'in port: «Поднять паруса»');
+  assert.deepEqual(pointerTargets({ ...base, stage: 'sail', docked: true }).slice(0, 2), ['#modal-panel [data-ptab="sea"]', '#tc-fire.tc-sail'], 'in port: the harbour’s gold «В море», else the HUD’s');
   assert.deepEqual(pointerTargets({ ...base, stage: 'sail' }), ['#tc-stick'], 'at sea: the wheel');
   assert.deepEqual(pointerTargets({ ...base, stage: 'sail', touch: false }), [], 'a desk steers by keys');
   assert.equal(pointerTargets({ ...base, stage: 'attack' })[0], '#tc-act[data-act="attack"]');
@@ -90,6 +90,9 @@ test('the fast start and the safe area (docs/23 items 88–89)', () => {
   assert.match(html, /<link rel="stylesheet" href="\/feel\.css" \/>/);
   assert.match(html, /<button id="login-continue" class="btn btn-primary hidden" type="button"><\/button>/);
   assert.ok(css.includes('#modal { padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); box-sizing: border-box; }'));
+  // The safe area trims a window only where it is less than the sheet's own 90% (docs/23 item 94: it had made every
+  // window full height, the scrim and the grip gone).
+  assert.ok(css.includes('height: min(90dvh, calc(100dvh - var(--sa-t) - var(--sa-b)));'));
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
   assert.match(main, /localStorage\.setItem\(CAPTAIN_KEY, m\.name\)/);
   assert.match(main, /m\.msg === 'Logged in elsewhere\.'/);

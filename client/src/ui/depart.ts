@@ -33,7 +33,7 @@ export function voyageShip(state: ClientState): VoyageShip | null {
 }
 
 /** One shortage as the harbour can meet it: how many, at what price, and the orders that buy it. */
-interface Offer {
+export interface Offer {
   need: VoyageNeed;
   n: number;
   cost: number;
@@ -115,6 +115,48 @@ function row(o: Offer, i: number, state: ClientState): string {
 
 let openSheetHandle: SheetHandle | null = null;
 
+/** A share of the purse the way out keeps back for the next repairs (docs/23 item 96: a newcomer's purse went whole on
+ *  the voyage's stores, and every homecoming after a fight met the harbour's check with nothing to mend her with). */
+export const RESERVE_SHARE = 0.25;
+export const RESERVE_MIN = 60;
+/** Below this share of hull or canvas, unmended, the way out asks before she sails (above it she sails as she is). */
+export const ASK_BELOW = 0.5;
+
+/** What the way out does by itself (docs/23 items 66, 96), pure: the repairs first when the purse holds them, then the
+ *  food, then — keeping RESERVE_SHARE of the purse back — the shot and the hands. Asked only when what is left is
+ *  grave: a hull or canvas under ASK_BELOW, or no food aboard and none bought. */
+export function departPlan(offers: Offer[], gold: number): { buy: Offer[]; cost: number; short: Offer[]; ask: boolean } {
+  const order = ['repair', 'food', 'ammo', 'crew'] as const;
+  const sorted = [...offers].sort((a, b) => order.indexOf(a.need.kind) - order.indexOf(b.need.kind));
+  const reserve = Math.max(RESERVE_MIN, Math.round(gold * RESERVE_SHARE));
+  let left = gold;
+  const buy: Offer[] = [], short: Offer[] = [];
+  for (const o of sorted) {
+    const keep = o.need.kind === 'ammo' || o.need.kind === 'crew' ? reserve : 0;
+    if (o.n > 0 && o.cost <= left - keep) {
+      buy.push(o);
+      left -= o.cost;
+    } else short.push(o);
+  }
+  const grave = short.some((o) => (o.need.kind === 'repair' && (o.need.hull < ASK_BELOW || o.need.sails < ASK_BELOW)) || (o.need.kind === 'food' && o.need.have <= 0));
+  return { buy, cost: gold - left, short, ask: grave };
+}
+
+/** Where the way out says what it bought (main.ts gives it the HUD's toasts). */
+let say: (msg: string, kind: string) => void = () => {};
+export function setDepartSay(fn: (msg: string, kind: string) => void): void {
+  say = fn;
+}
+/** The grave shortfall she last sailed with anyway, and when (the page's clock): not asked again for it for a while. */
+let sailedAnyway: { key: string; at: number } | null = null;
+const ASK_AGAIN_MS = 10 * 60_000;
+const graveKey = (short: Offer[]) => short.map((o) => o.need.kind).sort().join(',');
+
+function boughtLine(buy: Offer[], cost: number): string {
+  const what = buy.map((o) => o.need.kind === 'repair' ? L('depart.w.repair') : L(`depart.w.${o.need.kind}`, { n: o.n })).join(', ');
+  return L('depart.bought', { what, cost: fmt(cost) });
+}
+
 /** Casting off: straight away when all is aboard, else the list of what is short first — in the kit's bottom sheet
  *  (docs/23 phase 1): the list scrolls, the three buttons stay at its foot. */
 export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go: () => void): void {
@@ -122,14 +164,18 @@ export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go
   // The First Watch sails a mile off the quay and is towed home if it goes wrong (docs/23 item 79): no list to read
   // between «Поднять паруса» and the sea — the 2026-10-06 newcomer's run stopped on it.
   if (!ship || !state.portView || !voyageNeeds(ship).length || state.onboarding?.stage) return go();
-  // docs/23 phase 6: what every voyage wants — food, round shot, the hands to sail her — is simply bought on the way
-  // out when the purse holds it (the harbour's own orders, before the order to cast off); only what is left — a
-  // damaged hull, a purse too thin, a hold too full — is asked.
-  const needs = voyageNeeds(ship);
-  const stores = needs.filter((n) => n.kind !== 'repair').map((n) => offerOf(n, state));
-  const cost = stores.reduce((a, o) => a + o.cost, 0);
-  if (stores.every((o) => o.n > 0 && o.n >= (o.need.kind === 'repair' ? 1 : o.need.buy)) && cost <= state.self!.gold && needs.every((n) => n.kind !== 'repair')) {
-    for (const o of stores) for (const m of o.msgs) send(m);
+  // docs/23 phase 6 and item 96: what a voyage wants is simply had on the way out when the purse holds it — the repairs,
+  // the food, and (a quarter of the purse kept back for the next repairs) the shot and the hands — by the harbour's own
+  // orders before the order to cast off, and said in one line. Only a grave shortfall is asked: a hull or canvas under
+  // half unmended, no food at all — and not again for a while once she sailed anyway with it.
+  const plan = departPlan(voyageNeeds(ship).map((n) => offerOf(n, state)), state.self!.gold);
+  const key = graveKey(plan.short.filter((o) => o.need.kind === 'repair' || o.need.kind === 'food'));
+  const askedLately = !!sailedAnyway && sailedAnyway.key === key && performance.now() - sailedAnyway.at < ASK_AGAIN_MS;
+  if (!plan.ask || askedLately) {
+    for (const o of plan.buy) for (const m of o.msgs) send(m);
+    if (plan.buy.length) say(boughtLine(plan.buy, plan.cost), 'info');
+    const mend = plan.short.find((o) => o.need.kind === 'repair' && o.n > 0);
+    if (mend) say(L('depart.cantRepair', { cost: fmt(mend.cost) }), 'info');
     return go();
   }
   openSheetHandle?.close('code');
@@ -173,6 +219,9 @@ export function departOrAsk(state: ClientState, send: (m: ClientMsg) => void, go
     if (what === 'stay') return sheet.close('button');
     if (what === 'sail') {
       sheet.close('button');
+      // She chose to sail with it: that shortfall is not asked again for a while (docs/23 item 96).
+      const s2 = voyageShip(state);
+      if (s2 && state.self) sailedAnyway = { key: graveKey(departPlan(voyageNeeds(s2).map((n) => offerOf(n, state)), state.self.gold).short.filter((o) => o.need.kind === 'repair' || o.need.kind === 'food')), at: performance.now() };
       return go();
     }
     const list = what === 'all' ? offers : [offers[Number(what)]].filter(Boolean);

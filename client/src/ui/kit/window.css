@@ -11,7 +11,7 @@
   .skinned #modal-panel { border-width: 12px 12px 0; border-image-width: 12px 12px 0; }
   #modal.w-from #modal-panel { transform: translateY(105%); transition: none; }
   #modal-panel.k-dragging { transition: none; }
-  #modal-panel .w-grip { display: flex; position: absolute; z-index: 6; top: -12px; left: 50%; transform: translateX(-50%); width: 120px; height: 18px; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
+  #modal-panel .w-grip { display: flex; position: absolute; z-index: 6; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 12px; align-items: flex-start; justify-content: center; padding-top: 3px; box-sizing: border-box; cursor: grab; touch-action: none; pointer-events: none; }
   #modal-panel .w-grip i { width: 40px; height: 4px; border-radius: var(--k-r-round); background: var(--k-brass); opacity: 0.8; }
   #modal-panel.w-answer .w-grip { display: none; }
   #modal-panel .modal-head { touch-action: none; }

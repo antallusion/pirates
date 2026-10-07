@@ -51,7 +51,9 @@ body.lock-auction .au-card, body.lock-auction #k-kind option[value="auction"],
 body.lock-guilds .tab[data-tab="guild"],
 /* The phase 6 windows (docs/23 items 65, 74): the harbour's second row and the Journal's rail. */
 body.lock-tattoos [data-ptab="tattoo"], body.lock-dice [data-ptab="dice"], body.lock-auction [data-ptab="auction"],
-body.lock-guilds [data-jtab="guild"] { display: none !important; }
+body.lock-guilds [data-jtab="guild"],
+/* …and the Journal's «Тату» chip (docs/23 item 94: the lock missed it). */
+body.lock-tattoos [data-jchip="tattoos"] { display: none !important; }
 
 /* ---- a fight on the screen (QA of phase 5): what the battle says stands in its top band, never over the field —
    at 640×360 the desk's band beside the round (50% + 136 px, as wide as 50% − 398 px) had no width left. */
@@ -69,5 +71,8 @@ body.lock-guilds [data-jtab="guild"] { display: none !important; }
    the 47 px of a notch, tools/mobile/safearea.mjs). The window's own layout is untouched. */
 @media (max-width: 699px), (max-height: 520px) {
   #modal { padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); box-sizing: border-box; }
-  #modal-panel { width: calc(100vw - var(--sa-l) - var(--sa-r)); height: calc(100dvh - var(--sa-t) - var(--sa-b)); }
+  /* 90% of the screen, the sheet's own height (window.css, docs/23 item 65): its scrim above to tap away, its grip in
+     sight — the safe part of the screen only when that is less (this rule, later and as specific, had made every
+     window full height, docs/23 item 94). */
+  #modal-panel { width: calc(100vw - var(--sa-l) - var(--sa-r)); height: min(90dvh, calc(100dvh - var(--sa-t) - var(--sa-b))); }
 }

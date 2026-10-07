@@ -419,6 +419,10 @@ export class TacticalPanel {
   /** The end put away by its button (a battle at sea closes itself a moment later). */
   private endHidden = false;
 
+  /** Her purse (main.ts): a ransom she cannot pay is shown, and why, but not offered (docs/23 item 93: the wheel
+   *  offered «Откуп 340» to an empty purse, the confirm sheet, then nothing). */
+  purse: () => number = () => Infinity;
+
   constructor(send: (m: ClientMsg) => void, now: () => number) {
     this.send = send;
     this.now = now;
@@ -836,7 +840,10 @@ export class TacticalPanel {
       { id: 'quick', label: L('quick'), icon: art('bt_quick', 'icon.bt_charge') },
     ];
     if (v.canCut) out.push({ id: 'cut', label: v.you === 0 ? L('fallBack') : L('cut'), icon: art('bt_retreat', 'icon.bt_colours') });
-    if (v.ransom) out.push({ id: 'ransom', label: L('ransom', { n: v.ransom }), icon: art('bt_ransom', 'icon.coin') });
+    if (v.ransom) {
+      const short = this.purse() < v.ransom;
+      out.push({ id: 'ransom', label: short ? L('ransomShort', { n: v.ransom }) : L('ransom', { n: v.ransom }), icon: art('bt_ransom', 'icon.coin'), disabled: short });
+    }
     if (v.canStrike) out.push({ id: 'surrender', label: L('strike'), icon: art('bt_strike', 'icon.bt_colours') });
     return out;
   }
@@ -1044,7 +1051,8 @@ export class TacticalPanel {
     const auto = me.auto ? L('autoOff') : L('auto');
     const cut = v.you === 0 ? L('fallBack') : L('cut');
     const ransomOn = this.ransomArmed > performance.now();
-    const ransom = v.ransom ? (ransomOn ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom })) : '';
+    const poor = !!v.ransom && this.purse() < v.ransom;
+    const ransom = v.ransom ? (poor ? L('ransomShort', { n: v.ransom }) : ransomOn ? L('ransomSure', { n: v.ransom }) : L('ransom', { n: v.ransom })) : '';
     const strike = armed ? L('strikeSure') : L('strike');
     el.querySelector('.tb-acts')!.innerHTML = [
       `<button class="btn" data-a="wait" ${lab(L('wait'))} ${!v.mine || act?.waited ? 'disabled' : ''}>${btIcon('bt_wait', 'icon.bt_hold')}${word(L('wait'))}</button>`,
@@ -1053,7 +1061,7 @@ export class TacticalPanel {
       `<button class="btn${me.auto ? ' on' : ''}" data-a="auto" ${lab(auto)}>${btIcon('bt_auto', '')}${word(auto)}</button>`,
       `<button class="btn" data-a="quick" ${lab(L('quick'))} ${v.over ? 'disabled' : ''}>${btIcon('bt_quick', '')}${word(L('quick'))}</button>`,
       v.canCut && !v.over ? `<button class="btn btn-danger" data-a="cut" ${lab(cut)}>${btIcon('bt_retreat', '')}${word(cut)}</button>` : '',
-      v.ransom && !v.over ? `<button class="btn${ransomOn ? ' on armed' : ''}" data-a="ransom" ${lab(ransom, L('ransomTip'))}>${btIcon('bt_ransom', 'icon.coin')}${word(ransom)}</button>` : '',
+      v.ransom && !v.over ? `<button class="btn${ransomOn ? ' on armed' : ''}" data-a="ransom" ${lab(ransom, L('ransomTip'))}${poor ? ' disabled' : ''}>${btIcon('bt_ransom', 'icon.coin')}${word(ransom)}</button>` : '',
       v.canStrike && !v.over ? `<button class="btn btn-danger${armed ? ' on armed' : ''}" data-a="surrender" ${lab(strike)}>${btIcon('bt_strike', '')}${word(strike)}</button>` : '',
     ].join('');
     el.querySelectorAll<HTMLElement>('[data-a]').forEach((b) => (b.onclick = () => {
@@ -1262,7 +1270,9 @@ export class TacticalPanel {
       const poor = sp.cost !== undefined && pool !== undefined && pool < sp.cost;
       const off = !v.mine || me.cast || wait > 0 || poor;
       const price = sp.scroll ? esc(L('scroll', { n: sp.scroll })) : sp.cost !== undefined ? `<span class="tb-bc-cost${sp.res === 'stam' ? ' stam' : ''}">${icon(sp.res === 'stam' ? 'icon.tree_survival' : 'icon.ab_brine_mend', '', 'ico-xs')}${sp.cost}</span>` : '';
-      const note = wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : price;
+      // A card that cannot be taken says why (docs/23 item 93: an order given, her move gone, the enemy's fog — it showed
+      // its price and did nothing).
+      const note = wait > 0 ? esc(L('ready.in', { n: wait })) : poor ? esc(L(sp.res === 'stam' ? 'noStam' : 'noWill')) : me.hush ? esc(L('hushed')) : me.cast ? esc(L('castDone')) : !v.mine ? esc(L('theirTurn')) : price;
       cards.push(card(`data-bkspell="${sp.id}"`, spIcon(sp.id, 'tb-bc-ico'), spName(sp.id), note, off, `${poor ? ' poor' : ''}`));
     }
     return `${will}<div class="tb-bk-grid">${cards.join('')}</div>`;

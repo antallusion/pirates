@@ -259,7 +259,14 @@ export class WorldMap {
     return defaultLayers(typeof matchMedia === 'function' && matchMedia('(max-height: 520px), (max-width: 699px)').matches);
   })();
   /** The port her mark was snapped to by the last tap (its name on «Плыть туда»). */
+  /** The port a tap on the chart marked, and where (a mark set elsewhere since — the minimap's long press, «где мой
+   *  уровень» — is not that port: its name went on showing on «Плыть туда», docs/23 item 94). */
   private markName = '';
+  private markAt: { x: number; y: number } | null = null;
+  private markLabel(): string {
+    const wp = waypoint();
+    return wp && this.markAt && Math.hypot(wp.x - this.markAt.x, wp.y - this.markAt.y) < 1 ? this.markName : '';
+  }
 
   open(root: HTMLElement, state: ClientState): void {
     const tracked = trackedQuest(state.self?.quests)?.id;
@@ -273,7 +280,7 @@ export class WorldMap {
       { id: 'all', icon: 'menu_map', label: W('map.all') },
     ].map((x) => ({ ...x, hint: W('map.layersHint') })), [...this.layers], 'mlayer');
     root.innerHTML = `${winHead(L('title'), { crest: 'menu_map', chips, sub: L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` }) })}
-      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><div class="map-wp-acts">${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markName)}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
+      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas><div class="map-wp-acts">${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() && !state.self?.dockedAt ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
       <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
       <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
@@ -365,7 +372,7 @@ export class WorldMap {
       clearBtn.classList.toggle('hidden', !waypoint());
       sailBtn?.classList.toggle('hidden', !waypoint() || !!state.self?.dockedAt);
       const nm = sailBtn?.querySelector('.map-wp-name');
-      if (nm) nm.textContent = waypoint() ? this.markName : '';
+      if (nm) nm.textContent = this.markLabel();
     };
     // docs/16 #36: the helmsman takes her to the mark.
     if (sailBtn) sailBtn.onclick = () => {
@@ -438,7 +445,8 @@ export class WorldMap {
       : undefined;
     const off = !!cur && Math.hypot(cur.x - x, cur.y - y) < hit;
     this.markName = off ? '' : port ? placeName(port.name) : '';
-    setWaypoint(off ? null : port ? { x: port.x, y: port.y } : { x, y });
+    this.markAt = off ? null : port ? { x: port.x, y: port.y } : { x, y };
+    setWaypoint(this.markAt);
     after();
     this.draw(state);
   }

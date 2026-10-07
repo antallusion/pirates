@@ -127,12 +127,21 @@ test('a watch saved in the nine old steps goes on in the five', () => {
   const { game } = makeGame();
   const { s } = recruit(game, 'Old Nine');
   const t = s.profile!.tutorial;
-  for (const [old, now] of [[0, 'sail'], [1, 'attack'], [2, 'board'], [3, 'board'], [5, 'port'], [8, 'port']] as const) {
+  for (const [old, now] of [[0, 'sail'], [1, 'attack'], [2, 'board'], [3, 'board'], [4, 'port']] as const) {
     t.v = 1;
     t.on = true;
     t.stage = old;
     sanitizeTutorial(s.profile!);
     assert.equal(STAGES[t.stage].id, now, `old step ${old}`);
+  }
+  // Past the old «recruit» she had been to port: the watch is done, nothing shut (docs/23 item 96).
+  for (const old of [5, 8]) {
+    t.v = 1;
+    t.on = true;
+    t.stage = old;
+    sanitizeTutorial(s.profile!);
+    assert.equal(t.on, false, `old step ${old}: done`);
+    assert.equal(t.stage, STAGES.length);
   }
   // A profile from before the counts: an old hand, nothing shut, no easy fights.
   delete t.played;

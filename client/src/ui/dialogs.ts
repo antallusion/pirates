@@ -244,12 +244,13 @@ export function renderHelp(root: HTMLElement, onboarding: OnboardingView | null 
     ['menu_chat', L('key.enter'), L('help.chat')],
   ];
   const touch: [string, string][] = [
+    // docs/23 phase 2's HUD (item 95: these lines still told of the broadside buttons, the sail ± and the aimed
+    // chasers the phone has not had since).
     ['menu_ship', L('help.t.stick')],
-    ['stat_sails', L('help.t.sail')],
+    ['goal', L('help.t.target')],
     ['fire', L('help.t.fire')],
-    ['chasers', L('help.t.chasers')],
-    ['mount_mortar', L('help.t.mount')],
-    ['anchor', L('help.t.context')],
+    ['tree_boarding', L('help.t.context')],
+    ['ab_double_shot', L('help.t.special')],
     ['ab_spotters_eye', L('help.t.zoom')],
     ['menu_map', L('help.t.menu')],
     ['ammo_round', L('help.ammo')],
@@ -259,7 +260,7 @@ export function renderHelp(root: HTMLElement, onboarding: OnboardingView | null 
   const rows = isTouch
     ? touch.map(([pic, d]) => `<div class="help-row">${icon(pic, '', 'item-ico')}<span>${esc(d)}</span></div>`).join('')
     : keys.map(([pic, k, d]) => `<div class="help-row">${icon(pic, '', 'item-ico')}<span><kbd>${esc(k)}</kbd> ${esc(d)}</span></div>`).join('');
-  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('help.title'))}</h2><div class="sub">${esc(L('help.sub'))}</div></div><div class="muted">${esc(L('help.close', { key: kb('help') }))}</div></div>
+  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('help.title'))}</h2><div class="sub">${esc(L('help.sub'))}</div></div>${isTouch ? '' : `<div class="muted">${esc(L('help.close', { key: kb('help') }))}</div>`}</div>
     <div class="modal-body"><div class="cols"><div class="help-list">${rows}</div>
     <div><div class="card"><h4 class="card-h">${icon('good_provisions', '', 'ico-md')}${esc(L('help.firstVoyage'))}</h4><p>${esc(L('help.firstVoyageText', { start: portName('saltmarrow'), second: portName('blackwater'), coast: REGIONS.black_coast.name.replace(/^The /, 'the '), capital: portName('gravesend') }))}</p></div>
     <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${esc(L('help.law'))}</h4><p>${esc(L('help.lawText', { a: portName('cinderhold'), b: portName('fogmouth') }))}</p></div>

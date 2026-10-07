@@ -118,6 +118,9 @@ function shipPic(classId: ShipClassId, cls = 'sy-pic'): string {
 /** A phone lying on its side: the landscape layout of the window (the same query as its styles). */
 const LANDSCAPE = matchMedia('(max-height: 520px) and (min-aspect-ratio: 1/1)');
 
+/** A phone's island: the board is its picture, the tiles its controls (the board's diamonds take no finger there). */
+const touchBoard = (): boolean => !!globalThis.document?.body?.classList.contains('touch');
+
 export class BaseWindow {
   sel: number | null = null;
   /** The island's plots, or its shipyard (docs/15 item 4). */
@@ -189,7 +192,7 @@ export class BaseWindow {
       ? `<div class="modal-body base-body yard-body town-body">${land ? top : ''}${townTab(v, state, this.mk)}</div>`
       : this.tab === 'yard'
       ? `<div class="modal-body base-body yard-body">${land ? top : ''}${this.yard(v, state)}</div>`
-      : `<div class="modal-body base-body${land ? ' base-land' : ''}"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}">${this.board(v)}</div></div><div class="base-sheet">${land ? top : ''}${this.sheet(v, state)}</div></div>`;
+      : `<div class="modal-body base-body${land ? ' base-land' : ''}"><div class="base-stage"><div class="base-board${this.moving !== null ? ' moving' : ''}" style="--ar:${(1 / layout(v).h).toFixed(4)}"${touchBoard() ? ' aria-hidden="true"' : ''}>${this.board(v)}</div></div><div class="base-sheet">${land ? top : ''}${this.sheet(v, state)}</div></div>`;
     root.innerHTML = `${winHead(L('title'), { crest: 'tab_isles', chips: tabs, sub: `${L('sub', { name: placeName(v.name), level: v.level, title })} · ${L('land', { biome: CO(`biome_${v.biome}` as 'biome_temperate') })}` }).replace('class="modal-head w-head', 'class="modal-head base-head w-head')}
       ${land ? '' : top}${body}`;
     this.bind(root, state);
@@ -239,7 +242,7 @@ export class BaseWindow {
       const prog = c.job ? Math.max(0, Math.min(1, (now - c.job.start) / Math.max(1, c.job.end - c.job.start))) : 0;
       // A diamond, not a box: the plot answers on its diamond and its building's body (the square boxes of the grid
       // lie over each other), so it is a role, not a <button>.
-      out.push(`<div class="${cls}" style="${style}" data-plot="${k}" role="button" tabindex="0" aria-label="${esc(`${L('plot', { n: k + 1 })}: ${label}`)}"><i class="bground"></i>
+      out.push(`<div class="${cls}" style="${style}" data-plot="${k}"${touchBoard() ? '' : ' role="button" tabindex="0"'} aria-label="${esc(`${L('plot', { n: k + 1 })}: ${label}`)}"><i class="bground"></i>
         ${art ? `<img class="bart" src="${art}" alt="" draggable="false"><i class="bhit"></i>` : c.what ? '' : '<span class="bplus">+</span>'}</div>`);
       // Timers, levels and yields ride over every picture, so a building in front never hides them.
       const marks = `${c.what && c.level && !raising ? `<span class="blvl">${c.level}</span>` : ''}${c.job ? `<span class="btimer"><span class="btime" data-end="${c.job.end}">${esc(timeText((c.job.end - now) / 1000))}</span><span class="bprog"><i data-start="${c.job.start}" data-stop="${c.job.end}" style="width:${Math.round(prog * 100)}%"></i></span></span>` : ''}${c.fresh > 0 && !c.job ? `<span class="bfresh">${icon(`good_${PRODUCERS[producerOf(c.what!)!].good}`, '', 'ico-sm')}+${fmt(c.fresh)}</span>` : ''}`;

@@ -4,7 +4,7 @@
 // The server says which step and which hint; the words are here, in both languages.
 
 import type { HudBlock, OnboardingView } from '../../../shared/src/protocol.ts';
-import { has, onLang, t } from '../i18n.ts';
+import { has, lang, onLang, t } from '../i18n.ts';
 import type { Key } from '../i18n.ts';
 import type { ClientState } from '../state.ts';
 import { $, esc, icon } from './dom.ts';
@@ -72,7 +72,7 @@ export class OnboardingUi {
     const touch = document.body.classList.contains('touch');
     const docked = !!this.state.self?.dockedAt;
     const line = (v.stage === 'sail' && docked ? 'stage.sail.dock' : `stage.${v.stage}.${touch ? 'touch' : 'body'}`) as Key;
-    const key = `${v.stage}|${line}|${v.index}|${v.of}`;
+    const key = `${v.stage}|${line}|${v.index}|${v.of}|${lang()}`; // a language changed mid-watch redraws the row
     if (el.dataset.k === key && !el.classList.contains('hidden')) return;
     el.dataset.k = key;
     el.classList.remove('hidden');

@@ -204,6 +204,12 @@ export function attachWheel(el: HTMLElement, b: WheelBinding): () => void {
     opened = false;
     timer = setTimeout(() => {
       timer = null;
+      // Redrawn away under the finger (the hex battle rebuilds its round buttons as the turns go by): the press ends
+      // with the button, no wheel left standing over the field with nothing to take it (docs/23 item 94).
+      if (!el.isConnected) {
+        id = null;
+        return;
+      }
       try { el.setPointerCapture(e.pointerId); } catch { /* gone */ }
       openAt(x0, y0);
     }, hold);

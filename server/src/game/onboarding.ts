@@ -61,7 +61,12 @@ export function sanitizeTutorial(p: Profile): void {
   t.easy ??= FIRST_FIGHTS;
   if (t.v !== WATCH_V) {
     // The nine steps of before (cast_off, gunnery, board, battle, recruit, skill, visit, lair, rescue) onto the five.
-    if (t.on) t.stage = [0, 1, 3, 3, 4, 4, 4, 4, 4][t.stage] ?? STAGES.length;
+    // Past the old «recruit» (skill, visit, lair, rescue) she had been to port already: the watch is behind her — the
+    // «В порт» step sent her back to a quay, the optional things shut and the HUD half hidden till then (docs/23 item 96).
+    if (t.on && t.stage >= 5) {
+      t.on = false;
+      t.stage = STAGES.length;
+    } else if (t.on) t.stage = [0, 1, 3, 3, 4][t.stage] ?? STAGES.length;
     t.v = WATCH_V;
   }
   if (t.stage > STAGES.length) t.stage = STAGES.length;
@@ -600,14 +605,18 @@ export interface OnboardingMetrics {
   cohort: Record<number, { created: number; last: number; skipped: boolean }>;
 }
 
+/** The funnel's store: the five steps' own (the nine steps' counts stay under 'onboarding', and were reported under the
+ *  five's names, docs/23 item 96). */
+const METRICS_KV = 'onboarding5';
+
 function metrics(game: Game): OnboardingMetrics {
-  const m = game.db.getKv<OnboardingMetrics>('onboarding') ?? { started: 0, knewTheSea: 0, skippedMidway: 0, finished: 0, stageDone: [], stageSkipped: [], stageSecs: [], hints: {}, rescues: 0, cohort: {} };
+  const m = game.db.getKv<OnboardingMetrics>(METRICS_KV) ?? { started: 0, knewTheSea: 0, skippedMidway: 0, finished: 0, stageDone: [], stageSkipped: [], stageSecs: [], hints: {}, rescues: 0, cohort: {} };
   m.cohort ??= {};
   return m;
 }
 
 function saveMetrics(game: Game, m: OnboardingMetrics): void {
-  game.db.setKv('onboarding', m);
+  game.db.setKv(METRICS_KV, m);
 }
 
 /** A captain is made: with the First Watch, or "I know the sea". */

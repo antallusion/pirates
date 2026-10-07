@@ -20,8 +20,9 @@ export function pointerTargets(f: PointerFacts): string[] {
   if (!f.stage || f.battle) return [];
   switch (f.stage) {
     case 'sail':
-      // In port: the harbour's «set sail» (or «Harbour» to bring that screen back); at sea, the wheel on a phone.
-      if (f.docked) return ['[data-act="undock"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
+      // In port: the harbour's gold «В море» on its rail (docs/23 phase 6; the old «Поднять паруса» is gone — the finger
+      // pointed at nothing and the watch's first step stood still, e2e 2026-10-07), else the HUD's big round «В море».
+      if (f.docked) return ['#modal-panel [data-ptab="sea"]', '#tc-fire.tc-sail', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
       return f.touch ? ['#tc-stick'] : [];
     case 'attack':
       // (already alongside her, «Действие» reads «На абордаж»: that is the step's battle, sooner)

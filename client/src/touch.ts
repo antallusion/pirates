@@ -7,6 +7,9 @@
 // Shown on coarse pointers or after the first touch.
 
 import { STICK_DOUBLE_MS, STICK_REEF_MS, seaWord, stickSail } from './ui/seahud.ts';
+
+/** A press held still this long steers (a quicker one may be a tap of the dash). */
+export const STICK_STEER_MS = 140;
 import { $ } from './ui/dom.ts';
 
 export interface TouchHooks {
@@ -91,9 +94,21 @@ export class TouchControls {
     s.setAttribute('aria-label', seaWord('stick'));
     let x0 = 0, y0 = 0, t0 = 0, moved = false, lastTap = 0, sail: number | null = null;
     let reef: ReturnType<typeof setTimeout> | null = null;
+    // A press steers once the finger slides (6 px) or stays (STICK_STEER_MS); a quick still tap is a tap — two are the
+    // dash, anywhere on the wheel, and one alone sets the course where it fell once the second did not come. (A press
+    // steered at once: a tap off the dead middle counted as a pull, so the dash only came from the middle 12%, and
+    // tapping the «»» chip twice turned her to the upper right at full sail — docs/23 item 94.)
+    let steering = false, last: PointerEvent | null = null;
+    let steerT: ReturnType<typeof setTimeout> | null = null, single: ReturnType<typeof setTimeout> | null = null;
     const stopReef = () => {
       if (reef) clearTimeout(reef);
       reef = null;
+    };
+    const steer = () => {
+      if (steerT) clearTimeout(steerT);
+      steerT = null;
+      steering = true;
+      if (last) move(last);
     };
     const move = (e: PointerEvent) => {
       const r = s.getBoundingClientRect();
@@ -129,6 +144,12 @@ export class TouchControls {
       t0 = performance.now();
       moved = false;
       sail = null;
+      steering = false;
+      last = e;
+      if (single) clearTimeout(single);
+      single = null;
+      if (steerT) clearTimeout(steerT);
+      steerT = setTimeout(steer, STICK_STEER_MS);
       // The middle held still: all sail in (there is no «−» button any more).
       stopReef();
       reef = setTimeout(() => {
@@ -139,24 +160,37 @@ export class TouchControls {
         setTimeout(() => s.classList.remove('reefed'), 500);
         try { navigator.vibrate?.(20); } catch { /* not allowed */ }
       }, STICK_REEF_MS);
-      move(e);
     });
     s.addEventListener('pointermove', (e) => {
-      if (e.pointerId === this.stickId) move(e);
+      if (e.pointerId !== this.stickId) return;
+      last = e;
+      if (!steering && Math.hypot(e.clientX - x0, e.clientY - y0) > 6) steer();
+      else if (steering) move(e);
     });
     const up = (e: PointerEvent) => {
       if (e.pointerId !== this.stickId) return;
       this.stickId = null;
       s.classList.remove('held');
       stopReef();
-      // A tap (short and still): two in a row are the dash.
+      if (steerT) clearTimeout(steerT);
+      steerT = null;
+      // A tap (short and still, never steered): two in a row are the dash; one alone steers where it fell.
       const now = performance.now();
-      const tap = e.type === 'pointerup' && !moved && now - t0 < 260 && Math.hypot(e.clientX - x0, e.clientY - y0) < 12;
+      const tap = e.type === 'pointerup' && !steering && now - t0 < 260 && Math.hypot(e.clientX - x0, e.clientY - y0) < 12;
       if (!tap) lastTap = 0;
       else if (now - lastTap < STICK_DOUBLE_MS) {
         lastTap = 0;
         this.hooks.dash();
-      } else lastTap = now;
+      } else {
+        lastTap = now;
+        const at = e;
+        single = setTimeout(() => {
+          single = null;
+          if (this.stickId !== null) return;
+          move(at);
+          this.knob.style.transform = '';
+        }, STICK_DOUBLE_MS);
+      }
     };
     s.addEventListener('pointerup', up);
     s.addEventListener('pointercancel', up);

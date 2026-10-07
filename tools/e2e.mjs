@@ -37,7 +37,7 @@ await page.waitForTimeout(800);
 await page.keyboard.press('Escape'); // help
 await page.waitForTimeout(500);
 if (await page.isVisible('#modal:not(.hidden)')) await page.screenshot({ path: `${out}/03-port.png` });
-await page.click('[data-act="undock"]', { timeout: 3000 }).catch(() => page.keyboard.press('f'));
+await page.click('#modal-panel [data-ptab="sea"]', { timeout: 3000 }).catch(() => page.keyboard.press('f'));
 await page.waitForTimeout(500);
 await page.keyboard.press('w');
 await page.keyboard.press('w');

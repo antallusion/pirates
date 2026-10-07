@@ -10,7 +10,7 @@ import { ask, tell } from './ui/confirm.ts';
 import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
-import { departOrAsk } from './ui/depart.ts';
+import { departOrAsk, setDepartSay } from './ui/depart.ts';
 import { EncounterCard } from './ui/encounter.ts';
 import { SurrenderCard } from './ui/surrender.ts';
 import { LairChestCard } from './ui/lairchest.ts';
@@ -67,7 +67,7 @@ import type { CompanyTab } from './ui/company.ts';
 import { LOG_PAGES } from './ui/logbook.ts';
 import { BaseWindow } from './ui/base.ts';
 import { $, decorateSums, esc, fmt, icon, keepInputs } from './ui/dom.ts';
-import { FOLDED, Hud, releaseModalToasts } from './ui/hud.ts';
+import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
 import { SeaHud, bestSpecial } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
 import type { TargetInfo } from './ui/kit/targetline.ts';
 import type { WheelOption } from './ui/kit/radial.ts';
@@ -130,6 +130,8 @@ const net = new Net();
 const state = new ClientState();
 const renderer = new Renderer($('world') as HTMLCanvasElement);
 const hud = new Hud();
+// The way out of port says in one line what it bought for the voyage (docs/23 item 96).
+setDepartSay((msg, kind) => hud.toast(msg, kind));
 const audio = new AudioEngine();
 renderer.onLightning = () => audio.thunder();
 for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListener(ev, () => audio.unlock(), { passive: true });
@@ -365,6 +367,7 @@ companyScreen.onWhisper = (name) => {
 const divePanel = new DivePanel((m) => net.send(m));
 const boardFight = new BoardFightPanel((m) => net.send(m), () => state.estServerTime());
 const tactical = new TacticalPanel((m) => net.send(m), () => state.estServerTime());
+tactical.purse = () => state.self?.gold ?? 0;
 const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
 // A phone plays sideways only (owner, 2026-10-02). On the first touch the game goes full screen and holds the screen
@@ -398,14 +401,17 @@ const touch = new TouchControls({
 // The sea HUD on a phone (docs/23 phase 2): «Огонь» and its wheel, «Действие» and its wheel, «Особое», the menu's
 // sheet, the news counter, the target line.
 const seaHud = new SeaHud($('touch'), {
-  folded: FOLDED,
+  folded: TOUCH_FOLDED,
   fire: () => seaFire(),
   fireOptions: () => fireWheel(),
   firePick: (id) => pickFireWheel(id),
   act: () => padContext(),
-  actOptions: () => curActs.map((a, i) => ({ id: String(i), label: a.label, icon: a.icon, glyph: '•' })),
+  // The wheel keeps the list it opened with while computePrompt() rebuilds curActs every frame: the pick runs that
+  // list's own act (by position the slide to «Высадка» ran whatever stood there a moment later, docs/23 item 94).
+  actOptions: () => (wheelActs = curActs.slice()).map((a, i) => ({ id: String(i), label: a.label, icon: a.icon, glyph: '•' })),
   actPick: (id) => {
-    const a = curActs[Number(id)];
+    const a = wheelActs[Number(id)];
+    wheelActs = [];
     if (a) runAct(a);
   },
   special: () => seaSpecial(),
@@ -718,7 +724,9 @@ function titleFilm(ka: HTMLElement, poster: string | null): void {
     audio.unlock();
     btn.disabled = true;
     setTimeout(() => (btn.disabled = false), 4000);
-    net.connect();
+    // The page connects by itself as it opens: a tap while that socket is still opening must not open a second (the
+    // server dropped one of the two — the title came back over a live game, or every input went to the dropped one).
+    if (!net.live) net.connect();
   };
 }
 if (net.token) net.connect();
@@ -966,11 +974,15 @@ function onMessage(m: ServerMsg): void {
         requestDock(pendingDock?.bribe ?? false, true);
         break;
       }
+      // A phone's small refusals (reloading, not on the beam) flash the button and buzz instead (docs/23 item 29): the
+      // server's refusals come as toasts of kind 'bad' (Game.ts err()), so the check on 'err' alone never saw them.
+      if (m.kind === 'bad' && touch.enabled && seaHud.petty(m.msg)) break;
       // World news goes to the feed (owner, 2026-09-29: the sea's news in a corner), the rest to the toasts.
       if (m.msg.startsWith('WORLD: ')) hud.feed(serverText(m.msg));
-      // While her men fight on a deck the sea's news (a fever, a tip) waits for the deck to clear; what the battle
-      // refuses comes as 'err'.
-      else if (state.boardTac) heldToasts.push({ msg: serverText(m.msg), kind: m.kind });
+      // While her men fight on a deck the sea's news (a fever, a tip) waits for the deck to clear. A refusal and a win
+      // are told at once, in the battle's top band (docs/23 item 93: «Не ваш ход», a cut that failed, a ransom she cannot
+      // pay — every refusal of the battle comes as a 'bad' toast, and was held to the end of it).
+      else if (state.boardTac && m.kind !== 'bad' && m.kind !== 'good') heldToasts.push({ msg: serverText(m.msg), kind: m.kind });
       else hud.toast(serverText(m.msg), m.kind);
       if (m.kind === 'gold') audio.coins();
       if (/a pirate is coming for you/.test(m.msg)) audio.bell(); // the lookout's alarm
@@ -1198,6 +1210,9 @@ function openModal(m: Modal): void {
   // A window comes up from the bottom edge as a sheet (docs/23 phase 6); a new window over an open one only swaps.
   if (m !== null && from === null) {
     modalAt = performance.now();
+    // A swipe that closed the last one left its drag on the panel (an inline translateY beats the slide's class: the
+    // harbour reopened 140 px low, its «В море» off the screen — docs/23 item 94).
+    $('modal-panel').style.transform = '';
     // Start below the edge, let the style land (a forced layout, not a frame: a busy frame came a second late),
     // then slide up.
     $('modal').classList.add('w-from');
@@ -1562,7 +1577,7 @@ new MutationObserver(() => {
 }).observe($('modal-panel'), { childList: true, subtree: true });
 
 // The window's grip and band drag it down (the kit's sheet gesture); a window that must be answered stays.
-wireSheetSwipe($('modal-panel'), () => (modal === 'barter' ? net.send({ t: 'barter', action: 'cancel' }) : closeModal()), '.w-grip, .modal-head, .w-head', null, () => !!modal && !ANSWER.includes(modal) && matchMedia('(max-height: 520px), (max-width: 699px)').matches);
+wireSheetSwipe($('modal-panel'), () => { $('modal-panel').style.transform = ''; if (modal === 'barter') net.send({ t: 'barter', action: 'cancel' }); else closeModal(); }, '.w-grip, .modal-head, .w-head', null, () => !!modal && !ANSWER.includes(modal) && matchMedia('(max-height: 520px), (max-width: 699px)').matches);
 $('modal').addEventListener('click', (e) => {
   // A tap on the scrim above a phone's sheet closes it, as the kit's sheets do.
   if (e.target === $('modal') && modal && !ANSWER.includes(modal) && performance.now() - modalAt > 450 && matchMedia('(max-height: 520px), (max-width: 699px)').matches) {
@@ -1944,6 +1959,8 @@ let lastDescentTier = -1;
 /** The action bar's buttons as last drawn (a click names one by its place), whether «⋯ more» is open, and a mark
  *  waiting for her to shorten sail. */
 let curActs: Act[] = [];
+/** The «Действие» wheel's list as it was when the wheel opened. */
+let wheelActs: Act[] = [];
 let actsMore = false;
 let actTipOffered = false;
 let pendingMark: { id: number; until: number } | null = null;
@@ -2360,7 +2377,7 @@ function seaFrame(): void {
   if (!self || !you) return;
   advCard.autoFold = true; // the adventure map's card waits on «Действие» (its «Осмотреть»)
   const a = curActs[0];
-  const news = FOLDED.filter((id) => {
+  const news = TOUCH_FOLDED.filter((id) => {
     const e = document.getElementById(id);
     return !!e && !e.classList.contains('hidden');
   }).length;
@@ -2577,6 +2594,9 @@ function stepPendingDock(): void {
   if (!pendingDock) return;
   const own = state.ownDisplay;
   if (state.self?.dockedAt || performance.now() > pendingDock.until || state.input.sail > 0) {
+    // Run out of time still at sea (she never slowed: a current, the wind, a pull of the stick): said, not dropped
+    // (docs/23 item 93: «убираем паруса», then nothing).
+    if (!state.self?.dockedAt && performance.now() > pendingDock.until && state.input.sail === 0) hud.toast(L('dockGaveUp'), 'bad');
     pendingDock = null;
     return;
   }

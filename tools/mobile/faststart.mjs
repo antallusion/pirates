@@ -23,14 +23,14 @@ async function back(label) {
     const v = await p.evaluate(() => {
       const g = globalThis.gravetide, s = g?.state;
       const vis = (q) => { const e = document.querySelector(q); return !!e && !e.closest('.hidden') && e.getClientRects().length > 0; };
-      return { login: vis('#screen-login'), cont: vis('#login-continue'), film: !!document.querySelector('.film'), port: vis('[data-act="undock"]'), check: vis('[data-dp="sail"]'), atSea: !!s?.self && !s.self.dockedAt && !!s.you, inGame: vis('#hud') };
+      return { login: vis('#screen-login'), cont: vis('#login-continue'), film: !!document.querySelector('.film'), port: vis('#modal-panel [data-ptab="sea"]'), check: vis('[data-dp="sail"]'), atSea: !!s?.self && !s.self.dockedAt && !!s.you, inGame: vis('#hud') };
     });
     if (shots < 3 && (v.login || v.port)) await p.screenshot({ path: `${OUT}/faststart_${label}_${++shots}.png` });
     if (v.atSea && !v.film) break;
     if (v.film) continue; // waited out
     const tap = async (sel, what) => { const r = await p.evaluate((q) => { const e = document.querySelector(q); const b = e?.getBoundingClientRect(); return b && b.width ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : null; }, sel); if (r) { await p.touchscreen.tap(r.x, r.y); taps++; did.push(what); await L.sleep(800); } };
     if (v.check) await tap('[data-dp="sail"]', 'check: sail anyway');
-    else if (v.port) await tap('[data-act="undock"]', 'set sail');
+    else if (v.port) await tap('#modal-panel [data-ptab="sea"]', 'set sail');
     else if (v.login && v.cont && i > 4) await tap('#login-continue', 'continue'); // only if the page has not let her in by itself
   }
   const r = { label, taps, did, secs: Math.round((Date.now() - t0) / 100) / 10 };

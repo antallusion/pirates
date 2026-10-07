@@ -95,6 +95,9 @@ export function fightOnScreen(): boolean {
 export const HELD_MAX = 4;
 
 export const FOLDED = ['hud-tip', 'hud-fish', 'hud-order', 'hud-holiday', 'hud-world', 'hud-goals', 'hud-feed'];
+/** On a phone the captain's sea orders and a group's signal flags fold away too, into the same sheet (docs/23 item 97:
+ *  with them the sea had 9–13 things to tap, not 5–7); the desk keeps them on its HUD. */
+export const TOUCH_FOLDED = [...FOLDED, 'hud-orders', 'hud-signals'];
 
 /** The transient blocks of the top stack (a hint, the sea's news, a boss's card), styles.css puts them at its head. */
 const TRANSIENT = ['hud-tip', 'hud-boss', 'hud-feed'];

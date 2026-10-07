@@ -192,7 +192,12 @@ export function stepPursuit(game: Game): void {
       }
       continue;
     }
-    if (now - run.helmAt < PURSUIT_RESUME) continue; // the captain's hand, or the moment after it
+    if (now - run.helmAt < PURSUIT_RESUME) {
+      // The captain's hand, or the moment after it: the boarding run (its −40% from every gun, its twice the way) is
+      // the helmsman's closing for the grapples, not hers to sail off with (docs/23 item 94).
+      boardRun(game, s, ship, false);
+      continue;
+    }
     const d = Math.hypot(t.state.x - ship.state.x, t.state.y - ship.state.y);
     // For the grapples she steers for where the mark will be when she gets there (the intercept at her own way), for
     // the guns where the mark will be when a ball does.
@@ -242,6 +247,11 @@ function autoBattle(game: Game, ship: ShipEntity, t: ShipEntity, run: Pursuit): 
   if (brain && !t.surrendered && !brain.struck && (canStrike(t) || t.npcRole === 'merchant' || t.npcRole === 'fisher')) {
     brain.struck = true;
     struck(game, t, brain, ship);
+  } else if (!t.surrendered && run.mode === 'board') {
+    // «Атаковать» was to board her: one that will not strike is left a wreck for the grapples, not sunk with the prize
+    // (docs/23 item 96).
+    const hull = Math.max(0, t.hull - t.stats.hullMax * 0.1);
+    if (hull > 0) applyDamage(game, t, { hull, crew: t.crew * 0.3, laddered: true }, ship);
   } else if (!t.surrendered) {
     applyDamage(game, t, { hull: t.hull + 1, laddered: true }, ship);
     game.emit({ k: 'hit', x: Math.round(t.state.x), y: Math.round(t.state.y), ship: t.id, dmg: Math.round(t.hull + 1), ammo: 'round' }, t.state.x, t.state.y);

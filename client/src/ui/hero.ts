@@ -131,7 +131,10 @@ export class HeroWindow {
       this.school = b.dataset.hschool as School;
       redo();
     }));
-    root.querySelectorAll<HTMLElement>('[data-hpick]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'skill', pick: Number(b.dataset.hpick) })));
+    root.querySelectorAll<HTMLButtonElement>('[data-hpick]').forEach((b) => (b.onclick = () => {
+      root.querySelectorAll<HTMLButtonElement>('[data-hpick]').forEach((x) => (x.disabled = true)); // one pick per offer
+      this.send({ t: 'hero', action: 'skill', pick: Number(b.dataset.hpick) });
+    }));
     root.querySelectorAll<HTMLElement>('[data-hcast]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'cast', id: b.dataset.hcast })));
     root.querySelectorAll<HTMLElement>('[data-hlearn]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'learn', id: b.dataset.hlearn })));
     root.querySelectorAll<HTMLElement>('[data-hbuy]').forEach((b) => (b.onclick = () => this.send({ t: 'hero', action: 'buy', index: Number(b.dataset.hbuy) })));
@@ -248,8 +251,14 @@ export function levelUpSheet(state: ClientState, send: (m: ClientMsg) => void): 
       const d = SKILLS[o.id];
       return `<button type="button" class="lu-pick" data-lupick="${i}">${icon(d.icon, '✦', 'lu-ico')}<span class="lu-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small></span></button>`;
     }).join('')}</div>`;
+    // One pick per offer: a second tap before the redraw went to the next level's offer, unseen (docs/23 item 94). The
+    // redraw (a new key: the next offer, or none) brings fresh buttons.
+    let picked = false;
     sheet.body.querySelectorAll<HTMLElement>('[data-lupick]').forEach((b) => (b.onclick = () => {
+      if (picked) return;
+      picked = true;
       b.setAttribute('aria-busy', 'true');
+      sheet.body.querySelectorAll<HTMLButtonElement>('[data-lupick]').forEach((x) => (x.disabled = true));
       send({ t: 'hero', action: 'skill', pick: Number(b.dataset.lupick) });
     }));
   };

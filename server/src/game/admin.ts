@@ -690,7 +690,12 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       if (role === 'merchant') o.cargo = { spices: 20, rum: 15, sugar: 20 };
       // Awake at once (a dormant ship is neither simulated nor sent until the sea wakes it).
       const brain = game.npcs.get(o.id);
-      if (brain) brain.active = true;
+      if (brain) {
+        brain.active = true;
+        // Her waters about the captain: without them she had no leg to sail and was struck off the sea the same second
+        // wherever she would not go for the captain (a safe sea — the Black Coast, where the QA runs start).
+        brain.area ??= { x: o.state.x, y: o.state.y, r: 3000 };
+      }
       game.grid.upsert(o.id, o.state.x, o.state.y);
       return `${o.name} (${o.cls.name} ⚓${o.shipLevel}, ${faction}) lies off your beam.`; // the sea sails no premium hull: her silver kin
     }
@@ -937,7 +942,12 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       const o = game.spawnNpcShip(role, cls, role === 'pirate' ? 'free' : role === 'ghost' ? 'choir' : 'league', ship.state.x + v.x * d, ship.state.y + v.y * d, ship.state.heading);
       game.setNpcLevel(o, ship.shipLevel);
       const brain = game.npcs.get(o.id);
-      if (brain) brain.active = true;
+      if (brain) {
+        brain.active = true;
+        // Her waters about the captain: without them she had no leg to sail and was struck off the sea the same second
+        // wherever she would not go for the captain (a safe sea — the Black Coast, where the QA runs start).
+        brain.area ??= { x: o.state.x, y: o.state.y, r: 3000 };
+      }
       o.input = { rudder: 0, sailTarget: 0 };
       o.state.speed = ship.state.speed = 0;
       game.grid.upsert(o.id, o.state.x, o.state.y);

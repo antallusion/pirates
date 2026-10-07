@@ -25,6 +25,7 @@ import { personName } from '../lang/names.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
+import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { ClientMsg, PortView, RefitView } from '../../../shared/src/protocol.ts';
@@ -51,8 +52,8 @@ import { sendService, serviceCard } from './marque.ts';
 import { captivesCard } from './turncoats.ts';
 import { holidayCard } from './holidays.ts';
 import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
-import { departOrAsk, voyageOrder } from './depart.ts';
-import { VOYAGE_MINUTES, voyageCrew } from '../../../shared/src/data/voyage.ts';
+import { departOrAsk, voyageOrder, voyageShip } from './depart.ts';
+import { VOYAGE_MINUTES, voyageCrew, voyageNeeds } from '../../../shared/src/data/voyage.ts';
 import { chipRow, figure, keepFolds, more, quickBar, quickBtn, railTabs, rangeHtml, sec, wasBecomes, winHead } from './kit/window.ts';
 import type { QuickBtn, WinTab } from './kit/window.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
@@ -80,6 +81,8 @@ const TAB_ICON = {
   market: 'tab_market', shipyard: 'menu_ship', tavern: 'tab_tavern', quests: 'tab_contracts', harbour: 'anchor', holdings: 'tab_holdings', exchange: 'tab_exchange',
 } as const;
 
+/** The biggest single order the harbour takes (server/src/game/ports.ts refuses |qty| > 500). */
+const SELL_LOT = 500;
 /** Goods that stay aboard when «Продать всё» sells the rest: the crew's food, the carpenters' stores. */
 const KEEP_ABOARD = new Set<GoodId>(['provisions', 'planks', 'sailcloth']);
 
@@ -92,12 +95,29 @@ export function sellableGoods(state: ClientState): { good: GoodId; n: number; es
   const black = !!state.ports.find((p) => p.id === view.portId)?.blackMarket;
   const keep = new Set<GoodId>(KEEP_ABOARD);
   for (const c of self.contracts) if (c.good) keep.add(c.good);
+  // …nor what a quest of hers still has to carry somewhere (a «deliver» step now or ahead: 20 barrels of powder for
+  // Blackwater went with the rum at one tap, docs/23 item 94).
+  for (const q of self.quests ?? []) {
+    const steps = QUESTS_BY_ID[q.id]?.steps ?? [];
+    for (let i = Math.max(0, q.step - 1); i < steps.length; i++) {
+      const st = steps[i];
+      if (st.type === 'deliver') keep.add(st.good);
+    }
+  }
   const out: { good: GoodId; n: number; est: number }[] = [];
   for (const r of view.market) {
     const n = Math.floor(self.cargo[r.good] ?? 0);
     if (n < 1 || keep.has(r.good) || GOODS[r.good].category === 'rare' || r.sell <= 0 || (!r.legal && !black)) continue;
     out.push({ good: r.good, n, est: Math.round(r.sell * n) });
   }
+  return out;
+}
+
+/** «Продать всё»'s orders: in lots of SELL_LOT at most — the harbour takes no bigger order (ports.ts), and a merchant
+ *  hull's 600 rum came back with «Неверное количество» (docs/23 item 93). */
+export function sellAllOrders(state: ClientState): ClientMsg[] {
+  const out: ClientMsg[] = [];
+  for (const x of sellableGoods(state)) for (let left = x.n; left > 0; left -= SELL_LOT) out.push({ t: 'trade', good: x.good, qty: -Math.min(SELL_LOT, left) });
   return out;
 }
 
@@ -227,11 +247,19 @@ export class PortScreen {
     // The tavern's hire slider (docs/23 item 68): the number and the button follow the finger.
     const range = root.querySelector<HTMLInputElement>('#tv-hire');
     if (range) {
-      range.onpointerdown = () => (this.holding = true);
       const let_go = () => {
+        removeEventListener('pointerup', let_go, true);
+        removeEventListener('pointercancel', let_go, true);
         if (!this.holding) return;
         this.holding = false;
         this.render(root, state);
+      };
+      // Let go anywhere: a drag released off the slider with its value unchanged left `holding` set and the harbour
+      // drew no more — its places' tabs dead (docs/23 item 94).
+      range.onpointerdown = () => {
+        this.holding = true;
+        addEventListener('pointerup', let_go, true);
+        addEventListener('pointercancel', let_go, true);
       };
       range.onpointerup = range.onpointercancel = range.onchange = let_go;
     }
@@ -262,7 +290,7 @@ export class PortScreen {
         return this.send({ t: 'trade', good: d.good as never, qty: Number(d.n) });
       case 'sell_useful':
         // docs/23 item 66: everything worth selling, in one tap.
-        for (const x of sellableGoods(state)) this.send({ t: 'trade', good: x.good, qty: -x.n });
+        for (const m of sellAllOrders(state)) this.send(m);
         return;
       case 'supplies':
         for (const m of voyageOrder(state, ['food', 'ammo']).msgs) this.send(m);
@@ -492,7 +520,11 @@ export class PortScreen {
         btns.push({ label: W('mk.sellAll'), sub: list.length ? `≈ ${money(est)}` : esc(W('mk.sellNone')), icon: 'coin', hint: W('mk.sellAllHint'), disabled: !list.length, primary: list.length > 0, data: { act: 'sell_useful' } });
       } else if (w === 'supplies') {
         const o = voyageOrder(state, ['food', 'ammo']);
-        btns.push({ label: W('mk.supplies'), sub: o.msgs.length ? money(o.cost) : esc(W('mk.suppliesOk')), icon: 'good_provisions', hint: W('mk.suppliesHint', { min: VOYAGE_MINUTES }), disabled: !o.msgs.length, data: { act: 'supplies' } });
+        // Short but nothing to buy here is not «всё есть» (docs/23 item 93): the hold is full, or the harbour sells none.
+        const ship = voyageShip(state);
+        const short = ship ? voyageNeeds(ship).filter((n) => n.kind === 'food' || n.kind === 'ammo') : [];
+        const none = !short.length ? W('mk.suppliesOk') : short.some((n) => n.kind === 'food' && n.buy <= 0) ? W('mk.suppliesFull') : W('mk.suppliesNone');
+        btns.push({ label: W('mk.supplies'), sub: o.msgs.length ? money(o.cost) : esc(none), icon: 'good_provisions', hint: W('mk.suppliesHint', { min: VOYAGE_MINUTES }), disabled: !o.msgs.length, data: { act: 'supplies' } });
       } else if (w === 'repair') {
         const cost = view.shipyard.repairCost;
         if (cost > 0) btns.push({ label: W('mk.repair'), sub: money(cost), icon: 'good_planks', hint: W('mk.repairHint'), data: { act: 'repair' } });

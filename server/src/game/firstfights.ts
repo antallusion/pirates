@@ -24,13 +24,17 @@ export const SOFT_DEALT = 0.4;
 /** A first fight is with a ship at most this many levels above the captain's. */
 export const SOFT_LEVELS = 1;
 
-/** The ship of the sea each novice is fighting her easy fight with (entity id), per session. */
-const foes = new WeakMap<PlayerSession, number>();
+/** The ship of the sea each novice is fighting her easy fight with (entity id), per captain's ship — her ship, not her
+ *  session: a reconnect takes the same ship over in a new session, and a map keyed by the session forgot the fight (it
+ *  never counted, so the softening never ran out; docs/23 item 94). */
+const foes = new WeakMap<ShipEntity, number>();
 
 /** Whether this ship of the sea may be a novice's easy fight: one on the ladder near her level, no boss, no legend. */
 function softenable(ship: ShipEntity, foe: ShipEntity): boolean {
   if (!foe.npcRole || foe.isPlayer || !foe.alive || foe.sinkingUntil || foe.surrendered || foe.prize) return false;
   if (!foe.onLadder || foe.npcRole === 'beast' || foe.cls.monster || foe.zoneBoss || foe.bossOf || foe.bossPart || foe.named || foe.namedMate || foe.dutchman || foe.caravanId) return false;
+  // Nor a group contract's elite, nor another captain's own escort (docs/23 item 94).
+  if (foe.elite || foe.ownerId !== null) return false;
   return foe.combatLevel <= ship.combatLevel + SOFT_LEVELS;
 }
 
@@ -47,12 +51,13 @@ export function softenFoe(game: Game, a: ShipEntity, b: ShipEntity, opts: { army
   if (!me || !foe) return;
   const s = game.sessionOf(me);
   if (!s || easyLeft(s) <= 0 || !softenable(me, foe)) return;
-  if (foe.softFor !== undefined) return;
+  // Softened for another novice still at sea (one gone from the sea leaves her free).
+  if (foe.softFor !== undefined && game.ships.get(foe.softFor)?.alive) return;
   // One at a time: a second ship that joins in fights as she is.
-  const cur = foes.get(s);
+  const cur = foes.get(me);
   if (cur !== undefined && cur !== foe.id && game.ships.get(cur)?.alive) return;
   foe.softFor = me.id;
-  foes.set(s, foe.id);
+  foes.set(me, foe.id);
   // The First Watch's raider is a lesson in boarding, kept for it (her own floor of men, round shot only): cut to half
   // her hull, the gun crews and the bump of the run-in sank her before the grapples could bite.
   if (game.npcs.get(foe.id)?.practice !== undefined) return;
@@ -75,16 +80,20 @@ export const FIGHT_QUIET = 20;
  *  (docs/23 item 82: after the First Watch the newcomer's run sailed about with no mark and no button to press — the
  *  game is to close on a ship and board her, so the first fights come to her). */
 export const FOE_IDLE = 25;
-/** Seconds idle, and the pirate brought last (entity id), per session. */
-const idle = new WeakMap<PlayerSession, { secs: number; foe: number | null }>();
+/** Seconds idle, and the pirate brought last (entity id), per captain's ship (see `foes`). */
+const idle = new WeakMap<ShipEntity, { secs: number; foe: number | null }>();
+/** A pirate brought to an idle novice leaves the sea this long after, once no captain is near (npc.ts expiresAt): they
+ *  were never struck off, a novice who outsailed them got another every 25 s, each kept for good against the world's
+ *  pirate quota (docs/23 item 96). */
+export const FOE_BROUGHT_LIFE = 600;
 
 /** Once a second for each captain: her easy foe gone (sunk, struck, taken) is one of the three behind her; lost far
  *  astern, she is let go and does not count. Idle with none, one is brought. */
 export function firstFightsSecond(game: Game, s: PlayerSession): void {
-  const id = foes.get(s);
   const p = s.profile, ship = s.ship;
-  if (id === undefined) return void bringFoe(game, s);
   if (!p || !ship) return;
+  const id = foes.get(ship);
+  if (id === undefined) return void bringFoe(game, s);
   const foe = game.ships.get(id);
   // Over: sunk, struck, taken — or let go (ransomed, released: she sails on, the fight done). A fight that has gone
   // quiet for FIGHT_QUIET seconds, with no boarding and no «Атаковать» on her, is over too (the 2026-10-06 newcomer's
@@ -92,13 +101,13 @@ export function firstFightsSecond(game: Game, s: PlayerSession): void {
   const quiet = !!foe && game.now - Math.max(foe.lastCombat, ship.lastCombat) > FIGHT_QUIET && !ship.boarding && !s.pendingBoarding && pursuitOf(ship)?.target !== foe.id;
   const over = !foe || !foe.alive || !!foe.sinkingUntil || foe.surrendered || foe.prize || quiet;
   if (over) {
-    foes.delete(s);
+    foes.delete(ship);
     if (foe) foe.softFor = undefined;
     p.tutorial.easy = Math.min(FIRST_FIGHTS, (p.tutorial.easy ?? FIRST_FIGHTS) + 1);
     return;
   }
   if (!ship.boarding && Math.hypot(foe.state.x - ship.state.x, foe.state.y - ship.state.y) > 3500) {
-    foes.delete(s);
+    foes.delete(ship);
     foe.softFor = undefined;
   }
 }
@@ -106,8 +115,8 @@ export function firstFightsSecond(game: Game, s: PlayerSession): void {
 function bringFoe(game: Game, s: PlayerSession): void {
   const ship = s.ship;
   if (!ship || !s.profile) return;
-  let w = idle.get(s);
-  if (!w) idle.set(s, (w = { secs: 0, foe: null }));
+  let w = idle.get(ship);
+  if (!w) idle.set(ship, (w = { secs: 0, foe: null }));
   // Only in a captain's first quarter of an hour, out at sea, free, and not in the First Watch (its raider is the
   // lesson's). The first three are softened when they begin; after them, one a level below hers.
   if (!fresh(s.profile) || onboardingProtected(s) || ship.docked || ship.boarding || ship.grappled || s.pendingBoarding || autosailOf(ship) || ship.inCombat(game.now) || !ship.alive) {
@@ -136,6 +145,7 @@ function bringFoe(game: Game, s: PlayerSession): void {
     game.setNpcLevel(foe, Math.max(1, ship.shipLevel - (easyLeft(s) > 0 ? 0 : 1)));
     const brain = game.npcs.get(foe.id);
     if (brain) {
+      brain.expiresAt = game.now + FOE_BROUGHT_LIFE;
       brain.area = { x: ship.state.x, y: ship.state.y, r: 3000 };
       brain.chase = { id: ship.id, until: game.now + 120 };
       brain.target = ship.id;

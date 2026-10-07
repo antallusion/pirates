@@ -371,6 +371,12 @@ export const EN = {
   'depart.sail': 'Set sail',
   'depart.stay': 'Stay in port',
   'depart.short': 'You have {gold} silver: not enough for all of it.',
+  'depart.bought': 'For the voyage: {what} — {cost} silver',
+  'depart.w.repair': 'repairs',
+  'depart.w.food': 'provisions {n}',
+  'depart.w.ammo': 'round shot {n}',
+  'depart.w.crew': 'hands {n}',
+  'depart.cantRepair': 'Not enough silver for repairs ({cost}): she sails as she is.',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -731,4 +737,10 @@ export const RU: Record<keyof typeof EN, string> = {
   'depart.sail': 'Поднять паруса',
   'depart.stay': 'Остаться в порту',
   'depart.short': 'У вас {gold} серебра: на всё не хватит.',
+  'depart.bought': 'На плавание: {what} — {cost} серебра',
+  'depart.w.repair': 'ремонт',
+  'depart.w.food': 'провизия {n}',
+  'depart.w.ammo': 'ядра {n}',
+  'depart.w.crew': 'матросы {n}',
+  'depart.cantRepair': 'На ремонт не хватает серебра ({cost}) — выходим как есть.',
 };

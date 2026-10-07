@@ -29,6 +29,11 @@ export class Net {
     this.handlers.push(fn);
   }
 
+  /** A socket open or opening (a second one makes the server drop one of the two sessions, docs/23 item 94). */
+  get live(): boolean {
+    return !!this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING);
+  }
+
   connect(name?: string): void {
     if (name) this.pendingName = name;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -60,7 +65,18 @@ export class Net {
     };
     ws.onclose = (ev) => {
       this.onStatus(false);
-      if (ev.code === 4000 || ev.code === 4002) return; // replaced by another login / client out of date
+      if (ev.code === 4000) return; // replaced by another login
+      // Out of date (a tab kept open across a deploy, docs/23 item 96): the new client is a reload away. Once a minute
+      // at most, so a server and a client that disagree for some other reason do not reload each other for ever.
+      if (ev.code === 4002) {
+        let last = 0;
+        try { last = Number(sessionStorage.getItem('gravetide.reloadAt') ?? 0); } catch { /* no storage */ }
+        if (Date.now() - last > 60_000) {
+          try { sessionStorage.setItem('gravetide.reloadAt', String(Date.now())); } catch { /* no storage */ }
+          location.reload();
+        }
+        return;
+      }
       const delay = Math.min(8000, 500 * 2 ** this.retry++);
       setTimeout(() => this.connect(), delay);
     };

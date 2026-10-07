@@ -3760,6 +3760,10 @@ export class Game {
   private onHello(s: PlayerSession, msg: { v: number; token?: string; name?: string }): void {
     if (msg.v !== PROTOCOL_VERSION) {
       this.sendTo(s, { t: 'err', msg: `Client out of date (protocol ${msg.v}, server ${PROTOCOL_VERSION}). Reload the page.` });
+      // …and the socket shut as the gateway shuts it (4002: no reconnecting, a reload): left open, a tab kept across a
+      // deploy stood frozen — no snapshots, «Вход не выполнен» at every input — until the flood guard cut it and it
+      // reconnected into the same wall (docs/23 item 96).
+      s.conn.close(4002, 'outdated');
       return;
     }
     if (s.authed) return;
